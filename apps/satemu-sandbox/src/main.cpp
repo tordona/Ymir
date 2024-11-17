@@ -27,6 +27,8 @@ constexpr size_t operator""_KiB(size_t sz) {
 }
 
 constexpr size_t kIPLSize = 512_KiB;
+constexpr size_t kWRAMLowSize = 1024_KiB;
+constexpr size_t kWRAMHighSize = 1024_KiB;
 
 template <unsigned B, std::integral T>
 constexpr auto SignExtend(T x) {
@@ -56,6 +58,12 @@ public:
         if (address <= 0x000FFFFF) {
             address &= 0x7FFFF;
             return m_IPL[address];
+        } else if (address - 0x200000 <= 0x000FFFFF) {
+            address &= 0xFFFFF;
+            return m_WRAMLow[address];
+        } else if (address - 0x6000000 <= 0x01FFFFFF) {
+            address &= 0xFFFFF;
+            return m_WRAMHigh[address];
         } else {
             fmt::println("unhandled SH2 bus 8-bit read from {:08X}", baseAddress);
             return 0;
@@ -64,11 +72,17 @@ public:
 
     uint16 ReadWord(uint32 baseAddress) {
         // const uint32 region = address >> 29;
-        uint32 address = baseAddress & 0x7FFFFFF;
+        uint32 address = baseAddress & 0x7FFFFFE;
 
         if (address <= 0x000FFFFF) {
             address &= 0x7FFFF;
             return (m_IPL[address + 0] << 8u) | m_IPL[address + 1];
+        } else if (address - 0x200000 <= 0x000FFFFF) {
+            address &= 0xFFFFF;
+            return (m_WRAMLow[address + 0] << 8u) | m_WRAMLow[address + 1];
+        } else if (address - 0x6000000 <= 0x01FFFFFF) {
+            address &= 0xFFFFF;
+            return (m_WRAMHigh[address + 0] << 8u) | m_WRAMHigh[address + 1];
         } else {
             fmt::println("unhandled SH2 bus 16-bit read from {:08X}", baseAddress);
             return 0;
@@ -77,32 +91,83 @@ public:
 
     uint32 ReadLong(uint32 baseAddress) {
         // const uint32 region = address >> 29;
-        uint32 address = baseAddress & 0x7FFFFFF;
+        uint32 address = baseAddress & 0x7FFFFFC;
 
         if (address <= 0x000FFFFF) {
             address &= 0x7FFFF;
             return (m_IPL[address + 0] << 24u) | (m_IPL[address + 1] << 16u) | (m_IPL[address + 2] << 8u) |
                    m_IPL[address + 3];
+        } else if (address - 0x200000 <= 0x000FFFFF) {
+            address &= 0xFFFFF;
+            return (m_WRAMLow[address + 0] << 24u) | (m_WRAMLow[address + 1] << 16u) | (m_WRAMLow[address + 2] << 8u) |
+                   m_WRAMLow[address + 3];
+        } else if (address - 0x6000000 <= 0x01FFFFFF) {
+            address &= 0xFFFFF;
+            return (m_WRAMHigh[address + 0] << 24u) | (m_WRAMHigh[address + 1] << 16u) |
+                   (m_WRAMHigh[address + 2] << 8u) | m_WRAMHigh[address + 3];
         } else {
             fmt::println("unhandled SH2 bus 32-bit read from {:08X}", baseAddress);
             return 0;
         }
     }
 
-    void WriteByte(uint32 address, uint8 value) {
-        fmt::println("unhandled SH2 bus 8-bit write to {:08X} = {:02X}", address, value);
+    void WriteByte(uint32 baseAddress, uint8 value) {
+        // const uint32 region = address >> 29;
+        uint32 address = baseAddress & 0x7FFFFFC;
+
+        if (address - 0x200000 <= 0x000FFFFF) {
+            address &= 0xFFFFF;
+            m_WRAMLow[address] = value;
+        } else if (address - 0x6000000 <= 0x01FFFFFF) {
+            address &= 0xFFFFF;
+            m_WRAMHigh[address] = value;
+        } else {
+            fmt::println("unhandled SH2 bus 8-bit write to {:08X} = {:02X}", baseAddress, value);
+        }
     }
 
-    void WriteWord(uint32 address, uint16 value) {
-        fmt::println("unhandled SH2 bus 16-bit write to {:08X} = {:04X}", address, value);
+    void WriteWord(uint32 baseAddress, uint16 value) {
+        // const uint32 region = address >> 29;
+        uint32 address = baseAddress & 0x7FFFFFC;
+
+        if (address - 0x200000 <= 0x000FFFFF) {
+            address &= 0xFFFFF;
+            m_WRAMLow[address + 0] = value >> 8u;
+            m_WRAMLow[address + 1] = value >> 0u;
+        } else if (address - 0x6000000 <= 0x01FFFFFF) {
+            address &= 0xFFFFF;
+            m_WRAMHigh[address + 0] = value >> 8u;
+            m_WRAMHigh[address + 1] = value >> 0u;
+        } else {
+            fmt::println("unhandled SH2 bus 16-bit write to {:08X} = {:04X}", baseAddress, value);
+        }
     }
 
-    void WriteLong(uint32 address, uint32 value) {
-        fmt::println("unhandled SH2 bus 32-bit write to {:08X} = {:08X}", address, value);
+    void WriteLong(uint32 baseAddress, uint32 value) {
+        // const uint32 region = address >> 29;
+        uint32 address = baseAddress & 0x7FFFFFC;
+
+        if (address - 0x200000 <= 0x000FFFFF) {
+            address &= 0xFFFFF;
+            m_WRAMLow[address + 0] = value >> 24u;
+            m_WRAMLow[address + 1] = value >> 16u;
+            m_WRAMLow[address + 2] = value >> 8u;
+            m_WRAMLow[address + 3] = value >> 0u;
+        } else if (address - 0x6000000 <= 0x01FFFFFF) {
+            address &= 0xFFFFF;
+            m_WRAMHigh[address + 0] = value >> 24u;
+            m_WRAMHigh[address + 1] = value >> 16u;
+            m_WRAMHigh[address + 2] = value >> 8u;
+            m_WRAMHigh[address + 3] = value >> 0u;
+        } else {
+            fmt::println("unhandled SH2 bus 32-bit write to {:08X} = {:08X}", baseAddress, value);
+        }
     }
 
 private:
     std::array<uint8, kIPLSize> m_IPL; // aka BIOS ROM
+    std::array<uint8, kWRAMLowSize> m_WRAMLow;
+    std::array<uint8, kWRAMHighSize> m_WRAMHigh;
 };
 
 class SH2 {
@@ -342,6 +407,12 @@ private:
         }
         case 0x3:
             switch (instr & 0xF) {
+            case 0x0: // 0011 nnnn mmmm 0000   CMP/EQ Rm, Rn
+                CMPEQ((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
             case 0x6: // 0011 nnnn mmmm 0110   CMP/HI Rm, Rn
                 CMPHI((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
                 if constexpr (!delaySlot) {
@@ -430,6 +501,36 @@ private:
                     PC += 2;
                 }
                 break;
+            case 0x6: // 0110 nnnn mmmm 0110   MOV.L @Rm+, Rn
+                MOVLP((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0xC: // 0110 nnnn mmmm 1100   EXTU.B Rm, Rn
+                EXTUB((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0xD: // 0110 nnnn mmmm 1101   EXTU.W Rm, Rn
+                EXTUW((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0xE: // 0110 nnnn mmmm 1100   EXTS.B Rm, Rn
+                EXTSB((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0xF: // 0110 nnnn mmmm 1101   EXTS.W Rm, Rn
+                EXTSW((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
             default: fmt::println("unhandled 0110 instruction"); break;
             }
             break;
@@ -500,6 +601,12 @@ private:
                     PC += 2;
                 }
                 break;
+            case 0x7: // 1100 0111 dddd dddd   MOVA @(disp,PC), R0
+                MOVA(instr & 0xFF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
             default: fmt::println("unhandled 1100 instruction"); break;
             }
             break;
@@ -525,8 +632,8 @@ private:
     }
 
     void ADDI(uint16 imm, uint16 rn) {
-        fmt::println("add #0x{:X}, r{}", imm, rn);
         sint32 simm = SignExtend<8>(imm);
+        fmt::println("add #{}0x{:X}, r{}", (simm < 0 ? "-" : ""), abs(simm), rn);
         R[rn] += simm;
     }
 
@@ -620,6 +727,11 @@ private:
         MAC.u64 = 0;
     }
 
+    void CMPEQ(uint16 rm, uint16 rn) {
+        fmt::println("cmp/eq r{}, r{}", rm, rn);
+        SR.T = R[rn] == R[rm];
+    }
+
     void CMPHI(uint16 rm, uint16 rn) {
         fmt::println("cmp/hi r{}, r{}", rm, rn);
         SR.T = R[rn] > R[rm];
@@ -636,6 +748,26 @@ private:
         fmt::println("dt r{}", rn);
         R[rn]--;
         SR.T = R[rn] == 0;
+    }
+
+    void EXTSB(uint16 rm, uint16 rn) {
+        fmt::println("exts.b r{}, r{}", rm, rn);
+        R[rn] = SignExtend<8>(R[rm]);
+    }
+
+    void EXTSW(uint16 rm, uint16 rn) {
+        fmt::println("exts.w r{}, r{}", rm, rn);
+        R[rn] = SignExtend<16>(R[rm]);
+    }
+
+    void EXTUB(uint16 rm, uint16 rn) {
+        fmt::println("extu.b r{}, r{}", rm, rn);
+        R[rn] = R[rm] & 0xFF;
+    }
+
+    void EXTUW(uint16 rm, uint16 rn) {
+        fmt::println("extu.w r{}, r{}", rm, rn);
+        R[rn] = R[rm] & 0xFFFF;
     }
 
     void LDCGBR(uint16 rm) {
@@ -658,9 +790,23 @@ private:
         PR = R[rm];
     }
 
+    void MOVA(uint16 disp) {
+        disp = (disp << 2u) + 4;
+        fmt::println("mova @(0x{:X},pc), r0", (PC & ~3) + disp);
+        R[0] = (PC & ~3) + disp;
+    }
+
     void MOVLL(uint16 rm, uint16 rn) {
         fmt::println("mov.l @r{}, r{}", rm, rn);
         R[rn] = m_bus.ReadLong(R[rm]);
+    }
+
+    void MOVLP(uint16 rm, uint16 rn) {
+        fmt::println("mov.l @r{}+, r{}", rm, rn);
+        R[rn] = m_bus.ReadLong(R[rm]);
+        if (rn != rm) {
+            R[rm] += 4;
+        }
     }
 
     void MOVBS(uint16 rm, uint16 rn) {
@@ -685,8 +831,8 @@ private:
     }
 
     void MOVI(uint16 imm, uint16 rn) {
-        fmt::println("mov #0x{:X}, r{}", imm, rn);
         sint32 simm = SignExtend<8>(imm);
+        fmt::println("mov #{}0x{:X}, r{}", (simm < 0 ? "-" : ""), abs(simm), rn);
         R[rn] = simm;
     }
 
