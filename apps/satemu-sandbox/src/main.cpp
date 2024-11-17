@@ -476,7 +476,7 @@ private:
     SH2Bus &m_bus;
 
     uint64 dbg_count = 0;
-    static constexpr uint64 dbg_minCount = 2101450;
+    static constexpr uint64 dbg_minCount = 2101795;
 
     template <typename... T>
     void dbg_print(fmt::format_string<T...> fmt, T &&...args) {
@@ -704,6 +704,12 @@ private:
                         PC += 2;
                     }
                     break;
+                case 0x0B: // 0110 mmmm 0000 1110   JSR @Rm
+                    JSR((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
                 case 0x0E: // 0110 mmmm 0000 1110   LDC Rm, SR
                     LDCSR((instr >> 8u) & 0xF);
                     if constexpr (!delaySlot) {
@@ -712,6 +718,18 @@ private:
                     break;
                 case 0x10: // 0100 nnnn 0001 0000   DT Rn
                     DT((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x11: // 0100 nnnn 0001 0001   CMP/PZ Rn
+                    CMPPZ((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x15: // 0100 nnnn 0001 0101   CMP/PL Rn
+                    CMPPL((instr >> 8u) & 0xF);
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
@@ -760,6 +778,18 @@ private:
             break;
         case 0x6:
             switch (instr & 0xF) {
+            case 0x0: // 0110 nnnn mmmm 0000   MOV.B @Rm, Rn
+                MOVBL((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0x1: // 0110 nnnn mmmm 0001   MOV.W @Rm, Rn
+                MOVWL((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
             case 0x2: // 0110 nnnn mmmm 0010   MOV.L @Rm, Rn
                 MOVLL((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
                 if constexpr (!delaySlot) {
@@ -837,6 +867,24 @@ private:
             break;
         case 0x8:
             switch ((instr >> 8u) & 0xF) {
+            case 0x0: // 1000 0000 nnnn dddd   MOV.B R0, @(disp,Rn)
+                MOVBS4(instr & 0xF, (instr >> 4u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0x1: // 1000 0001 nnnn dddd   MOV.W R0, @(disp,Rn)
+                MOVWS4(instr & 0xF, (instr >> 4u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0x8: // 1000 1000 iiii iiii   CMP/EQ #imm, R0
+                CMPIM(instr & 0xFF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
             case 0x9: // 1000 1001 dddd dddd   BT <label>
                 if constexpr (delaySlot) {
                     // TODO: illegal instruction
@@ -896,7 +944,7 @@ private:
                     PC += 2;
                 }
                 break;
-            case 0x1: // 1100 0000 dddd dddd   MOV.W R0, @(disp,GBR)
+            case 0x1: // 1100 0001 dddd dddd   MOV.W R0, @(disp,GBR)
                 MOVWSG(instr & 0xFF);
                 if constexpr (!delaySlot) {
                     PC += 2;
@@ -910,6 +958,18 @@ private:
                 break;
             case 0x7: // 1100 0111 dddd dddd   MOVA @(disp,PC), R0
                 MOVA(instr & 0xFF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0x8: // 1100 1000 iiii iiii   TST #imm, R0
+                TSTI(instr & 0xFF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0xC: // 1100 1100 iiii iiii   TST.B #imm, @(R0,GBR)
+                TSTM(instr & 0xFF);
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
@@ -1049,6 +1109,22 @@ private:
         SR.T = R[rn] > R[rm];
     }
 
+    void CMPIM(uint16 imm) {
+        sint32 simm = SignExtend<8>(imm);
+        dbg_println("cmp/eq #{}0x{:X}, r0", (simm < 0 ? "-" : ""), abs(simm));
+        SR.T = R[0] == simm;
+    }
+
+    void CMPPL(uint16 rn) {
+        dbg_println("cmp/pl r{}", rn);
+        SR.T = R[rn] > 0;
+    }
+
+    void CMPPZ(uint16 rn) {
+        dbg_println("cmp/pz r{}", rn);
+        SR.T = R[rn] >= 0;
+    }
+
     void DIV0U() {
         dbg_println("div0u");
         SR.M = 0;
@@ -1089,6 +1165,13 @@ private:
         Execute<true>(delaySlot);
     }
 
+    void JSR(uint16 rm) {
+        dbg_println("jsr @r{}", rm);
+        PR = PC;
+        PC = R[rm] + 4;
+        Execute<true>(PR + 2);
+    }
+
     void LDCGBR(uint16 rm) {
         dbg_println("ldc r{}, gbr", rm);
         GBR = R[rm];
@@ -1118,6 +1201,16 @@ private:
         disp = (disp << 2u) + 4;
         dbg_println("mova @(0x{:X},pc), r0", (PC & ~3) + disp);
         R[0] = (PC & ~3) + disp;
+    }
+
+    void MOVBL(uint16 rm, uint16 rn) {
+        dbg_println("mov.b @r{}, r{}", rm, rn);
+        R[rn] = SignExtend<8>(m_bus.ReadByte(R[rm]));
+    }
+
+    void MOVWL(uint16 rm, uint16 rn) {
+        dbg_println("mov.w @r{}, r{}", rm, rn);
+        R[rn] = SignExtend<16>(m_bus.ReadWord(R[rm]));
     }
 
     void MOVLL(uint16 rm, uint16 rn) {
@@ -1169,8 +1262,19 @@ private:
         m_bus.WriteByte(R[rn] + R[0], R[rm]);
     }
 
+    void MOVBS4(uint16 disp, uint16 rn) {
+        dbg_println("mov.b r0, @(0x{:X},r{})", disp, rn);
+        m_bus.WriteByte(R[rn] + disp, R[0]);
+    }
+
+    void MOVWS4(uint16 disp, uint16 rn) {
+        disp <<= 1u;
+        dbg_println("mov.w r0, @(0x{:X},r{})", disp, rn);
+        m_bus.WriteWord(R[rn] + disp, R[0]);
+    }
+
     void MOVLS4(uint16 rm, uint16 disp, uint16 rn) {
-        disp <<= 2;
+        disp <<= 2u;
         dbg_println("mov.l r{}, @(0x{:X},r{})", rm, disp, rn);
         m_bus.WriteLong(R[rn] + disp, R[rm]);
     }
@@ -1181,13 +1285,13 @@ private:
     }
 
     void MOVWSG(uint16 disp) {
-        disp <<= 1;
+        disp <<= 1u;
         dbg_println("mov.w r0, @(0x{:X},gbr)", disp);
         m_bus.WriteWord(GBR + disp, R[0]);
     }
 
     void MOVLSG(uint16 disp) {
-        disp <<= 2;
+        disp <<= 2u;
         dbg_println("mov.l r0, @(0x{:X},gbr)", disp);
         m_bus.WriteLong(GBR + disp, R[0]);
     }
@@ -1199,7 +1303,7 @@ private:
     }
 
     void MOVLI(uint16 disp, uint16 rn) {
-        disp <<= 2;
+        disp <<= 2u;
         dbg_println("mov.l @(0x{:08X},pc), r{}", ((PC + 4) & ~3) + disp, rn);
         R[rn] = m_bus.ReadLong(((PC + 4) & ~3u) + disp);
     }
@@ -1289,6 +1393,17 @@ private:
     void TST(uint16 rm, uint16 rn) {
         dbg_println("tst r{}, r{}", rm, rn);
         SR.T = (R[rn] & R[rm]) == 0;
+    }
+
+    void TSTI(uint16 imm) {
+        dbg_println("tst #0x{:X}, r0", imm);
+        SR.T = (R[0] & imm) == 0;
+    }
+
+    void TSTM(uint16 imm) {
+        dbg_println("tst.b #0x{:X}, @(r0,gbr)", imm);
+        uint8 tmp = m_bus.ReadByte(GBR + R[0]);
+        SR.T = (tmp & imm) == 0;
     }
 
     void XOR(uint16 rm, uint16 rn) {
