@@ -42,10 +42,14 @@ constexpr auto SignExtend(T x) {
 class SH2Bus {
 public:
     SH2Bus() {
+        m_IPL.fill(0);
         Reset(true);
     }
 
-    void Reset(bool hard) {}
+    void Reset(bool hard) {
+        m_WRAMLow.fill(0);
+        m_WRAMHigh.fill(0);
+    }
 
     void LoadIPL(std::span<uint8, kIPLSize> ipl) {
         std::copy(ipl.begin(), ipl.end(), m_IPL.begin());
@@ -55,9 +59,15 @@ public:
         // const uint32 region = address >> 29;
         uint32 address = baseAddress & 0x7FFFFFF;
 
-        if (address <= 0x000FFFFF) {
+        if (baseAddress >= 0xFFFFFE00) {
+            address &= 0x1FF;
+            return OnChipRegReadByte(address);
+        } else if (address <= 0x000FFFFF) {
             address &= 0x7FFFF;
             return m_IPL[address];
+        } else if (address - 0x100000 <= 0x0007FFFF) {
+            address &= 0x7F;
+            return SMPCRead(address);
         } else if (address - 0x200000 <= 0x000FFFFF) {
             address &= 0xFFFFF;
             return m_WRAMLow[address];
@@ -74,7 +84,10 @@ public:
         // const uint32 region = address >> 29;
         uint32 address = baseAddress & 0x7FFFFFE;
 
-        if (address <= 0x000FFFFF) {
+        if (baseAddress >= 0xFFFFFE00) {
+            address &= 0x1FF;
+            return OnChipRegReadWord(address);
+        } else if (address <= 0x000FFFFF) {
             address &= 0x7FFFF;
             return (m_IPL[address + 0] << 8u) | m_IPL[address + 1];
         } else if (address - 0x200000 <= 0x000FFFFF) {
@@ -93,7 +106,10 @@ public:
         // const uint32 region = address >> 29;
         uint32 address = baseAddress & 0x7FFFFFC;
 
-        if (address <= 0x000FFFFF) {
+        if (baseAddress >= 0xFFFFFE00) {
+            address &= 0x1FF;
+            return OnChipRegReadLong(address);
+        } else if (address <= 0x000FFFFF) {
             address &= 0x7FFFF;
             return (m_IPL[address + 0] << 24u) | (m_IPL[address + 1] << 16u) | (m_IPL[address + 2] << 8u) |
                    m_IPL[address + 3];
@@ -113,9 +129,15 @@ public:
 
     void WriteByte(uint32 baseAddress, uint8 value) {
         // const uint32 region = address >> 29;
-        uint32 address = baseAddress & 0x7FFFFFC;
+        uint32 address = baseAddress & 0x7FFFFFF;
 
-        if (address - 0x200000 <= 0x000FFFFF) {
+        if (baseAddress >= 0xFFFFFE00) {
+            address &= 0x1FF;
+            OnChipRegWriteByte(address, value);
+        } else if (address - 0x100000 <= 0x0007FFFF && (address & 1)) {
+            address &= 0x7F;
+            SMPCWrite(address, value);
+        } else if (address - 0x200000 <= 0x000FFFFF) {
             address &= 0xFFFFF;
             m_WRAMLow[address] = value;
         } else if (address - 0x6000000 <= 0x01FFFFFF) {
@@ -128,9 +150,15 @@ public:
 
     void WriteWord(uint32 baseAddress, uint16 value) {
         // const uint32 region = address >> 29;
-        uint32 address = baseAddress & 0x7FFFFFC;
+        uint32 address = baseAddress & 0x7FFFFFE;
 
-        if (address - 0x200000 <= 0x000FFFFF) {
+        if (baseAddress >= 0xFFFFFE00) {
+            address &= 0x1FF;
+            OnChipRegWriteWord(address, value);
+        } else if (address - 0x100000 <= 0x0007FFFF) {
+            address &= 0x7F;
+            SMPCWrite(address | 1, value);
+        } else if (address - 0x200000 <= 0x000FFFFF) {
             address &= 0xFFFFF;
             m_WRAMLow[address + 0] = value >> 8u;
             m_WRAMLow[address + 1] = value >> 0u;
@@ -147,7 +175,10 @@ public:
         // const uint32 region = address >> 29;
         uint32 address = baseAddress & 0x7FFFFFC;
 
-        if (address - 0x200000 <= 0x000FFFFF) {
+        if (baseAddress >= 0xFFFFFE00) {
+            address &= 0x1FF;
+            OnChipRegWriteLong(address, value);
+        } else if (address - 0x200000 <= 0x000FFFFF) {
             address &= 0xFFFFF;
             m_WRAMLow[address + 0] = value >> 24u;
             m_WRAMLow[address + 1] = value >> 16u;
@@ -168,6 +199,193 @@ private:
     std::array<uint8, kIPLSize> m_IPL; // aka BIOS ROM
     std::array<uint8, kWRAMLowSize> m_WRAMLow;
     std::array<uint8, kWRAMHighSize> m_WRAMHigh;
+
+    uint8 SMPCRead(uint32 address) {
+        fmt::println("unhandled SMPC read from {:02X}", address);
+        return 0;
+    }
+
+    void SMPCWrite(uint32 address, uint8 value) {
+        fmt::println("unhandled SMPC write to {:02X} = {:02X}", address, value);
+    }
+
+    uint8 OnChipRegReadByte(uint32 address) {
+        fmt::println("unhandled on-chip register 8-bit read from {:02X}", address);
+        return 0;
+    }
+
+    uint16 OnChipRegReadWord(uint32 address) {
+        fmt::println("unhandled on-chip register 16-bit read from {:02X}", address);
+        return 0;
+    }
+
+    uint32 OnChipRegReadLong(uint32 address) {
+        fmt::println("unhandled on-chip register 32-bit read from {:02X}", address);
+        return 0;
+    }
+
+    void OnChipRegWriteByte(uint32 address, uint8 value) {
+        fmt::println("unhandled on-chip register 8-bit write to {:02X} = {:02X}", address, value);
+    }
+
+    void OnChipRegWriteWord(uint32 address, uint16 value) {
+        fmt::println("unhandled on-chip register 16-bit write to {:02X} = {:04X}", address, value);
+    }
+
+    void OnChipRegWriteLong(uint32 address, uint32 value) {
+        fmt::println("unhandled on-chip register 32-bit write to {:02X} = {:08X}", address, value);
+    }
+
+    // On-chip registers  (from SH7604 manual)
+    //
+    // --- SCI module ---
+    //
+    // addr r/w  access   init  code    name
+    // 000  R/W  8        00    SMR     Serial Mode Register
+    //   b  r/w  code  description
+    //   7  R/W  C/nA  Communication Mode (0=async, 1=clocked sync)
+    //   6  R/W  CHR   Character Length (0=8-bit, 1=7-bit)
+    //   5  R/W  PE    Parity Enable (0=disable, 1=enable)
+    //   4  R/W  O/nE  Parity Mode (0=even, 1=odd)
+    //   3  R/W  STOP  Stop Bit Length (0=one, 1=two)
+    //   2  R/W  MP    Multiprocessor Mode (0=disabled, 1=enabled)
+    //   1  R/W  CKS1  Clock Select bit 1  (00=phi/4,  01=phi/16,
+    //   0  R/W  CKS0  Clock Select bit 0   10=phi/64, 11=phi/256)
+    //
+    // 001  R/W  8        FF    BRR     Bit Rate Register
+    // 002  R/W  8        00    SCR     Serial Control Register
+    // 003  R/W  8        FF    TDR     Transmit Data Register
+    // 004  R/W* 8        84    SSR     Serial Status Register
+    //   * Can only write a 0 to clear the flags
+    //
+    // 005  R    8        00    RDR     Receive Data Register
+    //
+    // --- FRT module ---
+    //
+    // 010  ?    8        ??    TIER    ???
+    // 011  ?    8        ??    FTCSR   ???
+    // 012  ?    8        ??    FRC     ???
+    // 013  ?    16?      ??    OCRA/B  ???
+    // 015  ?    16?      ??    TCR     ???
+    // 017  ?    8        ??    TOCR    ???
+    // 018  ?    16?      ??    FICR    ???
+    //
+    // --- INTC module ---
+    //
+    // 060  ?    16?      ??    IPRB    ???
+    // 062  ?    16?      ??    VCRA    ???
+    // 064  ?    16?      ??    VCRB    ???
+    // 066  ?    16?      ??    VCRC    ???
+    // 068  ?    16?      ??    VCRD    ???
+    //
+    // --- DMAC module ---
+    //
+    // 071  ?    8        ??    DRCR0   ???
+    // 072  ?    8        ??    DRCR1   ???
+    //
+    // --- WDT module ---
+    //
+    // 080  R    8        ??    WTCSR   ???
+    // 081  R    8        ??    WTCNT   ???
+    // 083  R    8        ??    RSTCSR  ???
+    //
+    // 080  W    8        ??    WTCSR   ???
+    // 080  W    8        ??    WTCNT   ???
+    // 082  W    8        ??    RSTCSR  ???
+    //
+    // --- Power-down module ---
+    //
+    // 091  ?    8        ??    SBYCR   ???
+    //
+    // --- Cache module ---
+    //
+    // 092  R/W  8        00    CCR     Cache Control Register
+    //   b  cd  r/w    description
+    //   7  W1  R/W    Way Specification (MSB)
+    //   6  W0  R/W    Way Specification (LSB)
+    //   5  -   R      [reserved]
+    //   4  CP  R/W    Cache Purge (0=normal, 1=purge)
+    //   3  TW  R/W    Two-Way Mode (0=four-way, 1=two-way)
+    //   2  OD  R/W    Data Replacement Disable (0=disabled, 1=data cache not updated on miss)
+    //   1  ID  R/W    Instruction Replacement Disabled (same as above, but for code cache)
+    //   0  CE  R/W    Cache Enable (0=disable, 1=enable)
+    //
+    //   Memory address space is partitioned on bits 31-29:
+    //   31 29  Partition                       Cache operation
+    //    000   Cache area                      Used when CCR.CE=1
+    //    001   Cache-through area              Bypassed
+    //    010   Associative purge area          Purge accessed cache lines (reads return 0x2312)
+    //    011   Address array read/write area   Cache addresses acessed directly (1 KiB, mirrored)
+    //    100   [ same as 110 ]
+    //    101   [ same as 001 ]
+    //    110   Data array read/write area      Cache data acessed directly (4 KiB, mirrored)
+    //    111   I/O area                        Bypassed
+    //
+    // --- INTC module (part 2) ---
+    //
+    // 0E0  ?    16?      ??    ICR     ???
+    // 0E2  ?    16?      ??    IPRA    ???
+    // 0E4  ?    16?      ??    VCRWDT  ???
+    //
+    // --- DIVU module ---
+    //
+    // 100  ?    32?      ??    DVSR    ???
+    // 104  ?    32?      ??    DVDNT   ???
+    // 108  ?    32?      ??    DVCR    ???
+    // 10C  ?    32?      ??    VCRDIV  ???
+    // 110  ?    32?      ??    DVDNTH  ???
+    // 114  ?    32?      ??    DVDNTL  ???
+    //
+    // --- UBC module (channel A) ---
+    //
+    // 140  ?    16?      ??    BARAH   ???
+    // 142  ?    16?      ??    BARAL   ???
+    // 144  ?    16?      ??    BAMRAH  ???
+    // 146  ?    16?      ??    BAMRAL  ???
+    // 148  ?    16?      ??    BBRA    ???
+    //
+    // --- UBC module (channel B) ---
+    //
+    // 160  ?    16?      ??    BARBH   ???
+    // 162  ?    16?      ??    BARBL   ???
+    // 164  ?    16?      ??    BAMRBH  ???
+    // 166  ?    16?      ??    BAMRBL  ???
+    // 168  ?    16?      ??    BBRB    ???
+    // 170  ?    16?      ??    BDRBH   ???
+    // 172  ?    16?      ??    BDRBL   ???
+    // 174  ?    16?      ??    BDMRBH  ???
+    // 176  ?    16?      ??    BDMRBL  ???
+    // 178  ?    16?      ??    BRCR    ???
+    //
+    // --- DMAC module (channel 0) ---
+    //
+    // 180  ?    32?      ??    SAR0    ???
+    // 184  ?    32?      ??    DAR0    ???
+    // 188  ?    32?      ??    TCR0    ???
+    // 18C  ?    32?      ??    CHCR0   ???
+    // 1A0  ?    32?      ??    VCRDMA0 ???
+    //
+    // --- DMAC module (channel 1) ---
+    //
+    // 190  ?    32?      ??    SAR1    ???
+    // 194  ?    32?      ??    DAR1    ???
+    // 198  ?    32?      ??    TCR1    ???
+    // 19C  ?    32?      ??    CHCR1   ???
+    // 1A8  ?    32?      ??    VCRDMA1 ???
+    //
+    // --- DMAC module (both channels) ---
+    //
+    // 1B0  ?    32?      ??    DMAOR   ???
+    //
+    // --- BSC module ---
+    //
+    // 1E0  R/W  16,32    03F0  BCR1    Bus Control Register 1
+    // 1E4  R/W  16,32    00FC  BCR2    Bus Control Register 2
+    // 1E8  R/W  16,32    AAFF  WCR     Wait Control Register
+    // 1EC  R/W  16,32    0000  MCR     Individual Memory Control Register
+    // 1F0  R/W  16,32    0000  RTCSR   Refresh Timer Control/Status Register
+    // 1F4  R/W  16,32    0000  RTCNT   Refresh Timer Counter
+    // 1F8  R/W  16,32    0000  RTCOR   Refresh Timer Constant Register
 };
 
 class SH2 {
