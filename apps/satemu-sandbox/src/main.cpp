@@ -42,6 +42,64 @@ constexpr auto SignExtend(T x) {
     return s.x;
 }
 
+// SH-2 memory map
+// https://wiki.yabause.org/index.php5?title=SH-2CPU
+// 
+// Address range            Size              Description
+// 0x00000000..0x000FFFFF   0x80000           Boot ROM / IPL
+// 0x00100000..0x0017FFFF   0x80              SMPC registers
+// 0x00180000..0x001FFFFF   0x10000           Backup RAM
+// 0x00200000..0x002FFFFF   0x100000          Work RAM Low
+// 0x00300000..0x003FFFFF   -                 Open bus? (reads random data, mostly 0x00)
+// 0x00400000..0x007FFFFF   -                 Reads 0x0000
+// 0x00800000..0x00FFFFFF   -                 Reads 0x0000 0x0001 0x0002 0x0003 0x0004 0x0005 0x0006 0x0007
+// 0x01000000..0x017FFFFF   -                 Reads 0xFFFF; writes go to slave SH-2 FRT  (MINIT area)
+// 0x01800000..0x01FFFFFF   -                 Reads 0xFFFF; writes go to master SH-2 FRT (SINIT area)
+// 0x02000000..0x03FFFFFF   -                 A-Bus CS0
+// 0x04000000..0x04FFFFFF   -                 A-Bus CS1
+// 0x05000000..0x057FFFFF   -                 A-Bus Dummy
+// 0x05800000..0x058FFFFF   -                 A-Bus CS2 (includes CD-ROM registers)
+// 0x05900000..0x059FFFFF   -                 Lockup when read
+// 0x05A00000..0x05AFFFFF   0x40000/0x80000   68000 Work RAM
+// 0x05B00000..0x05BFFFFF   0x1000            SCSP registers
+// 0x05C00000..0x05C7FFFF   0x80000           VDP1 VRAM
+// 0x05C80000..0x05CFFFFF   0x40000           VDP1 Framebuffer (backbuffer only)
+// 0x05D00000..0x05D7FFFF   0x18 (no mirror)  VDP1 Registers
+// 0x05D80000..0x05DFFFFF   -                 Lockup when read
+// 0x05E00000..0x05EFFFFF   0x80000           VDP2 VRAM
+// 0x05F00000..0x05F7FFFF   0x1000            VDP2 CRAM
+// 0x05F80000..0x05FBFFFF   0x200             VDP2 registers
+// 0x05FC0000..0x05FDFFFF   -                 Reads 0x000E0000
+// 0x05FE0000..0x05FEFFFF   0x100             SCU registers
+// 0x05FF0000..0x05FFFFFF   0x100             Unknown registers
+// 0x06000000..0x07FFFFFF   0x100000          Work RAM High
+//
+// Notes
+// - Unless otherwise specified, all regions are mirrored across the designated area
+// - Backup RAM
+//   - Only odd bytes mapped
+//   - Reads from even bytes return 0xFF
+//   - Writes to even bytes map to correspoding odd byte
+// - 68000 Work RAM
+//   - Area size depends on MEM4MB bit setting:
+//       0=only first 256 KiB are used/mirrored
+//       1=all 512 KiB are used/mirrored
+// - VDP2 CRAM
+//   - Byte writes write garbage to the odd/even byte counterpart
+//   - Byte reads work normally
+//
+// Address bits 26..0 map to the table above for memory partitions 000, 001 and 101
+// Address bits 28..27 are not used
+// Address bits 31..29 map to special memory regions as described in the SH7604 manual:
+//    Bits  Partition                       Cache operation
+//    000   Cache area                      Cache used when CCR.CE=1
+//    001   Cache-through area              Cache bypassed
+//    010   Associative purge area          Purge accessed cache lines (reads return 0x2312)
+//    011   Address array read/write area   Cache addresses acessed directly (1 KiB, mirrored)
+//    100   [ same as 110 ]
+//    101   [ same as 001 ]
+//    110   Data array read/write area      Cache data acessed directly (4 KiB, mirrored)
+//    111   I/O area (on-chip registers)    Cache bypassed
 class SH2Bus {
 public:
     SH2Bus() {
@@ -312,17 +370,6 @@ private:
     //   2  OD  R/W    Data Replacement Disable (0=disabled, 1=data cache not updated on miss)
     //   1  ID  R/W    Instruction Replacement Disabled (same as above, but for code cache)
     //   0  CE  R/W    Cache Enable (0=disable, 1=enable)
-    //
-    //   Memory address space is partitioned on bits 31-29:
-    //   31 29  Partition                       Cache operation
-    //    000   Cache area                      Used when CCR.CE=1
-    //    001   Cache-through area              Bypassed
-    //    010   Associative purge area          Purge accessed cache lines (reads return 0x2312)
-    //    011   Address array read/write area   Cache addresses acessed directly (1 KiB, mirrored)
-    //    100   [ same as 110 ]
-    //    101   [ same as 001 ]
-    //    110   Data array read/write area      Cache data acessed directly (4 KiB, mirrored)
-    //    111   I/O area                        Bypassed
     //
     // --- INTC module (part 2) ---
     //
