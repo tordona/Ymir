@@ -3,6 +3,7 @@
 #include <fmt/format.h>
 
 #include <array>
+#include <bit>
 #include <concepts>
 #include <cstdint>
 #include <filesystem>
@@ -11,6 +12,8 @@
 #include <span>
 #include <string_view>
 #include <vector>
+
+static_assert(std::endian::native == std::endian::little, "big-endian platforms are not supported at this moment");
 
 using uint8 = uint8_t;
 using uint16 = uint16_t;
@@ -476,7 +479,7 @@ private:
     SH2Bus &m_bus;
 
     uint64 dbg_count = 0;
-    static constexpr uint64 dbg_minCount = 2101795;
+    static constexpr uint64 dbg_minCount = 2117175;
 
     template <typename... T>
     void dbg_print(fmt::format_string<T...> fmt, T &&...args) {
@@ -501,19 +504,19 @@ private:
         switch (instr >> 12u) {
         case 0x0:
             switch (instr) {
-            case 0x0008:
+            case 0x0008: // 0000 0000 0000 1000   CLRT
                 CLRT();
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
-            case 0x0009:
+            case 0x0009: // 0000 0000 0000 1001   NOP
                 NOP();
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
-            case 0x000B:
+            case 0x000B: // 0000 0000 0000 1011   RTS
                 if constexpr (delaySlot) {
                     // TODO: illegal instruction
                     dbg_println("illegal delay slot instruction");
@@ -521,31 +524,31 @@ private:
                     RTS();
                 }
                 break;
-            case 0x0018:
+            case 0x0018: // 0000 0000 0001 1000   SETT
                 SETT();
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
-            case 0x0019:
+            case 0x0019: // 0000 0000 0001 1001   DIV0U
                 DIV0U();
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
-            case 0x001B:
+            case 0x001B: // 0000 0000 0001 1011   SLEEP
                 SLEEP();
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
-            case 0x0028:
+            case 0x0028: // 0000 0000 0010 1000   CLRMAC
                 CLRMAC();
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
-            case 0x002B:
+            case 0x002B: // 0000 0000 0010 1011   RTE
                 if constexpr (delaySlot) {
                     // TODO: illegal instruction
                     dbg_println("illegal delay slot instruction");
@@ -554,60 +557,76 @@ private:
                 }
                 break;
             default:
-                switch (instr & 0xF) {
-                case 0x3:
-                    switch ((instr >> 4u) & 0xF) {
-                    case 0x0: // 0000 mmmm 0000 0011   BSRF Rm
-                        if constexpr (delaySlot) {
-                            // TODO: illegal instruction
-                            dbg_println("illegal delay slot instruction");
-                        } else {
-                            BSRF((instr >> 8u) & 0xF);
-                        }
-                        break;
-                    case 0x2: // 0000 mmmm 0010 0011   BRAF Rm
-                        if constexpr (delaySlot) {
-                            // TODO: illegal instruction
-                            dbg_println("illegal delay slot instruction");
-                        } else {
-                            BRAF((instr >> 8u) & 0xF);
-                        }
-                        break;
-                    default: dbg_println("illegal instruction?"); break;
-                    }
-                    break;
-                case 0x4: // 0000 nnnn mmmm 0100   MOV.B Rm, @(R0,Rn)
-                    MOVBS0((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                switch (instr & 0xFF) {
+                case 0x02: // 0000 nnnn 0000 0010   STC SR, Rn
+                    STCSR((instr >> 8u) & 0xF);
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
-                case 0xA: {
-                    const uint16 rn = (instr >> 8u) & 0xF;
-                    switch ((instr >> 4u) & 0xF) {
-                    case 0x0:
-                        STSMACH(rn);
-                        if constexpr (!delaySlot) {
-                            PC += 2;
-                        }
-                        break;
-                    case 0x1:
-                        STSMACL(rn);
-                        if constexpr (!delaySlot) {
-                            PC += 2;
-                        }
-                        break;
-                    case 0x2:
-                        STSPR(rn);
-                        if constexpr (!delaySlot) {
-                            PC += 2;
-                        }
-                        break;
-                    default: dbg_println("illegal instruction?"); break;
+                case 0x03: // 0000 mmmm 0000 0011   BSRF Rm
+                    if constexpr (delaySlot) {
+                        // TODO: illegal instruction
+                        dbg_println("illegal delay slot instruction");
+                    } else {
+                        BSRF((instr >> 8u) & 0xF);
                     }
                     break;
-                }
-                default: dbg_println("unhandled 0000 instruction"); break;
+                case 0x0A: // 0000 nnnn 0000 1010   STS MACH, Rn
+                    STSMACH((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x1A: // 0000 nnnn 0001 1010   STS MACL, Rn
+                    STSMACL((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x12: // 0000 nnnn 0001 0010   STC GBR, Rn
+                    STCGBR((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x22: // 0000 nnnn 0010 0010   STC VBR, Rn
+                    STCVBR((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x23: // 0000 mmmm 0010 0011   BRAF Rm
+                    if constexpr (delaySlot) {
+                        // TODO: illegal instruction
+                        dbg_println("illegal delay slot instruction");
+                    } else {
+                        BRAF((instr >> 8u) & 0xF);
+                    }
+                    break;
+                case 0x29: // 0000 nnnn 0010 1001   MOVT Rn
+                    MOVT((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x2A: // 0000 nnnn 0010 1010   STS PR, Rn
+                    STSPR((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                default:
+                    switch (instr & 0xF) {
+                    case 0x4: // 0000 nnnn mmmm 0100   MOV.B Rm, @(R0,Rn)
+                        MOVBS0((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                        if constexpr (!delaySlot) {
+                            PC += 2;
+                        }
+                        break;
+                    default: dbg_println("unhandled 0000 instruction"); break;
+                    }
+                    break;
                 }
                 break;
             }
@@ -640,6 +659,30 @@ private:
                     PC += 2;
                 }
                 break;
+            case 0x4: // 0010 nnnn mmmm 0100   MOV.B Rm, @-Rn
+                MOVBM(rm, rn);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0x5: // 0010 nnnn mmmm 0101   MOV.W Rm, @-Rn
+                MOVWM(rm, rn);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0x6: // 0010 nnnn mmmm 0110   MOV.L Rm, @-Rn
+                MOVLM(rm, rn);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0x7: // 0010 nnnn mmmm 0110   DIV0S Rm, Rn
+                DIV0S(rm, rn);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
             case 0x8: // 0010 nnnn mmmm 1000   TST Rm, Rn
                 TST(rm, rn);
                 if constexpr (!delaySlot) {
@@ -658,6 +701,18 @@ private:
                     PC += 2;
                 }
                 break;
+            case 0xB: // 0010 nnnn mmmm 1011   OR Rm, Rn
+                OR(rm, rn);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0xC: // 0010 nnnn mmmm 1100   CMP/STR Rm, Rn
+                CMPSTR(rm, rn);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
             default: dbg_println("unhandled 0010 instruction"); break;
             }
             break;
@@ -670,14 +725,50 @@ private:
                     PC += 2;
                 }
                 break;
+            case 0x2: // 0011 nnnn mmmm 0010   CMP/HS Rm, Rn
+                CMPHS((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0x3: // 0011 nnnn mmmm 0011   CMP/GE Rm, Rn
+                CMPGE((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
             case 0x6: // 0011 nnnn mmmm 0110   CMP/HI Rm, Rn
                 CMPHI((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
-            case 0xC: // 0011 nnnn mmm 1100   ADD Rm, Rn
+            case 0x7: // 0011 nnnn mmmm 0111   CMP/GT Rm, Rn
+                CMPGT((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0x8: // 0011 nnnn mmmm 1100   SUB Rm, Rn
+                SUB((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0xC: // 0011 nnnn mmmm 1100   ADD Rm, Rn
                 ADD((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0xE: // 0011 nnnn mmmm 1110   ADDC Rm, Rn
+                ADDC((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0xF: // 0011 nnnn mmmm 1110   ADDV Rm, Rn
+                ADDV((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
@@ -698,16 +789,60 @@ private:
                         PC += 2;
                     }
                     break;
+                case 0x01: // 0100 nnnn 0000 0001   SHLR Rn
+                    SHLR((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x02: // 0100 nnnn 0000 0010   STS.L MACH, @-Rn
+                    STSMMACH((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x04: // 0100 nnnn 0000 0100   ROTL Rn
+                    ROTL((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x05: // 0100 nnnn 0000 0101   ROTR Rn
+                    ROTR((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x06: // 0100 mmmm 0000 0110   LDS.L @Rm+, MACH
+                    LDSMMACH((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
                 case 0x08: // 0100 nnnn 0000 1000   SHLL2 Rn
                     SHLL2((instr >> 8u) & 0xF);
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
-                case 0x0B: // 0110 mmmm 0000 1110   JSR @Rm
-                    JSR((instr >> 8u) & 0xF);
+                case 0x09: // 0100 nnnn 0000 1001   SHLR2 Rn
+                    SHLR2((instr >> 8u) & 0xF);
                     if constexpr (!delaySlot) {
                         PC += 2;
+                    }
+                    break;
+                case 0x0A: // 0100 mmmm 0000 1010   LDS Rm, MACH
+                    LDSMACH((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x0B: // 0110 mmmm 0000 1110   JSR @Rm
+                    if constexpr (delaySlot) {
+                        // TODO: illegal instruction
+                        dbg_println("illegal delay slot instruction");
+                    } else {
+                        JSR((instr >> 8u) & 0xF);
                     }
                     break;
                 case 0x0E: // 0110 mmmm 0000 1110   LDC Rm, SR
@@ -728,8 +863,20 @@ private:
                         PC += 2;
                     }
                     break;
+                case 0x12: // 0100 nnnn 0001 0010   STS.L MACL, @-Rn
+                    STSMMACL((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
                 case 0x15: // 0100 nnnn 0001 0101   CMP/PL Rn
                     CMPPL((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x16: // 0100 mmmm 0001 0110   LDS.L @Rm+, MACL
+                    LDSMMACL((instr >> 8u) & 0xF);
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
@@ -740,14 +887,68 @@ private:
                         PC += 2;
                     }
                     break;
+                case 0x19: // 0100 nnnn 0001 1001   SHLR8 Rn
+                    SHLR8((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x1A: // 0100 mmmm 0001 1010   LDS Rm, MACL
+                    LDSMACL((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
                 case 0x1E: // 0110 mmmm 0001 1110   LDC Rm, GBR
                     LDCGBR((instr >> 8u) & 0xF);
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
+                case 0x20: // 0100 nnnn 0010 0000   SHAL Rn
+                    SHAL((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x21: // 0100 nnnn 0010 0001   SHAR Rn
+                    SHAR((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x22: // 0100 nnnn 0010 0010   STS.L PR, @-Rn
+                    STSMPR((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x24: // 0100 nnnn 0010 0100   ROTCL Rn
+                    ROTCL((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x25: // 0100 nnnn 0010 0101   ROTCR Rn
+                    ROTCR((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x26: // 0100 mmmm 0010 0110   LDS.L @Rm+, PR
+                    LDSMPR((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
                 case 0x28: // 0100 nnnn 0010 1000   SHLL16 Rn
                     SHLL16((instr >> 8u) & 0xF);
+                    if constexpr (!delaySlot) {
+                        PC += 2;
+                    }
+                    break;
+                case 0x29: // 0100 nnnn 0010 1001   SHLR16 Rn
+                    SHLR16((instr >> 8u) & 0xF);
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
@@ -774,6 +975,12 @@ private:
                     break;
                 default: dbg_println("unhandled 0100 instruction"); break;
                 }
+            }
+            break;
+        case 0x5: // 0101 nnnn mmmm dddd   MOV.L @(disp,Rm), Rn
+            MOVLL4((instr >> 4) & 0xF, instr & 0xF, (instr >> 8) & 0xF);
+            if constexpr (!delaySlot) {
+                PC += 2;
             }
             break;
         case 0x6:
@@ -879,6 +1086,18 @@ private:
                     PC += 2;
                 }
                 break;
+            case 0x4: // 1000 0100 mmmm dddd   MOV.B @(disp,Rm), R0
+                MOVBL4(instr & 0xF, (instr >> 4u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0x5: // 1000 0101 mmmm dddd   MOV.W @(disp,Rm), R0
+                MOVWL4(instr & 0xF, (instr >> 4u) & 0xF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
             case 0x8: // 1000 1000 iiii iiii   CMP/EQ #imm, R0
                 CMPIM(instr & 0xFF);
                 if constexpr (!delaySlot) {
@@ -918,6 +1137,12 @@ private:
                 }
                 break;
             default: dbg_println("unhandled 1000 instruction"); break;
+            }
+            break;
+        case 0x9: // 1001 nnnn dddd dddd   MOV.W @(disp,PC), Rn
+            MOVWI(instr & 0xFF, (instr >> 8) & 0xF);
+            if constexpr (!delaySlot) {
+                PC += 2;
             }
             break;
         case 0xA: // 1011 dddd dddd dddd   BRA <label>
@@ -968,8 +1193,32 @@ private:
                     PC += 2;
                 }
                 break;
+            case 0x9: // 1100 1001 iiii iiii   AND #imm, R0
+                ANDI(instr & 0xFF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0xA: // 1100 1010 iiii iiii   XOR #imm, R0
+                XORI(instr & 0xFF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0xB: // 1100 1011 iiii iiii   OR #imm, R0
+                ORI(instr & 0xFF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
             case 0xC: // 1100 1100 iiii iiii   TST.B #imm, @(R0,GBR)
                 TSTM(instr & 0xFF);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0xD: // 1100 1001 iiii iiii   AND #imm, @(R0,GBR)
+                ANDM(instr & 0xFF);
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
@@ -1004,9 +1253,42 @@ private:
         R[rn] += simm;
     }
 
+    void ADDC(uint16 rm, uint16 rn) {
+        dbg_println("addc r{}, r{}", rm, rn);
+        uint32 tmp1 = R[rn] + R[rm];
+        uint32 tmp0 = R[rn];
+        R[rn] = tmp1 + SR.T;
+        SR.T = (tmp0 > tmp1) || (tmp1 > R[rn]);
+    }
+
+    void ADDV(uint16 rm, uint16 rn) {
+        dbg_println("addv r{}, r{}", rm, rn);
+
+        bool dst = static_cast<sint32>(R[rn]) < 0;
+        bool src = static_cast<sint32>(R[rm]) < 0;
+
+        R[rn] += R[rm];
+
+        bool ans = static_cast<sint32>(R[rn]) < 0;
+        ans ^= dst;
+        SR.T = (src == dst) & ans;
+    }
+
     void AND(uint16 rm, uint16 rn) {
         dbg_println("and r{}, r{}", rm, rn);
         R[rn] &= R[rm];
+    }
+
+    void ANDI(uint16 imm) {
+        dbg_println("and #0x{:X}, r0", imm);
+        R[0] &= imm;
+    }
+
+    void ANDM(uint16 imm) {
+        dbg_println("and.b #0x{:X}, @(r0,gbr)", imm);
+        uint8 tmp = m_bus.ReadByte(GBR + R[0]);
+        tmp &= imm;
+        m_bus.WriteByte(GBR + R[0], tmp);
     }
 
     void BF(uint16 disp) {
@@ -1089,14 +1371,14 @@ private:
         }
     }
 
-    void CLRT() {
-        dbg_println("clrt");
-        SR.T = 0;
-    }
-
     void CLRMAC() {
         dbg_println("clrmac");
         MAC.u64 = 0;
+    }
+
+    void CLRT() {
+        dbg_println("clrt");
+        SR.T = 0;
     }
 
     void CMPEQ(uint16 rm, uint16 rn) {
@@ -1104,9 +1386,24 @@ private:
         SR.T = R[rn] == R[rm];
     }
 
+    void CMPGE(uint16 rm, uint16 rn) {
+        dbg_println("cmp/ge r{}, r{}", rm, rn);
+        SR.T = static_cast<sint16>(R[rn]) >= static_cast<sint16>(R[rm]);
+    }
+
+    void CMPGT(uint16 rm, uint16 rn) {
+        dbg_println("cmp/gt r{}, r{}", rm, rn);
+        SR.T = static_cast<sint16>(R[rn]) > static_cast<sint16>(R[rm]);
+    }
+
     void CMPHI(uint16 rm, uint16 rn) {
         dbg_println("cmp/hi r{}, r{}", rm, rn);
         SR.T = R[rn] > R[rm];
+    }
+
+    void CMPHS(uint16 rm, uint16 rn) {
+        dbg_println("cmp/hs r{}, r{}", rm, rn);
+        SR.T = R[rn] >= R[rm];
     }
 
     void CMPIM(uint16 imm) {
@@ -1123,6 +1420,23 @@ private:
     void CMPPZ(uint16 rn) {
         dbg_println("cmp/pz r{}", rn);
         SR.T = R[rn] >= 0;
+    }
+
+    void CMPSTR(uint16 rm, uint16 rn) {
+        dbg_println("cmp/str r{}, r{}", rm, rn);
+        uint16 tmp = R[rm] & R[rn];
+        uint8 hh = tmp >> 12u;
+        uint8 hl = tmp >> 8u;
+        uint8 lh = tmp >> 4u;
+        uint8 ll = tmp >> 0u;
+        SR.T = !(hh && hl && lh && ll);
+    }
+
+    void DIV0S(uint16 rm, uint16 rn) {
+        dbg_println("div0s r{}, r{}", rm, rn);
+        SR.M = static_cast<sint16>(R[rm]) < 0;
+        SR.Q = static_cast<sint16>(R[rn]) < 0;
+        SR.T = SR.M != SR.Q;
     }
 
     void DIV0U() {
@@ -1168,7 +1482,7 @@ private:
     void JSR(uint16 rm) {
         dbg_println("jsr @r{}", rm);
         PR = PC;
-        PC = R[rm] + 4;
+        PC = R[rm];
         Execute<true>(PR + 2);
     }
 
@@ -1187,9 +1501,37 @@ private:
         VBR = R[rm];
     }
 
+    void LDSMACH(uint16 rm) {
+        dbg_println("lds r{}, mach", rm);
+        MAC.H = R[rm];
+    }
+
+    void LDSMACL(uint16 rm) {
+        dbg_println("lds r{}, macl", rm);
+        MAC.L = R[rm];
+    }
+
     void LDSPR(uint16 rm) {
         dbg_println("lds r{}, pr", rm);
         PR = R[rm];
+    }
+
+    void LDSMMACH(uint16 rm) {
+        dbg_println("lds.l @r{}+, mach", rm);
+        MAC.H = m_bus.ReadLong(R[rm]);
+        R[rm] += 4;
+    }
+
+    void LDSMMACL(uint16 rm) {
+        dbg_println("lds.l @r{}+, macl", rm);
+        MAC.L = m_bus.ReadLong(R[rm]);
+        R[rm] += 4;
+    }
+
+    void LDSMPR(uint16 rm) {
+        dbg_println("lds.l @r{}+, pr", rm);
+        PR = m_bus.ReadLong(R[rm]);
+        R[rm] += 4;
     }
 
     void MOV(uint16 rm, uint16 rn) {
@@ -1216,6 +1558,41 @@ private:
     void MOVLL(uint16 rm, uint16 rn) {
         dbg_println("mov.l @r{}, r{}", rm, rn);
         R[rn] = m_bus.ReadLong(R[rm]);
+    }
+
+    void MOVBL4(uint16 rm, uint16 disp) {
+        dbg_println("mov.b @(0x{:X},r{}), r0", disp, rm);
+        R[0] = SignExtend<8>(m_bus.ReadByte(R[rm] + disp));
+    }
+
+    void MOVWL4(uint16 rm, uint16 disp) {
+        disp <<= 1u;
+        dbg_println("mov.w @(0x{:X},r{}), r0", disp, rm);
+        R[0] = SignExtend<16>(m_bus.ReadWord(R[rm] + disp));
+    }
+
+    void MOVLL4(uint16 rm, uint16 disp, uint16 rn) {
+        disp <<= 2u;
+        dbg_println("mov.l @(0x{:X},r{}), r{}", disp, rm, rn);
+        R[rn] = m_bus.ReadLong(R[rm] + disp);
+    }
+
+    void MOVBM(uint16 rm, uint16 rn) {
+        dbg_println("mov.b r{}, @-r{}", rm, rn);
+        m_bus.WriteByte(R[rn] - 1, R[rm]);
+        R[rn] -= 1;
+    }
+
+    void MOVWM(uint16 rm, uint16 rn) {
+        dbg_println("mov.w r{}, @-r{}", rm, rn);
+        m_bus.WriteWord(R[rn] - 2, R[rm]);
+        R[rn] -= 2;
+    }
+
+    void MOVLM(uint16 rm, uint16 rn) {
+        dbg_println("mov.l r{}, @-r{}", rm, rn);
+        m_bus.WriteByte(R[rn] - 4, R[rm]);
+        R[rn] -= 4;
     }
 
     void MOVBP(uint16 rm, uint16 rn) {
@@ -1302,14 +1679,61 @@ private:
         R[rn] = simm;
     }
 
+    void MOVWI(uint16 disp, uint16 rn) {
+        disp <<= 1u;
+        dbg_println("mov.w @(0x{:08X},pc), r{}", PC + 4 + disp, rn);
+        R[rn] = SignExtend<16>(m_bus.ReadWord(PC + 4 + disp));
+    }
+
     void MOVLI(uint16 disp, uint16 rn) {
         disp <<= 2u;
         dbg_println("mov.l @(0x{:08X},pc), r{}", ((PC + 4) & ~3) + disp, rn);
         R[rn] = m_bus.ReadLong(((PC + 4) & ~3u) + disp);
     }
 
+    void MOVT(uint16 rn) {
+        dbg_println("movt r{}", rn);
+        R[rn] = SR.T;
+    }
+
     void NOP() {
         dbg_println("nop");
+    }
+
+    void OR(uint16 rm, uint16 rn) {
+        dbg_println("or r{}, r{}", rm, rn);
+        R[rn] |= R[rm];
+    }
+
+    void ORI(uint16 imm) {
+        dbg_println("or #0x{:X}, r0", imm);
+        R[0] |= imm;
+    }
+
+    void ROTCL(uint16 rn) {
+        dbg_println("rotcl r{}", rn);
+        uint16 tmp = R[rn] >> 31u;
+        R[rn] = (R[rn] << 1u) | SR.T;
+        SR.T = tmp;
+    }
+
+    void ROTCR(uint16 rn) {
+        dbg_println("rotcr r{}", rn);
+        uint16 tmp = R[rn] & 1u;
+        R[rn] = (R[rn] >> 1u) | (SR.T << 31u);
+        SR.T = tmp;
+    }
+
+    void ROTL(uint16 rn) {
+        dbg_println("rotl r{}", rn);
+        SR.T = R[rn] >> 31u;
+        R[rn] = (R[rn] << 1u) | SR.T;
+    }
+
+    void ROTR(uint16 rn) {
+        dbg_println("rotr r{}", rn);
+        SR.T = R[rn] & 1u;
+        R[rn] = (R[rn] >> 1u) | (SR.T << 31u);
     }
 
     void RTE() {
@@ -1334,6 +1758,18 @@ private:
         SR.T = 1;
     }
 
+    void SHAL(uint16 rn) {
+        dbg_println("shal r{}", rn);
+        SR.T = R[rn] >> 31u;
+        R[rn] <<= 1u;
+    }
+
+    void SHAR(uint16 rn) {
+        dbg_println("shar r{}", rn);
+        SR.T = R[rn] & 1u;
+        R[rn] = static_cast<sint32>(R[rn]) >> 1;
+    }
+
     void SHLL(uint16 rn) {
         dbg_println("shll r{}", rn);
         SR.T = R[rn] >> 31u;
@@ -1355,9 +1791,45 @@ private:
         R[rn] <<= 16u;
     }
 
+    void SHLR(uint16 rn) {
+        dbg_println("shlr r{}", rn);
+        SR.T = R[rn] & 1u;
+        R[rn] >>= 1u;
+    }
+
+    void SHLR2(uint16 rn) {
+        dbg_println("shlr2 r{}", rn);
+        R[rn] >>= 2u;
+    }
+
+    void SHLR8(uint16 rn) {
+        dbg_println("shlr8 r{}", rn);
+        R[rn] >>= 8u;
+    }
+
+    void SHLR16(uint16 rn) {
+        dbg_println("shlr16 r{}", rn);
+        R[rn] >>= 16u;
+    }
+
     void SLEEP() {
         PC -= 2;
         // TODO: wait for exception
+    }
+
+    void STCSR(uint16 rn) {
+        dbg_println("stc sr, r{}", rn);
+        R[rn] = SR.u32;
+    }
+
+    void STCGBR(uint16 rn) {
+        dbg_println("stc gbr, r{}", rn);
+        R[rn] = GBR;
+    }
+
+    void STCVBR(uint16 rn) {
+        dbg_println("stc vbr, r{}", rn);
+        R[rn] = VBR;
     }
 
     void STSMACH(uint16 rn) {
@@ -1373,6 +1845,29 @@ private:
     void STSPR(uint16 rn) {
         dbg_println("sts pr, r{}", rn);
         R[rn] = PR;
+    }
+
+    void STSMMACH(uint16 rn) {
+        dbg_println("sts mach, @-r{}", rn);
+        R[rn] -= 4;
+        m_bus.WriteLong(R[rn], MAC.H);
+    }
+
+    void STSMMACL(uint16 rn) {
+        dbg_println("sts macl, @-r{}", rn);
+        R[rn] -= 4;
+        m_bus.WriteLong(R[rn], MAC.L);
+    }
+
+    void STSMPR(uint16 rn) {
+        dbg_println("sts pr, @-r{}", rn);
+        R[rn] -= 4;
+        m_bus.WriteLong(R[rn], PR);
+    }
+
+    void SUB(uint16 rm, uint16 rn) {
+        dbg_println("sub r{}, r{}", rm, rn);
+        R[rn] -= R[rm];
     }
 
     void SWAPB(uint16 rm, uint16 rn) {
@@ -1409,6 +1904,11 @@ private:
     void XOR(uint16 rm, uint16 rn) {
         dbg_println("xor r{}, r{}", rm, rn);
         R[rn] ^= R[rm];
+    }
+
+    void XORI(uint16 imm) {
+        dbg_println("xor #0x{:X}, r0", imm);
+        R[0] ^= imm;
     }
 };
 
