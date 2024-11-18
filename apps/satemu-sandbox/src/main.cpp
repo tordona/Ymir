@@ -15,6 +15,18 @@
 
 static_assert(std::endian::native == std::endian::little, "big-endian platforms are not supported at this moment");
 
+namespace util {
+
+[[noreturn]] inline void unreachable() {
+#if defined(__clang__) || defined(__GNUC__) || defined(__GNUG__)
+    __builtin_unreachable();
+#elif defined(_MSC_VER)
+    __assume(0);
+#endif
+}
+
+} // namespace util
+
 using uint8 = uint8_t;
 using uint16 = uint16_t;
 using uint32 = uint32_t;
@@ -42,10 +54,13 @@ constexpr auto SignExtend(T x) {
     return s.x;
 }
 
+template <typename T>
+concept mem_access_type = std::same_as<T, uint8> || std::same_as<T, uint16> || std::same_as<T, uint32>;
+
 // SH-2 memory map
 // https://wiki.yabause.org/index.php5?title=SH-2CPU
-// 
-// Address range            Size              Description
+//
+// Address range            Mirror size       Description
 // 0x00000000..0x000FFFFF   0x80000           Boot ROM / IPL
 // 0x00100000..0x0017FFFF   0x80              SMPC registers
 // 0x00180000..0x001FFFFF   0x10000           Backup RAM
@@ -87,19 +102,6 @@ constexpr auto SignExtend(T x) {
 // - VDP2 CRAM
 //   - Byte writes write garbage to the odd/even byte counterpart
 //   - Byte reads work normally
-//
-// Address bits 26..0 map to the table above for memory partitions 000, 001 and 101
-// Address bits 28..27 are not used
-// Address bits 31..29 map to special memory regions as described in the SH7604 manual:
-//    Bits  Partition                       Cache operation
-//    000   Cache area                      Cache used when CCR.CE=1
-//    001   Cache-through area              Cache bypassed
-//    010   Associative purge area          Purge accessed cache lines (reads return 0x2312)
-//    011   Address array read/write area   Cache addresses acessed directly (1 KiB, mirrored)
-//    100   [ same as 110 ]
-//    101   [ same as 001 ]
-//    110   Data array read/write area      Cache data acessed directly (4 KiB, mirrored)
-//    111   I/O area (on-chip registers)    Cache bypassed
 class SH2Bus {
 public:
     SH2Bus() {
@@ -116,14 +118,32 @@ public:
         std::copy(ipl.begin(), ipl.end(), m_IPL.begin());
     }
 
+    template <mem_access_type T>
+    T Read(uint32 address) {
+        if constexpr (std::is_same_v<T, uint8>) {
+            return ReadByte(address);
+        } else if constexpr (std::is_same_v<T, uint16>) {
+            return ReadWord(address);
+        } else if constexpr (std::is_same_v<T, uint32>) {
+            return ReadLong(address);
+        }
+    }
+
+    template <mem_access_type T>
+    void Write(uint32 address, T value) {
+        if constexpr (std::is_same_v<T, uint8>) {
+            WriteByte(address, value);
+        } else if constexpr (std::is_same_v<T, uint16>) {
+            WriteWord(address, value);
+        } else if constexpr (std::is_same_v<T, uint32>) {
+            WriteLong(address, value);
+        }
+    }
+
     uint8 ReadByte(uint32 baseAddress) {
-        // const uint32 region = address >> 29;
         uint32 address = baseAddress & 0x7FFFFFF;
 
-        if (baseAddress >= 0xFFFFFE00) {
-            address &= 0x1FF;
-            return OnChipRegReadByte(address);
-        } else if (address <= 0x000FFFFF) {
+        if (address <= 0x000FFFFF) {
             address &= 0x7FFFF;
             return m_IPL[address];
         } else if (address - 0x100000 <= 0x0007FFFF) {
@@ -145,13 +165,9 @@ public:
     }
 
     uint16 ReadWord(uint32 baseAddress) {
-        // const uint32 region = address >> 29;
         uint32 address = baseAddress & 0x7FFFFFE;
 
-        if (baseAddress >= 0xFFFFFE00) {
-            address &= 0x1FF;
-            return OnChipRegReadWord(address);
-        } else if (address <= 0x000FFFFF) {
+        if (address <= 0x000FFFFF) {
             address &= 0x7FFFF;
             return (m_IPL[address + 0] << 8u) | m_IPL[address + 1];
         } else if (address - 0x200000 <= 0x000FFFFF) {
@@ -170,13 +186,9 @@ public:
     }
 
     uint32 ReadLong(uint32 baseAddress) {
-        // const uint32 region = address >> 29;
         uint32 address = baseAddress & 0x7FFFFFC;
 
-        if (baseAddress >= 0xFFFFFE00) {
-            address &= 0x1FF;
-            return OnChipRegReadLong(address);
-        } else if (address <= 0x000FFFFF) {
+        if (address <= 0x000FFFFF) {
             address &= 0x7FFFF;
             return (m_IPL[address + 0] << 24u) | (m_IPL[address + 1] << 16u) | (m_IPL[address + 2] << 8u) |
                    m_IPL[address + 3];
@@ -198,13 +210,9 @@ public:
     }
 
     void WriteByte(uint32 baseAddress, uint8 value) {
-        // const uint32 region = address >> 29;
         uint32 address = baseAddress & 0x7FFFFFF;
 
-        if (baseAddress >= 0xFFFFFE00) {
-            address &= 0x1FF;
-            OnChipRegWriteByte(address, value);
-        } else if (address - 0x100000 <= 0x0007FFFF && (address & 1)) {
+        if (address - 0x100000 <= 0x0007FFFF && (address & 1)) {
             address &= 0x7F;
             SMPCWrite(address, value);
         } else if (address - 0x200000 <= 0x000FFFFF) {
@@ -222,13 +230,9 @@ public:
     }
 
     void WriteWord(uint32 baseAddress, uint16 value) {
-        // const uint32 region = address >> 29;
         uint32 address = baseAddress & 0x7FFFFFE;
 
-        if (baseAddress >= 0xFFFFFE00) {
-            address &= 0x1FF;
-            OnChipRegWriteWord(address, value);
-        } else if (address - 0x100000 <= 0x0007FFFF) {
+        if (address - 0x100000 <= 0x0007FFFF) {
             address &= 0x7F;
             SMPCWrite(address | 1, value);
         } else if (address - 0x200000 <= 0x000FFFFF) {
@@ -248,13 +252,9 @@ public:
     }
 
     void WriteLong(uint32 baseAddress, uint32 value) {
-        // const uint32 region = address >> 29;
         uint32 address = baseAddress & 0x7FFFFFC;
 
-        if (baseAddress >= 0xFFFFFE00) {
-            address &= 0x1FF;
-            OnChipRegWriteLong(address, value);
-        } else if (address - 0x200000 <= 0x000FFFFF) {
+        if (address - 0x200000 <= 0x000FFFFF) {
             address &= 0xFFFFF;
             m_WRAMLow[address + 0] = value >> 24u;
             m_WRAMLow[address + 1] = value >> 16u;
@@ -314,35 +314,267 @@ private:
     void SCUWriteLong(uint32 address, uint32 value) {
         fmt::println("unhandled SCU 32-bit write to {:08X} = {:08X}", address, value);
     }
+};
 
-    uint8 OnChipRegReadByte(uint32 address) {
-        fmt::println("unhandled on-chip register 8-bit read from {:02X}", address);
-        return 0;
+class SH2 {
+public:
+    SH2(SH2Bus &bus)
+        : m_bus(bus) {
+        Reset(true);
     }
 
-    uint16 OnChipRegReadWord(uint32 address) {
-        fmt::println("unhandled on-chip register 16-bit read from {:02X}", address);
-        return 0;
+    void Reset(bool hard) {
+        // Initial values:
+        // - R0-R14 = undefined
+        // - R15 = ReadLong(VBR + 4)
+
+        // - SR = bits I3-I0 set, reserved bits clear, the rest is undefined
+        // - GBR = undefined
+        // - VBR = 0x00000000
+
+        // - MACH, MACL = undefined
+        // - PR = undefined
+        // - PC = ReadLong(VBR)
+
+        R.fill(0);
+        PR = 0;
+
+        SR.u32 = 0;
+        SR.I0 = SR.I1 = SR.I2 = SR.I3 = 1;
+        GBR = 0;
+        VBR = 0x00000000;
+
+        MAC.u64 = 0;
+
+        PC = MemReadLong(VBR);
+        R[15] = MemReadLong(VBR + 4);
     }
 
-    uint32 OnChipRegReadLong(uint32 address) {
-        fmt::println("unhandled on-chip register 32-bit read from {:02X}", address);
-        return 0;
+    void Step() {
+        auto bit = [](bool value, std::string_view bit) { return value ? fmt::format(" {}", bit) : ""; };
+
+        dbg_println(" R0 = {:08X}   R4 = {:08X}   R8 = {:08X}  R12 = {:08X}", R[0], R[4], R[8], R[12]);
+        dbg_println(" R1 = {:08X}   R5 = {:08X}   R9 = {:08X}  R13 = {:08X}", R[1], R[5], R[9], R[13]);
+        dbg_println(" R2 = {:08X}   R6 = {:08X}  R10 = {:08X}  R14 = {:08X}", R[2], R[6], R[10], R[14]);
+        dbg_println(" R3 = {:08X}   R7 = {:08X}  R11 = {:08X}  R15 = {:08X}", R[3], R[7], R[11], R[15]);
+        dbg_println("GBR = {:08X}  VBR = {:08X}  MAC = {:08X}.{:08X}", GBR, VBR, MAC.H, MAC.L);
+        dbg_println(" PC = {:08X}   PR = {:08X}   SR = {:08X} {}{}{}{}{}{}{}{}", PC, PR, SR.u32, bit(SR.M, "M"),
+                    bit(SR.Q, "Q"), bit(SR.I3, "I3"), bit(SR.I2, "I2"), bit(SR.I1, "I1"), bit(SR.I0, "I0"),
+                    bit(SR.S, "S"), bit(SR.T, "T"));
+
+        Execute<false>(PC);
+        dbg_println("");
     }
 
-    void OnChipRegWriteByte(uint32 address, uint8 value) {
-        fmt::println("unhandled on-chip register 8-bit write to {:02X} = {:02X}", address, value);
+    uint32 GetPC() const {
+        return PC;
     }
 
-    void OnChipRegWriteWord(uint32 address, uint16 value) {
-        fmt::println("unhandled on-chip register 16-bit write to {:02X} = {:04X}", address, value);
+private:
+    std::array<uint32, 16> R;
+
+    uint32 PC;
+    uint32 PR;
+
+    union SR_t {
+        uint32 u32;
+        struct {
+            uint32 T : 1;
+            uint32 S : 1;
+            uint32 : 2;
+            uint32 I0 : 1;
+            uint32 I1 : 1;
+            uint32 I2 : 1;
+            uint32 I3 : 1;
+            uint32 Q : 1;
+            uint32 M : 1;
+        };
+    } SR;
+    uint32 GBR;
+    uint32 VBR;
+
+    union MAC_t {
+        uint64 u64;
+        struct {
+            uint32 H;
+            uint32 L;
+        };
+    } MAC;
+
+    SH2Bus &m_bus;
+
+    uint64 dbg_count = 0;
+    static constexpr uint64 dbg_minCount = 9547530;
+
+    template <typename... T>
+    void dbg_print(fmt::format_string<T...> fmt, T &&...args) {
+        if (dbg_count >= dbg_minCount) {
+            fmt::print(fmt, static_cast<T &&>(args)...);
+        }
     }
 
-    void OnChipRegWriteLong(uint32 address, uint32 value) {
-        fmt::println("unhandled on-chip register 32-bit write to {:02X} = {:08X}", address, value);
+    template <typename... T>
+    void dbg_println(fmt::format_string<T...> fmt, T &&...args) {
+        if (dbg_count >= dbg_minCount) {
+            fmt::println(fmt, static_cast<T &&>(args)...);
+        }
     }
 
-    // On-chip registers  (from SH7604 manual)
+    // -------------------------------------------------------------------------
+    // Memory accessors
+
+    // According to the SH7604 manual, the address space is divided into these areas:
+    //
+    // Address range            Space                           Memory
+    // 0x00000000..0x01FFFFFF   CS0 space, cache area           Ordinary space or burst ROM
+    // 0x02000000..0x03FFFFFF   CS1 space, cache area           Ordinary space
+    // 0x04000000..0x05FFFFFF   CS2 space, cache area           Ordinary space or synchronous DRAM
+    // 0x06000000..0x07FFFFFF   CS3 space, cache area           Ordinary space, synchronous SDRAM, DRAM or pseudo-DRAM
+    // 0x08000000..0x1FFFFFFF   Reserved
+    // 0x20000000..0x21FFFFFF   CS0 space, cache-through area   Ordinary space or burst ROM
+    // 0x22000000..0x23FFFFFF   CS1 space, cache-through area   Ordinary space
+    // 0x24000000..0x25FFFFFF   CS2 space, cache-through area   Ordinary space or synchronous DRAM
+    // 0x26000000..0x27FFFFFF   CS3 space, cache-through area   Ordinary space, synchronous SDRAM, DRAM or pseudo-DRAM
+    // 0x28000000..0x3FFFFFFF   Reserved
+    // 0x40000000..0x47FFFFFF   Associative purge space
+    // 0x48000000..0x5FFFFFFF   Reserved
+    // 0x60000000..0x7FFFFFFF   Address array, read/write space
+    // 0x80000000..0x9FFFFFFF   Reserved  [undocumented mirror of 0xC0000000..0xDFFFFFFF]
+    // 0xA0000000..0xBFFFFFFF   Reserved  [undocumented mirror of 0x20000000..0x3FFFFFFF]
+    // 0xC0000000..0xC0000FFF   Data array, read/write space
+    // 0xC0001000..0xDFFFFFFF   Reserved
+    // 0xE0000000..0xFFFF7FFF   Reserved
+    // 0xFFFF8000..0xFFFFBFFF   For setting synchronous DRAM mode
+    // 0xFFFFC000..0xFFFFFDFF   Reserved
+    // 0xFFFFFE00..0xFFFFFFFF   On-chip peripheral modules
+    //
+    // The cache uses address bits 31..29 to specify its behavior:
+    //    Bits  Partition                       Cache operation
+    //    000   Cache area                      Cache used when CCR.CE=1
+    //    001   Cache-through area              Cache bypassed
+    //    010   Associative purge area          Purge accessed cache lines (reads return 0x2312)
+    //    011   Address array read/write area   Cache addresses acessed directly (1 KiB, mirrored)
+    //    100   [undocumented, same as 110]
+    //    101   [undocumented, same as 001]
+    //    110   Data array read/write area      Cache data acessed directly (4 KiB, mirrored)
+    //    111   I/O area (on-chip registers)    Cache bypassed
+
+    template <mem_access_type T>
+    T MemRead(uint32 address) {
+        const uint32 partition = address >> 29u;
+        if (address & static_cast<uint32>(sizeof(T) - 1)) {
+            fmt::println("WARNING: misaligned {}-bit read from {:08X}", sizeof(T) * 8, address);
+            // TODO: address error (misaligned access)
+            // - might have to store data in a class member instead of returning
+        }
+
+        switch (partition) {
+        case 0b000: // cache
+
+            // TODO: try reading from cache
+            // fallthrough
+        case 0b001:
+        case 0b101: // cache-through
+            return m_bus.Read<T>(address);
+        case 0b010: // associative purge
+
+            // TODO: implement
+            return (address & 1) ? static_cast<T>(0x12231223) : static_cast<T>(0x23122312);
+        case 0b011: // cache address array read/write
+
+            // TODO: implement
+            fmt::println("unhandled {}-bit SH-2 cache address array read from {:08X}", sizeof(T) * 8, address);
+            return 0;
+        case 0b100:
+        case 0b110: // cache data array read/write
+
+            // TODO: implement
+            fmt::println("unhandled {}-bit SH-2 cache data array read from {:08X}", sizeof(T) * 8, address);
+            return 0;
+        case 0b111: // I/O area
+            if (address >= 0xFFFFFE00) {
+                return OnChipRegRead<T>(address & 0x1FF);
+            } else {
+                // TODO: implement
+                fmt::println("unhandled {}-bit SH-2 I/O area read from {:08X}", sizeof(T) * 8, address);
+                return 0;
+            }
+        }
+
+        util::unreachable();
+    }
+
+    uint8 MemReadByte(uint32 address) {
+        return MemRead<uint8>(address);
+    }
+
+    uint16 MemReadWord(uint32 address) {
+        return MemRead<uint16>(address);
+    }
+
+    uint32 MemReadLong(uint32 address) {
+        return MemRead<uint32>(address);
+    }
+
+    template <mem_access_type T>
+    void MemWrite(uint32 address, T value) {
+        const uint32 partition = address >> 29u;
+        if (address & static_cast<uint32>(sizeof(T) - 1)) {
+            fmt::println("WARNING: misaligned {}-bit write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+            // TODO: address error (misaligned access)
+        }
+
+        switch (partition) {
+        case 0b000: // cache
+
+            // TODO: try reading from cache
+            // fallthrough
+        case 0b001:
+        case 0b101: // cache-through
+            m_bus.Write<T>(address, value);
+            break;
+        case 0b010: // associative purge
+
+            // TODO: implement
+            break;
+        case 0b011: // cache address array read/write
+
+            // TODO: implement
+            fmt::println("unhandled {}-bit SH-2 cache address array write to {:08X} = {:X}", sizeof(T) * 8, address,
+                         value);
+            break;
+        case 0b100:
+        case 0b110: // cache data array read/write
+
+            // TODO: implement
+            fmt::println("unhandled {}-bit SH-2 cache data array write to {:08X} = {:X}", sizeof(T) * 8, address,
+                         value);
+            break;
+        case 0b111: // I/O area
+            if (address >= 0xFFFFFE00) {
+                OnChipRegWrite<T>(address & 0x1FF, value);
+            } else {
+                // TODO: implement
+                fmt::println("unhandled {}-bit SH-2 I/O area write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+            }
+            break;
+        }
+    }
+
+    void MemWriteByte(uint32 address, uint8 value) {
+        MemWrite<uint8>(address, value);
+    }
+
+    void MemWriteWord(uint32 address, uint16 value) {
+        MemWrite<uint16>(address, value);
+    }
+
+    void MemWriteLong(uint32 address, uint32 value) {
+        MemWrite<uint32>(address, value);
+    }
+
+    // -------------------------------------------------------------------------
+    // On-chip peripherals
     //
     // --- SCI module ---
     //
@@ -481,116 +713,25 @@ private:
     // 1F0  R/W  16,32    0000  RTCSR   Refresh Timer Control/Status Register
     // 1F4  R/W  16,32    0000  RTCNT   Refresh Timer Counter
     // 1F8  R/W  16,32    0000  RTCOR   Refresh Timer Constant Register
-};
 
-class SH2 {
-public:
-    SH2(SH2Bus &bus)
-        : m_bus(bus) {
-        Reset(true);
+    template <mem_access_type T>
+    T OnChipRegRead(uint32 address) {
+        fmt::println("unhandled {}-bit on-chip register read from {:02X}", sizeof(T) * 8, address);
+        return 0;
     }
 
-    void Reset(bool hard) {
-        // Initial values:
-        // - R0-R14 = undefined
-        // - R15 = ReadLong(VBR + 4)
-
-        // - SR = bits I3-I0 set, reserved bits clear, the rest is undefined
-        // - GBR = undefined
-        // - VBR = 0x00000000
-
-        // - MACH, MACL = undefined
-        // - PR = undefined
-        // - PC = ReadLong(VBR)
-
-        R.fill(0);
-        PR = 0;
-
-        SR.u32 = 0;
-        SR.I0 = SR.I1 = SR.I2 = SR.I3 = 1;
-        GBR = 0;
-        VBR = 0x00000000;
-
-        MAC.u64 = 0;
-
-        PC = m_bus.ReadLong(VBR);
-        R[15] = m_bus.ReadLong(VBR + 4);
+    template <mem_access_type T>
+    void OnChipRegWrite(uint32 address, T value) {
+        fmt::println("unhandled {}-bit on-chip register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
     }
 
-    void Step() {
-        auto bit = [](bool value, std::string_view bit) { return value ? fmt::format(" {}", bit) : ""; };
-
-        dbg_println(" R0 = {:08X}   R4 = {:08X}   R8 = {:08X}  R12 = {:08X}", R[0], R[4], R[8], R[12]);
-        dbg_println(" R1 = {:08X}   R5 = {:08X}   R9 = {:08X}  R13 = {:08X}", R[1], R[5], R[9], R[13]);
-        dbg_println(" R2 = {:08X}   R6 = {:08X}  R10 = {:08X}  R14 = {:08X}", R[2], R[6], R[10], R[14]);
-        dbg_println(" R3 = {:08X}   R7 = {:08X}  R11 = {:08X}  R15 = {:08X}", R[3], R[7], R[11], R[15]);
-        dbg_println("GBR = {:08X}  VBR = {:08X}  MAC = {:08X}.{:08X}", GBR, VBR, MAC.H, MAC.L);
-        dbg_println(" PC = {:08X}   PR = {:08X}   SR = {:08X} {}{}{}{}{}{}{}{}", PC, PR, SR.u32, bit(SR.M, "M"),
-                    bit(SR.Q, "Q"), bit(SR.I3, "I3"), bit(SR.I2, "I2"), bit(SR.I1, "I1"), bit(SR.I0, "I0"),
-                    bit(SR.S, "S"), bit(SR.T, "T"));
-
-        Execute<false>(PC);
-        dbg_println("");
-    }
-
-    uint32 GetPC() const {
-        return PC;
-    }
-
-private:
-    std::array<uint32, 16> R;
-
-    uint32 PC;
-    uint32 PR;
-
-    union SR_t {
-        uint32 u32;
-        struct {
-            uint32 T : 1;
-            uint32 S : 1;
-            uint32 : 2;
-            uint32 I0 : 1;
-            uint32 I1 : 1;
-            uint32 I2 : 1;
-            uint32 I3 : 1;
-            uint32 Q : 1;
-            uint32 M : 1;
-        };
-    } SR;
-    uint32 GBR;
-    uint32 VBR;
-
-    union MAC_t {
-        uint64 u64;
-        struct {
-            uint32 H;
-            uint32 L;
-        };
-    } MAC;
-
-    SH2Bus &m_bus;
-
-    uint64 dbg_count = 0;
-    static constexpr uint64 dbg_minCount = 9547530;
-
-    template <typename... T>
-    void dbg_print(fmt::format_string<T...> fmt, T &&...args) {
-        if (dbg_count >= dbg_minCount) {
-            fmt::print(fmt, static_cast<T &&>(args)...);
-        }
-    }
-
-    template <typename... T>
-    void dbg_println(fmt::format_string<T...> fmt, T &&...args) {
-        if (dbg_count >= dbg_minCount) {
-            fmt::println(fmt, static_cast<T &&>(args)...);
-        }
-    }
+    // -------------------------------------------------------------------------
+    // Execution
 
     template <bool delaySlot>
     void Execute(uint32 address) {
         ++dbg_count;
-        const uint16 instr = m_bus.ReadWord(address);
+        const uint16 instr = MemReadWord(address);
         dbg_print("[{:5}] {:08X}{} {:04X}  ", dbg_count, address, delaySlot ? '*' : ' ', instr);
 
         switch (instr >> 12u) {
@@ -1576,9 +1717,9 @@ private:
 
     void ANDM(uint16 imm) {
         dbg_println("and.b #0x{:X}, @(r0,gbr)", imm);
-        uint8 tmp = m_bus.ReadByte(GBR + R[0]);
+        uint8 tmp = MemReadByte(GBR + R[0]);
         tmp &= imm;
-        m_bus.WriteByte(GBR + R[0], tmp);
+        MemWriteByte(GBR + R[0], tmp);
     }
 
     void BF(uint16 disp) {
@@ -1793,19 +1934,19 @@ private:
 
     void LDCMSR(uint16 rm) {
         dbg_println("ldc.l @r{}+, sr", rm);
-        SR.u32 = m_bus.ReadLong(R[rm]) & 0x000003F3;
+        SR.u32 = MemReadLong(R[rm]) & 0x000003F3;
         R[rm] += 4;
     }
 
     void LDCMGBR(uint16 rm) {
         dbg_println("ldc.l @r{}+, gbr", rm);
-        GBR = m_bus.ReadLong(R[rm]);
+        GBR = MemReadLong(R[rm]);
         R[rm] += 4;
     }
 
     void LDCMVBR(uint16 rm) {
         dbg_println("ldc.l @r{}+, vbr", rm);
-        VBR = m_bus.ReadLong(R[rm]);
+        VBR = MemReadLong(R[rm]);
         R[rm] += 4;
     }
 
@@ -1826,19 +1967,19 @@ private:
 
     void LDSMMACH(uint16 rm) {
         dbg_println("lds.l @r{}+, mach", rm);
-        MAC.H = m_bus.ReadLong(R[rm]);
+        MAC.H = MemReadLong(R[rm]);
         R[rm] += 4;
     }
 
     void LDSMMACL(uint16 rm) {
         dbg_println("lds.l @r{}+, macl", rm);
-        MAC.L = m_bus.ReadLong(R[rm]);
+        MAC.L = MemReadLong(R[rm]);
         R[rm] += 4;
     }
 
     void LDSMPR(uint16 rm) {
         dbg_println("lds.l @r{}+, pr", rm);
-        PR = m_bus.ReadLong(R[rm]);
+        PR = MemReadLong(R[rm]);
         R[rm] += 4;
     }
 
@@ -1855,89 +1996,89 @@ private:
 
     void MOVBL(uint16 rm, uint16 rn) {
         dbg_println("mov.b @r{}, r{}", rm, rn);
-        R[rn] = SignExtend<8>(m_bus.ReadByte(R[rm]));
+        R[rn] = SignExtend<8>(MemReadByte(R[rm]));
     }
 
     void MOVWL(uint16 rm, uint16 rn) {
         dbg_println("mov.w @r{}, r{}", rm, rn);
-        R[rn] = SignExtend<16>(m_bus.ReadWord(R[rm]));
+        R[rn] = SignExtend<16>(MemReadWord(R[rm]));
     }
 
     void MOVLL(uint16 rm, uint16 rn) {
         dbg_println("mov.l @r{}, r{}", rm, rn);
-        R[rn] = m_bus.ReadLong(R[rm]);
+        R[rn] = MemReadLong(R[rm]);
     }
 
     void MOVBL0(uint16 rm, uint16 rn) {
         dbg_println("mov.b @(r0,r{}), r{}", rm, rn);
-        R[rn] = SignExtend<8>(m_bus.ReadByte(R[rm] + R[0]));
+        R[rn] = SignExtend<8>(MemReadByte(R[rm] + R[0]));
     }
 
     void MOVWL0(uint16 rm, uint16 rn) {
         dbg_println("mov.w @(r0,r{}), r{})", rm, rn);
-        R[rn] = SignExtend<16>(m_bus.ReadWord(R[rm] + R[0]));
+        R[rn] = SignExtend<16>(MemReadWord(R[rm] + R[0]));
     }
 
     void MOVLL0(uint16 rm, uint16 rn) {
         dbg_println("mov.l @(r0,r{}), r{})", rm, rn);
-        R[rn] = m_bus.ReadLong(R[rm] + R[0]);
+        R[rn] = MemReadLong(R[rm] + R[0]);
     }
 
     void MOVBL4(uint16 rm, uint16 disp) {
         dbg_println("mov.b @(0x{:X},r{}), r0", disp, rm);
-        R[0] = SignExtend<8>(m_bus.ReadByte(R[rm] + disp));
+        R[0] = SignExtend<8>(MemReadByte(R[rm] + disp));
     }
 
     void MOVWL4(uint16 rm, uint16 disp) {
         disp <<= 1u;
         dbg_println("mov.w @(0x{:X},r{}), r0", disp, rm);
-        R[0] = SignExtend<16>(m_bus.ReadWord(R[rm] + disp));
+        R[0] = SignExtend<16>(MemReadWord(R[rm] + disp));
     }
 
     void MOVLL4(uint16 rm, uint16 disp, uint16 rn) {
         disp <<= 2u;
         dbg_println("mov.l @(0x{:X},r{}), r{}", disp, rm, rn);
-        R[rn] = m_bus.ReadLong(R[rm] + disp);
+        R[rn] = MemReadLong(R[rm] + disp);
     }
 
     void MOVBLG(uint16 disp) {
         dbg_println("mov.b @(0x{:X},gbr), r0", disp);
-        R[0] = SignExtend<8>(m_bus.ReadByte(GBR + disp));
+        R[0] = SignExtend<8>(MemReadByte(GBR + disp));
     }
 
     void MOVWLG(uint16 disp) {
         disp <<= 1u;
         dbg_println("mov.w @(0x{:X},gbr), r0", disp);
-        R[0] = SignExtend<16>(m_bus.ReadWord(GBR + disp));
+        R[0] = SignExtend<16>(MemReadWord(GBR + disp));
     }
 
     void MOVLLG(uint16 disp) {
         disp <<= 2u;
         dbg_println("mov.l @(0x{:X},gbr), r0", disp);
-        R[0] = m_bus.ReadLong(GBR + disp);
+        R[0] = MemReadLong(GBR + disp);
     }
 
     void MOVBM(uint16 rm, uint16 rn) {
         dbg_println("mov.b r{}, @-r{}", rm, rn);
-        m_bus.WriteByte(R[rn] - 1, R[rm]);
+        MemWriteByte(R[rn] - 1, R[rm]);
         R[rn] -= 1;
     }
 
     void MOVWM(uint16 rm, uint16 rn) {
         dbg_println("mov.w r{}, @-r{}", rm, rn);
-        m_bus.WriteWord(R[rn] - 2, R[rm]);
+        MemWriteWord(R[rn] - 2, R[rm]);
         R[rn] -= 2;
     }
 
     void MOVLM(uint16 rm, uint16 rn) {
         dbg_println("mov.l r{}, @-r{}", rm, rn);
-        m_bus.WriteByte(R[rn] - 4, R[rm]);
+        MemWriteByte(R[rn] - 4, R[rm]);
         R[rn] -= 4;
     }
 
     void MOVBP(uint16 rm, uint16 rn) {
         dbg_println("mov.b @r{}+, r{}", rm, rn);
-        R[rn] = SignExtend<8>(m_bus.ReadByte(R[rm]));
+        R[rn] = SignExtend<8>(MemReadByte(R[rm]));
         if (rn != rm) {
             R[rm] += 1;
         }
@@ -1945,7 +2086,7 @@ private:
 
     void MOVWP(uint16 rm, uint16 rn) {
         dbg_println("mov.w @r{}+, r{}", rm, rn);
-        R[rn] = SignExtend<16>(m_bus.ReadWord(R[rm]));
+        R[rn] = SignExtend<16>(MemReadWord(R[rm]));
         if (rn != rm) {
             R[rm] += 2;
         }
@@ -1953,7 +2094,7 @@ private:
 
     void MOVLP(uint16 rm, uint16 rn) {
         dbg_println("mov.l @r{}+, r{}", rm, rn);
-        R[rn] = m_bus.ReadLong(R[rm]);
+        R[rn] = MemReadLong(R[rm]);
         if (rn != rm) {
             R[rm] += 4;
         }
@@ -1961,66 +2102,66 @@ private:
 
     void MOVBS(uint16 rm, uint16 rn) {
         dbg_println("mov.b r{}, @r{}", rm, rn);
-        m_bus.WriteByte(R[rn], R[rm]);
+        MemWriteByte(R[rn], R[rm]);
     }
 
     void MOVWS(uint16 rm, uint16 rn) {
         dbg_println("mov.w r{}, @r{}", rm, rn);
-        m_bus.WriteWord(R[rn], R[rm]);
+        MemWriteWord(R[rn], R[rm]);
     }
 
     void MOVLS(uint16 rm, uint16 rn) {
         dbg_println("mov.l r{}, @r{}", rm, rn);
-        m_bus.WriteLong(R[rn], R[rm]);
+        MemWriteLong(R[rn], R[rm]);
     }
 
     void MOVBS0(uint16 rm, uint16 rn) {
         dbg_println("mov.b r{}, @(r0,r{})", rm, rn);
-        m_bus.WriteByte(R[rn] + R[0], R[rm]);
+        MemWriteByte(R[rn] + R[0], R[rm]);
     }
 
     void MOVWS0(uint16 rm, uint16 rn) {
         dbg_println("mov.w r{}, @(r0,r{})", rm, rn);
-        m_bus.WriteWord(R[rn] + R[0], R[rm]);
+        MemWriteWord(R[rn] + R[0], R[rm]);
     }
 
     void MOVLS0(uint16 rm, uint16 rn) {
         dbg_println("mov.l r{}, @(r0,r{})", rm, rn);
-        m_bus.WriteLong(R[rn] + R[0], R[rm]);
+        MemWriteLong(R[rn] + R[0], R[rm]);
     }
 
     void MOVBS4(uint16 disp, uint16 rn) {
         dbg_println("mov.b r0, @(0x{:X},r{})", disp, rn);
-        m_bus.WriteByte(R[rn] + disp, R[0]);
+        MemWriteByte(R[rn] + disp, R[0]);
     }
 
     void MOVWS4(uint16 disp, uint16 rn) {
         disp <<= 1u;
         dbg_println("mov.w r0, @(0x{:X},r{})", disp, rn);
-        m_bus.WriteWord(R[rn] + disp, R[0]);
+        MemWriteWord(R[rn] + disp, R[0]);
     }
 
     void MOVLS4(uint16 rm, uint16 disp, uint16 rn) {
         disp <<= 2u;
         dbg_println("mov.l r{}, @(0x{:X},r{})", rm, disp, rn);
-        m_bus.WriteLong(R[rn] + disp, R[rm]);
+        MemWriteLong(R[rn] + disp, R[rm]);
     }
 
     void MOVBSG(uint16 disp) {
         dbg_println("mov.b r0, @(0x{:X},gbr)", disp);
-        m_bus.WriteByte(GBR + disp, R[0]);
+        MemWriteByte(GBR + disp, R[0]);
     }
 
     void MOVWSG(uint16 disp) {
         disp <<= 1u;
         dbg_println("mov.w r0, @(0x{:X},gbr)", disp);
-        m_bus.WriteWord(GBR + disp, R[0]);
+        MemWriteWord(GBR + disp, R[0]);
     }
 
     void MOVLSG(uint16 disp) {
         disp <<= 2u;
         dbg_println("mov.l r0, @(0x{:X},gbr)", disp);
-        m_bus.WriteLong(GBR + disp, R[0]);
+        MemWriteLong(GBR + disp, R[0]);
     }
 
     void MOVI(uint16 imm, uint16 rn) {
@@ -2032,13 +2173,13 @@ private:
     void MOVWI(uint16 disp, uint16 rn) {
         disp <<= 1u;
         dbg_println("mov.w @(0x{:08X},pc), r{}", PC + 4 + disp, rn);
-        R[rn] = SignExtend<16>(m_bus.ReadWord(PC + 4 + disp));
+        R[rn] = SignExtend<16>(MemReadWord(PC + 4 + disp));
     }
 
     void MOVLI(uint16 disp, uint16 rn) {
         disp <<= 2u;
         dbg_println("mov.l @(0x{:08X},pc), r{}", ((PC + 4) & ~3) + disp, rn);
-        R[rn] = m_bus.ReadLong(((PC + 4) & ~3u) + disp);
+        R[rn] = MemReadLong(((PC + 4) & ~3u) + disp);
     }
 
     void MOVT(uint16 rn) {
@@ -2079,9 +2220,9 @@ private:
 
     void ORM(uint16 imm) {
         dbg_println("or.b #0x{:X}, @(r0,gbr)", imm);
-        uint8 tmp = m_bus.ReadByte(GBR + R[0]);
+        uint8 tmp = MemReadByte(GBR + R[0]);
         tmp |= imm;
-        m_bus.WriteByte(GBR + R[0], tmp);
+        MemWriteByte(GBR + R[0], tmp);
     }
 
     void ROTCL(uint16 rn) {
@@ -2113,9 +2254,9 @@ private:
     void RTE() {
         dbg_println("rte");
         uint32 delaySlot = PC + 2;
-        PC = m_bus.ReadLong(R[15] + 4);
+        PC = MemReadLong(R[15] + 4);
         R[15] += 4;
-        SR.u32 = m_bus.ReadLong(R[15]) & 0x000003F3;
+        SR.u32 = MemReadLong(R[15]) & 0x000003F3;
         R[15] += 4;
         Execute<true>(delaySlot);
     }
@@ -2214,19 +2355,19 @@ private:
     void STCMSR(uint16 rn) {
         dbg_println("stc.l sr, @-r{}", rn);
         R[rn] -= 4;
-        m_bus.WriteLong(R[rn], SR.u32);
+        MemWriteLong(R[rn], SR.u32);
     }
 
     void STCMGBR(uint16 rn) {
         dbg_println("stc.l gbr, @-r{}", rn);
         R[rn] -= 4;
-        m_bus.WriteLong(R[rn], GBR);
+        MemWriteLong(R[rn], GBR);
     }
 
     void STCMVBR(uint16 rn) {
         dbg_println("stc.l vbr, @-r{}", rn);
         R[rn] -= 4;
-        m_bus.WriteLong(R[rn], VBR);
+        MemWriteLong(R[rn], VBR);
     }
 
     void STSMACL(uint16 rn) {
@@ -2242,19 +2383,19 @@ private:
     void STSMMACH(uint16 rn) {
         dbg_println("sts.l mach, @-r{}", rn);
         R[rn] -= 4;
-        m_bus.WriteLong(R[rn], MAC.H);
+        MemWriteLong(R[rn], MAC.H);
     }
 
     void STSMMACL(uint16 rn) {
         dbg_println("sts.l macl, @-r{}", rn);
         R[rn] -= 4;
-        m_bus.WriteLong(R[rn], MAC.L);
+        MemWriteLong(R[rn], MAC.L);
     }
 
     void STSMPR(uint16 rn) {
         dbg_println("sts.l pr, @-r{}", rn);
         R[rn] -= 4;
-        m_bus.WriteLong(R[rn], PR);
+        MemWriteLong(R[rn], PR);
     }
 
     void SUB(uint16 rm, uint16 rn) {
@@ -2303,10 +2444,10 @@ private:
         dbg_println("WARNING: bus lock not implemented!");
 
         // TODO: enable bus lock on this read
-        uint8 tmp = m_bus.ReadByte(R[rn]);
+        uint8 tmp = MemReadByte(R[rn]);
         SR.T = tmp == 0;
         // TODO: disable bus lock on this write
-        m_bus.WriteByte(R[rn], tmp | 0x80);
+        MemWriteByte(R[rn], tmp | 0x80);
     }
 
     void TST(uint16 rm, uint16 rn) {
@@ -2321,17 +2462,17 @@ private:
 
     void TSTM(uint16 imm) {
         dbg_println("tst.b #0x{:X}, @(r0,gbr)", imm);
-        uint8 tmp = m_bus.ReadByte(GBR + R[0]);
+        uint8 tmp = MemReadByte(GBR + R[0]);
         SR.T = (tmp & imm) == 0;
     }
 
     void TRAPA(uint16 imm) {
         dbg_println("trapa #0x{:X}", imm);
         R[15] -= 4;
-        m_bus.WriteLong(R[15], SR.u32);
+        MemWriteLong(R[15], SR.u32);
         R[15] -= 4;
-        m_bus.WriteLong(R[15], PC - 2);
-        PC = m_bus.ReadLong(VBR + (imm << 2)) + 4;
+        MemWriteLong(R[15], PC - 2);
+        PC = MemReadLong(VBR + (imm << 2)) + 4;
     }
 
     void XOR(uint16 rm, uint16 rn) {
@@ -2346,9 +2487,9 @@ private:
 
     void XORM(uint16 imm) {
         dbg_println("xor.b #0x{:X}, @(r0,gbr)", imm);
-        uint8 tmp = m_bus.ReadByte(GBR + R[0]);
+        uint8 tmp = MemReadByte(GBR + R[0]);
         tmp ^= imm;
-        m_bus.WriteByte(GBR + R[0], tmp);
+        MemWriteByte(GBR + R[0], tmp);
     }
 
     void XTRCT(uint16 rm, uint16 rn) {
