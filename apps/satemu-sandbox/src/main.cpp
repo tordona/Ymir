@@ -132,6 +132,9 @@ public:
         } else if (address - 0x200000 <= 0x000FFFFF) {
             address &= 0xFFFFF;
             return m_WRAMLow[address];
+        } else if (address - 0x5FE0000 <= 0x0000FFFF) {
+            address &= 0xFF;
+            return SCUReadByte(address);
         } else if (address - 0x6000000 <= 0x01FFFFFF) {
             address &= 0xFFFFF;
             return m_WRAMHigh[address];
@@ -154,6 +157,9 @@ public:
         } else if (address - 0x200000 <= 0x000FFFFF) {
             address &= 0xFFFFF;
             return (m_WRAMLow[address + 0] << 8u) | m_WRAMLow[address + 1];
+        } else if (address - 0x5FE0000 <= 0x0000FFFF) {
+            address &= 0xFF;
+            return SCUReadWord(address);
         } else if (address - 0x6000000 <= 0x01FFFFFF) {
             address &= 0xFFFFF;
             return (m_WRAMHigh[address + 0] << 8u) | m_WRAMHigh[address + 1];
@@ -178,6 +184,9 @@ public:
             address &= 0xFFFFF;
             return (m_WRAMLow[address + 0] << 24u) | (m_WRAMLow[address + 1] << 16u) | (m_WRAMLow[address + 2] << 8u) |
                    m_WRAMLow[address + 3];
+        } else if (address - 0x5FE0000 <= 0x0000FFFF) {
+            address &= 0xFF;
+            return SCUReadLong(address);
         } else if (address - 0x6000000 <= 0x01FFFFFF) {
             address &= 0xFFFFF;
             return (m_WRAMHigh[address + 0] << 24u) | (m_WRAMHigh[address + 1] << 16u) |
@@ -201,6 +210,9 @@ public:
         } else if (address - 0x200000 <= 0x000FFFFF) {
             address &= 0xFFFFF;
             m_WRAMLow[address] = value;
+        } else if (address - 0x5FE0000 <= 0x0000FFFF) {
+            address &= 0xFF;
+            SCUWriteByte(address, value);
         } else if (address - 0x6000000 <= 0x01FFFFFF) {
             address &= 0xFFFFF;
             m_WRAMHigh[address] = value;
@@ -223,6 +235,9 @@ public:
             address &= 0xFFFFF;
             m_WRAMLow[address + 0] = value >> 8u;
             m_WRAMLow[address + 1] = value >> 0u;
+        } else if (address - 0x5FE0000 <= 0x0000FFFF) {
+            address &= 0xFF;
+            SCUWriteWord(address, value);
         } else if (address - 0x6000000 <= 0x01FFFFFF) {
             address &= 0xFFFFF;
             m_WRAMHigh[address + 0] = value >> 8u;
@@ -245,6 +260,9 @@ public:
             m_WRAMLow[address + 1] = value >> 16u;
             m_WRAMLow[address + 2] = value >> 8u;
             m_WRAMLow[address + 3] = value >> 0u;
+        } else if (address - 0x5FE0000 <= 0x0000FFFF) {
+            address &= 0xFF;
+            SCUWriteLong(address, value);
         } else if (address - 0x6000000 <= 0x01FFFFFF) {
             address &= 0xFFFFF;
             m_WRAMHigh[address + 0] = value >> 24u;
@@ -268,6 +286,33 @@ private:
 
     void SMPCWrite(uint32 address, uint8 value) {
         fmt::println("unhandled SMPC write to {:02X} = {:02X}", address, value);
+    }
+
+    uint8 SCUReadByte(uint32 address) {
+        fmt::println("unhandled SCU 8-bit read from {:08X}", address);
+        return 0;
+    }
+
+    uint16 SCUReadWord(uint32 address) {
+        fmt::println("unhandled SCU 16-bit read from {:08X}", address);
+        return 0;
+    }
+
+    uint32 SCUReadLong(uint32 address) {
+        fmt::println("unhandled SCU 32-bit read from {:08X}", address);
+        return 0;
+    }
+
+    void SCUWriteByte(uint32 address, uint8 value) {
+        fmt::println("unhandled SCU 8-bit write to {:08X} = {:02X}", address, value);
+    }
+
+    void SCUWriteWord(uint32 address, uint16 value) {
+        fmt::println("unhandled SCU 16-bit write to {:08X} = {:04X}", address, value);
+    }
+
+    void SCUWriteLong(uint32 address, uint32 value) {
+        fmt::println("unhandled SCU 32-bit write to {:08X} = {:08X}", address, value);
     }
 
     uint8 OnChipRegReadByte(uint32 address) {
