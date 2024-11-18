@@ -15,6 +15,9 @@
 
 static_assert(std::endian::native == std::endian::little, "big-endian platforms are not supported at this moment");
 
+// -----------------------------------------------------------------------------
+// unreachable.hpp
+
 namespace util {
 
 [[noreturn]] inline void unreachable() {
@@ -27,6 +30,9 @@ namespace util {
 
 } // namespace util
 
+// -----------------------------------------------------------------------------
+// types.hpp
+
 using uint8 = uint8_t;
 using uint16 = uint16_t;
 using uint32 = uint32_t;
@@ -37,13 +43,8 @@ using sint16 = int16_t;
 using sint32 = int32_t;
 using sint64 = int64_t;
 
-constexpr size_t operator""_KiB(size_t sz) {
-    return sz * 1024;
-}
-
-constexpr size_t kIPLSize = 512_KiB;
-constexpr size_t kWRAMLowSize = 1024_KiB;
-constexpr size_t kWRAMHighSize = 1024_KiB;
+// -----------------------------------------------------------------------------
+// signextend.hpp
 
 template <unsigned B, std::integral T>
 constexpr auto SignExtend(T x) {
@@ -53,6 +54,20 @@ constexpr auto SignExtend(T x) {
     } s{static_cast<ST>(x)};
     return s.x;
 }
+
+// -----------------------------------------------------------------------------
+// size_ops.hpp
+
+constexpr size_t operator""_KiB(size_t sz) {
+    return sz * 1024;
+}
+
+// -----------------------------------------------------------------------------
+// sh2_bus.hpp
+
+constexpr size_t kIPLSize = 512_KiB;
+constexpr size_t kWRAMLowSize = 1024_KiB;
+constexpr size_t kWRAMHighSize = 1024_KiB;
 
 template <typename T>
 concept mem_access_type = std::same_as<T, uint8> || std::same_as<T, uint16> || std::same_as<T, uint32>;
@@ -316,6 +331,9 @@ private:
     }
 };
 
+// -----------------------------------------------------------------------------
+// sh2.hpp
+
 class SH2 {
 public:
     SH2(SH2Bus &bus)
@@ -348,6 +366,9 @@ public:
 
         PC = MemReadLong(VBR);
         R[15] = MemReadLong(VBR + 4);
+
+        // On-chip registers
+        WriteCCR(0x00);
     }
 
     void Step() {
@@ -461,7 +482,7 @@ private:
 
     template <mem_access_type T>
     T MemRead(uint32 address) {
-        const uint32 partition = address >> 29u;
+        const uint32 partition = (address >> 29u) & 0b111;
         if (address & static_cast<uint32>(sizeof(T) - 1)) {
             fmt::println("WARNING: misaligned {}-bit read from {:08X}", sizeof(T) * 8, address);
             // TODO: address error (misaligned access)
@@ -471,7 +492,9 @@ private:
         switch (partition) {
         case 0b000: // cache
 
-            // TODO: try reading from cache
+            if (CCR.CE) {
+                // TODO: use cache
+            }
             // fallthrough
         case 0b001:
         case 0b101: // cache-through
@@ -479,6 +502,7 @@ private:
         case 0b010: // associative purge
 
             // TODO: implement
+            fmt::println("unhandled {}-bit SH-2 associative purge read from {:08X}", sizeof(T) * 8, address);
             return (address & 1) ? static_cast<T>(0x12231223) : static_cast<T>(0x23122312);
         case 0b011: // cache address array read/write
 
@@ -504,18 +528,6 @@ private:
         util::unreachable();
     }
 
-    uint8 MemReadByte(uint32 address) {
-        return MemRead<uint8>(address);
-    }
-
-    uint16 MemReadWord(uint32 address) {
-        return MemRead<uint16>(address);
-    }
-
-    uint32 MemReadLong(uint32 address) {
-        return MemRead<uint32>(address);
-    }
-
     template <mem_access_type T>
     void MemWrite(uint32 address, T value) {
         const uint32 partition = address >> 29u;
@@ -527,7 +539,9 @@ private:
         switch (partition) {
         case 0b000: // cache
 
-            // TODO: try reading from cache
+            if (CCR.CE) {
+                // TODO: use cache
+            }
             // fallthrough
         case 0b001:
         case 0b101: // cache-through
@@ -536,6 +550,8 @@ private:
         case 0b010: // associative purge
 
             // TODO: implement
+            fmt::println("unhandled {}-bit SH-2 associative purge write to {:08X} = {:X}", sizeof(T) * 8, address,
+                         value);
             break;
         case 0b011: // cache address array read/write
 
@@ -559,6 +575,18 @@ private:
             }
             break;
         }
+    }
+
+    uint8 MemReadByte(uint32 address) {
+        return MemRead<uint8>(address);
+    }
+
+    uint16 MemReadWord(uint32 address) {
+        return MemRead<uint16>(address);
+    }
+
+    uint32 MemReadLong(uint32 address) {
+        return MemRead<uint32>(address);
     }
 
     void MemWriteByte(uint32 address, uint8 value) {
@@ -647,6 +675,34 @@ private:
     //   2  OD  R/W    Data Replacement Disable (0=disabled, 1=data cache not updated on miss)
     //   1  ID  R/W    Instruction Replacement Disabled (same as above, but for code cache)
     //   0  CE  R/W    Cache Enable (0=disable, 1=enable)
+    union CCR_t {
+        uint8 u8 = 0x00;
+        struct {
+            uint8 CE : 1;
+            uint8 ID : 1;
+            uint8 OD : 1;
+            uint8 TW : 1;
+            uint8 CP : 1;
+            uint8 _rsvd5 : 1;
+            uint8 W0 : 1;
+            uint8 W1 : 1;
+        };
+    } CCR;
+
+    void WriteCCR(uint8 value) {
+        if (CCR.u8 == value) {
+            return;
+        }
+
+        fmt::println("CCR changed from 0x{:02X} to 0x{:02X}", CCR.u8, value);
+        CCR.u8 = value;
+        if (CCR.CP) {
+            fmt::println("  cache purged");
+            // TODO: purge cache
+            CCR.CP = 0;
+        }
+    }
+
     //
     // --- INTC module (part 2) ---
     //
@@ -716,13 +772,20 @@ private:
 
     template <mem_access_type T>
     T OnChipRegRead(uint32 address) {
-        fmt::println("unhandled {}-bit on-chip register read from {:02X}", sizeof(T) * 8, address);
-        return 0;
+        switch (address) {
+        case 0x92 ... 0x9F: return (CCR.u8 << 8u) | CCR.u8;
+        default: fmt::println("unhandled {}-bit on-chip register read from {:02X}", sizeof(T) * 8, address); return 0;
+        }
     }
 
     template <mem_access_type T>
     void OnChipRegWrite(uint32 address, T value) {
-        fmt::println("unhandled {}-bit on-chip register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+        switch (address) {
+        case 0x92: WriteCCR(value); break;
+        default:
+            fmt::println("unhandled {}-bit on-chip register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+            break;
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -2526,6 +2589,8 @@ private:
     SH2Bus m_sh2bus;
     SH2 m_masterSH2;
 };
+
+// -----------------------------------------------------------------------------
 
 std::vector<uint8_t> loadROM(std::filesystem::path romPath) {
     fmt::print("Loading ROM from {}... ", romPath.string());
