@@ -368,6 +368,7 @@ public:
         R[15] = MemReadLong(VBR + 4);
 
         // On-chip registers
+        m_cacheEntries.fill({});
         WriteCCR(0x00);
     }
 
@@ -504,13 +505,12 @@ private:
             // TODO: implement
             fmt::println("unhandled {}-bit SH-2 associative purge read from {:08X}", sizeof(T) * 8, address);
             return (address & 1) ? static_cast<T>(0x12231223) : static_cast<T>(0x23122312);
-        case 0b011: // cache address array read/write
-
-            // TODO: implement
-            fmt::println("unhandled {}-bit SH-2 cache address array read from {:08X}", sizeof(T) * 8, address);
-            return 0;
+        case 0b011: { // cache address array
+            uint32 entry = (address >> 4u) & 0x3F;
+            return m_cacheEntries[entry].tag[CCR.W01]; // TODO: include LRU data
+        }
         case 0b100:
-        case 0b110: // cache data array read/write
+        case 0b110: // cache data array
 
             // TODO: implement
             fmt::println("unhandled {}-bit SH-2 cache data array read from {:08X}", sizeof(T) * 8, address);
@@ -553,14 +553,14 @@ private:
             fmt::println("unhandled {}-bit SH-2 associative purge write to {:08X} = {:X}", sizeof(T) * 8, address,
                          value);
             break;
-        case 0b011: // cache address array read/write
-
-            // TODO: implement
-            fmt::println("unhandled {}-bit SH-2 cache address array write to {:08X} = {:X}", sizeof(T) * 8, address,
-                         value);
+        case 0b011: { // cache address array
+            uint32 entry = (address >> 4u) & 0x3F;
+            m_cacheEntries[entry].tag[CCR.W01] = address & 0x1FFFFC04;
+            // TODO: update LRU data
             break;
+        }
         case 0b100:
-        case 0b110: // cache data array read/write
+        case 0b110: // cache data array
 
             // TODO: implement
             fmt::println("unhandled {}-bit SH-2 cache data array write to {:08X} = {:X}", sizeof(T) * 8, address,
@@ -664,7 +664,22 @@ private:
     // 091  ?    8        ??    SBYCR   ???
     //
     // --- Cache module ---
-    //
+
+    static constexpr size_t kCacheWays = 4;
+    static constexpr size_t kCacheEntries = 64;
+    static constexpr size_t kCacheLineSize = 16;
+
+    struct CacheEntry {
+        // Tag layout:
+        //   28..10: tag
+        //        2: valid bit
+        // All other bits must be zero
+        // This matches the address array structure
+        std::array<uint32, kCacheWays> tag;
+        std::array<std::array<uint8, kCacheLineSize>, kCacheWays> line;
+    };
+    alignas(16) std::array<CacheEntry, kCacheEntries> m_cacheEntries;
+
     // 092  R/W  8        00    CCR     Cache Control Register
     //   b  cd  r/w    description
     //   7  W1  R/W    Way Specification (MSB)
@@ -684,8 +699,7 @@ private:
             uint8 TW : 1;
             uint8 CP : 1;
             uint8 _rsvd5 : 1;
-            uint8 W0 : 1;
-            uint8 W1 : 1;
+            uint8 W01 : 2;
         };
     } CCR;
 
@@ -2592,8 +2606,8 @@ private:
 
 // -----------------------------------------------------------------------------
 
-std::vector<uint8_t> loadROM(std::filesystem::path romPath) {
-    fmt::print("Loading ROM from {}... ", romPath.string());
+std::vector<uint8_t> loadFile(std::filesystem::path romPath) {
+    fmt::print("Loading file {}... ", romPath.string());
 
     std::vector<uint8_t> rom;
     std::ifstream romStream{romPath, std::ios::binary | std::ios::ate};
@@ -2620,7 +2634,7 @@ int main(int argc, char **argv) {
 
     auto saturn = std::make_unique<Saturn>();
 
-    auto rom = loadROM(argv[1]);
+    auto rom = loadFile(argv[1]);
     if (rom.size() != kIPLSize) {
         fmt::println("IPL ROM size mismatch: expected {} bytes, got {} bytes", kIPLSize, rom.size());
         return EXIT_FAILURE;
