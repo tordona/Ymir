@@ -336,8 +336,9 @@ private:
 
 class SH2 {
 public:
-    SH2(SH2Bus &bus)
+    SH2(SH2Bus &bus, bool master)
         : m_bus(bus) {
+        BCR1.MASTER = !master;
         Reset(true);
     }
 
@@ -368,6 +369,11 @@ public:
         R[15] = MemReadLong(VBR + 4);
 
         // On-chip registers
+        BCR1.u15 = 0x3F0;
+        BCR2.u16 = 0xFC;
+        WCR.u16 = 0xAAFF;
+        MCR.u16 = 0x0;
+
         m_cacheEntries.fill({});
         WriteCCR(0x00);
     }
@@ -507,7 +513,7 @@ private:
             return (address & 1) ? static_cast<T>(0x12231223) : static_cast<T>(0x23122312);
         case 0b011: { // cache address array
             uint32 entry = (address >> 4u) & 0x3F;
-            return m_cacheEntries[entry].tag[CCR.W01]; // TODO: include LRU data
+            return m_cacheEntries[entry].tag[CCR.Wn]; // TODO: include LRU data
         }
         case 0b100:
         case 0b110: // cache data array
@@ -555,7 +561,7 @@ private:
             break;
         case 0b011: { // cache address array
             uint32 entry = (address >> 4u) & 0x3F;
-            m_cacheEntries[entry].tag[CCR.W01] = address & 0x1FFFFC04;
+            m_cacheEntries[entry].tag[CCR.Wn] = address & 0x1FFFFC04;
             // TODO: update LRU data
             break;
         }
@@ -569,6 +575,17 @@ private:
         case 0b111: // I/O area
             if (address >= 0xFFFFFE00) {
                 OnChipRegWrite<T>(address & 0x1FF, value);
+            } else if ((address >> 12u) == 0xFFFF8) {
+                // DRAM setup stuff
+                switch (address) {
+                case 0xFFFF8426: fmt::println("16-bit CAS latency 1"); break;
+                case 0xFFFF8446: fmt::println("16-bit CAS latency 2"); break;
+                case 0xFFFF8466: fmt::println("16-bit CAS latency 3"); break;
+                case 0xFFFF8848: fmt::println("32-bit CAS latency 1"); break;
+                case 0xFFFF8888: fmt::println("32-bit CAS latency 2"); break;
+                case 0xFFFF88C8: fmt::println("32-bit CAS latency 3"); break;
+                default: fmt::println("unhandled {}-bit SH-2 I/O area read from {:08X}", sizeof(T) * 8, address); break;
+                }
             } else {
                 // TODO: implement
                 fmt::println("unhandled {}-bit SH-2 I/O area write to {:08X} = {:X}", sizeof(T) * 8, address, value);
@@ -691,7 +708,7 @@ private:
     //   1  ID  R/W    Instruction Replacement Disabled (same as above, but for code cache)
     //   0  CE  R/W    Cache Enable (0=disable, 1=enable)
     union CCR_t {
-        uint8 u8 = 0x00;
+        uint8 u8;
         struct {
             uint8 CE : 1;
             uint8 ID : 1;
@@ -699,7 +716,7 @@ private:
             uint8 TW : 1;
             uint8 CP : 1;
             uint8 _rsvd5 : 1;
-            uint8 W01 : 2;
+            uint8 Wn : 2;
         };
     } CCR;
 
@@ -708,10 +725,10 @@ private:
             return;
         }
 
-        fmt::println("CCR changed from 0x{:02X} to 0x{:02X}", CCR.u8, value);
+        // fmt::println("CCR changed from 0x{:02X} to 0x{:02X}", CCR.u8, value);
         CCR.u8 = value;
         if (CCR.CP) {
-            fmt::println("  cache purged");
+            // fmt::println("  cache purged");
             // TODO: purge cache
             CCR.CP = 0;
         }
@@ -777,17 +794,103 @@ private:
     // --- BSC module ---
     //
     // 1E0  R/W  16,32    03F0  BCR1    Bus Control Register 1
+    union BCR1_t {
+        uint16 u16;
+        struct {
+            uint16 DRAMn : 3;
+            uint16 _rsvd3 : 1;
+            uint16 A0LWn : 2;
+            uint16 A1LWn : 2;
+            uint16 AHLWn : 2;
+            uint16 PSHR : 1;
+            uint16 BSTROM : 1;
+            uint16 ENDIAN : 1;
+            uint16 _rsvd13 : 1;
+            uint16 _rsvd14 : 1;
+            uint16 MASTER : 1;
+        };
+        uint16 u15 : 15;
+    } BCR1;
+
     // 1E4  R/W  16,32    00FC  BCR2    Bus Control Register 2
+    union BCR2_t {
+        uint16 u16;
+        struct {
+            uint16 _rsvd0 : 1;
+            uint16 _rsvd1 : 1;
+            uint16 A1SZn : 2;
+            uint16 A2SZn : 2;
+            uint16 A3SZn : 2;
+        };
+    } BCR2;
+
     // 1E8  R/W  16,32    AAFF  WCR     Wait Control Register
+    union WCR_t {
+        uint16 u16;
+        struct {
+            uint16 W0n : 2;
+            uint16 W1n : 2;
+            uint16 W2n : 2;
+            uint16 W3n : 2;
+            uint16 IW0n : 2;
+            uint16 IW1n : 2;
+            uint16 IW2n : 2;
+            uint16 IW3n : 2;
+        };
+    } WCR;
+
     // 1EC  R/W  16,32    0000  MCR     Individual Memory Control Register
+    union MCR_t {
+        uint16 u16;
+        struct {
+            uint16 _rsvd0 : 1;
+            uint16 _rsvd1 : 1;
+            uint16 RMD : 1;
+            uint16 RFSH : 1;
+            uint16 AMX0 : 1;
+            uint16 AMX1 : 1;
+            uint16 SZ : 1;
+            uint16 AMX2 : 1;
+            uint16 _rsvd8 : 1;
+            uint16 RASD : 1;
+            uint16 BE : 1;
+            uint16 TRASn : 2;
+            uint16 TRWL : 1;
+            uint16 RCD : 1;
+            uint16 TRP : 1;
+        };
+    } MCR;
+
     // 1F0  R/W  16,32    0000  RTCSR   Refresh Timer Control/Status Register
+    union RTCSR_t {
+        uint16 u16;
+        struct {
+            uint16 _rsvd0 : 1;
+            uint16 _rsvd1 : 1;
+            uint16 _rsvd2 : 1;
+            uint16 CKSn : 3;
+            uint16 CMIE : 1;
+            uint16 CMF : 1;
+        };
+    } RTCSR;
+
     // 1F4  R/W  16,32    0000  RTCNT   Refresh Timer Counter
+    uint8 RTCNT;
+
     // 1F8  R/W  16,32    0000  RTCOR   Refresh Timer Constant Register
+    uint8 RTCOR;
 
     template <mem_access_type T>
     T OnChipRegRead(uint32 address) {
         switch (address) {
         case 0x92 ... 0x9F: return (CCR.u8 << 8u) | CCR.u8;
+        case 0x1E0: return BCR1.u16;
+        case 0x1E4: return BCR2.u16;
+        case 0x1E8: return WCR.u16;
+        case 0x1EC: return MCR.u16;
+        case 0x1F0: return RTCSR.u16;
+        case 0x1F4: return RTCNT;
+        case 0x1F8: return RTCOR;
         default: fmt::println("unhandled {}-bit on-chip register read from {:02X}", sizeof(T) * 8, address); return 0;
         }
     }
@@ -795,7 +898,66 @@ private:
     template <mem_access_type T>
     void OnChipRegWrite(uint32 address, T value) {
         switch (address) {
-        case 0x92: WriteCCR(value); break;
+        case 0x92: // CCR
+            WriteCCR(value);
+            break;
+        case 0x1E0: // BCR1
+            // only accepts 32-bit writes and the top 16 bits must be 0xA55A
+            if constexpr (std::is_same_v<T, uint32>) {
+                if ((value >> 16u) == 0xA55A) {
+                    BCR1.u15 = value & 0x1FF7;
+                }
+            }
+            break;
+        case 0x1E4: // BCR2
+            // only accepts 32-bit writes and the top 16 bits must be 0xA55A
+            if constexpr (std::is_same_v<T, uint32>) {
+                if ((value >> 16u) == 0xA55A) {
+                    BCR2.u16 = value & 0xFC;
+                }
+            }
+            break;
+        case 0x1E8: // WCR
+            // only accepts 32-bit writes and the top 16 bits must be 0xA55A
+            if constexpr (std::is_same_v<T, uint32>) {
+                if ((value >> 16u) == 0xA55A) {
+                    WCR.u16 = value;
+                }
+            }
+            break;
+        case 0x1EC: // MCR
+            // only accepts 32-bit writes and the top 16 bits must be 0xA55A
+            if constexpr (std::is_same_v<T, uint32>) {
+                if ((value >> 16u) == 0xA55A) {
+                    MCR.u16 = value & 0xFEFC;
+                }
+            }
+            break;
+        case 0x1F0: // RTCSR
+            // only accepts 32-bit writes and the top 16 bits must be 0xA55A
+            if constexpr (std::is_same_v<T, uint32>) {
+                if ((value >> 16u) == 0xA55A) {
+                    // TODO: implement the set/clear rules for RTCSR.CMF
+                    RTCSR.u16 = (value & 0x78) | (RTCSR.u16 & 0x80);
+                }
+            }
+            break;
+        case 0x1F4: // RTCNT
+            // only accepts 32-bit writes and the top 16 bits must be 0xA55A
+            if constexpr (std::is_same_v<T, uint32>) {
+                if ((value >> 16u) == 0xA55A) {
+                    RTCNT = value;
+                }
+            }
+            break;
+        case 0x1F8: // RTCOR
+            // only accepts 32-bit writes and the top 16 bits must be 0xA55A
+            if constexpr (std::is_same_v<T, uint32>) {
+                if ((value >> 16u) == 0xA55A) {
+                    RTCOR = value;
+                }
+            }
+            break;
         default:
             fmt::println("unhandled {}-bit on-chip register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
             break;
@@ -2578,7 +2740,7 @@ private:
 class Saturn {
 public:
     Saturn()
-        : m_masterSH2(m_sh2bus) {
+        : m_masterSH2(m_sh2bus, true) {
         Reset(true);
     }
 
