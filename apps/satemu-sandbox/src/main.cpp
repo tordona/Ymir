@@ -544,7 +544,6 @@ private:
 
         switch (partition) {
         case 0b000: // cache
-
             if (CCR.CE) {
                 // TODO: use cache
             }
@@ -554,7 +553,6 @@ private:
             m_bus.Write<T>(address, value);
             break;
         case 0b010: // associative purge
-
             // TODO: implement
             fmt::println("unhandled {}-bit SH-2 associative purge write to {:08X} = {:X}", sizeof(T) * 8, address,
                          value);
@@ -567,7 +565,6 @@ private:
         }
         case 0b100:
         case 0b110: // cache data array
-
             // TODO: implement
             fmt::println("unhandled {}-bit SH-2 cache data array write to {:08X} = {:X}", sizeof(T) * 8, address,
                          value);
@@ -661,6 +658,10 @@ private:
     // 066  ?    16?      ??    VCRC    ???
     // 068  ?    16?      ??    VCRD    ???
     //
+    // 0E0  ?    16?      ??    ICR     ???
+    // 0E2  ?    16?      ??    IPRA    ???
+    // 0E4  ?    16?      ??    VCRWDT  ???
+    //
     // --- DMAC module ---
     //
     // 071  ?    8        ??    DRCR0   ???
@@ -734,13 +735,8 @@ private:
         }
     }
 
-    //
-    // --- INTC module (part 2) ---
-    //
-    // 0E0  ?    16?      ??    ICR     ???
-    // 0E2  ?    16?      ??    IPRA    ???
-    // 0E4  ?    16?      ??    VCRWDT  ???
-    //
+    // 0E0, 0E2, 0E4 are in INTC module above
+
     // --- DIVU module ---
     //
     // 100  ?    32?      ??    DVSR    ???
@@ -896,7 +892,14 @@ private:
     }
 
     template <mem_access_type T>
-    void OnChipRegWrite(uint32 address, T value) {
+    void OnChipRegWrite(uint32 address, T baseValue) {
+        uint32 value = baseValue;
+        if constexpr (std::is_same_v<T, uint8>) {
+            if (address >= 0x100) {
+                value |= value << 8u;
+            }
+        }
+
         switch (address) {
         case 0x92: // CCR
             WriteCCR(value);
