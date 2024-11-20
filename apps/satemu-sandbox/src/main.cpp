@@ -369,6 +369,8 @@ public:
         R[15] = MemReadLong(VBR + 4);
 
         // On-chip registers
+        IPRB.u16 = 0x0;
+        IPRA.u16 = 0x0;
         BCR1.u15 = 0x3F0;
         BCR2.u16 = 0xFC;
         WCR.u16 = 0xAAFF;
@@ -522,8 +524,15 @@ private:
             fmt::println("unhandled {}-bit SH-2 cache data array read from {:08X}", sizeof(T) * 8, address);
             return 0;
         case 0b111: // I/O area
-            if (address >= 0xFFFFFE00) {
-                return OnChipRegRead<T>(address & 0x1FF);
+            if ((address & 0xE0004000) == 0xE0004000) {
+                // bits 31-29 and 14 must be set
+                // bits 8-0 index the register
+                // bits 28 and 12 must be both set to access the lower half of the registers
+                if ((address & 0x100) == 0 && (address & 0x10001000) != 0x10001000) {
+                    return OpenBusRead<T>(address);
+                } else {
+                    return OnChipRegRead<T>(address & 0x1FF);
+                }
             } else {
                 // TODO: implement
                 fmt::println("unhandled {}-bit SH-2 I/O area read from {:08X}", sizeof(T) * 8, address);
@@ -570,8 +579,13 @@ private:
                          value);
             break;
         case 0b111: // I/O area
-            if (address >= 0xFFFFFE00) {
-                OnChipRegWrite<T>(address & 0x1FF, value);
+            if ((address & 0xE0004000) == 0xE0004000) {
+                // bits 31-29 and 14 must be set
+                // bits 8-0 index the register
+                // bits 28 and 12 must be both set to access the lower half of the registers
+                if ((address & 0x100) || (address & 0x10001000) == 0x10001000) {
+                    OnChipRegWrite<T>(address & 0x1FF, value);
+                }
             } else if ((address >> 12u) == 0xFFFF8) {
                 // DRAM setup stuff
                 switch (address) {
@@ -615,6 +629,19 @@ private:
         MemWrite<uint32>(address, value);
     }
 
+    // Returns 00 00 00 01 00 02 00 03 00 04 00 05 00 06 00 07
+    template <mem_access_type T>
+    T OpenBusRead(uint32 address) {
+        if constexpr (std::is_same_v<T, uint8>) {
+            return (address & 1u) * ((address >> 1u) & 0x7);
+            // return OpenBusRead<uint16>(address) >> (((address & 1) ^ 1) * 8);
+        } else if constexpr (std::is_same_v<T, uint16>) {
+            return (address >> 1u) & 0x7;
+        } else if constexpr (std::is_same_v<T, uint32>) {
+            return (OpenBusRead<uint16>(address + 1) << 16u) | OpenBusRead<uint16>(address);
+        }
+    }
+
     // -------------------------------------------------------------------------
     // On-chip peripherals
     //
@@ -622,6 +649,7 @@ private:
     //
     // addr r/w  access   init  code    name
     // 000  R/W  8        00    SMR     Serial Mode Register
+    //
     //   b  r/w  code  description
     //   7  R/W  C/nA  Communication Mode (0=async, 1=clocked sync)
     //   6  R/W  CHR   Character Length (0=8-bit, 1=7-bit)
@@ -651,16 +679,61 @@ private:
     // 018  ?    16?      ??    FICR    ???
     //
     // --- INTC module ---
+
+    // 060  R/W  8,16     0000  IPRB    Interrupt priority setting register B
     //
-    // 060  ?    16?      ??    IPRB    ???
-    // 062  ?    16?      ??    VCRA    ???
-    // 064  ?    16?      ??    VCRB    ???
-    // 066  ?    16?      ??    VCRC    ???
-    // 068  ?    16?      ??    VCRD    ???
+    //   bits   r/w  code       description
+    //   15-12  R/W  SCIIP(n)   Serial Communication Interface (SCI) Interrupt Priority Level
+    //   11-8   R/W  FRTIP(n)   Free-Running Timer (FRT) Interrupt Priority Level
+    //    7-0   R/W  Reserved   Must be zero
     //
-    // 0E0  ?    16?      ??    ICR     ???
-    // 0E2  ?    16?      ??    IPRA    ???
-    // 0E4  ?    16?      ??    VCRWDT  ???
+    //   (n) ranges from 0 (LSB) to 3 (MSB).
+    //   Interrupt priority levels range from 0 to 15.
+    union IPRB_t {
+        uint16 u16;
+        struct {
+            uint16 _rsvd0_7 : 8;
+            uint16 FRTIPn : 4;
+            uint16 SCIIPn : 4;
+        };
+    } IPRB;
+
+    // 062  R/W  8,16     0000  VCRA    Vector number setting register A
+    // 064  R/W  8,16     0000  VCRB    Vector number setting register B
+    // 066  R/W  8,16     0000  VCRC    Vector number setting register C
+    // 068  R/W  8,16     0000  VCRD    Vector number setting register D
+    //
+    // 0E0  R/W  8,16     0000  ICR     Interrupt control register
+    //    Bit 15 is read-only, indicating NMI level.
+    //    Due to this, the default value may be either 8000 or 0000.
+
+    // 0E2  R/W  8,16     0000  IPRA    Interrupt priority setting register A
+    //
+    //   bits   r/w  code       description
+    //   15-12  R/W  DIVUIP(n)  Division Unit (DIVU) Interrupt Priority Level
+    //   11-8   R/W  DMACIP(n)  DMA Controller (DMAC) Interrupt Priority Level
+    //    7-4   R/W  WDTIP(n)   Watchdog Timer (WDT) Interrupt Priority Level
+    //    3-0   R/W  Reserved   Must be zero
+    //
+    //   (n) ranges from 0 (LSB) to 3 (MSB).
+    //   Interrupt priority levels range from 0 to 15.
+    //
+    //   The DMAC priority level is assigned to both channels.
+    //   If both channels raise an interrupt, channel 0 is prioritized.
+    //
+    //   WDTIP(n) includes both the watchdog timer and bus state controller (BSC).
+    //   WDT interrupt has priority over BSC.
+    union IPRA_t {
+        uint16 u16;
+        struct {
+            uint16 _rsvd0_3 : 4;
+            uint16 WDTIPn : 4;
+            uint16 DMACIPn : 4;
+            uint16 DIVUIPn : 4;
+        };
+    } IPRA;
+
+    // 0E4  R/W  8,16     0000  VCRWDT  Vector number setting register WDT
     //
     // --- DMAC module ---
     //
@@ -878,34 +951,104 @@ private:
 
     template <mem_access_type T>
     T OnChipRegRead(uint32 address) {
+        // Misaligned memory accesses raise an address error, meaning all accesses here are aligned.
+        // Therefore:
+        //   (address & 3) == 2 is only valid for 16-bit accesses
+        //   (address & 1) == 1 is only valid for 8-bit accesses
+        // Additionally:
+        //   (address & 1) == 0 has special cases for registers 0-255:
+        //     8-bit read from a 16-bit register:  r >> 8u
+        //     16-bit read from a 8-bit register: (r << 8u) | r
+        //     Every other access returns just r
+
+        // Registers 0-255 do not accept 32-bit accesses
+        if constexpr (std::is_same_v<T, uint32>) {
+            if (address < 0x100) {
+                // TODO: raise an address error
+            }
+        }
+
+        // Registers 256-511 do not accept 8-bit accesses
+        if constexpr (std::is_same_v<T, uint8>) {
+            if (address >= 0x100) {
+                // TODO: raise an address error
+            }
+        }
+
+        auto adjustWordLower = [&](uint16 value) -> T {
+            if constexpr (std::is_same_v<T, uint8>) {
+                return (address & 1) ? value : (value >> 8u);
+            } else {
+                return value;
+            }
+        };
+        auto adjustByteLower = [&](uint8 value) -> T {
+            if constexpr (std::is_same_v<T, uint16>) {
+                return (address & 1) ? value : ((value << 8u) | value);
+            } else {
+                return value;
+            }
+        };
+
         switch (address) {
-        case 0x92 ... 0x9F: return (CCR.u8 << 8u) | CCR.u8;
-        case 0x1E0: return BCR1.u16;
-        case 0x1E4: return BCR2.u16;
-        case 0x1E8: return WCR.u16;
-        case 0x1EC: return MCR.u16;
-        case 0x1F0: return RTCSR.u16;
-        case 0x1F4: return RTCNT;
-        case 0x1F8: return RTCOR;
-        default: fmt::println("unhandled {}-bit on-chip register read from {:02X}", sizeof(T) * 8, address); return 0;
+        case 0x60 ... 0x61: return adjustWordLower(IPRB.u16);
+        case 0x92 ... 0x9F: return adjustByteLower(CCR.u8);
+        case 0xE2 ... 0xE3: return adjustWordLower(IPRA.u16);
+
+        case 0x1E0 ... 0x1E2: return BCR1.u16;
+        case 0x1E4 ... 0x1E6: return BCR2.u16;
+        case 0x1E8 ... 0x1EA: return WCR.u16;
+        case 0x1EC ... 0x1EE: return MCR.u16;
+        case 0x1F0 ... 0x1F2: return RTCSR.u16;
+        case 0x1F4 ... 0x1F6: return RTCNT;
+        case 0x1F8 ... 0x1FA: return RTCOR;
+
+        default: //
+            fmt::println("unhandled {}-bit on-chip register read from {:02X}", sizeof(T) * 8, address);
+            return 0;
         }
     }
 
     template <mem_access_type T>
     void OnChipRegWrite(uint32 address, T baseValue) {
+        // Misaligned memory accesses raise an address error, meaning all accesses here are aligned.
+        // Therefore:
+        //   (address & 3) == 2 is only valid for 16-bit accesses
+        //   (address & 1) == 1 is only valid for 8-bit accesses
+
+        // Registers 0-255 do not accept 32-bit accesses
+        if constexpr (std::is_same_v<T, uint32>) {
+            if (address < 0x100) {
+                // TODO: raise an address error
+            }
+        }
+
+        // Registers 256-511 do not accept 8-bit accesses
         uint32 value = baseValue;
         if constexpr (std::is_same_v<T, uint8>) {
             if (address >= 0x100) {
+                // TODO: raise an address error
                 value |= value << 8u;
             }
         }
 
+        // For registers 0-255, 8-bit writes to 16-bit registers change the corresponding byte
+        auto writeWordLower = [&](uint16 regValue) -> T {
+            if constexpr (std::is_same_v<T, uint8>) {
+                uint16 shift = ((address & 1) ^ 1) * 8;
+                return (regValue & ~(0xFFu << shift)) | (value << shift);
+            } else {
+                return value;
+            }
+        };
+
         switch (address) {
-        case 0x92: // CCR
-            WriteCCR(value);
-            break;
+        case 0x60 ... 0x61: IPRB.u16 = writeWordLower(IPRB.u16) & 0xFF00; break;
+        case 0x92: WriteCCR(value); break;
+        case 0xE2 ... 0xE3: IPRA.u16 = writeWordLower(IPRA.u16) & 0xFFF0; break;
+
         case 0x1E0: // BCR1
-            // only accepts 32-bit writes and the top 16 bits must be 0xA55A
+            // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
             if constexpr (std::is_same_v<T, uint32>) {
                 if ((value >> 16u) == 0xA55A) {
                     BCR1.u15 = value & 0x1FF7;
@@ -913,7 +1056,7 @@ private:
             }
             break;
         case 0x1E4: // BCR2
-            // only accepts 32-bit writes and the top 16 bits must be 0xA55A
+            // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
             if constexpr (std::is_same_v<T, uint32>) {
                 if ((value >> 16u) == 0xA55A) {
                     BCR2.u16 = value & 0xFC;
@@ -921,7 +1064,7 @@ private:
             }
             break;
         case 0x1E8: // WCR
-            // only accepts 32-bit writes and the top 16 bits must be 0xA55A
+            // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
             if constexpr (std::is_same_v<T, uint32>) {
                 if ((value >> 16u) == 0xA55A) {
                     WCR.u16 = value;
@@ -929,7 +1072,7 @@ private:
             }
             break;
         case 0x1EC: // MCR
-            // only accepts 32-bit writes and the top 16 bits must be 0xA55A
+            // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
             if constexpr (std::is_same_v<T, uint32>) {
                 if ((value >> 16u) == 0xA55A) {
                     MCR.u16 = value & 0xFEFC;
@@ -937,7 +1080,7 @@ private:
             }
             break;
         case 0x1F0: // RTCSR
-            // only accepts 32-bit writes and the top 16 bits must be 0xA55A
+            // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
             if constexpr (std::is_same_v<T, uint32>) {
                 if ((value >> 16u) == 0xA55A) {
                     // TODO: implement the set/clear rules for RTCSR.CMF
@@ -946,7 +1089,7 @@ private:
             }
             break;
         case 0x1F4: // RTCNT
-            // only accepts 32-bit writes and the top 16 bits must be 0xA55A
+            // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
             if constexpr (std::is_same_v<T, uint32>) {
                 if ((value >> 16u) == 0xA55A) {
                     RTCNT = value;
@@ -954,14 +1097,14 @@ private:
             }
             break;
         case 0x1F8: // RTCOR
-            // only accepts 32-bit writes and the top 16 bits must be 0xA55A
+            // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
             if constexpr (std::is_same_v<T, uint32>) {
                 if ((value >> 16u) == 0xA55A) {
                     RTCOR = value;
                 }
             }
             break;
-        default:
+        default: //
             fmt::println("unhandled {}-bit on-chip register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
             break;
         }
