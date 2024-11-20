@@ -4,6 +4,7 @@
 
 #include <array>
 #include <bit>
+#include <cassert>
 #include <concepts>
 #include <cstdint>
 #include <filesystem>
@@ -63,6 +64,83 @@ constexpr size_t operator""_KiB(size_t sz) {
 }
 
 // -----------------------------------------------------------------------------
+// smpc.hpp
+
+class SMPC {
+public:
+    SMPC() {
+        Reset(true);
+    }
+
+    void Reset(bool hard) {
+        IREG.fill(0);
+        OREG.fill(0);
+        SR.u8 = 0x80;
+        SF = false;
+    }
+
+    uint8 ReadOREG(uint8 offset) {
+        return OREG[offset & 31];
+    }
+
+    uint8 ReadSR() {
+        return SR.u8;
+    }
+
+    uint8 ReadSF() {
+        return SF;
+    }
+
+    void WriteIREG(uint8 offset, uint8 value) {
+        assert(offset < 7);
+        IREG[offset] = value;
+    }
+
+    void WriteCOMREG(uint8 value) {
+        // TODO: implement
+        fmt::println("unimplemented SMPC COMREG write = {:02X}", value);
+    }
+
+    void WriteSF(uint8 value) {
+        // TODO: implement
+        fmt::println("unimplemented SMPC SF write = {:02X}", value);
+    }
+
+private:
+    std::array<uint8, 7> IREG;
+    std::array<uint8, 32> OREG;
+
+    // bits   r/w  code     description
+    //    7   R    -        Reserved - must be one
+    //    6   R    PDL      Peripheral Data Location bit (0=2nd+, 1=1st)
+    //    5   R    NPE      Remaining Peripheral Existence bit (0=no remaining data, 1=more remaining data)
+    //    4   R    RESB     Reset button status (0=released, 1=pressed)
+    //  3-2   R    P2MD0-1  Port 2 Mode
+    //                        00: 15-byte mode
+    //                        01: 255-byte mode
+    //                        10: Unused
+    //                        11: 0-byte mode
+    //  1-0   R    P1MD0-1  Port 1 Mode
+    //                        00: 15-byte mode
+    //                        01: 255-byte mode
+    //                        10: Unused
+    //                        11: 0-byte mode
+    union SR_t {
+        uint8 u8;
+        struct {
+            uint8 P1MDn : 2;
+            uint8 P2MDn : 2;
+            uint8 RESB : 1;
+            uint8 NPE : 1;
+            uint8 PDL : 1;
+            uint8 _rsvd7 : 1;
+        };
+    } SR;
+
+    bool SF;
+};
+
+// -----------------------------------------------------------------------------
 // sh2_bus.hpp
 
 constexpr size_t kIPLSize = 512_KiB;
@@ -119,7 +197,8 @@ concept mem_access_type = std::same_as<T, uint8> || std::same_as<T, uint16> || s
 //   - Byte reads work normally
 class SH2Bus {
 public:
-    SH2Bus() {
+    SH2Bus(SMPC &smpc)
+        : m_SMPC(smpc) {
         m_IPL.fill(0);
         Reset(true);
     }
@@ -163,7 +242,7 @@ public:
             return m_IPL[address];
         } else if (address - 0x100000 <= 0x0007FFFF) {
             address &= 0x7F;
-            return SMPCRead(address);
+            return SMPCRead(address | 1);
         } else if (address - 0x200000 <= 0x000FFFFF) {
             address &= 0xFFFFF;
             return m_WRAMLow[address];
@@ -185,6 +264,9 @@ public:
         if (address <= 0x000FFFFF) {
             address &= 0x7FFFF;
             return (m_IPL[address + 0] << 8u) | m_IPL[address + 1];
+        } else if (address - 0x100000 <= 0x0007FFFF) {
+            address &= 0x7F;
+            return 0xFF00 | SMPCRead(address | 1);
         } else if (address - 0x200000 <= 0x000FFFFF) {
             address &= 0xFFFFF;
             return (m_WRAMLow[address + 0] << 8u) | m_WRAMLow[address + 1];
@@ -228,8 +310,10 @@ public:
         uint32 address = baseAddress & 0x7FFFFFF;
 
         if (address - 0x100000 <= 0x0007FFFF && (address & 1)) {
-            address &= 0x7F;
-            SMPCWrite(address, value);
+            if (address & 1) {
+                address &= 0x7F;
+                SMPCWrite(address, value);
+            }
         } else if (address - 0x200000 <= 0x000FFFFF) {
             address &= 0xFFFFF;
             m_WRAMLow[address] = value;
@@ -249,7 +333,7 @@ public:
 
         if (address - 0x100000 <= 0x0007FFFF) {
             address &= 0x7F;
-            SMPCWrite(address | 1, value);
+            SMPCWrite(address, value);
         } else if (address - 0x200000 <= 0x000FFFFF) {
             address &= 0xFFFFF;
             m_WRAMLow[address + 0] = value >> 8u;
@@ -294,13 +378,24 @@ private:
     std::array<uint8, kWRAMLowSize> m_WRAMLow;
     std::array<uint8, kWRAMHighSize> m_WRAMHigh;
 
+    SMPC &m_SMPC;
+
     uint8 SMPCRead(uint32 address) {
-        fmt::println("unhandled SMPC read from {:02X}", address);
-        return 0;
+        switch (address) {
+        case 0x21 ... 0x5F: return m_SMPC.ReadOREG((address - 0x20) >> 1);
+        case 0x61: return m_SMPC.ReadSR();
+        case 0x63: return m_SMPC.ReadSF();
+        default: fmt::println("unhandled SMPC read from {:02X}", address); return 0; // TODO: read open bus
+        }
     }
 
     void SMPCWrite(uint32 address, uint8 value) {
-        fmt::println("unhandled SMPC write to {:02X} = {:02X}", address, value);
+        switch (address) {
+        case 0x01 ... 0x0D: m_SMPC.WriteIREG(address >> 1, value); break;
+        case 0x1F: m_SMPC.WriteCOMREG(value); break;
+        case 0x63: m_SMPC.WriteSF(value); break;
+        default: fmt::println("unhandled SMPC write to {:02X} = {:02X}", address, value); break;
+        }
     }
 
     uint8 SCUReadByte(uint32 address) {
@@ -538,7 +633,7 @@ private:
                 // bits 8-0 index the register
                 // bits 28 and 12 must be both set to access the lower half of the registers
                 if ((address & 0x100) == 0 && (address & 0x10001000) != 0x10001000) {
-                    return OpenBusRead<T>(address);
+                    return OpenBusSeqRead<T>(address);
                 } else {
                     return OnChipRegRead<T>(address & 0x1FF);
                 }
@@ -640,14 +735,14 @@ private:
 
     // Returns 00 00 00 01 00 02 00 03 00 04 00 05 00 06 00 07
     template <mem_access_type T>
-    T OpenBusRead(uint32 address) {
+    T OpenBusSeqRead(uint32 address) {
         if constexpr (std::is_same_v<T, uint8>) {
             return (address & 1u) * ((address >> 1u) & 0x7);
-            // return OpenBusRead<uint16>(address) >> (((address & 1) ^ 1) * 8);
+            // return OpenBusSeqRead<uint16>(address) >> (((address & 1) ^ 1) * 8);
         } else if constexpr (std::is_same_v<T, uint16>) {
             return (address >> 1u) & 0x7;
         } else if constexpr (std::is_same_v<T, uint32>) {
-            return (OpenBusRead<uint16>(address + 1) << 16u) | OpenBusRead<uint16>(address);
+            return (OpenBusSeqRead<uint16>(address + 1) << 16u) | OpenBusSeqRead<uint16>(address);
         }
     }
 
@@ -923,6 +1018,7 @@ private:
     // 100  ?    32?      ??    DVSR    ???
     // 104  ?    32?      ??    DVDNT   ???
     // 108  ?    32?      ??    DVCR    ???
+
     // 10C  R/W  16,32    ??    VCRDIV  Vector number register setting DIV
     //
     //   bits   r/w  code   description
@@ -981,8 +1077,6 @@ private:
     //    7-0   R/W  VC7-0  Vector Number
     uint8 VCRDMA1;
 
-    // --- DMAC module (both channels) ---
-    //
     // 1B0  ?    32?      ??    DMAOR   ???
     //
     // --- BSC module ---
@@ -3056,13 +3150,15 @@ private:
 class Saturn {
 public:
     Saturn()
-        : m_masterSH2(m_sh2bus, true) {
+        : m_sh2bus(m_SMPC)
+        , m_masterSH2(m_sh2bus, true) {
         Reset(true);
     }
 
     void Reset(bool hard) {
         m_sh2bus.Reset(hard);
         m_masterSH2.Reset(hard);
+        m_SMPC.Reset(hard);
     }
 
     void LoadIPL(std::span<uint8, kIPLSize> ipl) {
@@ -3080,6 +3176,7 @@ public:
 private:
     SH2Bus m_sh2bus;
     SH2 m_masterSH2;
+    SMPC m_SMPC;
 };
 
 // -----------------------------------------------------------------------------
