@@ -369,12 +369,21 @@ public:
         R[15] = MemReadLong(VBR + 4);
 
         // On-chip registers
-        IPRB.val.u16 = 0x0;
-        IPRA.val.u16 = 0x0;
-        BCR1.u15 = 0x3F0;
-        BCR2.u16 = 0xFC;
+        IPRB.val.u16 = 0x0000;
+        VCRA.val.u16 = 0x0000;
+        VCRB.val.u16 = 0x0000;
+        VCRC.val.u16 = 0x0000;
+        VCRD.val.u16 = 0x0000;
+        ICR.val.u16 = 0x0000;
+        IPRA.val.u16 = 0x0000;
+        VCRWDT.val.u16 = 0x0000;
+        VCRDIV = 0x0000; // undefined initial value
+        VCRDMA0 = 0x00;  // undefined initial value
+        VCRDMA1 = 0x00;  // undefined initial value
+        BCR1.u15 = 0x03F0;
+        BCR2.u16 = 0x00FC;
         WCR.u16 = 0xAAFF;
-        MCR.u16 = 0x0;
+        MCR.u16 = 0x0000;
 
         m_cacheEntries.fill({});
         WriteCCR(0x00);
@@ -688,11 +697,10 @@ private:
     // 060  R/W  8,16     0000  IPRB    Interrupt priority setting register B
     //
     //   bits   r/w  code       description
-    //   15-12  R/W  SCIIP(n)   Serial Communication Interface (SCI) Interrupt Priority Level
-    //   11-8   R/W  FRTIP(n)   Free-Running Timer (FRT) Interrupt Priority Level
+    //   15-12  R/W  SCIIP3-0   Serial Communication Interface (SCI) Interrupt Priority Level
+    //   11-8   R/W  FRTIP3-0   Free-Running Timer (FRT) Interrupt Priority Level
     //    7-0   R/W  Reserved   Must be zero
     //
-    //   (n) ranges from 0 (LSB) to 3 (MSB).
     //   Interrupt priority levels range from 0 to 15.
     union IPRB_t {
         Reg16 val;
@@ -704,29 +712,108 @@ private:
     } IPRB;
 
     // 062  R/W  8,16     0000  VCRA    Vector number setting register A
+    //
+    //   bits   r/w  code     description
+    //     15   R    -        Reserved - must be zero
+    //   14-8   R/W  SERV6-0  Serial Communication Interface (SCI) Receive-Error Interrupt Vector Number
+    //      7   R    -        Reserved - must be zero
+    //    6-0   R/W  SRXV6-0  Serial Communication Interface (SCI) Receive-Data-Full Interrupt Vector Number
+    union VCRA_t {
+        Reg16 val;
+        struct {
+            uint16 SRXVn : 7;
+            uint16 _rsvd7 : 1;
+            uint16 SERVn : 7;
+            uint16 _rsvd15 : 1;
+        };
+    } VCRA;
+
     // 064  R/W  8,16     0000  VCRB    Vector number setting register B
+    //
+    //   bits   r/w  code     description
+    //     15   R    -        Reserved - must be zero
+    //   14-8   R/W  STXV6-0  Serial Communication Interface (SCI) Transmit-Data-Empty Interrupt Vector Number
+    //      7   R    -        Reserved - must be zero
+    //    6-0   R/W  STEV6-0  Serial Communication Interface (SCI) Transmit-End Interrupt Vector Number
+    union VCRB_t {
+        Reg16 val;
+        struct {
+            uint16 STEVn : 7;
+            uint16 _rsvd7 : 1;
+            uint16 STXVn : 7;
+            uint16 _rsvd15 : 1;
+        };
+    } VCRB;
+
     // 066  R/W  8,16     0000  VCRC    Vector number setting register C
+    //
+    //   bits   r/w  code     description
+    //     15   R    -        Reserved - must be zero
+    //   14-8   R/W  FICV6-0  Free-Running Timer (FRT) Input-Capture Interrupt Vector Number
+    //      7   R    -        Reserved - must be zero
+    //    6-0   R/W  FOCV6-0  Free-Running Timer (FRT) Output-Compare Interrupt Vector Number
+    union VCRC_t {
+        Reg16 val;
+        struct {
+            uint16 FOCVn : 7;
+            uint16 _rsvd7 : 1;
+            uint16 FICVn : 7;
+            uint16 _rsvd15 : 1;
+        };
+    } VCRC;
+
     // 068  R/W  8,16     0000  VCRD    Vector number setting register D
     //
+    //   bits   r/w  code     description
+    //     15   R    -        Reserved - must be zero
+    //   14-8   R/W  FOVV6-0  Free-Running Timer (FRT) Overflow Interrupt Vector Number
+    //    7-0   R    -        Reserved - must be zero
+    union VCRD_t {
+        Reg16 val;
+        struct {
+            uint16 _rsvd0_7 : 8;
+            uint16 FOVVn : 7;
+            uint16 _rsvd15 : 1;
+        };
+    } VCRD;
+
     // 0E0  R/W  8,16     0000  ICR     Interrupt control register
-    //    Bit 15 is read-only, indicating NMI level.
-    //    Due to this, the default value may be either 8000 or 0000.
+    //
+    //   bits   r/w  code   description
+    //     15   R    NMIL   NMI Input Level
+    //   14-9   R    -      Reserved - must be zero
+    //      8   R/W  NMIE   NMI Edge Select (0=falling, 1=rising)
+    //    7-1   R    -      Reserved - must be zero
+    //      0   R/W  VECMD  IRL Interrupt Vector Mode Select (0=auto, 1=external)
+    //                      Auto-vector mode assigns 71 to IRL15 and IRL14, and 64 to IRL1.
+    //                      External vector mode reads from external vector number input pins D7-D0.
+    //
+    //    The default value may be either 8000 or 0000 because NMIL is an external signal.
+    union ICR_t {
+        Reg16 val;
+        struct {
+            uint16 VECMD : 1;
+            uint16 _rsvd1_7 : 7;
+            uint16 NMIE : 1;
+            uint16 _rsvd9_14 : 6;
+            uint16 NMIL : 1;
+        };
+    } ICR;
 
     // 0E2  R/W  8,16     0000  IPRA    Interrupt priority setting register A
     //
     //   bits   r/w  code       description
-    //   15-12  R/W  DIVUIP(n)  Division Unit (DIVU) Interrupt Priority Level
-    //   11-8   R/W  DMACIP(n)  DMA Controller (DMAC) Interrupt Priority Level
-    //    7-4   R/W  WDTIP(n)   Watchdog Timer (WDT) Interrupt Priority Level
-    //    3-0   R/W  Reserved   Must be zero
+    //   15-12  R/W  DIVUIP3-0  Division Unit (DIVU) Interrupt Priority Level
+    //   11-8   R/W  DMACIP3-0  DMA Controller (DMAC) Interrupt Priority Level
+    //    7-4   R/W  WDTIP3-0   Watchdog Timer (WDT) Interrupt Priority Level
+    //    3-0   R    -          Reserved - must be zero
     //
-    //   (n) ranges from 0 (LSB) to 3 (MSB).
     //   Interrupt priority levels range from 0 to 15.
     //
     //   The DMAC priority level is assigned to both channels.
     //   If both channels raise an interrupt, channel 0 is prioritized.
     //
-    //   WDTIP(n) includes both the watchdog timer and bus state controller (BSC).
+    //   WDTIP3-0 includes both the watchdog timer and bus state controller (BSC).
     //   WDT interrupt has priority over BSC.
     union IPRA_t {
         Reg16 val;
@@ -740,6 +827,21 @@ private:
 
     // 0E4  R/W  8,16     0000  VCRWDT  Vector number setting register WDT
     //
+    //   bits   r/w  code     description
+    //     15   R    -        Reserved - must be zero
+    //   14-8   R/W  WITV6-0  Watchdog Timer (WDT) Interval Interrupt Vector Number
+    //      7   R    -        Reserved - must be zero
+    //    6-0   R/W  BCMV6-0  Bus State Controller (BSC) Compare Match Interrupt Vector Number
+    union VCRWDT_t {
+        Reg16 val;
+        struct {
+            uint16 BCMVn : 7;
+            uint16 _rsvd7 : 1;
+            uint16 WITVn : 7;
+            uint16 _rsvd15 : 1;
+        };
+    } VCRWDT;
+
     // --- DMAC module ---
     //
     // 071  ?    8        ??    DRCR0   ???
@@ -777,15 +879,16 @@ private:
     alignas(16) std::array<CacheEntry, kCacheEntries> m_cacheEntries;
 
     // 092  R/W  8        00    CCR     Cache Control Register
-    //   b  cd  r/w    description
-    //   7  W1  R/W    Way Specification (MSB)
-    //   6  W0  R/W    Way Specification (LSB)
-    //   5  -   R      [reserved]
-    //   4  CP  R/W    Cache Purge (0=normal, 1=purge)
-    //   3  TW  R/W    Two-Way Mode (0=four-way, 1=two-way)
-    //   2  OD  R/W    Data Replacement Disable (0=disabled, 1=data cache not updated on miss)
-    //   1  ID  R/W    Instruction Replacement Disabled (same as above, but for code cache)
-    //   0  CE  R/W    Cache Enable (0=disable, 1=enable)
+    //
+    //   bits   r/w  code   description
+    //      7   R/W  W1     Way Specification (MSB)
+    //      6   R/W  W0     Way Specification (LSB)
+    //      5   R    -      Reserved - must be zero
+    //      4   R/W  CP     Cache Purge (0=normal, 1=purge)
+    //      3   R/W  TW     Two-Way Mode (0=four-way, 1=two-way)
+    //      2   R/W  OD     Data Replacement Disable (0=disabled, 1=data cache not updated on miss)
+    //      1   R/W  ID     Instruction Replacement Disabled (same as above, but for code cache)
+    //      0   R/W  CE     Cache Enable (0=disable, 1=enable)
     union CCR_t {
         uint8 u8;
         struct {
@@ -820,7 +923,13 @@ private:
     // 100  ?    32?      ??    DVSR    ???
     // 104  ?    32?      ??    DVDNT   ???
     // 108  ?    32?      ??    DVCR    ???
-    // 10C  ?    32?      ??    VCRDIV  ???
+    // 10C  R/W  16,32    ??    VCRDIV  Vector number register setting DIV
+    //
+    //   bits   r/w  code   description
+    //  31-16   R    -      Reserved - must be zero
+    //   15-0   R/W  -      Interrupt Vector Number
+    uint16 VCRDIV;
+
     // 110  ?    32?      ??    DVDNTH  ???
     // 114  ?    32?      ??    DVDNTL  ???
     //
@@ -845,22 +954,33 @@ private:
     // 176  ?    16?      ??    BDMRBL  ???
     // 178  ?    16?      ??    BRCR    ???
     //
-    // --- DMAC module (channel 0) ---
-    //
+    // --- DMAC module ---
+
     // 180  ?    32?      ??    SAR0    ???
     // 184  ?    32?      ??    DAR0    ???
     // 188  ?    32?      ??    TCR0    ???
     // 18C  ?    32?      ??    CHCR0   ???
-    // 1A0  ?    32?      ??    VCRDMA0 ???
+
+    // 1A0  R/W  32       ??    VCRDMA0 DMA vector number register 0
     //
-    // --- DMAC module (channel 1) ---
+    //   bits   r/w  code   description
+    //   31-8   R    -      Reserved - must be zero
+    //    7-0   R/W  VC7-0  Vector Number
+    uint8 VCRDMA0;
+
     //
     // 190  ?    32?      ??    SAR1    ???
     // 194  ?    32?      ??    DAR1    ???
     // 198  ?    32?      ??    TCR1    ???
     // 19C  ?    32?      ??    CHCR1   ???
-    // 1A8  ?    32?      ??    VCRDMA1 ???
+
+    // 1A8  R/W  32       ??    VCRDMA1 DMA vector number register 1
     //
+    //   bits   r/w  code   description
+    //   31-8   R    -      Reserved - must be zero
+    //    7-0   R/W  VC7-0  Vector Number
+    uint8 VCRDMA1;
+
     // --- DMAC module (both channels) ---
     //
     // 1B0  ?    32?      ??    DMAOR   ???
@@ -1001,8 +1121,19 @@ private:
 
         switch (address) {
         case 0x60 ... 0x61: return readWordLower(IPRB.val);
+        case 0x62 ... 0x63: return readWordLower(VCRA.val);
+        case 0x64 ... 0x65: return readWordLower(VCRB.val);
+        case 0x66 ... 0x67: return readWordLower(VCRC.val);
+        case 0x68 ... 0x69: return readWordLower(VCRD.val);
         case 0x92 ... 0x9F: return readByteLower(CCR.u8);
+        case 0xE0 ... 0xE1: return readWordLower(ICR.val);
         case 0xE2 ... 0xE3: return readWordLower(IPRA.val);
+        case 0xE4 ... 0xE5: return readWordLower(VCRWDT.val);
+
+        case 0x10C: return VCRDIV;
+
+        case 0x1A0: return VCRDMA0;
+        case 0x1A8: return VCRDMA1;
 
         case 0x1E0 ... 0x1E2: return BCR1.u16;
         case 0x1E4 ... 0x1E6: return BCR2.u16;
@@ -1063,11 +1194,28 @@ private:
         switch (address) {
         case 0x60: writeWordLower(IPRB.val, value, 0xFF00); break;
         case 0x61: writeWordLower(IPRB.val, value, 0xFF00); break;
+        case 0x62: writeWordLower(VCRA.val, value, 0x7F7F); break;
+        case 0x63: writeWordLower(VCRA.val, value, 0x7F7F); break;
+        case 0x64: writeWordLower(VCRB.val, value, 0x7F7F); break;
+        case 0x65: writeWordLower(VCRB.val, value, 0x7F7F); break;
+        case 0x66: writeWordLower(VCRC.val, value, 0x7F7F); break;
+        case 0x67: writeWordLower(VCRC.val, value, 0x7F7F); break;
+        case 0x68: writeWordLower(VCRD.val, value, 0x7F00); break;
+        case 0x69: writeWordLower(VCRD.val, value, 0x7F00); break;
 
         case 0x92: WriteCCR(value); break;
 
+        case 0xE0: writeWordLower(ICR.val, value, 0x0101); break;
+        case 0xE1: writeWordLower(ICR.val, value, 0x0101); break;
         case 0xE2: writeWordLower(IPRA.val, value, 0xFFF0); break;
         case 0xE3: writeWordLower(IPRA.val, value, 0xFFF0); break;
+        case 0xE4: writeWordLower(VCRWDT.val, value, 0x7F7F); break;
+        case 0xE5: writeWordLower(VCRWDT.val, value, 0x7F7F); break;
+
+        case 0x10C: VCRDIV = value; break;
+
+        case 0x1A0: VCRDMA0 = value; break;
+        case 0x1A8: VCRDMA1 = value; break;
 
         case 0x1E0: // BCR1
             // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
