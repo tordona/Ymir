@@ -439,41 +439,56 @@ private:
 
     template <mem_access_type T>
     T SCURead(uint32 address) {
-        fmt::println("unhandled {}-bit SCU read from {:08X}", sizeof(T) * 8, address);
+        fmt::println("unhandled {}-bit SCU read from {:02X}", sizeof(T) * 8, address);
         return 0;
     }
 
     template <mem_access_type T>
     void SCUWrite(uint32 address, T value) {
-        fmt::println("unhandled {}-bit SCU write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+        fmt::println("unhandled {}-bit SCU write to {:02X} = {:X}", sizeof(T) * 8, address, value);
     }
 
     template <mem_access_type T>
     T CS2Read(uint32 address) {
-        if ((address & 0x7FFF) < 0x1000) {
+        // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
+        // These 4 KiB blocks are mapped every 32 KiB, up to 0x25891000.
+        if ((address & 0x7FFF) < 0x1000 && address < 0x91000) {
+            // TODO: 8-bit, 32-bit
             return CDBRead(address & 0x3F);
         }
 
-        fmt::println("unhandled {}-bit A-Bus CS2 read from {:08X}", sizeof(T) * 8, address);
+        fmt::println("unhandled {}-bit A-Bus CS2 read from {:05X}", sizeof(T) * 8, address);
         return 0;
     }
 
     template <mem_access_type T>
     void CS2Write(uint32 address, T value) {
-        fmt::println("unhandled {}-bit A-Bus CS2 write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+        // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
+        // These 4 KiB blocks are mapped every 32 KiB, up to 0x25891000.
+        if ((address & 0x7FFF) < 0x1000 && address < 0x91000) {
+            // TODO: 8-bit, 32-bit
+            CDBWrite(address & 0x3F, value);
+        } else {
+            fmt::println("unhandled {}-bit A-Bus CS2 write to {:05X} = {:X}", sizeof(T) * 8, address, value);
+        }
     }
 
     // -------------------------------------------------------------------------
     // TODO: move to CDBlock object
     uint16 CDBRead(uint32 address) {
+        fmt::println("CD Block read from {:02X}", address);
         // TODO: implement properly; we're just stubbing the CDBLOCK init sequence here
         switch (address) {
         case 0x18: return 0x0043;
         case 0x1C: return 0x4442;
         case 0x20: return 0x4C4F;
-        case 0x22: return 0x434B;
-        default: fmt::println("unhandled CD Block read from {:08X}", address); return 0;
+        case 0x24: return 0x434B;
+        default: fmt::println("unhandled CD Block read from {:02X}", address); return 0;
+        }
     }
+
+    void CDBWrite(uint32 address, uint16 value) {
+        fmt::println("unhandled CD Block write to {:02X} = {:X}", address, value);
     }
     // -------------------------------------------------------------------------
 };
@@ -590,7 +605,7 @@ private:
     SH2Bus &m_bus;
 
     uint64 dbg_count = 0;
-    static constexpr uint64 dbg_minCount = 9303610; // 9302150; // 9547530;
+    static constexpr uint64 dbg_minCount = 9303629; // 9302150; // 9547530;
 
     template <typename... T>
     void dbg_print(fmt::format_string<T...> fmt, T &&...args) {
@@ -684,10 +699,10 @@ private:
                 // bits 31-29 and 14 must be set
                 // bits 8-0 index the register
                 // bits 28 and 12 must be both set to access the lower half of the registers
-                if ((address & 0x100) == 0 && (address & 0x10001000) != 0x10001000) {
-                    return OpenBusSeqRead<T>(address);
-                } else {
+                if ((address & 0x100) || (address & 0x10001000) == 0x10001000) {
                     return OnChipRegRead<T>(address & 0x1FF);
+                } else {
+                    return OpenBusSeqRead<T>(address);
                 }
             } else {
                 // TODO: implement
@@ -785,7 +800,7 @@ private:
         MemWrite<uint32>(address, value);
     }
 
-    // Returns 00 00 00 01 00 02 00 03 00 04 00 05 00 06 00 07
+    // Returns 00 00 00 01 00 02 00 03 00 04 00 05 00 06 00 07 ... repeating
     template <mem_access_type T>
     T OpenBusSeqRead(uint32 address) {
         if constexpr (std::is_same_v<T, uint8>) {
@@ -1494,7 +1509,7 @@ private:
             default:
                 switch (instr & 0xFF) {
                 case 0x02: // 0000 nnnn 0000 0010   STC SR, Rn
-                    STCSR((instr >> 8u) & 0xF);
+                    STCSR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
@@ -1504,29 +1519,29 @@ private:
                         // TODO: illegal instruction
                         dbg_println("illegal delay slot instruction");
                     } else {
-                        BSRF((instr >> 8u) & 0xF);
+                        BSRF(bit::extract<8, 11>(instr));
                     }
                     break;
                 case 0x0A: // 0000 nnnn 0000 1010   STS MACH, Rn
-                    STSMACH((instr >> 8u) & 0xF);
+                    STSMACH(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x12: // 0000 nnnn 0001 0010   STC GBR, Rn
-                    STCGBR((instr >> 8u) & 0xF);
+                    STCGBR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x1A: // 0000 nnnn 0001 1010   STS MACL, Rn
-                    STSMACL((instr >> 8u) & 0xF);
+                    STSMACL(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x22: // 0000 nnnn 0010 0010   STC VBR, Rn
-                    STCVBR((instr >> 8u) & 0xF);
+                    STCVBR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
@@ -1536,17 +1551,17 @@ private:
                         // TODO: illegal instruction
                         dbg_println("illegal delay slot instruction");
                     } else {
-                        BRAF((instr >> 8u) & 0xF);
+                        BRAF(bit::extract<8, 11>(instr));
                     }
                     break;
                 case 0x29: // 0000 nnnn 0010 1001   MOVT Rn
-                    MOVT((instr >> 8u) & 0xF);
+                    MOVT(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x2A: // 0000 nnnn 0010 1010   STS PR, Rn
-                    STSPR((instr >> 8u) & 0xF);
+                    STSPR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
@@ -1554,38 +1569,38 @@ private:
                 default:
                     switch (instr & 0xF) {
                     case 0x4: // 0000 nnnn mmmm 0100   MOV.B Rm, @(R0,Rn)
-                        MOVBS0((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                        MOVBS0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                         if constexpr (!delaySlot) {
                             PC += 2;
                         }
                         break;
                     case 0x5: // 0000 nnnn mmmm 0101   MOV.W Rm, @(R0,Rn)
-                        MOVWS0((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                        MOVWS0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                         if constexpr (!delaySlot) {
                             PC += 2;
                         }
                         break;
                     case 0x6: // 0000 nnnn mmmm 0110   MOV.L Rm, @(R0,Rn)
-                        MOVLS0((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                        MOVLS0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                         if constexpr (!delaySlot) {
                             PC += 2;
                         }
                         break;
                         // TODO: case 0x7: // 0000 nnnn mmmm 0111   MUL.L Rm, Rn
                     case 0xC: // 0000 nnnn mmmm 1100   MOV.B @(R0,Rm), Rn
-                        MOVBL0((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                        MOVBL0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                         if constexpr (!delaySlot) {
                             PC += 2;
                         }
                         break;
                     case 0xD: // 0000 nnnn mmmm 1101   MOV.W @(R0,Rm), Rn
-                        MOVWL0((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                        MOVWL0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                         if constexpr (!delaySlot) {
                             PC += 2;
                         }
                         break;
                     case 0xE: // 0000 nnnn mmmm 1110   MOV.L @(R0,Rm), Rn
-                        MOVLL0((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                        MOVLL0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                         if constexpr (!delaySlot) {
                             PC += 2;
                         }
@@ -1600,14 +1615,14 @@ private:
             }
             break;
         case 0x1: // 0001 nnnn mmmm dddd   MOV.L Rm, @(disp,Rn)
-            MOVLS4((instr >> 4u) & 0xF, instr & 0xF, (instr >> 8u) & 0xF);
+            MOVLS4(bit::extract<4, 7>(instr), bit::extract<0, 3>(instr), bit::extract<8, 11>(instr));
             if constexpr (!delaySlot) {
                 PC += 2;
             }
             break;
         case 0x2: {
-            const uint16 rm = (instr >> 4u) & 0xF;
-            const uint16 rn = (instr >> 8u) & 0xF;
+            const uint16 rm = bit::extract<4, 7>(instr);
+            const uint16 rn = bit::extract<8, 11>(instr);
             switch (instr & 0xF) {
             case 0x0: // 0010 nnnn mmmm 0000   MOV.B Rm, @Rn
                 MOVBS(rm, rn);
@@ -1699,19 +1714,19 @@ private:
         case 0x3:
             switch (instr & 0xF) {
             case 0x0: // 0011 nnnn mmmm 0000   CMP/EQ Rm, Rn
-                CMPEQ((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                CMPEQ(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x2: // 0011 nnnn mmmm 0010   CMP/HS Rm, Rn
-                CMPHS((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                CMPHS(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x3: // 0011 nnnn mmmm 0011   CMP/GE Rm, Rn
-                CMPGE((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                CMPGE(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
@@ -1719,31 +1734,31 @@ private:
                 // TODO: case 0x4: // 0011 nnnn mmmm 0100   DIV1 Rm, Rn
                 // TODO: case 0x5: // 0011 nnnn mmmm 0101   DMULU.L Rm, Rn
             case 0x6: // 0011 nnnn mmmm 0110   CMP/HI Rm, Rn
-                CMPHI((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                CMPHI(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x7: // 0011 nnnn mmmm 0111   CMP/GT Rm, Rn
-                CMPGT((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                CMPGT(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x8: // 0011 nnnn mmmm 1000   SUB Rm, Rn
-                SUB((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                SUB(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x9: // 0011 nnnn mmmm 1001   SUBC Rm, Rn
-                SUBC((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                SUBC(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0xA: // 0011 nnnn mmmm 1010   SUBV Rm, Rn
-                SUBV((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                SUBV(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
@@ -1752,20 +1767,20 @@ private:
                 // There's no case 0xB
 
             case 0xC: // 0011 nnnn mmmm 1100   ADD Rm, Rn
-                ADD((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                ADD(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             // TODO: case 0xD: // 0011 nnnn mmmm 1101   DMULS.L Rm, Rn
             case 0xE: // 0011 nnnn mmmm 1110   ADDC Rm, Rn
-                ADDC((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                ADDC(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0xF: // 0011 nnnn mmmm 1110   ADDV Rm, Rn
-                ADDV((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                ADDV(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
@@ -1781,67 +1796,67 @@ private:
             } else {
                 switch (instr & 0xFF) {
                 case 0x00: // 0100 nnnn 0000 0000   SHLL Rn
-                    SHLL((instr >> 8u) & 0xF);
+                    SHLL(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x01: // 0100 nnnn 0000 0001   SHLR Rn
-                    SHLR((instr >> 8u) & 0xF);
+                    SHLR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x02: // 0100 nnnn 0000 0010   STS.L MACH, @-Rn
-                    STSMMACH((instr >> 8u) & 0xF);
+                    STSMMACH(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x03: // 0100 nnnn 0000 0010   STC.L SR, @-Rn
-                    STCMSR((instr >> 8u) & 0xF);
+                    STCMSR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x04: // 0100 nnnn 0000 0100   ROTL Rn
-                    ROTL((instr >> 8u) & 0xF);
+                    ROTL(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x05: // 0100 nnnn 0000 0101   ROTR Rn
-                    ROTR((instr >> 8u) & 0xF);
+                    ROTR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x06: // 0100 mmmm 0000 0110   LDS.L @Rm+, MACH
-                    LDSMMACH((instr >> 8u) & 0xF);
+                    LDSMMACH(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x07: // 0100 mmmm 0000 0111   LDC.L @Rm+, SR
-                    LDCMSR((instr >> 8u) & 0xF);
+                    LDCMSR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x08: // 0100 nnnn 0000 1000   SHLL2 Rn
-                    SHLL2((instr >> 8u) & 0xF);
+                    SHLL2(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x09: // 0100 nnnn 0000 1001   SHLR2 Rn
-                    SHLR2((instr >> 8u) & 0xF);
+                    SHLR2(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x0A: // 0100 mmmm 0000 1010   LDS Rm, MACH
-                    LDSMACH((instr >> 8u) & 0xF);
+                    LDSMACH(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
@@ -1851,14 +1866,14 @@ private:
                         // TODO: illegal instruction
                         dbg_println("illegal delay slot instruction");
                     } else {
-                        JSR((instr >> 8u) & 0xF);
+                        JSR(bit::extract<8, 11>(instr));
                     }
                     break;
 
                     // There's no case 0x0C or 0x0D
 
                 case 0x0E: // 0110 mmmm 0000 1110   LDC Rm, SR
-                    LDCSR((instr >> 8u) & 0xF);
+                    LDCSR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
@@ -1867,25 +1882,25 @@ private:
                     // There's no case 0x0F
 
                 case 0x10: // 0100 nnnn 0001 0000   DT Rn
-                    DT((instr >> 8u) & 0xF);
+                    DT(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x11: // 0100 nnnn 0001 0001   CMP/PZ Rn
-                    CMPPZ((instr >> 8u) & 0xF);
+                    CMPPZ(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x12: // 0100 nnnn 0001 0010   STS.L MACL, @-Rn
-                    STSMMACL((instr >> 8u) & 0xF);
+                    STSMMACL(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x13: // 0100 nnnn 0001 0011   STC.L GBR, @-Rn
-                    STCMGBR((instr >> 8u) & 0xF);
+                    STCMGBR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
@@ -1894,43 +1909,43 @@ private:
                     // There's no case 0x14
 
                 case 0x15: // 0100 nnnn 0001 0101   CMP/PL Rn
-                    CMPPL((instr >> 8u) & 0xF);
+                    CMPPL(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x16: // 0100 mmmm 0001 0110   LDS.L @Rm+, MACL
-                    LDSMMACL((instr >> 8u) & 0xF);
+                    LDSMMACL(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x17: // 0100 mmmm 0001 0111   LDC.L @Rm+, GBR
-                    LDCMGBR((instr >> 8u) & 0xF);
+                    LDCMGBR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x18: // 0100 nnnn 0001 1000   SHLL8 Rn
-                    SHLL8((instr >> 8u) & 0xF);
+                    SHLL8(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x19: // 0100 nnnn 0001 1001   SHLR8 Rn
-                    SHLR8((instr >> 8u) & 0xF);
+                    SHLR8(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x1A: // 0100 mmmm 0001 1010   LDS Rm, MACL
-                    LDSMACL((instr >> 8u) & 0xF);
+                    LDSMACL(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x1B: // 0100 nnnn 0001 1011   TAS.B @Rn
-                    TAS((instr >> 8u) & 0xF);
+                    TAS(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
@@ -1939,7 +1954,7 @@ private:
                     // There's no case 0x1C or 0x1D
 
                 case 0x1E: // 0110 mmmm 0001 1110   LDC Rm, GBR
-                    LDCGBR((instr >> 8u) & 0xF);
+                    LDCGBR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
@@ -1948,67 +1963,67 @@ private:
                     // There's no case 0x1F
 
                 case 0x20: // 0100 nnnn 0010 0000   SHAL Rn
-                    SHAL((instr >> 8u) & 0xF);
+                    SHAL(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x21: // 0100 nnnn 0010 0001   SHAR Rn
-                    SHAR((instr >> 8u) & 0xF);
+                    SHAR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x22: // 0100 nnnn 0010 0010   STS.L PR, @-Rn
-                    STSMPR((instr >> 8u) & 0xF);
+                    STSMPR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x23: // 0100 nnnn 0010 0011   STC.L VBR, @-Rn
-                    STCMVBR((instr >> 8u) & 0xF);
+                    STCMVBR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x24: // 0100 nnnn 0010 0100   ROTCL Rn
-                    ROTCL((instr >> 8u) & 0xF);
+                    ROTCL(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x25: // 0100 nnnn 0010 0101   ROTCR Rn
-                    ROTCR((instr >> 8u) & 0xF);
+                    ROTCR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x26: // 0100 mmmm 0010 0110   LDS.L @Rm+, PR
-                    LDSMPR((instr >> 8u) & 0xF);
+                    LDSMPR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x27: // 0100 mmmm 0010 0111   LDC.L @Rm+, VBR
-                    LDCMVBR((instr >> 8u) & 0xF);
+                    LDCMVBR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x28: // 0100 nnnn 0010 1000   SHLL16 Rn
-                    SHLL16((instr >> 8u) & 0xF);
+                    SHLL16(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x29: // 0100 nnnn 0010 1001   SHLR16 Rn
-                    SHLR16((instr >> 8u) & 0xF);
+                    SHLR16(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
                     break;
                 case 0x2A: // 0100 mmmm 0010 1010   LDS Rm, PR
-                    LDSPR((instr >> 8u) & 0xF);
+                    LDSPR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
@@ -2018,14 +2033,14 @@ private:
                         // TODO: illegal instruction
                         dbg_println("illegal delay slot instruction");
                     } else {
-                        JMP((instr >> 8u) & 0xF);
+                        JMP(bit::extract<8, 11>(instr));
                     }
                     break;
 
                     // There's no case 0x2C or 0x2D
 
                 case 0x2E: // 0110 mmmm 0010 1110   LDC Rm, VBR
-                    LDCVBR((instr >> 8u) & 0xF);
+                    LDCVBR(bit::extract<8, 11>(instr));
                     if constexpr (!delaySlot) {
                         PC += 2;
                     }
@@ -2038,7 +2053,7 @@ private:
             }
             break;
         case 0x5: // 0101 nnnn mmmm dddd   MOV.L @(disp,Rm), Rn
-            MOVLL4((instr >> 4) & 0xF, instr & 0xF, (instr >> 8) & 0xF);
+            MOVLL4(bit::extract<4, 7>(instr), bit::extract<0, 3>(instr), bit::extract<8, 11>(instr));
             if constexpr (!delaySlot) {
                 PC += 2;
             }
@@ -2046,97 +2061,97 @@ private:
         case 0x6:
             switch (instr & 0xF) {
             case 0x0: // 0110 nnnn mmmm 0000   MOV.B @Rm, Rn
-                MOVBL((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                MOVBL(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x1: // 0110 nnnn mmmm 0001   MOV.W @Rm, Rn
-                MOVWL((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                MOVWL(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x2: // 0110 nnnn mmmm 0010   MOV.L @Rm, Rn
-                MOVLL((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                MOVLL(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x3: // 0110 nnnn mmmm 0010   MOV Rm, Rn
-                MOV((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                MOV(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x4: // 0110 nnnn mmmm 0110   MOV.B @Rm+, Rn
-                MOVBP((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                MOVBP(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x5: // 0110 nnnn mmmm 0110   MOV.W @Rm+, Rn
-                MOVWP((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                MOVWP(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x6: // 0110 nnnn mmmm 0110   MOV.L @Rm+, Rn
-                MOVLP((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                MOVLP(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x7: // 0110 nnnn mmmm 0111   NOT Rm, Rn
-                NOT((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                NOT(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x8: // 0110 nnnn mmmm 1000   SWAP.B Rm, Rn
-                SWAPB((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                SWAPB(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x9: // 0110 nnnn mmmm 1001   SWAP.W Rm, Rn
-                SWAPW((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                SWAPW(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0xA: // 0110 nnnn mmmm 1010   NEGC Rm, Rn
-                NEGC((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                NEGC(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0xB: // 0110 nnnn mmmm 1011   NEG Rm, Rn
-                NEG((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                NEG(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0xC: // 0110 nnnn mmmm 1100   EXTU.B Rm, Rn
-                EXTUB((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                EXTUB(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0xD: // 0110 nnnn mmmm 1101   EXTU.W Rm, Rn
-                EXTUW((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                EXTUW(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0xE: // 0110 nnnn mmmm 1110   EXTS.B Rm, Rn
-                EXTSB((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                EXTSB(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0xF: // 0110 nnnn mmmm 1111   EXTS.W Rm, Rn
-                EXTSW((instr >> 4u) & 0xF, (instr >> 8u) & 0xF);
+                EXTSW(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
@@ -2144,7 +2159,7 @@ private:
             }
             break;
         case 0x7: // 0111 nnnn iiii iiii   ADD #imm, Rn
-            ADDI(instr & 0xFF, (instr >> 8u) & 0xF);
+            ADDI(bit::extract<0, 7>(instr), bit::extract<8, 11>(instr));
             if constexpr (!delaySlot) {
                 PC += 2;
             }
@@ -2152,13 +2167,13 @@ private:
         case 0x8:
             switch ((instr >> 8u) & 0xF) {
             case 0x0: // 1000 0000 nnnn dddd   MOV.B R0, @(disp,Rn)
-                MOVBS4(instr & 0xF, (instr >> 4u) & 0xF);
+                MOVBS4(bit::extract<0, 3>(instr), bit::extract<4, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x1: // 1000 0001 nnnn dddd   MOV.W R0, @(disp,Rn)
-                MOVWS4(instr & 0xF, (instr >> 4u) & 0xF);
+                MOVWS4(bit::extract<0, 3>(instr), bit::extract<4, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
@@ -2167,13 +2182,13 @@ private:
                 // There's no case 0x2 or 0x3
 
             case 0x4: // 1000 0100 mmmm dddd   MOV.B @(disp,Rm), R0
-                MOVBL4(instr & 0xF, (instr >> 4u) & 0xF);
+                MOVBL4(bit::extract<4, 7>(instr), bit::extract<0, 3>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x5: // 1000 0101 mmmm dddd   MOV.W @(disp,Rm), R0
-                MOVWL4(instr & 0xF, (instr >> 4u) & 0xF);
+                MOVWL4(bit::extract<4, 7>(instr), bit::extract<0, 3>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
@@ -2182,7 +2197,7 @@ private:
                 // There's no case 0x6 or 0x7
 
             case 0x8: // 1000 1000 iiii iiii   CMP/EQ #imm, R0
-                CMPIM(instr & 0xFF);
+                CMPIM(bit::extract<0, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
@@ -2192,7 +2207,7 @@ private:
                     // TODO: illegal instruction
                     dbg_println("illegal delay slot instruction");
                 } else {
-                    BT(instr & 0xFF);
+                    BT(bit::extract<0, 7>(instr));
                 }
                 break;
 
@@ -2203,7 +2218,7 @@ private:
                     // TODO: illegal instruction
                     dbg_println("illegal delay slot instruction");
                 } else {
-                    BF(instr & 0xFF);
+                    BF(bit::extract<0, 7>(instr));
                 }
                 break;
 
@@ -2214,7 +2229,7 @@ private:
                     // TODO: illegal instruction
                     dbg_println("illegal delay slot instruction");
                 } else {
-                    BTS(instr & 0xFF);
+                    BTS(bit::extract<0, 7>(instr));
                 }
                 break;
 
@@ -2225,14 +2240,14 @@ private:
                     // TODO: illegal instruction
                     dbg_println("illegal delay slot instruction");
                 } else {
-                    BFS(instr & 0xFF);
+                    BFS(bit::extract<0, 7>(instr));
                 }
                 break;
             default: dbg_println("unhandled 1000 instruction"); break;
             }
             break;
         case 0x9: // 1001 nnnn dddd dddd   MOV.W @(disp,PC), Rn
-            MOVWI(instr & 0xFF, (instr >> 8) & 0xF);
+            MOVWI(bit::extract<0, 7>(instr), bit::extract<8, 11>(instr));
             if constexpr (!delaySlot) {
                 PC += 2;
             }
@@ -2242,7 +2257,7 @@ private:
                 // TODO: illegal instruction
                 dbg_println("illegal delay slot instruction");
             } else {
-                BRA(instr & 0xFFF);
+                BRA(bit::extract<0, 11>(instr));
             }
             break;
         case 0xB: // 1011 dddd dddd dddd   BSR <label>
@@ -2250,25 +2265,25 @@ private:
                 // TODO: illegal instruction
                 dbg_println("illegal delay slot instruction");
             } else {
-                BSR(instr & 0xFFF);
+                BSR(bit::extract<0, 11>(instr));
             }
             break;
         case 0xC:
             switch ((instr >> 8u) & 0xF) {
             case 0x0: // 1100 0000 dddd dddd   MOV.B R0, @(disp,GBR)
-                MOVBSG(instr & 0xFF);
+                MOVBSG(bit::extract<0, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x1: // 1100 0001 dddd dddd   MOV.W R0, @(disp,GBR)
-                MOVWSG(instr & 0xFF);
+                MOVWSG(bit::extract<0, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x2: // 1100 0010 dddd dddd   MOV.L R0, @(disp,GBR)
-                MOVLSG(instr & 0xFF);
+                MOVLSG(bit::extract<0, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
@@ -2278,77 +2293,77 @@ private:
                     // TODO: illegal instruction
                     dbg_println("illegal delay slot instruction");
                 } else {
-                    TRAPA(instr & 0xFF);
+                    TRAPA(bit::extract<0, 7>(instr));
                 }
                 break;
             case 0x4: // 1100 0100 dddd dddd   MOV.B @(disp,GBR), R0
-                MOVBLG(instr & 0xFF);
+                MOVBLG(bit::extract<0, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x5: // 1100 0101 dddd dddd   MOV.W @(disp,GBR), R0
-                MOVWLG(instr & 0xFF);
+                MOVWLG(bit::extract<0, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x6: // 1100 0110 dddd dddd   MOV.L @(disp,GBR), R0
-                MOVLLG(instr & 0xFF);
+                MOVLLG(bit::extract<0, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x7: // 1100 0111 dddd dddd   MOVA @(disp,PC), R0
-                MOVA(instr & 0xFF);
+                MOVA(bit::extract<0, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x8: // 1100 1000 iiii iiii   TST #imm, R0
-                TSTI(instr & 0xFF);
+                TSTI(bit::extract<0, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0x9: // 1100 1001 iiii iiii   AND #imm, R0
-                ANDI(instr & 0xFF);
+                ANDI(bit::extract<0, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0xA: // 1100 1010 iiii iiii   XOR #imm, R0
-                XORI(instr & 0xFF);
+                XORI(bit::extract<0, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0xB: // 1100 1011 iiii iiii   OR #imm, R0
-                ORI(instr & 0xFF);
+                ORI(bit::extract<0, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0xC: // 1100 1100 iiii iiii   TST.B #imm, @(R0,GBR)
-                TSTM(instr & 0xFF);
+                TSTM(bit::extract<0, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0xD: // 1100 1001 iiii iiii   AND #imm, @(R0,GBR)
-                ANDM(instr & 0xFF);
+                ANDM(bit::extract<0, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0xE: // 1100 1001 iiii iiii   XOR #imm, @(R0,GBR)
-                XORM(instr & 0xFF);
+                XORM(bit::extract<0, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
                 break;
             case 0xF: // 1100 1001 iiii iiii   OR #imm, @(R0,GBR)
-                ORM(instr & 0xFF);
+                ORM(bit::extract<0, 7>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
                 }
@@ -2357,13 +2372,13 @@ private:
             }
             break;
         case 0xD: // 1101 nnnn dddd dddd   MOV.L @(disp,PC), Rn
-            MOVLI(instr & 0xFF, (instr >> 8) & 0xF);
+            MOVLI(bit::extract<0, 7>(instr), bit::extract<8, 11>(instr));
             if constexpr (!delaySlot) {
                 PC += 2;
             }
             break;
         case 0xE: // 1110 nnnn iiii iiii   MOV #imm, Rn
-            MOVI(instr & 0xFF, (instr >> 8) & 0xF);
+            MOVI(bit::extract<0, 7>(instr), bit::extract<8, 11>(instr));
             if constexpr (!delaySlot) {
                 PC += 2;
             }
@@ -3262,14 +3277,15 @@ int main(int argc, char **argv) {
     }
 
     auto saturn = std::make_unique<Saturn>();
-
-    auto rom = loadFile(argv[1]);
-    if (rom.size() != kIPLSize) {
-        fmt::println("IPL ROM size mismatch: expected {} bytes, got {} bytes", kIPLSize, rom.size());
-        return EXIT_FAILURE;
+    {
+        auto rom = loadFile(argv[1]);
+        if (rom.size() != kIPLSize) {
+            fmt::println("IPL ROM size mismatch: expected {} bytes, got {} bytes", kIPLSize, rom.size());
+            return EXIT_FAILURE;
+        }
+        saturn->LoadIPL(std::span<uint8, kIPLSize>(rom));
+        fmt::println("IPL ROM loaded");
     }
-    saturn->LoadIPL(std::span<uint8, kIPLSize>(rom));
-    fmt::println("IPL ROM loaded");
 
     saturn->Reset(true);
     auto &msh2 = saturn->MasterSH2();
