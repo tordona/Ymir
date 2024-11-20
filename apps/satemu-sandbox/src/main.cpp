@@ -57,6 +57,28 @@ constexpr auto SignExtend(T x) {
 }
 
 // -----------------------------------------------------------------------------
+// data_ops.hpp
+
+template <typename T>
+concept mem_access_type = std::same_as<T, uint8> || std::same_as<T, uint16> || std::same_as<T, uint32>;
+
+template <mem_access_type T>
+T ReadBE(uint8 *data) {
+    T value = 0;
+    for (uint32 i = 0; i < sizeof(T); i++) {
+        value |= data[i] << ((sizeof(T) - 1u - i) * 8u);
+    }
+    return value;
+}
+
+template <mem_access_type T>
+void WriteBE(uint8 *data, T value) {
+    for (uint32 i = 0; i < sizeof(T); i++) {
+        data[i] = value >> ((sizeof(T) - 1u - i) * 8u);
+    }
+}
+
+// -----------------------------------------------------------------------------
 // bit_ops.hpp
 
 namespace bit {
@@ -208,6 +230,14 @@ private:
 
         // TODO: should delay execution
         switch (COMREG) {
+        case Command::RESENAB:
+            fmt::println("RESENAB command received");
+            RESENAB();
+            break;
+        case Command::RESDISA:
+            fmt::println("RESDISA command received");
+            RESDISA();
+            break;
         case Command::INTBACK:
             fmt::println("INTBACK command received: {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
             INTBACK();
@@ -223,7 +253,25 @@ private:
     // -------------------------------------------------------------------------
     // Commands
 
+    void RESENAB() {
+        // TODO: enable reset NMI
+
+        SF = 0; // done processing
+
+        OREG[31] = 0x19;
+    }
+
+    void RESDISA() {
+        // TODO: disable reset NMI
+
+        SF = 0; // done processing
+
+        OREG[31] = 0x1A;
+    }
+
     void INTBACK() {
+        // TODO: implement
+
         // const bool getSMPCStatus = IREG[0];
         // const bool optimize = bit::extract<1>(IREG[1]);
         // const bool getPeripheralData = bit::extract<3>(IREG[1]);
@@ -270,8 +318,10 @@ constexpr size_t kIPLSize = 512_KiB;
 constexpr size_t kWRAMLowSize = 1024_KiB;
 constexpr size_t kWRAMHighSize = 1024_KiB;
 
-template <typename T>
-concept mem_access_type = std::same_as<T, uint8> || std::same_as<T, uint16> || std::same_as<T, uint32>;
+template <uint32 base, uint64 size>
+constexpr bool AddressInRange(uint32 address) {
+    return address >= base && address < base + size;
+}
 
 // SH-2 memory map
 // https://wiki.yabause.org/index.php5?title=SH-2CPU
@@ -337,162 +387,46 @@ public:
 
     template <mem_access_type T>
     T Read(uint32 address) {
-        if constexpr (std::is_same_v<T, uint8>) {
-            return ReadByte(address);
-        } else if constexpr (std::is_same_v<T, uint16>) {
-            return ReadWord(address);
-        } else if constexpr (std::is_same_v<T, uint32>) {
-            return ReadLong(address);
+        address &= ~(sizeof(T) - 1);
+
+        // TODO: consider using a LUT
+
+        if (AddressInRange<0x0000000, 0x100000>(address)) {
+            return ReadBE<T>(&m_IPL[address & 0x7FFFF]);
+        } else if (AddressInRange<0x0100000, 0x80000>(address)) {
+            return m_SMPC.Read((address & 0x7F) | 1);
+        } else if (AddressInRange<0x0200000, 0x100000>(address)) {
+            return ReadBE<T>(&m_WRAMLow[address & 0xFFFFF]);
+        } else if (AddressInRange<0x5800000, 0x100000>(address)) {
+            return CS2Read<T>(address & 0xFFFFF);
+        } else if (AddressInRange<0x5FE0000, 0x10000>(address)) {
+            return SCURead<T>(address & 0xFF);
+        } else if (AddressInRange<0x6000000, 0x2000000>(address)) {
+            return ReadBE<T>(&m_WRAMHigh[address & 0xFFFFF]);
+        } else {
+            fmt::println("unhandled {}-bit SH2 bus read from {:08X}", sizeof(T) * 8, address);
+            return 0;
         }
     }
 
     template <mem_access_type T>
     void Write(uint32 address, T value) {
-        if constexpr (std::is_same_v<T, uint8>) {
-            WriteByte(address, value);
-        } else if constexpr (std::is_same_v<T, uint16>) {
-            WriteWord(address, value);
-        } else if constexpr (std::is_same_v<T, uint32>) {
-            WriteLong(address, value);
-        }
-    }
+        address &= ~(sizeof(T) - 1);
 
-    uint8 ReadByte(uint32 baseAddress) {
-        uint32 address = baseAddress & 0x7FFFFFF;
+        // TODO: consider using a LUT
 
-        if (address <= 0x000FFFFF) {
-            address &= 0x7FFFF;
-            return m_IPL[address];
-        } else if (address - 0x100000 <= 0x0007FFFF) {
-            address &= 0x7F;
-            return m_SMPC.Read(address | 1);
-        } else if (address - 0x200000 <= 0x000FFFFF) {
-            address &= 0xFFFFF;
-            return m_WRAMLow[address];
-        } else if (address - 0x5FE0000 <= 0x0000FFFF) {
-            address &= 0xFF;
-            return SCUReadByte(address);
-        } else if (address - 0x6000000 <= 0x01FFFFFF) {
-            address &= 0xFFFFF;
-            return m_WRAMHigh[address];
+        if (AddressInRange<0x100000, 0x80000>(address)) {
+            m_SMPC.Write((address & 0x7F) | 1, value);
+        } else if (AddressInRange<0x200000, 0x100000>(address)) {
+            WriteBE<T>(&m_WRAMLow[address & 0xFFFFF], value);
+        } else if (AddressInRange<0x5800000, 0x100000>(address)) {
+            CS2Write<T>(address & 0xFFFFF, value);
+        } else if (AddressInRange<0x5FE0000, 0x10000>(address)) {
+            SCUWrite<T>(address & 0xFF, value);
+        } else if (AddressInRange<0x6000000, 0x2000000>(address)) {
+            WriteBE<T>(&m_WRAMHigh[address & 0xFFFFF], value);
         } else {
-            fmt::println("unhandled SH2 bus 8-bit read from {:08X}", baseAddress);
-            return 0;
-        }
-    }
-
-    uint16 ReadWord(uint32 baseAddress) {
-        uint32 address = baseAddress & 0x7FFFFFE;
-
-        if (address <= 0x000FFFFF) {
-            address &= 0x7FFFF;
-            return (m_IPL[address + 0] << 8u) | m_IPL[address + 1];
-        } else if (address - 0x100000 <= 0x0007FFFF) {
-            address &= 0x7F;
-            return 0xFF00 | m_SMPC.Read(address | 1);
-        } else if (address - 0x200000 <= 0x000FFFFF) {
-            address &= 0xFFFFF;
-            return (m_WRAMLow[address + 0] << 8u) | m_WRAMLow[address + 1];
-        } else if (address - 0x5FE0000 <= 0x0000FFFF) {
-            address &= 0xFF;
-            return SCUReadWord(address);
-        } else if (address - 0x6000000 <= 0x01FFFFFF) {
-            address &= 0xFFFFF;
-            return (m_WRAMHigh[address + 0] << 8u) | m_WRAMHigh[address + 1];
-        } else {
-            fmt::println("unhandled SH2 bus 16-bit read from {:08X}", baseAddress);
-            return 0;
-        }
-    }
-
-    uint32 ReadLong(uint32 baseAddress) {
-        uint32 address = baseAddress & 0x7FFFFFC;
-
-        if (address <= 0x000FFFFF) {
-            address &= 0x7FFFF;
-            return (m_IPL[address + 0] << 24u) | (m_IPL[address + 1] << 16u) | (m_IPL[address + 2] << 8u) |
-                   m_IPL[address + 3];
-        } else if (address - 0x200000 <= 0x000FFFFF) {
-            address &= 0xFFFFF;
-            return (m_WRAMLow[address + 0] << 24u) | (m_WRAMLow[address + 1] << 16u) | (m_WRAMLow[address + 2] << 8u) |
-                   m_WRAMLow[address + 3];
-        } else if (address - 0x5FE0000 <= 0x0000FFFF) {
-            address &= 0xFF;
-            return SCUReadLong(address);
-        } else if (address - 0x6000000 <= 0x01FFFFFF) {
-            address &= 0xFFFFF;
-            return (m_WRAMHigh[address + 0] << 24u) | (m_WRAMHigh[address + 1] << 16u) |
-                   (m_WRAMHigh[address + 2] << 8u) | m_WRAMHigh[address + 3];
-        } else {
-            fmt::println("unhandled SH2 bus 32-bit read from {:08X}", baseAddress);
-            return 0;
-        }
-    }
-
-    void WriteByte(uint32 baseAddress, uint8 value) {
-        uint32 address = baseAddress & 0x7FFFFFF;
-
-        if (address - 0x100000 <= 0x0007FFFF && (address & 1)) {
-            if (address & 1) {
-                address &= 0x7F;
-                m_SMPC.Write(address, value);
-            }
-        } else if (address - 0x200000 <= 0x000FFFFF) {
-            address &= 0xFFFFF;
-            m_WRAMLow[address] = value;
-        } else if (address - 0x5FE0000 <= 0x0000FFFF) {
-            address &= 0xFF;
-            SCUWriteByte(address, value);
-        } else if (address - 0x6000000 <= 0x01FFFFFF) {
-            address &= 0xFFFFF;
-            m_WRAMHigh[address] = value;
-        } else {
-            fmt::println("unhandled SH2 bus 8-bit write to {:08X} = {:02X}", baseAddress, value);
-        }
-    }
-
-    void WriteWord(uint32 baseAddress, uint16 value) {
-        uint32 address = baseAddress & 0x7FFFFFE;
-
-        if (address - 0x100000 <= 0x0007FFFF) {
-            address &= 0x7F;
-            m_SMPC.Write(address, value);
-        } else if (address - 0x200000 <= 0x000FFFFF) {
-            address &= 0xFFFFF;
-            m_WRAMLow[address + 0] = value >> 8u;
-            m_WRAMLow[address + 1] = value >> 0u;
-        } else if (address - 0x5FE0000 <= 0x0000FFFF) {
-            address &= 0xFF;
-            SCUWriteWord(address, value);
-        } else if (address - 0x6000000 <= 0x01FFFFFF) {
-            address &= 0xFFFFF;
-            m_WRAMHigh[address + 0] = value >> 8u;
-            m_WRAMHigh[address + 1] = value >> 0u;
-        } else {
-            fmt::println("unhandled SH2 bus 16-bit write to {:08X} = {:04X}", baseAddress, value);
-        }
-    }
-
-    void WriteLong(uint32 baseAddress, uint32 value) {
-        uint32 address = baseAddress & 0x7FFFFFC;
-
-        if (address - 0x200000 <= 0x000FFFFF) {
-            address &= 0xFFFFF;
-            m_WRAMLow[address + 0] = value >> 24u;
-            m_WRAMLow[address + 1] = value >> 16u;
-            m_WRAMLow[address + 2] = value >> 8u;
-            m_WRAMLow[address + 3] = value >> 0u;
-        } else if (address - 0x5FE0000 <= 0x0000FFFF) {
-            address &= 0xFF;
-            SCUWriteLong(address, value);
-        } else if (address - 0x6000000 <= 0x01FFFFFF) {
-            address &= 0xFFFFF;
-            m_WRAMHigh[address + 0] = value >> 24u;
-            m_WRAMHigh[address + 1] = value >> 16u;
-            m_WRAMHigh[address + 2] = value >> 8u;
-            m_WRAMHigh[address + 3] = value >> 0u;
-        } else {
-            fmt::println("unhandled SH2 bus 32-bit write to {:08X} = {:08X}", baseAddress, value);
+            fmt::println("unhandled {}-bit SH2 bus write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         }
     }
 
@@ -503,32 +437,45 @@ private:
 
     SMPC &m_SMPC;
 
-    uint8 SCUReadByte(uint32 address) {
-        fmt::println("unhandled SCU 8-bit read from {:08X}", address);
+    template <mem_access_type T>
+    T SCURead(uint32 address) {
+        fmt::println("unhandled {}-bit SCU read from {:08X}", sizeof(T) * 8, address);
         return 0;
     }
 
-    uint16 SCUReadWord(uint32 address) {
-        fmt::println("unhandled SCU 16-bit read from {:08X}", address);
+    template <mem_access_type T>
+    void SCUWrite(uint32 address, T value) {
+        fmt::println("unhandled {}-bit SCU write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+    }
+
+    template <mem_access_type T>
+    T CS2Read(uint32 address) {
+        if ((address & 0x7FFF) < 0x1000) {
+            return CDBRead(address & 0x3F);
+        }
+
+        fmt::println("unhandled {}-bit A-Bus CS2 read from {:08X}", sizeof(T) * 8, address);
         return 0;
     }
 
-    uint32 SCUReadLong(uint32 address) {
-        fmt::println("unhandled SCU 32-bit read from {:08X}", address);
-        return 0;
+    template <mem_access_type T>
+    void CS2Write(uint32 address, T value) {
+        fmt::println("unhandled {}-bit A-Bus CS2 write to {:08X} = {:X}", sizeof(T) * 8, address, value);
     }
 
-    void SCUWriteByte(uint32 address, uint8 value) {
-        fmt::println("unhandled SCU 8-bit write to {:08X} = {:02X}", address, value);
+    // -------------------------------------------------------------------------
+    // TODO: move to CDBlock object
+    uint16 CDBRead(uint32 address) {
+        // TODO: implement properly; we're just stubbing the CDBLOCK init sequence here
+        switch (address) {
+        case 0x18: return 0x0043;
+        case 0x1C: return 0x4442;
+        case 0x20: return 0x4C4F;
+        case 0x22: return 0x434B;
+        default: fmt::println("unhandled CD Block read from {:08X}", address); return 0;
     }
-
-    void SCUWriteWord(uint32 address, uint16 value) {
-        fmt::println("unhandled SCU 16-bit write to {:08X} = {:04X}", address, value);
     }
-
-    void SCUWriteLong(uint32 address, uint32 value) {
-        fmt::println("unhandled SCU 32-bit write to {:08X} = {:08X}", address, value);
-    }
+    // -------------------------------------------------------------------------
 };
 
 // -----------------------------------------------------------------------------
@@ -643,7 +590,7 @@ private:
     SH2Bus &m_bus;
 
     uint64 dbg_count = 0;
-    static constexpr uint64 dbg_minCount = 9302150; // 9547530;
+    static constexpr uint64 dbg_minCount = 9303610; // 9302150; // 9547530;
 
     template <typename... T>
     void dbg_print(fmt::format_string<T...> fmt, T &&...args) {
@@ -716,7 +663,7 @@ private:
             // fallthrough
         case 0b001:
         case 0b101: // cache-through
-            return m_bus.Read<T>(address);
+            return m_bus.Read<T>(address & 0x7FFFFFF);
         case 0b010: // associative purge
 
             // TODO: implement
@@ -768,7 +715,7 @@ private:
             // fallthrough
         case 0b001:
         case 0b101: // cache-through
-            m_bus.Write<T>(address, value);
+            m_bus.Write<T>(address & 0x7FFFFFF, value);
             break;
         case 0b010: // associative purge
             // TODO: implement
@@ -2827,7 +2774,7 @@ private:
 
     void MOVLM(uint16 rm, uint16 rn) {
         dbg_println("mov.l r{}, @-r{}", rm, rn);
-        MemWriteByte(R[rn] - 4, R[rm]);
+        MemWriteLong(R[rn] - 4, R[rm]);
         R[rn] -= 4;
     }
 
@@ -3083,6 +3030,7 @@ private:
     }
 
     void SLEEP() {
+        dbg_println("sleep");
         PC -= 2;
         // TODO: wait for exception
     }
