@@ -369,8 +369,8 @@ public:
         R[15] = MemReadLong(VBR + 4);
 
         // On-chip registers
-        IPRB.u16 = 0x0;
-        IPRA.u16 = 0x0;
+        IPRB.val.u16 = 0x0;
+        IPRA.val.u16 = 0x0;
         BCR1.u15 = 0x3F0;
         BCR2.u16 = 0xFC;
         WCR.u16 = 0xAAFF;
@@ -644,7 +644,12 @@ private:
 
     // -------------------------------------------------------------------------
     // On-chip peripherals
-    //
+
+    union Reg16 {
+        uint16 u16;
+        uint8 u8[2];
+    };
+
     // --- SCI module ---
     //
     // addr r/w  access   init  code    name
@@ -690,7 +695,7 @@ private:
     //   (n) ranges from 0 (LSB) to 3 (MSB).
     //   Interrupt priority levels range from 0 to 15.
     union IPRB_t {
-        uint16 u16;
+        Reg16 val;
         struct {
             uint16 _rsvd0_7 : 8;
             uint16 FRTIPn : 4;
@@ -724,7 +729,7 @@ private:
     //   WDTIP(n) includes both the watchdog timer and bus state controller (BSC).
     //   WDT interrupt has priority over BSC.
     union IPRA_t {
-        uint16 u16;
+        Reg16 val;
         struct {
             uint16 _rsvd0_3 : 4;
             uint16 WDTIPn : 4;
@@ -975,14 +980,14 @@ private:
             }
         }
 
-        auto adjustWordLower = [&](uint16 value) -> T {
+        auto readWordLower = [&](Reg16 value) -> T {
             if constexpr (std::is_same_v<T, uint8>) {
-                return (address & 1) ? value : (value >> 8u);
+                return value.u8[(address & 1) ^ 1];
             } else {
-                return value;
+                return value.u16;
             }
         };
-        auto adjustByteLower = [&](uint8 value) -> T {
+        auto readByteLower = [&](uint8 value) -> T {
             if constexpr (std::is_same_v<T, uint16>) {
                 return (address & 1) ? value : ((value << 8u) | value);
             } else {
@@ -990,10 +995,14 @@ private:
             }
         };
 
+        // Note: Clang generates marginally faster code with case ranges here.
+        // See:
+        // https://quick-bench.com/q/vB2HZ3bzAIlqIazYoVxy7A0ooKg
+
         switch (address) {
-        case 0x60 ... 0x61: return adjustWordLower(IPRB.u16);
-        case 0x92 ... 0x9F: return adjustByteLower(CCR.u8);
-        case 0xE2 ... 0xE3: return adjustWordLower(IPRA.u16);
+        case 0x60 ... 0x61: return readWordLower(IPRB.val);
+        case 0x92 ... 0x9F: return readByteLower(CCR.u8);
+        case 0xE2 ... 0xE3: return readWordLower(IPRA.val);
 
         case 0x1E0 ... 0x1E2: return BCR1.u16;
         case 0x1E4 ... 0x1E6: return BCR2.u16;
@@ -1033,19 +1042,32 @@ private:
         }
 
         // For registers 0-255, 8-bit writes to 16-bit registers change the corresponding byte
-        auto writeWordLower = [&](uint16 regValue, uint32 value) -> uint32 {
+        auto writeWordLower = [&](Reg16 &reg, T value, uint16 mask) {
             if constexpr (std::is_same_v<T, uint8>) {
-                const uint8_t shift = ((address & 1) ^ 1) * 8;
-                return (regValue & ~(0xFF << shift)) | (value << shift);
+                uint32 index = ((address & 1) ^ 1);
+                mask >>= index * 8;
+                if ((mask & 0xFF) != 0) {
+                    reg.u8[index] = value & mask;
+                }
             } else {
-                return value;
+                reg.u16 = value & mask;
             }
         };
 
+        // Note: the repeated cases below might seem redundant, but it actually causes Clang to generate better code.
+        // Case ranges (case 0x61 ... 0x62) or fallthrough (case 0x61: case 0x62) generate suboptimal code.
+        // See:
+        // https://quick-bench.com/q/j3XUHw-u-Y75chqoIPnxwyF3JXw
+        // https://godbolt.org/z/5nbPxqd5d
+
         switch (address) {
-        case 0x60 ... 0x61: IPRB.u16 = writeWordLower(IPRB.u16, value) & 0xFF00; break;
+        case 0x60: writeWordLower(IPRB.val, value, 0xFF00); break;
+        case 0x61: writeWordLower(IPRB.val, value, 0xFF00); break;
+
         case 0x92: WriteCCR(value); break;
-        case 0xE2 ... 0xE3: IPRA.u16 = writeWordLower(IPRA.u16, value) & 0xFFF0; break;
+
+        case 0xE2: writeWordLower(IPRA.val, value, 0xFFF0); break;
+        case 0xE3: writeWordLower(IPRA.val, value, 0xFFF0); break;
 
         case 0x1E0: // BCR1
             // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
