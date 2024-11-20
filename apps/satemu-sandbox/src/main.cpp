@@ -236,6 +236,8 @@ private:
         SR.NPE = 0;  // 0=no remaining data, 1=more data
         SR.RESB = 0; // reset button state (0=off, 1=on)
 
+        SF = 0; // done processing
+
         OREG[0] = 0x80; // STE set, RESD clear
 
         OREG[1] = 0x20; // Year 1000s, Year 100s (BCD)
@@ -641,7 +643,7 @@ private:
     SH2Bus &m_bus;
 
     uint64 dbg_count = 0;
-    static constexpr uint64 dbg_minCount = 9547530;
+    static constexpr uint64 dbg_minCount = 9302150; // 9547530;
 
     template <typename... T>
     void dbg_print(fmt::format_string<T...> fmt, T &&...args) {
@@ -1482,9 +1484,10 @@ private:
 
     template <bool delaySlot>
     void Execute(uint32 address) {
-        ++dbg_count;
         const uint16 instr = MemReadWord(address);
-        dbg_print("[{:5}] {:08X}{} {:04X}  ", dbg_count, address, delaySlot ? '*' : ' ', instr);
+
+        ++dbg_count;
+        dbg_print("[{:10}] {:08X}{} {:04X}  ", dbg_count, address, delaySlot ? '*' : ' ', instr);
 
         switch (instr >> 12u) {
         case 0x0:
