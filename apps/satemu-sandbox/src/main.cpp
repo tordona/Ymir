@@ -57,6 +57,28 @@ constexpr auto SignExtend(T x) {
 }
 
 // -----------------------------------------------------------------------------
+// bit_ops.hpp
+
+namespace bit {
+
+// Extracts a range of bits from the value.
+// start and end are both inclusive.
+template <size_t start, size_t end = start, typename T>
+constexpr T extract(T value) {
+    static_assert(start < sizeof(T) * 8, "start out of range");
+    static_assert(end < sizeof(T) * 8, "end out of range");
+    static_assert(end >= start, "end cannot be before start");
+
+    using UT = std::make_unsigned_t<T>;
+
+    constexpr size_t length = end - start + 1;
+    constexpr UT mask = static_cast<UT>(~(~0 << length));
+    return (value >> start) & mask;
+}
+
+} // namespace bit
+
+// -----------------------------------------------------------------------------
 // size_ops.hpp
 
 constexpr size_t operator""_KiB(size_t sz) {
@@ -73,45 +95,68 @@ public:
     }
 
     void Reset(bool hard) {
-        IREG.fill(0);
-        OREG.fill(0);
+        IREG.fill(0x00);
+        OREG.fill(0x00);
+        COMREG = Command::None;
         SR.u8 = 0x80;
         SF = false;
+
+        m_busValue = 0x00;
     }
 
-    uint8 ReadOREG(uint8 offset) {
-        return OREG[offset & 31];
+    uint8 Read(uint32 address) {
+        switch (address) {
+        case 0x21 ... 0x5F: return ReadOREG((address - 0x20) >> 1);
+        case 0x61: return ReadSR();
+        case 0x63: return ReadSF();
+        default: fmt::println("unhandled SMPC read from {:02X}", address); return m_busValue;
+        }
     }
 
-    uint8 ReadSR() {
-        return SR.u8;
-    }
-
-    uint8 ReadSF() {
-        return SF;
-    }
-
-    void WriteIREG(uint8 offset, uint8 value) {
-        assert(offset < 7);
-        IREG[offset] = value;
-    }
-
-    void WriteCOMREG(uint8 value) {
-        // TODO: implement
-        fmt::println("unimplemented SMPC COMREG write = {:02X}", value);
-    }
-
-    void WriteSF(uint8 value) {
-        // TODO: implement
-        fmt::println("unimplemented SMPC SF write = {:02X}", value);
+    void Write(uint32 address, uint8 value) {
+        m_busValue = value;
+        switch (address) {
+        case 0x01 ... 0x0D: WriteIREG(address >> 1, value); break;
+        case 0x1F: WriteCOMREG(value); break;
+        case 0x63: WriteSF(value); break;
+        default: fmt::println("unhandled SMPC write to {:02X} = {:02X}", address, value); break;
+        }
     }
 
 private:
     std::array<uint8, 7> IREG;
     std::array<uint8, 32> OREG;
 
+    enum class Command : uint8 {
+        // Resetable system management commands
+        MSHON = 0x00,    // Master SH-2 ON
+        SSHON = 0x02,    // Slave SH-2 ON
+        SSHOFF = 0x03,   // Slave SH-2 OFF
+        SNDON = 0x06,    // Sound CPU ON (MC68EC000)
+        SNDOFF = 0x07,   // Sound CPU OFF (MC68EC000)
+        CDON = 0x08,     // CD ON
+        CDOFF = 0x09,    // CD OFF
+        SYSRES = 0x0D,   // Entire System Reset
+        CKCHG352 = 0x0E, // Clock Change 352 Mode
+        CKCHG320 = 0x0F, // Clock Change 320 Mode
+        NMIREQ = 0x18,   // NMI Request
+        RESENAB = 0x19,  // Reset Enable
+        RESDISA = 0x1A,  // Reset Disable
+
+        // Non-resetable system management commands
+        INTBACK = 0x10, // Interrupt Back (SMPC Status Acquisition)
+        SETSMEM = 0x17, // SMPC Memory Setting
+
+        // RTC commands
+        SETTIME = 0x16, // Time Setting
+
+        None = 0xFF,
+    };
+
+    Command COMREG;
+
     // bits   r/w  code     description
-    //    7   R    -        Reserved - must be one
+    //    7   R    -        ??
     //    6   R    PDL      Peripheral Data Location bit (0=2nd+, 1=1st)
     //    5   R    NPE      Remaining Peripheral Existence bit (0=no remaining data, 1=more remaining data)
     //    4   R    RESB     Reset button status (0=released, 1=pressed)
@@ -133,11 +178,87 @@ private:
             uint8 RESB : 1;
             uint8 NPE : 1;
             uint8 PDL : 1;
-            uint8 _rsvd7 : 1;
+            uint8 bit7 : 1;
         };
     } SR;
 
     bool SF;
+
+    uint8 m_busValue;
+
+    uint8 ReadOREG(uint8 offset) const {
+        return OREG[offset & 31];
+    }
+
+    uint8 ReadSR() const {
+        return SR.u8;
+    }
+
+    uint8 ReadSF() const {
+        return SF;
+    }
+
+    void WriteIREG(uint8 offset, uint8 value) {
+        assert(offset < 7);
+        IREG[offset] = value;
+    }
+
+    void WriteCOMREG(uint8 value) {
+        COMREG = static_cast<Command>(value);
+
+        // TODO: should delay execution
+        switch (COMREG) {
+        case Command::INTBACK:
+            fmt::println("INTBACK command received: {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
+            INTBACK();
+            break;
+        default: fmt::println("unhandled SMPC command {:02X}", static_cast<uint8>(COMREG)); break;
+        }
+    }
+
+    void WriteSF(uint8 value) {
+        SF = true;
+    }
+
+    // -------------------------------------------------------------------------
+    // Commands
+
+    void INTBACK() {
+        // const bool getSMPCStatus = IREG[0];
+        // const bool optimize = bit::extract<1>(IREG[1]);
+        // const bool getPeripheralData = bit::extract<3>(IREG[1]);
+        // const uint8 port1mode = bit::extract<4, 5>(IREG[1]);
+        // const uint8 port2mode = bit::extract<6, 7>(IREG[1]);
+        // IREG[2] == 0xF0;
+
+        SR.bit7 = 0; // fixed 0
+        SR.PDL = 1;  // fixed 1
+        SR.NPE = 0;  // 0=no remaining data, 1=more data
+        SR.RESB = 0; // reset button state (0=off, 1=on)
+
+        OREG[0] = 0x80; // STE set, RESD clear
+
+        OREG[1] = 0x20; // Year 1000s, Year 100s (BCD)
+        OREG[2] = 0x24; // Year 10s, Year 1s (BCD)
+        OREG[3] = 0x3B; // Day of week (0=sun), Month (hex, 1=jan)
+        OREG[4] = 0x20; // Day (BCD)
+        OREG[5] = 0x12; // Hour (BCD)
+        OREG[6] = 0x34; // Minute (BCD)
+        OREG[7] = 0x56; // Second (BCD)
+
+        OREG[8] = 0x00; // Cartridge code (CTG1-0) == 0b00
+        OREG[9] = 0x04; // Area code (0x04=NA)
+
+        OREG[10] = 0b00111110; // System status 1 (DOTSEL, MSHNMI, SYSRES, SNDRES)
+        OREG[11] = 0b00000010; // System status 2 (CDRES)
+
+        OREG[12] = 0x00; // SMEM 1 Saved Data
+        OREG[13] = 0x00; // SMEM 2 Saved Data
+        OREG[14] = 0x00; // SMEM 3 Saved Data
+        OREG[15] = 0x00; // SMEM 4 Saved Data
+
+        OREG[31] = 0x00;
+    }
 };
 
 // -----------------------------------------------------------------------------
@@ -242,7 +363,7 @@ public:
             return m_IPL[address];
         } else if (address - 0x100000 <= 0x0007FFFF) {
             address &= 0x7F;
-            return SMPCRead(address | 1);
+            return m_SMPC.Read(address | 1);
         } else if (address - 0x200000 <= 0x000FFFFF) {
             address &= 0xFFFFF;
             return m_WRAMLow[address];
@@ -266,7 +387,7 @@ public:
             return (m_IPL[address + 0] << 8u) | m_IPL[address + 1];
         } else if (address - 0x100000 <= 0x0007FFFF) {
             address &= 0x7F;
-            return 0xFF00 | SMPCRead(address | 1);
+            return 0xFF00 | m_SMPC.Read(address | 1);
         } else if (address - 0x200000 <= 0x000FFFFF) {
             address &= 0xFFFFF;
             return (m_WRAMLow[address + 0] << 8u) | m_WRAMLow[address + 1];
@@ -312,7 +433,7 @@ public:
         if (address - 0x100000 <= 0x0007FFFF && (address & 1)) {
             if (address & 1) {
                 address &= 0x7F;
-                SMPCWrite(address, value);
+                m_SMPC.Write(address, value);
             }
         } else if (address - 0x200000 <= 0x000FFFFF) {
             address &= 0xFFFFF;
@@ -333,7 +454,7 @@ public:
 
         if (address - 0x100000 <= 0x0007FFFF) {
             address &= 0x7F;
-            SMPCWrite(address, value);
+            m_SMPC.Write(address, value);
         } else if (address - 0x200000 <= 0x000FFFFF) {
             address &= 0xFFFFF;
             m_WRAMLow[address + 0] = value >> 8u;
@@ -379,24 +500,6 @@ private:
     std::array<uint8, kWRAMHighSize> m_WRAMHigh;
 
     SMPC &m_SMPC;
-
-    uint8 SMPCRead(uint32 address) {
-        switch (address) {
-        case 0x21 ... 0x5F: return m_SMPC.ReadOREG((address - 0x20) >> 1);
-        case 0x61: return m_SMPC.ReadSR();
-        case 0x63: return m_SMPC.ReadSF();
-        default: fmt::println("unhandled SMPC read from {:02X}", address); return 0; // TODO: read open bus
-        }
-    }
-
-    void SMPCWrite(uint32 address, uint8 value) {
-        switch (address) {
-        case 0x01 ... 0x0D: m_SMPC.WriteIREG(address >> 1, value); break;
-        case 0x1F: m_SMPC.WriteCOMREG(value); break;
-        case 0x63: m_SMPC.WriteSF(value); break;
-        default: fmt::println("unhandled SMPC write to {:02X} = {:02X}", address, value); break;
-        }
-    }
 
     uint8 SCUReadByte(uint32 address) {
         fmt::println("unhandled SCU 8-bit read from {:08X}", address);
