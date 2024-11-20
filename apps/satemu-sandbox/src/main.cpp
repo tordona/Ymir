@@ -1033,19 +1033,19 @@ private:
         }
 
         // For registers 0-255, 8-bit writes to 16-bit registers change the corresponding byte
-        auto writeWordLower = [&](uint16 regValue) -> T {
+        auto writeWordLower = [&](uint16 regValue, uint32 value) -> uint32 {
             if constexpr (std::is_same_v<T, uint8>) {
-                uint16 shift = ((address & 1) ^ 1) * 8;
-                return (regValue & ~(0xFFu << shift)) | (value << shift);
+                const uint8_t shift = ((address & 1) ^ 1) * 8;
+                return (regValue & ~(0xFF << shift)) | (value << shift);
             } else {
                 return value;
             }
         };
 
         switch (address) {
-        case 0x60 ... 0x61: IPRB.u16 = writeWordLower(IPRB.u16) & 0xFF00; break;
+        case 0x60 ... 0x61: IPRB.u16 = writeWordLower(IPRB.u16, value) & 0xFF00; break;
         case 0x92: WriteCCR(value); break;
-        case 0xE2 ... 0xE3: IPRA.u16 = writeWordLower(IPRA.u16) & 0xFFF0; break;
+        case 0xE2 ... 0xE3: IPRA.u16 = writeWordLower(IPRA.u16, value) & 0xFFF0; break;
 
         case 0x1E0: // BCR1
             // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
