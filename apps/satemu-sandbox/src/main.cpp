@@ -379,6 +379,12 @@ public:
     void Reset(bool hard) {
         m_WRAMLow.fill(0);
         m_WRAMHigh.fill(0);
+        m_SMPC.Reset(hard);
+
+        m_cdbCRs[0] = 0x0043; // ' C'
+        m_cdbCRs[1] = 0x4442; // 'DB'
+        m_cdbCRs[2] = 0x4C4F; // 'LO'
+        m_cdbCRs[3] = 0x434B; // 'CK'
     }
 
     void LoadIPL(std::span<uint8, kIPLSize> ipl) {
@@ -475,14 +481,29 @@ private:
 
     // -------------------------------------------------------------------------
     // TODO: move to CDBlock object
+
+    std::array<uint16, 4> m_cdbCRs;
+
     uint16 CDBRead(uint32 address) {
         fmt::println("CD Block read from {:02X}", address);
         // TODO: implement properly; we're just stubbing the CDBLOCK init sequence here
         switch (address) {
-        case 0x18: return 0x0043;
-        case 0x1C: return 0x4442;
-        case 0x20: return 0x4C4F;
-        case 0x24: return 0x434B;
+        case 0x08: return 0x400; // MEGA HACK to get past the boot sequence
+        case 0x18: return m_cdbCRs[0];
+        case 0x1C: return m_cdbCRs[1];
+        case 0x20: return m_cdbCRs[2];
+        case 0x24: {
+            uint16 result = m_cdbCRs[3];
+
+            // MEGA HACK! replace with a blank periodic report to get past the boot sequence
+            // TODO: implement periodic CD status reporting *properly*
+            m_cdbCRs[0] = 0x20FF;
+            m_cdbCRs[1] = 0xFFFF;
+            m_cdbCRs[2] = 0xFFFF;
+            m_cdbCRs[3] = 0xFFFF;
+
+            return result;
+        }
         default: fmt::println("unhandled CD Block read from {:02X}", address); return 0;
         }
     }
@@ -605,7 +626,7 @@ private:
     SH2Bus &m_bus;
 
     uint64 dbg_count = 0;
-    static constexpr uint64 dbg_minCount = 9303629; // 9302150; // 9547530;
+    static constexpr uint64 dbg_minCount = 10489689; // 9302150; // 9547530;
 
     template <typename... T>
     void dbg_print(fmt::format_string<T...> fmt, T &&...args) {
@@ -2388,6 +2409,14 @@ private:
 
         default: dbg_println("unhandled instruction"); break;
         }
+
+        // if ((PC & 0x7FFFFFF) == 0x0003b6e)
+        // if ((PC & 0x7FFFFFF) == 0x0004a9c)
+        // if ((PC & 0x7FFFFFF) == 0x6001278)
+        // if ((PC & 0x7FFFFFF) == 0x0003378)
+        // if ((PC & 0x7FFFFFF) == 0x00033d0)
+        // if ((PC & 0x7FFFFFF) == 0x0002630)
+        //    __debugbreak();
     }
 
     void ADD(uint16 rm, uint16 rn) {
