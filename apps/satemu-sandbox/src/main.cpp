@@ -78,6 +78,22 @@ void WriteBE(uint8 *data, T value) {
     }
 }
 
+template <mem_access_type T>
+T ReadLE(uint8 *data) {
+    T value = 0;
+    for (uint32 i = 0; i < sizeof(T); i++) {
+        value |= data[i] << (i * 8u);
+    }
+    return value;
+}
+
+template <mem_access_type T>
+void WriteLE(uint8 *data, T value) {
+    for (uint32 i = 0; i < sizeof(T); i++) {
+        data[i] = value >> (i * 8u);
+    }
+}
+
 // -----------------------------------------------------------------------------
 // bit_ops.hpp
 
@@ -317,6 +333,7 @@ private:
 constexpr size_t kIPLSize = 512_KiB;
 constexpr size_t kWRAMLowSize = 1024_KiB;
 constexpr size_t kWRAMHighSize = 1024_KiB;
+constexpr size_t kM68KWRAMSize = 512_KiB;
 
 template <uint32 base, uint64 size>
 constexpr bool AddressInRange(uint32 address) {
@@ -405,6 +422,9 @@ public:
             return ReadBE<T>(&m_WRAMLow[address & 0xFFFFF]);
         } else if (AddressInRange<0x5800000, 0x100000>(address)) {
             return CS2Read<T>(address & 0xFFFFF);
+        } else if (AddressInRange<0x5A00000, 0x100000>(address)) {
+            // TODO: handle SCSP memory size bit
+            return ReadBE<T>(&m_m68kWRAM[address & 0x7FFFF]);
         } else if (AddressInRange<0x5FE0000, 0x10000>(address)) {
             return SCURead<T>(address & 0xFF);
         } else if (AddressInRange<0x6000000, 0x2000000>(address)) {
@@ -427,6 +447,10 @@ public:
             WriteBE<T>(&m_WRAMLow[address & 0xFFFFF], value);
         } else if (AddressInRange<0x5800000, 0x100000>(address)) {
             CS2Write<T>(address & 0xFFFFF, value);
+        } else if (AddressInRange<0x5A00000, 0x100000>(address)) {
+            // TODO: handle SCSP memory size bit
+            // TODO: delay writes?
+            WriteBE<T>(&m_m68kWRAM[address & 0x7FFFF], value);
         } else if (AddressInRange<0x5FE0000, 0x10000>(address)) {
             SCUWrite<T>(address & 0xFF, value);
         } else if (AddressInRange<0x6000000, 0x2000000>(address)) {
@@ -440,6 +464,9 @@ private:
     std::array<uint8, kIPLSize> m_IPL; // aka BIOS ROM
     std::array<uint8, kWRAMLowSize> m_WRAMLow;
     std::array<uint8, kWRAMHighSize> m_WRAMHigh;
+
+    // TODO: move to SCSP
+    std::array<uint8, kM68KWRAMSize> m_m68kWRAM;
 
     SMPC &m_SMPC;
 
@@ -478,6 +505,22 @@ private:
             fmt::println("unhandled {}-bit A-Bus CS2 write to {:05X} = {:X}", sizeof(T) * 8, address, value);
         }
     }
+
+    // -------------------------------------------------------------------------
+    // TODO: move to SCSP object
+
+    /*uint32 SCSP_memMask; // set according to MEM4MB
+
+    template <mem_access_type T>
+    void SCSPWrite(uint32 address, T value) {
+        switch (address) {
+        case 0x100400: {
+            break;
+        }
+        }
+    }*/
+
+    // -------------------------------------------------------------------------
 
     // -------------------------------------------------------------------------
     // TODO: move to CDBlock object
@@ -626,7 +669,7 @@ private:
     SH2Bus &m_bus;
 
     uint64 dbg_count = 0;
-    static constexpr uint64 dbg_minCount = 10489689; // 9302150; // 9547530;
+    static constexpr uint64 dbg_minCount = 17635778; // 10489689; // 9302150; // 9547530;
 
     template <typename... T>
     void dbg_print(fmt::format_string<T...> fmt, T &&...args) {
@@ -2565,12 +2608,12 @@ private:
 
     void CMPGE(uint16 rm, uint16 rn) {
         dbg_println("cmp/ge r{}, r{}", rm, rn);
-        SR.T = static_cast<sint16>(R[rn]) >= static_cast<sint16>(R[rm]);
+        SR.T = static_cast<sint32>(R[rn]) >= static_cast<sint32>(R[rm]);
     }
 
     void CMPGT(uint16 rm, uint16 rn) {
         dbg_println("cmp/gt r{}, r{}", rm, rn);
-        SR.T = static_cast<sint16>(R[rn]) > static_cast<sint16>(R[rm]);
+        SR.T = static_cast<sint32>(R[rn]) > static_cast<sint32>(R[rm]);
     }
 
     void CMPHI(uint16 rm, uint16 rn) {
@@ -2611,8 +2654,8 @@ private:
 
     void DIV0S(uint16 rm, uint16 rn) {
         dbg_println("div0s r{}, r{}", rm, rn);
-        SR.M = static_cast<sint16>(R[rm]) < 0;
-        SR.Q = static_cast<sint16>(R[rn]) < 0;
+        SR.M = static_cast<sint32>(R[rm]) < 0;
+        SR.Q = static_cast<sint32>(R[rn]) < 0;
         SR.T = SR.M != SR.Q;
     }
 
@@ -3282,19 +3325,19 @@ private:
 std::vector<uint8_t> loadFile(std::filesystem::path romPath) {
     fmt::print("Loading file {}... ", romPath.string());
 
-    std::vector<uint8_t> rom;
-    std::ifstream romStream{romPath, std::ios::binary | std::ios::ate};
-    if (romStream.is_open()) {
-        auto size = romStream.tellg();
-        romStream.seekg(0, std::ios::beg);
+    std::vector<uint8_t> data;
+    std::ifstream stream{romPath, std::ios::binary | std::ios::ate};
+    if (stream.is_open()) {
+        auto size = stream.tellg();
+        stream.seekg(0, std::ios::beg);
         fmt::println("{} bytes", (size_t)size);
 
-        rom.resize(size);
-        romStream.read(reinterpret_cast<char *>(rom.data()), size);
+        data.resize(size);
+        stream.read(reinterpret_cast<char *>(data.data()), size);
     } else {
         fmt::println("failed!");
     }
-    return rom;
+    return data;
 }
 
 int main(int argc, char **argv) {
