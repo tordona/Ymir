@@ -661,8 +661,8 @@ private:
     union MAC_t {
         uint64 u64;
         struct {
-            uint32 H;
             uint32 L;
+            uint32 H;
         };
     } MAC;
 
@@ -2736,7 +2736,8 @@ private:
 
     void DMULS(uint16 rm, uint16 rn) {
         dbg_println("dmuls.l r{}, r{}", rm, rn);
-        MAC.u64 = SignExtend<32, sint64>(R[rm]) * SignExtend<32, sint64>(R[rn]);
+        auto cast = [](uint32 val) { return static_cast<sint64>(static_cast<sint32>(val)); };
+        MAC.u64 = cast(R[rm]) * cast(R[rn]);
     }
 
     void DMULU(uint16 rm, uint16 rn) {
@@ -2865,7 +2866,7 @@ private:
 
         sint32 mul = op1 * op2;
         if (SR.S) {
-            sint64 result = SignExtend<32, sint64>(MAC.L) + mul;
+            sint64 result = static_cast<sint64>(static_cast<sint32>(MAC.L)) + mul;
             sint32 saturatedResult = std::clamp<sint64>(result, 0xFFFFFFFF'80000000, 0x00000000'7FFFFFFF);
             if (result == saturatedResult) {
                 MAC.L = result;
@@ -2881,9 +2882,9 @@ private:
     void MACL(uint16 rm, uint16 rn) {
         dbg_println("mac.l @r{}+, $r{}+)", rm, rn);
 
-        sint64 op2 = SignExtend<32, sint64>(MemReadLong(R[rn]));
+        sint64 op2 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[rn])));
         R[rn] += 4;
-        sint64 op1 = SignExtend<32, sint64>(MemReadLong(R[rm]));
+        sint64 op1 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[rm])));
         R[rm] += 4;
 
         sint64 mul = op1 * op2;
