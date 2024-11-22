@@ -1650,7 +1650,12 @@ private:
                             PC += 2;
                         }
                         break;
-                        // TODO: case 0x7: // 0000 nnnn mmmm 0111   MUL.L Rm, Rn
+                    case 0x7: // 0000 nnnn mmmm 0111   MUL.L Rm, Rn
+                        MULL(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
+                        if constexpr (!delaySlot) {
+                            PC += 2;
+                        }
+                        break;
                     case 0xC: // 0000 nnnn mmmm 1100   MOV.B @(R0,Rm), Rn
                         MOVBL0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                         if constexpr (!delaySlot) {
@@ -1669,8 +1674,12 @@ private:
                             PC += 2;
                         }
                         break;
-                        // TODO: case 0xF: // 0000 nnnn mmmm 1111   MAC.L @Rm, @Rn+
-
+                    case 0xF: // 0000 nnnn mmmm 1111   MAC.L @Rm+, @Rn+
+                        MACL(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
+                        if constexpr (!delaySlot) {
+                            PC += 2;
+                        }
+                        break;
                     default: dbg_println("unhandled 0000 instruction"); break;
                     }
                     break;
@@ -1769,8 +1778,18 @@ private:
                     PC += 2;
                 }
                 break;
-            // TODO: case 0xE: // 0010 nnnn mmmm 1110   MULU.W Rm, Rn
-            // TODO: case 0xF: // 0010 nnnn mmmm 1111   MULS.W Rm, Rn
+            case 0xE: // 0010 nnnn mmmm 1110   MULU.W Rm, Rn
+                MULU(rm, rn);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0xF: // 0010 nnnn mmmm 1111   MULS.W Rm, Rn
+                MULS(rm, rn);
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
             default: dbg_println("unhandled 0010 instruction"); break;
             }
             break;
@@ -1795,8 +1814,18 @@ private:
                     PC += 2;
                 }
                 break;
-                // TODO: case 0x4: // 0011 nnnn mmmm 0100   DIV1 Rm, Rn
-                // TODO: case 0x5: // 0011 nnnn mmmm 0101   DMULU.L Rm, Rn
+            case 0x4: // 0011 nnnn mmmm 0100   DIV1 Rm, Rn
+                DIV1(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
+            case 0x5: // 0011 nnnn mmmm 0101   DMULU.L Rm, Rn
+                DMULU(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
             case 0x6: // 0011 nnnn mmmm 0110   CMP/HI Rm, Rn
                 CMPHI(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
@@ -1836,7 +1865,12 @@ private:
                     PC += 2;
                 }
                 break;
-            // TODO: case 0xD: // 0011 nnnn mmmm 1101   DMULS.L Rm, Rn
+            case 0xD: // 0011 nnnn mmmm 1101   DMULS.L Rm, Rn
+                DMULS(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
             case 0xE: // 0011 nnnn mmmm 1110   ADDC Rm, Rn
                 ADDC(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
@@ -1855,8 +1889,11 @@ private:
         case 0x4:
             if ((instr & 0xF) == 0xF) {
                 // 0100 nnnn mmmm 1111   MAC.W @Rm+, @Rn+
-                // TODO: implement
-                dbg_println("unhandled MAC.W instruction");
+                MACW(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
+                if constexpr (!delaySlot) {
+                    PC += 2;
+                }
+                break;
             } else {
                 switch (instr & 0xFF) {
                 case 0x00: // 0100 nnnn 0000 0000   SHLL Rn
@@ -2666,6 +2703,47 @@ private:
         SR.T = 0;
     }
 
+    void DIV1(uint16 rm, uint16 rn) {
+        dbg_println("div1 r{}, r{}", rm, rn);
+
+        const bool oldQ = SR.Q;
+        SR.Q = static_cast<sint32>(R[rn]) < 0;
+        R[rn] = (R[rn] << 1u) | SR.T;
+
+        const uint32 prevVal = R[rn];
+        if (oldQ == SR.M) {
+            R[rn] -= R[rm];
+        } else {
+            R[rn] += R[rm];
+        }
+
+        if (oldQ) {
+            if (SR.M) {
+                SR.Q ^= R[rn] <= prevVal;
+            } else {
+                SR.Q ^= R[rn] < prevVal;
+            }
+        } else {
+            if (SR.M) {
+                SR.Q ^= R[rn] >= prevVal;
+            } else {
+                SR.Q ^= R[rn] > prevVal;
+            }
+        }
+
+        SR.T = SR.Q == SR.M;
+    }
+
+    void DMULS(uint16 rm, uint16 rn) {
+        dbg_println("dmuls.l r{}, r{}", rm, rn);
+        MAC.u64 = SignExtend<32, sint64>(R[rm]) * SignExtend<32, sint64>(R[rn]);
+    }
+
+    void DMULU(uint16 rm, uint16 rn) {
+        dbg_println("dmulu.l r{}, r{}", rm, rn);
+        MAC.u64 = static_cast<uint64>(R[rm]) * static_cast<uint64>(R[rn]);
+    }
+
     void DT(uint16 rn) {
         dbg_println("dt r{}", rn);
         R[rn]--;
@@ -2775,6 +2853,53 @@ private:
     void MOV(uint16 rm, uint16 rn) {
         dbg_println("mov r{}, r{}", rm, rn);
         R[rn] = R[rm];
+    }
+
+    void MACW(uint16 rm, uint16 rn) {
+        dbg_println("mac.w @r{}+, $r{}+)", rm, rn);
+
+        sint32 op2 = SignExtend<16, sint32>(MemReadWord(R[rn]));
+        R[rn] += 2;
+        sint32 op1 = SignExtend<16, sint32>(MemReadWord(R[rm]));
+        R[rm] += 2;
+
+        sint32 mul = op1 * op2;
+        if (SR.S) {
+            sint64 result = SignExtend<32, sint64>(MAC.L) + mul;
+            sint32 saturatedResult = std::clamp<sint64>(result, 0xFFFFFFFF'80000000, 0x00000000'7FFFFFFF);
+            if (result == saturatedResult) {
+                MAC.L = result;
+            } else {
+                MAC.L = saturatedResult;
+                MAC.H = 1;
+            }
+        } else {
+            MAC.u64 += mul;
+        }
+    }
+
+    void MACL(uint16 rm, uint16 rn) {
+        dbg_println("mac.l @r{}+, $r{}+)", rm, rn);
+
+        sint64 op2 = SignExtend<32, sint64>(MemReadLong(R[rn]));
+        R[rn] += 4;
+        sint64 op1 = SignExtend<32, sint64>(MemReadLong(R[rm]));
+        R[rm] += 4;
+
+        sint64 mul = op1 * op2;
+        sint64 result = mul + MAC.u64;
+        if (SR.S) {
+            if (bit::extract<63>((result ^ MAC.u64) & (result ^ mul))) {
+                if (bit::extract<63>(MAC.u64)) {
+                    result = 0xFFFF8000'00000000;
+                } else {
+                    result = 0x00007FFF'FFFFFFFF;
+                }
+            } else {
+                result = std::clamp<sint64>(result, 0xFFFF8000'00000000, 0x00007FFF'FFFFFFFF);
+            }
+        }
+        MAC.u64 = result;
     }
 
     void MOVA(uint16 disp) {
@@ -2974,6 +3099,22 @@ private:
     void MOVT(uint16 rn) {
         dbg_println("movt r{}", rn);
         R[rn] = SR.T;
+    }
+
+    void MULL(uint16 rm, uint16 rn) {
+        dbg_println("mul.l r{}, r{}", rm, rn);
+        MAC.L = R[rm] * R[rn];
+    }
+
+    void MULS(uint16 rm, uint16 rn) {
+        dbg_println("muls.w r{}, r{}", rm, rn);
+        MAC.L = SignExtend<16>(R[rm]) * SignExtend<16>(R[rn]);
+    }
+
+    void MULU(uint16 rm, uint16 rn) {
+        dbg_println("mulu.w r{}, r{}", rm, rn);
+        auto cast = [](uint32 val) { return static_cast<uint32>(static_cast<uint16>(val)); };
+        MAC.L = cast(R[rm]) * cast(R[rn]);
     }
 
     void NOP() {
