@@ -14,6 +14,7 @@ add_library(satemu-core
 
     include/satemu/util/bit_ops.hpp
     include/satemu/util/data_ops.hpp
+    include/satemu/util/inline.hpp
     include/satemu/util/size_ops.hpp
     include/satemu/util/unreachable.hpp
 

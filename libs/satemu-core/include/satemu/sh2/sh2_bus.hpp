@@ -6,9 +6,14 @@
 
 #include "satemu/util/data_ops.hpp"
 
+#include <concepts>
 #include <span>
 
 namespace satemu {
+
+// Specifies valid types for memory accesses
+template <typename T>
+concept mem_access_type = std::same_as<T, uint8> || std::same_as<T, uint16> || std::same_as<T, uint32>;
 
 // SH-2 memory map
 // https://wiki.yabause.org/index.php5?title=SH-2CPU
@@ -84,6 +89,8 @@ public:
 
         // TODO: consider using a LUT
 
+        using namespace util;
+
         if (AddressInRange<0x0000000, 0x100000>(address)) {
             return ReadBE<T>(&m_IPL[address & 0x7FFFF]);
         } else if (AddressInRange<0x0100000, 0x80000>(address)) {
@@ -110,6 +117,8 @@ public:
         address &= ~(sizeof(T) - 1);
 
         // TODO: consider using a LUT
+
+        using namespace util;
 
         if (AddressInRange<0x100000, 0x80000>(address)) {
             m_SMPC.Write((address & 0x7F) | 1, value);
