@@ -1,5 +1,8 @@
 #pragma once
 
+#include <satemu/core_types.hpp>
+#include <satemu/sys/sys.hpp>
+
 #include <satemu/export.h>
 
 namespace satemu {

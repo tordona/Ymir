@@ -1,6 +1,21 @@
 ## Create the library target
 add_library(satemu-core
+    include/satemu/core_types.hpp
     include/satemu/satemu.hpp
+
+    include/satemu/sh2/sh2.hpp
+    include/satemu/sh2/sh2_bus.hpp
+    include/satemu/sh2/sh2_bus_defs.hpp
+
+    include/satemu/smpc/smpc.hpp
+    include/satemu/smpc/smpc_defs.hpp
+
+    include/satemu/sys/sys.hpp
+
+    include/satemu/util/bit_ops.hpp
+    include/satemu/util/data_ops.hpp
+    include/satemu/util/size_ops.hpp
+    include/satemu/util/unreachable.hpp
 
     src/satemu/satemu.cpp
 )
@@ -14,11 +29,24 @@ target_include_directories(satemu-core
 )
 target_compile_features(satemu-core PUBLIC cxx_std_20)
 
-## Build precompiled header
-#target_precompile_headers(satemu-core
-#    PUBLIC
-#        <string>
-#)
+## Add dependencies
+target_link_libraries(satemu-core PUBLIC fmt)
+
+# Build precompiled header
+target_precompile_headers(satemu-core
+    PUBLIC
+        <algorithm>
+        <array>
+        <bit>
+        <cassert>
+        <concepts>
+        <cstddef>
+        <cstdint>
+        <span>
+        <type_traits>
+
+        <fmt/format.h>
+)
 
 ## Define version macros
 target_add_version_defines(satemu-core)
