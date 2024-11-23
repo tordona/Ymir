@@ -362,10 +362,53 @@ union CHCTLB_t {
     };
 };
 
-// 18002C   BMPNA   Bitmap Palette Number
+// 18002C   BMPNA   NBG0/NBG1 Bitmap Palette Number
 //
 //   bits   r/w  code          description
-//     15   R/W  xxPNB         Pattern Name Data Size (0=2 words, 1=1 word)
+//  15-14        -             Reserved, must be zero
+//     13     W  N1BMPR        NBG1 Special Priority
+//     12     W  N1BMCC        NBG1 Special Color Calculation
+//     11        -             Reserved, must be zero
+//   10-8     W  N1BMP6-4      -
+//    7-6        -             Reserved, must be zero
+//      5     W  N0BMPR        NBG0 Special Priority
+//      4     W  N0BMCC        NBG0 Special Color Calculation
+//      3        -             Reserved, must be zero
+//    2-0     W  N0BMP6-4      -
+union BMPNA_t {
+    uint16 u16;
+    struct {
+        uint16 N0BMPn : 3;
+        uint16 _rsvd3 : 1;
+        uint16 N0BMCC : 1;
+        uint16 N0BMPR : 1;
+        uint16 _rsvd6_7 : 2;
+        uint16 N1BMPn : 3;
+        uint16 _rsvd11 : 1;
+        uint16 N1BMCC : 1;
+        uint16 N1BMPR : 1;
+        uint16 _rsvd14_15 : 2;
+    };
+};
+
+// 18002E   BMPNB   RBG0 Bitmap Palette Number
+//
+//   bits   r/w  code          description
+//   15-6        -             Reserved, must be zero
+//      5     W  R0BMPR        RBG0 Special Priority
+//      4     W  R0BMCC        RBG0 Special Color Calculation
+//      3        -             Reserved, must be zero
+//    2-0     W  R0BMP6-4      -
+union BMPNB_t {
+    uint16 u16;
+    struct {
+        uint16 N0BMPn : 3;
+        uint16 _rsvd3 : 1;
+        uint16 N0BMCC : 1;
+        uint16 N0BMPR : 1;
+        uint16 _rsvd6_15 : 10;
+    };
+};
 
 // 180030   PNCN0   NBG0/RBG1 Pattern Name Control
 // 180032   PNCN1   NBG1 Pattern Name Control

@@ -19,6 +19,8 @@ void VDP2::Reset(bool hard) {
     BGON.u16 = 0x0;
     CHCTLA.u16 = 0x0;
     CHCTLB.u16 = 0x0;
+    BMPNA.u16 = 0x0;
+    BMPNB.u16 = 0x0;
     PNCN0.u16 = 0x0;
     PNCN1.u16 = 0x0;
     PNCN2.u16 = 0x0;
