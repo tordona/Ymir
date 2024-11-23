@@ -13,6 +13,7 @@ Saturn::Saturn()
 void Saturn::Reset(bool hard) {
     m_sh2bus.Reset(hard);
     m_masterSH2.Reset(hard);
+    m_slaveSH2.Reset(hard);
     m_SCU.Reset(hard);
     m_SMPC.Reset(hard);
     m_SCSP.Reset(hard);
