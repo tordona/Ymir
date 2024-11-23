@@ -46,6 +46,9 @@ void VDP2::Reset(bool hard) {
     SCN3.u32 = 0x0;
     ZMCTL.u16 = 0x0;
     SCRCTL.u16 = 0x0;
+    VCSTA.u32 = 0x0;
+    LSTA0.u32 = 0x0;
+    LSTA1.u32 = 0x0;
     OVPNRA = 0x0;
     OVPNRB = 0x0;
 }

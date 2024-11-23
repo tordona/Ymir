@@ -987,6 +987,70 @@ union SCRCTL_t {
     };
 };
 
+// 18009C   VCSTAU  Vertical Cell Scroll Table Address (upper)
+//
+//   bits   r/w  code          description
+//   15-3        -             Reserved, must be zero
+//    2-0     W  VCSTA18-16    Vertical Cell Scroll Table Base Address (bits 18-16)
+//
+// 18009E   VCSTAL  Vertical Cell Scroll Table Address (lower)
+//
+//   bits   r/w  code          description
+//   15-1     W  VCSTA15-1     Vertical Cell Scroll Table Base Address (bits 15-1)
+//      0        -             Reserved, must be zero
+union VCSTA_t {
+    uint32 u32;
+    struct {
+        union {
+            uint16 u16;
+            struct {
+                uint16 VCSTAn : 3;
+                uint16 _rsvd3_15 : 13;
+            };
+        } U;
+        union {
+            uint16 u16;
+            struct {
+                uint16 _rsvd0 : 1;
+                uint16 VCSTAn : 15;
+            };
+        } L;
+    };
+};
+
+// 1800A0   LSTA0U  NBG0 Line Cell Scroll Table Address (upper)
+// 1800A4   LSTA1U  NBG1 Line Cell Scroll Table Address (upper)
+//
+//   bits   r/w  code          description
+//   15-3        -             Reserved, must be zero
+//    2-0     W  NxLSTA18-16   NBGx Line Cell Scroll Table Base Address (bits 18-16)
+//
+// 1800A2   LSTA0L  NBG0 Line Cell Scroll Table Address (lower)
+// 1800A6   LSTA1L  NBG1 Line Cell Scroll Table Address (lower)
+//
+//   bits   r/w  code          description
+//   15-1     W  NxLSTA15-1    NBGx Line Cell Scroll Table Base Address (bits 15-1)
+//      0        -             Reserved, must be zero
+union LSTA_t {
+    uint32 u32;
+    struct {
+        union {
+            uint16 u16;
+            struct {
+                uint16 LSTAn : 3;
+                uint16 _rsvd3_15 : 13;
+            };
+        } U;
+        union {
+            uint16 u16;
+            struct {
+                uint16 _rsvd0 : 1;
+                uint16 LSTAn : 15;
+            };
+        } L;
+    };
+};
+
 // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
 // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
 //

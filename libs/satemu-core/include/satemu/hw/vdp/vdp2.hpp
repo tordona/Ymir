@@ -136,6 +136,12 @@ public:
         case 0x096: return 0; // SCYN3 is write-only
         case 0x098: return 0; // ZMCTL is write-only
         case 0x09A: return 0; // SCRCTL is write-only
+        case 0x09C: return 0; // VCSTAU is write-only
+        case 0x09E: return 0; // VCSTAL is write-only
+        case 0x0A0: return 0; // LSTA0U is write-only
+        case 0x0A2: return 0; // LSTA0L is write-only
+        case 0x0A4: return 0; // LSTA1U is write-only
+        case 0x0A6: return 0; // LSTA1L is write-only
         case 0x0B8: return 0; // OVPNRA is write-only
         case 0x0BA: return 0; // OVPNRB is write-only
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
@@ -222,6 +228,12 @@ public:
         case 0x096: SCN3.Y.u16 = value & 0x07FF; break;
         case 0x098: ZMCTL.u16 = value & 0x0303; break;
         case 0x09A: SCRCTL.u16 = value & 0x3F3F; break;
+        case 0x09C: VCSTA.U.u16 = value & 0x0007; break;
+        case 0x09E: VCSTA.L.u16 = value & 0xFFFE; break;
+        case 0x0A0: LSTA0.U.u16 = value & 0x0007; break;
+        case 0x0A2: LSTA0.L.u16 = value & 0xFFFE; break;
+        case 0x0A4: LSTA1.U.u16 = value & 0x0007; break;
+        case 0x0A6: LSTA1.L.u16 = value & 0xFFFE; break;
         case 0x0B8: OVPNRA = value; break;
         case 0x0BA: OVPNRB = value; break;
         default:
@@ -313,6 +325,12 @@ private:
     OVPNR_t OVPNRA;  // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
     OVPNR_t OVPNRB;  // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
     SCRCTL_t SCRCTL; // 18009A   SCRCTL  Line and Vertical Cell Scroll Control
+                     // 18009C   VCSTAU  Vertical Cell Scroll Table Address (upper)
+    VCSTA_t VCSTA;   // 18009E   VCSTAL  Vertical Cell Scroll Table Address (lower)
+                     // 1800A0   LSTA0U  NBG0 Line Cell Scroll Table Address (upper)
+    LSTA_t LSTA0;    // 1800A2   LSTA0L  NBG0 Line Cell Scroll Table Address (lower)
+                     // 1800A4   LSTA1U  NBG1 Line Cell Scroll Table Address (upper)
+    LSTA_t LSTA1;    // 1800A6   LSTA1L  NBG1 Line Cell Scroll Table Address (lower)
 
     // -------------------------------------------------------------------------
 
