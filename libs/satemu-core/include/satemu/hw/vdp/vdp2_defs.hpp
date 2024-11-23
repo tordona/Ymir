@@ -268,6 +268,31 @@ union BGON_t {
     };
 };
 
+// 180022   MZCTL   Mosaic Control
+//
+//   bits   r/w  code          description
+//  15-12        MZSZV3-0      Vertical Mosaic Size
+//   11-8        MZSZH3-0      Horizontal Mosaic Size
+//    7-5        -             Reserved, must be zero
+//      4        R0MZE         RBG0 Mosaic Enable
+//      3        N3MZE         NBG3 Mosaic Enable
+//      2        N2MZE         NBG2 Mosaic Enable
+//      1        N1MZE         NBG1 Mosaic Enable
+//      0        N0MZE         NBG0/RBG1 Mosaic Enable
+union MZCTL_t {
+    uint16 u16;
+    struct {
+        uint16 N0MZE : 1;
+        uint16 N1MZE : 1;
+        uint16 N2MZE : 1;
+        uint16 N3MZE : 1;
+        uint16 R0MZE : 1;
+        uint16 _rsvd5_7 : 3;
+        uint16 MZSZHn : 4;
+        uint16 MZSZVn : 4;
+    };
+};
+
 // 180028   CHCTLA  Character Control Register A
 //
 //   bits   r/w  code          description
@@ -706,6 +731,91 @@ union MPRP_t {
                 uint16 _rsvd14_15 : 2;
             };
         } OP;
+    };
+};
+
+// 180070   SCXIN0  NBG0 Horizontal Screen Scroll Value (integer part)
+// 180072   SCXDN0  NBG0 Horizontal Screen Scroll Value (fractional part)
+// 180074   SCYIN0  NBG0 Vertical Screen Scroll Value (integer part)
+// 180076   SCYDN0  NBG0 Vertical Screen Scroll Value (fractional part)
+// 180080   SCXIN1  NBG1 Horizontal Screen Scroll Value (integer part)
+// 180082   SCXDN1  NBG1 Horizontal Screen Scroll Value (fractional part)
+// 180084   SCYIN1  NBG1 Vertical Screen Scroll Value (integer part)
+// 180086   SCYDN1  NBG1 Vertical Screen Scroll Value (fractional part)
+//
+// SCdINx:  (d=X,Y; x=0,1)
+//   bits   r/w  code          description
+//  15-11        -             Reserved, must be zero
+//   10-0     W  NxSCdI10-0    Horizontal/Vertical Screen Scroll Value (integer part)
+//
+// SCdDNx:  (d=X,Y; x=0,1)
+//   bits   r/w  code          description
+//   15-8     W  NxSCdD1-8     Horizontal/Vertical Screen Scroll Value (fractional part)
+//    7-0        -             Reserved, must be zero
+union SCXYID_t {
+    uint64 u64;
+    struct {
+        struct {
+            union {
+                uint16 u16;
+                struct {
+                    uint16 NSCXI : 11;
+                    uint16 _rsvd11_15 : 5;
+                };
+            } I;
+            union {
+                uint16 u16;
+                struct {
+                    uint16 _rsvd0_7 : 8;
+                    uint16 NSCXD : 8;
+                };
+            } D;
+        } X;
+        struct {
+            union {
+                uint16 u16;
+                struct {
+                    uint16 NSCYI : 11;
+                    uint16 _rsvd11_15 : 5;
+                };
+            } I;
+            union {
+                uint16 u16;
+                struct {
+                    uint16 _rsvd0_7 : 8;
+                    uint16 NSCYD : 8;
+                };
+            } D;
+        } Y;
+    };
+};
+
+// 180090   SCXN2   NBG2 Horizontal Screen Scroll Value
+// 180092   SCYN2   NBG2 Vertical Screen Scroll Value
+// 180094   SCXN3   NBG3 Horizontal Screen Scroll Value
+// 180096   SCYN3   NBG3 Vertical Screen Scroll Value
+//
+// SCdNx:  (d=X,Y; x=2,3)
+//   bits   r/w  code          description
+//  15-11        -             Reserved, must be zero
+//   10-0     W  NxSCd10-0     Horizontal/Vertical Screen Scroll Value (integer)
+union SCXY_t {
+    uint32 u32;
+    struct {
+        union {
+            uint16 u16;
+            struct {
+                uint16 NSCX : 11;
+                uint16 _rsvd11_15 : 5;
+            };
+        } X;
+        union {
+            uint16 u16;
+            struct {
+                uint16 NSCY : 11;
+                uint16 _rsvd11_15 : 5;
+            };
+        } Y;
     };
 };
 

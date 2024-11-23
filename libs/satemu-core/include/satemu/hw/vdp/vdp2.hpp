@@ -75,6 +75,7 @@ public:
         case 0x01E: return 0; // CYCB1 is write-only
         case 0x01C: return 0; // CYCB1 is write-only
         case 0x020: return 0; // BGON is write-only
+        case 0x022: return 0; // MZCTL is write-only
         case 0x028: return 0; // CHCTLA is write-only
         case 0x02A: return 0; // CHCTLB is write-only
         case 0x02C: return 0; // BMPNA is write-only
@@ -111,6 +112,18 @@ public:
         case 0x06A: return 0; // MPKLRB is write-only
         case 0x06C: return 0; // MPMNRB is write-only
         case 0x06E: return 0; // MPOPRB is write-only
+        case 0x070: return 0; // SCXIN0 is write-only
+        case 0x072: return 0; // SCXDN0 is write-only
+        case 0x074: return 0; // SCYIN0 is write-only
+        case 0x076: return 0; // SCYDN0 is write-only
+        case 0x080: return 0; // SCXIN1 is write-only
+        case 0x082: return 0; // SCXDN1 is write-only
+        case 0x084: return 0; // SCYIN1 is write-only
+        case 0x086: return 0; // SCYDN1 is write-only
+        case 0x090: return 0; // SCXN2 is write-only
+        case 0x092: return 0; // SCYN2 is write-only
+        case 0x094: return 0; // SCXN3 is write-only
+        case 0x096: return 0; // SCYN3 is write-only
         case 0x0B8: return 0; // OVPNRA is write-only
         case 0x0BA: return 0; // OVPNRB is write-only
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
@@ -136,6 +149,7 @@ public:
         case 0x01E: CYCB1.U.u16 = value; break;
         case 0x01C: CYCB1.L.u16 = value; break;
         case 0x020: BGON.u16 = value & 0x1F3F; break;
+        case 0x022: MZCTL.u16 = value & 0xFF1F; break;
         case 0x028: CHCTLA.u16 = value & 0x3F7F; break;
         case 0x02A: CHCTLB.u16 = value & 0x7733; break;
         case 0x02C: BMPNA.u16 = value & 0x3737; break;
@@ -172,6 +186,18 @@ public:
         case 0x06A: MPRB.KL.u16 = value & 0x3F3F; break;
         case 0x06C: MPRB.MN.u16 = value & 0x3F3F; break;
         case 0x06E: MPRB.OP.u16 = value & 0x3F3F; break;
+        case 0x070: SCN0.X.I.u16 = value & 0x07FF; break;
+        case 0x072: SCN0.X.D.u16 = value & 0xFF00; break;
+        case 0x074: SCN0.Y.I.u16 = value & 0x07FF; break;
+        case 0x076: SCN0.Y.D.u16 = value & 0xFF00; break;
+        case 0x080: SCN1.X.I.u16 = value & 0x07FF; break;
+        case 0x082: SCN1.X.D.u16 = value & 0xFF00; break;
+        case 0x084: SCN1.Y.I.u16 = value & 0x07FF; break;
+        case 0x086: SCN1.Y.D.u16 = value & 0xFF00; break;
+        case 0x090: SCN2.X.u16 = value & 0x07FF; break;
+        case 0x092: SCN2.Y.u16 = value & 0x07FF; break;
+        case 0x094: SCN3.X.u16 = value & 0x07FF; break;
+        case 0x096: SCN3.Y.u16 = value & 0x07FF; break;
         case 0x0B8: OVPNRA = value; break;
         case 0x0BA: OVPNRB = value; break;
         default:
@@ -197,6 +223,7 @@ private:
                      // 18001C   CYCB1L  VRAM Cycle Pattern B1 Lower
     CYC_t CYCB1;     // 18001E   CYCB1U  VRAM Cycle Pattern B1 Upper
     BGON_t BGON;     // 180020   BGON    Screen Display Enable
+    MZCTL_t MZCTL;   // 180022   MZCTL   Mosaic Control
     CHCTLA_t CHCTLA; // 180028   CHCTLA  Character Control Register A
     CHCTLB_t CHCTLB; // 18002A   CHCTLB  Character Control Register A
     BMPNA_t BMPNA;   // 18002C   BMPNA   NBG0/NBG1 Bitmap Palette Number
@@ -233,6 +260,18 @@ private:
                      // 18006A   MPKLRB  Rotation Parameter A Scroll Surface Map for Screen Planes K,L
                      // 18006C   MPMNRB  Rotation Parameter A Scroll Surface Map for Screen Planes M,N
     MPRP_t MPRB;     // 18006E   MPOPRB  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
+                     // 180070   SCXIN0  NBG0 Horizontal Screen Scroll Value (integer part)
+                     // 180072   SCXDN0  NBG0 Horizontal Screen Scroll Value (fractional part)
+                     // 180074   SCYIN0  NBG0 Vertical Screen Scroll Value (integer part)
+    SCXYID_t SCN0;   // 180076   SCYDN0  NBG0 Vertical Screen Scroll Value (fractional part)
+                     // 180080   SCXIN1  NBG1 Horizontal Screen Scroll Value (integer part)
+                     // 180082   SCXDN1  NBG1 Horizontal Screen Scroll Value (fractional part)
+                     // 180084   SCYIN1  NBG1 Vertical Screen Scroll Value (integer part)
+    SCXYID_t SCN1;   // 180086   SCYDN1  NBG1 Vertical Screen Scroll Value (fractional part)
+                     // 180090   SCXN2   NBG2 Horizontal Screen Scroll Value
+    SCXY_t SCN2;     // 180092   SCYN2   NBG2 Vertical Screen Scroll Value
+                     // 180094   SCXN3   NBG3 Horizontal Screen Scroll Value
+    SCXY_t SCN3;     // 180096   SCYN3   NBG3 Vertical Screen Scroll Value
     OVPNR_t OVPNRA;  // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
     OVPNR_t OVPNRB;  // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
 
