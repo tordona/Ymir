@@ -709,4 +709,15 @@ union MPRP_t {
     };
 };
 
+// 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
+// 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
+//
+//   bits   r/w  code          description
+//   15-0     W  RxOPN15-0     Over Pattern Name
+//
+// x:
+//   A = Rotation Parameter A (OVPNRA)
+//   B = Rotation Parameter B (OVPNRB)
+using OVPNR_t = uint16;
+
 } // namespace satemu::vdp2

@@ -111,6 +111,8 @@ public:
         case 0x06A: return 0; // MPKLRB is write-only
         case 0x06C: return 0; // MPMNRB is write-only
         case 0x06E: return 0; // MPOPRB is write-only
+        case 0x0B8: return 0; // OVPNRA is write-only
+        case 0x0BA: return 0; // OVPNRB is write-only
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
         }
     }
@@ -170,6 +172,8 @@ public:
         case 0x06A: MPRB.KL.u16 = value & 0x3F3F; break;
         case 0x06C: MPRB.MN.u16 = value & 0x3F3F; break;
         case 0x06E: MPRB.OP.u16 = value & 0x3F3F; break;
+        case 0x0B8: OVPNRA = value; break;
+        case 0x0BA: OVPNRB = value; break;
         default:
             fmt::println("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
             break;
@@ -229,6 +233,8 @@ private:
                      // 18006A   MPKLRB  Rotation Parameter A Scroll Surface Map for Screen Planes K,L
                      // 18006C   MPMNRB  Rotation Parameter A Scroll Surface Map for Screen Planes M,N
     MPRP_t MPRB;     // 18006E   MPOPRB  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
+    OVPNR_t OVPNRA;  // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
+    OVPNR_t OVPNRB;  // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
 
     // -------------------------------------------------------------------------
 

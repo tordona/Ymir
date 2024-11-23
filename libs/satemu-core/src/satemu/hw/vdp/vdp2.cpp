@@ -35,6 +35,8 @@ void VDP2::Reset(bool hard) {
     MPRA.IJKLMNOP.u64 = 0x0;
     MPRB.ABCDEFGH.u64 = 0x0;
     MPRB.IJKLMNOP.u64 = 0x0;
+    OVPNRA = 0x0;
+    OVPNRB = 0x0;
 }
 
 } // namespace satemu::vdp2
