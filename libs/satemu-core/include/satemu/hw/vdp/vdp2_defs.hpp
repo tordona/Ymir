@@ -447,7 +447,7 @@ union MPOFN_t {
     };
 };
 
-// 18003C   MPOFN   Rotation Parameter A/B Map Offset
+// 18003E   MPOFR   Rotation Parameter A/B Map Offset
 //
 //   bits   r/w  code          description
 //   15-7   R    -             Reserved, must be zero
