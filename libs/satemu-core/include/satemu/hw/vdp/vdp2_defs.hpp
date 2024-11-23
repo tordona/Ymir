@@ -268,4 +268,97 @@ union BGON_t {
     };
 };
 
+// 180028   CHCTLA  Character Control Register A
+//
+//   bits   r/w  code          description
+//  15-14   R    -             Reserved, must be zero
+//  13-12   R/W  N1CHCN1-0     NBG1/EXBG Character Color Number
+//                               00 (0) =       16 colors - palette
+//                               01 (1) =      256 colors - palette
+//                               10 (2) =     2048 colors - palette
+//                               11 (3) =    32768 colors - RGB (NBG1)
+//                                        16777216 colors - RGB (EXBG)
+//  11-10   R/W  N1BMSZ1-0     NBG1 Bitmap Size
+//                               00 (0) = 512x256
+//                               01 (1) = 512x512
+//                               10 (2) = 1024x256
+//                               11 (3) = 1024x512
+//      9   R/W  N1BMEN        NBG1 Bitmap Enable (0=cells, 1=bitmap)
+//      8   R/W  N1CHSZ        NBG1 Character Size (0=1x1, 1=2x2)
+//      7   R    -             Reserved, must be zero
+//    6-4   R/W  N0CHCN2-0     NBG0/RBG1 Character Color Number
+//                               000 (0) =       16 colors - palette
+//                               001 (1) =      256 colors - palette
+//                               010 (2) =     2048 colors - palette
+//                               011 (3) =    32768 colors - RGB
+//                               100 (4) = 16777216 colors - RGB (Normal mode only)
+//                                           forbidden for Hi-Res or Exclusive Monitor
+//                               101 (5) = forbidden
+//                               110 (6) = forbidden
+//                               111 (7) = forbidden
+//    3-2   R/W  N0BMSZ1-0     NBG0 Bitmap Size
+//                               00 (0) = 512x256
+//                               01 (1) = 512x512
+//                               10 (2) = 1024x256
+//                               11 (3) = 1024x512
+//      1   R/W  N0BMEN        NBG0 Bitmap Enable (0=cells, 1=bitmap)
+//      0   R/W  N0CHSZ        NBG0 Character Size (0=1x1, 1=2x2)
+union CHCTLA_t {
+    uint16 u16;
+    struct {
+        uint16 N0CHSZ : 1;
+        uint16 N0BMEN : 1;
+        uint16 N0BMSZn : 2;
+        uint16 N0CHCNn : 3;
+        uint16 _rsvd7 : 1;
+        uint16 N1CHSZ : 1;
+        uint16 N1BMEN : 1;
+        uint16 N1BMSZn : 2;
+        uint16 N1CHCNn : 2;
+        uint16 _rsvd14_15 : 2;
+    };
+};
+
+// 18002A   CHCTLB  Character Control Register B
+//
+//   bits   r/w  code          description
+//     15   R    -             Reserved, must be zero
+//  14-12   R/W  R0CHCN2-0     RBG0 Character Color Number
+//                               NOTE: Exclusive Monitor cannot display this BG plane
+//                               000 (0) =       16 colors - palette
+//                               001 (1) =      256 colors - palette
+//                               010 (2) =     2048 colors - palette
+//                               011 (3) =    32768 colors - RGB
+//                               100 (4) = 16777216 colors - RGB (Normal mode only)
+//                                           forbidden for Hi-Res
+//                               101 (5) = forbidden
+//                               110 (6) = forbidden
+//                               111 (7) = forbidden
+//     11   R    -             Reserved, must be zero
+//     10   R/W  R0BMSZ        RBG0 Bitmap Size (0=512x256, 1=512x512)
+//      9   R/W  R0BMEN        RBG0 Bitmap Enable (0=cells, 1=bitmap)
+//      8   R/W  R0CHSZ        RBG0 Character Size (0=1x1, 1=2x2)
+//    7-6   R    -             Reserved, must be zero
+//      5   R/W  N3CHCN        NBG3 Character Color Number (0=16 colors, 1=256 colors; both palette)
+//      4   R/W  N3CHSZ        NBG3 Character Size (0=1x1, 1=2x2)
+//    3-2   R    -             Reserved, must be zero
+//      1   R/W  N2CHCN        NBG2 Character Color Number (0=16 colors, 1=256 colors; both palette)
+//      0   R/W  N2CHSZ        NBG2 Character Size (0=1x1, 1=2x2)
+union CHCTLB_t {
+    uint16 u16;
+    struct {
+        uint16 N2CHSZ : 1;
+        uint16 N2CHCN : 1;
+        uint16 _rsvd2_3 : 2;
+        uint16 N3CHSZ : 1;
+        uint16 N3CHCN : 1;
+        uint16 _rsvd6_7 : 2;
+        uint16 R0CHSZ : 1;
+        uint16 R0BMEN : 1;
+        uint16 R0BMSZ : 1;
+        uint16 _rsvd11 : 1;
+        uint16 R0CHCNn : 3;
+        uint16 _rsvd15 : 1;
+    };
+};
 } // namespace satemu::vdp2

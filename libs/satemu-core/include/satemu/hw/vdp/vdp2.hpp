@@ -75,6 +75,8 @@ public:
         case 0x01E: return CYCB1.U.u16;
         case 0x01C: return CYCB1.L.u16;
         case 0x020: return BGON.u16;
+        case 0x028: return CHCTLA.u16;
+        case 0x02A: return CHCTLB.u16;
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
         }
     }
@@ -98,6 +100,8 @@ public:
         case 0x01E: CYCB1.U.u16 = value; break;
         case 0x01C: CYCB1.L.u16 = value; break;
         case 0x020: BGON.u16 = value & 0x1F3F; break;
+        case 0x028: CHCTLA.u16 = value & 0x3F7F; break;
+        case 0x02A: CHCTLB.u16 = value & 0x7733; break;
         default:
             fmt::println("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
             break;
@@ -121,6 +125,8 @@ private:
                      // 18001C   CYCB1L  VRAM Cycle Pattern B1 Lower
     CYC_t CYCB1;     // 18001E   CYCB1U  VRAM Cycle Pattern B1 Upper
     BGON_t BGON;     // 180020   BGON    Screen Display Enable
+    CHCTLA_t CHCTLA; // 180028   CHCTLA  Character Control Register A
+    CHCTLB_t CHCTLB; // 18002A   CHCTLB  Character Control Register A
 
     // -------------------------------------------------------------------------
 

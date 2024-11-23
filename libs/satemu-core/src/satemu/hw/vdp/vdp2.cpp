@@ -17,6 +17,8 @@ void VDP2::Reset(bool hard) {
     CYCB0.u32 = 0x0;
     CYCB1.u32 = 0x0;
     BGON.u16 = 0x0;
+    CHCTLA.u16 = 0x0;
+    CHCTLB.u16 = 0x0;
 }
 
 } // namespace satemu::vdp2
