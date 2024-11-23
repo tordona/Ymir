@@ -4,9 +4,268 @@
 
 #include <satemu/util/size_ops.hpp>
 
-namespace satemu {
+namespace satemu::vdp2 {
 
 constexpr size_t kVDP2VRAMSize = 512_KiB;
 constexpr size_t kCRAMSize = 4_KiB;
 
-} // namespace satemu
+// TODO: consider splitting unions into individual fields for performance
+
+// 180000   TVMD    TV Screen Mode
+//
+//   bits   r/w  code          description
+//     15   R/W  DISP          TV Screen Display (0=no display, 1=display)
+//   14-9   R    -             Reserved, must be zero
+//      8   R/W  BDCLMD        Border Color Mode (0=black, 1=back screen)
+//    7-6   R/W  LSMD1-0       Interlace Mode
+//                               00 (0) = Non-Interlace
+//                               01 (1) = (Forbidden)
+//                               10 (2) = Single-density interlace
+//                               11 (3) = Double-density interlace
+//    5-4   R/W  VRESO1-0      Vertical Resolution
+//                               00 (0) = 224 lines (NTSC or PAL)
+//                               01 (1) = 240 lines (NTSC or PAL)
+//                               10 (2) = 256 lines (PAL only)
+//                               11 (3) = (Forbidden)
+//      3   R    -             Reserved, must be zero
+//    2-0   R/W  HRESO2-0      Horizontal Resolution
+//                               000 (0) = 320 pixels - Normal Graphic A (NTSC or PAL)
+//                               001 (1) = 352 pixels - Normal Graphic B (NTSC or PAL)
+//                               010 (2) = 640 pixels - Hi-Res Graphic A (NTSC or PAL)
+//                               011 (3) = 704 pixels - Hi-Res Graphic B (NTSC or PAL)
+//                               100 (4) = 320 pixels - Exclusive Normal Graphic A (31 KHz monitor)
+//                               101 (5) = 352 pixels - Exclusive Normal Graphic B (Hi-Vision monitor)
+//                               110 (4) = 640 pixels - Exclusive Hi-Res Graphic A (31 KHz monitor)
+//                               111 (5) = 704 pixels - Exclusive Hi-Res Graphic B (Hi-Vision monitor)
+union TVMD_t {
+    uint16 u16;
+    struct {
+        uint16 HRESOn : 3;
+        uint16 _rsvd3 : 1;
+        uint16 VRESOn : 2;
+        uint16 LSMDn : 2;
+        uint16 BDCLMD : 1;
+        uint16 _rsvd9_14 : 6;
+        uint16 DISP : 1;
+    };
+};
+
+// 180002   EXTEN   External Signal Enable
+//
+//   bits   r/w  code          description
+//  15-10   R    -             Reserved, must be zero
+//      9   R/W  EXLTEN        External Latch Enable (0=on read, 1=on external signal)
+//      8   R/W  EXSYEN        External Sync Enable (0=disable, 1=enable)
+//    7-2   R    -             Reserved, must be zero
+//      1   R/W  DASEL         Display Area Select (0=selected area, 1=full screen)
+//      0   R/W  EXBGEN        External BG Enable (0=disable, 1=enable)
+union EXTEN_t {
+    uint16 u16;
+    struct {
+        uint16 EXBGEN : 1;
+        uint16 DASEL : 1;
+        uint16 _rsvd2_7 : 6;
+        uint16 EXSYEN : 1;
+        uint16 EXLTEN : 1;
+        uint16 _rsvd10_15 : 6;
+    };
+};
+
+// 180006   VRSIZE  VRAM Size
+//
+//   bits   r/w  code          description
+//     15   R/W  VRAMSZ        VRAM Size (0=512 KiB, 1=1 MiB)
+//   14-4   R    -             Reserved, must be zero
+//    3-0   R    VER3-0        VDP2 Version Number
+union VRSIZE_t {
+    uint16 u16;
+    struct {
+        uint16 VERn : 4;
+        uint16 _rsvd4_14 : 11;
+        uint16 VRAMSZ : 1;
+    };
+};
+
+// 180008   HCNT    H Counter
+//
+//   bits   r/w  code          description
+//  15-10   R    -             Reserved, must be zero
+//    9-0   R    HCT9-0        H Counter Value
+//
+// Notes
+// - Counter layout depends on screen mode:
+//     Normal: bits 8-0 shifted left by 1; HCT0 is invalid
+//     Hi-Res: bits 9-0
+//     Excl. Normal: bits 8-0 (no shift); HCT9 is invalid
+//     Excl. Hi-Res: bits 9-1 shifted right by 1; HCT9 is invalid
+
+// 18000A   VCNT    V Counter
+//
+//   bits   r/w  code          description
+//  15-10   R    -             Reserved, must be zero
+//    9-0   R    VCT9-0        V Counter Value
+//
+// Notes
+// - Counter layout depends on screen mode:
+//     Exclusive Monitor: bits 9-0
+//     Normal Hi-Res double-density interlace:
+//       bits 8-0 shifted left by 1
+//       bit 0 contains interlaced field (0=odd, 1=even)
+//     All other modes: bits 8-0 shifted left by 1; VCT0 is invalid
+
+// 18000E   RAMCTL  RAM Control
+//
+//   bits   r/w  code          description
+//     15   R/W  CRKTE         Color RAM Coefficient Table Enable
+//     14   R    -             Reserved, must be zero
+//  13-12   R/W  CRMD1-0       Color RAM Mode
+//                               00 (0) = RGB 5:5:5, 1024 words
+//                               01 (1) = RGB 5:5:5, 2048 words
+//                               10 (2) = RGB 8:8:8, 1024 words
+//                               11 (3) = RGB 8:8:8, 1024 words  (same as mode 2, undocumented)
+//  11-10   R    -             Reserved, must be zero
+//      9   R/W  VRBMD         VRAM-B Mode (0=single partition, 1=two partitions)
+//      8   R/W  VRAMD         VRAM-A Mode (0=single partition, 1=two partitions)
+//    7-6   R/W  RDBSB1(1-0)   Rotation Data Bank Select for VRAM-B1
+//    5-4   R/W  RDBSB0(1-0)   Rotation Data Bank Select for VRAM-B0 (or VRAM-B)
+//    3-2   R/W  RDBSA1(1-0)   Rotation Data Bank Select for VRAM-A1
+//    1-0   R/W  RDBSA0(1-0)   Rotation Data Bank Select for VRAM-A0 (or VRAM-B)
+union RAMCTL_t {
+    uint16 u16;
+    struct {
+        uint16 RDBSA0n : 2;
+        uint16 RDBSA1n : 2;
+        uint16 RDBSB0n : 2;
+        uint16 RDBSB1n : 2;
+        uint16 VRAMD : 1;
+        uint16 VRBMD : 1;
+        uint16 _rsvd10_11 : 2;
+        uint16 CRMDn : 2;
+        uint16 _rsvd14 : 1;
+        uint16 CRKTE : 1;
+    };
+};
+
+// 180010   CYCA0L  VRAM Cycle Pattern A0 Lower
+//
+//   bits   r/w  code          description
+//  15-12   R/W  VCP0A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T0
+//   11-8   R/W  VCP1A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T1
+//    7-4   R/W  VCP2A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T2
+//    3-0   R/W  VCP3A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T3
+//
+// 180012   CYCA0U  VRAM Cycle Pattern A0 Upper
+//
+//   bits   r/w  code          description
+//  15-12   R/W  VCP4A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T4
+//   11-8   R/W  VCP5A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T5
+//    7-4   R/W  VCP6A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T6
+//    3-0   R/W  VCP7A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T7
+//
+// 180014   CYCA1L  VRAM Cycle Pattern A1 Lower
+//
+//   bits   r/w  code          description
+//  15-12   R/W  VCP0A1(3-0)   VRAM-A1 Timing for T0
+//   11-8   R/W  VCP1A1(3-0)   VRAM-A1 Timing for T1
+//    7-4   R/W  VCP2A1(3-0)   VRAM-A1 Timing for T2
+//    3-0   R/W  VCP3A1(3-0)   VRAM-A1 Timing for T3
+//
+// 180016   CYCA1U  VRAM Cycle Pattern A1 Upper
+//
+//   bits   r/w  code          description
+//  15-12   R/W  VCP4A1(3-0)   VRAM-A1 Timing for T4
+//   11-8   R/W  VCP5A1(3-0)   VRAM-A1 Timing for T5
+//    7-4   R/W  VCP6A1(3-0)   VRAM-A1 Timing for T6
+//    3-0   R/W  VCP7A1(3-0)   VRAM-A1 Timing for T7
+//
+// 180018   CYCB0L  VRAM Cycle Pattern B0 Lower
+//
+//   bits   r/w  code          description
+//  15-12   R/W  VCP0B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T0
+//   11-8   R/W  VCP1B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T1
+//    7-4   R/W  VCP2B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T2
+//    3-0   R/W  VCP3B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T3
+//
+// 18001A   CYCB0U  VRAM Cycle Pattern B0 Upper
+//
+//   bits   r/w  code          description
+//  15-12   R/W  VCP4B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T4
+//   11-8   R/W  VCP5B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T5
+//    7-4   R/W  VCP6B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T6
+//    3-0   R/W  VCP7B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T7
+//
+// 18001C   CYCB1L  VRAM Cycle Pattern B1 Lower
+//
+//   bits   r/w  code          description
+//  15-12   R/W  VCP0B1(3-0)   VRAM-B1 Timing for T0
+//   11-8   R/W  VCP1B1(3-0)   VRAM-B1 Timing for T1
+//    7-4   R/W  VCP2B1(3-0)   VRAM-B1 Timing for T2
+//    3-0   R/W  VCP3B1(3-0)   VRAM-B1 Timing for T3
+//
+// 18001E   CYCB1U  VRAM Cycle Pattern B1 Upper
+//
+//   bits   r/w  code          description
+//  15-12   R/W  VCP4B1(3-0)   VRAM-B1 Timing for T4
+//   11-8   R/W  VCP5B1(3-0)   VRAM-B1 Timing for T5
+//    7-4   R/W  VCP6B1(3-0)   VRAM-B1 Timing for T6
+//    3-0   R/W  VCP7B1(3-0)   VRAM-B1 Timing for T7
+union CYC_t {
+    uint32 u32;
+    struct {
+        union {
+            uint16 u16;
+            struct {
+                uint16 VCP3n : 4;
+                uint16 VCP2n : 4;
+                uint16 VCP1n : 4;
+                uint16 VCP0n : 4;
+            };
+        } L;
+        union {
+            uint16 u16;
+            struct {
+                uint16 VCP7n : 4;
+                uint16 VCP6n : 4;
+                uint16 VCP5n : 4;
+                uint16 VCP4n : 4;
+            };
+        } U;
+    };
+};
+
+// 180020   BGON    Screen Display Enable
+//
+//   bits   r/w  code          description
+//  15-13   R    -             Reserved, must be zero
+//     12   R/W  R0TPON        RBG0 Transparent Display (0=enable, 1=disable)
+//     11   R/W  N3TPON        NBG3 Transparent Display (0=enable, 1=disable)
+//     10   R/W  N2TPON        NBG2 Transparent Display (0=enable, 1=disable)
+//      9   R/W  N1TPON        NBG1/EXBG Transparent Display (0=enable, 1=disable)
+//      8   R/W  N0TPON        NBG0/RBG1 Transparent Display (0=enable, 1=disable)
+//    7-6   R    -             Reserved, must be zero
+//      5   R/W  R1ON          RBG1 Display (0=disable, 1=enable)
+//      4   R/W  R0ON          RBG0 Display (0=disable, 1=enable)
+//      3   R/W  N3ON          NBG3 Display (0=disable, 1=enable)
+//      2   R/W  N2ON          NBG2 Display (0=disable, 1=enable)
+//      1   R/W  N1ON          NBG1 Display (0=disable, 1=enable)
+//      0   R/W  N0ON          NBG0 Display (0=disable, 1=enable)
+union BGON_t {
+    uint16 u16;
+    struct {
+        uint16 N0ON : 1;
+        uint16 N1ON : 1;
+        uint16 N2ON : 1;
+        uint16 N3ON : 1;
+        uint16 R0ON : 1;
+        uint16 R1ON : 1;
+        uint16 _rsvd6_7 : 2;
+        uint16 N0TPON : 1;
+        uint16 N1TPON : 1;
+        uint16 N2TPON : 1;
+        uint16 N3TPON : 1;
+        uint16 R0TPON : 1;
+        uint16 _rsvd15 : 1;
+    };
+};
+
+} // namespace satemu::vdp2

@@ -37,7 +37,7 @@ private:
     SCSP m_SCSP;
     CDBlock m_CDBlock;
     VDP1 m_VDP1;
-    VDP2 m_VDP2;
+    vdp2::VDP2 m_VDP2;
 };
 
 } // namespace satemu

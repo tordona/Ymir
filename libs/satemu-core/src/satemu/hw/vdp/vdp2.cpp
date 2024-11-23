@@ -1,6 +1,6 @@
 #include <satemu/hw/vdp/vdp2.hpp>
 
-namespace satemu {
+namespace satemu::vdp2 {
 
 VDP2::VDP2() {
     Reset(true);
@@ -16,6 +16,7 @@ void VDP2::Reset(bool hard) {
     CYCA1.u32 = 0x0;
     CYCB0.u32 = 0x0;
     CYCB1.u32 = 0x0;
+    BGON.u16 = 0x0;
 }
 
-} // namespace satemu
+} // namespace satemu::vdp2
