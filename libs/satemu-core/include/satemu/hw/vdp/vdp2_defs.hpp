@@ -491,22 +491,28 @@ union MPOFR_t {
 //   D = Plane D (bits 13-8 of MPCDxx)
 union MPBG_t {
     uint32 u32;
+
+    struct {
+        uint8 param : 6;
+        uint8 _rsvd : 2;
+    } arr[4];
+
     struct {
         union {
             uint16 u16;
             struct {
-                uint16 MPAn : 5;
+                uint16 MPAn : 6;
                 uint16 _rsvd6_7 : 2;
-                uint16 MPBn : 5;
+                uint16 MPBn : 6;
                 uint16 _rsvd14_15 : 2;
             };
         } AB;
         union {
             uint16 u16;
             struct {
-                uint16 MPCn : 5;
+                uint16 MPCn : 6;
                 uint16 _rsvd6_7 : 2;
-                uint16 MPDn : 5;
+                uint16 MPDn : 6;
                 uint16 _rsvd14_15 : 2;
             };
         } CD;
@@ -558,6 +564,7 @@ union MPRP_t {
             uint64 u64;
         } IJKLMNOP;
     };
+
     struct {
         struct {
             uint32 u32;
@@ -572,76 +579,82 @@ union MPRP_t {
             uint32 u32;
         } MNOP;
     };
+
+    struct {
+        uint8 param : 6;
+        uint8 _rsvd : 2;
+    } arr[16];
+
     struct {
         union {
             uint16 u16;
             struct {
-                uint16 MPAn : 5;
+                uint16 MPAn : 6;
                 uint16 _rsvd6_7 : 2;
-                uint16 MPBn : 5;
+                uint16 MPBn : 6;
                 uint16 _rsvd14_15 : 2;
             };
         } AB;
         union {
             uint16 u16;
             struct {
-                uint16 MPCn : 5;
+                uint16 MPCn : 6;
                 uint16 _rsvd6_7 : 2;
-                uint16 MPDn : 5;
+                uint16 MPDn : 6;
                 uint16 _rsvd14_15 : 2;
             };
         } CD;
         union {
             uint16 u16;
             struct {
-                uint16 MPEn : 5;
+                uint16 MPEn : 6;
                 uint16 _rsvd6_7 : 2;
-                uint16 MPFn : 5;
+                uint16 MPFn : 6;
                 uint16 _rsvd14_15 : 2;
             };
         } EF;
         union {
             uint16 u16;
             struct {
-                uint16 MPGn : 5;
+                uint16 MPGn : 6;
                 uint16 _rsvd6_7 : 2;
-                uint16 MPHn : 5;
+                uint16 MPHn : 6;
                 uint16 _rsvd14_15 : 2;
             };
         } GH;
         union {
             uint16 u16;
             struct {
-                uint16 MPIn : 5;
+                uint16 MPIn : 6;
                 uint16 _rsvd6_7 : 2;
-                uint16 MPJn : 5;
+                uint16 MPJn : 6;
                 uint16 _rsvd14_15 : 2;
             };
         } IJ;
         union {
             uint16 u16;
             struct {
-                uint16 MPKn : 5;
+                uint16 MPKn : 6;
                 uint16 _rsvd6_7 : 2;
-                uint16 MPLn : 5;
+                uint16 MPLn : 6;
                 uint16 _rsvd14_15 : 2;
             };
         } KL;
         union {
             uint16 u16;
             struct {
-                uint16 MPMn : 5;
+                uint16 MPMn : 6;
                 uint16 _rsvd6_7 : 2;
-                uint16 MPNn : 5;
+                uint16 MPNn : 6;
                 uint16 _rsvd14_15 : 2;
             };
         } MN;
         union {
             uint16 u16;
             struct {
-                uint16 MPOn : 5;
+                uint16 MPOn : 6;
                 uint16 _rsvd6_7 : 2;
-                uint16 MPPn : 5;
+                uint16 MPPn : 6;
                 uint16 _rsvd14_15 : 2;
             };
         } OP;
