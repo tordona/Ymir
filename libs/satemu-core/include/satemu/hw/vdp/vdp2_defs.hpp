@@ -271,14 +271,14 @@ union BGON_t {
 // 180022   MZCTL   Mosaic Control
 //
 //   bits   r/w  code          description
-//  15-12        MZSZV3-0      Vertical Mosaic Size
-//   11-8        MZSZH3-0      Horizontal Mosaic Size
+//  15-12     W  MZSZV3-0      Vertical Mosaic Size
+//   11-8     W  MZSZH3-0      Horizontal Mosaic Size
 //    7-5        -             Reserved, must be zero
-//      4        R0MZE         RBG0 Mosaic Enable
-//      3        N3MZE         NBG3 Mosaic Enable
-//      2        N2MZE         NBG2 Mosaic Enable
-//      1        N1MZE         NBG1 Mosaic Enable
-//      0        N0MZE         NBG0/RBG1 Mosaic Enable
+//      4     W  R0MZE         RBG0 Mosaic Enable
+//      3     W  N3MZE         NBG3 Mosaic Enable
+//      2     W  N2MZE         NBG2 Mosaic Enable
+//      1     W  N1MZE         NBG1 Mosaic Enable
+//      0     W  N0MZE         NBG0/RBG1 Mosaic Enable
 union MZCTL_t {
     uint16 u16;
     struct {
@@ -290,6 +290,50 @@ union MZCTL_t {
         uint16 _rsvd5_7 : 3;
         uint16 MZSZHn : 4;
         uint16 MZSZVn : 4;
+    };
+};
+
+// 180024   SFSEL   Special Function Code Select
+//
+//   bits   r/w  code          description
+//   15-5        -             Reserved, must be zero
+//      4     W  R0SFCS        RBG0 Special Function Code Select
+//      3     W  N3SFCS        NBG3 Special Function Code Select
+//      2     W  N2SFCS        NBG2 Special Function Code Select
+//      1     W  N1SFCS        NBG1 Special Function Code Select
+//      0     W  N0SFCS        NBG0/RBG1 Special Function Code Select
+union SFSEL_t {
+    uint16 u16;
+    struct {
+        uint16 N0SFCS : 1;
+        uint16 N1SFCS : 1;
+        uint16 N2SFCS : 1;
+        uint16 N3SFCS : 1;
+        uint16 R0SFCS : 1;
+        uint16 _rsvd5_15 : 11;
+    };
+};
+
+// 180026   SFCODE  Special Function Code
+//
+//   bits   r/w  code          description
+//   15-8        SFCDB7-0      Special Function Code B
+//    7-0        SFCDA7-0      Special Function Code A
+//
+// Each bit in SFCDxn matches the least significant 4 bits of the color code:
+//   n=0: 0x0 or 0x1
+//   n=1: 0x2 or 0x3
+//   n=2: 0x4 or 0x5
+//   n=3: 0x6 or 0x7
+//   n=4: 0x8 or 0x9
+//   n=5: 0xA or 0xB
+//   n=6: 0xC or 0xD
+//   n=7: 0xE or 0xF
+union SFCODE_t {
+    uint16 u16;
+    struct {
+        uint8 SFCDBn;
+        uint8 SFCDAn;
     };
 };
 
@@ -348,7 +392,7 @@ union CHCTLA_t {
 //
 //   bits   r/w  code          description
 //     15        -             Reserved, must be zero
-//  14-12   R/W  R0CHCN2-0     RBG0 Character Color Number
+//  14-12     W  R0CHCN2-0     RBG0 Character Color Number
 //                               NOTE: Exclusive Monitor cannot display this BG plane
 //                               000 (0) =       16 colors - palette
 //                               001 (1) =      256 colors - palette
@@ -360,15 +404,15 @@ union CHCTLA_t {
 //                               110 (6) = forbidden
 //                               111 (7) = forbidden
 //     11        -             Reserved, must be zero
-//     10   R/W  R0BMSZ        RBG0 Bitmap Size (0=512x256, 1=512x512)
-//      9   R/W  R0BMEN        RBG0 Bitmap Enable (0=cells, 1=bitmap)
-//      8   R/W  R0CHSZ        RBG0 Character Size (0=1x1, 1=2x2)
+//     10     W  R0BMSZ        RBG0 Bitmap Size (0=512x256, 1=512x512)
+//      9     W  R0BMEN        RBG0 Bitmap Enable (0=cells, 1=bitmap)
+//      8     W  R0CHSZ        RBG0 Character Size (0=1x1, 1=2x2)
 //    7-6        -             Reserved, must be zero
-//      5   R/W  N3CHCN        NBG3 Character Color Number (0=16 colors, 1=256 colors; both palette)
-//      4   R/W  N3CHSZ        NBG3 Character Size (0=1x1, 1=2x2)
+//      5     W  N3CHCN        NBG3 Character Color Number (0=16 colors, 1=256 colors; both palette)
+//      4     W  N3CHSZ        NBG3 Character Size (0=1x1, 1=2x2)
 //    3-2        -             Reserved, must be zero
-//      1   R/W  N2CHCN        NBG2 Character Color Number (0=16 colors, 1=256 colors; both palette)
-//      0   R/W  N2CHSZ        NBG2 Character Size (0=1x1, 1=2x2)
+//      1     W  N2CHCN        NBG2 Character Color Number (0=16 colors, 1=256 colors; both palette)
+//      0     W  N2CHSZ        NBG2 Character Size (0=1x1, 1=2x2)
 union CHCTLB_t {
     uint16 u16;
     struct {

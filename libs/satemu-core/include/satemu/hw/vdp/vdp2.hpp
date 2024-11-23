@@ -76,6 +76,8 @@ public:
         case 0x01C: return 0; // CYCB1 is write-only
         case 0x020: return 0; // BGON is write-only
         case 0x022: return 0; // MZCTL is write-only
+        case 0x024: return 0; // SFSEL is write-only
+        case 0x026: return 0; // SFCODE is write-only
         case 0x028: return 0; // CHCTLA is write-only
         case 0x02A: return 0; // CHCTLB is write-only
         case 0x02C: return 0; // BMPNA is write-only
@@ -160,6 +162,8 @@ public:
         case 0x01C: CYCB1.L.u16 = value; break;
         case 0x020: BGON.u16 = value & 0x1F3F; break;
         case 0x022: MZCTL.u16 = value & 0xFF1F; break;
+        case 0x024: SFSEL.u16 = value & 0x001F; break;
+        case 0x026: SFCODE.u16 = value; break;
         case 0x028: CHCTLA.u16 = value & 0x3F7F; break;
         case 0x02A: CHCTLB.u16 = value & 0x7733; break;
         case 0x02C: BMPNA.u16 = value & 0x3737; break;
@@ -232,7 +236,10 @@ private:
 
     TVMD_t TVMD;     // 180000   TVMD    TV Screen Mode
     EXTEN_t EXTEN;   // 180002   EXTEN   External Signal Enable
+                     // 180004   TVSTAT  Screen Status (read-only)
     VRSIZE_t VRSIZE; // 180006   VRSIZE  VRAM Size
+                     // 180008   HCNT    H Counter (read-only)
+                     // 18000A   VCNT    V Counter (read-only)
     RAMCTL_t RAMCTL; // 18000E   RAMCTL  RAM Control
                      // 180010   CYCA0L  VRAM Cycle Pattern A0 Lower
     CYC_t CYCA0;     // 180012   CYCA0U  VRAM Cycle Pattern A0 Upper
@@ -244,10 +251,12 @@ private:
     CYC_t CYCB1;     // 18001E   CYCB1U  VRAM Cycle Pattern B1 Upper
     BGON_t BGON;     // 180020   BGON    Screen Display Enable
     MZCTL_t MZCTL;   // 180022   MZCTL   Mosaic Control
+    SFSEL_t SFSEL;   // 180024   SFSEL   Special Function Code Select
+    SFCODE_t SFCODE; // 180026   SFCODE  Special Function Code
     CHCTLA_t CHCTLA; // 180028   CHCTLA  Character Control Register A
     CHCTLB_t CHCTLB; // 18002A   CHCTLB  Character Control Register A
     BMPNA_t BMPNA;   // 18002C   BMPNA   NBG0/NBG1 Bitmap Palette Number
-    BMPNB_t BMPNB;   // 18002C   BMPNB   RBG0 Bitmap Palette Number
+    BMPNB_t BMPNB;   // 18002E   BMPNB   RBG0 Bitmap Palette Number
     PNC_t PNCN0;     // 180030   PNCN0   NBG0/RBG1 Pattern Name Control
     PNC_t PNCN1;     // 180032   PNCN1   NBG1 Pattern Name Control
     PNC_t PNCN2;     // 180034   PNCN2   NBG2 Pattern Name Control

@@ -18,6 +18,8 @@ void VDP2::Reset(bool hard) {
     CYCB1.u32 = 0x0;
     BGON.u16 = 0x0;
     MZCTL.u16 = 0x0;
+    SFSEL.u16 = 0x0;
+    SFCODE.u16 = 0x0;
     CHCTLA.u16 = 0x0;
     CHCTLB.u16 = 0x0;
     BMPNA.u16 = 0x0;
