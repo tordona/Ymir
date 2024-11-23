@@ -3,8 +3,6 @@
 #include <satemu/core_types.hpp>
 #include <satemu/sys/sys.hpp>
 
-#include <satemu/export.h>
-
 namespace satemu {
 
 namespace version {
@@ -15,7 +13,5 @@ namespace version {
     constexpr auto patch = satemu_VERSION_PATCH;
 
 } // namespace version
-
-// LIB_EXPORT void func();
 
 } // namespace satemu

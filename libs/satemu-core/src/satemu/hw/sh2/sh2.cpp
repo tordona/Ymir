@@ -1,4 +1,4 @@
-#include <satemu/sh2/sh2.hpp>
+#include <satemu/hw/sh2/sh2.hpp>
 
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/unreachable.hpp>

@@ -3,12 +3,23 @@ add_library(satemu-core
     include/satemu/core_types.hpp
     include/satemu/satemu.hpp
 
-    include/satemu/sh2/sh2.hpp
-    include/satemu/sh2/sh2_bus.hpp
-    include/satemu/sh2/sh2_bus_defs.hpp
+    include/satemu/hw/hw_defs.hpp
 
-    include/satemu/smpc/smpc.hpp
-    include/satemu/smpc/smpc_defs.hpp
+    include/satemu/hw/cdblock/cdblock.hpp
+    include/satemu/hw/cdblock/cdblock_defs.hpp
+
+    include/satemu/hw/scsp/scsp.hpp
+    include/satemu/hw/scsp/scsp_defs.hpp
+
+    include/satemu/hw/scu/scu.hpp
+    include/satemu/hw/scu/scu_defs.hpp
+
+    include/satemu/hw/sh2/sh2.hpp
+    include/satemu/hw/sh2/sh2_bus.hpp
+    include/satemu/hw/sh2/sh2_bus_defs.hpp
+
+    include/satemu/hw/smpc/smpc.hpp
+    include/satemu/hw/smpc/smpc_defs.hpp
 
     include/satemu/sys/sys.hpp
 
@@ -21,7 +32,8 @@ add_library(satemu-core
 
     src/satemu/satemu.cpp
 
-    src/satemu/sh2/sh2.cpp
+    src/satemu/hw/sh2/sh2.cpp
+    src/satemu/hw/sh2/sh2_bus.cpp
 )
 add_library(satemu::satemu-core ALIAS satemu-core)
 set_target_properties(satemu-core PROPERTIES

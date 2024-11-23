@@ -1,6 +1,6 @@
 #pragma once
 
-#include "satemu/core_types.hpp"
+#include <satemu/core_types.hpp>
 
 #include "inline.hpp"
 
