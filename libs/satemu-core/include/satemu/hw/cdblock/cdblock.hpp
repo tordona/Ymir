@@ -18,7 +18,7 @@ public:
 
     template <mem_access_type T>
     T Read(uint32 address) {
-        fmt::println("CD Block read from {:02X}", address);
+        fmt::println("{}-bit CD Block read from {:02X}", sizeof(T) * 8, address);
         // TODO: implement properly; we're just stubbing the CDBLOCK init sequence here
         switch (address) {
         case 0x08:

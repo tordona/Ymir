@@ -3,9 +3,10 @@
 namespace satemu {
 
 Saturn::Saturn()
-    : m_sh2bus(m_SCU, m_SMPC, m_SCSP, m_CDBlock)
+    : m_sh2bus(m_SCU, m_SMPC)
     , m_masterSH2(m_sh2bus, true)
-    , m_slaveSH2(m_sh2bus, false) {
+    , m_slaveSH2(m_sh2bus, false)
+    , m_SCU(m_VDP1, m_VDP2, m_SCSP, m_CDBlock) {
     Reset(true);
 }
 
@@ -16,6 +17,8 @@ void Saturn::Reset(bool hard) {
     m_SMPC.Reset(hard);
     m_SCSP.Reset(hard);
     m_CDBlock.Reset(hard);
+    m_VDP1.Reset(hard);
+    m_VDP2.Reset(hard);
 }
 
 void Saturn::LoadIPL(std::span<uint8, kIPLSize> ipl) {

@@ -6,10 +6,10 @@
 
 namespace util {
 
-// Determines if the given address is in range [base..base+size)
-template <uint32 base, uint64 size>
+// Determines if the given address is in range [start..end]
+template <uint32 start, uint64 end>
 ALWAYS_INLINE constexpr bool AddressInRange(uint32 address) {
-    return address >= base && address < base + size;
+    return address >= start && address < end;
 }
 
 template <typename T>

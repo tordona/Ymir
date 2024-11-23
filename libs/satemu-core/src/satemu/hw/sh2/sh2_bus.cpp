@@ -2,11 +2,9 @@
 
 namespace satemu {
 
-SH2Bus::SH2Bus(SCU &scu, SMPC &smpc, SCSP &scsp, CDBlock &cdblock)
+SH2Bus::SH2Bus(SCU &scu, SMPC &smpc)
     : m_SCU(scu)
-    , m_SMPC(smpc)
-    , m_SCSP(scsp)
-    , m_CDBlock(cdblock) {
+    , m_SMPC(smpc) {
     m_IPL.fill(0);
     Reset(true);
 }

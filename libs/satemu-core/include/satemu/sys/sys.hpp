@@ -5,6 +5,8 @@
 #include <satemu/hw/scu/scu.hpp>
 #include <satemu/hw/sh2/sh2.hpp>
 #include <satemu/hw/smpc/smpc.hpp>
+#include <satemu/hw/vdp/vdp1.hpp>
+#include <satemu/hw/vdp/vdp2.hpp>
 
 #include <satemu/util/inline.hpp>
 
@@ -34,6 +36,8 @@ private:
     SMPC m_SMPC;
     SCSP m_SCSP;
     CDBlock m_CDBlock;
+    VDP1 m_VDP1;
+    VDP2 m_VDP2;
 };
 
 } // namespace satemu
