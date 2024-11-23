@@ -422,4 +422,46 @@ union PLSZ_t {
     };
 };
 
+// 18003C   MPOFN   NBG0-3 Map Offset
+//
+//   bits   r/w  code          description
+//     15   R    -             Reserved, must be zero
+//  14-12   R/W  M3MP8-6       NBG3 Map Offset
+//     11   R    -             Reserved, must be zero
+//   10-8   R/W  M2MP8-6       NBG2 Map Offset
+//      7   R    -             Reserved, must be zero
+//    6-4   R/W  M1MP8-6       NBG1 Map Offset
+//      3   R    -             Reserved, must be zero
+//    2-0   R/W  M0MP8-6       NBG0 Map Offset
+union MPOFN_t {
+    uint16 u16;
+    struct {
+        uint16 M0MPn : 3;
+        uint16 _rsvd3 : 1;
+        uint16 M1MPn : 3;
+        uint16 _rsvd7 : 1;
+        uint16 M2MPn : 3;
+        uint16 _rsvd11 : 1;
+        uint16 M3MPn : 3;
+        uint16 _rsvd15 : 1;
+    };
+};
+
+// 18003C   MPOFN   Rotation Parameter A/B Map Offset
+//
+//   bits   r/w  code          description
+//   15-7   R    -             Reserved, must be zero
+//    6-4   R/W  RBMP8-6       Rotation Parameter B Map Offset
+//      3   R    -             Reserved, must be zero
+//    2-0   R/W  RAMP8-6       Rotation Parameter A Map Offset
+union MPOFR_t {
+    uint16 u16;
+    struct {
+        uint16 RAMPn : 3;
+        uint16 _rsvd3 : 1;
+        uint16 RBMPn : 3;
+        uint16 _rsvd7_15 : 9;
+    };
+};
+
 } // namespace satemu::vdp2

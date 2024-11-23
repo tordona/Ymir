@@ -83,6 +83,8 @@ public:
         case 0x036: return PNCN3.u16;
         case 0x038: return PNCR.u16;
         case 0x03A: return PLSZ.u16;
+        case 0x03C: return MPOFN.u16;
+        case 0x03E: return MPOFR.u16;
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
         }
     }
@@ -114,6 +116,8 @@ public:
         case 0x036: PNCN3.u16 = value & 0xC3FF; break;
         case 0x038: PNCR.u16 = value & 0xC3FF; break;
         case 0x03A: PLSZ.u16 = value; break;
+        case 0x03C: MPOFN.u16 = value & 0x7777; break;
+        case 0x03E: MPOFR.u16 = value & 0x0077; break;
         default:
             fmt::println("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
             break;
@@ -145,6 +149,8 @@ private:
     PNC_t PNCN3;     // 180036   PNCN3   NBG3 Pattern Name Control
     PNC_t PNCR;      // 180038   PNCR    RBG0 Pattern Name Control
     PLSZ_t PLSZ;     // 18003A   PLSZ    Plane Size
+    MPOFN_t MPOFN;   // 18003C   MPOFN   NBG0-3 Map Offset
+    MPOFR_t MPOFR;   // 18003E   MPOFR   Rotation Parameter A/B Map Offset
 
     // -------------------------------------------------------------------------
 
