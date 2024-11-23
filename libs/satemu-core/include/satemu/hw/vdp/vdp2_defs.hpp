@@ -464,14 +464,14 @@ union MPOFR_t {
     };
 };
 
-// 180040   MPABN0  NBG0 Normal Scroll Screen Map
-// 180042   MPCDN0  NBG0 Normal Scroll Screen Map
-// 180044   MPABN1  NBG1 Normal Scroll Screen Map
-// 180046   MPCDN1  NBG1 Normal Scroll Screen Map
-// 180048   MPABN2  NBG2 Normal Scroll Screen Map
-// 18004A   MPCDN2  NBG2 Normal Scroll Screen Map
-// 18004C   MPABN3  NBG3 Normal Scroll Screen Map
-// 18004E   MPCDN3  NBG3 Normal Scroll Screen Map
+// 180040   MPABN0  NBG0 Normal Scroll Screen Map for Planes A,B
+// 180042   MPCDN0  NBG0 Normal Scroll Screen Map for Planes C,D
+// 180044   MPABN1  NBG1 Normal Scroll Screen Map for Planes A,B
+// 180046   MPCDN1  NBG1 Normal Scroll Screen Map for Planes C,D
+// 180048   MPABN2  NBG2 Normal Scroll Screen Map for Planes A,B
+// 18004A   MPCDN2  NBG2 Normal Scroll Screen Map for Planes C,D
+// 18004C   MPABN3  NBG3 Normal Scroll Screen Map for Planes A,B
+// 18004E   MPCDN3  NBG3 Normal Scroll Screen Map for Planes C,D
 //
 //   bits   r/w  code          description
 //  15-14   R    -             Reserved, must be zero
@@ -489,7 +489,7 @@ union MPOFR_t {
 //   B = Plane B (bits 13-8 of MPABxx)
 //   C = Plane C (bits  5-0 of MPCDxx)
 //   D = Plane D (bits 13-8 of MPCDxx)
-union MP_t {
+union MPBG_t {
     uint32 u32;
     struct {
         union {
@@ -510,6 +510,141 @@ union MP_t {
                 uint16 _rsvd14_15 : 2;
             };
         } CD;
+    };
+};
+
+// 180050   MPABRA  Rotation Parameter A Scroll Surface Map for Screen Planes A,B
+// 180052   MPCDRA  Rotation Parameter A Scroll Surface Map for Screen Planes C,D
+// 180054   MPEFRA  Rotation Parameter A Scroll Surface Map for Screen Planes E,F
+// 180056   MPGHRA  Rotation Parameter A Scroll Surface Map for Screen Planes G,H
+// 180058   MPIJRA  Rotation Parameter A Scroll Surface Map for Screen Planes I,J
+// 18005A   MPKLRA  Rotation Parameter A Scroll Surface Map for Screen Planes K,L
+// 18005C   MPMNRA  Rotation Parameter A Scroll Surface Map for Screen Planes M,N
+// 18005E   MPOPRA  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
+// 180060   MPABRB  Rotation Parameter A Scroll Surface Map for Screen Planes A,B
+// 180062   MPCDRB  Rotation Parameter A Scroll Surface Map for Screen Planes C,D
+// 180064   MPEFRB  Rotation Parameter A Scroll Surface Map for Screen Planes E,F
+// 180066   MPGHRB  Rotation Parameter A Scroll Surface Map for Screen Planes G,H
+// 180068   MPIJRB  Rotation Parameter A Scroll Surface Map for Screen Planes I,J
+// 18006A   MPKLRB  Rotation Parameter A Scroll Surface Map for Screen Planes K,L
+// 18006C   MPMNRB  Rotation Parameter A Scroll Surface Map for Screen Planes M,N
+// 18006E   MPOPRB  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
+//
+//   bits   r/w  code          description
+//  15-14   R    -             Reserved, must be zero
+//   13-8   R/W  RxMPy5-0      Rotation Parameter x Screen Plane y Map
+//    7-6   R    -             Reserved, must be zero
+//    5-0   R/W  RxMPy5-0      Rotation Parameter x Screen Plane y Map
+//
+// x:
+//   A = Rotation Parameter A (MPyyRA)
+//   B = Rotation Parameter A (MPyyRB)
+// y:
+//   A = Screen Plane A (bits  5-0 of MPABxx)
+//   B = Screen Plane B (bits 13-8 of MPABxx)
+//   C = Screen Plane C (bits  5-0 of MPCDxx)
+//   D = Screen Plane D (bits 13-8 of MPCDxx)
+//   ...
+//   M = Screen Plane M (bits  5-0 of MPMNxx)
+//   N = Screen Plane N (bits 13-8 of MPMNxx)
+//   O = Screen Plane O (bits  5-0 of MPOPxx)
+//   P = Screen Plane P (bits 13-8 of MPOPxx)
+union MPRP_t {
+    struct {
+        struct {
+            uint64 u64;
+        } ABCDEFGH;
+        struct {
+            uint64 u64;
+        } IJKLMNOP;
+    };
+    struct {
+        struct {
+            uint32 u32;
+        } ABCD;
+        struct {
+            uint32 u32;
+        } EFGH;
+        struct {
+            uint32 u32;
+        } IJKL;
+        struct {
+            uint32 u32;
+        } MNOP;
+    };
+    struct {
+        union {
+            uint16 u16;
+            struct {
+                uint16 MPAn : 5;
+                uint16 _rsvd6_7 : 2;
+                uint16 MPBn : 5;
+                uint16 _rsvd14_15 : 2;
+            };
+        } AB;
+        union {
+            uint16 u16;
+            struct {
+                uint16 MPCn : 5;
+                uint16 _rsvd6_7 : 2;
+                uint16 MPDn : 5;
+                uint16 _rsvd14_15 : 2;
+            };
+        } CD;
+        union {
+            uint16 u16;
+            struct {
+                uint16 MPEn : 5;
+                uint16 _rsvd6_7 : 2;
+                uint16 MPFn : 5;
+                uint16 _rsvd14_15 : 2;
+            };
+        } EF;
+        union {
+            uint16 u16;
+            struct {
+                uint16 MPGn : 5;
+                uint16 _rsvd6_7 : 2;
+                uint16 MPHn : 5;
+                uint16 _rsvd14_15 : 2;
+            };
+        } GH;
+        union {
+            uint16 u16;
+            struct {
+                uint16 MPIn : 5;
+                uint16 _rsvd6_7 : 2;
+                uint16 MPJn : 5;
+                uint16 _rsvd14_15 : 2;
+            };
+        } IJ;
+        union {
+            uint16 u16;
+            struct {
+                uint16 MPKn : 5;
+                uint16 _rsvd6_7 : 2;
+                uint16 MPLn : 5;
+                uint16 _rsvd14_15 : 2;
+            };
+        } KL;
+        union {
+            uint16 u16;
+            struct {
+                uint16 MPMn : 5;
+                uint16 _rsvd6_7 : 2;
+                uint16 MPNn : 5;
+                uint16 _rsvd14_15 : 2;
+            };
+        } MN;
+        union {
+            uint16 u16;
+            struct {
+                uint16 MPOn : 5;
+                uint16 _rsvd6_7 : 2;
+                uint16 MPPn : 5;
+                uint16 _rsvd14_15 : 2;
+            };
+        } OP;
     };
 };
 
