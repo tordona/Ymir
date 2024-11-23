@@ -142,6 +142,8 @@ public:
         case 0x0A2: return 0; // LSTA0L is write-only
         case 0x0A4: return 0; // LSTA1U is write-only
         case 0x0A6: return 0; // LSTA1L is write-only
+        case 0x0A8: return 0; // LCTAU is write-only
+        case 0x0AA: return 0; // LCTAL is write-only
         case 0x0B8: return 0; // OVPNRA is write-only
         case 0x0BA: return 0; // OVPNRB is write-only
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
@@ -234,6 +236,8 @@ public:
         case 0x0A2: LSTA0.L.u16 = value & 0xFFFE; break;
         case 0x0A4: LSTA1.U.u16 = value & 0x0007; break;
         case 0x0A6: LSTA1.L.u16 = value & 0xFFFE; break;
+        case 0x0A8: LCTA.U.u16 = value & 0x8007; break;
+        case 0x0AA: LCTA.L.u16 = value; break;
         case 0x0B8: OVPNRA = value; break;
         case 0x0BA: OVPNRB = value; break;
         default:
@@ -322,8 +326,6 @@ private:
                      // 180094   SCXN3   NBG3 Horizontal Screen Scroll Value
     SCXY_t SCN3;     // 180096   SCYN3   NBG3 Vertical Screen Scroll Value
     ZMCTL_t ZMCTL;   // 180098   ZMCTL   Reduction Enable
-    OVPNR_t OVPNRA;  // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
-    OVPNR_t OVPNRB;  // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
     SCRCTL_t SCRCTL; // 18009A   SCRCTL  Line and Vertical Cell Scroll Control
                      // 18009C   VCSTAU  Vertical Cell Scroll Table Address (upper)
     VCSTA_t VCSTA;   // 18009E   VCSTAL  Vertical Cell Scroll Table Address (lower)
@@ -331,6 +333,10 @@ private:
     LSTA_t LSTA0;    // 1800A2   LSTA0L  NBG0 Line Cell Scroll Table Address (lower)
                      // 1800A4   LSTA1U  NBG1 Line Cell Scroll Table Address (upper)
     LSTA_t LSTA1;    // 1800A6   LSTA1L  NBG1 Line Cell Scroll Table Address (lower)
+                     // 1800A8   LCTAU   Line Color Screen Table Address (upper)
+    LCTA_t LCTA;     // 1800AA   LCTAL   Line Color Screen Table Address (lower)
+    OVPNR_t OVPNRA;  // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
+    OVPNR_t OVPNRB;  // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
 
     // -------------------------------------------------------------------------
 

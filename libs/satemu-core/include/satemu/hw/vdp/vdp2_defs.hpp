@@ -1004,17 +1004,21 @@ union VCSTA_t {
         union {
             uint16 u16;
             struct {
-                uint16 VCSTAn : 3;
-                uint16 _rsvd3_15 : 13;
-            };
-        } U;
-        union {
-            uint16 u16;
-            struct {
                 uint16 _rsvd0 : 1;
                 uint16 VCSTAn : 15;
             };
         } L;
+        union {
+            uint16 u16;
+            struct {
+                uint16 VCSTAn : 3;
+                uint16 _rsvd3_15 : 13;
+            };
+        } U;
+    };
+    struct {
+        uint32 : 1;
+        uint32 VCSTAn : 18;
     };
 };
 
@@ -1037,17 +1041,52 @@ union LSTA_t {
         union {
             uint16 u16;
             struct {
-                uint16 LSTAn : 3;
-                uint16 _rsvd3_15 : 13;
-            };
-        } U;
-        union {
-            uint16 u16;
-            struct {
                 uint16 _rsvd0 : 1;
                 uint16 LSTAn : 15;
             };
         } L;
+        union {
+            uint16 u16;
+            struct {
+                uint16 LSTAn : 3;
+                uint16 _rsvd3_15 : 13;
+            };
+        } U;
+    };
+    struct {
+        uint32 : 1;
+        uint32 LSTAn : 18;
+    };
+};
+
+// 1800A8   LCTAU   Line Color Screen Table Address (upper)
+//
+//   bits   r/w  code          description
+//     15     W  LCCLMD
+//   14-3        -             Reserved, must be zero
+//    2-0     W  LCTA18-16     Line Color Screen Table Base Address (bits 18-16)
+//
+// 1800AA   LCTAL   Line Color Screen Table Address (lower)
+//
+//   bits   r/w  code          description
+//   15-0     W  LCTA15-0      Line Color Screen Table Base Address (bits 15-0)
+union LCTA_t {
+    uint32 u32;
+    struct {
+        union {
+            uint16 u16;
+            uint16 LCTAn;
+        } L;
+        union {
+            uint16 u16;
+            struct {
+                uint16 LCTAn : 3;
+                uint16 _rsvd3_15 : 13;
+            };
+        } U;
+    };
+    struct {
+        uint32 LCTAn : 19;
     };
 };
 
