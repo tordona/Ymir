@@ -14,13 +14,9 @@ namespace satemu {
 
 class SCSP {
 public:
-    SCSP() {
-        Reset(true);
-    }
+    SCSP();
 
-    void Reset(bool hard) {
-        m_m68kWRAM.fill(0);
-    }
+    void Reset(bool hard);
 
     template <mem_access_type T>
     T ReadWRAM(uint32 address) {

@@ -12,16 +12,9 @@ namespace satemu {
 
 class CDBlock {
 public:
-    CDBlock() {
-        Reset(true);
-    }
+    CDBlock();
 
-    void Reset(bool hard) {
-        m_CR[0] = 0x0043; // ' C'
-        m_CR[1] = 0x4442; // 'DB'
-        m_CR[2] = 0x4C4F; // 'LO'
-        m_CR[3] = 0x434B; // 'CK'
-    }
+    void Reset(bool hard);
 
     template <mem_access_type T>
     T Read(uint32 address) {

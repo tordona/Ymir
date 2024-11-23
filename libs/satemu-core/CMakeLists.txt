@@ -32,8 +32,16 @@ add_library(satemu-core
 
     src/satemu/satemu.cpp
 
+    src/satemu/hw/cdblock/cdblock.cpp
+    
+    src/satemu/hw/scsp/scsp.cpp
+    
+    src/satemu/hw/scu/scu.cpp
+
     src/satemu/hw/sh2/sh2.cpp
     src/satemu/hw/sh2/sh2_bus.cpp
+
+    src/satemu/sys/sys.cpp
 )
 add_library(satemu::satemu-core ALIAS satemu-core)
 set_target_properties(satemu-core PROPERTIES

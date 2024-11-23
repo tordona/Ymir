@@ -10,11 +10,9 @@ namespace satemu {
 
 class SCU {
 public:
-    SCU() {
-        Reset(true);
-    }
+    SCU();
 
-    void Reset(bool hard) {}
+    void Reset(bool hard);
 
     template <mem_access_type T>
     T Read(uint32 address) {

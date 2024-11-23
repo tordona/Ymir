@@ -6,35 +6,21 @@
 #include <satemu/hw/sh2/sh2.hpp>
 #include <satemu/hw/smpc/smpc.hpp>
 
+#include <satemu/util/inline.hpp>
+
 namespace satemu {
 
 class Saturn {
 public:
-    Saturn()
-        : m_sh2bus(m_SCU, m_SMPC, m_SCSP, m_CDBlock)
-        , m_masterSH2(m_sh2bus, true)
-        , m_slaveSH2(m_sh2bus, false) {
-        Reset(true);
-    }
+    Saturn();
 
-    void Reset(bool hard) {
-        m_sh2bus.Reset(hard);
-        m_masterSH2.Reset(hard);
-        m_SCU.Reset(hard);
-        m_SMPC.Reset(hard);
-        m_SCSP.Reset(hard);
-        m_CDBlock.Reset(hard);
-    }
+    void Reset(bool hard);
 
-    void LoadIPL(std::span<uint8, kIPLSize> ipl) {
-        m_sh2bus.LoadIPL(ipl);
-    }
+    void LoadIPL(std::span<uint8, kIPLSize> ipl);
 
-    void Step() {
-        m_masterSH2.Step();
-    }
+    void Step();
 
-    SH2 &MasterSH2() {
+    ALWAYS_INLINE SH2 &MasterSH2() {
         return m_masterSH2;
     }
 
