@@ -391,4 +391,35 @@ union PNC_t {
     };
 };
 
+// 18003A   PLSZ    Plane Size
+//
+//   bits   r/w  code          description
+//  15-14   R/W  RBOVR1-0      Rotation Parameter B Screen-over Process
+//  13-12   R/W  RBPLSZ1-0     Rotation Parameter B Plane Size
+//  11-10   R/W  RAOVR1-0      Rotation Parameter A Screen-over Process
+//    9-8   R/W  RAPLSZ1-0     Rotation Parameter A Plane Size
+//    7-6   R/W  N3PLSZ1-0     NBG3 Plane Size
+//    5-4   R/W  N2PLSZ1-0     NBG2 Plane Size
+//    3-2   R/W  N1PLSZ1-0     NBG1 Plane Size
+//    1-0   R/W  N0PLSZ1-0     NBG0 Plane Size
+//
+//  xxOVR1-0:
+//    00 (0) = Repeat plane infinitely
+//    01 (1) = Use character pattern in screen-over pattern name register
+//    10 (2) = Transparent
+//    11 (3) = Force 512x512 with transparent outsides (256 line bitmaps draw twice)
+union PLSZ_t {
+    uint16 u16;
+    struct {
+        uint16 N0PLSZn : 2;
+        uint16 N1PLSZn : 2;
+        uint16 N2PLSZn : 2;
+        uint16 N3PLSZn : 2;
+        uint16 RAPLSZn : 2;
+        uint16 RAOVRn : 2;
+        uint16 RBPLSZn : 2;
+        uint16 RBOVRn : 2;
+    };
+};
+
 } // namespace satemu::vdp2
