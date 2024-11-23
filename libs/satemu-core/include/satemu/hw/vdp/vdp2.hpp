@@ -66,49 +66,49 @@ public:
         // case 0x008: return 0; // TODO: HCNT
         // case 0x00A: return 0; // TODO: VCNT
         case 0x00E: return RAMCTL.u16;
-        case 0x010: return CYCA0.L.u16;
-        case 0x012: return CYCA0.U.u16;
-        case 0x014: return CYCA1.L.u16;
-        case 0x016: return CYCA1.U.u16;
-        case 0x018: return CYCB0.L.u16;
-        case 0x01A: return CYCB0.U.u16;
-        case 0x01E: return CYCB1.U.u16;
-        case 0x01C: return CYCB1.L.u16;
-        case 0x020: return BGON.u16;
-        case 0x028: return CHCTLA.u16;
-        case 0x02A: return CHCTLB.u16;
-        case 0x030: return PNCN0.u16;
-        case 0x032: return PNCN1.u16;
-        case 0x034: return PNCN2.u16;
-        case 0x036: return PNCN3.u16;
-        case 0x038: return PNCR.u16;
-        case 0x03A: return PLSZ.u16;
-        case 0x03C: return MPOFN.u16;
-        case 0x03E: return MPOFR.u16;
-        case 0x040: return MPN0.AB.u16;
-        case 0x042: return MPN0.CD.u16;
-        case 0x044: return MPN1.AB.u16;
-        case 0x046: return MPN1.CD.u16;
-        case 0x048: return MPN2.AB.u16;
-        case 0x04A: return MPN2.CD.u16;
-        case 0x04C: return MPN3.AB.u16;
-        case 0x04E: return MPN3.CD.u16;
-        case 0x050: return MPRA.AB.u16;
-        case 0x052: return MPRA.CD.u16;
-        case 0x054: return MPRA.EF.u16;
-        case 0x056: return MPRA.GH.u16;
-        case 0x058: return MPRA.IJ.u16;
-        case 0x05A: return MPRA.KL.u16;
-        case 0x05C: return MPRA.MN.u16;
-        case 0x05E: return MPRA.OP.u16;
-        case 0x060: return MPRB.AB.u16;
-        case 0x062: return MPRB.CD.u16;
-        case 0x064: return MPRB.EF.u16;
-        case 0x066: return MPRB.GH.u16;
-        case 0x068: return MPRB.IJ.u16;
-        case 0x06A: return MPRB.KL.u16;
-        case 0x06C: return MPRB.MN.u16;
-        case 0x06E: return MPRB.OP.u16;
+        case 0x010: return 0; // CYCA0 is write-only
+        case 0x012: return 0; // CYCA0 is write-only
+        case 0x014: return 0; // CYCA1 is write-only
+        case 0x016: return 0; // CYCA1 is write-only
+        case 0x018: return 0; // CYCB0 is write-only
+        case 0x01A: return 0; // CYCB0 is write-only
+        case 0x01E: return 0; // CYCB1 is write-only
+        case 0x01C: return 0; // CYCB1 is write-only
+        case 0x020: return 0; // BGON is write-only
+        case 0x028: return 0; // CHCTLA is write-only
+        case 0x02A: return 0; // CHCTLB is write-only
+        case 0x030: return 0; // PNCN0 is write-only
+        case 0x032: return 0; // PNCN1 is write-only
+        case 0x034: return 0; // PNCN2 is write-only
+        case 0x036: return 0; // PNCN3 is write-only
+        case 0x038: return 0; // PNCR is write-only
+        case 0x03A: return 0; // PLSZ is write-only
+        case 0x03C: return 0; // MPOFN is write-only
+        case 0x03E: return 0; // MPOFR is write-only
+        case 0x040: return 0; // MPN0 is write-only
+        case 0x042: return 0; // MPN0 is write-only
+        case 0x044: return 0; // MPN1 is write-only
+        case 0x046: return 0; // MPN1 is write-only
+        case 0x048: return 0; // MPN2 is write-only
+        case 0x04A: return 0; // MPN2 is write-only
+        case 0x04C: return 0; // MPN3 is write-only
+        case 0x04E: return 0; // MPN3 is write-only
+        case 0x050: return 0; // MPRA is write-only
+        case 0x052: return 0; // MPRA is write-only
+        case 0x054: return 0; // MPRA is write-only
+        case 0x056: return 0; // MPRA is write-only
+        case 0x058: return 0; // MPRA is write-only
+        case 0x05A: return 0; // MPRA is write-only
+        case 0x05C: return 0; // MPRA is write-only
+        case 0x05E: return 0; // MPRA is write-only
+        case 0x060: return 0; // MPRB is write-only
+        case 0x062: return 0; // MPRB is write-only
+        case 0x064: return 0; // MPRB is write-only
+        case 0x066: return 0; // MPRB is write-only
+        case 0x068: return 0; // MPRB is write-only
+        case 0x06A: return 0; // MPRB is write-only
+        case 0x06C: return 0; // MPRB is write-only
+        case 0x06E: return 0; // MPRB is write-only
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
         }
     }
@@ -191,38 +191,39 @@ private:
     BGON_t BGON;     // 180020   BGON    Screen Display Enable
     CHCTLA_t CHCTLA; // 180028   CHCTLA  Character Control Register A
     CHCTLB_t CHCTLB; // 18002A   CHCTLB  Character Control Register A
-    PNC_t PNCN0;     // 180030   PNCN0   NBG0/RBG1 Pattern Name Control
-    PNC_t PNCN1;     // 180032   PNCN1   NBG1 Pattern Name Control
-    PNC_t PNCN2;     // 180034   PNCN2   NBG2 Pattern Name Control
-    PNC_t PNCN3;     // 180036   PNCN3   NBG3 Pattern Name Control
-    PNC_t PNCR;      // 180038   PNCR    RBG0 Pattern Name Control
-    PLSZ_t PLSZ;     // 18003A   PLSZ    Plane Size
-    MPOFN_t MPOFN;   // 18003C   MPOFN   NBG0-3 Map Offset
-    MPOFR_t MPOFR;   // 18003E   MPOFR   Rotation Parameter A/B Map Offset
-                     // 180040   MPABN0  NBG0 Normal Scroll Screen Map for Planes A,B
-    MPBG_t MPN0;     // 180042   MPCDN0  NBG0 Normal Scroll Screen Map for Planes C,D
-                     // 180044   MPABN1  NBG1 Normal Scroll Screen Map for Planes A,B
-    MPBG_t MPN1;     // 180046   MPCDN1  NBG1 Normal Scroll Screen Map for Planes C,D
-                     // 180048   MPABN2  NBG2 Normal Scroll Screen Map for Planes A,B
-    MPBG_t MPN2;     // 18004A   MPCDN2  NBG2 Normal Scroll Screen Map for Planes C,D
-                     // 18004C   MPABN3  NBG3 Normal Scroll Screen Map for Planes A,B
-    MPBG_t MPN3;     // 18004E   MPCDN3  NBG3 Normal Scroll Screen Map for Planes C,D
-                     // 180050   MPABRA  Rotation Parameter A Scroll Surface Map for Screen Planes A,B
-                     // 180052   MPCDRA  Rotation Parameter A Scroll Surface Map for Screen Planes C,D
-                     // 180054   MPEFRA  Rotation Parameter A Scroll Surface Map for Screen Planes E,F
-                     // 180056   MPGHRA  Rotation Parameter A Scroll Surface Map for Screen Planes G,H
-                     // 180058   MPIJRA  Rotation Parameter A Scroll Surface Map for Screen Planes I,J
-                     // 18005A   MPKLRA  Rotation Parameter A Scroll Surface Map for Screen Planes K,L
-                     // 18005C   MPMNRA  Rotation Parameter A Scroll Surface Map for Screen Planes M,N
-    MPRP_t MPRA;     // 18005E   MPOPRA  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
-                     // 180060   MPABRB  Rotation Parameter A Scroll Surface Map for Screen Planes A,B
-                     // 180062   MPCDRB  Rotation Parameter A Scroll Surface Map for Screen Planes C,D
-                     // 180064   MPEFRB  Rotation Parameter A Scroll Surface Map for Screen Planes E,F
-                     // 180066   MPGHRB  Rotation Parameter A Scroll Surface Map for Screen Planes G,H
-                     // 180068   MPIJRB  Rotation Parameter A Scroll Surface Map for Screen Planes I,J
-                     // 18006A   MPKLRB  Rotation Parameter A Scroll Surface Map for Screen Planes K,L
-                     // 18006C   MPMNRB  Rotation Parameter A Scroll Surface Map for Screen Planes M,N
-    MPRP_t MPRB;     // 18006E   MPOPRB  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
+
+    PNC_t PNCN0;   // 180030   PNCN0   NBG0/RBG1 Pattern Name Control
+    PNC_t PNCN1;   // 180032   PNCN1   NBG1 Pattern Name Control
+    PNC_t PNCN2;   // 180034   PNCN2   NBG2 Pattern Name Control
+    PNC_t PNCN3;   // 180036   PNCN3   NBG3 Pattern Name Control
+    PNC_t PNCR;    // 180038   PNCR    RBG0 Pattern Name Control
+    PLSZ_t PLSZ;   // 18003A   PLSZ    Plane Size
+    MPOFN_t MPOFN; // 18003C   MPOFN   NBG0-3 Map Offset
+    MPOFR_t MPOFR; // 18003E   MPOFR   Rotation Parameter A/B Map Offset
+                   // 180040   MPABN0  NBG0 Normal Scroll Screen Map for Planes A,B
+    MPBG_t MPN0;   // 180042   MPCDN0  NBG0 Normal Scroll Screen Map for Planes C,D
+                   // 180044   MPABN1  NBG1 Normal Scroll Screen Map for Planes A,B
+    MPBG_t MPN1;   // 180046   MPCDN1  NBG1 Normal Scroll Screen Map for Planes C,D
+                   // 180048   MPABN2  NBG2 Normal Scroll Screen Map for Planes A,B
+    MPBG_t MPN2;   // 18004A   MPCDN2  NBG2 Normal Scroll Screen Map for Planes C,D
+                   // 18004C   MPABN3  NBG3 Normal Scroll Screen Map for Planes A,B
+    MPBG_t MPN3;   // 18004E   MPCDN3  NBG3 Normal Scroll Screen Map for Planes C,D
+                   // 180050   MPABRA  Rotation Parameter A Scroll Surface Map for Screen Planes A,B
+                   // 180052   MPCDRA  Rotation Parameter A Scroll Surface Map for Screen Planes C,D
+                   // 180054   MPEFRA  Rotation Parameter A Scroll Surface Map for Screen Planes E,F
+                   // 180056   MPGHRA  Rotation Parameter A Scroll Surface Map for Screen Planes G,H
+                   // 180058   MPIJRA  Rotation Parameter A Scroll Surface Map for Screen Planes I,J
+                   // 18005A   MPKLRA  Rotation Parameter A Scroll Surface Map for Screen Planes K,L
+                   // 18005C   MPMNRA  Rotation Parameter A Scroll Surface Map for Screen Planes M,N
+    MPRP_t MPRA;   // 18005E   MPOPRA  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
+                   // 180060   MPABRB  Rotation Parameter A Scroll Surface Map for Screen Planes A,B
+                   // 180062   MPCDRB  Rotation Parameter A Scroll Surface Map for Screen Planes C,D
+                   // 180064   MPEFRB  Rotation Parameter A Scroll Surface Map for Screen Planes E,F
+                   // 180066   MPGHRB  Rotation Parameter A Scroll Surface Map for Screen Planes G,H
+                   // 180068   MPIJRB  Rotation Parameter A Scroll Surface Map for Screen Planes I,J
+                   // 18006A   MPKLRB  Rotation Parameter A Scroll Surface Map for Screen Planes K,L
+                   // 18006C   MPMNRB  Rotation Parameter A Scroll Surface Map for Screen Planes M,N
+    MPRP_t MPRB;   // 18006E   MPOPRB  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
 
     // -------------------------------------------------------------------------
 

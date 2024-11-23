@@ -15,7 +15,7 @@ constexpr size_t kCRAMSize = 4_KiB;
 //
 //   bits   r/w  code          description
 //     15   R/W  DISP          TV Screen Display (0=no display, 1=display)
-//   14-9   R    -             Reserved, must be zero
+//   14-9        -             Reserved, must be zero
 //      8   R/W  BDCLMD        Border Color Mode (0=black, 1=back screen)
 //    7-6   R/W  LSMD1-0       Interlace Mode
 //                               00 (0) = Non-Interlace
@@ -27,7 +27,7 @@ constexpr size_t kCRAMSize = 4_KiB;
 //                               01 (1) = 240 lines (NTSC or PAL)
 //                               10 (2) = 256 lines (PAL only)
 //                               11 (3) = (Forbidden)
-//      3   R    -             Reserved, must be zero
+//      3        -             Reserved, must be zero
 //    2-0   R/W  HRESO2-0      Horizontal Resolution
 //                               000 (0) = 320 pixels - Normal Graphic A (NTSC or PAL)
 //                               001 (1) = 352 pixels - Normal Graphic B (NTSC or PAL)
@@ -53,10 +53,10 @@ union TVMD_t {
 // 180002   EXTEN   External Signal Enable
 //
 //   bits   r/w  code          description
-//  15-10   R    -             Reserved, must be zero
+//  15-10        -             Reserved, must be zero
 //      9   R/W  EXLTEN        External Latch Enable (0=on read, 1=on external signal)
 //      8   R/W  EXSYEN        External Sync Enable (0=disable, 1=enable)
-//    7-2   R    -             Reserved, must be zero
+//    7-2        -             Reserved, must be zero
 //      1   R/W  DASEL         Display Area Select (0=selected area, 1=full screen)
 //      0   R/W  EXBGEN        External BG Enable (0=disable, 1=enable)
 union EXTEN_t {
@@ -75,7 +75,7 @@ union EXTEN_t {
 //
 //   bits   r/w  code          description
 //     15   R/W  VRAMSZ        VRAM Size (0=512 KiB, 1=1 MiB)
-//   14-4   R    -             Reserved, must be zero
+//   14-4        -             Reserved, must be zero
 //    3-0   R    VER3-0        VDP2 Version Number
 union VRSIZE_t {
     uint16 u16;
@@ -89,7 +89,7 @@ union VRSIZE_t {
 // 180008   HCNT    H Counter
 //
 //   bits   r/w  code          description
-//  15-10   R    -             Reserved, must be zero
+//  15-10        -             Reserved, must be zero
 //    9-0   R    HCT9-0        H Counter Value
 //
 // Notes
@@ -102,7 +102,7 @@ union VRSIZE_t {
 // 18000A   VCNT    V Counter
 //
 //   bits   r/w  code          description
-//  15-10   R    -             Reserved, must be zero
+//  15-10        -             Reserved, must be zero
 //    9-0   R    VCT9-0        V Counter Value
 //
 // Notes
@@ -117,13 +117,13 @@ union VRSIZE_t {
 //
 //   bits   r/w  code          description
 //     15   R/W  CRKTE         Color RAM Coefficient Table Enable
-//     14   R    -             Reserved, must be zero
+//     14        -             Reserved, must be zero
 //  13-12   R/W  CRMD1-0       Color RAM Mode
 //                               00 (0) = RGB 5:5:5, 1024 words
 //                               01 (1) = RGB 5:5:5, 2048 words
 //                               10 (2) = RGB 8:8:8, 1024 words
 //                               11 (3) = RGB 8:8:8, 1024 words  (same as mode 2, undocumented)
-//  11-10   R    -             Reserved, must be zero
+//  11-10        -             Reserved, must be zero
 //      9   R/W  VRBMD         VRAM-B Mode (0=single partition, 1=two partitions)
 //      8   R/W  VRAMD         VRAM-A Mode (0=single partition, 1=two partitions)
 //    7-6   R/W  RDBSB1(1-0)   Rotation Data Bank Select for VRAM-B1
@@ -149,66 +149,66 @@ union RAMCTL_t {
 // 180010   CYCA0L  VRAM Cycle Pattern A0 Lower
 //
 //   bits   r/w  code          description
-//  15-12   R/W  VCP0A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T0
-//   11-8   R/W  VCP1A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T1
-//    7-4   R/W  VCP2A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T2
-//    3-0   R/W  VCP3A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T3
+//  15-12     W  VCP0A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T0
+//   11-8     W  VCP1A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T1
+//    7-4     W  VCP2A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T2
+//    3-0     W  VCP3A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T3
 //
 // 180012   CYCA0U  VRAM Cycle Pattern A0 Upper
 //
 //   bits   r/w  code          description
-//  15-12   R/W  VCP4A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T4
-//   11-8   R/W  VCP5A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T5
-//    7-4   R/W  VCP6A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T6
-//    3-0   R/W  VCP7A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T7
+//  15-12     W  VCP4A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T4
+//   11-8     W  VCP5A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T5
+//    7-4     W  VCP6A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T6
+//    3-0     W  VCP7A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T7
 //
 // 180014   CYCA1L  VRAM Cycle Pattern A1 Lower
 //
 //   bits   r/w  code          description
-//  15-12   R/W  VCP0A1(3-0)   VRAM-A1 Timing for T0
-//   11-8   R/W  VCP1A1(3-0)   VRAM-A1 Timing for T1
-//    7-4   R/W  VCP2A1(3-0)   VRAM-A1 Timing for T2
-//    3-0   R/W  VCP3A1(3-0)   VRAM-A1 Timing for T3
+//  15-12     W  VCP0A1(3-0)   VRAM-A1 Timing for T0
+//   11-8     W  VCP1A1(3-0)   VRAM-A1 Timing for T1
+//    7-4     W  VCP2A1(3-0)   VRAM-A1 Timing for T2
+//    3-0     W  VCP3A1(3-0)   VRAM-A1 Timing for T3
 //
 // 180016   CYCA1U  VRAM Cycle Pattern A1 Upper
 //
 //   bits   r/w  code          description
-//  15-12   R/W  VCP4A1(3-0)   VRAM-A1 Timing for T4
-//   11-8   R/W  VCP5A1(3-0)   VRAM-A1 Timing for T5
-//    7-4   R/W  VCP6A1(3-0)   VRAM-A1 Timing for T6
-//    3-0   R/W  VCP7A1(3-0)   VRAM-A1 Timing for T7
+//  15-12     W  VCP4A1(3-0)   VRAM-A1 Timing for T4
+//   11-8     W  VCP5A1(3-0)   VRAM-A1 Timing for T5
+//    7-4     W  VCP6A1(3-0)   VRAM-A1 Timing for T6
+//    3-0     W  VCP7A1(3-0)   VRAM-A1 Timing for T7
 //
 // 180018   CYCB0L  VRAM Cycle Pattern B0 Lower
 //
 //   bits   r/w  code          description
-//  15-12   R/W  VCP0B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T0
-//   11-8   R/W  VCP1B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T1
-//    7-4   R/W  VCP2B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T2
-//    3-0   R/W  VCP3B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T3
+//  15-12     W  VCP0B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T0
+//   11-8     W  VCP1B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T1
+//    7-4     W  VCP2B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T2
+//    3-0     W  VCP3B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T3
 //
 // 18001A   CYCB0U  VRAM Cycle Pattern B0 Upper
 //
 //   bits   r/w  code          description
-//  15-12   R/W  VCP4B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T4
-//   11-8   R/W  VCP5B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T5
-//    7-4   R/W  VCP6B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T6
-//    3-0   R/W  VCP7B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T7
+//  15-12     W  VCP4B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T4
+//   11-8     W  VCP5B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T5
+//    7-4     W  VCP6B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T6
+//    3-0     W  VCP7B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T7
 //
 // 18001C   CYCB1L  VRAM Cycle Pattern B1 Lower
 //
 //   bits   r/w  code          description
-//  15-12   R/W  VCP0B1(3-0)   VRAM-B1 Timing for T0
-//   11-8   R/W  VCP1B1(3-0)   VRAM-B1 Timing for T1
-//    7-4   R/W  VCP2B1(3-0)   VRAM-B1 Timing for T2
-//    3-0   R/W  VCP3B1(3-0)   VRAM-B1 Timing for T3
+//  15-12     W  VCP0B1(3-0)   VRAM-B1 Timing for T0
+//   11-8     W  VCP1B1(3-0)   VRAM-B1 Timing for T1
+//    7-4     W  VCP2B1(3-0)   VRAM-B1 Timing for T2
+//    3-0     W  VCP3B1(3-0)   VRAM-B1 Timing for T3
 //
 // 18001E   CYCB1U  VRAM Cycle Pattern B1 Upper
 //
 //   bits   r/w  code          description
-//  15-12   R/W  VCP4B1(3-0)   VRAM-B1 Timing for T4
-//   11-8   R/W  VCP5B1(3-0)   VRAM-B1 Timing for T5
-//    7-4   R/W  VCP6B1(3-0)   VRAM-B1 Timing for T6
-//    3-0   R/W  VCP7B1(3-0)   VRAM-B1 Timing for T7
+//  15-12     W  VCP4B1(3-0)   VRAM-B1 Timing for T4
+//   11-8     W  VCP5B1(3-0)   VRAM-B1 Timing for T5
+//    7-4     W  VCP6B1(3-0)   VRAM-B1 Timing for T6
+//    3-0     W  VCP7B1(3-0)   VRAM-B1 Timing for T7
 union CYC_t {
     uint32 u32;
     struct {
@@ -236,19 +236,19 @@ union CYC_t {
 // 180020   BGON    Screen Display Enable
 //
 //   bits   r/w  code          description
-//  15-13   R    -             Reserved, must be zero
-//     12   R/W  R0TPON        RBG0 Transparent Display (0=enable, 1=disable)
-//     11   R/W  N3TPON        NBG3 Transparent Display (0=enable, 1=disable)
-//     10   R/W  N2TPON        NBG2 Transparent Display (0=enable, 1=disable)
-//      9   R/W  N1TPON        NBG1/EXBG Transparent Display (0=enable, 1=disable)
-//      8   R/W  N0TPON        NBG0/RBG1 Transparent Display (0=enable, 1=disable)
-//    7-6   R    -             Reserved, must be zero
-//      5   R/W  R1ON          RBG1 Display (0=disable, 1=enable)
-//      4   R/W  R0ON          RBG0 Display (0=disable, 1=enable)
-//      3   R/W  N3ON          NBG3 Display (0=disable, 1=enable)
-//      2   R/W  N2ON          NBG2 Display (0=disable, 1=enable)
-//      1   R/W  N1ON          NBG1 Display (0=disable, 1=enable)
-//      0   R/W  N0ON          NBG0 Display (0=disable, 1=enable)
+//  15-13        -             Reserved, must be zero
+//     12     W  R0TPON        RBG0 Transparent Display (0=enable, 1=disable)
+//     11     W  N3TPON        NBG3 Transparent Display (0=enable, 1=disable)
+//     10     W  N2TPON        NBG2 Transparent Display (0=enable, 1=disable)
+//      9     W  N1TPON        NBG1/EXBG Transparent Display (0=enable, 1=disable)
+//      8     W  N0TPON        NBG0/RBG1 Transparent Display (0=enable, 1=disable)
+//    7-6        -             Reserved, must be zero
+//      5     W  R1ON          RBG1 Display (0=disable, 1=enable)
+//      4     W  R0ON          RBG0 Display (0=disable, 1=enable)
+//      3     W  N3ON          NBG3 Display (0=disable, 1=enable)
+//      2     W  N2ON          NBG2 Display (0=disable, 1=enable)
+//      1     W  N1ON          NBG1 Display (0=disable, 1=enable)
+//      0     W  N0ON          NBG0 Display (0=disable, 1=enable)
 union BGON_t {
     uint16 u16;
     struct {
@@ -271,22 +271,22 @@ union BGON_t {
 // 180028   CHCTLA  Character Control Register A
 //
 //   bits   r/w  code          description
-//  15-14   R    -             Reserved, must be zero
-//  13-12   R/W  N1CHCN1-0     NBG1/EXBG Character Color Number
+//  15-14        -             Reserved, must be zero
+//  13-12     W  N1CHCN1-0     NBG1/EXBG Character Color Number
 //                               00 (0) =       16 colors - palette
 //                               01 (1) =      256 colors - palette
 //                               10 (2) =     2048 colors - palette
 //                               11 (3) =    32768 colors - RGB (NBG1)
 //                                        16777216 colors - RGB (EXBG)
-//  11-10   R/W  N1BMSZ1-0     NBG1 Bitmap Size
+//  11-10     W  N1BMSZ1-0     NBG1 Bitmap Size
 //                               00 (0) = 512x256
 //                               01 (1) = 512x512
 //                               10 (2) = 1024x256
 //                               11 (3) = 1024x512
-//      9   R/W  N1BMEN        NBG1 Bitmap Enable (0=cells, 1=bitmap)
-//      8   R/W  N1CHSZ        NBG1 Character Size (0=1x1, 1=2x2)
-//      7   R    -             Reserved, must be zero
-//    6-4   R/W  N0CHCN2-0     NBG0/RBG1 Character Color Number
+//      9     W  N1BMEN        NBG1 Bitmap Enable (0=cells, 1=bitmap)
+//      8     W  N1CHSZ        NBG1 Character Size (0=1x1, 1=2x2)
+//      7        -             Reserved, must be zero
+//    6-4     W  N0CHCN2-0     NBG0/RBG1 Character Color Number
 //                               000 (0) =       16 colors - palette
 //                               001 (1) =      256 colors - palette
 //                               010 (2) =     2048 colors - palette
@@ -296,13 +296,13 @@ union BGON_t {
 //                               101 (5) = forbidden
 //                               110 (6) = forbidden
 //                               111 (7) = forbidden
-//    3-2   R/W  N0BMSZ1-0     NBG0 Bitmap Size
+//    3-2     W  N0BMSZ1-0     NBG0 Bitmap Size
 //                               00 (0) = 512x256
 //                               01 (1) = 512x512
 //                               10 (2) = 1024x256
 //                               11 (3) = 1024x512
-//      1   R/W  N0BMEN        NBG0 Bitmap Enable (0=cells, 1=bitmap)
-//      0   R/W  N0CHSZ        NBG0 Character Size (0=1x1, 1=2x2)
+//      1     W  N0BMEN        NBG0 Bitmap Enable (0=cells, 1=bitmap)
+//      0     W  N0CHSZ        NBG0 Character Size (0=1x1, 1=2x2)
 union CHCTLA_t {
     uint16 u16;
     struct {
@@ -322,7 +322,7 @@ union CHCTLA_t {
 // 18002A   CHCTLB  Character Control Register B
 //
 //   bits   r/w  code          description
-//     15   R    -             Reserved, must be zero
+//     15        -             Reserved, must be zero
 //  14-12   R/W  R0CHCN2-0     RBG0 Character Color Number
 //                               NOTE: Exclusive Monitor cannot display this BG plane
 //                               000 (0) =       16 colors - palette
@@ -334,14 +334,14 @@ union CHCTLA_t {
 //                               101 (5) = forbidden
 //                               110 (6) = forbidden
 //                               111 (7) = forbidden
-//     11   R    -             Reserved, must be zero
+//     11        -             Reserved, must be zero
 //     10   R/W  R0BMSZ        RBG0 Bitmap Size (0=512x256, 1=512x512)
 //      9   R/W  R0BMEN        RBG0 Bitmap Enable (0=cells, 1=bitmap)
 //      8   R/W  R0CHSZ        RBG0 Character Size (0=1x1, 1=2x2)
-//    7-6   R    -             Reserved, must be zero
+//    7-6        -             Reserved, must be zero
 //      5   R/W  N3CHCN        NBG3 Character Color Number (0=16 colors, 1=256 colors; both palette)
 //      4   R/W  N3CHSZ        NBG3 Character Size (0=1x1, 1=2x2)
-//    3-2   R    -             Reserved, must be zero
+//    3-2        -             Reserved, must be zero
 //      1   R/W  N2CHCN        NBG2 Character Color Number (0=16 colors, 1=256 colors; both palette)
 //      0   R/W  N2CHSZ        NBG2 Character Size (0=1x1, 1=2x2)
 union CHCTLB_t {
@@ -362,6 +362,11 @@ union CHCTLB_t {
     };
 };
 
+// 18002C   BMPNA   Bitmap Palette Number
+//
+//   bits   r/w  code          description
+//     15   R/W  xxPNB         Pattern Name Data Size (0=2 words, 1=1 word)
+
 // 180030   PNCN0   NBG0/RBG1 Pattern Name Control
 // 180032   PNCN1   NBG1 Pattern Name Control
 // 180034   PNCN2   NBG2 Pattern Name Control
@@ -369,15 +374,15 @@ union CHCTLB_t {
 // 180038   PNCR    RBG0 Pattern Name Control
 //
 //   bits   r/w  code          description
-//     15   R/W  xxPNB         Pattern Name Data Size (0=2 words, 1=1 word)
-//     14   R/W  xxCNSM        Character Number Supplement
+//     15     W  xxPNB         Pattern Name Data Size (0=2 words, 1=1 word)
+//     14     W  xxCNSM        Character Number Supplement
 //                               0 = char number is 10 bits; H/V flip available
 //                               1 = char number is 12 bits; H/V flip unavailable
-//  13-10   R    -             Reserved, must be zero
-//      9   R/W  xxSPR         Special Priority bit
-//      8   R/W  xxSCC         Special Color Calculation bit
-//    7-5   R/W  xxSPLT6-4     Supplementary Palette bits
-//    4-0   R/W  xxSCN4-0      Supplementary Character Number bits
+//  13-10        -             Reserved, must be zero
+//      9     W  xxSPR         Special Priority bit
+//      8     W  xxSCC         Special Color Calculation bit
+//    7-5     W  xxSPLT6-4     Supplementary Palette bits
+//    4-0     W  xxSCN4-0      Supplementary Character Number bits
 union PNC_t {
     uint16 u16;
     struct {
@@ -394,14 +399,14 @@ union PNC_t {
 // 18003A   PLSZ    Plane Size
 //
 //   bits   r/w  code          description
-//  15-14   R/W  RBOVR1-0      Rotation Parameter B Screen-over Process
-//  13-12   R/W  RBPLSZ1-0     Rotation Parameter B Plane Size
-//  11-10   R/W  RAOVR1-0      Rotation Parameter A Screen-over Process
-//    9-8   R/W  RAPLSZ1-0     Rotation Parameter A Plane Size
-//    7-6   R/W  N3PLSZ1-0     NBG3 Plane Size
-//    5-4   R/W  N2PLSZ1-0     NBG2 Plane Size
-//    3-2   R/W  N1PLSZ1-0     NBG1 Plane Size
-//    1-0   R/W  N0PLSZ1-0     NBG0 Plane Size
+//  15-14     W  RBOVR1-0      Rotation Parameter B Screen-over Process
+//  13-12     W  RBPLSZ1-0     Rotation Parameter B Plane Size
+//  11-10     W  RAOVR1-0      Rotation Parameter A Screen-over Process
+//    9-8     W  RAPLSZ1-0     Rotation Parameter A Plane Size
+//    7-6     W  N3PLSZ1-0     NBG3 Plane Size
+//    5-4     W  N2PLSZ1-0     NBG2 Plane Size
+//    3-2     W  N1PLSZ1-0     NBG1 Plane Size
+//    1-0     W  N0PLSZ1-0     NBG0 Plane Size
 //
 //  xxOVR1-0:
 //    00 (0) = Repeat plane infinitely
@@ -425,14 +430,14 @@ union PLSZ_t {
 // 18003C   MPOFN   NBG0-3 Map Offset
 //
 //   bits   r/w  code          description
-//     15   R    -             Reserved, must be zero
-//  14-12   R/W  M3MP8-6       NBG3 Map Offset
-//     11   R    -             Reserved, must be zero
-//   10-8   R/W  M2MP8-6       NBG2 Map Offset
-//      7   R    -             Reserved, must be zero
-//    6-4   R/W  M1MP8-6       NBG1 Map Offset
-//      3   R    -             Reserved, must be zero
-//    2-0   R/W  M0MP8-6       NBG0 Map Offset
+//     15        -             Reserved, must be zero
+//  14-12     W  M3MP8-6       NBG3 Map Offset
+//     11        -             Reserved, must be zero
+//   10-8     W  M2MP8-6       NBG2 Map Offset
+//      7        -             Reserved, must be zero
+//    6-4     W  M1MP8-6       NBG1 Map Offset
+//      3        -             Reserved, must be zero
+//    2-0     W  M0MP8-6       NBG0 Map Offset
 union MPOFN_t {
     uint16 u16;
     struct {
@@ -450,10 +455,10 @@ union MPOFN_t {
 // 18003E   MPOFR   Rotation Parameter A/B Map Offset
 //
 //   bits   r/w  code          description
-//   15-7   R    -             Reserved, must be zero
-//    6-4   R/W  RBMP8-6       Rotation Parameter B Map Offset
-//      3   R    -             Reserved, must be zero
-//    2-0   R/W  RAMP8-6       Rotation Parameter A Map Offset
+//   15-7        -             Reserved, must be zero
+//    6-4     W  RBMP8-6       Rotation Parameter B Map Offset
+//      3        -             Reserved, must be zero
+//    2-0     W  RAMP8-6       Rotation Parameter A Map Offset
 union MPOFR_t {
     uint16 u16;
     struct {
@@ -474,10 +479,10 @@ union MPOFR_t {
 // 18004E   MPCDN3  NBG3 Normal Scroll Screen Map for Planes C,D
 //
 //   bits   r/w  code          description
-//  15-14   R    -             Reserved, must be zero
-//   13-8   R/W  xxMPy5-0      BG xx Plane y Map
-//    7-6   R    -             Reserved, must be zero
-//    5-0   R/W  xxMPy5-0      BG xx Plane y Map
+//  15-14        -             Reserved, must be zero
+//   13-8     W  xxMPy5-0      BG xx Plane y Map
+//    7-6        -             Reserved, must be zero
+//    5-0     W  xxMPy5-0      BG xx Plane y Map
 //
 // xx:
 //   N0 = NBG0 (MPyyN0)
@@ -537,10 +542,10 @@ union MPBG_t {
 // 18006E   MPOPRB  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
 //
 //   bits   r/w  code          description
-//  15-14   R    -             Reserved, must be zero
-//   13-8   R/W  RxMPy5-0      Rotation Parameter x Screen Plane y Map
-//    7-6   R    -             Reserved, must be zero
-//    5-0   R/W  RxMPy5-0      Rotation Parameter x Screen Plane y Map
+//  15-14        -             Reserved, must be zero
+//   13-8     W  RxMPy5-0      Rotation Parameter x Screen Plane y Map
+//    7-6        -             Reserved, must be zero
+//    5-0     W  RxMPy5-0      Rotation Parameter x Screen Plane y Map
 //
 // x:
 //   A = Rotation Parameter A (MPyyRA)
