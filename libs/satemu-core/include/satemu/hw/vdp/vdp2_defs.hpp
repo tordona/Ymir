@@ -361,4 +361,34 @@ union CHCTLB_t {
         uint16 _rsvd15 : 1;
     };
 };
+
+// 180030   PNCN0   NBG0/RBG1 Pattern Name Control
+// 180032   PNCN1   NBG1 Pattern Name Control
+// 180034   PNCN2   NBG2 Pattern Name Control
+// 180036   PNCN3   NBG3 Pattern Name Control
+// 180038   PNCR    RBG0 Pattern Name Control
+//
+//   bits   r/w  code          description
+//     15   R/W  xxPNB         Pattern Name Data Size (0=2 words, 1=1 word)
+//     14   R/W  xxCNSM        Character Number Supplement
+//                               0 = char number is 10 bits; H/V flip available
+//                               1 = char number is 12 bits; H/V flip unavailable
+//  13-10   R    -             Reserved, must be zero
+//      9   R/W  xxSPR         Special Priority bit
+//      8   R/W  xxSCC         Special Color Calculation bit
+//    7-5   R/W  xxSPLT6-4     Supplementary Palette bits
+//    4-0   R/W  xxSCN4-0      Supplementary Character Number bits
+union PNC_t {
+    uint16 u16;
+    struct {
+        uint16 SCNn : 5;
+        uint16 SPLTn : 3;
+        uint16 SCC : 1;
+        uint16 SPR : 1;
+        uint16 _rsvd : 4;
+        uint16 CNSM : 1;
+        uint16 PNB : 1;
+    };
+};
+
 } // namespace satemu::vdp2

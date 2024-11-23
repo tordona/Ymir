@@ -77,6 +77,11 @@ public:
         case 0x020: return BGON.u16;
         case 0x028: return CHCTLA.u16;
         case 0x02A: return CHCTLB.u16;
+        case 0x030: return PNCN0.u16;
+        case 0x032: return PNCN1.u16;
+        case 0x034: return PNCN2.u16;
+        case 0x036: return PNCN3.u16;
+        case 0x038: return PNCR.u16;
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
         }
     }
@@ -102,6 +107,11 @@ public:
         case 0x020: BGON.u16 = value & 0x1F3F; break;
         case 0x028: CHCTLA.u16 = value & 0x3F7F; break;
         case 0x02A: CHCTLB.u16 = value & 0x7733; break;
+        case 0x030: PNCN0.u16 = value & 0xC3FF; break;
+        case 0x032: PNCN1.u16 = value & 0xC3FF; break;
+        case 0x034: PNCN2.u16 = value & 0xC3FF; break;
+        case 0x036: PNCN3.u16 = value & 0xC3FF; break;
+        case 0x038: PNCR.u16 = value & 0xC3FF; break;
         default:
             fmt::println("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
             break;
@@ -127,6 +137,11 @@ private:
     BGON_t BGON;     // 180020   BGON    Screen Display Enable
     CHCTLA_t CHCTLA; // 180028   CHCTLA  Character Control Register A
     CHCTLB_t CHCTLB; // 18002A   CHCTLB  Character Control Register A
+    PNC_t PNCN0;     // 180030   PNCN0   NBG0/RBG1 Pattern Name Control
+    PNC_t PNCN1;     // 180032   PNCN1   NBG1 Pattern Name Control
+    PNC_t PNCN2;     // 180034   PNCN2   NBG2 Pattern Name Control
+    PNC_t PNCN3;     // 180036   PNCN3   NBG3 Pattern Name Control
+    PNC_t PNCR;      // 180038   PNCR    RBG0 Pattern Name Control
 
     // -------------------------------------------------------------------------
 
