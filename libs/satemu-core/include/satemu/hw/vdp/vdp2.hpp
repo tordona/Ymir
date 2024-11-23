@@ -133,6 +133,7 @@ public:
         case 0x094: return 0; // SCXN3 is write-only
         case 0x096: return 0; // SCYN3 is write-only
         case 0x098: return 0; // ZMCTL is write-only
+        case 0x09A: return 0; // SCRCTL is write-only
         case 0x0B8: return 0; // OVPNRA is write-only
         case 0x0BA: return 0; // OVPNRB is write-only
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
@@ -216,6 +217,7 @@ public:
         case 0x094: SCN3.X.u16 = value & 0x07FF; break;
         case 0x096: SCN3.Y.u16 = value & 0x07FF; break;
         case 0x098: ZMCTL.u16 = value & 0x0303; break;
+        case 0x09A: SCRCTL.u16 = value & 0x3F3F; break;
         case 0x0B8: OVPNRA = value; break;
         case 0x0BA: OVPNRB = value; break;
         default:
@@ -301,6 +303,7 @@ private:
     ZMCTL_t ZMCTL;   // 180098   ZMCTL   Reduction Enable
     OVPNR_t OVPNRA;  // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
     OVPNR_t OVPNRB;  // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
+    SCRCTL_t SCRCTL; // 18009A   SCRCTL  Line and Vertical Cell Scroll Control
 
     // -------------------------------------------------------------------------
 

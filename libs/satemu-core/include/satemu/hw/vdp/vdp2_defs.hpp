@@ -902,6 +902,47 @@ union ZMCTL_t {
     };
 };
 
+// 18009A   SCRCTL  Line and Vertical Cell Scroll Control
+//
+//   bits   r/w  code          description
+//  15-14        -             Reserved, must be zero
+//  13-12     W  N1LSS1-0      NBG1 Line Scroll Interval
+//                               00 (0) = Each line
+//                               01 (1) = Every 2 lines
+//                               10 (2) = Every 4 lines
+//                               11 (3) = Every 8 lines
+//                               NOTE: Values are doubled for single-density interlaced mode
+//     11     W  N1LZMX        NBG1 Line Zoom X Enable (0=disable, 1=enable)
+//     10     W  N1LSCY        NBG1 Line Scroll Y Enable (0=disable, 1=enable)
+//      9     W  N1LSCX        NBG1 Line Scroll X Enable (0=disable, 1=enable)
+//      8     W  N1VCSC        NBG1 Vertical Cell Scroll Enable (0=disable, 1=enable)
+//    7-6        -             Reserved, must be zero
+//    5-4     W  N0LSS1-0      NBG0 Line Scroll Interval
+//                               00 (0) = Each line
+//                               01 (1) = Every 2 lines
+//                               10 (2) = Every 4 lines
+//                               11 (3) = Every 8 lines
+//                               NOTE: Values are doubled for single-density interlaced mode
+//      3     W  N0LZMX        NBG0 Line Zoom X Enable (0=disable, 1=enable)
+//      2     W  N0LSCY        NBG0 Line Scroll Y Enable (0=disable, 1=enable)
+//      1     W  N0LSCX        NBG0 Line Scroll X Enable (0=disable, 1=enable)
+//      0     W  N0VCSC        NBG0 Vertical Cell Scroll Enable (0=disable, 1=enable)
+union SCRCTL_t {
+    uint16 u16;
+    struct {
+        uint16 N0VCSC : 1;
+        uint16 N0LSCX : 1;
+        uint16 N0LSCY : 1;
+        uint16 N0LZMX : 1;
+        uint16 _rsvd6_7 : 2;
+        uint16 N1VCSC : 1;
+        uint16 N1LSCX : 1;
+        uint16 N1LSCY : 1;
+        uint16 N1LZMX : 1;
+        uint16 _rsvd14_15 : 2;
+    };
+};
+
 // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
 // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
 //
