@@ -9,6 +9,7 @@ VDP2::VDP2() {
 void VDP2::Reset(bool hard) {
     m_VRAM.fill(0);
     m_CRAM.fill(0);
+    RAMCTL.u16 = 0x0;
 }
 
 } // namespace satemu
