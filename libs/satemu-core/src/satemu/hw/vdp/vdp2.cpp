@@ -11,6 +11,11 @@ void VDP2::Reset(bool hard) {
     m_CRAM.fill(0);
     TVMD.u16 = 0x0;
     RAMCTL.u16 = 0x0;
+    VRSIZE.u16 = 0x0;
+    CYCA0.u32 = 0x0;
+    CYCA1.u32 = 0x0;
+    CYCB0.u32 = 0x0;
+    CYCB1.u32 = 0x0;
 }
 
 } // namespace satemu

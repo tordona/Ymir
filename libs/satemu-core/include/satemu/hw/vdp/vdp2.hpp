@@ -19,6 +19,8 @@ public:
 
     void Reset(bool hard);
 
+    // TODO: handle VRSIZE.VRAMSZ in Read/WriteVRAM maybe?
+
     template <mem_access_type T>
     T ReadVRAM(uint32 address) {
         /*address &= 0x7FFFF;
@@ -60,7 +62,18 @@ public:
         case 0x000: return TVMD.u16;
         case 0x002: return EXTEN.u16;
         // case 0x004: return 0; // TODO: TVSTAT
+        case 0x006: return VRSIZE.u16;
+        // case 0x008: return 0; // TODO: HCNT
+        // case 0x00A: return 0; // TODO: VCNT
         case 0x00E: return RAMCTL.u16;
+        case 0x010: return CYCA0.L.u16;
+        case 0x012: return CYCA0.U.u16;
+        case 0x014: return CYCA1.L.u16;
+        case 0x016: return CYCA1.U.u16;
+        case 0x018: return CYCB0.L.u16;
+        case 0x01A: return CYCB0.U.u16;
+        case 0x01E: return CYCB1.U.u16;
+        case 0x01C: return CYCB1.L.u16;
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
         }
     }
@@ -71,7 +84,18 @@ public:
         case 0x000: TVMD.u16 = value & 0x81F7; break;
         case 0x002: EXTEN.u16 = value & 0x0303; break;
         case 0x004: /* TVSTAT is read-only */ break;
+        case 0x006: VRSIZE.u16 = value & 0x8000; break;
+        case 0x008: /* HCNT is read-only */ break;
+        case 0x00A: /* VCNT is read-only */ break;
         case 0x00E: RAMCTL.u16 = value & 0xB3FF; break;
+        case 0x010: CYCA0.L.u16 = value; break;
+        case 0x012: CYCA0.U.u16 = value; break;
+        case 0x014: CYCA1.L.u16 = value; break;
+        case 0x016: CYCA1.U.u16 = value; break;
+        case 0x018: CYCB0.L.u16 = value; break;
+        case 0x01A: CYCB0.U.u16 = value; break;
+        case 0x01E: CYCB1.U.u16 = value; break;
+        case 0x01C: CYCB1.L.u16 = value; break;
         default:
             fmt::println("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
             break;
@@ -144,6 +168,48 @@ private:
         };
     } EXTEN;
 
+    // 180006   VRSIZE  VRAM Size
+    //
+    //   bits   r/w  code          description
+    //     15   R/W  VRAMSZ        VRAM Size (0=512 KiB, 1=1 MiB)
+    //   14-4   R    -             Reserved, must be zero
+    //    3-0   R    VER3-0        VDP2 Version Number
+    union VRSIZE_t {
+        uint16 u16;
+        struct {
+            uint16 VERn : 4;
+            uint16 _rsvd4_14 : 11;
+            uint16 VRAMSZ : 1;
+        };
+    } VRSIZE;
+
+    // 180008   HCNT    H Counter
+    //
+    //   bits   r/w  code          description
+    //  15-10   R    -             Reserved, must be zero
+    //    9-0   R    HCT9-0        H Counter Value
+    //
+    // Notes
+    // - Counter layout depends on screen mode:
+    //     Normal: bits 8-0 shifted left by 1; HCT0 is invalid
+    //     Hi-Res: bits 9-0
+    //     Excl. Normal: bits 8-0 (no shift); HCT9 is invalid
+    //     Excl. Hi-Res: bits 9-1 shifted right by 1; HCT9 is invalid
+
+    // 18000A   VCNT    V Counter
+    //
+    //   bits   r/w  code          description
+    //  15-10   R    -             Reserved, must be zero
+    //    9-0   R    VCT9-0        V Counter Value
+    //
+    // Notes
+    // - Counter layout depends on screen mode:
+    //     Exclusive Monitor: bits 9-0
+    //     Normal Hi-Res double-density interlace:
+    //       bits 8-0 shifted left by 1
+    //       bit 0 contains interlaced field (0=odd, 1=even)
+    //     All other modes: bits 8-0 shifted left by 1; VCT0 is invalid
+
     // 18000E   RAMCTL  RAM Control
     //
     //   bits   r/w  code          description
@@ -176,6 +242,96 @@ private:
             uint16 CRKTE : 1;
         };
     } RAMCTL;
+
+    // 180010   CYCA0L  VRAM Cycle Pattern A0 Lower
+    //
+    //   bits   r/w  code          description
+    //  15-12   R/W  VCP0A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T0
+    //   11-8   R/W  VCP1A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T1
+    //    7-4   R/W  VCP2A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T2
+    //    3-0   R/W  VCP3A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T3
+    //
+    // 180012   CYCA0U  VRAM Cycle Pattern A0 Upper
+    //
+    //   bits   r/w  code          description
+    //  15-12   R/W  VCP4A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T4
+    //   11-8   R/W  VCP5A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T5
+    //    7-4   R/W  VCP6A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T6
+    //    3-0   R/W  VCP7A0(3-0)   VRAM-A0 (or VRAM-A) Timing for T7
+    //
+    // 180014   CYCA1L  VRAM Cycle Pattern A1 Lower
+    //
+    //   bits   r/w  code          description
+    //  15-12   R/W  VCP0A1(3-0)   VRAM-A1 Timing for T0
+    //   11-8   R/W  VCP1A1(3-0)   VRAM-A1 Timing for T1
+    //    7-4   R/W  VCP2A1(3-0)   VRAM-A1 Timing for T2
+    //    3-0   R/W  VCP3A1(3-0)   VRAM-A1 Timing for T3
+    //
+    // 180016   CYCA1U  VRAM Cycle Pattern A1 Upper
+    //
+    //   bits   r/w  code          description
+    //  15-12   R/W  VCP4A1(3-0)   VRAM-A1 Timing for T4
+    //   11-8   R/W  VCP5A1(3-0)   VRAM-A1 Timing for T5
+    //    7-4   R/W  VCP6A1(3-0)   VRAM-A1 Timing for T6
+    //    3-0   R/W  VCP7A1(3-0)   VRAM-A1 Timing for T7
+    //
+    // 180018   CYCB0L  VRAM Cycle Pattern B0 Lower
+    //
+    //   bits   r/w  code          description
+    //  15-12   R/W  VCP0B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T0
+    //   11-8   R/W  VCP1B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T1
+    //    7-4   R/W  VCP2B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T2
+    //    3-0   R/W  VCP3B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T3
+    //
+    // 18001A   CYCB0U  VRAM Cycle Pattern B0 Upper
+    //
+    //   bits   r/w  code          description
+    //  15-12   R/W  VCP4B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T4
+    //   11-8   R/W  VCP5B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T5
+    //    7-4   R/W  VCP6B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T6
+    //    3-0   R/W  VCP7B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T7
+    //
+    // 18001C   CYCB1L  VRAM Cycle Pattern B1 Lower
+    //
+    //   bits   r/w  code          description
+    //  15-12   R/W  VCP0B1(3-0)   VRAM-B1 Timing for T0
+    //   11-8   R/W  VCP1B1(3-0)   VRAM-B1 Timing for T1
+    //    7-4   R/W  VCP2B1(3-0)   VRAM-B1 Timing for T2
+    //    3-0   R/W  VCP3B1(3-0)   VRAM-B1 Timing for T3
+    //
+    // 18001E   CYCB1U  VRAM Cycle Pattern B1 Upper
+    //
+    //   bits   r/w  code          description
+    //  15-12   R/W  VCP4B1(3-0)   VRAM-B1 Timing for T4
+    //   11-8   R/W  VCP5B1(3-0)   VRAM-B1 Timing for T5
+    //    7-4   R/W  VCP6B1(3-0)   VRAM-B1 Timing for T6
+    //    3-0   R/W  VCP7B1(3-0)   VRAM-B1 Timing for T7
+    //
+    union CYC_t {
+        uint32 u32;
+        struct {
+            union {
+                uint16 u16;
+                struct {
+                    uint16 VCP3n : 4;
+                    uint16 VCP2n : 4;
+                    uint16 VCP1n : 4;
+                    uint16 VCP0n : 4;
+                };
+            } L;
+            union {
+                uint16 u16;
+                struct {
+                    uint16 VCP7n : 4;
+                    uint16 VCP6n : 4;
+                    uint16 VCP5n : 4;
+                    uint16 VCP4n : 4;
+                };
+            } U;
+        };
+    } CYCA0, CYCA1, CYCB0, CYCB1;
+
+    // -------------------------------------------------------------------------
 
     // CRAM has four modes specified by RAMCTL.CRMD. Each mode has some addressing quirks:
     //   0 - writes to the lower half are mirrored to the upper half and vice-versa
