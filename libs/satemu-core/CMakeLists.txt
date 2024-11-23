@@ -18,7 +18,10 @@ add_library(satemu-core
     include/satemu/util/size_ops.hpp
     include/satemu/util/unreachable.hpp
 
+
     src/satemu/satemu.cpp
+
+    src/satemu/sh2/sh2.cpp
 )
 add_library(satemu::satemu-core ALIAS satemu-core)
 set_target_properties(satemu-core PROPERTIES
