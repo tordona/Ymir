@@ -85,6 +85,14 @@ public:
         case 0x03A: return PLSZ.u16;
         case 0x03C: return MPOFN.u16;
         case 0x03E: return MPOFR.u16;
+        case 0x040: return MPN0.AB.u16;
+        case 0x042: return MPN0.CD.u16;
+        case 0x044: return MPN1.AB.u16;
+        case 0x046: return MPN1.CD.u16;
+        case 0x048: return MPN2.AB.u16;
+        case 0x04A: return MPN2.CD.u16;
+        case 0x04C: return MPN3.AB.u16;
+        case 0x04E: return MPN3.CD.u16;
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
         }
     }
@@ -118,6 +126,14 @@ public:
         case 0x03A: PLSZ.u16 = value; break;
         case 0x03C: MPOFN.u16 = value & 0x7777; break;
         case 0x03E: MPOFR.u16 = value & 0x0077; break;
+        case 0x040: MPN0.AB.u16 = value & 0x3F3F; break;
+        case 0x042: MPN0.CD.u16 = value & 0x3F3F; break;
+        case 0x044: MPN1.AB.u16 = value & 0x3F3F; break;
+        case 0x046: MPN1.CD.u16 = value & 0x3F3F; break;
+        case 0x048: MPN2.AB.u16 = value & 0x3F3F; break;
+        case 0x04A: MPN2.CD.u16 = value & 0x3F3F; break;
+        case 0x04C: MPN3.AB.u16 = value & 0x3F3F; break;
+        case 0x04E: MPN3.CD.u16 = value & 0x3F3F; break;
         default:
             fmt::println("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
             break;
@@ -151,6 +167,14 @@ private:
     PLSZ_t PLSZ;     // 18003A   PLSZ    Plane Size
     MPOFN_t MPOFN;   // 18003C   MPOFN   NBG0-3 Map Offset
     MPOFR_t MPOFR;   // 18003E   MPOFR   Rotation Parameter A/B Map Offset
+                     // 180040   MPABN0  NBG0 Normal Scroll Screen Map
+    MP_t MPN0;       // 180042   MPCDN0  NBG0 Normal Scroll Screen Map
+                     // 180044   MPABN1  NBG1 Normal Scroll Screen Map
+    MP_t MPN1;       // 180046   MPCDN1  NBG1 Normal Scroll Screen Map
+                     // 180048   MPABN2  NBG2 Normal Scroll Screen Map
+    MP_t MPN2;       // 18004A   MPCDN2  NBG2 Normal Scroll Screen Map
+                     // 18004C   MPABN3  NBG3 Normal Scroll Screen Map
+    MP_t MPN3;       // 18004E   MPCDN3  NBG3 Normal Scroll Screen Map
 
     // -------------------------------------------------------------------------
 

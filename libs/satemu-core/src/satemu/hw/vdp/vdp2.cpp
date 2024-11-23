@@ -25,6 +25,10 @@ void VDP2::Reset(bool hard) {
     PNCN3.u16 = 0x0;
     PNCR.u16 = 0x0;
     MPOFN.u16 = 0x0;
+    MPN0.u32 = 0x0;
+    MPN1.u32 = 0x0;
+    MPN2.u32 = 0x0;
+    MPN3.u32 = 0x0;
 }
 
 } // namespace satemu::vdp2

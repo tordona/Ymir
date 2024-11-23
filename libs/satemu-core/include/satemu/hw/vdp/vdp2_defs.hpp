@@ -464,4 +464,53 @@ union MPOFR_t {
     };
 };
 
+// 180040   MPABN0  NBG0 Normal Scroll Screen Map
+// 180042   MPCDN0  NBG0 Normal Scroll Screen Map
+// 180044   MPABN1  NBG1 Normal Scroll Screen Map
+// 180046   MPCDN1  NBG1 Normal Scroll Screen Map
+// 180048   MPABN2  NBG2 Normal Scroll Screen Map
+// 18004A   MPCDN2  NBG2 Normal Scroll Screen Map
+// 18004C   MPABN3  NBG3 Normal Scroll Screen Map
+// 18004E   MPCDN3  NBG3 Normal Scroll Screen Map
+//
+//   bits   r/w  code          description
+//  15-14   R    -             Reserved, must be zero
+//   13-8   R/W  xxMPy5-0      BG xx Plane y Map
+//    7-6   R    -             Reserved, must be zero
+//    5-0   R/W  xxMPy5-0      BG xx Plane y Map
+//
+// xx:
+//   N0 = NBG0 (MPyyN0)
+//   N1 = NBG1 (MPyyN1)
+//   N2 = NBG2 (MPyyN2)
+//   N3 = NBG3 (MPyyN3)
+// y:
+//   A = Plane A (bits  5-0 of MPABxx)
+//   B = Plane B (bits 13-8 of MPABxx)
+//   C = Plane C (bits  5-0 of MPCDxx)
+//   D = Plane D (bits 13-8 of MPCDxx)
+union MP_t {
+    uint32 u32;
+    struct {
+        union {
+            uint16 u16;
+            struct {
+                uint16 MPAn : 5;
+                uint16 _rsvd6_7 : 2;
+                uint16 MPBn : 5;
+                uint16 _rsvd14_15 : 2;
+            };
+        } AB;
+        union {
+            uint16 u16;
+            struct {
+                uint16 MPCn : 5;
+                uint16 _rsvd6_7 : 2;
+                uint16 MPDn : 5;
+                uint16 _rsvd14_15 : 2;
+            };
+        } CD;
+    };
+};
+
 } // namespace satemu::vdp2
