@@ -116,14 +116,23 @@ public:
         case 0x072: return 0; // SCXDN0 is write-only
         case 0x074: return 0; // SCYIN0 is write-only
         case 0x076: return 0; // SCYDN0 is write-only
+        case 0x078: return 0; // ZMXIN0 is write-only
+        case 0x07A: return 0; // ZMXDN0 is write-only
+        case 0x07C: return 0; // ZMYIN0 is write-only
+        case 0x07E: return 0; // ZMYDN0 is write-only
         case 0x080: return 0; // SCXIN1 is write-only
         case 0x082: return 0; // SCXDN1 is write-only
         case 0x084: return 0; // SCYIN1 is write-only
         case 0x086: return 0; // SCYDN1 is write-only
+        case 0x088: return 0; // ZMXIN1 is write-only
+        case 0x08A: return 0; // ZMXDN1 is write-only
+        case 0x08C: return 0; // ZMYIN1 is write-only
+        case 0x08E: return 0; // ZMYDN1 is write-only
         case 0x090: return 0; // SCXN2 is write-only
         case 0x092: return 0; // SCYN2 is write-only
         case 0x094: return 0; // SCXN3 is write-only
         case 0x096: return 0; // SCYN3 is write-only
+        case 0x098: return 0; // ZMCTL is write-only
         case 0x0B8: return 0; // OVPNRA is write-only
         case 0x0BA: return 0; // OVPNRB is write-only
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
@@ -190,14 +199,23 @@ public:
         case 0x072: SCN0.X.D.u16 = value & 0xFF00; break;
         case 0x074: SCN0.Y.I.u16 = value & 0x07FF; break;
         case 0x076: SCN0.Y.D.u16 = value & 0xFF00; break;
+        case 0x078: ZMN0.X.I.u16 = value & 0x0007; break;
+        case 0x07A: ZMN0.X.D.u16 = value & 0xFF00; break;
+        case 0x07B: ZMN0.Y.I.u16 = value & 0x0007; break;
+        case 0x07C: ZMN0.Y.D.u16 = value & 0xFF00; break;
         case 0x080: SCN1.X.I.u16 = value & 0x07FF; break;
         case 0x082: SCN1.X.D.u16 = value & 0xFF00; break;
         case 0x084: SCN1.Y.I.u16 = value & 0x07FF; break;
         case 0x086: SCN1.Y.D.u16 = value & 0xFF00; break;
+        case 0x088: ZMN1.X.I.u16 = value & 0x0007; break;
+        case 0x08A: ZMN1.X.D.u16 = value & 0xFF00; break;
+        case 0x08B: ZMN1.Y.I.u16 = value & 0x0007; break;
+        case 0x08C: ZMN1.Y.D.u16 = value & 0xFF00; break;
         case 0x090: SCN2.X.u16 = value & 0x07FF; break;
         case 0x092: SCN2.Y.u16 = value & 0x07FF; break;
         case 0x094: SCN3.X.u16 = value & 0x07FF; break;
         case 0x096: SCN3.Y.u16 = value & 0x07FF; break;
+        case 0x098: ZMCTL.u16 = value & 0x0303; break;
         case 0x0B8: OVPNRA = value; break;
         case 0x0BA: OVPNRB = value; break;
         default:
@@ -264,14 +282,23 @@ private:
                      // 180072   SCXDN0  NBG0 Horizontal Screen Scroll Value (fractional part)
                      // 180074   SCYIN0  NBG0 Vertical Screen Scroll Value (integer part)
     SCXYID_t SCN0;   // 180076   SCYDN0  NBG0 Vertical Screen Scroll Value (fractional part)
+                     // 180078   ZMXIN0  NBG0 Horizontal Coordinate Increment (integer part)
+                     // 18007A   ZMXDN0  NBG0 Horizontal Coordinate Increment (fractional part)
+                     // 18007C   ZMYIN0  NBG0 Vertical Coordinate Increment (integer part)
+    ZMXYID_t ZMN0;   // 18007E   ZMYDN0  NBG0 Vertical Coordinate Increment (fractional part)
                      // 180080   SCXIN1  NBG1 Horizontal Screen Scroll Value (integer part)
                      // 180082   SCXDN1  NBG1 Horizontal Screen Scroll Value (fractional part)
                      // 180084   SCYIN1  NBG1 Vertical Screen Scroll Value (integer part)
     SCXYID_t SCN1;   // 180086   SCYDN1  NBG1 Vertical Screen Scroll Value (fractional part)
+                     // 180088   ZMXIN1  NBG1 Horizontal Coordinate Increment (integer part)
+                     // 18008A   ZMXDN1  NBG1 Horizontal Coordinate Increment (fractional part)
+                     // 18008C   ZMYIN1  NBG1 Vertical Coordinate Increment (integer part)
+    ZMXYID_t ZMN1;   // 18008E   ZMYDN1  NBG1 Vertical Coordinate Increment (fractional part)
                      // 180090   SCXN2   NBG2 Horizontal Screen Scroll Value
     SCXY_t SCN2;     // 180092   SCYN2   NBG2 Vertical Screen Scroll Value
                      // 180094   SCXN3   NBG3 Horizontal Screen Scroll Value
     SCXY_t SCN3;     // 180096   SCYN3   NBG3 Vertical Screen Scroll Value
+    ZMCTL_t ZMCTL;   // 180098   ZMCTL   Reduction Enable
     OVPNR_t OVPNRA;  // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
     OVPNR_t OVPNRB;  // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
 

@@ -37,9 +37,12 @@ void VDP2::Reset(bool hard) {
     MPRB.ABCDEFGH.u64 = 0x0;
     MPRB.IJKLMNOP.u64 = 0x0;
     SCN0.u64 = 0x0;
+    ZMN0.u64 = 0x0;
     SCN1.u64 = 0x0;
+    ZMN1.u64 = 0x0;
     SCN2.u32 = 0x0;
     SCN3.u32 = 0x0;
+    ZMCTL.u16 = 0x0;
     OVPNRA = 0x0;
     OVPNRB = 0x0;
 }

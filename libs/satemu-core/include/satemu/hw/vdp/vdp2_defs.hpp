@@ -790,6 +790,62 @@ union SCXYID_t {
     };
 };
 
+// 180078   ZMXIN0  NBG0 Horizontal Coordinate Increment (integer part)
+// 18007A   ZMXDN0  NBG0 Horizontal Coordinate Increment (fractional part)
+// 18007C   ZMYIN0  NBG0 Vertical Coordinate Increment (integer part)
+// 18007E   ZMYDN0  NBG0 Vertical Coordinate Increment (fractional part)
+// 180088   ZMXIN1  NBG1 Horizontal Coordinate Increment (integer part)
+// 18008A   ZMXDN1  NBG1 Horizontal Coordinate Increment (fractional part)
+// 18008C   ZMYIN1  NBG1 Vertical Coordinate Increment (integer part)
+// 18008E   ZMYDN1  NBG1 Vertical Coordinate Increment (fractional part)
+//
+// ZMdINx:  (d=X,Y; x=0,1)
+//   bits   r/w  code          description
+//   15-3        -             Reserved, must be zero
+//    2-0     W  NxZMdI2-0     Horizontal/Vertical Coordinate Increment (integer part)
+//
+// ZMdDNx:  (d=X,Y; x=0,1)
+//   bits   r/w  code          description
+//   15-8     W  NxZMdD1-8     Horizontal/Vertical Coordinate Increment (fractional part)
+//    7-0        -             Reserved, must be zero
+union ZMXYID_t {
+    uint64 u64;
+    struct {
+        struct {
+            union {
+                uint16 u16;
+                struct {
+                    uint16 NZMXI : 3;
+                    uint16 _rsvd11_15 : 13;
+                };
+            } I;
+            union {
+                uint16 u16;
+                struct {
+                    uint16 _rsvd0_7 : 8;
+                    uint16 NZMXD : 8;
+                };
+            } D;
+        } X;
+        struct {
+            union {
+                uint16 u16;
+                struct {
+                    uint16 NZMYI : 3;
+                    uint16 _rsvd11_15 : 13;
+                };
+            } I;
+            union {
+                uint16 u16;
+                struct {
+                    uint16 _rsvd0_7 : 8;
+                    uint16 NZMYD : 8;
+                };
+            } D;
+        } Y;
+    };
+};
+
 // 180090   SCXN2   NBG2 Horizontal Screen Scroll Value
 // 180092   SCYN2   NBG2 Vertical Screen Scroll Value
 // 180094   SCXN3   NBG3 Horizontal Screen Scroll Value
@@ -816,6 +872,33 @@ union SCXY_t {
                 uint16 _rsvd11_15 : 5;
             };
         } Y;
+    };
+};
+
+// 180098   ZMCTL   Reduction Enable
+//
+//   bits   r/w  code          description
+//  15-10        -             Reserved, must be zero
+//      9     W  N1ZMQT        NBG1 Zoom Quarter
+//      8     W  N1ZMHF        NBG1 Zoom Half
+//    7-2        -             Reserved, must be zero
+//      1     W  N0ZMQT        NBG0 Zoom Quarter
+//      0     W  N0ZMHF        NBG0 Zoom Half
+//
+//  NxZMQT,NxZMHF:
+//       0,0   no horizontal reduction, no restrictions
+//       0,1   up to 1/2 horizontal reduction, max 256 character colors
+//       1,0   up to 1/4 horizontal reduction, max 16 character colors
+//       1,1   up to 1/4 horizontal reduction, max 16 character colors
+union ZMCTL_t {
+    uint16 u16;
+    struct {
+        uint16 N0ZMHF : 1;
+        uint16 N0ZMQT : 1;
+        uint16 _rsvd2_7 : 6;
+        uint16 N1ZMHF : 1;
+        uint16 N1ZMQT : 1;
+        uint16 _rsvd10_15 : 6;
     };
 };
 
