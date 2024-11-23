@@ -4,7 +4,12 @@
 
 #include <satemu/hw/hw_defs.hpp>
 
+#include <satemu/util/data_ops.hpp>
+#include <satemu/util/size_ops.hpp>
+
 #include <fmt/format.h>
+
+#include <array>
 
 namespace satemu {
 
@@ -16,24 +21,22 @@ public:
 
     template <mem_access_type T>
     T ReadVRAM(uint32 address) {
-        fmt::println("unhandled {}-bit VDP2 VRAM read from {:02X}", sizeof(T) * 8, address);
-        return 0;
+        return util::ReadBE<T>(&m_VRAM[address & 0x7FFFF]);
     }
 
     template <mem_access_type T>
     void WriteVRAM(uint32 address, T value) {
-        fmt::println("unhandled {}-bit VDP2 VRAM write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+        util::WriteBE<T>(&m_VRAM[address & 0x7FFFF], value);
     }
 
     template <mem_access_type T>
     T ReadCRAM(uint32 address) {
-        fmt::println("unhandled {}-bit VDP2 CRAM read from {:02X}", sizeof(T) * 8, address);
-        return 0;
+        return util::ReadBE<T>(&m_CRAM[address & 0xFFF]);
     }
 
     template <mem_access_type T>
     void WriteCRAM(uint32 address, T value) {
-        fmt::println("unhandled {}-bit VDP2 CRAM write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+        util::WriteBE<T>(&m_CRAM[address & 0xFFF], value);
     }
 
     template <mem_access_type T>
@@ -48,6 +51,8 @@ public:
     }
 
 private:
+    std::array<uint8, 512_KiB> m_VRAM;
+    std::array<uint8, 4_KiB> m_CRAM;
 };
 
 } // namespace satemu

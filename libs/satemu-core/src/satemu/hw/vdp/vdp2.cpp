@@ -6,6 +6,9 @@ VDP2::VDP2() {
     Reset(true);
 }
 
-void VDP2::Reset(bool hard) {}
+void VDP2::Reset(bool hard) {
+    m_VRAM.fill(0);
+    m_CRAM.fill(0);
+}
 
 } // namespace satemu
