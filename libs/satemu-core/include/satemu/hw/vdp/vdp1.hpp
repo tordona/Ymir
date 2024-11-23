@@ -51,8 +51,8 @@ public:
     }
 
 private:
-    std::array<uint8, 512_KiB> m_VRAM;
-    std::array<std::array<uint8, 256_KiB>, 2> m_framebuffers;
+    std::array<uint8, kVDP1VRAMSize> m_VRAM;
+    std::array<std::array<uint8, kFramebufferRAMSize>, 2> m_framebuffers;
     size_t m_drawFB;
 };
 

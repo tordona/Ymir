@@ -39,14 +39,14 @@ namespace satemu {
 // - Unless otherwise specified, all regions are mirrored across the designated area
 // - Addresses 0x200'0000..0x58F'FFFF comprise the SCU A-Bus
 // - Addresses 0x5A0'0000..0x5FB'FFFF comprise the SCU B-Bus
-// - A-Bus and B-Bus reads are always 32-bit (split into two 16-bit reads internally)
-// - A-Bus and B-Bus 32-bit writes are split into two 16-bit writes internally
+// - [TODO] A-Bus and B-Bus reads are always 32-bit (split into two 16-bit reads internally)
+// - [TODO] A-Bus and B-Bus 32-bit writes are split into two 16-bit writes internally
 // - 68000 Work RAM
-//   - Area size depends on MEM4MB bit setting:
+//   - [TODO] Area size depends on MEM4MB bit setting:
 //       0=only first 256 KiB are used/mirrored
 //       1=all 512 KiB are used/mirrored
 // - VDP2 CRAM
-//   - Byte writes write garbage to the odd/even byte counterpart
+//   - [TODO] Byte writes write garbage to the odd/even byte counterpart
 //   - Byte reads work normally
 class SCU {
 public:

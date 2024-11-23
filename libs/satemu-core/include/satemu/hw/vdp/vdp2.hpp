@@ -5,7 +5,6 @@
 #include <satemu/hw/hw_defs.hpp>
 
 #include <satemu/util/data_ops.hpp>
-#include <satemu/util/size_ops.hpp>
 
 #include <fmt/format.h>
 
@@ -51,8 +50,8 @@ public:
     }
 
 private:
-    std::array<uint8, 512_KiB> m_VRAM;
-    std::array<uint8, 4_KiB> m_CRAM;
+    std::array<uint8, kVDP2VRAMSize> m_VRAM; // 4x 128 KiB banks: A0, A1, B0, B1
+    std::array<uint8, kCRAMSize> m_CRAM;
 };
 
 } // namespace satemu
