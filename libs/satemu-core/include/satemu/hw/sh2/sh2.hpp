@@ -116,8 +116,8 @@ private:
 
     // --- SCI module ---
     //
-    // addr r/w  access   init  code    name
-    // 000  R/W  8        00    SMR     Serial Mode Register
+    // addr r/w  access   init      code    name
+    // 000  R/W  8        00        SMR     Serial Mode Register
     //
     //   b  r/w  code  description
     //   7  R/W  C/nA  Communication Mode (0=async, 1=clocked sync)
@@ -129,27 +129,27 @@ private:
     //   1  R/W  CKS1  Clock Select bit 1  (00=phi/4,  01=phi/16,
     //   0  R/W  CKS0  Clock Select bit 0   10=phi/64, 11=phi/256)
     //
-    // 001  R/W  8        FF    BRR     Bit Rate Register
-    // 002  R/W  8        00    SCR     Serial Control Register
-    // 003  R/W  8        FF    TDR     Transmit Data Register
-    // 004  R/W* 8        84    SSR     Serial Status Register
+    // 001  R/W  8        FF        BRR     Bit Rate Register
+    // 002  R/W  8        00        SCR     Serial Control Register
+    // 003  R/W  8        FF        TDR     Transmit Data Register
+    // 004  R/W* 8        84        SSR     Serial Status Register
     //   * Can only write a 0 to clear the flags
     //
-    // 005  R    8        00    RDR     Receive Data Register
+    // 005  R    8        00        RDR     Receive Data Register
     //
     // --- FRT module ---
     //
-    // 010  ?    8        ??    TIER    ???
-    // 011  ?    8        ??    FTCSR   ???
-    // 012  ?    8        ??    FRC     ???
-    // 013  ?    16?      ??    OCRA/B  ???
-    // 015  ?    16?      ??    TCR     ???
-    // 017  ?    8        ??    TOCR    ???
-    // 018  ?    16?      ??    FICR    ???
+    // 010  ?    8        ??        TIER    ???
+    // 011  ?    8        ??        FTCSR   ???
+    // 012  ?    8        ??        FRC     ???
+    // 013  ?    16?      ??        OCRA/B  ???
+    // 015  ?    16?      ??        TCR     ???
+    // 017  ?    8        ??        TOCR    ???
+    // 018  ?    16?      ??        FICR    ???
     //
     // --- INTC module ---
 
-    // 060  R/W  8,16     0000  IPRB    Interrupt priority setting register B
+    // 060  R/W  8,16     0000      IPRB    Interrupt priority setting register B
     //
     //   bits   r/w  code       description
     //   15-12  R/W  SCIIP3-0   Serial Communication Interface (SCI) Interrupt Priority Level
@@ -166,7 +166,7 @@ private:
         };
     } IPRB;
 
-    // 062  R/W  8,16     0000  VCRA    Vector number setting register A
+    // 062  R/W  8,16     0000      VCRA    Vector number setting register A
     //
     //   bits   r/w  code     description
     //     15   R    -        Reserved - must be zero
@@ -183,7 +183,7 @@ private:
         };
     } VCRA;
 
-    // 064  R/W  8,16     0000  VCRB    Vector number setting register B
+    // 064  R/W  8,16     0000      VCRB    Vector number setting register B
     //
     //   bits   r/w  code     description
     //     15   R    -        Reserved - must be zero
@@ -200,7 +200,7 @@ private:
         };
     } VCRB;
 
-    // 066  R/W  8,16     0000  VCRC    Vector number setting register C
+    // 066  R/W  8,16     0000      VCRC    Vector number setting register C
     //
     //   bits   r/w  code     description
     //     15   R    -        Reserved - must be zero
@@ -217,7 +217,7 @@ private:
         };
     } VCRC;
 
-    // 068  R/W  8,16     0000  VCRD    Vector number setting register D
+    // 068  R/W  8,16     0000      VCRD    Vector number setting register D
     //
     //   bits   r/w  code     description
     //     15   R    -        Reserved - must be zero
@@ -232,7 +232,7 @@ private:
         };
     } VCRD;
 
-    // 0E0  R/W  8,16     0000  ICR     Interrupt control register
+    // 0E0  R/W  8,16     0000      ICR     Interrupt control register
     //
     //   bits   r/w  code   description
     //     15   R    NMIL   NMI Input Level
@@ -255,7 +255,7 @@ private:
         };
     } ICR;
 
-    // 0E2  R/W  8,16     0000  IPRA    Interrupt priority setting register A
+    // 0E2  R/W  8,16     0000      IPRA    Interrupt priority setting register A
     //
     //   bits   r/w  code       description
     //   15-12  R/W  DIVUIP3-0  Division Unit (DIVU) Interrupt Priority Level
@@ -280,7 +280,7 @@ private:
         };
     } IPRA;
 
-    // 0E4  R/W  8,16     0000  VCRWDT  Vector number setting register WDT
+    // 0E4  R/W  8,16     0000      VCRWDT  Vector number setting register WDT
     //
     //   bits   r/w  code     description
     //     15   R    -        Reserved - must be zero
@@ -299,22 +299,22 @@ private:
 
     // --- DMAC module ---
     //
-    // 071  ?    8        ??    DRCR0   ???
-    // 072  ?    8        ??    DRCR1   ???
+    // 071  ?    8        ??        DRCR0   ???
+    // 072  ?    8        ??        DRCR1   ???
     //
     // --- WDT module ---
     //
-    // 080  R    8        ??    WTCSR   ???
-    // 081  R    8        ??    WTCNT   ???
-    // 083  R    8        ??    RSTCSR  ???
+    // 080  R    8        ??        WTCSR   ???
+    // 081  R    8        ??        WTCNT   ???
+    // 083  R    8        ??        RSTCSR  ???
     //
-    // 080  W    8        ??    WTCSR   ???
-    // 080  W    8        ??    WTCNT   ???
-    // 082  W    8        ??    RSTCSR  ???
+    // 080  W    8        ??        WTCSR   ???
+    // 080  W    8        ??        WTCNT   ???
+    // 082  W    8        ??        RSTCSR  ???
     //
     // --- Power-down module ---
     //
-    // 091  ?    8        ??    SBYCR   ???
+    // 091  ?    8        ??        SBYCR   ???
     //
     // --- Cache module ---
 
@@ -333,7 +333,7 @@ private:
     };
     alignas(16) std::array<CacheEntry, kCacheEntries> m_cacheEntries;
 
-    // 092  R/W  8        00    CCR     Cache Control Register
+    // 092  R/W  8        00        CCR     Cache Control Register
     //
     //   bits   r/w  code   description
     //      7   R/W  W1     Way Specification (MSB)
@@ -363,51 +363,71 @@ private:
 
     // --- DIVU module ---
     //
-    // 100  ?    32?      ??    DVSR    ???
-    // 104  ?    32?      ??    DVDNT   ???
-    // 108  ?    32?      ??    DVCR    ???
+    // 100  R/W  32       ud        DVSR    Divisor register
+    //
+    //   bits   r/w  code   description
+    //   31-0   R/W  -      Divisor number
 
-    // 10C  R/W  16,32    ??    VCRDIV  Vector number register setting DIV
+    // 104  R/W  32       ud        DVDNT   Dividend register L for 32-bit division
+    //
+    //   bits   r/w  code   description
+    //   31-0   R/W  -      32-bit dividend number
+
+    // 108  R/W  16,32    00000000  DVCR    Division control register
+    //
+    //   bits   r/w  code   description
+    //   31-2   R    -      Reserved - must be zero
+    //      1   R/W  OVFIE  OVF interrupt enable (0=disabled, 1=enabled)
+    //      0   R/W  OVF    Overflow Flag (0=no overflow, 1=overflow)
+
+    // 10C  R/W  16,32    ud        VCRDIV  Vector number register setting DIV
     //
     //   bits   r/w  code   description
     //  31-16   R    -      Reserved - must be zero
     //   15-0   R/W  -      Interrupt Vector Number
     uint16 VCRDIV;
 
-    // 110  ?    32?      ??    DVDNTH  ???
-    // 114  ?    32?      ??    DVDNTL  ???
+    // 110  R/W  32       ud        DVDNTH  Dividend register H
+    //
+    //   bits   r/w  code   description
+    //   31-0   R/W  -      64-bit dividend number (upper half)
+
+    // 114  R/W  32       ud        DVDNTL  Dividend register L
+    //
+    //   bits   r/w  code   description
+    //   31-0   R/W  -      64-bit dividend number (lower half)
 
     // 120..13F are mirrors of 100..11F
 
     // --- UBC module (channel A) ---
     //
-    // 140  ?    16?      ??    BARAH   ???
-    // 142  ?    16?      ??    BARAL   ???
-    // 144  ?    16?      ??    BAMRAH  ???
-    // 146  ?    16?      ??    BAMRAL  ???
-    // 148  ?    16?      ??    BBRA    ???
+    // 140  ?    16?      ??        BARAH   ???
+    // 142  ?    16?      ??        BARAL   ???
+    // 144  ?    16?      ??        BAMRAH  ???
+    // 146  ?    16?      ??        BAMRAL  ???
+    // 148  ?    16?      ??        BBRA    ???
     //
     // --- UBC module (channel B) ---
     //
-    // 160  ?    16?      ??    BARBH   ???
-    // 162  ?    16?      ??    BARBL   ???
-    // 164  ?    16?      ??    BAMRBH  ???
-    // 166  ?    16?      ??    BAMRBL  ???
-    // 168  ?    16?      ??    BBRB    ???
-    // 170  ?    16?      ??    BDRBH   ???
-    // 172  ?    16?      ??    BDRBL   ???
-    // 174  ?    16?      ??    BDMRBH  ???
-    // 176  ?    16?      ??    BDMRBL  ???
-    // 178  ?    16?      ??    BRCR    ???
+    // 160  ?    16?      ??        BARBH   ???
+    // 162  ?    16?      ??        BARBL   ???
+    // 164  ?    16?      ??        BAMRBH  ???
+    // 166  ?    16?      ??        BAMRBL  ???
+    // 168  ?    16?      ??        BBRB    ???
+    // 170  ?    16?      ??        BDRBH   ???
+    // 172  ?    16?      ??        BDRBL   ???
+    // 174  ?    16?      ??        BDMRBH  ???
+    // 176  ?    16?      ??        BDMRBL  ???
+    // 178  ?    16?      ??        BRCR    ???
     //
     // --- DMAC module ---
 
-    // 180  ?    32?      ??    SAR0    ???
-    // 184  ?    32?      ??    DAR0    ???
-    // 188  ?    32?      ??    TCR0    ???
-    // 18C  ?    32?      ??    CHCR0   ???
+    // 180  ?    32?      ??        SAR0    ???
+    // 184  ?    32?      ??        DAR0    ???
+    // 188  ?    32?      ??        TCR0    ???
+    // 18C  ?    32?      ??        CHCR0   ???
 
-    // 1A0  R/W  32       ??    VCRDMA0 DMA vector number register 0
+    // 1A0  R/W  32       ud        VCRDMA0 DMA vector number register 0
     //
     //   bits   r/w  code   description
     //   31-8   R    -      Reserved - must be zero
@@ -415,23 +435,23 @@ private:
     uint8 VCRDMA0;
 
     //
-    // 190  ?    32?      ??    SAR1    ???
-    // 194  ?    32?      ??    DAR1    ???
-    // 198  ?    32?      ??    TCR1    ???
-    // 19C  ?    32?      ??    CHCR1   ???
+    // 190  ?    32?      ??        SAR1    ???
+    // 194  ?    32?      ??        DAR1    ???
+    // 198  ?    32?      ??        TCR1    ???
+    // 19C  ?    32?      ??        CHCR1   ???
 
-    // 1A8  R/W  32       ??    VCRDMA1 DMA vector number register 1
+    // 1A8  R/W  32       ud        VCRDMA1 DMA vector number register 1
     //
     //   bits   r/w  code   description
     //   31-8   R    -      Reserved - must be zero
     //    7-0   R/W  VC7-0  Vector Number
     uint8 VCRDMA1;
 
-    // 1B0  ?    32?      ??    DMAOR   ???
+    // 1B0  ?    32?      ??        DMAOR   ???
     //
     // --- BSC module ---
     //
-    // 1E0  R/W  16,32    03F0  BCR1    Bus Control Register 1
+    // 1E0  R/W  16,32    03F0      BCR1    Bus Control Register 1
     union BCR1_t {
         uint16 u16;
         struct {
@@ -450,7 +470,7 @@ private:
         uint16 u15 : 15;
     } BCR1;
 
-    // 1E4  R/W  16,32    00FC  BCR2    Bus Control Register 2
+    // 1E4  R/W  16,32    00FC      BCR2    Bus Control Register 2
     union BCR2_t {
         uint16 u16;
         struct {
@@ -462,7 +482,7 @@ private:
         };
     } BCR2;
 
-    // 1E8  R/W  16,32    AAFF  WCR     Wait Control Register
+    // 1E8  R/W  16,32    AAFF      WCR     Wait Control Register
     union WCR_t {
         uint16 u16;
         struct {
@@ -477,7 +497,7 @@ private:
         };
     } WCR;
 
-    // 1EC  R/W  16,32    0000  MCR     Individual Memory Control Register
+    // 1EC  R/W  16,32    0000      MCR     Individual Memory Control Register
     union MCR_t {
         uint16 u16;
         struct {
@@ -499,7 +519,7 @@ private:
         };
     } MCR;
 
-    // 1F0  R/W  16,32    0000  RTCSR   Refresh Timer Control/Status Register
+    // 1F0  R/W  16,32    0000      RTCSR   Refresh Timer Control/Status Register
     union RTCSR_t {
         uint16 u16;
         struct {
@@ -512,10 +532,10 @@ private:
         };
     } RTCSR;
 
-    // 1F4  R/W  16,32    0000  RTCNT   Refresh Timer Counter
+    // 1F4  R/W  16,32    0000      RTCNT   Refresh Timer Counter
     uint8 RTCNT;
 
-    // 1F8  R/W  16,32    0000  RTCOR   Refresh Timer Constant Register
+    // 1F8  R/W  16,32    0000      RTCOR   Refresh Timer Constant Register
     uint8 RTCOR;
 
     template <mem_access_type T>
