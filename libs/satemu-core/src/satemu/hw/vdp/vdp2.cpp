@@ -50,6 +50,8 @@ void VDP2::Reset(bool hard) {
     LSTA0.u32 = 0x0;
     LSTA1.u32 = 0x0;
     LCTA.u32 = 0x0;
+    RPMD.u16 = 0x0;
+    RPRCTL.u16 = 0x0;
     OVPNRA = 0x0;
     OVPNRB = 0x0;
 }

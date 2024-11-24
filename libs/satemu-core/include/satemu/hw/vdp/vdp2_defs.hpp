@@ -1121,6 +1121,48 @@ union BKTA_t {
     };
 };
 
+// 1800B0   RPMD    Rotation Parameter Mode
+//
+//   bits   r/w  code          description
+//   15-2        -             Reserved, must be zero
+//    1-0     W  RPMD1-0       Rotation Parameter Mode
+//                               00 (0) = Rotation Parameter A
+//                               01 (1) = Rotation Parameter B
+//                               10 (2) = Screens switched via coeff. data from RPA table
+//                               11 (3) = Screens switched via rotation parameter window
+union RPMD_t {
+    uint16 u16;
+    struct {
+        uint16 RPMDn : 2;
+        uint16 _rsvd2_15 : 14;
+    };
+};
+
+// 1800B2   RPRCTL  Rotation Parameter Read Control
+//
+//   bits   r/w  code          description
+//  15-11        -             Reserved, must be zero
+//     10     W  RBKASTRE      Enable for KA-st of Rotation Parameter B
+//      9     W  RBYSTRE       Enable for Y-st of Rotation Parameter B
+//      8     W  RBXSTRE       Enable for X-st of Rotation Parameter B
+//    7-3        -             Reserved, must be zero
+//      2     W  RAKASTRE      Enable for KA-st of Rotation Parameter A
+//      1     W  RAYSTRE       Enable for Y-st of Rotation Parameter A
+//      0     W  RAXSTRE       Enable for X-st of Rotation Parameter A
+union RPRCTL_t {
+    uint16 u16;
+    struct {
+        uint16 RAXSTRE : 1;
+        uint16 RAYSTRE : 1;
+        uint16 RABKSTRE : 1;
+        uint16 _rsvd3_7 : 5;
+        uint16 RBXSTRE : 1;
+        uint16 RBYSTRE : 1;
+        uint16 RBBKSTRE : 1;
+        uint16 _rsvd11_15 : 5;
+    };
+};
+
 // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
 // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
 //
