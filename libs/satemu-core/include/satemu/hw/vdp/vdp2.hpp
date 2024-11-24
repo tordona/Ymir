@@ -170,6 +170,12 @@ public:
         case 0x0DA: return 0; // LWTA0L is read-only
         case 0x0DC: return 0; // LWTA1U is read-only
         case 0x0DE: return 0; // LWTA1L is read-only
+        case 0x114: return 0; // COAR is read-only
+        case 0x116: return 0; // COAG is read-only
+        case 0x118: return 0; // COAB is read-only
+        case 0x11A: return 0; // COBR is read-only
+        case 0x11C: return 0; // COBG is read-only
+        case 0x11E: return 0; // COBB is read-only
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
         }
     }
@@ -288,6 +294,12 @@ public:
         case 0x0DA: LWTA0.L.u16 = value & 0xFFFE; break;
         case 0x0DC: LWTA1.U.u16 = value & 0x8007; break;
         case 0x0DE: LWTA1.L.u16 = value & 0xFFFE; break;
+        case 0x114: COAR.u16 = value & 0x01FF; break;
+        case 0x116: COAG.u16 = value & 0x01FF; break;
+        case 0x118: COAB.u16 = value & 0x01FF; break;
+        case 0x11A: COBR.u16 = value & 0x01FF; break;
+        case 0x11C: COBG.u16 = value & 0x01FF; break;
+        case 0x11E: COBB.u16 = value & 0x01FF; break;
         default:
             fmt::println("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
             break;
@@ -424,6 +436,7 @@ private:
                      // 1800F8
                      // 1800FA
                      // 1800FC
+                     // 1800FE   -       Reserved
                      // 180100
                      // 180102
                      // 180104
@@ -434,12 +447,12 @@ private:
                      // 18010E
                      // 180110
                      // 180112
-                     // 180114
-                     // 180116
-                     // 180118
-                     // 18011A
-                     // 18011C
-                     // 18011E
+    CO_t COAR;       // 180114   COAR    Color Offset A - Red
+    CO_t COAG;       // 180116   COAG    Color Offset A - Green
+    CO_t COAB;       // 180118   COAB    Color Offset A - Blue
+    CO_t COBR;       // 18011A   COBR    Color Offset B - Red
+    CO_t COBG;       // 18011C   COBG    Color Offset B - Green
+    CO_t COBB;       // 18011E   COBB    Color Offset B - Blue
 
     // -------------------------------------------------------------------------
 

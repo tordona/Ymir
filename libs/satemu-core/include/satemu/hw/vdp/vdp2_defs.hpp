@@ -1531,4 +1531,24 @@ union LWTA_t {
     };
 };
 
+// 180114   COAR    Color Offset A - Red
+// 180116   COAG    Color Offset A - Green
+// 180118   COAB    Color Offset A - Blue
+// 18011A   COBR    Color Offset B - Red
+// 18011C   COBG    Color Offset B - Green
+// 18011E   COBB    Color Offset B - Blue
+//
+//   bits   r/w  code          description
+//   15-9        -             Reserved, must be zero
+//    8-0     W  COxc8-0       Color Offset Value
+//
+// x: A,B; c: R,G,B
+union CO_t {
+    uint16_t u16;
+    struct {
+        uint16 COxcn : 9;
+        uint16 _rsvd9_15 : 7;
+    };
+};
+
 } // namespace satemu::vdp2
