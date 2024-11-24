@@ -56,6 +56,7 @@ void VDP2::Reset(bool hard) {
     KTAOF.u16 = 0x0;
     OVPNRA = 0x0;
     OVPNRB = 0x0;
+    RPTA.u32 = 0x0;
 }
 
 } // namespace satemu::vdp2

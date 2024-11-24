@@ -152,6 +152,8 @@ public:
         case 0x0B6: return 0; // KTAOF is write-only
         case 0x0B8: return 0; // OVPNRA is write-only
         case 0x0BA: return 0; // OVPNRB is write-only
+        case 0x0BC: return 0; // RPTAU is write-only
+        case 0x0BE: return 0; // RPTAL is write-only
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
         }
     }
@@ -252,6 +254,8 @@ public:
         case 0x0B6: KTAOF.u16 = value & 0x0707; break;
         case 0x0B8: OVPNRA = value; break;
         case 0x0BA: OVPNRB = value; break;
+        case 0x0BC: RPTA.U.u16 = value & 0x0007; break;
+        case 0x0BE: RPTA.L.u16 = value & 0xFFFE; break;
         default:
             fmt::println("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
             break;
@@ -355,6 +359,55 @@ private:
     KTAOF_t KTAOF;   // 1800B6   KTAOF   Coefficient Table Address Offset
     OVPNR_t OVPNRA;  // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
     OVPNR_t OVPNRB;  // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
+                     // 1800BC   RPTAU   Rotation Parameters Table Address (upper)
+    RPTA_t RPTA;     // 1800BE   RPTAL   Rotation Parameters Table Address (lower)
+                     // 1800C0
+                     // 1800C2
+                     // 1800C4
+                     // 1800C6
+                     // 1800C8
+                     // 1800CA
+                     // 1800CC
+                     // 1800CE
+                     // 1800D0
+                     // 1800D2
+                     // 1800D4
+                     // 1800D6
+                     // 1800D8
+                     // 1800DA
+                     // 1800DC
+                     // 1800DE
+                     // 1800E0
+                     // 1800E2
+                     // 1800E4
+                     // 1800E6
+                     // 1800E8
+                     // 1800EA
+                     // 1800EC
+                     // 1800EE
+                     // 1800F0
+                     // 1800F2
+                     // 1800F4
+                     // 1800F6
+                     // 1800F8
+                     // 1800FA
+                     // 1800FC
+                     // 180100
+                     // 180102
+                     // 180104
+                     // 180106
+                     // 180108
+                     // 18010A
+                     // 18010C
+                     // 18010E
+                     // 180110
+                     // 180112
+                     // 180114
+                     // 180116
+                     // 180118
+                     // 18011A
+                     // 18011C
+                     // 18011E
 
     // -------------------------------------------------------------------------
 

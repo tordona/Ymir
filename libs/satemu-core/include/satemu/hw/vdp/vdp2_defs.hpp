@@ -1232,4 +1232,39 @@ union KTAOF_t {
 //   B = Rotation Parameter B (OVPNRB)
 using OVPNR_t = uint16;
 
+// 1800BC   RPTAU   Rotation Parameters Table Address (upper)
+//
+//   bits   r/w  code          description
+//   15-3        -             Reserved, must be zero
+//    2-0     W  RPTA18-16     Rotation Parameters Table Base Address (bits 18-16)
+//
+// 1800BE   RPTAL   Rotation Parameters Table Address (lower)
+//
+//   bits   r/w  code          description
+//   15-1     W  RPTA15-1      Rotation Parameters Table Base Address (bits 15-0)
+//      0        -             Reserved, must be zero
+union RPTA_t {
+    uint32 u32;
+    struct {
+        union {
+            uint16 u16;
+            struct {
+                uint16 _rsvd0 : 1;
+                uint16 RPTAn : 15;
+            };
+        } L;
+        union {
+            uint16 u16;
+            struct {
+                uint16 RPTAn : 3;
+                uint16 _rsvd3_15 : 13;
+            };
+        } U;
+    };
+    struct {
+        uint32 : 1;
+        uint32 RPTAn : 18;
+    };
+};
+
 } // namespace satemu::vdp2
