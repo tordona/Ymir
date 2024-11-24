@@ -176,6 +176,8 @@ public:
         case 0x0E6: return 0; // CRAOFB is write-only
         case 0x0E8: return 0; // LNCLEN is write-only
         case 0x0EA: return 0; // SFPRMD is write-only
+        case 0x0EC: return 0; // CCCTL is write-only
+        case 0x0EE: return 0; // SFCCMD is write-only
         case 0x0F0: return 0; // PRISA is write-only
         case 0x0F2: return 0; // PRISB is write-only
         case 0x0F4: return 0; // PRISC is write-only
@@ -323,6 +325,7 @@ public:
         case 0x0E6: CRAOFA.u16 = value & 0x0077; break;
         case 0x0E8: LNCLEN.u16 = value & 0x003F; break;
         case 0x0EA: SFPRMD.u16 = value & 0x03FF; break;
+        case 0x0EC: CCCTL.u16 = value & 0xF77F; break;
         case 0x0F0: PRISA.u16 = value & 0x0707; break;
         case 0x0F2: PRISB.u16 = value & 0x0707; break;
         case 0x0F4: PRISC.u16 = value & 0x0707; break;
@@ -473,7 +476,7 @@ private:
     CRAOFB_t CRAOFB; // 1800E6   CRAOFB  RBG0 and Sprite Color RAM Address Offset
     LNCLEN_t LNCLEN; // 1800E8   LNCLEN  Line Color Screen Enable
     SFPRMD_t SFPRMD; // 1800EA   SFPRMD  Special Priority Mode
-                     // 1800EC
+    CCCTL_t CCCTL;   // 1800EC   CCCTL   Color Calculation Control
                      // 1800EE
     PRI_t PRISA;     // 1800F0   PRISA   Sprite 0 and 1 Priority Number
     PRI_t PRISB;     // 1800F2   PRISB   Sprite 2 and 3 Priority Number

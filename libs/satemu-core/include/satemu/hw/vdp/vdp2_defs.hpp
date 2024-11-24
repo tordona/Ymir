@@ -1681,6 +1681,53 @@ union SFPRMD_t {
     };
 };
 
+// 1800EC   CCCTL   Color Calculation Control
+//
+//   bits   r/w  code          description
+//     15     W  BOKEN         Gradation Enable (0=disable, 1=enable)
+//  14-12     W  BOKN2-0       Gradation Screen Number
+//                               000 (0) = Sprite
+//                               001 (1) = RBG0
+//                               010 (2) = NBG0/RBG1
+//                               011 (3) = Invalid
+//                               100 (4) = NBG1/EXBG
+//                               101 (5) = NBG2
+//                               110 (6) = NBG3
+//                               111 (7) = Invalid
+//     11        -             Reserved, must be zero
+//     10     W  EXCCEN        Extended Color Calculation Enable (0=disable, 1=enable)
+//      9     W  CCRTMD        Color Calculation Ratio Mode (0=top screen side, 1=second screen side)
+//      8     W  CCMD          Color Calculation Mode (0=use color calculation register, 1=as is)
+//      7        -             Reserved, must be zero
+//      6     W  SPCCEN        Sprite Color Calculation Enable
+//      5     W  LCCCEN        Line Color Color Calculation Enable
+//      4     W  R0CCEN        RBG0 Color Calculation Enable
+//      3     W  N3CCEN        NBG3 Color Calculation Enable
+//      2     W  N2CCEN        NBG2 Color Calculation Enable
+//      1     W  N1CCEN        NBG1 Color Calculation Enable
+//      0     W  N0CCEN        NBG0 Color Calculation Enable
+//
+// xxCCEN: 0=disable, 1=enable
+union CCCTL_t {
+    uint16 u16;
+    struct {
+        uint16 N0CCEN : 1;
+        uint16 N1CCEN : 1;
+        uint16 N2CCEN : 1;
+        uint16 N3CCEN : 1;
+        uint16 R0CCEN : 1;
+        uint16 LCCCEN : 1;
+        uint16 SPCCEN : 1;
+        uint16 _rsvd7 : 1;
+        uint16 CCMD : 1;
+        uint16 CCRTMD : 1;
+        uint16 EXCCEN : 1;
+        uint16 _rsvd11 : 1;
+        uint16 BOKNn : 3;
+        uint16 BOKEN : 1;
+    };
+};
+
 // 1800F0   PRISA   Sprite 0 and 1 Priority Number
 //
 //   bits   r/w  code          description
