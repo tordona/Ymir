@@ -107,6 +107,9 @@ void VDP2::Reset(bool hard) {
     m_dotClockMult = 2;
     m_VCounter = 0;
 
+    BeginHPhaseActiveDisplay();
+    BeginVPhaseActiveDisplay();
+
     UpdateResolution();
 }
 
@@ -229,6 +232,10 @@ void VDP2::IncrementVCounter() {
 
 void VDP2::BeginHPhaseActiveDisplay() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering horizontal active display phase", m_VCounter);
+    if (m_VPhase == VerticalPhase::Active) {
+        // TODO: draw line
+        // fmt::println("VDP2: drawing line {}", m_VCounter);
+    }
 }
 
 void VDP2::BeginHPhaseRightBorder() {
@@ -273,6 +280,8 @@ void VDP2::BeginVPhaseVerticalSync() {
 void VDP2::BeginVPhaseTopBlanking() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering top blanking phase", m_VCounter);
     TVSTAT.VBLANK = 0;
+    // TODO: end frame
+    fmt::println("VDP2: -------- end frame --------");
 }
 
 void VDP2::BeginVPhaseTopBorder() {

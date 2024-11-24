@@ -1167,13 +1167,13 @@ union RPMD_t {
 //
 //   bits   r/w  code          description
 //  15-11        -             Reserved, must be zero
-//     10     W  RBKASTRE      Enable for KA-st of Rotation Parameter B
-//      9     W  RBYSTRE       Enable for Y-st of Rotation Parameter B
-//      8     W  RBXSTRE       Enable for X-st of Rotation Parameter B
+//     10     W  RBKASTRE      Enable for KAst of Rotation Parameter B
+//      9     W  RBYSTRE       Enable for Yst of Rotation Parameter B
+//      8     W  RBXSTRE       Enable for Xst of Rotation Parameter B
 //    7-3        -             Reserved, must be zero
-//      2     W  RAKASTRE      Enable for KA-st of Rotation Parameter A
-//      1     W  RAYSTRE       Enable for Y-st of Rotation Parameter A
-//      0     W  RAXSTRE       Enable for X-st of Rotation Parameter A
+//      2     W  RAKASTRE      Enable for KAst of Rotation Parameter A
+//      1     W  RAYSTRE       Enable for Yst of Rotation Parameter A
+//      0     W  RAXSTRE       Enable for Xst of Rotation Parameter A
 union RPRCTL_t {
     uint16 u16;
     struct {
