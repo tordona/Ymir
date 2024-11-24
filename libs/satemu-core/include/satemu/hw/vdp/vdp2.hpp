@@ -366,6 +366,7 @@ private:
     VRSIZE_t VRSIZE; // 180006   VRSIZE  VRAM Size
                      // 180008   HCNT    H Counter (read-only)
                      // 18000A   VCNT    V Counter (read-only)
+                     // 18000C   -       Reserved (but not really)
     RAMCTL_t RAMCTL; // 18000E   RAMCTL  RAM Control
                      // 180010   CYCA0L  VRAM Cycle Pattern A0 Lower
     CYC_t CYCA0;     // 180012   CYCA0U  VRAM Cycle Pattern A0 Upper
