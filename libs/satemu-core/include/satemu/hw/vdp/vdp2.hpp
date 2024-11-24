@@ -326,6 +326,7 @@ public:
         case 0x0E8: LNCLEN.u16 = value & 0x003F; break;
         case 0x0EA: SFPRMD.u16 = value & 0x03FF; break;
         case 0x0EC: CCCTL.u16 = value & 0xF77F; break;
+        case 0x0EE: SFCCMD.u16 = value & 0x03FF; break;
         case 0x0F0: PRISA.u16 = value & 0x0707; break;
         case 0x0F2: PRISB.u16 = value & 0x0707; break;
         case 0x0F4: PRISC.u16 = value & 0x0707; break;
@@ -477,7 +478,7 @@ private:
     LNCLEN_t LNCLEN; // 1800E8   LNCLEN  Line Color Screen Enable
     SFPRMD_t SFPRMD; // 1800EA   SFPRMD  Special Priority Mode
     CCCTL_t CCCTL;   // 1800EC   CCCTL   Color Calculation Control
-                     // 1800EE
+    SFCCMD_t SFCCMD; // 1800EE   SFCCMD  Special Color Calculation Mode
     PRI_t PRISA;     // 1800F0   PRISA   Sprite 0 and 1 Priority Number
     PRI_t PRISB;     // 1800F2   PRISB   Sprite 2 and 3 Priority Number
     PRI_t PRISC;     // 1800F4   PRISC   Sprite 4 and 5 Priority Number

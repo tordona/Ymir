@@ -1728,6 +1728,26 @@ union CCCTL_t {
     };
 };
 
+// 1800EE   SFCCMD  Special Color Calculation Mode
+//
+//   bits   r/w  code          description
+//  15-10        -             Reserved, must be zero
+//    9-8     W  R0SCCM1-0     RBG0 Special Color Calculation Mode
+//    7-6     W  N3SCCM1-0     NBG3 Special Color Calculation Mode
+//    5-4     W  N2SCCM1-0     NBG2 Special Color Calculation Mode
+//    3-2     W  N1SCCM1-0     NBG1 Special Color Calculation Mode
+//    1-0     W  N0SCCM1-0     NBG0 Special Color Calculation Mode
+union SFCCMD_t {
+    uint16 u16;
+    struct {
+        uint16 N0SCCMn : 2;
+        uint16 N1SCCMn : 2;
+        uint16 N2SCCMn : 2;
+        uint16 N3SCCMn : 2;
+        uint16 R0SCCMn : 2;
+        uint16 _rsvd10_15 : 6;
+    };
+};
 // 1800F0   PRISA   Sprite 0 and 1 Priority Number
 //
 //   bits   r/w  code          description
