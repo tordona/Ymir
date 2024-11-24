@@ -1558,6 +1558,33 @@ union SPCTL_t {
     };
 };
 
+// 1800E2   SDCTL   Shadow Control
+//
+//   bits   r/w  code          description
+//   15-9        -             Reserved, must be zero
+//      8     W  TPSDSL        Transparent Shadow (0=disable, 1=enable)
+//    7-6        -             Reserved, must be zero
+//      5     W  BKSDEN        Back Screen Shadow Enable
+//      4     W  R0SDEN        RBG0 Shadow Enable
+//      3     W  N3SDEN        NBG3 Shadow Enable
+//      2     W  N2SDEN        NBG2 Shadow Enable
+//      1     W  N1SDEN        NBG1/EXBG Shadow Enable
+//      0     W  N0SDEN        NBG0/RBG1 Shadow Enable
+union SDCTL_t {
+    uint16 u16;
+    struct {
+        uint16 N0SDEN : 1;
+        uint16 N1SDEN : 1;
+        uint16 N2SDEN : 1;
+        uint16 N3SDEN : 1;
+        uint16 R0SDEN : 1;
+        uint16 BKSDEN : 1;
+        uint16 _rsvd6_7 : 2;
+        uint16 TPSDSL : 1;
+        uint16 _rsvd9_15 : 7;
+    };
+};
+
 // 1800F0   PRISA   Sprite 0 and 1 Priority Number
 //
 //   bits   r/w  code          description
