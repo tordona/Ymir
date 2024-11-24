@@ -1204,6 +1204,23 @@ union KTCTL_t {
     };
 };
 
+// 1800B6   KTAOF   Coefficient Table Address Offset
+//
+//   bits   r/w  code          description
+//  15-11        -             Reserved, must be zero
+//   10-8     W  RBKTAOS2-0    Coefficient Table Address Offset for Rotation Parameter B
+//    7-3        -             Reserved, must be zero
+//    2-0     W  RAKTAOS2-0    Coefficient Table Address Offset for Rotation Parameter A
+union KTAOF_t {
+    uint16 u16;
+    struct {
+        uint16 RAKTAOSn : 3;
+        uint16 _rsvd3_7 : 5;
+        uint16 RBKTAOSn : 3;
+        uint16 _rsvd11_15 : 5;
+    };
+};
+
 // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
 // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
 //

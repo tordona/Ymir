@@ -149,6 +149,7 @@ public:
         case 0x0B0: return 0; // RPMD is write-only
         case 0x0B2: return 0; // RPRCTL is write-only
         case 0x0B4: return 0; // KTCTL is write-only
+        case 0x0B6: return 0; // KTAOF is write-only
         case 0x0B8: return 0; // OVPNRA is write-only
         case 0x0BA: return 0; // OVPNRB is write-only
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
@@ -247,7 +248,8 @@ public:
         case 0x0AE: BKTA.L.u16 = value; break;
         case 0x0B0: RPMD.u16 = value & 0x0003; break;
         case 0x0B2: RPRCTL.u16 = value & 0x0707; break;
-        case 0x0B4: KTCTL.u16 = value & 0x0707; break;
+        case 0x0B4: KTCTL.u16 = value & 0x1F1F; break;
+        case 0x0B6: KTAOF.u16 = value & 0x0707; break;
         case 0x0B8: OVPNRA = value; break;
         case 0x0BA: OVPNRB = value; break;
         default:
@@ -350,6 +352,7 @@ private:
     RPMD_t RPMD;     // 1800B0   RPMD    Rotation Parameter Mode
     RPRCTL_t RPRCTL; // 1800B2   RPRCTL  Rotation Parameter Read Control
     KTCTL_t KTCTL;   // 1800B4   KTCTL   Coefficient Table Control
+    KTAOF_t KTAOF;   // 1800B6   KTAOF   Coefficient Table Address Offset
     OVPNR_t OVPNRA;  // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
     OVPNR_t OVPNRB;  // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
 
