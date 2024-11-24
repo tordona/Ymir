@@ -170,6 +170,9 @@ public:
         case 0x0DA: return 0; // LWTA0L is write-only
         case 0x0DC: return 0; // LWTA1U is write-only
         case 0x0DE: return 0; // LWTA1L is write-only
+        case 0x0F8: return 0; // PRINA is write-only
+        case 0x0FA: return 0; // PRINB is write-only
+        case 0x0FC: return 0; // PRIR is write-only
         case 0x100: return 0; // CCRSA is write-only
         case 0x102: return 0; // CCRSB is write-only
         case 0x104: return 0; // CCRSC is write-only
@@ -304,6 +307,9 @@ public:
         case 0x0DA: LWTA0.L.u16 = value & 0xFFFE; break;
         case 0x0DC: LWTA1.U.u16 = value & 0x8007; break;
         case 0x0DE: LWTA1.L.u16 = value & 0xFFFE; break;
+        case 0x0F8: PRINA.u16 = value & 0x0707; break;
+        case 0x0FA: PRINB.u16 = value & 0x0707; break;
+        case 0x0FC: PRIR.u16 = value & 0x0007; break;
         case 0x100: CCRSA.u16 = value & 0x1F1F; break;
         case 0x102: CCRSB.u16 = value & 0x1F1F; break;
         case 0x104: CCRSC.u16 = value & 0x1F1F; break;
@@ -453,9 +459,9 @@ private:
                      // 1800F2
                      // 1800F4
                      // 1800F6
-                     // 1800F8
-                     // 1800FA
-                     // 1800FC
+    PRI_t PRINA;     // 1800F8   PRINA   NBG0 and NBG1 Priority Number
+    PRI_t PRINB;     // 1800FA   PRINB   NBG2 and NBG3 Priority Number
+    PRI_t PRIR;      // 1800FC   PRIR    RBG0 Priority Number
                      // 1800FE   -       Reserved
     CCRS_t CCRSA;    // 180100   CCRSA   Sprite 0 and 1 Color Calculation Ratio
     CCRS_t CCRSB;    // 180102   CCRSB   Sprite 2 and 3 Color Calculation Ratio

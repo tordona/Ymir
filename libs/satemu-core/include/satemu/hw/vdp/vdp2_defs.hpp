@@ -1531,6 +1531,37 @@ union LWTA_t {
     };
 };
 
+// 1800F8   PRINA   NBG0 and NBG1 Priority Number
+//
+//   bits   r/w  code          description
+//  15-11        -             Reserved, must be zero
+//   10-8     W  N1PRIN2-0     NBG1 Priority Number
+//    7-3        -             Reserved, must be zero
+//    2-0     W  N0PRIN2-0     NBG0 Priority Number
+//
+// 1800FA   PRINB   NBG2 and NBG3 Priority Number
+//
+//   bits   r/w  code          description
+//  15-11        -             Reserved, must be zero
+//   10-8     W  N3PRIN2-0     NBG3 Priority Number
+//    7-3        -             Reserved, must be zero
+//    2-0     W  N2PRIN2-0     NBG2 Priority Number
+//
+// 1800FC   PRIR    RBG0 Priority Number
+//
+//   bits   r/w  code          description
+//   15-3        -             Reserved, must be zero
+//    2-0     W  R0PRIN2-0     RBG0 Priority Number
+union PRI_t {
+    uint16 u16;
+    struct {
+        uint16 lPRINn : 3; // (NA) NBG0, (NB) NBG2, (R) RBG0
+        uint16 _rsvd3_7 : 5;
+        uint16 uPRINn : 3; // (NA) NBG1, (NB) NBG3, (R) reserved
+        uint16 _rsvd11_15 : 5;
+    };
+};
+
 // 180100   CCRSA   Sprite 0 and 1 Color Calculation Ratio
 //
 //   bits   r/w  code          description
@@ -1606,7 +1637,7 @@ union CCR_t {
     struct {
         uint16 lCCRTn : 5; // (NA) NBG0, (NB) NBG2, (R) RBG0, (LB) Line Color Screen
         uint16 _rsvd5_7 : 3;
-        uint16 uCCRTn : 5; // (NA) NBG1, (NB) NBG3, (R) invalid, (LB) Back Screen
+        uint16 uCCRTn : 5; // (NA) NBG1, (NB) NBG3, (R) reserved, (LB) Back Screen
         uint16 _rsvd13_15 : 3;
     };
 };
