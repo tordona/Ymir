@@ -206,10 +206,10 @@ union RAMCTL_t {
 // 180018   CYCB0L  VRAM Cycle Pattern B0 Lower
 //
 //   bits   r/w  code          description
-//  15-12     W  VCP0B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T0
-//   11-8     W  VCP1B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T1
-//    7-4     W  VCP2B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T2
-//    3-0     W  VCP3B0(3-0)   VRAM-b0 (or VRAM-B) Timing for T3
+//  15-12     W  VCP0B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T0
+//   11-8     W  VCP1B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T1
+//    7-4     W  VCP2B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T2
+//    3-0     W  VCP3B0(3-0)   VRAM-B0 (or VRAM-B) Timing for T3
 //
 // 18001A   CYCB0U  VRAM Cycle Pattern B0 Upper
 //
