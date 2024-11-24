@@ -1631,6 +1631,29 @@ union CRAOFB_t {
     };
 };
 
+// 1800E8   LNCLEN  Line Color Screen Enable
+//
+//   bits   r/w  code          description
+//   15-6        -             Reserved, must be zero
+//      5     W  SPLCEN        Sprite Line Color Screen Enable
+//      4     W  R0LCEN        RBG0 Line Color Screen Enable
+//      3     W  N3LCEN        NBG3 Line Color Screen Enable
+//      2     W  N2LCEN        NBG2 Line Color Screen Enable
+//      1     W  N1LCEN        NBG1 Line Color Screen Enable
+//      0     W  N0LCEN        NBG0 Line Color Screen Enable
+union LNCLEN_t {
+    uint16 u16;
+    struct {
+        uint16 N0LCEN : 1;
+        uint16 N1LCEN : 1;
+        uint16 N2LCEN : 1;
+        uint16 N3LCEN : 1;
+        uint16 R0LCEN : 1;
+        uint16 SPLCEN : 1;
+        uint16 _rsvd6_15 : 10;
+    };
+};
+
 // 1800F0   PRISA   Sprite 0 and 1 Priority Number
 //
 //   bits   r/w  code          description

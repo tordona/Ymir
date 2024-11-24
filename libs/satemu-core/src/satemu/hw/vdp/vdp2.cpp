@@ -66,6 +66,7 @@ void VDP2::Reset(bool hard) {
     SDCTL.u16 = 0x0;
     CRAOFA.u16 = 0x0;
     CRAOFB.u16 = 0x0;
+    LNCLEN.u16 = 0x0;
 
     PRISA.u16 = 0x0;
     PRISB.u16 = 0x0;
