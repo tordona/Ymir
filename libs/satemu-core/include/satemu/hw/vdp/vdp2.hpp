@@ -154,6 +154,18 @@ public:
         case 0x0BA: return 0; // OVPNRB is write-only
         case 0x0BC: return 0; // RPTAU is write-only
         case 0x0BE: return 0; // RPTAL is write-only
+        case 0x0C0: return 0; // WPSX0 is read-only
+        case 0x0C2: return 0; // WPEX0 is read-only
+        case 0x0C4: return 0; // WPSY0 is read-only
+        case 0x0C6: return 0; // WPEY0 is read-only
+        case 0x0C8: return 0; // WPSX1 is read-only
+        case 0x0CA: return 0; // WPEX1 is read-only
+        case 0x0CC: return 0; // WPSY1 is read-only
+        case 0x0CE: return 0; // WPEY1 is read-only
+        case 0x0D0: return 0; // WCTLA is read-only
+        case 0x0D2: return 0; // WCTLB is read-only
+        case 0x0D4: return 0; // WCTLC is read-only
+        case 0x0D6: return 0; // WCTLD is read-only
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
         }
     }
@@ -264,6 +276,10 @@ public:
         case 0x0CA: WPXY1.X.E.u16 = value & 0x03FF; break;
         case 0x0CC: WPXY1.Y.S.u16 = value & 0x01FF; break;
         case 0x0CE: WPXY1.Y.E.u16 = value & 0x01FF; break;
+        case 0x0D0: WCTL.A.u16 = value & 0xBFBF; break;
+        case 0x0D2: WCTL.B.u16 = value & 0xBFBF; break;
+        case 0x0D4: WCTL.C.u16 = value & 0xBFBF; break;
+        case 0x0D6: WCTL.D.u16 = value & 0xBF8F; break;
         default:
             fmt::println("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
             break;
@@ -377,10 +393,10 @@ private:
                      // 1800CA   WPSY1   Window 1 Vertical Start Point
                      // 1800CC   WPEX1   Window 1 Horizontal End Point
     WPXY_t WPXY1;    // 1800CE   WPEY1   Window 1 Vertical End Point
-                     // 1800D0
-                     // 1800D2
-                     // 1800D4
-                     // 1800D6
+                     // 1800D0   WCTLA   NBG0 and NBG1 Window Control
+                     // 1800D2   WCTLB   NBG2 and NBG3 Window Control
+                     // 1800D4   WCTLC   RBG0 and Sprite Window Control
+    WCTL_t WCTL;     // 1800D6   WCTLD   Rotation Window and Color Calculation Window Control
                      // 1800D8
                      // 1800DA
                      // 1800DC
