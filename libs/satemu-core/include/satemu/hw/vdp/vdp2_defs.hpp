@@ -1163,6 +1163,47 @@ union RPRCTL_t {
     };
 };
 
+// 1800B4   KTCTL   Coefficient Table Control
+//
+//   bits   r/w  code          description
+//  15-13        -             Reserved, must be zero
+//     12     W  RBKLCE        Use line color screen data from Rotation Parameter B coeff. data
+//  11-10     W  RBKMD1-0      Coefficient Mode for Rotation Parameter B
+//                               00 (0) = Use as scale coeff. kx, ky
+//                               01 (1) = Use as scale coeff. kx
+//                               10 (2) = Use as scale coeff. ky
+//                               11 (3) = Use as viewpoint Xp after rotation conversion
+//      9     W  RBKDBS        Coefficient Data Size for Rotation Parameter B
+//                               0 = 2 words
+//                               1 = 1 word
+//      8     W  RBKTE         Coefficient Table Enable for Rotation Parameter B
+//    7-5        -             Reserved, must be zero
+//      4     W  RAKLCE        Use line color screen data from Rotation Parameter A coeff. data
+//    3-2     W  RAKMD1-0      Coefficient Mode for Rotation Parameter A
+//                               00 (0) = Use as scale coeff. kx, ky
+//                               01 (1) = Use as scale coeff. kx
+//                               10 (2) = Use as scale coeff. ky
+//                               11 (3) = Use as viewpoint Xp after rotation conversion
+//      1     W  RAKDBS        Coefficient Data Size for Rotation Parameter A
+//                               0 = 2 words
+//                               1 = 1 word
+//      0     W  RAKTE         Coefficient Table Enable for Rotation Parameter A
+union KTCTL_t {
+    uint16 u16;
+    struct {
+        uint16 RAKTE : 1;
+        uint16 RAKDBS : 1;
+        uint16 RAKMDn : 2;
+        uint16 RAKLCE : 1;
+        uint16 _rsvd5_7 : 3;
+        uint16 RBKTE : 1;
+        uint16 RBKDBS : 1;
+        uint16 RBKMDn : 2;
+        uint16 RBKLCE : 1;
+        uint16 _rsvd13_15 : 3;
+    };
+};
+
 // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
 // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
 //

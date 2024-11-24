@@ -52,6 +52,7 @@ void VDP2::Reset(bool hard) {
     LCTA.u32 = 0x0;
     RPMD.u16 = 0x0;
     RPRCTL.u16 = 0x0;
+    KTCTL.u16 = 0x0;
     OVPNRA = 0x0;
     OVPNRB = 0x0;
 }
