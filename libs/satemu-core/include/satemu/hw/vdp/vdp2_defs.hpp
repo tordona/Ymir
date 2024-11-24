@@ -1531,6 +1531,33 @@ union LWTA_t {
     };
 };
 
+// 1800E0   SPCTL   Sprite Control
+//
+//   bits   r/w  code          description
+//  15-14        -             Reserved, must be zero
+//  13-12     W  SPCCCS1-0     Sprite Color Calculation Condition
+//                               00 (0) = Priority Number <= Color Calculation Number
+//                               01 (1) = Priority Number == Color Calculation Number
+//                               10 (2) = Priority Number >= Color Calculation Number
+//                               11 (3) = Color Data MSB == 1
+//     11        -             Reserved, must be zero
+//   10-8     W  SPCCN2-0      Color Calculation Number
+//    7-6        -             Reserved, must be zero
+//      5     W  SPCLMD        Sprite Color Format Data (0=palette only, 1=palette and RGB)
+//      4     W  SPWINEN       Sprite Window Enable (0=disable, 1=enable)
+//    3-0     W  SPTYPE3-0     Sprite Type (0,1,2,...,D,E,F)
+union SPCTL_t {
+    uint16 u16;
+    struct {
+        uint16 SPTYPEn : 4;
+        uint16 SPWINEN : 1;
+        uint16 SPCLMD : 1;
+        uint16 _rsvd6_7 : 2;
+        uint16 SPCCNn : 3;
+        uint16 SPCCCSn : 2;
+    };
+};
+
 // 1800F0   PRISA   Sprite 0 and 1 Priority Number
 //
 //   bits   r/w  code          description

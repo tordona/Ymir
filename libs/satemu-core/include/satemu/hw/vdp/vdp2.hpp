@@ -170,6 +170,7 @@ public:
         case 0x0DA: return 0; // LWTA0L is write-only
         case 0x0DC: return 0; // LWTA1U is write-only
         case 0x0DE: return 0; // LWTA1L is write-only
+        case 0x0E0: return 0; // SPCTL is write-only
         case 0x0F0: return 0; // PRISA is write-only
         case 0x0F2: return 0; // PRISB is write-only
         case 0x0F4: return 0; // PRISC is write-only
@@ -311,6 +312,7 @@ public:
         case 0x0DA: LWTA0.L.u16 = value & 0xFFFE; break;
         case 0x0DC: LWTA1.U.u16 = value & 0x8007; break;
         case 0x0DE: LWTA1.L.u16 = value & 0xFFFE; break;
+        case 0x0E0: SPCTL.u16 = value & 0x373F; break;
         case 0x0F0: PRISA.u16 = value & 0x0707; break;
         case 0x0F2: PRISB.u16 = value & 0x0707; break;
         case 0x0F4: PRISC.u16 = value & 0x0707; break;
@@ -455,7 +457,7 @@ private:
     LWTA_t LWTA0;    // 1800DA   LWTA0L  Window 0 Line Window Address Table (lower)
                      // 1800DC   LWTA1U  Window 1 Line Window Address Table (upper)
     LWTA_t LWTA1;    // 1800DE   LWTA1L  Window 1 Line Window Address Table (lower)
-                     // 1800E0
+    SPCTL_t SPCTL;   // 1800E0   SPCTL   Sprite Control
                      // 1800E2
                      // 1800E4
                      // 1800E6

@@ -62,6 +62,7 @@ void VDP2::Reset(bool hard) {
     WCTL.u64 = 0x0;
     LWTA0.u32 = 0x0;
     LWTA1.u32 = 0x0;
+    SPCTL.u16 = 0x0;
 
     PRISA.u16 = 0x0;
     PRISB.u16 = 0x0;
