@@ -367,11 +367,13 @@ private:
     //
     //   bits   r/w  code   description
     //   31-0   R/W  -      Divisor number
+    uint32 DVSR;
 
     // 104  R/W  32       ud        DVDNT   Dividend register L for 32-bit division
     //
     //   bits   r/w  code   description
     //   31-0   R/W  -      32-bit dividend number
+    uint32 DVDNT;
 
     // 108  R/W  16,32    00000000  DVCR    Division control register
     //
@@ -379,6 +381,14 @@ private:
     //   31-2   R    -      Reserved - must be zero
     //      1   R/W  OVFIE  OVF interrupt enable (0=disabled, 1=enabled)
     //      0   R/W  OVF    Overflow Flag (0=no overflow, 1=overflow)
+    union DVCR_t {
+        uint32 u32;
+        struct {
+            uint32 OVF : 1;
+            uint32 OVFIE : 1;
+            uint32 _rsvd2_31 : 30;
+        };
+    } DVCR;
 
     // 10C  R/W  16,32    ud        VCRDIV  Vector number register setting DIV
     //
@@ -391,13 +401,29 @@ private:
     //
     //   bits   r/w  code   description
     //   31-0   R/W  -      64-bit dividend number (upper half)
+    uint32 DVDNTH;
 
     // 114  R/W  32       ud        DVDNTL  Dividend register L
     //
     //   bits   r/w  code   description
     //   31-0   R/W  -      64-bit dividend number (lower half)
+    uint32 DVDNTL;
 
     // 120..13F are mirrors of 100..11F
+
+    // Both division calculations take 39 cycles to complete, or 6 if it results in overflow.
+    // On overflow, the OVF bit is set and an overflow interrupt is generated if DVCR.OVFIE=1.
+    // DVDNTH and DVDNTL will contain the partial results of the operation after 6 cycles.
+    // If DVCR.OFVIE=0, DVDNTL will be saturated to 0x7FFFFFFF or 0x80000000 depending on the sign.
+    // For 32-bit by 32-bit divisions, DVDNT receives a copy of DVDNTL.
+
+    // Begins a 32-bit by 32-bit signed division calculation, storing the 32-bit quotient in DVDNT
+    // and the 32-bit remainder in DVDNTH.
+    void DIVUBegin32();
+
+    // Begins a 64-bit by 32-bit signed division calculation, storing the 32-bit quotient in DVDNTL
+    // and the 32-bit remainder in DVDNTH.
+    void DIVUBegin64();
 
     // --- UBC module (channel A) ---
     //

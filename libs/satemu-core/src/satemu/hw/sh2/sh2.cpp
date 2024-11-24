@@ -4,6 +4,7 @@
 #include <satemu/util/unreachable.hpp>
 
 #include <algorithm>
+#include <limits>
 
 namespace satemu {
 
@@ -92,6 +93,12 @@ void SH2::Reset(bool hard) {
 
     m_cacheEntries.fill({});
     WriteCCR(0x00);
+
+    DVSR = 0x0;  // undefined initial value
+    DVDNT = 0x0; // undefined initial value
+    DVCR.u32 = 0x00000000;
+    DVDNTH = 0x0; // undefined initial value
+    DVDNTL = 0x0; // undefined initial value
 }
 
 void SH2::Step() {
@@ -268,6 +275,46 @@ void SH2::WriteCCR(uint8 value) {
     }
 }
 
+void SH2::DIVUBegin32() {
+    static constexpr sint32 kMinValue = std::numeric_limits<sint32>::min();
+    static constexpr sint32 kMaxValue = std::numeric_limits<sint32>::max();
+
+    const sint32 dividend = static_cast<sint32>(DVDNT);
+    const sint32 divisor = static_cast<sint32>(DVSR);
+
+    if (divisor != 0) {
+        // TODO: schedule event to run this after 39 cycles
+
+        if (dividend == kMinValue && divisor == -1) [[unlikely]] {
+            // Handle extreme case
+            DVDNTL = DVDNT = kMinValue;
+            DVDNTH = 0;
+        } else {
+            DVDNTL = DVDNT = dividend / divisor;
+            DVDNTH = dividend % divisor;
+        }
+    } else {
+        // Overflow
+        // TODO: schedule event to run this after 6 cycles
+
+        // Store results after 6 cycles - 3 for setting flags and 3 for calculations
+        DVDNTH = dividend >> 29;
+        if (DVCR.OVFIE) {
+            DVDNTL = DVDNT = (dividend << 3) | ((dividend >> 31) & 7);
+        } else {
+            // DVDNT/DVDNTL is saturated if the interrupt signal is disabled
+            DVDNTL = DVDNT = dividend < 0 ? kMinValue : kMaxValue;
+        }
+
+        // Signal overflow
+        DVCR.OVF = 1;
+    }
+}
+
+void SH2::DIVUBegin64() {
+    // TODO: implement
+}
+
 template <mem_access_type T>
 T SH2::OnChipRegRead(uint32 address) {
     // Misaligned memory accesses raise an address error, meaning all accesses here are aligned.
@@ -324,8 +371,23 @@ T SH2::OnChipRegRead(uint32 address) {
     case 0xE2 ... 0xE3: return readWordLower(IPRA.val);
     case 0xE4 ... 0xE5: return readWordLower(VCRWDT.val);
 
-    case 0x10C: return VCRDIV;
+    case 0x100:
+    case 0x120: return DVSR;
+
+    case 0x104:
+    case 0x124: return DVDNT;
+
+    case 0x108:
+    case 0x128: return DVCR.u32;
+
+    case 0x10C:
     case 0x12C: return VCRDIV;
+
+    case 0x110:
+    case 0x130: return DVDNTH;
+
+    case 0x114:
+    case 0x134: return DVDNTL;
 
     case 0x1A0: return VCRDMA0;
     case 0x1A8: return VCRDMA1;
@@ -407,8 +469,31 @@ void SH2::OnChipRegWrite(uint32 address, T baseValue) {
     case 0xE4: writeWordLower(VCRWDT.val, value, 0x7F7F); break;
     case 0xE5: writeWordLower(VCRWDT.val, value, 0x7F7F); break;
 
-    case 0x10C: VCRDIV = value; break;
+    case 0x100:
+    case 0x120: DVSR = value; break;
+
+    case 0x104:
+    case 0x124:
+        DVDNT = value;
+        DVDNTL = value;
+        DVDNTH = static_cast<sint32>(value) >> 31;
+        DIVUBegin32();
+        break;
+
+    case 0x108:
+    case 0x128: DVCR.u32 = value & 0x00000003; break;
+
+    case 0x10C:
     case 0x12C: VCRDIV = value; break;
+
+    case 0x110:
+    case 0x130: DVDNTH = value; break;
+
+    case 0x114:
+    case 0x134:
+        DVDNTL = value;
+        DIVUBegin64();
+        break;
 
     case 0x1A0: VCRDMA0 = value; break;
     case 0x1A8: VCRDMA1 = value; break;

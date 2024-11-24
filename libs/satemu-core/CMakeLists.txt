@@ -74,6 +74,7 @@ target_precompile_headers(satemu-core
         <concepts>
         <cstddef>
         <cstdint>
+        <limits>
         <span>
         <type_traits>
 
