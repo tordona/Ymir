@@ -5,6 +5,7 @@
 namespace satemu::vdp2 {
 
 VDP2::VDP2() {
+    // TODO: set PAL flag
     Reset(true);
 }
 
@@ -13,7 +14,8 @@ void VDP2::Reset(bool hard) {
     m_CRAM.fill(0);
 
     TVMD.u16 = 0x0;
-    TVSTAT.u16 = 0x0; // TODO: preserve PAL flag
+    TVSTAT.u16 &= 0xFFFE; // Preserve PAL flag
+    HCNT = 0x0;
     VCNT = 0x0;
     RAMCTL.u16 = 0x0;
     VRSIZE.u16 = 0x0;
@@ -102,6 +104,8 @@ void VDP2::Reset(bool hard) {
     m_HPhase = HorizontalPhase::Active;
     m_VPhase = VerticalPhase::Active;
     m_currCycles = 0;
+    m_dotClockMult = 2;
+    m_VCounter = 0;
 
     UpdateResolution();
 }
@@ -137,7 +141,7 @@ void VDP2::UpdateResolution() {
     // TODO: check for NTSC, PAL or exclusive monitor; assuming NTSC for now
     // TODO: exclusive monitor: even hRes entries are valid for 31 KHz monitors, odd are for Hi-Vision
     m_HRes = hRes[TVMD.HRESOn];
-    m_VRes = vRes[TVMD.VRESOn & 1]; // for PAL, use & 3 (or omit it)
+    m_VRes = vRes[TVMD.VRESOn & (TVSTAT.PAL ? 3 : 1)];
     if (TVMD.LSMDn == 3) {
         // Double-density interlace doubles the vertical resolution
         m_VRes *= 2;
@@ -187,8 +191,7 @@ void VDP2::UpdateResolution() {
             {256, 272, 275, 278, 297, 313},
         }},
     }};
-    // TODO: first index is NTSC/PAL selector
-    m_VTimings = vTimings[0][TVMD.VRESOn];
+    m_VTimings = vTimings[TVSTAT.PAL][TVMD.VRESOn];
 
     // Adjust for dot clock
     const uint32 dotClockMult = (TVMD.HRESOn & 2) ? 2 : 4;
@@ -202,11 +205,11 @@ void VDP2::UpdateResolution() {
 }
 
 void VDP2::IncrementVCounter() {
-    ++VCNT;
-    while (VCNT >= m_VTimings[static_cast<uint32>(m_VPhase)]) {
+    ++m_VCounter;
+    while (m_VCounter >= m_VTimings[static_cast<uint32>(m_VPhase)]) {
         auto nextPhase = static_cast<uint32>(m_VPhase) + 1;
         if (nextPhase == 6) {
-            VCNT = 0;
+            m_VCounter = 0;
             nextPhase = 0;
         }
 
@@ -225,28 +228,28 @@ void VDP2::IncrementVCounter() {
 // ----
 
 void VDP2::BeginHPhaseActiveDisplay() {
-    fmt::println("VDP2: (VCNT = {:3d})  entering horizontal active display phase", VCNT);
+    // fmt::println("VDP2: (VCNT = {:3d})  entering horizontal active display phase", m_VCounter);
 }
 
 void VDP2::BeginHPhaseRightBorder() {
-    fmt::println("VDP2: (VCNT = {:3d})  entering right border phase", VCNT);
+    // fmt::println("VDP2: (VCNT = {:3d})  entering right border phase", m_VCounter);
 }
 
 void VDP2::BeginHPhaseHorizontalSync() {
     IncrementVCounter();
-    fmt::println("VDP2: (VCNT = {:3d})  entering horizontal sync phase", VCNT);
+    // fmt::println("VDP2: (VCNT = {:3d})  entering horizontal sync phase", m_VCounter);
     TVSTAT.HBLANK = 1;
 }
 
 void VDP2::BeginHPhaseLeftBorder() {
-    fmt::println("VDP2: (VCNT = {:3d})  entering left border phase", VCNT);
+    // fmt::println("VDP2: (VCNT = {:3d})  entering left border phase", m_VCounter);
     TVSTAT.HBLANK = 0;
 }
 
 // ----
 
 void VDP2::BeginVPhaseActiveDisplay() {
-    fmt::println("VDP2: (VCNT = {:3d})  entering vertical active display phase", VCNT);
+    // fmt::println("VDP2: (VCNT = {:3d})  entering vertical active display phase", m_VCounter);
     if (TVMD.LSMDn != 0) {
         TVSTAT.ODD ^= 1;
     } else {
@@ -255,25 +258,25 @@ void VDP2::BeginVPhaseActiveDisplay() {
 }
 
 void VDP2::BeginVPhaseBottomBorder() {
-    fmt::println("VDP2: (VCNT = {:3d})  entering bottom border phase", VCNT);
+    // fmt::println("VDP2: (VCNT = {:3d})  entering bottom border phase", m_VCounter);
 }
 
 void VDP2::BeginVPhaseBottomBlanking() {
-    fmt::println("VDP2: (VCNT = {:3d})  entering bottom blanking phase", VCNT);
+    // fmt::println("VDP2: (VCNT = {:3d})  entering bottom blanking phase", m_VCounter);
 }
 
 void VDP2::BeginVPhaseVerticalSync() {
-    fmt::println("VDP2: (VCNT = {:3d})  entering vertical sync phase", VCNT);
+    // fmt::println("VDP2: (VCNT = {:3d})  entering vertical sync phase", m_VCounter);
     TVSTAT.VBLANK = 1;
 }
 
 void VDP2::BeginVPhaseTopBlanking() {
-    fmt::println("VDP2: (VCNT = {:3d})  entering top blanking phase", VCNT);
+    // fmt::println("VDP2: (VCNT = {:3d})  entering top blanking phase", m_VCounter);
     TVSTAT.VBLANK = 0;
 }
 
 void VDP2::BeginVPhaseTopBorder() {
-    fmt::println("VDP2: (VCNT = {:3d})  entering top border phase", VCNT);
+    // fmt::println("VDP2: (VCNT = {:3d})  entering top border phase", m_VCounter);
 }
 
 } // namespace satemu::vdp2

@@ -65,10 +65,10 @@ public:
         switch (address) {
         case 0x000: return TVMD.u16;
         case 0x002: return EXTEN.u16;
-        // case 0x004: return 0; // TODO: TVSTAT
+        case 0x004: return TVSTAT.u16;
         case 0x006: return VRSIZE.u16;
-        // case 0x008: return 0; // TODO: HCNT
-        // case 0x00A: return 0; // TODO: VCNT
+        case 0x008: return HCNT;
+        case 0x00A: return VCNT;
         case 0x00E: return RAMCTL.u16;
         case 0x010: return CYCA0.L.u16;   // write-only?
         case 0x012: return CYCA0.U.u16;   // write-only?
@@ -373,7 +373,7 @@ private:
     EXTEN_t EXTEN;   // 180002   EXTEN   External Signal Enable
     TVSTAT_t TVSTAT; // 180004   TVSTAT  Screen Status (read-only)
     VRSIZE_t VRSIZE; // 180006   VRSIZE  VRAM Size
-                     // 180008   HCNT    H Counter (read-only)
+    uint16 HCNT;     // 180008   HCNT    H Counter (read-only)
     uint16 VCNT;     // 18000A   VCNT    V Counter (read-only)
                      // 18000C   -       Reserved (but not really)
     RAMCTL_t RAMCTL; // 18000E   RAMCTL  RAM Control
@@ -582,6 +582,7 @@ private:
     // TODO: replace with scheduler
     uint64 m_currCycles;
     uint32 m_dotClockMult;
+    uint16 m_VCounter;
 
     // Display resolution (derived from TVMODE)
     uint32 m_HRes; // Horizontal display resolution
