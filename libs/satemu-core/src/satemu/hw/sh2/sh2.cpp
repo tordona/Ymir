@@ -325,6 +325,7 @@ T SH2::OnChipRegRead(uint32 address) {
     case 0xE4 ... 0xE5: return readWordLower(VCRWDT.val);
 
     case 0x10C: return VCRDIV;
+    case 0x12C: return VCRDIV;
 
     case 0x1A0: return VCRDMA0;
     case 0x1A8: return VCRDMA1;
@@ -407,6 +408,7 @@ void SH2::OnChipRegWrite(uint32 address, T baseValue) {
     case 0xE5: writeWordLower(VCRWDT.val, value, 0x7F7F); break;
 
     case 0x10C: VCRDIV = value; break;
+    case 0x12C: VCRDIV = value; break;
 
     case 0x1A0: VCRDMA0 = value; break;
     case 0x1A8: VCRDMA1 = value; break;

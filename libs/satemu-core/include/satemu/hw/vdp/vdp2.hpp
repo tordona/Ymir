@@ -360,6 +360,8 @@ private:
     std::array<uint8, kVDP2VRAMSize> m_VRAM; // 4x 128 KiB banks: A0, A1, B0, B1
     std::array<uint8, kCRAMSize> m_CRAM;
 
+    // -------------------------------------------------------------------------
+
     TVMD_t TVMD;     // 180000   TVMD    TV Screen Mode
     EXTEN_t EXTEN;   // 180002   EXTEN   External Signal Enable
                      // 180004   TVSTAT  Screen Status (read-only)

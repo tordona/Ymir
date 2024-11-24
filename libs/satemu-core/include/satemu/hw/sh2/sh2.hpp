@@ -376,7 +376,9 @@ private:
 
     // 110  ?    32?      ??    DVDNTH  ???
     // 114  ?    32?      ??    DVDNTL  ???
-    //
+
+    // 120..13F are mirrors of 100..11F
+
     // --- UBC module (channel A) ---
     //
     // 140  ?    16?      ??    BARAH   ???
