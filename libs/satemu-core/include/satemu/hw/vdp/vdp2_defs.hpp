@@ -1062,7 +1062,7 @@ union LSTA_t {
 // 1800A8   LCTAU   Line Color Screen Table Address (upper)
 //
 //   bits   r/w  code          description
-//     15     W  LCCLMD
+//     15     W  LCCLMD        Line Color Screen Mode (0=single color, 1=per line)
 //   14-3        -             Reserved, must be zero
 //    2-0     W  LCTA18-16     Line Color Screen Table Base Address (bits 18-16)
 //
@@ -1087,6 +1087,37 @@ union LCTA_t {
     };
     struct {
         uint32 LCTAn : 19;
+    };
+};
+
+// 1800AC   BKTAU   Back Screen Table Address (upper)
+//
+//   bits   r/w  code          description
+//     15     W  BKCLMD        Back Screen Color Mode (0=single color, 1=per line)
+//   14-3        -             Reserved, must be zero
+//    2-0     W  BKTA18-16     Back Screen Table Base Address (bits 18-16)
+//
+// 1800AE   BKTAL   Back Screen Table Address (lower)
+//
+//   bits   r/w  code          description
+//   15-0     W  BKTA15-0      Back Screen Table Base Address (bits 15-0)
+union BKTA_t {
+    uint32 u32;
+    struct {
+        union {
+            uint16 u16;
+            uint16 BKTAn;
+        } L;
+        union {
+            uint16 u16;
+            struct {
+                uint16 BKTAn : 3;
+                uint16 _rsvd3_15 : 13;
+            };
+        } U;
+    };
+    struct {
+        uint32 BKTAn : 19;
     };
 };
 

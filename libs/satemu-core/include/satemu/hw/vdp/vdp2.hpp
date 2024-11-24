@@ -144,6 +144,8 @@ public:
         case 0x0A6: return 0; // LSTA1L is write-only
         case 0x0A8: return 0; // LCTAU is write-only
         case 0x0AA: return 0; // LCTAL is write-only
+        case 0x0AC: return 0; // BKTAU is write-only
+        case 0x0AE: return 0; // BKTAL is write-only
         case 0x0B8: return 0; // OVPNRA is write-only
         case 0x0BA: return 0; // OVPNRB is write-only
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
@@ -214,16 +216,16 @@ public:
         case 0x076: SCN0.Y.D.u16 = value & 0xFF00; break;
         case 0x078: ZMN0.X.I.u16 = value & 0x0007; break;
         case 0x07A: ZMN0.X.D.u16 = value & 0xFF00; break;
-        case 0x07B: ZMN0.Y.I.u16 = value & 0x0007; break;
-        case 0x07C: ZMN0.Y.D.u16 = value & 0xFF00; break;
+        case 0x07C: ZMN0.Y.I.u16 = value & 0x0007; break;
+        case 0x07E: ZMN0.Y.D.u16 = value & 0xFF00; break;
         case 0x080: SCN1.X.I.u16 = value & 0x07FF; break;
         case 0x082: SCN1.X.D.u16 = value & 0xFF00; break;
         case 0x084: SCN1.Y.I.u16 = value & 0x07FF; break;
         case 0x086: SCN1.Y.D.u16 = value & 0xFF00; break;
         case 0x088: ZMN1.X.I.u16 = value & 0x0007; break;
         case 0x08A: ZMN1.X.D.u16 = value & 0xFF00; break;
-        case 0x08B: ZMN1.Y.I.u16 = value & 0x0007; break;
-        case 0x08C: ZMN1.Y.D.u16 = value & 0xFF00; break;
+        case 0x08C: ZMN1.Y.I.u16 = value & 0x0007; break;
+        case 0x08E: ZMN1.Y.D.u16 = value & 0xFF00; break;
         case 0x090: SCN2.X.u16 = value & 0x07FF; break;
         case 0x092: SCN2.Y.u16 = value & 0x07FF; break;
         case 0x094: SCN3.X.u16 = value & 0x07FF; break;
@@ -238,6 +240,8 @@ public:
         case 0x0A6: LSTA1.L.u16 = value & 0xFFFE; break;
         case 0x0A8: LCTA.U.u16 = value & 0x8007; break;
         case 0x0AA: LCTA.L.u16 = value; break;
+        case 0x0AC: BKTA.U.u16 = value & 0x8007; break;
+        case 0x0AE: BKTA.L.u16 = value; break;
         case 0x0B8: OVPNRA = value; break;
         case 0x0BA: OVPNRB = value; break;
         default:
@@ -335,6 +339,8 @@ private:
     LSTA_t LSTA1;    // 1800A6   LSTA1L  NBG1 Line Cell Scroll Table Address (lower)
                      // 1800A8   LCTAU   Line Color Screen Table Address (upper)
     LCTA_t LCTA;     // 1800AA   LCTAL   Line Color Screen Table Address (lower)
+                     // 1800AC   BKTAU   Back Screen Table Address (upper)
+    BKTA_t BKTA;     // 1800AE   BKTAL   Back Screen Table Address (lower)
     OVPNR_t OVPNRA;  // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
     OVPNR_t OVPNRB;  // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
 
