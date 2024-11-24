@@ -1267,4 +1267,57 @@ union RPTA_t {
     };
 };
 
+// 1800C0   WPSX0   Window 0 Horizontal Start Point
+// 1800C4   WPEX0   Window 0 Horizontal End Point
+// 1800C8   WPSX1   Window 1 Horizontal Start Point
+// 1800CC   WPEX1   Window 1 Horizontal End Point
+//
+//   bits   r/w  code          description
+//  15-10        -             Reserved, must be zero
+//    9-0     W  WxSX9-0       Window x Start/End Horizontal Coordinate
+//
+// 1800C2   WPSY0   Window 0 Vertical Start Point
+// 1800C6   WPEY0   Window 0 Vertical End Point
+// 1800CA   WPSY1   Window 1 Vertical Start Point
+// 1800CE   WPEY1   Window 1 Vertical End Point
+//
+//   bits   r/w  code          description
+//   15-9        -             Reserved, must be zero
+//    8-0     W  WnSY8-0       Window n Start/End Vertical Coordinate
+union WPXY_t {
+    uint64 u64;
+    struct {
+        union {
+            uint16 u16;
+            struct {
+                uint16 WxSXn : 10;
+                uint16 _rsvd10_15 : 6;
+            };
+        } S;
+        union {
+            uint16 u16;
+            struct {
+                uint16 WxEXn : 10;
+                uint16 _rsvd10_15 : 6;
+            };
+        } E;
+    } X;
+    struct {
+        union {
+            uint16 u16;
+            struct {
+                uint16 WxSXn : 10;
+                uint16 _rsvd10_15 : 6;
+            };
+        } S;
+        union {
+            uint16 u16;
+            struct {
+                uint16 WxEXn : 10;
+                uint16 _rsvd10_15 : 6;
+            };
+        } E;
+    } Y;
+};
+
 } // namespace satemu::vdp2

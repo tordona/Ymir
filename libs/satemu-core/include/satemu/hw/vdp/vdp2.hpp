@@ -256,6 +256,14 @@ public:
         case 0x0BA: OVPNRB = value; break;
         case 0x0BC: RPTA.U.u16 = value & 0x0007; break;
         case 0x0BE: RPTA.L.u16 = value & 0xFFFE; break;
+        case 0x0C0: WPXY0.X.S.u16 = value & 0x03FF; break;
+        case 0x0C2: WPXY0.X.E.u16 = value & 0x03FF; break;
+        case 0x0C4: WPXY0.Y.S.u16 = value & 0x01FF; break;
+        case 0x0C6: WPXY0.Y.E.u16 = value & 0x01FF; break;
+        case 0x0C8: WPXY1.X.S.u16 = value & 0x03FF; break;
+        case 0x0CA: WPXY1.X.E.u16 = value & 0x03FF; break;
+        case 0x0CC: WPXY1.Y.S.u16 = value & 0x01FF; break;
+        case 0x0CE: WPXY1.Y.E.u16 = value & 0x01FF; break;
         default:
             fmt::println("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
             break;
@@ -361,14 +369,14 @@ private:
     OVPNR_t OVPNRB;  // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
                      // 1800BC   RPTAU   Rotation Parameters Table Address (upper)
     RPTA_t RPTA;     // 1800BE   RPTAL   Rotation Parameters Table Address (lower)
-                     // 1800C0
-                     // 1800C2
-                     // 1800C4
-                     // 1800C6
-                     // 1800C8
-                     // 1800CA
-                     // 1800CC
-                     // 1800CE
+                     // 1800C0   WPSX0   Window 0 Horizontal Start Point
+                     // 1800C2   WPSY0   Window 0 Vertical Start Point
+                     // 1800C4   WPEX0   Window 0 Horizontal End Point
+    WPXY_t WPXY0;    // 1800C6   WPEY0   Window 0 Vertical End Point
+                     // 1800C8   WPSX1   Window 1 Horizontal Start Point
+                     // 1800CA   WPSY1   Window 1 Vertical Start Point
+                     // 1800CC   WPEX1   Window 1 Horizontal End Point
+    WPXY_t WPXY1;    // 1800CE   WPEY1   Window 1 Vertical End Point
                      // 1800D0
                      // 1800D2
                      // 1800D4
