@@ -170,6 +170,14 @@ public:
         case 0x0DA: return 0; // LWTA0L is write-only
         case 0x0DC: return 0; // LWTA1U is write-only
         case 0x0DE: return 0; // LWTA1L is write-only
+        case 0x100: return 0; // CCRSA is write-only
+        case 0x102: return 0; // CCRSB is write-only
+        case 0x104: return 0; // CCRSC is write-only
+        case 0x106: return 0; // CCRSD is write-only
+        case 0x108: return 0; // CCRNA is write-only
+        case 0x10A: return 0; // CCRNB is write-only
+        case 0x10C: return 0; // CCRR is write-only
+        case 0x10E: return 0; // CCRLB is write-only
         case 0x110: return 0; // CLOFEN is write-only
         case 0x112: return 0; // CLOFSL is write-only
         case 0x114: return 0; // COAR is write-only
@@ -296,6 +304,14 @@ public:
         case 0x0DA: LWTA0.L.u16 = value & 0xFFFE; break;
         case 0x0DC: LWTA1.U.u16 = value & 0x8007; break;
         case 0x0DE: LWTA1.L.u16 = value & 0xFFFE; break;
+        case 0x100: CCRSA.u16 = value & 0x1F1F; break;
+        case 0x102: CCRSB.u16 = value & 0x1F1F; break;
+        case 0x104: CCRSC.u16 = value & 0x1F1F; break;
+        case 0x106: CCRSD.u16 = value & 0x1F1F; break;
+        case 0x108: CCRNA.u16 = value & 0x1F1F; break;
+        case 0x10A: CCRNB.u16 = value & 0x1F1F; break;
+        case 0x10C: CCRR.u16 = value & 0x001F; break;
+        case 0x10E: CCRLB.u16 = value & 0x1F1F; break;
         case 0x110: CLOFEN.u16 = value & 0x007F; break;
         case 0x112: CLOFSL.u16 = value & 0x007F; break;
         case 0x114: COAR.u16 = value & 0x01FF; break;
@@ -441,14 +457,14 @@ private:
                      // 1800FA
                      // 1800FC
                      // 1800FE   -       Reserved
-                     // 180100
-                     // 180102
-                     // 180104
-                     // 180106
-                     // 180108
-                     // 18010A
-                     // 18010C
-                     // 18010E
+    CCRS_t CCRSA;    // 180100   CCRSA   Sprite 0 and 1 Color Calculation Ratio
+    CCRS_t CCRSB;    // 180102   CCRSB   Sprite 2 and 3 Color Calculation Ratio
+    CCRS_t CCRSC;    // 180104   CCRSC   Sprite 4 and 5 Color Calculation Ratio
+    CCRS_t CCRSD;    // 180106   CCRSD   Sprite 6 and 7 Color Calculation Ratio
+    CCR_t CCRNA;     // 180108   CCRNA   NBG0 and NBG1 Color Calculation Ratio
+    CCR_t CCRNB;     // 18010A   CCRNB   NBG2 and NBG3 Color Calculation Ratio
+    CCR_t CCRR;      // 18010C   CCRR    RBG0 Color Calculation Ratio
+    CCR_t CCRLB;     // 18010E   CCRLB   Line Color Screen and Back Screen Color Calculation Ratio
     CLOFEN_t CLOFEN; // 180110   CLOFEN  Color Offset Enable
     CLOFSL_t CLOFSL; // 180112   CLOFSL  Color Offset Select
     CO_t COAR;       // 180114   COAR    Color Offset A - Red

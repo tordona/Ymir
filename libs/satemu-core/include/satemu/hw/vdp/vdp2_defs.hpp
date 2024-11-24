@@ -1531,12 +1531,92 @@ union LWTA_t {
     };
 };
 
+// 180100   CCRSA   Sprite 0 and 1 Color Calculation Ratio
+//
+//   bits   r/w  code          description
+//  15-13        -             Reserved, must be zero
+//   12-8     W  S1CCRT4-0     Sprite Register 1 Color Calculation Ratio
+//    7-5        -             Reserved, must be zero
+//    4-0     W  S0CCRT4-0     Sprite Register 0 Color Calculation Ratio
+//
+// 180102   CCRSB   Sprite 2 and 3 Color Calculation Ratio
+//
+//   bits   r/w  code          description
+//  15-13        -             Reserved, must be zero
+//   12-8     W  S3CCRT4-0     Sprite Register 3 Color Calculation Ratio
+//    7-5        -             Reserved, must be zero
+//    4-0     W  S2CCRT4-0     Sprite Register 2 Color Calculation Ratio
+//
+// 180104   CCRSC   Sprite 4 and 5 Color Calculation Ratio
+//
+//   bits   r/w  code          description
+//  15-13        -             Reserved, must be zero
+//   12-8     W  S5CCRT4-0     Sprite Register 5 Color Calculation Ratio
+//    7-5        -             Reserved, must be zero
+//    4-0     W  S4CCRT4-0     Sprite Register 4 Color Calculation Ratio
+//
+// 180106   CCRSD   Sprite 6 and 7 Color Calculation Ratio
+//
+//   bits   r/w  code          description
+//  15-13        -             Reserved, must be zero
+//   12-8     W  S7CCRT4-0     Sprite Register 7 Color Calculation Ratio
+//    7-5        -             Reserved, must be zero
+//    4-0     W  S6CCRT4-0     Sprite Register 6 Color Calculation Ratio
+union CCRS_t {
+    uint16 u16;
+    struct {
+        uint16 lCCRTn : 5; // (A) Sprite 0, (B) Sprite 2, (C) Sprite 4, (D) Sprite 6
+        uint16 _rsvd5_7 : 3;
+        uint16 uCCRTn : 5; // (A) Sprite 1, (B) Sprite 3, (C) Sprite 5, (D) Sprite 7
+        uint16 _rsvd13_15 : 3;
+    };
+};
+
+// 180108   CCRNA   NBG0 and NBG1 Color Calculation Ratio
+//
+//   bits   r/w  code          description
+//  15-13        -             Reserved, must be zero
+//   12-8     W  N1CCRT4-0     NBG1 Color Calculation Ratio
+//    7-5        -             Reserved, must be zero
+//    4-0     W  N0CCRT4-0     NBG0 Color Calculation Ratio
+//
+// 18010A   CCRNB   NBG2 and NBG3 Color Calculation Ratio
+//
+//   bits   r/w  code          description
+//  15-13        -             Reserved, must be zero
+//   12-8     W  N3CCRT4-0     NBG3 Color Calculation Ratio
+//    7-5        -             Reserved, must be zero
+//    4-0     W  N2CCRT4-0     NBG2 Color Calculation Ratio
+//
+// 18010C   CCRR    RBG0 Color Calculation Ratio
+//
+//   bits   r/w  code          description
+//   15-5        -             Reserved, must be zero
+//    4-0     W  R0CCRT4-0     RBG0 Color Calculation Ratio
+//
+// 18010E   CCRLB   Line Color Screen and Back Screen Color Calculation Ratio
+//
+//   bits   r/w  code          description
+//  15-13        -             Reserved, must be zero
+//   12-8     W  BKCCRT4-0     Back Screen Color Calculation Ratio
+//    7-5        -             Reserved, must be zero
+//    4-0     W  LCCCRT4-0     Line Color Screen Color Calculation Ratio
+union CCR_t {
+    uint16 u16;
+    struct {
+        uint16 lCCRTn : 5; // (NA) NBG0, (NB) NBG2, (R) RBG0, (LB) Line Color Screen
+        uint16 _rsvd5_7 : 3;
+        uint16 uCCRTn : 5; // (NA) NBG1, (NB) NBG3, (R) invalid, (LB) Back Screen
+        uint16 _rsvd13_15 : 3;
+    };
+};
+
 // 180110   CLOFEN  Color Offset Enable
 //
 //   bits   r/w  code          description
 //   15-7        -             Reserved, must be zero
 //      6     W  SPCOEN        Sprite Color Offset Enable
-//      5     W  BKCOEN        Backdrop Color Offset Enable
+//      5     W  BKCOEN        Back Screen Color Offset Enable
 //      4     W  R0COEN        RBG0 Color Offset Enable
 //      3     W  N3COEN        NBG3 Color Offset Enable
 //      2     W  N2COEN        NBG2 Color Offset Enable
