@@ -19,7 +19,11 @@ public:
 
     void Reset(bool hard);
 
+    // TODO: use scheduler
+    void Advance(uint64 cycles);
+
     // TODO: handle VRSIZE.VRAMSZ in Read/WriteVRAM maybe?
+    // TODO: CRAM and registers only accept 16-bit and 32-bit accesses
 
     template <mem_access_type T>
     T ReadVRAM(uint32 address) {
@@ -66,141 +70,141 @@ public:
         // case 0x008: return 0; // TODO: HCNT
         // case 0x00A: return 0; // TODO: VCNT
         case 0x00E: return RAMCTL.u16;
-        case 0x010: return 0; // CYCA0 is write-only
-        case 0x012: return 0; // CYCA0 is write-only
-        case 0x014: return 0; // CYCA1 is write-only
-        case 0x016: return 0; // CYCA1 is write-only
-        case 0x018: return 0; // CYCB0 is write-only
-        case 0x01A: return 0; // CYCB0 is write-only
-        case 0x01E: return 0; // CYCB1 is write-only
-        case 0x01C: return 0; // CYCB1 is write-only
-        case 0x020: return 0; // BGON is write-only
-        case 0x022: return 0; // MZCTL is write-only
-        case 0x024: return 0; // SFSEL is write-only
-        case 0x026: return 0; // SFCODE is write-only
-        case 0x028: return 0; // CHCTLA is write-only
-        case 0x02A: return 0; // CHCTLB is write-only
-        case 0x02C: return 0; // BMPNA is write-only
-        case 0x02E: return 0; // BMPNB is write-only
-        case 0x030: return 0; // PNCN0 is write-only
-        case 0x032: return 0; // PNCN1 is write-only
-        case 0x034: return 0; // PNCN2 is write-only
-        case 0x036: return 0; // PNCN3 is write-only
-        case 0x038: return 0; // PNCR is write-only
-        case 0x03A: return 0; // PLSZ is write-only
-        case 0x03C: return 0; // MPOFN is write-only
-        case 0x03E: return 0; // MPOFR is write-only
-        case 0x040: return 0; // MPABN0 is write-only
-        case 0x042: return 0; // MPCDN0 is write-only
-        case 0x044: return 0; // MPABN1 is write-only
-        case 0x046: return 0; // MPCDN1 is write-only
-        case 0x048: return 0; // MPABN2 is write-only
-        case 0x04A: return 0; // MPCDN2 is write-only
-        case 0x04C: return 0; // MPABN3 is write-only
-        case 0x04E: return 0; // MPCDN3 is write-only
-        case 0x050: return 0; // MPABRA is write-only
-        case 0x052: return 0; // MPCDRA is write-only
-        case 0x054: return 0; // MPEFRA is write-only
-        case 0x056: return 0; // MPGHRA is write-only
-        case 0x058: return 0; // MPIJRA is write-only
-        case 0x05A: return 0; // MPKLRA is write-only
-        case 0x05C: return 0; // MPMNRA is write-only
-        case 0x05E: return 0; // MPOPRA is write-only
-        case 0x060: return 0; // MPABRB is write-only
-        case 0x062: return 0; // MPCDRB is write-only
-        case 0x064: return 0; // MPEFRB is write-only
-        case 0x066: return 0; // MPGHRB is write-only
-        case 0x068: return 0; // MPIJRB is write-only
-        case 0x06A: return 0; // MPKLRB is write-only
-        case 0x06C: return 0; // MPMNRB is write-only
-        case 0x06E: return 0; // MPOPRB is write-only
-        case 0x070: return 0; // SCXIN0 is write-only
-        case 0x072: return 0; // SCXDN0 is write-only
-        case 0x074: return 0; // SCYIN0 is write-only
-        case 0x076: return 0; // SCYDN0 is write-only
-        case 0x078: return 0; // ZMXIN0 is write-only
-        case 0x07A: return 0; // ZMXDN0 is write-only
-        case 0x07C: return 0; // ZMYIN0 is write-only
-        case 0x07E: return 0; // ZMYDN0 is write-only
-        case 0x080: return 0; // SCXIN1 is write-only
-        case 0x082: return 0; // SCXDN1 is write-only
-        case 0x084: return 0; // SCYIN1 is write-only
-        case 0x086: return 0; // SCYDN1 is write-only
-        case 0x088: return 0; // ZMXIN1 is write-only
-        case 0x08A: return 0; // ZMXDN1 is write-only
-        case 0x08C: return 0; // ZMYIN1 is write-only
-        case 0x08E: return 0; // ZMYDN1 is write-only
-        case 0x090: return 0; // SCXN2 is write-only
-        case 0x092: return 0; // SCYN2 is write-only
-        case 0x094: return 0; // SCXN3 is write-only
-        case 0x096: return 0; // SCYN3 is write-only
-        case 0x098: return 0; // ZMCTL is write-only
-        case 0x09A: return 0; // SCRCTL is write-only
-        case 0x09C: return 0; // VCSTAU is write-only
-        case 0x09E: return 0; // VCSTAL is write-only
-        case 0x0A0: return 0; // LSTA0U is write-only
-        case 0x0A2: return 0; // LSTA0L is write-only
-        case 0x0A4: return 0; // LSTA1U is write-only
-        case 0x0A6: return 0; // LSTA1L is write-only
-        case 0x0A8: return 0; // LCTAU is write-only
-        case 0x0AA: return 0; // LCTAL is write-only
-        case 0x0AC: return 0; // BKTAU is write-only
-        case 0x0AE: return 0; // BKTAL is write-only
-        case 0x0B0: return 0; // RPMD is write-only
-        case 0x0B2: return 0; // RPRCTL is write-only
-        case 0x0B4: return 0; // KTCTL is write-only
-        case 0x0B6: return 0; // KTAOF is write-only
-        case 0x0B8: return 0; // OVPNRA is write-only
-        case 0x0BA: return 0; // OVPNRB is write-only
-        case 0x0BC: return 0; // RPTAU is write-only
-        case 0x0BE: return 0; // RPTAL is write-only
-        case 0x0C0: return 0; // WPSX0 is write-only
-        case 0x0C2: return 0; // WPEX0 is write-only
-        case 0x0C4: return 0; // WPSY0 is write-only
-        case 0x0C6: return 0; // WPEY0 is write-only
-        case 0x0C8: return 0; // WPSX1 is write-only
-        case 0x0CA: return 0; // WPEX1 is write-only
-        case 0x0CC: return 0; // WPSY1 is write-only
-        case 0x0CE: return 0; // WPEY1 is write-only
-        case 0x0D0: return 0; // WCTLA is write-only
-        case 0x0D2: return 0; // WCTLB is write-only
-        case 0x0D4: return 0; // WCTLC is write-only
-        case 0x0D6: return 0; // WCTLD is write-only
-        case 0x0D8: return 0; // LWTA0U is write-only
-        case 0x0DA: return 0; // LWTA0L is write-only
-        case 0x0DC: return 0; // LWTA1U is write-only
-        case 0x0DE: return 0; // LWTA1L is write-only
-        case 0x0E0: return 0; // SPCTL is write-only
-        case 0x0E2: return 0; // SDCTL is write-only
-        case 0x0E4: return 0; // CRAOFA is write-only
-        case 0x0E6: return 0; // CRAOFB is write-only
-        case 0x0E8: return 0; // LNCLEN is write-only
-        case 0x0EA: return 0; // SFPRMD is write-only
-        case 0x0EC: return 0; // CCCTL is write-only
-        case 0x0EE: return 0; // SFCCMD is write-only
-        case 0x0F0: return 0; // PRISA is write-only
-        case 0x0F2: return 0; // PRISB is write-only
-        case 0x0F4: return 0; // PRISC is write-only
-        case 0x0F6: return 0; // PRISD is write-only
-        case 0x0F8: return 0; // PRINA is write-only
-        case 0x0FA: return 0; // PRINB is write-only
-        case 0x0FC: return 0; // PRIR is write-only
-        case 0x100: return 0; // CCRSA is write-only
-        case 0x102: return 0; // CCRSB is write-only
-        case 0x104: return 0; // CCRSC is write-only
-        case 0x106: return 0; // CCRSD is write-only
-        case 0x108: return 0; // CCRNA is write-only
-        case 0x10A: return 0; // CCRNB is write-only
-        case 0x10C: return 0; // CCRR is write-only
-        case 0x10E: return 0; // CCRLB is write-only
-        case 0x110: return 0; // CLOFEN is write-only
-        case 0x112: return 0; // CLOFSL is write-only
-        case 0x114: return 0; // COAR is write-only
-        case 0x116: return 0; // COAG is write-only
-        case 0x118: return 0; // COAB is write-only
-        case 0x11A: return 0; // COBR is write-only
-        case 0x11C: return 0; // COBG is write-only
-        case 0x11E: return 0; // COBB is write-only
+        case 0x010: return CYCA0.L.u16;   // write-only?
+        case 0x012: return CYCA0.U.u16;   // write-only?
+        case 0x014: return CYCA1.L.u16;   // write-only?
+        case 0x016: return CYCA1.U.u16;   // write-only?
+        case 0x018: return CYCB0.L.u16;   // write-only?
+        case 0x01A: return CYCB0.U.u16;   // write-only?
+        case 0x01E: return CYCB1.L.u16;   // write-only?
+        case 0x01C: return CYCB1.U.u16;   // write-only?
+        case 0x020: return BGON.u16;      // write-only?
+        case 0x022: return MZCTL.u16;     // write-only?
+        case 0x024: return SFSEL.u16;     // write-only?
+        case 0x026: return SFCODE.u16;    // write-only?
+        case 0x028: return CHCTLA.u16;    // write-only?
+        case 0x02A: return CHCTLB.u16;    // write-only?
+        case 0x02C: return BMPNA.u16;     // write-only?
+        case 0x02E: return BMPNB.u16;     // write-only?
+        case 0x030: return PNCN0.u16;     // write-only?
+        case 0x032: return PNCN1.u16;     // write-only?
+        case 0x034: return PNCN2.u16;     // write-only?
+        case 0x036: return PNCN3.u16;     // write-only?
+        case 0x038: return PNCR.u16;      // write-only?
+        case 0x03A: return PLSZ.u16;      // write-only?
+        case 0x03C: return MPOFN.u16;     // write-only?
+        case 0x03E: return MPOFR.u16;     // write-only?
+        case 0x040: return MPN0.AB.u16;   // write-only?
+        case 0x042: return MPN0.CD.u16;   // write-only?
+        case 0x044: return MPN1.AB.u16;   // write-only?
+        case 0x046: return MPN1.CD.u16;   // write-only?
+        case 0x048: return MPN2.AB.u16;   // write-only?
+        case 0x04A: return MPN2.CD.u16;   // write-only?
+        case 0x04C: return MPN3.AB.u16;   // write-only?
+        case 0x04E: return MPN3.CD.u16;   // write-only?
+        case 0x050: return MPRA.AB.u16;   // write-only?
+        case 0x052: return MPRA.CD.u16;   // write-only?
+        case 0x054: return MPRA.EF.u16;   // write-only?
+        case 0x056: return MPRA.GH.u16;   // write-only?
+        case 0x058: return MPRA.IJ.u16;   // write-only?
+        case 0x05A: return MPRA.KL.u16;   // write-only?
+        case 0x05C: return MPRA.MN.u16;   // write-only?
+        case 0x05E: return MPRA.OP.u16;   // write-only?
+        case 0x060: return MPRB.AB.u16;   // write-only?
+        case 0x062: return MPRB.CD.u16;   // write-only?
+        case 0x064: return MPRB.EF.u16;   // write-only?
+        case 0x066: return MPRB.GH.u16;   // write-only?
+        case 0x068: return MPRB.IJ.u16;   // write-only?
+        case 0x06A: return MPRB.KL.u16;   // write-only?
+        case 0x06C: return MPRB.MN.u16;   // write-only?
+        case 0x06E: return MPRB.OP.u16;   // write-only?
+        case 0x070: return SCN0.X.I.u16;  // write-only?
+        case 0x072: return SCN0.X.D.u16;  // write-only?
+        case 0x074: return SCN0.Y.I.u16;  // write-only?
+        case 0x076: return SCN0.Y.D.u16;  // write-only?
+        case 0x078: return ZMN0.X.I.u16;  // write-only?
+        case 0x07A: return ZMN0.X.D.u16;  // write-only?
+        case 0x07C: return ZMN0.Y.I.u16;  // write-only?
+        case 0x07E: return ZMN0.Y.D.u16;  // write-only?
+        case 0x080: return SCN1.X.I.u16;  // write-only?
+        case 0x082: return SCN1.X.D.u16;  // write-only?
+        case 0x084: return SCN1.Y.I.u16;  // write-only?
+        case 0x086: return SCN1.Y.D.u16;  // write-only?
+        case 0x088: return ZMN1.X.I.u16;  // write-only?
+        case 0x08A: return ZMN1.X.D.u16;  // write-only?
+        case 0x08C: return ZMN1.Y.I.u16;  // write-only?
+        case 0x08E: return ZMN1.Y.D.u16;  // write-only?
+        case 0x090: return SCN2.X.u16;    // write-only?
+        case 0x092: return SCN2.Y.u16;    // write-only?
+        case 0x094: return SCN3.X.u16;    // write-only?
+        case 0x096: return SCN3.Y.u16;    // write-only?
+        case 0x098: return ZMCTL.u16;     // write-only?
+        case 0x09A: return SCRCTL.u16;    // write-only?
+        case 0x09C: return VCSTA.U.u16;   // write-only?
+        case 0x09E: return VCSTA.L.u16;   // write-only?
+        case 0x0A0: return LSTA0.U.u16;   // write-only?
+        case 0x0A2: return LSTA0.L.u16;   // write-only?
+        case 0x0A4: return LSTA1.U.u16;   // write-only?
+        case 0x0A6: return LSTA1.L.u16;   // write-only?
+        case 0x0A8: return LCTA.U.u16;    // write-only?
+        case 0x0AA: return LCTA.L.u16;    // write-only?
+        case 0x0AC: return BKTA.U.u16;    // write-only?
+        case 0x0AE: return BKTA.L.u16;    // write-only?
+        case 0x0B0: return RPMD.u16;      // write-only?
+        case 0x0B2: return RPRCTL.u16;    // write-only?
+        case 0x0B4: return KTCTL.u16;     // write-only?
+        case 0x0B6: return KTAOF.u16;     // write-only?
+        case 0x0B8: return OVPNRA;        // write-only?
+        case 0x0BA: return OVPNRB;        // write-only?
+        case 0x0BC: return RPTA.U.u16;    // write-only?
+        case 0x0BE: return RPTA.L.u16;    // write-only?
+        case 0x0C0: return WPXY0.X.S.u16; // write-only?
+        case 0x0C2: return WPXY0.X.E.u16; // write-only?
+        case 0x0C4: return WPXY0.Y.S.u16; // write-only?
+        case 0x0C6: return WPXY0.Y.E.u16; // write-only?
+        case 0x0C8: return WPXY1.X.S.u16; // write-only?
+        case 0x0CA: return WPXY1.X.E.u16; // write-only?
+        case 0x0CC: return WPXY1.Y.S.u16; // write-only?
+        case 0x0CE: return WPXY1.Y.E.u16; // write-only?
+        case 0x0D0: return WCTL.A.u16;    // write-only?
+        case 0x0D2: return WCTL.B.u16;    // write-only?
+        case 0x0D4: return WCTL.C.u16;    // write-only?
+        case 0x0D6: return WCTL.D.u16;    // write-only?
+        case 0x0D8: return LWTA0.U.u16;   // write-only?
+        case 0x0DA: return LWTA0.L.u16;   // write-only?
+        case 0x0DC: return LWTA1.U.u16;   // write-only?
+        case 0x0DE: return LWTA1.L.u16;   // write-only?
+        case 0x0E0: return SPCTL.u16;     // write-only?
+        case 0x0E2: return SDCTL.u16;     // write-only?
+        case 0x0E4: return CRAOFA.u16;    // write-only?
+        case 0x0E6: return CRAOFB.u16;    // write-only?
+        case 0x0E8: return LNCLEN.u16;    // write-only?
+        case 0x0EA: return SFPRMD.u16;    // write-only?
+        case 0x0EC: return CCCTL.u16;     // write-only?
+        case 0x0EE: return SFCCMD.u16;    // write-only?
+        case 0x0F0: return PRISA.u16;     // write-only?
+        case 0x0F2: return PRISB.u16;     // write-only?
+        case 0x0F4: return PRISC.u16;     // write-only?
+        case 0x0F6: return PRISD.u16;     // write-only?
+        case 0x0F8: return PRINA.u16;     // write-only?
+        case 0x0FA: return PRINB.u16;     // write-only?
+        case 0x0FC: return PRIR.u16;      // write-only?
+        case 0x100: return CCRSA.u16;     // write-only?
+        case 0x102: return CCRSB.u16;     // write-only?
+        case 0x104: return CCRSC.u16;     // write-only?
+        case 0x106: return CCRSD.u16;     // write-only?
+        case 0x108: return CCRNA.u16;     // write-only?
+        case 0x10A: return CCRNB.u16;     // write-only?
+        case 0x10C: return CCRR.u16;      // write-only?
+        case 0x10E: return CCRLB.u16;     // write-only?
+        case 0x110: return CLOFEN.u16;    // write-only?
+        case 0x112: return CLOFSL.u16;    // write-only?
+        case 0x114: return COAR.u16;      // write-only?
+        case 0x116: return COAG.u16;      // write-only?
+        case 0x118: return COAB.u16;      // write-only?
+        case 0x11A: return COBR.u16;      // write-only?
+        case 0x11C: return COBG.u16;      // write-only?
+        case 0x11E: return COBB.u16;      // write-only?
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
         }
     }
@@ -208,7 +212,10 @@ public:
     template <mem_access_type T>
     void WriteReg(uint32 address, T value) {
         switch (address) {
-        case 0x000: TVMD.u16 = value & 0x81F7; break;
+        case 0x000:
+            TVMD.u16 = value & 0x81F7;
+            UpdateResolution();
+            break;
         case 0x002: EXTEN.u16 = value & 0x0303; break;
         case 0x004: /* TVSTAT is read-only */ break;
         case 0x006: VRSIZE.u16 = value & 0x8000; break;
@@ -364,10 +371,10 @@ private:
 
     TVMD_t TVMD;     // 180000   TVMD    TV Screen Mode
     EXTEN_t EXTEN;   // 180002   EXTEN   External Signal Enable
-                     // 180004   TVSTAT  Screen Status (read-only)
+    TVSTAT_t TVSTAT; // 180004   TVSTAT  Screen Status (read-only)
     VRSIZE_t VRSIZE; // 180006   VRSIZE  VRAM Size
                      // 180008   HCNT    H Counter (read-only)
-                     // 18000A   VCNT    V Counter (read-only)
+    uint16 VCNT;     // 18000A   VCNT    V Counter (read-only)
                      // 18000C   -       Reserved (but not really)
     RAMCTL_t RAMCTL; // 18000E   RAMCTL  RAM Control
                      // 180010   CYCA0L  VRAM Cycle Pattern A0 Lower
@@ -519,6 +526,88 @@ private:
         }
         return address;
     }
+
+    // -------------------------------------------------------------------------
+
+    // Horizontal display phases:
+    // NOTE: dots listed are for NTSC/PAL modes
+    // NOTE: each dot takes 4 system (SH-2) cycles
+    //
+    // 0             320/352        347/375     400/432    427/455 dots
+    // +----------------+--------------+-----------+-------------+
+    // | Active display | Right border | Horz sync | Left border | (no blanking intervals?)
+    // +-+--------------+-+------------+-----------+-------------+
+    //   |                |
+    //   |                +-- Either black (BDCLMD=0) or set to the border color as defined by the back screen.
+    //   |                    The right border is optional.
+    //   |
+    //   +-- Graphics data is shown here
+    enum class HorizontalPhase { Active, RightBorder, HorizontalSync, LeftBorder };
+    HorizontalPhase m_HPhase; // Current horizontal display phase
+
+    // Vertical display phases:
+    // (from https://wiki.yabause.org/index.php5?title=VDP2, with extra notes by StrikerX3)
+    // NOTE: scanlines listed are for NTSC/PAL modes
+    //
+    // +----------------+ Scanline 0
+    // |                |
+    // | Active display |   Graphics data is shown here.
+    // |                |
+    // +----------------+ Scanline 224, 240 or 256
+    // |                |   Either black (BDCLMD=0) or set to the border color as defined by the back screen.
+    // | Bottom border  |   The bottom border is optional.
+    // |                |
+    // +----------------+ Scanline 232, 240, 256, 264 or 272
+    // |                |
+    // | Bottom blanking|   Appears as light black.
+    // |                |
+    // +----------------+ Scanline 237, 245, 259, 267 or 275
+    // |                |
+    // | Vertical sync  |   Appears as pure black.
+    // |                |
+    // +----------------+ Scanline 240, 248, 262, 270 or 278
+    // |                |
+    // | Top blanking   |   Appears as light black.
+    // |                |
+    // +----------------+ Scanline 255, 263, 281, 289 or 297
+    // |                |   Either black (BDCLMD=0) or set to the border color as defined by the back screen.
+    // | Top border     |   The top border is optional.
+    // |                |
+    // +----------------+ Scanline 262 or 313
+    enum class VerticalPhase { Active, BottomBorder, BottomBlanking, VerticalSync, TopBlanking, TopBorder };
+    VerticalPhase m_VPhase; // Current vertical display phase
+
+    // Current cycles (for phase timing) measured in system cycles.
+    // HCNT is derived from this.
+    // TODO: replace with scheduler
+    uint64 m_currCycles;
+    uint32 m_dotClockMult;
+
+    // Display resolution (derived from TVMODE)
+    uint32 m_HRes; // Horizontal display resolution
+    uint32 m_VRes; // Vertical display resolution
+
+    // Display timings
+    std::array<uint32, 4> m_HTimings;
+    std::array<uint32, 6> m_VTimings;
+
+    // Updates the display resolution and timings based on TVMODE
+    void UpdateResolution();
+
+    void IncrementVCounter();
+
+    // Phase handlers
+    void BeginHPhaseActiveDisplay();
+    void BeginHPhaseRightBorder();
+    void BeginHPhaseHorizontalSync();
+    void BeginHPhaseLeftBorder();
+
+    void BeginVPhaseActiveDisplay();
+    void BeginVPhaseBottomBorder();
+    void BeginVPhaseBottomBlanking();
+    void BeginVPhaseVerticalSync();
+    void BeginVPhaseTopBlanking();
+    void BeginVPhaseTopBorder();
 };
 
 } // namespace satemu::vdp2

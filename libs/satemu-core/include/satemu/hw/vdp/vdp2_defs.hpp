@@ -71,6 +71,31 @@ union EXTEN_t {
     };
 };
 
+// 180004   TVSTAT  Screen Status
+//
+//   bits   r/w  code          description
+//  15-10        -             Reserved, must be zero
+//      9   R    EXLTFG        External Latch Flag (0=not latched, 1=latched)
+//      8   R    EXSYFG        External Sync Flag (0=not synced, 1=synced)
+//    7-4        -             Reserved, must be zero
+//      3   R    VBLANK        Vertical Blank Flag (0=vertical scan, 1=vertical retrace)
+//      2   R    HBLANK        Horizontal Blank Flag (0=horizontal scan, 1=horizontal retrace)
+//      1   R    ODD           Scan Field Flag (0=even, 1=odd)
+//      0   R    PAL           TV Standard Flag (0=NTSC, 1=PAL)
+union TVSTAT_t {
+    uint16 u16;
+    struct {
+        uint16 PAL : 1;
+        uint16 ODD : 1;
+        uint16 HBLANK : 1;
+        uint16 VBLANK : 1;
+        uint16 _rsvd4_7 : 4;
+        uint16 EXSYFG : 1;
+        uint16 EXLTFG : 1;
+        uint16 _rsvd10_15 : 6;
+    };
+};
+
 // 180006   VRSIZE  VRAM Size
 //
 //   bits   r/w  code          description

@@ -28,6 +28,10 @@ void Saturn::LoadIPL(std::span<uint8, kIPLSize> ipl) {
 
 void Saturn::Step() {
     m_masterSH2.Step();
+
+    // TODO: proper timings
+    // TODO: remove when using a scheduler
+    m_VDP2.Advance(1);
 }
 
 } // namespace satemu
