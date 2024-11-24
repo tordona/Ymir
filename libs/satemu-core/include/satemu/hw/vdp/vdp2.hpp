@@ -172,6 +172,8 @@ public:
         case 0x0DE: return 0; // LWTA1L is write-only
         case 0x0E0: return 0; // SPCTL is write-only
         case 0x0E2: return 0; // SDCTL is write-only
+        case 0x0E4: return 0; // CRAOFA is write-only
+        case 0x0E6: return 0; // CRAOFB is write-only
         case 0x0F0: return 0; // PRISA is write-only
         case 0x0F2: return 0; // PRISB is write-only
         case 0x0F4: return 0; // PRISC is write-only
@@ -315,6 +317,8 @@ public:
         case 0x0DE: LWTA1.L.u16 = value & 0xFFFE; break;
         case 0x0E0: SPCTL.u16 = value & 0x373F; break;
         case 0x0E2: SDCTL.u16 = value & 0x013F; break;
+        case 0x0E4: CRAOFA.u16 = value & 0x7777; break;
+        case 0x0E6: CRAOFA.u16 = value & 0x0077; break;
         case 0x0F0: PRISA.u16 = value & 0x0707; break;
         case 0x0F2: PRISB.u16 = value & 0x0707; break;
         case 0x0F4: PRISC.u16 = value & 0x0707; break;
@@ -461,8 +465,8 @@ private:
     LWTA_t LWTA1;    // 1800DE   LWTA1L  Window 1 Line Window Address Table (lower)
     SPCTL_t SPCTL;   // 1800E0   SPCTL   Sprite Control
     SDCTL_t SDCTL;   // 1800E2   SDCTL   Shadow Control
-                     // 1800E4
-                     // 1800E6
+    CRAOFA_t CRAOFA; // 1800E4   CRAOFA  NBG0-NBG3 Color RAM Address Offset
+    CRAOFB_t CRAOFB; // 1800E6   CRAOFB  RBG0 and Sprite Color RAM Address Offset
                      // 1800E8
                      // 1800EA
                      // 1800EC

@@ -1585,6 +1585,52 @@ union SDCTL_t {
     };
 };
 
+// 1800E4   CRAOFA  NBG0-NBG3 Color RAM Address Offset
+//
+//   bits   r/w  code          description
+//     15        -             Reserved, must be zero
+//  14-12     W  N3CAOS2-0     NBG3 Color RAM Adress Offset
+//     11        -             Reserved, must be zero
+//   10-8     W  N2CAOS2-0     NBG2 Color RAM Adress Offset
+//      7        -             Reserved, must be zero
+//    6-4     W  N1CAOS2-0     NBG1/EXBG Color RAM Adress Offset
+//      3        -             Reserved, must be zero
+//    2-0     W  N0CAOS2-0     NBG0/RBG1 Color RAM Adress Offset
+union CRAOFA_t {
+    uint16 u16;
+    struct {
+        uint16 N0CAOSn : 3;
+        uint16 _rsvd3 : 1;
+        uint16 N1CAOSn : 3;
+        uint16 _rsvd7 : 1;
+        uint16 N2CAOSn : 3;
+        uint16 _rsvd11 : 1;
+        uint16 N3CAOSn : 3;
+        uint16 _rsvd15 : 1;
+    };
+};
+
+// 1800E6   CRAOFB  RBG0 and Sprite Color RAM Address Offset
+//
+//   bits   r/w  code          description
+//   15-7        -             Reserved, must be zero
+//    6-4     W  SPCAOS2-0     Sprite Color RAM Adress Offset
+//      3        -             Reserved, must be zero
+//    2-0     W  R0CAOS2-0     RBG0 Color RAM Adress Offset
+union CRAOFB_t {
+    uint16 u16;
+    struct {
+        uint16 N0CAOSn : 3;
+        uint16 _rsvd3 : 1;
+        uint16 N1CAOSn : 3;
+        uint16 _rsvd7 : 1;
+        uint16 N2CAOSn : 3;
+        uint16 _rsvd11 : 1;
+        uint16 N3CAOSn : 3;
+        uint16 _rsvd15 : 1;
+    };
+};
+
 // 1800F0   PRISA   Sprite 0 and 1 Priority Number
 //
 //   bits   r/w  code          description
