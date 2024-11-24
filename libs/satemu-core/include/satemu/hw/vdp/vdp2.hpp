@@ -166,6 +166,10 @@ public:
         case 0x0D2: return 0; // WCTLB is read-only
         case 0x0D4: return 0; // WCTLC is read-only
         case 0x0D6: return 0; // WCTLD is read-only
+        case 0x0D8: return 0; // LWTA0U is read-only
+        case 0x0DA: return 0; // LWTA0L is read-only
+        case 0x0DC: return 0; // LWTA1U is read-only
+        case 0x0DE: return 0; // LWTA1L is read-only
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
         }
     }
@@ -280,6 +284,10 @@ public:
         case 0x0D2: WCTL.B.u16 = value & 0xBFBF; break;
         case 0x0D4: WCTL.C.u16 = value & 0xBFBF; break;
         case 0x0D6: WCTL.D.u16 = value & 0xBF8F; break;
+        case 0x0D8: LWTA0.U.u16 = value & 0x8007; break;
+        case 0x0DA: LWTA0.L.u16 = value & 0xFFFE; break;
+        case 0x0DC: LWTA1.U.u16 = value & 0x8007; break;
+        case 0x0DE: LWTA1.L.u16 = value & 0xFFFE; break;
         default:
             fmt::println("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
             break;
@@ -397,10 +405,10 @@ private:
                      // 1800D2   WCTLB   NBG2 and NBG3 Window Control
                      // 1800D4   WCTLC   RBG0 and Sprite Window Control
     WCTL_t WCTL;     // 1800D6   WCTLD   Rotation Window and Color Calculation Window Control
-                     // 1800D8
-                     // 1800DA
-                     // 1800DC
-                     // 1800DE
+                     // 1800D8   LWTA0U  Window 0 Line Window Address Table (upper)
+    LWTA_t LWTA0;    // 1800DA   LWTA0L  Window 0 Line Window Address Table (lower)
+                     // 1800DC   LWTA1U  Window 1 Line Window Address Table (upper)
+    LWTA_t LWTA1;    // 1800DE   LWTA1L  Window 1 Line Window Address Table (lower)
                      // 1800E0
                      // 1800E2
                      // 1800E4

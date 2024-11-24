@@ -1492,4 +1492,43 @@ union WCTL_t {
     } D;
 };
 
+// 1800D8   LWTA0U  Window 0 Line Window Address Table (upper)
+// 1800DC   LWTA1U  Window 1 Line Window Address Table (upper)
+//
+//   bits   r/w  code          description
+//     15     W  WxLWE         Line Window Enable (0=disabled, 1=enabled)
+//   14-3        -             Reserved, must be zero
+//    2-0     W  WxLWTA18-16   Line Window Address Table (bits 18-16)
+//
+// 1800DA   LWTA0L  Window 0 Line Window Address Table (lower)
+// 1800DE   LWTA1L  Window 1 Line Window Address Table (lower)
+//
+//   bits   r/w  code          description
+//   15-1     W  WxLWTA15-1    Line Window Address Table (bits 15-1)
+//      0        -             Reserved, must be zero
+union LWTA_t {
+    uint32 u32;
+    struct {
+        union {
+            uint16 u16;
+            struct {
+                uint16 _rsvd0 : 1;
+                uint16 LWTAn : 15;
+            };
+        } L;
+        union {
+            uint16 u16;
+            struct {
+                uint16 LWTAn : 3;
+                uint16 _rsvd3_14 : 12;
+                uint16 LWE : 1;
+            };
+        } U;
+    };
+    struct {
+        uint32 : 1;
+        uint32 LWTAn : 18;
+    };
+};
+
 } // namespace satemu::vdp2

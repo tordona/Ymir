@@ -60,6 +60,8 @@ void VDP2::Reset(bool hard) {
     WPXY0.u64 = 0x0;
     WPXY1.u64 = 0x0;
     WCTL.u64 = 0x0;
+    LWTA0.u32 = 0x0;
+    LWTA1.u32 = 0x0;
 }
 
 } // namespace satemu::vdp2
