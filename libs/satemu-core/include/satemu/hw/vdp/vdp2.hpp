@@ -170,6 +170,10 @@ public:
         case 0x0DA: return 0; // LWTA0L is write-only
         case 0x0DC: return 0; // LWTA1U is write-only
         case 0x0DE: return 0; // LWTA1L is write-only
+        case 0x0F0: return 0; // PRISA is write-only
+        case 0x0F2: return 0; // PRISB is write-only
+        case 0x0F4: return 0; // PRISC is write-only
+        case 0x0F6: return 0; // PRISD is write-only
         case 0x0F8: return 0; // PRINA is write-only
         case 0x0FA: return 0; // PRINB is write-only
         case 0x0FC: return 0; // PRIR is write-only
@@ -307,6 +311,10 @@ public:
         case 0x0DA: LWTA0.L.u16 = value & 0xFFFE; break;
         case 0x0DC: LWTA1.U.u16 = value & 0x8007; break;
         case 0x0DE: LWTA1.L.u16 = value & 0xFFFE; break;
+        case 0x0F0: PRISA.u16 = value & 0x0707; break;
+        case 0x0F2: PRISB.u16 = value & 0x0707; break;
+        case 0x0F4: PRISC.u16 = value & 0x0707; break;
+        case 0x0F6: PRISD.u16 = value & 0x0707; break;
         case 0x0F8: PRINA.u16 = value & 0x0707; break;
         case 0x0FA: PRINB.u16 = value & 0x0707; break;
         case 0x0FC: PRIR.u16 = value & 0x0007; break;
@@ -455,10 +463,10 @@ private:
                      // 1800EA
                      // 1800EC
                      // 1800EE
-                     // 1800F0
-                     // 1800F2
-                     // 1800F4
-                     // 1800F6
+    PRI_t PRISA;     // 1800F0   PRISA   Sprite 0 and 1 Priority Number
+    PRI_t PRISB;     // 1800F2   PRISB   Sprite 2 and 3 Priority Number
+    PRI_t PRISC;     // 1800F4   PRISC   Sprite 4 and 5 Priority Number
+    PRI_t PRISD;     // 1800F6   PRISD   Sprite 6 and 7 Priority Number
     PRI_t PRINA;     // 1800F8   PRINA   NBG0 and NBG1 Priority Number
     PRI_t PRINB;     // 1800FA   PRINB   NBG2 and NBG3 Priority Number
     PRI_t PRIR;      // 1800FC   PRIR    RBG0 Priority Number

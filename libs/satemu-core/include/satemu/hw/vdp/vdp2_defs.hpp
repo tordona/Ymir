@@ -1531,6 +1531,38 @@ union LWTA_t {
     };
 };
 
+// 1800F0   PRISA   Sprite 0 and 1 Priority Number
+//
+//   bits   r/w  code          description
+//  15-11        -             Reserved, must be zero
+//   10-8     W  S1PRIN2-0     Sprite 1 Priority Number
+//    7-3        -             Reserved, must be zero
+//    2-0     W  S0PRIN2-0     Sprite 0 Priority Number
+//
+// 1800F2   PRISB   Sprite 2 and 3 Priority Number
+//
+//   bits   r/w  code          description
+//  15-11        -             Reserved, must be zero
+//   10-8     W  S3PRIN2-0     Sprite 3 Priority Number
+//    7-3        -             Reserved, must be zero
+//    2-0     W  S3PRIN2-0     Sprite 2 Priority Number
+//
+// 1800F4   PRISC   Sprite 4 and 5 Priority Number
+//
+//   bits   r/w  code          description
+//  15-11        -             Reserved, must be zero
+//   10-8     W  S5PRIN2-0     Sprite 5 Priority Number
+//    7-3        -             Reserved, must be zero
+//    2-0     W  S4PRIN2-0     Sprite 4 Priority Number
+//
+// 1800F6   PRISD   Sprite 6 and 7 Priority Number
+//
+//   bits   r/w  code          description
+//  15-11        -             Reserved, must be zero
+//   10-8     W  S7PRIN2-0     Sprite 7 Priority Number
+//    7-3        -             Reserved, must be zero
+//    2-0     W  S6PRIN2-0     Sprite 6 Priority Number
+//
 // 1800F8   PRINA   NBG0 and NBG1 Priority Number
 //
 //   bits   r/w  code          description
