@@ -62,6 +62,9 @@ void VDP2::Reset(bool hard) {
     WCTL.u64 = 0x0;
     LWTA0.u32 = 0x0;
     LWTA1.u32 = 0x0;
+
+    CLOFEN.u16 = 0x0;
+    CLOFSL.u16 = 0x0;
     COAR.u16 = 0x0;
     COAG.u16 = 0x0;
     COAB.u16 = 0x0;

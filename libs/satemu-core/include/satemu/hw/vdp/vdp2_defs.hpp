@@ -1531,6 +1531,64 @@ union LWTA_t {
     };
 };
 
+// 180110   CLOFEN  Color Offset Enable
+//
+//   bits   r/w  code          description
+//   15-7        -             Reserved, must be zero
+//      6     W  SPCOEN        Sprite Color Offset Enable
+//      5     W  BKCOEN        Backdrop Color Offset Enable
+//      4     W  R0COEN        RBG0 Color Offset Enable
+//      3     W  N3COEN        NBG3 Color Offset Enable
+//      2     W  N2COEN        NBG2 Color Offset Enable
+//      1     W  N1COEN        NBG1 Color Offset Enable
+//      0     W  N0COEN        NBG0 Color Offset Enable
+//
+// For all bits:
+//   0 = enable
+//   1 = disable
+union CLOFEN_t {
+    uint16 u16;
+    struct {
+        uint16 N0COEN : 1;
+        uint16 N1COEN : 1;
+        uint16 N2COEN : 1;
+        uint16 N3COEN : 1;
+        uint16 R0COEN : 1;
+        uint16 BKCOEN : 1;
+        uint16 SPCOEN : 1;
+        uint16 _rsvd7_15 : 9;
+    };
+};
+
+// 180112   CLOFSL  Color Offset Select
+//
+//   bits   r/w  code          description
+//   15-7        -             Reserved, must be zero
+//      6     W  SPCOSL        Sprite Color Offset Select
+//      5     W  BKCOSL        Backdrop Color Offset Select
+//      4     W  R0COSL        RBG0 Color Offset Select
+//      3     W  N3COSL        NBG3 Color Offset Select
+//      2     W  N2COSL        NBG2 Color Offset Select
+//      1     W  N1COSL        NBG1 Color Offset Select
+//      0     W  N0COSL        NBG0 Color Offset Select
+//
+// For all bits:
+//   0 = Color Offset A
+//   1 = Color Offset B
+union CLOFSL_t {
+    uint16 u16;
+    struct {
+        uint16 N0COSL : 1;
+        uint16 N1COSL : 1;
+        uint16 N2COSL : 1;
+        uint16 N3COSL : 1;
+        uint16 R0COSL : 1;
+        uint16 BKCOSL : 1;
+        uint16 SPCOSL : 1;
+        uint16 _rsvd7_15 : 9;
+    };
+};
+
 // 180114   COAR    Color Offset A - Red
 // 180116   COAG    Color Offset A - Green
 // 180118   COAB    Color Offset A - Blue
