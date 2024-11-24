@@ -1654,6 +1654,33 @@ union LNCLEN_t {
     };
 };
 
+// 1800EA   SFPRMD  Special Priority Mode
+//
+//   bits   r/w  code          description
+//  15-10        -             Reserved, must be zero
+//    9-8     W  R0SPRM1-0     RBG0 Special Priority Mode
+//    7-6     W  N3SPRM1-0     NBG3 Special Priority Mode
+//    5-4     W  N2SPRM1-0     NBG2 Special Priority Mode
+//    3-2     W  N1SPRM1-0     NBG1/EXBG Special Priority Mode
+//    1-0     W  N0SPRM1-0     NBG0/RBG1 Special Priority Mode
+//
+// For all parameters, use LSB of priority number:
+//   00 (0) = per screen
+//   01 (1) = per character
+//   10 (2) = per pixel
+//   11 (3) = (forbidden)
+union SFPRMD_t {
+    uint16 u16;
+    struct {
+        uint16 N0SPRMn : 2;
+        uint16 N1SPRMn : 2;
+        uint16 N2SPRMn : 2;
+        uint16 N3SPRMn : 2;
+        uint16 R0SPRMn : 2;
+        uint16 _rsvd10_15 : 6;
+    };
+};
+
 // 1800F0   PRISA   Sprite 0 and 1 Priority Number
 //
 //   bits   r/w  code          description

@@ -67,6 +67,7 @@ void VDP2::Reset(bool hard) {
     CRAOFA.u16 = 0x0;
     CRAOFB.u16 = 0x0;
     LNCLEN.u16 = 0x0;
+    SFPRMD.u16 = 0x0;
 
     PRISA.u16 = 0x0;
     PRISB.u16 = 0x0;
