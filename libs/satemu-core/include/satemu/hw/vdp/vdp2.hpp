@@ -329,7 +329,7 @@ public:
         case 0x0E0: SPCTL.u16 = value & 0x373F; break;
         case 0x0E2: SDCTL.u16 = value & 0x013F; break;
         case 0x0E4: CRAOFA.u16 = value & 0x7777; break;
-        case 0x0E6: CRAOFA.u16 = value & 0x0077; break;
+        case 0x0E6: CRAOFB.u16 = value & 0x0077; break;
         case 0x0E8: LNCLEN.u16 = value & 0x003F; break;
         case 0x0EA: SFPRMD.u16 = value & 0x03FF; break;
         case 0x0EC: CCCTL.u16 = value & 0xF77F; break;

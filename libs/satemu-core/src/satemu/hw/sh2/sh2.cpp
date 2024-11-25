@@ -131,7 +131,6 @@ T SH2::MemRead(uint32 address) {
 
     switch (partition) {
     case 0b000: // cache
-
         if (CCR.CE) {
             // TODO: use cache
         }
@@ -1935,15 +1934,15 @@ void SH2::STSMPR(uint16 rn) {
 void SH2::SWAPB(uint16 rm, uint16 rn) {
     dbg_println("swap.b r{}, r{}", rm, rn);
 
-    uint32 tmp0 = R[rm] & 0xFFFF0000;
-    uint32 tmp1 = (R[rm] & 0xFF) << 8u;
+    const uint32 tmp0 = R[rm] & 0xFFFF0000;
+    const uint32 tmp1 = (R[rm] & 0xFF) << 8u;
     R[rn] = ((R[rm] >> 8u) & 0xFF) | tmp1 | tmp0;
 }
 
 void SH2::SWAPW(uint16 rm, uint16 rn) {
     dbg_println("swap.w r{}, r{}", rm, rn);
 
-    uint32 tmp = R[rm] >> 16u;
+    const uint32 tmp = R[rm] >> 16u;
     R[rn] = (R[rm] << 16u) | tmp;
 }
 
@@ -1958,15 +1957,15 @@ void SH2::ADD(uint16 rm, uint16 rn) {
 }
 
 void SH2::ADDI(uint16 imm, uint16 rn) {
-    sint32 simm = bit::sign_extend<8>(imm);
+    const sint32 simm = bit::sign_extend<8>(imm);
     dbg_println("add #{}0x{:X}, r{}", (simm < 0 ? "-" : ""), abs(simm), rn);
     R[rn] += simm;
 }
 
 void SH2::ADDC(uint16 rm, uint16 rn) {
     dbg_println("addc r{}, r{}", rm, rn);
-    uint32 tmp1 = R[rn] + R[rm];
-    uint32 tmp0 = R[rn];
+    const uint32 tmp1 = R[rn] + R[rm];
+    const uint32 tmp0 = R[rn];
     R[rn] = tmp1 + SR.T;
     SR.T = (tmp0 > tmp1) || (tmp1 > R[rn]);
 }
@@ -1974,8 +1973,8 @@ void SH2::ADDC(uint16 rm, uint16 rn) {
 void SH2::ADDV(uint16 rm, uint16 rn) {
     dbg_println("addv r{}, r{}", rm, rn);
 
-    bool dst = static_cast<sint32>(R[rn]) < 0;
-    bool src = static_cast<sint32>(R[rm]) < 0;
+    const bool dst = static_cast<sint32>(R[rn]) < 0;
+    const bool src = static_cast<sint32>(R[rm]) < 0;
 
     R[rn] += R[rm];
 
@@ -2008,7 +2007,7 @@ void SH2::NEG(uint16 rm, uint16 rn) {
 
 void SH2::NEGC(uint16 rm, uint16 rn) {
     dbg_println("negc r{}, r{}", rm, rn);
-    uint32 tmp = -R[rm];
+    const uint32 tmp = -R[rm];
     R[rn] = tmp - SR.T;
     SR.T = (0 < tmp) || (tmp < R[rn]);
 }
@@ -2037,14 +2036,14 @@ void SH2::ORM(uint16 imm) {
 
 void SH2::ROTCL(uint16 rn) {
     dbg_println("rotcl r{}", rn);
-    uint16 tmp = R[rn] >> 31u;
+    const bool tmp = R[rn] >> 31u;
     R[rn] = (R[rn] << 1u) | SR.T;
     SR.T = tmp;
 }
 
 void SH2::ROTCR(uint16 rn) {
     dbg_println("rotcr r{}", rn);
-    uint16 tmp = R[rn] & 1u;
+    const bool tmp = R[rn] & 1u;
     R[rn] = (R[rn] >> 1u) | (SR.T << 31u);
     SR.T = tmp;
 }
@@ -2122,8 +2121,8 @@ void SH2::SUB(uint16 rm, uint16 rn) {
 
 void SH2::SUBC(uint16 rm, uint16 rn) {
     dbg_println("subc r{}, r{}", rm, rn);
-    uint32 tmp1 = R[rn] - R[rm];
-    uint32 tmp0 = R[rn];
+    const uint32 tmp1 = R[rn] - R[rm];
+    const uint32 tmp0 = R[rn];
     R[rn] = tmp1 - SR.T;
     SR.T = (tmp0 < tmp1) || (tmp1 < R[rn]);
 }
@@ -2131,8 +2130,8 @@ void SH2::SUBC(uint16 rm, uint16 rn) {
 void SH2::SUBV(uint16 rm, uint16 rn) {
     dbg_println("subv r{}, r{}", rm, rn);
 
-    bool dst = static_cast<sint32>(R[rn]) < 0;
-    bool src = static_cast<sint32>(R[rm]) < 0;
+    const bool dst = static_cast<sint32>(R[rn]) < 0;
+    const bool src = static_cast<sint32>(R[rm]) < 0;
 
     R[rn] -= R[rm];
 
@@ -2172,15 +2171,15 @@ void SH2::CLRMAC() {
 void SH2::MACW(uint16 rm, uint16 rn) {
     dbg_println("mac.w @r{}+, @r{}+)", rm, rn);
 
-    sint32 op2 = bit::sign_extend<16, sint32>(MemReadWord(R[rn]));
+    const sint32 op2 = bit::sign_extend<16, sint32>(MemReadWord(R[rn]));
     R[rn] += 2;
-    sint32 op1 = bit::sign_extend<16, sint32>(MemReadWord(R[rm]));
+    const sint32 op1 = bit::sign_extend<16, sint32>(MemReadWord(R[rm]));
     R[rm] += 2;
 
-    sint32 mul = op1 * op2;
+    const sint32 mul = op1 * op2;
     if (SR.S) {
-        sint64 result = static_cast<sint64>(static_cast<sint32>(MAC.L)) + mul;
-        sint32 saturatedResult = std::clamp<sint64>(result, 0xFFFFFFFF'80000000, 0x00000000'7FFFFFFF);
+        const sint64 result = static_cast<sint64>(static_cast<sint32>(MAC.L)) + mul;
+        const sint32 saturatedResult = std::clamp<sint64>(result, 0xFFFFFFFF'80000000, 0x00000000'7FFFFFFF);
         if (result == saturatedResult) {
             MAC.L = result;
         } else {
@@ -2195,12 +2194,12 @@ void SH2::MACW(uint16 rm, uint16 rn) {
 void SH2::MACL(uint16 rm, uint16 rn) {
     dbg_println("mac.l @r{}+, @r{}+)", rm, rn);
 
-    sint64 op2 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[rn])));
+    const sint64 op2 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[rn])));
     R[rn] += 4;
-    sint64 op1 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[rm])));
+    const sint64 op1 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[rm])));
     R[rm] += 4;
 
-    sint64 mul = op1 * op2;
+    const sint64 mul = op1 * op2;
     sint64 result = mul + MAC.u64;
     if (SR.S) {
         if (bit::extract<63>((result ^ MAC.u64) & (result ^ mul))) {
@@ -2289,7 +2288,7 @@ void SH2::DIV1(uint16 rm, uint16 rn) {
 }
 
 void SH2::CMPIM(uint16 imm) {
-    sint32 simm = bit::sign_extend<8>(imm);
+    const sint32 simm = bit::sign_extend<8>(imm);
     dbg_println("cmp/eq #{}0x{:X}, r0", (simm < 0 ? "-" : ""), abs(simm));
     SR.T = R[0] == simm;
 }
@@ -2331,11 +2330,11 @@ void SH2::CMPPZ(uint16 rn) {
 
 void SH2::CMPSTR(uint16 rm, uint16 rn) {
     dbg_println("cmp/str r{}, r{}", rm, rn);
-    uint16 tmp = R[rm] & R[rn];
-    uint8 hh = tmp >> 12u;
-    uint8 hl = tmp >> 8u;
-    uint8 lh = tmp >> 4u;
-    uint8 ll = tmp >> 0u;
+    const uint32 tmp = R[rm] & R[rn];
+    const uint8 hh = tmp >> 24u;
+    const uint8 hl = tmp >> 16u;
+    const uint8 lh = tmp >> 8u;
+    const uint8 ll = tmp >> 0u;
     SR.T = !(hh && hl && lh && ll);
 }
 
@@ -2344,7 +2343,7 @@ void SH2::TAS(uint16 rn) {
     dbg_println("WARNING: bus lock not implemented!");
 
     // TODO: enable bus lock on this read
-    uint8 tmp = MemReadByte(R[rn]);
+    const uint8 tmp = MemReadByte(R[rn]);
     SR.T = tmp == 0;
     // TODO: disable bus lock on this write
     MemWriteByte(R[rn], tmp | 0x80);
@@ -2362,12 +2361,12 @@ void SH2::TSTI(uint16 imm) {
 
 void SH2::TSTM(uint16 imm) {
     dbg_println("tst.b #0x{:X}, @(r0,gbr)", imm);
-    uint8 tmp = MemReadByte(GBR + R[0]);
+    const uint8 tmp = MemReadByte(GBR + R[0]);
     SR.T = (tmp & imm) == 0;
 }
 
 void SH2::BF(uint16 disp) {
-    sint32 sdisp = (bit::sign_extend<8>(disp) << 1) + 4;
+    const sint32 sdisp = (bit::sign_extend<8>(disp) << 1) + 4;
     dbg_println("bf 0x{:08X}", PC + sdisp);
 
     if (!SR.T) {
@@ -2378,11 +2377,11 @@ void SH2::BF(uint16 disp) {
 }
 
 void SH2::BFS(uint16 disp) {
-    sint32 sdisp = (bit::sign_extend<8>(disp) << 1) + 4;
+    const sint32 sdisp = (bit::sign_extend<8>(disp) << 1) + 4;
     dbg_println("bf/s 0x{:08X}", PC + sdisp);
 
     if (!SR.T) {
-        uint32 delaySlot = PC + 2;
+        const uint32 delaySlot = PC + 2;
         PC += sdisp;
         Execute<true>(delaySlot);
     } else {
@@ -2391,7 +2390,7 @@ void SH2::BFS(uint16 disp) {
 }
 
 void SH2::BT(uint16 disp) {
-    sint32 sdisp = (bit::sign_extend<8>(disp) << 1) + 4;
+    const sint32 sdisp = (bit::sign_extend<8>(disp) << 1) + 4;
     dbg_println("bt 0x{:08X}", PC + sdisp);
 
     if (SR.T) {
@@ -2402,11 +2401,11 @@ void SH2::BT(uint16 disp) {
 }
 
 void SH2::BTS(uint16 disp) {
-    sint32 sdisp = (bit::sign_extend<8>(disp) << 1) + 4;
+    const sint32 sdisp = (bit::sign_extend<8>(disp) << 1) + 4;
     dbg_println("bt/s 0x{:08X}", PC + sdisp);
 
     if (SR.T) {
-        uint32 delaySlot = PC + 2;
+        const uint32 delaySlot = PC + 2;
         PC += sdisp;
         Execute<true>(delaySlot);
     } else {
@@ -2415,22 +2414,22 @@ void SH2::BTS(uint16 disp) {
 }
 
 void SH2::BRA(uint16 disp) {
-    sint32 sdisp = (bit::sign_extend<12>(disp) << 1) + 4;
+    const sint32 sdisp = (bit::sign_extend<12>(disp) << 1) + 4;
     dbg_println("bra 0x{:08X}", PC + sdisp);
-    uint32 delaySlot = PC + 2;
+    const uint32 delaySlot = PC + 2;
     PC += sdisp;
     Execute<true>(delaySlot);
 }
 
 void SH2::BRAF(uint16 rm) {
     dbg_println("braf r{}", rm);
-    uint32 delaySlot = PC + 2;
+    const uint32 delaySlot = PC + 2;
     PC += R[rm] + 4;
     Execute<true>(delaySlot);
 }
 
 void SH2::BSR(uint16 disp) {
-    sint32 sdisp = (bit::sign_extend<12>(disp) << 1) + 4;
+    const sint32 sdisp = (bit::sign_extend<12>(disp) << 1) + 4;
     dbg_println("bsr 0x{:08X}", PC + sdisp);
 
     PR = PC;
@@ -2447,7 +2446,7 @@ void SH2::BSRF(uint16 rm) {
 
 void SH2::JMP(uint16 rm) {
     dbg_println("jmp @r{}", rm);
-    uint32 delaySlot = PC + 2;
+    const uint32 delaySlot = PC + 2;
     PC = R[rm];
     Execute<true>(delaySlot);
 }
@@ -2470,7 +2469,7 @@ void SH2::TRAPA(uint16 imm) {
 
 void SH2::RTE() {
     dbg_println("rte");
-    uint32 delaySlot = PC + 2;
+    const uint32 delaySlot = PC + 2;
     PC = MemReadLong(R[15] + 4);
     R[15] += 4;
     SR.u32 = MemReadLong(R[15]) & 0x000003F3;
@@ -2480,7 +2479,7 @@ void SH2::RTE() {
 
 void SH2::RTS() {
     dbg_println("rts");
-    uint32 delaySlot = PC + 2;
+    const uint32 delaySlot = PC + 2;
     PC = PR + 4;
     Execute<true>(delaySlot);
 }
