@@ -10,7 +10,7 @@ union Color555 {
         uint16 r : 5;
         uint16 g : 5;
         uint16 b : 5;
-        uint16 CC : 1;
+        uint16 msb : 1; // CC in CRAM, transparency in cells when using RGB format
     };
 };
 
@@ -21,7 +21,7 @@ struct Color888 {
         uint32 g : 8;
         uint32 b : 8;
         uint32 : 7;
-        uint32 CC : 1;
+        uint32 msb : 1; // CC in CRAM, transparency in cells when using RGB format
     };
 };
 

@@ -7,7 +7,7 @@ Color888 ConvertRGB555to888(Color555 color) {
         .r = static_cast<uint32>(color.r) << 3u,
         .g = static_cast<uint32>(color.g) << 3u,
         .b = static_cast<uint32>(color.b) << 3u,
-        .CC = color.CC,
+        .msb = color.msb,
     };
 }
 
