@@ -14,7 +14,7 @@ union Color555 {
     };
 };
 
-struct Color888 {
+union Color888 {
     uint32 u32;
     struct {
         uint32 r : 8;

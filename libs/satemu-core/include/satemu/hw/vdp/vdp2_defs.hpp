@@ -550,6 +550,12 @@ union PNC_t {
 //    01 (1) = Use character pattern in screen-over pattern name register
 //    10 (2) = Transparent
 //    11 (3) = Force 512x512 with transparent outsides (256 line bitmaps draw twice)
+//
+//  xxPLSZ1-0:
+//    00 (0) = 1x1
+//    01 (1) = 2x1
+//    10 (2) = forbidden (but probably 1x2)
+//    11 (3) = 2x2
 union PLSZ_t {
     uint16 u16;
     struct {
