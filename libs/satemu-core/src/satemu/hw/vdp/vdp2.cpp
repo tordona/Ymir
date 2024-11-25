@@ -111,6 +111,8 @@ void VDP2::Reset(bool hard) {
     BeginVPhaseActiveDisplay();
 
     UpdateResolution();
+
+    m_frameNum = 0;
 }
 
 void VDP2::Advance(uint64 cycles) {
@@ -281,7 +283,8 @@ void VDP2::BeginVPhaseTopBlanking() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering top blanking phase", m_VCounter);
     TVSTAT.VBLANK = 0;
     // TODO: end frame
-    fmt::println("VDP2: -------- end frame --------");
+    fmt::println("VDP2: -------- end frame {} --------", m_frameNum);
+    m_frameNum++;
 }
 
 void VDP2::BeginVPhaseTopBorder() {

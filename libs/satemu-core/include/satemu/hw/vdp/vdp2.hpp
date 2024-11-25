@@ -609,6 +609,9 @@ private:
     void BeginVPhaseVerticalSync();
     void BeginVPhaseTopBlanking();
     void BeginVPhaseTopBorder();
+
+    // DEBUG: to be removed
+    uint64 m_frameNum;
 };
 
 } // namespace satemu::vdp2
