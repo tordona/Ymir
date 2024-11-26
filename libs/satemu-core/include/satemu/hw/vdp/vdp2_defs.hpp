@@ -4,10 +4,159 @@
 
 #include <satemu/util/size_ops.hpp>
 
+#include <array>
+
 namespace satemu::vdp2 {
 
 constexpr size_t kVDP2VRAMSize = 512_KiB;
 constexpr size_t kCRAMSize = 4_KiB;
+
+// Character color formats
+enum class ColorFormat {
+    Palette16,
+    Palette256,
+    Palette2048,
+    RGB555,
+    RGB888,
+};
+
+// Rotation BG screen-over process
+enum class ScreenOverProcess {
+    Repeat,
+    RepeatChar,
+    Transparent,
+    Fixed512,
+};
+
+// NBG (rot=false) and RBG (rot=true) parameters.
+template <bool rot>
+struct BGParams {
+    BGParams() {
+        Reset();
+    }
+
+    void Reset() {
+        enabled = false;
+        transparent = false;
+        twoWordChar = false;
+        bitmap = false;
+
+        cellSize = 1;
+
+        // numPagesH = numPagesV = 1;
+        // bitmapSizeH = bitmapSizeV = 0;
+
+        mapIndices.fill(0);
+
+        colorFormat = ColorFormat::Palette16;
+        screenOverProcess = ScreenOverProcess::Repeat;
+
+        // pageSizeShift = 0;
+        // mapIndexMask = 0;
+        cramOffset = 0;
+
+        plsz = 0;
+        bmsz = 0;
+
+        UpdatePLSZ();
+        UpdateCHCTL();
+    }
+
+    // Whether to display this background.
+    // Derived from BGON.xxON
+    bool enabled;
+
+    // If true, honor transparency bit in color data.
+    // Derived from BGON.xxTPON
+    bool transparent;
+
+    // Whether characters use one (false) or two (true) words.
+    // Derived from PNCNn/PNCR.xxPNB
+    bool twoWordChar;
+
+    // Whether the background uses cells (false) or a bitmap (true).
+    // Derived CHCTLA/CHCTLB.xxBMEN
+    bool bitmap;
+
+    // Cell dimensions in a page (1x1 or 2x2).
+    // Derived from CHCTLA/CHCTLB.xxCHSZ
+    uint32 cellSize;
+
+    uint32 numPagesH; // Horizontal pages in a plane, derived from PLSZ.xxPLSZn
+    uint32 numPagesV; // Vertical pages in a plane, derived from PLSZ.xxPLSZn
+
+    uint32 bitmapSizeH; // Horizontal bitmap dots, derived from CHCTLA/CHCTLB.xxBMSZ
+    uint32 bitmapSizeV; // Vertical bitmap dots, derived from CHCTLA/CHCTLB.xxBMSZ
+
+    // NBG planes A-D, derived from MPOFN and MPABN0-MPCDN3.
+    // RBG planes A-P, derived from MPOFNR and MPABRA-MPOPRB.
+    std::array<uint32, rot ? 16 : 4> mapIndices;
+
+    // Character color format.
+    // Derived from CHCTLA/CHCTLB.xxCHCNn
+    ColorFormat colorFormat;
+
+    // Rotation BG screen-over process.
+    // Derived from PLSZ.RxOVRn
+    ScreenOverProcess screenOverProcess;
+
+    // Bit shift applied to calculated page base address.
+    // Derived from CHCTLA/CHCTLB.xxCHSZ and PNCNn/PNCR.xxPNB
+    uint32 pageSizeShift;
+
+    // Mask applied to map indices when calculating the page base address.
+    // Derived from CHCTLA/CHCTLB.xxCHSZ, PNCNn/PNCR.xxPNB and PLSZ.xxPLSZn
+    uint32 mapIndexMask;
+
+    // Color RAM palette offset (in bytes).
+    // Derived from CRAOFA/CRAOFB.xxCAOSn
+    uint32 cramOffset;
+
+    uint16 plsz; // Raw value of PLSZ.xxPLSZn
+    uint16 bmsz; // Raw value of CHCTLA/CHCTLB.xxBMSZ
+
+    void UpdatePLSZ() {
+        numPagesH = (plsz & 1) + 1;
+        numPagesV = (plsz >> 1) + 1;
+
+        UpdateMapIndexMask();
+    }
+
+    void UpdateCHCTL() {
+        static constexpr uint32 kBitmapSizesH[] = {512, 512, 1024, 1024};
+        static constexpr uint32 kBitmapSizesV[] = {256, 512, 256, 512};
+        bitmapSizeH = kBitmapSizesH[bmsz];
+        bitmapSizeV = kBitmapSizesV[bmsz];
+
+        UpdateMapIndexMask();
+        UpdatePageSizeShift();
+    }
+
+private:
+    void UpdateMapIndexMask() {
+        // [Character Size][Pattern Name Data Size ^ 1][Plane Size]
+        static constexpr uint32 kMapIndexMasks[2][2][4] = {
+            {{0x7F, 0x7E, 0x7E, 0x7C}, {0x3F, 0x3E, 0x3E, 0x3C}},
+            {{0x1FF, 0x1FE, 0x1FE, 0x1FC}, {0xFF, 0xFE, 0xFE, 0xFC}},
+        };
+
+        const uint32 chsz = cellSize - 1;
+        const uint32 pnds = twoWordChar;
+        mapIndexMask = kMapIndexMasks[chsz][pnds][plsz];
+    }
+
+    void UpdatePageSizeShift() {
+        // [Character Size][Pattern Name Data Size ^ 1]
+        static constexpr uint32 kPageSizes[2][2] = {
+            {13, 14},
+            {11, 12},
+        };
+
+        const uint32 chsz = cellSize - 1;
+        const uint32 pnds = twoWordChar;
+        pageSizeShift = kPageSizes[chsz][pnds];
+    }
+};
 
 // TODO: consider splitting unions into individual fields for performance
 
@@ -258,41 +407,6 @@ union CYC_t {
     };
 };
 
-// 180020   BGON    Screen Display Enable
-//
-//   bits   r/w  code          description
-//  15-13        -             Reserved, must be zero
-//     12     W  R0TPON        RBG0 Transparent Display (0=enable, 1=disable)
-//     11     W  N3TPON        NBG3 Transparent Display (0=enable, 1=disable)
-//     10     W  N2TPON        NBG2 Transparent Display (0=enable, 1=disable)
-//      9     W  N1TPON        NBG1/EXBG Transparent Display (0=enable, 1=disable)
-//      8     W  N0TPON        NBG0/RBG1 Transparent Display (0=enable, 1=disable)
-//    7-6        -             Reserved, must be zero
-//      5     W  R1ON          RBG1 Display (0=disable, 1=enable)
-//      4     W  R0ON          RBG0 Display (0=disable, 1=enable)
-//      3     W  N3ON          NBG3 Display (0=disable, 1=enable)
-//      2     W  N2ON          NBG2 Display (0=disable, 1=enable)
-//      1     W  N1ON          NBG1 Display (0=disable, 1=enable)
-//      0     W  N0ON          NBG0 Display (0=disable, 1=enable)
-union BGON_t {
-    uint16 u16;
-    struct {
-        uint16 N0ON : 1;
-        uint16 N1ON : 1;
-        uint16 N2ON : 1;
-        uint16 N3ON : 1;
-        uint16 R0ON : 1;
-        uint16 R1ON : 1;
-        uint16 _rsvd6_7 : 2;
-        uint16 N0TPON : 1;
-        uint16 N1TPON : 1;
-        uint16 N2TPON : 1;
-        uint16 N3TPON : 1;
-        uint16 R0TPON : 1;
-        uint16 _rsvd15 : 1;
-    };
-};
-
 // 180022   MZCTL   Mosaic Control
 //
 //   bits   r/w  code          description
@@ -359,100 +473,6 @@ union SFCODE_t {
     struct {
         uint8 SFCDBn;
         uint8 SFCDAn;
-    };
-};
-
-// 180028   CHCTLA  Character Control Register A
-//
-//   bits   r/w  code          description
-//  15-14        -             Reserved, must be zero
-//  13-12     W  N1CHCN1-0     NBG1/EXBG Character Color Number
-//                               00 (0) =       16 colors - palette
-//                               01 (1) =      256 colors - palette
-//                               10 (2) =     2048 colors - palette
-//                               11 (3) =    32768 colors - RGB (NBG1)
-//                                        16777216 colors - RGB (EXBG)
-//  11-10     W  N1BMSZ1-0     NBG1 Bitmap Size
-//                               00 (0) = 512x256
-//                               01 (1) = 512x512
-//                               10 (2) = 1024x256
-//                               11 (3) = 1024x512
-//      9     W  N1BMEN        NBG1 Bitmap Enable (0=cells, 1=bitmap)
-//      8     W  N1CHSZ        NBG1 Character Size (0=1x1, 1=2x2)
-//      7        -             Reserved, must be zero
-//    6-4     W  N0CHCN2-0     NBG0/RBG1 Character Color Number
-//                               000 (0) =       16 colors - palette
-//                               001 (1) =      256 colors - palette
-//                               010 (2) =     2048 colors - palette
-//                               011 (3) =    32768 colors - RGB
-//                               100 (4) = 16777216 colors - RGB (Normal mode only)
-//                                           forbidden for Hi-Res or Exclusive Monitor
-//                               101 (5) = forbidden
-//                               110 (6) = forbidden
-//                               111 (7) = forbidden
-//    3-2     W  N0BMSZ1-0     NBG0 Bitmap Size
-//                               00 (0) = 512x256
-//                               01 (1) = 512x512
-//                               10 (2) = 1024x256
-//                               11 (3) = 1024x512
-//      1     W  N0BMEN        NBG0 Bitmap Enable (0=cells, 1=bitmap)
-//      0     W  N0CHSZ        NBG0 Character Size (0=1x1, 1=2x2)
-union CHCTLA_t {
-    uint16 u16;
-    struct {
-        uint16 N0CHSZ : 1;
-        uint16 N0BMEN : 1;
-        uint16 N0BMSZn : 2;
-        uint16 N0CHCNn : 3;
-        uint16 _rsvd7 : 1;
-        uint16 N1CHSZ : 1;
-        uint16 N1BMEN : 1;
-        uint16 N1BMSZn : 2;
-        uint16 N1CHCNn : 2;
-        uint16 _rsvd14_15 : 2;
-    };
-};
-
-// 18002A   CHCTLB  Character Control Register B
-//
-//   bits   r/w  code          description
-//     15        -             Reserved, must be zero
-//  14-12     W  R0CHCN2-0     RBG0 Character Color Number
-//                               NOTE: Exclusive Monitor cannot display this BG plane
-//                               000 (0) =       16 colors - palette
-//                               001 (1) =      256 colors - palette
-//                               010 (2) =     2048 colors - palette
-//                               011 (3) =    32768 colors - RGB
-//                               100 (4) = 16777216 colors - RGB (Normal mode only)
-//                                           forbidden for Hi-Res
-//                               101 (5) = forbidden
-//                               110 (6) = forbidden
-//                               111 (7) = forbidden
-//     11        -             Reserved, must be zero
-//     10     W  R0BMSZ        RBG0 Bitmap Size (0=512x256, 1=512x512)
-//      9     W  R0BMEN        RBG0 Bitmap Enable (0=cells, 1=bitmap)
-//      8     W  R0CHSZ        RBG0 Character Size (0=1x1, 1=2x2)
-//    7-6        -             Reserved, must be zero
-//      5     W  N3CHCN        NBG3 Character Color Number (0=16 colors, 1=256 colors; both palette)
-//      4     W  N3CHSZ        NBG3 Character Size (0=1x1, 1=2x2)
-//    3-2        -             Reserved, must be zero
-//      1     W  N2CHCN        NBG2 Character Color Number (0=16 colors, 1=256 colors; both palette)
-//      0     W  N2CHSZ        NBG2 Character Size (0=1x1, 1=2x2)
-union CHCTLB_t {
-    uint16 u16;
-    struct {
-        uint16 N2CHSZ : 1;
-        uint16 N2CHCN : 1;
-        uint16 _rsvd2_3 : 2;
-        uint16 N3CHSZ : 1;
-        uint16 N3CHCN : 1;
-        uint16 _rsvd6_7 : 2;
-        uint16 R0CHSZ : 1;
-        uint16 R0BMEN : 1;
-        uint16 R0BMSZ : 1;
-        uint16 _rsvd11 : 1;
-        uint16 R0CHCNn : 3;
-        uint16 _rsvd15 : 1;
     };
 };
 
@@ -530,282 +550,6 @@ union PNC_t {
         uint16 _rsvd : 4;
         uint16 CNSM : 1;
         uint16 PNB : 1;
-    };
-};
-
-// 18003A   PLSZ    Plane Size
-//
-//   bits   r/w  code          description
-//  15-14     W  RBOVR1-0      Rotation Parameter B Screen-over Process
-//  13-12     W  RBPLSZ1-0     Rotation Parameter B Plane Size
-//  11-10     W  RAOVR1-0      Rotation Parameter A Screen-over Process
-//    9-8     W  RAPLSZ1-0     Rotation Parameter A Plane Size
-//    7-6     W  N3PLSZ1-0     NBG3 Plane Size
-//    5-4     W  N2PLSZ1-0     NBG2 Plane Size
-//    3-2     W  N1PLSZ1-0     NBG1 Plane Size
-//    1-0     W  N0PLSZ1-0     NBG0 Plane Size
-//
-//  xxOVR1-0:
-//    00 (0) = Repeat plane infinitely
-//    01 (1) = Use character pattern in screen-over pattern name register
-//    10 (2) = Transparent
-//    11 (3) = Force 512x512 with transparent outsides (256 line bitmaps draw twice)
-//
-//  xxPLSZ1-0:
-//    00 (0) = 1x1
-//    01 (1) = 2x1
-//    10 (2) = forbidden (but probably 1x2)
-//    11 (3) = 2x2
-union PLSZ_t {
-    uint16 u16;
-    struct {
-        uint16 N0PLSZn : 2;
-        uint16 N1PLSZn : 2;
-        uint16 N2PLSZn : 2;
-        uint16 N3PLSZn : 2;
-        uint16 RAPLSZn : 2;
-        uint16 RAOVRn : 2;
-        uint16 RBPLSZn : 2;
-        uint16 RBOVRn : 2;
-    };
-};
-
-// 18003C   MPOFN   NBG0-3 Map Offset
-//
-//   bits   r/w  code          description
-//     15        -             Reserved, must be zero
-//  14-12     W  M3MP8-6       NBG3 Map Offset
-//     11        -             Reserved, must be zero
-//   10-8     W  M2MP8-6       NBG2 Map Offset
-//      7        -             Reserved, must be zero
-//    6-4     W  M1MP8-6       NBG1 Map Offset
-//      3        -             Reserved, must be zero
-//    2-0     W  M0MP8-6       NBG0 Map Offset
-union MPOFN_t {
-    uint16 u16;
-    struct {
-        uint16 M0MPn : 3;
-        uint16 _rsvd3 : 1;
-        uint16 M1MPn : 3;
-        uint16 _rsvd7 : 1;
-        uint16 M2MPn : 3;
-        uint16 _rsvd11 : 1;
-        uint16 M3MPn : 3;
-        uint16 _rsvd15 : 1;
-    };
-};
-
-// 18003E   MPOFR   Rotation Parameter A/B Map Offset
-//
-//   bits   r/w  code          description
-//   15-7        -             Reserved, must be zero
-//    6-4     W  RBMP8-6       Rotation Parameter B Map Offset
-//      3        -             Reserved, must be zero
-//    2-0     W  RAMP8-6       Rotation Parameter A Map Offset
-union MPOFR_t {
-    uint16 u16;
-    struct {
-        uint16 RAMPn : 3;
-        uint16 _rsvd3 : 1;
-        uint16 RBMPn : 3;
-        uint16 _rsvd7_15 : 9;
-    };
-};
-
-// 180040   MPABN0  NBG0 Normal Scroll Screen Map for Planes A,B
-// 180042   MPCDN0  NBG0 Normal Scroll Screen Map for Planes C,D
-// 180044   MPABN1  NBG1 Normal Scroll Screen Map for Planes A,B
-// 180046   MPCDN1  NBG1 Normal Scroll Screen Map for Planes C,D
-// 180048   MPABN2  NBG2 Normal Scroll Screen Map for Planes A,B
-// 18004A   MPCDN2  NBG2 Normal Scroll Screen Map for Planes C,D
-// 18004C   MPABN3  NBG3 Normal Scroll Screen Map for Planes A,B
-// 18004E   MPCDN3  NBG3 Normal Scroll Screen Map for Planes C,D
-//
-//   bits   r/w  code          description
-//  15-14        -             Reserved, must be zero
-//   13-8     W  xxMPy5-0      BG xx Plane y Map
-//    7-6        -             Reserved, must be zero
-//    5-0     W  xxMPy5-0      BG xx Plane y Map
-//
-// xx:
-//   N0 = NBG0 (MPyyN0)
-//   N1 = NBG1 (MPyyN1)
-//   N2 = NBG2 (MPyyN2)
-//   N3 = NBG3 (MPyyN3)
-// y:
-//   A = Plane A (bits  5-0 of MPABxx)
-//   B = Plane B (bits 13-8 of MPABxx)
-//   C = Plane C (bits  5-0 of MPCDxx)
-//   D = Plane D (bits 13-8 of MPCDxx)
-union MPBG_t {
-    uint32 u32;
-
-    struct {
-        uint8 param : 6;
-        uint8 _rsvd : 2;
-    } arr[4];
-
-    struct {
-        union {
-            uint16 u16;
-            struct {
-                uint16 MPAn : 6;
-                uint16 _rsvd6_7 : 2;
-                uint16 MPBn : 6;
-                uint16 _rsvd14_15 : 2;
-            };
-        } AB;
-        union {
-            uint16 u16;
-            struct {
-                uint16 MPCn : 6;
-                uint16 _rsvd6_7 : 2;
-                uint16 MPDn : 6;
-                uint16 _rsvd14_15 : 2;
-            };
-        } CD;
-    };
-};
-
-// 180050   MPABRA  Rotation Parameter A Scroll Surface Map for Screen Planes A,B
-// 180052   MPCDRA  Rotation Parameter A Scroll Surface Map for Screen Planes C,D
-// 180054   MPEFRA  Rotation Parameter A Scroll Surface Map for Screen Planes E,F
-// 180056   MPGHRA  Rotation Parameter A Scroll Surface Map for Screen Planes G,H
-// 180058   MPIJRA  Rotation Parameter A Scroll Surface Map for Screen Planes I,J
-// 18005A   MPKLRA  Rotation Parameter A Scroll Surface Map for Screen Planes K,L
-// 18005C   MPMNRA  Rotation Parameter A Scroll Surface Map for Screen Planes M,N
-// 18005E   MPOPRA  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
-// 180060   MPABRB  Rotation Parameter A Scroll Surface Map for Screen Planes A,B
-// 180062   MPCDRB  Rotation Parameter A Scroll Surface Map for Screen Planes C,D
-// 180064   MPEFRB  Rotation Parameter A Scroll Surface Map for Screen Planes E,F
-// 180066   MPGHRB  Rotation Parameter A Scroll Surface Map for Screen Planes G,H
-// 180068   MPIJRB  Rotation Parameter A Scroll Surface Map for Screen Planes I,J
-// 18006A   MPKLRB  Rotation Parameter A Scroll Surface Map for Screen Planes K,L
-// 18006C   MPMNRB  Rotation Parameter A Scroll Surface Map for Screen Planes M,N
-// 18006E   MPOPRB  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
-//
-//   bits   r/w  code          description
-//  15-14        -             Reserved, must be zero
-//   13-8     W  RxMPy5-0      Rotation Parameter x Screen Plane y Map
-//    7-6        -             Reserved, must be zero
-//    5-0     W  RxMPy5-0      Rotation Parameter x Screen Plane y Map
-//
-// x:
-//   A = Rotation Parameter A (MPyyRA)
-//   B = Rotation Parameter A (MPyyRB)
-// y:
-//   A = Screen Plane A (bits  5-0 of MPABxx)
-//   B = Screen Plane B (bits 13-8 of MPABxx)
-//   C = Screen Plane C (bits  5-0 of MPCDxx)
-//   D = Screen Plane D (bits 13-8 of MPCDxx)
-//   ...
-//   M = Screen Plane M (bits  5-0 of MPMNxx)
-//   N = Screen Plane N (bits 13-8 of MPMNxx)
-//   O = Screen Plane O (bits  5-0 of MPOPxx)
-//   P = Screen Plane P (bits 13-8 of MPOPxx)
-union MPRP_t {
-    struct {
-        struct {
-            uint64 u64;
-        } ABCDEFGH;
-        struct {
-            uint64 u64;
-        } IJKLMNOP;
-    };
-
-    struct {
-        struct {
-            uint32 u32;
-        } ABCD;
-        struct {
-            uint32 u32;
-        } EFGH;
-        struct {
-            uint32 u32;
-        } IJKL;
-        struct {
-            uint32 u32;
-        } MNOP;
-    };
-
-    struct {
-        uint8 param : 6;
-        uint8 _rsvd : 2;
-    } arr[16];
-
-    struct {
-        union {
-            uint16 u16;
-            struct {
-                uint16 MPAn : 6;
-                uint16 _rsvd6_7 : 2;
-                uint16 MPBn : 6;
-                uint16 _rsvd14_15 : 2;
-            };
-        } AB;
-        union {
-            uint16 u16;
-            struct {
-                uint16 MPCn : 6;
-                uint16 _rsvd6_7 : 2;
-                uint16 MPDn : 6;
-                uint16 _rsvd14_15 : 2;
-            };
-        } CD;
-        union {
-            uint16 u16;
-            struct {
-                uint16 MPEn : 6;
-                uint16 _rsvd6_7 : 2;
-                uint16 MPFn : 6;
-                uint16 _rsvd14_15 : 2;
-            };
-        } EF;
-        union {
-            uint16 u16;
-            struct {
-                uint16 MPGn : 6;
-                uint16 _rsvd6_7 : 2;
-                uint16 MPHn : 6;
-                uint16 _rsvd14_15 : 2;
-            };
-        } GH;
-        union {
-            uint16 u16;
-            struct {
-                uint16 MPIn : 6;
-                uint16 _rsvd6_7 : 2;
-                uint16 MPJn : 6;
-                uint16 _rsvd14_15 : 2;
-            };
-        } IJ;
-        union {
-            uint16 u16;
-            struct {
-                uint16 MPKn : 6;
-                uint16 _rsvd6_7 : 2;
-                uint16 MPLn : 6;
-                uint16 _rsvd14_15 : 2;
-            };
-        } KL;
-        union {
-            uint16 u16;
-            struct {
-                uint16 MPMn : 6;
-                uint16 _rsvd6_7 : 2;
-                uint16 MPNn : 6;
-                uint16 _rsvd14_15 : 2;
-            };
-        } MN;
-        union {
-            uint16 u16;
-            struct {
-                uint16 MPOn : 6;
-                uint16 _rsvd6_7 : 2;
-                uint16 MPPn : 6;
-                uint16 _rsvd14_15 : 2;
-            };
-        } OP;
     };
 };
 

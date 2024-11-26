@@ -23,12 +23,9 @@ void VDP2::Reset(bool hard) {
     CYCA1.u32 = 0x0;
     CYCB0.u32 = 0x0;
     CYCB1.u32 = 0x0;
-    BGON.u16 = 0x0;
     MZCTL.u16 = 0x0;
     SFSEL.u16 = 0x0;
     SFCODE.u16 = 0x0;
-    CHCTLA.u16 = 0x0;
-    CHCTLB.u16 = 0x0;
     BMPNA.u16 = 0x0;
     BMPNB.u16 = 0x0;
     PNCN0.u16 = 0x0;
@@ -36,15 +33,6 @@ void VDP2::Reset(bool hard) {
     PNCN2.u16 = 0x0;
     PNCN3.u16 = 0x0;
     PNCR.u16 = 0x0;
-    MPOFN.u16 = 0x0;
-    MPN0.u32 = 0x0;
-    MPN1.u32 = 0x0;
-    MPN2.u32 = 0x0;
-    MPN3.u32 = 0x0;
-    MPRA.ABCDEFGH.u64 = 0x0;
-    MPRA.IJKLMNOP.u64 = 0x0;
-    MPRB.ABCDEFGH.u64 = 0x0;
-    MPRB.IJKLMNOP.u64 = 0x0;
     SCN0.u64 = 0x0;
     ZMN0.u64 = 0x0;
     SCN1.u64 = 0x0;
@@ -100,6 +88,13 @@ void VDP2::Reset(bool hard) {
     COBR.u16 = 0x0;
     COBG.u16 = 0x0;
     COBB.u16 = 0x0;
+
+    for (auto &bg : m_NormBGParams) {
+        bg.Reset();
+    }
+    for (auto &bg : m_RotBGParams) {
+        bg.Reset();
+    }
 
     m_HPhase = HorizontalPhase::Active;
     m_VPhase = VerticalPhase::Active;
@@ -284,6 +279,9 @@ void VDP2::BeginVPhaseTopBlanking() {
     TVSTAT.VBLANK = 0;
     // TODO: end frame
     fmt::println("VDP2: -------- end frame {} --------", m_frameNum);
+    if (m_frameNum == 37) {
+        __debugbreak();
+    }
     m_frameNum++;
 }
 

@@ -6,6 +6,7 @@
 
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/data_ops.hpp>
+#include <satemu/util/inline.hpp>
 
 #include <fmt/format.h>
 
@@ -78,12 +79,12 @@ public:
         case 0x01A: return CYCB0.U.u16;   // write-only?
         case 0x01E: return CYCB1.L.u16;   // write-only?
         case 0x01C: return CYCB1.U.u16;   // write-only?
-        case 0x020: return BGON.u16;      // write-only?
+        case 0x020: return ReadBGON();    // write-only?
         case 0x022: return MZCTL.u16;     // write-only?
         case 0x024: return SFSEL.u16;     // write-only?
         case 0x026: return SFCODE.u16;    // write-only?
-        case 0x028: return CHCTLA.u16;    // write-only?
-        case 0x02A: return CHCTLB.u16;    // write-only?
+        case 0x028: return ReadCHCTLA();  // write-only?
+        case 0x02A: return ReadCHCTLB();  // write-only?
         case 0x02C: return BMPNA.u16;     // write-only?
         case 0x02E: return BMPNB.u16;     // write-only?
         case 0x030: return PNCN0.u16;     // write-only?
@@ -91,33 +92,33 @@ public:
         case 0x034: return PNCN2.u16;     // write-only?
         case 0x036: return PNCN3.u16;     // write-only?
         case 0x038: return PNCR.u16;      // write-only?
-        case 0x03A: return PLSZ.u16;      // write-only?
-        case 0x03C: return MPOFN.u16;     // write-only?
-        case 0x03E: return MPOFR.u16;     // write-only?
-        case 0x040: return MPN0.AB.u16;   // write-only?
-        case 0x042: return MPN0.CD.u16;   // write-only?
-        case 0x044: return MPN1.AB.u16;   // write-only?
-        case 0x046: return MPN1.CD.u16;   // write-only?
-        case 0x048: return MPN2.AB.u16;   // write-only?
-        case 0x04A: return MPN2.CD.u16;   // write-only?
-        case 0x04C: return MPN3.AB.u16;   // write-only?
-        case 0x04E: return MPN3.CD.u16;   // write-only?
-        case 0x050: return MPRA.AB.u16;   // write-only?
-        case 0x052: return MPRA.CD.u16;   // write-only?
-        case 0x054: return MPRA.EF.u16;   // write-only?
-        case 0x056: return MPRA.GH.u16;   // write-only?
-        case 0x058: return MPRA.IJ.u16;   // write-only?
-        case 0x05A: return MPRA.KL.u16;   // write-only?
-        case 0x05C: return MPRA.MN.u16;   // write-only?
-        case 0x05E: return MPRA.OP.u16;   // write-only?
-        case 0x060: return MPRB.AB.u16;   // write-only?
-        case 0x062: return MPRB.CD.u16;   // write-only?
-        case 0x064: return MPRB.EF.u16;   // write-only?
-        case 0x066: return MPRB.GH.u16;   // write-only?
-        case 0x068: return MPRB.IJ.u16;   // write-only?
-        case 0x06A: return MPRB.KL.u16;   // write-only?
-        case 0x06C: return MPRB.MN.u16;   // write-only?
-        case 0x06E: return MPRB.OP.u16;   // write-only?
+        case 0x03A: return ReadPLSZ();    // write-only?
+        case 0x03C: return ReadMPOFN();   // write-only?
+        case 0x03E: return ReadMPOFR();   // write-only?
+        case 0x040: return ReadMPN(0, 0); // write-only?
+        case 0x042: return ReadMPN(0, 1); // write-only?
+        case 0x044: return ReadMPN(1, 0); // write-only?
+        case 0x046: return ReadMPN(1, 1); // write-only?
+        case 0x048: return ReadMPN(2, 0); // write-only?
+        case 0x04A: return ReadMPN(2, 1); // write-only?
+        case 0x04C: return ReadMPN(3, 0); // write-only?
+        case 0x04E: return ReadMPN(3, 1); // write-only?
+        case 0x050: return ReadMPR(0, 0); // write-only?
+        case 0x052: return ReadMPR(0, 1); // write-only?
+        case 0x054: return ReadMPR(0, 2); // write-only?
+        case 0x056: return ReadMPR(0, 3); // write-only?
+        case 0x058: return ReadMPR(0, 4); // write-only?
+        case 0x05A: return ReadMPR(0, 5); // write-only?
+        case 0x05C: return ReadMPR(0, 6); // write-only?
+        case 0x05E: return ReadMPR(0, 7); // write-only?
+        case 0x060: return ReadMPR(1, 0); // write-only?
+        case 0x062: return ReadMPR(1, 1); // write-only?
+        case 0x064: return ReadMPR(1, 2); // write-only?
+        case 0x066: return ReadMPR(1, 3); // write-only?
+        case 0x068: return ReadMPR(1, 4); // write-only?
+        case 0x06A: return ReadMPR(1, 5); // write-only?
+        case 0x06C: return ReadMPR(1, 6); // write-only?
+        case 0x06E: return ReadMPR(1, 7); // write-only?
         case 0x070: return SCN0.X.I.u16;  // write-only?
         case 0x072: return SCN0.X.D.u16;  // write-only?
         case 0x074: return SCN0.Y.I.u16;  // write-only?
@@ -230,12 +231,12 @@ public:
         case 0x01A: CYCB0.U.u16 = value; break;
         case 0x01E: CYCB1.U.u16 = value; break;
         case 0x01C: CYCB1.L.u16 = value; break;
-        case 0x020: BGON.u16 = value & 0x1F3F; break;
+        case 0x020: WriteBGON(value); break;
         case 0x022: MZCTL.u16 = value & 0xFF1F; break;
         case 0x024: SFSEL.u16 = value & 0x001F; break;
         case 0x026: SFCODE.u16 = value; break;
-        case 0x028: CHCTLA.u16 = value & 0x3F7F; break;
-        case 0x02A: CHCTLB.u16 = value & 0x7733; break;
+        case 0x028: WriteCHCTLA(value); break;
+        case 0x02A: WriteCHCTLB(value); break;
         case 0x02C: BMPNA.u16 = value & 0x3737; break;
         case 0x02E: BMPNB.u16 = value & 0x0037; break;
         case 0x030: PNCN0.u16 = value & 0xC3FF; break;
@@ -243,33 +244,33 @@ public:
         case 0x034: PNCN2.u16 = value & 0xC3FF; break;
         case 0x036: PNCN3.u16 = value & 0xC3FF; break;
         case 0x038: PNCR.u16 = value & 0xC3FF; break;
-        case 0x03A: PLSZ.u16 = value; break;
-        case 0x03C: MPOFN.u16 = value & 0x7777; break;
-        case 0x03E: MPOFR.u16 = value & 0x0077; break;
-        case 0x040: MPN0.AB.u16 = value & 0x3F3F; break;
-        case 0x042: MPN0.CD.u16 = value & 0x3F3F; break;
-        case 0x044: MPN1.AB.u16 = value & 0x3F3F; break;
-        case 0x046: MPN1.CD.u16 = value & 0x3F3F; break;
-        case 0x048: MPN2.AB.u16 = value & 0x3F3F; break;
-        case 0x04A: MPN2.CD.u16 = value & 0x3F3F; break;
-        case 0x04C: MPN3.AB.u16 = value & 0x3F3F; break;
-        case 0x04E: MPN3.CD.u16 = value & 0x3F3F; break;
-        case 0x050: MPRA.AB.u16 = value & 0x3F3F; break;
-        case 0x052: MPRA.CD.u16 = value & 0x3F3F; break;
-        case 0x054: MPRA.EF.u16 = value & 0x3F3F; break;
-        case 0x056: MPRA.GH.u16 = value & 0x3F3F; break;
-        case 0x058: MPRA.IJ.u16 = value & 0x3F3F; break;
-        case 0x05A: MPRA.KL.u16 = value & 0x3F3F; break;
-        case 0x05C: MPRA.MN.u16 = value & 0x3F3F; break;
-        case 0x05E: MPRA.OP.u16 = value & 0x3F3F; break;
-        case 0x060: MPRB.AB.u16 = value & 0x3F3F; break;
-        case 0x062: MPRB.CD.u16 = value & 0x3F3F; break;
-        case 0x064: MPRB.EF.u16 = value & 0x3F3F; break;
-        case 0x066: MPRB.GH.u16 = value & 0x3F3F; break;
-        case 0x068: MPRB.IJ.u16 = value & 0x3F3F; break;
-        case 0x06A: MPRB.KL.u16 = value & 0x3F3F; break;
-        case 0x06C: MPRB.MN.u16 = value & 0x3F3F; break;
-        case 0x06E: MPRB.OP.u16 = value & 0x3F3F; break;
+        case 0x03A: WritePLSZ(value); break;
+        case 0x03C: WriteMPOFN(value); break;
+        case 0x03E: WriteMPOFR(value); break;
+        case 0x040: WriteMPN(value, 0, 0); break;
+        case 0x042: WriteMPN(value, 0, 1); break;
+        case 0x044: WriteMPN(value, 1, 0); break;
+        case 0x046: WriteMPN(value, 1, 1); break;
+        case 0x048: WriteMPN(value, 2, 0); break;
+        case 0x04A: WriteMPN(value, 2, 1); break;
+        case 0x04C: WriteMPN(value, 3, 0); break;
+        case 0x04E: WriteMPN(value, 3, 1); break;
+        case 0x050: WriteMPR(value, 0, 0); break;
+        case 0x052: WriteMPR(value, 0, 1); break;
+        case 0x054: WriteMPR(value, 0, 2); break;
+        case 0x056: WriteMPR(value, 0, 3); break;
+        case 0x058: WriteMPR(value, 0, 4); break;
+        case 0x05A: WriteMPR(value, 0, 5); break;
+        case 0x05C: WriteMPR(value, 0, 6); break;
+        case 0x05E: WriteMPR(value, 0, 7); break;
+        case 0x060: WriteMPR(value, 1, 0); break;
+        case 0x062: WriteMPR(value, 1, 1); break;
+        case 0x064: WriteMPR(value, 1, 2); break;
+        case 0x066: WriteMPR(value, 1, 3); break;
+        case 0x068: WriteMPR(value, 1, 4); break;
+        case 0x06A: WriteMPR(value, 1, 5); break;
+        case 0x06C: WriteMPR(value, 1, 6); break;
+        case 0x06E: WriteMPR(value, 1, 7); break;
         case 0x070: SCN0.X.I.u16 = value & 0x07FF; break;
         case 0x072: SCN0.X.D.u16 = value & 0xFF00; break;
         case 0x074: SCN0.Y.I.u16 = value & 0x07FF; break;
@@ -385,47 +386,391 @@ private:
     CYC_t CYCB0;     // 18001A   CYCB0U  VRAM Cycle Pattern B0 Upper
                      // 18001C   CYCB1L  VRAM Cycle Pattern B1 Lower
     CYC_t CYCB1;     // 18001E   CYCB1U  VRAM Cycle Pattern B1 Upper
-    BGON_t BGON;     // 180020   BGON    Screen Display Enable
+
+    // 180020   BGON    Screen Display Enable
+    //
+    //   bits   r/w  code          description
+    //  15-13        -             Reserved, must be zero
+    //     12     W  R0TPON        RBG0 Transparent Display (0=enable, 1=disable)
+    //     11     W  N3TPON        NBG3 Transparent Display (0=enable, 1=disable)
+    //     10     W  N2TPON        NBG2 Transparent Display (0=enable, 1=disable)
+    //      9     W  N1TPON        NBG1/EXBG Transparent Display (0=enable, 1=disable)
+    //      8     W  N0TPON        NBG0/RBG1 Transparent Display (0=enable, 1=disable)
+    //    7-6        -             Reserved, must be zero
+    //      5     W  R1ON          RBG1 Display (0=disable, 1=enable)
+    //      4     W  R0ON          RBG0 Display (0=disable, 1=enable)
+    //      3     W  N3ON          NBG3 Display (0=disable, 1=enable)
+    //      2     W  N2ON          NBG2 Display (0=disable, 1=enable)
+    //      1     W  N1ON          NBG1 Display (0=disable, 1=enable)
+    //      0     W  N0ON          NBG0 Display (0=disable, 1=enable)
+
+    ALWAYS_INLINE uint16 ReadBGON() {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, m_NormBGParams[0].enabled);
+        bit::deposit_into<1>(value, m_NormBGParams[1].enabled);
+        bit::deposit_into<2>(value, m_NormBGParams[2].enabled);
+        bit::deposit_into<3>(value, m_NormBGParams[3].enabled);
+        bit::deposit_into<4>(value, m_RotBGParams[0].enabled);
+        bit::deposit_into<5>(value, m_RotBGParams[1].enabled);
+
+        bit::deposit_into<8>(value, m_NormBGParams[0].transparent);
+        bit::deposit_into<9>(value, m_NormBGParams[1].transparent);
+        bit::deposit_into<10>(value, m_NormBGParams[2].transparent);
+        bit::deposit_into<11>(value, m_NormBGParams[3].transparent);
+        bit::deposit_into<12>(value, m_RotBGParams[0].transparent);
+        return value;
+    }
+
+    ALWAYS_INLINE void WriteBGON(uint16 value) {
+        m_NormBGParams[0].enabled = bit::extract<0>(value);
+        m_NormBGParams[1].enabled = bit::extract<1>(value);
+        m_NormBGParams[2].enabled = bit::extract<2>(value);
+        m_NormBGParams[3].enabled = bit::extract<3>(value);
+        m_RotBGParams[0].enabled = bit::extract<4>(value);
+        m_RotBGParams[1].enabled = bit::extract<5>(value);
+
+        m_NormBGParams[0].transparent = bit::extract<8>(value);
+        m_NormBGParams[1].transparent = bit::extract<9>(value);
+        m_NormBGParams[2].transparent = bit::extract<10>(value);
+        m_NormBGParams[3].transparent = bit::extract<11>(value);
+        m_RotBGParams[0].transparent = bit::extract<12>(value);
+        m_RotBGParams[1].transparent = m_NormBGParams[0].transparent;
+    }
+
     MZCTL_t MZCTL;   // 180022   MZCTL   Mosaic Control
     SFSEL_t SFSEL;   // 180024   SFSEL   Special Function Code Select
     SFCODE_t SFCODE; // 180026   SFCODE  Special Function Code
-    CHCTLA_t CHCTLA; // 180028   CHCTLA  Character Control Register A
-    CHCTLB_t CHCTLB; // 18002A   CHCTLB  Character Control Register A
-    BMPNA_t BMPNA;   // 18002C   BMPNA   NBG0/NBG1 Bitmap Palette Number
-    BMPNB_t BMPNB;   // 18002E   BMPNB   RBG0 Bitmap Palette Number
-    PNC_t PNCN0;     // 180030   PNCN0   NBG0/RBG1 Pattern Name Control
-    PNC_t PNCN1;     // 180032   PNCN1   NBG1 Pattern Name Control
-    PNC_t PNCN2;     // 180034   PNCN2   NBG2 Pattern Name Control
-    PNC_t PNCN3;     // 180036   PNCN3   NBG3 Pattern Name Control
-    PNC_t PNCR;      // 180038   PNCR    RBG0 Pattern Name Control
-    PLSZ_t PLSZ;     // 18003A   PLSZ    Plane Size
-    MPOFN_t MPOFN;   // 18003C   MPOFN   NBG0-3 Map Offset
-    MPOFR_t MPOFR;   // 18003E   MPOFR   Rotation Parameter A/B Map Offset
-                     // 180040   MPABN0  NBG0 Normal Scroll Screen Map for Planes A,B
-    MPBG_t MPN0;     // 180042   MPCDN0  NBG0 Normal Scroll Screen Map for Planes C,D
-                     // 180044   MPABN1  NBG1 Normal Scroll Screen Map for Planes A,B
-    MPBG_t MPN1;     // 180046   MPCDN1  NBG1 Normal Scroll Screen Map for Planes C,D
-                     // 180048   MPABN2  NBG2 Normal Scroll Screen Map for Planes A,B
-    MPBG_t MPN2;     // 18004A   MPCDN2  NBG2 Normal Scroll Screen Map for Planes C,D
-                     // 18004C   MPABN3  NBG3 Normal Scroll Screen Map for Planes A,B
-    MPBG_t MPN3;     // 18004E   MPCDN3  NBG3 Normal Scroll Screen Map for Planes C,D
-                     // 180050   MPABRA  Rotation Parameter A Scroll Surface Map for Screen Planes A,B
-                     // 180052   MPCDRA  Rotation Parameter A Scroll Surface Map for Screen Planes C,D
-                     // 180054   MPEFRA  Rotation Parameter A Scroll Surface Map for Screen Planes E,F
-                     // 180056   MPGHRA  Rotation Parameter A Scroll Surface Map for Screen Planes G,H
-                     // 180058   MPIJRA  Rotation Parameter A Scroll Surface Map for Screen Planes I,J
-                     // 18005A   MPKLRA  Rotation Parameter A Scroll Surface Map for Screen Planes K,L
-                     // 18005C   MPMNRA  Rotation Parameter A Scroll Surface Map for Screen Planes M,N
-    MPRP_t MPRA;     // 18005E   MPOPRA  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
-                     // 180060   MPABRB  Rotation Parameter A Scroll Surface Map for Screen Planes A,B
-                     // 180062   MPCDRB  Rotation Parameter A Scroll Surface Map for Screen Planes C,D
-                     // 180064   MPEFRB  Rotation Parameter A Scroll Surface Map for Screen Planes E,F
-                     // 180066   MPGHRB  Rotation Parameter A Scroll Surface Map for Screen Planes G,H
-                     // 180068   MPIJRB  Rotation Parameter A Scroll Surface Map for Screen Planes I,J
-                     // 18006A   MPKLRB  Rotation Parameter A Scroll Surface Map for Screen Planes K,L
-                     // 18006C   MPMNRB  Rotation Parameter A Scroll Surface Map for Screen Planes M,N
-    MPRP_t MPRB;     // 18006E   MPOPRB  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
-                     // 180070   SCXIN0  NBG0 Horizontal Screen Scroll Value (integer part)
+
+    // 180028   CHCTLA  Character Control Register A
+    //
+    //   bits   r/w  code          description
+    //  15-14        -             Reserved, must be zero
+    //  13-12     W  N1CHCN1-0     NBG1/EXBG Character Color Number
+    //                               00 (0) =       16 colors - palette
+    //                               01 (1) =      256 colors - palette
+    //                               10 (2) =     2048 colors - palette
+    //                               11 (3) =    32768 colors - RGB (NBG1)
+    //                                        16777216 colors - RGB (EXBG)
+    //  11-10     W  N1BMSZ1-0     NBG1 Bitmap Size
+    //                               00 (0) = 512x256
+    //                               01 (1) = 512x512
+    //                               10 (2) = 1024x256
+    //                               11 (3) = 1024x512
+    //      9     W  N1BMEN        NBG1 Bitmap Enable (0=cells, 1=bitmap)
+    //      8     W  N1CHSZ        NBG1 Character Size (0=1x1, 1=2x2)
+    //      7        -             Reserved, must be zero
+    //    6-4     W  N0CHCN2-0     NBG0/RBG1 Character Color Number
+    //                               000 (0) =       16 colors - palette
+    //                               001 (1) =      256 colors - palette
+    //                               010 (2) =     2048 colors - palette
+    //                               011 (3) =    32768 colors - RGB
+    //                               100 (4) = 16777216 colors - RGB (Normal mode only)
+    //                                           forbidden for Hi-Res or Exclusive Monitor
+    //                               101 (5) = forbidden
+    //                               110 (6) = forbidden
+    //                               111 (7) = forbidden
+    //    3-2     W  N0BMSZ1-0     NBG0 Bitmap Size
+    //                               00 (0) = 512x256
+    //                               01 (1) = 512x512
+    //                               10 (2) = 1024x256
+    //                               11 (3) = 1024x512
+    //      1     W  N0BMEN        NBG0 Bitmap Enable (0=cells, 1=bitmap)
+    //      0     W  N0CHSZ        NBG0 Character Size (0=1x1, 1=2x2)
+
+    ALWAYS_INLINE uint16 ReadCHCTLA() {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, m_NormBGParams[0].cellSize - 1);
+        bit::deposit_into<1>(value, m_NormBGParams[0].bitmap);
+        bit::deposit_into<2, 3>(value, m_NormBGParams[0].bmsz);
+        bit::deposit_into<4, 6>(value, static_cast<uint32>(m_NormBGParams[0].colorFormat));
+
+        bit::deposit_into<8>(value, m_NormBGParams[1].cellSize - 1);
+        bit::deposit_into<9>(value, m_NormBGParams[1].bitmap);
+        bit::deposit_into<10, 11>(value, m_NormBGParams[1].bmsz);
+        bit::deposit_into<12, 13>(value, static_cast<uint32>(m_NormBGParams[1].colorFormat));
+        return value;
+    }
+
+    ALWAYS_INLINE void WriteCHCTLA(uint16 value) {
+        m_NormBGParams[0].cellSize = bit::extract<0>(value) + 1;
+        m_NormBGParams[0].bitmap = bit::extract<1>(value);
+        m_NormBGParams[0].bmsz = bit::extract<2, 3>(value);
+        m_NormBGParams[0].colorFormat = static_cast<ColorFormat>(bit::extract<4, 6>(value));
+        m_NormBGParams[0].UpdateCHCTL();
+
+        m_RotBGParams[1].colorFormat = m_NormBGParams[0].colorFormat;
+        m_RotBGParams[1].UpdateCHCTL();
+
+        m_NormBGParams[1].cellSize = bit::extract<8>(value) + 1;
+        m_NormBGParams[1].bitmap = bit::extract<9>(value);
+        m_NormBGParams[1].bmsz = bit::extract<10, 11>(value);
+        m_NormBGParams[1].colorFormat = static_cast<ColorFormat>(bit::extract<12, 13>(value));
+        m_NormBGParams[1].UpdateCHCTL();
+    }
+
+    // 18002A   CHCTLB  Character Control Register B
+    //
+    //   bits   r/w  code          description
+    //     15        -             Reserved, must be zero
+    //  14-12     W  R0CHCN2-0     RBG0 Character Color Number
+    //                               NOTE: Exclusive Monitor cannot display this BG plane
+    //                               000 (0) =       16 colors - palette
+    //                               001 (1) =      256 colors - palette
+    //                               010 (2) =     2048 colors - palette
+    //                               011 (3) =    32768 colors - RGB
+    //                               100 (4) = 16777216 colors - RGB (Normal mode only)
+    //                                           forbidden for Hi-Res
+    //                               101 (5) = forbidden
+    //                               110 (6) = forbidden
+    //                               111 (7) = forbidden
+    //     11        -             Reserved, must be zero
+    //     10     W  R0BMSZ        RBG0 Bitmap Size (0=512x256, 1=512x512)
+    //      9     W  R0BMEN        RBG0 Bitmap Enable (0=cells, 1=bitmap)
+    //      8     W  R0CHSZ        RBG0 Character Size (0=1x1, 1=2x2)
+    //    7-6        -             Reserved, must be zero
+    //      5     W  N3CHCN        NBG3 Character Color Number (0=16 colors, 1=256 colors; both palette)
+    //      4     W  N3CHSZ        NBG3 Character Size (0=1x1, 1=2x2)
+    //    3-2        -             Reserved, must be zero
+    //      1     W  N2CHCN        NBG2 Character Color Number (0=16 colors, 1=256 colors; both palette)
+    //      0     W  N2CHSZ        NBG2 Character Size (0=1x1, 1=2x2)
+
+    ALWAYS_INLINE uint16 ReadCHCTLB() {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, m_NormBGParams[2].cellSize - 1);
+        bit::deposit_into<1>(value, static_cast<uint32>(m_NormBGParams[2].colorFormat));
+
+        bit::deposit_into<4>(value, m_NormBGParams[3].cellSize - 1);
+        bit::deposit_into<5>(value, static_cast<uint32>(m_NormBGParams[3].colorFormat));
+
+        bit::deposit_into<8>(value, m_RotBGParams[0].cellSize - 1);
+        bit::deposit_into<9>(value, m_RotBGParams[0].bitmap);
+        bit::deposit_into<10>(value, m_RotBGParams[0].bmsz);
+        bit::deposit_into<12, 14>(value, static_cast<uint32>(m_RotBGParams[0].colorFormat));
+        return value;
+    }
+
+    ALWAYS_INLINE void WriteCHCTLB(uint16 value) {
+        m_NormBGParams[2].cellSize = bit::extract<0>(value) + 1;
+        m_NormBGParams[2].colorFormat = static_cast<ColorFormat>(bit::extract<1>(value));
+        m_NormBGParams[2].UpdateCHCTL();
+
+        m_NormBGParams[3].cellSize = bit::extract<4>(value) + 1;
+        m_NormBGParams[3].colorFormat = static_cast<ColorFormat>(bit::extract<5>(value));
+        m_NormBGParams[3].UpdateCHCTL();
+
+        m_RotBGParams[0].cellSize = bit::extract<8>(value) + 1;
+        m_RotBGParams[0].bitmap = bit::extract<9>(value);
+        m_RotBGParams[0].bmsz = bit::extract<10>(value);
+        m_RotBGParams[0].colorFormat = static_cast<ColorFormat>(bit::extract<12, 14>(value));
+        m_RotBGParams[0].UpdateCHCTL();
+    }
+
+    BMPNA_t BMPNA; // 18002C   BMPNA   NBG0/NBG1 Bitmap Palette Number
+    BMPNB_t BMPNB; // 18002E   BMPNB   RBG0 Bitmap Palette Number
+    PNC_t PNCN0;   // 180030   PNCN0   NBG0/RBG1 Pattern Name Control
+    PNC_t PNCN1;   // 180032   PNCN1   NBG1 Pattern Name Control
+    PNC_t PNCN2;   // 180034   PNCN2   NBG2 Pattern Name Control
+    PNC_t PNCN3;   // 180036   PNCN3   NBG3 Pattern Name Control
+    PNC_t PNCR;    // 180038   PNCR    RBG0 Pattern Name Control
+
+    // 18003A   PLSZ    Plane Size
+    //
+    //   bits   r/w  code          description
+    //  15-14     W  RBOVR1-0      Rotation Parameter B Screen-over Process
+    //  13-12     W  RBPLSZ1-0     Rotation Parameter B Plane Size
+    //  11-10     W  RAOVR1-0      Rotation Parameter A Screen-over Process
+    //    9-8     W  RAPLSZ1-0     Rotation Parameter A Plane Size
+    //    7-6     W  N3PLSZ1-0     NBG3 Plane Size
+    //    5-4     W  N2PLSZ1-0     NBG2 Plane Size
+    //    3-2     W  N1PLSZ1-0     NBG1 Plane Size
+    //    1-0     W  N0PLSZ1-0     NBG0 Plane Size
+    //
+    //  xxOVR1-0:
+    //    00 (0) = Repeat plane infinitely
+    //    01 (1) = Use character pattern in screen-over pattern name register
+    //    10 (2) = Transparent
+    //    11 (3) = Force 512x512 with transparent outsides (256 line bitmaps draw twice)
+    //
+    //  xxPLSZ1-0:
+    //    00 (0) = 1x1
+    //    01 (1) = 2x1
+    //    10 (2) = forbidden (but probably 1x2)
+    //    11 (3) = 2x2
+
+    ALWAYS_INLINE uint16 ReadPLSZ() {
+        uint16 value = 0;
+        bit::deposit_into<0, 1>(value, m_NormBGParams[0].plsz);
+        bit::deposit_into<2, 3>(value, m_NormBGParams[1].plsz);
+        bit::deposit_into<4, 5>(value, m_NormBGParams[2].plsz);
+        bit::deposit_into<6, 7>(value, m_NormBGParams[3].plsz);
+        bit::deposit_into<8, 9>(value, m_RotBGParams[0].plsz);
+        bit::deposit_into<10, 11>(value, static_cast<uint32>(m_RotBGParams[0].screenOverProcess));
+        bit::deposit_into<12, 13>(value, m_RotBGParams[1].plsz);
+        bit::deposit_into<14, 15>(value, static_cast<uint32>(m_RotBGParams[1].screenOverProcess));
+        return value;
+    }
+
+    ALWAYS_INLINE void WritePLSZ(uint16 value) {
+        m_NormBGParams[0].plsz = bit::extract<0, 1>(value);
+        m_NormBGParams[1].plsz = bit::extract<2, 3>(value);
+        m_NormBGParams[2].plsz = bit::extract<4, 5>(value);
+        m_NormBGParams[3].plsz = bit::extract<6, 7>(value);
+        m_RotBGParams[0].plsz = bit::extract<8, 9>(value);
+        m_RotBGParams[0].screenOverProcess = static_cast<ScreenOverProcess>(bit::extract<10, 11>(value));
+        m_RotBGParams[1].plsz = bit::extract<12, 13>(value);
+        m_RotBGParams[1].screenOverProcess = static_cast<ScreenOverProcess>(bit::extract<14, 15>(value));
+        for (auto &bg : m_NormBGParams) {
+            bg.UpdatePLSZ();
+        }
+        for (auto &bg : m_RotBGParams) {
+            bg.UpdatePLSZ();
+        }
+    }
+
+    // 18003C   MPOFN   NBG0-3 Map Offset
+    //
+    //   bits   r/w  code          description
+    //     15        -             Reserved, must be zero
+    //  14-12     W  M3MP8-6       NBG3 Map Offset
+    //     11        -             Reserved, must be zero
+    //   10-8     W  M2MP8-6       NBG2 Map Offset
+    //      7        -             Reserved, must be zero
+    //    6-4     W  M1MP8-6       NBG1 Map Offset
+    //      3        -             Reserved, must be zero
+    //    2-0     W  M0MP8-6       NBG0 Map Offset
+
+    ALWAYS_INLINE uint16 ReadMPOFN() {
+        uint16 value = 0;
+        bit::deposit_into<0, 2>(value, bit::extract<6, 8>(m_NormBGParams[0].mapIndices[0]));
+        bit::deposit_into<4, 6>(value, bit::extract<6, 8>(m_NormBGParams[1].mapIndices[0]));
+        bit::deposit_into<8, 10>(value, bit::extract<6, 8>(m_NormBGParams[2].mapIndices[0]));
+        bit::deposit_into<12, 14>(value, bit::extract<6, 8>(m_NormBGParams[3].mapIndices[0]));
+        return value;
+    }
+
+    ALWAYS_INLINE void WriteMPOFN(uint16 value) {
+        for (int i = 0; i < 4; i++) {
+            bit::deposit_into<6, 8>(m_NormBGParams[0].mapIndices[i], bit::extract<0, 2>(value));
+            bit::deposit_into<6, 8>(m_NormBGParams[1].mapIndices[i], bit::extract<4, 6>(value));
+            bit::deposit_into<6, 8>(m_NormBGParams[2].mapIndices[i], bit::extract<8, 10>(value));
+            bit::deposit_into<6, 8>(m_NormBGParams[3].mapIndices[i], bit::extract<12, 14>(value));
+        }
+    }
+
+    // 18003E   MPOFR   Rotation Parameter A/B Map Offset
+    //
+    //   bits   r/w  code          description
+    //   15-7        -             Reserved, must be zero
+    //    6-4     W  RBMP8-6       Rotation Parameter B Map Offset
+    //      3        -             Reserved, must be zero
+    //    2-0     W  RAMP8-6       Rotation Parameter A Map Offset
+
+    ALWAYS_INLINE uint16 ReadMPOFR() {
+        uint16 value = 0;
+        bit::deposit_into<0, 2>(value, bit::extract<6, 8>(m_RotBGParams[0].mapIndices[0]));
+        bit::deposit_into<4, 6>(value, bit::extract<6, 8>(m_RotBGParams[1].mapIndices[0]));
+        return value;
+    }
+
+    ALWAYS_INLINE void WriteMPOFR(uint16 value) {
+        for (int i = 0; i < 4; i++) {
+            bit::deposit_into<6, 8>(m_RotBGParams[0].mapIndices[i], bit::extract<0, 2>(value));
+            bit::deposit_into<6, 8>(m_RotBGParams[1].mapIndices[i], bit::extract<4, 6>(value));
+        }
+    }
+
+    // 180040   MPABN0  NBG0 Normal Scroll Screen Map for Planes A,B
+    // 180042   MPCDN0  NBG0 Normal Scroll Screen Map for Planes C,D
+    // 180044   MPABN1  NBG1 Normal Scroll Screen Map for Planes A,B
+    // 180046   MPCDN1  NBG1 Normal Scroll Screen Map for Planes C,D
+    // 180048   MPABN2  NBG2 Normal Scroll Screen Map for Planes A,B
+    // 18004A   MPCDN2  NBG2 Normal Scroll Screen Map for Planes C,D
+    // 18004C   MPABN3  NBG3 Normal Scroll Screen Map for Planes A,B
+    // 18004E   MPCDN3  NBG3 Normal Scroll Screen Map for Planes C,D
+    //
+    //   bits   r/w  code          description
+    //  15-14        -             Reserved, must be zero
+    //   13-8     W  xxMPy5-0      BG xx Plane y Map
+    //    7-6        -             Reserved, must be zero
+    //    5-0     W  xxMPy5-0      BG xx Plane y Map
+    //
+    // xx:
+    //   N0 = NBG0 (MPyyN0)
+    //   N1 = NBG1 (MPyyN1)
+    //   N2 = NBG2 (MPyyN2)
+    //   N3 = NBG3 (MPyyN3)
+    // y:
+    //   A = Plane A (bits  5-0 of MPABxx)
+    //   B = Plane B (bits 13-8 of MPABxx)
+    //   C = Plane C (bits  5-0 of MPCDxx)
+    //   D = Plane D (bits 13-8 of MPCDxx)
+
+    ALWAYS_INLINE uint16 ReadMPN(uint32 bgIndex, uint32 planeIndex) {
+        uint16 value = 0;
+        auto &bg = m_NormBGParams[bgIndex];
+        bit::deposit_into<0, 5>(value, bit::extract<0, 5>(bg.mapIndices[planeIndex * 2 + 0]));
+        bit::deposit_into<8, 13>(value, bit::extract<0, 5>(bg.mapIndices[planeIndex * 2 + 1]));
+        return value;
+    }
+
+    ALWAYS_INLINE void WriteMPN(uint16 value, uint32 bgIndex, uint32 planeIndex) {
+        auto &bg = m_NormBGParams[bgIndex];
+        bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 0], bit::extract<0, 5>(value));
+        bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 1], bit::extract<8, 13>(value));
+    }
+
+    // 180050   MPABRA  Rotation Parameter A Scroll Surface Map for Screen Planes A,B
+    // 180052   MPCDRA  Rotation Parameter A Scroll Surface Map for Screen Planes C,D
+    // 180054   MPEFRA  Rotation Parameter A Scroll Surface Map for Screen Planes E,F
+    // 180056   MPGHRA  Rotation Parameter A Scroll Surface Map for Screen Planes G,H
+    // 180058   MPIJRA  Rotation Parameter A Scroll Surface Map for Screen Planes I,J
+    // 18005A   MPKLRA  Rotation Parameter A Scroll Surface Map for Screen Planes K,L
+    // 18005C   MPMNRA  Rotation Parameter A Scroll Surface Map for Screen Planes M,N
+    // 18005E   MPOPRA  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
+    // 180060   MPABRB  Rotation Parameter A Scroll Surface Map for Screen Planes A,B
+    // 180062   MPCDRB  Rotation Parameter A Scroll Surface Map for Screen Planes C,D
+    // 180064   MPEFRB  Rotation Parameter A Scroll Surface Map for Screen Planes E,F
+    // 180066   MPGHRB  Rotation Parameter A Scroll Surface Map for Screen Planes G,H
+    // 180068   MPIJRB  Rotation Parameter A Scroll Surface Map for Screen Planes I,J
+    // 18006A   MPKLRB  Rotation Parameter A Scroll Surface Map for Screen Planes K,L
+    // 18006C   MPMNRB  Rotation Parameter A Scroll Surface Map for Screen Planes M,N
+    // 18006E   MPOPRB  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
+    //
+    //   bits   r/w  code          description
+    //  15-14        -             Reserved, must be zero
+    //   13-8     W  RxMPy5-0      Rotation Parameter x Screen Plane y Map
+    //    7-6        -             Reserved, must be zero
+    //    5-0     W  RxMPy5-0      Rotation Parameter x Screen Plane y Map
+    //
+    // x:
+    //   A = Rotation Parameter A (MPyyRA)
+    //   B = Rotation Parameter A (MPyyRB)
+    // y:
+    //   A = Screen Plane A (bits  5-0 of MPABxx)
+    //   B = Screen Plane B (bits 13-8 of MPABxx)
+    //   C = Screen Plane C (bits  5-0 of MPCDxx)
+    //   D = Screen Plane D (bits 13-8 of MPCDxx)
+    //   ...
+    //   M = Screen Plane M (bits  5-0 of MPMNxx)
+    //   N = Screen Plane N (bits 13-8 of MPMNxx)
+    //   O = Screen Plane O (bits  5-0 of MPOPxx)
+    //   P = Screen Plane P (bits 13-8 of MPOPxx)
+
+    ALWAYS_INLINE uint16 ReadMPR(uint32 bgIndex, uint32 planeIndex) {
+        uint16 value = 0;
+        auto &bg = m_RotBGParams[bgIndex];
+        bit::deposit_into<0, 5>(value, bit::extract<0, 5>(bg.mapIndices[planeIndex * 2 + 0]));
+        bit::deposit_into<8, 13>(value, bit::extract<0, 5>(bg.mapIndices[planeIndex * 2 + 1]));
+        return value;
+    }
+
+    ALWAYS_INLINE void WriteMPR(uint16 value, uint32 bgIndex, uint32 planeIndex) {
+        auto &bg = m_RotBGParams[bgIndex];
+        bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 0], bit::extract<0, 5>(value));
+        bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 1], bit::extract<8, 13>(value));
+    }
+
+    /**/             // 180070   SCXIN0  NBG0 Horizontal Screen Scroll Value (integer part)
                      // 180072   SCXDN0  NBG0 Horizontal Screen Scroll Value (fractional part)
                      // 180074   SCYIN0  NBG0 Vertical Screen Scroll Value (integer part)
     SCXYID_t SCN0;   // 180076   SCYDN0  NBG0 Vertical Screen Scroll Value (fractional part)
@@ -513,6 +858,11 @@ private:
     CO_t COBR;       // 18011A   COBR    Color Offset B - Red
     CO_t COBG;       // 18011C   COBG    Color Offset B - Green
     CO_t COBB;       // 18011E   COBB    Color Offset B - Blue
+
+    // -------------------------------------------------------------------------
+
+    std::array<BGParams<false>, 4> m_NormBGParams;
+    std::array<BGParams<true>, 2> m_RotBGParams;
 
     // -------------------------------------------------------------------------
 
