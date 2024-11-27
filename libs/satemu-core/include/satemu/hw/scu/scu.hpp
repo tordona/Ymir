@@ -50,7 +50,7 @@ namespace satemu {
 //   - Byte reads work normally
 class SCU {
 public:
-    SCU(VDP1 &vdp1, vdp2::VDP2 &vdp2, SCSP &scsp, CDBlock &cdblock);
+    SCU(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, SCSP &scsp, CDBlock &cdblock);
 
     void Reset(bool hard);
 
@@ -132,7 +132,7 @@ public:
     }
 
 private:
-    VDP1 &m_VDP1;
+    vdp1::VDP1 &m_VDP1;
     vdp2::VDP2 &m_VDP2;
     SCSP &m_SCSP;
     CDBlock &m_CDBlock;

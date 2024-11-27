@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/core_types.hpp>
+
 #include <satemu/hw/cdblock/cdblock.hpp>
 #include <satemu/hw/scsp/scsp.hpp>
 #include <satemu/hw/scu/scu.hpp>
@@ -36,7 +38,7 @@ private:
     SMPC m_SMPC;
     SCSP m_SCSP;
     CDBlock m_CDBlock;
-    VDP1 m_VDP1;
+    vdp1::VDP1 m_VDP1;
     vdp2::VDP2 m_VDP2;
 };
 

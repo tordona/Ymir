@@ -1,6 +1,6 @@
 #include <satemu/hw/vdp/vdp1.hpp>
 
-namespace satemu {
+namespace satemu::vdp1 {
 
 VDP1::VDP1() {
     Reset(true);
@@ -14,4 +14,4 @@ void VDP1::Reset(bool hard) {
     m_drawFB = 0;
 }
 
-} // namespace satemu
+} // namespace satemu::vdp1

@@ -11,7 +11,7 @@
 
 #include <array>
 
-namespace satemu {
+namespace satemu::vdp1 {
 
 class VDP1 {
 public:
@@ -56,4 +56,4 @@ private:
     size_t m_drawFB;
 };
 
-} // namespace satemu
+} // namespace satemu::vdp1
