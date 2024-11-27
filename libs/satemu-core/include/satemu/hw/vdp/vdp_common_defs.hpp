@@ -2,6 +2,8 @@
 
 #include <satemu/core_types.hpp>
 
+#include <satemu/util/inline.hpp>
+
 namespace satemu::vdp {
 
 union Color555 {
@@ -25,6 +27,13 @@ union Color888 {
     };
 };
 
-Color888 ConvertRGB555to888(Color555 color);
+FORCE_INLINE Color888 ConvertRGB555to888(Color555 color) {
+    return Color888{
+        .r = static_cast<uint32>(color.r) << 3u,
+        .g = static_cast<uint32>(color.g) << 3u,
+        .b = static_cast<uint32>(color.b) << 3u,
+        .msb = color.msb,
+    };
+}
 
 } // namespace satemu::vdp
