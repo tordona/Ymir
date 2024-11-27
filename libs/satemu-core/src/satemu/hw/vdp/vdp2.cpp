@@ -28,11 +28,6 @@ void VDP2::Reset(bool hard) {
     SFCODE.u16 = 0x0;
     BMPNA.u16 = 0x0;
     BMPNB.u16 = 0x0;
-    PNCN0.u16 = 0x0;
-    PNCN1.u16 = 0x0;
-    PNCN2.u16 = 0x0;
-    PNCN3.u16 = 0x0;
-    PNCR.u16 = 0x0;
     SCN0.u64 = 0x0;
     ZMN0.u64 = 0x0;
     SCN1.u64 = 0x0;
@@ -59,8 +54,6 @@ void VDP2::Reset(bool hard) {
     LWTA1.u32 = 0x0;
     SPCTL.u16 = 0x0;
     SDCTL.u16 = 0x0;
-    CRAOFA.u16 = 0x0;
-    CRAOFB.u16 = 0x0;
     LNCLEN.u16 = 0x0;
     SFPRMD.u16 = 0x0;
     CCCTL.u16 = 0x0;

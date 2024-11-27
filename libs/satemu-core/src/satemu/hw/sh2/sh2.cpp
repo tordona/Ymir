@@ -9,7 +9,7 @@
 namespace satemu {
 
 uint64 dbg_count = 0;
-static constexpr uint64 dbg_minCount = 17635778; // 10489689; // 9302150; // 9547530;
+static constexpr uint64 dbg_minCount = 99999999999; // 17635778; // 10489689; // 9302150; // 9547530;
 
 template <typename... T>
 void dbg_print(fmt::format_string<T...> fmt, T &&...args) {

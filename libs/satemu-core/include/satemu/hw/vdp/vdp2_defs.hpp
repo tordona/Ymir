@@ -38,7 +38,6 @@ struct BGParams {
     void Reset() {
         enabled = false;
         transparent = false;
-        twoWordChar = false;
         bitmap = false;
 
         cellSize = 1;
@@ -51,12 +50,20 @@ struct BGParams {
         colorFormat = ColorFormat::Palette16;
         screenOverProcess = ScreenOverProcess::Repeat;
 
+        supplCharNum = 0;
+        supplPalNum = 0;
+        specialColorCalc = false;
+        specialPriority = false;
+        wideChar = false;
+        twoWordChar = false;
+
         // pageSizeShift = 0;
         // mapIndexMask = 0;
-        cramOffset = 0;
+        // cramOffset = 0;
 
         plsz = 0;
         bmsz = 0;
+        caos = 0;
 
         UpdatePLSZ();
         UpdateCHCTL();
@@ -69,10 +76,6 @@ struct BGParams {
     // If true, honor transparency bit in color data.
     // Derived from BGON.xxTPON
     bool transparent;
-
-    // Whether characters use one (false) or two (true) words.
-    // Derived from PNCNn/PNCR.xxPNB
-    bool twoWordChar;
 
     // Whether the background uses cells (false) or a bitmap (true).
     // Derived CHCTLA/CHCTLB.xxBMEN
@@ -100,6 +103,31 @@ struct BGParams {
     // Derived from PLSZ.RxOVRn
     ScreenOverProcess screenOverProcess;
 
+    // Supplementary bits 4-0 for character number, when using 1-word characters.
+    // Derived from PNCN0/PNCR.xxSCNn
+    uint32 supplCharNum;
+
+    // Supplementary bits 6-4 for palette number, when using 1-word characters.
+    // Derived from PNCN0/PNCR.xxSPLTn
+    uint32 supplPalNum;
+
+    // Special Color Calculation enable.
+    // Derived from PNCN0/PNCR.xxSCC
+    bool specialColorCalc;
+
+    // Special Priority enable.
+    // Derived from PNCN0/PNCR.xxSPR
+    bool specialPriority;
+
+    // Character number width: 10 bits (false) or 12 bits (true).
+    // When true, disables the horizontal and vertical flip bits in the character.
+    // Derived from PNCN0/PNCR.xxCNSM
+    bool wideChar;
+
+    // Whether characters use one (false) or two (true) words.
+    // Derived from PNCNn/PNCR.xxPNB
+    bool twoWordChar;
+
     // Bit shift applied to calculated page base address.
     // Derived from CHCTLA/CHCTLB.xxCHSZ and PNCNn/PNCR.xxPNB
     uint32 pageSizeShift;
@@ -109,11 +137,13 @@ struct BGParams {
     uint32 mapIndexMask;
 
     // Color RAM palette offset (in bytes).
-    // Derived from CRAOFA/CRAOFB.xxCAOSn
-    uint32 cramOffset;
+    // Derived from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn
+    // NOTE: this is calculated in the renderer from CRAOFA/CRAOFB.xxCAOSn + RAMCTL.CRMDn
+    // uint32 cramOffset;
 
     uint16 plsz; // Raw value of PLSZ.xxPLSZn
     uint16 bmsz; // Raw value of CHCTLA/CHCTLB.xxBMSZ
+    uint16 caos; // Raw value of CRAOFA/CRAOFB.xxCAOSn
 
     void UpdatePLSZ() {
         numPagesH = (plsz & 1) + 1;
@@ -521,35 +551,6 @@ union BMPNB_t {
         uint16 N0BMCC : 1;
         uint16 N0BMPR : 1;
         uint16 _rsvd6_15 : 10;
-    };
-};
-
-// 180030   PNCN0   NBG0/RBG1 Pattern Name Control
-// 180032   PNCN1   NBG1 Pattern Name Control
-// 180034   PNCN2   NBG2 Pattern Name Control
-// 180036   PNCN3   NBG3 Pattern Name Control
-// 180038   PNCR    RBG0 Pattern Name Control
-//
-//   bits   r/w  code          description
-//     15     W  xxPNB         Pattern Name Data Size (0=2 words, 1=1 word)
-//     14     W  xxCNSM        Character Number Supplement
-//                               0 = char number is 10 bits; H/V flip available
-//                               1 = char number is 12 bits; H/V flip unavailable
-//  13-10        -             Reserved, must be zero
-//      9     W  xxSPR         Special Priority bit
-//      8     W  xxSCC         Special Color Calculation bit
-//    7-5     W  xxSPLT6-4     Supplementary Palette bits
-//    4-0     W  xxSCN4-0      Supplementary Character Number bits
-union PNC_t {
-    uint16 u16;
-    struct {
-        uint16 SCNn : 5;
-        uint16 SPLTn : 3;
-        uint16 SCC : 1;
-        uint16 SPR : 1;
-        uint16 _rsvd : 4;
-        uint16 CNSM : 1;
-        uint16 PNB : 1;
     };
 };
 
@@ -1357,52 +1358,6 @@ union SDCTL_t {
         uint16 _rsvd6_7 : 2;
         uint16 TPSDSL : 1;
         uint16 _rsvd9_15 : 7;
-    };
-};
-
-// 1800E4   CRAOFA  NBG0-NBG3 Color RAM Address Offset
-//
-//   bits   r/w  code          description
-//     15        -             Reserved, must be zero
-//  14-12     W  N3CAOS2-0     NBG3 Color RAM Adress Offset
-//     11        -             Reserved, must be zero
-//   10-8     W  N2CAOS2-0     NBG2 Color RAM Adress Offset
-//      7        -             Reserved, must be zero
-//    6-4     W  N1CAOS2-0     NBG1/EXBG Color RAM Adress Offset
-//      3        -             Reserved, must be zero
-//    2-0     W  N0CAOS2-0     NBG0/RBG1 Color RAM Adress Offset
-union CRAOFA_t {
-    uint16 u16;
-    struct {
-        uint16 N0CAOSn : 3;
-        uint16 _rsvd3 : 1;
-        uint16 N1CAOSn : 3;
-        uint16 _rsvd7 : 1;
-        uint16 N2CAOSn : 3;
-        uint16 _rsvd11 : 1;
-        uint16 N3CAOSn : 3;
-        uint16 _rsvd15 : 1;
-    };
-};
-
-// 1800E6   CRAOFB  RBG0 and Sprite Color RAM Address Offset
-//
-//   bits   r/w  code          description
-//   15-7        -             Reserved, must be zero
-//    6-4     W  SPCAOS2-0     Sprite Color RAM Adress Offset
-//      3        -             Reserved, must be zero
-//    2-0     W  R0CAOS2-0     RBG0 Color RAM Adress Offset
-union CRAOFB_t {
-    uint16 u16;
-    struct {
-        uint16 N0CAOSn : 3;
-        uint16 _rsvd3 : 1;
-        uint16 N1CAOSn : 3;
-        uint16 _rsvd7 : 1;
-        uint16 N2CAOSn : 3;
-        uint16 _rsvd11 : 1;
-        uint16 N3CAOSn : 3;
-        uint16 _rsvd15 : 1;
     };
 };
 

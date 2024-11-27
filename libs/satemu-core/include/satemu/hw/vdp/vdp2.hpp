@@ -87,11 +87,11 @@ public:
         case 0x02A: return ReadCHCTLB();  // write-only?
         case 0x02C: return BMPNA.u16;     // write-only?
         case 0x02E: return BMPNB.u16;     // write-only?
-        case 0x030: return PNCN0.u16;     // write-only?
-        case 0x032: return PNCN1.u16;     // write-only?
-        case 0x034: return PNCN2.u16;     // write-only?
-        case 0x036: return PNCN3.u16;     // write-only?
-        case 0x038: return PNCR.u16;      // write-only?
+        case 0x030: return ReadPNCN(0);   // write-only?
+        case 0x032: return ReadPNCN(1);   // write-only?
+        case 0x034: return ReadPNCN(2);   // write-only?
+        case 0x036: return ReadPNCN(3);   // write-only?
+        case 0x038: return ReadPNCR();    // write-only?
         case 0x03A: return ReadPLSZ();    // write-only?
         case 0x03C: return ReadMPOFN();   // write-only?
         case 0x03E: return ReadMPOFR();   // write-only?
@@ -177,8 +177,8 @@ public:
         case 0x0DE: return LWTA1.L.u16;   // write-only?
         case 0x0E0: return SPCTL.u16;     // write-only?
         case 0x0E2: return SDCTL.u16;     // write-only?
-        case 0x0E4: return CRAOFA.u16;    // write-only?
-        case 0x0E6: return CRAOFB.u16;    // write-only?
+        case 0x0E4: return ReadCRAOFA();  // write-only?
+        case 0x0E6: return ReadCRAOFB();  // write-only?
         case 0x0E8: return LNCLEN.u16;    // write-only?
         case 0x0EA: return SFPRMD.u16;    // write-only?
         case 0x0EC: return CCCTL.u16;     // write-only?
@@ -239,11 +239,11 @@ public:
         case 0x02A: WriteCHCTLB(value); break;
         case 0x02C: BMPNA.u16 = value & 0x3737; break;
         case 0x02E: BMPNB.u16 = value & 0x0037; break;
-        case 0x030: PNCN0.u16 = value & 0xC3FF; break;
-        case 0x032: PNCN1.u16 = value & 0xC3FF; break;
-        case 0x034: PNCN2.u16 = value & 0xC3FF; break;
-        case 0x036: PNCN3.u16 = value & 0xC3FF; break;
-        case 0x038: PNCR.u16 = value & 0xC3FF; break;
+        case 0x030: WritePNCN(0, value); break;
+        case 0x032: WritePNCN(1, value); break;
+        case 0x034: WritePNCN(2, value); break;
+        case 0x036: WritePNCN(3, value); break;
+        case 0x038: WritePNCR(value); break;
         case 0x03A: WritePLSZ(value); break;
         case 0x03C: WriteMPOFN(value); break;
         case 0x03E: WriteMPOFR(value); break;
@@ -329,8 +329,8 @@ public:
         case 0x0DE: LWTA1.L.u16 = value & 0xFFFE; break;
         case 0x0E0: SPCTL.u16 = value & 0x373F; break;
         case 0x0E2: SDCTL.u16 = value & 0x013F; break;
-        case 0x0E4: CRAOFA.u16 = value & 0x7777; break;
-        case 0x0E6: CRAOFB.u16 = value & 0x0077; break;
+        case 0x0E4: WriteCRAOFA(value); break;
+        case 0x0E6: WriteCRAOFB(value); break;
         case 0x0E8: LNCLEN.u16 = value & 0x003F; break;
         case 0x0EA: SFPRMD.u16 = value & 0x03FF; break;
         case 0x0EC: CCCTL.u16 = value & 0xF77F; break;
@@ -567,11 +567,72 @@ private:
 
     BMPNA_t BMPNA; // 18002C   BMPNA   NBG0/NBG1 Bitmap Palette Number
     BMPNB_t BMPNB; // 18002E   BMPNB   RBG0 Bitmap Palette Number
-    PNC_t PNCN0;   // 180030   PNCN0   NBG0/RBG1 Pattern Name Control
-    PNC_t PNCN1;   // 180032   PNCN1   NBG1 Pattern Name Control
-    PNC_t PNCN2;   // 180034   PNCN2   NBG2 Pattern Name Control
-    PNC_t PNCN3;   // 180036   PNCN3   NBG3 Pattern Name Control
-    PNC_t PNCR;    // 180038   PNCR    RBG0 Pattern Name Control
+
+    // 180030   PNCN0   NBG0/RBG1 Pattern Name Control
+    // 180032   PNCN1   NBG1 Pattern Name Control
+    // 180034   PNCN2   NBG2 Pattern Name Control
+    // 180036   PNCN3   NBG3 Pattern Name Control
+    // 180038   PNCR    RBG0 Pattern Name Control
+    //
+    //   bits   r/w  code          description
+    //     15     W  xxPNB         Pattern Name Data Size (0=2 words, 1=1 word)
+    //     14     W  xxCNSM        Character Number Supplement
+    //                               0 = char number is 10 bits; H/V flip available
+    //                               1 = char number is 12 bits; H/V flip unavailable
+    //  13-10        -             Reserved, must be zero
+    //      9     W  xxSPR         Special Priority bit
+    //      8     W  xxSCC         Special Color Calculation bit
+    //    7-5     W  xxSPLT6-4     Supplementary Palette bits 6-4
+    //    4-0     W  xxSCN4-0      Supplementary Character Number bits 4-0
+
+    ALWAYS_INLINE uint16 ReadPNCN(uint32 bgIndex) {
+        uint16 value = 0;
+        bit::deposit_into<0, 4>(value, m_NormBGParams[bgIndex].supplCharNum);
+        bit::deposit_into<5, 7>(value, m_NormBGParams[bgIndex].supplPalNum);
+        bit::deposit_into<8>(value, m_NormBGParams[bgIndex].specialColorCalc);
+        bit::deposit_into<9>(value, m_NormBGParams[bgIndex].specialPriority);
+        bit::deposit_into<14>(value, m_NormBGParams[bgIndex].wideChar);
+        bit::deposit_into<15>(value, !m_NormBGParams[bgIndex].twoWordChar);
+
+        if (bgIndex == 0) {
+            m_RotBGParams[1].supplCharNum = m_NormBGParams[0].supplCharNum;
+            m_RotBGParams[1].supplPalNum = m_NormBGParams[0].supplPalNum;
+            m_RotBGParams[1].specialColorCalc = m_NormBGParams[0].specialColorCalc;
+            m_RotBGParams[1].specialPriority = m_NormBGParams[0].specialPriority;
+            m_RotBGParams[1].wideChar = m_NormBGParams[0].wideChar;
+            m_RotBGParams[1].twoWordChar = m_NormBGParams[0].twoWordChar;
+        }
+        return value;
+    }
+
+    ALWAYS_INLINE void WritePNCN(uint32 bgIndex, uint16 value) {
+        m_NormBGParams[bgIndex].supplCharNum = bit::extract<0, 4>(value);
+        m_NormBGParams[bgIndex].supplPalNum = bit::extract<5, 7>(value);
+        m_NormBGParams[bgIndex].specialColorCalc = bit::extract<8>(value);
+        m_NormBGParams[bgIndex].specialPriority = bit::extract<9>(value);
+        m_NormBGParams[bgIndex].wideChar = bit::extract<14>(value);
+        m_NormBGParams[bgIndex].twoWordChar = !bit::extract<15>(value);
+    }
+
+    ALWAYS_INLINE uint16 ReadPNCR() {
+        uint16 value = 0;
+        bit::deposit_into<0, 4>(value, m_RotBGParams[0].supplCharNum);
+        bit::deposit_into<5, 7>(value, m_RotBGParams[0].supplPalNum);
+        bit::deposit_into<8>(value, m_RotBGParams[0].specialColorCalc);
+        bit::deposit_into<9>(value, m_RotBGParams[0].specialPriority);
+        bit::deposit_into<14>(value, m_RotBGParams[0].wideChar);
+        bit::deposit_into<15>(value, !m_RotBGParams[0].twoWordChar);
+        return value;
+    }
+
+    ALWAYS_INLINE void WritePNCR(uint16 value) {
+        m_RotBGParams[0].supplCharNum = bit::extract<0, 4>(value);
+        m_RotBGParams[0].supplPalNum = bit::extract<5, 7>(value);
+        m_RotBGParams[0].specialColorCalc = bit::extract<8>(value);
+        m_RotBGParams[0].specialPriority = bit::extract<9>(value);
+        m_RotBGParams[0].wideChar = bit::extract<14>(value);
+        m_RotBGParams[0].twoWordChar = !bit::extract<15>(value);
+    }
 
     // 18003A   PLSZ    Plane Size
     //
@@ -828,8 +889,70 @@ private:
     LWTA_t LWTA1;    // 1800DE   LWTA1L  Window 1 Line Window Address Table (lower)
     SPCTL_t SPCTL;   // 1800E0   SPCTL   Sprite Control
     SDCTL_t SDCTL;   // 1800E2   SDCTL   Shadow Control
-    CRAOFA_t CRAOFA; // 1800E4   CRAOFA  NBG0-NBG3 Color RAM Address Offset
-    CRAOFB_t CRAOFB; // 1800E6   CRAOFB  RBG0 and Sprite Color RAM Address Offset
+
+    // 1800E4   CRAOFA  NBG0-NBG3 Color RAM Address Offset
+    //
+    //   bits   r/w  code          description
+    //     15        -             Reserved, must be zero
+    //  14-12     W  N3CAOS2-0     NBG3 Color RAM Adress Offset
+    //     11        -             Reserved, must be zero
+    //   10-8     W  N2CAOS2-0     NBG2 Color RAM Adress Offset
+    //      7        -             Reserved, must be zero
+    //    6-4     W  N1CAOS2-0     NBG1/EXBG Color RAM Adress Offset
+    //      3        -             Reserved, must be zero
+    //    2-0     W  N0CAOS2-0     NBG0/RBG1 Color RAM Adress Offset
+
+    ALWAYS_INLINE uint16 ReadCRAOFA() {
+        uint16 value = 0;
+        bit::deposit_into<0, 2>(value, m_NormBGParams[0].caos);
+        bit::deposit_into<4, 6>(value, m_NormBGParams[1].caos);
+        bit::deposit_into<8, 10>(value, m_NormBGParams[2].caos);
+        bit::deposit_into<12, 14>(value, m_NormBGParams[3].caos);
+        return value;
+    }
+
+    ALWAYS_INLINE void WriteCRAOFA(uint16 value) {
+        m_NormBGParams[0].caos = bit::extract<0, 2>(value);
+        m_NormBGParams[1].caos = bit::extract<4, 6>(value);
+        m_NormBGParams[2].caos = bit::extract<8, 10>(value);
+        m_NormBGParams[3].caos = bit::extract<12, 14>(value);
+        m_RotBGParams[0].caos = m_NormBGParams[0].caos;
+
+        /*const uint32 cramShift = RAMCTL.CRMDn == 1 ? 10 : 9;
+        m_NormBGParams[0].cramOffset = m_NormBGParams[0].caos << cramShift;
+        m_NormBGParams[1].cramOffset = m_NormBGParams[1].caos << cramShift;
+        m_NormBGParams[2].cramOffset = m_NormBGParams[2].caos << cramShift;
+        m_NormBGParams[3].cramOffset = m_NormBGParams[3].caos << cramShift;
+        m_RotBGParams[0].cramOffset = m_NormBGParams[0].cramOffset;*/
+    }
+
+    // 1800E6   CRAOFB  RBG0 and Sprite Color RAM Address Offset
+    //
+    //   bits   r/w  code          description
+    //   15-7        -             Reserved, must be zero
+    //    6-4     W  SPCAOS2-0     Sprite Color RAM Adress Offset
+    //      3        -             Reserved, must be zero
+    //    2-0     W  R0CAOS2-0     RBG0 Color RAM Adress Offset
+
+    ALWAYS_INLINE uint16 ReadCRAOFB() {
+        uint16 value = 0;
+        bit::deposit_into<0, 2>(value, m_RotBGParams[0].caos);
+        // TODO: SPCAOSn
+        // bit::deposit_into<4, 6>(value, ?m_SpriteParams?.caos);
+        return value;
+    }
+
+    ALWAYS_INLINE void WriteCRAOFB(uint16 value) {
+        m_RotBGParams[0].caos = bit::extract<0, 2>(value);
+        // TODO: SPCAOSn
+        // ?m_SpriteParams?.caos = bit::extract<4, 6>(value);
+
+        /*const uint32 cramShift = RAMCTL.CRMDn == 1 ? 10 : 9;
+        m_RotBGParams[0].cramOffset = m_RotBGParams[0].caos << cramShift;
+        // TODO: SPCAOSn
+        // ?m_SpriteParams?.cramOffset = ?m_SpriteParams?.caos << cramShift;*/
+    }
+
     LNCLEN_t LNCLEN; // 1800E8   LNCLEN  Line Color Screen Enable
     SFPRMD_t SFPRMD; // 1800EA   SFPRMD  Special Priority Mode
     CCCTL_t CCCTL;   // 1800EC   CCCTL   Color Calculation Control
