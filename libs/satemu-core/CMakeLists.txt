@@ -53,6 +53,8 @@ add_library(satemu-core
     src/satemu/hw/vdp/vdp2.cpp
 
     src/satemu/sys/sys.cpp
+
+    src/satemu/util/constexpr_for.hpp
 )
 add_library(satemu::satemu-core ALIAS satemu-core)
 set_target_properties(satemu-core PROPERTIES
