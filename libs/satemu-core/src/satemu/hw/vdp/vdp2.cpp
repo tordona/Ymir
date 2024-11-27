@@ -1,6 +1,6 @@
 #include <satemu/hw/vdp/vdp2.hpp>
 
-#include <satemu/util/unreachable.hpp>
+#include <satemu/util/constexpr_for.hpp>
 
 #include <fmt/format.h>
 
@@ -229,8 +229,7 @@ void VDP2::IncrementVCounter() {
 void VDP2::BeginHPhaseActiveDisplay() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering horizontal active display phase", m_VCounter);
     if (m_VPhase == VerticalPhase::Active) {
-        // TODO: draw line
-        // fmt::println("VDP2: drawing line {}", m_VCounter);
+        DrawLine();
     }
 }
 
@@ -291,11 +290,98 @@ void VDP2::BeginVPhaseTopBorder() {
 // ----
 // Renderer
 
-template <bool twoWord>
-ALWAYS_INLINE VDP2::Character VDP2::FetchCharacter(uint32 pageBaseAddress, uint32 charIndex) {
+void VDP2::DrawLine() {
+    // fmt::println("VDP2: drawing line {}", m_VCounter);
+
+    using FnDrawNBG = void (VDP2::*)(const NormBGParams &, BGRenderContext &);
+
+    // Lookup table of DrawNormalBG functions
+    // [twoWordChar][colorFormat][colorMode]
+    static constexpr auto fnDrawNBGs = [] {
+        std::array<std::array<std::array<FnDrawNBG, 4>, 8>, 2> arr{};
+
+        util::constexpr_for<2>([&](auto twcIndex) {
+            const bool twoWordChar = twcIndex;
+            util::constexpr_for<8>([&](auto cfIndex) {
+                const size_t colorFormat = cfIndex <= 4 ? cfIndex : 4;
+                util::constexpr_for<4>([&](auto cmIndex) {
+                    const size_t colorMode = cmIndex <= 2 ? cmIndex : 2;
+                    arr[twcIndex][cfIndex][cmIndex] = &VDP2::DrawNormalBG<twoWordChar, colorFormat, colorMode>;
+                });
+            });
+        });
+
+        return arr;
+    }();
+
+    // Draw normal BGs
+    for (const auto &bg : m_NormBGParams) {
+        if (bg.enabled) {
+            BGRenderContext rctx{};
+            rctx.cramOffset = bg.caos << (RAMCTL.CRMDn == 1 ? 10 : 9);
+            (this->*fnDrawNBGs[bg.twoWordChar][static_cast<size_t>(bg.colorFormat)][RAMCTL.CRMDn])(bg, rctx);
+        }
+    }
+
+    // Draw rotation BGs
+    for (const auto &bg : m_RotBGParams) {
+        if (bg.enabled) {
+            BGRenderContext rctx{};
+            rctx.cramOffset = bg.caos << (RAMCTL.CRMDn == 1 ? 10 : 9);
+            // TODO: implement
+            //(this->*fnDrawRBGs[bg.twoWordChar][static_cast<size_t>(bg.colorFormat)][RAMCTL.CRMDn])(bg, rctx);
+        }
+    }
+}
+
+template <bool twoWordChar, uint32 colorFormat, uint32 colorMode>
+NO_INLINE void VDP2::DrawNormalBG(const NormBGParams &bgParams, BGRenderContext &rctx) {
+    // TODO: deal with scrolling, scaling, shifting, etc.
+    const uint32 y = m_VCounter;
+    for (uint32 x = 0; x < m_HRes; x++) {
+        // TODO: priority handling
+        // TODO: special color handling
+        // framebuffer[x][y] = color;
+
+        Color888 color{};
+
+        if (bgParams.bitmap) {
+            // TODO: draw bitmap BG
+        } else {
+            color = DrawNormalScrollBG<twoWordChar, colorFormat, colorMode>(bgParams, rctx, x, y);
+        }
+    }
+}
+
+template <bool twoWordChar, uint32 colorFormat, uint32 colorMode>
+FORCE_INLINE Color888 VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx, uint32 x,
+                                               uint32 y) {
+    // TODO: implement scrolling, scaling, rotation, mosaic
+
+    // Determine which plane the (x,y) coordinates correspond to
+    // TODO: implement
+    const uint32 plane = 0;
+
+    // Determine which character inside the plane the (x,y) coordinates correspond to
+    // TODO: implement
+    const uint32 charIndex = 0;
+
+    // Determine dot coordinates
+    // TODO: implement
+    const uint32 dotX = 0;
+    const uint32 dotY = 0;
+
+    // Fetch dot color
+    const uint32 pageBaseAddress = bgParams.pageBaseAddresses[plane];
+    const Character ch = FetchCharacter<twoWordChar>(pageBaseAddress, charIndex);
+    return FetchColor<colorFormat, colorMode>(rctx.cramOffset, ch, dotX, dotY);
+}
+
+template <bool twoWordChar>
+FORCE_INLINE VDP2::Character VDP2::FetchCharacter(uint32 pageBaseAddress, uint32 charIndex) {
     Character ch{};
 
-    if constexpr (twoWord) {
+    if constexpr (twoWordChar) {
         const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint32);
         const uint32 charData = util::ReadBE<uint32>(&m_VRAM[charAddress]);
 
@@ -315,44 +401,39 @@ ALWAYS_INLINE VDP2::Character VDP2::FetchCharacter(uint32 pageBaseAddress, uint3
     return ch;
 }
 
-template <uint32 chcn, uint32 crmd>
-ALWAYS_INLINE vdp::Color888 VDP2::FetchColor(Character ch, uint8 dotX, uint8 dotY) {
-    static_assert(chcn < 5, "Invalid xxCHCN value");
+template <uint32 colorFormat, uint32 colorMode>
+FORCE_INLINE vdp::Color888 VDP2::FetchColor(uint32 cramOffset, Character ch, uint8 dotX, uint8 dotY) {
+    static_assert(colorFormat <= 4, "Invalid xxCHCN value");
     assert(dotX < 8);
     assert(dotY < 8);
 
     // Cell addressing uses a fixed offset of 32 bytes
     const uint32 cellAddress = ch.charNum * 0x20;
 
-    // TODO: no need to compute on every color fetch
-    // TODO: compute properly
-    // const uint32 cramOffset = caos << (RAMCTL.CRMDn == 1 ? 10 : 9);
-    const uint32 cramOffset = 0;
-
-    if constexpr (chcn == 0) {
+    if constexpr (colorFormat == 0) {
         // 16 color palette
         const uint32 dotAddress = (cellAddress + dotX + dotY * 8) >> 1u;
         const uint8 dotData = (m_VRAM[dotAddress & 0x7FFFF] >> ((dotX & 1) * 4)) & 0xF;
         const uint32 colorIndex = (ch.palNum << 4u) | dotData;
-        return FetchCRAMColor<crmd>(cramOffset, colorIndex);
-    } else if constexpr (chcn == 1) {
+        return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
+    } else if constexpr (colorFormat == 1) {
         // 256 color palette
         const uint32 dotAddress = cellAddress + dotX + dotY * 8;
         const uint8 dotData = m_VRAM[dotAddress & 0x7FFFF];
         const uint32 colorIndex = ((ch.palNum & 0x70) << 4u) | dotData;
-        return FetchCRAMColor<crmd>(cramOffset, colorIndex);
-    } else if constexpr (chcn == 2) {
+        return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
+    } else if constexpr (colorFormat == 2) {
         // 2048 color palette
         const uint32 dotAddress = (cellAddress + dotX + dotY * 8) * sizeof(uint16);
         const uint16 dotData = util::ReadBE<uint16>(&m_VRAM[dotAddress & 0x7FFFF]);
         const uint32 colorIndex = dotData & 0x7FF;
-        return FetchCRAMColor<crmd>(cramOffset, colorIndex);
-    } else if constexpr (chcn == 3) {
+        return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
+    } else if constexpr (colorFormat == 3) {
         // 5:5:5 RGB
         const uint32 dotAddress = (cellAddress + dotX + dotY * 8) * sizeof(uint16);
         const uint16 dotData = util::ReadBE<uint16>(&m_VRAM[dotAddress & 0x7FFFF]);
         return ConvertRGB555to888(Color555{.u16 = dotData});
-    } else { // chcn == 4
+    } else { // colorFormat == 4
         // 8:8:8 RGB
         const uint32 dotAddress = (cellAddress + dotX + dotY * 8) * sizeof(uint32);
         const uint32 dotData = util::ReadBE<uint32>(&m_VRAM[dotAddress & 0x7FFFF]);
@@ -360,23 +441,23 @@ ALWAYS_INLINE vdp::Color888 VDP2::FetchColor(Character ch, uint8 dotX, uint8 dot
     }
 }
 
-template <uint32 crmd>
-ALWAYS_INLINE Color888 VDP2::FetchCRAMColor(uint32 cramOffset, uint32 colorIndex) {
-    static_assert(crmd < 3, "Invalid CRMD value");
+template <uint32 colorMode>
+FORCE_INLINE Color888 VDP2::FetchCRAMColor(uint32 cramOffset, uint32 colorIndex) {
+    static_assert(colorMode <= 2, "Invalid CRMD value");
 
-    if constexpr (crmd == 0) {
+    if constexpr (colorMode == 0) {
         // RGB 5:5:5, 1024 words
         const uint32 address = (cramOffset + colorIndex * sizeof(uint16)) & 0x7FF;
         const uint16 data = util::ReadBE<uint16>(&m_CRAM[address]);
         Color555 clr555{.u16 = data};
         return ConvertRGB555to888(clr555);
-    } else if constexpr (crmd == 1) {
+    } else if constexpr (colorMode == 1) {
         // RGB 5:5:5, 2048 words
         const uint32 address = (cramOffset + colorIndex * sizeof(uint16)) & 0xFFF;
         const uint16 data = util::ReadBE<uint16>(&m_CRAM[address]);
         Color555 clr555{.u16 = data};
         return ConvertRGB555to888(clr555);
-    } else { // crmd == 2
+    } else { // colorMode == 2
         // RGB 8:8:8, 1024 words
         const uint32 address = (cramOffset + colorIndex * sizeof(uint32)) & 0xFFF;
         const uint32 data = util::ReadBE<uint32>(&m_CRAM[address]);

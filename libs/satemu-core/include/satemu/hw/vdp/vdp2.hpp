@@ -1110,10 +1110,28 @@ private:
         bool flipV;         // Vertical flip
     };
 
+    struct BGRenderContext {
+        // CRAM base offset for color fetching.
+        // Derived from RAMCTL.CRMDn and CRAOFA/CRAOFB.xxCAOSn
+        uint32 cramOffset;
+        // = bgParams->caos << (RAMCTL.CRMDn == 1 ? 10 : 9);
+    };
+
+    // Draws the scanline at m_VCounter.
+    void DrawLine();
+
+    // Draws an NBG scanline.
+    template <bool twoWordChar, uint32 colorFormat, uint32 colorMode>
+    void DrawNormalBG(const NormBGParams &bgParams, BGRenderContext &rctx);
+
+    // Draws a normal scroll BG scanline.
+    template <bool twoWordChar, uint32 colorFormat, uint32 colorMode>
+    vdp::Color888 DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx, uint32 x, uint32 y);
+
     // Fetches a character from VRAM.
     // pageBaseAddress specifies the base address of the page of character patterns.
     // charIndex is the index of the character to fetch.
-    template <bool twoWord>
+    template <bool twoWordChar>
     Character FetchCharacter(uint32 pageBaseAddress, uint32 charIndex);
 
     // Fetches a color from a pixel in the specified cell.
@@ -1121,14 +1139,14 @@ private:
     // dotX and dotY specify the coordinates of the pixel within the cell, both ranging from 0 to 7.
     // chcn is the value of CHCTLA/CHCTLB.xxCHCNn.
     // crmd is the value of RAMCTL.CRMDn.
-    template <uint32 chcn, uint32 crmd>
-    vdp::Color888 FetchColor(Character ch, uint8 dotX, uint8 dotY);
+    template <uint32 colorFormat, uint32 colorMode>
+    vdp::Color888 FetchColor(uint32 cramOffset, Character ch, uint8 dotX, uint8 dotY);
 
     // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
     // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
     // colorIndex specifies the color index.
     // crmd is the value of RAMCTL.CRMDn.
-    template <uint32 crmd>
+    template <uint32 colorMode>
     vdp::Color888 FetchCRAMColor(uint32 cramOffset, uint32 colorIndex);
 
     // DEBUG: to be removed
