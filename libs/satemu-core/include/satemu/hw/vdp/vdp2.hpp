@@ -4,6 +4,8 @@
 
 #include <satemu/hw/hw_defs.hpp>
 
+#include <satemu/hw/vdp/vdp_common_defs.hpp>
+
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/data_ops.hpp>
 #include <satemu/util/inline.hpp>
@@ -1082,6 +1084,41 @@ private:
     void BeginVPhaseVerticalSync();
     void BeginVPhaseTopBlanking();
     void BeginVPhaseTopBorder();
+
+    // -------------------------------------------------------------------------
+    // Rendering
+    // TODO: move to a Renderer class
+
+    // Pattern Name Data, contains parameters for a character
+    struct Character {
+        uint16 charNum;     // Character number, 15 bits
+        uint8 palNum;       // Palette number, 7 bits
+        bool specColorCalc; // Special color calculation
+        bool specPriority;  // Special priority
+        bool flipH;         // Horizontal flip
+        bool flipV;         // Vertical flip
+    };
+
+    // Fetches a character from VRAM.
+    // pageBaseAddress specifies the base address of the page of character patterns.
+    // charIndex is the index of the character to fetch.
+    template <bool twoWord>
+    Character FetchCharacter(uint32 pageBaseAddress, uint32 charIndex);
+
+    // Fetches a color from a pixel in the specified cell.
+    // ch contains character parameters.
+    // dotX and dotY specify the coordinates of the pixel within the cell, both ranging from 0 to 7.
+    // chcn is the value of CHCTLA/CHCTLB.xxCHCNn.
+    // crmd is the value of RAMCTL.CRMDn.
+    template <uint32 chcn, uint32 crmd>
+    vdp::Color888 FetchColor(Character ch, uint8 dotX, uint8 dotY);
+
+    // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
+    // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
+    // colorIndex specifies the color index.
+    // crmd is the value of RAMCTL.CRMDn.
+    template <uint32 crmd>
+    vdp::Color888 FetchCRAMColor(uint32 cramOffset, uint32 colorIndex);
 
     // DEBUG: to be removed
     uint64 m_frameNum;

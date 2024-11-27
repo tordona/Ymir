@@ -93,7 +93,7 @@ struct BGParams {
 
     // NBG planes A-D, derived from MPOFN and MPABN0-MPCDN3.
     // RBG planes A-P, derived from MPOFNR and MPABRA-MPOPRB.
-    std::array<uint32, rot ? 16 : 4> mapIndices;
+    std::array<uint16, rot ? 16 : 4> mapIndices;
 
     // Character color format.
     // Derived from CHCTLA/CHCTLB.xxCHCNn
