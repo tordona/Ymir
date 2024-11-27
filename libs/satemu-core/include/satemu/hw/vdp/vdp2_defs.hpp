@@ -171,6 +171,9 @@ struct BGParams {
     }
 };
 
+using NormBGParams = BGParams<false>;
+using RotBGParams = BGParams<true>;
+
 // TODO: consider splitting unions into individual fields for performance
 
 // 180000   TVMD    TV Screen Mode

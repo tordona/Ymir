@@ -997,8 +997,8 @@ private:
 
     // -------------------------------------------------------------------------
 
-    std::array<BGParams<false>, 4> m_NormBGParams;
-    std::array<BGParams<true>, 2> m_RotBGParams;
+    std::array<NormBGParams, 4> m_NormBGParams;
+    std::array<RotBGParams, 2> m_RotBGParams;
 
     // -------------------------------------------------------------------------
 
