@@ -24,7 +24,7 @@ public:
 
     void Step();
 
-    ALWAYS_INLINE SH2 &MasterSH2() {
+    FORCE_INLINE SH2 &MasterSH2() {
         return m_masterSH2;
     }
 

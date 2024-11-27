@@ -406,7 +406,7 @@ private:
     //      1     W  N1ON          NBG1 Display (0=disable, 1=enable)
     //      0     W  N0ON          NBG0 Display (0=disable, 1=enable)
 
-    ALWAYS_INLINE uint16 ReadBGON() {
+    FORCE_INLINE uint16 ReadBGON() {
         uint16 value = 0;
         bit::deposit_into<0>(value, m_NormBGParams[0].enabled);
         bit::deposit_into<1>(value, m_NormBGParams[1].enabled);
@@ -423,7 +423,7 @@ private:
         return value;
     }
 
-    ALWAYS_INLINE void WriteBGON(uint16 value) {
+    FORCE_INLINE void WriteBGON(uint16 value) {
         m_NormBGParams[0].enabled = bit::extract<0>(value);
         m_NormBGParams[1].enabled = bit::extract<1>(value);
         m_NormBGParams[2].enabled = bit::extract<2>(value);
@@ -479,7 +479,7 @@ private:
     //      1     W  N0BMEN        NBG0 Bitmap Enable (0=cells, 1=bitmap)
     //      0     W  N0CHSZ        NBG0 Character Size (0=1x1, 1=2x2)
 
-    ALWAYS_INLINE uint16 ReadCHCTLA() {
+    FORCE_INLINE uint16 ReadCHCTLA() {
         uint16 value = 0;
         bit::deposit_into<0>(value, m_NormBGParams[0].cellSize - 1);
         bit::deposit_into<1>(value, m_NormBGParams[0].bitmap);
@@ -493,7 +493,7 @@ private:
         return value;
     }
 
-    ALWAYS_INLINE void WriteCHCTLA(uint16 value) {
+    FORCE_INLINE void WriteCHCTLA(uint16 value) {
         m_NormBGParams[0].cellSize = bit::extract<0>(value) + 1;
         m_NormBGParams[0].bitmap = bit::extract<1>(value);
         m_NormBGParams[0].bmsz = bit::extract<2, 3>(value);
@@ -536,7 +536,7 @@ private:
     //      1     W  N2CHCN        NBG2 Character Color Number (0=16 colors, 1=256 colors; both palette)
     //      0     W  N2CHSZ        NBG2 Character Size (0=1x1, 1=2x2)
 
-    ALWAYS_INLINE uint16 ReadCHCTLB() {
+    FORCE_INLINE uint16 ReadCHCTLB() {
         uint16 value = 0;
         bit::deposit_into<0>(value, m_NormBGParams[2].cellSize - 1);
         bit::deposit_into<1>(value, static_cast<uint32>(m_NormBGParams[2].colorFormat));
@@ -551,7 +551,7 @@ private:
         return value;
     }
 
-    ALWAYS_INLINE void WriteCHCTLB(uint16 value) {
+    FORCE_INLINE void WriteCHCTLB(uint16 value) {
         m_NormBGParams[2].cellSize = bit::extract<0>(value) + 1;
         m_NormBGParams[2].colorFormat = static_cast<ColorFormat>(bit::extract<1>(value));
         m_NormBGParams[2].UpdateCHCTL();
@@ -587,7 +587,7 @@ private:
     //    7-5     W  xxSPLT6-4     Supplementary Palette bits 6-4
     //    4-0     W  xxSCN4-0      Supplementary Character Number bits 4-0
 
-    ALWAYS_INLINE uint16 ReadPNCN(uint32 bgIndex) {
+    FORCE_INLINE uint16 ReadPNCN(uint32 bgIndex) {
         uint16 value = 0;
         bit::deposit_into<0, 4>(value, m_NormBGParams[bgIndex].supplCharNum);
         bit::deposit_into<5, 7>(value, m_NormBGParams[bgIndex].supplPalNum);
@@ -598,7 +598,7 @@ private:
         return value;
     }
 
-    ALWAYS_INLINE void WritePNCN(uint32 bgIndex, uint16 value) {
+    FORCE_INLINE void WritePNCN(uint32 bgIndex, uint16 value) {
         m_NormBGParams[bgIndex].supplCharNum = bit::extract<0, 4>(value);
         m_NormBGParams[bgIndex].supplPalNum = bit::extract<5, 7>(value);
         m_NormBGParams[bgIndex].specialColorCalc = bit::extract<8>(value);
@@ -618,7 +618,7 @@ private:
         }
     }
 
-    ALWAYS_INLINE uint16 ReadPNCR() {
+    FORCE_INLINE uint16 ReadPNCR() {
         uint16 value = 0;
         bit::deposit_into<0, 4>(value, m_RotBGParams[0].supplCharNum);
         bit::deposit_into<5, 7>(value, m_RotBGParams[0].supplPalNum);
@@ -629,7 +629,7 @@ private:
         return value;
     }
 
-    ALWAYS_INLINE void WritePNCR(uint16 value) {
+    FORCE_INLINE void WritePNCR(uint16 value) {
         m_RotBGParams[0].supplCharNum = bit::extract<0, 4>(value);
         m_RotBGParams[0].supplPalNum = bit::extract<5, 7>(value);
         m_RotBGParams[0].specialColorCalc = bit::extract<8>(value);
@@ -663,7 +663,7 @@ private:
     //    10 (2) = forbidden (but probably 1x2)
     //    11 (3) = 2x2
 
-    ALWAYS_INLINE uint16 ReadPLSZ() {
+    FORCE_INLINE uint16 ReadPLSZ() {
         uint16 value = 0;
         bit::deposit_into<0, 1>(value, m_NormBGParams[0].plsz);
         bit::deposit_into<2, 3>(value, m_NormBGParams[1].plsz);
@@ -676,7 +676,7 @@ private:
         return value;
     }
 
-    ALWAYS_INLINE void WritePLSZ(uint16 value) {
+    FORCE_INLINE void WritePLSZ(uint16 value) {
         m_NormBGParams[0].plsz = bit::extract<0, 1>(value);
         m_NormBGParams[1].plsz = bit::extract<2, 3>(value);
         m_NormBGParams[2].plsz = bit::extract<4, 5>(value);
@@ -705,7 +705,7 @@ private:
     //      3        -             Reserved, must be zero
     //    2-0     W  M0MP8-6       NBG0 Map Offset
 
-    ALWAYS_INLINE uint16 ReadMPOFN() {
+    FORCE_INLINE uint16 ReadMPOFN() {
         uint16 value = 0;
         bit::deposit_into<0, 2>(value, bit::extract<6, 8>(m_NormBGParams[0].mapIndices[0]));
         bit::deposit_into<4, 6>(value, bit::extract<6, 8>(m_NormBGParams[1].mapIndices[0]));
@@ -714,7 +714,7 @@ private:
         return value;
     }
 
-    ALWAYS_INLINE void WriteMPOFN(uint16 value) {
+    FORCE_INLINE void WriteMPOFN(uint16 value) {
         for (int i = 0; i < 4; i++) {
             bit::deposit_into<6, 8>(m_NormBGParams[0].mapIndices[i], bit::extract<0, 2>(value));
             bit::deposit_into<6, 8>(m_NormBGParams[1].mapIndices[i], bit::extract<4, 6>(value));
@@ -734,14 +734,14 @@ private:
     //      3        -             Reserved, must be zero
     //    2-0     W  RAMP8-6       Rotation Parameter A Map Offset
 
-    ALWAYS_INLINE uint16 ReadMPOFR() {
+    FORCE_INLINE uint16 ReadMPOFR() {
         uint16 value = 0;
         bit::deposit_into<0, 2>(value, bit::extract<6, 8>(m_RotBGParams[0].mapIndices[0]));
         bit::deposit_into<4, 6>(value, bit::extract<6, 8>(m_RotBGParams[1].mapIndices[0]));
         return value;
     }
 
-    ALWAYS_INLINE void WriteMPOFR(uint16 value) {
+    FORCE_INLINE void WriteMPOFR(uint16 value) {
         for (int i = 0; i < 4; i++) {
             bit::deposit_into<6, 8>(m_RotBGParams[0].mapIndices[i], bit::extract<0, 2>(value));
             bit::deposit_into<6, 8>(m_RotBGParams[1].mapIndices[i], bit::extract<4, 6>(value));
@@ -777,7 +777,7 @@ private:
     //   C = Plane C (bits  5-0 of MPCDxx)
     //   D = Plane D (bits 13-8 of MPCDxx)
 
-    ALWAYS_INLINE uint16 ReadMPN(uint32 bgIndex, uint32 planeIndex) {
+    FORCE_INLINE uint16 ReadMPN(uint32 bgIndex, uint32 planeIndex) {
         uint16 value = 0;
         auto &bg = m_NormBGParams[bgIndex];
         bit::deposit_into<0, 5>(value, bit::extract<0, 5>(bg.mapIndices[planeIndex * 2 + 0]));
@@ -785,7 +785,7 @@ private:
         return value;
     }
 
-    ALWAYS_INLINE void WriteMPN(uint16 value, uint32 bgIndex, uint32 planeIndex) {
+    FORCE_INLINE void WriteMPN(uint16 value, uint32 bgIndex, uint32 planeIndex) {
         auto &bg = m_NormBGParams[bgIndex];
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 0], bit::extract<0, 5>(value));
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 1], bit::extract<8, 13>(value));
@@ -829,7 +829,7 @@ private:
     //   O = Screen Plane O (bits  5-0 of MPOPxx)
     //   P = Screen Plane P (bits 13-8 of MPOPxx)
 
-    ALWAYS_INLINE uint16 ReadMPR(uint32 bgIndex, uint32 planeIndex) {
+    FORCE_INLINE uint16 ReadMPR(uint32 bgIndex, uint32 planeIndex) {
         uint16 value = 0;
         auto &bg = m_RotBGParams[bgIndex];
         bit::deposit_into<0, 5>(value, bit::extract<0, 5>(bg.mapIndices[planeIndex * 2 + 0]));
@@ -837,7 +837,7 @@ private:
         return value;
     }
 
-    ALWAYS_INLINE void WriteMPR(uint16 value, uint32 bgIndex, uint32 planeIndex) {
+    FORCE_INLINE void WriteMPR(uint16 value, uint32 bgIndex, uint32 planeIndex) {
         auto &bg = m_RotBGParams[bgIndex];
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 0], bit::extract<0, 5>(value));
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 1], bit::extract<8, 13>(value));
@@ -915,7 +915,7 @@ private:
     //      3        -             Reserved, must be zero
     //    2-0     W  N0CAOS2-0     NBG0/RBG1 Color RAM Adress Offset
 
-    ALWAYS_INLINE uint16 ReadCRAOFA() {
+    FORCE_INLINE uint16 ReadCRAOFA() {
         uint16 value = 0;
         bit::deposit_into<0, 2>(value, m_NormBGParams[0].caos);
         bit::deposit_into<4, 6>(value, m_NormBGParams[1].caos);
@@ -924,7 +924,7 @@ private:
         return value;
     }
 
-    ALWAYS_INLINE void WriteCRAOFA(uint16 value) {
+    FORCE_INLINE void WriteCRAOFA(uint16 value) {
         m_NormBGParams[0].caos = bit::extract<0, 2>(value);
         m_NormBGParams[1].caos = bit::extract<4, 6>(value);
         m_NormBGParams[2].caos = bit::extract<8, 10>(value);
@@ -947,7 +947,7 @@ private:
     //      3        -             Reserved, must be zero
     //    2-0     W  R0CAOS2-0     RBG0 Color RAM Adress Offset
 
-    ALWAYS_INLINE uint16 ReadCRAOFB() {
+    FORCE_INLINE uint16 ReadCRAOFB() {
         uint16 value = 0;
         bit::deposit_into<0, 2>(value, m_RotBGParams[0].caos);
         // TODO: SPCAOSn
@@ -955,7 +955,7 @@ private:
         return value;
     }
 
-    ALWAYS_INLINE void WriteCRAOFB(uint16 value) {
+    FORCE_INLINE void WriteCRAOFB(uint16 value) {
         m_RotBGParams[0].caos = bit::extract<0, 2>(value);
         // TODO: SPCAOSn
         // ?m_SpriteParams?.caos = bit::extract<4, 6>(value);

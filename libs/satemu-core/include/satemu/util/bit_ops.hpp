@@ -10,7 +10,7 @@ namespace bit {
 // Sign-extend from a constant bit width.
 // The return type is the signed equivalent of T.
 template <unsigned B, std::integral T>
-ALWAYS_INLINE constexpr auto sign_extend(T x) {
+FORCE_INLINE constexpr auto sign_extend(T x) {
     using ST = std::make_signed_t<T>;
     struct {
         ST x : B;
@@ -21,7 +21,7 @@ ALWAYS_INLINE constexpr auto sign_extend(T x) {
 // Extracts a range of bits from the value.
 // start and end are both inclusive.
 template <size_t start, size_t end = start, typename T>
-ALWAYS_INLINE constexpr T extract(T value) {
+FORCE_INLINE constexpr T extract(T value) {
     static_assert(start < sizeof(T) * 8, "start out of range");
     static_assert(end < sizeof(T) * 8, "end out of range");
     static_assert(end >= start, "end cannot be before start");
@@ -36,7 +36,7 @@ ALWAYS_INLINE constexpr T extract(T value) {
 // Deposits a range of bits into the value and returns the modified value.
 // start and end are both inclusive.
 template <size_t start, size_t end = start, typename T, typename TV = T>
-ALWAYS_INLINE constexpr T deposit(T base, TV value) {
+FORCE_INLINE constexpr T deposit(T base, TV value) {
     static_assert(start < sizeof(T) * 8, "start out of range");
     static_assert(end < sizeof(T) * 8, "end out of range");
     static_assert(end >= start, "end cannot be before start");
@@ -53,7 +53,7 @@ ALWAYS_INLINE constexpr T deposit(T base, TV value) {
 // Deposits a range of bits into the referenced value.
 // start and end are both inclusive.
 template <size_t start, size_t end = start, typename T, typename TV = T>
-ALWAYS_INLINE constexpr void deposit_into(T &base, TV value) {
+FORCE_INLINE constexpr void deposit_into(T &base, TV value) {
     base = deposit<start, end>(base, value);
 }
 

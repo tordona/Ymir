@@ -16,7 +16,7 @@ public:
 
     void Step();
 
-    ALWAYS_INLINE uint32 GetPC() const {
+    FORCE_INLINE uint32 GetPC() const {
         return PC;
     }
 
