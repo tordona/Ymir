@@ -42,10 +42,13 @@ struct BGParams {
 
         cellSize = 1;
 
-        // numPagesH = numPagesV = 1;
-        // bitmapSizeH = bitmapSizeV = 0;
+        numPagesH = 1;
+        numPagesV = 1;
+        bitmapSizeH = 512;
+        bitmapSizeV = 256;
 
         mapIndices.fill(0);
+        pageBaseAddresses.fill(0);
 
         colorFormat = ColorFormat::Palette16;
         screenOverProcess = ScreenOverProcess::Repeat;
@@ -57,16 +60,9 @@ struct BGParams {
         wideChar = false;
         twoWordChar = false;
 
-        // pageSizeShift = 0;
-        // mapIndexMask = 0;
-        // cramOffset = 0;
-
         plsz = 0;
         bmsz = 0;
         caos = 0;
-
-        UpdatePLSZ();
-        UpdateCHCTL();
     }
 
     // Whether to display this background.
@@ -91,9 +87,13 @@ struct BGParams {
     uint32 bitmapSizeH; // Horizontal bitmap dots, derived from CHCTLA/CHCTLB.xxBMSZ
     uint32 bitmapSizeV; // Vertical bitmap dots, derived from CHCTLA/CHCTLB.xxBMSZ
 
-    // NBG planes A-D, derived from MPOFN and MPABN0-MPCDN3.
-    // RBG planes A-P, derived from MPOFNR and MPABRA-MPOPRB.
+    // Indices for NBG planes A-D, derived from MPOFN and MPABN0-MPCDN3.
+    // Indices for RBG planes A-P, derived from MPOFNR and MPABRA-MPOPRB.
     std::array<uint16, rot ? 16 : 4> mapIndices;
+
+    // Page base addresses for NBG planes A-D or RBG planes A-P.
+    // Derived from mapIndices, CHCTLA/CHCTLB.xxCHSZ, PNCNn/PNCR.xxPNB and PLSZ.xxPLSZn
+    std::array<uint32, rot ? 16 : 4> pageBaseAddresses;
 
     // Character color format.
     // Derived from CHCTLA/CHCTLB.xxCHCNn
@@ -128,19 +128,6 @@ struct BGParams {
     // Derived from PNCNn/PNCR.xxPNB
     bool twoWordChar;
 
-    // Bit shift applied to calculated page base address.
-    // Derived from CHCTLA/CHCTLB.xxCHSZ and PNCNn/PNCR.xxPNB
-    uint32 pageSizeShift;
-
-    // Mask applied to map indices when calculating the page base address.
-    // Derived from CHCTLA/CHCTLB.xxCHSZ, PNCNn/PNCR.xxPNB and PLSZ.xxPLSZn
-    uint32 mapIndexMask;
-
-    // Color RAM palette offset (in bytes).
-    // Derived from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn
-    // NOTE: this is calculated in the renderer from CRAOFA/CRAOFB.xxCAOSn + RAMCTL.CRMDn
-    // uint32 cramOffset;
-
     uint16 plsz; // Raw value of PLSZ.xxPLSZn
     uint16 bmsz; // Raw value of CHCTLA/CHCTLB.xxBMSZ
     uint16 caos; // Raw value of CRAOFA/CRAOFB.xxCAOSn
@@ -149,7 +136,7 @@ struct BGParams {
         numPagesH = (plsz & 1) + 1;
         numPagesV = (plsz >> 1) + 1;
 
-        UpdateMapIndexMask();
+        UpdatePageBaseAddresses();
     }
 
     void UpdateCHCTL() {
@@ -158,24 +145,16 @@ struct BGParams {
         bitmapSizeH = kBitmapSizesH[bmsz];
         bitmapSizeV = kBitmapSizesV[bmsz];
 
-        UpdateMapIndexMask();
-        UpdatePageSizeShift();
+        UpdatePageBaseAddresses();
     }
 
-private:
-    void UpdateMapIndexMask() {
+    void UpdatePageBaseAddresses() {
         // [Character Size][Pattern Name Data Size ^ 1][Plane Size]
         static constexpr uint32 kMapIndexMasks[2][2][4] = {
             {{0x7F, 0x7E, 0x7E, 0x7C}, {0x3F, 0x3E, 0x3E, 0x3C}},
             {{0x1FF, 0x1FE, 0x1FE, 0x1FC}, {0xFF, 0xFE, 0xFE, 0xFC}},
         };
 
-        const uint32 chsz = cellSize - 1;
-        const uint32 pnds = twoWordChar;
-        mapIndexMask = kMapIndexMasks[chsz][pnds][plsz];
-    }
-
-    void UpdatePageSizeShift() {
         // [Character Size][Pattern Name Data Size ^ 1]
         static constexpr uint32 kPageSizes[2][2] = {
             {13, 14},
@@ -184,7 +163,11 @@ private:
 
         const uint32 chsz = cellSize - 1;
         const uint32 pnds = twoWordChar;
-        pageSizeShift = kPageSizes[chsz][pnds];
+        const uint32 mapIndexMask = kMapIndexMasks[chsz][pnds][plsz];
+        const uint32 pageSizeShift = kPageSizes[chsz][pnds];
+        for (int i = 0; i < pageBaseAddresses.size(); i++) {
+            pageBaseAddresses[i] = (mapIndices[i] & mapIndexMask) << pageSizeShift;
+        }
     }
 };
 

@@ -595,15 +595,6 @@ private:
         bit::deposit_into<9>(value, m_NormBGParams[bgIndex].specialPriority);
         bit::deposit_into<14>(value, m_NormBGParams[bgIndex].wideChar);
         bit::deposit_into<15>(value, !m_NormBGParams[bgIndex].twoWordChar);
-
-        if (bgIndex == 0) {
-            m_RotBGParams[1].supplCharNum = m_NormBGParams[0].supplCharNum;
-            m_RotBGParams[1].supplPalNum = m_NormBGParams[0].supplPalNum;
-            m_RotBGParams[1].specialColorCalc = m_NormBGParams[0].specialColorCalc;
-            m_RotBGParams[1].specialPriority = m_NormBGParams[0].specialPriority;
-            m_RotBGParams[1].wideChar = m_NormBGParams[0].wideChar;
-            m_RotBGParams[1].twoWordChar = m_NormBGParams[0].twoWordChar;
-        }
         return value;
     }
 
@@ -614,6 +605,17 @@ private:
         m_NormBGParams[bgIndex].specialPriority = bit::extract<9>(value);
         m_NormBGParams[bgIndex].wideChar = bit::extract<14>(value);
         m_NormBGParams[bgIndex].twoWordChar = !bit::extract<15>(value);
+        m_NormBGParams[bgIndex].UpdatePageBaseAddresses();
+
+        if (bgIndex == 0) {
+            m_RotBGParams[1].supplCharNum = m_NormBGParams[0].supplCharNum;
+            m_RotBGParams[1].supplPalNum = m_NormBGParams[0].supplPalNum;
+            m_RotBGParams[1].specialColorCalc = m_NormBGParams[0].specialColorCalc;
+            m_RotBGParams[1].specialPriority = m_NormBGParams[0].specialPriority;
+            m_RotBGParams[1].wideChar = m_NormBGParams[0].wideChar;
+            m_RotBGParams[1].twoWordChar = m_NormBGParams[0].twoWordChar;
+            m_RotBGParams[1].UpdatePageBaseAddresses();
+        }
     }
 
     ALWAYS_INLINE uint16 ReadPNCR() {
@@ -634,6 +636,7 @@ private:
         m_RotBGParams[0].specialPriority = bit::extract<9>(value);
         m_RotBGParams[0].wideChar = bit::extract<14>(value);
         m_RotBGParams[0].twoWordChar = !bit::extract<15>(value);
+        m_RotBGParams[0].UpdatePageBaseAddresses();
     }
 
     // 18003A   PLSZ    Plane Size
@@ -718,6 +721,9 @@ private:
             bit::deposit_into<6, 8>(m_NormBGParams[2].mapIndices[i], bit::extract<8, 10>(value));
             bit::deposit_into<6, 8>(m_NormBGParams[3].mapIndices[i], bit::extract<12, 14>(value));
         }
+        for (auto &bg : m_NormBGParams) {
+            bg.UpdatePageBaseAddresses();
+        }
     }
 
     // 18003E   MPOFR   Rotation Parameter A/B Map Offset
@@ -739,6 +745,9 @@ private:
         for (int i = 0; i < 4; i++) {
             bit::deposit_into<6, 8>(m_RotBGParams[0].mapIndices[i], bit::extract<0, 2>(value));
             bit::deposit_into<6, 8>(m_RotBGParams[1].mapIndices[i], bit::extract<4, 6>(value));
+        }
+        for (auto &bg : m_RotBGParams) {
+            bg.UpdatePageBaseAddresses();
         }
     }
 
@@ -780,6 +789,7 @@ private:
         auto &bg = m_NormBGParams[bgIndex];
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 0], bit::extract<0, 5>(value));
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 1], bit::extract<8, 13>(value));
+        bg.UpdatePageBaseAddresses();
     }
 
     // 180050   MPABRA  Rotation Parameter A Scroll Surface Map for Screen Planes A,B
@@ -831,6 +841,7 @@ private:
         auto &bg = m_RotBGParams[bgIndex];
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 0], bit::extract<0, 5>(value));
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 1], bit::extract<8, 13>(value));
+        bg.UpdatePageBaseAddresses();
     }
 
     /**/             // 180070   SCXIN0  NBG0 Horizontal Screen Scroll Value (integer part)
