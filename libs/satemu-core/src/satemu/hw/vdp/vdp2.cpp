@@ -293,23 +293,26 @@ void VDP2::BeginVPhaseTopBorder() {
 void VDP2::DrawLine() {
     // fmt::println("VDP2: drawing line {}", m_VCounter);
 
-    using FnDrawNBG = void (VDP2::*)(const NormBGParams &, BGRenderContext &);
+    using FnDrawScrollNBG = void (VDP2::*)(const NormBGParams &, BGRenderContext &);
 
-    // Lookup table of DrawNormalBG functions
+    // Lookup table of DrawNormalScrollBG functions
     // [twoWordChar][fourCellChar][colorFormat][colorMode]
-    static constexpr auto fnDrawNBGs = [] {
-        std::array<std::array<std::array<std::array<FnDrawNBG, 4>, 8>, 2>, 2> arr{};
+    static constexpr auto fnDrawScrollNBGs = [] {
+        std::array<std::array<std::array<std::array<std::array<FnDrawScrollNBG, 4>, 8>, 2>, 2>, 2> arr{};
 
         util::constexpr_for<2>([&](auto twcIndex) {
             const bool twoWordChar = twcIndex;
             util::constexpr_for<2>([&](auto fccIndex) {
                 const bool fourCellChar = fccIndex;
-                util::constexpr_for<8>([&](auto cfIndex) {
-                    const size_t colorFormat = cfIndex <= 4 ? cfIndex : 4;
-                    util::constexpr_for<4>([&](auto cmIndex) {
-                        const size_t colorMode = cmIndex <= 2 ? cmIndex : 2;
-                        arr[twcIndex][fccIndex][cfIndex][cmIndex] =
-                            &VDP2::DrawNormalBG<twoWordChar, fourCellChar, colorFormat, colorMode>;
+                util::constexpr_for<2>([&](auto wcIndex) {
+                    const bool wideChar = wcIndex;
+                    util::constexpr_for<8>([&](auto cfIndex) {
+                        const size_t colorFormat = cfIndex <= 4 ? cfIndex : 4;
+                        util::constexpr_for<4>([&](auto cmIndex) {
+                            const size_t colorMode = cmIndex <= 2 ? cmIndex : 2;
+                            arr[twcIndex][fccIndex][wcIndex][cfIndex][cmIndex] =
+                                &VDP2::DrawNormalScrollBG<twoWordChar, fourCellChar, wideChar, colorFormat, colorMode>;
+                        });
                     });
                 });
             });
@@ -325,9 +328,10 @@ void VDP2::DrawLine() {
             rctx.cramOffset = bg.caos << (RAMCTL.CRMDn == 1 ? 10 : 9);
             const bool twoWordChar = bg.twoWordChar;
             const bool fourCellChar = bg.cellSizeShift;
+            const bool wideChar = bg.wideChar;
             const uint32 colorFormat = static_cast<uint32>(bg.colorFormat);
             const uint32 colorMode = RAMCTL.CRMDn;
-            (this->*fnDrawNBGs[twoWordChar][fourCellChar][colorFormat][colorMode])(bg, rctx);
+            (this->*fnDrawScrollNBGs[twoWordChar][fourCellChar][wideChar][colorFormat][colorMode])(bg, rctx);
         }
     }
 
@@ -342,27 +346,8 @@ void VDP2::DrawLine() {
     }
 }
 
-template <bool twoWordChar, bool fourCellChar, uint32 colorFormat, uint32 colorMode>
-NO_INLINE void VDP2::DrawNormalBG(const NormBGParams &bgParams, BGRenderContext &rctx) {
-    // TODO: deal with scrolling, scaling, shifting, etc.
-    const uint32 y = m_VCounter;
-    for (uint32 x = 0; x < m_HRes; x++) {
-        Color888 color{};
-
-        if (bgParams.bitmap) {
-            // TODO: draw bitmap BG
-        } else {
-            color = DrawNormalScrollBG<twoWordChar, fourCellChar, colorFormat, colorMode>(bgParams, rctx, x, y);
-        }
-        // TODO: priority handling
-        // TODO: special color handling
-        // framebuffer[x][y] = color;
-    }
-}
-
-template <bool twoWordChar, bool fourCellChar, uint32 colorFormat, uint32 colorMode>
-FORCE_INLINE Color888 VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx, uint32 x,
-                                               uint32 y) {
+template <bool twoWordChar, bool fourCellChar, bool wideChar, uint32 colorFormat, uint32 colorMode>
+NO_INLINE void VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx) {
     //          Map
     // +---------+---------+
     // |         |         |   Normal BGs always have 4 planes named A,B,C,D in this exact configuration.
@@ -431,60 +416,69 @@ FORCE_INLINE Color888 VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGR
     // TODO: implement scrolling, scaling, rotation, mosaic
     // - might have to move things around since scaling and rotation will probably rely on incrementing counters
 
-    // Determine plane index from the (x,y) coordinate
-    const uint32 planeX = bit::extract<9>(x) >> bgParams.pageShiftH;
-    const uint32 planeY = bit::extract<9>(y) >> bgParams.pageShiftV;
-    const uint32 plane = planeX + planeY * 2u;
+    const uint32 y = m_VCounter;
+    for (uint32 x = 0; x < m_HRes; x++) {
+        // Determine plane index from the (x,y) coordinate
+        const uint32 planeX = bit::extract<9>(x) >> bgParams.pageShiftH;
+        const uint32 planeY = bit::extract<9>(y) >> bgParams.pageShiftV;
+        const uint32 plane = planeX + planeY * 2u;
 
-    // Determine page index from the (x,y) coordinate
-    const uint32 pageX = bit::extract<9>(x) & bgParams.pageShiftH;
-    const uint32 pageY = bit::extract<9>(y) & bgParams.pageShiftV;
-    const uint32 page = pageX + pageY * 2u;
+        // Determine page index from the (x,y) coordinate
+        const uint32 pageX = bit::extract<9>(x) & bgParams.pageShiftH;
+        const uint32 pageY = bit::extract<9>(y) & bgParams.pageShiftV;
+        const uint32 page = pageX + pageY * 2u;
 
-    // Determine character pattern from the (x,y) coordinate
-    const uint32 charPatX = bit::extract<3, 8>(x) >> fourCellChar;
-    const uint32 charPatY = bit::extract<3, 8>(y) >> fourCellChar;
-    const uint32 charIndex = charPatX + charPatY * (64u >> fourCellChar);
+        // Determine character pattern from the (x,y) coordinate
+        const uint32 charPatX = bit::extract<3, 8>(x) >> fourCellChar;
+        const uint32 charPatY = bit::extract<3, 8>(y) >> fourCellChar;
+        const uint32 charIndex = charPatX + charPatY * (64u >> fourCellChar);
 
-    // Determine cell index from the (x,y) coordinate
-    const uint32 cellX = bit::extract<3>(x) & fourCellChar;
-    const uint32 cellY = bit::extract<3>(y) & fourCellChar;
-    const uint32 cellIndex = cellX + cellY * 2u;
+        // Determine cell index from the (x,y) coordinate
+        const uint32 cellX = bit::extract<3>(x) & fourCellChar;
+        const uint32 cellY = bit::extract<3>(y) & fourCellChar;
+        const uint32 cellIndex = cellX + cellY * 2u;
 
-    // Determine dot coordinates
-    const uint32 dotX = bit::extract<0, 2>(x);
-    const uint32 dotY = bit::extract<0, 2>(y);
+        // Determine dot coordinates
+        const uint32 dotX = bit::extract<0, 2>(x);
+        const uint32 dotY = bit::extract<0, 2>(y);
 
-    // Fetch character
-    const uint32 pageBaseAddress = bgParams.pageBaseAddresses[plane];
-    const uint32 pageOffset = page * kPageSizes[fourCellChar][twoWordChar];
-    const Character ch = FetchCharacter<twoWordChar>(pageBaseAddress + pageOffset, charIndex);
+        // Fetch character
+        const uint32 pageBaseAddress = bgParams.pageBaseAddresses[plane];
+        const uint32 pageOffset = page * kPageSizes[fourCellChar][twoWordChar];
+        const uint32 pageAddress = pageBaseAddress + pageOffset;
+        const Character ch = twoWordChar
+                                 ? FetchTwoWordCharacter(pageAddress, charIndex)
+                                 : FetchOneWordCharacter<fourCellChar, colorFormat, wideChar>(pageAddress, charIndex);
 
-    // Fetch dot color using character data
-    return FetchColor<colorFormat, colorMode>(rctx.cramOffset, ch, dotX, dotY, cellIndex);
+        // Fetch dot color using character data
+        Color888 color = FetchColor<colorFormat, colorMode>(rctx.cramOffset, ch, dotX, dotY, cellIndex);
+        // TODO: priority handling
+        // TODO: special color handling
+        // framebuffer[x][y] = color;
+    }
 }
 
-template <bool twoWordChar>
-FORCE_INLINE VDP2::Character VDP2::FetchCharacter(uint32 pageBaseAddress, uint32 charIndex) {
+FORCE_INLINE VDP2::Character VDP2::FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex) {
+    const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint32);
+    const uint32 charData = util::ReadBE<uint32>(&m_VRAM[charAddress]);
+
     Character ch{};
+    ch.charNum = bit::extract<0, 14>(charData);
+    ch.palNum = bit::extract<16, 22>(charData);
+    ch.specColorCalc = bit::extract<28>(charData);
+    ch.specPriority = bit::extract<29>(charData);
+    ch.flipH = bit::extract<30>(charData);
+    ch.flipV = bit::extract<31>(charData);
+    return ch;
+}
 
-    if constexpr (twoWordChar) {
-        const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint32);
-        const uint32 charData = util::ReadBE<uint32>(&m_VRAM[charAddress]);
+template <bool fourCellChar, uint32 colorFormat, bool wideChar>
+FORCE_INLINE VDP2::Character VDP2::FetchOneWordCharacter(uint32 pageBaseAddress, uint32 charIndex) {
+    const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint16);
+    const uint16 charData = util::ReadBE<uint16>(&m_VRAM[charAddress]);
 
-        ch.charNum = bit::extract<0, 14>(charData);
-        ch.palNum = bit::extract<16, 22>(charData);
-        ch.specColorCalc = bit::extract<28>(charData);
-        ch.specPriority = bit::extract<29>(charData);
-        ch.flipH = bit::extract<30>(charData);
-        ch.flipV = bit::extract<31>(charData);
-    } else {
-        const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint16);
-        const uint16 charData = util::ReadBE<uint16>(&m_VRAM[charAddress]);
-
-        // TODO: implement
-    }
-
+    // TODO: implement
+    Character ch{};
     return ch;
 }
 

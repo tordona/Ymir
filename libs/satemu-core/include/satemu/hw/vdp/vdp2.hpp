@@ -1120,23 +1120,28 @@ private:
     // Draws the scanline at m_VCounter.
     void DrawLine();
 
-    // Draws an NBG scanline.
+    // Draws a normal scroll BG scanline.
     // twoWordChar indicates if character patterns use one word (false) or two words (true).
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
+    // wideChar indicates if the flip bits are available (false) or used to extend the character number (true).
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
-    template <bool twoWordChar, bool fourCellChar, uint32 colorFormat, uint32 colorMode>
-    void DrawNormalBG(const NormBGParams &bgParams, BGRenderContext &rctx);
+    template <bool twoWordChar, bool fourCellChar, bool wideChar, uint32 colorFormat, uint32 colorMode>
+    void DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx);
 
-    // Draws a normal scroll BG scanline.
-    template <bool twoWordChar, bool fourCellChar, uint32 colorFormat, uint32 colorMode>
-    vdp::Color888 DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx, uint32 x, uint32 y);
-
-    // Fetches a character from VRAM.
+    // Fetches a two-word character from VRAM.
     // pageBaseAddress specifies the base address of the page of character patterns.
     // charIndex is the index of the character to fetch.
-    template <bool twoWordChar>
-    Character FetchCharacter(uint32 pageBaseAddress, uint32 charIndex);
+    Character FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex);
+
+    // Fetches a one-word character from VRAM.
+    // pageBaseAddress specifies the base address of the page of character patterns.
+    // charIndex is the index of the character to fetch.
+    // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
+    // colorFormat is the color format for cell data.
+    // wideChar indicates if the flip bits are available (false) or used to extend the character number (true).
+    template <bool fourCellChar, uint32 colorFormat, bool wideChar>
+    Character FetchOneWordCharacter(uint32 pageBaseAddress, uint32 charIndex);
 
     // Fetches a color from a pixel in the specified cell in a 2x2 character pattern.
     // ch contains character parameters.
