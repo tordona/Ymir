@@ -429,30 +429,31 @@ FORCE_INLINE Color888 VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGR
     // +--+--+--+--+--+--+--+--+
 
     // TODO: implement scrolling, scaling, rotation, mosaic
+    // - might have to move things around since scaling and rotation will probably rely on incrementing counters
 
     // Determine plane index from the (x,y) coordinate
-    const uint32 planeX = ((x >> 9u) & 1) >> bgParams.pageShiftH;
-    const uint32 planeY = ((y >> 9u) & 1) >> bgParams.pageShiftV;
+    const uint32 planeX = bit::extract<9>(x) >> bgParams.pageShiftH;
+    const uint32 planeY = bit::extract<9>(y) >> bgParams.pageShiftV;
     const uint32 plane = planeX + planeY * 2;
 
     // Determine page index from the (x,y) coordinate
-    const uint32 pageX = (x >> 9u) & bgParams.pageShiftH;
-    const uint32 pageY = (y >> 9u) & bgParams.pageShiftV;
+    const uint32 pageX = bit::extract<9>(x) & bgParams.pageShiftH;
+    const uint32 pageY = bit::extract<9>(y) & bgParams.pageShiftV;
     const uint32 page = pageX + pageY * 2;
 
     // Determine character pattern from the (x,y) coordinate
-    const uint32 charPatX = ((x >> 3u) & 63) >> fourCellChar;
-    const uint32 charPatY = ((y >> 3u) & 63) >> fourCellChar;
+    const uint32 charPatX = bit::extract<3, 8>(x) >> fourCellChar;
+    const uint32 charPatY = bit::extract<3, 8>(y) >> fourCellChar;
     const uint32 charIndex = charPatX + charPatY * 2;
 
     // Determine cell index from the (x,y) coordinate
-    const uint32 cellX = (x >> 3u) & fourCellChar;
-    const uint32 cellY = (y >> 3u) & fourCellChar;
+    const uint32 cellX = bit::extract<3, 8>(x) & fourCellChar;
+    const uint32 cellY = bit::extract<3, 8>(y) & fourCellChar;
     const uint32 cellIndex = cellX + cellY * 2;
 
     // Determine dot coordinates
-    const uint32 dotX = x & 7;
-    const uint32 dotY = y & 7;
+    const uint32 dotX = bit::extract<0, 2>(x);
+    const uint32 dotY = bit::extract<0, 2>(y);
 
     // Fetch character
     const uint32 pageBaseAddress = bgParams.pageBaseAddresses[plane];
