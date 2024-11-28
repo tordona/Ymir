@@ -434,22 +434,22 @@ FORCE_INLINE Color888 VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGR
     // Determine plane index from the (x,y) coordinate
     const uint32 planeX = bit::extract<9>(x) >> bgParams.pageShiftH;
     const uint32 planeY = bit::extract<9>(y) >> bgParams.pageShiftV;
-    const uint32 plane = planeX + planeY * 2;
+    const uint32 plane = planeX + planeY * 2u;
 
     // Determine page index from the (x,y) coordinate
     const uint32 pageX = bit::extract<9>(x) & bgParams.pageShiftH;
     const uint32 pageY = bit::extract<9>(y) & bgParams.pageShiftV;
-    const uint32 page = pageX + pageY * 2;
+    const uint32 page = pageX + pageY * 2u;
 
     // Determine character pattern from the (x,y) coordinate
     const uint32 charPatX = bit::extract<3, 8>(x) >> fourCellChar;
     const uint32 charPatY = bit::extract<3, 8>(y) >> fourCellChar;
-    const uint32 charIndex = charPatX + charPatY * 2;
+    const uint32 charIndex = charPatX + charPatY * (64u >> fourCellChar);
 
     // Determine cell index from the (x,y) coordinate
-    const uint32 cellX = bit::extract<3, 8>(x) & fourCellChar;
-    const uint32 cellY = bit::extract<3, 8>(y) & fourCellChar;
-    const uint32 cellIndex = cellX + cellY * 2;
+    const uint32 cellX = bit::extract<3>(x) & fourCellChar;
+    const uint32 cellY = bit::extract<3>(y) & fourCellChar;
+    const uint32 cellIndex = cellX + cellY * 2u;
 
     // Determine dot coordinates
     const uint32 dotX = bit::extract<0, 2>(x);
