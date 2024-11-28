@@ -125,6 +125,7 @@ struct BGParams {
     uint32 supplCharNum;
 
     // Supplementary bits 6-4 for palette number, when using 1-word characters.
+    // The value is already shifted in place to optimize rendering calculations.
     // Derived from PNCN0/PNCR.xxSPLTn
     uint32 supplPalNum;
 

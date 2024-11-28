@@ -590,7 +590,7 @@ private:
     FORCE_INLINE uint16 ReadPNCN(uint32 bgIndex) {
         uint16 value = 0;
         bit::deposit_into<0, 4>(value, m_NormBGParams[bgIndex].supplCharNum);
-        bit::deposit_into<5, 7>(value, m_NormBGParams[bgIndex].supplPalNum);
+        bit::deposit_into<5, 7>(value, m_NormBGParams[bgIndex].supplPalNum >> 4u);
         bit::deposit_into<8>(value, m_NormBGParams[bgIndex].specialColorCalc);
         bit::deposit_into<9>(value, m_NormBGParams[bgIndex].specialPriority);
         bit::deposit_into<14>(value, m_NormBGParams[bgIndex].wideChar);
@@ -600,7 +600,7 @@ private:
 
     FORCE_INLINE void WritePNCN(uint32 bgIndex, uint16 value) {
         m_NormBGParams[bgIndex].supplCharNum = bit::extract<0, 4>(value);
-        m_NormBGParams[bgIndex].supplPalNum = bit::extract<5, 7>(value);
+        m_NormBGParams[bgIndex].supplPalNum = bit::extract<5, 7>(value) << 4u;
         m_NormBGParams[bgIndex].specialColorCalc = bit::extract<8>(value);
         m_NormBGParams[bgIndex].specialPriority = bit::extract<9>(value);
         m_NormBGParams[bgIndex].wideChar = bit::extract<14>(value);
@@ -621,7 +621,7 @@ private:
     FORCE_INLINE uint16 ReadPNCR() {
         uint16 value = 0;
         bit::deposit_into<0, 4>(value, m_RotBGParams[0].supplCharNum);
-        bit::deposit_into<5, 7>(value, m_RotBGParams[0].supplPalNum);
+        bit::deposit_into<5, 7>(value, m_RotBGParams[0].supplPalNum >> 4u);
         bit::deposit_into<8>(value, m_RotBGParams[0].specialColorCalc);
         bit::deposit_into<9>(value, m_RotBGParams[0].specialPriority);
         bit::deposit_into<14>(value, m_RotBGParams[0].wideChar);
@@ -631,7 +631,7 @@ private:
 
     FORCE_INLINE void WritePNCR(uint16 value) {
         m_RotBGParams[0].supplCharNum = bit::extract<0, 4>(value);
-        m_RotBGParams[0].supplPalNum = bit::extract<5, 7>(value);
+        m_RotBGParams[0].supplPalNum = bit::extract<5, 7>(value) << 4u;
         m_RotBGParams[0].specialColorCalc = bit::extract<8>(value);
         m_RotBGParams[0].specialPriority = bit::extract<9>(value);
         m_RotBGParams[0].wideChar = bit::extract<14>(value);
@@ -1121,6 +1121,8 @@ private:
     void DrawLine();
 
     // Draws a normal scroll BG scanline.
+    // bgParams contains the parameters for the BG to draw.
+    // rctx contains additional context for the renderer.
     // twoWordChar indicates if character patterns use one word (false) or two words (true).
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
     // wideChar indicates if the flip bits are available (false) or used to extend the character number (true).
@@ -1135,13 +1137,14 @@ private:
     Character FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex);
 
     // Fetches a one-word character from VRAM.
+    // bgParams contains the parameters for the BG to draw.
     // pageBaseAddress specifies the base address of the page of character patterns.
     // charIndex is the index of the character to fetch.
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
-    // colorFormat is the color format for cell data.
+    // largePalette indicates if the color format uses 16 colors (false) or more (true).
     // wideChar indicates if the flip bits are available (false) or used to extend the character number (true).
-    template <bool fourCellChar, uint32 colorFormat, bool wideChar>
-    Character FetchOneWordCharacter(uint32 pageBaseAddress, uint32 charIndex);
+    template <bool fourCellChar, bool largePalette, bool wideChar>
+    Character FetchOneWordCharacter(const NormBGParams &bgParams, uint32 pageBaseAddress, uint32 charIndex);
 
     // Fetches a color from a pixel in the specified cell in a 2x2 character pattern.
     // ch contains character parameters.

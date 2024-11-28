@@ -446,9 +446,10 @@ NO_INLINE void VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderCo
         const uint32 pageBaseAddress = bgParams.pageBaseAddresses[plane];
         const uint32 pageOffset = page * kPageSizes[fourCellChar][twoWordChar];
         const uint32 pageAddress = pageBaseAddress + pageOffset;
-        const Character ch = twoWordChar
-                                 ? FetchTwoWordCharacter(pageAddress, charIndex)
-                                 : FetchOneWordCharacter<fourCellChar, colorFormat, wideChar>(pageAddress, charIndex);
+        constexpr bool largePalette = colorFormat > 0;
+        const Character ch =
+            twoWordChar ? FetchTwoWordCharacter(pageAddress, charIndex)
+                        : FetchOneWordCharacter<fourCellChar, largePalette, wideChar>(bgParams, pageAddress, charIndex);
 
         // Fetch dot color using character data
         Color888 color = FetchColor<colorFormat, colorMode>(rctx.cramOffset, ch, dotX, dotY, cellIndex);
@@ -472,13 +473,57 @@ FORCE_INLINE VDP2::Character VDP2::FetchTwoWordCharacter(uint32 pageBaseAddress,
     return ch;
 }
 
-template <bool fourCellChar, uint32 colorFormat, bool wideChar>
-FORCE_INLINE VDP2::Character VDP2::FetchOneWordCharacter(uint32 pageBaseAddress, uint32 charIndex) {
+template <bool fourCellChar, bool largePalette, bool wideChar>
+FORCE_INLINE VDP2::Character VDP2::FetchOneWordCharacter(const NormBGParams &bgParams, uint32 pageBaseAddress,
+                                                         uint32 charIndex) {
     const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint16);
     const uint16 charData = util::ReadBE<uint16>(&m_VRAM[charAddress]);
 
-    // TODO: implement
+    /*
+    Contents of 1 word character patterns vary based on Character Size, Character Color Count and Auxiliary Mode:
+        Character Size        = CHCTLA/CHCTLB.xxCHSZ  = !fourCellChar = FCC
+        Character Color Count = CHCTLA/CHCTLB.xxCHCNn = largePalette  = LP
+        Auxiliary Mode        = PNCN0/PNCR.xxCNSM     = wideChar      = WC
+                ---------------- Character data ----------------    Supplement in Pattern Name Control Register
+    FCC LP  WC  |15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0|    | 9  8  7  6  5  4  3  2  1  0|
+     F   F   F  |palnum 3-0 |VF|HF| character number 9-0       |    |PR|CC| PN 6-4 |charnum 14-10 |
+     F   T   F  |--| PN 6-4 |VF|HF| character number 9-0       |    |PR|CC|--------|charnum 14-10 |
+     T   F   F  |palnum 3-0 |VF|HF| character number 11-2      |    |PR|CC| PN 6-4 |CN 14-12|CN1-0|
+     T   T   F  |--| PN 6-4 |VF|HF| character number 11-2      |    |PR|CC|--------|CN 14-12|CN1-0|
+     F   F   T  |palnum 3-0 |       character number 11-0      |    |PR|CC| PN 6-4 |CN 14-12|-----|
+     F   T   T  |--| PN 6-4 |       character number 11-0      |    |PR|CC|--------|CN 14-12|-----|
+     T   F   T  |palnum 3-0 |       character number 13-2      |    |PR|CC| PN 6-4 |xx|-----|CN1-0|   xx=CN14
+     T   T   T  |--| PN 6-4 |       character number 13-2      |    |PR|CC|--------|xx|-----|CN1-0|   xx=CN14
+    */
+
+    // Character number bit range from the 1-word character pattern data (charData)
+    static constexpr uint32 charNumStart = 2 * fourCellChar;
+    static constexpr uint32 charNumEnd = charNumStart + 9 + 2 * wideChar;
+
+    // Upper character number bit range from the supplementary character number (bgParams.supplCharNum)
+    static constexpr uint32 supplCharNumStartUpper = 2 * fourCellChar + 2 * wideChar;
+    static constexpr uint32 supplCharNumEndUpper = 4;
+    // The lower bits are always in range 0..1 and only used if fourCellChar == true
+
+    // TODO: palette number supplement
+
+    const uint32 baseCharNum = bit::extract<charNumStart, charNumEnd>(charData);
+    const uint32 supplCharNum = bit::extract<supplCharNumStartUpper, supplCharNumEndUpper>(bgParams.supplCharNum);
+
     Character ch{};
+    ch.charNum = (baseCharNum << charNumStart) | (supplCharNum << (10 + supplCharNumStartUpper));
+    if constexpr (fourCellChar) {
+        ch.charNum |= bit::extract<0, 1>(bgParams.supplCharNum);
+    }
+    if constexpr (largePalette) {
+        ch.palNum = bit::extract<12, 14>(charData) << 4u;
+    } else {
+        ch.palNum = bit::extract<12, 15>(charData) | bgParams.supplPalNum;
+    }
+    ch.specColorCalc = bgParams.specialColorCalc;
+    ch.specPriority = bgParams.specialPriority;
+    ch.flipH = !wideChar && bit::extract<10>(charData);
+    ch.flipV = !wideChar && bit::extract<11>(charData);
     return ch;
 }
 
