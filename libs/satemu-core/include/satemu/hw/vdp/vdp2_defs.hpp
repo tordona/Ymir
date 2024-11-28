@@ -67,10 +67,15 @@ struct BGParams {
         colorFormat = ColorFormat::Palette16;
         screenOverProcess = ScreenOverProcess::Repeat;
 
-        supplCharNum = 0;
-        supplPalNum = 0;
-        specialColorCalc = false;
-        specialPriority = false;
+        supplScrollCharNum = 0;
+        supplScrollPalNum = 0;
+        supplScrollSpecialColorCalc = false;
+        supplScrollSpecialPriority = false;
+
+        supplBitmapPalNum = 0;
+        supplBitmapSpecialColorCalc = false;
+        supplBitmapSpecialPriority = false;
+
         wideChar = false;
         twoWordChar = false;
 
@@ -120,22 +125,35 @@ struct BGParams {
     // Derived from PLSZ.RxOVRn
     ScreenOverProcess screenOverProcess;
 
-    // Supplementary bits 4-0 for character number, when using 1-word characters.
+    // Supplementary bits 4-0 for scroll screen character number, when using 1-word characters.
     // Derived from PNCN0/PNCR.xxSCNn
-    uint32 supplCharNum;
+    uint32 supplScrollCharNum;
 
-    // Supplementary bits 6-4 for palette number, when using 1-word characters.
+    // Supplementary bits 6-4 for scroll screen palette number, when using 1-word characters.
     // The value is already shifted in place to optimize rendering calculations.
     // Derived from PNCN0/PNCR.xxSPLTn
-    uint32 supplPalNum;
+    uint32 supplScrollPalNum;
 
-    // Special Color Calculation enable.
+    // Bits 6-4 for bitmap palette number.
+    // The value is already shifted in place to optimize rendering calculations.
+    // Derived from BMPNA/BMPNB.xxBMPn
+    uint32 supplBitmapPalNum;
+
+    // Supplementary Special Color Calculation bit for scroll BGs.
     // Derived from PNCN0/PNCR.xxSCC
-    bool specialColorCalc;
+    bool supplScrollSpecialColorCalc;
 
-    // Special Priority enable.
+    // Supplementary Special Priority bit for scroll BGs.
     // Derived from PNCN0/PNCR.xxSPR
-    bool specialPriority;
+    bool supplScrollSpecialPriority;
+
+    // Supplementary Special Color Calculation bit for bitmap BGs.
+    // Derived from BMPNA/BMPNB.xxBMCC
+    bool supplBitmapSpecialColorCalc;
+
+    // Supplementary Special Priority bit for bitmap BGs.
+    // Derived from BMPNA/BMPNB.xxBMPR
+    bool supplBitmapSpecialPriority;
 
     // Character number width: 10 bits (false) or 12 bits (true).
     // When true, disables the horizontal and vertical flip bits in the character.
@@ -495,54 +513,6 @@ union SFCODE_t {
     struct {
         uint8 SFCDBn;
         uint8 SFCDAn;
-    };
-};
-
-// 18002C   BMPNA   NBG0/NBG1 Bitmap Palette Number
-//
-//   bits   r/w  code          description
-//  15-14        -             Reserved, must be zero
-//     13     W  N1BMPR        NBG1 Special Priority
-//     12     W  N1BMCC        NBG1 Special Color Calculation
-//     11        -             Reserved, must be zero
-//   10-8     W  N1BMP6-4      -
-//    7-6        -             Reserved, must be zero
-//      5     W  N0BMPR        NBG0 Special Priority
-//      4     W  N0BMCC        NBG0 Special Color Calculation
-//      3        -             Reserved, must be zero
-//    2-0     W  N0BMP6-4      -
-union BMPNA_t {
-    uint16 u16;
-    struct {
-        uint16 N0BMPn : 3;
-        uint16 _rsvd3 : 1;
-        uint16 N0BMCC : 1;
-        uint16 N0BMPR : 1;
-        uint16 _rsvd6_7 : 2;
-        uint16 N1BMPn : 3;
-        uint16 _rsvd11 : 1;
-        uint16 N1BMCC : 1;
-        uint16 N1BMPR : 1;
-        uint16 _rsvd14_15 : 2;
-    };
-};
-
-// 18002E   BMPNB   RBG0 Bitmap Palette Number
-//
-//   bits   r/w  code          description
-//   15-6        -             Reserved, must be zero
-//      5     W  R0BMPR        RBG0 Special Priority
-//      4     W  R0BMCC        RBG0 Special Color Calculation
-//      3        -             Reserved, must be zero
-//    2-0     W  R0BMP6-4      -
-union BMPNB_t {
-    uint16 u16;
-    struct {
-        uint16 N0BMPn : 3;
-        uint16 _rsvd3 : 1;
-        uint16 N0BMCC : 1;
-        uint16 N0BMPR : 1;
-        uint16 _rsvd6_15 : 10;
     };
 };
 

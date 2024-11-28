@@ -87,8 +87,8 @@ public:
         case 0x026: return SFCODE.u16;    // write-only?
         case 0x028: return ReadCHCTLA();  // write-only?
         case 0x02A: return ReadCHCTLB();  // write-only?
-        case 0x02C: return BMPNA.u16;     // write-only?
-        case 0x02E: return BMPNB.u16;     // write-only?
+        case 0x02C: return ReadBMPNA();   // write-only?
+        case 0x02E: return ReadBMPNB();   // write-only?
         case 0x030: return ReadPNCN(0);   // write-only?
         case 0x032: return ReadPNCN(1);   // write-only?
         case 0x034: return ReadPNCN(2);   // write-only?
@@ -239,8 +239,8 @@ public:
         case 0x026: SFCODE.u16 = value; break;
         case 0x028: WriteCHCTLA(value); break;
         case 0x02A: WriteCHCTLB(value); break;
-        case 0x02C: BMPNA.u16 = value & 0x3737; break;
-        case 0x02E: BMPNB.u16 = value & 0x0037; break;
+        case 0x02C: WriteBMPNA(value); break;
+        case 0x02E: WriteBMPNB(value); break;
         case 0x030: WritePNCN(0, value); break;
         case 0x032: WritePNCN(1, value); break;
         case 0x034: WritePNCN(2, value); break;
@@ -567,8 +567,64 @@ private:
         m_RotBGParams[0].UpdateCHCTL();
     }
 
-    BMPNA_t BMPNA; // 18002C   BMPNA   NBG0/NBG1 Bitmap Palette Number
-    BMPNB_t BMPNB; // 18002E   BMPNB   RBG0 Bitmap Palette Number
+    // 18002C   BMPNA   NBG0/NBG1 Bitmap Palette Number
+    //
+    //   bits   r/w  code          description
+    //  15-14        -             Reserved, must be zero
+    //     13     W  N1BMPR        NBG1 Special Priority
+    //     12     W  N1BMCC        NBG1 Special Color Calculation
+    //     11        -             Reserved, must be zero
+    //   10-8     W  N1BMP6-4      NBG1 Palette Number
+    //    7-6        -             Reserved, must be zero
+    //      5     W  N0BMPR        NBG0 Special Priority
+    //      4     W  N0BMCC        NBG0 Special Color Calculation
+    //      3        -             Reserved, must be zero
+    //    2-0     W  N0BMP6-4      NBG0 Palette Number
+
+    FORCE_INLINE uint16 ReadBMPNA() {
+        uint16 value = 0;
+        bit::deposit_into<0, 2>(value, m_NormBGParams[0].supplBitmapPalNum >> 4u);
+        bit::deposit_into<4>(value, m_NormBGParams[0].supplBitmapSpecialColorCalc);
+        bit::deposit_into<5>(value, m_NormBGParams[0].supplBitmapSpecialPriority);
+
+        bit::deposit_into<8, 10>(value, m_NormBGParams[1].supplBitmapPalNum >> 4u);
+        bit::deposit_into<12>(value, m_NormBGParams[1].supplBitmapSpecialColorCalc);
+        bit::deposit_into<13>(value, m_NormBGParams[1].supplBitmapSpecialPriority);
+        return value;
+    }
+
+    FORCE_INLINE void WriteBMPNA(uint16 value) {
+        m_NormBGParams[0].supplBitmapPalNum = bit::extract<0, 2>(value) << 4u;
+        m_NormBGParams[0].supplBitmapSpecialColorCalc = bit::extract<4>(value);
+        m_NormBGParams[0].supplBitmapSpecialPriority = bit::extract<5>(value);
+
+        m_NormBGParams[1].supplBitmapPalNum = bit::extract<8, 10>(value) << 4u;
+        m_NormBGParams[1].supplBitmapSpecialColorCalc = bit::extract<12>(value);
+        m_NormBGParams[1].supplBitmapSpecialPriority = bit::extract<13>(value);
+    }
+
+    // 18002E   BMPNB   RBG0 Bitmap Palette Number
+    //
+    //   bits   r/w  code          description
+    //   15-6        -             Reserved, must be zero
+    //      5     W  R0BMPR        RBG0 Special Priority
+    //      4     W  R0BMCC        RBG0 Special Color Calculation
+    //      3        -             Reserved, must be zero
+    //    2-0     W  R0BMP6-4      RBG0 Palette Number
+
+    FORCE_INLINE uint16 ReadBMPNB() {
+        uint16 value = 0;
+        bit::deposit_into<0, 2>(value, m_RotBGParams[0].supplBitmapPalNum >> 4u);
+        bit::deposit_into<4>(value, m_RotBGParams[0].supplBitmapSpecialColorCalc);
+        bit::deposit_into<5>(value, m_RotBGParams[0].supplBitmapSpecialPriority);
+        return value;
+    }
+
+    FORCE_INLINE void WriteBMPNB(uint16 value) {
+        m_RotBGParams[0].supplBitmapPalNum = bit::extract<0, 2>(value) << 4u;
+        m_RotBGParams[0].supplBitmapSpecialColorCalc = bit::extract<4>(value);
+        m_RotBGParams[0].supplBitmapSpecialPriority = bit::extract<5>(value);
+    }
 
     // 180030   PNCN0   NBG0/RBG1 Pattern Name Control
     // 180032   PNCN1   NBG1 Pattern Name Control
@@ -589,29 +645,29 @@ private:
 
     FORCE_INLINE uint16 ReadPNCN(uint32 bgIndex) {
         uint16 value = 0;
-        bit::deposit_into<0, 4>(value, m_NormBGParams[bgIndex].supplCharNum);
-        bit::deposit_into<5, 7>(value, m_NormBGParams[bgIndex].supplPalNum >> 4u);
-        bit::deposit_into<8>(value, m_NormBGParams[bgIndex].specialColorCalc);
-        bit::deposit_into<9>(value, m_NormBGParams[bgIndex].specialPriority);
+        bit::deposit_into<0, 4>(value, m_NormBGParams[bgIndex].supplScrollCharNum);
+        bit::deposit_into<5, 7>(value, m_NormBGParams[bgIndex].supplScrollPalNum >> 4u);
+        bit::deposit_into<8>(value, m_NormBGParams[bgIndex].supplScrollSpecialColorCalc);
+        bit::deposit_into<9>(value, m_NormBGParams[bgIndex].supplScrollSpecialPriority);
         bit::deposit_into<14>(value, m_NormBGParams[bgIndex].wideChar);
         bit::deposit_into<15>(value, !m_NormBGParams[bgIndex].twoWordChar);
         return value;
     }
 
     FORCE_INLINE void WritePNCN(uint32 bgIndex, uint16 value) {
-        m_NormBGParams[bgIndex].supplCharNum = bit::extract<0, 4>(value);
-        m_NormBGParams[bgIndex].supplPalNum = bit::extract<5, 7>(value) << 4u;
-        m_NormBGParams[bgIndex].specialColorCalc = bit::extract<8>(value);
-        m_NormBGParams[bgIndex].specialPriority = bit::extract<9>(value);
+        m_NormBGParams[bgIndex].supplScrollCharNum = bit::extract<0, 4>(value);
+        m_NormBGParams[bgIndex].supplScrollPalNum = bit::extract<5, 7>(value) << 4u;
+        m_NormBGParams[bgIndex].supplScrollSpecialColorCalc = bit::extract<8>(value);
+        m_NormBGParams[bgIndex].supplScrollSpecialPriority = bit::extract<9>(value);
         m_NormBGParams[bgIndex].wideChar = bit::extract<14>(value);
         m_NormBGParams[bgIndex].twoWordChar = !bit::extract<15>(value);
         m_NormBGParams[bgIndex].UpdatePageBaseAddresses();
 
         if (bgIndex == 0) {
-            m_RotBGParams[1].supplCharNum = m_NormBGParams[0].supplCharNum;
-            m_RotBGParams[1].supplPalNum = m_NormBGParams[0].supplPalNum;
-            m_RotBGParams[1].specialColorCalc = m_NormBGParams[0].specialColorCalc;
-            m_RotBGParams[1].specialPriority = m_NormBGParams[0].specialPriority;
+            m_RotBGParams[1].supplScrollCharNum = m_NormBGParams[0].supplScrollCharNum;
+            m_RotBGParams[1].supplScrollPalNum = m_NormBGParams[0].supplScrollPalNum;
+            m_RotBGParams[1].supplScrollSpecialColorCalc = m_NormBGParams[0].supplScrollSpecialColorCalc;
+            m_RotBGParams[1].supplScrollSpecialPriority = m_NormBGParams[0].supplScrollSpecialPriority;
             m_RotBGParams[1].wideChar = m_NormBGParams[0].wideChar;
             m_RotBGParams[1].twoWordChar = m_NormBGParams[0].twoWordChar;
             m_RotBGParams[1].UpdatePageBaseAddresses();
@@ -620,20 +676,20 @@ private:
 
     FORCE_INLINE uint16 ReadPNCR() {
         uint16 value = 0;
-        bit::deposit_into<0, 4>(value, m_RotBGParams[0].supplCharNum);
-        bit::deposit_into<5, 7>(value, m_RotBGParams[0].supplPalNum >> 4u);
-        bit::deposit_into<8>(value, m_RotBGParams[0].specialColorCalc);
-        bit::deposit_into<9>(value, m_RotBGParams[0].specialPriority);
+        bit::deposit_into<0, 4>(value, m_RotBGParams[0].supplScrollCharNum);
+        bit::deposit_into<5, 7>(value, m_RotBGParams[0].supplScrollPalNum >> 4u);
+        bit::deposit_into<8>(value, m_RotBGParams[0].supplScrollSpecialColorCalc);
+        bit::deposit_into<9>(value, m_RotBGParams[0].supplScrollSpecialPriority);
         bit::deposit_into<14>(value, m_RotBGParams[0].wideChar);
         bit::deposit_into<15>(value, !m_RotBGParams[0].twoWordChar);
         return value;
     }
 
     FORCE_INLINE void WritePNCR(uint16 value) {
-        m_RotBGParams[0].supplCharNum = bit::extract<0, 4>(value);
-        m_RotBGParams[0].supplPalNum = bit::extract<5, 7>(value) << 4u;
-        m_RotBGParams[0].specialColorCalc = bit::extract<8>(value);
-        m_RotBGParams[0].specialPriority = bit::extract<9>(value);
+        m_RotBGParams[0].supplScrollCharNum = bit::extract<0, 4>(value);
+        m_RotBGParams[0].supplScrollPalNum = bit::extract<5, 7>(value) << 4u;
+        m_RotBGParams[0].supplScrollSpecialColorCalc = bit::extract<8>(value);
+        m_RotBGParams[0].supplScrollSpecialPriority = bit::extract<9>(value);
         m_RotBGParams[0].wideChar = bit::extract<14>(value);
         m_RotBGParams[0].twoWordChar = !bit::extract<15>(value);
         m_RotBGParams[0].UpdatePageBaseAddresses();

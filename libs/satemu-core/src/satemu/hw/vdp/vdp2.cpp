@@ -32,8 +32,6 @@ void VDP2::Reset(bool hard) {
     MZCTL.u16 = 0x0;
     SFSEL.u16 = 0x0;
     SFCODE.u16 = 0x0;
-    BMPNA.u16 = 0x0;
-    BMPNB.u16 = 0x0;
     SCN0.u64 = 0x0;
     ZMN0.u64 = 0x0;
     SCN1.u64 = 0x0;
@@ -331,7 +329,11 @@ void VDP2::DrawLine() {
             const bool wideChar = bg.wideChar;
             const uint32 colorFormat = static_cast<uint32>(bg.colorFormat);
             const uint32 colorMode = RAMCTL.CRMDn;
-            (this->*fnDrawScrollNBGs[twoWordChar][fourCellChar][wideChar][colorFormat][colorMode])(bg, rctx);
+            if (bg.bitmap) {
+                // TODO: draw bitmap NBG
+            } else {
+                (this->*fnDrawScrollNBGs[twoWordChar][fourCellChar][wideChar][colorFormat][colorMode])(bg, rctx);
+            }
         }
     }
 
@@ -341,7 +343,11 @@ void VDP2::DrawLine() {
             BGRenderContext rctx{};
             rctx.cramOffset = bg.caos << (RAMCTL.CRMDn == 1 ? 10 : 9);
             // TODO: implement
-            // (this->*fnDrawRBGs[...])(bg, rctx);
+            if (bg.bitmap) {
+                // TODO: draw bitmap RBG
+            } else {
+                // (this->*fnDrawScrollRBGs[...])(bg, rctx);
+            }
         }
     }
 }
@@ -508,20 +514,20 @@ FORCE_INLINE VDP2::Character VDP2::FetchOneWordCharacter(const NormBGParams &bgP
     // TODO: palette number supplement
 
     const uint32 baseCharNum = bit::extract<charNumStart, charNumEnd>(charData);
-    const uint32 supplCharNum = bit::extract<supplCharNumStartUpper, supplCharNumEndUpper>(bgParams.supplCharNum);
+    const uint32 supplCharNum = bit::extract<supplCharNumStartUpper, supplCharNumEndUpper>(bgParams.supplScrollCharNum);
 
     Character ch{};
     ch.charNum = (baseCharNum << charNumStart) | (supplCharNum << (10 + supplCharNumStartUpper));
     if constexpr (fourCellChar) {
-        ch.charNum |= bit::extract<0, 1>(bgParams.supplCharNum);
+        ch.charNum |= bit::extract<0, 1>(bgParams.supplScrollCharNum);
     }
     if constexpr (largePalette) {
         ch.palNum = bit::extract<12, 14>(charData) << 4u;
     } else {
-        ch.palNum = bit::extract<12, 15>(charData) | bgParams.supplPalNum;
+        ch.palNum = bit::extract<12, 15>(charData) | bgParams.supplScrollPalNum;
     }
-    ch.specColorCalc = bgParams.specialColorCalc;
-    ch.specPriority = bgParams.specialPriority;
+    ch.specColorCalc = bgParams.supplScrollSpecialColorCalc;
+    ch.specPriority = bgParams.supplScrollSpecialPriority;
     ch.flipH = !wideChar && bit::extract<10>(charData);
     ch.flipV = !wideChar && bit::extract<11>(charData);
     return ch;
