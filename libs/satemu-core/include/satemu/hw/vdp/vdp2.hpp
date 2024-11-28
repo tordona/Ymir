@@ -481,12 +481,12 @@ private:
 
     FORCE_INLINE uint16 ReadCHCTLA() {
         uint16 value = 0;
-        bit::deposit_into<0>(value, m_NormBGParams[0].cellSize - 1);
+        bit::deposit_into<0>(value, m_NormBGParams[0].cellSizeShift);
         bit::deposit_into<1>(value, m_NormBGParams[0].bitmap);
         bit::deposit_into<2, 3>(value, m_NormBGParams[0].bmsz);
         bit::deposit_into<4, 6>(value, static_cast<uint32>(m_NormBGParams[0].colorFormat));
 
-        bit::deposit_into<8>(value, m_NormBGParams[1].cellSize - 1);
+        bit::deposit_into<8>(value, m_NormBGParams[1].cellSizeShift);
         bit::deposit_into<9>(value, m_NormBGParams[1].bitmap);
         bit::deposit_into<10, 11>(value, m_NormBGParams[1].bmsz);
         bit::deposit_into<12, 13>(value, static_cast<uint32>(m_NormBGParams[1].colorFormat));
@@ -494,7 +494,7 @@ private:
     }
 
     FORCE_INLINE void WriteCHCTLA(uint16 value) {
-        m_NormBGParams[0].cellSize = bit::extract<0>(value) + 1;
+        m_NormBGParams[0].cellSizeShift = bit::extract<0>(value);
         m_NormBGParams[0].bitmap = bit::extract<1>(value);
         m_NormBGParams[0].bmsz = bit::extract<2, 3>(value);
         m_NormBGParams[0].colorFormat = static_cast<ColorFormat>(bit::extract<4, 6>(value));
@@ -503,7 +503,7 @@ private:
         m_RotBGParams[1].colorFormat = m_NormBGParams[0].colorFormat;
         m_RotBGParams[1].UpdateCHCTL();
 
-        m_NormBGParams[1].cellSize = bit::extract<8>(value) + 1;
+        m_NormBGParams[1].cellSizeShift = bit::extract<8>(value);
         m_NormBGParams[1].bitmap = bit::extract<9>(value);
         m_NormBGParams[1].bmsz = bit::extract<10, 11>(value);
         m_NormBGParams[1].colorFormat = static_cast<ColorFormat>(bit::extract<12, 13>(value));
@@ -538,13 +538,13 @@ private:
 
     FORCE_INLINE uint16 ReadCHCTLB() {
         uint16 value = 0;
-        bit::deposit_into<0>(value, m_NormBGParams[2].cellSize - 1);
+        bit::deposit_into<0>(value, m_NormBGParams[2].cellSizeShift);
         bit::deposit_into<1>(value, static_cast<uint32>(m_NormBGParams[2].colorFormat));
 
-        bit::deposit_into<4>(value, m_NormBGParams[3].cellSize - 1);
+        bit::deposit_into<4>(value, m_NormBGParams[3].cellSizeShift);
         bit::deposit_into<5>(value, static_cast<uint32>(m_NormBGParams[3].colorFormat));
 
-        bit::deposit_into<8>(value, m_RotBGParams[0].cellSize - 1);
+        bit::deposit_into<8>(value, m_RotBGParams[0].cellSizeShift);
         bit::deposit_into<9>(value, m_RotBGParams[0].bitmap);
         bit::deposit_into<10>(value, m_RotBGParams[0].bmsz);
         bit::deposit_into<12, 14>(value, static_cast<uint32>(m_RotBGParams[0].colorFormat));
@@ -552,15 +552,15 @@ private:
     }
 
     FORCE_INLINE void WriteCHCTLB(uint16 value) {
-        m_NormBGParams[2].cellSize = bit::extract<0>(value) + 1;
+        m_NormBGParams[2].cellSizeShift = bit::extract<0>(value);
         m_NormBGParams[2].colorFormat = static_cast<ColorFormat>(bit::extract<1>(value));
         m_NormBGParams[2].UpdateCHCTL();
 
-        m_NormBGParams[3].cellSize = bit::extract<4>(value) + 1;
+        m_NormBGParams[3].cellSizeShift = bit::extract<4>(value);
         m_NormBGParams[3].colorFormat = static_cast<ColorFormat>(bit::extract<5>(value));
         m_NormBGParams[3].UpdateCHCTL();
 
-        m_RotBGParams[0].cellSize = bit::extract<8>(value) + 1;
+        m_RotBGParams[0].cellSizeShift = bit::extract<8>(value);
         m_RotBGParams[0].bitmap = bit::extract<9>(value);
         m_RotBGParams[0].bmsz = bit::extract<10>(value);
         m_RotBGParams[0].colorFormat = static_cast<ColorFormat>(bit::extract<12, 14>(value));
@@ -1121,11 +1121,15 @@ private:
     void DrawLine();
 
     // Draws an NBG scanline.
-    template <bool twoWordChar, uint32 colorFormat, uint32 colorMode>
+    // twoWordChar indicates if character patterns use one word (false) or two words (true).
+    // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
+    // colorFormat is the color format for cell data.
+    // colorMode is the CRAM color mode.
+    template <bool twoWordChar, bool fourCellChar, uint32 colorFormat, uint32 colorMode>
     void DrawNormalBG(const NormBGParams &bgParams, BGRenderContext &rctx);
 
     // Draws a normal scroll BG scanline.
-    template <bool twoWordChar, uint32 colorFormat, uint32 colorMode>
+    template <bool twoWordChar, bool fourCellChar, uint32 colorFormat, uint32 colorMode>
     vdp::Color888 DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx, uint32 x, uint32 y);
 
     // Fetches a character from VRAM.
@@ -1134,13 +1138,14 @@ private:
     template <bool twoWordChar>
     Character FetchCharacter(uint32 pageBaseAddress, uint32 charIndex);
 
-    // Fetches a color from a pixel in the specified cell.
+    // Fetches a color from a pixel in the specified cell in a 2x2 character pattern.
     // ch contains character parameters.
     // dotX and dotY specify the coordinates of the pixel within the cell, both ranging from 0 to 7.
+    // cellIndex is the index of the cell in the character pattern, ranging from 0 to 3.
     // chcn is the value of CHCTLA/CHCTLB.xxCHCNn.
     // crmd is the value of RAMCTL.CRMDn.
     template <uint32 colorFormat, uint32 colorMode>
-    vdp::Color888 FetchColor(uint32 cramOffset, Character ch, uint8 dotX, uint8 dotY);
+    vdp::Color888 FetchColor(uint32 cramOffset, Character ch, uint8 dotX, uint8 dotY, uint32 cellIndex);
 
     // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
     // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.

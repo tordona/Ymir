@@ -296,17 +296,21 @@ void VDP2::DrawLine() {
     using FnDrawNBG = void (VDP2::*)(const NormBGParams &, BGRenderContext &);
 
     // Lookup table of DrawNormalBG functions
-    // [twoWordChar][colorFormat][colorMode]
+    // [twoWordChar][fourCellChar][colorFormat][colorMode]
     static constexpr auto fnDrawNBGs = [] {
-        std::array<std::array<std::array<FnDrawNBG, 4>, 8>, 2> arr{};
+        std::array<std::array<std::array<std::array<FnDrawNBG, 4>, 8>, 2>, 2> arr{};
 
         util::constexpr_for<2>([&](auto twcIndex) {
             const bool twoWordChar = twcIndex;
-            util::constexpr_for<8>([&](auto cfIndex) {
-                const size_t colorFormat = cfIndex <= 4 ? cfIndex : 4;
-                util::constexpr_for<4>([&](auto cmIndex) {
-                    const size_t colorMode = cmIndex <= 2 ? cmIndex : 2;
-                    arr[twcIndex][cfIndex][cmIndex] = &VDP2::DrawNormalBG<twoWordChar, colorFormat, colorMode>;
+            util::constexpr_for<2>([&](auto fccIndex) {
+                const bool fourCellChar = fccIndex;
+                util::constexpr_for<8>([&](auto cfIndex) {
+                    const size_t colorFormat = cfIndex <= 4 ? cfIndex : 4;
+                    util::constexpr_for<4>([&](auto cmIndex) {
+                        const size_t colorMode = cmIndex <= 2 ? cmIndex : 2;
+                        arr[twcIndex][fccIndex][cfIndex][cmIndex] =
+                            &VDP2::DrawNormalBG<twoWordChar, fourCellChar, colorFormat, colorMode>;
+                    });
                 });
             });
         });
@@ -319,7 +323,11 @@ void VDP2::DrawLine() {
         if (bg.enabled) {
             BGRenderContext rctx{};
             rctx.cramOffset = bg.caos << (RAMCTL.CRMDn == 1 ? 10 : 9);
-            (this->*fnDrawNBGs[bg.twoWordChar][static_cast<size_t>(bg.colorFormat)][RAMCTL.CRMDn])(bg, rctx);
+            const bool twoWordChar = bg.twoWordChar;
+            const bool fourCellChar = bg.cellSizeShift;
+            const uint32 colorFormat = static_cast<uint32>(bg.colorFormat);
+            const uint32 colorMode = RAMCTL.CRMDn;
+            (this->*fnDrawNBGs[twoWordChar][fourCellChar][colorFormat][colorMode])(bg, rctx);
         }
     }
 
@@ -329,52 +337,130 @@ void VDP2::DrawLine() {
             BGRenderContext rctx{};
             rctx.cramOffset = bg.caos << (RAMCTL.CRMDn == 1 ? 10 : 9);
             // TODO: implement
-            //(this->*fnDrawRBGs[bg.twoWordChar][static_cast<size_t>(bg.colorFormat)][RAMCTL.CRMDn])(bg, rctx);
+            // (this->*fnDrawRBGs[...])(bg, rctx);
         }
     }
 }
 
-template <bool twoWordChar, uint32 colorFormat, uint32 colorMode>
+template <bool twoWordChar, bool fourCellChar, uint32 colorFormat, uint32 colorMode>
 NO_INLINE void VDP2::DrawNormalBG(const NormBGParams &bgParams, BGRenderContext &rctx) {
     // TODO: deal with scrolling, scaling, shifting, etc.
     const uint32 y = m_VCounter;
     for (uint32 x = 0; x < m_HRes; x++) {
-        // TODO: priority handling
-        // TODO: special color handling
-        // framebuffer[x][y] = color;
-
         Color888 color{};
 
         if (bgParams.bitmap) {
             // TODO: draw bitmap BG
         } else {
-            color = DrawNormalScrollBG<twoWordChar, colorFormat, colorMode>(bgParams, rctx, x, y);
+            color = DrawNormalScrollBG<twoWordChar, fourCellChar, colorFormat, colorMode>(bgParams, rctx, x, y);
         }
+        // TODO: priority handling
+        // TODO: special color handling
+        // framebuffer[x][y] = color;
     }
 }
 
-template <bool twoWordChar, uint32 colorFormat, uint32 colorMode>
+template <bool twoWordChar, bool fourCellChar, uint32 colorFormat, uint32 colorMode>
 FORCE_INLINE Color888 VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx, uint32 x,
                                                uint32 y) {
+    //          Map
+    // +---------+---------+
+    // |         |         |   Normal BGs always have 4 planes named A,B,C,D in this exact configuration.
+    // | Plane A | Plane B |   Each plane can point to different portions of VRAM through a combination of bits
+    // |         |         |   from the Map Register (per BG) and the Map Offset Register (per BG and plane):
+    // +---------+---------+     bits 5-0 of the address come from the Map Register (MPxxN#)
+    // |         |         |     bits 8-6 of the address come from the Map Offset Register (MPOFN)
+    // | Plane C | Plane D |
+    // |         |         |
+    // +---------+---------+
+    //
+    //         Plane
+    // +---------+---------+   Each plane is composed of 1x1, 2x1 or 2x2 pages, determined by Plane Size in the
+    // |         |         |   Plane Size Register (PLSZ).
+    // | Page 1  | Page 2  |   Pages are stored sequentially in VRAM left to right, top to bottom, as shown.
+    // |         |         |
+    // +---------+---------+
+    // |         |         |
+    // | Page 3  | Page 4  |
+    // |         |         |
+    // +---------+---------+
+    //
+    //           Page
+    // +----+----+..+----+----+   Pages contain 32x32 or 64x64 character patterns, which are groups of 1x1 or 2x2 cells,
+    // |CP 1|CP 2|  |CP63|CP64|   determined by Character Size in the Character Control Register (CHCTLA-B).
+    // +----+----+..+----+----+   Pages always contain a total of 64x64 cells - a grid of 64x64 1x1 character patterns
+    // |  65|  66|  | 127| 128|   or 32x32 2x2 character patterns. Because of this, pages always have 512x512 dots.
+    // +----+----+..+----+----+
+    // :    :    :  :    :    :   Character patterns in a page are stored sequentially in VRAM left to right, top to
+    // +----+----+..+----+----+   bottom, as shown. The figure to the left illustrates a 64x64 page; a 32x32 page would
+    // |3969|3970|  |4031|4032|   have 1024 character patterns in total instead of 4096.
+    // +----+----+..+----+----+
+    // |4033|4034|  |4095|4096|
+    // +----+----+..+----+----+
+    //
+    //   Character Pattern
+    // +---------+---------+   Character patterns are groups of 1x1 or 2x2 cells, determined by Character Size in the
+    // |         |         |   Character Control Register (CHCTLA-B).
+    // | Cell 1  | Cell 2  |   Cells are stored sequentially in VRAM left to right, top to bottom, as shown.
+    // |         |         |   Character patterns contain a character number (15 bits), a palette number (7 bits, only
+    // +---------+---------+   used with 16 or 256 color palette modes), two special function bits (Special Priority and
+    // |         |         |   Special Color Calculation) and two flip bits (horizontal and vertical).
+    // | Cell 3  | Cell 4  |   Character patterns can be one or two words long, as defined by Pattern Name Data Size
+    // |         |         |   in the Pattern Name Control Register (PNCN0-3, PNCR).
+    // +---------+---------+   When using one word characters, some of the data comes from supplementary registers.
+    //
+    //           Cell
+    // +--+--+--+--+--+--+--+--+   Cells contain 8x8 dots (pixels) in one of the following color formats:
+    // | 1| 2| 3| 4| 5| 6| 7| 8|     - 16 color palette
+    // +--+--+--+--+--+--+--+--+     - 256 color palette
+    // | 9|10|11|12|13|14|15|16|     - 1024 or 2048 color palette (depending on Color Mode)
+    // +--+--+--+--+--+--+--+--+     - 5:5:5 RGB (32768 colors)
+    // |17|18|19|20|21|22|23|24|     - 8:8:8 RGB (16777216 colors)
+    // +--+--+--+--+--+--+--+--+
+    // |25|26|27|28|29|30|31|32|
+    // +--+--+--+--+--+--+--+--+
+    // |33|34|35|36|37|38|39|40|
+    // +--+--+--+--+--+--+--+--+
+    // |41|42|43|44|45|46|47|48|
+    // +--+--+--+--+--+--+--+--+
+    // |49|50|51|52|53|54|55|56|
+    // +--+--+--+--+--+--+--+--+
+    // |57|58|59|60|61|62|63|64|
+    // +--+--+--+--+--+--+--+--+
+
     // TODO: implement scrolling, scaling, rotation, mosaic
 
-    // Determine which plane the (x,y) coordinates correspond to
-    // TODO: implement
-    const uint32 plane = 0;
+    // Determine plane index from the (x,y) coordinate
+    const uint32 planeX = ((x >> 9u) & 1) >> bgParams.pageShiftH;
+    const uint32 planeY = ((y >> 9u) & 1) >> bgParams.pageShiftV;
+    const uint32 plane = planeX + planeY * 2;
 
-    // Determine which character inside the plane the (x,y) coordinates correspond to
-    // TODO: implement
-    const uint32 charIndex = 0;
+    // Determine page index from the (x,y) coordinate
+    const uint32 pageX = (x >> 9u) & bgParams.pageShiftH;
+    const uint32 pageY = (y >> 9u) & bgParams.pageShiftV;
+    const uint32 page = pageX + pageY * 2;
+
+    // Determine character pattern from the (x,y) coordinate
+    const uint32 charPatX = ((x >> 3u) & 63) >> fourCellChar;
+    const uint32 charPatY = ((y >> 3u) & 63) >> fourCellChar;
+    const uint32 charIndex = charPatX + charPatY * 2;
+
+    // Determine cell index from the (x,y) coordinate
+    const uint32 cellX = (x >> 3u) & fourCellChar;
+    const uint32 cellY = (y >> 3u) & fourCellChar;
+    const uint32 cellIndex = cellX + cellY * 2;
 
     // Determine dot coordinates
-    // TODO: implement
-    const uint32 dotX = 0;
-    const uint32 dotY = 0;
+    const uint32 dotX = x & 7;
+    const uint32 dotY = y & 7;
 
-    // Fetch dot color
+    // Fetch character
     const uint32 pageBaseAddress = bgParams.pageBaseAddresses[plane];
-    const Character ch = FetchCharacter<twoWordChar>(pageBaseAddress, charIndex);
-    return FetchColor<colorFormat, colorMode>(rctx.cramOffset, ch, dotX, dotY);
+    const uint32 pageOffset = page * kPageSizes[fourCellChar][twoWordChar];
+    const Character ch = FetchCharacter<twoWordChar>(pageBaseAddress + pageOffset, charIndex);
+
+    // Fetch dot color using character data
+    return FetchColor<colorFormat, colorMode>(rctx.cramOffset, ch, dotX, dotY, cellIndex);
 }
 
 template <bool twoWordChar>
@@ -402,13 +488,13 @@ FORCE_INLINE VDP2::Character VDP2::FetchCharacter(uint32 pageBaseAddress, uint32
 }
 
 template <uint32 colorFormat, uint32 colorMode>
-FORCE_INLINE vdp::Color888 VDP2::FetchColor(uint32 cramOffset, Character ch, uint8 dotX, uint8 dotY) {
+FORCE_INLINE vdp::Color888 VDP2::FetchColor(uint32 cramOffset, Character ch, uint8 dotX, uint8 dotY, uint32 cellIndex) {
     static_assert(colorFormat <= 4, "Invalid xxCHCN value");
     assert(dotX < 8);
     assert(dotY < 8);
 
     // Cell addressing uses a fixed offset of 32 bytes
-    const uint32 cellAddress = ch.charNum * 0x20;
+    const uint32 cellAddress = (ch.charNum + cellIndex) * 0x20;
 
     if constexpr (colorFormat == 0) {
         // 16 color palette

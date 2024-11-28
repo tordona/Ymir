@@ -28,6 +28,20 @@ enum class ScreenOverProcess {
     Fixed512,
 };
 
+// Map index mask lookup table
+// [Character Size][Pattern Name Data Size ^ 1][Plane Size]
+static constexpr uint32 kMapIndexMasks[2][2][4] = {
+    {{0x7F, 0x7E, 0x7E, 0x7C}, {0x3F, 0x3E, 0x3E, 0x3C}},
+    {{0x1FF, 0x1FE, 0x1FE, 0x1FC}, {0xFF, 0xFE, 0xFE, 0xFC}},
+};
+
+// Page sizes lookup table
+// [Character Size][Pattern Name Data Size ^ 1]
+static constexpr uint32 kPageSizes[2][2] = {
+    {13, 14},
+    {11, 12},
+};
+
 // NBG (rot=false) and RBG (rot=true) parameters.
 template <bool rot>
 struct BGParams {
@@ -40,10 +54,10 @@ struct BGParams {
         transparent = false;
         bitmap = false;
 
-        cellSize = 1;
+        cellSizeShift = 0;
 
-        numPagesH = 1;
-        numPagesV = 1;
+        pageShiftH = 0;
+        pageShiftV = 0;
         bitmapSizeH = 512;
         bitmapSizeV = 256;
 
@@ -77,12 +91,15 @@ struct BGParams {
     // Derived CHCTLA/CHCTLB.xxBMEN
     bool bitmap;
 
-    // Cell dimensions in a page (1x1 or 2x2).
+    // Cell size shift corresponding to the dimensions of a character pattern (0=1x1, 1=2x2).
     // Derived from CHCTLA/CHCTLB.xxCHSZ
-    uint32 cellSize;
+    uint32 cellSizeShift;
 
-    uint32 numPagesH; // Horizontal pages in a plane, derived from PLSZ.xxPLSZn
-    uint32 numPagesV; // Vertical pages in a plane, derived from PLSZ.xxPLSZn
+    // Page shifts are either 0 or 1, used when determining which plane a particular (x,y) coordinate belongs to.
+    // A shift of 0 corresponds to 1 page per plane dimension.
+    // A shift of 1 corresponds to 2 pages per plane dimension.
+    uint32 pageShiftH; // Horizontal page shift, derived from PLSZ.xxPLSZn
+    uint32 pageShiftV; // Vertical page shift, derived from PLSZ.xxPLSZn
 
     uint32 bitmapSizeH; // Horizontal bitmap dots, derived from CHCTLA/CHCTLB.xxBMSZ
     uint32 bitmapSizeV; // Vertical bitmap dots, derived from CHCTLA/CHCTLB.xxBMSZ
@@ -133,8 +150,8 @@ struct BGParams {
     uint16 caos; // Raw value of CRAOFA/CRAOFB.xxCAOSn
 
     void UpdatePLSZ() {
-        numPagesH = (plsz & 1) + 1;
-        numPagesV = (plsz >> 1) + 1;
+        pageShiftH = plsz & 1;
+        pageShiftV = plsz >> 1;
 
         UpdatePageBaseAddresses();
     }
@@ -149,19 +166,7 @@ struct BGParams {
     }
 
     void UpdatePageBaseAddresses() {
-        // [Character Size][Pattern Name Data Size ^ 1][Plane Size]
-        static constexpr uint32 kMapIndexMasks[2][2][4] = {
-            {{0x7F, 0x7E, 0x7E, 0x7C}, {0x3F, 0x3E, 0x3E, 0x3C}},
-            {{0x1FF, 0x1FE, 0x1FE, 0x1FC}, {0xFF, 0xFE, 0xFE, 0xFC}},
-        };
-
-        // [Character Size][Pattern Name Data Size ^ 1]
-        static constexpr uint32 kPageSizes[2][2] = {
-            {13, 14},
-            {11, 12},
-        };
-
-        const uint32 chsz = cellSize - 1;
+        const uint32 chsz = cellSizeShift;
         const uint32 pnds = twoWordChar;
         const uint32 mapIndexMask = kMapIndexMasks[chsz][pnds][plsz];
         const uint32 pageSizeShift = kPageSizes[chsz][pnds];
