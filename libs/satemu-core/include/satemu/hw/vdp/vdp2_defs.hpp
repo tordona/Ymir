@@ -123,7 +123,7 @@ struct BGParams {
     // Derived from PRINA/PRINB/PRIR.xxPRINn
     uint8 priorityNumber;
 
-    // Special priority mode for scroll screens.
+    // Special priority mode.
     // Derived from SFPRMD.xxSPRMn
     PriorityMode priorityMode;
 
@@ -137,6 +137,7 @@ struct BGParams {
     uint32 pageShiftH; // Horizontal page shift, derived from PLSZ.xxPLSZn
     uint32 pageShiftV; // Vertical page shift, derived from PLSZ.xxPLSZn
 
+    // Bitmap dimensions, when the screen is in bitmap mode.
     uint32 bitmapSizeH; // Horizontal bitmap dots, derived from CHCTLA/CHCTLB.xxBMSZ
     uint32 bitmapSizeV; // Vertical bitmap dots, derived from CHCTLA/CHCTLB.xxBMSZ
 
@@ -212,6 +213,7 @@ struct BGParams {
     // Derived from PNCNn/PNCR.xxPNB
     bool twoWordChar;
 
+    // Raw register values, to facilitate reads.
     uint16 plsz; // Raw value of PLSZ.xxPLSZn
     uint16 bmsz; // Raw value of CHCTLA/CHCTLB.xxBMSZ
     uint16 caos; // Raw value of CRAOFA/CRAOFB.xxCAOSn

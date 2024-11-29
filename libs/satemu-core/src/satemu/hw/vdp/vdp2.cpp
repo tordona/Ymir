@@ -328,6 +328,15 @@ void VDP2::DrawLine() {
     // TODO: request framebuffer from frontend
     static Color888 fb[704 * 480];
 
+    // TODO: priority handling
+    // - should probably move the for (uint32 x ...) loop here
+    // - sort layers per pixel
+    //   - drawing functions must return priority info in addition to color
+    //   - figure out how to do this optimally; don't want to hit CRAM if not needed
+    //     - probably need a context struct to store addresses, priority and color data
+
+    // TODO: special color handling
+
     // Draw normal BGs
     for (const auto &bg : m_NormBGParams) {
         if (bg.enabled) {
@@ -479,8 +488,7 @@ NO_INLINE void VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderCo
 
         // Fetch dot color using character data
         Color888 color = FetchCharacterColor<colorFormat, colorMode>(rctx.cramOffset, ch, dotX, dotY, cellIndex);
-        // TODO: priority handling
-        // TODO: special color handling
+        // TODO: write to temporary buffer?
         rctx.framebuffer[x + y * m_HRes] = color;
 
         // Increment horizontal coordinate
@@ -502,8 +510,7 @@ NO_INLINE void VDP2::DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderCo
         const uint32 scrollY = fracScrollY >> 8u;
 
         Color888 color = FetchBitmapColor<colorFormat, colorMode>(bgParams, rctx.cramOffset, scrollX, scrollY);
-        // TODO: priority handling
-        // TODO: special color handling
+        // TODO: write to temporary buffer?
         rctx.framebuffer[x + y * m_HRes] = color;
 
         // Increment horizontal coordinate
