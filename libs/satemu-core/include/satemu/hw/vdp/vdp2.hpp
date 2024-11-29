@@ -181,7 +181,7 @@ public:
         case 0x0E2: return SDCTL.u16;     // write-only?
         case 0x0E4: return ReadCRAOFA();  // write-only?
         case 0x0E6: return ReadCRAOFB();  // write-only?
-        case 0x0E8: return LNCLEN.u16;    // write-only?
+        case 0x0E8: return ReadLNCLEN();  // write-only?
         case 0x0EA: return ReadSFPRMD();  // write-only?
         case 0x0EC: return CCCTL.u16;     // write-only?
         case 0x0EE: return SFCCMD.u16;    // write-only?
@@ -333,7 +333,7 @@ public:
         case 0x0E2: SDCTL.u16 = value & 0x013F; break;
         case 0x0E4: WriteCRAOFA(value); break;
         case 0x0E6: WriteCRAOFB(value); break;
-        case 0x0E8: LNCLEN.u16 = value & 0x003F; break;
+        case 0x0E8: WriteLNCLEN(value); break;
         case 0x0EA: WriteSFPRMD(value); break;
         case 0x0EC: CCCTL.u16 = value & 0xF77F; break;
         case 0x0EE: SFCCMD.u16 = value & 0x03FF; break;
@@ -1112,7 +1112,37 @@ private:
         // ?m_SpriteParams?.caos = bit::extract<4, 6>(value);
     }
 
-    LNCLEN_t LNCLEN; // 1800E8   LNCLEN  Line Color Screen Enable
+    // 1800E8   LNCLEN  Line Color Screen Enable
+    //
+    //   bits   r/w  code          description
+    //   15-6        -             Reserved, must be zero
+    //      5     W  SPLCEN        Sprite Line Color Screen Enable
+    //      4     W  R0LCEN        RBG0 Line Color Screen Enable
+    //      3     W  N3LCEN        NBG3 Line Color Screen Enable
+    //      2     W  N2LCEN        NBG2 Line Color Screen Enable
+    //      1     W  N1LCEN        NBG1 Line Color Screen Enable
+    //      0     W  N0LCEN        NBG0 Line Color Screen Enable
+
+    FORCE_INLINE uint16 ReadLNCLEN() {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, m_NormBGParams[0].lineColorScreenEnable);
+        bit::deposit_into<1>(value, m_NormBGParams[1].lineColorScreenEnable);
+        bit::deposit_into<2>(value, m_NormBGParams[2].lineColorScreenEnable);
+        bit::deposit_into<3>(value, m_NormBGParams[3].lineColorScreenEnable);
+        bit::deposit_into<4>(value, m_RotBGParams[0].lineColorScreenEnable);
+        // TODO: bit::deposit_into<5>(value, ?m_SpriteParams?.lineColorScreenEnable);
+        return value;
+    }
+
+    void WriteLNCLEN(uint16 value) {
+        m_NormBGParams[0].lineColorScreenEnable = bit::extract<0>(value);
+        m_NormBGParams[1].lineColorScreenEnable = bit::extract<1>(value);
+        m_NormBGParams[2].lineColorScreenEnable = bit::extract<2>(value);
+        m_NormBGParams[3].lineColorScreenEnable = bit::extract<3>(value);
+        m_RotBGParams[0].lineColorScreenEnable = bit::extract<4>(value);
+        m_RotBGParams[1].lineColorScreenEnable = m_NormBGParams[0].lineColorScreenEnable;
+        // TODO: ?m_SpriteParams?.lineColorScreenEnable = bit::extract<5>(value);
+    }
 
     // 1800EA   SFPRMD  Special Priority Mode
     //
