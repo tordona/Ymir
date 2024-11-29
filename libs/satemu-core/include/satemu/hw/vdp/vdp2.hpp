@@ -121,26 +121,26 @@ public:
         case 0x06A: return ReadMPR(1, 5); // write-only?
         case 0x06C: return ReadMPR(1, 6); // write-only?
         case 0x06E: return ReadMPR(1, 7); // write-only?
-        case 0x070: return SCN0.X.I.u16;  // write-only?
-        case 0x072: return SCN0.X.D.u16;  // write-only?
-        case 0x074: return SCN0.Y.I.u16;  // write-only?
-        case 0x076: return SCN0.Y.D.u16;  // write-only?
-        case 0x078: return ZMN0.X.I.u16;  // write-only?
-        case 0x07A: return ZMN0.X.D.u16;  // write-only?
-        case 0x07C: return ZMN0.Y.I.u16;  // write-only?
-        case 0x07E: return ZMN0.Y.D.u16;  // write-only?
-        case 0x080: return SCN1.X.I.u16;  // write-only?
-        case 0x082: return SCN1.X.D.u16;  // write-only?
-        case 0x084: return SCN1.Y.I.u16;  // write-only?
-        case 0x086: return SCN1.Y.D.u16;  // write-only?
-        case 0x088: return ZMN1.X.I.u16;  // write-only?
-        case 0x08A: return ZMN1.X.D.u16;  // write-only?
-        case 0x08C: return ZMN1.Y.I.u16;  // write-only?
-        case 0x08E: return ZMN1.Y.D.u16;  // write-only?
-        case 0x090: return SCN2.X.u16;    // write-only?
-        case 0x092: return SCN2.Y.u16;    // write-only?
-        case 0x094: return SCN3.X.u16;    // write-only?
-        case 0x096: return SCN3.Y.u16;    // write-only?
+        case 0x070: return ReadSCXIN(0);  // write-only?
+        case 0x072: return ReadSCXDN(0);  // write-only?
+        case 0x074: return ReadSCYIN(0);  // write-only?
+        case 0x076: return ReadSCYDN(0);  // write-only?
+        case 0x078: return ReadZMXIN(0);  // write-only?
+        case 0x07A: return ReadZMXDN(0);  // write-only?
+        case 0x07C: return ReadZMYIN(0);  // write-only?
+        case 0x07E: return ReadZMYDN(0);  // write-only?
+        case 0x080: return ReadSCXIN(1);  // write-only?
+        case 0x082: return ReadSCXDN(1);  // write-only?
+        case 0x084: return ReadSCYIN(1);  // write-only?
+        case 0x086: return ReadSCYDN(1);  // write-only?
+        case 0x088: return ReadZMXIN(1);  // write-only?
+        case 0x08A: return ReadZMXDN(1);  // write-only?
+        case 0x08C: return ReadZMYIN(1);  // write-only?
+        case 0x08E: return ReadZMYDN(1);  // write-only?
+        case 0x090: return ReadSCXIN(2);  // write-only?
+        case 0x092: return ReadSCYIN(2);  // write-only?
+        case 0x094: return ReadSCXIN(3);  // write-only?
+        case 0x096: return ReadSCYIN(3);  // write-only?
         case 0x098: return ZMCTL.u16;     // write-only?
         case 0x09A: return SCRCTL.u16;    // write-only?
         case 0x09C: return VCSTA.U.u16;   // write-only?
@@ -273,26 +273,26 @@ public:
         case 0x06A: WriteMPR(value, 1, 5); break;
         case 0x06C: WriteMPR(value, 1, 6); break;
         case 0x06E: WriteMPR(value, 1, 7); break;
-        case 0x070: SCN0.X.I.u16 = value & 0x07FF; break;
-        case 0x072: SCN0.X.D.u16 = value & 0xFF00; break;
-        case 0x074: SCN0.Y.I.u16 = value & 0x07FF; break;
-        case 0x076: SCN0.Y.D.u16 = value & 0xFF00; break;
-        case 0x078: ZMN0.X.I.u16 = value & 0x0007; break;
-        case 0x07A: ZMN0.X.D.u16 = value & 0xFF00; break;
-        case 0x07C: ZMN0.Y.I.u16 = value & 0x0007; break;
-        case 0x07E: ZMN0.Y.D.u16 = value & 0xFF00; break;
-        case 0x080: SCN1.X.I.u16 = value & 0x07FF; break;
-        case 0x082: SCN1.X.D.u16 = value & 0xFF00; break;
-        case 0x084: SCN1.Y.I.u16 = value & 0x07FF; break;
-        case 0x086: SCN1.Y.D.u16 = value & 0xFF00; break;
-        case 0x088: ZMN1.X.I.u16 = value & 0x0007; break;
-        case 0x08A: ZMN1.X.D.u16 = value & 0xFF00; break;
-        case 0x08C: ZMN1.Y.I.u16 = value & 0x0007; break;
-        case 0x08E: ZMN1.Y.D.u16 = value & 0xFF00; break;
-        case 0x090: SCN2.X.u16 = value & 0x07FF; break;
-        case 0x092: SCN2.Y.u16 = value & 0x07FF; break;
-        case 0x094: SCN3.X.u16 = value & 0x07FF; break;
-        case 0x096: SCN3.Y.u16 = value & 0x07FF; break;
+        case 0x070: WriteSCXIN(value, 0); break;
+        case 0x072: WriteSCXDN(value, 0); break;
+        case 0x074: WriteSCYIN(value, 0); break;
+        case 0x076: WriteSCYDN(value, 0); break;
+        case 0x078: WriteZMXIN(value, 0); break;
+        case 0x07A: WriteZMXDN(value, 0); break;
+        case 0x07C: WriteZMYIN(value, 0); break;
+        case 0x07E: WriteZMYDN(value, 0); break;
+        case 0x080: WriteSCXIN(value, 1); break;
+        case 0x082: WriteSCXDN(value, 1); break;
+        case 0x084: WriteSCYIN(value, 1); break;
+        case 0x086: WriteSCYDN(value, 1); break;
+        case 0x088: WriteZMXIN(value, 1); break;
+        case 0x08A: WriteZMXDN(value, 1); break;
+        case 0x08C: WriteZMYIN(value, 1); break;
+        case 0x08E: WriteZMYDN(value, 1); break;
+        case 0x090: WriteSCXIN(value, 2); break;
+        case 0x092: WriteSCYIN(value, 2); break;
+        case 0x094: WriteSCXIN(value, 3); break;
+        case 0x096: WriteSCYIN(value, 3); break;
         case 0x098: ZMCTL.u16 = value & 0x0303; break;
         case 0x09A: SCRCTL.u16 = value & 0x3F3F; break;
         case 0x09C: VCSTA.U.u16 = value & 0x0007; break;
@@ -910,26 +910,118 @@ private:
         bg.UpdatePageBaseAddresses();
     }
 
-    /**/             // 180070   SCXIN0  NBG0 Horizontal Screen Scroll Value (integer part)
-                     // 180072   SCXDN0  NBG0 Horizontal Screen Scroll Value (fractional part)
-                     // 180074   SCYIN0  NBG0 Vertical Screen Scroll Value (integer part)
-    SCXYID_t SCN0;   // 180076   SCYDN0  NBG0 Vertical Screen Scroll Value (fractional part)
-                     // 180078   ZMXIN0  NBG0 Horizontal Coordinate Increment (integer part)
-                     // 18007A   ZMXDN0  NBG0 Horizontal Coordinate Increment (fractional part)
-                     // 18007C   ZMYIN0  NBG0 Vertical Coordinate Increment (integer part)
-    ZMXYID_t ZMN0;   // 18007E   ZMYDN0  NBG0 Vertical Coordinate Increment (fractional part)
-                     // 180080   SCXIN1  NBG1 Horizontal Screen Scroll Value (integer part)
-                     // 180082   SCXDN1  NBG1 Horizontal Screen Scroll Value (fractional part)
-                     // 180084   SCYIN1  NBG1 Vertical Screen Scroll Value (integer part)
-    SCXYID_t SCN1;   // 180086   SCYDN1  NBG1 Vertical Screen Scroll Value (fractional part)
-                     // 180088   ZMXIN1  NBG1 Horizontal Coordinate Increment (integer part)
-                     // 18008A   ZMXDN1  NBG1 Horizontal Coordinate Increment (fractional part)
-                     // 18008C   ZMYIN1  NBG1 Vertical Coordinate Increment (integer part)
-    ZMXYID_t ZMN1;   // 18008E   ZMYDN1  NBG1 Vertical Coordinate Increment (fractional part)
-                     // 180090   SCXN2   NBG2 Horizontal Screen Scroll Value
-    SCXY_t SCN2;     // 180092   SCYN2   NBG2 Vertical Screen Scroll Value
-                     // 180094   SCXN3   NBG3 Horizontal Screen Scroll Value
-    SCXY_t SCN3;     // 180096   SCYN3   NBG3 Vertical Screen Scroll Value
+    // 180070   SCXIN0  NBG0 Horizontal Screen Scroll Value (integer part)
+    // 180072   SCXDN0  NBG0 Horizontal Screen Scroll Value (fractional part)
+    // 180074   SCYIN0  NBG0 Vertical Screen Scroll Value (integer part)
+    // 180076   SCYDN0  NBG0 Vertical Screen Scroll Value (fractional part)
+    // 180080   SCXIN1  NBG1 Horizontal Screen Scroll Value (integer part)
+    // 180082   SCXDN1  NBG1 Horizontal Screen Scroll Value (fractional part)
+    // 180084   SCYIN1  NBG1 Vertical Screen Scroll Value (integer part)
+    // 180086   SCYDN1  NBG1 Vertical Screen Scroll Value (fractional part)
+    //
+    // SCdINx:  (d=X,Y; x=0,1)
+    //   bits   r/w  code          description
+    //  15-11        -             Reserved, must be zero
+    //   10-0     W  NxSCdI10-0    Horizontal/Vertical Screen Scroll Value (integer part)
+    //
+    // SCdDNx:  (d=X,Y; x=0,1)
+    //   bits   r/w  code          description
+    //   15-8     W  NxSCdD1-8     Horizontal/Vertical Screen Scroll Value (fractional part)
+    //    7-0        -             Reserved, must be zero
+    //
+    // 180090   SCXN2   NBG2 Horizontal Screen Scroll Value
+    // 180092   SCYN2   NBG2 Vertical Screen Scroll Value
+    // 180094   SCXN3   NBG3 Horizontal Screen Scroll Value
+    // 180096   SCYN3   NBG3 Vertical Screen Scroll Value
+    //
+    // SCdNx:  (d=X,Y; x=2,3)
+    //   bits   r/w  code          description
+    //  15-11        -             Reserved, must be zero
+    //   10-0     W  NxSCd10-0     Horizontal/Vertical Screen Scroll Value (integer)
+
+    FORCE_INLINE uint16 ReadSCXIN(uint32 bgIndex) {
+        return bit::extract<8, 18>(m_NormBGParams[bgIndex].scrollAmountH);
+    }
+
+    FORCE_INLINE void WriteSCXIN(uint16 value, uint32 bgIndex) {
+        bit::deposit_into<8, 18>(m_NormBGParams[bgIndex].scrollAmountH, bit::extract<0, 10>(value));
+    }
+
+    FORCE_INLINE uint16 ReadSCXDN(uint32 bgIndex) {
+        return bit::extract<0, 7>(m_NormBGParams[bgIndex].scrollAmountH);
+    }
+
+    FORCE_INLINE void WriteSCXDN(uint16 value, uint32 bgIndex) {
+        bit::deposit_into<0, 7>(m_NormBGParams[bgIndex].scrollAmountH, bit::extract<8, 15>(value));
+    }
+
+    FORCE_INLINE uint16 ReadSCYIN(uint32 bgIndex) {
+        return bit::extract<8, 18>(m_NormBGParams[bgIndex].scrollAmountV);
+    }
+
+    FORCE_INLINE void WriteSCYIN(uint16 value, uint32 bgIndex) {
+        bit::deposit_into<8, 18>(m_NormBGParams[bgIndex].scrollAmountV, bit::extract<0, 10>(value));
+    }
+
+    FORCE_INLINE uint16 ReadSCYDN(uint32 bgIndex) {
+        return bit::extract<0, 7>(m_NormBGParams[bgIndex].scrollAmountV);
+    }
+
+    FORCE_INLINE void WriteSCYDN(uint16 value, uint32 bgIndex) {
+        bit::deposit_into<0, 7>(m_NormBGParams[bgIndex].scrollAmountV, bit::extract<8, 15>(value));
+    }
+
+    // 180078   ZMXIN0  NBG0 Horizontal Coordinate Increment (integer part)
+    // 18007A   ZMXDN0  NBG0 Horizontal Coordinate Increment (fractional part)
+    // 18007C   ZMYIN0  NBG0 Vertical Coordinate Increment (integer part)
+    // 18007E   ZMYDN0  NBG0 Vertical Coordinate Increment (fractional part)
+    // 180088   ZMXIN1  NBG1 Horizontal Coordinate Increment (integer part)
+    // 18008A   ZMXDN1  NBG1 Horizontal Coordinate Increment (fractional part)
+    // 18008C   ZMYIN1  NBG1 Vertical Coordinate Increment (integer part)
+    // 18008E   ZMYDN1  NBG1 Vertical Coordinate Increment (fractional part)
+    //
+    // ZMdINx:  (d=X,Y; x=0,1)
+    //   bits   r/w  code          description
+    //   15-3        -             Reserved, must be zero
+    //    2-0     W  NxZMdI2-0     Horizontal/Vertical Coordinate Increment (integer part)
+    //
+    // ZMdDNx:  (d=X,Y; x=0,1)
+    //   bits   r/w  code          description
+    //   15-8     W  NxZMdD1-8     Horizontal/Vertical Coordinate Increment (fractional part)
+    //    7-0        -             Reserved, must be zero
+
+    FORCE_INLINE uint16 ReadZMXIN(uint32 bgIndex) {
+        return bit::extract<8, 10>(m_NormBGParams[bgIndex].scrollIncH);
+    }
+
+    FORCE_INLINE void WriteZMXIN(uint16 value, uint32 bgIndex) {
+        bit::deposit_into<8, 10>(m_NormBGParams[bgIndex].scrollIncH, bit::extract<0, 2>(value));
+    }
+
+    FORCE_INLINE uint16 ReadZMXDN(uint32 bgIndex) {
+        return bit::extract<0, 7>(m_NormBGParams[bgIndex].scrollIncH);
+    }
+
+    FORCE_INLINE void WriteZMXDN(uint16 value, uint32 bgIndex) {
+        bit::deposit_into<0, 7>(m_NormBGParams[bgIndex].scrollIncH, bit::extract<8, 15>(value));
+    }
+
+    FORCE_INLINE uint16 ReadZMYIN(uint32 bgIndex) {
+        return bit::extract<8, 10>(m_NormBGParams[bgIndex].scrollIncV);
+    }
+
+    FORCE_INLINE void WriteZMYIN(uint16 value, uint32 bgIndex) {
+        bit::deposit_into<8, 10>(m_NormBGParams[bgIndex].scrollIncV, bit::extract<0, 2>(value));
+    }
+
+    FORCE_INLINE uint16 ReadZMYDN(uint32 bgIndex) {
+        return bit::extract<0, 7>(m_NormBGParams[bgIndex].scrollIncV);
+    }
+
+    FORCE_INLINE void WriteZMYDN(uint16 value, uint32 bgIndex) {
+        bit::deposit_into<0, 7>(m_NormBGParams[bgIndex].scrollIncV, bit::extract<8, 15>(value));
+    }
+
     ZMCTL_t ZMCTL;   // 180098   ZMCTL   Reduction Enable
     SCRCTL_t SCRCTL; // 18009A   SCRCTL  Line and Vertical Cell Scroll Control
                      // 18009C   VCSTAU  Vertical Cell Scroll Table Address (upper)

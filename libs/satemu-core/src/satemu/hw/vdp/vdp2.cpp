@@ -32,12 +32,6 @@ void VDP2::Reset(bool hard) {
     MZCTL.u16 = 0x0;
     SFSEL.u16 = 0x0;
     SFCODE.u16 = 0x0;
-    SCN0.u64 = 0x0;
-    ZMN0.u64 = 0x0;
-    SCN1.u64 = 0x0;
-    ZMN1.u64 = 0x0;
-    SCN2.u32 = 0x0;
-    SCN3.u32 = 0x0;
     ZMCTL.u16 = 0x0;
     SCRCTL.u16 = 0x0;
     VCSTA.u32 = 0x0;
@@ -443,34 +437,41 @@ NO_INLINE void VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderCo
     // |57|58|59|60|61|62|63|64|
     // +--+--+--+--+--+--+--+--+
 
-    // TODO: implement scrolling, scaling, rotation, mosaic
-    // - might have to move things around since scaling and rotation will probably rely on incrementing counters
+    // TODO: implement mosaic
 
     const uint32 y = m_VCounter;
+
+    // TODO: precompute fracScrollY at start of frame and increment per Y
+    uint32 fracScrollX = bgParams.scrollAmountH;
+    uint32 fracScrollY = bgParams.scrollAmountV + y * bgParams.scrollIncV;
     for (uint32 x = 0; x < m_HRes; x++) {
-        // Determine plane index from the (x,y) coordinate
-        const uint32 planeX = bit::extract<9>(x) >> bgParams.pageShiftH;
-        const uint32 planeY = bit::extract<9>(y) >> bgParams.pageShiftV;
+        // Get integer scroll screen coordinates
+        const uint32 scrollX = fracScrollX >> 8u;
+        const uint32 scrollY = fracScrollY >> 8u;
+
+        // Determine plane index from the scroll coordinate
+        const uint32 planeX = bit::extract<9>(scrollX) >> bgParams.pageShiftH;
+        const uint32 planeY = bit::extract<9>(scrollY) >> bgParams.pageShiftV;
         const uint32 plane = planeX + planeY * 2u;
 
-        // Determine page index from the (x,y) coordinate
-        const uint32 pageX = bit::extract<9>(x) & bgParams.pageShiftH;
-        const uint32 pageY = bit::extract<9>(y) & bgParams.pageShiftV;
+        // Determine page index from the scroll coordinate
+        const uint32 pageX = bit::extract<9>(scrollX) & bgParams.pageShiftH;
+        const uint32 pageY = bit::extract<9>(scrollY) & bgParams.pageShiftV;
         const uint32 page = pageX + pageY * 2u;
 
-        // Determine character pattern from the (x,y) coordinate
-        const uint32 charPatX = bit::extract<3, 8>(x) >> fourCellChar;
-        const uint32 charPatY = bit::extract<3, 8>(y) >> fourCellChar;
+        // Determine character pattern from the scroll coordinate
+        const uint32 charPatX = bit::extract<3, 8>(scrollX) >> fourCellChar;
+        const uint32 charPatY = bit::extract<3, 8>(scrollY) >> fourCellChar;
         const uint32 charIndex = charPatX + charPatY * (64u >> fourCellChar);
 
-        // Determine cell index from the (x,y) coordinate
-        const uint32 cellX = bit::extract<3>(x) & fourCellChar;
-        const uint32 cellY = bit::extract<3>(y) & fourCellChar;
+        // Determine cell index from the scroll coordinate
+        const uint32 cellX = bit::extract<3>(scrollX) & fourCellChar;
+        const uint32 cellY = bit::extract<3>(scrollY) & fourCellChar;
         const uint32 cellIndex = cellX + cellY * 2u;
 
         // Determine dot coordinates
-        const uint32 dotX = bit::extract<0, 2>(x);
-        const uint32 dotY = bit::extract<0, 2>(y);
+        const uint32 dotX = bit::extract<0, 2>(scrollX);
+        const uint32 dotY = bit::extract<0, 2>(scrollY);
 
         // Fetch character
         const uint32 pageBaseAddress = bgParams.pageBaseAddresses[plane];
@@ -486,6 +487,9 @@ NO_INLINE void VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderCo
         // TODO: priority handling
         // TODO: special color handling
         rctx.framebuffer[x + y * m_HRes] = color;
+
+        // Increment horizontal coordinate
+        fracScrollX += bgParams.scrollIncH;
     }
 }
 

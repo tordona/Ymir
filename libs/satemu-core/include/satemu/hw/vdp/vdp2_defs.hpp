@@ -61,6 +61,12 @@ struct BGParams {
         bitmapSizeH = 512;
         bitmapSizeV = 256;
 
+        scrollAmountH = 0;
+        scrollAmountV = 0;
+
+        scrollIncH = 1u << 8u;
+        scrollIncV = 1u << 8u;
+
         mapIndices.fill(0);
         pageBaseAddresses.fill(0);
         bitmapBaseAddress = 0;
@@ -109,6 +115,19 @@ struct BGParams {
 
     uint32 bitmapSizeH; // Horizontal bitmap dots, derived from CHCTLA/CHCTLB.xxBMSZ
     uint32 bitmapSizeV; // Vertical bitmap dots, derived from CHCTLA/CHCTLB.xxBMSZ
+
+    // Screen scroll amount, in 11.8 fixed-point format.
+    // Used in scroll NBGs.
+    // Scroll amounts for NBGs 2 and 3 do not have a fractional part, but the values are still stored with 8 fractional
+    // bits here for consistency and ease of implementation.
+    uint32 scrollAmountH; // Horizontal scroll amount with 8 fractional bits, derived from SCXINn and SCXDNn
+    uint32 scrollAmountV; // Vertical scroll amount with 8 fractional bits, derived from SCYINn and SCYDNn
+
+    // Screen scroll increment per pixel, in 11.8 fixed-point format.
+    // NBGs 2 and 3 do not have increment registers; they always increment each coordinate by 1.0, which is stored here
+    // for consistency and ease of implementation.
+    uint32 scrollIncH; // Horizontal scroll increment with 8 fractional bits, derived from ZMXINn and ZMXDNn
+    uint32 scrollIncV; // Vertical scroll increment with 8 fractional bits, derived from ZMYINn and ZMYDNn
 
     // Indices for NBG planes A-D, derived from MPOFN and MPABN0-MPCDN3.
     // Indices for RBG planes A-P, derived from MPOFR and MPABRA-MPOPRB.
@@ -518,147 +537,6 @@ union SFCODE_t {
     struct {
         uint8 SFCDBn;
         uint8 SFCDAn;
-    };
-};
-
-// 180070   SCXIN0  NBG0 Horizontal Screen Scroll Value (integer part)
-// 180072   SCXDN0  NBG0 Horizontal Screen Scroll Value (fractional part)
-// 180074   SCYIN0  NBG0 Vertical Screen Scroll Value (integer part)
-// 180076   SCYDN0  NBG0 Vertical Screen Scroll Value (fractional part)
-// 180080   SCXIN1  NBG1 Horizontal Screen Scroll Value (integer part)
-// 180082   SCXDN1  NBG1 Horizontal Screen Scroll Value (fractional part)
-// 180084   SCYIN1  NBG1 Vertical Screen Scroll Value (integer part)
-// 180086   SCYDN1  NBG1 Vertical Screen Scroll Value (fractional part)
-//
-// SCdINx:  (d=X,Y; x=0,1)
-//   bits   r/w  code          description
-//  15-11        -             Reserved, must be zero
-//   10-0     W  NxSCdI10-0    Horizontal/Vertical Screen Scroll Value (integer part)
-//
-// SCdDNx:  (d=X,Y; x=0,1)
-//   bits   r/w  code          description
-//   15-8     W  NxSCdD1-8     Horizontal/Vertical Screen Scroll Value (fractional part)
-//    7-0        -             Reserved, must be zero
-union SCXYID_t {
-    uint64 u64;
-    struct {
-        struct {
-            union {
-                uint16 u16;
-                struct {
-                    uint16 NSCXI : 11;
-                    uint16 _rsvd11_15 : 5;
-                };
-            } I;
-            union {
-                uint16 u16;
-                struct {
-                    uint16 _rsvd0_7 : 8;
-                    uint16 NSCXD : 8;
-                };
-            } D;
-        } X;
-        struct {
-            union {
-                uint16 u16;
-                struct {
-                    uint16 NSCYI : 11;
-                    uint16 _rsvd11_15 : 5;
-                };
-            } I;
-            union {
-                uint16 u16;
-                struct {
-                    uint16 _rsvd0_7 : 8;
-                    uint16 NSCYD : 8;
-                };
-            } D;
-        } Y;
-    };
-};
-
-// 180078   ZMXIN0  NBG0 Horizontal Coordinate Increment (integer part)
-// 18007A   ZMXDN0  NBG0 Horizontal Coordinate Increment (fractional part)
-// 18007C   ZMYIN0  NBG0 Vertical Coordinate Increment (integer part)
-// 18007E   ZMYDN0  NBG0 Vertical Coordinate Increment (fractional part)
-// 180088   ZMXIN1  NBG1 Horizontal Coordinate Increment (integer part)
-// 18008A   ZMXDN1  NBG1 Horizontal Coordinate Increment (fractional part)
-// 18008C   ZMYIN1  NBG1 Vertical Coordinate Increment (integer part)
-// 18008E   ZMYDN1  NBG1 Vertical Coordinate Increment (fractional part)
-//
-// ZMdINx:  (d=X,Y; x=0,1)
-//   bits   r/w  code          description
-//   15-3        -             Reserved, must be zero
-//    2-0     W  NxZMdI2-0     Horizontal/Vertical Coordinate Increment (integer part)
-//
-// ZMdDNx:  (d=X,Y; x=0,1)
-//   bits   r/w  code          description
-//   15-8     W  NxZMdD1-8     Horizontal/Vertical Coordinate Increment (fractional part)
-//    7-0        -             Reserved, must be zero
-union ZMXYID_t {
-    uint64 u64;
-    struct {
-        struct {
-            union {
-                uint16 u16;
-                struct {
-                    uint16 NZMXI : 3;
-                    uint16 _rsvd11_15 : 13;
-                };
-            } I;
-            union {
-                uint16 u16;
-                struct {
-                    uint16 _rsvd0_7 : 8;
-                    uint16 NZMXD : 8;
-                };
-            } D;
-        } X;
-        struct {
-            union {
-                uint16 u16;
-                struct {
-                    uint16 NZMYI : 3;
-                    uint16 _rsvd11_15 : 13;
-                };
-            } I;
-            union {
-                uint16 u16;
-                struct {
-                    uint16 _rsvd0_7 : 8;
-                    uint16 NZMYD : 8;
-                };
-            } D;
-        } Y;
-    };
-};
-
-// 180090   SCXN2   NBG2 Horizontal Screen Scroll Value
-// 180092   SCYN2   NBG2 Vertical Screen Scroll Value
-// 180094   SCXN3   NBG3 Horizontal Screen Scroll Value
-// 180096   SCYN3   NBG3 Vertical Screen Scroll Value
-//
-// SCdNx:  (d=X,Y; x=2,3)
-//   bits   r/w  code          description
-//  15-11        -             Reserved, must be zero
-//   10-0     W  NxSCd10-0     Horizontal/Vertical Screen Scroll Value (integer)
-union SCXY_t {
-    uint32 u32;
-    struct {
-        union {
-            uint16 u16;
-            struct {
-                uint16 NSCX : 11;
-                uint16 _rsvd11_15 : 5;
-            };
-        } X;
-        union {
-            uint16 u16;
-            struct {
-                uint16 NSCY : 11;
-                uint16 _rsvd11_15 : 5;
-            };
-        } Y;
     };
 };
 
