@@ -54,6 +54,8 @@ struct BGParams {
         transparent = false;
         bitmap = false;
 
+        priorityNumber = 0;
+
         cellSizeShift = 0;
 
         pageShiftH = 0;
@@ -102,6 +104,10 @@ struct BGParams {
     // Whether the background uses cells (false) or a bitmap (true).
     // Derived CHCTLA/CHCTLB.xxBMEN
     bool bitmap;
+
+    // Priority number from 0 (transparent) to 7 (highest).
+    // Derived from PRINA/PRINB/PRIR.xxPRINn
+    uint8 priorityNumber;
 
     // Cell size shift corresponding to the dimensions of a character pattern (0=1x1, 1=2x2).
     // Derived from CHCTLA/CHCTLB.xxCHSZ
@@ -1354,28 +1360,6 @@ union SFCCMD_t {
 //   10-8     W  S7PRIN2-0     Sprite 7 Priority Number
 //    7-3        -             Reserved, must be zero
 //    2-0     W  S6PRIN2-0     Sprite 6 Priority Number
-//
-// 1800F8   PRINA   NBG0 and NBG1 Priority Number
-//
-//   bits   r/w  code          description
-//  15-11        -             Reserved, must be zero
-//   10-8     W  N1PRIN2-0     NBG1 Priority Number
-//    7-3        -             Reserved, must be zero
-//    2-0     W  N0PRIN2-0     NBG0 Priority Number
-//
-// 1800FA   PRINB   NBG2 and NBG3 Priority Number
-//
-//   bits   r/w  code          description
-//  15-11        -             Reserved, must be zero
-//   10-8     W  N3PRIN2-0     NBG3 Priority Number
-//    7-3        -             Reserved, must be zero
-//    2-0     W  N2PRIN2-0     NBG2 Priority Number
-//
-// 1800FC   PRIR    RBG0 Priority Number
-//
-//   bits   r/w  code          description
-//   15-3        -             Reserved, must be zero
-//    2-0     W  R0PRIN2-0     RBG0 Priority Number
 union PRI_t {
     uint16 u16;
     struct {

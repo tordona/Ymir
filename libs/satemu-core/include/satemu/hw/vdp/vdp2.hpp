@@ -189,9 +189,9 @@ public:
         case 0x0F2: return PRISB.u16;     // write-only?
         case 0x0F4: return PRISC.u16;     // write-only?
         case 0x0F6: return PRISD.u16;     // write-only?
-        case 0x0F8: return PRINA.u16;     // write-only?
-        case 0x0FA: return PRINB.u16;     // write-only?
-        case 0x0FC: return PRIR.u16;      // write-only?
+        case 0x0F8: return ReadPRINA();   // write-only?
+        case 0x0FA: return ReadPRINB();   // write-only?
+        case 0x0FC: return ReadPRIR();    // write-only?
         case 0x100: return CCRSA.u16;     // write-only?
         case 0x102: return CCRSB.u16;     // write-only?
         case 0x104: return CCRSC.u16;     // write-only?
@@ -341,9 +341,9 @@ public:
         case 0x0F2: PRISB.u16 = value & 0x0707; break;
         case 0x0F4: PRISC.u16 = value & 0x0707; break;
         case 0x0F6: PRISD.u16 = value & 0x0707; break;
-        case 0x0F8: PRINA.u16 = value & 0x0707; break;
-        case 0x0FA: PRINB.u16 = value & 0x0707; break;
-        case 0x0FC: PRIR.u16 = value & 0x0007; break;
+        case 0x0F8: WritePRINA(value); break;
+        case 0x0FA: WritePRINB(value); break;
+        case 0x0FC: WritePRIR(value); break;
         case 0x100: CCRSA.u16 = value & 0x1F1F; break;
         case 0x102: CCRSB.u16 = value & 0x1F1F; break;
         case 0x104: CCRSC.u16 = value & 0x1F1F; break;
@@ -1088,13 +1088,6 @@ private:
         m_NormBGParams[2].caos = bit::extract<8, 10>(value);
         m_NormBGParams[3].caos = bit::extract<12, 14>(value);
         m_RotBGParams[0].caos = m_NormBGParams[0].caos;
-
-        /*const uint32 cramShift = RAMCTL.CRMDn == 1 ? 10 : 9;
-        m_NormBGParams[0].cramOffset = m_NormBGParams[0].caos << cramShift;
-        m_NormBGParams[1].cramOffset = m_NormBGParams[1].caos << cramShift;
-        m_NormBGParams[2].cramOffset = m_NormBGParams[2].caos << cramShift;
-        m_NormBGParams[3].cramOffset = m_NormBGParams[3].caos << cramShift;
-        m_RotBGParams[0].cramOffset = m_NormBGParams[0].cramOffset;*/
     }
 
     // 1800E6   CRAOFB  RBG0 and Sprite Color RAM Address Offset
@@ -1117,11 +1110,6 @@ private:
         m_RotBGParams[0].caos = bit::extract<0, 2>(value);
         // TODO: SPCAOSn
         // ?m_SpriteParams?.caos = bit::extract<4, 6>(value);
-
-        /*const uint32 cramShift = RAMCTL.CRMDn == 1 ? 10 : 9;
-        m_RotBGParams[0].cramOffset = m_RotBGParams[0].caos << cramShift;
-        // TODO: SPCAOSn
-        // ?m_SpriteParams?.cramOffset = ?m_SpriteParams?.caos << cramShift;*/
     }
 
     LNCLEN_t LNCLEN; // 1800E8   LNCLEN  Line Color Screen Enable
@@ -1132,10 +1120,66 @@ private:
     PRI_t PRISB;     // 1800F2   PRISB   Sprite 2 and 3 Priority Number
     PRI_t PRISC;     // 1800F4   PRISC   Sprite 4 and 5 Priority Number
     PRI_t PRISD;     // 1800F6   PRISD   Sprite 6 and 7 Priority Number
-    PRI_t PRINA;     // 1800F8   PRINA   NBG0 and NBG1 Priority Number
-    PRI_t PRINB;     // 1800FA   PRINB   NBG2 and NBG3 Priority Number
-    PRI_t PRIR;      // 1800FC   PRIR    RBG0 Priority Number
-                     // 1800FE   -       Reserved
+
+    // 1800F8   PRINA   NBG0 and NBG1 Priority Number
+    //
+    //   bits   r/w  code          description
+    //  15-11        -             Reserved, must be zero
+    //   10-8     W  N1PRIN2-0     NBG1 Priority Number
+    //    7-3        -             Reserved, must be zero
+    //    2-0     W  N0PRIN2-0     NBG0/RBG1 Priority Number
+
+    FORCE_INLINE uint16 ReadPRINA() {
+        uint16 value = 0;
+        bit::deposit_into<0, 2>(value, m_NormBGParams[0].priorityNumber);
+        bit::deposit_into<8, 10>(value, m_NormBGParams[1].priorityNumber);
+        return value;
+    }
+
+    void WritePRINA(uint16 value) {
+        m_NormBGParams[0].priorityNumber = bit::extract<0, 2>(value);
+        m_NormBGParams[1].priorityNumber = bit::extract<8, 10>(value);
+        m_RotBGParams[1].priorityNumber = m_NormBGParams[0].priorityNumber;
+    }
+
+    // 1800FA   PRINB   NBG2 and NBG3 Priority Number
+    //
+    //   bits   r/w  code          description
+    //  15-11        -             Reserved, must be zero
+    //   10-8     W  N3PRIN2-0     NBG3 Priority Number
+    //    7-3        -             Reserved, must be zero
+    //    2-0     W  N2PRIN2-0     NBG2 Priority Number
+
+    FORCE_INLINE uint16 ReadPRINB() {
+        uint16 value = 0;
+        bit::deposit_into<0, 2>(value, m_NormBGParams[2].priorityNumber);
+        bit::deposit_into<8, 10>(value, m_NormBGParams[3].priorityNumber);
+        return value;
+    }
+
+    void WritePRINB(uint16 value) {
+        m_NormBGParams[2].priorityNumber = bit::extract<0, 2>(value);
+        m_NormBGParams[3].priorityNumber = bit::extract<8, 10>(value);
+    }
+
+    // 1800FC   PRIR    RBG0 Priority Number
+    //
+    //   bits   r/w  code          description
+    //   15-3        -             Reserved, must be zero
+    //    2-0     W  R0PRIN2-0     RBG0 Priority Number
+
+    FORCE_INLINE uint16 ReadPRIR() {
+        uint16 value = 0;
+        bit::deposit_into<0, 2>(value, m_RotBGParams[0].priorityNumber);
+        return value;
+    }
+
+    void WritePRIR(uint16 value) {
+        m_RotBGParams[0].priorityNumber = bit::extract<0, 2>(value);
+    }
+
+    // 1800FE   -       Reserved
+
     CCRS_t CCRSA;    // 180100   CCRSA   Sprite 0 and 1 Color Calculation Ratio
     CCRS_t CCRSB;    // 180102   CCRSB   Sprite 2 and 3 Color Calculation Ratio
     CCRS_t CCRSC;    // 180104   CCRSC   Sprite 4 and 5 Color Calculation Ratio

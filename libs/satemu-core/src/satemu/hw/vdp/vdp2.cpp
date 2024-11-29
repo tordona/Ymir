@@ -60,9 +60,6 @@ void VDP2::Reset(bool hard) {
     PRISB.u16 = 0x0;
     PRISC.u16 = 0x0;
     PRISD.u16 = 0x0;
-    PRINA.u16 = 0x0;
-    PRINB.u16 = 0x0;
-    PRIR.u16 = 0x0;
     CCRSA.u16 = 0x0;
     CCRSB.u16 = 0x0;
     CCRSC.u16 = 0x0;
