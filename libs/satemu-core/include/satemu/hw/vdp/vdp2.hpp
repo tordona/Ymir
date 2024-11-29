@@ -182,7 +182,7 @@ public:
         case 0x0E4: return ReadCRAOFA();  // write-only?
         case 0x0E6: return ReadCRAOFB();  // write-only?
         case 0x0E8: return LNCLEN.u16;    // write-only?
-        case 0x0EA: return SFPRMD.u16;    // write-only?
+        case 0x0EA: return ReadSFPRMD();  // write-only?
         case 0x0EC: return CCCTL.u16;     // write-only?
         case 0x0EE: return SFCCMD.u16;    // write-only?
         case 0x0F0: return PRISA.u16;     // write-only?
@@ -334,7 +334,7 @@ public:
         case 0x0E4: WriteCRAOFA(value); break;
         case 0x0E6: WriteCRAOFB(value); break;
         case 0x0E8: LNCLEN.u16 = value & 0x003F; break;
-        case 0x0EA: SFPRMD.u16 = value & 0x03FF; break;
+        case 0x0EA: WriteSFPRMD(value); break;
         case 0x0EC: CCCTL.u16 = value & 0xF77F; break;
         case 0x0EE: SFCCMD.u16 = value & 0x03FF; break;
         case 0x0F0: PRISA.u16 = value & 0x0707; break;
@@ -1113,7 +1113,42 @@ private:
     }
 
     LNCLEN_t LNCLEN; // 1800E8   LNCLEN  Line Color Screen Enable
-    SFPRMD_t SFPRMD; // 1800EA   SFPRMD  Special Priority Mode
+
+    // 1800EA   SFPRMD  Special Priority Mode
+    //
+    //   bits   r/w  code          description
+    //  15-10        -             Reserved, must be zero
+    //    9-8     W  R0SPRM1-0     RBG0 Special Priority Mode
+    //    7-6     W  N3SPRM1-0     NBG3 Special Priority Mode
+    //    5-4     W  N2SPRM1-0     NBG2 Special Priority Mode
+    //    3-2     W  N1SPRM1-0     NBG1/EXBG Special Priority Mode
+    //    1-0     W  N0SPRM1-0     NBG0/RBG1 Special Priority Mode
+    //
+    // For all parameters, use LSB of priority number:
+    //   00 (0) = per screen
+    //   01 (1) = per character
+    //   10 (2) = per pixel
+    //   11 (3) = (forbidden)
+
+    FORCE_INLINE uint16 ReadSFPRMD() {
+        uint16 value = 0;
+        bit::deposit_into<0, 1>(value, static_cast<uint32>(m_NormBGParams[0].priorityMode));
+        bit::deposit_into<2, 3>(value, static_cast<uint32>(m_NormBGParams[1].priorityMode));
+        bit::deposit_into<4, 5>(value, static_cast<uint32>(m_NormBGParams[2].priorityMode));
+        bit::deposit_into<6, 7>(value, static_cast<uint32>(m_NormBGParams[3].priorityMode));
+        bit::deposit_into<8, 9>(value, static_cast<uint32>(m_RotBGParams[0].priorityMode));
+        return value;
+    }
+
+    FORCE_INLINE void WriteSFPRMD(uint16 value) {
+        m_NormBGParams[0].priorityMode = static_cast<PriorityMode>(bit::extract<0, 1>(value));
+        m_NormBGParams[1].priorityMode = static_cast<PriorityMode>(bit::extract<2, 3>(value));
+        m_NormBGParams[2].priorityMode = static_cast<PriorityMode>(bit::extract<4, 5>(value));
+        m_NormBGParams[3].priorityMode = static_cast<PriorityMode>(bit::extract<6, 7>(value));
+        m_RotBGParams[0].priorityMode = static_cast<PriorityMode>(bit::extract<8, 9>(value));
+        m_RotBGParams[1].priorityMode = m_NormBGParams[0].priorityMode;
+    }
+
     CCCTL_t CCCTL;   // 1800EC   CCCTL   Color Calculation Control
     SFCCMD_t SFCCMD; // 1800EE   SFCCMD  Special Color Calculation Mode
     PRI_t PRISA;     // 1800F0   PRISA   Sprite 0 and 1 Priority Number
@@ -1332,7 +1367,7 @@ private:
     // wideChar indicates if the flip bits are available (false) or used to extend the character number (true).
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
-    template <bool twoWordChar, bool fourCellChar, bool wideChar, uint32 colorFormat, uint32 colorMode>
+    template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
     void DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx);
 
     // Draws a normal bitmap BG scanline.
@@ -1340,7 +1375,7 @@ private:
     // rctx contains additional context for the renderer.
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
-    template <uint32 colorFormat, uint32 colorMode>
+    template <ColorFormat colorFormat, uint32 colorMode>
     void DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderContext &rctx);
 
     // Fetches a two-word character from VRAM.
@@ -1364,7 +1399,7 @@ private:
     // cellIndex is the index of the cell in the character pattern, ranging from 0 to 3.
     // colorFormat is the value of CHCTLA/CHCTLB.xxCHCNn.
     // colorMode is the CRAM color mode.
-    template <uint32 colorFormat, uint32 colorMode>
+    template <ColorFormat colorFormat, uint32 colorMode>
     vdp::Color888 FetchCharacterColor(uint32 cramOffset, Character ch, uint8 dotX, uint8 dotY, uint32 cellIndex);
 
     // Fetches a color from a bitmap pixel.
@@ -1373,7 +1408,7 @@ private:
     // dotX and dotY specify the coordinates of the pixel within the bitmap.
     // colorFormat is the color format for pixel data.
     // colorMode is the CRAM color mode.
-    template <uint32 colorFormat, uint32 colorMode>
+    template <ColorFormat colorFormat, uint32 colorMode>
     vdp::Color888 FetchBitmapColor(const NormBGParams &bgParams, uint32 cramOffset, uint8 dotX, uint8 dotY);
 
     // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
