@@ -336,11 +336,16 @@ void VDP2::DrawLine() {
         return arr;
     }();
 
+    // TODO: request framebuffer from frontend
+    static Color888 fb[704 * 480];
+
     // Draw normal BGs
     for (const auto &bg : m_NormBGParams) {
         if (bg.enabled) {
             BGRenderContext rctx{};
             rctx.cramOffset = bg.caos << (RAMCTL.CRMDn == 1 ? 10 : 9);
+            rctx.framebuffer = fb;
+
             const uint32 colorFormat = static_cast<uint32>(bg.colorFormat);
             const uint32 colorMode = RAMCTL.CRMDn;
             if (bg.bitmap) {
@@ -359,6 +364,8 @@ void VDP2::DrawLine() {
         if (bg.enabled) {
             BGRenderContext rctx{};
             rctx.cramOffset = bg.caos << (RAMCTL.CRMDn == 1 ? 10 : 9);
+            rctx.framebuffer = fb;
+
             // TODO: implement
             if (bg.bitmap) {
                 // TODO: draw bitmap RBG
@@ -478,7 +485,7 @@ NO_INLINE void VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderCo
         Color888 color = FetchCharacterColor<colorFormat, colorMode>(rctx.cramOffset, ch, dotX, dotY, cellIndex);
         // TODO: priority handling
         // TODO: special color handling
-        // framebuffer[x][y] = color;
+        rctx.framebuffer[x + y * m_HRes] = color;
     }
 }
 
@@ -492,7 +499,7 @@ NO_INLINE void VDP2::DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderCo
         Color888 color = FetchBitmapColor<colorFormat, colorMode>(bgParams, rctx.cramOffset, x, y);
         // TODO: priority handling
         // TODO: special color handling
-        // framebuffer[x][y] = color;
+        rctx.framebuffer[x + y * m_HRes] = color;
     }
 }
 

@@ -1180,7 +1180,9 @@ private:
         // CRAM base offset for color fetching.
         // Derived from RAMCTL.CRMDn and CRAOFA/CRAOFB.xxCAOSn
         uint32 cramOffset;
-        // = bgParams->caos << (RAMCTL.CRMDn == 1 ? 10 : 9);
+
+        // Pointer to framebuffer matching the current screen resolution.
+        vdp::Color888 *framebuffer;
     };
 
     // Draws the scanline at m_VCounter.
