@@ -495,15 +495,24 @@ NO_INLINE void VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderCo
 
 template <uint32 colorFormat, uint32 colorMode>
 NO_INLINE void VDP2::DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderContext &rctx) {
-    // TODO: implement scrolling, scaling, rotation, mosaic
-    // - might have to move things around since scaling and rotation will probably rely on incrementing counters
-
     const uint32 y = m_VCounter;
+
+    // TODO: precompute fracScrollY at start of frame and increment per Y
+    uint32 fracScrollX = bgParams.scrollAmountH;
+    uint32 fracScrollY = bgParams.scrollAmountV + y * bgParams.scrollIncV;
+
     for (uint32 x = 0; x < m_HRes; x++) {
-        Color888 color = FetchBitmapColor<colorFormat, colorMode>(bgParams, rctx.cramOffset, x, y);
+        // Get integer scroll screen coordinates
+        const uint32 scrollX = fracScrollX >> 8u;
+        const uint32 scrollY = fracScrollY >> 8u;
+
+        Color888 color = FetchBitmapColor<colorFormat, colorMode>(bgParams, rctx.cramOffset, scrollX, scrollY);
         // TODO: priority handling
         // TODO: special color handling
         rctx.framebuffer[x + y * m_HRes] = color;
+
+        // Increment horizontal coordinate
+        fracScrollX += bgParams.scrollIncH;
     }
 }
 
