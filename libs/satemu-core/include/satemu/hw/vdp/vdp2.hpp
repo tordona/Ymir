@@ -777,6 +777,12 @@ private:
             bit::deposit_into<6, 8>(m_NormBGParams[2].mapIndices[i], bit::extract<8, 10>(value));
             bit::deposit_into<6, 8>(m_NormBGParams[3].mapIndices[i], bit::extract<12, 14>(value));
         }
+        // shift by 17 is the same as multiply by 0x20000, which is the boundary for bitmap data
+        m_NormBGParams[0].bitmapBaseAddress = bit::extract<0, 2>(value) << 17u;
+        m_NormBGParams[1].bitmapBaseAddress = bit::extract<4, 6>(value) << 17u;
+        m_NormBGParams[2].bitmapBaseAddress = bit::extract<8, 10>(value) << 17u;
+        m_NormBGParams[3].bitmapBaseAddress = bit::extract<12, 14>(value) << 17u;
+
         for (auto &bg : m_NormBGParams) {
             bg.UpdatePageBaseAddresses();
         }
@@ -802,6 +808,10 @@ private:
             bit::deposit_into<6, 8>(m_RotBGParams[0].mapIndices[i], bit::extract<0, 2>(value));
             bit::deposit_into<6, 8>(m_RotBGParams[1].mapIndices[i], bit::extract<4, 6>(value));
         }
+        // shift by 17 is the same as multiply by 0x20000, which is the boundary for bitmap data
+        m_RotBGParams[0].bitmapBaseAddress = bit::extract<0, 2>(value) << 17u;
+        m_RotBGParams[1].bitmapBaseAddress = bit::extract<4, 6>(value) << 17u;
+
         for (auto &bg : m_RotBGParams) {
             bg.UpdatePageBaseAddresses();
         }
@@ -1187,6 +1197,14 @@ private:
     template <bool twoWordChar, bool fourCellChar, bool wideChar, uint32 colorFormat, uint32 colorMode>
     void DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx);
 
+    // Draws a normal bitmap BG scanline.
+    // bgParams contains the parameters for the BG to draw.
+    // rctx contains additional context for the renderer.
+    // colorFormat is the color format for bitmap data.
+    // colorMode is the CRAM color mode.
+    template <uint32 colorFormat, uint32 colorMode>
+    void DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderContext &rctx);
+
     // Fetches a two-word character from VRAM.
     // pageBaseAddress specifies the base address of the page of character patterns.
     // charIndex is the index of the character to fetch.
@@ -1206,15 +1224,24 @@ private:
     // ch contains character parameters.
     // dotX and dotY specify the coordinates of the pixel within the cell, both ranging from 0 to 7.
     // cellIndex is the index of the cell in the character pattern, ranging from 0 to 3.
-    // chcn is the value of CHCTLA/CHCTLB.xxCHCNn.
-    // crmd is the value of RAMCTL.CRMDn.
+    // colorFormat is the value of CHCTLA/CHCTLB.xxCHCNn.
+    // colorMode is the CRAM color mode.
     template <uint32 colorFormat, uint32 colorMode>
-    vdp::Color888 FetchColor(uint32 cramOffset, Character ch, uint8 dotX, uint8 dotY, uint32 cellIndex);
+    vdp::Color888 FetchCharacterColor(uint32 cramOffset, Character ch, uint8 dotX, uint8 dotY, uint32 cellIndex);
+
+    // Fetches a color from a bitmap pixel.
+    // bgParams contains the bitmap parameters.
+    // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
+    // dotX and dotY specify the coordinates of the pixel within the bitmap.
+    // colorFormat is the color format for pixel data.
+    // colorMode is the CRAM color mode.
+    template <uint32 colorFormat, uint32 colorMode>
+    vdp::Color888 FetchBitmapColor(const NormBGParams &bgParams, uint32 cramOffset, uint8 dotX, uint8 dotY);
 
     // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
     // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
     // colorIndex specifies the color index.
-    // crmd is the value of RAMCTL.CRMDn.
+    // colorMode is the CRAM color mode.
     template <uint32 colorMode>
     vdp::Color888 FetchCRAMColor(uint32 cramOffset, uint32 colorIndex);
 

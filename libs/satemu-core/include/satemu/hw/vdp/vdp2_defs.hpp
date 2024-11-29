@@ -63,6 +63,7 @@ struct BGParams {
 
         mapIndices.fill(0);
         pageBaseAddresses.fill(0);
+        bitmapBaseAddress = 0;
 
         colorFormat = ColorFormat::Palette16;
         screenOverProcess = ScreenOverProcess::Repeat;
@@ -110,12 +111,16 @@ struct BGParams {
     uint32 bitmapSizeV; // Vertical bitmap dots, derived from CHCTLA/CHCTLB.xxBMSZ
 
     // Indices for NBG planes A-D, derived from MPOFN and MPABN0-MPCDN3.
-    // Indices for RBG planes A-P, derived from MPOFNR and MPABRA-MPOPRB.
+    // Indices for RBG planes A-P, derived from MPOFR and MPABRA-MPOPRB.
     std::array<uint16, rot ? 16 : 4> mapIndices;
 
     // Page base addresses for NBG planes A-D or RBG planes A-P.
     // Derived from mapIndices, CHCTLA/CHCTLB.xxCHSZ, PNCNn/PNCR.xxPNB and PLSZ.xxPLSZn
     std::array<uint32, rot ? 16 : 4> pageBaseAddresses;
+
+    // Base address of bitmap data.
+    // Derived from MPOFN/MPOFR
+    uint32 bitmapBaseAddress;
 
     // Character color format.
     // Derived from CHCTLA/CHCTLB.xxCHCNn
