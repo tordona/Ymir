@@ -1469,6 +1469,10 @@ private:
         // Derived from RAMCTL.CRMDn and CRAOFA/CRAOFB.xxCAOSn
         uint32 cramOffset;
 
+        // Bits 3-1 of the color data retrieved from VRAM per pixel.
+        // Used by special priority function.
+        std::array<uint8, 704> colorData;
+
         // Colors per pixel
         std::array<vdp::Color888, 704> colors;
 
@@ -1517,13 +1521,16 @@ private:
     Character FetchOneWordCharacter(const NormBGParams &bgParams, uint32 pageBaseAddress, uint32 charIndex);
 
     // Fetches a color from a pixel in the specified cell in a 2x2 character pattern.
+    // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
+    // colorData is an output variable where bits 3-1 of the palette color data from VRAM is stored.
     // ch contains character parameters.
     // dotX and dotY specify the coordinates of the pixel within the cell, both ranging from 0 to 7.
     // cellIndex is the index of the cell in the character pattern, ranging from 0 to 3.
     // colorFormat is the value of CHCTLA/CHCTLB.xxCHCNn.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    vdp::Color888 FetchCharacterColor(uint32 cramOffset, Character ch, uint8 dotX, uint8 dotY, uint32 cellIndex);
+    vdp::Color888 FetchCharacterColor(uint32 cramOffset, uint8 &colorData, Character ch, uint8 dotX, uint8 dotY,
+                                      uint32 cellIndex);
 
     // Fetches a color from a bitmap pixel.
     // bgParams contains the bitmap parameters.

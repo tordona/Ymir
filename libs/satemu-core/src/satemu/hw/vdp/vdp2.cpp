@@ -452,6 +452,8 @@ NO_INLINE void VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderCo
     // |57|58|59|60|61|62|63|64|
     // +--+--+--+--+--+--+--+--+
 
+    const auto &specialFunctionCodes = m_specialFunctionCodes[bgParams.specialFunctionSelect];
+
     // TODO: implement mosaic
 
     const uint32 y = m_VCounter;
@@ -498,7 +500,8 @@ NO_INLINE void VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderCo
                         : FetchOneWordCharacter<fourCellChar, largePalette, wideChar>(bgParams, pageAddress, charIndex);
 
         // Fetch dot color using character data
-        rctx.colors[x] = FetchCharacterColor<colorFormat, colorMode>(rctx.cramOffset, ch, dotX, dotY, cellIndex);
+        rctx.colors[x] =
+            FetchCharacterColor<colorFormat, colorMode>(rctx.cramOffset, rctx.colorData[x], ch, dotX, dotY, cellIndex);
 
         // Compute priority
         rctx.priorities[x] = bgParams.priorityNumber;
@@ -508,11 +511,8 @@ NO_INLINE void VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderCo
         } else if (bgParams.priorityMode == PriorityMode::PerDot) {
             if constexpr (colorFormat == ColorFormat::Palette16 || colorFormat == ColorFormat::Palette256 ||
                           colorFormat == ColorFormat::Palette2048) {
-                // TODO: get palette color data properly
-                const uint16 colorData = 0x3; // bits 3-1 of dotData
-
                 rctx.priorities[x] &= ~1;
-                if (ch.specPriority && m_specialFunctionCodes[bgParams.specialFunctionSelect].colorMatches[colorData]) {
+                if (ch.specPriority && specialFunctionCodes.colorMatches[rctx.colorData[x]]) {
                     rctx.priorities[x] |= 1;
                 }
             }
@@ -541,17 +541,9 @@ NO_INLINE void VDP2::DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderCo
 
         // Compute priority
         rctx.priorities[x] = bgParams.priorityNumber;
-        if constexpr (colorFormat == ColorFormat::Palette16 || colorFormat == ColorFormat::Palette256 ||
-                      colorFormat == ColorFormat::Palette2048) {
-            if (bgParams.priorityMode == PriorityMode::PerDot) {
-                // TODO: get palette color data properly
-                const uint16 colorData = 0x3; // bits 3-1 of dotData
-
-                rctx.priorities[x] &= ~1;
-                if (m_specialFunctionCodes[bgParams.specialFunctionSelect].colorMatches[colorData]) {
-                    rctx.priorities[x] |= 1;
-                }
-            }
+        if (bgParams.priorityMode == PriorityMode::PerCharacter || bgParams.priorityMode == PriorityMode::PerDot) {
+            rctx.priorities[x] &= ~1;
+            rctx.priorities[x] |= bgParams.supplBitmapSpecialPriority;
         }
 
         // Increment horizontal coordinate
@@ -626,8 +618,8 @@ FORCE_INLINE VDP2::Character VDP2::FetchOneWordCharacter(const NormBGParams &bgP
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-FORCE_INLINE vdp::Color888 VDP2::FetchCharacterColor(uint32 cramOffset, Character ch, uint8 dotX, uint8 dotY,
-                                                     uint32 cellIndex) {
+FORCE_INLINE vdp::Color888 VDP2::FetchCharacterColor(uint32 cramOffset, uint8 &colorData, Character ch, uint8 dotX,
+                                                     uint8 dotY, uint32 cellIndex) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
     assert(dotX < 8);
     assert(dotY < 8);
@@ -641,16 +633,19 @@ FORCE_INLINE vdp::Color888 VDP2::FetchCharacterColor(uint32 cramOffset, Characte
         const uint32 dotAddress = dotBaseAddress >> 1u;
         const uint8 dotData = (m_VRAM[dotAddress & 0x7FFFF] >> ((dotX & 1) * 4)) & 0xF;
         const uint32 colorIndex = (ch.palNum << 4u) | dotData;
+        colorData = bit::extract<1, 3>(dotData);
         return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = dotBaseAddress;
         const uint8 dotData = m_VRAM[dotAddress & 0x7FFFF];
         const uint32 colorIndex = ((ch.palNum & 0x70) << 4u) | dotData;
+        colorData = bit::extract<1, 3>(dotData);
         return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
         const uint16 dotData = util::ReadBE<uint16>(&m_VRAM[dotAddress & 0x7FFFF]);
         const uint32 colorIndex = dotData & 0x7FF;
+        colorData = bit::extract<1, 3>(dotData);
         return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
