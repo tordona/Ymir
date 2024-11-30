@@ -12,7 +12,7 @@ constexpr size_t kVDP2VRAMSize = 512_KiB;
 constexpr size_t kCRAMSize = 4_KiB;
 
 // Character color formats
-enum class ColorFormat {
+enum class ColorFormat : uint8 {
     Palette16,
     Palette256,
     Palette2048,
@@ -21,7 +21,7 @@ enum class ColorFormat {
 };
 
 // Rotation BG screen-over process
-enum class ScreenOverProcess {
+enum class ScreenOverProcess : uint8 {
     Repeat,
     RepeatChar,
     Transparent,
@@ -29,7 +29,7 @@ enum class ScreenOverProcess {
 };
 
 // Special priority modes
-enum class PriorityMode {
+enum class PriorityMode : uint8 {
     PerScreen,
     PerCharacter,
     PerDot,
