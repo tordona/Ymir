@@ -1419,7 +1419,7 @@ private:
     // | Top border     |   The top border is optional.
     // |                |
     // +----------------+ Scanline 262 or 313
-    enum class VerticalPhase { Active, BottomBorder, BottomBlanking, VerticalSync, TopBlanking, TopBorder };
+    enum class VerticalPhase { Active, BottomBorder, BottomBlanking, VerticalSync, TopBlanking, TopBorder, LastLine };
     VerticalPhase m_VPhase; // Current vertical display phase
 
     // Current cycles (for phase timing) measured in system cycles.
@@ -1435,7 +1435,7 @@ private:
 
     // Display timings
     std::array<uint32, 4> m_HTimings;
-    std::array<uint32, 6> m_VTimings;
+    std::array<uint32, 7> m_VTimings;
 
     // Updates the display resolution and timings based on TVMODE
     void UpdateResolution();
@@ -1454,6 +1454,7 @@ private:
     void BeginVPhaseVerticalSync();
     void BeginVPhaseTopBlanking();
     void BeginVPhaseTopBorder();
+    void BeginVPhaseLastLine();
 
     // -------------------------------------------------------------------------
     // Rendering

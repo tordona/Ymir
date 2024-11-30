@@ -159,23 +159,24 @@ void VDP2::UpdateResolution() {
     //   VSy = Vertical Sync
     //   TBl = Top Blanking
     //   TBd = Top Border
+    //   LLn = Last Line
     //   ADp = Active Display
-    static constexpr std::array<std::array<std::array<uint32, 6>, 4>, 2> vTimings{{
+    static constexpr std::array<std::array<std::array<uint32, 7>, 4>, 2> vTimings{{
         // NTSC
         {{
-            // BBd, BBl, VSy, TBl, TBd, ADp
-            {224, 232, 237, 240, 255, 263},
-            {240, 240, 245, 248, 263, 263},
-            {224, 232, 237, 240, 255, 263},
-            {240, 240, 245, 248, 263, 263},
+            // BBd, BBl, VSy, TBl, TBd, LLn, ADp
+            {224, 232, 237, 240, 255, 262, 263},
+            {240, 240, 245, 248, 263, 262, 263},
+            {224, 232, 237, 240, 255, 262, 263},
+            {240, 240, 245, 248, 263, 262, 263},
         }},
         // PAL
         {{
             // BBd, BBl, VSy, TBl, TBd, ADp
-            {224, 256, 259, 262, 281, 313},
-            {240, 264, 267, 270, 289, 313},
-            {256, 272, 275, 278, 297, 313},
-            {256, 272, 275, 278, 297, 313},
+            {224, 256, 259, 262, 281, 312, 313},
+            {240, 264, 267, 270, 289, 312, 313},
+            {256, 272, 275, 278, 297, 312, 313},
+            {256, 272, 275, 278, 297, 312, 313},
         }},
     }};
     m_VTimings = vTimings[TVSTAT.PAL][TVMD.VRESOn];
@@ -195,7 +196,7 @@ void VDP2::IncrementVCounter() {
     ++m_VCounter;
     while (m_VCounter >= m_VTimings[static_cast<uint32>(m_VPhase)]) {
         auto nextPhase = static_cast<uint32>(m_VPhase) + 1;
-        if (nextPhase == 6) {
+        if (nextPhase == 7) {
             m_VCounter = 0;
             nextPhase = 0;
         }
@@ -208,6 +209,7 @@ void VDP2::IncrementVCounter() {
         case VerticalPhase::VerticalSync: BeginVPhaseVerticalSync(); break;
         case VerticalPhase::TopBlanking: BeginVPhaseTopBlanking(); break;
         case VerticalPhase::TopBorder: BeginVPhaseTopBorder(); break;
+        case VerticalPhase::LastLine: BeginVPhaseLastLine(); break;
         }
     }
 }
@@ -234,7 +236,10 @@ void VDP2::BeginHPhaseRightBorder() {
 void VDP2::BeginHPhaseHorizontalSync() {
     IncrementVCounter();
     // fmt::println("VDP2: (VCNT = {:3d})  entering horizontal sync phase", m_VCounter);
+
     TVSTAT.HBLANK = 1;
+    // TODO: trigger HBlank IN interrupt on SCU
+    // - should also increment Timer 0 and trigger Timer 0 interrupt if the counter matches the compare register
 }
 
 void VDP2::BeginHPhaseLeftBorder() {
@@ -264,17 +269,26 @@ void VDP2::BeginVPhaseBottomBlanking() {
 void VDP2::BeginVPhaseVerticalSync() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering vertical sync phase", m_VCounter);
     TVSTAT.VBLANK = 1;
+    // TODO: trigger VBlank IN interrupt on SCU
 }
 
 void VDP2::BeginVPhaseTopBlanking() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering top blanking phase", m_VCounter);
-    TVSTAT.VBLANK = 0;
+
     // TODO: end frame
     m_cbFrameComplete(m_framebuffer, m_latchedHRes, m_latchedVRes);
 }
 
 void VDP2::BeginVPhaseTopBorder() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering top border phase", m_VCounter);
+}
+
+void VDP2::BeginVPhaseLastLine() {
+    // fmt::println("VDP2: (VCNT = {:3d})  entering last line phase", m_VCounter);
+
+    TVSTAT.VBLANK = 0;
+    // TODO: trigger VBlank OUT interrupt on SCU
+    // - should also reset Timer 0
 }
 
 // ----
