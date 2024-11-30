@@ -265,9 +265,9 @@ void VDP2::BeginVPhaseTopBlanking() {
     TVSTAT.VBLANK = 0;
     // TODO: end frame
     fmt::println("VDP2: -------- end frame {} --------", m_frameNum);
-    if (m_frameNum == 37) {
+    /*if (m_frameNum == 37) {
         __debugbreak();
-    }
+    }*/
     m_frameNum++;
 }
 

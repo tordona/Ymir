@@ -6,7 +6,7 @@ add_executable(satemu::satemu-sandbox ALIAS satemu-sandbox)
 set_target_properties(satemu-sandbox PROPERTIES
                       VERSION ${satemu_VERSION}
                       SOVERSION ${satemu_VERSION_MAJOR})
-target_link_libraries(satemu-sandbox PRIVATE satemu::satemu-frontend-base)
+target_link_libraries(satemu-sandbox PRIVATE satemu::satemu-frontend-base SDL3::SDL3)
 target_compile_features(satemu-sandbox PUBLIC cxx_std_20)
 
 ## Add dependencies

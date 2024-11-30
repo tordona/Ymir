@@ -62,9 +62,28 @@ message(STATUS "Adding vendored libraries")
 message(VERBOSE "==> {fmt}")
 add_subdirectory(fmt)
 
+# SDL - https://github.com/libsdl-org/SDL
+message(VERBOSE "==> SDL")
+set(SDL_DISABLE_UNINSTALL ON)
+set(SDL_TEST_LIBRARY OFF)
+if(BUILD_SHARED_LIBS)
+    set(SDL_SHARED ON)
+    set(SDL_STATIC OFF)
+else()
+    set(SDL_SHARED OFF)
+    set(SDL_STATIC ON)
+endif()
+add_subdirectory_quiet(SDL)
+
 # --------------------------------------------------------------------------------------------------
 
 # Place vendored library projects under a Vendored folder in Visual Studio solutions
 if(MSVC)
     set_target_properties(fmt PROPERTIES FOLDER Vendored)
+    if(BUILD_SHARED_LIBS)
+        set_target_properties(SDL3-shared PROPERTIES FOLDER Vendored)
+    else()
+        set_target_properties(SDL3-static PROPERTIES FOLDER Vendored)
+    endif()
+    set_target_properties(SDL_uclibc PROPERTIES FOLDER Vendored)
 endif()
