@@ -137,15 +137,44 @@ private:
     SCSP &m_SCSP;
     CDBlock &m_CDBlock;
 
+    // -------------------------------------------------------------------------
+    // SCU registers
+
+    InterruptMask m_intrMask;
+    InterruptStatus m_intrStatus;
+
     template <mem_access_type T>
     T ReadReg(uint32 address) {
-        fmt::println("unhandled {}-bit SCU register read from {:02X}", sizeof(T) * 8, address);
-        return 0;
+        switch (address) {
+        case 0xA0: // Interrupt Mask
+            return m_intrMask.u32;
+        case 0xA4: // Interrupt Status
+            return m_intrStatus.u32;
+        case 0xA8: // A-Bus Interrupt Acknowledge
+            // TODO: not yet sure how this works
+            return 0;
+        default: //
+            fmt::println("unhandled {}-bit SCU register read from {:02X}", sizeof(T) * 8, address);
+            return 0;
+        }
     }
 
     template <mem_access_type T>
     void WriteReg(uint32 address, T value) {
-        fmt::println("unhandled {}-bit SCU register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+        switch (address) {
+        case 0xA0: // Interrupt Mask
+            m_intrMask.u32 = value & 0x0000BFFF;
+            break;
+        case 0xA4: // Interrupt Status
+            m_intrStatus.u32 &= value;
+            break;
+        case 0xA8: // A-Bus Interrupt Acknowledge
+            // TODO: not yet sure how this works
+            break;
+        default:
+            fmt::println("unhandled {}-bit SCU register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+            break;
+        }
     }
 };
 
