@@ -40,7 +40,7 @@ private:
     SH2 m_masterSH2;
     SH2 m_slaveSH2;
 
-    SCU m_SCU;
+    scu::SCU m_SCU;
     SMPC m_SMPC;
     SCSP m_SCSP;
     CDBlock m_CDBlock;

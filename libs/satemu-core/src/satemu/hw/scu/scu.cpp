@@ -1,6 +1,6 @@
 #include <satemu/hw/scu/scu.hpp>
 
-namespace satemu {
+namespace satemu::scu {
 
 SCU::SCU(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, SCSP &scsp, CDBlock &cdblock)
     : m_VDP1(vdp1)
@@ -12,4 +12,4 @@ SCU::SCU(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, SCSP &scsp, CDBlock &cdblock)
 
 void SCU::Reset(bool hard) {}
 
-} // namespace satemu
+} // namespace satemu::scu

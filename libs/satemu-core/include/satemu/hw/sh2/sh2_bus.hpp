@@ -45,7 +45,7 @@ namespace satemu {
 // SCSP contains the MC68EC000 and 512 KiB of RAM
 class SH2Bus {
 public:
-    SH2Bus(SCU &scu, SMPC &smpc);
+    SH2Bus(scu::SCU &scu, SMPC &smpc);
 
     void Reset(bool hard);
 
@@ -101,7 +101,7 @@ private:
     std::array<uint8, kWRAMLowSize> m_WRAMLow;
     std::array<uint8, kWRAMHighSize> m_WRAMHigh;
 
-    SCU &m_SCU;
+    scu::SCU &m_SCU;
     SMPC &m_SMPC;
 };
 

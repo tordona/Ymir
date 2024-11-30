@@ -12,7 +12,7 @@
 
 #include <fmt/format.h>
 
-namespace satemu {
+namespace satemu::scu {
 
 // SCU memory map
 //
@@ -149,4 +149,4 @@ private:
     }
 };
 
-} // namespace satemu
+} // namespace satemu::scu
