@@ -6,7 +6,8 @@ Saturn::Saturn()
     : m_sh2bus(m_SCU, m_SMPC)
     , m_masterSH2(m_sh2bus, true)
     , m_slaveSH2(m_sh2bus, false)
-    , m_SCU(m_VDP1, m_VDP2, m_SCSP, m_CDBlock) {
+    , m_SCU(m_VDP1, m_VDP2, m_SCSP, m_CDBlock)
+    , m_VDP2(m_SCU) {
     Reset(true);
 }
 

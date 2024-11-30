@@ -10,7 +10,8 @@ using namespace satemu::vdp;
 
 namespace satemu::vdp2 {
 
-VDP2::VDP2() {
+VDP2::VDP2(scu::SCU &scu)
+    : m_scuOps(scu) {
     // TODO: set PAL flag
     Reset(true);
 }
@@ -238,8 +239,7 @@ void VDP2::BeginHPhaseHorizontalSync() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering horizontal sync phase", m_VCounter);
 
     TVSTAT.HBLANK = 1;
-    // TODO: trigger HBlank IN interrupt on SCU
-    // - should also increment Timer 0 and trigger Timer 0 interrupt if the counter matches the compare register
+    m_scuOps.TriggerHBlankIN();
 }
 
 void VDP2::BeginHPhaseLeftBorder() {
@@ -269,7 +269,7 @@ void VDP2::BeginVPhaseBottomBlanking() {
 void VDP2::BeginVPhaseVerticalSync() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering vertical sync phase", m_VCounter);
     TVSTAT.VBLANK = 1;
-    // TODO: trigger VBlank IN interrupt on SCU
+    m_scuOps.TriggerVBlankIN();
 }
 
 void VDP2::BeginVPhaseTopBlanking() {
@@ -287,8 +287,7 @@ void VDP2::BeginVPhaseLastLine() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering last line phase", m_VCounter);
 
     TVSTAT.VBLANK = 0;
-    // TODO: trigger VBlank OUT interrupt on SCU
-    // - should also reset Timer 0
+    m_scuOps.TriggerVBlankOUT();
 }
 
 // ----

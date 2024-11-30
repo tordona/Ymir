@@ -26,6 +26,7 @@ add_library(satemu-core
     include/satemu/hw/vdp/vdp1_defs.hpp
     include/satemu/hw/vdp/vdp2.hpp
     include/satemu/hw/vdp/vdp2_defs.hpp
+    include/satemu/hw/vdp/vdp2_scu_ops.hpp
 
     include/satemu/sys/sys.hpp
 
@@ -51,6 +52,7 @@ add_library(satemu-core
 
     src/satemu/hw/vdp/vdp1.cpp
     src/satemu/hw/vdp/vdp2.cpp
+    src/satemu/hw/vdp/vdp2_scu_ops.cpp
 
     src/satemu/sys/sys.cpp
 

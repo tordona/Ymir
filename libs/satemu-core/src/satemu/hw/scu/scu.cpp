@@ -15,4 +15,18 @@ void SCU::Reset(bool hard) {
     m_intrStatus.u32 = 0;
 }
 
+void SCU::TriggerHBlankIN() {
+    // TODO: also increment Timer 0 and trigger Timer 0 interrupt if the counter matches the compare register
+    m_intrMask.VDP2_HBlankIN = 1;
+}
+
+void SCU::TriggerVBlankIN() {
+    m_intrMask.VDP2_VBlankIN = 1;
+}
+
+void SCU::TriggerVBlankOUT() {
+    // TODO: also reset Timer 0
+    m_intrMask.VDP2_VBlankOUT = 1;
+}
+
 } // namespace satemu::scu

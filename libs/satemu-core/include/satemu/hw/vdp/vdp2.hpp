@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vdp2_defs.hpp"
+#include "vdp2_scu_ops.hpp"
 
 #include <satemu/hw/hw_defs.hpp>
 
@@ -18,7 +19,7 @@ namespace satemu::vdp2 {
 
 class VDP2 {
 public:
-    VDP2();
+    VDP2(scu::SCU &scu);
 
     void Reset(bool hard);
 
@@ -1436,6 +1437,9 @@ private:
     // Display timings
     std::array<uint32, 4> m_HTimings;
     std::array<uint32, 7> m_VTimings;
+
+    // Access to SCU operations
+    SCUOperations m_scuOps;
 
     // Updates the display resolution and timings based on TVMODE
     void UpdateResolution();

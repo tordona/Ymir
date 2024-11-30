@@ -138,10 +138,19 @@ private:
     CDBlock &m_CDBlock;
 
     // -------------------------------------------------------------------------
-    // SCU registers
+    // Interrupts
 
     InterruptMask m_intrMask;
     InterruptStatus m_intrStatus;
+
+    void TriggerHBlankIN();
+    void TriggerVBlankIN();
+    void TriggerVBlankOUT();
+
+    friend class vdp2::SCUOperations;
+
+    // -------------------------------------------------------------------------
+    // SCU registers
 
     template <mem_access_type T>
     T ReadReg(uint32 address) {
