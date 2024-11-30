@@ -84,7 +84,7 @@ public:
         case 0x020: return ReadBGON();    // write-only?
         case 0x022: return MZCTL.u16;     // write-only?
         case 0x024: return ReadSFSEL();   // write-only?
-        case 0x026: return SFCODE.u16;    // write-only?
+        case 0x026: return ReadSFCODE();  // write-only?
         case 0x028: return ReadCHCTLA();  // write-only?
         case 0x02A: return ReadCHCTLB();  // write-only?
         case 0x02C: return ReadBMPNA();   // write-only?
@@ -236,7 +236,7 @@ public:
         case 0x020: WriteBGON(value); break;
         case 0x022: MZCTL.u16 = value & 0xFF1F; break;
         case 0x024: WriteSFSEL(value); break;
-        case 0x026: SFCODE.u16 = value; break;
+        case 0x026: WriteSFCODE(value); break;
         case 0x028: WriteCHCTLA(value); break;
         case 0x02A: WriteCHCTLB(value); break;
         case 0x02C: WriteBMPNA(value); break;
@@ -470,7 +470,63 @@ private:
         m_RotBGParams[1].specialFunctionSelect = m_NormBGParams[0].specialFunctionSelect;
     }
 
-    SFCODE_t SFCODE; // 180026   SFCODE  Special Function Code
+    // 180026   SFCODE  Special Function Code
+    //
+    //   bits   r/w  code          description
+    //   15-8        SFCDB7-0      Special Function Code B
+    //    7-0        SFCDA7-0      Special Function Code A
+    //
+    // Each bit in SFCDxn matches the least significant 4 bits of the color code:
+    //   n=0: 0x0 or 0x1
+    //   n=1: 0x2 or 0x3
+    //   n=2: 0x4 or 0x5
+    //   n=3: 0x6 or 0x7
+    //   n=4: 0x8 or 0x9
+    //   n=5: 0xA or 0xB
+    //   n=6: 0xC or 0xD
+    //   n=7: 0xE or 0xF
+
+    FORCE_INLINE uint16 ReadSFCODE() {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, m_specialFunctionCodes[0].colorMatches[0]);
+        bit::deposit_into<1>(value, m_specialFunctionCodes[0].colorMatches[1]);
+        bit::deposit_into<2>(value, m_specialFunctionCodes[0].colorMatches[2]);
+        bit::deposit_into<3>(value, m_specialFunctionCodes[0].colorMatches[3]);
+        bit::deposit_into<4>(value, m_specialFunctionCodes[0].colorMatches[4]);
+        bit::deposit_into<5>(value, m_specialFunctionCodes[0].colorMatches[5]);
+        bit::deposit_into<6>(value, m_specialFunctionCodes[0].colorMatches[6]);
+        bit::deposit_into<7>(value, m_specialFunctionCodes[0].colorMatches[7]);
+
+        bit::deposit_into<8>(value, m_specialFunctionCodes[1].colorMatches[0]);
+        bit::deposit_into<9>(value, m_specialFunctionCodes[1].colorMatches[1]);
+        bit::deposit_into<10>(value, m_specialFunctionCodes[1].colorMatches[2]);
+        bit::deposit_into<11>(value, m_specialFunctionCodes[1].colorMatches[3]);
+        bit::deposit_into<12>(value, m_specialFunctionCodes[1].colorMatches[4]);
+        bit::deposit_into<13>(value, m_specialFunctionCodes[1].colorMatches[5]);
+        bit::deposit_into<14>(value, m_specialFunctionCodes[1].colorMatches[6]);
+        bit::deposit_into<15>(value, m_specialFunctionCodes[1].colorMatches[7]);
+        return value;
+    }
+
+    FORCE_INLINE void WriteSFCODE(uint16 value) {
+        m_specialFunctionCodes[0].colorMatches[0] = bit::extract<0>(value);
+        m_specialFunctionCodes[0].colorMatches[1] = bit::extract<1>(value);
+        m_specialFunctionCodes[0].colorMatches[2] = bit::extract<2>(value);
+        m_specialFunctionCodes[0].colorMatches[3] = bit::extract<3>(value);
+        m_specialFunctionCodes[0].colorMatches[4] = bit::extract<4>(value);
+        m_specialFunctionCodes[0].colorMatches[5] = bit::extract<5>(value);
+        m_specialFunctionCodes[0].colorMatches[6] = bit::extract<6>(value);
+        m_specialFunctionCodes[0].colorMatches[7] = bit::extract<7>(value);
+
+        m_specialFunctionCodes[1].colorMatches[0] = bit::extract<8>(value);
+        m_specialFunctionCodes[1].colorMatches[1] = bit::extract<9>(value);
+        m_specialFunctionCodes[1].colorMatches[2] = bit::extract<10>(value);
+        m_specialFunctionCodes[1].colorMatches[3] = bit::extract<11>(value);
+        m_specialFunctionCodes[1].colorMatches[4] = bit::extract<12>(value);
+        m_specialFunctionCodes[1].colorMatches[5] = bit::extract<13>(value);
+        m_specialFunctionCodes[1].colorMatches[6] = bit::extract<14>(value);
+        m_specialFunctionCodes[1].colorMatches[7] = bit::extract<15>(value);
+    }
 
     // 180028   CHCTLA  Character Control Register A
     //
@@ -1295,6 +1351,8 @@ private:
 
     std::array<NormBGParams, 4> m_NormBGParams;
     std::array<RotBGParams, 2> m_RotBGParams;
+
+    std::array<SpecialFunctionCodes, 2> m_specialFunctionCodes;
 
     // -------------------------------------------------------------------------
 

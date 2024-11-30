@@ -253,6 +253,20 @@ struct BGParams {
 using NormBGParams = BGParams<false>;
 using RotBGParams = BGParams<true>;
 
+// Special Function Codes, derived from SFCODE.
+struct SpecialFunctionCodes {
+    SpecialFunctionCodes() {
+        Reset();
+    }
+
+    void Reset() {
+        colorMatches.fill(0);
+    }
+
+    // If the entry indexed by bits 3-1 of the color code is true, the special function is applied to the pixel
+    std::array<bool, 8> colorMatches;
+};
+
 // TODO: consider splitting unions into individual fields for performance
 
 // 180000   TVMD    TV Screen Mode
@@ -524,29 +538,6 @@ union MZCTL_t {
         uint16 _rsvd5_7 : 3;
         uint16 MZSZHn : 4;
         uint16 MZSZVn : 4;
-    };
-};
-
-// 180026   SFCODE  Special Function Code
-//
-//   bits   r/w  code          description
-//   15-8        SFCDB7-0      Special Function Code B
-//    7-0        SFCDA7-0      Special Function Code A
-//
-// Each bit in SFCDxn matches the least significant 4 bits of the color code:
-//   n=0: 0x0 or 0x1
-//   n=1: 0x2 or 0x3
-//   n=2: 0x4 or 0x5
-//   n=3: 0x6 or 0x7
-//   n=4: 0x8 or 0x9
-//   n=5: 0xA or 0xB
-//   n=6: 0xC or 0xD
-//   n=7: 0xE or 0xF
-union SFCODE_t {
-    uint16 u16;
-    struct {
-        uint8 SFCDAn;
-        uint8 SFCDBn;
     };
 };
 
