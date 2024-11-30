@@ -83,7 +83,7 @@ public:
         case 0x01C: return CYCB1.U.u16;   // write-only?
         case 0x020: return ReadBGON();    // write-only?
         case 0x022: return MZCTL.u16;     // write-only?
-        case 0x024: return SFSEL.u16;     // write-only?
+        case 0x024: return ReadSFSEL();   // write-only?
         case 0x026: return SFCODE.u16;    // write-only?
         case 0x028: return ReadCHCTLA();  // write-only?
         case 0x02A: return ReadCHCTLB();  // write-only?
@@ -235,7 +235,7 @@ public:
         case 0x01C: CYCB1.L.u16 = value; break;
         case 0x020: WriteBGON(value); break;
         case 0x022: MZCTL.u16 = value & 0xFF1F; break;
-        case 0x024: SFSEL.u16 = value & 0x001F; break;
+        case 0x024: WriteSFSEL(value); break;
         case 0x026: SFCODE.u16 = value; break;
         case 0x028: WriteCHCTLA(value); break;
         case 0x02A: WriteCHCTLB(value); break;
@@ -439,8 +439,37 @@ private:
         m_RotBGParams[1].transparent = m_NormBGParams[0].transparent;
     }
 
-    MZCTL_t MZCTL;   // 180022   MZCTL   Mosaic Control
-    SFSEL_t SFSEL;   // 180024   SFSEL   Special Function Code Select
+    MZCTL_t MZCTL; // 180022   MZCTL   Mosaic Control
+
+    // 180024   SFSEL   Special Function Code Select
+    //
+    //   bits   r/w  code          description
+    //   15-5        -             Reserved, must be zero
+    //      4     W  R0SFCS        RBG0 Special Function Code Select
+    //      3     W  N3SFCS        NBG3 Special Function Code Select
+    //      2     W  N2SFCS        NBG2 Special Function Code Select
+    //      1     W  N1SFCS        NBG1 Special Function Code Select
+    //      0     W  N0SFCS        NBG0/RBG1 Special Function Code Select
+
+    FORCE_INLINE uint16 ReadSFSEL() {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, m_NormBGParams[0].specialFunctionSelect);
+        bit::deposit_into<1>(value, m_NormBGParams[1].specialFunctionSelect);
+        bit::deposit_into<2>(value, m_NormBGParams[3].specialFunctionSelect);
+        bit::deposit_into<3>(value, m_NormBGParams[4].specialFunctionSelect);
+        bit::deposit_into<4>(value, m_RotBGParams[0].specialFunctionSelect);
+        return value;
+    }
+
+    FORCE_INLINE void WriteSFSEL(uint16 value) {
+        m_NormBGParams[0].specialFunctionSelect = bit::extract<0>(value);
+        m_NormBGParams[1].specialFunctionSelect = bit::extract<1>(value);
+        m_NormBGParams[2].specialFunctionSelect = bit::extract<2>(value);
+        m_NormBGParams[3].specialFunctionSelect = bit::extract<3>(value);
+        m_RotBGParams[0].specialFunctionSelect = bit::extract<4>(value);
+        m_RotBGParams[1].specialFunctionSelect = m_NormBGParams[0].specialFunctionSelect;
+    }
+
     SFCODE_t SFCODE; // 180026   SFCODE  Special Function Code
 
     // 180028   CHCTLA  Character Control Register A

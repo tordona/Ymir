@@ -65,6 +65,7 @@ struct BGParams {
 
         priorityNumber = 0;
         priorityMode = PriorityMode::PerScreen;
+        specialFunctionSelect = 0;
 
         cellSizeShift = 0;
 
@@ -126,6 +127,10 @@ struct BGParams {
     // Special priority mode.
     // Derived from SFPRMD.xxSPRMn
     PriorityMode priorityMode;
+
+    // Special function select (0=A, 1=B).
+    // Derived from SFSEL.xxSFCS
+    uint8 specialFunctionSelect;
 
     // Cell size shift corresponding to the dimensions of a character pattern (0=1x1, 1=2x2).
     // Derived from CHCTLA/CHCTLB.xxCHSZ
@@ -522,27 +527,6 @@ union MZCTL_t {
     };
 };
 
-// 180024   SFSEL   Special Function Code Select
-//
-//   bits   r/w  code          description
-//   15-5        -             Reserved, must be zero
-//      4     W  R0SFCS        RBG0 Special Function Code Select
-//      3     W  N3SFCS        NBG3 Special Function Code Select
-//      2     W  N2SFCS        NBG2 Special Function Code Select
-//      1     W  N1SFCS        NBG1 Special Function Code Select
-//      0     W  N0SFCS        NBG0/RBG1 Special Function Code Select
-union SFSEL_t {
-    uint16 u16;
-    struct {
-        uint16 N0SFCS : 1;
-        uint16 N1SFCS : 1;
-        uint16 N2SFCS : 1;
-        uint16 N3SFCS : 1;
-        uint16 R0SFCS : 1;
-        uint16 _rsvd5_15 : 11;
-    };
-};
-
 // 180026   SFCODE  Special Function Code
 //
 //   bits   r/w  code          description
@@ -561,8 +545,8 @@ union SFSEL_t {
 union SFCODE_t {
     uint16 u16;
     struct {
-        uint8 SFCDBn;
         uint8 SFCDAn;
+        uint8 SFCDBn;
     };
 };
 

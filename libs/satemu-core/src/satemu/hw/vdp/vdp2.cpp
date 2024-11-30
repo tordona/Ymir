@@ -30,7 +30,6 @@ void VDP2::Reset(bool hard) {
     CYCB0.u32 = 0x0;
     CYCB1.u32 = 0x0;
     MZCTL.u16 = 0x0;
-    SFSEL.u16 = 0x0;
     SFCODE.u16 = 0x0;
     ZMCTL.u16 = 0x0;
     SCRCTL.u16 = 0x0;
