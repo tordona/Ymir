@@ -95,8 +95,6 @@ void VDP2::Reset(bool hard) {
     BeginVPhaseActiveDisplay();
 
     UpdateResolution();
-
-    m_frameNum = 0;
 }
 
 void VDP2::Advance(uint64 cycles) {
@@ -219,6 +217,12 @@ void VDP2::IncrementVCounter() {
 void VDP2::BeginHPhaseActiveDisplay() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering horizontal active display phase", m_VCounter);
     if (m_VPhase == VerticalPhase::Active) {
+        if (m_VCounter == 0) {
+            // Latch resolution
+            m_latchedHRes = m_HRes;
+            m_latchedVRes = m_VRes;
+            m_framebuffer = m_cbRequestFramebuffer(m_latchedHRes, m_latchedVRes);
+        }
         DrawLine();
     }
 }
@@ -266,11 +270,7 @@ void VDP2::BeginVPhaseTopBlanking() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering top blanking phase", m_VCounter);
     TVSTAT.VBLANK = 0;
     // TODO: end frame
-    fmt::println("VDP2: -------- end frame {} --------", m_frameNum);
-    /*if (m_frameNum == 37) {
-        __debugbreak();
-    }*/
-    m_frameNum++;
+    m_cbFrameComplete(m_framebuffer, m_latchedHRes, m_latchedVRes);
 }
 
 void VDP2::BeginVPhaseTopBorder() {
@@ -367,14 +367,8 @@ void VDP2::DrawLine() {
         }
     }
 
-    // TODO: request framebuffer from frontend
-    // - only once per frame
-    // - latch screen dimensions at the start of the frame
-    // - avoid using m_HRes/m_VRes throughout the rendering process
-    static Color888 fb[704 * 480];
-
     const uint32 y = m_VCounter;
-    for (uint32 x = 0; x < m_HRes; x++) {
+    for (uint32 x = 0; x < m_latchedHRes; x++) {
         // TODO: handle priorities
         // - sort layers per pixel
         //   - priority == 0 -> transparent pixel
@@ -384,7 +378,9 @@ void VDP2::DrawLine() {
         //   - add one if second screen color calculation is enabled (extended color calculation)
         // - use BACK when all layers are transparent
         // TODO: handle color calculations
-        fb[x + y * m_VRes] = m_renderContexts[0].colors[x];
+        if (m_framebuffer != nullptr) {
+            m_framebuffer[x + y * m_latchedHRes] = m_renderContexts[3].colors[x].u32;
+        }
     }
 }
 
@@ -464,7 +460,7 @@ NO_INLINE void VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderCo
     // TODO: precompute fracScrollY at start of frame and increment per Y
     uint32 fracScrollX = bgParams.scrollAmountH;
     uint32 fracScrollY = bgParams.scrollAmountV + y * bgParams.scrollIncV;
-    for (uint32 x = 0; x < m_HRes; x++) {
+    for (uint32 x = 0; x < m_latchedHRes; x++) {
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 8u;
         const uint32 scrollY = fracScrollY >> 8u;
@@ -534,7 +530,7 @@ NO_INLINE void VDP2::DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderCo
     uint32 fracScrollX = bgParams.scrollAmountH;
     uint32 fracScrollY = bgParams.scrollAmountV + y * bgParams.scrollIncV;
 
-    for (uint32 x = 0; x < m_HRes; x++) {
+    for (uint32 x = 0; x < m_latchedHRes; x++) {
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 8u;
         const uint32 scrollY = fracScrollY >> 8u;

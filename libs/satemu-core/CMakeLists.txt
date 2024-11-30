@@ -30,6 +30,7 @@ add_library(satemu-core
     include/satemu/sys/sys.hpp
 
     include/satemu/util/bit_ops.hpp
+    include/satemu/util/callback.hpp
     include/satemu/util/data_ops.hpp
     include/satemu/util/inline.hpp
     include/satemu/util/size_ops.hpp

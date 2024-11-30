@@ -24,6 +24,12 @@ public:
 
     void Step();
 
+    // TODO: void RunFrame();
+    FORCE_INLINE void SetFramebufferCallbacks(vdp2::CBRequestFramebuffer cbRequestFramebuffer,
+                                              vdp2::CBFrameComplete cbFrameComplete) {
+        m_VDP2.SetCallbacks(cbRequestFramebuffer, cbFrameComplete);
+    }
+
     FORCE_INLINE SH2 &MasterSH2() {
         return m_masterSH2;
     }

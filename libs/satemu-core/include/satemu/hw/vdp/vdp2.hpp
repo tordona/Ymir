@@ -22,6 +22,11 @@ public:
 
     void Reset(bool hard);
 
+    FORCE_INLINE void SetCallbacks(CBRequestFramebuffer cbRequestFramebuffer, CBFrameComplete cbFrameComplete) {
+        m_cbRequestFramebuffer = cbRequestFramebuffer;
+        m_cbFrameComplete = cbFrameComplete;
+    }
+
     // TODO: use scheduler
     void Advance(uint64 cycles);
 
@@ -1483,6 +1488,17 @@ private:
     // Render contexts for NBGs 0-3 then RBGs 0-1
     std::array<BGRenderContext, 4 + 2> m_renderContexts;
 
+    // Screen resolution latched at 0x0
+    uint32 m_latchedHRes; // Latched horizontal screen resolution
+    uint32 m_latchedVRes; // Latched vertical screen resolution
+
+    // Framebuffer provided by the frontend to render the current frame into
+    FramebufferColor *m_framebuffer;
+
+    // Callbacks
+    CBRequestFramebuffer m_cbRequestFramebuffer;
+    CBFrameComplete m_cbFrameComplete;
+
     // Draws the scanline at m_VCounter.
     void DrawLine();
 
@@ -1547,9 +1563,6 @@ private:
     // colorMode is the CRAM color mode.
     template <uint32 colorMode>
     vdp::Color888 FetchCRAMColor(uint32 cramOffset, uint32 colorIndex);
-
-    // DEBUG: to be removed
-    uint64 m_frameNum;
 };
 
 } // namespace satemu::vdp2

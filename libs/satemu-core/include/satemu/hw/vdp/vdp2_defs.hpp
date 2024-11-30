@@ -2,6 +2,7 @@
 
 #include <satemu/core_types.hpp>
 
+#include <satemu/util/callback.hpp>
 #include <satemu/util/size_ops.hpp>
 
 #include <array>
@@ -266,6 +267,12 @@ struct SpecialFunctionCodes {
     // If the entry indexed by bits 3-1 of the color code is true, the special function is applied to the pixel
     std::array<bool, 8> colorMatches;
 };
+
+// Framebuffer color is in little-endian XRGB8888 format
+using FramebufferColor = uint32;
+
+using CBRequestFramebuffer = util::Callback<FramebufferColor *(uint32 width, uint32 height)>;
+using CBFrameComplete = util::Callback<void(FramebufferColor *fb, uint32 width, uint32 height)>;
 
 // TODO: consider splitting unions into individual fields for performance
 

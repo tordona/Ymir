@@ -55,6 +55,14 @@ void runEmulator(satemu::Saturn &saturn) {
     using clk = std::chrono::steady_clock;
     using namespace std::chrono_literals;
 
+    // Screen parameters
+    // TODO: adjust dynamically
+    // NOTE: double-horizontal res should halve horizontal scale
+    // NOTE: add room for borders
+    const uint32 screenWidth = 320;
+    const uint32 screenHeight = 224;
+    const uint32 scale = 3;
+
     // ---------------------------------
     // Initialize SDL video subsystem
 
@@ -77,8 +85,8 @@ void runEmulator(satemu::Saturn &saturn) {
     // Assume the following calls succeed
     SDL_SetStringProperty(windowProps, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Unnamed Sega Saturn emulator");
     SDL_SetBooleanProperty(windowProps, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, false);
-    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, 320 * 2);
-    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, 224 * 2);
+    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, screenWidth * scale);
+    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, screenHeight * scale);
     SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
     SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
 
@@ -115,20 +123,24 @@ void runEmulator(satemu::Saturn &saturn) {
     // ---------------------------------
     // Create texture to render on
 
-    auto texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, 320, 224);
+    auto texture =
+        SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, screenWidth, screenHeight);
     if (texture == nullptr) {
         SDL_Log("Unable to create texture: %s", SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyTexture{[&] { SDL_DestroyTexture(texture); }};
 
+    SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+
     // ---------------------------------
     // Main emulator loop
 
-    std::vector<uint32> framebuffer(704 * 480);
-    // TODO: setup framebuffer callbacks (request, complete)
-
     saturn.Reset(true);
+
+    // Configure single framebuffer
+    std::vector<uint32> framebuffer(704 * 480);
+    saturn.SetFramebufferCallbacks({framebuffer.data(), [](uint32, uint32, void *ctx) { return (uint32 *)ctx; }}, {});
 
     auto t = clk::now();
     uint64 frames = 0;
@@ -150,7 +162,7 @@ void runEmulator(satemu::Saturn &saturn) {
         uint32 *pixels = nullptr;
         int pitch = 0;
         if (SDL_LockTexture(texture, nullptr, (void **)&pixels, &pitch)) {
-            std::copy_n(framebuffer.begin(), 320 * 224, pixels);
+            std::copy_n(framebuffer.begin(), screenWidth * screenHeight, pixels);
             SDL_UnlockTexture(texture);
         }
 
