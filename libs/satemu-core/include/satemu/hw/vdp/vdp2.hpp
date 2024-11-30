@@ -460,8 +460,8 @@ private:
         uint16 value = 0;
         bit::deposit_into<0>(value, m_NormBGParams[0].specialFunctionSelect);
         bit::deposit_into<1>(value, m_NormBGParams[1].specialFunctionSelect);
-        bit::deposit_into<2>(value, m_NormBGParams[3].specialFunctionSelect);
-        bit::deposit_into<3>(value, m_NormBGParams[4].specialFunctionSelect);
+        bit::deposit_into<2>(value, m_NormBGParams[2].specialFunctionSelect);
+        bit::deposit_into<3>(value, m_NormBGParams[3].specialFunctionSelect);
         bit::deposit_into<4>(value, m_RotBGParams[0].specialFunctionSelect);
         return value;
     }
