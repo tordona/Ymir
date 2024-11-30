@@ -88,6 +88,8 @@ void VDP2::Reset(bool hard) {
     m_currCycles = 0;
     m_dotClockMult = 2;
     m_VCounter = 0;
+    m_HRes = 320;
+    m_VRes = 224;
 
     BeginHPhaseActiveDisplay();
     BeginVPhaseActiveDisplay();
@@ -380,6 +382,7 @@ void VDP2::DrawLine() {
         // - keep two topmost layers
         //   - add one if LNCL insertion happened
         //   - add one if second screen color calculation is enabled (extended color calculation)
+        // - use BACK when all layers are transparent
         // TODO: handle color calculations
         fb[x + y * m_VRes] = m_renderContexts[0].colors[x];
     }
