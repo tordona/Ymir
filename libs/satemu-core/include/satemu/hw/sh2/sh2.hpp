@@ -16,6 +16,8 @@ public:
 
     void Step();
 
+    void SetInterruptLevel(uint8 level);
+
     FORCE_INLINE uint32 GetPC() const {
         return PC;
     }
@@ -38,6 +40,12 @@ private:
             uint32 I3 : 1;
             uint32 Q : 1;
             uint32 M : 1;
+        };
+        struct {
+            uint32 : 1;
+            uint32 : 1;
+            uint32 : 2;
+            uint32 ILevel : 4;
         };
     } SR;
     uint32 GBR;
@@ -571,10 +579,24 @@ private:
     void OnChipRegWrite(uint32 address, T baseValue);
 
     // -------------------------------------------------------------------------
+    // Interrupts
+
+    uint8 m_pendingIRL;
+
+    struct PendingInterruptInfo {
+        uint8 priority;
+        uint8 vecNum;
+    } m_pendingInterrupt;
+
+    void CheckInterrupts();
+
+    // -------------------------------------------------------------------------
     // Execution
 
     template <bool delaySlot>
     void Execute(uint32 address);
+
+    void EnterException(uint8 vectorNumber);
 
     void NOP(); // nop
 

@@ -117,6 +117,12 @@ void SH2::Step() {
     dbg_println("");
 }
 
+void SH2::SetInterruptLevel(uint8 level) {
+    assert(level < 16);
+    m_pendingIRL = level;
+    CheckInterrupts();
+}
+
 // -------------------------------------------------------------------------
 // Memory accessors
 
@@ -565,6 +571,13 @@ void SH2::OnChipRegWrite(uint32 address, T baseValue) {
 
 template <bool delaySlot>
 void SH2::Execute(uint32 address) {
+    if (m_pendingInterrupt.priority > SR.ILevel) [[unlikely]] {
+        EnterException(m_pendingInterrupt.vecNum);
+        SR.ILevel = m_pendingInterrupt.priority;
+        CheckInterrupts();
+    }
+
+    // TODO: emulate fetch - decode - execute - memory access - writeback pipeline
     const uint16 instr = MemReadWord(address);
 
     ++dbg_count;
@@ -587,8 +600,8 @@ void SH2::Execute(uint32 address) {
             break;
         case 0x000B: // 0000 0000 0000 1011   RTS
             if constexpr (delaySlot) {
-                // TODO: illegal instruction
-                dbg_println("illegal delay slot instruction");
+                // Illegal slot instruction exception
+                EnterException(6);
             } else {
                 RTS();
             }
@@ -619,8 +632,8 @@ void SH2::Execute(uint32 address) {
             break;
         case 0x002B: // 0000 0000 0010 1011   RTE
             if constexpr (delaySlot) {
-                // TODO: illegal instruction
-                dbg_println("illegal delay slot instruction");
+                // Illegal slot instruction exception
+                EnterException(6);
             } else {
                 RTE();
             }
@@ -635,8 +648,8 @@ void SH2::Execute(uint32 address) {
                 break;
             case 0x03: // 0000 mmmm 0000 0011   BSRF Rm
                 if constexpr (delaySlot) {
-                    // TODO: illegal instruction
-                    dbg_println("illegal delay slot instruction");
+                    // Illegal slot instruction exception
+                    EnterException(6);
                 } else {
                     BSRF(bit::extract<8, 11>(instr));
                 }
@@ -667,8 +680,8 @@ void SH2::Execute(uint32 address) {
                 break;
             case 0x23: // 0000 mmmm 0010 0011   BRAF Rm
                 if constexpr (delaySlot) {
-                    // TODO: illegal instruction
-                    dbg_println("illegal delay slot instruction");
+                    // Illegal slot instruction exception
+                    EnterException(6);
                 } else {
                     BRAF(bit::extract<8, 11>(instr));
                 }
@@ -1019,8 +1032,8 @@ void SH2::Execute(uint32 address) {
                 break;
             case 0x0B: // 0110 mmmm 0000 1110   JSR @Rm
                 if constexpr (delaySlot) {
-                    // TODO: illegal instruction
-                    dbg_println("illegal delay slot instruction");
+                    // Illegal slot instruction exception
+                    EnterException(6);
                 } else {
                     JSR(bit::extract<8, 11>(instr));
                 }
@@ -1186,8 +1199,8 @@ void SH2::Execute(uint32 address) {
                 break;
             case 0x2B: // 0100 mmmm 0010 1011   JMP @Rm
                 if constexpr (delaySlot) {
-                    // TODO: illegal instruction
-                    dbg_println("illegal delay slot instruction");
+                    // Illegal slot instruction exception
+                    EnterException(6);
                 } else {
                     JMP(bit::extract<8, 11>(instr));
                 }
@@ -1360,8 +1373,8 @@ void SH2::Execute(uint32 address) {
             break;
         case 0x9: // 1000 1001 dddd dddd   BT <label>
             if constexpr (delaySlot) {
-                // TODO: illegal instruction
-                dbg_println("illegal delay slot instruction");
+                // Illegal slot instruction exception
+                EnterException(6);
             } else {
                 BT(bit::extract<0, 7>(instr));
             }
@@ -1371,8 +1384,8 @@ void SH2::Execute(uint32 address) {
 
         case 0xB: // 1000 1011 dddd dddd   BF <label>
             if constexpr (delaySlot) {
-                // TODO: illegal instruction
-                dbg_println("illegal delay slot instruction");
+                // Illegal slot instruction exception
+                EnterException(6);
             } else {
                 BF(bit::extract<0, 7>(instr));
             }
@@ -1382,8 +1395,8 @@ void SH2::Execute(uint32 address) {
 
         case 0xD: // 1000 1101 dddd dddd   BT/S <label>
             if constexpr (delaySlot) {
-                // TODO: illegal instruction
-                dbg_println("illegal delay slot instruction");
+                // Illegal slot instruction exception
+                EnterException(6);
             } else {
                 BTS(bit::extract<0, 7>(instr));
             }
@@ -1393,8 +1406,8 @@ void SH2::Execute(uint32 address) {
 
         case 0xF: // 1000 1111 dddd dddd   BF/S <label>
             if constexpr (delaySlot) {
-                // TODO: illegal instruction
-                dbg_println("illegal delay slot instruction");
+                // Illegal slot instruction exception
+                EnterException(6);
             } else {
                 BFS(bit::extract<0, 7>(instr));
             }
@@ -1410,16 +1423,16 @@ void SH2::Execute(uint32 address) {
         break;
     case 0xA: // 1011 dddd dddd dddd   BRA <label>
         if constexpr (delaySlot) {
-            // TODO: illegal instruction
-            dbg_println("illegal delay slot instruction");
+            // Illegal slot instruction exception
+            EnterException(6);
         } else {
             BRA(bit::extract<0, 11>(instr));
         }
         break;
     case 0xB: // 1011 dddd dddd dddd   BSR <label>
         if constexpr (delaySlot) {
-            // TODO: illegal instruction
-            dbg_println("illegal delay slot instruction");
+            // Illegal slot instruction exception
+            EnterException(6);
         } else {
             BSR(bit::extract<0, 11>(instr));
         }
@@ -1446,8 +1459,8 @@ void SH2::Execute(uint32 address) {
             break;
         case 0x3: // 1100 0011 iiii iiii   TRAPA #imm
             if constexpr (delaySlot) {
-                // TODO: illegal instruction
-                dbg_println("illegal delay slot instruction");
+                // Illegal slot instruction exception
+                EnterException(6);
             } else {
                 TRAPA(bit::extract<0, 7>(instr));
             }
@@ -1544,14 +1557,60 @@ void SH2::Execute(uint32 address) {
 
     default: dbg_println("unhandled instruction"); break;
     }
+}
 
-    // if ((PC & 0x7FFFFFF) == 0x0003b6e)
-    // if ((PC & 0x7FFFFFF) == 0x0004a9c)
-    // if ((PC & 0x7FFFFFF) == 0x6001278)
-    // if ((PC & 0x7FFFFFF) == 0x0003378)
-    // if ((PC & 0x7FFFFFF) == 0x00033d0)
-    // if ((PC & 0x7FFFFFF) == 0x0002630)
-    //    __debugbreak();
+void SH2::CheckInterrupts() {
+    // TODO: check interrupts from these sources (in order of priority, when priority numbers are the same):
+    //   name             priority       vecnum
+    //   NMI              16             0x0B
+    //   User break       15             0x0C
+    //   IRLs 15-1        15-1           0x40 + (level >> 1)
+    //   DIVU OVFI        IPRA.DIVUIPn   VCRDIV
+    //   DMAC0 xfer end   IPRA.DMACIPn   VCRDMA0
+    //   DMAC1 xfer end   IPRA.DMACIPn   VCRDMA1
+    //   WDT ITI          IPRA.WDTIPn    VCRWDT
+    //   BSC REF CMI      IPRA.WDTIPn    VCRWDT
+    //   SCI ERI          IPRB.SCIIPn    VCRA.SERVn
+    //   SCI RXI          IPRB.SCIIPn    VCRA.SRXVn
+    //   SCI TXI          IPRB.SCIIPn    VCRB.STXVn
+    //   SCI TEI          IPRB.SCIIPn    VCRB.STEVn
+    //   FRT ICI          IPRB.FRTIPn    VCRC.FICVn
+    //   FRT OCI          IPRB.FRTIPn    VCRC.FOCVn
+    //   FRT OVI          IPRB.FRTIPn    VCRD.FOVVn
+    // use the vector number of the exception with highest priority
+    // TODO: external vector fetch
+
+    // TODO: NMI, user break (before IRLs)
+
+    m_pendingInterrupt.priority = m_pendingIRL;
+    m_pendingInterrupt.vecNum = 0x40 + (m_pendingIRL >> 1u);
+
+    auto update = [&](uint8 intrPriority, uint8 vecNum) {
+        if (intrPriority > m_pendingInterrupt.priority) {
+            m_pendingInterrupt.priority = intrPriority;
+            m_pendingInterrupt.vecNum = vecNum;
+        }
+    };
+
+    if (DVCR.OVF && DVCR.OVFIE) {
+        update(IPRA.DIVUIPn, VCRDIV);
+    }
+
+    // TODO: DMAC0, DMAC1 transfer end
+    // TODO: WDT ITI, BSC REF CMI
+    // TODO: SCI ERI, RXI, TXI, TEI
+    // TODO: FRT ICI, OCI, OVI
+
+    // if level > SR.ILevel, set interrupt exception flag
+    // otherwise clear interrupt exception flag
+}
+
+void SH2::EnterException(uint8 vectorNumber) {
+    R[15] -= 4;
+    MemWriteLong(R[15], SR.u32);
+    R[15] -= 4;
+    MemWriteLong(R[15], PC - 2);
+    PC = MemReadLong(VBR + (static_cast<uint32>(vectorNumber) << 2u)) + 4;
 }
 
 void SH2::NOP() {
@@ -2460,11 +2519,7 @@ void SH2::JSR(uint16 rm) {
 
 void SH2::TRAPA(uint16 imm) {
     dbg_println("trapa #0x{:X}", imm);
-    R[15] -= 4;
-    MemWriteLong(R[15], SR.u32);
-    R[15] -= 4;
-    MemWriteLong(R[15], PC - 2);
-    PC = MemReadLong(VBR + (imm << 2)) + 4;
+    EnterException(imm);
 }
 
 void SH2::RTE() {
