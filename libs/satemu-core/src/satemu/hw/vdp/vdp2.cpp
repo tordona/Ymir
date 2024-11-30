@@ -328,6 +328,11 @@ void VDP2::DrawLine() {
         return arr;
     }();
 
+    // TODO: optimize
+    // - RBG1 replaces NBG0
+    // - when RBG0 and RBG1 are both enabled, NBG0-3 are disabled
+    // - this means we can use less render contexts (4 max it seems)
+
     // Draw normal BGs
     int i = 0;
     for (const auto &bg : m_NormBGParams) {
@@ -371,15 +376,24 @@ void VDP2::DrawLine() {
     for (uint32 x = 0; x < m_latchedHRes; x++) {
         // TODO: handle priorities
         // - sort layers per pixel
-        //   - priority == 0 -> transparent pixel
+        //   - priority == 0 and special priority in use -> transparent pixel
         //   - transparent pixels are ignored
         // - keep two topmost layers
         //   - add one if LNCL insertion happened
         //   - add one if second screen color calculation is enabled (extended color calculation)
         // - use BACK when all layers are transparent
         // TODO: handle color calculations
+
+        // HACK: for now, use the top priority of each layer
         if (m_framebuffer != nullptr) {
-            m_framebuffer[x + y * m_latchedHRes] = m_renderContexts[3].colors[x].u32;
+            uint32 prio = 0;
+            for (int i = 0; i < 6; i++) {
+                const auto &rctx = m_renderContexts[i];
+                if (rctx.colors[x].msb && rctx.priorities[x] >= prio) {
+                    prio = rctx.priorities[x];
+                    m_framebuffer[x + y * m_latchedHRes] = rctx.colors[x].u32;
+                }
+            }
         }
     }
 }
