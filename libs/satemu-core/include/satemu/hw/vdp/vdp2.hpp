@@ -1224,7 +1224,7 @@ private:
         return value;
     }
 
-    void WriteLNCLEN(uint16 value) {
+    FORCE_INLINE void WriteLNCLEN(uint16 value) {
         m_NormBGParams[0].lineColorScreenEnable = bit::extract<0>(value);
         m_NormBGParams[1].lineColorScreenEnable = bit::extract<1>(value);
         m_NormBGParams[2].lineColorScreenEnable = bit::extract<2>(value);
@@ -1291,7 +1291,7 @@ private:
         return value;
     }
 
-    void WritePRINA(uint16 value) {
+    FORCE_INLINE void WritePRINA(uint16 value) {
         m_NormBGParams[0].priorityNumber = bit::extract<0, 2>(value);
         m_NormBGParams[1].priorityNumber = bit::extract<8, 10>(value);
         m_RotBGParams[1].priorityNumber = m_NormBGParams[0].priorityNumber;
@@ -1312,7 +1312,7 @@ private:
         return value;
     }
 
-    void WritePRINB(uint16 value) {
+    FORCE_INLINE void WritePRINB(uint16 value) {
         m_NormBGParams[2].priorityNumber = bit::extract<0, 2>(value);
         m_NormBGParams[3].priorityNumber = bit::extract<8, 10>(value);
     }
@@ -1329,7 +1329,7 @@ private:
         return value;
     }
 
-    void WritePRIR(uint16 value) {
+    FORCE_INLINE void WritePRIR(uint16 value) {
         m_RotBGParams[0].priorityNumber = bit::extract<0, 2>(value);
     }
 
@@ -1364,7 +1364,7 @@ private:
     // RAMCTL.CRMD modes 2 and 3 shuffle address bits as follows:
     //   10 09 08 07 06 05 04 03 02 01 11 00
     //   in short, bits 10-01 are shifted left and bit 11 takes place of bit 01
-    uint32 MapCRAMAddress(uint32 address) const {
+    FORCE_INLINE uint32 MapCRAMAddress(uint32 address) const {
         if (RAMCTL.CRMDn == 2 || RAMCTL.CRMDn == 3) {
             address =
                 bit::extract<0>(address) | (bit::extract<11>(address) << 1u) | (bit::extract<1, 10>(address) << 2u);
