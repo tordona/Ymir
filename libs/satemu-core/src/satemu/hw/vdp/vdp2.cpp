@@ -326,24 +326,12 @@ void VDP2::DrawLine() {
         return arr;
     }();
 
-    // TODO: request framebuffer from frontend
-    static Color888 fb[704 * 480];
-
-    // TODO: priority handling
-    // - should probably move the for (uint32 x ...) loop here
-    // - sort layers per pixel
-    //   - drawing functions must return priority info in addition to color
-    //   - figure out how to do this optimally; don't want to hit CRAM if not needed
-    //     - probably need a context struct to store addresses, priority and color data
-
-    // TODO: special color handling
-
     // Draw normal BGs
+    int i = 0;
     for (const auto &bg : m_NormBGParams) {
+        auto &rctx = m_renderContexts[i++];
         if (bg.enabled) {
-            BGRenderContext rctx{};
             rctx.cramOffset = bg.caos << (RAMCTL.CRMDn == 1 ? 10 : 9);
-            rctx.framebuffer = fb;
 
             const uint32 colorFormat = static_cast<uint32>(bg.colorFormat);
             const uint32 colorMode = RAMCTL.CRMDn;
@@ -355,23 +343,45 @@ void VDP2::DrawLine() {
                 const bool wideChar = bg.wideChar;
                 (this->*fnDrawScrollNBGs[twoWordChar][fourCellChar][wideChar][colorFormat][colorMode])(bg, rctx);
             }
+        } else {
+            rctx.priorities.fill(0);
         }
     }
 
     // Draw rotation BGs
     for (const auto &bg : m_RotBGParams) {
+        auto &rctx = m_renderContexts[i++];
         if (bg.enabled) {
-            BGRenderContext rctx{};
             rctx.cramOffset = bg.caos << (RAMCTL.CRMDn == 1 ? 10 : 9);
-            rctx.framebuffer = fb;
 
             // TODO: implement
             if (bg.bitmap) {
-                // TODO: draw bitmap RBG
+                // (this->*fnDrawBitmapRBGs[...])(bg, rctx);
             } else {
                 // (this->*fnDrawScrollRBGs[...])(bg, rctx);
             }
+        } else {
+            rctx.priorities.fill(0);
         }
+    }
+
+    // TODO: request framebuffer from frontend
+    // - only once per frame
+    // - latch screen dimensions at the start of the frame
+    // - avoid using m_HRes/m_VRes throughout the rendering process
+    static Color888 fb[704 * 480];
+
+    const uint32 y = m_VCounter;
+    for (uint32 x = 0; x < m_HRes; x++) {
+        // TODO: handle priorities
+        // - sort layers per pixel
+        //   - priority == 0 -> transparent pixel
+        //   - transparent pixels are ignored
+        // - keep two topmost layers
+        //   - add one if LNCL insertion happened
+        //   - add one if second screen color calculation is enabled (extended color calculation)
+        // TODO: handle color calculations
+        fb[x + y * m_VRes] = m_renderContexts[0].colors[x];
     }
 }
 
@@ -488,9 +498,25 @@ NO_INLINE void VDP2::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderCo
                         : FetchOneWordCharacter<fourCellChar, largePalette, wideChar>(bgParams, pageAddress, charIndex);
 
         // Fetch dot color using character data
-        Color888 color = FetchCharacterColor<colorFormat, colorMode>(rctx.cramOffset, ch, dotX, dotY, cellIndex);
-        // TODO: write to temporary buffer?
-        rctx.framebuffer[x + y * m_HRes] = color;
+        rctx.colors[x] = FetchCharacterColor<colorFormat, colorMode>(rctx.cramOffset, ch, dotX, dotY, cellIndex);
+
+        // Compute priority
+        rctx.priorities[x] = bgParams.priorityNumber;
+        if (bgParams.priorityMode == PriorityMode::PerCharacter) {
+            rctx.priorities[x] &= ~1;
+            rctx.priorities[x] |= ch.specPriority;
+        } else if (bgParams.priorityMode == PriorityMode::PerDot) {
+            if constexpr (colorFormat == ColorFormat::Palette16 || colorFormat == ColorFormat::Palette256 ||
+                          colorFormat == ColorFormat::Palette2048) {
+                // TODO: get palette color data properly
+                const uint16 colorData = 0x3; // bits 3-1 of dotData
+
+                rctx.priorities[x] &= ~1;
+                if (ch.specPriority && m_specialFunctionCodes[bgParams.specialFunctionSelect].colorMatches[colorData]) {
+                    rctx.priorities[x] |= 1;
+                }
+            }
+        }
 
         // Increment horizontal coordinate
         fracScrollX += bgParams.scrollIncH;
@@ -510,9 +536,23 @@ NO_INLINE void VDP2::DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderCo
         const uint32 scrollX = fracScrollX >> 8u;
         const uint32 scrollY = fracScrollY >> 8u;
 
-        Color888 color = FetchBitmapColor<colorFormat, colorMode>(bgParams, rctx.cramOffset, scrollX, scrollY);
-        // TODO: write to temporary buffer?
-        rctx.framebuffer[x + y * m_HRes] = color;
+        // Fetch dot color from bitmap
+        rctx.colors[x] = FetchBitmapColor<colorFormat, colorMode>(bgParams, rctx.cramOffset, scrollX, scrollY);
+
+        // Compute priority
+        rctx.priorities[x] = bgParams.priorityNumber;
+        if constexpr (colorFormat == ColorFormat::Palette16 || colorFormat == ColorFormat::Palette256 ||
+                      colorFormat == ColorFormat::Palette2048) {
+            if (bgParams.priorityMode == PriorityMode::PerDot) {
+                // TODO: get palette color data properly
+                const uint16 colorData = 0x3; // bits 3-1 of dotData
+
+                rctx.priorities[x] &= ~1;
+                if (m_specialFunctionCodes[bgParams.specialFunctionSelect].colorMatches[colorData]) {
+                    rctx.priorities[x] |= 1;
+                }
+            }
+        }
 
         // Increment horizontal coordinate
         fracScrollX += bgParams.scrollIncH;

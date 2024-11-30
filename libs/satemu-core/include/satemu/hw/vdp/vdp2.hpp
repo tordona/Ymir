@@ -1469,9 +1469,15 @@ private:
         // Derived from RAMCTL.CRMDn and CRAOFA/CRAOFB.xxCAOSn
         uint32 cramOffset;
 
-        // Pointer to framebuffer matching the current screen resolution.
-        vdp::Color888 *framebuffer;
+        // Colors per pixel
+        std::array<vdp::Color888, 704> colors;
+
+        // Priorities per pixel
+        std::array<uint8, 704> priorities;
     };
+
+    // Render contexts for NBGs 0-3 then RBGs 0-1
+    std::array<BGRenderContext, 4 + 2> m_renderContexts;
 
     // Draws the scanline at m_VCounter.
     void DrawLine();
