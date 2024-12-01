@@ -268,12 +268,6 @@ struct SpecialFunctionCodes {
     std::array<bool, 8> colorMatches;
 };
 
-// Framebuffer color is in little-endian XRGB8888 format
-using FramebufferColor = uint32;
-
-using CBRequestFramebuffer = util::Callback<FramebufferColor *(uint32 width, uint32 height)>;
-using CBFrameComplete = util::Callback<void(FramebufferColor *fb, uint32 width, uint32 height)>;
-
 // TODO: consider splitting unions into individual fields for performance
 
 // 180000   TVMD    TV Screen Mode

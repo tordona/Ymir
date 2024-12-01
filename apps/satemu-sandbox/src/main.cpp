@@ -140,7 +140,7 @@ void runEmulator(satemu::Saturn &saturn) {
 
     // Configure single framebuffer
     std::vector<uint32> framebuffer(704 * 480);
-    saturn.VDP2.SetCallbacks({framebuffer.data(), [](uint32, uint32, void *ctx) { return (uint32 *)ctx; }}, {});
+    saturn.sysVideo.SetCallbacks({framebuffer.data(), [](uint32, uint32, void *ctx) { return (uint32 *)ctx; }}, {});
 
     auto t = clk::now();
     uint64 frames = 0;

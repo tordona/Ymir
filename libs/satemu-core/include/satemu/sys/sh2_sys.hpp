@@ -13,7 +13,7 @@ public:
     void Step();
 
 private:
-    sh2::SH2 &m_sh2;
+    sh2::SH2 &m_SH2;
 };
 
 } // namespace satemu::sys

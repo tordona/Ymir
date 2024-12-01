@@ -11,14 +11,30 @@
 
 #include <array>
 
+// -----------------------------------------------------------------------------
+// Forward declarations
+
+namespace satemu::sys {
+
+class VideoSystem;
+
+} // namespace satemu::sys
+
+// -----------------------------------------------------------------------------
+
 namespace satemu::vdp1 {
 
 class VDP1 {
+    friend class sys::VideoSystem;
+
 public:
     VDP1();
 
+private:
+    // Invoked by VideoSystem::Reset(bool)
     void Reset(bool hard);
 
+public:
     template <mem_access_type T>
     T ReadVRAM(uint32 address) {
         return util::ReadBE<T>(&m_VRAM[address & 0x7FFFF]);

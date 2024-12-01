@@ -9,6 +9,7 @@
 #include <satemu/hw/vdp/vdp2.hpp>
 
 #include <satemu/sys/sh2_sys.hpp>
+#include <satemu/sys/video_sys.hpp>
 
 namespace satemu {
 
@@ -25,7 +26,6 @@ struct Saturn {
     // Components
 
     sh2::SH2 SH2;
-
     scu::SCU SCU;
     smpc::SMPC SMPC;
     scsp::SCSP SCSP;
@@ -37,18 +37,22 @@ struct Saturn {
     // Systems
     //
     // Systems are logical groupings of components with complex logic and interactions between them.
+    //
+    // Each system manages one or more components and may optionally connect with additional components to perform more
+    // complex interactions such as triggering interrupts.
 
-    sys::SH2System sysSH2;
+    sys::SH2System sysSH2;     // manages SH2
+    sys::VideoSystem sysVideo; // manages VDP1 and VDP2, connects with SCU and SH2
 
     // TODO: implement more systems
     // - examples:
     //   - SoundSystem: uses SCSP, SCU (for interrupts probably), maybe both SH2s?
-    //   - VideoSystem: VDP1, VDP2, SCU (interrupts), both SH2s, ...
     //   - InputSystem: SMPC, anything else?
     //   - MgmtSystem: SMPC and all the stuff it resets (SH2s, the M68K in the SCSP, etc.)
     //   - CDSystem: CDBlock, SCU? probably both SH2s for interrupts too...
     // - anything that needs to raise interrupts will very likely need SCU + both SH2s
-    //   - might be useful to create a base class called InterruptSystem with common logic
+    //   - might be useful to group them in an InterruptSystem with common logic
+    //     - inherit or compose?
     // - not everything needs to be in a dedicated system
     //   - the Saturn class itself can be considered a "global" system
     //   - Reset() is a global operation, so it makes sense to stay here

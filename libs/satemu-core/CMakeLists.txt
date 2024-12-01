@@ -30,6 +30,7 @@ add_library(satemu-core
 
     include/satemu/sys/sh2_sys.hpp
     include/satemu/sys/sys.hpp
+    include/satemu/sys/video_sys.hpp
     
     include/satemu/util/bit_ops.hpp
     include/satemu/util/callback.hpp
@@ -56,6 +57,7 @@ add_library(satemu-core
 
     src/satemu/sys/sh2_sys.cpp
     src/satemu/sys/sys.cpp
+    src/satemu/sys/video_sys.cpp
 
     src/satemu/sys/sh2/sh2_interpreter.hpp
     src/satemu/sys/sh2/sh2_mem.hpp

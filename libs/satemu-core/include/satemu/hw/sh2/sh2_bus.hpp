@@ -47,15 +47,15 @@ class SH2Bus {
 public:
     SH2Bus(scu::SCU &scu, smpc::SMPC &smpc);
 
+private:
     void Reset(bool hard);
 
+public:
     void LoadIPL(std::span<uint8, kIPLSize> ipl);
 
     template <mem_access_type T>
     T Read(uint32 address) {
         address &= ~(sizeof(T) - 1);
-
-        // TODO: consider using a LUT
 
         using namespace util;
 
@@ -78,8 +78,6 @@ public:
     template <mem_access_type T>
     void Write(uint32 address, T value) {
         address &= ~(sizeof(T) - 1);
-
-        // TODO: consider using a LUT
 
         using namespace util;
 

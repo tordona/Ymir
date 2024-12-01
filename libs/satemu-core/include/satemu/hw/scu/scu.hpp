@@ -12,6 +12,15 @@
 
 #include <fmt/format.h>
 
+// Forward declarations
+namespace satemu::sys {
+
+class VideoSystem;
+
+} // namespace satemu::sys
+
+// -----------------------------------------------------------------------------
+
 namespace satemu::scu {
 
 // SCU memory map
@@ -147,9 +156,7 @@ private:
     void TriggerVBlankIN();
     void TriggerVBlankOUT();
 
-    // TODO: figure out a controlled way to give these classes access to SCU methods
-    // without incurring a performance penalty or creating circular dependencies
-    friend class vdp2::VDP2;
+    friend class sys::VideoSystem;
 
     // -------------------------------------------------------------------------
     // SCU registers

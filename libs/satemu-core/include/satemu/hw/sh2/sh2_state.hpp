@@ -28,7 +28,7 @@ struct SH2State {
 
 private:
     // Resets *most* of the state, except for PC and R15 which need to read from the bus.
-    // To fully reset the state, use SH2System::Reset(bool) instead.
+    // SH2System::Reset(bool) invokes this and initializes PC and R15 properly.
     void Reset(bool hard);
 
 public:
