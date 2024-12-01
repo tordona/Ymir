@@ -46,13 +46,9 @@ struct Saturn {
 
     // TODO: implement more systems
     // - examples:
-    //   - SoundSystem: uses SCSP, SCU (for interrupts probably), maybe both SH2s?
-    //   - InputSystem: SMPC, anything else?
-    //   - MgmtSystem: SMPC and all the stuff it resets (SH2s, the M68K in the SCSP, etc.)
-    //   - CDSystem: CDBlock, SCU? probably both SH2s for interrupts too...
-    // - anything that needs to raise interrupts will very likely need SCU + both SH2s
-    //   - might be useful to group them in an InterruptSystem with common logic
-    //     - inherit or compose?
+    //   - SMPCSystem: owns SMPC, talks to nearly all other systems (SH2s, the M68K in the SCSP, etc.)
+    //   - SoundSystem: owns SCSP, talks to SCU system? (for interrupts)
+    //   - CDSystem: owns CDBlock, talks to SCU system? (for interrupts)
     // - not everything needs to be in a dedicated system
     //   - the Saturn class itself can be considered a "global" system
     //   - Reset() is a global operation, so it makes sense to stay here
