@@ -15,7 +15,7 @@ namespace satemu::sys {
 
 class SCUSystem {
 public:
-    SCUSystem(scu::SCU &scu, SH2System &sysSH2);
+    SCUSystem(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, SH2System &sysSH2);
 
     void Reset(bool hard);
 
@@ -25,8 +25,9 @@ public:
     void TriggerVBlankIN();
     void TriggerVBlankOUT();
 
+    scu::SCU SCU;
+
 private:
-    scu::SCU &m_SCU;
     SH2System &m_sysSH2;
 
     void UpdateInterruptLevel();

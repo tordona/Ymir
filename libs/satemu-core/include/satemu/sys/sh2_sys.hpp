@@ -10,14 +10,11 @@ public:
 
     void Reset(bool hard);
 
-    void LoadIPL(std::span<uint8, kIPLSize> ipl);
-
     void Step();
 
     void SetInterruptLevel(uint8 level);
 
-private:
-    sh2::SH2 m_SH2;
+    sh2::SH2 SH2;
 };
 
 } // namespace satemu::sys

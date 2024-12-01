@@ -19,6 +19,8 @@ struct Saturn {
 
     void Reset(bool hard);
 
+    void LoadIPL(std::span<uint8, kIPLSize> ipl);
+
     // TODO: consider moving this to a system
     // TODO: implement RunFrame
     void Step();
@@ -26,7 +28,6 @@ struct Saturn {
     // -------------------------------------------------------------------------
     // Components
 
-    scu::SCU SCU;
     smpc::SMPC SMPC;
     scsp::SCSP SCSP;
     cdblock::CDBlock CDBlock;
