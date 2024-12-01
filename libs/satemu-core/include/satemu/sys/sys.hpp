@@ -1,7 +1,5 @@
 #pragma once
 
-#include <satemu/core_types.hpp>
-
 #include <satemu/hw/cdblock/cdblock.hpp>
 #include <satemu/hw/scsp/scsp.hpp>
 #include <satemu/hw/scu/scu.hpp>
@@ -9,6 +7,8 @@
 #include <satemu/hw/smpc/smpc.hpp>
 #include <satemu/hw/vdp/vdp1.hpp>
 #include <satemu/hw/vdp/vdp2.hpp>
+
+#include <satemu/sys/sh2_sys.hpp>
 
 namespace satemu {
 
@@ -21,10 +21,10 @@ struct Saturn {
     // TODO: implement RunFrame
     void Step();
 
-    SH2Bus sh2bus;
+    // -------------------------------------------------------------------------
+    // Components
 
-    sh2::SH2 masterSH2;
-    sh2::SH2 slaveSH2;
+    sh2::SH2 SH2;
 
     scu::SCU SCU;
     smpc::SMPC SMPC;
@@ -33,8 +33,14 @@ struct Saturn {
     vdp1::VDP1 VDP1;
     vdp2::VDP2 VDP2;
 
-    // TODO: introduce "systems"
-    // - logical groupings of components with complex logic
+    // -------------------------------------------------------------------------
+    // Systems
+    //
+    // Systems are logical groupings of components with complex logic and interactions between them.
+
+    sys::SH2System sysSH2;
+
+    // TODO: implement more systems
     // - examples:
     //   - SoundSystem: uses SCSP, SCU (for interrupts probably), maybe both SH2s?
     //   - VideoSystem: VDP1, VDP2, SCU (interrupts), both SH2s, ...

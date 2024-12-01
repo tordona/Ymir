@@ -17,6 +17,7 @@ add_library(satemu-core
     include/satemu/hw/sh2/sh2.hpp
     include/satemu/hw/sh2/sh2_bus.hpp
     include/satemu/hw/sh2/sh2_bus_defs.hpp
+    include/satemu/hw/sh2/sh2_state.hpp
 
     include/satemu/hw/smpc/smpc.hpp
     include/satemu/hw/smpc/smpc_defs.hpp
@@ -27,8 +28,9 @@ add_library(satemu-core
     include/satemu/hw/vdp/vdp2.hpp
     include/satemu/hw/vdp/vdp2_defs.hpp
 
+    include/satemu/sys/sh2_sys.hpp
     include/satemu/sys/sys.hpp
-
+    
     include/satemu/util/bit_ops.hpp
     include/satemu/util/callback.hpp
     include/satemu/util/data_ops.hpp
@@ -46,13 +48,17 @@ add_library(satemu-core
     
     src/satemu/hw/scu/scu.cpp
 
-    src/satemu/hw/sh2/sh2.cpp
     src/satemu/hw/sh2/sh2_bus.cpp
+    src/satemu/hw/sh2/sh2_state.cpp
 
     src/satemu/hw/vdp/vdp1.cpp
     src/satemu/hw/vdp/vdp2.cpp
 
+    src/satemu/sys/sh2_sys.cpp
     src/satemu/sys/sys.cpp
+
+    src/satemu/sys/sh2/sh2_interpreter.hpp
+    src/satemu/sys/sh2/sh2_mem.hpp
 
     src/satemu/util/constexpr_for.hpp
 )

@@ -1,6 +1,6 @@
 #include <satemu/hw/sh2/sh2_bus.hpp>
 
-namespace satemu {
+namespace satemu::sh2 {
 
 SH2Bus::SH2Bus(scu::SCU &scu, smpc::SMPC &smpc)
     : m_SCU(scu)
@@ -18,4 +18,4 @@ void SH2Bus::LoadIPL(std::span<uint8, kIPLSize> ipl) {
     std::copy(ipl.begin(), ipl.end(), m_IPL.begin());
 }
 
-} // namespace satemu
+} // namespace satemu::sh2

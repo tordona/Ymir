@@ -198,7 +198,7 @@ int main(int argc, char **argv) {
             fmt::println("IPL ROM size mismatch: expected {} bytes, got {} bytes", satemu::kIPLSize, rom.size());
             return EXIT_FAILURE;
         }
-        saturn->sh2bus.LoadIPL(std::span<uint8, satemu::kIPLSize>(rom));
+        saturn->SH2.bus.LoadIPL(std::span<uint8, satemu::kIPLSize>(rom));
         fmt::println("IPL ROM loaded");
     }
     runEmulator(*saturn);

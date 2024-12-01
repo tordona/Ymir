@@ -128,6 +128,8 @@ void VDP2::UpdateResolution() {
     static constexpr uint32 hRes[] = {320, 352, 640, 704};
     static constexpr uint32 vRes[] = {224, 240, 256, 256};
 
+    // TODO: wait until next frame to update timings and etc.
+    // - not sure how the hardware behaves if TVMODE is changed mid-frame
     // TODO: check for NTSC, PAL or exclusive monitor; assuming NTSC for now
     // TODO: exclusive monitor: even hRes entries are valid for 31 KHz monitors, odd are for Hi-Vision
     m_HRes = hRes[TVMD.HRESOn];
@@ -601,7 +603,7 @@ FORCE_INLINE VDP2::Character VDP2::FetchOneWordCharacter(const NormBGParams &bgP
 
     /*
     Contents of 1 word character patterns vary based on Character Size, Character Color Count and Auxiliary Mode:
-        Character Size        = CHCTLA/CHCTLB.xxCHSZ  = !fourCellChar = FCC
+        Character Size        = CHCTLA/CHCTLB.xxCHSZ  = !fourCellChar = !FCC
         Character Color Count = CHCTLA/CHCTLB.xxCHCNn = largePalette  = LP
         Auxiliary Mode        = PNCN0/PNCR.xxCNSM     = wideChar      = WC
                 ---------------- Character data ----------------    Supplement in Pattern Name Control Register

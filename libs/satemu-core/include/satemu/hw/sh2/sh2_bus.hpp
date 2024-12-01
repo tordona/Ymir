@@ -11,7 +11,7 @@
 
 #include <span>
 
-namespace satemu {
+namespace satemu::sh2 {
 
 // SH-2 memory map
 // https://wiki.yabause.org/index.php5?title=SH-2CPU
@@ -105,4 +105,4 @@ private:
     smpc::SMPC &m_SMPC;
 };
 
-} // namespace satemu
+} // namespace satemu::sh2
