@@ -1,5 +1,7 @@
 #include <satemu/hw/vdp/vdp2.hpp>
 
+#include <satemu/hw/scu/scu.hpp>
+
 #include <satemu/util/constexpr_for.hpp>
 
 #include <fmt/format.h>
@@ -11,7 +13,7 @@ using namespace satemu::vdp;
 namespace satemu::vdp2 {
 
 VDP2::VDP2(scu::SCU &scu)
-    : m_scuOps(scu) {
+    : m_scu(scu) {
     // TODO: set PAL flag
     Reset(true);
 }
@@ -193,7 +195,7 @@ void VDP2::UpdateResolution() {
     fmt::println("VDP2: display {}", TVMD.DISP ? "ON" : "OFF");
 }
 
-void VDP2::IncrementVCounter() {
+FORCE_INLINE void VDP2::IncrementVCounter() {
     ++m_VCounter;
     while (m_VCounter >= m_VTimings[static_cast<uint32>(m_VPhase)]) {
         auto nextPhase = static_cast<uint32>(m_VPhase) + 1;
@@ -239,7 +241,7 @@ void VDP2::BeginHPhaseHorizontalSync() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering horizontal sync phase", m_VCounter);
 
     TVSTAT.HBLANK = 1;
-    m_scuOps.TriggerHBlankIN();
+    m_scu.TriggerHBlankIN();
 }
 
 void VDP2::BeginHPhaseLeftBorder() {
@@ -269,7 +271,7 @@ void VDP2::BeginVPhaseBottomBlanking() {
 void VDP2::BeginVPhaseVerticalSync() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering vertical sync phase", m_VCounter);
     TVSTAT.VBLANK = 1;
-    m_scuOps.TriggerVBlankIN();
+    m_scu.TriggerVBlankIN();
 }
 
 void VDP2::BeginVPhaseTopBlanking() {
@@ -287,7 +289,7 @@ void VDP2::BeginVPhaseLastLine() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering last line phase", m_VCounter);
 
     TVSTAT.VBLANK = 0;
-    m_scuOps.TriggerVBlankOUT();
+    m_scu.TriggerVBlankOUT();
 }
 
 // ----

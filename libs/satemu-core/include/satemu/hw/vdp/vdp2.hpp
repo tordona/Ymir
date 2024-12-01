@@ -1,7 +1,6 @@
 #pragma once
 
 #include "vdp2_defs.hpp"
-#include "vdp2_scu_ops.hpp"
 
 #include <satemu/hw/hw_defs.hpp>
 
@@ -14,6 +13,14 @@
 #include <fmt/format.h>
 
 #include <array>
+
+// Forward declarations
+
+namespace satemu::scu {
+
+class SCU;
+
+} // namespace satemu::scu
 
 namespace satemu::vdp2 {
 
@@ -375,6 +382,8 @@ public:
 private:
     std::array<uint8, kVDP2VRAMSize> m_VRAM; // 4x 128 KiB banks: A0, A1, B0, B1
     std::array<uint8, kCRAMSize> m_CRAM;
+
+    scu::SCU &m_scu;
 
     // -------------------------------------------------------------------------
 
@@ -1437,9 +1446,6 @@ private:
     // Display timings
     std::array<uint32, 4> m_HTimings;
     std::array<uint32, 7> m_VTimings;
-
-    // Access to SCU operations
-    SCUOperations m_scuOps;
 
     // Updates the display resolution and timings based on TVMODE
     void UpdateResolution();

@@ -147,7 +147,9 @@ private:
     void TriggerVBlankIN();
     void TriggerVBlankOUT();
 
-    friend class vdp2::SCUOperations;
+    // TODO: figure out a controlled way to give these classes access to SCU methods
+    // without incurring a performance penalty or creating circular dependencies
+    friend class vdp2::VDP2;
 
     // -------------------------------------------------------------------------
     // SCU registers
