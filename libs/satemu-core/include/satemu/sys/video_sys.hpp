@@ -35,8 +35,14 @@ private:
     scu::SCU &m_SCU;
     sh2::SH2 &m_SH2;
 
-    // Callbacks
+    // -------------------------------------------------------------------------
+    // Frontend callbacks
+
+    // Invoked when the renderer is about to start a new frame, to retrieve a buffer from the frontend in which to
+    // render the screen. The frame will contain <width> x <height> pixels in XBGR8888 little-endian format.
     CBRequestFramebuffer m_cbRequestFramebuffer;
+
+    // Invoked whne the renderer finishes drawing a frame.
     CBFrameComplete m_cbFrameComplete;
 
     // -------------------------------------------------------------------------
@@ -107,7 +113,7 @@ private:
     std::array<uint32, 4> m_HTimings;
     std::array<uint32, 7> m_VTimings;
 
-    // Updates the display resolution and timings based on TVMODE
+    // Updates the display resolution and timings based on TVMODE if it is dirty
     void UpdateResolution();
 
     void IncrementVCounter();

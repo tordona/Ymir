@@ -247,23 +247,20 @@ void VideoSystem::DrawLine() {
     static constexpr auto fnDrawScrollNBGs = [] {
         std::array<std::array<std::array<std::array<std::array<FnDrawScrollNBG, 4>, 8>, 2>, 2>, 2> arr{};
 
-        util::constexpr_for<2>([&](auto twcIndex) {
+        util::constexpr_for<2 * 2 * 2 * 8 * 4>([&](auto index) {
+            const uint32 twcIndex = bit::extract<0>(index());
+            const uint32 fccIndex = bit::extract<1>(index());
+            const uint32 wcIndex = bit::extract<2>(index());
+            const uint32 cfIndex = bit::extract<3, 5>(index());
+            const uint32 cmIndex = bit::extract<6, 7>(index());
+
             const bool twoWordChar = twcIndex;
-            util::constexpr_for<2>([&](auto fccIndex) {
-                const bool fourCellChar = fccIndex;
-                util::constexpr_for<2>([&](auto wcIndex) {
-                    const bool wideChar = wcIndex;
-                    util::constexpr_for<8>([&](auto cfIndex) {
-                        const ColorFormat colorFormat = static_cast<ColorFormat>(cfIndex <= 4 ? cfIndex : 4);
-                        util::constexpr_for<4>([&](auto cmIndex) {
-                            const size_t colorMode = cmIndex <= 2 ? cmIndex : 2;
-                            arr[twcIndex][fccIndex][wcIndex][cfIndex][cmIndex] =
-                                &VideoSystem::DrawNormalScrollBG<twoWordChar, fourCellChar, wideChar, colorFormat,
-                                                                 colorMode>;
-                        });
-                    });
-                });
-            });
+            const bool fourCellChar = fccIndex;
+            const bool wideChar = wcIndex;
+            const ColorFormat colorFormat = static_cast<ColorFormat>(cfIndex <= 4 ? cfIndex : 4);
+            const uint32 colorMode = cmIndex <= 2 ? cmIndex : 2;
+            arr[twcIndex][fccIndex][wcIndex][cfIndex][cmIndex] =
+                &VideoSystem::DrawNormalScrollBG<twoWordChar, fourCellChar, wideChar, colorFormat, colorMode>;
         });
 
         return arr;
@@ -274,12 +271,13 @@ void VideoSystem::DrawLine() {
     static constexpr auto fnDrawBitmapNBGs = [] {
         std::array<std::array<FnDrawBitmapNBG, 4>, 8> arr{};
 
-        util::constexpr_for<8>([&](auto cfIndex) {
+        util::constexpr_for<8 * 4>([&](auto index) {
+            const uint32 cfIndex = bit::extract<0, 2>(index());
+            const uint32 cmIndex = bit::extract<3, 4>(index());
+
             const ColorFormat colorFormat = static_cast<ColorFormat>(cfIndex <= 4 ? cfIndex : 4);
-            util::constexpr_for<4>([&](auto cmIndex) {
-                const size_t colorMode = cmIndex <= 2 ? cmIndex : 2;
-                arr[cfIndex][cmIndex] = &VideoSystem::DrawNormalBitmapBG<colorFormat, colorMode>;
-            });
+            const size_t colorMode = cmIndex <= 2 ? cmIndex : 2;
+            arr[cfIndex][cmIndex] = &VideoSystem::DrawNormalBitmapBG<colorFormat, colorMode>;
         });
 
         return arr;
