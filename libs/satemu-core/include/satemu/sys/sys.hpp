@@ -36,11 +36,19 @@ struct Saturn {
     // TODO: introduce "systems"
     // - logical groupings of components with complex logic
     // - examples:
-    //   - SoundSystem: uses SCSP, SCU (for interrupts probably), maybe SH2Bus?
-    //   - VideoSystem: VDP1, VDP2, SCU (interrupts), ...
+    //   - SoundSystem: uses SCSP, SCU (for interrupts probably), maybe both SH2s?
+    //   - VideoSystem: VDP1, VDP2, SCU (interrupts), both SH2s, ...
     //   - InputSystem: SMPC, anything else?
-    //   - CDSystem: CDBlock, SCU?
-    //   - EmulatorSystem? something to run and step through code
+    //   - MgmtSystem: SMPC and all the stuff it resets (SH2s, the M68K in the SCSP, etc.)
+    //   - CDSystem: CDBlock, SCU? probably both SH2s for interrupts too...
+    // - anything that needs to raise interrupts will very likely need SCU + both SH2s
+    //   - might be useful to create a base class called InterruptSystem with common logic
+    // - not everything needs to be in a dedicated system
+    //   - the Saturn class itself can be considered a "global" system
+    //   - Reset() is a global operation, so it makes sense to stay here
+    //   - debugging features might live here too
+    //   - save states
+    //   - high-level control like running and stepping should probably be here too
     // - some components might still require references
     //   - e.g. SH2 still needs to be able to talk to an SH2Bus
     //     - move the emulation logic to an SH2System
