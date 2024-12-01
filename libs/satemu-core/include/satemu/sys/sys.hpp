@@ -10,42 +10,41 @@
 #include <satemu/hw/vdp/vdp1.hpp>
 #include <satemu/hw/vdp/vdp2.hpp>
 
-#include <satemu/util/inline.hpp>
-
 namespace satemu {
 
-class Saturn {
-public:
+struct Saturn {
     Saturn();
 
     void Reset(bool hard);
 
-    void LoadIPL(std::span<uint8, kIPLSize> ipl);
-
+    // TODO: consider moving this to a system
+    // TODO: implement RunFrame
     void Step();
 
-    // TODO: void RunFrame();
-    FORCE_INLINE void SetFramebufferCallbacks(vdp2::CBRequestFramebuffer cbRequestFramebuffer,
-                                              vdp2::CBFrameComplete cbFrameComplete) {
-        m_VDP2.SetCallbacks(cbRequestFramebuffer, cbFrameComplete);
-    }
+    SH2Bus sh2bus;
 
-    FORCE_INLINE sh2::SH2 &MasterSH2() {
-        return m_masterSH2;
-    }
+    sh2::SH2 masterSH2;
+    sh2::SH2 slaveSH2;
 
-private:
-    SH2Bus m_sh2bus;
+    scu::SCU SCU;
+    smpc::SMPC SMPC;
+    scsp::SCSP SCSP;
+    cdblock::CDBlock CDBlock;
+    vdp1::VDP1 VDP1;
+    vdp2::VDP2 VDP2;
 
-    sh2::SH2 m_masterSH2;
-    sh2::SH2 m_slaveSH2;
-
-    scu::SCU m_SCU;
-    smpc::SMPC m_SMPC;
-    scsp::SCSP m_SCSP;
-    cdblock::CDBlock m_CDBlock;
-    vdp1::VDP1 m_VDP1;
-    vdp2::VDP2 m_VDP2;
+    // TODO: introduce "systems"
+    // - logical groupings of components with complex logic
+    // - examples:
+    //   - SoundSystem: uses SCSP, SCU (for interrupts probably), maybe SH2Bus?
+    //   - VideoSystem: VDP1, VDP2, SCU (interrupts), ...
+    //   - InputSystem: SMPC, anything else?
+    //   - CDSystem: CDBlock, SCU?
+    //   - EmulatorSystem? something to run and step through code
+    // - some components might still require references
+    //   - e.g. SH2 still needs to be able to talk to an SH2Bus
+    //     - move the emulation logic to an SH2System
+    //       - could even include *both* SH2s in one system, saving a reference
 };
 
 } // namespace satemu

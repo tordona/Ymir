@@ -140,7 +140,7 @@ void runEmulator(satemu::Saturn &saturn) {
 
     // Configure single framebuffer
     std::vector<uint32> framebuffer(704 * 480);
-    saturn.SetFramebufferCallbacks({framebuffer.data(), [](uint32, uint32, void *ctx) { return (uint32 *)ctx; }}, {});
+    saturn.VDP2.SetCallbacks({framebuffer.data(), [](uint32, uint32, void *ctx) { return (uint32 *)ctx; }}, {});
 
     auto t = clk::now();
     uint64 frames = 0;
@@ -198,7 +198,7 @@ int main(int argc, char **argv) {
             fmt::println("IPL ROM size mismatch: expected {} bytes, got {} bytes", satemu::kIPLSize, rom.size());
             return EXIT_FAILURE;
         }
-        saturn->LoadIPL(std::span<uint8, satemu::kIPLSize>(rom));
+        saturn->sh2bus.LoadIPL(std::span<uint8, satemu::kIPLSize>(rom));
         fmt::println("IPL ROM loaded");
     }
     runEmulator(*saturn);
