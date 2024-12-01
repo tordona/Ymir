@@ -26,7 +26,6 @@ struct Saturn {
     // -------------------------------------------------------------------------
     // Components
 
-    sh2::SH2 SH2;
     scu::SCU SCU;
     smpc::SMPC SMPC;
     scsp::SCSP SCSP;
@@ -39,12 +38,12 @@ struct Saturn {
     //
     // Systems are logical groupings of components with complex logic and interactions between them.
     //
-    // Each system manages one or more components and may optionally connect with additional components to perform more
-    // complex interactions such as triggering interrupts.
+    // Each system owns one or more components and may optionally connect with other systems to perform more complex
+    // interactions such as triggering interrupts.
 
-    sys::SH2System sysSH2;     // manages SH2
-    sys::SCUSystem sysSCU;     // manages SCU, talks to SH2 system
-    sys::VideoSystem sysVideo; // manages VDP1 and VDP2, talks to SCU system
+    sys::SH2System sysSH2;     // owns SH2
+    sys::SCUSystem sysSCU;     // owns SCU, talks to SH2 system
+    sys::VideoSystem sysVideo; // owns VDP1 and VDP2, talks to SCU system
 
     // TODO: implement more systems
     // - examples:

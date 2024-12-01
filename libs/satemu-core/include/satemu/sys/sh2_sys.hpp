@@ -6,16 +6,18 @@ namespace satemu::sys {
 
 class SH2System {
 public:
-    SH2System(sh2::SH2 &sh2);
+    SH2System(scu::SCU &scu, smpc::SMPC &smpc);
 
     void Reset(bool hard);
+
+    void LoadIPL(std::span<uint8, kIPLSize> ipl);
 
     void Step();
 
     void SetInterruptLevel(uint8 level);
 
 private:
-    sh2::SH2 &m_SH2;
+    sh2::SH2 m_SH2;
 };
 
 } // namespace satemu::sys

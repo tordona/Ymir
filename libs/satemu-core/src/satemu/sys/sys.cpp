@@ -3,10 +3,9 @@
 namespace satemu {
 
 Saturn::Saturn()
-    : SH2(SCU, SMPC)
-    , SCU(VDP1, VDP2, SCSP, CDBlock)
+    : SCU(VDP1, VDP2, SCSP, CDBlock)
 
-    , sysSH2(SH2)
+    , sysSH2(SCU, SMPC)
     , sysSCU(SCU, sysSH2)
     , sysVideo(VDP1, VDP2, sysSCU) {
     Reset(true);

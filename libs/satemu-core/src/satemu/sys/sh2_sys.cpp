@@ -7,8 +7,8 @@ using namespace satemu::sh2;
 
 namespace satemu::sys {
 
-SH2System::SH2System(SH2 &sh2)
-    : m_SH2(sh2) {}
+SH2System::SH2System(scu::SCU &scu, smpc::SMPC &smpc)
+    : m_SH2(scu, smpc) {}
 
 void SH2System::Reset(bool hard) {
     auto reset = [&](SH2State &state) {
@@ -19,6 +19,10 @@ void SH2System::Reset(bool hard) {
 
     reset(m_SH2.masterState);
     reset(m_SH2.slaveState);
+}
+
+void SH2System::LoadIPL(std::span<uint8, kIPLSize> ipl) {
+    m_SH2.bus.LoadIPL(ipl);
 }
 
 void SH2System::Step() {
