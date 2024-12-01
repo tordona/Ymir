@@ -28,6 +28,8 @@ public:
 private:
     scu::SCU &m_SCU;
     SH2System &m_sysSH2;
+
+    void UpdateInterruptLevel();
 };
 
 } // namespace satemu::sys

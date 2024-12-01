@@ -17,17 +17,21 @@ void SCUSystem::Reset(bool hard) {
 void SCUSystem::TriggerHBlankIN() {
     m_SCU.m_intrMask.VDP2_HBlankIN = 1;
     // TODO: also increment Timer 0 and trigger Timer 0 interrupt if the counter matches the compare register
-    // TODO: m_sysSH2.SetInterruptLevel(intrLevel);
+    UpdateInterruptLevel();
 }
 
 void SCUSystem::TriggerVBlankIN() {
     m_SCU.m_intrMask.VDP2_VBlankIN = 1;
-    // TODO: m_sysSH2.SetInterruptLevel(intrLevel);
+    UpdateInterruptLevel();
 }
 
 void SCUSystem::TriggerVBlankOUT() {
     m_SCU.m_intrMask.VDP2_VBlankOUT = 1;
     // TODO: also reset Timer 0
+    UpdateInterruptLevel();
+}
+
+void SCUSystem::UpdateInterruptLevel() {
     // TODO: m_sysSH2.SetInterruptLevel(intrLevel);
 }
 
