@@ -6,7 +6,7 @@
 
 #include <satemu/util/inline.hpp>
 
-namespace satemu {
+namespace satemu::sh2 {
 
 class SH2 {
 public:
@@ -754,4 +754,4 @@ private:
     void RTS(); // rts
 };
 
-} // namespace satemu
+} // namespace satemu::sh2

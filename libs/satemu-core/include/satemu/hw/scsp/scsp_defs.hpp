@@ -2,8 +2,8 @@
 
 #include <satemu/util/size_ops.hpp>
 
-namespace satemu {
+namespace satemu::scsp {
 
 constexpr size_t kM68KWRAMSize = 512_KiB;
 
-} // namespace satemu
+} // namespace satemu::scsp

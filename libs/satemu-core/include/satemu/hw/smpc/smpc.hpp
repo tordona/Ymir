@@ -7,7 +7,7 @@
 
 #include <fmt/format.h>
 
-namespace satemu {
+namespace satemu::smpc {
 
 class SMPC {
 public:
@@ -210,4 +210,4 @@ private:
     }
 };
 
-} // namespace satemu
+} // namespace satemu::smpc

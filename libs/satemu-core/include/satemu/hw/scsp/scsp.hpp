@@ -10,7 +10,7 @@
 
 #include <array>
 
-namespace satemu {
+namespace satemu::scsp {
 
 class SCSP {
 public:
@@ -46,4 +46,4 @@ private:
     std::array<uint8, kM68KWRAMSize> m_m68kWRAM;
 };
 
-} // namespace satemu
+} // namespace satemu::scsp

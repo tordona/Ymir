@@ -30,20 +30,20 @@ public:
         m_VDP2.SetCallbacks(cbRequestFramebuffer, cbFrameComplete);
     }
 
-    FORCE_INLINE SH2 &MasterSH2() {
+    FORCE_INLINE sh2::SH2 &MasterSH2() {
         return m_masterSH2;
     }
 
 private:
     SH2Bus m_sh2bus;
 
-    SH2 m_masterSH2;
-    SH2 m_slaveSH2;
+    sh2::SH2 m_masterSH2;
+    sh2::SH2 m_slaveSH2;
 
     scu::SCU m_SCU;
-    SMPC m_SMPC;
-    SCSP m_SCSP;
-    CDBlock m_CDBlock;
+    smpc::SMPC m_SMPC;
+    scsp::SCSP m_SCSP;
+    cdblock::CDBlock m_CDBlock;
     vdp1::VDP1 m_VDP1;
     vdp2::VDP2 m_VDP2;
 };

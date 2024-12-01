@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <limits>
 
-namespace satemu {
+namespace satemu::sh2 {
 
 uint64 dbg_count = 0;
 static constexpr uint64 dbg_minCount = 99999999999; // 17635778; // 10489689; // 9302150; // 9547530;
@@ -2539,4 +2539,4 @@ void SH2::RTS() {
     Execute<true>(delaySlot);
 }
 
-} // namespace satemu
+} // namespace satemu::sh2

@@ -1,6 +1,6 @@
 #include <satemu/hw/cdblock/cdblock.hpp>
 
-namespace satemu {
+namespace satemu::cdblock {
 
 CDBlock::CDBlock() {
     Reset(true);
@@ -13,4 +13,4 @@ void CDBlock::Reset(bool hard) {
     m_CR[3] = 0x434B; // 'CK'
 }
 
-} // namespace satemu
+} // namespace satemu::cdblock

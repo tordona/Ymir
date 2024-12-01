@@ -8,7 +8,7 @@
 
 #include <array>
 
-namespace satemu {
+namespace satemu::cdblock {
 
 class CDBlock {
 public:
@@ -52,4 +52,4 @@ private:
     std::array<uint16, 4> m_CR;
 };
 
-} // namespace satemu
+} // namespace satemu::cdblock

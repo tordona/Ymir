@@ -2,7 +2,7 @@
 
 namespace satemu {
 
-SH2Bus::SH2Bus(scu::SCU &scu, SMPC &smpc)
+SH2Bus::SH2Bus(scu::SCU &scu, smpc::SMPC &smpc)
     : m_SCU(scu)
     , m_SMPC(smpc) {
     m_IPL.fill(0);
