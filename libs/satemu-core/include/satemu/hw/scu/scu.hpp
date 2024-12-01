@@ -15,7 +15,7 @@
 // Forward declarations
 namespace satemu::sys {
 
-class VideoSystem;
+class SCUSystem;
 
 } // namespace satemu::sys
 
@@ -58,11 +58,16 @@ namespace satemu::scu {
 //   - [TODO] Byte writes write garbage to the odd/even byte counterpart
 //   - Byte reads work normally
 class SCU {
+    friend class sys::SCUSystem;
+
 public:
     SCU(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, scsp::SCSP &scsp, cdblock::CDBlock &cdblock);
 
+private:
+    // Invoked by SCUSystem::Reset(bool)
     void Reset(bool hard);
 
+public:
     template <mem_access_type T>
     T Read(uint32 address) {
         using namespace util;
@@ -151,12 +156,6 @@ private:
 
     InterruptMask m_intrMask;
     InterruptStatus m_intrStatus;
-
-    void TriggerHBlankIN();
-    void TriggerVBlankIN();
-    void TriggerVBlankOUT();
-
-    friend class sys::VideoSystem;
 
     // -------------------------------------------------------------------------
     // SCU registers

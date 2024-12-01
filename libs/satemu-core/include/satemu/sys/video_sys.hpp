@@ -1,11 +1,16 @@
 #pragma once
 
-#include <satemu/hw/scu/scu.hpp>
-#include <satemu/hw/sh2/sh2.hpp>
 #include <satemu/hw/vdp/vdp1.hpp>
 #include <satemu/hw/vdp/vdp2.hpp>
 
 #include <satemu/util/inline.hpp>
+
+// Forward declarations
+namespace satemu::sys {
+
+class SCUSystem;
+
+} // namespace satemu::sys
 
 namespace satemu::sys {
 
@@ -17,7 +22,7 @@ using CBFrameComplete = util::Callback<void(FramebufferColor *fb, uint32 width, 
 
 class VideoSystem {
 public:
-    VideoSystem(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, scu::SCU &scu, sh2::SH2 &sh2);
+    VideoSystem(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, SCUSystem &sysSCU);
 
     void Reset(bool hard);
 
@@ -32,8 +37,7 @@ public:
 private:
     vdp1::VDP1 &m_VDP1;
     vdp2::VDP2 &m_VDP2;
-    scu::SCU &m_SCU;
-    sh2::SH2 &m_SH2;
+    SCUSystem &m_sysSCU;
 
     // -------------------------------------------------------------------------
     // Frontend callbacks

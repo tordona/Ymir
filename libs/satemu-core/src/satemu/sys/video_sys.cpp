@@ -1,5 +1,7 @@
 #include <satemu/sys/video_sys.hpp>
 
+#include <satemu/sys/scu_sys.hpp>
+
 #include <satemu/util/constexpr_for.hpp>
 
 #include <fmt/format.h>
@@ -10,11 +12,10 @@ using namespace satemu::vdp2;
 
 namespace satemu::sys {
 
-VideoSystem::VideoSystem(VDP1 &vdp1, VDP2 &vdp2, scu::SCU &scu, sh2::SH2 &sh2)
+VideoSystem::VideoSystem(VDP1 &vdp1, VDP2 &vdp2, SCUSystem &sysSCU)
     : m_VDP1(vdp1)
     , m_VDP2(vdp2)
-    , m_SCU(scu)
-    , m_SH2(sh2) {}
+    , m_sysSCU(sysSCU) {}
 
 void VideoSystem::Reset(bool hard) {
     m_VDP1.Reset(hard);
@@ -180,7 +181,7 @@ void VideoSystem::BeginHPhaseHorizontalSync() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering horizontal sync phase", m_VCounter);
 
     m_VDP2.TVSTAT.HBLANK = 1;
-    m_SCU.TriggerHBlankIN();
+    m_sysSCU.TriggerHBlankIN();
 }
 
 void VideoSystem::BeginHPhaseLeftBorder() {
@@ -210,7 +211,7 @@ void VideoSystem::BeginVPhaseBottomBlanking() {
 void VideoSystem::BeginVPhaseVerticalSync() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering vertical sync phase", m_VCounter);
     m_VDP2.TVSTAT.VBLANK = 1;
-    m_SCU.TriggerVBlankIN();
+    m_sysSCU.TriggerVBlankIN();
 }
 
 void VideoSystem::BeginVPhaseTopBlanking() {
@@ -230,7 +231,7 @@ void VideoSystem::BeginVPhaseLastLine() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering last line phase", m_VCounter);
 
     m_VDP2.TVSTAT.VBLANK = 0;
-    m_SCU.TriggerVBlankOUT();
+    m_sysSCU.TriggerVBlankOUT();
 }
 
 // ----

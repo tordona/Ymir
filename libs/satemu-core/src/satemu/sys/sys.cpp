@@ -2,22 +2,23 @@
 
 namespace satemu {
 
-// TODO: remove these reference-passing constructors
 Saturn::Saturn()
     : SH2(SCU, SMPC)
     , SCU(VDP1, VDP2, SCSP, CDBlock)
+
     , sysSH2(SH2)
-    , sysVideo(VDP1, VDP2, SCU, SH2) {
+    , sysSCU(SCU, sysSH2)
+    , sysVideo(VDP1, VDP2, sysSCU) {
     Reset(true);
 }
 
 void Saturn::Reset(bool hard) {
-    SCU.Reset(hard);
     SMPC.Reset(hard);
     SCSP.Reset(hard);
     CDBlock.Reset(hard);
 
     sysSH2.Reset(hard);
+    sysSCU.Reset(hard);
     sysVideo.Reset(hard);
 }
 

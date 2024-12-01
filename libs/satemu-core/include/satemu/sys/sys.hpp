@@ -8,6 +8,7 @@
 #include <satemu/hw/vdp/vdp1.hpp>
 #include <satemu/hw/vdp/vdp2.hpp>
 
+#include <satemu/sys/scu_sys.hpp>
 #include <satemu/sys/sh2_sys.hpp>
 #include <satemu/sys/video_sys.hpp>
 
@@ -42,7 +43,8 @@ struct Saturn {
     // complex interactions such as triggering interrupts.
 
     sys::SH2System sysSH2;     // manages SH2
-    sys::VideoSystem sysVideo; // manages VDP1 and VDP2, connects with SCU and SH2
+    sys::SCUSystem sysSCU;     // manages SCU, talks to SH2 system
+    sys::VideoSystem sysVideo; // manages VDP1 and VDP2, talks to SCU system
 
     // TODO: implement more systems
     // - examples:

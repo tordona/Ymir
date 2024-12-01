@@ -12,6 +12,8 @@ public:
 
     void Step();
 
+    void SetInterruptLevel(uint8 level);
+
 private:
     sh2::SH2 &m_SH2;
 };
