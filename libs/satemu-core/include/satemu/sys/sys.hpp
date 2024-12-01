@@ -31,8 +31,6 @@ struct Saturn {
     smpc::SMPC SMPC;
     scsp::SCSP SCSP;
     cdblock::CDBlock CDBlock;
-    vdp1::VDP1 VDP1;
-    vdp2::VDP2 VDP2;
 
     // -------------------------------------------------------------------------
     // Systems

@@ -12,14 +12,12 @@ using namespace satemu::vdp2;
 
 namespace satemu::sys {
 
-VideoSystem::VideoSystem(VDP1 &vdp1, VDP2 &vdp2, SCUSystem &sysSCU)
-    : m_VDP1(vdp1)
-    , m_VDP2(vdp2)
-    , m_sysSCU(sysSCU) {}
+VideoSystem::VideoSystem(SCUSystem &sysSCU)
+    : m_sysSCU(sysSCU) {}
 
 void VideoSystem::Reset(bool hard) {
-    m_VDP1.Reset(hard);
-    m_VDP2.Reset(hard);
+    VDP1.Reset(hard);
+    VDP2.Reset(hard);
 
     m_HPhase = HorizontalPhase::Active;
     m_VPhase = VerticalPhase::Active;
@@ -58,11 +56,11 @@ void VideoSystem::Advance(uint64 cycles) {
 }
 
 void VideoSystem::UpdateResolution() {
-    if (!m_VDP2.m_TVMDDirty) {
+    if (!VDP2.m_TVMDDirty) {
         return;
     }
 
-    m_VDP2.m_TVMDDirty = false;
+    VDP2.m_TVMDDirty = false;
 
     // Horizontal/vertical resolution tables
     // NTSC uses the first two vRes entries, PAL uses the full table, and exclusive monitors use 480 lines
@@ -73,9 +71,9 @@ void VideoSystem::UpdateResolution() {
     // - not sure how the hardware behaves if TVMODE is changed mid-frame
     // TODO: check for NTSC, PAL or exclusive monitor; assuming NTSC for now
     // TODO: exclusive monitor: even hRes entries are valid for 31 KHz monitors, odd are for Hi-Vision
-    m_HRes = hRes[m_VDP2.TVMD.HRESOn];
-    m_VRes = vRes[m_VDP2.TVMD.VRESOn & (m_VDP2.TVSTAT.PAL ? 3 : 1)];
-    if (m_VDP2.TVMD.LSMDn == 3) {
+    m_HRes = hRes[VDP2.TVMD.HRESOn];
+    m_VRes = vRes[VDP2.TVMD.VRESOn & (VDP2.TVSTAT.PAL ? 3 : 1)];
+    if (VDP2.TVMD.LSMDn == 3) {
         // Double-density interlace doubles the vertical resolution
         m_VRes *= 2;
     }
@@ -97,7 +95,7 @@ void VideoSystem::UpdateResolution() {
         {640, 694, 800, 854},
         {704, 375, 864, 910},
     }};
-    m_HTimings = hTimings[m_VDP2.TVMD.HRESOn];
+    m_HTimings = hTimings[VDP2.TVMD.HRESOn];
 
     // Vertical phase timings
     //   BBd = Bottom Border
@@ -125,17 +123,17 @@ void VideoSystem::UpdateResolution() {
             {256, 272, 275, 278, 297, 312, 313},
         }},
     }};
-    m_VTimings = vTimings[m_VDP2.TVSTAT.PAL][m_VDP2.TVMD.VRESOn];
+    m_VTimings = vTimings[VDP2.TVSTAT.PAL][VDP2.TVMD.VRESOn];
 
     // Adjust for dot clock
-    const uint32 dotClockMult = (m_VDP2.TVMD.HRESOn & 2) ? 2 : 4;
+    const uint32 dotClockMult = (VDP2.TVMD.HRESOn & 2) ? 2 : 4;
     for (auto &timing : m_HTimings) {
         timing *= dotClockMult;
     }
     m_dotClockMult = dotClockMult;
 
     fmt::println("VDP2: dot clock mult = {}", dotClockMult);
-    fmt::println("VDP2: display {}", m_VDP2.TVMD.DISP ? "ON" : "OFF");
+    fmt::println("VDP2: display {}", VDP2.TVMD.DISP ? "ON" : "OFF");
 }
 
 FORCE_INLINE void VideoSystem::IncrementVCounter() {
@@ -180,23 +178,23 @@ void VideoSystem::BeginHPhaseHorizontalSync() {
     IncrementVCounter();
     // fmt::println("VDP2: (VCNT = {:3d})  entering horizontal sync phase", m_VCounter);
 
-    m_VDP2.TVSTAT.HBLANK = 1;
+    VDP2.TVSTAT.HBLANK = 1;
     m_sysSCU.TriggerHBlankIN();
 }
 
 void VideoSystem::BeginHPhaseLeftBorder() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering left border phase", m_VCounter);
-    m_VDP2.TVSTAT.HBLANK = 0;
+    VDP2.TVSTAT.HBLANK = 0;
 }
 
 // ----
 
 void VideoSystem::BeginVPhaseActiveDisplay() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering vertical active display phase", m_VCounter);
-    if (m_VDP2.TVMD.LSMDn != 0) {
-        m_VDP2.TVSTAT.ODD ^= 1;
+    if (VDP2.TVMD.LSMDn != 0) {
+        VDP2.TVSTAT.ODD ^= 1;
     } else {
-        m_VDP2.TVSTAT.ODD = 1;
+        VDP2.TVSTAT.ODD = 1;
     }
 }
 
@@ -210,7 +208,7 @@ void VideoSystem::BeginVPhaseBottomBlanking() {
 
 void VideoSystem::BeginVPhaseVerticalSync() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering vertical sync phase", m_VCounter);
-    m_VDP2.TVSTAT.VBLANK = 1;
+    VDP2.TVSTAT.VBLANK = 1;
     m_sysSCU.TriggerVBlankIN();
 }
 
@@ -230,7 +228,7 @@ void VideoSystem::BeginVPhaseTopBorder() {
 void VideoSystem::BeginVPhaseLastLine() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering last line phase", m_VCounter);
 
-    m_VDP2.TVSTAT.VBLANK = 0;
+    VDP2.TVSTAT.VBLANK = 0;
     m_sysSCU.TriggerVBlankOUT();
 }
 
@@ -291,13 +289,13 @@ void VideoSystem::DrawLine() {
 
     // Draw normal BGs
     int i = 0;
-    for (const auto &bg : m_VDP2.m_NormBGParams) {
+    for (const auto &bg : VDP2.m_NormBGParams) {
         auto &rctx = m_renderContexts[i++];
         if (bg.enabled) {
-            rctx.cramOffset = bg.caos << (m_VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
+            rctx.cramOffset = bg.caos << (VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
 
             const uint32 colorFormat = static_cast<uint32>(bg.colorFormat);
-            const uint32 colorMode = m_VDP2.RAMCTL.CRMDn;
+            const uint32 colorMode = VDP2.RAMCTL.CRMDn;
             if (bg.bitmap) {
                 (this->*fnDrawBitmapNBGs[colorFormat][colorMode])(bg, rctx);
             } else {
@@ -312,10 +310,10 @@ void VideoSystem::DrawLine() {
     }
 
     // Draw rotation BGs
-    for (const auto &bg : m_VDP2.m_RotBGParams) {
+    for (const auto &bg : VDP2.m_RotBGParams) {
         auto &rctx = m_renderContexts[i++];
         if (bg.enabled) {
-            rctx.cramOffset = bg.caos << (m_VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
+            rctx.cramOffset = bg.caos << (VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
 
             // TODO: implement
             if (bg.bitmap) {
@@ -421,7 +419,7 @@ NO_INLINE void VideoSystem::DrawNormalScrollBG(const NormBGParams &bgParams, BGR
     // |57|58|59|60|61|62|63|64|
     // +--+--+--+--+--+--+--+--+
 
-    const auto &specialFunctionCodes = m_VDP2.m_specialFunctionCodes[bgParams.specialFunctionSelect];
+    const auto &specialFunctionCodes = VDP2.m_specialFunctionCodes[bgParams.specialFunctionSelect];
 
     // TODO: implement mosaic
 
@@ -522,7 +520,7 @@ NO_INLINE void VideoSystem::DrawNormalBitmapBG(const NormBGParams &bgParams, BGR
 
 FORCE_INLINE VideoSystem::Character VideoSystem::FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex) {
     const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint32);
-    const uint32 charData = util::ReadBE<uint32>(&m_VDP2.m_VRAM[charAddress]);
+    const uint32 charData = util::ReadBE<uint32>(&VDP2.m_VRAM[charAddress]);
 
     Character ch{};
     ch.charNum = bit::extract<0, 14>(charData);
@@ -538,7 +536,7 @@ template <bool fourCellChar, bool largePalette, bool wideChar>
 FORCE_INLINE VideoSystem::Character VideoSystem::FetchOneWordCharacter(const NormBGParams &bgParams,
                                                                        uint32 pageBaseAddress, uint32 charIndex) {
     const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint16);
-    const uint16 charData = util::ReadBE<uint16>(&m_VDP2.m_VRAM[charAddress]);
+    const uint16 charData = util::ReadBE<uint16>(&VDP2.m_VRAM[charAddress]);
 
     /*
     Contents of 1 word character patterns vary based on Character Size, Character Color Count and Auxiliary Mode:
@@ -600,29 +598,29 @@ FORCE_INLINE vdp::Color888 VideoSystem::FetchCharacterColor(uint32 cramOffset, u
 
     if constexpr (colorFormat == ColorFormat::Palette16) {
         const uint32 dotAddress = dotBaseAddress >> 1u;
-        const uint8 dotData = (m_VDP2.m_VRAM[dotAddress & 0x7FFFF] >> ((dotX & 1) * 4)) & 0xF;
+        const uint8 dotData = (VDP2.m_VRAM[dotAddress & 0x7FFFF] >> ((dotX & 1) * 4)) & 0xF;
         const uint32 colorIndex = (ch.palNum << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
         return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = dotBaseAddress;
-        const uint8 dotData = m_VDP2.m_VRAM[dotAddress & 0x7FFFF];
+        const uint8 dotData = VDP2.m_VRAM[dotAddress & 0x7FFFF];
         const uint32 colorIndex = ((ch.palNum & 0x70) << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
         return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
-        const uint16 dotData = util::ReadBE<uint16>(&m_VDP2.m_VRAM[dotAddress & 0x7FFFF]);
+        const uint16 dotData = util::ReadBE<uint16>(&VDP2.m_VRAM[dotAddress & 0x7FFFF]);
         const uint32 colorIndex = dotData & 0x7FF;
         colorData = bit::extract<1, 3>(dotData);
         return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
-        const uint16 dotData = util::ReadBE<uint16>(&m_VDP2.m_VRAM[dotAddress & 0x7FFFF]);
+        const uint16 dotData = util::ReadBE<uint16>(&VDP2.m_VRAM[dotAddress & 0x7FFFF]);
         return ConvertRGB555to888(Color555{.u16 = dotData});
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint32);
-        const uint32 dotData = util::ReadBE<uint32>(&m_VDP2.m_VRAM[dotAddress & 0x7FFFF]);
+        const uint32 dotData = util::ReadBE<uint32>(&VDP2.m_VRAM[dotAddress & 0x7FFFF]);
         return Color888{.u32 = dotData};
     }
 }
@@ -644,26 +642,26 @@ FORCE_INLINE vdp::Color888 VideoSystem::FetchBitmapColor(const NormBGParams &bgP
 
     if constexpr (colorFormat == ColorFormat::Palette16) {
         const uint32 dotAddress = dotBaseAddress >> 1u;
-        const uint8 dotData = (m_VDP2.m_VRAM[dotAddress & 0x7FFFF] >> ((dotX & 1) * 4)) & 0xF;
+        const uint8 dotData = (VDP2.m_VRAM[dotAddress & 0x7FFFF] >> ((dotX & 1) * 4)) & 0xF;
         const uint32 colorIndex = palNum | dotData;
         return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = dotBaseAddress;
-        const uint8 dotData = m_VDP2.m_VRAM[dotAddress & 0x7FFFF];
+        const uint8 dotData = VDP2.m_VRAM[dotAddress & 0x7FFFF];
         const uint32 colorIndex = palNum | dotData;
         return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
-        const uint16 dotData = util::ReadBE<uint16>(&m_VDP2.m_VRAM[dotAddress & 0x7FFFF]);
+        const uint16 dotData = util::ReadBE<uint16>(&VDP2.m_VRAM[dotAddress & 0x7FFFF]);
         const uint32 colorIndex = dotData & 0x7FF;
         return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
-        const uint16 dotData = util::ReadBE<uint16>(&m_VDP2.m_VRAM[dotAddress & 0x7FFFF]);
+        const uint16 dotData = util::ReadBE<uint16>(&VDP2.m_VRAM[dotAddress & 0x7FFFF]);
         return ConvertRGB555to888(Color555{.u16 = dotData});
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint32);
-        const uint32 dotData = util::ReadBE<uint32>(&m_VDP2.m_VRAM[dotAddress & 0x7FFFF]);
+        const uint32 dotData = util::ReadBE<uint32>(&VDP2.m_VRAM[dotAddress & 0x7FFFF]);
         return Color888{.u32 = dotData};
     }
 }
@@ -675,19 +673,19 @@ FORCE_INLINE Color888 VideoSystem::FetchCRAMColor(uint32 cramOffset, uint32 colo
     if constexpr (colorMode == 0) {
         // RGB 5:5:5, 1024 words
         const uint32 address = (cramOffset + colorIndex * sizeof(uint16)) & 0x7FF;
-        const uint16 data = util::ReadBE<uint16>(&m_VDP2.m_CRAM[address]);
+        const uint16 data = util::ReadBE<uint16>(&VDP2.m_CRAM[address]);
         Color555 clr555{.u16 = data};
         return ConvertRGB555to888(clr555);
     } else if constexpr (colorMode == 1) {
         // RGB 5:5:5, 2048 words
         const uint32 address = (cramOffset + colorIndex * sizeof(uint16)) & 0xFFF;
-        const uint16 data = util::ReadBE<uint16>(&m_VDP2.m_CRAM[address]);
+        const uint16 data = util::ReadBE<uint16>(&VDP2.m_CRAM[address]);
         Color555 clr555{.u16 = data};
         return ConvertRGB555to888(clr555);
     } else { // colorMode == 2
         // RGB 8:8:8, 1024 words
         const uint32 address = (cramOffset + colorIndex * sizeof(uint32)) & 0xFFF;
-        const uint32 data = util::ReadBE<uint32>(&m_VDP2.m_CRAM[address]);
+        const uint32 data = util::ReadBE<uint32>(&VDP2.m_CRAM[address]);
         return Color888{.u32 = data};
     }
 }

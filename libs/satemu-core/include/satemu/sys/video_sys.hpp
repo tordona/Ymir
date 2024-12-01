@@ -22,7 +22,7 @@ using CBFrameComplete = util::Callback<void(FramebufferColor *fb, uint32 width, 
 
 class VideoSystem {
 public:
-    VideoSystem(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, SCUSystem &sysSCU);
+    VideoSystem(SCUSystem &sysSCU);
 
     void Reset(bool hard);
 
@@ -34,9 +34,10 @@ public:
     // TODO: replace with scheduler events
     void Advance(uint64 cycles);
 
+    vdp1::VDP1 VDP1;
+    vdp2::VDP2 VDP2;
+
 private:
-    vdp1::VDP1 &m_VDP1;
-    vdp2::VDP2 &m_VDP2;
     SCUSystem &m_sysSCU;
 
     // -------------------------------------------------------------------------
