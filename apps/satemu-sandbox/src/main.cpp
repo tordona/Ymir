@@ -154,7 +154,8 @@ void runEmulator(satemu::Saturn &saturn) {
         ++frames;
         auto t2 = clk::now();
         if (t2 - t >= 1s) {
-            fmt::println("{} fps", frames);
+            auto title = fmt::format("{} fps", frames);
+            SDL_SetWindowTitle(window, title.c_str());
             frames = 0;
             t = t2;
         }
