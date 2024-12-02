@@ -26,8 +26,9 @@ namespace satemu::sh2 {
 // TODO  0x080'0000..0x0FF'FFFF   -             Reads 0x0000 0x0001 0x0002 0x0003 0x0004 0x0005 0x0006 0x0007
 // TODO  0x100'0000..0x17F'FFFF   -             Reads 0xFFFF; writes go to slave SH-2 FRT  (MINIT area)
 // TODO  0x180'0000..0x1FF'FFFF   -             Reads 0xFFFF; writes go to master SH-2 FRT (SINIT area)
-//       0x200'0000..0x3FF'FFFF   -             SCU A-Bus (cartridge interface)
-//       0x400'0000..0x5FF'FFFF   -             SCU B-Bus (VDP1, VDP2)
+//       0x200'0000..0x58F'FFFF   -             SCU A-Bus (cartridge interface, CD block)
+//       0x590'0000..0x59F'FFFF   -             Lock-up when read
+//       0x5A0'0000..0x5FB'FFFF   -             SCU B-Bus (SCSP, VDP1, VDP2)
 //       0x600'0000..0x7FF'FFFF   0x100000      Work RAM High
 //
 // Notes
