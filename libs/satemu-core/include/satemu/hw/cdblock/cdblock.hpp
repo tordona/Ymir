@@ -7,6 +7,7 @@
 #include <fmt/format.h>
 
 #include <array>
+#include <type_traits>
 
 namespace satemu::cdblock {
 

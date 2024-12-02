@@ -51,8 +51,6 @@ add_library(satemu-core
 
     src/satemu/hw/sh2/sh2.cpp
     src/satemu/hw/sh2/sh2_bus.cpp
-    src/satemu/hw/sh2/sh2_interpreter.hpp
-    src/satemu/hw/sh2/sh2_mem.hpp
     src/satemu/hw/sh2/sh2_state.cpp
 
     src/satemu/hw/vdp/vdp1.cpp
