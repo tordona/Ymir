@@ -4,57 +4,36 @@
 
 #include <satemu/util/bit_ops.hpp>
 
-// TODO: replace with forward declaration
-#include <satemu/sys/scu_sys.hpp>
-
 #include <array>
 #include <cassert>
 
 #include <fmt/format.h>
 
+// Forward declarations
+namespace satemu::scu {
+
+class SCU;
+
+} // namespace satemu::scu
+
+// -----------------------------------------------------------------------------
+
 namespace satemu::smpc {
 
 class SMPC {
 public:
-    SMPC(sys::SCUSystem &sysSCU)
-        : m_sysSCU(sysSCU) {
-        Reset(true);
-    }
+    SMPC(scu::SCU &scu);
 
-    void Reset(bool hard) {
-        IREG.fill(0x00);
-        OREG.fill(0x00);
-        COMREG = Command::None;
-        SR.u8 = 0x80;
-        SF = false;
+    void Reset(bool hard);
 
-        m_busValue = 0x00;
-    }
-
-    uint8 Read(uint32 address) {
-        switch (address) {
-        case 0x21 ... 0x5F: return ReadOREG((address - 0x20) >> 1);
-        case 0x61: return ReadSR();
-        case 0x63: return ReadSF();
-        default: fmt::println("unhandled SMPC read from {:02X}", address); return m_busValue;
-        }
-    }
-
-    void Write(uint32 address, uint8 value) {
-        m_busValue = value;
-        switch (address) {
-        case 0x01 ... 0x0D: WriteIREG(address >> 1, value); break;
-        case 0x1F: WriteCOMREG(value); break;
-        case 0x63: WriteSF(value); break;
-        default: fmt::println("unhandled SMPC write to {:02X} = {:02X}", address, value); break;
-        }
-    }
+    uint8 Read(uint32 address);
+    void Write(uint32 address, uint8 value);
 
 private:
     std::array<uint8, 7> IREG;
     std::array<uint8, 32> OREG;
 
-    sys::SCUSystem &m_sysSCU;
+    scu::SCU &m_SCU;
 
     enum class Command : uint8 {
         // Resetable system management commands
@@ -115,126 +94,20 @@ private:
 
     uint8 m_busValue;
 
-    uint8 ReadOREG(uint8 offset) const {
-        return OREG[offset & 31];
-    }
+    uint8 ReadOREG(uint8 offset) const;
+    uint8 ReadSR() const;
+    uint8 ReadSF() const;
 
-    uint8 ReadSR() const {
-        return SR.u8;
-    }
-
-    uint8 ReadSF() const {
-        return SF;
-    }
-
-    void WriteIREG(uint8 offset, uint8 value) {
-        assert(offset < 7);
-        IREG[offset] = value;
-    }
-
-    void WriteCOMREG(uint8 value) {
-        COMREG = static_cast<Command>(value);
-
-        // TODO: should delay execution
-        switch (COMREG) {
-        case Command::RESENAB:
-            fmt::println("RESENAB command received");
-            RESENAB();
-            break;
-        case Command::RESDISA:
-            fmt::println("RESDISA command received");
-            RESDISA();
-            break;
-        case Command::INTBACK:
-            fmt::println("INTBACK command received: {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
-            INTBACK();
-            break;
-        default: fmt::println("unhandled SMPC command {:02X}", static_cast<uint8>(COMREG)); break;
-        }
-    }
-
-    void WriteSF(uint8 value) {
-        SF = true;
-    }
+    void WriteIREG(uint8 offset, uint8 value);
+    void WriteCOMREG(uint8 value);
+    void WriteSF(uint8 value);
 
     // -------------------------------------------------------------------------
     // Commands
 
-    void RESENAB() {
-        // TODO: enable reset NMI
-
-        SF = 0; // done processing
-
-        OREG[31] = 0x19;
-    }
-
-    void RESDISA() {
-        // TODO: disable reset NMI
-
-        SF = 0; // done processing
-
-        OREG[31] = 0x1A;
-    }
-
-    void INTBACK() {
-        // TODO: implement properly
-
-        const bool getSMPCStatus = IREG[0];
-        // const bool optimize = bit::extract<1>(IREG[1]);
-        const bool getPeripheralData = bit::extract<3>(IREG[1]);
-        const uint8 port1mode = bit::extract<4, 5>(IREG[1]);
-        const uint8 port2mode = bit::extract<6, 7>(IREG[1]);
-        if (IREG[2] != 0xF0) {
-            // TODO: log invalid INTBACK command
-            // TODO: does SMPC reject the command in this case?
-        }
-
-        SF = 0; // done processing
-
-        if (getSMPCStatus) {
-            SR.bit7 = 0; // fixed 0
-            SR.PDL = 1;  // fixed 1
-            SR.NPE = 0;  // 0=no remaining data, 1=more data
-            SR.RESB = 0; // reset button state (0=off, 1=on)
-
-            OREG[0] = 0x80; // STE set, RESD clear
-
-            OREG[1] = 0x20; // Year 1000s, Year 100s (BCD)
-            OREG[2] = 0x24; // Year 10s, Year 1s (BCD)
-            OREG[3] = 0x3B; // Day of week (0=sun), Month (hex, 1=jan)
-            OREG[4] = 0x20; // Day (BCD)
-            OREG[5] = 0x12; // Hour (BCD)
-            OREG[6] = 0x34; // Minute (BCD)
-            OREG[7] = 0x56; // Second (BCD)
-
-            OREG[8] = 0x00; // Cartridge code (CTG1-0) == 0b00
-            OREG[9] = 0x04; // Area code (0x04=NA)
-
-            OREG[10] = 0b00111110; // System status 1 (DOTSEL, MSHNMI, SYSRES, SNDRES)
-            OREG[11] = 0b00000010; // System status 2 (CDRES)
-
-            OREG[12] = 0x00; // SMEM 1 Saved Data
-            OREG[13] = 0x00; // SMEM 2 Saved Data
-            OREG[14] = 0x00; // SMEM 3 Saved Data
-            OREG[15] = 0x00; // SMEM 4 Saved Data
-
-            OREG[31] = 0x00;
-        } else if (getPeripheralData) {
-            SR.bit7 = 1;          // fixed 1
-            SR.PDL = 1;           // 1=first data, 2=second+ data
-            SR.NPE = 0;           // 0=no remaining data, 1=more data
-            SR.RESB = 0;          // reset button state (0=off, 1=on)
-            SR.P1MDn = port1mode; // port 1 mode: 0=15 byte, 1=255 byte
-            SR.P2MDn = port2mode; // port 2 mode: 2=unused,  3=0 byte
-
-            OREG.fill(0xFF);
-            OREG[0] = 0xF1; // 7-4 = F=no multitap/device directly connected; 3-0 = 1 device
-            OREG[1] = 0x02; // 7-4 = 0=standard pad; 3-0 = 2 data bytes
-            OREG[2] = 0xFF; // individual bits 7-0: left, right, down, up, start, A, C, B
-            OREG[3] = 0xFF; // individual bits 7-3: R, X, Y, Z, L; button state is inverted
-        }
-        m_sysSCU.TriggerSystemManager();
-    }
+    void RESENAB();
+    void RESDISA();
+    void INTBACK();
 };
 
 } // namespace satemu::smpc

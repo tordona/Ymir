@@ -1,6 +1,6 @@
 #include <satemu/sys/video_sys.hpp>
 
-#include <satemu/sys/scu_sys.hpp>
+#include <satemu/hw/scu/scu.hpp>
 
 #include <satemu/util/constexpr_for.hpp>
 
@@ -12,8 +12,8 @@ using namespace satemu::vdp2;
 
 namespace satemu::sys {
 
-VideoSystem::VideoSystem(SCUSystem &sysSCU)
-    : m_sysSCU(sysSCU) {}
+VideoSystem::VideoSystem(scu::SCU &scu)
+    : m_SCU(scu) {}
 
 void VideoSystem::Reset(bool hard) {
     VDP1.Reset(hard);
@@ -179,7 +179,7 @@ void VideoSystem::BeginHPhaseHorizontalSync() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering horizontal sync phase", m_VCounter);
 
     VDP2.TVSTAT.HBLANK = 1;
-    m_sysSCU.TriggerHBlankIN();
+    m_SCU.TriggerHBlankIN();
 }
 
 void VideoSystem::BeginHPhaseLeftBorder() {
@@ -209,7 +209,7 @@ void VideoSystem::BeginVPhaseBottomBlanking() {
 void VideoSystem::BeginVPhaseVerticalSync() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering vertical sync phase", m_VCounter);
     VDP2.TVSTAT.VBLANK = 1;
-    m_sysSCU.TriggerVBlankIN();
+    m_SCU.TriggerVBlankIN();
 }
 
 void VideoSystem::BeginVPhaseTopBlanking() {
@@ -229,7 +229,7 @@ void VideoSystem::BeginVPhaseLastLine() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering last line phase", m_VCounter);
 
     VDP2.TVSTAT.VBLANK = 0;
-    m_sysSCU.TriggerVBlankOUT();
+    m_SCU.TriggerVBlankOUT();
 }
 
 // ----
@@ -305,6 +305,9 @@ void VideoSystem::DrawLine() {
                 (this->*fnDrawScrollNBGs[twoWordChar][fourCellChar][wideChar][colorFormat][colorMode])(bg, rctx);
             }
         } else {
+            // TODO: optimize -- fill these when the BG is disabled
+            rctx.colorData.fill(0);
+            rctx.colors.fill({0});
             rctx.priorities.fill(0);
         }
     }
@@ -322,10 +325,14 @@ void VideoSystem::DrawLine() {
                 // (this->*fnDrawScrollRBGs[...])(bg, rctx);
             }
         } else {
+            // TODO: optimize -- fill these when the BG is disabled
+            rctx.colorData.fill(0);
+            rctx.colors.fill({0});
             rctx.priorities.fill(0);
         }
     }
 
+    // Compose image
     const uint32 y = m_VCounter;
     for (uint32 x = 0; x < m_HRes; x++) {
         // TODO: handle priorities
@@ -348,6 +355,7 @@ void VideoSystem::DrawLine() {
                     m_framebuffer[x + y * m_HRes] = rctx.colors[x].u32;
                 }
             }
+            // TODO: if no layers are visible, draw BACK screen
         }
     }
 }

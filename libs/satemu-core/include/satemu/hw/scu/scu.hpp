@@ -15,7 +15,7 @@
 // Forward declarations
 namespace satemu::sys {
 
-class SCUSystem;
+class SH2System;
 
 } // namespace satemu::sys
 
@@ -58,16 +58,11 @@ namespace satemu::scu {
 //   - [TODO] Byte writes write garbage to the odd/even byte counterpart
 //   - Byte reads work normally
 class SCU {
-    friend class sys::SCUSystem;
-
 public:
-    SCU(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, scsp::SCSP &scsp, cdblock::CDBlock &cdblock);
+    SCU(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sys::SH2System &sysSH2);
 
-private:
-    // Invoked by SCUSystem::Reset(bool)
     void Reset(bool hard);
 
-public:
     template <mem_access_type T>
     T Read(uint32 address) {
         using namespace util;
@@ -145,17 +140,28 @@ public:
         }
     }
 
+    // -------------------------------------------------------------------------
+    // External interrupt triggers
+
+    void AttachExternalInterruptCallback();
+
+    void TriggerHBlankIN();
+    void TriggerVBlankIN();
+    void TriggerVBlankOUT();
+    void TriggerSystemManager();
+
 private:
     vdp1::VDP1 &m_VDP1;
     vdp2::VDP2 &m_VDP2;
     scsp::SCSP &m_SCSP;
     cdblock::CDBlock &m_CDBlock;
+    sys::SH2System &m_sysSH2;
 
     // -------------------------------------------------------------------------
     // Interrupts
 
-    InterruptMask intrMask;
-    InterruptStatus intrStatus;
+    InterruptMask m_intrMask;
+    InterruptStatus m_intrStatus;
 
     // -------------------------------------------------------------------------
     // SCU registers
@@ -164,9 +170,9 @@ private:
     T ReadReg(uint32 address) {
         switch (address) {
         case 0xA0: // Interrupt Mask
-            return intrMask.u32;
+            return m_intrMask.u32;
         case 0xA4: // Interrupt Status
-            return intrStatus.u32;
+            return m_intrStatus.u32;
         case 0xA8: // A-Bus Interrupt Acknowledge
             // TODO: not yet sure how this works
             return 0;
@@ -180,10 +186,10 @@ private:
     void WriteReg(uint32 address, T value) {
         switch (address) {
         case 0xA0: // Interrupt Mask
-            intrMask.u32 = value & 0x0000BFFF;
+            m_intrMask.u32 = value & 0x0000BFFF;
             break;
         case 0xA4: // Interrupt Status
-            intrStatus.u32 &= value;
+            m_intrStatus.u32 &= value;
             break;
         case 0xA8: // A-Bus Interrupt Acknowledge
             // TODO: not yet sure how this works
@@ -193,6 +199,8 @@ private:
             break;
         }
     }
+
+    void UpdateInterruptLevel(bool acknowledge);
 };
 
 } // namespace satemu::scu

@@ -8,7 +8,6 @@
 #include <satemu/hw/vdp/vdp1.hpp>
 #include <satemu/hw/vdp/vdp2.hpp>
 
-#include <satemu/sys/scu_sys.hpp>
 #include <satemu/sys/sh2_sys.hpp>
 #include <satemu/sys/video_sys.hpp>
 
@@ -28,6 +27,7 @@ struct Saturn {
     // -------------------------------------------------------------------------
     // Components
 
+    scu::SCU SCU;
     smpc::SMPC SMPC;
     scsp::SCSP SCSP;
     cdblock::CDBlock CDBlock;
@@ -41,7 +41,6 @@ struct Saturn {
     // interactions such as triggering interrupts.
 
     sys::SH2System sysSH2;     // owns SH2
-    sys::SCUSystem sysSCU;     // owns SCU, talks to SH2 system
     sys::VideoSystem sysVideo; // owns VDP1 and VDP2, talks to SCU system
 
     // TODO: implement more systems

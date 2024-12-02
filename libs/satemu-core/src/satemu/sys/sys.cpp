@@ -3,20 +3,23 @@
 namespace satemu {
 
 Saturn::Saturn()
-    : SMPC(sysSCU)
-    , sysSH2(sysSCU.SCU, SMPC)
-    , sysSCU(sysVideo.VDP1, sysVideo.VDP2, SCSP, CDBlock, sysSH2)
-    , sysVideo(sysSCU) {
+    : SCU(sysVideo.VDP1, sysVideo.VDP2, SCSP, CDBlock, sysSH2)
+    , SMPC(SCU)
+    , sysSH2(SCU, SMPC)
+    , sysVideo(SCU) {
+
+    SCU.AttachExternalInterruptCallback();
+
     Reset(true);
 }
 
 void Saturn::Reset(bool hard) {
+    SCU.Reset(hard);
     SMPC.Reset(hard);
     SCSP.Reset(hard);
     CDBlock.Reset(hard);
 
     sysSH2.Reset(hard);
-    sysSCU.Reset(hard);
     sysVideo.Reset(hard);
 }
 
