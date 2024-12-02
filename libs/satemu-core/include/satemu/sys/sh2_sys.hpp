@@ -12,6 +12,7 @@ public:
 
     void Step();
 
+    void SetExternalInterruptCallback(sh2::CBAcknowledgeExternalInterrupt callback);
     void SetExternalInterrupt(uint8 level, uint8 vecNum);
 
     sh2::SH2 SH2;

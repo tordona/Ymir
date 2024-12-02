@@ -72,7 +72,6 @@ void SH2State::SetExternalInterrupt(uint8 level, uint8 vecNum) {
     assert(level < 16);
     pendingExternalIntrLevel = level;
     pendingExternalIntrVecNum = vecNum;
-    CheckInterrupts();
 }
 
 // -----------------------------------------------------------------------------
@@ -133,7 +132,7 @@ void SH2State::DIVUBegin64() {
 // -----------------------------------------------------------------------------
 // Interrupts
 
-void SH2State::CheckInterrupts() {
+bool SH2State::CheckInterrupts() {
     // TODO: check interrupts from these sources (in order of priority, when priority numbers are the same):
     //   name             priority       vecnum
     //   NMI              16             0x0B
@@ -156,6 +155,7 @@ void SH2State::CheckInterrupts() {
 
     // TODO: NMI, user break (before IRLs)
 
+    bool usingExternalIntr = true;
     pendingInterrupt.priority = pendingExternalIntrLevel;
     pendingInterrupt.vecNum = ICR.VECMD ? pendingExternalIntrVecNum : 0x40 + (pendingExternalIntrLevel >> 1u);
 
@@ -163,6 +163,7 @@ void SH2State::CheckInterrupts() {
         if (intrPriority > pendingInterrupt.priority) {
             pendingInterrupt.priority = intrPriority;
             pendingInterrupt.vecNum = vecNum;
+            usingExternalIntr = false;
         }
     };
 
@@ -175,7 +176,11 @@ void SH2State::CheckInterrupts() {
     // TODO: SCI ERI, RXI, TXI, TEI
     // TODO: FRT ICI, OCI, OVI
 
-    // interrupt exception flag = level > SR.ILevel
+    const bool result = pendingInterrupt.priority > SR.ILevel;
+    if (result && usingExternalIntr) {
+        cbAcknowledgeExternalInterrupt();
+    }
+    return result;
 }
 
 } // namespace satemu::sh2

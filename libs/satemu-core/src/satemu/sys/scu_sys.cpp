@@ -10,7 +10,13 @@ namespace satemu::sys {
 
 SCUSystem::SCUSystem(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, SH2System &sysSH2)
     : SCU(vdp1, vdp2, scsp, cdblock)
-    , m_sysSH2(sysSH2) {}
+    , m_sysSH2(sysSH2) {
+
+    sysSH2.SetExternalInterruptCallback({this, [](void *ptr) {
+                                             auto &sysSCU = *static_cast<SCUSystem *>(ptr);
+                                             sysSCU.UpdateInterruptLevel(true);
+                                         }});
+}
 
 void SCUSystem::Reset(bool hard) {
     SCU.Reset(hard);
@@ -19,21 +25,26 @@ void SCUSystem::Reset(bool hard) {
 void SCUSystem::TriggerHBlankIN() {
     SCU.intrStatus.VDP2_HBlankIN = 1;
     // TODO: also increment Timer 0 and trigger Timer 0 interrupt if the counter matches the compare register
-    UpdateInterruptLevel();
+    UpdateInterruptLevel(false);
 }
 
 void SCUSystem::TriggerVBlankIN() {
     SCU.intrStatus.VDP2_VBlankIN = 1;
-    UpdateInterruptLevel();
+    UpdateInterruptLevel(false);
 }
 
 void SCUSystem::TriggerVBlankOUT() {
     SCU.intrStatus.VDP2_VBlankOUT = 1;
     // TODO: also reset Timer 0
-    UpdateInterruptLevel();
+    UpdateInterruptLevel(false);
 }
 
-void SCUSystem::UpdateInterruptLevel() {
+void SCUSystem::TriggerSystemManager() {
+    SCU.intrStatus.SM_SystemManager = 1;
+    UpdateInterruptLevel(false);
+}
+
+void SCUSystem::UpdateInterruptLevel(bool acknowledge) {
     // SCU interrupts
     //  bit  vec   lvl  source  reason
     //    0   40     F  VDP2    VBlank IN
@@ -77,16 +88,28 @@ void SCUSystem::UpdateInterruptLevel() {
                                                  0x0};
 
     const uint32 intrBits = SCU.intrStatus.u32 & ~SCU.intrMask.u16;
-    const uint16 intrIndexBase = std::countr_zero<uint16>(intrBits >> 0u);
-    const uint16 intrIndexABus = std::countr_zero<uint16>(intrBits >> 16u);
+    if (intrBits != 0) {
+        const uint16 intrIndexBase = std::countr_zero<uint16>(intrBits >> 0u);
+        const uint16 intrIndexABus = std::countr_zero<uint16>(intrBits >> 16u);
 
-    const uint8 intrLevelBase = kBaseIntrLevels[intrIndexBase];
-    const uint8 intrLevelABus = kABusIntrLevels[intrIndexABus];
+        const uint8 intrLevelBase = kBaseIntrLevels[intrIndexBase];
+        const uint8 intrLevelABus = kABusIntrLevels[intrIndexABus];
 
-    if (intrLevelBase >= intrLevelABus) {
-        m_sysSH2.SetExternalInterrupt(intrLevelBase, intrIndexBase + 0x40);
+        if (acknowledge) {
+            if (intrLevelBase >= intrLevelABus) {
+                SCU.intrStatus.u32 &= ~(1u << intrIndexBase);
+            } else {
+                SCU.intrStatus.u32 &= ~(1u << (intrIndexABus + 16u));
+            }
+        }
+
+        if (intrLevelBase >= intrLevelABus) {
+            m_sysSH2.SetExternalInterrupt(intrLevelBase, intrIndexBase + 0x40);
+        } else {
+            m_sysSH2.SetExternalInterrupt(intrLevelABus, intrIndexABus + 0x50);
+        }
     } else {
-        m_sysSH2.SetExternalInterrupt(intrLevelABus, intrIndexABus + 0x50);
+        m_sysSH2.SetExternalInterrupt(0, 0);
     }
 }
 

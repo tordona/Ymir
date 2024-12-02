@@ -984,16 +984,11 @@ FORCE_INLINE void RTS(SH2State &state, SH2Bus &bus) {
 template <bool delaySlot>
 void Execute(SH2State &state, SH2Bus &bus, uint32 address) {
     if constexpr (!delaySlot) {
-        if (state.pendingInterrupt.priority > state.SR.ILevel) [[unlikely]] {
-            // TODO: check R15 before entering exception and compare against R15 at RTE
-            // - RTE is reading PC = 0x00000001
-            // TODO: might have to clear the pending external interrupt or check what's happening on SCU
-            // - interrupt routine should acknowledge the interrupt and cause SCU to update the interrupt signals
+        if (state.CheckInterrupts()) [[unlikely]] {
             fmt::println(">> intr level {:02X} vec {:02X}", state.pendingInterrupt.priority,
                          state.pendingInterrupt.vecNum);
             EnterException(state, bus, state.pendingInterrupt.vecNum);
             state.SR.ILevel = state.pendingInterrupt.priority;
-            state.CheckInterrupts();
             address = state.PC;
         }
     }

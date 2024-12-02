@@ -28,6 +28,11 @@ void SH2System::Step() {
     // sh2::interp::Step(SH2.slaveState, SH2.bus);
 }
 
+void SH2System::SetExternalInterruptCallback(CBAcknowledgeExternalInterrupt callback) {
+    SH2.masterState.SetExternalInterruptCallback(callback);
+    // TODO: slave callback?
+}
+
 void SH2System::SetExternalInterrupt(uint8 level, uint8 vecNum) {
     SH2.masterState.SetExternalInterrupt(level, vecNum);
     // TODO: when to set slave IRL?

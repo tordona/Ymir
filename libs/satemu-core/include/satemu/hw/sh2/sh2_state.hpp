@@ -3,6 +3,7 @@
 #include <satemu/core_types.hpp>
 
 #include <satemu/hw/hw_defs.hpp>
+#include <satemu/util/callback.hpp>
 
 #include <fmt/format.h>
 
@@ -21,6 +22,8 @@ class SH2System;
 
 namespace satemu::sh2 {
 
+using CBAcknowledgeExternalInterrupt = util::Callback<void()>;
+
 struct SH2State {
     friend class sys::SH2System;
 
@@ -32,6 +35,10 @@ private:
     void Reset(bool hard);
 
 public:
+    void SetExternalInterruptCallback(CBAcknowledgeExternalInterrupt callback) {
+        cbAcknowledgeExternalInterrupt = callback;
+    }
+
     void SetExternalInterrupt(uint8 level, uint8 vecNum);
 
     std::array<uint32, 16> R;
@@ -777,6 +784,8 @@ public:
     // -------------------------------------------------------------------------
     // Interrupts
 
+    CBAcknowledgeExternalInterrupt cbAcknowledgeExternalInterrupt;
+
     uint8 pendingExternalIntrLevel;
     uint8 pendingExternalIntrVecNum;
 
@@ -785,7 +794,7 @@ public:
         uint8 vecNum;
     } pendingInterrupt;
 
-    void CheckInterrupts();
+    bool CheckInterrupts();
 };
 
 } // namespace satemu::sh2
