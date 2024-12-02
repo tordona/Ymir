@@ -29,7 +29,6 @@ add_library(satemu-core
     include/satemu/hw/vdp/vdp2_defs.hpp
 
     include/satemu/sys/sys.hpp
-    include/satemu/sys/video_sys.hpp
     
     include/satemu/util/bit_ops.hpp
     include/satemu/util/callback.hpp
@@ -60,7 +59,6 @@ add_library(satemu-core
     src/satemu/hw/vdp/vdp2.cpp
 
     src/satemu/sys/sys.cpp
-    src/satemu/sys/video_sys.cpp
 
     src/satemu/util/constexpr_for.hpp
 )

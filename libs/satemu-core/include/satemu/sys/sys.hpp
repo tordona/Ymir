@@ -8,8 +8,6 @@
 #include <satemu/hw/vdp/vdp1.hpp>
 #include <satemu/hw/vdp/vdp2.hpp>
 
-#include <satemu/sys/video_sys.hpp>
-
 namespace satemu {
 
 struct Saturn {
@@ -28,35 +26,11 @@ struct Saturn {
 
     sh2::SH2 SH2; // Includes master and slave SH-2 CPUs, their bus, both WRAM halves and IPL ROM
     scu::SCU SCU;
+    vdp1::VDP1 VDP1;
+    vdp2::VDP2 VDP2;
     smpc::SMPC SMPC;
     scsp::SCSP SCSP;
     cdblock::CDBlock CDBlock;
-
-    // -------------------------------------------------------------------------
-    // Systems
-    //
-    // Systems are logical groupings of components with complex logic and interactions between them.
-    //
-    // Each system owns one or more components and may optionally connect with other systems to perform more complex
-    // interactions such as triggering interrupts.
-
-    sys::VideoSystem sysVideo; // owns VDP1 and VDP2, talks to SCU system
-
-    // TODO: implement more systems
-    // - examples:
-    //   - SMPCSystem: owns SMPC, talks to nearly all other systems (SH2s, the M68K in the SCSP, etc.)
-    //   - SoundSystem: owns SCSP, talks to SCU system? (for interrupts)
-    //   - CDSystem: owns CDBlock, talks to SCU system? (for interrupts)
-    // - not everything needs to be in a dedicated system
-    //   - the Saturn class itself can be considered a "global" system
-    //   - Reset() is a global operation, so it makes sense to stay here
-    //   - debugging features might live here too
-    //   - save states
-    //   - high-level control like running and stepping should probably be here too
-    // - some components might still require references
-    //   - e.g. SH2 still needs to be able to talk to an SH2Bus
-    //     - move the emulation logic to an SH2System
-    //       - could even include *both* SH2s in one system, saving a reference
 };
 
 } // namespace satemu

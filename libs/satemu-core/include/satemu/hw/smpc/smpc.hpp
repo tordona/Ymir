@@ -9,7 +9,9 @@
 
 #include <fmt/format.h>
 
+// -----------------------------------------------------------------------------
 // Forward declarations
+
 namespace satemu::scu {
 
 class SCU;

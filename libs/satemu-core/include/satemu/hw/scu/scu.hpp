@@ -12,7 +12,9 @@
 
 #include <fmt/format.h>
 
+// -----------------------------------------------------------------------------
 // Forward declarations
+
 namespace satemu::sh2 {
 
 class SH2;

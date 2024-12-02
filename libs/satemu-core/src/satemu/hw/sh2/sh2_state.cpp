@@ -178,6 +178,7 @@ bool SH2State::CheckInterrupts() {
 
     const bool result = pendingInterrupt.priority > SR.ILevel;
     if (result && usingExternalIntr) {
+        // TODO: performance?
         cbAcknowledgeExternalInterrupt();
     }
     return result;

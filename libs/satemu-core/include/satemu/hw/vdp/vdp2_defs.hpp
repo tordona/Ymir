@@ -9,6 +9,14 @@
 
 namespace satemu::vdp2 {
 
+// TODO: move this to a "renderer defs" header
+// Framebuffer color is in little-endian XRGB8888 format
+using FramebufferColor = uint32;
+
+// TODO: move these to a "renderer defs" header
+using CBRequestFramebuffer = util::Callback<FramebufferColor *(uint32 width, uint32 height)>;
+using CBFrameComplete = util::Callback<void(FramebufferColor *fb, uint32 width, uint32 height)>;
+
 constexpr size_t kVDP2VRAMSize = 512_KiB;
 constexpr size_t kCRAMSize = 4_KiB;
 
