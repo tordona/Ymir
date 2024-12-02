@@ -8,7 +8,6 @@
 #include <satemu/hw/vdp/vdp1.hpp>
 #include <satemu/hw/vdp/vdp2.hpp>
 
-#include <satemu/sys/sh2_sys.hpp>
 #include <satemu/sys/video_sys.hpp>
 
 namespace satemu {
@@ -27,6 +26,7 @@ struct Saturn {
     // -------------------------------------------------------------------------
     // Components
 
+    sh2::SH2 SH2; // Includes master and slave SH-2 CPUs, their bus, both WRAM halves and IPL ROM
     scu::SCU SCU;
     smpc::SMPC SMPC;
     scsp::SCSP SCSP;
@@ -40,7 +40,6 @@ struct Saturn {
     // Each system owns one or more components and may optionally connect with other systems to perform more complex
     // interactions such as triggering interrupts.
 
-    sys::SH2System sysSH2;     // owns SH2
     sys::VideoSystem sysVideo; // owns VDP1 and VDP2, talks to SCU system
 
     // TODO: implement more systems

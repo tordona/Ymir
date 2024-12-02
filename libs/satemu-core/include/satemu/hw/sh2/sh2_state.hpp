@@ -12,11 +12,11 @@
 // -----------------------------------------------------------------------------
 // Forward declarations
 
-namespace satemu::sys {
+namespace satemu::sh2 {
 
-class SH2System;
+class SH2;
 
-} // namespace satemu::sys
+} // namespace satemu::sh2
 
 // -----------------------------------------------------------------------------
 
@@ -25,13 +25,13 @@ namespace satemu::sh2 {
 using CBAcknowledgeExternalInterrupt = util::Callback<void()>;
 
 struct SH2State {
-    friend class sys::SH2System;
+    friend class SH2;
 
     SH2State(bool master);
 
 private:
     // Resets *most* of the state, except for PC and R15 which need to read from the bus.
-    // SH2System::Reset(bool) invokes this and initializes PC and R15 properly.
+    // SH2::Reset(bool) invokes this and initializes PC and R15 properly.
     void Reset(bool hard);
 
 public:

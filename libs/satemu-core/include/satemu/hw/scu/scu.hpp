@@ -13,11 +13,11 @@
 #include <fmt/format.h>
 
 // Forward declarations
-namespace satemu::sys {
+namespace satemu::sh2 {
 
-class SH2System;
+class SH2;
 
-} // namespace satemu::sys
+} // namespace satemu::sh2
 
 // -----------------------------------------------------------------------------
 
@@ -59,7 +59,9 @@ namespace satemu::scu {
 //   - Byte reads work normally
 class SCU {
 public:
-    SCU(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sys::SH2System &sysSH2);
+    SCU(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2 &sh2);
+
+    void PostConstructInit();
 
     void Reset(bool hard);
 
@@ -143,8 +145,6 @@ public:
     // -------------------------------------------------------------------------
     // External interrupt triggers
 
-    void AttachExternalInterruptCallback();
-
     void TriggerHBlankIN();
     void TriggerVBlankIN();
     void TriggerVBlankOUT();
@@ -155,7 +155,7 @@ private:
     vdp2::VDP2 &m_VDP2;
     scsp::SCSP &m_SCSP;
     cdblock::CDBlock &m_CDBlock;
-    sys::SH2System &m_sysSH2;
+    sh2::SH2 &m_SH2;
 
     // -------------------------------------------------------------------------
     // Interrupts

@@ -3,32 +3,32 @@
 namespace satemu {
 
 Saturn::Saturn()
-    : SCU(sysVideo.VDP1, sysVideo.VDP2, SCSP, CDBlock, sysSH2)
+    : SH2(SCU, SMPC)
+    , SCU(sysVideo.VDP1, sysVideo.VDP2, SCSP, CDBlock, SH2)
     , SMPC(SCU)
-    , sysSH2(SCU, SMPC)
     , sysVideo(SCU) {
 
-    SCU.AttachExternalInterruptCallback();
+    SCU.PostConstructInit();
 
     Reset(true);
 }
 
 void Saturn::Reset(bool hard) {
+    SH2.Reset(hard);
     SCU.Reset(hard);
     SMPC.Reset(hard);
     SCSP.Reset(hard);
     CDBlock.Reset(hard);
 
-    sysSH2.Reset(hard);
     sysVideo.Reset(hard);
 }
 
 void Saturn::LoadIPL(std::span<uint8, kIPLSize> ipl) {
-    sysSH2.SH2.bus.LoadIPL(ipl);
+    SH2.LoadIPL(ipl);
 }
 
 void Saturn::Step() {
-    sysSH2.Step();
+    SH2.Step();
 
     // TODO: proper timings
     // TODO: replace with scheduler events

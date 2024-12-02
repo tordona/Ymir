@@ -1,28 +1,28 @@
 #include <satemu/hw/scu/scu.hpp>
 
-#include <satemu/sys/sh2_sys.hpp>
+#include <satemu/hw/sh2/sh2.hpp>
 
 namespace satemu::scu {
 
-SCU::SCU(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sys::SH2System &sysSH2)
+SCU::SCU(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2 &sh2)
     : m_VDP1(vdp1)
     , m_VDP2(vdp2)
     , m_SCSP(scsp)
     , m_CDBlock(cdblock)
-    , m_sysSH2(sysSH2) {
+    , m_SH2(sh2) {
     Reset(true);
+}
+
+void SCU::PostConstructInit() {
+    m_SH2.SetExternalInterruptCallback({this, [](void *ptr) {
+                                            auto &scu = *static_cast<scu::SCU *>(ptr);
+                                            scu.UpdateInterruptLevel(true);
+                                        }});
 }
 
 void SCU::Reset(bool hard) {
     m_intrMask.u32 = 0;
     m_intrStatus.u32 = 0;
-}
-
-void SCU::AttachExternalInterruptCallback() {
-    m_sysSH2.SetExternalInterruptCallback({this, [](void *ptr) {
-                                               auto &scu = *static_cast<scu::SCU *>(ptr);
-                                               scu.UpdateInterruptLevel(true);
-                                           }});
 }
 
 void SCU::TriggerHBlankIN() {
@@ -107,12 +107,12 @@ void SCU::UpdateInterruptLevel(bool acknowledge) {
         }
 
         if (intrLevelBase >= intrLevelABus) {
-            m_sysSH2.SetExternalInterrupt(intrLevelBase, intrIndexBase + 0x40);
+            m_SH2.SetExternalInterrupt(intrLevelBase, intrIndexBase + 0x40);
         } else {
-            m_sysSH2.SetExternalInterrupt(intrLevelABus, intrIndexABus + 0x50);
+            m_SH2.SetExternalInterrupt(intrLevelABus, intrIndexABus + 0x50);
         }
     } else {
-        m_sysSH2.SetExternalInterrupt(0, 0);
+        m_SH2.SetExternalInterrupt(0, 0);
     }
 }
 

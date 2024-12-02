@@ -28,7 +28,6 @@ add_library(satemu-core
     include/satemu/hw/vdp/vdp2.hpp
     include/satemu/hw/vdp/vdp2_defs.hpp
 
-    include/satemu/sys/sh2_sys.hpp
     include/satemu/sys/sys.hpp
     include/satemu/sys/video_sys.hpp
     
@@ -51,18 +50,17 @@ add_library(satemu-core
 
     src/satemu/hw/smpc/smpc.cpp
 
+    src/satemu/hw/sh2/sh2.cpp
     src/satemu/hw/sh2/sh2_bus.cpp
+    src/satemu/hw/sh2/sh2_interpreter.hpp
+    src/satemu/hw/sh2/sh2_mem.hpp
     src/satemu/hw/sh2/sh2_state.cpp
 
     src/satemu/hw/vdp/vdp1.cpp
     src/satemu/hw/vdp/vdp2.cpp
 
-    src/satemu/sys/sh2_sys.cpp
     src/satemu/sys/sys.cpp
     src/satemu/sys/video_sys.cpp
-
-    src/satemu/sys/sh2/sh2_interpreter.hpp
-    src/satemu/sys/sh2/sh2_mem.hpp
 
     src/satemu/util/constexpr_for.hpp
 )
