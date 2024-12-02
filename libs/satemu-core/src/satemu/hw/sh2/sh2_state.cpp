@@ -62,14 +62,16 @@ void SH2State::Reset(bool hard) {
     DVDNTH = 0x0; // undefined initial value
     DVDNTL = 0x0; // undefined initial value
 
-    pendingIRL = 0;
+    pendingExternalIntrLevel = 0;
+    pendingExternalIntrVecNum = 0;
     pendingInterrupt.priority = 0;
     pendingInterrupt.vecNum = 0;
 }
 
-void SH2State::SetInterruptLevel(uint8 level) {
+void SH2State::SetExternalInterrupt(uint8 level, uint8 vecNum) {
     assert(level < 16);
-    pendingIRL = level;
+    pendingExternalIntrLevel = level;
+    pendingExternalIntrVecNum = vecNum;
     CheckInterrupts();
 }
 
@@ -154,8 +156,8 @@ void SH2State::CheckInterrupts() {
 
     // TODO: NMI, user break (before IRLs)
 
-    pendingInterrupt.priority = pendingIRL;
-    pendingInterrupt.vecNum = 0x40 + (pendingIRL >> 1u);
+    pendingInterrupt.priority = pendingExternalIntrLevel;
+    pendingInterrupt.vecNum = ICR.VECMD ? pendingExternalIntrVecNum : 0x40 + (pendingExternalIntrLevel >> 1u);
 
     auto update = [&](uint8 intrPriority, uint8 vecNum) {
         if (intrPriority > pendingInterrupt.priority) {

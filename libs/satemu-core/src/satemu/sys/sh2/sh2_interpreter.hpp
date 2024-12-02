@@ -33,57 +33,12 @@ inline void dbg_println(fmt::format_string<T...> fmt, T &&...args) {
 // -----------------------------------------------------------------------------
 // Intepreter
 
-inline void CheckInterrupts(SH2State &state) {
-    // TODO: check interrupts from these sources (in order of priority, when priority numbers are the same):
-    //   name             priority       vecnum
-    //   NMI              16             0x0B
-    //   User break       15             0x0C
-    //   IRLs 15-1        15-1           0x40 + (level >> 1)
-    //   DIVU OVFI        IPRA.DIVUIPn   VCRDIV
-    //   DMAC0 xfer end   IPRA.DMACIPn   VCRDMA0
-    //   DMAC1 xfer end   IPRA.DMACIPn   VCRDMA1
-    //   WDT ITI          IPRA.WDTIPn    VCRWDT
-    //   BSC REF CMI      IPRA.WDTIPn    VCRWDT
-    //   SCI ERI          IPRB.SCIIPn    VCRA.SERVn
-    //   SCI RXI          IPRB.SCIIPn    VCRA.SRXVn
-    //   SCI TXI          IPRB.SCIIPn    VCRB.STXVn
-    //   SCI TEI          IPRB.SCIIPn    VCRB.STEVn
-    //   FRT ICI          IPRB.FRTIPn    VCRC.FICVn
-    //   FRT OCI          IPRB.FRTIPn    VCRC.FOCVn
-    //   FRT OVI          IPRB.FRTIPn    VCRD.FOVVn
-    // use the vector number of the exception with highest priority
-    // TODO: external vector fetch
-
-    // TODO: NMI, user break (before IRLs)
-
-    state.pendingInterrupt.priority = state.pendingIRL;
-    state.pendingInterrupt.vecNum = 0x40 + (state.pendingIRL >> 1u);
-
-    auto update = [&](uint8 intrPriority, uint8 vecNum) {
-        if (intrPriority > state.pendingInterrupt.priority) {
-            state.pendingInterrupt.priority = intrPriority;
-            state.pendingInterrupt.vecNum = vecNum;
-        }
-    };
-
-    if (state.DVCR.OVF && state.DVCR.OVFIE) {
-        update(state.IPRA.DIVUIPn, state.VCRDIV);
-    }
-
-    // TODO: DMAC0, DMAC1 transfer end
-    // TODO: WDT ITI, BSC REF CMI
-    // TODO: SCI ERI, RXI, TXI, TEI
-    // TODO: FRT ICI, OCI, OVI
-
-    // TODO: interrupt exception flag = level > SR.ILevel
-}
-
 inline void EnterException(SH2State &state, SH2Bus &bus, uint8 vectorNumber) {
     state.R[15] -= 4;
     MemWriteLong(state, bus, state.R[15], state.SR.u32);
     state.R[15] -= 4;
-    MemWriteLong(state, bus, state.R[15], state.PC - 2);
-    state.PC = MemReadLong(state, bus, state.VBR + (static_cast<uint32>(vectorNumber) << 2u)) + 4;
+    MemWriteLong(state, bus, state.R[15], state.PC - 4);
+    state.PC = MemReadLong(state, bus, state.VBR + (static_cast<uint32>(vectorNumber) << 2u));
 }
 
 // -----------------------------------------------------------------------------
@@ -999,13 +954,17 @@ FORCE_INLINE void JSR(SH2State &state, SH2Bus &bus, uint16 rm) {
 
 FORCE_INLINE void TRAPA(SH2State &state, SH2Bus &bus, uint16 imm) {
     // dbg_println("trapa #0x{:X}", imm);
-    EnterException(state, bus, imm);
+    state.R[15] -= 4;
+    MemWriteLong(state, bus, state.R[15], state.SR.u32);
+    state.R[15] -= 4;
+    MemWriteLong(state, bus, state.R[15], state.PC - 2);
+    state.PC = MemReadLong(state, bus, state.VBR + (imm << 2u));
 }
 
 FORCE_INLINE void RTE(SH2State &state, SH2Bus &bus) {
     // dbg_println("rte");
     const uint32 delaySlot = state.PC + 2;
-    state.PC = MemReadLong(state, bus, state.R[15] + 4);
+    state.PC = MemReadLong(state, bus, state.R[15]) + 4;
     state.R[15] += 4;
     state.SR.u32 = MemReadLong(state, bus, state.R[15]) & 0x000003F3;
     state.R[15] += 4;
@@ -1024,17 +983,35 @@ FORCE_INLINE void RTS(SH2State &state, SH2Bus &bus) {
 
 template <bool delaySlot>
 void Execute(SH2State &state, SH2Bus &bus, uint32 address) {
-    if (state.pendingInterrupt.priority > state.SR.ILevel) [[unlikely]] {
-        EnterException(state, bus, state.pendingInterrupt.vecNum);
-        state.SR.ILevel = state.pendingInterrupt.priority;
-        CheckInterrupts(state);
+    if constexpr (!delaySlot) {
+        if (state.pendingInterrupt.priority > state.SR.ILevel) [[unlikely]] {
+            // TODO: check R15 before entering exception and compare against R15 at RTE
+            // - RTE is reading PC = 0x00000001
+            // TODO: might have to clear the pending external interrupt or check what's happening on SCU
+            // - interrupt routine should acknowledge the interrupt and cause SCU to update the interrupt signals
+            fmt::println(">> intr level {:02X} vec {:02X}", state.pendingInterrupt.priority,
+                         state.pendingInterrupt.vecNum);
+            EnterException(state, bus, state.pendingInterrupt.vecNum);
+            state.SR.ILevel = state.pendingInterrupt.priority;
+            state.CheckInterrupts();
+            address = state.PC;
+        }
     }
 
     // TODO: emulate fetch - decode - execute - memory access - writeback pipeline
     const uint16 instr = MemReadWord(state, bus, address);
 
-    // ++dbg_count;
+    /*static uint64 dbg_count = 0;
+    ++dbg_count;
     // dbg_print("[{:10}] {:08X}{} {:04X}  ", dbg_count, address, delaySlot ? '*' : ' ', instr);
+    if (dbg_count > 14000000) {
+        fmt::print("{:08X}{} {:04X}  ", address, delaySlot ? '*' : ' ', instr);
+        for (int i = 0; i < 16; i++) {
+            fmt::print(" {:08X}", state.R[i]);
+        }
+        fmt::println("  pr = {:08X}  sr = {:08X}  gbr = {:08X}  vbr = {:08X}", state.PR, state.SR.u32, state.GBR,
+                     state.VBR);
+    }*/
 
     switch (instr >> 12u) {
     case 0x0:

@@ -32,7 +32,7 @@ private:
     void Reset(bool hard);
 
 public:
-    void SetInterruptLevel(uint8 level);
+    void SetExternalInterrupt(uint8 level, uint8 vecNum);
 
     std::array<uint32, 16> R;
 
@@ -777,7 +777,8 @@ public:
     // -------------------------------------------------------------------------
     // Interrupts
 
-    uint8 pendingIRL;
+    uint8 pendingExternalIntrLevel;
+    uint8 pendingExternalIntrVecNum;
 
     struct PendingInterruptInfo {
         uint8 priority;

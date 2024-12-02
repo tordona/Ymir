@@ -11,8 +11,8 @@ SCU::SCU(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, scsp::SCSP &scsp, cdblock::CDBlock 
 }
 
 void SCU::Reset(bool hard) {
-    m_intrMask.u32 = 0;
-    m_intrStatus.u32 = 0;
+    intrMask.u32 = 0;
+    intrStatus.u32 = 0;
 }
 
 } // namespace satemu::scu

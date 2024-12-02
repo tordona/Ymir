@@ -154,8 +154,8 @@ private:
     // -------------------------------------------------------------------------
     // Interrupts
 
-    InterruptMask m_intrMask;
-    InterruptStatus m_intrStatus;
+    InterruptMask intrMask;
+    InterruptStatus intrStatus;
 
     // -------------------------------------------------------------------------
     // SCU registers
@@ -164,9 +164,9 @@ private:
     T ReadReg(uint32 address) {
         switch (address) {
         case 0xA0: // Interrupt Mask
-            return m_intrMask.u32;
+            return intrMask.u32;
         case 0xA4: // Interrupt Status
-            return m_intrStatus.u32;
+            return intrStatus.u32;
         case 0xA8: // A-Bus Interrupt Acknowledge
             // TODO: not yet sure how this works
             return 0;
@@ -180,10 +180,10 @@ private:
     void WriteReg(uint32 address, T value) {
         switch (address) {
         case 0xA0: // Interrupt Mask
-            m_intrMask.u32 = value & 0x0000BFFF;
+            intrMask.u32 = value & 0x0000BFFF;
             break;
         case 0xA4: // Interrupt Status
-            m_intrStatus.u32 &= value;
+            intrStatus.u32 &= value;
             break;
         case 0xA8: // A-Bus Interrupt Acknowledge
             // TODO: not yet sure how this works

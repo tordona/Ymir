@@ -12,7 +12,7 @@ public:
 
     void Step();
 
-    void SetInterruptLevel(uint8 level);
+    void SetExternalInterrupt(uint8 level, uint8 vecNum);
 
     sh2::SH2 SH2;
 };

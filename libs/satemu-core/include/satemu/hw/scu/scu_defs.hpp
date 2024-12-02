@@ -74,11 +74,16 @@ union InterruptStatus {
         uint32 ABus_ExtIntrE : 1;
         uint32 ABus_ExtIntrF : 1;
     };
+    struct {
+        uint32 : 16;
+        uint32 ABus_ExtIntrs : 16;
+    };
 };
 static_assert(sizeof(InterruptStatus) == sizeof(uint32));
 
 union InterruptMask {
     uint32 u32;
+    uint16 u16; // excludes A-Bus external interrupts bit
     struct {
         uint32 VDP2_VBlankIN : 1;
         uint32 VDP2_VBlankOUT : 1;

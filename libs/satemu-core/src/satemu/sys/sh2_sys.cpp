@@ -28,10 +28,10 @@ void SH2System::Step() {
     // sh2::interp::Step(SH2.slaveState, SH2.bus);
 }
 
-void SH2System::SetInterruptLevel(uint8 level) {
-    SH2.masterState.SetInterruptLevel(level);
+void SH2System::SetExternalInterrupt(uint8 level, uint8 vecNum) {
+    SH2.masterState.SetExternalInterrupt(level, vecNum);
     // TODO: when to set slave IRL?
-    // SH2.slaveState.SetInterruptLevel(level);
+    // SH2.slaveState.SetExternalInterrupt(level, vecNum);
 }
 
 } // namespace satemu::sys
