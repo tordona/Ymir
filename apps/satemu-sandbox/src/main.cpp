@@ -194,12 +194,13 @@ int main(int argc, char **argv) {
 
     auto saturn = std::make_unique<satemu::Saturn>();
     {
+        constexpr auto iplSize = satemu::sh2::kIPLSize;
         auto rom = loadFile(argv[1]);
-        if (rom.size() != satemu::kIPLSize) {
-            fmt::println("IPL ROM size mismatch: expected {} bytes, got {} bytes", satemu::kIPLSize, rom.size());
+        if (rom.size() != iplSize) {
+            fmt::println("IPL ROM size mismatch: expected {} bytes, got {} bytes", iplSize, rom.size());
             return EXIT_FAILURE;
         }
-        saturn->LoadIPL(std::span<uint8, satemu::kIPLSize>(rom));
+        saturn->LoadIPL(std::span<uint8, iplSize>(rom));
         fmt::println("IPL ROM loaded");
     }
     runEmulator(*saturn);

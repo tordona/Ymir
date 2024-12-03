@@ -18,4 +18,8 @@ void SH2Bus::LoadIPL(std::span<uint8, kIPLSize> ipl) {
     std::copy(ipl.begin(), ipl.end(), m_IPL.begin());
 }
 
+void SH2Bus::AcknowledgeExternalInterrupt() {
+    m_SCU.AcknowledgeExternalInterrupt();
+}
+
 } // namespace satemu::sh2

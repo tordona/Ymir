@@ -13,13 +13,6 @@ SCU::SCU(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, scsp::SCSP &scsp, cdblock::CDBlock 
     Reset(true);
 }
 
-void SCU::PostConstructInit() {
-    m_SH2.SetExternalInterruptCallback({this, [](void *ptr) {
-                                            auto &scu = *static_cast<scu::SCU *>(ptr);
-                                            scu.UpdateInterruptLevel(true);
-                                        }});
-}
-
 void SCU::Reset(bool hard) {
     m_intrMask.u32 = 0;
     m_intrStatus.u32 = 0;
@@ -45,6 +38,10 @@ void SCU::TriggerVBlankOUT() {
 void SCU::TriggerSystemManager() {
     m_intrStatus.SM_SystemManager = 1;
     UpdateInterruptLevel(false);
+}
+
+void SCU::AcknowledgeExternalInterrupt() {
+    UpdateInterruptLevel(true);
 }
 
 void SCU::UpdateInterruptLevel(bool acknowledge) {

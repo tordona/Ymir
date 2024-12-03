@@ -63,8 +63,6 @@ class SCU {
 public:
     SCU(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2 &sh2);
 
-    void PostConstructInit();
-
     void Reset(bool hard);
 
     template <mem_access_type T>
@@ -151,6 +149,8 @@ public:
     void TriggerVBlankIN();
     void TriggerVBlankOUT();
     void TriggerSystemManager();
+
+    void AcknowledgeExternalInterrupt();
 
 private:
     vdp1::VDP1 &m_VDP1;

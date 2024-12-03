@@ -48,10 +48,8 @@ class SH2Bus {
 public:
     SH2Bus(scu::SCU &scu, smpc::SMPC &smpc);
 
-private:
     void Reset(bool hard);
 
-public:
     void LoadIPL(std::span<uint8, kIPLSize> ipl);
 
     template <mem_access_type T>
@@ -94,6 +92,8 @@ public:
             fmt::println("unhandled {}-bit SH2 bus write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         }
     }
+
+    void AcknowledgeExternalInterrupt();
 
 private:
     std::array<uint8, kIPLSize> m_IPL; // aka BIOS ROM

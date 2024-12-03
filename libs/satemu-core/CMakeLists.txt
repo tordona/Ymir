@@ -15,9 +15,10 @@ add_library(satemu-core
     include/satemu/hw/scu/scu_defs.hpp
 
     include/satemu/hw/sh2/sh2.hpp
+    include/satemu/hw/sh2/sh2_block.hpp
     include/satemu/hw/sh2/sh2_bus.hpp
     include/satemu/hw/sh2/sh2_bus_defs.hpp
-    include/satemu/hw/sh2/sh2_state.hpp
+    include/satemu/hw/sh2/sh2_defs.hpp
 
     include/satemu/hw/smpc/smpc.hpp
     include/satemu/hw/smpc/smpc_defs.hpp
@@ -51,7 +52,6 @@ add_library(satemu-core
 
     src/satemu/hw/sh2/sh2.cpp
     src/satemu/hw/sh2/sh2_bus.cpp
-    src/satemu/hw/sh2/sh2_state.cpp
 
     src/satemu/hw/vdp/vdp1.cpp
     src/satemu/hw/vdp/vdp2.cpp

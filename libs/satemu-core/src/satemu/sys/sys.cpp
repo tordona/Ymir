@@ -4,11 +4,9 @@ namespace satemu {
 
 Saturn::Saturn()
     : SH2(SCU, SMPC)
-    , SCU(VDP1, VDP2, SCSP, CDBlock, SH2)
+    , SCU(VDP1, VDP2, SCSP, CDBlock, SH2.master)
     , VDP2(SCU)
     , SMPC(SCU) {
-
-    SCU.PostConstructInit();
 
     Reset(true);
 }
@@ -23,12 +21,14 @@ void Saturn::Reset(bool hard) {
     CDBlock.Reset(hard);
 }
 
-void Saturn::LoadIPL(std::span<uint8, kIPLSize> ipl) {
-    SH2.LoadIPL(ipl);
+void Saturn::LoadIPL(std::span<uint8, sh2::kIPLSize> ipl) {
+    SH2.bus.LoadIPL(ipl);
 }
 
 void Saturn::Step() {
-    SH2.Step();
+    SH2.master.Step();
+    // TODO: step slave SH2 if enabled
+    // SH2.slave.Step();
 
     // TODO: proper timings
     // TODO: replace with scheduler events
