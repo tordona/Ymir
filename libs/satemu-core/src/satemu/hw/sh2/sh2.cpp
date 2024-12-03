@@ -13,8 +13,8 @@ SH2::SH2(scu::SCU &scu, smpc::SMPC &smpc)
 void SH2::Reset(bool hard) {
     auto reset = [&](SH2State &state) {
         state.Reset(hard);
-        state.PC = MemReadLong(state, state.VBR);
-        state.R[15] = MemReadLong(state, state.VBR + 4);
+        state.PC = MemReadLong(state, 0x00000000);
+        state.R[15] = MemReadLong(state, 0x00000004);
     };
 
     reset(m_masterState);
@@ -1866,12 +1866,12 @@ FORCE_INLINE void SH2::CMPHS(SH2State &state, uint16 rm, uint16 rn) {
 
 FORCE_INLINE void SH2::CMPPL(SH2State &state, uint16 rn) {
     // dbg_println("cmp/pl r{}", rn);
-    state.SR.T = state.R[rn] > 0;
+    state.SR.T = static_cast<sint32>(state.R[rn]) > 0;
 }
 
 FORCE_INLINE void SH2::CMPPZ(SH2State &state, uint16 rn) {
     // dbg_println("cmp/pz r{}", rn);
-    state.SR.T = state.R[rn] >= 0;
+    state.SR.T = static_cast<sint32>(state.R[rn]) >= 0;
 }
 
 FORCE_INLINE void SH2::CMPSTR(SH2State &state, uint16 rm, uint16 rn) {

@@ -89,7 +89,6 @@ void SCU::UpdateInterruptLevel(bool acknowledge) {
     static constexpr uint32 kABusIntrLevels[] = {0x7, 0x7, 0x7, 0x7, 0x4, 0x4, 0x4, 0x4, //
                                                  0x1, 0x1, 0x1, 0x1, 0x1, 0x1, 0x1, 0x1, //
                                                  0x0};
-
     const uint32 intrBits = m_intrStatus.u32 & ~m_intrMask.u16;
     if (intrBits != 0) {
         const uint16 intrIndexBase = std::countr_zero<uint16>(intrBits >> 0u);
@@ -104,12 +103,13 @@ void SCU::UpdateInterruptLevel(bool acknowledge) {
             } else {
                 m_intrStatus.u32 &= ~(1u << (intrIndexABus + 16u));
             }
-        }
-
-        if (intrLevelBase >= intrLevelABus) {
-            m_SH2.SetExternalInterrupt(intrLevelBase, intrIndexBase + 0x40);
+            m_SH2.SetExternalInterrupt(0, 0);
         } else {
-            m_SH2.SetExternalInterrupt(intrLevelABus, intrIndexABus + 0x50);
+            if (intrLevelBase >= intrLevelABus) {
+                m_SH2.SetExternalInterrupt(intrLevelBase, intrIndexBase + 0x40);
+            } else {
+                m_SH2.SetExternalInterrupt(intrLevelABus, intrIndexABus + 0x50);
+            }
         }
     } else {
         m_SH2.SetExternalInterrupt(0, 0);

@@ -12,7 +12,7 @@ SH2State::SH2State(bool master) {
 void SH2State::Reset(bool hard) {
     // Initial values:
     // - R0-R14 = undefined
-    // - R15 = ReadLong(VBR + 4)
+    // - R15 = ReadLong(0x00000004)
 
     // - SR = bits I3-I0 set, reserved bits clear, the rest is undefined
     // - GBR = undefined
@@ -20,7 +20,7 @@ void SH2State::Reset(bool hard) {
 
     // - MACH, MACL = undefined
     // - PR = undefined
-    // - PC = ReadLong(VBR)
+    // - PC = ReadLong(0x00000000)
 
     R.fill(0);
     PR = 0;
@@ -33,8 +33,8 @@ void SH2State::Reset(bool hard) {
     MAC.u64 = 0;
 
     // NOTE: this needs to be done externally since this class doesn't have access to SH2Bus
-    // PC = MemReadLong(VBR);
-    // R[15] = MemReadLong(VBR + 4);
+    // PC = MemReadLong(0x00000000);
+    // R[15] = MemReadLong(0x00000004);
 
     // On-chip registers
     IPRB.val.u16 = 0x0000;
