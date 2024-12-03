@@ -167,11 +167,11 @@ private:
     // --- DIVU module ---
 
     DVSR_t DVSR;     // 100  R/W  32       ud        DVSR    Divisor register
-    DVDNT_t DVDNT;   // 104  R/W  32       ud        DVDNT   Dividend register for 32-bit division
+    DVDNT_t DVDNT;   // 104  R/W  32       ud        DVDNT   Dividend register L for 32-bit division
     DVCR_t DVCR;     // 108  R/W  16,32    00000000  DVCR    Division control register
     VCRDIV_t VCRDIV; // 10C  R/W  16,32    ud        VCRDIV  Vector number register setting DIV
-    DVDNTH_t DVDNTH; // 110  R/W  32       ud        DVDNTH  Dividend register H for 64-bit division
-    DVDNTL_t DVDNTL; // 114  R/W  32       ud        DVDNTL  Dividend register L for 64-bit division
+    DVDNTH_t DVDNTH; // 110  R/W  32       ud        DVDNTH  Dividend register H
+    DVDNTL_t DVDNTL; // 114  R/W  32       ud        DVDNTL  Dividend register L
                      // 120..13F are mirrors of 100..11F
 
     // Both division calculations take 39 cycles to complete, or 6 if it results in overflow.

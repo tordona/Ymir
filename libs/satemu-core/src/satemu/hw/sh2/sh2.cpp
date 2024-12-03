@@ -309,7 +309,8 @@ void SH2::DIVUBegin32() {
         // Overflow
         // TODO: schedule event to run this after 6 cycles
 
-        // Store results after 6 cycles - 3 for setting flags and 3 for calculations
+        // Perform partial division
+        // The division unit uses 3 cycles to set up flags, leaving 3 cycles for calculations
         DVDNTH = dividend >> 29;
         if (DVCR.OVFIE) {
             DVDNTL = DVDNT = (dividend << 3) | ((dividend >> 31) & 7);
@@ -320,17 +321,68 @@ void SH2::DIVUBegin32() {
 
         // Signal overflow
         DVCR.OVF = 1;
+        if (DVCR.OVFIE) {
+            // TODO: trigger interrupt
+        }
     }
 }
 
 void SH2::DIVUBegin64() {
-    // TODO: implement
-    // __debugbreak();
-    const bool m = SR.M;
-    const bool q = SR.Q;
-    const bool t = SR.T;
-    fmt::println("SH2: DIVU 64x32 not yet implemented! DVDNTH={:08X} DVDNTL={:08X} DVSR={:08X} M={:d} Q={:d} T={:d}",
-                 DVDNTH, DVDNTL, DVSR, m, q, t);
+    static constexpr sint32 kMinValue32 = std::numeric_limits<sint32>::min();
+    static constexpr sint32 kMaxValue32 = std::numeric_limits<sint32>::max();
+    static constexpr sint64 kMinValue64 = std::numeric_limits<sint64>::min();
+
+    sint64 dividend = (static_cast<sint64>(DVDNTH) << 32ll) | static_cast<sint64>(DVDNTL);
+    const sint32 divisor = static_cast<sint32>(DVSR);
+
+    bool overflow = divisor == 0;
+    if (!overflow) {
+        const sint64 quotient = dividend / divisor;
+        const sint32 remainder = dividend % divisor;
+
+        if (quotient <= kMinValue32 || quotient > kMaxValue32) [[unlikely]] {
+            // Overflow cases
+            overflow = true;
+        } else if (dividend == kMinValue64 && divisor == -1) [[unlikely]] {
+            // Handle extreme case
+            overflow = true;
+        } else {
+            // TODO: schedule event to run this after 39 cycles
+            DVDNTL = DVDNT = quotient;
+            DVDNTH = remainder;
+        }
+    }
+
+    if (overflow) {
+        // Overflow is detected after 6 cycles
+
+        // Perform partial division
+        // The division unit uses 3 cycles to set up flags, leaving 3 cycles for calculations
+        bool Q = dividend < 0;
+        const bool M = divisor < 0;
+        for (int i = 0; i < 3; i++) {
+            if (Q == M) {
+                dividend -= static_cast<uint64>(divisor) << 32ull;
+            } else {
+                dividend += static_cast<uint64>(divisor) << 32ull;
+            }
+
+            Q = dividend < 0;
+            dividend = (dividend << 1ll) | (Q == M);
+        }
+
+        // Signal overflow
+        DVCR.OVF = 1;
+
+        // Update output registers
+        if (DVCR.OVFIE) {
+            DVDNTL = DVDNT = dividend;
+        } else {
+            // DVDNT/DVDNTL is saturated if the interrupt signal is disabled
+            DVDNTL = DVDNT = dividend < 0 ? kMinValue32 : kMaxValue32;
+        }
+        DVDNTH = dividend >> 32ll;
+    }
 }
 
 template <mem_access_type T>
