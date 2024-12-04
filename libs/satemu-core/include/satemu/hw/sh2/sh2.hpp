@@ -234,8 +234,12 @@ private:
     // -------------------------------------------------------------------------
     // Interpreter
 
-    template <bool delaySlot>
     void Execute(uint32 address);
+
+    bool m_delaySlot;
+    uint32 m_delaySlotTarget;
+
+    void SetupDelaySlot(uint32 targetAddress);
 
     // -------------------------------------------------------------------------
     // Instruction interpreters

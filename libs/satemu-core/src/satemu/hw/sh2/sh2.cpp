@@ -90,7 +90,7 @@ FLATTEN void SH2::Step() {
                 bit(SR.T, "T"));*/
 
     // TODO: choose between interpreter (cached or uncached) and JIT recompiler
-    Execute<false>(PC);
+    Execute(PC);
     // dbg_println("");
 }
 
@@ -698,18 +698,18 @@ void SH2::EnterException(uint8 vectorNumber) {
 // -----------------------------------------------------------------------------
 // Interpreter
 
-template <bool delaySlot>
 void SH2::Execute(uint32 address) {
-    if constexpr (!delaySlot) {
-        if (CheckInterrupts()) [[unlikely]] {
-            fmt::println(">> intr level {:02X} vec {:02X}", m_pendingInterrupt.priority, m_pendingInterrupt.vecNum);
-            EnterException(m_pendingInterrupt.vecNum);
-            SR.ILevel = m_pendingInterrupt.priority;
-            address = PC;
-        }
+    if (!m_delaySlot && CheckInterrupts()) [[unlikely]] {
+        fmt::println(">> intr level {:02X} vec {:02X}", m_pendingInterrupt.priority, m_pendingInterrupt.vecNum);
+        EnterException(m_pendingInterrupt.vecNum);
+        SR.ILevel = m_pendingInterrupt.priority;
+        address = PC;
     }
 
     // TODO: emulate fetch - decode - execute - memory access - writeback pipeline
+    // TODO: figure out a way to optimize delay slots for performance
+    // - perhaps decoding instructions beforehand
+
     const uint16 instr = MemReadWord(address);
 
     /*static uint64 dbg_count = 0;
@@ -723,23 +723,28 @@ void SH2::Execute(uint32 address) {
         fmt::println("  pr = {:08X}  sr = {:08X}  gbr = {:08X}  vbr = {:08X}", PR, SR.u32, GBR, VBR);
     }*/
 
+    auto advancePC = [&] {
+        if (m_delaySlot) {
+            PC = m_delaySlotTarget;
+            m_delaySlot = false;
+        } else {
+            PC += 2;
+        }
+    };
+
     switch (instr >> 12u) {
     case 0x0:
         switch (instr) {
         case 0x0008: // 0000 0000 0000 1000   CLRT
             CLRT();
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x0009: // 0000 0000 0000 1001   NOP
             NOP();
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x000B: // 0000 0000 0000 1011   RTS
-            if constexpr (delaySlot) {
+            if (m_delaySlot) {
                 // Illegal slot instruction exception
                 EnterException(6);
             } else {
@@ -748,30 +753,22 @@ void SH2::Execute(uint32 address) {
             break;
         case 0x0018: // 0000 0000 0001 1000   SETT
             SETT();
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x0019: // 0000 0000 0001 1001   DIV0U
             DIV0U();
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x001B: // 0000 0000 0001 1011   SLEEP
             SLEEP();
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x0028: // 0000 0000 0010 1000   CLRMAC
             CLRMAC();
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x002B: // 0000 0000 0010 1011   RTE
-            if constexpr (delaySlot) {
+            if (m_delaySlot) {
                 // Illegal slot instruction exception
                 EnterException(6);
             } else {
@@ -782,12 +779,10 @@ void SH2::Execute(uint32 address) {
             switch (instr & 0xFF) {
             case 0x02: // 0000 nnnn 0000 0010   STC SR, Rn
                 STCSR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x03: // 0000 mmmm 0000 0011   BSRF Rm
-                if constexpr (delaySlot) {
+                if (m_delaySlot) {
                     // Illegal slot instruction exception
                     EnterException(6);
                 } else {
@@ -796,30 +791,22 @@ void SH2::Execute(uint32 address) {
                 break;
             case 0x0A: // 0000 nnnn 0000 1010   STS MACH, Rn
                 STSMACH(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x12: // 0000 nnnn 0001 0010   STC GBR, Rn
                 STCGBR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x1A: // 0000 nnnn 0001 1010   STS MACL, Rn
                 STSMACL(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x22: // 0000 nnnn 0010 0010   STC VBR, Rn
                 STCVBR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x23: // 0000 mmmm 0010 0011   BRAF Rm
-                if constexpr (delaySlot) {
+                if (m_delaySlot) {
                     // Illegal slot instruction exception
                     EnterException(6);
                 } else {
@@ -828,65 +815,45 @@ void SH2::Execute(uint32 address) {
                 break;
             case 0x29: // 0000 nnnn 0010 1001   MOVT Rn
                 MOVT(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x2A: // 0000 nnnn 0010 1010   STS PR, Rn
                 STSPR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             default:
                 switch (instr & 0xF) {
                 case 0x4: // 0000 nnnn mmmm 0100   MOV.B Rm, @(R0,Rn)
                     MOVBS0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-                    if constexpr (!delaySlot) {
-                        PC += 2;
-                    }
+                    advancePC();
                     break;
                 case 0x5: // 0000 nnnn mmmm 0101   MOV.W Rm, @(R0,Rn)
                     MOVWS0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-                    if constexpr (!delaySlot) {
-                        PC += 2;
-                    }
+                    advancePC();
                     break;
                 case 0x6: // 0000 nnnn mmmm 0110   MOV.L Rm, @(R0,Rn)
                     MOVLS0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-                    if constexpr (!delaySlot) {
-                        PC += 2;
-                    }
+                    advancePC();
                     break;
                 case 0x7: // 0000 nnnn mmmm 0111   MUL.L Rm, Rn
                     MULL(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-                    if constexpr (!delaySlot) {
-                        PC += 2;
-                    }
+                    advancePC();
                     break;
                 case 0xC: // 0000 nnnn mmmm 1100   MOV.B @(R0,Rm), Rn
                     MOVBL0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-                    if constexpr (!delaySlot) {
-                        PC += 2;
-                    }
+                    advancePC();
                     break;
                 case 0xD: // 0000 nnnn mmmm 1101   MOV.W @(R0,Rm), Rn
                     MOVWL0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-                    if constexpr (!delaySlot) {
-                        PC += 2;
-                    }
+                    advancePC();
                     break;
                 case 0xE: // 0000 nnnn mmmm 1110   MOV.L @(R0,Rm), Rn
                     MOVLL0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-                    if constexpr (!delaySlot) {
-                        PC += 2;
-                    }
+                    advancePC();
                     break;
                 case 0xF: // 0000 nnnn mmmm 1111   MAC.L @Rm+, @Rn+
                     MACL(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-                    if constexpr (!delaySlot) {
-                        PC += 2;
-                    }
+                    advancePC();
                     break;
                 default: /*dbg_println("unhandled 0000 instruction");*/ __debugbreak(); break;
                 }
@@ -897,9 +864,7 @@ void SH2::Execute(uint32 address) {
         break;
     case 0x1: // 0001 nnnn mmmm dddd   MOV.L Rm, @(disp,Rn)
         MOVLS4(bit::extract<4, 7>(instr), bit::extract<0, 3>(instr), bit::extract<8, 11>(instr));
-        if constexpr (!delaySlot) {
-            PC += 2;
-        }
+        advancePC();
         break;
     case 0x2: {
         const uint16 rm = bit::extract<4, 7>(instr);
@@ -907,96 +872,66 @@ void SH2::Execute(uint32 address) {
         switch (instr & 0xF) {
         case 0x0: // 0010 nnnn mmmm 0000   MOV.B Rm, @Rn
             MOVBS(rm, rn);
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x1: // 0010 nnnn mmmm 0001   MOV.W Rm, @Rn
             MOVWS(rm, rn);
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x2: // 0010 nnnn mmmm 0010   MOV.L Rm, @Rn
             MOVLS(rm, rn);
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
 
             // There's no case 0x3
 
         case 0x4: // 0010 nnnn mmmm 0100   MOV.B Rm, @-Rn
             MOVBM(rm, rn);
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x5: // 0010 nnnn mmmm 0101   MOV.W Rm, @-Rn
             MOVWM(rm, rn);
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x6: // 0010 nnnn mmmm 0110   MOV.L Rm, @-Rn
             MOVLM(rm, rn);
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x7: // 0010 nnnn mmmm 0110   DIV0S Rm, Rn
             DIV0S(rm, rn);
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x8: // 0010 nnnn mmmm 1000   TST Rm, Rn
             TST(rm, rn);
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x9: // 0010 nnnn mmmm 1001   AND Rm, Rn
             AND(rm, rn);
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xA: // 0010 nnnn mmmm 1010   XOR Rm, Rn
             XOR(rm, rn);
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xB: // 0010 nnnn mmmm 1011   OR Rm, Rn
             OR(rm, rn);
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xC: // 0010 nnnn mmmm 1100   CMP/STR Rm, Rn
             CMPSTR(rm, rn);
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xD: // 0010 nnnn mmmm 1101   XTRCT Rm, Rn
             XTRCT(rm, rn);
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xE: // 0010 nnnn mmmm 1110   MULU.W Rm, Rn
             MULU(rm, rn);
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xF: // 0010 nnnn mmmm 1111   MULS.W Rm, Rn
             MULS(rm, rn);
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         default: /*dbg_println("unhandled 0010 instruction");*/ __debugbreak(); break;
         }
@@ -1006,93 +941,65 @@ void SH2::Execute(uint32 address) {
         switch (instr & 0xF) {
         case 0x0: // 0011 nnnn mmmm 0000   CMP/EQ Rm, Rn
             CMPEQ(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x2: // 0011 nnnn mmmm 0010   CMP/HS Rm, Rn
             CMPHS(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x3: // 0011 nnnn mmmm 0011   CMP/GE Rm, Rn
             CMPGE(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x4: // 0011 nnnn mmmm 0100   DIV1 Rm, Rn
             DIV1(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x5: // 0011 nnnn mmmm 0101   DMULU.L Rm, Rn
             DMULU(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x6: // 0011 nnnn mmmm 0110   CMP/HI Rm, Rn
             CMPHI(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x7: // 0011 nnnn mmmm 0111   CMP/GT Rm, Rn
             CMPGT(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x8: // 0011 nnnn mmmm 1000   SUB Rm, Rn
             SUB(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
 
             // There's no case 0x9
 
         case 0xA: // 0011 nnnn mmmm 1010   SUBC Rm, Rn
             SUBC(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xB: // 0011 nnnn mmmm 1011   SUBV Rm, Rn
             SUBV(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
 
             // There's no case 0xB
 
         case 0xC: // 0011 nnnn mmmm 1100   ADD Rm, Rn
             ADD(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xD: // 0011 nnnn mmmm 1101   DMULS.L Rm, Rn
             DMULS(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xE: // 0011 nnnn mmmm 1110   ADDC Rm, Rn
             ADDC(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xF: // 0011 nnnn mmmm 1110   ADDV Rm, Rn
             ADDV(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         default: /*dbg_println("unhandled 0011 instruction");*/ __debugbreak(); break;
         }
@@ -1101,80 +1008,56 @@ void SH2::Execute(uint32 address) {
         if ((instr & 0xF) == 0xF) {
             // 0100 nnnn mmmm 1111   MAC.W @Rm+, @Rn+
             MACW(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         } else {
             switch (instr & 0xFF) {
             case 0x00: // 0100 nnnn 0000 0000   SHLL Rn
                 SHLL(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x01: // 0100 nnnn 0000 0001   SHLR Rn
                 SHLR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x02: // 0100 nnnn 0000 0010   STS.L MACH, @-Rn
                 STSMMACH(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x03: // 0100 nnnn 0000 0010   STC.L SR, @-Rn
                 STCMSR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x04: // 0100 nnnn 0000 0100   ROTL Rn
                 ROTL(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x05: // 0100 nnnn 0000 0101   ROTR Rn
                 ROTR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x06: // 0100 mmmm 0000 0110   LDS.L @Rm+, MACH
                 LDSMMACH(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x07: // 0100 mmmm 0000 0111   LDC.L @Rm+, SR
                 LDCMSR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x08: // 0100 nnnn 0000 1000   SHLL2 Rn
                 SHLL2(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x09: // 0100 nnnn 0000 1001   SHLR2 Rn
                 SHLR2(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x0A: // 0100 mmmm 0000 1010   LDS Rm, MACH
                 LDSMACH(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x0B: // 0100 mmmm 0000 1011   JSR @Rm
-                if constexpr (delaySlot) {
+                if (m_delaySlot) {
                     // Illegal slot instruction exception
                     EnterException(6);
                 } else {
@@ -1186,162 +1069,114 @@ void SH2::Execute(uint32 address) {
 
             case 0x0E: // 0100 mmmm 0000 1110   LDC Rm, SR
                 LDCSR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
 
                 // There's no case 0x0F
 
             case 0x10: // 0100 nnnn 0001 0000   DT Rn
                 DT(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x11: // 0100 nnnn 0001 0001   CMP/PZ Rn
                 CMPPZ(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x12: // 0100 nnnn 0001 0010   STS.L MACL, @-Rn
                 STSMMACL(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x13: // 0100 nnnn 0001 0011   STC.L GBR, @-Rn
                 STCMGBR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
 
                 // There's no case 0x14
 
             case 0x15: // 0100 nnnn 0001 0101   CMP/PL Rn
                 CMPPL(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x16: // 0100 mmmm 0001 0110   LDS.L @Rm+, MACL
                 LDSMMACL(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x17: // 0100 mmmm 0001 0111   LDC.L @Rm+, GBR
                 LDCMGBR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x18: // 0100 nnnn 0001 1000   SHLL8 Rn
                 SHLL8(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x19: // 0100 nnnn 0001 1001   SHLR8 Rn
                 SHLR8(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x1A: // 0100 mmmm 0001 1010   LDS Rm, MACL
                 LDSMACL(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x1B: // 0100 nnnn 0001 1011   TAS.B @Rn
                 TAS(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
 
                 // There's no case 0x1C or 0x1D
 
             case 0x1E: // 0110 mmmm 0001 1110   LDC Rm, GBR
                 LDCGBR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
 
                 // There's no case 0x1F
 
             case 0x20: // 0100 nnnn 0010 0000   SHAL Rn
                 SHAL(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x21: // 0100 nnnn 0010 0001   SHAR Rn
                 SHAR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x22: // 0100 nnnn 0010 0010   STS.L PR, @-Rn
                 STSMPR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x23: // 0100 nnnn 0010 0011   STC.L VBR, @-Rn
                 STCMVBR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x24: // 0100 nnnn 0010 0100   ROTCL Rn
                 ROTCL(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x25: // 0100 nnnn 0010 0101   ROTCR Rn
                 ROTCR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x26: // 0100 mmmm 0010 0110   LDS.L @Rm+, PR
                 LDSMPR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x27: // 0100 mmmm 0010 0111   LDC.L @Rm+, VBR
                 LDCMVBR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x28: // 0100 nnnn 0010 1000   SHLL16 Rn
                 SHLL16(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x29: // 0100 nnnn 0010 1001   SHLR16 Rn
                 SHLR16(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x2A: // 0100 mmmm 0010 1010   LDS Rm, PR
                 LDSPR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
             case 0x2B: // 0100 mmmm 0010 1011   JMP @Rm
-                if constexpr (delaySlot) {
+                if (m_delaySlot) {
                     // Illegal slot instruction exception
                     EnterException(6);
                 } else {
@@ -1353,9 +1188,7 @@ void SH2::Execute(uint32 address) {
 
             case 0x2E: // 0110 mmmm 0010 1110   LDC Rm, VBR
                 LDCVBR(bit::extract<8, 11>(instr));
-                if constexpr (!delaySlot) {
-                    PC += 2;
-                }
+                advancePC();
                 break;
 
                 // There's no case 0x2F..0xFF
@@ -1366,156 +1199,110 @@ void SH2::Execute(uint32 address) {
         break;
     case 0x5: // 0101 nnnn mmmm dddd   MOV.L @(disp,Rm), Rn
         MOVLL4(bit::extract<4, 7>(instr), bit::extract<0, 3>(instr), bit::extract<8, 11>(instr));
-        if constexpr (!delaySlot) {
-            PC += 2;
-        }
+        advancePC();
         break;
     case 0x6:
         switch (instr & 0xF) {
         case 0x0: // 0110 nnnn mmmm 0000   MOV.B @Rm, Rn
             MOVBL(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x1: // 0110 nnnn mmmm 0001   MOV.W @Rm, Rn
             MOVWL(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x2: // 0110 nnnn mmmm 0010   MOV.L @Rm, Rn
             MOVLL(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x3: // 0110 nnnn mmmm 0010   MOV Rm, Rn
             MOV(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x4: // 0110 nnnn mmmm 0110   MOV.B @Rm+, Rn
             MOVBP(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x5: // 0110 nnnn mmmm 0110   MOV.W @Rm+, Rn
             MOVWP(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x6: // 0110 nnnn mmmm 0110   MOV.L @Rm+, Rn
             MOVLP(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x7: // 0110 nnnn mmmm 0111   NOT Rm, Rn
             NOT(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x8: // 0110 nnnn mmmm 1000   SWAP.B Rm, Rn
             SWAPB(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x9: // 0110 nnnn mmmm 1001   SWAP.W Rm, Rn
             SWAPW(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xA: // 0110 nnnn mmmm 1010   NEGC Rm, Rn
             NEGC(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xB: // 0110 nnnn mmmm 1011   NEG Rm, Rn
             NEG(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xC: // 0110 nnnn mmmm 1100   EXTU.B Rm, Rn
             EXTUB(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xD: // 0110 nnnn mmmm 1101   EXTU.W Rm, Rn
             EXTUW(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xE: // 0110 nnnn mmmm 1110   EXTS.B Rm, Rn
             EXTSB(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xF: // 0110 nnnn mmmm 1111   EXTS.W Rm, Rn
             EXTSW(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         }
         break;
     case 0x7: // 0111 nnnn iiii iiii   ADD #imm, Rn
         ADDI(bit::extract<0, 7>(instr), bit::extract<8, 11>(instr));
-        if constexpr (!delaySlot) {
-            PC += 2;
-        }
+        advancePC();
         break;
     case 0x8:
         switch ((instr >> 8u) & 0xF) {
         case 0x0: // 1000 0000 nnnn dddd   MOV.B R0, @(disp,Rn)
             MOVBS4(bit::extract<0, 3>(instr), bit::extract<4, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x1: // 1000 0001 nnnn dddd   MOV.W R0, @(disp,Rn)
             MOVWS4(bit::extract<0, 3>(instr), bit::extract<4, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
 
             // There's no case 0x2 or 0x3
 
         case 0x4: // 1000 0100 mmmm dddd   MOV.B @(disp,Rm), R0
             MOVBL4(bit::extract<4, 7>(instr), bit::extract<0, 3>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x5: // 1000 0101 mmmm dddd   MOV.W @(disp,Rm), R0
             MOVWL4(bit::extract<4, 7>(instr), bit::extract<0, 3>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
 
             // There's no case 0x6 or 0x7
 
         case 0x8: // 1000 1000 iiii iiii   CMP/EQ #imm, R0
             CMPIM(bit::extract<0, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x9: // 1000 1001 dddd dddd   BT <label>
-            if constexpr (delaySlot) {
+            if (m_delaySlot) {
                 // Illegal slot instruction exception
                 EnterException(6);
             } else {
@@ -1526,7 +1313,7 @@ void SH2::Execute(uint32 address) {
             // There's no case 0xA
 
         case 0xB: // 1000 1011 dddd dddd   BF <label>
-            if constexpr (delaySlot) {
+            if (m_delaySlot) {
                 // Illegal slot instruction exception
                 EnterException(6);
             } else {
@@ -1537,7 +1324,7 @@ void SH2::Execute(uint32 address) {
             // There's no case 0xC
 
         case 0xD: // 1000 1101 dddd dddd   BT/S <label>
-            if constexpr (delaySlot) {
+            if (m_delaySlot) {
                 // Illegal slot instruction exception
                 EnterException(6);
             } else {
@@ -1548,7 +1335,7 @@ void SH2::Execute(uint32 address) {
             // There's no case 0xE
 
         case 0xF: // 1000 1111 dddd dddd   BF/S <label>
-            if constexpr (delaySlot) {
+            if (m_delaySlot) {
                 // Illegal slot instruction exception
                 EnterException(6);
             } else {
@@ -1560,12 +1347,10 @@ void SH2::Execute(uint32 address) {
         break;
     case 0x9: // 1001 nnnn dddd dddd   MOV.W @(disp,PC), Rn
         MOVWI(bit::extract<0, 7>(instr), bit::extract<8, 11>(instr));
-        if constexpr (!delaySlot) {
-            PC += 2;
-        }
+        advancePC();
         break;
     case 0xA: // 1010 dddd dddd dddd   BRA <label>
-        if constexpr (delaySlot) {
+        if (m_delaySlot) {
             // Illegal slot instruction exception
             EnterException(6);
         } else {
@@ -1573,7 +1358,7 @@ void SH2::Execute(uint32 address) {
         }
         break;
     case 0xB: // 1011 dddd dddd dddd   BSR <label>
-        if constexpr (delaySlot) {
+        if (m_delaySlot) {
             // Illegal slot instruction exception
             EnterException(6);
         } else {
@@ -1584,24 +1369,18 @@ void SH2::Execute(uint32 address) {
         switch ((instr >> 8u) & 0xF) {
         case 0x0: // 1100 0000 dddd dddd   MOV.B R0, @(disp,GBR)
             MOVBSG(bit::extract<0, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x1: // 1100 0001 dddd dddd   MOV.W R0, @(disp,GBR)
             MOVWSG(bit::extract<0, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x2: // 1100 0010 dddd dddd   MOV.L R0, @(disp,GBR)
             MOVLSG(bit::extract<0, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x3: // 1100 0011 iiii iiii   TRAPA #imm
-            if constexpr (delaySlot) {
+            if (m_delaySlot) {
                 // Illegal slot instruction exception
                 EnterException(6);
             } else {
@@ -1610,96 +1389,73 @@ void SH2::Execute(uint32 address) {
             break;
         case 0x4: // 1100 0100 dddd dddd   MOV.B @(disp,GBR), R0
             MOVBLG(bit::extract<0, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x5: // 1100 0101 dddd dddd   MOV.W @(disp,GBR), R0
             MOVWLG(bit::extract<0, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x6: // 1100 0110 dddd dddd   MOV.L @(disp,GBR), R0
             MOVLLG(bit::extract<0, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x7: // 1100 0111 dddd dddd   MOVA @(disp,PC), R0
             MOVA(bit::extract<0, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x8: // 1100 1000 iiii iiii   TST #imm, R0
             TSTI(bit::extract<0, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0x9: // 1100 1001 iiii iiii   AND #imm, R0
             ANDI(bit::extract<0, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xA: // 1100 1010 iiii iiii   XOR #imm, R0
             XORI(bit::extract<0, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xB: // 1100 1011 iiii iiii   OR #imm, R0
             ORI(bit::extract<0, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xC: // 1100 1100 iiii iiii   TST.B #imm, @(R0,GBR)
             TSTM(bit::extract<0, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xD: // 1100 1001 iiii iiii   AND #imm, @(R0,GBR)
             ANDM(bit::extract<0, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xE: // 1100 1001 iiii iiii   XOR #imm, @(R0,GBR)
             XORM(bit::extract<0, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         case 0xF: // 1100 1001 iiii iiii   OR #imm, @(R0,GBR)
             ORM(bit::extract<0, 7>(instr));
-            if constexpr (!delaySlot) {
-                PC += 2;
-            }
+            advancePC();
             break;
         default: /*dbg_println("unhandled 1100 instruction");*/ __debugbreak(); break;
         }
         break;
     case 0xD: // 1101 nnnn dddd dddd   MOV.L @(disp,PC), Rn
         MOVLI(bit::extract<0, 7>(instr), bit::extract<8, 11>(instr));
-        if constexpr (!delaySlot) {
-            PC += 2;
-        }
+        advancePC();
         break;
     case 0xE: // 1110 nnnn iiii iiii   MOV #imm, Rn
         MOVI(bit::extract<0, 7>(instr), bit::extract<8, 11>(instr));
-        if constexpr (!delaySlot) {
-            PC += 2;
-        }
+        advancePC();
         break;
 
         // There's no case 0xF
 
     default: /*dbg_println("unhandled instruction");*/ __debugbreak(); break;
     }
+}
+
+void SH2::SetupDelaySlot(uint32 targetAddress) {
+    m_delaySlot = true;
+    m_delaySlotTarget = targetAddress;
 }
 
 // -----------------------------------------------------------------------------
@@ -2532,12 +2288,9 @@ FORCE_INLINE void SH2::BFS(uint16 disp) {
     // dbg_println("bf/s 0x{:08X}", PC + sdisp);
 
     if (!SR.T) {
-        const uint32 delaySlot = PC + 2;
-        PC += sdisp;
-        Execute<true>(delaySlot);
-    } else {
-        PC += 2;
+        SetupDelaySlot(PC + sdisp);
     }
+    PC += 2;
 }
 
 FORCE_INLINE void SH2::BT(uint16 disp) {
@@ -2556,27 +2309,22 @@ FORCE_INLINE void SH2::BTS(uint16 disp) {
     // dbg_println("bt/s 0x{:08X}", PC + sdisp);
 
     if (SR.T) {
-        const uint32 delaySlot = PC + 2;
-        PC += sdisp;
-        Execute<true>(delaySlot);
-    } else {
-        PC += 2;
+        SetupDelaySlot(PC + sdisp);
     }
+    PC += 2;
 }
 
 FORCE_INLINE void SH2::BRA(uint16 disp) {
     const sint32 sdisp = (bit::sign_extend<12>(disp) << 1) + 4;
     // dbg_println("bra 0x{:08X}", PC + sdisp);
-    const uint32 delaySlot = PC + 2;
-    PC += sdisp;
-    Execute<true>(delaySlot);
+    SetupDelaySlot(PC + sdisp);
+    PC += 2;
 }
 
 FORCE_INLINE void SH2::BRAF(uint16 rm) {
     // dbg_println("braf r{}", rm);
-    const uint32 delaySlot = PC + 2;
-    PC += R[rm] + 4;
-    Execute<true>(delaySlot);
+    SetupDelaySlot(PC + R[rm] + 4);
+    PC += 2;
 }
 
 FORCE_INLINE void SH2::BSR(uint16 disp) {
@@ -2584,29 +2332,28 @@ FORCE_INLINE void SH2::BSR(uint16 disp) {
     // dbg_println("bsr 0x{:08X}", PC + sdisp);
 
     PR = PC;
-    PC += sdisp;
-    Execute<true>(PR + 2);
+    SetupDelaySlot(PC + sdisp);
+    PC += 2;
 }
 
 FORCE_INLINE void SH2::BSRF(uint16 rm) {
     // dbg_println("bsrf r{}", rm);
     PR = PC;
-    PC += R[rm] + 4;
-    Execute<true>(PR + 2);
+    SetupDelaySlot(PC + R[rm] + 4);
+    PC += 2;
 }
 
 FORCE_INLINE void SH2::JMP(uint16 rm) {
     // dbg_println("jmp @r{}", rm);
-    const uint32 delaySlot = PC + 2;
-    PC = R[rm];
-    Execute<true>(delaySlot);
+    SetupDelaySlot(R[rm]);
+    PC += 2;
 }
 
 FORCE_INLINE void SH2::JSR(uint16 rm) {
     // dbg_println("jsr @r{}", rm);
     PR = PC;
-    PC = R[rm];
-    Execute<true>(PR + 2);
+    SetupDelaySlot(R[rm]);
+    PC += 2;
 }
 
 FORCE_INLINE void SH2::TRAPA(uint16 imm) {
@@ -2620,19 +2367,17 @@ FORCE_INLINE void SH2::TRAPA(uint16 imm) {
 
 FORCE_INLINE void SH2::RTE() {
     // dbg_println("rte");
-    const uint32 delaySlot = PC + 2;
-    PC = MemReadLong(R[15]) + 4;
+    SetupDelaySlot(MemReadLong(R[15]) + 4);
+    PC += 2;
     R[15] += 4;
     SR.u32 = MemReadLong(R[15]) & 0x000003F3;
     R[15] += 4;
-    Execute<true>(delaySlot);
 }
 
 FORCE_INLINE void SH2::RTS() {
     // dbg_println("rts");
-    const uint32 delaySlot = PC + 2;
-    PC = PR + 4;
-    Execute<true>(delaySlot);
+    SetupDelaySlot(PR + 4);
+    PC += 2;
 }
 
 } // namespace satemu::sh2
