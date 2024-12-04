@@ -1052,13 +1052,16 @@ void SH2::Execute(uint32 address) {
                 PC += 2;
             }
             break;
-        case 0x9: // 0011 nnnn mmmm 1001   SUBC Rm, Rn
+
+            // There's no case 0x9
+
+        case 0xA: // 0011 nnnn mmmm 1010   SUBC Rm, Rn
             SUBC(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
             if constexpr (!delaySlot) {
                 PC += 2;
             }
             break;
-        case 0xA: // 0011 nnnn mmmm 1010   SUBV Rm, Rn
+        case 0xB: // 0011 nnnn mmmm 1011   SUBV Rm, Rn
             SUBV(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
             if constexpr (!delaySlot) {
                 PC += 2;
@@ -1170,7 +1173,7 @@ void SH2::Execute(uint32 address) {
                     PC += 2;
                 }
                 break;
-            case 0x0B: // 0110 mmmm 0000 1110   JSR @Rm
+            case 0x0B: // 0100 mmmm 0000 1011   JSR @Rm
                 if constexpr (delaySlot) {
                     // Illegal slot instruction exception
                     EnterException(6);
@@ -1181,7 +1184,7 @@ void SH2::Execute(uint32 address) {
 
                 // There's no case 0x0C or 0x0D
 
-            case 0x0E: // 0110 mmmm 0000 1110   LDC Rm, SR
+            case 0x0E: // 0100 mmmm 0000 1110   LDC Rm, SR
                 LDCSR(bit::extract<8, 11>(instr));
                 if constexpr (!delaySlot) {
                     PC += 2;
@@ -1561,7 +1564,7 @@ void SH2::Execute(uint32 address) {
             PC += 2;
         }
         break;
-    case 0xA: // 1011 dddd dddd dddd   BRA <label>
+    case 0xA: // 1010 dddd dddd dddd   BRA <label>
         if constexpr (delaySlot) {
             // Illegal slot instruction exception
             EnterException(6);
@@ -2478,7 +2481,7 @@ FORCE_INLINE void SH2::CMPPZ(uint16 rn) {
 
 FORCE_INLINE void SH2::CMPSTR(uint16 rm, uint16 rn) {
     // dbg_println("cmp/str r{}, r{}", rm, rn);
-    const uint32 tmp = R[rm] & R[rn];
+    const uint32 tmp = R[rm] ^ R[rn];
     const uint8 hh = tmp >> 24u;
     const uint8 hl = tmp >> 16u;
     const uint8 lh = tmp >> 8u;
