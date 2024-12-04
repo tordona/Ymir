@@ -11,7 +11,6 @@ MC68EC000::MC68EC000(M68kBus &bus)
 
 void MC68EC000::Reset(bool hard) {
     // TODO: check reset values
-    // FP7-FP0 should be correct, not sure about the rest
 
     D.fill(0);
     A.fill(0);
@@ -20,11 +19,6 @@ void MC68EC000::Reset(bool hard) {
     PC = 0;
 
     CCR.u16 = 0;
-
-    FP.fill(NAN);
-    FPCR.u16 = 0;
-    FPSR.u32 = 0;
-    FPIAR = 0;
 }
 
 void MC68EC000::Step() {}
