@@ -12,6 +12,7 @@ include(cmake/CopyRuntimeDLLs.cmake)
 string(COMPARE EQUAL "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}" is_top_level)
 
 option(satemu_INCLUDE_PACKAGING "Include packaging rules for satemu" "${is_top_level}")
+option(satemu_ENABLE_IPO "Enable IPO / LTO for satemu" ON)
 
 ## C++ language configuration boilerplate
 if (NOT DEFINED CMAKE_CXX_VISIBILITY_PRESET AND

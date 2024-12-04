@@ -106,6 +106,21 @@ generate_export_header(satemu-core EXPORT_FILE_NAME include/satemu/export.h)
 target_compile_definitions(satemu-core PUBLIC "$<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:satemu_core_STATIC_DEFINE>")
 target_include_directories(satemu-core PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>")
 
+## Enable LTO if supported
+include(CheckIPOSupported)
+check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
+
+if(IPO_SUPPORTED)
+    message(STATUS "IPO / LTO supported")
+    if(satemu_ENABLE_IPO)
+        message(STATUS "Enabling IPO / LTO for satemu-core")
+        set_property(TARGET satemu-core PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
+else()
+    message(STATUS "IPO / LTO not supported: ${IPO_ERROR}")
+endif()
+
+
 ## Configure Visual Studio filters
 if (MSVC)
     vs_set_filters(TARGET satemu-core)
