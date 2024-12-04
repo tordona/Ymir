@@ -75,6 +75,9 @@ void SH2::Reset(bool hard) {
     m_pendingExternalIntrVecNum = 0;
     m_pendingInterrupt.priority = 0;
     m_pendingInterrupt.vecNum = 0;
+
+    m_delaySlot = false;
+    m_delaySlotTarget = 0;
 }
 
 FLATTEN void SH2::Step() {
