@@ -22,7 +22,7 @@ SH2::SH2(SH2Bus &bus, bool master)
 void SH2::Reset(bool hard) {
     // Initial values:
     // - R0-R14 = undefined
-    // - R15 = ReadLong(0x00000004)
+    // - R15 = ReadLong(0x00000004)  [NOTE: ignores VBR]
 
     // - SR = bits I3-I0 set, reserved bits clear, the rest is undefined
     // - GBR = undefined
@@ -30,7 +30,7 @@ void SH2::Reset(bool hard) {
 
     // - MACH, MACL = undefined
     // - PR = undefined
-    // - PC = ReadLong(0x00000000)
+    // - PC = ReadLong(0x00000000)  [NOTE: ignores VBR]
 
     R.fill(0);
     PR = 0;
@@ -123,12 +123,12 @@ void dbg_println(fmt::format_string<T...> fmt, T &&...args) {
 // -----------------------------------------------------------------------------
 // Memory accessors
 
-template <mem_access_type T>
+template <mem_access_type T, bool instrFetch>
 T SH2::MemRead(uint32 address) {
     const uint32 partition = (address >> 29u) & 0b111;
     if (address & static_cast<uint32>(sizeof(T) - 1)) {
         fmt::println("WARNING: misaligned {}-bit read from {:08X}", sizeof(T) * 8, address);
-        // TODO: address error (misaligned access)
+        // TODO: raise CPU address error due to misaligned access
         // - might have to store data in a class member instead of returning
     }
 
@@ -157,7 +157,11 @@ T SH2::MemRead(uint32 address) {
         fmt::println("unhandled {}-bit SH-2 cache data array read from {:08X}", sizeof(T) * 8, address);
         return 0;
     case 0b111: // I/O area
-        if ((address & 0xE0004000) == 0xE0004000) {
+        if constexpr (instrFetch) {
+            // TODO: raise CPU address error due to attempt to fetch instruction from I/O area
+            fmt::println("attempted to fetch instruction from I/O area at {:08X}", address);
+            return 0;
+        } else if ((address & 0xE0004000) == 0xE0004000) {
             // bits 31-29 and 14 must be set
             // bits 8-0 index the register
             // bits 28 and 12 must be both set to access the lower half of the registers
@@ -236,16 +240,20 @@ void SH2::MemWrite(uint32 address, T value) {
     }
 }
 
+uint16 SH2::FetchInstruction(uint32 address) {
+    return MemRead<uint16, true>(address);
+}
+
 FLATTEN FORCE_INLINE uint8 SH2::MemReadByte(uint32 address) {
-    return MemRead<uint8>(address);
+    return MemRead<uint8, false>(address);
 }
 
 FLATTEN FORCE_INLINE uint16 SH2::MemReadWord(uint32 address) {
-    return MemRead<uint16>(address);
+    return MemRead<uint16, false>(address);
 }
 
 FLATTEN FORCE_INLINE uint32 SH2::MemReadLong(uint32 address) {
-    return MemRead<uint32>(address);
+    return MemRead<uint32, false>(address);
 }
 
 FLATTEN FORCE_INLINE void SH2::MemWriteByte(uint32 address, uint8 value) {
@@ -400,14 +408,14 @@ T SH2::OnChipRegRead(uint32 address) {
     // Registers 0-255 do not accept 32-bit accesses
     if constexpr (std::is_same_v<T, uint32>) {
         if (address < 0x100) {
-            // TODO: raise an address error
+            // TODO: raise CPU address error
         }
     }
 
     // Registers 256-511 do not accept 8-bit accesses
     if constexpr (std::is_same_v<T, uint8>) {
         if (address >= 0x100) {
-            // TODO: raise an address error
+            // TODO: raise CPU address error
         }
     }
 
@@ -710,7 +718,7 @@ void SH2::Execute(uint32 address) {
     // TODO: figure out a way to optimize delay slots for performance
     // - perhaps decoding instructions beforehand
 
-    const uint16 instr = MemReadWord(address);
+    const uint16 instr = FetchInstruction(address);
 
     /*static uint64 dbg_count = 0;
     ++dbg_count;

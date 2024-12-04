@@ -114,11 +114,13 @@ private:
     //    110   Data array read/write area      Cache data acessed directly (4 KiB, mirrored)
     //    111   I/O area (on-chip registers)    Cache bypassed
 
-    template <mem_access_type T>
+    template <mem_access_type T, bool instrFetch>
     T MemRead(uint32 address);
 
     template <mem_access_type T>
     void MemWrite(uint32 address, T value);
+
+    uint16 FetchInstruction(uint32 address);
 
     uint8 MemReadByte(uint32 address);
     uint16 MemReadWord(uint32 address);
