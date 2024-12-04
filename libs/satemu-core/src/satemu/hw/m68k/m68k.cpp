@@ -4,13 +4,29 @@
 
 namespace satemu::m68k {
 
-M68EC000::M68EC000(M68kBus &bus)
+MC68EC000::MC68EC000(M68kBus &bus)
     : m_bus(bus) {
     Reset(true);
 }
 
-void M68EC000::Reset(bool hard) {}
+void MC68EC000::Reset(bool hard) {
+    // TODO: check reset values
+    // FP7-FP0 should be correct, not sure about the rest
 
-void M68EC000::Step() {}
+    D.fill(0);
+    A.fill(0);
+    SP_swap = 0;
+
+    PC = 0;
+
+    CCR.u16 = 0;
+
+    FP.fill(NAN);
+    FPCR.u16 = 0;
+    FPSR.u32 = 0;
+    FPIAR = 0;
+}
+
+void MC68EC000::Step() {}
 
 } // namespace satemu::m68k

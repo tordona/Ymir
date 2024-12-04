@@ -44,7 +44,7 @@ public:
     }
 
 private:
-    m68k::M68EC000 m_m68k;
+    m68k::MC68EC000 m_m68k;
     m68k::M68kBus m_bus;
 };
 
