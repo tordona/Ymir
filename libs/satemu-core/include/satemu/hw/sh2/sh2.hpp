@@ -37,6 +37,8 @@ private:
     // -------------------------------------------------------------------------
     // CPU state
 
+    // R0 through R15.
+    // R15 is also used as the hardware stack pointer (SP).
     std::array<uint32, 16> R;
 
     uint32 PC;
@@ -231,17 +233,16 @@ private:
     // -------------------------------------------------------------------------
     // Helper functions
 
+    void SetupDelaySlot(uint32 targetAddress);
     void EnterException(uint8 vectorNumber);
+
+    bool m_delaySlot;
+    uint32 m_delaySlotTarget;
 
     // -------------------------------------------------------------------------
     // Interpreter
 
     void Execute(uint32 address);
-
-    bool m_delaySlot;
-    uint32 m_delaySlotTarget;
-
-    void SetupDelaySlot(uint32 targetAddress);
 
     // -------------------------------------------------------------------------
     // Instruction interpreters
