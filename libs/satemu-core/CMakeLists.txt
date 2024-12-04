@@ -8,6 +8,10 @@ add_library(satemu-core
     include/satemu/hw/cdblock/cdblock.hpp
     include/satemu/hw/cdblock/cdblock_defs.hpp
 
+    include/satemu/hw/m68k/m68k.hpp
+    include/satemu/hw/m68k/m68k_bus.hpp
+    include/satemu/hw/m68k/m68k_defs.hpp
+
     include/satemu/hw/scsp/scsp.hpp
     include/satemu/hw/scsp/scsp_defs.hpp
 
@@ -43,6 +47,9 @@ add_library(satemu-core
     src/satemu/satemu.cpp
 
     src/satemu/hw/cdblock/cdblock.cpp
+    
+    src/satemu/hw/m68k/m68k.cpp
+    src/satemu/hw/m68k/m68k_bus.cpp
     
     src/satemu/hw/scsp/scsp.cpp
     

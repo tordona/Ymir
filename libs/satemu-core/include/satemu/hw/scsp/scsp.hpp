@@ -4,11 +4,10 @@
 
 #include <satemu/hw/hw_defs.hpp>
 
-#include <satemu/util/data_ops.hpp>
+#include <satemu/hw/m68k/m68k.hpp>
+#include <satemu/hw/m68k/m68k_bus.hpp>
 
 #include <fmt/format.h>
-
-#include <array>
 
 namespace satemu::scsp {
 
@@ -18,17 +17,19 @@ public:
 
     void Reset(bool hard);
 
+    void Advance(uint64 cycles);
+
     template <mem_access_type T>
     T ReadWRAM(uint32 address) {
         // TODO: handle memory size bit
-        return util::ReadBE<T>(&m_m68kWRAM[address & 0x7FFFF]);
+        return m_bus.Read<T>(address);
     }
 
     template <mem_access_type T>
     void WriteWRAM(uint32 address, T value) {
         // TODO: handle memory size bit
         // TODO: delay writes?
-        util::WriteBE<T>(&m_m68kWRAM[address & 0x7FFFF], value);
+        m_bus.Write<T>(address, value);
     }
 
     template <mem_access_type T>
@@ -43,7 +44,8 @@ public:
     }
 
 private:
-    std::array<uint8, kM68KWRAMSize> m_m68kWRAM;
+    m68k::M68EC000 m_m68k;
+    m68k::M68kBus m_bus;
 };
 
 } // namespace satemu::scsp

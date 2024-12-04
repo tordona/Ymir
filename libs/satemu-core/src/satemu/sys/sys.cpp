@@ -33,6 +33,9 @@ void Saturn::Step() {
     // TODO: proper timings
     // TODO: replace with scheduler events
     VDP2.Advance(1);
+
+    // TODO: proper timings
+    SCSP.Advance(1);
 }
 
 } // namespace satemu
