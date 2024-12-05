@@ -8,6 +8,7 @@
 #include <satemu/hw/m68k/m68k_defs.hpp>
 
 #include <satemu/util/data_ops.hpp>
+#include <satemu/util/inline.hpp>
 
 #include <fmt/format.h>
 
@@ -21,27 +22,27 @@ public:
 
     void Advance(uint64 cycles);
 
+    // -------------------------------------------------------------------------
+    // SCU-facing bus
+
     template <mem_access_type T>
-    T ReadWRAM(uint32 address) {
-        // TODO: handle memory size bit
-        return util::ReadBE<T>(&m_WRAM[address & 0x7FFFF]);
+    FLATTEN T ReadWRAM(uint32 address) {
+        return ReadWRAM<T, false>(address);
     }
 
     template <mem_access_type T>
-    void WriteWRAM(uint32 address, T value) {
-        // TODO: handle memory size bit
-        util::WriteBE<T>(&m_WRAM[address & 0x7FFFF], value);
+    FLATTEN void WriteWRAM(uint32 address, T value) {
+        WriteWRAM<T, false>(address, value);
     }
 
     template <mem_access_type T>
     T ReadReg(uint32 address) {
-        fmt::println("unhandled {}-bit SCSP register read from {:03X}", sizeof(T) * 8, address);
-        return 0;
+        return ReadReg<T, false>(address);
     }
 
     template <mem_access_type T>
     void WriteReg(uint32 address, T value) {
-        fmt::println("unhandled {}-bit SCSP register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
+        WriteReg<T, false>(address, value);
     }
 
     void SetCPUEnabled(bool enabled);
@@ -53,7 +54,7 @@ private:
     std::array<uint8, m68k::kM68KWRAMSize> m_WRAM;
 
     // -------------------------------------------------------------------------
-    // MC68EC000 bus
+    // MC68EC000-facing bus
 
     friend class m68k::MC68EC000;
 
@@ -61,9 +62,9 @@ private:
     T Read(uint32 address) {
         if (util::AddressInRange<0x000000, 0x0FFFFF>(address)) {
             // TODO: handle memory size bit
-            return ReadWRAM<T>(address);
+            return ReadWRAM<T, true>(address);
         } else if (util::AddressInRange<0x100000, 0x1FFFFF>(address)) {
-            return ReadReg<T>(address & 0xFFF);
+            return ReadReg<T, true>(address & 0xFFF);
         } else {
             return 0;
         }
@@ -72,10 +73,39 @@ private:
     template <mem_access_type T>
     void Write(uint32 address, T value) {
         if (util::AddressInRange<0x000000, 0x0FFFFF>(address)) {
-            WriteWRAM<T>(address, value);
+            WriteWRAM<T, true>(address, value);
         } else if (util::AddressInRange<0x100000, 0x1FFFFF>(address)) {
-            WriteReg<T>(address & 0xFFF, value);
+            WriteReg<T, true>(address & 0xFFF, value);
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Generic accessors
+    // fromM68K: false=SCU, true=MC68EC000
+
+    template <mem_access_type T, bool fromM68K>
+    T ReadWRAM(uint32 address) {
+        // TODO: handle memory size bit
+        return util::ReadBE<T>(&m_WRAM[address & 0x7FFFF]);
+    }
+
+    template <mem_access_type T, bool fromM68K>
+    void WriteWRAM(uint32 address, T value) {
+        // TODO: handle memory size bit
+        util::WriteBE<T>(&m_WRAM[address & 0x7FFFF], value);
+    }
+
+    template <mem_access_type T, bool fromM68K>
+    T ReadReg(uint32 address) {
+        fmt::println("unhandled {}-bit SCSP register read from {:03X} via {}", sizeof(T) * 8, address,
+                     (fromM68K ? "M68K" : "SCU"));
+        return 0;
+    }
+
+    template <mem_access_type T, bool fromM68K>
+    void WriteReg(uint32 address, T value) {
+        fmt::println("unhandled {}-bit SCSP register write to {:03X} via {} = {:X}", sizeof(T) * 8, address,
+                     (fromM68K ? "M68K" : "SCU"), value);
     }
 };
 
