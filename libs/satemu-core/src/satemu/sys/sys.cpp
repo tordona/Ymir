@@ -6,7 +6,7 @@ Saturn::Saturn()
     : SH2(SCU, SMPC)
     , SCU(VDP1, VDP2, SCSP, CDBlock, SH2.master)
     , VDP2(SCU)
-    , SMPC(SCU) {
+    , SMPC(SCU, SCSP) {
 
     Reset(true);
 }

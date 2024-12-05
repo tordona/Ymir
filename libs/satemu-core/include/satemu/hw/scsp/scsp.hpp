@@ -43,9 +43,13 @@ public:
         fmt::println("unhandled {}-bit SCSP register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
     }
 
+    void SetCPUEnabled(bool enabled);
+
 private:
     m68k::MC68EC000 m_m68k;
     m68k::M68kBus m_bus;
+
+    bool m_cpuEnabled;
 };
 
 } // namespace satemu::scsp

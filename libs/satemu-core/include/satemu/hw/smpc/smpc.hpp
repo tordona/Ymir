@@ -18,13 +18,19 @@ class SCU;
 
 } // namespace satemu::scu
 
+namespace satemu::scsp {
+
+class SCSP;
+
+} // namespace satemu::scsp
+
 // -----------------------------------------------------------------------------
 
 namespace satemu::smpc {
 
 class SMPC {
 public:
-    SMPC(scu::SCU &scu);
+    SMPC(scu::SCU &scu, scsp::SCSP &scsp);
 
     void Reset(bool hard);
 
@@ -36,6 +42,7 @@ private:
     std::array<uint8, 32> OREG;
 
     scu::SCU &m_SCU;
+    scsp::SCSP &m_SCSP;
 
     enum class Command : uint8 {
         // Resetable system management commands
@@ -107,6 +114,8 @@ private:
     // -------------------------------------------------------------------------
     // Commands
 
+    void SNDON();
+    void SNDOFF();
     void RESENAB();
     void RESDISA();
     void INTBACK();

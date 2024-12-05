@@ -1,11 +1,13 @@
 #include <satemu/hw/smpc/smpc.hpp>
 
+#include <satemu/hw/scsp/scsp.hpp>
 #include <satemu/hw/scu/scu.hpp>
 
 namespace satemu::smpc {
 
-SMPC::SMPC(scu::SCU &scu)
-    : m_SCU(scu) {
+SMPC::SMPC(scu::SCU &scu, scsp::SCSP &scsp)
+    : m_SCU(scu)
+    , m_SCSP(scsp) {
     Reset(true);
 }
 
@@ -60,6 +62,8 @@ void SMPC::WriteCOMREG(uint8 value) {
 
     // TODO: should delay execution
     switch (COMREG) {
+    case Command::SNDON: SNDON(); break;
+    case Command::SNDOFF: SNDOFF(); break;
     case Command::RESENAB: RESENAB(); break;
     case Command::RESDISA: RESDISA(); break;
     case Command::INTBACK: INTBACK(); break;
@@ -71,8 +75,28 @@ void SMPC::WriteSF(uint8 value) {
     SF = true;
 }
 
+void SMPC::SNDON() {
+    fmt::println("SMPC: processing SNDON");
+
+    m_SCSP.SetCPUEnabled(true);
+
+    SF = 0; // done processing
+
+    OREG[31] = 0x06;
+}
+
+void SMPC::SNDOFF() {
+    fmt::println("SMPC: processing SNDOFF");
+
+    m_SCSP.SetCPUEnabled(false);
+
+    SF = 0; // done processing
+
+    OREG[31] = 0x07;
+}
+
 void SMPC::RESENAB() {
-    fmt::println("RESENAB command received");
+    fmt::println("SMPC: processing RESENAB");
     // TODO: enable reset NMI
 
     SF = 0; // done processing
@@ -81,7 +105,7 @@ void SMPC::RESENAB() {
 }
 
 void SMPC::RESDISA() {
-    fmt::println("RESDISA command received");
+    fmt::println("SMPC: processing RESDISA");
     // TODO: disable reset NMI
 
     SF = 0; // done processing
@@ -90,7 +114,7 @@ void SMPC::RESDISA() {
 }
 
 void SMPC::INTBACK() {
-    fmt::println("INTBACK command received: {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
+    fmt::println("SMPC: processing INTBACK {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
     // TODO: implement properly
 
     const bool getSMPCStatus = IREG[0];
