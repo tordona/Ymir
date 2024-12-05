@@ -27,7 +27,7 @@ public:
 
     template <mem_access_type T>
     FLATTEN T ReadWRAM(uint32 address) {
-        return ReadWRAM<T, false>(address);
+        return ReadWRAM<T, false, false>(address);
     }
 
     template <mem_access_type T>
@@ -37,7 +37,7 @@ public:
 
     template <mem_access_type T>
     T ReadReg(uint32 address) {
-        return ReadReg<T, false>(address);
+        return ReadReg<T, false, false>(address);
     }
 
     template <mem_access_type T>
@@ -58,13 +58,13 @@ private:
 
     friend class m68k::MC68EC000;
 
-    template <mem_access_type T>
+    template <mem_access_type T, bool instrFetch>
     T Read(uint32 address) {
         if (util::AddressInRange<0x000000, 0x0FFFFF>(address)) {
             // TODO: handle memory size bit
-            return ReadWRAM<T, true>(address);
+            return ReadWRAM<T, true, instrFetch>(address);
         } else if (util::AddressInRange<0x100000, 0x1FFFFF>(address)) {
-            return ReadReg<T, true>(address & 0xFFF);
+            return ReadReg<T, true, instrFetch>(address & 0xFFF);
         } else {
             return 0;
         }
@@ -83,7 +83,7 @@ private:
     // Generic accessors
     // fromM68K: false=SCU, true=MC68EC000
 
-    template <mem_access_type T, bool fromM68K>
+    template <mem_access_type T, bool fromM68K, bool instrFetch>
     T ReadWRAM(uint32 address) {
         // TODO: handle memory size bit
         return util::ReadBE<T>(&m_WRAM[address & 0x7FFFF]);
@@ -95,10 +95,12 @@ private:
         util::WriteBE<T>(&m_WRAM[address & 0x7FFFF], value);
     }
 
-    template <mem_access_type T, bool fromM68K>
+    template <mem_access_type T, bool fromM68K, bool instrFetch>
     T ReadReg(uint32 address) {
-        fmt::println("unhandled {}-bit SCSP register read from {:03X} via {}", sizeof(T) * 8, address,
-                     (fromM68K ? "M68K" : "SCU"));
+        if constexpr (!instrFetch) {
+            fmt::println("unhandled {}-bit SCSP register read from {:03X} via {}", sizeof(T) * 8, address,
+                         (fromM68K ? "M68K" : "SCU"));
+        }
         return 0;
     }
 

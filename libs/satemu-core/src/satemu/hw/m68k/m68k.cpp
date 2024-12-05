@@ -14,10 +14,10 @@ void MC68EC000::Reset(bool hard) {
 
     D.fill(0);
     A.fill(0);
-    A[7] = m_bus.Read<uint32>(0x00000000);
+    A[7] = MemReadLong(0x00000000);
     SP_swap = 0;
 
-    PC = m_bus.Read<uint32>(0x00000004);
+    PC = MemReadLong(0x00000004);
 
     CCR.u16 = 0;
 }
@@ -28,7 +28,7 @@ void MC68EC000::Step() {
 
 template <mem_access_type T, bool instrFetch>
 T MC68EC000::MemRead(uint32 address) {
-    return m_bus.Read<T>(address);
+    return m_bus.Read<T, instrFetch>(address);
 }
 
 template <mem_access_type T>
