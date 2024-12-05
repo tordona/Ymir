@@ -1,10 +1,10 @@
 #include <satemu/hw/m68k/m68k.hpp>
 
-#include <satemu/hw/scsp/scsp.hpp>
+#include <satemu/hw/scsp/scsp.hpp> // because M68kBus *is* SCSP
 
 namespace satemu::m68k {
 
-MC68EC000::MC68EC000(scsp::SCSP &bus)
+MC68EC000::MC68EC000(M68kBus &bus)
     : m_bus(bus) {
     Reset(true);
 }

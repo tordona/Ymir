@@ -20,9 +20,12 @@ class SCSP; // doubles as the MC68EC000 bus
 
 namespace satemu::m68k {
 
+// Just to hide the fact that we're using the SCSP directly as the bus
+using M68kBus = scsp::SCSP;
+
 class MC68EC000 {
 public:
-    MC68EC000(scsp::SCSP &bus);
+    MC68EC000(M68kBus &bus);
 
     void Reset(bool hard);
 
@@ -68,7 +71,7 @@ private:
     // -------------------------------------------------------------------------
     // Memory accessors
 
-    scsp::SCSP &m_bus;
+    M68kBus &m_bus;
 
     template <mem_access_type T, bool instrFetch>
     T MemRead(uint32 address);
