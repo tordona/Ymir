@@ -243,7 +243,7 @@ void SH2::MemWrite(uint32 address, T value) {
     }
 }
 
-uint16 SH2::FetchInstruction(uint32 address) {
+FLATTEN FORCE_INLINE uint16 SH2::FetchInstruction(uint32 address) {
     return MemRead<uint16, true>(address);
 }
 

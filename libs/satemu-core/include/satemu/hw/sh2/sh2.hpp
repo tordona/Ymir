@@ -3,7 +3,6 @@
 #include "sh2_defs.hpp"
 
 #include <satemu/core_types.hpp>
-
 #include <satemu/hw/hw_defs.hpp>
 
 #include <fmt/format.h>
