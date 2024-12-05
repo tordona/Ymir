@@ -3,13 +3,13 @@
 namespace satemu::scsp {
 
 SCSP::SCSP()
-    : m_m68k(m_bus) {
+    : m_m68k(*this) {
     Reset(true);
 }
 
 void SCSP::Reset(bool hard) {
     m_m68k.Reset(true);
-    m_bus.Reset();
+    m_WRAM.fill(0);
 
     m_cpuEnabled = false;
 }

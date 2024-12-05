@@ -5,7 +5,9 @@
 #include <satemu/hw/hw_defs.hpp>
 
 #include <satemu/hw/m68k/m68k.hpp>
-#include <satemu/hw/m68k/m68k_bus.hpp>
+#include <satemu/hw/m68k/m68k_defs.hpp>
+
+#include <satemu/util/data_ops.hpp>
 
 #include <fmt/format.h>
 
@@ -22,14 +24,13 @@ public:
     template <mem_access_type T>
     T ReadWRAM(uint32 address) {
         // TODO: handle memory size bit
-        return m_bus.Read<T>(address);
+        return util::ReadBE<T>(&m_WRAM[address & 0x7FFFF]);
     }
 
     template <mem_access_type T>
     void WriteWRAM(uint32 address, T value) {
         // TODO: handle memory size bit
-        // TODO: delay writes?
-        m_bus.Write<T>(address, value);
+        util::WriteBE<T>(&m_WRAM[address & 0x7FFFF], value);
     }
 
     template <mem_access_type T>
@@ -47,9 +48,35 @@ public:
 
 private:
     m68k::MC68EC000 m_m68k;
-    m68k::M68kBus m_bus;
-
     bool m_cpuEnabled;
+
+    std::array<uint8, m68k::kM68KWRAMSize> m_WRAM;
+
+    // -------------------------------------------------------------------------
+    // MC68EC000 bus
+
+    friend class m68k::MC68EC000;
+
+    template <mem_access_type T>
+    T Read(uint32 address) {
+        if (util::AddressInRange<0x000000, 0x0FFFFF>(address)) {
+            // TODO: handle memory size bit
+            return ReadWRAM<T>(address);
+        } else if (util::AddressInRange<0x100000, 0x1FFFFF>(address)) {
+            return ReadReg<T>(address & 0xFFF);
+        } else {
+            return 0;
+        }
+    }
+
+    template <mem_access_type T>
+    void Write(uint32 address, T value) {
+        if (util::AddressInRange<0x000000, 0x0FFFFF>(address)) {
+            WriteWRAM<T>(address, value);
+        } else if (util::AddressInRange<0x100000, 0x1FFFFF>(address)) {
+            WriteReg<T>(address & 0xFFF, value);
+        }
+    }
 };
 
 } // namespace satemu::scsp
