@@ -43,6 +43,7 @@ enum class OpcodeType : uint8 {
     Move_EA_EA, // move.<sz> <ea_src>, <ea_dst>
     Move_EA_SR, // move.w <ea>, sr
     MoveQ,      // moveq #<imm>, dn
+    MoveA,      // movea.<sz> <ea>, an
 
     UnconditionalBranch, // bra <label>
     BranchToSubroutine,  // bsr <label>

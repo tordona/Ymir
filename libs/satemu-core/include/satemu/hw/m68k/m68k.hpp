@@ -113,6 +113,7 @@ private:
     void Instr_Move_EA_EA(uint16 instr);
     void Instr_Move_EA_SR(uint16 instr);
     void Instr_MoveQ(uint16 instr);
+    void Instr_MoveA(uint16 instr);
 
     void Instr_UnconditionalBranch(uint16 instr);
     void Instr_BranchToSubroutine(uint16 instr);

@@ -192,6 +192,7 @@ void MC68EC000::Execute() {
     case OpcodeType::Move_EA_EA: Instr_Move_EA_EA(instr); break;
     case OpcodeType::Move_EA_SR: Instr_Move_EA_SR(instr); break;
     case OpcodeType::MoveQ: Instr_MoveQ(instr); break;
+    case OpcodeType::MoveA: Instr_MoveA(instr); break;
 
     case OpcodeType::UnconditionalBranch: Instr_UnconditionalBranch(instr); break;
     case OpcodeType::BranchToSubroutine: Instr_BranchToSubroutine(instr); break;
@@ -268,6 +269,18 @@ void MC68EC000::Instr_MoveQ(uint16 instr) {
     SR.Z = value == 0;
     SR.V = 0;
     SR.C = 0;
+}
+
+void MC68EC000::Instr_MoveA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 An = bit::extract<9, 11>(instr);
+    const uint16 size = bit::extract<12, 13>(instr);
+
+    switch (size) {
+    case 0b11: A[An] = static_cast<sint16>(ReadEffectiveAddress<uint16>(M, Xn)); break;
+    case 0b10: A[An] = ReadEffectiveAddress<uint32>(M, Xn); break;
+    }
 }
 
 void MC68EC000::Instr_UnconditionalBranch(uint16 instr) {

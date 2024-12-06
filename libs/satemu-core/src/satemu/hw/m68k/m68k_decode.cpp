@@ -77,12 +77,13 @@ DecodeTable BuildDecodeTable() {
 
         switch (instr >> 12u) {
         case 0x0: break;
-        case 0x1: break;
+        case 0x1:
         case 0x2:
-            if (bit::extract<12, 13>(instr) == 0b00) {
-                // TODO: various bitwise operations
-            } else if (bit::extract<6, 8>(instr) == 0b001) {
-                // TODO: MOVEA
+        case 0x3:
+            if (bit::extract<6, 8>(instr) == 0b001) {
+                if ((instr >> 12u) != 0b01) {
+                    opcodeEntry = OpcodeType::MoveA;
+                }
             } else {
                 const uint16 srcEA = bit::extract<0, 5>(instr);
                 const uint16 dstEA = (bit::extract<6, 8>(instr) << 3) | bit::extract<9, 11>(instr);
@@ -93,7 +94,6 @@ DecodeTable BuildDecodeTable() {
                 }
             }
             break;
-        case 0x3: break;
         case 0x4:
             if (bit::extract<6, 11>(instr) == 0b0110'11) {
                 if (kValidDataAddrModes[bit::extract<0, 5>(instr)]) {
