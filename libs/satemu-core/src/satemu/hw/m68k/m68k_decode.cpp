@@ -101,6 +101,12 @@ DecodeTable BuildDecodeTable() {
                 } else {
                     opcodeEntry = OpcodeType::Illegal;
                 }
+            } else if (bit::extract<6, 8>(instr) == 0b111) {
+                if (kValidControlAddrModes[bit::extract<0, 5>(instr)]) {
+                    opcodeEntry = OpcodeType::LEA;
+                } else {
+                    opcodeEntry = OpcodeType::Illegal;
+                }
             }
             break;
         case 0x5: break;

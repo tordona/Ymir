@@ -45,6 +45,8 @@ enum class OpcodeType : uint8 {
     MoveQ,      // moveq #<imm>, dn
     MoveA,      // movea.<sz> <ea>, an
 
+    LEA, // lea <ea>, an
+
     UnconditionalBranch, // bra <label>
     BranchToSubroutine,  // bsr <label>
     ConditionalBranch,   // b<cc> <label>
