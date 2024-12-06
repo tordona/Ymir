@@ -1,5 +1,6 @@
 #pragma once
 
+#include "m68k_decode.hpp"
 #include "m68k_defs.hpp"
 
 #include <satemu/core_types.hpp>
@@ -49,9 +50,11 @@ private:
 
     uint32 PC;
 
-    union CCR_t {
+    union SR_t {
         uint16 u16;
         struct {
+            // --- condition code register (CCR) ---
+            // available in all modes
             uint16 C : 1; // Carry/borrow flag
             uint16 V : 1; // Overflow flag
             uint16 Z : 1; // Zero flag
@@ -66,7 +69,7 @@ private:
             uint16 T0 : 1; // Trace enable 0 (always zero on MC68EC000)
             uint16 T1 : 1; // Trace enable 1
         };
-    } CCR;
+    } SR;
 
     // -------------------------------------------------------------------------
     // Memory accessors
@@ -79,7 +82,7 @@ private:
     template <mem_access_type T>
     void MemWrite(uint32 address, T value);
 
-    uint16 FetchInstruction(uint32 address);
+    uint16 FetchInstruction();
 
     uint8 MemReadByte(uint32 address);
     uint16 MemReadWord(uint32 address);
@@ -92,12 +95,16 @@ private:
     // -------------------------------------------------------------------------
     // Helper functions
 
-    // TODO: Effective addressing mode handling
+    template <mem_access_type T>
+    T ReadEffectiveAddress(uint8 M, uint8 Xn);
+
+    template <mem_access_type T>
+    void WriteEffectiveAddress(uint8 M, uint8 Xn, T value);
 
     // -------------------------------------------------------------------------
     // Interpreter
 
-    void Execute(uint32 address);
+    void Execute();
 
     // -------------------------------------------------------------------------
     // Instruction interpreters
