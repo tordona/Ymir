@@ -47,9 +47,10 @@ enum class OpcodeType : uint8 {
 
     LEA, // lea <ea>, an
 
-    UnconditionalBranch, // bra <label>
-    BranchToSubroutine,  // bsr <label>
-    ConditionalBranch,   // b<cc> <label>
+    BRA, // bra <label>
+    BSR, // bsr <label>
+    Bcc, // b<cc> <label>
+    JSR, // jsr <ea>
 
     Illegal,   // any illegal instruction, including the designated ILLEGAL instruction 0100 1010 1111 1100
     Undecoded, // instructions that the decoding table is missing; should not happen

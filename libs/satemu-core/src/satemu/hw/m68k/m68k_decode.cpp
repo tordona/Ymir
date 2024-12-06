@@ -95,9 +95,15 @@ DecodeTable BuildDecodeTable() {
             }
             break;
         case 0x4:
-            if (bit::extract<6, 11>(instr) == 0b0110'11) {
+            if (bit::extract<6, 11>(instr) == 0b011011) {
                 if (kValidDataAddrModes[bit::extract<0, 5>(instr)]) {
                     opcodeEntry = OpcodeType::Move_EA_SR;
+                } else {
+                    opcodeEntry = OpcodeType::Illegal;
+                }
+            } else if (bit::extract<6, 11>(instr) == 0b111010) {
+                if (kValidControlAddrModes[bit::extract<0, 5>(instr)]) {
+                    opcodeEntry = OpcodeType::JSR;
                 } else {
                     opcodeEntry = OpcodeType::Illegal;
                 }
@@ -112,9 +118,9 @@ DecodeTable BuildDecodeTable() {
         case 0x5: break;
         case 0x6:
             switch (bit::extract<8, 11>(instr)) {
-            case 0b0000: opcodeEntry = OpcodeType::UnconditionalBranch; break;
-            case 0b0001: opcodeEntry = OpcodeType::BranchToSubroutine; break;
-            default: opcodeEntry = OpcodeType::ConditionalBranch; break;
+            case 0b0000: opcodeEntry = OpcodeType::BRA; break;
+            case 0b0001: opcodeEntry = OpcodeType::BSR; break;
+            default: opcodeEntry = OpcodeType::Bcc; break;
             }
             break;
         case 0x7:

@@ -117,9 +117,10 @@ private:
 
     void Instr_LEA(uint16 instr);
 
-    void Instr_UnconditionalBranch(uint16 instr);
-    void Instr_BranchToSubroutine(uint16 instr);
-    void Instr_ConditionalBranch(uint16 instr);
+    void Instr_BRA(uint16 instr);
+    void Instr_BSR(uint16 instr);
+    void Instr_Bcc(uint16 instr);
+    void Instr_JSR(uint16 instr);
 
     void Instr_Illegal(uint16 instr);
 };

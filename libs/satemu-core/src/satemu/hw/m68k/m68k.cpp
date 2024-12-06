@@ -113,10 +113,7 @@ T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
     }
     case 0b111:
         switch (Xn) {
-        case 0b010: {
-            const uint32 address = PC + static_cast<sint16>(FetchInstruction());
-            return MemRead<T, false>(address);
-        }
+        case 0b010: return PC + static_cast<sint16>(FetchInstruction());
         case 0b011: {
             const uint16 briefExtWord = FetchInstruction();
 
@@ -153,9 +150,11 @@ T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
 
 template <mem_access_type T>
 void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
+    static constexpr uint32 regMask = ~0u << (sizeof(T) * 8u - 1u) << 1u;
+
     switch (M) {
-    case 0b000: D[Xn] = value; break;
-    case 0b001: A[Xn] = value; break;
+    case 0b000: D[Xn] = (D[Xn] & regMask) | value; break;
+    case 0b001: A[Xn] = (A[Xn] & regMask) | value; break;
     case 0b010: MemWrite<T>(A[Xn], value); break;
     case 0b011:
         MemWrite<T>(A[Xn], value);
@@ -196,9 +195,10 @@ void MC68EC000::Execute() {
 
     case OpcodeType::LEA: Instr_LEA(instr); break;
 
-    case OpcodeType::UnconditionalBranch: Instr_UnconditionalBranch(instr); break;
-    case OpcodeType::BranchToSubroutine: Instr_BranchToSubroutine(instr); break;
-    case OpcodeType::ConditionalBranch: Instr_ConditionalBranch(instr); break;
+    case OpcodeType::BRA: Instr_BRA(instr); break;
+    case OpcodeType::BSR: Instr_BSR(instr); break;
+    case OpcodeType::Bcc: Instr_Bcc(instr); break;
+    case OpcodeType::JSR: Instr_JSR(instr); break;
 
     case OpcodeType::Illegal: Instr_Illegal(instr); break;
 
@@ -293,7 +293,7 @@ void MC68EC000::Instr_LEA(uint16 instr) {
     A[An] = ReadEffectiveAddress<uint32>(M, Xn);
 }
 
-void MC68EC000::Instr_UnconditionalBranch(uint16 instr) {
+void MC68EC000::Instr_BRA(uint16 instr) {
     const uint32 currPC = PC;
     sint16 disp = static_cast<sint8>(bit::extract<0, 7>(instr));
     if (disp == 0x00) {
@@ -302,7 +302,7 @@ void MC68EC000::Instr_UnconditionalBranch(uint16 instr) {
     PC = currPC + disp;
 }
 
-void MC68EC000::Instr_BranchToSubroutine(uint16 instr) {
+void MC68EC000::Instr_BSR(uint16 instr) {
     const uint32 currPC = PC;
     sint16 disp = static_cast<sint8>(bit::extract<0, 7>(instr));
     if (disp == 0x00) {
@@ -314,7 +314,7 @@ void MC68EC000::Instr_BranchToSubroutine(uint16 instr) {
     PC = currPC + disp;
 }
 
-void MC68EC000::Instr_ConditionalBranch(uint16 instr) {
+void MC68EC000::Instr_Bcc(uint16 instr) {
     const uint32 currPC = PC;
     sint16 disp = static_cast<sint8>(bit::extract<0, 7>(instr));
     if (disp == 0x00) {
@@ -324,6 +324,16 @@ void MC68EC000::Instr_ConditionalBranch(uint16 instr) {
     if (kCondTable[(cond << 4u) | SR.flags]) {
         PC = currPC + disp;
     }
+}
+
+void MC68EC000::Instr_JSR(uint16 instr) {
+    const uint32 currPC = PC;
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+
+    A[7] -= 4;
+    MemWrite<uint32>(A[7], currPC);
+    PC = ReadEffectiveAddress<uint32>(M, Xn);
 }
 
 void MC68EC000::Instr_Illegal(uint16 instr) {
