@@ -104,7 +104,13 @@ DecodeTable BuildDecodeTable() {
             }
             break;
         case 0x5: break;
-        case 0x6: break;
+        case 0x6:
+            switch (bit::extract<8, 11>(instr)) {
+            case 0b0000: opcodeEntry = OpcodeType::UnconditionalBranch; break;
+            case 0b0001: opcodeEntry = OpcodeType::BranchToSubroutine; break;
+            default: opcodeEntry = OpcodeType::ConditionalBranch; break;
+            }
+            break;
         case 0x7:
             if (bit::extract<8>(instr) == 0) {
                 opcodeEntry = OpcodeType::MoveQ;

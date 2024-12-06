@@ -69,6 +69,7 @@ private:
             uint16 T0 : 1; // Trace enable 0 (always zero on MC68EC000)
             uint16 T1 : 1; // Trace enable 1
         };
+        uint16 flags : 4;
     } SR;
 
     // -------------------------------------------------------------------------
@@ -108,6 +109,16 @@ private:
 
     // -------------------------------------------------------------------------
     // Instruction interpreters
+
+    void Instr_Move_EA_EA(uint16 instr);
+    void Instr_Move_EA_SR(uint16 instr);
+    void Instr_MoveQ(uint16 instr);
+
+    void Instr_UnconditionalBranch(uint16 instr);
+    void Instr_BranchToSubroutine(uint16 instr);
+    void Instr_ConditionalBranch(uint16 instr);
+
+    void Instr_Illegal(uint16 instr);
 };
 
 } // namespace satemu::m68k

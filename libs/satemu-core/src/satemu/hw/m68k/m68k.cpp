@@ -189,65 +189,16 @@ void MC68EC000::Execute() {
 
     const OpcodeType type = g_decodeTable.opcodeTypes[instr];
     switch (type) {
-    case OpcodeType::Move_EA_EA: {
-        const uint32 size = bit::extract<12, 13>(instr);
-        const uint32 dstXn = bit::extract<9, 11>(instr);
-        const uint32 dstM = bit::extract<6, 8>(instr);
-        const uint32 srcXn = bit::extract<0, 2>(instr);
-        const uint32 srcM = bit::extract<3, 5>(instr);
+    case OpcodeType::Move_EA_EA: Instr_Move_EA_EA(instr); break;
+    case OpcodeType::Move_EA_SR: Instr_Move_EA_SR(instr); break;
+    case OpcodeType::MoveQ: Instr_MoveQ(instr); break;
 
-        // size:
-        //   01 = byte
-        //   11 = word  <-- mind the swapped
-        //   10 = long  <-- bit values!
-        switch (size) {
-        case 0b01: {
-            const uint8 value = ReadEffectiveAddress<uint8>(srcM, srcXn);
-            WriteEffectiveAddress<uint8>(dstM, dstXn, value);
-            SR.N = value >> 7u;
-            SR.Z = value == 0;
-            SR.V = 0;
-            SR.C = 0;
-            break;
-        }
-        case 0b11: {
-            const uint16 value = ReadEffectiveAddress<uint16>(srcM, srcXn);
-            WriteEffectiveAddress<uint16>(dstM, dstXn, value);
-            SR.N = value >> 15u;
-            SR.Z = value == 0;
-            SR.V = 0;
-            SR.C = 0;
-            break;
-        }
-        case 0b10: {
-            const uint32 value = ReadEffectiveAddress<uint32>(srcM, srcXn);
-            WriteEffectiveAddress<uint32>(dstM, dstXn, value);
-            SR.N = value >> 31u;
-            SR.Z = value == 0;
-            SR.V = 0;
-            SR.C = 0;
-            break;
-        }
-        }
-    } break;
-    case OpcodeType::Move_EA_SR: {
-        const uint16 Xn = bit::extract<0, 2>(instr);
-        const uint16 M = bit::extract<3, 5>(instr);
-        SR.u16 = ReadEffectiveAddress<uint16>(M, Xn) & 0xF71F;
-    } break;
-    case OpcodeType::MoveQ: {
-        const sint32 value = static_cast<sint8>(bit::extract<0, 7>(instr));
-        const uint32 reg = bit::extract<9, 11>(instr);
-        D[reg] = value;
-        SR.N = value >> 31;
-        SR.Z = value == 0;
-        SR.V = 0;
-        SR.C = 0;
-    } break;
+    case OpcodeType::UnconditionalBranch: Instr_UnconditionalBranch(instr); break;
+    case OpcodeType::BranchToSubroutine: Instr_BranchToSubroutine(instr); break;
+    case OpcodeType::ConditionalBranch: Instr_ConditionalBranch(instr); break;
 
-    case OpcodeType::Illegal:
-        // TODO: handle illegal instruction exception
-        break;
+    case OpcodeType::Illegal: Instr_Illegal(instr); break;
+
     case OpcodeType::Undecoded:
         fmt::println("M68K: found undecoded instruction {:04X} at {:08X} -- this is a bug!", instr, PC - 2);
         break;
@@ -256,6 +207,104 @@ void MC68EC000::Execute() {
                      static_cast<uint32>(type), instr, PC - 2);
         break;
     }
+}
+
+// -----------------------------------------------------------------------------
+// Instruction interpreters
+
+void MC68EC000::Instr_Move_EA_EA(uint16 instr) {
+    const uint32 size = bit::extract<12, 13>(instr);
+    const uint32 dstXn = bit::extract<9, 11>(instr);
+    const uint32 dstM = bit::extract<6, 8>(instr);
+    const uint32 srcXn = bit::extract<0, 2>(instr);
+    const uint32 srcM = bit::extract<3, 5>(instr);
+
+    // size:
+    //   01 = byte
+    //   11 = word  <-- mind the swapped
+    //   10 = long  <-- bit values!
+    switch (size) {
+    case 0b01: {
+        const uint8 value = ReadEffectiveAddress<uint8>(srcM, srcXn);
+        WriteEffectiveAddress<uint8>(dstM, dstXn, value);
+        SR.N = value >> 7u;
+        SR.Z = value == 0;
+        SR.V = 0;
+        SR.C = 0;
+        break;
+    }
+    case 0b11: {
+        const uint16 value = ReadEffectiveAddress<uint16>(srcM, srcXn);
+        WriteEffectiveAddress<uint16>(dstM, dstXn, value);
+        SR.N = value >> 15u;
+        SR.Z = value == 0;
+        SR.V = 0;
+        SR.C = 0;
+        break;
+    }
+    case 0b10: {
+        const uint32 value = ReadEffectiveAddress<uint32>(srcM, srcXn);
+        WriteEffectiveAddress<uint32>(dstM, dstXn, value);
+        SR.N = value >> 31u;
+        SR.Z = value == 0;
+        SR.V = 0;
+        SR.C = 0;
+        break;
+    }
+    }
+}
+
+void MC68EC000::Instr_Move_EA_SR(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    SR.u16 = ReadEffectiveAddress<uint16>(M, Xn) & 0xF71F;
+}
+
+void MC68EC000::Instr_MoveQ(uint16 instr) {
+    const sint32 value = static_cast<sint8>(bit::extract<0, 7>(instr));
+    const uint32 reg = bit::extract<9, 11>(instr);
+    D[reg] = value;
+    SR.N = value >> 31;
+    SR.Z = value == 0;
+    SR.V = 0;
+    SR.C = 0;
+}
+
+void MC68EC000::Instr_UnconditionalBranch(uint16 instr) {
+    const uint32 currPC = PC;
+    sint16 disp = static_cast<sint8>(bit::extract<0, 7>(instr));
+    if (disp == 0x00) {
+        disp = static_cast<sint16>(FetchInstruction());
+    }
+    PC = currPC + disp;
+}
+
+void MC68EC000::Instr_BranchToSubroutine(uint16 instr) {
+    const uint32 currPC = PC;
+    sint16 disp = static_cast<sint8>(bit::extract<0, 7>(instr));
+    if (disp == 0x00) {
+        disp = static_cast<sint16>(FetchInstruction());
+    }
+
+    A[7] -= 4;
+    MemWrite<uint32>(A[7], currPC);
+    PC = currPC + disp;
+}
+
+void MC68EC000::Instr_ConditionalBranch(uint16 instr) {
+    const uint32 currPC = PC;
+    sint16 disp = static_cast<sint8>(bit::extract<0, 7>(instr));
+    if (disp == 0x00) {
+        disp = static_cast<sint16>(FetchInstruction());
+    }
+    const uint32 cond = bit::extract<8, 11>(instr);
+    if (kCondTable[(cond << 4u) | SR.flags]) {
+        PC = currPC + disp;
+    }
+}
+
+void MC68EC000::Instr_Illegal(uint16 instr) {
+    // TODO: handle illegal instruction exception
 }
 
 } // namespace satemu::m68k
