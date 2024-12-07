@@ -87,6 +87,9 @@ void MC68EC000::HandleInterrupt(ExceptionVector vector, uint8 level) {
 
 void MC68EC000::HandleExceptionCommon(ExceptionVector vector, uint8 intrLevel) {
     const uint16 oldSR = SR.u16;
+    if (SR.S == 0) {
+        std::swap(regs.SP, SP_swap);
+    }
     SR.S = 1;
     SR.T = 0;
     SR.IPM = intrLevel;
@@ -96,6 +99,14 @@ void MC68EC000::HandleExceptionCommon(ExceptionVector vector, uint8 intrLevel) {
     regs.SP -= 2;
     MemWrite<uint16>(regs.SP, oldSR);
     PC = static_cast<uint32>(vector) << 2u;
+}
+
+bool MC68EC000::CheckPrivilege() {
+    if (!SR.S) {
+        PC -= 2;
+        EnterException(ExceptionVector::PrivilegeViolation);
+    }
+    return SR.S;
 }
 
 // M   Xn
@@ -435,6 +446,9 @@ void MC68EC000::Execute() {
 
     case OpcodeType::RTS: Instr_RTS(instr); break;
 
+    case OpcodeType::Trap: Instr_Trap(instr); break;
+    case OpcodeType::TrapV: Instr_TrapV(instr); break;
+
     case OpcodeType::Illegal: Instr_Illegal(instr); break;
     case OpcodeType::Illegal1010: Instr_Illegal1010(instr); break;
     case OpcodeType::Illegal1111: Instr_Illegal1111(instr); break;
@@ -474,14 +488,11 @@ void MC68EC000::Instr_Move_EA_EA(uint16 instr) {
 }
 
 void MC68EC000::Instr_Move_EA_SR(uint16 instr) {
-    if (!SR.S) {
-        PC -= 2;
-        EnterException(ExceptionVector::PrivilegeViolation);
-        return;
+    if (CheckPrivilege()) {
+        const uint16 Xn = bit::extract<0, 2>(instr);
+        const uint16 M = bit::extract<3, 5>(instr);
+        SetSR(ReadEffectiveAddress<uint16>(M, Xn) & 0xF71F);
     }
-    const uint16 Xn = bit::extract<0, 2>(instr);
-    const uint16 M = bit::extract<3, 5>(instr);
-    SR.u16 = ReadEffectiveAddress<uint16>(M, Xn) & 0xF71F;
 }
 
 void MC68EC000::Instr_MoveA(uint16 instr) {
@@ -1171,6 +1182,17 @@ void MC68EC000::Instr_Jmp(uint16 instr) {
 void MC68EC000::Instr_RTS(uint16 instr) {
     PC = MemReadLong(regs.SP);
     regs.SP += 4;
+}
+
+void MC68EC000::Instr_Trap(uint16 instr) {
+    const uint8 vector = bit::extract<0, 3>(instr);
+    EnterException(static_cast<ExceptionVector>(0x20 + vector));
+}
+
+void MC68EC000::Instr_TrapV(uint16 instr) {
+    if (SR.V) {
+        EnterException(ExceptionVector::TRAPVInstruction);
+    }
 }
 
 void MC68EC000::Instr_Illegal(uint16 instr) {

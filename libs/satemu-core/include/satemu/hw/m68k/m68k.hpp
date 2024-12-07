@@ -132,7 +132,9 @@ private:
         Trace = 0x9,
         Line1010Emulator = 0xA,
         Line1111Emulator = 0xB,
+
         UninitializedInterrupt = 0xF,
+
         SpuriousInterrupt = 0x18,
         Level1InterruptAutovector = 0x19,
         Level2InterruptAutovector = 0x1A,
@@ -141,6 +143,23 @@ private:
         Level5InterruptAutovector = 0x1D,
         Level6InterruptAutovector = 0x1E,
         Level7InterruptAutovector = 0x1F,
+
+        TRAPVector0 = 0x20,
+        TRAPVector1 = 0x21,
+        TRAPVector2 = 0x22,
+        TRAPVector3 = 0x23,
+        TRAPVector4 = 0x24,
+        TRAPVector5 = 0x25,
+        TRAPVector6 = 0x26,
+        TRAPVector7 = 0x27,
+        TRAPVector8 = 0x28,
+        TRAPVector9 = 0x29,
+        TRAPVectorA = 0x2A,
+        TRAPVectorB = 0x2B,
+        TRAPVectorC = 0x2C,
+        TRAPVectorD = 0x2D,
+        TRAPVectorE = 0x2E,
+        TRAPVectorF = 0x2F,
     };
 
     // Enters the specified exception vector
@@ -157,6 +176,11 @@ private:
     // - Pushes PC and the unmodified copy of SR to the stack
     // - Sets PC to the address at the exception vector
     void HandleExceptionCommon(ExceptionVector vector, uint8 intrLevel);
+
+    // Checks if the privileged instruction can be executed.
+    // Enters the privileged violation exception vector if running in user mode.
+    // Returns true if the privileged instruction can be executed.
+    bool CheckPrivilege();
 
     // -------------------------------------------------------------------------
     // Helper functions
@@ -292,6 +316,9 @@ private:
     void Instr_Jmp(uint16 instr);
 
     void Instr_RTS(uint16 instr);
+
+    void Instr_Trap(uint16 instr);
+    void Instr_TrapV(uint16 instr);
 
     void Instr_Illegal(uint16 instr);
     void Instr_Illegal1010(uint16 instr);
