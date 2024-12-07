@@ -146,6 +146,8 @@ DecodeTable BuildDecodeTable() {
                 opcode = legalIf(OpcodeType::Move_EA_SR, kValidDataAddrModes[ea]);
             } else if (bit::extract<6, 11>(instr) == 0b111010) {
                 opcode = legalIf(OpcodeType::JSR, kValidControlAddrModes[ea]);
+            } else if (bit::extract<6, 11>(instr) == 0b111011) {
+                opcode = legalIf(OpcodeType::Jmp, kValidControlAddrModes[ea]);
             } else if (bit::extract<7, 11>(instr) == 0b10001) {
                 const bool isPredecrement = (ea >> 3u) == 0b100;
                 if (isPredecrement) {

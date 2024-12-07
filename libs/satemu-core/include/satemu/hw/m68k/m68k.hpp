@@ -237,6 +237,7 @@ private:
     void Instr_Bcc(uint16 instr);
     void Instr_DBcc(uint16 instr);
     void Instr_JSR(uint16 instr);
+    void Instr_Jmp(uint16 instr);
 
     void Instr_RTS(uint16 instr);
 

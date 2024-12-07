@@ -81,6 +81,7 @@ enum class OpcodeType : uint8 {
     Bcc,  // b<cc> <label>
     DBcc, // db<cc>.<sz> Dn, <label>
     JSR,  // jsr <ea>
+    Jmp,  // jmp <ea>
 
     RTS, // rts
 

@@ -106,10 +106,10 @@ T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
         const uint8 extXn = bit::extract<12, 14>(briefExtWord);
         const bool m = bit::extract<15>(briefExtWord);
 
-        uint32 index = m ? regs.A[extXn] : regs.D[extXn];
+        sint32 index = m ? regs.A[extXn] : regs.D[extXn];
         if (!s) {
             // Word index
-            index &= 0xFFFF;
+            index = static_cast<sint16>(index);
         }
         return MemRead<T, false>(regs.A[Xn] + disp + index);
     }
@@ -124,10 +124,10 @@ T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
             const uint8 extXn = bit::extract<12, 14>(briefExtWord);
             const bool m = bit::extract<15>(briefExtWord);
 
-            uint32 index = m ? regs.A[extXn] : regs.D[extXn];
+            sint32 index = m ? regs.A[extXn] : regs.D[extXn];
             if (!s) {
                 // Word index
-                index &= 0xFFFF;
+                index = static_cast<sint16>(index);
             }
             return MemRead<T, false>(address + index);
         }
@@ -182,10 +182,10 @@ void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
         const uint8 extXn = bit::extract<12, 14>(briefExtWord);
         const bool m = bit::extract<15>(briefExtWord);
 
-        uint32 index = m ? regs.A[extXn] : regs.D[extXn];
+        sint32 index = m ? regs.A[extXn] : regs.D[extXn];
         if (!s) {
             // Word index
-            index &= 0xFFFF;
+            index = static_cast<sint16>(index);
         }
         MemWrite<T>(regs.A[Xn] + disp + index, value);
         break;
@@ -244,10 +244,10 @@ void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify &&modify) {
         const uint8 extXn = bit::extract<12, 14>(briefExtWord);
         const bool m = bit::extract<15>(briefExtWord);
 
-        uint32 index = m ? regs.A[extXn] : regs.D[extXn];
+        sint32 index = m ? regs.A[extXn] : regs.D[extXn];
         if (!s) {
             // Word index
-            index &= 0xFFFF;
+            index = static_cast<sint16>(index);
         }
         const uint32 address = regs.A[Xn] + disp + index;
         const T value = MemRead<T, false>(address);
@@ -291,10 +291,10 @@ uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
             const uint8 extXn = bit::extract<12, 14>(briefExtWord);
             const bool m = bit::extract<15>(briefExtWord);
 
-            uint32 index = m ? regs.A[extXn] : regs.D[extXn];
+            sint32 index = m ? regs.A[extXn] : regs.D[extXn];
             if (!s) {
                 // Word index
-                index &= 0xFFFF;
+                index = static_cast<sint16>(index);
             }
             return address + index;
         }
@@ -396,6 +396,7 @@ void MC68EC000::Execute() {
     case OpcodeType::Bcc: Instr_Bcc(instr); break;
     case OpcodeType::DBcc: Instr_DBcc(instr); break;
     case OpcodeType::JSR: Instr_JSR(instr); break;
+    case OpcodeType::Jmp: Instr_Jmp(instr); break;
 
     case OpcodeType::RTS: Instr_RTS(instr); break;
 
@@ -1056,6 +1057,14 @@ void MC68EC000::Instr_JSR(uint16 instr) {
 
     regs.SP -= 4;
     MemWriteLong(regs.SP, PC);
+    PC = target;
+}
+
+void MC68EC000::Instr_Jmp(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+
+    const uint32 target = CalcEffectiveAddress(M, Xn);
     PC = target;
 }
 
