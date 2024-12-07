@@ -98,8 +98,14 @@ private:
     template <mem_access_type T, bool fromM68K, bool instrFetch>
     T ReadReg(uint32 address) {
         if constexpr (!instrFetch) {
-            fmt::println("unhandled {}-bit SCSP register read via {} from {:03X}", sizeof(T) * 8,
-                         (fromM68K ? "M68K" : "SCU"), address);
+            switch (address) {
+            case 0x420: return 0x40; // TODO: implement CCR.SCIPD
+
+            default:
+                fmt::println("unhandled {}-bit SCSP register read via {} from {:03X}", sizeof(T) * 8,
+                             (fromM68K ? "M68K" : "SCU"), address);
+                break;
+            }
         }
         return 0;
     }
