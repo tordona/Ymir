@@ -16,16 +16,21 @@ MC68EC000::MC68EC000(M68kBus &bus)
 
 void MC68EC000::Reset(bool hard) {
     // TODO: check reset values
+    if (hard) {
+        regs.DA.fill(0);
 
-    regs.DA.fill(0);
+        m_externalInterruptLevel = 0;
+    }
+
     regs.SP = MemReadLong(0x00000000);
     SP_swap = 0;
 
     PC = MemReadLong(0x00000004);
 
     SR.u16 = 0;
-
-    m_externalInterruptLevel = 0;
+    SR.S = 1;
+    SR.T = 0;
+    SR.IPM = 7;
 }
 
 void MC68EC000::Step() {
