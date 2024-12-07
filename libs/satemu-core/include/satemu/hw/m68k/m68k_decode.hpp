@@ -51,14 +51,16 @@ enum class OpcodeType : uint8 {
 
     Swap, // swap dn
 
-    AddA,     // adda.<sz> <ea>, an
-    AddI,     // addi.<sz> #<data>, <ea>
-    AndI_EA,  // andi.<sz> #<data>, <ea>
-    AddQ_An,  // addq.<sz> #<data>, an
-    AddQ_EA,  // addq.<sz> #<data>, <ea>
-    Or_Dn_EA, // or.<sz> Dn, <ea>
-    Or_EA_Dn, // or.<sz> <ea>, Dn
-    SubI,     // subi.<sz> #<data>, <ea>
+    Add_Dn_EA, // add.<sz> dn, <ea>
+    Add_EA_Dn, // add.<sz> <ea>, dn
+    AddA,      // adda.<sz> <ea>, an
+    AddI,      // addi.<sz> #<data>, <ea>
+    AndI_EA,   // andi.<sz> #<data>, <ea>
+    AddQ_An,   // addq.<sz> #<data>, an
+    AddQ_EA,   // addq.<sz> #<data>, <ea>
+    Or_Dn_EA,  // or.<sz> Dn, <ea>
+    Or_EA_Dn,  // or.<sz> <ea>, Dn
+    SubI,      // subi.<sz> #<data>, <ea>
 
     LSL_I, // lsl.<sz> #<data>, <ea>
     LSL_M, // lsl.<sz> <ea>

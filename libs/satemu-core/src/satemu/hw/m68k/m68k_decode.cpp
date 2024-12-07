@@ -79,7 +79,7 @@ static constexpr auto kValidDataAlterableAddrModes = [] {
 
 // Valid memory alterable addressing modes
 static constexpr auto kValidMemoryAlterableAddrModes = [] {
-    std::array<bool, 0b111'111 + 1> arr = kValidControlAddrModes;
+    std::array<bool, 0b111'111 + 1> arr = kValidMemoryAddrModes;
     for (int i = 0; i < arr.size(); i++) {
         arr[i] &= kValidAlterableAddrModes[i];
     }
@@ -225,11 +225,22 @@ DecodeTable BuildDecodeTable() {
             break;
         }
         case 0xC: break;
-        case 0xD:
+        case 0xD: {
+            const uint16 ea = bit::extract<0, 5>(instr);
             if (bit::extract<6, 7>(instr) == 0b11) {
                 opcode = legalIf(OpcodeType::AddA, kValidAddrModes[bit::extract<0, 5>(instr)]);
+            } else if (bit::extract<4, 5>(instr) == 0b00 && bit::extract<8>(instr) == 1) {
+                // TODO: ADDX
+            } else {
+                const bool dir = bit::extract<8>(instr);
+                if (dir) {
+                    opcode = legalIf(OpcodeType::Add_Dn_EA, kValidMemoryAlterableAddrModes[ea]);
+                } else {
+                    opcode = legalIf(OpcodeType::Add_EA_Dn, kValidAddrModes[ea]);
+                }
             }
             break;
+        }
         case 0xE:
             if (bit::extract<6, 7>(instr) == 0b11) {
                 const uint16 ea = bit::extract<0, 5>(instr);

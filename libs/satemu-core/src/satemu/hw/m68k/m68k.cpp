@@ -294,6 +294,8 @@ void MC68EC000::Execute() {
 
     case OpcodeType::Swap: Instr_Swap(instr); break;
 
+    case OpcodeType::Add_Dn_EA: Instr_Add_Dn_EA(instr); break;
+    case OpcodeType::Add_EA_Dn: Instr_Add_EA_Dn(instr); break;
     case OpcodeType::AddA: Instr_AddA(instr); break;
     case OpcodeType::AddI: Instr_AddI(instr); break;
     case OpcodeType::AddQ_An: Instr_AddQ_An(instr); break;
@@ -466,6 +468,48 @@ void MC68EC000::Instr_Swap(uint16 instr) {
     const uint32 value = (regs.D[reg] >> 16u) | (regs.D[reg] << 16u);
     regs.D[reg] = value;
     SetLogicFlags(value);
+}
+
+void MC68EC000::Instr_Add_Dn_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T op1 = regs.D[Dn];
+        const T op2 = ReadEffectiveAddress<T>(M, Xn);
+        const T result = op2 + op1;
+        WriteEffectiveAddress<T>(M, Xn, result);
+        SetArithFlags(op1, op2, result);
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+void MC68EC000::Instr_Add_EA_Dn(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T op1 = ReadEffectiveAddress<T>(M, Xn);
+        const T op2 = regs.D[Dn];
+        const T result = op2 + op1;
+        regs.D[Dn] = result;
+        SetArithFlags(op1, op2, result);
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
 }
 
 void MC68EC000::Instr_AddA(uint16 instr) {
