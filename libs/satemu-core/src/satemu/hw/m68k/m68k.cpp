@@ -283,6 +283,8 @@ void MC68EC000::Execute() {
     case OpcodeType::MoveM_Rs_PD: Instr_MoveM_Rs_PD(instr); break;
     case OpcodeType::MoveQ: Instr_MoveQ(instr); break;
 
+    case OpcodeType::Swap: Instr_Swap(instr); break;
+
     case OpcodeType::AddA: Instr_AddA(instr); break;
     case OpcodeType::AddI: Instr_AddI(instr); break;
     case OpcodeType::AddQ_An: Instr_AddQ_An(instr); break;
@@ -439,6 +441,13 @@ void MC68EC000::Instr_MoveM_Rs_PD(uint16 instr) {
 void MC68EC000::Instr_MoveQ(uint16 instr) {
     const sint32 value = static_cast<sint8>(bit::extract<0, 7>(instr));
     const uint32 reg = bit::extract<9, 11>(instr);
+    regs.D[reg] = value;
+    SetLogicFlags(value);
+}
+
+void MC68EC000::Instr_Swap(uint16 instr) {
+    const uint32 reg = bit::extract<0, 3>(instr);
+    const uint32 value = (regs.D[reg] >> 16u) | (regs.D[reg] << 16u);
     regs.D[reg] = value;
     SetLogicFlags(value);
 }

@@ -173,6 +173,8 @@ private:
     void Instr_MoveM_Rs_PD(uint16 instr);
     void Instr_MoveQ(uint16 instr);
 
+    void Instr_Swap(uint16 instr);
+
     void Instr_AddA(uint16 instr);
     void Instr_AddI(uint16 instr);
     void Instr_AddQ_An(uint16 instr);

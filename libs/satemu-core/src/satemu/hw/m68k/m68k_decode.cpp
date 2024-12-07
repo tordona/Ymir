@@ -132,6 +132,8 @@ DecodeTable BuildDecodeTable() {
             const uint16 ea = bit::extract<0, 5>(instr);
             if (instr == 0x4E75) {
                 opcode = OpcodeType::RTS;
+            } else if (bit::extract<3, 11>(instr) == 0b100001000) {
+                opcode = OpcodeType::Swap;
             } else if (bit::extract<6, 11>(instr) == 0b011011) {
                 opcode = legalIf(OpcodeType::Move_EA_SR, kValidDataAddrModes[ea]);
             } else if (bit::extract<6, 11>(instr) == 0b111010) {
