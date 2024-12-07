@@ -160,7 +160,7 @@ void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
 
     switch (M) {
     case 0b000: D[Xn] = (D[Xn] & regMask) | value; break;
-    case 0b001: A[Xn] = (A[Xn] & regMask) | value; break;
+    case 0b001: A[Xn] = value; break;
     case 0b010: MemWrite<T>(A[Xn], value); break;
     case 0b011:
         MemWrite<T>(A[Xn], value);
@@ -277,6 +277,8 @@ void MC68EC000::Execute() {
 
     case OpcodeType::AddA: Instr_AddA(instr); break;
     case OpcodeType::AddI: Instr_AddI(instr); break;
+    case OpcodeType::AddQ_An: Instr_AddQ_An(instr); break;
+    case OpcodeType::AddQ_EA: Instr_AddQ_EA(instr); break;
     case OpcodeType::AndI_EA: Instr_AndI_EA(instr); break;
 
     case OpcodeType::LEA: Instr_LEA(instr); break;
@@ -373,6 +375,45 @@ void MC68EC000::Instr_AddI(uint16 instr) {
         if constexpr (sizeof(T) == sizeof(uint32)) {
             op1 = (op1 << 16u) | FetchInstruction();
         }
+        const T op2 = ReadEffectiveAddress<T>(M, Xn);
+        const T result = op1 + op2;
+        WriteEffectiveAddress<T>(M, Xn, result);
+        SetArithFlags(op1, op2, result);
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+void MC68EC000::Instr_AddQ_An(uint16 instr) {
+    const uint16 An = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const uint32 op1 = static_cast<std::make_signed_t<T>>(bit::extract<9, 11>(instr));
+        const uint32 op2 = A[An];
+        const uint32 result = op1 + op2;
+        A[An] = result;
+        SetArithFlags(op1, op2, result);
+    };
+
+    switch (sz) {
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+void MC68EC000::Instr_AddQ_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 data = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T op1 = data == 0 ? 8 : data;
         const T op2 = ReadEffectiveAddress<T>(M, Xn);
         const T result = op1 + op2;
         WriteEffectiveAddress<T>(M, Xn, result);

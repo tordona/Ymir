@@ -135,6 +135,8 @@ private:
 
     void Instr_AddA(uint16 instr);
     void Instr_AddI(uint16 instr);
+    void Instr_AddQ_An(uint16 instr);
+    void Instr_AddQ_EA(uint16 instr);
     void Instr_AndI_EA(uint16 instr);
 
     void Instr_LEA(uint16 instr);

@@ -48,6 +48,8 @@ enum class OpcodeType : uint8 {
     AddA,    // adda.<sz> <ea>, an
     AddI,    // addi.<sz> #<data>, <ea>
     AndI_EA, // andi.<sz> #<data>, <ea>
+    AddQ_An, // addq.<sz> #<data>, an
+    AddQ_EA, // addq.<sz> #<data>, <ea>
 
     LEA, // lea <ea>, an
 

@@ -115,22 +115,42 @@ DecodeTable BuildDecodeTable() {
                 opcode = legalIf(OpcodeType::Move_EA_EA, kValidDataAlterableAddrModes[dstEA] && kValidAddrModes[srcEA]);
             }
             break;
-        case 0x4:
+        case 0x4: {
+            const uint16 ea = bit::extract<0, 5>(instr);
             if (instr == 0x4E75) {
                 opcode = OpcodeType::RTS;
             } else if (bit::extract<6, 11>(instr) == 0b011011) {
-                opcode = legalIf(OpcodeType::Move_EA_SR, kValidDataAddrModes[bit::extract<0, 5>(instr)]);
+                opcode = legalIf(OpcodeType::Move_EA_SR, kValidDataAddrModes[ea]);
             } else if (bit::extract<6, 11>(instr) == 0b111010) {
-                opcode = legalIf(OpcodeType::JSR, kValidControlAddrModes[bit::extract<0, 5>(instr)]);
+                opcode = legalIf(OpcodeType::JSR, kValidControlAddrModes[ea]);
             } else if (bit::extract<6, 8>(instr) == 0b111) {
-                opcode = legalIf(OpcodeType::LEA, kValidControlAddrModes[bit::extract<0, 5>(instr)]);
+                opcode = legalIf(OpcodeType::LEA, kValidControlAddrModes[ea]);
             }
             break;
-        case 0x5:
+        }
+        case 0x5: {
+            const uint16 ea = bit::extract<0, 5>(instr);
             if (bit::extract<3, 7>(instr) == 0b11001) {
                 opcode = OpcodeType::DBcc;
+            } else if (bit::extract<6, 7>(instr) == 0b11) {
+                // TODO: Scc
+            } else {
+                const uint16 M = bit::extract<3, 5>(instr);
+                const uint16 sz = bit::extract<6, 7>(instr);
+                const bool isAn = M == 0b001;
+                const bool isByte = sz == 0b00;
+                if (bit::extract<8>(instr) == 1) {
+                    // TODO: SUBQ
+                } else {
+                    if (isAn) {
+                        opcode = legalIf(OpcodeType::AddQ_An, !isByte);
+                    } else {
+                        opcode = legalIf(OpcodeType::AddQ_EA, kValidAlterableAddrModes[ea]);
+                    }
+                }
             }
             break;
+        }
         case 0x6:
             switch (bit::extract<8, 11>(instr)) {
             case 0b0000: opcode = OpcodeType::BRA; break;
