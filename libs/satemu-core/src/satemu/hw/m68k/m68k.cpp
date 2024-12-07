@@ -258,6 +258,7 @@ void MC68EC000::Execute() {
     case OpcodeType::MoveA: Instr_MoveA(instr); break;
 
     case OpcodeType::AddA: Instr_AddA(instr); break;
+    case OpcodeType::AddI: Instr_AddI(instr); break;
     case OpcodeType::AndI_EA: Instr_AndI_EA(instr); break;
 
     case OpcodeType::LEA: Instr_LEA(instr); break;
@@ -368,6 +369,47 @@ void MC68EC000::Instr_AddA(uint16 instr) {
     }
 }
 
+void MC68EC000::Instr_AddI(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+
+    switch (sz) {
+    case 0b00: {
+        const uint8 op1 = FetchInstruction();
+        const uint8 op2 = ReadEffectiveAddress<uint8>(M, Xn);
+        const uint8 value = op1 + op2;
+        WriteEffectiveAddress<uint8>(M, Xn, value);
+        SR.N = value >> 7u;
+        SR.Z = value == 0;
+        SR.V = ((value ^ op1) & (value ^ op2)) >> 7u;
+        SR.C = SR.X = value < op1;
+    } break;
+    case 0b01: {
+        const uint16 op1 = FetchInstruction();
+        const uint16 op2 = ReadEffectiveAddress<uint16>(M, Xn);
+        const uint16 value = op1 + op2;
+        WriteEffectiveAddress<uint16>(M, Xn, value);
+        SR.N = value >> 15u;
+        SR.Z = value == 0;
+        SR.V = ((value ^ op1) & (value ^ op2)) >> 15u;
+        SR.C = SR.X = value < op1;
+    } break;
+    case 0b10: {
+        const uint32 op1High = FetchInstruction();
+        const uint32 op1Low = FetchInstruction();
+        const uint32 op1 = (op1High << 16u) | op1Low;
+        const uint32 op2 = ReadEffectiveAddress<uint32>(M, Xn);
+        const uint32 value = op1 + op2;
+        WriteEffectiveAddress<uint32>(M, Xn, value);
+        SR.N = value >> 31u;
+        SR.Z = value == 0;
+        SR.V = ((value ^ op1) & (value ^ op2)) >> 31u;
+        SR.C = SR.X = value < op1;
+    } break;
+    }
+}
+
 void MC68EC000::Instr_AndI_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
@@ -375,7 +417,9 @@ void MC68EC000::Instr_AndI_EA(uint16 instr) {
 
     switch (sz) {
     case 0b00: {
-        const uint8 value = FetchInstruction();
+        const uint8 op1 = FetchInstruction();
+        const uint8 op2 = ReadEffectiveAddress<uint8>(M, Xn);
+        const uint8 value = op1 & op2;
         WriteEffectiveAddress<uint8>(M, Xn, value);
         SR.N = value >> 7u;
         SR.Z = value == 0;
@@ -383,7 +427,9 @@ void MC68EC000::Instr_AndI_EA(uint16 instr) {
         SR.C = 0;
     } break;
     case 0b01: {
-        const uint16 value = FetchInstruction();
+        const uint16 op1 = FetchInstruction();
+        const uint16 op2 = ReadEffectiveAddress<uint16>(M, Xn);
+        const uint16 value = op1 & op2;
         WriteEffectiveAddress<uint16>(M, Xn, value);
         SR.N = value >> 15u;
         SR.Z = value == 0;
@@ -391,9 +437,11 @@ void MC68EC000::Instr_AndI_EA(uint16 instr) {
         SR.C = 0;
     } break;
     case 0b10: {
-        const uint32 valueHigh = FetchInstruction();
-        const uint32 valueLow = FetchInstruction();
-        const uint32 value = (valueHigh << 16u) | valueLow;
+        const uint32 op1High = FetchInstruction();
+        const uint32 op1Low = FetchInstruction();
+        const uint32 op1 = (op1High << 16u) | op1Low;
+        const uint32 op2 = ReadEffectiveAddress<uint32>(M, Xn);
+        const uint32 value = op1 & op2;
         WriteEffectiveAddress<uint32>(M, Xn, value);
         SR.N = value >> 31u;
         SR.Z = value == 0;

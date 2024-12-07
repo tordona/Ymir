@@ -96,6 +96,10 @@ DecodeTable BuildDecodeTable() {
                 const uint16 ea = bit::extract<0, 5>(instr);
                 const uint16 sz = bit::extract<6, 7>(instr);
                 opcode = legalIf(OpcodeType::AndI_EA, sz != 0b11 && kValidDataAlterableAddrModes[ea]);
+            } else if (bit::extract<8, 11>(instr) == 0b0110) {
+                const uint16 ea = bit::extract<0, 5>(instr);
+                const uint16 sz = bit::extract<6, 7>(instr);
+                opcode = legalIf(OpcodeType::AddI, sz != 0b11 && kValidDataAlterableAddrModes[ea]);
             }
             break;
         case 0x1:
