@@ -200,7 +200,19 @@ DecodeTable BuildDecodeTable() {
         }
         case 0x9: break;
         case 0xA: break;
-        case 0xB: break;
+        case 0xB: {
+            const uint16 ea = bit::extract<0, 5>(instr);
+            if (bit::extract<6, 7>(instr)) {
+                // TODO: CMPA
+            } else if (bit::extract<8>(instr) == 0) {
+                opcode = legalIf(OpcodeType::Cmp, kValidAddrModes[ea]);
+            } else if (bit::extract<3, 5>(instr) == 0b001) {
+                // TODO: CMPM
+            } else {
+                // TODO: EOR
+            }
+            break;
+        }
         case 0xC: break;
         case 0xD:
             if (bit::extract<6, 7>(instr) == 0b11) {

@@ -246,13 +246,16 @@ uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
     util::unreachable();
 }
 
-template <std::integral T>
+template <std::integral T, bool setX>
 void MC68EC000::SetArithFlags(T op1, T op2, T result) {
     static constexpr T shift = sizeof(T) * 8 - 1;
     SR.N = result >> shift;
     SR.Z = result == 0;
     SR.V = ((result ^ op1) & (result ^ op2)) >> shift;
-    SR.C = SR.X = result < op1;
+    SR.C = result < op1;
+    if constexpr (setX) {
+        SR.X = SR.C;
+    }
 }
 
 template <std::integral T>
@@ -288,6 +291,8 @@ void MC68EC000::Execute() {
     case OpcodeType::Or_Dn_EA: Instr_Or_Dn_EA(instr); break;
     case OpcodeType::Or_EA_Dn: Instr_Or_EA_Dn(instr); break;
     case OpcodeType::SubI: Instr_SubI(instr); break;
+
+    case OpcodeType::Cmp: Instr_Cmp(instr); break;
 
     case OpcodeType::LEA: Instr_LEA(instr); break;
 
@@ -592,6 +597,26 @@ void MC68EC000::Instr_SubI(uint16 instr) {
         const T result = op2 - op1;
         WriteEffectiveAddress<T>(M, Xn, result);
         SetArithFlags(op1, op2, result);
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+void MC68EC000::Instr_Cmp(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T op1 = ReadEffectiveAddress<T>(M, Xn);
+        const T op2 = regs.D[Dn];
+        const T result = op2 - op1;
+        SetCompareFlags(op1, op2, result);
     };
 
     switch (sz) {

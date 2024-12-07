@@ -129,11 +129,24 @@ private:
     uint32 CalcEffectiveAddress(uint8 M, uint8 Xn);
 
     // Update XNZVC flags based on the result of an arithmetic operation:
-    //  X and C are set if the operation resulted in a carry or borrow
+    //  C is set if the operation resulted in a carry or borrow
     //  N is set if the result is negative (MSB set)
+    //  V is set if the result overflows
     //  Z is set if the result is zero
-    template <std::integral T>
+    //  X is set to C if setX is true
+    template <std::integral T, bool setX = false>
     void SetArithFlags(T op1, T op2, T result);
+
+    // Update XNZVC flags based on the result of a comparison operation:
+    //  C is set if the operation resulted in a carry or borrow
+    //  N is set if the result is negative (MSB set)
+    //  V is set if the result overflows
+    //  Z is set if the result is zero
+    //  X is not changed
+    template <std::integral T>
+    void SetCompareFlags(T op1, T op2, T result) {
+        return SetArithFlags<T, false>(op1, op2, result);
+    }
 
     // Update NZVC flags based on the result of a logic or move operation.
     //  X is not updated
@@ -168,6 +181,8 @@ private:
     void Instr_Or_Dn_EA(uint16 instr);
     void Instr_Or_EA_Dn(uint16 instr);
     void Instr_SubI(uint16 instr);
+
+    void Instr_Cmp(uint16 instr);
 
     void Instr_LEA(uint16 instr);
 
