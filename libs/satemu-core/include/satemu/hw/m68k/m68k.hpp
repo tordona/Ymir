@@ -135,11 +135,31 @@ private:
     // Update XNZVC flags based on the result of an arithmetic operation:
     //  N is set if the result is negative (MSB set)
     //  Z is set if the result is zero
-    //  V is set if the result overflows
+    //  V is set if the result overflows (addition if sub=false, subtraction if sub=true)
     //  C is set if the operation resulted in a carry or borrow
     //  X is set to C if setX is true
-    template <std::integral T, bool setX = false>
+    template <std::integral T, bool sub, bool setX = false>
     void SetArithFlags(T op1, T op2, T result);
+
+    // Update XNZVC flags based on the result of an addition:
+    //  N is set if the result is negative (MSB set)
+    //  Z is set if the result is zero
+    //  V is set if the result overflows
+    //  C and X are set if the operation resulted in a carry or borrow
+    template <std::integral T>
+    void SetAdditionFlags(T op1, T op2, T result) {
+        return SetArithFlags<T, false, true>(op1, op2, result);
+    }
+
+    // Update XNZVC flags based on the result of a subtraction:
+    //  N is set if the result is negative (MSB set)
+    //  Z is set if the result is zero
+    //  V is set if the result overflows
+    //  C and X are set if the operation resulted in a carry or borrow
+    template <std::integral T>
+    void SetSubtractionFlags(T op1, T op2, T result) {
+        return SetArithFlags<T, true, true>(op1, op2, result);
+    }
 
     // Update XNZVC flags based on the result of a comparison operation:
     //  N is set if the result is negative (MSB set)
@@ -149,7 +169,7 @@ private:
     //  X is not changed
     template <std::integral T>
     void SetCompareFlags(T op1, T op2, T result) {
-        return SetArithFlags<T, false>(op1, op2, result);
+        return SetArithFlags<T, true, false>(op1, op2, result);
     }
 
     // Update NZVC flags based on the result of a logic or move operation.
@@ -206,6 +226,7 @@ private:
     void Instr_LSR_R(uint16 instr);
 
     void Instr_Cmp(uint16 instr);
+    void Instr_CmpA(uint16 instr);
 
     void Instr_LEA(uint16 instr);
 

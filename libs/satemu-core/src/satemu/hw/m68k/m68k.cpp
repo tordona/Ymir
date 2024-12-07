@@ -313,12 +313,16 @@ uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
     util::unreachable();
 }
 
-template <std::integral T, bool setX>
+template <std::integral T, bool sub, bool setX>
 void MC68EC000::SetArithFlags(T op1, T op2, T result) {
     static constexpr T shift = sizeof(T) * 8 - 1;
     SR.N = result >> shift;
     SR.Z = result == 0;
-    SR.V = ((result ^ op1) & (result ^ op2)) >> shift;
+    if constexpr (sub) {
+        SR.V = ((op1 ^ op2) & (result ^ op2)) >> shift;
+    } else {
+        SR.V = ((result ^ op1) & (result ^ op2)) >> shift;
+    }
     SR.C = result < op1;
     if constexpr (setX) {
         SR.X = SR.C;
@@ -381,6 +385,7 @@ void MC68EC000::Execute() {
     case OpcodeType::LSR_R: Instr_LSR_R(instr); break;
 
     case OpcodeType::Cmp: Instr_Cmp(instr); break;
+    case OpcodeType::CmpA: Instr_CmpA(instr); break;
 
     case OpcodeType::LEA: Instr_LEA(instr); break;
 
@@ -548,7 +553,7 @@ void MC68EC000::Instr_Add_Dn_EA(uint16 instr) {
         const T op1 = regs.D[Dn];
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 + op1;
-            SetArithFlags(op1, op2, result);
+            SetAdditionFlags(op1, op2, result);
             return result;
         });
     };
@@ -571,7 +576,7 @@ void MC68EC000::Instr_Add_EA_Dn(uint16 instr) {
         const T op2 = regs.D[Dn];
         const T result = op2 + op1;
         regs.D[Dn] = result;
-        SetArithFlags(op1, op2, result);
+        SetAdditionFlags(op1, op2, result);
     };
 
     switch (sz) {
@@ -606,7 +611,7 @@ void MC68EC000::Instr_AddI(uint16 instr) {
         }
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 + op1;
-            SetArithFlags(op1, op2, result);
+            SetAdditionFlags(op1, op2, result);
             return result;
         });
     };
@@ -627,7 +632,7 @@ void MC68EC000::Instr_AddQ_An(uint16 instr) {
         const uint32 op2 = regs.A[An];
         const uint32 result = op2 + op1;
         regs.A[An] = result;
-        SetArithFlags(op1, op2, result);
+        SetAdditionFlags(op1, op2, result);
     };
 
     switch (sz) {
@@ -646,7 +651,7 @@ void MC68EC000::Instr_AddQ_EA(uint16 instr) {
         const T op1 = data == 0 ? 8 : data;
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 + op1;
-            SetArithFlags(op1, op2, result);
+            SetAdditionFlags(op1, op2, result);
             return result;
         });
     };
@@ -737,7 +742,7 @@ void MC68EC000::Instr_SubI(uint16 instr) {
         }
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 - op1;
-            SetArithFlags(op1, op2, result);
+            SetSubtractionFlags(op1, op2, result);
             return result;
         });
     };
@@ -920,6 +925,26 @@ void MC68EC000::Instr_Cmp(uint16 instr) {
     case 0b00: op.template operator()<uint8>(); break;
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+void MC68EC000::Instr_CmpA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<8>(instr);
+    const uint16 An = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T op1 = static_cast<std::make_signed_t<T>>(ReadEffectiveAddress<T>(M, Xn));
+        const T op2 = regs.A[An];
+        const T result = op2 - op1;
+        SetCompareFlags(op1, op2, result);
+    };
+
+    if (sz) {
+        op.template operator()<uint32>();
+    } else {
+        op.template operator()<uint16>();
     }
 }
 

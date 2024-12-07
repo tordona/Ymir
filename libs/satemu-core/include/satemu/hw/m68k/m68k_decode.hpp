@@ -41,22 +41,22 @@ constexpr auto kCondTable = [] {
 
 enum class OpcodeType : uint8 {
     Move_EA_EA,  // move.<sz> <ea_src>, <ea_dst>
-    Move_EA_SR,  // move.w <ea>, sr
-    MoveA,       // movea.<sz> <ea>, an
+    Move_EA_SR,  // move.w <ea>, SR
+    MoveA,       // movea.<sz> <ea>, An
     MoveM_EA_Rs, // movem.<sz> <ea>, <list>
     MoveM_PI_Rs, // movem.<sz> (An)+, <list>
     MoveM_Rs_EA, // movem.<sz> <list>, <ea>
     MoveM_Rs_PD, // movem.<sz> <list>, -(An)
-    MoveQ,       // moveq #<imm>, dn
+    MoveQ,       // moveq #<imm>, Dn
 
-    Swap, // swap dn
+    Swap, // swap Dn
 
-    Add_Dn_EA, // add.<sz> dn, <ea>
-    Add_EA_Dn, // add.<sz> <ea>, dn
-    AddA,      // adda.<sz> <ea>, an
+    Add_Dn_EA, // add.<sz> Dn, <ea>
+    Add_EA_Dn, // add.<sz> <ea>, Dn
+    AddA,      // adda.<sz> <ea>, An
     AddI,      // addi.<sz> #<data>, <ea>
     AndI_EA,   // andi.<sz> #<data>, <ea>
-    AddQ_An,   // addq.<sz> #<data>, an
+    AddQ_An,   // addq.<sz> #<data>, An
     AddQ_EA,   // addq.<sz> #<data>, <ea>
     Or_Dn_EA,  // or.<sz> Dn, <ea>
     Or_EA_Dn,  // or.<sz> <ea>, Dn
@@ -64,19 +64,20 @@ enum class OpcodeType : uint8 {
 
     LSL_I, // lsl.<sz> #<data>, <ea>
     LSL_M, // lsl.<sz> <ea>
-    LSL_R, // lsl.<sz> dn, <ea>
+    LSL_R, // lsl.<sz> Dn, <ea>
     LSR_I, // lsr.<sz> #<data>, <ea>
     LSR_M, // lsr.<sz> <ea>
-    LSR_R, // lsr.<sz> dn, <ea>
+    LSR_R, // lsr.<sz> Dn, <ea>
 
-    Cmp, // cmp.<sz> <ea>, Dn
+    Cmp,  // cmp.<sz> <ea>, An
+    CmpA, // cmpa <ea>, An
 
-    LEA, // lea <ea>, an
+    LEA, // lea <ea>, An
 
     BRA,  // bra <label>
     BSR,  // bsr <label>
     Bcc,  // b<cc> <label>
-    DBcc, // db<cc>.<sz> dn, <label>
+    DBcc, // db<cc>.<sz> Dn, <label>
     JSR,  // jsr <ea>
 
     RTS, // rts
