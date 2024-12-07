@@ -154,6 +154,8 @@ DecodeTable BuildDecodeTable() {
             const uint16 ea = bit::extract<0, 5>(instr);
             if (instr == 0x4E75) {
                 opcode = OpcodeType::RTS;
+            } else if (instr == 0x4AFC) {
+                opcode = OpcodeType::Illegal;
             } else if (bit::extract<3, 11>(instr) == 0b100001000) {
                 opcode = OpcodeType::Swap;
             } else if (bit::extract<6, 11>(instr) == 0b011011) {
@@ -228,7 +230,7 @@ DecodeTable BuildDecodeTable() {
             break;
         }
         case 0x9: break;
-        case 0xA: break;
+        case 0xA: opcode = OpcodeType::Illegal1010; break;
         case 0xB: {
             const uint16 ea = bit::extract<0, 5>(instr);
             if (bit::extract<6, 7>(instr) == 0b11) {
@@ -278,7 +280,7 @@ DecodeTable BuildDecodeTable() {
                 }
             }
             break;
-        case 0xF: break;
+        case 0xF: opcode = OpcodeType::Illegal1111; break;
         }
     }
 

@@ -68,6 +68,36 @@ FLATTEN FORCE_INLINE void MC68EC000::MemWriteLong(uint32 address, uint32 value) 
     MemWrite<uint32>(address, value);
 }
 
+void MC68EC000::SetSR(uint16 value) {
+    const bool oldS = SR.S;
+    SR.u16 = value;
+
+    if (SR.S != oldS) {
+        std::swap(regs.SP, SP_swap);
+    }
+}
+
+void MC68EC000::EnterException(ExceptionVector vector) {
+    HandleExceptionCommon(vector, SR.IPM);
+}
+
+void MC68EC000::HandleInterrupt(ExceptionVector vector, uint8 level) {
+    HandleExceptionCommon(vector, level);
+}
+
+void MC68EC000::HandleExceptionCommon(ExceptionVector vector, uint8 intrLevel) {
+    const uint16 oldSR = SR.u16;
+    SR.S = 1;
+    SR.T = 0;
+    SR.IPM = intrLevel;
+
+    regs.SP -= 4;
+    MemWrite<uint32>(regs.SP, PC);
+    regs.SP -= 2;
+    MemWrite<uint16>(regs.SP, oldSR);
+    PC = static_cast<uint32>(vector) << 2u;
+}
+
 // M   Xn
 // 000 <reg>  D<reg>               Data register
 // 001 <reg>  A<reg>               Address register
@@ -406,6 +436,8 @@ void MC68EC000::Execute() {
     case OpcodeType::RTS: Instr_RTS(instr); break;
 
     case OpcodeType::Illegal: Instr_Illegal(instr); break;
+    case OpcodeType::Illegal1010: Instr_Illegal1010(instr); break;
+    case OpcodeType::Illegal1111: Instr_Illegal1111(instr); break;
 
     case OpcodeType::Undecoded:
         fmt::println("M68K: found undecoded instruction {:04X} at {:08X} -- this is a bug!", instr, PC - 2);
@@ -442,6 +474,11 @@ void MC68EC000::Instr_Move_EA_EA(uint16 instr) {
 }
 
 void MC68EC000::Instr_Move_EA_SR(uint16 instr) {
+    if (!SR.S) {
+        PC -= 2;
+        EnterException(ExceptionVector::PrivilegeViolation);
+        return;
+    }
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     SR.u16 = ReadEffectiveAddress<uint16>(M, Xn) & 0xF71F;
@@ -1137,7 +1174,15 @@ void MC68EC000::Instr_RTS(uint16 instr) {
 }
 
 void MC68EC000::Instr_Illegal(uint16 instr) {
-    // TODO: handle illegal instruction exception
+    EnterException(ExceptionVector::IllegalInstruction);
+}
+
+void MC68EC000::Instr_Illegal1010(uint16 instr) {
+    EnterException(ExceptionVector::Line1010Emulator);
+}
+
+void MC68EC000::Instr_Illegal1111(uint16 instr) {
+    EnterException(ExceptionVector::Line1111Emulator);
 }
 
 } // namespace satemu::m68k

@@ -87,10 +87,10 @@ private:
             uint16 : 3;
             uint16 IPM : 3; // Interrupt priority mask (I2-I0)
             uint16 : 1;
-            uint16 M : 1;  // Master/interrupt state (always zero on MC68EC000)
-            uint16 S : 1;  // Supervisor/user state
-            uint16 T0 : 1; // Trace enable 0 (always zero on MC68EC000)
-            uint16 T1 : 1; // Trace enable 1
+            uint16 /*M*/ : 1;    // Master/interrupt state (always zero on MC68EC000)
+            uint16 S : 1;        // Supervisor/user state
+            uint16 /*T0*/ : 1;   // Trace enable 0 (always zero on MC68EC000)
+            uint16 /*T1*/ T : 1; // Trace enable 1
         };
         uint16 flags : 4;
     } SR;
@@ -117,15 +117,62 @@ private:
     void MemWriteLong(uint32 address, uint32 value);
 
     // -------------------------------------------------------------------------
+    // Exception handling
+
+    enum class ExceptionVector : uint32 {
+        ResetSSP = 0x0,
+        ResetPC = 0x1,
+        BusError = 0x2,
+        AddressError = 0x3,
+        IllegalInstruction = 0x4,
+        ZeroDivide = 0x5,
+        CHKInstruction = 0x6,
+        TRAPVInstruction = 0x7,
+        PrivilegeViolation = 0x8,
+        Trace = 0x9,
+        Line1010Emulator = 0xA,
+        Line1111Emulator = 0xB,
+        UninitializedInterrupt = 0xF,
+        SpuriousInterrupt = 0x18,
+        Level1InterruptAutovector = 0x19,
+        Level2InterruptAutovector = 0x1A,
+        Level3InterruptAutovector = 0x1B,
+        Level4InterruptAutovector = 0x1C,
+        Level5InterruptAutovector = 0x1D,
+        Level6InterruptAutovector = 0x1E,
+        Level7InterruptAutovector = 0x1F,
+    };
+
+    // Enters the specified exception vector
+    void EnterException(ExceptionVector vector);
+
+    // Handles an interrupt of the specified level.
+    // The vector is either provided from an external device or generated internally.
+    void HandleInterrupt(ExceptionVector vector, uint8 level);
+
+    // Performs the common exception handling process:
+    // - Makes a copy of SR
+    // - Enters supervisor mode (SR.S = 1)
+    // - Disables tracing (SR.T = 0)
+    // - Pushes PC and the unmodified copy of SR to the stack
+    // - Sets PC to the address at the exception vector
+    void HandleExceptionCommon(ExceptionVector vector, uint8 intrLevel);
+
+    // -------------------------------------------------------------------------
     // Helper functions
 
+    // Sets SR to the specified value and handles privilege mode switching
+    void SetSR(uint16 value);
+
+    // Reads from an effective address
     template <mem_access_type T>
     T ReadEffectiveAddress(uint8 M, uint8 Xn);
 
+    // Writes to an effective address
     template <mem_access_type T>
     void WriteEffectiveAddress(uint8 M, uint8 Xn, T value);
 
-    // Read-modify-write
+    // Read-modify-write an effective address
     template <mem_access_type T, typename FnModify>
     void ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify &&modify);
 
@@ -247,6 +294,8 @@ private:
     void Instr_RTS(uint16 instr);
 
     void Instr_Illegal(uint16 instr);
+    void Instr_Illegal1010(uint16 instr);
+    void Instr_Illegal1111(uint16 instr);
 };
 
 } // namespace satemu::m68k
