@@ -107,9 +107,12 @@ T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
         const uint8 extXn = bit::extract<12, 14>(briefExtWord);
         const bool m = bit::extract<15>(briefExtWord);
 
-        const uint32 index = m ? A[extXn] : D[extXn];
-        const uint32 scale = s ? sizeof(uint16) : sizeof(uint32);
-        return MemRead<T, false>(A[Xn] + disp + index * scale);
+        uint32 index = m ? A[extXn] : D[extXn];
+        if (!s) {
+            // Word index
+            index &= 0xFFFF;
+        }
+        return MemRead<T, false>(A[Xn] + disp + index);
     }
     case 0b111:
         switch (Xn) {
@@ -122,9 +125,12 @@ T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
             const uint8 extXn = bit::extract<12, 14>(briefExtWord);
             const bool m = bit::extract<15>(briefExtWord);
 
-            const uint32 index = m ? A[extXn] : D[extXn];
-            const uint32 scale = s ? sizeof(uint16) : sizeof(uint32);
-            return MemRead<T, false>(address + index * scale);
+            uint32 index = m ? A[extXn] : D[extXn];
+            if (!s) {
+                // Word index
+                index &= 0xFFFF;
+            }
+            return MemRead<T, false>(address + index);
         }
         case 0b000: {
             const uint16 address = FetchInstruction();
@@ -176,9 +182,12 @@ void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
         const uint8 extXn = bit::extract<12, 14>(briefExtWord);
         const bool m = bit::extract<15>(briefExtWord);
 
-        const uint32 index = m ? A[extXn] : D[extXn];
-        const uint32 scale = s ? sizeof(uint16) : sizeof(uint32);
-        MemWrite<T>(A[Xn] + disp + index * scale, value);
+        uint32 index = m ? A[extXn] : D[extXn];
+        if (!s) {
+            // Word index
+            index &= 0xFFFF;
+        }
+        MemWrite<T>(A[Xn] + disp + index, value);
     } break;
     }
 }
@@ -198,9 +207,12 @@ uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
         const uint8 extXn = bit::extract<12, 14>(briefExtWord);
         const bool m = bit::extract<15>(briefExtWord);
 
-        const uint32 index = m ? A[extXn] : D[extXn];
-        const uint32 scale = s ? sizeof(uint16) : sizeof(uint32);
-        return A[Xn] + disp + index * scale;
+        uint32 index = m ? A[extXn] : D[extXn];
+        if (!s) {
+            // Word index
+            index &= 0xFFFF;
+        }
+        return A[Xn] + disp + index;
     }
     case 0b111:
         switch (Xn) {
@@ -213,9 +225,12 @@ uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
             const uint8 extXn = bit::extract<12, 14>(briefExtWord);
             const bool m = bit::extract<15>(briefExtWord);
 
-            const uint32 index = m ? A[extXn] : D[extXn];
-            const uint32 scale = s ? sizeof(uint16) : sizeof(uint32);
-            return address + index * scale;
+            uint32 index = m ? A[extXn] : D[extXn];
+            if (!s) {
+                // Word index
+                index &= 0xFFFF;
+            }
+            return address + index;
         }
         case 0b000: {
             const uint16 address = FetchInstruction();
@@ -243,6 +258,7 @@ void MC68EC000::Execute() {
     case OpcodeType::MoveA: Instr_MoveA(instr); break;
 
     case OpcodeType::AddA: Instr_AddA(instr); break;
+    case OpcodeType::AndI_EA: Instr_AndI_EA(instr); break;
 
     case OpcodeType::LEA: Instr_LEA(instr); break;
 
@@ -349,6 +365,41 @@ void MC68EC000::Instr_AddA(uint16 instr) {
         A[An] += ReadEffectiveAddress<uint32>(M, Xn);
     } else {
         A[An] += ReadEffectiveAddress<uint16>(M, Xn);
+    }
+}
+
+void MC68EC000::Instr_AndI_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+
+    switch (sz) {
+    case 0b00: {
+        const uint8 value = FetchInstruction();
+        WriteEffectiveAddress<uint8>(M, Xn, value);
+        SR.N = value >> 7u;
+        SR.Z = value == 0;
+        SR.V = 0;
+        SR.C = 0;
+    } break;
+    case 0b01: {
+        const uint16 value = FetchInstruction();
+        WriteEffectiveAddress<uint16>(M, Xn, value);
+        SR.N = value >> 15u;
+        SR.Z = value == 0;
+        SR.V = 0;
+        SR.C = 0;
+    } break;
+    case 0b10: {
+        const uint32 valueHigh = FetchInstruction();
+        const uint32 valueLow = FetchInstruction();
+        const uint32 value = (valueHigh << 16u) | valueLow;
+        WriteEffectiveAddress<uint32>(M, Xn, value);
+        SR.N = value >> 31u;
+        SR.Z = value == 0;
+        SR.V = 0;
+        SR.C = 0;
+    } break;
     }
 }
 

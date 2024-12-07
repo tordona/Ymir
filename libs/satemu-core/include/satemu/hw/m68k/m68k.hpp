@@ -119,6 +119,7 @@ private:
     void Instr_MoveA(uint16 instr);
 
     void Instr_AddA(uint16 instr);
+    void Instr_AndI_EA(uint16 instr);
 
     void Instr_LEA(uint16 instr);
 
