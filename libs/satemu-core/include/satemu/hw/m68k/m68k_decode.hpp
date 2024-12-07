@@ -72,6 +72,7 @@ enum class OpcodeType : uint8 {
 
     Cmp,  // cmp.<sz> <ea>, An
     CmpA, // cmpa <ea>, An
+    CmpI, // cmpi.<sz> #<data>, <ea>
 
     LEA, // lea <ea>, An
 

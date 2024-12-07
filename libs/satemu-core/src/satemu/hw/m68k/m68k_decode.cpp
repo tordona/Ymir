@@ -105,25 +105,24 @@ DecodeTable BuildDecodeTable() {
         auto legalIf = [](OpcodeType type, bool cond) { return cond ? type : OpcodeType::Illegal; };
 
         switch (instr >> 12u) {
-        case 0x0:
+        case 0x0: {
+            const uint16 ea = bit::extract<0, 5>(instr);
+            const uint16 sz = bit::extract<6, 7>(instr);
             if (instr == 0x023C) {
                 // TODO: AndI_CCR
             } else if (instr == 0x027C) {
                 // TODO: AndI_SR
             } else if (bit::extract<8, 11>(instr) == 0b0010) {
-                const uint16 ea = bit::extract<0, 5>(instr);
-                const uint16 sz = bit::extract<6, 7>(instr);
                 opcode = legalIf(OpcodeType::AndI_EA, sz != 0b11 && kValidDataAlterableAddrModes[ea]);
             } else if (bit::extract<8, 11>(instr) == 0b0100) {
-                const uint16 ea = bit::extract<0, 5>(instr);
-                const uint16 sz = bit::extract<6, 7>(instr);
                 opcode = legalIf(OpcodeType::SubI, sz != 0b11 && kValidDataAlterableAddrModes[ea]);
             } else if (bit::extract<8, 11>(instr) == 0b0110) {
-                const uint16 ea = bit::extract<0, 5>(instr);
-                const uint16 sz = bit::extract<6, 7>(instr);
                 opcode = legalIf(OpcodeType::AddI, sz != 0b11 && kValidDataAlterableAddrModes[ea]);
+            } else if (bit::extract<8, 11>(instr) == 0b1100) {
+                opcode = legalIf(OpcodeType::CmpI, sz != 0b11 && kValidDataAddrModes[ea]);
             }
             break;
+        }
         case 0x1:
         case 0x2:
         case 0x3:
@@ -163,7 +162,7 @@ DecodeTable BuildDecodeTable() {
                 }
             } else if (bit::extract<8, 11>(instr) == 0b0010) {
                 const uint16 sz = bit::extract<6, 7>(instr);
-                opcode = legalIf(OpcodeType::Clr, kValidDataAlterableAddrModes[ea] && sz != 0b11);
+                opcode = legalIf(OpcodeType::Clr, sz != 0b11 && kValidDataAlterableAddrModes[ea]);
             } else if (bit::extract<6, 8>(instr) == 0b111) {
                 opcode = legalIf(OpcodeType::LEA, kValidControlAddrModes[ea]);
             }

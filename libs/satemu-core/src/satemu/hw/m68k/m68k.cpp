@@ -387,6 +387,7 @@ void MC68EC000::Execute() {
 
     case OpcodeType::Cmp: Instr_Cmp(instr); break;
     case OpcodeType::CmpA: Instr_CmpA(instr); break;
+    case OpcodeType::CmpI: Instr_CmpI(instr); break;
 
     case OpcodeType::LEA: Instr_LEA(instr); break;
 
@@ -969,6 +970,28 @@ void MC68EC000::Instr_CmpA(uint16 instr) {
     }
 }
 
+void MC68EC000::Instr_CmpI(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+
+    auto op = [&]<std::integral T>() {
+        T op1 = FetchInstruction();
+        if constexpr (sizeof(T) == sizeof(uint32)) {
+            op1 = (op1 << 16u) | FetchInstruction();
+        }
+        const T op2 = ReadEffectiveAddress<T>(M, Xn);
+        const T result = op2 - op1;
+        SetCompareFlags(op1, op2, result);
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
 void MC68EC000::Instr_LEA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
@@ -994,7 +1017,7 @@ void MC68EC000::Instr_BSR(uint16 instr) {
     }
 
     regs.SP -= 4;
-    MemWriteLong(regs.SP, currPC);
+    MemWriteLong(regs.SP, PC);
     PC = currPC + disp;
 }
 
