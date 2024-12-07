@@ -115,7 +115,11 @@ DecodeTable BuildDecodeTable() {
                 }
             }
             break;
-        case 0x5: break;
+        case 0x5:
+            if (bit::extract<3, 7>(instr) == 0b11001) {
+                opcodeEntry = OpcodeType::DBcc;
+            }
+            break;
         case 0x6:
             switch (bit::extract<8, 11>(instr)) {
             case 0b0000: opcodeEntry = OpcodeType::BRA; break;

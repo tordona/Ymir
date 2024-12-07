@@ -102,6 +102,9 @@ private:
     template <mem_access_type T>
     void WriteEffectiveAddress(uint8 M, uint8 Xn, T value);
 
+    // Calculates effective addresses for instructions that use control addresses (LEA, JSR, JMP, MOVEM, etc.)
+    uint32 CalcEffectiveAddress(uint8 M, uint8 Xn);
+
     // -------------------------------------------------------------------------
     // Interpreter
 
@@ -120,6 +123,7 @@ private:
     void Instr_BRA(uint16 instr);
     void Instr_BSR(uint16 instr);
     void Instr_Bcc(uint16 instr);
+    void Instr_DBcc(uint16 instr);
     void Instr_JSR(uint16 instr);
 
     void Instr_Illegal(uint16 instr);
