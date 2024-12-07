@@ -192,6 +192,24 @@ void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
     }
 }
 
+template <std::integral T>
+void MC68EC000::SetArithFlags(T op1, T op2, T result) {
+    static constexpr T shift = sizeof(T) * 8 - 1;
+    SR.N = result >> shift;
+    SR.Z = result == 0;
+    SR.V = ((result ^ op1) & (result ^ op2)) >> shift;
+    SR.C = SR.X = result < op1;
+}
+
+template <std::integral T>
+void MC68EC000::SetLogicFlags(T result) {
+    static constexpr T shift = sizeof(T) * 8 - 1;
+    SR.N = result >> shift;
+    SR.Z = result == 0;
+    SR.V = 0;
+    SR.C = 0;
+}
+
 uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
     switch (M) {
     case 0b010: return A[Xn];
@@ -293,38 +311,17 @@ void MC68EC000::Instr_Move_EA_EA(uint16 instr) {
     const uint32 srcXn = bit::extract<0, 2>(instr);
     const uint32 srcM = bit::extract<3, 5>(instr);
 
-    // size:
-    //   01 = byte
-    //   11 = word  <-- mind the swapped
-    //   10 = long  <-- bit values!
+    auto move = [&]<std::integral T>() {
+        const T value = ReadEffectiveAddress<T>(srcM, srcXn);
+        WriteEffectiveAddress<T>(dstM, dstXn, value);
+        SetLogicFlags(value);
+    };
+
+    // Note the swapped bit order between word and longword moves
     switch (size) {
-    case 0b01: {
-        const uint8 value = ReadEffectiveAddress<uint8>(srcM, srcXn);
-        WriteEffectiveAddress<uint8>(dstM, dstXn, value);
-        SR.N = value >> 7u;
-        SR.Z = value == 0;
-        SR.V = 0;
-        SR.C = 0;
-        break;
-    }
-    case 0b11: {
-        const uint16 value = ReadEffectiveAddress<uint16>(srcM, srcXn);
-        WriteEffectiveAddress<uint16>(dstM, dstXn, value);
-        SR.N = value >> 15u;
-        SR.Z = value == 0;
-        SR.V = 0;
-        SR.C = 0;
-        break;
-    }
-    case 0b10: {
-        const uint32 value = ReadEffectiveAddress<uint32>(srcM, srcXn);
-        WriteEffectiveAddress<uint32>(dstM, dstXn, value);
-        SR.N = value >> 31u;
-        SR.Z = value == 0;
-        SR.V = 0;
-        SR.C = 0;
-        break;
-    }
+    case 0b01: move.template operator()<uint8>(); break;
+    case 0b11: move.template operator()<uint16>(); break;
+    case 0b10: move.template operator()<uint32>(); break;
     }
 }
 
@@ -338,10 +335,7 @@ void MC68EC000::Instr_MoveQ(uint16 instr) {
     const sint32 value = static_cast<sint8>(bit::extract<0, 7>(instr));
     const uint32 reg = bit::extract<9, 11>(instr);
     D[reg] = value;
-    SR.N = value >> 31;
-    SR.Z = value == 0;
-    SR.V = 0;
-    SR.C = 0;
+    SetLogicFlags(value);
 }
 
 void MC68EC000::Instr_MoveA(uint16 instr) {
@@ -374,39 +368,21 @@ void MC68EC000::Instr_AddI(uint16 instr) {
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
 
+    auto op = [&]<std::integral T>() {
+        T op1 = FetchInstruction();
+        if constexpr (sizeof(T) == sizeof(uint32)) {
+            op1 = (op1 << 16u) | FetchInstruction();
+        }
+        const T op2 = ReadEffectiveAddress<T>(M, Xn);
+        const T result = op1 + op2;
+        WriteEffectiveAddress<T>(M, Xn, result);
+        SetArithFlags(op1, op2, result);
+    };
+
     switch (sz) {
-    case 0b00: {
-        const uint8 op1 = FetchInstruction();
-        const uint8 op2 = ReadEffectiveAddress<uint8>(M, Xn);
-        const uint8 value = op1 + op2;
-        WriteEffectiveAddress<uint8>(M, Xn, value);
-        SR.N = value >> 7u;
-        SR.Z = value == 0;
-        SR.V = ((value ^ op1) & (value ^ op2)) >> 7u;
-        SR.C = SR.X = value < op1;
-    } break;
-    case 0b01: {
-        const uint16 op1 = FetchInstruction();
-        const uint16 op2 = ReadEffectiveAddress<uint16>(M, Xn);
-        const uint16 value = op1 + op2;
-        WriteEffectiveAddress<uint16>(M, Xn, value);
-        SR.N = value >> 15u;
-        SR.Z = value == 0;
-        SR.V = ((value ^ op1) & (value ^ op2)) >> 15u;
-        SR.C = SR.X = value < op1;
-    } break;
-    case 0b10: {
-        const uint32 op1High = FetchInstruction();
-        const uint32 op1Low = FetchInstruction();
-        const uint32 op1 = (op1High << 16u) | op1Low;
-        const uint32 op2 = ReadEffectiveAddress<uint32>(M, Xn);
-        const uint32 value = op1 + op2;
-        WriteEffectiveAddress<uint32>(M, Xn, value);
-        SR.N = value >> 31u;
-        SR.Z = value == 0;
-        SR.V = ((value ^ op1) & (value ^ op2)) >> 31u;
-        SR.C = SR.X = value < op1;
-    } break;
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
     }
 }
 
@@ -415,39 +391,21 @@ void MC68EC000::Instr_AndI_EA(uint16 instr) {
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
 
+    auto op = [&]<std::integral T>() {
+        T op1 = FetchInstruction();
+        if constexpr (sizeof(T) == sizeof(uint32)) {
+            op1 = (op1 << 16u) | FetchInstruction();
+        }
+        const T op2 = ReadEffectiveAddress<T>(M, Xn);
+        const T result = op1 & op2;
+        WriteEffectiveAddress<T>(M, Xn, result);
+        SetLogicFlags(result);
+    };
+
     switch (sz) {
-    case 0b00: {
-        const uint8 op1 = FetchInstruction();
-        const uint8 op2 = ReadEffectiveAddress<uint8>(M, Xn);
-        const uint8 value = op1 & op2;
-        WriteEffectiveAddress<uint8>(M, Xn, value);
-        SR.N = value >> 7u;
-        SR.Z = value == 0;
-        SR.V = 0;
-        SR.C = 0;
-    } break;
-    case 0b01: {
-        const uint16 op1 = FetchInstruction();
-        const uint16 op2 = ReadEffectiveAddress<uint16>(M, Xn);
-        const uint16 value = op1 & op2;
-        WriteEffectiveAddress<uint16>(M, Xn, value);
-        SR.N = value >> 15u;
-        SR.Z = value == 0;
-        SR.V = 0;
-        SR.C = 0;
-    } break;
-    case 0b10: {
-        const uint32 op1High = FetchInstruction();
-        const uint32 op1Low = FetchInstruction();
-        const uint32 op1 = (op1High << 16u) | op1Low;
-        const uint32 op2 = ReadEffectiveAddress<uint32>(M, Xn);
-        const uint32 value = op1 & op2;
-        WriteEffectiveAddress<uint32>(M, Xn, value);
-        SR.N = value >> 31u;
-        SR.Z = value == 0;
-        SR.V = 0;
-        SR.C = 0;
-    } break;
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
     }
 }
 

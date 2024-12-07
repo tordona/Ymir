@@ -105,6 +105,21 @@ private:
     // Calculates effective addresses for instructions that use control addresses (LEA, JSR, JMP, MOVEM, etc.)
     uint32 CalcEffectiveAddress(uint8 M, uint8 Xn);
 
+    // Update XNZVC flags based on the result of an arithmetic operation:
+    //  X and C are set if the operation resulted in a carry or borrow
+    //  N is set if the result is negative (MSB set)
+    //  Z is set if the result is zero
+    template <std::integral T>
+    void SetArithFlags(T op1, T op2, T result);
+
+    // Update NZVC flags based on the result of a logic or move operation.
+    //  X is not updated
+    //  N is set if the result is negative (MSB set)
+    //  Z is set if the result is zero
+    //  V and C are cleared
+    template <std::integral T>
+    void SetLogicFlags(T result);
+
     // -------------------------------------------------------------------------
     // Interpreter
 
