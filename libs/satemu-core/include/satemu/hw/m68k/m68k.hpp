@@ -205,6 +205,7 @@ private:
     void Instr_MoveM_Rs_PD(uint16 instr);
     void Instr_MoveQ(uint16 instr);
 
+    void Instr_Clr(uint16 instr);
     void Instr_Swap(uint16 instr);
 
     void Instr_Add_Dn_EA(uint16 instr);

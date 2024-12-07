@@ -49,6 +49,7 @@ enum class OpcodeType : uint8 {
     MoveM_Rs_PD, // movem.<sz> <list>, -(An)
     MoveQ,       // moveq #<imm>, Dn
 
+    Clr,  // clr.<sz> <ea>
     Swap, // swap Dn
 
     Add_Dn_EA, // add.<sz> Dn, <ea>

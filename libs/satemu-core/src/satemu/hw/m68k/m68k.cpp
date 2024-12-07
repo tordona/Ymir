@@ -364,6 +364,7 @@ void MC68EC000::Execute() {
     case OpcodeType::MoveM_Rs_PD: Instr_MoveM_Rs_PD(instr); break;
     case OpcodeType::MoveQ: Instr_MoveQ(instr); break;
 
+    case OpcodeType::Clr: Instr_Clr(instr); break;
     case OpcodeType::Swap: Instr_Swap(instr); break;
 
     case OpcodeType::Add_Dn_EA: Instr_Add_Dn_EA(instr); break;
@@ -534,6 +535,26 @@ void MC68EC000::Instr_MoveQ(uint16 instr) {
     const uint32 reg = bit::extract<9, 11>(instr);
     regs.D[reg] = value;
     SetLogicFlags(value);
+}
+
+void MC68EC000::Instr_Clr(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+
+    auto op = [&]<std::integral T>() {
+        ModifyEffectiveAddress<T>(M, Xn, [&](T) {
+            SR.Z = 1;
+            SR.N = SR.V = SR.C = 0;
+            return 0;
+        });
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
 }
 
 void MC68EC000::Instr_Swap(uint16 instr) {

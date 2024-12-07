@@ -161,6 +161,9 @@ DecodeTable BuildDecodeTable() {
                 } else {
                     opcode = legalIf(OpcodeType::MoveM_EA_Rs, kValidControlAddrModes[ea]);
                 }
+            } else if (bit::extract<8, 11>(instr) == 0b0010) {
+                const uint16 sz = bit::extract<6, 7>(instr);
+                opcode = legalIf(OpcodeType::Clr, kValidDataAlterableAddrModes[ea] && sz != 0b11);
             } else if (bit::extract<6, 8>(instr) == 0b111) {
                 opcode = legalIf(OpcodeType::LEA, kValidControlAddrModes[ea]);
             }
