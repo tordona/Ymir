@@ -374,6 +374,7 @@ void MC68EC000::Execute() {
     case OpcodeType::AddQ_An: Instr_AddQ_An(instr); break;
     case OpcodeType::AddQ_EA: Instr_AddQ_EA(instr); break;
     case OpcodeType::AndI_EA: Instr_AndI_EA(instr); break;
+    case OpcodeType::Eor_Dn_EA: Instr_Eor_Dn_EA(instr); break;
     case OpcodeType::Or_Dn_EA: Instr_Or_Dn_EA(instr); break;
     case OpcodeType::Or_EA_Dn: Instr_Or_EA_Dn(instr); break;
     case OpcodeType::SubI: Instr_SubI(instr); break;
@@ -702,6 +703,28 @@ void MC68EC000::Instr_AndI_EA(uint16 instr) {
         }
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 & op1;
+            SetLogicFlags(result);
+            return result;
+        });
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+void MC68EC000::Instr_Eor_Dn_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T op1 = regs.D[Dn];
+        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+            const T result = op2 ^ op1;
             SetLogicFlags(result);
             return result;
         });

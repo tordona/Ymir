@@ -215,6 +215,7 @@ private:
     void Instr_AddQ_An(uint16 instr);
     void Instr_AddQ_EA(uint16 instr);
     void Instr_AndI_EA(uint16 instr);
+    void Instr_Eor_Dn_EA(uint16 instr);
     void Instr_Or_Dn_EA(uint16 instr);
     void Instr_Or_EA_Dn(uint16 instr);
     void Instr_SubI(uint16 instr);

@@ -238,7 +238,7 @@ DecodeTable BuildDecodeTable() {
             } else if (bit::extract<3, 5>(instr) == 0b001) {
                 // TODO: CMPM
             } else {
-                // TODO: EOR
+                opcode = legalIf(OpcodeType::Eor_Dn_EA, kValidDataAlterableAddrModes[ea]);
             }
             break;
         }
