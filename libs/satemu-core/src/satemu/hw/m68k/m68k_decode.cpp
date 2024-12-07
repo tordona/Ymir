@@ -77,6 +77,15 @@ static constexpr auto kValidDataAlterableAddrModes = [] {
     return arr;
 }();
 
+// Valid control alterable addressing modes
+static constexpr auto kValidControlAlterableAddrModes = [] {
+    std::array<bool, 0b111'111 + 1> arr = kValidControlAddrModes;
+    for (int i = 0; i < arr.size(); i++) {
+        arr[i] &= kValidAlterableAddrModes[i];
+    }
+    return arr;
+}();
+
 DecodeTable BuildDecodeTable() {
     DecodeTable table{};
     table.opcodeTypes.fill(OpcodeType::Undecoded);
@@ -127,6 +136,20 @@ DecodeTable BuildDecodeTable() {
                 opcode = legalIf(OpcodeType::Move_EA_SR, kValidDataAddrModes[ea]);
             } else if (bit::extract<6, 11>(instr) == 0b111010) {
                 opcode = legalIf(OpcodeType::JSR, kValidControlAddrModes[ea]);
+            } else if (bit::extract<7, 11>(instr) == 0b10001) {
+                const bool isPredecrement = (ea >> 3u) == 0b100;
+                if (isPredecrement) {
+                    opcode = OpcodeType::MoveM_Rs_PD;
+                } else {
+                    opcode = legalIf(OpcodeType::MoveM_Rs_EA, kValidControlAlterableAddrModes[ea]);
+                }
+            } else if (bit::extract<7, 11>(instr) == 0b11001) {
+                const bool isPostincrement = (ea >> 3u) == 0b011;
+                if (isPostincrement) {
+                    opcode = OpcodeType::MoveM_PI_Rs;
+                } else {
+                    opcode = legalIf(OpcodeType::MoveM_EA_Rs, kValidControlAddrModes[ea]);
+                }
             } else if (bit::extract<6, 8>(instr) == 0b111) {
                 opcode = legalIf(OpcodeType::LEA, kValidControlAddrModes[ea]);
             }

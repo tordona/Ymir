@@ -40,10 +40,14 @@ constexpr auto kCondTable = [] {
 // -----------------------------------------------------------------------------
 
 enum class OpcodeType : uint8 {
-    Move_EA_EA, // move.<sz> <ea_src>, <ea_dst>
-    Move_EA_SR, // move.w <ea>, sr
-    MoveQ,      // moveq #<imm>, dn
-    MoveA,      // movea.<sz> <ea>, an
+    Move_EA_EA,  // move.<sz> <ea_src>, <ea_dst>
+    Move_EA_SR,  // move.w <ea>, sr
+    MoveA,       // movea.<sz> <ea>, an
+    MoveM_EA_Rs, // movem.<sz> <ea>, <list>
+    MoveM_PI_Rs, // movem.<sz> (An)+, <list>
+    MoveM_Rs_EA, // movem.<sz> <list>, <ea>
+    MoveM_Rs_PD, // movem.<sz> <list>, -(An)
+    MoveQ,       // moveq #<imm>, dn
 
     AddA,     // adda.<sz> <ea>, an
     AddI,     // addi.<sz> #<data>, <ea>

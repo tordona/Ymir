@@ -15,9 +15,8 @@ MC68EC000::MC68EC000(M68kBus &bus)
 void MC68EC000::Reset(bool hard) {
     // TODO: check reset values
 
-    D.fill(0);
-    A.fill(0);
-    A[7] = MemReadLong(0x00000000);
+    regs.DA.fill(0);
+    regs.SP = MemReadLong(0x00000000);
     SP_swap = 0;
 
     PC = MemReadLong(0x00000004);
@@ -86,18 +85,18 @@ FLATTEN FORCE_INLINE void MC68EC000::MemWriteLong(uint32 address, uint32 value) 
 template <mem_access_type T>
 T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
     switch (M) {
-    case 0b000: return D[Xn];
-    case 0b001: return A[Xn];
-    case 0b010: return MemRead<T, false>(A[Xn]);
+    case 0b000: return regs.D[Xn];
+    case 0b001: return regs.A[Xn];
+    case 0b010: return MemRead<T, false>(regs.A[Xn]);
     case 0b011: {
-        const T value = MemRead<T, false>(A[Xn]);
-        A[Xn] += sizeof(T);
+        const T value = MemRead<T, false>(regs.A[Xn]);
+        regs.A[Xn] += sizeof(T);
         return value;
     }
-    case 0b100: A[Xn] -= sizeof(T); return MemRead<T, false>(A[Xn]);
+    case 0b100: regs.A[Xn] -= sizeof(T); return MemRead<T, false>(regs.A[Xn]);
     case 0b101: {
         const sint16 disp = static_cast<sint16>(FetchInstruction());
-        return MemRead<T, false>(A[Xn] + disp);
+        return MemRead<T, false>(regs.A[Xn] + disp);
     }
     case 0b110: {
         const uint16 briefExtWord = FetchInstruction();
@@ -107,12 +106,12 @@ T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
         const uint8 extXn = bit::extract<12, 14>(briefExtWord);
         const bool m = bit::extract<15>(briefExtWord);
 
-        uint32 index = m ? A[extXn] : D[extXn];
+        uint32 index = m ? regs.A[extXn] : regs.D[extXn];
         if (!s) {
             // Word index
             index &= 0xFFFF;
         }
-        return MemRead<T, false>(A[Xn] + disp + index);
+        return MemRead<T, false>(regs.A[Xn] + disp + index);
     }
     case 0b111:
         switch (Xn) {
@@ -125,7 +124,7 @@ T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
             const uint8 extXn = bit::extract<12, 14>(briefExtWord);
             const bool m = bit::extract<15>(briefExtWord);
 
-            uint32 index = m ? A[extXn] : D[extXn];
+            uint32 index = m ? regs.A[extXn] : regs.D[extXn];
             if (!s) {
                 // Word index
                 index &= 0xFFFF;
@@ -159,20 +158,20 @@ void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
     static constexpr uint32 regMask = ~0u << (sizeof(T) * 8u - 1u) << 1u;
 
     switch (M) {
-    case 0b000: D[Xn] = (D[Xn] & regMask) | value; break;
-    case 0b001: A[Xn] = value; break;
-    case 0b010: MemWrite<T>(A[Xn], value); break;
+    case 0b000: regs.D[Xn] = (regs.D[Xn] & regMask) | value; break;
+    case 0b001: regs.A[Xn] = value; break;
+    case 0b010: MemWrite<T>(regs.A[Xn], value); break;
     case 0b011:
-        MemWrite<T>(A[Xn], value);
-        A[Xn] += sizeof(T);
+        MemWrite<T>(regs.A[Xn], value);
+        regs.A[Xn] += sizeof(T);
         break;
     case 0b100:
-        A[Xn] -= sizeof(T);
-        MemWrite<T>(A[Xn], value);
+        regs.A[Xn] -= sizeof(T);
+        MemWrite<T>(regs.A[Xn], value);
         break;
     case 0b101: {
         const sint16 disp = static_cast<sint16>(FetchInstruction());
-        MemWrite<T>(A[Xn] + disp, value);
+        MemWrite<T>(regs.A[Xn] + disp, value);
     } break;
     case 0b110: {
         const uint16 briefExtWord = FetchInstruction();
@@ -182,40 +181,22 @@ void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
         const uint8 extXn = bit::extract<12, 14>(briefExtWord);
         const bool m = bit::extract<15>(briefExtWord);
 
-        uint32 index = m ? A[extXn] : D[extXn];
+        uint32 index = m ? regs.A[extXn] : regs.D[extXn];
         if (!s) {
             // Word index
             index &= 0xFFFF;
         }
-        MemWrite<T>(A[Xn] + disp + index, value);
+        MemWrite<T>(regs.A[Xn] + disp + index, value);
     } break;
     }
-}
-
-template <std::integral T>
-void MC68EC000::SetArithFlags(T op1, T op2, T result) {
-    static constexpr T shift = sizeof(T) * 8 - 1;
-    SR.N = result >> shift;
-    SR.Z = result == 0;
-    SR.V = ((result ^ op1) & (result ^ op2)) >> shift;
-    SR.C = SR.X = result < op1;
-}
-
-template <std::integral T>
-void MC68EC000::SetLogicFlags(T result) {
-    static constexpr T shift = sizeof(T) * 8 - 1;
-    SR.N = result >> shift;
-    SR.Z = result == 0;
-    SR.V = 0;
-    SR.C = 0;
 }
 
 uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
     switch (M) {
-    case 0b010: return A[Xn];
+    case 0b010: return regs.A[Xn];
     case 0b101: {
         const sint16 disp = static_cast<sint16>(FetchInstruction());
-        return A[Xn] + disp;
+        return regs.A[Xn] + disp;
     }
     case 0b110: {
         const uint16 briefExtWord = FetchInstruction();
@@ -225,12 +206,12 @@ uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
         const uint8 extXn = bit::extract<12, 14>(briefExtWord);
         const bool m = bit::extract<15>(briefExtWord);
 
-        uint32 index = m ? A[extXn] : D[extXn];
+        uint32 index = m ? regs.A[extXn] : regs.D[extXn];
         if (!s) {
             // Word index
             index &= 0xFFFF;
         }
-        return A[Xn] + disp + index;
+        return regs.A[Xn] + disp + index;
     }
     case 0b111:
         switch (Xn) {
@@ -243,7 +224,7 @@ uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
             const uint8 extXn = bit::extract<12, 14>(briefExtWord);
             const bool m = bit::extract<15>(briefExtWord);
 
-            uint32 index = m ? A[extXn] : D[extXn];
+            uint32 index = m ? regs.A[extXn] : regs.D[extXn];
             if (!s) {
                 // Word index
                 index &= 0xFFFF;
@@ -265,6 +246,27 @@ uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
     util::unreachable();
 }
 
+template <std::integral T>
+void MC68EC000::SetArithFlags(T op1, T op2, T result) {
+    static constexpr T shift = sizeof(T) * 8 - 1;
+    SR.N = result >> shift;
+    SR.Z = result == 0;
+    SR.V = ((result ^ op1) & (result ^ op2)) >> shift;
+    SR.C = SR.X = result < op1;
+}
+
+template <std::integral T>
+void MC68EC000::SetLogicFlags(T result) {
+    static constexpr T shift = sizeof(T) * 8 - 1;
+    SR.N = result >> shift;
+    SR.Z = result == 0;
+    SR.V = 0;
+    SR.C = 0;
+}
+
+// -----------------------------------------------------------------------------
+// Interpreter
+
 void MC68EC000::Execute() {
     const uint16 instr = FetchInstruction();
 
@@ -272,8 +274,11 @@ void MC68EC000::Execute() {
     switch (type) {
     case OpcodeType::Move_EA_EA: Instr_Move_EA_EA(instr); break;
     case OpcodeType::Move_EA_SR: Instr_Move_EA_SR(instr); break;
-    case OpcodeType::MoveQ: Instr_MoveQ(instr); break;
     case OpcodeType::MoveA: Instr_MoveA(instr); break;
+    case OpcodeType::MoveM_EA_Rs: Instr_MoveM_EA_Rs(instr); break;
+    case OpcodeType::MoveM_Rs_EA: Instr_MoveM_Rs_EA(instr); break;
+    case OpcodeType::MoveM_Rs_PD: Instr_MoveM_Rs_PD(instr); break;
+    case OpcodeType::MoveQ: Instr_MoveQ(instr); break;
 
     case OpcodeType::AddA: Instr_AddA(instr); break;
     case OpcodeType::AddI: Instr_AddI(instr); break;
@@ -336,13 +341,6 @@ void MC68EC000::Instr_Move_EA_SR(uint16 instr) {
     SR.u16 = ReadEffectiveAddress<uint16>(M, Xn) & 0xF71F;
 }
 
-void MC68EC000::Instr_MoveQ(uint16 instr) {
-    const sint32 value = static_cast<sint8>(bit::extract<0, 7>(instr));
-    const uint32 reg = bit::extract<9, 11>(instr);
-    D[reg] = value;
-    SetLogicFlags(value);
-}
-
 void MC68EC000::Instr_MoveA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
@@ -350,9 +348,94 @@ void MC68EC000::Instr_MoveA(uint16 instr) {
     const uint16 size = bit::extract<12, 13>(instr);
 
     switch (size) {
-    case 0b11: A[An] = static_cast<sint16>(ReadEffectiveAddress<uint16>(M, Xn)); break;
-    case 0b10: A[An] = ReadEffectiveAddress<uint32>(M, Xn); break;
+    case 0b11: regs.A[An] = static_cast<sint16>(ReadEffectiveAddress<uint16>(M, Xn)); break;
+    case 0b10: regs.A[An] = ReadEffectiveAddress<uint32>(M, Xn); break;
     }
+}
+
+void MC68EC000::Instr_MoveM_EA_Rs(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const bool sz = bit::extract<6>(instr);
+    const uint16 regList = FetchInstruction();
+    uint32 address = CalcEffectiveAddress(M, Xn);
+
+    auto xfer = [&]<std::integral T>(uint32 regIndex) {
+        const T value = MemRead<T, false>(address);
+        regs.DA[regIndex] = value;
+        address += sizeof(T);
+    };
+
+    for (uint32 i = 0; i < 16; i++) {
+        if (regList & (1u << i)) {
+            sz ? xfer.template operator()<uint32>(i) : xfer.template operator()<uint16>(i);
+        }
+    }
+}
+
+void MC68EC000::Instr_MoveM_PI_Rs(uint16 instr) {
+    const uint16 An = bit::extract<0, 2>(instr);
+    const bool sz = bit::extract<6>(instr);
+    const uint16 regList = FetchInstruction();
+
+    auto xfer = [&]<std::integral T>(uint32 regIndex) {
+        const uint32 address = regs.A[An];
+        const T value = MemRead<T, false>(address);
+        regs.DA[regIndex] = value;
+        regs.A[An] = address + sizeof(T);
+    };
+
+    for (uint32 i = 0; i < 16; i++) {
+        if (regList & (1u << i)) {
+            sz ? xfer.template operator()<uint32>(i) : xfer.template operator()<uint16>(i);
+        }
+    }
+}
+
+void MC68EC000::Instr_MoveM_Rs_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const bool sz = bit::extract<6>(instr);
+    const uint16 regList = FetchInstruction();
+    uint32 address = CalcEffectiveAddress(M, Xn);
+
+    auto xfer = [&]<std::integral T>(uint32 regIndex) {
+        const T value = regs.DA[regIndex];
+        MemWrite<T>(address, value);
+        address += sizeof(T);
+    };
+
+    for (uint32 i = 0; i < 16; i++) {
+        if (regList & (1u << i)) {
+            sz ? xfer.template operator()<uint32>(i) : xfer.template operator()<uint16>(i);
+        }
+    }
+}
+
+void MC68EC000::Instr_MoveM_Rs_PD(uint16 instr) {
+    const uint16 An = bit::extract<0, 2>(instr);
+    const bool sz = bit::extract<6>(instr);
+    const uint16 regList = FetchInstruction();
+
+    auto xfer = [&]<std::integral T>(uint32 regIndex) {
+        const uint32 address = regs.A[An] - sizeof(T);
+        const T value = regs.DA[15 - regIndex];
+        MemWrite<T>(address, value);
+        regs.A[An] = address - sizeof(T);
+    };
+
+    for (uint32 i = 0; i < 16; i++) {
+        if (regList & (1u << i)) {
+            sz ? xfer.template operator()<uint32>(i) : xfer.template operator()<uint16>(i);
+        }
+    }
+}
+
+void MC68EC000::Instr_MoveQ(uint16 instr) {
+    const sint32 value = static_cast<sint8>(bit::extract<0, 7>(instr));
+    const uint32 reg = bit::extract<9, 11>(instr);
+    regs.D[reg] = value;
+    SetLogicFlags(value);
 }
 
 void MC68EC000::Instr_AddA(uint16 instr) {
@@ -362,9 +445,9 @@ void MC68EC000::Instr_AddA(uint16 instr) {
     const uint16 An = bit::extract<9, 11>(instr);
 
     if (sz) {
-        A[An] += ReadEffectiveAddress<uint32>(M, Xn);
+        regs.A[An] += ReadEffectiveAddress<uint32>(M, Xn);
     } else {
-        A[An] += ReadEffectiveAddress<uint16>(M, Xn);
+        regs.A[An] += ReadEffectiveAddress<uint16>(M, Xn);
     }
 }
 
@@ -397,9 +480,9 @@ void MC68EC000::Instr_AddQ_An(uint16 instr) {
 
     auto op = [&]<std::integral T>() {
         const uint32 op1 = static_cast<std::make_signed_t<T>>(bit::extract<9, 11>(instr));
-        const uint32 op2 = A[An];
+        const uint32 op2 = regs.A[An];
         const uint32 result = op2 + op1;
-        A[An] = result;
+        regs.A[An] = result;
         SetArithFlags(op1, op2, result);
     };
 
@@ -460,7 +543,7 @@ void MC68EC000::Instr_Or_Dn_EA(uint16 instr) {
     const uint16 Dn = bit::extract<9, 11>(instr);
 
     auto op = [&]<std::integral T>() {
-        const T op1 = D[Dn];
+        const T op1 = regs.D[Dn];
         const T op2 = ReadEffectiveAddress<T>(M, Xn);
         const T result = op2 | op1;
         WriteEffectiveAddress<T>(M, Xn, result);
@@ -482,9 +565,9 @@ void MC68EC000::Instr_Or_EA_Dn(uint16 instr) {
 
     auto op = [&]<std::integral T>() {
         const T op1 = ReadEffectiveAddress<T>(M, Xn);
-        const T op2 = D[Dn];
+        const T op2 = regs.D[Dn];
         const T result = op2 | op1;
-        D[Dn] = result;
+        regs.D[Dn] = result;
         SetLogicFlags(result);
     };
 
@@ -523,7 +606,7 @@ void MC68EC000::Instr_LEA(uint16 instr) {
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 An = bit::extract<9, 11>(instr);
 
-    A[An] = CalcEffectiveAddress(M, Xn);
+    regs.A[An] = CalcEffectiveAddress(M, Xn);
 }
 
 void MC68EC000::Instr_BRA(uint16 instr) {
@@ -542,8 +625,8 @@ void MC68EC000::Instr_BSR(uint16 instr) {
         disp = static_cast<sint16>(FetchInstruction());
     }
 
-    A[7] -= 4;
-    MemWriteLong(A[7], currPC);
+    regs.SP -= 4;
+    MemWriteLong(regs.SP, currPC);
     PC = currPC + disp;
 }
 
@@ -566,8 +649,8 @@ void MC68EC000::Instr_DBcc(uint16 instr) {
     const sint16 disp = static_cast<sint16>(FetchInstruction());
 
     if (!kCondTable[(cond << 4u) | SR.flags]) {
-        const uint16 value = D[Dn] - 1;
-        D[Dn] = (D[Dn] & 0xFFFF0000) | value;
+        const uint16 value = regs.D[Dn] - 1;
+        regs.D[Dn] = (regs.D[Dn] & 0xFFFF0000) | value;
         if (value != 0xFFFFu) {
             PC = currPC + disp;
         }
@@ -580,14 +663,14 @@ void MC68EC000::Instr_JSR(uint16 instr) {
 
     const uint32 target = CalcEffectiveAddress(M, Xn);
 
-    A[7] -= 4;
-    MemWriteLong(A[7], PC);
+    regs.SP -= 4;
+    MemWriteLong(regs.SP, PC);
     PC = target;
 }
 
 void MC68EC000::Instr_RTS(uint16 instr) {
-    PC = MemReadLong(A[7]);
-    A[7] += 4;
+    PC = MemReadLong(regs.SP);
+    regs.SP += 4;
 }
 
 void MC68EC000::Instr_Illegal(uint16 instr) {

@@ -36,8 +36,31 @@ private:
     // -------------------------------------------------------------------------
     // CPU state
 
-    std::array<uint32, 8> D; // Data registers D0-D7
-    std::array<uint32, 8> A; // Address registers A0-A7
+    union Regs {
+        std::array<uint32, 8 + 8> DA; // D0-D7 followed by A0-A7
+        struct {
+            std::array<uint32, 8> D; // Data registers D0-D7
+            std::array<uint32, 8> A; // Address registers A0-A7
+        };
+        struct {
+            uint32 D0;
+            uint32 D1;
+            uint32 D2;
+            uint32 D3;
+            uint32 D4;
+            uint32 D5;
+            uint32 D6;
+            uint32 D7;
+            uint32 A0;
+            uint32 A1;
+            uint32 A2;
+            uint32 A3;
+            uint32 A4;
+            uint32 A5;
+            uint32 A6;
+            uint32 SP;
+        };
+    } regs;
 
     // This variable stores the value of the inactive stack pointer.
     //
@@ -130,8 +153,12 @@ private:
 
     void Instr_Move_EA_EA(uint16 instr);
     void Instr_Move_EA_SR(uint16 instr);
-    void Instr_MoveQ(uint16 instr);
     void Instr_MoveA(uint16 instr);
+    void Instr_MoveM_EA_Rs(uint16 instr);
+    void Instr_MoveM_PI_Rs(uint16 instr);
+    void Instr_MoveM_Rs_EA(uint16 instr);
+    void Instr_MoveM_Rs_PD(uint16 instr);
+    void Instr_MoveQ(uint16 instr);
 
     void Instr_AddA(uint16 instr);
     void Instr_AddI(uint16 instr);
