@@ -77,6 +77,15 @@ static constexpr auto kValidDataAlterableAddrModes = [] {
     return arr;
 }();
 
+// Valid memory alterable addressing modes
+static constexpr auto kValidMemoryAlterableAddrModes = [] {
+    std::array<bool, 0b111'111 + 1> arr = kValidControlAddrModes;
+    for (int i = 0; i < arr.size(); i++) {
+        arr[i] &= kValidAlterableAddrModes[i];
+    }
+    return arr;
+}();
+
 // Valid control alterable addressing modes
 static constexpr auto kValidControlAlterableAddrModes = [] {
     std::array<bool, 0b111'111 + 1> arr = kValidControlAddrModes;
@@ -221,7 +230,25 @@ DecodeTable BuildDecodeTable() {
                 opcode = legalIf(OpcodeType::AddA, kValidAddrModes[bit::extract<0, 5>(instr)]);
             }
             break;
-        case 0xE: break;
+        case 0xE:
+            if (bit::extract<6, 7>(instr) == 0b11) {
+                const uint16 ea = bit::extract<0, 5>(instr);
+                const bool dir = bit::extract<8>(instr);
+                opcode = legalIf(dir ? OpcodeType::LSL_M : OpcodeType::LSR_M, kValidMemoryAlterableAddrModes[ea]);
+            } else {
+                const bool reg = bit::extract<5>(instr);
+                const bool dir = bit::extract<8>(instr);
+                switch (bit::extract<3, 4>(instr)) {
+                case 0b00: /* TODO: ASL/ASR */ break;
+                case 0b01:
+                    opcode = reg ? (dir ? OpcodeType::LSL_R : OpcodeType::LSR_R)
+                                 : (dir ? OpcodeType::LSL_I : OpcodeType::LSR_I);
+                    break;
+                case 0b10: /* TODO: ROXL/ROXR */ break;
+                case 0b11: /* TODO: ROL/ROR */ break;
+                }
+            }
+            break;
         case 0xF: break;
         }
     }

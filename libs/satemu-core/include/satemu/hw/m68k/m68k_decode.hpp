@@ -60,6 +60,13 @@ enum class OpcodeType : uint8 {
     Or_EA_Dn, // or.<sz> <ea>, Dn
     SubI,     // subi.<sz> #<data>, <ea>
 
+    LSL_I, // lsl.<sz> #<data>, <ea>
+    LSL_M, // lsl.<sz> <ea>
+    LSL_R, // lsl.<sz> dn, <ea>
+    LSR_I, // lsr.<sz> #<data>, <ea>
+    LSR_M, // lsr.<sz> <ea>
+    LSR_R, // lsr.<sz> dn, <ea>
+
     Cmp, // cmp.<sz> <ea>, Dn
 
     LEA, // lea <ea>, an

@@ -267,6 +267,15 @@ void MC68EC000::SetLogicFlags(T result) {
     SR.C = 0;
 }
 
+template <std::integral T>
+void MC68EC000::SetShiftFlags(T result, bool carry) {
+    static constexpr T shift = sizeof(T) * 8 - 1;
+    SR.N = result >> shift;
+    SR.Z = result == 0;
+    SR.V = 0;
+    SR.C = SR.X = carry;
+}
+
 // -----------------------------------------------------------------------------
 // Interpreter
 
@@ -293,6 +302,13 @@ void MC68EC000::Execute() {
     case OpcodeType::Or_Dn_EA: Instr_Or_Dn_EA(instr); break;
     case OpcodeType::Or_EA_Dn: Instr_Or_EA_Dn(instr); break;
     case OpcodeType::SubI: Instr_SubI(instr); break;
+
+    case OpcodeType::LSL_I: Instr_LSL_I(instr); break;
+    case OpcodeType::LSL_M: Instr_LSL_M(instr); break;
+    case OpcodeType::LSL_R: Instr_LSL_R(instr); break;
+    case OpcodeType::LSR_I: Instr_LSR_I(instr); break;
+    case OpcodeType::LSR_M: Instr_LSR_M(instr); break;
+    case OpcodeType::LSR_R: Instr_LSR_R(instr); break;
 
     case OpcodeType::Cmp: Instr_Cmp(instr); break;
 
@@ -606,6 +622,158 @@ void MC68EC000::Instr_SubI(uint16 instr) {
         const T result = op2 - op1;
         WriteEffectiveAddress<T>(M, Xn, result);
         SetArithFlags(op1, op2, result);
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+void MC68EC000::Instr_LSL_I(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    uint32 shift = bit::extract<9, 11>(instr);
+    if (shift == 0) {
+        shift = 8;
+    }
+
+    auto op = [&]<std::integral T>() {
+        if (sizeof(T) == sizeof(uint8) && shift == 8) {
+            const T value = regs.D[Dn];
+            const T result = 0;
+            const bool carry = value >> 7;
+            regs.D[Dn] = result;
+            SetShiftFlags(result, carry);
+        } else {
+            const T value = regs.D[Dn];
+            const T result = value << shift;
+            const bool carry = (value >> (sizeof(T) * 8 - shift)) & 1;
+            regs.D[Dn] = result;
+            SetShiftFlags(result, carry);
+        }
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+void MC68EC000::Instr_LSL_M(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+
+    const uint16 value = ReadEffectiveAddress<uint16>(M, Xn);
+    const uint16 result = value << 1u;
+    const bool carry = value >> 15u;
+    WriteEffectiveAddress<uint16>(M, Xn, result);
+    SetShiftFlags(result, carry);
+}
+
+void MC68EC000::Instr_LSL_R(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 shiftReg = bit::extract<9, 11>(instr);
+    const uint32 shift = regs.D[shiftReg] & 63;
+
+    auto op = [&]<std::integral T>() {
+        const T value = regs.D[Dn];
+        T result;
+        bool carry;
+        if (shift > sizeof(T) * 8) {
+            result = 0;
+            carry = false;
+        } else if (shift == sizeof(T) * 8) {
+            result = 0;
+            carry = value & 1;
+        } else if (shift != 0) {
+            result = value << shift;
+            carry = (value >> (sizeof(T) * 8 - shift)) & 1;
+        } else {
+            result = value;
+            carry = false;
+        }
+        regs.D[Dn] = result;
+        SetShiftFlags(result, carry);
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+void MC68EC000::Instr_LSR_I(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    uint32 shift = bit::extract<9, 11>(instr);
+    if (shift == 0) {
+        shift = 8;
+    }
+
+    auto op = [&]<std::integral T>() {
+        if (sizeof(T) == sizeof(uint8) && shift == 8) {
+            const T value = regs.D[Dn];
+            const T result = 0;
+            const bool carry = value & 1;
+            regs.D[Dn] = result;
+            SetShiftFlags(result, carry);
+        } else {
+            const T value = regs.D[Dn];
+            const T result = value >> shift;
+            const bool carry = (value >> (shift - 1)) & 1;
+            regs.D[Dn] = result;
+            SetShiftFlags(result, carry);
+        }
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+void MC68EC000::Instr_LSR_M(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+
+    const uint16 value = ReadEffectiveAddress<uint16>(M, Xn);
+    const uint16 result = value >> 1u;
+    const bool carry = value & 1;
+    WriteEffectiveAddress<uint16>(M, Xn, result);
+    SetShiftFlags(result, carry);
+}
+
+void MC68EC000::Instr_LSR_R(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 shiftReg = bit::extract<9, 11>(instr);
+    const uint32 shift = regs.D[shiftReg] & 63;
+
+    auto op = [&]<std::integral T>() {
+        const T value = regs.D[Dn];
+        T result;
+        bool carry;
+        if (shift > sizeof(T) * 8) {
+            result = 0;
+            carry = false;
+        } else if (shift == sizeof(T) * 8) {
+            result = 0;
+            carry = value >> (sizeof(T) * 8 - 1);
+        } else if (shift != 0) {
+            result = value >> shift;
+            carry = (value >> (shift - 1)) & 1;
+        } else {
+            result = value;
+            carry = false;
+        }
+        regs.D[Dn] = result;
+        SetShiftFlags(result, carry);
     };
 
     switch (sz) {

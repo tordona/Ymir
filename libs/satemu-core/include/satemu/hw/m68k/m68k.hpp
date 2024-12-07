@@ -129,19 +129,19 @@ private:
     uint32 CalcEffectiveAddress(uint8 M, uint8 Xn);
 
     // Update XNZVC flags based on the result of an arithmetic operation:
-    //  C is set if the operation resulted in a carry or borrow
     //  N is set if the result is negative (MSB set)
-    //  V is set if the result overflows
     //  Z is set if the result is zero
+    //  V is set if the result overflows
+    //  C is set if the operation resulted in a carry or borrow
     //  X is set to C if setX is true
     template <std::integral T, bool setX = false>
     void SetArithFlags(T op1, T op2, T result);
 
     // Update XNZVC flags based on the result of a comparison operation:
-    //  C is set if the operation resulted in a carry or borrow
     //  N is set if the result is negative (MSB set)
-    //  V is set if the result overflows
     //  Z is set if the result is zero
+    //  V is set if the result overflows
+    //  C is set if the operation resulted in a carry or borrow
     //  X is not changed
     template <std::integral T>
     void SetCompareFlags(T op1, T op2, T result) {
@@ -149,12 +149,20 @@ private:
     }
 
     // Update NZVC flags based on the result of a logic or move operation.
-    //  X is not updated
     //  N is set if the result is negative (MSB set)
     //  Z is set if the result is zero
     //  V and C are cleared
+    //  X is not updated
     template <std::integral T>
     void SetLogicFlags(T result);
+
+    // Update XNZVC flags based on the result of a bit shift or rotation operation:
+    //  N is set if the result is negative (MSB set)
+    //  Z is set if the result is zero
+    //  V is set if the result overflows
+    //  C and X are set to the last bit shifted out
+    template <std::integral T>
+    void SetShiftFlags(T result, bool carry);
 
     // -------------------------------------------------------------------------
     // Interpreter
@@ -183,6 +191,13 @@ private:
     void Instr_Or_Dn_EA(uint16 instr);
     void Instr_Or_EA_Dn(uint16 instr);
     void Instr_SubI(uint16 instr);
+
+    void Instr_LSL_I(uint16 instr);
+    void Instr_LSL_M(uint16 instr);
+    void Instr_LSL_R(uint16 instr);
+    void Instr_LSR_I(uint16 instr);
+    void Instr_LSR_M(uint16 instr);
+    void Instr_LSR_R(uint16 instr);
 
     void Instr_Cmp(uint16 instr);
 
