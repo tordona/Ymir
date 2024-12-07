@@ -73,7 +73,9 @@ DecodeTable BuildDecodeTable() {
     table.opcodeTypes.fill(OpcodeType::Undecoded);
 
     for (uint32 instr = 0; instr < 0x10000; instr++) {
-        auto &opcodeEntry = table.opcodeTypes[instr];
+        auto &opcode = table.opcodeTypes[instr];
+
+        auto legalIf = [](OpcodeType type, bool cond) { return cond ? type : OpcodeType::Illegal; };
 
         switch (instr >> 12u) {
         case 0x0: break;
@@ -82,64 +84,47 @@ DecodeTable BuildDecodeTable() {
         case 0x3:
             if (bit::extract<6, 8>(instr) == 0b001) {
                 if ((instr >> 12u) != 0b01) {
-                    opcodeEntry = OpcodeType::MoveA;
+                    opcode = OpcodeType::MoveA;
                 }
             } else {
                 const uint16 srcEA = bit::extract<0, 5>(instr);
                 const uint16 dstEA = (bit::extract<6, 8>(instr) << 3) | bit::extract<9, 11>(instr);
-                if (kValidDataAddrModes[dstEA] && kValidAlterableAddrModes[dstEA] && kValidAddrModes[srcEA]) {
-                    opcodeEntry = OpcodeType::Move_EA_EA;
-                } else {
-                    opcodeEntry = OpcodeType::Illegal;
-                }
+                opcode = legalIf(OpcodeType::Move_EA_EA, kValidDataAddrModes[dstEA] &&
+                                                             kValidAlterableAddrModes[dstEA] && kValidAddrModes[srcEA]);
             }
             break;
         case 0x4:
             if (bit::extract<6, 11>(instr) == 0b011011) {
-                if (kValidDataAddrModes[bit::extract<0, 5>(instr)]) {
-                    opcodeEntry = OpcodeType::Move_EA_SR;
-                } else {
-                    opcodeEntry = OpcodeType::Illegal;
-                }
+                opcode = legalIf(OpcodeType::Move_EA_SR, kValidDataAddrModes[bit::extract<0, 5>(instr)]);
             } else if (bit::extract<6, 11>(instr) == 0b111010) {
-                if (kValidControlAddrModes[bit::extract<0, 5>(instr)]) {
-                    opcodeEntry = OpcodeType::JSR;
-                } else {
-                    opcodeEntry = OpcodeType::Illegal;
-                }
+                opcode = legalIf(OpcodeType::JSR, kValidControlAddrModes[bit::extract<0, 5>(instr)]);
             } else if (bit::extract<6, 8>(instr) == 0b111) {
-                if (kValidControlAddrModes[bit::extract<0, 5>(instr)]) {
-                    opcodeEntry = OpcodeType::LEA;
-                } else {
-                    opcodeEntry = OpcodeType::Illegal;
-                }
+                opcode = legalIf(OpcodeType::LEA, kValidControlAddrModes[bit::extract<0, 5>(instr)]);
             }
             break;
         case 0x5:
             if (bit::extract<3, 7>(instr) == 0b11001) {
-                opcodeEntry = OpcodeType::DBcc;
+                opcode = OpcodeType::DBcc;
             }
             break;
         case 0x6:
             switch (bit::extract<8, 11>(instr)) {
-            case 0b0000: opcodeEntry = OpcodeType::BRA; break;
-            case 0b0001: opcodeEntry = OpcodeType::BSR; break;
-            default: opcodeEntry = OpcodeType::Bcc; break;
+            case 0b0000: opcode = OpcodeType::BRA; break;
+            case 0b0001: opcode = OpcodeType::BSR; break;
+            default: opcode = OpcodeType::Bcc; break;
             }
             break;
-        case 0x7:
-            if (bit::extract<8>(instr) == 0) {
-                opcodeEntry = OpcodeType::MoveQ;
-            } else {
-                opcodeEntry = OpcodeType::Illegal;
-            }
-            break;
+        case 0x7: opcode = legalIf(OpcodeType::MoveQ, bit::extract<8>(instr) == 0); break;
         case 0x8: break;
         case 0x9: break;
         case 0xA: break;
         case 0xB: break;
         case 0xC: break;
-        case 0xD: break;
+        case 0xD:
+            if (bit::extract<6, 7>(instr) == 0b11) {
+                opcode = legalIf(OpcodeType::AddA, kValidAddrModes[bit::extract<0, 5>(instr)]);
+            }
+            break;
         case 0xE: break;
         case 0xF: break;
         }

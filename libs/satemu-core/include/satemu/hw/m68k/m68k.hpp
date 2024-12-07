@@ -118,6 +118,8 @@ private:
     void Instr_MoveQ(uint16 instr);
     void Instr_MoveA(uint16 instr);
 
+    void Instr_AddA(uint16 instr);
+
     void Instr_LEA(uint16 instr);
 
     void Instr_BRA(uint16 instr);

@@ -45,12 +45,14 @@ enum class OpcodeType : uint8 {
     MoveQ,      // moveq #<imm>, dn
     MoveA,      // movea.<sz> <ea>, an
 
+    AddA, // adda.<sz> <ea>, an
+
     LEA, // lea <ea>, an
 
     BRA,  // bra <label>
     BSR,  // bsr <label>
     Bcc,  // b<cc> <label>
-    DBcc, // db<cc> <label>
+    DBcc, // db<cc>.<sz> dn, <label>
     JSR,  // jsr <ea>
 
     Illegal,   // any illegal instruction, including the designated ILLEGAL instruction 0100 1010 1111 1100

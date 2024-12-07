@@ -242,6 +242,8 @@ void MC68EC000::Execute() {
     case OpcodeType::MoveQ: Instr_MoveQ(instr); break;
     case OpcodeType::MoveA: Instr_MoveA(instr); break;
 
+    case OpcodeType::AddA: Instr_AddA(instr); break;
+
     case OpcodeType::LEA: Instr_LEA(instr); break;
 
     case OpcodeType::BRA: Instr_BRA(instr); break;
@@ -335,6 +337,19 @@ void MC68EC000::Instr_MoveA(uint16 instr) {
     }
 }
 
+void MC68EC000::Instr_AddA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const bool sz = bit::extract<8>(instr);
+    const uint16 An = bit::extract<9, 11>(instr);
+
+    if (sz) {
+        A[An] += ReadEffectiveAddress<uint32>(M, Xn);
+    } else {
+        A[An] += ReadEffectiveAddress<uint16>(M, Xn);
+    }
+}
+
 void MC68EC000::Instr_LEA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
@@ -387,8 +402,6 @@ void MC68EC000::Instr_DBcc(uint16 instr) {
         D[Dn] = (D[Dn] & 0xFFFF0000) | value;
         if (value != 0xFFFFu) {
             PC = currPC + disp;
-        } else {
-            __debugbreak();
         }
     }
 }
