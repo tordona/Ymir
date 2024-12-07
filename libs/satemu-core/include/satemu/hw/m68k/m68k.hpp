@@ -229,6 +229,10 @@ private:
     void Instr_Cmp(uint16 instr);
     void Instr_CmpA(uint16 instr);
     void Instr_CmpI(uint16 instr);
+    void Instr_BTst_I_Dn(uint16 instr);
+    void Instr_BTst_I_EA(uint16 instr);
+    void Instr_BTst_R_Dn(uint16 instr);
+    void Instr_BTst_R_EA(uint16 instr);
 
     void Instr_LEA(uint16 instr);
 

@@ -388,6 +388,10 @@ void MC68EC000::Execute() {
     case OpcodeType::Cmp: Instr_Cmp(instr); break;
     case OpcodeType::CmpA: Instr_CmpA(instr); break;
     case OpcodeType::CmpI: Instr_CmpI(instr); break;
+    case OpcodeType::BTst_I_Dn: Instr_BTst_I_Dn(instr); break;
+    case OpcodeType::BTst_I_EA: Instr_BTst_I_EA(instr); break;
+    case OpcodeType::BTst_R_Dn: Instr_BTst_R_Dn(instr); break;
+    case OpcodeType::BTst_R_EA: Instr_BTst_R_EA(instr); break;
 
     case OpcodeType::LEA: Instr_LEA(instr); break;
 
@@ -991,6 +995,42 @@ void MC68EC000::Instr_CmpI(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+}
+
+void MC68EC000::Instr_BTst_I_Dn(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 index = FetchInstruction() & 31;
+
+    const uint32 value = regs.D[Dn];
+    SR.Z = (value >> index) & 1;
+}
+
+void MC68EC000::Instr_BTst_I_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 index = FetchInstruction() & 7;
+
+    const uint8 value = ReadEffectiveAddress<uint8>(M, Xn);
+    SR.Z = (value >> index) & 1;
+}
+
+void MC68EC000::Instr_BTst_R_Dn(uint16 instr) {
+    const uint16 dstDn = bit::extract<0, 2>(instr);
+    const uint16 srcDn = bit::extract<9, 11>(instr);
+    const uint16 index = regs.D[srcDn] & 31;
+
+    const uint32 value = regs.D[dstDn];
+    SR.Z = (value >> index) & 1;
+}
+
+void MC68EC000::Instr_BTst_R_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 srcDn = bit::extract<9, 11>(instr);
+    const uint16 index = regs.D[srcDn] & 8;
+
+    const uint8 value = ReadEffectiveAddress<uint8>(M, Xn);
+    SR.Z = (value >> index) & 1;
 }
 
 void MC68EC000::Instr_LEA(uint16 instr) {

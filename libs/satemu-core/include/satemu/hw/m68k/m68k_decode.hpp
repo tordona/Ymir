@@ -70,9 +70,13 @@ enum class OpcodeType : uint8 {
     LSR_M, // lsr.<sz> <ea>
     LSR_R, // lsr.<sz> Dn, <ea>
 
-    Cmp,  // cmp.<sz> <ea>, An
-    CmpA, // cmpa <ea>, An
-    CmpI, // cmpi.<sz> #<data>, <ea>
+    Cmp,       // cmp.<sz> <ea>, An
+    CmpA,      // cmpa <ea>, An
+    CmpI,      // cmpi.<sz> #<data>, <ea>
+    BTst_I_Dn, // btst.<sz> #<data>, Dn
+    BTst_I_EA, // btst.<sz> #<data>, <ea>
+    BTst_R_Dn, // btst.<sz> Dn, Dn
+    BTst_R_EA, // btst.<sz> Dn, <ea>
 
     LEA, // lea <ea>, An
 
