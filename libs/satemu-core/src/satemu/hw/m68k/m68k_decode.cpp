@@ -163,7 +163,18 @@ DecodeTable BuildDecodeTable() {
             }
             break;
         case 0x7: opcode = legalIf(OpcodeType::MoveQ, bit::extract<8>(instr) == 0); break;
-        case 0x8: break;
+        case 0x8: {
+            const uint16 ea = bit::extract<0, 5>(instr);
+            if (bit::extract<6, 7>(instr) == 0b11) {
+                // TODO: DIVU, DIVS
+            } else if (bit::extract<4, 8>(instr) == 0b10000) {
+                // TODO: SBCD
+            } else {
+                const uint16 dir = bit::extract<8>(instr);
+                opcode = legalIf(dir ? OpcodeType::Or_Dn_EA : OpcodeType::Or_EA_Dn, kValidDataAddrModes[ea]);
+            }
+            break;
+        }
         case 0x9: break;
         case 0xA: break;
         case 0xB: break;

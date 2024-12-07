@@ -45,12 +45,14 @@ enum class OpcodeType : uint8 {
     MoveQ,      // moveq #<imm>, dn
     MoveA,      // movea.<sz> <ea>, an
 
-    AddA,    // adda.<sz> <ea>, an
-    AddI,    // addi.<sz> #<data>, <ea>
-    AndI_EA, // andi.<sz> #<data>, <ea>
-    AddQ_An, // addq.<sz> #<data>, an
-    AddQ_EA, // addq.<sz> #<data>, <ea>
-    SubI,    // subi.<sz> #<data>, <ea>
+    AddA,     // adda.<sz> <ea>, an
+    AddI,     // addi.<sz> #<data>, <ea>
+    AndI_EA,  // andi.<sz> #<data>, <ea>
+    AddQ_An,  // addq.<sz> #<data>, an
+    AddQ_EA,  // addq.<sz> #<data>, <ea>
+    Or_Dn_EA, // or.<sz> Dn, <ea>
+    Or_EA_Dn, // or.<sz> <ea>, Dn
+    SubI,     // subi.<sz> #<data>, <ea>
 
     LEA, // lea <ea>, an
 
