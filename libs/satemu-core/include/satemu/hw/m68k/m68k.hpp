@@ -32,6 +32,8 @@ public:
 
     void Step();
 
+    void SetExternalInterruptLevel(uint8 level);
+
 private:
     // -------------------------------------------------------------------------
     // CPU state
@@ -119,48 +121,7 @@ private:
     // -------------------------------------------------------------------------
     // Exception handling
 
-    enum class ExceptionVector : uint32 {
-        ResetSSP = 0x0,
-        ResetPC = 0x1,
-        BusError = 0x2,
-        AddressError = 0x3,
-        IllegalInstruction = 0x4,
-        ZeroDivide = 0x5,
-        CHKInstruction = 0x6,
-        TRAPVInstruction = 0x7,
-        PrivilegeViolation = 0x8,
-        Trace = 0x9,
-        Line1010Emulator = 0xA,
-        Line1111Emulator = 0xB,
-
-        UninitializedInterrupt = 0xF,
-
-        SpuriousInterrupt = 0x18,
-        Level1InterruptAutovector = 0x19,
-        Level2InterruptAutovector = 0x1A,
-        Level3InterruptAutovector = 0x1B,
-        Level4InterruptAutovector = 0x1C,
-        Level5InterruptAutovector = 0x1D,
-        Level6InterruptAutovector = 0x1E,
-        Level7InterruptAutovector = 0x1F,
-
-        TRAPVector0 = 0x20,
-        TRAPVector1 = 0x21,
-        TRAPVector2 = 0x22,
-        TRAPVector3 = 0x23,
-        TRAPVector4 = 0x24,
-        TRAPVector5 = 0x25,
-        TRAPVector6 = 0x26,
-        TRAPVector7 = 0x27,
-        TRAPVector8 = 0x28,
-        TRAPVector9 = 0x29,
-        TRAPVectorA = 0x2A,
-        TRAPVectorB = 0x2B,
-        TRAPVectorC = 0x2C,
-        TRAPVectorD = 0x2D,
-        TRAPVectorE = 0x2E,
-        TRAPVectorF = 0x2F,
-    };
+    uint8 m_externalInterruptLevel;
 
     // Enters the specified exception vector
     void EnterException(ExceptionVector vector);
@@ -181,6 +142,9 @@ private:
     // Enters the privileged violation exception vector if running in user mode.
     // Returns true if the privileged instruction can be executed.
     bool CheckPrivilege();
+
+    // Enters the interrupt exception handler if there is a pending interrupt not masked by the current interrupt level.
+    void CheckInterrupt();
 
     // -------------------------------------------------------------------------
     // Helper functions

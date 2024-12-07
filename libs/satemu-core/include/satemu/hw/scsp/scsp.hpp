@@ -115,6 +115,11 @@ private:
         fmt::println("unhandled {}-bit SCSP register write via {} to {:03X} = {:X}", sizeof(T) * 8,
                      (fromM68K ? "M68K" : "SCU"), address, value);
     }
+
+    // -------------------------------------------------------------------------
+    // Interrupt handling
+
+    m68k::ExceptionVector AcknowledgeInterrupt(uint8 level);
 };
 
 } // namespace satemu::scsp

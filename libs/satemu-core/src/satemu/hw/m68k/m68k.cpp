@@ -5,6 +5,8 @@
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/unreachable.hpp>
 
+#include <cassert>
+
 namespace satemu::m68k {
 
 MC68EC000::MC68EC000(M68kBus &bus)
@@ -22,10 +24,17 @@ void MC68EC000::Reset(bool hard) {
     PC = MemReadLong(0x00000004);
 
     SR.u16 = 0;
+
+    m_externalInterruptLevel = 0;
 }
 
 void MC68EC000::Step() {
     Execute();
+}
+
+void MC68EC000::SetExternalInterruptLevel(uint8 level) {
+    assert(level <= 7);
+    m_externalInterruptLevel = level;
 }
 
 template <mem_access_type T, bool instrFetch>
@@ -107,6 +116,17 @@ bool MC68EC000::CheckPrivilege() {
         EnterException(ExceptionVector::PrivilegeViolation);
     }
     return SR.S;
+}
+
+void MC68EC000::CheckInterrupt() {
+    const uint8 level = m_externalInterruptLevel;
+    if (level == 7 || level > SR.IPM) {
+        ExceptionVector vector = m_bus.AcknowledgeInterrupt(level);
+        if (vector == ExceptionVector::AutoVectorRequest) {
+            vector = static_cast<ExceptionVector>(static_cast<uint32>(ExceptionVector::BaseAutovector) + level);
+        }
+        HandleInterrupt(vector, level);
+    }
 }
 
 // M   Xn
@@ -392,6 +412,8 @@ void MC68EC000::SetShiftFlags(T result, bool carry) {
 // Interpreter
 
 void MC68EC000::Execute() {
+    CheckInterrupt();
+
     const uint16 instr = FetchInstruction();
 
     const OpcodeType type = g_decodeTable.opcodeTypes[instr];

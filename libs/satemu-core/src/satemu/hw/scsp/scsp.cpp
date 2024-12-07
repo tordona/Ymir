@@ -1,5 +1,7 @@
 #include <satemu/hw/scsp/scsp.hpp>
 
+using namespace satemu::m68k;
+
 namespace satemu::scsp {
 
 SCSP::SCSP()
@@ -29,6 +31,11 @@ void SCSP::SetCPUEnabled(bool enabled) {
         m_m68k.Reset(true); // false? does it matter?
     }
     m_cpuEnabled = enabled;
+}
+
+ExceptionVector SCSP::AcknowledgeInterrupt(uint8 level) {
+    // TODO: does the SCSP allow setting specific vector numbers?
+    return ExceptionVector::AutoVectorRequest;
 }
 
 } // namespace satemu::scsp
