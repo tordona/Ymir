@@ -94,7 +94,9 @@ DecodeTable BuildDecodeTable() {
             }
             break;
         case 0x4:
-            if (bit::extract<6, 11>(instr) == 0b011011) {
+            if (instr == 0x4E75) {
+                opcode = OpcodeType::RTS;
+            } else if (bit::extract<6, 11>(instr) == 0b011011) {
                 opcode = legalIf(OpcodeType::Move_EA_SR, kValidDataAddrModes[bit::extract<0, 5>(instr)]);
             } else if (bit::extract<6, 11>(instr) == 0b111010) {
                 opcode = legalIf(OpcodeType::JSR, kValidControlAddrModes[bit::extract<0, 5>(instr)]);

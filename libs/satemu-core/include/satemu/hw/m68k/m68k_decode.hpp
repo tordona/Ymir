@@ -55,6 +55,8 @@ enum class OpcodeType : uint8 {
     DBcc, // db<cc>.<sz> dn, <label>
     JSR,  // jsr <ea>
 
+    RTS, // rts
+
     Illegal,   // any illegal instruction, including the designated ILLEGAL instruction 0100 1010 1111 1100
     Undecoded, // instructions that the decoding table is missing; should not happen
 };

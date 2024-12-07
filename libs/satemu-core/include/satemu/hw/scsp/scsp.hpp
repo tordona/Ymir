@@ -98,16 +98,16 @@ private:
     template <mem_access_type T, bool fromM68K, bool instrFetch>
     T ReadReg(uint32 address) {
         if constexpr (!instrFetch) {
-            fmt::println("unhandled {}-bit SCSP register read from {:03X} via {}", sizeof(T) * 8, address,
-                         (fromM68K ? "M68K" : "SCU"));
+            fmt::println("unhandled {}-bit SCSP register read via {} from {:03X}", sizeof(T) * 8,
+                         (fromM68K ? "M68K" : "SCU"), address);
         }
         return 0;
     }
 
     template <mem_access_type T, bool fromM68K>
     void WriteReg(uint32 address, T value) {
-        fmt::println("unhandled {}-bit SCSP register write to {:03X} via {} = {:X}", sizeof(T) * 8, address,
-                     (fromM68K ? "M68K" : "SCU"), value);
+        fmt::println("unhandled {}-bit SCSP register write via {} to {:03X} = {:X}", sizeof(T) * 8,
+                     (fromM68K ? "M68K" : "SCU"), address, value);
     }
 };
 

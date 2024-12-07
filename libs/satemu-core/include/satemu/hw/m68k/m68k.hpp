@@ -128,6 +128,8 @@ private:
     void Instr_DBcc(uint16 instr);
     void Instr_JSR(uint16 instr);
 
+    void Instr_RTS(uint16 instr);
+
     void Instr_Illegal(uint16 instr);
 };
 

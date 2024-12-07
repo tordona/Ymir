@@ -252,6 +252,8 @@ void MC68EC000::Execute() {
     case OpcodeType::DBcc: Instr_DBcc(instr); break;
     case OpcodeType::JSR: Instr_JSR(instr); break;
 
+    case OpcodeType::RTS: Instr_RTS(instr); break;
+
     case OpcodeType::Illegal: Instr_Illegal(instr); break;
 
     case OpcodeType::Undecoded:
@@ -375,7 +377,7 @@ void MC68EC000::Instr_BSR(uint16 instr) {
     }
 
     A[7] -= 4;
-    MemWrite<uint32>(A[7], currPC);
+    MemWriteLong(A[7], currPC);
     PC = currPC + disp;
 }
 
@@ -407,13 +409,19 @@ void MC68EC000::Instr_DBcc(uint16 instr) {
 }
 
 void MC68EC000::Instr_JSR(uint16 instr) {
-    const uint32 currPC = PC;
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
 
+    const uint32 target = CalcEffectiveAddress(M, Xn);
+
     A[7] -= 4;
-    MemWrite<uint32>(A[7], currPC);
-    PC = CalcEffectiveAddress(M, Xn);
+    MemWriteLong(A[7], PC);
+    PC = target;
+}
+
+void MC68EC000::Instr_RTS(uint16 instr) {
+    PC = MemReadLong(A[7]);
+    A[7] += 4;
 }
 
 void MC68EC000::Instr_Illegal(uint16 instr) {
