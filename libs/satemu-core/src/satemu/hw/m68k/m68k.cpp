@@ -172,7 +172,8 @@ void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
     case 0b101: {
         const sint16 disp = static_cast<sint16>(FetchInstruction());
         MemWrite<T>(regs.A[Xn] + disp, value);
-    } break;
+        break;
+    }
     case 0b110: {
         const uint16 briefExtWord = FetchInstruction();
 
@@ -187,7 +188,73 @@ void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
             index &= 0xFFFF;
         }
         MemWrite<T>(regs.A[Xn] + disp + index, value);
-    } break;
+        break;
+    }
+    }
+}
+
+template <mem_access_type T, typename FnModify>
+void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify &&modify) {
+    static constexpr uint32 regMask = ~0u << (sizeof(T) * 8u - 1u) << 1u;
+
+    switch (M) {
+    case 0b000: {
+        const T value = modify(regs.D[Xn]);
+        regs.D[Xn] = (regs.D[Xn] & regMask) | value;
+        break;
+    }
+    case 0b001: {
+        const uint32 value = modify(regs.A[Xn]);
+        regs.A[Xn] = value;
+        break;
+    }
+    case 0b010: {
+        const T value = MemRead<T, false>(regs.A[Xn]);
+        const T result = modify(value);
+        MemWrite<T>(regs.A[Xn], result);
+        break;
+    }
+    case 0b011: {
+        const T value = MemRead<T, false>(regs.A[Xn]);
+        const T result = modify(value);
+        MemWrite<T>(regs.A[Xn], result);
+        regs.A[Xn] += sizeof(T);
+        break;
+    }
+    case 0b100: {
+        regs.A[Xn] -= sizeof(T);
+        const T value = MemRead<T, false>(regs.A[Xn]);
+        const T result = modify(value);
+        MemWrite<T>(regs.A[Xn], result);
+        break;
+    }
+    case 0b101: {
+        const sint16 disp = static_cast<sint16>(FetchInstruction());
+        const uint32 address = regs.A[Xn] + disp;
+        const T value = MemRead<T, false>(address);
+        const T result = modify(value);
+        MemWrite<T>(address, result);
+        break;
+    }
+    case 0b110: {
+        const uint16 briefExtWord = FetchInstruction();
+
+        const sint8 disp = static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
+        const bool s = bit::extract<11>(briefExtWord);
+        const uint8 extXn = bit::extract<12, 14>(briefExtWord);
+        const bool m = bit::extract<15>(briefExtWord);
+
+        uint32 index = m ? regs.A[extXn] : regs.D[extXn];
+        if (!s) {
+            // Word index
+            index &= 0xFFFF;
+        }
+        const uint32 address = regs.A[Xn] + disp + index;
+        const T value = MemRead<T, false>(address);
+        const T result = modify(value);
+        MemWrite<T>(address, result);
+        break;
+    }
     }
 }
 
@@ -288,6 +355,7 @@ void MC68EC000::Execute() {
     case OpcodeType::Move_EA_SR: Instr_Move_EA_SR(instr); break;
     case OpcodeType::MoveA: Instr_MoveA(instr); break;
     case OpcodeType::MoveM_EA_Rs: Instr_MoveM_EA_Rs(instr); break;
+    case OpcodeType::MoveM_PI_Rs: Instr_MoveM_PI_Rs(instr); break;
     case OpcodeType::MoveM_Rs_EA: Instr_MoveM_Rs_EA(instr); break;
     case OpcodeType::MoveM_Rs_PD: Instr_MoveM_Rs_PD(instr); break;
     case OpcodeType::MoveQ: Instr_MoveQ(instr); break;
@@ -446,7 +514,7 @@ void MC68EC000::Instr_MoveM_Rs_PD(uint16 instr) {
         const uint32 address = regs.A[An] - sizeof(T);
         const T value = regs.DA[15 - regIndex];
         MemWrite<T>(address, value);
-        regs.A[An] = address - sizeof(T);
+        regs.A[An] = address;
     };
 
     for (uint32 i = 0; i < 16; i++) {
@@ -478,10 +546,11 @@ void MC68EC000::Instr_Add_Dn_EA(uint16 instr) {
 
     auto op = [&]<std::integral T>() {
         const T op1 = regs.D[Dn];
-        const T op2 = ReadEffectiveAddress<T>(M, Xn);
-        const T result = op2 + op1;
-        WriteEffectiveAddress<T>(M, Xn, result);
-        SetArithFlags(op1, op2, result);
+        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+            const T result = op2 + op1;
+            SetArithFlags(op1, op2, result);
+            return result;
+        });
     };
 
     switch (sz) {
@@ -535,10 +604,11 @@ void MC68EC000::Instr_AddI(uint16 instr) {
         if constexpr (sizeof(T) == sizeof(uint32)) {
             op1 = (op1 << 16u) | FetchInstruction();
         }
-        const T op2 = ReadEffectiveAddress<T>(M, Xn);
-        const T result = op2 + op1;
-        WriteEffectiveAddress<T>(M, Xn, result);
-        SetArithFlags(op1, op2, result);
+        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+            const T result = op2 + op1;
+            SetArithFlags(op1, op2, result);
+            return result;
+        });
     };
 
     switch (sz) {
@@ -574,10 +644,11 @@ void MC68EC000::Instr_AddQ_EA(uint16 instr) {
 
     auto op = [&]<std::integral T>() {
         const T op1 = data == 0 ? 8 : data;
-        const T op2 = ReadEffectiveAddress<T>(M, Xn);
-        const T result = op2 + op1;
-        WriteEffectiveAddress<T>(M, Xn, result);
-        SetArithFlags(op1, op2, result);
+        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+            const T result = op2 + op1;
+            SetArithFlags(op1, op2, result);
+            return result;
+        });
     };
 
     switch (sz) {
@@ -597,10 +668,11 @@ void MC68EC000::Instr_AndI_EA(uint16 instr) {
         if constexpr (sizeof(T) == sizeof(uint32)) {
             op1 = (op1 << 16u) | FetchInstruction();
         }
-        const T op2 = ReadEffectiveAddress<T>(M, Xn);
-        const T result = op2 & op1;
-        WriteEffectiveAddress<T>(M, Xn, result);
-        SetLogicFlags(result);
+        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+            const T result = op2 & op1;
+            SetLogicFlags(result);
+            return result;
+        });
     };
 
     switch (sz) {
@@ -618,10 +690,11 @@ void MC68EC000::Instr_Or_Dn_EA(uint16 instr) {
 
     auto op = [&]<std::integral T>() {
         const T op1 = regs.D[Dn];
-        const T op2 = ReadEffectiveAddress<T>(M, Xn);
-        const T result = op2 | op1;
-        WriteEffectiveAddress<T>(M, Xn, result);
-        SetLogicFlags(result);
+        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+            const T result = op2 | op1;
+            SetLogicFlags(result);
+            return result;
+        });
     };
 
     switch (sz) {
@@ -662,10 +735,11 @@ void MC68EC000::Instr_SubI(uint16 instr) {
         if constexpr (sizeof(T) == sizeof(uint32)) {
             op1 = (op1 << 16u) | FetchInstruction();
         }
-        const T op2 = ReadEffectiveAddress<T>(M, Xn);
-        const T result = op2 - op1;
-        WriteEffectiveAddress<T>(M, Xn, result);
-        SetArithFlags(op1, op2, result);
+        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+            const T result = op2 - op1;
+            SetArithFlags(op1, op2, result);
+            return result;
+        });
     };
 
     switch (sz) {
@@ -710,11 +784,12 @@ void MC68EC000::Instr_LSL_M(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
 
-    const uint16 value = ReadEffectiveAddress<uint16>(M, Xn);
-    const uint16 result = value << 1u;
-    const bool carry = value >> 15u;
-    WriteEffectiveAddress<uint16>(M, Xn, result);
-    SetShiftFlags(result, carry);
+    ModifyEffectiveAddress<uint16>(M, Xn, [&](uint16 value) {
+        const uint16 result = value << 1u;
+        const bool carry = value >> 15u;
+        SetShiftFlags(result, carry);
+        return result;
+    });
 }
 
 void MC68EC000::Instr_LSL_R(uint16 instr) {
@@ -786,11 +861,12 @@ void MC68EC000::Instr_LSR_M(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
 
-    const uint16 value = ReadEffectiveAddress<uint16>(M, Xn);
-    const uint16 result = value >> 1u;
-    const bool carry = value & 1;
-    WriteEffectiveAddress<uint16>(M, Xn, result);
-    SetShiftFlags(result, carry);
+    ModifyEffectiveAddress<uint16>(M, Xn, [&](uint16 value) {
+        const uint16 result = value >> 1u;
+        const bool carry = value & 1u;
+        SetShiftFlags(result, carry);
+        return result;
+    });
 }
 
 void MC68EC000::Instr_LSR_R(uint16 instr) {

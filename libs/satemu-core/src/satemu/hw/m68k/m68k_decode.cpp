@@ -213,7 +213,7 @@ DecodeTable BuildDecodeTable() {
         case 0xA: break;
         case 0xB: {
             const uint16 ea = bit::extract<0, 5>(instr);
-            if (bit::extract<6, 7>(instr)) {
+            if (bit::extract<6, 7>(instr) == 0b11) {
                 // TODO: CMPA
             } else if (bit::extract<8>(instr) == 0) {
                 opcode = legalIf(OpcodeType::Cmp, kValidAddrModes[ea]);

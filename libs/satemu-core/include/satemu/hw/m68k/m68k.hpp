@@ -125,6 +125,10 @@ private:
     template <mem_access_type T>
     void WriteEffectiveAddress(uint8 M, uint8 Xn, T value);
 
+    // Read-modify-write
+    template <mem_access_type T, typename FnModify>
+    void ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify &&modify);
+
     // Calculates effective addresses for instructions that use control addresses (LEA, JSR, JMP, MOVEM, etc.)
     uint32 CalcEffectiveAddress(uint8 M, uint8 Xn);
 
