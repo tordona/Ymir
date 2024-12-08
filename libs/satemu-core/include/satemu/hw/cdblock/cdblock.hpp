@@ -49,10 +49,7 @@ public:
 
             // MEGA HACK! replace with a blank periodic report to get past the boot sequence
             // TODO: implement periodic CD status reporting *properly*
-            m_CR[0] = 0x20FF;
-            m_CR[1] = 0xFFFF;
-            m_CR[2] = 0xFFFF;
-            m_CR[3] = 0xFFFF;
+            MakePeriodicReport();
 
             return result;
         }
@@ -67,7 +64,10 @@ public:
             m_HIRQ &= value;
             UpdateInterrupts();
             break;
-        case 0x0C: m_HIRQMASK = value; break;
+        case 0x0C:
+            m_HIRQMASK = value;
+            UpdateInterrupts();
+            break;
 
         default: fmt::println("unhandled {}-bit CD Block write to {:02X} = {:X}", sizeof(T) * 8, address, value); break;
         }
@@ -84,7 +84,13 @@ private:
     uint16 m_HIRQ;
     uint16 m_HIRQMASK;
 
+    void SetInterrupt(uint16 bits);
     void UpdateInterrupts();
+
+    // -------------------------------------------------------------------------
+    // Status reports
+
+    void MakePeriodicReport();
 
     // -------------------------------------------------------------------------
     // Commands

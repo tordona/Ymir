@@ -21,10 +21,23 @@ void CDBlock::Reset(bool hard) {
 
 void CDBlock::Advance(uint64 cycles) {}
 
+void CDBlock::SetInterrupt(uint16 bits) {
+    m_HIRQ |= bits;
+    UpdateInterrupts();
+}
+
 void CDBlock::UpdateInterrupts() {
     if (m_HIRQ & m_HIRQMASK) {
         m_scu.TriggerExternalInterrupt0();
     }
+}
+
+void CDBlock::MakePeriodicReport() {
+    // TODO: implement
+    m_CR[0] = 0x20FF;
+    m_CR[1] = 0xFFFF;
+    m_CR[2] = 0xFFFF;
+    m_CR[3] = 0xFFFF;
 }
 
 void CDBlock::ProcessCommand() {
