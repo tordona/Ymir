@@ -41,6 +41,10 @@ public:
 
     template <mem_access_type T>
     T ReadReg(uint32 address) {
+        if (address == 0x10) {
+            // MEGA HACK to get past the boot sequence
+            return 3;
+        }
         fmt::println("unhandled {}-bit VDP1 register read from {:02X}", sizeof(T) * 8, address);
         return 0;
     }

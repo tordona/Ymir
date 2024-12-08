@@ -24,7 +24,7 @@ public:
         switch (address) {
         case 0x08:
             // MEGA HACK to get past the boot sequence
-            return std::is_same_v<T, uint8> ? (0x400 >> (((address & 1) ^ 1) * 8)) : 0x400;
+            return std::is_same_v<T, uint8> ? (0x601 >> (((address & 1) ^ 1) * 8)) : 0x601;
         case 0x18: return m_CR[0];
         case 0x1C: return m_CR[1];
         case 0x20: return m_CR[2];
