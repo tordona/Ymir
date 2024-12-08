@@ -3,9 +3,20 @@
 #include <satemu/core_types.hpp>
 #include <satemu/hw/hw_defs.hpp>
 
+#include <satemu/util/bit_ops.hpp>
+
 #include <array>
 
 namespace satemu::scsp {
+
+// Audio sampling rate in Hz
+constexpr uint64 kAudioFreq = 44100;
+
+// Number of SCSP cycles for each sample output
+constexpr uint64 kCyclesPerSample = 512;
+
+// SCSP clock frequency: 22,579,200 Hz = 44,100 Hz * 512 cycles per sample
+constexpr uint64 kClockFreq = kAudioFreq * kCyclesPerSample;
 
 struct Slot {
     Slot() {
@@ -31,6 +42,31 @@ struct Slot {
         loopStateLink = false;
         egHold = false;
 
+        modulationLevel = 0;
+        modXSelect = 0;
+        modYSelect = 0;
+        stackWriteInhibit = false;
+
+        totalLevel = 0;
+        soundDirect = false;
+
+        octave = 0;
+        freqNumSwitch = 0;
+
+        lfoReset = false;
+        lfof = 0;
+        lfoFreq = s_lfoFreqTbl[0];
+        ampLFOSens = 0;
+        ampLFOWaveform = Waveform::Saw;
+        pitchLFOWaveform = Waveform::Saw;
+
+        inputMixingLevel = 0;
+        inputSelect = 0;
+        directSendLevel = 0;
+        directPan = 0;
+        effectSendLevel = 0;
+        effectPan = 0;
+
         keyOn = false;
     }
 
@@ -48,7 +84,8 @@ struct Slot {
     // -------------------------------------------------------------------------
     // Registers
 
-    // Loop Control Register
+    // --- Loop Control Register ---
+
     uint32 startAddress;     // (R/W) SA
     uint32 loopStartAddress; // (R/W) LSA
     uint32 loopEndAddress;   // (R/W) LEA
@@ -94,8 +131,8 @@ struct Slot {
     enum class SoundSource { SoundRAM, Noise, Silence, Unknown };
     SoundSource soundSource; // (R/W) SSCTL
 
-    // Envelope Generator Register
-    //
+    // --- Envelope Generator Register ---
+
     // States: Attack, Decay 1, Decay 2, Release
     //
     // Starts from Attack on Key ON.
@@ -121,27 +158,48 @@ struct Slot {
                           //   true:  volume raises during attack state
                           //   false: volume is set to maximum during attack phase while maintaining the same duration
 
-    // FM Modulation Control Register
+    // --- FM Modulation Control Register ---
 
-    // Sound Volume Register
+    uint8 modulationLevel;  // (R/W) MDL - add +- n * pi where n is:
+                            // 0-4   5     6    7    8   9  A  B  C  D   E   F
+                            //  0   1/16  1/8  1/4  1/2  1  2  4  8  16  32  64
+    uint8 modXSelect;       // (R/W) MDXSL - selects modulation input X
+    uint8 modYSelect;       // (R/W) MDYSL - selects modulation input Y
+    bool stackWriteInhibit; // (R/W) STWINH - when set, blocks writes to direct data stack (SOUS)
 
-    // Pitch Register
+    // --- Sound Volume Register ---
 
-    // LFO Register
+    uint8 totalLevel; // (R/W) TL - 0x00 = no attenuation, 0xFF = max attenuation (-95.7 dB)
+    bool soundDirect; // (R/W) SDIR - true causes the sound from this slot to bypass the EG, TL, ALFO, etc.
 
-    // Mixer Register
+    // --- Pitch Register ---
 
-    // Slot Status Register
+    uint8 octave;         // (R/W) OCT
+    uint16 freqNumSwitch; // (R/W) FNS
 
-    // Sound Memory Configuration Register
+    // --- LFO Register ---
 
-    // MIDI Register
+    enum class Waveform { Saw, Square, Triangle, Noise };
 
-    // Timer Register
+    static constexpr std::array<uint32, 32> s_lfoFreqTbl = {1020, 892, 764, 636, 508, 444, 380, 316, 252, 220, 188,
+                                                            156,  124, 108, 92,  76,  60,  52,  44,  36,  28,  24,
+                                                            20,   16,  12,  10,  8,   6,   4,   3,   2,   1};
 
-    // Interrupt Control Register
+    bool lfoReset;             // (R/W) LFORE - true resets the LFO
+    uint8 lfof;                // (R/W) LFOF - 0x00 to 0x1F (raw value)
+    uint32 lfoFreq;            // (R/W) LFOF - determines the LFO increment interval (from s_lfoFreqTbl)
+    uint8 ampLFOSens;          // (R/W) ALFOS - 0 (none) to 7 (maximum) intensity of tremor effect
+    uint8 pitchLFOSens;        // (R/W) PLFOS - 0 (none) to 7 (maximum) intensity of tremolo effect
+    Waveform ampLFOWaveform;   // (R/W) ALFOWS - unsigned from 0x00 to 0xFF (all waveforms start at zero and increment)
+    Waveform pitchLFOWaveform; // (R/W) PLFOWS - signed from 0x80 to 0x7F (zero at 0x00, starting point of saw/triangle)
 
-    // DMA Transfer Register
+    // --- Mixer Register ---
+    uint8 inputMixingLevel; // (R/W) IMXL - 0 (no mix) to 7 (maximum) - into MIXS DSP stack
+    uint8 inputSelect;      // (R/W) ISEL - 0 to 15 - indexes a MIXS DSP stack
+    uint8 directSendLevel;  // (R/W) DISDL - 0 (no send) to 7 (maximum)
+    uint8 directPan;        // (R/W) DIPAN - 0 to 31  [100% left]  31..16  [center]  0..15  [100% right]
+    uint8 effectSendLevel;  // (R/W) EFSDL - 0 (no send) to 7 (maximum)
+    uint8 effectPan;        // (R/W) EFPAN - 0 to 31  [100% left]  31..16  [center]  0..15  [100% right]
 
     // -------------------------------------------------------------------------
     // State
@@ -150,6 +208,53 @@ struct Slot {
     // If changed, triggers the new state (e.g. begin ADSR attack phase on key ON or release phase on key OFF).
     // Writing 1 to KYONEX on any slot will apply KYONB on every slot.
     bool keyOn; // current key on state
+};
+
+struct Timer {
+    Timer() {
+        Reset();
+    }
+
+    void Reset() {
+        incrementInterval = 0;
+        reload = 0;
+        incrementMask = 0;
+        doReload = false;
+        counter = 0;
+    }
+
+    bool Tick() {
+        if (doReload) {
+            counter = reload;
+            doReload = false;
+        } else {
+            counter++;
+        }
+        return counter == 0xFF;
+    }
+
+    void WriteTIMx(uint8 value) {
+        reload = value;
+        doReload = true;
+    }
+
+    void WriteTxCTL(uint8 value) {
+        incrementInterval = bit::extract<0, 2>(value);
+        incrementMask = ((1u << value) - 1);
+    }
+
+    // -------------------------------------------------------------------------
+    // Registers
+
+    uint8 incrementInterval; // (W) TxCTL - 0 to 7 - increment every (1 << N) samples
+    uint8 reload;            // (W) TIMx - resets the timer counter on the next tick
+
+    // -------------------------------------------------------------------------
+    // State
+
+    uint64 incrementMask; // computed from TxCTL
+    bool doReload;        // whether to reload the counter on the next tick
+    uint8 counter;        // counts up to 0xFF, then raises an interrupt
 };
 
 } // namespace satemu::scsp

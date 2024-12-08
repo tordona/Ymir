@@ -14,11 +14,22 @@
 
 #include <array>
 
+// -----------------------------------------------------------------------------
+// Forward declarations
+
+namespace satemu::scu {
+
+class SCU;
+
+} // namespace satemu::scu
+
+// -----------------------------------------------------------------------------
+
 namespace satemu::scsp {
 
 class SCSP {
 public:
-    SCSP();
+    SCSP(scu::SCU &scu);
 
     void Reset(bool hard);
 
@@ -55,6 +66,8 @@ private:
     bool m_cpuEnabled;
 
     alignas(16) std::array<uint8, m68k::kM68KWRAMSize> m_WRAM;
+
+    scu::SCU &m_scu;
 
     // -------------------------------------------------------------------------
     // MC68EC000-facing bus
@@ -114,20 +127,17 @@ private:
 
     template <mem_access_type T, bool fromM68K, bool instrFetch>
     T ReadReg(uint32 address) {
-        // static constexpr bool is16 = std::is_same_v<T, uint16>;
+        static constexpr bool is16 = std::is_same_v<T, uint16>;
 
-        /*auto shiftByte = [](uint16 value) {
+        auto shiftByte = [](uint16 value) {
             if constexpr (is16) {
                 return value >> 16u;
             } else {
                 return value;
             }
-        };*/
+        };
 
         if constexpr (!instrFetch) {
-            // case 0x400: return ReadReg400<is16, true>();
-            // case 0x401: return shiftByte(ReadReg400<true, is16>());
-
             if (address < 0x400) {
                 const uint32 slotIndex = address >> 5;
                 auto &slot = m_slots[slotIndex];
@@ -138,13 +148,39 @@ private:
             }
 
             switch (address) {
-            case 0x400: return 0;
-            case 0x401: return 0;
+            case 0x400: return 0; // Write-only
+            case 0x401: return 0; // Only VER is readable, and it is 0
 
-            case 0x420:
-                fmt::println("faked {}-bit SCSP register read via {} from {:03X}", sizeof(T) * 8,
-                             (fromM68K ? "M68K" : "SCU"), address);
-                return 0x40; // TODO: implement CCR.SCIPD
+            case 0x408: return shiftByte(ReadReg408<is16, true>());
+            case 0x409: return ReadReg408<true, is16>();
+
+            case 0x418: return 0; // Timers are write-only
+            case 0x419: return 0; // Timers are write-only
+            case 0x41A: return 0; // Timers are write-only
+            case 0x41B: return 0; // Timers are write-only
+            case 0x41C: return 0; // Timers are write-only
+            case 0x41D: return 0; // Timers are write-only
+
+            case 0x41E: return shiftByte(ReadSCIEB());
+            case 0x41F: return ReadSCIEB();
+            case 0x420: return shiftByte(ReadSCIPD());
+            case 0x421: return ReadSCIPD();
+            case 0x422: return 0; // SCIRE is write-only
+            case 0x423: return 0; // SCIRE is write-only
+
+            case 0x424: return shiftByte(ReadSCILV(0));
+            case 0x425: return ReadSCILV(0);
+            case 0x426: return shiftByte(ReadSCILV(1));
+            case 0x427: return ReadSCILV(1);
+            case 0x428: return shiftByte(ReadSCILV(2));
+            case 0x429: return ReadSCILV(2);
+
+            case 0x42A: return shiftByte(ReadMCIEB());
+            case 0x42B: return ReadMCIEB();
+            case 0x42C: return shiftByte(ReadMCIPD());
+            case 0x42D: return ReadMCIPD();
+            case 0x42E: return 0; // MCIRE is write-only
+            case 0x42F: return 0; // MCIRE is write-only
 
             default:
                 fmt::println("unhandled {}-bit SCSP register read via {} from {:03X}", sizeof(T) * 8,
@@ -179,12 +215,46 @@ private:
         case 0x400: WriteReg400<is16, true>(value16); break;
         case 0x401: WriteReg400<true, is16>(value16); break;
 
+        case 0x408: WriteReg408<is16, true>(value16); break;
+        case 0x409: WriteReg408<true, is16>(value16); break;
+
+        case 0x418: WriteTimer<is16, true>(0, value16); break;
+        case 0x419: WriteTimer<true, is16>(0, value16); break;
+        case 0x41A: WriteTimer<is16, true>(1, value16); break;
+        case 0x41B: WriteTimer<true, is16>(1, value16); break;
+        case 0x41C: WriteTimer<is16, true>(2, value16); break;
+        case 0x41D: WriteTimer<true, is16>(2, value16); break;
+
+        case 0x41E: WriteSCIEB<is16, true>(value16); break;
+        case 0x41F: WriteSCIEB<true, is16>(value16); break;
+        case 0x420: WriteSCIPD<is16, true>(value16); break;
+        case 0x421: WriteSCIPD<true, is16>(value16); break;
+        case 0x422: WriteSCIRE<is16, true>(value16); break;
+        case 0x423: WriteSCIRE<true, is16>(value16); break;
+
+        case 0x424: WriteSCILV<is16, true>(0, value16); break;
+        case 0x425: WriteSCILV<true, is16>(0, value16); break;
+        case 0x426: WriteSCILV<is16, true>(1, value16); break;
+        case 0x427: WriteSCILV<true, is16>(1, value16); break;
+        case 0x428: WriteSCILV<is16, true>(2, value16); break;
+        case 0x429: WriteSCILV<true, is16>(2, value16); break;
+
+        case 0x42A: WriteMCIEB<is16, true>(value16); break;
+        case 0x42B: WriteMCIEB<true, is16>(value16); break;
+        case 0x42C: WriteMCIPD<is16, true>(value16); break;
+        case 0x42D: WriteMCIPD<true, is16>(value16); break;
+        case 0x42E: WriteMCIRE<is16, true>(value16); break;
+        case 0x42F: WriteMCIRE<true, is16>(value16); break;
+
         default:
             fmt::println("unhandled {}-bit SCSP register write via {} to {:03X} = {:X}", sizeof(T) * 8,
                          (fromM68K ? "M68K" : "SCU"), address, value);
             break;
         }
     }
+
+    // --- Mixer Register ---
+    // --- Sound Memory Configuration Register ---
 
     template <bool lowerHalf, bool upperHalf>
     void WriteReg400(uint16 value) {
@@ -197,14 +267,174 @@ private:
         }
     }
 
+    template <bool lowerHalf, bool upperHalf>
+    uint16 ReadReg408() {
+        uint16 value = 0;
+        // TODO: implement
+        // bit::deposit_into<7, 10>(m_slots[m_monitorSlotCall].samplePosition >> 12u);
+        return value;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteReg408(uint16 value) {
+        if constexpr (upperHalf) {
+            m_monitorSlotCall = bit::extract<11, 15>(value);
+        }
+    }
+
+    // --- Timer Register ---
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteTimer(uint32 index, uint16 value) {
+        if constexpr (lowerHalf) {
+            m_timers[index].WriteTIMx(bit::extract<0, 7>(value));
+        }
+        if constexpr (upperHalf) {
+            m_timers[index].WriteTxCTL(bit::extract<8, 10>(value));
+        }
+    }
+
+    // --- Interrupt Control Register ---
+
+    uint16 ReadSCIEB() const {
+        return m_m68kEnabledInterrupts;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteSCIEB(uint16 value) {
+        static constexpr uint32 lb = lowerHalf ? 0 : 8;
+        static constexpr uint32 ub = upperHalf ? 10 : 7;
+        bit::deposit_into<lb, ub>(m_m68kEnabledInterrupts, bit::extract<lb, ub>(value));
+        UpdateM68KInterrupts();
+    }
+
+    uint16 ReadSCIPD() const {
+        return m_m68kPendingInterrupts;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteSCIPD(uint16 value) {
+        if constexpr (lowerHalf) {
+            bit::deposit_into<5>(m_m68kPendingInterrupts, bit::extract<5>(value));
+            UpdateM68KInterrupts();
+        }
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteSCIRE(uint16 value) {
+        m_m68kEnabledInterrupts &= ~value;
+        UpdateM68KInterrupts();
+    }
+
+    // ---
+
+    uint16 ReadMCIEB() const {
+        return m_scuEnabledInterrupts;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteMCIEB(uint16 value) {
+        static constexpr uint32 lb = lowerHalf ? 0 : 8;
+        static constexpr uint32 ub = upperHalf ? 10 : 7;
+        bit::deposit_into<lb, ub>(m_scuEnabledInterrupts, bit::extract<lb, ub>(value));
+        UpdateSCUInterrupts();
+    }
+
+    uint16 ReadMCIPD() const {
+        return m_scuPendingInterrupts;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteMCIPD(uint16 value) {
+        if constexpr (lowerHalf) {
+            bit::deposit_into<5>(m_scuPendingInterrupts, bit::extract<5>(value));
+            UpdateSCUInterrupts();
+        }
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteMCIRE(uint16 value) {
+        m_scuEnabledInterrupts &= ~value;
+        UpdateSCUInterrupts();
+    }
+
+    // ---
+
+    uint16 ReadSCILV(uint32 index) {
+        return m_m68kInterruptLevels[index];
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteSCILV(uint32 index, uint16 value) {
+        if constexpr (lowerHalf) {
+            m_m68kInterruptLevels[index] = bit::extract<0, 7>(value);
+            UpdateM68KInterrupts();
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Registers
 
-    uint32 m_masterVolume;
-    bool m_mem4MB;
-    bool m_dac18Bits;
+    // --- Mixer Register ---
+
+    uint32 m_masterVolume; // (W) MVOL - master volume adjustment after all audio processing
+    bool m_dac18Bits;      // (W) DAC18B - outputs 18-bit instead of 16-bit data to DAC
+
+    // --- Sound Memory Configuration Register ---
+
+    bool m_mem4MB; // (W) MEM4MB - enables full 4 Mbit RAM access instead of 1 Mbit
+
+    // --- Slot Status Register ---
+
+    uint8 m_monitorSlotCall; // (W) MSLC - selects a slot to monitor the current sample offset from SA
+                             // (R) CA - Call Address - the offset from SA of the current sample (in 4 KiB units?)
+
+    // --- MIDI Register ---
+
+    // TODO
+
+    // --- Timer Register ---
+
+    std::array<Timer, 3> m_timers;
+
+    // --- Interrupt Control Register ---
+
+    // Pending interrupt flags
+    static constexpr uint16 kIntrINT0N = 0;          // External INT0N line
+    static constexpr uint16 kIntrINT1N = 1;          // External INT1N line
+    static constexpr uint16 kIntrINT2N = 2;          // External INT2N line
+    static constexpr uint16 kIntrMIDIInput = 3;      // MIDI input non-empty
+    static constexpr uint16 kIntrDMATransferEnd = 4; // DMA transfer end
+    static constexpr uint16 kIntrCPUManual = 5;      // CPU manual interrupt request
+    static constexpr uint16 kIntrTimerA = 6;         // Timer A
+    static constexpr uint16 kIntrTimerB = 7;         // Timer B
+    static constexpr uint16 kIntrTimerC = 8;         // Timer C
+    static constexpr uint16 kIntrMIDIOutput = 9;     // MIDI output empty
+    static constexpr uint16 kIntrSample = 10;        // Once every sample tick
+
+    uint16 m_scuEnabledInterrupts;  // (W) MCIEB
+    uint16 m_scuPendingInterrupts;  // (W) MCIPD
+    uint16 m_m68kEnabledInterrupts; // (W) SCIEB
+    uint16 m_m68kPendingInterrupts; // (W) SCIPD
+
+    std::array<uint8, 3> m_m68kInterruptLevels; // (W) SCILV0-2
+
+    void SetInterrupt(uint16 intr, bool level);
+
+    void UpdateM68KInterrupts();
+    void UpdateSCUInterrupts();
+
+    // --- DMA Transfer Register ---
 
     std::array<Slot, 32> m_slots;
+
+    // -------------------------------------------------------------------------
+    // Audio processing
+
+    void ProcessSample();
+
+    uint64 m_accumSampleCycles; // number of SCSP cycles toward the next sample tick
+    uint64 m_sampleCounter;     // total number of samples
 
     // -------------------------------------------------------------------------
     // Interrupt handling

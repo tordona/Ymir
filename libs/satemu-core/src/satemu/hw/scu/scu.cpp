@@ -40,6 +40,11 @@ void SCU::TriggerSystemManager() {
     UpdateInterruptLevel(false);
 }
 
+void SCU::TriggerSoundRequest(bool level) {
+    m_intrStatus.SCSP_SoundRequest = level;
+    UpdateInterruptLevel(false);
+}
+
 void SCU::AcknowledgeExternalInterrupt() {
     UpdateInterruptLevel(true);
 }

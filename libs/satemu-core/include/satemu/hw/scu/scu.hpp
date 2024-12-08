@@ -77,9 +77,21 @@ public:
             }
 
         } else if (AddressInRange<0x5A0'0000, 0x5AF'FFFF>(address)) {
-            return m_SCSP.ReadWRAM<uint16>(address & 0x7FFFF);
+            if constexpr (std::is_same_v<T, uint32>) {
+                uint32 value = m_SCSP.ReadWRAM<uint16>((address + 0) & 0x7FFFF);
+                value = (value << 16u) | m_SCSP.ReadWRAM<uint16>((address + 2) & 0x7FFFF);
+                return value;
+            } else {
+                return m_SCSP.ReadWRAM<T>(address & 0x7FFFF);
+            }
         } else if (AddressInRange<0x5B0'0000, 0x5BF'FFFF>(address)) {
-            return m_SCSP.ReadReg<uint16>(address & 0xFFF);
+            if constexpr (std::is_same_v<T, uint32>) {
+                uint32 value = m_SCSP.ReadReg<uint16>((address + 0) & 0xFFF);
+                value = (value << 16u) | m_SCSP.ReadReg<uint16>((address + 2) & 0xFFF);
+                return value;
+            } else {
+                return m_SCSP.ReadReg<T>(address & 0xFFF);
+            }
 
         } else if (AddressInRange<0x5C0'0000, 0x5C7'FFFF>(address)) {
             return m_VDP1.ReadVRAM<T>(address & 0x7FFFF);
@@ -118,13 +130,15 @@ public:
 
         } else if (AddressInRange<0x5A0'0000, 0x5AF'FFFF>(address)) {
             if constexpr (std::is_same_v<T, uint32>) {
-                m_SCSP.WriteWRAM<uint16>(address & 0x7FFFF, value);
+                m_SCSP.WriteWRAM<uint16>((address + 0) & 0x7FFFF, value >> 16u);
+                m_SCSP.WriteWRAM<uint16>((address + 2) & 0x7FFFF, value >> 0u);
             } else {
                 m_SCSP.WriteWRAM<T>(address & 0x7FFFF, value);
             }
         } else if (AddressInRange<0x5B0'0000, 0x5BF'FFFF>(address)) {
             if constexpr (std::is_same_v<T, uint32>) {
-                m_SCSP.WriteReg<uint16>(address & 0xFFF, value);
+                m_SCSP.WriteReg<uint16>((address + 0) & 0xFFF, value >> 16u);
+                m_SCSP.WriteReg<uint16>((address + 2) & 0xFFF, value >> 0u);
             } else {
                 m_SCSP.WriteReg<T>(address & 0xFFF, value);
             }
@@ -157,6 +171,7 @@ public:
     void TriggerVBlankIN();
     void TriggerVBlankOUT();
     void TriggerSystemManager();
+    void TriggerSoundRequest(bool level);
 
     void AcknowledgeExternalInterrupt();
 
