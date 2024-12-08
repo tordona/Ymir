@@ -90,10 +90,10 @@ void SCSP::UpdateM68KInterrupts() {
     //
     // Suppose we want to pick the largest of four binary numbers: (x) 101, (y) 011, (z) 110, (w) 001.
     // First, let's rearrange the bits to group bits from each position into one word each:
-    //         xyzw
-    //  bit 2  1010
-    //  bit 1  0110
-    //  bit 0  1101
+    //          xyzw
+    //   bit 2  1010
+    //   bit 1  0110
+    //   bit 0  1101
     //
     // Now we can take advantage of the fact that a binary digit can only be 0 or 1, meaning that if any bit is 1 in the
     // most significant bit of a number, we know that any other number that has a digit 0 in the same position cannot be
@@ -102,7 +102,7 @@ void SCSP::UpdateM68KInterrupts() {
     // Let's go through one iteration of the algorithm. We've already set up the table in a convenient manner to allow
     // parallel calculations. Let's create a bitmask to indicate which numbers we're still checking:
     //
-    //  mask   1111
+    //   mask   1111
     //
     // We can AND the mask with the most significant bit we're checking to see if any number has that bit set:
     //
