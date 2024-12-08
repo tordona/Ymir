@@ -18,6 +18,19 @@ constexpr uint64 kCyclesPerSample = 512;
 // SCSP clock frequency: 22,579,200 Hz = 44,100 Hz * 512 cycles per sample
 constexpr uint64 kClockFreq = kAudioFreq * kCyclesPerSample;
 
+// Pending interrupt flags
+constexpr uint16 kIntrINT0N = 0;          // External INT0N line
+constexpr uint16 kIntrINT1N = 1;          // External INT1N line
+constexpr uint16 kIntrINT2N = 2;          // External INT2N line
+constexpr uint16 kIntrMIDIInput = 3;      // MIDI input non-empty
+constexpr uint16 kIntrDMATransferEnd = 4; // DMA transfer end
+constexpr uint16 kIntrCPUManual = 5;      // CPU manual interrupt request
+constexpr uint16 kIntrTimerA = 6;         // Timer A
+constexpr uint16 kIntrTimerB = 7;         // Timer B
+constexpr uint16 kIntrTimerC = 8;         // Timer C
+constexpr uint16 kIntrMIDIOutput = 9;     // MIDI output empty
+constexpr uint16 kIntrSample = 10;        // Once every sample tick
+
 struct Slot {
     Slot() {
         Reset();

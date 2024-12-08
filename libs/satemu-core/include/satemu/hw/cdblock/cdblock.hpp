@@ -51,6 +51,8 @@ public:
 
 private:
     std::array<uint16, 4> m_CR;
+
+    uint16 m_HIRQ;
 };
 
 } // namespace satemu::cdblock

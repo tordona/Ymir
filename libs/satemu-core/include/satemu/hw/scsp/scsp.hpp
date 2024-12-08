@@ -399,19 +399,6 @@ private:
 
     // --- Interrupt Control Register ---
 
-    // Pending interrupt flags
-    static constexpr uint16 kIntrINT0N = 0;          // External INT0N line
-    static constexpr uint16 kIntrINT1N = 1;          // External INT1N line
-    static constexpr uint16 kIntrINT2N = 2;          // External INT2N line
-    static constexpr uint16 kIntrMIDIInput = 3;      // MIDI input non-empty
-    static constexpr uint16 kIntrDMATransferEnd = 4; // DMA transfer end
-    static constexpr uint16 kIntrCPUManual = 5;      // CPU manual interrupt request
-    static constexpr uint16 kIntrTimerA = 6;         // Timer A
-    static constexpr uint16 kIntrTimerB = 7;         // Timer B
-    static constexpr uint16 kIntrTimerC = 8;         // Timer C
-    static constexpr uint16 kIntrMIDIOutput = 9;     // MIDI output empty
-    static constexpr uint16 kIntrSample = 10;        // Once every sample tick
-
     uint16 m_scuEnabledInterrupts;  // (W) MCIEB
     uint16 m_scuPendingInterrupts;  // (W) MCIPD
     uint16 m_m68kEnabledInterrupts; // (W) SCIEB
