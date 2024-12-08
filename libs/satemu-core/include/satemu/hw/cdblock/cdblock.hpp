@@ -89,6 +89,8 @@ private:
     // -------------------------------------------------------------------------
     // Commands
 
+    void ProcessCommand();
+
     void CmdGetStatus();                    // 0x00
     void CmdGetHardwareInfo();              // 0x01
     void CmdGetTOC();                       // 0x02

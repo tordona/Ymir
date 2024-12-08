@@ -27,6 +27,81 @@ void CDBlock::UpdateInterrupts() {
     }
 }
 
+void CDBlock::ProcessCommand() {
+    const uint8 cmd = m_CR[0] >> 8u;
+
+    switch (cmd) {
+    case 0x00: CmdGetStatus(); break;
+    case 0x01: CmdGetHardwareInfo(); break;
+    case 0x02: CmdGetTOC(); break;
+    case 0x03: CmdGetSessionInfo(); break;
+    case 0x04: CmdInitializeCDSystem(); break;
+    case 0x05: CmdOpenTray(); break;
+    case 0x06: CmdEndDataTransfer(); break;
+    case 0x10: CmdPlayDisc(); break;
+    case 0x11: CmdSeekDisc(); break;
+    case 0x12: CmdScanDisc(); break;
+    case 0x20: CmdGetSubcodeQ_RW(); break;
+    case 0x30: CmdSetCDDeviceConnection(); break;
+    case 0x31: CmdGetCDDeviceConnection(); break;
+    case 0x32: CmdGetLastBufferDest(); break;
+    case 0x40: CmdSetFilterRange(); break;
+    case 0x41: CmdGetFilterRange(); break;
+    case 0x42: CmdSetFilterSubheaderConditions(); break;
+    case 0x43: CmdGetFilterSubheaderConditions(); break;
+    case 0x44: CmdSetFilterMode(); break;
+    case 0x45: CmdGetFilterMode(); break;
+    case 0x46: CmdSetFilterConnection(); break;
+    case 0x47: CmdGetFilterConnection(); break;
+    case 0x48: CmdResetSelector(); break;
+    case 0x50: CmdGetBufferSize(); break;
+    case 0x51: CmdGetSectorNumber(); break;
+    case 0x52: CmdCalculateActualSize(); break;
+    case 0x53: CmdGetActualSize(); break;
+    case 0x54: CmdGetSectorInfo(); break;
+    case 0x55: CmdExecuteFADSearch(); break;
+    case 0x56: CmdGetFADSearchResults(); break;
+    case 0x60: CmdSetSectorLength(); break;
+    case 0x61: CmdGetSectorData(); break;
+    case 0x62: CmdDeleteSectorData(); break;
+    case 0x63: CmdGetThenDeleteSectorData(); break;
+    case 0x64: CmdPutSectorData(); break;
+    case 0x65: CmdCopySectorData(); break;
+    case 0x66: CmdMoveSectorData(); break;
+    case 0x67: CmdGetCopyError(); break;
+    case 0x70: CmdChangeDirectory(); break;
+    case 0x71: CmdReadDirectory(); break;
+    case 0x72: CmdGetFileSystemScope(); break;
+    case 0x73: CmdGetFileInfo(); break;
+    case 0x74: CmdReadFile(); break;
+    case 0x75: CmdAbortFile(); break;
+
+    case 0x90: CmdMpegGetStatus(); break;
+    case 0x91: CmdMpegGetInterrupt(); break;
+    case 0x92: CmdMpegSetInterruptMask(); break;
+    case 0x93: CmdMpegInit(); break;
+    case 0x94: CmdMpegSetMode(); break;
+    case 0x95: CmdMpegPlay(); break;
+    case 0x96: CmdMpegSetDecodingMethod(); break;
+    case 0x9A: CmdMpegSetConnection(); break;
+    case 0x9B: CmdMpegGetConnection(); break;
+    case 0x9D: CmdMpegSetStream(); break;
+    case 0x9E: CmdMpegGetStream(); break;
+    case 0xA0: CmdMpegDisplay(); break;
+    case 0xA1: CmdMpegSetWindow(); break;
+    case 0xA2: CmdMpegSetBorderColor(); break;
+    case 0xA3: CmdMpegSetFade(); break;
+    case 0xA4: CmdMpegSetVideoEffects(); break;
+    case 0xAF: CmdMpegSetLSI(); break;
+
+    case 0xE0: CmdAuthenticateDevice(); break;
+    case 0xE1: CmdIsDeviceAuthenticated(); break;
+    case 0xE2: CmdGetMpegROM(); break;
+
+    default: fmt::println("CDBlock: unimplemented command {:02X}", cmd); break;
+    }
+}
+
 void CDBlock::CmdGetStatus() {}
 
 void CDBlock::CmdGetHardwareInfo() {}
