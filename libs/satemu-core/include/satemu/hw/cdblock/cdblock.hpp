@@ -133,6 +133,28 @@ private:
     void CmdGetFileInfo();                  // 0x73
     void CmdReadFile();                     // 0x74
     void CmdAbortFile();                    // 0x75
+
+    void CmdMpegGetStatus();         // 0x90
+    void CmdMpegGetInterrupt();      // 0x91
+    void CmdMpegSetInterruptMask();  // 0x92
+    void CmdMpegInit();              // 0x93
+    void CmdMpegSetMode();           // 0x94
+    void CmdMpegPlay();              // 0x95
+    void CmdMpegSetDecodingMethod(); // 0x96
+    void CmdMpegSetConnection();     // 0x9A
+    void CmdMpegGetConnection();     // 0x9B
+    void CmdMpegSetStream();         // 0x9D
+    void CmdMpegGetStream();         // 0x9E
+    void CmdMpegDisplay();           // 0xA0
+    void CmdMpegSetWindow();         // 0xA1
+    void CmdMpegSetBorderColor();    // 0xA2
+    void CmdMpegSetFade();           // 0xA3
+    void CmdMpegSetVideoEffects();   // 0xA4
+    void CmdMpegSetLSI();            // 0xAF
+
+    void CmdAuthenticateDevice();    // 0xE0
+    void CmdIsDeviceAuthenticated(); // 0xE1
+    void CmdGetMpegROM();            // 0xE2
 };
 
 } // namespace satemu::cdblock

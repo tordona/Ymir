@@ -115,4 +115,44 @@ void CDBlock::CmdReadFile() {}
 
 void CDBlock::CmdAbortFile() {}
 
+void CDBlock::CmdMpegGetStatus() {}
+
+void CDBlock::CmdMpegGetInterrupt() {}
+
+void CDBlock::CmdMpegSetInterruptMask() {}
+
+void CDBlock::CmdMpegInit() {}
+
+void CDBlock::CmdMpegSetMode() {}
+
+void CDBlock::CmdMpegPlay() {}
+
+void CDBlock::CmdMpegSetDecodingMethod() {}
+
+void CDBlock::CmdMpegSetConnection() {}
+
+void CDBlock::CmdMpegGetConnection() {}
+
+void CDBlock::CmdMpegSetStream() {}
+
+void CDBlock::CmdMpegGetStream() {}
+
+void CDBlock::CmdMpegDisplay() {}
+
+void CDBlock::CmdMpegSetWindow() {}
+
+void CDBlock::CmdMpegSetBorderColor() {}
+
+void CDBlock::CmdMpegSetFade() {}
+
+void CDBlock::CmdMpegSetVideoEffects() {}
+
+void CDBlock::CmdMpegSetLSI() {}
+
+void CDBlock::CmdAuthenticateDevice() {}
+
+void CDBlock::CmdIsDeviceAuthenticated() {}
+
+void CDBlock::CmdGetMpegROM() {}
+
 } // namespace satemu::cdblock
