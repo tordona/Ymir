@@ -172,6 +172,7 @@ public:
     void TriggerVBlankOUT();
     void TriggerSystemManager();
     void TriggerSoundRequest(bool level);
+    void TriggerExternalInterrupt0();
 
     void AcknowledgeExternalInterrupt();
 

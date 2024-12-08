@@ -45,6 +45,11 @@ void SCU::TriggerSoundRequest(bool level) {
     UpdateInterruptLevel(false);
 }
 
+void SCU::TriggerExternalInterrupt0() {
+    m_intrStatus.ABus_ExtIntr0 = 1;
+    UpdateInterruptLevel(false);
+}
+
 void SCU::AcknowledgeExternalInterrupt() {
     UpdateInterruptLevel(true);
 }
