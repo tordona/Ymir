@@ -76,7 +76,7 @@ public:
 private:
     scu::SCU &m_scu;
 
-    std::array<uint16, 4> m_CR;
+    alignas(uint64) std::array<uint16, 4> m_CR;
 
     // -------------------------------------------------------------------------
     // Interrupts
@@ -85,6 +85,54 @@ private:
     uint16 m_HIRQMASK;
 
     void UpdateInterrupts();
+
+    // -------------------------------------------------------------------------
+    // Commands
+
+    void CmdGetStatus();                    // 0x00
+    void CmdGetHardwareInfo();              // 0x01
+    void CmdGetTOC();                       // 0x02
+    void CmdGetSessionInfo();               // 0x03
+    void CmdInitializeCDSystem();           // 0x04
+    void CmdOpenTray();                     // 0x05
+    void CmdEndDataTransfer();              // 0x06
+    void CmdPlayDisc();                     // 0x10
+    void CmdSeekDisc();                     // 0x11
+    void CmdScanDisc();                     // 0x12
+    void CmdGetSubcodeQ_RW();               // 0x20
+    void CmdSetCDDeviceConnection();        // 0x30
+    void CmdGetCDDeviceConnection();        // 0x31
+    void CmdGetLastBufferDest();            // 0x32
+    void CmdSetFilterRange();               // 0x40
+    void CmdGetFilterRange();               // 0x41
+    void CmdSetFilterSubheaderConditions(); // 0x42
+    void CmdGetFilterSubheaderConditions(); // 0x43
+    void CmdSetFilterMode();                // 0x44
+    void CmdGetFilterMode();                // 0x45
+    void CmdSetFilterConnection();          // 0x46
+    void CmdGetFilterConnection();          // 0x47
+    void CmdResetSelector();                // 0x48
+    void CmdGetBufferSize();                // 0x50
+    void CmdGetSectorNumber();              // 0x51
+    void CmdCalculateActualSize();          // 0x52
+    void CmdGetActualSize();                // 0x53
+    void CmdGetSectorInfo();                // 0x54
+    void CmdExecuteFADSearch();             // 0x55
+    void CmdGetFADSearchResults();          // 0x56
+    void CmdSetSectorLength();              // 0x60
+    void CmdGetSectorData();                // 0x61
+    void CmdDeleteSectorData();             // 0x62
+    void CmdGetThenDeleteSectorData();      // 0x63
+    void CmdPutSectorData();                // 0x64
+    void CmdCopySectorData();               // 0x65
+    void CmdMoveSectorData();               // 0x66
+    void CmdGetCopyError();                 // 0x67
+    void CmdChangeDirectory();              // 0x70
+    void CmdReadDirectory();                // 0x71
+    void CmdGetFileSystemScope();           // 0x72
+    void CmdGetFileInfo();                  // 0x73
+    void CmdReadFile();                     // 0x74
+    void CmdAbortFile();                    // 0x75
 };
 
 } // namespace satemu::cdblock
