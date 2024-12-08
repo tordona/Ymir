@@ -14,6 +14,14 @@ void SCSP::Reset(bool hard) {
     m_WRAM.fill(0);
 
     m_cpuEnabled = false;
+
+    m_masterVolume = 0;
+    m_mem4MB = false;
+    m_dac18Bits = false;
+
+    for (auto &slot : m_slots) {
+        slot.Reset();
+    }
 }
 
 void SCSP::Advance(uint64 cycles) {

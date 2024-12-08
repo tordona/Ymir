@@ -77,9 +77,9 @@ public:
             }
 
         } else if (AddressInRange<0x5A0'0000, 0x5AF'FFFF>(address)) {
-            return m_SCSP.ReadWRAM<T>(address & 0x7FFFF);
+            return m_SCSP.ReadWRAM<uint16>(address & 0x7FFFF);
         } else if (AddressInRange<0x5B0'0000, 0x5BF'FFFF>(address)) {
-            return m_SCSP.ReadReg<T>(address & 0xFFF);
+            return m_SCSP.ReadReg<uint16>(address & 0xFFF);
 
         } else if (AddressInRange<0x5C0'0000, 0x5C7'FFFF>(address)) {
             return m_VDP1.ReadVRAM<T>(address & 0x7FFFF);
@@ -117,9 +117,17 @@ public:
             }
 
         } else if (AddressInRange<0x5A0'0000, 0x5AF'FFFF>(address)) {
-            m_SCSP.WriteWRAM<T>(address & 0x7FFFF, value);
+            if constexpr (std::is_same_v<T, uint32>) {
+                m_SCSP.WriteWRAM<uint16>(address & 0x7FFFF, value);
+            } else {
+                m_SCSP.WriteWRAM<T>(address & 0x7FFFF, value);
+            }
         } else if (AddressInRange<0x5B0'0000, 0x5BF'FFFF>(address)) {
-            m_SCSP.WriteReg<T>(address & 0xFFF, value);
+            if constexpr (std::is_same_v<T, uint32>) {
+                m_SCSP.WriteReg<uint16>(address & 0xFFF, value);
+            } else {
+                m_SCSP.WriteReg<T>(address & 0xFFF, value);
+            }
 
         } else if (AddressInRange<0x5C0'0000, 0x5C7'FFFF>(address)) {
             m_VDP1.WriteVRAM<T>(address & 0x7FFFF, value);

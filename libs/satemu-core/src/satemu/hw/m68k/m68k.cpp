@@ -44,12 +44,23 @@ void MC68EC000::SetExternalInterruptLevel(uint8 level) {
 
 template <mem_access_type T, bool instrFetch>
 T MC68EC000::MemRead(uint32 address) {
-    return m_bus.Read<T, instrFetch>(address);
+    if constexpr (std::is_same_v<T, uint32>) {
+        const uint32 hi = m_bus.Read<uint16, instrFetch>(address + 0);
+        const uint32 lo = m_bus.Read<uint16, instrFetch>(address + 2);
+        return (hi << 16u) | lo;
+    } else {
+        return m_bus.Read<T, instrFetch>(address);
+    }
 }
 
 template <mem_access_type T>
 void MC68EC000::MemWrite(uint32 address, T value) {
-    m_bus.Write<T>(address, value);
+    if constexpr (std::is_same_v<T, uint32>) {
+        m_bus.Write<uint16>(address + 0, value >> 16u);
+        m_bus.Write<uint16>(address + 2, value >> 0u);
+    } else {
+        m_bus.Write<T>(address, value);
+    }
 }
 
 FLATTEN FORCE_INLINE uint16 MC68EC000::FetchInstruction() {
