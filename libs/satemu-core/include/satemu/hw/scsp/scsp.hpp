@@ -128,6 +128,15 @@ private:
             // case 0x400: return ReadReg400<is16, true>();
             // case 0x401: return shiftByte(ReadReg400<true, is16>());
 
+            if (address < 0x400) {
+                const uint32 slotIndex = address >> 5;
+                auto &slot = m_slots[slotIndex];
+                return slot.ReadReg<T, fromM68K>(address);
+            }
+            if (address >= 0x700) {
+                // TODO: DSP
+            }
+
             switch (address) {
             case 0x400: return 0;
             case 0x401: return 0;
@@ -148,8 +157,17 @@ private:
 
     template <mem_access_type T, bool fromM68K>
     void WriteReg(uint32 address, T value) {
-        static constexpr bool is16 = std::is_same_v<T, uint16>;
+        if (address < 0x400) {
+            const uint32 slotIndex = address >> 5;
+            auto &slot = m_slots[slotIndex];
+            slot.WriteReg<T, fromM68K>(address, value);
+            return;
+        }
+        if (address >= 0x700) {
+            // TODO: DSP
+        }
 
+        static constexpr bool is16 = std::is_same_v<T, uint16>;
         uint16 value16 = value;
         if constexpr (!is16) {
             if ((address & 1) == 0) {
