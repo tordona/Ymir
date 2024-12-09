@@ -41,24 +41,16 @@ public:
 
     template <mem_access_type T>
     T ReadImpl(uint32 address) {
-        // TODO: implement properly; we're just stubbing the CDBLOCK init sequence here
         switch (address) {
-        case 0x08: // return m_HIRQ;
-            // MEGA HACK to get past the boot sequence
-            return std::is_same_v<T, uint8> ? (0x601 >> (((address & 1) ^ 1) * 8)) : 0x601;
+        case 0x08: return m_HIRQ;
         case 0x0C: return m_HIRQMASK;
         case 0x18: return m_CR[0];
         case 0x1C: return m_CR[1];
         case 0x20: return m_CR[2];
-        case 0x24: {
-            uint16 result = m_CR[3];
-
-            // MEGA HACK! replace with a blank periodic report to get past the boot sequence
-            // TODO: implement periodic CD status reporting *properly*
-            ReportCDStatus();
-
-            return result;
-        }
+        case 0x24:
+            m_processingCommand = false;
+            m_readyForPeriodicReports = true;
+            return m_CR[3];
         default: fmt::println("unhandled {}-bit CD Block read from {:02X}", sizeof(T) * 8, address); return 0;
         }
     }
@@ -74,6 +66,17 @@ public:
         case 0x0C:
             m_HIRQMASK = value;
             UpdateInterrupts();
+            break;
+        case 0x18:
+            m_processingCommand = true;
+            m_status.statusCode &= ~kStatusFlagPeriodic;
+            m_CR[0] = value;
+            break;
+        case 0x1C: m_CR[1] = value; break;
+        case 0x20: m_CR[2] = value; break;
+        case 0x24:
+            m_CR[3] = value;
+            SetupCommand();
             break;
 
         default: fmt::println("unhandled {}-bit CD Block write to {:02X} = {:X}", sizeof(T) * 8, address, value); break;
@@ -116,6 +119,16 @@ private:
 
     // -------------------------------------------------------------------------
     // Commands
+
+    bool m_processingCommand;
+    uint32 m_currCommandCycles;   // current cycle count for commands
+    uint32 m_targetCommandCycles; // command is executed when current >= target
+
+    bool m_readyForPeriodicReports;      // HACK to avoid overwriting the initial state during the boot sequence
+    uint32 m_currPeriodicReportCycles;   // current cycle count for periodic reports
+    uint32 m_targetPeriodicReportCycles; // periodic report is generated when current >= target
+
+    void SetupCommand();
 
     void ProcessCommand();
 

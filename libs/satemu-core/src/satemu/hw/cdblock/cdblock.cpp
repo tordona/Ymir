@@ -15,18 +15,46 @@ void CDBlock::Reset(bool hard) {
     m_CR[2] = 0x4C4F; // 'LO'
     m_CR[3] = 0x434B; // 'CK'
 
-    m_HIRQ = 0;
-    m_HIRQMASK = 0;
-
-    m_status.statusCode = kStatusCodeNoDisc | kStatusFlagPeriodic;
+    m_status.statusCode = 0;
     m_status.frameAddress = 0xFFFFFF;
     m_status.flagsRepeat = 0xFF;
     m_status.controlADR = 0xFF;
     m_status.track = 0xFF;
     m_status.index = 0xFF;
+
+    m_HIRQ = 0x0BE1;
+    m_HIRQMASK = 0;
+
+    m_processingCommand = false;
+    m_currCommandCycles = 0;
+    m_targetCommandCycles = 0;
+
+    m_readyForPeriodicReports = false;
+    m_currPeriodicReportCycles = 0;
+    m_targetPeriodicReportCycles = 50000;
 }
 
-void CDBlock::Advance(uint64 cycles) {}
+void CDBlock::Advance(uint64 cycles) {
+    if (m_targetCommandCycles > 0) {
+        m_currCommandCycles += cycles;
+        if (m_currCommandCycles >= m_targetCommandCycles) {
+            ProcessCommand();
+            m_targetCommandCycles = 0;
+        }
+    }
+
+    if (m_readyForPeriodicReports) {
+        m_currPeriodicReportCycles += cycles;
+        if (m_currPeriodicReportCycles >= m_targetPeriodicReportCycles) {
+            m_currPeriodicReportCycles -= m_targetPeriodicReportCycles;
+            if (!m_processingCommand) {
+                m_status.statusCode |= kStatusFlagPeriodic;
+                ReportCDStatus();
+                SetInterrupt(kHIRQ_SCDQ);
+            }
+        }
+    }
+}
 
 void CDBlock::SetInterrupt(uint16 bits) {
     m_HIRQ |= bits;
@@ -34,6 +62,7 @@ void CDBlock::SetInterrupt(uint16 bits) {
 }
 
 void CDBlock::UpdateInterrupts() {
+    fmt::println("CDBlock: HIRQ = {:04X}  mask = {:04X}  active = {:04X}", m_HIRQ, m_HIRQMASK, m_HIRQ & m_HIRQMASK);
     if (m_HIRQ & m_HIRQMASK) {
         m_scu.TriggerExternalInterrupt0();
     }
@@ -44,6 +73,10 @@ void CDBlock::ReportCDStatus() {
     m_CR[1] = (m_status.controlADR << 8u) | m_status.track;
     m_CR[2] = (m_status.index << 8u) | ((m_status.frameAddress >> 16u) & 0xFF);
     m_CR[3] = m_status.frameAddress;
+}
+
+void CDBlock::SetupCommand() {
+    m_targetCommandCycles = 50;
 }
 
 void CDBlock::ProcessCommand() {
@@ -136,12 +169,12 @@ void CDBlock::CmdGetHardwareInfo() {
     // Report structure:
     // status code      <blank>
     // hardware flags   hardware version
-    // <blank>          MPEG version
+    // <blank>          MPEG version (0 if unauthenticated)
     // drive version    drive revision
     m_CR[0] = m_status.statusCode << 8u;
-    m_CR[1] = 0x0201;
-    m_CR[2] = 0x0001;
-    m_CR[3] = 0x0400;
+    m_CR[1] = 0x0002;
+    m_CR[2] = 0x0000;
+    m_CR[3] = 0x0600;
 
     SetInterrupt(kHIRQ_CMOK);
 }
@@ -157,7 +190,8 @@ void CDBlock::CmdOpenTray() {}
 void CDBlock::CmdEndDataTransfer() {
     fmt::println("CDBlock: -> End data transfer");
 
-    // TODO: stop ongoing transfer if any
+    // TODO: stop any ongoing transfer
+    // - trigger kHIRQ_EHST on Get Sector Data, Get Then Delete Sector or Put Sector
 
     // Report structure:
     // status code      transfer word number bits 23-16
@@ -260,7 +294,18 @@ void CDBlock::CmdMpegGetInterrupt() {}
 
 void CDBlock::CmdMpegSetInterruptMask() {}
 
-void CDBlock::CmdMpegInit() {}
+void CDBlock::CmdMpegInit() {
+    fmt::println("CDBlock: -> MPEG init");
+
+    // TODO: initialize MPEG stuff
+
+    m_CR[0] = 0xFF00; // not authenticated
+    m_CR[1] = 0;
+    m_CR[2] = 0;
+    m_CR[3] = 0;
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_MPED | kHIRQ_MPST);
+}
 
 void CDBlock::CmdMpegSetMode() {}
 

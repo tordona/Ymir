@@ -38,6 +38,9 @@ void Saturn::Step() {
 
     // TODO: proper timings
     SCSP.Advance(1);
+
+    // TODO: proper timings
+    CDBlock.Advance(1);
 }
 
 } // namespace satemu
