@@ -48,6 +48,7 @@ void CDBlock::ReportCDStatus() {
 
 void CDBlock::ProcessCommand() {
     const uint8 cmd = m_CR[0] >> 8u;
+    fmt::println("CDBlock: processing command {:02X}", cmd);
 
     switch (cmd) {
     case 0x00: CmdGetStatus(); break;
@@ -121,9 +122,29 @@ void CDBlock::ProcessCommand() {
     }
 }
 
-void CDBlock::CmdGetStatus() {}
+void CDBlock::CmdGetStatus() {
+    fmt::println("CDBlock: -> Get status");
 
-void CDBlock::CmdGetHardwareInfo() {}
+    ReportCDStatus();
+
+    SetInterrupt(kHIRQ_CMOK);
+}
+
+void CDBlock::CmdGetHardwareInfo() {
+    fmt::println("CDBlock: -> Get hardware info");
+
+    // Report structure:
+    // status code      <blank>
+    // hardware flags   hardware version
+    // <blank>          MPEG version
+    // drive version    drive revision
+    m_CR[0] = m_status.statusCode << 8u;
+    m_CR[1] = 0x0201;
+    m_CR[2] = 0x0001;
+    m_CR[3] = 0x0400;
+
+    SetInterrupt(kHIRQ_CMOK);
+}
 
 void CDBlock::CmdGetTOC() {}
 
@@ -133,7 +154,23 @@ void CDBlock::CmdInitializeCDSystem() {}
 
 void CDBlock::CmdOpenTray() {}
 
-void CDBlock::CmdEndDataTransfer() {}
+void CDBlock::CmdEndDataTransfer() {
+    fmt::println("CDBlock: -> End data transfer");
+
+    // TODO: stop ongoing transfer if any
+
+    // Report structure:
+    // status code      transfer word number bits 23-16
+    // transfer word number bits 15-0
+    // <blank>
+    // <blank>
+    m_CR[0] = (m_status.statusCode << 8u) | 0xFF;
+    m_CR[1] = 0xFFFF;
+    m_CR[2] = 0x0000;
+    m_CR[3] = 0x0000;
+
+    SetInterrupt(kHIRQ_CMOK);
+}
 
 void CDBlock::CmdPlayDisc() {}
 
@@ -207,7 +244,15 @@ void CDBlock::CmdGetFileInfo() {}
 
 void CDBlock::CmdReadFile() {}
 
-void CDBlock::CmdAbortFile() {}
+void CDBlock::CmdAbortFile() {
+    fmt::println("CDBlock: -> Abort file");
+
+    // TODO: abort file transfer
+
+    ReportCDStatus();
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_EFLS);
+}
 
 void CDBlock::CmdMpegGetStatus() {}
 
