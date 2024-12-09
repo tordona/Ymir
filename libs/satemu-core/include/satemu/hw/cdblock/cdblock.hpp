@@ -105,6 +105,9 @@ private:
 
     uint8 m_readSpeed;
 
+    uint32 m_getSectorLength;
+    uint32 m_putSectorLength;
+
     // -------------------------------------------------------------------------
     // Interrupts
 

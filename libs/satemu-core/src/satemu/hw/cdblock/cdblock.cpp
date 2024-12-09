@@ -15,7 +15,7 @@ void CDBlock::Reset(bool hard) {
     m_CR[2] = 0x4C4F; // 'LO'
     m_CR[3] = 0x434B; // 'CK'
 
-    m_status.statusCode = 0;
+    m_status.statusCode = kStatusCodePause;
     m_status.frameAddress = 0xFFFFFF;
     m_status.flagsRepeat = 0xFF;
     m_status.controlADR = 0xFF;
@@ -24,7 +24,10 @@ void CDBlock::Reset(bool hard) {
 
     m_readSpeed = 1;
 
-    m_HIRQ = 0x0BE1;
+    m_getSectorLength = 2048;
+    m_putSectorLength = 2048;
+
+    m_HIRQ = 0x0BC1; // 0x0BE1;
     m_HIRQMASK = 0;
 
     m_processingCommand = false;
@@ -108,7 +111,7 @@ void CDBlock::ProcessCommand() {
     // case 0x45: CmdGetFilterMode(); break;
     // case 0x46: CmdSetFilterConnection(); break;
     // case 0x47: CmdGetFilterConnection(); break;
-    // case 0x48: CmdResetSelector(); break;
+    case 0x48: CmdResetSelector(); break;
     // case 0x50: CmdGetBufferSize(); break;
     // case 0x51: CmdGetSectorNumber(); break;
     // case 0x52: CmdCalculateActualSize(); break;
@@ -116,7 +119,7 @@ void CDBlock::ProcessCommand() {
     // case 0x54: CmdGetSectorInfo(); break;
     // case 0x55: CmdExecuteFADSearch(); break;
     // case 0x56: CmdGetFADSearchResults(); break;
-    // case 0x60: CmdSetSectorLength(); break;
+    case 0x60: CmdSetSectorLength(); break;
     // case 0x61: CmdGetSectorData(); break;
     // case 0x62: CmdDeleteSectorData(); break;
     // case 0x63: CmdGetThenDeleteSectorData(); break;
@@ -200,6 +203,7 @@ void CDBlock::CmdInitializeCDSystem() {
     // const bool ignoreMode2Subheader = bit::extract<2>(m_CR[0]);
     // const bool retryForm2Read = bit::extract<3>(m_CR[0]);
     const uint8 readSpeed = bit::extract<4, 5>(m_CR[0]); // 0=max (2x), 1=1x, 2=2x, 3=invalid
+    // const bool keepSettings = bit::extract<7>(m_CR[0]);
     // const uint16 standbyTime = m_CR[1];
     // const uint8 ecc = bit::extract<8, 15>(m_CR[3]);
     // const uint8 retryCount = bit::extract<0, 7>(m_CR[3]);
@@ -270,7 +274,52 @@ void CDBlock::CmdSetFilterConnection() {}
 
 void CDBlock::CmdGetFilterConnection() {}
 
-void CDBlock::CmdResetSelector() {}
+void CDBlock::CmdResetSelector() {
+    fmt::println("CDBlock: -> Reset selector");
+
+    // Input structure:
+    // 0x48           reset flags
+    // <blank>
+    // buffer number  <blank>
+    // <blank>
+    const uint8 resetFlags = bit::extract<0, 7>(m_CR[0]);
+
+    if (resetFlags == 0) {
+        const uint8 bufferNumber = bit::extract<8, 15>(m_CR[2]);
+        // TODO: clear everything in the specified buffer only
+
+        fmt::println("CDBlock: clearing all data for buffer {}", bufferNumber);
+    } else {
+        if (bit::extract<2>(resetFlags)) {
+            // TODO: clear all buffer data
+            fmt::println("CDBlock: clearing all buffer data");
+        }
+        if (bit::extract<3>(resetFlags)) {
+            // TODO: clear section output connectors
+            fmt::println("CDBlock: clearing all section output connectors");
+        }
+        if (bit::extract<4>(resetFlags)) {
+            // TODO: clear filter conditions
+            fmt::println("CDBlock: clearing all filter conditions");
+        }
+        if (bit::extract<4>(resetFlags)) {
+            // TODO: clear filter input connectors
+            fmt::println("CDBlock: clearing all filter input connectors");
+        }
+        if (bit::extract<6>(resetFlags)) {
+            // TODO: clear true filter output connectors
+            fmt::println("CDBlock: clearing all true filter output connectors");
+        }
+        if (bit::extract<7>(resetFlags)) {
+            // TODO: clear false filter output connectors
+            fmt::println("CDBlock: clearing all false filter output connectors");
+        }
+    }
+
+    ReportCDStatus();
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
+}
 
 void CDBlock::CmdGetBufferSize() {}
 
@@ -286,7 +335,36 @@ void CDBlock::CmdExecuteFADSearch() {}
 
 void CDBlock::CmdGetFADSearchResults() {}
 
-void CDBlock::CmdSetSectorLength() {}
+void CDBlock::CmdSetSectorLength() {
+    fmt::println("CDBlock: -> Set sector length");
+
+    // Input structure:
+    // 0x60               get sector length
+    // put sector length  <blank>
+    // <blank>
+    // <blank>
+    const uint8 getSectorLength = bit::extract<0, 7>(m_CR[0]);
+    const uint8 putSectorLength = bit::extract<8, 15>(m_CR[1]);
+
+    static constexpr uint32 kSectorLengths[] = {
+        2048, // user data
+        2336, // + subheader (checksum, ECC)
+        2340, // + header (sector offset and mode)
+        2352, // + sync bytes
+    };
+
+    if (getSectorLength < 4) {
+        m_getSectorLength = kSectorLengths[getSectorLength];
+    }
+    if (putSectorLength < 4) {
+        m_putSectorLength = kSectorLengths[putSectorLength];
+    }
+    fmt::println("CDBlock: Sector lengths: get={} put={}", m_getSectorLength, m_putSectorLength);
+
+    ReportCDStatus();
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
+}
 
 void CDBlock::CmdGetSectorData() {}
 
