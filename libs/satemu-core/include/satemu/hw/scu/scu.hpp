@@ -73,7 +73,9 @@ public:
             if ((address & 0x7FFF) < 0x1000 && address < 0x5891000) {
                 // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
                 // These 4 KiB blocks are mapped every 32 KiB, up to 0x25891000.
-                return m_CDBlock.Read<T>(address & 0x3F);
+                return m_CDBlock.ReadReg<T>(address & 0x3F);
+            } else {
+                return m_CDBlock.ReadData<T>(address & 0xFFFFF);
             }
 
         } else if (AddressInRange<0x5A0'0000, 0x5AF'FFFF>(address)) {
@@ -123,9 +125,9 @@ public:
             if ((address & 0x7FFF) < 0x1000 && address < 0x5891000) {
                 // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
                 // These 4 KiB blocks are mapped every 32 KiB, up to 0x25891000.
-                m_CDBlock.Write<T>(address & 0x3F, value);
+                m_CDBlock.WriteReg<T>(address & 0x3F, value);
             } else {
-                fmt::println("unhandled {}-bit SCU write to {:05X} = {:X}", sizeof(T) * 8, address, value);
+                m_CDBlock.WriteData<T>(address & 0xFFFFF, value);
             }
 
         } else if (AddressInRange<0x5A0'0000, 0x5AF'FFFF>(address)) {

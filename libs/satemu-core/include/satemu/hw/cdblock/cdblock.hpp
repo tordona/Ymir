@@ -33,14 +33,25 @@ public:
     // TODO: handle 8-bit and 32-bit accesses properly
 
     template <mem_access_type T>
-    T Read(uint32 address) {
-        T value = ReadImpl<T>(address);
-        fmt::println("{}-bit CD Block read from {:02X} = {:X}", sizeof(T) * 8, address, value);
+    T ReadData(uint32 address) {
+        fmt::println("unhandled {}-bit CD Block data read from {:02X}", sizeof(T) * 8, address);
+        return 0;
+    }
+
+    template <mem_access_type T>
+    void WriteData(uint32 address, T value) {
+        fmt::println("unhandled {}-bit CD Block data write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+    }
+
+    template <mem_access_type T>
+    T ReadReg(uint32 address) {
+        T value = ReadRegImpl<T>(address);
+        fmt::println("{}-bit CD Block register read from {:02X} = {:X}", sizeof(T) * 8, address, value);
         return value;
     }
 
     template <mem_access_type T>
-    T ReadImpl(uint32 address) {
+    T ReadRegImpl(uint32 address) {
         switch (address) {
         case 0x08: return m_HIRQ;
         case 0x0C: return m_HIRQMASK;
@@ -51,13 +62,13 @@ public:
             m_processingCommand = false;
             m_readyForPeriodicReports = true;
             return m_CR[3];
-        default: fmt::println("unhandled {}-bit CD Block read from {:02X}", sizeof(T) * 8, address); return 0;
+        default: fmt::println("unhandled {}-bit CD Block register read from {:02X}", sizeof(T) * 8, address); return 0;
         }
     }
 
     template <mem_access_type T>
-    void Write(uint32 address, T value) {
-        fmt::println("{}-bit CD Block write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+    void WriteReg(uint32 address, T value) {
+        fmt::println("{}-bit CD Block register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
         switch (address) {
         case 0x08:
             m_HIRQ &= value;
@@ -79,7 +90,9 @@ public:
             SetupCommand();
             break;
 
-        default: fmt::println("unhandled {}-bit CD Block write to {:02X} = {:X}", sizeof(T) * 8, address, value); break;
+        default:
+            fmt::println("unhandled {}-bit CD Block register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+            break;
         }
     }
 
