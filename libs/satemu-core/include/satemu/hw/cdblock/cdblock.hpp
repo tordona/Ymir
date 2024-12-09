@@ -34,7 +34,13 @@ public:
 
     template <mem_access_type T>
     T Read(uint32 address) {
-        fmt::println("{}-bit CD Block read from {:02X}", sizeof(T) * 8, address);
+        T value = ReadImpl<T>(address);
+        fmt::println("{}-bit CD Block read from {:02X} = {:X}", sizeof(T) * 8, address, value);
+        return value;
+    }
+
+    template <mem_access_type T>
+    T ReadImpl(uint32 address) {
         // TODO: implement properly; we're just stubbing the CDBLOCK init sequence here
         switch (address) {
         case 0x08: // return m_HIRQ;
@@ -49,7 +55,7 @@ public:
 
             // MEGA HACK! replace with a blank periodic report to get past the boot sequence
             // TODO: implement periodic CD status reporting *properly*
-            MakePeriodicReport();
+            ReportCDStatus();
 
             return result;
         }
@@ -59,6 +65,7 @@ public:
 
     template <mem_access_type T>
     void Write(uint32 address, T value) {
+        fmt::println("{}-bit CD Block write to {:02X} = {:X}", sizeof(T) * 8, address, value);
         switch (address) {
         case 0x08:
             m_HIRQ &= value;
@@ -79,6 +86,21 @@ private:
     alignas(uint64) std::array<uint16, 4> m_CR;
 
     // -------------------------------------------------------------------------
+    // Disc/drive state
+
+    struct Status {
+        // Status code, one of kStatusCode* constants and kStatusFlag* flags, or kStatusReject.
+        // kStatusFlagPeriodic and kStatusFlagWait are mutually exclusive.
+        uint8 statusCode;
+
+        uint32 frameAddress;
+        uint8 flagsRepeat; // 7-4: flags, 3-0: repeat count (0x0 to 0xE)
+        uint8 controlADR;
+        uint8 track;
+        uint8 index;
+    } m_status;
+
+    // -------------------------------------------------------------------------
     // Interrupts
 
     uint16 m_HIRQ;
@@ -90,7 +112,7 @@ private:
     // -------------------------------------------------------------------------
     // Status reports
 
-    void MakePeriodicReport();
+    void ReportCDStatus();
 
     // -------------------------------------------------------------------------
     // Commands

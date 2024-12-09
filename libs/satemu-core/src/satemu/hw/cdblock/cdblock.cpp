@@ -17,6 +17,13 @@ void CDBlock::Reset(bool hard) {
 
     m_HIRQ = 0;
     m_HIRQMASK = 0;
+
+    m_status.statusCode = kStatusCodeNoDisc | kStatusFlagPeriodic;
+    m_status.frameAddress = 0xFFFFFF;
+    m_status.flagsRepeat = 0xFF;
+    m_status.controlADR = 0xFF;
+    m_status.track = 0xFF;
+    m_status.index = 0xFF;
 }
 
 void CDBlock::Advance(uint64 cycles) {}
@@ -32,12 +39,11 @@ void CDBlock::UpdateInterrupts() {
     }
 }
 
-void CDBlock::MakePeriodicReport() {
-    // TODO: implement
-    m_CR[0] = 0x20FF;
-    m_CR[1] = 0xFFFF;
-    m_CR[2] = 0xFFFF;
-    m_CR[3] = 0xFFFF;
+void CDBlock::ReportCDStatus() {
+    m_CR[0] = (m_status.statusCode << 8u) | m_status.flagsRepeat;
+    m_CR[1] = (m_status.controlADR << 8u) | m_status.track;
+    m_CR[2] = (m_status.index << 8u) | ((m_status.frameAddress >> 16u) & 0xFF);
+    m_CR[3] = m_status.frameAddress;
 }
 
 void CDBlock::ProcessCommand() {

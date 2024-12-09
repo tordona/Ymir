@@ -21,20 +21,22 @@ constexpr uint16 kHIRQ_MPCM = 0x1000; // Long-running MPEG operation finished
 constexpr uint16 kHIRQ_MPST = 0x2000; // MPEG interrupt raised
 
 // Status codes
-constexpr uint8 kStatusBusy = 0x00;
-constexpr uint8 kStatusPause = 0x01;
-constexpr uint8 kStatusStandby = 0x02;
-constexpr uint8 kStatusPlay = 0x03;
-constexpr uint8 kStatusSeek = 0x04;
-constexpr uint8 kStatusScan = 0x05;
-constexpr uint8 kStatusOpen = 0x06;
-constexpr uint8 kStatusNoDisc = 0x07;
-constexpr uint8 kStatusRetry = 0x08;
-constexpr uint8 kStatusError = 0x09;
-constexpr uint8 kStatusFatal = 0x0A;
-constexpr uint8 kStatusPeriodic = 0x20;
-constexpr uint8 kStatusXferRequest = 0x40;
-constexpr uint8 kStatusWait = 0x80;
+constexpr uint8 kStatusCodeBusy = 0x00;
+constexpr uint8 kStatusCodePause = 0x01;
+constexpr uint8 kStatusCodeStandby = 0x02;
+constexpr uint8 kStatusCodePlay = 0x03;
+constexpr uint8 kStatusCodeSeek = 0x04;
+constexpr uint8 kStatusCodeScan = 0x05;
+constexpr uint8 kStatusCodeOpen = 0x06;
+constexpr uint8 kStatusCodeNoDisc = 0x07;
+constexpr uint8 kStatusCodeRetry = 0x08;
+constexpr uint8 kStatusCodeError = 0x09;
+constexpr uint8 kStatusCodeFatal = 0x0A;
+
+constexpr uint8 kStatusFlagPeriodic = 0x20;
+constexpr uint8 kStatusFlagXferRequest = 0x40;
+constexpr uint8 kStatusFlagWait = 0x80;
+
 constexpr uint8 kStatusReject = 0xFF;
 
 } // namespace satemu::cdblock
