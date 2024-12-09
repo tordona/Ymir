@@ -39,4 +39,8 @@ constexpr uint8 kStatusFlagWait = 0x80;
 
 constexpr uint8 kStatusReject = 0xFF;
 
+// Drive parameters
+constexpr uint16 kMinStandbyTime = 60;
+constexpr uint16 kMaxStandbyTime = 900;
+
 } // namespace satemu::cdblock
