@@ -91,8 +91,8 @@ void CDBlock::ProcessCommand() {
     switch (cmd) {
     case 0x00: CmdGetStatus(); break;
     case 0x01: CmdGetHardwareInfo(); break;
-    // case 0x02: CmdGetTOC(); break;
-    // case 0x03: CmdGetSessionInfo(); break;
+    case 0x02: CmdGetTOC(); break;
+    case 0x03: CmdGetSessionInfo(); break;
     case 0x04: CmdInitializeCDSystem(); break;
     // case 0x05: CmdOpenTray(); break;
     case 0x06: CmdEndDataTransfer(); break;
@@ -154,7 +154,9 @@ void CDBlock::ProcessCommand() {
         // case 0xA4: CmdMpegSetVideoEffects(); break;
         // case 0xAF: CmdMpegSetLSI(); break;
 
-        // case 0xE0: CmdAuthenticateDevice(); break;
+    case 0xE0:
+        CmdAuthenticateDevice();
+        break;
         // case 0xE1: CmdIsDeviceAuthenticated(); break;
         // case 0xE2: CmdGetMpegROM(); break;
 
@@ -165,6 +167,13 @@ void CDBlock::ProcessCommand() {
 void CDBlock::CmdGetStatus() {
     fmt::println("CDBlock: -> Get status");
 
+    // Input structure:
+    // 0x00     <blank>
+    // <blank>
+    // <blank>
+    // <blank>
+
+    // Output structure: standard CD status data
     ReportCDStatus();
 
     SetInterrupt(kHIRQ_CMOK);
@@ -173,7 +182,13 @@ void CDBlock::CmdGetStatus() {
 void CDBlock::CmdGetHardwareInfo() {
     fmt::println("CDBlock: -> Get hardware info");
 
-    // Report structure:
+    // Input structure:
+    // 0x01     <blank>
+    // <blank>
+    // <blank>
+    // <blank>
+
+    // Output structure:
     // status code      <blank>
     // hardware flags   hardware version
     // <blank>          MPEG version (0 if unauthenticated)
@@ -186,9 +201,56 @@ void CDBlock::CmdGetHardwareInfo() {
     SetInterrupt(kHIRQ_CMOK);
 }
 
-void CDBlock::CmdGetTOC() {}
+void CDBlock::CmdGetTOC() {
+    fmt::println("CDBlock: -> Get TOC");
 
-void CDBlock::CmdGetSessionInfo() {}
+    // Input structure:
+    // 0x02     <blank>
+    // <blank>
+    // <blank>
+    // <blank>
+
+    // TODO: prepare read transfer from media if present
+
+    // assuming no media
+
+    // Output structure:
+    // status code   <blank>
+    // TOC size
+    // <blank>
+    // <blank>
+    m_CR[0] = m_status.statusCode << 8u;
+    m_CR[1] = 0x00CC;
+    m_CR[2] = 0x0000;
+    m_CR[3] = 0x0000;
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY);
+}
+
+void CDBlock::CmdGetSessionInfo() {
+    fmt::println("CDBlock: -> Get session info");
+
+    // Input structure:
+    // 0x03     session data type (00 = all, others = specific session)
+    // <blank>
+    // <blank>
+    // <blank>
+    // const uint8 sessionType = bit::extract<0, 7>(m_CR[0]);
+
+    // TODO: read from TOC
+
+    // assuming no data
+
+    // Output structure:
+    // status code        <blank>
+    // <blank>
+    // session num/count  lba bits 23-16
+    // lba bits 15-0
+    m_CR[0] = m_status.statusCode << 8u;
+    m_CR[1] = 0x0000;
+    m_CR[2] = 0xFFFF;
+    m_CR[3] = 0xFFFF;
+}
 
 void CDBlock::CmdInitializeCDSystem() {
     fmt::println("CDBlock: -> Initialize CD system");
@@ -218,6 +280,7 @@ void CDBlock::CmdInitializeCDSystem() {
     m_readSpeed = readSpeed == 1 ? 1 : 2;
     fmt::println("CDBlock: Read speed: {}x", m_readSpeed);
 
+    // Output structure: standard CD status data
     ReportCDStatus();
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
@@ -228,10 +291,16 @@ void CDBlock::CmdOpenTray() {}
 void CDBlock::CmdEndDataTransfer() {
     fmt::println("CDBlock: -> End data transfer");
 
+    // Input structure:
+    // 0x06     <blank>
+    // <blank>
+    // <blank>
+    // <blank>
+
     // TODO: stop any ongoing transfer
     // - trigger kHIRQ_EHST on Get Sector Data, Get Then Delete Sector or Put Sector
 
-    // Report structure:
+    // Output structure:
     // status code      transfer word number bits 23-16
     // transfer word number bits 15-0
     // <blank>
@@ -316,6 +385,7 @@ void CDBlock::CmdResetSelector() {
         }
     }
 
+    // Output structure: standard CD status data
     ReportCDStatus();
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
@@ -361,6 +431,7 @@ void CDBlock::CmdSetSectorLength() {
     }
     fmt::println("CDBlock: Sector lengths: get={} put={}", m_getSectorLength, m_putSectorLength);
 
+    // Output structure: standard CD status data
     ReportCDStatus();
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
@@ -381,7 +452,13 @@ void CDBlock::CmdMoveSectorData() {}
 void CDBlock::CmdGetCopyError() {
     fmt::println("CDBlock: -> Get copy error");
 
-    // Report structure:
+    // Input structure:
+    // 0x67     <blank>
+    // <blank>
+    // <blank>
+    // <blank>
+
+    // Output structure:
     // status code      error code
     // <blank>
     // <blank>
@@ -407,8 +484,15 @@ void CDBlock::CmdReadFile() {}
 void CDBlock::CmdAbortFile() {
     fmt::println("CDBlock: -> Abort file");
 
+    // Input structure:
+    // 0x75     <blank>
+    // <blank>
+    // <blank>
+    // <blank>
+
     // TODO: abort file transfer
 
+    // Output structure: standard CD status data
     ReportCDStatus();
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_EFLS);
@@ -423,9 +507,20 @@ void CDBlock::CmdMpegSetInterruptMask() {}
 void CDBlock::CmdMpegInit() {
     fmt::println("CDBlock: -> MPEG init");
 
+    // Input structure:
+    // 0x93     <blank>
+    // <blank>
+    // <blank>
+    // <blank>
+
     // TODO: initialize MPEG stuff
 
-    m_CR[0] = 0xFF00; // not authenticated
+    // Output structure:
+    // status code (FF=unauthenticated)  <blank>
+    // <blank>
+    // <blank>
+    // <blank>
+    m_CR[0] = 0xFF00;
     m_CR[1] = 0;
     m_CR[2] = 0;
     m_CR[3] = 0;
@@ -459,7 +554,34 @@ void CDBlock::CmdMpegSetVideoEffects() {}
 
 void CDBlock::CmdMpegSetLSI() {}
 
-void CDBlock::CmdAuthenticateDevice() {}
+void CDBlock::CmdAuthenticateDevice() {
+    fmt::println("CDBlock: -> Authenticate device");
+
+    // Input structure:
+    // 0xE1    <blank>
+    // authentication type (0x0000=CD, 0x0001=MPEG)
+    // <blank>
+    // <blank>
+
+    const uint16 authType = m_CR[1];
+
+    switch (authType) {
+    case 0x0000:
+        fmt::println("CDBlock: CD authentication");
+        SetInterrupt(kHIRQ_EFLS | kHIRQ_CSCT);
+        break;
+    case 0x0001:
+        fmt::println("CDBlock: MPEG authentication");
+        SetInterrupt(kHIRQ_MPED);
+        break;
+    default: fmt::println("CDBlock: unexpected authentication type {}", authType); break;
+    }
+
+    // Output structure: standard CD status data
+    ReportCDStatus();
+
+    SetInterrupt(kHIRQ_CMOK);
+}
 
 void CDBlock::CmdIsDeviceAuthenticated() {}
 

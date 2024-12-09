@@ -139,7 +139,7 @@ private:
     // -------------------------------------------------------------------------
     // Commands
 
-    bool m_processingCommand;
+    bool m_processingCommand;     // true if a command is in progress
     uint32 m_currCommandCycles;   // current cycle count for commands
     uint32 m_targetCommandCycles; // command is executed when current >= target
 
