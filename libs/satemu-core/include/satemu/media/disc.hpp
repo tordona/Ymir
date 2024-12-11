@@ -24,6 +24,7 @@ struct Track {
 struct Session {
     std::array<Track, 99> tracks;
     uint32 numTracks;
+    uint32 firstTrackIndex;
 
     uint32 startFrameAddress;
     uint32 endFrameAddress;

@@ -160,7 +160,6 @@ bool Load(std::filesystem::path mdsPath, Disc &disc) {
     // fmt::println("MDF/MDS: {} {}", header.numSessions, (header.numSessions > 1 ? "sessions" : "session"));
 
     // Housekeeping
-    uint32 startFrameAddress = 0;
     uint32 endFrameAddress = 0;
     std::array<uint32, 99> trackStartOffsets{};
     std::array<fs::path, 99> trackMDFs{};
@@ -216,10 +215,6 @@ bool Load(std::filesystem::path mdsPath, Disc &disc) {
 
                 track.startFrameAddress = trackData.startSector + 150;
                 track.interleavedSubchannel = trackData.subchannelMode != 0;
-
-                if (startFrameAddress == 0) {
-                    startFrameAddress = track.startFrameAddress;
-                }
 
                 // Complete previous track
                 if (trackData.trackNum > sessionData.firstTrack) {
@@ -304,7 +299,8 @@ bool Load(std::filesystem::path mdsPath, Disc &disc) {
 
         // Finish session
         session.numTracks = sessionData.lastTrack - sessionData.firstTrack + 1;
-        session.startFrameAddress = startFrameAddress;
+        session.firstTrackIndex = sessionData.firstTrack - 1;
+        session.startFrameAddress = sessionData.sessionStart + 150;
         session.endFrameAddress = endFrameAddress;
         session.BuildTOC();
     }

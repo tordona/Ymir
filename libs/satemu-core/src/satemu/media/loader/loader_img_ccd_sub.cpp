@@ -263,7 +263,8 @@ bool Load(std::filesystem::path ccdPath, Disc &disc) {
         const uint32 lastTrackNum = pointA1.min;
 
         session.numTracks = lastTrackNum - firstTrackNum + 1;
-        session.startFrameAddress = 150;
+        session.firstTrackIndex = firstTrackNum - 1;
+        session.startFrameAddress = 0;
         session.endFrameAddress = TimestampToFrameAddress(pointA2.min, pointA2.sec, pointA2.frame);
 
         for (int j = 0; j < session.numTracks; j++) {

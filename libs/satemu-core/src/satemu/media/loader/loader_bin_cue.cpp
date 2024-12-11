@@ -68,7 +68,7 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
     // BIN/CUE files have only one session
     disc.sessions.clear();
     auto &session = disc.sessions.emplace_back();
-    session.startFrameAddress = 150;
+    session.startFrameAddress = 0;
 
     // auto cueFileSize = fs::file_size(cuePath);
     // fmt::println("BIN/CUE: File size: {} bytes", cueFileSize);
@@ -179,6 +179,7 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
 
             if (nextTrackNum == 0) {
                 nextTrackNum = trackNum;
+                session.firstTrackIndex = trackNum - 1;
             } else if (trackNum != nextTrackNum) {
                 // fmt::println("BIN/CUE: Unexpected track order: expected {} but found {} (line {})", nextTrackNum,
                 //              trackNum, lineNum);
