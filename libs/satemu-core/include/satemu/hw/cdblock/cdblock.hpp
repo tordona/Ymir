@@ -189,6 +189,17 @@ private:
     uint32 m_currCommandCycles;   // current cycle count for commands
     uint32 m_targetCommandCycles; // command is executed when current >= target
 
+    // Periodic response intervals:
+    // - Not playing:         16.667ms =  60 Hz = 1000000/3 (333333.333) cycles @ 20 MHz = once per video frame
+    // - Playing at 1x speed: 13.333ms =  75 Hz =  800000/3 (266666.667) cycles @ 20 MHz = once per CD frame
+    // - Playing at 2x speed:  6.667ms = 150 Hz =  400000/3 (133333.333) cycles @ 20 MHz = once per CD frame
+
+    // Constants for periodic report cycles (tripled to avoid rounding)
+
+    static constexpr uint32 kPeriodicCyclesNotPlaying = 1000000;
+    static constexpr uint32 kPeriodicCyclesPlaying1x = 800000;
+    // 2x cycles can be easily derived from 1x
+
     bool m_readyForPeriodicReports;      // HACK to avoid overwriting the initial state during the boot sequence
     uint32 m_currPeriodicReportCycles;   // current cycle count for periodic reports
     uint32 m_targetPeriodicReportCycles; // periodic report is generated when current >= target

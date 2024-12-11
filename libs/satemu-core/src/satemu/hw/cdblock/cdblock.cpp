@@ -44,7 +44,7 @@ void CDBlock::Reset(bool hard) {
 
     m_readyForPeriodicReports = false;
     m_currPeriodicReportCycles = 0;
-    m_targetPeriodicReportCycles = 50000;
+    m_targetPeriodicReportCycles = kPeriodicCyclesNotPlaying;
 }
 
 void CDBlock::LoadDisc(media::Disc &&disc) {
@@ -75,7 +75,7 @@ void CDBlock::Advance(uint64 cycles) {
     }
 
     if (m_readyForPeriodicReports) {
-        m_currPeriodicReportCycles += cycles;
+        m_currPeriodicReportCycles += cycles * 3;
         if (m_currPeriodicReportCycles >= m_targetPeriodicReportCycles) {
             m_currPeriodicReportCycles -= m_targetPeriodicReportCycles;
             if (!m_processingCommand) {
