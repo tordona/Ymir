@@ -16,7 +16,7 @@ void CDBlock::Reset(bool hard) {
     m_CR[3] = 0x434B; // 'CK'
 
     m_status.statusCode = kStatusCodePause;
-    m_status.frameAddress = 0xFFFFFF;
+    m_status.frameAddress = 0x1FFFFFF;
     m_status.flagsRepeat = 0xFF;
     m_status.controlADR = 0xFF;
     m_status.track = 0xFF;
@@ -29,6 +29,11 @@ void CDBlock::Reset(bool hard) {
 
     m_HIRQ = 0x0BC1; // 0x0BE1;
     m_HIRQMASK = 0;
+
+    m_transferType = TransferType::None;
+    m_transferPos = 0;
+    m_transferLength = 0;
+    m_transferCount = 0x1FFFFFF;
 
     m_processingCommand = false;
     m_currCommandCycles = 0;
@@ -85,7 +90,7 @@ void CDBlock::SetInterrupt(uint16 bits) {
 }
 
 void CDBlock::UpdateInterrupts() {
-    fmt::println("CDBlock: HIRQ = {:04X}  mask = {:04X}  active = {:04X}", m_HIRQ, m_HIRQMASK, m_HIRQ & m_HIRQMASK);
+    // fmt::println("CDBlock: HIRQ = {:04X}  mask = {:04X}  active = {:04X}", m_HIRQ, m_HIRQMASK, m_HIRQ & m_HIRQMASK);
     if (m_HIRQ & m_HIRQMASK) {
         m_scu.TriggerExternalInterrupt0();
     }
@@ -98,13 +103,57 @@ void CDBlock::ReportCDStatus() {
     m_CR[3] = m_status.frameAddress;
 }
 
+void CDBlock::SetupTransfer(TransferType type) {
+    m_transferType = type;
+    m_transferPos = 0;
+    m_transferLength = 0;
+    m_transferCount = 0x1FFFFFF;
+
+    switch (type) {
+    case TransferType::None: fmt::println("CDBlock: Ending transfer"); break;
+    case TransferType::TOC:
+        fmt::println("CDBlock: Starting TOC transfer");
+        m_transferLength = sizeof(media::Session::toc) / sizeof(uint16);
+        m_transferCount = 0;
+        break;
+    default: assert(false); break; // this should never happen
+    }
+}
+
+uint16 CDBlock::DoTransfer() {
+    uint16 value = 0;
+    switch (m_transferType) {
+    case TransferType::None: value = 0; break;
+    case TransferType::TOC: {
+        const bool evenWord = (m_transferPos & 2) == 0;
+        const std::size_t tocIndex = m_transferPos / sizeof(uint32);
+        value = m_disc.sessions[0].toc[tocIndex] >> (evenWord * 16u);
+        break;
+    }
+    default:
+        assert(false); // this should never happen
+        value = 0;
+        break;
+    }
+
+    m_transferPos += sizeof(uint16);
+    m_transferCount += sizeof(uint16);
+    if (m_transferPos >= m_transferLength) {
+        m_transferType = TransferType::None;
+        m_transferPos = 0;
+        m_transferLength = 0;
+    }
+    return value;
+}
+
 void CDBlock::SetupCommand() {
     m_targetCommandCycles = 50;
 }
 
 void CDBlock::ProcessCommand() {
     const uint8 cmd = m_CR[0] >> 8u;
-    fmt::println("CDBlock: processing command {:02X}", cmd);
+    fmt::println("CDBlock: processing command {:02X}  {:04X} {:04X} {:04X} {:04X}", cmd, m_CR[0], m_CR[1], m_CR[2],
+                 m_CR[3]);
 
     switch (cmd) {
     case 0x00: CmdGetStatus(); break;
@@ -228,19 +277,20 @@ void CDBlock::CmdGetTOC() {
     // <blank>
     // <blank>
 
-    // TODO: prepare read transfer from media if present
-
-    // assuming no media
+    SetupTransfer(TransferType::TOC);
 
     // Output structure:
     // status code   <blank>
-    // TOC size
+    // TOC size in words
     // <blank>
     // <blank>
     m_CR[0] = m_status.statusCode << 8u;
-    m_CR[1] = 0x00CC;
+    m_CR[1] = sizeof(media::Session::toc) / sizeof(uint16);
     m_CR[2] = 0x0000;
     m_CR[3] = 0x0000;
+
+    // TODO: make busy for a brief moment
+    m_status.statusCode = kStatusCodePause;
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY);
 }
@@ -253,21 +303,35 @@ void CDBlock::CmdGetSessionInfo() {
     // <blank>
     // <blank>
     // <blank>
-    // const uint8 sessionType = bit::extract<0, 7>(m_CR[0]);
-
-    // TODO: read from TOC
-
-    // assuming no data
 
     // Output structure:
     // status code        <blank>
     // <blank>
     // session num/count  lba bits 23-16
     // lba bits 15-0
+
+    const uint8 sessionNum = bit::extract<0, 7>(m_CR[0]);
+    if (sessionNum == 0) {
+        // Get information about all sessions
+        m_CR[2] = (m_disc.sessions.size() << 8u); // TODO: session LBA?
+        m_CR[3] = 0x0000;
+    } else if (sessionNum <= m_disc.sessions.size()) {
+        // Get information about a specific session
+        m_CR[2] = (sessionNum << 8u) | bit::extract<16, 23>(m_disc.sessions[sessionNum - 1].toc[101]);
+        m_CR[3] = bit::extract<0, 15>(m_disc.sessions[sessionNum - 1].toc[101]);
+    } else {
+        // Return FFFFFFFF for nonexistent sessions
+        m_CR[2] = 0xFFFF;
+        m_CR[3] = 0xFFFF;
+    }
+
     m_CR[0] = m_status.statusCode << 8u;
     m_CR[1] = 0x0000;
-    m_CR[2] = 0xFFFF;
-    m_CR[3] = 0xFFFF;
+
+    // TODO: make busy for a brief moment
+    m_status.statusCode = kStatusCodePause;
+
+    SetInterrupt(kHIRQ_CMOK);
 }
 
 void CDBlock::CmdInitializeCDSystem() {
@@ -319,14 +383,17 @@ void CDBlock::CmdEndDataTransfer() {
     // - trigger kHIRQ_EHST on Get Sector Data, Get Then Delete Sector or Put Sector
 
     // Output structure:
-    // status code      transfer word number bits 23-16
-    // transfer word number bits 15-0
+    // status code      transferred word count bits 23-16
+    // transferred word count bits 15-0
     // <blank>
     // <blank>
-    m_CR[0] = (m_status.statusCode << 8u) | 0xFF;
-    m_CR[1] = 0xFFFF;
+    const uint32 wordCount = m_transferCount / sizeof(uint16);
+    m_CR[0] = (m_status.statusCode << 8u) | (wordCount >> 16u);
+    m_CR[1] = wordCount;
     m_CR[2] = 0x0000;
     m_CR[3] = 0x0000;
+
+    m_transferCount = 0x1FFFFFF;
 
     SetInterrupt(kHIRQ_CMOK);
 }

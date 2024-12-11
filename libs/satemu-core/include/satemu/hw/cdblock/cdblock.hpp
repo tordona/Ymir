@@ -41,8 +41,12 @@ public:
 
     template <mem_access_type T>
     T ReadData(uint32 address) {
-        fmt::println("unhandled {}-bit CD Block data read from {:02X}", sizeof(T) * 8, address);
-        return 0;
+        if (address == 0x98000) {
+            return DoTransfer();
+        } else {
+            fmt::println("unhandled {}-bit CD Block data read from {:02X}", sizeof(T) * 8, address);
+            return 0;
+        }
     }
 
     template <mem_access_type T>
@@ -106,6 +110,7 @@ public:
 private:
     scu::SCU &m_scu;
 
+    // TODO: use a device instead, to support reading from real drives as well as disc images
     media::Disc m_disc;
 
     alignas(uint64) std::array<uint16, 4> m_CR;
@@ -144,6 +149,22 @@ private:
 
     // Updates CR1-4 with the current CD status
     void ReportCDStatus();
+
+    // -------------------------------------------------------------------------
+    // Data transfers
+
+    enum class TransferType { None, TOC };
+
+    TransferType m_transferType; // Type of transfer in progress
+    uint32 m_transferPos;        // Current transfer position in bytes
+    uint32 m_transferLength;     // Total number of bytes to be transferred
+    uint32 m_transferCount;      // Number of bytes transferred in the last transfer
+
+    // Initializes a transfer of the specified type
+    void SetupTransfer(TransferType type);
+
+    // Reads one word from the transfer
+    uint16 DoTransfer();
 
     // -------------------------------------------------------------------------
     // Commands
