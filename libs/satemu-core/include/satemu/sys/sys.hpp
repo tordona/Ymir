@@ -41,6 +41,13 @@ struct Saturn {
     smpc::SMPC SMPC;
     scsp::SCSP SCSP;
     cdblock::CDBlock CDBlock;
+
+private:
+    // -------------------------------------------------------------------------
+    // Cycle counting
+
+    uint64 m_scspCycles; // SCSP, M68K
+    uint64 m_cdbCycles;  // CD Block, SH1, SMPC (1/5)
 };
 
 } // namespace satemu
