@@ -33,12 +33,28 @@ add_library(satemu-core
     include/satemu/hw/vdp/vdp2.hpp
     include/satemu/hw/vdp/vdp2_defs.hpp
 
+    include/satemu/media/cd_struct.hpp
+    include/satemu/media/frame_address.hpp
+    
+    include/satemu/media/loader/loader.hpp
+    include/satemu/media/loader/loader_bin_cue.hpp
+    include/satemu/media/loader/loader_img_ccd_sub.hpp
+    include/satemu/media/loader/loader_iso.hpp
+    include/satemu/media/loader/loader_mdf_mds.hpp
+
+    include/satemu/media/binary_reader/binary_reader.hpp
+    include/satemu/media/binary_reader/binary_reader_file.hpp
+    include/satemu/media/binary_reader/binary_reader_impl.hpp
+    include/satemu/media/binary_reader/binary_reader_mem.hpp
+    include/satemu/media/binary_reader/binary_reader_subview.hpp
+
     include/satemu/sys/sys.hpp
     
     include/satemu/util/bit_ops.hpp
     include/satemu/util/callback.hpp
     include/satemu/util/data_ops.hpp
     include/satemu/util/inline.hpp
+    include/satemu/util/scope_guard.hpp
     include/satemu/util/size_ops.hpp
     include/satemu/util/thread_name.hpp
     include/satemu/util/unreachable.hpp
@@ -62,6 +78,12 @@ add_library(satemu-core
 
     src/satemu/hw/vdp/vdp1.cpp
     src/satemu/hw/vdp/vdp2.cpp
+
+    src/satemu/media/loader/loader.cpp
+    src/satemu/media/loader/loader_bin_cue.cpp
+    src/satemu/media/loader/loader_img_ccd_sub.cpp
+    src/satemu/media/loader/loader_iso.cpp
+    src/satemu/media/loader/loader_mdf_mds.cpp
 
     src/satemu/sys/sys.cpp
 
@@ -90,11 +112,19 @@ target_precompile_headers(satemu-core
         <concepts>
         <cstddef>
         <cstdint>
+        <filesystem>
+        <fstream>
         <limits>
+        <memory>
+        <set>
         <span>
+        <sstream>
         <type_traits>
+        <unordered_map>
+        <vector>
 
         <fmt/format.h>
+        <fmt/xchar.h>
 )
 
 ## Define version macros
