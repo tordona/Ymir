@@ -187,8 +187,9 @@ void runEmulator(satemu::Saturn &saturn) {
 int main(int argc, char **argv) {
     fmt::println("satemu {}", satemu::version::string);
     if (argc < 2) {
-        fmt::println("missing argument: rompath");
-        fmt::println("    rompath   Path to Saturn BIOS ROM");
+        fmt::println("missing argument: biospath [discpath]");
+        fmt::println("    biospath   Path to Saturn BIOS ROM");
+        fmt::println("    discpath   Path to Saturn disc image (.ccd, .cue, .iso, .mds)");
         return EXIT_FAILURE;
     }
 
@@ -202,6 +203,15 @@ int main(int argc, char **argv) {
         }
         saturn->LoadIPL(std::span<uint8, iplSize>(rom));
         fmt::println("IPL ROM loaded");
+    }
+    if (argc > 2) {
+        media::Disc disc{};
+        if (!media::LoadDisc(argv[2], disc)) {
+            fmt::println("Failed to load media from {}", argv[2]);
+            return EXIT_FAILURE;
+        }
+        fmt::println("Loaded disc image from {}", argv[2]);
+        saturn->LoadDisc(std::move(disc));
     }
     runEmulator(*saturn);
 

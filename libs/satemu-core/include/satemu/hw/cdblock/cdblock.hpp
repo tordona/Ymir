@@ -4,6 +4,8 @@
 
 #include <satemu/hw/hw_defs.hpp>
 
+#include <satemu/media/disc.hpp>
+
 #include <fmt/format.h>
 
 #include <array>
@@ -27,6 +29,11 @@ public:
     CDBlock(scu::SCU &scu);
 
     void Reset(bool hard);
+
+    void LoadDisc(media::Disc &&disc);
+    void EjectDisc();
+    void OpenTray();
+    void CloseTray();
 
     void Advance(uint64 cycles);
 
@@ -98,6 +105,8 @@ public:
 
 private:
     scu::SCU &m_scu;
+
+    media::Disc m_disc;
 
     alignas(uint64) std::array<uint16, 4> m_CR;
 

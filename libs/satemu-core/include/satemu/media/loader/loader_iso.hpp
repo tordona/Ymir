@@ -1,6 +1,6 @@
 #pragma once
 
-#include <satemu/media/cd_struct.hpp>
+#include <satemu/media/disc.hpp>
 
 #include <filesystem>
 
@@ -12,11 +12,11 @@
 //
 // The sector size must be derived from the total file size, which must be a multiple of 2048 or 2352.
 
-namespace media {
+namespace media::loader::iso {
 
 // Attempts to load an ISO file from isoPath into the specified Disc object.
 // Returns true if loading the file succeeded.
 // If this function returns false, the Disc object is invalidated.
-bool LoadIso(std::filesystem::path isoPath, Disc &disc);
+bool Load(std::filesystem::path isoPath, Disc &disc);
 
-} // namespace media
+} // namespace media::loader::iso

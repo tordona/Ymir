@@ -10,15 +10,15 @@
 
 namespace fs = std::filesystem;
 
-namespace media {
+namespace media::loader::iso {
 
-bool LoadIso(std::filesystem::path isoPath, Disc &disc) {
+bool Load(std::filesystem::path isoPath, Disc &disc) {
     std::ifstream in{isoPath, std::ios::binary};
 
     util::ScopeGuard sgInvalidateDisc{[&] { disc.sessions.clear(); }};
 
     if (!in) {
-        fmt::println("ISO: Could not load ISO file");
+        // fmt::println("ISO: Could not load ISO file");
         return false;
     }
 
@@ -30,10 +30,10 @@ bool LoadIso(std::filesystem::path isoPath, Disc &disc) {
         in.read(reinterpret_cast<char *>(start.data()), start.size());
         if (!in) {
             if (in.gcount() < 12) {
-                fmt::println("ISO: File too small");
+                // fmt::println("ISO: File too small");
             } else {
                 std::error_code err{errno, std::generic_category()};
-                fmt::println("ISO: File could not be read: {}", err.message());
+                // fmt::println("ISO: File could not be read: {}", err.message());
             }
             return false;
         }
@@ -43,12 +43,12 @@ bool LoadIso(std::filesystem::path isoPath, Disc &disc) {
                                                            0xff, 0xff, 0xff, 0xff, 0xff, 0x00};
         sectorSize = start == expected ? 2352 : 2048;
     }
-    fmt::println("ISO: Sector size: {} bytes", sectorSize);
+    // fmt::println("ISO: Sector size: {} bytes", sectorSize);
 
     // Sanity check: ensure file contains an exact multiple of the sector size
     const uintmax_t fileSize = fs::file_size(isoPath);
     if (fileSize % sectorSize != 0) {
-        fmt::println("ISO: File is truncated");
+        // fmt::println("ISO: File is truncated");
         return false;
     }
     const uint32 frames = fileSize / sectorSize;
@@ -69,9 +69,10 @@ bool LoadIso(std::filesystem::path isoPath, Disc &disc) {
     std::error_code err{};
     // TODO: dynamically choose implementation from configuration
     // track.binaryReader = std::make_unique<MemoryBinaryReader>(isoPath, err);
-    track.binaryReader = std::make_unique<FileBinaryReader>(isoPath, err);
+    // track.binaryReader = std::make_unique<FileBinaryReader>(isoPath, err);
+    track.binaryReader = std::make_unique<MemoryMappedBinaryReader>(isoPath, err);
     if (err) {
-        fmt::println("ISO: Could not create file reader: {}", err.message());
+        // fmt::println("ISO: Could not create file reader: {}", err.message());
         return false;
     }
 
@@ -82,4 +83,4 @@ bool LoadIso(std::filesystem::path isoPath, Disc &disc) {
     return true;
 }
 
-} // namespace media
+} // namespace media::loader::iso

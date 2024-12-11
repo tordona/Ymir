@@ -8,6 +8,8 @@
 #include <satemu/hw/vdp/vdp1.hpp>
 #include <satemu/hw/vdp/vdp2.hpp>
 
+#include <satemu/media/disc.hpp>
+
 namespace satemu {
 
 struct Saturn {
@@ -15,7 +17,15 @@ struct Saturn {
 
     void Reset(bool hard);
 
+    // -------------------------------------------------------------------------
+    // Convenience methods
+
     void LoadIPL(std::span<uint8, sh2::kIPLSize> ipl);
+
+    void LoadDisc(media::Disc &&disc);
+    void EjectDisc();
+    void OpenTray();
+    void CloseTray();
 
     // TODO: consider moving this to a system
     // TODO: implement RunFrame

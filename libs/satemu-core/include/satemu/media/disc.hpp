@@ -86,6 +86,17 @@ struct Session {
 
 struct Disc {
     std::vector<Session> sessions;
+
+    Disc() = default;
+    Disc(const Disc &) = delete;
+    Disc(Disc &&) = default;
+
+    Disc &operator=(const Disc &) = delete;
+    Disc &operator=(Disc &&) = default;
+
+    void Swap(Disc &&disc) {
+        sessions.swap(disc.sessions);
+    }
 };
 
 } // namespace media

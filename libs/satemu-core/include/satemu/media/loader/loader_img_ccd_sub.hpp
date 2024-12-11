@@ -1,6 +1,6 @@
 #pragma once
 
-#include <satemu/media/cd_struct.hpp>
+#include <satemu/media/disc.hpp>
 
 #include <filesystem>
 
@@ -44,11 +44,11 @@
 // - INDEX <n>: Starting LBAs of individual indexes in a track
 // - FLAGS: Special properties such as 4-channel audio, some forms of DRM, etc.
 
-namespace media {
+namespace media::loader::ccd {
 
 // Attempts to load a CUE file (along with any referenced BIN files) from cuePath into the specified Disc object.
 // Returns true if loading all files succeeded.
 // If this function returns false, the Disc object is invalidated.
-bool LoadImgCcdSub(std::filesystem::path ccdPath, Disc &disc);
+bool Load(std::filesystem::path ccdPath, Disc &disc);
 
-} // namespace media
+} // namespace media::loader::ccd

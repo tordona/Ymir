@@ -3,16 +3,17 @@
 namespace media {
 
 bool LoadDisc(std::filesystem::path path, Disc &disc) {
-    if (LoadBinCue(path, disc)) {
+    if (loader::bincue::Load(path, disc)) {
         return true;
     }
-    if (LoadMdfMds(path, disc)) {
+    if (loader::mdfmds::Load(path, disc)) {
         return true;
     }
-    if (LoadImgCcdSub(path, disc)) {
+    if (loader::ccd::Load(path, disc)) {
         return true;
     }
-    if (LoadIso(path, disc)) { // NOTE: must be the last to be tested
+    // NOTE: ISO must be the last to be tested since its detection is more lenient
+    if (loader::iso::Load(path, disc)) {
         return true;
     }
     return false;

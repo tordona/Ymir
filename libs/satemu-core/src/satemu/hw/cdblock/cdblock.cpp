@@ -39,6 +39,24 @@ void CDBlock::Reset(bool hard) {
     m_targetPeriodicReportCycles = 50000;
 }
 
+void CDBlock::LoadDisc(media::Disc &&disc) {
+    m_disc.Swap(std::move(disc));
+    // TODO: update status
+}
+
+void CDBlock::EjectDisc() {
+    m_disc = {};
+    // TODO: update status
+}
+
+void CDBlock::OpenTray() {
+    // TODO: implement
+}
+
+void CDBlock::CloseTray() {
+    // TODO: implement
+}
+
 void CDBlock::Advance(uint64 cycles) {
     if (m_targetCommandCycles > 0) {
         m_currCommandCycles += cycles;

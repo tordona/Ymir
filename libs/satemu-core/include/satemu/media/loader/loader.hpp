@@ -5,7 +5,7 @@
 #include "loader_iso.hpp"
 #include "loader_mdf_mds.hpp"
 
-#include <satemu/media/cd_struct.hpp>
+#include <satemu/media/disc.hpp>
 
 #include <filesystem>
 #include <vector>

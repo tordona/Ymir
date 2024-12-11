@@ -33,7 +33,7 @@ add_library(satemu-core
     include/satemu/hw/vdp/vdp2.hpp
     include/satemu/hw/vdp/vdp2_defs.hpp
 
-    include/satemu/media/cd_struct.hpp
+    include/satemu/media/disc.hpp
     include/satemu/media/frame_address.hpp
     
     include/satemu/media/loader/loader.hpp

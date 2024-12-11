@@ -14,7 +14,7 @@
 
 namespace fs = std::filesystem;
 
-namespace media {
+namespace media::loader::mdfmds {
 
 // Format parsing based on reverse-engineering work by Henrik Stokseth.
 
@@ -94,13 +94,13 @@ struct MDSFooter {
 #pragma pack(pop)
 static_assert(sizeof(MDSFooter) == 0x10);
 
-bool LoadMdfMds(std::filesystem::path mdsPath, Disc &disc) {
+bool Load(std::filesystem::path mdsPath, Disc &disc) {
     std::ifstream in{mdsPath, std::ios::binary};
 
     util::ScopeGuard sgInvalidateDisc{[&] { disc.sessions.clear(); }};
 
     if (!in) {
-        fmt::println("MDF/MDS: Could not load MDS file");
+        // fmt::println("MDF/MDS: Could not load MDS file");
         return false;
     }
 
@@ -108,11 +108,11 @@ bool LoadMdfMds(std::filesystem::path mdsPath, Disc &disc) {
         in.read(reinterpret_cast<char *>(&value), sizeof(value));
         if (!in) {
             std::error_code err{errno, std::generic_category()};
-            fmt::println("MDF/MDS: File could not be read: {}", err.message());
+            // fmt::println("MDF/MDS: File could not be read: {}", err.message());
             return false;
         }
         if (in.gcount() < sizeof(value)) {
-            fmt::println("MDF/MDS: File truncated");
+            // fmt::println("MDF/MDS: File truncated");
             return false;
         }
         return true;
@@ -121,7 +121,7 @@ bool LoadMdfMds(std::filesystem::path mdsPath, Disc &disc) {
     // Read and validate header
     MDSHeader header{};
     if (!read(header)) {
-        fmt::println("MDF/MDS: Could not read MDS header");
+        // fmt::println("MDF/MDS: Could not read MDS header");
         return false;
     }
 
@@ -129,13 +129,13 @@ bool LoadMdfMds(std::filesystem::path mdsPath, Disc &disc) {
     static constexpr std::array<uint8, 16> expected = {0x4D, 0x45, 0x44, 0x49, 0x41, 0x20, 0x44, 0x45,
                                                        0x53, 0x43, 0x52, 0x49, 0x50, 0x54, 0x4F, 0x52};
     if (header.signature != expected) {
-        fmt::println("MDF/MDS: Not a valid MDS file");
+        // fmt::println("MDF/MDS: Not a valid MDS file");
         return false;
     }
 
     // Expect version 1
     if (header.version != 0x0301) {
-        fmt::println("MDF/MDS: Unsupported MDS version {:04X}", header.version);
+        // fmt::println("MDF/MDS: Unsupported MDS version {:04X}", header.version);
         return false;
     }
 
@@ -147,7 +147,7 @@ bool LoadMdfMds(std::filesystem::path mdsPath, Disc &disc) {
     //   10  DVD-ROM
     //   12  DVD-R
     if (header.mediumType >= 0x10) {
-        fmt::println("MDF/MDS: MDS file describes a DVD image - not supported");
+        // fmt::println("MDF/MDS: MDS file describes a DVD image - not supported");
         return false;
     }
 
@@ -157,28 +157,26 @@ bool LoadMdfMds(std::filesystem::path mdsPath, Disc &disc) {
     MDSFooter footerData{};
 
     // Get session count
-    fmt::println("MDF/MDS: {} {}", header.numSessions, (header.numSessions > 1 ? "sessions" : "session"));
+    // fmt::println("MDF/MDS: {} {}", header.numSessions, (header.numSessions > 1 ? "sessions" : "session"));
 
     // Housekeeping
     uint32 startFrameAddress = 0;
     uint32 endFrameAddress = 0;
     std::array<uint32, 99> trackStartOffsets{};
     std::array<fs::path, 99> trackMDFs{};
-    // TODO: dynamically choose implementation from configuration
-    // std::unordered_map<fs::path, std::shared_ptr<MemoryBinaryReader>> files{};
-    std::unordered_map<fs::path, std::shared_ptr<FileBinaryReader>> files{};
+    std::unordered_map<fs::path, std::shared_ptr<IBinaryReader>> files{};
 
     // Build sessions
     disc.sessions.clear();
     for (uint32 i = 0; i < header.numSessions; i++) {
         in.seekg(header.sessionDataOffset + i * sizeof(MDSSession), std::ios::beg);
         if (!read(sessionData)) {
-            fmt::println("MDF/MDS: Could not read session {}", i);
+            // fmt::println("MDF/MDS: Could not read session {}", i);
             return false;
         }
 
-        fmt::println("MDF/MDS: Session {} - tracks {} to {}", sessionData.sessionNumber, sessionData.firstTrack,
-                     sessionData.lastTrack);
+        // fmt::println("MDF/MDS: Session {} - tracks {} to {}", sessionData.sessionNumber, sessionData.firstTrack,
+        //              sessionData.lastTrack);
 
         auto &session = disc.sessions.emplace_back();
 
@@ -186,8 +184,9 @@ bool LoadMdfMds(std::filesystem::path mdsPath, Disc &disc) {
             const uint32 trackBlockOffset = sessionData.trackBlocksOffset + j * sizeof(MDSTrack);
             in.seekg(trackBlockOffset, std::ios::beg);
             if (!read(trackData)) {
-                fmt::println("MDF/MDS: Could not read track {} in session {} at 0x{:X}", j, sessionData.sessionNumber,
-                             trackBlockOffset);
+                // fmt::println("MDF/MDS: Could not read track {} in session {} at 0x{:X}", j,
+                // sessionData.sessionNumber,
+                //              trackBlockOffset);
                 return false;
             }
 
@@ -238,16 +237,16 @@ bool LoadMdfMds(std::filesystem::path mdsPath, Disc &disc) {
                 }
 
                 if (trackData.footerOffset == 0) {
-                    fmt::println("MDF/MDS: No footer data found for track {} in session {} at 0x{:X}", j,
-                                 sessionData.sessionNumber, trackData.footerOffset);
+                    // fmt::println("MDF/MDS: No footer data found for track {} in session {} at 0x{:X}", j,
+                    //              sessionData.sessionNumber, trackData.footerOffset);
                     return false;
                 }
 
                 // Get data file name
                 in.seekg(trackData.footerOffset);
                 if (!read(footerData)) {
-                    fmt::println("MDF/MDS: Could not read footer data from track {} in session {}", j,
-                                 sessionData.sessionNumber);
+                    // fmt::println("MDF/MDS: Could not read footer data from track {} in session {}", j,
+                    //              sessionData.sessionNumber);
                     return false;
                 }
 
@@ -275,9 +274,10 @@ bool LoadMdfMds(std::filesystem::path mdsPath, Disc &disc) {
                     std::error_code err{};
                     // TODO: dynamically choose implementation from configuration
                     // files.insert({mdfPath, std::make_shared<MemoryBinaryReader>(mdfPath, err)});
-                    files.insert({mdfPath, std::make_shared<FileBinaryReader>(mdfPath, err)});
+                    // files.insert({mdfPath, std::make_shared<FileBinaryReader>(mdfPath, err)});
+                    files.insert({mdfPath, std::make_shared<MemoryMappedBinaryReader>(mdfPath, err)});
                     if (err) {
-                        fmt::println("MDF/MDS: Failed to load MDF file {} - {}", mdfPath.string(), err.message());
+                        // fmt::println("MDF/MDS: Failed to load MDF file {} - {}", mdfPath.string(), err.message());
                         return false;
                     }
                 }
@@ -314,4 +314,4 @@ bool LoadMdfMds(std::filesystem::path mdsPath, Disc &disc) {
     return true;
 }
 
-} // namespace media
+} // namespace media::loader::mdfmds

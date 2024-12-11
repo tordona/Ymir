@@ -27,6 +27,22 @@ void Saturn::LoadIPL(std::span<uint8, sh2::kIPLSize> ipl) {
     SH2.bus.LoadIPL(ipl);
 }
 
+void Saturn::LoadDisc(media::Disc &&disc) {
+    CDBlock.LoadDisc(std::move(disc));
+}
+
+void Saturn::EjectDisc() {
+    CDBlock.EjectDisc();
+}
+
+void Saturn::OpenTray() {
+    CDBlock.OpenTray();
+}
+
+void Saturn::CloseTray() {
+    CDBlock.CloseTray();
+}
+
 void Saturn::Step() {
     SH2.master.Step();
     // TODO: step slave SH2 if enabled
