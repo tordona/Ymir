@@ -135,6 +135,19 @@ private:
     uint32 m_getSectorLength;
     uint32 m_putSectorLength;
 
+    // CD authentication status:
+    //   0: no CD/not authenticated
+    //   1: audio CD
+    //   2: non-Saturn CD
+    //   3: non-original Saturn CD
+    //   4: original Saturn CD
+    uint8 m_discAuthStatus;
+
+    // MPEG authentication status:
+    //   0: no MPEG card/not authenticated
+    //   2: MPEG card present
+    uint8 m_mpegAuthStatus;
+
     // -------------------------------------------------------------------------
     // Interrupts
 

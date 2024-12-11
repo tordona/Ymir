@@ -27,6 +27,9 @@ void CDBlock::Reset(bool hard) {
     m_getSectorLength = 2048;
     m_putSectorLength = 2048;
 
+    m_discAuthStatus = 0;
+    m_mpegAuthStatus = 0;
+
     m_HIRQ = 0x0BC1; // 0x0BE1;
     m_HIRQMASK = 0;
 
@@ -221,10 +224,10 @@ void CDBlock::ProcessCommand() {
         // case 0xA4: CmdMpegSetVideoEffects(); break;
         // case 0xAF: CmdMpegSetLSI(); break;
 
-    case 0xE0:
-        CmdAuthenticateDevice();
+    case 0xE0: CmdAuthenticateDevice(); break;
+    case 0xE1:
+        CmdIsDeviceAuthenticated();
         break;
-        // case 0xE1: CmdIsDeviceAuthenticated(); break;
         // case 0xE2: CmdGetMpegROM(); break;
 
     default: fmt::println("CDBlock: unimplemented command {:02X}", cmd); break;
@@ -653,14 +656,19 @@ void CDBlock::CmdAuthenticateDevice() {
     switch (authType) {
     case 0x0000:
         fmt::println("CDBlock: CD authentication");
+        m_discAuthStatus = 4; // always authenticated ;)
         SetInterrupt(kHIRQ_EFLS | kHIRQ_CSCT);
         break;
     case 0x0001:
         fmt::println("CDBlock: MPEG authentication");
+        m_mpegAuthStatus = 2;
         SetInterrupt(kHIRQ_MPED);
         break;
     default: fmt::println("CDBlock: unexpected authentication type {}", authType); break;
     }
+
+    // TODO: make busy for a brief moment
+    m_status.statusCode = kStatusCodePause;
 
     // Output structure: standard CD status data
     ReportCDStatus();
@@ -668,7 +676,29 @@ void CDBlock::CmdAuthenticateDevice() {
     SetInterrupt(kHIRQ_CMOK);
 }
 
-void CDBlock::CmdIsDeviceAuthenticated() {}
+void CDBlock::CmdIsDeviceAuthenticated() {
+    fmt::println("CDBlock: -> Is device authenticated");
+
+    // Input structure:
+    // 0xE2    <blank>
+    // authentication type (0x0000=CD, 0x0001=MPEG)
+    // <blank>
+    // <blank>
+
+    const uint16 authType = m_CR[1];
+
+    // Output structure:
+    // status code  <blank>
+    // authentication status
+    // <blank>
+    // <unknown>
+    m_CR[0] = (m_status.statusCode << 8u);
+    m_CR[1] = authType == 0x0000 ? m_discAuthStatus : m_mpegAuthStatus;
+    m_CR[2] = 0;
+    m_CR[3] = 0;
+
+    SetInterrupt(kHIRQ_CMOK);
+}
 
 void CDBlock::CmdGetMpegROM() {}
 
