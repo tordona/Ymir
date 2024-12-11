@@ -65,7 +65,7 @@ public:
 
     void Reset(bool hard);
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     T Read(uint32 address) {
         using namespace util;
 
@@ -117,7 +117,7 @@ public:
         return 0;
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     void Write(uint32 address, T value) {
         using namespace util;
 
@@ -194,7 +194,7 @@ private:
     // -------------------------------------------------------------------------
     // SCU registers
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     T ReadReg(uint32 address) {
         switch (address) {
         case 0xA0: // Interrupt Mask
@@ -210,7 +210,7 @@ private:
         }
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     void WriteReg(uint32 address, T value) {
         switch (address) {
         case 0xA0: // Interrupt Mask

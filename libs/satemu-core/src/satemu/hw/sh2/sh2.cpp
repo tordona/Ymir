@@ -126,7 +126,7 @@ void dbg_println(fmt::format_string<T...> fmt, T &&...args) {
 // -----------------------------------------------------------------------------
 // Memory accessors
 
-template <mem_access_type T, bool instrFetch>
+template <mem_primitive T, bool instrFetch>
 T SH2::MemRead(uint32 address) {
     const uint32 partition = (address >> 29u) & 0b111;
     if (address & static_cast<uint32>(sizeof(T) - 1)) {
@@ -183,7 +183,7 @@ T SH2::MemRead(uint32 address) {
     util::unreachable();
 }
 
-template <mem_access_type T>
+template <mem_primitive T>
 void SH2::MemWrite(uint32 address, T value) {
     const uint32 partition = address >> 29u;
     if (address & static_cast<uint32>(sizeof(T) - 1)) {
@@ -271,7 +271,7 @@ FLATTEN FORCE_INLINE void SH2::MemWriteLong(uint32 address, uint32 value) {
     MemWrite<uint32>(address, value);
 }
 
-template <mem_access_type T>
+template <mem_primitive T>
 T SH2::OpenBusSeqRead(uint32 address) {
     if constexpr (std::is_same_v<T, uint8>) {
         return (address & 1u) * ((address >> 1u) & 0x7);
@@ -396,7 +396,7 @@ void SH2::DIVUBegin64() {
     }
 }
 
-template <mem_access_type T>
+template <mem_primitive T>
 T SH2::OnChipRegRead(uint32 address) {
     // Misaligned memory accesses raise an address error, meaning all accesses here are aligned.
     // Therefore:
@@ -487,7 +487,7 @@ T SH2::OnChipRegRead(uint32 address) {
     }
 }
 
-template <mem_access_type T>
+template <mem_primitive T>
 void SH2::OnChipRegWrite(uint32 address, T baseValue) {
     // Misaligned memory accesses raise an address error, meaning all accesses here are aligned.
     // Therefore:

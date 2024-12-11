@@ -52,7 +52,7 @@ public:
 
     void LoadIPL(std::span<uint8, kIPLSize> ipl);
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     T Read(uint32 address) {
         address &= ~(sizeof(T) - 1);
 
@@ -74,7 +74,7 @@ public:
         }
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     void Write(uint32 address, T value) {
         address &= ~(sizeof(T) - 1);
 

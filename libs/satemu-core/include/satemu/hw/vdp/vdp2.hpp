@@ -44,7 +44,7 @@ public:
     // TODO: handle VRSIZE.VRAMSZ in Read/WriteVRAM maybe?
     // TODO: CRAM and registers only accept 16-bit and 32-bit accesses
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     T ReadVRAM(uint32 address) {
         /*address &= 0x7FFFF;
         T value = util::ReadBE<T>(&m_VRAM[address]);
@@ -53,13 +53,13 @@ public:
         return util::ReadBE<T>(&m_VRAM[address & 0x7FFFF]);
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     void WriteVRAM(uint32 address, T value) {
         // fmt::println("{}-bit VDP2 VRAM write to {:05X} = {:X}", sizeof(T) * 8, address & 0x7FFFF, value);
         util::WriteBE<T>(&m_VRAM[address & 0x7FFFF], value);
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     T ReadCRAM(uint32 address) {
         /*address &= MapCRAMAddress(address);
         T value = util::ReadBE<T>(&m_CRAM[address]);
@@ -68,7 +68,7 @@ public:
         return util::ReadBE<T>(&m_CRAM[MapCRAMAddress(address)]);
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     void WriteCRAM(uint32 address, T value) {
         address = MapCRAMAddress(address);
         // fmt::println("{}-bit VDP2 CRAM write to {:05X} = {:X}", sizeof(T) * 8, address, value);
@@ -79,7 +79,7 @@ public:
         }
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     T ReadReg(uint32 address) {
         switch (address) {
         case 0x000: return TVMD.u16;
@@ -228,7 +228,7 @@ public:
         }
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     void WriteReg(uint32 address, T value) {
         switch (address) {
         case 0x000:

@@ -102,10 +102,10 @@ private:
 
     M68kBus &m_bus;
 
-    template <mem_access_type T, bool instrFetch>
+    template <mem_primitive T, bool instrFetch>
     T MemRead(uint32 address);
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     void MemWrite(uint32 address, T value);
 
     uint16 FetchInstruction();
@@ -153,15 +153,15 @@ private:
     void SetSR(uint16 value);
 
     // Reads from an effective address
-    template <mem_access_type T>
+    template <mem_primitive T>
     T ReadEffectiveAddress(uint8 M, uint8 Xn);
 
     // Writes to an effective address
-    template <mem_access_type T>
+    template <mem_primitive T>
     void WriteEffectiveAddress(uint8 M, uint8 Xn, T value);
 
     // Read-modify-write an effective address
-    template <mem_access_type T, typename FnModify>
+    template <mem_primitive T, typename FnModify>
     void ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify &&modify);
 
     // Calculates effective addresses for instructions that use control addresses (LEA, JSR, JMP, MOVEM, etc.)

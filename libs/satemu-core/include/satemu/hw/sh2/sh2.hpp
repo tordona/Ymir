@@ -115,10 +115,10 @@ private:
     //    110   Data array read/write area      Cache data acessed directly (4 KiB, mirrored)
     //    111   I/O area (on-chip registers)    Cache bypassed
 
-    template <mem_access_type T, bool instrFetch>
+    template <mem_primitive T, bool instrFetch>
     T MemRead(uint32 address);
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     void MemWrite(uint32 address, T value);
 
     uint16 FetchInstruction(uint32 address);
@@ -132,7 +132,7 @@ private:
     void MemWriteLong(uint32 address, uint32 value);
 
     // Returns 00 00 00 01 00 02 00 03 00 04 00 05 00 06 00 07 ... repeating
-    template <mem_access_type T>
+    template <mem_primitive T>
     T OpenBusSeqRead(uint32 address);
 
     // -------------------------------------------------------------------------
@@ -210,10 +210,10 @@ private:
     RTCNT_t RTCNT; // 1F4  R/W  16,32    0000      RTCNT   Refresh Timer Counter
     RTCOR_t RTCOR; // 1F8  R/W  16,32    0000      RTCOR   Refresh Timer Constant Register
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     T OnChipRegRead(uint32 address);
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     void OnChipRegWrite(uint32 address, T baseValue);
 
     // -------------------------------------------------------------------------

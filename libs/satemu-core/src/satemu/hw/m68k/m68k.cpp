@@ -42,7 +42,7 @@ void MC68EC000::SetExternalInterruptLevel(uint8 level) {
     m_externalInterruptLevel = level;
 }
 
-template <mem_access_type T, bool instrFetch>
+template <mem_primitive T, bool instrFetch>
 T MC68EC000::MemRead(uint32 address) {
     if constexpr (std::is_same_v<T, uint32>) {
         const uint32 hi = m_bus.Read<uint16, instrFetch>(address + 0);
@@ -53,7 +53,7 @@ T MC68EC000::MemRead(uint32 address) {
     }
 }
 
-template <mem_access_type T>
+template <mem_primitive T>
 void MC68EC000::MemWrite(uint32 address, T value) {
     if constexpr (std::is_same_v<T, uint32>) {
         m_bus.Write<uint16>(address + 0, value >> 16u);
@@ -159,7 +159,7 @@ void MC68EC000::CheckInterrupt() {
 // 111 001    (xxx).l              Absolute long
 // 111 100    #imm                 Immediate
 
-template <mem_access_type T>
+template <mem_primitive T>
 T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
     switch (M) {
     case 0b000: return regs.D[Xn];
@@ -230,7 +230,7 @@ T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
     util::unreachable();
 }
 
-template <mem_access_type T>
+template <mem_primitive T>
 void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
     static constexpr uint32 regMask = ~0u << (sizeof(T) * 8u - 1u) << 1u;
 
@@ -270,7 +270,7 @@ void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
     }
 }
 
-template <mem_access_type T, typename FnModify>
+template <mem_primitive T, typename FnModify>
 void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify &&modify) {
     static constexpr uint32 regMask = ~0u << (sizeof(T) * 8u - 1u) << 1u;
 

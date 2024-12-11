@@ -19,27 +19,27 @@ public:
 
     void Reset(bool hard);
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     T ReadVRAM(uint32 address) {
         return util::ReadBE<T>(&m_VRAM[address & 0x7FFFF]);
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     void WriteVRAM(uint32 address, T value) {
         util::WriteBE<T>(&m_VRAM[address & 0x7FFFF], value);
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     T ReadFB(uint32 address) {
         return util::ReadBE<T>(&m_framebuffers[m_drawFB][address & 0x3FFFF]);
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     void WriteFB(uint32 address, T value) {
         util::WriteBE<T>(&m_framebuffers[m_drawFB][address & 0x3FFFF], value);
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     T ReadReg(uint32 address) {
         if (address == 0x10) {
             // MEGA HACK to get past the boot sequence
@@ -49,7 +49,7 @@ public:
         return 0;
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     void WriteReg(uint32 address, T value) {
         fmt::println("unhandled {}-bit VDP1 register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
     }

@@ -39,7 +39,7 @@ public:
 
     // TODO: handle 8-bit and 32-bit accesses properly
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     T ReadData(uint32 address) {
         if (address == 0x98000) {
             return DoTransfer();
@@ -49,19 +49,19 @@ public:
         }
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     void WriteData(uint32 address, T value) {
         fmt::println("unhandled {}-bit CD Block data write to {:02X} = {:X}", sizeof(T) * 8, address, value);
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     T ReadReg(uint32 address) {
         T value = ReadRegImpl<T>(address);
         fmt::println("{}-bit CD Block register read from {:02X} = {:X}", sizeof(T) * 8, address, value);
         return value;
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     T ReadRegImpl(uint32 address) {
         switch (address) {
         case 0x08: return m_HIRQ;
@@ -77,7 +77,7 @@ public:
         }
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     void WriteReg(uint32 address, T value) {
         fmt::println("{}-bit CD Block register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
         switch (address) {

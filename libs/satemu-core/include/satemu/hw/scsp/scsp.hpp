@@ -39,22 +39,22 @@ public:
     // SCU-facing bus
     // 16-bit reads, 8- or 16-bit writes
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     FLATTEN T ReadWRAM(uint32 address) {
         return ReadWRAM<T, false, false>(address);
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     FLATTEN void WriteWRAM(uint32 address, T value) {
         WriteWRAM<T, false>(address, value);
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     T ReadReg(uint32 address) {
         return ReadReg<T, false, false>(address);
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     void WriteReg(uint32 address, T value) {
         WriteReg<T, false>(address, value);
     }
@@ -75,7 +75,7 @@ private:
 
     friend class m68k::MC68EC000;
 
-    template <mem_access_type T, bool instrFetch>
+    template <mem_primitive T, bool instrFetch>
     T Read(uint32 address) {
         if (util::AddressInRange<0x000000, 0x0FFFFF>(address)) {
             // TODO: handle memory size bit
@@ -87,7 +87,7 @@ private:
         }
     }
 
-    template <mem_access_type T>
+    template <mem_primitive T>
     void Write(uint32 address, T value) {
         if (util::AddressInRange<0x000000, 0x0FFFFF>(address)) {
             WriteWRAM<T, true>(address, value);
@@ -101,13 +101,13 @@ private:
     // fromM68K: false=SCU, true=MC68EC000
     // T is either uint8 or uint16, never uint32
 
-    template <mem_access_type T, bool fromM68K, bool instrFetch>
+    template <mem_primitive T, bool fromM68K, bool instrFetch>
     T ReadWRAM(uint32 address) {
         // TODO: handle memory size bit
         return util::ReadBE<T>(&m_WRAM[address & 0x7FFFF]);
     }
 
-    template <mem_access_type T, bool fromM68K>
+    template <mem_primitive T, bool fromM68K>
     void WriteWRAM(uint32 address, T value) {
         // TODO: handle memory size bit
         util::WriteBE<T>(&m_WRAM[address & 0x7FFFF], value);
@@ -125,7 +125,7 @@ private:
     //   8-bit on even addresses   8-bit value in bits 15-8
     //   8-bit on odd addresses    8-bit value in bits 7-0
 
-    template <mem_access_type T, bool fromM68K, bool instrFetch>
+    template <mem_primitive T, bool fromM68K, bool instrFetch>
     T ReadReg(uint32 address) {
         static constexpr bool is16 = std::is_same_v<T, uint16>;
 
@@ -191,7 +191,7 @@ private:
         return 0;
     }
 
-    template <mem_access_type T, bool fromM68K>
+    template <mem_primitive T, bool fromM68K>
     void WriteReg(uint32 address, T value) {
         if (address < 0x400) {
             const uint32 slotIndex = address >> 5;
