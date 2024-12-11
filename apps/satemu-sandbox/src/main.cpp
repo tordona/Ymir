@@ -147,7 +147,24 @@ void runEmulator(satemu::Saturn &saturn) {
     bool running = true;
     while (running) {
         // TODO: saturn.RunFrame();
-        for (int i = 0; i < 428 * 264 * 4; i++) {
+
+        // For the timings below, we introduce a counting factor in order to avoid rounding errors from the division.
+        // At each step we increment the current cycle count by the factor, effectively enabling fractional cycle
+        // counting with pure integer math.
+
+        // NTSC timings at the default (fast) clock rate
+        static constexpr uint64 kClockRate = 28'636'360;
+        static constexpr uint64 kFramesPerSecond = 60;
+        static constexpr uint64 kCycleCountingFactor = 3;
+        static constexpr uint64 kCyclesPerFrame = kClockRate * kCycleCountingFactor / kFramesPerSecond;
+
+        // PAL timings at the default (fast) clock rate)
+        // static constexpr uint64 kClockRate = 28'437'500;
+        // static constexpr uint64 kFramesPerSecond = 50;
+        // static constexpr uint64 kCycleCountingFactor = 1;
+        // static constexpr uint64 kCyclesPerFrame = kClockRate * kCycleCountingFactor / kFramesPerSecond;
+
+        for (int i = 0; i < kCyclesPerFrame; i += kCycleCountingFactor) {
             saturn.Step();
         }
 
