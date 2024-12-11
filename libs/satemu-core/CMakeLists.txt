@@ -46,6 +46,7 @@ add_library(satemu-core
     include/satemu/media/binary_reader/binary_reader_file.hpp
     include/satemu/media/binary_reader/binary_reader_impl.hpp
     include/satemu/media/binary_reader/binary_reader_mem.hpp
+    include/satemu/media/binary_reader/binary_reader_mmap.hpp
     include/satemu/media/binary_reader/binary_reader_subview.hpp
 
     include/satemu/sys/sys.hpp
@@ -100,7 +101,7 @@ target_include_directories(satemu-core
 target_compile_features(satemu-core PUBLIC cxx_std_20)
 
 ## Add dependencies
-target_link_libraries(satemu-core PUBLIC fmt)
+target_link_libraries(satemu-core PUBLIC fmt mio)
 
 # Build precompiled header
 target_precompile_headers(satemu-core
@@ -125,6 +126,8 @@ target_precompile_headers(satemu-core
 
         <fmt/format.h>
         <fmt/xchar.h>
+
+         <mio/mmap.hpp>
 )
 
 ## Define version macros

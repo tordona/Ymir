@@ -62,6 +62,16 @@ message(STATUS "Adding vendored libraries")
 message(VERBOSE "==> {fmt}")
 add_subdirectory(fmt)
 
+# mio - https://github.com/mandreyel/mio
+# Notes:
+# - Using StrikerX3's fork instead
+#   - This fork implements the features in this PR: https://github.com/mandreyel/mio/pull/78
+#   - It also stops the library from including CTest unconditionally, which is not done in that PR
+#     - Do not switch the submodule URL to the upstream as it would violate policy #1 even after
+#       merging the PR
+message(VERBOSE "==> mio")
+add_subdirectory(mio)
+
 # SDL - https://github.com/libsdl-org/SDL
 message(VERBOSE "==> SDL")
 set(SDL_DISABLE_UNINSTALL ON)
