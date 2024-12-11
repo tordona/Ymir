@@ -64,6 +64,7 @@ bool Load(std::filesystem::path isoPath, Disc &disc) {
     auto &track = session.tracks[0];
     track.sectorSize = sectorSize;
     track.controlADR = 0x41; // always a data track
+    track.interleavedSubchannel = false;
     track.startFrameAddress = session.startFrameAddress;
     track.endFrameAddress = session.endFrameAddress;
 

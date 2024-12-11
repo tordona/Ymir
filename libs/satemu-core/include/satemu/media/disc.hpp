@@ -5,7 +5,6 @@
 #include <satemu/media/binary_reader/binary_reader.hpp>
 
 #include <array>
-#include <filesystem>
 #include <memory>
 #include <vector>
 
@@ -15,10 +14,10 @@ struct Track {
     std::unique_ptr<IBinaryReader> binaryReader;
     uint32 sectorSize;
     uint8 controlADR;
+    bool interleavedSubchannel; // true=96-byte PW subchannel, interleaved
 
     uint32 startFrameAddress;
     uint32 endFrameAddress;
-    bool interleavedSubchannel; // true=96-byte PW subchannel, interleaved
 };
 
 struct Session {

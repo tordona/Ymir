@@ -278,6 +278,7 @@ bool Load(std::filesystem::path ccdPath, Disc &disc) {
 
             track.sectorSize = 2352;
             track.controlADR = (point.control << 4u) | point.adr;
+            track.interleavedSubchannel = false;
 
             track.startFrameAddress = TimestampToFrameAddress(point.min, point.sec, point.frame);
 

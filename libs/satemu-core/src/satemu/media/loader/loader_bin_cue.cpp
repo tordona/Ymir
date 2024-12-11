@@ -208,6 +208,7 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
             auto &track = session.tracks[currTrackIndex];
             track.sectorSize = sectorSize;
             track.controlADR = controlADR;
+            track.interleavedSubchannel = false;
 
             session.numTracks++;
             if (session.numTracks > 99) {
