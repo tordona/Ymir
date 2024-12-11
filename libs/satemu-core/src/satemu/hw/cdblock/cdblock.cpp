@@ -100,7 +100,11 @@ void CDBlock::UpdateInterrupts() {
 }
 
 void CDBlock::ReportCDStatus() {
-    m_CR[0] = (m_status.statusCode << 8u) | m_status.flagsRepeat;
+    ReportCDStatus(m_status.statusCode);
+}
+
+void CDBlock::ReportCDStatus(uint8 statusCode) {
+    m_CR[0] = (statusCode << 8u) | m_status.flagsRepeat;
     m_CR[1] = (m_status.controlADR << 8u) | m_status.track;
     m_CR[2] = (m_status.index << 8u) | ((m_status.frameAddress >> 16u) & 0xFF);
     m_CR[3] = m_status.frameAddress;
@@ -197,7 +201,7 @@ void CDBlock::ProcessCommand() {
     // case 0x65: CmdCopySectorData(); break;
     // case 0x66: CmdMoveSectorData(); break;
     case 0x67: CmdGetCopyError(); break;
-    // case 0x70: CmdChangeDirectory(); break;
+    case 0x70: CmdChangeDirectory(); break;
     // case 0x71: CmdReadDirectory(); break;
     // case 0x72: CmdGetFileSystemScope(); break;
     // case 0x73: CmdGetFileInfo(); break;
@@ -559,7 +563,36 @@ void CDBlock::CmdGetCopyError() {
     SetInterrupt(kHIRQ_CMOK);
 }
 
-void CDBlock::CmdChangeDirectory() {}
+void CDBlock::CmdChangeDirectory() {
+    fmt::println("CDBlock: -> Change directory");
+
+    // Input structure:
+    // 0x70     <blank>
+    // <blank>
+    // filter number   file ID bits 23-16
+    // file ID bits 15-0
+
+    const uint8 filterNum = bit::extract<8, 15>(m_CR[2]);
+    const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
+
+    // Output structure: standard CD status data
+    if (filterNum < 0x24) {
+        // TODO: read from file system
+        // if (m_fs.ChangeDirectory(fileID, m_filters[filterNum])) {
+        //     // succeeded
+        //     ReportCDStatus();
+        // } else {
+        //     // failed
+        ReportCDStatus(kStatusReject);
+        // }
+    } else if (filterNum == 0xFF) {
+        ReportCDStatus(kStatusReject);
+    } else {
+        ReportCDStatus();
+    }
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_EFLS);
+}
 
 void CDBlock::CmdReadDirectory() {}
 

@@ -163,6 +163,9 @@ private:
     // Updates CR1-4 with the current CD status
     void ReportCDStatus();
 
+    // Updates CR1-4 with the current CD status, overriding the status code
+    void ReportCDStatus(uint8 statusCode);
+
     // -------------------------------------------------------------------------
     // Data transfers
 
