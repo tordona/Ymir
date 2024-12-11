@@ -43,4 +43,16 @@ constexpr uint8 kStatusReject = 0xFF;
 constexpr uint16 kMinStandbyTime = 60;
 constexpr uint16 kMaxStandbyTime = 900;
 
+// Periodic response intervals:
+// - Not playing:         16.667ms =  60 Hz = 1000000/3 (333333.333) cycles @ 20 MHz = once per video frame
+// - Playing at 1x speed: 13.333ms =  75 Hz =  800000/3 (266666.667) cycles @ 20 MHz = once per CD frame
+// - Playing at 2x speed:  6.667ms = 150 Hz =  400000/3 (133333.333) cycles @ 20 MHz = once per CD frame
+
+// Constants for periodic report cycles are tripled to avoid rounding.
+// Cycle counting must be tripled to account for that.
+// 2x cycles can be easily derived from 1x cycles.
+
+static constexpr uint32 kPeriodicCyclesNotPlaying = 1000000;
+static constexpr uint32 kPeriodicCyclesPlaying1x = 800000;
+
 } // namespace satemu::cdblock
