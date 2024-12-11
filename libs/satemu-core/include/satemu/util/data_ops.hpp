@@ -28,4 +28,20 @@ FORCE_INLINE void WriteBE(uint8 *data, T value) {
     }
 }
 
+template <typename T>
+FORCE_INLINE T ReadLE(uint8 *data) {
+    T value = 0;
+    for (uint32 i = 0; i < sizeof(T); i++) {
+        value |= data[i] << (i * 8u);
+    }
+    return value;
+}
+
+template <typename T>
+FORCE_INLINE void WriteLE(uint8 *data, T value) {
+    for (uint32 i = 0; i < sizeof(T); i++) {
+        data[i] = value >> (i * 8u);
+    }
+}
+
 } // namespace util
