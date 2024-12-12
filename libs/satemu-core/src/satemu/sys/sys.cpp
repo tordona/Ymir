@@ -4,8 +4,8 @@ namespace satemu {
 
 Saturn::Saturn()
     : SH2(SCU, SMPC)
-    , SCU(VDP1, VDP2, SCSP, CDBlock, SH2.master)
-    , VDP2(SCU)
+    , SCU(VDP, SCSP, CDBlock, SH2.master)
+    , VDP(SCU)
     , SMPC(SCU, SCSP)
     , SCSP(SCU)
     , CDBlock(SCU) {
@@ -16,8 +16,7 @@ Saturn::Saturn()
 void Saturn::Reset(bool hard) {
     SH2.Reset(hard);
     SCU.Reset(hard);
-    VDP1.Reset(hard);
-    VDP2.Reset(hard);
+    VDP.Reset(hard);
     SMPC.Reset(hard);
     SCSP.Reset(hard);
     CDBlock.Reset(hard);
@@ -80,7 +79,7 @@ void Saturn::Step() {
     // SH2.slave.Step();
 
     // TODO: replace with scheduler events
-    VDP2.Advance(1);
+    VDP.Advance(1);
 
     m_scspCycles += 2464;
     if (m_scspCycles >= 3125) {

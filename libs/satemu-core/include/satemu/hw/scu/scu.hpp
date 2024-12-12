@@ -5,8 +5,7 @@
 #include <satemu/hw/cdblock/cdblock.hpp>
 #include <satemu/hw/hw_defs.hpp>
 #include <satemu/hw/scsp/scsp.hpp>
-#include <satemu/hw/vdp/vdp1.hpp>
-#include <satemu/hw/vdp/vdp2.hpp>
+#include <satemu/hw/vdp/vdp.hpp>
 
 #include <satemu/util/data_ops.hpp>
 
@@ -61,7 +60,7 @@ namespace satemu::scu {
 //   - Byte reads work normally
 class SCU {
 public:
-    SCU(vdp1::VDP1 &vdp1, vdp2::VDP2 &vdp2, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2 &sh2);
+    SCU(vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2 &sh2);
 
     void Reset(bool hard);
 
@@ -96,18 +95,18 @@ public:
             }
 
         } else if (AddressInRange<0x5C0'0000, 0x5C7'FFFF>(address)) {
-            return m_VDP1.ReadVRAM<T>(address & 0x7FFFF);
+            return m_VDP.VDP1ReadVRAM<T>(address & 0x7FFFF);
         } else if (AddressInRange<0x5C8'0000, 0x5CF'FFFF>(address)) {
-            return m_VDP1.ReadFB<T>(address & 0x3FFFF);
+            return m_VDP.VDP1ReadFB<T>(address & 0x3FFFF);
         } else if (AddressInRange<0x5D0'0000, 0x5D7'FFFF>(address)) {
-            return m_VDP1.ReadReg<T>(address & 0x7FFFF);
+            return m_VDP.VDP1ReadReg<T>(address & 0x7FFFF);
 
         } else if (AddressInRange<0x5E0'0000, 0x5EF'FFFF>(address)) {
-            return m_VDP2.ReadVRAM<T>(address & 0x7FFFF);
+            return m_VDP.VDP2ReadVRAM<T>(address & 0x7FFFF);
         } else if (AddressInRange<0x5F0'0000, 0x5F7'FFFF>(address)) {
-            return m_VDP2.ReadCRAM<T>(address & 0xFFF);
+            return m_VDP.VDP2ReadCRAM<T>(address & 0xFFF);
         } else if (AddressInRange<0x5F8'0000, 0x5FB'FFFF>(address)) {
-            return m_VDP2.ReadReg<T>(address & 0x1FF);
+            return m_VDP.VDP2ReadReg<T>(address & 0x1FF);
 
         } else if (AddressInRange<0x5FE'0000, 0x5FE'FFFF>(address)) {
             return ReadReg<T>(address & 0xFF);
@@ -146,18 +145,18 @@ public:
             }
 
         } else if (AddressInRange<0x5C0'0000, 0x5C7'FFFF>(address)) {
-            m_VDP1.WriteVRAM<T>(address & 0x7FFFF, value);
+            m_VDP.VDP1WriteVRAM<T>(address & 0x7FFFF, value);
         } else if (AddressInRange<0x5C8'0000, 0x5CF'FFFF>(address)) {
-            m_VDP1.WriteFB<T>(address & 0x3FFFF, value);
+            m_VDP.VDP1WriteFB<T>(address & 0x3FFFF, value);
         } else if (AddressInRange<0x5D0'0000, 0x5D7'FFFF>(address)) {
-            m_VDP1.WriteReg<T>(address & 0x7FFFF, value);
+            m_VDP.VDP1WriteReg<T>(address & 0x7FFFF, value);
 
         } else if (AddressInRange<0x5E0'0000, 0x5EF'FFFF>(address)) {
-            m_VDP2.WriteVRAM<T>(address & 0x7FFFF, value);
+            m_VDP.VDP2WriteVRAM<T>(address & 0x7FFFF, value);
         } else if (AddressInRange<0x5F0'0000, 0x5F7'FFFF>(address)) {
-            m_VDP2.WriteCRAM<T>(address & 0xFFF, value);
+            m_VDP.VDP2WriteCRAM<T>(address & 0xFFF, value);
         } else if (AddressInRange<0x5F8'0000, 0x5FB'FFFF>(address)) {
-            m_VDP2.WriteReg<T>(address & 0x1FF, value);
+            m_VDP.VDP2WriteReg<T>(address & 0x1FF, value);
 
         } else if (AddressInRange<0x5FE'0000, 0x5FE'FFFF>(address)) {
             WriteReg<T>(address & 0xFF, value);
@@ -179,8 +178,7 @@ public:
     void AcknowledgeExternalInterrupt();
 
 private:
-    vdp1::VDP1 &m_VDP1;
-    vdp2::VDP2 &m_VDP2;
+    vdp::VDP &m_VDP;
     scsp::SCSP &m_SCSP;
     cdblock::CDBlock &m_CDBlock;
     sh2::SH2 &m_SH2;

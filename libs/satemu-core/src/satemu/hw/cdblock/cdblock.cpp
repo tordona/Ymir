@@ -199,15 +199,13 @@ void CDBlock::Advance(uint64 cycles) {
         }
     }
 
-    if (m_readyForPeriodicReports) {
-        m_currPeriodicReportCycles += cycles * 3;
-        if (m_currPeriodicReportCycles >= m_targetPeriodicReportCycles) {
-            m_currPeriodicReportCycles -= m_targetPeriodicReportCycles;
-            if (!m_processingCommand) {
-                m_status.statusCode |= kStatusFlagPeriodic;
-                ReportCDStatus();
-                SetInterrupt(kHIRQ_SCDQ);
-            }
+    m_currPeriodicReportCycles += cycles * 3;
+    if (m_currPeriodicReportCycles >= m_targetPeriodicReportCycles) {
+        m_currPeriodicReportCycles -= m_targetPeriodicReportCycles;
+        if (m_readyForPeriodicReports && !m_processingCommand) {
+            m_status.statusCode |= kStatusFlagPeriodic;
+            ReportCDStatus();
+            SetInterrupt(kHIRQ_SCDQ);
         }
     }
 }

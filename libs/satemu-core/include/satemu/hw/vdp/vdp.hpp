@@ -1,10 +1,8 @@
 #pragma once
 
-#include "vdp2_defs.hpp"
+#include "vdp_defs.hpp"
 
 #include <satemu/hw/hw_defs.hpp>
-
-#include <satemu/hw/vdp/vdp_common_defs.hpp>
 
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/data_ops.hpp>
@@ -25,11 +23,12 @@ class SCU;
 
 // -----------------------------------------------------------------------------
 
-namespace satemu::vdp2 {
+namespace satemu::vdp {
 
-class VDP2 {
+// Contains both VDP1 and VDP2
+class VDP {
 public:
-    VDP2(scu::SCU &scu);
+    VDP(scu::SCU &scu);
 
     void Reset(bool hard);
 
@@ -41,26 +40,66 @@ public:
     // TODO: replace with scheduler events
     void Advance(uint64 cycles);
 
+    // -------------------------------------------------------------------------
+    // VDP1 memory/register access
+
+    template <mem_primitive T>
+    T VDP1ReadVRAM(uint32 address) {
+        return util::ReadBE<T>(&m_VRAM1[address & 0x7FFFF]);
+    }
+
+    template <mem_primitive T>
+    void VDP1WriteVRAM(uint32 address, T value) {
+        util::WriteBE<T>(&m_VRAM1[address & 0x7FFFF], value);
+    }
+
+    template <mem_primitive T>
+    T VDP1ReadFB(uint32 address) {
+        return util::ReadBE<T>(&m_spriteFB[m_drawFB][address & 0x3FFFF]);
+    }
+
+    template <mem_primitive T>
+    void VDP1WriteFB(uint32 address, T value) {
+        util::WriteBE<T>(&m_spriteFB[m_drawFB][address & 0x3FFFF], value);
+    }
+
+    template <mem_primitive T>
+    T VDP1ReadReg(uint32 address) {
+        if (address == 0x10) {
+            // MEGA HACK to get past the boot sequence
+            return 3;
+        }
+        fmt::println("unhandled {}-bit VDP1 register read from {:02X}", sizeof(T) * 8, address);
+        return 0;
+    }
+
+    template <mem_primitive T>
+    void VDP1WriteReg(uint32 address, T value) {
+        fmt::println("unhandled {}-bit VDP1 register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+    }
     // TODO: handle VRSIZE.VRAMSZ in Read/WriteVRAM maybe?
     // TODO: CRAM and registers only accept 16-bit and 32-bit accesses
 
+    // -------------------------------------------------------------------------
+    // VDP2 memory/register access
+
     template <mem_primitive T>
-    T ReadVRAM(uint32 address) {
+    T VDP2ReadVRAM(uint32 address) {
         /*address &= 0x7FFFF;
         T value = util::ReadBE<T>(&m_VRAM[address]);
         fmt::println("{}-bit VDP2 VRAM read from {:05X} = {:X}", sizeof(T) * 8, address, value);
         return value;*/
-        return util::ReadBE<T>(&m_VRAM[address & 0x7FFFF]);
+        return util::ReadBE<T>(&m_VRAM2[address & 0x7FFFF]);
     }
 
     template <mem_primitive T>
-    void WriteVRAM(uint32 address, T value) {
+    void VDP2WriteVRAM(uint32 address, T value) {
         // fmt::println("{}-bit VDP2 VRAM write to {:05X} = {:X}", sizeof(T) * 8, address & 0x7FFFF, value);
-        util::WriteBE<T>(&m_VRAM[address & 0x7FFFF], value);
+        util::WriteBE<T>(&m_VRAM2[address & 0x7FFFF], value);
     }
 
     template <mem_primitive T>
-    T ReadCRAM(uint32 address) {
+    T VDP2ReadCRAM(uint32 address) {
         /*address &= MapCRAMAddress(address);
         T value = util::ReadBE<T>(&m_CRAM[address]);
         fmt::println("{}-bit VDP2 CRAM read from {:03X} = {:X}", sizeof(T) * 8, address, value);
@@ -69,7 +108,7 @@ public:
     }
 
     template <mem_primitive T>
-    void WriteCRAM(uint32 address, T value) {
+    void VDP2WriteCRAM(uint32 address, T value) {
         address = MapCRAMAddress(address);
         // fmt::println("{}-bit VDP2 CRAM write to {:05X} = {:X}", sizeof(T) * 8, address, value);
         util::WriteBE<T>(&m_CRAM[address], value);
@@ -80,7 +119,7 @@ public:
     }
 
     template <mem_primitive T>
-    T ReadReg(uint32 address) {
+    T VDP2ReadReg(uint32 address) {
         switch (address) {
         case 0x000: return TVMD.u16;
         case 0x002: return EXTEN.u16;
@@ -229,7 +268,7 @@ public:
     }
 
     template <mem_primitive T>
-    void WriteReg(uint32 address, T value) {
+    void VDP2WriteReg(uint32 address, T value) {
         switch (address) {
         case 0x000:
             TVMD.u16 = value & 0x81F7;
@@ -383,8 +422,11 @@ public:
     }
 
 private:
-    std::array<uint8, kVDP2VRAMSize> m_VRAM; // 4x 128 KiB banks: A0, A1, B0, B1
-    std::array<uint8, kCRAMSize> m_CRAM;
+    std::array<uint8, kVDP1VRAMSize> m_VRAM1;
+    std::array<uint8, kVDP2VRAMSize> m_VRAM2; // 4x 128 KiB banks: A0, A1, B0, B1
+    std::array<uint8, kVDP2CRAMSize> m_CRAM;
+    std::array<std::array<uint8, kVDP1FramebufferRAMSize>, 2> m_spriteFB;
+    size_t m_drawFB; // index of current sprite draw buffer; opposite buffer is CPU-accessible
 
     scu::SCU &m_SCU;
 
@@ -399,7 +441,10 @@ private:
     CBFrameComplete m_cbFrameComplete;
 
     // -------------------------------------------------------------------------
-    // Registers
+    // VDP1 registers
+
+    // -------------------------------------------------------------------------
+    // VDP2 registers
 
     TVMD_t TVMD;     // 180000   TVMD    TV Screen Mode
     EXTEN_t EXTEN;   // 180002   EXTEN   External Signal Enable
@@ -1534,16 +1579,16 @@ private:
     // wideChar indicates if the flip bits are available (false) or used to extend the character number (true).
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
-    template <bool twoWordChar, bool fourCellChar, bool wideChar, vdp2::ColorFormat colorFormat, uint32 colorMode>
-    void DrawNormalScrollBG(const vdp2::NormBGParams &bgParams, BGRenderContext &rctx);
+    template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
+    void DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx);
 
     // Draws a normal bitmap BG scanline.
     // bgParams contains the parameters for the BG to draw.
     // rctx contains additional context for the renderer.
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
-    template <vdp2::ColorFormat colorFormat, uint32 colorMode>
-    void DrawNormalBitmapBG(const vdp2::NormBGParams &bgParams, BGRenderContext &rctx);
+    template <ColorFormat colorFormat, uint32 colorMode>
+    void DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderContext &rctx);
 
     // Fetches a two-word character from VRAM.
     // pageBaseAddress specifies the base address of the page of character patterns.
@@ -1558,7 +1603,7 @@ private:
     // largePalette indicates if the color format uses 16 colors (false) or more (true).
     // wideChar indicates if the flip bits are available (false) or used to extend the character number (true).
     template <bool fourCellChar, bool largePalette, bool wideChar>
-    Character FetchOneWordCharacter(const vdp2::NormBGParams &bgParams, uint32 pageBaseAddress, uint32 charIndex);
+    Character FetchOneWordCharacter(const NormBGParams &bgParams, uint32 pageBaseAddress, uint32 charIndex);
 
     // Fetches a color from a pixel in the specified cell in a 2x2 character pattern.
     // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
@@ -1568,7 +1613,7 @@ private:
     // cellIndex is the index of the cell in the character pattern, ranging from 0 to 3.
     // colorFormat is the value of CHCTLA/CHCTLB.xxCHCNn.
     // colorMode is the CRAM color mode.
-    template <vdp2::ColorFormat colorFormat, uint32 colorMode>
+    template <ColorFormat colorFormat, uint32 colorMode>
     vdp::Color888 FetchCharacterColor(uint32 cramOffset, uint8 &colorData, Character ch, uint8 dotX, uint8 dotY,
                                       uint32 cellIndex);
 
@@ -1578,8 +1623,8 @@ private:
     // dotX and dotY specify the coordinates of the pixel within the bitmap.
     // colorFormat is the color format for pixel data.
     // colorMode is the CRAM color mode.
-    template <vdp2::ColorFormat colorFormat, uint32 colorMode>
-    vdp::Color888 FetchBitmapColor(const vdp2::NormBGParams &bgParams, uint32 cramOffset, uint8 dotX, uint8 dotY);
+    template <ColorFormat colorFormat, uint32 colorMode>
+    vdp::Color888 FetchBitmapColor(const NormBGParams &bgParams, uint32 cramOffset, uint8 dotX, uint8 dotY);
 
     // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
     // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
@@ -1589,4 +1634,4 @@ private:
     vdp::Color888 FetchCRAMColor(uint32 cramOffset, uint32 colorIndex);
 };
 
-} // namespace satemu::vdp2
+} // namespace satemu::vdp

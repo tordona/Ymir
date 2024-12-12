@@ -27,11 +27,8 @@ add_library(satemu-core
     include/satemu/hw/smpc/smpc.hpp
     include/satemu/hw/smpc/smpc_defs.hpp
 
-    include/satemu/hw/vdp/vdp_common_defs.hpp
-    include/satemu/hw/vdp/vdp1.hpp
-    include/satemu/hw/vdp/vdp1_defs.hpp
-    include/satemu/hw/vdp/vdp2.hpp
-    include/satemu/hw/vdp/vdp2_defs.hpp
+    include/satemu/hw/vdp/vdp.hpp
+    include/satemu/hw/vdp/vdp_defs.hpp
 
     include/satemu/media/disc.hpp
     include/satemu/media/filesystem.hpp
@@ -78,8 +75,7 @@ add_library(satemu-core
     src/satemu/hw/sh2/sh2.cpp
     src/satemu/hw/sh2/sh2_bus.cpp
 
-    src/satemu/hw/vdp/vdp1.cpp
-    src/satemu/hw/vdp/vdp2.cpp
+    src/satemu/hw/vdp/vdp.cpp
 
     src/satemu/media/loader/loader.cpp
     src/satemu/media/loader/loader_bin_cue.cpp

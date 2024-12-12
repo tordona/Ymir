@@ -5,8 +5,7 @@
 #include <satemu/hw/scu/scu.hpp>
 #include <satemu/hw/sh2/sh2_block.hpp>
 #include <satemu/hw/smpc/smpc.hpp>
-#include <satemu/hw/vdp/vdp1.hpp>
-#include <satemu/hw/vdp/vdp2.hpp>
+#include <satemu/hw/vdp/vdp.hpp>
 
 #include <satemu/media/disc.hpp>
 
@@ -34,13 +33,12 @@ struct Saturn {
     // -------------------------------------------------------------------------
     // Components
 
-    sh2::SH2Block SH2;
-    scu::SCU SCU;
-    vdp1::VDP1 VDP1;
-    vdp2::VDP2 VDP2;
-    smpc::SMPC SMPC;
-    scsp::SCSP SCSP;
-    cdblock::CDBlock CDBlock;
+    sh2::SH2Block SH2;        // Master and slave SH-2 CPUs
+    scu::SCU SCU;             // SCU and its DSP
+    vdp::VDP VDP;             // VDP1 and VDP2
+    smpc::SMPC SMPC;          // SMPC and input devices
+    scsp::SCSP SCSP;          // SCSP and MC68EC000 CPU
+    cdblock::CDBlock CDBlock; // CD block and media
 
 private:
     // -------------------------------------------------------------------------
