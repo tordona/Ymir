@@ -84,8 +84,15 @@ void CDBlock::LoadDisc(media::Disc &&disc) {
             std::array<uint8, 2048> buf{};
 
             // Extract fields
-            uint32 sectorOffset = volumeDescAddress * track.sectorSize;
+            uint32 sectorIndex = volumeDescAddress;
             const uint32 userDataOffset = (track.sectorSize == 2352) ? 16 : 0; // Skip sync bytes if present
+
+            auto readSector = [&](uint32 sectorIndex) {
+                const uint32 sectorOffset = sectorIndex * track.sectorSize;
+                const auto readSize = track.binaryReader->Read(sectorOffset + userDataOffset, buf.size(), buf);
+                return readSize == buf.size();
+            };
+
             for (;;) {
                 // TODO: bool Track::ReadSectorData(uint32 frameAddress, std::span<uint8> buffer)
                 // - reads the 2048 bytes of user data in the sector
@@ -93,10 +100,7 @@ void CDBlock::LoadDisc(media::Disc &&disc) {
                 // TODO: uint32 Track::ReadSectorRaw(uint32 frameAddress, std::span<uint8> buffer)
                 // - reads the entire sector, whatever the size
                 // - returns the amount of bytes read; should == track.sectorSize
-                const auto readSize = track.binaryReader->Read(sectorOffset + userDataOffset, buf.size(), buf);
-
-                // Bail out if we could not read the sector entirely
-                if (readSize < buf.size()) {
+                if (!readSector(sectorIndex)) {
                     break;
                 }
 
@@ -119,18 +123,30 @@ void CDBlock::LoadDisc(media::Disc &&disc) {
                         break;
                     }
 
-                    media::fs::DirectoryRecord dirRecord{};
+                    // Read path tables
+                    media::fs::PathTableRecord pathTableRecord{};
+                    auto readPathTableRecord = [&](uint16 pos) {
+                        if (volDesc.pathTableLPos == 0) {
+                            return;
+                        }
+                        if (!readSector(volDesc.pathTableLPos)) {
+                            return;
+                        }
+                        if (!pathTableRecord.Read(buf)) {
+                            return;
+                        }
+                    };
 
-                    // TODO: read path tables from volDesc.pathTableLPos
-
-                    // TODO: offset frame address requests in commands by -150
+                    readPathTableRecord(volDesc.pathTableLPos);
+                    readPathTableRecord(volDesc.pathTableLOptPos);
+                    readPathTableRecord(volDesc.pathTableMPos);
+                    readPathTableRecord(volDesc.pathTableMOptPos);
 
                     // Read directory records from the root directory
-                    const uint32 baseDirRecordsPos = volDesc.rootDirRecord.extentPos;
+                    media::fs::DirectoryRecord dirRecord{};
                     const uint32 numSectors = volDesc.rootDirRecord.dataSize / volDesc.logicalBlockSize; // div by 2048?
                     for (uint32 sectorIndex = 0; sectorIndex < numSectors; sectorIndex++) {
-                        const uintmax_t dirRecordOffset = (baseDirRecordsPos + sectorIndex) * track.sectorSize;
-                        if (track.binaryReader->Read(dirRecordOffset + userDataOffset, buf.size(), buf) < buf.size()) {
+                        if (!readSector(volDesc.rootDirRecord.extentPos + sectorIndex)) {
                             break;
                         }
 
@@ -150,7 +166,7 @@ void CDBlock::LoadDisc(media::Disc &&disc) {
                 }
 
                 // Go to the next sector
-                sectorOffset += track.sectorSize;
+                sectorIndex++;
             }
 
             break;

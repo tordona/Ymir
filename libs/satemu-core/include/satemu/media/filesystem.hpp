@@ -139,7 +139,7 @@ struct DirectoryRecord {
     uint16 fileVersion;
 
     // Fills in this record with data from the start of the given span.
-    // Returns true if the record has been fully updated.
+    // Returns true if the record has been fully read.
     // If false, the record may have been partially updated or not modified.
     bool Read(std::span<uint8> input) {
         // Ensure there's enough data to read the static fields
@@ -193,7 +193,6 @@ struct DirectoryRecord {
 //    8-(7+LEN_DI)   char[LEN_DI]  Directory identifier
 //    (8+LEN_DI)     -             Padding field (00 byte)
 struct PathTableRecord {
-    uint8 recordSize;
     uint8 extAttrRecordSize;
 
     uint32 extentPos;
@@ -203,7 +202,7 @@ struct PathTableRecord {
     std::string directoryID;
 
     // Fills in this record with data from the start of the given span.
-    // Returns true if the record has been fully updated.
+    // Returns true if the record has been fully read.
     // If false, the record may have been partially updated or not modified.
     bool Read(std::span<uint8> input) {
         // Ensure there's enough data to read the static fields
@@ -211,15 +210,21 @@ struct PathTableRecord {
             return false;
         }
 
-        recordSize = input[0];
+        const uint8 dirIDLength = input[0];
         extAttrRecordSize = input[1];
         extentPos = util::ReadLE<uint32>(&input[2]);
         parentDirNumber = util::ReadLE<uint16>(&input[6]);
-        const uint8 dirIDLength = input[32];
         if (input.size() < 8 + dirIDLength) {
             return false;
         }
-        directoryID.assign(&input[33], &input[33] + dirIDLength);
+        directoryID.assign(&input[8], &input[8] + dirIDLength);
+        if (directoryID.size() == 1) {
+            if (directoryID[0] == 0x00) {
+                directoryID = ".";
+            } else if (directoryID[0] == 0x01) {
+                directoryID = "..";
+            }
+        }
         return true;
     }
 };
@@ -282,7 +287,7 @@ struct ExtendedAttributeRecord {
     std::string escapeSequences;
 
     // Fills in this record with data from the start of the given span.
-    // Returns true if the record has been fully updated.
+    // Returns true if the record has been fully read.
     // If false, the record may have been partially updated or not modified.
     bool Read(std::span<uint8> input) {
         // Ensure there's enough data to read the static fields
@@ -353,7 +358,7 @@ struct VolumeDescriptorHeader {
     uint8 version;
 
     // Fills in this descriptor with data from the start of the given span.
-    // Returns true if the descriptor has been fully updated.
+    // Returns true if the descriptor has been fully read.
     // If false, the descriptor may have been partially updated or not modified.
     bool Read(std::span<uint8> input) {
         // Ensure there's enough data to read the static fields
@@ -401,7 +406,7 @@ struct BootRecord {
 
     // Fills in this descriptor with data from the start of the given span, which should point to the beginning of the
     // sector.
-    // Returns true if the descriptor has been fully updated.
+    // Returns true if the descriptor has been fully read.
     // If false, the descriptor may have been partially updated or not modified.
     bool Read(std::span<uint8> input) {
         // Ensure there's enough data to read the static fields
@@ -446,6 +451,7 @@ struct BootRecord {
 //  882       -           (reserved)
 //  883-1394  -           Application use
 // 1395-2047  -           (reserved)
+// NOTE: the difference between type L and type M path tables is the endianness: (L)east/(M)ost significant byte first.
 struct VolumeDescriptor {
     std::string systemID;
     std::string volumeID;
@@ -485,7 +491,7 @@ struct VolumeDescriptor {
 
     // Fills in this descriptor with data from the start of the given span, which should point to the beginning of the
     // sector.
-    // Returns true if the descriptor has been fully updated.
+    // Returns true if the descriptor has been fully read.
     // If false, the descriptor may have been partially updated or not modified.
     bool Read(std::span<uint8> input) {
         // Ensure there's enough data to read the static fields
@@ -541,7 +547,7 @@ struct VolumePartitionDescriptor {
 
     // Fills in this descriptor with data from the start of the given span, which should point to the beginning of the
     // sector.
-    // Returns true if the descriptor has been fully updated.
+    // Returns true if the descriptor has been fully read.
     // If false, the descriptor may have been partially updated or not modified.
     bool Read(std::span<uint8> input) {
         // Ensure there's enough data to read the static fields
