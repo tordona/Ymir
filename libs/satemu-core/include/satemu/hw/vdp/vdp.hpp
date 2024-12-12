@@ -68,7 +68,7 @@ public:
     template <mem_primitive T>
     T VDP1ReadReg(uint32 address) {
         switch (address) {
-        case 0x00: return 0; // TVHR is write-only
+        case 0x00: return 0; // TVMR is write-only
         case 0x02: return 0; // FBCR is write-only
         case 0x04: return 0; // PTMR is write-only
         case 0x06: return 0; // EWDR is write-only
@@ -76,10 +76,11 @@ public:
         case 0x0A: return 0; // EWRR is write-only
         case 0x0C: return 0; // ENDR is write-only
 
-        case 0x10: return m_VDP1regs.ReadEDSR();
-        case 0x12: return m_VDP1regs.ReadLOPR();
-        case 0x14: return m_VDP1regs.ReadCOPR();
-        case 0x16: return m_VDP1regs.ReadMODR();
+        case 0x10:
+            return m_VDP1regs.ReadEDSR();
+            // case 0x12: return m_VDP1regs.ReadLOPR();
+            // case 0x14: return m_VDP1regs.ReadCOPR();
+            // case 0x16: return m_VDP1regs.ReadMODR();
 
         default: fmt::println("unhandled {}-bit VDP1 register read from {:02X}", sizeof(T) * 8, address); return 0;
         }
@@ -88,13 +89,13 @@ public:
     template <mem_primitive T>
     void VDP1WriteReg(uint32 address, T value) {
         switch (address) {
-        case 0x00: m_VDP1regs.WriteTVHR(value); break;
-        case 0x02: m_VDP1regs.WriteFBCR(value); break;
-        case 0x04: m_VDP1regs.WritePTMR(value); break;
-        case 0x06: m_VDP1regs.WriteEWDR(value); break;
-        case 0x08: m_VDP1regs.WriteEWLR(value); break;
-        case 0x0A: m_VDP1regs.WriteEWRR(value); break;
-        case 0x0C: m_VDP1regs.WriteENDR(value); break;
+            // case 0x00: m_VDP1regs.WriteTVMR(value); break;
+            // case 0x02: m_VDP1regs.WriteFBCR(value); break;
+            // case 0x04: m_VDP1regs.WritePTMR(value); break;
+            // case 0x06: m_VDP1regs.WriteEWDR(value); break;
+            // case 0x08: m_VDP1regs.WriteEWLR(value); break;
+            // case 0x0A: m_VDP1regs.WriteEWRR(value); break;
+            // case 0x0C: m_VDP1regs.WriteENDR(value); break;
 
         case 0x10: break; // EDSR is read-only
         case 0x12: break; // LOPR is read-only
@@ -473,67 +474,174 @@ private:
     // VDP1 registers
 
     struct VDP1Regs {
-        // 100000   TVHR  TV Mode Selection
+        // 100000   TVMR  TV Mode Selection
+        //
+        //   bits   r/w  code  description
+        //   15-4        -     Reserved, must be zero
+        //      3     W  VBE   V-Blank Erase/Write Enable
+        //                       0 = do not erase/write during VBlank
+        //                       1 = perform erase/write during VBlank
+        //    2-0     W  TVM   TV Mode Select
+        //                       bit 2: HDTV Enable (0=NTSC/PAL, 1=HDTV/31KC)
+        //                       bit 1: Frame Buffer Rotation Enable (0=disable, 1=enable)
+        //                       bit 0: Bit Depth Selection (0=16bpp, 1=8bpp)
+        //
+        // Notes:
+        // - When using frame buffer rotation, interlace cannot be set to double density mode.
+        // - When using HDTV modes, rotation must be disabled and the bit depth must be set to 16bpp
+        // - TVM changes must be done between the 2nd HBlank IN from VBlank IN and the 1st HBlank IN after VBlank OUT.
+        // - The frame buffer screen size varies based on TVM:
+        //     TVM   Frame buffer screen size
+        //     000    512x256
+        //     001   1024x256
+        //     010    512x256
+        //     011    512x512
+        //     100    512x256
 
-        void WriteTVHR(uint16 value) {
+        void WriteTVMR(uint16 value) {
             // TODO: implement
         }
 
         // 100002   FBCR  Frame Buffer Change Mode
+        //
+        //   bits   r/w  code  description
+        //   15-5        -     Reserved, must be zero
+        //      4     W  EOS   Even/Odd Coordinate Select (sample pixels at: 0=even coordinates, 1=odd coordinates)
+        //                       Related to High Speed Shrink option
+        //      3     W  DIE   Double Interlace Enable (0=non-interlace/single interlace, 1=double interlace)
+        //      2     W  DIL   Double Interlace Draw Line
+        //                       If DIE = 0:
+        //                         0 = draws even and odd lines
+        //                         1 = (prohibited)
+        //                       If DIE = 1:
+        //                         0 = draws even lines only
+        //                         1 = draws odd lines only
+        //      1     W  FCM   Frame Buffer Change Mode
+        //      0     W  FCT   Frame Buffer Change Trigger
+        //
+        // Notes:
+        // TVMR.VBE, FCM and FCT specify when frame buffer switches happen and whether they are cleared on swap.
+        //   TVMR.VBE  FCM  FCT  Mode                            Timing
+        //         0    0    0   1-cycle mode                    Switch every field (60 Hz)
+        //         0    1    0   Manual mode (erase)             Erase in next field
+        //         0    1    1   Manual mode (switch)            Switch in next field
+        //         1    1    1   Manual mode (erase and switch)  Erase at VBlank IN and switch in next field
+        // Unlisted combinations are prohibited.
+        // For manual erase and switch, the program should write VBE,FCM,FCT = 011, then wait until the HBlank IN of the
+        // last visible scanline immediately before VBlank (224 or 240) to issue another write to set VBE,FCM,FCT = 111,
+        // and finally restore VBE = 0 after VBlank OUT to stop VDP1 from clearing the next frame buffer.
 
         void WriteFBCR(uint16 value) {
             // TODO: implement
         }
 
         // 100004   PTMR  Draw Trigger
+        //
+        //   bits   r/w  code  description
+        //   15-2        -     Reserved, must be zero
+        //    1-0     W  PTM   Plot Trigger Mode
+        //                       00 (0) = No trigger
+        //                       01 (1) = Trigger immediately upon writing this value to PTMR
+        //                       10 (2) = Trigger on frame buffer switch
+        //                       11 (3) = (prohibited)
 
         void WritePTMR(uint16 value) {
             // TODO: implement
         }
 
         // 100006   EWDR  Erase/write Data
+        //
+        //   bits   r/w  code  description
+        //   15-0     W  -     Erase/write Data Value
+        //
+        // Notes:
+        // - The entire register value is used to clear the frame buffer
+        // - Writes 16-bit values at a time
+        // - For 8-bit modes:
+        //   - Bits 15-8 specify the values for even X coordinates
+        //   - Bits 7-0 specify the values for odd X coordinates
 
         void WriteEWDR(uint16 value) {
             // TODO: implement
         }
 
         // 100008   EWLR  Erase/write Upper-left coordinate
+        //
+        //   bits   r/w  code  description
+        //     15        -     Reserved, must be zero
+        //   14-9     W  -     Upper-left Coordinate X1
+        //    8-0     W  -     Upper-left Coordinate Y1
 
         void WriteEWLR(uint16 value) {
             // TODO: implement
         }
 
         // 10000A   EWRR  Erase/write Bottom-right Coordinate
+        //
+        //   bits   r/w  code  description
+        //   15-9     W  -     Lower-right Coordinate X3
+        //    8-0     W  -     Lower-right Coordinate Y3
 
         void WriteEWRR(uint16 value) {
             // TODO: implement
         }
 
         // 10000C   ENDR  Draw Forced Termination
+        //
+        // (all bits are reserved and must be zero)
+        //
+        // Notes:
+        // - Stops drawing ~30 clock cycles after the write is issued to this register
 
         void WriteENDR(uint16 value) {
             // TODO: implement
         }
 
         // 100010   EDSR  Transfer End Status
+        //
+        //   bits   r/w  code  description
+        //   15-2        -     Reserved, must be zero
+        //      1   R    CEF   Current End Bit Fetch Status
+        //                       0 = drawing in progress (end bit not yet fetched)
+        //                       1 = drawing finished (end bit fetched)
+        //      0   R    BEF   Before End Bit Fetch Status
+        //                       0 = previous drawing end bit not fetched
+        //                       1 = previous drawing end bit fetched
 
         uint16 ReadEDSR() {
             return 3; // MEGA HACK to get past the boot sequence
         }
 
         // 100012   LOPR  Last Operation Command Address
+        //
+        //   bits   r/w  code  description
+        //   15-0   R    -     Last Operation Command Address (divided by 8)
 
         uint16 ReadLOPR() {
             return 0;
         }
 
         // 100014   COPR  Current Operation Command Address
+        //
+        //   bits   r/w  code  description
+        //   15-0   R    -     Current Operation Command Address (divided by 8)
 
         uint16 ReadCOPR() {
             return 0;
         }
 
         // 100016   MODR  Mode Status
+        //
+        //   bits   r/w  code  description
+        //  15-12   R    VER   Version Number (0b0001)
+        //   11-9        -     Reserved, must be zero
+        //      8   R    PTM1  Plot Trigger Mode (read-only view of PTMR.PTM bit 1)
+        //      7   R    EOS   Even/Odd Coordinate Select (read-only view of FBCR.EOS)
+        //      6   R    DIE   Double Interlace Enable (read-only view of FBCR.DIE)
+        //      5   R    DIL   Double Interlace Draw Line (read-only view of FBCR.DIL)
+        //      4   R    FCM   Frame Buffer Change Mode (read-only view of FBCR.FCM)
+        //      3   R    VBE   V-Blank Erase/Write Enable (read-only view of TVMR.VBE)
+        //    2-0   R    TVM   TV Mode Selection (read-only view of TVMR.TVM)
 
         uint16 ReadMODR() {
             return 0;
@@ -1668,7 +1776,7 @@ private:
     FramebufferColor *m_framebuffer;
 
     // Draws the scanline at m_VCounter.
-    void DrawLine();
+    void VDP2DrawLine();
 
     // Draws a normal scroll BG scanline.
     // bgParams contains the parameters for the BG to draw.

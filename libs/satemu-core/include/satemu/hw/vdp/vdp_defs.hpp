@@ -62,6 +62,93 @@ using CBFrameComplete = util::Callback<void(FramebufferColor *fb, uint32 width, 
 // -----------------------------------------------------------------------------
 // VDP1 registers
 
+// VDP1 command types
+enum class VDP1Command : uint16 {
+    // Textured drawing
+    DrawNormalSprite = 0x0,
+    DrawScaledSprite = 0x1,
+    DrawDistortedSprite = 0x2,
+
+    // Untextured drawing
+    DrawPolygon = 0x4,
+    DrawPolylines = 0x5,
+    DrawLine = 0x6,
+
+    // Clipping coordinate setting
+    UserClipping = 0x8,
+    SystemClipping = 0x9,
+
+    // Local coordinate setting
+    LocalCoordinates = 0xA,
+};
+
+// VDP1 command table
+struct VDP1CommandTable {
+    // CMDCTRL - Control Words
+    union {
+        uint16 u16;
+        struct {
+            VDP1Command command : 4;
+            uint16 direction : 2;
+            uint16 : 2;
+            uint16 zoomPoint : 4;
+            uint16 jumpSelect : 3;
+            uint16 end : 1;
+        };
+    } cmdctrl;
+
+    // CMDLINK - Link Specification
+    uint16 cmdlink;
+
+    // CMDPMOD - Draw Mode Word
+    union {
+        uint16 u16;
+        struct {
+            uint16 colorCalc : 3;
+            uint16 colorMode : 3;
+            uint16 transparentPixelDisable : 1;
+            uint16 endCodeDisable : 1;
+            uint16 meshEnable : 1;
+            uint16 userClippingEnable : 1;
+            uint16 clippingMode : 1;
+            uint16 preClippingDisable : 1;
+            uint16 highSpeedShrink : 1;
+            uint16 : 2;
+            uint16 msbOn : 1;
+        };
+    } cmdpmod;
+
+    // CMDCOLR - Color Control Word
+    uint16 cmdcolr;
+
+    // CMDSRCA - Character Address
+    uint16 cmdsrca;
+
+    // CMDSIZE - Character Size
+    union {
+        uint16 u16;
+        struct {
+            uint16 sizeV : 7;
+            uint16 sizeH : 6;
+        };
+    } cmdsize;
+
+    sint16 cmdxa; // CMDXA - Vertex A X Coordinate
+    sint16 cmdya; // CMDYA - Vertex A Y Coordinate
+    sint16 cmdxb; // CMDXB - Vertex B X Coordinate
+    sint16 cmdyb; // CMDYB - Vertex B Y Coordinate
+    sint16 cmdxc; // CMDXC - Vertex C X Coordinate
+    sint16 cmdyc; // CMDYC - Vertex C Y Coordinate
+    sint16 cmdxd; // CMDXD - Vertex D X Coordinate
+    sint16 cmdyd; // CMDYD - Vertex D Y Coordinate
+
+    // CMDGRDA - Gouraud Shading Table
+    uint16 cmdgrda;
+
+    uint16 _padding;
+};
+static_assert(sizeof(VDP1CommandTable) == 0x20);
+
 // -----------------------------------------------------------------------------
 // VDP2 registers
 

@@ -237,7 +237,7 @@ void VDP::BeginHPhaseActiveDisplay() {
         if (m_VCounter == 0) {
             m_framebuffer = m_cbRequestFramebuffer(m_HRes, m_VRes);
         }
-        DrawLine();
+        VDP2DrawLine();
     }
 }
 
@@ -306,7 +306,7 @@ void VDP::BeginVPhaseLastLine() {
 // ----
 // Renderer
 
-void VDP::DrawLine() {
+void VDP::VDP2DrawLine() {
     // fmt::println("VDP2: drawing line {}", m_VCounter);
 
     using FnDrawScrollNBG = void (VDP::*)(const NormBGParams &, BGRenderContext &);
