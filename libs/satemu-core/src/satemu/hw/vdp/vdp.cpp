@@ -25,67 +25,67 @@ void VDP::Reset(bool hard) {
     }
     m_drawFB = 0;
 
-    TVMD.u16 = 0x0;
-    TVSTAT.u16 &= 0xFFFE; // Preserve PAL flag
-    HCNT = 0x0;
-    VCNT = 0x0;
-    RAMCTL.u16 = 0x0;
-    VRSIZE.u16 = 0x0;
-    CYCA0.u32 = 0x0;
-    CYCA1.u32 = 0x0;
-    CYCB0.u32 = 0x0;
-    CYCB1.u32 = 0x0;
-    MZCTL.u16 = 0x0;
-    ZMCTL.u16 = 0x0;
-    SCRCTL.u16 = 0x0;
-    VCSTA.u32 = 0x0;
-    LSTA0.u32 = 0x0;
-    LSTA1.u32 = 0x0;
-    LCTA.u32 = 0x0;
-    RPMD.u16 = 0x0;
-    RPRCTL.u16 = 0x0;
-    KTCTL.u16 = 0x0;
-    KTAOF.u16 = 0x0;
-    OVPNRA = 0x0;
-    OVPNRB = 0x0;
-    RPTA.u32 = 0x0;
-    WPXY0.u64 = 0x0;
-    WPXY1.u64 = 0x0;
-    WCTL.u64 = 0x0;
-    LWTA0.u32 = 0x0;
-    LWTA1.u32 = 0x0;
-    SPCTL.u16 = 0x0;
-    SDCTL.u16 = 0x0;
-    CCCTL.u16 = 0x0;
-    SFCCMD.u16 = 0x0;
-    PRISA.u16 = 0x0;
-    PRISB.u16 = 0x0;
-    PRISC.u16 = 0x0;
-    PRISD.u16 = 0x0;
-    CCRSA.u16 = 0x0;
-    CCRSB.u16 = 0x0;
-    CCRSC.u16 = 0x0;
-    CCRSD.u16 = 0x0;
-    CCRNA.u16 = 0x0;
-    CCRNB.u16 = 0x0;
-    CCRR.u16 = 0x0;
-    CCRLB.u16 = 0x0;
-    CLOFEN.u16 = 0x0;
-    CLOFSL.u16 = 0x0;
-    COAR.u16 = 0x0;
-    COAG.u16 = 0x0;
-    COAB.u16 = 0x0;
-    COBR.u16 = 0x0;
-    COBG.u16 = 0x0;
-    COBB.u16 = 0x0;
+    m_VDP2regs.TVMD.u16 = 0x0;
+    m_VDP2regs.TVSTAT.u16 &= 0xFFFE; // Preserve PAL flag
+    m_VDP2regs.HCNT = 0x0;
+    m_VDP2regs.VCNT = 0x0;
+    m_VDP2regs.RAMCTL.u16 = 0x0;
+    m_VDP2regs.VRSIZE.u16 = 0x0;
+    m_VDP2regs.CYCA0.u32 = 0x0;
+    m_VDP2regs.CYCA1.u32 = 0x0;
+    m_VDP2regs.CYCB0.u32 = 0x0;
+    m_VDP2regs.CYCB1.u32 = 0x0;
+    m_VDP2regs.MZCTL.u16 = 0x0;
+    m_VDP2regs.ZMCTL.u16 = 0x0;
+    m_VDP2regs.SCRCTL.u16 = 0x0;
+    m_VDP2regs.VCSTA.u32 = 0x0;
+    m_VDP2regs.LSTA0.u32 = 0x0;
+    m_VDP2regs.LSTA1.u32 = 0x0;
+    m_VDP2regs.LCTA.u32 = 0x0;
+    m_VDP2regs.RPMD.u16 = 0x0;
+    m_VDP2regs.RPRCTL.u16 = 0x0;
+    m_VDP2regs.KTCTL.u16 = 0x0;
+    m_VDP2regs.KTAOF.u16 = 0x0;
+    m_VDP2regs.OVPNRA = 0x0;
+    m_VDP2regs.OVPNRB = 0x0;
+    m_VDP2regs.RPTA.u32 = 0x0;
+    m_VDP2regs.WPXY0.u64 = 0x0;
+    m_VDP2regs.WPXY1.u64 = 0x0;
+    m_VDP2regs.WCTL.u64 = 0x0;
+    m_VDP2regs.LWTA0.u32 = 0x0;
+    m_VDP2regs.LWTA1.u32 = 0x0;
+    m_VDP2regs.SPCTL.u16 = 0x0;
+    m_VDP2regs.SDCTL.u16 = 0x0;
+    m_VDP2regs.CCCTL.u16 = 0x0;
+    m_VDP2regs.SFCCMD.u16 = 0x0;
+    m_VDP2regs.PRISA.u16 = 0x0;
+    m_VDP2regs.PRISB.u16 = 0x0;
+    m_VDP2regs.PRISC.u16 = 0x0;
+    m_VDP2regs.PRISD.u16 = 0x0;
+    m_VDP2regs.CCRSA.u16 = 0x0;
+    m_VDP2regs.CCRSB.u16 = 0x0;
+    m_VDP2regs.CCRSC.u16 = 0x0;
+    m_VDP2regs.CCRSD.u16 = 0x0;
+    m_VDP2regs.CCRNA.u16 = 0x0;
+    m_VDP2regs.CCRNB.u16 = 0x0;
+    m_VDP2regs.CCRR.u16 = 0x0;
+    m_VDP2regs.CCRLB.u16 = 0x0;
+    m_VDP2regs.CLOFEN.u16 = 0x0;
+    m_VDP2regs.CLOFSL.u16 = 0x0;
+    m_VDP2regs.COAR.u16 = 0x0;
+    m_VDP2regs.COAG.u16 = 0x0;
+    m_VDP2regs.COAB.u16 = 0x0;
+    m_VDP2regs.COBR.u16 = 0x0;
+    m_VDP2regs.COBG.u16 = 0x0;
+    m_VDP2regs.COBB.u16 = 0x0;
 
-    for (auto &bg : m_NormBGParams) {
+    for (auto &bg : m_VDP2regs.m_NormBGParams) {
         bg.Reset();
     }
-    for (auto &bg : m_RotBGParams) {
+    for (auto &bg : m_VDP2regs.m_RotBGParams) {
         bg.Reset();
     }
-    for (auto &sp : m_specialFunctionCodes) {
+    for (auto &sp : m_VDP2regs.m_specialFunctionCodes) {
         sp.Reset();
     }
 
@@ -96,7 +96,7 @@ void VDP::Reset(bool hard) {
     m_VCounter = 0;
     m_HRes = 320;
     m_VRes = 224;
-    m_TVMDDirty = true;
+    m_VDP2regs.m_TVMDDirty = true;
 
     BeginHPhaseActiveDisplay();
     BeginVPhaseActiveDisplay();
@@ -127,11 +127,11 @@ void VDP::Advance(uint64 cycles) {
 }
 
 void VDP::UpdateResolution() {
-    if (!m_TVMDDirty) {
+    if (!m_VDP2regs.m_TVMDDirty) {
         return;
     }
 
-    m_TVMDDirty = false;
+    m_VDP2regs.m_TVMDDirty = false;
 
     // Horizontal/vertical resolution tables
     // NTSC uses the first two vRes entries, PAL uses the full table, and exclusive monitors use 480 lines
@@ -142,9 +142,9 @@ void VDP::UpdateResolution() {
     // - not sure how the hardware behaves if TVMODE is changed mid-frame
     // TODO: check for NTSC, PAL or exclusive monitor; assuming NTSC for now
     // TODO: exclusive monitor: even hRes entries are valid for 31 KHz monitors, odd are for Hi-Vision
-    m_HRes = hRes[TVMD.HRESOn];
-    m_VRes = vRes[TVMD.VRESOn & (TVSTAT.PAL ? 3 : 1)];
-    if (TVMD.LSMDn == 3) {
+    m_HRes = hRes[m_VDP2regs.TVMD.HRESOn];
+    m_VRes = vRes[m_VDP2regs.TVMD.VRESOn & (m_VDP2regs.TVSTAT.PAL ? 3 : 1)];
+    if (m_VDP2regs.TVMD.LSMDn == 3) {
         // Double-density interlace doubles the vertical resolution
         m_VRes *= 2;
     }
@@ -166,7 +166,7 @@ void VDP::UpdateResolution() {
         {640, 694, 800, 854},
         {704, 375, 864, 910},
     }};
-    m_HTimings = hTimings[TVMD.HRESOn];
+    m_HTimings = hTimings[m_VDP2regs.TVMD.HRESOn];
 
     // Vertical phase timings
     //   BBd = Bottom Border
@@ -194,17 +194,17 @@ void VDP::UpdateResolution() {
             {256, 272, 275, 278, 297, 312, 313},
         }},
     }};
-    m_VTimings = vTimings[TVSTAT.PAL][TVMD.VRESOn];
+    m_VTimings = vTimings[m_VDP2regs.TVSTAT.PAL][m_VDP2regs.TVMD.VRESOn];
 
     // Adjust for dot clock
-    const uint32 dotClockMult = (TVMD.HRESOn & 2) ? 2 : 4;
+    const uint32 dotClockMult = (m_VDP2regs.TVMD.HRESOn & 2) ? 2 : 4;
     for (auto &timing : m_HTimings) {
         timing *= dotClockMult;
     }
     m_dotClockMult = dotClockMult;
 
     fmt::println("VDP2: dot clock mult = {}", dotClockMult);
-    fmt::println("VDP2: display {}", TVMD.DISP ? "ON" : "OFF");
+    fmt::println("VDP2: display {}", m_VDP2regs.TVMD.DISP ? "ON" : "OFF");
 }
 
 FORCE_INLINE void VDP::IncrementVCounter() {
@@ -249,23 +249,23 @@ void VDP::BeginHPhaseHorizontalSync() {
     IncrementVCounter();
     // fmt::println("VDP2: (VCNT = {:3d})  entering horizontal sync phase", m_VCounter);
 
-    TVSTAT.HBLANK = 1;
+    m_VDP2regs.TVSTAT.HBLANK = 1;
     m_SCU.TriggerHBlankIN();
 }
 
 void VDP::BeginHPhaseLeftBorder() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering left border phase", m_VCounter);
-    TVSTAT.HBLANK = 0;
+    m_VDP2regs.TVSTAT.HBLANK = 0;
 }
 
 // ----
 
 void VDP::BeginVPhaseActiveDisplay() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering vertical active display phase", m_VCounter);
-    if (TVMD.LSMDn != 0) {
-        TVSTAT.ODD ^= 1;
+    if (m_VDP2regs.TVMD.LSMDn != 0) {
+        m_VDP2regs.TVSTAT.ODD ^= 1;
     } else {
-        TVSTAT.ODD = 1;
+        m_VDP2regs.TVSTAT.ODD = 1;
     }
 }
 
@@ -279,7 +279,7 @@ void VDP::BeginVPhaseBottomBlanking() {
 
 void VDP::BeginVPhaseVerticalSync() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering vertical sync phase", m_VCounter);
-    TVSTAT.VBLANK = 1;
+    m_VDP2regs.TVSTAT.VBLANK = 1;
     m_SCU.TriggerVBlankIN();
 }
 
@@ -299,7 +299,7 @@ void VDP::BeginVPhaseTopBorder() {
 void VDP::BeginVPhaseLastLine() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering last line phase", m_VCounter);
 
-    TVSTAT.VBLANK = 0;
+    m_VDP2regs.TVSTAT.VBLANK = 0;
     m_SCU.TriggerVBlankOUT();
 }
 
@@ -360,13 +360,13 @@ void VDP::DrawLine() {
 
     // Draw normal BGs
     int i = 0;
-    for (const auto &bg : m_NormBGParams) {
+    for (const auto &bg : m_VDP2regs.m_NormBGParams) {
         auto &rctx = m_renderContexts[i++];
         if (bg.enabled) {
-            rctx.cramOffset = bg.caos << (RAMCTL.CRMDn == 1 ? 10 : 9);
+            rctx.cramOffset = bg.caos << (m_VDP2regs.RAMCTL.CRMDn == 1 ? 10 : 9);
 
             const uint32 colorFormat = static_cast<uint32>(bg.colorFormat);
-            const uint32 colorMode = RAMCTL.CRMDn;
+            const uint32 colorMode = m_VDP2regs.RAMCTL.CRMDn;
             if (bg.bitmap) {
                 (this->*fnDrawBitmapNBGs[colorFormat][colorMode])(bg, rctx);
             } else {
@@ -384,10 +384,10 @@ void VDP::DrawLine() {
     }
 
     // Draw rotation BGs
-    for (const auto &bg : m_RotBGParams) {
+    for (const auto &bg : m_VDP2regs.m_RotBGParams) {
         auto &rctx = m_renderContexts[i++];
         if (bg.enabled) {
-            rctx.cramOffset = bg.caos << (RAMCTL.CRMDn == 1 ? 10 : 9);
+            rctx.cramOffset = bg.caos << (m_VDP2regs.RAMCTL.CRMDn == 1 ? 10 : 9);
 
             // TODO: implement
             if (bg.bitmap) {
@@ -498,7 +498,7 @@ NO_INLINE void VDP::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderCon
     // |57|58|59|60|61|62|63|64|
     // +--+--+--+--+--+--+--+--+
 
-    const auto &specialFunctionCodes = m_specialFunctionCodes[bgParams.specialFunctionSelect];
+    const auto &specialFunctionCodes = m_VDP2regs.m_specialFunctionCodes[bgParams.specialFunctionSelect];
 
     // TODO: implement mosaic
 
