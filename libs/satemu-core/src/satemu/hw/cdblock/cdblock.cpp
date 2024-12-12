@@ -119,13 +119,34 @@ void CDBlock::LoadDisc(media::Disc &&disc) {
                         break;
                     }
 
-                    // TODO: read directory records starting from volDesc.rootDirRecord
-                    // - volDesc.rootDirRecord.extentPos = location of the first sector with root directory records
-                    // - numSectors = volDesc.rootDirRecord.dataSize / volDesc.logicalBlockSize (or / 2048?)
+                    media::fs::DirectoryRecord dirRecord{};
 
                     // TODO: read path tables from volDesc.pathTableLPos
 
-                    // TODO: offset all sector numbers from filesystem structures by +150
+                    // TODO: offset frame address requests in commands by -150
+
+                    // Read directory records from the root directory
+                    const uint32 baseDirRecordsPos = volDesc.rootDirRecord.extentPos;
+                    const uint32 numSectors = volDesc.rootDirRecord.dataSize / volDesc.logicalBlockSize; // div by 2048?
+                    for (uint32 sectorIndex = 0; sectorIndex < numSectors; sectorIndex++) {
+                        const uintmax_t dirRecordOffset = (baseDirRecordsPos + sectorIndex) * track.sectorSize;
+                        if (track.binaryReader->Read(dirRecordOffset + userDataOffset, buf.size(), buf) < buf.size()) {
+                            break;
+                        }
+
+                        uint32 recOffset = 0;
+                        for (;;) {
+                            if (!dirRecord.Read({buf.begin() + recOffset, buf.end()})) {
+                                break;
+                            }
+                            if (dirRecord.recordSize == 0) {
+                                break;
+                            }
+                            // TODO: add directory record to table
+
+                            recOffset += dirRecord.recordSize;
+                        }
+                    }
                 }
 
                 // Go to the next sector

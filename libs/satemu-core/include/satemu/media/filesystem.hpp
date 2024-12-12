@@ -136,6 +136,7 @@ struct DirectoryRecord {
     uint16 volSeqNumber;
 
     std::string fileID;
+    uint16 fileVersion;
 
     // Fills in this record with data from the start of the given span.
     // Returns true if the record has been fully updated.
@@ -162,6 +163,21 @@ struct DirectoryRecord {
             return false;
         }
         fileID.assign(&input[33], &input[33] + fileIDLength);
+        if (fileID.size() == 1) {
+            if (fileID[0] == 0x00) {
+                fileID = ".";
+            } else if (fileID[0] == 0x01) {
+                fileID = "..";
+            }
+        } else {
+            const auto sep2Pos = fileID.find_last_of(';');
+            if (sep2Pos != std::string::npos) {
+                fileVersion = std::stoi(fileID.substr(sep2Pos + 1));
+                fileID = fileID.substr(0, sep2Pos);
+            } else {
+                fileVersion = 0;
+            }
+        }
         return true;
     }
 };
