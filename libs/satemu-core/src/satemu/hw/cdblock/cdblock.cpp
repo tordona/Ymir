@@ -2,6 +2,9 @@
 
 #include <satemu/hw/scu/scu.hpp>
 
+#include <satemu/media/filesystem.hpp>
+#include <satemu/util/data_ops.hpp>
+
 namespace satemu::cdblock {
 
 CDBlock::CDBlock(scu::SCU &scu)
@@ -50,6 +53,88 @@ void CDBlock::Reset(bool hard) {
 void CDBlock::LoadDisc(media::Disc &&disc) {
     m_disc.Swap(std::move(disc));
     // TODO: update status
+
+    // Try building filesystem structure
+    // TODO: move out of here
+    // TODO: test multisession discs
+
+    // Bail out if there are no sessions
+    if (m_disc.sessions.empty()) {
+        return;
+    }
+
+    // The system uses the volume descriptor from the final session on the disc
+    const auto &session = m_disc.sessions.back();
+
+    // The volume descriptor is at frame address 166 (00:02:16) from the start of the session
+    const uint32 absVolumeDescAddress = session.startFrameAddress + 166;
+
+    // Find the track containing the frame address
+    // TODO: consider moving into Disc/Session/Track
+    for (int i = 0; i < session.numTracks; i++) {
+        const auto &track = session.tracks[session.firstTrackIndex + i];
+        if (absVolumeDescAddress >= track.startFrameAddress && absVolumeDescAddress <= track.endFrameAddress) {
+            if (track.controlADR != 0x41) {
+                // Not a data track
+                break;
+            }
+
+            // Found it; compute the offset and read the volume descriptor
+            const uint32 volumeDescAddress = absVolumeDescAddress - track.startFrameAddress;
+            std::array<uint8, 2048> buf{};
+
+            // Extract fields
+            uint32 sectorOffset = volumeDescAddress * track.sectorSize;
+            const uint32 userDataOffset = (track.sectorSize == 2352) ? 16 : 0; // Skip sync bytes if present
+            for (;;) {
+                // TODO: bool Track::ReadSectorData(uint32 frameAddress, std::span<uint8> buffer)
+                // - reads the 2048 bytes of user data in the sector
+                // - returns true if the sector was read, false if out of range
+                // TODO: uint32 Track::ReadSectorRaw(uint32 frameAddress, std::span<uint8> buffer)
+                // - reads the entire sector, whatever the size
+                // - returns the amount of bytes read; should == track.sectorSize
+                const auto readSize = track.binaryReader->Read(sectorOffset + userDataOffset, buf.size(), buf);
+
+                // Bail out if we could not read the sector entirely
+                if (readSize < buf.size()) {
+                    break;
+                }
+
+                // Bail out if this is not a valid volume descriptor
+                media::fs::VolumeDescriptorHeader volDescHeader{};
+                if (!volDescHeader.Read(buf)) {
+                    break;
+                }
+
+                // Bail out if this is a terminator
+                if (volDescHeader.type == media::fs::VolumeDescriptorType::Terminator) {
+                    break;
+                }
+
+                // Parse the different types of volume descriptors
+                // TODO: parse supplementary/enhanced volume descriptors, and maybe volume partition descriptors too
+                if (volDescHeader.type == media::fs::VolumeDescriptorType::Primary) {
+                    media::fs::VolumeDescriptor volDesc{};
+                    if (!volDesc.Read(buf)) {
+                        break;
+                    }
+
+                    // TODO: read directory records starting from volDesc.rootDirRecord
+                    // - volDesc.rootDirRecord.extentPos = location of the first sector with root directory records
+                    // - numSectors = volDesc.rootDirRecord.dataSize / volDesc.logicalBlockSize (or / 2048?)
+
+                    // TODO: read path tables from volDesc.pathTableLPos
+
+                    // TODO: offset all sector numbers from filesystem structures by +150
+                }
+
+                // Go to the next sector
+                sectorOffset += track.sectorSize;
+            }
+
+            break;
+        }
+    }
 }
 
 void CDBlock::EjectDisc() {
@@ -573,7 +658,7 @@ void CDBlock::CmdChangeDirectory() {
     // file ID bits 15-0
 
     const uint8 filterNum = bit::extract<8, 15>(m_CR[2]);
-    const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
+    // const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
 
     // Output structure: standard CD status data
     if (filterNum < 0x24) {
