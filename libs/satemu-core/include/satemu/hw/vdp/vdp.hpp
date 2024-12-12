@@ -43,6 +43,8 @@ public:
     // -------------------------------------------------------------------------
     // VDP1 memory/register access
 
+    // TODO: should only accept 16-bit accesses
+
     template <mem_primitive T>
     T VDP1ReadVRAM(uint32 address) {
         return util::ReadBE<T>(&m_VRAM1[address & 0x7FFFF]);
@@ -65,17 +67,44 @@ public:
 
     template <mem_primitive T>
     T VDP1ReadReg(uint32 address) {
-        if (address == 0x10) {
-            // MEGA HACK to get past the boot sequence
-            return 3;
+        switch (address) {
+        case 0x00: return 0; // TVHR is write-only
+        case 0x02: return 0; // FBCR is write-only
+        case 0x04: return 0; // PTMR is write-only
+        case 0x06: return 0; // EWDR is write-only
+        case 0x08: return 0; // EWLR is write-only
+        case 0x0A: return 0; // EWRR is write-only
+        case 0x0C: return 0; // ENDR is write-only
+
+        case 0x10: return m_VDP1regs.ReadEDSR();
+        case 0x12: return m_VDP1regs.ReadLOPR();
+        case 0x14: return m_VDP1regs.ReadCOPR();
+        case 0x16: return m_VDP1regs.ReadMODR();
+
+        default: fmt::println("unhandled {}-bit VDP1 register read from {:02X}", sizeof(T) * 8, address); return 0;
         }
-        fmt::println("unhandled {}-bit VDP1 register read from {:02X}", sizeof(T) * 8, address);
-        return 0;
     }
 
     template <mem_primitive T>
     void VDP1WriteReg(uint32 address, T value) {
-        fmt::println("unhandled {}-bit VDP1 register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+        switch (address) {
+        case 0x00: m_VDP1regs.WriteTVHR(value); break;
+        case 0x02: m_VDP1regs.WriteFBCR(value); break;
+        case 0x04: m_VDP1regs.WritePTMR(value); break;
+        case 0x06: m_VDP1regs.WriteEWDR(value); break;
+        case 0x08: m_VDP1regs.WriteEWLR(value); break;
+        case 0x0A: m_VDP1regs.WriteEWRR(value); break;
+        case 0x0C: m_VDP1regs.WriteENDR(value); break;
+
+        case 0x10: break; // EDSR is read-only
+        case 0x12: break; // LOPR is read-only
+        case 0x14: break; // COPR is read-only
+        case 0x16: break; // MODR is read-only
+
+        default:
+            fmt::println("unhandled {}-bit VDP1 register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+            break;
+        }
     }
     // TODO: handle VRSIZE.VRAMSZ in Read/WriteVRAM maybe?
     // TODO: CRAM and registers only accept 16-bit and 32-bit accesses
@@ -442,6 +471,74 @@ private:
 
     // -------------------------------------------------------------------------
     // VDP1 registers
+
+    struct VDP1Regs {
+        // 100000   TVHR  TV Mode Selection
+
+        void WriteTVHR(uint16 value) {
+            // TODO: implement
+        }
+
+        // 100002   FBCR  Frame Buffer Change Mode
+
+        void WriteFBCR(uint16 value) {
+            // TODO: implement
+        }
+
+        // 100004   PTMR  Draw Trigger
+
+        void WritePTMR(uint16 value) {
+            // TODO: implement
+        }
+
+        // 100006   EWDR  Erase/write Data
+
+        void WriteEWDR(uint16 value) {
+            // TODO: implement
+        }
+
+        // 100008   EWLR  Erase/write Upper-left coordinate
+
+        void WriteEWLR(uint16 value) {
+            // TODO: implement
+        }
+
+        // 10000A   EWRR  Erase/write Bottom-right Coordinate
+
+        void WriteEWRR(uint16 value) {
+            // TODO: implement
+        }
+
+        // 10000C   ENDR  Draw Forced Termination
+
+        void WriteENDR(uint16 value) {
+            // TODO: implement
+        }
+
+        // 100010   EDSR  Transfer End Status
+
+        uint16 ReadEDSR() {
+            return 3; // MEGA HACK to get past the boot sequence
+        }
+
+        // 100012   LOPR  Last Operation Command Address
+
+        uint16 ReadLOPR() {
+            return 0;
+        }
+
+        // 100014   COPR  Current Operation Command Address
+
+        uint16 ReadCOPR() {
+            return 0;
+        }
+
+        // 100016   MODR  Mode Status
+
+        uint16 ReadMODR() {
+            return 0;
+        }
+    } m_VDP1regs;
 
     // -------------------------------------------------------------------------
     // VDP2 registers
