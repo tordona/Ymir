@@ -716,7 +716,7 @@ void SH2::EnterException(uint8 vectorNumber) {
 
 void SH2::Execute(uint32 address) {
     if (!m_delaySlot && CheckInterrupts()) [[unlikely]] {
-        fmt::println(">> intr level {:02X} vec {:02X}", m_pendingInterrupt.priority, m_pendingInterrupt.vecNum);
+        // fmt::println(">> intr level {:02X} vec {:02X}", m_pendingInterrupt.priority, m_pendingInterrupt.vecNum);
         EnterException(m_pendingInterrupt.vecNum);
         SR.ILevel = m_pendingInterrupt.priority;
         address = PC;

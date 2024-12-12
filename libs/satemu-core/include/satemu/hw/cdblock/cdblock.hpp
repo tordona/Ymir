@@ -56,13 +56,13 @@ public:
 
     template <mem_primitive T>
     T ReadReg(uint32 address) {
-        T value = ReadRegImpl<T>(address);
+        /*T value = ReadRegImpl<T>(address);
         fmt::println("{}-bit CD Block register read from {:02X} = {:X}", sizeof(T) * 8, address, value);
         return value;
     }
 
     template <mem_primitive T>
-    T ReadRegImpl(uint32 address) {
+    T ReadRegImpl(uint32 address) {*/
         switch (address) {
         case 0x08: return m_HIRQ;
         case 0x0C: return m_HIRQMASK;
@@ -79,7 +79,7 @@ public:
 
     template <mem_primitive T>
     void WriteReg(uint32 address, T value) {
-        fmt::println("{}-bit CD Block register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+        // fmt::println("{}-bit CD Block register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
         switch (address) {
         case 0x08:
             m_HIRQ &= value;
