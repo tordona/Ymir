@@ -58,22 +58,22 @@ void Saturn::Step() {
     // - SMPC MCU: 4.00000 MHz
 
     // Subcycle counting is needed to accurately emulate the timings between these components.
-    // We count cycles for each clock separately, incrementing by the smallest subcycle count.
-    // When a counter reaches the step threshold, a full cycle is completed on that component.
+    // We use the fastest clocks as a reference, incrementing the cycle counts of the other clocks by the same amount.
+    // When a counter reaches the threshold, a full cycle is completed on that clock.
     //
     // Subcycles for NTSC system:
-    //   Clock        Subcycles per step
-    //   28,636,360    2464  (reference)
-    //   22,579,200    3125  (error: ~0.000001%)
-    //   20,000,000    3528  (error: ~0.000001%)
-    //    4,000,000   14112  (error: ~0.000001%)
+    //   Clock rate    Step   Actual clock rate (error)
+    //   28,636,360    2464   28,636,360 (reference)
+    //   22,579,200    3125  ~22,579,197 (error: ~0.000001%)
+    //   20,000,000    3528  ~19,999,997 (error: ~0.000001%)
+    //    4,000,000   17640   ~3,999,999 (error: ~0.000001%)
     //
     // Subcycles for PAL system:
-    //   Clock        Subcycles per step
-    //   28,437,500    9925   (reference)
-    //   22,579,200   12500   (error: ~0.00001%)
-    //   20,000,000   14112   (error: ~0.00001%)
-    //    4,000,000   56448   (error: ~0.00001%)
+    //   Clock rate    Step   Actual clock rate (error)
+    //   28,437,500    9925   28,437,500 (reference)
+    //   22,579,200   12500   22,579,375 (error: ~0.00001%)
+    //   20,000,000   14112  ~20,000,155 (error: ~0.00001%)
+    //    4,000,000   70560   ~4,000,031 (error: ~0.00001%)
 
     SH2.master.Step();
     // TODO: step slave SH2 if enabled
