@@ -135,6 +135,8 @@ void CDBlock::LoadDisc(media::Disc &&disc) {
                         if (!pathTableRecord.Read(buf)) {
                             return;
                         }
+                        // TODO: build directory hierarchy
+                        // TODO: read extended attributes if present
                     };
 
                     readPathTableRecord(volDesc.pathTableLPos);
@@ -159,6 +161,7 @@ void CDBlock::LoadDisc(media::Disc &&disc) {
                                 break;
                             }
                             // TODO: add directory record to table
+                            // TODO: read extended attributes if present
 
                             recOffset += dirRecord.recordSize;
                         }
