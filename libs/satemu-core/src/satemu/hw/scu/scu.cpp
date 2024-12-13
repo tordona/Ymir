@@ -80,7 +80,7 @@ void SCU::RunDSP(uint64 cycles) {
     }
 
     // Execute next command
-    const uint32 command = m_dspState.programRAM[m_dspState.programAddress++];
+    const uint32 command = m_dspState.programRAM[m_dspState.PC++];
     const uint32 cmdCategory = bit::extract<30, 31>(command);
 
     switch (cmdCategory) {
@@ -89,6 +89,16 @@ void SCU::RunDSP(uint64 cycles) {
     case 0b11: DSPCmd_Special(command); break;
     }
 
+    // Update PC
+    if (m_dspState.jmpCounter > 0) {
+        m_dspState.jmpCounter--;
+        if (m_dspState.jmpCounter == 0) {
+            m_dspState.PC = m_dspState.nextPC;
+            m_dspState.nextPC = ~0;
+        }
+    }
+
+    // Update CT0-3
     for (int i = 0; i < 3; i++) {
         if (m_dspState.incCT[i]) {
             m_dspState.CT[i]++;
@@ -151,11 +161,41 @@ void SCU::DSPWriteImm(uint8 index, uint32 value) {
     case 0b0111: m_dspState.dmaWriteAddr = value; break;
     case 0b1010: m_dspState.loopCount = value; break;
     case 0b1100:
-        // TODO: check PC offsets
-        m_dspState.loopTop = m_dspState.programAddress;
-        m_dspState.programAddress = value;
+        m_dspState.loopTop = m_dspState.PC;
+        DSPDelayedJump(value);
         break;
     }
+}
+
+FORCE_INLINE bool SCU::DSPCondCheck(uint8 cond) const {
+    // 000001: NZ  (Z=0)
+    // 000010: NS  (S=0)
+    // 000011: NZS (Z=0 && S=0)
+    // 000100: NC  (C=0)
+    // 001000: NT0 (T0=0)
+    // 100001: Z   (Z=1)
+    // 100010: S   (S=1)
+    // 100011: ZS  (Z=1 || S=1)
+    // 100100: C   (C=1)
+    // 101000: T0  (T0=1)
+    switch (cond) {
+    case 0b000001: return !m_dspState.zero;
+    case 0b000010: return !m_dspState.sign;
+    case 0b000011: return !m_dspState.zero && !m_dspState.sign;
+    case 0b000100: return !m_dspState.carry;
+    case 0b001000: return !m_dspState.transfer0;
+
+    case 0b100001: return m_dspState.zero;
+    case 0b100010: return m_dspState.sign;
+    case 0b100011: return m_dspState.zero || m_dspState.sign;
+    case 0b100100: return m_dspState.carry;
+    case 0b101000: return m_dspState.transfer0;
+    }
+}
+
+FORCE_INLINE void SCU::DSPDelayedJump(uint8 target) {
+    m_dspState.nextPC = target;
+    m_dspState.jmpCounter = 2;
 }
 
 FORCE_INLINE void SCU::DSPCmd_Operation(uint32 command) {
@@ -315,32 +355,8 @@ FORCE_INLINE void SCU::DSPCmd_LoadImm(uint32 command) {
         // Conditional transfer
         imm = bit::sign_extend<19>(bit::extract<0, 18>(command));
 
-        // 000001: NZ  (Z=0)
-        // 000010: NS  (S=0)
-        // 000011: NZS (Z=0 && S=0)
-        // 000100: NC  (C=0)
-        // 001000: NT0 (T0=0)
-        // 100001: Z   (Z=1)
-        // 100010: S   (S=1)
-        // 100011: ZS  (Z=1 || S=1)
-        // 100100: C   (C=1)
-        // 101000: T0  (T0=1)
-        const sint32 cond = bit::extract<19, 24>(command);
-        bool exec = false;
-        switch (cond) {
-        case 0b000001: exec = !m_dspState.zero; break;
-        case 0b000010: exec = !m_dspState.sign; break;
-        case 0b000011: exec = !m_dspState.zero && !m_dspState.sign; break;
-        case 0b000100: exec = !m_dspState.carry; break;
-        case 0b001000: exec = !m_dspState.transfer0; break;
-
-        case 0b100001: exec = m_dspState.zero; break;
-        case 0b100010: exec = m_dspState.sign; break;
-        case 0b100011: exec = m_dspState.zero || m_dspState.sign; break;
-        case 0b100100: exec = m_dspState.carry; break;
-        case 0b101000: exec = m_dspState.transfer0; break;
-        }
-        if (!exec) {
+        const uint8 cond = bit::extract<19, 24>(command);
+        if (!DSPCondCheck(cond)) {
             return;
         }
     } else {
@@ -363,13 +379,26 @@ FORCE_INLINE void SCU::DSPCmd_Special(uint32 command) {
 
 FORCE_INLINE void SCU::DSPCmd_Special_DMA(uint32 command) {}
 
-FORCE_INLINE void SCU::DSPCmd_Special_Jump(uint32 command) {}
+FORCE_INLINE void SCU::DSPCmd_Special_Jump(uint32 command) {
+    const uint32 cond = bit::extract<19, 24>(command);
+    if (cond != 0 && !DSPCondCheck(cond)) {
+        return;
+    }
+
+    const uint8 target = bit::extract<0, 7>(command);
+    DSPDelayedJump(target);
+}
 
 FORCE_INLINE void SCU::DSPCmd_Special_LoopBottom(uint32 command) {
-    if (bit::extract<27>(command)) {
-        // LPS
-    } else {
-        // BTM
+    if (m_dspState.loopCount != 0) {
+        m_dspState.loopCount--;
+        if (bit::extract<27>(command)) {
+            // LPS
+            DSPDelayedJump(m_dspState.PC);
+        } else {
+            // BTM
+            DSPDelayedJump(m_dspState.loopTop);
+        }
     }
 }
 

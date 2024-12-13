@@ -211,8 +211,11 @@ private:
             programEnded = false;
             programStep = false;
 
-            programAddress = 0;
+            PC = 0;
             dataAddress = 0;
+
+            nextPC = ~0;
+            jmpCounter = 0;
 
             transfer0 = false;
 
@@ -222,6 +225,7 @@ private:
             overflow = false;
 
             CT.fill(0);
+            incCT.fill(false);
 
             ALU.u64 = 0;
             AC.u64 = 0;
@@ -249,8 +253,11 @@ private:
         bool programEnded;
         bool programStep;
 
-        uint8 programAddress;
+        uint8 PC; // program address
         uint8 dataAddress;
+
+        uint32 nextPC;    // jump target
+        uint8 jmpCounter; // when it reaches zero, perform the jump
 
         bool transfer0;
 
@@ -311,7 +318,7 @@ private:
                 return;
             }
 
-            programRAM[programAddress++] = value;
+            programRAM[PC++] = value;
         }
 
         uint32 ReadData() {
@@ -352,6 +359,12 @@ private:
     // Immediate writes to [d]
     void DSPWriteImm(uint8 index, uint32 value);
 
+    // Checks if the current DSP flags pass the given condition
+    bool DSPCondCheck(uint8 cond) const;
+
+    // Prepares a delayed jump to the given target address
+    void DSPDelayedJump(uint8 target);
+
     // DSP command interpreters
 
     void DSPCmd_Operation(uint32 command);
@@ -371,7 +384,7 @@ private:
         case 0x80: // DSP Program Control Port
             if constexpr (std::is_same_v<T, uint32>) {
                 uint32 value = 0;
-                bit::deposit_into<0, 7>(value, m_dspState.programAddress);
+                bit::deposit_into<0, 7>(value, m_dspState.PC);
                 bit::deposit_into<16>(value, m_dspState.programExecuting);
                 bit::deposit_into<18>(value, m_dspState.programEnded);
                 bit::deposit_into<19>(value, m_dspState.overflow);
@@ -414,7 +427,7 @@ private:
         case 0x80: // DSP Program Control Port
             if constexpr (std::is_same_v<T, uint32>) {
                 if (bit::extract<15>(value)) {
-                    m_dspState.programAddress = bit::extract<0, 7>(value);
+                    m_dspState.PC = bit::extract<0, 7>(value);
                 }
                 if (bit::extract<25>(value)) {
                     m_dspState.programPaused = true;
