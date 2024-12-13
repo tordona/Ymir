@@ -15,6 +15,12 @@ SCU::SCU(vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2 &s
 void SCU::Reset(bool hard) {
     m_intrMask.u32 = 0;
     m_intrStatus.u32 = 0;
+
+    m_dspState.Reset();
+}
+
+void SCU::Advance(uint64 cycles) {
+    RunDSP(cycles);
 }
 
 void SCU::TriggerHBlankIN() {
@@ -51,6 +57,30 @@ void SCU::TriggerExternalInterrupt0() {
 
 void SCU::AcknowledgeExternalInterrupt() {
     UpdateInterruptLevel(true);
+}
+
+void SCU::RunDSP(uint64 cycles) {
+    // TODO: proper cycle counting
+
+    // Bail out if not executing
+    if (!m_dspState.programExecuting && !m_dspState.programStep) {
+        return;
+    }
+
+    // Bail out if paused
+    if (m_dspState.programPaused) {
+        return;
+    }
+
+    // Execute next command
+    const uint32 command = m_dspState.programRAM[m_dspState.programAddress++];
+    const uint32 cmdD1Bus = bit::extract<0, 13>(command);
+    const uint32 cmdYBus = bit::extract<14, 19>(command);
+    const uint32 cmdXBus = bit::extract<20, 25>(command);
+    const uint32 cmdALU = bit::extract<26, 29>(command);
+
+    // Clear stepping flag to ensure the DSP only runs one command when stepping
+    m_dspState.programStep = false;
 }
 
 void SCU::UpdateInterruptLevel(bool acknowledge) {

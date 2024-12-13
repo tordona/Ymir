@@ -64,6 +64,8 @@ public:
 
     void Reset(bool hard);
 
+    void Advance(uint64 cycles);
+
     template <mem_primitive T>
     T Read(uint32 address) {
         using namespace util;
@@ -190,11 +192,127 @@ private:
     InterruptStatus m_intrStatus;
 
     // -------------------------------------------------------------------------
+    // DSP
+
+    struct DSPState {
+        DSPState() {
+            Reset();
+        }
+
+        void Reset() {
+            programRAM.fill(0);
+            for (auto &bank : dataRAM) {
+                bank.fill(0);
+            }
+
+            programExecuting = false;
+            programPaused = false;
+            programEnded = false;
+            programStep = false;
+
+            programAddress = 0;
+            dataAddress = 0;
+
+            transfer0 = false;
+
+            sign = false;
+            zero = false;
+            carry = false;
+            overflow = false;
+
+            dataAccessAddresses.fill(0);
+            multiplierOut = 0;
+        }
+
+        std::array<uint32, 256> programRAM;
+        std::array<std::array<uint32, 64>, 4> dataRAM;
+
+        bool programExecuting;
+        bool programPaused;
+        bool programEnded;
+        bool programStep;
+
+        uint8 programAddress;
+        uint8 dataAddress;
+
+        bool transfer0;
+
+        bool sign;
+        bool zero;
+        bool carry;
+        bool overflow;
+
+        std::array<uint8, 4> dataAccessAddresses; // CT0-3
+        uint64 multiplierOut;                     // MULTIPLIER
+
+        void WriteProgram(uint32 value) {
+            // Cannot write while program is executing
+            if (programExecuting) {
+                return;
+            }
+
+            programRAM[programAddress++] = value;
+        }
+
+        uint32 ReadData() {
+            // Cannot read while program is executing
+            if (programExecuting) {
+                return 0;
+            }
+
+            const uint8 bank = bit::extract<6, 7>(dataAddress);
+            const uint8 offset = bit::extract<0, 5>(dataAddress);
+            dataAddress++;
+            return dataRAM[bank][offset];
+        }
+
+        void WriteData(uint32 value) {
+            // Cannot write while program is executing
+            if (programExecuting) {
+                return;
+            }
+
+            const uint8 bank = bit::extract<6, 7>(dataAddress);
+            const uint8 offset = bit::extract<0, 5>(dataAddress);
+            dataAddress++;
+            dataRAM[bank][offset] = value;
+        }
+    } m_dspState;
+
+    void RunDSP(uint64 cycles);
+
+    // -------------------------------------------------------------------------
     // SCU registers
 
     template <mem_primitive T>
     T ReadReg(uint32 address) {
         switch (address) {
+        case 0x80: // DSP Program Control Port
+            if constexpr (std::is_same_v<T, uint32>) {
+                uint32 value = 0;
+                bit::deposit_into<0, 7>(value, m_dspState.programAddress);
+                bit::deposit_into<16>(value, m_dspState.programExecuting);
+                bit::deposit_into<18>(value, m_dspState.programEnded);
+                bit::deposit_into<19>(value, m_dspState.overflow);
+                bit::deposit_into<20>(value, m_dspState.carry);
+                bit::deposit_into<21>(value, m_dspState.zero);
+                bit::deposit_into<22>(value, m_dspState.sign);
+                bit::deposit_into<23>(value, m_dspState.transfer0);
+                return value;
+            } else {
+                return 0;
+            }
+        case 0x84: // DSP Program RAM Data Port (write-only)
+            return 0;
+        case 0x88: // DSP Data RAM Address Port (write-only)
+            return 0;
+        case 0x8C: // DSP Data RAM Data Port
+            if constexpr (std::is_same_v<T, uint32>) {
+                return m_dspState.ReadData();
+            } else {
+                return 0;
+            }
+
         case 0xA0: // Interrupt Mask
             return m_intrMask.u32;
         case 0xA4: // Interrupt Status
@@ -202,6 +320,7 @@ private:
         case 0xA8: // A-Bus Interrupt Acknowledge
             // TODO: not yet sure how this works
             return 0;
+
         default: //
             fmt::println("unhandled {}-bit SCU register read from {:02X}", sizeof(T) * 8, address);
             return 0;
@@ -211,6 +330,37 @@ private:
     template <mem_primitive T>
     void WriteReg(uint32 address, T value) {
         switch (address) {
+        case 0x80: // DSP Program Control Port
+            if constexpr (std::is_same_v<T, uint32>) {
+                if (bit::extract<15>(value)) {
+                    m_dspState.programAddress = bit::extract<0, 7>(value);
+                }
+                if (bit::extract<25>(value)) {
+                    m_dspState.programPaused = true;
+                } else if (bit::extract<26>(value)) {
+                    m_dspState.programPaused = false;
+                } else {
+                    m_dspState.programExecuting = bit::extract<16>(value);
+                    m_dspState.programStep = bit::extract<17>(value);
+                }
+            }
+            break;
+        case 0x84: // DSP Program RAM Data Port (write-only)
+            if constexpr (std::is_same_v<T, uint32>) {
+                m_dspState.WriteProgram(value);
+            }
+            break;
+        case 0x88: // DSP Data RAM Address Port (write-only)
+            if constexpr (std::is_same_v<T, uint32>) {
+                m_dspState.dataAddress = bit::extract<0, 7>(value);
+            }
+            break;
+        case 0x8C: // DSP Data RAM Data Port
+            if constexpr (std::is_same_v<T, uint32>) {
+                m_dspState.WriteData(value);
+            }
+            break;
+
         case 0xA0: // Interrupt Mask
             m_intrMask.u32 = value & 0x0000BFFF;
             break;
@@ -220,6 +370,7 @@ private:
         case 0xA8: // A-Bus Interrupt Acknowledge
             // TODO: not yet sure how this works
             break;
+
         default:
             fmt::println("unhandled {}-bit SCU register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
             break;

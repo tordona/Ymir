@@ -79,6 +79,9 @@ void Saturn::Step() {
     // SH2.slave.Step();
 
     // TODO: replace with scheduler events
+    SCU.Advance(1);
+
+    // TODO: replace with scheduler events
     VDP.Advance(1);
 
     m_scspCycles += 2464;
