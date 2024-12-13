@@ -4,6 +4,7 @@
 
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/callback.hpp>
+#include <satemu/util/data_ops.hpp>
 #include <satemu/util/inline.hpp>
 #include <satemu/util/size_ops.hpp>
 
@@ -63,49 +64,66 @@ using CBFrameComplete = util::Callback<void(FramebufferColor *fb, uint32 width, 
 // -----------------------------------------------------------------------------
 // VDP1 registers
 
-// VDP1 command types
-enum class VDP1Command : uint16 {
-    // Textured drawing
-    DrawNormalSprite = 0x0,
-    DrawScaledSprite = 0x1,
-    DrawDistortedSprite = 0x2,
-    DrawDistortedSpriteAlt = 0x3,
+// VDP1 command structure in VRAM
+//   00  CMDCTRL  Control Words
+//   02  CMDLINK  Link Specification
+//   04  CMDPMOD  Draw Mode Word
+//   06  CMDCOLR  Color Control Word
+//   08  CMDSRCA  Character Address
+//   0A  CMDSIZE  Character Size
+//   0C  CMDXA    Vertex A X Coordinate
+//   0E  CMDYA    Vertex A Y Coordinate
+//   10  CMDXB    Vertex B X Coordinate
+//   12  CMDYB    Vertex B Y Coordinate
+//   14  CMDXC    Vertex C X Coordinate
+//   16  CMDYC    Vertex C Y Coordinate
+//   18  CMDXD    Vertex D X Coordinate
+//   1A  CMDYD    Vertex D Y Coordinate
+//   1C  CMDGRDA  Gouraud Shading Table
+struct VDP1Command {
+    enum class CommandType : uint16 {
+        // Textured drawing
+        DrawNormalSprite = 0x0,
+        DrawScaledSprite = 0x1,
+        DrawDistortedSprite = 0x2,
+        DrawDistortedSpriteAlt = 0x3,
 
-    // Untextured drawing
-    DrawPolygon = 0x4,
-    DrawPolylines = 0x5,
-    DrawPolylinesAlt = 0x7,
-    DrawLine = 0x6,
+        // Untextured drawing
+        DrawPolygon = 0x4,
+        DrawPolylines = 0x5,
+        DrawPolylinesAlt = 0x7,
+        DrawLine = 0x6,
 
-    // Clipping coordinate setting
-    UserClipping = 0x8,
-    UserClippingAlt = 0xB,
-    SystemClipping = 0x9,
+        // Clipping coordinate setting
+        UserClipping = 0x8,
+        UserClippingAlt = 0xB,
+        SystemClipping = 0x9,
 
-    // Local coordinate setting
-    LocalCoordinates = 0xA,
-};
+        // Local coordinate setting
+        LocalCoordinates = 0xA,
+    };
 
-// VDP1 command table structure in VRAM
-struct VDP1CommandTable {
-    // CMDCTRL - Control Words
-    union {
+    enum class JumpType : uint16 {
+        Next = 0x0,
+        Assign = 0x1,
+        Call = 0x2,
+        Return = 0x3,
+    };
+
+    union CMDCTRL {
         uint16 u16;
         struct {
-            VDP1Command command : 4;
+            CommandType command : 4;
             uint16 direction : 2;
             uint16 : 2;
             uint16 zoomPoint : 4;
-            uint16 jumpSelect : 3;
+            JumpType jumpMode : 2;
+            uint16 skip : 1;
             uint16 end : 1;
         };
-    } cmdctrl;
+    };
 
-    // CMDLINK - Link Specification
-    uint16 cmdlink;
-
-    // CMDPMOD - Draw Mode Word
-    union {
+    union CMDPMOD {
         uint16 u16;
         struct {
             uint16 colorCalc : 3;
@@ -120,38 +138,16 @@ struct VDP1CommandTable {
             uint16 : 2;
             uint16 msbOn : 1;
         };
-    } cmdpmod;
+    };
 
-    // CMDCOLR - Color Control Word
-    uint16 cmdcolr;
-
-    // CMDSRCA - Character Address
-    uint16 cmdsrca;
-
-    // CMDSIZE - Character Size
-    union {
+    union CMDSIZE {
         uint16 u16;
         struct {
             uint16 sizeV : 7;
             uint16 sizeH : 6;
         };
-    } cmdsize;
-
-    sint16 cmdxa; // CMDXA - Vertex A X Coordinate
-    sint16 cmdya; // CMDYA - Vertex A Y Coordinate
-    sint16 cmdxb; // CMDXB - Vertex B X Coordinate
-    sint16 cmdyb; // CMDYB - Vertex B Y Coordinate
-    sint16 cmdxc; // CMDXC - Vertex C X Coordinate
-    sint16 cmdyc; // CMDYC - Vertex C Y Coordinate
-    sint16 cmdxd; // CMDXD - Vertex D X Coordinate
-    sint16 cmdyd; // CMDYD - Vertex D Y Coordinate
-
-    // CMDGRDA - Gouraud Shading Table
-    uint16 cmdgrda;
-
-    uint16 dummy;
+    };
 };
-static_assert(sizeof(VDP1CommandTable) == 0x20);
 
 struct VDP1Params {
     VDP1Params() {
@@ -170,7 +166,7 @@ struct VDP1Params {
         dblInterlaceEnable = false;
         evenOddCoordSelect = false;
 
-        drawTrigger = 0;
+        plotTrigger = 0;
 
         eraseWriteValue = 0;
 
@@ -182,6 +178,11 @@ struct VDP1Params {
         // HACK: should be false
         currFrameEnded = true;
         prevFrameEnded = true;
+
+        currCommandAddress = 0;
+        prevCommandAddress = 0;
+
+        returnAddress = ~0;
 
         UpdateTVMR();
     }
@@ -233,7 +234,7 @@ struct VDP1Params {
 
     // Frame drawing trigger.
     // Derived from PTMR.PTM
-    uint8 drawTrigger;
+    uint8 plotTrigger;
 
     // Value written to erased parts of the framebuffer.
     // Derived from EWDR
@@ -247,8 +248,18 @@ struct VDP1Params {
     uint16 eraseY3; // Erase window bottom-right Y coordinate
 
     // Whether the drawing end command was fetched on the current and previous frames.
+    // Used in EDSR
     bool currFrameEnded; // Drawing end bit fetched on current frame
     bool prevFrameEnded; // Drawing end bit fetched on previous frame
+
+    // Addresses of the last executed commands in the current and previous frames.
+    // Used in LOPR and COPR
+    uint16 currCommandAddress; // Address of the last executed command in the current frame
+    uint16 prevCommandAddress; // Address of the last executed command in the previous frame
+
+    // Return address in the command table.
+    // Used by commands that use the jump types Call and Return.
+    uint16 returnAddress;
 
     void UpdateTVMR() {
         static constexpr uint32 kSizesH[] = {512, 1024, 512, 512, 512, 512, 512, 512};
@@ -344,7 +355,7 @@ struct VDP1Regs {
     //                       11 (3) = (prohibited)
 
     FORCE_INLINE void WritePTMR(uint16 value) {
-        params.drawTrigger = bit::extract<0, 1>(value);
+        params.plotTrigger = bit::extract<0, 1>(value);
     }
 
     // 100006   EWDR  Erase/write Data
@@ -417,9 +428,7 @@ struct VDP1Regs {
     //   15-0   R    -     Last Operation Command Address (divided by 8)
 
     FORCE_INLINE uint16 ReadLOPR() const {
-        uint16 value = 0;
-        // TODO: implement
-        return value;
+        return params.prevCommandAddress >> 3u;
     }
 
     // 100014   COPR  Current Operation Command Address
@@ -428,9 +437,7 @@ struct VDP1Regs {
     //   15-0   R    -     Current Operation Command Address (divided by 8)
 
     FORCE_INLINE uint16 ReadCOPR() const {
-        uint16 value = 0;
-        // TODO: implement
-        return value;
+        return params.currCommandAddress >> 3u;
     }
 
     // 100016   MODR  Mode Status

@@ -92,7 +92,7 @@ public:
         case 0x02: m_VDP1regs.WriteFBCR(value); break;
         case 0x04:
             m_VDP1regs.WritePTMR(value);
-            if (m_VDP1regs.params.drawTrigger == 0b01) {
+            if (m_VDP1regs.params.plotTrigger == 0b01) {
                 VDP1BeginFrame();
             }
             break;
@@ -620,6 +620,12 @@ private:
 
     // Begins the next VDP1 frame.
     void VDP1BeginFrame();
+
+    // Process the VDP1 command table
+    void VDP1ProcessCommands();
+
+    // Ends the current VDP1 frame.
+    void VDP1EndFrame();
 
     // Draws the VDP2 scanline at m_VCounter.
     void VDP2DrawLine();

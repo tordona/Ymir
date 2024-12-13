@@ -239,6 +239,11 @@ void VDP::BeginVPhaseLastLine() {
 
     m_VDP2regs.TVSTAT.VBLANK = 0;
     m_SCU.TriggerVBlankOUT();
+
+    // TODO: check the timing on this
+    if (m_VDP1regs.params.plotTrigger == 0b10) {
+        VDP1BeginFrame();
+    }
 }
 
 // ----
@@ -248,6 +253,92 @@ void VDP::VDP1BeginFrame() {
     fmt::println("VDP1: starting frame drawing on framebuffer {}", m_drawFB);
     // TODO: setup rendering
     // TODO: figure out VDP1 timings
+
+    m_VDP1regs.params.prevCommandAddress = m_VDP1regs.params.currCommandAddress;
+    m_VDP1regs.params.currCommandAddress = 0;
+    m_VDP1regs.params.returnAddress = ~0;
+
+    // TODO: process while advancing cycles
+    VDP1ProcessCommands();
+}
+
+void VDP::VDP1ProcessCommands() {
+    static constexpr uint16 kNoReturn = ~0;
+
+    auto &cmdAddress = m_VDP1regs.params.currCommandAddress;
+
+    // Run up to 10000 commands to avoid infinite loops
+    // TODO: cycle counting
+    for (int i = 0; i < 10000; i++) {
+        const VDP1Command::CMDCTRL cmdctrl{.u16 = util::ReadBE<uint16>(&m_VRAM1[cmdAddress + 0x00])};
+        if (cmdctrl.end) {
+            return;
+        }
+
+        // Process command
+        if (!cmdctrl.skip) {
+            using enum VDP1Command::CommandType;
+
+            switch (cmdctrl.command) {
+            case DrawNormalSprite: break;
+            case DrawScaledSprite: break;
+            case DrawDistortedSprite: // fallthrough
+            case DrawDistortedSpriteAlt: break;
+
+            case DrawPolygon: break;
+            case DrawPolylines: // fallthrough
+            case DrawPolylinesAlt: break;
+            case DrawLine: break;
+
+            case UserClipping: // fallthrough
+            case UserClippingAlt: break;
+            case SystemClipping: break;
+            case LocalCoordinates: break;
+
+            default:
+                fmt::println("VDP1: Unexpected command type {:X}", static_cast<uint16>(cmdctrl.command));
+                VDP1EndFrame();
+                return;
+            }
+        }
+
+        // Go to the next command
+        {
+            using enum VDP1Command::JumpType;
+
+            switch (cmdctrl.jumpMode) {
+            case Next: cmdAddress += 0x20; break;
+            case Assign: {
+                cmdAddress = util::ReadBE<uint16>(&m_VRAM1[cmdAddress + 0x02]) << 3u;
+                break;
+            }
+            case Call: {
+                // Nested calls seem to not update the return address
+                if (m_VDP1regs.params.returnAddress == kNoReturn) {
+                    m_VDP1regs.params.returnAddress = cmdAddress + 0x20;
+                }
+                cmdAddress = util::ReadBE<uint16>(&m_VRAM1[cmdAddress + 0x02]) << 3u;
+                break;
+            }
+            case Return: {
+                // Return seems to only return if there was a previous Call
+                if (m_VDP1regs.params.returnAddress != kNoReturn) {
+                    cmdAddress = m_VDP1regs.params.returnAddress;
+                    m_VDP1regs.params.returnAddress = kNoReturn;
+                } else {
+                    cmdAddress += 0x20;
+                }
+                break;
+            }
+            }
+        }
+
+        cmdAddress &= 0x7FFFF;
+    }
+}
+
+void VDP::VDP1EndFrame() {
+    m_VDP1regs.params.currFrameEnded = true;
 }
 
 void VDP::VDP2DrawLine() {
