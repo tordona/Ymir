@@ -226,6 +226,8 @@ private:
             ALU.u64 = 0;
             AC.u64 = 0;
             P.u64 = 0;
+            RX = 0;
+            RY = 0;
 
             loopTop = 0;
             loopCount = 0;
@@ -257,8 +259,10 @@ private:
         bool carry;
         bool overflow;
 
-        std::array<uint8, 4> CT; // DSP data address
+        // DSP data address
+        std::array<uint8, 4> CT;
 
+        // ALU operation output
         union {
             uint64 u64 : 48;
             struct {
@@ -267,6 +271,7 @@ private:
             };
         } ALU;
 
+        // ALU operation input 1
         union {
             uint64 u64 : 48;
             struct {
@@ -275,6 +280,8 @@ private:
             };
         } AC;
 
+        // ALU operation input 2
+        // Multiplication output
         union {
             uint64 u64 : 48;
             struct {
@@ -282,6 +289,9 @@ private:
                 uint16 H;
             };
         } P;
+
+        sint32 RX; // Multiplication input 1
+        sint32 RY; // Multiplication input 2
 
         uint8 loopTop;    // TOP
         uint16 loopCount; // LOP
@@ -329,6 +339,14 @@ private:
     } m_dspState;
 
     void RunDSP(uint64 cycles);
+
+    // DSP memory/register accessors
+
+    // X-Bus, Y-Bus and D1-Bus reads from [s]
+    uint32 DSPReadSource(uint8 index);
+
+    // D1-Bus writes to [d]
+    void DSPWriteD1Bus(uint8 index, uint32 value);
 
     // DSP command interpreters
 
