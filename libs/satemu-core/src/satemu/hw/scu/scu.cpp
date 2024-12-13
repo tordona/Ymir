@@ -2,6 +2,8 @@
 
 #include <satemu/hw/sh2/sh2.hpp>
 
+#include <bit>
+
 namespace satemu::scu {
 
 SCU::SCU(vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2 &sh2)
@@ -92,50 +94,99 @@ void SCU::RunDSP(uint64 cycles) {
 }
 
 FORCE_INLINE void SCU::DSPCmd_Operation(uint32 command) {
+    auto setZS32 = [&](uint32 value) {
+        m_dspState.zero = value == 0;
+        m_dspState.sign = static_cast<sint32>(value) < 0;
+    };
+
+    auto setZS48 = [&](uint64 value) {
+        value <<= 16ull;
+        m_dspState.zero = value == 0;
+        m_dspState.sign = static_cast<sint64>(value) < 0;
+    };
+
     // ALU
     switch (bit::extract<26, 29>(command)) {
     case 0b0000: // NOP
-        // TODO: implement
         break;
     case 0b0001: // AND
-        // TODO: implement
+        m_dspState.ALU.L = m_dspState.AC.L & m_dspState.P.L;
+        setZS32(m_dspState.ALU.L);
+        m_dspState.carry = 0;
         break;
     case 0b0010: // OR
-        // TODO: implement
+        m_dspState.ALU.L = m_dspState.AC.L | m_dspState.P.L;
+        setZS32(m_dspState.ALU.L);
+        m_dspState.carry = 0;
         break;
     case 0b0011: // XOR
-        // TODO: implement
+        m_dspState.ALU.L = m_dspState.AC.L ^ m_dspState.P.L;
+        setZS32(m_dspState.ALU.L);
+        m_dspState.carry = 0;
         break;
     case 0b0100: // ADD
-        // TODO: implement
+    {
+        const uint64 op1 = m_dspState.AC.L;
+        const uint64 op2 = m_dspState.P.L;
+        const uint64 result = op1 + op2;
+        setZS32(result);
+        m_dspState.carry = bit::extract<32>(result);
+        m_dspState.overflow = bit::extract<31>((~(op1 ^ op2)) & (op1 ^ result));
+        m_dspState.ALU.L = result;
         break;
+    }
     case 0b0101: // SUB
-        // TODO: implement
+    {
+        const uint64 op1 = m_dspState.AC.L;
+        const uint64 op2 = m_dspState.P.L;
+        const uint64 result = op1 - op2;
+        setZS32(result);
+        m_dspState.carry = bit::extract<32>(result);
+        m_dspState.overflow = bit::extract<31>((op1 ^ op2) & (op1 ^ result));
+        m_dspState.ALU.L = result;
         break;
+    }
     case 0b0110: // AD2
-        // TODO: implement
+    {
+        const uint64 op1 = m_dspState.AC.u64;
+        const uint64 op2 = m_dspState.P.u64;
+        const uint64 result = op1 + op2;
+        setZS48(result);
+        m_dspState.carry = bit::extract<48>(result);
+        m_dspState.overflow = bit::extract<31>((~(op1 ^ op2)) & (op1 ^ result));
+        m_dspState.ALU.u64 = result;
         break;
+    }
     case 0b1000: // SR
-        // TODO: implement
+        m_dspState.carry = bit::extract<1>(m_dspState.AC.L);
+        m_dspState.AC.L = static_cast<sint32>(m_dspState.AC.L) >> 1;
+        setZS32(m_dspState.AC.L);
         break;
     case 0b1001: // RR
-        // TODO: implement
+        m_dspState.carry = bit::extract<1>(m_dspState.AC.L);
+        m_dspState.AC.L = std::rotr(m_dspState.AC.L, 1);
+        setZS32(m_dspState.AC.L);
         break;
     case 0b1010: // SL
-        // TODO: implement
+        m_dspState.carry = bit::extract<31>(m_dspState.AC.L);
+        m_dspState.AC.L = m_dspState.AC.L << 1u;
+        setZS32(m_dspState.AC.L);
         break;
     case 0b1011: // RL
-        // TODO: implement
+        m_dspState.carry = bit::extract<31>(m_dspState.AC.L);
+        m_dspState.AC.L = std::rotl(m_dspState.AC.L, 1);
+        setZS32(m_dspState.AC.L);
         break;
     case 0b1111: // RL8
-        // TODO: implement
+        m_dspState.carry = bit::extract<24>(m_dspState.AC.L);
+        m_dspState.AC.L = std::rotl(m_dspState.AC.L, 8);
+        setZS32(m_dspState.AC.L);
         break;
     }
 
     // X-Bus
     switch (bit::extract<23, 25>(command)) {
     case 0b000: // NOP
-        // TODO: implement
         break;
     case 0b010: // MOV MUL,P
         // TODO: implement
@@ -151,7 +202,6 @@ FORCE_INLINE void SCU::DSPCmd_Operation(uint32 command) {
     // Y-Bus
     switch (bit::extract<17, 19>(command)) {
     case 0b000: // NOP
-        // TODO: implement
         break;
     case 0b001: // CLR A
         // TODO: implement

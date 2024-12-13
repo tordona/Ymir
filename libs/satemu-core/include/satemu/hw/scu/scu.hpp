@@ -223,7 +223,9 @@ private:
 
             CT.fill(0);
 
-            multiplierOut = 0;
+            ALU.u64 = 0;
+            AC.u64 = 0;
+            P.u64 = 0;
 
             loopTop = 0;
             loopCount = 0;
@@ -257,7 +259,29 @@ private:
 
         std::array<uint8, 4> CT; // DSP data address
 
-        uint64 multiplierOut; // MULTIPLIER
+        union {
+            uint64 u64 : 48;
+            struct {
+                uint32 L;
+                uint16 H;
+            };
+        } ALU;
+
+        union {
+            uint64 u64 : 48;
+            struct {
+                uint32 L;
+                uint16 H;
+            };
+        } AC;
+
+        union {
+            uint64 u64 : 48;
+            struct {
+                uint32 L;
+                uint16 H;
+            };
+        } P;
 
         uint8 loopTop;    // TOP
         uint16 loopCount; // LOP
