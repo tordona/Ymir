@@ -170,11 +170,12 @@ public:
     // -------------------------------------------------------------------------
     // External interrupt triggers
 
-    void TriggerHBlankIN();
     void TriggerVBlankIN();
     void TriggerVBlankOUT();
-    void TriggerSystemManager();
+    void TriggerHBlankIN();
+    void TriggerDSPEnd();
     void TriggerSoundRequest(bool level);
+    void TriggerSystemManager();
     void TriggerExternalInterrupt0();
 
     void AcknowledgeExternalInterrupt();
@@ -220,10 +221,20 @@ private:
             carry = false;
             overflow = false;
 
-            dataAccessAddresses.fill(0);
+            CT.fill(0);
+
             multiplierOut = 0;
+
             loopTop = 0;
             loopCount = 0;
+
+            dmaRun = false;
+            dmaToD0 = false;
+            dmaCount = 0;
+            dmaSrc = 0;
+            dmaDst = 0;
+            dmaReadAddr = 0;
+            dmaWriteAddr = 0;
         }
 
         std::array<uint32, 256> programRAM;
@@ -244,10 +255,20 @@ private:
         bool carry;
         bool overflow;
 
-        std::array<uint8, 4> dataAccessAddresses; // CT0-3
-        uint64 multiplierOut;                     // MULTIPLIER
-        uint8 loopTop;                            // TOP
-        uint16 loopCount;                         // LOP
+        std::array<uint8, 4> CT; // DSP data address
+
+        uint64 multiplierOut; // MULTIPLIER
+
+        uint8 loopTop;    // TOP
+        uint16 loopCount; // LOP
+
+        bool dmaRun;         // DMA transfer in progress
+        bool dmaToD0;        // DMA transfer direction: false=D0 to DSP, true=DSP to D0
+        uint8 dmaCount;      // Remaining words in DMA transfer
+        uint8 dmaSrc;        // DMA source register: CT0-3 (from DSP) or RA0 (from DA)
+        uint8 dmaDst;        // DMA destination register: CT0-3 (to DSP) or WA0 (to DA)
+        uint32 dmaReadAddr;  // DMA read address (RA0)
+        uint32 dmaWriteAddr; // DMA write address (WA0)
 
         void WriteProgram(uint32 value) {
             // Cannot write while program is executing
@@ -284,6 +305,16 @@ private:
     } m_dspState;
 
     void RunDSP(uint64 cycles);
+
+    // DSP command interpreters
+
+    void DSPCmd_Operation(uint32 command);
+    void DSPCmd_LoadImm(uint32 command);
+    void DSPCmd_Special(uint32 command);
+    void DSPCmd_Special_DMA(uint32 command);
+    void DSPCmd_Special_Jump(uint32 command);
+    void DSPCmd_Special_LoopBottom(uint32 command);
+    void DSPCmd_Special_End(uint32 command);
 
     // -------------------------------------------------------------------------
     // SCU registers

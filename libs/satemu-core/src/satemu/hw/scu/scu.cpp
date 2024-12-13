@@ -23,12 +23,6 @@ void SCU::Advance(uint64 cycles) {
     RunDSP(cycles);
 }
 
-void SCU::TriggerHBlankIN() {
-    m_intrStatus.VDP2_HBlankIN = 1;
-    // TODO: also increment Timer 0 and trigger Timer 0 interrupt if the counter matches the compare register
-    UpdateInterruptLevel(false);
-}
-
 void SCU::TriggerVBlankIN() {
     m_intrStatus.VDP2_VBlankIN = 1;
     UpdateInterruptLevel(false);
@@ -40,13 +34,24 @@ void SCU::TriggerVBlankOUT() {
     UpdateInterruptLevel(false);
 }
 
-void SCU::TriggerSystemManager() {
-    m_intrStatus.SM_SystemManager = 1;
+void SCU::TriggerHBlankIN() {
+    m_intrStatus.VDP2_HBlankIN = 1;
+    // TODO: also increment Timer 0 and trigger Timer 0 interrupt if the counter matches the compare register
+    UpdateInterruptLevel(false);
+}
+
+void SCU::TriggerDSPEnd() {
+    m_intrStatus.SCU_DSPEnd = 1;
     UpdateInterruptLevel(false);
 }
 
 void SCU::TriggerSoundRequest(bool level) {
     m_intrStatus.SCSP_SoundRequest = level;
+    UpdateInterruptLevel(false);
+}
+
+void SCU::TriggerSystemManager() {
+    m_intrStatus.SM_SystemManager = 1;
     UpdateInterruptLevel(false);
 }
 
@@ -74,13 +79,157 @@ void SCU::RunDSP(uint64 cycles) {
 
     // Execute next command
     const uint32 command = m_dspState.programRAM[m_dspState.programAddress++];
-    const uint32 cmdD1Bus = bit::extract<0, 13>(command);
-    const uint32 cmdYBus = bit::extract<14, 19>(command);
-    const uint32 cmdXBus = bit::extract<20, 25>(command);
-    const uint32 cmdALU = bit::extract<26, 29>(command);
+    const uint32 cmdCategory = bit::extract<30, 31>(command);
+
+    switch (cmdCategory) {
+    case 0b00: DSPCmd_Operation(command); break;
+    case 0b10: DSPCmd_LoadImm(command); break;
+    case 0b11: DSPCmd_Special(command); break;
+    }
 
     // Clear stepping flag to ensure the DSP only runs one command when stepping
     m_dspState.programStep = false;
+}
+
+FORCE_INLINE void SCU::DSPCmd_Operation(uint32 command) {
+    // ALU
+    switch (bit::extract<26, 29>(command)) {
+    case 0b0000: // NOP
+        // TODO: implement
+        break;
+    case 0b0001: // AND
+        // TODO: implement
+        break;
+    case 0b0010: // OR
+        // TODO: implement
+        break;
+    case 0b0011: // XOR
+        // TODO: implement
+        break;
+    case 0b0100: // ADD
+        // TODO: implement
+        break;
+    case 0b0101: // SUB
+        // TODO: implement
+        break;
+    case 0b0110: // AD2
+        // TODO: implement
+        break;
+    case 0b1000: // SR
+        // TODO: implement
+        break;
+    case 0b1001: // RR
+        // TODO: implement
+        break;
+    case 0b1010: // SL
+        // TODO: implement
+        break;
+    case 0b1011: // RL
+        // TODO: implement
+        break;
+    case 0b1111: // RL8
+        // TODO: implement
+        break;
+    }
+
+    // X-Bus
+    switch (bit::extract<23, 25>(command)) {
+    case 0b000: // NOP
+        // TODO: implement
+        break;
+    case 0b010: // MOV MUL,P
+        // TODO: implement
+        break;
+    case 0b011: // MOV [s],P
+        // TODO: implement
+        break;
+    case 0b100: // MOV [s],X
+        // TODO: implement
+        break;
+    }
+
+    // Y-Bus
+    switch (bit::extract<17, 19>(command)) {
+    case 0b000: // NOP
+        // TODO: implement
+        break;
+    case 0b001: // CLR A
+        // TODO: implement
+        break;
+    case 0b010: // MOV ALU,A
+        // TODO: implement
+        break;
+    case 0b011: // MOV [s],A
+        // TODO: implement
+        break;
+    case 0b100: // MOV [s],Y
+        // TODO: implement
+        break;
+    }
+
+    // D1-Bus
+    switch (bit::extract<12, 13>(command)) {
+    case 0b00: // NOP
+        break;
+    case 0b01: { // MOV SImm, [d]
+        const sint32 imm = bit::sign_extend<8>(bit::extract<0, 7>(command));
+        const uint32 dst = bit::extract<8, 11>(command);
+        // TODO: implement
+        break;
+    }
+    case 0b11: { // MOV [s], [d]
+        const sint32 src = bit::extract<0, 3>(command);
+        const uint32 dst = bit::extract<8, 11>(command);
+        // TODO: implement
+        break;
+    }
+    }
+}
+
+FORCE_INLINE void SCU::DSPCmd_LoadImm(uint32 command) {
+    const uint32 dst = bit::extract<26, 29>(command);
+    if (bit::extract<25>(command)) {
+        // Conditional transfer
+        const sint32 imm = bit::sign_extend<19>(bit::extract<0, 18>(command));
+        const sint32 cond = bit::extract<19, 24>(command);
+        // 000001: NZ  (Z=0)
+        // 000010: NS  (S=0)
+        // 000011: NZS (Z=0 && S=0)
+        // 000100: NC  (C=0)
+        // 001000: NT0 (T0=0)
+        // 100001: Z   (Z=1)
+        // 100010: S   (S=1)
+        // 100011: ZS  (Z=1 || S=1)
+        // 100100: C   (C=1)
+        // 101000: T0  (T0=1)
+    } else {
+        // Unconditional transfer
+        const sint32 imm = bit::sign_extend<25>(bit::extract<0, 24>(command));
+    }
+}
+
+FORCE_INLINE void SCU::DSPCmd_Special(uint32 command) {
+    const uint32 cmdSubcategory = bit::extract<28, 29>(command);
+    switch (cmdSubcategory) {
+    case 0b00: DSPCmd_Special_DMA(command); break;
+    case 0b01: DSPCmd_Special_Jump(command); break;
+    case 0b10: DSPCmd_Special_LoopBottom(command); break;
+    case 0b11: DSPCmd_Special_End(command); break;
+    }
+}
+
+FORCE_INLINE void SCU::DSPCmd_Special_DMA(uint32 command) {}
+
+FORCE_INLINE void SCU::DSPCmd_Special_Jump(uint32 command) {}
+
+FORCE_INLINE void SCU::DSPCmd_Special_LoopBottom(uint32 command) {}
+
+FORCE_INLINE void SCU::DSPCmd_Special_End(uint32 command) {
+    const bool setEndIntr = bit::extract<27>(command);
+    m_dspState.programEnded = true;
+    if (setEndIntr) {
+        TriggerDSPEnd();
+    }
 }
 
 void SCU::UpdateInterruptLevel(bool acknowledge) {
