@@ -222,6 +222,8 @@ private:
 
             dataAccessAddresses.fill(0);
             multiplierOut = 0;
+            loopTop = 0;
+            loopCount = 0;
         }
 
         std::array<uint32, 256> programRAM;
@@ -244,6 +246,8 @@ private:
 
         std::array<uint8, 4> dataAccessAddresses; // CT0-3
         uint64 multiplierOut;                     // MULTIPLIER
+        uint8 loopTop;                            // TOP
+        uint16 loopCount;                         // LOP
 
         void WriteProgram(uint32 value) {
             // Cannot write while program is executing
