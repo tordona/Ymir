@@ -348,6 +348,9 @@ private:
     // D1-Bus writes to [d]
     void DSPWriteD1Bus(uint8 index, uint32 value);
 
+    // Immediate writes to [d]
+    void DSPWriteImm(uint8 index, uint32 value);
+
     // DSP command interpreters
 
     void DSPCmd_Operation(uint32 command);
@@ -416,9 +419,10 @@ private:
                     m_dspState.programPaused = true;
                 } else if (bit::extract<26>(value)) {
                     m_dspState.programPaused = false;
-                } else {
+                } else if (!m_dspState.programExecuting) {
                     m_dspState.programExecuting = bit::extract<16>(value);
                     m_dspState.programStep = bit::extract<17>(value);
+                    m_dspState.programEnded = false;
                 }
             }
             break;

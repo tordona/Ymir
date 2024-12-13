@@ -128,6 +128,26 @@ FORCE_INLINE void SCU::DSPWriteD1Bus(uint8 index, uint32 value) {
     }
 }
 
+void SCU::DSPWriteImm(uint8 index, uint32 value) {
+    switch (index) {
+    case 0b0000 ... 0b0011: {
+        const uint32 addr = m_dspState.CT[index] & 0x3F;
+        m_dspState.dataRAM[index][addr] = value;
+        break;
+    }
+    case 0b0100: m_dspState.RX = value; break;
+    case 0b0101: m_dspState.P.u64 = static_cast<sint32>(value); break;
+    case 0b0110: m_dspState.dmaReadAddr = value; break;
+    case 0b0111: m_dspState.dmaWriteAddr = value; break;
+    case 0b1010: m_dspState.loopCount = value; break;
+    case 0b1100:
+        // TODO: check PC offsets
+        m_dspState.loopTop = m_dspState.programAddress;
+        m_dspState.programAddress = value;
+        break;
+    }
+}
+
 FORCE_INLINE void SCU::DSPCmd_Operation(uint32 command) {
     auto setZS32 = [&](uint32 value) {
         m_dspState.zero = value == 0;
@@ -280,10 +300,11 @@ FORCE_INLINE void SCU::DSPCmd_Operation(uint32 command) {
 
 FORCE_INLINE void SCU::DSPCmd_LoadImm(uint32 command) {
     const uint32 dst = bit::extract<26, 29>(command);
+    sint32 imm;
     if (bit::extract<25>(command)) {
         // Conditional transfer
-        const sint32 imm = bit::sign_extend<19>(bit::extract<0, 18>(command));
-        const sint32 cond = bit::extract<19, 24>(command);
+        imm = bit::sign_extend<19>(bit::extract<0, 18>(command));
+
         // 000001: NZ  (Z=0)
         // 000010: NS  (S=0)
         // 000011: NZS (Z=0 && S=0)
@@ -294,10 +315,30 @@ FORCE_INLINE void SCU::DSPCmd_LoadImm(uint32 command) {
         // 100011: ZS  (Z=1 || S=1)
         // 100100: C   (C=1)
         // 101000: T0  (T0=1)
+        const sint32 cond = bit::extract<19, 24>(command);
+        bool exec = false;
+        switch (cond) {
+        case 0b000001: exec = !m_dspState.zero; break;
+        case 0b000010: exec = !m_dspState.sign; break;
+        case 0b000011: exec = !m_dspState.zero && !m_dspState.sign; break;
+        case 0b000100: exec = !m_dspState.carry; break;
+        case 0b001000: exec = !m_dspState.transfer0; break;
+
+        case 0b100001: exec = m_dspState.zero; break;
+        case 0b100010: exec = m_dspState.sign; break;
+        case 0b100011: exec = m_dspState.zero || m_dspState.sign; break;
+        case 0b100100: exec = m_dspState.carry; break;
+        case 0b101000: exec = m_dspState.transfer0; break;
+        }
+        if (!exec) {
+            return;
+        }
     } else {
         // Unconditional transfer
-        const sint32 imm = bit::sign_extend<25>(bit::extract<0, 24>(command));
+        imm = bit::sign_extend<25>(bit::extract<0, 24>(command));
     }
+
+    DSPWriteImm(dst, imm);
 }
 
 FORCE_INLINE void SCU::DSPCmd_Special(uint32 command) {
@@ -318,6 +359,7 @@ FORCE_INLINE void SCU::DSPCmd_Special_LoopBottom(uint32 command) {}
 
 FORCE_INLINE void SCU::DSPCmd_Special_End(uint32 command) {
     const bool setEndIntr = bit::extract<27>(command);
+    m_dspState.programExecuting = false;
     m_dspState.programEnded = true;
     if (setEndIntr) {
         TriggerDSPEnd();
