@@ -69,14 +69,17 @@ enum class VDP1Command : uint16 {
     DrawNormalSprite = 0x0,
     DrawScaledSprite = 0x1,
     DrawDistortedSprite = 0x2,
+    DrawDistortedSpriteAlt = 0x3,
 
     // Untextured drawing
     DrawPolygon = 0x4,
     DrawPolylines = 0x5,
+    DrawPolylinesAlt = 0x7,
     DrawLine = 0x6,
 
     // Clipping coordinate setting
     UserClipping = 0x8,
+    UserClippingAlt = 0xB,
     SystemClipping = 0x9,
 
     // Local coordinate setting
@@ -146,7 +149,7 @@ struct VDP1CommandTable {
     // CMDGRDA - Gouraud Shading Table
     uint16 cmdgrda;
 
-    uint16 _padding;
+    uint16 dummy;
 };
 static_assert(sizeof(VDP1CommandTable) == 0x20);
 
