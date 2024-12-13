@@ -25,69 +25,8 @@ void VDP::Reset(bool hard) {
     }
     m_drawFB = 0;
 
-    m_VDP2regs.TVMD.u16 = 0x0;
-    m_VDP2regs.TVSTAT.u16 &= 0xFFFE; // Preserve PAL flag
-    m_VDP2regs.HCNT = 0x0;
-    m_VDP2regs.VCNT = 0x0;
-    m_VDP2regs.RAMCTL.u16 = 0x0;
-    m_VDP2regs.VRSIZE.u16 = 0x0;
-    m_VDP2regs.CYCA0.u32 = 0x0;
-    m_VDP2regs.CYCA1.u32 = 0x0;
-    m_VDP2regs.CYCB0.u32 = 0x0;
-    m_VDP2regs.CYCB1.u32 = 0x0;
-    m_VDP2regs.MZCTL.u16 = 0x0;
-    m_VDP2regs.ZMCTL.u16 = 0x0;
-    m_VDP2regs.SCRCTL.u16 = 0x0;
-    m_VDP2regs.VCSTA.u32 = 0x0;
-    m_VDP2regs.LSTA0.u32 = 0x0;
-    m_VDP2regs.LSTA1.u32 = 0x0;
-    m_VDP2regs.LCTA.u32 = 0x0;
-    m_VDP2regs.RPMD.u16 = 0x0;
-    m_VDP2regs.RPRCTL.u16 = 0x0;
-    m_VDP2regs.KTCTL.u16 = 0x0;
-    m_VDP2regs.KTAOF.u16 = 0x0;
-    m_VDP2regs.OVPNRA = 0x0;
-    m_VDP2regs.OVPNRB = 0x0;
-    m_VDP2regs.RPTA.u32 = 0x0;
-    m_VDP2regs.WPXY0.u64 = 0x0;
-    m_VDP2regs.WPXY1.u64 = 0x0;
-    m_VDP2regs.WCTL.u64 = 0x0;
-    m_VDP2regs.LWTA0.u32 = 0x0;
-    m_VDP2regs.LWTA1.u32 = 0x0;
-    m_VDP2regs.SPCTL.u16 = 0x0;
-    m_VDP2regs.SDCTL.u16 = 0x0;
-    m_VDP2regs.CCCTL.u16 = 0x0;
-    m_VDP2regs.SFCCMD.u16 = 0x0;
-    m_VDP2regs.PRISA.u16 = 0x0;
-    m_VDP2regs.PRISB.u16 = 0x0;
-    m_VDP2regs.PRISC.u16 = 0x0;
-    m_VDP2regs.PRISD.u16 = 0x0;
-    m_VDP2regs.CCRSA.u16 = 0x0;
-    m_VDP2regs.CCRSB.u16 = 0x0;
-    m_VDP2regs.CCRSC.u16 = 0x0;
-    m_VDP2regs.CCRSD.u16 = 0x0;
-    m_VDP2regs.CCRNA.u16 = 0x0;
-    m_VDP2regs.CCRNB.u16 = 0x0;
-    m_VDP2regs.CCRR.u16 = 0x0;
-    m_VDP2regs.CCRLB.u16 = 0x0;
-    m_VDP2regs.CLOFEN.u16 = 0x0;
-    m_VDP2regs.CLOFSL.u16 = 0x0;
-    m_VDP2regs.COAR.u16 = 0x0;
-    m_VDP2regs.COAG.u16 = 0x0;
-    m_VDP2regs.COAB.u16 = 0x0;
-    m_VDP2regs.COBR.u16 = 0x0;
-    m_VDP2regs.COBG.u16 = 0x0;
-    m_VDP2regs.COBB.u16 = 0x0;
-
-    for (auto &bg : m_VDP2regs.m_NormBGParams) {
-        bg.Reset();
-    }
-    for (auto &bg : m_VDP2regs.m_RotBGParams) {
-        bg.Reset();
-    }
-    for (auto &sp : m_VDP2regs.m_specialFunctionCodes) {
-        sp.Reset();
-    }
+    m_VDP1regs.Reset();
+    m_VDP2regs.Reset();
 
     m_HPhase = HorizontalPhase::Active;
     m_VPhase = VerticalPhase::Active;
@@ -96,7 +35,6 @@ void VDP::Reset(bool hard) {
     m_VCounter = 0;
     m_HRes = 320;
     m_VRes = 224;
-    m_VDP2regs.m_TVMDDirty = true;
 
     BeginHPhaseActiveDisplay();
     BeginVPhaseActiveDisplay();
@@ -127,11 +65,11 @@ void VDP::Advance(uint64 cycles) {
 }
 
 void VDP::UpdateResolution() {
-    if (!m_VDP2regs.m_TVMDDirty) {
+    if (!m_VDP2regs.TVMDDirty) {
         return;
     }
 
-    m_VDP2regs.m_TVMDDirty = false;
+    m_VDP2regs.TVMDDirty = false;
 
     // Horizontal/vertical resolution tables
     // NTSC uses the first two vRes entries, PAL uses the full table, and exclusive monitors use 480 lines
@@ -306,6 +244,12 @@ void VDP::BeginVPhaseLastLine() {
 // ----
 // Renderer
 
+void VDP::VDP1BeginFrame() {
+    fmt::println("VDP1: starting frame drawing on framebuffer {}", m_drawFB);
+    // TODO: setup rendering
+    // TODO: figure out VDP1 timings
+}
+
 void VDP::VDP2DrawLine() {
     // fmt::println("VDP2: drawing line {}", m_VCounter);
 
@@ -360,7 +304,7 @@ void VDP::VDP2DrawLine() {
 
     // Draw normal BGs
     int i = 0;
-    for (const auto &bg : m_VDP2regs.m_NormBGParams) {
+    for (const auto &bg : m_VDP2regs.normBGParams) {
         auto &rctx = m_renderContexts[i++];
         if (bg.enabled) {
             rctx.cramOffset = bg.caos << (m_VDP2regs.RAMCTL.CRMDn == 1 ? 10 : 9);
@@ -384,7 +328,7 @@ void VDP::VDP2DrawLine() {
     }
 
     // Draw rotation BGs
-    for (const auto &bg : m_VDP2regs.m_RotBGParams) {
+    for (const auto &bg : m_VDP2regs.rotBGParams) {
         auto &rctx = m_renderContexts[i++];
         if (bg.enabled) {
             rctx.cramOffset = bg.caos << (m_VDP2regs.RAMCTL.CRMDn == 1 ? 10 : 9);
@@ -498,7 +442,7 @@ NO_INLINE void VDP::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderCon
     // |57|58|59|60|61|62|63|64|
     // +--+--+--+--+--+--+--+--+
 
-    const auto &specialFunctionCodes = m_VDP2regs.m_specialFunctionCodes[bgParams.specialFunctionSelect];
+    const auto &specialFunctionCodes = m_VDP2regs.specialFunctionCodes[bgParams.specialFunctionSelect];
 
     // TODO: implement mosaic
 
