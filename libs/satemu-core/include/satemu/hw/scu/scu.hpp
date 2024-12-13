@@ -261,6 +261,7 @@ private:
 
         // DSP data address
         std::array<uint8, 4> CT;
+        std::array<bool, 4> incCT; // whether CT must be incremented after this iteration
 
         // ALU operation output
         union {

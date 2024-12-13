@@ -89,6 +89,13 @@ void SCU::RunDSP(uint64 cycles) {
     case 0b11: DSPCmd_Special(command); break;
     }
 
+    for (int i = 0; i < 3; i++) {
+        if (m_dspState.incCT[i]) {
+            m_dspState.CT[i]++;
+        }
+    }
+    m_dspState.incCT.fill(false);
+
     // Clear stepping flag to ensure the DSP only runs one command when stepping
     m_dspState.programStep = false;
 }
@@ -96,13 +103,11 @@ void SCU::RunDSP(uint64 cycles) {
 FORCE_INLINE uint32 SCU::DSPReadSource(uint8 index) {
     switch (index) {
     case 0b0000 ... 0b0111: {
-        const uint8 addrIndex = bit::extract<0, 1>(index);
+        const uint8 ctIndex = bit::extract<0, 1>(index);
         const bool inc = bit::extract<2>(index);
-        const uint32 addr = m_dspState.CT[addrIndex] & 0x3F;
-        const uint32 value = m_dspState.dataRAM[addrIndex][addr];
-        if (inc) {
-            m_dspState.CT[addrIndex]++;
-        }
+        const uint32 addr = m_dspState.CT[ctIndex] & 0x3F;
+        const uint32 value = m_dspState.dataRAM[ctIndex][addr];
+        m_dspState.incCT[ctIndex] |= inc;
         return value;
     }
     case 0b1001: return m_dspState.ALU.L;
@@ -116,6 +121,7 @@ FORCE_INLINE void SCU::DSPWriteD1Bus(uint8 index, uint32 value) {
     case 0b0000 ... 0b0011: {
         const uint32 addr = m_dspState.CT[index] & 0x3F;
         m_dspState.dataRAM[index][addr] = value;
+        m_dspState.incCT[index] = true;
         break;
     }
     case 0b0100: m_dspState.RX = value; break;
@@ -124,7 +130,10 @@ FORCE_INLINE void SCU::DSPWriteD1Bus(uint8 index, uint32 value) {
     case 0b0111: m_dspState.dmaWriteAddr = value; break;
     case 0b1010: m_dspState.loopCount = value; break;
     case 0b1011: m_dspState.loopTop = value; break;
-    case 0b1100 ... 0b1111: m_dspState.CT[index & 3] = value & 0x3F; break;
+    case 0b1100 ... 0b1111:
+        m_dspState.CT[index & 3] = value & 0x3F;
+        m_dspState.incCT[index & 3] = false;
+        break;
     }
 }
 
@@ -133,6 +142,7 @@ void SCU::DSPWriteImm(uint8 index, uint32 value) {
     case 0b0000 ... 0b0011: {
         const uint32 addr = m_dspState.CT[index] & 0x3F;
         m_dspState.dataRAM[index][addr] = value;
+        m_dspState.incCT[index] = true;
         break;
     }
     case 0b0100: m_dspState.RX = value; break;
@@ -355,7 +365,13 @@ FORCE_INLINE void SCU::DSPCmd_Special_DMA(uint32 command) {}
 
 FORCE_INLINE void SCU::DSPCmd_Special_Jump(uint32 command) {}
 
-FORCE_INLINE void SCU::DSPCmd_Special_LoopBottom(uint32 command) {}
+FORCE_INLINE void SCU::DSPCmd_Special_LoopBottom(uint32 command) {
+    if (bit::extract<27>(command)) {
+        // LPS
+    } else {
+        // BTM
+    }
+}
 
 FORCE_INLINE void SCU::DSPCmd_Special_End(uint32 command) {
     const bool setEndIntr = bit::extract<27>(command);
