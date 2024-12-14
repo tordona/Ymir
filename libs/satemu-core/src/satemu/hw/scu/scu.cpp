@@ -36,7 +36,10 @@ void SCU::Reset(bool hard) {
 }
 
 void SCU::Advance(uint64 cycles) {
+    RunDMA(cycles);
+
     RunDSP(cycles);
+
     if (cycles >= m_timer1Counter) {
         m_timer1Counter = 0;
         if (m_timer1Enable && (!m_timer1Mode || m_timer0Counter == m_timer0Compare)) {
@@ -50,12 +53,14 @@ void SCU::Advance(uint64 cycles) {
 void SCU::TriggerVBlankIN() {
     m_intrStatus.VDP2_VBlankIN = 1;
     UpdateInterruptLevel(false);
+    TriggerDMA(DMATrigger::VBlankIN);
 }
 
 void SCU::TriggerVBlankOUT() {
     m_intrStatus.VDP2_VBlankOUT = 1;
     m_timer0Counter = 0;
     UpdateInterruptLevel(false);
+    TriggerDMA(DMATrigger::VBlankOUT);
 }
 
 void SCU::TriggerHBlankIN() {
@@ -66,16 +71,19 @@ void SCU::TriggerHBlankIN() {
     }
     m_timer1Counter = m_timer1Reload;
     UpdateInterruptLevel(false);
+    TriggerDMA(DMATrigger::HBlankIN);
 }
 
 void SCU::TriggerTimer0() {
     m_intrStatus.SCU_Timer0 = 1;
     UpdateInterruptLevel(false);
+    TriggerDMA(DMATrigger::Timer0);
 }
 
 void SCU::TriggerTimer1() {
     m_intrStatus.SCU_Timer1 = 1;
     UpdateInterruptLevel(false);
+    TriggerDMA(DMATrigger::Timer1);
 }
 
 void SCU::TriggerDSPEnd() {
@@ -86,11 +94,18 @@ void SCU::TriggerDSPEnd() {
 void SCU::TriggerSoundRequest(bool level) {
     m_intrStatus.SCSP_SoundRequest = level;
     UpdateInterruptLevel(false);
+    TriggerDMA(DMATrigger::SoundRequest);
 }
 
 void SCU::TriggerSystemManager() {
     m_intrStatus.SM_SystemManager = 1;
     UpdateInterruptLevel(false);
+}
+
+void SCU::TriggerSpriteDrawEnd() {
+    m_intrStatus.VDP1_SpriteDrawEnd = 1;
+    UpdateInterruptLevel(false);
+    TriggerDMA(DMATrigger::SpriteDrawEnd);
 }
 
 void SCU::TriggerExternalInterrupt0() {
@@ -104,6 +119,85 @@ void SCU::AcknowledgeExternalInterrupt() {
 
 void SCU::RunDMA(uint64 cycles) {
     // TODO: proper cycle counting
+    for (int level = 2; level >= 0; level--) {
+        auto &ch = m_dmaChannels[level];
+
+        if (!ch.enabled) {
+            continue;
+        }
+
+        auto readIndirect = [&] {
+            ch.currSrcAddr = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 0);
+            ch.currDstAddr = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 4);
+            ch.currXferCount = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 8);
+            ch.currIndirectSrc += 3 * sizeof(uint32);
+            ch.endIndirect = bit::extract<31>(ch.currXferCount);
+            if (level == 0) {
+                ch.currXferCount = bit::extract<0, 19>(ch.currXferCount);
+            } else {
+                ch.currXferCount = bit::extract<0, 11>(ch.currXferCount);
+            }
+            fmt::println("SCU DMA{}: Starting indirect transfer at {:08X} - from {:08X} to {:08X} - {:05X} bytes{}",
+                         level, ch.currIndirectSrc - 3 * sizeof(uint32), ch.currSrcAddr, ch.currDstAddr,
+                         ch.currXferCount, (ch.endIndirect ? " (final)" : ""));
+        };
+
+        if (ch.start) {
+            ch.start = false;
+            ch.active = true;
+            if (ch.indirect) {
+                ch.currIndirectSrc = ch.srcAddr;
+                readIndirect();
+            } else {
+                fmt::println("SCU DMA{}: Starting direct transfer from {:08X} to {:08X} - {:05X} bytes", level,
+                             ch.srcAddr, ch.dstAddr, ch.xferCount);
+                ch.currSrcAddr = ch.srcAddr;
+                ch.currDstAddr = ch.dstAddr;
+                ch.currXferCount = ch.xferCount;
+            }
+        }
+
+        if (ch.active) {
+            const uint32 value = m_SH2.bus.Read<uint32>(ch.currSrcAddr & 0x7FF'FFFF);
+            m_SH2.bus.Write<uint32>(ch.currDstAddr & 0x7FF'FFFF, value);
+
+            if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currSrcAddr)) {
+                ch.currSrcAddr += ch.srcAddrInc * 2;
+            } else {
+                ch.currSrcAddr += ch.srcAddrInc;
+            }
+            if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currDstAddr)) {
+                ch.currDstAddr += ch.dstAddrInc * 2;
+            } else {
+                ch.currDstAddr += ch.dstAddrInc;
+            }
+
+            if (ch.currXferCount > sizeof(uint32)) {
+                ch.currXferCount -= sizeof(uint32);
+                break; // higher-level DMA transfers interrupt lower-level ones
+            } else if (ch.indirect && !ch.endIndirect) {
+                readIndirect();
+                break; // higher-level DMA transfers interrupt lower-level ones
+            } else {
+                ch.active = false;
+                ch.currXferCount = 0;
+                if (ch.updateSrcAddr) {
+                    ch.srcAddr = ch.currSrcAddr;
+                }
+                if (ch.updateDstAddr) {
+                    ch.dstAddr = ch.currDstAddr;
+                }
+            }
+        }
+    }
+}
+
+void SCU::TriggerDMA(DMATrigger trigger) {
+    for (auto &ch : m_dmaChannels) {
+        if (ch.enabled && !ch.active && ch.trigger == trigger) {
+            ch.start = true;
+        }
+    }
 }
 
 void SCU::RunDSP(uint64 cycles) {

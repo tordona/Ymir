@@ -108,8 +108,9 @@ public:
     void TriggerDSPEnd();
     void TriggerSoundRequest(bool level);
     void TriggerSystemManager();
-    void TriggerExternalInterrupt0();
+    void TriggerSpriteDrawEnd();
 
+    void TriggerExternalInterrupt0();
     void AcknowledgeExternalInterrupt();
 
 private:
@@ -198,7 +199,6 @@ private:
             // 32-bit writes are split into two 16-bit writes
             WriteBBus<uint16>(address + 0, value >> 16u);
             WriteBBus<uint16>(address + 2, value >> 0u);
-            return;
         } else if (AddressInRange<0x5A0'0000, 0x5AF'FFFF>(address)) {
             m_SCSP.WriteWRAM<T>(address & 0x7FFFF, value);
         } else if (AddressInRange<0x5B0'0000, 0x5BF'FFFF>(address)) {
@@ -260,6 +260,14 @@ private:
             active = false;
             indirect = false;
             trigger = DMATrigger::Immediate;
+
+            start = false;
+            currSrcAddr = 0;
+            currDstAddr = 0;
+            currXferCount = 0;
+
+            currIndirectSrc = 0;
+            endIndirect = false;
         }
 
         uint32 srcAddr;     // DnR - Read address
@@ -273,11 +281,21 @@ private:
         bool active;        // Transfer active (triggered by trigger condition)
         bool indirect;      // DxMOD - Mode (false=direct, true=indirect)
         DMATrigger trigger; // DxFT2-0 - DMA Starting Factor
+
+        bool start;           // Start transfer on next cycle
+        uint32 currSrcAddr;   // Current read address
+        uint32 currDstAddr;   // Current write address
+        uint32 currXferCount; // Current transfer count (stops when == xferCount)
+
+        uint32 currIndirectSrc; // Indirect data transfer source address
+        bool endIndirect;       // Whether the end flag was sent on the current indirect transfer
     };
 
     std::array<DMAChannel, 3> m_dmaChannels;
 
     void RunDMA(uint64 cycles);
+
+    void TriggerDMA(DMATrigger trigger);
 
     // -------------------------------------------------------------------------
     // DSP
@@ -660,8 +678,8 @@ private:
             if constexpr (std::is_same_v<T, uint32>) {
                 auto &ch = m_dmaChannels[address >> 5u];
                 ch.enabled = bit::extract<8>(value);
-                if (ch.enabled && ch.trigger == DMATrigger::Immediate && bit::extract<0>(value)) {
-                    ch.active = true;
+                if (ch.enabled && !ch.active && ch.trigger == DMATrigger::Immediate && bit::extract<0>(value)) {
+                    ch.start = true;
                 }
             }
             break;
