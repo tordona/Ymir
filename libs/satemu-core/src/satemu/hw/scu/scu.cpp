@@ -102,6 +102,10 @@ void SCU::AcknowledgeExternalInterrupt() {
     UpdateInterruptLevel(true);
 }
 
+void SCU::RunDMA(uint64 cycles) {
+    // TODO: proper cycle counting
+}
+
 void SCU::RunDSP(uint64 cycles) {
     // TODO: proper cycle counting
 

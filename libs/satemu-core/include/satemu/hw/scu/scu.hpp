@@ -252,24 +252,32 @@ private:
             srcAddr = 0;   // initial value undefined
             dstAddr = 0;   // initial value undefined
             xferCount = 0; // initial value undefined
-            readAddrInc = 4;
-            writeAddrInc = 2;
-            running = false;
+            srcAddrInc = 4;
+            dstAddrInc = 2;
+            updateSrcAddr = false;
+            updateDstAddr = false;
+            enabled = false;
+            active = false;
             indirect = false;
             trigger = DMATrigger::Immediate;
         }
 
-        uint32 srcAddr;      // DnR - Read Address
-        uint32 dstAddr;      // DnW - Write Address
-        uint32 xferCount;    // DnC - Transfer Byte Number (up to 1 MiB for level 0, 4 KiB for levels 1 and 2)
-        uint32 readAddrInc;  // DnAD.DnRA - Read Address Increment (0=0, 1=+4 bytes)
-        uint32 writeAddrInc; // DnAD.DnWA - Write Address Increment (+0,2,4,8,16,32,64,128 bytes)
-        bool running;        // transfer active (set by DxEN/DxGO)
-        bool indirect;       // DxMOD - Mode (false=direct, true=indirect)
-        DMATrigger trigger;  // DxFT2-0 - DMA Starting Factor
+        uint32 srcAddr;     // DnR - Read address
+        uint32 dstAddr;     // DnW - Write address
+        uint32 xferCount;   // DnC - Transfer byte count (up to 1 MiB for level 0, 4 KiB for levels 1 and 2)
+        uint32 srcAddrInc;  // DnAD.DnRA - Read address increment (0=0, 1=+4 bytes)
+        uint32 dstAddrInc;  // DnAD.DnWA - Write address increment (+0,2,4,8,16,32,64,128 bytes)
+        bool updateSrcAddr; // DnRUP - Update read address after transfer
+        bool updateDstAddr; // DnWUP - Update write address after transfer
+        bool enabled;       // DxEN - Enable
+        bool active;        // Transfer active (triggered by trigger condition)
+        bool indirect;      // DxMOD - Mode (false=direct, true=indirect)
+        DMATrigger trigger; // DxFT2-0 - DMA Starting Factor
     };
 
     std::array<DMAChannel, 3> m_dmaChannels;
+
+    void RunDMA(uint64 cycles);
 
     // -------------------------------------------------------------------------
     // DSP
@@ -482,6 +490,69 @@ private:
     template <mem_primitive T>
     T ReadReg(uint32 address) {
         switch (address) {
+        case 0x00: // Level 0 DMA Read Address
+        case 0x20: // Level 1 DMA Read Address
+        case 0x40: // Level 2 DMA Read Address
+            if constexpr (std::is_same_v<T, uint32>) {
+                auto &ch = m_dmaChannels[address >> 5u];
+                return ch.srcAddr;
+            } else {
+                return 0;
+            }
+        case 0x04: // Level 0 DMA Write Address
+        case 0x24: // Level 1 DMA Write Address
+        case 0x44: // Level 2 DMA Write Address
+            if constexpr (std::is_same_v<T, uint32>) {
+                auto &ch = m_dmaChannels[address >> 5u];
+                return ch.dstAddr;
+            } else {
+                return 0;
+            }
+        case 0x08: // Level 0 DMA Transfer Number
+        case 0x28: // Level 1 DMA Transfer Number
+        case 0x48: // Level 2 DMA Transfer Number
+            if constexpr (std::is_same_v<T, uint32>) {
+                auto &ch = m_dmaChannels[address >> 5u];
+                return ch.xferCount;
+            } else {
+                return 0;
+            }
+        case 0x0C: // Level 0 DMA Increment (write-only)
+        case 0x2C: // Level 1 DMA Increment (write-only)
+        case 0x4C: // Level 2 DMA Increment (write-only)
+            return 0;
+        case 0x10: // Level 0 DMA Enable (write-only)
+        case 0x30: // Level 1 DMA Enable (write-only)
+        case 0x50: // Level 2 DMA Enable (write-only)
+            return 0;
+        case 0x14: // Level 0 DMA Mode (write-only)
+        case 0x34: // Level 1 DMA Mode (write-only)
+        case 0x54: // Level 2 DMA Mode (write-only)
+            return 0;
+
+        case 0x60: // DMA Force Stop (write-only)
+            return 0;
+        case 0x7C: // DMA Status
+        {
+            // TODO: check if the standby flags are correct (bit 5, 9, 13)
+            uint32 value = 0;
+            // bit::deposit_into<0>(value, m_dspState.dmaRun); // TODO: is this correct?
+            // bit::deposit_into<1>(value, m_dspState.dmaStandby?);
+            bit::deposit_into<4>(value, m_dmaChannels[0].active);
+            bit::deposit_into<5>(value, !m_dmaChannels[0].active && m_dmaChannels[0].enabled);
+            bit::deposit_into<8>(value, m_dmaChannels[1].active);
+            bit::deposit_into<9>(value, !m_dmaChannels[1].active && m_dmaChannels[1].enabled);
+            bit::deposit_into<12>(value, m_dmaChannels[2].active);
+            bit::deposit_into<13>(value, !m_dmaChannels[2].active && m_dmaChannels[2].enabled);
+            bit::deposit_into<16>(value,
+                                  m_dmaChannels[0].active && (m_dmaChannels[1].active || m_dmaChannels[2].active));
+            bit::deposit_into<17>(value, m_dmaChannels[1].active && m_dmaChannels[2].active);
+            // TODO: bit 20: DMA accessing A-Bus
+            // TODO: bit 21: DMA accessing B-Bus
+            // TODO: bit 22: DMA accessing DSP-Bus
+            return value;
+        }
+
         case 0x80: // DSP Program Control Port
             if constexpr (std::is_same_v<T, uint32>) {
                 uint32 value = 0;
@@ -545,6 +616,77 @@ private:
     template <mem_primitive T>
     void WriteReg(uint32 address, T value) {
         switch (address) {
+        case 0x00: // Level 0 DMA Read Address
+        case 0x20: // Level 1 DMA Read Address
+        case 0x40: // Level 2 DMA Read Address
+            if constexpr (std::is_same_v<T, uint32>) {
+                auto &ch = m_dmaChannels[address >> 5u];
+                ch.srcAddr = bit::extract<0, 26>(value);
+            }
+            break;
+        case 0x04: // Level 0 DMA Write Address
+        case 0x24: // Level 1 DMA Write Address
+        case 0x44: // Level 2 DMA Write Address
+            if constexpr (std::is_same_v<T, uint32>) {
+                auto &ch = m_dmaChannels[address >> 5u];
+                ch.dstAddr = bit::extract<0, 26>(value);
+            }
+            break;
+        case 0x08: // Level 0 DMA Transfer Number
+            if constexpr (std::is_same_v<T, uint32>) {
+                auto &ch = m_dmaChannels[address >> 5u];
+                ch.xferCount = bit::extract<0, 19>(value);
+            }
+            break;
+        case 0x28: // Level 1 DMA Transfer Number
+        case 0x48: // Level 2 DMA Transfer Number
+            if constexpr (std::is_same_v<T, uint32>) {
+                auto &ch = m_dmaChannels[address >> 5u];
+                ch.xferCount = bit::extract<0, 11>(value);
+            }
+            break;
+        case 0x0C: // Level 0 DMA Increment
+        case 0x2C: // Level 1 DMA Increment
+        case 0x4C: // Level 2 DMA Increment
+            if constexpr (std::is_same_v<T, uint32>) {
+                auto &ch = m_dmaChannels[address >> 5u];
+                ch.srcAddrInc = bit::extract<8>(value) * 4u;
+                ch.dstAddrInc = (1u << bit::extract<0, 2>(value)) & ~1u;
+            }
+            break;
+        case 0x10: // Level 0 DMA Enable
+        case 0x30: // Level 1 DMA Enable
+        case 0x50: // Level 2 DMA Enable
+            if constexpr (std::is_same_v<T, uint32>) {
+                auto &ch = m_dmaChannels[address >> 5u];
+                ch.enabled = bit::extract<8>(value);
+                if (ch.enabled && ch.trigger == DMATrigger::Immediate && bit::extract<0>(value)) {
+                    ch.active = true;
+                }
+            }
+            break;
+        case 0x14: // Level 0 DMA Mode
+        case 0x34: // Level 1 DMA Mode
+        case 0x54: // Level 2 DMA Mode
+            if constexpr (std::is_same_v<T, uint32>) {
+                auto &ch = m_dmaChannels[address >> 5u];
+                ch.indirect = bit::extract<24>(value);
+                ch.updateSrcAddr = bit::extract<16>(value);
+                ch.updateDstAddr = bit::extract<8>(value);
+                ch.trigger = static_cast<DMATrigger>(bit::extract<0, 2>(value));
+            }
+            break;
+
+        case 0x60: // DMA Force Stop
+            if (bit::extract<0>(value)) {
+                for (auto &ch : m_dmaChannels) {
+                    ch.active = false;
+                }
+            }
+            break;
+        case 0x7C: // DMA Status (read-only)
+            break;
+
         case 0x80: // DSP Program Control Port
             if constexpr (std::is_same_v<T, uint32>) {
                 if (bit::extract<15>(value)) {
