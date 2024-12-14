@@ -672,17 +672,19 @@ private:
 
     // Individual VDP1 command processors
 
-    void VDP1DrawNormalSprite(uint16 cmdAddress);
-    void VDP1DrawScaledSprite(uint16 cmdAddress);
-    void VDP1DrawDistortedSprite(uint16 cmdAddress);
+    void VDP1Cmd_DrawNormalSprite(uint16 cmdAddress);
+    void VDP1Cmd_DrawScaledSprite(uint16 cmdAddress);
+    void VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress);
 
-    void VDP1DrawPolygon(uint16 cmdAddress);
-    void VDP1DrawPolylines(uint16 cmdAddress);
-    void VDP1DrawLine(uint16 cmdAddress);
+    void VDP1Cmd_DrawPolygon(uint16 cmdAddress);
+    void VDP1Cmd_DrawPolylines(uint16 cmdAddress);
+    void VDP1Cmd_DrawLine(uint16 cmdAddress);
 
-    void VDP1SetSystemClipping(uint16 cmdAddress);
-    void VDP1SetUserClipping(uint16 cmdAddress);
-    void VDP1SetLocalCoordinates(uint16 cmdAddress);
+    void VDP1Cmd_SetSystemClipping(uint16 cmdAddress);
+    void VDP1Cmd_SetUserClipping(uint16 cmdAddress);
+    void VDP1Cmd_SetLocalCoordinates(uint16 cmdAddress);
+
+    // --------------------
 
     // Draws the VDP2 scanline at m_VCounter.
     void VDP2DrawLine();

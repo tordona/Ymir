@@ -13,7 +13,7 @@ FORCE_INLINE constexpr bool AddressInRange(uint32 address) {
 }
 
 template <typename T>
-FORCE_INLINE T ReadBE(uint8 *data) {
+FORCE_INLINE T ReadBE(const uint8 *data) {
     T value = 0;
     for (uint32 i = 0; i < sizeof(T); i++) {
         value |= data[i] << ((sizeof(T) - 1u - i) * 8u);
@@ -29,7 +29,7 @@ FORCE_INLINE void WriteBE(uint8 *data, T value) {
 }
 
 template <typename T>
-FORCE_INLINE T ReadLE(uint8 *data) {
+FORCE_INLINE T ReadLE(const uint8 *data) {
     T value = 0;
     for (uint32 i = 0; i < sizeof(T); i++) {
         value |= data[i] << (i * 8u);

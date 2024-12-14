@@ -262,7 +262,9 @@ void VDP::BeginVPhaseLastLine() {
 
 void VDP::VDP1EraseFramebuffer() {
     fmt::println("VDP1: Erasing framebuffer {}", m_drawFB ^ 1);
-    // TODO: implement
+    // TODO: erase only the specified region
+    // TODO: use the erase fill value
+    m_spriteFB[m_drawFB ^ 1].fill(0);
 }
 
 FORCE_INLINE void VDP::VDP1SwitchFramebuffer() {
@@ -275,9 +277,11 @@ void VDP::VDP1BeginFrame() {
         // Manual erase
         VDP1EraseFramebuffer();
     }
+    VDP1EraseFramebuffer(); // HACK(VDP1)
     if (m_VDP1regs.params.fbSwitchTrigger && m_VDP1regs.params.fbSwitchMode) {
         // Manual switch
-        VDP1SwitchFramebuffer();
+        // TODO: bad timing, it seems
+        // VDP1SwitchFramebuffer();
     }
 
     fmt::println("VDP1: starting frame on framebuffer {}", m_drawFB);
@@ -290,6 +294,9 @@ void VDP::VDP1BeginFrame() {
 
     // TODO: process while advancing cycles
     VDP1ProcessCommands();
+
+    // HACK(VDP1)
+    VDP1SwitchFramebuffer();
 }
 
 void VDP::VDP1EndFrame() {
@@ -316,20 +323,20 @@ void VDP::VDP1ProcessCommands() {
             using enum VDP1Command::CommandType;
 
             switch (cmdctrl.command) {
-            case DrawNormalSprite: VDP1DrawNormalSprite(cmdAddress); break;
-            case DrawScaledSprite: VDP1DrawScaledSprite(cmdAddress); break;
+            case DrawNormalSprite: VDP1Cmd_DrawNormalSprite(cmdAddress); break;
+            case DrawScaledSprite: VDP1Cmd_DrawScaledSprite(cmdAddress); break;
             case DrawDistortedSprite: // fallthrough
-            case DrawDistortedSpriteAlt: VDP1DrawDistortedSprite(cmdAddress); break;
+            case DrawDistortedSpriteAlt: VDP1Cmd_DrawDistortedSprite(cmdAddress); break;
 
-            case DrawPolygon: VDP1DrawPolygon(cmdAddress); break;
+            case DrawPolygon: VDP1Cmd_DrawPolygon(cmdAddress); break;
             case DrawPolylines: // fallthrough
-            case DrawPolylinesAlt: VDP1DrawPolylines(cmdAddress); break;
-            case DrawLine: VDP1DrawLine(cmdAddress); break;
+            case DrawPolylinesAlt: VDP1Cmd_DrawPolylines(cmdAddress); break;
+            case DrawLine: VDP1Cmd_DrawLine(cmdAddress); break;
 
             case UserClipping: // fallthrough
-            case UserClippingAlt: VDP1SetUserClipping(cmdAddress); break;
-            case SystemClipping: VDP1SetSystemClipping(cmdAddress); break;
-            case SetLocalCoordinates: VDP1SetLocalCoordinates(cmdAddress); break;
+            case UserClippingAlt: VDP1Cmd_SetUserClipping(cmdAddress); break;
+            case SystemClipping: VDP1Cmd_SetSystemClipping(cmdAddress); break;
+            case SetLocalCoordinates: VDP1Cmd_SetLocalCoordinates(cmdAddress); break;
 
             default:
                 fmt::println("VDP1: Unexpected command type {:X}", static_cast<uint16>(cmdctrl.command));
@@ -373,19 +380,47 @@ void VDP::VDP1ProcessCommands() {
     }
 }
 
-void VDP::VDP1DrawNormalSprite(uint16 cmdAddress) {
+void VDP::VDP1Cmd_DrawNormalSprite(uint16 cmdAddress) {
     fmt::println("VDP1: Draw normal sprite");
 }
 
-void VDP::VDP1DrawScaledSprite(uint16 cmdAddress) {
+void VDP::VDP1Cmd_DrawScaledSprite(uint16 cmdAddress) {
     fmt::println("VDP1: Draw scaled sprite");
 }
 
-void VDP::VDP1DrawDistortedSprite(uint16 cmdAddress) {
-    // fmt::println("VDP1: Draw distored sprite");
+void VDP::VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress) {
+    fmt::println("VDP1: Draw distored sprite");
 }
 
-void VDP::VDP1DrawPolygon(uint16 cmdAddress) {
+struct Slope {
+    static constexpr sint64 kFracBits = 13;
+
+    Slope(sint32 x1, sint32 y1, sint32 x2, sint32 y2)
+        : x1(x1)
+        , y1(y1)
+        , x2(x2)
+        , y2(y2) {
+        dx = x2 - x1;
+        dy = y2 - y1;
+
+        xmajor = abs(dx) > abs(dy);
+        if (xmajor) {
+            d = dy != 0 ? (static_cast<sint64>(dx) << kFracBits) / dy : 0;
+        } else {
+            d = dx != 0 ? (static_cast<sint64>(dy) << kFracBits) / dx : 0;
+        }
+    }
+
+    sint32 x1, y1;
+    sint32 x2, y2;
+
+    sint32 dx;
+    sint32 dy;
+    sint64 d;
+    bool xmajor;
+};
+
+void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::CMDPMOD cmdpmod{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
     // Valid fields:
@@ -397,36 +432,113 @@ void VDP::VDP1DrawPolygon(uint16 cmdAddress) {
     // cmdpmod.msbOn;
 
     const uint16 color = VDP1ReadVRAM<uint16>(cmdAddress + 0x06);
-    const sint32 xa = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C));
-    const sint32 ya = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E));
-    const sint32 xb = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x10));
-    const sint32 yb = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x12));
-    const sint32 xc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14));
-    const sint32 yc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16));
-    const sint32 xd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x18));
-    const sint32 yd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1A));
-    const uint16 gouraudTable = VDP1ReadVRAM<uint16>(cmdAddress + 0x1C) << 3u;
+    const sint32 xa = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C)) + ctx.localCoordX;
+    const sint32 ya = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E)) + ctx.localCoordY;
+    const sint32 xb = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x10)) + ctx.localCoordX;
+    const sint32 yb = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x12)) + ctx.localCoordY;
+    const sint32 xc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14)) + ctx.localCoordX;
+    const sint32 yc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16)) + ctx.localCoordY;
+    const sint32 xd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x18)) + ctx.localCoordX;
+    const sint32 yd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1A)) + ctx.localCoordY;
+    const uint32 gouraudTable = static_cast<uint32>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
 
     fmt::println("VDP1: Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
                  xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, cmdpmod.u16);
+
+    // TODO: move to a common rendering function
+
+    // Polygon vertices in default orientation:
+    //
+    //    A-->B
+    //    ^   |
+    //    |   v
+    //    D<--C
+
+    Slope slopeL{xa, ya, xd, yd};
+    Slope slopeR{xb, yb, xc, yc};
+
+    // Figure out which slope is the longest
+    const sint32 lenL = slopeL.dx * slopeL.dx + slopeL.dy * slopeL.dy;
+    const sint32 lenR = slopeR.dx * slopeR.dx + slopeR.dy * slopeR.dy;
+    const sint32 len = std::max(lenL, lenR);
+
+    auto plotPixel = [&](sint32 px, sint32 py, uint16 color) {
+        if (cmdpmod.meshEnable && ((px ^ py) & 1)) {
+            return;
+        }
+
+        const uint32 fbOffset = py * m_VDP1regs.params.fbSizeH + px;
+        if (m_VDP1regs.params.pixel8Bits) {
+            m_spriteFB[m_drawFB][fbOffset & 0x3FFFF] = color;
+        } else {
+            util::WriteBE<uint16>(&m_spriteFB[m_drawFB][(fbOffset * sizeof(uint16)) & 0x3FFFE], color);
+        }
+    };
+
+    // Iterate over the longer slope's pixels, drawing lines that connect to the other slope
+    // TODO: simplify code
+    // TODO: "anti-aliasing"
+    /*if (len == lenL) {
+        if (slopeL.xmajor) {
+            const sint32 xinc = slopeL.dx >= 0 ? 1 : -1;
+            sint32 fpy = slopeL.y1 << Slope::kFracBits;
+            for (sint32 px = slopeL.x1; px != slopeL.x2; px += xinc) {
+                const sint32 py = fpy >> Slope::kFracBits;
+                plotPixel(px, py, color);
+                fpy += slopeL.d;
+            }
+        } else {
+            const sint32 yinc = slopeL.dy >= 0 ? 1 : -1;
+            sint32 fpx = slopeL.x1 << Slope::kFracBits;
+            for (sint32 py = slopeL.y1; py != slopeL.y2; py += yinc) {
+                const sint32 px = fpx >> Slope::kFracBits;
+                plotPixel(px, py, color);
+                fpx += slopeL.d;
+            }
+        }
+    } else {
+        if (slopeR.xmajor) {
+            const sint32 xinc = slopeR.dx >= 0 ? 1 : -1;
+            sint32 fpy = slopeR.y1 << Slope::kFracBits;
+            for (sint32 px = slopeR.x1; px != slopeR.x2; px += xinc) {
+                const sint32 py = fpy >> Slope::kFracBits;
+                plotPixel(px, py, color);
+                fpy += slopeR.d;
+            }
+        } else {
+            const sint32 yinc = slopeR.dy >= 0 ? 1 : -1;
+            sint32 fpx = slopeL.x1 << Slope::kFracBits;
+            for (sint32 py = slopeR.y1; py != slopeR.y2; py += yinc) {
+                const sint32 px = fpx >> Slope::kFracBits;
+                plotPixel(px, py, color);
+                fpx += slopeR.d;
+            }
+        }
+    }*/
+
+    // HACK: debugging
+    plotPixel(xa, ya, 1);
+    plotPixel(xb, yb, 2);
+    plotPixel(xc, yc, 3);
+    plotPixel(xd, yd, 4);
 }
 
-void VDP::VDP1DrawPolylines(uint16 cmdAddress) {
+void VDP::VDP1Cmd_DrawPolylines(uint16 cmdAddress) {
     fmt::println("VDP1: Draw polylines");
 }
 
-void VDP::VDP1DrawLine(uint16 cmdAddress) {
+void VDP::VDP1Cmd_DrawLine(uint16 cmdAddress) {
     fmt::println("VDP1: Draw line");
 }
 
-void VDP::VDP1SetSystemClipping(uint16 cmdAddress) {
+void VDP::VDP1Cmd_SetSystemClipping(uint16 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     ctx.sysClipH = bit::extract<0, 9>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14));
     ctx.sysClipV = bit::extract<0, 8>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16));
     fmt::println("VDP1: Set system clipping: {}x{}", ctx.sysClipH, ctx.sysClipV);
 }
 
-void VDP::VDP1SetUserClipping(uint16 cmdAddress) {
+void VDP::VDP1Cmd_SetUserClipping(uint16 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     ctx.userClipX0 = bit::extract<0, 9>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C));
     ctx.userClipY0 = bit::extract<0, 8>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E));
@@ -436,7 +548,7 @@ void VDP::VDP1SetUserClipping(uint16 cmdAddress) {
                  ctx.userClipY1);
 }
 
-void VDP::VDP1SetLocalCoordinates(uint16 cmdAddress) {
+void VDP::VDP1Cmd_SetLocalCoordinates(uint16 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     ctx.localCoordX = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C));
     ctx.localCoordY = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E));
@@ -553,7 +665,7 @@ void VDP::VDP2DrawLine() {
         // - use BACK when all layers are transparent
         // TODO: handle color calculations
 
-        // HACK: for now, use the top priority of each layer
+        // HACK(VDP2): for now, use the top priority of each layer
         if (m_framebuffer != nullptr) {
             uint32 prio = 0;
             for (int i = 0; i < 6; i++) {
@@ -564,6 +676,30 @@ void VDP::VDP2DrawLine() {
                 }
             }
             // TODO: if no layers are visible, draw BACK screen
+
+            // HACK(VDP2,VDP1): override with sprite layer for debugging
+            const auto &spriteFB = m_spriteFB[m_drawFB ^ 1];
+            const uint32 spriteFBOffset = x + y * m_VDP1regs.params.fbSizeH;
+            uint16 spriteColor;
+            if (m_VDP1regs.params.pixel8Bits) {
+                spriteColor = spriteFB[spriteFBOffset];
+            } else {
+                spriteColor = util::ReadBE<uint16>(&spriteFB[spriteFBOffset * sizeof(uint16)]);
+            }
+            if (spriteColor != 0) {
+                // TODO: should read sprite color properly
+                if (spriteColor == 1) {
+                    m_framebuffer[x + y * m_HRes] = 0xFF0000FF;
+                } else if (spriteColor == 2) {
+                    m_framebuffer[x + y * m_HRes] = 0xFF00FF00;
+                } else if (spriteColor == 3) {
+                    m_framebuffer[x + y * m_HRes] = 0xFFFF0000;
+                } else if (spriteColor == 4) {
+                    m_framebuffer[x + y * m_HRes] = 0xFF00FFFF;
+                } else {
+                    m_framebuffer[x + y * m_HRes] = 0xFFFFFFFF;
+                }
+            }
         }
     }
 }

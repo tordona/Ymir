@@ -158,7 +158,7 @@ struct VDP1Params {
         vblankErase = false;
         hdtvEnable = false;
         fbRotEnable = false;
-        bitDepth8 = false;
+        pixel8Bits = false;
 
         fbSwitchTrigger = false;
         fbSwitchMode = false;
@@ -199,9 +199,9 @@ struct VDP1Params {
     // Derived from TVMR.TVM bit 1
     bool fbRotEnable;
 
-    // Bit depth selection - 8bpp (true) or 16bpp (false)
+    // Pixel data width - 8 bits (true) or 16 bits (false)
     // Derived from TVMR.TVM bit 0
-    bool bitDepth8;
+    bool pixel8Bits;
 
     // Frame buffer dimensions.
     // Derived from TVMR.TVM
@@ -264,7 +264,7 @@ struct VDP1Params {
     void UpdateTVMR() {
         static constexpr uint32 kSizesH[] = {512, 1024, 512, 512, 512, 512, 512, 512};
         static constexpr uint32 kSizesV[] = {256, 256, 256, 512, 512, 512, 512, 512};
-        const uint8 tvm = (hdtvEnable << 2) | (fbRotEnable << 1) | bitDepth8;
+        const uint8 tvm = (hdtvEnable << 2) | (fbRotEnable << 1) | pixel8Bits;
         fbSizeH = kSizesH[tvm];
         fbSizeV = kSizesV[tvm];
     }
@@ -303,7 +303,7 @@ struct VDP1Regs {
         params.vblankErase = bit::extract<3>(value);
         params.hdtvEnable = bit::extract<2>(value);
         params.fbRotEnable = bit::extract<1>(value);
-        params.bitDepth8 = bit::extract<0>(value);
+        params.pixel8Bits = bit::extract<0>(value);
         params.UpdateTVMR();
     }
 
@@ -455,7 +455,7 @@ struct VDP1Regs {
 
     FORCE_INLINE uint16 ReadMODR() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, params.bitDepth8);
+        bit::deposit_into<0>(value, params.pixel8Bits);
         bit::deposit_into<1>(value, params.fbRotEnable);
         bit::deposit_into<2>(value, params.hdtvEnable);
         bit::deposit_into<3>(value, params.vblankErase);
