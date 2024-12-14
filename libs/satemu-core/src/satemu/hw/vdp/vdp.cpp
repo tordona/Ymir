@@ -392,6 +392,11 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress) {
     fmt::println("VDP1: Draw distored sprite");
 }
 
+template <std::integral T1, std::integral T2>
+auto safeDiv(T1 dividend, T2 divisor) {
+    return (divisor != 0) ? dividend / divisor : 0;
+}
+
 struct Slope {
     static constexpr sint64 kFracBits = 13;
 
@@ -402,22 +407,34 @@ struct Slope {
         , y2(y2) {
         dx = x2 - x1;
         dy = y2 - y1;
+        dmax = std::max(abs(dx), abs(dy));
 
-        xmajor = abs(dx) > abs(dy);
+        fx1 = ((static_cast<sint64>(x1) << 1) + 1) << (kFracBits - 1);
+        fy1 = ((static_cast<sint64>(y1) << 1) + 1) << (kFracBits - 1);
+        fxinc = safeDiv(((static_cast<sint64>(dx) << 1) + 1) << (kFracBits - 1), dmax);
+        fyinc = safeDiv(((static_cast<sint64>(dy) << 1) + 1) << (kFracBits - 1), dmax);
+
+        xmajor = abs(dx) >= abs(dy);
         if (xmajor) {
-            d = dx != 0 ? (static_cast<sint64>(dy) << kFracBits) / dx : 0;
+            aspect = safeDiv(static_cast<sint64>(dy) << kFracBits, dx);
         } else {
-            d = dy != 0 ? (static_cast<sint64>(dx) << kFracBits) / dy : 0;
+            aspect = safeDiv(static_cast<sint64>(dx) << kFracBits, dy);
         }
     }
 
-    sint32 x1, y1;
-    sint32 x2, y2;
+    sint32 x1, y1; // starting coordinates
+    sint32 x2, y2; // ending coordinates
 
-    sint32 dx;
-    sint32 dy;
-    sint64 d;
-    bool xmajor;
+    sint32 dx;   // width of the slope: x2 - x1
+    sint32 dy;   // height of the slope: y2 - y1
+    sint32 dmax; // longest span of the slope: max(abs(dx), abs(dy))
+
+    sint64 aspect; // slope aspect: dy/dx (x-major) or dx/dy (y-major) (with 13 fractional bits)
+    bool xmajor;   // true if abs(dx) >= abs(dy)
+    // X-major slopes should be interpolated over X
+
+    sint64 fx1, fy1;     // starting coordinates with 13 fractional bits
+    sint64 fxinc, fyinc; // slope interpolation increments with 13 fractional bits
 };
 
 void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
@@ -440,6 +457,12 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     const sint32 yc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16)) + ctx.localCoordY;
     const sint32 xd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x18)) + ctx.localCoordX;
     const sint32 yd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1A)) + ctx.localCoordY;
+
+    // HACK: override coordinates for debugging
+    // const sint32 xa = 20, ya = 50;
+    // const sint32 xb = 10, yb = 10;
+    // const sint32 xc = 25, yc = 20;
+    // const sint32 xd = 70, yd = 70;
     const uint32 gouraudTable = static_cast<uint32>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
 
     fmt::println("VDP1: Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
@@ -458,10 +481,6 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     Slope slopeR{xb, yb, xc, yc};
 
     // Figure out which slope is the longest
-    const sint32 lenL = slopeL.dx * slopeL.dx + slopeL.dy * slopeL.dy;
-    const sint32 lenR = slopeR.dx * slopeR.dx + slopeR.dy * slopeR.dy;
-    const sint32 len = std::max(lenL, lenR);
-
     auto plotPixel = [&](sint32 px, sint32 py, uint16 color) {
         if (cmdpmod.meshEnable && ((px ^ py) & 1)) {
             return;
@@ -478,53 +497,99 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     // Iterate over the longer slope's pixels, drawing lines that connect to the other slope
     // TODO: simplify code
     // TODO: "anti-aliasing"
-    if (len == lenL) {
+    if (slopeL.dmax >= slopeR.dmax) {
         if (slopeL.xmajor) {
-            const sint32 xinc = slopeL.dx >= 0 ? 1 : -1;
-            sint32 fpy = ((slopeL.y1 << 1) + 1) << (Slope::kFracBits - 1);
-            // sint32 fpy = slopeL.y1 << Slope::kFracBits;
-            for (sint32 px = slopeL.x1; px != slopeL.x2; px += xinc) {
-                const sint32 py = fpy >> Slope::kFracBits;
-                plotPixel(px, py, color);
-                fpy += slopeL.d;
+            const sint32 lxinc = slopeL.dx >= 0 ? 1 : -1;
+            sint32 lfy = slopeL.fy1;
+            sint32 rfx = slopeR.fx1;
+            sint32 rfy = slopeR.fy1;
+            for (sint32 lx = slopeL.x1; lx != slopeL.x2 + lxinc; lx += lxinc) {
+                const sint32 ly = lfy >> Slope::kFracBits;
+                const sint32 rx = rfx >> Slope::kFracBits;
+                const sint32 ry = rfy >> Slope::kFracBits;
+
+                // TODO: plot line between (lx,ly) and (rx,ry)
+                plotPixel(lx, ly, 5);
+                plotPixel(rx, ry, 6);
+
+                lfy += slopeL.aspect;
+                if (slopeL.dmax != 0) {
+                    rfx += slopeR.fxinc * slopeR.dmax / slopeL.dmax;
+                    rfy += slopeR.fyinc * slopeR.dmax / slopeL.dmax;
+                }
             }
         } else {
-            const sint32 yinc = slopeL.dy >= 0 ? 1 : -1;
-            sint32 fpx = ((slopeL.x1 << 1) + 1) << (Slope::kFracBits - 1);
-            // sint32 fpx = slopeL.x1 << Slope::kFracBits;
-            for (sint32 py = slopeL.y1; py != slopeL.y2; py += yinc) {
-                const sint32 px = fpx >> Slope::kFracBits;
-                plotPixel(px, py, color);
-                fpx += slopeL.d;
+            const sint32 lyinc = slopeL.dy >= 0 ? 1 : -1;
+            sint32 lfx = slopeL.fx1;
+            sint32 rfx = slopeR.fx1;
+            sint32 rfy = slopeR.fy1;
+            for (sint32 ly = slopeL.y1; ly != slopeL.y2 + lyinc; ly += lyinc) {
+                const sint32 lx = lfx >> Slope::kFracBits;
+                const sint32 rx = rfx >> Slope::kFracBits;
+                const sint32 ry = rfy >> Slope::kFracBits;
+
+                // TODO: plot line between (lx,ly) and (rx,ry)
+                plotPixel(lx, ly, 7);
+                plotPixel(rx, ry, 8);
+
+                lfx += slopeL.aspect;
+                if (slopeL.dmax != 0) {
+                    rfx += slopeR.fxinc * slopeR.dmax / slopeL.dmax;
+                    rfy += slopeR.fyinc * slopeR.dmax / slopeL.dmax;
+                }
             }
         }
     } else {
         if (slopeR.xmajor) {
-            const sint32 xinc = slopeR.dx >= 0 ? 1 : -1;
-            sint32 fpy = ((slopeR.y1 << 1) + 1) << (Slope::kFracBits - 1);
-            // sint32 fpy = slopeR.y1 << Slope::kFracBits;
-            for (sint32 px = slopeR.x1; px != slopeR.x2; px += xinc) {
-                const sint32 py = fpy >> Slope::kFracBits;
-                plotPixel(px, py, color);
-                fpy += slopeR.d;
+            const sint32 rxinc = slopeR.dx >= 0 ? 1 : -1;
+            sint32 rfy = slopeR.fy1;
+            sint32 lfx = slopeL.fx1;
+            sint32 lfy = slopeL.fy1;
+            for (sint32 rx = slopeR.x1; rx != slopeR.x2 + rxinc; rx += rxinc) {
+                const sint32 ry = rfy >> Slope::kFracBits;
+                const sint32 lx = lfx >> Slope::kFracBits;
+                const sint32 ly = lfy >> Slope::kFracBits;
+
+                // TODO: plot line between (lx,ly) and (rx,ry)
+                plotPixel(lx, ly, 1);
+                plotPixel(rx, ry, 2);
+
+                rfy += slopeR.aspect;
+                if (slopeR.dmax != 0) {
+                    lfx += slopeL.fxinc * slopeL.dmax / slopeR.dmax;
+                    lfy += slopeL.fyinc * slopeL.dmax / slopeR.dmax;
+                }
             }
         } else {
-            const sint32 yinc = slopeR.dy >= 0 ? 1 : -1;
-            sint32 fpx = ((slopeR.x1 << 1) + 1) << (Slope::kFracBits - 1);
-            // sint32 fpx = slopeL.x1 << Slope::kFracBits;
-            for (sint32 py = slopeR.y1; py != slopeR.y2; py += yinc) {
-                const sint32 px = fpx >> Slope::kFracBits;
-                plotPixel(px, py, color);
-                fpx += slopeR.d;
+            const sint32 ryinc = slopeR.dy >= 0 ? 1 : -1;
+            sint32 rfx = slopeR.fx1;
+            sint32 lfx = slopeL.fx1;
+            sint32 lfy = slopeL.fy1;
+            for (sint32 ry = slopeR.y1; ry != slopeR.y2 + ryinc; ry += ryinc) {
+                const sint32 rx = rfx >> Slope::kFracBits;
+                const sint32 lx = lfx >> Slope::kFracBits;
+                const sint32 ly = lfy >> Slope::kFracBits;
+
+                // TODO: plot line between (lx,ly) and (rx,ry)
+                plotPixel(lx, ly, 3);
+                plotPixel(rx, ry, 4);
+
+                rfx += slopeR.aspect;
+                if (slopeR.dmax != 0) {
+                    lfx += slopeL.fxinc * slopeL.dmax / slopeR.dmax;
+                    lfy += slopeL.fyinc * slopeL.dmax / slopeR.dmax;
+                }
             }
         }
     }
 
     // HACK: debugging
-    plotPixel(xa, ya, 1);
-    plotPixel(xb, yb, 2);
-    plotPixel(xc, yc, 3);
-    plotPixel(xd, yd, 4);
+    /*if (m_drawFB) {
+        plotPixel(xa, ya, 1);
+        plotPixel(xb, yb, 2);
+        plotPixel(xc, yc, 3);
+        plotPixel(xd, yd, 4);
+    }*/
 }
 
 void VDP::VDP1Cmd_DrawPolylines(uint16 cmdAddress) {
