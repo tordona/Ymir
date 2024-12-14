@@ -381,15 +381,17 @@ void VDP::VDP1ProcessCommands() {
 }
 
 void VDP::VDP1Cmd_DrawNormalSprite(uint16 cmdAddress) {
-    fmt::println("VDP1: Draw normal sprite");
+    // fmt::println("VDP1: Draw normal sprite");
 }
 
 void VDP::VDP1Cmd_DrawScaledSprite(uint16 cmdAddress) {
-    fmt::println("VDP1: Draw scaled sprite");
+    // fmt::println("VDP1: Draw scaled sprite");
 }
 
 void VDP::VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress) {
-    fmt::println("VDP1: Draw distored sprite");
+    // fmt::println("VDP1: Draw distored sprite");
+    // HACK: cheating here just to get something displayed
+    VDP1Cmd_DrawPolygon(cmdAddress);
 }
 
 template <std::integral T1, std::integral T2>
@@ -462,8 +464,9 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     const sint32 yd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1A)) + ctx.localCoordY;
     const uint32 gouraudTable = static_cast<uint32>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
 
-    fmt::println("VDP1: Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
-                 xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, cmdpmod.u16);
+    // fmt::println(
+    // "VDP1: Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
+    //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, cmdpmod.u16);
 
     // TODO: move to a common rendering function
 
@@ -516,7 +519,12 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
                     rpy += line.aspect;
                     // "anti-alias"
                     if ((rpy >> Slope::kFracBits) != py) {
-                        plotPixel(px, rpy >> Slope::kFracBits, color);
+                        if ((line.dx >> 31) == (line.dy >> 31)) {
+                            // TODO: there might be an off-by-one error here
+                            plotPixel(px + line.dmaxinc, py, color);
+                        } else {
+                            plotPixel(px, rpy >> Slope::kFracBits, color);
+                        }
                     }
                 }
             } else {
@@ -527,7 +535,12 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
                     rpx += line.aspect;
                     // "anti-alias"
                     if ((rpx >> Slope::kFracBits) != px) {
-                        plotPixel(rpx >> Slope::kFracBits, py, color);
+                        if ((line.dx >> 31) == (line.dy >> 31)) {
+                            plotPixel(rpx >> Slope::kFracBits, py, color);
+                        } else {
+                            // TODO: there might be an off-by-one error here
+                            plotPixel(px, py + line.dmaxinc, color);
+                        }
                     }
                 }
             }
@@ -557,7 +570,12 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
                     rpy += line.aspect;
                     // "anti-alias"
                     if ((rpy >> Slope::kFracBits) != py) {
-                        plotPixel(px, rpy >> Slope::kFracBits, color);
+                        if ((line.dx >> 31) == (line.dy >> 31)) {
+                            // TODO: there might be an off-by-one error here
+                            plotPixel(px + line.dmaxinc, py, color);
+                        } else {
+                            plotPixel(px, rpy >> Slope::kFracBits, color);
+                        }
                     }
                 }
             } else {
@@ -568,7 +586,12 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
                     rpx += line.aspect;
                     // "anti-alias"
                     if ((rpx >> Slope::kFracBits) != px) {
-                        plotPixel(rpx >> Slope::kFracBits, py, color);
+                        if ((line.dx >> 31) == (line.dy >> 31)) {
+                            plotPixel(rpx >> Slope::kFracBits, py, color);
+                        } else {
+                            // TODO: there might be an off-by-one error here
+                            plotPixel(px, py + line.dmaxinc, color);
+                        }
                     }
                 }
             }
@@ -583,18 +606,18 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
 }
 
 void VDP::VDP1Cmd_DrawPolylines(uint16 cmdAddress) {
-    fmt::println("VDP1: Draw polylines");
+    // fmt::println("VDP1: Draw polylines");
 }
 
 void VDP::VDP1Cmd_DrawLine(uint16 cmdAddress) {
-    fmt::println("VDP1: Draw line");
+    // fmt::println("VDP1: Draw line");
 }
 
 void VDP::VDP1Cmd_SetSystemClipping(uint16 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     ctx.sysClipH = bit::extract<0, 9>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14));
     ctx.sysClipV = bit::extract<0, 8>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16));
-    fmt::println("VDP1: Set system clipping: {}x{}", ctx.sysClipH, ctx.sysClipV);
+    // fmt::println("VDP1: Set system clipping: {}x{}", ctx.sysClipH, ctx.sysClipV);
 }
 
 void VDP::VDP1Cmd_SetUserClipping(uint16 cmdAddress) {
@@ -603,15 +626,15 @@ void VDP::VDP1Cmd_SetUserClipping(uint16 cmdAddress) {
     ctx.userClipY0 = bit::extract<0, 8>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E));
     ctx.userClipX1 = bit::extract<0, 9>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14));
     ctx.userClipY1 = bit::extract<0, 8>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16));
-    fmt::println("VDP1: Set user clipping: {}x{} - {}x{}", ctx.userClipX0, ctx.userClipY0, ctx.userClipX1,
-                 ctx.userClipY1);
+    // fmt::println("VDP1: Set user clipping: {}x{} - {}x{}", ctx.userClipX0, ctx.userClipY0, ctx.userClipX1,
+    //              ctx.userClipY1);
 }
 
 void VDP::VDP1Cmd_SetLocalCoordinates(uint16 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     ctx.localCoordX = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C));
     ctx.localCoordY = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E));
-    fmt::println("VDP1: Set local coordinates: {}x{}", ctx.localCoordX, ctx.localCoordY);
+    // fmt::println("VDP1: Set local coordinates: {}x{}", ctx.localCoordX, ctx.localCoordY);
 }
 
 void VDP::VDP2DrawLine() {
@@ -747,25 +770,7 @@ void VDP::VDP2DrawLine() {
             }
             if (spriteColor != 0) {
                 // TODO: should read sprite color properly
-                if (spriteColor == 1) {
-                    m_framebuffer[x + y * m_HRes] = 0xFF0000FF;
-                } else if (spriteColor == 2) {
-                    m_framebuffer[x + y * m_HRes] = 0xFF00FF00;
-                } else if (spriteColor == 3) {
-                    m_framebuffer[x + y * m_HRes] = 0xFFFF0000;
-                } else if (spriteColor == 4) {
-                    m_framebuffer[x + y * m_HRes] = 0xFF00FFFF;
-                } else if (spriteColor == 5) {
-                    m_framebuffer[x + y * m_HRes] = 0xFF009F9F;
-                } else if (spriteColor == 6) {
-                    m_framebuffer[x + y * m_HRes] = 0xFF9F9F00;
-                } else if (spriteColor == 7) {
-                    m_framebuffer[x + y * m_HRes] = 0xFF7F7F7F;
-                } else if (spriteColor == 8) {
-                    m_framebuffer[x + y * m_HRes] = 0xFF007FFF;
-                } else {
-                    m_framebuffer[x + y * m_HRes] = 0xFFFFFFFF;
-                }
+                m_framebuffer[x + y * m_HRes] = 0xFFFFFFFF;
             }
         }
     }
