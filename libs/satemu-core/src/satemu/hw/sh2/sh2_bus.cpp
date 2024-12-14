@@ -5,17 +5,17 @@ namespace satemu::sh2 {
 SH2Bus::SH2Bus(scu::SCU &scu, smpc::SMPC &smpc)
     : m_SCU(scu)
     , m_SMPC(smpc) {
-    m_IPL.fill(0);
+    IPL.fill(0);
     Reset(true);
 }
 
 void SH2Bus::Reset(bool hard) {
-    m_WRAMLow.fill(0);
-    m_WRAMHigh.fill(0);
+    WRAMLow.fill(0);
+    WRAMHigh.fill(0);
 }
 
 void SH2Bus::LoadIPL(std::span<uint8, kIPLSize> ipl) {
-    std::copy(ipl.begin(), ipl.end(), m_IPL.begin());
+    std::copy(ipl.begin(), ipl.end(), IPL.begin());
 }
 
 void SH2Bus::AcknowledgeExternalInterrupt() {

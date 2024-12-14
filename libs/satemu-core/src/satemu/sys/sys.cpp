@@ -4,7 +4,7 @@ namespace satemu {
 
 Saturn::Saturn()
     : SH2(SCU, SMPC)
-    , SCU(VDP, SCSP, CDBlock, SH2.master)
+    , SCU(VDP, SCSP, CDBlock, SH2)
     , VDP(SCU)
     , SMPC(SCU, SCSP)
     , SCSP(SCU)

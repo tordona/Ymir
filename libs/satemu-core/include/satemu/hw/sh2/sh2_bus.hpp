@@ -59,15 +59,15 @@ public:
         using namespace util;
 
         /****/ if (AddressInRange<0x000'0000, 0x00F'FFFF>(address)) {
-            return ReadBE<T>(&m_IPL[address & 0x7FFFF]);
+            return ReadBE<T>(&IPL[address & 0x7FFFF]);
         } else if (AddressInRange<0x010'0000, 0x017'FFFF>(address)) {
             return m_SMPC.Read((address & 0x7F) | 1);
         } else if (AddressInRange<0x020'0000, 0x02F'FFFF>(address)) {
-            return ReadBE<T>(&m_WRAMLow[address & 0xFFFFF]);
+            return ReadBE<T>(&WRAMLow[address & 0xFFFFF]);
         } else if (AddressInRange<0x200'0000, 0x5FF'FFFF>(address)) {
             return m_SCU.Read<T>(address);
         } else if (AddressInRange<0x600'0000, 0x7FF'FFFF>(address)) {
-            return ReadBE<T>(&m_WRAMHigh[address & 0xFFFFF]);
+            return ReadBE<T>(&WRAMHigh[address & 0xFFFFF]);
         } else {
             fmt::println("unhandled {}-bit SH2 bus read from {:08X}", sizeof(T) * 8, address);
             return 0;
@@ -83,11 +83,11 @@ public:
         /****/ if (AddressInRange<0x010'0000, 0x017'FFFF>(address)) {
             m_SMPC.Write((address & 0x7F) | 1, value);
         } else if (AddressInRange<0x020'0000, 0x02F'FFFF>(address)) {
-            WriteBE<T>(&m_WRAMLow[address & 0xFFFFF], value);
+            WriteBE<T>(&WRAMLow[address & 0xFFFFF], value);
         } else if (AddressInRange<0x200'0000, 0x5FF'FFFF>(address)) {
             m_SCU.Write<T>(address, value);
         } else if (AddressInRange<0x600'0000, 0x7FF'FFFF>(address)) {
-            WriteBE<T>(&m_WRAMHigh[address & 0xFFFFF], value);
+            WriteBE<T>(&WRAMHigh[address & 0xFFFFF], value);
         } else {
             fmt::println("unhandled {}-bit SH2 bus write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         }
@@ -95,11 +95,11 @@ public:
 
     void AcknowledgeExternalInterrupt();
 
-private:
-    std::array<uint8, kIPLSize> m_IPL; // aka BIOS ROM
-    std::array<uint8, kWRAMLowSize> m_WRAMLow;
-    std::array<uint8, kWRAMHighSize> m_WRAMHigh;
+    std::array<uint8, kIPLSize> IPL; // aka BIOS ROM
+    std::array<uint8, kWRAMLowSize> WRAMLow;
+    std::array<uint8, kWRAMHighSize> WRAMHigh;
 
+private:
     scu::SCU &m_SCU;
     smpc::SMPC &m_SMPC;
 };

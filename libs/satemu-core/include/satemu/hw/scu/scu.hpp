@@ -16,7 +16,7 @@
 
 namespace satemu::sh2 {
 
-class SH2;
+class SH2Block;
 
 } // namespace satemu::sh2
 
@@ -60,7 +60,7 @@ namespace satemu::scu {
 //   - Byte reads work normally
 class SCU {
 public:
-    SCU(vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2 &sh2);
+    SCU(vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2Block &sh2);
 
     void Reset(bool hard);
 
@@ -184,7 +184,7 @@ private:
     vdp::VDP &m_VDP;
     scsp::SCSP &m_SCSP;
     cdblock::CDBlock &m_CDBlock;
-    sh2::SH2 &m_SH2;
+    sh2::SH2Block &m_SH2;
 
     // -------------------------------------------------------------------------
     // Interrupts
@@ -217,8 +217,6 @@ private:
             nextPC = ~0;
             jmpCounter = 0;
 
-            transfer0 = false;
-
             sign = false;
             zero = false;
             carry = false;
@@ -238,11 +236,13 @@ private:
 
             dmaRun = false;
             dmaToD0 = false;
+            dmaHold = false;
             dmaCount = 0;
             dmaSrc = 0;
             dmaDst = 0;
             dmaReadAddr = 0;
             dmaWriteAddr = 0;
+            dmaAddrInc = 0;
         }
 
         std::array<uint32, 256> programRAM;
@@ -258,8 +258,6 @@ private:
 
         uint32 nextPC;    // jump target
         uint8 jmpCounter; // when it reaches zero, perform the jump
-
-        bool transfer0;
 
         bool sign;
         bool zero;
@@ -304,13 +302,15 @@ private:
         uint8 loopTop;    // TOP
         uint16 loopCount; // LOP
 
-        bool dmaRun;         // DMA transfer in progress
+        bool dmaRun;         // DMA transfer in progress (T0)
         bool dmaToD0;        // DMA transfer direction: false=D0 to DSP, true=DSP to D0
-        uint8 dmaCount;      // Remaining words in DMA transfer
-        uint8 dmaSrc;        // DMA source register: CT0-3 (from DSP) or RA0 (from DA)
-        uint8 dmaDst;        // DMA destination register: CT0-3 (to DSP) or WA0 (to DA)
+        bool dmaHold;        // DMA transfer hold address
+        uint8 dmaCount;      // DMA transfer length
+        uint8 dmaSrc;        // DMA source register (CT0-3 or program RAM)
+        uint8 dmaDst;        // DMA destination register (CT0-3 or program RAM)
         uint32 dmaReadAddr;  // DMA read address (RA0)
         uint32 dmaWriteAddr; // DMA write address (WA0)
+        uint32 dmaAddrInc;   // DMA address increment
 
         void WriteProgram(uint32 value) {
             // Cannot write while program is executing
@@ -347,6 +347,7 @@ private:
     } m_dspState;
 
     void RunDSP(uint64 cycles);
+    void RunDSPDMA(uint64 cycles);
 
     // DSP memory/register accessors
 
@@ -391,7 +392,7 @@ private:
                 bit::deposit_into<20>(value, m_dspState.carry);
                 bit::deposit_into<21>(value, m_dspState.zero);
                 bit::deposit_into<22>(value, m_dspState.sign);
-                bit::deposit_into<23>(value, m_dspState.transfer0);
+                bit::deposit_into<23>(value, m_dspState.dmaRun);
                 return value;
             } else {
                 return 0;

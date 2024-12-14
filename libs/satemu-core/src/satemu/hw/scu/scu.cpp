@@ -1,12 +1,12 @@
 #include <satemu/hw/scu/scu.hpp>
 
-#include <satemu/hw/sh2/sh2.hpp>
+#include <satemu/hw/sh2/sh2_block.hpp>
 
 #include <bit>
 
 namespace satemu::scu {
 
-SCU::SCU(vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2 &sh2)
+SCU::SCU(vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2Block &sh2)
     : m_VDP(vdp)
     , m_SCSP(scsp)
     , m_CDBlock(cdblock)
@@ -69,6 +69,8 @@ void SCU::AcknowledgeExternalInterrupt() {
 void SCU::RunDSP(uint64 cycles) {
     // TODO: proper cycle counting
 
+    RunDSPDMA(cycles);
+
     // Bail out if not executing
     if (!m_dspState.programExecuting && !m_dspState.programStep) {
         return;
@@ -82,7 +84,6 @@ void SCU::RunDSP(uint64 cycles) {
     // Execute next command
     const uint32 command = m_dspState.programRAM[m_dspState.PC++];
     const uint32 cmdCategory = bit::extract<30, 31>(command);
-
     switch (cmdCategory) {
     case 0b00: DSPCmd_Operation(command); break;
     case 0b10: DSPCmd_LoadImm(command); break;
@@ -102,6 +103,7 @@ void SCU::RunDSP(uint64 cycles) {
     for (int i = 0; i < 3; i++) {
         if (m_dspState.incCT[i]) {
             m_dspState.CT[i]++;
+            m_dspState.CT[i] &= 0x3F;
         }
     }
     m_dspState.incCT.fill(false);
@@ -110,13 +112,68 @@ void SCU::RunDSP(uint64 cycles) {
     m_dspState.programStep = false;
 }
 
+void SCU::RunDSPDMA(uint64 cycles) {
+    // TODO: proper cycle counting
+
+    // Bail out if DMA is not running
+    if (!m_dspState.dmaRun) {
+        return;
+    }
+
+    const bool toD0 = m_dspState.dmaToD0;
+    uint32 addrD0 = toD0 ? m_dspState.dmaWriteAddr : m_dspState.dmaReadAddr;
+
+    // Run transfer
+    // TODO: should iterate through transfers based on cycle count
+    for (uint32 i = 0; i < m_dspState.dmaCount; i++) {
+        const uint32 ctIndex = toD0 ? m_dspState.dmaSrc : m_dspState.dmaDst;
+        const bool useDataRAM = ctIndex <= 3; // else: use program RAM
+        const uint32 ctAddr = useDataRAM ? m_dspState.CT[ctIndex] : 0;
+        if (toD0) {
+            const uint32 value = useDataRAM ? m_dspState.dataRAM[ctIndex][ctAddr] : m_dspState.programRAM[i & 0xFF];
+            if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(addrD0)) {
+                // B-Bus does two 16-bit writes
+                Write<uint16>(addrD0 + 0, value >> 16u);
+                Write<uint16>(addrD0 + 2, value >> 0u);
+            } else {
+                // Everything else does 32-bit writes
+                m_SH2.bus.Write<uint32>(addrD0, value);
+            }
+        } else {
+            const uint32 value = m_SH2.bus.Read<uint32>(addrD0);
+            if (useDataRAM) {
+                m_dspState.dataRAM[ctIndex][ctAddr] = value;
+            } else {
+                m_dspState.programRAM[i & 0xFF] = value;
+            }
+        }
+        if (useDataRAM) {
+            m_dspState.CT[ctIndex]++;
+            m_dspState.CT[ctIndex] &= 0x3F;
+        }
+        addrD0 += m_dspState.dmaAddrInc;
+        addrD0 &= 0x7FF'FFFC;
+    }
+
+    // Update RA0/WA0 if not holding address
+    if (!m_dspState.dmaHold) {
+        if (toD0) {
+            m_dspState.dmaWriteAddr = addrD0;
+        } else {
+            m_dspState.dmaReadAddr = addrD0;
+        }
+    }
+
+    m_dspState.dmaRun = false;
+}
+
 FORCE_INLINE uint32 SCU::DSPReadSource(uint8 index) {
     switch (index) {
     case 0b0000 ... 0b0111: {
         const uint8 ctIndex = bit::extract<0, 1>(index);
         const bool inc = bit::extract<2>(index);
-        const uint32 addr = m_dspState.CT[ctIndex] & 0x3F;
-        const uint32 value = m_dspState.dataRAM[ctIndex][addr];
+        const uint32 ctAddr = m_dspState.CT[ctIndex];
+        const uint32 value = m_dspState.dataRAM[ctIndex][ctAddr];
         m_dspState.incCT[ctIndex] |= inc;
         return value;
     }
@@ -129,15 +186,15 @@ FORCE_INLINE uint32 SCU::DSPReadSource(uint8 index) {
 FORCE_INLINE void SCU::DSPWriteD1Bus(uint8 index, uint32 value) {
     switch (index) {
     case 0b0000 ... 0b0011: {
-        const uint32 addr = m_dspState.CT[index] & 0x3F;
+        const uint32 addr = m_dspState.CT[index];
         m_dspState.dataRAM[index][addr] = value;
         m_dspState.incCT[index] = true;
         break;
     }
     case 0b0100: m_dspState.RX = value; break;
     case 0b0101: m_dspState.P.u64 = static_cast<sint32>(value); break;
-    case 0b0110: m_dspState.dmaReadAddr = value; break;
-    case 0b0111: m_dspState.dmaWriteAddr = value; break;
+    case 0b0110: m_dspState.dmaReadAddr = (value << 2u) & 0x7FF'FFFC; break;
+    case 0b0111: m_dspState.dmaWriteAddr = (value << 2u) & 0x7FF'FFFC; break;
     case 0b1010: m_dspState.loopCount = value; break;
     case 0b1011: m_dspState.loopTop = value; break;
     case 0b1100 ... 0b1111:
@@ -150,15 +207,15 @@ FORCE_INLINE void SCU::DSPWriteD1Bus(uint8 index, uint32 value) {
 void SCU::DSPWriteImm(uint8 index, uint32 value) {
     switch (index) {
     case 0b0000 ... 0b0011: {
-        const uint32 addr = m_dspState.CT[index] & 0x3F;
+        const uint32 addr = m_dspState.CT[index];
         m_dspState.dataRAM[index][addr] = value;
         m_dspState.incCT[index] = true;
         break;
     }
     case 0b0100: m_dspState.RX = value; break;
     case 0b0101: m_dspState.P.u64 = static_cast<sint32>(value); break;
-    case 0b0110: m_dspState.dmaReadAddr = value; break;
-    case 0b0111: m_dspState.dmaWriteAddr = value; break;
+    case 0b0110: m_dspState.dmaReadAddr = (value << 2u) & 0x7FF'FFFC; break;
+    case 0b0111: m_dspState.dmaWriteAddr = (value << 2u) & 0x7FF'FFFC; break;
     case 0b1010: m_dspState.loopCount = value; break;
     case 0b1100:
         m_dspState.loopTop = m_dspState.PC;
@@ -183,14 +240,15 @@ FORCE_INLINE bool SCU::DSPCondCheck(uint8 cond) const {
     case 0b000010: return !m_dspState.sign;
     case 0b000011: return !m_dspState.zero && !m_dspState.sign;
     case 0b000100: return !m_dspState.carry;
-    case 0b001000: return !m_dspState.transfer0;
+    case 0b001000: return !m_dspState.dmaRun;
 
     case 0b100001: return m_dspState.zero;
     case 0b100010: return m_dspState.sign;
     case 0b100011: return m_dspState.zero || m_dspState.sign;
     case 0b100100: return m_dspState.carry;
-    case 0b101000: return m_dspState.transfer0;
+    case 0b101000: return m_dspState.dmaRun;
     }
+    return false;
 }
 
 FORCE_INLINE void SCU::DSPDelayedJump(uint8 target) {
@@ -377,7 +435,63 @@ FORCE_INLINE void SCU::DSPCmd_Special(uint32 command) {
     }
 }
 
-FORCE_INLINE void SCU::DSPCmd_Special_DMA(uint32 command) {}
+FORCE_INLINE void SCU::DSPCmd_Special_DMA(uint32 command) {
+    // Finish previous DMA transfer
+    if (m_dspState.dmaRun) {
+        RunDSPDMA(1); // TODO: cycles?
+    }
+
+    // Get DMA transfer length
+    if (bit::extract<13>(command)) {
+        const uint8 ctIndex = bit::extract<0, 1>(command);
+        const bool inc = bit::extract<2>(command);
+        const uint32 ctAddr = m_dspState.CT[ctIndex];
+        m_dspState.dmaCount = m_dspState.dataRAM[ctIndex][ctAddr];
+        if (inc) {
+            m_dspState.CT[ctIndex]++;
+            m_dspState.CT[ctIndex] &= 0x3F;
+        }
+    } else {
+        m_dspState.dmaCount = bit::extract<0, 7>(command);
+    }
+
+    // Get [RAM] source/destination register (CT) index and address increment
+    if (m_dspState.dmaToD0) {
+        // DMA [RAM],D0,SImm
+        // DMA [RAM],D0,[s]
+        // DMAH [RAM],D0,SImm
+        // DMAH [RAM],D0,[s]
+        m_dspState.dmaSrc = bit::extract<8, 9>(command);
+        /*if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(m_dspState.dmaWriteAddr)) {
+            // A-Bus is limited to increments of 0 or 1
+            m_dspState.dmaAddrInc = bit::extract<16>(command);
+        } else {
+            m_dspState.dmaAddrInc = (1 << bit::extract<15, 17>(command)) >> 1;
+        }*/
+    } else if (bit::extract<10, 14>(command) == 0b00000) {
+        // DMA D0,[RAM],SImm
+        // Cannot write to program RAM, but can increment by up to 64 units
+        m_dspState.dmaDst = bit::extract<8, 9>(command);
+        // m_dspState.dmaAddrInc = (1 << bit::extract<15, 17>(command)) >> 1;
+    } else {
+        // DMA D0,[RAM],[s]
+        // DMAH D0,[RAM],SImm
+        // DMAH D0,[RAM],[s]
+        m_dspState.dmaDst = bit::extract<8, 10>(command);
+        /*if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(m_dspState.dmaReadAddr)) {
+            // A-Bus only
+            m_dspState.dmaAddrInc = bit::extract<16>(command);
+        } else {
+            m_dspState.dmaAddrInc = 0;
+        }*/
+    }
+    m_dspState.dmaAddrInc = (1 << bit::extract<15, 17>(command)) >> 1;
+    m_dspState.dmaAddrInc *= sizeof(uint32);
+
+    m_dspState.dmaRun = true;
+    m_dspState.dmaToD0 = bit::extract<12>(command);
+    m_dspState.dmaHold = bit::extract<14>(command);
+}
 
 FORCE_INLINE void SCU::DSPCmd_Special_Jump(uint32 command) {
     const uint32 cond = bit::extract<19, 24>(command);
@@ -467,16 +581,16 @@ void SCU::UpdateInterruptLevel(bool acknowledge) {
             } else {
                 m_intrStatus.u32 &= ~(1u << (intrIndexABus + 16u));
             }
-            m_SH2.SetExternalInterrupt(0, 0);
+            m_SH2.master.SetExternalInterrupt(0, 0);
         } else {
             if (intrLevelBase >= intrLevelABus) {
-                m_SH2.SetExternalInterrupt(intrLevelBase, intrIndexBase + 0x40);
+                m_SH2.master.SetExternalInterrupt(intrLevelBase, intrIndexBase + 0x40);
             } else {
-                m_SH2.SetExternalInterrupt(intrLevelABus, intrIndexABus + 0x50);
+                m_SH2.master.SetExternalInterrupt(intrLevelABus, intrIndexABus + 0x50);
             }
         }
     } else {
-        m_SH2.SetExternalInterrupt(0, 0);
+        m_SH2.master.SetExternalInterrupt(0, 0);
     }
 }
 
