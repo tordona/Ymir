@@ -120,8 +120,19 @@ void SCU::RunDSPDMA(uint64 cycles) {
         return;
     }
 
+    enum class Bus {
+        ABus,
+        BBus,
+        WRAM,
+        None,
+    };
+
     const bool toD0 = m_dspState.dmaToD0;
     uint32 addrD0 = toD0 ? m_dspState.dmaWriteAddr : m_dspState.dmaReadAddr;
+    const Bus bus = util::AddressInRange<0x200'0000, 0x58F'FFFF>(addrD0)   ? Bus::ABus
+                    : util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(addrD0) ? Bus::BBus
+                    : addrD0 >= 0x600'0000                                 ? Bus::WRAM
+                                                                           : Bus::None;
 
     // Run transfer
     // TODO: should iterate through transfers based on cycle count
@@ -130,29 +141,48 @@ void SCU::RunDSPDMA(uint64 cycles) {
         const bool useDataRAM = ctIndex <= 3; // else: use program RAM
         const uint32 ctAddr = useDataRAM ? m_dspState.CT[ctIndex] : 0;
         if (toD0) {
+            // Data RAM -> D0
             const uint32 value = useDataRAM ? m_dspState.dataRAM[ctIndex][ctAddr] : m_dspState.programRAM[i & 0xFF];
-            if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(addrD0)) {
-                // B-Bus does two 16-bit writes
-                Write<uint16>(addrD0 + 0, value >> 16u);
-                Write<uint16>(addrD0 + 2, value >> 0u);
-            } else {
-                // Everything else does 32-bit writes
-                m_SH2.bus.Write<uint32>(addrD0, value);
+            if (bus == Bus::ABus) {
+                // A-Bus -> one 32-bit write
+                WriteABus<uint32>(addrD0, value);
+                addrD0 += m_dspState.dmaAddrInc;
+            } else if (bus == Bus::BBus) {
+                // B-Bus -> two 16-bit writes
+                WriteBBus<uint32>(addrD0, value);
+                addrD0 += m_dspState.dmaAddrInc * 2;
+            } else if (bus == Bus::WRAM) {
+                // WRAM -> one 32-bit write
+                util::WriteBE<uint32>(&m_SH2.bus.WRAMHigh[addrD0 & 0xFFFFC], value);
+                addrD0 += m_dspState.dmaAddrInc;
             }
         } else {
-            const uint32 value = m_SH2.bus.Read<uint32>(addrD0);
+            // D0 -> Data/Program RAM
+            uint32 value = 0;
+            if (bus == Bus::ABus) {
+                // A-Bus -> one 32-bit read
+                value = ReadABus<uint32>(addrD0);
+                addrD0 += m_dspState.dmaAddrInc;
+            } else if (bus == Bus::BBus) {
+                // B-Bus -> two 16-bit reads
+                value = ReadBBus<uint32>(addrD0);
+                addrD0 += 4;
+            } else if (bus == Bus::WRAM) {
+                // WRAM -> one 32-bit read
+                value = util::ReadBE<uint32>(&m_SH2.bus.WRAMHigh[addrD0 & 0xFFFFF]);
+                addrD0 += m_dspState.dmaAddrInc;
+            }
             if (useDataRAM) {
                 m_dspState.dataRAM[ctIndex][ctAddr] = value;
             } else {
                 m_dspState.programRAM[i & 0xFF] = value;
             }
         }
+        addrD0 &= 0x7FF'FFFC;
         if (useDataRAM) {
             m_dspState.CT[ctIndex]++;
             m_dspState.CT[ctIndex] &= 0x3F;
         }
-        addrD0 += m_dspState.dmaAddrInc;
-        addrD0 &= 0x7FF'FFFC;
     }
 
     // Update RA0/WA0 if not holding address
@@ -441,6 +471,10 @@ FORCE_INLINE void SCU::DSPCmd_Special_DMA(uint32 command) {
         RunDSPDMA(1); // TODO: cycles?
     }
 
+    m_dspState.dmaRun = true;
+    m_dspState.dmaToD0 = bit::extract<12>(command);
+    m_dspState.dmaHold = bit::extract<14>(command);
+
     // Get DMA transfer length
     if (bit::extract<13>(command)) {
         const uint8 ctIndex = bit::extract<0, 1>(command);
@@ -456,41 +490,26 @@ FORCE_INLINE void SCU::DSPCmd_Special_DMA(uint32 command) {
     }
 
     // Get [RAM] source/destination register (CT) index and address increment
+    const uint8 addrInc = bit::extract<15, 17>(command);
     if (m_dspState.dmaToD0) {
         // DMA [RAM],D0,SImm
         // DMA [RAM],D0,[s]
         // DMAH [RAM],D0,SImm
         // DMAH [RAM],D0,[s]
         m_dspState.dmaSrc = bit::extract<8, 9>(command);
-        /*if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(m_dspState.dmaWriteAddr)) {
-            // A-Bus is limited to increments of 0 or 1
-            m_dspState.dmaAddrInc = bit::extract<16>(command);
-        } else {
-            m_dspState.dmaAddrInc = (1 << bit::extract<15, 17>(command)) >> 1;
-        }*/
+        m_dspState.dmaAddrInc = (1 << addrInc) & ~1;
     } else if (bit::extract<10, 14>(command) == 0b00000) {
         // DMA D0,[RAM],SImm
         // Cannot write to program RAM, but can increment by up to 64 units
         m_dspState.dmaDst = bit::extract<8, 9>(command);
-        // m_dspState.dmaAddrInc = (1 << bit::extract<15, 17>(command)) >> 1;
+        m_dspState.dmaAddrInc = (1 << (addrInc & 0x2)) & ~1;
     } else {
         // DMA D0,[RAM],[s]
         // DMAH D0,[RAM],SImm
         // DMAH D0,[RAM],[s]
         m_dspState.dmaDst = bit::extract<8, 10>(command);
-        /*if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(m_dspState.dmaReadAddr)) {
-            // A-Bus only
-            m_dspState.dmaAddrInc = bit::extract<16>(command);
-        } else {
-            m_dspState.dmaAddrInc = 0;
-        }*/
+        m_dspState.dmaAddrInc = (1 << (addrInc & 0x2)) & ~1;
     }
-    m_dspState.dmaAddrInc = (1 << bit::extract<15, 17>(command)) >> 1;
-    m_dspState.dmaAddrInc *= sizeof(uint32);
-
-    m_dspState.dmaRun = true;
-    m_dspState.dmaToD0 = bit::extract<12>(command);
-    m_dspState.dmaHold = bit::extract<14>(command);
 }
 
 FORCE_INLINE void SCU::DSPCmd_Special_Jump(uint32 command) {
