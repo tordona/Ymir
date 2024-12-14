@@ -219,6 +219,9 @@ void VDP::BeginVPhaseVerticalSync() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering vertical sync phase", m_VCounter);
     m_VDP2regs.TVSTAT.VBLANK = 1;
     m_SCU.TriggerVBlankIN();
+    if (m_VDP1regs.params.vblankErase) {
+        VDP1EraseFramebuffer();
+    }
 }
 
 void VDP::BeginVPhaseTopBlanking() {
@@ -240,7 +243,13 @@ void VDP::BeginVPhaseLastLine() {
     m_VDP2regs.TVSTAT.VBLANK = 0;
     m_SCU.TriggerVBlankOUT();
 
+    fmt::println("VDP: VBlank OUT");
+
     // TODO: check the timing on this
+    if (!m_VDP1regs.params.vblankErase && !m_VDP1regs.params.fbSwitchTrigger && !m_VDP1regs.params.fbSwitchMode) {
+        // 1-cycle mode switches framebuffers every frame
+        VDP1SwitchFramebuffer();
+    }
     if (m_VDP1regs.params.plotTrigger == 0b10) {
         VDP1BeginFrame();
     }
@@ -249,8 +258,27 @@ void VDP::BeginVPhaseLastLine() {
 // ----
 // Renderer
 
+void VDP::VDP1EraseFramebuffer() {
+    fmt::println("VDP1: Erasing framebuffer {}", m_drawFB ^ 1);
+    // TODO: implement
+}
+
+FORCE_INLINE void VDP::VDP1SwitchFramebuffer() {
+    m_drawFB ^= 1;
+    fmt::println("VDP1: Switching framebuffers - draw {}, display {}", m_drawFB, m_drawFB ^ 1);
+}
+
 void VDP::VDP1BeginFrame() {
-    fmt::println("VDP1: starting frame drawing on framebuffer {}", m_drawFB);
+    if (!m_VDP1regs.params.vblankErase && m_VDP1regs.params.fbSwitchTrigger && !m_VDP1regs.params.fbSwitchMode) {
+        // Manual erase
+        VDP1EraseFramebuffer();
+    }
+    if (m_VDP1regs.params.fbSwitchTrigger && m_VDP1regs.params.fbSwitchMode) {
+        // Manual switch
+        VDP1SwitchFramebuffer();
+    }
+
+    fmt::println("VDP1: starting frame on framebuffer {}", m_drawFB);
     // TODO: setup rendering
     // TODO: figure out VDP1 timings
 
@@ -272,6 +300,8 @@ void VDP::VDP1ProcessCommands() {
     for (int i = 0; i < 10000; i++) {
         const VDP1Command::CMDCTRL cmdctrl{.u16 = util::ReadBE<uint16>(&m_VRAM1[cmdAddress + 0x00])};
         if (cmdctrl.end) {
+            fmt::println("VDP1: End of command list");
+            m_SCU.TriggerSpriteDrawEnd();
             return;
         }
 
@@ -280,20 +310,20 @@ void VDP::VDP1ProcessCommands() {
             using enum VDP1Command::CommandType;
 
             switch (cmdctrl.command) {
-            case DrawNormalSprite: break;
-            case DrawScaledSprite: break;
+            case DrawNormalSprite: /*fmt::println("VDP1: Draw normal sprite");*/ break;
+            case DrawScaledSprite: /*fmt::println("VDP1: Draw scaled sprite");*/ break;
             case DrawDistortedSprite: // fallthrough
-            case DrawDistortedSpriteAlt: break;
+            case DrawDistortedSpriteAlt: /*fmt::println("VDP1: Draw distorted sprite");*/ break;
 
-            case DrawPolygon: break;
+            case DrawPolygon: /*fmt::println("VDP1: Draw polygon");*/ break;
             case DrawPolylines: // fallthrough
-            case DrawPolylinesAlt: break;
-            case DrawLine: break;
+            case DrawPolylinesAlt: /*fmt::println("VDP1: Draw polylines");*/ break;
+            case DrawLine: /*fmt::println("VDP1: Draw line");*/ break;
 
             case UserClipping: // fallthrough
-            case UserClippingAlt: break;
-            case SystemClipping: break;
-            case LocalCoordinates: break;
+            case UserClippingAlt: /*fmt::println("VDP1: Set user clipping");*/ break;
+            case SystemClipping: /*fmt::println("VDP1: Set system clipping");*/ break;
+            case LocalCoordinates: /*fmt::println("VDP1: Load coordinates");*/ break;
 
             default:
                 fmt::println("VDP1: Unexpected command type {:X}", static_cast<uint16>(cmdctrl.command));

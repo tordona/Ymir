@@ -618,6 +618,9 @@ private:
     // Framebuffer provided by the frontend to render the current frame into
     FramebufferColor *m_framebuffer;
 
+    void VDP1EraseFramebuffer();
+    void VDP1SwitchFramebuffer();
+
     // Begins the next VDP1 frame.
     void VDP1BeginFrame();
 
