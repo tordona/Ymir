@@ -316,15 +316,15 @@ void VDP::VDP1ProcessCommands() {
             using enum VDP1Command::CommandType;
 
             switch (cmdctrl.command) {
-            case DrawNormalSprite: /*fmt::println("VDP1: Draw normal sprite");*/ break;
-            case DrawScaledSprite: /*fmt::println("VDP1: Draw scaled sprite");*/ break;
+            case DrawNormalSprite: VDP1DrawNormalSprite(cmdAddress); break;
+            case DrawScaledSprite: VDP1DrawScaledSprite(cmdAddress); break;
             case DrawDistortedSprite: // fallthrough
-            case DrawDistortedSpriteAlt: /*fmt::println("VDP1: Draw distorted sprite");*/ break;
+            case DrawDistortedSpriteAlt: VDP1DrawDistortedSprite(cmdAddress); break;
 
-            case DrawPolygon: /*fmt::println("VDP1: Draw polygon");*/ break;
+            case DrawPolygon: VDP1DrawPolygon(cmdAddress); break;
             case DrawPolylines: // fallthrough
-            case DrawPolylinesAlt: /*fmt::println("VDP1: Draw polylines");*/ break;
-            case DrawLine: /*fmt::println("VDP1: Draw line");*/ break;
+            case DrawPolylinesAlt: VDP1DrawPolylines(cmdAddress); break;
+            case DrawLine: VDP1DrawLine(cmdAddress); break;
 
             case UserClipping: // fallthrough
             case UserClippingAlt: VDP1SetUserClipping(cmdAddress); break;
@@ -371,6 +371,30 @@ void VDP::VDP1ProcessCommands() {
 
         cmdAddress &= 0x7FFFF;
     }
+}
+
+void VDP::VDP1DrawNormalSprite(uint16 cmdAddress) {
+    // fmt::println("VDP1: Draw normal sprite");
+}
+
+void VDP::VDP1DrawScaledSprite(uint16 cmdAddress) {
+    // fmt::println("VDP1: Draw scaled sprite");
+}
+
+void VDP::VDP1DrawDistortedSprite(uint16 cmdAddress) {
+    // fmt::println("VDP1: Draw distored sprite");
+}
+
+void VDP::VDP1DrawPolygon(uint16 cmdAddress) {
+    // fmt::println("VDP1: Draw polygon");
+}
+
+void VDP::VDP1DrawPolylines(uint16 cmdAddress) {
+    // fmt::println("VDP1: Draw polylines");
+}
+
+void VDP::VDP1DrawLine(uint16 cmdAddress) {
+    // fmt::println("VDP1: Draw line");
 }
 
 void VDP::VDP1SetSystemClipping(uint16 cmdAddress) {

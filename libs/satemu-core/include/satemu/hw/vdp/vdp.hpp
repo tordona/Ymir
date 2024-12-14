@@ -672,6 +672,14 @@ private:
 
     // Individual VDP1 command processors
 
+    void VDP1DrawNormalSprite(uint16 cmdAddress);
+    void VDP1DrawScaledSprite(uint16 cmdAddress);
+    void VDP1DrawDistortedSprite(uint16 cmdAddress);
+
+    void VDP1DrawPolygon(uint16 cmdAddress);
+    void VDP1DrawPolylines(uint16 cmdAddress);
+    void VDP1DrawLine(uint16 cmdAddress);
+
     void VDP1SetSystemClipping(uint16 cmdAddress);
     void VDP1SetUserClipping(uint16 cmdAddress);
     void VDP1SetLocalCoordinates(uint16 cmdAddress);
