@@ -45,6 +45,18 @@ void Saturn::CloseTray() {
     CDBlock.CloseTray();
 }
 
+void Saturn::RunFrame() {
+    // Run until VDP exits top blanking phase
+    while (VDP.InTopBlankingPhase()) {
+        Step();
+    }
+
+    // Run until VDP enters top blanking phase
+    while (!VDP.InTopBlankingPhase()) {
+        Step();
+    }
+}
+
 void Saturn::Step() {
     // Clock speeds:
     // - SH2: 28.63636 MHz on NTSC systems or 28.43750 MHz on PAL systems

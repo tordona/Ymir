@@ -164,9 +164,11 @@ void runEmulator(satemu::Saturn &saturn) {
         // static constexpr uint64 kCycleCountingFactor = 1;
         // static constexpr uint64 kCyclesPerFrame = kClockRate * kCycleCountingFactor / kFramesPerSecond;
 
-        for (int i = 0; i < kCyclesPerFrame; i += kCycleCountingFactor) {
+        /*for (int i = 0; i < kCyclesPerFrame; i += kCycleCountingFactor) {
             saturn.Step();
-        }
+        }*/
+
+        saturn.RunFrame();
 
         ++frames;
         auto t2 = clk::now();

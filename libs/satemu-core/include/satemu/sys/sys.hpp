@@ -26,8 +26,7 @@ struct Saturn {
     void OpenTray();
     void CloseTray();
 
-    // TODO: consider moving this to a system
-    // TODO: implement RunFrame
+    void RunFrame();
     void Step();
 
     // -------------------------------------------------------------------------

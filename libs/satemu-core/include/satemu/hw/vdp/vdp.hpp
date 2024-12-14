@@ -76,10 +76,10 @@ public:
         case 0x0A: return 0; // EWRR is write-only
         case 0x0C: return 0; // ENDR is write-only
 
-        case 0x10: return m_VDP1regs.ReadEDSR();
-        case 0x12: return m_VDP1regs.ReadLOPR();
-        case 0x14: return m_VDP1regs.ReadCOPR();
-        case 0x16: return m_VDP1regs.ReadMODR();
+        case 0x10: return m_VDP1.ReadEDSR();
+        case 0x12: return m_VDP1.ReadLOPR();
+        case 0x14: return m_VDP1.ReadCOPR();
+        case 0x16: return m_VDP1.ReadMODR();
 
         default: fmt::println("unhandled {}-bit VDP1 register read from {:02X}", sizeof(T) * 8, address); return 0;
         }
@@ -88,17 +88,17 @@ public:
     template <mem_primitive T>
     void VDP1WriteReg(uint32 address, T value) {
         switch (address) {
-        case 0x00: m_VDP1regs.WriteTVMR(value); break;
-        case 0x02: m_VDP1regs.WriteFBCR(value); break;
+        case 0x00: m_VDP1.WriteTVMR(value); break;
+        case 0x02: m_VDP1.WriteFBCR(value); break;
         case 0x04:
-            m_VDP1regs.WritePTMR(value);
-            if (m_VDP1regs.params.plotTrigger == 0b01) {
+            m_VDP1.WritePTMR(value);
+            if (m_VDP1.plotTrigger == 0b01) {
                 VDP1BeginFrame();
             }
             break;
-        case 0x06: m_VDP1regs.WriteEWDR(value); break;
-        case 0x08: m_VDP1regs.WriteEWLR(value); break;
-        case 0x0A: m_VDP1regs.WriteEWRR(value); break;
+        case 0x06: m_VDP1.WriteEWDR(value); break;
+        case 0x08: m_VDP1.WriteEWLR(value); break;
+        case 0x0A: m_VDP1.WriteEWRR(value); break;
         case 0x0C: // ENDR
             // TODO: schedule drawing termination after 30 cycles
             break;
@@ -148,7 +148,7 @@ public:
         address = MapCRAMAddress(address);
         // fmt::println("{}-bit VDP2 CRAM write to {:05X} = {:X}", sizeof(T) * 8, address, value);
         util::WriteBE<T>(&m_CRAM[address], value);
-        if (m_VDP2regs.RAMCTL.CRMDn == 0) {
+        if (m_VDP2.RAMCTL.CRMDn == 0) {
             // fmt::println("   replicated to {:05X}", address ^ 0x800);
             util::WriteBE<T>(&m_CRAM[address ^ 0x800], value);
         }
@@ -157,148 +157,148 @@ public:
     template <mem_primitive T>
     T VDP2ReadReg(uint32 address) {
         switch (address) {
-        case 0x000: return m_VDP2regs.TVMD.u16;
-        case 0x002: return m_VDP2regs.EXTEN.u16;
-        case 0x004: return m_VDP2regs.TVSTAT.u16;
-        case 0x006: return m_VDP2regs.VRSIZE.u16;
-        case 0x008: return m_VDP2regs.HCNT;
-        case 0x00A: return m_VDP2regs.VCNT;
-        case 0x00E: return m_VDP2regs.RAMCTL.u16;
-        case 0x010: return m_VDP2regs.CYCA0.L.u16;   // write-only?
-        case 0x012: return m_VDP2regs.CYCA0.U.u16;   // write-only?
-        case 0x014: return m_VDP2regs.CYCA1.L.u16;   // write-only?
-        case 0x016: return m_VDP2regs.CYCA1.U.u16;   // write-only?
-        case 0x018: return m_VDP2regs.CYCB0.L.u16;   // write-only?
-        case 0x01A: return m_VDP2regs.CYCB0.U.u16;   // write-only?
-        case 0x01E: return m_VDP2regs.CYCB1.L.u16;   // write-only?
-        case 0x01C: return m_VDP2regs.CYCB1.U.u16;   // write-only?
-        case 0x020: return m_VDP2regs.ReadBGON();    // write-only?
-        case 0x022: return m_VDP2regs.MZCTL.u16;     // write-only?
-        case 0x024: return m_VDP2regs.ReadSFSEL();   // write-only?
-        case 0x026: return m_VDP2regs.ReadSFCODE();  // write-only?
-        case 0x028: return m_VDP2regs.ReadCHCTLA();  // write-only?
-        case 0x02A: return m_VDP2regs.ReadCHCTLB();  // write-only?
-        case 0x02C: return m_VDP2regs.ReadBMPNA();   // write-only?
-        case 0x02E: return m_VDP2regs.ReadBMPNB();   // write-only?
-        case 0x030: return m_VDP2regs.ReadPNCN(0);   // write-only?
-        case 0x032: return m_VDP2regs.ReadPNCN(1);   // write-only?
-        case 0x034: return m_VDP2regs.ReadPNCN(2);   // write-only?
-        case 0x036: return m_VDP2regs.ReadPNCN(3);   // write-only?
-        case 0x038: return m_VDP2regs.ReadPNCR();    // write-only?
-        case 0x03A: return m_VDP2regs.ReadPLSZ();    // write-only?
-        case 0x03C: return m_VDP2regs.ReadMPOFN();   // write-only?
-        case 0x03E: return m_VDP2regs.ReadMPOFR();   // write-only?
-        case 0x040: return m_VDP2regs.ReadMPN(0, 0); // write-only?
-        case 0x042: return m_VDP2regs.ReadMPN(0, 1); // write-only?
-        case 0x044: return m_VDP2regs.ReadMPN(1, 0); // write-only?
-        case 0x046: return m_VDP2regs.ReadMPN(1, 1); // write-only?
-        case 0x048: return m_VDP2regs.ReadMPN(2, 0); // write-only?
-        case 0x04A: return m_VDP2regs.ReadMPN(2, 1); // write-only?
-        case 0x04C: return m_VDP2regs.ReadMPN(3, 0); // write-only?
-        case 0x04E: return m_VDP2regs.ReadMPN(3, 1); // write-only?
-        case 0x050: return m_VDP2regs.ReadMPR(0, 0); // write-only?
-        case 0x052: return m_VDP2regs.ReadMPR(0, 1); // write-only?
-        case 0x054: return m_VDP2regs.ReadMPR(0, 2); // write-only?
-        case 0x056: return m_VDP2regs.ReadMPR(0, 3); // write-only?
-        case 0x058: return m_VDP2regs.ReadMPR(0, 4); // write-only?
-        case 0x05A: return m_VDP2regs.ReadMPR(0, 5); // write-only?
-        case 0x05C: return m_VDP2regs.ReadMPR(0, 6); // write-only?
-        case 0x05E: return m_VDP2regs.ReadMPR(0, 7); // write-only?
-        case 0x060: return m_VDP2regs.ReadMPR(1, 0); // write-only?
-        case 0x062: return m_VDP2regs.ReadMPR(1, 1); // write-only?
-        case 0x064: return m_VDP2regs.ReadMPR(1, 2); // write-only?
-        case 0x066: return m_VDP2regs.ReadMPR(1, 3); // write-only?
-        case 0x068: return m_VDP2regs.ReadMPR(1, 4); // write-only?
-        case 0x06A: return m_VDP2regs.ReadMPR(1, 5); // write-only?
-        case 0x06C: return m_VDP2regs.ReadMPR(1, 6); // write-only?
-        case 0x06E: return m_VDP2regs.ReadMPR(1, 7); // write-only?
-        case 0x070: return m_VDP2regs.ReadSCXIN(0);  // write-only?
-        case 0x072: return m_VDP2regs.ReadSCXDN(0);  // write-only?
-        case 0x074: return m_VDP2regs.ReadSCYIN(0);  // write-only?
-        case 0x076: return m_VDP2regs.ReadSCYDN(0);  // write-only?
-        case 0x078: return m_VDP2regs.ReadZMXIN(0);  // write-only?
-        case 0x07A: return m_VDP2regs.ReadZMXDN(0);  // write-only?
-        case 0x07C: return m_VDP2regs.ReadZMYIN(0);  // write-only?
-        case 0x07E: return m_VDP2regs.ReadZMYDN(0);  // write-only?
-        case 0x080: return m_VDP2regs.ReadSCXIN(1);  // write-only?
-        case 0x082: return m_VDP2regs.ReadSCXDN(1);  // write-only?
-        case 0x084: return m_VDP2regs.ReadSCYIN(1);  // write-only?
-        case 0x086: return m_VDP2regs.ReadSCYDN(1);  // write-only?
-        case 0x088: return m_VDP2regs.ReadZMXIN(1);  // write-only?
-        case 0x08A: return m_VDP2regs.ReadZMXDN(1);  // write-only?
-        case 0x08C: return m_VDP2regs.ReadZMYIN(1);  // write-only?
-        case 0x08E: return m_VDP2regs.ReadZMYDN(1);  // write-only?
-        case 0x090: return m_VDP2regs.ReadSCXIN(2);  // write-only?
-        case 0x092: return m_VDP2regs.ReadSCYIN(2);  // write-only?
-        case 0x094: return m_VDP2regs.ReadSCXIN(3);  // write-only?
-        case 0x096: return m_VDP2regs.ReadSCYIN(3);  // write-only?
-        case 0x098: return m_VDP2regs.ZMCTL.u16;     // write-only?
-        case 0x09A: return m_VDP2regs.SCRCTL.u16;    // write-only?
-        case 0x09C: return m_VDP2regs.VCSTA.U.u16;   // write-only?
-        case 0x09E: return m_VDP2regs.VCSTA.L.u16;   // write-only?
-        case 0x0A0: return m_VDP2regs.LSTA0.U.u16;   // write-only?
-        case 0x0A2: return m_VDP2regs.LSTA0.L.u16;   // write-only?
-        case 0x0A4: return m_VDP2regs.LSTA1.U.u16;   // write-only?
-        case 0x0A6: return m_VDP2regs.LSTA1.L.u16;   // write-only?
-        case 0x0A8: return m_VDP2regs.LCTA.U.u16;    // write-only?
-        case 0x0AA: return m_VDP2regs.LCTA.L.u16;    // write-only?
-        case 0x0AC: return m_VDP2regs.BKTA.U.u16;    // write-only?
-        case 0x0AE: return m_VDP2regs.BKTA.L.u16;    // write-only?
-        case 0x0B0: return m_VDP2regs.RPMD.u16;      // write-only?
-        case 0x0B2: return m_VDP2regs.RPRCTL.u16;    // write-only?
-        case 0x0B4: return m_VDP2regs.KTCTL.u16;     // write-only?
-        case 0x0B6: return m_VDP2regs.KTAOF.u16;     // write-only?
-        case 0x0B8: return m_VDP2regs.OVPNRA;        // write-only?
-        case 0x0BA: return m_VDP2regs.OVPNRB;        // write-only?
-        case 0x0BC: return m_VDP2regs.RPTA.U.u16;    // write-only?
-        case 0x0BE: return m_VDP2regs.RPTA.L.u16;    // write-only?
-        case 0x0C0: return m_VDP2regs.WPXY0.X.S.u16; // write-only?
-        case 0x0C2: return m_VDP2regs.WPXY0.X.E.u16; // write-only?
-        case 0x0C4: return m_VDP2regs.WPXY0.Y.S.u16; // write-only?
-        case 0x0C6: return m_VDP2regs.WPXY0.Y.E.u16; // write-only?
-        case 0x0C8: return m_VDP2regs.WPXY1.X.S.u16; // write-only?
-        case 0x0CA: return m_VDP2regs.WPXY1.X.E.u16; // write-only?
-        case 0x0CC: return m_VDP2regs.WPXY1.Y.S.u16; // write-only?
-        case 0x0CE: return m_VDP2regs.WPXY1.Y.E.u16; // write-only?
-        case 0x0D0: return m_VDP2regs.WCTL.A.u16;    // write-only?
-        case 0x0D2: return m_VDP2regs.WCTL.B.u16;    // write-only?
-        case 0x0D4: return m_VDP2regs.WCTL.C.u16;    // write-only?
-        case 0x0D6: return m_VDP2regs.WCTL.D.u16;    // write-only?
-        case 0x0D8: return m_VDP2regs.LWTA0.U.u16;   // write-only?
-        case 0x0DA: return m_VDP2regs.LWTA0.L.u16;   // write-only?
-        case 0x0DC: return m_VDP2regs.LWTA1.U.u16;   // write-only?
-        case 0x0DE: return m_VDP2regs.LWTA1.L.u16;   // write-only?
-        case 0x0E0: return m_VDP2regs.SPCTL.u16;     // write-only?
-        case 0x0E2: return m_VDP2regs.SDCTL.u16;     // write-only?
-        case 0x0E4: return m_VDP2regs.ReadCRAOFA();  // write-only?
-        case 0x0E6: return m_VDP2regs.ReadCRAOFB();  // write-only?
-        case 0x0E8: return m_VDP2regs.ReadLNCLEN();  // write-only?
-        case 0x0EA: return m_VDP2regs.ReadSFPRMD();  // write-only?
-        case 0x0EC: return m_VDP2regs.CCCTL.u16;     // write-only?
-        case 0x0EE: return m_VDP2regs.SFCCMD.u16;    // write-only?
-        case 0x0F0: return m_VDP2regs.PRISA.u16;     // write-only?
-        case 0x0F2: return m_VDP2regs.PRISB.u16;     // write-only?
-        case 0x0F4: return m_VDP2regs.PRISC.u16;     // write-only?
-        case 0x0F6: return m_VDP2regs.PRISD.u16;     // write-only?
-        case 0x0F8: return m_VDP2regs.ReadPRINA();   // write-only?
-        case 0x0FA: return m_VDP2regs.ReadPRINB();   // write-only?
-        case 0x0FC: return m_VDP2regs.ReadPRIR();    // write-only?
-        case 0x100: return m_VDP2regs.CCRSA.u16;     // write-only?
-        case 0x102: return m_VDP2regs.CCRSB.u16;     // write-only?
-        case 0x104: return m_VDP2regs.CCRSC.u16;     // write-only?
-        case 0x106: return m_VDP2regs.CCRSD.u16;     // write-only?
-        case 0x108: return m_VDP2regs.CCRNA.u16;     // write-only?
-        case 0x10A: return m_VDP2regs.CCRNB.u16;     // write-only?
-        case 0x10C: return m_VDP2regs.CCRR.u16;      // write-only?
-        case 0x10E: return m_VDP2regs.CCRLB.u16;     // write-only?
-        case 0x110: return m_VDP2regs.CLOFEN.u16;    // write-only?
-        case 0x112: return m_VDP2regs.CLOFSL.u16;    // write-only?
-        case 0x114: return m_VDP2regs.COAR.u16;      // write-only?
-        case 0x116: return m_VDP2regs.COAG.u16;      // write-only?
-        case 0x118: return m_VDP2regs.COAB.u16;      // write-only?
-        case 0x11A: return m_VDP2regs.COBR.u16;      // write-only?
-        case 0x11C: return m_VDP2regs.COBG.u16;      // write-only?
-        case 0x11E: return m_VDP2regs.COBB.u16;      // write-only?
+        case 0x000: return m_VDP2.TVMD.u16;
+        case 0x002: return m_VDP2.EXTEN.u16;
+        case 0x004: return m_VDP2.TVSTAT.u16;
+        case 0x006: return m_VDP2.VRSIZE.u16;
+        case 0x008: return m_VDP2.HCNT;
+        case 0x00A: return m_VDP2.VCNT;
+        case 0x00E: return m_VDP2.RAMCTL.u16;
+        case 0x010: return m_VDP2.CYCA0.L.u16;   // write-only?
+        case 0x012: return m_VDP2.CYCA0.U.u16;   // write-only?
+        case 0x014: return m_VDP2.CYCA1.L.u16;   // write-only?
+        case 0x016: return m_VDP2.CYCA1.U.u16;   // write-only?
+        case 0x018: return m_VDP2.CYCB0.L.u16;   // write-only?
+        case 0x01A: return m_VDP2.CYCB0.U.u16;   // write-only?
+        case 0x01E: return m_VDP2.CYCB1.L.u16;   // write-only?
+        case 0x01C: return m_VDP2.CYCB1.U.u16;   // write-only?
+        case 0x020: return m_VDP2.ReadBGON();    // write-only?
+        case 0x022: return m_VDP2.MZCTL.u16;     // write-only?
+        case 0x024: return m_VDP2.ReadSFSEL();   // write-only?
+        case 0x026: return m_VDP2.ReadSFCODE();  // write-only?
+        case 0x028: return m_VDP2.ReadCHCTLA();  // write-only?
+        case 0x02A: return m_VDP2.ReadCHCTLB();  // write-only?
+        case 0x02C: return m_VDP2.ReadBMPNA();   // write-only?
+        case 0x02E: return m_VDP2.ReadBMPNB();   // write-only?
+        case 0x030: return m_VDP2.ReadPNCN(0);   // write-only?
+        case 0x032: return m_VDP2.ReadPNCN(1);   // write-only?
+        case 0x034: return m_VDP2.ReadPNCN(2);   // write-only?
+        case 0x036: return m_VDP2.ReadPNCN(3);   // write-only?
+        case 0x038: return m_VDP2.ReadPNCR();    // write-only?
+        case 0x03A: return m_VDP2.ReadPLSZ();    // write-only?
+        case 0x03C: return m_VDP2.ReadMPOFN();   // write-only?
+        case 0x03E: return m_VDP2.ReadMPOFR();   // write-only?
+        case 0x040: return m_VDP2.ReadMPN(0, 0); // write-only?
+        case 0x042: return m_VDP2.ReadMPN(0, 1); // write-only?
+        case 0x044: return m_VDP2.ReadMPN(1, 0); // write-only?
+        case 0x046: return m_VDP2.ReadMPN(1, 1); // write-only?
+        case 0x048: return m_VDP2.ReadMPN(2, 0); // write-only?
+        case 0x04A: return m_VDP2.ReadMPN(2, 1); // write-only?
+        case 0x04C: return m_VDP2.ReadMPN(3, 0); // write-only?
+        case 0x04E: return m_VDP2.ReadMPN(3, 1); // write-only?
+        case 0x050: return m_VDP2.ReadMPR(0, 0); // write-only?
+        case 0x052: return m_VDP2.ReadMPR(0, 1); // write-only?
+        case 0x054: return m_VDP2.ReadMPR(0, 2); // write-only?
+        case 0x056: return m_VDP2.ReadMPR(0, 3); // write-only?
+        case 0x058: return m_VDP2.ReadMPR(0, 4); // write-only?
+        case 0x05A: return m_VDP2.ReadMPR(0, 5); // write-only?
+        case 0x05C: return m_VDP2.ReadMPR(0, 6); // write-only?
+        case 0x05E: return m_VDP2.ReadMPR(0, 7); // write-only?
+        case 0x060: return m_VDP2.ReadMPR(1, 0); // write-only?
+        case 0x062: return m_VDP2.ReadMPR(1, 1); // write-only?
+        case 0x064: return m_VDP2.ReadMPR(1, 2); // write-only?
+        case 0x066: return m_VDP2.ReadMPR(1, 3); // write-only?
+        case 0x068: return m_VDP2.ReadMPR(1, 4); // write-only?
+        case 0x06A: return m_VDP2.ReadMPR(1, 5); // write-only?
+        case 0x06C: return m_VDP2.ReadMPR(1, 6); // write-only?
+        case 0x06E: return m_VDP2.ReadMPR(1, 7); // write-only?
+        case 0x070: return m_VDP2.ReadSCXIN(0);  // write-only?
+        case 0x072: return m_VDP2.ReadSCXDN(0);  // write-only?
+        case 0x074: return m_VDP2.ReadSCYIN(0);  // write-only?
+        case 0x076: return m_VDP2.ReadSCYDN(0);  // write-only?
+        case 0x078: return m_VDP2.ReadZMXIN(0);  // write-only?
+        case 0x07A: return m_VDP2.ReadZMXDN(0);  // write-only?
+        case 0x07C: return m_VDP2.ReadZMYIN(0);  // write-only?
+        case 0x07E: return m_VDP2.ReadZMYDN(0);  // write-only?
+        case 0x080: return m_VDP2.ReadSCXIN(1);  // write-only?
+        case 0x082: return m_VDP2.ReadSCXDN(1);  // write-only?
+        case 0x084: return m_VDP2.ReadSCYIN(1);  // write-only?
+        case 0x086: return m_VDP2.ReadSCYDN(1);  // write-only?
+        case 0x088: return m_VDP2.ReadZMXIN(1);  // write-only?
+        case 0x08A: return m_VDP2.ReadZMXDN(1);  // write-only?
+        case 0x08C: return m_VDP2.ReadZMYIN(1);  // write-only?
+        case 0x08E: return m_VDP2.ReadZMYDN(1);  // write-only?
+        case 0x090: return m_VDP2.ReadSCXIN(2);  // write-only?
+        case 0x092: return m_VDP2.ReadSCYIN(2);  // write-only?
+        case 0x094: return m_VDP2.ReadSCXIN(3);  // write-only?
+        case 0x096: return m_VDP2.ReadSCYIN(3);  // write-only?
+        case 0x098: return m_VDP2.ZMCTL.u16;     // write-only?
+        case 0x09A: return m_VDP2.SCRCTL.u16;    // write-only?
+        case 0x09C: return m_VDP2.VCSTA.U.u16;   // write-only?
+        case 0x09E: return m_VDP2.VCSTA.L.u16;   // write-only?
+        case 0x0A0: return m_VDP2.LSTA0.U.u16;   // write-only?
+        case 0x0A2: return m_VDP2.LSTA0.L.u16;   // write-only?
+        case 0x0A4: return m_VDP2.LSTA1.U.u16;   // write-only?
+        case 0x0A6: return m_VDP2.LSTA1.L.u16;   // write-only?
+        case 0x0A8: return m_VDP2.LCTA.U.u16;    // write-only?
+        case 0x0AA: return m_VDP2.LCTA.L.u16;    // write-only?
+        case 0x0AC: return m_VDP2.BKTA.U.u16;    // write-only?
+        case 0x0AE: return m_VDP2.BKTA.L.u16;    // write-only?
+        case 0x0B0: return m_VDP2.RPMD.u16;      // write-only?
+        case 0x0B2: return m_VDP2.RPRCTL.u16;    // write-only?
+        case 0x0B4: return m_VDP2.KTCTL.u16;     // write-only?
+        case 0x0B6: return m_VDP2.KTAOF.u16;     // write-only?
+        case 0x0B8: return m_VDP2.OVPNRA;        // write-only?
+        case 0x0BA: return m_VDP2.OVPNRB;        // write-only?
+        case 0x0BC: return m_VDP2.RPTA.U.u16;    // write-only?
+        case 0x0BE: return m_VDP2.RPTA.L.u16;    // write-only?
+        case 0x0C0: return m_VDP2.WPXY0.X.S.u16; // write-only?
+        case 0x0C2: return m_VDP2.WPXY0.X.E.u16; // write-only?
+        case 0x0C4: return m_VDP2.WPXY0.Y.S.u16; // write-only?
+        case 0x0C6: return m_VDP2.WPXY0.Y.E.u16; // write-only?
+        case 0x0C8: return m_VDP2.WPXY1.X.S.u16; // write-only?
+        case 0x0CA: return m_VDP2.WPXY1.X.E.u16; // write-only?
+        case 0x0CC: return m_VDP2.WPXY1.Y.S.u16; // write-only?
+        case 0x0CE: return m_VDP2.WPXY1.Y.E.u16; // write-only?
+        case 0x0D0: return m_VDP2.WCTL.A.u16;    // write-only?
+        case 0x0D2: return m_VDP2.WCTL.B.u16;    // write-only?
+        case 0x0D4: return m_VDP2.WCTL.C.u16;    // write-only?
+        case 0x0D6: return m_VDP2.WCTL.D.u16;    // write-only?
+        case 0x0D8: return m_VDP2.LWTA0.U.u16;   // write-only?
+        case 0x0DA: return m_VDP2.LWTA0.L.u16;   // write-only?
+        case 0x0DC: return m_VDP2.LWTA1.U.u16;   // write-only?
+        case 0x0DE: return m_VDP2.LWTA1.L.u16;   // write-only?
+        case 0x0E0: return m_VDP2.SPCTL.u16;     // write-only?
+        case 0x0E2: return m_VDP2.SDCTL.u16;     // write-only?
+        case 0x0E4: return m_VDP2.ReadCRAOFA();  // write-only?
+        case 0x0E6: return m_VDP2.ReadCRAOFB();  // write-only?
+        case 0x0E8: return m_VDP2.ReadLNCLEN();  // write-only?
+        case 0x0EA: return m_VDP2.ReadSFPRMD();  // write-only?
+        case 0x0EC: return m_VDP2.CCCTL.u16;     // write-only?
+        case 0x0EE: return m_VDP2.SFCCMD.u16;    // write-only?
+        case 0x0F0: return m_VDP2.PRISA.u16;     // write-only?
+        case 0x0F2: return m_VDP2.PRISB.u16;     // write-only?
+        case 0x0F4: return m_VDP2.PRISC.u16;     // write-only?
+        case 0x0F6: return m_VDP2.PRISD.u16;     // write-only?
+        case 0x0F8: return m_VDP2.ReadPRINA();   // write-only?
+        case 0x0FA: return m_VDP2.ReadPRINB();   // write-only?
+        case 0x0FC: return m_VDP2.ReadPRIR();    // write-only?
+        case 0x100: return m_VDP2.CCRSA.u16;     // write-only?
+        case 0x102: return m_VDP2.CCRSB.u16;     // write-only?
+        case 0x104: return m_VDP2.CCRSC.u16;     // write-only?
+        case 0x106: return m_VDP2.CCRSD.u16;     // write-only?
+        case 0x108: return m_VDP2.CCRNA.u16;     // write-only?
+        case 0x10A: return m_VDP2.CCRNB.u16;     // write-only?
+        case 0x10C: return m_VDP2.CCRR.u16;      // write-only?
+        case 0x10E: return m_VDP2.CCRLB.u16;     // write-only?
+        case 0x110: return m_VDP2.CLOFEN.u16;    // write-only?
+        case 0x112: return m_VDP2.CLOFSL.u16;    // write-only?
+        case 0x114: return m_VDP2.COAR.u16;      // write-only?
+        case 0x116: return m_VDP2.COAG.u16;      // write-only?
+        case 0x118: return m_VDP2.COAB.u16;      // write-only?
+        case 0x11A: return m_VDP2.COBR.u16;      // write-only?
+        case 0x11C: return m_VDP2.COBG.u16;      // write-only?
+        case 0x11E: return m_VDP2.COBB.u16;      // write-only?
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
         }
     }
@@ -307,154 +307,158 @@ public:
     void VDP2WriteReg(uint32 address, T value) {
         switch (address) {
         case 0x000:
-            m_VDP2regs.TVMD.u16 = value & 0x81F7;
-            m_VDP2regs.TVMDDirty = true;
+            m_VDP2.TVMD.u16 = value & 0x81F7;
+            m_VDP2.TVMDDirty = true;
             break;
-        case 0x002: m_VDP2regs.EXTEN.u16 = value & 0x0303; break;
+        case 0x002: m_VDP2.EXTEN.u16 = value & 0x0303; break;
         case 0x004: /* TVSTAT is read-only */ break;
-        case 0x006: m_VDP2regs.VRSIZE.u16 = value & 0x8000; break;
+        case 0x006: m_VDP2.VRSIZE.u16 = value & 0x8000; break;
         case 0x008: /* HCNT is read-only */ break;
         case 0x00A: /* VCNT is read-only */ break;
-        case 0x00E: m_VDP2regs.RAMCTL.u16 = value & 0xB3FF; break;
-        case 0x010: m_VDP2regs.CYCA0.L.u16 = value; break;
-        case 0x012: m_VDP2regs.CYCA0.U.u16 = value; break;
-        case 0x014: m_VDP2regs.CYCA1.L.u16 = value; break;
-        case 0x016: m_VDP2regs.CYCA1.U.u16 = value; break;
-        case 0x018: m_VDP2regs.CYCB0.L.u16 = value; break;
-        case 0x01A: m_VDP2regs.CYCB0.U.u16 = value; break;
-        case 0x01E: m_VDP2regs.CYCB1.U.u16 = value; break;
-        case 0x01C: m_VDP2regs.CYCB1.L.u16 = value; break;
-        case 0x020: m_VDP2regs.WriteBGON(value); break;
-        case 0x022: m_VDP2regs.MZCTL.u16 = value & 0xFF1F; break;
-        case 0x024: m_VDP2regs.WriteSFSEL(value); break;
-        case 0x026: m_VDP2regs.WriteSFCODE(value); break;
-        case 0x028: m_VDP2regs.WriteCHCTLA(value); break;
-        case 0x02A: m_VDP2regs.WriteCHCTLB(value); break;
-        case 0x02C: m_VDP2regs.WriteBMPNA(value); break;
-        case 0x02E: m_VDP2regs.WriteBMPNB(value); break;
-        case 0x030: m_VDP2regs.WritePNCN(0, value); break;
-        case 0x032: m_VDP2regs.WritePNCN(1, value); break;
-        case 0x034: m_VDP2regs.WritePNCN(2, value); break;
-        case 0x036: m_VDP2regs.WritePNCN(3, value); break;
-        case 0x038: m_VDP2regs.WritePNCR(value); break;
-        case 0x03A: m_VDP2regs.WritePLSZ(value); break;
-        case 0x03C: m_VDP2regs.WriteMPOFN(value); break;
-        case 0x03E: m_VDP2regs.WriteMPOFR(value); break;
-        case 0x040: m_VDP2regs.WriteMPN(value, 0, 0); break;
-        case 0x042: m_VDP2regs.WriteMPN(value, 0, 1); break;
-        case 0x044: m_VDP2regs.WriteMPN(value, 1, 0); break;
-        case 0x046: m_VDP2regs.WriteMPN(value, 1, 1); break;
-        case 0x048: m_VDP2regs.WriteMPN(value, 2, 0); break;
-        case 0x04A: m_VDP2regs.WriteMPN(value, 2, 1); break;
-        case 0x04C: m_VDP2regs.WriteMPN(value, 3, 0); break;
-        case 0x04E: m_VDP2regs.WriteMPN(value, 3, 1); break;
-        case 0x050: m_VDP2regs.WriteMPR(value, 0, 0); break;
-        case 0x052: m_VDP2regs.WriteMPR(value, 0, 1); break;
-        case 0x054: m_VDP2regs.WriteMPR(value, 0, 2); break;
-        case 0x056: m_VDP2regs.WriteMPR(value, 0, 3); break;
-        case 0x058: m_VDP2regs.WriteMPR(value, 0, 4); break;
-        case 0x05A: m_VDP2regs.WriteMPR(value, 0, 5); break;
-        case 0x05C: m_VDP2regs.WriteMPR(value, 0, 6); break;
-        case 0x05E: m_VDP2regs.WriteMPR(value, 0, 7); break;
-        case 0x060: m_VDP2regs.WriteMPR(value, 1, 0); break;
-        case 0x062: m_VDP2regs.WriteMPR(value, 1, 1); break;
-        case 0x064: m_VDP2regs.WriteMPR(value, 1, 2); break;
-        case 0x066: m_VDP2regs.WriteMPR(value, 1, 3); break;
-        case 0x068: m_VDP2regs.WriteMPR(value, 1, 4); break;
-        case 0x06A: m_VDP2regs.WriteMPR(value, 1, 5); break;
-        case 0x06C: m_VDP2regs.WriteMPR(value, 1, 6); break;
-        case 0x06E: m_VDP2regs.WriteMPR(value, 1, 7); break;
-        case 0x070: m_VDP2regs.WriteSCXIN(value, 0); break;
-        case 0x072: m_VDP2regs.WriteSCXDN(value, 0); break;
-        case 0x074: m_VDP2regs.WriteSCYIN(value, 0); break;
-        case 0x076: m_VDP2regs.WriteSCYDN(value, 0); break;
-        case 0x078: m_VDP2regs.WriteZMXIN(value, 0); break;
-        case 0x07A: m_VDP2regs.WriteZMXDN(value, 0); break;
-        case 0x07C: m_VDP2regs.WriteZMYIN(value, 0); break;
-        case 0x07E: m_VDP2regs.WriteZMYDN(value, 0); break;
-        case 0x080: m_VDP2regs.WriteSCXIN(value, 1); break;
-        case 0x082: m_VDP2regs.WriteSCXDN(value, 1); break;
-        case 0x084: m_VDP2regs.WriteSCYIN(value, 1); break;
-        case 0x086: m_VDP2regs.WriteSCYDN(value, 1); break;
-        case 0x088: m_VDP2regs.WriteZMXIN(value, 1); break;
-        case 0x08A: m_VDP2regs.WriteZMXDN(value, 1); break;
-        case 0x08C: m_VDP2regs.WriteZMYIN(value, 1); break;
-        case 0x08E: m_VDP2regs.WriteZMYDN(value, 1); break;
-        case 0x090: m_VDP2regs.WriteSCXIN(value, 2); break;
-        case 0x092: m_VDP2regs.WriteSCYIN(value, 2); break;
-        case 0x094: m_VDP2regs.WriteSCXIN(value, 3); break;
-        case 0x096: m_VDP2regs.WriteSCYIN(value, 3); break;
-        case 0x098: m_VDP2regs.ZMCTL.u16 = value & 0x0303; break;
-        case 0x09A: m_VDP2regs.SCRCTL.u16 = value & 0x3F3F; break;
-        case 0x09C: m_VDP2regs.VCSTA.U.u16 = value & 0x0007; break;
-        case 0x09E: m_VDP2regs.VCSTA.L.u16 = value & 0xFFFE; break;
-        case 0x0A0: m_VDP2regs.LSTA0.U.u16 = value & 0x0007; break;
-        case 0x0A2: m_VDP2regs.LSTA0.L.u16 = value & 0xFFFE; break;
-        case 0x0A4: m_VDP2regs.LSTA1.U.u16 = value & 0x0007; break;
-        case 0x0A6: m_VDP2regs.LSTA1.L.u16 = value & 0xFFFE; break;
-        case 0x0A8: m_VDP2regs.LCTA.U.u16 = value & 0x8007; break;
-        case 0x0AA: m_VDP2regs.LCTA.L.u16 = value; break;
-        case 0x0AC: m_VDP2regs.BKTA.U.u16 = value & 0x8007; break;
-        case 0x0AE: m_VDP2regs.BKTA.L.u16 = value; break;
-        case 0x0B0: m_VDP2regs.RPMD.u16 = value & 0x0003; break;
-        case 0x0B2: m_VDP2regs.RPRCTL.u16 = value & 0x0707; break;
-        case 0x0B4: m_VDP2regs.KTCTL.u16 = value & 0x1F1F; break;
-        case 0x0B6: m_VDP2regs.KTAOF.u16 = value & 0x0707; break;
-        case 0x0B8: m_VDP2regs.OVPNRA = value; break;
-        case 0x0BA: m_VDP2regs.OVPNRB = value; break;
-        case 0x0BC: m_VDP2regs.RPTA.U.u16 = value & 0x0007; break;
-        case 0x0BE: m_VDP2regs.RPTA.L.u16 = value & 0xFFFE; break;
-        case 0x0C0: m_VDP2regs.WPXY0.X.S.u16 = value & 0x03FF; break;
-        case 0x0C2: m_VDP2regs.WPXY0.X.E.u16 = value & 0x03FF; break;
-        case 0x0C4: m_VDP2regs.WPXY0.Y.S.u16 = value & 0x01FF; break;
-        case 0x0C6: m_VDP2regs.WPXY0.Y.E.u16 = value & 0x01FF; break;
-        case 0x0C8: m_VDP2regs.WPXY1.X.S.u16 = value & 0x03FF; break;
-        case 0x0CA: m_VDP2regs.WPXY1.X.E.u16 = value & 0x03FF; break;
-        case 0x0CC: m_VDP2regs.WPXY1.Y.S.u16 = value & 0x01FF; break;
-        case 0x0CE: m_VDP2regs.WPXY1.Y.E.u16 = value & 0x01FF; break;
-        case 0x0D0: m_VDP2regs.WCTL.A.u16 = value & 0xBFBF; break;
-        case 0x0D2: m_VDP2regs.WCTL.B.u16 = value & 0xBFBF; break;
-        case 0x0D4: m_VDP2regs.WCTL.C.u16 = value & 0xBFBF; break;
-        case 0x0D6: m_VDP2regs.WCTL.D.u16 = value & 0xBF8F; break;
-        case 0x0D8: m_VDP2regs.LWTA0.U.u16 = value & 0x8007; break;
-        case 0x0DA: m_VDP2regs.LWTA0.L.u16 = value & 0xFFFE; break;
-        case 0x0DC: m_VDP2regs.LWTA1.U.u16 = value & 0x8007; break;
-        case 0x0DE: m_VDP2regs.LWTA1.L.u16 = value & 0xFFFE; break;
-        case 0x0E0: m_VDP2regs.SPCTL.u16 = value & 0x373F; break;
-        case 0x0E2: m_VDP2regs.SDCTL.u16 = value & 0x013F; break;
-        case 0x0E4: m_VDP2regs.WriteCRAOFA(value); break;
-        case 0x0E6: m_VDP2regs.WriteCRAOFB(value); break;
-        case 0x0E8: m_VDP2regs.WriteLNCLEN(value); break;
-        case 0x0EA: m_VDP2regs.WriteSFPRMD(value); break;
-        case 0x0EC: m_VDP2regs.CCCTL.u16 = value & 0xF77F; break;
-        case 0x0EE: m_VDP2regs.SFCCMD.u16 = value & 0x03FF; break;
-        case 0x0F0: m_VDP2regs.PRISA.u16 = value & 0x0707; break;
-        case 0x0F2: m_VDP2regs.PRISB.u16 = value & 0x0707; break;
-        case 0x0F4: m_VDP2regs.PRISC.u16 = value & 0x0707; break;
-        case 0x0F6: m_VDP2regs.PRISD.u16 = value & 0x0707; break;
-        case 0x0F8: m_VDP2regs.WritePRINA(value); break;
-        case 0x0FA: m_VDP2regs.WritePRINB(value); break;
-        case 0x0FC: m_VDP2regs.WritePRIR(value); break;
-        case 0x100: m_VDP2regs.CCRSA.u16 = value & 0x1F1F; break;
-        case 0x102: m_VDP2regs.CCRSB.u16 = value & 0x1F1F; break;
-        case 0x104: m_VDP2regs.CCRSC.u16 = value & 0x1F1F; break;
-        case 0x106: m_VDP2regs.CCRSD.u16 = value & 0x1F1F; break;
-        case 0x108: m_VDP2regs.CCRNA.u16 = value & 0x1F1F; break;
-        case 0x10A: m_VDP2regs.CCRNB.u16 = value & 0x1F1F; break;
-        case 0x10C: m_VDP2regs.CCRR.u16 = value & 0x001F; break;
-        case 0x10E: m_VDP2regs.CCRLB.u16 = value & 0x1F1F; break;
-        case 0x110: m_VDP2regs.CLOFEN.u16 = value & 0x007F; break;
-        case 0x112: m_VDP2regs.CLOFSL.u16 = value & 0x007F; break;
-        case 0x114: m_VDP2regs.COAR.u16 = value & 0x01FF; break;
-        case 0x116: m_VDP2regs.COAG.u16 = value & 0x01FF; break;
-        case 0x118: m_VDP2regs.COAB.u16 = value & 0x01FF; break;
-        case 0x11A: m_VDP2regs.COBR.u16 = value & 0x01FF; break;
-        case 0x11C: m_VDP2regs.COBG.u16 = value & 0x01FF; break;
-        case 0x11E: m_VDP2regs.COBB.u16 = value & 0x01FF; break;
+        case 0x00E: m_VDP2.RAMCTL.u16 = value & 0xB3FF; break;
+        case 0x010: m_VDP2.CYCA0.L.u16 = value; break;
+        case 0x012: m_VDP2.CYCA0.U.u16 = value; break;
+        case 0x014: m_VDP2.CYCA1.L.u16 = value; break;
+        case 0x016: m_VDP2.CYCA1.U.u16 = value; break;
+        case 0x018: m_VDP2.CYCB0.L.u16 = value; break;
+        case 0x01A: m_VDP2.CYCB0.U.u16 = value; break;
+        case 0x01E: m_VDP2.CYCB1.U.u16 = value; break;
+        case 0x01C: m_VDP2.CYCB1.L.u16 = value; break;
+        case 0x020: m_VDP2.WriteBGON(value); break;
+        case 0x022: m_VDP2.MZCTL.u16 = value & 0xFF1F; break;
+        case 0x024: m_VDP2.WriteSFSEL(value); break;
+        case 0x026: m_VDP2.WriteSFCODE(value); break;
+        case 0x028: m_VDP2.WriteCHCTLA(value); break;
+        case 0x02A: m_VDP2.WriteCHCTLB(value); break;
+        case 0x02C: m_VDP2.WriteBMPNA(value); break;
+        case 0x02E: m_VDP2.WriteBMPNB(value); break;
+        case 0x030: m_VDP2.WritePNCN(0, value); break;
+        case 0x032: m_VDP2.WritePNCN(1, value); break;
+        case 0x034: m_VDP2.WritePNCN(2, value); break;
+        case 0x036: m_VDP2.WritePNCN(3, value); break;
+        case 0x038: m_VDP2.WritePNCR(value); break;
+        case 0x03A: m_VDP2.WritePLSZ(value); break;
+        case 0x03C: m_VDP2.WriteMPOFN(value); break;
+        case 0x03E: m_VDP2.WriteMPOFR(value); break;
+        case 0x040: m_VDP2.WriteMPN(value, 0, 0); break;
+        case 0x042: m_VDP2.WriteMPN(value, 0, 1); break;
+        case 0x044: m_VDP2.WriteMPN(value, 1, 0); break;
+        case 0x046: m_VDP2.WriteMPN(value, 1, 1); break;
+        case 0x048: m_VDP2.WriteMPN(value, 2, 0); break;
+        case 0x04A: m_VDP2.WriteMPN(value, 2, 1); break;
+        case 0x04C: m_VDP2.WriteMPN(value, 3, 0); break;
+        case 0x04E: m_VDP2.WriteMPN(value, 3, 1); break;
+        case 0x050: m_VDP2.WriteMPR(value, 0, 0); break;
+        case 0x052: m_VDP2.WriteMPR(value, 0, 1); break;
+        case 0x054: m_VDP2.WriteMPR(value, 0, 2); break;
+        case 0x056: m_VDP2.WriteMPR(value, 0, 3); break;
+        case 0x058: m_VDP2.WriteMPR(value, 0, 4); break;
+        case 0x05A: m_VDP2.WriteMPR(value, 0, 5); break;
+        case 0x05C: m_VDP2.WriteMPR(value, 0, 6); break;
+        case 0x05E: m_VDP2.WriteMPR(value, 0, 7); break;
+        case 0x060: m_VDP2.WriteMPR(value, 1, 0); break;
+        case 0x062: m_VDP2.WriteMPR(value, 1, 1); break;
+        case 0x064: m_VDP2.WriteMPR(value, 1, 2); break;
+        case 0x066: m_VDP2.WriteMPR(value, 1, 3); break;
+        case 0x068: m_VDP2.WriteMPR(value, 1, 4); break;
+        case 0x06A: m_VDP2.WriteMPR(value, 1, 5); break;
+        case 0x06C: m_VDP2.WriteMPR(value, 1, 6); break;
+        case 0x06E: m_VDP2.WriteMPR(value, 1, 7); break;
+        case 0x070: m_VDP2.WriteSCXIN(value, 0); break;
+        case 0x072: m_VDP2.WriteSCXDN(value, 0); break;
+        case 0x074: m_VDP2.WriteSCYIN(value, 0); break;
+        case 0x076: m_VDP2.WriteSCYDN(value, 0); break;
+        case 0x078: m_VDP2.WriteZMXIN(value, 0); break;
+        case 0x07A: m_VDP2.WriteZMXDN(value, 0); break;
+        case 0x07C: m_VDP2.WriteZMYIN(value, 0); break;
+        case 0x07E: m_VDP2.WriteZMYDN(value, 0); break;
+        case 0x080: m_VDP2.WriteSCXIN(value, 1); break;
+        case 0x082: m_VDP2.WriteSCXDN(value, 1); break;
+        case 0x084: m_VDP2.WriteSCYIN(value, 1); break;
+        case 0x086: m_VDP2.WriteSCYDN(value, 1); break;
+        case 0x088: m_VDP2.WriteZMXIN(value, 1); break;
+        case 0x08A: m_VDP2.WriteZMXDN(value, 1); break;
+        case 0x08C: m_VDP2.WriteZMYIN(value, 1); break;
+        case 0x08E: m_VDP2.WriteZMYDN(value, 1); break;
+        case 0x090: m_VDP2.WriteSCXIN(value, 2); break;
+        case 0x092: m_VDP2.WriteSCYIN(value, 2); break;
+        case 0x094: m_VDP2.WriteSCXIN(value, 3); break;
+        case 0x096: m_VDP2.WriteSCYIN(value, 3); break;
+        case 0x098: m_VDP2.ZMCTL.u16 = value & 0x0303; break;
+        case 0x09A: m_VDP2.SCRCTL.u16 = value & 0x3F3F; break;
+        case 0x09C: m_VDP2.VCSTA.U.u16 = value & 0x0007; break;
+        case 0x09E: m_VDP2.VCSTA.L.u16 = value & 0xFFFE; break;
+        case 0x0A0: m_VDP2.LSTA0.U.u16 = value & 0x0007; break;
+        case 0x0A2: m_VDP2.LSTA0.L.u16 = value & 0xFFFE; break;
+        case 0x0A4: m_VDP2.LSTA1.U.u16 = value & 0x0007; break;
+        case 0x0A6: m_VDP2.LSTA1.L.u16 = value & 0xFFFE; break;
+        case 0x0A8: m_VDP2.LCTA.U.u16 = value & 0x8007; break;
+        case 0x0AA: m_VDP2.LCTA.L.u16 = value; break;
+        case 0x0AC: m_VDP2.BKTA.U.u16 = value & 0x8007; break;
+        case 0x0AE: m_VDP2.BKTA.L.u16 = value; break;
+        case 0x0B0: m_VDP2.RPMD.u16 = value & 0x0003; break;
+        case 0x0B2: m_VDP2.RPRCTL.u16 = value & 0x0707; break;
+        case 0x0B4: m_VDP2.KTCTL.u16 = value & 0x1F1F; break;
+        case 0x0B6: m_VDP2.KTAOF.u16 = value & 0x0707; break;
+        case 0x0B8: m_VDP2.OVPNRA = value; break;
+        case 0x0BA: m_VDP2.OVPNRB = value; break;
+        case 0x0BC: m_VDP2.RPTA.U.u16 = value & 0x0007; break;
+        case 0x0BE: m_VDP2.RPTA.L.u16 = value & 0xFFFE; break;
+        case 0x0C0: m_VDP2.WPXY0.X.S.u16 = value & 0x03FF; break;
+        case 0x0C2: m_VDP2.WPXY0.X.E.u16 = value & 0x03FF; break;
+        case 0x0C4: m_VDP2.WPXY0.Y.S.u16 = value & 0x01FF; break;
+        case 0x0C6: m_VDP2.WPXY0.Y.E.u16 = value & 0x01FF; break;
+        case 0x0C8: m_VDP2.WPXY1.X.S.u16 = value & 0x03FF; break;
+        case 0x0CA: m_VDP2.WPXY1.X.E.u16 = value & 0x03FF; break;
+        case 0x0CC: m_VDP2.WPXY1.Y.S.u16 = value & 0x01FF; break;
+        case 0x0CE: m_VDP2.WPXY1.Y.E.u16 = value & 0x01FF; break;
+        case 0x0D0: m_VDP2.WCTL.A.u16 = value & 0xBFBF; break;
+        case 0x0D2: m_VDP2.WCTL.B.u16 = value & 0xBFBF; break;
+        case 0x0D4: m_VDP2.WCTL.C.u16 = value & 0xBFBF; break;
+        case 0x0D6: m_VDP2.WCTL.D.u16 = value & 0xBF8F; break;
+        case 0x0D8: m_VDP2.LWTA0.U.u16 = value & 0x8007; break;
+        case 0x0DA: m_VDP2.LWTA0.L.u16 = value & 0xFFFE; break;
+        case 0x0DC: m_VDP2.LWTA1.U.u16 = value & 0x8007; break;
+        case 0x0DE: m_VDP2.LWTA1.L.u16 = value & 0xFFFE; break;
+        case 0x0E0: m_VDP2.SPCTL.u16 = value & 0x373F; break;
+        case 0x0E2: m_VDP2.SDCTL.u16 = value & 0x013F; break;
+        case 0x0E4: m_VDP2.WriteCRAOFA(value); break;
+        case 0x0E6: m_VDP2.WriteCRAOFB(value); break;
+        case 0x0E8: m_VDP2.WriteLNCLEN(value); break;
+        case 0x0EA: m_VDP2.WriteSFPRMD(value); break;
+        case 0x0EC: m_VDP2.CCCTL.u16 = value & 0xF77F; break;
+        case 0x0EE: m_VDP2.SFCCMD.u16 = value & 0x03FF; break;
+        case 0x0F0: m_VDP2.PRISA.u16 = value & 0x0707; break;
+        case 0x0F2: m_VDP2.PRISB.u16 = value & 0x0707; break;
+        case 0x0F4: m_VDP2.PRISC.u16 = value & 0x0707; break;
+        case 0x0F6: m_VDP2.PRISD.u16 = value & 0x0707; break;
+        case 0x0F8: m_VDP2.WritePRINA(value); break;
+        case 0x0FA: m_VDP2.WritePRINB(value); break;
+        case 0x0FC: m_VDP2.WritePRIR(value); break;
+        case 0x100: m_VDP2.CCRSA.u16 = value & 0x1F1F; break;
+        case 0x102: m_VDP2.CCRSB.u16 = value & 0x1F1F; break;
+        case 0x104: m_VDP2.CCRSC.u16 = value & 0x1F1F; break;
+        case 0x106: m_VDP2.CCRSD.u16 = value & 0x1F1F; break;
+        case 0x108: m_VDP2.CCRNA.u16 = value & 0x1F1F; break;
+        case 0x10A: m_VDP2.CCRNB.u16 = value & 0x1F1F; break;
+        case 0x10C: m_VDP2.CCRR.u16 = value & 0x001F; break;
+        case 0x10E: m_VDP2.CCRLB.u16 = value & 0x1F1F; break;
+        case 0x110: m_VDP2.CLOFEN.u16 = value & 0x007F; break;
+        case 0x112: m_VDP2.CLOFSL.u16 = value & 0x007F; break;
+        case 0x114: m_VDP2.COAR.u16 = value & 0x01FF; break;
+        case 0x116: m_VDP2.COAG.u16 = value & 0x01FF; break;
+        case 0x118: m_VDP2.COAB.u16 = value & 0x01FF; break;
+        case 0x11A: m_VDP2.COBR.u16 = value & 0x01FF; break;
+        case 0x11C: m_VDP2.COBG.u16 = value & 0x01FF; break;
+        case 0x11E: m_VDP2.COBB.u16 = value & 0x01FF; break;
         default:
             fmt::println("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
             break;
         }
+    }
+
+    bool InTopBlankingPhase() const {
+        return m_VPhase == VerticalPhase::TopBlanking;
     }
 
 private:
@@ -479,8 +483,8 @@ private:
     // -------------------------------------------------------------------------
     // Registers
 
-    VDP1Regs m_VDP1regs;
-    VDP2Regs m_VDP2regs;
+    VDP1Regs m_VDP1;
+    VDP2Regs m_VDP2;
 
     // -------------------------------------------------------------------------
 
@@ -488,7 +492,7 @@ private:
     //   10 09 08 07 06 05 04 03 02 01 11 00
     //   in short, bits 10-01 are shifted left and bit 11 takes place of bit 01
     FORCE_INLINE uint32 MapCRAMAddress(uint32 address) const {
-        if (m_VDP2regs.RAMCTL.CRMDn == 2 || m_VDP2regs.RAMCTL.CRMDn == 3) {
+        if (m_VDP2.RAMCTL.CRMDn == 2 || m_VDP2.RAMCTL.CRMDn == 3) {
             address =
                 bit::extract<0>(address) | (bit::extract<11>(address) << 1u) | (bit::extract<1, 10>(address) << 2u);
         }
@@ -658,8 +662,8 @@ private:
     // Erases the current VDP1 display framebuffer.
     void VDP1EraseFramebuffer();
 
-    // Switches VDP1 framebuffers.
-    void VDP1SwitchFramebuffer();
+    // Swaps VDP1 framebuffers.
+    void VDP1SwapFramebuffer();
 
     // Begins the next VDP1 frame.
     void VDP1BeginFrame();

@@ -25,8 +25,8 @@ void VDP::Reset(bool hard) {
     }
     m_drawFB = 0;
 
-    m_VDP1regs.Reset();
-    m_VDP2regs.Reset();
+    m_VDP1.Reset();
+    m_VDP2.Reset();
 
     m_HPhase = HorizontalPhase::Active;
     m_VPhase = VerticalPhase::Active;
@@ -67,11 +67,11 @@ void VDP::Advance(uint64 cycles) {
 }
 
 void VDP::UpdateResolution() {
-    if (!m_VDP2regs.TVMDDirty) {
+    if (!m_VDP2.TVMDDirty) {
         return;
     }
 
-    m_VDP2regs.TVMDDirty = false;
+    m_VDP2.TVMDDirty = false;
 
     // Horizontal/vertical resolution tables
     // NTSC uses the first two vRes entries, PAL uses the full table, and exclusive monitors use 480 lines
@@ -82,9 +82,9 @@ void VDP::UpdateResolution() {
     // - not sure how the hardware behaves if TVMODE is changed mid-frame
     // TODO: check for NTSC, PAL or exclusive monitor; assuming NTSC for now
     // TODO: exclusive monitor: even hRes entries are valid for 31 KHz monitors, odd are for Hi-Vision
-    m_HRes = hRes[m_VDP2regs.TVMD.HRESOn];
-    m_VRes = vRes[m_VDP2regs.TVMD.VRESOn & (m_VDP2regs.TVSTAT.PAL ? 3 : 1)];
-    if (m_VDP2regs.TVMD.LSMDn == 3) {
+    m_HRes = hRes[m_VDP2.TVMD.HRESOn];
+    m_VRes = vRes[m_VDP2.TVMD.VRESOn & (m_VDP2.TVSTAT.PAL ? 3 : 1)];
+    if (m_VDP2.TVMD.LSMDn == 3) {
         // Double-density interlace doubles the vertical resolution
         m_VRes *= 2;
     }
@@ -106,7 +106,7 @@ void VDP::UpdateResolution() {
         {640, 694, 800, 854},
         {704, 375, 864, 910},
     }};
-    m_HTimings = hTimings[m_VDP2regs.TVMD.HRESOn];
+    m_HTimings = hTimings[m_VDP2.TVMD.HRESOn];
 
     // Vertical phase timings
     //   BBd = Bottom Border
@@ -134,17 +134,17 @@ void VDP::UpdateResolution() {
             {256, 272, 275, 278, 297, 312, 313},
         }},
     }};
-    m_VTimings = vTimings[m_VDP2regs.TVSTAT.PAL][m_VDP2regs.TVMD.VRESOn];
+    m_VTimings = vTimings[m_VDP2.TVSTAT.PAL][m_VDP2.TVMD.VRESOn];
 
     // Adjust for dot clock
-    const uint32 dotClockMult = (m_VDP2regs.TVMD.HRESOn & 2) ? 2 : 4;
+    const uint32 dotClockMult = (m_VDP2.TVMD.HRESOn & 2) ? 2 : 4;
     for (auto &timing : m_HTimings) {
         timing *= dotClockMult;
     }
     m_dotClockMult = dotClockMult;
 
     fmt::println("VDP2: dot clock mult = {}", dotClockMult);
-    fmt::println("VDP2: display {}", m_VDP2regs.TVMD.DISP ? "ON" : "OFF");
+    fmt::println("VDP2: display {}", m_VDP2.TVMD.DISP ? "ON" : "OFF");
 }
 
 FORCE_INLINE void VDP::IncrementVCounter() {
@@ -176,6 +176,7 @@ void VDP::BeginHPhaseActiveDisplay() {
     if (m_VPhase == VerticalPhase::Active) {
         if (m_VCounter == 0) {
             m_framebuffer = m_cbRequestFramebuffer(m_HRes, m_VRes);
+            fmt::println("VDP: begin frame, VDP1 fb {}", m_drawFB ^ 1);
         }
         VDP2DrawLine();
     }
@@ -189,23 +190,23 @@ void VDP::BeginHPhaseHorizontalSync() {
     IncrementVCounter();
     // fmt::println("VDP2: (VCNT = {:3d})  entering horizontal sync phase", m_VCounter);
 
-    m_VDP2regs.TVSTAT.HBLANK = 1;
+    m_VDP2.TVSTAT.HBLANK = 1;
     m_SCU.TriggerHBlankIN();
 }
 
 void VDP::BeginHPhaseLeftBorder() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering left border phase", m_VCounter);
-    m_VDP2regs.TVSTAT.HBLANK = 0;
+    m_VDP2.TVSTAT.HBLANK = 0;
 }
 
 // ----
 
 void VDP::BeginVPhaseActiveDisplay() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering vertical active display phase", m_VCounter);
-    if (m_VDP2regs.TVMD.LSMDn != 0) {
-        m_VDP2regs.TVSTAT.ODD ^= 1;
+    if (m_VDP2.TVMD.LSMDn != 0) {
+        m_VDP2.TVSTAT.ODD ^= 1;
     } else {
-        m_VDP2regs.TVSTAT.ODD = 1;
+        m_VDP2.TVSTAT.ODD = 1;
     }
 }
 
@@ -219,10 +220,19 @@ void VDP::BeginVPhaseBottomBlanking() {
 
 void VDP::BeginVPhaseVerticalSync() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering vertical sync phase", m_VCounter);
-    m_VDP2regs.TVSTAT.VBLANK = 1;
+    m_VDP2.TVSTAT.VBLANK = 1;
     m_SCU.TriggerVBlankIN();
-    if (m_VDP1regs.params.vblankErase) {
+
+    if (m_VDP1.vblankErase) {
+        // 1-cycle mode
         VDP1EraseFramebuffer();
+    } else if (m_VDP1.fbSwapMode) {
+        // Manual mode
+        if (m_VDP1.fbSwapTrigger) {
+            VDP1SwapFramebuffer();
+        } else {
+            VDP1EraseFramebuffer();
+        }
     }
 }
 
@@ -242,17 +252,17 @@ void VDP::BeginVPhaseTopBorder() {
 void VDP::BeginVPhaseLastLine() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering last line phase", m_VCounter);
 
-    m_VDP2regs.TVSTAT.VBLANK = 0;
+    m_VDP2.TVSTAT.VBLANK = 0;
     m_SCU.TriggerVBlankOUT();
 
-    fmt::println("VDP: VBlank OUT");
+    // fmt::println("VDP: VBlank OUT");
 
-    // TODO: check the timing on this
-    if (!m_VDP1regs.params.vblankErase && !m_VDP1regs.params.fbSwitchTrigger && !m_VDP1regs.params.fbSwitchMode) {
-        // 1-cycle mode switches framebuffers every frame
-        VDP1SwitchFramebuffer();
-    }
-    if (m_VDP1regs.params.plotTrigger == 0b10) {
+    if (m_VDP1.fbSwapRequest) {
+        m_VDP1.fbSwapRequest = false;
+        VDP1EraseFramebuffer();
+        VDP1SwapFramebuffer();
+        VDP1BeginFrame();
+    } else if (m_VDP1.plotTrigger == 0b10) {
         VDP1BeginFrame();
     }
 }
@@ -261,52 +271,46 @@ void VDP::BeginVPhaseLastLine() {
 // Renderer
 
 void VDP::VDP1EraseFramebuffer() {
-    fmt::println("VDP1: Erasing framebuffer {}", m_drawFB ^ 1);
-    // TODO: erase only the specified region
-    // TODO: use the erase fill value
-    m_spriteFB[m_drawFB ^ 1].fill(0);
+    if (!m_VDP1.fbSwapMode || m_VDP1.fbManualErase) {
+        fmt::println("VDP1: Erasing framebuffer {}", m_drawFB ^ 1);
+        m_VDP1.fbManualErase = false;
+        // TODO: erase only the specified region
+        // TODO: use the erase fill value
+        m_spriteFB[m_drawFB ^ 1].fill(0);
+    }
 }
 
-FORCE_INLINE void VDP::VDP1SwitchFramebuffer() {
-    m_drawFB ^= 1;
-    fmt::println("VDP1: Switching framebuffers - draw {}, display {}", m_drawFB, m_drawFB ^ 1);
+FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
+    if (!m_VDP1.fbSwapMode || m_VDP1.fbManualSwap) {
+        fmt::println("VDP1: Swapping framebuffers - draw {}, display {}", m_drawFB ^ 1, m_drawFB);
+        m_VDP1.fbManualSwap = false;
+        m_drawFB ^= 1;
+    }
 }
 
 void VDP::VDP1BeginFrame() {
-    if (!m_VDP1regs.params.vblankErase && m_VDP1regs.params.fbSwitchTrigger && !m_VDP1regs.params.fbSwitchMode) {
-        // Manual erase
-        VDP1EraseFramebuffer();
-    }
-    VDP1EraseFramebuffer(); // HACK(VDP1)
-    if (m_VDP1regs.params.fbSwitchTrigger && m_VDP1regs.params.fbSwitchMode) {
-        // Manual switch
-        // TODO: bad timing, it seems
-        // VDP1SwitchFramebuffer();
-    }
+    fmt::println("VDP1: starting frame on framebuffer {} - VBE={:d} FCT={:d} FCM={:d}", m_drawFB, m_VDP1.vblankErase,
+                 m_VDP1.fbSwapTrigger, m_VDP1.fbSwapMode);
 
-    fmt::println("VDP1: starting frame on framebuffer {}", m_drawFB);
     // TODO: setup rendering
     // TODO: figure out VDP1 timings
 
-    m_VDP1regs.params.prevCommandAddress = m_VDP1regs.params.currCommandAddress;
-    m_VDP1regs.params.currCommandAddress = 0;
-    m_VDP1regs.params.returnAddress = ~0;
+    m_VDP1.prevCommandAddress = m_VDP1.currCommandAddress;
+    m_VDP1.currCommandAddress = 0;
+    m_VDP1.returnAddress = ~0;
 
     // TODO: process while advancing cycles
     VDP1ProcessCommands();
-
-    // HACK(VDP1)
-    VDP1SwitchFramebuffer();
 }
 
 void VDP::VDP1EndFrame() {
-    m_VDP1regs.params.currFrameEnded = true;
+    m_VDP1.currFrameEnded = true;
 }
 
 void VDP::VDP1ProcessCommands() {
     static constexpr uint16 kNoReturn = ~0;
 
-    auto &cmdAddress = m_VDP1regs.params.currCommandAddress;
+    auto &cmdAddress = m_VDP1.currCommandAddress;
 
     // Run up to 10000 commands to avoid infinite loops
     // TODO: cycle counting
@@ -357,17 +361,17 @@ void VDP::VDP1ProcessCommands() {
             }
             case Call: {
                 // Nested calls seem to not update the return address
-                if (m_VDP1regs.params.returnAddress == kNoReturn) {
-                    m_VDP1regs.params.returnAddress = cmdAddress + 0x20;
+                if (m_VDP1.returnAddress == kNoReturn) {
+                    m_VDP1.returnAddress = cmdAddress + 0x20;
                 }
                 cmdAddress = util::ReadBE<uint16>(&m_VRAM1[cmdAddress + 0x02]) << 3u;
                 break;
             }
             case Return: {
                 // Return seems to only return if there was a previous Call
-                if (m_VDP1regs.params.returnAddress != kNoReturn) {
-                    cmdAddress = m_VDP1regs.params.returnAddress;
-                    m_VDP1regs.params.returnAddress = kNoReturn;
+                if (m_VDP1.returnAddress != kNoReturn) {
+                    cmdAddress = m_VDP1.returnAddress;
+                    m_VDP1.returnAddress = kNoReturn;
                 } else {
                     cmdAddress += 0x20;
                 }
@@ -486,8 +490,8 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
             return;
         }
 
-        const uint32 fbOffset = py * m_VDP1regs.params.fbSizeH + px;
-        if (m_VDP1regs.params.pixel8Bits) {
+        const uint32 fbOffset = py * m_VDP1.fbSizeH + px;
+        if (m_VDP1.pixel8Bits) {
             m_spriteFB[m_drawFB][fbOffset & 0x3FFFF] = color;
         } else {
             util::WriteBE<uint16>(&m_spriteFB[m_drawFB][(fbOffset * sizeof(uint16)) & 0x3FFFE], color);
@@ -691,13 +695,13 @@ void VDP::VDP2DrawLine() {
 
     // Draw normal BGs
     int i = 0;
-    for (const auto &bg : m_VDP2regs.normBGParams) {
+    for (const auto &bg : m_VDP2.normBGParams) {
         auto &rctx = m_renderContexts[i++];
         if (bg.enabled) {
-            rctx.cramOffset = bg.caos << (m_VDP2regs.RAMCTL.CRMDn == 1 ? 10 : 9);
+            rctx.cramOffset = bg.caos << (m_VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
 
             const uint32 colorFormat = static_cast<uint32>(bg.colorFormat);
-            const uint32 colorMode = m_VDP2regs.RAMCTL.CRMDn;
+            const uint32 colorMode = m_VDP2.RAMCTL.CRMDn;
             if (bg.bitmap) {
                 (this->*fnDrawBitmapNBGs[colorFormat][colorMode])(bg, rctx);
             } else {
@@ -715,10 +719,10 @@ void VDP::VDP2DrawLine() {
     }
 
     // Draw rotation BGs
-    for (const auto &bg : m_VDP2regs.rotBGParams) {
+    for (const auto &bg : m_VDP2.rotBGParams) {
         auto &rctx = m_renderContexts[i++];
         if (bg.enabled) {
-            rctx.cramOffset = bg.caos << (m_VDP2regs.RAMCTL.CRMDn == 1 ? 10 : 9);
+            rctx.cramOffset = bg.caos << (m_VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
 
             // TODO: implement
             if (bg.bitmap) {
@@ -761,9 +765,9 @@ void VDP::VDP2DrawLine() {
 
             // HACK(VDP2,VDP1): override with sprite layer for debugging
             const auto &spriteFB = m_spriteFB[m_drawFB ^ 1];
-            const uint32 spriteFBOffset = x + y * m_VDP1regs.params.fbSizeH;
+            const uint32 spriteFBOffset = x + y * m_VDP1.fbSizeH;
             uint16 spriteColor;
-            if (m_VDP1regs.params.pixel8Bits) {
+            if (m_VDP1.pixel8Bits) {
                 spriteColor = spriteFB[spriteFBOffset];
             } else {
                 spriteColor = util::ReadBE<uint16>(&spriteFB[spriteFBOffset * sizeof(uint16)]);
@@ -843,7 +847,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGRende
     // |57|58|59|60|61|62|63|64|
     // +--+--+--+--+--+--+--+--+
 
-    const auto &specialFunctionCodes = m_VDP2regs.specialFunctionCodes[bgParams.specialFunctionSelect];
+    const auto &specialFunctionCodes = m_VDP2.specialFunctionCodes[bgParams.specialFunctionSelect];
 
     // TODO: implement mosaic
 

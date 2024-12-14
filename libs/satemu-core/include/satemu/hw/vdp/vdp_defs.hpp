@@ -149,19 +149,15 @@ struct VDP1Command {
     };
 };
 
-struct VDP1Params {
-    VDP1Params() {
-        Reset();
-    }
-
+struct VDP1Regs {
     void Reset() {
         vblankErase = false;
         hdtvEnable = false;
         fbRotEnable = false;
         pixel8Bits = false;
 
-        fbSwitchTrigger = false;
-        fbSwitchMode = false;
+        fbSwapTrigger = false;
+        fbSwapMode = false;
         dblInterlaceDrawLine = false;
         dblInterlaceEnable = false;
         evenOddCoordSelect = false;
@@ -183,6 +179,10 @@ struct VDP1Params {
         prevCommandAddress = 0;
 
         returnAddress = ~0;
+
+        fbManualErase = false;
+        fbManualSwap = false;
+        fbSwapRequest = false;
 
         UpdateTVMR();
     }
@@ -208,15 +208,15 @@ struct VDP1Params {
     uint32 fbSizeH;
     uint32 fbSizeV;
 
-    // Frame buffer switch trigger: enabled (true) or disabled (false).
+    // Frame buffer swap trigger: enabled (true) or disabled (false).
     // Exact behavior depends on TVMR.VBE, FBCR.FCM and FBCR.FCT.
     // Derived from FBCR.FCT
-    bool fbSwitchTrigger;
+    bool fbSwapTrigger;
 
-    // Frame buffer switch mode: manual (true) or 1-cycle mode (false).
+    // Frame buffer swap mode: manual (true) or 1-cycle mode (false).
     // Exact behavior depends on TVMR.VBE, FBCR.FCM and FBCR.FCT.
     // Derived from FBCR.FCM
-    bool fbSwitchMode;
+    bool fbSwapMode;
 
     // Double interlace draw line (even/odd lines).
     // Behavior depends on FBCR.DIE.
@@ -261,18 +261,16 @@ struct VDP1Params {
     // Used by commands that use the jump types Call and Return.
     uint16 returnAddress;
 
+    bool fbManualErase; // Manual framebuffer erase requested
+    bool fbManualSwap;  // Manual framebuffer swap requested
+    bool fbSwapRequest; // Framebuffer swap requested
+
     void UpdateTVMR() {
         static constexpr uint32 kSizesH[] = {512, 1024, 512, 512, 512, 512, 512, 512};
         static constexpr uint32 kSizesV[] = {256, 256, 256, 512, 512, 512, 512, 512};
         const uint8 tvm = (hdtvEnable << 2) | (fbRotEnable << 1) | pixel8Bits;
         fbSizeH = kSizesH[tvm];
         fbSizeV = kSizesV[tvm];
-    }
-};
-
-struct VDP1Regs {
-    void Reset() {
-        params.Reset();
     }
 
     // 100000   TVMR  TV Mode Selection
@@ -300,12 +298,14 @@ struct VDP1Regs {
     //     100    512x256
 
     FORCE_INLINE void WriteTVMR(uint16 value) {
-        params.vblankErase = bit::extract<3>(value);
-        params.hdtvEnable = bit::extract<2>(value);
-        params.fbRotEnable = bit::extract<1>(value);
-        params.pixel8Bits = bit::extract<0>(value);
-        params.UpdateTVMR();
+        vblankErase = bit::extract<3>(value);
+        hdtvEnable = bit::extract<2>(value);
+        fbRotEnable = bit::extract<1>(value);
+        pixel8Bits = bit::extract<0>(value);
+        UpdateTVMR();
     }
+
+    // -------------------------------------------------------------------------
 
     // 100002   FBCR  Frame Buffer Change Mode
     //
@@ -325,23 +325,31 @@ struct VDP1Regs {
     //      0     W  FCT   Frame Buffer Change Trigger
     //
     // Notes:
-    // TVMR.VBE, FCM and FCT specify when frame buffer switches happen and whether they are cleared on swap.
-    //   TVMR.VBE  FCM  FCT  Mode                            Timing
-    //         0    0    0   1-cycle mode                    Switch every field (60 Hz)
-    //         0    1    0   Manual mode (erase)             Erase in next field
-    //         0    1    1   Manual mode (switch)            Switch in next field
-    //         1    1    1   Manual mode (erase and switch)  Erase at VBlank IN and switch in next field
+    // TVMR.VBE, FCM and FCT specify when frame buffer swaps happen and whether they are cleared on swap.
+    //   TVMR.VBE  FCM  FCT  Mode                          Timing
+    //         0    0    0   1-cycle mode                  Swap every field (60 Hz)
+    //         0    1    0   Manual mode (erase)           Erase in next field
+    //         0    1    1   Manual mode (swap)            Swap in next field
+    //         1    1    1   Manual mode (erase and swap)  Erase at VBlank IN and swap in next field
     // Unlisted combinations are prohibited.
-    // For manual erase and switch, the program should write VBE,FCM,FCT = 011, then wait until the HBlank IN of the
+    // For manual erase and swap, the program should write VBE,FCM,FCT = 011, then wait until the HBlank IN of the
     // last visible scanline immediately before VBlank (224 or 240) to issue another write to set VBE,FCM,FCT = 111,
     // and finally restore VBE = 0 after VBlank OUT to stop VDP1 from clearing the next frame buffer.
 
     FORCE_INLINE void WriteFBCR(uint16 value) {
-        params.fbSwitchTrigger = bit::extract<0>(value);
-        params.fbSwitchMode = bit::extract<1>(value);
-        params.dblInterlaceDrawLine = bit::extract<2>(value);
-        params.dblInterlaceEnable = bit::extract<3>(value);
-        params.evenOddCoordSelect = bit::extract<4>(value);
+        fbSwapTrigger = bit::extract<0>(value);
+        fbSwapMode = bit::extract<1>(value);
+        dblInterlaceDrawLine = bit::extract<2>(value);
+        dblInterlaceEnable = bit::extract<3>(value);
+        evenOddCoordSelect = bit::extract<4>(value);
+
+        if (fbSwapMode) {
+            if (fbSwapTrigger) {
+                fbManualSwap = true;
+            } else {
+                fbManualErase = true;
+            }
+        }
     }
 
     // 100004   PTMR  Draw Trigger
@@ -351,11 +359,11 @@ struct VDP1Regs {
     //    1-0     W  PTM   Plot Trigger Mode
     //                       00 (0) = No trigger
     //                       01 (1) = Trigger immediately upon writing this value to PTMR
-    //                       10 (2) = Trigger on frame buffer switch
+    //                       10 (2) = Trigger on frame buffer swap
     //                       11 (3) = (prohibited)
 
     FORCE_INLINE void WritePTMR(uint16 value) {
-        params.plotTrigger = bit::extract<0, 1>(value);
+        plotTrigger = bit::extract<0, 1>(value);
     }
 
     // 100006   EWDR  Erase/write Data
@@ -371,7 +379,7 @@ struct VDP1Regs {
     //   - Bits 7-0 specify the values for odd X coordinates
 
     FORCE_INLINE void WriteEWDR(uint16 value) {
-        params.eraseWriteValue = value;
+        eraseWriteValue = value;
     }
 
     // 100008   EWLR  Erase/write Upper-left coordinate
@@ -382,8 +390,8 @@ struct VDP1Regs {
     //    8-0     W  -     Upper-left Coordinate Y1
 
     FORCE_INLINE void WriteEWLR(uint16 value) {
-        params.eraseY1 = bit::extract<0, 8>(value);
-        params.eraseX1 = bit::extract<9, 14>(value);
+        eraseY1 = bit::extract<0, 8>(value);
+        eraseX1 = bit::extract<9, 14>(value);
     }
 
     // 10000A   EWRR  Erase/write Bottom-right Coordinate
@@ -393,8 +401,8 @@ struct VDP1Regs {
     //    8-0     W  -     Lower-right Coordinate Y3
 
     FORCE_INLINE void WriteEWRR(uint16 value) {
-        params.eraseY3 = bit::extract<0, 8>(value);
-        params.eraseX3 = bit::extract<9, 15>(value);
+        eraseY3 = bit::extract<0, 8>(value);
+        eraseX3 = bit::extract<9, 15>(value);
     }
 
     // 10000C   ENDR  Draw Forced Termination
@@ -417,8 +425,8 @@ struct VDP1Regs {
 
     FORCE_INLINE uint16 ReadEDSR() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, params.prevFrameEnded);
-        bit::deposit_into<1>(value, params.currFrameEnded);
+        bit::deposit_into<0>(value, prevFrameEnded);
+        bit::deposit_into<1>(value, currFrameEnded);
         return value;
     }
 
@@ -428,7 +436,7 @@ struct VDP1Regs {
     //   15-0   R    -     Last Operation Command Address (divided by 8)
 
     FORCE_INLINE uint16 ReadLOPR() const {
-        return params.prevCommandAddress >> 3u;
+        return prevCommandAddress >> 3u;
     }
 
     // 100014   COPR  Current Operation Command Address
@@ -437,7 +445,7 @@ struct VDP1Regs {
     //   15-0   R    -     Current Operation Command Address (divided by 8)
 
     FORCE_INLINE uint16 ReadCOPR() const {
-        return params.currCommandAddress >> 3u;
+        return currCommandAddress >> 3u;
     }
 
     // 100016   MODR  Mode Status
@@ -455,21 +463,17 @@ struct VDP1Regs {
 
     FORCE_INLINE uint16 ReadMODR() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, params.pixel8Bits);
-        bit::deposit_into<1>(value, params.fbRotEnable);
-        bit::deposit_into<2>(value, params.hdtvEnable);
-        bit::deposit_into<3>(value, params.vblankErase);
-        bit::deposit_into<4>(value, params.fbSwitchMode);
-        bit::deposit_into<5>(value, params.dblInterlaceDrawLine);
-        bit::deposit_into<6>(value, params.dblInterlaceEnable);
-        bit::deposit_into<7>(value, params.evenOddCoordSelect);
+        bit::deposit_into<0>(value, pixel8Bits);
+        bit::deposit_into<1>(value, fbRotEnable);
+        bit::deposit_into<2>(value, hdtvEnable);
+        bit::deposit_into<3>(value, vblankErase);
+        bit::deposit_into<4>(value, fbSwapMode);
+        bit::deposit_into<5>(value, dblInterlaceDrawLine);
+        bit::deposit_into<6>(value, dblInterlaceEnable);
+        bit::deposit_into<7>(value, evenOddCoordSelect);
         bit::deposit_into<12, 15>(value, 0b0001);
         return value;
     }
-
-    // -------------------------------------------------------------------------
-
-    VDP1Params params;
 };
 
 // -----------------------------------------------------------------------------
