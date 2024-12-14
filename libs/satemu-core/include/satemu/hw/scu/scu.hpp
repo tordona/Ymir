@@ -103,6 +103,8 @@ public:
     void TriggerVBlankIN();
     void TriggerVBlankOUT();
     void TriggerHBlankIN();
+    void TriggerTimer0();
+    void TriggerTimer1();
     void TriggerDSPEnd();
     void TriggerSoundRequest(bool level);
     void TriggerSystemManager();
@@ -454,7 +456,28 @@ private:
     void DSPCmd_Special_End(uint32 command);
 
     // -------------------------------------------------------------------------
+    // Timers
+
+    // Timer 0 counts up at every HBlank IN
+    // Resets to 0 at VBlank OUT of the first line before the display area
+    // Raises interrupt when counter == compare
+    uint16 m_timer0Counter;
+    uint16 m_timer0Compare;
+
+    // Timer 1 reloads at HBlank IN
+    // Counts down every 7 MHz (4 cycles) when enabled
+    // Raises interrupt when counter == 0 depending on mode:
+    // - false: every line
+    // - true: only if Timer 0 counter matched on previous line
+    uint16 m_timer1Counter; // 2 fractional bits
+    uint16 m_timer1Reload;  // 2 fractional bits
+    bool m_timer1Enable;
+    bool m_timer1Mode;
+
+    // -------------------------------------------------------------------------
     // SCU registers
+
+    bool m_WRAMSizeSelect; // false=2x2Mbit, true=2x4Mbit
 
     template <mem_primitive T>
     T ReadReg(uint32 address) {
@@ -485,13 +508,33 @@ private:
                 return 0;
             }
 
+        case 0x90: // Timer 0 Compare (write-only)
+            return 0;
+        case 0x94: // Timer 1 Set Data (write-only)
+            return 0;
+        case 0x98: // Timer 1 Mode (write-only)
+            return 0;
+
         case 0xA0: // Interrupt Mask
             return m_intrMask.u32;
         case 0xA4: // Interrupt Status
             return m_intrStatus.u32;
         case 0xA8: // A-Bus Interrupt Acknowledge
             // TODO: not yet sure how this works
+            fmt::println("unhandled A-Bus Interrupt Acknowledge read");
             return 0;
+
+        case 0xB0: // A-Bus Set (part 1) (write-only)
+            return 0;
+        case 0xB4: // A-Bus Set (part 2) (write-only)
+            return 0;
+        case 0xB8: // A-Bus Refresh (write-only)
+            return 0;
+
+        case 0xC4: // SCU SDRAM Select
+            return m_WRAMSizeSelect;
+        case 0xC8: // SCU Version
+            return 0x4;
 
         default: //
             fmt::println("unhandled {}-bit SCU register read from {:02X}", sizeof(T) * 8, address);
@@ -518,12 +561,12 @@ private:
                 }
             }
             break;
-        case 0x84: // DSP Program RAM Data Port (write-only)
+        case 0x84: // DSP Program RAM Data Port
             if constexpr (std::is_same_v<T, uint32>) {
                 m_dspState.WriteProgram(value);
             }
             break;
-        case 0x88: // DSP Data RAM Address Port (write-only)
+        case 0x88: // DSP Data RAM Address Port
             if constexpr (std::is_same_v<T, uint32>) {
                 m_dspState.dataAddress = bit::extract<0, 7>(value);
             }
@@ -531,6 +574,23 @@ private:
         case 0x8C: // DSP Data RAM Data Port
             if constexpr (std::is_same_v<T, uint32>) {
                 m_dspState.WriteData(value);
+            }
+            break;
+
+        case 0x90: // Timer 0 Compare
+            if constexpr (std::is_same_v<T, uint32>) {
+                m_timer0Compare = bit::extract<0, 9>(value);
+            }
+            break;
+        case 0x94: // Timer 1 Set Data
+            if constexpr (std::is_same_v<T, uint32>) {
+                m_timer1Reload = bit::extract<0, 8>(value) << 2u;
+            }
+            break;
+        case 0x98: // Timer 1 Mode
+            if constexpr (std::is_same_v<T, uint32>) {
+                m_timer1Enable = bit::extract<0>(value);
+                m_timer1Mode = bit::extract<8>(value);
             }
             break;
 
@@ -542,6 +602,23 @@ private:
             break;
         case 0xA8: // A-Bus Interrupt Acknowledge
             // TODO: not yet sure how this works
+            fmt::println("unhandled A-Bus Interrupt Acknowledge write = {:X}", value);
+            break;
+
+        case 0xB0: // A-Bus Set (part 1)
+            // ignored for now
+            break;
+        case 0xB4: // A-Bus Set (part 2)
+            // ignored for now
+            break;
+        case 0xB8: // A-Bus Refresh
+            // ignored for now
+            break;
+
+        case 0xC4: // SCU SDRAM Select
+            m_WRAMSizeSelect = value;
+            break;
+        case 0xC8: // SCU Version (read-only)
             break;
 
         default:

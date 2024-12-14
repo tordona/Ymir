@@ -23,10 +23,28 @@ void SCU::Reset(bool hard) {
     }
 
     m_dspState.Reset();
+
+    m_timer0Counter = 0;
+    m_timer0Compare = 0;
+
+    m_timer1Counter = 0;
+    m_timer1Reload = 0;
+    m_timer1Enable = false;
+    m_timer1Mode = false;
+
+    m_WRAMSizeSelect = false;
 }
 
 void SCU::Advance(uint64 cycles) {
     RunDSP(cycles);
+    if (cycles >= m_timer1Counter) {
+        m_timer1Counter = 0;
+        if (m_timer1Enable && (!m_timer1Mode || m_timer0Counter == m_timer0Compare)) {
+            TriggerTimer1();
+        }
+    } else {
+        m_timer1Counter -= cycles;
+    }
 }
 
 void SCU::TriggerVBlankIN() {
@@ -36,13 +54,27 @@ void SCU::TriggerVBlankIN() {
 
 void SCU::TriggerVBlankOUT() {
     m_intrStatus.VDP2_VBlankOUT = 1;
-    // TODO: also reset Timer 0
+    m_timer0Counter = 0;
     UpdateInterruptLevel(false);
 }
 
 void SCU::TriggerHBlankIN() {
     m_intrStatus.VDP2_HBlankIN = 1;
-    // TODO: also increment Timer 0 and trigger Timer 0 interrupt if the counter matches the compare register
+    m_timer0Counter++;
+    if (m_timer0Counter == m_timer0Compare) {
+        TriggerTimer0();
+    }
+    m_timer1Counter = m_timer1Reload;
+    UpdateInterruptLevel(false);
+}
+
+void SCU::TriggerTimer0() {
+    m_intrStatus.SCU_Timer0 = 1;
+    UpdateInterruptLevel(false);
+}
+
+void SCU::TriggerTimer1() {
+    m_intrStatus.SCU_Timer1 = 1;
     UpdateInterruptLevel(false);
 }
 
