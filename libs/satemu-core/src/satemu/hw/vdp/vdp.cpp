@@ -416,18 +416,21 @@ struct Slope {
 
         xmajor = abs(dx) >= abs(dy);
         if (xmajor) {
-            aspect = safeDiv(static_cast<sint64>(dy) << kFracBits, dx);
+            aspect = safeDiv(static_cast<sint64>(dy) << kFracBits, abs(dx));
+            dmaxinc = dx >= 0 ? 1 : -1;
         } else {
-            aspect = safeDiv(static_cast<sint64>(dx) << kFracBits, dy);
+            aspect = safeDiv(static_cast<sint64>(dx) << kFracBits, abs(dy));
+            dmaxinc = dy >= 0 ? 1 : -1;
         }
     }
 
     sint32 x1, y1; // starting coordinates
     sint32 x2, y2; // ending coordinates
 
-    sint32 dx;   // width of the slope: x2 - x1
-    sint32 dy;   // height of the slope: y2 - y1
-    sint32 dmax; // longest span of the slope: max(abs(dx), abs(dy))
+    sint32 dx;      // width of the slope: x2 - x1
+    sint32 dy;      // height of the slope: y2 - y1
+    sint32 dmax;    // longest span of the slope: max(abs(dx), abs(dy))
+    sint32 dmaxinc; // increment on the longest axis (+1 or -1)
 
     sint64 aspect; // slope aspect: dy/dx (x-major) or dx/dy (y-major) (with 13 fractional bits)
     bool xmajor;   // true if abs(dx) >= abs(dy)
@@ -459,10 +462,10 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     const sint32 yd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1A)) + ctx.localCoordY;
 
     // HACK: override coordinates for debugging
-    // const sint32 xa = 20, ya = 50;
-    // const sint32 xb = 10, yb = 10;
-    // const sint32 xc = 25, yc = 20;
-    // const sint32 xd = 70, yd = 70;
+    // const sint32 xa = 10, ya = 20;
+    // const sint32 xb = 300, yb = 200;
+    // const sint32 xc = 290, yc = 30;
+    // const sint32 xd = 40, yd = 190;
     const uint32 gouraudTable = static_cast<uint32>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
 
     fmt::println("VDP1: Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
@@ -497,88 +500,79 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     // Iterate over the longer slope's pixels, drawing lines that connect to the other slope
     // TODO: simplify code
     // TODO: "anti-aliasing"
-    if (slopeL.dmax >= slopeR.dmax) {
-        if (slopeL.xmajor) {
-            const sint32 lxinc = slopeL.dx >= 0 ? 1 : -1;
-            sint32 lfy = slopeL.fy1;
-            sint32 rfx = slopeR.fx1;
-            sint32 rfy = slopeR.fy1;
-            for (sint32 lx = slopeL.x1; lx != slopeL.x2 + lxinc; lx += lxinc) {
-                const sint32 ly = lfy >> Slope::kFracBits;
-                const sint32 rx = rfx >> Slope::kFracBits;
-                const sint32 ry = rfy >> Slope::kFracBits;
+    if (slopeL.dmax < slopeR.dmax) {
+        std::swap(slopeL, slopeR);
+    }
 
-                // TODO: plot line between (lx,ly) and (rx,ry)
-                plotPixel(lx, ly, 5);
-                plotPixel(rx, ry, 6);
+    if (slopeL.xmajor) {
+        sint32 lfy = slopeL.fy1;
+        sint32 rfx = slopeR.fx1;
+        sint32 rfy = slopeR.fy1;
+        for (sint32 lx = slopeL.x1; lx != slopeL.x2 + slopeL.dmaxinc; lx += slopeL.dmaxinc) {
+            const sint32 ly = lfy >> Slope::kFracBits;
+            const sint32 rx = rfx >> Slope::kFracBits;
+            const sint32 ry = rfy >> Slope::kFracBits;
 
-                lfy += slopeL.aspect;
-                if (slopeL.dmax != 0) {
-                    rfx += slopeR.fxinc * slopeR.dmax / slopeL.dmax;
-                    rfy += slopeR.fyinc * slopeR.dmax / slopeL.dmax;
+            // TODO: plot line between (lx,ly) and (rx,ry)
+            Slope line{lx, ly, rx, ry};
+            if (line.xmajor) {
+                sint64 rpy = line.fy1;
+                for (sint32 px = line.x1; px != line.x2 + line.dmaxinc; px += line.dmaxinc) {
+                    const sint64 py = rpy >> Slope::kFracBits;
+                    plotPixel(px, py, 5);
+                    rpy += line.aspect;
+                }
+            } else {
+                sint64 rpx = line.fx1;
+                for (sint32 py = line.y1; py != line.y2 + line.dmaxinc; py += line.dmaxinc) {
+                    const sint64 px = rpx >> Slope::kFracBits;
+                    plotPixel(px, py, 6);
+                    rpx += line.aspect;
                 }
             }
-        } else {
-            const sint32 lyinc = slopeL.dy >= 0 ? 1 : -1;
-            sint32 lfx = slopeL.fx1;
-            sint32 rfx = slopeR.fx1;
-            sint32 rfy = slopeR.fy1;
-            for (sint32 ly = slopeL.y1; ly != slopeL.y2 + lyinc; ly += lyinc) {
-                const sint32 lx = lfx >> Slope::kFracBits;
-                const sint32 rx = rfx >> Slope::kFracBits;
-                const sint32 ry = rfy >> Slope::kFracBits;
+            plotPixel(lx, ly, 1);
+            plotPixel(rx, ry, 2);
 
-                // TODO: plot line between (lx,ly) and (rx,ry)
-                plotPixel(lx, ly, 7);
-                plotPixel(rx, ry, 8);
-
-                lfx += slopeL.aspect;
-                if (slopeL.dmax != 0) {
-                    rfx += slopeR.fxinc * slopeR.dmax / slopeL.dmax;
-                    rfy += slopeR.fyinc * slopeR.dmax / slopeL.dmax;
-                }
+            lfy += slopeL.aspect;
+            if (slopeL.dmax != 0) {
+                rfx += slopeR.fxinc * slopeR.dmax / slopeL.dmax;
+                rfy += slopeR.fyinc * slopeR.dmax / slopeL.dmax;
             }
         }
     } else {
-        if (slopeR.xmajor) {
-            const sint32 rxinc = slopeR.dx >= 0 ? 1 : -1;
-            sint32 rfy = slopeR.fy1;
-            sint32 lfx = slopeL.fx1;
-            sint32 lfy = slopeL.fy1;
-            for (sint32 rx = slopeR.x1; rx != slopeR.x2 + rxinc; rx += rxinc) {
-                const sint32 ry = rfy >> Slope::kFracBits;
-                const sint32 lx = lfx >> Slope::kFracBits;
-                const sint32 ly = lfy >> Slope::kFracBits;
+        const sint32 lyinc = slopeL.dy >= 0 ? 1 : -1;
+        sint32 lfx = slopeL.fx1;
+        sint32 rfx = slopeR.fx1;
+        sint32 rfy = slopeR.fy1;
+        for (sint32 ly = slopeL.y1; ly != slopeL.y2 + lyinc; ly += lyinc) {
+            const sint32 lx = lfx >> Slope::kFracBits;
+            const sint32 rx = rfx >> Slope::kFracBits;
+            const sint32 ry = rfy >> Slope::kFracBits;
 
-                // TODO: plot line between (lx,ly) and (rx,ry)
-                plotPixel(lx, ly, 1);
-                plotPixel(rx, ry, 2);
-
-                rfy += slopeR.aspect;
-                if (slopeR.dmax != 0) {
-                    lfx += slopeL.fxinc * slopeL.dmax / slopeR.dmax;
-                    lfy += slopeL.fyinc * slopeL.dmax / slopeR.dmax;
+            // TODO: plot line between (lx,ly) and (rx,ry)
+            Slope line{lx, ly, rx, ry};
+            if (line.xmajor) {
+                sint64 rpy = line.fy1;
+                for (sint32 px = line.x1; px != line.x2 + line.dmaxinc; px += line.dmaxinc) {
+                    const sint64 py = rpy >> Slope::kFracBits;
+                    plotPixel(px, py, 7);
+                    rpy += line.aspect;
+                }
+            } else {
+                sint64 rpx = line.fx1;
+                for (sint32 py = line.y1; py != line.y2 + line.dmaxinc; py += line.dmaxinc) {
+                    const sint64 px = rpx >> Slope::kFracBits;
+                    plotPixel(px, py, 8);
+                    rpx += line.aspect;
                 }
             }
-        } else {
-            const sint32 ryinc = slopeR.dy >= 0 ? 1 : -1;
-            sint32 rfx = slopeR.fx1;
-            sint32 lfx = slopeL.fx1;
-            sint32 lfy = slopeL.fy1;
-            for (sint32 ry = slopeR.y1; ry != slopeR.y2 + ryinc; ry += ryinc) {
-                const sint32 rx = rfx >> Slope::kFracBits;
-                const sint32 lx = lfx >> Slope::kFracBits;
-                const sint32 ly = lfy >> Slope::kFracBits;
+            plotPixel(lx, ly, 3);
+            plotPixel(rx, ry, 4);
 
-                // TODO: plot line between (lx,ly) and (rx,ry)
-                plotPixel(lx, ly, 3);
-                plotPixel(rx, ry, 4);
-
-                rfx += slopeR.aspect;
-                if (slopeR.dmax != 0) {
-                    lfx += slopeL.fxinc * slopeL.dmax / slopeR.dmax;
-                    lfy += slopeL.fyinc * slopeL.dmax / slopeR.dmax;
-                }
+            lfx += slopeL.aspect;
+            if (slopeL.dmax != 0) {
+                rfx += slopeR.fxinc * slopeR.dmax / slopeL.dmax;
+                rfy += slopeR.fyinc * slopeR.dmax / slopeL.dmax;
             }
         }
     }
