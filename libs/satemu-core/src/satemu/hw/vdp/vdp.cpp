@@ -460,12 +460,6 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     const sint32 yc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16)) + ctx.localCoordY;
     const sint32 xd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x18)) + ctx.localCoordX;
     const sint32 yd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1A)) + ctx.localCoordY;
-
-    // HACK: override coordinates for debugging
-    // const sint32 xa = 10, ya = 20;
-    // const sint32 xb = 300, yb = 200;
-    // const sint32 xc = 290, yc = 30;
-    // const sint32 xd = 40, yd = 190;
     const uint32 gouraudTable = static_cast<uint32>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
 
     fmt::println("VDP1: Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
@@ -498,12 +492,12 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     };
 
     // Iterate over the longer slope's pixels, drawing lines that connect to the other slope
-    // TODO: simplify code
-    // TODO: "anti-aliasing"
     if (slopeL.dmax < slopeR.dmax) {
         std::swap(slopeL, slopeR);
     }
 
+    // TODO: simplify code
+    // TODO: apply gouraud
     if (slopeL.xmajor) {
         sint32 lfy = slopeL.fy1;
         sint32 rfx = slopeR.fx1;
@@ -513,25 +507,30 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
             const sint32 rx = rfx >> Slope::kFracBits;
             const sint32 ry = rfy >> Slope::kFracBits;
 
-            // TODO: plot line between (lx,ly) and (rx,ry)
             Slope line{lx, ly, rx, ry};
             if (line.xmajor) {
                 sint64 rpy = line.fy1;
                 for (sint32 px = line.x1; px != line.x2 + line.dmaxinc; px += line.dmaxinc) {
                     const sint64 py = rpy >> Slope::kFracBits;
-                    plotPixel(px, py, 5);
+                    plotPixel(px, py, color);
                     rpy += line.aspect;
+                    // "anti-alias"
+                    if ((rpy >> Slope::kFracBits) != py) {
+                        plotPixel(px, rpy >> Slope::kFracBits, color);
+                    }
                 }
             } else {
                 sint64 rpx = line.fx1;
                 for (sint32 py = line.y1; py != line.y2 + line.dmaxinc; py += line.dmaxinc) {
                     const sint64 px = rpx >> Slope::kFracBits;
-                    plotPixel(px, py, 6);
+                    plotPixel(px, py, color);
                     rpx += line.aspect;
+                    // "anti-alias"
+                    if ((rpx >> Slope::kFracBits) != px) {
+                        plotPixel(rpx >> Slope::kFracBits, py, color);
+                    }
                 }
             }
-            plotPixel(lx, ly, 1);
-            plotPixel(rx, ry, 2);
 
             lfy += slopeL.aspect;
             if (slopeL.dmax != 0) {
@@ -549,25 +548,30 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
             const sint32 rx = rfx >> Slope::kFracBits;
             const sint32 ry = rfy >> Slope::kFracBits;
 
-            // TODO: plot line between (lx,ly) and (rx,ry)
             Slope line{lx, ly, rx, ry};
             if (line.xmajor) {
                 sint64 rpy = line.fy1;
                 for (sint32 px = line.x1; px != line.x2 + line.dmaxinc; px += line.dmaxinc) {
                     const sint64 py = rpy >> Slope::kFracBits;
-                    plotPixel(px, py, 7);
+                    plotPixel(px, py, color);
                     rpy += line.aspect;
+                    // "anti-alias"
+                    if ((rpy >> Slope::kFracBits) != py) {
+                        plotPixel(px, rpy >> Slope::kFracBits, color);
+                    }
                 }
             } else {
                 sint64 rpx = line.fx1;
                 for (sint32 py = line.y1; py != line.y2 + line.dmaxinc; py += line.dmaxinc) {
                     const sint64 px = rpx >> Slope::kFracBits;
-                    plotPixel(px, py, 8);
+                    plotPixel(px, py, color);
                     rpx += line.aspect;
+                    // "anti-alias"
+                    if ((rpx >> Slope::kFracBits) != px) {
+                        plotPixel(rpx >> Slope::kFracBits, py, color);
+                    }
                 }
             }
-            plotPixel(lx, ly, 3);
-            plotPixel(rx, ry, 4);
 
             lfx += slopeL.aspect;
             if (slopeL.dmax != 0) {
@@ -576,14 +580,6 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
             }
         }
     }
-
-    // HACK: debugging
-    /*if (m_drawFB) {
-        plotPixel(xa, ya, 1);
-        plotPixel(xb, yb, 2);
-        plotPixel(xc, yc, 3);
-        plotPixel(xd, yd, 4);
-    }*/
 }
 
 void VDP::VDP1Cmd_DrawPolylines(uint16 cmdAddress) {
