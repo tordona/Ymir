@@ -36,6 +36,8 @@ void VDP::Reset(bool hard) {
     m_HRes = 320;
     m_VRes = 224;
 
+    m_VDP1RenderContext.Reset();
+
     BeginHPhaseActiveDisplay();
     BeginVPhaseActiveDisplay();
 
@@ -290,6 +292,10 @@ void VDP::VDP1BeginFrame() {
     VDP1ProcessCommands();
 }
 
+void VDP::VDP1EndFrame() {
+    m_VDP1regs.params.currFrameEnded = true;
+}
+
 void VDP::VDP1ProcessCommands() {
     static constexpr uint16 kNoReturn = ~0;
 
@@ -298,7 +304,7 @@ void VDP::VDP1ProcessCommands() {
     // Run up to 10000 commands to avoid infinite loops
     // TODO: cycle counting
     for (int i = 0; i < 10000; i++) {
-        const VDP1Command::CMDCTRL cmdctrl{.u16 = util::ReadBE<uint16>(&m_VRAM1[cmdAddress + 0x00])};
+        const VDP1Command::CMDCTRL cmdctrl{.u16 = VDP1ReadVRAM<uint16>(cmdAddress)};
         if (cmdctrl.end) {
             fmt::println("VDP1: End of command list");
             m_SCU.TriggerSpriteDrawEnd();
@@ -321,9 +327,9 @@ void VDP::VDP1ProcessCommands() {
             case DrawLine: /*fmt::println("VDP1: Draw line");*/ break;
 
             case UserClipping: // fallthrough
-            case UserClippingAlt: /*fmt::println("VDP1: Set user clipping");*/ break;
-            case SystemClipping: /*fmt::println("VDP1: Set system clipping");*/ break;
-            case LocalCoordinates: /*fmt::println("VDP1: Load coordinates");*/ break;
+            case UserClippingAlt: VDP1SetUserClipping(cmdAddress); break;
+            case SystemClipping: VDP1SetSystemClipping(cmdAddress); break;
+            case SetLocalCoordinates: VDP1SetLocalCoordinates(cmdAddress); break;
 
             default:
                 fmt::println("VDP1: Unexpected command type {:X}", static_cast<uint16>(cmdctrl.command));
@@ -367,8 +373,28 @@ void VDP::VDP1ProcessCommands() {
     }
 }
 
-void VDP::VDP1EndFrame() {
-    m_VDP1regs.params.currFrameEnded = true;
+void VDP::VDP1SetSystemClipping(uint16 cmdAddress) {
+    auto &ctx = m_VDP1RenderContext;
+    ctx.sysClipH = bit::extract<0, 9>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14));
+    ctx.sysClipV = bit::extract<0, 8>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16));
+    fmt::println("VDP1: Set system clipping: {}x{}", ctx.sysClipH, ctx.sysClipV);
+}
+
+void VDP::VDP1SetUserClipping(uint16 cmdAddress) {
+    auto &ctx = m_VDP1RenderContext;
+    ctx.userClipX0 = bit::extract<0, 9>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C));
+    ctx.userClipY0 = bit::extract<0, 8>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E));
+    ctx.userClipX1 = bit::extract<0, 9>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14));
+    ctx.userClipY1 = bit::extract<0, 8>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16));
+    fmt::println("VDP1: Set user clipping: {}x{} - {}x{}", ctx.userClipX0, ctx.userClipY0, ctx.userClipX1,
+                 ctx.userClipY1);
+}
+
+void VDP::VDP1SetLocalCoordinates(uint16 cmdAddress) {
+    auto &ctx = m_VDP1RenderContext;
+    ctx.localCoordX = bit::sign_extend<10>(bit::extract<0, 10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C)));
+    ctx.localCoordY = bit::sign_extend<10>(bit::extract<0, 10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E)));
+    fmt::println("VDP1: Set local coordinates: {}x{}", ctx.localCoordX, ctx.localCoordY);
 }
 
 void VDP::VDP2DrawLine() {

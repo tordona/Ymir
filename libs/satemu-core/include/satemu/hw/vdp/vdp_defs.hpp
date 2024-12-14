@@ -100,7 +100,7 @@ struct VDP1Command {
         SystemClipping = 0x9,
 
         // Local coordinate setting
-        LocalCoordinates = 0xA,
+        SetLocalCoordinates = 0xA,
     };
 
     enum class JumpType : uint16 {

@@ -586,6 +586,43 @@ private:
     // Rendering
     // TODO: move to a class or namespace
 
+    // VDP1 renderer parameters and state
+    struct VDP1RenderContext {
+        VDP1RenderContext() {
+            Reset();
+        }
+
+        void Reset() {
+            sysClipH = 512;
+            sysClipV = 256;
+
+            userClipX0 = 0;
+            userClipY0 = 0;
+
+            userClipX1 = 512;
+            userClipY1 = 256;
+
+            localCoordX = 0;
+            localCoordY = 0;
+        }
+
+        // System clipping dimensions
+        uint16 sysClipH;
+        uint16 sysClipV;
+
+        // User clipping area
+        // Top-left
+        uint16 userClipX0;
+        uint16 userClipY0;
+        // Bottom-right
+        uint16 userClipX1;
+        uint16 userClipY1;
+
+        // Local coordinates offset
+        sint32 localCoordX;
+        sint32 localCoordY;
+    } m_VDP1RenderContext;
+
     // Pattern Name Data, contains parameters for a character
     struct Character {
         uint16 charNum;     // Character number, 15 bits
@@ -627,11 +664,17 @@ private:
     // Begins the next VDP1 frame.
     void VDP1BeginFrame();
 
+    // Ends the current VDP1 frame.
+    void VDP1EndFrame();
+
     // Processes the VDP1 command table.
     void VDP1ProcessCommands();
 
-    // Ends the current VDP1 frame.
-    void VDP1EndFrame();
+    // Individual VDP1 command processors
+
+    void VDP1SetSystemClipping(uint16 cmdAddress);
+    void VDP1SetUserClipping(uint16 cmdAddress);
+    void VDP1SetLocalCoordinates(uint16 cmdAddress);
 
     // Draws the VDP2 scanline at m_VCounter.
     void VDP2DrawLine();
