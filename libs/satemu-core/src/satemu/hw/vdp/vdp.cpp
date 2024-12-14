@@ -405,9 +405,9 @@ struct Slope {
 
         xmajor = abs(dx) > abs(dy);
         if (xmajor) {
-            d = dy != 0 ? (static_cast<sint64>(dx) << kFracBits) / dy : 0;
-        } else {
             d = dx != 0 ? (static_cast<sint64>(dy) << kFracBits) / dx : 0;
+        } else {
+            d = dy != 0 ? (static_cast<sint64>(dx) << kFracBits) / dy : 0;
         }
     }
 
@@ -478,10 +478,11 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     // Iterate over the longer slope's pixels, drawing lines that connect to the other slope
     // TODO: simplify code
     // TODO: "anti-aliasing"
-    /*if (len == lenL) {
+    if (len == lenL) {
         if (slopeL.xmajor) {
             const sint32 xinc = slopeL.dx >= 0 ? 1 : -1;
-            sint32 fpy = slopeL.y1 << Slope::kFracBits;
+            sint32 fpy = ((slopeL.y1 << 1) + 1) << (Slope::kFracBits - 1);
+            // sint32 fpy = slopeL.y1 << Slope::kFracBits;
             for (sint32 px = slopeL.x1; px != slopeL.x2; px += xinc) {
                 const sint32 py = fpy >> Slope::kFracBits;
                 plotPixel(px, py, color);
@@ -489,7 +490,8 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
             }
         } else {
             const sint32 yinc = slopeL.dy >= 0 ? 1 : -1;
-            sint32 fpx = slopeL.x1 << Slope::kFracBits;
+            sint32 fpx = ((slopeL.x1 << 1) + 1) << (Slope::kFracBits - 1);
+            // sint32 fpx = slopeL.x1 << Slope::kFracBits;
             for (sint32 py = slopeL.y1; py != slopeL.y2; py += yinc) {
                 const sint32 px = fpx >> Slope::kFracBits;
                 plotPixel(px, py, color);
@@ -499,7 +501,8 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     } else {
         if (slopeR.xmajor) {
             const sint32 xinc = slopeR.dx >= 0 ? 1 : -1;
-            sint32 fpy = slopeR.y1 << Slope::kFracBits;
+            sint32 fpy = ((slopeR.y1 << 1) + 1) << (Slope::kFracBits - 1);
+            // sint32 fpy = slopeR.y1 << Slope::kFracBits;
             for (sint32 px = slopeR.x1; px != slopeR.x2; px += xinc) {
                 const sint32 py = fpy >> Slope::kFracBits;
                 plotPixel(px, py, color);
@@ -507,14 +510,15 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
             }
         } else {
             const sint32 yinc = slopeR.dy >= 0 ? 1 : -1;
-            sint32 fpx = slopeL.x1 << Slope::kFracBits;
+            sint32 fpx = ((slopeR.x1 << 1) + 1) << (Slope::kFracBits - 1);
+            // sint32 fpx = slopeL.x1 << Slope::kFracBits;
             for (sint32 py = slopeR.y1; py != slopeR.y2; py += yinc) {
                 const sint32 px = fpx >> Slope::kFracBits;
                 plotPixel(px, py, color);
                 fpx += slopeR.d;
             }
         }
-    }*/
+    }
 
     // HACK: debugging
     plotPixel(xa, ya, 1);
@@ -696,6 +700,14 @@ void VDP::VDP2DrawLine() {
                     m_framebuffer[x + y * m_HRes] = 0xFFFF0000;
                 } else if (spriteColor == 4) {
                     m_framebuffer[x + y * m_HRes] = 0xFF00FFFF;
+                } else if (spriteColor == 5) {
+                    m_framebuffer[x + y * m_HRes] = 0xFF009F9F;
+                } else if (spriteColor == 6) {
+                    m_framebuffer[x + y * m_HRes] = 0xFF9F9F00;
+                } else if (spriteColor == 7) {
+                    m_framebuffer[x + y * m_HRes] = 0xFF7F7F7F;
+                } else if (spriteColor == 8) {
+                    m_framebuffer[x + y * m_HRes] = 0xFF007FFF;
                 } else {
                     m_framebuffer[x + y * m_HRes] = 0xFFFFFFFF;
                 }
