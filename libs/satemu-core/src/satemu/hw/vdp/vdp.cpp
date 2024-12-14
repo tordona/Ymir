@@ -374,11 +374,11 @@ void VDP::VDP1ProcessCommands() {
 }
 
 void VDP::VDP1DrawNormalSprite(uint16 cmdAddress) {
-    // fmt::println("VDP1: Draw normal sprite");
+    fmt::println("VDP1: Draw normal sprite");
 }
 
 void VDP::VDP1DrawScaledSprite(uint16 cmdAddress) {
-    // fmt::println("VDP1: Draw scaled sprite");
+    fmt::println("VDP1: Draw scaled sprite");
 }
 
 void VDP::VDP1DrawDistortedSprite(uint16 cmdAddress) {
@@ -386,15 +386,37 @@ void VDP::VDP1DrawDistortedSprite(uint16 cmdAddress) {
 }
 
 void VDP::VDP1DrawPolygon(uint16 cmdAddress) {
-    // fmt::println("VDP1: Draw polygon");
+    auto &ctx = m_VDP1RenderContext;
+    const VDP1Command::CMDPMOD cmdpmod{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
+    // Valid fields:
+    // cmdpmod.colorCalc;
+    // cmdpmod.meshEnable;
+    // cmdpmod.userClippingEnable;
+    // cmdpmod.clippingMode;
+    // cmdpmod.preClippingDisable;
+    // cmdpmod.msbOn;
+
+    const uint16 color = VDP1ReadVRAM<uint16>(cmdAddress + 0x06);
+    const sint32 xa = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C));
+    const sint32 ya = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E));
+    const sint32 xb = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x10));
+    const sint32 yb = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x12));
+    const sint32 xc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14));
+    const sint32 yc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16));
+    const sint32 xd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x18));
+    const sint32 yd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1A));
+    const uint16 gouraudTable = VDP1ReadVRAM<uint16>(cmdAddress + 0x1C) << 3u;
+
+    fmt::println("VDP1: Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
+                 xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, cmdpmod.u16);
 }
 
 void VDP::VDP1DrawPolylines(uint16 cmdAddress) {
-    // fmt::println("VDP1: Draw polylines");
+    fmt::println("VDP1: Draw polylines");
 }
 
 void VDP::VDP1DrawLine(uint16 cmdAddress) {
-    // fmt::println("VDP1: Draw line");
+    fmt::println("VDP1: Draw line");
 }
 
 void VDP::VDP1SetSystemClipping(uint16 cmdAddress) {
@@ -416,8 +438,8 @@ void VDP::VDP1SetUserClipping(uint16 cmdAddress) {
 
 void VDP::VDP1SetLocalCoordinates(uint16 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
-    ctx.localCoordX = bit::sign_extend<10>(bit::extract<0, 10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C)));
-    ctx.localCoordY = bit::sign_extend<10>(bit::extract<0, 10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E)));
+    ctx.localCoordX = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C));
+    ctx.localCoordY = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E));
     fmt::println("VDP1: Set local coordinates: {}x{}", ctx.localCoordX, ctx.localCoordY);
 }
 
