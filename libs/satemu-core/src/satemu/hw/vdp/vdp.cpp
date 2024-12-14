@@ -377,7 +377,7 @@ void VDP::VDP2DrawLine() {
     using FnDrawScrollNBG = void (VDP::*)(const NormBGParams &, BGRenderContext &);
     using FnDrawBitmapNBG = void (VDP::*)(const NormBGParams &, BGRenderContext &);
 
-    // Lookup table of DrawNormalScrollBG functions
+    // Lookup table of VDP2DrawNormalScrollBG functions
     // [twoWordChar][fourCellChar][wideChar][colorFormat][colorMode]
     static constexpr auto fnDrawScrollNBGs = [] {
         std::array<std::array<std::array<std::array<std::array<FnDrawScrollNBG, 4>, 8>, 2>, 2>, 2> arr{};
@@ -395,13 +395,13 @@ void VDP::VDP2DrawLine() {
             const ColorFormat colorFormat = static_cast<ColorFormat>(cfIndex <= 4 ? cfIndex : 4);
             const uint32 colorMode = cmIndex <= 2 ? cmIndex : 2;
             arr[twcIndex][fccIndex][wcIndex][cfIndex][cmIndex] =
-                &VDP::DrawNormalScrollBG<twoWordChar, fourCellChar, wideChar, colorFormat, colorMode>;
+                &VDP::VDP2DrawNormalScrollBG<twoWordChar, fourCellChar, wideChar, colorFormat, colorMode>;
         });
 
         return arr;
     }();
 
-    // Lookup table of DrawNormalBitmapBG functions
+    // Lookup table of VDP2DrawNormalBitmapBG functions
     // [colorFormat][colorMode]
     static constexpr auto fnDrawBitmapNBGs = [] {
         std::array<std::array<FnDrawBitmapNBG, 4>, 8> arr{};
@@ -412,7 +412,7 @@ void VDP::VDP2DrawLine() {
 
             const ColorFormat colorFormat = static_cast<ColorFormat>(cfIndex <= 4 ? cfIndex : 4);
             const size_t colorMode = cmIndex <= 2 ? cmIndex : 2;
-            arr[cfIndex][cmIndex] = &VDP::DrawNormalBitmapBG<colorFormat, colorMode>;
+            arr[cfIndex][cmIndex] = &VDP::VDP2DrawNormalBitmapBG<colorFormat, colorMode>;
         });
 
         return arr;
@@ -497,7 +497,7 @@ void VDP::VDP2DrawLine() {
 }
 
 template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx) {
+NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx) {
     //          Map
     // +---------+---------+
     // |         |         |   Normal BGs always have 4 planes named A,B,C,D in this exact configuration.
@@ -607,12 +607,13 @@ NO_INLINE void VDP::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderCon
         const uint32 pageAddress = pageBaseAddress + pageOffset;
         constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
         const Character ch =
-            twoWordChar ? FetchTwoWordCharacter(pageAddress, charIndex)
-                        : FetchOneWordCharacter<fourCellChar, largePalette, wideChar>(bgParams, pageAddress, charIndex);
+            twoWordChar
+                ? VDP2FetchTwoWordCharacter(pageAddress, charIndex)
+                : VDP2FetchOneWordCharacter<fourCellChar, largePalette, wideChar>(bgParams, pageAddress, charIndex);
 
         // Fetch dot color using character data
-        rctx.colors[x] =
-            FetchCharacterColor<colorFormat, colorMode>(rctx.cramOffset, rctx.colorData[x], ch, dotX, dotY, cellIndex);
+        rctx.colors[x] = VDP2FetchCharacterColor<colorFormat, colorMode>(rctx.cramOffset, rctx.colorData[x], ch, dotX,
+                                                                         dotY, cellIndex);
 
         // Compute priority
         rctx.priorities[x] = bgParams.priorityNumber;
@@ -635,7 +636,7 @@ NO_INLINE void VDP::DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderCon
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderContext &rctx) {
+NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderContext &rctx) {
     const uint32 y = m_VCounter;
 
     // TODO: precompute fracScrollY at start of frame and increment per Y
@@ -648,7 +649,7 @@ NO_INLINE void VDP::DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderCon
         const uint32 scrollY = fracScrollY >> 8u;
 
         // Fetch dot color from bitmap
-        rctx.colors[x] = FetchBitmapColor<colorFormat, colorMode>(bgParams, rctx.cramOffset, scrollX, scrollY);
+        rctx.colors[x] = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, rctx.cramOffset, scrollX, scrollY);
 
         // Compute priority
         rctx.priorities[x] = bgParams.priorityNumber;
@@ -662,7 +663,7 @@ NO_INLINE void VDP::DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderCon
     }
 }
 
-FORCE_INLINE VDP::Character VDP::FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex) {
+FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex) {
     const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint32);
     const uint32 charData = util::ReadBE<uint32>(&m_VRAM2[charAddress]);
 
@@ -677,8 +678,8 @@ FORCE_INLINE VDP::Character VDP::FetchTwoWordCharacter(uint32 pageBaseAddress, u
 }
 
 template <bool fourCellChar, bool largePalette, bool wideChar>
-FORCE_INLINE VDP::Character VDP::FetchOneWordCharacter(const NormBGParams &bgParams, uint32 pageBaseAddress,
-                                                       uint32 charIndex) {
+FORCE_INLINE VDP::Character VDP::VDP2FetchOneWordCharacter(const NormBGParams &bgParams, uint32 pageBaseAddress,
+                                                           uint32 charIndex) {
     const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint16);
     const uint16 charData = util::ReadBE<uint16>(&m_VRAM2[charAddress]);
 
@@ -729,8 +730,8 @@ FORCE_INLINE VDP::Character VDP::FetchOneWordCharacter(const NormBGParams &bgPar
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-FORCE_INLINE vdp::Color888 VDP::FetchCharacterColor(uint32 cramOffset, uint8 &colorData, Character ch, uint8 dotX,
-                                                    uint8 dotY, uint32 cellIndex) {
+FORCE_INLINE vdp::Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &colorData, Character ch, uint8 dotX,
+                                                        uint8 dotY, uint32 cellIndex) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
     assert(dotX < 8);
     assert(dotY < 8);
@@ -745,19 +746,19 @@ FORCE_INLINE vdp::Color888 VDP::FetchCharacterColor(uint32 cramOffset, uint8 &co
         const uint8 dotData = (m_VRAM2[dotAddress & 0x7FFFF] >> ((dotX & 1) * 4)) & 0xF;
         const uint32 colorIndex = (ch.palNum << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
-        return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
+        return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = dotBaseAddress;
         const uint8 dotData = m_VRAM2[dotAddress & 0x7FFFF];
         const uint32 colorIndex = ((ch.palNum & 0x70) << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
-        return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
+        return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
         const uint16 dotData = util::ReadBE<uint16>(&m_VRAM2[dotAddress & 0x7FFFF]);
         const uint32 colorIndex = dotData & 0x7FF;
         colorData = bit::extract<1, 3>(dotData);
-        return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
+        return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
         const uint16 dotData = util::ReadBE<uint16>(&m_VRAM2[dotAddress & 0x7FFFF]);
@@ -770,8 +771,8 @@ FORCE_INLINE vdp::Color888 VDP::FetchCharacterColor(uint32 cramOffset, uint8 &co
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-FORCE_INLINE vdp::Color888 VDP::FetchBitmapColor(const NormBGParams &bgParams, uint32 cramOffset, uint8 dotX,
-                                                 uint8 dotY) {
+FORCE_INLINE vdp::Color888 VDP::VDP2FetchBitmapColor(const NormBGParams &bgParams, uint32 cramOffset, uint8 dotX,
+                                                     uint8 dotY) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
 
     // Bitmap data wraps around infinitely
@@ -788,17 +789,17 @@ FORCE_INLINE vdp::Color888 VDP::FetchBitmapColor(const NormBGParams &bgParams, u
         const uint32 dotAddress = dotBaseAddress >> 1u;
         const uint8 dotData = (m_VRAM2[dotAddress & 0x7FFFF] >> ((dotX & 1) * 4)) & 0xF;
         const uint32 colorIndex = palNum | dotData;
-        return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
+        return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = dotBaseAddress;
         const uint8 dotData = m_VRAM2[dotAddress & 0x7FFFF];
         const uint32 colorIndex = palNum | dotData;
-        return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
+        return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
         const uint16 dotData = util::ReadBE<uint16>(&m_VRAM2[dotAddress & 0x7FFFF]);
         const uint32 colorIndex = dotData & 0x7FF;
-        return FetchCRAMColor<colorMode>(cramOffset, colorIndex);
+        return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
         const uint16 dotData = util::ReadBE<uint16>(&m_VRAM2[dotAddress & 0x7FFFF]);
@@ -811,7 +812,7 @@ FORCE_INLINE vdp::Color888 VDP::FetchBitmapColor(const NormBGParams &bgParams, u
 }
 
 template <uint32 colorMode>
-FORCE_INLINE Color888 VDP::FetchCRAMColor(uint32 cramOffset, uint32 colorIndex) {
+FORCE_INLINE Color888 VDP::VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorIndex) {
     static_assert(colorMode <= 2, "Invalid CRMD value");
 
     if constexpr (colorMode == 0) {

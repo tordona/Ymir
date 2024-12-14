@@ -618,13 +618,16 @@ private:
     // Framebuffer provided by the frontend to render the current frame into
     FramebufferColor *m_framebuffer;
 
+    // Erases the current VDP1 display framebuffer.
     void VDP1EraseFramebuffer();
+
+    // Switches VDP1 framebuffers.
     void VDP1SwitchFramebuffer();
 
     // Begins the next VDP1 frame.
     void VDP1BeginFrame();
 
-    // Process the VDP1 command table
+    // Processes the VDP1 command table.
     void VDP1ProcessCommands();
 
     // Ends the current VDP1 frame.
@@ -642,7 +645,7 @@ private:
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
     template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
-    void DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx);
+    void VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx);
 
     // Draws a normal bitmap BG scanline.
     // bgParams contains the parameters for the BG to draw.
@@ -650,12 +653,12 @@ private:
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    void DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderContext &rctx);
+    void VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderContext &rctx);
 
     // Fetches a two-word character from VRAM.
     // pageBaseAddress specifies the base address of the page of character patterns.
     // charIndex is the index of the character to fetch.
-    Character FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex);
+    Character VDP2FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex);
 
     // Fetches a one-word character from VRAM.
     // bgParams contains the parameters for the BG to draw.
@@ -665,7 +668,7 @@ private:
     // largePalette indicates if the color format uses 16 colors (false) or more (true).
     // wideChar indicates if the flip bits are available (false) or used to extend the character number (true).
     template <bool fourCellChar, bool largePalette, bool wideChar>
-    Character FetchOneWordCharacter(const NormBGParams &bgParams, uint32 pageBaseAddress, uint32 charIndex);
+    Character VDP2FetchOneWordCharacter(const NormBGParams &bgParams, uint32 pageBaseAddress, uint32 charIndex);
 
     // Fetches a color from a pixel in the specified cell in a 2x2 character pattern.
     // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
@@ -676,8 +679,8 @@ private:
     // colorFormat is the value of CHCTLA/CHCTLB.xxCHCNn.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    vdp::Color888 FetchCharacterColor(uint32 cramOffset, uint8 &colorData, Character ch, uint8 dotX, uint8 dotY,
-                                      uint32 cellIndex);
+    vdp::Color888 VDP2FetchCharacterColor(uint32 cramOffset, uint8 &colorData, Character ch, uint8 dotX, uint8 dotY,
+                                          uint32 cellIndex);
 
     // Fetches a color from a bitmap pixel.
     // bgParams contains the bitmap parameters.
@@ -686,14 +689,14 @@ private:
     // colorFormat is the color format for pixel data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    vdp::Color888 FetchBitmapColor(const NormBGParams &bgParams, uint32 cramOffset, uint8 dotX, uint8 dotY);
+    vdp::Color888 VDP2FetchBitmapColor(const NormBGParams &bgParams, uint32 cramOffset, uint8 dotX, uint8 dotY);
 
     // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
     // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
     // colorIndex specifies the color index.
     // colorMode is the CRAM color mode.
     template <uint32 colorMode>
-    vdp::Color888 FetchCRAMColor(uint32 cramOffset, uint32 colorIndex);
+    vdp::Color888 VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorIndex);
 };
 
 } // namespace satemu::vdp
