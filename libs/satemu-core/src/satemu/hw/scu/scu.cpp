@@ -18,6 +18,10 @@ void SCU::Reset(bool hard) {
     m_intrMask.u32 = 0;
     m_intrStatus.u32 = 0;
 
+    for (auto &ch : m_dmaChannels) {
+        ch.Reset();
+    }
+
     m_dspState.Reset();
 }
 

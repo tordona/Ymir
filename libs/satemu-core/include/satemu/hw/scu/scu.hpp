@@ -230,9 +230,44 @@ private:
     // -------------------------------------------------------------------------
     // DMA
 
-    // TODO: implement
-    // 3 levels
-    // Priorities: 2 > 1 > 0
+    enum class DMATrigger {
+        VBlankIN = 0,
+        VBlankOUT = 1,
+        HBlankIN = 2,
+        Timer0 = 3,
+        Timer1 = 4,
+        SoundRequest = 5,
+        SpriteDrawEnd = 6,
+        Immediate = 7,
+    };
+
+    struct DMAChannel {
+        DMAChannel() {
+            Reset();
+        }
+
+        void Reset() {
+            srcAddr = 0;   // initial value undefined
+            dstAddr = 0;   // initial value undefined
+            xferCount = 0; // initial value undefined
+            readAddrInc = 4;
+            writeAddrInc = 2;
+            running = false;
+            indirect = false;
+            trigger = DMATrigger::Immediate;
+        }
+
+        uint32 srcAddr;      // DnR - Read Address
+        uint32 dstAddr;      // DnW - Write Address
+        uint32 xferCount;    // DnC - Transfer Byte Number (up to 1 MiB for level 0, 4 KiB for levels 1 and 2)
+        uint32 readAddrInc;  // DnAD.DnRA - Read Address Increment (0=0, 1=+4 bytes)
+        uint32 writeAddrInc; // DnAD.DnWA - Write Address Increment (+0,2,4,8,16,32,64,128 bytes)
+        bool running;        // transfer active (set by DxEN/DxGO)
+        bool indirect;       // DxMOD - Mode (false=direct, true=indirect)
+        DMATrigger trigger;  // DxFT2-0 - DMA Starting Factor
+    };
+
+    std::array<DMAChannel, 3> m_dmaChannels;
 
     // -------------------------------------------------------------------------
     // DSP
