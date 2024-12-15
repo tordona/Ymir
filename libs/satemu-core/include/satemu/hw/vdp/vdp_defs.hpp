@@ -125,6 +125,16 @@ struct VDP1Command {
     };
 
     // CMDPMOD
+    //   15   MSB On
+    //   12   High-Speed Shrink
+    //   11   Pre-clipping Disable
+    //   10   User Clipping Enable
+    //    9   User Clipping Mode
+    //    8   Mesh Enable
+    //    7   End Code Disable
+    //    6   Transparent Pixel Disable
+    //  5-3   Color Mode
+    //  2-0   Color Calculation Bits
     union DrawMode {
         uint16 u16;
         struct {
@@ -133,8 +143,8 @@ struct VDP1Command {
             uint16 transparentPixelDisable : 1;
             uint16 endCodeDisable : 1;
             uint16 meshEnable : 1;
-            uint16 userClippingEnable : 1;
             uint16 clippingMode : 1;
+            uint16 userClippingEnable : 1;
             uint16 preClippingDisable : 1;
             uint16 highSpeedShrink : 1;
             uint16 : 2;

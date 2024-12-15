@@ -674,6 +674,12 @@ private:
     // Processes the VDP1 command table.
     void VDP1ProcessCommands();
 
+    bool VDP1IsPixelUserClipped(sint32 x, sint32 y) const;
+    bool VDP1IsPixelSystemClipped(sint32 x, sint32 y) const;
+    bool VDP1IsLineSystemClipped(sint32 x1, sint32 y1, sint32 x2, sint32 y2) const;
+    bool VDP1IsQuadSystemClipped(sint32 x1, sint32 y1, sint32 x2, sint32 y2, sint32 x3, sint32 y3, sint32 x4,
+                                 sint32 y4) const;
+
     void VDP1PlotPixel(sint32 x, sint32 y, uint16 color, VDP1Command::DrawMode mode, uint32 gouraudTable);
     void VDP1PlotLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint16 color, VDP1Command::DrawMode mode,
                       uint32 gouraudTable);

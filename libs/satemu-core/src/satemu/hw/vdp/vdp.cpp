@@ -390,18 +390,86 @@ void VDP::VDP1ProcessCommands() {
     }
 }
 
+bool VDP::VDP1IsPixelUserClipped(sint32 x, sint32 y) const {
+    const auto &ctx = m_VDP1RenderContext;
+    if (x < ctx.userClipX0 || x > ctx.userClipX1) {
+        return true;
+    }
+    if (y < ctx.userClipY0 || y > ctx.userClipY1) {
+        return true;
+    }
+    return false;
+}
+
+bool VDP::VDP1IsPixelSystemClipped(sint32 x, sint32 y) const {
+    const auto &ctx = m_VDP1RenderContext;
+    if (x < 0 || x > ctx.sysClipH) {
+        return true;
+    }
+    if (y < 0 || y > ctx.sysClipV) {
+        return true;
+    }
+    return false;
+}
+
+bool VDP::VDP1IsLineSystemClipped(sint32 x1, sint32 y1, sint32 x2, sint32 y2) const {
+    const auto &ctx = m_VDP1RenderContext;
+    if (x1 < 0 && x2 < 0) {
+        return true;
+    }
+    if (y1 < 0 && y2 < 0) {
+        return true;
+    }
+    if (x1 > ctx.sysClipH && x2 > ctx.sysClipH) {
+        return true;
+    }
+    if (y1 > ctx.sysClipV && y2 > ctx.sysClipV) {
+        return true;
+    }
+    return false;
+}
+
+bool VDP::VDP1IsQuadSystemClipped(sint32 x1, sint32 y1, sint32 x2, sint32 y2, sint32 x3, sint32 y3, sint32 x4,
+                                  sint32 y4) const {
+    const auto &ctx = m_VDP1RenderContext;
+    if (x1 < 0 && x2 < 0 && x3 < 0 && x4 < 0) {
+        return true;
+    }
+    if (y1 < 0 && y2 < 0 && y3 < 0 && y4 < 0) {
+        return true;
+    }
+    if (x1 > ctx.sysClipH && x2 > ctx.sysClipH && x3 > ctx.sysClipH && x4 > ctx.sysClipH) {
+        return true;
+    }
+    if (y1 > ctx.sysClipV && y2 > ctx.sysClipV && y3 > ctx.sysClipV && y4 > ctx.sysClipV) {
+        return true;
+    }
+    return false;
+}
+
 FORCE_INLINE void VDP::VDP1PlotPixel(sint32 x, sint32 y, uint16 color, VDP1Command::DrawMode mode,
                                      uint32 gouraudTable) {
     if (mode.meshEnable && ((x ^ y) & 1)) {
         return;
     }
 
+    // Reject pixels outside of clipping area
+    if (VDP1IsPixelSystemClipped(x, y)) {
+        return;
+    }
+    if (mode.userClippingEnable) {
+        // clippingMode = false -> draw inside, reject outside
+        // clippingMode = true -> draw outside, reject inside
+        // The function returns true if the pixel is clipped, therefore we want to reject pixels that return the
+        // opposite of clippingMode on that function.
+        if (VDP1IsPixelUserClipped(x, y) != mode.clippingMode) {
+            return;
+        }
+    }
+
     // TODO: use gouraud table
     // TODO: color calculations? (mode.colorCalc)
-    // TODO: clipping:
-    //   mode.userClippingEnable
-    //   mode.clippingMode
-    //   mode.preClippingDisable
+    // TODO: mode.preClippingDisable
     // TODO: mode.msbOn?
 
     const uint32 fbOffset = y * m_VDP1.fbSizeH + x;
@@ -455,6 +523,10 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     // "VDP1: Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
     //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, mode.u16);
 
+    if (VDP1IsQuadSystemClipped(xa, ya, xb, yb, xc, yc, xd, yd)) {
+        return;
+    }
+
     // Interpolate linearly over edges A-D and B-C
     for (EdgeIterator edge{xa, ya, xb, yb, xc, yc, xd, yd}; edge.CanStep(); edge.Step()) {
         const sint32 lx = edge.XMaj();
@@ -486,6 +558,10 @@ void VDP::VDP1Cmd_DrawPolylines(uint16 cmdAddress) {
     // "VDP1: Draw polylines: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
     //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, mode.u16);
 
+    if (VDP1IsQuadSystemClipped(xa, ya, xb, yb, xc, yc, xd, yd)) {
+        return;
+    }
+
     VDP1PlotLine(xa, ya, xb, yb, color, mode, gouraudTable);
     VDP1PlotLine(xb, yb, xc, yc, color, mode, gouraudTable);
     VDP1PlotLine(xc, yc, xd, yd, color, mode, gouraudTable);
@@ -505,6 +581,10 @@ void VDP::VDP1Cmd_DrawLine(uint16 cmdAddress) {
 
     // fmt::println("VDP1: Draw line: {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa, ya, xb, yb,
     //              color, gouraudTable, mode.u16);
+
+    if (VDP1IsLineSystemClipped(xa, ya, xb, yb)) {
+        return;
+    }
 
     VDP1PlotLine(xa, ya, xb, yb, color, mode, gouraudTable);
 }
