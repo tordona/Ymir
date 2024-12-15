@@ -407,13 +407,6 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress) {
 void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::CMDPMOD cmdpmod{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
-    // Valid fields:
-    // cmdpmod.colorCalc;
-    // cmdpmod.meshEnable;
-    // cmdpmod.userClippingEnable;
-    // cmdpmod.clippingMode;
-    // cmdpmod.preClippingDisable;
-    // cmdpmod.msbOn;
 
     const uint16 color = VDP1ReadVRAM<uint16>(cmdAddress + 0x06);
     const sint32 xa = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C)) + ctx.localCoordX;
@@ -432,17 +425,6 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
 
     // TODO: move to a common rendering function
 
-    // Polygon vertices in default orientation:
-    //
-    //    A-->B
-    //    ^   |
-    //    |   v
-    //    D<--C
-
-    Slope slopeL{xa, ya, xd, yd};
-    Slope slopeR{xb, yb, xc, yc};
-
-    // Figure out which slope is the longest
     auto plotPixel = [&](sint32 px, sint32 py, uint16 color) {
         if (cmdpmod.meshEnable && ((px ^ py) & 1)) {
             return;
@@ -456,70 +438,26 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
         }
     };
 
-    // Iterate over the longer slope's pixels, drawing lines that connect to the other slope
-    if (slopeL.dmaj < slopeR.dmaj) {
-        std::swap(slopeL, slopeR);
-    }
+    // Interpolate linearly over edges A-D and B-C
+    for (EdgeIterator edge{xa, ya, xb, yb, xc, yc, xd, yd}; edge.CanStep(); edge.Step()) {
+        const sint32 lx = edge.XMaj();
+        const sint32 ly = edge.YMaj();
+        const sint32 rx = edge.XMin();
+        const sint32 ry = edge.YMin();
 
-    // TODO: simplify code and make it generic
-    // TODO: figure out how to replace the outer if-else with Slope
-    // - probably needs a fractional Step(...) function to work
-    // TODO: apply gouraud
-    /*for (; slopeL.CanStep(); slopeL.Step(), slopeR.Step(slopeL)) {
-        const sint32 lx = slopeL.X();
-        const sint32 ly = slopeL.Y();
-        const sint32 rx = slopeR.X();
-        const sint32 ry = slopeR.Y();
+        // Plot lines between the interpolated points
+        for (LinePlotter line{lx, ly, rx, ry}; line.CanStep(); line.Step()) {
+            // TODO: apply gouraud (gouraudTable)
+            // TODO: color calculations? (cmdpmod.colorCalc)
+            // TODO: clipping:
+            //   cmdpmod.userClippingEnable
+            //   cmdpmod.clippingMode
+            //   cmdpmod.preClippingDisable
+            // TODO: cmdpmod.msbOn?
 
-        for (Slope line{lx, ly, rx, ry}; line.CanStep(); line.Step()) {
             plotPixel(line.X(), line.Y(), color);
             if (line.NeedsAntiAliasing()) {
                 plotPixel(line.AAX(), line.AAY(), color);
-            }
-        }
-    }*/
-    if (slopeL.xmajor) {
-        sint32 lfy = slopeL.fy1;
-        sint32 rfx = slopeR.fx1;
-        sint32 rfy = slopeR.fy1;
-        for (sint32 lx = slopeL.x1; lx != slopeL.x2; lx += slopeL.dmajinc) {
-            const sint32 ly = lfy >> Slope::kFracBits;
-            const sint32 rx = rfx >> Slope::kFracBits;
-            const sint32 ry = rfy >> Slope::kFracBits;
-
-            for (LinePlotter line{lx, ly, rx, ry}; line.CanStep(); line.Step()) {
-                plotPixel(line.X(), line.Y(), color);
-                if (line.NeedsAntiAliasing()) {
-                    plotPixel(line.AAX(), line.AAY(), color);
-                }
-            }
-
-            lfy += slopeL.aspect;
-            if (slopeL.dmaj != 0) {
-                rfx += slopeR.fxinc * slopeR.dmaj / slopeL.dmaj;
-                rfy += slopeR.fyinc * slopeR.dmaj / slopeL.dmaj;
-            }
-        }
-    } else {
-        sint32 lfx = slopeL.fx1;
-        sint32 rfx = slopeR.fx1;
-        sint32 rfy = slopeR.fy1;
-        for (sint32 ly = slopeL.y1; ly != slopeL.y2; ly += slopeL.dmajinc) {
-            const sint32 lx = lfx >> Slope::kFracBits;
-            const sint32 rx = rfx >> Slope::kFracBits;
-            const sint32 ry = rfy >> Slope::kFracBits;
-
-            for (LinePlotter line{lx, ly, rx, ry}; line.CanStep(); line.Step()) {
-                plotPixel(line.X(), line.Y(), color);
-                if (line.NeedsAntiAliasing()) {
-                    plotPixel(line.AAX(), line.AAY(), color);
-                }
-            }
-
-            lfx += slopeL.aspect;
-            if (slopeL.dmaj != 0) {
-                rfx += slopeR.fxinc * slopeR.dmaj / slopeL.dmaj;
-                rfy += slopeR.fyinc * slopeR.dmaj / slopeL.dmaj;
             }
         }
     }
