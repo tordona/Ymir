@@ -487,7 +487,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
             const sint32 rx = rfx >> Slope::kFracBits;
             const sint32 ry = rfy >> Slope::kFracBits;
 
-            for (Slope line{lx, ly, rx, ry}; line.CanStep(); line.Step()) {
+            for (LinePlotter line{lx, ly, rx, ry}; line.CanStep(); line.Step()) {
                 plotPixel(line.X(), line.Y(), color);
                 if (line.NeedsAntiAliasing()) {
                     plotPixel(line.AAX(), line.AAY(), color);
@@ -509,7 +509,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
             const sint32 rx = rfx >> Slope::kFracBits;
             const sint32 ry = rfy >> Slope::kFracBits;
 
-            for (Slope line{lx, ly, rx, ry}; line.CanStep(); line.Step()) {
+            for (LinePlotter line{lx, ly, rx, ry}; line.CanStep(); line.Step()) {
                 plotPixel(line.X(), line.Y(), color);
                 if (line.NeedsAntiAliasing()) {
                     plotPixel(line.AAX(), line.AAY(), color);
