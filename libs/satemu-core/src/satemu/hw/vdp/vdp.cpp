@@ -176,7 +176,7 @@ void VDP::BeginHPhaseActiveDisplay() {
     if (m_VPhase == VerticalPhase::Active) {
         if (m_VCounter == 0) {
             m_framebuffer = m_cbRequestFramebuffer(m_HRes, m_VRes);
-            fmt::println("VDP: begin frame, VDP1 fb {}", m_drawFB ^ 1);
+            // fmt::println("VDP: begin frame, VDP1 fb {}", m_drawFB ^ 1);
         }
         VDP2DrawLine();
     }
@@ -222,18 +222,6 @@ void VDP::BeginVPhaseVerticalSync() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering vertical sync phase", m_VCounter);
     m_VDP2.TVSTAT.VBLANK = 1;
     m_SCU.TriggerVBlankIN();
-
-    if (m_VDP1.vblankErase) {
-        // 1-cycle mode
-        VDP1EraseFramebuffer();
-    } else if (m_VDP1.fbSwapMode) {
-        // Manual mode
-        if (m_VDP1.fbSwapTrigger) {
-            VDP1SwapFramebuffer();
-        } else {
-            VDP1EraseFramebuffer();
-        }
-    }
 }
 
 void VDP::BeginVPhaseTopBlanking() {
@@ -255,42 +243,58 @@ void VDP::BeginVPhaseLastLine() {
     m_VDP2.TVSTAT.VBLANK = 0;
     m_SCU.TriggerVBlankOUT();
 
-    // fmt::println("VDP: VBlank OUT");
+    // fmt::println("VDP: VBlank OUT  VBE={:d} FCM={:d} FCT={:d} PTM={:d} mswap={:d} merase={:d}", m_VDP1.vblankErase,
+    //              m_VDP1.fbSwapMode, m_VDP1.fbSwapTrigger, m_VDP1.plotTrigger, m_VDP1.fbManualSwap,
+    //              m_VDP1.fbManualErase);
 
-    if (m_VDP1.fbSwapRequest) {
-        m_VDP1.fbSwapRequest = false;
+    bool swapFB = false;
+    if (m_VDP1.fbManualSwap) {
+        m_VDP1.fbManualSwap = false;
+        swapFB = true;
+    }
+
+    if (!m_VDP1.fbSwapMode) {
+        swapFB = true;
+    }
+
+    // VBlank erase or 1-cycle mode
+    if (m_VDP1.vblankErase || !m_VDP1.fbSwapMode) {
         VDP1EraseFramebuffer();
+    }
+
+    // Swap framebuffers and trigger:
+    // - Manual erase
+    // - VDP1 draw if PMTR.PTM == 0b10
+    if (swapFB) {
+        if (m_VDP1.fbManualErase) {
+            m_VDP1.fbManualErase = false;
+            VDP1EraseFramebuffer();
+        }
         VDP1SwapFramebuffer();
-        VDP1BeginFrame();
-    } else if (m_VDP1.plotTrigger == 0b10) {
-        VDP1BeginFrame();
+        if (m_VDP1.plotTrigger == 0b10) {
+            VDP1BeginFrame();
+        }
     }
 }
 
 // ----
 // Renderer
 
-void VDP::VDP1EraseFramebuffer() {
-    if (!m_VDP1.fbSwapMode || m_VDP1.fbManualErase) {
-        fmt::println("VDP1: Erasing framebuffer {}", m_drawFB ^ 1);
-        m_VDP1.fbManualErase = false;
-        // TODO: erase only the specified region
-        // TODO: use the erase fill value
-        m_spriteFB[m_drawFB ^ 1].fill(0);
-    }
+FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
+    // fmt::println("VDP1: Erasing framebuffer {}", m_drawFB ^ 1);
+    // TODO: erase only the specified region
+    // TODO: use the erase fill value
+    m_spriteFB[m_drawFB ^ 1].fill(0);
 }
 
 FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
-    if (!m_VDP1.fbSwapMode || m_VDP1.fbManualSwap) {
-        fmt::println("VDP1: Swapping framebuffers - draw {}, display {}", m_drawFB ^ 1, m_drawFB);
-        m_VDP1.fbManualSwap = false;
-        m_drawFB ^= 1;
-    }
+    // fmt::println("VDP1: Swapping framebuffers - draw {}, display {}", m_drawFB ^ 1, m_drawFB);
+    m_drawFB ^= 1;
 }
 
 void VDP::VDP1BeginFrame() {
-    fmt::println("VDP1: starting frame on framebuffer {} - VBE={:d} FCT={:d} FCM={:d}", m_drawFB, m_VDP1.vblankErase,
-                 m_VDP1.fbSwapTrigger, m_VDP1.fbSwapMode);
+    // fmt::println("VDP1: starting frame on framebuffer {} - VBE={:d} FCT={:d} FCM={:d}", m_drawFB, m_VDP1.vblankErase,
+    //              m_VDP1.fbSwapTrigger, m_VDP1.fbSwapMode);
 
     // TODO: setup rendering
     // TODO: figure out VDP1 timings
@@ -317,7 +321,7 @@ void VDP::VDP1ProcessCommands() {
     for (int i = 0; i < 10000; i++) {
         const VDP1Command::CMDCTRL cmdctrl{.u16 = VDP1ReadVRAM<uint16>(cmdAddress)};
         if (cmdctrl.end) {
-            fmt::println("VDP1: End of command list");
+            // fmt::println("VDP1: End of command list");
             m_SCU.TriggerSpriteDrawEnd();
             return;
         }

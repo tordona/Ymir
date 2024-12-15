@@ -182,7 +182,6 @@ struct VDP1Regs {
 
         fbManualErase = false;
         fbManualSwap = false;
-        fbSwapRequest = false;
 
         UpdateTVMR();
     }
@@ -263,7 +262,6 @@ struct VDP1Regs {
 
     bool fbManualErase; // Manual framebuffer erase requested
     bool fbManualSwap;  // Manual framebuffer swap requested
-    bool fbSwapRequest; // Framebuffer swap requested
 
     void UpdateTVMR() {
         static constexpr uint32 kSizesH[] = {512, 1024, 512, 512, 512, 512, 512, 512};
