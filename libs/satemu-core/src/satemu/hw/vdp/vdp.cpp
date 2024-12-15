@@ -513,7 +513,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
         sint32 lfy = slopeL.fy1;
         sint32 rfx = slopeR.fx1;
         sint32 rfy = slopeR.fy1;
-        for (sint32 lx = slopeL.x1; lx != slopeL.x2 + slopeL.dmaxinc; lx += slopeL.dmaxinc) {
+        for (sint32 lx = slopeL.x1; lx != slopeL.x2; lx += slopeL.dmaxinc) {
             const sint32 ly = lfy >> Slope::kFracBits;
             const sint32 rx = rfx >> Slope::kFracBits;
             const sint32 ry = rfy >> Slope::kFracBits;
@@ -521,7 +521,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
             Slope line{lx, ly, rx, ry};
             if (line.xmajor) {
                 sint64 rpy = line.fy1;
-                for (sint32 px = line.x1; px != line.x2 + line.dmaxinc; px += line.dmaxinc) {
+                for (sint32 px = line.x1; px != line.x2; px += line.dmaxinc) {
                     const sint64 py = rpy >> Slope::kFracBits;
                     plotPixel(px, py, color);
                     rpy += line.aspect;
@@ -537,7 +537,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
                 }
             } else {
                 sint64 rpx = line.fx1;
-                for (sint32 py = line.y1; py != line.y2 + line.dmaxinc; py += line.dmaxinc) {
+                for (sint32 py = line.y1; py != line.y2; py += line.dmaxinc) {
                     const sint64 px = rpx >> Slope::kFracBits;
                     plotPixel(px, py, color);
                     rpx += line.aspect;
@@ -560,11 +560,10 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
             }
         }
     } else {
-        const sint32 lyinc = slopeL.dy >= 0 ? 1 : -1;
         sint32 lfx = slopeL.fx1;
         sint32 rfx = slopeR.fx1;
         sint32 rfy = slopeR.fy1;
-        for (sint32 ly = slopeL.y1; ly != slopeL.y2 + lyinc; ly += lyinc) {
+        for (sint32 ly = slopeL.y1; ly != slopeL.y2; ly += slopeL.dmaxinc) {
             const sint32 lx = lfx >> Slope::kFracBits;
             const sint32 rx = rfx >> Slope::kFracBits;
             const sint32 ry = rfy >> Slope::kFracBits;
@@ -572,7 +571,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
             Slope line{lx, ly, rx, ry};
             if (line.xmajor) {
                 sint64 rpy = line.fy1;
-                for (sint32 px = line.x1; px != line.x2 + line.dmaxinc; px += line.dmaxinc) {
+                for (sint32 px = line.x1; px != line.x2; px += line.dmaxinc) {
                     const sint64 py = rpy >> Slope::kFracBits;
                     plotPixel(px, py, color);
                     rpy += line.aspect;
@@ -588,7 +587,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
                 }
             } else {
                 sint64 rpx = line.fx1;
-                for (sint32 py = line.y1; py != line.y2 + line.dmaxinc; py += line.dmaxinc) {
+                for (sint32 py = line.y1; py != line.y2; py += line.dmaxinc) {
                     const sint64 px = rpx >> Slope::kFracBits;
                     plotPixel(px, py, color);
                     rpx += line.aspect;
