@@ -40,6 +40,18 @@ void VDP::Reset(bool hard) {
 
     m_VDP1RenderContext.Reset();
 
+    m_spriteLayer.colors.fill({});
+    m_spriteLayer.priorities.fill(0);
+    m_spriteLayer.colorCalcRatios.fill(0);
+    m_spriteLayer.shadowOrWindow.fill(false);
+
+    for (auto &bgLayer : m_bgLayers) {
+        bgLayer.colors.fill({});
+        bgLayer.priorities.fill(0);
+        bgLayer.colorData.fill(0);
+        bgLayer.cramOffset = 0;
+    }
+
     BeginHPhaseActiveDisplay();
     BeginVPhaseActiveDisplay();
 
@@ -616,8 +628,25 @@ void VDP::VDP1Cmd_SetLocalCoordinates(uint16 cmdAddress) {
 void VDP::VDP2DrawLine() {
     // fmt::println("VDP2: drawing line {}", m_VCounter);
 
-    using FnDrawScrollNBG = void (VDP::*)(const NormBGParams &, BGRenderContext &);
-    using FnDrawBitmapNBG = void (VDP::*)(const NormBGParams &, BGRenderContext &);
+    using FnDrawSprite = void (VDP::*)();
+    using FnDrawScrollNBG = void (VDP::*)(const NormBGParams &, BGLayer &);
+    using FnDrawBitmapNBG = void (VDP::*)(const NormBGParams &, BGLayer &);
+    // using FnDrawRotBG = void (VDP::*)(const RotBGParams &, BGLayer &);
+
+    // Lookup table of VDP2DrawSpriteLayer functions
+    // [colorMode]
+    static constexpr auto fnDrawSprite = [] {
+        std::array<FnDrawSprite, 4> arr{};
+
+        util::constexpr_for<4>([&](auto index) {
+            const uint32 cmIndex = bit::extract<6, 7>(index());
+
+            const uint32 colorMode = cmIndex <= 2 ? cmIndex : 2;
+            arr[cmIndex] = &VDP::VDP2DrawSpriteLayer<colorMode>;
+        });
+
+        return arr;
+    }();
 
     // Lookup table of VDP2DrawNormalScrollBG functions
     // [twoWordChar][fourCellChar][wideChar][colorFormat][colorMode]
@@ -663,50 +692,54 @@ void VDP::VDP2DrawLine() {
     // TODO: optimize
     // - RBG1 replaces NBG0
     // - when RBG0 and RBG1 are both enabled, NBG0-3 are disabled
-    // - this means we can use less render contexts (4 max it seems)
+    // - this means we can use less layers (4 max it seems)
+
+    const uint32 colorMode = m_VDP2.RAMCTL.CRMDn;
+
+    // Draw sprite layer
+    (this->*fnDrawSprite[colorMode])();
 
     // Draw normal BGs
     int i = 0;
     for (const auto &bg : m_VDP2.normBGParams) {
-        auto &rctx = m_renderContexts[i++];
+        auto &layer = m_bgLayers[i++];
         if (bg.enabled) {
-            rctx.cramOffset = bg.caos << (m_VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
+            layer.cramOffset = bg.caos << (m_VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
 
             const uint32 colorFormat = static_cast<uint32>(bg.colorFormat);
-            const uint32 colorMode = m_VDP2.RAMCTL.CRMDn;
             if (bg.bitmap) {
-                (this->*fnDrawBitmapNBGs[colorFormat][colorMode])(bg, rctx);
+                (this->*fnDrawBitmapNBGs[colorFormat][colorMode])(bg, layer);
             } else {
                 const bool twoWordChar = bg.twoWordChar;
                 const bool fourCellChar = bg.cellSizeShift;
                 const bool wideChar = bg.wideChar;
-                (this->*fnDrawScrollNBGs[twoWordChar][fourCellChar][wideChar][colorFormat][colorMode])(bg, rctx);
+                (this->*fnDrawScrollNBGs[twoWordChar][fourCellChar][wideChar][colorFormat][colorMode])(bg, layer);
             }
         } else {
             // TODO: optimize -- fill these when the BG is disabled
-            rctx.colorData.fill(0);
-            rctx.colors.fill({0});
-            rctx.priorities.fill(0);
+            layer.colorData.fill(0);
+            layer.colors.fill({0});
+            layer.priorities.fill(0);
         }
     }
 
     // Draw rotation BGs
     for (const auto &bg : m_VDP2.rotBGParams) {
-        auto &rctx = m_renderContexts[i++];
+        auto &layer = m_bgLayers[i++];
         if (bg.enabled) {
-            rctx.cramOffset = bg.caos << (m_VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
+            layer.cramOffset = bg.caos << (m_VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
 
             // TODO: implement
             if (bg.bitmap) {
-                // (this->*fnDrawBitmapRBGs[...])(bg, rctx);
+                // (this->*fnDrawBitmapRBGs[...])(bg, layer);
             } else {
-                // (this->*fnDrawScrollRBGs[...])(bg, rctx);
+                // (this->*fnDrawScrollRBGs[...])(bg, layer);
             }
         } else {
             // TODO: optimize -- fill these when the BG is disabled
-            rctx.colorData.fill(0);
-            rctx.colors.fill({0});
-            rctx.priorities.fill(0);
+            layer.colorData.fill(0);
+            layer.colors.fill({0});
+            layer.priorities.fill(0);
         }
     }
 
@@ -725,37 +758,57 @@ void VDP::VDP2DrawLine() {
 
         // HACK(VDP2): for now, use the top priority of each layer
         if (m_framebuffer != nullptr) {
-            uint32 prio = 0;
+            // TODO: draw sprite layer properly
+            uint32 prio = m_spriteLayer.priorities[x];
+            m_framebuffer[x + y * m_HRes] = m_spriteLayer.colors[x].u32;
+
             for (int i = 0; i < 6; i++) {
-                const auto &rctx = m_renderContexts[i];
-                if (rctx.colors[x].msb && rctx.priorities[x] >= prio) {
-                    prio = rctx.priorities[x];
-                    m_framebuffer[x + y * m_HRes] = rctx.colors[x].u32;
+                const auto &layer = m_bgLayers[i];
+                if (layer.colors[x].msb && layer.priorities[x] >= prio) {
+                    prio = layer.priorities[x];
+                    m_framebuffer[x + y * m_HRes] = layer.colors[x].u32;
                 }
             }
             // TODO: if no layers are visible, draw BACK screen
+        }
+    }
+}
 
-            // HACK(VDP2,VDP1): override with sprite layer for debugging
-            const auto &spriteFB = m_spriteFB[m_drawFB ^ 1];
-            const uint32 spriteFBOffset = x + y * m_VDP1.fbSizeH;
-            uint16 spriteColor;
-            if (m_VDP1.pixel8Bits) {
-                spriteColor = spriteFB[spriteFBOffset];
-            } else {
-                spriteColor = util::ReadBE<uint16>(&spriteFB[spriteFBOffset * sizeof(uint16)]);
+template <uint32 colorMode>
+NO_INLINE void VDP::VDP2DrawSpriteLayer() {
+    const uint32 y = m_VCounter;
+
+    for (uint32 x = 0; x < m_HRes; x++) {
+        const auto &spriteFB = m_spriteFB[m_drawFB ^ 1];
+        const uint32 spriteFBOffset = x + y * m_VDP1.fbSizeH;
+
+        bool isPaletteData = true;
+        if (m_VDP2.spriteParams.mixedFormat) {
+            const uint16 spriteDataValue = util::ReadBE<uint16>(&spriteFB[spriteFBOffset * sizeof(uint16)]);
+            if (bit::extract<15>(spriteDataValue)) {
+                // RGB data
+                m_spriteLayer.colors[x] = ConvertRGB555to888(Color555{spriteDataValue});
+                m_spriteLayer.priorities[x] = 0;
+                m_spriteLayer.colorCalcRatios[x] = 0;
+                m_spriteLayer.shadowOrWindow[x] = false;
+                isPaletteData = false;
             }
-            if (spriteColor != 0) {
-                // TODO: should read sprite color properly
-                const Color555 color555{.u16 = spriteColor};
-                const Color888 color888 = ConvertRGB555to888(color555);
-                m_framebuffer[x + y * m_HRes] = color888.u32;
-            }
+        }
+
+        if (isPaletteData) {
+            // Palette data
+            const SpriteData spriteData = VDP2FetchSpriteData(spriteFBOffset);
+            const uint16 cramAddress = spriteData.colorData + m_VDP2.spriteParams.colorDataOffset;
+            m_spriteLayer.colors[x] = VDP2FetchCRAMColor<colorMode>(cramAddress);
+            m_spriteLayer.priorities[x] = spriteData.priority;
+            m_spriteLayer.colorCalcRatios[x] = spriteData.colorCalcRatio;
+            m_spriteLayer.shadowOrWindow[x] = spriteData.shadowOrWindow;
         }
     }
 }
 
 template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx) {
+NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer &layer) {
     //          Map
     // +---------+---------+
     // |         |         |   Normal BGs always have 4 planes named A,B,C,D in this exact configuration.
@@ -870,20 +923,20 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGRende
                 : VDP2FetchOneWordCharacter<fourCellChar, largePalette, wideChar>(bgParams, pageAddress, charIndex);
 
         // Fetch dot color using character data
-        rctx.colors[x] = VDP2FetchCharacterColor<colorFormat, colorMode>(rctx.cramOffset, rctx.colorData[x], ch, dotX,
-                                                                         dotY, cellIndex);
+        layer.colors[x] = VDP2FetchCharacterColor<colorFormat, colorMode>(layer.cramOffset, layer.colorData[x], ch,
+                                                                          dotX, dotY, cellIndex);
 
         // Compute priority
-        rctx.priorities[x] = bgParams.priorityNumber;
+        layer.priorities[x] = bgParams.priorityNumber;
         if (bgParams.priorityMode == PriorityMode::PerCharacter) {
-            rctx.priorities[x] &= ~1;
-            rctx.priorities[x] |= ch.specPriority;
+            layer.priorities[x] &= ~1;
+            layer.priorities[x] |= ch.specPriority;
         } else if (bgParams.priorityMode == PriorityMode::PerDot) {
             if constexpr (colorFormat == ColorFormat::Palette16 || colorFormat == ColorFormat::Palette256 ||
                           colorFormat == ColorFormat::Palette2048) {
-                rctx.priorities[x] &= ~1;
-                if (ch.specPriority && specialFunctionCodes.colorMatches[rctx.colorData[x]]) {
-                    rctx.priorities[x] |= 1;
+                layer.priorities[x] &= ~1;
+                if (ch.specPriority && specialFunctionCodes.colorMatches[layer.colorData[x]]) {
+                    layer.priorities[x] |= 1;
                 }
             }
         }
@@ -894,7 +947,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGRende
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderContext &rctx) {
+NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGLayer &layer) {
     const uint32 y = m_VCounter;
 
     // TODO: precompute fracScrollY at start of frame and increment per Y
@@ -907,13 +960,13 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGRende
         const uint32 scrollY = fracScrollY >> 8u;
 
         // Fetch dot color from bitmap
-        rctx.colors[x] = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, rctx.cramOffset, scrollX, scrollY);
+        layer.colors[x] = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, layer.cramOffset, scrollX, scrollY);
 
         // Compute priority
-        rctx.priorities[x] = bgParams.priorityNumber;
+        layer.priorities[x] = bgParams.priorityNumber;
         if (bgParams.priorityMode == PriorityMode::PerCharacter || bgParams.priorityMode == PriorityMode::PerDot) {
-            rctx.priorities[x] &= ~1;
-            rctx.priorities[x] |= bgParams.supplBitmapSpecialPriority;
+            layer.priorities[x] &= ~1;
+            layer.priorities[x] |= bgParams.supplBitmapSpecialPriority;
         }
 
         // Increment horizontal coordinate
@@ -938,7 +991,7 @@ FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(uint32 pageBaseAddres
 FLATTEN FORCE_INLINE SpriteData VDP::VDP2FetchSpriteData(uint32 fbOffset) {
     const uint8 type = m_VDP2.spriteParams.type;
     if (type < 8) {
-        return VDP2FetchWordSpriteData(fbOffset, type);
+        return VDP2FetchWordSpriteData(fbOffset * sizeof(uint16), type);
     } else {
         return VDP2FetchByteSpriteData(fbOffset, type);
     }
@@ -1099,8 +1152,8 @@ FORCE_INLINE VDP::Character VDP::VDP2FetchOneWordCharacter(const NormBGParams &b
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-FORCE_INLINE vdp::Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &colorData, Character ch, uint8 dotX,
-                                                        uint8 dotY, uint32 cellIndex) {
+FORCE_INLINE Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &colorData, Character ch, uint8 dotX,
+                                                   uint8 dotY, uint32 cellIndex) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
     assert(dotX < 8);
     assert(dotY < 8);
@@ -1140,8 +1193,8 @@ FORCE_INLINE vdp::Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-FORCE_INLINE vdp::Color888 VDP::VDP2FetchBitmapColor(const NormBGParams &bgParams, uint32 cramOffset, uint8 dotX,
-                                                     uint8 dotY) {
+FORCE_INLINE Color888 VDP::VDP2FetchBitmapColor(const NormBGParams &bgParams, uint32 cramOffset, uint8 dotX,
+                                                uint8 dotY) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
 
     // Bitmap data wraps around infinitely
@@ -1184,22 +1237,35 @@ template <uint32 colorMode>
 FORCE_INLINE Color888 VDP::VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorIndex) {
     static_assert(colorMode <= 2, "Invalid CRMD value");
 
+    if constexpr (colorMode == 0 || colorMode == 1) {
+        // RGB 5:5:5, 1024 words (mode 0)
+        // RGB 5:5:5, 2048 words (mode 1)
+        return VDP2FetchCRAMColor<colorMode>(cramOffset + colorIndex * sizeof(uint16));
+    } else { // colorMode == 2
+        // RGB 8:8:8, 1024 words
+        return VDP2FetchCRAMColor<colorMode>(cramOffset + colorIndex * sizeof(uint32));
+    }
+}
+
+template <uint32 colorMode>
+FORCE_INLINE Color888 VDP::VDP2FetchCRAMColor(uint32 cramAddress) {
+    static_assert(colorMode <= 2, "Invalid CRMD value");
+
+    cramAddress &= 0x7FF;
+
     if constexpr (colorMode == 0) {
         // RGB 5:5:5, 1024 words
-        const uint32 address = (cramOffset + colorIndex * sizeof(uint16)) & 0x7FF;
-        const uint16 data = util::ReadBE<uint16>(&m_CRAM[address]);
+        const uint16 data = util::ReadBE<uint16>(&m_CRAM[cramAddress]);
         Color555 clr555{.u16 = data};
         return ConvertRGB555to888(clr555);
     } else if constexpr (colorMode == 1) {
         // RGB 5:5:5, 2048 words
-        const uint32 address = (cramOffset + colorIndex * sizeof(uint16)) & 0xFFF;
-        const uint16 data = util::ReadBE<uint16>(&m_CRAM[address]);
+        const uint16 data = util::ReadBE<uint16>(&m_CRAM[cramAddress]);
         Color555 clr555{.u16 = data};
         return ConvertRGB555to888(clr555);
     } else { // colorMode == 2
         // RGB 8:8:8, 1024 words
-        const uint32 address = (cramOffset + colorIndex * sizeof(uint32)) & 0xFFF;
-        const uint32 data = util::ReadBE<uint32>(&m_CRAM[address]);
+        const uint32 data = util::ReadBE<uint32>(&m_CRAM[cramAddress]);
         return Color888{.u32 = data};
     }
 }

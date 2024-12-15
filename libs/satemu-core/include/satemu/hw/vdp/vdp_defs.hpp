@@ -751,6 +751,7 @@ struct SpriteParams {
         colorCalcValue = 0;
         colorCalcCond = SpriteColorCalculationCondition::PriorityLessThanOrEqual;
         priorities.fill(0);
+        colorDataOffset = 0;
     }
 
     // The sprite type (0..F).
@@ -780,6 +781,10 @@ struct SpriteParams {
     // Sprite color calculation ratios for registers 0-7, ranging from 31:1 to 0:32.
     // Derived from CCRSA, CCRSB, CCRSC and CCRSD.
     std::array<uint8, 8> colorCalcRatios;
+
+    // Sprite color data offset.
+    // Derived from CRAOFB.SPCAOSn
+    uint16 colorDataOffset;
 };
 
 struct SpriteData {
@@ -2809,15 +2814,13 @@ struct VDP2Regs {
     FORCE_INLINE uint16 ReadCRAOFB() const {
         uint16 value = 0;
         bit::deposit_into<0, 2>(value, rotBGParams[0].caos);
-        // TODO: SPCAOSn
-        // bit::deposit_into<4, 6>(value, ?m_SpriteParams?.caos);
+        bit::deposit_into<4, 6>(value, spriteParams.colorDataOffset >> 8u);
         return value;
     }
 
     FORCE_INLINE void WriteCRAOFB(uint16 value) {
         rotBGParams[0].caos = bit::extract<0, 2>(value);
-        // TODO: SPCAOSn
-        // ?m_SpriteParams?.caos = bit::extract<4, 6>(value);
+        spriteParams.colorDataOffset = bit::extract<4, 6>(value) << 8u;
     }
 
     // 1800E8   LNCLEN  Line Color Screen Enable

@@ -637,15 +637,7 @@ private:
         bool flipV;         // Vertical flip
     };
 
-    struct BGRenderContext {
-        // CRAM base offset for color fetching.
-        // Derived from RAMCTL.CRMDn and CRAOFA/CRAOFB.xxCAOSn
-        uint32 cramOffset;
-
-        // Bits 3-1 of the color data retrieved from VRAM per pixel.
-        // Used by special priority function.
-        std::array<uint8, 704> colorData;
-
+    struct Layer {
         // Colors per pixel
         std::array<vdp::Color888, 704> colors;
 
@@ -653,8 +645,29 @@ private:
         std::array<uint8, 704> priorities;
     };
 
-    // Render contexts for NBGs 0-3 then RBGs 0-1
-    std::array<BGRenderContext, 4 + 2> m_renderContexts;
+    struct SpriteLayer : public Layer {
+        // Color calculation ratios per pixel
+        std::array<uint8, 704> colorCalcRatios;
+
+        // Shadow or window enable bits per pixel
+        std::array<bool, 704> shadowOrWindow;
+    };
+
+    struct BGLayer : public Layer {
+        // Bits 3-1 of the color data retrieved from VRAM per pixel.
+        // Used by special priority function.
+        std::array<uint8, 704> colorData;
+
+        // CRAM base offset for color fetching.
+        // Derived from RAMCTL.CRMDn and CRAOFA/CRAOFB.xxCAOSn
+        uint32 cramOffset;
+    };
+
+    // Layer data for sprites
+    SpriteLayer m_spriteLayer;
+
+    // Layer data for NBGs 0-3 then RBGs 0-1
+    std::array<BGLayer, 4 + 2> m_bgLayers;
 
     // Framebuffer provided by the frontend to render the current frame into
     FramebufferColor *m_framebuffer;
@@ -703,24 +716,29 @@ private:
     // Draws the VDP2 scanline at m_VCounter.
     void VDP2DrawLine();
 
+    // Draws the current scanline of the sprite layer.
+    // colorMode is the CRAM color mode.
+    template <uint32 colorMode>
+    void VDP2DrawSpriteLayer();
+
     // Draws a normal scroll BG scanline.
     // bgParams contains the parameters for the BG to draw.
-    // rctx contains additional context for the renderer.
+    // layer is a reference to the layer object for the specified background.
     // twoWordChar indicates if character patterns use one word (false) or two words (true).
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
     // wideChar indicates if the flip bits are available (false) or used to extend the character number (true).
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
     template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGRenderContext &rctx);
+    void VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer &layer);
 
     // Draws a normal bitmap BG scanline.
     // bgParams contains the parameters for the BG to draw.
-    // rctx contains additional context for the renderer.
+    // layer is a reference to the layer object for the specified background.
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGRenderContext &rctx);
+    void VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGLayer &layer);
 
     // Fetches a two-word character from VRAM.
     // pageBaseAddress specifies the base address of the page of character patterns.
@@ -764,6 +782,12 @@ private:
     // colorMode is the CRAM color mode.
     template <uint32 colorMode>
     vdp::Color888 VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorIndex);
+
+    // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
+    // cramAddress is the CRAM address.
+    // colorMode is the CRAM color mode.
+    template <uint32 colorMode>
+    vdp::Color888 VDP2FetchCRAMColor(uint32 cramAddress);
 
     // Fetches sprite data based on the current sprite mode.
     // fbOffset is the offset into the framebuffer (in bytes) where the sprite data is located.
