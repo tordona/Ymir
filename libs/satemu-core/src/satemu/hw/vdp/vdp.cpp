@@ -507,7 +507,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
         std::swap(slopeL, slopeR);
     }
 
-    // TODO: simplify code
+    // TODO: simplify code and make it generic
     // TODO: apply gouraud
     if (slopeL.xmajor) {
         sint32 lfy = slopeL.fy1;
@@ -569,6 +569,16 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
             const sint32 ry = rfy >> Slope::kFracBits;
 
             Slope line{lx, ly, rx, ry};
+            // TODO: rename Slope to Line or Edge or something similar
+            // - Line makes most sense since it will be used to draw the insides of a polygon too
+            // TODO: replace entire if-else block below with:
+            /*while (line.Step()) {
+                plotPixel(line.X(), line.Y(), color);
+                if (line.SlopeChanged()) {
+                    plotPixel(line.AAX(), line.AAY(), color);
+                }
+            }*/
+            // TODO: figure out how to replace the outer if-else too
             if (line.xmajor) {
                 sint64 rpy = line.fy1;
                 for (sint32 px = line.x1; px != line.x2; px += line.dmaxinc) {
