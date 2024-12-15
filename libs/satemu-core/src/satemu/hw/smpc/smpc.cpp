@@ -76,7 +76,7 @@ void SMPC::WriteSF(uint8 value) {
 }
 
 void SMPC::SNDON() {
-    fmt::println("SMPC: processing SNDON");
+    // fmt::println("SMPC: processing SNDON");
 
     m_SCSP.SetCPUEnabled(true);
 
@@ -86,7 +86,7 @@ void SMPC::SNDON() {
 }
 
 void SMPC::SNDOFF() {
-    fmt::println("SMPC: processing SNDOFF");
+    // fmt::println("SMPC: processing SNDOFF");
 
     m_SCSP.SetCPUEnabled(false);
 
@@ -96,7 +96,7 @@ void SMPC::SNDOFF() {
 }
 
 void SMPC::RESENAB() {
-    fmt::println("SMPC: processing RESENAB");
+    // fmt::println("SMPC: processing RESENAB");
     // TODO: enable reset NMI
 
     SF = 0; // done processing
@@ -105,7 +105,7 @@ void SMPC::RESENAB() {
 }
 
 void SMPC::RESDISA() {
-    fmt::println("SMPC: processing RESDISA");
+    // fmt::println("SMPC: processing RESDISA");
     // TODO: disable reset NMI
 
     SF = 0; // done processing
@@ -114,7 +114,7 @@ void SMPC::RESDISA() {
 }
 
 void SMPC::INTBACK() {
-    fmt::println("SMPC: processing INTBACK {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
+    // fmt::println("SMPC: processing INTBACK {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
     // TODO: implement properly
 
     const bool getSMPCStatus = IREG[0];
