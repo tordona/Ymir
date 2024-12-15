@@ -797,9 +797,10 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
 
         if (isPaletteData) {
             // Palette data
+            // TODO: check if this is correct, seems bugged
             const SpriteData spriteData = VDP2FetchSpriteData(spriteFBOffset);
-            const uint16 cramAddress = spriteData.colorData + m_VDP2.spriteParams.colorDataOffset;
-            m_spriteLayer.colors[x] = VDP2FetchCRAMColor<colorMode>(cramAddress);
+            const uint32 colorIndex = m_VDP2.spriteParams.colorDataOffset + spriteData.colorData;
+            m_spriteLayer.colors[x] = VDP2FetchCRAMColor<colorMode>(0, colorIndex);
             m_spriteLayer.priorities[x] = spriteData.priority;
             m_spriteLayer.colorCalcRatios[x] = spriteData.colorCalcRatio;
             m_spriteLayer.shadowOrWindow[x] = spriteData.shadowOrWindow;
@@ -1237,35 +1238,22 @@ template <uint32 colorMode>
 FORCE_INLINE Color888 VDP::VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorIndex) {
     static_assert(colorMode <= 2, "Invalid CRMD value");
 
-    if constexpr (colorMode == 0 || colorMode == 1) {
-        // RGB 5:5:5, 1024 words (mode 0)
-        // RGB 5:5:5, 2048 words (mode 1)
-        return VDP2FetchCRAMColor<colorMode>(cramOffset + colorIndex * sizeof(uint16));
-    } else { // colorMode == 2
-        // RGB 8:8:8, 1024 words
-        return VDP2FetchCRAMColor<colorMode>(cramOffset + colorIndex * sizeof(uint32));
-    }
-}
-
-template <uint32 colorMode>
-FORCE_INLINE Color888 VDP::VDP2FetchCRAMColor(uint32 cramAddress) {
-    static_assert(colorMode <= 2, "Invalid CRMD value");
-
-    cramAddress &= 0x7FF;
-
     if constexpr (colorMode == 0) {
         // RGB 5:5:5, 1024 words
-        const uint16 data = util::ReadBE<uint16>(&m_CRAM[cramAddress]);
+        const uint32 address = (cramOffset + colorIndex * sizeof(uint16)) & 0x7FF;
+        const uint16 data = util::ReadBE<uint16>(&m_CRAM[address]);
         Color555 clr555{.u16 = data};
         return ConvertRGB555to888(clr555);
     } else if constexpr (colorMode == 1) {
         // RGB 5:5:5, 2048 words
-        const uint16 data = util::ReadBE<uint16>(&m_CRAM[cramAddress]);
+        const uint32 address = (cramOffset + colorIndex * sizeof(uint16)) & 0xFFF;
+        const uint16 data = util::ReadBE<uint16>(&m_CRAM[address]);
         Color555 clr555{.u16 = data};
         return ConvertRGB555to888(clr555);
     } else { // colorMode == 2
         // RGB 8:8:8, 1024 words
-        const uint32 data = util::ReadBE<uint32>(&m_CRAM[cramAddress]);
+        const uint32 address = (cramOffset + colorIndex * sizeof(uint32)) & 0xFFF;
+        const uint32 data = util::ReadBE<uint32>(&m_CRAM[address]);
         return Color888{.u32 = data};
     }
 }

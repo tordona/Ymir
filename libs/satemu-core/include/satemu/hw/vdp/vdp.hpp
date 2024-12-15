@@ -783,12 +783,6 @@ private:
     template <uint32 colorMode>
     vdp::Color888 VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorIndex);
 
-    // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
-    // cramAddress is the CRAM address.
-    // colorMode is the CRAM color mode.
-    template <uint32 colorMode>
-    vdp::Color888 VDP2FetchCRAMColor(uint32 cramAddress);
-
     // Fetches sprite data based on the current sprite mode.
     // fbOffset is the offset into the framebuffer (in bytes) where the sprite data is located.
     SpriteData VDP2FetchSpriteData(uint32 fbOffset);

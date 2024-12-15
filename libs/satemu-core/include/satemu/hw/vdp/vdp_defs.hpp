@@ -784,7 +784,7 @@ struct SpriteParams {
 
     // Sprite color data offset.
     // Derived from CRAOFB.SPCAOSn
-    uint16 colorDataOffset;
+    uint32 colorDataOffset;
 };
 
 struct SpriteData {
