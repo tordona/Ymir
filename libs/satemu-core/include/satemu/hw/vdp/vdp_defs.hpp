@@ -152,12 +152,14 @@ struct VDP1Command {
         };
     };
 
-    // Size
+    // CMDSIZE
+    //  13-8   Character Size X / 8
+    //   7-0   Character Size Y
     union Size {
         uint16 u16;
         struct {
-            uint16 sizeV : 7;
-            uint16 sizeH : 6;
+            uint16 V : 7;
+            uint16 H : 6;
         };
     };
 };

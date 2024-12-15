@@ -502,6 +502,23 @@ FORCE_INLINE void VDP::VDP1PlotLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, 
     }
 }
 
+void VDP::VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint32 colorBank, VDP1Command::DrawMode mode,
+                               uint32 gouraudTable, uint32 charAddr, uint32 charSizeH, uint32 v) {
+    for (TexturedLineStepper line{x1, y1, x2, y2, charSizeH}; line.CanStep(); line.Step()) {
+        const uint32 u = line.U();
+        if (line.UChanged()) {
+            // TODO: load new character
+            // TODO: process end codes
+        }
+        // TODO: calculate color
+
+        VDP1PlotPixel(line.X(), line.Y(), colorBank, mode, gouraudTable);
+        if (line.NeedsAntiAliasing()) {
+            VDP1PlotPixel(line.AAX(), line.AAY(), colorBank, mode, gouraudTable);
+        }
+    }
+}
+
 void VDP::VDP1Cmd_DrawNormalSprite(uint16 cmdAddress) {
     // fmt::println("VDP1: Draw normal sprite");
 }
@@ -511,9 +528,43 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint16 cmdAddress) {
 }
 
 void VDP::VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress) {
-    // fmt::println("VDP1: Draw distored sprite");
-    // HACK: cheating here just to get something displayed
-    VDP1Cmd_DrawPolygon(cmdAddress);
+    auto &ctx = m_VDP1RenderContext;
+    const VDP1Command::DrawMode mode{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
+    const uint16 color = VDP1ReadVRAM<uint16>(cmdAddress + 0x06);
+    const uint32 charAddr = VDP1ReadVRAM<uint16>(cmdAddress + 0x08) * 8u;
+    const VDP1Command::Size size{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x0A)};
+    const sint32 xa = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C)) + ctx.localCoordX;
+    const sint32 ya = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E)) + ctx.localCoordY;
+    const sint32 xb = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x10)) + ctx.localCoordX;
+    const sint32 yb = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x12)) + ctx.localCoordY;
+    const sint32 xc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14)) + ctx.localCoordX;
+    const sint32 yc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16)) + ctx.localCoordY;
+    const sint32 xd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x18)) + ctx.localCoordX;
+    const sint32 yd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1A)) + ctx.localCoordY;
+    const uint32 gouraudTable = static_cast<uint32>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
+
+    fmt::println("VDP1: Draw distorted sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
+                 "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
+                 xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, mode.u16, size.H * 8, size.V, charAddr);
+
+    if (VDP1IsQuadSystemClipped(xa, ya, xb, yb, xc, yc, xd, yd)) {
+        return;
+    }
+
+    const uint32 charSizeH = size.H * 8;
+    const uint32 charSizeV = size.V;
+
+    // Interpolate linearly over edges A-D and B-C
+    for (TexturedQuadEdgesStepper edge{xa, ya, xb, yb, xc, yc, xd, yd, charSizeV}; edge.CanStep(); edge.Step()) {
+        const sint32 lx = edge.XMaj();
+        const sint32 ly = edge.YMaj();
+        const sint32 rx = edge.XMin();
+        const sint32 ry = edge.YMin();
+        const uint32 v = edge.V();
+
+        // Plot lines between the interpolated points
+        VDP1PlotTexturedLine(lx, ly, rx, ry, color, mode, gouraudTable, charAddr, charSizeH, v);
+    }
 }
 
 void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {

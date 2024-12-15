@@ -25,7 +25,7 @@ public:
         return ((static_cast<sint64>(value) << 1) + 1) << (kFracBits - 1);
     }
 
-    Slope(sint32 x1, sint32 y1, sint32 x2, sint32 y2) {
+    FORCE_INLINE Slope(sint32 x1, sint32 y1, sint32 x2, sint32 y2) {
         const sint32 dx = x2 - x1;
         const sint32 dy = y2 - y1;
 
@@ -96,7 +96,7 @@ protected:
 // Steps over the pixels of a line.
 class LineStepper : public Slope {
 public:
-    LineStepper(sint32 x1, sint32 y1, sint32 x2, sint32 y2)
+    FORCE_INLINE LineStepper(sint32 x1, sint32 y1, sint32 x2, sint32 y2)
         : Slope(x1, y1, x2, y2) {
 
         const bool samesign = (x1 > x2) == (y1 > y2);
@@ -141,7 +141,8 @@ private:
 // other edge proportional to their lengths.
 class QuadEdgesStepper {
 public:
-    QuadEdgesStepper(sint32 xa, sint32 ya, sint32 xb, sint32 yb, sint32 xc, sint32 yc, sint32 xd, sint32 yd)
+    FORCE_INLINE QuadEdgesStepper(sint32 xa, sint32 ya, sint32 xb, sint32 yb, sint32 xc, sint32 yc, sint32 xd,
+                                  sint32 yd)
         : majslope(xa, ya, xd, yd)
         , minslope(xb, yb, xc, yc) {
 
@@ -152,6 +153,17 @@ public:
 
         minmajinc = SafeDiv(minslope.majinc * minslope.dmaj, majslope.dmaj);
         minmininc = SafeDiv(minslope.mininc * minslope.dmaj, majslope.dmaj);
+    }
+
+    // Steps both slopes of the edge to the next coordinate.
+    // The major slope is stepped by a full pixel.
+    // The minor slope is stepped in proportion to the major slope.
+    // Should not be invoked when CanStep() returns false
+    FORCE_INLINE void Step() {
+        majslope.Step();
+        // Step minor slope by a fraction proportional to majslope.dmaj / minslope.dmaj
+        minslope.majcounter += minmajinc;
+        minslope.mincounter += minmininc;
     }
 
     // Determines if the edge can be stepped
@@ -179,22 +191,64 @@ public:
         return minslope.Y();
     }
 
-    // Steps both slopes of the edge to the next coordinate.
-    // The major slope is stepped by a full pixel.
-    // The minor slope is stepped in proportion to the major slope.
-    // Should not be invoked when CanStep() returns false
-    FORCE_INLINE void Step() {
-        majslope.Step();
-        // Step minor slope by a fraction proportional to majslope.dmaj / minslope.dmaj
-        minslope.majcounter += minmajinc;
-        minslope.mincounter += minmininc;
-    }
-
     Slope majslope; // slope with the longest span
     Slope minslope; // slope with the shortest span
 
 private:
     sint64 minmajinc, minmininc; // fractional minor slope interpolation increments
+};
+
+// Steps over the pixels of a textured line, interpolating the texture's U coordinate based on the character width.
+class TexturedLineStepper : public LineStepper {
+public:
+    TexturedLineStepper(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint32 charSizeH)
+        : LineStepper(x1, y1, x2, y2) {
+        // TODO: precompute U increment from charSizeH
+    }
+
+    // Steps the slope to the next coordinate.
+    // The U coordinate is stepped in proportion to the horizontal character size
+    // Should not be invoked when CanStep() returns false
+    FORCE_INLINE void Step() {
+        LineStepper::Step();
+        // TODO: increment U
+    }
+
+    // Retrieves the current U texel coordinate.
+    FORCE_INLINE uint32 U() const {
+        return 0; // TODO: return computed U
+    }
+
+    // Determines if the U texel coordinate has changed on this step.
+    FORCE_INLINE bool UChanged() const {
+        return false; // TODO: calculate; should also return true for the first step
+    }
+};
+
+// Edge iterator for a textured quad with vertices A-B-C-D arranged in clockwise order from top-left, interpolating the
+// texture's V coordinate based on the character height.
+class TexturedQuadEdgesStepper : public QuadEdgesStepper {
+public:
+    TexturedQuadEdgesStepper(sint32 xa, sint32 ya, sint32 xb, sint32 yb, sint32 xc, sint32 yc, sint32 xd, sint32 yd,
+                             uint32 charSizeV)
+        : QuadEdgesStepper(xa, ya, xb, yb, xc, yc, xd, yd) {
+        // TODO: precompute V increment from charSizeV
+    }
+
+    // Steps both slopes of the edge to the next coordinate.
+    // The major slope is stepped by a full pixel.
+    // The minor slope is stepped in proportion to the major slope.
+    // The V coordinate is stepped in proportion to the vertical character size
+    // Should not be invoked when CanStep() returns false
+    FORCE_INLINE void Step() {
+        QuadEdgesStepper::Step();
+        // TODO: increment V
+    }
+
+    // Retrieves the current V texel coordinate.
+    FORCE_INLINE uint32 V() const {
+        return 0; // TODO: return computed V
+    }
 };
 
 } // namespace satemu::vdp
