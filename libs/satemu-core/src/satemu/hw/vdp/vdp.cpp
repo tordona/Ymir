@@ -408,7 +408,7 @@ auto safeDiv(T1 dividend, T2 divisor) {
 }
 
 struct Slope {
-    static constexpr sint64 kFracBits = 13;
+    static constexpr sint64 kFracBits = 16;
 
     Slope(sint32 x1, sint32 y1, sint32 x2, sint32 y2)
         : x1(x1)
@@ -417,21 +417,71 @@ struct Slope {
         , y2(y2) {
         dx = x2 - x1;
         dy = y2 - y1;
-        dmax = std::max(abs(dx), abs(dy));
+        dmaj = std::max(abs(dx), abs(dy));
 
         fx1 = ((static_cast<sint64>(x1) << 1) + 1) << (kFracBits - 1);
         fy1 = ((static_cast<sint64>(y1) << 1) + 1) << (kFracBits - 1);
-        fxinc = safeDiv(((static_cast<sint64>(dx) << 1) + 1) << (kFracBits - 1), dmax);
-        fyinc = safeDiv(((static_cast<sint64>(dy) << 1) + 1) << (kFracBits - 1), dmax);
+        fxinc = safeDiv(((static_cast<sint64>(dx) << 1) + 1) << (kFracBits - 1), dmaj);
+        fyinc = safeDiv(((static_cast<sint64>(dy) << 1) + 1) << (kFracBits - 1), dmaj);
 
         xmajor = abs(dx) >= abs(dy);
         if (xmajor) {
             aspect = safeDiv(static_cast<sint64>(dy) << kFracBits, abs(dx));
-            dmaxinc = dx >= 0 ? 1 : -1;
+            dmajinc = dx >= 0 ? 1 : -1;
+            aaxinc = (dx >> 31) == (dy >> 31) ? dmajinc : 0;
+            aayinc = (dx >> 31) == (dy >> 31) ? 0 : (dy >= 0 ? 1 : -1);
+            aamininc = aspect;
+            majcounter = x1;
+            majcounterend = x2;
+            mincounter = fy1;
         } else {
             aspect = safeDiv(static_cast<sint64>(dx) << kFracBits, abs(dy));
-            dmaxinc = dy >= 0 ? 1 : -1;
+            dmajinc = dy >= 0 ? 1 : -1;
+            aaxinc = (dx >> 31) == (dy >> 31) ? 0 : (dx >= 0 ? -1 : 1);
+            aayinc = (dx >> 31) == (dy >> 31) ? -dmajinc : 0;
+            aamininc = -aspect;
+            majcounter = y1;
+            majcounterend = y2;
+            mincounter = fx1;
         }
+    }
+
+    // Steps the slope to the next coordinate.
+    // Should not be invoked when CanStep() returns false
+    void Step() {
+        majcounter += dmajinc;
+        mincounter += aspect;
+    }
+
+    // Determines if the slope can be stepped
+    bool CanStep() const {
+        return majcounter != majcounterend;
+    }
+
+    // Retrieves the current X coordinate (no fractional bits)
+    sint32 X() const {
+        return xmajor ? majcounter : (mincounter >> kFracBits);
+    }
+
+    // Retrieves the current Y coordinate (no fractional bits)
+    sint32 Y() const {
+        return xmajor ? (mincounter >> kFracBits) : majcounter;
+    }
+
+    // Determines if the current step needs antialiasing
+    bool NeedsAntiAliasing() const {
+        // Antialiasing is needed when the coordinate on the minor axis has changed from the previous step
+        return ((mincounter + aamininc) >> kFracBits) != (mincounter >> kFracBits);
+    }
+
+    // Returns the X coordinate of the antialiased pixel
+    sint32 AAX() const {
+        return X() + aaxinc;
+    }
+
+    // Returns the Y coordinate of the antialiased pixel
+    sint32 AAY() const {
+        return Y() + aayinc;
     }
 
     sint32 x1, y1; // starting coordinates
@@ -439,15 +489,21 @@ struct Slope {
 
     sint32 dx;      // width of the slope: x2 - x1
     sint32 dy;      // height of the slope: y2 - y1
-    sint32 dmax;    // longest span of the slope: max(abs(dx), abs(dy))
-    sint32 dmaxinc; // increment on the longest axis (+1 or -1)
+    sint32 dmaj;    // major span of the slope: max(abs(dx), abs(dy))
+    sint32 dmajinc; // increment on the major axis (+1 or -1)
 
-    sint64 aspect; // slope aspect: dy/dx (x-major) or dx/dy (y-major) (with 13 fractional bits)
-    bool xmajor;   // true if abs(dx) >= abs(dy)
-    // X-major slopes should be interpolated over X
+    sint64 aspect;   // slope aspect: dy/dx (x-major) or dx/dy (y-major) (with fractional bits)
+    bool xmajor;     // true if abs(dx) >= abs(dy)
+    sint32 aaxinc;   // X increment for antialiasing
+    sint32 aayinc;   // Y increment for antialiasing
+    sint64 aamininc; // Minor axis increment for antialiasing
 
-    sint64 fx1, fy1;     // starting coordinates with 13 fractional bits
-    sint64 fxinc, fyinc; // slope interpolation increments with 13 fractional bits
+    sint64 fx1, fy1;     // starting coordinates with fractional bits
+    sint64 fxinc, fyinc; // slope interpolation increments with fractional bits
+
+    sint32 majcounter;    // coordinate counter for the major axis (incremented by dmajinc per step)
+    sint32 majcounterend; // final coordinate counter for the major axis
+    sint64 mincounter;    // coordinate counter for the minor axis (fractional, incremented by aspect)
 };
 
 void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
@@ -503,120 +559,56 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     };
 
     // Iterate over the longer slope's pixels, drawing lines that connect to the other slope
-    if (slopeL.dmax < slopeR.dmax) {
+    if (slopeL.dmaj < slopeR.dmaj) {
         std::swap(slopeL, slopeR);
     }
 
     // TODO: simplify code and make it generic
+    // TODO: figure out how to replace the outer if-else with Slope
+    // - probably needs a fractional Step(...) function to work
     // TODO: apply gouraud
     if (slopeL.xmajor) {
         sint32 lfy = slopeL.fy1;
         sint32 rfx = slopeR.fx1;
         sint32 rfy = slopeR.fy1;
-        for (sint32 lx = slopeL.x1; lx != slopeL.x2; lx += slopeL.dmaxinc) {
+        for (sint32 lx = slopeL.x1; lx != slopeL.x2; lx += slopeL.dmajinc) {
             const sint32 ly = lfy >> Slope::kFracBits;
             const sint32 rx = rfx >> Slope::kFracBits;
             const sint32 ry = rfy >> Slope::kFracBits;
 
-            Slope line{lx, ly, rx, ry};
-            if (line.xmajor) {
-                sint64 rpy = line.fy1;
-                for (sint32 px = line.x1; px != line.x2; px += line.dmaxinc) {
-                    const sint64 py = rpy >> Slope::kFracBits;
-                    plotPixel(px, py, color);
-                    rpy += line.aspect;
-                    // "anti-alias"
-                    if ((rpy >> Slope::kFracBits) != py) {
-                        if ((line.dx >> 31) == (line.dy >> 31)) {
-                            // TODO: there might be an off-by-one error here
-                            plotPixel(px + line.dmaxinc, py, color);
-                        } else {
-                            plotPixel(px, rpy >> Slope::kFracBits, color);
-                        }
-                    }
-                }
-            } else {
-                sint64 rpx = line.fx1;
-                for (sint32 py = line.y1; py != line.y2; py += line.dmaxinc) {
-                    const sint64 px = rpx >> Slope::kFracBits;
-                    plotPixel(px, py, color);
-                    rpx += line.aspect;
-                    // "anti-alias"
-                    if ((rpx >> Slope::kFracBits) != px) {
-                        if ((line.dx >> 31) == (line.dy >> 31)) {
-                            plotPixel(rpx >> Slope::kFracBits, py, color);
-                        } else {
-                            // TODO: there might be an off-by-one error here
-                            plotPixel(px, py + line.dmaxinc, color);
-                        }
-                    }
+            for (Slope line{lx, ly, rx, ry}; line.CanStep(); line.Step()) {
+                plotPixel(line.X(), line.Y(), color);
+                if (line.NeedsAntiAliasing()) {
+                    plotPixel(line.AAX(), line.AAY(), color);
                 }
             }
 
             lfy += slopeL.aspect;
-            if (slopeL.dmax != 0) {
-                rfx += slopeR.fxinc * slopeR.dmax / slopeL.dmax;
-                rfy += slopeR.fyinc * slopeR.dmax / slopeL.dmax;
+            if (slopeL.dmaj != 0) {
+                rfx += slopeR.fxinc * slopeR.dmaj / slopeL.dmaj;
+                rfy += slopeR.fyinc * slopeR.dmaj / slopeL.dmaj;
             }
         }
     } else {
         sint32 lfx = slopeL.fx1;
         sint32 rfx = slopeR.fx1;
         sint32 rfy = slopeR.fy1;
-        for (sint32 ly = slopeL.y1; ly != slopeL.y2; ly += slopeL.dmaxinc) {
+        for (sint32 ly = slopeL.y1; ly != slopeL.y2; ly += slopeL.dmajinc) {
             const sint32 lx = lfx >> Slope::kFracBits;
             const sint32 rx = rfx >> Slope::kFracBits;
             const sint32 ry = rfy >> Slope::kFracBits;
 
-            Slope line{lx, ly, rx, ry};
-            // TODO: rename Slope to Line or Edge or something similar
-            // - Line makes most sense since it will be used to draw the insides of a polygon too
-            // TODO: replace entire if-else block below with:
-            /*while (line.Step()) {
+            for (Slope line{lx, ly, rx, ry}; line.CanStep(); line.Step()) {
                 plotPixel(line.X(), line.Y(), color);
-                if (line.SlopeChanged()) {
+                if (line.NeedsAntiAliasing()) {
                     plotPixel(line.AAX(), line.AAY(), color);
-                }
-            }*/
-            // TODO: figure out how to replace the outer if-else too
-            if (line.xmajor) {
-                sint64 rpy = line.fy1;
-                for (sint32 px = line.x1; px != line.x2; px += line.dmaxinc) {
-                    const sint64 py = rpy >> Slope::kFracBits;
-                    plotPixel(px, py, color);
-                    rpy += line.aspect;
-                    // "anti-alias"
-                    if ((rpy >> Slope::kFracBits) != py) {
-                        if ((line.dx >> 31) == (line.dy >> 31)) {
-                            // TODO: there might be an off-by-one error here
-                            plotPixel(px + line.dmaxinc, py, color);
-                        } else {
-                            plotPixel(px, rpy >> Slope::kFracBits, color);
-                        }
-                    }
-                }
-            } else {
-                sint64 rpx = line.fx1;
-                for (sint32 py = line.y1; py != line.y2; py += line.dmaxinc) {
-                    const sint64 px = rpx >> Slope::kFracBits;
-                    plotPixel(px, py, color);
-                    rpx += line.aspect;
-                    // "anti-alias"
-                    if ((rpx >> Slope::kFracBits) != px) {
-                        if ((line.dx >> 31) == (line.dy >> 31)) {
-                            plotPixel(rpx >> Slope::kFracBits, py, color);
-                        } else {
-                            // TODO: there might be an off-by-one error here
-                            plotPixel(px, py + line.dmaxinc, color);
-                        }
-                    }
                 }
             }
 
             lfx += slopeL.aspect;
-            if (slopeL.dmax != 0) {
-                rfx += slopeR.fxinc * slopeR.dmax / slopeL.dmax;
-                rfy += slopeR.fyinc * slopeR.dmax / slopeL.dmax;
+            if (slopeL.dmaj != 0) {
+                rfx += slopeR.fxinc * slopeR.dmaj / slopeL.dmaj;
+                rfy += slopeR.fyinc * slopeR.dmaj / slopeL.dmaj;
             }
         }
     }
