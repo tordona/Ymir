@@ -321,7 +321,7 @@ void VDP::VDP1ProcessCommands() {
     // Run up to 10000 commands to avoid infinite loops
     // TODO: cycle counting
     for (int i = 0; i < 10000; i++) {
-        const VDP1Command::CMDCTRL cmdctrl{.u16 = VDP1ReadVRAM<uint16>(cmdAddress)};
+        const VDP1Command::Control cmdctrl{.u16 = VDP1ReadVRAM<uint16>(cmdAddress)};
         if (cmdctrl.end) {
             // fmt::println("VDP1: End of command list");
             m_SCU.TriggerSpriteDrawEnd();
@@ -390,6 +390,38 @@ void VDP::VDP1ProcessCommands() {
     }
 }
 
+FORCE_INLINE void VDP::VDP1PlotPixel(sint32 x, sint32 y, uint16 color, VDP1Command::DrawMode mode,
+                                     uint32 gouraudTable) {
+    if (mode.meshEnable && ((x ^ y) & 1)) {
+        return;
+    }
+
+    // TODO: use gouraud table
+    // TODO: color calculations? (mode.colorCalc)
+    // TODO: clipping:
+    //   mode.userClippingEnable
+    //   mode.clippingMode
+    //   mode.preClippingDisable
+    // TODO: mode.msbOn?
+
+    const uint32 fbOffset = y * m_VDP1.fbSizeH + x;
+    if (m_VDP1.pixel8Bits) {
+        m_spriteFB[m_drawFB][fbOffset & 0x3FFFF] = color;
+    } else {
+        util::WriteBE<uint16>(&m_spriteFB[m_drawFB][(fbOffset * sizeof(uint16)) & 0x3FFFE], color);
+    }
+}
+
+FORCE_INLINE void VDP::VDP1PlotLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint16 color,
+                                    VDP1Command::DrawMode mode, uint32 gouraudTable) {
+    for (LinePlotter line{x1, y1, x2, y2}; line.CanStep(); line.Step()) {
+        VDP1PlotPixel(line.X(), line.Y(), color, mode, gouraudTable);
+        if (line.NeedsAntiAliasing()) {
+            VDP1PlotPixel(line.AAX(), line.AAY(), color, mode, gouraudTable);
+        }
+    }
+}
+
 void VDP::VDP1Cmd_DrawNormalSprite(uint16 cmdAddress) {
     // fmt::println("VDP1: Draw normal sprite");
 }
@@ -406,7 +438,7 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress) {
 
 void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
-    const VDP1Command::CMDPMOD cmdpmod{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
+    const VDP1Command::DrawMode mode{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
 
     const uint16 color = VDP1ReadVRAM<uint16>(cmdAddress + 0x06);
     const sint32 xa = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C)) + ctx.localCoordX;
@@ -421,22 +453,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
 
     // fmt::println(
     // "VDP1: Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
-    //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, cmdpmod.u16);
-
-    // TODO: move to a common rendering function
-
-    auto plotPixel = [&](sint32 px, sint32 py, uint16 color) {
-        if (cmdpmod.meshEnable && ((px ^ py) & 1)) {
-            return;
-        }
-
-        const uint32 fbOffset = py * m_VDP1.fbSizeH + px;
-        if (m_VDP1.pixel8Bits) {
-            m_spriteFB[m_drawFB][fbOffset & 0x3FFFF] = color;
-        } else {
-            util::WriteBE<uint16>(&m_spriteFB[m_drawFB][(fbOffset * sizeof(uint16)) & 0x3FFFE], color);
-        }
-    };
+    //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, mode.u16);
 
     // Interpolate linearly over edges A-D and B-C
     for (EdgeIterator edge{xa, ya, xb, yb, xc, yc, xd, yd}; edge.CanStep(); edge.Step()) {
@@ -446,29 +463,50 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
         const sint32 ry = edge.YMin();
 
         // Plot lines between the interpolated points
-        for (LinePlotter line{lx, ly, rx, ry}; line.CanStep(); line.Step()) {
-            // TODO: apply gouraud (gouraudTable)
-            // TODO: color calculations? (cmdpmod.colorCalc)
-            // TODO: clipping:
-            //   cmdpmod.userClippingEnable
-            //   cmdpmod.clippingMode
-            //   cmdpmod.preClippingDisable
-            // TODO: cmdpmod.msbOn?
-
-            plotPixel(line.X(), line.Y(), color);
-            if (line.NeedsAntiAliasing()) {
-                plotPixel(line.AAX(), line.AAY(), color);
-            }
-        }
+        VDP1PlotLine(lx, ly, rx, ry, color, mode, gouraudTable);
     }
 }
 
 void VDP::VDP1Cmd_DrawPolylines(uint16 cmdAddress) {
-    // fmt::println("VDP1: Draw polylines");
+    auto &ctx = m_VDP1RenderContext;
+    const VDP1Command::DrawMode mode{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
+
+    const uint16 color = VDP1ReadVRAM<uint16>(cmdAddress + 0x06);
+    const sint32 xa = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C)) + ctx.localCoordX;
+    const sint32 ya = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E)) + ctx.localCoordY;
+    const sint32 xb = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x10)) + ctx.localCoordX;
+    const sint32 yb = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x12)) + ctx.localCoordY;
+    const sint32 xc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14)) + ctx.localCoordX;
+    const sint32 yc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16)) + ctx.localCoordY;
+    const sint32 xd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x18)) + ctx.localCoordX;
+    const sint32 yd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1A)) + ctx.localCoordY;
+    const uint32 gouraudTable = static_cast<uint32>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
+
+    // fmt::println(
+    // "VDP1: Draw polylines: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
+    //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, mode.u16);
+
+    VDP1PlotLine(xa, ya, xb, yb, color, mode, gouraudTable);
+    VDP1PlotLine(xb, yb, xc, yc, color, mode, gouraudTable);
+    VDP1PlotLine(xc, yc, xd, yd, color, mode, gouraudTable);
+    VDP1PlotLine(xd, yd, xa, ya, color, mode, gouraudTable);
 }
 
 void VDP::VDP1Cmd_DrawLine(uint16 cmdAddress) {
-    // fmt::println("VDP1: Draw line");
+    auto &ctx = m_VDP1RenderContext;
+    const VDP1Command::DrawMode mode{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
+
+    const uint16 color = VDP1ReadVRAM<uint16>(cmdAddress + 0x06);
+    const sint32 xa = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C)) + ctx.localCoordX;
+    const sint32 ya = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E)) + ctx.localCoordY;
+    const sint32 xb = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x10)) + ctx.localCoordX;
+    const sint32 yb = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x12)) + ctx.localCoordY;
+    const uint32 gouraudTable = static_cast<uint32>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
+
+    // fmt::println("VDP1: Draw line: {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa, ya, xb, yb,
+    //              color, gouraudTable, mode.u16);
+
+    VDP1PlotLine(xa, ya, xb, yb, color, mode, gouraudTable);
 }
 
 void VDP::VDP1Cmd_SetSystemClipping(uint16 cmdAddress) {

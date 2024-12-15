@@ -110,7 +110,8 @@ struct VDP1Command {
         Return = 0x3,
     };
 
-    union CMDCTRL {
+    // CMDCTRL
+    union Control {
         uint16 u16;
         struct {
             CommandType command : 4;
@@ -123,7 +124,8 @@ struct VDP1Command {
         };
     };
 
-    union CMDPMOD {
+    // CMDPMOD
+    union DrawMode {
         uint16 u16;
         struct {
             uint16 colorCalc : 3;
@@ -140,7 +142,8 @@ struct VDP1Command {
         };
     };
 
-    union CMDSIZE {
+    // Size
+    union Size {
         uint16 u16;
         struct {
             uint16 sizeV : 7;

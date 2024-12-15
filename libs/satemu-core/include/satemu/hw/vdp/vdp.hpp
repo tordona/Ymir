@@ -674,6 +674,10 @@ private:
     // Processes the VDP1 command table.
     void VDP1ProcessCommands();
 
+    void VDP1PlotPixel(sint32 x, sint32 y, uint16 color, VDP1Command::DrawMode mode, uint32 gouraudTable);
+    void VDP1PlotLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint16 color, VDP1Command::DrawMode mode,
+                      uint32 gouraudTable);
+
     // Individual VDP1 command processors
 
     void VDP1Cmd_DrawNormalSprite(uint16 cmdAddress);
