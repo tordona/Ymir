@@ -482,7 +482,7 @@ FORCE_INLINE void VDP::VDP1PlotPixel(sint32 x, sint32 y, uint16 color, VDP1Comma
 
 FORCE_INLINE void VDP::VDP1PlotLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint16 color,
                                     VDP1Command::DrawMode mode, uint32 gouraudTable) {
-    for (LinePlotter line{x1, y1, x2, y2}; line.CanStep(); line.Step()) {
+    for (LineStepper line{x1, y1, x2, y2}; line.CanStep(); line.Step()) {
         VDP1PlotPixel(line.X(), line.Y(), color, mode, gouraudTable);
         if (line.NeedsAntiAliasing()) {
             VDP1PlotPixel(line.AAX(), line.AAY(), color, mode, gouraudTable);
@@ -528,7 +528,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     }
 
     // Interpolate linearly over edges A-D and B-C
-    for (EdgeIterator edge{xa, ya, xb, yb, xc, yc, xd, yd}; edge.CanStep(); edge.Step()) {
+    for (QuadEdgesStepper edge{xa, ya, xb, yb, xc, yc, xd, yd}; edge.CanStep(); edge.Step()) {
         const sint32 lx = edge.XMaj();
         const sint32 ly = edge.YMaj();
         const sint32 rx = edge.XMin();

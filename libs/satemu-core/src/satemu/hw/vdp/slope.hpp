@@ -90,12 +90,13 @@ protected:
         return xmajor ? mincounter : majcounter;
     }
 
-    friend class EdgeIterator;
+    friend class QuadEdgesStepper;
 };
 
-class LinePlotter : public Slope {
+// Steps over the pixels of a line.
+class LineStepper : public Slope {
 public:
-    LinePlotter(sint32 x1, sint32 y1, sint32 x2, sint32 y2)
+    LineStepper(sint32 x1, sint32 y1, sint32 x2, sint32 y2)
         : Slope(x1, y1, x2, y2) {
 
         const bool samesign = (x1 > x2) == (y1 > y2);
@@ -129,15 +130,18 @@ private:
     sint64 aayinc; // Y increment for antialiasing
 };
 
-class EdgeIterator {
+// Edge iterator for a quad with vertices A-B-C-D arranged in clockwise order from top-left:
+//
+//    A-->B
+//    ^   |
+//    |   v
+//    D<--C
+//
+// The stepper uses the edges A-D and B-C and steps over each pixel on the longer edge, advancing the position on the
+// other edge proportional to their lengths.
+class QuadEdgesStepper {
 public:
-    // Builds an edge iterator for a quad with vertices A-B-C-D arranged in clockwise order from top-left:
-    //
-    //    A-->B
-    //    ^   |
-    //    |   v
-    //    D<--C
-    EdgeIterator(sint32 xa, sint32 ya, sint32 xb, sint32 yb, sint32 xc, sint32 yc, sint32 xd, sint32 yd)
+    QuadEdgesStepper(sint32 xa, sint32 ya, sint32 xb, sint32 yb, sint32 xc, sint32 yc, sint32 xd, sint32 yd)
         : majslope(xa, ya, xd, yd)
         , minslope(xb, yb, xc, yc) {
 
@@ -190,7 +194,7 @@ public:
     Slope minslope; // slope with the shortest span
 
 private:
-    sint64 minmajinc, minmininc; // minor slope interpolation increments with fractional bits
+    sint64 minmajinc, minmininc; // fractional minor slope interpolation increments
 };
 
 } // namespace satemu::vdp
