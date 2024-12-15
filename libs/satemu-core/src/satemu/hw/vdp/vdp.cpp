@@ -746,7 +746,9 @@ void VDP::VDP2DrawLine() {
             }
             if (spriteColor != 0) {
                 // TODO: should read sprite color properly
-                m_framebuffer[x + y * m_HRes] = 0xFFFFFFFF;
+                const Color555 color555{.u16 = spriteColor};
+                const Color888 color888 = ConvertRGB555to888(color555);
+                m_framebuffer[x + y * m_HRes] = color888.u32;
             }
         }
     }

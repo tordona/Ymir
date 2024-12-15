@@ -732,6 +732,56 @@ struct BGParams {
 using NormBGParams = BGParams<false>;
 using RotBGParams = BGParams<true>;
 
+enum class SpriteColorCalculationCondition : uint8 {
+    PriorityLessThanOrEqual,
+    PriorityEqual,
+    PriorityGreaterThanOrEqual,
+    MsbEqualsOne,
+};
+
+struct SpriteParams {
+    SpriteParams() {
+        Reset();
+    }
+
+    void Reset() {
+        type = 0;
+        windowEnable = false;
+        mixedFormat = false;
+        colorCalcValue = 0;
+        colorCalcCond = SpriteColorCalculationCondition::PriorityLessThanOrEqual;
+        priorities.fill(0);
+    }
+
+    // The sprite type (0..F).
+    // Derived from SPCTL.SPTYPE3-0
+    uint8 type;
+
+    // Whether sprite window is in use.
+    // Derived from SPCTL.SPWINEN
+    bool windowEnable;
+
+    // Whether sprite data uses palette only (false) or mixed palette/RGB (true) data.
+    // Derived from SPCTL.SPCLMD
+    bool mixedFormat;
+
+    // The color calculation value to compare against the priority number of sprites.
+    // Derived from SPCTL.SPCCN2-0
+    uint8 colorCalcValue;
+
+    // The color calculation condition.
+    // Derived from SPCTL.SPCCCS1-0
+    SpriteColorCalculationCondition colorCalcCond;
+
+    // Sprite priority numbers for registers 0-7.
+    // Derived from PRISA, PRISB, PRISC and PRISD.
+    std::array<uint8, 8> priorities;
+
+    // Sprite color calculation ratios for registers 0-7, ranging from 31:1 to 0:32.
+    // Derived from CCRSA, CCRSB, CCRSC and CCRSD.
+    std::array<uint8, 8> colorCalcRatios;
+};
+
 // Special Function Codes, derived from SFCODE.
 struct SpecialFunctionCodes {
     SpecialFunctionCodes() {
@@ -1632,33 +1682,6 @@ union LWTA_t {
     };
 };
 
-// 1800E0   SPCTL   Sprite Control
-//
-//   bits   r/w  code          description
-//  15-14        -             Reserved, must be zero
-//  13-12     W  SPCCCS1-0     Sprite Color Calculation Condition
-//                               00 (0) = Priority Number <= Color Calculation Number
-//                               01 (1) = Priority Number == Color Calculation Number
-//                               10 (2) = Priority Number >= Color Calculation Number
-//                               11 (3) = Color Data MSB == 1
-//     11        -             Reserved, must be zero
-//   10-8     W  SPCCN2-0      Color Calculation Number
-//    7-6        -             Reserved, must be zero
-//      5     W  SPCLMD        Sprite Color Format Data (0=palette only, 1=palette and RGB)
-//      4     W  SPWINEN       Sprite Window Enable (0=disable, 1=enable)
-//    3-0     W  SPTYPE3-0     Sprite Type (0,1,2,...,D,E,F)
-union SPCTL_t {
-    uint16 u16;
-    struct {
-        uint16 SPTYPEn : 4;
-        uint16 SPWINEN : 1;
-        uint16 SPCLMD : 1;
-        uint16 _rsvd6_7 : 2;
-        uint16 SPCCNn : 3;
-        uint16 SPCCCSn : 2;
-    };
-};
-
 // 1800E2   SDCTL   Shadow Control
 //
 //   bits   r/w  code          description
@@ -1751,87 +1774,6 @@ union SFCCMD_t {
         uint16 N3SCCMn : 2;
         uint16 R0SCCMn : 2;
         uint16 _rsvd10_15 : 6;
-    };
-};
-// 1800F0   PRISA   Sprite 0 and 1 Priority Number
-//
-//   bits   r/w  code          description
-//  15-11        -             Reserved, must be zero
-//   10-8     W  S1PRIN2-0     Sprite 1 Priority Number
-//    7-3        -             Reserved, must be zero
-//    2-0     W  S0PRIN2-0     Sprite 0 Priority Number
-//
-// 1800F2   PRISB   Sprite 2 and 3 Priority Number
-//
-//   bits   r/w  code          description
-//  15-11        -             Reserved, must be zero
-//   10-8     W  S3PRIN2-0     Sprite 3 Priority Number
-//    7-3        -             Reserved, must be zero
-//    2-0     W  S3PRIN2-0     Sprite 2 Priority Number
-//
-// 1800F4   PRISC   Sprite 4 and 5 Priority Number
-//
-//   bits   r/w  code          description
-//  15-11        -             Reserved, must be zero
-//   10-8     W  S5PRIN2-0     Sprite 5 Priority Number
-//    7-3        -             Reserved, must be zero
-//    2-0     W  S4PRIN2-0     Sprite 4 Priority Number
-//
-// 1800F6   PRISD   Sprite 6 and 7 Priority Number
-//
-//   bits   r/w  code          description
-//  15-11        -             Reserved, must be zero
-//   10-8     W  S7PRIN2-0     Sprite 7 Priority Number
-//    7-3        -             Reserved, must be zero
-//    2-0     W  S6PRIN2-0     Sprite 6 Priority Number
-union PRI_t {
-    uint16 u16;
-    struct {
-        uint16 lPRINn : 3; // (NA) NBG0, (NB) NBG2, (R) RBG0
-        uint16 _rsvd3_7 : 5;
-        uint16 uPRINn : 3; // (NA) NBG1, (NB) NBG3, (R) reserved
-        uint16 _rsvd11_15 : 5;
-    };
-};
-
-// 180100   CCRSA   Sprite 0 and 1 Color Calculation Ratio
-//
-//   bits   r/w  code          description
-//  15-13        -             Reserved, must be zero
-//   12-8     W  S1CCRT4-0     Sprite Register 1 Color Calculation Ratio
-//    7-5        -             Reserved, must be zero
-//    4-0     W  S0CCRT4-0     Sprite Register 0 Color Calculation Ratio
-//
-// 180102   CCRSB   Sprite 2 and 3 Color Calculation Ratio
-//
-//   bits   r/w  code          description
-//  15-13        -             Reserved, must be zero
-//   12-8     W  S3CCRT4-0     Sprite Register 3 Color Calculation Ratio
-//    7-5        -             Reserved, must be zero
-//    4-0     W  S2CCRT4-0     Sprite Register 2 Color Calculation Ratio
-//
-// 180104   CCRSC   Sprite 4 and 5 Color Calculation Ratio
-//
-//   bits   r/w  code          description
-//  15-13        -             Reserved, must be zero
-//   12-8     W  S5CCRT4-0     Sprite Register 5 Color Calculation Ratio
-//    7-5        -             Reserved, must be zero
-//    4-0     W  S4CCRT4-0     Sprite Register 4 Color Calculation Ratio
-//
-// 180106   CCRSD   Sprite 6 and 7 Color Calculation Ratio
-//
-//   bits   r/w  code          description
-//  15-13        -             Reserved, must be zero
-//   12-8     W  S7CCRT4-0     Sprite Register 7 Color Calculation Ratio
-//    7-5        -             Reserved, must be zero
-//    4-0     W  S6CCRT4-0     Sprite Register 6 Color Calculation Ratio
-union CCRS_t {
-    uint16 u16;
-    struct {
-        uint16 lCCRTn : 5; // (A) Sprite 0, (B) Sprite 2, (C) Sprite 4, (D) Sprite 6
-        uint16 _rsvd5_7 : 3;
-        uint16 uCCRTn : 5; // (A) Sprite 1, (B) Sprite 3, (C) Sprite 5, (D) Sprite 7
-        uint16 _rsvd13_15 : 3;
     };
 };
 
@@ -1983,18 +1925,9 @@ struct VDP2Regs {
         WCTL.u64 = 0x0;
         LWTA0.u32 = 0x0;
         LWTA1.u32 = 0x0;
-        SPCTL.u16 = 0x0;
         SDCTL.u16 = 0x0;
         CCCTL.u16 = 0x0;
         SFCCMD.u16 = 0x0;
-        PRISA.u16 = 0x0;
-        PRISB.u16 = 0x0;
-        PRISC.u16 = 0x0;
-        PRISD.u16 = 0x0;
-        CCRSA.u16 = 0x0;
-        CCRSB.u16 = 0x0;
-        CCRSC.u16 = 0x0;
-        CCRSD.u16 = 0x0;
         CCRNA.u16 = 0x0;
         CCRNB.u16 = 0x0;
         CCRR.u16 = 0x0;
@@ -2585,7 +2518,7 @@ struct VDP2Regs {
         return value;
     }
 
-    FORCE_INLINE void WriteMPN(uint16 value, uint32 bgIndex, uint32 planeIndex) {
+    FORCE_INLINE void WriteMPN(uint32 bgIndex, uint32 planeIndex, uint16 value) {
         auto &bg = normBGParams[bgIndex];
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 0], bit::extract<0, 5>(value));
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 1], bit::extract<8, 13>(value));
@@ -2637,7 +2570,7 @@ struct VDP2Regs {
         return value;
     }
 
-    FORCE_INLINE void WriteMPR(uint16 value, uint32 bgIndex, uint32 planeIndex) {
+    FORCE_INLINE void WriteMPR(uint32 bgIndex, uint32 planeIndex, uint16 value) {
         auto &bg = rotBGParams[bgIndex];
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 0], bit::extract<0, 5>(value));
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 1], bit::extract<8, 13>(value));
@@ -2677,7 +2610,7 @@ struct VDP2Regs {
         return bit::extract<8, 18>(normBGParams[bgIndex].scrollAmountH);
     }
 
-    FORCE_INLINE void WriteSCXIN(uint16 value, uint32 bgIndex) {
+    FORCE_INLINE void WriteSCXIN(uint32 bgIndex, uint16 value) {
         bit::deposit_into<8, 18>(normBGParams[bgIndex].scrollAmountH, bit::extract<0, 10>(value));
     }
 
@@ -2685,7 +2618,7 @@ struct VDP2Regs {
         return bit::extract<0, 7>(normBGParams[bgIndex].scrollAmountH);
     }
 
-    FORCE_INLINE void WriteSCXDN(uint16 value, uint32 bgIndex) {
+    FORCE_INLINE void WriteSCXDN(uint32 bgIndex, uint16 value) {
         bit::deposit_into<0, 7>(normBGParams[bgIndex].scrollAmountH, bit::extract<8, 15>(value));
     }
 
@@ -2693,7 +2626,7 @@ struct VDP2Regs {
         return bit::extract<8, 18>(normBGParams[bgIndex].scrollAmountV);
     }
 
-    FORCE_INLINE void WriteSCYIN(uint16 value, uint32 bgIndex) {
+    FORCE_INLINE void WriteSCYIN(uint32 bgIndex, uint16 value) {
         bit::deposit_into<8, 18>(normBGParams[bgIndex].scrollAmountV, bit::extract<0, 10>(value));
     }
 
@@ -2701,7 +2634,7 @@ struct VDP2Regs {
         return bit::extract<0, 7>(normBGParams[bgIndex].scrollAmountV);
     }
 
-    FORCE_INLINE void WriteSCYDN(uint16 value, uint32 bgIndex) {
+    FORCE_INLINE void WriteSCYDN(uint32 bgIndex, uint16 value) {
         bit::deposit_into<0, 7>(normBGParams[bgIndex].scrollAmountV, bit::extract<8, 15>(value));
     }
 
@@ -2728,7 +2661,7 @@ struct VDP2Regs {
         return bit::extract<8, 10>(normBGParams[bgIndex].scrollIncH);
     }
 
-    FORCE_INLINE void WriteZMXIN(uint16 value, uint32 bgIndex) {
+    FORCE_INLINE void WriteZMXIN(uint32 bgIndex, uint16 value) {
         bit::deposit_into<8, 10>(normBGParams[bgIndex].scrollIncH, bit::extract<0, 2>(value));
     }
 
@@ -2736,7 +2669,7 @@ struct VDP2Regs {
         return bit::extract<0, 7>(normBGParams[bgIndex].scrollIncH);
     }
 
-    FORCE_INLINE void WriteZMXDN(uint16 value, uint32 bgIndex) {
+    FORCE_INLINE void WriteZMXDN(uint32 bgIndex, uint16 value) {
         bit::deposit_into<0, 7>(normBGParams[bgIndex].scrollIncH, bit::extract<8, 15>(value));
     }
 
@@ -2744,7 +2677,7 @@ struct VDP2Regs {
         return bit::extract<8, 10>(normBGParams[bgIndex].scrollIncV);
     }
 
-    FORCE_INLINE void WriteZMYIN(uint16 value, uint32 bgIndex) {
+    FORCE_INLINE void WriteZMYIN(uint32 bgIndex, uint16 value) {
         bit::deposit_into<8, 10>(normBGParams[bgIndex].scrollIncV, bit::extract<0, 2>(value));
     }
 
@@ -2752,7 +2685,7 @@ struct VDP2Regs {
         return bit::extract<0, 7>(normBGParams[bgIndex].scrollIncV);
     }
 
-    FORCE_INLINE void WriteZMYDN(uint16 value, uint32 bgIndex) {
+    FORCE_INLINE void WriteZMYDN(uint32 bgIndex, uint16 value) {
         bit::deposit_into<0, 7>(normBGParams[bgIndex].scrollIncV, bit::extract<8, 15>(value));
     }
 
@@ -2792,8 +2725,42 @@ struct VDP2Regs {
     LWTA_t LWTA0;    // 1800DA   LWTA0L  Window 0 Line Window Address Table (lower)
                      // 1800DC   LWTA1U  Window 1 Line Window Address Table (upper)
     LWTA_t LWTA1;    // 1800DE   LWTA1L  Window 1 Line Window Address Table (lower)
-    SPCTL_t SPCTL;   // 1800E0   SPCTL   Sprite Control
-    SDCTL_t SDCTL;   // 1800E2   SDCTL   Shadow Control
+
+    // 1800E0   SPCTL   Sprite Control
+    //
+    //   bits   r/w  code          description
+    //  15-14        -             Reserved, must be zero
+    //  13-12     W  SPCCCS1-0     Sprite Color Calculation Condition
+    //                               00 (0) = Priority Number <= Color Calculation Number
+    //                               01 (1) = Priority Number == Color Calculation Number
+    //                               10 (2) = Priority Number >= Color Calculation Number
+    //                               11 (3) = Color Data MSB == 1
+    //     11        -             Reserved, must be zero
+    //   10-8     W  SPCCN2-0      Color Calculation Number
+    //    7-6        -             Reserved, must be zero
+    //      5     W  SPCLMD        Sprite Color Format Data (0=palette only, 1=palette and RGB)
+    //      4     W  SPWINEN       Sprite Window Enable (0=disable, 1=enable)
+    //    3-0     W  SPTYPE3-0     Sprite Type (0,1,2,...,D,E,F)
+
+    FORCE_INLINE uint16 ReadSPCTL() const {
+        uint16 value = 0;
+        bit::deposit_into<0, 3>(value, spriteParams.type);
+        bit::deposit_into<4>(value, spriteParams.windowEnable);
+        bit::deposit_into<5>(value, spriteParams.mixedFormat);
+        bit::deposit_into<8, 10>(value, spriteParams.colorCalcValue);
+        bit::deposit_into<12, 13>(value, static_cast<uint16>(spriteParams.colorCalcCond));
+        return value;
+    }
+
+    FORCE_INLINE void WriteSPCTL(uint16 value) {
+        spriteParams.type = bit::extract<0, 3>(value);
+        spriteParams.windowEnable = bit::extract<4>(value);
+        spriteParams.mixedFormat = bit::extract<4>(value);
+        spriteParams.colorCalcValue = bit::extract<8, 10>(value);
+        spriteParams.colorCalcCond = static_cast<SpriteColorCalculationCondition>(bit::extract<12, 13>(value));
+    }
+
+    SDCTL_t SDCTL; // 1800E2   SDCTL   Shadow Control
 
     // 1800E4   CRAOFA  NBG0-NBG3 Color RAM Address Offset
     //
@@ -2915,10 +2882,50 @@ struct VDP2Regs {
 
     CCCTL_t CCCTL;   // 1800EC   CCCTL   Color Calculation Control
     SFCCMD_t SFCCMD; // 1800EE   SFCCMD  Special Color Calculation Mode
-    PRI_t PRISA;     // 1800F0   PRISA   Sprite 0 and 1 Priority Number
-    PRI_t PRISB;     // 1800F2   PRISB   Sprite 2 and 3 Priority Number
-    PRI_t PRISC;     // 1800F4   PRISC   Sprite 4 and 5 Priority Number
-    PRI_t PRISD;     // 1800F6   PRISD   Sprite 6 and 7 Priority Number
+
+    // 1800F0   PRISA   Sprite 0 and 1 Priority Number
+    //
+    //   bits   r/w  code          description
+    //  15-11        -             Reserved, must be zero
+    //   10-8     W  S1PRIN2-0     Sprite 1 Priority Number
+    //    7-3        -             Reserved, must be zero
+    //    2-0     W  S0PRIN2-0     Sprite 0 Priority Number
+    //
+    // 1800F2   PRISB   Sprite 2 and 3 Priority Number
+    //
+    //   bits   r/w  code          description
+    //  15-11        -             Reserved, must be zero
+    //   10-8     W  S3PRIN2-0     Sprite 3 Priority Number
+    //    7-3        -             Reserved, must be zero
+    //    2-0     W  S3PRIN2-0     Sprite 2 Priority Number
+    //
+    // 1800F4   PRISC   Sprite 4 and 5 Priority Number
+    //
+    //   bits   r/w  code          description
+    //  15-11        -             Reserved, must be zero
+    //   10-8     W  S5PRIN2-0     Sprite 5 Priority Number
+    //    7-3        -             Reserved, must be zero
+    //    2-0     W  S4PRIN2-0     Sprite 4 Priority Number
+    //
+    // 1800F6   PRISD   Sprite 6 and 7 Priority Number
+    //
+    //   bits   r/w  code          description
+    //  15-11        -             Reserved, must be zero
+    //   10-8     W  S7PRIN2-0     Sprite 7 Priority Number
+    //    7-3        -             Reserved, must be zero
+    //    2-0     W  S6PRIN2-0     Sprite 6 Priority Number
+
+    FORCE_INLINE uint16 ReadPRISn(uint32 offset) const {
+        uint16 value = 0;
+        bit::deposit_into<0, 2>(value, spriteParams.priorities[offset * 2 + 0]);
+        bit::deposit_into<8, 10>(value, spriteParams.priorities[offset * 2 + 1]);
+        return value;
+    }
+
+    FORCE_INLINE void WritePRISn(uint32 offset, uint16 value) {
+        spriteParams.priorities[offset * 2 + 0] = bit::extract<0, 2>(value);
+        spriteParams.priorities[offset * 2 + 1] = bit::extract<8, 10>(value);
+    }
 
     // 1800F8   PRINA   NBG0 and NBG1 Priority Number
     //
@@ -2979,10 +2986,50 @@ struct VDP2Regs {
 
     // 1800FE   -       Reserved
 
-    CCRS_t CCRSA;    // 180100   CCRSA   Sprite 0 and 1 Color Calculation Ratio
-    CCRS_t CCRSB;    // 180102   CCRSB   Sprite 2 and 3 Color Calculation Ratio
-    CCRS_t CCRSC;    // 180104   CCRSC   Sprite 4 and 5 Color Calculation Ratio
-    CCRS_t CCRSD;    // 180106   CCRSD   Sprite 6 and 7 Color Calculation Ratio
+    // 180100   CCRSA   Sprite 0 and 1 Color Calculation Ratio
+    //
+    //   bits   r/w  code          description
+    //  15-13        -             Reserved, must be zero
+    //   12-8     W  S1CCRT4-0     Sprite Register 1 Color Calculation Ratio
+    //    7-5        -             Reserved, must be zero
+    //    4-0     W  S0CCRT4-0     Sprite Register 0 Color Calculation Ratio
+    //
+    // 180102   CCRSB   Sprite 2 and 3 Color Calculation Ratio
+    //
+    //   bits   r/w  code          description
+    //  15-13        -             Reserved, must be zero
+    //   12-8     W  S3CCRT4-0     Sprite Register 3 Color Calculation Ratio
+    //    7-5        -             Reserved, must be zero
+    //    4-0     W  S2CCRT4-0     Sprite Register 2 Color Calculation Ratio
+    //
+    // 180104   CCRSC   Sprite 4 and 5 Color Calculation Ratio
+    //
+    //   bits   r/w  code          description
+    //  15-13        -             Reserved, must be zero
+    //   12-8     W  S5CCRT4-0     Sprite Register 5 Color Calculation Ratio
+    //    7-5        -             Reserved, must be zero
+    //    4-0     W  S4CCRT4-0     Sprite Register 4 Color Calculation Ratio
+    //
+    // 180106   CCRSD   Sprite 6 and 7 Color Calculation Ratio
+    //
+    //   bits   r/w  code          description
+    //  15-13        -             Reserved, must be zero
+    //   12-8     W  S7CCRT4-0     Sprite Register 7 Color Calculation Ratio
+    //    7-5        -             Reserved, must be zero
+    //    4-0     W  S6CCRT4-0     Sprite Register 6 Color Calculation Ratio
+
+    FORCE_INLINE uint16 ReadCCRSn(uint32 offset) const {
+        uint16 value = 0;
+        bit::deposit_into<0, 2>(value, spriteParams.colorCalcRatios[offset * 2 + 0]);
+        bit::deposit_into<8, 10>(value, spriteParams.colorCalcRatios[offset * 2 + 1]);
+        return value;
+    }
+
+    FORCE_INLINE void WriteCCRSn(uint32 offset, uint16 value) {
+        spriteParams.colorCalcRatios[offset * 2 + 0] = bit::extract<0, 2>(value);
+        spriteParams.colorCalcRatios[offset * 2 + 1] = bit::extract<8, 10>(value);
+    }
+
     CCR_t CCRNA;     // 180108   CCRNA   NBG0 and NBG1 Color Calculation Ratio
     CCR_t CCRNB;     // 18010A   CCRNB   NBG2 and NBG3 Color Calculation Ratio
     CCR_t CCRR;      // 18010C   CCRR    RBG0 Color Calculation Ratio
@@ -3004,6 +3051,7 @@ struct VDP2Regs {
 
     std::array<NormBGParams, 4> normBGParams;
     std::array<RotBGParams, 2> rotBGParams;
+    SpriteParams spriteParams;
 
     std::array<SpecialFunctionCodes, 2> specialFunctionCodes;
 };
