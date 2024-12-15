@@ -935,7 +935,7 @@ FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(uint32 pageBaseAddres
     return ch;
 }
 
-SpriteData VDP::VDP2FetchSpriteData(uint32 fbOffset) {
+FLATTEN FORCE_INLINE SpriteData VDP::VDP2FetchSpriteData(uint32 fbOffset) {
     const uint8 type = m_VDP2.spriteParams.type;
     if (type < 8) {
         return VDP2FetchWordSpriteData(fbOffset, type);
@@ -944,7 +944,7 @@ SpriteData VDP::VDP2FetchSpriteData(uint32 fbOffset) {
     }
 }
 
-SpriteData VDP::VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type) {
+FORCE_INLINE SpriteData VDP::VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type) {
     assert(type >= 8);
 
     const uint8 rawData = m_spriteFB[m_drawFB ^ 1][fbOffset & 0x3FFFF];
@@ -989,7 +989,7 @@ SpriteData VDP::VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type) {
     return data;
 }
 
-SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type) {
+FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type) {
     assert(type < 8);
 
     const uint16 rawData = util::ReadBE<uint16>(&m_spriteFB[m_drawFB ^ 1][fbOffset & 0x3FFFE]);
