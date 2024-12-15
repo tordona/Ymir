@@ -2,6 +2,8 @@
 
 #include <satemu/hw/scu/scu.hpp>
 
+#include "slope.hpp"
+
 #include <satemu/util/constexpr_for.hpp>
 
 #include <fmt/format.h>
@@ -402,110 +404,6 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress) {
     VDP1Cmd_DrawPolygon(cmdAddress);
 }
 
-template <std::integral T1, std::integral T2>
-auto safeDiv(T1 dividend, T2 divisor) {
-    return (divisor != 0) ? dividend / divisor : 0;
-}
-
-struct Slope {
-    static constexpr sint64 kFracBits = 16;
-
-    Slope(sint32 x1, sint32 y1, sint32 x2, sint32 y2)
-        : x1(x1)
-        , y1(y1)
-        , x2(x2)
-        , y2(y2) {
-        dx = x2 - x1;
-        dy = y2 - y1;
-        dmaj = std::max(abs(dx), abs(dy));
-
-        fx1 = ((static_cast<sint64>(x1) << 1) + 1) << (kFracBits - 1);
-        fy1 = ((static_cast<sint64>(y1) << 1) + 1) << (kFracBits - 1);
-        fxinc = safeDiv(((static_cast<sint64>(dx) << 1) + 1) << (kFracBits - 1), dmaj);
-        fyinc = safeDiv(((static_cast<sint64>(dy) << 1) + 1) << (kFracBits - 1), dmaj);
-
-        xmajor = abs(dx) >= abs(dy);
-        if (xmajor) {
-            aspect = safeDiv(static_cast<sint64>(dy) << kFracBits, abs(dx));
-            dmajinc = dx >= 0 ? 1 : -1;
-            aaxinc = (dx >> 31) == (dy >> 31) ? dmajinc : 0;
-            aayinc = (dx >> 31) == (dy >> 31) ? 0 : (dy >= 0 ? 1 : -1);
-            aamininc = aspect;
-            majcounter = x1;
-            majcounterend = x2;
-            mincounter = fy1;
-        } else {
-            aspect = safeDiv(static_cast<sint64>(dx) << kFracBits, abs(dy));
-            dmajinc = dy >= 0 ? 1 : -1;
-            aaxinc = (dx >> 31) == (dy >> 31) ? 0 : (dx >= 0 ? -1 : 1);
-            aayinc = (dx >> 31) == (dy >> 31) ? -dmajinc : 0;
-            aamininc = -aspect;
-            majcounter = y1;
-            majcounterend = y2;
-            mincounter = fx1;
-        }
-    }
-
-    // Steps the slope to the next coordinate.
-    // Should not be invoked when CanStep() returns false
-    void Step() {
-        majcounter += dmajinc;
-        mincounter += aspect;
-    }
-
-    // Determines if the slope can be stepped
-    bool CanStep() const {
-        return majcounter != majcounterend;
-    }
-
-    // Retrieves the current X coordinate (no fractional bits)
-    sint32 X() const {
-        return xmajor ? majcounter : (mincounter >> kFracBits);
-    }
-
-    // Retrieves the current Y coordinate (no fractional bits)
-    sint32 Y() const {
-        return xmajor ? (mincounter >> kFracBits) : majcounter;
-    }
-
-    // Determines if the current step needs antialiasing
-    bool NeedsAntiAliasing() const {
-        // Antialiasing is needed when the coordinate on the minor axis has changed from the previous step
-        return ((mincounter + aamininc) >> kFracBits) != (mincounter >> kFracBits);
-    }
-
-    // Returns the X coordinate of the antialiased pixel
-    sint32 AAX() const {
-        return X() + aaxinc;
-    }
-
-    // Returns the Y coordinate of the antialiased pixel
-    sint32 AAY() const {
-        return Y() + aayinc;
-    }
-
-    sint32 x1, y1; // starting coordinates
-    sint32 x2, y2; // ending coordinates
-
-    sint32 dx;      // width of the slope: x2 - x1
-    sint32 dy;      // height of the slope: y2 - y1
-    sint32 dmaj;    // major span of the slope: max(abs(dx), abs(dy))
-    sint32 dmajinc; // increment on the major axis (+1 or -1)
-
-    sint64 aspect;   // slope aspect: dy/dx (x-major) or dx/dy (y-major) (with fractional bits)
-    bool xmajor;     // true if abs(dx) >= abs(dy)
-    sint32 aaxinc;   // X increment for antialiasing
-    sint32 aayinc;   // Y increment for antialiasing
-    sint64 aamininc; // Minor axis increment for antialiasing
-
-    sint64 fx1, fy1;     // starting coordinates with fractional bits
-    sint64 fxinc, fyinc; // slope interpolation increments with fractional bits
-
-    sint32 majcounter;    // coordinate counter for the major axis (incremented by dmajinc per step)
-    sint32 majcounterend; // final coordinate counter for the major axis
-    sint64 mincounter;    // coordinate counter for the minor axis (fractional, incremented by aspect)
-};
-
 void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::CMDPMOD cmdpmod{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
@@ -567,6 +465,19 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     // TODO: figure out how to replace the outer if-else with Slope
     // - probably needs a fractional Step(...) function to work
     // TODO: apply gouraud
+    /*for (; slopeL.CanStep(); slopeL.Step(), slopeR.Step(slopeL)) {
+        const sint32 lx = slopeL.X();
+        const sint32 ly = slopeL.Y();
+        const sint32 rx = slopeR.X();
+        const sint32 ry = slopeR.Y();
+
+        for (Slope line{lx, ly, rx, ry}; line.CanStep(); line.Step()) {
+            plotPixel(line.X(), line.Y(), color);
+            if (line.NeedsAntiAliasing()) {
+                plotPixel(line.AAX(), line.AAY(), color);
+            }
+        }
+    }*/
     if (slopeL.xmajor) {
         sint32 lfy = slopeL.fy1;
         sint32 rfx = slopeR.fx1;

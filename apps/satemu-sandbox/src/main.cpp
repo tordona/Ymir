@@ -153,10 +153,10 @@ void runEmulator(satemu::Saturn &saturn) {
         // counting with pure integer math.
 
         // NTSC timings at the default (fast) clock rate
-        static constexpr uint64 kClockRate = 28'636'360;
-        static constexpr uint64 kFramesPerSecond = 60;
-        static constexpr uint64 kCycleCountingFactor = 3;
-        static constexpr uint64 kCyclesPerFrame = kClockRate * kCycleCountingFactor / kFramesPerSecond;
+        // static constexpr uint64 kClockRate = 28'636'360;
+        // static constexpr uint64 kFramesPerSecond = 60;
+        // static constexpr uint64 kCycleCountingFactor = 3;
+        // static constexpr uint64 kCyclesPerFrame = kClockRate * kCycleCountingFactor / kFramesPerSecond;
 
         // PAL timings at the default (fast) clock rate
         // static constexpr uint64 kClockRate = 28'437'500;

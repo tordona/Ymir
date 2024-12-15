@@ -75,6 +75,7 @@ add_library(satemu-core
     src/satemu/hw/sh2/sh2.cpp
     src/satemu/hw/sh2/sh2_bus.cpp
 
+    src/satemu/hw/vdp/slope.hpp
     src/satemu/hw/vdp/vdp.cpp
 
     src/satemu/media/loader/loader.cpp
@@ -107,6 +108,7 @@ target_precompile_headers(satemu-core
         <array>
         <bit>
         <cassert>
+        <cmath>
         <concepts>
         <cstddef>
         <cstdint>
@@ -119,6 +121,7 @@ target_precompile_headers(satemu-core
         <sstream>
         <type_traits>
         <unordered_map>
+        <utility>
         <vector>
 
         <fmt/format.h>
