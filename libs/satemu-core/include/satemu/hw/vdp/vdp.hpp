@@ -764,6 +764,20 @@ private:
     // colorMode is the CRAM color mode.
     template <uint32 colorMode>
     vdp::Color888 VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorIndex);
+
+    // Fetches sprite data based on the current sprite mode.
+    // fbOffset is the offset into the framebuffer (in bytes) where the sprite data is located.
+    SpriteData VDP2FetchSpriteData(uint32 fbOffset);
+
+    // Fetches 8-bit sprite data based on the current sprite mode.
+    // fbOffset is the offset into the framebuffer (in bytes) where the sprite data is located.
+    // type is the sprite type (between 8 and 15).
+    SpriteData VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type);
+
+    // Fetches 16-bit sprite data based on the current sprite mode.
+    // fbOffset is the offset into the framebuffer (in bytes) where the sprite data is located.
+    // type is the sprite type (between 0 and 7).
+    SpriteData VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type);
 };
 
 } // namespace satemu::vdp

@@ -782,6 +782,13 @@ struct SpriteParams {
     std::array<uint8, 8> colorCalcRatios;
 };
 
+struct SpriteData {
+    uint16 colorData = 0;        // DC10-0
+    uint8 colorCalcRatio = 0;    // CC2-0
+    uint8 priority = 0;          // PR2-0
+    bool shadowOrWindow = false; // SD
+};
+
 // Special Function Codes, derived from SFCODE.
 struct SpecialFunctionCodes {
     SpecialFunctionCodes() {
