@@ -5,11 +5,13 @@
 #include <satemu/hw/hw_defs.hpp>
 
 #include <satemu/media/disc.hpp>
+#include <satemu/media/filesystem.hpp>
 
 #include <fmt/format.h>
 
 #include <array>
 #include <type_traits>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // Forward declarations
@@ -112,6 +114,9 @@ private:
 
     // TODO: use a device instead, to support reading from real drives as well as disc images
     media::Disc m_disc;
+
+    std::vector<media::fs::PathTableRecord> m_pathTableRecords;
+    std::vector<media::fs::DirectoryRecord> m_directoryRecords;
 
     alignas(uint64) std::array<uint16, 4> m_CR;
 

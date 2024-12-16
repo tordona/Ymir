@@ -193,6 +193,7 @@ struct DirectoryRecord {
 //    8-(7+LEN_DI)   char[LEN_DI]  Directory identifier
 //    (8+LEN_DI)     -             Padding field (00 byte)
 struct PathTableRecord {
+    uint32 recordSize;
     uint8 extAttrRecordSize;
 
     uint32 extentPos;
@@ -211,6 +212,10 @@ struct PathTableRecord {
         }
 
         const uint8 dirIDLength = input[0];
+        if (dirIDLength == 0) {
+            return false;
+        }
+        recordSize = (dirIDLength + 1 + 8) & ~1;
         extAttrRecordSize = input[1];
         extentPos = util::ReadLE<uint32>(&input[2]);
         parentDirNumber = util::ReadLE<uint16>(&input[6]);
@@ -225,6 +230,7 @@ struct PathTableRecord {
                 directoryID = "..";
             }
         }
+        // NOTE: one padding byte (00) if dirIDLength is odd
         return true;
     }
 };

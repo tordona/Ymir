@@ -2,7 +2,6 @@
 
 #include <satemu/hw/scu/scu.hpp>
 
-#include <satemu/media/filesystem.hpp>
 #include <satemu/util/data_ops.hpp>
 
 namespace satemu::cdblock {
@@ -57,6 +56,8 @@ void CDBlock::LoadDisc(media::Disc &&disc) {
     // Try building filesystem structure
     // TODO: move out of here
     // TODO: test multisession discs
+    m_pathTableRecords.clear();
+    m_directoryRecords.clear();
 
     // Bail out if there are no sessions
     if (m_disc.sessions.empty()) {
@@ -94,7 +95,7 @@ void CDBlock::LoadDisc(media::Disc &&disc) {
             };
 
             for (;;) {
-                // TODO: bool Track::ReadSectorData(uint32 frameAddress, std::span<uint8> buffer)
+                // TODO: bool Track::ReadSectorUserData(uint32 frameAddress, std::span<uint8> buffer)
                 // - reads the 2048 bytes of user data in the sector
                 // - returns true if the sector was read, false if out of range
                 // TODO: uint32 Track::ReadSectorRaw(uint32 frameAddress, std::span<uint8> buffer)
@@ -124,28 +125,31 @@ void CDBlock::LoadDisc(media::Disc &&disc) {
                     }
 
                     // Read path tables
-                    media::fs::PathTableRecord pathTableRecord{};
-                    auto readPathTableRecord = [&](uint16 pos) {
-                        if (volDesc.pathTableLPos == 0) {
+                    auto readPathTableRecords = [&](uint16 pos) {
+                        if (pos == 0) {
                             return;
                         }
-                        if (!readSector(volDesc.pathTableLPos)) {
-                            return;
+                        for (;;) {
+                            if (!readSector(pos)) {
+                                return;
+                            }
+                            auto &pathTableRecord = m_pathTableRecords.emplace_back();
+                            if (!pathTableRecord.Read(buf)) {
+                                m_pathTableRecords.pop_back();
+                                return;
+                            }
+                            pos += pathTableRecord.recordSize;
+                            // TODO: build directory hierarchy
+                            // TODO: read extended attributes if present
                         }
-                        if (!pathTableRecord.Read(buf)) {
-                            return;
-                        }
-                        // TODO: build directory hierarchy
-                        // TODO: read extended attributes if present
                     };
 
-                    readPathTableRecord(volDesc.pathTableLPos);
-                    readPathTableRecord(volDesc.pathTableLOptPos);
-                    readPathTableRecord(volDesc.pathTableMPos);
-                    readPathTableRecord(volDesc.pathTableMOptPos);
+                    readPathTableRecords(volDesc.pathTableLPos);
+                    readPathTableRecords(volDesc.pathTableLOptPos);
+                    readPathTableRecords(volDesc.pathTableMPos);
+                    readPathTableRecords(volDesc.pathTableMOptPos);
 
                     // Read directory records from the root directory
-                    media::fs::DirectoryRecord dirRecord{};
                     const uint32 numSectors = volDesc.rootDirRecord.dataSize / volDesc.logicalBlockSize; // div by 2048?
                     for (uint32 sectorIndex = 0; sectorIndex < numSectors; sectorIndex++) {
                         if (!readSector(volDesc.rootDirRecord.extentPos + sectorIndex)) {
@@ -154,13 +158,15 @@ void CDBlock::LoadDisc(media::Disc &&disc) {
 
                         uint32 recOffset = 0;
                         for (;;) {
+                            auto &dirRecord = m_directoryRecords.emplace_back();
                             if (!dirRecord.Read({buf.begin() + recOffset, buf.end()})) {
+                                m_directoryRecords.pop_back();
                                 break;
                             }
                             if (dirRecord.recordSize == 0) {
+                                m_directoryRecords.pop_back();
                                 break;
                             }
-                            // TODO: add directory record to table
                             // TODO: read extended attributes if present
 
                             recOffset += dirRecord.recordSize;
@@ -696,7 +702,7 @@ void CDBlock::CmdChangeDirectory() {
     // file ID bits 15-0
 
     const uint8 filterNum = bit::extract<8, 15>(m_CR[2]);
-    // const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
+    const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
 
     // Output structure: standard CD status data
     if (filterNum < 0x24) {
