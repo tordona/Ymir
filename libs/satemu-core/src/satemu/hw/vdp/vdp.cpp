@@ -586,7 +586,7 @@ void VDP::VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint3
     }
 }
 
-void VDP::VDP1Cmd_DrawNormalSprite(uint16 cmdAddress, VDP1Command::Control control) {
+void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control control) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
     const uint16 color = VDP1ReadVRAM<uint16>(cmdAddress + 0x06);
@@ -632,7 +632,7 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint16 cmdAddress, VDP1Command::Control contr
     }
 }
 
-void VDP::VDP1Cmd_DrawScaledSprite(uint16 cmdAddress, VDP1Command::Control control) {
+void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control control) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
     const uint16 color = VDP1ReadVRAM<uint16>(cmdAddress + 0x06);
@@ -755,7 +755,7 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint16 cmdAddress, VDP1Command::Control contr
     }
 }
 
-void VDP::VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress, VDP1Command::Control control) {
+void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control control) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
     const uint16 color = VDP1ReadVRAM<uint16>(cmdAddress + 0x06);
@@ -795,7 +795,7 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress, VDP1Command::Control co
     }
 }
 
-void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
+void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
 
@@ -830,7 +830,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
     }
 }
 
-void VDP::VDP1Cmd_DrawPolylines(uint16 cmdAddress) {
+void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
 
@@ -859,7 +859,7 @@ void VDP::VDP1Cmd_DrawPolylines(uint16 cmdAddress) {
     VDP1PlotLine(xd, yd, xa, ya, color, mode, gouraudTable);
 }
 
-void VDP::VDP1Cmd_DrawLine(uint16 cmdAddress) {
+void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
 
@@ -880,14 +880,14 @@ void VDP::VDP1Cmd_DrawLine(uint16 cmdAddress) {
     VDP1PlotLine(xa, ya, xb, yb, color, mode, gouraudTable);
 }
 
-void VDP::VDP1Cmd_SetSystemClipping(uint16 cmdAddress) {
+void VDP::VDP1Cmd_SetSystemClipping(uint32 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     ctx.sysClipH = bit::extract<0, 9>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14));
     ctx.sysClipV = bit::extract<0, 8>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16));
     // fmt::println("VDP1: Set system clipping: {}x{}", ctx.sysClipH, ctx.sysClipV);
 }
 
-void VDP::VDP1Cmd_SetUserClipping(uint16 cmdAddress) {
+void VDP::VDP1Cmd_SetUserClipping(uint32 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     ctx.userClipX0 = bit::extract<0, 9>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C));
     ctx.userClipY0 = bit::extract<0, 8>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E));
@@ -897,7 +897,7 @@ void VDP::VDP1Cmd_SetUserClipping(uint16 cmdAddress) {
     //              ctx.userClipY1);
 }
 
-void VDP::VDP1Cmd_SetLocalCoordinates(uint16 cmdAddress) {
+void VDP::VDP1Cmd_SetLocalCoordinates(uint32 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     ctx.localCoordX = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C));
     ctx.localCoordY = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E));

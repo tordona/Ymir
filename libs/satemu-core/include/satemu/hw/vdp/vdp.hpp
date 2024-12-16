@@ -716,17 +716,17 @@ private:
 
     // Individual VDP1 command processors
 
-    void VDP1Cmd_DrawNormalSprite(uint16 cmdAddress, VDP1Command::Control control);
-    void VDP1Cmd_DrawScaledSprite(uint16 cmdAddress, VDP1Command::Control control);
-    void VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress, VDP1Command::Control control);
+    void VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control control);
+    void VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control control);
+    void VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control control);
 
-    void VDP1Cmd_DrawPolygon(uint16 cmdAddress);
-    void VDP1Cmd_DrawPolylines(uint16 cmdAddress);
-    void VDP1Cmd_DrawLine(uint16 cmdAddress);
+    void VDP1Cmd_DrawPolygon(uint32 cmdAddress);
+    void VDP1Cmd_DrawPolylines(uint32 cmdAddress);
+    void VDP1Cmd_DrawLine(uint32 cmdAddress);
 
-    void VDP1Cmd_SetSystemClipping(uint16 cmdAddress);
-    void VDP1Cmd_SetUserClipping(uint16 cmdAddress);
-    void VDP1Cmd_SetLocalCoordinates(uint16 cmdAddress);
+    void VDP1Cmd_SetSystemClipping(uint32 cmdAddress);
+    void VDP1Cmd_SetUserClipping(uint32 cmdAddress);
+    void VDP1Cmd_SetLocalCoordinates(uint32 cmdAddress);
 
     // -------------------------------------------------------------------------
     // VDP2
