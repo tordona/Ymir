@@ -144,9 +144,13 @@ uint16 CDBlock::DoTransfer() {
     switch (m_transferType) {
     case TransferType::None: value = 0; break;
     case TransferType::TOC: {
-        const bool evenWord = (m_transferPos & 2) == 0;
-        const std::size_t tocIndex = m_transferPos / sizeof(uint32);
-        value = m_disc.sessions[0].toc[tocIndex] >> (evenWord * 16u);
+        if (m_disc.sessions.empty()) {
+            value = 0xFFFF;
+        } else {
+            const bool evenWord = (m_transferPos & 2) == 0;
+            const std::size_t tocIndex = m_transferPos / sizeof(uint32);
+            value = m_disc.sessions.back().toc[tocIndex] >> (evenWord * 16u);
+        }
         break;
     }
     default:
@@ -190,8 +194,8 @@ void CDBlock::ProcessCommand() {
     case 0x04: CmdInitializeCDSystem(); break;
     // case 0x05: CmdOpenTray(); break;
     case 0x06: CmdEndDataTransfer(); break;
-    // case 0x10: CmdPlayDisc(); break;
-    // case 0x11: CmdSeekDisc(); break;
+    case 0x10: CmdPlayDisc(); break;
+    case 0x11: CmdSeekDisc(); break;
     // case 0x12: CmdScanDisc(); break;
     // case 0x20: CmdGetSubcodeQ_RW(); break;
     case 0x30: CmdSetCDDeviceConnection(); break;
@@ -425,9 +429,62 @@ void CDBlock::CmdEndDataTransfer() {
     SetInterrupt(kHIRQ_CMOK);
 }
 
-void CDBlock::CmdPlayDisc() {}
+void CDBlock::CmdPlayDisc() {
+    fmt::println("CDBlock: -> Play disc");
 
-void CDBlock::CmdSeekDisc() {}
+    // Input structure:
+    // 0x10           start position bits 23-16
+    // start position bits 15-0
+    // play mode      end position bits 23-16
+    // end position bits 15-0
+    const uint8 playMode = bit::extract<8, 15>(m_CR[2]);
+    const uint32 startPos = (bit::extract<0, 7>(m_CR[0]) << 16u) | m_CR[1];
+    const uint32 endPos = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
+    // const bool isStartFAD = bit::extract<23>(startPos);
+    // const bool isEndFAD = bit::extract<23>(endPos);
+
+    fmt::println("CDBlock: Play start {:06X} end {:06X} mode {:X}", startPos, endPos, playMode);
+    // TODO: implement
+    // isStartFAD and isEndFAD:
+    //   true: startPos and endPos are FADs (& 0x7FFFFF)
+    //   false: startPos and endPos are track numbers
+    // status after running the command: -> Seek -> Play
+    // if buffer full: -> Pause; raise kHIRQ_BFUL
+    // when buffer no longer full: -> Play
+    // when sectors are read: raise kHIRQ_CSCT
+
+    // Output structure: standard CD status data
+    ReportCDStatus();
+
+    SetInterrupt(kHIRQ_CMOK);
+}
+
+void CDBlock::CmdSeekDisc() {
+    fmt::println("CDBlock: -> Seek disc");
+
+    // Input structure:
+    // 0x11           start position bits 23-16
+    // start position bits 15-0
+    // <blank>
+    // <blank>
+    const uint32 startPos = (bit::extract<0, 7>(m_CR[0]) << 16u) | m_CR[1];
+    // const bool isStartFAD = bit::extract<23>(startPos);
+
+    fmt::println("CDBlock: Seek start {:06X}", startPos);
+    // TODO: implement
+    // isStartFAD :
+    //   true: startPos is FAD (& 0x7FFFFF)
+    //   false: startPos is track number
+    // stops playing if status is Play
+    // status after running the command: -> Paused
+    // setting invalid track: -> Standby
+    // startPos = 0xFFFFFF: stops playing and -> Paused
+
+    // Output structure: standard CD status data
+    ReportCDStatus();
+
+    SetInterrupt(kHIRQ_CMOK);
+}
 
 void CDBlock::CmdScanDisc() {}
 
