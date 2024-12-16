@@ -342,22 +342,22 @@ void VDP::VDP1ProcessCommands() {
     // Run up to 10000 commands to avoid infinite loops
     // TODO: cycle counting
     for (int i = 0; i < 10000; i++) {
-        const VDP1Command::Control cmdctrl{.u16 = VDP1ReadVRAM<uint16>(cmdAddress)};
-        if (cmdctrl.end) {
+        const VDP1Command::Control control{.u16 = VDP1ReadVRAM<uint16>(cmdAddress)};
+        if (control.end) {
             // fmt::println("VDP1: End of command list");
             m_SCU.TriggerSpriteDrawEnd();
             return;
         }
 
         // Process command
-        if (!cmdctrl.skip) {
+        if (!control.skip) {
             using enum VDP1Command::CommandType;
 
-            switch (cmdctrl.command) {
-            case DrawNormalSprite: VDP1Cmd_DrawNormalSprite(cmdAddress); break;
-            case DrawScaledSprite: VDP1Cmd_DrawScaledSprite(cmdAddress); break;
+            switch (control.command) {
+            case DrawNormalSprite: VDP1Cmd_DrawNormalSprite(cmdAddress, control); break;
+            case DrawScaledSprite: VDP1Cmd_DrawScaledSprite(cmdAddress, control); break;
             case DrawDistortedSprite: // fallthrough
-            case DrawDistortedSpriteAlt: VDP1Cmd_DrawDistortedSprite(cmdAddress); break;
+            case DrawDistortedSpriteAlt: VDP1Cmd_DrawDistortedSprite(cmdAddress, control); break;
 
             case DrawPolygon: VDP1Cmd_DrawPolygon(cmdAddress); break;
             case DrawPolylines: // fallthrough
@@ -370,7 +370,7 @@ void VDP::VDP1ProcessCommands() {
             case SetLocalCoordinates: VDP1Cmd_SetLocalCoordinates(cmdAddress); break;
 
             default:
-                fmt::println("VDP1: Unexpected command type {:X}", static_cast<uint16>(cmdctrl.command));
+                fmt::println("VDP1: Unexpected command type {:X}", static_cast<uint16>(control.command));
                 VDP1EndFrame();
                 return;
             }
@@ -380,7 +380,7 @@ void VDP::VDP1ProcessCommands() {
         {
             using enum VDP1Command::JumpType;
 
-            switch (cmdctrl.jumpMode) {
+            switch (control.jumpMode) {
             case Next: cmdAddress += 0x20; break;
             case Assign: {
                 cmdAddress = util::ReadBE<uint16>(&m_VRAM1[cmdAddress + 0x02]) << 3u;
@@ -512,10 +512,18 @@ FORCE_INLINE void VDP::VDP1PlotLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, 
     }
 }
 
-void VDP::VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint32 colorBank, VDP1Command::DrawMode mode,
-                               uint32 gouraudTable, uint32 charAddr, uint32 charSizeH, uint32 v) {
+void VDP::VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint32 colorBank,
+                               VDP1Command::Control control, VDP1Command::DrawMode mode, uint32 gouraudTable,
+                               uint32 charAddr, uint32 charSizeH, uint32 charSizeV, uint32 v) {
+    if (control.flipV) {
+        v = charSizeV - 1 - v;
+    }
+
     for (TexturedLineStepper line{x1, y1, x2, y2, charSizeH}; line.CanStep(); line.Step()) {
-        const uint32 u = line.U();
+        uint32 u = line.U();
+        if (control.flipH) {
+            u = charSizeH - 1 - u;
+        }
         if (line.UChanged()) {
             // TODO: load new character
             // TODO: process end codes
@@ -541,7 +549,7 @@ void VDP::VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint3
     }
 }
 
-void VDP::VDP1Cmd_DrawNormalSprite(uint16 cmdAddress) {
+void VDP::VDP1Cmd_DrawNormalSprite(uint16 cmdAddress, VDP1Command::Control control) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
     const uint16 color = VDP1ReadVRAM<uint16>(cmdAddress + 0x06);
@@ -583,11 +591,11 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint16 cmdAddress) {
         const uint32 v = edge.V();
 
         // Plot lines between the interpolated points
-        VDP1PlotTexturedLine(lx, ly, rx, ry, color, mode, gouraudTable, charAddr, charSizeH, v);
+        VDP1PlotTexturedLine(lx, ly, rx, ry, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v);
     }
 }
 
-void VDP::VDP1Cmd_DrawScaledSprite(uint16 cmdAddress) {
+void VDP::VDP1Cmd_DrawScaledSprite(uint16 cmdAddress, VDP1Command::Control control) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
     const uint16 color = VDP1ReadVRAM<uint16>(cmdAddress + 0x06);
@@ -624,11 +632,11 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint16 cmdAddress) {
         const uint32 v = edge.V();
 
         // Plot lines between the interpolated points
-        VDP1PlotTexturedLine(lx, ly, rx, ry, color, mode, gouraudTable, charAddr, charSizeH, v);
+        VDP1PlotTexturedLine(lx, ly, rx, ry, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v);
     }
 }
 
-void VDP::VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress) {
+void VDP::VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress, VDP1Command::Control control) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
     const uint16 color = VDP1ReadVRAM<uint16>(cmdAddress + 0x06);
@@ -664,7 +672,7 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress) {
         const uint32 v = edge.V();
 
         // Plot lines between the interpolated points
-        VDP1PlotTexturedLine(lx, ly, rx, ry, color, mode, gouraudTable, charAddr, charSizeH, v);
+        VDP1PlotTexturedLine(lx, ly, rx, ry, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v);
     }
 }
 
@@ -794,7 +802,7 @@ void VDP::VDP2DrawLine() {
         std::array<FnDrawSprite, 4> arr{};
 
         util::constexpr_for<4>([&](auto index) {
-            const uint32 cmIndex = bit::extract<6, 7>(index());
+            const uint32 cmIndex = bit::extract<0, 1>(index());
 
             const uint32 colorMode = cmIndex <= 2 ? cmIndex : 2;
             arr[cmIndex] = &VDP::VDP2DrawSpriteLayer<colorMode>;
@@ -1328,6 +1336,14 @@ FORCE_INLINE Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &col
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
     assert(dotX < 8);
     assert(dotY < 8);
+
+    // Flip dot coordinates if requested
+    if (ch.flipH) {
+        dotX ^= 7;
+    }
+    if (ch.flipV) {
+        dotY ^= 7;
+    }
 
     // Cell addressing uses a fixed offset of 32 bytes
     const uint32 cellAddress = (ch.charNum + cellIndex) * 0x20;

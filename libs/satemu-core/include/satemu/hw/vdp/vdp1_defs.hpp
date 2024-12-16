@@ -58,7 +58,8 @@ struct VDP1Command {
         uint16 u16;
         struct {
             CommandType command : 4;
-            uint16 direction : 2;
+            uint16 flipH : 1;
+            uint16 flipV : 1;
             uint16 : 2;
             uint16 zoomPoint : 4;
             JumpType jumpMode : 2;
