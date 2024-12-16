@@ -57,12 +57,12 @@ public:
 
     template <mem_primitive T>
     T VDP1ReadFB(uint32 address) {
-        return util::ReadBE<T>(&VDP1GetDrawFB()[address & 0x3FFFF]);
+        return util::ReadBE<T>(&m_spriteFB[m_drawFB][address & 0x3FFFF]);
     }
 
     template <mem_primitive T>
     void VDP1WriteFB(uint32 address, T value) {
-        util::WriteBE<T>(&VDP1GetDrawFB()[address & 0x3FFFF], value);
+        util::WriteBE<T>(&m_spriteFB[m_drawFB][address & 0x3FFFF], value);
     }
 
     template <mem_primitive T>
@@ -506,13 +506,15 @@ private:
     // NOTE: dots listed are for NTSC/PAL modes
     // NOTE: each dot takes 4 system (SH-2) cycles
     //
-    // 0             320/352        347/375     400/432    427/455 dots
+    // 0             320/352        347/375     400/432       427/455 dots
     // +----------------+--------------+-----------+-------------+
     // | Active display | Right border | Horz sync | Left border | (no blanking intervals?)
-    // +-+--------------+-+------------+-----------+-------------+
-    //   |                |
-    //   |                +-- Either black (BDCLMD=0) or set to the border color as defined by the back screen.
-    //   |                    The border is optional.
+    // +-+--------------+-+------------+-----------+-+-----------+
+    //   |                |                          |
+    //   |                +------------+-------------+
+    //   |                             |
+    //   |      Either black (BDCLMD=0) or set to the border color as defined by the back screen.
+    //   |      The border is optional.
     //   |
     //   +-- Graphics data is shown here
     //
@@ -783,12 +785,14 @@ private:
 
     // Fetches a color from a bitmap pixel.
     // bgParams contains the bitmap parameters.
+    // transparent is an output variable where the transparency of a pixel is set.
     // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
     // dotX and dotY specify the coordinates of the pixel within the bitmap.
     // colorFormat is the color format for pixel data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    vdp::Color888 VDP2FetchBitmapColor(const NormBGParams &bgParams, uint32 cramOffset, uint8 dotX, uint8 dotY);
+    vdp::Color888 VDP2FetchBitmapColor(const NormBGParams &bgParams, bool &transparent, uint32 cramOffset, uint8 dotX,
+                                       uint8 dotY);
 
     // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
     // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.

@@ -522,6 +522,7 @@ void VDP::VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint3
         }
 
         // TODO: calculate color properly
+        // TODO: honor horizontal/vertical flip
 
         // HACK(VDP1): plot texture coordinates for debugging purposes
         // const uint16 color = colorBank + u + v * charSizeH;
@@ -1128,7 +1129,9 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGLayer
         const uint32 scrollY = fracScrollY >> 8u;
 
         // Fetch dot color from bitmap
-        layer.colors[x] = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, layer.cramOffset, scrollX, scrollY);
+        layer.colors[x] = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, layer.transparent[x], layer.cramOffset,
+                                                                       scrollX, scrollY);
+        layer.transparent[x] &= bgParams.enableTransparency;
 
         // Compute priority
         layer.priorities[x] = bgParams.priorityNumber;
@@ -1366,8 +1369,8 @@ FORCE_INLINE Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &col
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-FORCE_INLINE Color888 VDP::VDP2FetchBitmapColor(const NormBGParams &bgParams, uint32 cramOffset, uint8 dotX,
-                                                uint8 dotY) {
+FORCE_INLINE Color888 VDP::VDP2FetchBitmapColor(const NormBGParams &bgParams, bool &transparent, uint32 cramOffset,
+                                                uint8 dotX, uint8 dotY) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
 
     // Bitmap data wraps around infinitely
@@ -1384,24 +1387,29 @@ FORCE_INLINE Color888 VDP::VDP2FetchBitmapColor(const NormBGParams &bgParams, ui
         const uint32 dotAddress = dotBaseAddress >> 1u;
         const uint8 dotData = (m_VRAM2[dotAddress & 0x7FFFF] >> ((dotX & 1) * 4)) & 0xF;
         const uint32 colorIndex = palNum | dotData;
+        transparent = dotData == 0;
         return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = dotBaseAddress;
         const uint8 dotData = m_VRAM2[dotAddress & 0x7FFFF];
         const uint32 colorIndex = palNum | dotData;
+        transparent = dotData == 0;
         return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
         const uint16 dotData = util::ReadBE<uint16>(&m_VRAM2[dotAddress & 0x7FFFF]);
         const uint32 colorIndex = dotData & 0x7FF;
+        transparent = (dotData & 0x7FF) == 0;
         return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
         const uint16 dotData = util::ReadBE<uint16>(&m_VRAM2[dotAddress & 0x7FFFF]);
+        transparent = bit::extract<15>(dotData) == 0;
         return ConvertRGB555to888(Color555{.u16 = dotData});
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint32);
         const uint32 dotData = util::ReadBE<uint32>(&m_VRAM2[dotAddress & 0x7FFFF]);
+        transparent = bit::extract<31>(dotData) == 0;
         return Color888{.u32 = dotData};
     }
 }
