@@ -134,6 +134,12 @@ struct VDP1Command {
     //    7   End Code Disable
     //    6   Transparent Pixel Disable
     //  5-3   Color Mode
+    //          000 (0) = 4 bpp, 16 colors, bank mode
+    //          001 (1) = 4 bpp, 16 colors, lookup table mode
+    //          010 (2) = 8 bpp, 64 colors, bank mode
+    //          011 (3) = 8 bpp, 128 colors, bank mode
+    //          100 (4) = 8 bpp, 256 colors, bank mode
+    //          101 (5) = 16 bpp, 32768 colors, RGB mode
     //  2-0   Color Calculation Bits
     union DrawMode {
         uint16 u16;
@@ -158,7 +164,7 @@ struct VDP1Command {
     union Size {
         uint16 u16;
         struct {
-            uint16 V : 7;
+            uint16 V : 8;
             uint16 H : 6;
         };
     };
@@ -2769,7 +2775,7 @@ struct VDP2Regs {
     FORCE_INLINE void WriteSPCTL(uint16 value) {
         spriteParams.type = bit::extract<0, 3>(value);
         spriteParams.windowEnable = bit::extract<4>(value);
-        spriteParams.mixedFormat = bit::extract<4>(value);
+        spriteParams.mixedFormat = bit::extract<5>(value);
         spriteParams.colorCalcValue = bit::extract<8, 10>(value);
         spriteParams.colorCalcCond = static_cast<SpriteColorCalculationCondition>(bit::extract<12, 13>(value));
     }

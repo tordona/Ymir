@@ -510,13 +510,22 @@ void VDP::VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint3
             // TODO: load new character
             // TODO: process end codes
         }
-        // TODO: calculate color
+
+        // TODO: calculate color properly
 
         // HACK: plot texture coordinates for debugging purposes
-        const uint16 color = colorBank + u + v * charSizeH;
-        VDP1PlotPixel(line.X(), line.Y(), color, mode, gouraudTable);
+        // const uint16 color = colorBank + u + v * charSizeH;
+
+        // HACK: assume 15-bit RGB
+        const uint32 charIndex = u + v * charSizeH;
+        const Color555 color{.u16 = util::ReadBE<uint16>(&m_VRAM1[(charAddr + charIndex * sizeof(uint16)) & 0x7FFFF])};
+        if (color.u16 == 0x0000 && !mode.transparentPixelDisable) {
+            continue;
+        }
+
+        VDP1PlotPixel(line.X(), line.Y(), color.u16, mode, gouraudTable);
         if (line.NeedsAntiAliasing()) {
-            VDP1PlotPixel(line.AAX(), line.AAY(), color, mode, gouraudTable);
+            VDP1PlotPixel(line.AAX(), line.AAY(), color.u16, mode, gouraudTable);
         }
     }
 }
@@ -545,16 +554,16 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress) {
     const sint32 yd = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1A)) + ctx.localCoordY;
     const uint32 gouraudTable = static_cast<uint32>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
 
+    const uint32 charSizeH = size.H * 8;
+    const uint32 charSizeV = size.V;
+
     fmt::println("VDP1: Draw distorted sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
                  "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
-                 xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, mode.u16, size.H * 8, size.V, charAddr);
+                 xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
 
     if (VDP1IsQuadSystemClipped(xa, ya, xb, yb, xc, yc, xd, yd)) {
         return;
     }
-
-    const uint32 charSizeH = size.H * 8;
-    const uint32 charSizeV = size.V;
 
     // Interpolate linearly over edges A-D and B-C
     for (TexturedQuadEdgesStepper edge{xa, ya, xb, yb, xc, yc, xd, yd, charSizeV}; edge.CanStep(); edge.Step()) {
@@ -586,7 +595,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint16 cmdAddress) {
 
     // fmt::println(
     // "VDP1: Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
-    //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, mode.u16);
+    //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16);
 
     if (VDP1IsQuadSystemClipped(xa, ya, xb, yb, xc, yc, xd, yd)) {
         return;
@@ -841,8 +850,8 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
             if (bit::extract<15>(spriteDataValue)) {
                 // RGB data
                 m_spriteLayer.colors[x] = ConvertRGB555to888(Color555{spriteDataValue});
-                m_spriteLayer.priorities[x] = 0;
-                m_spriteLayer.colorCalcRatios[x] = 0;
+                m_spriteLayer.priorities[x] = m_VDP2.spriteParams.priorities[0];
+                m_spriteLayer.colorCalcRatios[x] = m_VDP2.spriteParams.colorCalcRatios[0];
                 m_spriteLayer.shadowOrWindow[x] = false;
                 isPaletteData = false;
             }
@@ -854,8 +863,8 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
             const SpriteData spriteData = VDP2FetchSpriteData(spriteFBOffset);
             const uint32 colorIndex = m_VDP2.spriteParams.colorDataOffset + spriteData.colorData;
             m_spriteLayer.colors[x] = VDP2FetchCRAMColor<colorMode>(0, colorIndex);
-            m_spriteLayer.priorities[x] = spriteData.priority;
-            m_spriteLayer.colorCalcRatios[x] = spriteData.colorCalcRatio;
+            m_spriteLayer.priorities[x] = m_VDP2.spriteParams.priorities[spriteData.priority];
+            m_spriteLayer.colorCalcRatios[x] = m_VDP2.spriteParams.colorCalcRatios[spriteData.colorCalcRatio];
             m_spriteLayer.shadowOrWindow[x] = spriteData.shadowOrWindow;
         }
     }
