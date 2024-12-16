@@ -92,6 +92,10 @@ void CDBlock::Advance(uint64 cycles) {
     if (m_currPeriodicReportCycles >= m_targetPeriodicReportCycles) {
         m_currPeriodicReportCycles -= m_targetPeriodicReportCycles;
         if (m_readyForPeriodicReports && !m_processingCommand) {
+            // HACK to ensure the system detects the absence of a disc properly
+            if (m_disc.sessions.empty()) {
+                m_status.statusCode = kStatusCodeNoDisc;
+            }
             m_status.statusCode |= kStatusFlagPeriodic;
             ReportCDStatus();
             SetInterrupt(kHIRQ_SCDQ);
