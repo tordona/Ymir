@@ -35,6 +35,7 @@ add_library(satemu-core
     include/satemu/media/disc.hpp
     include/satemu/media/filesystem.hpp
     include/satemu/media/frame_address.hpp
+    include/satemu/media/iso9660.hpp
     
     include/satemu/media/loader/loader.hpp
     include/satemu/media/loader/loader_bin_cue.hpp
@@ -79,6 +80,8 @@ add_library(satemu-core
 
     src/satemu/hw/vdp/slope.hpp
     src/satemu/hw/vdp/vdp.cpp
+
+    src/satemu/media/filesystem.cpp
 
     src/satemu/media/loader/loader.cpp
     src/satemu/media/loader/loader_bin_cue.cpp

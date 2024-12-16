@@ -114,9 +114,7 @@ private:
 
     // TODO: use a device instead, to support reading from real drives as well as disc images
     media::Disc m_disc;
-
-    std::vector<media::fs::PathTableRecord> m_pathTableRecords;
-    std::vector<media::fs::DirectoryRecord> m_directoryRecords;
+    media::fs::Filesystem m_fs;
 
     alignas(uint64) std::array<uint16, 4> m_CR;
 

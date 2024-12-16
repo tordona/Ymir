@@ -276,7 +276,7 @@ bool Load(std::filesystem::path ccdPath, Disc &disc) {
                 return false;
             }
 
-            track.sectorSize = 2352;
+            track.SetSectorSize(2352);
             track.controlADR = (point.control << 4u) | point.adr;
             track.interleavedSubchannel = false;
 

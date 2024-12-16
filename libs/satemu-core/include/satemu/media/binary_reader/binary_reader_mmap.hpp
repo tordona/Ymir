@@ -37,6 +37,9 @@ public:
         if (!m_in.is_mapped()) {
             return 0;
         }
+        if (offset >= m_in.size()) {
+            return 0;
+        }
 
         // Limit size to the smallest of the requested size, the output buffer size and the amount of bytes available in
         // the file starting from offset

@@ -28,6 +28,9 @@ public:
     }
 
     uintmax_t Read(uintmax_t offset, uintmax_t size, std::span<uint8> output) const final {
+        if (offset >= m_size) {
+            return 0;
+        }
         // Limit size to the smallest of the requested size, the output buffer size and the amount of bytes available in
         // the file starting from offset
         size = std::min(size, m_size - offset);

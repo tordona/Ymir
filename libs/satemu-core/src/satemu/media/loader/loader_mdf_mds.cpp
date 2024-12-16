@@ -210,7 +210,7 @@ bool Load(std::filesystem::path mdsPath, Disc &disc) {
 
             if (trackData.trackNum <= 99) {
                 auto &track = session.tracks[trackIndex];
-                track.sectorSize = trackData.sectorSize;
+                track.SetSectorSize(trackData.sectorSize);
                 track.controlADR = (trackData.controlADR << 4u) | (trackData.controlADR >> 4u);
 
                 track.startFrameAddress = trackData.startSector + 150;

@@ -6,6 +6,7 @@
 
 #include <array>
 #include <memory>
+#include <span>
 #include <vector>
 
 namespace media {
@@ -13,11 +14,27 @@ namespace media {
 struct Track {
     std::unique_ptr<IBinaryReader> binaryReader;
     uint32 sectorSize;
+    uint32 userDataOffset;
     uint8 controlADR;
     bool interleavedSubchannel; // true=96-byte PW subchannel, interleaved
 
     uint32 startFrameAddress;
     uint32 endFrameAddress;
+
+    void SetSectorSize(uint32 size) {
+        sectorSize = size;
+        userDataOffset = size == 2352 ? 16 : 0;
+    }
+
+    uintmax_t ReadSectorUserData(uint32 frameAddress, std::span<uint8, 2048> outBuf) const {
+        const uint32 sectorOffset = frameAddress * sectorSize;
+        return binaryReader->Read(sectorOffset + userDataOffset, 2048, outBuf);
+    }
+
+    uintmax_t ReadSectorRaw(uint32 frameAddress, std::span<uint8> outBuf) const {
+        const uint32 sectorOffset = frameAddress * sectorSize;
+        return binaryReader->Read(sectorOffset, sectorSize, outBuf);
+    }
 };
 
 struct Session {
@@ -27,6 +44,16 @@ struct Session {
 
     uint32 startFrameAddress;
     uint32 endFrameAddress;
+
+    const Track *FindTrack(uint32 absFrameAddress) const {
+        for (int i = 0; i < numTracks; i++) {
+            const auto &track = tracks[firstTrackIndex + i];
+            if (absFrameAddress >= track.startFrameAddress && absFrameAddress <= track.endFrameAddress) {
+                return &track;
+            }
+        }
+        return nullptr;
+    }
 
     // The table of contents contains the following entries:
     // (partially from https://www.ecma-international.org/wp-content/uploads/ECMA-394_1st_edition_december_2010.pdf)
