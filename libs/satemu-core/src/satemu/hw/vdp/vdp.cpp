@@ -541,11 +541,90 @@ void VDP::VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint3
 }
 
 void VDP::VDP1Cmd_DrawNormalSprite(uint16 cmdAddress) {
-    // fmt::println("VDP1: Draw normal sprite");
+    auto &ctx = m_VDP1RenderContext;
+    const VDP1Command::DrawMode mode{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
+    const uint16 color = VDP1ReadVRAM<uint16>(cmdAddress + 0x06);
+    const uint32 charAddr = VDP1ReadVRAM<uint16>(cmdAddress + 0x08) * 8u;
+    const VDP1Command::Size size{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x0A)};
+    const sint32 xa = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C)) + ctx.localCoordX;
+    const sint32 ya = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E)) + ctx.localCoordY;
+    const uint32 gouraudTable = static_cast<uint32>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
+
+    const uint32 charSizeH = size.H * 8;
+    const uint32 charSizeV = size.V;
+
+    const sint32 lx = xa;             // left X
+    const sint32 ty = ya;             // top Y
+    const sint32 rx = xa + charSizeH; // right X
+    const sint32 by = ya + charSizeV; // bottom Y
+
+    const sint32 xb = rx;
+    const sint32 yb = ty;
+    const sint32 xc = rx;
+    const sint32 yc = by;
+    const sint32 xd = lx;
+    const sint32 yd = by;
+
+    // fmt::println("VDP1: Draw normal sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
+    //              "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
+    //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
+
+    if (VDP1IsQuadSystemClipped(xa, ya, xb, yb, xc, yc, xd, yd)) {
+        return;
+    }
+
+    // Interpolate linearly over edges A-D and B-C
+    for (TexturedQuadEdgesStepper edge{xa, ya, xb, yb, xc, yc, xd, yd, charSizeV}; edge.CanStep(); edge.Step()) {
+        const sint32 lx = edge.XMaj();
+        const sint32 ly = edge.YMaj();
+        const sint32 rx = edge.XMin();
+        const sint32 ry = edge.YMin();
+        const uint32 v = edge.V();
+
+        // Plot lines between the interpolated points
+        VDP1PlotTexturedLine(lx, ly, rx, ry, color, mode, gouraudTable, charAddr, charSizeH, v);
+    }
 }
 
 void VDP::VDP1Cmd_DrawScaledSprite(uint16 cmdAddress) {
-    // fmt::println("VDP1: Draw scaled sprite");
+    auto &ctx = m_VDP1RenderContext;
+    const VDP1Command::DrawMode mode{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x04)};
+    const uint16 color = VDP1ReadVRAM<uint16>(cmdAddress + 0x06);
+    const uint32 charAddr = VDP1ReadVRAM<uint16>(cmdAddress + 0x08) * 8u;
+    const VDP1Command::Size size{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x0A)};
+    const sint32 xa = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C)) + ctx.localCoordX;
+    const sint32 ya = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E)) + ctx.localCoordY;
+    const sint32 xc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14)) + ctx.localCoordX;
+    const sint32 yc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16)) + ctx.localCoordY;
+    const uint32 gouraudTable = static_cast<uint32>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
+
+    const uint32 charSizeH = size.H * 8;
+    const uint32 charSizeV = size.V;
+
+    const sint32 xb = xc;
+    const sint32 yb = ya;
+    const sint32 xd = xa;
+    const sint32 yd = yc;
+
+    // fmt::println("VDP1: Draw scaled sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
+    //              "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
+    //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
+
+    if (VDP1IsQuadSystemClipped(xa, ya, xb, yb, xc, yc, xd, yd)) {
+        return;
+    }
+
+    // Interpolate linearly over edges A-D and B-C
+    for (TexturedQuadEdgesStepper edge{xa, ya, xb, yb, xc, yc, xd, yd, charSizeV}; edge.CanStep(); edge.Step()) {
+        const sint32 lx = edge.XMaj();
+        const sint32 ly = edge.YMaj();
+        const sint32 rx = edge.XMin();
+        const sint32 ry = edge.YMin();
+        const uint32 v = edge.V();
+
+        // Plot lines between the interpolated points
+        VDP1PlotTexturedLine(lx, ly, rx, ry, color, mode, gouraudTable, charAddr, charSizeH, v);
+    }
 }
 
 void VDP::VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress) {
@@ -833,6 +912,9 @@ void VDP::VDP2DrawLine() {
 
         // HACK(VDP2): for now, use the top priority of each layer
         if (m_framebuffer != nullptr) {
+            // TODO: this should be unnecessary
+            m_framebuffer[x + y * m_HRes] = 0;
+
             // TODO: draw sprite layer properly
             uint32 prio = 0;
             if (!m_spriteLayer.transparent[x]) {
@@ -845,7 +927,7 @@ void VDP::VDP2DrawLine() {
                 if (layer.transparent[x]) {
                     continue;
                 }
-                if (layer.priorities[x] < prio) {
+                if (layer.priorities[x] <= prio) {
                     continue;
                 }
                 prio = layer.priorities[x];
