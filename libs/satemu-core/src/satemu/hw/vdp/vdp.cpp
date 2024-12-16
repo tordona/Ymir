@@ -512,9 +512,11 @@ void VDP::VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint3
         }
         // TODO: calculate color
 
-        VDP1PlotPixel(line.X(), line.Y(), colorBank, mode, gouraudTable);
+        // HACK: plot texture coordinates for debugging purposes
+        const uint16 color = colorBank + u + v * charSizeH;
+        VDP1PlotPixel(line.X(), line.Y(), color, mode, gouraudTable);
         if (line.NeedsAntiAliasing()) {
-            VDP1PlotPixel(line.AAX(), line.AAY(), colorBank, mode, gouraudTable);
+            VDP1PlotPixel(line.AAX(), line.AAY(), color, mode, gouraudTable);
         }
     }
 }

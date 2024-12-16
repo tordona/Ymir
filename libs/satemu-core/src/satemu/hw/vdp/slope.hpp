@@ -69,6 +69,11 @@ public:
         return (xmajor ? mincounter : majcounter) >> kFracBits;
     }
 
+    // Retrieves the slope's longest span length
+    FORCE_INLINE sint32 DMajor() const {
+        return dmaj;
+    }
+
 protected:
     sint32 dmaj;   // major span of the slope: max(abs(dx), abs(dy))
     sint64 majinc; // fractional increment on the major axis (+1 or -1)
@@ -203,7 +208,8 @@ class TexturedLineStepper : public LineStepper {
 public:
     TexturedLineStepper(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint32 charSizeH)
         : LineStepper(x1, y1, x2, y2) {
-        // TODO: precompute U increment from charSizeH
+        u = 0;
+        uinc = SafeDiv(ToFrac(charSizeH), dmaj);
     }
 
     // Steps the slope to the next coordinate.
@@ -211,18 +217,21 @@ public:
     // Should not be invoked when CanStep() returns false
     FORCE_INLINE void Step() {
         LineStepper::Step();
-        // TODO: increment U
+        u += uinc;
     }
 
     // Retrieves the current U texel coordinate.
     FORCE_INLINE uint32 U() const {
-        return 0; // TODO: return computed U
+        return u >> kFracBits;
     }
 
     // Determines if the U texel coordinate has changed on this step.
     FORCE_INLINE bool UChanged() const {
-        return false; // TODO: calculate; should also return true for the first step
+        return u == 0 || ((u - uinc) >> kFracBits) != (u >> kFracBits);
     }
+
+    sint64 u;    // current U texel coordinate, fractional
+    sint64 uinc; // U texel coordinate increment per step, fractional
 };
 
 // Edge iterator for a textured quad with vertices A-B-C-D arranged in clockwise order from top-left, interpolating the
@@ -232,7 +241,8 @@ public:
     TexturedQuadEdgesStepper(sint32 xa, sint32 ya, sint32 xb, sint32 yb, sint32 xc, sint32 yc, sint32 xd, sint32 yd,
                              uint32 charSizeV)
         : QuadEdgesStepper(xa, ya, xb, yb, xc, yc, xd, yd) {
-        // TODO: precompute V increment from charSizeV
+        v = 0;
+        vinc = SafeDiv(Slope::ToFrac(charSizeV), majslope.DMajor());
     }
 
     // Steps both slopes of the edge to the next coordinate.
@@ -242,13 +252,16 @@ public:
     // Should not be invoked when CanStep() returns false
     FORCE_INLINE void Step() {
         QuadEdgesStepper::Step();
-        // TODO: increment V
+        v += vinc;
     }
 
     // Retrieves the current V texel coordinate.
     FORCE_INLINE uint32 V() const {
-        return 0; // TODO: return computed V
+        return v >> Slope::kFracBits;
     }
+
+    sint64 v;    // current V texel coordinate, fractional
+    sint64 vinc; // V texel coordinate increment per step, fractional
 };
 
 } // namespace satemu::vdp
