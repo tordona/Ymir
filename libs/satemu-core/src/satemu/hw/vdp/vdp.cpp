@@ -291,14 +291,21 @@ void VDP::BeginVPhaseLastLine() {
     }
 }
 
-// ----
-// Renderer
+// -----------------------------------------------------------------------------
+// VDP1
+
+FORCE_INLINE std::array<uint8, kVDP1FramebufferRAMSize> &VDP::VDP1GetDrawFB() {
+    return m_spriteFB[m_drawFB];
+}
+
+FORCE_INLINE std::array<uint8, kVDP1FramebufferRAMSize> &VDP::VDP1GetDisplayFB() {
+    return m_spriteFB[m_drawFB ^ 1];
+}
 
 FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
     // fmt::println("VDP1: Erasing framebuffer {}", m_drawFB ^ 1);
     // TODO: erase only the specified region
-    // TODO: use the erase fill value
-    m_spriteFB[m_drawFB ^ 1].fill(0);
+    VDP1GetDisplayFB().fill(m_VDP1.eraseWriteValue);
 }
 
 FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
@@ -485,10 +492,11 @@ FORCE_INLINE void VDP::VDP1PlotPixel(sint32 x, sint32 y, uint16 color, VDP1Comma
     // TODO: mode.msbOn?
 
     const uint32 fbOffset = y * m_VDP1.fbSizeH + x;
+    auto &drawFB = VDP1GetDrawFB();
     if (m_VDP1.pixel8Bits) {
-        m_spriteFB[m_drawFB][fbOffset & 0x3FFFF] = color;
+        drawFB[fbOffset & 0x3FFFF] = color;
     } else {
-        util::WriteBE<uint16>(&m_spriteFB[m_drawFB][(fbOffset * sizeof(uint16)) & 0x3FFFE], color);
+        util::WriteBE<uint16>(&drawFB[(fbOffset * sizeof(uint16)) & 0x3FFFE], color);
     }
 }
 
@@ -557,9 +565,9 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint16 cmdAddress) {
     const uint32 charSizeH = size.H * 8;
     const uint32 charSizeV = size.V;
 
-    fmt::println("VDP1: Draw distorted sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
-                 "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
-                 xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
+    // fmt::println("VDP1: Draw distorted sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
+    //              "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
+    //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
 
     if (VDP1IsQuadSystemClipped(xa, ya, xb, yb, xc, yc, xd, yd)) {
         return;
@@ -686,6 +694,9 @@ void VDP::VDP1Cmd_SetLocalCoordinates(uint16 cmdAddress) {
     ctx.localCoordY = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E));
     // fmt::println("VDP1: Set local coordinates: {}x{}", ctx.localCoordX, ctx.localCoordY);
 }
+
+// -----------------------------------------------------------------------------
+// VDP2
 
 void VDP::VDP2DrawLine() {
     // fmt::println("VDP2: drawing line {}", m_VCounter);
@@ -841,7 +852,7 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
     const uint32 y = m_VCounter;
 
     for (uint32 x = 0; x < m_HRes; x++) {
-        const auto &spriteFB = m_spriteFB[m_drawFB ^ 1];
+        const auto &spriteFB = VDP1GetDisplayFB();
         const uint32 spriteFBOffset = x + y * m_VDP1.fbSizeH;
 
         bool isPaletteData = true;
@@ -1063,7 +1074,7 @@ FLATTEN FORCE_INLINE SpriteData VDP::VDP2FetchSpriteData(uint32 fbOffset) {
 FORCE_INLINE SpriteData VDP::VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type) {
     assert(type >= 8);
 
-    const uint8 rawData = m_spriteFB[m_drawFB ^ 1][fbOffset & 0x3FFFF];
+    const uint8 rawData = VDP1GetDisplayFB()[fbOffset & 0x3FFFF];
 
     SpriteData data{};
     switch (m_VDP2.spriteParams.type) {
@@ -1108,7 +1119,7 @@ FORCE_INLINE SpriteData VDP::VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type
 FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type) {
     assert(type < 8);
 
-    const uint16 rawData = util::ReadBE<uint16>(&m_spriteFB[m_drawFB ^ 1][fbOffset & 0x3FFFE]);
+    const uint16 rawData = util::ReadBE<uint16>(&VDP1GetDisplayFB()[fbOffset & 0x3FFFE]);
 
     SpriteData data{};
     switch (m_VDP2.spriteParams.type) {

@@ -57,12 +57,12 @@ public:
 
     template <mem_primitive T>
     T VDP1ReadFB(uint32 address) {
-        return util::ReadBE<T>(&m_spriteFB[m_drawFB][address & 0x3FFFF]);
+        return util::ReadBE<T>(&VDP1GetDrawFB()[address & 0x3FFFF]);
     }
 
     template <mem_primitive T>
     void VDP1WriteFB(uint32 address, T value) {
-        util::WriteBE<T>(&m_spriteFB[m_drawFB][address & 0x3FFFF], value);
+        util::WriteBE<T>(&VDP1GetDrawFB()[address & 0x3FFFF], value);
     }
 
     template <mem_primitive T>
@@ -587,8 +587,9 @@ private:
     void BeginVPhaseLastLine();
 
     // -------------------------------------------------------------------------
-    // Rendering
-    // TODO: move to a class or namespace
+    // VDP1
+
+    // TODO: split out rendering code
 
     // VDP1 renderer parameters and state
     struct VDP1RenderContext {
@@ -672,6 +673,12 @@ private:
     // Framebuffer provided by the frontend to render the current frame into
     FramebufferColor *m_framebuffer;
 
+    // Gets the current VDP1 draw framebuffer.
+    std::array<uint8, kVDP1FramebufferRAMSize> &VDP1GetDrawFB();
+
+    // Gets the current VDP1 display framebuffer.
+    std::array<uint8, kVDP1FramebufferRAMSize> &VDP1GetDisplayFB();
+
     // Erases the current VDP1 display framebuffer.
     void VDP1EraseFramebuffer();
 
@@ -713,7 +720,8 @@ private:
     void VDP1Cmd_SetUserClipping(uint16 cmdAddress);
     void VDP1Cmd_SetLocalCoordinates(uint16 cmdAddress);
 
-    // --------------------
+    // -------------------------------------------------------------------------
+    // VDP2
 
     // Draws the VDP2 scanline at m_VCounter.
     void VDP2DrawLine();
