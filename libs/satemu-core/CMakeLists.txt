@@ -29,6 +29,8 @@ add_library(satemu-core
 
     include/satemu/hw/vdp/vdp.hpp
     include/satemu/hw/vdp/vdp_defs.hpp
+    include/satemu/hw/vdp/vdp1_defs.hpp
+    include/satemu/hw/vdp/vdp2_defs.hpp
 
     include/satemu/media/disc.hpp
     include/satemu/media/filesystem.hpp
