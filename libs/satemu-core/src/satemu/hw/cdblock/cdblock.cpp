@@ -54,7 +54,11 @@ void CDBlock::LoadDisc(media::Disc &&disc) {
     // TODO: update status
 
     // Try building filesystem structure
-    m_fs.Read(m_disc);
+    if (m_fs.Read(m_disc)) {
+        fmt::println("CDBlock: Filesystem built successfully");
+    } else {
+        fmt::println("CDBlock: Failed to build filesystem");
+    }
 }
 
 void CDBlock::EjectDisc() {

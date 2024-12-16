@@ -87,6 +87,7 @@ bool Filesystem::Read(const Disc &disc) {
 bool Filesystem::ChangeDirectory(uint32 fileID /*, const Filter &filter*/) {
     if (fileID == 0xFFFFFF) {
         // Go to root directory; should be the first in the list
+        // TODO: refactor/simplify code
         if (m_directories.size() > 0) {
             m_currDirectory = 1;
             // TODO: read first 256 directory entries using filter
