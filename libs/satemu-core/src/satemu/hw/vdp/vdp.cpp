@@ -521,10 +521,10 @@ void VDP::VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint3
 
         // TODO: calculate color properly
 
-        // HACK: plot texture coordinates for debugging purposes
+        // HACK(VDP1): plot texture coordinates for debugging purposes
         // const uint16 color = colorBank + u + v * charSizeH;
 
-        // HACK: assume 15-bit RGB
+        // HACK(VDP1): assume 15-bit RGB
         const uint32 charIndex = u + v * charSizeH;
         const Color555 color{.u16 = util::ReadBE<uint16>(&m_VRAM1[(charAddr + charIndex * sizeof(uint16)) & 0x7FFFF])};
         if (color.u16 == 0x0000 && !mode.transparentPixelDisable) {

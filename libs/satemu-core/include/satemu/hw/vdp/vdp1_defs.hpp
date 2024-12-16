@@ -135,7 +135,7 @@ struct VDP1Regs {
         eraseX3 = 0;
         eraseY3 = 0;
 
-        // HACK: should be false
+        // HACK(VDP1): should be false
         currFrameEnded = true;
         prevFrameEnded = true;
 
