@@ -331,6 +331,8 @@ void VDP::VDP1BeginFrame() {
     m_VDP1.prevCommandAddress = m_VDP1.currCommandAddress;
     m_VDP1.currCommandAddress = 0;
     m_VDP1.returnAddress = ~0;
+    m_VDP1.prevFrameEnded = m_VDP1.currFrameEnded;
+    m_VDP1.currFrameEnded = false;
 
     // TODO: process while advancing cycles
     VDP1ProcessCommands();
@@ -351,6 +353,7 @@ void VDP::VDP1ProcessCommands() {
         const VDP1Command::Control control{.u16 = VDP1ReadVRAM<uint16>(cmdAddress)};
         if (control.end) {
             // fmt::println("VDP1: End of command list");
+            VDP1EndFrame();
             m_SCU.TriggerSpriteDrawEnd();
             return;
         }
