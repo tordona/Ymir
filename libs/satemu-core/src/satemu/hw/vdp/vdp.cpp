@@ -638,30 +638,112 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint16 cmdAddress, VDP1Command::Control contr
     const uint16 color = VDP1ReadVRAM<uint16>(cmdAddress + 0x06);
     const uint32 charAddr = VDP1ReadVRAM<uint16>(cmdAddress + 0x08) * 8u;
     const VDP1Command::Size size{.u16 = VDP1ReadVRAM<uint16>(cmdAddress + 0x0A)};
-    const sint32 xa = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C)) + ctx.localCoordX;
-    const sint32 ya = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E)) + ctx.localCoordY;
-    const sint32 xc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14)) + ctx.localCoordX;
-    const sint32 yc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16)) + ctx.localCoordY;
+    const sint32 xa = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C));
+    const sint32 ya = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E));
     const uint32 gouraudTable = static_cast<uint32>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
 
     const uint32 charSizeH = size.H * 8;
     const uint32 charSizeV = size.V;
 
-    const sint32 xb = xc;
-    const sint32 yb = ya;
-    const sint32 xd = xa;
-    const sint32 yd = yc;
+    // Calculated quad coordinates
+    sint32 qxa;
+    sint32 qya;
+    sint32 qxb;
+    sint32 qyb;
+    sint32 qxc;
+    sint32 qyc;
+    sint32 qxd;
+    sint32 qyd;
+
+    const uint8 zoomPointH = bit::extract<0, 1>(control.zoomPoint);
+    const uint8 zoomPointV = bit::extract<2, 3>(control.zoomPoint);
+    if (zoomPointH == 0 || zoomPointV == 0) {
+        const sint32 xc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14));
+        const sint32 yc = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16));
+
+        // Top-left coordinates on vertex A
+        // Bottom-right coordinates on vertex C
+        qxa = xa;
+        qya = ya;
+        qxb = xc;
+        qyb = ya;
+        qxc = xc;
+        qyc = yc;
+        qxd = xa;
+        qyd = yc;
+    } else {
+        const sint32 xb = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x10));
+        const sint32 yb = bit::sign_extend<10>(VDP1ReadVRAM<uint16>(cmdAddress + 0x12));
+
+        // Zoom origin on vertex A
+        // Zoom dimensions on vertex B
+
+        // X axis
+        switch (zoomPointH) {
+        case 1: // left
+            qxa = xa;
+            qxb = xa + xb;
+            qxc = xa + xb;
+            qxd = xa;
+            break;
+        case 2: // center
+            qxa = xa - xb / 2;
+            qxb = xa + (xb + 1) / 2;
+            qxc = xa + (xb + 1) / 2;
+            qxd = xa - xb / 2;
+            break;
+        case 3: // right
+            qxa = xa - xb;
+            qxb = xa;
+            qxc = xa;
+            qxd = xa - xb;
+            break;
+        }
+
+        // Y axis
+        switch (zoomPointV) {
+        case 1: // upper
+            qya = ya;
+            qyb = ya;
+            qyc = ya + yb;
+            qyd = ya + yb;
+            break;
+        case 2: // center
+            qya = ya - yb / 2;
+            qyb = ya - yb / 2;
+            qyc = ya + (yb + 1) / 2;
+            qyd = ya + (yb + 1) / 2;
+            break;
+        case 3: // lower
+            qya = ya - yb;
+            qyb = ya - yb;
+            qyc = ya;
+            qyd = ya;
+            break;
+        }
+    }
+
+    qxa += ctx.localCoordX;
+    qya += ctx.localCoordY;
+    qxb += ctx.localCoordX;
+    qyb += ctx.localCoordY;
+    qxc += ctx.localCoordX;
+    qyc += ctx.localCoordY;
+    qxd += ctx.localCoordX;
+    qyd += ctx.localCoordY;
 
     // fmt::println("VDP1: Draw scaled sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
     //              "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
-    //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
+    //              qxa, qya, qxb, qyb, qxc, qyc, qxd, qyd, color, gouraudTable, mode.u16, charSizeH, charSizeV,
+    //              charAddr);
 
-    if (VDP1IsQuadSystemClipped(xa, ya, xb, yb, xc, yc, xd, yd)) {
+    if (VDP1IsQuadSystemClipped(qxa, qya, qxb, qyb, qxc, qyc, qxd, qyd)) {
         return;
     }
 
     // Interpolate linearly over edges A-D and B-C
-    for (TexturedQuadEdgesStepper edge{xa, ya, xb, yb, xc, yc, xd, yd, charSizeV}; edge.CanStep(); edge.Step()) {
+    for (TexturedQuadEdgesStepper edge{qxa, qya, qxb, qyb, qxc, qyc, qxd, qyd, charSizeV}; edge.CanStep();
+         edge.Step()) {
         const sint32 lx = edge.XMaj();
         const sint32 ly = edge.YMaj();
         const sint32 rx = edge.XMin();
