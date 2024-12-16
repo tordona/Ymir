@@ -581,13 +581,13 @@ void CDBlock::CmdChangeDirectory() {
     // Output structure: standard CD status data
     if (filterNum < 0x24) {
         // TODO: read from file system
-        // if (m_fs.ChangeDirectory(fileID, m_filters[filterNum])) {
-        //     // succeeded
-        //     ReportCDStatus();
-        // } else {
-        //     // failed
-        ReportCDStatus(kStatusReject);
-        // }
+        if (m_fs.ChangeDirectory(fileID /*, m_filters[filterNum]*/)) {
+            // succeeded
+            ReportCDStatus();
+        } else {
+            // failed
+            ReportCDStatus(kStatusReject);
+        }
     } else if (filterNum == 0xFF) {
         ReportCDStatus(kStatusReject);
     } else {

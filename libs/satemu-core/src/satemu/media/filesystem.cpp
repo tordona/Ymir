@@ -8,6 +8,8 @@ namespace media::fs {
 
 bool Filesystem::Read(const Disc &disc) {
     m_directories.clear();
+    m_currDirectory = 0;
+
     util::ScopeGuard sgInvalidate = [&] { m_directories.clear(); };
 
     // TODO: test multisession discs
@@ -55,7 +57,12 @@ bool Filesystem::Read(const Disc &disc) {
         // Succeed if we found a terminator
         if (volDescHeader.type == VolumeDescriptorType::Terminator) {
             sgInvalidate.Cancel();
-            return true;
+            if (m_directories.empty()) {
+                return false;
+            } else {
+                m_currDirectory = 1;
+                return true;
+            }
         }
 
         // Parse the different types of volume descriptors
@@ -74,6 +81,22 @@ bool Filesystem::Read(const Disc &disc) {
     }
 
     // Fail if we somehow get here without finding a terminator
+    return false;
+}
+
+bool Filesystem::ChangeDirectory(uint32 fileID /*, const Filter &filter*/) {
+    if (fileID == 0xFFFFFF) {
+        // Go to root directory; should be the first in the list
+        if (m_directories.size() > 0) {
+            m_currDirectory = 1;
+            // TODO: read first 256 directory entries using filter
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        // TODO: how do we find this fileID?
+    }
     return false;
 }
 

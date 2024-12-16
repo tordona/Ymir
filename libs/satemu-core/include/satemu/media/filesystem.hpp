@@ -86,9 +86,16 @@ public:
     // If this function returns false, the filesystem object is invalidated.
     bool Read(const Disc &disc);
 
+    // Attempts to switch to the specified directory.
+    // Returns true if succesful, false if fileID is not a directory or does not exist.
+    // The filesystem state is not modified on failure.
+    bool ChangeDirectory(uint32 fileID /*, const Filter &filter*/);
+
 private:
     // Directories parsed from the path table records.
     std::vector<Directory> m_directories;
+
+    uint32 m_currDirectory;
 
     bool ReadPathTableRecords(const Track &track, const media::iso9660::VolumeDescriptor &volDesc);
 };
