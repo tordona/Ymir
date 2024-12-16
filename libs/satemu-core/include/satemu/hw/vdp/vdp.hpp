@@ -306,10 +306,12 @@ public:
     template <mem_primitive T>
     void VDP2WriteReg(uint32 address, T value) {
         switch (address) {
-        case 0x000:
+        case 0x000: {
+            const uint16 oldTVMD = m_VDP2.TVMD.u16;
             m_VDP2.TVMD.u16 = value & 0x81F7;
-            m_VDP2.TVMDDirty = true;
+            m_VDP2.TVMDDirty = m_VDP2.TVMD.u16 != oldTVMD;
             break;
+        }
         case 0x002: m_VDP2.EXTEN.u16 = value & 0x0303; break;
         case 0x004: /* TVSTAT is read-only */ break;
         case 0x006: m_VDP2.VRSIZE.u16 = value & 0x8000; break;

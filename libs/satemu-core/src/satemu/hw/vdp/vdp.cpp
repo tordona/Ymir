@@ -106,6 +106,12 @@ void VDP::UpdateResolution() {
     }
 
     fmt::println("VDP2: screen resolution set to {}x{}", m_HRes, m_VRes);
+    switch (m_VDP2.TVMD.LSMDn) {
+    case 0: fmt::println("VDP2: non-interlace mode"); break;
+    case 1: fmt::println("VDP2: invalid interlace mode"); break;
+    case 2: fmt::println("VDP2: single interlace mode"); break;
+    case 3: fmt::println("VDP2: double interlace mode"); break;
+    }
 
     // Timing tables
     // NOTE: the timings indicate when the specified phase begins
@@ -525,26 +531,57 @@ void VDP::VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint3
             u = charSizeH - 1 - u;
         }
         if (line.UChanged()) {
-            // TODO: load new character
+            // TODO: optimization: load new texel and compute U here
             // TODO: process end codes
         }
 
         // TODO: calculate color properly
-        // TODO: honor horizontal/vertical flip
 
-        // HACK(VDP1): plot texture coordinates for debugging purposes
-        // const uint16 color = colorBank + u + v * charSizeH;
-
-        // HACK(VDP1): assume 15-bit RGB
         const uint32 charIndex = u + v * charSizeH;
-        const Color555 color{.u16 = util::ReadBE<uint16>(&m_VRAM1[(charAddr + charIndex * sizeof(uint16)) & 0x7FFFF])};
-        if (color.u16 == 0x0000 && !mode.transparentPixelDisable) {
+
+        uint16 color = 0;
+        bool transparent = true;
+        switch (mode.colorMode) {
+        case 0: // 4 bpp, 16 colors, bank mode
+            color = m_VRAM1[(charAddr + (charIndex >> 1)) & 0x7FFFF];
+            color = (color >> (((u ^ 1) & 1) * 4)) & 0xF;
+            transparent = color == 0x0;
+            color |= colorBank;
+            break;
+        case 1: // 4 bpp, 16 colors, lookup table mode
+            color = m_VRAM1[(charAddr + (charIndex >> 1)) & 0x7FFFF];
+            color = (color >> (((u ^ 1) & 1) * 4)) & 0xF;
+            transparent = color == 0x0;
+            color = util::ReadBE<uint16>(&m_VRAM1[(color * sizeof(uint16) + colorBank * 8) & 0x7FFFF]);
+            break;
+        case 2: // 8 bpp, 64 colors, bank mode
+            color = m_VRAM1[(charAddr + charIndex) & 0x7FFFF] & 0x3F;
+            transparent = color == 0x0;
+            color |= colorBank & 0xFFC0;
+            break;
+        case 3: // 8 bpp, 128 colors, bank mode
+            color = m_VRAM1[(charAddr + charIndex) & 0x7FFFF] & 0x7F;
+            transparent = color == 0x00;
+            color |= colorBank & 0xFF80;
+            break;
+        case 4: // 8 bpp, 256 colors, bank mode
+            color = m_VRAM1[(charAddr + charIndex) & 0x7FFFF];
+            transparent = color == 0x00;
+            color |= colorBank & 0xFF00;
+            break;
+        case 5: // 16 bpp, 32768 colors, RGB mode
+            color = util::ReadBE<uint16>(&m_VRAM1[(charAddr + charIndex * sizeof(uint16)) & 0x7FFFF]);
+            transparent = color == 0x0000;
+            break;
+        }
+
+        if (transparent && !mode.transparentPixelDisable) {
             continue;
         }
 
-        VDP1PlotPixel(line.X(), line.Y(), color.u16, mode, gouraudTable);
+        VDP1PlotPixel(line.X(), line.Y(), color, mode, gouraudTable);
         if (line.NeedsAntiAliasing()) {
-            VDP1PlotPixel(line.AAX(), line.AAY(), color.u16, mode, gouraudTable);
+            VDP1PlotPixel(line.AAX(), line.AAY(), color, mode, gouraudTable);
         }
     }
 }
