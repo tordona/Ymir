@@ -56,7 +56,7 @@ struct BGParams {
 
     void Reset() {
         enabled = false;
-        transparent = false;
+        enableTransparency = false;
         bitmap = false;
 
         lineColorScreenEnable = false;
@@ -108,7 +108,7 @@ struct BGParams {
 
     // If true, honor transparency bit in color data.
     // Derived from BGON.xxTPON
-    bool transparent;
+    bool enableTransparency;
 
     // Whether the background uses cells (false) or a bitmap (true).
     // Derived CHCTLA/CHCTLB.xxBMEN
@@ -1528,11 +1528,11 @@ struct VDP2Regs {
         bit::deposit_into<4>(value, rotBGParams[0].enabled);
         bit::deposit_into<5>(value, rotBGParams[1].enabled);
 
-        bit::deposit_into<8>(value, normBGParams[0].transparent);
-        bit::deposit_into<9>(value, normBGParams[1].transparent);
-        bit::deposit_into<10>(value, normBGParams[2].transparent);
-        bit::deposit_into<11>(value, normBGParams[3].transparent);
-        bit::deposit_into<12>(value, rotBGParams[0].transparent);
+        bit::deposit_into<8>(value, !normBGParams[0].enableTransparency);
+        bit::deposit_into<9>(value, !normBGParams[1].enableTransparency);
+        bit::deposit_into<10>(value, !normBGParams[2].enableTransparency);
+        bit::deposit_into<11>(value, !normBGParams[3].enableTransparency);
+        bit::deposit_into<12>(value, !rotBGParams[0].enableTransparency);
         return value;
     }
 
@@ -1544,12 +1544,12 @@ struct VDP2Regs {
         rotBGParams[0].enabled = bit::extract<4>(value);
         rotBGParams[1].enabled = bit::extract<5>(value);
 
-        normBGParams[0].transparent = bit::extract<8>(value);
-        normBGParams[1].transparent = bit::extract<9>(value);
-        normBGParams[2].transparent = bit::extract<10>(value);
-        normBGParams[3].transparent = bit::extract<11>(value);
-        rotBGParams[0].transparent = bit::extract<12>(value);
-        rotBGParams[1].transparent = normBGParams[0].transparent;
+        normBGParams[0].enableTransparency = !bit::extract<8>(value);
+        normBGParams[1].enableTransparency = !bit::extract<9>(value);
+        normBGParams[2].enableTransparency = !bit::extract<10>(value);
+        normBGParams[3].enableTransparency = !bit::extract<11>(value);
+        rotBGParams[0].enableTransparency = !bit::extract<12>(value);
+        rotBGParams[1].enableTransparency = !normBGParams[0].enableTransparency;
     }
 
     MZCTL_t MZCTL; // 180022   MZCTL   Mosaic Control

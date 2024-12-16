@@ -41,12 +41,14 @@ void VDP::Reset(bool hard) {
     m_VDP1RenderContext.Reset();
 
     m_spriteLayer.colors.fill({});
+    m_spriteLayer.transparent.fill(true);
     m_spriteLayer.priorities.fill(0);
     m_spriteLayer.colorCalcRatios.fill(0);
     m_spriteLayer.shadowOrWindow.fill(false);
 
     for (auto &bgLayer : m_bgLayers) {
         bgLayer.colors.fill({});
+        bgLayer.transparent.fill(true);
         bgLayer.priorities.fill(0);
         bgLayer.colorData.fill(0);
         bgLayer.cramOffset = 0;
@@ -832,15 +834,22 @@ void VDP::VDP2DrawLine() {
         // HACK(VDP2): for now, use the top priority of each layer
         if (m_framebuffer != nullptr) {
             // TODO: draw sprite layer properly
-            uint32 prio = m_spriteLayer.priorities[x];
-            m_framebuffer[x + y * m_HRes] = m_spriteLayer.colors[x].u32;
+            uint32 prio = 0;
+            if (!m_spriteLayer.transparent[x]) {
+                prio = m_spriteLayer.priorities[x];
+                m_framebuffer[x + y * m_HRes] = m_spriteLayer.colors[x].u32;
+            }
 
             for (int i = 0; i < 6; i++) {
                 const auto &layer = m_bgLayers[i];
-                if (layer.colors[x].msb && layer.priorities[x] >= prio) {
-                    prio = layer.priorities[x];
-                    m_framebuffer[x + y * m_HRes] = layer.colors[x].u32;
+                if (layer.transparent[x]) {
+                    continue;
                 }
+                if (layer.priorities[x] < prio) {
+                    continue;
+                }
+                prio = layer.priorities[x];
+                m_framebuffer[x + y * m_HRes] = layer.colors[x].u32;
             }
             // TODO: if no layers are visible, draw BACK screen
         }
@@ -861,6 +870,7 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
             if (bit::extract<15>(spriteDataValue)) {
                 // RGB data
                 m_spriteLayer.colors[x] = ConvertRGB555to888(Color555{spriteDataValue});
+                m_spriteLayer.transparent[x] = false;
                 m_spriteLayer.priorities[x] = m_VDP2.spriteParams.priorities[0];
                 m_spriteLayer.colorCalcRatios[x] = m_VDP2.spriteParams.colorCalcRatios[0];
                 m_spriteLayer.shadowOrWindow[x] = false;
@@ -874,6 +884,7 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
             const SpriteData spriteData = VDP2FetchSpriteData(spriteFBOffset);
             const uint32 colorIndex = m_VDP2.spriteParams.colorDataOffset + spriteData.colorData;
             m_spriteLayer.colors[x] = VDP2FetchCRAMColor<colorMode>(0, colorIndex);
+            m_spriteLayer.transparent[x] = spriteData.colorData == 0;
             m_spriteLayer.priorities[x] = m_VDP2.spriteParams.priorities[spriteData.priority];
             m_spriteLayer.colorCalcRatios[x] = m_VDP2.spriteParams.colorCalcRatios[spriteData.colorCalcRatio];
             m_spriteLayer.shadowOrWindow[x] = spriteData.shadowOrWindow;
@@ -997,8 +1008,9 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer
                 : VDP2FetchOneWordCharacter<fourCellChar, largePalette, wideChar>(bgParams, pageAddress, charIndex);
 
         // Fetch dot color using character data
-        layer.colors[x] = VDP2FetchCharacterColor<colorFormat, colorMode>(layer.cramOffset, layer.colorData[x], ch,
-                                                                          dotX, dotY, cellIndex);
+        layer.colors[x] = VDP2FetchCharacterColor<colorFormat, colorMode>(
+            layer.cramOffset, layer.colorData[x], layer.transparent[x], ch, dotX, dotY, cellIndex);
+        layer.transparent[x] &= bgParams.enableTransparency;
 
         // Compute priority
         layer.priorities[x] = bgParams.priorityNumber;
@@ -1226,8 +1238,8 @@ FORCE_INLINE VDP::Character VDP::VDP2FetchOneWordCharacter(const NormBGParams &b
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-FORCE_INLINE Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &colorData, Character ch, uint8 dotX,
-                                                   uint8 dotY, uint32 cellIndex) {
+FORCE_INLINE Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &colorData, bool &transparent, Character ch,
+                                                   uint8 dotX, uint8 dotY, uint32 cellIndex) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
     assert(dotX < 8);
     assert(dotY < 8);
@@ -1242,26 +1254,31 @@ FORCE_INLINE Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &col
         const uint8 dotData = (m_VRAM2[dotAddress & 0x7FFFF] >> ((dotX & 1) * 4)) & 0xF;
         const uint32 colorIndex = (ch.palNum << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
+        transparent = dotData == 0;
         return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = dotBaseAddress;
         const uint8 dotData = m_VRAM2[dotAddress & 0x7FFFF];
         const uint32 colorIndex = ((ch.palNum & 0x70) << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
+        transparent = dotData == 0;
         return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
         const uint16 dotData = util::ReadBE<uint16>(&m_VRAM2[dotAddress & 0x7FFFF]);
         const uint32 colorIndex = dotData & 0x7FF;
         colorData = bit::extract<1, 3>(dotData);
+        transparent = (dotData & 0x7FF) == 0;
         return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
         const uint16 dotData = util::ReadBE<uint16>(&m_VRAM2[dotAddress & 0x7FFFF]);
+        transparent = bit::extract<15>(dotData) == 0;
         return ConvertRGB555to888(Color555{.u16 = dotData});
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
         const uint32 dotAddress = dotBaseAddress * sizeof(uint32);
         const uint32 dotData = util::ReadBE<uint32>(&m_VRAM2[dotAddress & 0x7FFFF]);
+        transparent = bit::extract<31>(dotData) == 0;
         return Color888{.u32 = dotData};
     }
 }

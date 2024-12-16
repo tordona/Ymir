@@ -642,6 +642,9 @@ private:
         // Colors per pixel
         std::array<vdp::Color888, 704> colors;
 
+        // Transparent pixels
+        std::array<bool, 704> transparent;
+
         // Priorities per pixel
         std::array<uint8, 704> priorities;
     };
@@ -768,14 +771,15 @@ private:
     // Fetches a color from a pixel in the specified cell in a 2x2 character pattern.
     // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
     // colorData is an output variable where bits 3-1 of the palette color data from VRAM is stored.
+    // transparent is an output variable where the transparency of a pixel is set.
     // ch contains character parameters.
     // dotX and dotY specify the coordinates of the pixel within the cell, both ranging from 0 to 7.
     // cellIndex is the index of the cell in the character pattern, ranging from 0 to 3.
     // colorFormat is the value of CHCTLA/CHCTLB.xxCHCNn.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    vdp::Color888 VDP2FetchCharacterColor(uint32 cramOffset, uint8 &colorData, Character ch, uint8 dotX, uint8 dotY,
-                                          uint32 cellIndex);
+    vdp::Color888 VDP2FetchCharacterColor(uint32 cramOffset, uint8 &colorData, bool &transparent, Character ch,
+                                          uint8 dotX, uint8 dotY, uint32 cellIndex);
 
     // Fetches a color from a bitmap pixel.
     // bgParams contains the bitmap parameters.
