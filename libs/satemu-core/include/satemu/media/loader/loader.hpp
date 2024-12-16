@@ -10,7 +10,7 @@
 #include <filesystem>
 #include <vector>
 
-namespace media {
+namespace satemu::media {
 
 // Attempts to load a CD image from any of the supported file formats:
 //   BIN/CUE     (if provided a .cue file)
@@ -21,4 +21,4 @@ namespace media {
 // If this function returns false, the Disc object is invalidated.
 bool LoadDisc(std::filesystem::path path, Disc &disc);
 
-} // namespace media
+} // namespace satemu::media

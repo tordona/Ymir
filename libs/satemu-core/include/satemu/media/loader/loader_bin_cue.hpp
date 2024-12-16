@@ -35,11 +35,11 @@
 // Time is specified in minutes, seconds and frames (mm:ss:ff). There are 75 frames in a second. Each frame
 // corresponds to a sector.
 
-namespace media::loader::bincue {
+namespace satemu::media::loader::bincue {
 
 // Attempts to load a CUE file (along with any referenced BIN files) from cuePath into the specified Disc object.
 // Returns true if loading all files succeeded.
 // If this function returns false, the Disc object is invalidated.
 bool Load(std::filesystem::path cuePath, Disc &disc);
 
-} // namespace media::loader::bincue
+} // namespace satemu::media::loader::bincue

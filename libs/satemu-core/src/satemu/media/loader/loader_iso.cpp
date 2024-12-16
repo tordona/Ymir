@@ -10,7 +10,7 @@
 
 namespace fs = std::filesystem;
 
-namespace media::loader::iso {
+namespace satemu::media::loader::iso {
 
 bool Load(std::filesystem::path isoPath, Disc &disc) {
     std::ifstream in{isoPath, std::ios::binary};
@@ -85,4 +85,4 @@ bool Load(std::filesystem::path isoPath, Disc &disc) {
     return true;
 }
 
-} // namespace media::loader::iso
+} // namespace satemu::media::loader::iso

@@ -2,7 +2,7 @@
 
 #include <satemu/core_types.hpp>
 
-namespace media {
+namespace satemu::media {
 
 inline uint32 TimestampToFrameAddress(uint32 min, uint32 sec, uint32 frame) {
     return min * 75 * 60 + sec * 75 + frame;
@@ -12,4 +12,4 @@ inline uintmax_t TimestampToFileOffset(uint32 min, uint32 sec, uint32 frame, uin
     return static_cast<uintmax_t>(TimestampToFrameAddress(min, sec, frame)) * sectorSize;
 }
 
-} // namespace media
+} // namespace satemu::media

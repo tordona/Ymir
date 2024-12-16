@@ -4,7 +4,7 @@
 
 #include <span>
 
-namespace media {
+namespace satemu::media {
 
 // Interface that specifies the contract for reading binary files.
 class IBinaryReader {
@@ -21,4 +21,4 @@ public:
     virtual uintmax_t Read(uintmax_t offset, uintmax_t size, std::span<uint8> output) const = 0;
 };
 
-} // namespace media
+} // namespace satemu::media

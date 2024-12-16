@@ -6,7 +6,7 @@
 #include <fstream>
 #include <span>
 
-namespace media {
+namespace satemu::media {
 
 // Implementation of IBinaryReader backed by a file.
 class FileBinaryReader final : public IBinaryReader {
@@ -62,4 +62,4 @@ private:
     uintmax_t m_size;
 };
 
-} // namespace media
+} // namespace satemu::media

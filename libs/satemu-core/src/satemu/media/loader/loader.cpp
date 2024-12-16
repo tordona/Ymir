@@ -1,6 +1,6 @@
 #include <satemu/media/loader/loader.hpp>
 
-namespace media {
+namespace satemu::media {
 
 bool LoadDisc(std::filesystem::path path, Disc &disc) {
     if (loader::bincue::Load(path, disc)) {
@@ -19,4 +19,4 @@ bool LoadDisc(std::filesystem::path path, Disc &disc) {
     return false;
 }
 
-} // namespace media
+} // namespace satemu::media

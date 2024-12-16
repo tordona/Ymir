@@ -16,7 +16,7 @@
 
 namespace fs = std::filesystem;
 
-namespace media::loader::ccd {
+namespace satemu::media::loader::ccd {
 
 struct CloneCDTocEntry {
     uint8 point;
@@ -325,4 +325,4 @@ bool Load(std::filesystem::path ccdPath, Disc &disc) {
     return true;
 }
 
-} // namespace media::loader::ccd
+} // namespace satemu::media::loader::ccd

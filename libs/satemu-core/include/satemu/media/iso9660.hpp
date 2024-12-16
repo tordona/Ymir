@@ -12,7 +12,7 @@
 #include <span>
 #include <string>
 
-namespace media::iso9660 {
+namespace satemu::media::iso9660 {
 
 // Note on field formats: the specification describes numeric fields can be recorded as little-endian, big-endian or
 // both byte orders simultaneously, where the number is recorded as little-endian followed by big-endian. This header
@@ -579,4 +579,4 @@ struct VolumePartitionDescriptor {
     }
 };
 
-} // namespace media::iso9660
+} // namespace satemu::media::iso9660

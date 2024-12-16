@@ -11,7 +11,7 @@
 #include <set>
 #include <sstream>
 
-namespace media::loader::bincue {
+namespace satemu::media::loader::bincue {
 
 const std::set<std::string> kValidCueKeywords = {
     // General commands
@@ -364,4 +364,4 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
     return true;
 }
 
-} // namespace media::loader::bincue
+} // namespace satemu::media::loader::bincue

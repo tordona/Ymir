@@ -9,7 +9,7 @@
 #include <span>
 #include <vector>
 
-namespace media {
+namespace satemu::media {
 
 struct Track {
     std::unique_ptr<IBinaryReader> binaryReader;
@@ -126,4 +126,4 @@ struct Disc {
     }
 };
 
-} // namespace media
+} // namespace satemu::media

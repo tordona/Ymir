@@ -4,7 +4,7 @@
 
 #include <filesystem>
 
-namespace media::loader::mdfmds {
+namespace satemu::media::loader::mdfmds {
 
 // Alcohol 120% Media Descriptor File/Sidecar files describe a full CD image with multiple sessions and tracks.
 // The MDF file contains the binary contents and the MDS file contains the disc structure.
@@ -14,4 +14,4 @@ namespace media::loader::mdfmds {
 // If this function returns false, the Disc object is invalidated.
 bool Load(std::filesystem::path mdsPath, Disc &disc);
 
-} // namespace media::loader::mdfmds
+} // namespace satemu::media::loader::mdfmds

@@ -7,7 +7,7 @@
 #include <span>
 #include <vector>
 
-namespace media {
+namespace satemu::media {
 
 // Implementation of IBinaryReader that reads from an in-memory buffer.
 class MemoryBinaryReader final : public IBinaryReader {
@@ -77,4 +77,4 @@ private:
     std::vector<uint8> m_data;
 };
 
-} // namespace media
+} // namespace satemu::media

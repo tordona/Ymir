@@ -14,7 +14,7 @@
 
 namespace fs = std::filesystem;
 
-namespace media::loader::mdfmds {
+namespace satemu::media::loader::mdfmds {
 
 // Format parsing based on reverse-engineering work by Henrik Stokseth.
 
@@ -310,4 +310,4 @@ bool Load(std::filesystem::path mdsPath, Disc &disc) {
     return true;
 }
 
-} // namespace media::loader::mdfmds
+} // namespace satemu::media::loader::mdfmds

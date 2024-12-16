@@ -4,7 +4,7 @@
 
 #include <memory>
 
-namespace media {
+namespace satemu::media {
 
 // Implementation of IBinaryReader that reads from a subview of a shared pointer to an IBinaryReader.
 class SharedSubviewBinaryReader final : public IBinaryReader {
@@ -44,4 +44,4 @@ private:
     uintmax_t m_size;
 };
 
-} // namespace media
+} // namespace satemu::media

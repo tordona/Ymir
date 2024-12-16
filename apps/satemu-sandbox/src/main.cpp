@@ -224,8 +224,8 @@ int main(int argc, char **argv) {
         fmt::println("IPL ROM loaded");
     }
     if (argc > 2) {
-        media::Disc disc{};
-        if (!media::LoadDisc(argv[2], disc)) {
+        satemu::media::Disc disc{};
+        if (!satemu::media::LoadDisc(argv[2], disc)) {
             fmt::println("Failed to load media from {}", argv[2]);
             return EXIT_FAILURE;
         }

@@ -7,7 +7,7 @@
 #include <filesystem>
 #include <span>
 
-namespace media {
+namespace satemu::media {
 
 // Implementation of IBinaryReader backed by a memory-mapped file.
 class MemoryMappedBinaryReader final : public IBinaryReader {
@@ -53,4 +53,4 @@ private:
     mio::mmap_source m_in;
 };
 
-} // namespace media
+} // namespace satemu::media

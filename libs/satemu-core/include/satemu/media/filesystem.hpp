@@ -9,8 +9,9 @@
 #include <cassert>
 #include <vector>
 
-namespace media::fs {
+namespace satemu::media::fs {
 
+// Represents a file or directory in a path table directory.
 class FilesystemEntry {
 public:
     FilesystemEntry(const iso9660::DirectoryRecord &dirRecord, uint16 parent)
@@ -46,6 +47,7 @@ private:
     bool m_isDirectory;
 };
 
+// Represents a path table directory.
 class Directory {
 public:
     Directory(const iso9660::DirectoryRecord &dirRecord, uint16 parent)
@@ -100,4 +102,4 @@ private:
     bool ReadPathTableRecords(const Track &track, const media::iso9660::VolumeDescriptor &volDesc);
 };
 
-} // namespace media::fs
+} // namespace satemu::media::fs

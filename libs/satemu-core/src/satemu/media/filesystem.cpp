@@ -2,9 +2,9 @@
 
 #include <satemu/util/scope_guard.hpp>
 
-using namespace media::iso9660;
+using namespace satemu::media::iso9660;
 
-namespace media::fs {
+namespace satemu::media::fs {
 
 bool Filesystem::Read(const Disc &disc) {
     m_directories.clear();
@@ -186,4 +186,4 @@ bool Filesystem::ReadPathTableRecords(const Track &track, const media::iso9660::
     return true;
 }
 
-} // namespace media::fs
+} // namespace satemu::media::fs
