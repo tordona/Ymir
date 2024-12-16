@@ -112,11 +112,11 @@ public:
 private:
     scu::SCU &m_scu;
 
+    alignas(uint64) std::array<uint16, 4> m_CR;
+
     // TODO: use a device instead, to support reading from real drives as well as disc images
     media::Disc m_disc;
     media::fs::Filesystem m_fs;
-
-    alignas(uint64) std::array<uint16, 4> m_CR;
 
     // -------------------------------------------------------------------------
     // Disc/drive state
@@ -184,6 +184,14 @@ private:
 
     // Reads one word from the transfer
     uint16 DoTransfer();
+
+    // -------------------------------------------------------------------------
+    // Filters
+
+    std::array<media::Filter, 24> m_filters;
+    uint8 m_cdDeviceConnection;
+
+    void DisconnectFilterInput(uint8 filterNumber);
 
     // -------------------------------------------------------------------------
     // Commands

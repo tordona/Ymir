@@ -84,7 +84,7 @@ bool Filesystem::Read(const Disc &disc) {
     return false;
 }
 
-bool Filesystem::ChangeDirectory(uint32 fileID /*, const Filter &filter*/) {
+bool Filesystem::ChangeDirectory(uint32 fileID, const Filter &filter) {
     if (fileID == 0xFFFFFF) {
         // Go to root directory; should be the first in the list
         // TODO: refactor/simplify code

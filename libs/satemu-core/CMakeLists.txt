@@ -34,6 +34,7 @@ add_library(satemu-core
 
     include/satemu/media/disc.hpp
     include/satemu/media/filesystem.hpp
+    include/satemu/media/filter.hpp
     include/satemu/media/frame_address.hpp
     include/satemu/media/iso9660.hpp
     

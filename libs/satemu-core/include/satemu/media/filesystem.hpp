@@ -4,6 +4,7 @@
 #include <satemu/util/bit_ops.hpp>
 
 #include "disc.hpp"
+#include "filter.hpp"
 #include "iso9660.hpp"
 
 #include <cassert>
@@ -91,7 +92,7 @@ public:
     // Attempts to switch to the specified directory.
     // Returns true if succesful, false if fileID is not a directory or does not exist.
     // The filesystem state is not modified on failure.
-    bool ChangeDirectory(uint32 fileID /*, const Filter &filter*/);
+    bool ChangeDirectory(uint32 fileID, const Filter &filter);
 
 private:
     // Directories parsed from the path table records.

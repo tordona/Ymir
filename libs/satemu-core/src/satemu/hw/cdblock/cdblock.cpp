@@ -40,6 +40,11 @@ void CDBlock::Reset(bool hard) {
     m_transferLength = 0;
     m_transferCount = 0x1FFFFFF;
 
+    for (auto &filter : m_filters) {
+        filter.Reset();
+    }
+    m_cdDeviceConnection = media::Filter::kDisconnected;
+
     m_processingCommand = false;
     m_currCommandCycles = 0;
     m_targetCommandCycles = 0;
@@ -160,6 +165,14 @@ uint16 CDBlock::DoTransfer() {
     return value;
 }
 
+void CDBlock::DisconnectFilterInput(uint8 filterNumber) {
+    for (auto &filter : m_filters) {
+        if (filter.falseOutput == filterNumber) {
+            filter.falseOutput = media::Filter::kDisconnected;
+        }
+    }
+}
+
 void CDBlock::SetupCommand() {
     m_targetCommandCycles = 50;
 }
@@ -181,7 +194,7 @@ void CDBlock::ProcessCommand() {
     // case 0x11: CmdSeekDisc(); break;
     // case 0x12: CmdScanDisc(); break;
     // case 0x20: CmdGetSubcodeQ_RW(); break;
-    // case 0x30: CmdSetCDDeviceConnection(); break;
+    case 0x30: CmdSetCDDeviceConnection(); break;
     // case 0x31: CmdGetCDDeviceConnection(); break;
     // case 0x32: CmdGetLastBufferDest(); break;
     // case 0x40: CmdSetFilterRange(); break;
@@ -420,7 +433,30 @@ void CDBlock::CmdScanDisc() {}
 
 void CDBlock::CmdGetSubcodeQ_RW() {}
 
-void CDBlock::CmdSetCDDeviceConnection() {}
+void CDBlock::CmdSetCDDeviceConnection() {
+    fmt::println("CDBlock: -> Set CD device connection");
+
+    // Input structure:
+    // 0x30           <blank>
+    // <blank>
+    // filter number  <blank>
+    // <blank>
+    const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
+
+    if (filterNumber < m_filters.size()) {
+        // Connect CD to specified filter
+        m_cdDeviceConnection = filterNumber;
+        DisconnectFilterInput(filterNumber);
+    } else if (filterNumber == media::Filter::kDisconnected) {
+        // Disconnect CD
+        m_cdDeviceConnection = media::Filter::kDisconnected;
+    }
+
+    // Output structure: standard CD status data
+    ReportCDStatus();
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
+}
 
 void CDBlock::CmdGetCDDeviceConnection() {}
 
@@ -458,29 +494,47 @@ void CDBlock::CmdResetSelector() {
 
         fmt::println("CDBlock: clearing all data for buffer {}", bufferNumber);
     } else {
-        if (bit::extract<2>(resetFlags)) {
-            // TODO: clear all buffer data
+        const bool clearBufferData = bit::extract<2>(resetFlags);
+        const bool clearSectionOutputs = bit::extract<3>(resetFlags);
+        const bool clearFilterConditions = bit::extract<4>(resetFlags);
+        const bool clearFilterInputs = bit::extract<5>(resetFlags);
+        const bool clearFilterTrueOutputs = bit::extract<6>(resetFlags);
+        const bool clearFilterFalseOutputs = bit::extract<7>(resetFlags);
+
+        if (clearBufferData) {
             fmt::println("CDBlock: clearing all buffer data");
+            // TODO: clear
         }
-        if (bit::extract<3>(resetFlags)) {
-            // TODO: clear section output connectors
+        if (clearSectionOutputs) {
             fmt::println("CDBlock: clearing all section output connectors");
+            // TODO: clear
         }
-        if (bit::extract<4>(resetFlags)) {
-            // TODO: clear filter conditions
+        if (clearFilterConditions) {
             fmt::println("CDBlock: clearing all filter conditions");
+            for (auto &filter : m_filters) {
+                filter.ResetConditions();
+            }
         }
-        if (bit::extract<4>(resetFlags)) {
-            // TODO: clear filter input connectors
+        if (clearFilterInputs) {
             fmt::println("CDBlock: clearing all filter input connectors");
+            // TODO: is this correct?
+            for (auto &filter : m_filters) {
+                filter.falseOutput = media::Filter::kDisconnected;
+            }
+            m_cdDeviceConnection = media::Filter::kDisconnected;
         }
-        if (bit::extract<6>(resetFlags)) {
-            // TODO: clear true filter output connectors
+        if (clearFilterTrueOutputs) {
             fmt::println("CDBlock: clearing all true filter output connectors");
+            for (int i = 0; auto &filter : m_filters) {
+                filter.trueOutput = i;
+                i++;
+            }
         }
-        if (bit::extract<7>(resetFlags)) {
-            // TODO: clear false filter output connectors
+        if (clearFilterFalseOutputs) {
             fmt::println("CDBlock: clearing all false filter output connectors");
+            for (auto &filter : m_filters) {
+                filter.falseOutput = media::Filter::kDisconnected;
+            }
         }
     }
 
@@ -583,9 +637,9 @@ void CDBlock::CmdChangeDirectory() {
     const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
 
     // Output structure: standard CD status data
-    if (filterNum < 0x24) {
+    if (filterNum < m_filters.size()) {
         // TODO: read from file system
-        if (m_fs.ChangeDirectory(fileID /*, m_filters[filterNum]*/)) {
+        if (m_fs.ChangeDirectory(fileID, m_filters[filterNum])) {
             // succeeded
             ReportCDStatus();
         } else {
