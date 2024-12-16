@@ -163,6 +163,7 @@ public:
         case 0x006: return m_VDP2.VRSIZE.u16;
         case 0x008: return m_VDP2.HCNT;
         case 0x00A: return m_VDP2.VCNT;
+        case 0x00c: return 0; // unknown/hidden register
         case 0x00E: return m_VDP2.RAMCTL.u16;
         case 0x010: return m_VDP2.CYCA0.L.u16;   // write-only?
         case 0x012: return m_VDP2.CYCA0.U.u16;   // write-only?
@@ -317,6 +318,7 @@ public:
         case 0x006: m_VDP2.VRSIZE.u16 = value & 0x8000; break;
         case 0x008: /* HCNT is read-only */ break;
         case 0x00A: /* VCNT is read-only */ break;
+        case 0x00C: /* unknown/hidden register */ break;
         case 0x00E: m_VDP2.RAMCTL.u16 = value & 0xB3FF; break;
         case 0x010: m_VDP2.CYCA0.L.u16 = value; break;
         case 0x012: m_VDP2.CYCA0.U.u16 = value; break;
