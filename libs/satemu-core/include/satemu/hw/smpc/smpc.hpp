@@ -51,7 +51,7 @@ public:
     uint8 Read(uint32 address);
     void Write(uint32 address, uint8 value);
 
-    // HACK(SMPC): simple pad controller support
+    // HACK(SMPC): simple controller pad support
     // buttons is a bitmask with inverted state (0=pressed, 1=released)
     // use the kButton* constants to set/clear bits
     //   15 = right
