@@ -117,11 +117,23 @@ void SMPC::INTBACK() {
     // fmt::println("SMPC: processing INTBACK {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
     // TODO: implement properly
 
-    const bool getSMPCStatus = IREG[0];
-    // const bool optimize = bit::extract<1>(IREG[1]);
-    const bool getPeripheralData = bit::extract<3>(IREG[1]);
-    const uint8 port1mode = bit::extract<4, 5>(IREG[1]);
-    const uint8 port2mode = bit::extract<6, 7>(IREG[1]);
+    if (m_intbackInProgress) {
+        // const bool continueFlag = bit::extract<7>(IREG[0]);
+        const bool breakFlag = bit::extract<6>(IREG[0]);
+        if (breakFlag) {
+            m_intbackInProgress = false;
+        }
+    } else {
+        m_intbackInProgress = true;
+        m_emittedSMPCStatus = false;
+        m_emittedPort1Status = false;
+
+        m_getSMPCStatus = IREG[0];
+    }
+    // m_optimize = bit::extract<1>(IREG[1]);
+    m_getPeripheralData = bit::extract<3>(IREG[1]);
+    m_port1mode = bit::extract<4, 5>(IREG[1]);
+    m_port2mode = bit::extract<6, 7>(IREG[1]);
     if (IREG[2] != 0xF0) {
         // TODO: log invalid INTBACK command
         // TODO: does SMPC reject the command in this case?
@@ -129,11 +141,23 @@ void SMPC::INTBACK() {
 
     SF = 0; // done processing
 
-    if (getSMPCStatus) {
-        SR.bit7 = 0; // fixed 0
-        SR.PDL = 1;  // fixed 1
-        SR.NPE = 0;  // 0=no remaining data, 1=more data
-        SR.RESB = 0; // reset button state (0=off, 1=on)
+    UpdateINTBACK();
+
+    m_SCU.TriggerSystemManager();
+}
+
+void SMPC::UpdateINTBACK() {
+    if (!m_intbackInProgress) {
+        return;
+    }
+
+    if (m_getSMPCStatus && !m_emittedSMPCStatus) {
+        m_emittedSMPCStatus = true;
+
+        SR.bit7 = 0;                   // fixed 0
+        SR.PDL = !m_getPeripheralData; // peripheral data on: 0=2nd+ report, 1=1st report
+        SR.NPE = m_getPeripheralData;  // 0=no remaining data, 1=more data
+        SR.RESB = 0;                   // reset button state (0=off, 1=on)
 
         OREG[0] = 0x80; // STE set, RESD clear
 
@@ -157,21 +181,24 @@ void SMPC::INTBACK() {
         OREG[15] = 0x00; // SMEM 4 Saved Data
 
         OREG[31] = 0x00;
-    } else if (getPeripheralData) {
-        SR.bit7 = 1;          // fixed 1
-        SR.PDL = 1;           // 1=first data, 2=second+ data
-        SR.NPE = 0;           // 0=no remaining data, 1=more data
-        SR.RESB = 0;          // reset button state (0=off, 1=on)
-        SR.P1MDn = port1mode; // port 1 mode: 0=15 byte, 1=255 byte
-        SR.P2MDn = port2mode; // port 2 mode: 2=unused,  3=0 byte
+    } else if (m_getPeripheralData && !m_emittedPort1Status) {
+        m_emittedPort1Status = true;
+
+        SR.bit7 = 1;               // fixed 1
+        SR.PDL = !m_getSMPCStatus; // 1=first data, 2=second+ data
+        SR.NPE = 0;                // 0=no remaining data, 1=more data
+        SR.RESB = 0;               // reset button state (0=off, 1=on)
+        SR.P1MDn = m_port1mode;    // port 1 mode \  0=15 byte, 1=255 byte
+        SR.P2MDn = m_port2mode;    // port 2 mode /  2=unused,  3=0 byte
 
         OREG.fill(0xFF);
-        OREG[0] = 0xF1; // 7-4 = F=no multitap/device directly connected; 3-0 = 1 device
-        OREG[1] = 0x02; // 7-4 = 0=standard pad; 3-0 = 2 data bytes
-        OREG[2] = 0xFF; // individual bits 7-0: left, right, down, up, start, A, C, B
-        OREG[3] = 0xFF; // individual bits 7-3: R, X, Y, Z, L; button state is inverted
+        OREG[0] = 0xF1;                           // 7-4 = F=no multitap/device directly connected; 3-0 = 1 device
+        OREG[1] = 0x02;                           // 7-4 = 0=standard pad; 3-0 = 2 data bytes
+        OREG[2] = bit::extract<8, 15>(m_buttons); // 7-0 = left, right, down, up, start, A, C, B  \ button state
+        OREG[3] = bit::extract<0, 7>(m_buttons);  // 7-3 = R, X, Y, Z, L; 2-0 = nothing           / is inverted!
     }
-    m_SCU.TriggerSystemManager();
+
+    m_intbackInProgress = SR.NPE;
 }
 
 } // namespace satemu::smpc

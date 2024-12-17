@@ -1,6 +1,7 @@
 #include <satemu/satemu.hpp>
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_events.h>
 #include <fmt/format.h>
 
 #include <chrono>
@@ -66,7 +67,7 @@ void runEmulator(satemu::Saturn &saturn) {
     // ---------------------------------
     // Initialize SDL video subsystem
 
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
         SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
         return;
     }
@@ -145,8 +146,47 @@ void runEmulator(satemu::Saturn &saturn) {
     auto t = clk::now();
     uint64 frames = 0;
     bool running = true;
+    uint16 &buttons = saturn.SMPC.Buttons();
+
+    auto setClearButton = [&](uint16 bits, bool pressed) {
+        if (pressed) {
+            buttons &= ~bits;
+        } else {
+            buttons |= bits;
+        }
+    };
+
+    auto updateButton = [&](SDL_Scancode scancode, bool pressed) {
+        switch (scancode) {
+        case SDL_SCANCODE_W: setClearButton(satemu::smpc::kButtonUp, pressed); break;
+        case SDL_SCANCODE_A: setClearButton(satemu::smpc::kButtonLeft, pressed); break;
+        case SDL_SCANCODE_S: setClearButton(satemu::smpc::kButtonDown, pressed); break;
+        case SDL_SCANCODE_D: setClearButton(satemu::smpc::kButtonRight, pressed); break;
+        case SDL_SCANCODE_Q: setClearButton(satemu::smpc::kButtonL, pressed); break;
+        case SDL_SCANCODE_E: setClearButton(satemu::smpc::kButtonR, pressed); break;
+        case SDL_SCANCODE_J: setClearButton(satemu::smpc::kButtonA, pressed); break;
+        case SDL_SCANCODE_K: setClearButton(satemu::smpc::kButtonB, pressed); break;
+        case SDL_SCANCODE_L: setClearButton(satemu::smpc::kButtonC, pressed); break;
+        case SDL_SCANCODE_U: setClearButton(satemu::smpc::kButtonX, pressed); break;
+        case SDL_SCANCODE_I: setClearButton(satemu::smpc::kButtonY, pressed); break;
+        case SDL_SCANCODE_O: setClearButton(satemu::smpc::kButtonZ, pressed); break;
+        case SDL_SCANCODE_G: setClearButton(satemu::smpc::kButtonStart, pressed); break;
+        case SDL_SCANCODE_H: setClearButton(satemu::smpc::kButtonStart, pressed); break;
+        case SDL_SCANCODE_RETURN: setClearButton(satemu::smpc::kButtonStart, pressed); break;
+        case SDL_SCANCODE_RETURN2: setClearButton(satemu::smpc::kButtonStart, pressed); break;
+        default: break;
+        }
+    };
+
     while (running) {
-        // TODO: saturn.RunFrame();
+        SDL_Event evt{};
+        while (SDL_PollEvent(&evt)) {
+            switch (evt.type) {
+            case SDL_EVENT_KEY_DOWN: updateButton(evt.key.scancode, true); break;
+            case SDL_EVENT_KEY_UP: updateButton(evt.key.scancode, false); break;
+            case SDL_EVENT_QUIT: running = false; break;
+            }
+        }
 
         // For the timings below, we introduce a counting factor in order to avoid rounding errors from the division.
         // At each step we increment the current cycle count by the factor, effectively enabling fractional cycle
@@ -189,14 +229,6 @@ void runEmulator(satemu::Saturn &saturn) {
         SDL_RenderClear(renderer);
         SDL_RenderTexture(renderer, texture, nullptr, nullptr);
         SDL_RenderPresent(renderer);
-
-        auto evt = SDL_Event{};
-        while (SDL_PollEvent(&evt)) {
-            if (evt.type == SDL_EVENT_QUIT) {
-                running = false;
-                break;
-            }
-        }
     }
 
     SDL_DestroyTexture(texture);

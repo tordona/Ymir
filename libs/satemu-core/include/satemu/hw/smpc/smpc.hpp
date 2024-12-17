@@ -28,6 +28,20 @@ class SCSP;
 
 namespace satemu::smpc {
 
+inline constexpr uint16 kButtonRight = (1u << 15u);
+inline constexpr uint16 kButtonLeft = (1u << 14u);
+inline constexpr uint16 kButtonDown = (1u << 13u);
+inline constexpr uint16 kButtonUp = (1u << 12u);
+inline constexpr uint16 kButtonStart = (1u << 11u);
+inline constexpr uint16 kButtonA = (1u << 10u);
+inline constexpr uint16 kButtonC = (1u << 9u);
+inline constexpr uint16 kButtonB = (1u << 8u);
+inline constexpr uint16 kButtonR = (1u << 7u);
+inline constexpr uint16 kButtonX = (1u << 6u);
+inline constexpr uint16 kButtonY = (1u << 5u);
+inline constexpr uint16 kButtonZ = (1u << 4u);
+inline constexpr uint16 kButtonL = (1u << 3u);
+
 class SMPC {
 public:
     SMPC(scu::SCU &scu, scsp::SCSP &scsp);
@@ -36,6 +50,26 @@ public:
 
     uint8 Read(uint32 address);
     void Write(uint32 address, uint8 value);
+
+    // HACK(SMPC): simple pad controller support
+    // buttons is a bitmask with inverted state (0=pressed, 1=released)
+    // use the kButton* constants to set/clear bits
+    //   15 = right
+    //   14 = left
+    //   13 = down
+    //   12 = up
+    //   11 = start
+    //   10 = A
+    //   9 = C
+    //   8 = B
+    //   7 = R
+    //   6 = X
+    //   5 = Y
+    //   4 = Z
+    //   3 = L
+    uint16 &Buttons() {
+        return m_buttons;
+    }
 
 private:
     std::array<uint8, 7> IREG;
@@ -110,6 +144,30 @@ private:
     void WriteIREG(uint8 offset, uint8 value);
     void WriteCOMREG(uint8 value);
     void WriteSF(uint8 value);
+
+    // -------------------------------------------------------------------------
+    // Input and INTBACK
+
+    // TODO: support multiple controllers, multi-tap, different types of devices, etc.
+    // for now, emulate just one standard Saturn pad (not analog)
+    uint16 m_buttons = 0xFFFF;
+
+    // INTBACK request parameters
+    bool m_getSMPCStatus;
+    bool m_getPeripheralData;
+    uint8 m_port1mode;
+    uint8 m_port2mode;
+
+    // INTBACK output control
+    bool m_intbackInProgress;
+    bool m_emittedSMPCStatus;  // have we emitted the SMPC status? (valid only if SMPC status requested)
+    bool m_emittedPort1Status; // have we emitted port 1 status? (valid only if peripheral data requested)
+    // TODO: port 2 data
+    // TODO: support multitap
+    // TODO: support controllers with longer reports
+    // - does the report split into two parts, or does it have to be in a single report?
+
+    void UpdateINTBACK();
 
     // -------------------------------------------------------------------------
     // Commands
