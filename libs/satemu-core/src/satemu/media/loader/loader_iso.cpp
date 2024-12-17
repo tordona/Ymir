@@ -59,7 +59,7 @@ bool Load(std::filesystem::path isoPath, Disc &disc) {
     session.numTracks = 1;
     session.firstTrackIndex = 0;
     session.startFrameAddress = 0;
-    session.endFrameAddress = session.startFrameAddress + frames + 150 - 1;
+    session.endFrameAddress = session.startFrameAddress + frames + 150;
 
     auto &track = session.tracks[0];
     track.SetSectorSize(sectorSize);
