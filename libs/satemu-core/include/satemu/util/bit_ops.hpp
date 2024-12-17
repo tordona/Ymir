@@ -50,11 +50,11 @@ FORCE_INLINE constexpr T deposit(T base, TV value) {
     return base;
 }
 
-// Deposits a range of bits into the referenced value.
+// Deposits a range of bits into the destination value.
 // start and end are both inclusive.
 template <size_t start, size_t end = start, typename T, typename TV = T>
-FORCE_INLINE constexpr void deposit_into(T &base, TV value) {
-    base = deposit<start, end>(base, value);
+FORCE_INLINE constexpr void deposit_into(T &dest, TV value) {
+    dest = deposit<start, end>(dest, value);
 }
 
 } // namespace bit
