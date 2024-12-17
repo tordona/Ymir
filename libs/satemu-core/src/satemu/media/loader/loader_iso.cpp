@@ -39,9 +39,9 @@ bool Load(std::filesystem::path isoPath, Disc &disc) {
         }
         in.seekg(0, std::ios::beg);
 
-        static constexpr std::array<uint8, 12> expected = {0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
-                                                           0xff, 0xff, 0xff, 0xff, 0xff, 0x00};
-        sectorSize = start == expected ? 2352 : 2048;
+        static constexpr std::array<uint8, 12> syncBytes = {0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+                                                            0xff, 0xff, 0xff, 0xff, 0xff, 0x00};
+        sectorSize = start == syncBytes ? 2352 : 2048;
     }
     // fmt::println("ISO: Sector size: {} bytes", sectorSize);
 
