@@ -345,6 +345,9 @@ void CDBlock::CmdGetSessionInfo() {
     // session num/count  lba bits 23-16
     // lba bits 15-0
 
+    m_CR[0] = m_status.statusCode << 8u;
+    m_CR[1] = 0x0000;
+
     const uint8 sessionNum = bit::extract<0, 7>(m_CR[0]);
     if (sessionNum == 0) {
         // Get information about all sessions
@@ -359,9 +362,6 @@ void CDBlock::CmdGetSessionInfo() {
         m_CR[2] = 0xFFFF;
         m_CR[3] = 0xFFFF;
     }
-
-    m_CR[0] = m_status.statusCode << 8u;
-    m_CR[1] = 0x0000;
 
     // TODO: make busy for a brief moment
     m_status.statusCode = kStatusCodePause;
