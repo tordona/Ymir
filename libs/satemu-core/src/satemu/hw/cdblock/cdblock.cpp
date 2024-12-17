@@ -389,7 +389,7 @@ void CDBlock::ProcessCommand() {
     // case 0x47: CmdGetFilterConnection(); break;
     case 0x48: CmdResetSelector(); break;
     // case 0x50: CmdGetBufferSize(); break;
-    // case 0x51: CmdGetSectorNumber(); break;
+    case 0x51: CmdGetSectorNumber(); break;
     // case 0x52: CmdCalculateActualSize(); break;
     // case 0x53: CmdGetActualSize(); break;
     // case 0x54: CmdGetSectorInfo(); break;
@@ -778,7 +778,30 @@ void CDBlock::CmdResetSelector() {
 
 void CDBlock::CmdGetBufferSize() {}
 
-void CDBlock::CmdGetSectorNumber() {}
+void CDBlock::CmdGetSectorNumber() {
+    fmt::println("CDBlock: -> Get sector number");
+
+    // Input structure:
+    // 0x51           <blank>
+    // <blank>
+    // buffer number  <blank>
+    // <blank>
+    // const uint8 bufferNumber = bit::extract<8, 15>(m_CR[2]);
+
+    // TODO: get block count in buffer
+
+    // Output structure:
+    // status code      <blank>
+    // <blank>
+    // <blank>
+    // number of blocks
+    m_CR[0] = (m_status.statusCode << 8u);
+    m_CR[1] = 0x0000;
+    m_CR[2] = 0x0000;
+    m_CR[3] = 0x0000;
+
+    SetInterrupt(kHIRQ_CMOK);
+}
 
 void CDBlock::CmdCalculateActualSize() {}
 
