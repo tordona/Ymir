@@ -102,7 +102,7 @@ struct Session {
         }
 
         if (firstTrackNum != 0) {
-            toc[99] = (tracks[0].controlADR << 24u) | (firstTrackNum << 16u);
+            toc[99] = (tracks[firstTrackNum - 1].controlADR << 24u) | (firstTrackNum << 16u);
             toc[100] = (tracks[lastTrackNum - 1].controlADR << 24u) | (lastTrackNum << 16u);
             toc[101] = (tracks[lastTrackNum - 1].controlADR << 24u) | endFrameAddress;
         } else {
