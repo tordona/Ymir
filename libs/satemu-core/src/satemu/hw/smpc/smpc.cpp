@@ -18,6 +18,9 @@ void SMPC::Reset(bool hard) {
     SR.u8 = 0x80;
     SF = false;
 
+    // TODO(SMPC): should be persisted
+    SMEM.fill(0);
+
     m_busValue = 0x00;
 }
 
@@ -67,6 +70,8 @@ void SMPC::WriteCOMREG(uint8 value) {
     case Command::RESENAB: RESENAB(); break;
     case Command::RESDISA: RESDISA(); break;
     case Command::INTBACK: INTBACK(); break;
+    case Command::SETSMEM: SETSMEM(); break;
+    case Command::SETTIME: SETTIME(); break;
     default: fmt::println("unhandled SMPC command {:02X}", static_cast<uint8>(COMREG)); break;
     }
 }
@@ -175,10 +180,10 @@ void SMPC::UpdateINTBACK() {
         OREG[10] = 0b00111110; // System status 1 (DOTSEL, MSHNMI, SYSRES, SNDRES)
         OREG[11] = 0b00000010; // System status 2 (CDRES)
 
-        OREG[12] = 0x00; // SMEM 1 Saved Data
-        OREG[13] = 0x00; // SMEM 2 Saved Data
-        OREG[14] = 0x00; // SMEM 3 Saved Data
-        OREG[15] = 0x00; // SMEM 4 Saved Data
+        OREG[12] = SMEM[0]; // SMEM 1 Saved Data
+        OREG[13] = SMEM[1]; // SMEM 2 Saved Data
+        OREG[14] = SMEM[2]; // SMEM 3 Saved Data
+        OREG[15] = SMEM[3]; // SMEM 4 Saved Data
 
         OREG[31] = 0x00;
     } else if (m_getPeripheralData && !m_emittedPort1Status) {
@@ -199,6 +204,40 @@ void SMPC::UpdateINTBACK() {
     }
 
     m_intbackInProgress = SR.NPE;
+}
+
+void SMPC::SETSMEM() {
+    fmt::println("SMPC: processing SETSMEM {:02X} {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2], IREG[3]);
+
+    SMEM[0] = IREG[0];
+    SMEM[1] = IREG[1];
+    SMEM[2] = IREG[2];
+    SMEM[3] = IREG[3];
+    // TODO: persist
+
+    SF = 0; // done processing
+
+    OREG[31] = 0x17;
+}
+
+void SMPC::SETTIME() {
+    fmt::println("SMPC: processing SETTIME year={:02X}{:02X} day/month={:02X} day={:02X} time={:02X}:{:02X}:{:02X}",
+                 IREG[0], IREG[1], IREG[2], IREG[3], IREG[4], IREG[5], IREG[6]);
+
+    // const uint8 bcdYear100s = IREG[0];
+    // const uint8 bcdYear1s = IREG[1];
+    // const uint8 day = bit::extract<4, 7>(IREG[2]);
+    // const uint8 month = bit::extract<0, 3>(IREG[2]);
+    // const uint8 bcdDay = IREG[3];
+    // const uint8 bcdHour = IREG[4];
+    // const uint8 bcdMinute = IREG[5];
+    // const uint8 bcdSecond = IREG[6];
+
+    // TODO: update time
+
+    SF = 0; // done processing
+
+    OREG[31] = 0x16;
 }
 
 } // namespace satemu::smpc

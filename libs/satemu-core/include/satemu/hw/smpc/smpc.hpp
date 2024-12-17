@@ -75,6 +75,8 @@ private:
     std::array<uint8, 7> IREG;
     std::array<uint8, 32> OREG;
 
+    std::array<uint8, 4> SMEM;
+
     scu::SCU &m_SCU;
     scsp::SCSP &m_SCSP;
 
@@ -177,6 +179,8 @@ private:
     void RESENAB();
     void RESDISA();
     void INTBACK();
+    void SETSMEM();
+    void SETTIME();
 };
 
 } // namespace satemu::smpc
