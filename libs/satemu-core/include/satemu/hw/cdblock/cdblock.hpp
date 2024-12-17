@@ -126,12 +126,25 @@ private:
         // kStatusFlagPeriodic and kStatusFlagWait are mutually exclusive.
         uint8 statusCode;
 
-        uint32 frameAddress;
-        uint8 flagsRepeat; // 7-4: flags, 3-0: repeat count (0x0 to 0xE)
-        uint8 controlADR;
-        uint8 track;
-        uint8 index;
+        uint32 frameAddress; // current frame address
+        uint8 flags;         // bit 7: 1=reading CD-ROM data; 0=reading CD-DA, seeking, scanning, etc.
+        uint8 repeatCount;   // bits 3-0: repeat count
+        uint8 controlADR;    // control/ADR bits of the current track
+        uint8 track;         // current track
+        uint8 index;         // current index
     } m_status;
+
+    bool m_readyForPeriodicReports; // HACK to avoid overwriting the initial state during the boot sequence
+
+    uint32 m_currDriveCycles;   // current cycle count for drive state processing
+    uint32 m_targetDriveCycles; // number of cycles until the next drive state update
+
+    uint32 m_playStartParam; // starting frame address or track/index for playback
+    uint32 m_playEndParam;   // ending frame address or track/index for playback
+    uint8 m_playRepeatParam; // playback repeat count parameter
+
+    uint32 m_playStartPos; // starting frame address for playback
+    uint32 m_playEndPos;   // ending frame address for playback
 
     uint8 m_readSpeed;
 
@@ -150,6 +163,10 @@ private:
     //   0: no MPEG card/not authenticated
     //   2: MPEG card present
     uint8 m_mpegAuthStatus;
+
+    bool SetupPlayback(uint32 startParam, uint32 endParam, uint16 repeatParam);
+
+    void ProcessDriveState();
 
     // -------------------------------------------------------------------------
     // Interrupts
@@ -199,10 +216,6 @@ private:
     bool m_processingCommand;     // true if a command is in progress
     uint32 m_currCommandCycles;   // current cycle count for commands
     uint32 m_targetCommandCycles; // command is executed when current >= target
-
-    bool m_readyForPeriodicReports;      // HACK to avoid overwriting the initial state during the boot sequence
-    uint32 m_currPeriodicReportCycles;   // current cycle count for periodic reports
-    uint32 m_targetPeriodicReportCycles; // periodic report is generated when current >= target
 
     void SetupCommand();
 

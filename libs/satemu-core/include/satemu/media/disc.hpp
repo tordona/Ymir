@@ -46,13 +46,21 @@ struct Session {
     uint32 endFrameAddress;
 
     const Track *FindTrack(uint32 absFrameAddress) const {
+        const uint8 trackIndex = FindTrackIndex(absFrameAddress);
+        if (trackIndex != 0xFF) {
+            return &tracks[trackIndex];
+        }
+        return nullptr;
+    }
+
+    uint8 FindTrackIndex(uint32 absFrameAddress) const {
         for (int i = 0; i < numTracks; i++) {
             const auto &track = tracks[firstTrackIndex + i];
             if (absFrameAddress >= track.startFrameAddress && absFrameAddress <= track.endFrameAddress) {
-                return &track;
+                return firstTrackIndex + i;
             }
         }
-        return nullptr;
+        return 0xFF;
     }
 
     // The table of contents contains the following entries:

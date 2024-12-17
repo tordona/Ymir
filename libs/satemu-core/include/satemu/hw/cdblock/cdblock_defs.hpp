@@ -54,7 +54,7 @@ constexpr uint32 kCyclesPerSecond = 20000000;
 // Cycle counting must be tripled to account for that.
 // 2x cycles can be easily derived from 1x cycles.
 
-constexpr uint32 kPeriodicCyclesNotPlaying = 1000000;
-constexpr uint32 kPeriodicCyclesPlaying1x = 800000;
+constexpr uint32 kDriveCyclesNotPlaying = 1000000;
+constexpr uint32 kDriveCyclesPlaying1x = 800000;
 
 } // namespace satemu::cdblock

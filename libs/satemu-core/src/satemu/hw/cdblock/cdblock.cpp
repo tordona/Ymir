@@ -19,10 +19,23 @@ void CDBlock::Reset(bool hard) {
 
     m_status.statusCode = kStatusCodePause;
     m_status.frameAddress = 0x1FFFFFF;
-    m_status.flagsRepeat = 0xFF;
+    m_status.flags = 0xF;
+    m_status.repeatCount = 0xF;
     m_status.controlADR = 0xFF;
     m_status.track = 0xFF;
     m_status.index = 0xFF;
+
+    m_readyForPeriodicReports = false;
+
+    m_currDriveCycles = 0;
+    m_targetDriveCycles = kDriveCyclesNotPlaying;
+
+    m_playStartParam = 0;
+    m_playEndParam = 0;
+    m_playRepeatParam = 0;
+
+    m_playStartPos = 0;
+    m_playEndPos = 0;
 
     m_readSpeed = 1;
 
@@ -48,10 +61,6 @@ void CDBlock::Reset(bool hard) {
     m_processingCommand = false;
     m_currCommandCycles = 0;
     m_targetCommandCycles = 0;
-
-    m_readyForPeriodicReports = false;
-    m_currPeriodicReportCycles = 0;
-    m_targetPeriodicReportCycles = kPeriodicCyclesNotPlaying;
 }
 
 void CDBlock::LoadDisc(media::Disc &&disc) {
@@ -88,18 +97,183 @@ void CDBlock::Advance(uint64 cycles) {
         }
     }
 
-    m_currPeriodicReportCycles += cycles * 3;
-    if (m_currPeriodicReportCycles >= m_targetPeriodicReportCycles) {
-        m_currPeriodicReportCycles -= m_targetPeriodicReportCycles;
+    m_currDriveCycles += cycles * 3;
+    if (m_currDriveCycles >= m_targetDriveCycles) {
+        m_currDriveCycles -= m_targetDriveCycles;
+        ProcessDriveState();
+
         if (m_readyForPeriodicReports && !m_processingCommand) {
             // HACK to ensure the system detects the absence of a disc properly
             if (m_disc.sessions.empty()) {
                 m_status.statusCode = kStatusCodeNoDisc;
+                m_targetDriveCycles = kDriveCyclesNotPlaying;
             }
             m_status.statusCode |= kStatusFlagPeriodic;
             ReportCDStatus();
             SetInterrupt(kHIRQ_SCDQ);
         }
+    }
+}
+
+bool CDBlock::SetupPlayback(uint32 startParam, uint32 endParam, uint16 repeatParam) {
+    // Handle "no change" parameters
+    if (startParam == 0xFFFFFF) {
+        startParam = m_playStartParam;
+    }
+    if (endParam == 0xFFFFFF) {
+        endParam = m_playEndParam;
+    }
+    if (repeatParam == 0xFF) {
+        repeatParam = m_playRepeatParam;
+    }
+
+    const bool isStartFAD = bit::extract<23>(startParam);
+    const bool isEndFAD = bit::extract<23>(endParam);
+    const bool resetPos = bit::extract<15>(repeatParam);
+
+    // Sanity check: both must be FADs or tracks, not a mix
+    if (isStartFAD != isEndFAD) {
+        fmt::println("CDBlock: playback start: start/end FAD type mismatch: {:06X} {:06X}", startParam, endParam);
+        return false; // reject
+    }
+
+    // Store playback parameters
+    m_playStartParam = startParam;
+    m_playEndParam = endParam;
+    m_playRepeatParam = repeatParam & 0xF;
+
+    // Make sure we have a disc
+    if (m_disc.sessions.empty()) {
+        fmt::println("CDBlock: playback start: no disc");
+        m_status.statusCode = kStatusCodeNoDisc;
+        m_targetDriveCycles = kDriveCyclesNotPlaying;
+        return true;
+    }
+
+    const media::Session &session = m_disc.sessions.back();
+
+    if (isStartFAD) {
+        // Frame address range
+        m_playStartPos = startParam & 0x7FFFFF;
+        m_playEndPos = m_playStartPos + (endParam & 0x7FFFFF) - 1;
+
+        fmt::println("CDBlock: playback start: FAD range {:06X} to {:06X}", m_playStartPos, m_playEndPos);
+
+        // Find track containing the requested start frame address
+        const uint8 trackIndex = session.FindTrackIndex(m_playStartPos);
+        if (trackIndex != 0xFF) {
+            // TODO: delay seek for a realistic amount of time
+            m_targetDriveCycles = kDriveCyclesPlaying1x * m_readSpeed;
+            m_status.statusCode = kStatusCodeSeek;
+            m_status.flags = 0x8;     // CD-ROM decoding flag
+            m_status.repeatCount = 0; // first repeat
+            m_status.controlADR = session.tracks[trackIndex].controlADR;
+            m_status.track = trackIndex + 1;
+            m_status.index = 1; // TODO: handle indexes
+            fmt::println("CDBlock: playback start: track:index {:02d}:{:02d} ctl/ADR={:02X}", m_status.track,
+                         m_status.index, m_status.controlADR);
+
+            if (resetPos) {
+                m_status.frameAddress = m_playStartPos;
+                fmt::println("CDBlock: playback start: reset playback position to {:06X}", m_status.frameAddress);
+            }
+        } else {
+            m_targetDriveCycles = kDriveCyclesNotPlaying;
+            m_status.statusCode = kStatusCodePause;
+        }
+    } else {
+        // Track range
+
+        // startParam and endParam contain the track number on the upper byte and index on the lower byte
+        uint8 startTrack = bit::extract<8, 15>(startParam);
+        uint8 endTrack = bit::extract<8, 15>(endParam);
+        uint8 startIndex = bit::extract<0, 7>(startParam);
+        uint8 endIndex = bit::extract<0, 7>(endParam);
+
+        // Handle default parameters - use first or last track and index in the disc
+        if (startParam == 0) {
+            startTrack = session.firstTrackIndex + 1;
+            startIndex = 1;
+        }
+        if (endParam == 0) {
+            endTrack = session.firstTrackIndex + session.numTracks;
+            endIndex = 1;
+        }
+
+        fmt::println("CDBlock: playback start: track:index range {:02d}:{:02d}-{:02d}{:02d} ", startTrack, startIndex,
+                     endTrack, endIndex);
+
+        // TODO: implement; the code below is incorrect and untested
+
+        /*
+        // Clamp track numbers to what's available in the disc
+        // If end < start, ProcessDriveState() will switch to the Pause state automatically
+        uint8 firstTrack = session.firstTrackIndex + 1;
+        uint8 lastTrack = firstTrack + session.numTracks - 1;
+        startTrack = std::clamp(startTrack, firstTrack, lastTrack);
+        endTrack = std::clamp(endTrack, firstTrack, lastTrack);
+
+        // TODO: Track needs to store Index information
+
+        fmt::println("CDBlock: playback start: track range after clamping {:02d}-{:02d}", startTrack, endTrack);
+
+        // Get frame address range for the specified tracks
+        if (m_status.statusCode != kStatusCodePause) {
+            m_playStartParam = session.tracks[startTrack - 1].startFrameAddress;
+            m_playEndParam = session.tracks[endTrack - 1].endFrameAddress;
+            fmt::println("CDBlock: playback start: track FAD range {:06X}-{:06X}", m_playStartParam, m_playEndParam);
+        }*/
+    }
+
+    return true;
+}
+
+void CDBlock::ProcessDriveState() {
+    switch (m_status.statusCode & 0xF) {
+    case kStatusCodeSeek:
+        m_targetDriveCycles = kDriveCyclesPlaying1x * m_readSpeed;
+        m_status.statusCode = kStatusCodePlay;
+        m_status.frameAddress = m_playStartPos;
+        break;
+    case kStatusCodePlay:
+        if (m_status.frameAddress <= m_playEndPos) {
+            // TODO: read into buffer
+            // when sectors are read: raise kHIRQ_CSCT
+            // if buffer full: -> Pause; raise kHIRQ_BFUL
+            // when buffer no longer full: -> Play
+
+            // HACK(CDB): simulate full buffer
+            // m_status.statusCode = kStatusCodePause;
+            // SetInterrupt(kHIRQ_BFUL);
+
+            // HACK(CDB): simulate successful transfer
+            fmt::println("CDBlock: playback: read from {:06X}", m_status.frameAddress);
+            SetInterrupt(kHIRQ_CSCT);
+
+            m_status.frameAddress++;
+        }
+
+        if (m_status.frameAddress > m_playEndPos) {
+            // 0x0 to 0xE = 0 to 14 repeats
+            // 0xF = infinite repeats
+            if (m_playRepeatParam == 0xF || m_status.repeatCount < m_playRepeatParam) {
+                if (m_playRepeatParam == 0xF) {
+                    fmt::println("CDBlock: playback repeat (infinite)");
+                } else {
+                    fmt::println("CDBlock: playback repeat: {} of {}", m_status.repeatCount + 1, m_playRepeatParam);
+                }
+                m_status.frameAddress = m_playStartPos;
+                m_status.repeatCount++;
+            } else {
+                fmt::println("CDBlock: playback ended");
+                m_status.frameAddress = m_playEndPos;
+                m_status.statusCode = kStatusCodePause;
+                m_targetDriveCycles = kDriveCyclesNotPlaying;
+                SetInterrupt(kHIRQ_PEND);
+            }
+        }
+
+        break;
     }
 }
 
@@ -120,7 +294,7 @@ void CDBlock::ReportCDStatus() {
 }
 
 void CDBlock::ReportCDStatus(uint8 statusCode) {
-    m_CR[0] = (statusCode << 8u) | m_status.flagsRepeat;
+    m_CR[0] = (statusCode << 8u) | (m_status.flags << 4u) | (m_status.repeatCount);
     m_CR[1] = (m_status.controlADR << 8u) | m_status.track;
     m_CR[2] = (m_status.index << 8u) | ((m_status.frameAddress >> 16u) & 0xFF);
     m_CR[3] = m_status.frameAddress;
@@ -326,6 +500,7 @@ void CDBlock::CmdGetTOC() {
 
     // TODO: make busy for a brief moment
     m_status.statusCode = kStatusCodePause;
+    m_targetDriveCycles = kDriveCyclesNotPlaying;
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY);
 }
@@ -365,6 +540,7 @@ void CDBlock::CmdGetSessionInfo() {
 
     // TODO: make busy for a brief moment
     m_status.statusCode = kStatusCodePause;
+    m_targetDriveCycles = kDriveCyclesNotPlaying;
 
     SetInterrupt(kHIRQ_CMOK);
 }
@@ -391,6 +567,7 @@ void CDBlock::CmdInitializeCDSystem() {
         fmt::println("CDBlock: Soft reset");
         // NOTE: switch to Busy, then Pause if disc is present
         m_status.statusCode = kStatusCodeNoDisc;
+        m_targetDriveCycles = kDriveCyclesNotPlaying;
         // TODO: reset state and configuration
     }
 
@@ -441,24 +618,18 @@ void CDBlock::CmdPlayDisc() {
     // start position bits 15-0
     // play mode      end position bits 23-16
     // end position bits 15-0
-    const uint8 playMode = bit::extract<8, 15>(m_CR[2]);
-    const uint32 startPos = (bit::extract<0, 7>(m_CR[0]) << 16u) | m_CR[1];
-    const uint32 endPos = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
-    // const bool isStartFAD = bit::extract<23>(startPos);
-    // const bool isEndFAD = bit::extract<23>(endPos);
+    const uint8 repeatParam = bit::extract<8, 15>(m_CR[2]);
+    const uint32 startParam = (bit::extract<0, 7>(m_CR[0]) << 16u) | m_CR[1];
+    const uint32 endParam = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
 
-    fmt::println("CDBlock: Play start {:06X} end {:06X} mode {:X}", startPos, endPos, playMode);
-    // TODO: implement
-    // isStartFAD and isEndFAD:
-    //   true: startPos and endPos are FADs (& 0x7FFFFF)
-    //   false: startPos and endPos are track numbers
-    // status after running the command: -> Seek -> Play
-    // if buffer full: -> Pause; raise kHIRQ_BFUL
-    // when buffer no longer full: -> Play
-    // when sectors are read: raise kHIRQ_CSCT
+    fmt::println("CDBlock: start={:06X} end={:06X} repeat={:X}", startParam, endParam, repeatParam);
 
     // Output structure: standard CD status data
-    ReportCDStatus();
+    if (SetupPlayback(startParam, endParam, repeatParam)) {
+        ReportCDStatus();
+    } else {
+        ReportCDStatus(kStatusReject);
+    }
 
     SetInterrupt(kHIRQ_CMOK);
 }
@@ -824,6 +995,7 @@ void CDBlock::CmdAuthenticateDevice() {
 
     // TODO: make busy for a brief moment
     m_status.statusCode = kStatusCodePause;
+    m_targetDriveCycles = kDriveCyclesNotPlaying;
 
     // Output structure: standard CD status data
     ReportCDStatus();
