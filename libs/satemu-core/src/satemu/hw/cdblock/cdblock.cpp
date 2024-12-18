@@ -380,7 +380,7 @@ void CDBlock::ProcessCommand() {
     // case 0x12: CmdScanDisc(); break;
     // case 0x20: CmdGetSubcodeQ_RW(); break;
     case 0x30: CmdSetCDDeviceConnection(); break;
-    // case 0x31: CmdGetCDDeviceConnection(); break;
+    case 0x31: CmdGetCDDeviceConnection(); break;
     // case 0x32: CmdGetLastBufferDest(); break;
     case 0x40: CmdSetFilterRange(); break;
     case 0x41: CmdGetFilterRange(); break;
@@ -693,7 +693,27 @@ void CDBlock::CmdSetCDDeviceConnection() {
     SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
 }
 
-void CDBlock::CmdGetCDDeviceConnection() {}
+void CDBlock::CmdGetCDDeviceConnection() {
+    fmt::println("CDBlock: -> Set CD device connection");
+
+    // Input structure:
+    // 0x31           <blank>
+    // <blank>
+    // <blank>
+    // <blank>
+
+    // Output structure:
+    // status code    <blank>
+    // <blank>
+    // filter number  <blank>
+    // <blank>
+    m_CR[0] = m_status.statusCode << 8u;
+    m_CR[1] = 0x0000;
+    m_CR[2] = m_cdDeviceConnection << 8u;
+    m_CR[3] = 0x0000;
+
+    SetInterrupt(kHIRQ_CMOK);
+}
 
 void CDBlock::CmdGetLastBufferDest() {}
 
