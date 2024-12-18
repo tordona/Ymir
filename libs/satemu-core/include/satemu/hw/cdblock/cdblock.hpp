@@ -203,9 +203,22 @@ private:
     uint16 DoTransfer();
 
     // -------------------------------------------------------------------------
-    // Filters
+    // Buffers, partitions and filters
 
+    // Buffers contain a full raw sector's worth of data.
+    struct Buffer {
+        std::array<uint8, 2352> data;
+    };
+
+    // Partitions contain a group of buffers.
+    struct Partition {
+        // TODO: define
+    };
+
+    std::array<Buffer, 200> m_buffers;
+    std::array<Partition, 24> m_partitions;
     std::array<media::Filter, 24> m_filters;
+
     uint8 m_cdDeviceConnection;
 
     void DisconnectFilterInput(uint8 filterNumber);

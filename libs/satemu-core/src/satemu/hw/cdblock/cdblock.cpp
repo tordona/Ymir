@@ -647,7 +647,7 @@ void CDBlock::CmdSeekDisc() {
 
     fmt::println("CDBlock: Seek start {:06X}", startPos);
     // TODO: implement
-    // isStartFAD :
+    // isStartFAD:
     //   true: startPos is FAD (& 0x7FFFFF)
     //   false: startPos is track number
     // stops playing if status is Play
