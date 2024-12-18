@@ -348,6 +348,9 @@ uint16 CDBlock::DoTransfer() {
 }
 
 void CDBlock::DisconnectFilterInput(uint8 filterNumber) {
+    if (m_cdDeviceConnection == filterNumber) {
+        m_cdDeviceConnection = media::Filter::kDisconnected;
+    }
     for (auto &filter : m_filters) {
         if (filter.falseOutput == filterNumber) {
             filter.falseOutput = media::Filter::kDisconnected;
@@ -379,12 +382,12 @@ void CDBlock::ProcessCommand() {
     case 0x30: CmdSetCDDeviceConnection(); break;
     // case 0x31: CmdGetCDDeviceConnection(); break;
     // case 0x32: CmdGetLastBufferDest(); break;
-    // case 0x40: CmdSetFilterRange(); break;
-    // case 0x41: CmdGetFilterRange(); break;
-    // case 0x42: CmdSetFilterSubheaderConditions(); break;
-    // case 0x43: CmdGetFilterSubheaderConditions(); break;
-    // case 0x44: CmdSetFilterMode(); break;
-    // case 0x45: CmdGetFilterMode(); break;
+    case 0x40: CmdSetFilterRange(); break;
+    case 0x41: CmdGetFilterRange(); break;
+    case 0x42: CmdSetFilterSubheaderConditions(); break;
+    case 0x43: CmdGetFilterSubheaderConditions(); break;
+    case 0x44: CmdSetFilterMode(); break;
+    case 0x45: CmdGetFilterMode(); break;
     // case 0x46: CmdSetFilterConnection(); break;
     // case 0x47: CmdGetFilterConnection(); break;
     case 0x48: CmdResetSelector(); break;
@@ -694,17 +697,176 @@ void CDBlock::CmdGetCDDeviceConnection() {}
 
 void CDBlock::CmdGetLastBufferDest() {}
 
-void CDBlock::CmdSetFilterRange() {}
+void CDBlock::CmdSetFilterRange() {
+    fmt::println("CDBlock: -> Set filter range");
 
-void CDBlock::CmdGetFilterRange() {}
+    // Input structure:
+    // 0x40           start frame address bits 23-16
+    // start frame address bits 15-0
+    // filter number  frame address count bits 23-16
+    // frame address count bits 15-0
+    const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
 
-void CDBlock::CmdSetFilterSubheaderConditions() {}
+    if (filterNumber < 24) {
+        const uint32 startFrameAddress = (bit::extract<0, 7>(m_CR[0]) << 16u) | m_CR[1];
+        const uint32 frameAddressCount = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
+        m_filters[filterNumber].startFrameAddress = startFrameAddress;
+        m_filters[filterNumber].frameAddressCount = frameAddressCount;
 
-void CDBlock::CmdGetFilterSubheaderConditions() {}
+        // Output structure: standard CD status data
+        ReportCDStatus();
+    } else {
+        ReportCDStatus(kStatusReject);
+    }
 
-void CDBlock::CmdSetFilterMode() {}
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
+}
 
-void CDBlock::CmdGetFilterMode() {}
+void CDBlock::CmdGetFilterRange() {
+    fmt::println("CDBlock: -> Get filter range");
+
+    // Input structure:
+    // 0x41           <blank>
+    // <blank>
+    // filter number  <blank>
+    // <blank>
+    const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
+
+    if (filterNumber < 24) {
+        // Output structure:
+        // status code    start frame address bits 23-16
+        // start frame address bits 15-0
+        // filter number  frame address count bits 23-16
+        // frame address count bits 15-0
+        m_CR[0] = (m_status.statusCode << 8u) | (m_filters[filterNumber].startFrameAddress >> 16u);
+        m_CR[1] = m_filters[filterNumber].startFrameAddress;
+        m_CR[2] = (filterNumber << 8u) | (m_filters[filterNumber].frameAddressCount >> 16u);
+        m_CR[3] = m_filters[filterNumber].frameAddressCount;
+    } else {
+        ReportCDStatus(kStatusReject);
+    }
+
+    SetInterrupt(kHIRQ_CMOK);
+}
+
+void CDBlock::CmdSetFilterSubheaderConditions() {
+    fmt::println("CDBlock: -> Set filter subheader conditions");
+
+    // Input structure:
+    // 0x42           channel
+    // submode mask   coding info mask
+    // filter number  file ID
+    // submode value  coding info value
+    const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
+
+    if (filterNumber < 24) {
+        const uint8 chanNum = bit::extract<0, 7>(m_CR[0]);
+        const uint8 submodeMask = bit::extract<8, 15>(m_CR[1]);
+        const uint8 codingInfoMask = bit::extract<0, 7>(m_CR[1]);
+        const uint8 fileID = bit::extract<0, 7>(m_CR[2]);
+        const uint8 submodeValue = bit::extract<8, 15>(m_CR[3]);
+        const uint8 codingInfoValue = bit::extract<0, 7>(m_CR[3]);
+
+        auto &filter = m_filters[filterNumber];
+        filter.chanNum = chanNum;
+        filter.fileNum = fileID;
+        filter.submodeMask = submodeMask;
+        filter.submodeValue = submodeValue;
+        filter.codingInfoMask = codingInfoMask;
+        filter.codingInfoValue = codingInfoValue;
+
+        // Output structure: standard CD status data
+        ReportCDStatus();
+    } else {
+        ReportCDStatus(kStatusReject);
+    }
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
+}
+
+void CDBlock::CmdGetFilterSubheaderConditions() {
+    fmt::println("CDBlock: -> Get filter subheader conditions");
+
+    // Input structure:
+    // 0x43           <blank>
+    // <blank>
+    // filter number  <blank>
+    // <blank>
+    const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
+
+    if (filterNumber < 24) {
+        // Output structure:
+        // status code    channel
+        // submode mask   coding info mask
+        // filter number  file ID
+        // submode value  coding info value
+        const auto &filter = m_filters[filterNumber];
+        m_CR[0] = (m_status.statusCode << 8u) | filter.chanNum;
+        m_CR[1] = (filter.submodeMask << 8u) | filter.codingInfoMask;
+        m_CR[2] = (filterNumber << 8u) | filter.fileNum;
+        m_CR[3] = (filter.submodeValue << 8u) | filter.codingInfoValue;
+    } else {
+        ReportCDStatus(kStatusReject);
+    }
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
+}
+
+void CDBlock::CmdSetFilterMode() {
+    fmt::println("CDBlock: -> Set filter mode");
+
+    // Input structure:
+    // 0x44           mode
+    // <blank>
+    // filter number  <blank>
+    // <blank>
+    const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
+
+    if (filterNumber < 24) {
+        const uint8 mode = bit::extract<0, 7>(m_CR[0]);
+
+        auto &filter = m_filters[filterNumber];
+        filter.mode = mode & 0x5F; // TODO: should it be masked?
+        if (mode & 0x80) {
+            filter.ResetConditions();
+        }
+
+        // Output structure: standard CD status data
+        ReportCDStatus();
+    } else {
+        ReportCDStatus(kStatusReject);
+    }
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
+}
+
+void CDBlock::CmdGetFilterMode() {
+    fmt::println("CDBlock: -> Set filter mode");
+
+    // Input structure:
+    // 0x45           <blank>
+    // <blank>
+    // filter number  <blank>
+    // <blank>
+    const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
+
+    if (filterNumber < 24) {
+        // Output structure:
+        // 0x44           mode
+        // <blank>
+        // filter number  <blank>
+        // <blank>
+        auto &filter = m_filters[filterNumber];
+        m_CR[0] = (m_status.statusCode << 8u) | filter.mode;
+        m_CR[1] = 0x0000;
+        m_CR[2] = (filterNumber << 8u);
+        m_CR[3] = 0x0000;
+    } else {
+        ReportCDStatus(kStatusReject);
+    }
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
+}
 
 void CDBlock::CmdSetFilterConnection() {}
 
@@ -767,6 +929,8 @@ void CDBlock::CmdResetSelector() {
             for (auto &filter : m_filters) {
                 filter.falseOutput = media::Filter::kDisconnected;
             }
+            // TODO: is this correct?
+            m_cdDeviceConnection = media::Filter::kDisconnected;
         }
     }
 
