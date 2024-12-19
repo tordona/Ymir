@@ -388,8 +388,8 @@ void CDBlock::ProcessCommand() {
     case 0x43: CmdGetFilterSubheaderConditions(); break;
     case 0x44: CmdSetFilterMode(); break;
     case 0x45: CmdGetFilterMode(); break;
-    // case 0x46: CmdSetFilterConnection(); break;
-    // case 0x47: CmdGetFilterConnection(); break;
+    case 0x46: CmdSetFilterConnection(); break;
+    case 0x47: CmdGetFilterConnection(); break;
     case 0x48: CmdResetSelector(); break;
     // case 0x50: CmdGetBufferSize(); break;
     case 0x51: CmdGetSectorNumber(); break;
@@ -861,7 +861,7 @@ void CDBlock::CmdSetFilterMode() {
 }
 
 void CDBlock::CmdGetFilterMode() {
-    fmt::println("CDBlock: -> Set filter mode");
+    fmt::println("CDBlock: -> Get filter mode");
 
     // Input structure:
     // 0x45           <blank>
@@ -872,7 +872,7 @@ void CDBlock::CmdGetFilterMode() {
 
     if (filterNumber < 24) {
         // Output structure:
-        // 0x44           mode
+        // status code    mode
         // <blank>
         // filter number  <blank>
         // <blank>
@@ -888,9 +888,65 @@ void CDBlock::CmdGetFilterMode() {
     SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
 }
 
-void CDBlock::CmdSetFilterConnection() {}
+void CDBlock::CmdSetFilterConnection() {
+    fmt::println("CDBlock: -> Set filter connection");
 
-void CDBlock::CmdGetFilterConnection() {}
+    // Input structure:
+    // 0x46           connection flags
+    // true conn      false conn
+    // filter number  <blank>
+    // <blank>
+    const bool setTrueConn = bit::extract<0>(m_CR[0]);
+    const bool setFalseConn = bit::extract<1>(m_CR[0]);
+    const uint8 trueConn = bit::extract<8, 15>(m_CR[1]);
+    const uint8 falseConn = bit::extract<0, 7>(m_CR[1]);
+    const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
+
+    if (filterNumber < 24) {
+        if (setTrueConn) {
+            m_filters[filterNumber].trueOutput = trueConn;
+        }
+        if (setFalseConn) {
+            DisconnectFilterInput(filterNumber);
+            m_filters[filterNumber].falseOutput = falseConn;
+        }
+
+        // Output structure: standard CD status data
+        ReportCDStatus();
+    } else {
+        ReportCDStatus(kStatusReject);
+    }
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
+}
+
+void CDBlock::CmdGetFilterConnection() {
+    fmt::println("CDBlock: -> Get filter connection");
+
+    // Input structure:
+    // 0x47           <blank>
+    // <blank>
+    // filter number  <blank>
+    // <blank>
+    const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
+
+    if (filterNumber < 24) {
+        // Output structure:
+        // status code    <blank>
+        // true conn      false conn
+        // <blank>
+        // <blank>
+        auto &filter = m_filters[filterNumber];
+        m_CR[0] = (m_status.statusCode << 8u);
+        m_CR[1] = (m_filters[filterNumber].trueOutput << 8u) | m_filters[filterNumber].falseOutput;
+        m_CR[2] = 0x0000;
+        m_CR[3] = 0x0000;
+    } else {
+        ReportCDStatus(kStatusReject);
+    }
+
+    SetInterrupt(kHIRQ_CMOK);
+}
 
 void CDBlock::CmdResetSelector() {
     fmt::println("CDBlock: -> Reset selector");
