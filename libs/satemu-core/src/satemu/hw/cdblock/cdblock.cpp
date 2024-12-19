@@ -568,8 +568,12 @@ void CDBlock::CmdInitializeCDSystem() {
 
     if (softReset) {
         fmt::println("CDBlock: Soft reset");
-        // NOTE: switch to Busy, then Pause if disc is present
-        m_status.statusCode = kStatusCodeNoDisc;
+        // TODO: switch to Busy for a bit before NoDisc/Pause
+        if (m_disc.sessions.empty()) {
+            m_status.statusCode = kStatusCodeNoDisc;
+        } else {
+            m_status.statusCode = kStatusCodePause;
+        }
         m_targetDriveCycles = kDriveCyclesNotPlaying;
         // TODO: reset state and configuration
     }
