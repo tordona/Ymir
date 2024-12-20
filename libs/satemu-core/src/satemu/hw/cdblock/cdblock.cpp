@@ -39,9 +39,6 @@ void CDBlock::Reset(bool hard) {
 
     m_readSpeed = 1;
 
-    m_getSectorLength = 2048;
-    m_putSectorLength = 2048;
-
     m_discAuthStatus = 0;
     m_mpegAuthStatus = 0;
 
@@ -59,6 +56,9 @@ void CDBlock::Reset(bool hard) {
         i++;
     }
     m_cdDeviceConnection = media::Filter::kDisconnected;
+
+    m_getSectorLength = 2048;
+    m_putSectorLength = 2048;
 
     m_processingCommand = false;
     m_currCommandCycles = 0;
@@ -968,11 +968,15 @@ void CDBlock::CmdResetSelector() {
     // <blank>
     const uint8 resetFlags = bit::extract<0, 7>(m_CR[0]);
 
+    bool reject = false;
     if (resetFlags == 0) {
         const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
-        // TODO: clear the specified buffer partition only
-
-        fmt::println("CDBlock: clearing all data for buffer partition {}", partitionNumber);
+        fmt::println("CDBlock: clearing buffer partition {}", partitionNumber);
+        if (partitionNumber < 24) {
+            m_partitions[partitionNumber].Clear();
+        } else {
+            reject = true;
+        }
     } else {
         const bool clearBufferData = bit::extract<2>(resetFlags);
         const bool clearSectionOutputs = bit::extract<3>(resetFlags);
@@ -983,7 +987,9 @@ void CDBlock::CmdResetSelector() {
 
         if (clearBufferData) {
             fmt::println("CDBlock: clearing all buffer partitions");
-            // TODO: clear
+            for (auto &partition : m_partitions) {
+                partition.Clear();
+            }
         }
         if (clearSectionOutputs) {
             fmt::println("CDBlock: clearing all partition output connectors");
@@ -1018,7 +1024,11 @@ void CDBlock::CmdResetSelector() {
     }
 
     // Output structure: standard CD status data
-    ReportCDStatus();
+    if (reject) {
+        ReportCDStatus(kStatusReject);
+    } else {
+        ReportCDStatus();
+    }
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
 }

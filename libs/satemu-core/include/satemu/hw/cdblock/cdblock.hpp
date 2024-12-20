@@ -148,9 +148,6 @@ private:
 
     uint8 m_readSpeed;
 
-    uint32 m_getSectorLength;
-    uint32 m_putSectorLength;
-
     // CD authentication status:
     //   0: no CD/not authenticated
     //   1: audio CD
@@ -255,6 +252,8 @@ private:
     // Partitions are logical groups of buffers.
     struct Partition {
         // TODO: define
+
+        void Clear() {}
     };
 
     std::array<Buffer, 200> m_buffers;
@@ -262,6 +261,9 @@ private:
     std::array<media::Filter, 24> m_filters;
 
     uint8 m_cdDeviceConnection;
+
+    uint32 m_getSectorLength;
+    uint32 m_putSectorLength;
 
     void DisconnectFilterInput(uint8 filterNumber);
 
