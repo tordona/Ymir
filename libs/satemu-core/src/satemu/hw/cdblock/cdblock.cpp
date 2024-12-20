@@ -53,8 +53,10 @@ void CDBlock::Reset(bool hard) {
     m_transferLength = 0;
     m_transferCount = 0x1FFFFFF;
 
-    for (auto &filter : m_filters) {
+    for (int i = 0; auto &filter : m_filters) {
         filter.Reset();
+        filter.trueOutput = i;
+        i++;
     }
     m_cdDeviceConnection = media::Filter::kDisconnected;
 
@@ -354,6 +356,7 @@ void CDBlock::DisconnectFilterInput(uint8 filterNumber) {
     for (auto &filter : m_filters) {
         if (filter.falseOutput == filterNumber) {
             filter.falseOutput = media::Filter::kDisconnected;
+            break; // there can be only one input connection to a filter
         }
     }
 }
@@ -684,8 +687,8 @@ void CDBlock::CmdSetCDDeviceConnection() {
 
     if (filterNumber < m_filters.size()) {
         // Connect CD to specified filter
-        m_cdDeviceConnection = filterNumber;
         DisconnectFilterInput(filterNumber);
+        m_cdDeviceConnection = filterNumber;
     } else if (filterNumber == media::Filter::kDisconnected) {
         // Disconnect CD
         m_cdDeviceConnection = media::Filter::kDisconnected;
@@ -698,7 +701,7 @@ void CDBlock::CmdSetCDDeviceConnection() {
 }
 
 void CDBlock::CmdGetCDDeviceConnection() {
-    fmt::println("CDBlock: -> Set CD device connection");
+    fmt::println("CDBlock: -> Get CD device connection");
 
     // Input structure:
     // 0x31           <blank>
@@ -734,8 +737,9 @@ void CDBlock::CmdSetFilterRange() {
     if (filterNumber < 24) {
         const uint32 startFrameAddress = (bit::extract<0, 7>(m_CR[0]) << 16u) | m_CR[1];
         const uint32 frameAddressCount = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
-        m_filters[filterNumber].startFrameAddress = startFrameAddress;
-        m_filters[filterNumber].frameAddressCount = frameAddressCount;
+        auto &filter = m_filters[filterNumber];
+        filter.startFrameAddress = startFrameAddress;
+        filter.frameAddressCount = frameAddressCount;
 
         // Output structure: standard CD status data
         ReportCDStatus();
@@ -762,10 +766,11 @@ void CDBlock::CmdGetFilterRange() {
         // start frame address bits 15-0
         // filter number  frame address count bits 23-16
         // frame address count bits 15-0
-        m_CR[0] = (m_status.statusCode << 8u) | (m_filters[filterNumber].startFrameAddress >> 16u);
-        m_CR[1] = m_filters[filterNumber].startFrameAddress;
-        m_CR[2] = (filterNumber << 8u) | (m_filters[filterNumber].frameAddressCount >> 16u);
-        m_CR[3] = m_filters[filterNumber].frameAddressCount;
+        const auto &filter = m_filters[filterNumber];
+        m_CR[0] = (m_status.statusCode << 8u) | (filter.startFrameAddress >> 16u);
+        m_CR[1] = filter.startFrameAddress;
+        m_CR[2] = (filterNumber << 8u) | (filter.frameAddressCount >> 16u);
+        m_CR[3] = filter.frameAddressCount;
     } else {
         ReportCDStatus(kStatusReject);
     }
@@ -880,7 +885,7 @@ void CDBlock::CmdGetFilterMode() {
         // <blank>
         // filter number  <blank>
         // <blank>
-        auto &filter = m_filters[filterNumber];
+        const auto &filter = m_filters[filterNumber];
         m_CR[0] = (m_status.statusCode << 8u) | filter.mode;
         m_CR[1] = 0x0000;
         m_CR[2] = (filterNumber << 8u);
@@ -907,12 +912,13 @@ void CDBlock::CmdSetFilterConnection() {
     const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
 
     if (filterNumber < 24) {
+        auto &filter = m_filters[filterNumber];
         if (setTrueConn) {
-            m_filters[filterNumber].trueOutput = trueConn;
+            filter.trueOutput = trueConn;
         }
         if (setFalseConn) {
             DisconnectFilterInput(filterNumber);
-            m_filters[filterNumber].falseOutput = falseConn;
+            filter.falseOutput = falseConn;
         }
 
         // Output structure: standard CD status data
@@ -940,9 +946,9 @@ void CDBlock::CmdGetFilterConnection() {
         // true conn      false conn
         // <blank>
         // <blank>
-        auto &filter = m_filters[filterNumber];
+        const auto &filter = m_filters[filterNumber];
         m_CR[0] = (m_status.statusCode << 8u);
-        m_CR[1] = (m_filters[filterNumber].trueOutput << 8u) | m_filters[filterNumber].falseOutput;
+        m_CR[1] = (filter.trueOutput << 8u) | filter.falseOutput;
         m_CR[2] = 0x0000;
         m_CR[3] = 0x0000;
     } else {
@@ -963,10 +969,10 @@ void CDBlock::CmdResetSelector() {
     const uint8 resetFlags = bit::extract<0, 7>(m_CR[0]);
 
     if (resetFlags == 0) {
-        const uint8 bufferNumber = bit::extract<8, 15>(m_CR[2]);
-        // TODO: clear everything in the specified buffer only
+        const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
+        // TODO: clear the specified buffer partition only
 
-        fmt::println("CDBlock: clearing all data for buffer {}", bufferNumber);
+        fmt::println("CDBlock: clearing all data for buffer partition {}", partitionNumber);
     } else {
         const bool clearBufferData = bit::extract<2>(resetFlags);
         const bool clearSectionOutputs = bit::extract<3>(resetFlags);
@@ -976,12 +982,12 @@ void CDBlock::CmdResetSelector() {
         const bool clearFilterFalseOutputs = bit::extract<7>(resetFlags);
 
         if (clearBufferData) {
-            fmt::println("CDBlock: clearing all buffer data");
+            fmt::println("CDBlock: clearing all buffer partitions");
             // TODO: clear
         }
         if (clearSectionOutputs) {
-            fmt::println("CDBlock: clearing all section output connectors");
-            // TODO: clear
+            fmt::println("CDBlock: clearing all partition output connectors");
+            // TODO: clear device inputs and filter inputs connected to partition outputs
         }
         if (clearFilterConditions) {
             fmt::println("CDBlock: clearing all filter conditions");
@@ -991,7 +997,6 @@ void CDBlock::CmdResetSelector() {
         }
         if (clearFilterInputs) {
             fmt::println("CDBlock: clearing all filter input connectors");
-            // TODO: is this correct?
             for (auto &filter : m_filters) {
                 filter.falseOutput = media::Filter::kDisconnected;
             }
@@ -1009,8 +1014,6 @@ void CDBlock::CmdResetSelector() {
             for (auto &filter : m_filters) {
                 filter.falseOutput = media::Filter::kDisconnected;
             }
-            // TODO: is this correct?
-            m_cdDeviceConnection = media::Filter::kDisconnected;
         }
     }
 
@@ -1030,7 +1033,7 @@ void CDBlock::CmdGetSectorNumber() {
     // <blank>
     // buffer number  <blank>
     // <blank>
-    // const uint8 bufferNumber = bit::extract<8, 15>(m_CR[2]);
+    // const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
 
     // TODO: get block count in buffer
 

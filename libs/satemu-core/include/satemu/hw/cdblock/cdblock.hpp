@@ -240,8 +240,10 @@ private:
     //   A buffer partition may receive any number of inputs. Data received from multiple inputs will be concatenated.
     // - The "false" output connector of a filter can only be assigned to a filter's input connector. The filter may
     //   output data to itself or another filter.
-    // - The buffer partition output connector can be assigned to a device input connector or another filter's input
-    //   connector through the copy/move commands.
+    // - The buffer partition output connector can be assigned to a device input connector or a filter's input connector
+    //   through the copy/move commands.
+    // - Only one connection can be made to filter input connectors. Attempting to connect another output to a filter
+    //   input will sever the existing connection.
     //
     // Disconnected filter output connectors will result in dropping the data.
 
