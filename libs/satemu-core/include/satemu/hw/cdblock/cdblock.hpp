@@ -204,13 +204,53 @@ private:
 
     // -------------------------------------------------------------------------
     // Buffers, partitions and filters
+    //
+    // The low-level storage unit is the buffer, which stores one sector of 2352 bytes worth of data.
+    // The CD block contains 202 buffers, but only 200 are accessible externally.
+    //
+    // A buffer partition is a logical group of buffers containing a continuous section of data. The partitions are only
+    // limited by the total buffer capacity of 200 blocks and can store buffers in any order, much like virtual memory
+    // allocations backed by physical memory in systems with MMUs.
+    //
+    // All streamed data passes through a configurable set of 24 filters that conditionally route data to one of two
+    // outputs: "true" or "false", or, more appropriately, "accept" and "reject". There are also 24 buffer partitions
+    // used as a staging area for transfers. Every filter and buffer partition has an input and output connector. By
+    // default, all filter inputs and buffer partition outputs are disconnected, and filter output connectors are routed
+    // to the buffer partition inputs of the same index.
+    //
+    // The CD block can receive data from these devices that expose an output connector:
+    // - The CD drive
+    // - The host SH-2 CPU (via writes to the data transfer register on port 0x98000)
+    // - The MPEG decoder, which contains the MPEG frame buffer and MPEG sector buffer
+    //
+    // Data can be streamed out to these devices that expose an input connector:
+    // - The host SH-2 CPU (via reads from the data transfer register on port 0x98000)
+    // - The MPEG decoder:
+    //   - Audio output
+    //   - Video output
+    //   - Frame buffer (directly connected to the VDP2's EXBG)
+    //   - Sector buffer
+    //
+    // Connections from and to devices are configured by SetCDDeviceConnection, MpegSetConnection, and several transfer
+    // commands which make the data accessible by the SH-2 via port 0x98000.
+    //
+    // Connections are constrained to the following rules:
+    // - Output connectors from devices can only be assigned to filter input connectors.
+    // - The "true" output connector of a filter can only be routed to the input connector of a buffer partition.
+    //   A buffer partition may receive any number of inputs. Data received from multiple inputs will be concatenated.
+    // - The "false" output connector of a filter can only be assigned to a filter's input connector. The filter may
+    //   output data to itself or another filter.
+    // - The buffer partition output connector can be assigned to a device input connector or another filter's input
+    //   connector through the copy/move commands.
+    //
+    // Disconnected filter output connectors will result in dropping the data.
 
     // Buffers contain a full raw sector's worth of data.
     struct Buffer {
         std::array<uint8, 2352> data;
     };
 
-    // Partitions contain a group of buffers.
+    // Partitions are logical groups of buffers.
     struct Partition {
         // TODO: define
     };
@@ -234,20 +274,29 @@ private:
 
     void ProcessCommand();
 
-    void CmdGetStatus();                    // 0x00
-    void CmdGetHardwareInfo();              // 0x01
-    void CmdGetTOC();                       // 0x02
-    void CmdGetSessionInfo();               // 0x03
-    void CmdInitializeCDSystem();           // 0x04
-    void CmdOpenTray();                     // 0x05
-    void CmdEndDataTransfer();              // 0x06
-    void CmdPlayDisc();                     // 0x10
-    void CmdSeekDisc();                     // 0x11
-    void CmdScanDisc();                     // 0x12
-    void CmdGetSubcodeQ_RW();               // 0x20
-    void CmdSetCDDeviceConnection();        // 0x30
-    void CmdGetCDDeviceConnection();        // 0x31
-    void CmdGetLastBufferDest();            // 0x32
+    // General CD block operations
+    void CmdGetStatus();          // 0x00
+    void CmdGetHardwareInfo();    // 0x01
+    void CmdGetTOC();             // 0x02
+    void CmdGetSessionInfo();     // 0x03
+    void CmdInitializeCDSystem(); // 0x04
+    void CmdOpenTray();           // 0x05
+    void CmdEndDataTransfer();    // 0x06
+
+    // Basic CD playback operations
+    void CmdPlayDisc(); // 0x10
+    void CmdSeekDisc(); // 0x11
+    void CmdScanDisc(); // 0x12
+
+    // Subcode retrieval
+    void CmdGetSubcodeQ_RW(); // 0x20
+
+    // CD-ROM device connection
+    void CmdSetCDDeviceConnection(); // 0x30
+    void CmdGetCDDeviceConnection(); // 0x31
+    void CmdGetLastBufferDest();     // 0x32
+
+    // Filters
     void CmdSetFilterRange();               // 0x40
     void CmdGetFilterRange();               // 0x41
     void CmdSetFilterSubheaderConditions(); // 0x42
@@ -257,28 +306,35 @@ private:
     void CmdSetFilterConnection();          // 0x46
     void CmdGetFilterConnection();          // 0x47
     void CmdResetSelector();                // 0x48
-    void CmdGetBufferSize();                // 0x50
-    void CmdGetSectorNumber();              // 0x51
-    void CmdCalculateActualSize();          // 0x52
-    void CmdGetActualSize();                // 0x53
-    void CmdGetSectorInfo();                // 0x54
-    void CmdExecuteFADSearch();             // 0x55
-    void CmdGetFADSearchResults();          // 0x56
-    void CmdSetSectorLength();              // 0x60
-    void CmdGetSectorData();                // 0x61
-    void CmdDeleteSectorData();             // 0x62
-    void CmdGetThenDeleteSectorData();      // 0x63
-    void CmdPutSectorData();                // 0x64
-    void CmdCopySectorData();               // 0x65
-    void CmdMoveSectorData();               // 0x66
-    void CmdGetCopyError();                 // 0x67
-    void CmdChangeDirectory();              // 0x70
-    void CmdReadDirectory();                // 0x71
-    void CmdGetFileSystemScope();           // 0x72
-    void CmdGetFileInfo();                  // 0x73
-    void CmdReadFile();                     // 0x74
-    void CmdAbortFile();                    // 0x75
 
+    // Buffers and buffer partitions
+    void CmdGetBufferSize();       // 0x50
+    void CmdGetSectorNumber();     // 0x51
+    void CmdCalculateActualSize(); // 0x52
+    void CmdGetActualSize();       // 0x53
+    void CmdGetSectorInfo();       // 0x54
+    void CmdExecuteFADSearch();    // 0x55
+    void CmdGetFADSearchResults(); // 0x56
+
+    // Buffer input and output
+    void CmdSetSectorLength();         // 0x60
+    void CmdGetSectorData();           // 0x61
+    void CmdDeleteSectorData();        // 0x62
+    void CmdGetThenDeleteSectorData(); // 0x63
+    void CmdPutSectorData();           // 0x64
+    void CmdCopySectorData();          // 0x65
+    void CmdMoveSectorData();          // 0x66
+    void CmdGetCopyError();            // 0x67
+
+    // File system operations
+    void CmdChangeDirectory();    // 0x70
+    void CmdReadDirectory();      // 0x71
+    void CmdGetFileSystemScope(); // 0x72
+    void CmdGetFileInfo();        // 0x73
+    void CmdReadFile();           // 0x74
+    void CmdAbortFile();          // 0x75
+
+    // MPEG decoder
     void CmdMpegGetStatus();         // 0x90
     void CmdMpegGetInterrupt();      // 0x91
     void CmdMpegSetInterruptMask();  // 0x92
@@ -286,16 +342,20 @@ private:
     void CmdMpegSetMode();           // 0x94
     void CmdMpegPlay();              // 0x95
     void CmdMpegSetDecodingMethod(); // 0x96
-    void CmdMpegSetConnection();     // 0x9A
-    void CmdMpegGetConnection();     // 0x9B
-    void CmdMpegSetStream();         // 0x9D
-    void CmdMpegGetStream();         // 0x9E
-    void CmdMpegDisplay();           // 0xA0
-    void CmdMpegSetWindow();         // 0xA1
-    void CmdMpegSetBorderColor();    // 0xA2
-    void CmdMpegSetFade();           // 0xA3
-    void CmdMpegSetVideoEffects();   // 0xA4
-    void CmdMpegSetLSI();            // 0xAF
+
+    // MPEG stream
+    void CmdMpegSetConnection(); // 0x9A
+    void CmdMpegGetConnection(); // 0x9B
+    void CmdMpegSetStream();     // 0x9D
+    void CmdMpegGetStream();     // 0x9E
+
+    // MPEG display screen
+    void CmdMpegDisplay();         // 0xA0
+    void CmdMpegSetWindow();       // 0xA1
+    void CmdMpegSetBorderColor();  // 0xA2
+    void CmdMpegSetFade();         // 0xA3
+    void CmdMpegSetVideoEffects(); // 0xA4
+    void CmdMpegSetLSI();          // 0xAF
 
     void CmdAuthenticateDevice();    // 0xE0
     void CmdIsDeviceAuthenticated(); // 0xE1
