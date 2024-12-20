@@ -239,7 +239,7 @@ void CDBlock::ProcessDriveState() {
         break;
     case kStatusCodePlay:
         if (m_status.frameAddress <= m_playEndPos) {
-            // TODO: read into buffer
+            // TODO: read into filter
             // when sectors are read: raise kHIRQ_CSCT
             // if buffer full: -> Pause; raise kHIRQ_BFUL
             // when buffer no longer full: -> Play
@@ -685,6 +685,7 @@ void CDBlock::CmdSetCDDeviceConnection() {
     // <blank>
     const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
 
+    bool reject = false;
     if (filterNumber < m_filters.size()) {
         // Connect CD to specified filter
         DisconnectFilterInput(filterNumber);
@@ -692,10 +693,16 @@ void CDBlock::CmdSetCDDeviceConnection() {
     } else if (filterNumber == media::Filter::kDisconnected) {
         // Disconnect CD
         m_cdDeviceConnection = media::Filter::kDisconnected;
+    } else {
+        reject = true;
     }
 
     // Output structure: standard CD status data
-    ReportCDStatus();
+    if (reject) {
+        ReportCDStatus(kStatusReject);
+    } else {
+        ReportCDStatus();
+    }
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
 }
@@ -979,7 +986,7 @@ void CDBlock::CmdResetSelector() {
         }
     } else {
         const bool clearBufferData = bit::extract<2>(resetFlags);
-        const bool clearSectionOutputs = bit::extract<3>(resetFlags);
+        const bool clearPartitionOutputs = bit::extract<3>(resetFlags);
         const bool clearFilterConditions = bit::extract<4>(resetFlags);
         const bool clearFilterInputs = bit::extract<5>(resetFlags);
         const bool clearFilterTrueOutputs = bit::extract<6>(resetFlags);
@@ -991,7 +998,7 @@ void CDBlock::CmdResetSelector() {
                 partition.Clear();
             }
         }
-        if (clearSectionOutputs) {
+        if (clearPartitionOutputs) {
             fmt::println("CDBlock: clearing all partition output connectors");
             // TODO: clear device inputs and filter inputs connected to partition outputs
         }
