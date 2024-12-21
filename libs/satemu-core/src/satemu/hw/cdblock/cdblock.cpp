@@ -2,8 +2,6 @@
 
 #include <satemu/hw/scu/scu.hpp>
 
-#include <satemu/util/data_ops.hpp>
-
 namespace satemu::cdblock {
 
 CDBlock::CDBlock(scu::SCU &scu)
@@ -49,6 +47,9 @@ void CDBlock::Reset(bool hard) {
     m_transferPos = 0;
     m_transferLength = 0;
     m_transferCount = 0x1FFFFFF;
+
+    m_bufferManager.Reset();
+    m_partitionManager.Reset();
 
     for (int i = 0; auto &filter : m_filters) {
         filter.Reset();
@@ -1073,7 +1074,7 @@ void CDBlock::CmdResetSelector() {
         const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
         fmt::println("CDBlock: clearing buffer partition {}", partitionNumber);
         if (partitionNumber < 24) {
-            m_partitions[partitionNumber].Clear();
+            m_partitionManager.Clear(partitionNumber);
         } else {
             reject = true;
         }
@@ -1087,9 +1088,7 @@ void CDBlock::CmdResetSelector() {
 
         if (clearBufferData) {
             fmt::println("CDBlock: clearing all buffer partitions");
-            for (auto &partition : m_partitions) {
-                partition.Clear();
-            }
+            m_partitionManager.ClearAll();
         }
         if (clearPartitionOutputs) {
             fmt::println("CDBlock: clearing all partition output connectors");
@@ -1148,9 +1147,9 @@ void CDBlock::CmdGetBufferSize() {
     // total filter count   <blank>
     // total buffer count
     m_CR[0] = m_status.statusCode << 8u;
-    m_CR[1] = 0; // TODO: free buffer count
+    m_CR[1] = m_bufferManager.FreeBufferCount();
     m_CR[2] = m_filters.size() << 8u;
-    m_CR[3] = m_buffers.size();
+    m_CR[3] = m_bufferManager.TotalBufferCount();
 
     SetInterrupt(kHIRQ_CMOK);
 }
@@ -1163,9 +1162,7 @@ void CDBlock::CmdGetSectorNumber() {
     // <blank>
     // partition number  <blank>
     // <blank>
-    // const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
-
-    // TODO: get block count in buffer
+    const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
 
     // Output structure:
     // status code      <blank>
@@ -1175,7 +1172,7 @@ void CDBlock::CmdGetSectorNumber() {
     m_CR[0] = (m_status.statusCode << 8u);
     m_CR[1] = 0x0000;
     m_CR[2] = 0x0000;
-    m_CR[3] = 0x0000;
+    m_CR[3] = m_partitionManager.GetBufferCount(partitionNumber);
 
     SetInterrupt(kHIRQ_CMOK);
 }

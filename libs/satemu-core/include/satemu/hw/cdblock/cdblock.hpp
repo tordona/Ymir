@@ -10,8 +10,7 @@
 #include <fmt/format.h>
 
 #include <array>
-#include <type_traits>
-#include <vector>
+#include <cassert>
 
 // -----------------------------------------------------------------------------
 // Forward declarations
@@ -244,20 +243,292 @@ private:
     //
     // Disconnected filter output connectors will result in dropping the data.
 
-    // Buffers contain a full raw sector's worth of data.
     struct Buffer {
         std::array<uint8, 2352> data;
+        Buffer *prev;
+        Buffer *next;
     };
 
-    // Partitions are logical groups of buffers.
-    struct Partition {
-        // TODO: define
+    class BufferManager {
+    public:
+        BufferManager() {
+            Reset();
+        }
 
-        void Clear() {}
+        void Reset() {
+            Buffer *prev = nullptr;
+            for (auto &buffer : m_buffers) {
+                buffer.data.fill(0);
+                buffer.prev = prev;
+                buffer.next = nullptr;
+                if (prev) {
+                    prev->next = &buffer;
+                }
+                prev = &buffer;
+            }
+
+            m_freeListHead = &m_buffers[0];
+            m_freeCount = m_buffers.size();
+        }
+
+        // Attempts to allocate a buffer.
+        // Returns nullptr if there are no free buffers.
+        Buffer *Allocate() {
+            if (m_freeListHead == nullptr) {
+                return nullptr;
+            }
+            assert(m_freeCount > 0 && m_freeCount <= m_buffers.size());
+
+            // Remove buffer from free list head
+            Buffer *buffer = m_freeListHead;
+            m_freeListHead = buffer->next;
+            m_freeCount--;
+            assert((m_freeListHead == nullptr) == (m_freeCount == 0));
+
+            // Detach buffer from linked list
+            m_freeListHead->prev = nullptr;
+            buffer->next = nullptr;
+            assert(buffer->prev == nullptr);
+
+            return buffer;
+        }
+
+        void Free(Buffer *buffer) {
+            // Detach buffer from existing linked list
+            if (buffer->prev) {
+                buffer->prev->next = buffer->next;
+            }
+            if (buffer->next) {
+                buffer->next->prev = buffer->prev;
+            }
+
+            // Insert it at the head of the free buffer list
+            if (m_freeListHead != nullptr) {
+                m_freeListHead->prev = buffer;
+            }
+            buffer->prev = nullptr;
+            buffer->next = m_freeListHead;
+            m_freeListHead = buffer;
+
+            m_freeCount++;
+        }
+
+        // Frees an entire chain of buffers.
+        // head must point to the head of the chain.
+        void FreeAll(Buffer *head) {
+            if (head == nullptr) [[unlikely]] {
+                return;
+            }
+            assert(head->prev == nullptr);
+
+            // Find the tail and relink the free list from it
+            Buffer *tail = head;
+            m_freeCount++;
+            for (; tail->next != nullptr; tail = tail->next) {
+                m_freeCount++;
+            }
+
+            tail->next = m_freeListHead;
+            m_freeListHead->prev = tail;
+            m_freeListHead = head;
+        }
+
+        // Frees a range of buffers.
+        // head and tail must belong to the same chain.
+        // null head means "free until the start of the chain".
+        // null tail means "free until the end of the chain".
+        void FreeRange(Buffer *head, Buffer *tail) {
+            // TODO: implement
+        }
+
+        uint8 FreeBufferCount() const {
+            return m_freeCount;
+        }
+
+        constexpr uint8 TotalBufferCount() const {
+            return m_buffers.size();
+        }
+
+    private:
+        std::array<Buffer, 200> m_buffers;
+        Buffer *m_freeListHead;
+        uint8 m_freeCount;
     };
 
-    std::array<Buffer, 200> m_buffers;
-    std::array<Partition, 24> m_partitions;
+    class PartitionManager {
+    public:
+        PartitionManager(BufferManager &bufferManager)
+            : m_bufferManager(bufferManager) {
+            Reset();
+        }
+
+        void Reset() {
+            m_partitions.fill({});
+        }
+
+        Buffer *InsertHead(uint8 partitionIndex) {
+            if (partitionIndex >= m_partitions.size()) [[unlikely]] {
+                return nullptr;
+            }
+
+            Buffer *buffer = m_bufferManager.Allocate();
+            if (buffer == nullptr) [[unlikely]] {
+                return nullptr;
+            }
+
+            m_partitions[partitionIndex].InsertHead(buffer);
+            return buffer;
+        }
+
+        Buffer *GetHead(uint8 partitionIndex) {
+            if (partitionIndex < m_partitions.size()) [[likely]] {
+                return m_partitions[partitionIndex].GetHead();
+            } else {
+                return nullptr;
+            }
+        }
+
+        Buffer *GetTail(uint8 partitionIndex) {
+            if (partitionIndex < m_partitions.size()) [[likely]] {
+                return m_partitions[partitionIndex].GetTail();
+            } else {
+                return nullptr;
+            }
+        }
+
+        Buffer *RemoveHead(uint8 partitionIndex) {
+            if (partitionIndex >= m_partitions.size()) [[unlikely]] {
+                return nullptr;
+            }
+
+            Buffer *buffer = m_partitions[partitionIndex].RemoveHead();
+            m_bufferManager.Free(buffer);
+            return buffer;
+        }
+
+        Buffer *RemoveTail(uint8 partitionIndex) {
+            if (partitionIndex >= m_partitions.size()) [[unlikely]] {
+                return nullptr;
+            }
+
+            Buffer *buffer = m_partitions[partitionIndex].RemoveTail();
+            m_bufferManager.Free(buffer);
+            return buffer;
+        }
+
+        void ClearAll() {
+            for (auto &partition : m_partitions) {
+                Buffer *head = partition.Clear();
+                m_bufferManager.FreeAll(head);
+            }
+        }
+
+        void Clear(uint8 partitionIndex) {
+            if (partitionIndex < m_partitions.size()) [[likely]] {
+                Buffer *head = m_partitions[partitionIndex].Clear();
+                m_bufferManager.FreeAll(head);
+            }
+        }
+
+        uint8 GetBufferCount(uint8 partitionIndex) const {
+            if (partitionIndex < m_partitions.size()) [[likely]] {
+                return m_partitions[partitionIndex].GetBufferCount();
+            } else {
+                return 0;
+            }
+        }
+
+        // TODO: get buffer at index?
+        // TODO: remove buffer range
+
+    private:
+        struct Partition {
+            // NOTE: must free the buffers manually!
+            Buffer *Clear() {
+                Buffer *head = m_head;
+                m_head = m_tail = nullptr;
+                m_bufferCount = 0;
+                return head;
+            }
+
+            void InsertHead(Buffer *buffer) {
+                if (m_head == nullptr) {
+                    assert(m_tail == nullptr);
+                    assert(m_bufferCount == 0);
+                    m_head = m_tail = buffer;
+                    m_bufferCount = 1;
+                } else {
+                    assert(buffer->prev == nullptr);
+                    assert(buffer->next == nullptr);
+                    buffer->next = m_head;
+                    m_head->prev = buffer;
+                    m_head = buffer;
+                    m_bufferCount++;
+                }
+            }
+
+            Buffer *GetHead() const {
+                return m_head;
+            }
+
+            Buffer *GetTail() const {
+                return m_tail;
+            }
+
+            Buffer *RemoveHead() {
+                Buffer *head = m_head;
+                if (head == nullptr) [[unlikely]] {
+                    return nullptr;
+                }
+                assert(m_head->prev == nullptr);
+                assert(m_bufferCount > 0);
+                m_head = m_head->next;
+                head->next = nullptr;
+                m_head->prev = nullptr;
+                if (head == m_tail) {
+                    assert(m_bufferCount == 1);
+                    m_tail = nullptr;
+                }
+                m_bufferCount--;
+
+                return head;
+            }
+
+            Buffer *RemoveTail() {
+                Buffer *tail = m_tail;
+                if (tail == nullptr) [[unlikely]] {
+                    return nullptr;
+                }
+                assert(m_tail->next == nullptr);
+                assert(m_bufferCount > 0);
+                m_tail = m_tail->prev;
+                tail->prev = nullptr;
+                m_tail->next = nullptr;
+                if (tail == m_head) {
+                    assert(m_bufferCount == 1);
+                    m_head = nullptr;
+                }
+                m_bufferCount--;
+
+                return tail;
+            }
+
+            uint8 GetBufferCount() const {
+                return m_bufferCount;
+            }
+
+        private:
+            Buffer *m_head = nullptr;
+            Buffer *m_tail = nullptr;
+            uint8 m_bufferCount = 0;
+        };
+
+        std::array<Partition, 24> m_partitions;
+        BufferManager &m_bufferManager;
+    };
+
+    BufferManager m_bufferManager;
+    PartitionManager m_partitionManager{m_bufferManager};
     std::array<media::Filter, 24> m_filters;
 
     uint8 m_cdDeviceConnection;
