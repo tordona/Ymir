@@ -164,6 +164,8 @@ private:
 
     void ProcessDriveState();
 
+    void ProcessDriveStatePlay();
+
     // -------------------------------------------------------------------------
     // Interrupts
 
@@ -247,6 +249,7 @@ private:
 
     struct Buffer {
         std::array<uint8, 2352> data;
+        uint16 size;
         Buffer *prev;
         Buffer *next;
     };
@@ -368,40 +371,25 @@ private:
             m_partitions.fill({});
         }
 
-        Buffer *InsertHead(uint8 partitionIndex) {
-            if (partitionIndex >= m_partitions.size()) [[unlikely]] {
-                return nullptr;
-            }
-
-            Buffer *buffer = m_bufferManager.Allocate();
-            if (buffer == nullptr) [[unlikely]] {
-                return nullptr;
-            }
+        void InsertHead(uint8 partitionIndex, Buffer *buffer) {
+            assert(partitionIndex < m_partitions.size());
+            assert(buffer != nullptr);
 
             m_partitions[partitionIndex].InsertHead(buffer);
-            return buffer;
         }
 
         Buffer *GetHead(uint8 partitionIndex) {
-            if (partitionIndex < m_partitions.size()) [[likely]] {
-                return m_partitions[partitionIndex].GetHead();
-            } else {
-                return nullptr;
-            }
+            assert(partitionIndex < m_partitions.size());
+            return m_partitions[partitionIndex].GetHead();
         }
 
         Buffer *GetTail(uint8 partitionIndex) {
-            if (partitionIndex < m_partitions.size()) [[likely]] {
-                return m_partitions[partitionIndex].GetTail();
-            } else {
-                return nullptr;
-            }
+            assert(partitionIndex < m_partitions.size());
+            return m_partitions[partitionIndex].GetTail();
         }
 
         Buffer *RemoveHead(uint8 partitionIndex) {
-            if (partitionIndex >= m_partitions.size()) [[unlikely]] {
-                return nullptr;
-            }
+            assert(partitionIndex < m_partitions.size());
 
             Buffer *buffer = m_partitions[partitionIndex].RemoveHead();
             m_bufferManager.Free(buffer);
@@ -409,9 +397,7 @@ private:
         }
 
         Buffer *RemoveTail(uint8 partitionIndex) {
-            if (partitionIndex >= m_partitions.size()) [[unlikely]] {
-                return nullptr;
-            }
+            assert(partitionIndex >= m_partitions.size());
 
             Buffer *buffer = m_partitions[partitionIndex].RemoveTail();
             m_bufferManager.Free(buffer);
@@ -433,11 +419,8 @@ private:
         }
 
         uint8 GetBufferCount(uint8 partitionIndex) const {
-            if (partitionIndex < m_partitions.size()) [[likely]] {
-                return m_partitions[partitionIndex].GetBufferCount();
-            } else {
-                return 0;
-            }
+            assert(partitionIndex < m_partitions.size());
+            return m_partitions[partitionIndex].GetBufferCount();
         }
 
         // TODO: get buffer at index?
@@ -534,6 +517,8 @@ private:
     std::array<media::Filter, 24> m_filters;
 
     uint8 m_cdDeviceConnection;
+
+    uint8 m_lastCDWritePartition;
 
     uint32 m_getSectorLength;
     uint32 m_putSectorLength;

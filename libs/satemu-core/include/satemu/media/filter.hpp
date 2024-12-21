@@ -2,6 +2,10 @@
 
 #include <satemu/core_types.hpp>
 
+#include <satemu/util/bit_ops.hpp>
+
+#include <span>
+
 namespace satemu::media {
 
 struct Filter {
@@ -34,6 +38,27 @@ struct Filter {
         codingInfoValue = 0;
     }
 
+    bool Test(std::span<uint8> data) const {
+        // TODO: implement
+        // const bool invertSubheaderConds = bit::extract<4>(mode);
+        if (bit::extract<0>(mode)) {
+            // TODO: filter by file number; honor invert flag
+        }
+        if (bit::extract<1>(mode)) {
+            // TODO: filter by channel number; honor invert flag
+        }
+        if (bit::extract<2>(mode)) {
+            // TODO: filter by submode; honor invert flag
+        }
+        if (bit::extract<3>(mode)) {
+            // TODO: filter by coding information; honor invert flag
+        }
+        if (bit::extract<6>(mode)) {
+            // TODO: filter by frame address range
+        }
+        return true;
+    }
+
     // Frame address filters
     uint32 startFrameAddress;
     uint32 frameAddressCount;
@@ -43,8 +68,8 @@ struct Filter {
     //   1   Filter by channel number
     //   2   Filter by submode
     //   3   Filter by coding information
-    //   4   Invert subheader conditions (all but
-    //   6   Filter by frame address
+    //   4   Invert subheader conditions (all but frame address range)
+    //   6   Filter by frame address range
     uint8 mode;
 
     // File and channel number subheader filters

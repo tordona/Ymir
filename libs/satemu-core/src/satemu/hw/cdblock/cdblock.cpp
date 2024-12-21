@@ -57,6 +57,7 @@ void CDBlock::Reset(bool hard) {
         i++;
     }
     m_cdDeviceConnection = media::Filter::kDisconnected;
+    m_lastCDWritePartition = ~0;
 
     m_getSectorLength = 2048;
     m_putSectorLength = 2048;
@@ -165,14 +166,21 @@ bool CDBlock::SetupPlayback(uint32 startParam, uint32 endParam, uint16 repeatPar
         // Find track containing the requested start frame address
         const uint8 trackIndex = session.FindTrackIndex(m_playStartPos);
         if (trackIndex != 0xFF) {
-            // TODO: delay seek for a realistic amount of time
-            m_targetDriveCycles = kDriveCyclesPlaying1x * m_readSpeed;
             m_status.statusCode = kStatusCodeSeek;
             m_status.flags = 0x8;     // CD-ROM decoding flag
             m_status.repeatCount = 0; // first repeat
             m_status.controlADR = session.tracks[trackIndex].controlADR;
             m_status.track = trackIndex + 1;
             m_status.index = 1; // TODO: handle indexes
+
+            // TODO: delay seek for a realistic amount of time
+            if (m_status.controlADR == 0x41) {
+                m_targetDriveCycles = kDriveCyclesPlaying1x * m_readSpeed;
+            } else {
+                // Force 1x speed if playing audio track
+                m_targetDriveCycles = kDriveCyclesPlaying1x;
+            }
+
             fmt::println("CDBlock: playback start: track:index {:02d}:{:02d} ctl/ADR={:02X}", m_status.track,
                          m_status.index, m_status.controlADR);
 
@@ -238,45 +246,103 @@ void CDBlock::ProcessDriveState() {
         m_status.statusCode = kStatusCodePlay;
         m_status.frameAddress = m_playStartPos;
         break;
-    case kStatusCodePlay:
-        if (m_status.frameAddress <= m_playEndPos) {
-            // TODO: read into filter
-            // when sectors are read: raise kHIRQ_CSCT
-            // if buffer full: -> Pause; raise kHIRQ_BFUL
-            // when buffer no longer full: -> Play
+    case kStatusCodePlay: ProcessDriveStatePlay(); break;
+    }
+}
 
-            // HACK(CDB): simulate full buffer
-            // m_status.statusCode = kStatusCodePause;
-            // SetInterrupt(kHIRQ_BFUL);
+void CDBlock::ProcessDriveStatePlay() {
+    if (m_status.frameAddress <= m_playEndPos) {
+        if (m_cdDeviceConnection != media::Filter::kDisconnected) [[likely]] {
+            assert(m_cdDeviceConnection < m_filters.size());
 
-            // HACK(CDB): simulate successful transfer
-            fmt::println("CDBlock: playback: read from {:06X}", m_status.frameAddress);
-            SetInterrupt(kHIRQ_CSCT);
+            fmt::println("CDBlock: playback: read from frame address {:06X}", m_status.frameAddress);
 
-            m_status.frameAddress++;
-        }
+            Buffer *buffer = m_bufferManager.Allocate();
+            if (buffer == nullptr) [[unlikely]] {
+                fmt::println("CDBlock: playback: no free buffer available");
 
-        if (m_status.frameAddress > m_playEndPos) {
-            // 0x0 to 0xE = 0 to 14 repeats
-            // 0xF = infinite repeats
-            if (m_playRepeatParam == 0xF || m_status.repeatCount < m_playRepeatParam) {
-                if (m_playRepeatParam == 0xF) {
-                    fmt::println("CDBlock: playback repeat (infinite)");
-                } else {
-                    fmt::println("CDBlock: playback repeat: {} of {}", m_status.repeatCount + 1, m_playRepeatParam);
-                }
-                m_status.frameAddress = m_playStartPos;
-                m_status.repeatCount++;
-            } else {
-                fmt::println("CDBlock: playback ended");
-                m_status.frameAddress = m_playEndPos;
                 m_status.statusCode = kStatusCodePause;
-                m_targetDriveCycles = kDriveCyclesNotPlaying;
-                SetInterrupt(kHIRQ_PEND);
+                SetInterrupt(kHIRQ_BFUL);
+                // TODO: when buffer no longer full, switch to Play if we paused because of BFUL
+                // - or maybe if m_status.frameAddress <= m_playEndPos
+            } else if (m_disc.sessions.empty()) [[unlikely]] {
+                fmt::println("CDBlock: playback: disc removed");
+
+                m_status.statusCode = kStatusCodeNoDisc; // TODO: is this correct?
+                SetInterrupt(kHIRQ_DCHG);
+            } else {
+                // TODO: consider caching the track pointer
+                const media::Session &session = m_disc.sessions.back();
+                const media::Track *track = session.FindTrack(m_status.frameAddress);
+
+                // Sanity check: is the track valid?
+                if (track != nullptr) [[likely]] {
+                    buffer->size = track->ReadSectorRaw(m_status.frameAddress, buffer->data);
+
+                    fmt::println("CDBlock: playback: read {} bytes", buffer->size);
+
+                    // Check against filter and send data to the appropriate destination
+                    uint8 filterNum = m_cdDeviceConnection;
+                    for (int i = 0; i < 24 && filterNum != media::Filter::kDisconnected; i++) {
+                        const media::Filter &filter = m_filters[filterNum];
+                        if (filter.Test({buffer->data.begin(), buffer->size})) {
+                            if (filter.trueOutput == media::Filter::kDisconnected) [[unlikely]] {
+                                fmt::println("CDBlock: passed filter; output disconnected - discarded");
+                                m_bufferManager.Free(buffer);
+                            } else {
+                                assert(filter.trueOutput < m_filters.size());
+                                fmt::println("CDBlock: passed filter; sent to buffer partition {}", filter.trueOutput);
+                                m_partitionManager.InsertHead(filter.trueOutput, buffer);
+                                m_lastCDWritePartition = filter.trueOutput;
+                            }
+                            break;
+                        } else {
+                            if (filter.falseOutput == media::Filter::kDisconnected) [[unlikely]] {
+                                fmt::println("CDBlock: failed filter; output disconnected - discarded");
+                                m_bufferManager.Free(buffer);
+                                break;
+                            } else {
+                                assert(filter.falseOutput < m_filters.size());
+                                fmt::println("CDBlock: failed filter; sent to filter {}", filter.falseOutput);
+                                filterNum = filter.falseOutput;
+                            }
+                        }
+                    }
+
+                    SetInterrupt(kHIRQ_CSCT);
+                } else {
+                    // This shouldn't really happen unless we're given an invalid disc image
+                    // Let's pretend this is a disc read error
+                    // TODO: what happens on a real disc read error?
+                    fmt::println("CDBlock: playback: track not found");
+                    m_status.statusCode = kStatusCodeError;
+                }
             }
+        } else {
+            fmt::println("CDBlock: playback: read from {:06X} discarded", m_status.frameAddress);
         }
 
-        break;
+        m_status.frameAddress++;
+    }
+
+    if (m_status.frameAddress > m_playEndPos) {
+        // 0x0 to 0xE = 0 to 14 repeats
+        // 0xF = infinite repeats
+        if (m_playRepeatParam == 0xF || m_status.repeatCount < m_playRepeatParam) {
+            if (m_playRepeatParam == 0xF) {
+                fmt::println("CDBlock: playback repeat (infinite)");
+            } else {
+                fmt::println("CDBlock: playback repeat: {} of {}", m_status.repeatCount + 1, m_playRepeatParam);
+            }
+            m_status.frameAddress = m_playStartPos;
+            m_status.repeatCount++;
+        } else {
+            fmt::println("CDBlock: playback ended");
+            m_status.frameAddress = m_playEndPos;
+            m_status.statusCode = kStatusCodePause;
+            m_targetDriveCycles = kDriveCyclesNotPlaying;
+            SetInterrupt(kHIRQ_PEND);
+        }
     }
 }
 
@@ -400,7 +466,7 @@ void CDBlock::ProcessCommand() {
     // case 0x20: CmdGetSubcodeQ_RW(); break;
     case 0x30: CmdSetCDDeviceConnection(); break;
     case 0x31: CmdGetCDDeviceConnection(); break;
-    // case 0x32: CmdGetLastBufferDest(); break;
+    case 0x32: CmdGetLastBufferDest(); break;
     case 0x40: CmdSetFilterRange(); break;
     case 0x41: CmdGetFilterRange(); break;
     case 0x42: CmdSetFilterSubheaderConditions(); break;
@@ -832,7 +898,7 @@ void CDBlock::CmdGetLastBufferDest() {
     // <blank>
     m_CR[0] = m_status.statusCode << 8u;
     m_CR[1] = 0x0000;
-    m_CR[2] = 0x0000; // TODO: set buffer partition number here
+    m_CR[2] = m_lastCDWritePartition << 8u;
     m_CR[3] = 0x0000;
 
     SetInterrupt(kHIRQ_CMOK);
