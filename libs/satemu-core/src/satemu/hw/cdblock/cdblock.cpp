@@ -812,9 +812,9 @@ void CDBlock::CmdGetLastBufferDest() {
     // <blank>
 
     // Output structure:
-    // status code     <blank>
+    // status code        <blank>
     // <blank>
-    // buffer number   <blank>
+    // partition number   <blank>
     // <blank>
     m_CR[0] = m_status.statusCode << 8u;
     m_CR[1] = 0x0000;
@@ -1062,9 +1062,9 @@ void CDBlock::CmdResetSelector() {
     fmt::println("CDBlock: -> Reset selector");
 
     // Input structure:
-    // 0x48           reset flags
+    // 0x48              reset flags
     // <blank>
-    // buffer number  <blank>
+    // partition number  <blank>
     // <blank>
     const uint8 resetFlags = bit::extract<0, 7>(m_CR[0]);
 
@@ -1159,9 +1159,9 @@ void CDBlock::CmdGetSectorNumber() {
     fmt::println("CDBlock: -> Get sector number");
 
     // Input structure:
-    // 0x51           <blank>
+    // 0x51              <blank>
     // <blank>
-    // buffer number  <blank>
+    // partition number  <blank>
     // <blank>
     // const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
 
@@ -1180,15 +1180,117 @@ void CDBlock::CmdGetSectorNumber() {
     SetInterrupt(kHIRQ_CMOK);
 }
 
-void CDBlock::CmdCalculateActualSize() {}
+void CDBlock::CmdCalculateActualSize() {
+    fmt::println("CDBlock: -> Calculate actual size");
 
-void CDBlock::CmdGetActualSize() {}
+    // Input structure:
+    // 0x52               <blank>
+    // sector offset
+    // partition number   <blank>
+    // sector number
+    // const uint16 sectorOffset = m_CR[1];
+    // const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
+    // const uint16 sectorNumber = m_CR[3];
 
-void CDBlock::CmdGetSectorInfo() {}
+    // TODO: calculate data size in words in specified partition starting from sectorOffset (0xFFFF = end) for
+    // sectorNumber sectors (0xFFFF = until the end)
 
-void CDBlock::CmdExecuteFADSearch() {}
+    // Output structure: standard CD status data
+    ReportCDStatus();
 
-void CDBlock::CmdGetFADSearchResults() {}
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
+}
+
+void CDBlock::CmdGetActualSize() {
+    fmt::println("CDBlock: -> Get actual size");
+
+    // Input structure:
+    // 0x53     <blank>
+    // <blank>
+    // <blank>
+    // <blank>
+
+    // Output structure:
+    // status code   calculated size bits 23-16 (in words)
+    // calculated size bits 15-0 (in words)
+    // <blank>
+    // <blank>
+    m_CR[0] = (m_status.statusCode << 8u); // TODO: calculated size
+    m_CR[1] = 0;                           // TODO: calculated size
+    m_CR[2] = 0x0000;
+    m_CR[3] = 0x0000;
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
+}
+
+void CDBlock::CmdGetSectorInfo() {
+    fmt::println("CDBlock: -> Get sector info");
+
+    // Input structure:
+    // 0x54               <blank>
+    // <blank>            sector number
+    // partition number   <blank>
+    // <blank>
+    // const uint8 sectorNumber = bit::extract<0, 7>(m_CR[1]);
+    // const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
+
+    // TODO:
+
+    // Output structure:
+    // status code          sector frame address bits 23-16
+    // sector frame address bits 15-0
+    // sector file number   sector coding number
+    // sector submode       sector coding info
+    m_CR[0] = (m_status.statusCode << 8u); // TODO: frame address high
+    m_CR[1] = 0;                           // TODO: frame address low
+    m_CR[2] = 0;                           // TODO: file number, coding number
+    m_CR[3] = 0;                           // TODO: submode, coding info
+
+    SetInterrupt(kHIRQ_CMOK);
+}
+
+void CDBlock::CmdExecuteFADSearch() {
+    fmt::println("CDBlock: -> Execute frame address search");
+
+    // Input structure:
+    // 0x55     <blank>
+    // sector position
+    // partition number   frame address bits 23-16
+    // frame address bits 15-0
+    // const uint16 sectorPos = m_CR[1];
+    // const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
+    // const uint32 frameAddress = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
+
+    // TODO: search for a sector with the largest FAD <= searched FAD within specified partition
+    // - how does sectorPos factor in here?
+
+    // Output structure: standard CD status data
+    ReportCDStatus();
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
+}
+
+void CDBlock::CmdGetFADSearchResults() {
+    fmt::println("CDBlock: -> Get frame address search results");
+
+    // Input structure:
+    // 0x56     <blank>
+    // <blank>
+    // <blank>
+    // <blank>
+
+    // Output structure:
+    // status code        <blank>
+    // sector position
+    // partition number   frame address bits 23-16
+    // frame address bits 15-0
+    m_CR[0] = (m_status.statusCode << 8u);
+    m_CR[1] = 0; // TODO: sector position
+    m_CR[2] = 0; // TODO: partition number, FAD high
+    m_CR[3] = 0; // TODO: FAD low
+
+    SetInterrupt(kHIRQ_CMOK);
+}
 
 void CDBlock::CmdSetSectorLength() {
     fmt::println("CDBlock: -> Set sector length");
