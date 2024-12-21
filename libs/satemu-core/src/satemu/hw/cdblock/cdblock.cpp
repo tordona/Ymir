@@ -590,7 +590,24 @@ void CDBlock::CmdInitializeCDSystem() {
     SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
 }
 
-void CDBlock::CmdOpenTray() {}
+void CDBlock::CmdOpenTray() {
+    fmt::println("CDBlock: -> Open tray");
+
+    // Input structure:
+    // 0x05     <blank>
+    // <blank>
+    // <blank>
+    // <blank>
+
+    // TODO: stop spinning disc
+    m_status.statusCode = kStatusCodeBusy;
+    m_discAuthStatus = 0;
+
+    // Output structure: standard CD status data
+    ReportCDStatus();
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_EFLS | kHIRQ_DCHG);
+}
 
 void CDBlock::CmdEndDataTransfer() {
     fmt::println("CDBlock: -> End data transfer");
@@ -671,9 +688,65 @@ void CDBlock::CmdSeekDisc() {
     SetInterrupt(kHIRQ_CMOK);
 }
 
-void CDBlock::CmdScanDisc() {}
+void CDBlock::CmdScanDisc() {
+    fmt::println("CDBlock: -> Scan disc");
 
-void CDBlock::CmdGetSubcodeQ_RW() {}
+    // Input structure:
+    // 0x12     scan direction
+    // <blank>
+    // <blank>
+    // <blank>
+    const uint8 direction = bit::extract<0, 7>(m_CR[0]);
+
+    // Output structure: standard CD status data
+    if (direction < 2) {
+        m_status.statusCode = kStatusCodeBusy;
+        // TODO: SetupScan(direction);
+        ReportCDStatus();
+    } else {
+        ReportCDStatus(kStatusReject);
+    }
+
+    SetInterrupt(kHIRQ_CMOK);
+}
+
+void CDBlock::CmdGetSubcodeQ_RW() {
+    fmt::println("CDBlock: -> Get Subcode Q/RW");
+
+    // Input structure:
+    // 0x20     type
+    // <blank>
+    // <blank>
+    // <blank>
+    // const uint8 type = bit::extract<0, 7>(m_CR[0]);
+
+    // TODO: handle types
+    //   type 0 = Q subcode
+    //   type 1 = R-W subcodes
+
+    // Output structure if valid:
+    // status code     <blank>
+    // Q/RW size in words (Q = 5, RW = 12)
+    // <blank>
+    // subcode flags
+    //
+    // TODO: raise kHIRQ_DRDY if valid
+    // TODO: setup read transfer if valid
+    // - subcode Q: 5 words
+    // - subcodes R-W: 12 words
+
+    // Output structure if invalid:
+    // 0x80   <blank>
+    // <blank>
+    // <blank>
+    // <blank>
+    m_CR[0] = 0x8000;
+    m_CR[1] = 0x0000;
+    m_CR[2] = 0x0000;
+    m_CR[3] = 0x0000;
+
+    SetInterrupt(kHIRQ_CMOK);
+}
 
 void CDBlock::CmdSetCDDeviceConnection() {
     fmt::println("CDBlock: -> Set CD device connection");
@@ -729,7 +802,27 @@ void CDBlock::CmdGetCDDeviceConnection() {
     SetInterrupt(kHIRQ_CMOK);
 }
 
-void CDBlock::CmdGetLastBufferDest() {}
+void CDBlock::CmdGetLastBufferDest() {
+    fmt::println("CDBlock: -> Get last buffer destination");
+
+    // Input structure:
+    // 0x32     <blank>
+    // <blank>
+    // <blank>
+    // <blank>
+
+    // Output structure:
+    // status code     <blank>
+    // <blank>
+    // buffer number   <blank>
+    // <blank>
+    m_CR[0] = m_status.statusCode << 8u;
+    m_CR[1] = 0x0000;
+    m_CR[2] = 0x0000; // TODO: set buffer partition number here
+    m_CR[3] = 0x0000;
+
+    SetInterrupt(kHIRQ_CMOK);
+}
 
 void CDBlock::CmdSetFilterRange() {
     fmt::println("CDBlock: -> Set filter range");
@@ -1040,7 +1133,27 @@ void CDBlock::CmdResetSelector() {
     SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
 }
 
-void CDBlock::CmdGetBufferSize() {}
+void CDBlock::CmdGetBufferSize() {
+    fmt::println("CDBlock: -> Get buffer size");
+
+    // Input structure:
+    // 0x50     <blank>
+    // <blank>
+    // <blank>
+    // <blank>
+
+    // Output structure:
+    // status code          <blank>
+    // free buffer count
+    // total filter count   <blank>
+    // total buffer count
+    m_CR[0] = m_status.statusCode << 8u;
+    m_CR[1] = 0; // TODO: free buffer count
+    m_CR[2] = m_filters.size() << 8u;
+    m_CR[3] = m_buffers.size();
+
+    SetInterrupt(kHIRQ_CMOK);
+}
 
 void CDBlock::CmdGetSectorNumber() {
     fmt::println("CDBlock: -> Get sector number");
