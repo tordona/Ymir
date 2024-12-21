@@ -43,7 +43,7 @@ public:
     template <mem_primitive T>
     T ReadData(uint32 address) {
         if (address == 0x98000) {
-            return DoTransfer();
+            return DoReadTransfer();
         } else {
             fmt::println("unhandled {}-bit CD Block data read from {:02X}", sizeof(T) * 8, address);
             return 0;
@@ -195,8 +195,10 @@ private:
     // Initializes a transfer of the specified type
     void SetupTransfer(TransferType type);
 
-    // Reads one word from the transfer
-    uint16 DoTransfer();
+    uint16 DoReadTransfer();
+    void DoWriteTransfer(uint16 value);
+
+    void AdvanceTransfer();
 
     // -------------------------------------------------------------------------
     // Buffers, partitions and filters

@@ -304,13 +304,21 @@ void CDBlock::ReportCDStatus(uint8 statusCode) {
 }
 
 void CDBlock::SetupTransfer(TransferType type) {
+    // const TransferType prevType = m_transferType;
     m_transferType = type;
     m_transferPos = 0;
     m_transferLength = 0;
     m_transferCount = 0x1FFFFFF;
 
     switch (type) {
-    case TransferType::None: fmt::println("CDBlock: Ending transfer"); break;
+    case TransferType::None:
+        fmt::println("CDBlock: Ending transfer");
+        // TODO:
+        /*if (prevType == TransferType::GetSector || prevType == TransferType::GetThenDeleteSector ||
+            prevType == TransferType::PutSector) {
+            SetInterrupt(kHIRQ_EHST);
+        }*/
+        break;
     case TransferType::TOC:
         fmt::println("CDBlock: Starting TOC transfer");
         m_transferLength = sizeof(media::Session::toc) / sizeof(uint16);
@@ -320,11 +328,10 @@ void CDBlock::SetupTransfer(TransferType type) {
     }
 }
 
-uint16 CDBlock::DoTransfer() {
+uint16 CDBlock::DoReadTransfer() {
     uint16 value = 0;
     switch (m_transferType) {
-    case TransferType::None: value = 0; break;
-    case TransferType::TOC: {
+    case TransferType::TOC:
         if (m_disc.sessions.empty()) {
             value = 0xFFFF;
         } else {
@@ -333,13 +340,23 @@ uint16 CDBlock::DoTransfer() {
             value = m_disc.sessions.back().toc[tocIndex] >> (evenWord * 16u);
         }
         break;
-    }
-    default:
-        assert(false); // this should never happen
-        value = 0;
-        break;
+    default: value = 0; break; // write-only or no active transfer
     }
 
+    AdvanceTransfer();
+
+    return value;
+}
+
+void CDBlock::DoWriteTransfer(uint16 value) {
+    // TODO: implement write transfers
+    /*switch (m_transferType) {
+    }*/
+
+    AdvanceTransfer();
+}
+
+void CDBlock::AdvanceTransfer() {
     m_transferPos += sizeof(uint16);
     m_transferCount += sizeof(uint16);
     if (m_transferPos >= m_transferLength) {
@@ -347,7 +364,6 @@ uint16 CDBlock::DoTransfer() {
         m_transferPos = 0;
         m_transferLength = 0;
     }
-    return value;
 }
 
 void CDBlock::DisconnectFilterInput(uint8 filterNumber) {
@@ -600,8 +616,8 @@ void CDBlock::CmdOpenTray() {
     // <blank>
     // <blank>
 
-    // TODO: stop spinning disc
-    m_status.statusCode = kStatusCodeBusy;
+    // TODO: stay in Busy status while disc stops spinning
+    m_status.statusCode = kStatusCodeOpen;
     m_discAuthStatus = 0;
 
     // Output structure: standard CD status data
@@ -619,8 +635,7 @@ void CDBlock::CmdEndDataTransfer() {
     // <blank>
     // <blank>
 
-    // TODO: stop any ongoing transfer
-    // - trigger kHIRQ_EHST on Get Sector Data, Get Then Delete Sector or Put Sector
+    SetupTransfer(TransferType::None);
 
     // Output structure:
     // status code      transferred word count bits 23-16
