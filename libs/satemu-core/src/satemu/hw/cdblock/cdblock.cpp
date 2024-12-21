@@ -16,7 +16,7 @@ void CDBlock::Reset(bool hard) {
     m_CR[3] = 0x434B; // 'CK'
 
     m_status.statusCode = kStatusCodePause;
-    m_status.frameAddress = 0x1FFFFFF;
+    m_status.frameAddress = 0xFFFFFF;
     m_status.flags = 0xF;
     m_status.repeatCount = 0xF;
     m_status.controlADR = 0xFF;
@@ -335,8 +335,8 @@ uint16 CDBlock::DoReadTransfer() {
         if (m_disc.sessions.empty()) {
             value = 0xFFFF;
         } else {
-            const bool evenWord = (m_transferPos & 2) == 0;
-            const std::size_t tocIndex = m_transferPos / sizeof(uint32);
+            const bool evenWord = (m_transferPos & 1) == 0;
+            const std::size_t tocIndex = m_transferPos * sizeof(uint16) / sizeof(uint32);
             value = m_disc.sessions.back().toc[tocIndex] >> (evenWord * 16u);
         }
         break;
@@ -357,8 +357,8 @@ void CDBlock::DoWriteTransfer(uint16 value) {
 }
 
 void CDBlock::AdvanceTransfer() {
-    m_transferPos += sizeof(uint16);
-    m_transferCount += sizeof(uint16);
+    m_transferPos++;
+    m_transferCount++;
     if (m_transferPos >= m_transferLength) {
         m_transferType = TransferType::None;
         m_transferPos = 0;
@@ -634,6 +634,8 @@ void CDBlock::CmdEndDataTransfer() {
     // <blank>
     // <blank>
 
+    const uint32 transferCount = m_transferCount;
+
     SetupTransfer(TransferType::None);
 
     // Output structure:
@@ -641,13 +643,10 @@ void CDBlock::CmdEndDataTransfer() {
     // transferred word count bits 15-0
     // <blank>
     // <blank>
-    const uint32 wordCount = m_transferCount / sizeof(uint16);
-    m_CR[0] = (m_status.statusCode << 8u) | (wordCount >> 16u);
-    m_CR[1] = wordCount;
+    m_CR[0] = (m_status.statusCode << 8u) | (transferCount >> 16u);
+    m_CR[1] = transferCount;
     m_CR[2] = 0x0000;
     m_CR[3] = 0x0000;
-
-    m_transferCount = 0x1FFFFFF;
 
     SetInterrupt(kHIRQ_CMOK);
 }

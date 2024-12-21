@@ -188,9 +188,9 @@ private:
     enum class TransferType { None, TOC };
 
     TransferType m_transferType; // Type of transfer in progress
-    uint32 m_transferPos;        // Current transfer position in bytes
-    uint32 m_transferLength;     // Total number of bytes to be transferred
-    uint32 m_transferCount;      // Number of bytes transferred in the last transfer
+    uint32 m_transferPos;        // Current transfer position in words
+    uint32 m_transferLength;     // Total number of words to be transferred
+    uint32 m_transferCount;      // Number of words transferred in the last transfer
 
     // Initializes a transfer of the specified type
     void SetupTransfer(TransferType type);
