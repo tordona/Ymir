@@ -1324,17 +1324,133 @@ void CDBlock::CmdSetSectorLength() {
     SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
 }
 
-void CDBlock::CmdGetSectorData() {}
+void CDBlock::CmdGetSectorData() {
+    fmt::println("CDBlock: -> Get sector data");
 
-void CDBlock::CmdDeleteSectorData() {}
+    // Input structure:
+    // 0x61               <blank>
+    // sector offset
+    // partition number   <blank>
+    // sector number
+    // const uint16 sectorOffset = m_CR[1];
+    // const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
+    // const uint16 sectorNumber = m_CR[3];
 
-void CDBlock::CmdGetThenDeleteSectorData() {}
+    // TODO: setup sector read transfer
+    // TODO: should set status flag kStatusFlagXferRequest until ready
 
-void CDBlock::CmdPutSectorData() {}
+    // Output structure: standard CD status data
+    ReportCDStatus();
 
-void CDBlock::CmdCopySectorData() {}
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_EHST);
+}
 
-void CDBlock::CmdMoveSectorData() {}
+void CDBlock::CmdDeleteSectorData() {
+    fmt::println("CDBlock: -> Delete sector data");
+
+    // Input structure:
+    // 0x62               <blank>
+    // sector position
+    // partition number   <blank>
+    // sector number
+    // const uint16 sectorPos = m_CR[1];
+    // const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
+    // const uint16 sectorNumber = m_CR[3];
+
+    // TODO: setup sector delete
+    // - if sectorPos is 0xFFFF, deletes sectorNumber sectors from the end
+    // - if sectorNumber is 0xFFFF, deletes from sectorPos until the end
+
+    // Output structure: standard CD status data
+    ReportCDStatus();
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_EHST);
+}
+
+void CDBlock::CmdGetThenDeleteSectorData() {
+    fmt::println("CDBlock: -> Get then delete sector data");
+
+    // Input structure:
+    // 0x63               <blank>
+    // sector offset
+    // partition number   <blank>
+    // sector number
+    // const uint16 sectorOffset = m_CR[1];
+    // const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
+    // const uint16 sectorNumber = m_CR[3];
+
+    // TODO: setup sector read transfer
+    // TODO: should set status flag kStatusFlagXferRequest until ready
+
+    // Output structure: standard CD status data
+    ReportCDStatus();
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_EHST | kHIRQ_DRDY);
+}
+
+void CDBlock::CmdPutSectorData() {
+    fmt::println("CDBlock: -> Put sector data");
+
+    // Input structure:
+    // 0x64               <blank>
+    // <blank>
+    // partition number   <blank>
+    // sector number
+    // const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
+    // const uint16 sectorNumber = m_CR[3];
+
+    // TODO: setup sector write transfer
+    // TODO: raise kHIRQ_EHST if not enough buffer space available
+    // TODO: should set status flag kStatusFlagXferRequest until ready
+
+    // Output structure: standard CD status data
+    ReportCDStatus();
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY);
+}
+
+void CDBlock::CmdCopySectorData() {
+    fmt::println("CDBlock: -> Copy sector data");
+
+    // Input structure:
+    // 0x65                      destination filter number
+    // sector offset
+    // source partition number   <blank>
+    // sector number
+    // const uint8 dstPartitionNumber = bit::extract<0, 7>(m_CR[0]);
+    // const uint16 sectorOffset = m_CR[1];
+    // const uint8 srcPartitionNumber = bit::extract<8, 15>(m_CR[2]);
+    // const uint16 sectorNumber = m_CR[3];
+
+    // TODO: setup async sector copy transfer
+    // TODO: report Reject status if not enough buffer space available
+
+    // Output structure: standard CD status data
+    ReportCDStatus();
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_ECPY);
+}
+
+void CDBlock::CmdMoveSectorData() {
+    fmt::println("CDBlock: -> Move sector data");
+
+    // Input structure:
+    // 0x66                      destination filter number
+    // sector offset
+    // source partition number   <blank>
+    // sector number
+    // const uint8 dstPartitionNumber = bit::extract<0, 7>(m_CR[0]);
+    // const uint16 sectorOffset = m_CR[1];
+    // const uint8 srcPartitionNumber = bit::extract<8, 15>(m_CR[2]);
+    // const uint16 sectorNumber = m_CR[3];
+
+    // TODO: setup async sector move transfer
+
+    // Output structure: standard CD status data
+    ReportCDStatus();
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_ECPY);
+}
 
 void CDBlock::CmdGetCopyError() {
     fmt::println("CDBlock: -> Get copy error");
