@@ -384,8 +384,7 @@ void CDBlock::SetupCommand() {
 
 void CDBlock::ProcessCommand() {
     const uint8 cmd = m_CR[0] >> 8u;
-    fmt::println("CDBlock: processing command {:02X}  {:04X} {:04X} {:04X} {:04X}", cmd, m_CR[0], m_CR[1], m_CR[2],
-                 m_CR[3]);
+    fmt::println("CDBlock: processing command {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
 
     switch (cmd) {
     case 0x00: CmdGetStatus(); break;
@@ -411,7 +410,7 @@ void CDBlock::ProcessCommand() {
     case 0x46: CmdSetFilterConnection(); break;
     case 0x47: CmdGetFilterConnection(); break;
     case 0x48: CmdResetSelector(); break;
-    // case 0x50: CmdGetBufferSize(); break;
+    case 0x50: CmdGetBufferSize(); break;
     case 0x51: CmdGetSectorNumber(); break;
     // case 0x52: CmdCalculateActualSize(); break;
     // case 0x53: CmdGetActualSize(); break;
