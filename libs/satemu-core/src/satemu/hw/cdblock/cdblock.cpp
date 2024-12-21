@@ -43,10 +43,10 @@ void CDBlock::Reset(bool hard) {
     m_HIRQ = 0x0BC1; // 0x0BE1;
     m_HIRQMASK = 0;
 
-    m_transferType = TransferType::None;
-    m_transferPos = 0;
-    m_transferLength = 0;
-    m_transferCount = 0x1FFFFFF;
+    m_xferType = TransferType::None;
+    m_xferPos = 0;
+    m_xferLength = 0;
+    m_xferCount = 0x1FFFFFF;
 
     m_bufferManager.Reset();
     m_partitionManager.Reset();
@@ -277,7 +277,7 @@ void CDBlock::ProcessDriveStatePlay() {
 
                 // Sanity check: is the track valid?
                 if (track != nullptr) [[likely]] {
-                    buffer->size = track->ReadSectorRaw(m_status.frameAddress, buffer->data);
+                    buffer->size = track->ReadSectorRaw(m_status.frameAddress - track->startFrameAddress, buffer->data);
 
                     fmt::println("CDBlock: playback: read {} bytes", buffer->size);
 
@@ -369,43 +369,89 @@ void CDBlock::ReportCDStatus(uint8 statusCode) {
     m_CR[3] = m_status.frameAddress;
 }
 
-void CDBlock::SetupTransfer(TransferType type) {
-    // const TransferType prevType = m_transferType;
-    m_transferType = type;
-    m_transferPos = 0;
-    m_transferLength = 0;
-    m_transferCount = 0x1FFFFFF;
+void CDBlock::SetupTOCTransfer() {
+    fmt::println("CDBlock: Starting TOC transfer");
+    m_xferType = TransferType::TOC;
+    m_xferPos = 0;
+    m_xferLength = sizeof(media::Session::toc) / sizeof(uint16);
+    m_xferCount = 0;
+}
 
-    switch (type) {
-    case TransferType::None:
-        fmt::println("CDBlock: Ending transfer");
-        // TODO:
-        /*if (prevType == TransferType::GetSector || prevType == TransferType::GetThenDeleteSector ||
-            prevType == TransferType::PutSector) {
-            SetInterrupt(kHIRQ_EHST);
-        }*/
-        break;
-    case TransferType::TOC:
-        fmt::println("CDBlock: Starting TOC transfer");
-        m_transferLength = sizeof(media::Session::toc) / sizeof(uint16);
-        m_transferCount = 0;
-        break;
-    default: assert(false); break; // this should never happen
+void CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8 partitionNumber, bool del) {
+    fmt::println("CDBlock: Starting sector {} transfer - sectors {} to {} into buffer partition {}",
+                 (del ? "read then delete" : "read"), sectorPos, sectorPos + sectorCount - 1, partitionNumber);
+    m_xferType = del ? TransferType::GetThenDeleteSector : TransferType::GetSector;
+    const uint8 partitionSize = m_partitionManager.GetBufferCount(partitionNumber);
+    if (sectorPos == 0xFFFF) {
+        m_xferSectorPos = partitionSize - sectorCount;
+        m_xferSectorEnd = partitionSize - 1;
+    } else if (sectorCount == 0xFFFF) {
+        m_xferSectorPos = sectorPos;
+        m_xferSectorEnd = partitionSize - 1;
+    } else {
+        m_xferSectorPos = sectorPos;
+        m_xferSectorEnd = std::min<uint32>(sectorPos + sectorCount - 1, partitionSize);
     }
+    m_xferPartition = partitionNumber;
+
+    m_xferPos = 0;
+    m_xferLength = m_getSectorLength / sizeof(uint16) * (m_xferSectorEnd - m_xferSectorPos + 1);
+    m_xferCount = 0;
+}
+
+void CDBlock::EndTransfer() {
+    fmt::println("CDBlock: Ending transfer");
+
+    // Trigger EHST HIRQ if ending certain sector transfers
+    switch (m_xferType) {
+    case TransferType::GetSector:
+    case TransferType::GetThenDeleteSector: SetInterrupt(kHIRQ_EHST); break;
+    default: break;
+    }
+
+    m_xferType = TransferType::None;
+    m_xferPos = 0;
+    m_xferLength = 0;
+    m_xferCount = 0xFFFFFF;
 }
 
 uint16 CDBlock::DoReadTransfer() {
     uint16 value = 0;
-    switch (m_transferType) {
+    switch (m_xferType) {
     case TransferType::TOC:
         if (m_disc.sessions.empty()) {
             value = 0xFFFF;
         } else {
-            const bool evenWord = (m_transferPos & 1) == 0;
-            const std::size_t tocIndex = m_transferPos * sizeof(uint16) / sizeof(uint32);
+            const bool evenWord = (m_xferPos & 1) == 0;
+            const std::size_t tocIndex = m_xferPos * sizeof(uint16) / sizeof(uint32);
             value = m_disc.sessions.back().toc[tocIndex] >> (evenWord * 16u);
         }
         break;
+
+    case TransferType::GetSector:
+    case TransferType::GetThenDeleteSector: {
+        // TODO: honor m_xferSectorPos (or at least the initial offset)
+        // TODO: cache buffer
+        Buffer *buffer = m_partitionManager.GetTail(m_xferPartition);
+
+        // TODO: honor m_getSectorLength
+        // - raw sector read should generate or mock missing parts
+        // - transfers should skip the sync bytes and header depending on m_getSectorLength:
+        //   - 2048: skip 16 bytes
+        //   - 2336: skip 16 bytes
+        //   - 2340: skip 12 bytes
+        //   - 2352: no skip
+        // Sector structure
+        // | 12 bytes | 4 bytes | 2048 bytes | 288 bytes |
+        // | sync     | header  | user data  | subheader |
+        value = util::ReadBE<uint16>(&buffer->data[(m_xferPos * sizeof(uint16)) & 2047]);
+
+        if (m_xferType == TransferType::GetThenDeleteSector) {
+            // TODO: implement - delete sector once fully read
+        }
+        break;
+    }
+
     default: value = 0; break; // write-only or no active transfer
     }
 
@@ -416,19 +462,19 @@ uint16 CDBlock::DoReadTransfer() {
 
 void CDBlock::DoWriteTransfer(uint16 value) {
     // TODO: implement write transfers
-    /*switch (m_transferType) {
+    /*switch (m_xferType) {
     }*/
 
     AdvanceTransfer();
 }
 
 void CDBlock::AdvanceTransfer() {
-    m_transferPos++;
-    m_transferCount++;
-    if (m_transferPos >= m_transferLength) {
-        m_transferType = TransferType::None;
-        m_transferPos = 0;
-        m_transferLength = 0;
+    m_xferPos++;
+    m_xferCount++;
+    if (m_xferPos >= m_xferLength) {
+        m_xferType = TransferType::None;
+        m_xferPos = 0;
+        m_xferLength = 0;
     }
 }
 
@@ -484,9 +530,9 @@ void CDBlock::ProcessCommand() {
     // case 0x55: CmdExecuteFADSearch(); break;
     // case 0x56: CmdGetFADSearchResults(); break;
     case 0x60: CmdSetSectorLength(); break;
-    // case 0x61: CmdGetSectorData(); break;
-    // case 0x62: CmdDeleteSectorData(); break;
-    // case 0x63: CmdGetThenDeleteSectorData(); break;
+    case 0x61: CmdGetSectorData(); break;
+    case 0x62: CmdDeleteSectorData(); break;
+    case 0x63: CmdGetThenDeleteSectorData(); break;
     // case 0x64: CmdPutSectorData(); break;
     // case 0x65: CmdCopySectorData(); break;
     // case 0x66: CmdMoveSectorData(); break;
@@ -574,7 +620,7 @@ void CDBlock::CmdGetTOC() {
     // <blank>
     // <blank>
 
-    SetupTransfer(TransferType::TOC);
+    SetupTOCTransfer();
 
     // Output structure:
     // status code   <blank>
@@ -700,9 +746,9 @@ void CDBlock::CmdEndDataTransfer() {
     // <blank>
     // <blank>
 
-    const uint32 transferCount = m_transferCount;
+    const uint32 transferCount = m_xferCount;
 
-    SetupTransfer(TransferType::None);
+    EndTransfer();
 
     // Output structure:
     // status code      transferred word count bits 23-16
@@ -1408,17 +1454,28 @@ void CDBlock::CmdGetSectorData() {
     // sector offset
     // partition number   <blank>
     // sector number
-    // const uint16 sectorOffset = m_CR[1];
-    // const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
-    // const uint16 sectorNumber = m_CR[3];
+    const uint16 sectorOffset = m_CR[1];
+    const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
+    const uint16 sectorNumber = m_CR[3];
 
-    // TODO: setup sector read transfer
-    // TODO: should set status flag kStatusFlagXferRequest until ready
+    bool reject = false;
+    if (partitionNumber >= m_partitionManager.PartitionCount()) [[unlikely]] {
+        reject = true;
+    } else if (m_partitionManager.GetBufferCount(partitionNumber) == 0) [[unlikely]] {
+        reject = true;
+    } else {
+        SetupGetSectorTransfer(sectorOffset, sectorNumber, partitionNumber, false);
+        // TODO: should set status flag kStatusFlagXferRequest until ready
+    }
 
     // Output structure: standard CD status data
-    ReportCDStatus();
+    if (reject) [[unlikely]] {
+        ReportCDStatus(kStatusReject);
+    } else {
+        ReportCDStatus();
+    }
 
-    SetInterrupt(kHIRQ_CMOK | kHIRQ_EHST);
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY | kHIRQ_EHST);
 }
 
 void CDBlock::CmdDeleteSectorData() {
@@ -1451,17 +1508,28 @@ void CDBlock::CmdGetThenDeleteSectorData() {
     // sector offset
     // partition number   <blank>
     // sector number
-    // const uint16 sectorOffset = m_CR[1];
-    // const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
-    // const uint16 sectorNumber = m_CR[3];
+    const uint16 sectorOffset = m_CR[1];
+    const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
+    const uint16 sectorNumber = m_CR[3];
 
-    // TODO: setup sector read transfer
-    // TODO: should set status flag kStatusFlagXferRequest until ready
+    bool reject = false;
+    if (partitionNumber >= m_partitionManager.PartitionCount()) [[unlikely]] {
+        reject = true;
+    } else if (m_partitionManager.GetBufferCount(partitionNumber) == 0) [[unlikely]] {
+        reject = true;
+    } else {
+        SetupGetSectorTransfer(sectorOffset, sectorNumber, partitionNumber, true);
+        // TODO: should set status flag kStatusFlagXferRequest until ready
+    }
 
     // Output structure: standard CD status data
-    ReportCDStatus();
+    if (reject) [[unlikely]] {
+        ReportCDStatus(kStatusReject);
+    } else {
+        ReportCDStatus();
+    }
 
-    SetInterrupt(kHIRQ_CMOK | kHIRQ_EHST | kHIRQ_DRDY);
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY | kHIRQ_EHST);
 }
 
 void CDBlock::CmdPutSectorData() {

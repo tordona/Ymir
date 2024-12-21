@@ -65,6 +65,7 @@ public:
     template <mem_primitive T>
     T ReadRegImpl(uint32 address) {*/
         switch (address) {
+        case 0x00: return DoReadTransfer();
         case 0x08: return m_HIRQ;
         case 0x0C: return m_HIRQMASK;
         case 0x18: return m_CR[0];
@@ -82,6 +83,7 @@ public:
     void WriteReg(uint32 address, T value) {
         // fmt::println("{}-bit CD Block register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
         switch (address) {
+        case 0x00: DoWriteTransfer(value); break;
         case 0x08:
             m_HIRQ &= value;
             UpdateInterrupts();
@@ -187,15 +189,20 @@ private:
     // -------------------------------------------------------------------------
     // Data transfers
 
-    enum class TransferType { None, TOC };
+    enum class TransferType { None, TOC, GetSector, GetThenDeleteSector };
 
-    TransferType m_transferType; // Type of transfer in progress
-    uint32 m_transferPos;        // Current transfer position in words
-    uint32 m_transferLength;     // Total number of words to be transferred
-    uint32 m_transferCount;      // Number of words transferred in the last transfer
+    TransferType m_xferType; // Type of transfer in progress
+    uint32 m_xferPos;        // Current transfer position in words
+    uint32 m_xferLength;     // Total number of words to be transferred
+    uint32 m_xferCount;      // Number of words transferred in the last transfer
+    uint32 m_xferSectorPos;  // Current transfer sector position
+    uint32 m_xferSectorEnd;  // Last sector to transfer
+    uint8 m_xferPartition;   // From which partition to read
+    // uint8 m_xferFilter;      // To which filter to write
 
-    // Initializes a transfer of the specified type
-    void SetupTransfer(TransferType type);
+    void SetupTOCTransfer();
+    void SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8 partitionNumber, bool del);
+    void EndTransfer();
 
     uint16 DoReadTransfer();
     void DoWriteTransfer(uint16 value);
@@ -421,6 +428,10 @@ private:
         uint8 GetBufferCount(uint8 partitionIndex) const {
             assert(partitionIndex < m_partitions.size());
             return m_partitions[partitionIndex].GetBufferCount();
+        }
+
+        constexpr uint8 PartitionCount() const {
+            return m_partitions.size();
         }
 
         // TODO: get buffer at index?
