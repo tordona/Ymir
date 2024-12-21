@@ -1462,7 +1462,7 @@ void CDBlock::CmdGetCopyError() {
     // <blank>
 
     // Output structure:
-    // status code      error code
+    // status code   error code
     // <blank>
     // <blank>
     // <blank>
@@ -1478,11 +1478,10 @@ void CDBlock::CmdChangeDirectory() {
     fmt::println("CDBlock: -> Change directory");
 
     // Input structure:
-    // 0x70     <blank>
+    // 0x70            <blank>
     // <blank>
     // filter number   file ID bits 23-16
     // file ID bits 15-0
-
     const uint8 filterNum = bit::extract<8, 15>(m_CR[2]);
     const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
 
@@ -1505,13 +1504,94 @@ void CDBlock::CmdChangeDirectory() {
     SetInterrupt(kHIRQ_CMOK | kHIRQ_EFLS);
 }
 
-void CDBlock::CmdReadDirectory() {}
+void CDBlock::CmdReadDirectory() {
+    fmt::println("CDBlock: -> Read directory");
 
-void CDBlock::CmdGetFileSystemScope() {}
+    // Input structure:
+    // 0x71            <blank>
+    // <blank>
+    // filter number   file ID bits 23-16
+    // file ID bits 15-0
+    // const uint8 filterNum = bit::extract<8, 15>(m_CR[2]);
+    // const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
 
-void CDBlock::CmdGetFileInfo() {}
+    // TODO: read directory contents starting from fileID
+    // TODO: write sectors to specified filter
 
-void CDBlock::CmdReadFile() {}
+    // Output structure: standard CD status data
+    ReportCDStatus();
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_EFLS);
+}
+
+void CDBlock::CmdGetFileSystemScope() {
+    fmt::println("CDBlock: -> Get file system scope");
+
+    // Input structure:
+    // 0x72     <blank>
+    // <blank>
+    // <blank>
+    // <blank>
+
+    // Output structure:
+    // status code            <blank>
+    // index number
+    // directory end offset   first file ID bits 23-16
+    // first file ID bits 15-0
+    m_CR[0] = m_status.statusCode << 8u;
+    m_CR[1] = 0; // TODO: index number
+    m_CR[2] = 0; // TODO: directory end offset, first file ID high
+    m_CR[3] = 0; // TODO: first file ID low
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_EFLS);
+}
+
+void CDBlock::CmdGetFileInfo() {
+    fmt::println("CDBlock: -> Get file info");
+
+    // Input structure:
+    // 0x73     <blank>
+    // <blank>
+    // <blank>  file ID bits 23-16
+    // file ID bits 15-0
+    // const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
+
+    // TODO: setup read transfer from the file info table
+
+    // Output structure:
+    // status code            <blank>
+    // file info size in bytes
+    // <blank>
+    // <blank>
+    m_CR[0] = m_status.statusCode << 8u;
+    m_CR[1] = 0x0000; // TODO: file info size in bytes
+    m_CR[2] = 0x0000;
+    m_CR[3] = 0x0000;
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY);
+}
+
+void CDBlock::CmdReadFile() {
+    fmt::println("CDBlock: -> Get file info");
+
+    // Input structure:
+    // 0x74            offset bits 23-16
+    // offset bits 15-0
+    // filter number   file ID bits 23-16
+    // file ID bits 15-0
+    // const uint32 offset = (bit::extract<0, 7>(m_CR[0]) << 16u) | m_CR[1];
+    // const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
+    // const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
+
+    // TODO: setup file "playback"
+
+    // Output structure: standard CD status data
+    ReportCDStatus();
+
+    // TODO: trigger kHIRQ_EFLS when done reading the entire file(last frame written to buffer)
+
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY);
+}
 
 void CDBlock::CmdAbortFile() {
     fmt::println("CDBlock: -> Abort file");
