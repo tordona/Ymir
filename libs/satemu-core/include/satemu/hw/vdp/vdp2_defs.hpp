@@ -353,8 +353,8 @@ struct SpecialFunctionCodes {
 //                               011 (3) = 704 pixels - Hi-Res Graphic B (NTSC or PAL)
 //                               100 (4) = 320 pixels - Exclusive Normal Graphic A (31 KHz monitor)
 //                               101 (5) = 352 pixels - Exclusive Normal Graphic B (Hi-Vision monitor)
-//                               110 (4) = 640 pixels - Exclusive Hi-Res Graphic A (31 KHz monitor)
-//                               111 (5) = 704 pixels - Exclusive Hi-Res Graphic B (Hi-Vision monitor)
+//                               110 (6) = 640 pixels - Exclusive Hi-Res Graphic A (31 KHz monitor)
+//                               111 (7) = 704 pixels - Exclusive Hi-Res Graphic B (Hi-Vision monitor)
 union TVMD_t {
     uint16 u16;
     struct {

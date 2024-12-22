@@ -121,14 +121,14 @@ void VDP::UpdateResolution() {
     //   HSy = Horizontal Sync
     //   LBd = Left Border
     //   ADp = Active Display
-    static constexpr std::array<std::array<uint32, 4>, 4> hTimings{{
+    static constexpr std::array<std::array<uint32, 4>, 8> hTimings{{
         // RBd, HSy, LBd, ADp
         {320, 347, 400, 427},
         {352, 375, 432, 455},
         {640, 694, 800, 854},
         {704, 375, 864, 910},
     }};
-    m_HTimings = hTimings[m_VDP2.TVMD.HRESOn];
+    m_HTimings = hTimings[m_VDP2.TVMD.HRESOn & 3]; // TODO: check exclusive monitor timings
 
     // Vertical phase timings
     //   BBd = Bottom Border
@@ -1277,7 +1277,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGLayer
 
 FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex) {
     const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint32);
-    const uint32 charData = util::ReadBE<uint32>(&m_VRAM2[charAddress]);
+    const uint32 charData = util::ReadBE<uint32>(&m_VRAM2[charAddress & 0x7FFFF]);
 
     Character ch{};
     ch.charNum = bit::extract<0, 14>(charData);
@@ -1404,7 +1404,7 @@ template <bool fourCellChar, bool largePalette, bool wideChar>
 FORCE_INLINE VDP::Character VDP::VDP2FetchOneWordCharacter(const NormBGParams &bgParams, uint32 pageBaseAddress,
                                                            uint32 charIndex) {
     const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint16);
-    const uint16 charData = util::ReadBE<uint16>(&m_VRAM2[charAddress]);
+    const uint16 charData = util::ReadBE<uint16>(&m_VRAM2[charAddress & 0x7FFFF]);
 
     /*
     Contents of 1 word character patterns vary based on Character Size, Character Color Count and Auxiliary Mode:
