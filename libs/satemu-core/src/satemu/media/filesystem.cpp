@@ -2,13 +2,16 @@
 
 #include <satemu/util/scope_guard.hpp>
 
+#include <cassert>
+
 using namespace satemu::media::iso9660;
 
 namespace satemu::media::fs {
 
 bool Filesystem::Read(const Disc &disc) {
     m_directories.clear();
-    m_currDirectory = 0;
+    m_currDirectory = ~0;
+    m_currFileOffset = 0;
 
     util::ScopeGuard sgInvalidate = [&] { m_directories.clear(); };
 
@@ -60,7 +63,8 @@ bool Filesystem::Read(const Disc &disc) {
             if (m_directories.empty()) {
                 return false;
             } else {
-                m_currDirectory = 1;
+                m_currDirectory = 0;
+                m_currFileOffset = 0;
                 return true;
             }
         }
@@ -85,20 +89,39 @@ bool Filesystem::Read(const Disc &disc) {
 }
 
 bool Filesystem::ChangeDirectory(uint32 fileID, const Filter &filter) {
+    // TODO: use filter somehow
+
+    if (m_directories.empty()) {
+        return false;
+    }
+
     if (fileID == 0xFFFFFF) {
         // Go to root directory; should be the first in the list
-        // TODO: refactor/simplify code
-        if (m_directories.size() > 0) {
-            m_currDirectory = 1;
-            // TODO: read first 256 directory entries using filter
-            return true;
-        } else {
-            return false;
-        }
+        m_currDirectory = 0;
+    } else if (m_currDirectory != ~0 && fileID - m_currFileOffset < m_directories.size()) {
+        // Go to specified directory
+        m_currDirectory = fileID - m_currFileOffset;
     } else {
-        // TODO: how do we find this fileID?
+        // File ID out of range or invalid current directory
+        return false;
     }
-    return false;
+
+    m_currFileOffset = 0;
+    return true;
+}
+
+uint32 Filesystem::GetFileCount() const {
+    if (m_directories.empty()) {
+        // No file system loaded
+        return 0;
+    }
+    if (m_currDirectory == ~0) {
+        // Invalid directory
+        return 0;
+    }
+    assert(m_currDirectory < m_directories.size());
+
+    return m_directories[m_currDirectory].GetContents().size() - 2;
 }
 
 bool Filesystem::ReadPathTableRecords(const Track &track, const media::iso9660::VolumeDescriptor &volDesc) {

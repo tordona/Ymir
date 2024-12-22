@@ -451,7 +451,7 @@ uint16 CDBlock::DoReadTransfer() {
             // Delete sector once fully read
             // TODO: fix this super hacky end-of-sector "detection"
             // - should also honor m_xferSectorPos (or at least the initial offset)
-            if (m_xferPos > 0 && bufferPos >= 2046) {
+            if (bufferPos >= 2046) {
                 m_partitionManager.RemoveTail(m_xferPartition);
             }
         }
@@ -545,7 +545,7 @@ void CDBlock::ProcessCommand() {
     case 0x67: CmdGetCopyError(); break;
     case 0x70: CmdChangeDirectory(); break;
     // case 0x71: CmdReadDirectory(); break;
-    // case 0x72: CmdGetFileSystemScope(); break;
+    case 0x72: CmdGetFileSystemScope(); break;
     // case 0x73: CmdGetFileInfo(); break;
     // case 0x74: CmdReadFile(); break;
     case 0x75: CmdAbortFile(); break;
@@ -1636,16 +1636,14 @@ void CDBlock::CmdChangeDirectory() {
     const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
 
     // Output structure: standard CD status data
+    bool reject = false;
     if (filterNum < m_filters.size()) {
-        // TODO: read from file system
-        if (m_fs.ChangeDirectory(fileID, m_filters[filterNum])) {
-            // succeeded
-            ReportCDStatus();
-        } else {
-            // failed
-            ReportCDStatus(kStatusReject);
-        }
+        reject = !m_fs.ChangeDirectory(fileID, m_filters[filterNum]);
     } else if (filterNum == 0xFF) {
+        reject = true;
+    }
+
+    if (reject) [[unlikely]] {
         ReportCDStatus(kStatusReject);
     } else {
         ReportCDStatus();
@@ -1688,10 +1686,14 @@ void CDBlock::CmdGetFileSystemScope() {
     // index number
     // directory end offset   first file ID bits 23-16
     // first file ID bits 15-0
+
+    const uint32 fileCount = m_fs.GetFileCount();
+    const uint32 fileOffset = m_fs.GetFileOffset();
+    const bool endOfDirectory = fileOffset + 254 >= fileCount;
     m_CR[0] = m_status.statusCode << 8u;
-    m_CR[1] = 0; // TODO: index number
-    m_CR[2] = 0; // TODO: directory end offset, first file ID high
-    m_CR[3] = 0; // TODO: first file ID low
+    m_CR[1] = m_fs.GetFileCount();
+    m_CR[2] = (endOfDirectory << 8u) | bit::extract<16, 23>(fileOffset);
+    m_CR[3] = bit::extract<0, 15>(fileOffset);
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_EFLS);
 }

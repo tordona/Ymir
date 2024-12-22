@@ -94,11 +94,20 @@ public:
     // The filesystem state is not modified on failure.
     bool ChangeDirectory(uint32 fileID, const Filter &filter);
 
+    // Returns the current file offset for file listings.
+    uint32 GetFileOffset() const {
+        return m_currFileOffset;
+    }
+
+    // Returns the number of files in the current directory, minus the self and parent directory references (. and ..)
+    uint32 GetFileCount() const;
+
 private:
     // Directories parsed from the path table records.
     std::vector<Directory> m_directories;
 
     uint32 m_currDirectory;
+    uint32 m_currFileOffset;
 
     bool ReadPathTableRecords(const Track &track, const media::iso9660::VolumeDescriptor &volDesc);
 };
