@@ -400,7 +400,7 @@ void CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8
 }
 
 void CDBlock::EndTransfer() {
-    fmt::println("CDBlock: Ending transfer");
+    fmt::println("CDBlock: Ending transfer at {} of {} words", m_xferPos, m_xferLength);
 
     // Trigger EHST HIRQ if ending certain sector transfers
     switch (m_xferType) {
@@ -434,6 +434,8 @@ uint16 CDBlock::DoReadTransfer() {
         // TODO: cache buffer
         Buffer *buffer = m_partitionManager.GetTail(m_xferPartition);
 
+        // TODO: check why it's transferring only half of the total data
+
         // TODO: honor m_getSectorLength
         // - raw sector read should generate or mock missing parts
         // - transfers should skip the sync bytes and header depending on m_getSectorLength:
@@ -444,10 +446,16 @@ uint16 CDBlock::DoReadTransfer() {
         // Sector structure
         // | 12 bytes | 4 bytes | 2048 bytes | 288 bytes |
         // | sync     | header  | user data  | subheader |
-        value = util::ReadBE<uint16>(&buffer->data[(m_xferPos * sizeof(uint16)) & 2047]);
+        const uint16 bufferPos = (m_xferPos * sizeof(uint16)) & 2047;
+        value = util::ReadBE<uint16>(&buffer->data[bufferPos]);
 
         if (m_xferType == TransferType::GetThenDeleteSector) {
-            // TODO: implement - delete sector once fully read
+            // Delete sector once fully read
+            // TODO: fix this super hacky end-of-sector "detection"
+            // - should also honor m_xferSectorPos (or at least the initial offset)
+            if (m_xferPos > 0 && bufferPos == 0) {
+                m_partitionManager.RemoveTail(m_xferPartition);
+            }
         }
         break;
     }

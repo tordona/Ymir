@@ -404,7 +404,7 @@ private:
         }
 
         Buffer *RemoveTail(uint8 partitionIndex) {
-            assert(partitionIndex >= m_partitions.size());
+            assert(partitionIndex < m_partitions.size());
 
             Buffer *buffer = m_partitions[partitionIndex].RemoveTail();
             m_bufferManager.Free(buffer);
