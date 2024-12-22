@@ -1734,7 +1734,7 @@ void CDBlock::CmdGetFileSystemScope() {
     // directory end offset   first file ID bits 23-16
     // first file ID bits 15-0
 
-    const uint32 fileOffset = m_fs.GetFileOffset();
+    const uint32 fileOffset = m_fs.GetFileOffset() + 2;
     const uint32 fileCount = m_fs.GetFileCount();
     const bool endOfDirectory = fileOffset + 254 >= fileCount;
     m_CR[0] = m_status.statusCode << 8u;
