@@ -41,21 +41,6 @@ public:
     // TODO: handle 8-bit and 32-bit accesses properly
 
     template <mem_primitive T>
-    T ReadData(uint32 address) {
-        if (address == 0x98000) {
-            return DoReadTransfer(); // TODO: should be InfoReadTransfer();
-        } else {
-            fmt::println("unhandled {}-bit CD Block data read from {:02X}", sizeof(T) * 8, address);
-            return 0;
-        }
-    }
-
-    template <mem_primitive T>
-    void WriteData(uint32 address, T value) {
-        fmt::println("unhandled {}-bit CD Block data write to {:02X} = {:X}", sizeof(T) * 8, address, value);
-    }
-
-    template <mem_primitive T>
     T ReadReg(uint32 address) {
         /*T value = ReadRegImpl<T>(address);
         fmt::println("{}-bit CD Block register read from {:02X} = {:X}", sizeof(T) * 8, address, value);
@@ -65,8 +50,8 @@ public:
     template <mem_primitive T>
     T ReadRegImpl(uint32 address) {*/
         switch (address) {
-        case 0x00: return DoReadTransfer(); // TODO: should be DataReadTransfer();
-        case 0x02: return DoReadTransfer(); // TODO: should be DataReadTransfer();
+        case 0x00: return DoReadTransfer();
+        case 0x02: return DoReadTransfer();
         case 0x08: return m_HIRQ;
         case 0x0C: return m_HIRQMASK;
         case 0x18: return m_CR[0];
@@ -84,8 +69,8 @@ public:
     void WriteReg(uint32 address, T value) {
         // fmt::println("{}-bit CD Block register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
         switch (address) {
-        case 0x00: DoWriteTransfer(value); break; // TODO: should be DataWriteTransfer(value);
-        case 0x02: DoWriteTransfer(value); break; // TODO: should be DataWriteTransfer(value);
+        case 0x00: DoWriteTransfer(value); break;
+        case 0x02: DoWriteTransfer(value); break;
         case 0x08:
             m_HIRQ &= value;
             UpdateInterrupts();

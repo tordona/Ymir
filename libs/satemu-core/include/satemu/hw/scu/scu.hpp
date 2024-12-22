@@ -132,17 +132,14 @@ private:
             value |= ReadABus<uint16>(address + 2) << 0u;
             return value;
         } else if (AddressInRange<0x580'0000, 0x58F'FFFF>(address)) {
-            if ((address & 0x7FFF) < 0x1000 && address < 0x5891000) {
+            if ((address & 0x7FFF) < 0x1000) {
                 // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
-                // These 4 KiB blocks are mapped every 32 KiB, up to 0x25891000.
+                // These 4 KiB blocks are mapped every 32 KiB.
                 return m_CDBlock.ReadReg<T>(address & 0x3F);
-            } else {
-                return m_CDBlock.ReadData<T>(address & 0xFFFFF);
             }
-        } else {
-            fmt::println("unhandled {}-bit SCU A-Bus read from {:05X}", sizeof(T) * 8, address);
-            return 0;
         }
+        fmt::println("unhandled {}-bit SCU A-Bus read from {:05X}", sizeof(T) * 8, address);
+        return 0;
     }
 
     template <mem_primitive T>
@@ -187,17 +184,16 @@ private:
             // 32-bit writes are split into two 16-bit writes
             WriteABus<uint16>(address + 0, value >> 16u);
             WriteABus<uint16>(address + 2, value >> 0u);
+            return;
         } else if (AddressInRange<0x580'0000, 0x58F'FFFF>(address)) {
-            if ((address & 0x7FFF) < 0x1000 && address < 0x5891000) {
+            if ((address & 0x7FFF) < 0x1000) {
                 // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
-                // These 4 KiB blocks are mapped every 32 KiB, up to 0x25891000.
+                // These 4 KiB blocks are mapped every 32 KiB.
                 m_CDBlock.WriteReg<T>(address & 0x3F, value);
-            } else {
-                m_CDBlock.WriteData<T>(address & 0xFFFFF, value);
+                return;
             }
-        } else {
-            fmt::println("unhandled {}-bit SCU A-Bus write to {:05X} = {:X}", sizeof(T) * 8, address, value);
         }
+        fmt::println("unhandled {}-bit SCU A-Bus write to {:05X} = {:X}", sizeof(T) * 8, address, value);
     }
 
     template <mem_primitive T>
