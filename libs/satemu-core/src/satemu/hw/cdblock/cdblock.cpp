@@ -61,6 +61,8 @@ void CDBlock::Reset(bool hard) {
     m_cdDeviceConnection = media::Filter::kDisconnected;
     m_lastCDWritePartition = ~0;
 
+    m_calculatedPartitionSize = 0;
+
     m_getSectorLength = 2048;
     m_putSectorLength = 2048;
 
@@ -281,7 +283,7 @@ bool CDBlock::SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber
 
     // Determine starting and ending frame addresses and other parameters for "playback"
     m_playStartPos = fileInfo.frameAddress + offset;
-    m_playEndPos = fileInfo.frameAddress + (fileInfo.fileSize + 2047) / 2048 - offset;
+    m_playEndPos = fileInfo.frameAddress + (fileInfo.fileSize + 2047) / 2048 - offset - 1;
     m_playMaxRepeat = 0;
     m_playFile = true;
 
@@ -497,7 +499,14 @@ void CDBlock::EndTransfer() {
     // Trigger EHST HIRQ if ending certain sector transfers
     switch (m_xferType) {
     case TransferType::GetSector:
-    case TransferType::GetThenDeleteSector: SetInterrupt(kHIRQ_EHST); break;
+    case TransferType::GetThenDeleteSector: {
+        const uint16 bufferPos = (m_xferPos * sizeof(uint16)) & 2047;
+        if (bufferPos < 2046) {
+            m_partitionManager.RemoveTail(m_xferPartition);
+        }
+        SetInterrupt(kHIRQ_EHST);
+        break;
+    }
     default: break;
     }
 
@@ -567,7 +576,7 @@ uint16 CDBlock::DoReadTransfer() {
         break;
     }
 
-    default: value = 0; break; // write-only or no active transfer, or unimplemented read transfer
+    default: return 0; // write-only or no active transfer, or unimplemented read transfer
     }
 
     AdvanceTransfer();
@@ -654,8 +663,8 @@ void CDBlock::ProcessCommand() {
     case 0x48: CmdResetSelector(); break;
     case 0x50: CmdGetBufferSize(); break;
     case 0x51: CmdGetSectorNumber(); break;
-    // case 0x52: CmdCalculateActualSize(); break;
-    // case 0x53: CmdGetActualSize(); break;
+    case 0x52: CmdCalculateActualSize(); break;
+    case 0x53: CmdGetActualSize(); break;
     // case 0x54: CmdGetSectorInfo(); break;
     // case 0x55: CmdExecuteFADSearch(); break;
     // case 0x56: CmdGetFADSearchResults(); break;
@@ -1428,15 +1437,41 @@ void CDBlock::CmdCalculateActualSize() {
     // sector offset
     // partition number   <blank>
     // sector number
-    // const uint16 sectorOffset = m_CR[1];
-    // const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
-    // const uint16 sectorNumber = m_CR[3];
+    const uint16 sectorOffset = m_CR[1];
+    const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
+    const uint16 sectorNumber = m_CR[3];
 
-    // TODO: calculate data size in words in specified partition starting from sectorOffset (0xFFFF = end) for
-    // sectorNumber sectors (0xFFFF = until the end)
+    bool reject = false;
+    if (partitionNumber > m_partitionManager.PartitionCount()) [[unlikely]] {
+        reject = true;
+    } else {
+        const uint8 bufferCount = m_partitionManager.GetBufferCount(partitionNumber);
+        if (sectorOffset != 0xFFFF && sectorOffset >= bufferCount) [[unlikely]] {
+            reject = true;
+        } else {
+            uint16 startSector;
+            uint16 endSector;
+            if (sectorOffset == 0xFFFF) {
+                startSector = bufferCount - 1;
+                if (sectorNumber < bufferCount) {
+                    endSector = startSector - sectorNumber + 1;
+                } else {
+                    endSector = 0;
+                }
+            } else {
+                startSector = sectorOffset;
+                endSector = std::min<uint16>(startSector + sectorNumber - 1, bufferCount - 1);
+            }
+            m_calculatedPartitionSize = m_partitionManager.CalculateSize(partitionNumber, startSector, endSector);
+        }
+    }
 
     // Output structure: standard CD status data
-    ReportCDStatus();
+    if (reject) [[unlikely]] {
+        ReportCDStatus(kStatusReject);
+    } else {
+        ReportCDStatus();
+    }
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
 }
@@ -1455,8 +1490,8 @@ void CDBlock::CmdGetActualSize() {
     // calculated size bits 15-0 (in words)
     // <blank>
     // <blank>
-    m_CR[0] = (m_status.statusCode << 8u); // TODO: calculated size
-    m_CR[1] = 0;                           // TODO: calculated size
+    m_CR[0] = (m_status.statusCode << 8u) | bit::extract<16, 23>(m_calculatedPartitionSize);
+    m_CR[1] = bit::extract<0, 15>(m_calculatedPartitionSize);
     m_CR[2] = 0x0000;
     m_CR[3] = 0x0000;
 
@@ -1879,7 +1914,7 @@ void CDBlock::CmdAbortFile() {
     // <blank>
     // <blank>
 
-    // TODO: abort file transfer
+    EndTransfer();
 
     // Output structure: standard CD status data
     ReportCDStatus();

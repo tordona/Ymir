@@ -132,6 +132,7 @@ private:
     uint32 m_playEndParam;   // ending frame address or track/index
     uint8 m_playRepeatParam; // playback repeat count parameter
 
+    // Playback status/parameters
     uint32 m_playStartPos; // starting frame address for playback
     uint32 m_playEndPos;   // ending frame address for playback
     uint8 m_playMaxRepeat; // max repeat count (0=no repeat, 1..14=N repeats, 15=infinite repeats)
@@ -432,6 +433,11 @@ private:
             return m_partitions.size();
         }
 
+        uint32 CalculateSize(uint8 partitionIndex, uint32 start, uint32 end) const {
+            assert(partitionIndex < m_partitions.size());
+            return m_partitions[partitionIndex].CalculateSize(start, end);
+        }
+
         // TODO: get buffer at index?
         // TODO: remove buffer range
 
@@ -515,6 +521,29 @@ private:
                 return m_bufferCount;
             }
 
+            uint32 CalculateSize(uint32 start, uint32 end) const {
+                uint32 pos = 0;
+                Buffer *buf = m_tail;
+                while (pos < start) {
+                    if (buf == nullptr) {
+                        return 0;
+                    }
+                    buf = buf->prev;
+                    pos++;
+                }
+
+                uint32 size = 0;
+                while (pos <= end) {
+                    if (buf == nullptr) {
+                        break;
+                    }
+                    size += buf->size;
+                    buf = buf->prev;
+                    pos++;
+                }
+                return size;
+            }
+
         private:
             Buffer *m_head = nullptr;
             Buffer *m_tail = nullptr;
@@ -530,8 +559,9 @@ private:
     std::array<media::Filter, 24> m_filters;
 
     uint8 m_cdDeviceConnection;
-
     uint8 m_lastCDWritePartition;
+
+    uint32 m_calculatedPartitionSize;
 
     uint32 m_getSectorLength;
     uint32 m_putSectorLength;
