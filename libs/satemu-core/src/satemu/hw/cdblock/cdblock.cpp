@@ -434,8 +434,6 @@ uint16 CDBlock::DoReadTransfer() {
         // TODO: cache buffer
         Buffer *buffer = m_partitionManager.GetTail(m_xferPartition);
 
-        // TODO: check why it's transferring only half of the total data
-
         // TODO: honor m_getSectorLength
         // - raw sector read should generate or mock missing parts
         // - transfers should skip the sync bytes and header depending on m_getSectorLength:
@@ -453,7 +451,7 @@ uint16 CDBlock::DoReadTransfer() {
             // Delete sector once fully read
             // TODO: fix this super hacky end-of-sector "detection"
             // - should also honor m_xferSectorPos (or at least the initial offset)
-            if (m_xferPos > 0 && bufferPos == 0) {
+            if (m_xferPos > 0 && bufferPos >= 2046) {
                 m_partitionManager.RemoveTail(m_xferPartition);
             }
         }

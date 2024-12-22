@@ -126,7 +126,12 @@ private:
     T ReadABus(uint32 address) {
         using namespace util;
 
-        /****/ if (AddressInRange<0x580'0000, 0x58F'FFFF>(address)) {
+        if constexpr (std::is_same_v<T, uint32>) {
+            // 32-bit reads are split into two 16-bit reads
+            uint32 value = ReadABus<uint16>(address + 0) << 16u;
+            value |= ReadABus<uint16>(address + 2) << 0u;
+            return value;
+        } else if (AddressInRange<0x580'0000, 0x58F'FFFF>(address)) {
             if ((address & 0x7FFF) < 0x1000 && address < 0x5891000) {
                 // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
                 // These 4 KiB blocks are mapped every 32 KiB, up to 0x25891000.
@@ -178,7 +183,11 @@ private:
     void WriteABus(uint32 address, T value) {
         using namespace util;
 
-        /****/ if (AddressInRange<0x580'0000, 0x58F'FFFF>(address)) {
+        if constexpr (std::is_same_v<T, uint32>) {
+            // 32-bit writes are split into two 16-bit writes
+            WriteABus<uint16>(address + 0, value >> 16u);
+            WriteABus<uint16>(address + 2, value >> 0u);
+        } else if (AddressInRange<0x580'0000, 0x58F'FFFF>(address)) {
             if ((address & 0x7FFF) < 0x1000 && address < 0x5891000) {
                 // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
                 // These 4 KiB blocks are mapped every 32 KiB, up to 0x25891000.
