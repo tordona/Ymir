@@ -124,7 +124,7 @@ uint32 Filesystem::GetFileCount() const {
     return m_directories[m_currDirectory].GetContents().size() - 2;
 }
 
-const FileInfo &Filesystem::GetFileInfo(uint8 fileID) const {
+const FileInfo &Filesystem::GetFileInfoWithOffset(uint8 fileID) const {
     if (!IsValid()) {
         // No file system loaded
         return kEmptyFileInfo;
@@ -139,6 +139,22 @@ const FileInfo &Filesystem::GetFileInfo(uint8 fileID) const {
         return kEmptyFileInfo;
     }
     return currDirContents[offset].GetFileInfo();
+}
+
+const FileInfo &media::fs::Filesystem::GetFileInfo(uint32 fileID) const {
+    if (!IsValid()) {
+        // No file system loaded
+        return kEmptyFileInfo;
+    }
+    if (!HasCurrentDirectory()) {
+        // Invalid directory
+        return kEmptyFileInfo;
+    }
+    const auto &currDirContents = m_directories[m_currDirectory].GetContents();
+    if (fileID >= currDirContents.size()) {
+        return kEmptyFileInfo;
+    }
+    return currDirContents[fileID].GetFileInfo();
 }
 
 bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor &volDesc) {

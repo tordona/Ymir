@@ -34,6 +34,8 @@ void CDBlock::Reset(bool hard) {
 
     m_playStartPos = 0;
     m_playEndPos = 0;
+    m_playMaxRepeat = 0;
+    m_playFile = false;
 
     m_readSpeed = 1;
 
@@ -119,7 +121,7 @@ void CDBlock::Advance(uint64 cycles) {
     }
 }
 
-bool CDBlock::SetupPlayback(uint32 startParam, uint32 endParam, uint16 repeatParam) {
+bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 repeatParam) {
     // Handle "no change" parameters
     if (startParam == 0xFFFFFF) {
         startParam = m_playStartParam;
@@ -145,6 +147,8 @@ bool CDBlock::SetupPlayback(uint32 startParam, uint32 endParam, uint16 repeatPar
     m_playStartParam = startParam;
     m_playEndParam = endParam;
     m_playRepeatParam = repeatParam & 0xF;
+    m_playMaxRepeat = m_playRepeatParam;
+    m_playFile = false;
 
     // Make sure we have a disc
     if (m_disc.sessions.empty()) {
@@ -175,7 +179,7 @@ bool CDBlock::SetupPlayback(uint32 startParam, uint32 endParam, uint16 repeatPar
 
             // TODO: delay seek for a realistic amount of time
             if (m_status.controlADR == 0x41) {
-                m_targetDriveCycles = kDriveCyclesPlaying1x * m_readSpeed;
+                m_targetDriveCycles = kDriveCyclesPlaying1x / m_readSpeed;
             } else {
                 // Force 1x speed if playing audio track
                 m_targetDriveCycles = kDriveCyclesPlaying1x;
@@ -239,10 +243,66 @@ bool CDBlock::SetupPlayback(uint32 startParam, uint32 endParam, uint16 repeatPar
     return true;
 }
 
+bool CDBlock::SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber) {
+    // Bail out if there is no file system
+    if (!m_fs.IsValid()) {
+        fmt::println("CDBlock: file playback: no file system; rejecting");
+        m_targetDriveCycles = kDriveCyclesNotPlaying;
+        m_status.statusCode = kStatusCodePause;
+        return true;
+    }
+
+    // Bail out if there is no current directory
+    if (!m_fs.HasCurrentDirectory()) {
+        fmt::println("CDBlock: file playback: no current directory set; rejecting");
+        m_targetDriveCycles = kDriveCyclesNotPlaying;
+        m_status.statusCode = kStatusCodePause;
+        return true;
+    }
+
+    // Reject if the file ID is out of range
+    const media::fs::FileInfo &fileInfo = m_fs.GetFileInfo(fileID);
+    if (!fileInfo.IsValid()) {
+        fmt::println("CDBlock: file playback: invalid file ID; rejecting");
+        return false;
+    }
+
+    // Reject if frame address doesn't point to a valid data track
+    const auto &session = m_disc.sessions.back();
+    const uint8 trackIndex = session.FindTrackIndex(m_playStartPos);
+    if (trackIndex == 0xFF) {
+        fmt::println("CDBlock: file playback: track not found for frame address {:06X}; rejecting", m_playStartPos);
+        return false;
+    }
+    if (session.tracks[trackIndex].controlADR != 0x41) {
+        fmt::println("CDBlock: file playback: not a data track at frame address {:06X}; rejecting", m_playStartPos);
+        return false;
+    }
+
+    // Determine starting and ending frame addresses and other parameters for "playback"
+    m_playStartPos = fileInfo.frameAddress + offset;
+    m_playEndPos = fileInfo.frameAddress + (fileInfo.fileSize + 2047) / 2048 - offset;
+    m_playMaxRepeat = 0;
+    m_playFile = true;
+
+    // Connect CD device to specified filter
+    ConnectCDDevice(filterNumber);
+
+    // Setup status
+    m_status.statusCode = kStatusCodeSeek;
+    m_status.flags = 0x8;     // CD-ROM decoding flag
+    m_status.repeatCount = 0; // first repeat
+    m_status.controlADR = session.tracks[trackIndex].controlADR;
+    m_status.track = trackIndex + 1;
+    m_status.index = 1; // TODO: handle indexes
+
+    return true;
+}
+
 void CDBlock::ProcessDriveState() {
     switch (m_status.statusCode & 0xF) {
     case kStatusCodeSeek:
-        m_targetDriveCycles = kDriveCyclesPlaying1x * m_readSpeed;
+        m_targetDriveCycles = kDriveCyclesPlaying1x / m_readSpeed;
         m_status.statusCode = kStatusCodePlay;
         m_status.frameAddress = m_playStartPos;
         break;
@@ -328,11 +388,11 @@ void CDBlock::ProcessDriveStatePlay() {
     if (m_status.frameAddress > m_playEndPos) {
         // 0x0 to 0xE = 0 to 14 repeats
         // 0xF = infinite repeats
-        if (m_playRepeatParam == 0xF || m_status.repeatCount < m_playRepeatParam) {
-            if (m_playRepeatParam == 0xF) {
+        if (m_playMaxRepeat == 0xF || m_status.repeatCount < m_playMaxRepeat) {
+            if (m_playMaxRepeat == 0xF) {
                 fmt::println("CDBlock: playback repeat (infinite)");
             } else {
-                fmt::println("CDBlock: playback repeat: {} of {}", m_status.repeatCount + 1, m_playRepeatParam);
+                fmt::println("CDBlock: playback repeat: {} of {}", m_status.repeatCount + 1, m_playMaxRepeat);
             }
             m_status.frameAddress = m_playStartPos;
             m_status.repeatCount++;
@@ -342,6 +402,9 @@ void CDBlock::ProcessDriveStatePlay() {
             m_status.statusCode = kStatusCodePause;
             m_targetDriveCycles = kDriveCyclesNotPlaying;
             SetInterrupt(kHIRQ_PEND);
+            if (m_playFile) {
+                SetInterrupt(kHIRQ_EFLS);
+            }
         }
     }
 }
@@ -488,7 +551,7 @@ uint16 CDBlock::DoReadTransfer() {
     }
 
     case TransferType::FileInfo: {
-        const media::fs::FileInfo &fileInfo = m_fs.GetFileInfo(m_xferCurrFileID);
+        const media::fs::FileInfo &fileInfo = m_fs.GetFileInfoWithOffset(m_xferCurrFileID);
         // TODO: improve/simplify this
         switch (m_xferPos % 6) {
         case 0: value = fileInfo.frameAddress >> 16u; break;
@@ -529,6 +592,20 @@ void CDBlock::AdvanceTransfer() {
         m_xferPos = 0;
         m_xferLength = 0;
     }
+}
+
+bool CDBlock::ConnectCDDevice(uint8 filterNumber) {
+    if (filterNumber < m_filters.size()) {
+        // Connect CD to specified filter
+        DisconnectFilterInput(filterNumber);
+        m_cdDeviceConnection = filterNumber;
+    } else if (filterNumber == media::Filter::kDisconnected) {
+        // Disconnect CD
+        m_cdDeviceConnection = media::Filter::kDisconnected;
+    } else {
+        return false;
+    }
+    return true;
 }
 
 void CDBlock::DisconnectFilterInput(uint8 filterNumber) {
@@ -594,7 +671,7 @@ void CDBlock::ProcessCommand() {
     // case 0x71: CmdReadDirectory(); break;
     case 0x72: CmdGetFileSystemScope(); break;
     case 0x73: CmdGetFileInfo(); break;
-    // case 0x74: CmdReadFile(); break;
+    case 0x74: CmdReadFile(); break;
     case 0x75: CmdAbortFile(); break;
 
     // case 0x90: CmdMpegGetStatus(); break;
@@ -831,7 +908,7 @@ void CDBlock::CmdPlayDisc() {
     fmt::println("CDBlock: start={:06X} end={:06X} repeat={:X}", startParam, endParam, repeatParam);
 
     // Output structure: standard CD status data
-    if (SetupPlayback(startParam, endParam, repeatParam)) {
+    if (SetupGenericPlayback(startParam, endParam, repeatParam)) {
         ReportCDStatus();
     } else {
         ReportCDStatus(kStatusReject);
@@ -937,23 +1014,11 @@ void CDBlock::CmdSetCDDeviceConnection() {
     // <blank>
     const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
 
-    bool reject = false;
-    if (filterNumber < m_filters.size()) {
-        // Connect CD to specified filter
-        DisconnectFilterInput(filterNumber);
-        m_cdDeviceConnection = filterNumber;
-    } else if (filterNumber == media::Filter::kDisconnected) {
-        // Disconnect CD
-        m_cdDeviceConnection = media::Filter::kDisconnected;
-    } else {
-        reject = true;
-    }
-
     // Output structure: standard CD status data
-    if (reject) {
-        ReportCDStatus(kStatusReject);
-    } else {
+    if (ConnectCDDevice(filterNumber)) {
         ReportCDStatus();
+    } else {
+        ReportCDStatus(kStatusReject);
     }
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
@@ -1791,16 +1856,16 @@ void CDBlock::CmdReadFile() {
     // offset bits 15-0
     // filter number   file ID bits 23-16
     // file ID bits 15-0
-    // const uint32 offset = (bit::extract<0, 7>(m_CR[0]) << 16u) | m_CR[1];
-    // const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
-    // const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
+    const uint32 offset = (bit::extract<0, 7>(m_CR[0]) << 16u) | m_CR[1];
+    const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
+    const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
 
-    // TODO: setup file "playback"
-
-    // Output structure: standard CD status data
-    ReportCDStatus();
-
-    // TODO: trigger kHIRQ_EFLS when done reading the entire file(last frame written to buffer)
+    if (SetupFilePlayback(fileID, offset, filterNumber)) {
+        // Output structure: standard CD status data
+        ReportCDStatus();
+    } else {
+        ReportCDStatus(kStatusReject);
+    }
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY);
 }
