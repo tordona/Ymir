@@ -60,7 +60,7 @@ bool Filesystem::Read(const Disc &disc) {
         // Succeed if we found a terminator
         if (volDescHeader.type == VolumeDescriptorType::Terminator) {
             sgInvalidate.Cancel();
-            if (m_directories.empty()) {
+            if (!IsValid()) {
                 return false;
             } else {
                 m_currDirectory = 0;
@@ -91,7 +91,7 @@ bool Filesystem::Read(const Disc &disc) {
 bool Filesystem::ChangeDirectory(uint32 fileID, const Filter &filter) {
     // TODO: use filter somehow
 
-    if (m_directories.empty()) {
+    if (!IsValid()) {
         return false;
     }
 
@@ -111,17 +111,34 @@ bool Filesystem::ChangeDirectory(uint32 fileID, const Filter &filter) {
 }
 
 uint32 Filesystem::GetFileCount() const {
-    if (m_directories.empty()) {
+    if (!IsValid()) {
         // No file system loaded
         return 0;
     }
-    if (m_currDirectory == ~0) {
+    if (!HasCurrentDirectory()) {
         // Invalid directory
         return 0;
     }
     assert(m_currDirectory < m_directories.size());
 
     return m_directories[m_currDirectory].GetContents().size() - 2;
+}
+
+const FileInfo &Filesystem::GetFileInfo(uint8 fileID) const {
+    if (!IsValid()) {
+        // No file system loaded
+        return kEmptyFileInfo;
+    }
+    if (!HasCurrentDirectory()) {
+        // Invalid directory
+        return kEmptyFileInfo;
+    }
+    const auto offset = fileID + m_currFileOffset;
+    const auto &currDirContents = m_directories[m_currDirectory].GetContents();
+    if (offset >= currDirContents.size()) {
+        return kEmptyFileInfo;
+    }
+    return currDirContents[offset].GetFileInfo();
 }
 
 bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor &volDesc) {
@@ -196,9 +213,10 @@ bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor
                         break;
                     }
                     // TODO: read extended attributes if present
+                    const uint8 fileNum = 0;
 
                     // Add record to directory
-                    contents.emplace_back(subdirRecord, pathRecIndex + 1);
+                    contents.emplace_back(subdirRecord, pathRecIndex + 1, fileNum);
 
                     dirRecOffset += subdirRecord.recordSize;
                 }

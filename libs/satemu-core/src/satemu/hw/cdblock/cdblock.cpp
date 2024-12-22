@@ -46,7 +46,7 @@ void CDBlock::Reset(bool hard) {
     m_xferType = TransferType::None;
     m_xferPos = 0;
     m_xferLength = 0;
-    m_xferCount = 0x1FFFFFF;
+    m_xferCount = 0xFFFFFF;
 
     m_bufferManager.Reset();
     m_partitionManager.Reset();
@@ -371,6 +371,7 @@ void CDBlock::ReportCDStatus(uint8 statusCode) {
 
 void CDBlock::SetupTOCTransfer() {
     fmt::println("CDBlock: Starting TOC transfer");
+
     m_xferType = TransferType::TOC;
     m_xferPos = 0;
     m_xferLength = sizeof(media::Session::toc) / sizeof(uint16);
@@ -380,7 +381,7 @@ void CDBlock::SetupTOCTransfer() {
 void CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8 partitionNumber, bool del) {
     fmt::println("CDBlock: Starting sector {} transfer - sectors {} to {} into buffer partition {}",
                  (del ? "read then delete" : "read"), sectorPos, sectorPos + sectorCount - 1, partitionNumber);
-    m_xferType = del ? TransferType::GetThenDeleteSector : TransferType::GetSector;
+
     const uint8 partitionSize = m_partitionManager.GetBufferCount(partitionNumber);
     if (sectorPos == 0xFFFF) {
         m_xferSectorPos = partitionSize - sectorCount;
@@ -394,12 +395,40 @@ void CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8
     }
     m_xferPartition = partitionNumber;
 
+    m_xferType = del ? TransferType::GetThenDeleteSector : TransferType::GetSector;
     m_xferPos = 0;
     m_xferLength = m_getSectorLength / sizeof(uint16) * (m_xferSectorEnd - m_xferSectorPos + 1);
     m_xferCount = 0;
 }
 
+uint32 CDBlock::SetupFileInfoTransfer(uint32 fileID) {
+    fmt::println("CDBlock: Starting file info transfer - file ID {:X}", fileID);
+
+    const uint32 fileOffset = m_fs.GetFileOffset();
+    const uint32 fileCount = m_fs.GetFileCount();
+    assert(fileOffset < fileCount);
+
+    const bool readAll = fileID == 0xFFFFFF;
+    uint32 numFileInfos;
+    if (readAll) {
+        numFileInfos = std::min(fileCount - fileOffset - 2, 254u);
+    } else {
+        numFileInfos = 1;
+    }
+
+    m_xferType = TransferType::FileInfo;
+    m_xferCurrFileID = readAll ? 0 : fileID;
+    m_xferPos = 0;
+    m_xferLength = numFileInfos * 12 / sizeof(uint16);
+    m_xferCount = 0;
+    return numFileInfos;
+}
+
 void CDBlock::EndTransfer() {
+    if (m_xferType == TransferType::None) {
+        return;
+    }
+
     fmt::println("CDBlock: Ending transfer at {} of {} words", m_xferPos, m_xferLength);
 
     // Trigger EHST HIRQ if ending certain sector transfers
@@ -458,7 +487,24 @@ uint16 CDBlock::DoReadTransfer() {
         break;
     }
 
-    default: value = 0; break; // write-only or no active transfer
+    case TransferType::FileInfo: {
+        const media::fs::FileInfo &fileInfo = m_fs.GetFileInfo(m_xferCurrFileID);
+        // TODO: improve/simplify this
+        switch (m_xferPos % 6) {
+        case 0: value = (fileInfo.frameAddress + 150) >> 16u; break;
+        case 1: value = (fileInfo.frameAddress + 150) >> 0u; break;
+        case 2: value = fileInfo.fileSize >> 16u; break;
+        case 3: value = fileInfo.fileSize >> 0u; break;
+        case 4: value = (fileInfo.unitSize << 8u) | fileInfo.interleaveGapSize; break;
+        case 5:
+            value = (fileInfo.fileNumber << 8u) | fileInfo.attributes;
+            m_xferCurrFileID++;
+            break;
+        }
+        break;
+    }
+
+    default: value = 0; break; // write-only or no active transfer, or unimplemented read transfer
     }
 
     AdvanceTransfer();
@@ -478,6 +524,7 @@ void CDBlock::AdvanceTransfer() {
     m_xferPos++;
     m_xferCount++;
     if (m_xferPos >= m_xferLength) {
+        fmt::println("CDBlock: Transfer finished - {} of {} words transferred", m_xferCount, m_xferLength);
         m_xferType = TransferType::None;
         m_xferPos = 0;
         m_xferLength = 0;
@@ -546,7 +593,7 @@ void CDBlock::ProcessCommand() {
     case 0x70: CmdChangeDirectory(); break;
     // case 0x71: CmdReadDirectory(); break;
     case 0x72: CmdGetFileSystemScope(); break;
-    // case 0x73: CmdGetFileInfo(); break;
+    case 0x73: CmdGetFileInfo(); break;
     // case 0x74: CmdReadFile(); break;
     case 0x75: CmdAbortFile(); break;
 
@@ -1687,8 +1734,8 @@ void CDBlock::CmdGetFileSystemScope() {
     // directory end offset   first file ID bits 23-16
     // first file ID bits 15-0
 
-    const uint32 fileCount = m_fs.GetFileCount();
     const uint32 fileOffset = m_fs.GetFileOffset();
+    const uint32 fileCount = m_fs.GetFileCount();
     const bool endOfDirectory = fileOffset + 254 >= fileCount;
     m_CR[0] = m_status.statusCode << 8u;
     m_CR[1] = m_fs.GetFileCount();
@@ -1706,25 +1753,38 @@ void CDBlock::CmdGetFileInfo() {
     // <blank>
     // <blank>  file ID bits 23-16
     // file ID bits 15-0
-    // const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
+    const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
 
-    // TODO: setup info read transfer from the file info table
+    bool reject = false;
+    if (!m_fs.IsValid() || !m_fs.HasCurrentDirectory()) {
+        reject = true;
+    }
+    if (fileID != 0xFFFFFF && fileID > m_fs.GetFileCount() - m_fs.GetFileOffset()) {
+        reject = true;
+    }
 
-    // Output structure:
-    // status code            <blank>
-    // file info size in bytes
-    // <blank>
-    // <blank>
-    m_CR[0] = m_status.statusCode << 8u;
-    m_CR[1] = 0x0000; // TODO: file info size in bytes
-    m_CR[2] = 0x0000;
-    m_CR[3] = 0x0000;
+    if (!reject) [[likely]] {
+        const uint32 numFileInfos = SetupFileInfoTransfer(fileID);
 
-    SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY);
+        // Output structure:
+        // status code            <blank>
+        // file info size in words
+        // <blank>
+        // <blank>
+        m_CR[0] = m_status.statusCode << 8u;
+        m_CR[1] = numFileInfos * 12 / sizeof(uint16);
+        m_CR[2] = 0x0000;
+        m_CR[3] = 0x0000;
+        SetInterrupt(kHIRQ_DRDY);
+    } else {
+        ReportCDStatus(kStatusReject);
+    }
+
+    SetInterrupt(kHIRQ_CMOK);
 }
 
 void CDBlock::CmdReadFile() {
-    fmt::println("CDBlock: -> Get file info");
+    fmt::println("CDBlock: -> Read file");
 
     // Input structure:
     // 0x74            offset bits 23-16

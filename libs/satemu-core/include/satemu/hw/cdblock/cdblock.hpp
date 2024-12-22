@@ -176,19 +176,26 @@ private:
     // -------------------------------------------------------------------------
     // Data transfers
 
-    enum class TransferType { None, TOC, GetSector, GetThenDeleteSector };
+    enum class TransferType { None, TOC, GetSector, GetThenDeleteSector, FileInfo };
 
+    // General transfer parameters
     TransferType m_xferType; // Type of transfer in progress
     uint32 m_xferPos;        // Current transfer position in words
     uint32 m_xferLength;     // Total number of words to be transferred
     uint32 m_xferCount;      // Number of words transferred in the last transfer
-    uint32 m_xferSectorPos;  // Current transfer sector position
-    uint32 m_xferSectorEnd;  // Last sector to transfer
-    uint8 m_xferPartition;   // From which partition to read
+
+    // Parameters for sector transfers
+    uint32 m_xferSectorPos; // Current transfer sector position
+    uint32 m_xferSectorEnd; // Last sector to transfer
+    uint8 m_xferPartition;  // From which partition to read
     // uint8 m_xferFilter;      // To which filter to write
+
+    // Parameters for file info transfers
+    uint32 m_xferCurrFileID; // Current file ID to read
 
     void SetupTOCTransfer();
     void SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8 partitionNumber, bool del);
+    uint32 SetupFileInfoTransfer(uint32 fileID);
     void EndTransfer();
 
     uint16 DoReadTransfer();

@@ -12,14 +12,33 @@
 
 namespace satemu::media::fs {
 
+struct FileInfo {
+    uint32 frameAddress = ~0;
+    uint32 fileSize = ~0;
+    uint8 unitSize = ~0;
+    uint8 interleaveGapSize = ~0;
+    uint8 fileNumber = ~0;
+    uint8 attributes = ~0;
+};
+constexpr FileInfo kEmptyFileInfo = {};
+
 // Represents a file or directory in a path table directory.
 class FilesystemEntry {
 public:
-    FilesystemEntry(const iso9660::DirectoryRecord &dirRecord, uint16 parent)
+    FilesystemEntry(const iso9660::DirectoryRecord &dirRecord, uint16 parent, uint8 fileID)
         : m_frameAddress(dirRecord.extentPos)
         , m_size(dirRecord.dataSize)
         , m_parent(parent)
-        , m_isDirectory(bit::extract<1>(dirRecord.flags)) {}
+        , m_isDirectory(bit::extract<1>(dirRecord.flags)) {
+        m_fileInfo = {
+            .frameAddress = dirRecord.extentPos,
+            .fileSize = dirRecord.dataSize,
+            .unitSize = dirRecord.fileUnitSize,
+            .interleaveGapSize = dirRecord.interleaveGapSize,
+            .fileNumber = fileID,
+            .attributes = dirRecord.flags,
+        };
+    }
 
     uint32 FrameAddress() const {
         return m_frameAddress;
@@ -41,11 +60,16 @@ public:
         return m_isDirectory;
     }
 
+    const FileInfo &GetFileInfo() const {
+        return m_fileInfo;
+    }
+
 private:
     uint32 m_frameAddress;
     uint32 m_size;
     uint16 m_parent;
     bool m_isDirectory;
+    FileInfo m_fileInfo;
 };
 
 // Represents a path table directory.
@@ -94,6 +118,16 @@ public:
     // The filesystem state is not modified on failure.
     bool ChangeDirectory(uint32 fileID, const Filter &filter);
 
+    // Determines if the file system is valid, i.e., there is at least one directory.
+    bool IsValid() const {
+        return !m_directories.empty();
+    }
+
+    // Determines if the file system has a valid current directory.
+    bool HasCurrentDirectory() const {
+        return m_currDirectory < m_directories.size();
+    }
+
     // Returns the current file offset for file listings.
     uint32 GetFileOffset() const {
         return m_currFileOffset;
@@ -101,6 +135,9 @@ public:
 
     // Returns the number of files in the current directory, minus the self and parent directory references (. and ..)
     uint32 GetFileCount() const;
+
+    // Retrieves the file info for the given file ID from the current directory, based on the current file offset.
+    const FileInfo &GetFileInfo(uint8 fileID) const;
 
 private:
     // Directories parsed from the path table records.
