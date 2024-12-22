@@ -31,7 +31,7 @@ public:
         , m_parent(parent)
         , m_isDirectory(bit::extract<1>(dirRecord.flags)) {
         m_fileInfo = {
-            .frameAddress = dirRecord.extentPos,
+            .frameAddress = dirRecord.extentPos + 150,
             .fileSize = dirRecord.dataSize,
             .unitSize = dirRecord.fileUnitSize,
             .interleaveGapSize = dirRecord.interleaveGapSize,

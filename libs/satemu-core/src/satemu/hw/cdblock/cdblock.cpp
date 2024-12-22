@@ -491,8 +491,8 @@ uint16 CDBlock::DoReadTransfer() {
         const media::fs::FileInfo &fileInfo = m_fs.GetFileInfo(m_xferCurrFileID);
         // TODO: improve/simplify this
         switch (m_xferPos % 6) {
-        case 0: value = (fileInfo.frameAddress + 150) >> 16u; break;
-        case 1: value = (fileInfo.frameAddress + 150) >> 0u; break;
+        case 0: value = fileInfo.frameAddress >> 16u; break;
+        case 1: value = fileInfo.frameAddress >> 0u; break;
         case 2: value = fileInfo.fileSize >> 16u; break;
         case 3: value = fileInfo.fileSize >> 0u; break;
         case 4: value = (fileInfo.unitSize << 8u) | fileInfo.interleaveGapSize; break;
