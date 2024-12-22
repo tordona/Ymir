@@ -124,7 +124,7 @@ uint32 Filesystem::GetFileCount() const {
     return m_directories[m_currDirectory].GetContents().size() - 2;
 }
 
-bool Filesystem::ReadPathTableRecords(const Track &track, const media::iso9660::VolumeDescriptor &volDesc) {
+bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor &volDesc) {
     // Fail if there is no LSB path table
     // TODO: support MSB path table
     if (volDesc.pathTableLPos == 0) {

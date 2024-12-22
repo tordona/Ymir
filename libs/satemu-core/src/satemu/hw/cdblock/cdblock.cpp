@@ -1708,7 +1708,7 @@ void CDBlock::CmdGetFileInfo() {
     // file ID bits 15-0
     // const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
 
-    // TODO: setup read transfer from the file info table
+    // TODO: setup info read transfer from the file info table
 
     // Output structure:
     // status code            <blank>
