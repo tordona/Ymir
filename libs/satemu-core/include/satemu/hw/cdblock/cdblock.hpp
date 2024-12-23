@@ -350,9 +350,10 @@ private:
 
         // Frees a range of buffers.
         // head and tail must either be both null or both non-null and belong to the same chain.
-        void FreeRange(Buffer *head, Buffer *tail) {
+        // Returns the distance between head and tail plus one, or zero if the parameters are invalid.
+        uint32 FreeRange(Buffer *head, Buffer *tail) {
             if (head == nullptr || tail == nullptr) {
-                return;
+                return 0;
             }
             assert(head->prev == nullptr);
             assert(tail->next == nullptr);
@@ -365,6 +366,8 @@ private:
             tail->next = m_freeListHead;
             m_freeListHead->prev = tail;
             m_freeListHead = head;
+
+            return distance;
         }
 
         uint8 FreeBufferCount() const {
@@ -443,7 +446,7 @@ private:
             return buffer;
         }
 
-        void DeleteSectors(uint8 partitionIndex, uint16 sectorPos, uint16 sectorCount) {
+        uint32 DeleteSectors(uint8 partitionIndex, uint16 sectorPos, uint16 sectorCount) {
             assert(partitionIndex < m_partitions.size());
 
             auto &partition = m_partitions[partitionIndex];
@@ -459,7 +462,7 @@ private:
             start = std::min<uint16>(start, sectorCount - 1);
             end = std::min<uint16>(end, sectorCount - 1);
             auto [head, tail] = partition.RemoveRange(start, end);
-            m_bufferManager.FreeRange(head, tail);
+            return m_bufferManager.FreeRange(head, tail);
         }
 
         void ClearAll() {

@@ -298,6 +298,8 @@ bool CDBlock::SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber
     m_status.track = trackIndex + 1;
     m_status.index = 1; // TODO: handle indexes
 
+    fmt::println("CDBlock: file playback: read file {}, offset {}, filter {}, frame addresses {:06X} to {:06X}", fileID,
+                 offset, filterNumber, m_playStartPos, m_playEndPos);
     return true;
 }
 
@@ -969,6 +971,7 @@ void CDBlock::CmdSeekDisc() {
     // status after running the command: -> Paused
     // setting invalid track: -> Standby
     // startPos = 0xFFFFFF: stops playing and -> Paused
+    // startPos = 0x000000: stops playing and -> Standby, and clear status values to all FFs
 
     // Output structure: standard CD status data
     ReportCDStatus();
@@ -1672,11 +1675,9 @@ void CDBlock::CmdDeleteSectorData() {
     } else if (m_partitionManager.GetBufferCount(partitionNumber) == 0) [[unlikely]] {
         reject = true;
     } else {
-        m_partitionManager.DeleteSectors(partitionNumber, sectorPos, sectorNumber);
+        const uint32 numFreedSectors = m_partitionManager.DeleteSectors(partitionNumber, sectorPos, sectorNumber);
+        fmt::println("CDBlock: freed {} sectors", numFreedSectors);
     }
-    // TODO: setup sector delete
-    // - if sectorPos is 0xFFFF, deletes sectorNumber sectors from the end
-    // - if sectorNumber is 0xFFFF, deletes from sectorPos until the end
 
     // Output structure: standard CD status data
     if (reject) [[unlikely]] {
