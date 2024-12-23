@@ -856,7 +856,19 @@ void CDBlock::CmdInitializeCDSystem() {
             m_status.statusCode = kStatusCodePause;
         }
         m_targetDriveCycles = kDriveCyclesNotPlaying;
-        // TODO: reset state and configuration
+
+        // Reset state and configuration
+        m_playStartParam = 0xFFFFFF;
+        m_playEndParam = 0xFFFFFF;
+        m_playRepeatParam = 0;
+
+        m_playStartPos = 0xFFFFFF;
+        m_playEndPos = 0xFFFFFF;
+        m_playMaxRepeat = 0;
+        m_playFile = false;
+
+        m_discAuthStatus = 0;
+        m_mpegAuthStatus = 0;
     }
 
     m_readSpeed = readSpeed == 1 ? 1 : 2;
