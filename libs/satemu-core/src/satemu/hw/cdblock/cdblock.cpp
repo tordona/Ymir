@@ -1489,6 +1489,7 @@ void CDBlock::CmdCalculateActualSize() {
                 endSector = std::min<uint16>(startSector + sectorNumber - 1, bufferCount - 1);
             }
             m_calculatedPartitionSize = m_partitionManager.CalculateSize(partitionNumber, startSector, endSector);
+            fmt::println("CDBlock: calculated actual size: {}", m_calculatedPartitionSize);
         }
     }
 
@@ -1662,10 +1663,10 @@ void CDBlock::CmdDeleteSectorData() {
 
     // Input structure:
     // 0x62               <blank>
-    // sector position
+    // sector offset
     // partition number   <blank>
     // sector number
-    const uint16 sectorPos = m_CR[1];
+    const uint16 sectorOffset = m_CR[1];
     const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
     const uint16 sectorNumber = m_CR[3];
 
@@ -1675,7 +1676,7 @@ void CDBlock::CmdDeleteSectorData() {
     } else if (m_partitionManager.GetBufferCount(partitionNumber) == 0) [[unlikely]] {
         reject = true;
     } else {
-        const uint32 numFreedSectors = m_partitionManager.DeleteSectors(partitionNumber, sectorPos, sectorNumber);
+        const uint32 numFreedSectors = m_partitionManager.DeleteSectors(partitionNumber, sectorOffset, sectorNumber);
         fmt::println("CDBlock: freed {} sectors", numFreedSectors);
     }
 
