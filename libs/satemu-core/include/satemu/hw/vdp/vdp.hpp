@@ -2,6 +2,9 @@
 
 #include "vdp_defs.hpp"
 
+#include "vdp1_regs.hpp"
+#include "vdp2_regs.hpp"
+
 #include <satemu/hw/hw_defs.hpp>
 
 #include <satemu/util/bit_ops.hpp>
@@ -234,7 +237,7 @@ public:
         case 0x094: return m_VDP2.ReadSCXIN(3);  // write-only?
         case 0x096: return m_VDP2.ReadSCYIN(3);  // write-only?
         case 0x098: return m_VDP2.ZMCTL.u16;     // write-only?
-        case 0x09A: return m_VDP2.SCRCTL.u16;    // write-only?
+        case 0x09A: return m_VDP2.ReadSCRCTL();  // write-only?
         case 0x09C: return m_VDP2.VCSTA.U.u16;   // write-only?
         case 0x09E: return m_VDP2.VCSTA.L.u16;   // write-only?
         case 0x0A0: return m_VDP2.LSTA0.U.u16;   // write-only?
@@ -284,6 +287,7 @@ public:
         case 0x0F8: return m_VDP2.ReadPRINA();   // write-only?
         case 0x0FA: return m_VDP2.ReadPRINB();   // write-only?
         case 0x0FC: return m_VDP2.ReadPRIR();    // write-only?
+        case 0x0FE: return 0;                    // supposedly reserved
         case 0x100: return m_VDP2.ReadCCRSn(0);  // write-only?
         case 0x102: return m_VDP2.ReadCCRSn(1);  // write-only?
         case 0x104: return m_VDP2.ReadCCRSn(2);  // write-only?
@@ -389,7 +393,7 @@ public:
         case 0x094: m_VDP2.WriteSCXIN(3, value); break;
         case 0x096: m_VDP2.WriteSCYIN(3, value); break;
         case 0x098: m_VDP2.ZMCTL.u16 = value & 0x0303; break;
-        case 0x09A: m_VDP2.SCRCTL.u16 = value & 0x3F3F; break;
+        case 0x09A: m_VDP2.WriteSCRCTL(value); break;
         case 0x09C: m_VDP2.VCSTA.U.u16 = value & 0x0007; break;
         case 0x09E: m_VDP2.VCSTA.L.u16 = value & 0xFFFE; break;
         case 0x0A0: m_VDP2.LSTA0.U.u16 = value & 0x0007; break;
@@ -439,6 +443,7 @@ public:
         case 0x0F8: m_VDP2.WritePRINA(value); break;
         case 0x0FA: m_VDP2.WritePRINB(value); break;
         case 0x0FC: m_VDP2.WritePRIR(value); break;
+        case 0x0FE: break; // supposedly reserved
         case 0x100: m_VDP2.WriteCCRSn(0, value); break;
         case 0x102: m_VDP2.WriteCCRSn(1, value); break;
         case 0x104: m_VDP2.WriteCCRSn(2, value); break;
