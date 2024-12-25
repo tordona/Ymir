@@ -199,6 +199,11 @@ void VDP::BeginHPhaseActiveDisplay() {
         if (m_VCounter == 0) {
             m_framebuffer = m_cbRequestFramebuffer(m_HRes, m_VRes);
             // fmt::println("VDP: begin frame, VDP1 fb {}", m_drawFB ^ 1);
+
+            for (int i = 0; i < 4; i++) {
+                const auto &bgParams = m_VDP2.normBGParams[i];
+                m_bgLayers[i].fracScrollY = bgParams.scrollAmountV;
+            }
         }
         VDP2DrawLine();
     }
@@ -1247,11 +1252,9 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer
 
 template <ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGLayer &layer) {
-    const uint32 y = m_VCounter;
-
-    // TODO: precompute fracScrollY at start of frame and increment per Y
     uint32 fracScrollX = bgParams.scrollAmountH;
-    uint32 fracScrollY = bgParams.scrollAmountV + y * bgParams.scrollIncV;
+    const uint32 fracScrollY = layer.fracScrollY;
+    layer.fracScrollY += bgParams.scrollIncV;
 
     for (uint32 x = 0; x < m_HRes; x++) {
         // Get integer scroll screen coordinates

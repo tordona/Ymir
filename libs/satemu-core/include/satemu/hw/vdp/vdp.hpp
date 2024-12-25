@@ -676,6 +676,10 @@ private:
         // CRAM base offset for color fetching.
         // Derived from RAMCTL.CRMDn and CRAOFA/CRAOFB.xxCAOSn
         uint32 cramOffset;
+
+        // Fractional Y scroll coordinate.
+        // Reset at the start of every frame and updated every scanline.
+        uint32 fracScrollY;
     };
 
     // Layer data for sprites
