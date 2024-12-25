@@ -1181,11 +1181,10 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer
 
     // TODO: implement mosaic
 
-    const uint32 y = m_VCounter;
-
-    // TODO: precompute fracScrollY at start of frame and increment per Y
     uint32 fracScrollX = bgParams.scrollAmountH;
-    uint32 fracScrollY = bgParams.scrollAmountV + y * bgParams.scrollIncV;
+    const uint32 fracScrollY = layer.fracScrollY;
+    layer.fracScrollY += bgParams.scrollIncV;
+
     for (uint32 x = 0; x < m_HRes; x++) {
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 8u;
