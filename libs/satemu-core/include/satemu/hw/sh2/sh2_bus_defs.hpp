@@ -4,9 +4,9 @@
 
 namespace satemu::sh2 {
 
-constexpr size_t kIPLSize = 512_KiB;
+inline constexpr size_t kIPLSize = 512_KiB;
 
-constexpr size_t kWRAMLowSize = 1_MiB;
-constexpr size_t kWRAMHighSize = 1_MiB;
+inline constexpr size_t kWRAMLowSize = 1_MiB;
+inline constexpr size_t kWRAMHighSize = 1_MiB;
 
 } // namespace satemu::sh2

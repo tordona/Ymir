@@ -9,7 +9,7 @@
 namespace satemu::m68k {
 
 // Condition code table
-constexpr auto kCondTable = [] {
+inline constexpr auto kCondTable = [] {
     std::array<bool, 16 * 16> arr{};
     for (uint32 nzvc = 0; nzvc < 16; nzvc++) {
         const bool n = bit::extract<3>(nzvc);
