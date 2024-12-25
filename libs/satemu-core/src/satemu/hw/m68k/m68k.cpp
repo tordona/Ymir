@@ -504,7 +504,7 @@ void MC68EC000::Execute() {
 // -----------------------------------------------------------------------------
 // Instruction interpreters
 
-void MC68EC000::Instr_Move_EA_EA(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_Move_EA_EA(uint16 instr) {
     const uint32 size = bit::extract<12, 13>(instr);
     const uint32 dstXn = bit::extract<9, 11>(instr);
     const uint32 dstM = bit::extract<6, 8>(instr);
@@ -525,7 +525,7 @@ void MC68EC000::Instr_Move_EA_EA(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_Move_EA_SR(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_Move_EA_SR(uint16 instr) {
     if (CheckPrivilege()) {
         const uint16 Xn = bit::extract<0, 2>(instr);
         const uint16 M = bit::extract<3, 5>(instr);
@@ -533,7 +533,7 @@ void MC68EC000::Instr_Move_EA_SR(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_MoveA(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_MoveA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 An = bit::extract<9, 11>(instr);
@@ -545,7 +545,7 @@ void MC68EC000::Instr_MoveA(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_MoveM_EA_Rs(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_MoveM_EA_Rs(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const bool sz = bit::extract<6>(instr);
@@ -565,7 +565,7 @@ void MC68EC000::Instr_MoveM_EA_Rs(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_MoveM_PI_Rs(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_MoveM_PI_Rs(uint16 instr) {
     const uint16 An = bit::extract<0, 2>(instr);
     const bool sz = bit::extract<6>(instr);
     const uint16 regList = FetchInstruction();
@@ -584,7 +584,7 @@ void MC68EC000::Instr_MoveM_PI_Rs(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_MoveM_Rs_EA(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_MoveM_Rs_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const bool sz = bit::extract<6>(instr);
@@ -604,7 +604,7 @@ void MC68EC000::Instr_MoveM_Rs_EA(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_MoveM_Rs_PD(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_MoveM_Rs_PD(uint16 instr) {
     const uint16 An = bit::extract<0, 2>(instr);
     const bool sz = bit::extract<6>(instr);
     const uint16 regList = FetchInstruction();
@@ -623,14 +623,14 @@ void MC68EC000::Instr_MoveM_Rs_PD(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_MoveQ(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_MoveQ(uint16 instr) {
     const sint32 value = static_cast<sint8>(bit::extract<0, 7>(instr));
     const uint32 reg = bit::extract<9, 11>(instr);
     regs.D[reg] = value;
     SetLogicFlags(value);
 }
 
-void MC68EC000::Instr_Clr(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_Clr(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
@@ -650,14 +650,14 @@ void MC68EC000::Instr_Clr(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_Swap(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_Swap(uint16 instr) {
     const uint32 reg = bit::extract<0, 3>(instr);
     const uint32 value = (regs.D[reg] >> 16u) | (regs.D[reg] << 16u);
     regs.D[reg] = value;
     SetLogicFlags(value);
 }
 
-void MC68EC000::Instr_Add_Dn_EA(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_Add_Dn_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
@@ -679,7 +679,7 @@ void MC68EC000::Instr_Add_Dn_EA(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_Add_EA_Dn(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_Add_EA_Dn(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
@@ -700,7 +700,7 @@ void MC68EC000::Instr_Add_EA_Dn(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_AddA(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_AddA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const bool sz = bit::extract<8>(instr);
@@ -713,7 +713,7 @@ void MC68EC000::Instr_AddA(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_AddI(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_AddI(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
@@ -737,7 +737,7 @@ void MC68EC000::Instr_AddI(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_AddQ_An(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_AddQ_An(uint16 instr) {
     const uint16 An = bit::extract<0, 2>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
 
@@ -755,7 +755,7 @@ void MC68EC000::Instr_AddQ_An(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_AddQ_EA(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_AddQ_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
@@ -777,7 +777,7 @@ void MC68EC000::Instr_AddQ_EA(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_AndI_EA(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_AndI_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
@@ -801,7 +801,7 @@ void MC68EC000::Instr_AndI_EA(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_Eor_Dn_EA(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_Eor_Dn_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
@@ -823,7 +823,7 @@ void MC68EC000::Instr_Eor_Dn_EA(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_Or_Dn_EA(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_Or_Dn_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
@@ -845,7 +845,7 @@ void MC68EC000::Instr_Or_Dn_EA(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_Or_EA_Dn(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_Or_EA_Dn(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
@@ -866,7 +866,7 @@ void MC68EC000::Instr_Or_EA_Dn(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_SubI(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_SubI(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
@@ -890,7 +890,7 @@ void MC68EC000::Instr_SubI(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_LSL_I(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_LSL_I(uint16 instr) {
     const uint16 Dn = bit::extract<0, 2>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
     uint32 shift = bit::extract<9, 11>(instr);
@@ -921,7 +921,7 @@ void MC68EC000::Instr_LSL_I(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_LSL_M(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_LSL_M(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
 
@@ -933,7 +933,7 @@ void MC68EC000::Instr_LSL_M(uint16 instr) {
     });
 }
 
-void MC68EC000::Instr_LSL_R(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_LSL_R(uint16 instr) {
     const uint16 Dn = bit::extract<0, 2>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
     const uint16 shiftReg = bit::extract<9, 11>(instr);
@@ -967,7 +967,7 @@ void MC68EC000::Instr_LSL_R(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_LSR_I(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_LSR_I(uint16 instr) {
     const uint16 Dn = bit::extract<0, 2>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
     uint32 shift = bit::extract<9, 11>(instr);
@@ -998,7 +998,7 @@ void MC68EC000::Instr_LSR_I(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_LSR_M(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_LSR_M(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
 
@@ -1010,7 +1010,7 @@ void MC68EC000::Instr_LSR_M(uint16 instr) {
     });
 }
 
-void MC68EC000::Instr_LSR_R(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_LSR_R(uint16 instr) {
     const uint16 Dn = bit::extract<0, 2>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
     const uint16 shiftReg = bit::extract<9, 11>(instr);
@@ -1044,7 +1044,7 @@ void MC68EC000::Instr_LSR_R(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_Cmp(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_Cmp(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
@@ -1064,7 +1064,7 @@ void MC68EC000::Instr_Cmp(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_CmpA(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_CmpA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 sz = bit::extract<8>(instr);
@@ -1084,7 +1084,7 @@ void MC68EC000::Instr_CmpA(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_CmpI(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_CmpI(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
@@ -1106,7 +1106,7 @@ void MC68EC000::Instr_CmpI(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_BTst_I_Dn(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_BTst_I_Dn(uint16 instr) {
     const uint16 Dn = bit::extract<0, 2>(instr);
     const uint16 index = FetchInstruction() & 31;
 
@@ -1114,7 +1114,7 @@ void MC68EC000::Instr_BTst_I_Dn(uint16 instr) {
     SR.Z = (value >> index) & 1;
 }
 
-void MC68EC000::Instr_BTst_I_EA(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_BTst_I_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 index = FetchInstruction() & 7;
@@ -1123,7 +1123,7 @@ void MC68EC000::Instr_BTst_I_EA(uint16 instr) {
     SR.Z = (value >> index) & 1;
 }
 
-void MC68EC000::Instr_BTst_R_Dn(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_BTst_R_Dn(uint16 instr) {
     const uint16 dstDn = bit::extract<0, 2>(instr);
     const uint16 srcDn = bit::extract<9, 11>(instr);
     const uint16 index = regs.D[srcDn] & 31;
@@ -1132,7 +1132,7 @@ void MC68EC000::Instr_BTst_R_Dn(uint16 instr) {
     SR.Z = (value >> index) & 1;
 }
 
-void MC68EC000::Instr_BTst_R_EA(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_BTst_R_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 srcDn = bit::extract<9, 11>(instr);
@@ -1142,7 +1142,7 @@ void MC68EC000::Instr_BTst_R_EA(uint16 instr) {
     SR.Z = (value >> index) & 1;
 }
 
-void MC68EC000::Instr_LEA(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_LEA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 An = bit::extract<9, 11>(instr);
@@ -1150,7 +1150,7 @@ void MC68EC000::Instr_LEA(uint16 instr) {
     regs.A[An] = CalcEffectiveAddress(M, Xn);
 }
 
-void MC68EC000::Instr_BRA(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_BRA(uint16 instr) {
     const uint32 currPC = PC;
     sint16 disp = static_cast<sint8>(bit::extract<0, 7>(instr));
     if (disp == 0x00) {
@@ -1159,7 +1159,7 @@ void MC68EC000::Instr_BRA(uint16 instr) {
     PC = currPC + disp;
 }
 
-void MC68EC000::Instr_BSR(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_BSR(uint16 instr) {
     const uint32 currPC = PC;
     sint16 disp = static_cast<sint8>(bit::extract<0, 7>(instr));
     if (disp == 0x00) {
@@ -1171,7 +1171,7 @@ void MC68EC000::Instr_BSR(uint16 instr) {
     PC = currPC + disp;
 }
 
-void MC68EC000::Instr_Bcc(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_Bcc(uint16 instr) {
     const uint32 currPC = PC;
     sint16 disp = static_cast<sint8>(bit::extract<0, 7>(instr));
     if (disp == 0x00) {
@@ -1183,7 +1183,7 @@ void MC68EC000::Instr_Bcc(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_DBcc(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_DBcc(uint16 instr) {
     const uint32 currPC = PC;
     const uint32 Dn = bit::extract<0, 2>(instr);
     const uint32 cond = bit::extract<8, 11>(instr);
@@ -1198,7 +1198,7 @@ void MC68EC000::Instr_DBcc(uint16 instr) {
     }
 }
 
-void MC68EC000::Instr_JSR(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_JSR(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
 
@@ -1209,7 +1209,7 @@ void MC68EC000::Instr_JSR(uint16 instr) {
     PC = target;
 }
 
-void MC68EC000::Instr_Jmp(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_Jmp(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
 
@@ -1217,31 +1217,31 @@ void MC68EC000::Instr_Jmp(uint16 instr) {
     PC = target;
 }
 
-void MC68EC000::Instr_RTS(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_RTS(uint16 instr) {
     PC = MemReadLong(regs.SP);
     regs.SP += 4;
 }
 
-void MC68EC000::Instr_Trap(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_Trap(uint16 instr) {
     const uint8 vector = bit::extract<0, 3>(instr);
     EnterException(static_cast<ExceptionVector>(0x20 + vector));
 }
 
-void MC68EC000::Instr_TrapV(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_TrapV(uint16 instr) {
     if (SR.V) {
         EnterException(ExceptionVector::TRAPVInstruction);
     }
 }
 
-void MC68EC000::Instr_Illegal(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_Illegal(uint16 instr) {
     EnterException(ExceptionVector::IllegalInstruction);
 }
 
-void MC68EC000::Instr_Illegal1010(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_Illegal1010(uint16 instr) {
     EnterException(ExceptionVector::Line1010Emulator);
 }
 
-void MC68EC000::Instr_Illegal1111(uint16 instr) {
+FORCE_INLINE void MC68EC000::Instr_Illegal1111(uint16 instr) {
     EnterException(ExceptionVector::Line1111Emulator);
 }
 

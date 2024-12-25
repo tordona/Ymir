@@ -699,12 +699,12 @@ bool SH2::CheckInterrupts() {
 // -------------------------------------------------------------------------
 // Helper functions
 
-void SH2::SetupDelaySlot(uint32 targetAddress) {
+FORCE_INLINE void SH2::SetupDelaySlot(uint32 targetAddress) {
     m_delaySlot = true;
     m_delaySlotTarget = targetAddress;
 }
 
-void SH2::EnterException(uint8 vectorNumber) {
+FORCE_INLINE void SH2::EnterException(uint8 vectorNumber) {
     R[15] -= 4;
     MemWriteLong(R[15], SR.u32);
     R[15] -= 4;
