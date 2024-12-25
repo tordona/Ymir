@@ -1196,10 +1196,28 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer
     const uint32 fracScrollY = layer.fracScrollY;
     layer.fracScrollY += bgParams.scrollIncV;
 
+    uint32 cellScrollTableAddress = m_VDP2.verticalCellScrollTableAddress;
+
+    auto readCellScrollY = [&] {
+        const uint32 address = cellScrollTableAddress & 0x7FFFF;
+        const uint32 value = util::ReadBE<uint32>(&m_VRAM2[address]);
+        cellScrollTableAddress += sizeof(uint32);
+        return value;
+    };
+
+    uint32 cellScrollY = bgParams.verticalCellScrollEnable ? readCellScrollY() : 0;
+
     for (uint32 x = 0; x < m_HRes; x++) {
+        // Update vertical cell scroll amount
+        if (bgParams.verticalCellScrollEnable) {
+            if (((fracScrollX >> 8u) & 7) == 0) {
+                cellScrollY = readCellScrollY();
+            }
+        }
+
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 8u;
-        const uint32 scrollY = fracScrollY >> 8u;
+        const uint32 scrollY = (fracScrollY >> 8u) + cellScrollY;
 
         // Determine plane index from the scroll coordinate
         const uint32 planeX = bit::extract<9>(scrollX) >> bgParams.pageShiftH;
@@ -1266,10 +1284,28 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGLayer
     const uint32 fracScrollY = layer.fracScrollY;
     layer.fracScrollY += bgParams.scrollIncV;
 
+    uint32 cellScrollTableAddress = m_VDP2.verticalCellScrollTableAddress;
+
+    auto readCellScrollY = [&] {
+        const uint32 address = cellScrollTableAddress & 0x7FFFF;
+        const uint32 value = util::ReadBE<uint32>(&m_VRAM2[address]);
+        cellScrollTableAddress += sizeof(uint32);
+        return value;
+    };
+
+    uint32 cellScrollY = bgParams.verticalCellScrollEnable ? readCellScrollY() : 0;
+
     for (uint32 x = 0; x < m_HRes; x++) {
+        // Update vertical cell scroll amount
+        if (bgParams.verticalCellScrollEnable) {
+            if (((fracScrollX >> 8u) & 7) == 0) {
+                cellScrollY = readCellScrollY();
+            }
+        }
+
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 8u;
-        const uint32 scrollY = fracScrollY >> 8u;
+        const uint32 scrollY = (fracScrollY >> 8u) + cellScrollY;
 
         // Fetch dot color from bitmap
         layer.colors[x] = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, layer.transparent[x], layer.cramOffset,

@@ -1275,6 +1275,10 @@ struct VDP2Regs {
     // Derived from VCSTAU/L
     uint32 verticalCellScrollTableAddress;
 
+    // Current vertical cell scroll table address.
+    // Reset at the start of every frame and incremented every cell or 8 bitmap pixels.
+    uint32 cellScrollTableAddress;
+
     std::array<SpecialFunctionCodes, 2> specialFunctionCodes;
 };
 
