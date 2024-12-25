@@ -4,6 +4,7 @@
 
 #include "slope.hpp"
 
+#include <satemu/util/bit_ops.hpp>
 #include <satemu/util/constexpr_for.hpp>
 
 #include <fmt/format.h>
@@ -202,7 +203,13 @@ void VDP::BeginHPhaseActiveDisplay() {
 
             for (int i = 0; i < 4; i++) {
                 const auto &bgParams = m_VDP2.normBGParams[i];
-                m_bgLayers[i].fracScrollY = bgParams.scrollAmountV;
+                auto &bgLayer = m_bgLayers[i];
+                bgLayer.fracScrollX = bgParams.scrollAmountH;
+                bgLayer.fracScrollY = bgParams.scrollAmountV;
+                bgLayer.scrollIncH = bgParams.scrollIncH;
+                if (i < 2) {
+                    bgLayer.lineScrollTableAddress = bgParams.lineScrollTableAddress;
+                }
             }
         }
         VDP2DrawLine();
@@ -996,6 +1003,10 @@ void VDP::VDP2DrawLine() {
         if (bg.enabled) {
             layer.cramOffset = bg.caos << (m_VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
 
+            if (i < 2) {
+                VDP2UpdateLineScreenScroll(bg, layer);
+            }
+
             const uint32 colorFormat = static_cast<uint32>(bg.colorFormat);
             if (bg.bitmap) {
                 (this->*fnDrawBitmapNBGs[colorFormat][colorMode])(bg, layer);
@@ -1181,7 +1192,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer
 
     // TODO: implement mosaic
 
-    uint32 fracScrollX = bgParams.scrollAmountH;
+    uint32 fracScrollX = layer.fracScrollX;
     const uint32 fracScrollY = layer.fracScrollY;
     layer.fracScrollY += bgParams.scrollIncV;
 
@@ -1245,13 +1256,13 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer
         }
 
         // Increment horizontal coordinate
-        fracScrollX += bgParams.scrollIncH;
+        fracScrollX += layer.scrollIncH;
     }
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGLayer &layer) {
-    uint32 fracScrollX = bgParams.scrollAmountH;
+    uint32 fracScrollX = layer.fracScrollX;
     const uint32 fracScrollY = layer.fracScrollY;
     layer.fracScrollY += bgParams.scrollIncV;
 
@@ -1273,7 +1284,28 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGLayer
         }
 
         // Increment horizontal coordinate
-        fracScrollX += bgParams.scrollIncH;
+        fracScrollX += layer.scrollIncH;
+    }
+}
+
+void VDP::VDP2UpdateLineScreenScroll(const NormBGParams &bgParams, BGLayer &layer) {
+    auto read = [&] {
+        const uint32 address = layer.lineScrollTableAddress & 0x7FFFF;
+        const uint32 value = util::ReadBE<uint32>(&m_VRAM2[address]);
+        layer.lineScrollTableAddress += sizeof(uint32);
+        return value;
+    };
+
+    if ((m_VCounter & ~(~0 << bgParams.lineScrollInterval)) == 0) {
+        if (bgParams.lineScrollXEnable) {
+            layer.fracScrollX = bit::extract<8, 26>(read());
+        }
+        if (bgParams.lineScrollYEnable) {
+            layer.fracScrollY = bit::extract<8, 26>(read());
+        }
+        if (bgParams.lineZoomEnable) {
+            layer.scrollIncH = bit::extract<8, 18>(read());
+        }
     }
 }
 

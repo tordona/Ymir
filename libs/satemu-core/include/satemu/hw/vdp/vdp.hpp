@@ -677,9 +677,20 @@ private:
         // Derived from RAMCTL.CRMDn and CRAOFA/CRAOFB.xxCAOSn
         uint32 cramOffset;
 
+        // Initial fractional X scroll coordinate.
+        uint32 fracScrollX;
+
         // Fractional Y scroll coordinate.
         // Reset at the start of every frame and updated every scanline.
         uint32 fracScrollY;
+
+        // Fractional X scroll coordinate increment.
+        // Applied every scanline.
+        uint32 scrollIncH;
+
+        // Current line scroll table address.
+        // Reset at the start of every frame and incremented every 1/2/4/8/16 lines.
+        uint32 lineScrollTableAddress;
     };
 
     // Layer data for sprites
@@ -751,6 +762,7 @@ private:
     void VDP2DrawSpriteLayer();
 
     // Draws a normal scroll BG scanline.
+    //
     // bgParams contains the parameters for the BG to draw.
     // layer is a reference to the layer object for the specified background.
     // twoWordChar indicates if character patterns use one word (false) or two words (true).
@@ -760,6 +772,13 @@ private:
     // colorMode is the CRAM color mode.
     template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
     void VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer &layer);
+
+    // Updates the line screen scroll parameters for the given background.
+    // Only valid for NBG0 and NBG1.
+    //
+    // bgParams contains the parameters for the BG to draw.
+    // layer is a reference to the layer object for the specified background.
+    void VDP2UpdateLineScreenScroll(const NormBGParams &bgParams, BGLayer &layer);
 
     // Draws a normal bitmap BG scanline.
     // bgParams contains the parameters for the BG to draw.
