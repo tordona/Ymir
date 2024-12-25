@@ -1488,8 +1488,9 @@ void CDBlock::CmdCalculateActualSize() {
                 startSector = sectorOffset;
                 endSector = std::min<uint16>(startSector + sectorNumber - 1, bufferCount - 1);
             }
-            m_calculatedPartitionSize = m_partitionManager.CalculateSize(partitionNumber, startSector, endSector);
-            fmt::println("CDBlock: calculated actual size: {}", m_calculatedPartitionSize);
+            m_calculatedPartitionSize =
+                m_partitionManager.CalculateSize(partitionNumber, startSector, endSector) / sizeof(uint16);
+            fmt::println("CDBlock: calculated actual size: {} words", m_calculatedPartitionSize);
         }
     }
 
