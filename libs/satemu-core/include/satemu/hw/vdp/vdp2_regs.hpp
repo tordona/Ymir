@@ -22,8 +22,6 @@ struct VDP2Regs {
         MZCTL.u16 = 0x0;
         ZMCTL.u16 = 0x0;
         VCSTA.u32 = 0x0;
-        LSTA0.u32 = 0x0;
-        LSTA1.u32 = 0x0;
         LCTA.u32 = 0x0;
         RPMD.u16 = 0x0;
         RPRCTL.u16 = 0x0;
@@ -861,13 +859,40 @@ struct VDP2Regs {
         normBGParams[1].lineScrollInterval = bit::extract<12, 13>(value);
     }
 
-    /**/             // 18009C   VCSTAU  Vertical Cell Scroll Table Address (upper)
-    VCSTA_t VCSTA;   // 18009E   VCSTAL  Vertical Cell Scroll Table Address (lower)
-                     // 1800A0   LSTA0U  NBG0 Line Cell Scroll Table Address (upper)
-    LSTA_t LSTA0;    // 1800A2   LSTA0L  NBG0 Line Cell Scroll Table Address (lower)
-                     // 1800A4   LSTA1U  NBG1 Line Cell Scroll Table Address (upper)
-    LSTA_t LSTA1;    // 1800A6   LSTA1L  NBG1 Line Cell Scroll Table Address (lower)
-                     // 1800A8   LCTAU   Line Color Screen Table Address (upper)
+    /**/           // 18009C   VCSTAU  Vertical Cell Scroll Table Address (upper)
+    VCSTA_t VCSTA; // 18009E   VCSTAL  Vertical Cell Scroll Table Address (lower)
+
+    // 1800A0   LSTA0U  NBG0 Line Scroll Table Address (upper)
+    // 1800A4   LSTA1U  NBG1 Line Scroll Table Address (upper)
+    //
+    //   bits   r/w  code          description
+    //   15-3        -             Reserved, must be zero
+    //    2-0     W  NxLSTA18-16   NBGx Line Scroll Table Base Address (bits 18-16)
+    //
+    // 1800A2   LSTA0L  NBG0 Line Scroll Table Address (lower)
+    // 1800A6   LSTA1L  NBG1 Line Scroll Table Address (lower)
+    //
+    //   bits   r/w  code          description
+    //   15-1     W  NxLSTA15-1    NBGx Line Scroll Table Base Address (bits 15-1)
+    //      0        -             Reserved, must be zero
+
+    FORCE_INLINE uint16 ReadLSTAnU(uint8 bgIndex) const {
+        return bit::extract<17, 19>(normBGParams[bgIndex].lineScrollTableAddress);
+    }
+
+    FORCE_INLINE void WriteLSTAnU(uint8 bgIndex, uint16 value) {
+        bit::deposit_into<17, 19>(normBGParams[bgIndex].lineScrollTableAddress, bit::extract<0, 2>(value));
+    }
+
+    FORCE_INLINE uint16 ReadLSTAnL(uint8 bgIndex) const {
+        return bit::extract<2, 16>(normBGParams[bgIndex].lineScrollTableAddress) << 1u;
+    }
+
+    FORCE_INLINE void WriteLSTAnL(uint8 bgIndex, uint16 value) {
+        bit::deposit_into<2, 16>(normBGParams[bgIndex].lineScrollTableAddress, bit::extract<1, 15>(value));
+    }
+
+    /**/             // 1800A8   LCTAU   Line Color Screen Table Address (upper)
     LCTA_t LCTA;     // 1800AA   LCTAL   Line Color Screen Table Address (lower)
                      // 1800AC   BKTAU   Back Screen Table Address (upper)
     BKTA_t BKTA;     // 1800AE   BKTAL   Back Screen Table Address (lower)
