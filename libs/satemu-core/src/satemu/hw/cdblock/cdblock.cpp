@@ -511,10 +511,6 @@ void CDBlock::EndTransfer() {
     switch (m_xferType) {
     case TransferType::GetSector:
     case TransferType::GetThenDeleteSector: {
-        const uint16 bufferPos = (m_xferPos * sizeof(uint16)) & 2047;
-        if (bufferPos < 2046) {
-            m_partitionManager.RemoveTail(m_xferPartition);
-        }
         SetInterrupt(kHIRQ_EHST);
         break;
     }
