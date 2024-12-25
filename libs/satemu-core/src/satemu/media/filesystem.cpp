@@ -44,10 +44,10 @@ bool Filesystem::Read(const Disc &disc) {
     std::array<uint8, 2048> buf{};
 
     // Found the track; compute the offset and read the volume descriptor
-    const uint32 volumeDescAddress = absVolumeDescAddress - track.startFrameAddress;
+    const uint32 volumeDescAddress = absVolumeDescAddress;
     for (uint32 sectorIndex = volumeDescAddress;; sectorIndex++) {
         // Fail if we can't read the sector
-        if (track.ReadSectorUserData(sectorIndex, buf) != 2048) {
+        if (!track.ReadSectorUserData(sectorIndex, buf)) {
             return false;
         }
 
@@ -173,7 +173,7 @@ bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor
     // Read all path table records
     const uint32 pathSectorCount = (volDesc.pathTableSize + 2047) / 2048;
     for (uint32 pathSectorIndex = 0; pathSectorIndex < pathSectorCount; pathSectorIndex++) {
-        if (track.ReadSectorUserData(volDesc.pathTableLPos + pathSectorIndex, pathTableBuf) != 2048) {
+        if (!track.ReadSectorUserData(volDesc.pathTableLPos + pathSectorIndex + 150, pathTableBuf)) {
             return false;
         }
 
@@ -191,7 +191,7 @@ bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor
 
             // Try reading the directory record
             DirectoryRecord dirRecord{};
-            if (track.ReadSectorUserData(pathTableRecord.extentPos, dirRecBuf) != 2048) {
+            if (!track.ReadSectorUserData(pathTableRecord.extentPos + 150, dirRecBuf)) {
                 return false;
             }
             if (!dirRecord.Read(dirRecBuf)) {
@@ -213,7 +213,7 @@ bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor
             // Read directory contents
             const uint32 dirSectorCount = (dirRecord.dataSize + 2047) / 2048;
             for (uint32 dirSectorIndex = 0; dirSectorIndex < dirSectorCount; dirSectorIndex++) {
-                if (track.ReadSectorUserData(dirRecord.extentPos + dirSectorIndex, dirRecBuf) != 2048) {
+                if (!track.ReadSectorUserData(dirRecord.extentPos + dirSectorIndex + 150, dirRecBuf)) {
                     return false;
                 }
 

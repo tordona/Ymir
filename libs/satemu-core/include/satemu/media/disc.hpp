@@ -26,14 +26,93 @@ struct Track {
         userDataOffset = size == 2352 ? 16 : 0;
     }
 
-    uintmax_t ReadSectorUserData(uint32 frameAddress, std::span<uint8, 2048> outBuf) const {
-        const uint32 sectorOffset = frameAddress * sectorSize;
-        return binaryReader->Read(sectorOffset + userDataOffset, 2048, outBuf);
+    // Reads the user data portion of a sector.
+    // Returns true if the sector was read successfully.
+    // Returns false if the sector could not be fully read or the frame address is out of range.
+    // TODO: support CD-ROM XA mode 2 form 2 user data (2324 bytes)
+    bool ReadSectorUserData(uint32 frameAddress, std::span<uint8, 2048> outBuf) const {
+        if (frameAddress < startFrameAddress || frameAddress > endFrameAddress) [[unlikely]] {
+            return false;
+        }
+
+        const uint32 sectorOffset = (frameAddress - startFrameAddress) * sectorSize;
+        return binaryReader->Read(sectorOffset + userDataOffset, 2048, outBuf) == 2048;
     }
 
-    uintmax_t ReadSectorRaw(uint32 frameAddress, std::span<uint8> outBuf) const {
-        const uint32 sectorOffset = frameAddress * sectorSize;
-        return binaryReader->Read(sectorOffset, sectorSize, outBuf);
+    // Reads a sector of the specified size from the given absolute frame address.
+    // If the output size is larger than the track sector size, the missing parts are synthesized in the output buffer.
+    // The following sizes are supported:
+    // - 2048 bytes: reads only the user data portion of the sector
+    // - 2336 bytes: appends the subheader (checksums and ECC)
+    // - 2340 bytes: prepends the header (min:sec:frac and mode)
+    // - 2352 bytes: prepends the sync bytes
+    // Returns true if the sector was read successfully.
+    // Returns false if the sector could not be fully read, the frame address is out of range or the requested size is
+    // unsupported.
+    bool ReadSector(uint32 frameAddress, std::span<uint8, 2352> outBuf, uint32 targetSize) const {
+        if (frameAddress < startFrameAddress || frameAddress > endFrameAddress) [[unlikely]] {
+            return false;
+        }
+        if (targetSize != 2048 && targetSize != 2336 && targetSize != 2340 && targetSize != 2352) [[unlikely]] {
+            return false;
+        }
+
+        // Determine which components are needed and which are present
+        const bool needsSyncBytes = targetSize >= 2352;
+        const bool needsHeader = targetSize >= 2340;
+        const bool needsSubheader = targetSize >= 2336;
+
+        const bool hasSyncBytes = sectorSize >= 2352;
+        const bool hasHeader = sectorSize >= 2340;
+        const bool hasSubheader = sectorSize >= 2336;
+
+        // Determine how much data needs to be skipped from the raw sector read and where we need to write it
+        const uint32 readOffset = (!needsSyncBytes && hasSyncBytes) * 12 + (!needsHeader && hasHeader) * 4;
+        const uint32 writeOffset = (needsSyncBytes && !hasSyncBytes) * 12 + (needsHeader && !hasHeader) * 4;
+
+        // Try to read raw sector data based on specifications
+        const uint32 sectorOffset = (frameAddress - startFrameAddress) * sectorSize + readOffset;
+        const std::span<uint8> output{outBuf.begin() + writeOffset, targetSize};
+        const uintmax_t readSize = binaryReader->Read(sectorOffset, targetSize, output);
+        if (readSize != targetSize) {
+            return false;
+        }
+
+        // Fill in any missing data
+        if (needsSyncBytes && !hasSyncBytes) {
+            static constexpr std::array<uint8, 12> syncBytes = {0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                                                                0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00};
+            std::copy(syncBytes.begin(), syncBytes.end(), outBuf.begin());
+        }
+        if (needsHeader && !hasHeader) {
+            // Convert absolute frame address to min:sec:frac
+            outBuf[0xC] = frameAddress / 75 / 60;
+            outBuf[0xD] = (frameAddress / 75) % 60;
+            outBuf[0xE] = frameAddress % 75;
+
+            // Determine mode based on track type and sector size
+            if (controlADR == 0x41) {
+                // Data track
+                if (sectorSize == 2336) {
+                    // Mode 2 form 1
+                    outBuf[0xF] = 0x02;
+                } else {
+                    // Mode 1
+                    outBuf[0xF] = 0x01;
+                }
+            } else {
+                // Audio track
+                outBuf[0xF] = 0x00;
+            }
+        }
+        if (needsSubheader && !hasSubheader) {
+            // Fill out checksums after user data
+            // TODO: actually calculate checksums
+            // for now, we'll fill the checksums with zeros and hope that no software ever checks them
+            std::fill_n(outBuf.begin() + writeOffset + 2048, 288, 0x00);
+        }
+
+        return true;
     }
 };
 

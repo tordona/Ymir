@@ -315,11 +315,12 @@ void CDBlock::ProcessDriveState() {
 }
 
 void CDBlock::ProcessDriveStatePlay() {
-    if (m_status.frameAddress <= m_playEndPos) {
+    const uint32 frameAddress = m_status.frameAddress;
+    if (frameAddress <= m_playEndPos) {
         if (m_cdDeviceConnection != media::Filter::kDisconnected) [[likely]] {
             assert(m_cdDeviceConnection < m_filters.size());
 
-            fmt::println("CDBlock: playback: read from frame address {:06X}", m_status.frameAddress);
+            fmt::println("CDBlock: playback: read from frame address {:06X}", frameAddress);
 
             Buffer *buffer = m_bufferManager.Allocate();
             if (buffer == nullptr) [[unlikely]] {
@@ -328,7 +329,7 @@ void CDBlock::ProcessDriveStatePlay() {
                 m_status.statusCode = kStatusCodePause;
                 SetInterrupt(kHIRQ_BFUL);
                 // TODO: when buffer no longer full, switch to Play if we paused because of BFUL
-                // - or maybe if m_status.frameAddress <= m_playEndPos
+                // - or maybe if frameAddress <= m_playEndPos
             } else if (m_disc.sessions.empty()) [[unlikely]] {
                 fmt::println("CDBlock: playback: disc removed");
 
@@ -337,11 +338,11 @@ void CDBlock::ProcessDriveStatePlay() {
             } else {
                 // TODO: consider caching the track pointer
                 const media::Session &session = m_disc.sessions.back();
-                const media::Track *track = session.FindTrack(m_status.frameAddress);
+                const media::Track *track = session.FindTrack(frameAddress);
 
                 // Sanity check: is the track valid?
-                if (track != nullptr) [[likely]] {
-                    buffer->size = track->ReadSectorRaw(m_status.frameAddress - track->startFrameAddress, buffer->data);
+                if (track != nullptr && track->ReadSector(frameAddress, buffer->data, m_getSectorLength)) [[likely]] {
+                    buffer->size = m_getSectorLength;
 
                     fmt::println("CDBlock: playback: read {} bytes", buffer->size);
 
@@ -383,7 +384,7 @@ void CDBlock::ProcessDriveStatePlay() {
                 }
             }
         } else {
-            fmt::println("CDBlock: playback: read from {:06X} discarded", m_status.frameAddress);
+            fmt::println("CDBlock: playback: read from {:06X} discarded", frameAddress);
         }
 
         m_status.frameAddress++;
@@ -542,16 +543,6 @@ uint16 CDBlock::DoReadTransfer() {
         // TODO: cache buffer
         Buffer *buffer = m_partitionManager.GetTail(m_xferPartition);
 
-        // TODO: honor m_getSectorLength
-        // - raw sector read should generate or mock missing parts
-        // - transfers should skip the sync bytes and header depending on m_getSectorLength:
-        //   - 2048: skip 16 bytes
-        //   - 2336: skip 16 bytes
-        //   - 2340: skip 12 bytes
-        //   - 2352: no skip
-        // Sector structure
-        // | 12 bytes | 4 bytes | 2048 bytes | 288 bytes |
-        // | sync     | header  | user data  | subheader |
         const uint16 bufferPos = (m_xferPos * sizeof(uint16)) & 2047;
         value = util::ReadBE<uint16>(&buffer->data[bufferPos]);
 
