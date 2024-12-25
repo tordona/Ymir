@@ -191,13 +191,28 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
             uint32 sectorSize{};
             uint32 controlADR{};
             if (format.starts_with("MODE")) {
-                sectorSize = std::stoi(format.substr(6));
+                // Data track
+                if (format.ends_with("_RAW")) {
+                    // MODE1_RAW and MODE2_RAW
+                    sectorSize = 2352;
+                } else {
+                    // Known modes:
+                    // MODE1/2048   MODE2/2048
+                    //              MODE2/2324
+                    //              MODE2/2336
+                    // MODE1/2352   MODE2/2352
+                    sectorSize = std::stoi(format.substr(6));
+                }
                 controlADR = 0x41;
+            } else if (format == "CDG") {
+                // Karaoke CD+G track
+                sectorSize = 2448;
             } else if (format == "AUDIO") {
+                // Audio track
                 sectorSize = 2352;
                 controlADR = 0x01;
             } else {
-                // fmt::println("BIN/CUE: Unrecognized track format (line {})", lineNum);
+                // fmt::println("BIN/CUE: Unsupported track format (line {})", lineNum);
                 return false;
             }
             // fmt::println("BIN/CUE:   Sector size: {} bytes", sectorSize);
