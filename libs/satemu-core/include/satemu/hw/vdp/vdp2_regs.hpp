@@ -58,6 +58,9 @@ struct VDP2Regs {
         }
         spriteParams.Reset();
 
+        verticalCellScrollTableAddress = 0;
+        cellScrollTableAddress = 0;
+
         for (auto &sp : specialFunctionCodes) {
             sp.Reset();
         }

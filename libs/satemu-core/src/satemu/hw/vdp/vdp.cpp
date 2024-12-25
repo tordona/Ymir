@@ -999,7 +999,7 @@ void VDP::VDP2DrawLine() {
     // Draw normal BGs
     int i = 0;
     for (const auto &bg : m_VDP2.normBGParams) {
-        auto &layer = m_bgLayers[i++];
+        auto &layer = m_bgLayers[i];
         if (bg.enabled) {
             layer.cramOffset = bg.caos << (m_VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
 
@@ -1022,6 +1022,7 @@ void VDP::VDP2DrawLine() {
             layer.colors.fill({0});
             layer.priorities.fill(0);
         }
+        ++i;
     }
 
     // Draw rotation BGs
@@ -1489,24 +1490,26 @@ FORCE_INLINE VDP::Character VDP::VDP2FetchOneWordCharacter(const NormBGParams &b
      T   T   F  |--| PN 6-4 |VF|HF| character number 11-2      |    |PR|CC|--------|CN 14-12|CN1-0|
      F   F   T  |palnum 3-0 |       character number 11-0      |    |PR|CC| PN 6-4 |CN 14-12|-----|
      F   T   T  |--| PN 6-4 |       character number 11-0      |    |PR|CC|--------|CN 14-12|-----|
-     T   F   T  |palnum 3-0 |       character number 13-2      |    |PR|CC| PN 6-4 |xx|-----|CN1-0|   xx=CN14
-     T   T   T  |--| PN 6-4 |       character number 13-2      |    |PR|CC|--------|xx|-----|CN1-0|   xx=CN14
+     T   F   T  |palnum 3-0 |       character number 13-2      |    |PR|CC| PN 6-4 |cn|-----|CN1-0|   cn=CN14
+     T   T   T  |--| PN 6-4 |       character number 13-2      |    |PR|CC|--------|cn|-----|CN1-0|   cn=CN14
     */
 
     // Character number bit range from the 1-word character pattern data (charData)
-    static constexpr uint32 charNumStart = 2 * fourCellChar;
-    static constexpr uint32 charNumEnd = charNumStart + 9 + 2 * wideChar;
+    static constexpr uint32 baseCharNumStart = 0;
+    static constexpr uint32 baseCharNumEnd = 9 + 2 * wideChar;
+    static constexpr uint32 baseCharNumPos = 2 * fourCellChar;
 
     // Upper character number bit range from the supplementary character number (bgParams.supplCharNum)
-    static constexpr uint32 supplCharNumStartUpper = 2 * fourCellChar + 2 * wideChar;
-    static constexpr uint32 supplCharNumEndUpper = 4;
+    static constexpr uint32 supplCharNumStart = 2 * fourCellChar + 2 * wideChar;
+    static constexpr uint32 supplCharNumEnd = 4;
+    static constexpr uint32 supplCharNumPos = 10 + supplCharNumStart;
     // The lower bits are always in range 0..1 and only used if fourCellChar == true
 
-    const uint32 baseCharNum = bit::extract<charNumStart, charNumEnd>(charData);
-    const uint32 supplCharNum = bit::extract<supplCharNumStartUpper, supplCharNumEndUpper>(bgParams.supplScrollCharNum);
+    const uint32 baseCharNum = bit::extract<baseCharNumStart, baseCharNumEnd>(charData);
+    const uint32 supplCharNum = bit::extract<supplCharNumStart, supplCharNumEnd>(bgParams.supplScrollCharNum);
 
     Character ch{};
-    ch.charNum = (baseCharNum << charNumStart) | (supplCharNum << (10 + supplCharNumStartUpper));
+    ch.charNum = (baseCharNum << baseCharNumPos) | (supplCharNum << supplCharNumPos);
     if constexpr (fourCellChar) {
         ch.charNum |= bit::extract<0, 1>(bgParams.supplScrollCharNum);
     }
