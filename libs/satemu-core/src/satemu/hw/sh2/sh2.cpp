@@ -762,7 +762,7 @@ void SH2::Execute(uint32 address) {
         case 0x000B: // 0000 0000 0000 1011   RTS
             if (m_delaySlot) {
                 // Illegal slot instruction exception
-                EnterException(6);
+                EnterException(xvSlotIllegalInstr);
             } else {
                 RTS();
             }
@@ -786,7 +786,7 @@ void SH2::Execute(uint32 address) {
         case 0x002B: // 0000 0000 0010 1011   RTE
             if (m_delaySlot) {
                 // Illegal slot instruction exception
-                EnterException(6);
+                EnterException(xvSlotIllegalInstr);
             } else {
                 RTE();
             }
@@ -800,7 +800,7 @@ void SH2::Execute(uint32 address) {
             case 0x03: // 0000 mmmm 0000 0011   BSRF Rm
                 if (m_delaySlot) {
                     // Illegal slot instruction exception
-                    EnterException(6);
+                    EnterException(xvSlotIllegalInstr);
                 } else {
                     BSRF(bit::extract<8, 11>(instr));
                 }
@@ -824,7 +824,7 @@ void SH2::Execute(uint32 address) {
             case 0x23: // 0000 mmmm 0010 0011   BRAF Rm
                 if (m_delaySlot) {
                     // Illegal slot instruction exception
-                    EnterException(6);
+                    EnterException(xvSlotIllegalInstr);
                 } else {
                     BRAF(bit::extract<8, 11>(instr));
                 }
@@ -1075,7 +1075,7 @@ void SH2::Execute(uint32 address) {
             case 0x0B: // 0100 mmmm 0000 1011   JSR @Rm
                 if (m_delaySlot) {
                     // Illegal slot instruction exception
-                    EnterException(6);
+                    EnterException(xvSlotIllegalInstr);
                 } else {
                     JSR(bit::extract<8, 11>(instr));
                 }
@@ -1194,7 +1194,7 @@ void SH2::Execute(uint32 address) {
             case 0x2B: // 0100 mmmm 0010 1011   JMP @Rm
                 if (m_delaySlot) {
                     // Illegal slot instruction exception
-                    EnterException(6);
+                    EnterException(xvSlotIllegalInstr);
                 } else {
                     JMP(bit::extract<8, 11>(instr));
                 }
@@ -1320,7 +1320,7 @@ void SH2::Execute(uint32 address) {
         case 0x9: // 1000 1001 dddd dddd   BT <label>
             if (m_delaySlot) {
                 // Illegal slot instruction exception
-                EnterException(6);
+                EnterException(xvSlotIllegalInstr);
             } else {
                 BT(bit::extract<0, 7>(instr));
             }
@@ -1331,7 +1331,7 @@ void SH2::Execute(uint32 address) {
         case 0xB: // 1000 1011 dddd dddd   BF <label>
             if (m_delaySlot) {
                 // Illegal slot instruction exception
-                EnterException(6);
+                EnterException(xvSlotIllegalInstr);
             } else {
                 BF(bit::extract<0, 7>(instr));
             }
@@ -1342,7 +1342,7 @@ void SH2::Execute(uint32 address) {
         case 0xD: // 1000 1101 dddd dddd   BT/S <label>
             if (m_delaySlot) {
                 // Illegal slot instruction exception
-                EnterException(6);
+                EnterException(xvSlotIllegalInstr);
             } else {
                 BTS(bit::extract<0, 7>(instr));
             }
@@ -1353,7 +1353,7 @@ void SH2::Execute(uint32 address) {
         case 0xF: // 1000 1111 dddd dddd   BF/S <label>
             if (m_delaySlot) {
                 // Illegal slot instruction exception
-                EnterException(6);
+                EnterException(xvSlotIllegalInstr);
             } else {
                 BFS(bit::extract<0, 7>(instr));
             }
@@ -1368,7 +1368,7 @@ void SH2::Execute(uint32 address) {
     case 0xA: // 1010 dddd dddd dddd   BRA <label>
         if (m_delaySlot) {
             // Illegal slot instruction exception
-            EnterException(6);
+            EnterException(xvSlotIllegalInstr);
         } else {
             BRA(bit::extract<0, 11>(instr));
         }
@@ -1376,7 +1376,7 @@ void SH2::Execute(uint32 address) {
     case 0xB: // 1011 dddd dddd dddd   BSR <label>
         if (m_delaySlot) {
             // Illegal slot instruction exception
-            EnterException(6);
+            EnterException(xvSlotIllegalInstr);
         } else {
             BSR(bit::extract<0, 11>(instr));
         }
@@ -1398,7 +1398,7 @@ void SH2::Execute(uint32 address) {
         case 0x3: // 1100 0011 iiii iiii   TRAPA #imm
             if (m_delaySlot) {
                 // Illegal slot instruction exception
-                EnterException(6);
+                EnterException(xvSlotIllegalInstr);
             } else {
                 TRAPA(bit::extract<0, 7>(instr));
             }
