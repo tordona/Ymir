@@ -662,41 +662,6 @@ union ZMCTL_t {
     };
 };
 
-// 18009C   VCSTAU  Vertical Cell Scroll Table Address (upper)
-//
-//   bits   r/w  code          description
-//   15-3        -             Reserved, must be zero
-//    2-0     W  VCSTA18-16    Vertical Cell Scroll Table Base Address (bits 18-16)
-//
-// 18009E   VCSTAL  Vertical Cell Scroll Table Address (lower)
-//
-//   bits   r/w  code          description
-//   15-1     W  VCSTA15-1     Vertical Cell Scroll Table Base Address (bits 15-1)
-//      0        -             Reserved, must be zero
-union VCSTA_t {
-    uint32 u32;
-    struct {
-        union {
-            uint16 u16;
-            struct {
-                uint16 _rsvd0 : 1;
-                uint16 VCSTAn : 15;
-            };
-        } L;
-        union {
-            uint16 u16;
-            struct {
-                uint16 VCSTAn : 3;
-                uint16 _rsvd3_15 : 13;
-            };
-        } U;
-    };
-    struct {
-        uint32 : 1;
-        uint32 VCSTAn : 18;
-    };
-};
-
 // 1800A8   LCTAU   Line Color Screen Table Address (upper)
 //
 //   bits   r/w  code          description

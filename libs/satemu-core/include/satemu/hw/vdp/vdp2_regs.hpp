@@ -21,7 +21,6 @@ struct VDP2Regs {
         CYCB1.u32 = 0x0;
         MZCTL.u16 = 0x0;
         ZMCTL.u16 = 0x0;
-        VCSTA.u32 = 0x0;
         LCTA.u32 = 0x0;
         RPMD.u16 = 0x0;
         RPRCTL.u16 = 0x0;
@@ -859,8 +858,33 @@ struct VDP2Regs {
         normBGParams[1].lineScrollInterval = bit::extract<12, 13>(value);
     }
 
-    /**/           // 18009C   VCSTAU  Vertical Cell Scroll Table Address (upper)
-    VCSTA_t VCSTA; // 18009E   VCSTAL  Vertical Cell Scroll Table Address (lower)
+    // 18009C   VCSTAU  Vertical Cell Scroll Table Address (upper)
+    //
+    //   bits   r/w  code          description
+    //   15-3        -             Reserved, must be zero
+    //    2-0     W  VCSTA18-16    Vertical Cell Scroll Table Base Address (bits 18-16)
+    //
+    // 18009E   VCSTAL  Vertical Cell Scroll Table Address (lower)
+    //
+    //   bits   r/w  code          description
+    //   15-1     W  VCSTA15-1     Vertical Cell Scroll Table Base Address (bits 15-1)
+    //      0        -             Reserved, must be zero
+
+    FORCE_INLINE uint16 ReadVCSTAU() const {
+        return bit::extract<17, 19>(verticalCellScrollTableAddress);
+    }
+
+    FORCE_INLINE void WriteVCSTAU(uint16 value) {
+        bit::deposit_into<17, 19>(verticalCellScrollTableAddress, bit::extract<0, 2>(value));
+    }
+
+    FORCE_INLINE uint16 ReadVCSTAL() const {
+        return bit::extract<2, 16>(verticalCellScrollTableAddress) << 1u;
+    }
+
+    FORCE_INLINE void WriteVCSTAL(uint16 value) {
+        bit::deposit_into<2, 16>(verticalCellScrollTableAddress, bit::extract<1, 15>(value));
+    }
 
     // 1800A0   LSTA0U  NBG0 Line Scroll Table Address (upper)
     // 1800A4   LSTA1U  NBG1 Line Scroll Table Address (upper)
@@ -1245,6 +1269,11 @@ struct VDP2Regs {
     std::array<NormBGParams, 4> normBGParams;
     std::array<RotBGParams, 2> rotBGParams;
     SpriteParams spriteParams;
+
+    // Vertical cell scroll table base address.
+    // Only valid for NBG0 and NBG1.
+    // Derived from VCSTAU/L
+    uint32 verticalCellScrollTableAddress;
 
     std::array<SpecialFunctionCodes, 2> specialFunctionCodes;
 };
