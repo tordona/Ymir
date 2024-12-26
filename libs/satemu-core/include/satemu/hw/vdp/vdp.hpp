@@ -688,6 +688,11 @@ private:
         // Current line scroll table address.
         // Reset at the start of every frame and incremented every 1/2/4/8/16 lines.
         uint32 lineScrollTableAddress;
+
+        // Vertical mosaic counter.
+        // Reset at the start of every frame and incremented every line.
+        // The value is mod mosaicV.
+        uint8 mosaicCounterY;
     };
 
     // Layer data for sprites

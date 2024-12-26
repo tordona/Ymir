@@ -49,7 +49,8 @@ void VDP::Reset(bool hard) {
         bgLayer.fracScrollX = 0;
         bgLayer.fracScrollY = 0;
         bgLayer.scrollIncH = 0x100;
-        bgLayer.lineScrollTableAddress = 0x100;
+        bgLayer.lineScrollTableAddress = 0;
+        bgLayer.mosaicCounterY = 0;
     }
 
     BeginHPhaseActiveDisplay();
@@ -204,6 +205,7 @@ void VDP::BeginHPhaseActiveDisplay() {
                 bgLayer.fracScrollX = bgParams.scrollAmountH;
                 bgLayer.fracScrollY = bgParams.scrollAmountV;
                 bgLayer.scrollIncH = bgParams.scrollIncH;
+                bgLayer.mosaicCounterY = 0;
                 if (i < 2) {
                     bgLayer.lineScrollTableAddress = bgParams.lineScrollTableAddress;
                 }
@@ -1040,6 +1042,10 @@ void VDP::VDP2DrawLine() {
         auto &layer = m_bgLayers[i];
         if (bg.enabled) {
             layer.cramOffset = bg.caos << (m_VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
+            layer.mosaicCounterY++;
+            if (layer.mosaicCounterY >= m_VDP2.mosaicV) {
+                layer.mosaicCounterY = 0;
+            }
 
             if (i < 2) {
                 VDP2UpdateLineScreenScroll(bg, layer);
@@ -1237,15 +1243,15 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer
         return bit::extract<8, 26>(value);
     };
 
+    uint8 mosaicCounterX = 0;
     uint32 cellScrollY = 0;
+
     if (bgParams.verticalCellScrollEnable) {
         // Read first vertical scroll amount if scrolled partway through a cell at the start of the line
         if (((fracScrollX >> 8u) & 7) != 0) {
             cellScrollY = readCellScrollY();
         }
     }
-
-    uint8 mosaicCounterX = 0;
 
     for (uint32 x = 0; x < m_HRes; x++) {
         if (bgParams.verticalCellScrollEnable) {
@@ -1273,7 +1279,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer
 
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 8u;
-        const uint32 scrollY = (fracScrollY + cellScrollY) >> 8u;
+        const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - layer.mosaicCounterY;
 
         // Determine plane index from the scroll coordinate
         const uint32 planeX = bit::extract<9>(scrollX) >> bgParams.pageShiftH;
@@ -1350,6 +1356,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGLayer
         return bit::extract<8, 26>(value);
     };
 
+    uint32 mosaicCounterX = 0;
     uint32 cellScrollY = 0;
 
     for (uint32 x = 0; x < m_HRes; x++) {
@@ -1358,11 +1365,27 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGLayer
             if (((fracScrollX >> 8u) & 7) == 0) {
                 cellScrollY = readCellScrollY();
             }
+        } else if (bgParams.mosaicEnable) {
+            // Apply horizontal mosaic
+            // TODO: should mosaic have priority over vertical cell scroll?
+            const uint8 currMosaicCounterX = mosaicCounterX;
+            mosaicCounterX++;
+            if (mosaicCounterX >= m_VDP2.mosaicH) {
+                mosaicCounterX = 0;
+            }
+            if (currMosaicCounterX > 0) {
+                // Simply copy over the data from the previous pixel
+                layer.pixels[x] = layer.pixels[x - 1];
+
+                // Increment horizontal coordinate
+                fracScrollX += layer.scrollIncH;
+                continue;
+            }
         }
 
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 8u;
-        const uint32 scrollY = (fracScrollY + cellScrollY) >> 8u;
+        const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - layer.mosaicCounterY;
 
         // Fetch dot color from bitmap
         auto &pixel = layer.pixels[x];
