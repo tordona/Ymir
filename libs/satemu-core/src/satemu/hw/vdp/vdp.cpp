@@ -1360,117 +1360,6 @@ FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(uint32 pageBaseAddres
     return ch;
 }
 
-FLATTEN FORCE_INLINE SpriteData VDP::VDP2FetchSpriteData(uint32 fbOffset) {
-    const uint8 type = m_VDP2.spriteParams.type;
-    if (type < 8) {
-        return VDP2FetchWordSpriteData(fbOffset * sizeof(uint16), type);
-    } else {
-        return VDP2FetchByteSpriteData(fbOffset, type);
-    }
-}
-
-FORCE_INLINE SpriteData VDP::VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type) {
-    assert(type >= 8);
-
-    const uint8 rawData = VDP1GetDisplayFB()[fbOffset & 0x3FFFF];
-
-    SpriteData data{};
-    switch (m_VDP2.spriteParams.type) {
-    case 0x8:
-        data.colorData = bit::extract<0, 6>(rawData);
-        data.priority = bit::extract<7>(rawData);
-        break;
-    case 0x9:
-        data.colorData = bit::extract<0, 5>(rawData);
-        data.colorCalcRatio = bit::extract<6>(rawData);
-        data.priority = bit::extract<7>(rawData);
-        break;
-    case 0xA:
-        data.colorData = bit::extract<0, 5>(rawData);
-        data.priority = bit::extract<6, 7>(rawData);
-        break;
-    case 0xB:
-        data.colorData = bit::extract<0, 5>(rawData);
-        data.colorCalcRatio = bit::extract<6, 7>(rawData);
-        break;
-    case 0xC:
-        data.colorData = bit::extract<0, 7>(rawData);
-        data.priority = bit::extract<7>(rawData);
-        break;
-    case 0xD:
-        data.colorData = bit::extract<0, 7>(rawData);
-        data.colorCalcRatio = bit::extract<6>(rawData);
-        data.priority = bit::extract<7>(rawData);
-        break;
-    case 0xE:
-        data.colorData = bit::extract<0, 7>(rawData);
-        data.priority = bit::extract<6, 7>(rawData);
-        break;
-    case 0xF:
-        data.colorData = bit::extract<0, 7>(rawData);
-        data.colorCalcRatio = bit::extract<6, 7>(rawData);
-        break;
-    }
-    return data;
-}
-
-FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type) {
-    assert(type < 8);
-
-    const uint16 rawData = util::ReadBE<uint16>(&VDP1GetDisplayFB()[fbOffset & 0x3FFFE]);
-
-    SpriteData data{};
-    switch (m_VDP2.spriteParams.type) {
-    case 0x0:
-        data.colorData = bit::extract<0, 10>(rawData);
-        data.colorCalcRatio = bit::extract<11, 13>(rawData);
-        data.priority = bit::extract<14, 15>(rawData);
-        break;
-    case 0x1:
-        data.colorData = bit::extract<0, 10>(rawData);
-        data.colorCalcRatio = bit::extract<11, 12>(rawData);
-        data.priority = bit::extract<13, 15>(rawData);
-        break;
-    case 0x2:
-        data.colorData = bit::extract<0, 10>(rawData);
-        data.colorCalcRatio = bit::extract<11, 13>(rawData);
-        data.priority = bit::extract<14>(rawData);
-        data.shadowOrWindow = bit::extract<15>(rawData);
-        break;
-    case 0x3:
-        data.colorData = bit::extract<0, 10>(rawData);
-        data.colorCalcRatio = bit::extract<11, 12>(rawData);
-        data.priority = bit::extract<13, 14>(rawData);
-        data.shadowOrWindow = bit::extract<15>(rawData);
-        break;
-    case 0x4:
-        data.colorData = bit::extract<0, 9>(rawData);
-        data.colorCalcRatio = bit::extract<10, 12>(rawData);
-        data.priority = bit::extract<13, 14>(rawData);
-        data.shadowOrWindow = bit::extract<15>(rawData);
-        break;
-    case 0x5:
-        data.colorData = bit::extract<0, 10>(rawData);
-        data.colorCalcRatio = bit::extract<11>(rawData);
-        data.priority = bit::extract<12, 14>(rawData);
-        data.shadowOrWindow = bit::extract<15>(rawData);
-        break;
-    case 0x6:
-        data.colorData = bit::extract<0, 9>(rawData);
-        data.colorCalcRatio = bit::extract<10, 11>(rawData);
-        data.priority = bit::extract<12, 14>(rawData);
-        data.shadowOrWindow = bit::extract<15>(rawData);
-        break;
-    case 0x7:
-        data.colorData = bit::extract<0, 8>(rawData);
-        data.colorCalcRatio = bit::extract<9, 11>(rawData);
-        data.priority = bit::extract<12, 14>(rawData);
-        data.shadowOrWindow = bit::extract<15>(rawData);
-        break;
-    }
-    return data;
-}
-
 template <bool fourCellChar, bool largePalette, bool wideChar>
 FORCE_INLINE VDP::Character VDP::VDP2FetchOneWordCharacter(const NormBGParams &bgParams, uint32 pageBaseAddress,
                                                            uint32 charIndex) {
@@ -1649,6 +1538,117 @@ FORCE_INLINE Color888 VDP::VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorInd
         const uint32 data = util::ReadBE<uint32>(&m_CRAM[address]);
         return Color888{.u32 = data};
     }
+}
+
+FLATTEN FORCE_INLINE SpriteData VDP::VDP2FetchSpriteData(uint32 fbOffset) {
+    const uint8 type = m_VDP2.spriteParams.type;
+    if (type < 8) {
+        return VDP2FetchWordSpriteData(fbOffset * sizeof(uint16), type);
+    } else {
+        return VDP2FetchByteSpriteData(fbOffset, type);
+    }
+}
+
+FORCE_INLINE SpriteData VDP::VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type) {
+    assert(type >= 8);
+
+    const uint8 rawData = VDP1GetDisplayFB()[fbOffset & 0x3FFFF];
+
+    SpriteData data{};
+    switch (m_VDP2.spriteParams.type) {
+    case 0x8:
+        data.colorData = bit::extract<0, 6>(rawData);
+        data.priority = bit::extract<7>(rawData);
+        break;
+    case 0x9:
+        data.colorData = bit::extract<0, 5>(rawData);
+        data.colorCalcRatio = bit::extract<6>(rawData);
+        data.priority = bit::extract<7>(rawData);
+        break;
+    case 0xA:
+        data.colorData = bit::extract<0, 5>(rawData);
+        data.priority = bit::extract<6, 7>(rawData);
+        break;
+    case 0xB:
+        data.colorData = bit::extract<0, 5>(rawData);
+        data.colorCalcRatio = bit::extract<6, 7>(rawData);
+        break;
+    case 0xC:
+        data.colorData = bit::extract<0, 7>(rawData);
+        data.priority = bit::extract<7>(rawData);
+        break;
+    case 0xD:
+        data.colorData = bit::extract<0, 7>(rawData);
+        data.colorCalcRatio = bit::extract<6>(rawData);
+        data.priority = bit::extract<7>(rawData);
+        break;
+    case 0xE:
+        data.colorData = bit::extract<0, 7>(rawData);
+        data.priority = bit::extract<6, 7>(rawData);
+        break;
+    case 0xF:
+        data.colorData = bit::extract<0, 7>(rawData);
+        data.colorCalcRatio = bit::extract<6, 7>(rawData);
+        break;
+    }
+    return data;
+}
+
+FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type) {
+    assert(type < 8);
+
+    const uint16 rawData = util::ReadBE<uint16>(&VDP1GetDisplayFB()[fbOffset & 0x3FFFE]);
+
+    SpriteData data{};
+    switch (m_VDP2.spriteParams.type) {
+    case 0x0:
+        data.colorData = bit::extract<0, 10>(rawData);
+        data.colorCalcRatio = bit::extract<11, 13>(rawData);
+        data.priority = bit::extract<14, 15>(rawData);
+        break;
+    case 0x1:
+        data.colorData = bit::extract<0, 10>(rawData);
+        data.colorCalcRatio = bit::extract<11, 12>(rawData);
+        data.priority = bit::extract<13, 15>(rawData);
+        break;
+    case 0x2:
+        data.colorData = bit::extract<0, 10>(rawData);
+        data.colorCalcRatio = bit::extract<11, 13>(rawData);
+        data.priority = bit::extract<14>(rawData);
+        data.shadowOrWindow = bit::extract<15>(rawData);
+        break;
+    case 0x3:
+        data.colorData = bit::extract<0, 10>(rawData);
+        data.colorCalcRatio = bit::extract<11, 12>(rawData);
+        data.priority = bit::extract<13, 14>(rawData);
+        data.shadowOrWindow = bit::extract<15>(rawData);
+        break;
+    case 0x4:
+        data.colorData = bit::extract<0, 9>(rawData);
+        data.colorCalcRatio = bit::extract<10, 12>(rawData);
+        data.priority = bit::extract<13, 14>(rawData);
+        data.shadowOrWindow = bit::extract<15>(rawData);
+        break;
+    case 0x5:
+        data.colorData = bit::extract<0, 10>(rawData);
+        data.colorCalcRatio = bit::extract<11>(rawData);
+        data.priority = bit::extract<12, 14>(rawData);
+        data.shadowOrWindow = bit::extract<15>(rawData);
+        break;
+    case 0x6:
+        data.colorData = bit::extract<0, 9>(rawData);
+        data.colorCalcRatio = bit::extract<10, 11>(rawData);
+        data.priority = bit::extract<12, 14>(rawData);
+        data.shadowOrWindow = bit::extract<15>(rawData);
+        break;
+    case 0x7:
+        data.colorData = bit::extract<0, 8>(rawData);
+        data.colorCalcRatio = bit::extract<9, 11>(rawData);
+        data.priority = bit::extract<12, 14>(rawData);
+        data.shadowOrWindow = bit::extract<15>(rawData);
+        break;
+    }
+    return data;
 }
 
 } // namespace satemu::vdp
