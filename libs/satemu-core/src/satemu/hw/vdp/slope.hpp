@@ -86,12 +86,12 @@ protected:
     sint64 mincounter;    // coordinate counter for the minor axis (fractional, incremented by mininc per step)
 
     // Retrieves the current fractional X coordinate
-    FORCE_INLINE sint32 FracX() const {
+    FORCE_INLINE sint64 FracX() const {
         return xmajor ? majcounter : mincounter;
     }
 
     // Retrieves the current fractional Y coordinate
-    FORCE_INLINE sint32 FracY() const {
+    FORCE_INLINE sint64 FracY() const {
         return xmajor ? mincounter : majcounter;
     }
 
@@ -166,7 +166,7 @@ public:
     // Should not be invoked when CanStep() returns false
     FORCE_INLINE void Step() {
         majslope.Step();
-        // Step minor slope by a fraction proportional to majslope.dmaj / minslope.dmaj
+        // Step minor slope by a fraction proportional to minslope.dmaj / majslope.dmaj
         minslope.majcounter += minmajinc;
         minslope.mincounter += minmininc;
     }
