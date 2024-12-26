@@ -6,6 +6,7 @@
 
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/constexpr_for.hpp>
+#include <satemu/util/unreachable.hpp>
 
 #include <fmt/format.h>
 
@@ -1081,76 +1082,143 @@ void VDP::VDP2DrawLine() {
     }
 
     // Compose image
-    const uint32 y = m_VCounter;
-    for (uint32 x = 0; x < m_HRes; x++) {
-        // TODO: handle priorities
-        // - sort layers per pixel
-        //   - priority == 0 and special priority in use -> transparent pixel
-        //   - transparent pixels are ignored
-        // - keep two topmost layers
-        //   - add one if LNCL insertion happened
-        //   - add one if second screen color calculation is enabled (extended color calculation)
-        // - use BACK when all layers are transparent
-        // TODO: handle color calculations
+    if (m_framebuffer != nullptr) {
+        const bool usesRBG1 = m_VDP2.rotBGParams[1].enabled;
+        const uint32 y = m_VCounter;
+        for (uint32 x = 0; x < m_HRes; x++) {
+            // TODO: handle priorities
+            // - sort layers per pixel
+            //   - priority == 0 and special priority in use -> transparent pixel
+            //   - transparent pixels are ignored
+            // - keep three topmost layers
+            //   - add one if LNCL insertion happened
+            //   - add one if second screen color calculation is enabled (extended color calculation)
+            // TODO: handle color calculations
+            // TODO: handle LNCL insertion
 
-        // HACK(VDP2): for now, use the top priority of each layer
-        if (m_framebuffer != nullptr) {
-            Color888 outputColor{};
+            // Get references to pixels of all layers
+            // TODO: merge BG layers NBG0 and RBG1
+            const auto &spritePixel = m_spriteLayer.pixels[x];
+            const auto &nbg0rbg1Pixel = usesRBG1 ? m_bgLayers[5].pixels[x] : m_bgLayers[0].pixels[x];
+            const auto &nbg1exbgPixel = m_bgLayers[1].pixels[x];
+            const auto &nbg2Pixel = m_bgLayers[2].pixels[x];
+            const auto &nbg3Pixel = m_bgLayers[3].pixels[x];
+            const auto &rbg0Pixel = m_bgLayers[4].pixels[x];
 
-            auto applyColorOffset = [&](bool enable, bool select) {
-                if (enable) {
-                    const auto &colorOffset = m_VDP2.colorOffsetParams[select];
-                    outputColor.r = std::clamp(outputColor.r + colorOffset.r, 0, 255);
-                    outputColor.g = std::clamp(outputColor.g + colorOffset.g, 0, 255);
-                    outputColor.b = std::clamp(outputColor.b + colorOffset.b, 0, 255);
+            // Determine layer order
+            enum Layer { LYR_Back, LYR_NBG3, LYR_NBG2, LYR_NBG1_EXBG, LYR_NBG0_RBG1, LYR_RBG0, LYR_Sprite };
+            std::array<Layer, 3> layers = {LYR_Back, LYR_Back, LYR_Back};
+            std::array<uint8, 3> layerPrios = {0, 0, 0};
+
+            auto insertLayer = [&](Layer layer, uint8 priority, bool transparent) {
+                if (transparent) {
+                    return;
+                }
+                if (priority == 0) {
+                    return;
+                }
+
+                // Higher priority beats lower priority
+                // If same priority, higher Layer index beats lower Layer index
+                // layers[0] is topmost (first) layer
+
+                for (int i = 0; i < 3; i++) {
+                    if (priority > layerPrios[i] || (priority == layerPrios[i] && layer > layers[i])) {
+                        // Push layers back
+                        for (int j = 2; j > i; j--) {
+                            layers[j] = layers[j - 1];
+                            layerPrios[j] = layerPrios[j - 1];
+                        }
+                        layers[i] = layer;
+                        layerPrios[i] = priority;
+                        break;
+                    }
                 }
             };
 
-            // TODO: draw sprite layer properly
-            uint32 prio = 0;
-            bool transparent = true;
+            insertLayer(LYR_Sprite, spritePixel.priority, spritePixel.transparent);
+            insertLayer(LYR_NBG0_RBG1, nbg0rbg1Pixel.priority, nbg0rbg1Pixel.transparent);
+            insertLayer(LYR_NBG1_EXBG, nbg1exbgPixel.priority, nbg1exbgPixel.transparent);
+            insertLayer(LYR_NBG2, nbg2Pixel.priority, nbg2Pixel.transparent);
+            insertLayer(LYR_NBG3, nbg3Pixel.priority, nbg3Pixel.transparent);
+            insertLayer(LYR_RBG0, rbg0Pixel.priority, rbg0Pixel.transparent);
 
-            // Draw sprite layer
-            const auto &spritePixel = m_spriteLayer.pixels[x];
-            if (!spritePixel.transparent) {
-                const auto &spriteParams = m_VDP2.spriteParams;
-                prio = spritePixel.priority;
-                transparent = false;
-                outputColor = spritePixel.color;
-                applyColorOffset(spriteParams.colorOffsetEnable, spriteParams.colorOffsetSelect);
-            }
+            // Get references to all layer parameters
+            // TODO: merge BG layers NBG0 and RBG1
+            const auto &spriteParams = m_VDP2.spriteParams;
+            const auto &nbg0Params = m_VDP2.normBGParams[0];
+            const auto &nbg1Params = m_VDP2.normBGParams[1];
+            const auto &nbg2Params = m_VDP2.normBGParams[2];
+            const auto &nbg3Params = m_VDP2.normBGParams[3];
+            const auto &rbg0Params = m_VDP2.rotBGParams[0];
+            const auto &rbg1Params = m_VDP2.rotBGParams[1];
+            const auto &backParams = m_VDP2.backScreenParams;
 
-            // Draw normal and rotation background layers
-            for (int i = 0; i < 6; i++) {
-                const auto &layer = m_bgLayers[i];
-                const auto &pixel = layer.pixels[x];
-                if (pixel.transparent) {
-                    continue;
+            // Calculate colors
+            auto getLayerColor = [&](Layer layer) -> Color888 {
+                switch (layer) {
+                case LYR_Sprite: return spritePixel.color;
+                case LYR_RBG0: return rbg0Pixel.color;
+                case LYR_NBG0_RBG1: return nbg0rbg1Pixel.color;
+                case LYR_NBG1_EXBG: return nbg1exbgPixel.color;
+                case LYR_NBG2: return nbg2Pixel.color;
+                case LYR_NBG3: return nbg3Pixel.color;
+                case LYR_Back: {
+                    const uint32 line = backParams.perLine ? y : 0;
+                    const uint32 address = backParams.baseAddress + line * sizeof(Color555);
+                    const Color555 color555{.u16 = util::ReadBE<uint16>(&m_VRAM2[address & 0x7FFFF])};
+                    return ConvertRGB555to888(color555);
                 }
-                if (pixel.priority <= prio) {
-                    continue;
+                default: util::unreachable();
                 }
-                prio = pixel.priority;
-                transparent = false;
-                outputColor = pixel.color;
-                if (i < 4) {
-                    const auto &bgParams = m_VDP2.normBGParams[i];
-                    applyColorOffset(bgParams.colorOffsetEnable, bgParams.colorOffsetSelect);
-                } else {
-                    const auto &bgParams = m_VDP2.rotBGParams[i - 4];
-                    applyColorOffset(bgParams.colorOffsetEnable, bgParams.colorOffsetSelect);
-                }
-            }
+            };
 
-            // If no layers are visible, draw BACK screen
-            if (transparent) {
-                const auto &backParams = m_VDP2.backScreenParams;
-                const uint32 line = backParams.perLine ? y : 0;
-                const uint32 address = backParams.baseAddress + line * sizeof(Color555);
-                const Color555 color555{.u16 = util::ReadBE<uint16>(&m_VRAM2[address & 0x7FFFF])};
-                outputColor = ConvertRGB555to888(color555);
-                applyColorOffset(backParams.colorOffsetEnable, backParams.colorOffsetSelect);
-            }
+            auto applyColorOffset = [&](Layer layer, Color888 color) -> Color888 {
+                bool enable, select;
+                switch (layer) {
+                case LYR_Sprite:
+                    enable = spriteParams.colorOffsetEnable;
+                    select = spriteParams.colorOffsetSelect;
+                    break;
+                case LYR_RBG0:
+                    enable = rbg0Params.colorOffsetEnable;
+                    select = rbg0Params.colorOffsetSelect;
+                    break;
+                case LYR_NBG0_RBG1:
+                    enable = usesRBG1 ? rbg1Params.colorOffsetEnable : nbg0Params.colorOffsetEnable;
+                    select = usesRBG1 ? rbg1Params.colorOffsetSelect : nbg0Params.colorOffsetSelect;
+                    break;
+                case LYR_NBG1_EXBG:
+                    enable = nbg1Params.colorOffsetEnable;
+                    select = nbg1Params.colorOffsetSelect;
+                    break;
+                case LYR_NBG2:
+                    enable = nbg2Params.colorOffsetEnable;
+                    select = nbg2Params.colorOffsetSelect;
+                    break;
+                case LYR_NBG3:
+                    enable = nbg3Params.colorOffsetEnable;
+                    select = nbg3Params.colorOffsetSelect;
+                    break;
+                case LYR_Back:
+                    enable = backParams.colorOffsetEnable;
+                    select = backParams.colorOffsetSelect;
+                    break;
+                default: util::unreachable();
+                }
+
+                if (enable) {
+                    const auto &colorOffset = m_VDP2.colorOffsetParams[select];
+                    color.r = std::clamp(color.r + colorOffset.r, 0, 255);
+                    color.g = std::clamp(color.g + colorOffset.g, 0, 255);
+                    color.b = std::clamp(color.b + colorOffset.b, 0, 255);
+                }
+                return color;
+            };
+
+            // HACK: for now, use the topmost layer
+            Color888 outputColor = getLayerColor(layers[0]);
+            outputColor = applyColorOffset(layers[0], outputColor);
 
             m_framebuffer[x + y * m_HRes] = outputColor.u32;
         }
