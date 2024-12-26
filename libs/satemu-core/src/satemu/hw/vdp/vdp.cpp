@@ -1086,16 +1086,6 @@ void VDP::VDP2DrawLine() {
         const bool usesRBG1 = m_VDP2.rotBGParams[1].enabled;
         const uint32 y = m_VCounter;
         for (uint32 x = 0; x < m_HRes; x++) {
-            // TODO: handle priorities
-            // - sort layers per pixel
-            //   - priority == 0 and special priority in use -> transparent pixel
-            //   - transparent pixels are ignored
-            // - keep three topmost layers
-            //   - add one if LNCL insertion happened
-            //   - add one if second screen color calculation is enabled (extended color calculation)
-            // TODO: handle color calculations
-            // TODO: handle LNCL insertion
-
             // Get references to pixels of all layers
             // TODO: merge BG layers NBG0 and RBG1
             const auto &spritePixel = m_spriteLayer.pixels[x];
@@ -1105,11 +1095,14 @@ void VDP::VDP2DrawLine() {
             const auto &nbg3Pixel = m_bgLayers[3].pixels[x];
             const auto &rbg0Pixel = m_bgLayers[4].pixels[x];
 
-            // Determine layer order
             enum Layer { LYR_Back, LYR_NBG3, LYR_NBG2, LYR_NBG1_EXBG, LYR_NBG0_RBG1, LYR_RBG0, LYR_Sprite };
             std::array<Layer, 3> layers = {LYR_Back, LYR_Back, LYR_Back};
             std::array<uint8, 3> layerPrios = {0, 0, 0};
 
+            // Inserts a layer into the appropriate position in the stack
+            // - Higher priority beats lower priority
+            // - If same priority, higher Layer index beats lower Layer index
+            // - layers[0] is topmost (first) layer
             auto insertLayer = [&](Layer layer, uint8 priority, bool transparent) {
                 if (transparent) {
                     return;
@@ -1117,10 +1110,6 @@ void VDP::VDP2DrawLine() {
                 if (priority == 0) {
                     return;
                 }
-
-                // Higher priority beats lower priority
-                // If same priority, higher Layer index beats lower Layer index
-                // layers[0] is topmost (first) layer
 
                 for (int i = 0; i < 3; i++) {
                     if (priority > layerPrios[i] || (priority == layerPrios[i] && layer > layers[i])) {
@@ -1136,6 +1125,7 @@ void VDP::VDP2DrawLine() {
                 }
             };
 
+            // Determine layer order
             insertLayer(LYR_Sprite, spritePixel.priority, spritePixel.transparent);
             insertLayer(LYR_NBG0_RBG1, nbg0rbg1Pixel.priority, nbg0rbg1Pixel.transparent);
             insertLayer(LYR_NBG1_EXBG, nbg1exbgPixel.priority, nbg1exbgPixel.transparent);
@@ -1154,7 +1144,7 @@ void VDP::VDP2DrawLine() {
             const auto &rbg1Params = m_VDP2.rotBGParams[1];
             const auto &backParams = m_VDP2.backScreenParams;
 
-            // Calculate colors
+            // Retrieves the color of the given layer
             auto getLayerColor = [&](Layer layer) -> Color888 {
                 switch (layer) {
                 case LYR_Sprite: return spritePixel.color;
@@ -1173,6 +1163,7 @@ void VDP::VDP2DrawLine() {
                 }
             };
 
+            // Applies the color offset effect if enabled on the specified layer
             auto applyColorOffset = [&](Layer layer, Color888 color) -> Color888 {
                 bool enable, select;
                 switch (layer) {
@@ -1216,6 +1207,9 @@ void VDP::VDP2DrawLine() {
                 return color;
             };
 
+            // Calculate color
+            // TODO: handle color calculations
+            // TODO: handle LNCL insertion
             // HACK: for now, use the topmost layer
             Color888 outputColor = getLayerColor(layers[0]);
             outputColor = applyColorOffset(layers[0], outputColor);
