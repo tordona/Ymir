@@ -431,14 +431,16 @@ struct ColorOffsetParams {
     }
 
     void Reset() {
-        red = 0;
-        green = 0;
-        blue = 0;
+        r = 0;
+        g = 0;
+        b = 0;
     }
 
-    sint16 red;
-    sint16 green;
-    sint16 blue;
+    // Color offset values as signed 9-bit integers.
+    // Derived from COAR/G/B and COBR/G/B
+    sint16 r;
+    sint16 g;
+    sint16 b;
 };
 
 // TODO: consider splitting unions into individual fields for performance

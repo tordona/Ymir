@@ -1375,6 +1375,7 @@ struct VDP2Regs {
         normBGParams[2].colorOffsetEnable = bit::extract<2>(value);
         normBGParams[3].colorOffsetEnable = bit::extract<3>(value);
         rotBGParams[0].colorOffsetEnable = bit::extract<4>(value);
+        rotBGParams[1].colorOffsetEnable = normBGParams[0].colorOffsetEnable;
         backScreenParams.colorOffsetEnable = bit::extract<5>(value);
         spriteParams.colorOffsetEnable = bit::extract<6>(value);
     }
@@ -1413,6 +1414,7 @@ struct VDP2Regs {
         normBGParams[2].colorOffsetSelect = bit::extract<2>(value);
         normBGParams[3].colorOffsetSelect = bit::extract<3>(value);
         rotBGParams[0].colorOffsetSelect = bit::extract<4>(value);
+        rotBGParams[1].colorOffsetSelect = normBGParams[0].colorOffsetSelect;
         backScreenParams.colorOffsetSelect = bit::extract<5>(value);
         spriteParams.colorOffsetSelect = bit::extract<6>(value);
     }
@@ -1431,23 +1433,23 @@ struct VDP2Regs {
     // x: A,B; c: R,G,B
 
     FORCE_INLINE uint16 ReadCOxR(uint8 select) const {
-        return colorOffsetParams[select].red;
+        return colorOffsetParams[select].r;
     }
     FORCE_INLINE uint16 ReadCOxG(uint8 select) const {
-        return colorOffsetParams[select].green;
+        return colorOffsetParams[select].g;
     }
     FORCE_INLINE uint16 ReadCOxB(uint8 select) const {
-        return colorOffsetParams[select].blue;
+        return colorOffsetParams[select].b;
     }
 
     FORCE_INLINE void WriteCOxR(uint8 select, uint16 value) {
-        colorOffsetParams[select].red = bit::sign_extend<9>(bit::extract<0, 8>(value));
+        colorOffsetParams[select].r = bit::sign_extend<9>(bit::extract<0, 8>(value));
     }
     FORCE_INLINE void WriteCOxG(uint8 select, uint16 value) {
-        colorOffsetParams[select].green = bit::sign_extend<9>(bit::extract<0, 8>(value));
+        colorOffsetParams[select].g = bit::sign_extend<9>(bit::extract<0, 8>(value));
     }
     FORCE_INLINE void WriteCOxB(uint8 select, uint16 value) {
-        colorOffsetParams[select].blue = bit::sign_extend<9>(bit::extract<0, 8>(value));
+        colorOffsetParams[select].b = bit::sign_extend<9>(bit::extract<0, 8>(value));
     }
 
     // -------------------------------------------------------------------------

@@ -1095,19 +1095,32 @@ void VDP::VDP2DrawLine() {
 
         // HACK(VDP2): for now, use the top priority of each layer
         if (m_framebuffer != nullptr) {
-            // TODO: this should be unnecessary
-            m_framebuffer[x + y * m_HRes] = 0;
+            Color888 outputColor{};
+
+            auto applyColorOffset = [&](bool enable, bool select) {
+                if (enable) {
+                    const auto &colorOffset = m_VDP2.colorOffsetParams[select];
+                    outputColor.r = std::clamp(outputColor.r + colorOffset.r, 0, 255);
+                    outputColor.g = std::clamp(outputColor.g + colorOffset.g, 0, 255);
+                    outputColor.b = std::clamp(outputColor.b + colorOffset.b, 0, 255);
+                }
+            };
 
             // TODO: draw sprite layer properly
             uint32 prio = 0;
             bool transparent = true;
+
+            // Draw sprite layer
             const auto &spritePixel = m_spriteLayer.pixels[x];
             if (!spritePixel.transparent) {
+                const auto &spriteParams = m_VDP2.spriteParams;
                 prio = spritePixel.priority;
                 transparent = false;
-                m_framebuffer[x + y * m_HRes] = spritePixel.color.u32;
+                outputColor = spritePixel.color;
+                applyColorOffset(spriteParams.colorOffsetEnable, spriteParams.colorOffsetSelect);
             }
 
+            // Draw normal and rotation background layers
             for (int i = 0; i < 6; i++) {
                 const auto &layer = m_bgLayers[i];
                 const auto &pixel = layer.pixels[x];
@@ -1119,7 +1132,14 @@ void VDP::VDP2DrawLine() {
                 }
                 prio = pixel.priority;
                 transparent = false;
-                m_framebuffer[x + y * m_HRes] = pixel.color.u32;
+                outputColor = pixel.color;
+                if (i < 4) {
+                    const auto &bgParams = m_VDP2.normBGParams[i];
+                    applyColorOffset(bgParams.colorOffsetEnable, bgParams.colorOffsetSelect);
+                } else {
+                    const auto &bgParams = m_VDP2.rotBGParams[i - 4];
+                    applyColorOffset(bgParams.colorOffsetEnable, bgParams.colorOffsetSelect);
+                }
             }
 
             // If no layers are visible, draw BACK screen
@@ -1128,9 +1148,11 @@ void VDP::VDP2DrawLine() {
                 const uint32 line = backParams.perLine ? y : 0;
                 const uint32 address = backParams.baseAddress + line * sizeof(Color555);
                 const Color555 color555{.u16 = util::ReadBE<uint16>(&m_VRAM2[address & 0x7FFFF])};
-                const Color888 color888 = ConvertRGB555to888(color555);
-                m_framebuffer[x + y * m_HRes] = color888.u32;
+                outputColor = ConvertRGB555to888(color555);
+                applyColorOffset(backParams.colorOffsetEnable, backParams.colorOffsetSelect);
             }
+
+            m_framebuffer[x + y * m_HRes] = outputColor.u32;
         }
     }
 }
