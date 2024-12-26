@@ -332,7 +332,7 @@ public:
         case 0x01A: m_VDP2.CYCB0.U.u16 = value; break;
         case 0x01E: m_VDP2.CYCB1.U.u16 = value; break;
         case 0x01C: m_VDP2.CYCB1.L.u16 = value; break;
-        case 0x020: m_VDP2.WriteBGON(value); break;
+        case 0x020: m_VDP2.WriteBGON(value), VDP2ClearDisabledBGs(); break;
         case 0x022: m_VDP2.WriteMZCTL(value); break;
         case 0x024: m_VDP2.WriteSFSEL(value); break;
         case 0x026: m_VDP2.WriteSFCODE(value); break;
@@ -649,29 +649,26 @@ private:
         bool flipV;         // Vertical flip
     };
 
-    struct Layer {
-        // Colors per pixel
-        std::array<vdp::Color888, 704> colors;
+    struct SpriteLayer {
+        struct Pixel {
+            Color888 color = {.u32 = 0};
+            bool transparent = true;
+            uint8 priority = 0;
+            uint8 colorCalcRatio = 0;
+            bool shadowOrWindow = false;
+        };
 
-        // Transparent pixels
-        std::array<bool, 704> transparent;
-
-        // Priorities per pixel
-        std::array<uint8, 704> priorities;
+        std::array<Pixel, 704> pixels;
     };
 
-    struct SpriteLayer : public Layer {
-        // Color calculation ratios per pixel
-        std::array<uint8, 704> colorCalcRatios;
+    struct BGLayer {
+        struct Pixel {
+            Color888 color = {.u32 = 0};
+            bool transparent = true;
+            uint8 priority = 0;
+        };
 
-        // Shadow or window enable bits per pixel
-        std::array<bool, 704> shadowOrWindow;
-    };
-
-    struct BGLayer : public Layer {
-        // Bits 3-1 of the color data retrieved from VRAM per pixel.
-        // Used by special priority function.
-        std::array<uint8, 704> colorData;
+        std::array<Pixel, 704> pixels;
 
         // CRAM base offset for color fetching.
         // Derived from RAMCTL.CRMDn and CRAOFA/CRAOFB.xxCAOSn
@@ -752,6 +749,9 @@ private:
 
     // -------------------------------------------------------------------------
     // VDP2
+
+    // Clears all disabled backgrounds.
+    void VDP2ClearDisabledBGs();
 
     // Updates the line screen scroll parameters for the given background.
     // Only valid for NBG0 and NBG1.

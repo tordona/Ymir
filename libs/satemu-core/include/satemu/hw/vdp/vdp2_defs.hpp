@@ -15,6 +15,11 @@ enum class ColorFormat : uint8 {
     RGB888,
 };
 
+inline constexpr bool IsPaletteColorFormat(ColorFormat format) {
+    using enum ColorFormat;
+    return format == Palette16 || format == Palette256 || format == Palette2048;
+}
+
 // Rotation BG screen-over process
 enum class ScreenOverProcess : uint8 {
     Repeat,

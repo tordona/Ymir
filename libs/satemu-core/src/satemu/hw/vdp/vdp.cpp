@@ -41,18 +41,15 @@ void VDP::Reset(bool hard) {
 
     m_VDP1RenderContext.Reset();
 
-    m_spriteLayer.colors.fill({});
-    m_spriteLayer.transparent.fill(true);
-    m_spriteLayer.priorities.fill(0);
-    m_spriteLayer.colorCalcRatios.fill(0);
-    m_spriteLayer.shadowOrWindow.fill(false);
+    m_spriteLayer.pixels.fill({});
 
     for (auto &bgLayer : m_bgLayers) {
-        bgLayer.colors.fill({});
-        bgLayer.transparent.fill(true);
-        bgLayer.priorities.fill(0);
-        bgLayer.colorData.fill(0);
+        bgLayer.pixels.fill({});
         bgLayer.cramOffset = 0;
+        bgLayer.fracScrollX = 0;
+        bgLayer.fracScrollY = 0;
+        bgLayer.scrollIncH = 0x100;
+        bgLayer.lineScrollTableAddress = 0x100;
     }
 
     BeginHPhaseActiveDisplay();
@@ -925,6 +922,21 @@ void VDP::VDP1Cmd_SetLocalCoordinates(uint32 cmdAddress) {
     // fmt::println("VDP1: Set local coordinates: {}x{}", ctx.localCoordX, ctx.localCoordY);
 }
 
+void VDP::VDP2ClearDisabledBGs() {
+    for (int i = 0; auto &bg : m_VDP2.normBGParams) {
+        if (!bg.enabled) {
+            m_bgLayers[i].pixels.fill({});
+        }
+        i++;
+    }
+    for (int i = 0; auto &bg : m_VDP2.rotBGParams) {
+        if (!bg.enabled) {
+            m_bgLayers[i + 4].pixels.fill({});
+        }
+        i++;
+    }
+}
+
 // -----------------------------------------------------------------------------
 // VDP2
 
@@ -1024,8 +1036,7 @@ void VDP::VDP2DrawLine() {
     (this->*fnDrawSprite[colorMode])();
 
     // Draw normal BGs
-    int i = 0;
-    for (const auto &bg : m_VDP2.normBGParams) {
+    for (int i = 0; const auto &bg : m_VDP2.normBGParams) {
         auto &layer = m_bgLayers[i];
         if (bg.enabled) {
             layer.cramOffset = bg.caos << (m_VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
@@ -1043,18 +1054,13 @@ void VDP::VDP2DrawLine() {
                 const bool wideChar = bg.wideChar;
                 (this->*fnDrawScrollNBGs[twoWordChar][fourCellChar][wideChar][colorFormat][colorMode])(bg, layer);
             }
-        } else {
-            // TODO: optimize -- fill these when the BG is disabled
-            layer.colorData.fill(0);
-            layer.colors.fill({0});
-            layer.priorities.fill(0);
         }
         ++i;
     }
 
     // Draw rotation BGs
-    for (const auto &bg : m_VDP2.rotBGParams) {
-        auto &layer = m_bgLayers[i++];
+    for (int i = 4; const auto &bg : m_VDP2.rotBGParams) {
+        auto &layer = m_bgLayers[i];
         if (bg.enabled) {
             layer.cramOffset = bg.caos << (m_VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
 
@@ -1064,12 +1070,8 @@ void VDP::VDP2DrawLine() {
             } else {
                 // (this->*fnDrawScrollRBGs[...])(bg, layer);
             }
-        } else {
-            // TODO: optimize -- fill these when the BG is disabled
-            layer.colorData.fill(0);
-            layer.colors.fill({0});
-            layer.priorities.fill(0);
         }
+        i++;
     }
 
     // Compose image
@@ -1092,21 +1094,23 @@ void VDP::VDP2DrawLine() {
 
             // TODO: draw sprite layer properly
             uint32 prio = 0;
-            if (!m_spriteLayer.transparent[x]) {
-                prio = m_spriteLayer.priorities[x];
-                m_framebuffer[x + y * m_HRes] = m_spriteLayer.colors[x].u32;
+            const auto &spritePixel = m_spriteLayer.pixels[x];
+            if (!spritePixel.transparent) {
+                prio = spritePixel.priority;
+                m_framebuffer[x + y * m_HRes] = spritePixel.color.u32;
             }
 
             for (int i = 0; i < 6; i++) {
                 const auto &layer = m_bgLayers[i];
-                if (layer.transparent[x]) {
+                const auto &pixel = layer.pixels[x];
+                if (pixel.transparent) {
                     continue;
                 }
-                if (layer.priorities[x] <= prio) {
+                if (pixel.priority <= prio) {
                     continue;
                 }
-                prio = layer.priorities[x];
-                m_framebuffer[x + y * m_HRes] = layer.colors[x].u32;
+                prio = pixel.priority;
+                m_framebuffer[x + y * m_HRes] = pixel.color.u32;
             }
             // TODO: if no layers are visible, draw BACK screen
         }
@@ -1121,30 +1125,32 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
         const auto &spriteFB = VDP1GetDisplayFB();
         const uint32 spriteFBOffset = x + y * m_VDP1.fbSizeH;
 
+        const auto &params = m_VDP2.spriteParams;
+        auto &pixel = m_spriteLayer.pixels[x];
+
         bool isPaletteData = true;
-        if (m_VDP2.spriteParams.mixedFormat) {
+        if (params.mixedFormat) {
             const uint16 spriteDataValue = util::ReadBE<uint16>(&spriteFB[spriteFBOffset * sizeof(uint16)]);
             if (bit::extract<15>(spriteDataValue)) {
                 // RGB data
-                m_spriteLayer.colors[x] = ConvertRGB555to888(Color555{spriteDataValue});
-                m_spriteLayer.transparent[x] = false;
-                m_spriteLayer.priorities[x] = m_VDP2.spriteParams.priorities[0];
-                m_spriteLayer.colorCalcRatios[x] = m_VDP2.spriteParams.colorCalcRatios[0];
-                m_spriteLayer.shadowOrWindow[x] = false;
+                pixel.color = ConvertRGB555to888(Color555{spriteDataValue});
+                pixel.transparent = false;
+                pixel.priority = params.priorities[0];
+                pixel.colorCalcRatio = params.colorCalcRatios[0];
+                pixel.shadowOrWindow = false;
                 isPaletteData = false;
             }
         }
 
         if (isPaletteData) {
             // Palette data
-            // TODO: check if this is correct, seems bugged
             const SpriteData spriteData = VDP2FetchSpriteData(spriteFBOffset);
-            const uint32 colorIndex = m_VDP2.spriteParams.colorDataOffset + spriteData.colorData;
-            m_spriteLayer.colors[x] = VDP2FetchCRAMColor<colorMode>(0, colorIndex);
-            m_spriteLayer.transparent[x] = spriteData.colorData == 0;
-            m_spriteLayer.priorities[x] = m_VDP2.spriteParams.priorities[spriteData.priority];
-            m_spriteLayer.colorCalcRatios[x] = m_VDP2.spriteParams.colorCalcRatios[spriteData.colorCalcRatio];
-            m_spriteLayer.shadowOrWindow[x] = spriteData.shadowOrWindow;
+            const uint32 colorIndex = params.colorDataOffset + spriteData.colorData;
+            pixel.color = VDP2FetchCRAMColor<colorMode>(0, colorIndex);
+            pixel.transparent = spriteData.colorData == 0;
+            pixel.priority = params.priorities[spriteData.priority];
+            pixel.colorCalcRatio = params.colorCalcRatios[spriteData.colorCalcRatio];
+            pixel.shadowOrWindow = spriteData.shadowOrWindow;
         }
     }
 }
@@ -1218,8 +1224,6 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer
 
     const auto &specialFunctionCodes = m_VDP2.specialFunctionCodes[bgParams.specialFunctionSelect];
 
-    // TODO: implement mosaic
-
     uint32 fracScrollX = layer.fracScrollX;
     const uint32 fracScrollY = layer.fracScrollY;
     layer.fracScrollY += bgParams.scrollIncV;
@@ -1235,17 +1239,35 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer
 
     uint32 cellScrollY = 0;
     if (bgParams.verticalCellScrollEnable) {
-        // Read first vertical scroll amount if scrolled partway through a cell
+        // Read first vertical scroll amount if scrolled partway through a cell at the start of the line
         if (((fracScrollX >> 8u) & 7) != 0) {
             cellScrollY = readCellScrollY();
         }
     }
 
+    uint8 mosaicCounterX = 0;
+
     for (uint32 x = 0; x < m_HRes; x++) {
-        // Update vertical cell scroll amount
         if (bgParams.verticalCellScrollEnable) {
+            // Update vertical cell scroll amount
             if (((fracScrollX >> 8u) & 7) == 0) {
                 cellScrollY = readCellScrollY();
+            }
+        } else if (bgParams.mosaicEnable) {
+            // Apply horizontal mosaic
+            // TODO: should mosaic have priority over vertical cell scroll?
+            const uint8 currMosaicCounterX = mosaicCounterX;
+            mosaicCounterX++;
+            if (mosaicCounterX >= m_VDP2.mosaicH) {
+                mosaicCounterX = 0;
+            }
+            if (currMosaicCounterX > 0) {
+                // Simply copy over the data from the previous pixel
+                layer.pixels[x] = layer.pixels[x - 1];
+
+                // Increment horizontal coordinate
+                fracScrollX += layer.scrollIncH;
+                continue;
             }
         }
 
@@ -1288,21 +1310,22 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer
                 : VDP2FetchOneWordCharacter<fourCellChar, largePalette, wideChar>(bgParams, pageAddress, charIndex);
 
         // Fetch dot color using character data
-        layer.colors[x] = VDP2FetchCharacterColor<colorFormat, colorMode>(
-            layer.cramOffset, layer.colorData[x], layer.transparent[x], ch, dotX, dotY, cellIndex);
-        layer.transparent[x] &= bgParams.enableTransparency;
+        auto &pixel = layer.pixels[x];
+        uint8 colorData{};
+        pixel.color = VDP2FetchCharacterColor<colorFormat, colorMode>(layer.cramOffset, colorData, pixel.transparent,
+                                                                      ch, dotX, dotY, cellIndex);
+        pixel.transparent &= bgParams.enableTransparency;
 
         // Compute priority
-        layer.priorities[x] = bgParams.priorityNumber;
+        pixel.priority = bgParams.priorityNumber;
         if (bgParams.priorityMode == PriorityMode::PerCharacter) {
-            layer.priorities[x] &= ~1;
-            layer.priorities[x] |= ch.specPriority;
+            pixel.priority &= ~1;
+            pixel.priority |= ch.specPriority;
         } else if (bgParams.priorityMode == PriorityMode::PerDot) {
-            if constexpr (colorFormat == ColorFormat::Palette16 || colorFormat == ColorFormat::Palette256 ||
-                          colorFormat == ColorFormat::Palette2048) {
-                layer.priorities[x] &= ~1;
-                if (ch.specPriority && specialFunctionCodes.colorMatches[layer.colorData[x]]) {
-                    layer.priorities[x] |= 1;
+            if constexpr (IsPaletteColorFormat(colorFormat)) {
+                pixel.priority &= ~1;
+                if (ch.specPriority && specialFunctionCodes.colorMatches[colorData]) {
+                    pixel.priority |= 1;
                 }
             }
         }
@@ -1342,15 +1365,16 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGLayer
         const uint32 scrollY = (fracScrollY + cellScrollY) >> 8u;
 
         // Fetch dot color from bitmap
-        layer.colors[x] = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, layer.transparent[x], layer.cramOffset,
-                                                                       scrollX, scrollY);
-        layer.transparent[x] &= bgParams.enableTransparency;
+        auto &pixel = layer.pixels[x];
+        pixel.color = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, pixel.transparent, layer.cramOffset,
+                                                                   scrollX, scrollY);
+        pixel.transparent &= bgParams.enableTransparency;
 
         // Compute priority
-        layer.priorities[x] = bgParams.priorityNumber;
+        pixel.priority = bgParams.priorityNumber;
         if (bgParams.priorityMode == PriorityMode::PerCharacter || bgParams.priorityMode == PriorityMode::PerDot) {
-            layer.priorities[x] &= ~1;
-            layer.priorities[x] |= bgParams.supplBitmapSpecialPriority;
+            pixel.priority &= ~1;
+            pixel.priority |= bgParams.supplBitmapSpecialPriority;
         }
 
         // Increment horizontal coordinate
