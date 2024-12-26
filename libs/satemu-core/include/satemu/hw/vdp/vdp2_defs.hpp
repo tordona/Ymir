@@ -373,6 +373,25 @@ struct SpecialFunctionCodes {
     std::array<bool, 8> colorMatches;
 };
 
+struct LineBackScreenParams {
+    LineBackScreenParams() {
+        Reset();
+    }
+
+    void Reset() {
+        perLine = false;
+        baseAddress = 0;
+    }
+
+    // Whether the line/back screen specifies a color for the whole screen (false) or per line (true).
+    // Derived from LCTAU.LCCLMD or BKTAU.BKCLMD
+    bool perLine;
+
+    // Base address of line/back screen data.
+    // Derived from LCTAU/L.LCTA18-0 or BKTAU/L.BKTA18-0
+    uint32 baseAddress;
+};
+
 // TODO: consider splitting unions into individual fields for performance
 
 // 180000   TVMD    TV Screen Mode
@@ -646,68 +665,6 @@ union ZMCTL_t {
         uint16 N1ZMHF : 1;
         uint16 N1ZMQT : 1;
         uint16 _rsvd10_15 : 6;
-    };
-};
-
-// 1800A8   LCTAU   Line Color Screen Table Address (upper)
-//
-//   bits   r/w  code          description
-//     15     W  LCCLMD        Line Color Screen Mode (0=single color, 1=per line)
-//   14-3        -             Reserved, must be zero
-//    2-0     W  LCTA18-16     Line Color Screen Table Base Address (bits 18-16)
-//
-// 1800AA   LCTAL   Line Color Screen Table Address (lower)
-//
-//   bits   r/w  code          description
-//   15-0     W  LCTA15-0      Line Color Screen Table Base Address (bits 15-0)
-union LCTA_t {
-    uint32 u32;
-    struct {
-        union {
-            uint16 u16;
-            uint16 LCTAn;
-        } L;
-        union {
-            uint16 u16;
-            struct {
-                uint16 LCTAn : 3;
-                uint16 _rsvd3_15 : 13;
-            };
-        } U;
-    };
-    struct {
-        uint32 LCTAn : 19;
-    };
-};
-
-// 1800AC   BKTAU   Back Screen Table Address (upper)
-//
-//   bits   r/w  code          description
-//     15     W  BKCLMD        Back Screen Color Mode (0=single color, 1=per line)
-//   14-3        -             Reserved, must be zero
-//    2-0     W  BKTA18-16     Back Screen Table Base Address (bits 18-16)
-//
-// 1800AE   BKTAL   Back Screen Table Address (lower)
-//
-//   bits   r/w  code          description
-//   15-0     W  BKTA15-0      Back Screen Table Base Address (bits 15-0)
-union BKTA_t {
-    uint32 u32;
-    struct {
-        union {
-            uint16 u16;
-            uint16 BKTAn;
-        } L;
-        union {
-            uint16 u16;
-            struct {
-                uint16 BKTAn : 3;
-                uint16 _rsvd3_15 : 13;
-            };
-        } U;
-    };
-    struct {
-        uint32 BKTAn : 19;
     };
 };
 

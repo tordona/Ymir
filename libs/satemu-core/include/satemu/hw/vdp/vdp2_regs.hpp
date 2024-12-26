@@ -20,7 +20,6 @@ struct VDP2Regs {
         CYCB0.u32 = 0x0;
         CYCB1.u32 = 0x0;
         ZMCTL.u16 = 0x0;
-        LCTA.u32 = 0x0;
         RPMD.u16 = 0x0;
         RPRCTL.u16 = 0x0;
         KTCTL.u16 = 0x0;
@@ -954,10 +953,70 @@ struct VDP2Regs {
         bit::deposit_into<2, 16>(normBGParams[bgIndex].lineScrollTableAddress, bit::extract<1, 15>(value));
     }
 
-    /**/             // 1800A8   LCTAU   Line Color Screen Table Address (upper)
-    LCTA_t LCTA;     // 1800AA   LCTAL   Line Color Screen Table Address (lower)
-                     // 1800AC   BKTAU   Back Screen Table Address (upper)
-    BKTA_t BKTA;     // 1800AE   BKTAL   Back Screen Table Address (lower)
+    // 1800A8   LCTAU   Line Color Screen Table Address (upper)
+    //
+    //   bits   r/w  code          description
+    //     15     W  LCCLMD        Line Color Screen Mode (0=single color, 1=per line)
+    //   14-3        -             Reserved, must be zero
+    //    2-0     W  LCTA18-16     Line Color Screen Table Base Address (bits 18-16)
+    //
+    // 1800AA   LCTAL   Line Color Screen Table Address (lower)
+    //
+    //   bits   r/w  code          description
+    //   15-0     W  LCTA15-0      Line Color Screen Table Base Address (bits 15-0)
+
+    FORCE_INLINE uint16 ReadLCTAU() const {
+        uint16 value = 0;
+        bit::deposit_into<0, 2>(value, bit::extract<16, 18>(lineScreenParams.baseAddress));
+        bit::deposit_into<15>(value, lineScreenParams.perLine);
+        return value;
+    }
+
+    FORCE_INLINE void WriteLCTAU(uint16 value) {
+        bit::deposit_into<16, 18>(lineScreenParams.baseAddress, bit::extract<0, 2>(value));
+        lineScreenParams.perLine = bit::extract<15>(value);
+    }
+
+    FORCE_INLINE uint16 ReadLCTAL() const {
+        return bit::extract<0, 15>(lineScreenParams.baseAddress);
+    }
+
+    FORCE_INLINE void WriteLCTAL(uint16 value) {
+        bit::deposit_into<0, 15>(lineScreenParams.baseAddress, value);
+    }
+
+    // 1800AC   BKTAU   Back Screen Table Address (upper)
+    //
+    //   bits   r/w  code          description
+    //     15     W  BKCLMD        Back Screen Color Mode (0=single color, 1=per line)
+    //   14-3        -             Reserved, must be zero
+    //    2-0     W  BKTA18-16     Back Screen Table Base Address (bits 18-16)
+    //
+    // 1800AE   BKTAL   Back Screen Table Address (lower)
+    //
+    //   bits   r/w  code          description
+    //   15-0     W  BKTA15-0      Back Screen Table Base Address (bits 15-0)
+
+    FORCE_INLINE uint16 ReadBKTAU() const {
+        uint16 value = 0;
+        bit::deposit_into<0, 2>(value, bit::extract<16, 18>(backScreenParams.baseAddress));
+        bit::deposit_into<15>(value, backScreenParams.perLine);
+        return value;
+    }
+
+    FORCE_INLINE void WriteBKTAU(uint16 value) {
+        bit::deposit_into<16, 18>(backScreenParams.baseAddress, bit::extract<0, 2>(value));
+        backScreenParams.perLine = bit::extract<15>(value);
+    }
+
+    FORCE_INLINE uint16 ReadBKTAL() const {
+        return bit::extract<0, 15>(backScreenParams.baseAddress);
+    }
+
+    FORCE_INLINE void WriteBKTAL(uint16 value) {
+        bit::deposit_into<0, 15>(backScreenParams.baseAddress, value);
+    }
+
     RPMD_t RPMD;     // 1800B0   RPMD    Rotation Parameter Mode
     RPRCTL_t RPRCTL; // 1800B2   RPRCTL  Rotation Parameter Read Control
     KTCTL_t KTCTL;   // 1800B4   KTCTL   Coefficient Table Control
@@ -1307,6 +1366,8 @@ struct VDP2Regs {
     std::array<NormBGParams, 4> normBGParams;
     std::array<RotBGParams, 2> rotBGParams;
     SpriteParams spriteParams;
+    LineBackScreenParams lineScreenParams;
+    LineBackScreenParams backScreenParams;
 
     // Vertical cell scroll table base address.
     // Only valid for NBG0 and NBG1.
