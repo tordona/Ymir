@@ -753,6 +753,13 @@ private:
     // -------------------------------------------------------------------------
     // VDP2
 
+    // Updates the line screen scroll parameters for the given background.
+    // Only valid for NBG0 and NBG1.
+    //
+    // bgParams contains the parameters for the BG to draw.
+    // layer is a reference to the layer object for the specified background.
+    void VDP2UpdateLineScreenScroll(const NormBGParams &bgParams, BGLayer &layer);
+
     // Draws the VDP2 scanline at m_VCounter.
     void VDP2DrawLine();
 
@@ -772,13 +779,6 @@ private:
     // colorMode is the CRAM color mode.
     template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
     void VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer &layer);
-
-    // Updates the line screen scroll parameters for the given background.
-    // Only valid for NBG0 and NBG1.
-    //
-    // bgParams contains the parameters for the BG to draw.
-    // layer is a reference to the layer object for the specified background.
-    void VDP2UpdateLineScreenScroll(const NormBGParams &bgParams, BGLayer &layer);
 
     // Draws a normal bitmap BG scanline.
     // bgParams contains the parameters for the BG to draw.

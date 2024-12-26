@@ -922,6 +922,27 @@ void VDP::VDP1Cmd_SetLocalCoordinates(uint32 cmdAddress) {
 // -----------------------------------------------------------------------------
 // VDP2
 
+void VDP::VDP2UpdateLineScreenScroll(const NormBGParams &bgParams, BGLayer &layer) {
+    auto read = [&] {
+        const uint32 address = layer.lineScrollTableAddress & 0x7FFFF;
+        const uint32 value = util::ReadBE<uint32>(&m_VRAM2[address]);
+        layer.lineScrollTableAddress += sizeof(uint32);
+        return value;
+    };
+
+    if ((m_VCounter & ~(~0 << bgParams.lineScrollInterval)) == 0) {
+        if (bgParams.lineScrollXEnable) {
+            layer.fracScrollX = bit::extract<8, 26>(read());
+        }
+        if (bgParams.lineScrollYEnable) {
+            layer.fracScrollY = bit::extract<8, 26>(read());
+        }
+        if (bgParams.lineZoomEnable) {
+            layer.scrollIncH = bit::extract<8, 18>(read());
+        }
+    }
+}
+
 void VDP::VDP2DrawLine() {
     // fmt::println("VDP2: drawing line {}", m_VCounter);
 
@@ -1322,27 +1343,6 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGLayer
 
         // Increment horizontal coordinate
         fracScrollX += layer.scrollIncH;
-    }
-}
-
-void VDP::VDP2UpdateLineScreenScroll(const NormBGParams &bgParams, BGLayer &layer) {
-    auto read = [&] {
-        const uint32 address = layer.lineScrollTableAddress & 0x7FFFF;
-        const uint32 value = util::ReadBE<uint32>(&m_VRAM2[address]);
-        layer.lineScrollTableAddress += sizeof(uint32);
-        return value;
-    };
-
-    if ((m_VCounter & ~(~0 << bgParams.lineScrollInterval)) == 0) {
-        if (bgParams.lineScrollXEnable) {
-            layer.fracScrollX = bit::extract<8, 26>(read());
-        }
-        if (bgParams.lineScrollYEnable) {
-            layer.fracScrollY = bit::extract<8, 26>(read());
-        }
-        if (bgParams.lineZoomEnable) {
-            layer.scrollIncH = bit::extract<8, 18>(read());
-        }
     }
 }
 
