@@ -1100,9 +1100,11 @@ void VDP::VDP2DrawLine() {
 
             // TODO: draw sprite layer properly
             uint32 prio = 0;
+            bool transparent = true;
             const auto &spritePixel = m_spriteLayer.pixels[x];
             if (!spritePixel.transparent) {
                 prio = spritePixel.priority;
+                transparent = false;
                 m_framebuffer[x + y * m_HRes] = spritePixel.color.u32;
             }
 
@@ -1116,9 +1118,19 @@ void VDP::VDP2DrawLine() {
                     continue;
                 }
                 prio = pixel.priority;
+                transparent = false;
                 m_framebuffer[x + y * m_HRes] = pixel.color.u32;
             }
-            // TODO: if no layers are visible, draw BACK screen
+
+            // If no layers are visible, draw BACK screen
+            if (transparent) {
+                const auto &backParams = m_VDP2.backScreenParams;
+                const uint32 line = backParams.perLine ? y : 0;
+                const uint32 address = backParams.baseAddress + line * sizeof(Color555);
+                const Color555 color555{.u16 = util::ReadBE<uint16>(&m_VRAM2[address & 0x7FFFF])};
+                const Color888 color888 = ConvertRGB555to888(color555);
+                m_framebuffer[x + y * m_HRes] = color888.u32;
+            }
         }
     }
 }

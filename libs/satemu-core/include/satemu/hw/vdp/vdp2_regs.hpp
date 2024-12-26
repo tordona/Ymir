@@ -999,22 +999,22 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadBKTAU() const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, bit::extract<16, 18>(backScreenParams.baseAddress));
+        bit::deposit_into<0, 2>(value, bit::extract<17, 19>(backScreenParams.baseAddress));
         bit::deposit_into<15>(value, backScreenParams.perLine);
         return value;
     }
 
     FORCE_INLINE void WriteBKTAU(uint16 value) {
-        bit::deposit_into<16, 18>(backScreenParams.baseAddress, bit::extract<0, 2>(value));
+        bit::deposit_into<17, 19>(backScreenParams.baseAddress, bit::extract<0, 2>(value));
         backScreenParams.perLine = bit::extract<15>(value);
     }
 
     FORCE_INLINE uint16 ReadBKTAL() const {
-        return bit::extract<0, 15>(backScreenParams.baseAddress);
+        return bit::extract<1, 16>(backScreenParams.baseAddress);
     }
 
     FORCE_INLINE void WriteBKTAL(uint16 value) {
-        bit::deposit_into<0, 15>(backScreenParams.baseAddress, value);
+        bit::deposit_into<1, 16>(backScreenParams.baseAddress, value);
     }
 
     RPMD_t RPMD;     // 1800B0   RPMD    Rotation Parameter Mode
