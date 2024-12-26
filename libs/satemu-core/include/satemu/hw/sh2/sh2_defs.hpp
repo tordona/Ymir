@@ -242,9 +242,9 @@ union VCRWDT_t {
 //
 // --- Cache module ---
 
-static constexpr size_t kCacheWays = 4;
-static constexpr size_t kCacheEntries = 64;
-static constexpr size_t kCacheLineSize = 16;
+inline constexpr size_t kCacheWays = 4;
+inline constexpr size_t kCacheEntries = 64;
+inline constexpr size_t kCacheLineSize = 16;
 
 struct CacheEntry {
     // Tag layout:

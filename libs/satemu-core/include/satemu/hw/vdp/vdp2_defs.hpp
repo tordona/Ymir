@@ -48,14 +48,14 @@ enum class SpecialColorCalcMode : uint8 {
 
 // Map index mask lookup table
 // [Character Size][Pattern Name Data Size ^ 1][Plane Size]
-static constexpr uint32 kMapIndexMasks[2][2][4] = {
+inline constexpr uint32 kMapIndexMasks[2][2][4] = {
     {{0x7F, 0x7E, 0x7E, 0x7C}, {0x3F, 0x3E, 0x3E, 0x3C}},
     {{0x1FF, 0x1FE, 0x1FE, 0x1FC}, {0xFF, 0xFE, 0xFE, 0xFC}},
 };
 
 // Page sizes lookup table
 // [Character Size][Pattern Name Data Size ^ 1]
-static constexpr uint32 kPageSizes[2][2] = {
+inline constexpr uint32 kPageSizes[2][2] = {
     {13, 14},
     {11, 12},
 };
