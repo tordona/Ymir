@@ -108,6 +108,9 @@ struct BGParams {
 
         mosaicEnable = false;
 
+        colorOffsetEnable = false;
+        colorOffsetSelect = false;
+
         plsz = 0;
         bmsz = 0;
         caos = 0;
@@ -257,10 +260,18 @@ struct BGParams {
     // Derived from LSTAnU/L
     uint32 lineScrollTableAddress;
 
-    // Whether to use the mosaic effect.
-    // If enabled, bypasses vertical cell scroll.
-    // Derived from MZCTL
+    // Enables the mosaic effect.
+    // If vertical cell scroll is also enabled, the mosaic effect is bypassed.
+    // Derived from MZCTL.xxMZE
     bool mosaicEnable;
+
+    // Enables the color offset effect.
+    // Derived from CLOFEN.xxCOEN
+    bool colorOffsetEnable;
+
+    // Selects the color offset parameters to use: A (false) or B (true).
+    // Derived from CLOFEN.xxCOSL
+    bool colorOffsetSelect;
 
     // Raw register values, to facilitate reads.
     uint16 plsz; // Raw value of PLSZ.xxPLSZn
@@ -317,6 +328,8 @@ struct SpriteParams {
         colorCalcCond = SpriteColorCalculationCondition::PriorityLessThanOrEqual;
         priorities.fill(0);
         colorDataOffset = 0;
+        colorOffsetEnable = false;
+        colorOffsetSelect = false;
     }
 
     // The sprite type (0..F).
@@ -350,6 +363,14 @@ struct SpriteParams {
     // Sprite color data offset.
     // Derived from CRAOFB.SPCAOSn
     uint32 colorDataOffset;
+
+    // Enables the color offset effect.
+    // Derived from CLOFEN.SPCOEN
+    bool colorOffsetEnable;
+
+    // Selects the color offset parameters to use: A (false) or B (true).
+    // Derived from CLOFEN.SPCOSL
+    bool colorOffsetSelect;
 };
 
 struct SpriteData {
@@ -381,6 +402,8 @@ struct LineBackScreenParams {
     void Reset() {
         perLine = false;
         baseAddress = 0;
+        colorOffsetEnable = false;
+        colorOffsetSelect = false;
     }
 
     // Whether the line/back screen specifies a color for the whole screen (false) or per line (true).
@@ -390,6 +413,32 @@ struct LineBackScreenParams {
     // Base address of line/back screen data.
     // Derived from LCTAU/L.LCTA18-0 or BKTAU/L.BKTA18-0
     uint32 baseAddress;
+
+    // Enables the color offset effect.
+    // Only valid for the back screen.
+    // Derived from CLOFEN.BKCOEN
+    bool colorOffsetEnable;
+
+    // Selects the color offset parameters to use: A (false) or B (true).
+    // Only valid for the back screen.
+    // Derived from CLOFEN.BKCOSL
+    bool colorOffsetSelect;
+};
+
+struct ColorOffsetParams {
+    ColorOffsetParams() {
+        Reset();
+    }
+
+    void Reset() {
+        red = 0;
+        green = 0;
+        blue = 0;
+    }
+
+    sint16 red;
+    sint16 green;
+    sint16 blue;
 };
 
 // TODO: consider splitting unions into individual fields for performance
@@ -1209,84 +1258,6 @@ union CCR_t {
         uint16 _rsvd5_7 : 3;
         uint16 uCCRTn : 5; // (NA) NBG1, (NB) NBG3, (R) reserved, (LB) Back Screen
         uint16 _rsvd13_15 : 3;
-    };
-};
-
-// 180110   CLOFEN  Color Offset Enable
-//
-//   bits   r/w  code          description
-//   15-7        -             Reserved, must be zero
-//      6     W  SPCOEN        Sprite Color Offset Enable
-//      5     W  BKCOEN        Back Screen Color Offset Enable
-//      4     W  R0COEN        RBG0 Color Offset Enable
-//      3     W  N3COEN        NBG3 Color Offset Enable
-//      2     W  N2COEN        NBG2 Color Offset Enable
-//      1     W  N1COEN        NBG1 Color Offset Enable
-//      0     W  N0COEN        NBG0 Color Offset Enable
-//
-// For all bits:
-//   0 = enable
-//   1 = disable
-union CLOFEN_t {
-    uint16 u16;
-    struct {
-        uint16 N0COEN : 1;
-        uint16 N1COEN : 1;
-        uint16 N2COEN : 1;
-        uint16 N3COEN : 1;
-        uint16 R0COEN : 1;
-        uint16 BKCOEN : 1;
-        uint16 SPCOEN : 1;
-        uint16 _rsvd7_15 : 9;
-    };
-};
-
-// 180112   CLOFSL  Color Offset Select
-//
-//   bits   r/w  code          description
-//   15-7        -             Reserved, must be zero
-//      6     W  SPCOSL        Sprite Color Offset Select
-//      5     W  BKCOSL        Backdrop Color Offset Select
-//      4     W  R0COSL        RBG0 Color Offset Select
-//      3     W  N3COSL        NBG3 Color Offset Select
-//      2     W  N2COSL        NBG2 Color Offset Select
-//      1     W  N1COSL        NBG1 Color Offset Select
-//      0     W  N0COSL        NBG0 Color Offset Select
-//
-// For all bits:
-//   0 = Color Offset A
-//   1 = Color Offset B
-union CLOFSL_t {
-    uint16 u16;
-    struct {
-        uint16 N0COSL : 1;
-        uint16 N1COSL : 1;
-        uint16 N2COSL : 1;
-        uint16 N3COSL : 1;
-        uint16 R0COSL : 1;
-        uint16 BKCOSL : 1;
-        uint16 SPCOSL : 1;
-        uint16 _rsvd7_15 : 9;
-    };
-};
-
-// 180114   COAR    Color Offset A - Red
-// 180116   COAG    Color Offset A - Green
-// 180118   COAB    Color Offset A - Blue
-// 18011A   COBR    Color Offset B - Red
-// 18011C   COBG    Color Offset B - Green
-// 18011E   COBB    Color Offset B - Blue
-//
-//   bits   r/w  code          description
-//   15-9        -             Reserved, must be zero
-//    8-0     W  COxc8-0       Color Offset Value
-//
-// x: A,B; c: R,G,B
-union CO_t {
-    uint16_t u16;
-    struct {
-        uint16 COxcn : 9;
-        uint16 _rsvd9_15 : 7;
     };
 };
 

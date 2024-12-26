@@ -166,7 +166,7 @@ public:
         case 0x006: return m_VDP2.VRSIZE.u16;
         case 0x008: return m_VDP2.HCNT;
         case 0x00A: return m_VDP2.VCNT;
-        case 0x00c: return 0; // unknown/hidden register
+        case 0x00C: return 0; // unknown/hidden register
         case 0x00E: return m_VDP2.RAMCTL.u16;
         case 0x010: return m_VDP2.CYCA0.L.u16;   // write-only?
         case 0x012: return m_VDP2.CYCA0.U.u16;   // write-only?
@@ -296,14 +296,14 @@ public:
         case 0x10A: return m_VDP2.CCRNB.u16;     // write-only?
         case 0x10C: return m_VDP2.CCRR.u16;      // write-only?
         case 0x10E: return m_VDP2.CCRLB.u16;     // write-only?
-        case 0x110: return m_VDP2.CLOFEN.u16;    // write-only?
-        case 0x112: return m_VDP2.CLOFSL.u16;    // write-only?
-        case 0x114: return m_VDP2.COAR.u16;      // write-only?
-        case 0x116: return m_VDP2.COAG.u16;      // write-only?
-        case 0x118: return m_VDP2.COAB.u16;      // write-only?
-        case 0x11A: return m_VDP2.COBR.u16;      // write-only?
-        case 0x11C: return m_VDP2.COBG.u16;      // write-only?
-        case 0x11E: return m_VDP2.COBB.u16;      // write-only?
+        case 0x110: return m_VDP2.ReadCLOFEN();  // write-only?
+        case 0x112: return m_VDP2.ReadCLOFSL();  // write-only?
+        case 0x114: return m_VDP2.ReadCOxR(0);   // write-only?
+        case 0x116: return m_VDP2.ReadCOxG(0);   // write-only?
+        case 0x118: return m_VDP2.ReadCOxB(0);   // write-only?
+        case 0x11A: return m_VDP2.ReadCOxR(1);   // write-only?
+        case 0x11C: return m_VDP2.ReadCOxG(1);   // write-only?
+        case 0x11E: return m_VDP2.ReadCOxB(1);   // write-only?
         default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
         }
     }
@@ -452,14 +452,14 @@ public:
         case 0x10A: m_VDP2.CCRNB.u16 = value & 0x1F1F; break;
         case 0x10C: m_VDP2.CCRR.u16 = value & 0x001F; break;
         case 0x10E: m_VDP2.CCRLB.u16 = value & 0x1F1F; break;
-        case 0x110: m_VDP2.CLOFEN.u16 = value & 0x007F; break;
-        case 0x112: m_VDP2.CLOFSL.u16 = value & 0x007F; break;
-        case 0x114: m_VDP2.COAR.u16 = value & 0x01FF; break;
-        case 0x116: m_VDP2.COAG.u16 = value & 0x01FF; break;
-        case 0x118: m_VDP2.COAB.u16 = value & 0x01FF; break;
-        case 0x11A: m_VDP2.COBR.u16 = value & 0x01FF; break;
-        case 0x11C: m_VDP2.COBG.u16 = value & 0x01FF; break;
-        case 0x11E: m_VDP2.COBB.u16 = value & 0x01FF; break;
+        case 0x110: m_VDP2.WriteCLOFEN(value); break;
+        case 0x112: m_VDP2.WriteCLOFSL(value); break;
+        case 0x114: m_VDP2.WriteCOxR(0, value); break;
+        case 0x116: m_VDP2.WriteCOxG(0, value); break;
+        case 0x118: m_VDP2.WriteCOxB(0, value); break;
+        case 0x11A: m_VDP2.WriteCOxR(1, value); break;
+        case 0x11C: m_VDP2.WriteCOxG(1, value); break;
+        case 0x11E: m_VDP2.WriteCOxB(1, value); break;
         default:
             fmt::println("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
             break;

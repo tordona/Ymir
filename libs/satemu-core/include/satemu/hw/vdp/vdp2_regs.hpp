@@ -39,14 +39,6 @@ struct VDP2Regs {
         CCRNB.u16 = 0x0;
         CCRR.u16 = 0x0;
         CCRLB.u16 = 0x0;
-        CLOFEN.u16 = 0x0;
-        CLOFSL.u16 = 0x0;
-        COAR.u16 = 0x0;
-        COAG.u16 = 0x0;
-        COAB.u16 = 0x0;
-        COBR.u16 = 0x0;
-        COBG.u16 = 0x0;
-        COBB.u16 = 0x0;
 
         for (auto &bg : normBGParams) {
             bg.Reset();
@@ -61,6 +53,10 @@ struct VDP2Regs {
 
         mosaicH = 1;
         mosaicV = 1;
+
+        for (auto &colorOffset : colorOffsetParams) {
+            colorOffset.Reset();
+        }
 
         for (auto &sp : specialFunctionCodes) {
             sp.Reset();
@@ -1344,18 +1340,115 @@ struct VDP2Regs {
         spriteParams.colorCalcRatios[offset * 2 + 1] = bit::extract<8, 10>(value);
     }
 
-    CCR_t CCRNA;     // 180108   CCRNA   NBG0 and NBG1 Color Calculation Ratio
-    CCR_t CCRNB;     // 18010A   CCRNB   NBG2 and NBG3 Color Calculation Ratio
-    CCR_t CCRR;      // 18010C   CCRR    RBG0 Color Calculation Ratio
-    CCR_t CCRLB;     // 18010E   CCRLB   Line Color Screen and Back Screen Color Calculation Ratio
-    CLOFEN_t CLOFEN; // 180110   CLOFEN  Color Offset Enable
-    CLOFSL_t CLOFSL; // 180112   CLOFSL  Color Offset Select
-    CO_t COAR;       // 180114   COAR    Color Offset A - Red
-    CO_t COAG;       // 180116   COAG    Color Offset A - Green
-    CO_t COAB;       // 180118   COAB    Color Offset A - Blue
-    CO_t COBR;       // 18011A   COBR    Color Offset B - Red
-    CO_t COBG;       // 18011C   COBG    Color Offset B - Green
-    CO_t COBB;       // 18011E   COBB    Color Offset B - Blue
+    CCR_t CCRNA; // 180108   CCRNA   NBG0 and NBG1 Color Calculation Ratio
+    CCR_t CCRNB; // 18010A   CCRNB   NBG2 and NBG3 Color Calculation Ratio
+    CCR_t CCRR;  // 18010C   CCRR    RBG0 Color Calculation Ratio
+    CCR_t CCRLB; // 18010E   CCRLB   Line Color Screen and Back Screen Color Calculation Ratio
+
+    // 180110   CLOFEN  Color Offset Enable
+    //
+    //   bits   r/w  code          description
+    //   15-7        -             Reserved, must be zero
+    //      6     W  SPCOEN        Sprite Color Offset Enable
+    //      5     W  BKCOEN        Back Screen Color Offset Enable
+    //      4     W  R0COEN        RBG0 Color Offset Enable
+    //      3     W  N3COEN        NBG3 Color Offset Enable
+    //      2     W  N2COEN        NBG2 Color Offset Enable
+    //      1     W  N1COEN        NBG1/EXBG Color Offset Enable
+    //      0     W  N0COEN        NBG0/RBG1 Color Offset Enable
+
+    FORCE_INLINE uint16 ReadCLOFEN() const {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, normBGParams[0].colorOffsetEnable);
+        bit::deposit_into<1>(value, normBGParams[1].colorOffsetEnable);
+        bit::deposit_into<2>(value, normBGParams[2].colorOffsetEnable);
+        bit::deposit_into<3>(value, normBGParams[3].colorOffsetEnable);
+        bit::deposit_into<4>(value, rotBGParams[0].colorOffsetEnable);
+        bit::deposit_into<5>(value, backScreenParams.colorOffsetEnable);
+        bit::deposit_into<6>(value, spriteParams.colorOffsetEnable);
+        return value;
+    }
+
+    FORCE_INLINE void WriteCLOFEN(uint16 value) {
+        normBGParams[0].colorOffsetEnable = bit::extract<0>(value);
+        normBGParams[1].colorOffsetEnable = bit::extract<1>(value);
+        normBGParams[2].colorOffsetEnable = bit::extract<2>(value);
+        normBGParams[3].colorOffsetEnable = bit::extract<3>(value);
+        rotBGParams[0].colorOffsetEnable = bit::extract<4>(value);
+        backScreenParams.colorOffsetEnable = bit::extract<5>(value);
+        spriteParams.colorOffsetEnable = bit::extract<6>(value);
+    }
+
+    // 180112   CLOFSL  Color Offset Select
+    //
+    //   bits   r/w  code          description
+    //   15-7        -             Reserved, must be zero
+    //      6     W  SPCOSL        Sprite Color Offset Select
+    //      5     W  BKCOSL        Backdrop Color Offset Select
+    //      4     W  R0COSL        RBG0 Color Offset Select
+    //      3     W  N3COSL        NBG3 Color Offset Select
+    //      2     W  N2COSL        NBG2 Color Offset Select
+    //      1     W  N1COSL        NBG1 Color Offset Select
+    //      0     W  N0COSL        NBG0 Color Offset Select
+    //
+    // For all bits:
+    //   0 = Color Offset A
+    //   1 = Color Offset B
+
+    FORCE_INLINE uint16 ReadCLOFSL() const {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, normBGParams[0].colorOffsetSelect);
+        bit::deposit_into<1>(value, normBGParams[1].colorOffsetSelect);
+        bit::deposit_into<2>(value, normBGParams[2].colorOffsetSelect);
+        bit::deposit_into<3>(value, normBGParams[3].colorOffsetSelect);
+        bit::deposit_into<4>(value, rotBGParams[0].colorOffsetSelect);
+        bit::deposit_into<5>(value, backScreenParams.colorOffsetSelect);
+        bit::deposit_into<6>(value, spriteParams.colorOffsetSelect);
+        return value;
+    }
+
+    FORCE_INLINE void WriteCLOFSL(uint16 value) {
+        normBGParams[0].colorOffsetSelect = bit::extract<0>(value);
+        normBGParams[1].colorOffsetSelect = bit::extract<1>(value);
+        normBGParams[2].colorOffsetSelect = bit::extract<2>(value);
+        normBGParams[3].colorOffsetSelect = bit::extract<3>(value);
+        rotBGParams[0].colorOffsetSelect = bit::extract<4>(value);
+        backScreenParams.colorOffsetSelect = bit::extract<5>(value);
+        spriteParams.colorOffsetSelect = bit::extract<6>(value);
+    }
+
+    // 180114   COAR    Color Offset A - Red
+    // 180116   COAG    Color Offset A - Green
+    // 180118   COAB    Color Offset A - Blue
+    // 18011A   COBR    Color Offset B - Red
+    // 18011C   COBG    Color Offset B - Green
+    // 18011E   COBB    Color Offset B - Blue
+    //
+    //   bits   r/w  code          description
+    //   15-9        -             Reserved, must be zero
+    //    8-0     W  COxc8-0       Color Offset Value
+    //
+    // x: A,B; c: R,G,B
+
+    FORCE_INLINE uint16 ReadCOxR(uint8 select) const {
+        return colorOffsetParams[select].red;
+    }
+    FORCE_INLINE uint16 ReadCOxG(uint8 select) const {
+        return colorOffsetParams[select].green;
+    }
+    FORCE_INLINE uint16 ReadCOxB(uint8 select) const {
+        return colorOffsetParams[select].blue;
+    }
+
+    FORCE_INLINE void WriteCOxR(uint8 select, uint16 value) {
+        colorOffsetParams[select].red = bit::sign_extend<9>(bit::extract<0, 8>(value));
+    }
+    FORCE_INLINE void WriteCOxG(uint8 select, uint16 value) {
+        colorOffsetParams[select].green = bit::sign_extend<9>(bit::extract<0, 8>(value));
+    }
+    FORCE_INLINE void WriteCOxB(uint8 select, uint16 value) {
+        colorOffsetParams[select].blue = bit::sign_extend<9>(bit::extract<0, 8>(value));
+    }
 
     // -------------------------------------------------------------------------
 
@@ -1381,9 +1474,13 @@ struct VDP2Regs {
     // Mosaic dimensions.
     // Applies to all backgrounds with the mosaic effect enabled.
     // Rotation backgrounds only use the horizontal dimension.
-    // Derived from MZCTL
+    // Derived from MZCTL.MZSZH/V
     uint8 mosaicH; // Horizontal mosaic size
     uint8 mosaicV; // Vertical mosaic size
+
+    // Color offset parameters.
+    // Derived from COAR/G/B and COBR/G/B
+    std::array<ColorOffsetParams, 2> colorOffsetParams;
 
     std::array<SpecialFunctionCodes, 2> specialFunctionCodes;
 };
