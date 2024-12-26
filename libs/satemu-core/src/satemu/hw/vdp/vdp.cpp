@@ -1095,6 +1095,8 @@ void VDP::VDP2DrawLine() {
             const auto &nbg3Pixel = m_bgLayers[3].pixels[x];
             const auto &rbg0Pixel = m_bgLayers[4].pixels[x];
 
+            // TODO: refactor this mess
+            // - too many switch-cases to get parameters/data
             enum Layer { LYR_Back, LYR_NBG3, LYR_NBG2, LYR_NBG1_EXBG, LYR_NBG0_RBG1, LYR_RBG0, LYR_Sprite };
             std::array<Layer, 3> layers = {LYR_Back, LYR_Back, LYR_Back};
             std::array<uint8, 3> layerPrios = {0, 0, 0};
@@ -1146,60 +1148,56 @@ void VDP::VDP2DrawLine() {
 
             // Retrieves the color of the given layer
             auto getLayerColor = [&](Layer layer) -> Color888 {
+                bool colorOffsetEnable{};
+                bool colorOffsetSelect{};
+                Color888 color{};
+
                 switch (layer) {
-                case LYR_Sprite: return spritePixel.color;
-                case LYR_RBG0: return rbg0Pixel.color;
-                case LYR_NBG0_RBG1: return nbg0rbg1Pixel.color;
-                case LYR_NBG1_EXBG: return nbg1exbgPixel.color;
-                case LYR_NBG2: return nbg2Pixel.color;
-                case LYR_NBG3: return nbg3Pixel.color;
+                case LYR_Sprite:
+                    color = spritePixel.color;
+                    colorOffsetEnable = spriteParams.colorOffsetEnable;
+                    colorOffsetSelect = spriteParams.colorOffsetSelect;
+                    break;
+                case LYR_RBG0:
+                    color = rbg0Pixel.color;
+                    colorOffsetEnable = rbg0Params.colorOffsetEnable;
+                    colorOffsetSelect = rbg0Params.colorOffsetSelect;
+                    break;
+                case LYR_NBG0_RBG1:
+                    color = nbg0rbg1Pixel.color;
+                    colorOffsetEnable = usesRBG1 ? rbg1Params.colorOffsetEnable : nbg0Params.colorOffsetEnable;
+                    colorOffsetSelect = usesRBG1 ? rbg1Params.colorOffsetSelect : nbg0Params.colorOffsetSelect;
+                    break;
+                case LYR_NBG1_EXBG:
+                    color = nbg1exbgPixel.color;
+                    colorOffsetEnable = nbg1Params.colorOffsetEnable;
+                    colorOffsetSelect = nbg1Params.colorOffsetSelect;
+                    break;
+                case LYR_NBG2:
+                    color = nbg2Pixel.color;
+                    colorOffsetEnable = nbg2Params.colorOffsetEnable;
+                    colorOffsetSelect = nbg2Params.colorOffsetSelect;
+                    break;
+                case LYR_NBG3:
+                    color = nbg3Pixel.color;
+                    colorOffsetEnable = nbg3Params.colorOffsetEnable;
+                    colorOffsetSelect = nbg3Params.colorOffsetSelect;
+                    break;
                 case LYR_Back: {
                     const uint32 line = backParams.perLine ? y : 0;
                     const uint32 address = backParams.baseAddress + line * sizeof(Color555);
                     const Color555 color555{.u16 = util::ReadBE<uint16>(&m_VRAM2[address & 0x7FFFF])};
-                    return ConvertRGB555to888(color555);
+                    color = ConvertRGB555to888(color555);
+                    colorOffsetEnable = backParams.colorOffsetEnable;
+                    colorOffsetSelect = backParams.colorOffsetSelect;
+                    break;
                 }
                 default: util::unreachable();
                 }
-            };
 
-            // Applies the color offset effect if enabled on the specified layer
-            auto applyColorOffset = [&](Layer layer, Color888 color) -> Color888 {
-                bool enable, select;
-                switch (layer) {
-                case LYR_Sprite:
-                    enable = spriteParams.colorOffsetEnable;
-                    select = spriteParams.colorOffsetSelect;
-                    break;
-                case LYR_RBG0:
-                    enable = rbg0Params.colorOffsetEnable;
-                    select = rbg0Params.colorOffsetSelect;
-                    break;
-                case LYR_NBG0_RBG1:
-                    enable = usesRBG1 ? rbg1Params.colorOffsetEnable : nbg0Params.colorOffsetEnable;
-                    select = usesRBG1 ? rbg1Params.colorOffsetSelect : nbg0Params.colorOffsetSelect;
-                    break;
-                case LYR_NBG1_EXBG:
-                    enable = nbg1Params.colorOffsetEnable;
-                    select = nbg1Params.colorOffsetSelect;
-                    break;
-                case LYR_NBG2:
-                    enable = nbg2Params.colorOffsetEnable;
-                    select = nbg2Params.colorOffsetSelect;
-                    break;
-                case LYR_NBG3:
-                    enable = nbg3Params.colorOffsetEnable;
-                    select = nbg3Params.colorOffsetSelect;
-                    break;
-                case LYR_Back:
-                    enable = backParams.colorOffsetEnable;
-                    select = backParams.colorOffsetSelect;
-                    break;
-                default: util::unreachable();
-                }
-
-                if (enable) {
-                    const auto &colorOffset = m_VDP2.colorOffsetParams[select];
+                // Apply color offset if enabled
+                if (colorOffsetEnable) {
+                    const auto &colorOffset = m_VDP2.colorOffsetParams[colorOffsetSelect];
                     color.r = std::clamp(color.r + colorOffset.r, 0, 255);
                     color.g = std::clamp(color.g + colorOffset.g, 0, 255);
                     color.b = std::clamp(color.b + colorOffset.b, 0, 255);
@@ -1207,14 +1205,73 @@ void VDP::VDP2DrawLine() {
                 return color;
             };
 
+            auto isColorCalcEnabled = [&](Layer layer) {
+                switch (layer) {
+                case LYR_Sprite: return spriteParams.colorCalcEnable;
+                case LYR_RBG0: return rbg0Params.colorCalcEnable;
+                case LYR_NBG0_RBG1: return usesRBG1 ? rbg1Params.colorCalcEnable : nbg0Params.colorCalcEnable;
+                case LYR_NBG1_EXBG: return nbg1Params.colorCalcEnable;
+                case LYR_NBG2: return nbg2Params.colorCalcEnable;
+                case LYR_NBG3: return nbg3Params.colorCalcEnable;
+                case LYR_Back: return backParams.colorCalcEnable;
+                default: util::unreachable();
+                }
+            };
+
+            auto getColorCalcRatio = [&](Layer layer) {
+                switch (layer) {
+                case LYR_Sprite: return spritePixel.colorCalcRatio;
+                case LYR_RBG0: return rbg0Params.colorCalcRatio;
+                case LYR_NBG0_RBG1: return usesRBG1 ? rbg1Params.colorCalcRatio : nbg0Params.colorCalcRatio;
+                case LYR_NBG1_EXBG: return nbg1Params.colorCalcRatio;
+                case LYR_NBG2: return nbg2Params.colorCalcRatio;
+                case LYR_NBG3: return nbg3Params.colorCalcRatio;
+                case LYR_Back: return backParams.colorCalcRatio;
+                default: util::unreachable();
+                }
+            };
+
+            const auto &colorCalcParams = m_VDP2.colorCalcParams;
+
             // Calculate color
-            // TODO: handle color calculations
             // TODO: handle LNCL insertion
             // - inserted behind the topmost layer if it has line color insertion enabled
+            // TODO: handle specialColorCalcMode directly in rendering code
+            Color888 outputColor{};
+            if (isColorCalcEnabled(layers[0])) {
+                const Color888 topColor = getLayerColor(layers[0]);
+                Color888 btmColor = getLayerColor(layers[1]);
 
-            // HACK: for now, use the topmost layer
-            Color888 outputColor = getLayerColor(layers[0]);
-            outputColor = applyColorOffset(layers[0], outputColor);
+                // Apply extended color calculations (only in normal TV modes)
+                if (colorCalcParams.extendedColorCalcEnable && m_VDP2.TVMD.HRESOn < 2) {
+                    // TODO: honor color RAM mode + palette/RGB format restrictions
+                    // - modes 1 and 2 don't blend layers if the bottom layer uses palette color
+                    //   - LNCL is considered RGB for that matter (i.e. it blends if requested)
+                    // TODO: honor LNCL insertion
+
+                    // HACK: assuming color RAM mode 0 for now
+                    if (isColorCalcEnabled(layers[1])) {
+                        const Color888 l2Color = getLayerColor(layers[2]);
+                        btmColor.r = (btmColor.r + l2Color.r) / 2;
+                        btmColor.g = (btmColor.g + l2Color.g) / 2;
+                        btmColor.b = (btmColor.b + l2Color.b) / 2;
+                    }
+                }
+
+                if (colorCalcParams.useAdditiveBlend) {
+                    outputColor.r = std::min(topColor.r + btmColor.r, 255);
+                    outputColor.g = std::min(topColor.g + btmColor.g, 255);
+                    outputColor.b = std::min(topColor.b + btmColor.b, 255);
+                } else {
+                    const uint8 ratio = getColorCalcRatio(colorCalcParams.useSecondScreenRatio ? layers[1] : layers[0]);
+                    const uint8 complRatio = 32 - ratio;
+                    outputColor.r = (topColor.r * complRatio + btmColor.r * ratio) / 32;
+                    outputColor.g = (topColor.g * complRatio + btmColor.g * ratio) / 32;
+                    outputColor.b = (topColor.b * complRatio + btmColor.b * ratio) / 32;
+                }
+            } else {
+                outputColor = getLayerColor(layers[0]);
+            }
 
             m_framebuffer[x + y * m_HRes] = outputColor.u32;
         }
