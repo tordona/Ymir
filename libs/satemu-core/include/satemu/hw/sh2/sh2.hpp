@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sh2_decode.hpp"
 #include "sh2_defs.hpp"
 
 #include <satemu/core_types.hpp>
@@ -250,153 +251,152 @@ private:
 
     void SLEEP(); // sleep
 
-    void MOV(uint16 rm, uint16 rn);                 // mov   Rm, Rn
-    void MOVBL(uint16 rm, uint16 rn);               // mov.b @Rm, Rn
-    void MOVWL(uint16 rm, uint16 rn);               // mov.w @Rm, Rn
-    void MOVLL(uint16 rm, uint16 rn);               // mov.l @Rm, Rn
-    void MOVBL0(uint16 rm, uint16 rn);              // mov.b @(R0,Rm), Rn
-    void MOVWL0(uint16 rm, uint16 rn);              // mov.w @(R0,Rm), Rn
-    void MOVLL0(uint16 rm, uint16 rn);              // mov.l @(R0,Rm), Rn
-    void MOVBL4(uint16 rm, uint16 disp);            // mov.b @(disp,Rm), R0
-    void MOVWL4(uint16 rm, uint16 disp);            // mov.w @(disp,Rm), R0
-    void MOVLL4(uint16 rm, uint16 disp, uint16 rn); // mov.l @(disp,Rm), Rn
-    void MOVBLG(uint16 disp);                       // mov.b @(disp,GBR), R0
-    void MOVWLG(uint16 disp);                       // mov.w @(disp,GBR), R0
-    void MOVLLG(uint16 disp);                       // mov.l @(disp,GBR), R0
-    void MOVBM(uint16 rm, uint16 rn);               // mov.b Rm, @-Rn
-    void MOVWM(uint16 rm, uint16 rn);               // mov.w Rm, @-Rn
-    void MOVLM(uint16 rm, uint16 rn);               // mov.l Rm, @-Rn
-    void MOVBP(uint16 rm, uint16 rn);               // mov.b @Rm+, Rn
-    void MOVWP(uint16 rm, uint16 rn);               // mov.w @Rm+, Rn
-    void MOVLP(uint16 rm, uint16 rn);               // mov.l @Rm+, Rn
-    void MOVBS(uint16 rm, uint16 rn);               // mov.b Rm, @Rn
-    void MOVWS(uint16 rm, uint16 rn);               // mov.w Rm, @Rn
-    void MOVLS(uint16 rm, uint16 rn);               // mov.l Rm, @Rn
-    void MOVBS0(uint16 rm, uint16 rn);              // mov.b Rm, @(R0,Rn)
-    void MOVWS0(uint16 rm, uint16 rn);              // mov.w Rm, @(R0,Rn)
-    void MOVLS0(uint16 rm, uint16 rn);              // mov.l Rm, @(R0,Rn)
-    void MOVBS4(uint16 disp, uint16 rn);            // mov.b R0, @(disp,Rn)
-    void MOVWS4(uint16 disp, uint16 rn);            // mov.w R0, @(disp,Rn)
-    void MOVLS4(uint16 rm, uint16 disp, uint16 rn); // mov.l Rm, @(disp,Rn)
-    void MOVBSG(uint16 disp);                       // mov.b R0, @(disp,GBR)
-    void MOVWSG(uint16 disp);                       // mov.w R0, @(disp,GBR)
-    void MOVLSG(uint16 disp);                       // mov.l R0, @(disp,GBR)
-    void MOVI(uint16 imm, uint16 rn);               // mov   #imm, Rn
-    void MOVWI(uint16 disp, uint16 rn);             // mov.w @(disp,PC), Rn
-    void MOVLI(uint16 disp, uint16 rn);             // mov.l @(disp,PC), Rn
-    void MOVA(uint16 disp);                         // mova  @(disp,PC), R0
-    void MOVT(uint16 rn);                           // movt  Rn
-    void CLRT();                                    // clrt
-    void SETT();                                    // sett
+    void MOV(InstrNM instr);     // mov   Rm, Rn
+    void MOVBL(InstrNM instr);   // mov.b @Rm, Rn
+    void MOVWL(InstrNM instr);   // mov.w @Rm, Rn
+    void MOVLL(InstrNM instr);   // mov.l @Rm, Rn
+    void MOVBL0(InstrNM instr);  // mov.b @(R0,Rm), Rn
+    void MOVWL0(InstrNM instr);  // mov.w @(R0,Rm), Rn
+    void MOVLL0(InstrNM instr);  // mov.l @(R0,Rm), Rn
+    void MOVBL4(InstrMD instr);  // mov.b @(disp,Rm), R0
+    void MOVWL4(InstrMD instr);  // mov.w @(disp,Rm), R0
+    void MOVLL4(InstrNMD instr); // mov.l @(disp,Rm), Rn
+    void MOVBLG(InstrD instr);   // mov.b @(disp,GBR), R0
+    void MOVWLG(InstrD instr);   // mov.w @(disp,GBR), R0
+    void MOVLLG(InstrD instr);   // mov.l @(disp,GBR), R0
+    void MOVBM(InstrNM instr);   // mov.b Rm, @-Rn
+    void MOVWM(InstrNM instr);   // mov.w Rm, @-Rn
+    void MOVLM(InstrNM instr);   // mov.l Rm, @-Rn
+    void MOVBP(InstrNM instr);   // mov.b @Rm+, Rn
+    void MOVWP(InstrNM instr);   // mov.w @Rm+, Rn
+    void MOVLP(InstrNM instr);   // mov.l @Rm+, Rn
+    void MOVBS(InstrNM instr);   // mov.b Rm, @Rn
+    void MOVWS(InstrNM instr);   // mov.w Rm, @Rn
+    void MOVLS(InstrNM instr);   // mov.l Rm, @Rn
+    void MOVBS0(InstrNM instr);  // mov.b Rm, @(R0,Rn)
+    void MOVWS0(InstrNM instr);  // mov.w Rm, @(R0,Rn)
+    void MOVLS0(InstrNM instr);  // mov.l Rm, @(R0,Rn)
+    void MOVBS4(InstrND4 instr); // mov.b R0, @(disp,Rn)
+    void MOVWS4(InstrND4 instr); // mov.w R0, @(disp,Rn)
+    void MOVLS4(InstrNMD instr); // mov.l Rm, @(disp,Rn)
+    void MOVBSG(InstrD instr);   // mov.b R0, @(disp,GBR)
+    void MOVWSG(InstrD instr);   // mov.w R0, @(disp,GBR)
+    void MOVLSG(InstrD instr);   // mov.l R0, @(disp,GBR)
+    void MOVI(InstrNI instr);    // mov   #imm, Rn
+    void MOVWI(InstrND8 instr);  // mov.w @(disp,PC), Rn
+    void MOVLI(InstrND8 instr);  // mov.l @(disp,PC), Rn
+    void MOVA(InstrD instr);     // mova  @(disp,PC), R0
+    void MOVT(InstrN instr);     // movt  Rn
+    void CLRT();                 // clrt
+    void SETT();                 // sett
 
-    void EXTSB(uint16 rm, uint16 rn); // exts.b Rm, Rn
-    void EXTSW(uint16 rm, uint16 rn); // exts.w Rm, Rn
-    void EXTUB(uint16 rm, uint16 rn); // extu.b Rm, Rn
-    void EXTUW(uint16 rm, uint16 rn); // extu.w Rm, Rn
+    void EXTSB(InstrNM instr); // exts.b Rm, Rn
+    void EXTSW(InstrNM instr); // exts.w Rm, Rn
+    void EXTUB(InstrNM instr); // extu.b Rm, Rn
+    void EXTUW(InstrNM instr); // extu.w Rm, Rn
+    void SWAPB(InstrNM instr); // swap.b Rm, Rn
+    void SWAPW(InstrNM instr); // swap.w Rm, Rn
+    void XTRCT(InstrNM instr); // xtrct  Rm, Rn
 
-    void LDCGBR(uint16 rm);   // ldc   Rm, GBR
-    void LDCSR(uint16 rm);    // ldc   Rm, SR
-    void LDCVBR(uint16 rm);   // ldc   Rm, VBR
-    void LDCMGBR(uint16 rm);  // ldc.l @Rm+, GBR
-    void LDCMSR(uint16 rm);   // ldc.l @Rm+, SR
-    void LDCMVBR(uint16 rm);  // ldc.l @Rm+, VBR
-    void LDSMACH(uint16 rm);  // lds   Rm, MACH
-    void LDSMACL(uint16 rm);  // lds   Rm, MACL
-    void LDSPR(uint16 rm);    // lds   Rm, PR
-    void LDSMMACH(uint16 rm); // lds.l @Rm+, MACH
-    void LDSMMACL(uint16 rm); // lds.l @Rm+, MACL
-    void LDSMPR(uint16 rm);   // lds.l @Rm+, PR
-    void STCGBR(uint16 rn);   // stc   GBR, Rn
-    void STCSR(uint16 rn);    // stc   SR, Rn
-    void STCVBR(uint16 rn);   // stc   VBR, Rn
-    void STCMGBR(uint16 rn);  // stc.l GBR, @-Rn
-    void STCMSR(uint16 rn);   // stc.l SR, @-Rn
-    void STCMVBR(uint16 rn);  // stc.l VBR, @-Rn
-    void STSMACH(uint16 rn);  // sts   MACH, Rn
-    void STSMACL(uint16 rn);  // sts   MACL, Rn
-    void STSPR(uint16 rn);    // sts   PR, Rn
-    void STSMMACH(uint16 rn); // sts.l MACH, @-Rn
-    void STSMMACL(uint16 rn); // sts.l MACL, @-Rn
-    void STSMPR(uint16 rn);   // sts.l PR, @-Rn
+    void LDCGBR(InstrM instr);   // ldc   Rm, GBR
+    void LDCSR(InstrM instr);    // ldc   Rm, SR
+    void LDCVBR(InstrM instr);   // ldc   Rm, VBR
+    void LDCMGBR(InstrM instr);  // ldc.l @Rm+, GBR
+    void LDCMSR(InstrM instr);   // ldc.l @Rm+, SR
+    void LDCMVBR(InstrM instr);  // ldc.l @Rm+, VBR
+    void LDSMACH(InstrM instr);  // lds   Rm, MACH
+    void LDSMACL(InstrM instr);  // lds   Rm, MACL
+    void LDSPR(InstrM instr);    // lds   Rm, PR
+    void LDSMMACH(InstrM instr); // lds.l @Rm+, MACH
+    void LDSMMACL(InstrM instr); // lds.l @Rm+, MACL
+    void LDSMPR(InstrM instr);   // lds.l @Rm+, PR
+    void STCGBR(InstrN instr);   // stc   GBR, Rn
+    void STCSR(InstrN instr);    // stc   SR, Rn
+    void STCVBR(InstrN instr);   // stc   VBR, Rn
+    void STCMGBR(InstrN instr);  // stc.l GBR, @-Rn
+    void STCMSR(InstrN instr);   // stc.l SR, @-Rn
+    void STCMVBR(InstrN instr);  // stc.l VBR, @-Rn
+    void STSMACH(InstrN instr);  // sts   MACH, Rn
+    void STSMACL(InstrN instr);  // sts   MACL, Rn
+    void STSPR(InstrN instr);    // sts   PR, Rn
+    void STSMMACH(InstrN instr); // sts.l MACH, @-Rn
+    void STSMMACL(InstrN instr); // sts.l MACL, @-Rn
+    void STSMPR(InstrN instr);   // sts.l PR, @-Rn
 
-    void SWAPB(uint16 rm, uint16 rn); // swap.b Rm, Rn
-    void SWAPW(uint16 rm, uint16 rn); // swap.w Rm, Rn
-    void XTRCT(uint16 rm, uint16 rn); // xtrct  Rm, Rn
+    void ADD(InstrNM instr);   // add    Rm, Rn
+    void ADDI(InstrNI instr);  // add    imm, Rn
+    void ADDC(InstrNM instr);  // addc   Rm, Rn
+    void ADDV(InstrNM instr);  // addv   Rm, Rn
+    void AND(InstrNM instr);   // and    Rm, Rn
+    void ANDI(InstrI instr);   // and    imm, R0
+    void ANDM(InstrI instr);   // and.   b imm, @(R0,GBR)
+    void NEG(InstrNM instr);   // neg    Rm, Rn
+    void NEGC(InstrNM instr);  // negc   Rm, Rn
+    void NOT(InstrNM instr);   // not    Rm, Rn
+    void OR(InstrNM instr);    // or     Rm, Rn
+    void ORI(InstrI instr);    // or     imm, Rn
+    void ORM(InstrI instr);    // or.b   imm, @(R0,GBR)
+    void ROTCL(InstrN instr);  // rotcl  Rn
+    void ROTCR(InstrN instr);  // rotcr  Rn
+    void ROTL(InstrN instr);   // rotl   Rn
+    void ROTR(InstrN instr);   // rotr   Rn
+    void SHAL(InstrN instr);   // shal   Rn
+    void SHAR(InstrN instr);   // shar   Rn
+    void SHLL(InstrN instr);   // shll   Rn
+    void SHLL2(InstrN instr);  // shll2  Rn
+    void SHLL8(InstrN instr);  // shll8  Rn
+    void SHLL16(InstrN instr); // shll16 Rn
+    void SHLR(InstrN instr);   // shlr   Rn
+    void SHLR2(InstrN instr);  // shlr2  Rn
+    void SHLR8(InstrN instr);  // shlr8  Rn
+    void SHLR16(InstrN instr); // shlr16 Rn
+    void SUB(InstrNM instr);   // sub    Rm, Rn
+    void SUBC(InstrNM instr);  // subc   Rm, Rn
+    void SUBV(InstrNM instr);  // subv   Rm, Rn
+    void XOR(InstrNM instr);   // xor    Rm, Rn
+    void XORI(InstrI instr);   // xor    imm, Rn
+    void XORM(InstrI instr);   // xor.b  imm, @(R0,GBR)
 
-    void ADD(uint16 rm, uint16 rn);   // add    Rm, Rn
-    void ADDI(uint16 imm, uint16 rn); // add    imm, Rn
-    void ADDC(uint16 rm, uint16 rn);  // addc   Rm, Rn
-    void ADDV(uint16 rm, uint16 rn);  // addv   Rm, Rn
-    void AND(uint16 rm, uint16 rn);   // and    Rm, Rn
-    void ANDI(uint16 imm);            // and    imm, R0
-    void ANDM(uint16 imm);            // and.   b imm, @(R0,GBR)
-    void NEG(uint16 rm, uint16 rn);   // neg    Rm, Rn
-    void NEGC(uint16 rm, uint16 rn);  // negc   Rm, Rn
-    void NOT(uint16 rm, uint16 rn);   // not    Rm, Rn
-    void OR(uint16 rm, uint16 rn);    // or     Rm, Rn
-    void ORI(uint16 imm);             // or     imm, Rn
-    void ORM(uint16 imm);             // or.b   imm, @(R0,GBR)
-    void ROTCL(uint16 rn);            // rotcl  Rn
-    void ROTCR(uint16 rn);            // rotcr  Rn
-    void ROTL(uint16 rn);             // rotl   Rn
-    void ROTR(uint16 rn);             // rotr   Rn
-    void SHAL(uint16 rn);             // shal   Rn
-    void SHAR(uint16 rn);             // shar   Rn
-    void SHLL(uint16 rn);             // shll   Rn
-    void SHLL2(uint16 rn);            // shll2  Rn
-    void SHLL8(uint16 rn);            // shll8  Rn
-    void SHLL16(uint16 rn);           // shll16 Rn
-    void SHLR(uint16 rn);             // shlr   Rn
-    void SHLR2(uint16 rn);            // shlr2  Rn
-    void SHLR8(uint16 rn);            // shlr8  Rn
-    void SHLR16(uint16 rn);           // shlr16 Rn
-    void SUB(uint16 rm, uint16 rn);   // sub    Rm, Rn
-    void SUBC(uint16 rm, uint16 rn);  // subc   Rm, Rn
-    void SUBV(uint16 rm, uint16 rn);  // subv   Rm, Rn
-    void XOR(uint16 rm, uint16 rn);   // xor    Rm, Rn
-    void XORI(uint16 imm);            // xor    imm, Rn
-    void XORM(uint16 imm);            // xor.b  imm, @(R0,GBR)
+    void DT(InstrN instr); // dt Rn
 
-    void DT(uint16 rn); // dt Rn
+    void CLRMAC();             // clrmac
+    void MACW(InstrNM instr);  // mac.w   @Rm+, @Rn+
+    void MACL(InstrNM instr);  // mac.l   @Rm+, @Rn+
+    void MULL(InstrNM instr);  // mul.l   Rm, Rn
+    void MULS(InstrNM instr);  // muls.w  Rm, Rn
+    void MULU(InstrNM instr);  // mulu.w  Rm, Rn
+    void DMULS(InstrNM instr); // dmuls.l Rm, Rn
+    void DMULU(InstrNM instr); // dmulu.l Rm, Rn
 
-    void CLRMAC();                    // clrmac
-    void MACW(uint16 rm, uint16 rn);  // mac.w   @Rm+, @Rn+
-    void MACL(uint16 rm, uint16 rn);  // mac.l   @Rm+, @Rn+
-    void MULL(uint16 rm, uint16 rn);  // mul.l   Rm, Rn
-    void MULS(uint16 rm, uint16 rn);  // muls.w  Rm, Rn
-    void MULU(uint16 rm, uint16 rn);  // mulu.w  Rm, Rn
-    void DMULS(uint16 rm, uint16 rn); // dmuls.l Rm, Rn
-    void DMULU(uint16 rm, uint16 rn); // dmulu.l Rm, Rn
+    void DIV0S(InstrNM instr); // div0s Rm, Rn
+    void DIV0U();              // div0u
+    void DIV1(InstrNM instr);  // div1  Rm, Rn
 
-    void DIV0S(uint16 rm, uint16 rn); // div0s Rm, Rn
-    void DIV0U();                     // div0u
-    void DIV1(uint16 rm, uint16 rn);  // div1  Rm, Rn
+    void CMPIM(InstrI instr);   // cmp/eq  imm, R0
+    void CMPEQ(InstrNM instr);  // cmp/eq  Rm, Rn
+    void CMPGE(InstrNM instr);  // cmp/ge  Rm, Rn
+    void CMPGT(InstrNM instr);  // cmp/gt  Rm, Rn
+    void CMPHI(InstrNM instr);  // cmp/hi  Rm, Rn
+    void CMPHS(InstrNM instr);  // cmp/hs  Rm, Rn
+    void CMPPL(InstrN instr);   // cmp/pl  Rn
+    void CMPPZ(InstrN instr);   // cmp/pz  Rn
+    void CMPSTR(InstrNM instr); // cmp/str Rm, Rn
+    void TAS(InstrN instr);     // tas.b   @Rn
+    void TST(InstrNM instr);    // tst     Rm, Rn
+    void TSTI(InstrI instr);    // tst     imm, R0
+    void TSTM(InstrI instr);    // tst.b   imm, @(R0,GBR)
 
-    void CMPIM(uint16 imm);            // cmp/eq  imm, R0
-    void CMPEQ(uint16 rm, uint16 rn);  // cmp/eq  Rm, Rn
-    void CMPGE(uint16 rm, uint16 rn);  // cmp/ge  Rm, Rn
-    void CMPGT(uint16 rm, uint16 rn);  // cmp/gt  Rm, Rn
-    void CMPHI(uint16 rm, uint16 rn);  // cmp/hi  Rm, Rn
-    void CMPHS(uint16 rm, uint16 rn);  // cmp/hs  Rm, Rn
-    void CMPPL(uint16 rn);             // cmp/pl  Rn
-    void CMPPZ(uint16 rn);             // cmp/pz  Rn
-    void CMPSTR(uint16 rm, uint16 rn); // cmp/str Rm, Rn
-    void TAS(uint16 rn);               // tas.b   @Rn
-    void TST(uint16 rm, uint16 rn);    // tst     Rm, Rn
-    void TSTI(uint16 imm);             // tst     imm, R0
-    void TSTM(uint16 imm);             // tst.b   imm, @(R0,GBR)
-
-    void BF(uint16 disp);   // bf    disp
-    void BFS(uint16 disp);  // bf/s  disp
-    void BT(uint16 disp);   // bt    disp
-    void BTS(uint16 disp);  // bt/s  disp
-    void BRA(uint16 disp);  // bra   disp
-    void BRAF(uint16 rm);   // braf  Rm
-    void BSR(uint16 disp);  // bsr   disp
-    void BSRF(uint16 rm);   // bsrf  Rm
-    void JMP(uint16 rm);    // jmp   @Rm
-    void JSR(uint16 rm);    // jsr   @Rm
-    void TRAPA(uint16 imm); // trapa imm
+    void BF(InstrD instr);    // bf    disp
+    void BFS(InstrD instr);   // bf/s  disp
+    void BT(InstrD instr);    // bt    disp
+    void BTS(InstrD instr);   // bt/s  disp
+    void BRA(InstrD12 instr); // bra   disp
+    void BRAF(InstrM instr);  // braf  Rm
+    void BSR(InstrD12 instr); // bsr   disp
+    void BSRF(InstrM instr);  // bsrf  Rm
+    void JMP(InstrM instr);   // jmp   @Rm
+    void JSR(InstrM instr);   // jsr   @Rm
+    void TRAPA(InstrI instr); // trapa imm
 
     void RTE(); // rte
     void RTS(); // rts

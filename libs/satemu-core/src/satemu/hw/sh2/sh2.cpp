@@ -748,129 +748,46 @@ void SH2::Execute(uint32 address) {
         }
     };
 
+    auto nonDelaySlot = [&](auto instr, auto... params) {
+        if (m_delaySlot) {
+            EnterException(xvSlotIllegalInstr);
+        } else {
+            (this->*instr)(params...);
+        }
+    };
+
     switch (instr >> 12u) {
     case 0x0:
         switch (instr) {
-        case 0x0008: // 0000 0000 0000 1000   CLRT
-            CLRT();
-            advancePC();
-            break;
-        case 0x0009: // 0000 0000 0000 1001   NOP
-            NOP();
-            advancePC();
-            break;
-        case 0x000B: // 0000 0000 0000 1011   RTS
-            if (m_delaySlot) {
-                // Illegal slot instruction exception
-                EnterException(xvSlotIllegalInstr);
-            } else {
-                RTS();
-            }
-            break;
-        case 0x0018: // 0000 0000 0001 1000   SETT
-            SETT();
-            advancePC();
-            break;
-        case 0x0019: // 0000 0000 0001 1001   DIV0U
-            DIV0U();
-            advancePC();
-            break;
-        case 0x001B: // 0000 0000 0001 1011   SLEEP
-            SLEEP();
-            advancePC();
-            break;
-        case 0x0028: // 0000 0000 0010 1000   CLRMAC
-            CLRMAC();
-            advancePC();
-            break;
-        case 0x002B: // 0000 0000 0010 1011   RTE
-            if (m_delaySlot) {
-                // Illegal slot instruction exception
-                EnterException(xvSlotIllegalInstr);
-            } else {
-                RTE();
-            }
-            break;
+        case 0x0008: CLRT(), advancePC(); break;     // 0    0000 0000 0000 1000   CLRT
+        case 0x0009: NOP(), advancePC(); break;      // 0    0000 0000 0000 1001   NOP
+        case 0x000B: nonDelaySlot(&SH2::RTS); break; // 0    0000 0000 0000 1011   RTS
+        case 0x0018: SETT(), advancePC(); break;     // 0    0000 0000 0001 1000   SETT
+        case 0x0019: DIV0U(), advancePC(); break;    // 0    0000 0000 0001 1001   DIV0U
+        case 0x001B: SLEEP(), advancePC(); break;    // 0    0000 0000 0001 1011   SLEEP
+        case 0x0028: CLRMAC(), advancePC(); break;   // 0    0000 0000 0010 1000   CLRMAC
+        case 0x002B: nonDelaySlot(&SH2::RTE); break; // 0    0000 0000 0010 1011   RTE
         default:
             switch (instr & 0xFF) {
-            case 0x02: // 0000 nnnn 0000 0010   STC SR, Rn
-                STCSR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x03: // 0000 mmmm 0000 0011   BSRF Rm
-                if (m_delaySlot) {
-                    // Illegal slot instruction exception
-                    EnterException(xvSlotIllegalInstr);
-                } else {
-                    BSRF(bit::extract<8, 11>(instr));
-                }
-                break;
-            case 0x0A: // 0000 nnnn 0000 1010   STS MACH, Rn
-                STSMACH(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x12: // 0000 nnnn 0001 0010   STC GBR, Rn
-                STCGBR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x1A: // 0000 nnnn 0001 1010   STS MACL, Rn
-                STSMACL(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x22: // 0000 nnnn 0010 0010   STC VBR, Rn
-                STCVBR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x23: // 0000 mmmm 0010 0011   BRAF Rm
-                if (m_delaySlot) {
-                    // Illegal slot instruction exception
-                    EnterException(xvSlotIllegalInstr);
-                } else {
-                    BRAF(bit::extract<8, 11>(instr));
-                }
-                break;
-            case 0x29: // 0000 nnnn 0010 1001   MOVT Rn
-                MOVT(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x2A: // 0000 nnnn 0010 1010   STS PR, Rn
-                STSPR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
+            case 0x02: STCSR(instr), advancePC(); break;       // n    0000 nnnn 0000 0010   STC SR, Rn
+            case 0x03: nonDelaySlot(&SH2::BSRF, instr); break; // m    0000 mmmm 0000 0011   BSRF Rm
+            case 0x0A: STSMACH(instr), advancePC(); break;     // n    0000 nnnn 0000 1010   STS MACH, Rn
+            case 0x12: STCGBR(instr), advancePC(); break;      // n    0000 nnnn 0001 0010   STC GBR, Rn
+            case 0x1A: STSMACL(instr), advancePC(); break;     // n    0000 nnnn 0001 1010   STS MACL, Rn
+            case 0x22: STCVBR(instr), advancePC(); break;      // n    0000 nnnn 0010 0010   STC VBR, Rn
+            case 0x23: nonDelaySlot(&SH2::BRAF, instr); break; // m    0000 mmmm 0010 0011   BRAF Rm
+            case 0x29: MOVT(instr), advancePC(); break;        // n    0000 nnnn 0010 1001   MOVT Rn
+            case 0x2A: STSPR(instr), advancePC(); break;       // n    0000 nnnn 0010 1010   STS PR, Rn
             default:
                 switch (instr & 0xF) {
-                case 0x4: // 0000 nnnn mmmm 0100   MOV.B Rm, @(R0,Rn)
-                    MOVBS0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-                    advancePC();
-                    break;
-                case 0x5: // 0000 nnnn mmmm 0101   MOV.W Rm, @(R0,Rn)
-                    MOVWS0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-                    advancePC();
-                    break;
-                case 0x6: // 0000 nnnn mmmm 0110   MOV.L Rm, @(R0,Rn)
-                    MOVLS0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-                    advancePC();
-                    break;
-                case 0x7: // 0000 nnnn mmmm 0111   MUL.L Rm, Rn
-                    MULL(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-                    advancePC();
-                    break;
-                case 0xC: // 0000 nnnn mmmm 1100   MOV.B @(R0,Rm), Rn
-                    MOVBL0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-                    advancePC();
-                    break;
-                case 0xD: // 0000 nnnn mmmm 1101   MOV.W @(R0,Rm), Rn
-                    MOVWL0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-                    advancePC();
-                    break;
-                case 0xE: // 0000 nnnn mmmm 1110   MOV.L @(R0,Rm), Rn
-                    MOVLL0(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-                    advancePC();
-                    break;
-                case 0xF: // 0000 nnnn mmmm 1111   MAC.L @Rm+, @Rn+
-                    MACL(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-                    advancePC();
-                    break;
+                case 0x4: MOVBS0(instr), advancePC(); break; // nm   0000 nnnn mmmm 0100   MOV.B Rm, @(R0,Rn)
+                case 0x5: MOVWS0(instr), advancePC(); break; // nm   0000 nnnn mmmm 0101   MOV.W Rm, @(R0,Rn)
+                case 0x6: MOVLS0(instr), advancePC(); break; // nm   0000 nnnn mmmm 0110   MOV.L Rm, @(R0,Rn)
+                case 0x7: MULL(instr), advancePC(); break;   // nm   0000 nnnn mmmm 0111   MUL.L Rm, Rn
+                case 0xC: MOVBL0(instr), advancePC(); break; // nm   0000 nnnn mmmm 1100   MOV.B @(R0,Rm), Rn
+                case 0xD: MOVWL0(instr), advancePC(); break; // nm   0000 nnnn mmmm 1101   MOV.W @(R0,Rm), Rn
+                case 0xE: MOVLL0(instr), advancePC(); break; // nm   0000 nnnn mmmm 1110   MOV.L @(R0,Rm), Rn
+                case 0xF: MACL(instr), advancePC(); break;   // nm   0000 nnnn mmmm 1111   MAC.L @Rm+, @Rn+
                 default: /*dbg_println("unhandled 0000 instruction");*/ __debugbreak(); break;
                 }
                 break;
@@ -878,592 +795,175 @@ void SH2::Execute(uint32 address) {
             break;
         }
         break;
-    case 0x1: // 0001 nnnn mmmm dddd   MOV.L Rm, @(disp,Rn)
-        MOVLS4(bit::extract<4, 7>(instr), bit::extract<0, 3>(instr), bit::extract<8, 11>(instr));
-        advancePC();
-        break;
+    case 0x1: MOVLS4(instr), advancePC(); break; // nmd  0001 nnnn mmmm dddd   MOV.L Rm, @(disp,Rn)
     case 0x2: {
-        const uint16 rm = bit::extract<4, 7>(instr);
-        const uint16 rn = bit::extract<8, 11>(instr);
         switch (instr & 0xF) {
-        case 0x0: // 0010 nnnn mmmm 0000   MOV.B Rm, @Rn
-            MOVBS(rm, rn);
-            advancePC();
-            break;
-        case 0x1: // 0010 nnnn mmmm 0001   MOV.W Rm, @Rn
-            MOVWS(rm, rn);
-            advancePC();
-            break;
-        case 0x2: // 0010 nnnn mmmm 0010   MOV.L Rm, @Rn
-            MOVLS(rm, rn);
-            advancePC();
-            break;
+        case 0x0: MOVBS(instr), advancePC(); break; // nm   0010 nnnn mmmm 0000   MOV.B Rm, @Rn
+        case 0x1: MOVWS(instr), advancePC(); break; // nm   0010 nnnn mmmm 0001   MOV.W Rm, @Rn
+        case 0x2: MOVLS(instr), advancePC(); break; // nm   0010 nnnn mmmm 0010   MOV.L Rm, @Rn
 
-            // There's no case 0x3
-
-        case 0x4: // 0010 nnnn mmmm 0100   MOV.B Rm, @-Rn
-            MOVBM(rm, rn);
-            advancePC();
-            break;
-        case 0x5: // 0010 nnnn mmmm 0101   MOV.W Rm, @-Rn
-            MOVWM(rm, rn);
-            advancePC();
-            break;
-        case 0x6: // 0010 nnnn mmmm 0110   MOV.L Rm, @-Rn
-            MOVLM(rm, rn);
-            advancePC();
-            break;
-        case 0x7: // 0010 nnnn mmmm 0110   DIV0S Rm, Rn
-            DIV0S(rm, rn);
-            advancePC();
-            break;
-        case 0x8: // 0010 nnnn mmmm 1000   TST Rm, Rn
-            TST(rm, rn);
-            advancePC();
-            break;
-        case 0x9: // 0010 nnnn mmmm 1001   AND Rm, Rn
-            AND(rm, rn);
-            advancePC();
-            break;
-        case 0xA: // 0010 nnnn mmmm 1010   XOR Rm, Rn
-            XOR(rm, rn);
-            advancePC();
-            break;
-        case 0xB: // 0010 nnnn mmmm 1011   OR Rm, Rn
-            OR(rm, rn);
-            advancePC();
-            break;
-        case 0xC: // 0010 nnnn mmmm 1100   CMP/STR Rm, Rn
-            CMPSTR(rm, rn);
-            advancePC();
-            break;
-        case 0xD: // 0010 nnnn mmmm 1101   XTRCT Rm, Rn
-            XTRCT(rm, rn);
-            advancePC();
-            break;
-        case 0xE: // 0010 nnnn mmmm 1110   MULU.W Rm, Rn
-            MULU(rm, rn);
-            advancePC();
-            break;
-        case 0xF: // 0010 nnnn mmmm 1111   MULS.W Rm, Rn
-            MULS(rm, rn);
-            advancePC();
-            break;
+        case 0x4: MOVBM(instr), advancePC(); break;  // nm   0010 nnnn mmmm 0100   MOV.B Rm, @-Rn
+        case 0x5: MOVWM(instr), advancePC(); break;  // nm   0010 nnnn mmmm 0101   MOV.W Rm, @-Rn
+        case 0x6: MOVLM(instr), advancePC(); break;  // nm   0010 nnnn mmmm 0110   MOV.L Rm, @-Rn
+        case 0x7: DIV0S(instr), advancePC(); break;  // nm   0010 nnnn mmmm 0110   DIV0S Rm, Rn
+        case 0x8: TST(instr), advancePC(); break;    // nm   0010 nnnn mmmm 1000   TST Rm, Rn
+        case 0x9: AND(instr), advancePC(); break;    // nm   0010 nnnn mmmm 1001   AND Rm, Rn
+        case 0xA: XOR(instr), advancePC(); break;    // nm   0010 nnnn mmmm 1010   XOR Rm, Rn
+        case 0xB: OR(instr), advancePC(); break;     // nm   0010 nnnn mmmm 1011   OR Rm, Rn
+        case 0xC: CMPSTR(instr), advancePC(); break; // nm   0010 nnnn mmmm 1100   CMP/STR Rm, Rn
+        case 0xD: XTRCT(instr), advancePC(); break;  // nm   0010 nnnn mmmm 1101   XTRCT Rm, Rn
+        case 0xE: MULU(instr), advancePC(); break;   // nm   0010 nnnn mmmm 1110   MULU.W Rm, Rn
+        case 0xF: MULS(instr), advancePC(); break;   // nm   0010 nnnn mmmm 1111   MULS.W Rm, Rn
         default: /*dbg_println("unhandled 0010 instruction");*/ __debugbreak(); break;
         }
         break;
     }
     case 0x3:
         switch (instr & 0xF) {
-        case 0x0: // 0011 nnnn mmmm 0000   CMP/EQ Rm, Rn
-            CMPEQ(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0x2: // 0011 nnnn mmmm 0010   CMP/HS Rm, Rn
-            CMPHS(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0x3: // 0011 nnnn mmmm 0011   CMP/GE Rm, Rn
-            CMPGE(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0x4: // 0011 nnnn mmmm 0100   DIV1 Rm, Rn
-            DIV1(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0x5: // 0011 nnnn mmmm 0101   DMULU.L Rm, Rn
-            DMULU(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0x6: // 0011 nnnn mmmm 0110   CMP/HI Rm, Rn
-            CMPHI(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0x7: // 0011 nnnn mmmm 0111   CMP/GT Rm, Rn
-            CMPGT(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0x8: // 0011 nnnn mmmm 1000   SUB Rm, Rn
-            SUB(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
+        case 0x0: CMPEQ(instr), advancePC(); break; // nm   0011 nnnn mmmm 0000   CMP/EQ Rm, Rn
+        case 0x2: CMPHS(instr), advancePC(); break; // nm   0011 nnnn mmmm 0010   CMP/HS Rm, Rn
+        case 0x3: CMPGE(instr), advancePC(); break; // nm   0011 nnnn mmmm 0011   CMP/GE Rm, Rn
+        case 0x4: DIV1(instr), advancePC(); break;  // nm   0011 nnnn mmmm 0100   DIV1 Rm, Rn
+        case 0x5: DMULU(instr), advancePC(); break; // nm   0011 nnnn mmmm 0101   DMULU.L Rm, Rn
+        case 0x6: CMPHI(instr), advancePC(); break; // nm   0011 nnnn mmmm 0110   CMP/HI Rm, Rn
+        case 0x7: CMPGT(instr), advancePC(); break; // nm   0011 nnnn mmmm 0111   CMP/GT Rm, Rn
+        case 0x8: SUB(instr), advancePC(); break;   // nm   0011 nnnn mmmm 1000   SUB Rm, Rn
 
-            // There's no case 0x9
+        case 0xA: SUBC(instr), advancePC(); break; // nm   0011 nnnn mmmm 1010   SUBC Rm, Rn
+        case 0xB: SUBV(instr), advancePC(); break; // nm   0011 nnnn mmmm 1011   SUBV Rm, Rn
 
-        case 0xA: // 0011 nnnn mmmm 1010   SUBC Rm, Rn
-            SUBC(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0xB: // 0011 nnnn mmmm 1011   SUBV Rm, Rn
-            SUBV(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-
-            // There's no case 0xB
-
-        case 0xC: // 0011 nnnn mmmm 1100   ADD Rm, Rn
-            ADD(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0xD: // 0011 nnnn mmmm 1101   DMULS.L Rm, Rn
-            DMULS(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0xE: // 0011 nnnn mmmm 1110   ADDC Rm, Rn
-            ADDC(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0xF: // 0011 nnnn mmmm 1110   ADDV Rm, Rn
-            ADDV(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
+        case 0xC: ADD(instr), advancePC(); break;   // nm   0011 nnnn mmmm 1100   ADD Rm, Rn
+        case 0xD: DMULS(instr), advancePC(); break; // nm   0011 nnnn mmmm 1101   DMULS.L Rm, Rn
+        case 0xE: ADDC(instr), advancePC(); break;  // nm   0011 nnnn mmmm 1110   ADDC Rm, Rn
+        case 0xF: ADDV(instr), advancePC(); break;  // nm   0011 nnnn mmmm 1110   ADDV Rm, Rn
         default: /*dbg_println("unhandled 0011 instruction");*/ __debugbreak(); break;
         }
         break;
     case 0x4:
         if ((instr & 0xF) == 0xF) {
-            // 0100 nnnn mmmm 1111   MAC.W @Rm+, @Rn+
-            MACW(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
+            // nMACW(instr),advancePC();break;m   0100 nnnn mmmm 1111   MAC.W @Rm+, @Rn+
         } else {
             switch (instr & 0xFF) {
-            case 0x00: // 0100 nnnn 0000 0000   SHLL Rn
-                SHLL(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x01: // 0100 nnnn 0000 0001   SHLR Rn
-                SHLR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x02: // 0100 nnnn 0000 0010   STS.L MACH, @-Rn
-                STSMMACH(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x03: // 0100 nnnn 0000 0010   STC.L SR, @-Rn
-                STCMSR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x04: // 0100 nnnn 0000 0100   ROTL Rn
-                ROTL(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x05: // 0100 nnnn 0000 0101   ROTR Rn
-                ROTR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x06: // 0100 mmmm 0000 0110   LDS.L @Rm+, MACH
-                LDSMMACH(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x07: // 0100 mmmm 0000 0111   LDC.L @Rm+, SR
-                LDCMSR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x08: // 0100 nnnn 0000 1000   SHLL2 Rn
-                SHLL2(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x09: // 0100 nnnn 0000 1001   SHLR2 Rn
-                SHLR2(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x0A: // 0100 mmmm 0000 1010   LDS Rm, MACH
-                LDSMACH(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x0B: // 0100 mmmm 0000 1011   JSR @Rm
-                if (m_delaySlot) {
-                    // Illegal slot instruction exception
-                    EnterException(xvSlotIllegalInstr);
-                } else {
-                    JSR(bit::extract<8, 11>(instr));
-                }
-                break;
+            case 0x00: SHLL(instr), advancePC(); break;       // n    0100 nnnn 0000 0000   SHLL Rn
+            case 0x01: SHLR(instr), advancePC(); break;       // n    0100 nnnn 0000 0001   SHLR Rn
+            case 0x02: STSMMACH(instr), advancePC(); break;   // n    0100 nnnn 0000 0010   STS.L MACH, @-Rn
+            case 0x03: STCMSR(instr), advancePC(); break;     // n    0100 nnnn 0000 0010   STC.L SR, @-Rn
+            case 0x04: ROTL(instr), advancePC(); break;       // n    0100 nnnn 0000 0100   ROTL Rn
+            case 0x05: ROTR(instr), advancePC(); break;       // n    0100 nnnn 0000 0101   ROTR Rn
+            case 0x06: LDSMMACH(instr), advancePC(); break;   // m    0100 mmmm 0000 0110   LDS.L @Rm+, MACH
+            case 0x07: LDCMSR(instr), advancePC(); break;     // m    0100 mmmm 0000 0111   LDC.L @Rm+, SR
+            case 0x08: SHLL2(instr), advancePC(); break;      // n    0100 nnnn 0000 1000   SHLL2 Rn
+            case 0x09: SHLR2(instr), advancePC(); break;      // n    0100 nnnn 0000 1001   SHLR2 Rn
+            case 0x0A: LDSMACH(instr), advancePC(); break;    // m    0100 mmmm 0000 1010   LDS Rm, MACH
+            case 0x0B: nonDelaySlot(&SH2::JSR, instr); break; // m    0100 mmmm 0000 1011   JSR @Rm
 
-                // There's no case 0x0C or 0x0D
+            case 0x0E: LDCSR(instr), advancePC(); break; // m    0100 mmmm 0000 1110   LDC Rm, SR
 
-            case 0x0E: // 0100 mmmm 0000 1110   LDC Rm, SR
-                LDCSR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
+            case 0x10: DT(instr), advancePC(); break;       // n    0100 nnnn 0001 0000   DT Rn
+            case 0x11: CMPPZ(instr), advancePC(); break;    // n    0100 nnnn 0001 0001   CMP/PZ Rn
+            case 0x12: STSMMACL(instr), advancePC(); break; // n    0100 nnnn 0001 0010   STS.L MACL, @-Rn
+            case 0x13: STCMGBR(instr), advancePC(); break;  // n    0100 nnnn 0001 0011   STC.L GBR, @-Rn
 
-                // There's no case 0x0F
+            case 0x15: CMPPL(instr), advancePC(); break;    // n    0100 nnnn 0001 0101   CMP/PL Rn
+            case 0x16: LDSMMACL(instr), advancePC(); break; // m    0100 mmmm 0001 0110   LDS.L @Rm+, MACL
+            case 0x17: LDCMGBR(instr), advancePC(); break;  // m    0100 mmmm 0001 0111   LDC.L @Rm+, GBR
+            case 0x18: SHLL8(instr), advancePC(); break;    // n    0100 nnnn 0001 1000   SHLL8 Rn
+            case 0x19: SHLR8(instr), advancePC(); break;    // n    0100 nnnn 0001 1001   SHLR8 Rn
+            case 0x1A: LDSMACL(instr), advancePC(); break;  // m    0100 mmmm 0001 1010   LDS Rm, MACL
+            case 0x1B: TAS(instr), advancePC(); break;      // n    0100 nnnn 0001 1011   TAS.B @Rn
 
-            case 0x10: // 0100 nnnn 0001 0000   DT Rn
-                DT(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x11: // 0100 nnnn 0001 0001   CMP/PZ Rn
-                CMPPZ(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x12: // 0100 nnnn 0001 0010   STS.L MACL, @-Rn
-                STSMMACL(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x13: // 0100 nnnn 0001 0011   STC.L GBR, @-Rn
-                STCMGBR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
+            case 0x1E: LDCGBR(instr), advancePC(); break; // m    0110 mmmm 0001 1110   LDC Rm, GBR
 
-                // There's no case 0x14
+            case 0x20: SHAL(instr), advancePC(); break;       // n    0100 nnnn 0010 0000   SHAL Rn
+            case 0x21: SHAR(instr), advancePC(); break;       // n    0100 nnnn 0010 0001   SHAR Rn
+            case 0x22: STSMPR(instr), advancePC(); break;     // n    0100 nnnn 0010 0010   STS.L PR, @-Rn
+            case 0x23: STCMVBR(instr), advancePC(); break;    // n    0100 nnnn 0010 0011   STC.L VBR, @-Rn
+            case 0x24: ROTCL(instr), advancePC(); break;      // n    0100 nnnn 0010 0100   ROTCL Rn
+            case 0x25: ROTCR(instr), advancePC(); break;      // n    0100 nnnn 0010 0101   ROTCR Rn
+            case 0x26: LDSMPR(instr), advancePC(); break;     // m    0100 mmmm 0010 0110   LDS.L @Rm+, PR
+            case 0x27: LDCMVBR(instr), advancePC(); break;    // m    0100 mmmm 0010 0111   LDC.L @Rm+, VBR
+            case 0x28: SHLL16(instr), advancePC(); break;     // n    0100 nnnn 0010 1000   SHLL16 Rn
+            case 0x29: SHLR16(instr), advancePC(); break;     // n    0100 nnnn 0010 1001   SHLR16 Rn
+            case 0x2A: LDSPR(instr), advancePC(); break;      // m    0100 mmmm 0010 1010   LDS Rm, PR
+            case 0x2B: nonDelaySlot(&SH2::JMP, instr); break; // m    0100 mmmm 0010 1011   JMP @Rm
 
-            case 0x15: // 0100 nnnn 0001 0101   CMP/PL Rn
-                CMPPL(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x16: // 0100 mmmm 0001 0110   LDS.L @Rm+, MACL
-                LDSMMACL(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x17: // 0100 mmmm 0001 0111   LDC.L @Rm+, GBR
-                LDCMGBR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x18: // 0100 nnnn 0001 1000   SHLL8 Rn
-                SHLL8(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x19: // 0100 nnnn 0001 1001   SHLR8 Rn
-                SHLR8(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x1A: // 0100 mmmm 0001 1010   LDS Rm, MACL
-                LDSMACL(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x1B: // 0100 nnnn 0001 1011   TAS.B @Rn
-                TAS(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-
-                // There's no case 0x1C or 0x1D
-
-            case 0x1E: // 0110 mmmm 0001 1110   LDC Rm, GBR
-                LDCGBR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-
-                // There's no case 0x1F
-
-            case 0x20: // 0100 nnnn 0010 0000   SHAL Rn
-                SHAL(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x21: // 0100 nnnn 0010 0001   SHAR Rn
-                SHAR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x22: // 0100 nnnn 0010 0010   STS.L PR, @-Rn
-                STSMPR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x23: // 0100 nnnn 0010 0011   STC.L VBR, @-Rn
-                STCMVBR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x24: // 0100 nnnn 0010 0100   ROTCL Rn
-                ROTCL(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x25: // 0100 nnnn 0010 0101   ROTCR Rn
-                ROTCR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x26: // 0100 mmmm 0010 0110   LDS.L @Rm+, PR
-                LDSMPR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x27: // 0100 mmmm 0010 0111   LDC.L @Rm+, VBR
-                LDCMVBR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x28: // 0100 nnnn 0010 1000   SHLL16 Rn
-                SHLL16(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x29: // 0100 nnnn 0010 1001   SHLR16 Rn
-                SHLR16(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x2A: // 0100 mmmm 0010 1010   LDS Rm, PR
-                LDSPR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-            case 0x2B: // 0100 mmmm 0010 1011   JMP @Rm
-                if (m_delaySlot) {
-                    // Illegal slot instruction exception
-                    EnterException(xvSlotIllegalInstr);
-                } else {
-                    JMP(bit::extract<8, 11>(instr));
-                }
-                break;
-
-                // There's no case 0x2C or 0x2D
-
-            case 0x2E: // 0110 mmmm 0010 1110   LDC Rm, VBR
-                LDCVBR(bit::extract<8, 11>(instr));
-                advancePC();
-                break;
-
-                // There's no case 0x2F..0xFF
+            case 0x2E: LDCVBR(instr), advancePC(); break; // m    0110 mmmm 0010 1110   LDC Rm, VBR
 
             default: /*dbg_println("unhandled 0100 instruction");*/ __debugbreak(); break;
             }
         }
         break;
-    case 0x5: // 0101 nnnn mmmm dddd   MOV.L @(disp,Rm), Rn
-        MOVLL4(bit::extract<4, 7>(instr), bit::extract<0, 3>(instr), bit::extract<8, 11>(instr));
-        advancePC();
-        break;
+    case 0x5: MOVLL4(instr), advancePC(); break; // nmd  0101 nnnn mmmm dddd   MOV.L @(disp,Rm), Rn
     case 0x6:
         switch (instr & 0xF) {
-        case 0x0: // 0110 nnnn mmmm 0000   MOV.B @Rm, Rn
-            MOVBL(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0x1: // 0110 nnnn mmmm 0001   MOV.W @Rm, Rn
-            MOVWL(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0x2: // 0110 nnnn mmmm 0010   MOV.L @Rm, Rn
-            MOVLL(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0x3: // 0110 nnnn mmmm 0010   MOV Rm, Rn
-            MOV(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0x4: // 0110 nnnn mmmm 0110   MOV.B @Rm+, Rn
-            MOVBP(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0x5: // 0110 nnnn mmmm 0110   MOV.W @Rm+, Rn
-            MOVWP(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0x6: // 0110 nnnn mmmm 0110   MOV.L @Rm+, Rn
-            MOVLP(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0x7: // 0110 nnnn mmmm 0111   NOT Rm, Rn
-            NOT(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0x8: // 0110 nnnn mmmm 1000   SWAP.B Rm, Rn
-            SWAPB(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0x9: // 0110 nnnn mmmm 1001   SWAP.W Rm, Rn
-            SWAPW(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0xA: // 0110 nnnn mmmm 1010   NEGC Rm, Rn
-            NEGC(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0xB: // 0110 nnnn mmmm 1011   NEG Rm, Rn
-            NEG(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0xC: // 0110 nnnn mmmm 1100   EXTU.B Rm, Rn
-            EXTUB(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0xD: // 0110 nnnn mmmm 1101   EXTU.W Rm, Rn
-            EXTUW(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0xE: // 0110 nnnn mmmm 1110   EXTS.B Rm, Rn
-            EXTSB(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
-        case 0xF: // 0110 nnnn mmmm 1111   EXTS.W Rm, Rn
-            EXTSW(bit::extract<4, 7>(instr), bit::extract<8, 11>(instr));
-            advancePC();
-            break;
+        case 0x0: MOVBL(instr), advancePC(); break; // nm   0110 nnnn mmmm 0000   MOV.B @Rm, Rn
+        case 0x1: MOVWL(instr), advancePC(); break; // nm   0110 nnnn mmmm 0001   MOV.W @Rm, Rn
+        case 0x2: MOVLL(instr), advancePC(); break; // nm   0110 nnnn mmmm 0010   MOV.L @Rm, Rn
+        case 0x3: MOV(instr), advancePC(); break;   // nm   0110 nnnn mmmm 0010   MOV Rm, Rn
+        case 0x4: MOVBP(instr), advancePC(); break; // nm   0110 nnnn mmmm 0110   MOV.B @Rm+, Rn
+        case 0x5: MOVWP(instr), advancePC(); break; // nm   0110 nnnn mmmm 0110   MOV.W @Rm+, Rn
+        case 0x6: MOVLP(instr), advancePC(); break; // nm   0110 nnnn mmmm 0110   MOV.L @Rm+, Rn
+        case 0x7: NOT(instr), advancePC(); break;   // nm   0110 nnnn mmmm 0111   NOT Rm, Rn
+        case 0x8: SWAPB(instr), advancePC(); break; // nm   0110 nnnn mmmm 1000   SWAP.B Rm, Rn
+        case 0x9: SWAPW(instr), advancePC(); break; // nm   0110 nnnn mmmm 1001   SWAP.W Rm, Rn
+        case 0xA: NEGC(instr), advancePC(); break;  // nm   0110 nnnn mmmm 1010   NEGC Rm, Rn
+        case 0xB: NEG(instr), advancePC(); break;   // nm   0110 nnnn mmmm 1011   NEG Rm, Rn
+        case 0xC: EXTUB(instr), advancePC(); break; // nm   0110 nnnn mmmm 1100   EXTU.B Rm, Rn
+        case 0xD: EXTUW(instr), advancePC(); break; // nm   0110 nnnn mmmm 1101   EXTU.W Rm, Rn
+        case 0xE: EXTSB(instr), advancePC(); break; // nm   0110 nnnn mmmm 1110   EXTS.B Rm, Rn
+        case 0xF: EXTSW(instr), advancePC(); break; // nm   0110 nnnn mmmm 1111   EXTS.W Rm, Rn
         }
         break;
-    case 0x7: // 0111 nnnn iiii iiii   ADD #imm, Rn
-        ADDI(bit::extract<0, 7>(instr), bit::extract<8, 11>(instr));
-        advancePC();
-        break;
+    case 0x7: ADDI(instr), advancePC(); break; // ni   0111 nnnn iiii iiii   ADD #imm, Rn
     case 0x8:
         switch ((instr >> 8u) & 0xF) {
-        case 0x0: // 1000 0000 nnnn dddd   MOV.B R0, @(disp,Rn)
-            MOVBS4(bit::extract<0, 3>(instr), bit::extract<4, 7>(instr));
-            advancePC();
-            break;
-        case 0x1: // 1000 0001 nnnn dddd   MOV.W R0, @(disp,Rn)
-            MOVWS4(bit::extract<0, 3>(instr), bit::extract<4, 7>(instr));
-            advancePC();
-            break;
+        case 0x0: MOVBS4(instr), advancePC(); break; // nd4  1000 0000 nnnn dddd   MOV.B R0, @(disp,Rn)
+        case 0x1: MOVWS4(instr), advancePC(); break; // nd4  1000 0001 nnnn dddd   MOV.W R0, @(disp,Rn)
 
-            // There's no case 0x2 or 0x3
+        case 0x4: MOVBL4(instr), advancePC(); break; // md   1000 0100 mmmm dddd   MOV.B @(disp,Rm), R0
+        case 0x5: MOVWL4(instr), advancePC(); break; // md   1000 0101 mmmm dddd   MOV.W @(disp,Rm), R0
 
-        case 0x4: // 1000 0100 mmmm dddd   MOV.B @(disp,Rm), R0
-            MOVBL4(bit::extract<4, 7>(instr), bit::extract<0, 3>(instr));
-            advancePC();
-            break;
-        case 0x5: // 1000 0101 mmmm dddd   MOV.W @(disp,Rm), R0
-            MOVWL4(bit::extract<4, 7>(instr), bit::extract<0, 3>(instr));
-            advancePC();
-            break;
+        case 0x8: CMPIM(instr), advancePC(); break;     // i    1000 1000 iiii iiii   CMP/EQ #imm, R0
+        case 0x9: nonDelaySlot(&SH2::BT, instr); break; // d    1000 1001 dddd dddd   BT <label>
 
-            // There's no case 0x6 or 0x7
+        case 0xB: nonDelaySlot(&SH2::BF, instr); break; // d    1000 1011 dddd dddd   BF <label>
 
-        case 0x8: // 1000 1000 iiii iiii   CMP/EQ #imm, R0
-            CMPIM(bit::extract<0, 7>(instr));
-            advancePC();
-            break;
-        case 0x9: // 1000 1001 dddd dddd   BT <label>
-            if (m_delaySlot) {
-                // Illegal slot instruction exception
-                EnterException(xvSlotIllegalInstr);
-            } else {
-                BT(bit::extract<0, 7>(instr));
-            }
-            break;
+        case 0xD: nonDelaySlot(&SH2::BTS, instr); break; // d    1000 1101 dddd dddd   BT/S <label>
 
-            // There's no case 0xA
+        case 0xF: nonDelaySlot(&SH2::BFS, instr); break; // d    1000 1111 dddd dddd   BF/S <label>
 
-        case 0xB: // 1000 1011 dddd dddd   BF <label>
-            if (m_delaySlot) {
-                // Illegal slot instruction exception
-                EnterException(xvSlotIllegalInstr);
-            } else {
-                BF(bit::extract<0, 7>(instr));
-            }
-            break;
-
-            // There's no case 0xC
-
-        case 0xD: // 1000 1101 dddd dddd   BT/S <label>
-            if (m_delaySlot) {
-                // Illegal slot instruction exception
-                EnterException(xvSlotIllegalInstr);
-            } else {
-                BTS(bit::extract<0, 7>(instr));
-            }
-            break;
-
-            // There's no case 0xE
-
-        case 0xF: // 1000 1111 dddd dddd   BF/S <label>
-            if (m_delaySlot) {
-                // Illegal slot instruction exception
-                EnterException(xvSlotIllegalInstr);
-            } else {
-                BFS(bit::extract<0, 7>(instr));
-            }
-            break;
         default: /*dbg_println("unhandled 1000 instruction");*/ __debugbreak(); break;
         }
         break;
-    case 0x9: // 1001 nnnn dddd dddd   MOV.W @(disp,PC), Rn
-        MOVWI(bit::extract<0, 7>(instr), bit::extract<8, 11>(instr));
-        advancePC();
-        break;
-    case 0xA: // 1010 dddd dddd dddd   BRA <label>
-        if (m_delaySlot) {
-            // Illegal slot instruction exception
-            EnterException(xvSlotIllegalInstr);
-        } else {
-            BRA(bit::extract<0, 11>(instr));
-        }
-        break;
-    case 0xB: // 1011 dddd dddd dddd   BSR <label>
-        if (m_delaySlot) {
-            // Illegal slot instruction exception
-            EnterException(xvSlotIllegalInstr);
-        } else {
-            BSR(bit::extract<0, 11>(instr));
-        }
-        break;
+    case 0x9: MOVWI(instr), advancePC(); break;      // nd8  1001 nnnn dddd dddd   MOV.W @(disp,PC), Rn
+    case 0xA: nonDelaySlot(&SH2::BRA, instr); break; // d12  1010 dddd dddd dddd   BRA <label>
+
+    case 0xB: nonDelaySlot(&SH2::BSR, instr); break; // d12  1011 dddd dddd dddd   BSR <label>
+
     case 0xC:
         switch ((instr >> 8u) & 0xF) {
-        case 0x0: // 1100 0000 dddd dddd   MOV.B R0, @(disp,GBR)
-            MOVBSG(bit::extract<0, 7>(instr));
-            advancePC();
-            break;
-        case 0x1: // 1100 0001 dddd dddd   MOV.W R0, @(disp,GBR)
-            MOVWSG(bit::extract<0, 7>(instr));
-            advancePC();
-            break;
-        case 0x2: // 1100 0010 dddd dddd   MOV.L R0, @(disp,GBR)
-            MOVLSG(bit::extract<0, 7>(instr));
-            advancePC();
-            break;
-        case 0x3: // 1100 0011 iiii iiii   TRAPA #imm
-            if (m_delaySlot) {
-                // Illegal slot instruction exception
-                EnterException(xvSlotIllegalInstr);
-            } else {
-                TRAPA(bit::extract<0, 7>(instr));
-            }
-            break;
-        case 0x4: // 1100 0100 dddd dddd   MOV.B @(disp,GBR), R0
-            MOVBLG(bit::extract<0, 7>(instr));
-            advancePC();
-            break;
-        case 0x5: // 1100 0101 dddd dddd   MOV.W @(disp,GBR), R0
-            MOVWLG(bit::extract<0, 7>(instr));
-            advancePC();
-            break;
-        case 0x6: // 1100 0110 dddd dddd   MOV.L @(disp,GBR), R0
-            MOVLLG(bit::extract<0, 7>(instr));
-            advancePC();
-            break;
-        case 0x7: // 1100 0111 dddd dddd   MOVA @(disp,PC), R0
-            MOVA(bit::extract<0, 7>(instr));
-            advancePC();
-            break;
-        case 0x8: // 1100 1000 iiii iiii   TST #imm, R0
-            TSTI(bit::extract<0, 7>(instr));
-            advancePC();
-            break;
-        case 0x9: // 1100 1001 iiii iiii   AND #imm, R0
-            ANDI(bit::extract<0, 7>(instr));
-            advancePC();
-            break;
-        case 0xA: // 1100 1010 iiii iiii   XOR #imm, R0
-            XORI(bit::extract<0, 7>(instr));
-            advancePC();
-            break;
-        case 0xB: // 1100 1011 iiii iiii   OR #imm, R0
-            ORI(bit::extract<0, 7>(instr));
-            advancePC();
-            break;
-        case 0xC: // 1100 1100 iiii iiii   TST.B #imm, @(R0,GBR)
-            TSTM(bit::extract<0, 7>(instr));
-            advancePC();
-            break;
-        case 0xD: // 1100 1001 iiii iiii   AND #imm, @(R0,GBR)
-            ANDM(bit::extract<0, 7>(instr));
-            advancePC();
-            break;
-        case 0xE: // 1100 1001 iiii iiii   XOR #imm, @(R0,GBR)
-            XORM(bit::extract<0, 7>(instr));
-            advancePC();
-            break;
-        case 0xF: // 1100 1001 iiii iiii   OR #imm, @(R0,GBR)
-            ORM(bit::extract<0, 7>(instr));
-            advancePC();
-            break;
+        case 0x0: MOVBSG(instr), advancePC(); break;       // d    1100 0000 dddd dddd   MOV.B R0, @(disp,GBR)
+        case 0x1: MOVWSG(instr), advancePC(); break;       // d    1100 0001 dddd dddd   MOV.W R0, @(disp,GBR)
+        case 0x2: MOVLSG(instr), advancePC(); break;       // d    1100 0010 dddd dddd   MOV.L R0, @(disp,GBR)
+        case 0x3: nonDelaySlot(&SH2::TRAPA, instr); break; // i    1100 0011 iiii iiii   TRAPA #imm
+
+        case 0x4: MOVBLG(instr), advancePC(); break; // d    1100 0100 dddd dddd   MOV.B @(disp,GBR), R0
+        case 0x5: MOVWLG(instr), advancePC(); break; // d    1100 0101 dddd dddd   MOV.W @(disp,GBR), R0
+        case 0x6: MOVLLG(instr), advancePC(); break; // d    1100 0110 dddd dddd   MOV.L @(disp,GBR), R0
+        case 0x7: MOVA(instr), advancePC(); break;   // d    1100 0111 dddd dddd   MOVA @(disp,PC), R0
+        case 0x8: TSTI(instr), advancePC(); break;   // i    1100 1000 iiii iiii   TST #imm, R0
+        case 0x9: ANDI(instr), advancePC(); break;   // i    1100 1001 iiii iiii   AND #imm, R0
+        case 0xA: XORI(instr), advancePC(); break;   // i    1100 1010 iiii iiii   XOR #imm, R0
+        case 0xB: ORI(instr), advancePC(); break;    // i    1100 1011 iiii iiii   OR #imm, R0
+        case 0xC: TSTM(instr), advancePC(); break;   // i    1100 1100 iiii iiii   TST.B #imm, @(R0,GBR)
+        case 0xD: ANDM(instr), advancePC(); break;   // i    1100 1001 iiii iiii   AND #imm, @(R0,GBR)
+        case 0xE: XORM(instr), advancePC(); break;   // i    1100 1001 iiii iiii   XOR #imm, @(R0,GBR)
+        case 0xF: ORM(instr), advancePC(); break;    // i    1100 1001 iiii iiii   OR #imm, @(R0,GBR)
         default: /*dbg_println("unhandled 1100 instruction");*/ __debugbreak(); break;
         }
         break;
-    case 0xD: // 1101 nnnn dddd dddd   MOV.L @(disp,PC), Rn
-        MOVLI(bit::extract<0, 7>(instr), bit::extract<8, 11>(instr));
-        advancePC();
-        break;
-    case 0xE: // 1110 nnnn iiii iiii   MOV #imm, Rn
-        MOVI(bit::extract<0, 7>(instr), bit::extract<8, 11>(instr));
-        advancePC();
-        break;
-
-        // There's no case 0xF
+    case 0xD: MOVLI(instr), advancePC(); break; // nd8  1101 nnnn dddd dddd   MOV.L @(disp,PC), Rn
+    case 0xE: MOVI(instr), advancePC(); break;  // ni   1110 nnnn iiii iiii   MOV #imm, Rn
 
     default: /*dbg_println("unhandled instruction");*/ __debugbreak(); break;
     }
@@ -1483,208 +983,212 @@ FORCE_INLINE void SH2::SLEEP() {
     __debugbreak();
 }
 
-FORCE_INLINE void SH2::MOV(uint16 rm, uint16 rn) {
-    // dbg_println("mov r{}, r{}", rm, rn);
-    R[rn] = R[rm];
+FORCE_INLINE void SH2::MOV(InstrNM instr) {
+    // dbg_println("mov r{}, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] = R[instr.Rm];
 }
 
-FORCE_INLINE void SH2::MOVBL(uint16 rm, uint16 rn) {
-    // dbg_println("mov.b @r{}, r{}", rm, rn);
-    R[rn] = bit::sign_extend<8>(MemReadByte(R[rm]));
+FORCE_INLINE void SH2::MOVBL(InstrNM instr) {
+    // dbg_println("mov.b @r{}, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] = bit::sign_extend<8>(MemReadByte(R[instr.Rm]));
 }
 
-FORCE_INLINE void SH2::MOVWL(uint16 rm, uint16 rn) {
-    // dbg_println("mov.w @r{}, r{}", rm, rn);
-    R[rn] = bit::sign_extend<16>(MemReadWord(R[rm]));
+FORCE_INLINE void SH2::MOVWL(InstrNM instr) {
+    // dbg_println("mov.w @r{}, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] = bit::sign_extend<16>(MemReadWord(R[instr.Rm]));
 }
 
-FORCE_INLINE void SH2::MOVLL(uint16 rm, uint16 rn) {
-    // dbg_println("mov.l @r{}, r{}", rm, rn);
-    R[rn] = MemReadLong(R[rm]);
+FORCE_INLINE void SH2::MOVLL(InstrNM instr) {
+    // dbg_println("mov.l @r{}, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] = MemReadLong(R[instr.Rm]);
 }
 
-FORCE_INLINE void SH2::MOVBL0(uint16 rm, uint16 rn) {
-    // dbg_println("mov.b @(r0,r{}), r{}", rm, rn);
-    R[rn] = bit::sign_extend<8>(MemReadByte(R[rm] + R[0]));
+FORCE_INLINE void SH2::MOVBL0(InstrNM instr) {
+    // dbg_println("mov.b @(r0,r{}), r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] = bit::sign_extend<8>(MemReadByte(R[instr.Rm] + R[0]));
 }
 
-FORCE_INLINE void SH2::MOVWL0(uint16 rm, uint16 rn) {
-    // dbg_println("mov.w @(r0,r{}), r{})", rm, rn);
-    R[rn] = bit::sign_extend<16>(MemReadWord(R[rm] + R[0]));
+FORCE_INLINE void SH2::MOVWL0(InstrNM instr) {
+    // dbg_println("mov.w @(r0,r{}), r{})", instr.Rm, instr.Rn);
+    R[instr.Rn] = bit::sign_extend<16>(MemReadWord(R[instr.Rm] + R[0]));
 }
 
-FORCE_INLINE void SH2::MOVLL0(uint16 rm, uint16 rn) {
-    // dbg_println("mov.l @(r0,r{}), r{})", rm, rn);
-    R[rn] = MemReadLong(R[rm] + R[0]);
+FORCE_INLINE void SH2::MOVLL0(InstrNM instr) {
+    // dbg_println("mov.l @(r0,r{}), r{})", instr.Rm, instr.Rn);
+    R[instr.Rn] = MemReadLong(R[instr.Rm] + R[0]);
 }
 
-FORCE_INLINE void SH2::MOVBL4(uint16 rm, uint16 disp) {
-    // dbg_println("mov.b @(0x{:X},r{}), r0", disp, rm);
-    R[0] = bit::sign_extend<8>(MemReadByte(R[rm] + disp));
+FORCE_INLINE void SH2::MOVBL4(InstrMD instr) {
+    const uint16 disp = instr.disp;
+    // dbg_println("mov.b @(0x{:X},r{}), r0", disp, instr.Rm);
+    R[0] = bit::sign_extend<8>(MemReadByte(R[instr.Rm] + disp));
 }
 
-FORCE_INLINE void SH2::MOVWL4(uint16 rm, uint16 disp) {
-    disp <<= 1u;
-    // dbg_println("mov.w @(0x{:X},r{}), r0", disp, rm);
-    R[0] = bit::sign_extend<16>(MemReadWord(R[rm] + disp));
+FORCE_INLINE void SH2::MOVWL4(InstrMD instr) {
+    const uint16 disp = instr.disp << 1u;
+    // dbg_println("mov.w @(0x{:X},r{}), r0", disp, instr.Rm);
+    R[0] = bit::sign_extend<16>(MemReadWord(R[instr.Rm] + disp));
 }
 
-FORCE_INLINE void SH2::MOVLL4(uint16 rm, uint16 disp, uint16 rn) {
-    disp <<= 2u;
+FORCE_INLINE void SH2::MOVLL4(InstrNMD instr) {
+    const uint16 disp = instr.disp << 2u;
     // dbg_println("mov.l @(0x{:X},r{}), r{}", disp, rm, rn);
-    R[rn] = MemReadLong(R[rm] + disp);
+    R[instr.Rn] = MemReadLong(R[instr.Rm] + disp);
 }
 
-FORCE_INLINE void SH2::MOVBLG(uint16 disp) {
+FORCE_INLINE void SH2::MOVBLG(InstrD instr) {
+    const uint16 disp = instr.disp;
     // dbg_println("mov.b @(0x{:X},gbr), r0", disp);
     R[0] = bit::sign_extend<8>(MemReadByte(GBR + disp));
 }
 
-FORCE_INLINE void SH2::MOVWLG(uint16 disp) {
-    disp <<= 1u;
+FORCE_INLINE void SH2::MOVWLG(InstrD instr) {
+    const uint16 disp = instr.disp << 1u;
     // dbg_println("mov.w @(0x{:X},gbr), r0", disp);
     R[0] = bit::sign_extend<16>(MemReadWord(GBR + disp));
 }
 
-FORCE_INLINE void SH2::MOVLLG(uint16 disp) {
-    disp <<= 2u;
+FORCE_INLINE void SH2::MOVLLG(InstrD instr) {
+    const uint16 disp = instr.disp << 2u;
     // dbg_println("mov.l @(0x{:X},gbr), r0", disp);
     R[0] = MemReadLong(GBR + disp);
 }
 
-FORCE_INLINE void SH2::MOVBM(uint16 rm, uint16 rn) {
-    // dbg_println("mov.b r{}, @-r{}", rm, rn);
-    MemWriteByte(R[rn] - 1, R[rm]);
-    R[rn] -= 1;
+FORCE_INLINE void SH2::MOVBM(InstrNM instr) {
+    // dbg_println("mov.b r{}, @-r{}", instr.Rm, instr.Rn);
+    MemWriteByte(R[instr.Rn] - 1, R[instr.Rm]);
+    R[instr.Rn] -= 1;
 }
 
-FORCE_INLINE void SH2::MOVWM(uint16 rm, uint16 rn) {
-    // dbg_println("mov.w r{}, @-r{}", rm, rn);
-    MemWriteWord(R[rn] - 2, R[rm]);
-    R[rn] -= 2;
+FORCE_INLINE void SH2::MOVWM(InstrNM instr) {
+    // dbg_println("mov.w r{}, @-r{}", instr.Rm, instr.Rn);
+    MemWriteWord(R[instr.Rn] - 2, R[instr.Rm]);
+    R[instr.Rn] -= 2;
 }
 
-FORCE_INLINE void SH2::MOVLM(uint16 rm, uint16 rn) {
-    // dbg_println("mov.l r{}, @-r{}", rm, rn);
-    MemWriteLong(R[rn] - 4, R[rm]);
-    R[rn] -= 4;
+FORCE_INLINE void SH2::MOVLM(InstrNM instr) {
+    // dbg_println("mov.l r{}, @-r{}", instr.Rm, instr.Rn);
+    MemWriteLong(R[instr.Rn] - 4, R[instr.Rm]);
+    R[instr.Rn] -= 4;
 }
 
-FORCE_INLINE void SH2::MOVBP(uint16 rm, uint16 rn) {
-    // dbg_println("mov.b @r{}+, r{}", rm, rn);
-    R[rn] = bit::sign_extend<8>(MemReadByte(R[rm]));
-    if (rn != rm) {
-        R[rm] += 1;
+FORCE_INLINE void SH2::MOVBP(InstrNM instr) {
+    // dbg_println("mov.b @r{}+, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] = bit::sign_extend<8>(MemReadByte(R[instr.Rm]));
+    if (instr.Rn != instr.Rm) {
+        R[instr.Rm] += 1;
     }
 }
 
-FORCE_INLINE void SH2::MOVWP(uint16 rm, uint16 rn) {
-    // dbg_println("mov.w @r{}+, r{}", rm, rn);
-    R[rn] = bit::sign_extend<16>(MemReadWord(R[rm]));
-    if (rn != rm) {
-        R[rm] += 2;
+FORCE_INLINE void SH2::MOVWP(InstrNM instr) {
+    // dbg_println("mov.w @r{}+, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] = bit::sign_extend<16>(MemReadWord(R[instr.Rm]));
+    if (instr.Rn != instr.Rm) {
+        R[instr.Rm] += 2;
     }
 }
 
-FORCE_INLINE void SH2::MOVLP(uint16 rm, uint16 rn) {
-    // dbg_println("mov.l @r{}+, r{}", rm, rn);
-    R[rn] = MemReadLong(R[rm]);
-    if (rn != rm) {
-        R[rm] += 4;
+FORCE_INLINE void SH2::MOVLP(InstrNM instr) {
+    // dbg_println("mov.l @r{}+, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] = MemReadLong(R[instr.Rm]);
+    if (instr.Rn != instr.Rm) {
+        R[instr.Rm] += 4;
     }
 }
 
-FORCE_INLINE void SH2::MOVBS(uint16 rm, uint16 rn) {
-    // dbg_println("mov.b r{}, @r{}", rm, rn);
-    MemWriteByte(R[rn], R[rm]);
+FORCE_INLINE void SH2::MOVBS(InstrNM instr) {
+    // dbg_println("mov.b r{}, @r{}", instr.Rm, instr.Rn);
+    MemWriteByte(R[instr.Rn], R[instr.Rm]);
 }
 
-FORCE_INLINE void SH2::MOVWS(uint16 rm, uint16 rn) {
-    // dbg_println("mov.w r{}, @r{}", rm, rn);
-    MemWriteWord(R[rn], R[rm]);
+FORCE_INLINE void SH2::MOVWS(InstrNM instr) {
+    // dbg_println("mov.w r{}, @r{}", instr.Rm, instr.Rn);
+    MemWriteWord(R[instr.Rn], R[instr.Rm]);
 }
 
-FORCE_INLINE void SH2::MOVLS(uint16 rm, uint16 rn) {
-    // dbg_println("mov.l r{}, @r{}", rm, rn);
-    MemWriteLong(R[rn], R[rm]);
+FORCE_INLINE void SH2::MOVLS(InstrNM instr) {
+    // dbg_println("mov.l r{}, @r{}", instr.Rm, instr.Rn);
+    MemWriteLong(R[instr.Rn], R[instr.Rm]);
 }
 
-FORCE_INLINE void SH2::MOVBS0(uint16 rm, uint16 rn) {
-    // dbg_println("mov.b r{}, @(r0,r{})", rm, rn);
-    MemWriteByte(R[rn] + R[0], R[rm]);
+FORCE_INLINE void SH2::MOVBS0(InstrNM instr) {
+    // dbg_println("mov.b r{}, @(r0,r{})", instr.Rm, instr.Rn);
+    MemWriteByte(R[instr.Rn] + R[0], R[instr.Rm]);
 }
 
-FORCE_INLINE void SH2::MOVWS0(uint16 rm, uint16 rn) {
-    // dbg_println("mov.w r{}, @(r0,r{})", rm, rn);
-    MemWriteWord(R[rn] + R[0], R[rm]);
+FORCE_INLINE void SH2::MOVWS0(InstrNM instr) {
+    // dbg_println("mov.w r{}, @(r0,r{})", instr.Rm, instr.Rn);
+    MemWriteWord(R[instr.Rn] + R[0], R[instr.Rm]);
 }
 
-FORCE_INLINE void SH2::MOVLS0(uint16 rm, uint16 rn) {
-    // dbg_println("mov.l r{}, @(r0,r{})", rm, rn);
-    MemWriteLong(R[rn] + R[0], R[rm]);
+FORCE_INLINE void SH2::MOVLS0(InstrNM instr) {
+    // dbg_println("mov.l r{}, @(r0,r{})", instr.Rm, instr.Rn);
+    MemWriteLong(R[instr.Rn] + R[0], R[instr.Rm]);
 }
 
-FORCE_INLINE void SH2::MOVBS4(uint16 disp, uint16 rn) {
-    // dbg_println("mov.b r0, @(0x{:X},r{})", disp, rn);
-    MemWriteByte(R[rn] + disp, R[0]);
+FORCE_INLINE void SH2::MOVBS4(InstrND4 instr) {
+    const uint16 disp = instr.disp;
+    // dbg_println("mov.b r0, @(0x{:X},r{})", disp, instr.Rn);
+    MemWriteByte(R[instr.Rn] + disp, R[0]);
 }
 
-FORCE_INLINE void SH2::MOVWS4(uint16 disp, uint16 rn) {
-    disp <<= 1u;
-    // dbg_println("mov.w r0, @(0x{:X},r{})", disp, rn);
-    MemWriteWord(R[rn] + disp, R[0]);
+FORCE_INLINE void SH2::MOVWS4(InstrND4 instr) {
+    const uint16 disp = instr.disp << 1u;
+    // dbg_println("mov.w r0, @(0x{:X},r{})", disp, instr.Rn);
+    MemWriteWord(R[instr.Rn] + disp, R[0]);
 }
 
-FORCE_INLINE void SH2::MOVLS4(uint16 rm, uint16 disp, uint16 rn) {
-    disp <<= 2u;
-    // dbg_println("mov.l r{}, @(0x{:X},r{})", rm, disp, rn);
-    MemWriteLong(R[rn] + disp, R[rm]);
+FORCE_INLINE void SH2::MOVLS4(InstrNMD instr) {
+    const uint16 disp = instr.disp << 2u;
+    // dbg_println("mov.l r{}, @(0x{:X},r{})", instr.Rm, disp, instr.Rn);
+    MemWriteLong(R[instr.Rn] + disp, R[instr.Rm]);
 }
 
-FORCE_INLINE void SH2::MOVBSG(uint16 disp) {
+FORCE_INLINE void SH2::MOVBSG(InstrD instr) {
+    const uint16 disp = instr.disp;
     // dbg_println("mov.b r0, @(0x{:X},gbr)", disp);
     MemWriteByte(GBR + disp, R[0]);
 }
 
-FORCE_INLINE void SH2::MOVWSG(uint16 disp) {
-    disp <<= 1u;
+FORCE_INLINE void SH2::MOVWSG(InstrD instr) {
+    const uint16 disp = instr.disp << 1u;
     // dbg_println("mov.w r0, @(0x{:X},gbr)", disp);
     MemWriteWord(GBR + disp, R[0]);
 }
 
-FORCE_INLINE void SH2::MOVLSG(uint16 disp) {
-    disp <<= 2u;
+FORCE_INLINE void SH2::MOVLSG(InstrD instr) {
+    const uint16 disp = instr.disp << 2u;
     // dbg_println("mov.l r0, @(0x{:X},gbr)", disp);
     MemWriteLong(GBR + disp, R[0]);
 }
 
-FORCE_INLINE void SH2::MOVI(uint16 imm, uint16 rn) {
-    sint32 simm = bit::sign_extend<8>(imm);
-    // dbg_println("mov #{}0x{:X}, r{}", (simm < 0 ? "-" : ""), abs(simm), rn);
-    R[rn] = simm;
+FORCE_INLINE void SH2::MOVI(InstrNI instr) {
+    sint32 simm = bit::sign_extend<8>(instr.imm);
+    // dbg_println("mov #{}0x{:X}, r{}", (simm < 0 ? "-" : ""), abs(simm), instr.Rn);
+    R[instr.Rn] = simm;
 }
 
-FORCE_INLINE void SH2::MOVWI(uint16 disp, uint16 rn) {
-    disp <<= 1u;
-    // dbg_println("mov.w @(0x{:08X},pc), r{}", PC + 4 + disp, rn);
-    R[rn] = bit::sign_extend<16>(MemReadWord(PC + 4 + disp));
+FORCE_INLINE void SH2::MOVWI(InstrND8 instr) {
+    const uint16 disp = instr.disp << 1u;
+    // dbg_println("mov.w @(0x{:08X},pc), r{}", PC + 4 + disp, instr.Rn);
+    R[instr.Rn] = bit::sign_extend<16>(MemReadWord(PC + 4 + disp));
 }
 
-FORCE_INLINE void SH2::MOVLI(uint16 disp, uint16 rn) {
-    disp <<= 2u;
-    // dbg_println("mov.l @(0x{:08X},pc), r{}", ((PC + 4) & ~3) + disp, rn);
-    R[rn] = MemReadLong(((PC + 4) & ~3u) + disp);
+FORCE_INLINE void SH2::MOVLI(InstrND8 instr) {
+    const uint16 disp = instr.disp << 2u;
+    // dbg_println("mov.l @(0x{:08X},pc), r{}", ((PC + 4) & ~3) + disp, instr.Rn);
+    R[instr.Rn] = MemReadLong(((PC + 4) & ~3u) + disp);
 }
 
-FORCE_INLINE void SH2::MOVA(uint16 disp) {
-    disp = (disp << 2u) + 4;
+FORCE_INLINE void SH2::MOVA(InstrD instr) {
+    const uint16 disp = (instr.disp << 2u) + 4u;
     // dbg_println("mova @(0x{:X},pc), r0", (PC & ~3) + disp);
     R[0] = (PC & ~3) + disp;
 }
 
-FORCE_INLINE void SH2::MOVT(uint16 rn) {
-    // dbg_println("movt r{}", rn);
-    R[rn] = SR.T;
+FORCE_INLINE void SH2::MOVT(InstrN instr) {
+    // dbg_println("movt r{}", instr.Rn);
+    R[instr.Rn] = SR.T;
 }
 
 FORCE_INLINE void SH2::CLRT() {
@@ -1697,388 +1201,388 @@ FORCE_INLINE void SH2::SETT() {
     SR.T = 1;
 }
 
-FORCE_INLINE void SH2::EXTSB(uint16 rm, uint16 rn) {
-    // dbg_println("exts.b r{}, r{}", rm, rn);
-    R[rn] = bit::sign_extend<8>(R[rm]);
+FORCE_INLINE void SH2::EXTSB(InstrNM instr) {
+    // dbg_println("exts.b r{}, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] = bit::sign_extend<8>(R[instr.Rm]);
 }
 
-FORCE_INLINE void SH2::EXTSW(uint16 rm, uint16 rn) {
-    // dbg_println("exts.w r{}, r{}", rm, rn);
-    R[rn] = bit::sign_extend<16>(R[rm]);
+FORCE_INLINE void SH2::EXTSW(InstrNM instr) {
+    // dbg_println("exts.w r{}, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] = bit::sign_extend<16>(R[instr.Rm]);
 }
 
-FORCE_INLINE void SH2::EXTUB(uint16 rm, uint16 rn) {
-    // dbg_println("extu.b r{}, r{}", rm, rn);
-    R[rn] = R[rm] & 0xFF;
+FORCE_INLINE void SH2::EXTUB(InstrNM instr) {
+    // dbg_println("extu.b r{}, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] = R[instr.Rm] & 0xFF;
 }
 
-FORCE_INLINE void SH2::EXTUW(uint16 rm, uint16 rn) {
-    // dbg_println("extu.w r{}, r{}", rm, rn);
-    R[rn] = R[rm] & 0xFFFF;
+FORCE_INLINE void SH2::EXTUW(InstrNM instr) {
+    // dbg_println("extu.w r{}, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] = R[instr.Rm] & 0xFFFF;
 }
 
-FORCE_INLINE void SH2::LDCGBR(uint16 rm) {
-    // dbg_println("ldc r{}, gbr", rm);
-    GBR = R[rm];
+FORCE_INLINE void SH2::SWAPB(InstrNM instr) {
+    // dbg_println("swap.b r{}, r{}", instr.Rm, instr.Rn);
+
+    const uint32 tmp0 = R[instr.Rm] & 0xFFFF0000;
+    const uint32 tmp1 = (R[instr.Rm] & 0xFF) << 8u;
+    R[instr.Rn] = ((R[instr.Rm] >> 8u) & 0xFF) | tmp1 | tmp0;
 }
 
-FORCE_INLINE void SH2::LDCSR(uint16 rm) {
-    // dbg_println("ldc r{}, sr", rm);
-    SR.u32 = R[rm] & 0x000003F3;
+FORCE_INLINE void SH2::SWAPW(InstrNM instr) {
+    // dbg_println("swap.w r{}, r{}", instr.Rm, instr.Rn);
+
+    const uint32 tmp = R[instr.Rm] >> 16u;
+    R[instr.Rn] = (R[instr.Rm] << 16u) | tmp;
 }
 
-FORCE_INLINE void SH2::LDCVBR(uint16 rm) {
-    // dbg_println("ldc r{}, vbr", rm);
-    VBR = R[rm];
+FORCE_INLINE void SH2::XTRCT(InstrNM instr) {
+    // dbg_println("xtrct r{}, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] = (R[instr.Rn] >> 16u) | (R[instr.Rm] << 16u);
 }
 
-FORCE_INLINE void SH2::LDCMGBR(uint16 rm) {
-    // dbg_println("ldc.l @r{}+, gbr", rm);
-    GBR = MemReadLong(R[rm]);
-    R[rm] += 4;
+FORCE_INLINE void SH2::LDCGBR(InstrM instr) {
+    // dbg_println("ldc r{}, gbr", instr.Rm);
+    GBR = R[instr.Rm];
 }
 
-FORCE_INLINE void SH2::LDCMSR(uint16 rm) {
-    // dbg_println("ldc.l @r{}+, sr", rm);
-    SR.u32 = MemReadLong(R[rm]) & 0x000003F3;
-    R[rm] += 4;
+FORCE_INLINE void SH2::LDCSR(InstrM instr) {
+    // dbg_println("ldc r{}, sr", instr.Rm);
+    SR.u32 = R[instr.Rm] & 0x000003F3;
 }
 
-FORCE_INLINE void SH2::LDCMVBR(uint16 rm) {
-    // dbg_println("ldc.l @r{}+, vbr", rm);
-    VBR = MemReadLong(R[rm]);
-    R[rm] += 4;
+FORCE_INLINE void SH2::LDCVBR(InstrM instr) {
+    // dbg_println("ldc r{}, vbr", instr.Rm);
+    VBR = R[instr.Rm];
 }
 
-FORCE_INLINE void SH2::LDSMACH(uint16 rm) {
-    // dbg_println("lds r{}, mach", rm);
-    MAC.H = R[rm];
+FORCE_INLINE void SH2::LDCMGBR(InstrM instr) {
+    // dbg_println("ldc.l @r{}+, gbr", instr.Rm);
+    GBR = MemReadLong(R[instr.Rm]);
+    R[instr.Rm] += 4;
 }
 
-FORCE_INLINE void SH2::LDSMACL(uint16 rm) {
-    // dbg_println("lds r{}, macl", rm);
-    MAC.L = R[rm];
+FORCE_INLINE void SH2::LDCMSR(InstrM instr) {
+    // dbg_println("ldc.l @r{}+, sr", instr.Rm);
+    SR.u32 = MemReadLong(R[instr.Rm]) & 0x000003F3;
+    R[instr.Rm] += 4;
 }
 
-FORCE_INLINE void SH2::LDSPR(uint16 rm) {
-    // dbg_println("lds r{}, pr", rm);
-    PR = R[rm];
+FORCE_INLINE void SH2::LDCMVBR(InstrM instr) {
+    // dbg_println("ldc.l @r{}+, vbr", instr.Rm);
+    VBR = MemReadLong(R[instr.Rm]);
+    R[instr.Rm] += 4;
 }
 
-FORCE_INLINE void SH2::LDSMMACH(uint16 rm) {
-    // dbg_println("lds.l @r{}+, mach", rm);
-    MAC.H = MemReadLong(R[rm]);
-    R[rm] += 4;
+FORCE_INLINE void SH2::LDSMACH(InstrM instr) {
+    // dbg_println("lds r{}, mach", instr.Rm);
+    MAC.H = R[instr.Rm];
 }
 
-FORCE_INLINE void SH2::LDSMMACL(uint16 rm) {
-    // dbg_println("lds.l @r{}+, macl", rm);
-    MAC.L = MemReadLong(R[rm]);
-    R[rm] += 4;
+FORCE_INLINE void SH2::LDSMACL(InstrM instr) {
+    // dbg_println("lds r{}, macl", instr.Rm);
+    MAC.L = R[instr.Rm];
 }
 
-FORCE_INLINE void SH2::LDSMPR(uint16 rm) {
-    // dbg_println("lds.l @r{}+, pr", rm);
-    PR = MemReadLong(R[rm]);
-    R[rm] += 4;
+FORCE_INLINE void SH2::LDSPR(InstrM instr) {
+    // dbg_println("lds r{}, pr", instr.Rm);
+    PR = R[instr.Rm];
 }
 
-FORCE_INLINE void SH2::STCGBR(uint16 rn) {
-    // dbg_println("stc gbr, r{}", rn);
-    R[rn] = GBR;
+FORCE_INLINE void SH2::LDSMMACH(InstrM instr) {
+    // dbg_println("lds.l @r{}+, mach", instr.Rm);
+    MAC.H = MemReadLong(R[instr.Rm]);
+    R[instr.Rm] += 4;
 }
 
-FORCE_INLINE void SH2::STCSR(uint16 rn) {
-    // dbg_println("stc sr, r{}", rn);
-    R[rn] = SR.u32;
+FORCE_INLINE void SH2::LDSMMACL(InstrM instr) {
+    // dbg_println("lds.l @r{}+, macl", instr.Rm);
+    MAC.L = MemReadLong(R[instr.Rm]);
+    R[instr.Rm] += 4;
 }
 
-FORCE_INLINE void SH2::STCVBR(uint16 rn) {
-    // dbg_println("stc vbr, r{}", rn);
-    R[rn] = VBR;
+FORCE_INLINE void SH2::LDSMPR(InstrM instr) {
+    // dbg_println("lds.l @r{}+, pr", instr.Rm);
+    PR = MemReadLong(R[instr.Rm]);
+    R[instr.Rm] += 4;
 }
 
-FORCE_INLINE void SH2::STCMGBR(uint16 rn) {
-    // dbg_println("stc.l gbr, @-r{}", rn);
-    R[rn] -= 4;
-    MemWriteLong(R[rn], GBR);
+FORCE_INLINE void SH2::STCGBR(InstrN instr) {
+    // dbg_println("stc gbr, r{}", instr.Rn);
+    R[instr.Rn] = GBR;
 }
 
-FORCE_INLINE void SH2::STCMSR(uint16 rn) {
-    // dbg_println("stc.l sr, @-r{}", rn);
-    R[rn] -= 4;
-    MemWriteLong(R[rn], SR.u32);
+FORCE_INLINE void SH2::STCSR(InstrN instr) {
+    // dbg_println("stc sr, r{}", instr.Rn);
+    R[instr.Rn] = SR.u32;
 }
 
-FORCE_INLINE void SH2::STCMVBR(uint16 rn) {
-    // dbg_println("stc.l vbr, @-r{}", rn);
-    R[rn] -= 4;
-    MemWriteLong(R[rn], VBR);
+FORCE_INLINE void SH2::STCVBR(InstrN instr) {
+    // dbg_println("stc vbr, r{}", instr.Rn);
+    R[instr.Rn] = VBR;
 }
 
-FORCE_INLINE void SH2::STSMACH(uint16 rn) {
-    // dbg_println("sts mach, r{}", rn);
-    R[rn] = MAC.H;
+FORCE_INLINE void SH2::STCMGBR(InstrN instr) {
+    // dbg_println("stc.l gbr, @-r{}", instr.Rn);
+    R[instr.Rn] -= 4;
+    MemWriteLong(R[instr.Rn], GBR);
 }
 
-FORCE_INLINE void SH2::STSMACL(uint16 rn) {
-    // dbg_println("sts macl, r{}", rn);
-    R[rn] = MAC.L;
+FORCE_INLINE void SH2::STCMSR(InstrN instr) {
+    // dbg_println("stc.l sr, @-r{}", instr.Rn);
+    R[instr.Rn] -= 4;
+    MemWriteLong(R[instr.Rn], SR.u32);
 }
 
-FORCE_INLINE void SH2::STSPR(uint16 rn) {
-    // dbg_println("sts pr, r{}", rn);
-    R[rn] = PR;
+FORCE_INLINE void SH2::STCMVBR(InstrN instr) {
+    // dbg_println("stc.l vbr, @-r{}", instr.Rn);
+    R[instr.Rn] -= 4;
+    MemWriteLong(R[instr.Rn], VBR);
 }
 
-FORCE_INLINE void SH2::STSMMACH(uint16 rn) {
-    // dbg_println("sts.l mach, @-r{}", rn);
-    R[rn] -= 4;
-    MemWriteLong(R[rn], MAC.H);
+FORCE_INLINE void SH2::STSMACH(InstrN instr) {
+    // dbg_println("sts mach, r{}", instr.Rn);
+    R[instr.Rn] = MAC.H;
 }
 
-FORCE_INLINE void SH2::STSMMACL(uint16 rn) {
-    // dbg_println("sts.l macl, @-r{}", rn);
-    R[rn] -= 4;
-    MemWriteLong(R[rn], MAC.L);
+FORCE_INLINE void SH2::STSMACL(InstrN instr) {
+    // dbg_println("sts macl, r{}", instr.Rn);
+    R[instr.Rn] = MAC.L;
 }
 
-FORCE_INLINE void SH2::STSMPR(uint16 rn) {
-    // dbg_println("sts.l pr, @-r{}", rn);
-    R[rn] -= 4;
-    MemWriteLong(R[rn], PR);
+FORCE_INLINE void SH2::STSPR(InstrN instr) {
+    // dbg_println("sts pr, r{}", instr.Rn);
+    R[instr.Rn] = PR;
 }
 
-FORCE_INLINE void SH2::SWAPB(uint16 rm, uint16 rn) {
-    // dbg_println("swap.b r{}, r{}", rm, rn);
-
-    const uint32 tmp0 = R[rm] & 0xFFFF0000;
-    const uint32 tmp1 = (R[rm] & 0xFF) << 8u;
-    R[rn] = ((R[rm] >> 8u) & 0xFF) | tmp1 | tmp0;
+FORCE_INLINE void SH2::STSMMACH(InstrN instr) {
+    // dbg_println("sts.l mach, @-r{}", instr.Rn);
+    R[instr.Rn] -= 4;
+    MemWriteLong(R[instr.Rn], MAC.H);
 }
 
-FORCE_INLINE void SH2::SWAPW(uint16 rm, uint16 rn) {
-    // dbg_println("swap.w r{}, r{}", rm, rn);
-
-    const uint32 tmp = R[rm] >> 16u;
-    R[rn] = (R[rm] << 16u) | tmp;
+FORCE_INLINE void SH2::STSMMACL(InstrN instr) {
+    // dbg_println("sts.l macl, @-r{}", instr.Rn);
+    R[instr.Rn] -= 4;
+    MemWriteLong(R[instr.Rn], MAC.L);
 }
 
-FORCE_INLINE void SH2::XTRCT(uint16 rm, uint16 rn) {
-    // dbg_println("xtrct r{}, r{}", rm, rn);
-    R[rn] = (R[rn] >> 16u) | (R[rm] << 16u);
+FORCE_INLINE void SH2::STSMPR(InstrN instr) {
+    // dbg_println("sts.l pr, @-r{}", instr.Rn);
+    R[instr.Rn] -= 4;
+    MemWriteLong(R[instr.Rn], PR);
 }
 
-FORCE_INLINE void SH2::ADD(uint16 rm, uint16 rn) {
-    // dbg_println("add r{}, r{}", rm, rn);
-    R[rn] += R[rm];
+FORCE_INLINE void SH2::ADD(InstrNM instr) {
+    // dbg_println("add r{}, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] += R[instr.Rm];
 }
 
-FORCE_INLINE void SH2::ADDI(uint16 imm, uint16 rn) {
-    const sint32 simm = bit::sign_extend<8>(imm);
-    // dbg_println("add #{}0x{:X}, r{}", (simm < 0 ? "-" : ""), abs(simm), rn);
-    R[rn] += simm;
+FORCE_INLINE void SH2::ADDI(InstrNI instr) {
+    const sint32 simm = bit::sign_extend<8>(instr.imm);
+    // dbg_println("add #{}0x{:X}, r{}", (simm < 0 ? "-" : ""), abs(simm), instr.Rn);
+    R[instr.Rn] += simm;
 }
 
-FORCE_INLINE void SH2::ADDC(uint16 rm, uint16 rn) {
-    // dbg_println("addc r{}, r{}", rm, rn);
-    const uint32 tmp1 = R[rn] + R[rm];
-    const uint32 tmp0 = R[rn];
-    R[rn] = tmp1 + SR.T;
-    SR.T = (tmp0 > tmp1) || (tmp1 > R[rn]);
+FORCE_INLINE void SH2::ADDC(InstrNM instr) {
+    // dbg_println("addc r{}, r{}", instr.Rm, instr.Rn);
+    const uint32 tmp1 = R[instr.Rn] + R[instr.Rm];
+    const uint32 tmp0 = R[instr.Rn];
+    R[instr.Rn] = tmp1 + SR.T;
+    SR.T = (tmp0 > tmp1) || (tmp1 > R[instr.Rn]);
 }
 
-FORCE_INLINE void SH2::ADDV(uint16 rm, uint16 rn) {
-    // dbg_println("addv r{}, r{}", rm, rn);
+FORCE_INLINE void SH2::ADDV(InstrNM instr) {
+    // dbg_println("addv r{}, r{}", instr.Rm, instr.Rn);
 
-    const bool dst = static_cast<sint32>(R[rn]) < 0;
-    const bool src = static_cast<sint32>(R[rm]) < 0;
+    const bool dst = static_cast<sint32>(R[instr.Rn]) < 0;
+    const bool src = static_cast<sint32>(R[instr.Rm]) < 0;
 
-    R[rn] += R[rm];
+    R[instr.Rn] += R[instr.Rm];
 
-    bool ans = static_cast<sint32>(R[rn]) < 0;
+    bool ans = static_cast<sint32>(R[instr.Rn]) < 0;
     ans ^= dst;
     SR.T = (src == dst) & ans;
 }
 
-FORCE_INLINE void SH2::AND(uint16 rm, uint16 rn) {
-    // dbg_println("and r{}, r{}", rm, rn);
-    R[rn] &= R[rm];
+FORCE_INLINE void SH2::AND(InstrNM instr) {
+    // dbg_println("and r{}, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] &= R[instr.Rm];
 }
 
-FORCE_INLINE void SH2::ANDI(uint16 imm) {
-    // dbg_println("and #0x{:X}, r0", imm);
-    R[0] &= imm;
+FORCE_INLINE void SH2::ANDI(InstrI instr) {
+    // dbg_println("and #0x{:X}, r0", instr.imm);
+    R[0] &= instr.imm;
 }
 
-FORCE_INLINE void SH2::ANDM(uint16 imm) {
-    // dbg_println("and.b #0x{:X}, @(r0,gbr)", imm);
+FORCE_INLINE void SH2::ANDM(InstrI instr) {
+    // dbg_println("and.b #0x{:X}, @(r0,gbr)", instr.imm);
     uint8 tmp = MemReadByte(GBR + R[0]);
-    tmp &= imm;
+    tmp &= instr.imm;
     MemWriteByte(GBR + R[0], tmp);
 }
 
-FORCE_INLINE void SH2::NEG(uint16 rm, uint16 rn) {
-    // dbg_println("neg r{}, r{}", rm, rn);
-    R[rn] = -R[rm];
+FORCE_INLINE void SH2::NEG(InstrNM instr) {
+    // dbg_println("neg r{}, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] = -R[instr.Rm];
 }
 
-FORCE_INLINE void SH2::NEGC(uint16 rm, uint16 rn) {
-    // dbg_println("negc r{}, r{}", rm, rn);
-    const uint32 tmp = -R[rm];
-    R[rn] = tmp - SR.T;
-    SR.T = (0 < tmp) || (tmp < R[rn]);
+FORCE_INLINE void SH2::NEGC(InstrNM instr) {
+    // dbg_println("negc r{}, r{}", instr.Rm, instr.Rn);
+    const uint32 tmp = -R[instr.Rm];
+    R[instr.Rn] = tmp - SR.T;
+    SR.T = (0 < tmp) || (tmp < R[instr.Rn]);
 }
 
-FORCE_INLINE void SH2::NOT(uint16 rm, uint16 rn) {
-    // dbg_println("not r{}, r{}", rm, rn);
-    R[rn] = ~R[rm];
+FORCE_INLINE void SH2::NOT(InstrNM instr) {
+    // dbg_println("not r{}, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] = ~R[instr.Rm];
 }
 
-FORCE_INLINE void SH2::OR(uint16 rm, uint16 rn) {
-    // dbg_println("or r{}, r{}", rm, rn);
-    R[rn] |= R[rm];
+FORCE_INLINE void SH2::OR(InstrNM instr) {
+    // dbg_println("or r{}, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] |= R[instr.Rm];
 }
 
-FORCE_INLINE void SH2::ORI(uint16 imm) {
-    // dbg_println("or #0x{:X}, r0", imm);
-    R[0] |= imm;
+FORCE_INLINE void SH2::ORI(InstrI instr) {
+    // dbg_println("or #0x{:X}, r0", instr.imm);
+    R[0] |= instr.imm;
 }
 
-FORCE_INLINE void SH2::ORM(uint16 imm) {
-    // dbg_println("or.b #0x{:X}, @(r0,gbr)", imm);
+FORCE_INLINE void SH2::ORM(InstrI instr) {
+    // dbg_println("or.b #0x{:X}, @(r0,gbr)", instr.imm);
     uint8 tmp = MemReadByte(GBR + R[0]);
-    tmp |= imm;
+    tmp |= instr.imm;
     MemWriteByte(GBR + R[0], tmp);
 }
 
-FORCE_INLINE void SH2::ROTCL(uint16 rn) {
-    // dbg_println("rotcl r{}", rn);
-    const bool tmp = R[rn] >> 31u;
-    R[rn] = (R[rn] << 1u) | SR.T;
+FORCE_INLINE void SH2::ROTCL(InstrN instr) {
+    // dbg_println("rotcl r{}", instr.Rn);
+    const bool tmp = R[instr.Rn] >> 31u;
+    R[instr.Rn] = (R[instr.Rn] << 1u) | SR.T;
     SR.T = tmp;
 }
 
-FORCE_INLINE void SH2::ROTCR(uint16 rn) {
-    // dbg_println("rotcr r{}", rn);
-    const bool tmp = R[rn] & 1u;
-    R[rn] = (R[rn] >> 1u) | (SR.T << 31u);
+FORCE_INLINE void SH2::ROTCR(InstrN instr) {
+    // dbg_println("rotcr r{}", instr.Rn);
+    const bool tmp = R[instr.Rn] & 1u;
+    R[instr.Rn] = (R[instr.Rn] >> 1u) | (SR.T << 31u);
     SR.T = tmp;
 }
 
-FORCE_INLINE void SH2::ROTL(uint16 rn) {
-    // dbg_println("rotl r{}", rn);
-    SR.T = R[rn] >> 31u;
-    R[rn] = (R[rn] << 1u) | SR.T;
+FORCE_INLINE void SH2::ROTL(InstrN instr) {
+    // dbg_println("rotl r{}", instr.Rn);
+    SR.T = R[instr.Rn] >> 31u;
+    R[instr.Rn] = (R[instr.Rn] << 1u) | SR.T;
 }
 
-FORCE_INLINE void SH2::ROTR(uint16 rn) {
-    // dbg_println("rotr r{}", rn);
-    SR.T = R[rn] & 1u;
-    R[rn] = (R[rn] >> 1u) | (SR.T << 31u);
+FORCE_INLINE void SH2::ROTR(InstrN instr) {
+    // dbg_println("rotr r{}", instr.Rn);
+    SR.T = R[instr.Rn] & 1u;
+    R[instr.Rn] = (R[instr.Rn] >> 1u) | (SR.T << 31u);
 }
 
-FORCE_INLINE void SH2::SHAL(uint16 rn) {
-    // dbg_println("shal r{}", rn);
-    SR.T = R[rn] >> 31u;
-    R[rn] <<= 1u;
+FORCE_INLINE void SH2::SHAL(InstrN instr) {
+    // dbg_println("shal r{}", instr.Rn);
+    SR.T = R[instr.Rn] >> 31u;
+    R[instr.Rn] <<= 1u;
 }
 
-FORCE_INLINE void SH2::SHAR(uint16 rn) {
-    // dbg_println("shar r{}", rn);
-    SR.T = R[rn] & 1u;
-    R[rn] = static_cast<sint32>(R[rn]) >> 1;
+FORCE_INLINE void SH2::SHAR(InstrN instr) {
+    // dbg_println("shar r{}", instr.Rn);
+    SR.T = R[instr.Rn] & 1u;
+    R[instr.Rn] = static_cast<sint32>(R[instr.Rn]) >> 1;
 }
 
-FORCE_INLINE void SH2::SHLL(uint16 rn) {
-    // dbg_println("shll r{}", rn);
-    SR.T = R[rn] >> 31u;
-    R[rn] <<= 1u;
+FORCE_INLINE void SH2::SHLL(InstrN instr) {
+    // dbg_println("shll r{}", instr.Rn);
+    SR.T = R[instr.Rn] >> 31u;
+    R[instr.Rn] <<= 1u;
 }
 
-FORCE_INLINE void SH2::SHLL2(uint16 rn) {
-    // dbg_println("shll2 r{}", rn);
-    R[rn] <<= 2u;
+FORCE_INLINE void SH2::SHLL2(InstrN instr) {
+    // dbg_println("shll2 r{}", instr.Rn);
+    R[instr.Rn] <<= 2u;
 }
 
-FORCE_INLINE void SH2::SHLL8(uint16 rn) {
-    // dbg_println("shll8 r{}", rn);
-    R[rn] <<= 8u;
+FORCE_INLINE void SH2::SHLL8(InstrN instr) {
+    // dbg_println("shll8 r{}", instr.Rn);
+    R[instr.Rn] <<= 8u;
 }
 
-FORCE_INLINE void SH2::SHLL16(uint16 rn) {
-    // dbg_println("shll16 r{}", rn);
-    R[rn] <<= 16u;
+FORCE_INLINE void SH2::SHLL16(InstrN instr) {
+    // dbg_println("shll16 r{}", instr.Rn);
+    R[instr.Rn] <<= 16u;
 }
 
-FORCE_INLINE void SH2::SHLR(uint16 rn) {
-    // dbg_println("shlr r{}", rn);
-    SR.T = R[rn] & 1u;
-    R[rn] >>= 1u;
+FORCE_INLINE void SH2::SHLR(InstrN instr) {
+    // dbg_println("shlr r{}", instr.Rn);
+    SR.T = R[instr.Rn] & 1u;
+    R[instr.Rn] >>= 1u;
 }
 
-FORCE_INLINE void SH2::SHLR2(uint16 rn) {
-    // dbg_println("shlr2 r{}", rn);
-    R[rn] >>= 2u;
+FORCE_INLINE void SH2::SHLR2(InstrN instr) {
+    // dbg_println("shlr2 r{}", instr.Rn);
+    R[instr.Rn] >>= 2u;
 }
 
-FORCE_INLINE void SH2::SHLR8(uint16 rn) {
-    // dbg_println("shlr8 r{}", rn);
-    R[rn] >>= 8u;
+FORCE_INLINE void SH2::SHLR8(InstrN instr) {
+    // dbg_println("shlr8 r{}", instr.Rn);
+    R[instr.Rn] >>= 8u;
 }
 
-FORCE_INLINE void SH2::SHLR16(uint16 rn) {
-    // dbg_println("shlr16 r{}", rn);
-    R[rn] >>= 16u;
+FORCE_INLINE void SH2::SHLR16(InstrN instr) {
+    // dbg_println("shlr16 r{}", instr.Rn);
+    R[instr.Rn] >>= 16u;
 }
 
-FORCE_INLINE void SH2::SUB(uint16 rm, uint16 rn) {
-    // dbg_println("sub r{}, r{}", rm, rn);
-    R[rn] -= R[rm];
+FORCE_INLINE void SH2::SUB(InstrNM instr) {
+    // dbg_println("sub r{}, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] -= R[instr.Rm];
 }
 
-FORCE_INLINE void SH2::SUBC(uint16 rm, uint16 rn) {
-    // dbg_println("subc r{}, r{}", rm, rn);
-    const uint32 tmp1 = R[rn] - R[rm];
-    const uint32 tmp0 = R[rn];
-    R[rn] = tmp1 - SR.T;
-    SR.T = (tmp0 < tmp1) || (tmp1 < R[rn]);
+FORCE_INLINE void SH2::SUBC(InstrNM instr) {
+    // dbg_println("subc r{}, r{}", instr.Rm, instr.Rn);
+    const uint32 tmp1 = R[instr.Rn] - R[instr.Rm];
+    const uint32 tmp0 = R[instr.Rn];
+    R[instr.Rn] = tmp1 - SR.T;
+    SR.T = (tmp0 < tmp1) || (tmp1 < R[instr.Rn]);
 }
 
-FORCE_INLINE void SH2::SUBV(uint16 rm, uint16 rn) {
-    // dbg_println("subv r{}, r{}", rm, rn);
+FORCE_INLINE void SH2::SUBV(InstrNM instr) {
+    // dbg_println("subv r{}, r{}", instr.Rm, instr.Rn);
 
-    const bool dst = static_cast<sint32>(R[rn]) < 0;
-    const bool src = static_cast<sint32>(R[rm]) < 0;
+    const bool dst = static_cast<sint32>(R[instr.Rn]) < 0;
+    const bool src = static_cast<sint32>(R[instr.Rm]) < 0;
 
-    R[rn] -= R[rm];
+    R[instr.Rn] -= R[instr.Rm];
 
-    bool ans = static_cast<sint32>(R[rn]) < 0;
+    bool ans = static_cast<sint32>(R[instr.Rn]) < 0;
     ans ^= dst;
     SR.T = (src != dst) & ans;
 }
 
-FORCE_INLINE void SH2::XOR(uint16 rm, uint16 rn) {
-    // dbg_println("xor r{}, r{}", rm, rn);
-    R[rn] ^= R[rm];
+FORCE_INLINE void SH2::XOR(InstrNM instr) {
+    // dbg_println("xor r{}, r{}", instr.Rm, instr.Rn);
+    R[instr.Rn] ^= R[instr.Rm];
 }
 
-FORCE_INLINE void SH2::XORI(uint16 imm) {
-    // dbg_println("xor #0x{:X}, r0", imm);
-    R[0] ^= imm;
+FORCE_INLINE void SH2::XORI(InstrI instr) {
+    // dbg_println("xor #0x{:X}, r0", instr.imm);
+    R[0] ^= instr.imm;
 }
 
-FORCE_INLINE void SH2::XORM(uint16 imm) {
-    // dbg_println("xor.b #0x{:X}, @(r0,gbr)", imm);
+FORCE_INLINE void SH2::XORM(InstrI instr) {
+    // dbg_println("xor.b #0x{:X}, @(r0,gbr)", instr.imm);
     uint8 tmp = MemReadByte(GBR + R[0]);
-    tmp ^= imm;
+    tmp ^= instr.imm;
     MemWriteByte(GBR + R[0], tmp);
 }
 
-FORCE_INLINE void SH2::DT(uint16 rn) {
-    // dbg_println("dt r{}", rn);
-    R[rn]--;
-    SR.T = R[rn] == 0;
+FORCE_INLINE void SH2::DT(InstrN instr) {
+    // dbg_println("dt r{}", instr.Rn);
+    R[instr.Rn]--;
+    SR.T = R[instr.Rn] == 0;
 }
 
 FORCE_INLINE void SH2::CLRMAC() {
@@ -2086,13 +1590,13 @@ FORCE_INLINE void SH2::CLRMAC() {
     MAC.u64 = 0;
 }
 
-FORCE_INLINE void SH2::MACW(uint16 rm, uint16 rn) {
-    // dbg_println("mac.w @r{}+, @r{}+)", rm, rn);
+FORCE_INLINE void SH2::MACW(InstrNM instr) {
+    // dbg_println("mac.w @r{}+, @r{}+)", instr.Rm, instr.Rn);
 
-    const sint32 op2 = bit::sign_extend<16, sint32>(MemReadWord(R[rn]));
-    R[rn] += 2;
-    const sint32 op1 = bit::sign_extend<16, sint32>(MemReadWord(R[rm]));
-    R[rm] += 2;
+    const sint32 op2 = bit::sign_extend<16, sint32>(MemReadWord(R[instr.Rn]));
+    R[instr.Rn] += 2;
+    const sint32 op1 = bit::sign_extend<16, sint32>(MemReadWord(R[instr.Rm]));
+    R[instr.Rm] += 2;
 
     const sint32 mul = op1 * op2;
     if (SR.S) {
@@ -2109,13 +1613,13 @@ FORCE_INLINE void SH2::MACW(uint16 rm, uint16 rn) {
     }
 }
 
-FORCE_INLINE void SH2::MACL(uint16 rm, uint16 rn) {
-    // dbg_println("mac.l @r{}+, @r{}+)", rm, rn);
+FORCE_INLINE void SH2::MACL(InstrNM instr) {
+    // dbg_println("mac.l @r{}+, @r{}+)", instr.Rm, instr.Rn);
 
-    const sint64 op2 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[rn])));
-    R[rn] += 4;
-    const sint64 op1 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[rm])));
-    R[rm] += 4;
+    const sint64 op2 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[instr.Rn])));
+    R[instr.Rn] += 4;
+    const sint64 op1 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[instr.Rm])));
+    R[instr.Rm] += 4;
 
     const sint64 mul = op1 * op2;
     sint64 result = mul + MAC.u64;
@@ -2133,37 +1637,37 @@ FORCE_INLINE void SH2::MACL(uint16 rm, uint16 rn) {
     MAC.u64 = result;
 }
 
-FORCE_INLINE void SH2::MULL(uint16 rm, uint16 rn) {
-    // dbg_println("mul.l r{}, r{}", rm, rn);
-    MAC.L = R[rm] * R[rn];
+FORCE_INLINE void SH2::MULL(InstrNM instr) {
+    // dbg_println("mul.l r{}, r{}", instr.Rm, instr.Rn);
+    MAC.L = R[instr.Rm] * R[instr.Rn];
 }
 
-FORCE_INLINE void SH2::MULS(uint16 rm, uint16 rn) {
-    // dbg_println("muls.w r{}, r{}", rm, rn);
-    MAC.L = bit::sign_extend<16>(R[rm]) * bit::sign_extend<16>(R[rn]);
+FORCE_INLINE void SH2::MULS(InstrNM instr) {
+    // dbg_println("muls.w r{}, r{}", instr.Rm, instr.Rn);
+    MAC.L = bit::sign_extend<16>(R[instr.Rm]) * bit::sign_extend<16>(R[instr.Rn]);
 }
 
-FORCE_INLINE void SH2::MULU(uint16 rm, uint16 rn) {
-    // dbg_println("mulu.w r{}, r{}", rm, rn);
+FORCE_INLINE void SH2::MULU(InstrNM instr) {
+    // dbg_println("mulu.w r{}, r{}", instr.Rm, instr.Rn);
     auto cast = [](uint32 val) { return static_cast<uint32>(static_cast<uint16>(val)); };
-    MAC.L = cast(R[rm]) * cast(R[rn]);
+    MAC.L = cast(R[instr.Rm]) * cast(R[instr.Rn]);
 }
 
-FORCE_INLINE void SH2::DMULS(uint16 rm, uint16 rn) {
-    // dbg_println("dmuls.l r{}, r{}", rm, rn);
+FORCE_INLINE void SH2::DMULS(InstrNM instr) {
+    // dbg_println("dmuls.l r{}, r{}", instr.Rm, instr.Rn);
     auto cast = [](uint32 val) { return static_cast<sint64>(static_cast<sint32>(val)); };
-    MAC.u64 = cast(R[rm]) * cast(R[rn]);
+    MAC.u64 = cast(R[instr.Rm]) * cast(R[instr.Rn]);
 }
 
-FORCE_INLINE void SH2::DMULU(uint16 rm, uint16 rn) {
-    // dbg_println("dmulu.l r{}, r{}", rm, rn);
-    MAC.u64 = static_cast<uint64>(R[rm]) * static_cast<uint64>(R[rn]);
+FORCE_INLINE void SH2::DMULU(InstrNM instr) {
+    // dbg_println("dmulu.l r{}, r{}", instr.Rm, instr.Rn);
+    MAC.u64 = static_cast<uint64>(R[instr.Rm]) * static_cast<uint64>(R[instr.Rn]);
 }
 
-FORCE_INLINE void SH2::DIV0S(uint16 rm, uint16 rn) {
-    // dbg_println("div0s r{}, r{}", rm, rn);
-    SR.M = static_cast<sint32>(R[rm]) < 0;
-    SR.Q = static_cast<sint32>(R[rn]) < 0;
+FORCE_INLINE void SH2::DIV0S(InstrNM instr) {
+    // dbg_println("div0s r{}, r{}", instr.Rm, instr.Rn);
+    SR.M = static_cast<sint32>(R[instr.Rm]) < 0;
+    SR.Q = static_cast<sint32>(R[instr.Rn]) < 0;
     SR.T = SR.M != SR.Q;
 }
 
@@ -2174,81 +1678,81 @@ FORCE_INLINE void SH2::DIV0U() {
     SR.T = 0;
 }
 
-FORCE_INLINE void SH2::DIV1(uint16 rm, uint16 rn) {
-    // dbg_println("div1 r{}, r{}", rm, rn);
+FORCE_INLINE void SH2::DIV1(InstrNM instr) {
+    // dbg_println("div1 r{}, r{}", instr.Rm, instr.Rn);
 
     const bool oldQ = SR.Q;
-    SR.Q = static_cast<sint32>(R[rn]) < 0;
-    R[rn] = (R[rn] << 1u) | SR.T;
+    SR.Q = static_cast<sint32>(R[instr.Rn]) < 0;
+    R[instr.Rn] = (R[instr.Rn] << 1u) | SR.T;
 
-    const uint32 prevVal = R[rn];
+    const uint32 prevVal = R[instr.Rn];
     if (oldQ == SR.M) {
-        R[rn] -= R[rm];
+        R[instr.Rn] -= R[instr.Rm];
     } else {
-        R[rn] += R[rm];
+        R[instr.Rn] += R[instr.Rm];
     }
 
     if (oldQ) {
         if (SR.M) {
-            SR.Q ^= R[rn] <= prevVal;
+            SR.Q ^= R[instr.Rn] <= prevVal;
         } else {
-            SR.Q ^= R[rn] < prevVal;
+            SR.Q ^= R[instr.Rn] < prevVal;
         }
     } else {
         if (SR.M) {
-            SR.Q ^= R[rn] >= prevVal;
+            SR.Q ^= R[instr.Rn] >= prevVal;
         } else {
-            SR.Q ^= R[rn] > prevVal;
+            SR.Q ^= R[instr.Rn] > prevVal;
         }
     }
 
     SR.T = SR.Q == SR.M;
 }
 
-FORCE_INLINE void SH2::CMPIM(uint16 imm) {
-    const sint32 simm = bit::sign_extend<8>(imm);
+FORCE_INLINE void SH2::CMPIM(InstrI instr) {
+    const sint32 simm = bit::sign_extend<8>(instr.imm);
     // dbg_println("cmp/eq #{}0x{:X}, r0", (simm < 0 ? "-" : ""), abs(simm));
     SR.T = R[0] == simm;
 }
 
-FORCE_INLINE void SH2::CMPEQ(uint16 rm, uint16 rn) {
-    // dbg_println("cmp/eq r{}, r{}", rm, rn);
-    SR.T = R[rn] == R[rm];
+FORCE_INLINE void SH2::CMPEQ(InstrNM instr) {
+    // dbg_println("cmp/eq r{}, r{}", instr.Rm, instr.Rn);
+    SR.T = R[instr.Rn] == R[instr.Rm];
 }
 
-FORCE_INLINE void SH2::CMPGE(uint16 rm, uint16 rn) {
-    // dbg_println("cmp/ge r{}, r{}", rm, rn);
-    SR.T = static_cast<sint32>(R[rn]) >= static_cast<sint32>(R[rm]);
+FORCE_INLINE void SH2::CMPGE(InstrNM instr) {
+    // dbg_println("cmp/ge r{}, r{}", instr.Rm, instr.Rn);
+    SR.T = static_cast<sint32>(R[instr.Rn]) >= static_cast<sint32>(R[instr.Rm]);
 }
 
-FORCE_INLINE void SH2::CMPGT(uint16 rm, uint16 rn) {
-    // dbg_println("cmp/gt r{}, r{}", rm, rn);
-    SR.T = static_cast<sint32>(R[rn]) > static_cast<sint32>(R[rm]);
+FORCE_INLINE void SH2::CMPGT(InstrNM instr) {
+    // dbg_println("cmp/gt r{}, r{}", instr.Rm, instr.Rn);
+    SR.T = static_cast<sint32>(R[instr.Rn]) > static_cast<sint32>(R[instr.Rm]);
 }
 
-FORCE_INLINE void SH2::CMPHI(uint16 rm, uint16 rn) {
-    // dbg_println("cmp/hi r{}, r{}", rm, rn);
-    SR.T = R[rn] > R[rm];
+FORCE_INLINE void SH2::CMPHI(InstrNM instr) {
+    // dbg_println("cmp/hi r{}, r{}", instr.Rm, instr.Rn);
+    SR.T = R[instr.Rn] > R[instr.Rm];
 }
 
-FORCE_INLINE void SH2::CMPHS(uint16 rm, uint16 rn) {
-    // dbg_println("cmp/hs r{}, r{}", rm, rn);
-    SR.T = R[rn] >= R[rm];
+FORCE_INLINE void SH2::CMPHS(InstrNM instr) {
+    // dbg_println("cmp/hs r{}, r{}", instr.Rm, instr.Rn);
+    SR.T = R[instr.Rn] >= R[instr.Rm];
 }
 
-FORCE_INLINE void SH2::CMPPL(uint16 rn) {
-    // dbg_println("cmp/pl r{}", rn);
-    SR.T = static_cast<sint32>(R[rn]) > 0;
+FORCE_INLINE void SH2::CMPPL(InstrN instr) {
+    // dbg_println("cmp/pl r{}", instr.Rn);
+    SR.T = static_cast<sint32>(R[instr.Rn]) > 0;
 }
 
-FORCE_INLINE void SH2::CMPPZ(uint16 rn) {
-    // dbg_println("cmp/pz r{}", rn);
-    SR.T = static_cast<sint32>(R[rn]) >= 0;
+FORCE_INLINE void SH2::CMPPZ(InstrN instr) {
+    // dbg_println("cmp/pz r{}", instr.Rn);
+    SR.T = static_cast<sint32>(R[instr.Rn]) >= 0;
 }
 
-FORCE_INLINE void SH2::CMPSTR(uint16 rm, uint16 rn) {
-    // dbg_println("cmp/str r{}, r{}", rm, rn);
-    const uint32 tmp = R[rm] ^ R[rn];
+FORCE_INLINE void SH2::CMPSTR(InstrNM instr) {
+    // dbg_println("cmp/str r{}, r{}", instr.Rm, instr.Rn);
+    const uint32 tmp = R[instr.Rm] ^ R[instr.Rn];
     const uint8 hh = tmp >> 24u;
     const uint8 hl = tmp >> 16u;
     const uint8 lh = tmp >> 8u;
@@ -2256,35 +1760,35 @@ FORCE_INLINE void SH2::CMPSTR(uint16 rm, uint16 rn) {
     SR.T = !(hh && hl && lh && ll);
 }
 
-FORCE_INLINE void SH2::TAS(uint16 rn) {
-    // dbg_println("tas.b @r{}", rn);
+FORCE_INLINE void SH2::TAS(InstrN instr) {
+    // dbg_println("tas.b @r{}", instr.Rn);
     // dbg_println("WARNING: bus lock not implemented!");
 
     // TODO: enable bus lock on this read
-    const uint8 tmp = MemReadByte(R[rn]);
+    const uint8 tmp = MemReadByte(R[instr.Rn]);
     SR.T = tmp == 0;
     // TODO: disable bus lock on this write
-    MemWriteByte(R[rn], tmp | 0x80);
+    MemWriteByte(R[instr.Rn], tmp | 0x80);
 }
 
-FORCE_INLINE void SH2::TST(uint16 rm, uint16 rn) {
-    // dbg_println("tst r{}, r{}", rm, rn);
-    SR.T = (R[rn] & R[rm]) == 0;
+FORCE_INLINE void SH2::TST(InstrNM instr) {
+    // dbg_println("tst r{}, r{}", instr.Rm, instr.Rn);
+    SR.T = (R[instr.Rn] & R[instr.Rm]) == 0;
 }
 
-FORCE_INLINE void SH2::TSTI(uint16 imm) {
-    // dbg_println("tst #0x{:X}, r0", imm);
-    SR.T = (R[0] & imm) == 0;
+FORCE_INLINE void SH2::TSTI(InstrI instr) {
+    // dbg_println("tst #0x{:X}, r0", instr.imm);
+    SR.T = (R[0] & instr.imm) == 0;
 }
 
-FORCE_INLINE void SH2::TSTM(uint16 imm) {
-    // dbg_println("tst.b #0x{:X}, @(r0,gbr)", imm);
+FORCE_INLINE void SH2::TSTM(InstrI instr) {
+    // dbg_println("tst.b #0x{:X}, @(r0,gbr)", instr.imm);
     const uint8 tmp = MemReadByte(GBR + R[0]);
-    SR.T = (tmp & imm) == 0;
+    SR.T = (tmp & instr.imm) == 0;
 }
 
-FORCE_INLINE void SH2::BF(uint16 disp) {
-    const sint32 sdisp = (bit::sign_extend<8>(disp) << 1) + 4;
+FORCE_INLINE void SH2::BF(InstrD instr) {
+    const sint32 sdisp = (bit::sign_extend<8>(instr.disp) << 1) + 4;
     // dbg_println("bf 0x{:08X}", PC + sdisp);
 
     if (!SR.T) {
@@ -2294,8 +1798,8 @@ FORCE_INLINE void SH2::BF(uint16 disp) {
     }
 }
 
-FORCE_INLINE void SH2::BFS(uint16 disp) {
-    const sint32 sdisp = (bit::sign_extend<8>(disp) << 1) + 4;
+FORCE_INLINE void SH2::BFS(InstrD instr) {
+    const sint32 sdisp = (bit::sign_extend<8>(instr.disp) << 1) + 4;
     // dbg_println("bf/s 0x{:08X}", PC + sdisp);
 
     if (!SR.T) {
@@ -2304,8 +1808,8 @@ FORCE_INLINE void SH2::BFS(uint16 disp) {
     PC += 2;
 }
 
-FORCE_INLINE void SH2::BT(uint16 disp) {
-    const sint32 sdisp = (bit::sign_extend<8>(disp) << 1) + 4;
+FORCE_INLINE void SH2::BT(InstrD instr) {
+    const sint32 sdisp = (bit::sign_extend<8>(instr.disp) << 1) + 4;
     // dbg_println("bt 0x{:08X}", PC + sdisp);
 
     if (SR.T) {
@@ -2315,8 +1819,8 @@ FORCE_INLINE void SH2::BT(uint16 disp) {
     }
 }
 
-FORCE_INLINE void SH2::BTS(uint16 disp) {
-    const sint32 sdisp = (bit::sign_extend<8>(disp) << 1) + 4;
+FORCE_INLINE void SH2::BTS(InstrD instr) {
+    const sint32 sdisp = (bit::sign_extend<8>(instr.disp) << 1) + 4;
     // dbg_println("bt/s 0x{:08X}", PC + sdisp);
 
     if (SR.T) {
@@ -2325,21 +1829,21 @@ FORCE_INLINE void SH2::BTS(uint16 disp) {
     PC += 2;
 }
 
-FORCE_INLINE void SH2::BRA(uint16 disp) {
-    const sint32 sdisp = (bit::sign_extend<12>(disp) << 1) + 4;
+FORCE_INLINE void SH2::BRA(InstrD12 instr) {
+    const sint32 sdisp = (bit::sign_extend<12>(instr.disp) << 1) + 4;
     // dbg_println("bra 0x{:08X}", PC + sdisp);
     SetupDelaySlot(PC + sdisp);
     PC += 2;
 }
 
-FORCE_INLINE void SH2::BRAF(uint16 rm) {
-    // dbg_println("braf r{}", rm);
-    SetupDelaySlot(PC + R[rm] + 4);
+FORCE_INLINE void SH2::BRAF(InstrM instr) {
+    // dbg_println("braf r{}", instr.Rm);
+    SetupDelaySlot(PC + R[instr.Rm] + 4);
     PC += 2;
 }
 
-FORCE_INLINE void SH2::BSR(uint16 disp) {
-    const sint32 sdisp = (bit::sign_extend<12>(disp) << 1) + 4;
+FORCE_INLINE void SH2::BSR(InstrD12 instr) {
+    const sint32 sdisp = (bit::sign_extend<12>(instr.disp) << 1) + 4;
     // dbg_println("bsr 0x{:08X}", PC + sdisp);
 
     PR = PC;
@@ -2347,33 +1851,33 @@ FORCE_INLINE void SH2::BSR(uint16 disp) {
     PC += 2;
 }
 
-FORCE_INLINE void SH2::BSRF(uint16 rm) {
-    // dbg_println("bsrf r{}", rm);
+FORCE_INLINE void SH2::BSRF(InstrM instr) {
+    // dbg_println("bsrf r{}", instr.Rm);
     PR = PC;
-    SetupDelaySlot(PC + R[rm] + 4);
+    SetupDelaySlot(PC + R[instr.Rm] + 4);
     PC += 2;
 }
 
-FORCE_INLINE void SH2::JMP(uint16 rm) {
-    // dbg_println("jmp @r{}", rm);
-    SetupDelaySlot(R[rm]);
+FORCE_INLINE void SH2::JMP(InstrM instr) {
+    // dbg_println("jmp @r{}", instr.Rm);
+    SetupDelaySlot(R[instr.Rm]);
     PC += 2;
 }
 
-FORCE_INLINE void SH2::JSR(uint16 rm) {
-    // dbg_println("jsr @r{}", rm);
+FORCE_INLINE void SH2::JSR(InstrM instr) {
+    // dbg_println("jsr @r{}", instr.Rm);
     PR = PC;
-    SetupDelaySlot(R[rm]);
+    SetupDelaySlot(R[instr.Rm]);
     PC += 2;
 }
 
-FORCE_INLINE void SH2::TRAPA(uint16 imm) {
-    // dbg_println("trapa #0x{:X}", imm);
+FORCE_INLINE void SH2::TRAPA(InstrI instr) {
+    // dbg_println("trapa #0x{:X}", instr.imm);
     R[15] -= 4;
     MemWriteLong(R[15], SR.u32);
     R[15] -= 4;
     MemWriteLong(R[15], PC - 2);
-    PC = MemReadLong(VBR + (imm << 2u));
+    PC = MemReadLong(VBR + (instr.imm << 2u));
 }
 
 FORCE_INLINE void SH2::RTE() {

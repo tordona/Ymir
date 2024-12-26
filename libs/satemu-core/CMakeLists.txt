@@ -22,6 +22,7 @@ add_library(satemu-core
     include/satemu/hw/sh2/sh2_block.hpp
     include/satemu/hw/sh2/sh2_bus.hpp
     include/satemu/hw/sh2/sh2_bus_defs.hpp
+    include/satemu/hw/sh2/sh2_decode.hpp
     include/satemu/hw/sh2/sh2_defs.hpp
 
     include/satemu/hw/smpc/smpc.hpp
