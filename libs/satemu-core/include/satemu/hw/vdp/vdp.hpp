@@ -824,8 +824,8 @@ private:
     // colorFormat is the color format for pixel data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    vdp::Color888 VDP2FetchBitmapColor(const NormBGParams &bgParams, bool &transparent, uint32 cramOffset, uint8 dotX,
-                                       uint8 dotY);
+    vdp::Color888 VDP2FetchBitmapColor(const NormBGParams &bgParams, bool &transparent, uint32 cramOffset, uint32 dotX,
+                                       uint32 dotY);
 
     // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
     // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.

@@ -1583,12 +1583,12 @@ FORCE_INLINE Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &col
 
 template <ColorFormat colorFormat, uint32 colorMode>
 FORCE_INLINE Color888 VDP::VDP2FetchBitmapColor(const NormBGParams &bgParams, bool &transparent, uint32 cramOffset,
-                                                uint8 dotX, uint8 dotY) {
+                                                uint32 dotX, uint32 dotY) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
 
     // Bitmap data wraps around infinitely
-    dotX &= ~(bgParams.bitmapSizeH - 1);
-    dotY &= ~(bgParams.bitmapSizeV - 1);
+    dotX &= bgParams.bitmapSizeH - 1;
+    dotY &= bgParams.bitmapSizeV - 1;
 
     // Bitmap addressing uses a fixed offset of 0x20000 bytes which is precalculated when MPOFN/MPOFR is written to
     const uint32 bitmapBaseAddress = bgParams.bitmapBaseAddress;
