@@ -34,10 +34,6 @@ struct VDP2Regs {
         LWTA1.u32 = 0x0;
         SDCTL.u16 = 0x0;
         SFCCMD.u16 = 0x0;
-        CCRNA.u16 = 0x0;
-        CCRNB.u16 = 0x0;
-        CCRR.u16 = 0x0;
-        CCRLB.u16 = 0x0;
 
         for (auto &bg : normBGParams) {
             bg.Reset();
@@ -1393,20 +1389,92 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadCCRSn(uint32 offset) const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, spriteParams.colorCalcRatios[offset * 2 + 0]);
-        bit::deposit_into<8, 10>(value, spriteParams.colorCalcRatios[offset * 2 + 1]);
+        bit::deposit_into<0, 2>(value, spriteParams.colorCalcRatios[offset * 2 + 0] - 1);
+        bit::deposit_into<8, 10>(value, spriteParams.colorCalcRatios[offset * 2 + 1] - 1);
         return value;
     }
 
     FORCE_INLINE void WriteCCRSn(uint32 offset, uint16 value) {
-        spriteParams.colorCalcRatios[offset * 2 + 0] = bit::extract<0, 2>(value);
-        spriteParams.colorCalcRatios[offset * 2 + 1] = bit::extract<8, 10>(value);
+        spriteParams.colorCalcRatios[offset * 2 + 0] = bit::extract<0, 2>(value) + 1;
+        spriteParams.colorCalcRatios[offset * 2 + 1] = bit::extract<8, 10>(value) + 1;
     }
 
-    CCR_t CCRNA; // 180108   CCRNA   NBG0 and NBG1 Color Calculation Ratio
-    CCR_t CCRNB; // 18010A   CCRNB   NBG2 and NBG3 Color Calculation Ratio
-    CCR_t CCRR;  // 18010C   CCRR    RBG0 Color Calculation Ratio
-    CCR_t CCRLB; // 18010E   CCRLB   Line Color Screen and Back Screen Color Calculation Ratio
+    // 180108   CCRNA   NBG0 and NBG1 Color Calculation Ratio
+    //
+    //   bits   r/w  code          description
+    //  15-13        -             Reserved, must be zero
+    //   12-8     W  N1CCRT4-0     NBG1/EXBG Color Calculation Ratio
+    //    7-5        -             Reserved, must be zero
+    //    4-0     W  N0CCRT4-0     NBG0/RBG1 Color Calculation Ratio
+    //
+    // 18010A   CCRNB   NBG2 and NBG3 Color Calculation Ratio
+    //
+    //   bits   r/w  code          description
+    //  15-13        -             Reserved, must be zero
+    //   12-8     W  N3CCRT4-0     NBG3 Color Calculation Ratio
+    //    7-5        -             Reserved, must be zero
+    //    4-0     W  N2CCRT4-0     NBG2 Color Calculation Ratio
+    //
+    // 18010C   CCRR    RBG0 Color Calculation Ratio
+    //
+    //   bits   r/w  code          description
+    //   15-5        -             Reserved, must be zero
+    //    4-0     W  R0CCRT4-0     RBG0 Color Calculation Ratio
+    //
+    // 18010E   CCRLB   Line Color Screen and Back Screen Color Calculation Ratio
+    //
+    //   bits   r/w  code          description
+    //  15-13        -             Reserved, must be zero
+    //   12-8     W  BKCCRT4-0     Back Screen Color Calculation Ratio
+    //    7-5        -             Reserved, must be zero
+    //    4-0     W  LCCCRT4-0     Line Color Screen Color Calculation Ratio
+
+    FORCE_INLINE uint16 ReadCCRNA() const {
+        uint16 value = 0;
+        bit::deposit_into<0, 4>(value, normBGParams[0].colorCalcRatio - 1);
+        bit::deposit_into<8, 12>(value, normBGParams[1].colorCalcRatio - 1);
+        return value;
+    }
+
+    FORCE_INLINE void WriteCCRNA(uint16 value) {
+        normBGParams[0].colorCalcRatio = bit::extract<0, 4>(value) + 1;
+        normBGParams[1].colorCalcRatio = bit::extract<8, 12>(value) + 1;
+        rotBGParams[1].colorCalcRatio = normBGParams[0].colorCalcRatio;
+    }
+
+    FORCE_INLINE uint16 ReadCCRNB() const {
+        uint16 value = 0;
+        bit::deposit_into<0, 4>(value, normBGParams[2].colorCalcRatio - 1);
+        bit::deposit_into<8, 12>(value, normBGParams[3].colorCalcRatio - 1);
+        return value;
+    }
+
+    FORCE_INLINE void WriteCCRNB(uint16 value) {
+        normBGParams[2].colorCalcRatio = bit::extract<0, 4>(value) + 1;
+        normBGParams[3].colorCalcRatio = bit::extract<8, 12>(value) + 1;
+    }
+
+    FORCE_INLINE uint16 ReadCCRR() const {
+        uint16 value = 0;
+        bit::deposit_into<0, 4>(value, rotBGParams[0].colorCalcRatio - 1);
+        return value;
+    }
+
+    FORCE_INLINE void WriteCCRR(uint16 value) {
+        rotBGParams[0].colorCalcRatio = bit::extract<0, 4>(value) + 1;
+    }
+
+    FORCE_INLINE uint16 ReadCCRLB() const {
+        uint16 value = 0;
+        bit::deposit_into<0, 4>(value, lineScreenParams.colorCalcRatio - 1);
+        bit::deposit_into<8, 12>(value, backScreenParams.colorCalcRatio - 1);
+        return value;
+    }
+
+    FORCE_INLINE void WriteCCRLB(uint16 value) {
+        lineScreenParams.colorCalcRatio = bit::extract<0, 4>(value) + 1;
+        backScreenParams.colorCalcRatio = bit::extract<8, 12>(value) + 1;
+    }
 
     // 180110   CLOFEN  Color Offset Enable
     //

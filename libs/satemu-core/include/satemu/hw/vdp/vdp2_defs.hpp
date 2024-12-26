@@ -112,6 +112,7 @@ struct BGParams {
         colorOffsetSelect = false;
 
         colorCalcEnable = false;
+        colorCalcRatio = 0;
 
         plsz = 0;
         bmsz = 0;
@@ -279,6 +280,11 @@ struct BGParams {
     // Derived from CCCTL.xxCCEN
     bool colorCalcEnable;
 
+    // Color calculation ratio, ranging from 31:1 to 0:32.
+    // The ratio is calculated as (32-colorCalcRatio) : (colorCalcRatio).
+    // Derived from CCRNA/B.NxCCRTn
+    uint8 colorCalcRatio;
+
     // Raw register values, to facilitate reads.
     uint16 plsz; // Raw value of PLSZ.xxPLSZn
     uint16 bmsz; // Raw value of CHCTLA/CHCTLB.xxBMSZ
@@ -334,6 +340,7 @@ struct SpriteParams {
         colorCalcValue = 0;
         colorCalcCond = SpriteColorCalculationCondition::PriorityLessThanOrEqual;
         priorities.fill(0);
+        colorCalcRatios.fill(0);
         colorDataOffset = 0;
         colorOffsetEnable = false;
         colorOffsetSelect = false;
@@ -368,6 +375,7 @@ struct SpriteParams {
     std::array<uint8, 8> priorities;
 
     // Sprite color calculation ratios for registers 0-7, ranging from 31:1 to 0:32.
+    // The ratio is calculated as (32-colorCalcRatio) : (colorCalcRatio).
     // Derived from CCRSA, CCRSB, CCRSC and CCRSD.
     std::array<uint8, 8> colorCalcRatios;
 
@@ -416,6 +424,7 @@ struct LineBackScreenParams {
         colorOffsetEnable = false;
         colorOffsetSelect = false;
         colorCalcEnable = false;
+        colorCalcRatio = 0;
     }
 
     // Whether the line/back screen specifies a color for the whole screen (false) or per line (true).
@@ -437,9 +446,13 @@ struct LineBackScreenParams {
     bool colorOffsetSelect;
 
     // Enables color calculation.
-    // Only valid for the line color screen.
     // Derived from CCCTL.LCCCEN
     bool colorCalcEnable;
+
+    // Color calculation ratio, ranging from 31:1 to 0:32.
+    // The ratio is calculated as (32-colorCalcRatio) : (colorCalcRatio).
+    // Derived from CCRNA/B.NxCCRTn
+    uint8 colorCalcRatio;
 };
 
 struct ColorOffsetParams {
@@ -1200,45 +1213,6 @@ union SFCCMD_t {
         uint16 N3SCCMn : 2;
         uint16 R0SCCMn : 2;
         uint16 _rsvd10_15 : 6;
-    };
-};
-
-// 180108   CCRNA   NBG0 and NBG1 Color Calculation Ratio
-//
-//   bits   r/w  code          description
-//  15-13        -             Reserved, must be zero
-//   12-8     W  N1CCRT4-0     NBG1 Color Calculation Ratio
-//    7-5        -             Reserved, must be zero
-//    4-0     W  N0CCRT4-0     NBG0 Color Calculation Ratio
-//
-// 18010A   CCRNB   NBG2 and NBG3 Color Calculation Ratio
-//
-//   bits   r/w  code          description
-//  15-13        -             Reserved, must be zero
-//   12-8     W  N3CCRT4-0     NBG3 Color Calculation Ratio
-//    7-5        -             Reserved, must be zero
-//    4-0     W  N2CCRT4-0     NBG2 Color Calculation Ratio
-//
-// 18010C   CCRR    RBG0 Color Calculation Ratio
-//
-//   bits   r/w  code          description
-//   15-5        -             Reserved, must be zero
-//    4-0     W  R0CCRT4-0     RBG0 Color Calculation Ratio
-//
-// 18010E   CCRLB   Line Color Screen and Back Screen Color Calculation Ratio
-//
-//   bits   r/w  code          description
-//  15-13        -             Reserved, must be zero
-//   12-8     W  BKCCRT4-0     Back Screen Color Calculation Ratio
-//    7-5        -             Reserved, must be zero
-//    4-0     W  LCCCRT4-0     Line Color Screen Color Calculation Ratio
-union CCR_t {
-    uint16 u16;
-    struct {
-        uint16 lCCRTn : 5; // (NA) NBG0, (NB) NBG2, (R) RBG0, (LB) Line Color Screen
-        uint16 _rsvd5_7 : 3;
-        uint16 uCCRTn : 5; // (NA) NBG1, (NB) NBG3, (R) reserved, (LB) Back Screen
-        uint16 _rsvd13_15 : 3;
     };
 };
 

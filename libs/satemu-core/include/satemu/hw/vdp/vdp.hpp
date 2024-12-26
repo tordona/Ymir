@@ -292,10 +292,10 @@ public:
         case 0x102: return m_VDP2.ReadCCRSn(1);  // write-only?
         case 0x104: return m_VDP2.ReadCCRSn(2);  // write-only?
         case 0x106: return m_VDP2.ReadCCRSn(3);  // write-only?
-        case 0x108: return m_VDP2.CCRNA.u16;     // write-only?
-        case 0x10A: return m_VDP2.CCRNB.u16;     // write-only?
-        case 0x10C: return m_VDP2.CCRR.u16;      // write-only?
-        case 0x10E: return m_VDP2.CCRLB.u16;     // write-only?
+        case 0x108: return m_VDP2.ReadCCRNA();   // write-only?
+        case 0x10A: return m_VDP2.ReadCCRNB();   // write-only?
+        case 0x10C: return m_VDP2.ReadCCRR();    // write-only?
+        case 0x10E: return m_VDP2.ReadCCRLB();   // write-only?
         case 0x110: return m_VDP2.ReadCLOFEN();  // write-only?
         case 0x112: return m_VDP2.ReadCLOFSL();  // write-only?
         case 0x114: return m_VDP2.ReadCOxR(0);   // write-only?
@@ -448,10 +448,10 @@ public:
         case 0x102: m_VDP2.WriteCCRSn(1, value); break;
         case 0x104: m_VDP2.WriteCCRSn(2, value); break;
         case 0x106: m_VDP2.WriteCCRSn(3, value); break;
-        case 0x108: m_VDP2.CCRNA.u16 = value & 0x1F1F; break;
-        case 0x10A: m_VDP2.CCRNB.u16 = value & 0x1F1F; break;
-        case 0x10C: m_VDP2.CCRR.u16 = value & 0x001F; break;
-        case 0x10E: m_VDP2.CCRLB.u16 = value & 0x1F1F; break;
+        case 0x108: m_VDP2.WriteCCRNA(value); break;
+        case 0x10A: m_VDP2.WriteCCRNB(value); break;
+        case 0x10C: m_VDP2.WriteCCRR(value); break;
+        case 0x10E: m_VDP2.WriteCCRLB(value); break;
         case 0x110: m_VDP2.WriteCLOFEN(value); break;
         case 0x112: m_VDP2.WriteCLOFSL(value); break;
         case 0x114: m_VDP2.WriteCOxR(0, value); break;
