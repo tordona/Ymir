@@ -42,16 +42,12 @@ void VDP::Reset(bool hard) {
 
     m_VDP1RenderContext.Reset();
 
-    m_spriteLayer.pixels.fill({});
-
-    for (auto &bgLayer : m_bgLayers) {
-        bgLayer.pixels.fill({});
-        bgLayer.cramOffset = 0;
-        bgLayer.fracScrollX = 0;
-        bgLayer.fracScrollY = 0;
-        bgLayer.scrollIncH = 0x100;
-        bgLayer.lineScrollTableAddress = 0;
-        bgLayer.mosaicCounterY = 0;
+    m_spriteLayer.Reset();
+    for (auto &bgLayer : m_normBGLayers) {
+        bgLayer.Reset();
+    }
+    for (auto &bgLayer : m_rotBGLayers) {
+        bgLayer.Reset();
     }
 
     BeginHPhaseActiveDisplay();
@@ -202,7 +198,7 @@ void VDP::BeginHPhaseActiveDisplay() {
 
             for (int i = 0; i < 4; i++) {
                 const auto &bgParams = m_VDP2.normBGParams[i];
-                auto &bgLayer = m_bgLayers[i];
+                auto &bgLayer = m_normBGLayers[i];
                 bgLayer.fracScrollX = bgParams.scrollAmountH;
                 bgLayer.fracScrollY = bgParams.scrollAmountV;
                 bgLayer.scrollIncH = bgParams.scrollIncH;
@@ -926,24 +922,22 @@ void VDP::VDP1Cmd_SetLocalCoordinates(uint32 cmdAddress) {
 }
 
 void VDP::VDP2ClearDisabledBGs() {
-    for (int i = 0; auto &bg : m_VDP2.normBGParams) {
-        if (!bg.enabled) {
-            m_bgLayers[i].pixels.fill({});
+    for (int i = 0; i < 4; i++) {
+        if (!m_VDP2.normBGParams[i].enabled) {
+            m_normBGLayers[i].pixels.fill({});
         }
-        i++;
     }
-    for (int i = 0; auto &bg : m_VDP2.rotBGParams) {
-        if (!bg.enabled) {
-            m_bgLayers[i + 4].pixels.fill({});
+    for (int i = 0; i < 2; i++) {
+        if (!m_VDP2.rotBGParams[i].enabled) {
+            m_rotBGLayers[i].pixels.fill({});
         }
-        i++;
     }
 }
 
 // -----------------------------------------------------------------------------
 // VDP2
 
-void VDP::VDP2UpdateLineScreenScroll(const NormBGParams &bgParams, BGLayer &layer) {
+void VDP::VDP2UpdateLineScreenScroll(const NormBGParams &bgParams, NormBGLayer &layer) {
     auto read = [&] {
         const uint32 address = layer.lineScrollTableAddress & 0x7FFFF;
         const uint32 value = util::ReadBE<uint32>(&m_VRAM2[address]);
@@ -968,8 +962,8 @@ void VDP::VDP2DrawLine() {
     // fmt::println("VDP2: drawing line {}", m_VCounter);
 
     using FnDrawSprite = void (VDP::*)();
-    using FnDrawScrollNBG = void (VDP::*)(const NormBGParams &, BGLayer &);
-    using FnDrawBitmapNBG = void (VDP::*)(const NormBGParams &, BGLayer &);
+    using FnDrawScrollNBG = void (VDP::*)(const NormBGParams &, NormBGLayer &);
+    using FnDrawBitmapNBG = void (VDP::*)(const NormBGParams &, NormBGLayer &);
     // using FnDrawRotBG = void (VDP::*)(const RotBGParams &, BGLayer &);
 
     // Lookup table of VDP2DrawSpriteLayer functions
@@ -1039,8 +1033,9 @@ void VDP::VDP2DrawLine() {
     (this->*fnDrawSprite[colorMode])();
 
     // Draw normal BGs
-    for (int i = 0; const auto &bg : m_VDP2.normBGParams) {
-        auto &layer = m_bgLayers[i];
+    for (int i = 0; i < 4; i++) {
+        const auto &bg = m_VDP2.normBGParams[i];
+        auto &layer = m_normBGLayers[i];
         if (bg.enabled) {
             layer.cramOffset = bg.caos << (colorMode == 1 ? 10 : 9);
             layer.mosaicCounterY++;
@@ -1062,14 +1057,14 @@ void VDP::VDP2DrawLine() {
                 (this->*fnDrawScrollNBGs[twoWordChar][fourCellChar][wideChar][colorFormat][colorMode])(bg, layer);
             }
         }
-        ++i;
     }
 
     // Draw rotation BGs
-    for (int i = 4; const auto &bg : m_VDP2.rotBGParams) {
-        auto &layer = m_bgLayers[i];
+    for (int i = 0; i < 2; i++) {
+        const auto &bg = m_VDP2.rotBGParams[i];
+        auto &layer = m_rotBGLayers[i];
         if (bg.enabled) {
-            layer.cramOffset = bg.caos << (colorMode == 1 ? 10 : 9);
+            // layer.cramOffset = bg.caos << (colorMode == 1 ? 10 : 9);
 
             // TODO: implement
             if (bg.bitmap) {
@@ -1078,7 +1073,6 @@ void VDP::VDP2DrawLine() {
                 // (this->*fnDrawScrollRBGs[...])(bg, layer);
             }
         }
-        i++;
     }
 
     // Compose image
@@ -1089,11 +1083,11 @@ void VDP::VDP2DrawLine() {
             // Get references to pixels of all layers
             // TODO: merge BG layers NBG0 and RBG1
             const auto &spritePixel = m_spriteLayer.pixels[x];
-            const auto &nbg0rbg1Pixel = usesRBG1 ? m_bgLayers[5].pixels[x] : m_bgLayers[0].pixels[x];
-            const auto &nbg1exbgPixel = m_bgLayers[1].pixels[x];
-            const auto &nbg2Pixel = m_bgLayers[2].pixels[x];
-            const auto &nbg3Pixel = m_bgLayers[3].pixels[x];
-            const auto &rbg0Pixel = m_bgLayers[4].pixels[x];
+            const auto &nbg0rbg1Pixel = usesRBG1 ? m_normBGLayers[5].pixels[x] : m_normBGLayers[0].pixels[x];
+            const auto &nbg1exbgPixel = m_normBGLayers[1].pixels[x];
+            const auto &nbg2Pixel = m_normBGLayers[2].pixels[x];
+            const auto &nbg3Pixel = m_normBGLayers[3].pixels[x];
+            const auto &rbg0Pixel = m_normBGLayers[4].pixels[x];
 
             // TODO: refactor this mess
             // - too many switch-cases to get parameters/data
@@ -1317,7 +1311,7 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
 }
 
 template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer &layer) {
+NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, NormBGLayer &layer) {
     //          Map
     // +---------+---------+
     // |         |         |   Normal BGs always have 4 planes named A,B,C,D in this exact configuration.
@@ -1497,7 +1491,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGLayer &layer) {
+NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, NormBGLayer &layer) {
     uint32 fracScrollX = layer.fracScrollX;
     const uint32 fracScrollY = layer.fracScrollY;
     layer.fracScrollY += bgParams.scrollIncV;

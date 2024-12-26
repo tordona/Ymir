@@ -679,6 +679,14 @@ private:
     };
 
     struct SpriteLayer {
+        SpriteLayer() {
+            Reset();
+        }
+
+        void Reset() {
+            pixels.fill({});
+        }
+
         struct Pixel {
             Color888 color = {.u32 = 0};
             bool transparent = true;
@@ -690,7 +698,21 @@ private:
         alignas(16) std::array<Pixel, 704> pixels;
     };
 
-    struct BGLayer {
+    struct NormBGLayer {
+        NormBGLayer() {
+            Reset();
+        }
+
+        void Reset() {
+            pixels.fill({});
+            cramOffset = 0;
+            fracScrollX = 0;
+            fracScrollY = 0;
+            scrollIncH = 0x100;
+            lineScrollTableAddress = 0;
+            mosaicCounterY = 0;
+        }
+
         struct Pixel {
             Color888 color = {.u32 = 0};
             bool transparent = true;
@@ -724,11 +746,32 @@ private:
         uint8 mosaicCounterY;
     };
 
+    struct RotBGLayer {
+        RotBGLayer() {
+            Reset();
+        }
+
+        void Reset() {
+            pixels.fill({});
+        }
+
+        struct Pixel {
+            Color888 color = {.u32 = 0};
+            bool transparent = true;
+            uint8 priority = 0;
+        };
+
+        alignas(16) std::array<Pixel, 704> pixels;
+    };
+
     // Layer data for sprites
     SpriteLayer m_spriteLayer;
 
-    // Layer data for NBGs 0-3 then RBGs 0-1
-    std::array<BGLayer, 4 + 2> m_bgLayers;
+    // Layer data for NBGs 0-3
+    std::array<NormBGLayer, 4> m_normBGLayers;
+
+    // Layer data for RBGs 0-1
+    std::array<RotBGLayer, 2> m_rotBGLayers;
 
     // Framebuffer provided by the frontend to render the current frame into
     FramebufferColor *m_framebuffer;
@@ -792,7 +835,7 @@ private:
     //
     // bgParams contains the parameters for the BG to draw.
     // layer is a reference to the layer object for the specified background.
-    void VDP2UpdateLineScreenScroll(const NormBGParams &bgParams, BGLayer &layer);
+    void VDP2UpdateLineScreenScroll(const NormBGParams &bgParams, NormBGLayer &layer);
 
     // Draws the VDP2 scanline at m_VCounter.
     void VDP2DrawLine();
@@ -812,7 +855,7 @@ private:
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
     template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer &layer);
+    void VDP2DrawNormalScrollBG(const NormBGParams &bgParams, NormBGLayer &layer);
 
     // Draws a normal bitmap BG scanline.
     // bgParams contains the parameters for the BG to draw.
@@ -820,7 +863,7 @@ private:
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGLayer &layer);
+    void VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, NormBGLayer &layer);
 
     // Fetches a two-word character from VRAM.
     // pageBaseAddress specifies the base address of the page of character patterns.
