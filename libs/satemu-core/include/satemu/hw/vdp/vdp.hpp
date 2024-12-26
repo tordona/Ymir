@@ -279,7 +279,7 @@ public:
         case 0x0E8: return m_VDP2.ReadLNCLEN();  // write-only?
         case 0x0EA: return m_VDP2.ReadSFPRMD();  // write-only?
         case 0x0EC: return m_VDP2.ReadCCCTL();   // write-only?
-        case 0x0EE: return m_VDP2.SFCCMD.u16;    // write-only?
+        case 0x0EE: return m_VDP2.ReadSFCCMD();  // write-only?
         case 0x0F0: return m_VDP2.ReadPRISn(0);  // write-only?
         case 0x0F2: return m_VDP2.ReadPRISn(1);  // write-only?
         case 0x0F4: return m_VDP2.ReadPRISn(2);  // write-only?
@@ -435,7 +435,7 @@ public:
         case 0x0E8: m_VDP2.WriteLNCLEN(value); break;
         case 0x0EA: m_VDP2.WriteSFPRMD(value); break;
         case 0x0EC: m_VDP2.WriteCCCTL(value); break;
-        case 0x0EE: m_VDP2.SFCCMD.u16 = value & 0x03FF; break;
+        case 0x0EE: m_VDP2.WriteSFCCMD(value); break;
         case 0x0F0: m_VDP2.WritePRISn(0, value); break;
         case 0x0F2: m_VDP2.WritePRISn(1, value); break;
         case 0x0F4: m_VDP2.WritePRISn(2, value); break;

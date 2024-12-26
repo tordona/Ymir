@@ -35,6 +35,13 @@ enum class PriorityMode : uint8 {
     PerDot,
 };
 
+enum class SpecialColorCalcMode : uint8 {
+    PerScreen,
+    PerCharacter,
+    PerDot,
+    ColorDataMSB,
+};
+
 // Map index mask lookup table
 // [Character Size][Pattern Name Data Size ^ 1][Plane Size]
 static constexpr uint32 kMapIndexMasks[2][2][4] = {
@@ -113,6 +120,7 @@ struct BGParams {
 
         colorCalcEnable = false;
         colorCalcRatio = 0;
+        specialColorCalcMode = SpecialColorCalcMode::PerScreen;
 
         plsz = 0;
         bmsz = 0;
@@ -284,6 +292,10 @@ struct BGParams {
     // The ratio is calculated as (32-colorCalcRatio) : (colorCalcRatio).
     // Derived from CCRNA/B.NxCCRTn
     uint8 colorCalcRatio;
+
+    // Special color calculation mode.
+    // Derived from SFCCMD.xxSCCMn
+    SpecialColorCalcMode specialColorCalcMode;
 
     // Raw register values, to facilitate reads.
     uint16 plsz; // Raw value of PLSZ.xxPLSZn
@@ -1192,27 +1204,6 @@ union SDCTL_t {
         uint16 _rsvd6_7 : 2;
         uint16 TPSDSL : 1;
         uint16 _rsvd9_15 : 7;
-    };
-};
-
-// 1800EE   SFCCMD  Special Color Calculation Mode
-//
-//   bits   r/w  code          description
-//  15-10        -             Reserved, must be zero
-//    9-8     W  R0SCCM1-0     RBG0 Special Color Calculation Mode
-//    7-6     W  N3SCCM1-0     NBG3 Special Color Calculation Mode
-//    5-4     W  N2SCCM1-0     NBG2 Special Color Calculation Mode
-//    3-2     W  N1SCCM1-0     NBG1 Special Color Calculation Mode
-//    1-0     W  N0SCCM1-0     NBG0 Special Color Calculation Mode
-union SFCCMD_t {
-    uint16 u16;
-    struct {
-        uint16 N0SCCMn : 2;
-        uint16 N1SCCMn : 2;
-        uint16 N2SCCMn : 2;
-        uint16 N3SCCMn : 2;
-        uint16 R0SCCMn : 2;
-        uint16 _rsvd10_15 : 6;
     };
 };
 

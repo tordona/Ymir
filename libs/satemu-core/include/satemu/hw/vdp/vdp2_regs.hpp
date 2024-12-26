@@ -33,7 +33,6 @@ struct VDP2Regs {
         LWTA0.u32 = 0x0;
         LWTA1.u32 = 0x0;
         SDCTL.u16 = 0x0;
-        SFCCMD.u16 = 0x0;
 
         for (auto &bg : normBGParams) {
             bg.Reset();
@@ -1250,7 +1249,34 @@ struct VDP2Regs {
         colorCalcParams.colorGradEnable = bit::extract<15>(value);
     }
 
-    SFCCMD_t SFCCMD; // 1800EE   SFCCMD  Special Color Calculation Mode
+    // 1800EE   SFCCMD  Special Color Calculation Mode
+    //
+    //   bits   r/w  code          description
+    //  15-10        -             Reserved, must be zero
+    //    9-8     W  R0SCCM1-0     RBG0 Special Color Calculation Mode
+    //    7-6     W  N3SCCM1-0     NBG3 Special Color Calculation Mode
+    //    5-4     W  N2SCCM1-0     NBG2 Special Color Calculation Mode
+    //    3-2     W  N1SCCM1-0     NBG1 Special Color Calculation Mode
+    //    1-0     W  N0SCCM1-0     NBG0 Special Color Calculation Mode
+
+    FORCE_INLINE uint16 ReadSFCCMD() const {
+        uint16 value = 0;
+        bit::deposit_into<0, 1>(value, static_cast<uint8>(normBGParams[0].specialColorCalcMode));
+        bit::deposit_into<2, 3>(value, static_cast<uint8>(normBGParams[1].specialColorCalcMode));
+        bit::deposit_into<4, 5>(value, static_cast<uint8>(normBGParams[2].specialColorCalcMode));
+        bit::deposit_into<6, 7>(value, static_cast<uint8>(normBGParams[3].specialColorCalcMode));
+        bit::deposit_into<8, 9>(value, static_cast<uint8>(rotBGParams[0].specialColorCalcMode));
+        return value;
+    }
+
+    FORCE_INLINE void WriteSFCCMD(uint16 value) {
+        normBGParams[0].specialColorCalcMode = static_cast<SpecialColorCalcMode>(bit::extract<0, 1>(value));
+        normBGParams[1].specialColorCalcMode = static_cast<SpecialColorCalcMode>(bit::extract<2, 3>(value));
+        normBGParams[2].specialColorCalcMode = static_cast<SpecialColorCalcMode>(bit::extract<4, 5>(value));
+        normBGParams[3].specialColorCalcMode = static_cast<SpecialColorCalcMode>(bit::extract<6, 7>(value));
+        rotBGParams[0].specialColorCalcMode = static_cast<SpecialColorCalcMode>(bit::extract<8, 9>(value));
+        rotBGParams[1].specialColorCalcMode = normBGParams[0].specialColorCalcMode;
+    }
 
     // 1800F0   PRISA   Sprite 0 and 1 Priority Number
     //
