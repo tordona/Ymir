@@ -535,12 +535,12 @@ FORCE_INLINE void VDP::VDP1PlotLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, 
 
 void VDP::VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint32 colorBank,
                                VDP1Command::Control control, VDP1Command::DrawMode mode, uint32 gouraudTable,
-                               uint32 charAddr, uint32 charSizeH, uint32 charSizeV, uint32 v) {
+                               uint32 charAddr, uint32 charSizeH, uint32 charSizeV, uint32 v, bool swapped) {
     if (control.flipV) {
         v = charSizeV - 1 - v;
     }
 
-    for (TexturedLineStepper line{x1, y1, x2, y2, charSizeH}; line.CanStep(); line.Step()) {
+    for (TexturedLineStepper line{x1, y1, x2, y2, charSizeH, swapped}; line.CanStep(); line.Step()) {
         uint32 u = line.U();
         if (control.flipH) {
             u = charSizeH - 1 - u;
@@ -641,9 +641,11 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
         const sint32 rx = edge.XMin();
         const sint32 ry = edge.YMin();
         const uint32 v = edge.V();
+        const bool swapped = edge.Swapped();
 
         // Plot lines between the interpolated points
-        VDP1PlotTexturedLine(lx, ly, rx, ry, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v);
+        VDP1PlotTexturedLine(lx, ly, rx, ry, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v,
+                             swapped);
     }
 }
 
@@ -764,9 +766,11 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
         const sint32 rx = edge.XMin();
         const sint32 ry = edge.YMin();
         const uint32 v = edge.V();
+        const bool swapped = edge.Swapped();
 
         // Plot lines between the interpolated points
-        VDP1PlotTexturedLine(lx, ly, rx, ry, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v);
+        VDP1PlotTexturedLine(lx, ly, rx, ry, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v,
+                             swapped);
     }
 }
 
@@ -804,9 +808,11 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control co
         const sint32 rx = edge.XMin();
         const sint32 ry = edge.YMin();
         const uint32 v = edge.V();
+        const bool swapped = edge.Swapped();
 
         // Plot lines between the interpolated points
-        VDP1PlotTexturedLine(lx, ly, rx, ry, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v);
+        VDP1PlotTexturedLine(lx, ly, rx, ry, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v,
+                             swapped);
     }
 }
 

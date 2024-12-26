@@ -734,7 +734,7 @@ private:
                       uint32 gouraudTable);
     void VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint32 colorBank,
                               VDP1Command::Control control, VDP1Command::DrawMode mode, uint32 gouraudTable,
-                              uint32 charAddr, uint32 charSizeH, uint32 charSizeV, uint32 v);
+                              uint32 charAddr, uint32 charSizeH, uint32 charSizeV, uint32 v, bool swapped);
 
     // Individual VDP1 command processors
 

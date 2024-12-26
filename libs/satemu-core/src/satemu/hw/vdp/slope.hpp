@@ -152,7 +152,8 @@ public:
         , minslope(xb, yb, xc, yc) {
 
         // Ensure the major slope is the longest
-        if (majslope.dmaj < minslope.dmaj) {
+        swapped = majslope.dmaj < minslope.dmaj;
+        if (swapped) {
             std::swap(majslope, minslope);
         }
 
@@ -196,20 +197,30 @@ public:
         return minslope.Y();
     }
 
+    // Determines if the left and right edges have been swapped
+    FORCE_INLINE bool Swapped() const {
+        return swapped;
+    }
+
     Slope majslope; // slope with the longest span
     Slope minslope; // slope with the shortest span
 
-private:
+protected:
     sint64 minmajinc, minmininc; // fractional minor slope interpolation increments
+
+    bool swapped; // whether the original slopes have been swapped
 };
 
 // Steps over the pixels of a textured line, interpolating the texture's U coordinate based on the character width.
 class TexturedLineStepper : public LineStepper {
 public:
-    TexturedLineStepper(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint32 charSizeH)
+    TexturedLineStepper(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint32 charSizeH, bool swapped)
         : LineStepper(x1, y1, x2, y2) {
-        u = 0;
+        u = swapped ? (charSizeH << kFracBits) : 0;
         uinc = SafeDiv(ToFrac(charSizeH), dmaj);
+        if (swapped) {
+            uinc = -uinc;
+        }
     }
 
     // Steps the slope to the next coordinate.
