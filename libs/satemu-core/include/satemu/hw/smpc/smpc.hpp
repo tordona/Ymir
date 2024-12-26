@@ -137,22 +137,38 @@ private:
 
     bool SF;
 
+    uint8 PDR1;
+    uint8 PDR2;
+    uint8 DDR1;
+    uint8 DDR2;
+
     uint8 m_busValue;
 
     uint8 ReadOREG(uint8 offset) const;
     uint8 ReadSR() const;
     uint8 ReadSF() const;
+    uint8 ReadPDR1() const;
+    uint8 ReadPDR2() const;
 
     void WriteIREG(uint8 offset, uint8 value);
     void WriteCOMREG(uint8 value);
     void WriteSF(uint8 value);
+    void WritePDR1(uint8 value);
+    void WritePDR2(uint8 value);
+    void WriteDDR1(uint8 value);
+    void WriteDDR2(uint8 value);
+    void WriteIOSEL(uint8 value);
 
     // -------------------------------------------------------------------------
-    // Input and INTBACK
+    // Input, parallel I/O and INTBACK
 
     // TODO: support multiple controllers, multi-tap, different types of devices, etc.
     // for now, emulate just one standard Saturn pad (not analog)
     uint16 m_buttons = 0xFFFF;
+
+    // Parallel I/O SMPC-controlled (false) or SH-2 direct mode (true)
+    bool m_pioMode1;
+    bool m_pioMode2;
 
     // INTBACK request parameters
     bool m_getSMPCStatus;

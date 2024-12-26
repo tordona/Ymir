@@ -3,6 +3,8 @@
 #include <satemu/hw/scsp/scsp.hpp>
 #include <satemu/hw/scu/scu.hpp>
 
+#include <satemu/util/inline.hpp>
+
 namespace satemu::smpc {
 
 SMPC::SMPC(scu::SCU &scu, scsp::SCSP &scsp)
@@ -18,10 +20,27 @@ void SMPC::Reset(bool hard) {
     SR.u8 = 0x80;
     SF = false;
 
-    // TODO(SMPC): should be persisted
+    PDR1 = 0;
+    PDR2 = 0;
+    DDR1 = 0;
+    DDR2 = 0;
+
+    // TODO(SMPC): SMEM should be persisted
     SMEM.fill(0);
 
     m_busValue = 0x00;
+
+    m_pioMode1 = false;
+    m_pioMode2 = false;
+
+    m_getSMPCStatus = false;
+    m_getPeripheralData = false;
+    m_port1mode = 0;
+    m_port2mode = 0;
+
+    m_intbackInProgress = false;
+    m_emittedSMPCStatus = false;
+    m_emittedPort1Status = false;
 }
 
 uint8 SMPC::Read(uint32 address) {
@@ -29,6 +48,9 @@ uint8 SMPC::Read(uint32 address) {
     case 0x21 ... 0x5F: return ReadOREG((address - 0x20) >> 1);
     case 0x61: return ReadSR();
     case 0x63: return ReadSF();
+    case 0x75: return ReadPDR1();
+    case 0x77: return ReadPDR2();
+    case 0x7D: return 0; // IOSEL is write-only
     default: fmt::println("unhandled SMPC read from {:02X}", address); return m_busValue;
     }
 }
@@ -39,28 +61,56 @@ void SMPC::Write(uint32 address, uint8 value) {
     case 0x01 ... 0x0D: WriteIREG(address >> 1, value); break;
     case 0x1F: WriteCOMREG(value); break;
     case 0x63: WriteSF(value); break;
+    case 0x75: WritePDR1(value); break;
+    case 0x77: WritePDR2(value); break;
+    case 0x79: WriteDDR1(value); break;
+    case 0x7B: WriteDDR2(value); break;
+    case 0x7D: WriteIOSEL(value); break;
     default: fmt::println("unhandled SMPC write to {:02X} = {:02X}", address, value); break;
     }
 }
 
-uint8 SMPC::ReadOREG(uint8 offset) const {
+FORCE_INLINE uint8 SMPC::ReadOREG(uint8 offset) const {
     return OREG[offset & 31];
 }
 
-uint8 SMPC::ReadSR() const {
+FORCE_INLINE uint8 SMPC::ReadSR() const {
     return SR.u8;
 }
 
-uint8 SMPC::ReadSF() const {
+FORCE_INLINE uint8 SMPC::ReadSF() const {
     return SF;
 }
 
-void SMPC::WriteIREG(uint8 offset, uint8 value) {
+FORCE_INLINE uint8 SMPC::ReadPDR1() const {
+    // TODO: read from port 1, then & ~DDR1
+
+    // HACK: read from our fixed standard Saturn pad
+    switch (bit::extract<5, 6>(PDR1)) {
+    case 0: // R X Y Z
+        return bit::extract<4, 7>(m_buttons) | (1u << 4u);
+    case 1: // right left down up
+        return bit::extract<12, 15>(m_buttons) | (1u << 4u);
+    case 2: // start A C B
+        return bit::extract<8, 11>(m_buttons) | (1u << 4u);
+    case 3: // L 1 0 0
+        return (bit::extract<3>(m_buttons) << 3u) | (1u << 4u) | 0b100;
+    }
+
+    return 0;
+}
+
+FORCE_INLINE uint8 SMPC::ReadPDR2() const {
+    // TODO: read from port 2, then & ~DDR2
+    return 0;
+}
+
+FORCE_INLINE void SMPC::WriteIREG(uint8 offset, uint8 value) {
     assert(offset < 7);
     IREG[offset] = value;
 }
 
-void SMPC::WriteCOMREG(uint8 value) {
+FORCE_INLINE void SMPC::WriteCOMREG(uint8 value) {
     COMREG = static_cast<Command>(value);
 
     // TODO: should delay execution
@@ -76,8 +126,31 @@ void SMPC::WriteCOMREG(uint8 value) {
     }
 }
 
-void SMPC::WriteSF(uint8 value) {
+FORCE_INLINE void SMPC::WriteSF(uint8 value) {
     SF = true;
+}
+
+void SMPC::WritePDR1(uint8 value) {
+    // write (value & DDR1) to peripheral on port 1
+    PDR1 = (PDR1 & ~DDR1) | (value & DDR1);
+}
+
+void SMPC::WritePDR2(uint8 value) {
+    // write (value & DDR2) to peripheral on port 2
+    PDR2 = (PDR2 & ~DDR2) | (value & DDR2);
+}
+
+void SMPC::WriteDDR1(uint8 value) {
+    DDR1 = value;
+}
+
+void SMPC::WriteDDR2(uint8 value) {
+    DDR2 = value;
+}
+
+FORCE_INLINE void SMPC::WriteIOSEL(uint8 value) {
+    m_pioMode1 = bit::extract<0>(value);
+    m_pioMode2 = bit::extract<1>(value);
 }
 
 void SMPC::SNDON() {
