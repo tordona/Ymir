@@ -460,12 +460,40 @@ struct ColorOffsetParams {
     sint16 b;
 };
 
+enum class ColorGradScreen : uint8 { Sprite, RBG0, NBG0_RBG1, Invalid3, NBG1_EXBG, NBG2, NBG3, Invalid7 };
+
 struct ColorCalcParams {
     ColorCalcParams() {
         Reset();
     }
 
-    void Reset() {}
+    void Reset() {
+        colorGradEnable = false;
+        colorGradScreen = ColorGradScreen::Sprite;
+        extendedColorCalcEnable = false;
+        useSecondScreenRatio = false;
+        useAdditiveBlend = false;
+    }
+
+    // Enables color gradation.
+    // Derived from CCCTL.BOKEN
+    bool colorGradEnable;
+
+    // Which screen to apply the color gradation function.
+    // Derived from CCCTL.BOKN2-0
+    ColorGradScreen colorGradScreen;
+
+    // Enables extended color calculation.
+    // Derived from CCCTL.EXCCEN
+    bool extendedColorCalcEnable;
+
+    // Use the ratio from the first (false) or second (true) topmost screen.
+    // Derived from CCCTL.CCRTMD
+    bool useSecondScreenRatio;
+
+    // Whether to use alpha (false) or additive (true) blending.
+    // Derived from CCCTL.CCMD
+    bool useAdditiveBlend;
 };
 
 // TODO: consider splitting unions into individual fields for performance

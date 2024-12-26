@@ -57,6 +57,8 @@ struct VDP2Regs {
             colorOffset.Reset();
         }
 
+        colorCalcParams.Reset();
+
         for (auto &sp : specialFunctionCodes) {
             sp.Reset();
         }
@@ -1226,6 +1228,12 @@ struct VDP2Regs {
         bit::deposit_into<4>(value, rotBGParams[0].colorCalcEnable);
         bit::deposit_into<5>(value, lineScreenParams.colorCalcEnable);
         bit::deposit_into<6>(value, spriteParams.colorCalcEnable);
+
+        bit::deposit_into<8>(value, colorCalcParams.useAdditiveBlend);
+        bit::deposit_into<9>(value, colorCalcParams.useSecondScreenRatio);
+        bit::deposit_into<10>(value, colorCalcParams.extendedColorCalcEnable);
+        bit::deposit_into<12, 14>(value, static_cast<uint8>(colorCalcParams.colorGradScreen));
+        bit::deposit_into<15>(value, colorCalcParams.colorGradEnable);
         return value;
     }
 
@@ -1238,6 +1246,12 @@ struct VDP2Regs {
         rotBGParams[1].colorCalcEnable = normBGParams[0].colorCalcEnable;
         lineScreenParams.colorCalcEnable = bit::extract<5>(value);
         spriteParams.colorCalcEnable = bit::extract<6>(value);
+
+        colorCalcParams.useAdditiveBlend = bit::extract<8>(value);
+        colorCalcParams.useSecondScreenRatio = bit::extract<9>(value);
+        colorCalcParams.extendedColorCalcEnable = bit::extract<10>(value);
+        colorCalcParams.colorGradScreen = static_cast<ColorGradScreen>(bit::extract<12, 14>(value));
+        colorCalcParams.colorGradEnable = bit::extract<15>(value);
     }
 
     SFCCMD_t SFCCMD; // 1800EE   SFCCMD  Special Color Calculation Mode
@@ -1532,6 +1546,10 @@ struct VDP2Regs {
     // Color offset parameters.
     // Derived from COAR/G/B and COBR/G/B
     std::array<ColorOffsetParams, 2> colorOffsetParams;
+
+    // Color calculation parameters.
+    // Derived from CCTL, CCRNA/B, CCRR and CCRLB
+    ColorCalcParams colorCalcParams;
 
     std::array<SpecialFunctionCodes, 2> specialFunctionCodes;
 };
