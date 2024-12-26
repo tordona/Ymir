@@ -658,7 +658,7 @@ private:
             bool shadowOrWindow = false;
         };
 
-        std::array<Pixel, 704> pixels;
+        alignas(16) std::array<Pixel, 704> pixels;
     };
 
     struct BGLayer {
@@ -668,7 +668,7 @@ private:
             uint8 priority = 0;
         };
 
-        std::array<Pixel, 704> pixels;
+        alignas(16) std::array<Pixel, 704> pixels;
 
         // CRAM base offset for color fetching.
         // Derived from RAMCTL.CRMDn and CRAOFA/CRAOFB.xxCAOSn
