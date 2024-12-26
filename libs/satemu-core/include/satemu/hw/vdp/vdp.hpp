@@ -248,7 +248,7 @@ public:
         case 0x0AA: return m_VDP2.ReadLCTAL();   // write-only?
         case 0x0AC: return m_VDP2.ReadBKTAU();   // write-only?
         case 0x0AE: return m_VDP2.ReadBKTAL();   // write-only?
-        case 0x0B0: return m_VDP2.RPMD.u16;      // write-only?
+        case 0x0B0: return m_VDP2.ReadRPMD();    // write-only?
         case 0x0B2: return m_VDP2.ReadRPRCTL();  // write-only?
         case 0x0B4: return m_VDP2.KTCTL.u16;     // write-only?
         case 0x0B6: return m_VDP2.KTAOF.u16;     // write-only?
@@ -404,7 +404,7 @@ public:
         case 0x0AA: m_VDP2.WriteLCTAL(value); break;
         case 0x0AC: m_VDP2.WriteBKTAU(value); break;
         case 0x0AE: m_VDP2.WriteBKTAL(value); break;
-        case 0x0B0: m_VDP2.RPMD.u16 = value & 0x0003; break;
+        case 0x0B0: m_VDP2.WriteRPMD(value); break;
         case 0x0B2: m_VDP2.WriteRPRCTL(value); break;
         case 0x0B4: m_VDP2.KTCTL.u16 = value & 0x1F1F; break;
         case 0x0B6: m_VDP2.KTAOF.u16 = value & 0x0707; break;

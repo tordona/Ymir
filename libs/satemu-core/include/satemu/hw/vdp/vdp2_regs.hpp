@@ -20,7 +20,6 @@ struct VDP2Regs {
         CYCB0.u32 = 0x0;
         CYCB1.u32 = 0x0;
         ZMCTL.u16 = 0x0;
-        RPMD.u16 = 0x0;
         KTCTL.u16 = 0x0;
         KTAOF.u16 = 0x0;
         OVPNRA = 0x0;
@@ -46,6 +45,7 @@ struct VDP2Regs {
             param.Reset();
         }
         rotParamsBaseAddress = 0;
+        rotParamMode = RotationParamMode::RotationParamA;
 
         verticalCellScrollTableAddress = 0;
         cellScrollTableAddress = 0;
@@ -1014,7 +1014,23 @@ struct VDP2Regs {
         bit::deposit_into<1, 16>(backScreenParams.baseAddress, value);
     }
 
-    RPMD_t RPMD; // 1800B0   RPMD    Rotation Parameter Mode
+    // 1800B0   RPMD    Rotation Parameter Mode
+    //
+    //   bits   r/w  code          description
+    //   15-2        -             Reserved, must be zero
+    //    1-0     W  RPMD1-0       Rotation Parameter Mode
+    //                               00 (0) = Rotation Parameter A
+    //                               01 (1) = Rotation Parameter B
+    //                               10 (2) = Screens switched via coeff. data from RPA table
+    //                               11 (3) = Screens switched via rotation parameter window
+
+    FORCE_INLINE uint16 ReadRPMD() const {
+        return static_cast<uint16>(rotParamMode);
+    }
+
+    FORCE_INLINE void WriteRPMD(uint16 value) {
+        rotParamMode = static_cast<RotationParamMode>(bit::extract<0, 1>(value));
+    }
 
     // 1800B2   RPRCTL  Rotation Parameter Read Control
     //
@@ -1689,6 +1705,7 @@ struct VDP2Regs {
 
     std::array<RotationParams, 2> rotParams;
     uint32 rotParamsBaseAddress;
+    RotationParamMode rotParamMode;
 
     // Vertical cell scroll table base address.
     // Only valid for NBG0 and NBG1.

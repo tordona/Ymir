@@ -361,6 +361,8 @@ struct RotationParams {
     bool readKAst;
 };
 
+enum class RotationParamMode : uint8 { RotationParamA, RotationParamB, Coefficient, Window };
+
 struct RotationParamTable {
     void ReadFrom(std::span<uint8> input) {
         Xst = bit::extract_signed<6, 28>(util::ReadBE<uint32>(&input[0x00]));
@@ -886,23 +888,6 @@ union ZMCTL_t {
         uint16 N1ZMHF : 1;
         uint16 N1ZMQT : 1;
         uint16 _rsvd10_15 : 6;
-    };
-};
-
-// 1800B0   RPMD    Rotation Parameter Mode
-//
-//   bits   r/w  code          description
-//   15-2        -             Reserved, must be zero
-//    1-0     W  RPMD1-0       Rotation Parameter Mode
-//                               00 (0) = Rotation Parameter A
-//                               01 (1) = Rotation Parameter B
-//                               10 (2) = Screens switched via coeff. data from RPA table
-//                               11 (3) = Screens switched via rotation parameter window
-union RPMD_t {
-    uint16 u16;
-    struct {
-        uint16 RPMDn : 2;
-        uint16 _rsvd2_15 : 14;
     };
 };
 
