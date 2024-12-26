@@ -1535,13 +1535,15 @@ FORCE_INLINE Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &col
     // Flip dot coordinates if requested
     if (ch.flipH) {
         dotX ^= 7;
+        cellIndex ^= 1;
     }
     if (ch.flipV) {
         dotY ^= 7;
+        cellIndex ^= 2;
     }
 
     // Cell addressing uses a fixed offset of 32 bytes
-    const uint32 cellAddress = (ch.charNum + cellIndex) * 0x20;
+    const uint32 cellAddress = (ch.charNum + cellIndex * 2) * 0x20;
     const uint32 dotOffset = dotX + dotY * 8;
     const uint32 dotBaseAddress = cellAddress + dotOffset;
 
