@@ -364,22 +364,22 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadBMPNA() const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, normBGParams[0].supplBitmapPalNum >> 4u);
+        bit::deposit_into<0, 2>(value, normBGParams[0].supplBitmapPalNum >> 8u);
         bit::deposit_into<4>(value, normBGParams[0].supplBitmapSpecialColorCalc);
         bit::deposit_into<5>(value, normBGParams[0].supplBitmapSpecialPriority);
 
-        bit::deposit_into<8, 10>(value, normBGParams[1].supplBitmapPalNum >> 4u);
+        bit::deposit_into<8, 10>(value, normBGParams[1].supplBitmapPalNum >> 8u);
         bit::deposit_into<12>(value, normBGParams[1].supplBitmapSpecialColorCalc);
         bit::deposit_into<13>(value, normBGParams[1].supplBitmapSpecialPriority);
         return value;
     }
 
     FORCE_INLINE void WriteBMPNA(uint16 value) {
-        normBGParams[0].supplBitmapPalNum = bit::extract<0, 2>(value) << 4u;
+        normBGParams[0].supplBitmapPalNum = bit::extract<0, 2>(value) << 8u;
         normBGParams[0].supplBitmapSpecialColorCalc = bit::extract<4>(value);
         normBGParams[0].supplBitmapSpecialPriority = bit::extract<5>(value);
 
-        normBGParams[1].supplBitmapPalNum = bit::extract<8, 10>(value) << 4u;
+        normBGParams[1].supplBitmapPalNum = bit::extract<8, 10>(value) << 8u;
         normBGParams[1].supplBitmapSpecialColorCalc = bit::extract<12>(value);
         normBGParams[1].supplBitmapSpecialPriority = bit::extract<13>(value);
     }
@@ -395,14 +395,14 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadBMPNB() const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, rotBGParams[0].supplBitmapPalNum >> 4u);
+        bit::deposit_into<0, 2>(value, rotBGParams[0].supplBitmapPalNum >> 8u);
         bit::deposit_into<4>(value, rotBGParams[0].supplBitmapSpecialColorCalc);
         bit::deposit_into<5>(value, rotBGParams[0].supplBitmapSpecialPriority);
         return value;
     }
 
     FORCE_INLINE void WriteBMPNB(uint16 value) {
-        rotBGParams[0].supplBitmapPalNum = bit::extract<0, 2>(value) << 4u;
+        rotBGParams[0].supplBitmapPalNum = bit::extract<0, 2>(value) << 8u;
         rotBGParams[0].supplBitmapSpecialColorCalc = bit::extract<4>(value);
         rotBGParams[0].supplBitmapSpecialPriority = bit::extract<5>(value);
     }
