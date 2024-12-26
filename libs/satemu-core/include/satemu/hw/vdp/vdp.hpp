@@ -828,6 +828,7 @@ private:
     // VDP2
 
     // Clears all disabled backgrounds.
+    // Meant to be invoked after changes to BGON.
     void VDP2ClearDisabledBGs();
 
     // Updates the line screen scroll parameters for the given background.
@@ -841,6 +842,7 @@ private:
     void VDP2DrawLine();
 
     // Draws the current scanline of the sprite layer.
+    //
     // colorMode is the CRAM color mode.
     template <uint32 colorMode>
     void VDP2DrawSpriteLayer();
@@ -858,6 +860,7 @@ private:
     void VDP2DrawNormalScrollBG(const NormBGParams &bgParams, NormBGLayer &layer);
 
     // Draws a normal bitmap BG scanline.
+    //
     // bgParams contains the parameters for the BG to draw.
     // layer is a reference to the layer object for the specified background.
     // colorFormat is the color format for bitmap data.
@@ -866,11 +869,13 @@ private:
     void VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, NormBGLayer &layer);
 
     // Fetches a two-word character from VRAM.
+    //
     // pageBaseAddress specifies the base address of the page of character patterns.
     // charIndex is the index of the character to fetch.
     Character VDP2FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex);
 
     // Fetches a one-word character from VRAM.
+    //
     // bgParams contains the parameters for the BG to draw.
     // pageBaseAddress specifies the base address of the page of character patterns.
     // charIndex is the index of the character to fetch.
@@ -881,6 +886,7 @@ private:
     Character VDP2FetchOneWordCharacter(const NormBGParams &bgParams, uint32 pageBaseAddress, uint32 charIndex);
 
     // Fetches a color from a pixel in the specified cell in a 2x2 character pattern.
+    //
     // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
     // colorData is an output variable where bits 3-1 of the palette color data from VRAM is stored.
     // transparent is an output variable where the transparency of a pixel is set.
@@ -894,6 +900,7 @@ private:
                                           uint8 dotX, uint8 dotY, uint32 cellIndex);
 
     // Fetches a color from a bitmap pixel.
+    //
     // bgParams contains the bitmap parameters.
     // transparent is an output variable where the transparency of a pixel is set.
     // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
@@ -905,6 +912,7 @@ private:
                                        uint32 dotY);
 
     // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
+    //
     // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
     // colorIndex specifies the color index.
     // colorMode is the CRAM color mode.
@@ -912,15 +920,18 @@ private:
     vdp::Color888 VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorIndex);
 
     // Fetches sprite data based on the current sprite mode.
+    //
     // fbOffset is the offset into the framebuffer (in bytes) where the sprite data is located.
     SpriteData VDP2FetchSpriteData(uint32 fbOffset);
 
     // Fetches 8-bit sprite data based on the current sprite mode.
+    //
     // fbOffset is the offset into the framebuffer (in bytes) where the sprite data is located.
     // type is the sprite type (between 8 and 15).
     SpriteData VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type);
 
     // Fetches 16-bit sprite data based on the current sprite mode.
+    //
     // fbOffset is the offset into the framebuffer (in bytes) where the sprite data is located.
     // type is the sprite type (between 0 and 7).
     SpriteData VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type);
