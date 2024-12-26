@@ -1230,10 +1230,16 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer
         const uint32 address = cellScrollTableAddress & 0x7FFFF;
         const uint32 value = util::ReadBE<uint32>(&m_VRAM2[address]);
         cellScrollTableAddress += sizeof(uint32);
-        return value;
+        return bit::extract<8, 26>(value);
     };
 
-    uint32 cellScrollY = bgParams.verticalCellScrollEnable ? readCellScrollY() : 0;
+    uint32 cellScrollY = 0;
+    if (bgParams.verticalCellScrollEnable) {
+        // Read first vertical scroll amount if scrolled partway through a cell
+        if (((fracScrollX >> 8u) & 7) != 0) {
+            cellScrollY = readCellScrollY();
+        }
+    }
 
     for (uint32 x = 0; x < m_HRes; x++) {
         // Update vertical cell scroll amount
@@ -1245,7 +1251,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, BGLayer
 
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 8u;
-        const uint32 scrollY = (fracScrollY >> 8u) + cellScrollY;
+        const uint32 scrollY = (fracScrollY + cellScrollY) >> 8u;
 
         // Determine plane index from the scroll coordinate
         const uint32 planeX = bit::extract<9>(scrollX) >> bgParams.pageShiftH;
@@ -1318,10 +1324,10 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGLayer
         const uint32 address = cellScrollTableAddress & 0x7FFFF;
         const uint32 value = util::ReadBE<uint32>(&m_VRAM2[address]);
         cellScrollTableAddress += sizeof(uint32);
-        return value;
+        return bit::extract<8, 26>(value);
     };
 
-    uint32 cellScrollY = bgParams.verticalCellScrollEnable ? readCellScrollY() : 0;
+    uint32 cellScrollY = 0;
 
     for (uint32 x = 0; x < m_HRes; x++) {
         // Update vertical cell scroll amount
@@ -1333,7 +1339,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, BGLayer
 
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 8u;
-        const uint32 scrollY = (fracScrollY >> 8u) + cellScrollY;
+        const uint32 scrollY = (fracScrollY + cellScrollY) >> 8u;
 
         // Fetch dot color from bitmap
         layer.colors[x] = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, layer.transparent[x], layer.cramOffset,
@@ -1440,36 +1446,35 @@ FORCE_INLINE Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &col
     // Cell addressing uses a fixed offset of 32 bytes
     const uint32 cellAddress = (ch.charNum + cellIndex * 2) * 0x20;
     const uint32 dotOffset = dotX + dotY * 8;
-    const uint32 dotBaseAddress = cellAddress + dotOffset;
 
     if constexpr (colorFormat == ColorFormat::Palette16) {
-        const uint32 dotAddress = dotBaseAddress >> 1u;
-        const uint8 dotData = (m_VRAM2[dotAddress & 0x7FFFF] >> ((dotX & 1) * 4)) & 0xF;
+        const uint32 dotAddress = cellAddress + (dotOffset >> 1u);
+        const uint8 dotData = (m_VRAM2[dotAddress & 0x7FFFF] >> (((dotX & 1) ^ 1) * 4)) & 0xF;
         const uint32 colorIndex = (ch.palNum << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
         transparent = dotData == 0;
         return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
-        const uint32 dotAddress = dotBaseAddress;
+        const uint32 dotAddress = cellAddress + dotOffset;
         const uint8 dotData = m_VRAM2[dotAddress & 0x7FFFF];
         const uint32 colorIndex = ((ch.palNum & 0x70) << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
         transparent = dotData == 0;
         return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
-        const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
+        const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint16);
         const uint16 dotData = util::ReadBE<uint16>(&m_VRAM2[dotAddress & 0x7FFFF]);
         const uint32 colorIndex = dotData & 0x7FF;
         colorData = bit::extract<1, 3>(dotData);
         transparent = (dotData & 0x7FF) == 0;
         return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
-        const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
+        const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint16);
         const uint16 dotData = util::ReadBE<uint16>(&m_VRAM2[dotAddress & 0x7FFFF]);
         transparent = bit::extract<15>(dotData) == 0;
         return ConvertRGB555to888(Color555{.u16 = dotData});
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
-        const uint32 dotAddress = dotBaseAddress * sizeof(uint32);
+        const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint32);
         const uint32 dotData = util::ReadBE<uint32>(&m_VRAM2[dotAddress & 0x7FFFF]);
         transparent = bit::extract<31>(dotData) == 0;
         return Color888{.u32 = dotData};
@@ -1488,34 +1493,33 @@ FORCE_INLINE Color888 VDP::VDP2FetchBitmapColor(const NormBGParams &bgParams, bo
     // Bitmap addressing uses a fixed offset of 0x20000 bytes which is precalculated when MPOFN/MPOFR is written to
     const uint32 bitmapBaseAddress = bgParams.bitmapBaseAddress;
     const uint32 dotOffset = dotX + dotY * bgParams.bitmapSizeH;
-    const uint32 dotBaseAddress = bitmapBaseAddress + dotOffset;
     const uint32 palNum = bgParams.supplBitmapPalNum;
 
     if constexpr (colorFormat == ColorFormat::Palette16) {
-        const uint32 dotAddress = dotBaseAddress >> 1u;
-        const uint8 dotData = (m_VRAM2[dotAddress & 0x7FFFF] >> ((dotX & 1) * 4)) & 0xF;
+        const uint32 dotAddress = bitmapBaseAddress + (dotOffset >> 1u);
+        const uint8 dotData = (m_VRAM2[dotAddress & 0x7FFFF] >> (((dotX & 1) ^ 1) * 4)) & 0xF;
         const uint32 colorIndex = palNum | dotData;
         transparent = dotData == 0;
         return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
-        const uint32 dotAddress = dotBaseAddress;
+        const uint32 dotAddress = bitmapBaseAddress + dotOffset;
         const uint8 dotData = m_VRAM2[dotAddress & 0x7FFFF];
         const uint32 colorIndex = palNum | dotData;
         transparent = dotData == 0;
         return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
-        const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
+        const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
         const uint16 dotData = util::ReadBE<uint16>(&m_VRAM2[dotAddress & 0x7FFFF]);
         const uint32 colorIndex = dotData & 0x7FF;
         transparent = (dotData & 0x7FF) == 0;
         return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
-        const uint32 dotAddress = dotBaseAddress * sizeof(uint16);
+        const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
         const uint16 dotData = util::ReadBE<uint16>(&m_VRAM2[dotAddress & 0x7FFFF]);
         transparent = bit::extract<15>(dotData) == 0;
         return ConvertRGB555to888(Color555{.u16 = dotData});
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
-        const uint32 dotAddress = dotBaseAddress * sizeof(uint32);
+        const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint32);
         const uint32 dotData = util::ReadBE<uint32>(&m_VRAM2[dotAddress & 0x7FFFF]);
         transparent = bit::extract<31>(dotData) == 0;
         return Color888{.u32 = dotData};
