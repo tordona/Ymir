@@ -177,7 +177,7 @@ public:
         case 0x01E: return m_VDP2.CYCB1.L.u16;   // write-only?
         case 0x01C: return m_VDP2.CYCB1.U.u16;   // write-only?
         case 0x020: return m_VDP2.ReadBGON();    // write-only?
-        case 0x022: return m_VDP2.MZCTL.u16;     // write-only?
+        case 0x022: return m_VDP2.ReadMZCTL();   // write-only?
         case 0x024: return m_VDP2.ReadSFSEL();   // write-only?
         case 0x026: return m_VDP2.ReadSFCODE();  // write-only?
         case 0x028: return m_VDP2.ReadCHCTLA();  // write-only?
@@ -333,7 +333,7 @@ public:
         case 0x01E: m_VDP2.CYCB1.U.u16 = value; break;
         case 0x01C: m_VDP2.CYCB1.L.u16 = value; break;
         case 0x020: m_VDP2.WriteBGON(value); break;
-        case 0x022: m_VDP2.MZCTL.u16 = value & 0xFF1F; break;
+        case 0x022: m_VDP2.WriteMZCTL(value); break;
         case 0x024: m_VDP2.WriteSFSEL(value); break;
         case 0x026: m_VDP2.WriteSFCODE(value); break;
         case 0x028: m_VDP2.WriteCHCTLA(value); break;

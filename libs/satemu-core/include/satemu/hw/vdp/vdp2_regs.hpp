@@ -19,7 +19,6 @@ struct VDP2Regs {
         CYCA1.u32 = 0x0;
         CYCB0.u32 = 0x0;
         CYCB1.u32 = 0x0;
-        MZCTL.u16 = 0x0;
         ZMCTL.u16 = 0x0;
         LCTA.u32 = 0x0;
         RPMD.u16 = 0x0;
@@ -60,6 +59,9 @@ struct VDP2Regs {
 
         verticalCellScrollTableAddress = 0;
         cellScrollTableAddress = 0;
+
+        mosaicH = 1;
+        mosaicV = 1;
 
         for (auto &sp : specialFunctionCodes) {
             sp.Reset();
@@ -135,7 +137,40 @@ struct VDP2Regs {
         rotBGParams[1].enableTransparency = !normBGParams[0].enableTransparency;
     }
 
-    MZCTL_t MZCTL; // 180022   MZCTL   Mosaic Control
+    // 180022   MZCTL   Mosaic Control
+    //
+    //   bits   r/w  code          description
+    //  15-12     W  MZSZV3-0      Vertical Mosaic Size
+    //   11-8     W  MZSZH3-0      Horizontal Mosaic Size
+    //    7-5        -             Reserved, must be zero
+    //      4     W  R0MZE         RBG0 Mosaic Enable
+    //      3     W  N3MZE         NBG3 Mosaic Enable
+    //      2     W  N2MZE         NBG2 Mosaic Enable
+    //      1     W  N1MZE         NBG1 Mosaic Enable
+    //      0     W  N0MZE         NBG0/RBG1 Mosaic Enable
+
+    FORCE_INLINE uint16 ReadMZCTL() const {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, normBGParams[0].mosaicEnable);
+        bit::deposit_into<1>(value, normBGParams[1].mosaicEnable);
+        bit::deposit_into<2>(value, normBGParams[2].mosaicEnable);
+        bit::deposit_into<3>(value, normBGParams[3].mosaicEnable);
+        bit::deposit_into<4>(value, rotBGParams[0].mosaicEnable);
+        bit::deposit_into<8, 11>(value, mosaicH - 1);
+        bit::deposit_into<12, 15>(value, mosaicV - 1);
+        return value;
+    }
+
+    FORCE_INLINE void WriteMZCTL(uint16 value) {
+        normBGParams[0].mosaicEnable = bit::extract<0>(value);
+        normBGParams[1].mosaicEnable = bit::extract<1>(value);
+        normBGParams[2].mosaicEnable = bit::extract<2>(value);
+        normBGParams[3].mosaicEnable = bit::extract<3>(value);
+        rotBGParams[0].mosaicEnable = bit::extract<4>(value);
+        rotBGParams[1].mosaicEnable = normBGParams[0].mosaicEnable;
+        mosaicH = bit::extract<8, 11>(value) + 1;
+        mosaicV = bit::extract<12, 15>(value) + 1;
+    }
 
     // 180024   SFSEL   Special Function Code Select
     //
@@ -1281,6 +1316,13 @@ struct VDP2Regs {
     // Current vertical cell scroll table address.
     // Reset at the start of every frame and incremented every cell or 8 bitmap pixels.
     uint32 cellScrollTableAddress;
+
+    // Mosaic dimensions.
+    // Applies to all backgrounds with the mosaic effect enabled.
+    // Rotation backgrounds only use the horizontal dimension.
+    // Derived from MZCTL
+    uint8 mosaicH; // Horizontal mosaic size
+    uint8 mosaicV; // Vertical mosaic size
 
     std::array<SpecialFunctionCodes, 2> specialFunctionCodes;
 };

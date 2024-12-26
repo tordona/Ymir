@@ -101,6 +101,8 @@ struct BGParams {
         lineScrollInterval = 0;
         lineScrollTableAddress = 0;
 
+        mosaicEnable = false;
+
         plsz = 0;
         bmsz = 0;
         caos = 0;
@@ -249,6 +251,11 @@ struct BGParams {
     // Only valid for NBG0 and NBG1.
     // Derived from LSTAnU/L
     uint32 lineScrollTableAddress;
+
+    // Whether to use the mosaic effect.
+    // If enabled, bypasses vertical cell scroll.
+    // Derived from MZCTL
+    bool mosaicEnable;
 
     // Raw register values, to facilitate reads.
     uint16 plsz; // Raw value of PLSZ.xxPLSZn
@@ -607,31 +614,6 @@ union CYC_t {
                 uint16 VCP4n : 4;
             };
         } U;
-    };
-};
-
-// 180022   MZCTL   Mosaic Control
-//
-//   bits   r/w  code          description
-//  15-12     W  MZSZV3-0      Vertical Mosaic Size
-//   11-8     W  MZSZH3-0      Horizontal Mosaic Size
-//    7-5        -             Reserved, must be zero
-//      4     W  R0MZE         RBG0 Mosaic Enable
-//      3     W  N3MZE         NBG3 Mosaic Enable
-//      2     W  N2MZE         NBG2 Mosaic Enable
-//      1     W  N1MZE         NBG1 Mosaic Enable
-//      0     W  N0MZE         NBG0/RBG1 Mosaic Enable
-union MZCTL_t {
-    uint16 u16;
-    struct {
-        uint16 N0MZE : 1;
-        uint16 N1MZE : 1;
-        uint16 N2MZE : 1;
-        uint16 N3MZE : 1;
-        uint16 R0MZE : 1;
-        uint16 _rsvd5_7 : 3;
-        uint16 MZSZHn : 4;
-        uint16 MZSZVn : 4;
     };
 };
 
