@@ -1779,8 +1779,8 @@ struct VDP2Regs {
     // The screen resolution is updated on VBlank.
     bool TVMDDirty;
 
-    std::array<NormBGParams, 4> normBGParams;
-    std::array<RotBGParams, 2> rotBGParams;
+    std::array<BGParams, 4> normBGParams;
+    std::array<BGParams, 2> rotBGParams;
     SpriteParams spriteParams;
     LineBackScreenParams lineScreenParams;
     LineBackScreenParams backScreenParams;

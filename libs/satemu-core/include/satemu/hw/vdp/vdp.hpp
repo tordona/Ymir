@@ -836,7 +836,7 @@ private:
     //
     // bgParams contains the parameters for the BG to draw.
     // layer is a reference to the layer object for the specified background.
-    void VDP2UpdateLineScreenScroll(const NormBGParams &bgParams, NormBGLayer &layer);
+    void VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayer &layer);
 
     // Draws the VDP2 scanline at m_VCounter.
     void VDP2DrawLine();
@@ -857,7 +857,7 @@ private:
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
     template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawNormalScrollBG(const NormBGParams &bgParams, NormBGLayer &layer);
+    void VDP2DrawNormalScrollBG(const BGParams &bgParams, NormBGLayer &layer);
 
     // Draws a normal bitmap BG scanline.
     //
@@ -866,7 +866,7 @@ private:
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, NormBGLayer &layer);
+    void VDP2DrawNormalBitmapBG(const BGParams &bgParams, NormBGLayer &layer);
 
     // Fetches a two-word character from VRAM.
     //
@@ -883,7 +883,7 @@ private:
     // largePalette indicates if the color format uses 16 colors (false) or more (true).
     // wideChar indicates if the flip bits are available (false) or used to extend the character number (true).
     template <bool fourCellChar, bool largePalette, bool wideChar>
-    Character VDP2FetchOneWordCharacter(const NormBGParams &bgParams, uint32 pageBaseAddress, uint32 charIndex);
+    Character VDP2FetchOneWordCharacter(const BGParams &bgParams, uint32 pageBaseAddress, uint32 charIndex);
 
     // Fetches a color from a pixel in the specified cell in a 2x2 character pattern.
     //
@@ -908,7 +908,7 @@ private:
     // colorFormat is the color format for pixel data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    vdp::Color888 VDP2FetchBitmapColor(const NormBGParams &bgParams, bool &transparent, uint32 cramOffset, uint32 dotX,
+    vdp::Color888 VDP2FetchBitmapColor(const BGParams &bgParams, bool &transparent, uint32 cramOffset, uint32 dotX,
                                        uint32 dotY);
 
     // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.

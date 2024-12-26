@@ -60,8 +60,7 @@ static constexpr uint32 kPageSizes[2][2] = {
     {11, 12},
 };
 
-// NBG (rot=false) and RBG (rot=true) parameters.
-template <bool rot>
+// NBG and RBG parameters.
 struct BGParams {
     BGParams() {
         Reset();
@@ -188,11 +187,11 @@ struct BGParams {
 
     // Indices for NBG planes A-D, derived from MPOFN and MPABN0-MPCDN3.
     // Indices for RBG planes A-P, derived from MPOFR and MPABRA-MPOPRB.
-    std::array<uint16, rot ? 16 : 4> mapIndices;
+    std::array<uint16, 16> mapIndices;
 
     // Page base addresses for NBG planes A-D or RBG planes A-P.
     // Derived from mapIndices, CHCTLA/CHCTLB.xxCHSZ, PNCNn/PNCR.xxPNB and PLSZ.xxPLSZn
-    std::array<uint32, rot ? 16 : 4> pageBaseAddresses;
+    std::array<uint32, 16> pageBaseAddresses;
 
     // Base address of bitmap data.
     // Derived from MPOFN/MPOFR
@@ -332,9 +331,6 @@ struct BGParams {
         }
     }
 };
-
-using NormBGParams = BGParams<false>;
-using RotBGParams = BGParams<true>;
 
 enum class RotationParamMode : uint8 { RotationParamA, RotationParamB, Coefficient, Window };
 

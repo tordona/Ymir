@@ -937,7 +937,7 @@ void VDP::VDP2ClearDisabledBGs() {
 // -----------------------------------------------------------------------------
 // VDP2
 
-void VDP::VDP2UpdateLineScreenScroll(const NormBGParams &bgParams, NormBGLayer &layer) {
+void VDP::VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayer &layer) {
     auto read = [&] {
         const uint32 address = layer.lineScrollTableAddress & 0x7FFFF;
         const uint32 value = util::ReadBE<uint32>(&m_VRAM2[address]);
@@ -962,8 +962,8 @@ void VDP::VDP2DrawLine() {
     // fmt::println("VDP2: drawing line {}", m_VCounter);
 
     using FnDrawSprite = void (VDP::*)();
-    using FnDrawScrollNBG = void (VDP::*)(const NormBGParams &, NormBGLayer &);
-    using FnDrawBitmapNBG = void (VDP::*)(const NormBGParams &, NormBGLayer &);
+    using FnDrawScrollNBG = void (VDP::*)(const BGParams &, NormBGLayer &);
+    using FnDrawBitmapNBG = void (VDP::*)(const BGParams &, NormBGLayer &);
     // using FnDrawRotBG = void (VDP::*)(const RotBGParams &, BGLayer &);
 
     // Lookup table of VDP2DrawSpriteLayer functions
@@ -1311,7 +1311,7 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
 }
 
 template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, NormBGLayer &layer) {
+NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, NormBGLayer &layer) {
     //          Map
     // +---------+---------+
     // |         |         |   Normal BGs always have 4 planes named A,B,C,D in this exact configuration.
@@ -1491,7 +1491,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const NormBGParams &bgParams, NormBGL
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const NormBGParams &bgParams, NormBGLayer &layer) {
+NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, NormBGLayer &layer) {
     uint32 fracScrollX = layer.fracScrollX;
     const uint32 fracScrollY = layer.fracScrollY;
     layer.fracScrollY += bgParams.scrollIncV;
@@ -1569,7 +1569,7 @@ FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(uint32 pageBaseAddres
 }
 
 template <bool fourCellChar, bool largePalette, bool wideChar>
-FORCE_INLINE VDP::Character VDP::VDP2FetchOneWordCharacter(const NormBGParams &bgParams, uint32 pageBaseAddress,
+FORCE_INLINE VDP::Character VDP::VDP2FetchOneWordCharacter(const BGParams &bgParams, uint32 pageBaseAddress,
                                                            uint32 charIndex) {
     const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint16);
     const uint16 charData = util::ReadBE<uint16>(&m_VRAM2[charAddress & 0x7FFFF]);
@@ -1678,7 +1678,7 @@ FORCE_INLINE Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &col
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-FORCE_INLINE Color888 VDP::VDP2FetchBitmapColor(const NormBGParams &bgParams, bool &transparent, uint32 cramOffset,
+FORCE_INLINE Color888 VDP::VDP2FetchBitmapColor(const BGParams &bgParams, bool &transparent, uint32 cramOffset,
                                                 uint32 dotX, uint32 dotY) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
 
