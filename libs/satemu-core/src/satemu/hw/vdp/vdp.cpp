@@ -1210,6 +1210,8 @@ void VDP::VDP2DrawLine() {
             // Calculate color
             // TODO: handle color calculations
             // TODO: handle LNCL insertion
+            // - inserted behind the topmost layer if it has line color insertion enabled
+
             // HACK: for now, use the topmost layer
             Color888 outputColor = getLayerColor(layers[0]);
             outputColor = applyColorOffset(layers[0], outputColor);

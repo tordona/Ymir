@@ -33,7 +33,6 @@ struct VDP2Regs {
         LWTA0.u32 = 0x0;
         LWTA1.u32 = 0x0;
         SDCTL.u16 = 0x0;
-        CCCTL.u16 = 0x0;
         SFCCMD.u16 = 0x0;
         CCRNA.u16 = 0x0;
         CCRNB.u16 = 0x0;
@@ -1190,7 +1189,57 @@ struct VDP2Regs {
         rotBGParams[1].priorityMode = normBGParams[0].priorityMode;
     }
 
-    CCCTL_t CCCTL;   // 1800EC   CCCTL   Color Calculation Control
+    // 1800EC   CCCTL   Color Calculation Control
+    //
+    //   bits   r/w  code          description
+    //     15     W  BOKEN         Gradation Enable (0=disable, 1=enable)
+    //  14-12     W  BOKN2-0       Gradation Screen Number
+    //                               000 (0) = Sprite
+    //                               001 (1) = RBG0
+    //                               010 (2) = NBG0/RBG1
+    //                               011 (3) = Invalid
+    //                               100 (4) = NBG1/EXBG
+    //                               101 (5) = NBG2
+    //                               110 (6) = NBG3
+    //                               111 (7) = Invalid
+    //     11        -             Reserved, must be zero
+    //     10     W  EXCCEN        Extended Color Calculation Enable (0=disable, 1=enable)
+    //      9     W  CCRTMD        Color Calculation Ratio Mode (0=top screen, 1=second screen)
+    //      8     W  CCMD          Color Calculation Mode (0=use color calculation register, 1=as is)
+    //      7        -             Reserved, must be zero
+    //      6     W  SPCCEN        Sprite Color Calculation Enable
+    //      5     W  LCCCEN        Line Color Color Calculation Enable
+    //      4     W  R0CCEN        RBG0 Color Calculation Enable
+    //      3     W  N3CCEN        NBG3 Color Calculation Enable
+    //      2     W  N2CCEN        NBG2 Color Calculation Enable
+    //      1     W  N1CCEN        NBG1/EXBG Color Calculation Enable
+    //      0     W  N0CCEN        NBG0/RBG1 Color Calculation Enable
+    //
+    // xxCCEN: 0=disable, 1=enable
+
+    FORCE_INLINE uint16 ReadCCCTL() const {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, normBGParams[0].colorCalcEnable);
+        bit::deposit_into<1>(value, normBGParams[1].colorCalcEnable);
+        bit::deposit_into<2>(value, normBGParams[2].colorCalcEnable);
+        bit::deposit_into<3>(value, normBGParams[3].colorCalcEnable);
+        bit::deposit_into<4>(value, rotBGParams[0].colorCalcEnable);
+        bit::deposit_into<5>(value, lineScreenParams.colorCalcEnable);
+        bit::deposit_into<6>(value, spriteParams.colorCalcEnable);
+        return value;
+    }
+
+    FORCE_INLINE void WriteCCCTL(uint16 value) {
+        normBGParams[0].colorCalcEnable = bit::extract<0>(value);
+        normBGParams[1].colorCalcEnable = bit::extract<1>(value);
+        normBGParams[2].colorCalcEnable = bit::extract<2>(value);
+        normBGParams[3].colorCalcEnable = bit::extract<3>(value);
+        rotBGParams[0].colorCalcEnable = bit::extract<4>(value);
+        rotBGParams[1].colorCalcEnable = normBGParams[0].colorCalcEnable;
+        lineScreenParams.colorCalcEnable = bit::extract<5>(value);
+        spriteParams.colorCalcEnable = bit::extract<6>(value);
+    }
+
     SFCCMD_t SFCCMD; // 1800EE   SFCCMD  Special Color Calculation Mode
 
     // 1800F0   PRISA   Sprite 0 and 1 Priority Number

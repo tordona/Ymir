@@ -111,6 +111,8 @@ struct BGParams {
         colorOffsetEnable = false;
         colorOffsetSelect = false;
 
+        colorCalcEnable = false;
+
         plsz = 0;
         bmsz = 0;
         caos = 0;
@@ -273,6 +275,10 @@ struct BGParams {
     // Derived from CLOFEN.xxCOSL
     bool colorOffsetSelect;
 
+    // Enables color calculation.
+    // Derived from CCCTL.xxCCEN
+    bool colorCalcEnable;
+
     // Raw register values, to facilitate reads.
     uint16 plsz; // Raw value of PLSZ.xxPLSZn
     uint16 bmsz; // Raw value of CHCTLA/CHCTLB.xxBMSZ
@@ -324,6 +330,7 @@ struct SpriteParams {
         type = 0;
         windowEnable = false;
         mixedFormat = false;
+        colorCalcEnable = false;
         colorCalcValue = 0;
         colorCalcCond = SpriteColorCalculationCondition::PriorityLessThanOrEqual;
         priorities.fill(0);
@@ -343,6 +350,10 @@ struct SpriteParams {
     // Whether sprite data uses palette only (false) or mixed palette/RGB (true) data.
     // Derived from SPCTL.SPCLMD
     bool mixedFormat;
+
+    // Enables color calculation.
+    // Derived from CCCTL.SPCCEN
+    bool colorCalcEnable;
 
     // The color calculation value to compare against the priority number of sprites.
     // Derived from SPCTL.SPCCN2-0
@@ -404,6 +415,7 @@ struct LineBackScreenParams {
         baseAddress = 0;
         colorOffsetEnable = false;
         colorOffsetSelect = false;
+        colorCalcEnable = false;
     }
 
     // Whether the line/back screen specifies a color for the whole screen (false) or per line (true).
@@ -423,6 +435,11 @@ struct LineBackScreenParams {
     // Only valid for the back screen.
     // Derived from CLOFEN.BKCOSL
     bool colorOffsetSelect;
+
+    // Enables color calculation.
+    // Only valid for the line color screen.
+    // Derived from CCCTL.LCCCEN
+    bool colorCalcEnable;
 };
 
 struct ColorOffsetParams {
@@ -441,6 +458,14 @@ struct ColorOffsetParams {
     sint16 r;
     sint16 g;
     sint16 b;
+};
+
+struct ColorCalcParams {
+    ColorCalcParams() {
+        Reset();
+    }
+
+    void Reset() {}
 };
 
 // TODO: consider splitting unions into individual fields for performance
@@ -1126,53 +1151,6 @@ union SDCTL_t {
         uint16 _rsvd6_7 : 2;
         uint16 TPSDSL : 1;
         uint16 _rsvd9_15 : 7;
-    };
-};
-
-// 1800EC   CCCTL   Color Calculation Control
-//
-//   bits   r/w  code          description
-//     15     W  BOKEN         Gradation Enable (0=disable, 1=enable)
-//  14-12     W  BOKN2-0       Gradation Screen Number
-//                               000 (0) = Sprite
-//                               001 (1) = RBG0
-//                               010 (2) = NBG0/RBG1
-//                               011 (3) = Invalid
-//                               100 (4) = NBG1/EXBG
-//                               101 (5) = NBG2
-//                               110 (6) = NBG3
-//                               111 (7) = Invalid
-//     11        -             Reserved, must be zero
-//     10     W  EXCCEN        Extended Color Calculation Enable (0=disable, 1=enable)
-//      9     W  CCRTMD        Color Calculation Ratio Mode (0=top screen side, 1=second screen side)
-//      8     W  CCMD          Color Calculation Mode (0=use color calculation register, 1=as is)
-//      7        -             Reserved, must be zero
-//      6     W  SPCCEN        Sprite Color Calculation Enable
-//      5     W  LCCCEN        Line Color Color Calculation Enable
-//      4     W  R0CCEN        RBG0 Color Calculation Enable
-//      3     W  N3CCEN        NBG3 Color Calculation Enable
-//      2     W  N2CCEN        NBG2 Color Calculation Enable
-//      1     W  N1CCEN        NBG1 Color Calculation Enable
-//      0     W  N0CCEN        NBG0 Color Calculation Enable
-//
-// xxCCEN: 0=disable, 1=enable
-union CCCTL_t {
-    uint16 u16;
-    struct {
-        uint16 N0CCEN : 1;
-        uint16 N1CCEN : 1;
-        uint16 N2CCEN : 1;
-        uint16 N3CCEN : 1;
-        uint16 R0CCEN : 1;
-        uint16 LCCCEN : 1;
-        uint16 SPCCEN : 1;
-        uint16 _rsvd7 : 1;
-        uint16 CCMD : 1;
-        uint16 CCRTMD : 1;
-        uint16 EXCCEN : 1;
-        uint16 _rsvd11 : 1;
-        uint16 BOKNn : 3;
-        uint16 BOKEN : 1;
     };
 };
 
