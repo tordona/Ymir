@@ -21,12 +21,10 @@ struct VDP2Regs {
         CYCB1.u32 = 0x0;
         ZMCTL.u16 = 0x0;
         RPMD.u16 = 0x0;
-        RPRCTL.u16 = 0x0;
         KTCTL.u16 = 0x0;
         KTAOF.u16 = 0x0;
         OVPNRA = 0x0;
         OVPNRB = 0x0;
-        RPTA.u32 = 0x0;
         WPXY0.u64 = 0x0;
         WPXY1.u64 = 0x0;
         WCTL.u64 = 0x0;
@@ -41,6 +39,13 @@ struct VDP2Regs {
             bg.Reset();
         }
         spriteParams.Reset();
+        lineScreenParams.Reset();
+        backScreenParams.Reset();
+
+        for (auto &param : rotParams) {
+            param.Reset();
+        }
+        rotParamsBaseAddress = 0;
 
         verticalCellScrollTableAddress = 0;
         cellScrollTableAddress = 0;
@@ -1009,30 +1014,91 @@ struct VDP2Regs {
         bit::deposit_into<1, 16>(backScreenParams.baseAddress, value);
     }
 
-    RPMD_t RPMD;     // 1800B0   RPMD    Rotation Parameter Mode
-    RPRCTL_t RPRCTL; // 1800B2   RPRCTL  Rotation Parameter Read Control
-    KTCTL_t KTCTL;   // 1800B4   KTCTL   Coefficient Table Control
-    KTAOF_t KTAOF;   // 1800B6   KTAOF   Coefficient Table Address Offset
-    OVPNR_t OVPNRA;  // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
-    OVPNR_t OVPNRB;  // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
-                     // 1800BC   RPTAU   Rotation Parameters Table Address (upper)
-    RPTA_t RPTA;     // 1800BE   RPTAL   Rotation Parameters Table Address (lower)
-                     // 1800C0   WPSX0   Window 0 Horizontal Start Point
-                     // 1800C2   WPSY0   Window 0 Vertical Start Point
-                     // 1800C4   WPEX0   Window 0 Horizontal End Point
-    WPXY_t WPXY0;    // 1800C6   WPEY0   Window 0 Vertical End Point
-                     // 1800C8   WPSX1   Window 1 Horizontal Start Point
-                     // 1800CA   WPSY1   Window 1 Vertical Start Point
-                     // 1800CC   WPEX1   Window 1 Horizontal End Point
-    WPXY_t WPXY1;    // 1800CE   WPEY1   Window 1 Vertical End Point
-                     // 1800D0   WCTLA   NBG0 and NBG1 Window Control
-                     // 1800D2   WCTLB   NBG2 and NBG3 Window Control
-                     // 1800D4   WCTLC   RBG0 and Sprite Window Control
-    WCTL_t WCTL;     // 1800D6   WCTLD   Rotation Window and Color Calculation Window Control
-                     // 1800D8   LWTA0U  Window 0 Line Window Address Table (upper)
-    LWTA_t LWTA0;    // 1800DA   LWTA0L  Window 0 Line Window Address Table (lower)
-                     // 1800DC   LWTA1U  Window 1 Line Window Address Table (upper)
-    LWTA_t LWTA1;    // 1800DE   LWTA1L  Window 1 Line Window Address Table (lower)
+    RPMD_t RPMD; // 1800B0   RPMD    Rotation Parameter Mode
+
+    // 1800B2   RPRCTL  Rotation Parameter Read Control
+    //
+    //   bits   r/w  code          description
+    //  15-11        -             Reserved, must be zero
+    //     10     W  RBKASTRE      Enable for KAst of Rotation Parameter B
+    //      9     W  RBYSTRE       Enable for Yst of Rotation Parameter B
+    //      8     W  RBXSTRE       Enable for Xst of Rotation Parameter B
+    //    7-3        -             Reserved, must be zero
+    //      2     W  RAKASTRE      Enable for KAst of Rotation Parameter A
+    //      1     W  RAYSTRE       Enable for Yst of Rotation Parameter A
+    //      0     W  RAXSTRE       Enable for Xst of Rotation Parameter A
+
+    FORCE_INLINE uint16 ReadRPRCTL() const {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, rotParams[0].readXst);
+        bit::deposit_into<1>(value, rotParams[0].readYst);
+        bit::deposit_into<2>(value, rotParams[0].readKAst);
+
+        bit::deposit_into<8>(value, rotParams[1].readXst);
+        bit::deposit_into<9>(value, rotParams[1].readYst);
+        bit::deposit_into<10>(value, rotParams[1].readKAst);
+        return value;
+    }
+
+    FORCE_INLINE void WriteRPRCTL(uint16 value) {
+        rotParams[0].readXst = bit::extract<0>(value);
+        rotParams[0].readYst = bit::extract<1>(value);
+        rotParams[0].readKAst = bit::extract<2>(value);
+
+        rotParams[1].readXst = bit::extract<8>(value);
+        rotParams[1].readYst = bit::extract<9>(value);
+        rotParams[1].readKAst = bit::extract<10>(value);
+    }
+
+    KTCTL_t KTCTL;  // 1800B4   KTCTL   Coefficient Table Control
+    KTAOF_t KTAOF;  // 1800B6   KTAOF   Coefficient Table Address Offset
+    OVPNR_t OVPNRA; // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
+    OVPNR_t OVPNRB; // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
+
+    // 1800BC   RPTAU   Rotation Parameters Table Address (upper)
+    //
+    //   bits   r/w  code          description
+    //   15-3        -             Reserved, must be zero
+    //    2-0     W  RPTA18-16     Rotation Parameters Table Base Address (bits 18-16)
+    //
+    // 1800BE   RPTAL   Rotation Parameters Table Address (lower)
+    //
+    //   bits   r/w  code          description
+    //   15-1     W  RPTA15-1      Rotation Parameters Table Base Address (bits 15-0)
+    //      0        -             Reserved, must be zero
+
+    FORCE_INLINE uint16 ReadRPTAU() const {
+        return bit::extract<17, 19>(rotParamsBaseAddress);
+    }
+
+    FORCE_INLINE void WriteRPTAU(uint16 value) {
+        bit::deposit_into<17, 19>(rotParamsBaseAddress, bit::extract<0, 2>(value));
+    }
+
+    FORCE_INLINE uint16 ReadRPTAL() const {
+        return bit::extract<2, 16>(rotParamsBaseAddress) << 1u;
+    }
+
+    FORCE_INLINE void WriteRPTAL(uint16 value) {
+        bit::deposit_into<2, 16>(rotParamsBaseAddress, bit::extract<1, 15>(value));
+    }
+
+    /**/          // 1800C0   WPSX0   Window 0 Horizontal Start Point
+                  // 1800C2   WPSY0   Window 0 Vertical Start Point
+                  // 1800C4   WPEX0   Window 0 Horizontal End Point
+    WPXY_t WPXY0; // 1800C6   WPEY0   Window 0 Vertical End Point
+                  // 1800C8   WPSX1   Window 1 Horizontal Start Point
+                  // 1800CA   WPSY1   Window 1 Vertical Start Point
+                  // 1800CC   WPEX1   Window 1 Horizontal End Point
+    WPXY_t WPXY1; // 1800CE   WPEY1   Window 1 Vertical End Point
+                  // 1800D0   WCTLA   NBG0 and NBG1 Window Control
+                  // 1800D2   WCTLB   NBG2 and NBG3 Window Control
+                  // 1800D4   WCTLC   RBG0 and Sprite Window Control
+    WCTL_t WCTL;  // 1800D6   WCTLD   Rotation Window and Color Calculation Window Control
+                  // 1800D8   LWTA0U  Window 0 Line Window Address Table (upper)
+    LWTA_t LWTA0; // 1800DA   LWTA0L  Window 0 Line Window Address Table (lower)
+                  // 1800DC   LWTA1U  Window 1 Line Window Address Table (upper)
+    LWTA_t LWTA1; // 1800DE   LWTA1L  Window 1 Line Window Address Table (lower)
 
     // 1800E0   SPCTL   Sprite Control
     //
@@ -1620,6 +1686,9 @@ struct VDP2Regs {
     SpriteParams spriteParams;
     LineBackScreenParams lineScreenParams;
     LineBackScreenParams backScreenParams;
+
+    std::array<RotationParams, 2> rotParams;
+    uint32 rotParamsBaseAddress;
 
     // Vertical cell scroll table base address.
     // Only valid for NBG0 and NBG1.

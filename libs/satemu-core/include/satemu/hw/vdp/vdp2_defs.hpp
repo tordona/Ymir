@@ -2,7 +2,11 @@
 
 #include <satemu/core_types.hpp>
 
+#include <satemu/util/bit_ops.hpp>
+#include <satemu/util/data_ops.hpp>
+
 #include <array>
+#include <span>
 
 namespace satemu::vdp {
 
@@ -332,6 +336,114 @@ struct BGParams {
 using NormBGParams = BGParams<false>;
 using RotBGParams = BGParams<true>;
 
+// Rotation Parameter A/B
+struct RotationParams {
+    RotationParams() {
+        Reset();
+    }
+
+    void Reset() {
+        readXst = false;
+        readYst = false;
+        readKAst = false;
+    }
+
+    // Read Xst on the next scanline. Automatically cleared when read.
+    // Derived from RPRCTL.RxXSTRE
+    bool readXst;
+
+    // Read Yst on the next scanline. Automatically cleared when read.
+    // Derived from RPRCTL.RxYSTRE
+    bool readYst;
+
+    // Read KAst on the next scanline. Automatically cleared when read.
+    // Derived from RPRCTL.RxKASTRE
+    bool readKAst;
+};
+
+struct RotationParamTable {
+    void ReadFrom(std::span<uint8> input) {
+        Xst = bit::extract_signed<6, 28>(util::ReadBE<uint32>(&input[0x00]));
+        Yst = bit::extract_signed<6, 28>(util::ReadBE<uint32>(&input[0x04]));
+        Zst = bit::extract_signed<6, 28>(util::ReadBE<uint32>(&input[0x08]));
+
+        dXst = bit::extract_signed<6, 18>(util::ReadBE<uint32>(&input[0x0C]));
+        dYst = bit::extract_signed<6, 18>(util::ReadBE<uint32>(&input[0x10]));
+
+        dX = bit::extract_signed<6, 18>(util::ReadBE<uint32>(&input[0x14]));
+        dY = bit::extract_signed<6, 18>(util::ReadBE<uint32>(&input[0x18]));
+
+        A = bit::extract_signed<6, 19>(util::ReadBE<uint32>(&input[0x1C]));
+        B = bit::extract_signed<6, 19>(util::ReadBE<uint32>(&input[0x20]));
+        C = bit::extract_signed<6, 19>(util::ReadBE<uint32>(&input[0x24]));
+        D = bit::extract_signed<6, 19>(util::ReadBE<uint32>(&input[0x28]));
+        E = bit::extract_signed<6, 19>(util::ReadBE<uint32>(&input[0x2C]));
+        F = bit::extract_signed<6, 19>(util::ReadBE<uint32>(&input[0x30]));
+
+        Px = bit::extract_signed<0, 13>(util::ReadBE<uint16>(&input[0x34]));
+        Py = bit::extract_signed<0, 13>(util::ReadBE<uint16>(&input[0x36]));
+        Pz = bit::extract_signed<0, 13>(util::ReadBE<uint16>(&input[0x38]));
+
+        Cx = bit::extract_signed<0, 13>(util::ReadBE<uint16>(&input[0x3C]));
+        Cy = bit::extract_signed<0, 13>(util::ReadBE<uint16>(&input[0x3E]));
+        Cz = bit::extract_signed<0, 13>(util::ReadBE<uint16>(&input[0x40]));
+
+        Mx = bit::extract_signed<6, 29>(util::ReadBE<uint32>(&input[0x44]));
+        My = bit::extract_signed<6, 29>(util::ReadBE<uint32>(&input[0x48]));
+
+        kx = bit::extract_signed<0, 24>(util::ReadBE<uint32>(&input[0x4C]));
+        ky = bit::extract_signed<0, 24>(util::ReadBE<uint32>(&input[0x50]));
+
+        KAst = bit::extract<6, 31>(util::ReadBE<uint32>(&input[0x54]));
+        dKAst = bit::extract_signed<6, 25>(util::ReadBE<uint32>(&input[0x58]));
+        dKAx = bit::extract_signed<6, 25>(util::ReadBE<uint32>(&input[0x5C]));
+    }
+
+    // Screen start coordinates (signed 13.10 fixed point)
+    sint32 Xst;
+    sint32 Yst;
+    sint32 Zst;
+
+    // Screen vertical coordinate increments (signed 3.10 fixed point)
+    sint32 dXst;
+    sint32 dYst;
+
+    // Screen horizontal coordinate increments (signed 3.10 fixed point)
+    sint32 dX;
+    sint32 dY;
+
+    // Rotation matrix parameters (signed 4.10 fixed point)
+    sint32 A;
+    sint32 B;
+    sint32 C;
+    sint32 D;
+    sint32 E;
+    sint32 F;
+
+    // Viewpoint coordinates (signed 14-bit integer)
+    sint16 Px;
+    sint16 Py;
+    sint16 Pz;
+
+    // Center point coordinates (signed 14-bit integer)
+    sint16 Cx;
+    sint16 Cy;
+    sint16 Cz;
+
+    // Horizontal shift (signed 14.10 fixed point)
+    sint32 Mx;
+    sint32 My;
+
+    // Scaling coefficients (signed 8.16 fixed point)
+    sint32 kx;
+    sint32 ky;
+
+    // Coefficient table parameters
+    uint32 KAst;  // Coefficient table start address (unsigned 16.10 fixed point)
+    sint32 dKAst; // Coefficient table vertical increment (signed 10.10 fixed point)
+    sint32 dKAx;  // Coefficient table horizontal increment (signed 10.10 fixed point)
+};
+
 enum class SpriteColorCalculationCondition : uint8 {
     PriorityLessThanOrEqual,
     PriorityEqual,
@@ -627,6 +739,7 @@ union VRSIZE_t {
 //
 //   bits   r/w  code          description
 //     15   R/W  CRKTE         Color RAM Coefficient Table Enable
+//                               If enabled, Color RAM Mode should be set to 01
 //     14        -             Reserved, must be zero
 //  13-12   R/W  CRMD1-0       Color RAM Mode
 //                               00 (0) = RGB 5:5:5, 1024 words
@@ -639,7 +752,13 @@ union VRSIZE_t {
 //    7-6   R/W  RDBSB1(1-0)   Rotation Data Bank Select for VRAM-B1
 //    5-4   R/W  RDBSB0(1-0)   Rotation Data Bank Select for VRAM-B0 (or VRAM-B)
 //    3-2   R/W  RDBSA1(1-0)   Rotation Data Bank Select for VRAM-A1
-//    1-0   R/W  RDBSA0(1-0)   Rotation Data Bank Select for VRAM-A0 (or VRAM-B)
+//    1-0   R/W  RDBSA0(1-0)   Rotation Data Bank Select for VRAM-A0 (or VRAM-A)
+//
+// RDBSxn(1-0):
+//   00 (0) = bank not used by rotation backgrounds
+//   01 (1) = bank used for coefficient table
+//   10 (2) = bank used for pattern name table
+//   11 (3) = bank used for character/bitmap pattern table
 union RAMCTL_t {
     uint16 u16;
     struct {
@@ -787,31 +906,6 @@ union RPMD_t {
     };
 };
 
-// 1800B2   RPRCTL  Rotation Parameter Read Control
-//
-//   bits   r/w  code          description
-//  15-11        -             Reserved, must be zero
-//     10     W  RBKASTRE      Enable for KAst of Rotation Parameter B
-//      9     W  RBYSTRE       Enable for Yst of Rotation Parameter B
-//      8     W  RBXSTRE       Enable for Xst of Rotation Parameter B
-//    7-3        -             Reserved, must be zero
-//      2     W  RAKASTRE      Enable for KAst of Rotation Parameter A
-//      1     W  RAYSTRE       Enable for Yst of Rotation Parameter A
-//      0     W  RAXSTRE       Enable for Xst of Rotation Parameter A
-union RPRCTL_t {
-    uint16 u16;
-    struct {
-        uint16 RAXSTRE : 1;
-        uint16 RAYSTRE : 1;
-        uint16 RABKSTRE : 1;
-        uint16 _rsvd3_7 : 5;
-        uint16 RBXSTRE : 1;
-        uint16 RBYSTRE : 1;
-        uint16 RBBKSTRE : 1;
-        uint16 _rsvd11_15 : 5;
-    };
-};
-
 // 1800B4   KTCTL   Coefficient Table Control
 //
 //   bits   r/w  code          description
@@ -880,41 +974,6 @@ union KTAOF_t {
 //   A = Rotation Parameter A (OVPNRA)
 //   B = Rotation Parameter B (OVPNRB)
 using OVPNR_t = uint16;
-
-// 1800BC   RPTAU   Rotation Parameters Table Address (upper)
-//
-//   bits   r/w  code          description
-//   15-3        -             Reserved, must be zero
-//    2-0     W  RPTA18-16     Rotation Parameters Table Base Address (bits 18-16)
-//
-// 1800BE   RPTAL   Rotation Parameters Table Address (lower)
-//
-//   bits   r/w  code          description
-//   15-1     W  RPTA15-1      Rotation Parameters Table Base Address (bits 15-0)
-//      0        -             Reserved, must be zero
-union RPTA_t {
-    uint32 u32;
-    struct {
-        union {
-            uint16 u16;
-            struct {
-                uint16 _rsvd0 : 1;
-                uint16 RPTAn : 15;
-            };
-        } L;
-        union {
-            uint16 u16;
-            struct {
-                uint16 RPTAn : 3;
-                uint16 _rsvd3_15 : 13;
-            };
-        } U;
-    };
-    struct {
-        uint32 : 1;
-        uint32 RPTAn : 18;
-    };
-};
 
 // 1800C0   WPSX0   Window 0 Horizontal Start Point
 // 1800C4   WPEX0   Window 0 Horizontal End Point

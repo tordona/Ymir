@@ -1029,7 +1029,7 @@ void VDP::VDP2DrawLine() {
     }();
 
     // TODO: optimize
-    // - RBG1 replaces NBG0
+    // - RBG1 replaces NBG0 if enabled
     // - when RBG0 and RBG1 are both enabled, NBG0-3 are disabled
     // - this means we can use less layers (4 max it seems)
 
@@ -1042,7 +1042,7 @@ void VDP::VDP2DrawLine() {
     for (int i = 0; const auto &bg : m_VDP2.normBGParams) {
         auto &layer = m_bgLayers[i];
         if (bg.enabled) {
-            layer.cramOffset = bg.caos << (m_VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
+            layer.cramOffset = bg.caos << (colorMode == 1 ? 10 : 9);
             layer.mosaicCounterY++;
             if (layer.mosaicCounterY >= m_VDP2.mosaicV) {
                 layer.mosaicCounterY = 0;
@@ -1069,7 +1069,7 @@ void VDP::VDP2DrawLine() {
     for (int i = 4; const auto &bg : m_VDP2.rotBGParams) {
         auto &layer = m_bgLayers[i];
         if (bg.enabled) {
-            layer.cramOffset = bg.caos << (m_VDP2.RAMCTL.CRMDn == 1 ? 10 : 9);
+            layer.cramOffset = bg.caos << (colorMode == 1 ? 10 : 9);
 
             // TODO: implement
             if (bg.bitmap) {

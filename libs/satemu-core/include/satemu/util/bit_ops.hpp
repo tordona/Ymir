@@ -33,6 +33,13 @@ FORCE_INLINE constexpr T extract(T value) {
     return (value >> start) & mask;
 }
 
+// Extracts a range of bits from the value, converting them into a signed integer.
+// start and end are both inclusive.
+template <size_t start, size_t end = start, typename T>
+FORCE_INLINE auto extract_signed(T value) {
+    return sign_extend<end - start + 1>(extract<start, end>(value));
+}
+
 // Deposits a range of bits into the value and returns the modified value.
 // start and end are both inclusive.
 template <size_t start, size_t end = start, typename T, typename TV = T>
