@@ -543,33 +543,6 @@ union VRSIZE_t {
     };
 };
 
-// 180008   HCNT    H Counter
-//
-//   bits   r/w  code          description
-//  15-10        -             Reserved, must be zero
-//    9-0   R    HCT9-0        H Counter Value
-//
-// Notes
-// - Counter layout depends on screen mode:
-//     Normal: bits 8-0 shifted left by 1; HCT0 is invalid
-//     Hi-Res: bits 9-0
-//     Excl. Normal: bits 8-0 (no shift); HCT9 is invalid
-//     Excl. Hi-Res: bits 9-1 shifted right by 1; HCT9 is invalid
-
-// 18000A   VCNT    V Counter
-//
-//   bits   r/w  code          description
-//  15-10        -             Reserved, must be zero
-//    9-0   R    VCT9-0        V Counter Value
-//
-// Notes
-// - Counter layout depends on screen mode:
-//     Exclusive Monitor: bits 9-0
-//     Normal Hi-Res double-density interlace:
-//       bits 8-0 shifted left by 1
-//       bit 0 contains interlaced field (0=odd, 1=even)
-//     All other modes: bits 8-0 shifted left by 1; VCT0 is invalid
-
 // 18000E   RAMCTL  RAM Control
 //
 //   bits   r/w  code          description
