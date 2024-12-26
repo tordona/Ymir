@@ -20,10 +20,6 @@ struct VDP2Regs {
         CYCB0.u32 = 0x0;
         CYCB1.u32 = 0x0;
         ZMCTL.u16 = 0x0;
-        KTCTL.u16 = 0x0;
-        KTAOF.u16 = 0x0;
-        OVPNRA = 0x0;
-        OVPNRB = 0x0;
         WPXY0.u64 = 0x0;
         WPXY1.u64 = 0x0;
         WCTL.u64 = 0x0;
@@ -44,8 +40,7 @@ struct VDP2Regs {
         for (auto &param : rotParams) {
             param.Reset();
         }
-        rotParamsBaseAddress = 0;
-        rotParamMode = RotationParamMode::RotationParamA;
+        commonRotParams.Reset();
 
         verticalCellScrollTableAddress = 0;
         cellScrollTableAddress = 0;
@@ -1025,11 +1020,11 @@ struct VDP2Regs {
     //                               11 (3) = Screens switched via rotation parameter window
 
     FORCE_INLINE uint16 ReadRPMD() const {
-        return static_cast<uint16>(rotParamMode);
+        return static_cast<uint16>(commonRotParams.rotParamMode);
     }
 
     FORCE_INLINE void WriteRPMD(uint16 value) {
-        rotParamMode = static_cast<RotationParamMode>(bit::extract<0, 1>(value));
+        commonRotParams.rotParamMode = static_cast<RotationParamMode>(bit::extract<0, 1>(value));
     }
 
     // 1800B2   RPRCTL  Rotation Parameter Read Control
@@ -1066,10 +1061,97 @@ struct VDP2Regs {
         rotParams[1].readKAst = bit::extract<10>(value);
     }
 
-    KTCTL_t KTCTL;  // 1800B4   KTCTL   Coefficient Table Control
-    KTAOF_t KTAOF;  // 1800B6   KTAOF   Coefficient Table Address Offset
-    OVPNR_t OVPNRA; // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
-    OVPNR_t OVPNRB; // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
+    // 1800B4   KTCTL   Coefficient Table Control
+    //
+    //   bits   r/w  code          description
+    //  15-13        -             Reserved, must be zero
+    //     12     W  RBKLCE        Use line color screen data from Rotation Parameter B coeff. data
+    //  11-10     W  RBKMD1-0      Coefficient Mode for Rotation Parameter B
+    //                               00 (0) = Use as scale coefficient kx, ky
+    //                               01 (1) = Use as scale coefficient kx
+    //                               10 (2) = Use as scale coefficient ky
+    //                               11 (3) = Use as viewpoint Xp after rotation conversion
+    //      9     W  RBKDBS        Coefficient Data Size for Rotation Parameter B
+    //                               0 = 2 words
+    //                               1 = 1 word
+    //      8     W  RBKTE         Coefficient Table Enable for Rotation Parameter B
+    //    7-5        -             Reserved, must be zero
+    //      4     W  RAKLCE        Use line color screen data from Rotation Parameter A coeff. data
+    //    3-2     W  RAKMD1-0      Coefficient Mode for Rotation Parameter A
+    //                               00 (0) = Use as scale coefficient kx, ky
+    //                               01 (1) = Use as scale coefficient kx
+    //                               10 (2) = Use as scale coefficient ky
+    //                               11 (3) = Use as viewpoint Xp after rotation conversion
+    //      1     W  RAKDBS        Coefficient Data Size for Rotation Parameter A
+    //                               0 = 2 words
+    //                               1 = 1 word
+    //      0     W  RAKTE         Coefficient Table Enable for Rotation Parameter A
+
+    FORCE_INLINE uint16 ReadKTCTL() const {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, rotParams[0].coeffTableEnable);
+        bit::deposit_into<1>(value, rotParams[0].coeffDataSize);
+        bit::deposit_into<2, 3>(value, static_cast<uint8>(rotParams[0].coeffDataMode));
+        bit::deposit_into<4>(value, rotParams[0].coeffUseLineColorData);
+
+        bit::deposit_into<8>(value, rotParams[1].coeffTableEnable);
+        bit::deposit_into<9>(value, rotParams[1].coeffDataSize);
+        bit::deposit_into<10, 11>(value, static_cast<uint8>(rotParams[1].coeffDataMode));
+        bit::deposit_into<12>(value, rotParams[1].coeffUseLineColorData);
+        return value;
+    }
+
+    FORCE_INLINE void WriteKTCTL(uint16 value) {
+        rotParams[0].coeffTableEnable = bit::extract<0>(value);
+        rotParams[0].coeffDataSize = bit::extract<1>(value);
+        rotParams[0].coeffDataMode = static_cast<CoefficientDataMode>(bit::extract<2, 3>(value));
+        rotParams[0].coeffUseLineColorData = bit::extract<4>(value);
+
+        rotParams[1].coeffTableEnable = bit::extract<8>(value);
+        rotParams[1].coeffDataSize = bit::extract<9>(value);
+        rotParams[1].coeffDataMode = static_cast<CoefficientDataMode>(bit::extract<10, 11>(value));
+        rotParams[1].coeffUseLineColorData = bit::extract<12>(value);
+    }
+
+    // 1800B6   KTAOF   Coefficient Table Address Offset
+    //
+    //   bits   r/w  code          description
+    //  15-11        -             Reserved, must be zero
+    //   10-8     W  RBKTAOS2-0    Coefficient Table Address Offset for Rotation Parameter B
+    //    7-3        -             Reserved, must be zero
+    //    2-0     W  RAKTAOS2-0    Coefficient Table Address Offset for Rotation Parameter A
+
+    FORCE_INLINE uint16 ReadKTAOF() const {
+        uint16 value = 0;
+        bit::deposit_into<0, 2>(value, bit::extract<13, 15>(rotParams[0].coeffTableAddressOffset));
+
+        bit::deposit_into<8, 10>(value, bit::extract<13, 15>(rotParams[1].coeffTableAddressOffset));
+        return value;
+    }
+
+    FORCE_INLINE void WriteKTAOF(uint16 value) {
+        bit::deposit_into<13, 15>(rotParams[0].coeffTableAddressOffset, bit::extract<0, 2>(value));
+
+        bit::deposit_into<13, 15>(rotParams[1].coeffTableAddressOffset, bit::extract<8, 10>(value));
+    }
+
+    // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
+    // 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
+    //
+    //   bits   r/w  code          description
+    //   15-0     W  RxOPN15-0     Over Pattern Name
+    //
+    // x:
+    //   A = Rotation Parameter A (OVPNRA)
+    //   B = Rotation Parameter B (OVPNRB)
+
+    FORCE_INLINE uint16 ReadOVPNRn(uint8 offset) const {
+        return rotParams[offset].screenOverPatternName;
+    }
+
+    FORCE_INLINE void WriteOVPNRn(uint8 offset, uint16 value) {
+        rotParams[offset].screenOverPatternName = value;
+    }
 
     // 1800BC   RPTAU   Rotation Parameters Table Address (upper)
     //
@@ -1084,19 +1166,19 @@ struct VDP2Regs {
     //      0        -             Reserved, must be zero
 
     FORCE_INLINE uint16 ReadRPTAU() const {
-        return bit::extract<17, 19>(rotParamsBaseAddress);
+        return bit::extract<17, 19>(commonRotParams.baseAddress);
     }
 
     FORCE_INLINE void WriteRPTAU(uint16 value) {
-        bit::deposit_into<17, 19>(rotParamsBaseAddress, bit::extract<0, 2>(value));
+        bit::deposit_into<17, 19>(commonRotParams.baseAddress, bit::extract<0, 2>(value));
     }
 
     FORCE_INLINE uint16 ReadRPTAL() const {
-        return bit::extract<2, 16>(rotParamsBaseAddress) << 1u;
+        return bit::extract<2, 16>(commonRotParams.baseAddress) << 1u;
     }
 
     FORCE_INLINE void WriteRPTAL(uint16 value) {
-        bit::deposit_into<2, 16>(rotParamsBaseAddress, bit::extract<1, 15>(value));
+        bit::deposit_into<2, 16>(commonRotParams.baseAddress, bit::extract<1, 15>(value));
     }
 
     /**/          // 1800C0   WPSX0   Window 0 Horizontal Start Point
@@ -1704,8 +1786,7 @@ struct VDP2Regs {
     LineBackScreenParams backScreenParams;
 
     std::array<RotationParams, 2> rotParams;
-    uint32 rotParamsBaseAddress;
-    RotationParamMode rotParamMode;
+    CommonRotationParams commonRotParams;
 
     // Vertical cell scroll table base address.
     // Only valid for NBG0 and NBG1.

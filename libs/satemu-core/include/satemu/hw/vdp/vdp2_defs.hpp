@@ -336,6 +336,24 @@ struct BGParams {
 using NormBGParams = BGParams<false>;
 using RotBGParams = BGParams<true>;
 
+enum class RotationParamMode : uint8 { RotationParamA, RotationParamB, Coefficient, Window };
+
+struct CommonRotationParams {
+    CommonRotationParams() {
+        Reset();
+    }
+
+    void Reset() {
+        baseAddress = 0;
+        rotParamMode = RotationParamMode::RotationParamA;
+    }
+
+    uint32 baseAddress;
+    RotationParamMode rotParamMode;
+};
+
+enum class CoefficientDataMode : uint8 { ScaleCoeffXY, ScaleCoeffX, ScaleCoeffY, ViewpointX };
+
 // Rotation Parameter A/B
 struct RotationParams {
     RotationParams() {
@@ -346,6 +364,11 @@ struct RotationParams {
         readXst = false;
         readYst = false;
         readKAst = false;
+        coeffTableEnable = false;
+        coeffDataSize = 0;
+        coeffUseLineColorData = false;
+        coeffTableAddressOffset = 0;
+        screenOverPatternName = 0;
     }
 
     // Read Xst on the next scanline. Automatically cleared when read.
@@ -359,9 +382,31 @@ struct RotationParams {
     // Read KAst on the next scanline. Automatically cleared when read.
     // Derived from RPRCTL.RxKASTRE
     bool readKAst;
-};
 
-enum class RotationParamMode : uint8 { RotationParamA, RotationParamB, Coefficient, Window };
+    // Enable use of the coefficient table.
+    // Derived from KTCTL.RxKTE
+    bool coeffTableEnable;
+
+    // Size of coefficient data: 1 word (0) or 2 words (1).
+    // Derived from KTCTL.RxKDBS
+    uint8 coeffDataSize;
+
+    // Coefficient data mode.
+    // Derived from KTCTL.RxKMD1-0
+    CoefficientDataMode coeffDataMode = CoefficientDataMode::ScaleCoeffXY;
+
+    // Enables use of line color data within coefficient data.
+    // Derived from KTCTL.RxKLCE
+    bool coeffUseLineColorData;
+
+    // Coefficient table address offset.
+    // Derived from KTAOF.RxKTAOS2-0
+    uint32 coeffTableAddressOffset;
+
+    // Screen-over pattern name value.
+    // Derived from OVPNRA/B
+    uint16 screenOverPatternName;
+};
 
 struct RotationParamTable {
     void ReadFrom(std::span<uint8> input) {
@@ -890,75 +935,6 @@ union ZMCTL_t {
         uint16 _rsvd10_15 : 6;
     };
 };
-
-// 1800B4   KTCTL   Coefficient Table Control
-//
-//   bits   r/w  code          description
-//  15-13        -             Reserved, must be zero
-//     12     W  RBKLCE        Use line color screen data from Rotation Parameter B coeff. data
-//  11-10     W  RBKMD1-0      Coefficient Mode for Rotation Parameter B
-//                               00 (0) = Use as scale coeff. kx, ky
-//                               01 (1) = Use as scale coeff. kx
-//                               10 (2) = Use as scale coeff. ky
-//                               11 (3) = Use as viewpoint Xp after rotation conversion
-//      9     W  RBKDBS        Coefficient Data Size for Rotation Parameter B
-//                               0 = 2 words
-//                               1 = 1 word
-//      8     W  RBKTE         Coefficient Table Enable for Rotation Parameter B
-//    7-5        -             Reserved, must be zero
-//      4     W  RAKLCE        Use line color screen data from Rotation Parameter A coeff. data
-//    3-2     W  RAKMD1-0      Coefficient Mode for Rotation Parameter A
-//                               00 (0) = Use as scale coeff. kx, ky
-//                               01 (1) = Use as scale coeff. kx
-//                               10 (2) = Use as scale coeff. ky
-//                               11 (3) = Use as viewpoint Xp after rotation conversion
-//      1     W  RAKDBS        Coefficient Data Size for Rotation Parameter A
-//                               0 = 2 words
-//                               1 = 1 word
-//      0     W  RAKTE         Coefficient Table Enable for Rotation Parameter A
-union KTCTL_t {
-    uint16 u16;
-    struct {
-        uint16 RAKTE : 1;
-        uint16 RAKDBS : 1;
-        uint16 RAKMDn : 2;
-        uint16 RAKLCE : 1;
-        uint16 _rsvd5_7 : 3;
-        uint16 RBKTE : 1;
-        uint16 RBKDBS : 1;
-        uint16 RBKMDn : 2;
-        uint16 RBKLCE : 1;
-        uint16 _rsvd13_15 : 3;
-    };
-};
-
-// 1800B6   KTAOF   Coefficient Table Address Offset
-//
-//   bits   r/w  code          description
-//  15-11        -             Reserved, must be zero
-//   10-8     W  RBKTAOS2-0    Coefficient Table Address Offset for Rotation Parameter B
-//    7-3        -             Reserved, must be zero
-//    2-0     W  RAKTAOS2-0    Coefficient Table Address Offset for Rotation Parameter A
-union KTAOF_t {
-    uint16 u16;
-    struct {
-        uint16 RAKTAOSn : 3;
-        uint16 _rsvd3_7 : 5;
-        uint16 RBKTAOSn : 3;
-        uint16 _rsvd11_15 : 5;
-    };
-};
-
-// 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
-// 1800BA   OVPNRB  Rotation Parameter B Screen-Over Pattern Name
-//
-//   bits   r/w  code          description
-//   15-0     W  RxOPN15-0     Over Pattern Name
-//
-// x:
-//   A = Rotation Parameter A (OVPNRA)
-//   B = Rotation Parameter B (OVPNRB)
-using OVPNR_t = uint16;
 
 // 1800C0   WPSX0   Window 0 Horizontal Start Point
 // 1800C4   WPEX0   Window 0 Horizontal End Point
