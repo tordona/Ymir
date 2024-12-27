@@ -555,7 +555,7 @@ FORCE_INLINE void SCU::DSPCmd_Operation(uint32 command) {
     case 0b00: // NOP
         break;
     case 0b01: { // MOV SImm, [d]
-        const sint32 imm = bit::sign_extend<8>(bit::extract<0, 7>(command));
+        const sint32 imm = bit::extract_signed<0, 7>(command);
         const uint32 dst = bit::extract<8, 11>(command);
         DSPWriteD1Bus(dst, imm);
         break;
@@ -575,7 +575,7 @@ FORCE_INLINE void SCU::DSPCmd_LoadImm(uint32 command) {
     sint32 imm;
     if (bit::extract<25>(command)) {
         // Conditional transfer
-        imm = bit::sign_extend<19>(bit::extract<0, 18>(command));
+        imm = bit::extract_signed<0, 18>(command);
 
         const uint8 cond = bit::extract<19, 24>(command);
         if (!DSPCondCheck(cond)) {
@@ -583,7 +583,7 @@ FORCE_INLINE void SCU::DSPCmd_LoadImm(uint32 command) {
         }
     } else {
         // Unconditional transfer
-        imm = bit::sign_extend<25>(bit::extract<0, 24>(command));
+        imm = bit::extract_signed<0, 24>(command);
     }
 
     DSPWriteImm(dst, imm);
