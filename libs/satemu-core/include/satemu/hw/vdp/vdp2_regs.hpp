@@ -27,10 +27,8 @@ struct VDP2Regs {
         LWTA1.u32 = 0x0;
         SDCTL.u16 = 0x0;
 
-        for (auto &bg : normBGParams) {
-            bg.Reset();
-        }
-        for (auto &bg : rotBGParams) {
+        bgEnabled.fill(false);
+        for (auto &bg : bgParams) {
             bg.Reset();
         }
         spriteParams.Reset();
@@ -97,35 +95,34 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadBGON() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, normBGParams[0].enabled);
-        bit::deposit_into<1>(value, normBGParams[1].enabled);
-        bit::deposit_into<2>(value, normBGParams[2].enabled);
-        bit::deposit_into<3>(value, normBGParams[3].enabled);
-        bit::deposit_into<4>(value, rotBGParams[0].enabled);
-        bit::deposit_into<5>(value, rotBGParams[1].enabled);
+        bit::deposit_into<0>(value, bgEnabled[0]);
+        bit::deposit_into<1>(value, bgEnabled[1]);
+        bit::deposit_into<2>(value, bgEnabled[2]);
+        bit::deposit_into<3>(value, bgEnabled[3]);
+        bit::deposit_into<4>(value, bgEnabled[4]);
+        bit::deposit_into<5>(value, bgEnabled[5]);
 
-        bit::deposit_into<8>(value, !normBGParams[0].enableTransparency);
-        bit::deposit_into<9>(value, !normBGParams[1].enableTransparency);
-        bit::deposit_into<10>(value, !normBGParams[2].enableTransparency);
-        bit::deposit_into<11>(value, !normBGParams[3].enableTransparency);
-        bit::deposit_into<12>(value, !rotBGParams[0].enableTransparency);
+        bit::deposit_into<8>(value, !bgParams[1].enableTransparency);
+        bit::deposit_into<9>(value, !bgParams[2].enableTransparency);
+        bit::deposit_into<10>(value, !bgParams[3].enableTransparency);
+        bit::deposit_into<11>(value, !bgParams[4].enableTransparency);
+        bit::deposit_into<12>(value, !bgParams[0].enableTransparency);
         return value;
     }
 
     FORCE_INLINE void WriteBGON(uint16 value) {
-        normBGParams[0].enabled = bit::extract<0>(value);
-        normBGParams[1].enabled = bit::extract<1>(value);
-        normBGParams[2].enabled = bit::extract<2>(value);
-        normBGParams[3].enabled = bit::extract<3>(value);
-        rotBGParams[0].enabled = bit::extract<4>(value);
-        rotBGParams[1].enabled = bit::extract<5>(value);
+        bgEnabled[0] = bit::extract<0>(value);
+        bgEnabled[1] = bit::extract<1>(value);
+        bgEnabled[2] = bit::extract<2>(value);
+        bgEnabled[3] = bit::extract<3>(value);
+        bgEnabled[4] = bit::extract<4>(value);
+        bgEnabled[5] = bit::extract<5>(value);
 
-        normBGParams[0].enableTransparency = !bit::extract<8>(value);
-        normBGParams[1].enableTransparency = !bit::extract<9>(value);
-        normBGParams[2].enableTransparency = !bit::extract<10>(value);
-        normBGParams[3].enableTransparency = !bit::extract<11>(value);
-        rotBGParams[0].enableTransparency = !bit::extract<12>(value);
-        rotBGParams[1].enableTransparency = !normBGParams[0].enableTransparency;
+        bgParams[1].enableTransparency = !bit::extract<8>(value);
+        bgParams[2].enableTransparency = !bit::extract<9>(value);
+        bgParams[3].enableTransparency = !bit::extract<10>(value);
+        bgParams[4].enableTransparency = !bit::extract<11>(value);
+        bgParams[0].enableTransparency = !bit::extract<12>(value);
     }
 
     // 180022   MZCTL   Mosaic Control
@@ -142,23 +139,22 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadMZCTL() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, normBGParams[0].mosaicEnable);
-        bit::deposit_into<1>(value, normBGParams[1].mosaicEnable);
-        bit::deposit_into<2>(value, normBGParams[2].mosaicEnable);
-        bit::deposit_into<3>(value, normBGParams[3].mosaicEnable);
-        bit::deposit_into<4>(value, rotBGParams[0].mosaicEnable);
+        bit::deposit_into<0>(value, bgParams[1].mosaicEnable);
+        bit::deposit_into<1>(value, bgParams[2].mosaicEnable);
+        bit::deposit_into<2>(value, bgParams[3].mosaicEnable);
+        bit::deposit_into<3>(value, bgParams[4].mosaicEnable);
+        bit::deposit_into<4>(value, bgParams[0].mosaicEnable);
         bit::deposit_into<8, 11>(value, mosaicH - 1);
         bit::deposit_into<12, 15>(value, mosaicV - 1);
         return value;
     }
 
     FORCE_INLINE void WriteMZCTL(uint16 value) {
-        normBGParams[0].mosaicEnable = bit::extract<0>(value);
-        normBGParams[1].mosaicEnable = bit::extract<1>(value);
-        normBGParams[2].mosaicEnable = bit::extract<2>(value);
-        normBGParams[3].mosaicEnable = bit::extract<3>(value);
-        rotBGParams[0].mosaicEnable = bit::extract<4>(value);
-        rotBGParams[1].mosaicEnable = normBGParams[0].mosaicEnable;
+        bgParams[1].mosaicEnable = bit::extract<0>(value);
+        bgParams[2].mosaicEnable = bit::extract<1>(value);
+        bgParams[3].mosaicEnable = bit::extract<2>(value);
+        bgParams[4].mosaicEnable = bit::extract<3>(value);
+        bgParams[0].mosaicEnable = bit::extract<4>(value);
         mosaicH = bit::extract<8, 11>(value) + 1;
         mosaicV = bit::extract<12, 15>(value) + 1;
     }
@@ -175,21 +171,20 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadSFSEL() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, normBGParams[0].specialFunctionSelect);
-        bit::deposit_into<1>(value, normBGParams[1].specialFunctionSelect);
-        bit::deposit_into<2>(value, normBGParams[2].specialFunctionSelect);
-        bit::deposit_into<3>(value, normBGParams[3].specialFunctionSelect);
-        bit::deposit_into<4>(value, rotBGParams[0].specialFunctionSelect);
+        bit::deposit_into<0>(value, bgParams[1].specialFunctionSelect);
+        bit::deposit_into<1>(value, bgParams[2].specialFunctionSelect);
+        bit::deposit_into<2>(value, bgParams[3].specialFunctionSelect);
+        bit::deposit_into<3>(value, bgParams[4].specialFunctionSelect);
+        bit::deposit_into<4>(value, bgParams[0].specialFunctionSelect);
         return value;
     }
 
     FORCE_INLINE void WriteSFSEL(uint16 value) {
-        normBGParams[0].specialFunctionSelect = bit::extract<0>(value);
-        normBGParams[1].specialFunctionSelect = bit::extract<1>(value);
-        normBGParams[2].specialFunctionSelect = bit::extract<2>(value);
-        normBGParams[3].specialFunctionSelect = bit::extract<3>(value);
-        rotBGParams[0].specialFunctionSelect = bit::extract<4>(value);
-        rotBGParams[1].specialFunctionSelect = normBGParams[0].specialFunctionSelect;
+        bgParams[1].specialFunctionSelect = bit::extract<0>(value);
+        bgParams[2].specialFunctionSelect = bit::extract<1>(value);
+        bgParams[3].specialFunctionSelect = bit::extract<2>(value);
+        bgParams[4].specialFunctionSelect = bit::extract<3>(value);
+        bgParams[0].specialFunctionSelect = bit::extract<4>(value);
     }
 
     // 180026   SFCODE  Special Function Code
@@ -260,13 +255,13 @@ struct VDP2Regs {
     //                               10 (2) =     2048 colors - palette
     //                               11 (3) =    32768 colors - RGB (NBG1)
     //                                        16777216 colors - RGB (EXBG)
-    //  11-10     W  N1BMSZ1-0     NBG1 Bitmap Size
+    //  11-10     W  N1BMSZ1-0     NBG1/EXBG Bitmap Size
     //                               00 (0) = 512x256
     //                               01 (1) = 512x512
     //                               10 (2) = 1024x256
     //                               11 (3) = 1024x512
-    //      9     W  N1BMEN        NBG1 Bitmap Enable (0=cells, 1=bitmap)
-    //      8     W  N1CHSZ        NBG1 Character Size (0=1x1, 1=2x2)
+    //      9     W  N1BMEN        NBG1/EXBG Bitmap Enable (0=cells, 1=bitmap)
+    //      8     W  N1CHSZ        NBG1/EXBG Character Size (0=1x1, 1=2x2)
     //      7        -             Reserved, must be zero
     //    6-4     W  N0CHCN2-0     NBG0/RBG1 Character Color Number
     //                               000 (0) =       16 colors - palette
@@ -278,43 +273,40 @@ struct VDP2Regs {
     //                               101 (5) = forbidden
     //                               110 (6) = forbidden
     //                               111 (7) = forbidden
-    //    3-2     W  N0BMSZ1-0     NBG0 Bitmap Size
+    //    3-2     W  N0BMSZ1-0     NBG0/RBG1 Bitmap Size
     //                               00 (0) = 512x256
     //                               01 (1) = 512x512
     //                               10 (2) = 1024x256
     //                               11 (3) = 1024x512
-    //      1     W  N0BMEN        NBG0 Bitmap Enable (0=cells, 1=bitmap)
-    //      0     W  N0CHSZ        NBG0 Character Size (0=1x1, 1=2x2)
+    //      1     W  N0BMEN        NBG0/RBG1 Bitmap Enable (0=cells, 1=bitmap)
+    //      0     W  N0CHSZ        NBG0/RBG1 Character Size (0=1x1, 1=2x2)
 
     FORCE_INLINE uint16 ReadCHCTLA() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, normBGParams[0].cellSizeShift);
-        bit::deposit_into<1>(value, normBGParams[0].bitmap);
-        bit::deposit_into<2, 3>(value, normBGParams[0].bmsz);
-        bit::deposit_into<4, 6>(value, static_cast<uint32>(normBGParams[0].colorFormat));
+        bit::deposit_into<0>(value, bgParams[1].cellSizeShift);
+        bit::deposit_into<1>(value, bgParams[1].bitmap);
+        bit::deposit_into<2, 3>(value, bgParams[1].bmsz);
+        bit::deposit_into<4, 6>(value, static_cast<uint32>(bgParams[1].colorFormat));
 
-        bit::deposit_into<8>(value, normBGParams[1].cellSizeShift);
-        bit::deposit_into<9>(value, normBGParams[1].bitmap);
-        bit::deposit_into<10, 11>(value, normBGParams[1].bmsz);
-        bit::deposit_into<12, 13>(value, static_cast<uint32>(normBGParams[1].colorFormat));
+        bit::deposit_into<8>(value, bgParams[2].cellSizeShift);
+        bit::deposit_into<9>(value, bgParams[2].bitmap);
+        bit::deposit_into<10, 11>(value, bgParams[2].bmsz);
+        bit::deposit_into<12, 13>(value, static_cast<uint32>(bgParams[2].colorFormat));
         return value;
     }
 
     FORCE_INLINE void WriteCHCTLA(uint16 value) {
-        normBGParams[0].cellSizeShift = bit::extract<0>(value);
-        normBGParams[0].bitmap = bit::extract<1>(value);
-        normBGParams[0].bmsz = bit::extract<2, 3>(value);
-        normBGParams[0].colorFormat = static_cast<ColorFormat>(bit::extract<4, 6>(value));
-        normBGParams[0].UpdateCHCTL();
+        bgParams[1].cellSizeShift = bit::extract<0>(value);
+        bgParams[1].bitmap = bit::extract<1>(value);
+        bgParams[1].bmsz = bit::extract<2, 3>(value);
+        bgParams[1].colorFormat = static_cast<ColorFormat>(bit::extract<4, 6>(value));
+        bgParams[1].UpdateCHCTL();
 
-        rotBGParams[1].colorFormat = normBGParams[0].colorFormat;
-        rotBGParams[1].UpdateCHCTL();
-
-        normBGParams[1].cellSizeShift = bit::extract<8>(value);
-        normBGParams[1].bitmap = bit::extract<9>(value);
-        normBGParams[1].bmsz = bit::extract<10, 11>(value);
-        normBGParams[1].colorFormat = static_cast<ColorFormat>(bit::extract<12, 13>(value));
-        normBGParams[1].UpdateCHCTL();
+        bgParams[2].cellSizeShift = bit::extract<8>(value);
+        bgParams[2].bitmap = bit::extract<9>(value);
+        bgParams[2].bmsz = bit::extract<10, 11>(value);
+        bgParams[2].colorFormat = static_cast<ColorFormat>(bit::extract<12, 13>(value));
+        bgParams[2].UpdateCHCTL();
     }
 
     // 18002A   CHCTLB  Character Control Register B
@@ -345,33 +337,33 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadCHCTLB() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, normBGParams[2].cellSizeShift);
-        bit::deposit_into<1>(value, static_cast<uint32>(normBGParams[2].colorFormat));
+        bit::deposit_into<0>(value, bgParams[3].cellSizeShift);
+        bit::deposit_into<1>(value, static_cast<uint32>(bgParams[3].colorFormat));
 
-        bit::deposit_into<4>(value, normBGParams[3].cellSizeShift);
-        bit::deposit_into<5>(value, static_cast<uint32>(normBGParams[3].colorFormat));
+        bit::deposit_into<4>(value, bgParams[4].cellSizeShift);
+        bit::deposit_into<5>(value, static_cast<uint32>(bgParams[4].colorFormat));
 
-        bit::deposit_into<8>(value, rotBGParams[0].cellSizeShift);
-        bit::deposit_into<9>(value, rotBGParams[0].bitmap);
-        bit::deposit_into<10>(value, rotBGParams[0].bmsz);
-        bit::deposit_into<12, 14>(value, static_cast<uint32>(rotBGParams[0].colorFormat));
+        bit::deposit_into<8>(value, bgParams[0].cellSizeShift);
+        bit::deposit_into<9>(value, bgParams[0].bitmap);
+        bit::deposit_into<10>(value, bgParams[0].bmsz);
+        bit::deposit_into<12, 14>(value, static_cast<uint32>(bgParams[0].colorFormat));
         return value;
     }
 
     FORCE_INLINE void WriteCHCTLB(uint16 value) {
-        normBGParams[2].cellSizeShift = bit::extract<0>(value);
-        normBGParams[2].colorFormat = static_cast<ColorFormat>(bit::extract<1>(value));
-        normBGParams[2].UpdateCHCTL();
+        bgParams[3].cellSizeShift = bit::extract<0>(value);
+        bgParams[3].colorFormat = static_cast<ColorFormat>(bit::extract<1>(value));
+        bgParams[3].UpdateCHCTL();
 
-        normBGParams[3].cellSizeShift = bit::extract<4>(value);
-        normBGParams[3].colorFormat = static_cast<ColorFormat>(bit::extract<5>(value));
-        normBGParams[3].UpdateCHCTL();
+        bgParams[4].cellSizeShift = bit::extract<4>(value);
+        bgParams[4].colorFormat = static_cast<ColorFormat>(bit::extract<5>(value));
+        bgParams[4].UpdateCHCTL();
 
-        rotBGParams[0].cellSizeShift = bit::extract<8>(value);
-        rotBGParams[0].bitmap = bit::extract<9>(value);
-        rotBGParams[0].bmsz = bit::extract<10>(value);
-        rotBGParams[0].colorFormat = static_cast<ColorFormat>(bit::extract<12, 14>(value));
-        rotBGParams[0].UpdateCHCTL();
+        bgParams[0].cellSizeShift = bit::extract<8>(value);
+        bgParams[0].bitmap = bit::extract<9>(value);
+        bgParams[0].bmsz = bit::extract<10>(value);
+        bgParams[0].colorFormat = static_cast<ColorFormat>(bit::extract<12, 14>(value));
+        bgParams[0].UpdateCHCTL();
     }
 
     // 18002C   BMPNA   NBG0/NBG1 Bitmap Palette Number
@@ -390,24 +382,24 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadBMPNA() const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, normBGParams[0].supplBitmapPalNum >> 8u);
-        bit::deposit_into<4>(value, normBGParams[0].supplBitmapSpecialColorCalc);
-        bit::deposit_into<5>(value, normBGParams[0].supplBitmapSpecialPriority);
+        bit::deposit_into<0, 2>(value, bgParams[1].supplBitmapPalNum >> 8u);
+        bit::deposit_into<4>(value, bgParams[1].supplBitmapSpecialColorCalc);
+        bit::deposit_into<5>(value, bgParams[1].supplBitmapSpecialPriority);
 
-        bit::deposit_into<8, 10>(value, normBGParams[1].supplBitmapPalNum >> 8u);
-        bit::deposit_into<12>(value, normBGParams[1].supplBitmapSpecialColorCalc);
-        bit::deposit_into<13>(value, normBGParams[1].supplBitmapSpecialPriority);
+        bit::deposit_into<8, 10>(value, bgParams[2].supplBitmapPalNum >> 8u);
+        bit::deposit_into<12>(value, bgParams[2].supplBitmapSpecialColorCalc);
+        bit::deposit_into<13>(value, bgParams[2].supplBitmapSpecialPriority);
         return value;
     }
 
     FORCE_INLINE void WriteBMPNA(uint16 value) {
-        normBGParams[0].supplBitmapPalNum = bit::extract<0, 2>(value) << 8u;
-        normBGParams[0].supplBitmapSpecialColorCalc = bit::extract<4>(value);
-        normBGParams[0].supplBitmapSpecialPriority = bit::extract<5>(value);
+        bgParams[1].supplBitmapPalNum = bit::extract<0, 2>(value) << 8u;
+        bgParams[1].supplBitmapSpecialColorCalc = bit::extract<4>(value);
+        bgParams[1].supplBitmapSpecialPriority = bit::extract<5>(value);
 
-        normBGParams[1].supplBitmapPalNum = bit::extract<8, 10>(value) << 8u;
-        normBGParams[1].supplBitmapSpecialColorCalc = bit::extract<12>(value);
-        normBGParams[1].supplBitmapSpecialPriority = bit::extract<13>(value);
+        bgParams[2].supplBitmapPalNum = bit::extract<8, 10>(value) << 8u;
+        bgParams[2].supplBitmapSpecialColorCalc = bit::extract<12>(value);
+        bgParams[2].supplBitmapSpecialPriority = bit::extract<13>(value);
     }
 
     // 18002E   BMPNB   RBG0 Bitmap Palette Number
@@ -421,16 +413,16 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadBMPNB() const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, rotBGParams[0].supplBitmapPalNum >> 8u);
-        bit::deposit_into<4>(value, rotBGParams[0].supplBitmapSpecialColorCalc);
-        bit::deposit_into<5>(value, rotBGParams[0].supplBitmapSpecialPriority);
+        bit::deposit_into<0, 2>(value, bgParams[0].supplBitmapPalNum >> 8u);
+        bit::deposit_into<4>(value, bgParams[0].supplBitmapSpecialColorCalc);
+        bit::deposit_into<5>(value, bgParams[0].supplBitmapSpecialPriority);
         return value;
     }
 
     FORCE_INLINE void WriteBMPNB(uint16 value) {
-        rotBGParams[0].supplBitmapPalNum = bit::extract<0, 2>(value) << 8u;
-        rotBGParams[0].supplBitmapSpecialColorCalc = bit::extract<4>(value);
-        rotBGParams[0].supplBitmapSpecialPriority = bit::extract<5>(value);
+        bgParams[0].supplBitmapPalNum = bit::extract<0, 2>(value) << 8u;
+        bgParams[0].supplBitmapSpecialColorCalc = bit::extract<4>(value);
+        bgParams[0].supplBitmapSpecialPriority = bit::extract<5>(value);
     }
 
     // 180030   PNCN0   NBG0/RBG1 Pattern Name Control
@@ -452,54 +444,43 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadPNCN(uint32 bgIndex) const {
         uint16 value = 0;
-        bit::deposit_into<0, 4>(value, normBGParams[bgIndex].supplScrollCharNum);
-        bit::deposit_into<5, 7>(value, normBGParams[bgIndex].supplScrollPalNum >> 4u);
-        bit::deposit_into<8>(value, normBGParams[bgIndex].supplScrollSpecialColorCalc);
-        bit::deposit_into<9>(value, normBGParams[bgIndex].supplScrollSpecialPriority);
-        bit::deposit_into<14>(value, normBGParams[bgIndex].wideChar);
-        bit::deposit_into<15>(value, !normBGParams[bgIndex].twoWordChar);
+        bit::deposit_into<0, 4>(value, bgParams[bgIndex].supplScrollCharNum);
+        bit::deposit_into<5, 7>(value, bgParams[bgIndex].supplScrollPalNum >> 4u);
+        bit::deposit_into<8>(value, bgParams[bgIndex].supplScrollSpecialColorCalc);
+        bit::deposit_into<9>(value, bgParams[bgIndex].supplScrollSpecialPriority);
+        bit::deposit_into<14>(value, bgParams[bgIndex].wideChar);
+        bit::deposit_into<15>(value, !bgParams[bgIndex].twoWordChar);
         return value;
     }
 
     FORCE_INLINE void WritePNCN(uint32 bgIndex, uint16 value) {
-        normBGParams[bgIndex].supplScrollCharNum = bit::extract<0, 4>(value);
-        normBGParams[bgIndex].supplScrollPalNum = bit::extract<5, 7>(value) << 4u;
-        normBGParams[bgIndex].supplScrollSpecialColorCalc = bit::extract<8>(value);
-        normBGParams[bgIndex].supplScrollSpecialPriority = bit::extract<9>(value);
-        normBGParams[bgIndex].wideChar = bit::extract<14>(value);
-        normBGParams[bgIndex].twoWordChar = !bit::extract<15>(value);
-        normBGParams[bgIndex].UpdatePageBaseAddresses();
-
-        if (bgIndex == 0) {
-            rotBGParams[1].supplScrollCharNum = normBGParams[0].supplScrollCharNum;
-            rotBGParams[1].supplScrollPalNum = normBGParams[0].supplScrollPalNum;
-            rotBGParams[1].supplScrollSpecialColorCalc = normBGParams[0].supplScrollSpecialColorCalc;
-            rotBGParams[1].supplScrollSpecialPriority = normBGParams[0].supplScrollSpecialPriority;
-            rotBGParams[1].wideChar = normBGParams[0].wideChar;
-            rotBGParams[1].twoWordChar = normBGParams[0].twoWordChar;
-            rotBGParams[1].UpdatePageBaseAddresses();
-        }
+        bgParams[bgIndex].supplScrollCharNum = bit::extract<0, 4>(value);
+        bgParams[bgIndex].supplScrollPalNum = bit::extract<5, 7>(value) << 4u;
+        bgParams[bgIndex].supplScrollSpecialColorCalc = bit::extract<8>(value);
+        bgParams[bgIndex].supplScrollSpecialPriority = bit::extract<9>(value);
+        bgParams[bgIndex].wideChar = bit::extract<14>(value);
+        bgParams[bgIndex].twoWordChar = !bit::extract<15>(value);
+        bgParams[bgIndex].UpdatePageBaseAddresses();
     }
 
     FORCE_INLINE uint16 ReadPNCR() const {
         uint16 value = 0;
-        bit::deposit_into<0, 4>(value, rotBGParams[0].supplScrollCharNum);
-        bit::deposit_into<5, 7>(value, rotBGParams[0].supplScrollPalNum >> 4u);
-        bit::deposit_into<8>(value, rotBGParams[0].supplScrollSpecialColorCalc);
-        bit::deposit_into<9>(value, rotBGParams[0].supplScrollSpecialPriority);
-        bit::deposit_into<14>(value, rotBGParams[0].wideChar);
-        bit::deposit_into<15>(value, !rotBGParams[0].twoWordChar);
+        bit::deposit_into<0, 4>(value, bgParams[0].supplScrollCharNum);
+        bit::deposit_into<5, 7>(value, bgParams[0].supplScrollPalNum >> 4u);
+        bit::deposit_into<8>(value, bgParams[0].supplScrollSpecialColorCalc);
+        bit::deposit_into<9>(value, bgParams[0].supplScrollSpecialPriority);
+        bit::deposit_into<14>(value, bgParams[0].wideChar);
+        bit::deposit_into<15>(value, !bgParams[0].twoWordChar);
         return value;
     }
 
     FORCE_INLINE void WritePNCR(uint16 value) {
-        rotBGParams[0].supplScrollCharNum = bit::extract<0, 4>(value);
-        rotBGParams[0].supplScrollPalNum = bit::extract<5, 7>(value) << 4u;
-        rotBGParams[0].supplScrollSpecialColorCalc = bit::extract<8>(value);
-        rotBGParams[0].supplScrollSpecialPriority = bit::extract<9>(value);
-        rotBGParams[0].wideChar = bit::extract<14>(value);
-        rotBGParams[0].twoWordChar = !bit::extract<15>(value);
-        rotBGParams[0].UpdatePageBaseAddresses();
+        bgParams[0].supplScrollCharNum = bit::extract<0, 4>(value);
+        bgParams[0].supplScrollPalNum = bit::extract<5, 7>(value) << 4u;
+        bgParams[0].supplScrollSpecialColorCalc = bit::extract<8>(value);
+        bgParams[0].supplScrollSpecialPriority = bit::extract<9>(value);
+        bgParams[0].wideChar = bit::extract<14>(value);
+        bgParams[0].twoWordChar = !bit::extract<15>(value);
     }
 
     // 18003A   PLSZ    Plane Size
@@ -528,32 +509,34 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadPLSZ() const {
         uint16 value = 0;
-        bit::deposit_into<0, 1>(value, normBGParams[0].plsz);
-        bit::deposit_into<2, 3>(value, normBGParams[1].plsz);
-        bit::deposit_into<4, 5>(value, normBGParams[2].plsz);
-        bit::deposit_into<6, 7>(value, normBGParams[3].plsz);
-        bit::deposit_into<8, 9>(value, rotBGParams[0].plsz);
-        bit::deposit_into<10, 11>(value, static_cast<uint32>(rotBGParams[0].screenOverProcess));
-        bit::deposit_into<12, 13>(value, rotBGParams[1].plsz);
-        bit::deposit_into<14, 15>(value, static_cast<uint32>(rotBGParams[1].screenOverProcess));
+        bit::deposit_into<0, 1>(value, bgParams[1].plsz);
+        bit::deposit_into<2, 3>(value, bgParams[2].plsz);
+        bit::deposit_into<4, 5>(value, bgParams[3].plsz);
+        bit::deposit_into<6, 7>(value, bgParams[4].plsz);
+
+        bit::deposit_into<8, 9>(value, rotParams[0].plsz);
+        bit::deposit_into<10, 11>(value, static_cast<uint32>(rotParams[0].screenOverProcess));
+        bit::deposit_into<12, 13>(value, rotParams[1].plsz);
+        bit::deposit_into<14, 15>(value, static_cast<uint32>(rotParams[1].screenOverProcess));
         return value;
     }
 
     FORCE_INLINE void WritePLSZ(uint16 value) {
-        normBGParams[0].plsz = bit::extract<0, 1>(value);
-        normBGParams[1].plsz = bit::extract<2, 3>(value);
-        normBGParams[2].plsz = bit::extract<4, 5>(value);
-        normBGParams[3].plsz = bit::extract<6, 7>(value);
-        rotBGParams[0].plsz = bit::extract<8, 9>(value);
-        rotBGParams[0].screenOverProcess = static_cast<ScreenOverProcess>(bit::extract<10, 11>(value));
-        rotBGParams[1].plsz = bit::extract<12, 13>(value);
-        rotBGParams[1].screenOverProcess = static_cast<ScreenOverProcess>(bit::extract<14, 15>(value));
-        for (auto &bg : normBGParams) {
-            bg.UpdatePLSZ();
-        }
-        for (auto &bg : rotBGParams) {
-            bg.UpdatePLSZ();
-        }
+        bgParams[1].plsz = bit::extract<0, 1>(value);
+        bgParams[2].plsz = bit::extract<2, 3>(value);
+        bgParams[3].plsz = bit::extract<4, 5>(value);
+        bgParams[4].plsz = bit::extract<6, 7>(value);
+        bgParams[1].UpdatePLSZ();
+        bgParams[2].UpdatePLSZ();
+        bgParams[3].UpdatePLSZ();
+        bgParams[4].UpdatePLSZ();
+
+        rotParams[0].plsz = bit::extract<8, 9>(value);
+        rotParams[0].screenOverProcess = static_cast<ScreenOverProcess>(bit::extract<10, 11>(value));
+        rotParams[1].plsz = bit::extract<12, 13>(value);
+        rotParams[1].screenOverProcess = static_cast<ScreenOverProcess>(bit::extract<14, 15>(value));
+        rotParams[0].UpdatePLSZ();
+        rotParams[1].UpdatePLSZ();
     }
 
     // 18003C   MPOFN   NBG0-3 Map Offset
@@ -570,29 +553,30 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadMPOFN() const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, bit::extract<6, 8>(normBGParams[0].mapIndices[0]));
-        bit::deposit_into<4, 6>(value, bit::extract<6, 8>(normBGParams[1].mapIndices[0]));
-        bit::deposit_into<8, 10>(value, bit::extract<6, 8>(normBGParams[2].mapIndices[0]));
-        bit::deposit_into<12, 14>(value, bit::extract<6, 8>(normBGParams[3].mapIndices[0]));
+        bit::deposit_into<0, 2>(value, bit::extract<6, 8>(bgParams[1].mapIndices[0]));
+        bit::deposit_into<4, 6>(value, bit::extract<6, 8>(bgParams[2].mapIndices[0]));
+        bit::deposit_into<8, 10>(value, bit::extract<6, 8>(bgParams[3].mapIndices[0]));
+        bit::deposit_into<12, 14>(value, bit::extract<6, 8>(bgParams[4].mapIndices[0]));
         return value;
     }
 
     FORCE_INLINE void WriteMPOFN(uint16 value) {
         for (int i = 0; i < 4; i++) {
-            bit::deposit_into<6, 8>(normBGParams[0].mapIndices[i], bit::extract<0, 2>(value));
-            bit::deposit_into<6, 8>(normBGParams[1].mapIndices[i], bit::extract<4, 6>(value));
-            bit::deposit_into<6, 8>(normBGParams[2].mapIndices[i], bit::extract<8, 10>(value));
-            bit::deposit_into<6, 8>(normBGParams[3].mapIndices[i], bit::extract<12, 14>(value));
+            bit::deposit_into<6, 8>(bgParams[1].mapIndices[i], bit::extract<0, 2>(value));
+            bit::deposit_into<6, 8>(bgParams[2].mapIndices[i], bit::extract<4, 6>(value));
+            bit::deposit_into<6, 8>(bgParams[3].mapIndices[i], bit::extract<8, 10>(value));
+            bit::deposit_into<6, 8>(bgParams[4].mapIndices[i], bit::extract<12, 14>(value));
         }
         // shift by 17 is the same as multiply by 0x20000, which is the boundary for bitmap data
-        normBGParams[0].bitmapBaseAddress = bit::extract<0, 2>(value) << 17u;
-        normBGParams[1].bitmapBaseAddress = bit::extract<4, 6>(value) << 17u;
-        normBGParams[2].bitmapBaseAddress = bit::extract<8, 10>(value) << 17u;
-        normBGParams[3].bitmapBaseAddress = bit::extract<12, 14>(value) << 17u;
+        bgParams[1].bitmapBaseAddress = bit::extract<0, 2>(value) << 17u;
+        bgParams[2].bitmapBaseAddress = bit::extract<4, 6>(value) << 17u;
+        bgParams[3].bitmapBaseAddress = bit::extract<8, 10>(value) << 17u;
+        bgParams[4].bitmapBaseAddress = bit::extract<12, 14>(value) << 17u;
 
-        for (auto &bg : normBGParams) {
-            bg.UpdatePageBaseAddresses();
-        }
+        bgParams[1].UpdatePageBaseAddresses();
+        bgParams[2].UpdatePageBaseAddresses();
+        bgParams[3].UpdatePageBaseAddresses();
+        bgParams[4].UpdatePageBaseAddresses();
     }
 
     // 18003E   MPOFR   Rotation Parameter A/B Map Offset
@@ -605,23 +589,19 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadMPOFR() const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, bit::extract<6, 8>(rotBGParams[0].mapIndices[0]));
-        bit::deposit_into<4, 6>(value, bit::extract<6, 8>(rotBGParams[1].mapIndices[0]));
+        bit::deposit_into<0, 2>(value, bit::extract<6, 8>(rotParams[0].mapIndices[0]));
+        bit::deposit_into<4, 6>(value, bit::extract<6, 8>(rotParams[1].mapIndices[0]));
         return value;
     }
 
     FORCE_INLINE void WriteMPOFR(uint16 value) {
         for (int i = 0; i < 4; i++) {
-            bit::deposit_into<6, 8>(rotBGParams[0].mapIndices[i], bit::extract<0, 2>(value));
-            bit::deposit_into<6, 8>(rotBGParams[1].mapIndices[i], bit::extract<4, 6>(value));
+            bit::deposit_into<6, 8>(rotParams[0].mapIndices[i], bit::extract<0, 2>(value));
+            bit::deposit_into<6, 8>(rotParams[1].mapIndices[i], bit::extract<4, 6>(value));
         }
         // shift by 17 is the same as multiply by 0x20000, which is the boundary for bitmap data
-        rotBGParams[0].bitmapBaseAddress = bit::extract<0, 2>(value) << 17u;
-        rotBGParams[1].bitmapBaseAddress = bit::extract<4, 6>(value) << 17u;
-
-        for (auto &bg : rotBGParams) {
-            bg.UpdatePageBaseAddresses();
-        }
+        rotParams[0].bitmapBaseAddress = bit::extract<0, 2>(value) << 17u;
+        rotParams[1].bitmapBaseAddress = bit::extract<4, 6>(value) << 17u;
     }
 
     // 180040   MPABN0  NBG0 Normal Scroll Screen Map for Planes A,B
@@ -652,14 +632,14 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadMPN(uint32 bgIndex, uint32 planeIndex) const {
         uint16 value = 0;
-        auto &bg = normBGParams[bgIndex];
+        auto &bg = bgParams[bgIndex];
         bit::deposit_into<0, 5>(value, bit::extract<0, 5>(bg.mapIndices[planeIndex * 2 + 0]));
         bit::deposit_into<8, 13>(value, bit::extract<0, 5>(bg.mapIndices[planeIndex * 2 + 1]));
         return value;
     }
 
     FORCE_INLINE void WriteMPN(uint32 bgIndex, uint32 planeIndex, uint16 value) {
-        auto &bg = normBGParams[bgIndex];
+        auto &bg = bgParams[bgIndex];
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 0], bit::extract<0, 5>(value));
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 1], bit::extract<8, 13>(value));
         bg.UpdatePageBaseAddresses();
@@ -673,14 +653,14 @@ struct VDP2Regs {
     // 18005A   MPKLRA  Rotation Parameter A Scroll Surface Map for Screen Planes K,L
     // 18005C   MPMNRA  Rotation Parameter A Scroll Surface Map for Screen Planes M,N
     // 18005E   MPOPRA  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
-    // 180060   MPABRB  Rotation Parameter A Scroll Surface Map for Screen Planes A,B
-    // 180062   MPCDRB  Rotation Parameter A Scroll Surface Map for Screen Planes C,D
-    // 180064   MPEFRB  Rotation Parameter A Scroll Surface Map for Screen Planes E,F
-    // 180066   MPGHRB  Rotation Parameter A Scroll Surface Map for Screen Planes G,H
-    // 180068   MPIJRB  Rotation Parameter A Scroll Surface Map for Screen Planes I,J
-    // 18006A   MPKLRB  Rotation Parameter A Scroll Surface Map for Screen Planes K,L
-    // 18006C   MPMNRB  Rotation Parameter A Scroll Surface Map for Screen Planes M,N
-    // 18006E   MPOPRB  Rotation Parameter A Scroll Surface Map for Screen Planes O,P
+    // 180060   MPABRB  Rotation Parameter B Scroll Surface Map for Screen Planes A,B
+    // 180062   MPCDRB  Rotation Parameter B Scroll Surface Map for Screen Planes C,D
+    // 180064   MPEFRB  Rotation Parameter B Scroll Surface Map for Screen Planes E,F
+    // 180066   MPGHRB  Rotation Parameter B Scroll Surface Map for Screen Planes G,H
+    // 180068   MPIJRB  Rotation Parameter B Scroll Surface Map for Screen Planes I,J
+    // 18006A   MPKLRB  Rotation Parameter B Scroll Surface Map for Screen Planes K,L
+    // 18006C   MPMNRB  Rotation Parameter B Scroll Surface Map for Screen Planes M,N
+    // 18006E   MPOPRB  Rotation Parameter B Scroll Surface Map for Screen Planes O,P
     //
     //   bits   r/w  code          description
     //  15-14        -             Reserved, must be zero
@@ -702,19 +682,18 @@ struct VDP2Regs {
     //   O = Screen Plane O (bits  5-0 of MPOPxx)
     //   P = Screen Plane P (bits 13-8 of MPOPxx)
 
-    FORCE_INLINE uint16 ReadMPR(uint32 bgIndex, uint32 planeIndex) const {
+    FORCE_INLINE uint16 ReadMPR(uint32 paramIndex, uint32 planeIndex) const {
         uint16 value = 0;
-        auto &bg = rotBGParams[bgIndex];
+        auto &bg = rotParams[paramIndex];
         bit::deposit_into<0, 5>(value, bit::extract<0, 5>(bg.mapIndices[planeIndex * 2 + 0]));
         bit::deposit_into<8, 13>(value, bit::extract<0, 5>(bg.mapIndices[planeIndex * 2 + 1]));
         return value;
     }
 
-    FORCE_INLINE void WriteMPR(uint32 bgIndex, uint32 planeIndex, uint16 value) {
-        auto &bg = rotBGParams[bgIndex];
+    FORCE_INLINE void WriteMPR(uint32 paramIndex, uint32 planeIndex, uint16 value) {
+        auto &bg = rotParams[paramIndex];
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 0], bit::extract<0, 5>(value));
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 1], bit::extract<8, 13>(value));
-        bg.UpdatePageBaseAddresses();
     }
 
     // 180070   SCXIN0  NBG0 Horizontal Screen Scroll Value (integer part)
@@ -747,35 +726,35 @@ struct VDP2Regs {
     //   10-0     W  NxSCd10-0     Horizontal/Vertical Screen Scroll Value (integer)
 
     FORCE_INLINE uint16 ReadSCXIN(uint32 bgIndex) const {
-        return bit::extract<8, 18>(normBGParams[bgIndex].scrollAmountH);
+        return bit::extract<8, 18>(bgParams[bgIndex].scrollAmountH);
     }
 
     FORCE_INLINE void WriteSCXIN(uint32 bgIndex, uint16 value) {
-        bit::deposit_into<8, 18>(normBGParams[bgIndex].scrollAmountH, bit::extract<0, 10>(value));
+        bit::deposit_into<8, 18>(bgParams[bgIndex].scrollAmountH, bit::extract<0, 10>(value));
     }
 
     FORCE_INLINE uint16 ReadSCXDN(uint32 bgIndex) const {
-        return bit::extract<0, 7>(normBGParams[bgIndex].scrollAmountH);
+        return bit::extract<0, 7>(bgParams[bgIndex].scrollAmountH);
     }
 
     FORCE_INLINE void WriteSCXDN(uint32 bgIndex, uint16 value) {
-        bit::deposit_into<0, 7>(normBGParams[bgIndex].scrollAmountH, bit::extract<8, 15>(value));
+        bit::deposit_into<0, 7>(bgParams[bgIndex].scrollAmountH, bit::extract<8, 15>(value));
     }
 
     FORCE_INLINE uint16 ReadSCYIN(uint32 bgIndex) const {
-        return bit::extract<8, 18>(normBGParams[bgIndex].scrollAmountV);
+        return bit::extract<8, 18>(bgParams[bgIndex].scrollAmountV);
     }
 
     FORCE_INLINE void WriteSCYIN(uint32 bgIndex, uint16 value) {
-        bit::deposit_into<8, 18>(normBGParams[bgIndex].scrollAmountV, bit::extract<0, 10>(value));
+        bit::deposit_into<8, 18>(bgParams[bgIndex].scrollAmountV, bit::extract<0, 10>(value));
     }
 
     FORCE_INLINE uint16 ReadSCYDN(uint32 bgIndex) const {
-        return bit::extract<0, 7>(normBGParams[bgIndex].scrollAmountV);
+        return bit::extract<0, 7>(bgParams[bgIndex].scrollAmountV);
     }
 
     FORCE_INLINE void WriteSCYDN(uint32 bgIndex, uint16 value) {
-        bit::deposit_into<0, 7>(normBGParams[bgIndex].scrollAmountV, bit::extract<8, 15>(value));
+        bit::deposit_into<0, 7>(bgParams[bgIndex].scrollAmountV, bit::extract<8, 15>(value));
     }
 
     // 180078   ZMXIN0  NBG0 Horizontal Coordinate Increment (integer part)
@@ -798,35 +777,35 @@ struct VDP2Regs {
     //    7-0        -             Reserved, must be zero
 
     FORCE_INLINE uint16 ReadZMXIN(uint32 bgIndex) const {
-        return bit::extract<8, 10>(normBGParams[bgIndex].scrollIncH);
+        return bit::extract<8, 10>(bgParams[bgIndex].scrollIncH);
     }
 
     FORCE_INLINE void WriteZMXIN(uint32 bgIndex, uint16 value) {
-        bit::deposit_into<8, 10>(normBGParams[bgIndex].scrollIncH, bit::extract<0, 2>(value));
+        bit::deposit_into<8, 10>(bgParams[bgIndex].scrollIncH, bit::extract<0, 2>(value));
     }
 
     FORCE_INLINE uint16 ReadZMXDN(uint32 bgIndex) const {
-        return bit::extract<0, 7>(normBGParams[bgIndex].scrollIncH);
+        return bit::extract<0, 7>(bgParams[bgIndex].scrollIncH);
     }
 
     FORCE_INLINE void WriteZMXDN(uint32 bgIndex, uint16 value) {
-        bit::deposit_into<0, 7>(normBGParams[bgIndex].scrollIncH, bit::extract<8, 15>(value));
+        bit::deposit_into<0, 7>(bgParams[bgIndex].scrollIncH, bit::extract<8, 15>(value));
     }
 
     FORCE_INLINE uint16 ReadZMYIN(uint32 bgIndex) const {
-        return bit::extract<8, 10>(normBGParams[bgIndex].scrollIncV);
+        return bit::extract<8, 10>(bgParams[bgIndex].scrollIncV);
     }
 
     FORCE_INLINE void WriteZMYIN(uint32 bgIndex, uint16 value) {
-        bit::deposit_into<8, 10>(normBGParams[bgIndex].scrollIncV, bit::extract<0, 2>(value));
+        bit::deposit_into<8, 10>(bgParams[bgIndex].scrollIncV, bit::extract<0, 2>(value));
     }
 
     FORCE_INLINE uint16 ReadZMYDN(uint32 bgIndex) const {
-        return bit::extract<0, 7>(normBGParams[bgIndex].scrollIncV);
+        return bit::extract<0, 7>(bgParams[bgIndex].scrollIncV);
     }
 
     FORCE_INLINE void WriteZMYDN(uint32 bgIndex, uint16 value) {
-        bit::deposit_into<0, 7>(normBGParams[bgIndex].scrollIncV, bit::extract<8, 15>(value));
+        bit::deposit_into<0, 7>(bgParams[bgIndex].scrollIncV, bit::extract<8, 15>(value));
     }
 
     ZMCTL_t ZMCTL; // 180098   ZMCTL   Reduction Enable
@@ -859,32 +838,32 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadSCRCTL() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, normBGParams[0].verticalCellScrollEnable);
-        bit::deposit_into<1>(value, normBGParams[0].lineScrollXEnable);
-        bit::deposit_into<2>(value, normBGParams[0].lineScrollYEnable);
-        bit::deposit_into<3>(value, normBGParams[0].lineZoomEnable);
-        bit::deposit_into<4, 5>(value, normBGParams[0].lineScrollInterval);
+        bit::deposit_into<0>(value, bgParams[1].verticalCellScrollEnable);
+        bit::deposit_into<1>(value, bgParams[1].lineScrollXEnable);
+        bit::deposit_into<2>(value, bgParams[1].lineScrollYEnable);
+        bit::deposit_into<3>(value, bgParams[1].lineZoomEnable);
+        bit::deposit_into<4, 5>(value, bgParams[1].lineScrollInterval);
 
-        bit::deposit_into<8>(value, normBGParams[1].verticalCellScrollEnable);
-        bit::deposit_into<9>(value, normBGParams[1].lineScrollXEnable);
-        bit::deposit_into<10>(value, normBGParams[1].lineScrollYEnable);
-        bit::deposit_into<11>(value, normBGParams[1].lineZoomEnable);
-        bit::deposit_into<12, 13>(value, normBGParams[1].lineScrollInterval);
+        bit::deposit_into<8>(value, bgParams[2].verticalCellScrollEnable);
+        bit::deposit_into<9>(value, bgParams[2].lineScrollXEnable);
+        bit::deposit_into<10>(value, bgParams[2].lineScrollYEnable);
+        bit::deposit_into<11>(value, bgParams[2].lineZoomEnable);
+        bit::deposit_into<12, 13>(value, bgParams[2].lineScrollInterval);
         return value;
     }
 
     FORCE_INLINE void WriteSCRCTL(uint16 value) {
-        normBGParams[0].verticalCellScrollEnable = bit::extract<0>(value);
-        normBGParams[0].lineScrollXEnable = bit::extract<1>(value);
-        normBGParams[0].lineScrollYEnable = bit::extract<2>(value);
-        normBGParams[0].lineZoomEnable = bit::extract<3>(value);
-        normBGParams[0].lineScrollInterval = bit::extract<4, 5>(value);
+        bgParams[1].verticalCellScrollEnable = bit::extract<0>(value);
+        bgParams[1].lineScrollXEnable = bit::extract<1>(value);
+        bgParams[1].lineScrollYEnable = bit::extract<2>(value);
+        bgParams[1].lineZoomEnable = bit::extract<3>(value);
+        bgParams[1].lineScrollInterval = bit::extract<4, 5>(value);
 
-        normBGParams[1].verticalCellScrollEnable = bit::extract<8>(value);
-        normBGParams[1].lineScrollXEnable = bit::extract<9>(value);
-        normBGParams[1].lineScrollYEnable = bit::extract<10>(value);
-        normBGParams[1].lineZoomEnable = bit::extract<11>(value);
-        normBGParams[1].lineScrollInterval = bit::extract<12, 13>(value);
+        bgParams[2].verticalCellScrollEnable = bit::extract<8>(value);
+        bgParams[2].lineScrollXEnable = bit::extract<9>(value);
+        bgParams[2].lineScrollYEnable = bit::extract<10>(value);
+        bgParams[2].lineZoomEnable = bit::extract<11>(value);
+        bgParams[2].lineScrollInterval = bit::extract<12, 13>(value);
     }
 
     // 18009C   VCSTAU  Vertical Cell Scroll Table Address (upper)
@@ -930,19 +909,19 @@ struct VDP2Regs {
     //      0        -             Reserved, must be zero
 
     FORCE_INLINE uint16 ReadLSTAnU(uint8 bgIndex) const {
-        return bit::extract<17, 19>(normBGParams[bgIndex].lineScrollTableAddress);
+        return bit::extract<17, 19>(bgParams[bgIndex].lineScrollTableAddress);
     }
 
     FORCE_INLINE void WriteLSTAnU(uint8 bgIndex, uint16 value) {
-        bit::deposit_into<17, 19>(normBGParams[bgIndex].lineScrollTableAddress, bit::extract<0, 2>(value));
+        bit::deposit_into<17, 19>(bgParams[bgIndex].lineScrollTableAddress, bit::extract<0, 2>(value));
     }
 
     FORCE_INLINE uint16 ReadLSTAnL(uint8 bgIndex) const {
-        return bit::extract<2, 16>(normBGParams[bgIndex].lineScrollTableAddress) << 1u;
+        return bit::extract<2, 16>(bgParams[bgIndex].lineScrollTableAddress) << 1u;
     }
 
     FORCE_INLINE void WriteLSTAnL(uint8 bgIndex, uint16 value) {
-        bit::deposit_into<2, 16>(normBGParams[bgIndex].lineScrollTableAddress, bit::extract<1, 15>(value));
+        bit::deposit_into<2, 16>(bgParams[bgIndex].lineScrollTableAddress, bit::extract<1, 15>(value));
     }
 
     // 1800A8   LCTAU   Line Color Screen Table Address (upper)
@@ -1248,19 +1227,18 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadCRAOFA() const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, normBGParams[0].caos);
-        bit::deposit_into<4, 6>(value, normBGParams[1].caos);
-        bit::deposit_into<8, 10>(value, normBGParams[2].caos);
-        bit::deposit_into<12, 14>(value, normBGParams[3].caos);
+        bit::deposit_into<0, 2>(value, bgParams[1].caos);
+        bit::deposit_into<4, 6>(value, bgParams[2].caos);
+        bit::deposit_into<8, 10>(value, bgParams[3].caos);
+        bit::deposit_into<12, 14>(value, bgParams[4].caos);
         return value;
     }
 
     FORCE_INLINE void WriteCRAOFA(uint16 value) {
-        normBGParams[0].caos = bit::extract<0, 2>(value);
-        normBGParams[1].caos = bit::extract<4, 6>(value);
-        normBGParams[2].caos = bit::extract<8, 10>(value);
-        normBGParams[3].caos = bit::extract<12, 14>(value);
-        rotBGParams[0].caos = normBGParams[0].caos;
+        bgParams[1].caos = bit::extract<0, 2>(value);
+        bgParams[2].caos = bit::extract<4, 6>(value);
+        bgParams[3].caos = bit::extract<8, 10>(value);
+        bgParams[4].caos = bit::extract<12, 14>(value);
     }
 
     // 1800E6   CRAOFB  RBG0 and Sprite Color RAM Address Offset
@@ -1273,13 +1251,13 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadCRAOFB() const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, rotBGParams[0].caos);
+        bit::deposit_into<0, 2>(value, bgParams[0].caos);
         bit::deposit_into<4, 6>(value, spriteParams.colorDataOffset >> 8u);
         return value;
     }
 
     FORCE_INLINE void WriteCRAOFB(uint16 value) {
-        rotBGParams[0].caos = bit::extract<0, 2>(value);
+        bgParams[0].caos = bit::extract<0, 2>(value);
         spriteParams.colorDataOffset = bit::extract<4, 6>(value) << 8u;
     }
 
@@ -1296,23 +1274,22 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadLNCLEN() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, normBGParams[0].lineColorScreenEnable);
-        bit::deposit_into<1>(value, normBGParams[1].lineColorScreenEnable);
-        bit::deposit_into<2>(value, normBGParams[2].lineColorScreenEnable);
-        bit::deposit_into<3>(value, normBGParams[3].lineColorScreenEnable);
-        bit::deposit_into<4>(value, rotBGParams[0].lineColorScreenEnable);
-        // TODO: bit::deposit_into<5>(value, ?m_SpriteParams?.lineColorScreenEnable);
+        bit::deposit_into<0>(value, bgParams[1].lineColorScreenEnable);
+        bit::deposit_into<1>(value, bgParams[2].lineColorScreenEnable);
+        bit::deposit_into<2>(value, bgParams[3].lineColorScreenEnable);
+        bit::deposit_into<3>(value, bgParams[4].lineColorScreenEnable);
+        bit::deposit_into<4>(value, bgParams[0].lineColorScreenEnable);
+        bit::deposit_into<5>(value, spriteParams.lineColorScreenEnable);
         return value;
     }
 
     FORCE_INLINE void WriteLNCLEN(uint16 value) {
-        normBGParams[0].lineColorScreenEnable = bit::extract<0>(value);
-        normBGParams[1].lineColorScreenEnable = bit::extract<1>(value);
-        normBGParams[2].lineColorScreenEnable = bit::extract<2>(value);
-        normBGParams[3].lineColorScreenEnable = bit::extract<3>(value);
-        rotBGParams[0].lineColorScreenEnable = bit::extract<4>(value);
-        rotBGParams[1].lineColorScreenEnable = normBGParams[0].lineColorScreenEnable;
-        // TODO: ?m_SpriteParams?.lineColorScreenEnable = bit::extract<5>(value);
+        bgParams[1].lineColorScreenEnable = bit::extract<0>(value);
+        bgParams[2].lineColorScreenEnable = bit::extract<1>(value);
+        bgParams[3].lineColorScreenEnable = bit::extract<2>(value);
+        bgParams[4].lineColorScreenEnable = bit::extract<3>(value);
+        bgParams[0].lineColorScreenEnable = bit::extract<4>(value);
+        spriteParams.lineColorScreenEnable = bit::extract<5>(value);
     }
 
     // 1800EA   SFPRMD  Special Priority Mode
@@ -1333,21 +1310,20 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadSFPRMD() const {
         uint16 value = 0;
-        bit::deposit_into<0, 1>(value, static_cast<uint32>(normBGParams[0].priorityMode));
-        bit::deposit_into<2, 3>(value, static_cast<uint32>(normBGParams[1].priorityMode));
-        bit::deposit_into<4, 5>(value, static_cast<uint32>(normBGParams[2].priorityMode));
-        bit::deposit_into<6, 7>(value, static_cast<uint32>(normBGParams[3].priorityMode));
-        bit::deposit_into<8, 9>(value, static_cast<uint32>(rotBGParams[0].priorityMode));
+        bit::deposit_into<0, 1>(value, static_cast<uint32>(bgParams[1].priorityMode));
+        bit::deposit_into<2, 3>(value, static_cast<uint32>(bgParams[2].priorityMode));
+        bit::deposit_into<4, 5>(value, static_cast<uint32>(bgParams[3].priorityMode));
+        bit::deposit_into<6, 7>(value, static_cast<uint32>(bgParams[4].priorityMode));
+        bit::deposit_into<8, 9>(value, static_cast<uint32>(bgParams[0].priorityMode));
         return value;
     }
 
     FORCE_INLINE void WriteSFPRMD(uint16 value) {
-        normBGParams[0].priorityMode = static_cast<PriorityMode>(bit::extract<0, 1>(value));
-        normBGParams[1].priorityMode = static_cast<PriorityMode>(bit::extract<2, 3>(value));
-        normBGParams[2].priorityMode = static_cast<PriorityMode>(bit::extract<4, 5>(value));
-        normBGParams[3].priorityMode = static_cast<PriorityMode>(bit::extract<6, 7>(value));
-        rotBGParams[0].priorityMode = static_cast<PriorityMode>(bit::extract<8, 9>(value));
-        rotBGParams[1].priorityMode = normBGParams[0].priorityMode;
+        bgParams[1].priorityMode = static_cast<PriorityMode>(bit::extract<0, 1>(value));
+        bgParams[2].priorityMode = static_cast<PriorityMode>(bit::extract<2, 3>(value));
+        bgParams[3].priorityMode = static_cast<PriorityMode>(bit::extract<4, 5>(value));
+        bgParams[4].priorityMode = static_cast<PriorityMode>(bit::extract<6, 7>(value));
+        bgParams[0].priorityMode = static_cast<PriorityMode>(bit::extract<8, 9>(value));
     }
 
     // 1800EC   CCCTL   Color Calculation Control
@@ -1380,11 +1356,11 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadCCCTL() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, normBGParams[0].colorCalcEnable);
-        bit::deposit_into<1>(value, normBGParams[1].colorCalcEnable);
-        bit::deposit_into<2>(value, normBGParams[2].colorCalcEnable);
-        bit::deposit_into<3>(value, normBGParams[3].colorCalcEnable);
-        bit::deposit_into<4>(value, rotBGParams[0].colorCalcEnable);
+        bit::deposit_into<0>(value, bgParams[1].colorCalcEnable);
+        bit::deposit_into<1>(value, bgParams[2].colorCalcEnable);
+        bit::deposit_into<2>(value, bgParams[3].colorCalcEnable);
+        bit::deposit_into<3>(value, bgParams[4].colorCalcEnable);
+        bit::deposit_into<4>(value, bgParams[0].colorCalcEnable);
         bit::deposit_into<5>(value, lineScreenParams.colorCalcEnable);
         bit::deposit_into<6>(value, spriteParams.colorCalcEnable);
 
@@ -1397,12 +1373,11 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCCCTL(uint16 value) {
-        normBGParams[0].colorCalcEnable = bit::extract<0>(value);
-        normBGParams[1].colorCalcEnable = bit::extract<1>(value);
-        normBGParams[2].colorCalcEnable = bit::extract<2>(value);
-        normBGParams[3].colorCalcEnable = bit::extract<3>(value);
-        rotBGParams[0].colorCalcEnable = bit::extract<4>(value);
-        rotBGParams[1].colorCalcEnable = normBGParams[0].colorCalcEnable;
+        bgParams[1].colorCalcEnable = bit::extract<0>(value);
+        bgParams[2].colorCalcEnable = bit::extract<1>(value);
+        bgParams[3].colorCalcEnable = bit::extract<2>(value);
+        bgParams[4].colorCalcEnable = bit::extract<3>(value);
+        bgParams[0].colorCalcEnable = bit::extract<4>(value);
         lineScreenParams.colorCalcEnable = bit::extract<5>(value);
         spriteParams.colorCalcEnable = bit::extract<6>(value);
 
@@ -1425,21 +1400,20 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadSFCCMD() const {
         uint16 value = 0;
-        bit::deposit_into<0, 1>(value, static_cast<uint8>(normBGParams[0].specialColorCalcMode));
-        bit::deposit_into<2, 3>(value, static_cast<uint8>(normBGParams[1].specialColorCalcMode));
-        bit::deposit_into<4, 5>(value, static_cast<uint8>(normBGParams[2].specialColorCalcMode));
-        bit::deposit_into<6, 7>(value, static_cast<uint8>(normBGParams[3].specialColorCalcMode));
-        bit::deposit_into<8, 9>(value, static_cast<uint8>(rotBGParams[0].specialColorCalcMode));
+        bit::deposit_into<0, 1>(value, static_cast<uint8>(bgParams[1].specialColorCalcMode));
+        bit::deposit_into<2, 3>(value, static_cast<uint8>(bgParams[2].specialColorCalcMode));
+        bit::deposit_into<4, 5>(value, static_cast<uint8>(bgParams[3].specialColorCalcMode));
+        bit::deposit_into<6, 7>(value, static_cast<uint8>(bgParams[4].specialColorCalcMode));
+        bit::deposit_into<8, 9>(value, static_cast<uint8>(bgParams[0].specialColorCalcMode));
         return value;
     }
 
     FORCE_INLINE void WriteSFCCMD(uint16 value) {
-        normBGParams[0].specialColorCalcMode = static_cast<SpecialColorCalcMode>(bit::extract<0, 1>(value));
-        normBGParams[1].specialColorCalcMode = static_cast<SpecialColorCalcMode>(bit::extract<2, 3>(value));
-        normBGParams[2].specialColorCalcMode = static_cast<SpecialColorCalcMode>(bit::extract<4, 5>(value));
-        normBGParams[3].specialColorCalcMode = static_cast<SpecialColorCalcMode>(bit::extract<6, 7>(value));
-        rotBGParams[0].specialColorCalcMode = static_cast<SpecialColorCalcMode>(bit::extract<8, 9>(value));
-        rotBGParams[1].specialColorCalcMode = normBGParams[0].specialColorCalcMode;
+        bgParams[1].specialColorCalcMode = static_cast<SpecialColorCalcMode>(bit::extract<0, 1>(value));
+        bgParams[2].specialColorCalcMode = static_cast<SpecialColorCalcMode>(bit::extract<2, 3>(value));
+        bgParams[3].specialColorCalcMode = static_cast<SpecialColorCalcMode>(bit::extract<4, 5>(value));
+        bgParams[4].specialColorCalcMode = static_cast<SpecialColorCalcMode>(bit::extract<6, 7>(value));
+        bgParams[0].specialColorCalcMode = static_cast<SpecialColorCalcMode>(bit::extract<8, 9>(value));
     }
 
     // 1800F0   PRISA   Sprite 0 and 1 Priority Number
@@ -1496,15 +1470,14 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadPRINA() const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, normBGParams[0].priorityNumber);
-        bit::deposit_into<8, 10>(value, normBGParams[1].priorityNumber);
+        bit::deposit_into<0, 2>(value, bgParams[1].priorityNumber);
+        bit::deposit_into<8, 10>(value, bgParams[2].priorityNumber);
         return value;
     }
 
     FORCE_INLINE void WritePRINA(uint16 value) {
-        normBGParams[0].priorityNumber = bit::extract<0, 2>(value);
-        normBGParams[1].priorityNumber = bit::extract<8, 10>(value);
-        rotBGParams[1].priorityNumber = normBGParams[0].priorityNumber;
+        bgParams[1].priorityNumber = bit::extract<0, 2>(value);
+        bgParams[2].priorityNumber = bit::extract<8, 10>(value);
     }
 
     // 1800FA   PRINB   NBG2 and NBG3 Priority Number
@@ -1517,14 +1490,14 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadPRINB() const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, normBGParams[2].priorityNumber);
-        bit::deposit_into<8, 10>(value, normBGParams[3].priorityNumber);
+        bit::deposit_into<0, 2>(value, bgParams[3].priorityNumber);
+        bit::deposit_into<8, 10>(value, bgParams[4].priorityNumber);
         return value;
     }
 
     FORCE_INLINE void WritePRINB(uint16 value) {
-        normBGParams[2].priorityNumber = bit::extract<0, 2>(value);
-        normBGParams[3].priorityNumber = bit::extract<8, 10>(value);
+        bgParams[3].priorityNumber = bit::extract<0, 2>(value);
+        bgParams[4].priorityNumber = bit::extract<8, 10>(value);
     }
 
     // 1800FC   PRIR    RBG0 Priority Number
@@ -1535,12 +1508,12 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadPRIR() const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, rotBGParams[0].priorityNumber);
+        bit::deposit_into<0, 2>(value, bgParams[0].priorityNumber);
         return value;
     }
 
     FORCE_INLINE void WritePRIR(uint16 value) {
-        rotBGParams[0].priorityNumber = bit::extract<0, 2>(value);
+        bgParams[0].priorityNumber = bit::extract<0, 2>(value);
     }
 
     // 1800FE   -       Reserved
@@ -1579,14 +1552,14 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadCCRSn(uint32 offset) const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, spriteParams.colorCalcRatios[offset * 2 + 0] - 1);
-        bit::deposit_into<8, 10>(value, spriteParams.colorCalcRatios[offset * 2 + 1] - 1);
+        bit::deposit_into<0, 4>(value, spriteParams.colorCalcRatios[offset * 2 + 0] - 1);
+        bit::deposit_into<8, 12>(value, spriteParams.colorCalcRatios[offset * 2 + 1] - 1);
         return value;
     }
 
     FORCE_INLINE void WriteCCRSn(uint32 offset, uint16 value) {
-        spriteParams.colorCalcRatios[offset * 2 + 0] = bit::extract<0, 2>(value) + 1;
-        spriteParams.colorCalcRatios[offset * 2 + 1] = bit::extract<8, 10>(value) + 1;
+        spriteParams.colorCalcRatios[offset * 2 + 0] = bit::extract<0, 4>(value) + 1;
+        spriteParams.colorCalcRatios[offset * 2 + 1] = bit::extract<8, 12>(value) + 1;
     }
 
     // 180108   CCRNA   NBG0 and NBG1 Color Calculation Ratio
@@ -1621,37 +1594,36 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadCCRNA() const {
         uint16 value = 0;
-        bit::deposit_into<0, 4>(value, normBGParams[0].colorCalcRatio - 1);
-        bit::deposit_into<8, 12>(value, normBGParams[1].colorCalcRatio - 1);
+        bit::deposit_into<0, 4>(value, bgParams[1].colorCalcRatio - 1);
+        bit::deposit_into<8, 12>(value, bgParams[2].colorCalcRatio - 1);
         return value;
     }
 
     FORCE_INLINE void WriteCCRNA(uint16 value) {
-        normBGParams[0].colorCalcRatio = bit::extract<0, 4>(value) + 1;
-        normBGParams[1].colorCalcRatio = bit::extract<8, 12>(value) + 1;
-        rotBGParams[1].colorCalcRatio = normBGParams[0].colorCalcRatio;
+        bgParams[1].colorCalcRatio = bit::extract<0, 4>(value) + 1;
+        bgParams[2].colorCalcRatio = bit::extract<8, 12>(value) + 1;
     }
 
     FORCE_INLINE uint16 ReadCCRNB() const {
         uint16 value = 0;
-        bit::deposit_into<0, 4>(value, normBGParams[2].colorCalcRatio - 1);
-        bit::deposit_into<8, 12>(value, normBGParams[3].colorCalcRatio - 1);
+        bit::deposit_into<0, 4>(value, bgParams[3].colorCalcRatio - 1);
+        bit::deposit_into<8, 12>(value, bgParams[4].colorCalcRatio - 1);
         return value;
     }
 
     FORCE_INLINE void WriteCCRNB(uint16 value) {
-        normBGParams[2].colorCalcRatio = bit::extract<0, 4>(value) + 1;
-        normBGParams[3].colorCalcRatio = bit::extract<8, 12>(value) + 1;
+        bgParams[3].colorCalcRatio = bit::extract<0, 4>(value) + 1;
+        bgParams[4].colorCalcRatio = bit::extract<8, 12>(value) + 1;
     }
 
     FORCE_INLINE uint16 ReadCCRR() const {
         uint16 value = 0;
-        bit::deposit_into<0, 4>(value, rotBGParams[0].colorCalcRatio - 1);
+        bit::deposit_into<0, 4>(value, bgParams[0].colorCalcRatio - 1);
         return value;
     }
 
     FORCE_INLINE void WriteCCRR(uint16 value) {
-        rotBGParams[0].colorCalcRatio = bit::extract<0, 4>(value) + 1;
+        bgParams[0].colorCalcRatio = bit::extract<0, 4>(value) + 1;
     }
 
     FORCE_INLINE uint16 ReadCCRLB() const {
@@ -1680,23 +1652,22 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadCLOFEN() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, normBGParams[0].colorOffsetEnable);
-        bit::deposit_into<1>(value, normBGParams[1].colorOffsetEnable);
-        bit::deposit_into<2>(value, normBGParams[2].colorOffsetEnable);
-        bit::deposit_into<3>(value, normBGParams[3].colorOffsetEnable);
-        bit::deposit_into<4>(value, rotBGParams[0].colorOffsetEnable);
+        bit::deposit_into<0>(value, bgParams[1].colorOffsetEnable);
+        bit::deposit_into<1>(value, bgParams[2].colorOffsetEnable);
+        bit::deposit_into<2>(value, bgParams[3].colorOffsetEnable);
+        bit::deposit_into<3>(value, bgParams[4].colorOffsetEnable);
+        bit::deposit_into<4>(value, bgParams[0].colorOffsetEnable);
         bit::deposit_into<5>(value, backScreenParams.colorOffsetEnable);
         bit::deposit_into<6>(value, spriteParams.colorOffsetEnable);
         return value;
     }
 
     FORCE_INLINE void WriteCLOFEN(uint16 value) {
-        normBGParams[0].colorOffsetEnable = bit::extract<0>(value);
-        normBGParams[1].colorOffsetEnable = bit::extract<1>(value);
-        normBGParams[2].colorOffsetEnable = bit::extract<2>(value);
-        normBGParams[3].colorOffsetEnable = bit::extract<3>(value);
-        rotBGParams[0].colorOffsetEnable = bit::extract<4>(value);
-        rotBGParams[1].colorOffsetEnable = normBGParams[0].colorOffsetEnable;
+        bgParams[1].colorOffsetEnable = bit::extract<0>(value);
+        bgParams[2].colorOffsetEnable = bit::extract<1>(value);
+        bgParams[3].colorOffsetEnable = bit::extract<2>(value);
+        bgParams[4].colorOffsetEnable = bit::extract<3>(value);
+        bgParams[0].colorOffsetEnable = bit::extract<4>(value);
         backScreenParams.colorOffsetEnable = bit::extract<5>(value);
         spriteParams.colorOffsetEnable = bit::extract<6>(value);
     }
@@ -1706,7 +1677,7 @@ struct VDP2Regs {
     //   bits   r/w  code          description
     //   15-7        -             Reserved, must be zero
     //      6     W  SPCOSL        Sprite Color Offset Select
-    //      5     W  BKCOSL        Backdrop Color Offset Select
+    //      5     W  BKCOSL        Back Screen Color Offset Select
     //      4     W  R0COSL        RBG0 Color Offset Select
     //      3     W  N3COSL        NBG3 Color Offset Select
     //      2     W  N2COSL        NBG2 Color Offset Select
@@ -1719,23 +1690,22 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadCLOFSL() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, normBGParams[0].colorOffsetSelect);
-        bit::deposit_into<1>(value, normBGParams[1].colorOffsetSelect);
-        bit::deposit_into<2>(value, normBGParams[2].colorOffsetSelect);
-        bit::deposit_into<3>(value, normBGParams[3].colorOffsetSelect);
-        bit::deposit_into<4>(value, rotBGParams[0].colorOffsetSelect);
+        bit::deposit_into<0>(value, bgParams[1].colorOffsetSelect);
+        bit::deposit_into<1>(value, bgParams[2].colorOffsetSelect);
+        bit::deposit_into<2>(value, bgParams[3].colorOffsetSelect);
+        bit::deposit_into<3>(value, bgParams[4].colorOffsetSelect);
+        bit::deposit_into<4>(value, bgParams[0].colorOffsetSelect);
         bit::deposit_into<5>(value, backScreenParams.colorOffsetSelect);
         bit::deposit_into<6>(value, spriteParams.colorOffsetSelect);
         return value;
     }
 
     FORCE_INLINE void WriteCLOFSL(uint16 value) {
-        normBGParams[0].colorOffsetSelect = bit::extract<0>(value);
-        normBGParams[1].colorOffsetSelect = bit::extract<1>(value);
-        normBGParams[2].colorOffsetSelect = bit::extract<2>(value);
-        normBGParams[3].colorOffsetSelect = bit::extract<3>(value);
-        rotBGParams[0].colorOffsetSelect = bit::extract<4>(value);
-        rotBGParams[1].colorOffsetSelect = normBGParams[0].colorOffsetSelect;
+        bgParams[1].colorOffsetSelect = bit::extract<0>(value);
+        bgParams[2].colorOffsetSelect = bit::extract<1>(value);
+        bgParams[3].colorOffsetSelect = bit::extract<2>(value);
+        bgParams[4].colorOffsetSelect = bit::extract<3>(value);
+        bgParams[0].colorOffsetSelect = bit::extract<4>(value);
         backScreenParams.colorOffsetSelect = bit::extract<5>(value);
         spriteParams.colorOffsetSelect = bit::extract<6>(value);
     }
@@ -1764,13 +1734,13 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCOxR(uint8 select, uint16 value) {
-        colorOffsetParams[select].r = bit::sign_extend<9>(bit::extract<0, 8>(value));
+        colorOffsetParams[select].r = bit::extract_signed<0, 8>(value);
     }
     FORCE_INLINE void WriteCOxG(uint8 select, uint16 value) {
-        colorOffsetParams[select].g = bit::sign_extend<9>(bit::extract<0, 8>(value));
+        colorOffsetParams[select].g = bit::extract_signed<0, 8>(value);
     }
     FORCE_INLINE void WriteCOxB(uint8 select, uint16 value) {
-        colorOffsetParams[select].b = bit::sign_extend<9>(bit::extract<0, 8>(value));
+        colorOffsetParams[select].b = bit::extract_signed<0, 8>(value);
     }
 
     // -------------------------------------------------------------------------
@@ -1779,12 +1749,30 @@ struct VDP2Regs {
     // The screen resolution is updated on VBlank.
     bool TVMDDirty;
 
-    std::array<BGParams, 4> normBGParams;
-    std::array<BGParams, 2> rotBGParams;
+    // Whether to display each background:
+    // [0] NBG0
+    // [1] NBG1
+    // [2] NBG2
+    // [3] NBG3
+    // [4] RBG0
+    // [5] RBG1
+    // Note that when RBG1 is enabled, RBG0 is required to be enabled as well and all NBGs are disabled.
+    // We'll assume that RBG0 is always enabled when RBG1 is also enabled.
+    // Derived from BGON.xxON
+    std::array<bool, 6> bgEnabled;
+
+    // Background parameters:
+    // [0] RBG0
+    // [1] NBG0/RBG1
+    // [2] NBG1/EXBG
+    // [3] NBG2
+    // [4] NBG3
+    std::array<BGParams, 5> bgParams;
     SpriteParams spriteParams;
     LineBackScreenParams lineScreenParams;
     LineBackScreenParams backScreenParams;
 
+    // Rotation Parameters A and B
     std::array<RotationParams, 2> rotParams;
     CommonRotationParams commonRotParams;
 

@@ -42,12 +42,15 @@ void VDP::Reset(bool hard) {
 
     m_VDP1RenderContext.Reset();
 
-    m_spriteLayer.Reset();
-    for (auto &bgLayer : m_normBGLayers) {
-        bgLayer.Reset();
+    for (auto &state : m_layerStates) {
+        state.Reset();
     }
-    for (auto &bgLayer : m_rotBGLayers) {
-        bgLayer.Reset();
+    m_spriteLayerState.Reset();
+    for (auto &state : m_normBGLayerStates) {
+        state.Reset();
+    }
+    for (auto &state : m_rotBGLayerStates) {
+        state.Reset();
     }
 
     BeginHPhaseActiveDisplay();
@@ -196,17 +199,7 @@ void VDP::BeginHPhaseActiveDisplay() {
             m_framebuffer = m_cbRequestFramebuffer(m_HRes, m_VRes);
             // fmt::println("VDP: begin frame, VDP1 fb {}", m_drawFB ^ 1);
 
-            for (int i = 0; i < 4; i++) {
-                const auto &bgParams = m_VDP2.normBGParams[i];
-                auto &bgLayer = m_normBGLayers[i];
-                bgLayer.fracScrollX = bgParams.scrollAmountH;
-                bgLayer.fracScrollY = bgParams.scrollAmountV;
-                bgLayer.scrollIncH = bgParams.scrollIncH;
-                bgLayer.mosaicCounterY = 0;
-                if (i < 2) {
-                    bgLayer.lineScrollTableAddress = bgParams.lineScrollTableAddress;
-                }
-            }
+            VDP2InitFrame();
         }
         VDP2DrawLine();
     }
@@ -921,39 +914,94 @@ void VDP::VDP1Cmd_SetLocalCoordinates(uint32 cmdAddress) {
     // fmt::println("VDP1: Set local coordinates: {}x{}", ctx.localCoordX, ctx.localCoordY);
 }
 
-void VDP::VDP2ClearDisabledBGs() {
-    for (int i = 0; i < 4; i++) {
-        if (!m_VDP2.normBGParams[i].enabled) {
-            m_normBGLayers[i].pixels.fill({});
-        }
+// -----------------------------------------------------------------------------
+// VDP2
+
+void VDP::VDP2InitFrame() {
+    // Sprite layer is always enabled
+    m_layerStates[0].enabled = true;
+
+    if (m_VDP2.bgEnabled[5]) {
+        VDP2InitRotationBG<0>();
+        VDP2InitRotationBG<1>();
+        m_layerStates[1].enabled = true;  // RBG0
+        m_layerStates[2].enabled = true;  // RBG1
+        m_layerStates[3].enabled = false; // EXBG
+        m_layerStates[4].enabled = false; // not used
+        m_layerStates[5].enabled = false; // not used
+    } else {
+        m_layerStates[1].enabled = m_VDP2.bgEnabled[4]; // RBG0
+        m_layerStates[2].enabled = m_VDP2.bgEnabled[0]; // NBG0
+        m_layerStates[3].enabled = m_VDP2.bgEnabled[1]; // NBG1/EXBG
+        m_layerStates[4].enabled = m_VDP2.bgEnabled[2]; // NBG2
+        m_layerStates[5].enabled = m_VDP2.bgEnabled[3]; // NBG3
+        VDP2InitRotationBG<0>();
+        VDP2InitNormalBG<0>();
+        VDP2InitNormalBG<1>();
+        VDP2InitNormalBG<2>();
+        VDP2InitNormalBG<3>();
     }
-    for (int i = 0; i < 2; i++) {
-        if (!m_VDP2.rotBGParams[i].enabled) {
-            m_rotBGLayers[i].pixels.fill({});
+}
+
+template <uint32 index>
+FORCE_INLINE void VDP::VDP2InitNormalBG() {
+    static_assert(index < 4, "Invalid NBG index");
+
+    if (!m_VDP2.bgEnabled[index]) {
+        return;
+    }
+
+    const BGParams &bgParams = m_VDP2.bgParams[index + 1];
+    NormBGLayerState &bgState = m_normBGLayerStates[index];
+    bgState.fracScrollX = bgParams.scrollAmountH;
+    bgState.fracScrollY = bgParams.scrollAmountV;
+    bgState.scrollIncH = bgParams.scrollIncH;
+    bgState.mosaicCounterY = 0;
+    if constexpr (index < 2) {
+        bgState.lineScrollTableAddress = bgParams.lineScrollTableAddress;
+    }
+}
+
+template <uint32 index>
+FORCE_INLINE void VDP::VDP2InitRotationBG() {
+    static_assert(index < 2, "Invalid RBG index");
+
+    if (!m_VDP2.bgEnabled[index + 4]) {
+        return;
+    }
+
+    const BGParams &bgParams = m_VDP2.bgParams[index];
+    RotBGLayerState &bgState = m_rotBGLayerStates[index];
+
+    const bool cellSizeShift = bgParams.cellSizeShift;
+    const bool twoWordChar = bgParams.twoWordChar;
+    for (int param = 0; param < 2; param++) {
+        const RotationParams &rotParam = m_VDP2.rotParams[param];
+        const uint16 plsz = rotParam.plsz;
+        for (int plane = 0; plane < 16; plane++) {
+            const uint32 mapIndex = rotParam.mapIndices[plane];
+            bgState.pageBaseAddresses[param][plane] = CalcPageBaseAddress(cellSizeShift, twoWordChar, plsz, mapIndex);
         }
     }
 }
 
-// -----------------------------------------------------------------------------
-// VDP2
-
-void VDP::VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayer &layer) {
+void VDP::VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayerState &bgState) {
     auto read = [&] {
-        const uint32 address = layer.lineScrollTableAddress & 0x7FFFF;
+        const uint32 address = bgState.lineScrollTableAddress & 0x7FFFF;
         const uint32 value = util::ReadBE<uint32>(&m_VRAM2[address]);
-        layer.lineScrollTableAddress += sizeof(uint32);
+        bgState.lineScrollTableAddress += sizeof(uint32);
         return value;
     };
 
     if ((m_VCounter & ~(~0 << bgParams.lineScrollInterval)) == 0) {
         if (bgParams.lineScrollXEnable) {
-            layer.fracScrollX = bit::extract<8, 26>(read());
+            bgState.fracScrollX = bit::extract<8, 26>(read());
         }
         if (bgParams.lineScrollYEnable) {
-            layer.fracScrollY = bit::extract<8, 26>(read());
+            bgState.fracScrollY = bit::extract<8, 26>(read());
         }
         if (bgParams.lineZoomEnable) {
-            layer.scrollIncH = bit::extract<8, 18>(read());
+            bgState.scrollIncH = bit::extract<8, 18>(read());
         }
     }
 }
@@ -961,15 +1009,12 @@ void VDP::VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayer &laye
 void VDP::VDP2DrawLine() {
     // fmt::println("VDP2: drawing line {}", m_VCounter);
 
-    using FnDrawSprite = void (VDP::*)();
-    using FnDrawScrollNBG = void (VDP::*)(const BGParams &, NormBGLayer &);
-    using FnDrawBitmapNBG = void (VDP::*)(const BGParams &, NormBGLayer &);
-    // using FnDrawRotBG = void (VDP::*)(const RotBGParams &, BGLayer &);
+    using FnDrawLayer = void (VDP::*)();
 
-    // Lookup table of VDP2DrawSpriteLayer functions
-    // [colorMode]
+    // Lookup table of sprite drawing functions
+    // Indexing: [colorMode]
     static constexpr auto fnDrawSprite = [] {
-        std::array<FnDrawSprite, 4> arr{};
+        std::array<FnDrawLayer, 4> arr{};
 
         util::constexpr_for<4>([&](auto index) {
             const uint32 cmIndex = bit::extract<0, 1>(index());
@@ -981,295 +1026,25 @@ void VDP::VDP2DrawLine() {
         return arr;
     }();
 
-    // Lookup table of VDP2DrawNormalScrollBG functions
-    // [twoWordChar][fourCellChar][wideChar][colorFormat][colorMode]
-    static constexpr auto fnDrawScrollNBGs = [] {
-        std::array<std::array<std::array<std::array<std::array<FnDrawScrollNBG, 4>, 8>, 2>, 2>, 2> arr{};
-
-        util::constexpr_for<2 * 2 * 2 * 8 * 4>([&](auto index) {
-            const uint32 twcIndex = bit::extract<0>(index());
-            const uint32 fccIndex = bit::extract<1>(index());
-            const uint32 wcIndex = bit::extract<2>(index());
-            const uint32 cfIndex = bit::extract<3, 5>(index());
-            const uint32 cmIndex = bit::extract<6, 7>(index());
-
-            const bool twoWordChar = twcIndex;
-            const bool fourCellChar = fccIndex;
-            const bool wideChar = wcIndex;
-            const ColorFormat colorFormat = static_cast<ColorFormat>(cfIndex <= 4 ? cfIndex : 4);
-            const uint32 colorMode = cmIndex <= 2 ? cmIndex : 2;
-            arr[twcIndex][fccIndex][wcIndex][cfIndex][cmIndex] =
-                &VDP::VDP2DrawNormalScrollBG<twoWordChar, fourCellChar, wideChar, colorFormat, colorMode>;
-        });
-
-        return arr;
-    }();
-
-    // Lookup table of VDP2DrawNormalBitmapBG functions
-    // [colorFormat][colorMode]
-    static constexpr auto fnDrawBitmapNBGs = [] {
-        std::array<std::array<FnDrawBitmapNBG, 4>, 8> arr{};
-
-        util::constexpr_for<8 * 4>([&](auto index) {
-            const uint32 cfIndex = bit::extract<0, 2>(index());
-            const uint32 cmIndex = bit::extract<3, 4>(index());
-
-            const ColorFormat colorFormat = static_cast<ColorFormat>(cfIndex <= 4 ? cfIndex : 4);
-            const size_t colorMode = cmIndex <= 2 ? cmIndex : 2;
-            arr[cfIndex][cmIndex] = &VDP::VDP2DrawNormalBitmapBG<colorFormat, colorMode>;
-        });
-
-        return arr;
-    }();
-
-    // TODO: optimize
-    // - RBG1 replaces NBG0 if enabled
-    // - when RBG0 and RBG1 are both enabled, NBG0-3 are disabled
-    // - this means we can use less layers (4 max it seems)
-
     const uint32 colorMode = m_VDP2.RAMCTL.CRMDn;
 
     // Draw sprite layer
     (this->*fnDrawSprite[colorMode])();
 
-    // Draw normal BGs
-    for (int i = 0; i < 4; i++) {
-        const auto &bg = m_VDP2.normBGParams[i];
-        auto &layer = m_normBGLayers[i];
-        if (bg.enabled) {
-            layer.cramOffset = bg.caos << (colorMode == 1 ? 10 : 9);
-            layer.mosaicCounterY++;
-            if (layer.mosaicCounterY >= m_VDP2.mosaicV) {
-                layer.mosaicCounterY = 0;
-            }
-
-            if (i < 2) {
-                VDP2UpdateLineScreenScroll(bg, layer);
-            }
-
-            const uint32 colorFormat = static_cast<uint32>(bg.colorFormat);
-            if (bg.bitmap) {
-                (this->*fnDrawBitmapNBGs[colorFormat][colorMode])(bg, layer);
-            } else {
-                const bool twoWordChar = bg.twoWordChar;
-                const bool fourCellChar = bg.cellSizeShift;
-                const bool wideChar = bg.wideChar;
-                (this->*fnDrawScrollNBGs[twoWordChar][fourCellChar][wideChar][colorFormat][colorMode])(bg, layer);
-            }
-        }
-    }
-
-    // Draw rotation BGs
-    for (int i = 0; i < 2; i++) {
-        const auto &bg = m_VDP2.rotBGParams[i];
-        auto &layer = m_rotBGLayers[i];
-        if (bg.enabled) {
-            // layer.cramOffset = bg.caos << (colorMode == 1 ? 10 : 9);
-
-            // TODO: implement
-            if (bg.bitmap) {
-                // (this->*fnDrawBitmapRBGs[...])(bg, layer);
-            } else {
-                // (this->*fnDrawScrollRBGs[...])(bg, layer);
-            }
-        }
+    // Draw background layers
+    if (m_VDP2.bgEnabled[5]) {
+        VDP2DrawRotationBG(0, colorMode); // RBG0
+        VDP2DrawRotationBG(1, colorMode); // RBG1
+    } else {
+        VDP2DrawRotationBG(0, colorMode); // RBG0
+        VDP2DrawNormalBG(0, colorMode);   // NBG0
+        VDP2DrawNormalBG(1, colorMode);   // NBG1
+        VDP2DrawNormalBG(2, colorMode);   // NBG2
+        VDP2DrawNormalBG(3, colorMode);   // NBG3
     }
 
     // Compose image
-    if (m_framebuffer != nullptr) {
-        const bool usesRBG1 = m_VDP2.rotBGParams[1].enabled;
-        const uint32 y = m_VCounter;
-        for (uint32 x = 0; x < m_HRes; x++) {
-            // Get references to pixels of all layers
-            // TODO: merge BG layers NBG0 and RBG1
-            const auto &spritePixel = m_spriteLayer.pixels[x];
-            const auto &nbg0rbg1Pixel = usesRBG1 ? m_normBGLayers[5].pixels[x] : m_normBGLayers[0].pixels[x];
-            const auto &nbg1exbgPixel = m_normBGLayers[1].pixels[x];
-            const auto &nbg2Pixel = m_normBGLayers[2].pixels[x];
-            const auto &nbg3Pixel = m_normBGLayers[3].pixels[x];
-            const auto &rbg0Pixel = m_normBGLayers[4].pixels[x];
-
-            // TODO: refactor this mess
-            // - too many switch-cases to get parameters/data
-            enum Layer { LYR_Back, LYR_NBG3, LYR_NBG2, LYR_NBG1_EXBG, LYR_NBG0_RBG1, LYR_RBG0, LYR_Sprite };
-            std::array<Layer, 3> layers = {LYR_Back, LYR_Back, LYR_Back};
-            std::array<uint8, 3> layerPrios = {0, 0, 0};
-
-            // Inserts a layer into the appropriate position in the stack
-            // - Higher priority beats lower priority
-            // - If same priority, higher Layer index beats lower Layer index
-            // - layers[0] is topmost (first) layer
-            auto insertLayer = [&](Layer layer, uint8 priority, bool transparent) {
-                if (transparent) {
-                    return;
-                }
-                if (priority == 0) {
-                    return;
-                }
-
-                for (int i = 0; i < 3; i++) {
-                    if (priority > layerPrios[i] || (priority == layerPrios[i] && layer > layers[i])) {
-                        // Push layers back
-                        for (int j = 2; j > i; j--) {
-                            layers[j] = layers[j - 1];
-                            layerPrios[j] = layerPrios[j - 1];
-                        }
-                        layers[i] = layer;
-                        layerPrios[i] = priority;
-                        break;
-                    }
-                }
-            };
-
-            // Determine layer order
-            insertLayer(LYR_Sprite, spritePixel.priority, spritePixel.transparent);
-            insertLayer(LYR_NBG0_RBG1, nbg0rbg1Pixel.priority, nbg0rbg1Pixel.transparent);
-            insertLayer(LYR_NBG1_EXBG, nbg1exbgPixel.priority, nbg1exbgPixel.transparent);
-            insertLayer(LYR_NBG2, nbg2Pixel.priority, nbg2Pixel.transparent);
-            insertLayer(LYR_NBG3, nbg3Pixel.priority, nbg3Pixel.transparent);
-            insertLayer(LYR_RBG0, rbg0Pixel.priority, rbg0Pixel.transparent);
-
-            // Get references to all layer parameters
-            // TODO: merge BG layers NBG0 and RBG1
-            const auto &spriteParams = m_VDP2.spriteParams;
-            const auto &nbg0Params = m_VDP2.normBGParams[0];
-            const auto &nbg1Params = m_VDP2.normBGParams[1];
-            const auto &nbg2Params = m_VDP2.normBGParams[2];
-            const auto &nbg3Params = m_VDP2.normBGParams[3];
-            const auto &rbg0Params = m_VDP2.rotBGParams[0];
-            const auto &rbg1Params = m_VDP2.rotBGParams[1];
-            const auto &backParams = m_VDP2.backScreenParams;
-
-            // Retrieves the color of the given layer
-            auto getLayerColor = [&](Layer layer) -> Color888 {
-                bool colorOffsetEnable{};
-                bool colorOffsetSelect{};
-                Color888 color{};
-
-                switch (layer) {
-                case LYR_Sprite:
-                    color = spritePixel.color;
-                    colorOffsetEnable = spriteParams.colorOffsetEnable;
-                    colorOffsetSelect = spriteParams.colorOffsetSelect;
-                    break;
-                case LYR_RBG0:
-                    color = rbg0Pixel.color;
-                    colorOffsetEnable = rbg0Params.colorOffsetEnable;
-                    colorOffsetSelect = rbg0Params.colorOffsetSelect;
-                    break;
-                case LYR_NBG0_RBG1:
-                    color = nbg0rbg1Pixel.color;
-                    colorOffsetEnable = usesRBG1 ? rbg1Params.colorOffsetEnable : nbg0Params.colorOffsetEnable;
-                    colorOffsetSelect = usesRBG1 ? rbg1Params.colorOffsetSelect : nbg0Params.colorOffsetSelect;
-                    break;
-                case LYR_NBG1_EXBG:
-                    color = nbg1exbgPixel.color;
-                    colorOffsetEnable = nbg1Params.colorOffsetEnable;
-                    colorOffsetSelect = nbg1Params.colorOffsetSelect;
-                    break;
-                case LYR_NBG2:
-                    color = nbg2Pixel.color;
-                    colorOffsetEnable = nbg2Params.colorOffsetEnable;
-                    colorOffsetSelect = nbg2Params.colorOffsetSelect;
-                    break;
-                case LYR_NBG3:
-                    color = nbg3Pixel.color;
-                    colorOffsetEnable = nbg3Params.colorOffsetEnable;
-                    colorOffsetSelect = nbg3Params.colorOffsetSelect;
-                    break;
-                case LYR_Back: {
-                    const uint32 line = backParams.perLine ? y : 0;
-                    const uint32 address = backParams.baseAddress + line * sizeof(Color555);
-                    const Color555 color555{.u16 = util::ReadBE<uint16>(&m_VRAM2[address & 0x7FFFF])};
-                    color = ConvertRGB555to888(color555);
-                    colorOffsetEnable = backParams.colorOffsetEnable;
-                    colorOffsetSelect = backParams.colorOffsetSelect;
-                    break;
-                }
-                default: util::unreachable();
-                }
-
-                // Apply color offset if enabled
-                if (colorOffsetEnable) {
-                    const auto &colorOffset = m_VDP2.colorOffsetParams[colorOffsetSelect];
-                    color.r = std::clamp(color.r + colorOffset.r, 0, 255);
-                    color.g = std::clamp(color.g + colorOffset.g, 0, 255);
-                    color.b = std::clamp(color.b + colorOffset.b, 0, 255);
-                }
-                return color;
-            };
-
-            auto isColorCalcEnabled = [&](Layer layer) {
-                switch (layer) {
-                case LYR_Sprite: return spriteParams.colorCalcEnable;
-                case LYR_RBG0: return rbg0Params.colorCalcEnable;
-                case LYR_NBG0_RBG1: return usesRBG1 ? rbg1Params.colorCalcEnable : nbg0Params.colorCalcEnable;
-                case LYR_NBG1_EXBG: return nbg1Params.colorCalcEnable;
-                case LYR_NBG2: return nbg2Params.colorCalcEnable;
-                case LYR_NBG3: return nbg3Params.colorCalcEnable;
-                case LYR_Back: return backParams.colorCalcEnable;
-                default: util::unreachable();
-                }
-            };
-
-            auto getColorCalcRatio = [&](Layer layer) {
-                switch (layer) {
-                case LYR_Sprite: return spritePixel.colorCalcRatio;
-                case LYR_RBG0: return rbg0Params.colorCalcRatio;
-                case LYR_NBG0_RBG1: return usesRBG1 ? rbg1Params.colorCalcRatio : nbg0Params.colorCalcRatio;
-                case LYR_NBG1_EXBG: return nbg1Params.colorCalcRatio;
-                case LYR_NBG2: return nbg2Params.colorCalcRatio;
-                case LYR_NBG3: return nbg3Params.colorCalcRatio;
-                case LYR_Back: return backParams.colorCalcRatio;
-                default: util::unreachable();
-                }
-            };
-
-            const auto &colorCalcParams = m_VDP2.colorCalcParams;
-
-            // Calculate color
-            // TODO: handle LNCL insertion
-            // - inserted behind the topmost layer if it has line color insertion enabled
-            // TODO: handle specialColorCalcMode directly in rendering code
-            Color888 outputColor{};
-            if (isColorCalcEnabled(layers[0])) {
-                const Color888 topColor = getLayerColor(layers[0]);
-                Color888 btmColor = getLayerColor(layers[1]);
-
-                // Apply extended color calculations (only in normal TV modes)
-                if (colorCalcParams.extendedColorCalcEnable && m_VDP2.TVMD.HRESOn < 2) {
-                    // TODO: honor color RAM mode + palette/RGB format restrictions
-                    // - modes 1 and 2 don't blend layers if the bottom layer uses palette color
-                    //   - LNCL is considered RGB for that matter (i.e. it blends if requested)
-                    // TODO: honor LNCL insertion
-
-                    // HACK: assuming color RAM mode 0 for now
-                    if (isColorCalcEnabled(layers[1])) {
-                        const Color888 l2Color = getLayerColor(layers[2]);
-                        btmColor.r = (btmColor.r + l2Color.r) / 2;
-                        btmColor.g = (btmColor.g + l2Color.g) / 2;
-                        btmColor.b = (btmColor.b + l2Color.b) / 2;
-                    }
-                }
-
-                if (colorCalcParams.useAdditiveBlend) {
-                    outputColor.r = std::min(topColor.r + btmColor.r, 255);
-                    outputColor.g = std::min(topColor.g + btmColor.g, 255);
-                    outputColor.b = std::min(topColor.b + btmColor.b, 255);
-                } else {
-                    const uint8 ratio = getColorCalcRatio(colorCalcParams.useSecondScreenRatio ? layers[1] : layers[0]);
-                    const uint8 complRatio = 32 - ratio;
-                    outputColor.r = (topColor.r * complRatio + btmColor.r * ratio) / 32;
-                    outputColor.g = (topColor.g * complRatio + btmColor.g * ratio) / 32;
-                    outputColor.b = (topColor.b * complRatio + btmColor.b * ratio) / 32;
-                }
-            } else {
-                outputColor = getLayerColor(layers[0]);
-            }
-
-            m_framebuffer[x + y * m_HRes] = outputColor.u32;
-        }
-    }
+    VDP2ComposeLine();
 }
 
 template <uint32 colorMode>
@@ -1280,8 +1055,9 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
         const auto &spriteFB = VDP1GetDisplayFB();
         const uint32 spriteFBOffset = x + y * m_VDP1.fbSizeH;
 
-        const auto &params = m_VDP2.spriteParams;
-        auto &pixel = m_spriteLayer.pixels[x];
+        const SpriteParams &params = m_VDP2.spriteParams;
+        auto &pixel = m_layerStates[0].pixels[x];
+        auto &attr = m_spriteLayerState.attrs[x];
 
         bool isPaletteData = true;
         if (params.mixedFormat) {
@@ -1291,8 +1067,8 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
                 pixel.color = ConvertRGB555to888(Color555{spriteDataValue});
                 pixel.transparent = false;
                 pixel.priority = params.priorities[0];
-                pixel.colorCalcRatio = params.colorCalcRatios[0];
-                pixel.shadowOrWindow = false;
+                attr.colorCalcRatio = params.colorCalcRatios[0];
+                attr.shadowOrWindow = false;
                 isPaletteData = false;
             }
         }
@@ -1304,14 +1080,313 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
             pixel.color = VDP2FetchCRAMColor<colorMode>(0, colorIndex);
             pixel.transparent = spriteData.colorData == 0;
             pixel.priority = params.priorities[spriteData.priority];
-            pixel.colorCalcRatio = params.colorCalcRatios[spriteData.colorCalcRatio];
-            pixel.shadowOrWindow = spriteData.shadowOrWindow;
+            attr.colorCalcRatio = params.colorCalcRatios[spriteData.colorCalcRatio];
+            attr.shadowOrWindow = spriteData.shadowOrWindow;
         }
     }
 }
 
+FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 bgIndex, uint32 colorMode) {
+    assert(bgIndex < 4);
+
+    using FnDraw = void (VDP::*)(const BGParams &, LayerState &, NormBGLayerState &);
+
+    // Lookup table of scroll BG drawing functions
+    // Indexing: [twoWordChar][fourCellChar][wideChar][colorFormat][colorMode]
+    static constexpr auto fnDrawScroll = [] {
+        std::array<std::array<std::array<std::array<std::array<FnDraw, 4>, 8>, 2>, 2>, 2> arr{};
+
+        util::constexpr_for<2 * 2 * 2 * 8 * 4>([&](auto index) {
+            const uint32 twc = bit::extract<0>(index());
+            const uint32 fcc = bit::extract<1>(index());
+            const uint32 wc = bit::extract<2>(index());
+            const uint32 cf = bit::extract<3, 5>(index());
+            const uint32 cm = bit::extract<6, 7>(index());
+
+            const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
+            const uint32 colorMode = cm <= 2 ? cm : 2;
+            arr[twc][fcc][wc][cf][cm] = &VDP::VDP2DrawNormalScrollBG<twc, fcc, wc, cfEnum, colorMode>;
+        });
+
+        return arr;
+    }();
+
+    // Lookup table of bitmap BG drawing functions
+    // Indexing: [colorFormat]
+    static constexpr auto fnDrawBitmap = [] {
+        std::array<std::array<FnDraw, 4>, 8> arr{};
+
+        util::constexpr_for<8 * 4>([&](auto index) {
+            const uint32 cf = bit::extract<0, 2>(index());
+            const uint32 cm = bit::extract<3, 4>(index());
+
+            const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
+            const uint32 colorMode = cm <= 2 ? cm : 2;
+            arr[cf][cm] = &VDP::VDP2DrawNormalBitmapBG<cfEnum, colorMode>;
+        });
+
+        return arr;
+    }();
+
+    if (!m_VDP2.bgEnabled[bgIndex]) {
+        return;
+    }
+
+    const BGParams &bgParams = m_VDP2.bgParams[bgIndex + 1];
+    LayerState &layerState = m_layerStates[bgIndex + 2];
+    NormBGLayerState &bgState = m_normBGLayerStates[bgIndex];
+
+    bgState.cramOffset = bgParams.caos << (colorMode == 1 ? 10 : 9);
+    bgState.mosaicCounterY++;
+    if (bgState.mosaicCounterY >= m_VDP2.mosaicV) {
+        bgState.mosaicCounterY = 0;
+    }
+
+    if (bgIndex < 2) {
+        VDP2UpdateLineScreenScroll(bgParams, bgState);
+    }
+
+    const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
+    if (bgParams.bitmap) {
+        (this->*fnDrawBitmap[cf][colorMode])(bgParams, layerState, bgState);
+    } else {
+        const bool twc = bgParams.twoWordChar;
+        const bool fcc = bgParams.cellSizeShift;
+        const bool wc = bgParams.wideChar;
+        (this->*fnDrawScroll[twc][fcc][wc][cf][colorMode])(bgParams, layerState, bgState);
+    }
+}
+
+FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 bgIndex, uint32 colorMode) {
+    assert(bgIndex < 2);
+
+    using FnDraw = void (VDP::*)(const BGParams &, LayerState &, RotBGLayerState &);
+
+    // Lookup table of scroll BG drawing functions
+    // Indexing: [twoWordChar][fourCellChar][wideChar][colorFormat][colorMode]
+    static constexpr auto fnDrawScroll = [] {
+        std::array<std::array<std::array<std::array<std::array<FnDraw, 4>, 8>, 2>, 2>, 2> arr{};
+
+        util::constexpr_for<2 * 2 * 2 * 8 * 4>([&](auto index) {
+            const uint32 twc = bit::extract<0>(index());
+            const uint32 fcc = bit::extract<1>(index());
+            const uint32 wc = bit::extract<2>(index());
+            const uint32 cf = bit::extract<3, 5>(index());
+            const uint32 cm = bit::extract<6, 7>(index());
+
+            const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
+            const uint32 colorMode = cm <= 2 ? cm : 2;
+            arr[twc][fcc][wc][cf][cm] = &VDP::VDP2DrawRotationScrollBG<twc, fcc, wc, cfEnum, colorMode>;
+        });
+
+        return arr;
+    }();
+
+    // Lookup table of bitmap BG drawing functions
+    // Indexing: [colorFormat]
+    static constexpr auto fnDrawBitmap = [] {
+        std::array<std::array<FnDraw, 4>, 8> arr{};
+
+        util::constexpr_for<8 * 4>([&](auto index) {
+            const uint32 cf = bit::extract<0, 2>(index());
+            const uint32 cm = bit::extract<3, 4>(index());
+
+            const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
+            const uint32 colorMode = cm <= 2 ? cm : 2;
+            arr[cf][cm] = &VDP::VDP2DrawRotationBitmapBG<cfEnum, colorMode>;
+        });
+
+        return arr;
+    }();
+
+    if (!m_VDP2.bgEnabled[bgIndex + 4]) {
+        return;
+    }
+
+    const BGParams &bgParams = m_VDP2.bgParams[bgIndex];
+    LayerState &layerState = m_layerStates[bgIndex + 1];
+    RotBGLayerState &bgState = m_rotBGLayerStates[bgIndex];
+
+    bgState.cramOffset = bgParams.caos << (colorMode == 1 ? 10 : 9);
+
+    const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
+    if (bgParams.bitmap) {
+        (this->*fnDrawBitmap[cf][colorMode])(bgParams, layerState, bgState);
+    } else {
+        const bool twc = bgParams.twoWordChar;
+        const bool fcc = bgParams.cellSizeShift;
+        const bool wc = bgParams.wideChar;
+        (this->*fnDrawScroll[twc][fcc][wc][cf][colorMode])(bgParams, layerState, bgState);
+    }
+}
+
+FORCE_INLINE void VDP::VDP2ComposeLine() {
+    if (m_framebuffer == nullptr) {
+        return;
+    }
+
+    const uint32 y = m_VCounter;
+    for (uint32 x = 0; x < m_HRes; x++) {
+        std::array<Layer, 3> layers = {LYR_Back, LYR_Back, LYR_Back};
+        std::array<uint8, 3> layerPrios = {0, 0, 0};
+
+        // Determine layer order
+        for (int layer = 0; layer < m_layerStates.size(); layer++) {
+            const LayerState &state = m_layerStates[layer];
+            if (!state.enabled) {
+                continue;
+            }
+
+            const Pixel &pixel = state.pixels[x];
+            if (pixel.transparent) {
+                continue;
+            }
+            if (pixel.priority == 0) {
+                continue;
+            }
+
+            // Insert the layer into the appropriate position in the stack
+            // - Higher priority beats lower priority
+            // - If same priority, lower Layer index beats higher Layer index
+            // - layers[0] is topmost (first) layer
+            for (int i = 0; i < 3; i++) {
+                if (pixel.priority > layerPrios[i] || (pixel.priority == layerPrios[i] && layer < layers[i])) {
+                    // Push layers back
+                    for (int j = 2; j > i; j--) {
+                        layers[j] = layers[j - 1];
+                        layerPrios[j] = layerPrios[j - 1];
+                    }
+                    layers[i] = static_cast<Layer>(layer);
+                    layerPrios[i] = pixel.priority;
+                    break;
+                }
+            }
+        }
+
+        // Retrieves the color of the given layer
+        auto getLayerColor = [&](Layer layer) -> Color888 {
+            bool colorOffsetEnable{};
+            bool colorOffsetSelect{};
+            Color888 color{};
+
+            if (layer == LYR_Sprite) {
+                const LayerState &state = m_layerStates[layer];
+                const Pixel &pixel = state.pixels[x];
+                const auto &spriteParams = m_VDP2.spriteParams;
+                colorOffsetEnable = spriteParams.colorOffsetEnable;
+                colorOffsetSelect = spriteParams.colorOffsetSelect;
+                color = pixel.color;
+            } else if (layer == LYR_Back) {
+                const auto &backParams = m_VDP2.backScreenParams;
+                const uint32 line = backParams.perLine ? y : 0;
+                const uint32 address = backParams.baseAddress + line * sizeof(Color555);
+                const Color555 color555{.u16 = util::ReadBE<uint16>(&m_VRAM2[address & 0x7FFFF])};
+                color = ConvertRGB555to888(color555);
+                colorOffsetEnable = backParams.colorOffsetEnable;
+                colorOffsetSelect = backParams.colorOffsetSelect;
+            } else {
+                const LayerState &state = m_layerStates[layer];
+                const Pixel &pixel = state.pixels[x];
+                const auto &bgParams = m_VDP2.bgParams[layer - LYR_RBG0];
+                colorOffsetEnable = bgParams.colorOffsetEnable;
+                colorOffsetSelect = bgParams.colorOffsetSelect;
+                color = pixel.color;
+            }
+
+            // Apply color offset if enabled
+            if (colorOffsetEnable) {
+                const auto &colorOffset = m_VDP2.colorOffsetParams[colorOffsetSelect];
+                color.r = std::clamp(color.r + colorOffset.r, 0, 255);
+                color.g = std::clamp(color.g + colorOffset.g, 0, 255);
+                color.b = std::clamp(color.b + colorOffset.b, 0, 255);
+            }
+            return color;
+        };
+
+        auto isColorCalcEnabled = [&](Layer layer) {
+            if (layer == LYR_Sprite) {
+                const SpriteParams &spriteParams = m_VDP2.spriteParams;
+                if (!spriteParams.colorCalcEnable) {
+                    return false;
+                }
+
+                const Pixel &pixel = m_layerStates[LYR_Sprite].pixels[x];
+
+                using enum SpriteColorCalculationCondition;
+
+                switch (spriteParams.colorCalcCond) {
+                case PriorityLessThanOrEqual: return pixel.priority <= spriteParams.colorCalcValue;
+                case PriorityEqual: return pixel.priority == spriteParams.colorCalcValue;
+                case PriorityGreaterThanOrEqual: return pixel.priority >= spriteParams.colorCalcValue;
+                case MsbEqualsOne: return pixel.color.msb == 1;
+                default: util::unreachable();
+                }
+            } else if (layer == LYR_Back) {
+                return m_VDP2.backScreenParams.colorCalcEnable;
+            } else {
+                return m_VDP2.bgParams[layer - LYR_RBG0].colorCalcEnable;
+            }
+        };
+
+        auto getColorCalcRatio = [&](Layer layer) {
+            if (layer == LYR_Sprite) {
+                return m_spriteLayerState.attrs[x].colorCalcRatio;
+            } else if (layer == LYR_Back) {
+                return m_VDP2.backScreenParams.colorCalcRatio;
+            } else {
+                return m_VDP2.bgParams[layer - LYR_RBG0].colorCalcRatio;
+            }
+        };
+
+        const auto &colorCalcParams = m_VDP2.colorCalcParams;
+
+        // Calculate color
+        // TODO: handle LNCL insertion
+        // - inserted behind the topmost layer if it has line color insertion enabled
+        // TODO: handle specialColorCalcMode directly in rendering code
+        Color888 outputColor{};
+        if (isColorCalcEnabled(layers[0])) {
+            const Color888 topColor = getLayerColor(layers[0]);
+            Color888 btmColor = getLayerColor(layers[1]);
+
+            // Apply extended color calculations (only in normal TV modes)
+            if (colorCalcParams.extendedColorCalcEnable && m_VDP2.TVMD.HRESOn < 2) {
+                // TODO: honor color RAM mode + palette/RGB format restrictions
+                // - modes 1 and 2 don't blend layers if the bottom layer uses palette color
+                //   - LNCL is considered RGB for that matter (i.e. it blends if requested)
+                // TODO: honor LNCL insertion
+
+                // HACK: assuming color RAM mode 0 for now
+                if (isColorCalcEnabled(layers[1])) {
+                    const Color888 l2Color = getLayerColor(layers[2]);
+                    btmColor.r = (btmColor.r + l2Color.r) / 2;
+                    btmColor.g = (btmColor.g + l2Color.g) / 2;
+                    btmColor.b = (btmColor.b + l2Color.b) / 2;
+                }
+            }
+
+            if (colorCalcParams.useAdditiveBlend) {
+                outputColor.r = std::min(topColor.r + btmColor.r, 255);
+                outputColor.g = std::min(topColor.g + btmColor.g, 255);
+                outputColor.b = std::min(topColor.b + btmColor.b, 255);
+            } else {
+                const uint8 ratio = getColorCalcRatio(colorCalcParams.useSecondScreenRatio ? layers[1] : layers[0]);
+                const uint8 complRatio = 32 - ratio;
+                outputColor.r = (topColor.r * complRatio + btmColor.r * ratio) / 32;
+                outputColor.g = (topColor.g * complRatio + btmColor.g * ratio) / 32;
+                outputColor.b = (topColor.b * complRatio + btmColor.b * ratio) / 32;
+            }
+        } else {
+            outputColor = getLayerColor(layers[0]);
+        }
+
+        m_framebuffer[x + y * m_HRes] = outputColor.u32;
+    }
+}
+
 template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, NormBGLayer &layer) {
+NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState &layerState,
+                                           NormBGLayerState &bgState) {
     //          Map
     // +---------+---------+
     // |         |         |   Normal BGs always have 4 planes named A,B,C,D in this exact configuration.
@@ -1379,9 +1454,9 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, NormBGLayer
 
     const auto &specialFunctionCodes = m_VDP2.specialFunctionCodes[bgParams.specialFunctionSelect];
 
-    uint32 fracScrollX = layer.fracScrollX;
-    const uint32 fracScrollY = layer.fracScrollY;
-    layer.fracScrollY += bgParams.scrollIncV;
+    uint32 fracScrollX = bgState.fracScrollX;
+    const uint32 fracScrollY = bgState.fracScrollY;
+    bgState.fracScrollY += bgParams.scrollIncV;
 
     uint32 cellScrollTableAddress = m_VDP2.verticalCellScrollTableAddress;
 
@@ -1418,17 +1493,17 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, NormBGLayer
             }
             if (currMosaicCounterX > 0) {
                 // Simply copy over the data from the previous pixel
-                layer.pixels[x] = layer.pixels[x - 1];
+                layerState.pixels[x] = layerState.pixels[x - 1];
 
                 // Increment horizontal coordinate
-                fracScrollX += layer.scrollIncH;
+                fracScrollX += bgState.scrollIncH;
                 continue;
             }
         }
 
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 8u;
-        const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - layer.mosaicCounterY;
+        const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - bgState.mosaicCounterY;
 
         // Determine plane index from the scroll coordinate
         const uint32 planeX = bit::extract<9>(scrollX) >> bgParams.pageShiftH;
@@ -1465,9 +1540,9 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, NormBGLayer
                 : VDP2FetchOneWordCharacter<fourCellChar, largePalette, wideChar>(bgParams, pageAddress, charIndex);
 
         // Fetch dot color using character data
-        auto &pixel = layer.pixels[x];
+        auto &pixel = layerState.pixels[x];
         uint8 colorData{};
-        pixel.color = VDP2FetchCharacterColor<colorFormat, colorMode>(layer.cramOffset, colorData, pixel.transparent,
+        pixel.color = VDP2FetchCharacterColor<colorFormat, colorMode>(bgState.cramOffset, colorData, pixel.transparent,
                                                                       ch, dotX, dotY, cellIndex);
         pixel.transparent &= bgParams.enableTransparency;
 
@@ -1486,15 +1561,16 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, NormBGLayer
         }
 
         // Increment horizontal coordinate
-        fracScrollX += layer.scrollIncH;
+        fracScrollX += bgState.scrollIncH;
     }
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, NormBGLayer &layer) {
-    uint32 fracScrollX = layer.fracScrollX;
-    const uint32 fracScrollY = layer.fracScrollY;
-    layer.fracScrollY += bgParams.scrollIncV;
+NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState &layerState,
+                                           NormBGLayerState &bgState) {
+    uint32 fracScrollX = bgState.fracScrollX;
+    const uint32 fracScrollY = bgState.fracScrollY;
+    bgState.fracScrollY += bgParams.scrollIncV;
 
     uint32 cellScrollTableAddress = m_VDP2.verticalCellScrollTableAddress;
 
@@ -1524,21 +1600,21 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, NormBGLayer
             }
             if (currMosaicCounterX > 0) {
                 // Simply copy over the data from the previous pixel
-                layer.pixels[x] = layer.pixels[x - 1];
+                layerState.pixels[x] = layerState.pixels[x - 1];
 
                 // Increment horizontal coordinate
-                fracScrollX += layer.scrollIncH;
+                fracScrollX += bgState.scrollIncH;
                 continue;
             }
         }
 
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 8u;
-        const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - layer.mosaicCounterY;
+        const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - bgState.mosaicCounterY;
 
         // Fetch dot color from bitmap
-        auto &pixel = layer.pixels[x];
-        pixel.color = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, pixel.transparent, layer.cramOffset,
+        auto &pixel = layerState.pixels[x];
+        pixel.color = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, pixel.transparent, bgState.cramOffset,
                                                                    scrollX, scrollY);
         pixel.transparent &= bgParams.enableTransparency;
 
@@ -1550,8 +1626,20 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, NormBGLayer
         }
 
         // Increment horizontal coordinate
-        fracScrollX += layer.scrollIncH;
+        fracScrollX += bgState.scrollIncH;
     }
+}
+
+template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
+NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState,
+                                             RotBGLayerState &bgState) {
+    // TODO: implement
+}
+
+template <ColorFormat colorFormat, uint32 colorMode>
+NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerState &layerState,
+                                             RotBGLayerState &bgState) {
+    // TODO: implement
 }
 
 FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex) {

@@ -184,22 +184,22 @@ public:
         case 0x02A: return m_VDP2.ReadCHCTLB();  // write-only?
         case 0x02C: return m_VDP2.ReadBMPNA();   // write-only?
         case 0x02E: return m_VDP2.ReadBMPNB();   // write-only?
-        case 0x030: return m_VDP2.ReadPNCN(0);   // write-only?
-        case 0x032: return m_VDP2.ReadPNCN(1);   // write-only?
-        case 0x034: return m_VDP2.ReadPNCN(2);   // write-only?
-        case 0x036: return m_VDP2.ReadPNCN(3);   // write-only?
+        case 0x030: return m_VDP2.ReadPNCN(1);   // write-only?
+        case 0x032: return m_VDP2.ReadPNCN(2);   // write-only?
+        case 0x034: return m_VDP2.ReadPNCN(3);   // write-only?
+        case 0x036: return m_VDP2.ReadPNCN(4);   // write-only?
         case 0x038: return m_VDP2.ReadPNCR();    // write-only?
         case 0x03A: return m_VDP2.ReadPLSZ();    // write-only?
         case 0x03C: return m_VDP2.ReadMPOFN();   // write-only?
         case 0x03E: return m_VDP2.ReadMPOFR();   // write-only?
-        case 0x040: return m_VDP2.ReadMPN(0, 0); // write-only?
-        case 0x042: return m_VDP2.ReadMPN(0, 1); // write-only?
-        case 0x044: return m_VDP2.ReadMPN(1, 0); // write-only?
-        case 0x046: return m_VDP2.ReadMPN(1, 1); // write-only?
-        case 0x048: return m_VDP2.ReadMPN(2, 0); // write-only?
-        case 0x04A: return m_VDP2.ReadMPN(2, 1); // write-only?
-        case 0x04C: return m_VDP2.ReadMPN(3, 0); // write-only?
-        case 0x04E: return m_VDP2.ReadMPN(3, 1); // write-only?
+        case 0x040: return m_VDP2.ReadMPN(1, 0); // write-only?
+        case 0x042: return m_VDP2.ReadMPN(1, 1); // write-only?
+        case 0x044: return m_VDP2.ReadMPN(2, 0); // write-only?
+        case 0x046: return m_VDP2.ReadMPN(2, 1); // write-only?
+        case 0x048: return m_VDP2.ReadMPN(3, 0); // write-only?
+        case 0x04A: return m_VDP2.ReadMPN(3, 1); // write-only?
+        case 0x04C: return m_VDP2.ReadMPN(4, 0); // write-only?
+        case 0x04E: return m_VDP2.ReadMPN(4, 1); // write-only?
         case 0x050: return m_VDP2.ReadMPR(0, 0); // write-only?
         case 0x052: return m_VDP2.ReadMPR(0, 1); // write-only?
         case 0x054: return m_VDP2.ReadMPR(0, 2); // write-only?
@@ -216,34 +216,34 @@ public:
         case 0x06A: return m_VDP2.ReadMPR(1, 5); // write-only?
         case 0x06C: return m_VDP2.ReadMPR(1, 6); // write-only?
         case 0x06E: return m_VDP2.ReadMPR(1, 7); // write-only?
-        case 0x070: return m_VDP2.ReadSCXIN(0);  // write-only?
-        case 0x072: return m_VDP2.ReadSCXDN(0);  // write-only?
-        case 0x074: return m_VDP2.ReadSCYIN(0);  // write-only?
-        case 0x076: return m_VDP2.ReadSCYDN(0);  // write-only?
-        case 0x078: return m_VDP2.ReadZMXIN(0);  // write-only?
-        case 0x07A: return m_VDP2.ReadZMXDN(0);  // write-only?
-        case 0x07C: return m_VDP2.ReadZMYIN(0);  // write-only?
-        case 0x07E: return m_VDP2.ReadZMYDN(0);  // write-only?
-        case 0x080: return m_VDP2.ReadSCXIN(1);  // write-only?
-        case 0x082: return m_VDP2.ReadSCXDN(1);  // write-only?
-        case 0x084: return m_VDP2.ReadSCYIN(1);  // write-only?
-        case 0x086: return m_VDP2.ReadSCYDN(1);  // write-only?
-        case 0x088: return m_VDP2.ReadZMXIN(1);  // write-only?
-        case 0x08A: return m_VDP2.ReadZMXDN(1);  // write-only?
-        case 0x08C: return m_VDP2.ReadZMYIN(1);  // write-only?
-        case 0x08E: return m_VDP2.ReadZMYDN(1);  // write-only?
-        case 0x090: return m_VDP2.ReadSCXIN(2);  // write-only?
-        case 0x092: return m_VDP2.ReadSCYIN(2);  // write-only?
-        case 0x094: return m_VDP2.ReadSCXIN(3);  // write-only?
-        case 0x096: return m_VDP2.ReadSCYIN(3);  // write-only?
+        case 0x070: return m_VDP2.ReadSCXIN(1);  // write-only?
+        case 0x072: return m_VDP2.ReadSCXDN(1);  // write-only?
+        case 0x074: return m_VDP2.ReadSCYIN(1);  // write-only?
+        case 0x076: return m_VDP2.ReadSCYDN(1);  // write-only?
+        case 0x078: return m_VDP2.ReadZMXIN(1);  // write-only?
+        case 0x07A: return m_VDP2.ReadZMXDN(1);  // write-only?
+        case 0x07C: return m_VDP2.ReadZMYIN(1);  // write-only?
+        case 0x07E: return m_VDP2.ReadZMYDN(1);  // write-only?
+        case 0x080: return m_VDP2.ReadSCXIN(2);  // write-only?
+        case 0x082: return m_VDP2.ReadSCXDN(2);  // write-only?
+        case 0x084: return m_VDP2.ReadSCYIN(2);  // write-only?
+        case 0x086: return m_VDP2.ReadSCYDN(2);  // write-only?
+        case 0x088: return m_VDP2.ReadZMXIN(2);  // write-only?
+        case 0x08A: return m_VDP2.ReadZMXDN(2);  // write-only?
+        case 0x08C: return m_VDP2.ReadZMYIN(2);  // write-only?
+        case 0x08E: return m_VDP2.ReadZMYDN(2);  // write-only?
+        case 0x090: return m_VDP2.ReadSCXIN(3);  // write-only?
+        case 0x092: return m_VDP2.ReadSCYIN(3);  // write-only?
+        case 0x094: return m_VDP2.ReadSCXIN(4);  // write-only?
+        case 0x096: return m_VDP2.ReadSCYIN(4);  // write-only?
         case 0x098: return m_VDP2.ZMCTL.u16;     // write-only?
         case 0x09A: return m_VDP2.ReadSCRCTL();  // write-only?
         case 0x09C: return m_VDP2.ReadVCSTAU();  // write-only?
         case 0x09E: return m_VDP2.ReadVCSTAL();  // write-only?
-        case 0x0A0: return m_VDP2.ReadLSTAnU(0); // write-only?
-        case 0x0A2: return m_VDP2.ReadLSTAnL(0); // write-only?
-        case 0x0A4: return m_VDP2.ReadLSTAnU(1); // write-only?
-        case 0x0A6: return m_VDP2.ReadLSTAnL(1); // write-only?
+        case 0x0A0: return m_VDP2.ReadLSTAnU(1); // write-only?
+        case 0x0A2: return m_VDP2.ReadLSTAnL(1); // write-only?
+        case 0x0A4: return m_VDP2.ReadLSTAnU(2); // write-only?
+        case 0x0A6: return m_VDP2.ReadLSTAnL(2); // write-only?
         case 0x0A8: return m_VDP2.ReadLCTAU();   // write-only?
         case 0x0AA: return m_VDP2.ReadLCTAL();   // write-only?
         case 0x0AC: return m_VDP2.ReadBKTAU();   // write-only?
@@ -332,7 +332,7 @@ public:
         case 0x01A: m_VDP2.CYCB0.U.u16 = value; break;
         case 0x01E: m_VDP2.CYCB1.U.u16 = value; break;
         case 0x01C: m_VDP2.CYCB1.L.u16 = value; break;
-        case 0x020: m_VDP2.WriteBGON(value), VDP2ClearDisabledBGs(); break;
+        case 0x020: m_VDP2.WriteBGON(value); break;
         case 0x022: m_VDP2.WriteMZCTL(value); break;
         case 0x024: m_VDP2.WriteSFSEL(value); break;
         case 0x026: m_VDP2.WriteSFCODE(value); break;
@@ -340,22 +340,22 @@ public:
         case 0x02A: m_VDP2.WriteCHCTLB(value); break;
         case 0x02C: m_VDP2.WriteBMPNA(value); break;
         case 0x02E: m_VDP2.WriteBMPNB(value); break;
-        case 0x030: m_VDP2.WritePNCN(0, value); break;
-        case 0x032: m_VDP2.WritePNCN(1, value); break;
-        case 0x034: m_VDP2.WritePNCN(2, value); break;
-        case 0x036: m_VDP2.WritePNCN(3, value); break;
+        case 0x030: m_VDP2.WritePNCN(1, value); break;
+        case 0x032: m_VDP2.WritePNCN(2, value); break;
+        case 0x034: m_VDP2.WritePNCN(3, value); break;
+        case 0x036: m_VDP2.WritePNCN(4, value); break;
         case 0x038: m_VDP2.WritePNCR(value); break;
         case 0x03A: m_VDP2.WritePLSZ(value); break;
         case 0x03C: m_VDP2.WriteMPOFN(value); break;
         case 0x03E: m_VDP2.WriteMPOFR(value); break;
-        case 0x040: m_VDP2.WriteMPN(0, 0, value); break;
-        case 0x042: m_VDP2.WriteMPN(0, 1, value); break;
-        case 0x044: m_VDP2.WriteMPN(1, 0, value); break;
-        case 0x046: m_VDP2.WriteMPN(1, 1, value); break;
-        case 0x048: m_VDP2.WriteMPN(2, 0, value); break;
-        case 0x04A: m_VDP2.WriteMPN(2, 1, value); break;
-        case 0x04C: m_VDP2.WriteMPN(3, 0, value); break;
-        case 0x04E: m_VDP2.WriteMPN(3, 1, value); break;
+        case 0x040: m_VDP2.WriteMPN(1, 0, value); break;
+        case 0x042: m_VDP2.WriteMPN(1, 1, value); break;
+        case 0x044: m_VDP2.WriteMPN(2, 0, value); break;
+        case 0x046: m_VDP2.WriteMPN(2, 1, value); break;
+        case 0x048: m_VDP2.WriteMPN(3, 0, value); break;
+        case 0x04A: m_VDP2.WriteMPN(3, 1, value); break;
+        case 0x04C: m_VDP2.WriteMPN(4, 0, value); break;
+        case 0x04E: m_VDP2.WriteMPN(4, 1, value); break;
         case 0x050: m_VDP2.WriteMPR(0, 0, value); break;
         case 0x052: m_VDP2.WriteMPR(0, 1, value); break;
         case 0x054: m_VDP2.WriteMPR(0, 2, value); break;
@@ -372,34 +372,34 @@ public:
         case 0x06A: m_VDP2.WriteMPR(1, 5, value); break;
         case 0x06C: m_VDP2.WriteMPR(1, 6, value); break;
         case 0x06E: m_VDP2.WriteMPR(1, 7, value); break;
-        case 0x070: m_VDP2.WriteSCXIN(0, value); break;
-        case 0x072: m_VDP2.WriteSCXDN(0, value); break;
-        case 0x074: m_VDP2.WriteSCYIN(0, value); break;
-        case 0x076: m_VDP2.WriteSCYDN(0, value); break;
-        case 0x078: m_VDP2.WriteZMXIN(0, value); break;
-        case 0x07A: m_VDP2.WriteZMXDN(0, value); break;
-        case 0x07C: m_VDP2.WriteZMYIN(0, value); break;
-        case 0x07E: m_VDP2.WriteZMYDN(0, value); break;
-        case 0x080: m_VDP2.WriteSCXIN(1, value); break;
-        case 0x082: m_VDP2.WriteSCXDN(1, value); break;
-        case 0x084: m_VDP2.WriteSCYIN(1, value); break;
-        case 0x086: m_VDP2.WriteSCYDN(1, value); break;
-        case 0x088: m_VDP2.WriteZMXIN(1, value); break;
-        case 0x08A: m_VDP2.WriteZMXDN(1, value); break;
-        case 0x08C: m_VDP2.WriteZMYIN(1, value); break;
-        case 0x08E: m_VDP2.WriteZMYDN(1, value); break;
-        case 0x090: m_VDP2.WriteSCXIN(2, value); break;
-        case 0x092: m_VDP2.WriteSCYIN(2, value); break;
-        case 0x094: m_VDP2.WriteSCXIN(3, value); break;
-        case 0x096: m_VDP2.WriteSCYIN(3, value); break;
+        case 0x070: m_VDP2.WriteSCXIN(1, value); break;
+        case 0x072: m_VDP2.WriteSCXDN(1, value); break;
+        case 0x074: m_VDP2.WriteSCYIN(1, value); break;
+        case 0x076: m_VDP2.WriteSCYDN(1, value); break;
+        case 0x078: m_VDP2.WriteZMXIN(1, value); break;
+        case 0x07A: m_VDP2.WriteZMXDN(1, value); break;
+        case 0x07C: m_VDP2.WriteZMYIN(1, value); break;
+        case 0x07E: m_VDP2.WriteZMYDN(1, value); break;
+        case 0x080: m_VDP2.WriteSCXIN(2, value); break;
+        case 0x082: m_VDP2.WriteSCXDN(2, value); break;
+        case 0x084: m_VDP2.WriteSCYIN(2, value); break;
+        case 0x086: m_VDP2.WriteSCYDN(2, value); break;
+        case 0x088: m_VDP2.WriteZMXIN(2, value); break;
+        case 0x08A: m_VDP2.WriteZMXDN(2, value); break;
+        case 0x08C: m_VDP2.WriteZMYIN(2, value); break;
+        case 0x08E: m_VDP2.WriteZMYDN(2, value); break;
+        case 0x090: m_VDP2.WriteSCXIN(3, value); break;
+        case 0x092: m_VDP2.WriteSCYIN(3, value); break;
+        case 0x094: m_VDP2.WriteSCXIN(4, value); break;
+        case 0x096: m_VDP2.WriteSCYIN(4, value); break;
         case 0x098: m_VDP2.ZMCTL.u16 = value & 0x0303; break;
         case 0x09A: m_VDP2.WriteSCRCTL(value); break;
         case 0x09C: m_VDP2.WriteVCSTAU(value); break;
         case 0x09E: m_VDP2.WriteVCSTAL(value); break;
-        case 0x0A0: m_VDP2.WriteLSTAnU(0, value); break;
-        case 0x0A2: m_VDP2.WriteLSTAnL(0, value); break;
-        case 0x0A4: m_VDP2.WriteLSTAnU(1, value); break;
-        case 0x0A6: m_VDP2.WriteLSTAnL(1, value); break;
+        case 0x0A0: m_VDP2.WriteLSTAnU(1, value); break;
+        case 0x0A2: m_VDP2.WriteLSTAnL(1, value); break;
+        case 0x0A4: m_VDP2.WriteLSTAnU(2, value); break;
+        case 0x0A6: m_VDP2.WriteLSTAnL(2, value); break;
         case 0x0A8: m_VDP2.WriteLCTAU(value); break;
         case 0x0AA: m_VDP2.WriteLCTAL(value); break;
         case 0x0AC: m_VDP2.WriteBKTAU(value); break;
@@ -678,33 +678,50 @@ private:
         bool flipV;         // Vertical flip
     };
 
-    struct SpriteLayer {
-        SpriteLayer() {
+    struct Pixel {
+        Color888 color = {.u32 = 0};
+        bool transparent = true;
+        uint8 priority = 0;
+    };
+
+    struct LayerState {
+        LayerState() {
             Reset();
         }
 
         void Reset() {
             pixels.fill({});
+            enabled = false;
         }
 
-        struct Pixel {
-            Color888 color = {.u32 = 0};
-            bool transparent = true;
-            uint8 priority = 0;
+        alignas(16) std::array<Pixel, 704> pixels;
+
+        bool enabled;
+    };
+
+    struct SpriteLayerState {
+        SpriteLayerState() {
+            Reset();
+        }
+
+        void Reset() {
+            attrs.fill({});
+        }
+
+        struct Attributes {
             uint8 colorCalcRatio = 0;
             bool shadowOrWindow = false;
         };
 
-        alignas(16) std::array<Pixel, 704> pixels;
+        alignas(16) std::array<Attributes, 704> attrs;
     };
 
-    struct NormBGLayer {
-        NormBGLayer() {
+    struct NormBGLayerState {
+        NormBGLayerState() {
             Reset();
         }
 
         void Reset() {
-            pixels.fill({});
             cramOffset = 0;
             fracScrollX = 0;
             fracScrollY = 0;
@@ -713,16 +730,8 @@ private:
             mosaicCounterY = 0;
         }
 
-        struct Pixel {
-            Color888 color = {.u32 = 0};
-            bool transparent = true;
-            uint8 priority = 0;
-        };
-
-        alignas(16) std::array<Pixel, 704> pixels;
-
         // CRAM base offset for color fetching.
-        // Derived from RAMCTL.CRMDn and CRAOFA/CRAOFB.xxCAOSn
+        // Derived from RAMCTL.CRMDn and CRAOFA.NxCAOSn
         uint32 cramOffset;
 
         // Initial fractional X scroll coordinate.
@@ -746,32 +755,46 @@ private:
         uint8 mosaicCounterY;
     };
 
-    struct RotBGLayer {
-        RotBGLayer() {
+    struct RotBGLayerState {
+        RotBGLayerState() {
             Reset();
         }
 
         void Reset() {
-            pixels.fill({});
+            cramOffset = 0;
         }
 
-        struct Pixel {
-            Color888 color = {.u32 = 0};
-            bool transparent = true;
-            uint8 priority = 0;
-        };
+        // CRAM base offset for color fetching.
+        // Derived from RAMCTL.CRMDn and CRAOFB.R0CAOSn
+        uint32 cramOffset;
 
-        alignas(16) std::array<Pixel, 704> pixels;
+        // Page base addresses for RBG planes A-P using Rotation Parameters A and B.
+        // Indexing: [Rotation Parameter A/B][Plane A-P]
+        // Derived from mapIndices, CHCTLA/CHCTLB.xxCHSZ, PNCR.xxPNB and PLSZ.xxPLSZn
+        std::array<std::array<uint32, 16>, 2> pageBaseAddresses;
     };
 
-    // Layer data for sprites
-    SpriteLayer m_spriteLayer;
+    // Layer state indices
+    enum Layer { LYR_Sprite, LYR_RBG0, LYR_NBG0_RBG1, LYR_NBG1_EXBG, LYR_NBG2, LYR_NBG3, LYR_Back };
 
-    // Layer data for NBGs 0-3
-    std::array<NormBGLayer, 4> m_normBGLayers;
+    // Common layer states
+    //     RBG0+RBG1   RBG0        no RBGs
+    // [0] Sprite      Sprite      Sprite
+    // [1] RBG0        RBG0        -
+    // [2] RBG1        NBG0        NBG0
+    // [3] EXBG        NBG1/EXBG   NBG1/EXBG
+    // [4] -           NBG2        NBG2
+    // [5] -           NBG3        NBG3
+    std::array<LayerState, 6> m_layerStates;
 
-    // Layer data for RBGs 0-1
-    std::array<RotBGLayer, 2> m_rotBGLayers;
+    // Sprite layer state
+    SpriteLayerState m_spriteLayerState;
+
+    // Layer state for NBGs 0-3
+    std::array<NormBGLayerState, 4> m_normBGLayerStates;
+
+    // Layer state for RBGs 0-1
+    std::array<RotBGLayerState, 2> m_rotBGLayerStates;
 
     // Framebuffer provided by the frontend to render the current frame into
     FramebufferColor *m_framebuffer;
@@ -827,46 +850,97 @@ private:
     // -------------------------------------------------------------------------
     // VDP2
 
-    // Clears all disabled backgrounds.
-    // Meant to be invoked after changes to BGON.
-    void VDP2ClearDisabledBGs();
+    // Initializes renderer state for a new frame.
+    void VDP2InitFrame();
+
+    // Initializes the specified NBG.
+    template <uint32 index>
+    void VDP2InitNormalBG();
+
+    // Initializes the specified RBG.
+    template <uint32 index>
+    void VDP2InitRotationBG();
 
     // Updates the line screen scroll parameters for the given background.
     // Only valid for NBG0 and NBG1.
     //
     // bgParams contains the parameters for the BG to draw.
-    // layer is a reference to the layer object for the specified background.
-    void VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayer &layer);
+    // bgState is a reference to the background layer state for the background.
+    void VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayerState &bgState);
 
-    // Draws the VDP2 scanline at m_VCounter.
+    // Draws the current VDP2 scanline.
     void VDP2DrawLine();
 
-    // Draws the current scanline of the sprite layer.
+    // Draws the current VDP2 scanline of the sprite layer.
     //
     // colorMode is the CRAM color mode.
     template <uint32 colorMode>
     void VDP2DrawSpriteLayer();
 
+    // Draws the current VDP2 scanline of the specified normal background layer.
+    //
+    // bgIndex specifies the normal background index, from 0 to 3.
+    // colorMode is the CRAM color mode.
+    void VDP2DrawNormalBG(uint32 bgIndex, uint32 colorMode);
+
+    // Draws the current VDP2 scanline of the specified rotation background layer.
+    //
+    // bgIndex specifies the rotation background index, from 0 to 1.
+    // colorMode is the CRAM color mode.
+    void VDP2DrawRotationBG(uint32 bgIndex, uint32 colorMode);
+
+    // Composes the current VDP2 scanline out of the rendered lines.
+    void VDP2ComposeLine();
+
     // Draws a normal scroll BG scanline.
     //
     // bgParams contains the parameters for the BG to draw.
-    // layer is a reference to the layer object for the specified background.
+    // layerState is a reference to the common layer state for the background.
+    // bgState is a reference to the background layer state for the background.
+    //
     // twoWordChar indicates if character patterns use one word (false) or two words (true).
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
     // wideChar indicates if the flip bits are available (false) or used to extend the character number (true).
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
     template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawNormalScrollBG(const BGParams &bgParams, NormBGLayer &layer);
+    void VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState);
 
     // Draws a normal bitmap BG scanline.
     //
     // bgParams contains the parameters for the BG to draw.
-    // layer is a reference to the layer object for the specified background.
+    // layerState is a reference to the common layer state for the background.
+    // bgState is a reference to the background layer state for the background.
+    //
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawNormalBitmapBG(const BGParams &bgParams, NormBGLayer &layer);
+    void VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState);
+
+    // Draws a rotation scroll BG scanline.
+    //
+    // bgParams contains the parameters for the BG to draw.
+    // layerState is a reference to the common layer state for the background.
+    // bgState is a reference to the background layer state for the background.
+    //
+    // twoWordChar indicates if character patterns use one word (false) or two words (true).
+    // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
+    // wideChar indicates if the flip bits are available (false) or used to extend the character number (true).
+    // colorFormat is the color format for cell data.
+    // colorMode is the CRAM color mode.
+    template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
+    void VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState, RotBGLayerState &bgState);
+
+    // Draws a rotation bitmap BG scanline.
+    //
+    // bgParams contains the parameters for the BG to draw.
+    // layerState is a reference to the common layer state for the background.
+    // bgState is a reference to the background layer state for the background.
+    //
+    // colorFormat is the color format for bitmap data.
+    // colorMode is the CRAM color mode.
+    template <ColorFormat colorFormat, uint32 colorMode>
+    void VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerState &layerState, RotBGLayerState &bgState);
 
     // Fetches a two-word character from VRAM.
     //

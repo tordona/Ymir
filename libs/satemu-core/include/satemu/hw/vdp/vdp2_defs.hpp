@@ -24,14 +24,6 @@ inline constexpr bool IsPaletteColorFormat(ColorFormat format) {
     return format == Palette16 || format == Palette256 || format == Palette2048;
 }
 
-// Rotation BG screen-over process
-enum class ScreenOverProcess : uint8 {
-    Repeat,
-    RepeatChar,
-    Transparent,
-    Fixed512,
-};
-
 // Special priority modes
 enum class PriorityMode : uint8 {
     PerScreen,
@@ -39,6 +31,7 @@ enum class PriorityMode : uint8 {
     PerDot,
 };
 
+// Special color calculation modes
 enum class SpecialColorCalcMode : uint8 {
     PerScreen,
     PerCharacter,
@@ -60,6 +53,17 @@ inline constexpr uint32 kPageSizes[2][2] = {
     {11, 12},
 };
 
+// Calculates the base address of character pages based on the following parameters:
+// - chsz: character size (cellSizeShift)
+// - pnds: pattern name data size (twoWordChar)
+// - plsz: plane size
+// - mapIndex: map index set by MPOFN and MPABN0-MPCDN3 for NBGs or MPOFR and MPABRA-MPOPRB for RBGs
+inline constexpr uint32 CalcPageBaseAddress(uint32 chsz, uint32 pnds, uint32 plsz, uint32 mapIndex) {
+    const uint32 mapIndexMask = kMapIndexMasks[chsz][pnds][plsz];
+    const uint32 pageSizeShift = kPageSizes[chsz][pnds];
+    return (mapIndex & mapIndexMask) << pageSizeShift;
+}
+
 // NBG and RBG parameters.
 struct BGParams {
     BGParams() {
@@ -67,7 +71,6 @@ struct BGParams {
     }
 
     void Reset() {
-        enabled = false;
         enableTransparency = false;
         bitmap = false;
 
@@ -95,7 +98,6 @@ struct BGParams {
         bitmapBaseAddress = 0;
 
         colorFormat = ColorFormat::Palette16;
-        screenOverProcess = ScreenOverProcess::Repeat;
 
         supplScrollCharNum = 0;
         supplScrollPalNum = 0;
@@ -129,10 +131,6 @@ struct BGParams {
         bmsz = 0;
         caos = 0;
     }
-
-    // Whether to display this background.
-    // Derived from BGON.xxON
-    bool enabled;
 
     // If true, honor transparency bit in color data.
     // Derived from BGON.xxTPON
@@ -186,24 +184,19 @@ struct BGParams {
     uint32 scrollIncV; // Vertical scroll increment with 8 fractional bits, derived from ZMYINn and ZMYDNn
 
     // Indices for NBG planes A-D, derived from MPOFN and MPABN0-MPCDN3.
-    // Indices for RBG planes A-P, derived from MPOFR and MPABRA-MPOPRB.
-    std::array<uint16, 16> mapIndices;
+    std::array<uint16, 4> mapIndices;
 
-    // Page base addresses for NBG planes A-D or RBG planes A-P.
-    // Derived from mapIndices, CHCTLA/CHCTLB.xxCHSZ, PNCNn/PNCR.xxPNB and PLSZ.xxPLSZn
-    std::array<uint32, 16> pageBaseAddresses;
+    // Page base addresses for NBG planes A-D.
+    // Derived from mapIndices, CHCTLA/CHCTLB.xxCHSZ, PNCNn.xxPNB and PLSZ.xxPLSZn
+    std::array<uint32, 4> pageBaseAddresses;
 
     // Base address of bitmap data.
-    // Derived from MPOFN/MPOFR
+    // Derived from MPOFN
     uint32 bitmapBaseAddress;
 
     // Character color format.
     // Derived from CHCTLA/CHCTLB.xxCHCNn
     ColorFormat colorFormat;
-
-    // Rotation BG screen-over process.
-    // Derived from PLSZ.RxOVRn
-    ScreenOverProcess screenOverProcess;
 
     // Supplementary bits 4-0 for scroll screen character number, when using 1-word characters.
     // Derived from PNCN0/PNCR.xxSCNn
@@ -322,17 +315,21 @@ struct BGParams {
     }
 
     void UpdatePageBaseAddresses() {
-        const uint32 chsz = cellSizeShift;
-        const uint32 pnds = twoWordChar;
-        const uint32 mapIndexMask = kMapIndexMasks[chsz][pnds][plsz];
-        const uint32 pageSizeShift = kPageSizes[chsz][pnds];
         for (int i = 0; i < pageBaseAddresses.size(); i++) {
-            pageBaseAddresses[i] = (mapIndices[i] & mapIndexMask) << pageSizeShift;
+            pageBaseAddresses[i] = CalcPageBaseAddress(cellSizeShift, twoWordChar, plsz, mapIndices[i]);
         }
     }
 };
 
 enum class RotationParamMode : uint8 { RotationParamA, RotationParamB, Coefficient, Window };
+
+// Rotation BG screen-over process
+enum class ScreenOverProcess : uint8 {
+    Repeat,
+    RepeatChar,
+    Transparent,
+    Fixed512,
+};
 
 struct CommonRotationParams {
     CommonRotationParams() {
@@ -360,11 +357,28 @@ struct RotationParams {
         readXst = false;
         readYst = false;
         readKAst = false;
+
         coeffTableEnable = false;
         coeffDataSize = 0;
         coeffUseLineColorData = false;
         coeffTableAddressOffset = 0;
+
+        screenOverProcess = ScreenOverProcess::Repeat;
         screenOverPatternName = 0;
+
+        pageShiftH = 0;
+        pageShiftV = 0;
+
+        mapIndices.fill(0);
+
+        bitmapBaseAddress = 0;
+
+        plsz = 0;
+    }
+
+    void UpdatePLSZ() {
+        pageShiftH = plsz & 1;
+        pageShiftV = plsz >> 1;
     }
 
     // Read Xst on the next scanline. Automatically cleared when read.
@@ -399,9 +413,29 @@ struct RotationParams {
     // Derived from KTAOF.RxKTAOS2-0
     uint32 coeffTableAddressOffset;
 
+    // Rotation BG screen-over process.
+    // Derived from PLSZ.RxOVRn
+    ScreenOverProcess screenOverProcess;
+
     // Screen-over pattern name value.
     // Derived from OVPNRA/B
     uint16 screenOverPatternName;
+
+    // Page shifts are either 0 or 1, used when determining which plane a particular (x,y) coordinate belongs to.
+    // A shift of 0 corresponds to 1 page per plane dimension.
+    // A shift of 1 corresponds to 2 pages per plane dimension.
+    uint32 pageShiftH; // Horizontal page shift, derived from PLSZ.xxPLSZn
+    uint32 pageShiftV; // Vertical page shift, derived from PLSZ.xxPLSZn
+
+    // Indices for RBG planes A-P, derived from MPOFR and MPABRA-MPOPRB.
+    std::array<uint16, 16> mapIndices;
+
+    // Base address of bitmap data.
+    // Derived from MPOFR
+    uint32 bitmapBaseAddress;
+
+    // Raw register values, to facilitate reads.
+    uint16 plsz; // Raw value of PLSZ.xxPLSZn
 };
 
 struct RotationParamTable {
@@ -511,6 +545,7 @@ struct SpriteParams {
         colorDataOffset = 0;
         colorOffsetEnable = false;
         colorOffsetSelect = false;
+        lineColorScreenEnable = false;
     }
 
     // The sprite type (0..F).
@@ -557,6 +592,10 @@ struct SpriteParams {
     // Selects the color offset parameters to use: A (false) or B (true).
     // Derived from CLOFEN.SPCOSL
     bool colorOffsetSelect;
+
+    // Enables LNCL screen insertion if this BG is the topmost layer.
+    // Derived from LNCLEN.SPLCEN
+    bool lineColorScreenEnable;
 };
 
 struct SpriteData {
