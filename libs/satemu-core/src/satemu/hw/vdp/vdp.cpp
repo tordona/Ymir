@@ -1062,10 +1062,8 @@ void VDP::VDP2DrawLine() {
 
     const uint32 colorMode = m_VDP2.RAMCTL.CRMDn;
 
-    // Load rotation parameters if requested and increment counters
+    // Load rotation parameters if requested
     VDP2LoadRotationParameterTables();
-    m_rotParamStates[0].IncrementV();
-    m_rotParamStates[1].IncrementV();
 
     // Draw sprite layer
     (this->*fnDrawSprite[colorMode])();
@@ -1084,6 +1082,10 @@ void VDP::VDP2DrawLine() {
 
     // Compose image
     VDP2ComposeLine();
+
+    // Increment rotation counters
+    m_rotParamStates[0].IncrementV();
+    m_rotParamStates[1].IncrementV();
 }
 
 template <uint32 colorMode>
@@ -1673,12 +1675,23 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState 
 template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState,
                                              RotBGLayerState &bgState) {
-    sint64 fracScrollX = m_rotParamStates[0].scrX;
-    sint64 fracScrollY = m_rotParamStates[0].scrY;
+    // TODO: for RBG0, select rotation parameters based on mode m_VDP2.commonRotParams.rotParamMode
+    // for RBG1, always use parameter B
 
+    sint32 fracScrollX = m_rotParamStates[0].scrX;
+    sint32 fracScrollY = m_rotParamStates[0].scrY;
+    uint32 coeffAddress = m_rotParamStates[0].KA;
+
+    const auto &commonRotParams = m_VDP2.commonRotParams;
+    const auto &rotParams = m_VDP2.rotParams[0];
     const auto &specialFunctionCodes = m_VDP2.specialFunctionCodes[bgParams.specialFunctionSelect];
 
     for (uint32 x = 0; x < m_HRes; x++) {
+        // Read coefficient table if enabled
+        if (rotParams.coeffTableEnable) {
+            const uint32 finalCoeffAddress = rotParams.coeffTableAddressOffset + coeffAddress;
+        }
+
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 16u;
         const uint32 scrollY = fracScrollY >> 16u;
@@ -1741,6 +1754,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
         // Increment coordinates
         fracScrollX += m_rotParamStates[0].scrXIncH;
         fracScrollY += m_rotParamStates[0].scrYIncH;
+        coeffAddress += m_rotParamStates[0].dKAx;
     }
 }
 

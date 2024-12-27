@@ -322,14 +322,6 @@ struct BGParams {
 
 enum class RotationParamMode : uint8 { RotationParamA, RotationParamB, Coefficient, Window };
 
-// Rotation BG screen-over process
-enum class ScreenOverProcess : uint8 {
-    Repeat,
-    RepeatChar,
-    Transparent,
-    Fixed512,
-};
-
 struct CommonRotationParams {
     CommonRotationParams() {
         Reset();
@@ -340,11 +332,17 @@ struct CommonRotationParams {
         rotParamMode = RotationParamMode::RotationParamA;
     }
 
+    // Rotation parameters table base address.
+    // Derived from RPTAU/L.RPTA18-1
     uint32 baseAddress;
+
+    // Rotation parameter mode.
+    // Derived from RPMD.RPMD1-0
     RotationParamMode rotParamMode;
 };
 
 enum class CoefficientDataMode : uint8 { ScaleCoeffXY, ScaleCoeffX, ScaleCoeffY, ViewpointX };
+enum class ScreenOverProcess : uint8 { Repeat, RepeatChar, Transparent, Fixed512 };
 
 // Rotation Parameter A/B
 struct RotationParams {
