@@ -248,7 +248,7 @@ void SMPC::UpdateINTBACK() {
         OREG[7] = 0x56; // Second (BCD)
 
         OREG[8] = 0x00; // Cartridge code (CTG1-0) == 0b00
-        OREG[9] = 0x04; // Area code (0x04=NA)
+        OREG[9] = 0x04; // Area code (0x01=JP, 0x04=NA)
 
         OREG[10] = 0b00111110; // System status 1 (DOTSEL, MSHNMI, SYSRES, SNDRES)
         OREG[11] = 0b00000010; // System status 2 (CDRES)
