@@ -711,6 +711,7 @@ private:
         struct Attributes {
             uint8 colorCalcRatio = 0;
             bool shadowOrWindow = false;
+            bool msbSet = false;
         };
 
         alignas(16) std::array<Attributes, 704> attrs;

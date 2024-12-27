@@ -600,6 +600,7 @@ struct SpriteParams {
 
 struct SpriteData {
     uint16 colorData = 0;        // DC10-0
+    bool colorDataMSB = false;   // MSB of color data, depends on sprite type
     uint8 colorCalcRatio = 0;    // CC2-0
     uint8 priority = 0;          // PR2-0
     bool shadowOrWindow = false; // SD
