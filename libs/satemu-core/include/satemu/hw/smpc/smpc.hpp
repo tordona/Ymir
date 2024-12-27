@@ -54,19 +54,6 @@ public:
     // HACK(SMPC): simple controller pad support
     // buttons is a bitmask with inverted state (0=pressed, 1=released)
     // use the kButton* constants to set/clear bits
-    //   15 = right
-    //   14 = left
-    //   13 = down
-    //   12 = up
-    //   11 = start
-    //   10 = A
-    //   9 = C
-    //   8 = B
-    //   7 = R
-    //   6 = X
-    //   5 = Y
-    //   4 = Z
-    //   3 = L
     uint16 &Buttons() {
         return m_buttons;
     }
@@ -147,24 +134,30 @@ private:
     uint8 ReadOREG(uint8 offset) const;
     uint8 ReadSR() const;
     uint8 ReadSF() const;
-    uint8 ReadPDR1() const;
-    uint8 ReadPDR2() const;
 
     void WriteIREG(uint8 offset, uint8 value);
     void WriteCOMREG(uint8 value);
     void WriteSF(uint8 value);
-    void WritePDR1(uint8 value);
-    void WritePDR2(uint8 value);
-    void WriteDDR1(uint8 value);
-    void WriteDDR2(uint8 value);
     void WriteIOSEL(uint8 value);
+
+    uint8 ReadPDR1() const;
+    void WritePDR1(uint8 value);
+    void WriteDDR1(uint8 value);
+
+    uint8 ReadPDR2() const;
+    void WritePDR2(uint8 value);
+    void WriteDDR2(uint8 value);
 
     // -------------------------------------------------------------------------
     // Input, parallel I/O and INTBACK
 
     // TODO: support multiple controllers, multi-tap, different types of devices, etc.
     // for now, emulate just one standard Saturn pad (not analog)
-    uint16 m_buttons = 0xFFFF;
+    //   15-12: right left down up
+    //   11-8:  start A C B
+    //    7-4:  R X Y Z
+    //    3-0:  L <one> <zero> <zero>
+    uint16 m_buttons = 0xFFFC;
 
     // Parallel I/O SMPC-controlled (false) or SH-2 direct mode (true)
     bool m_pioMode1;

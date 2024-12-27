@@ -82,29 +82,6 @@ FORCE_INLINE uint8 SMPC::ReadSF() const {
     return SF;
 }
 
-FORCE_INLINE uint8 SMPC::ReadPDR1() const {
-    // TODO: read from port 1, then & ~DDR1
-
-    // HACK: read from our fixed standard Saturn pad
-    switch (bit::extract<5, 6>(PDR1)) {
-    case 0: // R X Y Z
-        return bit::extract<4, 7>(m_buttons) | (1u << 4u);
-    case 1: // right left down up
-        return bit::extract<12, 15>(m_buttons) | (1u << 4u);
-    case 2: // start A C B
-        return bit::extract<8, 11>(m_buttons) | (1u << 4u);
-    case 3: // L 1 0 0
-        return (bit::extract<3>(m_buttons) << 3u) | (1u << 4u) | 0b100;
-    }
-
-    return 0;
-}
-
-FORCE_INLINE uint8 SMPC::ReadPDR2() const {
-    // TODO: read from port 2, then & ~DDR2
-    return 0;
-}
-
 FORCE_INLINE void SMPC::WriteIREG(uint8 offset, uint8 value) {
     assert(offset < 7);
     IREG[offset] = value;
@@ -130,27 +107,60 @@ FORCE_INLINE void SMPC::WriteSF(uint8 value) {
     SF = true;
 }
 
-void SMPC::WritePDR1(uint8 value) {
-    // write (value & DDR1) to peripheral on port 1
-    PDR1 = (PDR1 & ~DDR1) | (value & DDR1);
-}
-
-void SMPC::WritePDR2(uint8 value) {
-    // write (value & DDR2) to peripheral on port 2
-    PDR2 = (PDR2 & ~DDR2) | (value & DDR2);
-}
-
-void SMPC::WriteDDR1(uint8 value) {
-    DDR1 = value;
-}
-
-void SMPC::WriteDDR2(uint8 value) {
-    DDR2 = value;
-}
-
 FORCE_INLINE void SMPC::WriteIOSEL(uint8 value) {
     m_pioMode1 = bit::extract<0>(value);
     m_pioMode2 = bit::extract<1>(value);
+}
+
+FORCE_INLINE uint8 SMPC::ReadPDR1() const {
+    return PDR1;
+}
+
+FORCE_INLINE void SMPC::WritePDR1(uint8 value) {
+    // TODO: process port 1 peripheral properly
+
+    // HACK: read from our fixed standard Saturn pad
+    switch (DDR1 & 0x7F) {
+    case 0x40: // TH control mode
+        if (value & 0x40) {
+            PDR1 = 0x70 | bit::extract<0, 3>(m_buttons);
+        } else {
+            PDR1 = 0x30 | bit::extract<12, 15>(m_buttons);
+        }
+        break;
+    case 0x60: // TH/TR control mode
+        switch (value & 0x60) {
+        case 0x00: // R X Y Z
+            PDR1 = 0x10 | bit::extract<4, 7>(m_buttons);
+            break;
+        case 0x20: // right left down up
+            PDR1 = 0x30 | bit::extract<12, 15>(m_buttons);
+            break;
+        case 0x40: // start A C B
+            PDR1 = 0x50 | bit::extract<8, 11>(m_buttons);
+            break;
+        case 0x60: // L 1 0 0
+            PDR1 = 0x70 | bit::extract<0, 3>(m_buttons);
+            break;
+        }
+    }
+    // fmt::println("SMPC: {:02X} {:02X} -> {:02X}  buttons {:04X}", DDR1, value, PDR1, m_buttons);
+}
+
+FORCE_INLINE void SMPC::WriteDDR1(uint8 value) {
+    DDR1 = value;
+}
+
+FORCE_INLINE uint8 SMPC::ReadPDR2() const {
+    return PDR2;
+}
+
+FORCE_INLINE void SMPC::WritePDR2(uint8 value) {
+    // TODO: process port 2 peripheral
+}
+
+FORCE_INLINE void SMPC::WriteDDR2(uint8 value) {
+    DDR2 = value;
 }
 
 void SMPC::SNDON() {
