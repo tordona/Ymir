@@ -52,6 +52,9 @@ void VDP::Reset(bool hard) {
     for (auto &state : m_rotBGLayerStates) {
         state.Reset();
     }
+    for (auto &state : m_rotParamStates) {
+        state.Reset();
+    }
 
     BeginHPhaseActiveDisplay();
     BeginVPhaseActiveDisplay();
@@ -958,16 +961,16 @@ FORCE_INLINE void VDP::VDP2InitRotationBG() {
     }
 
     const BGParams &bgParams = m_VDP2.bgParams[index];
-    RotBGLayerState &bgState = m_rotBGLayerStates[index];
-
     const bool cellSizeShift = bgParams.cellSizeShift;
     const bool twoWordChar = bgParams.twoWordChar;
+
     for (int param = 0; param < 2; param++) {
         const RotationParams &rotParam = m_VDP2.rotParams[param];
+        auto &pageBaseAddresses = m_rotParamStates[param].pageBaseAddresses;
         const uint16 plsz = rotParam.plsz;
         for (int plane = 0; plane < 16; plane++) {
             const uint32 mapIndex = rotParam.mapIndices[plane];
-            bgState.pageBaseAddresses[param][plane] = CalcPageBaseAddress(cellSizeShift, twoWordChar, plsz, mapIndex);
+            pageBaseAddresses[plane] = CalcPageBaseAddress(cellSizeShift, twoWordChar, plsz, mapIndex);
         }
     }
 }
@@ -1012,6 +1015,31 @@ void VDP::VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayerState 
     }
 }
 
+void VDP::VDP2LoadRotationParameterTables() {
+    const uint32 baseAddress = m_VDP2.commonRotParams.baseAddress;
+    const bool readAll = m_VCounter == 0;
+
+    for (int i = 0; i < 2; i++) {
+        RotationParams &rotParams = m_VDP2.rotParams[i];
+
+        const bool readXst = readAll || rotParams.readXst;
+        const bool readYst = readAll || rotParams.readYst;
+        const bool readKAst = readAll || rotParams.readKAst;
+
+        // TODO: dirty check to avoid recalculating everything on every line
+        // Tables are located at the base address 0x80 bytes apart
+        RotationParamTable table{};
+        const uint32 address = baseAddress + i * 0x80;
+        table.ReadFrom(&m_VRAM2[address & 0x7FFFF]);
+
+        m_rotParamStates[i].Calculate(table, readXst, readYst, readKAst);
+
+        rotParams.readXst = false;
+        rotParams.readYst = false;
+        rotParams.readKAst = false;
+    }
+}
+
 void VDP::VDP2DrawLine() {
     // fmt::println("VDP2: drawing line {}", m_VCounter);
 
@@ -1033,6 +1061,11 @@ void VDP::VDP2DrawLine() {
     }();
 
     const uint32 colorMode = m_VDP2.RAMCTL.CRMDn;
+
+    // Load rotation parameters if requested and increment counters
+    VDP2LoadRotationParameterTables();
+    m_rotParamStates[0].IncrementV();
+    m_rotParamStates[1].IncrementV();
 
     // Draw sprite layer
     (this->*fnDrawSprite[colorMode])();
@@ -1640,13 +1673,83 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState 
 template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState,
                                              RotBGLayerState &bgState) {
-    // TODO: implement
+    sint64 fracScrollX = m_rotParamStates[0].scrX;
+    sint64 fracScrollY = m_rotParamStates[0].scrY;
+
+    const auto &specialFunctionCodes = m_VDP2.specialFunctionCodes[bgParams.specialFunctionSelect];
+
+    for (uint32 x = 0; x < m_HRes; x++) {
+        // Get integer scroll screen coordinates
+        const uint32 scrollX = fracScrollX >> 16u;
+        const uint32 scrollY = fracScrollY >> 16u;
+
+        // Determine plane index from the scroll coordinate
+        const uint32 planeX = bit::extract<9, 10>(scrollX) >> bgParams.pageShiftH;
+        const uint32 planeY = bit::extract<9, 10>(scrollY) >> bgParams.pageShiftV;
+        const uint32 plane = planeX + planeY * 4u;
+
+        // Determine page index from the scroll coordinate
+        const uint32 pageX = bit::extract<9>(scrollX) & bgParams.pageShiftH;
+        const uint32 pageY = bit::extract<9>(scrollY) & bgParams.pageShiftV;
+        const uint32 page = pageX + pageY * 2u;
+
+        // Determine character pattern from the scroll coordinate
+        const uint32 charPatX = bit::extract<3, 8>(scrollX) >> fourCellChar;
+        const uint32 charPatY = bit::extract<3, 8>(scrollY) >> fourCellChar;
+        const uint32 charIndex = charPatX + charPatY * (64u >> fourCellChar);
+
+        // Determine cell index from the scroll coordinate
+        const uint32 cellX = bit::extract<3>(scrollX) & fourCellChar;
+        const uint32 cellY = bit::extract<3>(scrollY) & fourCellChar;
+        const uint32 cellIndex = cellX + cellY * 2u;
+
+        // Determine dot coordinates
+        const uint32 dotX = bit::extract<0, 2>(scrollX);
+        const uint32 dotY = bit::extract<0, 2>(scrollY);
+
+        // Fetch character
+        const uint32 pageBaseAddress = bgParams.pageBaseAddresses[plane];
+        const uint32 pageOffset = page * kPageSizes[fourCellChar][twoWordChar];
+        const uint32 pageAddress = pageBaseAddress + pageOffset;
+        constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
+        const Character ch =
+            twoWordChar
+                ? VDP2FetchTwoWordCharacter(pageAddress, charIndex)
+                : VDP2FetchOneWordCharacter<fourCellChar, largePalette, wideChar>(bgParams, pageAddress, charIndex);
+
+        // Fetch dot color using character data
+        auto &pixel = layerState.pixels[x];
+        uint8 colorData{};
+        pixel.color = VDP2FetchCharacterColor<colorFormat, colorMode>(bgState.cramOffset, colorData, pixel.transparent,
+                                                                      ch, dotX, dotY, cellIndex);
+        pixel.transparent &= bgParams.enableTransparency;
+
+        // Compute priority
+        pixel.priority = bgParams.priorityNumber;
+        if (bgParams.priorityMode == PriorityMode::PerCharacter) {
+            pixel.priority &= ~1;
+            pixel.priority |= ch.specPriority;
+        } else if (bgParams.priorityMode == PriorityMode::PerDot) {
+            if constexpr (IsPaletteColorFormat(colorFormat)) {
+                pixel.priority &= ~1;
+                if (ch.specPriority && specialFunctionCodes.colorMatches[colorData]) {
+                    pixel.priority |= 1;
+                }
+            }
+        }
+
+        // Increment coordinates
+        fracScrollX += m_rotParamStates[0].scrXIncH;
+        fracScrollY += m_rotParamStates[0].scrYIncH;
+    }
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerState &layerState,
                                              RotBGLayerState &bgState) {
-    // TODO: implement
+    for (uint32 x = 0; x < m_HRes; x++) {
+        // TODO: implement
+    }
 }
 
 FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex) {

@@ -768,11 +768,111 @@ private:
         // CRAM base offset for color fetching.
         // Derived from RAMCTL.CRMDn and CRAOFB.R0CAOSn
         uint32 cramOffset;
+    };
+
+    // State for Rotation Parameters A and B
+    struct RotParamState {
+        RotParamState() {
+            Reset();
+        }
+
+        void Reset() {
+            pageBaseAddresses.fill(0);
+            scrX = scrY = 0;
+            scrXIncV = scrYIncV = 0;
+            scrXIncH = scrYIncH = 0;
+            KA = 0;
+            KAst = 0;
+            dKAst = 0;
+            dKAx = 0;
+        }
+
+        // Calculates counters and increments using the given rotation parameter table.
+        void Calculate(const RotationParamTable &t, bool readXst, bool readYst, bool readKAst) {
+            // 16*(16-16) + 16*(16-16) + 16*(16-16) = 32 frac bits
+            // reduce to 16 frac bits
+            const sint64 Xsp = (t.A * (t.Xst - t.Px) + t.B * (t.Yst - t.Py) + t.C * (t.Zst - t.Pz)) >> 16ll;
+            const sint64 Ysp = (t.D * (t.Xst - t.Px) + t.E * (t.Yst - t.Py) + t.F * (t.Zst - t.Pz)) >> 16ll;
+
+            // 16*(16-16) + 16*(16-16) + 16*(16-16) + 16 + 16 = 32+32+32 + 16+16
+            // reduce 32 to frac bits, result is 16 frac bits
+            const sint64 Xp = ((t.A * (t.Px - t.Cx) + t.B * (t.Py - t.Cy) + t.C * (t.Pz - t.Cz)) >> 16ll) + t.Cx + t.Mx;
+            const sint64 Yp = ((t.D * (t.Px - t.Cx) + t.E * (t.Py - t.Cy) + t.F * (t.Pz - t.Cz)) >> 16ll) + t.Cy + t.My;
+
+            // 16*16 + 16*16 = 32 frac bits
+            // reduce to 16 frac bits
+            const sint64 dX = (t.A * t.deltaX + t.B * t.deltaY) >> 16ll;
+            const sint64 dY = (t.D * t.deltaX + t.E * t.deltaY) >> 16ll;
+
+            // Initial value
+            // 16*16 + 16 = 32 + 16
+            // reduce 32 to 16 frac bits, result is 16 frac bits
+            scrX0 = ((t.kx * Xsp) >> 16ll) + Xp;
+            scrY0 = ((t.ky * Ysp) >> 16ll) + Yp;
+
+            // Increment per Vcnt
+            // 16*(16*16 + 16*16) = 16*32
+            // reduce 32 to 16 frac bits, result is 32 frac bits
+            // reduce to 16 frac bits
+            scrXIncV = (t.kx * ((t.A * t.deltaXst + t.B * t.deltaYst) >> 16ll)) >> 16ll;
+            scrYIncV = (t.ky * ((t.D * t.deltaXst + t.E * t.deltaYst) >> 16ll)) >> 16ll;
+
+            // Increment per Hcnt
+            // 16*16 = 32
+            // reduce to 16 frac bits
+            scrXIncH = (t.kx * dX) >> 16ll;
+            scrYIncH = (t.ky * dY) >> 16ll;
+
+            // Reload screen counters if requested
+            if (readXst) {
+                scrX = scrX0;
+            }
+            if (readYst) {
+                scrY = scrY0;
+            }
+
+            // ---
+
+            // All of these have 10 fractional bits
+            // No maths involved, so store them directly
+
+            KAst = t.KAst;
+            dKAst = t.dKAst;
+            dKAx = t.dKAx;
+
+            // Reload coefficient address if requested
+            if (readKAst) {
+                KA = KAst;
+            }
+        }
+
+        // Increments counters by one Vcnt step
+        void IncrementV() {
+            scrX += scrXIncV;
+            scrY += scrYIncV;
+            KA += dKAst;
+        }
 
         // Page base addresses for RBG planes A-P using Rotation Parameters A and B.
-        // Indexing: [Rotation Parameter A/B][Plane A-P]
+        // Indexing: [Plane A-P]
         // Derived from mapIndices, CHCTLA/CHCTLB.xxCHSZ, PNCR.xxPNB and PLSZ.xxPLSZn
-        std::array<std::array<uint32, 16>, 2> pageBaseAddresses;
+        std::array<uint32, 16> pageBaseAddresses;
+
+        // Current screen coordinates (with 10 fractional bits).
+        // Initialized to (scrX0, scrY0) when the rotation parameter table is read.
+        // Incremented by (scrXIncV, scrYIncV) every scanline and (in a copy) by (scrXIncH, scrYIncH) every pixel.
+        sint32 scrX, scrY;
+        sint32 scrX0, scrY0;       // Initial screen coordinates; updated when the rotation parameter table is read
+        sint32 scrXIncV, scrYIncV; // Screen coordinate increments per vertical counter increment
+        sint32 scrXIncH, scrYIncH; // Screen coordinate increments per horizontal counter increment
+
+        // Current coefficient table address with 10 fractional bits.
+        // Initialized to KAst when the rotation parameter table is read.
+        // Incremented by dKAst every scanline and (in a copy) by dKAx every pixel.
+        uint32 KA;
+        uint32 KAst;  // Initial coefficient table address; updated when the rotation parameter table is read
+        sint32 dKAst; // Coefficient table address increment per vertical counter increment
+        sint32 dKAx;  // Coefficient table address increment per horizontal counter increment
     };
 
     // Layer state indices
@@ -796,6 +896,9 @@ private:
 
     // Layer state for RBGs 0-1
     std::array<RotBGLayerState, 2> m_rotBGLayerStates;
+
+    // States for Rotation Parameters A and B.
+    std::array<RotParamState, 2> m_rotParamStates;
 
     // Framebuffer provided by the frontend to render the current frame into
     FramebufferColor *m_framebuffer;
@@ -871,6 +974,9 @@ private:
     // bgParams contains the parameters for the BG to draw.
     // bgState is a reference to the background layer state for the background.
     void VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayerState &bgState);
+
+    // Loads rotation parameter tables and calculates coefficients and increments.
+    void VDP2LoadRotationParameterTables();
 
     // Draws the current VDP2 scanline.
     void VDP2DrawLine();
