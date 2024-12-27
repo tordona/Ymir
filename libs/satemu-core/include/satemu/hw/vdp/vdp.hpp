@@ -332,7 +332,7 @@ public:
         case 0x01A: m_VDP2.CYCB0.U.u16 = value; break;
         case 0x01E: m_VDP2.CYCB1.U.u16 = value; break;
         case 0x01C: m_VDP2.CYCB1.L.u16 = value; break;
-        case 0x020: m_VDP2.WriteBGON(value); break;
+        case 0x020: m_VDP2.WriteBGON(value), VDP2UpdateEnabledBGs(); break;
         case 0x022: m_VDP2.WriteMZCTL(value); break;
         case 0x024: m_VDP2.WriteSFSEL(value); break;
         case 0x026: m_VDP2.WriteSFCODE(value); break;
@@ -861,6 +861,9 @@ private:
     // Initializes the specified RBG.
     template <uint32 index>
     void VDP2InitRotationBG();
+
+    // Updates the enabled backgrounds.
+    void VDP2UpdateEnabledBGs();
 
     // Updates the line screen scroll parameters for the given background.
     // Only valid for NBG0 and NBG1.

@@ -918,23 +918,10 @@ void VDP::VDP1Cmd_SetLocalCoordinates(uint32 cmdAddress) {
 // VDP2
 
 void VDP::VDP2InitFrame() {
-    // Sprite layer is always enabled
-    m_layerStates[0].enabled = true;
-
     if (m_VDP2.bgEnabled[5]) {
         VDP2InitRotationBG<0>();
         VDP2InitRotationBG<1>();
-        m_layerStates[1].enabled = true;  // RBG0
-        m_layerStates[2].enabled = true;  // RBG1
-        m_layerStates[3].enabled = false; // EXBG
-        m_layerStates[4].enabled = false; // not used
-        m_layerStates[5].enabled = false; // not used
     } else {
-        m_layerStates[1].enabled = m_VDP2.bgEnabled[4]; // RBG0
-        m_layerStates[2].enabled = m_VDP2.bgEnabled[0]; // NBG0
-        m_layerStates[3].enabled = m_VDP2.bgEnabled[1]; // NBG1/EXBG
-        m_layerStates[4].enabled = m_VDP2.bgEnabled[2]; // NBG2
-        m_layerStates[5].enabled = m_VDP2.bgEnabled[3]; // NBG3
         VDP2InitRotationBG<0>();
         VDP2InitNormalBG<0>();
         VDP2InitNormalBG<1>();
@@ -982,6 +969,25 @@ FORCE_INLINE void VDP::VDP2InitRotationBG() {
             const uint32 mapIndex = rotParam.mapIndices[plane];
             bgState.pageBaseAddresses[param][plane] = CalcPageBaseAddress(cellSizeShift, twoWordChar, plsz, mapIndex);
         }
+    }
+}
+
+void VDP::VDP2UpdateEnabledBGs() {
+    // Sprite layer is always enabled
+    m_layerStates[0].enabled = true;
+
+    if (m_VDP2.bgEnabled[5]) {
+        m_layerStates[1].enabled = true;  // RBG0
+        m_layerStates[2].enabled = true;  // RBG1
+        m_layerStates[3].enabled = false; // EXBG
+        m_layerStates[4].enabled = false; // not used
+        m_layerStates[5].enabled = false; // not used
+    } else {
+        m_layerStates[1].enabled = m_VDP2.bgEnabled[4]; // RBG0
+        m_layerStates[2].enabled = m_VDP2.bgEnabled[0]; // NBG0
+        m_layerStates[3].enabled = m_VDP2.bgEnabled[1]; // NBG1/EXBG
+        m_layerStates[4].enabled = m_VDP2.bgEnabled[2]; // NBG2
+        m_layerStates[5].enabled = m_VDP2.bgEnabled[3]; // NBG3
     }
 }
 
