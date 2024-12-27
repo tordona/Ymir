@@ -301,7 +301,9 @@ private:
             assert((m_freeListHead == nullptr) == (m_freeCount == 0));
 
             // Detach buffer from linked list
-            m_freeListHead->prev = nullptr;
+            if (m_freeListHead != nullptr) {
+                m_freeListHead->prev = nullptr;
+            }
             buffer->next = nullptr;
             assert(buffer->prev == nullptr);
 
