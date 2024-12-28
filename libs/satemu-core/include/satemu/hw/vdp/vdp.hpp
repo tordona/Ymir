@@ -866,13 +866,27 @@ private:
     bool VDP1IsLineSystemClipped(CoordS32 coord1, CoordS32 coord2) const;
     bool VDP1IsQuadSystemClipped(CoordS32 coord1, CoordS32 coord2, CoordS32 coord3, CoordS32 coord4) const;
 
-    // TODO: introduce a few structs to group pixel, line and texture parameters
+    struct VDP1PixelParams {
+        VDP1Command::DrawMode mode;
+        uint16 color;
+        uint32 gouraudTable;
+    };
 
-    void VDP1PlotPixel(CoordS32 coord, uint16 color, VDP1Command::DrawMode mode, uint32 gouraudTable);
-    void VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, uint16 color, VDP1Command::DrawMode mode, uint32 gouraudTable);
-    void VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, uint32 colorBank, VDP1Command::Control control,
-                              VDP1Command::DrawMode mode, uint32 gouraudTable, uint32 charAddr, uint32 charSizeH,
-                              uint32 charSizeV, uint32 v, bool swapped);
+    struct VDP1TexturedLineParams {
+        VDP1Command::Control control;
+        VDP1Command::DrawMode mode;
+        uint32 colorBank;
+        uint32 gouraudTable;
+        uint32 charAddr;
+        uint32 charSizeH;
+        uint32 charSizeV;
+        uint32 texV;
+        bool swapped;
+    };
+
+    void VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams);
+    void VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams);
+    void VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1TexturedLineParams &lineParams);
 
     // Individual VDP1 command processors
 

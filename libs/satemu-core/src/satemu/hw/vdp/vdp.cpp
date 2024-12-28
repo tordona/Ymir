@@ -485,9 +485,9 @@ bool VDP::VDP1IsQuadSystemClipped(CoordS32 coord1, CoordS32 coord2, CoordS32 coo
     return false;
 }
 
-FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, uint16 color, VDP1Command::DrawMode mode, uint32 gouraudTable) {
+FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams) {
     auto [x, y] = coord;
-    if (mode.meshEnable && ((x ^ y) & 1)) {
+    if (pixelParams.mode.meshEnable && ((x ^ y) & 1)) {
         return;
     }
 
@@ -495,12 +495,12 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, uint16 color, VDP1Command::
     if (VDP1IsPixelSystemClipped(coord)) {
         return;
     }
-    if (mode.userClippingEnable) {
+    if (pixelParams.mode.userClippingEnable) {
         // clippingMode = false -> draw inside, reject outside
         // clippingMode = true -> draw outside, reject inside
         // The function returns true if the pixel is clipped, therefore we want to reject pixels that return the
         // opposite of clippingMode on that function.
-        if (VDP1IsPixelUserClipped(coord) != mode.clippingMode) {
+        if (VDP1IsPixelUserClipped(coord) != pixelParams.mode.clippingMode) {
             return;
         }
     }
@@ -513,33 +513,32 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, uint16 color, VDP1Command::
     const uint32 fbOffset = y * m_VDP1.fbSizeH + x;
     auto &drawFB = VDP1GetDrawFB();
     if (m_VDP1.pixel8Bits) {
-        drawFB[fbOffset & 0x3FFFF] = color;
+        drawFB[fbOffset & 0x3FFFF] = pixelParams.color;
     } else {
-        util::WriteBE<uint16>(&drawFB[(fbOffset * sizeof(uint16)) & 0x3FFFE], color);
+        util::WriteBE<uint16>(&drawFB[(fbOffset * sizeof(uint16)) & 0x3FFFE], pixelParams.color);
     }
 }
 
-FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, uint16 color, VDP1Command::DrawMode mode,
-                                    uint32 gouraudTable) {
+FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams) {
     for (LineStepper line{coord1, coord2}; line.CanStep(); line.Step()) {
-        VDP1PlotPixel(line.Coord(), color, mode, gouraudTable);
+        VDP1PlotPixel(line.Coord(), pixelParams);
         if (line.NeedsAntiAliasing()) {
-            VDP1PlotPixel(line.AACoord(), color, mode, gouraudTable);
+            VDP1PlotPixel(line.AACoord(), pixelParams);
         }
     }
 }
 
-void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, uint32 colorBank, VDP1Command::Control control,
-                               VDP1Command::DrawMode mode, uint32 gouraudTable, uint32 charAddr, uint32 charSizeH,
-                               uint32 charSizeV, uint32 v, bool swapped) {
-    if (control.flipV) {
-        v = charSizeV - 1 - v;
+void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1TexturedLineParams &lineParams) {
+    uint32 v = lineParams.texV;
+    if (lineParams.control.flipV) {
+        v = lineParams.charSizeV - 1 - v;
     }
 
-    for (TexturedLineStepper line{coord1, coord2, charSizeH, swapped}; line.CanStep(); line.Step()) {
+    for (TexturedLineStepper line{coord1, coord2, lineParams.charSizeH, lineParams.swapped}; line.CanStep();
+         line.Step()) {
         uint32 u = line.U();
-        if (control.flipH) {
-            u = charSizeH - 1 - u;
+        if (lineParams.control.flipH) {
+            u = lineParams.charSizeH - 1 - u;
         }
         if (line.UChanged()) {
             // TODO: optimization: load new texel and compute U here
@@ -548,51 +547,57 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, uint32 colorBan
 
         // TODO: calculate color properly
 
-        const uint32 charIndex = u + v * charSizeH;
+        const uint32 charIndex = u + v * lineParams.charSizeH;
 
         uint16 color = 0;
         bool transparent = true;
-        switch (mode.colorMode) {
+        switch (lineParams.mode.colorMode) {
         case 0: // 4 bpp, 16 colors, bank mode
-            color = VDP1ReadVRAM<uint8>(charAddr + (charIndex >> 1));
+            color = VDP1ReadVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
             color = (color >> (((u ^ 1) & 1) * 4)) & 0xF;
             transparent = color == 0x0;
-            color |= colorBank;
+            color |= lineParams.colorBank;
             break;
         case 1: // 4 bpp, 16 colors, lookup table mode
-            color = VDP1ReadVRAM<uint8>(charAddr + (charIndex >> 1));
+            color = VDP1ReadVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
             color = (color >> (((u ^ 1) & 1) * 4)) & 0xF;
             transparent = color == 0x0;
-            color = VDP1ReadVRAM<uint16>(color * sizeof(uint16) + colorBank * 8);
+            color = VDP1ReadVRAM<uint16>(color * sizeof(uint16) + lineParams.colorBank * 8);
             break;
         case 2: // 8 bpp, 64 colors, bank mode
-            color = VDP1ReadVRAM<uint8>(charAddr + charIndex) & 0x3F;
+            color = VDP1ReadVRAM<uint8>(lineParams.charAddr + charIndex) & 0x3F;
             transparent = color == 0x0;
-            color |= colorBank & 0xFFC0;
+            color |= lineParams.colorBank & 0xFFC0;
             break;
         case 3: // 8 bpp, 128 colors, bank mode
-            color = VDP1ReadVRAM<uint8>(charAddr + charIndex) & 0x7F;
+            color = VDP1ReadVRAM<uint8>(lineParams.charAddr + charIndex) & 0x7F;
             transparent = color == 0x00;
-            color |= colorBank & 0xFF80;
+            color |= lineParams.colorBank & 0xFF80;
             break;
         case 4: // 8 bpp, 256 colors, bank mode
-            color = VDP1ReadVRAM<uint8>(charAddr + charIndex);
+            color = VDP1ReadVRAM<uint8>(lineParams.charAddr + charIndex);
             transparent = color == 0x00;
-            color |= colorBank & 0xFF00;
+            color |= lineParams.colorBank & 0xFF00;
             break;
         case 5: // 16 bpp, 32768 colors, RGB mode
-            color = VDP1ReadVRAM<uint16>(charAddr + charIndex * sizeof(uint16));
+            color = VDP1ReadVRAM<uint16>(lineParams.charAddr + charIndex * sizeof(uint16));
             transparent = color == 0x0000;
             break;
         }
 
-        if (transparent && !mode.transparentPixelDisable) {
+        if (transparent && !lineParams.mode.transparentPixelDisable) {
             continue;
         }
 
-        VDP1PlotPixel(line.Coord(), color, mode, gouraudTable);
+        VDP1PixelParams pixelParams{
+            .mode = lineParams.mode,
+            .color = color,
+            .gouraudTable = lineParams.gouraudTable,
+        };
+
+        VDP1PlotPixel(line.Coord(), pixelParams);
         if (line.NeedsAntiAliasing()) {
-            VDP1PlotPixel(line.AACoord(), color, mode, gouraudTable);
+            VDP1PlotPixel(line.AACoord(), pixelParams);
         }
     }
 }
@@ -628,16 +633,24 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
         return;
     }
 
+    VDP1TexturedLineParams params{
+        .control = control,
+        .mode = mode,
+        .colorBank = color,
+        .gouraudTable = gouraudTable,
+        .charAddr = charAddr,
+        .charSizeH = charSizeH,
+        .charSizeV = charSizeV,
+    };
+
     // Interpolate linearly over edges A-D and B-C
     for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, charSizeV}; edge.CanStep(); edge.Step()) {
+        // Plot lines between the interpolated points
         const CoordS32 coordL{edge.XMaj(), edge.YMaj()};
         const CoordS32 coordR{edge.XMin(), edge.YMin()};
-        const uint32 v = edge.V();
-        const bool swapped = edge.Swapped();
-
-        // Plot lines between the interpolated points
-        VDP1PlotTexturedLine(coordL, coordR, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v,
-                             swapped);
+        params.texV = edge.V();
+        params.swapped = edge.Swapped();
+        VDP1PlotTexturedLine(coordL, coordR, params);
     }
 }
 
@@ -755,16 +768,24 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
         return;
     }
 
+    VDP1TexturedLineParams params{
+        .control = control,
+        .mode = mode,
+        .colorBank = color,
+        .gouraudTable = gouraudTable,
+        .charAddr = charAddr,
+        .charSizeH = charSizeH,
+        .charSizeV = charSizeV,
+    };
+
     // Interpolate linearly over edges A-D and B-C
     for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, charSizeV}; edge.CanStep(); edge.Step()) {
+        // Plot lines between the interpolated points
         const CoordS32 coordL{edge.XMaj(), edge.YMaj()};
         const CoordS32 coordR{edge.XMin(), edge.YMin()};
-        const uint32 v = edge.V();
-        const bool swapped = edge.Swapped();
-
-        // Plot lines between the interpolated points
-        VDP1PlotTexturedLine(coordL, coordR, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v,
-                             swapped);
+        params.texV = edge.V();
+        params.swapped = edge.Swapped();
+        VDP1PlotTexturedLine(coordL, coordR, params);
     }
 }
 
@@ -800,16 +821,24 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control co
         return;
     }
 
+    VDP1TexturedLineParams params{
+        .control = control,
+        .mode = mode,
+        .colorBank = color,
+        .gouraudTable = gouraudTable,
+        .charAddr = charAddr,
+        .charSizeH = charSizeH,
+        .charSizeV = charSizeV,
+    };
+
     // Interpolate linearly over edges A-D and B-C
     for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, charSizeV}; edge.CanStep(); edge.Step()) {
+        // Plot lines between the interpolated points
         const CoordS32 coordL{edge.XMaj(), edge.YMaj()};
         const CoordS32 coordR{edge.XMin(), edge.YMin()};
-        const uint32 v = edge.V();
-        const bool swapped = edge.Swapped();
-
-        // Plot lines between the interpolated points
-        VDP1PlotTexturedLine(coordL, coordR, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v,
-                             swapped);
+        params.texV = edge.V();
+        params.swapped = edge.Swapped();
+        VDP1PlotTexturedLine(coordL, coordR, params);
     }
 }
 
@@ -841,13 +870,19 @@ void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
         return;
     }
 
+    const VDP1PixelParams params{
+        .mode = mode,
+        .color = color,
+        .gouraudTable = gouraudTable,
+    };
+
     // Interpolate linearly over edges A-D and B-C
     for (QuadEdgesStepper edge{coordA, coordB, coordC, coordD}; edge.CanStep(); edge.Step()) {
         const CoordS32 coordL{edge.XMaj(), edge.YMaj()};
         const CoordS32 coordR{edge.XMin(), edge.YMin()};
 
         // Plot lines between the interpolated points
-        VDP1PlotLine(coordL, coordR, color, mode, gouraudTable);
+        VDP1PlotLine(coordL, coordR, params);
     }
 }
 
@@ -879,10 +914,16 @@ void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
         return;
     }
 
-    VDP1PlotLine(coordA, coordB, color, mode, gouraudTable);
-    VDP1PlotLine(coordB, coordC, color, mode, gouraudTable);
-    VDP1PlotLine(coordC, coordD, color, mode, gouraudTable);
-    VDP1PlotLine(coordD, coordA, color, mode, gouraudTable);
+    const VDP1PixelParams params{
+        .mode = mode,
+        .color = color,
+        .gouraudTable = gouraudTable,
+    };
+
+    VDP1PlotLine(coordA, coordB, params);
+    VDP1PlotLine(coordB, coordC, params);
+    VDP1PlotLine(coordC, coordD, params);
+    VDP1PlotLine(coordD, coordA, params);
 }
 
 void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
@@ -906,7 +947,13 @@ void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
         return;
     }
 
-    VDP1PlotLine(coordA, coordB, color, mode, gouraudTable);
+    const VDP1PixelParams params{
+        .mode = mode,
+        .color = color,
+        .gouraudTable = gouraudTable,
+    };
+
+    VDP1PlotLine(coordA, coordB, params);
 }
 
 void VDP::VDP1Cmd_SetSystemClipping(uint32 cmdAddress) {
