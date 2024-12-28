@@ -14,6 +14,7 @@
 #include <fmt/format.h>
 
 #include <array>
+#include <span>
 
 // -----------------------------------------------------------------------------
 // Forward declarations
@@ -680,6 +681,14 @@ private:
         sint32 localCoordY;
     } m_VDP1RenderContext;
 
+    // Character modes, a combination of Character Size from the Character Control Register (CHCTLA-B) and Character
+    // Number Supplement from the Pattern Name Control Register (PNCN0-3/PNCR)
+    enum class CharacterMode {
+        TwoWord,         // 2 word characters
+        OneWordStandard, // 1 word characters with standard character data, H/V flip available
+        OneWordExtended, // 1 word characters with extended character data; H/V flip unavailable
+    };
+
     // Pattern Name Data, contains parameters for a character
     struct Character {
         uint16 charNum;     // Character number, 15 bits
@@ -936,12 +945,11 @@ private:
     // layerState is a reference to the common layer state for the background.
     // bgState is a reference to the background layer state for the background.
     //
-    // twoWordChar indicates if character patterns use one word (false) or two words (true).
+    // charMode indicates if character patterns use two words or one word with standard or extended character data.
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
-    // wideChar indicates if the flip bits are available (false) or used to extend the character number (true).
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
-    template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
+    template <CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
     void VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState);
 
     // Draws a normal bitmap BG scanline.
@@ -960,12 +968,11 @@ private:
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
     //
-    // twoWordChar indicates if character patterns use one word (false) or two words (true).
+    // charMode indicates if character patterns use two words or one word with standard or extended character data.
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
-    // wideChar indicates if the flip bits are available (false) or used to extend the character number (true).
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
-    template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
+    template <CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
     void VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState);
 
     // Draws a rotation bitmap BG scanline.
@@ -985,6 +992,30 @@ private:
     // coeffAddress is the calculated coefficient address (KA).
     Coefficient VDP2FetchRotationCoefficient(const RotationParams &params, uint32 coeffAddress);
 
+    // Fetches a scroll background pixel at the given coordinates.
+    //
+    // bgParams contains the parameters for the BG to draw.
+    // pageBaseAddresses is a reference to the table containing the planes' pages' base addresses.
+    // scrollX and scrollY are the integer coordinates of the scroll screen.
+    //
+    // charMode indicates if character patterns use two words or one word with standard or extended character data.
+    // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
+    // colorFormat is the color format for cell data.
+    // colorMode is the CRAM color mode.
+    template <bool rot, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
+    Pixel VDPFetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses, uint32 scrollX,
+                                uint32 scrollY);
+
+    // Fetches a bitmap background pixel at the given coordinates.
+    //
+    // bgParams contains the parameters for the BG to draw.
+    // scrollX and scrollY are the integer coordinates of the scroll screen.
+    //
+    // colorFormat is the color format for bitmap data.
+    // colorMode is the CRAM color mode.
+    template <bool rot, ColorFormat colorFormat, uint32 colorMode>
+    Pixel VDPFetchBitmapBGPixel(const BGParams &bgParams, uint32 scrollX, uint32 scrollY);
+
     // Fetches a two-word character from VRAM.
     //
     // pageBaseAddress specifies the base address of the page of character patterns.
@@ -998,8 +1029,8 @@ private:
     // charIndex is the index of the character to fetch.
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
     // largePalette indicates if the color format uses 16 colors (false) or more (true).
-    // wideChar indicates if the flip bits are available (false) or used to extend the character number (true).
-    template <bool fourCellChar, bool largePalette, bool wideChar>
+    // extChar indicates if the flip bits are available (false) or used to extend the character number (true).
+    template <bool fourCellChar, bool largePalette, bool extChar>
     Character VDP2FetchOneWordCharacter(const BGParams &bgParams, uint32 pageBaseAddress, uint32 charIndex);
 
     // Fetches a color from a pixel in the specified cell in a 2x2 character pattern.
@@ -1013,8 +1044,8 @@ private:
     // colorFormat is the value of CHCTLA/CHCTLB.xxCHCNn.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    vdp::Color888 VDP2FetchCharacterColor(uint32 cramOffset, uint8 &colorData, bool &transparent, Character ch,
-                                          uint8 dotX, uint8 dotY, uint32 cellIndex);
+    Color888 VDP2FetchCharacterColor(uint32 cramOffset, uint8 &colorData, bool &transparent, Character ch, uint8 dotX,
+                                     uint8 dotY, uint32 cellIndex);
 
     // Fetches a color from a bitmap pixel.
     //
@@ -1024,7 +1055,7 @@ private:
     // colorFormat is the color format for pixel data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    vdp::Color888 VDP2FetchBitmapColor(const BGParams &bgParams, bool &transparent, uint32 dotX, uint32 dotY);
+    Color888 VDP2FetchBitmapColor(const BGParams &bgParams, bool &transparent, uint32 dotX, uint32 dotY);
 
     // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
     //
@@ -1032,7 +1063,7 @@ private:
     // colorIndex specifies the color index.
     // colorMode is the CRAM color mode.
     template <uint32 colorMode>
-    vdp::Color888 VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorIndex);
+    Color888 VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorIndex);
 
     // Fetches sprite data based on the current sprite mode.
     //

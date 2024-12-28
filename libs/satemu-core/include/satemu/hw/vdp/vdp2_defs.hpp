@@ -109,7 +109,7 @@ struct BGParams {
         supplBitmapSpecialColorCalc = false;
         supplBitmapSpecialPriority = false;
 
-        wideChar = false;
+        extChar = false;
         twoWordChar = false;
 
         verticalCellScrollEnable = false;
@@ -203,12 +203,12 @@ struct BGParams {
     uint32 cramOffset;
 
     // Supplementary bits 4-0 for scroll screen character number, when using 1-word characters.
-    // Derived from PNCN0/PNCR.xxSCNn
+    // Derived from PNCNn/PNCR.xxSCNn
     uint32 supplScrollCharNum;
 
     // Supplementary bits 6-4 for scroll screen palette number, when using 1-word characters.
     // The value is already shifted in place to optimize rendering calculations.
-    // Derived from PNCN0/PNCR.xxSPLTn
+    // Derived from PNCNn/PNCR.xxSPLTn
     uint32 supplScrollPalNum;
 
     // Bits 6-4 for bitmap palette number.
@@ -217,11 +217,11 @@ struct BGParams {
     uint32 supplBitmapPalNum;
 
     // Supplementary Special Color Calculation bit for scroll BGs.
-    // Derived from PNCN0/PNCR.xxSCC
+    // Derived from PNCNn/PNCR.xxSCC
     bool supplScrollSpecialColorCalc;
 
     // Supplementary Special Priority bit for scroll BGs.
-    // Derived from PNCN0/PNCR.xxSPR
+    // Derived from PNCNn/PNCR.xxSPR
     bool supplScrollSpecialPriority;
 
     // Supplementary Special Color Calculation bit for bitmap BGs.
@@ -234,8 +234,8 @@ struct BGParams {
 
     // Character number width: 10 bits (false) or 12 bits (true).
     // When true, disables the horizontal and vertical flip bits in the character.
-    // Derived from PNCN0/PNCR.xxCNSM
-    bool wideChar;
+    // Derived from PNCNn/PNCR.xxCNSM
+    bool extChar;
 
     // Whether characters use one (false) or two (true) words.
     // Derived from PNCNn/PNCR.xxPNB

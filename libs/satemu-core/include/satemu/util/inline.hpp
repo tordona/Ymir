@@ -1,6 +1,6 @@
 #pragma once
 
-#if !defined(NDEBUG)
+#if !defined(NDEBUG) || defined(DISABLE_FORCE_INLINE)
     #define FORCE_INLINE inline
     #define NO_INLINE
     #define FLATTEN

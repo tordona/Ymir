@@ -1211,20 +1211,20 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 bgIndex, uint32 colorMode) {
     using FnDraw = void (VDP::*)(const BGParams &, LayerState &, NormBGLayerState &);
 
     // Lookup table of scroll BG drawing functions
-    // Indexing: [twoWordChar][fourCellChar][wideChar][colorFormat][colorMode]
+    // Indexing: [charMode][fourCellChar][colorFormat][colorMode]
     static constexpr auto fnDrawScroll = [] {
-        std::array<std::array<std::array<std::array<std::array<FnDraw, 4>, 8>, 2>, 2>, 2> arr{};
+        std::array<std::array<std::array<std::array<FnDraw, 4>, 8>, 2>, 3> arr{};
 
-        util::constexpr_for<2 * 2 * 2 * 8 * 4>([&](auto index) {
-            const uint32 twc = bit::extract<0>(index());
-            const uint32 fcc = bit::extract<1>(index());
-            const uint32 wc = bit::extract<2>(index());
-            const uint32 cf = bit::extract<3, 5>(index());
-            const uint32 cm = bit::extract<6, 7>(index());
+        util::constexpr_for<3 * 2 * 8 * 4>([&](auto index) {
+            const uint32 chm = index() % 3;
+            const uint32 fcc = bit::extract<0>(index() / 3);
+            const uint32 cf = bit::extract<1, 3>(index() / 3);
+            const uint32 clm = bit::extract<4, 5>(index() / 3);
 
+            const CharacterMode chmEnum = static_cast<CharacterMode>(chm);
             const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
-            const uint32 colorMode = cm <= 2 ? cm : 2;
-            arr[twc][fcc][wc][cf][cm] = &VDP::VDP2DrawNormalScrollBG<twc, fcc, wc, cfEnum, colorMode>;
+            const uint32 colorMode = clm <= 2 ? clm : 2;
+            arr[chm][fcc][cf][clm] = &VDP::VDP2DrawNormalScrollBG<chmEnum, fcc, cfEnum, colorMode>;
         });
 
         return arr;
@@ -1270,8 +1270,11 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 bgIndex, uint32 colorMode) {
     } else {
         const bool twc = bgParams.twoWordChar;
         const bool fcc = bgParams.cellSizeShift;
-        const bool wc = bgParams.wideChar;
-        (this->*fnDrawScroll[twc][fcc][wc][cf][colorMode])(bgParams, layerState, bgState);
+        const bool exc = bgParams.extChar;
+        const uint32 chm = static_cast<uint32>(twc   ? CharacterMode::TwoWord
+                                               : exc ? CharacterMode::OneWordExtended
+                                                     : CharacterMode::OneWordStandard);
+        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(bgParams, layerState, bgState);
     }
 }
 
@@ -1281,20 +1284,20 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 bgIndex, uint32 colorMode) {
     using FnDraw = void (VDP::*)(const BGParams &, LayerState &);
 
     // Lookup table of scroll BG drawing functions
-    // Indexing: [twoWordChar][fourCellChar][wideChar][colorFormat][colorMode]
+    // Indexing: [twoWordChar][fourCellChar][extChar][colorFormat][colorMode]
     static constexpr auto fnDrawScroll = [] {
-        std::array<std::array<std::array<std::array<std::array<FnDraw, 4>, 8>, 2>, 2>, 2> arr{};
+        std::array<std::array<std::array<std::array<FnDraw, 4>, 8>, 2>, 3> arr{};
 
-        util::constexpr_for<2 * 2 * 2 * 8 * 4>([&](auto index) {
-            const uint32 twc = bit::extract<0>(index());
-            const uint32 fcc = bit::extract<1>(index());
-            const uint32 wc = bit::extract<2>(index());
-            const uint32 cf = bit::extract<3, 5>(index());
-            const uint32 cm = bit::extract<6, 7>(index());
+        util::constexpr_for<3 * 2 * 8 * 4>([&](auto index) {
+            const uint32 chm = index() % 3;
+            const uint32 fcc = bit::extract<0>(index() / 3);
+            const uint32 cf = bit::extract<1, 3>(index() / 3);
+            const uint32 clm = bit::extract<4, 5>(index() / 3);
 
+            const CharacterMode chmEnum = static_cast<CharacterMode>(chm);
             const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
-            const uint32 colorMode = cm <= 2 ? cm : 2;
-            arr[twc][fcc][wc][cf][cm] = &VDP::VDP2DrawRotationScrollBG<twc, fcc, wc, cfEnum, colorMode>;
+            const uint32 colorMode = clm <= 2 ? clm : 2;
+            arr[chm][fcc][cf][clm] = &VDP::VDP2DrawRotationScrollBG<chmEnum, fcc, cfEnum, colorMode>;
         });
 
         return arr;
@@ -1330,8 +1333,11 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 bgIndex, uint32 colorMode) {
     } else {
         const bool twc = bgParams.twoWordChar;
         const bool fcc = bgParams.cellSizeShift;
-        const bool wc = bgParams.wideChar;
-        (this->*fnDrawScroll[twc][fcc][wc][cf][colorMode])(bgParams, layerState);
+        const bool exc = bgParams.extChar;
+        const uint32 chm = static_cast<uint32>(twc   ? CharacterMode::TwoWord
+                                               : exc ? CharacterMode::OneWordExtended
+                                                     : CharacterMode::OneWordStandard);
+        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(bgParams, layerState);
     }
 }
 
@@ -1499,76 +1505,9 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
     }
 }
 
-template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
+template <VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState &layerState,
                                            NormBGLayerState &bgState) {
-    //          Map
-    // +---------+---------+
-    // |         |         |   Normal BGs always have 4 planes named A,B,C,D in this exact configuration.
-    // | Plane A | Plane B |   Each plane can point to different portions of VRAM through a combination of bits
-    // |         |         |   from the Map Register (per BG) and the Map Offset Register (per BG and plane):
-    // +---------+---------+     bits 5-0 of the address come from the Map Register (MPxxN#)
-    // |         |         |     bits 8-6 of the address come from the Map Offset Register (MPOFN)
-    // | Plane C | Plane D |
-    // |         |         |
-    // +---------+---------+
-    //
-    //         Plane
-    // +---------+---------+   Each plane is composed of 1x1, 2x1 or 2x2 pages, determined by Plane Size in the
-    // |         |         |   Plane Size Register (PLSZ).
-    // | Page 1  | Page 2  |   Pages are stored sequentially in VRAM left to right, top to bottom, as shown.
-    // |         |         |
-    // +---------+---------+
-    // |         |         |
-    // | Page 3  | Page 4  |
-    // |         |         |
-    // +---------+---------+
-    //
-    //           Page
-    // +----+----+..+----+----+   Pages contain 32x32 or 64x64 character patterns, which are groups of 1x1 or 2x2 cells,
-    // |CP 1|CP 2|  |CP63|CP64|   determined by Character Size in the Character Control Register (CHCTLA-B).
-    // +----+----+..+----+----+   Pages always contain a total of 64x64 cells - a grid of 64x64 1x1 character patterns
-    // |  65|  66|  | 127| 128|   or 32x32 2x2 character patterns. Because of this, pages always have 512x512 dots.
-    // +----+----+..+----+----+
-    // :    :    :  :    :    :   Character patterns in a page are stored sequentially in VRAM left to right, top to
-    // +----+----+..+----+----+   bottom, as shown. The figure to the left illustrates a 64x64 page; a 32x32 page would
-    // |3969|3970|  |4031|4032|   have 1024 character patterns in total instead of 4096.
-    // +----+----+..+----+----+
-    // |4033|4034|  |4095|4096|
-    // +----+----+..+----+----+
-    //
-    //   Character Pattern
-    // +---------+---------+   Character patterns are groups of 1x1 or 2x2 cells, determined by Character Size in the
-    // |         |         |   Character Control Register (CHCTLA-B).
-    // | Cell 1  | Cell 2  |   Cells are stored sequentially in VRAM left to right, top to bottom, as shown.
-    // |         |         |   Character patterns contain a character number (15 bits), a palette number (7 bits, only
-    // +---------+---------+   used with 16 or 256 color palette modes), two special function bits (Special Priority and
-    // |         |         |   Special Color Calculation) and two flip bits (horizontal and vertical).
-    // | Cell 3  | Cell 4  |   Character patterns can be one or two words long, as defined by Pattern Name Data Size
-    // |         |         |   in the Pattern Name Control Register (PNCN0-3, PNCR).
-    // +---------+---------+   When using one word characters, some of the data comes from supplementary registers.
-    //
-    //           Cell
-    // +--+--+--+--+--+--+--+--+   Cells contain 8x8 dots (pixels) in one of the following color formats:
-    // | 1| 2| 3| 4| 5| 6| 7| 8|     - 16 color palette
-    // +--+--+--+--+--+--+--+--+     - 256 color palette
-    // | 9|10|11|12|13|14|15|16|     - 1024 or 2048 color palette (depending on Color Mode)
-    // +--+--+--+--+--+--+--+--+     - 5:5:5 RGB (32768 colors)
-    // |17|18|19|20|21|22|23|24|     - 8:8:8 RGB (16777216 colors)
-    // +--+--+--+--+--+--+--+--+
-    // |25|26|27|28|29|30|31|32|
-    // +--+--+--+--+--+--+--+--+
-    // |33|34|35|36|37|38|39|40|
-    // +--+--+--+--+--+--+--+--+
-    // |41|42|43|44|45|46|47|48|
-    // +--+--+--+--+--+--+--+--+
-    // |49|50|51|52|53|54|55|56|
-    // +--+--+--+--+--+--+--+--+
-    // |57|58|59|60|61|62|63|64|
-    // +--+--+--+--+--+--+--+--+
-
-    const auto &specialFunctionCodes = m_VDP2.specialFunctionCodes[bgParams.specialFunctionSelect];
-
     uint32 fracScrollX = bgState.fracScrollX;
     const uint32 fracScrollY = bgState.fracScrollY;
     bgState.fracScrollY += bgParams.scrollIncV;
@@ -1615,64 +1554,13 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState 
             }
         }
 
-        // Get integer scroll screen coordinates
+        // Compute integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 8u;
         const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - bgState.mosaicCounterY;
 
-        // Determine plane index from the scroll coordinate
-        const uint32 planeX = bit::extract<9>(scrollX) >> bgParams.pageShiftH;
-        const uint32 planeY = bit::extract<9>(scrollY) >> bgParams.pageShiftV;
-        const uint32 plane = planeX + planeY * 2u;
-
-        // Determine page index from the scroll coordinate
-        const uint32 pageX = bit::extract<9>(scrollX) & bgParams.pageShiftH;
-        const uint32 pageY = bit::extract<9>(scrollY) & bgParams.pageShiftV;
-        const uint32 page = pageX + pageY * 2u;
-
-        // Determine character pattern from the scroll coordinate
-        const uint32 charPatX = bit::extract<3, 8>(scrollX) >> fourCellChar;
-        const uint32 charPatY = bit::extract<3, 8>(scrollY) >> fourCellChar;
-        const uint32 charIndex = charPatX + charPatY * (64u >> fourCellChar);
-
-        // Determine cell index from the scroll coordinate
-        const uint32 cellX = bit::extract<3>(scrollX) & fourCellChar;
-        const uint32 cellY = bit::extract<3>(scrollY) & fourCellChar;
-        const uint32 cellIndex = cellX + cellY * 2u;
-
-        // Determine dot coordinates
-        const uint32 dotX = bit::extract<0, 2>(scrollX);
-        const uint32 dotY = bit::extract<0, 2>(scrollY);
-
-        // Fetch character
-        const uint32 pageBaseAddress = bgParams.pageBaseAddresses[plane];
-        const uint32 pageOffset = page * kPageSizes[fourCellChar][twoWordChar];
-        const uint32 pageAddress = pageBaseAddress + pageOffset;
-        constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
-        const Character ch =
-            twoWordChar
-                ? VDP2FetchTwoWordCharacter(pageAddress, charIndex)
-                : VDP2FetchOneWordCharacter<fourCellChar, largePalette, wideChar>(bgParams, pageAddress, charIndex);
-
-        // Fetch dot color using character data
-        auto &pixel = layerState.pixels[x];
-        uint8 colorData{};
-        pixel.color = VDP2FetchCharacterColor<colorFormat, colorMode>(bgParams.cramOffset, colorData, pixel.transparent,
-                                                                      ch, dotX, dotY, cellIndex);
-        pixel.transparent &= bgParams.enableTransparency;
-
-        // Compute priority
-        pixel.priority = bgParams.priorityNumber;
-        if (bgParams.priorityMode == PriorityMode::PerCharacter) {
-            pixel.priority &= ~1;
-            pixel.priority |= ch.specPriority;
-        } else if (bgParams.priorityMode == PriorityMode::PerDot) {
-            if constexpr (IsPaletteColorFormat(colorFormat)) {
-                pixel.priority &= ~1;
-                if (ch.specPriority && specialFunctionCodes.colorMatches[colorData]) {
-                    pixel.priority |= 1;
-                }
-            }
-        }
+        // Plot pixel
+        layerState.pixels[x] = VDPFetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
+            bgParams, bgParams.pageBaseAddresses, scrollX, scrollY);
 
         // Increment horizontal coordinate
         fracScrollX += bgState.scrollIncH;
@@ -1721,28 +1609,19 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState 
             }
         }
 
-        // Get integer scroll screen coordinates
+        // Compute integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 8u;
         const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - bgState.mosaicCounterY;
 
-        // Fetch dot color from bitmap
-        auto &pixel = layerState.pixels[x];
-        pixel.color = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, pixel.transparent, scrollX, scrollY);
-        pixel.transparent &= bgParams.enableTransparency;
-
-        // Compute priority
-        pixel.priority = bgParams.priorityNumber;
-        if (bgParams.priorityMode == PriorityMode::PerCharacter || bgParams.priorityMode == PriorityMode::PerDot) {
-            pixel.priority &= ~1;
-            pixel.priority |= bgParams.supplBitmapSpecialPriority;
-        }
+        // Plot pixel
+        layerState.pixels[x] = VDPFetchBitmapBGPixel<false, colorFormat, colorMode>(bgParams, scrollX, scrollY);
 
         // Increment horizontal coordinate
         fracScrollX += bgState.scrollIncH;
     }
 }
 
-template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
+template <VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState) {
     // TODO: for RBG0, select rotation parameters based on m_VDP2.commonRotParams.rotParamMode
     // for RBG1, always use parameter B
@@ -1750,7 +1629,6 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
     // const auto &commonRotParams = m_VDP2.commonRotParams;
     const auto &rotParams = m_VDP2.rotParams[0];
     auto &rotParamState = m_rotParamStates[0];
-    const auto &specialFunctionCodes = m_VDP2.specialFunctionCodes[bgParams.specialFunctionSelect];
 
     for (uint32 x = 0; x < m_HRes; x++) {
         auto &pixel = layerState.pixels[x];
@@ -1769,66 +1647,40 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
         const uint32 scrollX = fracScrollX >> 16u;
         const uint32 scrollY = fracScrollY >> 16u;
 
-        // Determine plane index from the scroll coordinate
-        const uint32 planeX = bit::extract<9, 10>(scrollX) >> bgParams.pageShiftH;
-        const uint32 planeY = bit::extract<9, 10>(scrollY) >> bgParams.pageShiftV;
-        const uint32 plane = planeX + planeY * 4u;
-
-        // Determine page index from the scroll coordinate
-        const uint32 pageX = bit::extract<9>(scrollX) & bgParams.pageShiftH;
-        const uint32 pageY = bit::extract<9>(scrollY) & bgParams.pageShiftV;
-        const uint32 page = pageX + pageY * 2u;
-
-        // Determine character pattern from the scroll coordinate
-        const uint32 charPatX = bit::extract<3, 8>(scrollX) >> fourCellChar;
-        const uint32 charPatY = bit::extract<3, 8>(scrollY) >> fourCellChar;
-        const uint32 charIndex = charPatX + charPatY * (64u >> fourCellChar);
-
-        // Determine cell index from the scroll coordinate
-        const uint32 cellX = bit::extract<3>(scrollX) & fourCellChar;
-        const uint32 cellY = bit::extract<3>(scrollY) & fourCellChar;
-        const uint32 cellIndex = cellX + cellY * 2u;
-
-        // Determine dot coordinates
-        const uint32 dotX = bit::extract<0, 2>(scrollX);
-        const uint32 dotY = bit::extract<0, 2>(scrollY);
-
-        // Fetch character
-        const uint32 pageBaseAddress = rotParamState.pageBaseAddresses[plane];
-        const uint32 pageOffset = page * kPageSizes[fourCellChar][twoWordChar];
-        const uint32 pageAddress = pageBaseAddress + pageOffset;
-        constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
-        const Character ch =
-            twoWordChar
-                ? VDP2FetchTwoWordCharacter(pageAddress, charIndex)
-                : VDP2FetchOneWordCharacter<fourCellChar, largePalette, wideChar>(bgParams, pageAddress, charIndex);
-
-        // Fetch dot color using character data
-        uint8 colorData{};
-        pixel.color = VDP2FetchCharacterColor<colorFormat, colorMode>(bgParams.cramOffset, colorData, pixel.transparent,
-                                                                      ch, dotX, dotY, cellIndex);
-        pixel.transparent &= bgParams.enableTransparency;
-
-        // Compute priority
-        pixel.priority = bgParams.priorityNumber;
-        if (bgParams.priorityMode == PriorityMode::PerCharacter) {
-            pixel.priority &= ~1;
-            pixel.priority |= ch.specPriority;
-        } else if (bgParams.priorityMode == PriorityMode::PerDot) {
-            if constexpr (IsPaletteColorFormat(colorFormat)) {
-                pixel.priority &= ~1;
-                if (ch.specPriority && specialFunctionCodes.colorMatches[colorData]) {
-                    pixel.priority |= 1;
-                }
-            }
-        }
+        // Plot pixel
+        layerState.pixels[x] = VDPFetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
+            bgParams, rotParamState.pageBaseAddresses, scrollX, scrollY);
     }
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerState &layerState) {
+    // TODO: for RBG0, select rotation parameters based on m_VDP2.commonRotParams.rotParamMode
+    // for RBG1, always use parameter B
+
+    // const auto &commonRotParams = m_VDP2.commonRotParams;
+    const auto &rotParams = m_VDP2.rotParams[0];
+    auto &rotParamState = m_rotParamStates[0];
+
     for (uint32 x = 0; x < m_HRes; x++) {
-        // TODO: implement
+        auto &pixel = layerState.pixels[x];
+
+        // Handle transparent pixels in coefficient table
+        if (rotParams.coeffTableEnable && rotParamState.transparent[x]) {
+            // TODO: if m_VDP2.commonRotParams.rotParamMode is Coefficient, switch to rot param B instead
+            pixel.transparent = true;
+            continue;
+        }
+
+        const sint32 fracScrollX = rotParamState.screenCoords[x].x;
+        const sint32 fracScrollY = rotParamState.screenCoords[x].y;
+
+        // Get integer scroll screen coordinates
+        const uint32 scrollX = fracScrollX >> 16u;
+        const uint32 scrollY = fracScrollY >> 16u;
+
+        // Plot pixel
+        layerState.pixels[x] = VDPFetchBitmapBGPixel<true, colorFormat, colorMode>(bgParams, scrollX, scrollY);
     }
 }
 
@@ -1879,6 +1731,159 @@ Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint
     return coeff;
 }
 
+template <bool rot, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
+FORCE_INLINE VDP::Pixel VDP::VDPFetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses,
+                                                   uint32 scrollX, uint32 scrollY) {
+    //      Map (NBGs)              Map (RBGs)
+    // +---------+---------+   +----+----+----+----+   Normal and rotation BGs are divided into planes in the exact
+    // |         |         |   | A  | B  | C  | D  |   configurations illustrated to the left.
+    // | Plane A | Plane B |   +----+----+----+----+   The BG's Map Offset Register is combined with the BG plane's
+    // |         |         |   | E  | F  | G  | H  |   Map Register (MPxxN#) to produce a base address for each plane:
+    // +---------+---------+   +----+----+----+----+     Address bits  Source
+    // |         |         |   | I  | J  | K  | L  |              8-6  Map Offset Register (MPOFN)
+    // | Plane C | Plane D |   +----+----+----+----+              5-0  Map Register (MPxxN#)
+    // |         |         |   | M  | N  | O  | P  |
+    // +---------+---------+   +----+----+----+----+   These addresses are precomputed in bgParams.pageBaseAddresses.
+    //
+    //         Plane
+    // +---------+---------+   Each plane is composed of 1x1, 2x1 or 2x2 pages, determined by Plane Size in the
+    // |         |         |   Plane Size Register (PLSZ).
+    // | Page 1  | Page 2  |   Pages are stored sequentially in VRAM left to right, top to bottom, as shown.
+    // |         |         |
+    // +---------+---------+   The size is stored as a bit shift in bgParams.pageShiftH and bgParams.pageShiftV.
+    // |         |         |
+    // | Page 3  | Page 4  |
+    // |         |         |
+    // +---------+---------+
+    //
+    //           Page
+    // +----+----+..+----+----+   Pages contain 32x32 or 64x64 character patterns, which are groups of 1x1 or 2x2 cells,
+    // |CP 1|CP 2|  |CP63|CP64|   determined by Character Size in the Character Control Register (CHCTLA-B).
+    // +----+----+..+----+----+   Pages always contain a total of 64x64 cells - a grid of 64x64 1x1 character patterns
+    // |  65|  66|  | 127| 128|   or 32x32 2x2 character patterns. Because of this, pages always have 512x512 dots.
+    // +----+----+..+----+----+
+    // :    :    :  :    :    :   Character patterns in a page are stored sequentially in VRAM left to right, top to
+    // +----+----+..+----+----+   bottom, as shown. The figure to the left illustrates a 64x64 page; a 32x32 page would
+    // |3969|3970|  |4031|4032|   have 1024 character patterns in total instead of 4096.
+    // +----+----+..+----+----+
+    // |4033|4034|  |4095|4096|   fourCellChar specifies the size of the character patterns (1x1 when false, 2x2 when
+    // +----+----+..+----+----+   true) and, by extension, the dimensions of the page (32x32 or 64x64 respectively).
+    //
+    //   Character Pattern
+    // +---------+---------+   Character patterns are groups of 1x1 or 2x2 cells, determined by Character Size in the
+    // |         |         |   Character Control Register (CHCTLA-B).
+    // | Cell 1  | Cell 2  |   Cells are stored sequentially in VRAM left to right, top to bottom, as shown.
+    // |         |         |   Character patterns contain a character number (15 bits), a palette number (7 bits, only
+    // +---------+---------+   used with 16 or 256 color palette modes), two special function bits (Special Priority and
+    // |         |         |   Special Color Calculation) and two flip bits (horizontal and vertical).
+    // | Cell 3  | Cell 4  |   Character patterns can be one or two words long, as defined by Pattern Name Data Size
+    // |         |         |   in the Pattern Name Control Register (PNCN0-3, PNCR).
+    // +---------+---------+   When using one word characters, some of the data comes from supplementary registers.
+    //                         fourCellChar stores the character pattern size (1x1 when false, 2x2 when true).
+    //                         twoWordChar determines if characters are one (false) or two (true) words long.
+    //                         extChar determines the length of the character data field in one word characters -- when
+    //                         true, they're extended by two bits, taking over the two flip bits.
+    //
+    //           Cell
+    // +--+--+--+--+--+--+--+--+   Cells contain 8x8 dots (pixels) in one of the following color formats:
+    // | 1| 2| 3| 4| 5| 6| 7| 8|     - 16 color palette
+    // +--+--+--+--+--+--+--+--+     - 256 color palette
+    // | 9|10|11|12|13|14|15|16|     - 1024 or 2048 color palette (depending on Color Mode)
+    // +--+--+--+--+--+--+--+--+     - 5:5:5 RGB (32768 colors)
+    // |17|18|19|20|21|22|23|24|     - 8:8:8 RGB (16777216 colors)
+    // +--+--+--+--+--+--+--+--+
+    // |25|26|27|28|29|30|31|32|   colorFormat specifies one of the color formats above.
+    // +--+--+--+--+--+--+--+--+   colorMode determines the palette color format in CRAM, one of:
+    // |33|34|35|36|37|38|39|40|     - 16-bit 5:5:5 RGB, 1024 words
+    // +--+--+--+--+--+--+--+--+     - 16-bit 5:5:5 RGB, 2048 words
+    // |41|42|43|44|45|46|47|48|     - 32-bit 8:8:8 RGB, 1024 longwords
+    // +--+--+--+--+--+--+--+--+
+    // |49|50|51|52|53|54|55|56|
+    // +--+--+--+--+--+--+--+--+
+    // |57|58|59|60|61|62|63|64|
+    // +--+--+--+--+--+--+--+--+
+
+    static constexpr std::size_t planeMSB = 9 + rot;
+    static constexpr std::size_t planeWidth = rot ? 4u : 2u;
+
+    static constexpr bool twoWordChar = charMode == CharacterMode::TwoWord;
+    static constexpr bool extChar = charMode == CharacterMode::OneWordExtended;
+
+    // Determine plane index from the scroll coordinates
+    const uint32 planeX = bit::extract<9, planeMSB>(scrollX) >> bgParams.pageShiftH;
+    const uint32 planeY = bit::extract<9, planeMSB>(scrollY) >> bgParams.pageShiftV;
+    const uint32 plane = planeX + planeY * planeWidth;
+
+    // Determine page index from the scroll coordinates
+    const uint32 pageX = bit::extract<9>(scrollX) & bgParams.pageShiftH;
+    const uint32 pageY = bit::extract<9>(scrollY) & bgParams.pageShiftV;
+    const uint32 page = pageX + pageY * 2u;
+
+    // Determine character pattern from the scroll coordinates
+    const uint32 charPatX = bit::extract<3, 8>(scrollX) >> fourCellChar;
+    const uint32 charPatY = bit::extract<3, 8>(scrollY) >> fourCellChar;
+    const uint32 charIndex = charPatX + charPatY * (64u >> fourCellChar);
+
+    // Determine cell index from the scroll coordinates
+    const uint32 cellX = bit::extract<3>(scrollX) & fourCellChar;
+    const uint32 cellY = bit::extract<3>(scrollY) & fourCellChar;
+    const uint32 cellIndex = cellX + cellY * 2u;
+
+    // Determine dot coordinates
+    const uint32 dotX = bit::extract<0, 2>(scrollX);
+    const uint32 dotY = bit::extract<0, 2>(scrollY);
+
+    // Fetch character
+    const uint32 pageBaseAddress = pageBaseAddresses[plane];
+    const uint32 pageOffset = page * kPageSizes[fourCellChar][twoWordChar];
+    const uint32 pageAddress = pageBaseAddress + pageOffset;
+    constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
+    const Character ch =
+        twoWordChar ? VDP2FetchTwoWordCharacter(pageAddress, charIndex)
+                    : VDP2FetchOneWordCharacter<fourCellChar, largePalette, extChar>(bgParams, pageAddress, charIndex);
+
+    // Fetch dot color using character data
+    Pixel pixel{};
+    uint8 colorData{};
+    pixel.color = VDP2FetchCharacterColor<colorFormat, colorMode>(bgParams.cramOffset, colorData, pixel.transparent, ch,
+                                                                  dotX, dotY, cellIndex);
+    pixel.transparent &= bgParams.enableTransparency;
+
+    // Compute priority
+    pixel.priority = bgParams.priorityNumber;
+    if (bgParams.priorityMode == PriorityMode::PerCharacter) {
+        pixel.priority &= ~1;
+        pixel.priority |= ch.specPriority;
+    } else if (bgParams.priorityMode == PriorityMode::PerDot) {
+        if constexpr (IsPaletteColorFormat(colorFormat)) {
+            const auto &specialFunctionCodes = m_VDP2.specialFunctionCodes[bgParams.specialFunctionSelect];
+            pixel.priority &= ~1;
+            if (ch.specPriority && specialFunctionCodes.colorMatches[colorData]) {
+                pixel.priority |= 1;
+            }
+        }
+    }
+
+    return pixel;
+}
+
+template <bool rot, ColorFormat colorFormat, uint32 colorMode>
+VDP::Pixel VDP::VDPFetchBitmapBGPixel(const BGParams &bgParams, uint32 scrollX, uint32 scrollY) {
+    // Fetch dot color from bitmap
+    Pixel pixel{};
+    pixel.color = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, pixel.transparent, scrollX, scrollY);
+    pixel.transparent &= bgParams.enableTransparency;
+
+    // Compute priority
+    pixel.priority = bgParams.priorityNumber;
+    if (bgParams.priorityMode == PriorityMode::PerCharacter || bgParams.priorityMode == PriorityMode::PerDot) {
+        pixel.priority &= ~1;
+        pixel.priority |= bgParams.supplBitmapSpecialPriority;
+    }
+
+    return pixel;
+}
+
 FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex) {
     const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint32);
     const uint32 charData = VDP2ReadVRAM<uint32>(charAddress);
@@ -1893,36 +1898,34 @@ FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(uint32 pageBaseAddres
     return ch;
 }
 
-template <bool fourCellChar, bool largePalette, bool wideChar>
+template <bool fourCellChar, bool largePalette, bool extChar>
 FORCE_INLINE VDP::Character VDP::VDP2FetchOneWordCharacter(const BGParams &bgParams, uint32 pageBaseAddress,
                                                            uint32 charIndex) {
     const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint16);
     const uint16 charData = VDP2ReadVRAM<uint16>(charAddress);
 
-    /*
-    Contents of 1 word character patterns vary based on Character Size, Character Color Count and Auxiliary Mode:
-        Character Size        = CHCTLA/CHCTLB.xxCHSZ  = !fourCellChar = !FCC
-        Character Color Count = CHCTLA/CHCTLB.xxCHCNn = largePalette  = LP
-        Auxiliary Mode        = PNCN0/PNCR.xxCNSM     = wideChar      = WC
-                ---------------- Character data ----------------    Supplement in Pattern Name Control Register
-    FCC LP  WC  |15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0|    | 9  8  7  6  5  4  3  2  1  0|
-     F   F   F  |palnum 3-0 |VF|HF| character number 9-0       |    |PR|CC| PN 6-4 |charnum 14-10 |
-     F   T   F  |--| PN 6-4 |VF|HF| character number 9-0       |    |PR|CC|--------|charnum 14-10 |
-     T   F   F  |palnum 3-0 |VF|HF| character number 11-2      |    |PR|CC| PN 6-4 |CN 14-12|CN1-0|
-     T   T   F  |--| PN 6-4 |VF|HF| character number 11-2      |    |PR|CC|--------|CN 14-12|CN1-0|
-     F   F   T  |palnum 3-0 |       character number 11-0      |    |PR|CC| PN 6-4 |CN 14-12|-----|
-     F   T   T  |--| PN 6-4 |       character number 11-0      |    |PR|CC|--------|CN 14-12|-----|
-     T   F   T  |palnum 3-0 |       character number 13-2      |    |PR|CC| PN 6-4 |cn|-----|CN1-0|   cn=CN14
-     T   T   T  |--| PN 6-4 |       character number 13-2      |    |PR|CC|--------|cn|-----|CN1-0|   cn=CN14
-    */
+    // Contents of 1 word character patterns vary based on Character Size, Character Color Count and Auxiliary Mode:
+    //     Character Size        = CHCTLA/CHCTLB.xxCHSZ  = !fourCellChar = !FCC
+    //     Character Color Count = CHCTLA/CHCTLB.xxCHCNn = largePalette  = LP
+    //     Auxiliary Mode        = PNCN0/PNCR.xxCNSM     = extChar      = EC
+    //             ---------------- Character data ----------------    Supplement in Pattern Name Control Register
+    // FCC LP  EC  |15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0|    | 9  8  7  6  5  4  3  2  1  0|
+    //  F   F   F  |palnum 3-0 |VF|HF| character number 9-0       |    |PR|CC| PN 6-4 |charnum 14-10 |
+    //  F   T   F  |--| PN 6-4 |VF|HF| character number 9-0       |    |PR|CC|--------|charnum 14-10 |
+    //  T   F   F  |palnum 3-0 |VF|HF| character number 11-2      |    |PR|CC| PN 6-4 |CN 14-12|CN1-0|
+    //  T   T   F  |--| PN 6-4 |VF|HF| character number 11-2      |    |PR|CC|--------|CN 14-12|CN1-0|
+    //  F   F   T  |palnum 3-0 |       character number 11-0      |    |PR|CC| PN 6-4 |CN 14-12|-----|
+    //  F   T   T  |--| PN 6-4 |       character number 11-0      |    |PR|CC|--------|CN 14-12|-----|
+    //  T   F   T  |palnum 3-0 |       character number 13-2      |    |PR|CC| PN 6-4 |cn|-----|CN1-0|   cn=CN14
+    //  T   T   T  |--| PN 6-4 |       character number 13-2      |    |PR|CC|--------|cn|-----|CN1-0|   cn=CN14
 
     // Character number bit range from the 1-word character pattern data (charData)
     static constexpr uint32 baseCharNumStart = 0;
-    static constexpr uint32 baseCharNumEnd = 9 + 2 * wideChar;
+    static constexpr uint32 baseCharNumEnd = 9 + 2 * extChar;
     static constexpr uint32 baseCharNumPos = 2 * fourCellChar;
 
     // Upper character number bit range from the supplementary character number (bgParams.supplCharNum)
-    static constexpr uint32 supplCharNumStart = 2 * fourCellChar + 2 * wideChar;
+    static constexpr uint32 supplCharNumStart = 2 * fourCellChar + 2 * extChar;
     static constexpr uint32 supplCharNumEnd = 4;
     static constexpr uint32 supplCharNumPos = 10 + supplCharNumStart;
     // The lower bits are always in range 0..1 and only used if fourCellChar == true
@@ -1942,8 +1945,8 @@ FORCE_INLINE VDP::Character VDP::VDP2FetchOneWordCharacter(const BGParams &bgPar
     }
     ch.specColorCalc = bgParams.supplScrollSpecialColorCalc;
     ch.specPriority = bgParams.supplScrollSpecialPriority;
-    ch.flipH = !wideChar && bit::extract<10>(charData);
-    ch.flipV = !wideChar && bit::extract<11>(charData);
+    ch.flipH = !extChar && bit::extract<10>(charData);
+    ch.flipV = !extChar && bit::extract<11>(charData);
     return ch;
 }
 

@@ -448,7 +448,7 @@ struct VDP2Regs {
         bit::deposit_into<5, 7>(value, bgParams[bgIndex].supplScrollPalNum >> 4u);
         bit::deposit_into<8>(value, bgParams[bgIndex].supplScrollSpecialColorCalc);
         bit::deposit_into<9>(value, bgParams[bgIndex].supplScrollSpecialPriority);
-        bit::deposit_into<14>(value, bgParams[bgIndex].wideChar);
+        bit::deposit_into<14>(value, bgParams[bgIndex].extChar);
         bit::deposit_into<15>(value, !bgParams[bgIndex].twoWordChar);
         return value;
     }
@@ -458,7 +458,7 @@ struct VDP2Regs {
         bgParams[bgIndex].supplScrollPalNum = bit::extract<5, 7>(value) << 4u;
         bgParams[bgIndex].supplScrollSpecialColorCalc = bit::extract<8>(value);
         bgParams[bgIndex].supplScrollSpecialPriority = bit::extract<9>(value);
-        bgParams[bgIndex].wideChar = bit::extract<14>(value);
+        bgParams[bgIndex].extChar = bit::extract<14>(value);
         bgParams[bgIndex].twoWordChar = !bit::extract<15>(value);
         bgParams[bgIndex].UpdatePageBaseAddresses();
     }
@@ -469,7 +469,7 @@ struct VDP2Regs {
         bit::deposit_into<5, 7>(value, bgParams[0].supplScrollPalNum >> 4u);
         bit::deposit_into<8>(value, bgParams[0].supplScrollSpecialColorCalc);
         bit::deposit_into<9>(value, bgParams[0].supplScrollSpecialPriority);
-        bit::deposit_into<14>(value, bgParams[0].wideChar);
+        bit::deposit_into<14>(value, bgParams[0].extChar);
         bit::deposit_into<15>(value, !bgParams[0].twoWordChar);
         return value;
     }
@@ -479,7 +479,7 @@ struct VDP2Regs {
         bgParams[0].supplScrollPalNum = bit::extract<5, 7>(value) << 4u;
         bgParams[0].supplScrollSpecialColorCalc = bit::extract<8>(value);
         bgParams[0].supplScrollSpecialPriority = bit::extract<9>(value);
-        bgParams[0].wideChar = bit::extract<14>(value);
+        bgParams[0].extChar = bit::extract<14>(value);
         bgParams[0].twoWordChar = !bit::extract<15>(value);
     }
 
