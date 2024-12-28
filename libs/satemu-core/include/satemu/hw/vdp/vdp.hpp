@@ -139,6 +139,12 @@ public:
 
     template <mem_primitive T>
     T VDP2ReadCRAM(uint32 address) {
+        if constexpr (std::is_same_v<T, uint32>) {
+            uint32 value = VDP2ReadCRAM<uint16>(address + 0) << 16u;
+            value |= VDP2ReadCRAM<uint16>(address + 2) << 0u;
+            return value;
+        }
+
         /*address &= MapCRAMAddress(address);
         T value = util::ReadBE<T>(&m_CRAM[address]);
         fmt::println("{}-bit VDP2 CRAM read from {:03X} = {:X}", sizeof(T) * 8, address, value);
@@ -148,6 +154,12 @@ public:
 
     template <mem_primitive T>
     void VDP2WriteCRAM(uint32 address, T value) {
+        if constexpr (std::is_same_v<T, uint32>) {
+            VDP2WriteCRAM<uint16>(address + 0, value >> 16u);
+            VDP2WriteCRAM<uint16>(address + 2, value >> 0u);
+            return;
+        }
+
         address = MapCRAMAddress(address);
         // fmt::println("{}-bit VDP2 CRAM write to {:05X} = {:X}", sizeof(T) * 8, address, value);
         util::WriteBE<T>(&m_CRAM[address], value);
@@ -505,7 +517,7 @@ private:
             address =
                 bit::extract<0>(address) | (bit::extract<11>(address) << 1u) | (bit::extract<1, 10>(address) << 2u);
         }
-        return address;
+        return address & 0xFFF;
     }
 
     // -------------------------------------------------------------------------
@@ -723,17 +735,12 @@ private:
         }
 
         void Reset() {
-            cramOffset = 0;
             fracScrollX = 0;
             fracScrollY = 0;
             scrollIncH = 0x100;
             lineScrollTableAddress = 0;
             mosaicCounterY = 0;
         }
-
-        // CRAM base offset for color fetching.
-        // Derived from RAMCTL.CRMDn and CRAOFA.NxCAOSn
-        uint32 cramOffset;
 
         // Initial fractional X scroll coordinate.
         uint32 fracScrollX;
@@ -754,20 +761,6 @@ private:
         // Reset at the start of every frame and incremented every line.
         // The value is mod mosaicV.
         uint8 mosaicCounterY;
-    };
-
-    struct RotBGLayerState {
-        RotBGLayerState() {
-            Reset();
-        }
-
-        void Reset() {
-            cramOffset = 0;
-        }
-
-        // CRAM base offset for color fetching.
-        // Derived from RAMCTL.CRMDn and CRAOFB.R0CAOSn
-        uint32 cramOffset;
     };
 
     struct Coord {
@@ -831,9 +824,6 @@ private:
 
     // Layer state for NBGs 0-3
     std::array<NormBGLayerState, 4> m_normBGLayerStates;
-
-    // Layer state for RBGs 0-1
-    std::array<RotBGLayerState, 2> m_rotBGLayerStates;
 
     // States for Rotation Parameters A and B.
     std::array<RotParamState, 2> m_rotParamStates;
@@ -969,7 +959,6 @@ private:
     //
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
-    // bgState is a reference to the background layer state for the background.
     //
     // twoWordChar indicates if character patterns use one word (false) or two words (true).
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
@@ -977,18 +966,17 @@ private:
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
     template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState, RotBGLayerState &bgState);
+    void VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState);
 
     // Draws a rotation bitmap BG scanline.
     //
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
-    // bgState is a reference to the background layer state for the background.
     //
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerState &layerState, RotBGLayerState &bgState);
+    void VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerState &layerState);
 
     // Fetches a rotation coefficient entry from VRAM or CRAM (depending on RAMCTL.CRKTE) using the specified rotation
     // parameters.
@@ -1032,13 +1020,11 @@ private:
     //
     // bgParams contains the bitmap parameters.
     // transparent is an output variable where the transparency of a pixel is set.
-    // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
     // dotX and dotY specify the coordinates of the pixel within the bitmap.
     // colorFormat is the color format for pixel data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    vdp::Color888 VDP2FetchBitmapColor(const BGParams &bgParams, bool &transparent, uint32 cramOffset, uint32 dotX,
-                                       uint32 dotY);
+    vdp::Color888 VDP2FetchBitmapColor(const BGParams &bgParams, bool &transparent, uint32 dotX, uint32 dotY);
 
     // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
     //

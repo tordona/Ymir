@@ -1227,18 +1227,18 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadCRAOFA() const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, bgParams[1].caos);
-        bit::deposit_into<4, 6>(value, bgParams[2].caos);
-        bit::deposit_into<8, 10>(value, bgParams[3].caos);
-        bit::deposit_into<12, 14>(value, bgParams[4].caos);
+        bit::deposit_into<0, 2>(value, bgParams[1].cramOffset >> 8u);
+        bit::deposit_into<4, 6>(value, bgParams[2].cramOffset >> 8u);
+        bit::deposit_into<8, 10>(value, bgParams[3].cramOffset >> 8u);
+        bit::deposit_into<12, 14>(value, bgParams[4].cramOffset >> 8u);
         return value;
     }
 
     FORCE_INLINE void WriteCRAOFA(uint16 value) {
-        bgParams[1].caos = bit::extract<0, 2>(value);
-        bgParams[2].caos = bit::extract<4, 6>(value);
-        bgParams[3].caos = bit::extract<8, 10>(value);
-        bgParams[4].caos = bit::extract<12, 14>(value);
+        bgParams[1].cramOffset = bit::extract<0, 2>(value) << 8u;
+        bgParams[2].cramOffset = bit::extract<4, 6>(value) << 8u;
+        bgParams[3].cramOffset = bit::extract<8, 10>(value) << 8u;
+        bgParams[4].cramOffset = bit::extract<12, 14>(value) << 8u;
     }
 
     // 1800E6   CRAOFB  RBG0 and Sprite Color RAM Address Offset
@@ -1251,13 +1251,13 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadCRAOFB() const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, bgParams[0].caos);
+        bit::deposit_into<0, 2>(value, bgParams[0].cramOffset >> 8u);
         bit::deposit_into<4, 6>(value, spriteParams.colorDataOffset >> 8u);
         return value;
     }
 
     FORCE_INLINE void WriteCRAOFB(uint16 value) {
-        bgParams[0].caos = bit::extract<0, 2>(value);
+        bgParams[0].cramOffset = bit::extract<0, 2>(value) << 8u;
         spriteParams.colorDataOffset = bit::extract<4, 6>(value) << 8u;
     }
 

@@ -98,6 +98,8 @@ struct BGParams {
 
         colorFormat = ColorFormat::Palette16;
 
+        cramOffset = 0;
+
         supplScrollCharNum = 0;
         supplScrollPalNum = 0;
         supplScrollSpecialColorCalc = false;
@@ -128,7 +130,6 @@ struct BGParams {
 
         plsz = 0;
         bmsz = 0;
-        caos = 0;
     }
 
     // If true, honor transparency bit in color data.
@@ -196,6 +197,10 @@ struct BGParams {
     // Character color format.
     // Derived from CHCTLA/CHCTLB.xxCHCNn
     ColorFormat colorFormat;
+
+    // Color RAM base offset.
+    // Derived from CRAOFA/CRAOFB.xxCAOSn
+    uint32 cramOffset;
 
     // Supplementary bits 4-0 for scroll screen character number, when using 1-word characters.
     // Derived from PNCN0/PNCR.xxSCNn
@@ -295,7 +300,6 @@ struct BGParams {
     // Raw register values, to facilitate reads.
     uint16 plsz; // Raw value of PLSZ.xxPLSZn
     uint16 bmsz; // Raw value of CHCTLA/CHCTLB.xxBMSZ
-    uint16 caos; // Raw value of CRAOFA/CRAOFB.xxCAOSn
 
     void UpdatePLSZ() {
         pageShiftH = plsz & 1;

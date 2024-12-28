@@ -49,9 +49,6 @@ void VDP::Reset(bool hard) {
     for (auto &state : m_normBGLayerStates) {
         state.Reset();
     }
-    for (auto &state : m_rotBGLayerStates) {
-        state.Reset();
-    }
     for (auto &state : m_rotParamStates) {
         state.Reset();
     }
@@ -396,7 +393,7 @@ void VDP::VDP1ProcessCommands() {
             switch (control.jumpMode) {
             case Next: cmdAddress += 0x20; break;
             case Assign: {
-                cmdAddress = util::ReadBE<uint16>(&m_VRAM1[cmdAddress + 0x02]) << 3u;
+                cmdAddress = VDP1ReadVRAM<uint16>(cmdAddress + 0x02) << 3u;
                 break;
             }
             case Call: {
@@ -404,7 +401,7 @@ void VDP::VDP1ProcessCommands() {
                 if (m_VDP1.returnAddress == kNoReturn) {
                     m_VDP1.returnAddress = cmdAddress + 0x20;
                 }
-                cmdAddress = util::ReadBE<uint16>(&m_VRAM1[cmdAddress + 0x02]) << 3u;
+                cmdAddress = VDP1ReadVRAM<uint16>(cmdAddress + 0x02) << 3u;
                 break;
             }
             case Return: {
@@ -550,34 +547,34 @@ void VDP::VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint3
         bool transparent = true;
         switch (mode.colorMode) {
         case 0: // 4 bpp, 16 colors, bank mode
-            color = m_VRAM1[(charAddr + (charIndex >> 1)) & 0x7FFFF];
+            color = VDP1ReadVRAM<uint8>(charAddr + (charIndex >> 1));
             color = (color >> (((u ^ 1) & 1) * 4)) & 0xF;
             transparent = color == 0x0;
             color |= colorBank;
             break;
         case 1: // 4 bpp, 16 colors, lookup table mode
-            color = m_VRAM1[(charAddr + (charIndex >> 1)) & 0x7FFFF];
+            color = VDP1ReadVRAM<uint8>(charAddr + (charIndex >> 1));
             color = (color >> (((u ^ 1) & 1) * 4)) & 0xF;
             transparent = color == 0x0;
-            color = util::ReadBE<uint16>(&m_VRAM1[(color * sizeof(uint16) + colorBank * 8) & 0x7FFFF]);
+            color = VDP1ReadVRAM<uint16>(color * sizeof(uint16) + colorBank * 8);
             break;
         case 2: // 8 bpp, 64 colors, bank mode
-            color = m_VRAM1[(charAddr + charIndex) & 0x7FFFF] & 0x3F;
+            color = VDP1ReadVRAM<uint8>(charAddr + charIndex) & 0x3F;
             transparent = color == 0x0;
             color |= colorBank & 0xFFC0;
             break;
         case 3: // 8 bpp, 128 colors, bank mode
-            color = m_VRAM1[(charAddr + charIndex) & 0x7FFFF] & 0x7F;
+            color = VDP1ReadVRAM<uint8>(charAddr + charIndex) & 0x7F;
             transparent = color == 0x00;
             color |= colorBank & 0xFF80;
             break;
         case 4: // 8 bpp, 256 colors, bank mode
-            color = m_VRAM1[(charAddr + charIndex) & 0x7FFFF];
+            color = VDP1ReadVRAM<uint8>(charAddr + charIndex);
             transparent = color == 0x00;
             color |= colorBank & 0xFF00;
             break;
         case 5: // 16 bpp, 32768 colors, RGB mode
-            color = util::ReadBE<uint16>(&m_VRAM1[(charAddr + charIndex * sizeof(uint16)) & 0x7FFFF]);
+            color = VDP1ReadVRAM<uint16>(charAddr + charIndex * sizeof(uint16));
             transparent = color == 0x0000;
             break;
         }
@@ -997,7 +994,7 @@ void VDP::VDP2UpdateEnabledBGs() {
 void VDP::VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayerState &bgState) {
     auto read = [&] {
         const uint32 address = bgState.lineScrollTableAddress & 0x7FFFF;
-        const uint32 value = util::ReadBE<uint32>(&m_VRAM2[address]);
+        const uint32 value = VDP2ReadVRAM<uint32>(address);
         bgState.lineScrollTableAddress += sizeof(uint32);
         return value;
     };
@@ -1258,7 +1255,6 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 bgIndex, uint32 colorMode) {
     LayerState &layerState = m_layerStates[bgIndex + 2];
     NormBGLayerState &bgState = m_normBGLayerStates[bgIndex];
 
-    bgState.cramOffset = bgParams.caos << (colorMode == 1 ? 10 : 9);
     bgState.mosaicCounterY++;
     if (bgState.mosaicCounterY >= m_VDP2.mosaicV) {
         bgState.mosaicCounterY = 0;
@@ -1282,7 +1278,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 bgIndex, uint32 colorMode) {
 FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 bgIndex, uint32 colorMode) {
     assert(bgIndex < 2);
 
-    using FnDraw = void (VDP::*)(const BGParams &, LayerState &, RotBGLayerState &);
+    using FnDraw = void (VDP::*)(const BGParams &, LayerState &);
 
     // Lookup table of scroll BG drawing functions
     // Indexing: [twoWordChar][fourCellChar][wideChar][colorFormat][colorMode]
@@ -1327,18 +1323,15 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 bgIndex, uint32 colorMode) {
 
     const BGParams &bgParams = m_VDP2.bgParams[bgIndex];
     LayerState &layerState = m_layerStates[bgIndex + 1];
-    RotBGLayerState &bgState = m_rotBGLayerStates[bgIndex];
-
-    bgState.cramOffset = bgParams.caos << (colorMode == 1 ? 10 : 9);
 
     const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
     if (bgParams.bitmap) {
-        (this->*fnDrawBitmap[cf][colorMode])(bgParams, layerState, bgState);
+        (this->*fnDrawBitmap[cf][colorMode])(bgParams, layerState);
     } else {
         const bool twc = bgParams.twoWordChar;
         const bool fcc = bgParams.cellSizeShift;
         const bool wc = bgParams.wideChar;
-        (this->*fnDrawScroll[twc][fcc][wc][cf][colorMode])(bgParams, layerState, bgState);
+        (this->*fnDrawScroll[twc][fcc][wc][cf][colorMode])(bgParams, layerState);
     }
 }
 
@@ -1402,7 +1395,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
                 const auto &backParams = m_VDP2.backScreenParams;
                 const uint32 line = backParams.perLine ? y : 0;
                 const uint32 address = backParams.baseAddress + line * sizeof(Color555);
-                const Color555 color555{.u16 = util::ReadBE<uint16>(&m_VRAM2[address & 0x7FFFF])};
+                const Color555 color555{.u16 = VDP2ReadVRAM<uint16>(address)};
                 color = ConvertRGB555to888(color555);
                 colorOffsetEnable = backParams.colorOffsetEnable;
                 colorOffsetSelect = backParams.colorOffsetSelect;
@@ -1583,8 +1576,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState 
     uint32 cellScrollTableAddress = m_VDP2.verticalCellScrollTableAddress;
 
     auto readCellScrollY = [&] {
-        const uint32 address = cellScrollTableAddress & 0x7FFFF;
-        const uint32 value = util::ReadBE<uint32>(&m_VRAM2[address]);
+        const uint32 value = VDP2ReadVRAM<uint32>(cellScrollTableAddress);
         cellScrollTableAddress += sizeof(uint32);
         return bit::extract<8, 26>(value);
     };
@@ -1664,7 +1656,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState 
         // Fetch dot color using character data
         auto &pixel = layerState.pixels[x];
         uint8 colorData{};
-        pixel.color = VDP2FetchCharacterColor<colorFormat, colorMode>(bgState.cramOffset, colorData, pixel.transparent,
+        pixel.color = VDP2FetchCharacterColor<colorFormat, colorMode>(bgParams.cramOffset, colorData, pixel.transparent,
                                                                       ch, dotX, dotY, cellIndex);
         pixel.transparent &= bgParams.enableTransparency;
 
@@ -1697,8 +1689,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState 
     uint32 cellScrollTableAddress = m_VDP2.verticalCellScrollTableAddress;
 
     auto readCellScrollY = [&] {
-        const uint32 address = cellScrollTableAddress & 0x7FFFF;
-        const uint32 value = util::ReadBE<uint32>(&m_VRAM2[address]);
+        const uint32 value = VDP2ReadVRAM<uint32>(cellScrollTableAddress);
         cellScrollTableAddress += sizeof(uint32);
         return bit::extract<8, 26>(value);
     };
@@ -1736,8 +1727,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState 
 
         // Fetch dot color from bitmap
         auto &pixel = layerState.pixels[x];
-        pixel.color = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, pixel.transparent, bgState.cramOffset,
-                                                                   scrollX, scrollY);
+        pixel.color = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, pixel.transparent, scrollX, scrollY);
         pixel.transparent &= bgParams.enableTransparency;
 
         // Compute priority
@@ -1753,8 +1743,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState 
 }
 
 template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState,
-                                             RotBGLayerState &bgState) {
+NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState) {
     // TODO: for RBG0, select rotation parameters based on m_VDP2.commonRotParams.rotParamMode
     // for RBG1, always use parameter B
 
@@ -1816,7 +1805,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
 
         // Fetch dot color using character data
         uint8 colorData{};
-        pixel.color = VDP2FetchCharacterColor<colorFormat, colorMode>(bgState.cramOffset, colorData, pixel.transparent,
+        pixel.color = VDP2FetchCharacterColor<colorFormat, colorMode>(bgParams.cramOffset, colorData, pixel.transparent,
                                                                       ch, dotX, dotY, cellIndex);
         pixel.transparent &= bgParams.enableTransparency;
 
@@ -1837,8 +1826,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerState &layerState,
-                                             RotBGLayerState &bgState) {
+NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerState &layerState) {
     for (uint32 x = 0; x < m_HRes; x++) {
         // TODO: implement
     }
@@ -1865,8 +1853,7 @@ Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint
     if (params.coeffDataSize == 1) {
         // One-word coefficient data
         const uint32 address = (baseAddress + offset) * sizeof(uint16);
-        const uint16 data = m_VDP2.RAMCTL.CRKTE ? util::ReadBE<uint16>(&m_CRAM[(address & 0x7FF) | 0x800])
-                                                : util::ReadBE<uint16>(&m_VRAM2[address & 0x7FFFF]);
+        const uint16 data = m_VDP2.RAMCTL.CRKTE ? VDP2ReadCRAM<uint16>(address | 0x800) : VDP2ReadVRAM<uint16>(address);
         coeff.value = bit::extract_signed<0, 14>(data);
         coeff.lineColorData = 0;
         coeff.transparent = bit::extract<15>(data);
@@ -1879,8 +1866,7 @@ Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint
     } else {
         // Two-word coefficient data
         const uint32 address = (baseAddress + offset) * sizeof(uint32);
-        const uint32 data = m_VDP2.RAMCTL.CRKTE ? util::ReadBE<uint32>(&m_CRAM[(address & 0x7FF) | 0x800])
-                                                : util::ReadBE<uint32>(&m_VRAM2[address & 0x7FFFF]);
+        const uint32 data = m_VDP2.RAMCTL.CRKTE ? VDP2ReadCRAM<uint32>(address | 0x800) : VDP2ReadVRAM<uint32>(address);
         coeff.value = bit::extract_signed<0, 23>(data);
         coeff.lineColorData = bit::extract<24, 30>(data);
         coeff.transparent = bit::extract<31>(data);
@@ -1895,7 +1881,7 @@ Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint
 
 FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex) {
     const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint32);
-    const uint32 charData = util::ReadBE<uint32>(&m_VRAM2[charAddress & 0x7FFFF]);
+    const uint32 charData = VDP2ReadVRAM<uint32>(charAddress);
 
     Character ch{};
     ch.charNum = bit::extract<0, 14>(charData);
@@ -1911,7 +1897,7 @@ template <bool fourCellChar, bool largePalette, bool wideChar>
 FORCE_INLINE VDP::Character VDP::VDP2FetchOneWordCharacter(const BGParams &bgParams, uint32 pageBaseAddress,
                                                            uint32 charIndex) {
     const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint16);
-    const uint16 charData = util::ReadBE<uint16>(&m_VRAM2[charAddress & 0x7FFFF]);
+    const uint16 charData = VDP2ReadVRAM<uint16>(charAddress);
 
     /*
     Contents of 1 word character patterns vary based on Character Size, Character Color Count and Auxiliary Mode:
@@ -1984,41 +1970,40 @@ FORCE_INLINE Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &col
 
     if constexpr (colorFormat == ColorFormat::Palette16) {
         const uint32 dotAddress = cellAddress + (dotOffset >> 1u);
-        const uint8 dotData = (m_VRAM2[dotAddress & 0x7FFFF] >> (((dotX & 1) ^ 1) * 4)) & 0xF;
+        const uint8 dotData = (VDP2ReadVRAM<uint8>(dotAddress) >> (((dotX & 1) ^ 1) * 4)) & 0xF;
         const uint32 colorIndex = (ch.palNum << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
         transparent = dotData == 0;
         return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = cellAddress + dotOffset;
-        const uint8 dotData = m_VRAM2[dotAddress & 0x7FFFF];
+        const uint8 dotData = VDP2ReadVRAM<uint8>(dotAddress);
         const uint32 colorIndex = ((ch.palNum & 0x70) << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
         transparent = dotData == 0;
         return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint16);
-        const uint16 dotData = util::ReadBE<uint16>(&m_VRAM2[dotAddress & 0x7FFFF]);
+        const uint16 dotData = VDP2ReadVRAM<uint16>(dotAddress);
         const uint32 colorIndex = dotData & 0x7FF;
         colorData = bit::extract<1, 3>(dotData);
         transparent = (dotData & 0x7FF) == 0;
         return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint16);
-        const uint16 dotData = util::ReadBE<uint16>(&m_VRAM2[dotAddress & 0x7FFFF]);
+        const uint16 dotData = VDP2ReadVRAM<uint16>(dotAddress);
         transparent = bit::extract<15>(dotData) == 0;
         return ConvertRGB555to888(Color555{.u16 = dotData});
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
         const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint32);
-        const uint32 dotData = util::ReadBE<uint32>(&m_VRAM2[dotAddress & 0x7FFFF]);
+        const uint32 dotData = VDP2ReadVRAM<uint32>(dotAddress);
         transparent = bit::extract<31>(dotData) == 0;
         return Color888{.u32 = dotData};
     }
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-FORCE_INLINE Color888 VDP::VDP2FetchBitmapColor(const BGParams &bgParams, bool &transparent, uint32 cramOffset,
-                                                uint32 dotX, uint32 dotY) {
+FORCE_INLINE Color888 VDP::VDP2FetchBitmapColor(const BGParams &bgParams, bool &transparent, uint32 dotX, uint32 dotY) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
 
     // Bitmap data wraps around infinitely
@@ -2032,30 +2017,30 @@ FORCE_INLINE Color888 VDP::VDP2FetchBitmapColor(const BGParams &bgParams, bool &
 
     if constexpr (colorFormat == ColorFormat::Palette16) {
         const uint32 dotAddress = bitmapBaseAddress + (dotOffset >> 1u);
-        const uint8 dotData = (m_VRAM2[dotAddress & 0x7FFFF] >> (((dotX & 1) ^ 1) * 4)) & 0xF;
+        const uint8 dotData = (VDP2ReadVRAM<uint8>(dotAddress) >> (((dotX & 1) ^ 1) * 4)) & 0xF;
         const uint32 colorIndex = palNum | dotData;
         transparent = dotData == 0;
-        return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
+        return VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset;
-        const uint8 dotData = m_VRAM2[dotAddress & 0x7FFFF];
+        const uint8 dotData = VDP2ReadVRAM<uint8>(dotAddress);
         const uint32 colorIndex = palNum | dotData;
         transparent = dotData == 0;
-        return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
+        return VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
-        const uint16 dotData = util::ReadBE<uint16>(&m_VRAM2[dotAddress & 0x7FFFF]);
+        const uint16 dotData = VDP2ReadVRAM<uint16>(dotAddress);
         const uint32 colorIndex = dotData & 0x7FF;
         transparent = (dotData & 0x7FF) == 0;
-        return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
+        return VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
-        const uint16 dotData = util::ReadBE<uint16>(&m_VRAM2[dotAddress & 0x7FFFF]);
+        const uint16 dotData = VDP2ReadVRAM<uint16>(dotAddress);
         transparent = bit::extract<15>(dotData) == 0;
         return ConvertRGB555to888(Color555{.u16 = dotData});
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint32);
-        const uint32 dotData = util::ReadBE<uint32>(&m_VRAM2[dotAddress & 0x7FFFF]);
+        const uint32 dotData = VDP2ReadVRAM<uint32>(dotAddress);
         transparent = bit::extract<31>(dotData) == 0;
         return Color888{.u32 = dotData};
     }
@@ -2067,20 +2052,20 @@ FORCE_INLINE Color888 VDP::VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorInd
 
     if constexpr (colorMode == 0) {
         // RGB 5:5:5, 1024 words
-        const uint32 address = (cramOffset + colorIndex * sizeof(uint16)) & 0x7FF;
-        const uint16 data = util::ReadBE<uint16>(&m_CRAM[address]);
+        const uint32 address = (cramOffset + colorIndex) * sizeof(uint16);
+        const uint16 data = VDP2ReadCRAM<uint16>(address & 0x7FF);
         Color555 clr555{.u16 = data};
         return ConvertRGB555to888(clr555);
     } else if constexpr (colorMode == 1) {
         // RGB 5:5:5, 2048 words
-        const uint32 address = (cramOffset + colorIndex * sizeof(uint16)) & 0xFFF;
-        const uint16 data = util::ReadBE<uint16>(&m_CRAM[address]);
+        const uint32 address = (cramOffset + colorIndex) * sizeof(uint16);
+        const uint16 data = VDP2ReadCRAM<uint16>(address);
         Color555 clr555{.u16 = data};
         return ConvertRGB555to888(clr555);
     } else { // colorMode == 2
         // RGB 8:8:8, 1024 words
-        const uint32 address = (cramOffset + colorIndex * sizeof(uint32)) & 0xFFF;
-        const uint32 data = util::ReadBE<uint32>(&m_CRAM[address]);
+        const uint32 address = (cramOffset + colorIndex) * sizeof(uint32);
+        const uint32 data = VDP2ReadCRAM<uint32>(address);
         return Color888{.u32 = data};
     }
 }
