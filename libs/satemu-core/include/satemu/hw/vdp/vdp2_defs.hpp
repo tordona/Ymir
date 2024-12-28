@@ -38,6 +38,8 @@ enum class SpecialColorCalcMode : uint8 {
     ColorDataMSB,
 };
 
+enum class WindowLogic : uint8 { Or, And };
+
 // Map index mask lookup table
 // [Character Size][Pattern Name Data Size ^ 1][Plane Size]
 inline constexpr uint32 kMapIndexMasks[2][2][4] = {
@@ -127,6 +129,10 @@ struct BGParams {
         colorCalcEnable = false;
         colorCalcRatio = 0;
         specialColorCalcMode = SpecialColorCalcMode::PerScreen;
+
+        windowEnable.fill(false);
+        windowActiveOutside.fill(false);
+        windowLogic = WindowLogic::Or;
 
         plsz = 0;
         bmsz = 0;
@@ -297,6 +303,24 @@ struct BGParams {
     // Derived from SFCCMD.xxSCCMn
     SpecialColorCalcMode specialColorCalcMode;
 
+    // Window enable flags for:
+    // [0] Window 0
+    // [1] Window 1
+    // [2] Sprite Window
+    // Derived from WCTLA/B/C.xxW0E, xxW1E and xxSWE
+    std::array<bool, 3> windowEnable;
+
+    // Determines if the active area of the window is inside (false) or outside (true) for:
+    // [0] Window 0
+    // [1] Window 1
+    // [2] Sprite Window
+    // Derived from WCTLA/B/C.xxW0A, xxW1A and xxSWA
+    std::array<bool, 3> windowActiveOutside;
+
+    // Window combination logic mode.
+    // Derived from WCTLA/B/C.xxLOG
+    WindowLogic windowLogic;
+
     // Raw register values, to facilitate reads.
     uint16 plsz; // Raw value of PLSZ.xxPLSZn
     uint16 bmsz; // Raw value of CHCTLA/CHCTLB.xxBMSZ
@@ -334,6 +358,9 @@ struct CommonRotationParams {
     void Reset() {
         baseAddress = 0;
         rotParamMode = RotationParamMode::RotationParamA;
+        windowEnable.fill(false);
+        windowActiveOutside.fill(false);
+        windowLogic = WindowLogic::Or;
     }
 
     // Rotation parameters table base address.
@@ -343,6 +370,22 @@ struct CommonRotationParams {
     // Rotation parameter mode.
     // Derived from RPMD.RPMD1-0
     RotationParamMode rotParamMode;
+
+    // Window enable flags for:
+    // [0] Window 0
+    // [1] Window 1
+    // Derived from WCTLD.RPW0E and RPW1E
+    std::array<bool, 2> windowEnable;
+
+    // Determines if the active area of the window is inside (false) or outside (true) for:
+    // [0] Window 0
+    // [1] Window 1
+    // Derived from WCTLD.RPW0A and RPW1A
+    std::array<bool, 2> windowActiveOutside;
+
+    // Window combination logic mode.
+    // Derived from WCTLD.RPLOG
+    WindowLogic windowLogic;
 };
 
 enum class CoefficientDataMode : uint8 { ScaleCoeffXY, ScaleCoeffX, ScaleCoeffY, ViewpointX };
@@ -530,7 +573,7 @@ struct SpriteParams {
 
     void Reset() {
         type = 0;
-        windowEnable = false;
+        spriteWindowEnable = false;
         mixedFormat = false;
         colorCalcEnable = false;
         colorCalcValue = 0;
@@ -541,6 +584,9 @@ struct SpriteParams {
         colorOffsetEnable = false;
         colorOffsetSelect = false;
         lineColorScreenEnable = false;
+        windowEnable.fill(false);
+        windowActiveOutside.fill(false);
+        windowLogic = WindowLogic::Or;
     }
 
     // The sprite type (0..F).
@@ -549,7 +595,7 @@ struct SpriteParams {
 
     // Whether sprite window is in use.
     // Derived from SPCTL.SPWINEN
-    bool windowEnable;
+    bool spriteWindowEnable;
 
     // Whether sprite data uses palette only (false) or mixed palette/RGB (true) data.
     // Derived from SPCTL.SPCLMD
@@ -591,6 +637,24 @@ struct SpriteParams {
     // Enables LNCL screen insertion if this BG is the topmost layer.
     // Derived from LNCLEN.SPLCEN
     bool lineColorScreenEnable;
+
+    // Window enable flags for:
+    // [0] Window 0
+    // [1] Window 1
+    // [2] Sprite Window
+    // Derived from WCTLC.SPW0E, SPW1E and SPSWE
+    std::array<bool, 3> windowEnable;
+
+    // Determines if the active area of the window is inside (false) or outside (true) for:
+    // [0] Window 0
+    // [1] Window 1
+    // [2] Sprite Window
+    // Derived from WCTLC.SPW0A, SPW1A and SPSWA
+    std::array<bool, 3> windowActiveOutside;
+
+    // Window combination logic mode.
+    // Derived from WCTLC.SPLOG
+    WindowLogic windowLogic;
 };
 
 struct SpriteData {
@@ -688,6 +752,9 @@ struct ColorCalcParams {
         extendedColorCalcEnable = false;
         useSecondScreenRatio = false;
         useAdditiveBlend = false;
+        windowEnable.fill(false);
+        windowActiveOutside.fill(false);
+        windowLogic = WindowLogic::Or;
     }
 
     // Enables color gradation.
@@ -709,6 +776,24 @@ struct ColorCalcParams {
     // Whether to use alpha (false) or additive (true) blending.
     // Derived from CCCTL.CCMD
     bool useAdditiveBlend;
+
+    // Window enable flags for:
+    // [0] Window 0
+    // [1] Window 1
+    // [2] Sprite Window
+    // Derived from WCTLD.CCW0E, CCW1E and CCSWE
+    std::array<bool, 3> windowEnable;
+
+    // Determines if the active area of the window is inside (false) or outside (true) for:
+    // [0] Window 0
+    // [1] Window 1
+    // [2] Sprite Window
+    // Derived from WCTLD.CCW0A, CCW1A and CCSWA
+    std::array<bool, 3> windowActiveOutside;
+
+    // Window combination logic mode.
+    // Derived from WCTLD.CCLOG
+    WindowLogic windowLogic;
 };
 
 struct WindowParams {
@@ -994,169 +1079,6 @@ union ZMCTL_t {
         uint16 N1ZMQT : 1;
         uint16 _rsvd10_15 : 6;
     };
-};
-
-// 1800D0   WCTLA   NBG0 and NBG1 Window Control
-//
-//   bits   r/w  code          description
-//     15     W  N1LOG         NBG1 Window Logic (0=OR, 1=AND)
-//     14        -             Reserved, must be zero
-//     13     W  N1SWE         NBG1 Sprite Window Enable (0=disable, 1=enable)
-//     12     W  N1SWA         NBG1 Sprite Window Area (0=inside, 1=outside)
-//     11     W  N1W1E         NBG1 Window 1 Enable (0=disable, 1=enable)
-//     10     W  N1W1A         NBG1 Window 1 Area (0=inside, 1=outside)
-//      9     W  N1W0E         NBG1 Window 0 Enable (0=disable, 1=enable)
-//      8     W  N1W0A         NBG1 Window 0 Area (0=inside, 1=outside)
-//      7     W  N0LOG         NBG0 Window Logic (0=OR, 1=AND)
-//      6        -             Reserved, must be zero
-//      5     W  N0SWE         NBG0 Sprite Window Enable (0=disable, 1=enable)
-//      4     W  N0SWA         NBG0 Sprite Window Area (0=inside, 1=outside)
-//      3     W  N0W1E         NBG0 Window 1 Enable (0=disable, 1=enable)
-//      2     W  N0W1A         NBG0 Window 1 Area (0=inside, 1=outside)
-//      1     W  N0W0E         NBG0 Window 0 Enable (0=disable, 1=enable)
-//      0     W  N0W0A         NBG0 Window 0 Area (0=inside, 1=outside)
-//
-// 1800D2   WCTLB   NBG2 and NBG3 Window Control
-//
-//   bits   r/w  code          description
-//     15     W  N3LOG         NBG3 Window Logic (0=OR, 1=AND)
-//     14        -             Reserved, must be zero
-//     13     W  N3SWE         NBG3 Sprite Window Enable (0=disable, 1=enable)
-//     12     W  N3SWA         NBG3 Sprite Window Area (0=inside, 1=outside)
-//     11     W  N3W1E         NBG3 Window 1 Enable (0=disable, 1=enable)
-//     10     W  N3W1A         NBG3 Window 1 Area (0=inside, 1=outside)
-//      9     W  N3W0E         NBG3 Window 0 Enable (0=disable, 1=enable)
-//      8     W  N3W0A         NBG3 Window 0 Area (0=inside, 1=outside)
-//      7     W  N2LOG         NBG2 Window Logic (0=OR, 1=AND)
-//      6        -             Reserved, must be zero
-//      5     W  N2SWE         NBG2 Sprite Window Enable (0=disable, 1=enable)
-//      4     W  N2SWA         NBG2 Sprite Window Area (0=inside, 1=outside)
-//      3     W  N2W1E         NBG2 Window 1 Enable (0=disable, 1=enable)
-//      2     W  N2W1A         NBG2 Window 1 Area (0=inside, 1=outside)
-//      1     W  N2W0E         NBG2 Window 0 Enable (0=disable, 1=enable)
-//      0     W  N2W0A         NBG2 Window 0 Area (0=inside, 1=outside)
-//
-// 1800D4   WCTLC   RBG0 and Sprite Window Control
-//
-//   bits   r/w  code          description
-//     15     W  SPLOG         Sprite Window Logic (0=OR, 1=AND)
-//     14        -             Reserved, must be zero
-//     13     W  SPSWE         Sprite Sprite Window Enable (0=disable, 1=enable)
-//     12     W  SPSWA         Sprite Sprite Window Area (0=inside, 1=outside)
-//     11     W  SPW1E         Sprite Window 1 Enable (0=disable, 1=enable)
-//     10     W  SPW1A         Sprite Window 1 Area (0=inside, 1=outside)
-//      9     W  SPW0E         Sprite Window 0 Enable (0=disable, 1=enable)
-//      8     W  SPW0A         Sprite Window 0 Area (0=inside, 1=outside)
-//      7     W  R0LOG         RBG0 Window Logic (0=OR, 1=AND)
-//      6        -             Reserved, must be zero
-//      5     W  R0SWE         RBG0 Sprite Window Enable (0=disable, 1=enable)
-//      4     W  R0SWA         RBG0 Sprite Window Area (0=inside, 1=outside)
-//      3     W  R0W1E         RBG0 Window 1 Enable (0=disable, 1=enable)
-//      2     W  R0W1A         RBG0 Window 1 Area (0=inside, 1=outside)
-//      1     W  R0W0E         RBG0 Window 0 Enable (0=disable, 1=enable)
-//      0     W  R0W0A         RBG0 Window 0 Area (0=inside, 1=outside)
-//
-// 1800D6   WCTLD   Rotation Window and Color Calculation Window Control
-//
-//   bits   r/w  code          description
-//     15     W  CCLOG         Sprite Window Logic (0=OR, 1=AND)
-//     14        -             Reserved, must be zero
-//     13     W  CCSWE         Color Calculation Window Sprite Window Enable (0=disable, 1=enable)
-//     12     W  CCSWA         Color Calculation Window Sprite Window Area (0=inside, 1=outside)
-//     11     W  CCW1E         Color Calculation Window Window 1 Enable (0=disable, 1=enable)
-//     10     W  CCW1A         Color Calculation Window Window 1 Area (0=inside, 1=outside)
-//      9     W  CCW0E         Color Calculation Window Window 0 Enable (0=disable, 1=enable)
-//      8     W  CCW0A         Color Calculation Window Window 0 Area (0=inside, 1=outside)
-//      7     W  RPLOG         Rotation Window Logic (0=OR, 1=AND)
-//    6-4        -             Reserved, must be zero
-//      3     W  RPW1E         Rotation Window Window 1 Enable (0=disable, 1=enable)
-//      2     W  RPW1A         Rotation Window Window 1 Area (0=inside, 1=outside)
-//      1     W  RPW0E         Rotation Window Window 0 Enable (0=disable, 1=enable)
-//      0     W  RPW0A         Rotation Window Window 0 Area (0=inside, 1=outside)
-union WCTL_t {
-    uint64 u64;
-    union {
-        uint16 u16;
-        struct {
-            uint16 N0W0A : 1;
-            uint16 N0W0E : 1;
-            uint16 N0W1A : 1;
-            uint16 N0W1E : 1;
-            uint16 N0SWA : 1;
-            uint16 N0SWE : 1;
-            uint16 _rsvd6 : 1;
-            uint16 N0LOG : 1;
-            uint16 N1W0A : 1;
-            uint16 N1W0E : 1;
-            uint16 N1W1A : 1;
-            uint16 N1W1E : 1;
-            uint16 N1SWA : 1;
-            uint16 N1SWE : 1;
-            uint16 _rsvd14 : 1;
-            uint16 N1LOG : 1;
-        };
-    } A;
-    union {
-        uint16 u16;
-        struct {
-            uint16 N2W0A : 1;
-            uint16 N2W0E : 1;
-            uint16 N2W1A : 1;
-            uint16 N2W1E : 1;
-            uint16 N2SWA : 1;
-            uint16 N2SWE : 1;
-            uint16 _rsvd6 : 1;
-            uint16 N2LOG : 1;
-            uint16 N3W0A : 1;
-            uint16 N3W0E : 1;
-            uint16 N3W1A : 1;
-            uint16 N3W1E : 1;
-            uint16 N3SWA : 1;
-            uint16 N3SWE : 1;
-            uint16 _rsvd14 : 1;
-            uint16 N3LOG : 1;
-        };
-    } B;
-    union {
-        uint16 u16;
-        struct {
-            uint16 RPW0A : 1;
-            uint16 RPW0E : 1;
-            uint16 RPW1A : 1;
-            uint16 RPW1E : 1;
-            uint16 _rsvd4_6 : 3;
-            uint16 RPLOG : 1;
-            uint16 CCW0A : 1;
-            uint16 CCW0E : 1;
-            uint16 CCW1A : 1;
-            uint16 CCW1E : 1;
-            uint16 CCSWA : 1;
-            uint16 CCSWE : 1;
-            uint16 _rsvd14 : 1;
-            uint16 CCLOG : 1;
-        };
-    } C;
-    union {
-        uint16 u16;
-        struct {
-            uint16 R0W0A : 1;
-            uint16 R0W0E : 1;
-            uint16 R0W1A : 1;
-            uint16 R0W1E : 1;
-            uint16 R0SWA : 1;
-            uint16 R0SWE : 1;
-            uint16 _rsvd6 : 1;
-            uint16 R0LOG : 1;
-            uint16 SPW0A : 1;
-            uint16 SPW0E : 1;
-            uint16 SPW1A : 1;
-            uint16 SPW1E : 1;
-            uint16 SPSWA : 1;
-            uint16 SPSWE : 1;
-            uint16 _rsvd14 : 1;
-            uint16 SPLOG : 1;
-        };
-    } D;
 };
 
 // 1800E2   SDCTL   Shadow Control

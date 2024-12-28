@@ -20,7 +20,6 @@ struct VDP2Regs {
         CYCB0.u32 = 0x0;
         CYCB1.u32 = 0x0;
         ZMCTL.u16 = 0x0;
-        WCTL.u64 = 0x0;
         SDCTL.u16 = 0x0;
 
         bgEnabled.fill(false);
@@ -1219,10 +1218,231 @@ struct VDP2Regs {
         windowParams[index].endY = bit::extract<0, 9>(value);
     }
 
-    /**/         // 1800D0   WCTLA   NBG0 and NBG1 Window Control
-                 // 1800D2   WCTLB   NBG2 and NBG3 Window Control
-                 // 1800D4   WCTLC   RBG0 and Sprite Window Control
-    WCTL_t WCTL; // 1800D6   WCTLD   Rotation Window and Color Calculation Window Control
+    // 1800D0   WCTLA   NBG0 and NBG1 Window Control
+    //
+    //   bits   r/w  code          description
+    //     15     W  N1LOG         NBG1/EXBG Window Logic (0=OR, 1=AND)
+    //     14        -             Reserved, must be zero
+    //     13     W  N1SWE         NBG1/EXBG Sprite Window Enable (0=disable, 1=enable)
+    //     12     W  N1SWA         NBG1/EXBG Sprite Window Area (0=inside, 1=outside)
+    //     11     W  N1W1E         NBG1/EXBG Window 1 Enable (0=disable, 1=enable)
+    //     10     W  N1W1A         NBG1/EXBG Window 1 Area (0=inside, 1=outside)
+    //      9     W  N1W0E         NBG1/EXBG Window 0 Enable (0=disable, 1=enable)
+    //      8     W  N1W0A         NBG1/EXBG Window 0 Area (0=inside, 1=outside)
+    //      7     W  N0LOG         NBG0/RBG1 Window Logic (0=OR, 1=AND)
+    //      6        -             Reserved, must be zero
+    //      5     W  N0SWE         NBG0/RBG1 Sprite Window Enable (0=disable, 1=enable)
+    //      4     W  N0SWA         NBG0/RBG1 Sprite Window Area (0=inside, 1=outside)
+    //      3     W  N0W1E         NBG0/RBG1 Window 1 Enable (0=disable, 1=enable)
+    //      2     W  N0W1A         NBG0/RBG1 Window 1 Area (0=inside, 1=outside)
+    //      1     W  N0W0E         NBG0/RBG1 Window 0 Enable (0=disable, 1=enable)
+    //      0     W  N0W0A         NBG0/RBG1 Window 0 Area (0=inside, 1=outside)
+
+    FORCE_INLINE uint16 ReadWCTLA() const {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, bgParams[1].windowActiveOutside[0]);
+        bit::deposit_into<1>(value, bgParams[1].windowEnable[0]);
+        bit::deposit_into<2>(value, bgParams[1].windowActiveOutside[1]);
+        bit::deposit_into<3>(value, bgParams[1].windowEnable[1]);
+        bit::deposit_into<4>(value, bgParams[1].windowActiveOutside[2]);
+        bit::deposit_into<5>(value, bgParams[1].windowEnable[2]);
+        bit::deposit_into<7>(value, static_cast<uint16>(bgParams[1].windowLogic));
+
+        bit::deposit_into<8>(value, bgParams[2].windowActiveOutside[0]);
+        bit::deposit_into<9>(value, bgParams[2].windowEnable[0]);
+        bit::deposit_into<10>(value, bgParams[2].windowActiveOutside[1]);
+        bit::deposit_into<11>(value, bgParams[2].windowEnable[1]);
+        bit::deposit_into<12>(value, bgParams[2].windowActiveOutside[2]);
+        bit::deposit_into<13>(value, bgParams[2].windowEnable[2]);
+        bit::deposit_into<15>(value, static_cast<uint16>(bgParams[2].windowLogic));
+        return value;
+    }
+
+    FORCE_INLINE void WriteWCTLA(uint16 value) {
+        bgParams[1].windowActiveOutside[0] = bit::extract<0>(value);
+        bgParams[1].windowEnable[0] = bit::extract<1>(value);
+        bgParams[1].windowActiveOutside[1] = bit::extract<2>(value);
+        bgParams[1].windowEnable[1] = bit::extract<3>(value);
+        bgParams[1].windowActiveOutside[2] = bit::extract<4>(value);
+        bgParams[1].windowEnable[2] = bit::extract<5>(value);
+        bgParams[1].windowLogic = static_cast<WindowLogic>(bit::extract<7>(value));
+
+        bgParams[2].windowActiveOutside[0] = bit::extract<8>(value);
+        bgParams[2].windowEnable[0] = bit::extract<9>(value);
+        bgParams[2].windowActiveOutside[1] = bit::extract<10>(value);
+        bgParams[2].windowEnable[1] = bit::extract<11>(value);
+        bgParams[2].windowActiveOutside[2] = bit::extract<12>(value);
+        bgParams[2].windowEnable[2] = bit::extract<13>(value);
+        bgParams[2].windowLogic = static_cast<WindowLogic>(bit::extract<15>(value));
+    }
+
+    // 1800D2   WCTLB   NBG2 and NBG3 Window Control
+    //
+    //   bits   r/w  code          description
+    //     15     W  N3LOG         NBG3 Window Logic (0=OR, 1=AND)
+    //     14        -             Reserved, must be zero
+    //     13     W  N3SWE         NBG3 Sprite Window Enable (0=disable, 1=enable)
+    //     12     W  N3SWA         NBG3 Sprite Window Area (0=inside, 1=outside)
+    //     11     W  N3W1E         NBG3 Window 1 Enable (0=disable, 1=enable)
+    //     10     W  N3W1A         NBG3 Window 1 Area (0=inside, 1=outside)
+    //      9     W  N3W0E         NBG3 Window 0 Enable (0=disable, 1=enable)
+    //      8     W  N3W0A         NBG3 Window 0 Area (0=inside, 1=outside)
+    //      7     W  N2LOG         NBG2 Window Logic (0=OR, 1=AND)
+    //      6        -             Reserved, must be zero
+    //      5     W  N2SWE         NBG2 Sprite Window Enable (0=disable, 1=enable)
+    //      4     W  N2SWA         NBG2 Sprite Window Area (0=inside, 1=outside)
+    //      3     W  N2W1E         NBG2 Window 1 Enable (0=disable, 1=enable)
+    //      2     W  N2W1A         NBG2 Window 1 Area (0=inside, 1=outside)
+    //      1     W  N2W0E         NBG2 Window 0 Enable (0=disable, 1=enable)
+    //      0     W  N2W0A         NBG2 Window 0 Area (0=inside, 1=outside)
+
+    FORCE_INLINE uint16 ReadWCTLB() const {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, bgParams[3].windowActiveOutside[0]);
+        bit::deposit_into<1>(value, bgParams[3].windowEnable[0]);
+        bit::deposit_into<2>(value, bgParams[3].windowActiveOutside[1]);
+        bit::deposit_into<3>(value, bgParams[3].windowEnable[1]);
+        bit::deposit_into<4>(value, bgParams[3].windowActiveOutside[2]);
+        bit::deposit_into<5>(value, bgParams[3].windowEnable[2]);
+        bit::deposit_into<7>(value, static_cast<uint16>(bgParams[3].windowLogic));
+
+        bit::deposit_into<8>(value, bgParams[4].windowActiveOutside[0]);
+        bit::deposit_into<9>(value, bgParams[4].windowEnable[0]);
+        bit::deposit_into<10>(value, bgParams[4].windowActiveOutside[1]);
+        bit::deposit_into<11>(value, bgParams[4].windowEnable[1]);
+        bit::deposit_into<12>(value, bgParams[4].windowActiveOutside[2]);
+        bit::deposit_into<13>(value, bgParams[4].windowEnable[2]);
+        bit::deposit_into<15>(value, static_cast<uint16>(bgParams[4].windowLogic));
+        return value;
+    }
+
+    FORCE_INLINE void WriteWCTLB(uint16 value) {
+        bgParams[3].windowActiveOutside[0] = bit::extract<0>(value);
+        bgParams[3].windowEnable[0] = bit::extract<1>(value);
+        bgParams[3].windowActiveOutside[1] = bit::extract<2>(value);
+        bgParams[3].windowEnable[1] = bit::extract<3>(value);
+        bgParams[3].windowActiveOutside[2] = bit::extract<4>(value);
+        bgParams[3].windowEnable[2] = bit::extract<5>(value);
+        bgParams[3].windowLogic = static_cast<WindowLogic>(bit::extract<7>(value));
+
+        bgParams[4].windowActiveOutside[0] = bit::extract<8>(value);
+        bgParams[4].windowEnable[0] = bit::extract<9>(value);
+        bgParams[4].windowActiveOutside[1] = bit::extract<10>(value);
+        bgParams[4].windowEnable[1] = bit::extract<11>(value);
+        bgParams[4].windowActiveOutside[2] = bit::extract<12>(value);
+        bgParams[4].windowEnable[2] = bit::extract<13>(value);
+        bgParams[4].windowLogic = static_cast<WindowLogic>(bit::extract<15>(value));
+    }
+
+    // 1800D4   WCTLC   RBG0 and Sprite Window Control
+    //
+    //   bits   r/w  code          description
+    //     15     W  SPLOG         Sprite Window Logic (0=OR, 1=AND)
+    //     14        -             Reserved, must be zero
+    //     13     W  SPSWE         Sprite Sprite Window Enable (0=disable, 1=enable)
+    //     12     W  SPSWA         Sprite Sprite Window Area (0=inside, 1=outside)
+    //     11     W  SPW1E         Sprite Window 1 Enable (0=disable, 1=enable)
+    //     10     W  SPW1A         Sprite Window 1 Area (0=inside, 1=outside)
+    //      9     W  SPW0E         Sprite Window 0 Enable (0=disable, 1=enable)
+    //      8     W  SPW0A         Sprite Window 0 Area (0=inside, 1=outside)
+    //      7     W  R0LOG         RBG0 Window Logic (0=OR, 1=AND)
+    //      6        -             Reserved, must be zero
+    //      5     W  R0SWE         RBG0 Sprite Window Enable (0=disable, 1=enable)
+    //      4     W  R0SWA         RBG0 Sprite Window Area (0=inside, 1=outside)
+    //      3     W  R0W1E         RBG0 Window 1 Enable (0=disable, 1=enable)
+    //      2     W  R0W1A         RBG0 Window 1 Area (0=inside, 1=outside)
+    //      1     W  R0W0E         RBG0 Window 0 Enable (0=disable, 1=enable)
+    //      0     W  R0W0A         RBG0 Window 0 Area (0=inside, 1=outside)
+
+    FORCE_INLINE uint16 ReadWCTLC() const {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, bgParams[0].windowActiveOutside[0]);
+        bit::deposit_into<1>(value, bgParams[0].windowEnable[0]);
+        bit::deposit_into<2>(value, bgParams[0].windowActiveOutside[1]);
+        bit::deposit_into<3>(value, bgParams[0].windowEnable[1]);
+        bit::deposit_into<4>(value, bgParams[0].windowActiveOutside[2]);
+        bit::deposit_into<5>(value, bgParams[0].windowEnable[2]);
+        bit::deposit_into<7>(value, static_cast<uint16>(bgParams[0].windowLogic));
+
+        bit::deposit_into<8>(value, spriteParams.windowActiveOutside[0]);
+        bit::deposit_into<9>(value, spriteParams.windowEnable[0]);
+        bit::deposit_into<10>(value, spriteParams.windowActiveOutside[1]);
+        bit::deposit_into<11>(value, spriteParams.windowEnable[1]);
+        bit::deposit_into<12>(value, spriteParams.windowActiveOutside[2]);
+        bit::deposit_into<13>(value, spriteParams.windowEnable[2]);
+        bit::deposit_into<15>(value, static_cast<uint16>(spriteParams.windowLogic));
+        return value;
+    }
+
+    FORCE_INLINE void WriteWCTLC(uint16 value) {
+        bgParams[0].windowActiveOutside[0] = bit::extract<0>(value);
+        bgParams[0].windowEnable[0] = bit::extract<1>(value);
+        bgParams[0].windowActiveOutside[1] = bit::extract<2>(value);
+        bgParams[0].windowEnable[1] = bit::extract<3>(value);
+        bgParams[0].windowActiveOutside[2] = bit::extract<4>(value);
+        bgParams[0].windowEnable[2] = bit::extract<5>(value);
+        bgParams[0].windowLogic = static_cast<WindowLogic>(bit::extract<7>(value));
+
+        spriteParams.windowActiveOutside[0] = bit::extract<8>(value);
+        spriteParams.windowEnable[0] = bit::extract<9>(value);
+        spriteParams.windowActiveOutside[1] = bit::extract<10>(value);
+        spriteParams.windowEnable[1] = bit::extract<11>(value);
+        spriteParams.windowActiveOutside[2] = bit::extract<12>(value);
+        spriteParams.windowEnable[2] = bit::extract<13>(value);
+        spriteParams.windowLogic = static_cast<WindowLogic>(bit::extract<15>(value));
+    }
+
+    // 1800D6   WCTLD   Rotation Window and Color Calculation Window Control
+    //
+    //   bits   r/w  code          description
+    //     15     W  CCLOG         Color Calculation Window Logic (0=OR, 1=AND)
+    //     14        -             Reserved, must be zero
+    //     13     W  CCSWE         Color Calculation Window Sprite Window Enable (0=disable, 1=enable)
+    //     12     W  CCSWA         Color Calculation Window Sprite Window Area (0=inside, 1=outside)
+    //     11     W  CCW1E         Color Calculation Window Window 1 Enable (0=disable, 1=enable)
+    //     10     W  CCW1A         Color Calculation Window Window 1 Area (0=inside, 1=outside)
+    //      9     W  CCW0E         Color Calculation Window Window 0 Enable (0=disable, 1=enable)
+    //      8     W  CCW0A         Color Calculation Window Window 0 Area (0=inside, 1=outside)
+    //      7     W  RPLOG         Rotation Parameter Window Logic (0=OR, 1=AND)
+    //    6-4        -             Reserved, must be zero
+    //      3     W  RPW1E         Rotation Parameter Window 1 Enable (0=disable, 1=enable)
+    //      2     W  RPW1A         Rotation Parameter Window 1 Area (0=inside, 1=outside)
+    //      1     W  RPW0E         Rotation Parameter Window 0 Enable (0=disable, 1=enable)
+    //      0     W  RPW0A         Rotation Parameter Window 0 Area (0=inside, 1=outside)
+
+    FORCE_INLINE uint16 ReadWCTLD() const {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, commonRotParams.windowActiveOutside[0]);
+        bit::deposit_into<1>(value, commonRotParams.windowEnable[0]);
+        bit::deposit_into<2>(value, commonRotParams.windowActiveOutside[1]);
+        bit::deposit_into<3>(value, commonRotParams.windowEnable[1]);
+        bit::deposit_into<7>(value, static_cast<uint16>(commonRotParams.windowLogic));
+
+        bit::deposit_into<8>(value, colorCalcParams.windowActiveOutside[0]);
+        bit::deposit_into<9>(value, colorCalcParams.windowEnable[0]);
+        bit::deposit_into<10>(value, colorCalcParams.windowActiveOutside[1]);
+        bit::deposit_into<11>(value, colorCalcParams.windowEnable[1]);
+        bit::deposit_into<12>(value, colorCalcParams.windowActiveOutside[2]);
+        bit::deposit_into<13>(value, colorCalcParams.windowEnable[2]);
+        bit::deposit_into<15>(value, static_cast<uint16>(colorCalcParams.windowLogic));
+        return value;
+    }
+
+    FORCE_INLINE void WriteWCTLD(uint16 value) {
+        commonRotParams.windowActiveOutside[0] = bit::extract<0>(value);
+        commonRotParams.windowEnable[0] = bit::extract<1>(value);
+        commonRotParams.windowActiveOutside[1] = bit::extract<2>(value);
+        commonRotParams.windowEnable[1] = bit::extract<3>(value);
+        commonRotParams.windowLogic = static_cast<WindowLogic>(bit::extract<7>(value));
+
+        colorCalcParams.windowActiveOutside[0] = bit::extract<8>(value);
+        colorCalcParams.windowEnable[0] = bit::extract<9>(value);
+        colorCalcParams.windowActiveOutside[1] = bit::extract<10>(value);
+        colorCalcParams.windowEnable[1] = bit::extract<11>(value);
+        colorCalcParams.windowActiveOutside[2] = bit::extract<12>(value);
+        colorCalcParams.windowEnable[2] = bit::extract<13>(value);
+        colorCalcParams.windowLogic = static_cast<WindowLogic>(bit::extract<15>(value));
+    }
 
     // 1800D8   LWTA0U  Window 0 Line Window Table Address (upper)
     // 1800DC   LWTA1U  Window 1 Line Window Table Address (upper)
@@ -1280,7 +1500,7 @@ struct VDP2Regs {
     FORCE_INLINE uint16 ReadSPCTL() const {
         uint16 value = 0;
         bit::deposit_into<0, 3>(value, spriteParams.type);
-        bit::deposit_into<4>(value, spriteParams.windowEnable);
+        bit::deposit_into<4>(value, spriteParams.spriteWindowEnable);
         bit::deposit_into<5>(value, spriteParams.mixedFormat);
         bit::deposit_into<8, 10>(value, spriteParams.colorCalcValue);
         bit::deposit_into<12, 13>(value, static_cast<uint16>(spriteParams.colorCalcCond));
@@ -1289,7 +1509,7 @@ struct VDP2Regs {
 
     FORCE_INLINE void WriteSPCTL(uint16 value) {
         spriteParams.type = bit::extract<0, 3>(value);
-        spriteParams.windowEnable = bit::extract<4>(value);
+        spriteParams.spriteWindowEnable = bit::extract<4>(value);
         spriteParams.mixedFormat = bit::extract<5>(value);
         spriteParams.colorCalcValue = bit::extract<8, 10>(value);
         spriteParams.colorCalcCond = static_cast<SpriteColorCalculationCondition>(bit::extract<12, 13>(value));
