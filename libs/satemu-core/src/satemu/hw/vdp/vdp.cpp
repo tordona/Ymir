@@ -1096,25 +1096,25 @@ void VDP::VDP2LoadRotationParameterTables() {
 
             if (x == 0) {
                 if (readXst) {
-                    scrX = state.scrX = ((kx * Xsp) >> 16ll); // no + Xp here because it's dynamic
+                    scrX = state.scrX = Xsp;
                 }
                 if (readYst) {
-                    scrY = state.scrY = ((ky * Ysp) >> 16ll) + Yp;
+                    scrY = state.scrY = Ysp;
                 }
             }
 
             // Store screen coordinates
-            state.screenCoords[x].x = scrX + Xp;
-            state.screenCoords[x].y = scrY;
+            state.screenCoords[x].x = ((kx * scrX) >> 16ll) + Xp;
+            state.screenCoords[x].y = ((ky * scrY) >> 16ll) + Yp;
 
             // Increment screen coordinates and coefficient table address by Hcnt
-            scrX += (kx * scrXIncH) >> 16ll;
-            scrY += (ky * scrYIncH) >> 16ll;
+            scrX += scrXIncH;
+            scrY += scrYIncH;
         }
 
         // Increment screen coordinates and coefficient table address by Vcnt for the next iteration
-        state.scrX += (kx * scrXIncV) >> 16ll;
-        state.scrY += (ky * scrYIncV) >> 16ll;
+        state.scrX += scrXIncV;
+        state.scrY += scrYIncV;
         state.KA += t.dKAst;
 
         // Disable read flags now that we've dealt with them
