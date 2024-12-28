@@ -1595,37 +1595,114 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState 
     }
 
     for (uint32 x = 0; x < m_HRes; x++) {
-        if (bgParams.verticalCellScrollEnable) {
-            // Update vertical cell scroll amount
-            if (((fracScrollX >> 8u) & 7) == 0) {
-                cellScrollY = readCellScrollY();
-            }
-        } else if (bgParams.mosaicEnable) {
-            // Apply horizontal mosaic
-            // TODO: should mosaic have priority over vertical cell scroll?
-            const uint8 currMosaicCounterX = mosaicCounterX;
-            mosaicCounterX++;
-            if (mosaicCounterX >= m_VDP2.mosaicH) {
-                mosaicCounterX = 0;
-            }
-            if (currMosaicCounterX > 0) {
-                // Simply copy over the data from the previous pixel
-                layerState.pixels[x] = layerState.pixels[x - 1];
+        // Check window visibility
+        bool inside = false;
+        if (bgParams.windowEnable[0] || bgParams.windowEnable[1] || bgParams.windowEnable[2]) {
+            // Initialize the inside flag with a sensible base value for the selected window combination logic
+            inside = bgParams.windowLogic == WindowLogic::And;
 
-                // Increment horizontal coordinate
-                fracScrollX += bgState.scrollIncH;
-                continue;
+            //  ORing with windowLogic == OR:   set the flag if  inside using  OR logic, otherwise no change
+            // ANDing with windowLogic == OR: clear the flag if outside using AND logic, otherwise no change
+
+            auto markInside = [&] { inside |= bgParams.windowLogic == WindowLogic::Or; };
+            auto markOutside = [&] { inside &= bgParams.windowLogic == WindowLogic::Or; };
+
+            auto mark = [&](bool state, bool inverted) {
+                // Truth table: (state false=outside, true=inside)
+                // state  inverted  result   st == ao
+                // false  false     outside  true
+                // true   false     inside   false
+                // false  true      inside   false
+                // true   true      outside  true
+
+                if (state == inverted) {
+                    markOutside();
+                } else {
+                    markInside();
+                }
+            };
+
+            // Check normal windows
+            for (int i = 0; i < 2; i++) {
+                // Skip if disabled
+                if (!bgParams.windowEnable[i]) {
+                    continue;
+                }
+
+                const WindowParams &windowParam = m_VDP2.windowParams[i];
+                const bool inverted = bgParams.windowInverted[i];
+
+                // Check vertical coordinate
+                if (m_VCounter < windowParam.startY || m_VCounter > windowParam.endY) {
+                    mark(false, inverted);
+                    continue;
+                }
+
+                uint16 startX = windowParam.startX;
+                uint16 endX = windowParam.endX;
+
+                // Read line window if enabled
+                if (windowParam.lineWindowTableEnable) {
+                    const uint32 yPos = m_VCounter - windowParam.startY;
+                    const uint32 address = windowParam.lineWindowTableAddress + yPos * sizeof(uint16) * 2;
+                    startX = bit::extract<0, 9>(VDP2ReadVRAM<uint16>(address + 0));
+                    endX = bit::extract<0, 9>(VDP2ReadVRAM<uint16>(address + 2));
+                }
+
+                // For normal screen modes, X coordinates don't use bit 0
+                if (m_VDP2.TVMD.HRESOn < 2) {
+                    startX >>= 1;
+                    endX >>= 1;
+                }
+
+                // Check horizontal coordinate
+                mark(x >= startX && x <= endX, inverted);
+            }
+
+            // Check sprite window
+            if (bgParams.windowEnable[2]) {
+                const bool inverted = bgParams.windowInverted[2];
+                mark(m_spriteLayerState.attrs[x].shadowOrWindow, inverted);
             }
         }
 
-        // Compute integer scroll screen coordinates
-        const uint32 scrollX = fracScrollX >> 8u;
-        const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - bgState.mosaicCounterY;
-        const CoordU32 scrollCoord{scrollX, scrollY};
+        if (inside) {
+            // Make pixel transparent if inside active window area
+            layerState.pixels[x].transparent = true;
+        } else {
+            // Apply vertical cell-scrolling or horizontal mosaic
+            if (bgParams.verticalCellScrollEnable) {
+                // Update vertical cell scroll amount
+                if (((fracScrollX >> 8u) & 7) == 0) {
+                    cellScrollY = readCellScrollY();
+                }
+            } else if (bgParams.mosaicEnable) {
+                // Apply horizontal mosaic
+                // TODO: should mosaic have priority over vertical cell scroll?
+                const uint8 currMosaicCounterX = mosaicCounterX;
+                mosaicCounterX++;
+                if (mosaicCounterX >= m_VDP2.mosaicH) {
+                    mosaicCounterX = 0;
+                }
+                if (currMosaicCounterX > 0) {
+                    // Simply copy over the data from the previous pixel
+                    layerState.pixels[x] = layerState.pixels[x - 1];
 
-        // Plot pixel
-        layerState.pixels[x] = VDPFetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
-            bgParams, bgParams.pageBaseAddresses, scrollCoord);
+                    // Increment horizontal coordinate
+                    fracScrollX += bgState.scrollIncH;
+                    continue;
+                }
+            }
+
+            // Compute integer scroll screen coordinates
+            const uint32 scrollX = fracScrollX >> 8u;
+            const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - bgState.mosaicCounterY;
+            const CoordU32 scrollCoord{scrollX, scrollY};
+
+            // Plot pixel
+            layerState.pixels[x] = VDPFetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
+                bgParams, bgParams.pageBaseAddresses, scrollCoord);
+        }
 
         // Increment horizontal coordinate
         fracScrollX += bgState.scrollIncH;
@@ -1806,12 +1883,14 @@ FORCE_INLINE VDP::Pixel VDP::VDPFetchScrollBGPixel(const BGParams &bgParams, std
     // +---------+---------+   +----+----+----+----+   Normal and rotation BGs are divided into planes in the exact
     // |         |         |   | A  | B  | C  | D  |   configurations illustrated to the left.
     // | Plane A | Plane B |   +----+----+----+----+   The BG's Map Offset Register is combined with the BG plane's
-    // |         |         |   | E  | F  | G  | H  |   Map Register (MPxxN#) to produce a base address for each plane:
+    // |         |         |   | E  | F  | G  | H  |   Map Register (MPxxN#) to produce a base address for each
+    // plane:
     // +---------+---------+   +----+----+----+----+     Address bits  Source
     // |         |         |   | I  | J  | K  | L  |              8-6  Map Offset Register (MPOFN)
     // | Plane C | Plane D |   +----+----+----+----+              5-0  Map Register (MPxxN#)
     // |         |         |   | M  | N  | O  | P  |
-    // +---------+---------+   +----+----+----+----+   These addresses are precomputed in bgParams.pageBaseAddresses.
+    // +---------+---------+   +----+----+----+----+   These addresses are precomputed in
+    // bgParams.pageBaseAddresses.
     //
     //         Plane
     // +---------+---------+   Each plane is composed of 1x1, 2x1 or 2x2 pages, determined by Plane Size in the
@@ -1825,32 +1904,34 @@ FORCE_INLINE VDP::Pixel VDP::VDPFetchScrollBGPixel(const BGParams &bgParams, std
     // +---------+---------+
     //
     //           Page
-    // +----+----+..+----+----+   Pages contain 32x32 or 64x64 character patterns, which are groups of 1x1 or 2x2 cells,
-    // |CP 1|CP 2|  |CP63|CP64|   determined by Character Size in the Character Control Register (CHCTLA-B).
-    // +----+----+..+----+----+   Pages always contain a total of 64x64 cells - a grid of 64x64 1x1 character patterns
-    // |  65|  66|  | 127| 128|   or 32x32 2x2 character patterns. Because of this, pages always have 512x512 dots.
+    // +----+----+..+----+----+   Pages contain 32x32 or 64x64 character patterns, which are groups of 1x1 or 2x2
+    // cells, |CP 1|CP 2|  |CP63|CP64|   determined by Character Size in the Character Control Register (CHCTLA-B).
+    // +----+----+..+----+----+   Pages always contain a total of 64x64 cells - a grid of 64x64 1x1 character
+    // patterns |  65|  66|  | 127| 128|   or 32x32 2x2 character patterns. Because of this, pages always have
+    // 512x512 dots.
     // +----+----+..+----+----+
     // :    :    :  :    :    :   Character patterns in a page are stored sequentially in VRAM left to right, top to
-    // +----+----+..+----+----+   bottom, as shown. The figure to the left illustrates a 64x64 page; a 32x32 page would
-    // |3969|3970|  |4031|4032|   have 1024 character patterns in total instead of 4096.
+    // +----+----+..+----+----+   bottom, as shown. The figure to the left illustrates a 64x64 page; a 32x32 page
+    // would |3969|3970|  |4031|4032|   have 1024 character patterns in total instead of 4096.
     // +----+----+..+----+----+
-    // |4033|4034|  |4095|4096|   fourCellChar specifies the size of the character patterns (1x1 when false, 2x2 when
+    // |4033|4034|  |4095|4096|   fourCellChar specifies the size of the character patterns (1x1 when false, 2x2
+    // when
     // +----+----+..+----+----+   true) and, by extension, the dimensions of the page (32x32 or 64x64 respectively).
     //
     //   Character Pattern
-    // +---------+---------+   Character patterns are groups of 1x1 or 2x2 cells, determined by Character Size in the
-    // |         |         |   Character Control Register (CHCTLA-B).
-    // | Cell 1  | Cell 2  |   Cells are stored sequentially in VRAM left to right, top to bottom, as shown.
-    // |         |         |   Character patterns contain a character number (15 bits), a palette number (7 bits, only
-    // +---------+---------+   used with 16 or 256 color palette modes), two special function bits (Special Priority and
-    // |         |         |   Special Color Calculation) and two flip bits (horizontal and vertical).
-    // | Cell 3  | Cell 4  |   Character patterns can be one or two words long, as defined by Pattern Name Data Size
-    // |         |         |   in the Pattern Name Control Register (PNCN0-3, PNCR).
+    // +---------+---------+   Character patterns are groups of 1x1 or 2x2 cells, determined by Character Size in
+    // the |         |         |   Character Control Register (CHCTLA-B). | Cell 1  | Cell 2  |   Cells are stored
+    // sequentially in VRAM left to right, top to bottom, as shown. |         |         |   Character patterns
+    // contain a character number (15 bits), a palette number (7 bits, only
+    // +---------+---------+   used with 16 or 256 color palette modes), two special function bits (Special Priority
+    // and |         |         |   Special Color Calculation) and two flip bits (horizontal and vertical). | Cell 3
+    // | Cell 4  |   Character patterns can be one or two words long, as defined by Pattern Name Data Size | | | in
+    // the Pattern Name Control Register (PNCN0-3, PNCR).
     // +---------+---------+   When using one word characters, some of the data comes from supplementary registers.
     //                         fourCellChar stores the character pattern size (1x1 when false, 2x2 when true).
     //                         twoWordChar determines if characters are one (false) or two (true) words long.
-    //                         extChar determines the length of the character data field in one word characters -- when
-    //                         true, they're extended by two bits, taking over the two flip bits.
+    //                         extChar determines the length of the character data field in one word characters --
+    //                         when true, they're extended by two bits, taking over the two flip bits.
     //
     //           Cell
     // +--+--+--+--+--+--+--+--+   Cells contain 8x8 dots (pixels) in one of the following color formats:

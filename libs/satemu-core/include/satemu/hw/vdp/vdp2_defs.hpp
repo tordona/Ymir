@@ -131,7 +131,7 @@ struct BGParams {
         specialColorCalcMode = SpecialColorCalcMode::PerScreen;
 
         windowEnable.fill(false);
-        windowActiveOutside.fill(false);
+        windowInverted.fill(false);
         windowLogic = WindowLogic::Or;
 
         plsz = 0;
@@ -315,7 +315,7 @@ struct BGParams {
     // [1] Window 1
     // [2] Sprite Window
     // Derived from WCTLA/B/C.xxW0A, xxW1A and xxSWA
-    std::array<bool, 3> windowActiveOutside;
+    std::array<bool, 3> windowInverted;
 
     // Window combination logic mode.
     // Derived from WCTLA/B/C.xxLOG
@@ -359,7 +359,7 @@ struct CommonRotationParams {
         baseAddress = 0;
         rotParamMode = RotationParamMode::RotationParamA;
         windowEnable.fill(false);
-        windowActiveOutside.fill(false);
+        windowInverted.fill(false);
         windowLogic = WindowLogic::Or;
     }
 
@@ -381,7 +381,7 @@ struct CommonRotationParams {
     // [0] Window 0
     // [1] Window 1
     // Derived from WCTLD.RPW0A and RPW1A
-    std::array<bool, 2> windowActiveOutside;
+    std::array<bool, 2> windowInverted;
 
     // Window combination logic mode.
     // Derived from WCTLD.RPLOG
@@ -585,7 +585,7 @@ struct SpriteParams {
         colorOffsetSelect = false;
         lineColorScreenEnable = false;
         windowEnable.fill(false);
-        windowActiveOutside.fill(false);
+        windowInverted.fill(false);
         windowLogic = WindowLogic::Or;
     }
 
@@ -650,7 +650,7 @@ struct SpriteParams {
     // [1] Window 1
     // [2] Sprite Window
     // Derived from WCTLC.SPW0A, SPW1A and SPSWA
-    std::array<bool, 3> windowActiveOutside;
+    std::array<bool, 3> windowInverted;
 
     // Window combination logic mode.
     // Derived from WCTLC.SPLOG
@@ -753,7 +753,7 @@ struct ColorCalcParams {
         useSecondScreenRatio = false;
         useAdditiveBlend = false;
         windowEnable.fill(false);
-        windowActiveOutside.fill(false);
+        windowInverted.fill(false);
         windowLogic = WindowLogic::Or;
     }
 
@@ -789,7 +789,7 @@ struct ColorCalcParams {
     // [1] Window 1
     // [2] Sprite Window
     // Derived from WCTLD.CCW0A, CCW1A and CCSWA
-    std::array<bool, 3> windowActiveOutside;
+    std::array<bool, 3> windowInverted;
 
     // Window combination logic mode.
     // Derived from WCTLD.CCLOG
