@@ -1595,105 +1595,34 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState 
     }
 
     for (uint32 x = 0; x < m_HRes; x++) {
-        // Check window visibility
-        bool inside = false;
-        if (bgParams.windowEnable[0] || bgParams.windowEnable[1] || bgParams.windowEnable[2]) {
-            // Initialize the inside flag with a sensible base value for the selected window combination logic
-            inside = bgParams.windowLogic == WindowLogic::And;
-
-            //  ORing with windowLogic == OR:   set the flag if  inside using  OR logic, otherwise no change
-            // ANDing with windowLogic == OR: clear the flag if outside using AND logic, otherwise no change
-
-            auto markInside = [&] { inside |= bgParams.windowLogic == WindowLogic::Or; };
-            auto markOutside = [&] { inside &= bgParams.windowLogic == WindowLogic::Or; };
-
-            auto mark = [&](bool state, bool inverted) {
-                // Truth table: (state false=outside, true=inside)
-                // state  inverted  result   st == ao
-                // false  false     outside  true
-                // true   false     inside   false
-                // false  true      inside   false
-                // true   true      outside  true
-
-                if (state == inverted) {
-                    markOutside();
-                } else {
-                    markInside();
-                }
-            };
-
-            // Check normal windows
-            for (int i = 0; i < 2; i++) {
-                // Skip if disabled
-                if (!bgParams.windowEnable[i]) {
-                    continue;
-                }
-
-                const WindowParams &windowParam = m_VDP2.windowParams[i];
-                const bool inverted = bgParams.windowInverted[i];
-
-                // Check vertical coordinate
-                if (m_VCounter < windowParam.startY || m_VCounter > windowParam.endY) {
-                    mark(false, inverted);
-                    continue;
-                }
-
-                uint16 startX = windowParam.startX;
-                uint16 endX = windowParam.endX;
-
-                // Read line window if enabled
-                if (windowParam.lineWindowTableEnable) {
-                    const uint32 yPos = m_VCounter - windowParam.startY;
-                    const uint32 address = windowParam.lineWindowTableAddress + yPos * sizeof(uint16) * 2;
-                    startX = bit::extract<0, 9>(VDP2ReadVRAM<uint16>(address + 0));
-                    endX = bit::extract<0, 9>(VDP2ReadVRAM<uint16>(address + 2));
-                }
-
-                // For normal screen modes, X coordinates don't use bit 0
-                if (m_VDP2.TVMD.HRESOn < 2) {
-                    startX >>= 1;
-                    endX >>= 1;
-                }
-
-                // Check horizontal coordinate
-                mark(x >= startX && x <= endX, inverted);
+        // Apply vertical cell-scrolling or horizontal mosaic
+        if (bgParams.verticalCellScrollEnable) {
+            // Update vertical cell scroll amount
+            if (((fracScrollX >> 8u) & 7) == 0) {
+                cellScrollY = readCellScrollY();
             }
+        } else if (bgParams.mosaicEnable) {
+            // Apply horizontal mosaic
+            // TODO: should mosaic have priority over vertical cell scroll?
+            const uint8 currMosaicCounterX = mosaicCounterX;
+            mosaicCounterX++;
+            if (mosaicCounterX >= m_VDP2.mosaicH) {
+                mosaicCounterX = 0;
+            }
+            if (currMosaicCounterX > 0) {
+                // Simply copy over the data from the previous pixel
+                layerState.pixels[x] = layerState.pixels[x - 1];
 
-            // Check sprite window
-            if (bgParams.windowEnable[2]) {
-                const bool inverted = bgParams.windowInverted[2];
-                mark(m_spriteLayerState.attrs[x].shadowOrWindow, inverted);
+                // Increment horizontal coordinate
+                fracScrollX += bgState.scrollIncH;
+                continue;
             }
         }
 
-        if (inside) {
+        if (VDP2IsInsideWindow(bgParams, x)) {
             // Make pixel transparent if inside active window area
             layerState.pixels[x].transparent = true;
         } else {
-            // Apply vertical cell-scrolling or horizontal mosaic
-            if (bgParams.verticalCellScrollEnable) {
-                // Update vertical cell scroll amount
-                if (((fracScrollX >> 8u) & 7) == 0) {
-                    cellScrollY = readCellScrollY();
-                }
-            } else if (bgParams.mosaicEnable) {
-                // Apply horizontal mosaic
-                // TODO: should mosaic have priority over vertical cell scroll?
-                const uint8 currMosaicCounterX = mosaicCounterX;
-                mosaicCounterX++;
-                if (mosaicCounterX >= m_VDP2.mosaicH) {
-                    mosaicCounterX = 0;
-                }
-                if (currMosaicCounterX > 0) {
-                    // Simply copy over the data from the previous pixel
-                    layerState.pixels[x] = layerState.pixels[x - 1];
-
-                    // Increment horizontal coordinate
-                    fracScrollX += bgState.scrollIncH;
-                    continue;
-                }
-            }
-
             // Compute integer scroll screen coordinates
             const uint32 scrollX = fracScrollX >> 8u;
             const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - bgState.mosaicCounterY;
@@ -1751,13 +1680,18 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState 
             }
         }
 
-        // Compute integer scroll screen coordinates
-        const uint32 scrollX = fracScrollX >> 8u;
-        const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - bgState.mosaicCounterY;
-        const CoordU32 scrollCoord{scrollX, scrollY};
+        if (VDP2IsInsideWindow(bgParams, x)) {
+            // Make pixel transparent if inside active window area
+            layerState.pixels[x].transparent = true;
+        } else {
+            // Compute integer scroll screen coordinates
+            const uint32 scrollX = fracScrollX >> 8u;
+            const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - bgState.mosaicCounterY;
+            const CoordU32 scrollCoord{scrollX, scrollY};
 
-        // Plot pixel
-        layerState.pixels[x] = VDPFetchBitmapBGPixel<false, colorFormat, colorMode>(bgParams, scrollCoord);
+            // Plot pixel
+            layerState.pixels[x] = VDPFetchBitmapBGPixel<false, colorFormat, colorMode>(bgParams, scrollCoord);
+        }
 
         // Increment horizontal coordinate
         fracScrollX += bgState.scrollIncH;
@@ -1874,6 +1808,74 @@ Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint
     }
 
     return coeff;
+}
+
+bool VDP::VDP2IsInsideWindow(const BGParams &bgParams, uint32 x) {
+    // If no windows are enabled, consider the pixel outside of windows
+    if (!bgParams.windowEnable[0] && !bgParams.windowEnable[1] && !bgParams.windowEnable[2]) {
+        return false;
+    }
+
+    // Check normal windows
+    for (int i = 0; i < 2; i++) {
+        // Skip if disabled
+        if (!bgParams.windowEnable[i]) {
+            continue;
+        }
+
+        const WindowParams &windowParam = m_VDP2.windowParams[i];
+        const bool inverted = bgParams.windowInverted[i];
+
+        // Truth table: (state: false=outside, true=inside)
+        // state  inverted  result   st != ao
+        // false  false     outside  false
+        // true   false     inside   true
+        // false  true      inside   true
+        // true   true      outside  false
+        auto isInside = [&](bool state) { return state != inverted; };
+
+        // Check vertical coordinate
+        const bool insideY = isInside(m_VCounter >= windowParam.startY && m_VCounter <= windowParam.endY);
+
+        uint16 startX = windowParam.startX;
+        uint16 endX = windowParam.endX;
+
+        // Read line window if enabled
+        if (windowParam.lineWindowTableEnable) {
+            const uint32 yPos = m_VCounter - windowParam.startY;
+            const uint32 address = windowParam.lineWindowTableAddress + yPos * sizeof(uint16) * 2;
+            startX = bit::extract<0, 9>(VDP2ReadVRAM<uint16>(address + 0));
+            endX = bit::extract<0, 9>(VDP2ReadVRAM<uint16>(address + 2));
+        }
+
+        // For normal screen modes, X coordinates don't use bit 0
+        if (m_VDP2.TVMD.HRESOn < 2) {
+            startX >>= 1;
+            endX >>= 1;
+        }
+
+        // Check horizontal coordinate
+        const bool insideX = isInside(x >= startX && x <= endX);
+
+        // Short-circuit the output if the logic allows for it
+        // true short-circuits OR logic
+        // false short-circuits AND logic
+        const bool inside = insideX && insideY;
+        if (inside == (bgParams.windowLogic == WindowLogic::Or)) {
+            return inside;
+        }
+    }
+
+    // Check sprite window
+    if (bgParams.windowEnable[2]) {
+        const bool inverted = bgParams.windowInverted[2];
+        return m_spriteLayerState.attrs[x].shadowOrWindow != inverted;
+    }
+
+    // Return the appropriate value for the given logic mode.
+    // If we got to this point using OR logic, then the pixel is outside all enabled windows.
+    // If we got to this point using AND logic, then the pixel is inside all enabled windows.
+    return bgParams.windowLogic == WindowLogic::And;
 }
 
 template <bool rot, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>

@@ -1006,6 +1006,14 @@ private:
     // coeffAddress is the calculated coefficient address (KA).
     Coefficient VDP2FetchRotationCoefficient(const RotationParams &params, uint32 coeffAddress);
 
+    // Checks if the pixel at the given (X, VCounter) coordinate is inside the active windows.
+    // Retrusn true if the pixel is inside a window.
+    // Returns false if the pixel is outside all windows or no windows are enabled.
+    //
+    // bgParams contains the parameters for the BG to draw.
+    // x is the horizontal coordinate of the pixel
+    bool VDP2IsInsideWindow(const BGParams &bgParams, uint32 x);
+
     // Fetches a scroll background pixel at the given coordinates.
     //
     // bgParams contains the parameters for the BG to draw.
