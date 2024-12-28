@@ -754,6 +754,7 @@ private:
         struct Attributes {
             uint8 colorCalcRatio = 0;
             bool shadowOrWindow = false;
+            SpriteShadowType shadowType = SpriteShadowType::None;
             bool msbSet = false;
         };
 
@@ -1106,17 +1107,26 @@ private:
     // fbOffset is the offset into the framebuffer (in bytes) where the sprite data is located.
     SpriteData VDP2FetchSpriteData(uint32 fbOffset);
 
+    // Fetches 16-bit sprite data based on the current sprite mode.
+    //
+    // fbOffset is the offset into the framebuffer (in bytes) where the sprite data is located.
+    // type is the sprite type (between 0 and 7).
+    SpriteData VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type);
+
     // Fetches 8-bit sprite data based on the current sprite mode.
     //
     // fbOffset is the offset into the framebuffer (in bytes) where the sprite data is located.
     // type is the sprite type (between 8 and 15).
     SpriteData VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type);
 
-    // Fetches 16-bit sprite data based on the current sprite mode.
+    // Determines the type of sprite shadow (if any) based on color data.
     //
-    // fbOffset is the offset into the framebuffer (in bytes) where the sprite data is located.
-    // type is the sprite type (between 0 and 7).
-    SpriteData VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type);
+    // colorData is the raw color data.
+    //
+    // colorDataBits specifies the bit width of the color data.
+    // checkMSB enables MSB shadow checks.
+    template <uint32 colorDataBits, bool checkMSB>
+    static SpriteShadowType VDP2DetermineShadowType(uint16 colorData);
 };
 
 } // namespace satemu::vdp
