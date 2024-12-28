@@ -694,7 +694,7 @@ private:
             enabled = false;
         }
 
-        alignas(16) std::array<Pixel, 704> pixels;
+        alignas(16) std::array<Pixel, kMaxResH> pixels;
 
         bool enabled;
     };
@@ -714,7 +714,7 @@ private:
             bool msbSet = false;
         };
 
-        alignas(16) std::array<Attributes, 704> attrs;
+        alignas(16) std::array<Attributes, kMaxResH> attrs;
     };
 
     struct NormBGLayerState {
@@ -770,7 +770,12 @@ private:
         uint32 cramOffset;
     };
 
-    // State for Rotation Parameters A and B
+    struct Coord {
+        sint32 x = 0;
+        sint32 y = 0;
+    };
+
+    // State for Rotation Parameters A and B.
     struct RotParamState {
         RotParamState() {
             Reset();
@@ -778,59 +783,11 @@ private:
 
         void Reset() {
             pageBaseAddresses.fill(0);
-            scrXIncV = scrYIncV = 0;
-            scrXIncH = scrYIncH = 0;
+            screenCoords.fill({});
+            lineColorData.fill(0);
+            transparent.fill(0);
+            scrX = scrY = 0;
             KA = 0;
-            KAst = 0;
-            dKAst = 0;
-            dKAx = 0;
-        }
-
-        // Calculates counters and increments using the given rotation parameter table.
-        void Calculate(const RotationParamTable &t, bool readKAst) {
-            // 16*(16-16) + 16*(16-16) + 16*(16-16) = 32 frac bits
-            // reduce to 16 frac bits
-            Xsp = (t.A * (t.Xst - t.Px) + t.B * (t.Yst - t.Py) + t.C * (t.Zst - t.Pz)) >> 16ll;
-            Ysp = (t.D * (t.Xst - t.Px) + t.E * (t.Yst - t.Py) + t.F * (t.Zst - t.Pz)) >> 16ll;
-
-            // 16*(16-16) + 16*(16-16) + 16*(16-16) + 16 + 16 = 32+32+32 + 16+16
-            // reduce 32 to 16 frac bits, result is 16 frac bits
-            Xp = ((t.A * (t.Px - t.Cx) + t.B * (t.Py - t.Cy) + t.C * (t.Pz - t.Cz)) >> 16ll) + t.Cx + t.Mx;
-            Yp = ((t.D * (t.Px - t.Cx) + t.E * (t.Py - t.Cy) + t.F * (t.Pz - t.Cz)) >> 16ll) + t.Cy + t.My;
-
-            kx = t.kx;
-            ky = t.ky;
-
-            // Increment per Vcnt
-            // 16*16 + 16*16 = 32
-            // reduce to 16 frac bits
-            scrXIncV = (t.A * t.deltaXst + t.B * t.deltaYst) >> 16ll;
-            scrYIncV = (t.D * t.deltaXst + t.E * t.deltaYst) >> 16ll;
-
-            // Increment per Hcnt
-            // 16*16 + 16*16 = 32 frac bits
-            // reduce to 16 frac bits
-            scrXIncH = (t.A * t.deltaX + t.B * t.deltaY) >> 16ll;
-            scrYIncH = (t.D * t.deltaX + t.E * t.deltaY) >> 16ll;
-
-            // ---
-
-            // All of these have 10 fractional bits
-            // No maths involved, so store them directly
-
-            KAst = t.KAst;
-            dKAst = t.dKAst;
-            dKAx = t.dKAx;
-
-            // Reload coefficient address if requested
-            if (readKAst) {
-                KA = KAst;
-            }
-        }
-
-        // Increments counters by one Vcnt step
-        void IncrementV() {
-            KA += dKAst;
         }
 
         // Page base addresses for RBG planes A-P using Rotation Parameters A and B.
@@ -838,27 +795,22 @@ private:
         // Derived from mapIndices, CHCTLA/CHCTLB.xxCHSZ, PNCR.xxPNB and PLSZ.xxPLSZn
         std::array<uint32, 16> pageBaseAddresses;
 
-        // Transformed initial screen coordinates, calculated from parameter table.
-        sint32 Xsp, Ysp;
+        // Precomputed screen coordinates (with 16 fractional bits).
+        alignas(16) std::array<Coord, kMaxResH> screenCoords;
 
-        // Transformed view coordinates, calculated from parameter table.
-        sint32 Xp, Yp;
+        // Prefetched coefficient table line color data.
+        // Filled in only if the coefficient table is enabled.
+        alignas(16) std::array<uint8, kMaxResH> lineColorData;
 
-        // Scaling coefficients retrieved from the table (with 16 fractional bits).
-        sint32 kx, ky;
+        // Prefetched coefficient table transparency bits.
+        // Filled in only if the coefficient table is enabled.
+        alignas(16) std::array<bool, kMaxResH> transparent;
 
-        // Screen coordinate increments (with 16 fractional bits).
-        // Increment by (kx*scrXIncV, ky*scrYIncV) every scanline and by (kx*scrXIncH, ky*scrYIncH) every pixel.
-        sint32 scrXIncV, scrYIncV; // Screen coordinate increments per vertical counter increment
-        sint32 scrXIncH, scrYIncH; // Screen coordinate increments per horizontal counter increment
+        // Current base screen coordinates, updated every scanline.
+        sint32 scrX, scrY;
 
-        // Current coefficient table address with 16 fractional bits.
-        // Initialized to KAst when the rotation parameter table is read.
-        // Incremented by dKAst every scanline and (in a copy) by dKAx every pixel.
+        // Current base coefficient address, updated every scanline.
         uint32 KA;
-        uint32 KAst;  // Initial coefficient table address; updated when the rotation parameter table is read
-        sint32 dKAst; // Coefficient table address increment per vertical counter increment
-        sint32 dKAx;  // Coefficient table address increment per horizontal counter increment
     };
 
     // Layer state indices

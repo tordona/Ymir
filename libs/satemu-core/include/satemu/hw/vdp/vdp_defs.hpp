@@ -22,6 +22,11 @@ inline constexpr size_t kVDP2VRAMSize = 512_KiB;
 inline constexpr size_t kVDP2CRAMSize = 4_KiB;
 
 // -----------------------------------------------------------------------------
+// Common constants
+
+inline constexpr uint32 kMaxResH = 704; // Maximum horizontal resolution
+
+// -----------------------------------------------------------------------------
 // Basic types
 
 union Color555 {

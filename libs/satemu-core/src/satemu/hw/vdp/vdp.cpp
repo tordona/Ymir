@@ -1019,61 +1019,108 @@ void VDP::VDP2LoadRotationParameterTables() {
     const uint32 baseAddress = m_VDP2.commonRotParams.baseAddress;
     const bool readAll = m_VCounter == 0;
 
-    // TODO: dirty check to avoid recalculating everything on every line
-
     for (int i = 0; i < 2; i++) {
-        RotationParams &rotParams = m_VDP2.rotParams[i];
+        RotationParams &params = m_VDP2.rotParams[i];
+        RotParamState &state = m_rotParamStates[i];
 
-        const bool readXst = readAll || rotParams.readXst;
-        const bool readYst = readAll || rotParams.readYst;
-        const bool readKAst = readAll || rotParams.readKAst;
+        const bool readXst = readAll || params.readXst;
+        const bool readYst = readAll || params.readYst;
+        const bool readKAst = readAll || params.readKAst;
 
         // Tables are located at the base address 0x80 bytes apart
-        RotationParamTable table{};
+        RotationParamTable t{};
         const uint32 address = baseAddress + i * 0x80;
-        table.ReadFrom(&m_VRAM2[address & 0x7FFFF]);
+        t.ReadFrom(&m_VRAM2[address & 0x7FFFF]);
 
-        RotParamState &state = m_rotParamStates[i];
-        state.Calculate(table, readKAst);
+        // Calculate parameters
 
-        // TODO: encapsulate these calculations and deduplicate code
-        sint32 kx = table.kx;
-        sint32 ky = table.ky;
-        sint32 Xp = state.Xp;
-        if (rotParams.coeffTableEnable) {
-            bool useCoeff_kx = false;
-            bool useCoeff_ky = false;
-            bool useCoeff_Xp = false;
-            switch (rotParams.coeffDataMode) {
-            case CoefficientDataMode::ScaleCoeffXY: useCoeff_kx = useCoeff_ky = true; break;
-            case CoefficientDataMode::ScaleCoeffX: useCoeff_kx = true; break;
-            case CoefficientDataMode::ScaleCoeffY: useCoeff_ky = true; break;
-            case CoefficientDataMode::ViewpointX: useCoeff_Xp = true; break;
+        // Transformed starting screen coordinates
+        // 16*(16-16) + 16*(16-16) + 16*(16-16) = 32 frac bits
+        // reduce to 16 frac bits
+        const sint64 Xsp = (t.A * (t.Xst - t.Px) + t.B * (t.Yst - t.Py) + t.C * (t.Zst - t.Pz)) >> 16ll;
+        const sint64 Ysp = (t.D * (t.Xst - t.Px) + t.E * (t.Yst - t.Py) + t.F * (t.Zst - t.Pz)) >> 16ll;
+
+        // Transformed view coordinates
+        // 16*(16-16) + 16*(16-16) + 16*(16-16) + 16 + 16 = 32+32+32 + 16+16
+        // reduce 32 to 16 frac bits, result is 16 frac bits
+        /***/ sint64 Xp = ((t.A * (t.Px - t.Cx) + t.B * (t.Py - t.Cy) + t.C * (t.Pz - t.Cz)) >> 16ll) + t.Cx + t.Mx;
+        const sint64 Yp = ((t.D * (t.Px - t.Cx) + t.E * (t.Py - t.Cy) + t.F * (t.Pz - t.Cz)) >> 16ll) + t.Cy + t.My;
+
+        // Screen coordinate increments per Vcnt
+        // 16*16 + 16*16 = 32
+        // reduce to 16 frac bits
+        const sint64 scrXIncV = (t.A * t.deltaXst + t.B * t.deltaYst) >> 16ll;
+        const sint64 scrYIncV = (t.D * t.deltaXst + t.E * t.deltaYst) >> 16ll;
+
+        // Screen coordinate increments per Hcnt
+        // 16*16 + 16*16 = 32 frac bits
+        // reduce to 16 frac bits
+        const sint64 scrXIncH = (t.A * t.deltaX + t.B * t.deltaY) >> 16ll;
+        const sint64 scrYIncH = (t.D * t.deltaX + t.E * t.deltaY) >> 16ll;
+
+        // Scaling factors
+        // 16 frac bits
+        sint64 kx = t.kx;
+        sint64 ky = t.ky;
+
+        // Current screen coordinates (16 frac bits) and coefficient address (10 frac bits)
+        sint32 scrX = state.scrX;
+        sint32 scrY = state.scrY;
+        uint32 KA = state.KA;
+
+        // Precompute whole line
+        for (uint32 x = 0; x < m_HRes; x++) {
+            if (x == 0) {
+                if (readKAst) {
+                    KA = state.KA = t.KAst;
+                }
             }
 
-            const Coefficient coeff = VDP2FetchRotationCoefficient(rotParams, state.KA);
-            if (useCoeff_kx) {
-                kx = coeff.value;
+            // Replace parameters with those obtained from the coefficient table if enabled
+            if (params.coeffTableEnable) {
+                const Coefficient coeff = VDP2FetchRotationCoefficient(params, KA);
+                state.lineColorData[x] = coeff.lineColorData;
+                state.transparent[x] = coeff.transparent;
+
+                using enum CoefficientDataMode;
+                switch (params.coeffDataMode) {
+                case ScaleCoeffXY: kx = ky = coeff.value; break;
+                case ScaleCoeffX: kx = coeff.value; break;
+                case ScaleCoeffY: ky = coeff.value; break;
+                case ViewpointX: Xp = coeff.value; break;
+                }
+
+                // Increment coefficient table address by Hcnt
+                KA += t.dKAx;
             }
-            if (useCoeff_ky) {
-                ky = coeff.value;
+
+            if (x == 0) {
+                if (readXst) {
+                    scrX = state.scrX = ((kx * Xsp) >> 16ll); // no + Xp here because it's dynamic
+                }
+                if (readYst) {
+                    scrY = state.scrY = ((ky * Ysp) >> 16ll) + Yp;
+                }
             }
-            if (useCoeff_Xp) {
-                Xp = coeff.value;
-            }
+
+            // Store screen coordinates
+            state.screenCoords[x].x = scrX + Xp;
+            state.screenCoords[x].y = scrY;
+
+            // Increment screen coordinates and coefficient table address by Hcnt
+            scrX += (kx * scrXIncH) >> 16ll;
+            scrY += (ky * scrYIncH) >> 16ll;
         }
 
-        // TODO: deal with this somehow
-        /*if (readXst) {
-            state.scrX = ((kx * state.Xsp) >> 16ll) + Xp;
-        }
-        if (readYst) {
-            state.scrY = ((ky * state.Ysp) >> 16ll) + state.Yp;
-        }*/
+        // Increment screen coordinates and coefficient table address by Vcnt for the next iteration
+        state.scrX += (kx * scrXIncV) >> 16ll;
+        state.scrY += (ky * scrYIncV) >> 16ll;
+        state.KA += t.dKAst;
 
-        rotParams.readXst = false;
-        rotParams.readYst = false;
-        rotParams.readKAst = false;
+        // Disable read flags now that we've dealt with them
+        params.readXst = false;
+        params.readYst = false;
+        params.readKAst = false;
     }
 }
 
@@ -1119,10 +1166,6 @@ void VDP::VDP2DrawLine() {
 
     // Compose image
     VDP2ComposeLine();
-
-    // Increment rotation counters
-    m_rotParamStates[0].IncrementV();
-    m_rotParamStates[1].IncrementV();
 }
 
 template <uint32 colorMode>
@@ -1720,51 +1763,18 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
     auto &rotParamState = m_rotParamStates[0];
     const auto &specialFunctionCodes = m_VDP2.specialFunctionCodes[bgParams.specialFunctionSelect];
 
-    uint32 coeffAddress = rotParamState.KA;
-
-    const uint32 y = m_VCounter;
     for (uint32 x = 0; x < m_HRes; x++) {
         auto &pixel = layerState.pixels[x];
 
-        // Apply coefficient if enabled
-        // TODO: encapsulate these calculations and deduplicate code
-        using enum CoefficientDataMode;
-        sint64 kx = rotParamState.kx;
-        sint64 ky = rotParamState.ky;
-        sint64 Xp = rotParamState.Xp;
-        if (rotParams.coeffTableEnable) {
-            const Coefficient coeff = VDP2FetchRotationCoefficient(rotParams, coeffAddress);
-            if (coeff.transparent) {
-                // TODO: if m_VDP2.commonRotParams.rotParamMode is Coefficient, switch to rot param B instead
-                pixel.transparent = true;
-
-                // Increment coefficient address
-                coeffAddress += rotParamState.dKAx;
-                continue;
-            }
-            if (rotParams.coeffDataMode == ViewpointX) {
-                Xp = coeff.value;
-            } else {
-                if (rotParams.coeffDataMode == ScaleCoeffXY || rotParams.coeffDataMode == ScaleCoeffX) {
-                    kx = coeff.value;
-                }
-                if (rotParams.coeffDataMode == ScaleCoeffXY || rotParams.coeffDataMode == ScaleCoeffY) {
-                    ky = coeff.value;
-                }
-            }
+        // Handle transparent pixels in coefficient table
+        if (rotParams.coeffTableEnable && rotParamState.transparent[x]) {
+            // TODO: if m_VDP2.commonRotParams.rotParamMode is Coefficient, switch to rot param B instead
+            pixel.transparent = true;
+            continue;
         }
 
-        const sint32 scrX = ((kx * rotParamState.Xsp) >> 16ll) + Xp;
-        const sint32 scrY = ((ky * rotParamState.Ysp) >> 16ll) + rotParamState.Yp;
-
-        const sint32 scrXIncV = (kx * m_rotParamStates[0].scrXIncV) >> 16ll;
-        const sint32 scrYIncV = (ky * m_rotParamStates[0].scrYIncV) >> 16ll;
-
-        const sint32 scrXIncH = (kx * m_rotParamStates[0].scrXIncH) >> 16ll;
-        const sint32 scrYIncH = (ky * m_rotParamStates[0].scrYIncH) >> 16ll;
-
-        const sint32 fracScrollX = scrX + scrXIncV * y + scrXIncH * x;
-        const sint32 fracScrollY = scrY + scrYIncV * y + scrYIncH * x;
+        const sint32 fracScrollX = rotParamState.screenCoords[x].x;
+        const sint32 fracScrollY = rotParamState.screenCoords[x].y;
 
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 16u;
@@ -1823,9 +1833,6 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
                 }
             }
         }
-
-        // Increment coefficient address
-        coeffAddress += rotParamState.dKAx;
     }
 }
 
