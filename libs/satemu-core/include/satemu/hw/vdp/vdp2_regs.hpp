@@ -21,8 +21,6 @@ struct VDP2Regs {
         CYCB1.u32 = 0x0;
         ZMCTL.u16 = 0x0;
         WCTL.u64 = 0x0;
-        LWTA0.u32 = 0x0;
-        LWTA1.u32 = 0x0;
         SDCTL.u16 = 0x0;
 
         bgEnabled.fill(false);
@@ -1221,14 +1219,47 @@ struct VDP2Regs {
         windowParams[index].endY = bit::extract<0, 9>(value);
     }
 
-    /**/          // 1800D0   WCTLA   NBG0 and NBG1 Window Control
-                  // 1800D2   WCTLB   NBG2 and NBG3 Window Control
-                  // 1800D4   WCTLC   RBG0 and Sprite Window Control
-    WCTL_t WCTL;  // 1800D6   WCTLD   Rotation Window and Color Calculation Window Control
-                  // 1800D8   LWTA0U  Window 0 Line Window Address Table (upper)
-    LWTA_t LWTA0; // 1800DA   LWTA0L  Window 0 Line Window Address Table (lower)
-                  // 1800DC   LWTA1U  Window 1 Line Window Address Table (upper)
-    LWTA_t LWTA1; // 1800DE   LWTA1L  Window 1 Line Window Address Table (lower)
+    /**/         // 1800D0   WCTLA   NBG0 and NBG1 Window Control
+                 // 1800D2   WCTLB   NBG2 and NBG3 Window Control
+                 // 1800D4   WCTLC   RBG0 and Sprite Window Control
+    WCTL_t WCTL; // 1800D6   WCTLD   Rotation Window and Color Calculation Window Control
+
+    // 1800D8   LWTA0U  Window 0 Line Window Table Address (upper)
+    // 1800DC   LWTA1U  Window 1 Line Window Table Address (upper)
+    //
+    //   bits   r/w  code          description
+    //     15     W  WxLWE         Line Window Enable (0=disabled, 1=enabled)
+    //   14-3        -             Reserved, must be zero
+    //    2-0     W  WxLWTA18-16   Line Window Table Address (bits 18-16)
+    //
+    // 1800DA   LWTA0L  Window 0 Line Window Table Address (lower)
+    // 1800DE   LWTA1L  Window 1 Line Window Table Address (lower)
+    //
+    //   bits   r/w  code          description
+    //   15-1     W  WxLWTA15-1    Line Window Table Address (bits 15-1)
+    //      0        -             Reserved, must be zero
+
+    FORCE_INLINE uint16 ReadLWTAnU(uint8 index) const {
+        uint16 value = 0;
+        bit::deposit_into<0, 2>(value, bit::extract<17, 19>(windowParams[index].lineWindowTableAddress));
+        bit::deposit_into<15>(value, windowParams[index].lineWindowTableEnable);
+        return value;
+    }
+
+    FORCE_INLINE void WriteLWTAnU(uint8 index, uint16 value) {
+        bit::deposit_into<17, 19>(windowParams[index].lineWindowTableAddress, bit::extract<0, 2>(value));
+        windowParams[index].lineWindowTableEnable = bit::extract<15>(value);
+    }
+
+    FORCE_INLINE uint16 ReadLWTAnL(uint8 index) const {
+        uint16 value = 0;
+        bit::deposit_into<1, 15>(value, bit::extract<2, 16>(windowParams[index].lineWindowTableAddress));
+        return value;
+    }
+
+    FORCE_INLINE void WriteLWTAnL(uint8 index, uint16 value) {
+        bit::deposit_into<2, 16>(windowParams[index].lineWindowTableAddress, bit::extract<1, 15>(value));
+    }
 
     // 1800E0   SPCTL   Sprite Control
     //

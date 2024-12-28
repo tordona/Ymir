@@ -281,10 +281,10 @@ public:
         case 0x0D2: return m_VDP2.WCTL.B.u16;    // write-only?
         case 0x0D4: return m_VDP2.WCTL.C.u16;    // write-only?
         case 0x0D6: return m_VDP2.WCTL.D.u16;    // write-only?
-        case 0x0D8: return m_VDP2.LWTA0.U.u16;   // write-only?
-        case 0x0DA: return m_VDP2.LWTA0.L.u16;   // write-only?
-        case 0x0DC: return m_VDP2.LWTA1.U.u16;   // write-only?
-        case 0x0DE: return m_VDP2.LWTA1.L.u16;   // write-only?
+        case 0x0D8: return m_VDP2.ReadLWTAnU(0); // write-only?
+        case 0x0DA: return m_VDP2.ReadLWTAnL(0); // write-only?
+        case 0x0DC: return m_VDP2.ReadLWTAnU(1); // write-only?
+        case 0x0DE: return m_VDP2.ReadLWTAnL(1); // write-only?
         case 0x0E0: return m_VDP2.ReadSPCTL();   // write-only?
         case 0x0E2: return m_VDP2.SDCTL.u16;     // write-only?
         case 0x0E4: return m_VDP2.ReadCRAOFA();  // write-only?
@@ -437,10 +437,10 @@ public:
         case 0x0D2: m_VDP2.WCTL.B.u16 = value & 0xBFBF; break;
         case 0x0D4: m_VDP2.WCTL.C.u16 = value & 0xBFBF; break;
         case 0x0D6: m_VDP2.WCTL.D.u16 = value & 0xBF8F; break;
-        case 0x0D8: m_VDP2.LWTA0.U.u16 = value & 0x8007; break;
-        case 0x0DA: m_VDP2.LWTA0.L.u16 = value & 0xFFFE; break;
-        case 0x0DC: m_VDP2.LWTA1.U.u16 = value & 0x8007; break;
-        case 0x0DE: m_VDP2.LWTA1.L.u16 = value & 0xFFFE; break;
+        case 0x0D8: m_VDP2.WriteLWTAnU(0, value); break;
+        case 0x0DA: m_VDP2.WriteLWTAnL(0, value); break;
+        case 0x0DC: m_VDP2.WriteLWTAnU(1, value); break;
+        case 0x0DE: m_VDP2.WriteLWTAnL(1, value); break;
         case 0x0E0: m_VDP2.WriteSPCTL(value); break;
         case 0x0E2: m_VDP2.SDCTL.u16 = value & 0x013F; break;
         case 0x0E4: m_VDP2.WriteCRAOFA(value); break;
