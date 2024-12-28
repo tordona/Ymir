@@ -505,6 +505,13 @@ struct RotationParamTable {
     sint32 dKAx;  // Coefficient table horizontal increment (signed 10.10 fixed point)
 };
 
+// Rotation coefficient entry.
+struct Coefficient {
+    sint32 value; // coefficient value, scaled to 16 fractional bits
+    uint8 lineColorData;
+    bool transparent;
+};
+
 enum class SpriteColorCalculationCondition : uint8 {
     PriorityLessThanOrEqual,
     PriorityEqual,

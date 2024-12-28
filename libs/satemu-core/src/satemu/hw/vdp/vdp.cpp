@@ -1019,6 +1019,8 @@ void VDP::VDP2LoadRotationParameterTables() {
     const uint32 baseAddress = m_VDP2.commonRotParams.baseAddress;
     const bool readAll = m_VCounter == 0;
 
+    // TODO: dirty check to avoid recalculating everything on every line
+
     for (int i = 0; i < 2; i++) {
         RotationParams &rotParams = m_VDP2.rotParams[i];
 
@@ -1026,13 +1028,48 @@ void VDP::VDP2LoadRotationParameterTables() {
         const bool readYst = readAll || rotParams.readYst;
         const bool readKAst = readAll || rotParams.readKAst;
 
-        // TODO: dirty check to avoid recalculating everything on every line
         // Tables are located at the base address 0x80 bytes apart
         RotationParamTable table{};
         const uint32 address = baseAddress + i * 0x80;
         table.ReadFrom(&m_VRAM2[address & 0x7FFFF]);
 
-        m_rotParamStates[i].Calculate(table, readXst, readYst, readKAst);
+        RotParamState &state = m_rotParamStates[i];
+        state.Calculate(table, readKAst);
+
+        // TODO: encapsulate these calculations and deduplicate code
+        sint32 kx = table.kx;
+        sint32 ky = table.ky;
+        sint32 Xp = state.Xp;
+        if (rotParams.coeffTableEnable) {
+            bool useCoeff_kx = false;
+            bool useCoeff_ky = false;
+            bool useCoeff_Xp = false;
+            switch (rotParams.coeffDataMode) {
+            case CoefficientDataMode::ScaleCoeffXY: useCoeff_kx = useCoeff_ky = true; break;
+            case CoefficientDataMode::ScaleCoeffX: useCoeff_kx = true; break;
+            case CoefficientDataMode::ScaleCoeffY: useCoeff_ky = true; break;
+            case CoefficientDataMode::ViewpointX: useCoeff_Xp = true; break;
+            }
+
+            const Coefficient coeff = VDP2FetchRotationCoefficient(rotParams, state.KA);
+            if (useCoeff_kx) {
+                kx = coeff.value;
+            }
+            if (useCoeff_ky) {
+                ky = coeff.value;
+            }
+            if (useCoeff_Xp) {
+                Xp = coeff.value;
+            }
+        }
+
+        // TODO: deal with this somehow
+        /*if (readXst) {
+            state.scrX = ((kx * state.Xsp) >> 16ll) + Xp;
+        }
+        if (readYst) {
+            state.scrY = ((ky * state.Ysp) >> 16ll) + state.Yp;
+        }*/
 
         rotParams.readXst = false;
         rotParams.readYst = false;
@@ -1675,22 +1712,49 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState 
 template <bool twoWordChar, bool fourCellChar, bool wideChar, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState,
                                              RotBGLayerState &bgState) {
-    // TODO: for RBG0, select rotation parameters based on mode m_VDP2.commonRotParams.rotParamMode
+    // TODO: for RBG0, select rotation parameters based on m_VDP2.commonRotParams.rotParamMode
     // for RBG1, always use parameter B
 
-    sint32 fracScrollX = m_rotParamStates[0].scrX;
-    sint32 fracScrollY = m_rotParamStates[0].scrY;
-    uint32 coeffAddress = m_rotParamStates[0].KA;
-
-    const auto &commonRotParams = m_VDP2.commonRotParams;
+    // const auto &commonRotParams = m_VDP2.commonRotParams;
     const auto &rotParams = m_VDP2.rotParams[0];
+    auto &rotParamState = m_rotParamStates[0];
     const auto &specialFunctionCodes = m_VDP2.specialFunctionCodes[bgParams.specialFunctionSelect];
 
+    uint32 coeffAddress = rotParamState.KA;
+
+    const uint32 y = m_VCounter;
     for (uint32 x = 0; x < m_HRes; x++) {
-        // Read coefficient table if enabled
+        // Apply coefficient if enabled
+        // TODO: encapsulate these calculations and deduplicate code
+        using enum CoefficientDataMode;
+        sint64 kx = rotParamState.kx;
+        sint64 ky = rotParamState.ky;
+        sint64 Xp = rotParamState.Xp;
         if (rotParams.coeffTableEnable) {
-            const uint32 finalCoeffAddress = rotParams.coeffTableAddressOffset + coeffAddress;
+            const Coefficient coeff = VDP2FetchRotationCoefficient(rotParams, coeffAddress);
+            if (rotParams.coeffDataMode == ViewpointX) {
+                Xp = coeff.value;
+            } else {
+                if (rotParams.coeffDataMode == ScaleCoeffXY || rotParams.coeffDataMode == ScaleCoeffX) {
+                    kx = coeff.value;
+                }
+                if (rotParams.coeffDataMode == ScaleCoeffXY || rotParams.coeffDataMode == ScaleCoeffY) {
+                    ky = coeff.value;
+                }
+            }
         }
+
+        const sint32 scrX = ((kx * rotParamState.Xsp) >> 16ll) + Xp;
+        const sint32 scrY = ((ky * rotParamState.Ysp) >> 16ll) + rotParamState.Yp;
+
+        const sint32 scrXIncV = (kx * m_rotParamStates[0].scrXIncV) >> 16ll;
+        const sint32 scrYIncV = (ky * m_rotParamStates[0].scrYIncV) >> 16ll;
+
+        const sint32 scrXIncH = (kx * m_rotParamStates[0].scrXIncH) >> 16ll;
+        const sint32 scrYIncH = (ky * m_rotParamStates[0].scrYIncH) >> 16ll;
+
+        const sint32 fracScrollX = scrX + scrXIncV * y + scrXIncH * x;
+        const sint32 fracScrollY = scrY + scrYIncV * y + scrYIncH * x;
 
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 16u;
@@ -1721,7 +1785,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
         const uint32 dotY = bit::extract<0, 2>(scrollY);
 
         // Fetch character
-        const uint32 pageBaseAddress = bgParams.pageBaseAddresses[plane];
+        const uint32 pageBaseAddress = rotParamState.pageBaseAddresses[plane];
         const uint32 pageOffset = page * kPageSizes[fourCellChar][twoWordChar];
         const uint32 pageAddress = pageBaseAddress + pageOffset;
         constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
@@ -1751,10 +1815,8 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
             }
         }
 
-        // Increment coordinates
-        fracScrollX += m_rotParamStates[0].scrXIncH;
-        fracScrollY += m_rotParamStates[0].scrYIncH;
-        coeffAddress += m_rotParamStates[0].dKAx;
+        // Increment coefficient address
+        coeffAddress += rotParamState.dKAx;
     }
 }
 
@@ -1764,6 +1826,55 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
     for (uint32 x = 0; x < m_HRes; x++) {
         // TODO: implement
     }
+}
+
+Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint32 coeffAddress) {
+    Coefficient coeff{};
+
+    // Coefficient data formats:
+    //
+    // 1 word   15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+    // kx/ky   |TP|SN|Coeff. IP  | Coefficient fractional part |
+    // Px      |TP|SN|Coefficient integer part            | FP |
+    //
+    // 2 words  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+    // kx/ky   |TP| Line color data    |SN|Coeff. integer part |Coefficient fractional part                    |
+    // Px      |TP| Line color data    |SN|Coefficient integer part                    |Coeff. fractional part |
+    //
+    // TP=transparent bit   SN=coefficient sign bit   IP=coefficient integer part   FP=coefficient fractional part
+
+    const uint32 baseAddress = params.coeffTableAddressOffset;
+    const uint32 offset = coeffAddress >> 10u;
+
+    if (params.coeffDataSize == 1) {
+        // Two-word coefficient data
+        const uint32 address = baseAddress + offset * sizeof(uint32);
+        const uint32 data = m_VDP2.RAMCTL.CRKTE ? util::ReadBE<uint32>(&m_CRAM[(address & 0x7FF) | 0x800])
+                                                : util::ReadBE<uint32>(&m_VRAM2[address & 0x7FFFF]);
+        coeff.value = bit::extract_signed<0, 23>(data);
+        coeff.lineColorData = bit::extract<24, 30>(data);
+        coeff.transparent = bit::extract<31>(data);
+
+        if (params.coeffDataMode == CoefficientDataMode::ViewpointX) {
+            coeff.value <<= 8;
+        }
+    } else {
+        // One-word coefficient data
+        const uint32 address = baseAddress + offset * sizeof(uint16);
+        const uint16 data = m_VDP2.RAMCTL.CRKTE ? util::ReadBE<uint16>(&m_CRAM[(address & 0x7FF) | 0x800])
+                                                : util::ReadBE<uint16>(&m_VRAM2[address & 0x7FFFF]);
+        coeff.value = bit::extract_signed<0, 14>(data);
+        coeff.lineColorData = 0;
+        coeff.transparent = bit::extract<15>(data);
+
+        if (params.coeffDataMode == CoefficientDataMode::ViewpointX) {
+            coeff.value <<= 14;
+        } else {
+            coeff.value <<= 6;
+        }
+    }
+
+    return coeff;
 }
 
 FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex) {

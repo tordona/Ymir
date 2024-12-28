@@ -778,7 +778,6 @@ private:
 
         void Reset() {
             pageBaseAddresses.fill(0);
-            scrX = scrY = 0;
             scrXIncV = scrYIncV = 0;
             scrXIncH = scrYIncH = 0;
             KA = 0;
@@ -788,48 +787,31 @@ private:
         }
 
         // Calculates counters and increments using the given rotation parameter table.
-        void Calculate(const RotationParamTable &t, bool readXst, bool readYst, bool readKAst) {
+        void Calculate(const RotationParamTable &t, bool readKAst) {
             // 16*(16-16) + 16*(16-16) + 16*(16-16) = 32 frac bits
             // reduce to 16 frac bits
-            const sint64 Xsp = (t.A * (t.Xst - t.Px) + t.B * (t.Yst - t.Py) + t.C * (t.Zst - t.Pz)) >> 16ll;
-            const sint64 Ysp = (t.D * (t.Xst - t.Px) + t.E * (t.Yst - t.Py) + t.F * (t.Zst - t.Pz)) >> 16ll;
+            Xsp = (t.A * (t.Xst - t.Px) + t.B * (t.Yst - t.Py) + t.C * (t.Zst - t.Pz)) >> 16ll;
+            Ysp = (t.D * (t.Xst - t.Px) + t.E * (t.Yst - t.Py) + t.F * (t.Zst - t.Pz)) >> 16ll;
 
             // 16*(16-16) + 16*(16-16) + 16*(16-16) + 16 + 16 = 32+32+32 + 16+16
             // reduce 32 to 16 frac bits, result is 16 frac bits
-            const sint64 Xp = ((t.A * (t.Px - t.Cx) + t.B * (t.Py - t.Cy) + t.C * (t.Pz - t.Cz)) >> 16ll) + t.Cx + t.Mx;
-            const sint64 Yp = ((t.D * (t.Px - t.Cx) + t.E * (t.Py - t.Cy) + t.F * (t.Pz - t.Cz)) >> 16ll) + t.Cy + t.My;
+            Xp = ((t.A * (t.Px - t.Cx) + t.B * (t.Py - t.Cy) + t.C * (t.Pz - t.Cz)) >> 16ll) + t.Cx + t.Mx;
+            Yp = ((t.D * (t.Px - t.Cx) + t.E * (t.Py - t.Cy) + t.F * (t.Pz - t.Cz)) >> 16ll) + t.Cy + t.My;
 
-            // 16*16 + 16*16 = 32 frac bits
-            // reduce to 16 frac bits
-            const sint64 dX = (t.A * t.deltaX + t.B * t.deltaY) >> 16ll;
-            const sint64 dY = (t.D * t.deltaX + t.E * t.deltaY) >> 16ll;
-
-            // Initial value
-            // 16*16 + 16 = 32 + 16
-            // reduce 32 to 16 frac bits, result is 16 frac bits
-            scrX0 = ((t.kx * Xsp) >> 16ll) + Xp;
-            scrY0 = ((t.ky * Ysp) >> 16ll) + Yp;
+            kx = t.kx;
+            ky = t.ky;
 
             // Increment per Vcnt
-            // 16*(16*16 + 16*16) = 16*32
-            // reduce 32 to 16 frac bits, result is 32 frac bits
+            // 16*16 + 16*16 = 32
             // reduce to 16 frac bits
-            scrXIncV = (t.kx * ((t.A * t.deltaXst + t.B * t.deltaYst) >> 16ll)) >> 16ll;
-            scrYIncV = (t.ky * ((t.D * t.deltaXst + t.E * t.deltaYst) >> 16ll)) >> 16ll;
+            scrXIncV = (t.A * t.deltaXst + t.B * t.deltaYst) >> 16ll;
+            scrYIncV = (t.D * t.deltaXst + t.E * t.deltaYst) >> 16ll;
 
             // Increment per Hcnt
-            // 16*16 = 32
+            // 16*16 + 16*16 = 32 frac bits
             // reduce to 16 frac bits
-            scrXIncH = (t.kx * dX) >> 16ll;
-            scrYIncH = (t.ky * dY) >> 16ll;
-
-            // Reload screen counters if requested
-            if (readXst) {
-                scrX = scrX0;
-            }
-            if (readYst) {
-                scrY = scrY0;
-            }
+            scrXIncH = (t.A * t.deltaX + t.B * t.deltaY) >> 16ll;
+            scrYIncH = (t.D * t.deltaX + t.E * t.deltaY) >> 16ll;
 
             // ---
 
@@ -848,8 +830,6 @@ private:
 
         // Increments counters by one Vcnt step
         void IncrementV() {
-            scrX += scrXIncV;
-            scrY += scrYIncV;
             KA += dKAst;
         }
 
@@ -858,15 +838,22 @@ private:
         // Derived from mapIndices, CHCTLA/CHCTLB.xxCHSZ, PNCR.xxPNB and PLSZ.xxPLSZn
         std::array<uint32, 16> pageBaseAddresses;
 
-        // Current screen coordinates (with 10 fractional bits).
+        // Transformed initial screen coordinates, calculated from parameter table.
+        sint32 Xsp, Ysp;
+
+        // Transformed view coordinates, calculated from parameter table.
+        sint32 Xp, Yp;
+
+        // Scaling coefficients retrieved from the table (with 16 fractional bits).
+        sint32 kx, ky;
+
+        // Current screen coordinates (with 16 fractional bits).
         // Initialized to (scrX0, scrY0) when the rotation parameter table is read.
-        // Incremented by (scrXIncV, scrYIncV) every scanline and (in a copy) by (scrXIncH, scrYIncH) every pixel.
-        sint32 scrX, scrY;
-        sint32 scrX0, scrY0;       // Initial screen coordinates; updated when the rotation parameter table is read
+        // Incremented by (kx*scrXIncV, ky*scrYIncV) every scanline and by (kx*scrXIncH, ky*scrYIncH) every pixel.
         sint32 scrXIncV, scrYIncV; // Screen coordinate increments per vertical counter increment
         sint32 scrXIncH, scrYIncH; // Screen coordinate increments per horizontal counter increment
 
-        // Current coefficient table address with 10 fractional bits.
+        // Current coefficient table address with 16 fractional bits.
         // Initialized to KAst when the rotation parameter table is read.
         // Incremented by dKAst every scanline and (in a copy) by dKAx every pixel.
         uint32 KA;
@@ -1051,6 +1038,13 @@ private:
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
     void VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerState &layerState, RotBGLayerState &bgState);
+
+    // Fetches a rotation coefficient entry from VRAM or CRAM (depending on RAMCTL.CRKTE) using the specified rotation
+    // parameters.
+    //
+    // params is the rotation parameter from which to retrieve the base address and coefficient data size.
+    // coeffAddress is the calculated coefficient address (KA).
+    Coefficient VDP2FetchRotationCoefficient(const RotationParams &params, uint32 coeffAddress);
 
     // Fetches a two-word character from VRAM.
     //
