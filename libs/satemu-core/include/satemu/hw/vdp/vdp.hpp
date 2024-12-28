@@ -286,7 +286,7 @@ public:
         case 0x0DC: return m_VDP2.ReadLWTAnU(1); // write-only?
         case 0x0DE: return m_VDP2.ReadLWTAnL(1); // write-only?
         case 0x0E0: return m_VDP2.ReadSPCTL();   // write-only?
-        case 0x0E2: return m_VDP2.SDCTL.u16;     // write-only?
+        case 0x0E2: return m_VDP2.ReadSDCTL();   // write-only?
         case 0x0E4: return m_VDP2.ReadCRAOFA();  // write-only?
         case 0x0E6: return m_VDP2.ReadCRAOFB();  // write-only?
         case 0x0E8: return m_VDP2.ReadLNCLEN();  // write-only?
@@ -442,7 +442,7 @@ public:
         case 0x0DC: m_VDP2.WriteLWTAnU(1, value); break;
         case 0x0DE: m_VDP2.WriteLWTAnL(1, value); break;
         case 0x0E0: m_VDP2.WriteSPCTL(value); break;
-        case 0x0E2: m_VDP2.SDCTL.u16 = value & 0x013F; break;
+        case 0x0E2: m_VDP2.WriteSDCTL(value); break;
         case 0x0E4: m_VDP2.WriteCRAOFA(value); break;
         case 0x0E6: m_VDP2.WriteCRAOFB(value); break;
         case 0x0E8: m_VDP2.WriteLNCLEN(value); break;

@@ -20,7 +20,6 @@ struct VDP2Regs {
         CYCB0.u32 = 0x0;
         CYCB1.u32 = 0x0;
         ZMCTL.u16 = 0x0;
-        SDCTL.u16 = 0x0;
 
         bgEnabled.fill(false);
         for (auto &bg : bgParams) {
@@ -54,6 +53,8 @@ struct VDP2Regs {
         for (auto &sp : specialFunctionCodes) {
             sp.Reset();
         }
+
+        transparentShadowEnable = false;
 
         TVMDDirty = true;
     }
@@ -1515,7 +1516,40 @@ struct VDP2Regs {
         spriteParams.colorCalcCond = static_cast<SpriteColorCalculationCondition>(bit::extract<12, 13>(value));
     }
 
-    SDCTL_t SDCTL; // 1800E2   SDCTL   Shadow Control
+    // 1800E2   SDCTL   Shadow Control
+    //
+    //   bits   r/w  code          description
+    //   15-9        -             Reserved, must be zero
+    //      8     W  TPSDSL        Transparent Shadow (0=disable, 1=enable)
+    //    7-6        -             Reserved, must be zero
+    //      5     W  BKSDEN        Back Screen Shadow Enable
+    //      4     W  R0SDEN        RBG0 Shadow Enable
+    //      3     W  N3SDEN        NBG3 Shadow Enable
+    //      2     W  N2SDEN        NBG2 Shadow Enable
+    //      1     W  N1SDEN        NBG1/EXBG Shadow Enable
+    //      0     W  N0SDEN        NBG0/RBG1 Shadow Enable
+
+    FORCE_INLINE uint16 ReadSDCTL() const {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, bgParams[1].shadowEnable);
+        bit::deposit_into<1>(value, bgParams[2].shadowEnable);
+        bit::deposit_into<2>(value, bgParams[3].shadowEnable);
+        bit::deposit_into<3>(value, bgParams[4].shadowEnable);
+        bit::deposit_into<4>(value, bgParams[0].shadowEnable);
+        bit::deposit_into<5>(value, backScreenParams.shadowEnable);
+        bit::deposit_into<8>(value, transparentShadowEnable);
+        return value;
+    }
+
+    FORCE_INLINE void WriteSDCTL(uint16 value) {
+        bgParams[1].shadowEnable = bit::extract<0>(value);
+        bgParams[2].shadowEnable = bit::extract<1>(value);
+        bgParams[3].shadowEnable = bit::extract<2>(value);
+        bgParams[4].shadowEnable = bit::extract<3>(value);
+        bgParams[0].shadowEnable = bit::extract<4>(value);
+        backScreenParams.shadowEnable = bit::extract<5>(value);
+        transparentShadowEnable = bit::extract<8>(value);
+    }
 
     // 1800E4   CRAOFA  NBG0-NBG3 Color RAM Address Offset
     //
@@ -2108,6 +2142,10 @@ struct VDP2Regs {
     ColorCalcParams colorCalcParams;
 
     std::array<SpecialFunctionCodes, 2> specialFunctionCodes;
+
+    // Enables transparent shadow sprites.
+    // Derived from SDCTL.TPSDSL
+    bool transparentShadowEnable;
 };
 
 } // namespace satemu::vdp
