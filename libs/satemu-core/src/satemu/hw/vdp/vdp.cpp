@@ -1450,21 +1450,14 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
             }
         }
 
-        // Retrieves the color of the given layer
+        // Retrieves the color of the given layer and applies color offset
         auto getLayerColor = [&](Layer layer) -> Color888 {
             bool colorOffsetEnable{};
             bool colorOffsetSelect{};
             Color888 color{};
 
-            if (layer == LYR_Sprite) {
-                const LayerState &state = m_layerStates[layer];
-                const Pixel &pixel = state.pixels[x];
-                const auto &spriteParams = m_VDP2.spriteParams;
-                colorOffsetEnable = spriteParams.colorOffsetEnable;
-                colorOffsetSelect = spriteParams.colorOffsetSelect;
-                color = pixel.color;
-            } else if (layer == LYR_Back) {
-                const auto &backParams = m_VDP2.backScreenParams;
+            if (layer == LYR_Back) {
+                const LineBackScreenParams &backParams = m_VDP2.backScreenParams;
                 const uint32 line = backParams.perLine ? y : 0;
                 const uint32 address = backParams.baseAddress + line * sizeof(Color555);
                 const Color555 color555{.u16 = VDP2ReadVRAM<uint16>(address)};
@@ -1474,10 +1467,16 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
             } else {
                 const LayerState &state = m_layerStates[layer];
                 const Pixel &pixel = state.pixels[x];
-                const auto &bgParams = m_VDP2.bgParams[layer - LYR_RBG0];
-                colorOffsetEnable = bgParams.colorOffsetEnable;
-                colorOffsetSelect = bgParams.colorOffsetSelect;
                 color = pixel.color;
+                if (layer == LYR_Sprite) {
+                    const SpriteParams &spriteParams = m_VDP2.spriteParams;
+                    colorOffsetEnable = spriteParams.colorOffsetEnable;
+                    colorOffsetSelect = spriteParams.colorOffsetSelect;
+                } else {
+                    const BGParams &bgParams = m_VDP2.bgParams[layer - LYR_RBG0];
+                    colorOffsetEnable = bgParams.colorOffsetEnable;
+                    colorOffsetSelect = bgParams.colorOffsetSelect;
+                }
             }
 
             // Apply color offset if enabled
@@ -1500,7 +1499,6 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
                 const Pixel &pixel = m_layerStates[LYR_Sprite].pixels[x];
 
                 using enum SpriteColorCalculationCondition;
-
                 switch (spriteParams.colorCalcCond) {
                 case PriorityLessThanOrEqual: return pixel.priority <= spriteParams.colorCalcValue;
                 case PriorityEqual: return pixel.priority == spriteParams.colorCalcValue;
