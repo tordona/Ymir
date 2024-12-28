@@ -847,9 +847,8 @@ private:
         // Scaling coefficients retrieved from the table (with 16 fractional bits).
         sint32 kx, ky;
 
-        // Current screen coordinates (with 16 fractional bits).
-        // Initialized to (scrX0, scrY0) when the rotation parameter table is read.
-        // Incremented by (kx*scrXIncV, ky*scrYIncV) every scanline and by (kx*scrXIncH, ky*scrYIncH) every pixel.
+        // Screen coordinate increments (with 16 fractional bits).
+        // Increment by (kx*scrXIncV, ky*scrYIncV) every scanline and by (kx*scrXIncH, ky*scrYIncH) every pixel.
         sint32 scrXIncV, scrYIncV; // Screen coordinate increments per vertical counter increment
         sint32 scrXIncH, scrYIncH; // Screen coordinate increments per horizontal counter increment
 

@@ -394,7 +394,7 @@ struct RotationParams {
     // Derived from KTCTL.RxKTE
     bool coeffTableEnable;
 
-    // Size of coefficient data: 1 word (0) or 2 words (1).
+    // Size of coefficient data: 2 words (0) or 1 word (1).
     // Derived from KTCTL.RxKDBS
     uint8 coeffDataSize;
 

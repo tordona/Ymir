@@ -1102,16 +1102,16 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadKTAOF() const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, bit::extract<17, 19>(rotParams[0].coeffTableAddressOffset));
+        bit::deposit_into<0, 2>(value, bit::extract<16, 18>(rotParams[0].coeffTableAddressOffset));
 
-        bit::deposit_into<8, 10>(value, bit::extract<17, 19>(rotParams[1].coeffTableAddressOffset));
+        bit::deposit_into<8, 10>(value, bit::extract<16, 18>(rotParams[1].coeffTableAddressOffset));
         return value;
     }
 
     FORCE_INLINE void WriteKTAOF(uint16 value) {
-        bit::deposit_into<17, 19>(rotParams[0].coeffTableAddressOffset, bit::extract<0, 2>(value));
+        bit::deposit_into<16, 18>(rotParams[0].coeffTableAddressOffset, bit::extract<0, 2>(value));
 
-        bit::deposit_into<17, 19>(rotParams[1].coeffTableAddressOffset, bit::extract<8, 10>(value));
+        bit::deposit_into<16, 18>(rotParams[1].coeffTableAddressOffset, bit::extract<8, 10>(value));
     }
 
     // 1800B8   OVPNRA  Rotation Parameter A Screen-Over Pattern Name
