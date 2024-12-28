@@ -421,7 +421,8 @@ void VDP::VDP1ProcessCommands() {
     }
 }
 
-bool VDP::VDP1IsPixelUserClipped(sint32 x, sint32 y) const {
+bool VDP::VDP1IsPixelUserClipped(CoordS32 coord) const {
+    auto [x, y] = coord;
     const auto &ctx = m_VDP1RenderContext;
     if (x < ctx.userClipX0 || x > ctx.userClipX1) {
         return true;
@@ -432,7 +433,8 @@ bool VDP::VDP1IsPixelUserClipped(sint32 x, sint32 y) const {
     return false;
 }
 
-bool VDP::VDP1IsPixelSystemClipped(sint32 x, sint32 y) const {
+bool VDP::VDP1IsPixelSystemClipped(CoordS32 coord) const {
+    auto [x, y] = coord;
     const auto &ctx = m_VDP1RenderContext;
     if (x < 0 || x > ctx.sysClipH) {
         return true;
@@ -443,7 +445,9 @@ bool VDP::VDP1IsPixelSystemClipped(sint32 x, sint32 y) const {
     return false;
 }
 
-bool VDP::VDP1IsLineSystemClipped(sint32 x1, sint32 y1, sint32 x2, sint32 y2) const {
+bool VDP::VDP1IsLineSystemClipped(CoordS32 coord1, CoordS32 coord2) const {
+    auto [x1, y1] = coord1;
+    auto [x2, y2] = coord2;
     const auto &ctx = m_VDP1RenderContext;
     if (x1 < 0 && x2 < 0) {
         return true;
@@ -460,8 +464,11 @@ bool VDP::VDP1IsLineSystemClipped(sint32 x1, sint32 y1, sint32 x2, sint32 y2) co
     return false;
 }
 
-bool VDP::VDP1IsQuadSystemClipped(sint32 x1, sint32 y1, sint32 x2, sint32 y2, sint32 x3, sint32 y3, sint32 x4,
-                                  sint32 y4) const {
+bool VDP::VDP1IsQuadSystemClipped(CoordS32 coord1, CoordS32 coord2, CoordS32 coord3, CoordS32 coord4) const {
+    auto [x1, y1] = coord1;
+    auto [x2, y2] = coord2;
+    auto [x3, y3] = coord3;
+    auto [x4, y4] = coord4;
     const auto &ctx = m_VDP1RenderContext;
     if (x1 < 0 && x2 < 0 && x3 < 0 && x4 < 0) {
         return true;
@@ -478,14 +485,14 @@ bool VDP::VDP1IsQuadSystemClipped(sint32 x1, sint32 y1, sint32 x2, sint32 y2, si
     return false;
 }
 
-FORCE_INLINE void VDP::VDP1PlotPixel(sint32 x, sint32 y, uint16 color, VDP1Command::DrawMode mode,
-                                     uint32 gouraudTable) {
+FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, uint16 color, VDP1Command::DrawMode mode, uint32 gouraudTable) {
+    auto [x, y] = coord;
     if (mode.meshEnable && ((x ^ y) & 1)) {
         return;
     }
 
     // Reject pixels outside of clipping area
-    if (VDP1IsPixelSystemClipped(x, y)) {
+    if (VDP1IsPixelSystemClipped(coord)) {
         return;
     }
     if (mode.userClippingEnable) {
@@ -493,7 +500,7 @@ FORCE_INLINE void VDP::VDP1PlotPixel(sint32 x, sint32 y, uint16 color, VDP1Comma
         // clippingMode = true -> draw outside, reject inside
         // The function returns true if the pixel is clipped, therefore we want to reject pixels that return the
         // opposite of clippingMode on that function.
-        if (VDP1IsPixelUserClipped(x, y) != mode.clippingMode) {
+        if (VDP1IsPixelUserClipped(coord) != mode.clippingMode) {
             return;
         }
     }
@@ -512,24 +519,24 @@ FORCE_INLINE void VDP::VDP1PlotPixel(sint32 x, sint32 y, uint16 color, VDP1Comma
     }
 }
 
-FORCE_INLINE void VDP::VDP1PlotLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint16 color,
-                                    VDP1Command::DrawMode mode, uint32 gouraudTable) {
-    for (LineStepper line{x1, y1, x2, y2}; line.CanStep(); line.Step()) {
-        VDP1PlotPixel(line.X(), line.Y(), color, mode, gouraudTable);
+FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, uint16 color, VDP1Command::DrawMode mode,
+                                    uint32 gouraudTable) {
+    for (LineStepper line{coord1, coord2}; line.CanStep(); line.Step()) {
+        VDP1PlotPixel(line.Coord(), color, mode, gouraudTable);
         if (line.NeedsAntiAliasing()) {
-            VDP1PlotPixel(line.AAX(), line.AAY(), color, mode, gouraudTable);
+            VDP1PlotPixel(line.AACoord(), color, mode, gouraudTable);
         }
     }
 }
 
-void VDP::VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint32 colorBank,
-                               VDP1Command::Control control, VDP1Command::DrawMode mode, uint32 gouraudTable,
-                               uint32 charAddr, uint32 charSizeH, uint32 charSizeV, uint32 v, bool swapped) {
+void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, uint32 colorBank, VDP1Command::Control control,
+                               VDP1Command::DrawMode mode, uint32 gouraudTable, uint32 charAddr, uint32 charSizeH,
+                               uint32 charSizeV, uint32 v, bool swapped) {
     if (control.flipV) {
         v = charSizeV - 1 - v;
     }
 
-    for (TexturedLineStepper line{x1, y1, x2, y2, charSizeH, swapped}; line.CanStep(); line.Step()) {
+    for (TexturedLineStepper line{coord1, coord2, charSizeH, swapped}; line.CanStep(); line.Step()) {
         uint32 u = line.U();
         if (control.flipH) {
             u = charSizeH - 1 - u;
@@ -583,9 +590,9 @@ void VDP::VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint3
             continue;
         }
 
-        VDP1PlotPixel(line.X(), line.Y(), color, mode, gouraudTable);
+        VDP1PlotPixel(line.Coord(), color, mode, gouraudTable);
         if (line.NeedsAntiAliasing()) {
-            VDP1PlotPixel(line.AAX(), line.AAY(), color, mode, gouraudTable);
+            VDP1PlotPixel(line.AACoord(), color, mode, gouraudTable);
         }
     }
 }
@@ -608,32 +615,28 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
     const sint32 rx = xa + charSizeH; // right X
     const sint32 by = ya + charSizeV; // bottom Y
 
-    const sint32 xb = rx;
-    const sint32 yb = ty;
-    const sint32 xc = rx;
-    const sint32 yc = by;
-    const sint32 xd = lx;
-    const sint32 yd = by;
+    const CoordS32 coordA{xa, ya};
+    const CoordS32 coordB{rx, ty};
+    const CoordS32 coordC{rx, by};
+    const CoordS32 coordD{lx, by};
 
     // fmt::println("VDP1: Draw normal sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
     //              "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
     //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
 
-    if (VDP1IsQuadSystemClipped(xa, ya, xb, yb, xc, yc, xd, yd)) {
+    if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
         return;
     }
 
     // Interpolate linearly over edges A-D and B-C
-    for (TexturedQuadEdgesStepper edge{xa, ya, xb, yb, xc, yc, xd, yd, charSizeV}; edge.CanStep(); edge.Step()) {
-        const sint32 lx = edge.XMaj();
-        const sint32 ly = edge.YMaj();
-        const sint32 rx = edge.XMin();
-        const sint32 ry = edge.YMin();
+    for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, charSizeV}; edge.CanStep(); edge.Step()) {
+        const CoordS32 coordL{edge.XMaj(), edge.YMaj()};
+        const CoordS32 coordR{edge.XMin(), edge.YMin()};
         const uint32 v = edge.V();
         const bool swapped = edge.Swapped();
 
         // Plot lines between the interpolated points
-        VDP1PlotTexturedLine(lx, ly, rx, ry, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v,
+        VDP1PlotTexturedLine(coordL, coordR, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v,
                              swapped);
     }
 }
@@ -738,27 +741,29 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
     qxd += ctx.localCoordX;
     qyd += ctx.localCoordY;
 
+    const CoordS32 coordA{qxa, qya};
+    const CoordS32 coordB{qxb, qyb};
+    const CoordS32 coordC{qxc, qyc};
+    const CoordS32 coordD{qxd, qyd};
+
     // fmt::println("VDP1: Draw scaled sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
     //              "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
     //              qxa, qya, qxb, qyb, qxc, qyc, qxd, qyd, color, gouraudTable, mode.u16, charSizeH, charSizeV,
     //              charAddr);
 
-    if (VDP1IsQuadSystemClipped(qxa, qya, qxb, qyb, qxc, qyc, qxd, qyd)) {
+    if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
         return;
     }
 
     // Interpolate linearly over edges A-D and B-C
-    for (TexturedQuadEdgesStepper edge{qxa, qya, qxb, qyb, qxc, qyc, qxd, qyd, charSizeV}; edge.CanStep();
-         edge.Step()) {
-        const sint32 lx = edge.XMaj();
-        const sint32 ly = edge.YMaj();
-        const sint32 rx = edge.XMin();
-        const sint32 ry = edge.YMin();
+    for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, charSizeV}; edge.CanStep(); edge.Step()) {
+        const CoordS32 coordL{edge.XMaj(), edge.YMaj()};
+        const CoordS32 coordR{edge.XMin(), edge.YMin()};
         const uint32 v = edge.V();
         const bool swapped = edge.Swapped();
 
         // Plot lines between the interpolated points
-        VDP1PlotTexturedLine(lx, ly, rx, ry, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v,
+        VDP1PlotTexturedLine(coordL, coordR, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v,
                              swapped);
     }
 }
@@ -782,25 +787,28 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control co
     const uint32 charSizeH = size.H * 8;
     const uint32 charSizeV = size.V;
 
+    const CoordS32 coordA{xa, ya};
+    const CoordS32 coordB{xb, yb};
+    const CoordS32 coordC{xc, yc};
+    const CoordS32 coordD{xd, yd};
+
     // fmt::println("VDP1: Draw distorted sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
     //              "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
     //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
 
-    if (VDP1IsQuadSystemClipped(xa, ya, xb, yb, xc, yc, xd, yd)) {
+    if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
         return;
     }
 
     // Interpolate linearly over edges A-D and B-C
-    for (TexturedQuadEdgesStepper edge{xa, ya, xb, yb, xc, yc, xd, yd, charSizeV}; edge.CanStep(); edge.Step()) {
-        const sint32 lx = edge.XMaj();
-        const sint32 ly = edge.YMaj();
-        const sint32 rx = edge.XMin();
-        const sint32 ry = edge.YMin();
+    for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, charSizeV}; edge.CanStep(); edge.Step()) {
+        const CoordS32 coordL{edge.XMaj(), edge.YMaj()};
+        const CoordS32 coordR{edge.XMin(), edge.YMin()};
         const uint32 v = edge.V();
         const bool swapped = edge.Swapped();
 
         // Plot lines between the interpolated points
-        VDP1PlotTexturedLine(lx, ly, rx, ry, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v,
+        VDP1PlotTexturedLine(coordL, coordR, color, control, mode, gouraudTable, charAddr, charSizeH, charSizeV, v,
                              swapped);
     }
 }
@@ -820,23 +828,26 @@ void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
     const sint32 yd = bit::sign_extend<16>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1A)) + ctx.localCoordY;
     const uint32 gouraudTable = static_cast<uint32>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
 
+    const CoordS32 coordA{xa, ya};
+    const CoordS32 coordB{xb, yb};
+    const CoordS32 coordC{xc, yc};
+    const CoordS32 coordD{xd, yd};
+
     // fmt::println(
     // "VDP1: Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
     //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16);
 
-    if (VDP1IsQuadSystemClipped(xa, ya, xb, yb, xc, yc, xd, yd)) {
+    if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
         return;
     }
 
     // Interpolate linearly over edges A-D and B-C
-    for (QuadEdgesStepper edge{xa, ya, xb, yb, xc, yc, xd, yd}; edge.CanStep(); edge.Step()) {
-        const sint32 lx = edge.XMaj();
-        const sint32 ly = edge.YMaj();
-        const sint32 rx = edge.XMin();
-        const sint32 ry = edge.YMin();
+    for (QuadEdgesStepper edge{coordA, coordB, coordC, coordD}; edge.CanStep(); edge.Step()) {
+        const CoordS32 coordL{edge.XMaj(), edge.YMaj()};
+        const CoordS32 coordR{edge.XMin(), edge.YMin()};
 
         // Plot lines between the interpolated points
-        VDP1PlotLine(lx, ly, rx, ry, color, mode, gouraudTable);
+        VDP1PlotLine(coordL, coordR, color, mode, gouraudTable);
     }
 }
 
@@ -855,18 +866,23 @@ void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
     const sint32 yd = bit::sign_extend<16>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1A)) + ctx.localCoordY;
     const uint32 gouraudTable = static_cast<uint32>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
 
+    const CoordS32 coordA{xa, ya};
+    const CoordS32 coordB{xb, yb};
+    const CoordS32 coordC{xc, yc};
+    const CoordS32 coordD{xd, yd};
+
     // fmt::println(
     // "VDP1: Draw polylines: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
     //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, mode.u16);
 
-    if (VDP1IsQuadSystemClipped(xa, ya, xb, yb, xc, yc, xd, yd)) {
+    if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
         return;
     }
 
-    VDP1PlotLine(xa, ya, xb, yb, color, mode, gouraudTable);
-    VDP1PlotLine(xb, yb, xc, yc, color, mode, gouraudTable);
-    VDP1PlotLine(xc, yc, xd, yd, color, mode, gouraudTable);
-    VDP1PlotLine(xd, yd, xa, ya, color, mode, gouraudTable);
+    VDP1PlotLine(coordA, coordB, color, mode, gouraudTable);
+    VDP1PlotLine(coordB, coordC, color, mode, gouraudTable);
+    VDP1PlotLine(coordC, coordD, color, mode, gouraudTable);
+    VDP1PlotLine(coordD, coordA, color, mode, gouraudTable);
 }
 
 void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
@@ -880,14 +896,17 @@ void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
     const sint32 yb = bit::sign_extend<16>(VDP1ReadVRAM<uint16>(cmdAddress + 0x12)) + ctx.localCoordY;
     const uint32 gouraudTable = static_cast<uint32>(VDP1ReadVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
 
+    const CoordS32 coordA{xa, ya};
+    const CoordS32 coordB{xb, yb};
+
     // fmt::println("VDP1: Draw line: {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa, ya, xb, yb,
     //              color, gouraudTable, mode.u16);
 
-    if (VDP1IsLineSystemClipped(xa, ya, xb, yb)) {
+    if (VDP1IsLineSystemClipped(coordA, coordB)) {
         return;
     }
 
-    VDP1PlotLine(xa, ya, xb, yb, color, mode, gouraudTable);
+    VDP1PlotLine(coordA, coordB, color, mode, gouraudTable);
 }
 
 void VDP::VDP1Cmd_SetSystemClipping(uint32 cmdAddress) {
@@ -1018,7 +1037,7 @@ void VDP::VDP2LoadRotationParameterTables() {
 
     for (int i = 0; i < 2; i++) {
         RotationParams &params = m_VDP2.rotParams[i];
-        RotParamState &state = m_rotParamStates[i];
+        RotationParamState &state = m_rotParamStates[i];
 
         const bool readXst = readAll || params.readXst;
         const bool readYst = readAll || params.readYst;
@@ -1557,10 +1576,11 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState 
         // Compute integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 8u;
         const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - bgState.mosaicCounterY;
+        const CoordU32 scrollCoord{scrollX, scrollY};
 
         // Plot pixel
         layerState.pixels[x] = VDPFetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
-            bgParams, bgParams.pageBaseAddresses, scrollX, scrollY);
+            bgParams, bgParams.pageBaseAddresses, scrollCoord);
 
         // Increment horizontal coordinate
         fracScrollX += bgState.scrollIncH;
@@ -1612,9 +1632,10 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState 
         // Compute integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 8u;
         const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - bgState.mosaicCounterY;
+        const CoordU32 scrollCoord{scrollX, scrollY};
 
         // Plot pixel
-        layerState.pixels[x] = VDPFetchBitmapBGPixel<false, colorFormat, colorMode>(bgParams, scrollX, scrollY);
+        layerState.pixels[x] = VDPFetchBitmapBGPixel<false, colorFormat, colorMode>(bgParams, scrollCoord);
 
         // Increment horizontal coordinate
         fracScrollX += bgState.scrollIncH;
@@ -1646,10 +1667,11 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 16u;
         const uint32 scrollY = fracScrollY >> 16u;
+        const CoordU32 scrollCoord{scrollX, scrollY};
 
         // Plot pixel
         layerState.pixels[x] = VDPFetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
-            bgParams, rotParamState.pageBaseAddresses, scrollX, scrollY);
+            bgParams, rotParamState.pageBaseAddresses, scrollCoord);
     }
 }
 
@@ -1678,9 +1700,10 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 16u;
         const uint32 scrollY = fracScrollY >> 16u;
+        const CoordU32 scrollCoord{scrollX, scrollY};
 
         // Plot pixel
-        layerState.pixels[x] = VDPFetchBitmapBGPixel<true, colorFormat, colorMode>(bgParams, scrollX, scrollY);
+        layerState.pixels[x] = VDPFetchBitmapBGPixel<true, colorFormat, colorMode>(bgParams, scrollCoord);
     }
 }
 
@@ -1733,7 +1756,7 @@ Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint
 
 template <bool rot, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
 FORCE_INLINE VDP::Pixel VDP::VDPFetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses,
-                                                   uint32 scrollX, uint32 scrollY) {
+                                                   CoordU32 scrollCoord) {
     //      Map (NBGs)              Map (RBGs)
     // +---------+---------+   +----+----+----+----+   Normal and rotation BGs are divided into planes in the exact
     // |         |         |   | A  | B  | C  | D  |   configurations illustrated to the left.
@@ -1809,6 +1832,8 @@ FORCE_INLINE VDP::Pixel VDP::VDPFetchScrollBGPixel(const BGParams &bgParams, std
     static constexpr bool twoWordChar = charMode == CharacterMode::TwoWord;
     static constexpr bool extChar = charMode == CharacterMode::OneWordExtended;
 
+    auto [scrollX, scrollY] = scrollCoord;
+
     // Determine plane index from the scroll coordinates
     const uint32 planeX = bit::extract<9, planeMSB>(scrollX) >> bgParams.pageShiftH;
     const uint32 planeY = bit::extract<9, planeMSB>(scrollY) >> bgParams.pageShiftV;
@@ -1832,6 +1857,7 @@ FORCE_INLINE VDP::Pixel VDP::VDPFetchScrollBGPixel(const BGParams &bgParams, std
     // Determine dot coordinates
     const uint32 dotX = bit::extract<0, 2>(scrollX);
     const uint32 dotY = bit::extract<0, 2>(scrollY);
+    const CoordU32 dotCoord{dotX, dotY};
 
     // Fetch character
     const uint32 pageBaseAddress = pageBaseAddresses[plane];
@@ -1846,7 +1872,7 @@ FORCE_INLINE VDP::Pixel VDP::VDPFetchScrollBGPixel(const BGParams &bgParams, std
     Pixel pixel{};
     uint8 colorData{};
     pixel.color = VDP2FetchCharacterColor<colorFormat, colorMode>(bgParams.cramOffset, colorData, pixel.transparent, ch,
-                                                                  dotX, dotY, cellIndex);
+                                                                  dotCoord, cellIndex);
     pixel.transparent &= bgParams.enableTransparency;
 
     // Compute priority
@@ -1868,10 +1894,10 @@ FORCE_INLINE VDP::Pixel VDP::VDPFetchScrollBGPixel(const BGParams &bgParams, std
 }
 
 template <bool rot, ColorFormat colorFormat, uint32 colorMode>
-VDP::Pixel VDP::VDPFetchBitmapBGPixel(const BGParams &bgParams, uint32 scrollX, uint32 scrollY) {
+VDP::Pixel VDP::VDPFetchBitmapBGPixel(const BGParams &bgParams, CoordU32 scrollCoord) {
     // Fetch dot color from bitmap
     Pixel pixel{};
-    pixel.color = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, pixel.transparent, scrollX, scrollY);
+    pixel.color = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, pixel.transparent, scrollCoord);
     pixel.transparent &= bgParams.enableTransparency;
 
     // Compute priority
@@ -1952,8 +1978,11 @@ FORCE_INLINE VDP::Character VDP::VDP2FetchOneWordCharacter(const BGParams &bgPar
 
 template <ColorFormat colorFormat, uint32 colorMode>
 FORCE_INLINE Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &colorData, bool &transparent, Character ch,
-                                                   uint8 dotX, uint8 dotY, uint32 cellIndex) {
+                                                   CoordU32 dotCoord, uint32 cellIndex) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
+
+    auto [dotX, dotY] = dotCoord;
+
     assert(dotX < 8);
     assert(dotY < 8);
 
@@ -2006,8 +2035,10 @@ FORCE_INLINE Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &col
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-FORCE_INLINE Color888 VDP::VDP2FetchBitmapColor(const BGParams &bgParams, bool &transparent, uint32 dotX, uint32 dotY) {
+FORCE_INLINE Color888 VDP::VDP2FetchBitmapColor(const BGParams &bgParams, bool &transparent, CoordU32 dotCoord) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
+
+    auto [dotX, dotY] = dotCoord;
 
     // Bitmap data wraps around infinitely
     dotX &= bgParams.bitmapSizeH - 1;

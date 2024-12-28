@@ -10,6 +10,7 @@
 #include <satemu/util/size_ops.hpp>
 
 #include <array>
+#include <concepts>
 
 namespace satemu::vdp {
 
@@ -66,5 +67,14 @@ using FramebufferColor = uint32;
 // TODO: move these to a "renderer defs" header
 using CBRequestFramebuffer = util::Callback<FramebufferColor *(uint32 width, uint32 height)>;
 using CBFrameComplete = util::Callback<void(FramebufferColor *fb, uint32 width, uint32 height)>;
+
+template <std::integral T>
+struct Coord {
+    T x = 0;
+    T y = 0;
+};
+
+using CoordS32 = Coord<sint32>;
+using CoordU32 = Coord<uint32>;
 
 } // namespace satemu::vdp

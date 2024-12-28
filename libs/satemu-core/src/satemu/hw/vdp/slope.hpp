@@ -3,6 +3,8 @@
 #include <satemu/core_types.hpp>
 #include <satemu/util/inline.hpp>
 
+#include <satemu/hw/vdp/vdp_defs.hpp>
+
 #include <cmath>
 #include <utility>
 
@@ -25,7 +27,10 @@ public:
         return ((static_cast<sint64>(value) << 1) + 1) << (kFracBits - 1);
     }
 
-    FORCE_INLINE Slope(sint32 x1, sint32 y1, sint32 x2, sint32 y2) {
+    FORCE_INLINE Slope(CoordS32 coord1, CoordS32 coord2) {
+        auto [x1, y1] = coord1;
+        auto [x2, y2] = coord2;
+
         const sint32 dx = x2 - x1;
         const sint32 dy = y2 - y1;
 
@@ -69,6 +74,11 @@ public:
         return (xmajor ? mincounter : majcounter) >> kFracBits;
     }
 
+    // Retrieves the current X and Y coordinates (no fractional bits)
+    FORCE_INLINE CoordS32 Coord() const {
+        return {X(), Y()};
+    }
+
     // Retrieves the slope's longest span length
     FORCE_INLINE sint32 DMajor() const {
         return dmaj;
@@ -101,8 +111,10 @@ protected:
 // Steps over the pixels of a line.
 class LineStepper : public Slope {
 public:
-    FORCE_INLINE LineStepper(sint32 x1, sint32 y1, sint32 x2, sint32 y2)
-        : Slope(x1, y1, x2, y2) {
+    FORCE_INLINE LineStepper(CoordS32 coord1, CoordS32 coord2)
+        : Slope(coord1, coord2) {
+        auto [x1, y1] = coord1;
+        auto [x2, y2] = coord2;
 
         const bool samesign = (x1 > x2) == (y1 > y2);
         if (xmajor) {
@@ -130,6 +142,11 @@ public:
         return (FracY() - aayinc) >> kFracBits;
     }
 
+    // Returns the X and Y coordinates of the antialiased pixel
+    FORCE_INLINE CoordS32 AACoord() const {
+        return {AAX(), AAY()};
+    }
+
 private:
     sint64 aaxinc; // X increment for antialiasing
     sint64 aayinc; // Y increment for antialiasing
@@ -146,10 +163,9 @@ private:
 // other edge proportional to their lengths.
 class QuadEdgesStepper {
 public:
-    FORCE_INLINE QuadEdgesStepper(sint32 xa, sint32 ya, sint32 xb, sint32 yb, sint32 xc, sint32 yc, sint32 xd,
-                                  sint32 yd)
-        : majslope(xa, ya, xd, yd)
-        , minslope(xb, yb, xc, yc) {
+    FORCE_INLINE QuadEdgesStepper(CoordS32 coordA, CoordS32 coordB, CoordS32 coordC, CoordS32 coordD)
+        : majslope(coordA, coordD)
+        , minslope(coordB, coordC) {
 
         // Ensure the major slope is the longest
         swapped = majslope.dmaj < minslope.dmaj;
@@ -214,8 +230,8 @@ protected:
 // Steps over the pixels of a textured line, interpolating the texture's U coordinate based on the character width.
 class TexturedLineStepper : public LineStepper {
 public:
-    TexturedLineStepper(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint32 charSizeH, bool swapped)
-        : LineStepper(x1, y1, x2, y2) {
+    TexturedLineStepper(CoordS32 coord1, CoordS32 coord2, uint32 charSizeH, bool swapped)
+        : LineStepper(coord1, coord2) {
         u = swapped ? (charSizeH << kFracBits) : 0;
         uinc = SafeDiv(ToFrac(charSizeH), dmaj);
         if (swapped) {
@@ -249,9 +265,8 @@ public:
 // texture's V coordinate based on the character height.
 class TexturedQuadEdgesStepper : public QuadEdgesStepper {
 public:
-    TexturedQuadEdgesStepper(sint32 xa, sint32 ya, sint32 xb, sint32 yb, sint32 xc, sint32 yc, sint32 xd, sint32 yd,
-                             uint32 charSizeV)
-        : QuadEdgesStepper(xa, ya, xb, yb, xc, yc, xd, yd) {
+    TexturedQuadEdgesStepper(CoordS32 coordA, CoordS32 coordB, CoordS32 coordC, CoordS32 coordD, uint32 charSizeV)
+        : QuadEdgesStepper(coordA, coordB, coordC, coordD) {
         v = 0;
         vinc = SafeDiv(Slope::ToFrac(charSizeV), majslope.DMajor());
     }

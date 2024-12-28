@@ -699,12 +699,14 @@ private:
         bool flipV;         // Vertical flip
     };
 
+    // Common pixel data: color, transparency and priority.
     struct Pixel {
         Color888 color = {.u32 = 0};
         bool transparent = true;
         uint8 priority = 0;
     };
 
+    // Layer state, containing the pixel output for the current scanline.
     struct LayerState {
         LayerState() {
             Reset();
@@ -720,6 +722,8 @@ private:
         bool enabled;
     };
 
+    // Layer state specific to the sprite layer.
+    // Includes additional pixel attributes for each pixel in the scanline.
     struct SpriteLayerState {
         SpriteLayerState() {
             Reset();
@@ -738,6 +742,7 @@ private:
         alignas(16) std::array<Attributes, kMaxResH> attrs;
     };
 
+    // NBG layer state, including coordinate counters, increments and addresses.
     struct NormBGLayerState {
         NormBGLayerState() {
             Reset();
@@ -772,14 +777,9 @@ private:
         uint8 mosaicCounterY;
     };
 
-    struct Coord {
-        sint32 x = 0;
-        sint32 y = 0;
-    };
-
     // State for Rotation Parameters A and B.
-    struct RotParamState {
-        RotParamState() {
+    struct RotationParamState {
+        RotationParamState() {
             Reset();
         }
 
@@ -798,7 +798,7 @@ private:
         std::array<uint32, 16> pageBaseAddresses;
 
         // Precomputed screen coordinates (with 16 fractional bits).
-        alignas(16) std::array<Coord, kMaxResH> screenCoords;
+        alignas(16) std::array<CoordS32, kMaxResH> screenCoords;
 
         // Prefetched coefficient table line color data.
         // Filled in only if the coefficient table is enabled.
@@ -835,7 +835,7 @@ private:
     std::array<NormBGLayerState, 4> m_normBGLayerStates;
 
     // States for Rotation Parameters A and B.
-    std::array<RotParamState, 2> m_rotParamStates;
+    std::array<RotationParamState, 2> m_rotParamStates;
 
     // Framebuffer provided by the frontend to render the current frame into
     FramebufferColor *m_framebuffer;
@@ -861,18 +861,18 @@ private:
     // Processes the VDP1 command table.
     void VDP1ProcessCommands();
 
-    bool VDP1IsPixelUserClipped(sint32 x, sint32 y) const;
-    bool VDP1IsPixelSystemClipped(sint32 x, sint32 y) const;
-    bool VDP1IsLineSystemClipped(sint32 x1, sint32 y1, sint32 x2, sint32 y2) const;
-    bool VDP1IsQuadSystemClipped(sint32 x1, sint32 y1, sint32 x2, sint32 y2, sint32 x3, sint32 y3, sint32 x4,
-                                 sint32 y4) const;
+    bool VDP1IsPixelUserClipped(CoordS32 coord) const;
+    bool VDP1IsPixelSystemClipped(CoordS32 coord) const;
+    bool VDP1IsLineSystemClipped(CoordS32 coord1, CoordS32 coord2) const;
+    bool VDP1IsQuadSystemClipped(CoordS32 coord1, CoordS32 coord2, CoordS32 coord3, CoordS32 coord4) const;
 
-    void VDP1PlotPixel(sint32 x, sint32 y, uint16 color, VDP1Command::DrawMode mode, uint32 gouraudTable);
-    void VDP1PlotLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint16 color, VDP1Command::DrawMode mode,
-                      uint32 gouraudTable);
-    void VDP1PlotTexturedLine(sint32 x1, sint32 y1, sint32 x2, sint32 y2, uint32 colorBank,
-                              VDP1Command::Control control, VDP1Command::DrawMode mode, uint32 gouraudTable,
-                              uint32 charAddr, uint32 charSizeH, uint32 charSizeV, uint32 v, bool swapped);
+    // TODO: introduce a few structs to group pixel, line and texture parameters
+
+    void VDP1PlotPixel(CoordS32 coord, uint16 color, VDP1Command::DrawMode mode, uint32 gouraudTable);
+    void VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, uint16 color, VDP1Command::DrawMode mode, uint32 gouraudTable);
+    void VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, uint32 colorBank, VDP1Command::Control control,
+                              VDP1Command::DrawMode mode, uint32 gouraudTable, uint32 charAddr, uint32 charSizeH,
+                              uint32 charSizeV, uint32 v, bool swapped);
 
     // Individual VDP1 command processors
 
@@ -1003,8 +1003,8 @@ private:
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
     template <bool rot, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
-    Pixel VDPFetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses, uint32 scrollX,
-                                uint32 scrollY);
+    Pixel VDPFetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses,
+                                CoordU32 scrollCoord);
 
     // Fetches a bitmap background pixel at the given coordinates.
     //
@@ -1014,7 +1014,7 @@ private:
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
     template <bool rot, ColorFormat colorFormat, uint32 colorMode>
-    Pixel VDPFetchBitmapBGPixel(const BGParams &bgParams, uint32 scrollX, uint32 scrollY);
+    Pixel VDPFetchBitmapBGPixel(const BGParams &bgParams, CoordU32 scrollCoord);
 
     // Fetches a two-word character from VRAM.
     //
@@ -1044,8 +1044,8 @@ private:
     // colorFormat is the value of CHCTLA/CHCTLB.xxCHCNn.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    Color888 VDP2FetchCharacterColor(uint32 cramOffset, uint8 &colorData, bool &transparent, Character ch, uint8 dotX,
-                                     uint8 dotY, uint32 cellIndex);
+    Color888 VDP2FetchCharacterColor(uint32 cramOffset, uint8 &colorData, bool &transparent, Character ch,
+                                     CoordU32 dotCoord, uint32 cellIndex);
 
     // Fetches a color from a bitmap pixel.
     //
@@ -1055,7 +1055,7 @@ private:
     // colorFormat is the color format for pixel data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    Color888 VDP2FetchBitmapColor(const BGParams &bgParams, bool &transparent, uint32 dotX, uint32 dotY);
+    Color888 VDP2FetchBitmapColor(const BGParams &bgParams, bool &transparent, CoordU32 dotCoord);
 
     // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
     //
