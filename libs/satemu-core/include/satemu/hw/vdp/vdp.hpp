@@ -681,6 +681,24 @@ private:
         sint32 localCoordY;
     } m_VDP1RenderContext;
 
+    struct VDP1PixelParams {
+        VDP1Command::DrawMode mode;
+        uint16 color;
+        uint32 gouraudTable;
+    };
+
+    struct VDP1TexturedLineParams {
+        VDP1Command::Control control;
+        VDP1Command::DrawMode mode;
+        uint32 colorBank;
+        uint32 gouraudTable;
+        uint32 charAddr;
+        uint32 charSizeH;
+        uint32 charSizeV;
+        uint32 texV;
+        bool swapped;
+    };
+
     // Character modes, a combination of Character Size from the Character Control Register (CHCTLA-B) and Character
     // Number Supplement from the Pattern Name Control Register (PNCN0-3/PNCR)
     enum class CharacterMode {
@@ -815,6 +833,8 @@ private:
         uint32 KA;
     };
 
+    enum RotParamSelector { RotParamA, RotParamB };
+
     // Layer state indices
     enum Layer { LYR_Sprite, LYR_RBG0, LYR_NBG0_RBG1, LYR_NBG1_EXBG, LYR_NBG2, LYR_NBG3, LYR_Back };
 
@@ -865,24 +885,6 @@ private:
     bool VDP1IsPixelSystemClipped(CoordS32 coord) const;
     bool VDP1IsLineSystemClipped(CoordS32 coord1, CoordS32 coord2) const;
     bool VDP1IsQuadSystemClipped(CoordS32 coord1, CoordS32 coord2, CoordS32 coord3, CoordS32 coord4) const;
-
-    struct VDP1PixelParams {
-        VDP1Command::DrawMode mode;
-        uint16 color;
-        uint32 gouraudTable;
-    };
-
-    struct VDP1TexturedLineParams {
-        VDP1Command::Control control;
-        VDP1Command::DrawMode mode;
-        uint32 colorBank;
-        uint32 gouraudTable;
-        uint32 charAddr;
-        uint32 charSizeH;
-        uint32 charSizeV;
-        uint32 texV;
-        bool swapped;
-    };
 
     void VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams);
     void VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams);
@@ -940,15 +942,19 @@ private:
 
     // Draws the current VDP2 scanline of the specified normal background layer.
     //
-    // bgIndex specifies the normal background index, from 0 to 3.
     // colorMode is the CRAM color mode.
-    void VDP2DrawNormalBG(uint32 bgIndex, uint32 colorMode);
+    //
+    // bgIndex specifies the normal background index, from 0 to 3.
+    template <uint32 bgIndex>
+    void VDP2DrawNormalBG(uint32 colorMode);
 
     // Draws the current VDP2 scanline of the specified rotation background layer.
     //
-    // bgIndex specifies the rotation background index, from 0 to 1.
     // colorMode is the CRAM color mode.
-    void VDP2DrawRotationBG(uint32 bgIndex, uint32 colorMode);
+    //
+    // bgIndex specifies the rotation background index, from 0 to 1.
+    template <uint32 bgIndex>
+    void VDP2DrawRotationBG(uint32 colorMode);
 
     // Composes the current VDP2 scanline out of the rendered lines.
     void VDP2ComposeLine();
@@ -982,11 +988,12 @@ private:
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
     //
+    // selRotParam enables dynamic rotation parameter selection (for RBG0).
     // charMode indicates if character patterns use two words or one word with standard or extended character data.
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
-    template <CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
+    template <bool selRotParam, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
     void VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState);
 
     // Draws a rotation bitmap BG scanline.
@@ -994,10 +1001,17 @@ private:
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
     //
+    // selRotParam enables dynamic rotation parameter selection (for RBG0).
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
-    template <ColorFormat colorFormat, uint32 colorMode>
+    template <bool selRotParam, ColorFormat colorFormat, uint32 colorMode>
     void VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerState &layerState);
+
+    // Selects a rotation parameter set based on the current parameter selection mode.
+    //
+    // bgParams contains the parameters for the BG to draw.
+    // x is the horizontal coordinate of the pixel
+    RotParamSelector VDP2SelectRotationParameter(const BGParams &bgParams, uint32 x);
 
     // Fetches a rotation coefficient entry from VRAM or CRAM (depending on RAMCTL.CRKTE) using the specified rotation
     // parameters.

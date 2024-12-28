@@ -1217,14 +1217,14 @@ void VDP::VDP2DrawLine() {
 
     // Draw background layers
     if (m_VDP2.bgEnabled[5]) {
-        VDP2DrawRotationBG(0, colorMode); // RBG0
-        VDP2DrawRotationBG(1, colorMode); // RBG1
+        VDP2DrawRotationBG<0>(colorMode); // RBG0
+        VDP2DrawRotationBG<1>(colorMode); // RBG1
     } else {
-        VDP2DrawRotationBG(0, colorMode); // RBG0
-        VDP2DrawNormalBG(0, colorMode);   // NBG0
-        VDP2DrawNormalBG(1, colorMode);   // NBG1
-        VDP2DrawNormalBG(2, colorMode);   // NBG2
-        VDP2DrawNormalBG(3, colorMode);   // NBG3
+        VDP2DrawRotationBG<0>(colorMode); // RBG0
+        VDP2DrawNormalBG<0>(colorMode);   // NBG0
+        VDP2DrawNormalBG<1>(colorMode);   // NBG1
+        VDP2DrawNormalBG<2>(colorMode);   // NBG2
+        VDP2DrawNormalBG<3>(colorMode);   // NBG3
     }
 
     // Compose image
@@ -1271,8 +1271,9 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
     }
 }
 
-FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 bgIndex, uint32 colorMode) {
-    assert(bgIndex < 4);
+template <uint32 bgIndex>
+FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 colorMode) {
+    static_assert(bgIndex < 4, "Invalid NBG index");
 
     using FnDraw = void (VDP::*)(const BGParams &, LayerState &, NormBGLayerState &);
 
@@ -1282,10 +1283,10 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 bgIndex, uint32 colorMode) {
         std::array<std::array<std::array<std::array<FnDraw, 4>, 8>, 2>, 3> arr{};
 
         util::constexpr_for<3 * 2 * 8 * 4>([&](auto index) {
-            const uint32 chm = index() % 3;
-            const uint32 fcc = bit::extract<0>(index() / 3);
-            const uint32 cf = bit::extract<1, 3>(index() / 3);
-            const uint32 clm = bit::extract<4, 5>(index() / 3);
+            const uint32 fcc = bit::extract<0>(index());
+            const uint32 cf = bit::extract<1, 3>(index());
+            const uint32 clm = bit::extract<4, 5>(index());
+            const uint32 chm = bit::extract<6, 7>(index());
 
             const CharacterMode chmEnum = static_cast<CharacterMode>(chm);
             const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
@@ -1326,7 +1327,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 bgIndex, uint32 colorMode) {
         bgState.mosaicCounterY = 0;
     }
 
-    if (bgIndex < 2) {
+    if constexpr (bgIndex < 2) {
         VDP2UpdateLineScreenScroll(bgParams, bgState);
     }
 
@@ -1344,33 +1345,34 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 bgIndex, uint32 colorMode) {
     }
 }
 
-FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 bgIndex, uint32 colorMode) {
-    assert(bgIndex < 2);
+template <uint32 bgIndex>
+FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 colorMode) {
+    static_assert(bgIndex < 2, "Invalid RBG index");
 
     using FnDraw = void (VDP::*)(const BGParams &, LayerState &);
 
     // Lookup table of scroll BG drawing functions
-    // Indexing: [twoWordChar][fourCellChar][extChar][colorFormat][colorMode]
+    // Indexing: [charMode][fourCellChar][colorFormat][colorMode]
     static constexpr auto fnDrawScroll = [] {
         std::array<std::array<std::array<std::array<FnDraw, 4>, 8>, 2>, 3> arr{};
 
         util::constexpr_for<3 * 2 * 8 * 4>([&](auto index) {
-            const uint32 chm = index() % 3;
-            const uint32 fcc = bit::extract<0>(index() / 3);
-            const uint32 cf = bit::extract<1, 3>(index() / 3);
-            const uint32 clm = bit::extract<4, 5>(index() / 3);
+            const uint32 fcc = bit::extract<0>(index());
+            const uint32 cf = bit::extract<1, 3>(index());
+            const uint32 clm = bit::extract<4, 5>(index());
+            const uint32 chm = bit::extract<6, 7>(index());
 
             const CharacterMode chmEnum = static_cast<CharacterMode>(chm);
             const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = clm <= 2 ? clm : 2;
-            arr[chm][fcc][cf][clm] = &VDP::VDP2DrawRotationScrollBG<chmEnum, fcc, cfEnum, colorMode>;
+            arr[chm][fcc][cf][clm] = &VDP::VDP2DrawRotationScrollBG<bgIndex, chmEnum, fcc, cfEnum, colorMode>;
         });
 
         return arr;
     }();
 
     // Lookup table of bitmap BG drawing functions
-    // Indexing: [colorFormat]
+    // Indexing: [colorFormat][colorMode]
     static constexpr auto fnDrawBitmap = [] {
         std::array<std::array<FnDraw, 4>, 8> arr{};
 
@@ -1380,7 +1382,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 bgIndex, uint32 colorMode) {
 
             const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = cm <= 2 ? cm : 2;
-            arr[cf][cm] = &VDP::VDP2DrawRotationBitmapBG<cfEnum, colorMode>;
+            arr[cf][cm] = &VDP::VDP2DrawRotationBitmapBG<bgIndex, cfEnum, colorMode>;
         });
 
         return arr;
@@ -1698,21 +1700,20 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState 
     }
 }
 
-template <VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
+template <bool selRotParam, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState) {
-    // TODO: for RBG0, select rotation parameters based on m_VDP2.commonRotParams.rotParamMode
-    // for RBG1, always use parameter B
-
-    // const auto &commonRotParams = m_VDP2.commonRotParams;
-    const auto &rotParams = m_VDP2.rotParams[0];
-    auto &rotParamState = m_rotParamStates[0];
+    const CommonRotationParams &commonRotParams = m_VDP2.commonRotParams;
 
     for (uint32 x = 0; x < m_HRes; x++) {
         auto &pixel = layerState.pixels[x];
 
+        const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(bgParams, x) : RotParamA;
+
+        const RotationParams &rotParams = m_VDP2.rotParams[rotParamSelector];
+        const RotationParamState &rotParamState = m_rotParamStates[rotParamSelector];
+
         // Handle transparent pixels in coefficient table
         if (rotParams.coeffTableEnable && rotParamState.transparent[x]) {
-            // TODO: if m_VDP2.commonRotParams.rotParamMode is Coefficient, switch to rot param B instead
             pixel.transparent = true;
             continue;
         }
@@ -1725,27 +1726,31 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
         const uint32 scrollY = fracScrollY >> 16u;
         const CoordU32 scrollCoord{scrollX, scrollY};
 
-        // Plot pixel
-        layerState.pixels[x] = VDPFetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
-            bgParams, rotParamState.pageBaseAddresses, scrollCoord);
+        if (commonRotParams.rotParamMode != RotationParamMode::Window && VDP2IsInsideWindow(bgParams, x)) {
+            // Make pixel transparent if inside a window and not using window-based rotation parameter selection
+            layerState.pixels[x].transparent = true;
+        } else {
+            // Plot pixel
+            layerState.pixels[x] = VDPFetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
+                bgParams, rotParamState.pageBaseAddresses, scrollCoord);
+        }
     }
 }
 
-template <ColorFormat colorFormat, uint32 colorMode>
+template <bool selRotParam, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerState &layerState) {
-    // TODO: for RBG0, select rotation parameters based on m_VDP2.commonRotParams.rotParamMode
-    // for RBG1, always use parameter B
-
-    // const auto &commonRotParams = m_VDP2.commonRotParams;
-    const auto &rotParams = m_VDP2.rotParams[0];
-    auto &rotParamState = m_rotParamStates[0];
+    const CommonRotationParams &commonRotParams = m_VDP2.commonRotParams;
 
     for (uint32 x = 0; x < m_HRes; x++) {
         auto &pixel = layerState.pixels[x];
 
+        const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(bgParams, x) : RotParamA;
+
+        const RotationParams &rotParams = m_VDP2.rotParams[rotParamSelector];
+        const RotationParamState &rotParamState = m_rotParamStates[rotParamSelector];
+
         // Handle transparent pixels in coefficient table
         if (rotParams.coeffTableEnable && rotParamState.transparent[x]) {
-            // TODO: if m_VDP2.commonRotParams.rotParamMode is Coefficient, switch to rot param B instead
             pixel.transparent = true;
             continue;
         }
@@ -1758,8 +1763,26 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
         const uint32 scrollY = fracScrollY >> 16u;
         const CoordU32 scrollCoord{scrollX, scrollY};
 
-        // Plot pixel
-        layerState.pixels[x] = VDPFetchBitmapBGPixel<true, colorFormat, colorMode>(bgParams, scrollCoord);
+        if (commonRotParams.rotParamMode != RotationParamMode::Window && VDP2IsInsideWindow(bgParams, x)) {
+            // Make pixel transparent if inside a window and not using window-based rotation parameter selection
+            layerState.pixels[x].transparent = true;
+        } else {
+            // Plot pixel
+            layerState.pixels[x] = VDPFetchBitmapBGPixel<true, colorFormat, colorMode>(bgParams, scrollCoord);
+        }
+    }
+}
+
+VDP::RotParamSelector VDP::VDP2SelectRotationParameter(const BGParams &bgParams, uint32 x) {
+    const CommonRotationParams &commonRotParams = m_VDP2.commonRotParams;
+
+    using enum RotationParamMode;
+    switch (commonRotParams.rotParamMode) {
+    case RotationParamA: return RotParamA;
+    case RotationParamB: return RotParamB;
+    case Coefficient:
+        return m_VDP2.rotParams[0].coeffTableEnable && m_rotParamStates[0].transparent[x] ? RotParamB : RotParamA;
+    case Window: return VDP2IsInsideWindow(bgParams, x) ? RotParamB : RotParamA;
     }
 }
 
