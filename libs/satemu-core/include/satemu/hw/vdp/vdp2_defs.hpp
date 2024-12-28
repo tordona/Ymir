@@ -711,6 +711,20 @@ struct ColorCalcParams {
     bool useAdditiveBlend;
 };
 
+struct WindowParams {
+    WindowParams() {
+        Reset();
+    }
+
+    void Reset() {
+        startX = startY = 0;
+        endX = endY = 0;
+    }
+
+    uint16 startX, startY;
+    uint16 endX, endY;
+};
+
 // TODO: consider splitting unions into individual fields for performance
 
 // 180000   TVMD    TV Screen Mode
@@ -965,68 +979,6 @@ union ZMCTL_t {
         uint16 N1ZMQT : 1;
         uint16 _rsvd10_15 : 6;
     };
-};
-
-// 1800C0   WPSX0   Window 0 Horizontal Start Point
-// 1800C4   WPEX0   Window 0 Horizontal End Point
-// 1800C8   WPSX1   Window 1 Horizontal Start Point
-// 1800CC   WPEX1   Window 1 Horizontal End Point
-//
-//   bits   r/w  code          description
-//  15-10        -             Reserved, must be zero
-//    9-0     W  WxSX9-0       Window x Start/End Horizontal Coordinate
-//
-// Valid coordinate bits vary depending on the screen mode:
-//   Normal: bits 8-0 shifted left by 1; bit 0 is invalid
-//   Hi-Res: bits 9-0
-//   Excl. Normal: bits 8-0; bit 9 is invalid
-//   Excl. Hi-Res: bits 9-1 shifted right by 1; bit 9 is invalid
-//
-// 1800C2   WPSY0   Window 0 Vertical Start Point
-// 1800C6   WPEY0   Window 0 Vertical End Point
-// 1800CA   WPSY1   Window 1 Vertical Start Point
-// 1800CE   WPEY1   Window 1 Vertical End Point
-//
-//   bits   r/w  code          description
-//   15-9        -             Reserved, must be zero
-//    8-0     W  WxSY8-0       Window x Start/End Vertical Coordinate
-//
-// Double-density interlace mode uses bits 7-0 shifted left by 1; bit 0 is invalid.
-// All other modes use bits 8-0 unmodified.
-union WPXY_t {
-    uint64 u64;
-    struct {
-        union {
-            uint16 u16;
-            struct {
-                uint16 WxSXn : 10;
-                uint16 _rsvd10_15 : 6;
-            };
-        } S;
-        union {
-            uint16 u16;
-            struct {
-                uint16 WxEXn : 10;
-                uint16 _rsvd10_15 : 6;
-            };
-        } E;
-    } X;
-    struct {
-        union {
-            uint16 u16;
-            struct {
-                uint16 WxSYn : 10;
-                uint16 _rsvd10_15 : 6;
-            };
-        } S;
-        union {
-            uint16 u16;
-            struct {
-                uint16 WxEYn : 10;
-                uint16 _rsvd10_15 : 6;
-            };
-        } E;
-    } Y;
 };
 
 // 1800D0   WCTLA   NBG0 and NBG1 Window Control

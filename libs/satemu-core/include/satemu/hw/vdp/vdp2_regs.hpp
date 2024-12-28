@@ -20,8 +20,6 @@ struct VDP2Regs {
         CYCB0.u32 = 0x0;
         CYCB1.u32 = 0x0;
         ZMCTL.u16 = 0x0;
-        WPXY0.u64 = 0x0;
-        WPXY1.u64 = 0x0;
         WCTL.u64 = 0x0;
         LWTA0.u32 = 0x0;
         LWTA1.u32 = 0x0;
@@ -39,6 +37,10 @@ struct VDP2Regs {
             param.Reset();
         }
         commonRotParams.Reset();
+
+        for (auto &param : windowParams) {
+            param.Reset();
+        }
 
         verticalCellScrollTableAddress = 0;
         cellScrollTableAddress = 0;
@@ -1124,12 +1126,12 @@ struct VDP2Regs {
     //   A = Rotation Parameter A (OVPNRA)
     //   B = Rotation Parameter B (OVPNRB)
 
-    FORCE_INLINE uint16 ReadOVPNRn(uint8 offset) const {
-        return rotParams[offset].screenOverPatternName;
+    FORCE_INLINE uint16 ReadOVPNRn(uint8 index) const {
+        return rotParams[index].screenOverPatternName;
     }
 
-    FORCE_INLINE void WriteOVPNRn(uint8 offset, uint16 value) {
-        rotParams[offset].screenOverPatternName = value;
+    FORCE_INLINE void WriteOVPNRn(uint8 index, uint16 value) {
+        rotParams[index].screenOverPatternName = value;
     }
 
     // 1800BC   RPTAU   Rotation Parameters Table Address (upper)
@@ -1160,15 +1162,66 @@ struct VDP2Regs {
         bit::deposit_into<2, 16>(commonRotParams.baseAddress, bit::extract<1, 15>(value));
     }
 
-    /**/          // 1800C0   WPSX0   Window 0 Horizontal Start Point
-                  // 1800C2   WPSY0   Window 0 Vertical Start Point
-                  // 1800C4   WPEX0   Window 0 Horizontal End Point
-    WPXY_t WPXY0; // 1800C6   WPEY0   Window 0 Vertical End Point
-                  // 1800C8   WPSX1   Window 1 Horizontal Start Point
-                  // 1800CA   WPSY1   Window 1 Vertical Start Point
-                  // 1800CC   WPEX1   Window 1 Horizontal End Point
-    WPXY_t WPXY1; // 1800CE   WPEY1   Window 1 Vertical End Point
-                  // 1800D0   WCTLA   NBG0 and NBG1 Window Control
+    // 1800C0   WPSX0   Window 0 Horizontal Start Point
+    // 1800C4   WPEX0   Window 0 Horizontal End Point
+    // 1800C8   WPSX1   Window 1 Horizontal Start Point
+    // 1800CC   WPEX1   Window 1 Horizontal End Point
+    //
+    //   bits   r/w  code          description
+    //  15-10        -             Reserved, must be zero
+    //    9-0     W  WxSX9-0       Window x Start/End Horizontal Coordinate
+    //
+    // Valid coordinate bits vary depending on the screen mode:
+    //   Normal: bits 8-0 shifted left by 1; bit 0 is invalid
+    //   Hi-Res: bits 9-0
+    //   Excl. Normal: bits 8-0; bit 9 is invalid
+    //   Excl. Hi-Res: bits 9-1 shifted right by 1; bit 9 is invalid
+    //
+    // 1800C2   WPSY0   Window 0 Vertical Start Point
+    // 1800C6   WPEY0   Window 0 Vertical End Point
+    // 1800CA   WPSY1   Window 1 Vertical Start Point
+    // 1800CE   WPEY1   Window 1 Vertical End Point
+    //
+    //   bits   r/w  code          description
+    //   15-9        -             Reserved, must be zero
+    //    8-0     W  WxSY8-0       Window x Start/End Vertical Coordinate
+    //
+    // Double-density interlace mode uses bits 7-0 shifted left by 1; bit 0 is invalid.
+    // All other modes use bits 8-0 unmodified.
+
+    FORCE_INLINE uint16 ReadWPSXn(uint8 index) const {
+        return windowParams[index].startX;
+    }
+
+    FORCE_INLINE void WriteWPSXn(uint8 index, uint16 value) {
+        windowParams[index].startX = bit::extract<0, 9>(value);
+    }
+
+    FORCE_INLINE uint16 ReadWPEXn(uint8 index) const {
+        return windowParams[index].endX;
+    }
+
+    FORCE_INLINE void WriteWPEXn(uint8 index, uint16 value) {
+        windowParams[index].endX = bit::extract<0, 9>(value);
+    }
+
+    FORCE_INLINE uint16 ReadWPSYn(uint8 index) const {
+        return windowParams[index].startY;
+    }
+
+    FORCE_INLINE void WriteWPSYn(uint8 index, uint16 value) {
+        windowParams[index].startY = bit::extract<0, 9>(value);
+    }
+
+    FORCE_INLINE uint16 ReadWPEYn(uint8 index) const {
+        return windowParams[index].endY;
+    }
+
+    FORCE_INLINE void WriteWPEYn(uint8 index, uint16 value) {
+        windowParams[index].endY = bit::extract<0, 9>(value);
+    }
+
+    /**/          // 1800D0   WCTLA   NBG0 and NBG1 Window Control
                   // 1800D2   WCTLB   NBG2 and NBG3 Window Control
                   // 1800D4   WCTLC   RBG0 and Sprite Window Control
     WCTL_t WCTL;  // 1800D6   WCTLD   Rotation Window and Color Calculation Window Control
@@ -1775,6 +1828,9 @@ struct VDP2Regs {
     // Rotation Parameters A and B
     std::array<RotationParams, 2> rotParams;
     CommonRotationParams commonRotParams;
+
+    // Window 0 and 1 parameters
+    std::array<WindowParams, 2> windowParams;
 
     // Vertical cell scroll table base address.
     // Only valid for NBG0 and NBG1.

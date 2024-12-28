@@ -269,14 +269,14 @@ public:
         case 0x0BA: return m_VDP2.ReadOVPNRn(1); // write-only?
         case 0x0BC: return m_VDP2.ReadRPTAU();   // write-only?
         case 0x0BE: return m_VDP2.ReadRPTAL();   // write-only?
-        case 0x0C0: return m_VDP2.WPXY0.X.S.u16; // write-only?
-        case 0x0C2: return m_VDP2.WPXY0.X.E.u16; // write-only?
-        case 0x0C4: return m_VDP2.WPXY0.Y.S.u16; // write-only?
-        case 0x0C6: return m_VDP2.WPXY0.Y.E.u16; // write-only?
-        case 0x0C8: return m_VDP2.WPXY1.X.S.u16; // write-only?
-        case 0x0CA: return m_VDP2.WPXY1.X.E.u16; // write-only?
-        case 0x0CC: return m_VDP2.WPXY1.Y.S.u16; // write-only?
-        case 0x0CE: return m_VDP2.WPXY1.Y.E.u16; // write-only?
+        case 0x0C0: return m_VDP2.ReadWPSXn(0);  // write-only?
+        case 0x0C2: return m_VDP2.ReadWPEXn(0);  // write-only?
+        case 0x0C4: return m_VDP2.ReadWPSYn(0);  // write-only?
+        case 0x0C6: return m_VDP2.ReadWPEYn(0);  // write-only?
+        case 0x0C8: return m_VDP2.ReadWPSXn(1);  // write-only?
+        case 0x0CA: return m_VDP2.ReadWPEXn(1);  // write-only?
+        case 0x0CC: return m_VDP2.ReadWPSYn(1);  // write-only?
+        case 0x0CE: return m_VDP2.ReadWPEYn(1);  // write-only?
         case 0x0D0: return m_VDP2.WCTL.A.u16;    // write-only?
         case 0x0D2: return m_VDP2.WCTL.B.u16;    // write-only?
         case 0x0D4: return m_VDP2.WCTL.C.u16;    // write-only?
@@ -425,14 +425,14 @@ public:
         case 0x0BA: m_VDP2.WriteOVPNRn(1, value); break;
         case 0x0BC: m_VDP2.WriteRPTAU(value); break;
         case 0x0BE: m_VDP2.WriteRPTAL(value); break;
-        case 0x0C0: m_VDP2.WPXY0.X.S.u16 = value & 0x03FF; break;
-        case 0x0C2: m_VDP2.WPXY0.X.E.u16 = value & 0x03FF; break;
-        case 0x0C4: m_VDP2.WPXY0.Y.S.u16 = value & 0x01FF; break;
-        case 0x0C6: m_VDP2.WPXY0.Y.E.u16 = value & 0x01FF; break;
-        case 0x0C8: m_VDP2.WPXY1.X.S.u16 = value & 0x03FF; break;
-        case 0x0CA: m_VDP2.WPXY1.X.E.u16 = value & 0x03FF; break;
-        case 0x0CC: m_VDP2.WPXY1.Y.S.u16 = value & 0x01FF; break;
-        case 0x0CE: m_VDP2.WPXY1.Y.E.u16 = value & 0x01FF; break;
+        case 0x0C0: m_VDP2.WriteWPSXn(0, value); break;
+        case 0x0C2: m_VDP2.WriteWPEXn(0, value); break;
+        case 0x0C4: m_VDP2.WriteWPSYn(0, value); break;
+        case 0x0C6: m_VDP2.WriteWPEYn(0, value); break;
+        case 0x0C8: m_VDP2.WriteWPSXn(1, value); break;
+        case 0x0CA: m_VDP2.WriteWPEXn(1, value); break;
+        case 0x0CC: m_VDP2.WriteWPSYn(1, value); break;
+        case 0x0CE: m_VDP2.WriteWPEYn(1, value); break;
         case 0x0D0: m_VDP2.WCTL.A.u16 = value & 0xBFBF; break;
         case 0x0D2: m_VDP2.WCTL.B.u16 = value & 0xBFBF; break;
         case 0x0D4: m_VDP2.WCTL.C.u16 = value & 0xBFBF; break;
