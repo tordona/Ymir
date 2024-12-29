@@ -704,7 +704,6 @@ private:
         uint32 charSizeV;
         uint32 texV;
         uint64 texFracV;
-        bool swapped;
     };
 
     // Character modes, a combination of Character Size from the Character Control Register (CHCTLA-B) and Character

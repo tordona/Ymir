@@ -426,16 +426,19 @@ struct Sandbox {
             DrawPixel(dx, dy, 0xff4fb6);
         }
 
-        bool swapped;
+        // bool swapped;
         bool first = true;
         for (QuadEdgesStepper edge{coordA, coordB, coordC, coordD}; edge.CanStep(); edge.Step()) {
-            const CoordS32 coordL{edge.XMaj(), edge.YMaj()};
-            const CoordS32 coordR{edge.XMin(), edge.YMin()};
+            const CoordS32 coordL{edge.LX(), edge.LY()};
+            const CoordS32 coordR{edge.RX(), edge.RY()};
 
             bool firstPixel = true;
             for (LineStepper line{coordL, coordR}; line.CanStep(); line.Step()) {
                 auto [x, y] = line.Coord();
-                const uint32 color = firstPixel ? 0xc7997c : first ? 0x96674a : 0x75492e;
+                // const uint32 color = firstPixel ? 0xc7997c : first ? 0x96674a : 0x75492e;
+                const uint32 color = ((line.FracPos() >> 8ll) & 0xFF) | (((edge.FracPos() >> 8ll) & 0xFF) << 8u) |
+                                     (firstPixel * 0xFF0000) | (first * 0x7F0000);
+
                 DrawPixel(x, y, color);
                 if (antialias && line.NeedsAntiAliasing()) {
                     auto [aax, aay] = line.AACoord();
@@ -444,7 +447,7 @@ struct Sandbox {
                 firstPixel = false;
             }
             if (first) {
-                swapped = edge.Swapped();
+                // swapped = edge.Swapped();
                 first = false;
             }
         }
@@ -466,9 +469,9 @@ struct Sandbox {
             DrawPixel(dx, dy, 0xff4fb6);
         }
 
-        if (swapped) {
+        /*if (swapped) {
             DrawPixel((ax + bx + cx + dx) / 4, (ay + by + cy + dy) / 4, 0xFFFFFF);
-        }
+        }*/
 
         lastTicks = SDL_GetTicks();
     }
@@ -655,7 +658,7 @@ int main(int argc, char **argv) {
     }
     runEmulator(*saturn);
 
-    //runSandbox();
+    // runSandbox();
 
     return EXIT_SUCCESS;
 }

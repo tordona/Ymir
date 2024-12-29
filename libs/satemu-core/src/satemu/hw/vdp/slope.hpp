@@ -64,6 +64,11 @@ public:
         return majcounter != majcounterend;
     }
 
+    // Returns the current fractional position in the line, where 0.0 is the start point and 1.0 is the end point.
+    FORCE_INLINE uint64 FracPos() const {
+        return SafeDiv(kFracOne - dmaj - 1 - (majcounterend - majcounter) * (majinc >> kFracBits), dmaj + 1);
+    }
+
     // Retrieves the current X coordinate (no fractional bits)
     FORCE_INLINE sint32 X() const {
         return (xmajor ? majcounter : mincounter) >> kFracBits;
@@ -86,7 +91,7 @@ public:
 
 protected:
     sint32 dmaj;   // major span of the slope: max(abs(dx), abs(dy))
-    sint64 majinc; // fractional increment on the major axis (+1 or -1)
+    sint64 majinc; // fractional increment on the major axis (+1.0 or -1.0)
     sint64 mininc; // fractional increment on the minor axis
 
     bool xmajor; // true if abs(dx) >= abs(dy)
@@ -147,11 +152,6 @@ public:
         return {AAX(), AAY()};
     }
 
-    // Returns the current fractional position in the line, where 0.0 is the start point and 1.0 is the end point.
-    FORCE_INLINE uint64 FracPos() const {
-        return SafeDiv(kFracOne - (majcounterend - majcounter) * majinc, dmaj);
-    }
-
 private:
     sint64 aaxinc; // X increment for antialiasing
     sint64 aayinc; // Y increment for antialiasing
@@ -169,14 +169,13 @@ private:
 class QuadEdgesStepper {
 public:
     FORCE_INLINE QuadEdgesStepper(CoordS32 coordA, CoordS32 coordB, CoordS32 coordC, CoordS32 coordD)
-        : majslope(coordA, coordD)
-        , minslope(coordB, coordC) {
+        : slopeL(coordA, coordD)
+        , slopeR(coordB, coordC) {
 
-        // Ensure the major slope is the longest
-        swapped = majslope.dmaj < minslope.dmaj;
-        if (swapped) {
-            std::swap(majslope, minslope);
-        }
+        swapped = slopeL.dmaj < slopeR.dmaj;
+
+        Slope &majslope = MajSlope();
+        Slope &minslope = MinSlope();
 
         minmajinc = SafeDiv(minslope.majinc * minslope.dmaj, majslope.dmaj);
         minmininc = SafeDiv(minslope.mininc * minslope.dmaj, majslope.dmaj);
@@ -187,49 +186,76 @@ public:
     // The minor slope is stepped in proportion to the major slope.
     // Should not be invoked when CanStep() returns false
     FORCE_INLINE void Step() {
-        majslope.Step();
+        MajSlope().Step();
+
         // Step minor slope by a fraction proportional to minslope.dmaj / majslope.dmaj
+        Slope &minslope = MinSlope();
         minslope.majcounter += minmajinc;
         minslope.mincounter += minmininc;
     }
 
     // Determines if the edge can be stepped
     FORCE_INLINE bool CanStep() const {
-        return majslope.CanStep();
+        return MajSlope().CanStep();
     }
 
-    // Retrieves the current X coordinate of the major slope
-    FORCE_INLINE sint32 XMaj() const {
-        return majslope.X();
+    // Retrieves the current X coordinate of the left slope
+    FORCE_INLINE sint32 LX() const {
+        return slopeL.X();
     }
 
-    // Retrieves the current Y coordinate of the major slope
-    FORCE_INLINE sint32 YMaj() const {
-        return majslope.Y();
+    // Retrieves the current Y coordinate of the left slope
+    FORCE_INLINE sint32 LY() const {
+        return slopeL.Y();
     }
 
-    // Retrieves the current X coordinate of the minor slope
-    FORCE_INLINE sint32 XMin() const {
-        return minslope.X();
+    // Retrieves the current X coordinate of the right slope
+    FORCE_INLINE sint32 RX() const {
+        return slopeR.X();
     }
 
-    // Retrieves the current Y coordinate of the minor slope
-    FORCE_INLINE sint32 YMin() const {
-        return minslope.Y();
+    // Retrieves the current Y coordinate of the right slope
+    FORCE_INLINE sint32 RY() const {
+        return slopeR.Y();
     }
 
     // Determines if the left and right edges have been swapped
-    FORCE_INLINE bool Swapped() const {
+    /*FORCE_INLINE bool Swapped() const {
         return swapped;
+    }*/
+
+    // Returns the current fractional position in the line, where 0.0 is the start point and 1.0 is the end point.
+    FORCE_INLINE uint64 FracPos() const {
+        return MajSlope().FracPos();
     }
 
-    Slope majslope; // slope with the longest span
-    Slope minslope; // slope with the shortest span
-
 protected:
+    Slope slopeL; // left slope (A-D)
+    Slope slopeR; // right slope (B-C)
+
     sint64 minmajinc, minmininc; // fractional minor slope interpolation increments
 
     bool swapped; // whether the original slopes have been swapped
+
+    // Returns the slope with the longest span
+    FORCE_INLINE Slope &MajSlope() {
+        return swapped ? slopeR : slopeL;
+    }
+
+    // Returns the slope with the shortest span
+    FORCE_INLINE Slope &MinSlope() {
+        return swapped ? slopeL : slopeR;
+    }
+
+    // Returns the slope with the longest span
+    FORCE_INLINE const Slope &MajSlope() const {
+        return swapped ? slopeR : slopeL;
+    }
+
+    // Returns the slope with the shortest span
+    FORCE_INLINE const Slope &MinSlope() const {
+        return swapped ? slopeL : slopeR;
+    }
 };
 
 // Steps over the pixels of a textured line, interpolating the texture's U coordinate based on the character width.
@@ -280,7 +306,7 @@ public:
     TexturedQuadEdgesStepper(CoordS32 coordA, CoordS32 coordB, CoordS32 coordC, CoordS32 coordD, uint32 charSizeV,
                              bool flipV)
         : QuadEdgesStepper(coordA, coordB, coordC, coordD) {
-        vinc = SafeDiv(Slope::ToFrac(charSizeV), majslope.DMajor());
+        vinc = SafeDiv(Slope::ToFrac(charSizeV), MajSlope().DMajor());
         if (flipV) {
             vinc = -vinc;
         }
