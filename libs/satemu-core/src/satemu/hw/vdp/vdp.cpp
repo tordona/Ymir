@@ -508,14 +508,21 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
     // TODO: use gouraud table
     // TODO: color calculations? (mode.colorCalc)
     // TODO: mode.preClippingDisable
-    // TODO: mode.msbOn?
 
     const uint32 fbOffset = y * m_VDP1.fbSizeH + x;
     auto &drawFB = VDP1GetDrawFB();
     if (m_VDP1.pixel8Bits) {
-        drawFB[fbOffset & 0x3FFFF] = pixelParams.color;
+        if (pixelParams.mode.msbOn) {
+            drawFB[fbOffset & 0x3FFFF] |= 0x80;
+        } else {
+            drawFB[fbOffset & 0x3FFFF] = pixelParams.color;
+        }
     } else {
-        util::WriteBE<uint16>(&drawFB[(fbOffset * sizeof(uint16)) & 0x3FFFE], pixelParams.color);
+        if (pixelParams.mode.msbOn) {
+            drawFB[(fbOffset * sizeof(uint16)) & 0x3FFFE] |= 0x80;
+        } else {
+            util::WriteBE<uint16>(&drawFB[(fbOffset * sizeof(uint16)) & 0x3FFFE], pixelParams.color);
+        }
     }
 }
 
@@ -1253,6 +1260,7 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
                 pixel.priority = params.priorities[0];
                 attr.colorCalcRatio = params.colorCalcRatios[0];
                 attr.shadowOrWindow = false;
+                attr.normalShadow = false;
                 isPaletteData = false;
             }
         }
@@ -1267,6 +1275,7 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
             attr.msbSet = spriteData.colorDataMSB;
             attr.colorCalcRatio = params.colorCalcRatios[spriteData.colorCalcRatio];
             attr.shadowOrWindow = spriteData.shadowOrWindow;
+            attr.normalShadow = spriteData.normalShadow;
         }
     }
 }
@@ -1433,6 +1442,12 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
             if (pixel.priority == 0) {
                 continue;
             }
+            if (layer == LYR_Sprite) {
+                const auto &attr = m_spriteLayerState.attrs[x];
+                if (attr.normalShadow) {
+                    continue;
+                }
+            }
 
             // Insert the layer into the appropriate position in the stack
             // - Higher priority beats lower priority
@@ -1525,6 +1540,16 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
             }
         };
 
+        auto isShadowEnabled = [&](Layer layer) {
+            if (layer == LYR_Sprite) {
+                return m_spriteLayerState.attrs[x].shadowOrWindow;
+            } else if (layer == LYR_Back) {
+                return m_VDP2.backScreenParams.shadowEnable;
+            } else {
+                return m_VDP2.bgParams[layer - LYR_RBG0].shadowEnable;
+            }
+        };
+
         const auto &colorCalcParams = m_VDP2.colorCalcParams;
 
         // Calculate color
@@ -1565,6 +1590,14 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
             }
         } else {
             outputColor = getLayerColor(layers[0]);
+        }
+
+        // Apply sprite shadow
+        if (isShadowEnabled(layers[0]) &&
+            (m_spriteLayerState.attrs[x].normalShadow || m_spriteLayerState.attrs[x].shadowOrWindow)) {
+            outputColor.r >>= 1u;
+            outputColor.g >>= 1u;
+            outputColor.b >>= 1u;
         }
 
         m_framebuffer[x + y * m_HRes] = outputColor.u32;
@@ -2276,14 +2309,14 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
         data.colorDataMSB = bit::extract<10>(rawData);
         data.colorCalcRatio = bit::extract<11, 13>(rawData);
         data.priority = bit::extract<14, 15>(rawData);
-        data.shadowType = VDP2DetermineShadowType<10, false>(data.colorData);
+        data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
         break;
     case 0x1:
         data.colorData = bit::extract<0, 10>(rawData);
         data.colorDataMSB = bit::extract<10>(rawData);
         data.colorCalcRatio = bit::extract<11, 12>(rawData);
         data.priority = bit::extract<13, 15>(rawData);
-        data.shadowType = VDP2DetermineShadowType<10, false>(data.colorData);
+        data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
         break;
     case 0x2:
         data.colorData = bit::extract<0, 10>(rawData);
@@ -2291,7 +2324,7 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
         data.colorCalcRatio = bit::extract<11, 13>(rawData);
         data.priority = bit::extract<14>(rawData);
         data.shadowOrWindow = bit::extract<15>(rawData);
-        data.shadowType = VDP2DetermineShadowType<10, true>(data.colorData);
+        data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
         break;
     case 0x3:
         data.colorData = bit::extract<0, 10>(rawData);
@@ -2299,7 +2332,7 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
         data.colorCalcRatio = bit::extract<11, 12>(rawData);
         data.priority = bit::extract<13, 14>(rawData);
         data.shadowOrWindow = bit::extract<15>(rawData);
-        data.shadowType = VDP2DetermineShadowType<10, true>(data.colorData);
+        data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
         break;
     case 0x4:
         data.colorData = bit::extract<0, 9>(rawData);
@@ -2307,7 +2340,7 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
         data.colorCalcRatio = bit::extract<10, 12>(rawData);
         data.priority = bit::extract<13, 14>(rawData);
         data.shadowOrWindow = bit::extract<15>(rawData);
-        data.shadowType = VDP2DetermineShadowType<9, true>(data.colorData);
+        data.normalShadow = VDP2IsNormalShadow<9>(data.colorData);
         break;
     case 0x5:
         data.colorData = bit::extract<0, 10>(rawData);
@@ -2315,7 +2348,7 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
         data.colorCalcRatio = bit::extract<11>(rawData);
         data.priority = bit::extract<12, 14>(rawData);
         data.shadowOrWindow = bit::extract<15>(rawData);
-        data.shadowType = VDP2DetermineShadowType<10, true>(data.colorData);
+        data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
         break;
     case 0x6:
         data.colorData = bit::extract<0, 9>(rawData);
@@ -2323,7 +2356,7 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
         data.colorCalcRatio = bit::extract<10, 11>(rawData);
         data.priority = bit::extract<12, 14>(rawData);
         data.shadowOrWindow = bit::extract<15>(rawData);
-        data.shadowType = VDP2DetermineShadowType<9, true>(data.colorData);
+        data.normalShadow = VDP2IsNormalShadow<9>(data.colorData);
         break;
     case 0x7:
         data.colorData = bit::extract<0, 8>(rawData);
@@ -2331,7 +2364,7 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
         data.colorCalcRatio = bit::extract<9, 11>(rawData);
         data.priority = bit::extract<12, 14>(rawData);
         data.shadowOrWindow = bit::extract<15>(rawData);
-        data.shadowType = VDP2DetermineShadowType<8, true>(data.colorData);
+        data.normalShadow = VDP2IsNormalShadow<8>(data.colorData);
         break;
     }
     return data;
@@ -2348,82 +2381,61 @@ FORCE_INLINE SpriteData VDP::VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type
         data.colorData = bit::extract<0, 6>(rawData);
         data.colorDataMSB = bit::extract<6>(rawData);
         data.priority = bit::extract<7>(rawData);
-        data.shadowType = VDP2DetermineShadowType<6, false>(data.colorData);
+        data.normalShadow = VDP2IsNormalShadow<6>(data.colorData);
         break;
     case 0x9:
         data.colorData = bit::extract<0, 5>(rawData);
         data.colorDataMSB = bit::extract<5>(rawData);
         data.colorCalcRatio = bit::extract<6>(rawData);
         data.priority = bit::extract<7>(rawData);
-        data.shadowType = VDP2DetermineShadowType<5, false>(data.colorData);
+        data.normalShadow = VDP2IsNormalShadow<5>(data.colorData);
         break;
     case 0xA:
         data.colorData = bit::extract<0, 5>(rawData);
         data.colorDataMSB = bit::extract<5>(rawData);
         data.priority = bit::extract<6, 7>(rawData);
-        data.shadowType = VDP2DetermineShadowType<5, false>(data.colorData);
+        data.normalShadow = VDP2IsNormalShadow<5>(data.colorData);
         break;
     case 0xB:
         data.colorData = bit::extract<0, 5>(rawData);
         data.colorDataMSB = bit::extract<5>(rawData);
         data.colorCalcRatio = bit::extract<6, 7>(rawData);
-        data.shadowType = VDP2DetermineShadowType<5, false>(data.colorData);
+        data.normalShadow = VDP2IsNormalShadow<5>(data.colorData);
         break;
     case 0xC:
         data.colorData = bit::extract<0, 7>(rawData);
         data.colorDataMSB = bit::extract<7>(rawData);
         data.priority = bit::extract<7>(rawData);
-        data.shadowType = VDP2DetermineShadowType<7, false>(data.colorData);
+        data.normalShadow = VDP2IsNormalShadow<7>(data.colorData);
         break;
     case 0xD:
         data.colorData = bit::extract<0, 7>(rawData);
         data.colorDataMSB = bit::extract<7>(rawData);
         data.colorCalcRatio = bit::extract<6>(rawData);
         data.priority = bit::extract<7>(rawData);
-        data.shadowType = VDP2DetermineShadowType<7, false>(data.colorData);
+        data.normalShadow = VDP2IsNormalShadow<7>(data.colorData);
         break;
     case 0xE:
         data.colorData = bit::extract<0, 7>(rawData);
         data.colorDataMSB = bit::extract<7>(rawData);
         data.priority = bit::extract<6, 7>(rawData);
-        data.shadowType = VDP2DetermineShadowType<7, false>(data.colorData);
+        data.normalShadow = VDP2IsNormalShadow<7>(data.colorData);
         break;
     case 0xF:
         data.colorData = bit::extract<0, 7>(rawData);
         data.colorDataMSB = bit::extract<7>(rawData);
         data.colorCalcRatio = bit::extract<6, 7>(rawData);
-        data.shadowType = VDP2DetermineShadowType<7, false>(data.colorData);
+        data.normalShadow = VDP2IsNormalShadow<7>(data.colorData);
         break;
     }
     return data;
 }
 
-template <uint32 colorDataBits, bool checkMSB>
-FORCE_INLINE SpriteShadowType VDP::VDP2DetermineShadowType(uint16 colorData) {
-    static constexpr uint16 kNormalShadowValue = ~(~0 << colorDataBits) & ~1;
-    static constexpr uint16 kMSBShadowMask = kNormalShadowValue >> 1;
-
-    using enum SpriteShadowType;
-
+template <uint32 colorDataBits>
+FORCE_INLINE bool VDP::VDP2IsNormalShadow(uint16 colorData) {
     // Check against normal shadow pattern (LSB = 0, rest of the bits = 1)
-    if (colorData == kNormalShadowValue) {
-        return Normal;
-    }
-
-    if constexpr (checkMSB) {
-        // Check for MSB shadow
-        // - if the rest of the bits are all zeros, it's a transparent shadow
-        // - if the rest of the bits are all ones, it's a sprite shadow
-        if (bit::extract<colorDataBits>(colorData)) {
-            if ((colorData & kMSBShadowMask) == 0) {
-                return TransparentMSB;
-            } else {
-                return SpriteMSB;
-            }
-        }
-    }
-
-    return None;
+    static constexpr uint16 kNormalShadowValue = ~(~0 << (colorDataBits + 1)) & ~1;
+    return (colorData == kNormalShadowValue);
 }
 
 } // namespace satemu::vdp

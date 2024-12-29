@@ -754,7 +754,7 @@ private:
         struct Attributes {
             uint8 colorCalcRatio = 0;
             bool shadowOrWindow = false;
-            SpriteShadowType shadowType = SpriteShadowType::None;
+            bool normalShadow = false;
             bool msbSet = false;
         };
 
@@ -1124,9 +1124,8 @@ private:
     // colorData is the raw color data.
     //
     // colorDataBits specifies the bit width of the color data.
-    // checkMSB enables MSB shadow checks.
-    template <uint32 colorDataBits, bool checkMSB>
-    static SpriteShadowType VDP2DetermineShadowType(uint16 colorData);
+    template <uint32 colorDataBits>
+    static bool VDP2IsNormalShadow(uint16 colorData);
 };
 
 } // namespace satemu::vdp
