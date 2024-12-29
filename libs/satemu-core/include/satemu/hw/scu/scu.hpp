@@ -381,6 +381,7 @@ private:
         // ALU operation output
         union {
             uint64 u64 : 48;
+            sint64 s64 : 48;
             struct {
                 uint32 L;
                 uint16 H;
@@ -390,6 +391,7 @@ private:
         // ALU operation input 1
         union {
             uint64 u64 : 48;
+            sint64 s64 : 48;
             struct {
                 uint32 L;
                 uint16 H;
@@ -400,6 +402,7 @@ private:
         // Multiplication output
         union {
             uint64 u64 : 48;
+            sint64 s64 : 48;
             struct {
                 uint32 L;
                 uint16 H;

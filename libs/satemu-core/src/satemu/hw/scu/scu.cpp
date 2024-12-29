@@ -337,18 +337,28 @@ FORCE_INLINE uint32 SCU::DSPReadSource(uint8 index) {
     case 0b0000 ... 0b0111: {
         const uint8 ctIndex = bit::extract<0, 1>(index);
         const bool inc = bit::extract<2>(index);
-        const uint32 ctAddr = m_dspState.CT[ctIndex];
-        const uint32 value = m_dspState.dataRAM[ctIndex][ctAddr];
+
+        // Finish previous DMA transfer
+        if (m_dspState.dmaRun) {
+            RunDSPDMA(1); // TODO: cycles?
+        }
+
         m_dspState.incCT[ctIndex] |= inc;
-        return value;
+        const uint32 ctAddr = m_dspState.CT[ctIndex];
+        return m_dspState.dataRAM[ctIndex][ctAddr];
     }
     case 0b1001: return m_dspState.ALU.L;
     case 0b1010: return m_dspState.ALU.u64 >> 16ull;
-    default: return 0;
+    default: return ~0;
     }
 }
 
 FORCE_INLINE void SCU::DSPWriteD1Bus(uint8 index, uint32 value) {
+    // Finish previous DMA transfer
+    if (m_dspState.dmaRun) {
+        RunDSPDMA(1); // TODO: cycles?
+    }
+
     switch (index) {
     case 0b0000 ... 0b0011: {
         const uint32 addr = m_dspState.CT[index];
@@ -357,7 +367,7 @@ FORCE_INLINE void SCU::DSPWriteD1Bus(uint8 index, uint32 value) {
         break;
     }
     case 0b0100: m_dspState.RX = value; break;
-    case 0b0101: m_dspState.P.u64 = static_cast<sint32>(value); break;
+    case 0b0101: m_dspState.P.s64 = static_cast<sint32>(value); break;
     case 0b0110: m_dspState.dmaReadAddr = (value << 2u) & 0x7FF'FFFC; break;
     case 0b0111: m_dspState.dmaWriteAddr = (value << 2u) & 0x7FF'FFFC; break;
     case 0b1010: m_dspState.loopCount = value; break;
@@ -370,6 +380,11 @@ FORCE_INLINE void SCU::DSPWriteD1Bus(uint8 index, uint32 value) {
 }
 
 void SCU::DSPWriteImm(uint8 index, uint32 value) {
+    // Finish previous DMA transfer
+    if (m_dspState.dmaRun) {
+        RunDSPDMA(1); // TODO: cycles?
+    }
+
     switch (index) {
     case 0b0000 ... 0b0011: {
         const uint32 addr = m_dspState.CT[index];
@@ -378,7 +393,7 @@ void SCU::DSPWriteImm(uint8 index, uint32 value) {
         break;
     }
     case 0b0100: m_dspState.RX = value; break;
-    case 0b0101: m_dspState.P.u64 = static_cast<sint32>(value); break;
+    case 0b0101: m_dspState.P.s64 = static_cast<sint32>(value); break;
     case 0b0110: m_dspState.dmaReadAddr = (value << 2u) & 0x7FF'FFFC; break;
     case 0b0111: m_dspState.dmaWriteAddr = (value << 2u) & 0x7FF'FFFC; break;
     case 0b1010: m_dspState.loopCount = value; break;
@@ -476,22 +491,22 @@ FORCE_INLINE void SCU::DSPCmd_Operation(uint32 command) {
     }
     case 0b0110: // AD2
     {
-        const uint64 op1 = bit::sign_extend<48>(m_dspState.AC.u64);
-        const uint64 op2 = bit::sign_extend<48>(m_dspState.P.u64);
-        const uint64 result = op1 + op2;
+        const sint64 op1 = m_dspState.AC.s64;
+        const sint64 op2 = m_dspState.P.s64;
+        const sint64 result = op1 + op2;
         setZS48(result);
         m_dspState.carry = bit::extract<48>(result);
-        m_dspState.overflow = bit::extract<31>((~(op1 ^ op2)) & (op1 ^ result));
+        m_dspState.overflow = bit::extract<47>((~(op1 ^ op2)) & (op1 ^ result));
         m_dspState.ALU.u64 = result;
         break;
     }
     case 0b1000: // SR
-        m_dspState.carry = bit::extract<1>(m_dspState.AC.L);
+        m_dspState.carry = bit::extract<0>(m_dspState.AC.L);
         m_dspState.AC.L = static_cast<sint32>(m_dspState.AC.L) >> 1;
         setZS32(m_dspState.AC.L);
         break;
     case 0b1001: // RR
-        m_dspState.carry = bit::extract<1>(m_dspState.AC.L);
+        m_dspState.carry = bit::extract<0>(m_dspState.AC.L);
         m_dspState.AC.L = std::rotr(m_dspState.AC.L, 1);
         setZS32(m_dspState.AC.L);
         break;
@@ -513,55 +528,77 @@ FORCE_INLINE void SCU::DSPCmd_Operation(uint32 command) {
     }
 
     // X-Bus
-    switch (bit::extract<23, 25>(command)) {
-    case 0b000: // NOP
-        break;
-    case 0b010: // MOV MUL,P
-        m_dspState.P.u64 = static_cast<sint64>(m_dspState.RX) * static_cast<sint64>(m_dspState.RY);
-        break;
-    case 0b011: // MOV [s],P
-    {
-        const sint32 value = DSPReadSource(bit::extract<20, 22>(command));
-        m_dspState.P.u64 = static_cast<sint64>(value);
-        break;
+    //
+    // X-Bus writes simultaneously to P and X in some cases:
+    // bits
+    // 25-23  executed operations
+    //  000
+    //  001
+    //  010   MOV MUL,P
+    //  011   MOV [s],P
+    //  100               MOV [s],X
+    //  101               MOV [s],X
+    //  110   MOV MUL,P   MOV [s],X
+    //  111   MOV [s],P   MOV [s],X
+    if (bit::extract<23, 24>(command) == 0b10) {
+        // MOV MUL,P
+        m_dspState.P.s64 = static_cast<sint64>(m_dspState.RX) * static_cast<sint64>(m_dspState.RY);
     }
-    case 0b100: // MOV [s],X
-        m_dspState.RX = DSPReadSource(bit::extract<20, 22>(command));
-        break;
+    if (bit::extract<23, 25>(command) >= 0b011) {
+        const sint32 value = DSPReadSource(bit::extract<20, 22>(command));
+        if (bit::extract<23, 24>(command) == 0b11) {
+            // MOV [s],P
+            m_dspState.P.s64 = static_cast<sint64>(value);
+        }
+        if (bit::extract<25>(command)) {
+            // MOV [s],X
+            m_dspState.RX = value;
+        }
     }
 
     // Y-Bus
-    switch (bit::extract<17, 19>(command)) {
-    case 0b000: // NOP
-        break;
-    case 0b001: // CLR A
+    //
+    // Y-Bus writes simultaneously to A and Y in some cases:
+    // bits
+    // 19-17  executed operations
+    // 000
+    // 001    CLR A
+    // 010    MOV ALU,A
+    // 011    MOV [s],A
+    // 100                MOV [s],Y
+    // 101    CLR A       MOV [s],Y
+    // 110    MOV ALU,A   MOV [s],Y
+    // 111    MOV [s],A   MOV [s],Y
+    if (bit::extract<17, 18>(command) == 0b01) {
+        // CLR A
         m_dspState.AC.u64 = 0;
-        break;
-    case 0b010: // MOV ALU,A
+    } else if (bit::extract<17, 18>(command) == 0b10) {
+        // MOV ALU,A
         m_dspState.AC.u64 = m_dspState.ALU.u64;
-        break;
-    case 0b011: // MOV [s],A
-    {
-        const sint32 value = DSPReadSource(bit::extract<14, 16>(command));
-        m_dspState.AC.u64 = static_cast<sint64>(value);
-        break;
     }
-    case 0b100: // MOV [s],Y
-        m_dspState.RY = DSPReadSource(bit::extract<14, 16>(command));
-        break;
+    if (bit::extract<17, 19>(command) >= 0b11) {
+        const sint32 value = DSPReadSource(bit::extract<14, 16>(command));
+        if (bit::extract<17, 18>(command) == 0b11) {
+            // MOV [s],A
+            m_dspState.AC.u64 = static_cast<sint64>(value);
+        }
+        if (bit::extract<19>(command)) {
+            // MOV [s],Y
+            m_dspState.RY = value;
+        }
     }
 
     // D1-Bus
     switch (bit::extract<12, 13>(command)) {
-    case 0b00: // NOP
-        break;
-    case 0b01: { // MOV SImm, [d]
+    case 0b01: // MOV SImm, [d]
+    {
         const sint32 imm = bit::extract_signed<0, 7>(command);
         const uint32 dst = bit::extract<8, 11>(command);
         DSPWriteD1Bus(dst, imm);
         break;
     }
-    case 0b11: { // MOV [s], [d]
+    case 0b11: // MOV [s], [d]
+    {
         const uint8 src = bit::extract<0, 3>(command);
         const uint32 dst = bit::extract<8, 11>(command);
         const uint32 value = DSPReadSource(src);
