@@ -142,7 +142,7 @@ void SCU::RunDMA(uint64 cycles) {
                          ch.currXferCount, (ch.endIndirect ? " (final)" : ""));
         };
 
-        if (ch.start) {
+        if (ch.start && !ch.active) {
             ch.start = false;
             ch.active = true;
             if (ch.indirect) {
@@ -179,6 +179,7 @@ void SCU::RunDMA(uint64 cycles) {
                 readIndirect();
                 break; // higher-level DMA transfers interrupt lower-level ones
             } else {
+                // fmt::println("SCU DMA{}: Finished transfer", level);
                 ch.active = false;
                 ch.currXferCount = 0;
                 if (ch.updateSrcAddr) {

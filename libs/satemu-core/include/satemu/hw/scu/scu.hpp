@@ -683,7 +683,12 @@ private:
             if constexpr (std::is_same_v<T, uint32>) {
                 auto &ch = m_dmaChannels[address >> 5u];
                 ch.enabled = bit::extract<8>(value);
-                if (ch.enabled && !ch.active && ch.trigger == DMATrigger::Immediate && bit::extract<0>(value)) {
+                if (ch.enabled && ch.trigger == DMATrigger::Immediate && bit::extract<0>(value)) {
+                    /*if (ch.active) {
+                        fmt::println(
+                            "SCU DMA{}: Triggering immediate DMA transfer while another transfer is in progress",
+                            (address >> 5u));
+                    }*/
                     ch.start = true;
                 }
             }
