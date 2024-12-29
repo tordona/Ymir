@@ -39,13 +39,13 @@ public:
         xmajor = abs(dx) >= abs(dy);
         if (xmajor) {
             majinc = dx >= 0 ? kFracOne : -kFracOne;
-            mininc = SafeDiv(ToFracHalfBias(dy), dmaj);
+            mininc = SafeDiv(ToFrac(dy), dmaj);
             majcounter = ToFrac(x1);
             majcounterend = ToFrac(x2);
             mincounter = ToFracHalfBias(y1);
         } else {
             majinc = dy >= 0 ? kFracOne : -kFracOne;
-            mininc = SafeDiv(ToFracHalfBias(dx), dmaj);
+            mininc = SafeDiv(ToFrac(dx), dmaj);
             majcounter = ToFrac(y1);
             majcounterend = ToFrac(y2);
             mincounter = ToFracHalfBias(x1);
