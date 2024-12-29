@@ -551,6 +551,9 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
             // TODO: optimization: load new texel and compute U here
             // TODO: process end codes
         }
+        if (u >= lineParams.charSizeH || v >= lineParams.charSizeV) {
+            continue;
+        }
 
         // TODO: calculate color properly
 

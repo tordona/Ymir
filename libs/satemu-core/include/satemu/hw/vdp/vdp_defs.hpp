@@ -70,6 +70,12 @@ using CBFrameComplete = util::Callback<void(FramebufferColor *fb, uint32 width, 
 
 template <std::integral T>
 struct Coord {
+    Coord() = default;
+
+    Coord(T x, T y)
+        : x(x)
+        , y(y) {}
+
     T x = 0;
     T y = 0;
 };
