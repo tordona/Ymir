@@ -1712,7 +1712,7 @@ FORCE_INLINE void SH2::DIV1(InstrNM instr) {
 FORCE_INLINE void SH2::CMPIM(InstrI instr) {
     const sint32 simm = bit::sign_extend<8>(instr.imm);
     // dbg_println("cmp/eq #{}0x{:X}, r0", (simm < 0 ? "-" : ""), abs(simm));
-    SR.T = R[0] == simm;
+    SR.T = static_cast<sint32>(R[0]) == simm;
 }
 
 FORCE_INLINE void SH2::CMPEQ(InstrNM instr) {
