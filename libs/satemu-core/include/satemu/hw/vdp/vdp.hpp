@@ -681,17 +681,24 @@ private:
         sint32 localCoordY;
     } m_VDP1RenderContext;
 
+    struct VDP1GouraudParams {
+        Color555 gouraudColorA;
+        Color555 gouraudColorB;
+        Color555 gouraudColorC;
+        Color555 gouraudColorD;
+        uint32 gouraudU; // 16 fractional bits, from 0.0 to 1.0
+        uint32 gouraudV; // 16 fractional bits, from 0.0 to 1.0
+    };
+
     struct VDP1PixelParams {
         VDP1Command::DrawMode mode;
         uint16 color;
-        uint32 gouraudTable;
     };
 
     struct VDP1TexturedLineParams {
         VDP1Command::Control control;
         VDP1Command::DrawMode mode;
         uint32 colorBank;
-        uint32 gouraudTable;
         uint32 charAddr;
         uint32 charSizeH;
         uint32 charSizeV;
@@ -887,9 +894,11 @@ private:
     bool VDP1IsLineSystemClipped(CoordS32 coord1, CoordS32 coord2) const;
     bool VDP1IsQuadSystemClipped(CoordS32 coord1, CoordS32 coord2, CoordS32 coord3, CoordS32 coord4) const;
 
-    void VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams);
-    void VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams);
-    void VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1TexturedLineParams &lineParams);
+    void VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams, const VDP1GouraudParams &gouraudParams);
+    void VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams,
+                      VDP1GouraudParams &gouraudParams);
+    void VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1TexturedLineParams &lineParams,
+                              VDP1GouraudParams &gouraudParams);
 
     // Individual VDP1 command processors
 
