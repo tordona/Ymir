@@ -235,7 +235,7 @@ void SCU::RunDSP(uint64 cycles) {
     }
 
     // Update CT0-3
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
         if (m_dspState.incCT[i]) {
             m_dspState.CT[i]++;
             m_dspState.CT[i] &= 0x3F;
