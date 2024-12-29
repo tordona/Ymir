@@ -82,10 +82,15 @@ struct VDP1Command {
     //          100 (4) = 8 bpp, 256 colors, bank mode
     //          101 (5) = 16 bpp, 32768 colors, RGB mode
     //  2-0   Color Calculation Bits
+    //    2     Gouraud shading enable
+    //    1     Half-source ("original graphic")
+    //    0     Half-destination ("background")
     union DrawMode {
         uint16 u16;
         struct {
-            uint16 colorCalc : 3;
+            uint16 halfDestination : 1;
+            uint16 halfSource : 1;
+            uint16 gouraudEnable : 1;
             uint16 colorMode : 3;
             uint16 transparentPixelDisable : 1;
             uint16 endCodeDisable : 1;

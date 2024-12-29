@@ -505,9 +505,11 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
         }
     }
 
-    // TODO: use gouraud table
-    // TODO: color calculations? (mode.colorCalc)
-    // TODO: mode.preClippingDisable
+    // TODO: pixelParams.mode.preClippingDisable
+
+    // TODO: pixelParams.mode.gouraudEnable
+    // TODO: pixelParams.mode.halfSource
+    // TODO: pixelParams.mode.halfDestination
 
     const uint32 fbOffset = y * m_VDP1.fbSizeH + x;
     auto &drawFB = VDP1GetDrawFB();
@@ -527,6 +529,12 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
 }
 
 FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams) {
+    // TODO: pixelParams.mode.gouraudEnable;
+    // - interpolate between A and B
+    // - LineStepper: calculate interpolation factor
+    // Color555 gouraudColorA{.u16 = VDP1ReadVRAM<uint16>(pixelParams.gouraudTable * 8u + 0u)};
+    // Color555 gouraudColorB{.u16 = VDP1ReadVRAM<uint16>(pixelParams.gouraudTable * 8u + 2u)};
+
     for (LineStepper line{coord1, coord2}; line.CanStep(); line.Step()) {
         VDP1PlotPixel(line.Coord(), pixelParams);
         if (line.NeedsAntiAliasing()) {
@@ -536,32 +544,43 @@ FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1
 }
 
 void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1TexturedLineParams &lineParams) {
+    // TODO: pixelParams.mode.gouraudEnable;
+    // - interpolate between A, B, C and D
+    // - use U and V
+    // Color555 gouraudColorA{.u16 = VDP1ReadVRAM<uint16>(pixelParams.gouraudTable * 8u + 0u)};
+    // Color555 gouraudColorB{.u16 = VDP1ReadVRAM<uint16>(pixelParams.gouraudTable * 8u + 2u)};
+    // Color555 gouraudColorC{.u16 = VDP1ReadVRAM<uint16>(pixelParams.gouraudTable * 8u + 4u)};
+    // Color555 gouraudColorD{.u16 = VDP1ReadVRAM<uint16>(pixelParams.gouraudTable * 8u + 6u)};
+
+    const uint32 charSizeH = lineParams.charSizeH;
+    const uint32 charSizeV = lineParams.charSizeV;
+    const auto mode = lineParams.mode;
+    const auto control = lineParams.control;
+
     uint32 v = lineParams.texV;
-    if (lineParams.control.flipV) {
-        v = lineParams.charSizeV - 1 - v;
+    if (control.flipV) {
+        v = charSizeV - 1 - v;
     }
 
-    for (TexturedLineStepper line{coord1, coord2, lineParams.charSizeH, lineParams.swapped}; line.CanStep();
-         line.Step()) {
+    for (TexturedLineStepper line{coord1, coord2, charSizeH, lineParams.swapped}; line.CanStep(); line.Step()) {
         uint32 u = line.U();
-        if (lineParams.control.flipH) {
-            u = lineParams.charSizeH - 1 - u;
+        if (control.flipH) {
+            u = charSizeH - 1 - u;
         }
         if (line.UChanged()) {
             // TODO: optimization: load new texel and compute U here
-            // TODO: process end codes
+            // TODO: process end codes, unless mode.endCodeDisable || mode.highSpeedShrink
+            // TODO: handle mode.highSpeedShrink
         }
-        if (u >= lineParams.charSizeH || v >= lineParams.charSizeV) {
+        if (u >= charSizeH || v >= charSizeV) {
             continue;
         }
 
-        // TODO: calculate color properly
-
-        const uint32 charIndex = u + v * lineParams.charSizeH;
+        const uint32 charIndex = u + v * charSizeH;
 
         uint16 color = 0;
         bool transparent = true;
-        switch (lineParams.mode.colorMode) {
+        switch (mode.colorMode) {
         case 0: // 4 bpp, 16 colors, bank mode
             color = VDP1ReadVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
             color = (color >> (((u ^ 1) & 1) * 4)) & 0xF;
@@ -595,12 +614,12 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
             break;
         }
 
-        if (transparent && !lineParams.mode.transparentPixelDisable) {
+        if (transparent && !mode.transparentPixelDisable) {
             continue;
         }
 
         VDP1PixelParams pixelParams{
-            .mode = lineParams.mode,
+            .mode = mode,
             .color = color,
             .gouraudTable = lineParams.gouraudTable,
         };
