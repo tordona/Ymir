@@ -599,17 +599,25 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
     if (control.flipV) { // TODO: precompute flip on slope
         v = charSizeV - 1 - v;
     }
+    // Bail out if V coordinate is out of range
+    if (v >= charSizeV) {
+        return;
+    }
+
+    // U coordinates are flipped by the edge swap and the horizontal flip flag.
+    // If both are set, they cancel each other out, so the line is only flipped if only one of them is set.
+    const bool flipU = lineParams.swapped != control.flipH;
 
     uint16 color = 0;
     bool transparent = true;
-    uint32 u = 0;
-    for (TexturedLineStepper line{coord1, coord2, charSizeH, lineParams.swapped}; line.CanStep(); line.Step()) {
+    for (TexturedLineStepper line{coord1, coord2, charSizeH, flipU}; line.CanStep(); line.Step()) {
         // Load new texel if U coordinate changed.
         // Note that the very first pixel in the line always passes the check.
         if (line.UChanged()) {
-            u = line.U();
-            if (control.flipH) { // TODO: precompute flip on slope
-                u = charSizeH - 1 - u;
+            const uint32 u = line.U();
+            // Bail out if U coordinate is out of range
+            if (u >= charSizeH) {
+                break;
             }
 
             // TODO: process end codes, unless mode.endCodeDisable || mode.highSpeedShrink
@@ -617,6 +625,7 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
 
             const uint32 charIndex = u + v * charSizeH;
 
+            // Read next texel
             switch (mode.colorMode) {
             case 0: // 4 bpp, 16 colors, bank mode
                 color = VDP1ReadVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
@@ -650,9 +659,6 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
                 transparent = color == 0x0000;
                 break;
             }
-        }
-        if (u >= charSizeH || v >= charSizeV) {
-            break;
         }
 
         if (transparent && !mode.transparentPixelDisable) {

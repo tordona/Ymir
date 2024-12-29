@@ -230,11 +230,12 @@ protected:
 // Steps over the pixels of a textured line, interpolating the texture's U coordinate based on the character width.
 class TexturedLineStepper : public LineStepper {
 public:
-    TexturedLineStepper(CoordS32 coord1, CoordS32 coord2, uint32 charSizeH, bool swapped)
+    TexturedLineStepper(CoordS32 coord1, CoordS32 coord2, uint32 charSizeH, bool flipU)
         : LineStepper(coord1, coord2) {
-        u = swapped ? (charSizeH << kFracBits) : 0;
+        ustart = flipU ? (static_cast<uint64>(charSizeH) << kFracBits) - 1 : 0u;
+        u = ustart;
         uinc = SafeDiv(ToFrac(charSizeH), dmaj);
-        if (swapped) {
+        if (flipU) {
             uinc = -uinc;
         }
     }
@@ -254,11 +255,12 @@ public:
 
     // Determines if the U texel coordinate has changed on this step.
     FORCE_INLINE bool UChanged() const {
-        return u == 0 || ((u - uinc) >> kFracBits) != (u >> kFracBits);
+        return u == ustart || ((u - uinc) >> kFracBits) != (u >> kFracBits);
     }
 
-    sint64 u;    // current U texel coordinate, fractional
-    sint64 uinc; // U texel coordinate increment per step, fractional
+    uint64 ustart; // starting U texel coordinate, fractional
+    uint64 u;      // current U texel coordinate, fractional
+    sint64 uinc;   // U texel coordinate increment per step, fractional
 };
 
 // Edge iterator for a textured quad with vertices A-B-C-D arranged in clockwise order from top-left, interpolating the
