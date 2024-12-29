@@ -343,7 +343,7 @@ FORCE_INLINE uint32 SCU::DSPReadSource(uint8 index) {
         return value;
     }
     case 0b1001: return m_dspState.ALU.L;
-    case 0b1010: return m_dspState.ALU.H;
+    case 0b1010: return m_dspState.ALU.u64 >> 16ull;
     default: return 0;
     }
 }
@@ -476,8 +476,8 @@ FORCE_INLINE void SCU::DSPCmd_Operation(uint32 command) {
     }
     case 0b0110: // AD2
     {
-        const uint64 op1 = m_dspState.AC.u64;
-        const uint64 op2 = m_dspState.P.u64;
+        const uint64 op1 = bit::sign_extend<48>(m_dspState.AC.u64);
+        const uint64 op2 = bit::sign_extend<48>(m_dspState.P.u64);
         const uint64 result = op1 + op2;
         setZS48(result);
         m_dspState.carry = bit::extract<48>(result);
