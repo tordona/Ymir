@@ -1596,11 +1596,15 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
         }
 
         // Apply sprite shadow
-        if (isShadowEnabled(layers[0]) &&
-            (m_spriteLayerState.attrs[x].normalShadow || m_spriteLayerState.attrs[x].shadowOrWindow)) {
-            outputColor.r >>= 1u;
-            outputColor.g >>= 1u;
-            outputColor.b >>= 1u;
+        if (isShadowEnabled(layers[0])) {
+            const bool isNormalShadow = m_spriteLayerState.attrs[x].normalShadow;
+            const bool isMSBShadow =
+                !m_VDP2.spriteParams.spriteWindowEnable && m_spriteLayerState.attrs[x].shadowOrWindow;
+            if (isNormalShadow || isMSBShadow) {
+                outputColor.r >>= 1u;
+                outputColor.g >>= 1u;
+                outputColor.b >>= 1u;
+            }
         }
 
         m_framebuffer[x + y * m_HRes] = outputColor.u32;
