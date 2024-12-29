@@ -507,23 +507,64 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
 
     // TODO: pixelParams.mode.preClippingDisable
 
-    // TODO: pixelParams.mode.gouraudEnable
-    // TODO: pixelParams.mode.halfSource
-    // TODO: pixelParams.mode.halfDestination
-
     const uint32 fbOffset = y * m_VDP1.fbSizeH + x;
     auto &drawFB = VDP1GetDrawFB();
     if (m_VDP1.pixel8Bits) {
+        // TODO: what happens if pixelParams.mode.colorCalcBits/gouraudEnable != 0?
         if (pixelParams.mode.msbOn) {
             drawFB[fbOffset & 0x3FFFF] |= 0x80;
         } else {
             drawFB[fbOffset & 0x3FFFF] = pixelParams.color;
         }
     } else {
+        uint8 *pixel = &drawFB[(fbOffset * sizeof(uint16)) & 0x3FFFE];
+
         if (pixelParams.mode.msbOn) {
             drawFB[(fbOffset * sizeof(uint16)) & 0x3FFFE] |= 0x80;
         } else {
-            util::WriteBE<uint16>(&drawFB[(fbOffset * sizeof(uint16)) & 0x3FFFE], pixelParams.color);
+            Color555 srcColor{.u16 = pixelParams.color};
+            Color555 dstColor{.u16 = util::ReadBE<uint16>(pixel)};
+
+            // Apply color calculations
+            //
+            // In all cases where calculation is done, the raw color data to be drawn ("original graphic") or from
+            // the background are interpreted as 5:5:5 RGB.
+
+            if (pixelParams.mode.gouraudEnable) {
+                // TODO: calculate gouraud shading on source color
+            }
+
+            switch (pixelParams.mode.colorCalcBits) {
+            case 0: // Replace
+                util::WriteBE<uint16>(pixel, srcColor.u16);
+                break;
+            case 1: // Shadow
+                // Halve destination luminosity if it's not transparent
+                if (dstColor.msb) {
+                    dstColor.r >>= 1u;
+                    dstColor.g >>= 1u;
+                    dstColor.b >>= 1u;
+                    util::WriteBE<uint16>(pixel, dstColor.u16);
+                }
+                break;
+            case 2: // Half-luminance
+                // Draw original graphic with halved luminance
+                srcColor.r >>= 1u;
+                srcColor.g >>= 1u;
+                srcColor.b >>= 1u;
+                util::WriteBE<uint16>(pixel, srcColor.u16);
+                break;
+            case 3: // Half-transparency
+                // If background is not transparent, blend half of original graphic and half of background
+                // Otherwise, draw original graphic as is
+                if (dstColor.msb) {
+                    srcColor.r = (srcColor.r + dstColor.r) >> 1u;
+                    srcColor.g = (srcColor.g + dstColor.g) >> 1u;
+                    srcColor.b = (srcColor.b + dstColor.b) >> 1u;
+                }
+                util::WriteBE<uint16>(pixel, srcColor.u16);
+                break;
+            }
         }
     }
 }

@@ -88,8 +88,7 @@ struct VDP1Command {
     union DrawMode {
         uint16 u16;
         struct {
-            uint16 halfDestination : 1;
-            uint16 halfSource : 1;
+            uint16 colorCalcBits : 2; // except Gouraud enable
             uint16 gouraudEnable : 1;
             uint16 colorMode : 3;
             uint16 transparentPixelDisable : 1;
