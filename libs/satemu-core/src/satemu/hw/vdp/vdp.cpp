@@ -421,7 +421,7 @@ void VDP::VDP1ProcessCommands() {
     }
 }
 
-bool VDP::VDP1IsPixelUserClipped(CoordS32 coord) const {
+FORCE_INLINE bool VDP::VDP1IsPixelUserClipped(CoordS32 coord) const {
     auto [x, y] = coord;
     const auto &ctx = m_VDP1RenderContext;
     if (x < ctx.userClipX0 || x > ctx.userClipX1) {
@@ -433,7 +433,7 @@ bool VDP::VDP1IsPixelUserClipped(CoordS32 coord) const {
     return false;
 }
 
-bool VDP::VDP1IsPixelSystemClipped(CoordS32 coord) const {
+FORCE_INLINE bool VDP::VDP1IsPixelSystemClipped(CoordS32 coord) const {
     auto [x, y] = coord;
     const auto &ctx = m_VDP1RenderContext;
     if (x < 0 || x > ctx.sysClipH) {
@@ -445,7 +445,7 @@ bool VDP::VDP1IsPixelSystemClipped(CoordS32 coord) const {
     return false;
 }
 
-bool VDP::VDP1IsLineSystemClipped(CoordS32 coord1, CoordS32 coord2) const {
+FORCE_INLINE bool VDP::VDP1IsLineSystemClipped(CoordS32 coord1, CoordS32 coord2) const {
     auto [x1, y1] = coord1;
     auto [x2, y2] = coord2;
     const auto &ctx = m_VDP1RenderContext;
@@ -532,7 +532,32 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
             // the background are interpreted as 5:5:5 RGB.
 
             if (pixelParams.mode.gouraudEnable) {
-                // TODO: calculate gouraud shading on source color
+                // Calculate gouraud shading on source color
+                // Interpolate between A, B, C and D (ordered in the standard Saturn quad orientation) using U and V
+                // Gouraud channel values are offset by -16
+
+                auto lerp = [](uint64 x, uint64 y, uint64 t) -> uint16 {
+                    static constexpr uint64 shift = Slope::kFracBits;
+                    return ((x << shift) + (y - x) * t) >> shift;
+                };
+
+                const Color555 A = gouraudParams.colorA;
+                const Color555 B = gouraudParams.colorB;
+                const Color555 C = gouraudParams.colorC;
+                const Color555 D = gouraudParams.colorD;
+                const uint64 U = gouraudParams.U;
+                const uint64 V = gouraudParams.V;
+
+                Color555 AB{.r = lerp(A.r, B.r, U), .g = lerp(A.g, B.g, U), .b = lerp(A.b, B.b, U)};
+                Color555 DC{.r = lerp(D.r, C.r, U), .g = lerp(D.g, C.g, U), .b = lerp(D.b, C.b, U)};
+
+                srcColor.r = std::clamp(srcColor.r + lerp(AB.r, DC.r, V) - 16, 0, 31);
+                srcColor.g = std::clamp(srcColor.g + lerp(AB.g, DC.g, V) - 16, 0, 31);
+                srcColor.b = std::clamp(srcColor.b + lerp(AB.b, DC.b, V) - 16, 0, 31);
+
+                // HACK: replace with U/V coordinates
+                // srcColor.r = U >> 8;
+                // srcColor.g = V >> 8;
             }
 
             switch (pixelParams.mode.colorCalcBits) {
@@ -572,11 +597,8 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
 
 FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams,
                                     VDP1GouraudParams &gouraudParams) {
-    // TODO: gouraud
-    // - interpolate between A and B
-    // - LineStepper: calculate interpolation factor
-
     for (LineStepper line{coord1, coord2}; line.CanStep(); line.Step()) {
+        gouraudParams.U = line.FracPos();
         VDP1PlotPixel(line.Coord(), pixelParams, gouraudParams);
         if (line.NeedsAntiAliasing()) {
             VDP1PlotPixel(line.AACoord(), pixelParams, gouraudParams);
@@ -586,23 +608,17 @@ FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1
 
 void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1TexturedLineParams &lineParams,
                                VDP1GouraudParams &gouraudParams) {
-    // TODO: gouraud
-    // - interpolate between A, B, C and D
-    // - use U and V
-
     const uint32 charSizeH = lineParams.charSizeH;
     const uint32 charSizeV = lineParams.charSizeV;
     const auto mode = lineParams.mode;
     const auto control = lineParams.control;
 
-    uint32 v = lineParams.texV;
-    if (control.flipV) { // TODO: precompute flip on slope
-        v = charSizeV - 1 - v;
-    }
+    const uint32 v = lineParams.texV;
     // Bail out if V coordinate is out of range
     if (v >= charSizeV) {
         return;
     }
+    gouraudParams.V = lineParams.texFracV / charSizeV / 8;
 
     // U coordinates are flipped by the edge swap and the horizontal flip flag.
     // If both are set, they cancel each other out, so the line is only flipped if only one of them is set.
@@ -670,6 +686,8 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
             .color = color,
         };
 
+        gouraudParams.U = line.FracU() / charSizeH / 8;
+
         VDP1PlotPixel(line.Coord(), pixelParams, gouraudParams);
         if (line.NeedsAntiAliasing()) {
             VDP1PlotPixel(line.AACoord(), pixelParams, gouraudParams);
@@ -718,14 +736,15 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
     };
 
     VDP1GouraudParams gouraudParams{
-        .gouraudColorA{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 0u)},
-        .gouraudColorB{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 2u)},
-        .gouraudColorC{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 4u)},
-        .gouraudColorD{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 6u)},
+        .colorA{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 0u)},
+        .colorB{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 2u)},
+        .colorC{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 4u)},
+        .colorD{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 6u)},
     };
 
     // Interpolate linearly over edges A-D and B-C
-    for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, charSizeV}; edge.CanStep(); edge.Step()) {
+    const bool flipV = control.flipV;
+    for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, charSizeV, flipV}; edge.CanStep(); edge.Step()) {
         // Plot lines between the interpolated points
         const CoordS32 coordL{edge.XMaj(), edge.YMaj()};
         const CoordS32 coordR{edge.XMin(), edge.YMin()};
@@ -859,14 +878,15 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
     };
 
     VDP1GouraudParams gouraudParams{
-        .gouraudColorA{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 0u)},
-        .gouraudColorB{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 2u)},
-        .gouraudColorC{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 4u)},
-        .gouraudColorD{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 6u)},
+        .colorA{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 0u)},
+        .colorB{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 2u)},
+        .colorC{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 4u)},
+        .colorD{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 6u)},
     };
 
     // Interpolate linearly over edges A-D and B-C
-    for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, charSizeV}; edge.CanStep(); edge.Step()) {
+    const bool flipV = control.flipV;
+    for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, charSizeV, flipV}; edge.CanStep(); edge.Step()) {
         // Plot lines between the interpolated points
         const CoordS32 coordL{edge.XMaj(), edge.YMaj()};
         const CoordS32 coordR{edge.XMin(), edge.YMin()};
@@ -918,18 +938,20 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control co
     };
 
     VDP1GouraudParams gouraudParams{
-        .gouraudColorA{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 0u)},
-        .gouraudColorB{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 2u)},
-        .gouraudColorC{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 4u)},
-        .gouraudColorD{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 6u)},
+        .colorA{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 0u)},
+        .colorB{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 2u)},
+        .colorC{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 4u)},
+        .colorD{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 6u)},
     };
 
     // Interpolate linearly over edges A-D and B-C
-    for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, charSizeV}; edge.CanStep(); edge.Step()) {
+    const bool flipV = control.flipV;
+    for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, charSizeV, flipV}; edge.CanStep(); edge.Step()) {
         // Plot lines between the interpolated points
         const CoordS32 coordL{edge.XMaj(), edge.YMaj()};
         const CoordS32 coordR{edge.XMin(), edge.YMin()};
         lineParams.texV = edge.V();
+        lineParams.texFracV = edge.FracV();
         lineParams.swapped = edge.Swapped();
         VDP1PlotTexturedLine(coordL, coordR, lineParams, gouraudParams);
     }
@@ -969,10 +991,10 @@ void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
     };
 
     VDP1GouraudParams gouraudParams{
-        .gouraudColorA{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 0u)},
-        .gouraudColorB{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 2u)},
-        .gouraudColorC{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 4u)},
-        .gouraudColorD{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 6u)},
+        .colorA{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 0u)},
+        .colorB{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 2u)},
+        .colorC{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 4u)},
+        .colorD{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 6u)},
     };
 
     // Interpolate linearly over edges A-D and B-C
@@ -1019,10 +1041,10 @@ void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
     };
 
     VDP1GouraudParams gouraudParams{
-        .gouraudColorA{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 0u)},
-        .gouraudColorB{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 2u)},
-        .gouraudColorC{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 4u)},
-        .gouraudColorD{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 6u)},
+        .colorA{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 0u)},
+        .colorB{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 2u)},
+        .colorC{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 4u)},
+        .colorD{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 6u)},
     };
 
     VDP1PlotLine(coordA, coordB, pixelParams, gouraudParams);
@@ -1058,8 +1080,9 @@ void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
     };
 
     VDP1GouraudParams gouraudParams{
-        .gouraudColorA{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 0u)},
-        .gouraudColorB{.u16 = VDP1ReadVRAM<uint16>(gouraudTable * 8u + 2u)},
+        .colorA{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 0u)},
+        .colorB{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 2u)},
+        .V = 0,
     };
 
     VDP1PlotLine(coordA, coordB, pixelParams, gouraudParams);

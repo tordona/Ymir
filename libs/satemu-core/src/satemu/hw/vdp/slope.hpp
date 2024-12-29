@@ -147,6 +147,11 @@ public:
         return {AAX(), AAY()};
     }
 
+    // Returns the current fractional position in the line, where 0.0 is the start point and 1.0 is the end point.
+    FORCE_INLINE uint64 FracPos() const {
+        return SafeDiv(kFracOne - (majcounterend - majcounter) * majinc, dmaj);
+    }
+
 private:
     sint64 aaxinc; // X increment for antialiasing
     sint64 aayinc; // Y increment for antialiasing
@@ -232,12 +237,12 @@ class TexturedLineStepper : public LineStepper {
 public:
     TexturedLineStepper(CoordS32 coord1, CoordS32 coord2, uint32 charSizeH, bool flipU)
         : LineStepper(coord1, coord2) {
-        ustart = flipU ? (static_cast<uint64>(charSizeH) << kFracBits) - 1 : 0u;
-        u = ustart;
         uinc = SafeDiv(ToFrac(charSizeH), dmaj);
         if (flipU) {
             uinc = -uinc;
         }
+        ustart = flipU ? Slope::ToFrac(static_cast<uint64>(charSizeH)) - 1 : 0u;
+        u = ustart;
     }
 
     // Steps the slope to the next coordinate.
@@ -251,6 +256,11 @@ public:
     // Retrieves the current U texel coordinate.
     FORCE_INLINE uint32 U() const {
         return u >> kFracBits;
+    }
+
+    // Retrieves the current fractinal U texel coordinate.
+    FORCE_INLINE uint64 FracU() const {
+        return u;
     }
 
     // Determines if the U texel coordinate has changed on this step.
@@ -267,10 +277,15 @@ public:
 // texture's V coordinate based on the character height.
 class TexturedQuadEdgesStepper : public QuadEdgesStepper {
 public:
-    TexturedQuadEdgesStepper(CoordS32 coordA, CoordS32 coordB, CoordS32 coordC, CoordS32 coordD, uint32 charSizeV)
+    TexturedQuadEdgesStepper(CoordS32 coordA, CoordS32 coordB, CoordS32 coordC, CoordS32 coordD, uint32 charSizeV,
+                             bool flipV)
         : QuadEdgesStepper(coordA, coordB, coordC, coordD) {
-        v = 0;
         vinc = SafeDiv(Slope::ToFrac(charSizeV), majslope.DMajor());
+        if (flipV) {
+            vinc = -vinc;
+        }
+        vstart = flipV ? Slope::ToFrac(static_cast<uint64>(charSizeV)) - 1 : 0u;
+        v = vstart;
     }
 
     // Steps both slopes of the edge to the next coordinate.
@@ -288,8 +303,14 @@ public:
         return v >> Slope::kFracBits;
     }
 
-    sint64 v;    // current V texel coordinate, fractional
-    sint64 vinc; // V texel coordinate increment per step, fractional
+    // Retrieves the current fractional V texel coordinate.
+    FORCE_INLINE uint64 FracV() const {
+        return v;
+    }
+
+    uint64 vstart; // starting V texel coordinate, fractional
+    uint64 v;      // current V texel coordinate, fractional
+    sint64 vinc;   // V texel coordinate increment per step, fractional
 };
 
 } // namespace satemu::vdp

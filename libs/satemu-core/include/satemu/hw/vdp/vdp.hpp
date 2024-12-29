@@ -682,12 +682,12 @@ private:
     } m_VDP1RenderContext;
 
     struct VDP1GouraudParams {
-        Color555 gouraudColorA;
-        Color555 gouraudColorB;
-        Color555 gouraudColorC;
-        Color555 gouraudColorD;
-        uint32 gouraudU; // 16 fractional bits, from 0.0 to 1.0
-        uint32 gouraudV; // 16 fractional bits, from 0.0 to 1.0
+        Color555 colorA;
+        Color555 colorB;
+        Color555 colorC;
+        Color555 colorD;
+        uint32 U; // 16 fractional bits, from 0.0 to 1.0
+        uint32 V; // 16 fractional bits, from 0.0 to 1.0
     };
 
     struct VDP1PixelParams {
@@ -703,6 +703,7 @@ private:
         uint32 charSizeH;
         uint32 charSizeV;
         uint32 texV;
+        uint64 texFracV;
         bool swapped;
     };
 
