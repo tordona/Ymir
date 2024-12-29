@@ -1,5 +1,7 @@
 #include <satemu/satemu.hpp>
 
+#include <satemu/util/scope_guard.hpp>
+
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
 #include <fmt/format.h>
@@ -10,6 +12,8 @@
 #include <memory>
 #include <span>
 #include <vector>
+
+using namespace util;
 
 std::vector<uint8> loadFile(std::filesystem::path romPath) {
     fmt::print("Loading file {}... ", romPath.string());
@@ -28,29 +32,6 @@ std::vector<uint8> loadFile(std::filesystem::path romPath) {
     }
     return data;
 }
-
-template <typename Fn>
-struct ScopeGuard {
-    ScopeGuard(const Fn &fn)
-        : fn(fn) {}
-
-    ScopeGuard(Fn &&fn)
-        : fn(std::move(fn)) {}
-
-    ~ScopeGuard() {
-        if (active) {
-            fn();
-        }
-    }
-
-    void Cancel() {
-        active = false;
-    }
-
-private:
-    Fn fn;
-    bool active = true;
-};
 
 void runEmulator(satemu::Saturn &saturn) {
     using clk = std::chrono::steady_clock;
