@@ -66,7 +66,7 @@ public:
 
     // Returns the current fractional position in the line, where 0.0 is the start point and 1.0 is the end point.
     FORCE_INLINE uint64 FracPos() const {
-        return SafeDiv(kFracOne - (majcounterend - majcounter) * (majinc >> kFracBits), dmaj + 1) - 1;
+        return kFracOne - SafeDiv((majcounterend - majcounter) * (majinc >> kFracBits), dmaj + 1);
     }
 
     // Retrieves the current X coordinate (no fractional bits)

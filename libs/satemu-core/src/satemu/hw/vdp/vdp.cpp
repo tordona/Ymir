@@ -548,37 +548,26 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
                 const uint64 U = gouraudParams.U;
                 const uint64 V = gouraudParams.V;
 
-                const sint16 Ar = (A.r - 0x10);
-                const sint16 Ag = (A.g - 0x10);
-                const sint16 Ab = (A.b - 0x10);
+                const sint16 ABr = lerp(static_cast<sint16>(A.r), static_cast<sint16>(B.r), U);
+                const sint16 ABg = lerp(static_cast<sint16>(A.g), static_cast<sint16>(B.g), U);
+                const sint16 ABb = lerp(static_cast<sint16>(A.b), static_cast<sint16>(B.b), U);
 
-                const sint16 Br = (B.r - 0x10);
-                const sint16 Bg = (B.g - 0x10);
-                const sint16 Bb = (B.b - 0x10);
+                const sint16 DCr = lerp(static_cast<sint16>(D.r), static_cast<sint16>(C.r), U);
+                const sint16 DCg = lerp(static_cast<sint16>(D.g), static_cast<sint16>(C.g), U);
+                const sint16 DCb = lerp(static_cast<sint16>(D.b), static_cast<sint16>(C.b), U);
 
-                const sint16 Cr = (C.r - 0x10);
-                const sint16 Cg = (C.g - 0x10);
-                const sint16 Cb = (C.b - 0x10);
-
-                const sint16 Dr = (D.r - 0x10);
-                const sint16 Dg = (D.g - 0x10);
-                const sint16 Db = (D.b - 0x10);
-
-                const sint16 ABr = lerp(Ar, Br, U);
-                const sint16 ABg = lerp(Ag, Bg, U);
-                const sint16 ABb = lerp(Ab, Bb, U);
-
-                const sint16 DCr = lerp(Dr, Cr, U);
-                const sint16 DCg = lerp(Dg, Cg, U);
-                const sint16 DCb = lerp(Db, Cb, U);
-
-                srcColor.r = std::clamp(srcColor.r + lerp(ABr, DCr, V), 0, 31);
-                srcColor.g = std::clamp(srcColor.g + lerp(ABg, DCg, V), 0, 31);
-                srcColor.b = std::clamp(srcColor.b + lerp(ABb, DCb, V), 0, 31);
+                srcColor.r = std::clamp(srcColor.r + lerp(ABr, DCr, V) - 0x10, 0, 31);
+                srcColor.g = std::clamp(srcColor.g + lerp(ABg, DCg, V) - 0x10, 0, 31);
+                srcColor.b = std::clamp(srcColor.b + lerp(ABb, DCb, V) - 0x10, 0, 31);
 
                 // HACK: replace with U/V coordinates
-                // srcColor.r = U >> 8;
-                // srcColor.g = V >> 8;
+                // srcColor.r = U >> (Slope::kFracBits - 5);
+                // srcColor.g = V >> (Slope::kFracBits - 5);
+
+                // HACK: replace with computed gouraud gradient
+                // srcColor.r = lerp(ABr, DCr, V);
+                // srcColor.g = lerp(ABg, DCg, V);
+                // srcColor.b = lerp(ABb, DCb, V);
             }
 
             switch (pixelParams.mode.colorCalcBits) {
