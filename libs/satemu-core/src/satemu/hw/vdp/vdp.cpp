@@ -536,7 +536,7 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
                 // Interpolate between A, B, C and D (ordered in the standard Saturn quad orientation) using U and V
                 // Gouraud channel values are offset by -16
 
-                auto lerp = [](uint64 x, uint64 y, uint64 t) -> uint16 {
+                auto lerp = [](sint64 x, sint64 y, uint64 t) -> sint16 {
                     static constexpr uint64 shift = Slope::kFracBits;
                     return ((x << shift) + (y - x) * t) >> shift;
                 };
@@ -548,12 +548,33 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
                 const uint64 U = gouraudParams.U;
                 const uint64 V = gouraudParams.V;
 
-                Color555 AB{.r = lerp(A.r, B.r, U), .g = lerp(A.g, B.g, U), .b = lerp(A.b, B.b, U)};
-                Color555 DC{.r = lerp(D.r, C.r, U), .g = lerp(D.g, C.g, U), .b = lerp(D.b, C.b, U)};
+                const sint16 Ar = (A.r - 0x10);
+                const sint16 Ag = (A.g - 0x10);
+                const sint16 Ab = (A.b - 0x10);
 
-                srcColor.r = std::clamp(srcColor.r + lerp(AB.r, DC.r, V) - 16, 0, 31);
-                srcColor.g = std::clamp(srcColor.g + lerp(AB.g, DC.g, V) - 16, 0, 31);
-                srcColor.b = std::clamp(srcColor.b + lerp(AB.b, DC.b, V) - 16, 0, 31);
+                const sint16 Br = (B.r - 0x10);
+                const sint16 Bg = (B.g - 0x10);
+                const sint16 Bb = (B.b - 0x10);
+
+                const sint16 Cr = (C.r - 0x10);
+                const sint16 Cg = (C.g - 0x10);
+                const sint16 Cb = (C.b - 0x10);
+
+                const sint16 Dr = (D.r - 0x10);
+                const sint16 Dg = (D.g - 0x10);
+                const sint16 Db = (D.b - 0x10);
+
+                const sint16 ABr = lerp(Ar, Br, U);
+                const sint16 ABg = lerp(Ag, Bg, U);
+                const sint16 ABb = lerp(Ab, Bb, U);
+
+                const sint16 DCr = lerp(Dr, Cr, U);
+                const sint16 DCg = lerp(Dg, Cg, U);
+                const sint16 DCb = lerp(Db, Cb, U);
+
+                srcColor.r = std::clamp(srcColor.r + lerp(ABr, DCr, V), 0, 31);
+                srcColor.g = std::clamp(srcColor.g + lerp(ABg, DCg, V), 0, 31);
+                srcColor.b = std::clamp(srcColor.b + lerp(ABb, DCb, V), 0, 31);
 
                 // HACK: replace with U/V coordinates
                 // srcColor.r = U >> 8;
@@ -613,12 +634,12 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
     const auto mode = lineParams.mode;
     const auto control = lineParams.control;
 
-    const uint32 v = lineParams.texV;
+    const uint32 v = lineParams.texFracV >> Slope::kFracBits;
     // Bail out if V coordinate is out of range
     if (v >= charSizeV) {
         return;
     }
-    gouraudParams.V = lineParams.texFracV / charSizeV / 8;
+    gouraudParams.V = lineParams.texFracV / charSizeV;
 
     uint16 color = 0;
     bool transparent = true;
@@ -683,7 +704,7 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
             .color = color,
         };
 
-        gouraudParams.U = line.FracU() / charSizeH / 8;
+        gouraudParams.U = line.FracU() / charSizeH;
 
         VDP1PlotPixel(line.Coord(), pixelParams, gouraudParams);
         if (line.NeedsAntiAliasing()) {
@@ -745,7 +766,7 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
         // Plot lines between the interpolated points
         const CoordS32 coordL{edge.LX(), edge.LY()};
         const CoordS32 coordR{edge.RX(), edge.RY()};
-        lineParams.texV = edge.V();
+        lineParams.texFracV = edge.FracV();
         VDP1PlotTexturedLine(coordL, coordR, lineParams, gouraudParams);
     }
 }
@@ -886,7 +907,7 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
         // Plot lines between the interpolated points
         const CoordS32 coordL{edge.LX(), edge.LY()};
         const CoordS32 coordR{edge.RX(), edge.RY()};
-        lineParams.texV = edge.V();
+        lineParams.texFracV = edge.FracV();
         VDP1PlotTexturedLine(coordL, coordR, lineParams, gouraudParams);
     }
 }
@@ -945,7 +966,6 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control co
         // Plot lines between the interpolated points
         const CoordS32 coordL{edge.LX(), edge.LY()};
         const CoordS32 coordR{edge.RX(), edge.RY()};
-        lineParams.texV = edge.V();
         lineParams.texFracV = edge.FracV();
         VDP1PlotTexturedLine(coordL, coordR, lineParams, gouraudParams);
     }

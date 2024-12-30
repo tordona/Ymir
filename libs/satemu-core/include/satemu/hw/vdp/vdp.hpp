@@ -702,7 +702,6 @@ private:
         uint32 charAddr;
         uint32 charSizeH;
         uint32 charSizeV;
-        uint32 texV;
         uint64 texFracV;
     };
 
