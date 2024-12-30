@@ -502,28 +502,28 @@ FORCE_INLINE void SCU::DSPCmd_Operation(uint32 command) {
     }
     case 0b1000: // SR
         m_dspState.carry = bit::extract<0>(m_dspState.AC.L);
-        m_dspState.AC.L = static_cast<sint32>(m_dspState.AC.L) >> 1;
-        setZS32(m_dspState.AC.L);
+        m_dspState.ALU.L = static_cast<sint32>(m_dspState.AC.L) >> 1;
+        setZS32(m_dspState.ALU.L);
         break;
     case 0b1001: // RR
         m_dspState.carry = bit::extract<0>(m_dspState.AC.L);
-        m_dspState.AC.L = std::rotr(m_dspState.AC.L, 1);
-        setZS32(m_dspState.AC.L);
+        m_dspState.ALU.L = std::rotr(m_dspState.AC.L, 1);
+        setZS32(m_dspState.ALU.L);
         break;
     case 0b1010: // SL
         m_dspState.carry = bit::extract<31>(m_dspState.AC.L);
-        m_dspState.AC.L = m_dspState.AC.L << 1u;
-        setZS32(m_dspState.AC.L);
+        m_dspState.ALU.L = m_dspState.AC.L << 1u;
+        setZS32(m_dspState.ALU.L);
         break;
     case 0b1011: // RL
         m_dspState.carry = bit::extract<31>(m_dspState.AC.L);
-        m_dspState.AC.L = std::rotl(m_dspState.AC.L, 1);
-        setZS32(m_dspState.AC.L);
+        m_dspState.ALU.L = std::rotl(m_dspState.AC.L, 1);
+        setZS32(m_dspState.ALU.L);
         break;
     case 0b1111: // RL8
         m_dspState.carry = bit::extract<24>(m_dspState.AC.L);
-        m_dspState.AC.L = std::rotl(m_dspState.AC.L, 8);
-        setZS32(m_dspState.AC.L);
+        m_dspState.ALU.L = std::rotl(m_dspState.AC.L, 8);
+        setZS32(m_dspState.ALU.L);
         break;
     }
 
