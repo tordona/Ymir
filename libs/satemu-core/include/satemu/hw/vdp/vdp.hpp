@@ -854,6 +854,21 @@ private:
 
     enum RotParamSelector { RotParamA, RotParamB };
 
+    // State of the LNCL and BACK screens, including the current color and address.
+    struct LineBackLayerState {
+        LineBackLayerState() {
+            Reset();
+        }
+
+        void Reset() {
+            lineColor.u32 = 0;
+            backColor.u32 = 0;
+        }
+
+        Color888 lineColor;
+        Color888 backColor;
+    };
+
     // Layer state indices
     enum Layer { LYR_Sprite, LYR_RBG0, LYR_NBG0_RBG1, LYR_NBG1_EXBG, LYR_NBG2, LYR_NBG3, LYR_Back };
 
@@ -875,6 +890,9 @@ private:
 
     // States for Rotation Parameters A and B.
     std::array<RotationParamState, 2> m_rotParamStates;
+
+    // State for the line color and back screens.
+    LineBackLayerState m_lineBackLayerState;
 
     // Framebuffer provided by the frontend to render the current frame into
     FramebufferColor *m_framebuffer;
@@ -954,6 +972,9 @@ private:
 
     // Draws the current VDP2 scanline.
     void VDP2DrawLine();
+
+    // Draws the line color and back screens.
+    void VDP2DrawLineColorAndBackScreens();
 
     // Draws the current VDP2 scanline of the sprite layer.
     //

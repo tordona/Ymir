@@ -52,6 +52,7 @@ void VDP::Reset(bool hard) {
     for (auto &state : m_rotParamStates) {
         state.Reset();
     }
+    m_lineBackLayerState.Reset();
 
     BeginHPhaseActiveDisplay();
     BeginVPhaseActiveDisplay();
@@ -1352,6 +1353,9 @@ void VDP::VDP2DrawLine() {
     // Load rotation parameters if requested
     VDP2LoadRotationParameterTables();
 
+    // Draw line color and back screen layers
+    VDP2DrawLineColorAndBackScreens();
+
     // Draw sprite layer
     (this->*fnDrawSprite[colorMode])();
 
@@ -1369,6 +1373,30 @@ void VDP::VDP2DrawLine() {
 
     // Compose image
     VDP2ComposeLine();
+}
+
+void VDP::VDP2DrawLineColorAndBackScreens() {
+    const LineBackScreenParams &lineParams = m_VDP2.lineScreenParams;
+    const LineBackScreenParams &backParams = m_VDP2.backScreenParams;
+
+    const uint32 y = m_VCounter;
+
+    // Read line color screen color
+    {
+        const uint32 line = lineParams.perLine ? y : 0;
+        const uint32 address = lineParams.baseAddress + line * sizeof(uint16);
+        const uint32 cramAddress = VDP2ReadVRAM<uint16>(address);
+        const Color555 color555{.u16 = VDP2ReadCRAM<uint16>(cramAddress)};
+        m_lineBackLayerState.lineColor = ConvertRGB555to888(color555);
+    }
+
+    // Read back screen color
+    {
+        const uint32 line = backParams.perLine ? y : 0;
+        const uint32 address = backParams.baseAddress + line * sizeof(Color555);
+        const Color555 color555{.u16 = VDP2ReadVRAM<uint16>(address)};
+        m_lineBackLayerState.backColor = ConvertRGB555to888(color555);
+    }
 }
 
 template <uint32 colorMode>
@@ -1608,10 +1636,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
 
             if (layer == LYR_Back) {
                 const LineBackScreenParams &backParams = m_VDP2.backScreenParams;
-                const uint32 line = backParams.perLine ? y : 0;
-                const uint32 address = backParams.baseAddress + line * sizeof(Color555);
-                const Color555 color555{.u16 = VDP2ReadVRAM<uint16>(address)};
-                color = ConvertRGB555to888(color555);
+                color = m_lineBackLayerState.backColor;
                 colorOffsetEnable = backParams.colorOffsetEnable;
                 colorOffsetSelect = backParams.colorOffsetSelect;
             } else {
