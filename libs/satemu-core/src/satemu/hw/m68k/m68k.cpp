@@ -487,6 +487,8 @@ void MC68EC000::Execute() {
     case OpcodeType::Trap: Instr_Trap(instr); break;
     case OpcodeType::TrapV: Instr_TrapV(instr); break;
 
+    case OpcodeType::Noop: Instr_Noop(instr); break;
+
     case OpcodeType::Illegal: Instr_Illegal(instr); break;
     case OpcodeType::Illegal1010: Instr_Illegal1010(instr); break;
     case OpcodeType::Illegal1111: Instr_Illegal1111(instr); break;
@@ -1231,6 +1233,10 @@ FORCE_INLINE void MC68EC000::Instr_TrapV(uint16 instr) {
     if (SR.V) {
         EnterException(ExceptionVector::TRAPVInstruction);
     }
+}
+
+FORCE_INLINE void MC68EC000::Instr_Noop(uint16 instr) {
+    // TODO: synchronize integer pipeline
 }
 
 FORCE_INLINE void MC68EC000::Instr_Illegal(uint16 instr) {

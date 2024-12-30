@@ -284,6 +284,8 @@ private:
     void Instr_Trap(uint16 instr);
     void Instr_TrapV(uint16 instr);
 
+    void Instr_Noop(uint16 instr);
+
     void Instr_Illegal(uint16 instr);
     void Instr_Illegal1010(uint16 instr);
     void Instr_Illegal1111(uint16 instr);

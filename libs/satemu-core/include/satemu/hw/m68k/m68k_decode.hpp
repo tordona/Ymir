@@ -94,6 +94,8 @@ enum class OpcodeType : uint8 {
     Trap,  // trap #<vector>
     TrapV, // trapv
 
+    Noop, // nop
+
     Illegal,     // any illegal instruction, including the designated ILLEGAL instruction 0100 1010 1111 1100
     Illegal1010, // illegal instructions with bits 15-12 = 1010
     Illegal1111, // illegal instructions with bits 15-12 = 1111

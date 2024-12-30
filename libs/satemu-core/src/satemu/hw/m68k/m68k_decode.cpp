@@ -152,7 +152,9 @@ DecodeTable BuildDecodeTable() {
             break;
         case 0x4: {
             const uint16 ea = bit::extract<0, 5>(instr);
-            if (instr == 0x4E75) {
+            if (instr == 0x4E71) {
+                opcode = OpcodeType::Noop;
+            } else if (instr == 0x4E75) {
                 opcode = OpcodeType::RTS;
             } else if (instr == 0x4E76) {
                 opcode = OpcodeType::TrapV;
