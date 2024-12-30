@@ -524,7 +524,7 @@ private:
             return addrs;
         }();
 
-        return kMapping[m_VDP2.RAMCTL.CRMDn >> 1][address];
+        return kMapping[m_VDP2.RAMCTL.CRMDn >> 1][address & 0xFFF];
 
         /*if (m_VDP2.RAMCTL.CRMDn == 2 || m_VDP2.RAMCTL.CRMDn == 3) {
             address =
