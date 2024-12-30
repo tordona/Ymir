@@ -33,7 +33,7 @@ void MC68EC000::Reset(bool hard) {
     SR.IPM = 7;
 }
 
-void MC68EC000::Step() {
+FLATTEN void MC68EC000::Step() {
     Execute();
 }
 
@@ -93,7 +93,7 @@ FLATTEN FORCE_INLINE void MC68EC000::MemWriteLong(uint32 address, uint32 value) 
     MemWrite<uint32>(address, value);
 }
 
-void MC68EC000::SetSR(uint16 value) {
+FORCE_INLINE void MC68EC000::SetSR(uint16 value) {
     const bool oldS = SR.S;
     SR.u16 = value;
 
@@ -102,15 +102,15 @@ void MC68EC000::SetSR(uint16 value) {
     }
 }
 
-void MC68EC000::EnterException(ExceptionVector vector) {
+FORCE_INLINE void MC68EC000::EnterException(ExceptionVector vector) {
     HandleExceptionCommon(vector, SR.IPM);
 }
 
-void MC68EC000::HandleInterrupt(ExceptionVector vector, uint8 level) {
+FORCE_INLINE void MC68EC000::HandleInterrupt(ExceptionVector vector, uint8 level) {
     HandleExceptionCommon(vector, level);
 }
 
-void MC68EC000::HandleExceptionCommon(ExceptionVector vector, uint8 intrLevel) {
+FORCE_INLINE void MC68EC000::HandleExceptionCommon(ExceptionVector vector, uint8 intrLevel) {
     const uint16 oldSR = SR.u16;
     if (SR.S == 0) {
         std::swap(regs.SP, SP_swap);
@@ -126,7 +126,7 @@ void MC68EC000::HandleExceptionCommon(ExceptionVector vector, uint8 intrLevel) {
     PC = static_cast<uint32>(vector) << 2u;
 }
 
-bool MC68EC000::CheckPrivilege() {
+FORCE_INLINE bool MC68EC000::CheckPrivilege() {
     if (!SR.S) {
         PC -= 2;
         EnterException(ExceptionVector::PrivilegeViolation);
@@ -134,7 +134,7 @@ bool MC68EC000::CheckPrivilege() {
     return SR.S;
 }
 
-void MC68EC000::CheckInterrupt() {
+FORCE_INLINE void MC68EC000::CheckInterrupt() {
     const uint8 level = m_externalInterruptLevel;
     if (level == 7 || level > SR.IPM) {
         ExceptionVector vector = m_bus.AcknowledgeInterrupt(level);
@@ -160,7 +160,7 @@ void MC68EC000::CheckInterrupt() {
 // 111 100    #imm                 Immediate
 
 template <mem_primitive T>
-T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
+FORCE_INLINE T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
     switch (M) {
     case 0b000: return regs.D[Xn];
     case 0b001: return regs.A[Xn];
@@ -231,7 +231,7 @@ T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
 }
 
 template <mem_primitive T>
-void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
+FORCE_INLINE void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
     static constexpr uint32 regMask = ~0u << (sizeof(T) * 8u - 1u) << 1u;
 
     switch (M) {
@@ -271,7 +271,7 @@ void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
 }
 
 template <mem_primitive T, typename FnModify>
-void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify &&modify) {
+FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify &&modify) {
     static constexpr uint32 regMask = ~0u << (sizeof(T) * 8u - 1u) << 1u;
 
     switch (M) {
@@ -335,7 +335,7 @@ void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify &&modify) {
     }
 }
 
-uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
+FORCE_INLINE uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
     switch (M) {
     case 0b010: return regs.A[Xn];
     case 0b101: {
@@ -391,7 +391,7 @@ uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
 }
 
 template <std::integral T, bool sub, bool setX>
-void MC68EC000::SetArithFlags(T op1, T op2, T result) {
+FORCE_INLINE void MC68EC000::SetArithFlags(T op1, T op2, T result) {
     static constexpr T shift = sizeof(T) * 8 - 1;
     SR.N = result >> shift;
     SR.Z = result == 0;
@@ -407,7 +407,7 @@ void MC68EC000::SetArithFlags(T op1, T op2, T result) {
 }
 
 template <std::integral T>
-void MC68EC000::SetLogicFlags(T result) {
+FORCE_INLINE void MC68EC000::SetLogicFlags(T result) {
     static constexpr T shift = sizeof(T) * 8 - 1;
     SR.N = result >> shift;
     SR.Z = result == 0;
@@ -416,7 +416,7 @@ void MC68EC000::SetLogicFlags(T result) {
 }
 
 template <std::integral T>
-void MC68EC000::SetShiftFlags(T result, bool carry) {
+FORCE_INLINE void MC68EC000::SetShiftFlags(T result, bool carry) {
     static constexpr T shift = sizeof(T) * 8 - 1;
     SR.N = result >> shift;
     SR.Z = result == 0;

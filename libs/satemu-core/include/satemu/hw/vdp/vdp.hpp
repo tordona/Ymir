@@ -514,11 +514,23 @@ private:
     //   10 09 08 07 06 05 04 03 02 01 11 00
     //   in short, bits 10-01 are shifted left and bit 11 takes place of bit 01
     FORCE_INLINE uint32 MapCRAMAddress(uint32 address) const {
-        if (m_VDP2.RAMCTL.CRMDn == 2 || m_VDP2.RAMCTL.CRMDn == 3) {
+        static constexpr auto kMapping = [] {
+            std::array<std::array<uint32, 4096>, 2> addrs{};
+            for (uint32 addr = 0; addr < 4096; addr++) {
+                addrs[0][addr] = addr;
+                addrs[1][addr] =
+                    bit::extract<0>(addr) | (bit::extract<11>(addr) << 1u) | (bit::extract<1, 10>(addr) << 2u);
+            }
+            return addrs;
+        }();
+
+        return kMapping[m_VDP2.RAMCTL.CRMDn >> 1][address];
+
+        /*if (m_VDP2.RAMCTL.CRMDn == 2 || m_VDP2.RAMCTL.CRMDn == 3) {
             address =
                 bit::extract<0>(address) | (bit::extract<11>(address) << 1u) | (bit::extract<1, 10>(address) << 2u);
         }
-        return address & 0xFFF;
+        return address & 0xFFF;*/
     }
 
     // -------------------------------------------------------------------------
