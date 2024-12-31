@@ -1417,6 +1417,7 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
                 pixel.color = ConvertRGB555to888(Color555{spriteDataValue});
                 pixel.transparent = false;
                 pixel.priority = params.priorities[0];
+                attr.msbSet = pixel.color.msb;
                 attr.colorCalcRatio = params.colorCalcRatios[0];
                 attr.shadowOrWindow = false;
                 attr.normalShadow = false;
