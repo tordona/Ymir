@@ -25,7 +25,7 @@ std::vector<uint8> loadFile(std::filesystem::path romPath) {
     if (stream.is_open()) {
         auto size = stream.tellg();
         stream.seekg(0, std::ios::beg);
-        fmt::println("{} bytes", (size_t)size);
+        fmt::println("{} bytes", (std::size_t)size);
 
         data.resize(size);
         stream.read(reinterpret_cast<char *>(data.data()), size);

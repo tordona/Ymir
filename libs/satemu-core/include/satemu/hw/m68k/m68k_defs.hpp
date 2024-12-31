@@ -6,7 +6,7 @@
 
 namespace satemu::m68k {
 
-inline constexpr size_t kM68KWRAMSize = 512_KiB;
+inline constexpr std::size_t kM68KWRAMSize = 512_KiB;
 
 enum class ExceptionVector : uint32 {
     ResetSSP = 0x0,

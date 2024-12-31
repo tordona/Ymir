@@ -488,7 +488,7 @@ private:
     std::array<uint8, kVDP2VRAMSize> m_VRAM2; // 4x 128 KiB banks: A0, A1, B0, B1
     std::array<uint8, kVDP2CRAMSize> m_CRAM;
     std::array<std::array<uint8, kVDP1FramebufferRAMSize>, 2> m_spriteFB;
-    size_t m_drawFB; // index of current sprite draw buffer; opposite buffer is CPU-accessible
+    std::size_t m_drawFB; // index of current sprite draw buffer; opposite buffer is CPU-accessible
 
     scu::SCU &m_SCU;
 

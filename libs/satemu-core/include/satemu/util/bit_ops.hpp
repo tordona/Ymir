@@ -3,6 +3,7 @@
 #include "inline.hpp"
 
 #include <concepts>
+#include <cstddef>
 #include <type_traits>
 
 namespace bit {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 inline constexpr std::size_t operator""_KiB(std::size_t sz) {
     return sz * 1024;
 }

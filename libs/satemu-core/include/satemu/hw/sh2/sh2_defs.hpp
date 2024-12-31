@@ -242,9 +242,9 @@ union RegVCRWDT {
 //
 // --- Cache module ---
 
-inline constexpr size_t kCacheWays = 4;
-inline constexpr size_t kCacheEntries = 64;
-inline constexpr size_t kCacheLineSize = 16;
+inline constexpr std::size_t kCacheWays = 4;
+inline constexpr std::size_t kCacheEntries = 64;
+inline constexpr std::size_t kCacheLineSize = 16;
 
 struct CacheEntry {
     // Tag layout:

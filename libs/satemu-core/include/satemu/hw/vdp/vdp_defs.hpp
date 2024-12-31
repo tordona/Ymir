@@ -17,10 +17,10 @@ namespace satemu::vdp {
 // -----------------------------------------------------------------------------
 // Memory chip sizes
 
-inline constexpr size_t kVDP1VRAMSize = 512_KiB;
-inline constexpr size_t kVDP1FramebufferRAMSize = 256_KiB;
-inline constexpr size_t kVDP2VRAMSize = 512_KiB;
-inline constexpr size_t kVDP2CRAMSize = 4_KiB;
+inline constexpr std::size_t kVDP1VRAMSize = 512_KiB;
+inline constexpr std::size_t kVDP1FramebufferRAMSize = 256_KiB;
+inline constexpr std::size_t kVDP2VRAMSize = 512_KiB;
+inline constexpr std::size_t kVDP2CRAMSize = 4_KiB;
 
 // -----------------------------------------------------------------------------
 // Common constants
