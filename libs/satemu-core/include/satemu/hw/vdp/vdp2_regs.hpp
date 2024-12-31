@@ -59,22 +59,22 @@ struct VDP2Regs {
         TVMDDirty = true;
     }
 
-    TVMD_t TVMD;     // 180000   TVMD    TV Screen Mode
-    EXTEN_t EXTEN;   // 180002   EXTEN   External Signal Enable
-    TVSTAT_t TVSTAT; // 180004   TVSTAT  Screen Status (read-only)
-    VRSIZE_t VRSIZE; // 180006   VRSIZE  VRAM Size
-    uint16 HCNT;     // 180008   HCNT    H Counter (read-only)
-    uint16 VCNT;     // 18000A   VCNT    V Counter (read-only)
-                     // 18000C   -       Reserved (but not really)
-    RAMCTL_t RAMCTL; // 18000E   RAMCTL  RAM Control
-                     // 180010   CYCA0L  VRAM Cycle Pattern A0 Lower
-    CYC_t CYCA0;     // 180012   CYCA0U  VRAM Cycle Pattern A0 Upper
-                     // 180014   CYCA1L  VRAM Cycle Pattern A1 Lower
-    CYC_t CYCA1;     // 180016   CYCA1U  VRAM Cycle Pattern A1 Upper
-                     // 180018   CYCB0L  VRAM Cycle Pattern B0 Lower
-    CYC_t CYCB0;     // 18001A   CYCB0U  VRAM Cycle Pattern B0 Upper
-                     // 18001C   CYCB1L  VRAM Cycle Pattern B1 Lower
-    CYC_t CYCB1;     // 18001E   CYCB1U  VRAM Cycle Pattern B1 Upper
+    RegTVMD TVMD;     // 180000   TVMD    TV Screen Mode
+    RegEXTEN EXTEN;   // 180002   EXTEN   External Signal Enable
+    RegTVSTAT TVSTAT; // 180004   TVSTAT  Screen Status (read-only)
+    RegVRSIZE VRSIZE; // 180006   VRSIZE  VRAM Size
+    uint16 HCNT;      // 180008   HCNT    H Counter (read-only)
+    uint16 VCNT;      // 18000A   VCNT    V Counter (read-only)
+                      // 18000C   -       Reserved (but not really)
+    RegRAMCTL RAMCTL; // 18000E   RAMCTL  RAM Control
+                      // 180010   CYCA0L  VRAM Cycle Pattern A0 Lower
+    RegCYC CYCA0;     // 180012   CYCA0U  VRAM Cycle Pattern A0 Upper
+                      // 180014   CYCA1L  VRAM Cycle Pattern A1 Lower
+    RegCYC CYCA1;     // 180016   CYCA1U  VRAM Cycle Pattern A1 Upper
+                      // 180018   CYCB0L  VRAM Cycle Pattern B0 Lower
+    RegCYC CYCB0;     // 18001A   CYCB0U  VRAM Cycle Pattern B0 Upper
+                      // 18001C   CYCB1L  VRAM Cycle Pattern B1 Lower
+    RegCYC CYCB1;     // 18001E   CYCB1U  VRAM Cycle Pattern B1 Upper
 
     // 180020   BGON    Screen Display Enable
     //
@@ -808,7 +808,7 @@ struct VDP2Regs {
         bit::deposit_into<0, 7>(bgParams[bgIndex].scrollIncV, bit::extract<8, 15>(value));
     }
 
-    ZMCTL_t ZMCTL; // 180098   ZMCTL   Reduction Enable
+    RegZMCTL ZMCTL; // 180098   ZMCTL   Reduction Enable
 
     // 18009A   SCRCTL  Line and Vertical Cell Scroll Control
     //

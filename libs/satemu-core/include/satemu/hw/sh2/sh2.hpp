@@ -44,7 +44,7 @@ private:
     uint32 PC;
     uint32 PR;
 
-    union SR_t {
+    union RegSR {
         uint32 u32;
         struct {
             uint32 T : 1;
@@ -67,7 +67,7 @@ private:
     uint32 GBR;
     uint32 VBR;
 
-    union MAC_t {
+    union RegMAC {
         uint64 u64;
         struct {
             uint32 L;
@@ -145,14 +145,14 @@ private:
 
     // --- INTC module ---
 
-    IPRB_t IPRB;     // 060  R/W  8,16     0000      IPRB    Interrupt priority setting register B
-    VCRA_t VCRA;     // 062  R/W  8,16     0000      VCRA    Vector number setting register A
-    VCRB_t VCRB;     // 064  R/W  8,16     0000      VCRB    Vector number setting register B
-    VCRC_t VCRC;     // 066  R/W  8,16     0000      VCRC    Vector number setting register C
-    VCRD_t VCRD;     // 068  R/W  8,16     0000      VCRD    Vector number setting register D
-    ICR_t ICR;       // 0E0  R/W  8,16     0000      ICR     Interrupt control register
-    IPRA_t IPRA;     // 0E2  R/W  8,16     0000      IPRA    Interrupt priority setting register A
-    VCRWDT_t VCRWDT; // 0E4  R/W  8,16     0000      VCRWDT  Vector number setting register WDT
+    RegIPRB IPRB;     // 060  R/W  8,16     0000      IPRB    Interrupt priority setting register B
+    RegVCRA VCRA;     // 062  R/W  8,16     0000      VCRA    Vector number setting register A
+    RegVCRB VCRB;     // 064  R/W  8,16     0000      VCRB    Vector number setting register B
+    RegVCRC VCRC;     // 066  R/W  8,16     0000      VCRC    Vector number setting register C
+    RegVCRD VCRD;     // 068  R/W  8,16     0000      VCRD    Vector number setting register D
+    RegICR ICR;       // 0E0  R/W  8,16     0000      ICR     Interrupt control register
+    RegIPRA IPRA;     // 0E2  R/W  8,16     0000      IPRA    Interrupt priority setting register A
+    RegVCRWDT VCRWDT; // 0E4  R/W  8,16     0000      VCRWDT  Vector number setting register WDT
 
     // --- DMAC module ---
 
@@ -164,19 +164,19 @@ private:
 
     alignas(16) std::array<CacheEntry, kCacheEntries> cacheEntries;
 
-    CCR_t CCR; // 092  R/W  8        00        CCR     Cache Control Register
+    RegCCR CCR; // 092  R/W  8        00        CCR     Cache Control Register
 
     void WriteCCR(uint8 value);
 
     // --- DIVU module ---
 
-    DVSR_t DVSR;     // 100  R/W  32       ud        DVSR    Divisor register
-    DVDNT_t DVDNT;   // 104  R/W  32       ud        DVDNT   Dividend register L for 32-bit division
-    DVCR_t DVCR;     // 108  R/W  16,32    00000000  DVCR    Division control register
-    VCRDIV_t VCRDIV; // 10C  R/W  16,32    ud        VCRDIV  Vector number register setting DIV
-    DVDNTH_t DVDNTH; // 110  R/W  32       ud        DVDNTH  Dividend register H
-    DVDNTL_t DVDNTL; // 114  R/W  32       ud        DVDNTL  Dividend register L
-                     // 120..13F are mirrors of 100..11F
+    RegDVSR DVSR;     // 100  R/W  32       ud        DVSR    Divisor register
+    RegDVDNT DVDNT;   // 104  R/W  32       ud        DVDNT   Dividend register L for 32-bit division
+    RegDVCR DVCR;     // 108  R/W  16,32    00000000  DVCR    Division control register
+    RegVCRDIV VCRDIV; // 10C  R/W  16,32    ud        VCRDIV  Vector number register setting DIV
+    RegDVDNTH DVDNTH; // 110  R/W  32       ud        DVDNTH  Dividend register H
+    RegDVDNTL DVDNTL; // 114  R/W  32       ud        DVDNTL  Dividend register L
+                      // 120..13F are mirrors of 100..11F
 
     // Both division calculations take 39 cycles to complete, or 6 if it results in overflow.
     // On overflow, the OVF bit is set and an overflow interrupt is generated if DVCR.OVFIE=1.
@@ -198,18 +198,18 @@ private:
 
     // --- DMAC module ---
 
-    VCRDMA0_t VCRDMA0; // 1A0  R/W  32       ud        VCRDMA0 DMA vector number register 0
-    VCRDMA1_t VCRDMA1; // 1A8  R/W  32       ud        VCRDMA1 DMA vector number register 1
+    RegVCRDMA0 VCRDMA0; // 1A0  R/W  32       ud        VCRDMA0 DMA vector number register 0
+    RegVCRDMA1 VCRDMA1; // 1A8  R/W  32       ud        VCRDMA1 DMA vector number register 1
 
     // --- BSC module ---
 
-    BCR1_t BCR1;   // 1E0  R/W  16,32    03F0      BCR1    Bus Control Register 1
-    BCR2_t BCR2;   // 1E4  R/W  16,32    00FC      BCR2    Bus Control Register 2
-    WCR_t WCR;     // 1E8  R/W  16,32    AAFF      WCR     Wait Control Register
-    MCR_t MCR;     // 1EC  R/W  16,32    0000      MCR     Individual Memory Control Register
-    RTCSR_t RTCSR; // 1F0  R/W  16,32    0000      RTCSR   Refresh Timer Control/Status Register
-    RTCNT_t RTCNT; // 1F4  R/W  16,32    0000      RTCNT   Refresh Timer Counter
-    RTCOR_t RTCOR; // 1F8  R/W  16,32    0000      RTCOR   Refresh Timer Constant Register
+    RegBCR1 BCR1;   // 1E0  R/W  16,32    03F0      BCR1    Bus Control Register 1
+    RegBCR2 BCR2;   // 1E4  R/W  16,32    00FC      BCR2    Bus Control Register 2
+    RegWCR WCR;     // 1E8  R/W  16,32    AAFF      WCR     Wait Control Register
+    RegMCR MCR;     // 1EC  R/W  16,32    0000      MCR     Individual Memory Control Register
+    RegRTCSR RTCSR; // 1F0  R/W  16,32    0000      RTCSR   Refresh Timer Control/Status Register
+    RegRTCNT RTCNT; // 1F4  R/W  16,32    0000      RTCNT   Refresh Timer Counter
+    RegRTCOR RTCOR; // 1F8  R/W  16,32    0000      RTCOR   Refresh Timer Constant Register
 
     template <mem_primitive T>
     T OnChipRegRead(uint32 address);

@@ -75,7 +75,7 @@ private:
 
     uint32 PC;
 
-    union SR_t {
+    union RegSR {
         uint16 u16;
         struct {
             // --- condition code register (CCR) ---

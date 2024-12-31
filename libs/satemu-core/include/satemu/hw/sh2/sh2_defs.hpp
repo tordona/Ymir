@@ -81,7 +81,7 @@ union Reg16 {
 //    7-0   R/W  Reserved   Must be zero
 //
 //   Interrupt priority levels range from 0 to 15.
-union IPRB_t {
+union RegIPRB {
     Reg16 val;
     struct {
         uint16 _rsvd0_7 : 8;
@@ -97,7 +97,7 @@ union IPRB_t {
 //   14-8   R/W  SERV6-0  Serial Communication Interface (SCI) Receive-Error Interrupt Vector Number
 //      7   R    -        Reserved - must be zero
 //    6-0   R/W  SRXV6-0  Serial Communication Interface (SCI) Receive-Data-Full Interrupt Vector Number
-union VCRA_t {
+union RegVCRA {
     Reg16 val;
     struct {
         uint16 SRXVn : 7;
@@ -114,7 +114,7 @@ union VCRA_t {
 //   14-8   R/W  STXV6-0  Serial Communication Interface (SCI) Transmit-Data-Empty Interrupt Vector Number
 //      7   R    -        Reserved - must be zero
 //    6-0   R/W  STEV6-0  Serial Communication Interface (SCI) Transmit-End Interrupt Vector Number
-union VCRB_t {
+union RegVCRB {
     Reg16 val;
     struct {
         uint16 STEVn : 7;
@@ -131,7 +131,7 @@ union VCRB_t {
 //   14-8   R/W  FICV6-0  Free-Running Timer (FRT) Input-Capture Interrupt Vector Number
 //      7   R    -        Reserved - must be zero
 //    6-0   R/W  FOCV6-0  Free-Running Timer (FRT) Output-Compare Interrupt Vector Number
-union VCRC_t {
+union RegVCRC {
     Reg16 val;
     struct {
         uint16 FOCVn : 7;
@@ -147,7 +147,7 @@ union VCRC_t {
 //     15   R    -        Reserved - must be zero
 //   14-8   R/W  FOVV6-0  Free-Running Timer (FRT) Overflow Interrupt Vector Number
 //    7-0   R    -        Reserved - must be zero
-union VCRD_t {
+union RegVCRD {
     Reg16 val;
     struct {
         uint16 _rsvd0_7 : 8;
@@ -168,7 +168,7 @@ union VCRD_t {
 //                      External vector mode reads from external vector number input pins D7-D0.
 //
 //    The default value may be either 8000 or 0000 because NMIL is an external signal.
-union ICR_t {
+union RegICR {
     Reg16 val;
     struct {
         uint16 VECMD : 1;
@@ -194,7 +194,7 @@ union ICR_t {
 //
 //   WDTIP3-0 includes both the watchdog timer and bus state controller (BSC).
 //   WDT interrupt has priority over BSC.
-union IPRA_t {
+union RegIPRA {
     Reg16 val;
     struct {
         uint16 _rsvd0_3 : 4;
@@ -211,7 +211,7 @@ union IPRA_t {
 //   14-8   R/W  WITV6-0  Watchdog Timer (WDT) Interval Interrupt Vector Number
 //      7   R    -        Reserved - must be zero
 //    6-0   R/W  BCMV6-0  Bus State Controller (BSC) Compare Match Interrupt Vector Number
-union VCRWDT_t {
+union RegVCRWDT {
     Reg16 val;
     struct {
         uint16 BCMVn : 7;
@@ -267,7 +267,7 @@ struct CacheEntry {
 //      2   R/W  OD     Data Replacement Disable (0=disabled, 1=data cache not updated on miss)
 //      1   R/W  ID     Instruction Replacement Disabled (same as above, but for code cache)
 //      0   R/W  CE     Cache Enable (0=disable, 1=enable)
-union CCR_t {
+union RegCCR {
     uint8 u8;
     struct {
         uint8 CE : 1;
@@ -288,13 +288,13 @@ union CCR_t {
 //
 //   bits   r/w  code   description
 //   31-0   R/W  -      Divisor number
-using DVSR_t = uint32;
+using RegDVSR = uint32;
 
 // 104  R/W  32       ud        DVDNT   Dividend register L for 32-bit division
 //
 //   bits   r/w  code   description
 //   31-0   R/W  -      32-bit dividend number
-using DVDNT_t = uint32;
+using RegDVDNT = uint32;
 
 // 108  R/W  16,32    00000000  DVCR    Division control register
 //
@@ -302,7 +302,7 @@ using DVDNT_t = uint32;
 //   31-2   R    -      Reserved - must be zero
 //      1   R/W  OVFIE  OVF interrupt enable (0=disabled, 1=enabled)
 //      0   R/W  OVF    Overflow Flag (0=no overflow, 1=overflow)
-union DVCR_t {
+union RegDVCR {
     uint32 u32;
     struct {
         uint32 OVF : 1;
@@ -316,19 +316,19 @@ union DVCR_t {
 //   bits   r/w  code   description
 //  31-16   R    -      Reserved - must be zero
 //   15-0   R/W  -      Interrupt Vector Number
-using VCRDIV_t = uint16;
+using RegVCRDIV = uint16;
 
 // 110  R/W  32       ud        DVDNTH  Dividend register H
 //
 //   bits   r/w  code   description
 //   31-0   R/W  -      64-bit dividend number (upper half)
-using DVDNTH_t = uint32;
+using RegDVDNTH = uint32;
 
 // 114  R/W  32       ud        DVDNTL  Dividend register L
 //
 //   bits   r/w  code   description
 //   31-0   R/W  -      64-bit dividend number (lower half)
-using DVDNTL_t = uint32;
+using RegDVDNTL = uint32;
 
 // 120..13F are mirrors of 100..11F
 
@@ -365,7 +365,7 @@ using DVDNTL_t = uint32;
 //   bits   r/w  code   description
 //   31-8   R    -      Reserved - must be zero
 //    7-0   R/W  VC7-0  Vector Number
-using VCRDMA0_t = uint8;
+using RegVCRDMA0 = uint8;
 
 //
 // 190  ?    32?      ??        SAR1    ???
@@ -378,14 +378,14 @@ using VCRDMA0_t = uint8;
 //   bits   r/w  code   description
 //   31-8   R    -      Reserved - must be zero
 //    7-0   R/W  VC7-0  Vector Number
-using VCRDMA1_t = uint8;
+using RegVCRDMA1 = uint8;
 
 // 1B0  ?    32?      ??        DMAOR   ???
 //
 // --- BSC module ---
 //
 // 1E0  R/W  16,32    03F0      BCR1    Bus Control Register 1
-union BCR1_t {
+union RegBCR1 {
     uint16 u16;
     struct {
         uint16 DRAMn : 3;
@@ -404,7 +404,7 @@ union BCR1_t {
 };
 
 // 1E4  R/W  16,32    00FC      BCR2    Bus Control Register 2
-union BCR2_t {
+union RegBCR2 {
     uint16 u16;
     struct {
         uint16 _rsvd0 : 1;
@@ -416,7 +416,7 @@ union BCR2_t {
 };
 
 // 1E8  R/W  16,32    AAFF      WCR     Wait Control Register
-union WCR_t {
+union RegWCR {
     uint16 u16;
     struct {
         uint16 W0n : 2;
@@ -431,7 +431,7 @@ union WCR_t {
 };
 
 // 1EC  R/W  16,32    0000      MCR     Individual Memory Control Register
-union MCR_t {
+union RegMCR {
     uint16 u16;
     struct {
         uint16 _rsvd0 : 1;
@@ -453,7 +453,7 @@ union MCR_t {
 };
 
 // 1F0  R/W  16,32    0000      RTCSR   Refresh Timer Control/Status Register
-union RTCSR_t {
+union RegRTCSR {
     uint16 u16;
     struct {
         uint16 _rsvd0 : 1;
@@ -466,9 +466,9 @@ union RTCSR_t {
 };
 
 // 1F4  R/W  16,32    0000      RTCNT   Refresh Timer Counter
-using RTCNT_t = uint8;
+using RegRTCNT = uint8;
 
 // 1F8  R/W  16,32    0000      RTCOR   Refresh Timer Constant Register
-using RTCOR_t = uint8;
+using RegRTCOR = uint8;
 
 } // namespace satemu::sh2

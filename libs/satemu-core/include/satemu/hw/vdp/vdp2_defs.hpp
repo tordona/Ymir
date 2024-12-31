@@ -834,7 +834,7 @@ struct WindowParams {
 //                               101 (5) = 352 pixels - Exclusive Normal Graphic B (Hi-Vision monitor)
 //                               110 (6) = 640 pixels - Exclusive Hi-Res Graphic A (31 KHz monitor)
 //                               111 (7) = 704 pixels - Exclusive Hi-Res Graphic B (Hi-Vision monitor)
-union TVMD_t {
+union RegTVMD {
     uint16 u16;
     struct {
         uint16 HRESOn : 3;
@@ -856,7 +856,7 @@ union TVMD_t {
 //    7-2        -             Reserved, must be zero
 //      1   R/W  DASEL         Display Area Select (0=selected area, 1=full screen)
 //      0   R/W  EXBGEN        External BG Enable (0=disable, 1=enable)
-union EXTEN_t {
+union RegEXTEN {
     uint16 u16;
     struct {
         uint16 EXBGEN : 1;
@@ -879,7 +879,7 @@ union EXTEN_t {
 //      2   R    HBLANK        Horizontal Blank Flag (0=horizontal scan, 1=horizontal retrace)
 //      1   R    ODD           Scan Field Flag (0=even, 1=odd)
 //      0   R    PAL           TV Standard Flag (0=NTSC, 1=PAL)
-union TVSTAT_t {
+union RegTVSTAT {
     uint16 u16;
     struct {
         uint16 PAL : 1;
@@ -899,7 +899,7 @@ union TVSTAT_t {
 //     15   R/W  VRAMSZ        VRAM Size (0=512 KiB, 1=1 MiB)
 //   14-4        -             Reserved, must be zero
 //    3-0   R    VER3-0        VDP2 Version Number
-union VRSIZE_t {
+union RegVRSIZE {
     uint16 u16;
     struct {
         uint16 VERn : 4;
@@ -932,7 +932,7 @@ union VRSIZE_t {
 //   01 (1) = bank used for coefficient table
 //   10 (2) = bank used for pattern name table
 //   11 (3) = bank used for character/bitmap pattern table
-union RAMCTL_t {
+union RegRAMCTL {
     uint16 u16;
     struct {
         uint16 RDBSA0n : 2;
@@ -1011,7 +1011,7 @@ union RAMCTL_t {
 //   11-8     W  VCP5B1(3-0)   VRAM-B1 Timing for T5
 //    7-4     W  VCP6B1(3-0)   VRAM-B1 Timing for T6
 //    3-0     W  VCP7B1(3-0)   VRAM-B1 Timing for T7
-union CYC_t {
+union RegCYC {
     uint32 u32;
     struct {
         union {
@@ -1050,7 +1050,7 @@ union CYC_t {
 //       0,1   up to 1/2 horizontal reduction, max 256 character colors
 //       1,0   up to 1/4 horizontal reduction, max 16 character colors
 //       1,1   up to 1/4 horizontal reduction, max 16 character colors
-union ZMCTL_t {
+union RegZMCTL {
     uint16 u16;
     struct {
         uint16 N0ZMHF : 1;

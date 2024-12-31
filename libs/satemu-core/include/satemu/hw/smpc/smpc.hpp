@@ -110,7 +110,7 @@ private:
     //                        01: 255-byte mode
     //                        10: Unused
     //                        11: 0-byte mode
-    union SR_t {
+    union RegSR {
         uint8 u8;
         struct {
             uint8 P1MDn : 2;
