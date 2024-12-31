@@ -938,22 +938,22 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadLCTAU() const {
         uint16 value = 0;
-        bit::deposit_into<0, 2>(value, bit::extract<16, 18>(lineScreenParams.baseAddress));
+        bit::deposit_into<0, 2>(value, bit::extract<17, 19>(lineScreenParams.baseAddress));
         bit::deposit_into<15>(value, lineScreenParams.perLine);
         return value;
     }
 
     FORCE_INLINE void WriteLCTAU(uint16 value) {
-        bit::deposit_into<16, 18>(lineScreenParams.baseAddress, bit::extract<0, 2>(value));
+        bit::deposit_into<17, 19>(lineScreenParams.baseAddress, bit::extract<0, 2>(value));
         lineScreenParams.perLine = bit::extract<15>(value);
     }
 
     FORCE_INLINE uint16 ReadLCTAL() const {
-        return bit::extract<0, 15>(lineScreenParams.baseAddress);
+        return bit::extract<1, 16>(lineScreenParams.baseAddress);
     }
 
     FORCE_INLINE void WriteLCTAL(uint16 value) {
-        bit::deposit_into<0, 15>(lineScreenParams.baseAddress, value);
+        bit::deposit_into<1, 16>(lineScreenParams.baseAddress, value);
     }
 
     // 1800AC   BKTAU   Back Screen Table Address (upper)

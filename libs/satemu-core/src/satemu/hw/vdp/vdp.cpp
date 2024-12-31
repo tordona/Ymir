@@ -1385,7 +1385,7 @@ void VDP::VDP2DrawLineColorAndBackScreens() {
     {
         const uint32 line = lineParams.perLine ? y : 0;
         const uint32 address = lineParams.baseAddress + line * sizeof(uint16);
-        const uint32 cramAddress = VDP2ReadVRAM<uint16>(address);
+        const uint32 cramAddress = VDP2ReadVRAM<uint16>(address) * sizeof(uint16);
         const Color555 color555{.u16 = VDP2ReadCRAM<uint16>(cramAddress)};
         m_lineBackLayerState.lineColor = ConvertRGB555to888(color555);
     }
@@ -1698,6 +1698,16 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
             }
         };
 
+        auto isLineColorEnabled = [&](Layer layer) {
+            if (layer == LYR_Sprite) {
+                return m_VDP2.spriteParams.lineColorScreenEnable;
+            } else if (layer == LYR_Back) {
+                return false;
+            } else {
+                return m_VDP2.bgParams[layer - LYR_RBG0].lineColorScreenEnable;
+            }
+        };
+
         auto isShadowEnabled = [&](Layer layer) {
             if (layer == LYR_Sprite) {
                 return m_spriteLayerState.attrs[x].shadowOrWindow;
@@ -1711,8 +1721,6 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
         const auto &colorCalcParams = m_VDP2.colorCalcParams;
 
         // Calculate color
-        // TODO: handle LNCL insertion
-        // - inserted behind the topmost layer if it has line color insertion enabled
         // TODO: handle specialColorCalcMode directly in rendering code
         Color888 outputColor{};
         if (isColorCalcEnabled(layers[0])) {
@@ -1720,13 +1728,12 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
             Color888 btmColor = getLayerColor(layers[1]);
 
             // Apply extended color calculations (only in normal TV modes)
-            if (colorCalcParams.extendedColorCalcEnable && m_VDP2.TVMD.HRESOn < 2) {
+            const bool useExtendedColorCalc = colorCalcParams.extendedColorCalcEnable && m_VDP2.TVMD.HRESOn < 2;
+            if (useExtendedColorCalc) {
                 // TODO: honor color RAM mode + palette/RGB format restrictions
                 // - modes 1 and 2 don't blend layers if the bottom layer uses palette color
-                //   - LNCL is considered RGB for that matter (i.e. it blends if requested)
-                // TODO: honor LNCL insertion
 
-                // HACK: assuming color RAM mode 0 for now
+                // HACK: assuming color RAM mode 0 for now (aka no restrictions)
                 if (isColorCalcEnabled(layers[1])) {
                     const Color888 l2Color = getLayerColor(layers[2]);
                     btmColor.r = (btmColor.r + l2Color.r) / 2;
@@ -1735,6 +1742,23 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
                 }
             }
 
+            // Insert and blend line color screen if top layer uses it
+            if (isLineColorEnabled(layers[0])) {
+                const Color888 lineColor = m_lineBackLayerState.lineColor;
+                if (useExtendedColorCalc) {
+                    btmColor.r = (lineColor.r + btmColor.r) / 2;
+                    btmColor.g = (lineColor.g + btmColor.g) / 2;
+                    btmColor.b = (lineColor.b + btmColor.b) / 2;
+                } else {
+                    const uint8 ratio = m_VDP2.lineScreenParams.colorCalcRatio;
+                    const uint8 complRatio = 32 - ratio;
+                    btmColor.r = (lineColor.r * complRatio + btmColor.r * ratio) / 32;
+                    btmColor.g = (lineColor.g * complRatio + btmColor.g * ratio) / 32;
+                    btmColor.b = (lineColor.b * complRatio + btmColor.b * ratio) / 32;
+                }
+            }
+
+            // Blend top and blended bottom layers
             if (colorCalcParams.useAdditiveBlend) {
                 outputColor.r = std::min(topColor.r + btmColor.r, 255);
                 outputColor.g = std::min(topColor.g + btmColor.g, 255);
