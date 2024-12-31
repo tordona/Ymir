@@ -4,6 +4,9 @@
 
 #include "inline.hpp"
 
+#include <concepts>
+#include <span>
+
 namespace util {
 
 // Determines if the given address is in range [start..end]
@@ -42,6 +45,18 @@ FORCE_INLINE void WriteLE(uint8 *data, T value) {
     for (uint32 i = 0; i < sizeof(T); i++) {
         data[i] = value >> (i * 8u);
     }
+}
+
+template <std::integral T>
+FORCE_INLINE T DecimalToInt(std::span<uint8> numericText) {
+    T result = 0;
+    for (auto ch : numericText) {
+        if (ch < '0' || ch > '9') {
+            break;
+        }
+        result = result * 10 + (static_cast<T>(ch) - '0');
+    }
+    return result;
 }
 
 } // namespace util

@@ -63,13 +63,13 @@ struct DateTime {
         if (dateTime.size() < 17) {
             return false;
         }
-        year = std::stoi(std::string(dateTime.begin(), dateTime.begin() + 4));
-        month = std::stoi(std::string(dateTime.begin() + 4, dateTime.begin() + 6));
-        day = std::stoi(std::string(dateTime.begin() + 6, dateTime.begin() + 8));
-        hour = std::stoi(std::string(dateTime.begin() + 8, dateTime.begin() + 10));
-        minute = std::stoi(std::string(dateTime.begin() + 10, dateTime.begin() + 12));
-        second = std::stoi(std::string(dateTime.begin() + 12, dateTime.begin() + 14));
-        centisecond = std::stoi(std::string(dateTime.begin() + 14, dateTime.begin() + 16));
+        year = util::DecimalToInt<uint16>(dateTime.subspan(0, 4));
+        month = util::DecimalToInt<uint8>(dateTime.subspan(4, 2));
+        day = util::DecimalToInt<uint8>(dateTime.subspan(6, 2));
+        hour = util::DecimalToInt<uint8>(dateTime.subspan(8, 2));
+        minute = util::DecimalToInt<uint8>(dateTime.subspan(10, 2));
+        second = util::DecimalToInt<uint8>(dateTime.subspan(12, 2));
+        centisecond = util::DecimalToInt<uint8>(dateTime.subspan(14, 2));
         gmtOffset = dateTime[16];
         return true;
     }
