@@ -353,7 +353,7 @@ using RegDVDNTL = uint32;
 //
 // --- DMAC module ---
 
-enum class DMATransferMode { Fixed, Increment, Decrement, Reserved };
+enum class DMATransferIncrementMode { Fixed, Increment, Decrement, Reserved };
 enum class DMATransferSize { Byte, Word, Longword, QuadLongword };
 enum class DMATransferBusMode : uint8 { CycleSteal, Burst };
 enum class DMATransferAddressMode : uint8 { Dual, Single };
@@ -367,8 +367,8 @@ struct DMAChannel {
 
     void Reset() {
         xferSize = DMATransferSize::Byte;
-        srcMode = DMATransferMode::Fixed;
-        dstMode = DMATransferMode::Fixed;
+        srcMode = DMATransferIncrementMode::Fixed;
+        dstMode = DMATransferIncrementMode::Fixed;
         autoRequest = false;
         ackXferMode = false;
         ackLevel = false;
@@ -380,6 +380,14 @@ struct DMAChannel {
         xferEnded = false;
         xferEnabled = false;
         resSelect = DMAResourceSelect::DREQ;
+    }
+
+    // Determines if the DMA transfer is enabled for this channel.
+    // The DMAC determines that a transfer is active by checking that DE = 1, DME = 1, TE = 0, NMIF = 0, AE = 0.
+    // This method returns true if DE = 1 and TE = 0.
+    // DME = 1, NMIF = 0 and AE = 0 must be checked externally as they're stored in DMAOR.
+    bool IsEnabled() const {
+        return xferEnabled && !xferEnded;
     }
 
     // 180  R/W  32       ud        SAR0    DMA source address register 0
@@ -450,8 +458,8 @@ struct DMAChannel {
     //      0   R/W  DE     DMA enable (0=transfer disabled, 1=transfer enabled)
 
     DMATransferSize xferSize;
-    DMATransferMode srcMode;
-    DMATransferMode dstMode;
+    DMATransferIncrementMode srcMode;
+    DMATransferIncrementMode dstMode;
     bool autoRequest;
     bool ackXferMode;
     bool ackLevel;
@@ -482,8 +490,8 @@ struct DMAChannel {
     }
 
     FORCE_INLINE void WriteCHCR(uint32 value) {
-        dstMode = static_cast<DMATransferMode>(bit::extract<14, 15>(value));
-        srcMode = static_cast<DMATransferMode>(bit::extract<12, 13>(value));
+        dstMode = static_cast<DMATransferIncrementMode>(bit::extract<14, 15>(value));
+        srcMode = static_cast<DMATransferIncrementMode>(bit::extract<12, 13>(value));
         xferSize = static_cast<DMATransferSize>(bit::extract<10, 11>(value));
         autoRequest = bit::extract<9>(value);
         ackXferMode = bit::extract<8>(value);
@@ -493,7 +501,7 @@ struct DMAChannel {
         xferBusMode = static_cast<DMATransferBusMode>(bit::extract<4>(value));
         xferAddressMode = static_cast<DMATransferAddressMode>(bit::extract<3>(value));
         irqEnable = bit::extract<2>(value);
-        xferEnded &= ~bit::extract<1>(value);
+        xferEnded &= bit::extract<1>(value);
         xferEnabled = bit::extract<0>(value);
     }
 
@@ -543,11 +551,11 @@ struct DMAChannel {
 //                        write:
 //                          0 = clear flag if it was set to 1
 //                          1 = no effect
-//      0   R/W  DMAE   DMA master enable (0=disable all channels, 1=enable all channels)
+//      0   R/W  DME    DMA master enable (0=disable all channels, 1=enable all channels)
 union RegDMAOR {
     uint32 u32;
     struct {
-        uint32 DMAE : 1;
+        uint32 DME : 1;
         uint32 NMIF : 1;
         uint32 AE : 1;
         uint32 PR : 1;

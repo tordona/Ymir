@@ -159,6 +159,10 @@ private:
     std::array<DMAChannel, 2> dmaChannels;
     RegDMAOR DMAOR;
 
+    // Determines if a DMA transfer is active for the specified channel.
+    // A transfer is active if DE = 1, DME = 1, TE = 0, NMIF = 0 and AE = 0.
+    bool IsDMATransferActive(const DMAChannel &ch) const;
+
     // --- WDT module ---
 
     // --- Power-down module ---

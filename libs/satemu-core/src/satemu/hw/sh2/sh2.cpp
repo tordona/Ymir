@@ -84,6 +84,85 @@ void SH2::Reset(bool hard) {
 }
 
 FLATTEN void SH2::Step() {
+    // TODO: optimize active DMA channel check
+    // TODO: proper timings, cycle-stealing, etc. (suspend instructions if not cached)
+    // TODO: prioritize channels based on DMAOR.PR
+    for (auto &ch : dmaChannels) {
+        if (!IsDMATransferActive(ch)) {
+            continue;
+        }
+
+        // Auto request mode will start the transfer right now.
+        // Module request mode checks if the signal from the configured source has been raised.
+        if (!ch.autoRequest) {
+            bool signal = false;
+            switch (ch.resSelect) {
+            case DMAResourceSelect::DREQ: /*TODO*/ signal = false; break;
+            case DMAResourceSelect::RXI: /*TODO*/ signal = false; break;
+            case DMAResourceSelect::TXI: /*TODO*/ signal = false; break;
+            case DMAResourceSelect::Reserved: signal = false; break;
+            }
+            if (!signal) {
+                continue;
+            }
+        }
+
+        static constexpr uint32 kXferSize[] = {1, 2, 4, 16};
+        const uint32 xferSize = kXferSize[static_cast<uint32>(ch.xferSize)];
+
+        auto incAddress = [&](uint32 address, DMATransferIncrementMode mode) -> uint32 {
+            using enum DMATransferIncrementMode;
+            switch (mode) {
+            case Fixed: return address;
+            case Increment: return address + xferSize;
+            case Decrement: return address - xferSize;
+            case Reserved: return address;
+            }
+        };
+
+        // Perform one unit of transfer
+        switch (ch.xferSize) {
+        case DMATransferSize::Byte: {
+            const uint8 value = MemReadByte(ch.srcAddress);
+            MemWriteByte(ch.dstAddress, value);
+            break;
+        }
+        case DMATransferSize::Word: {
+            const uint16 value = MemReadWord(ch.srcAddress);
+            MemWriteWord(ch.dstAddress, value);
+            break;
+        }
+        case DMATransferSize::Longword: {
+            const uint32 value = MemReadLong(ch.srcAddress);
+            MemWriteLong(ch.dstAddress, value);
+            break;
+        }
+        case DMATransferSize::QuadLongword:
+            for (int i = 0; i < 4; i++) {
+                const uint32 value = MemReadLong(ch.srcAddress + i * sizeof(uint32));
+                MemWriteLong(ch.dstAddress + i * sizeof(uint32), value);
+            }
+            break;
+        }
+
+        ch.srcAddress = incAddress(ch.srcAddress, ch.srcMode);
+        ch.dstAddress = incAddress(ch.dstAddress, ch.dstMode);
+
+        // Check if transfer ended
+        if (ch.xferSize == DMATransferSize::QuadLongword) {
+            ch.xferCount -= 4;
+        } else {
+            ch.xferCount--;
+        }
+        if (ch.xferCount == 0) {
+            // Raise DEI interrupt if requested
+            if (ch.irqEnable) {
+                // TODO: raise DEI interrupt
+            }
+            ch.xferEnded = true;
+        }
+    }
+
     /*auto bit = [](bool value, std::string_view bit) { return value ? fmt::format(" {}", bit) : ""; };
 
     dbg_println(" R0 = {:08X}   R4 = {:08X}   R8 = {:08X}  R12 = {:08X}", R[0], R[4], R[8], R[12]);
@@ -288,6 +367,10 @@ T SH2::OpenBusSeqRead(uint32 address) {
 
 // -----------------------------------------------------------------------------
 // On-chip peripherals
+
+FLATTEN FORCE_INLINE bool SH2::IsDMATransferActive(const DMAChannel &ch) const {
+    return ch.IsEnabled() && DMAOR.DME && !DMAOR.NMIF && !DMAOR.AE;
+}
 
 void SH2::WriteCCR(uint8 value) {
     if (CCR.u8 == value) {
@@ -612,9 +695,9 @@ void SH2::OnChipRegWrite(uint32 address, T baseValue) {
     case 0x1A8: dmaChannels[1].vecNum = value; break;
 
     case 0x1B0:
-        DMAOR.DMAE = bit::extract<0>(value);
-        DMAOR.NMIF &= ~bit::extract<1>(value);
-        DMAOR.AE &= ~bit::extract<2>(value);
+        DMAOR.DME = bit::extract<0>(value);
+        DMAOR.NMIF &= bit::extract<1>(value);
+        DMAOR.AE &= bit::extract<2>(value);
         DMAOR.PR = bit::extract<3>(value);
         break;
 
@@ -685,7 +768,7 @@ void SH2::OnChipRegWrite(uint32 address, T baseValue) {
 // Interrupts
 
 bool SH2::CheckInterrupts() {
-    // TODO: check interrupts from these sources (in order of priority, when priority numbers are the same):
+    // Check interrupts from these sources (in order of priority, when priority numbers are the same):
     //   name             priority       vecnum
     //   NMI              16             0x0B
     //   User break       15             0x0C
@@ -702,8 +785,7 @@ bool SH2::CheckInterrupts() {
     //   FRT ICI          IPRB.FRTIPn    VCRC.FICVn
     //   FRT OCI          IPRB.FRTIPn    VCRC.FOCVn
     //   FRT OVI          IPRB.FRTIPn    VCRD.FOVVn
-    // use the vector number of the exception with highest priority
-    // TODO: external vector fetch
+    // Use the vector number of the exception with highest priority
 
     // TODO: NMI, user break (before IRLs)
 
