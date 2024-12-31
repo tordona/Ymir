@@ -2,6 +2,9 @@
 
 #include <satemu/core_types.hpp>
 
+#include <satemu/util/bit_ops.hpp>
+#include <satemu/util/inline.hpp>
+
 #include <array>
 
 namespace satemu::sh2 {
@@ -460,6 +463,40 @@ struct DMAChannel {
     bool xferEnded;
     bool xferEnabled;
 
+    FORCE_INLINE uint32 ReadCHCR() const {
+        uint32 value{};
+        bit::deposit_into<14, 15>(value, static_cast<uint32>(dstMode));
+        bit::deposit_into<12, 13>(value, static_cast<uint32>(srcMode));
+        bit::deposit_into<10, 11>(value, static_cast<uint32>(xferSize));
+        bit::deposit_into<9>(value, autoRequest);
+        bit::deposit_into<8>(value, ackXferMode);
+        bit::deposit_into<7>(value, ackLevel);
+        bit::deposit_into<6>(value, static_cast<uint32>(dreqSelect));
+        bit::deposit_into<5>(value, dreqLevel);
+        bit::deposit_into<4>(value, static_cast<uint32>(xferBusMode));
+        bit::deposit_into<3>(value, static_cast<uint32>(xferAddressMode));
+        bit::deposit_into<2>(value, irqEnable);
+        bit::deposit_into<1>(value, xferEnded);
+        bit::deposit_into<0>(value, xferEnabled);
+        return value;
+    }
+
+    FORCE_INLINE void WriteCHCR(uint32 value) {
+        dstMode = static_cast<DMATransferMode>(bit::extract<14, 15>(value));
+        srcMode = static_cast<DMATransferMode>(bit::extract<12, 13>(value));
+        xferSize = static_cast<DMATransferSize>(bit::extract<10, 11>(value));
+        autoRequest = bit::extract<9>(value);
+        ackXferMode = bit::extract<8>(value);
+        ackLevel = bit::extract<7>(value);
+        dreqSelect = static_cast<SignalDetectionMode>(bit::extract<6>(value));
+        dreqLevel = bit::extract<5>(value);
+        xferBusMode = static_cast<DMATransferBusMode>(bit::extract<4>(value));
+        xferAddressMode = static_cast<DMATransferAddressMode>(bit::extract<3>(value));
+        irqEnable = bit::extract<2>(value);
+        xferEnded &= ~bit::extract<1>(value);
+        xferEnabled = bit::extract<0>(value);
+    }
+
     // 1A0  R/W  32       ud        VCRDMA0 DMA vector number register 0
     // 1A8  R/W  32       ud        VCRDMA1 DMA vector number register 1
     //
@@ -479,6 +516,14 @@ struct DMAChannel {
     //                        10 (2) = TXI (on-chip SCI transmit-data-empty interrupt transfer request)
     //                        11 (3) = Reserved
     DMAResourceSelect resSelect;
+
+    FORCE_INLINE uint8 ReadDRCR() const {
+        return static_cast<uint8>(resSelect);
+    }
+
+    FORCE_INLINE void WriteDRCR(uint8 value) {
+        resSelect = static_cast<DMAResourceSelect>(bit::extract<0, 1>(value));
+    }
 };
 
 // 1B0  R/W  32       00000000  DMAOR   DMA operation register

@@ -450,6 +450,10 @@ T SH2::OnChipRegRead(uint32 address) {
     case 0x64 ... 0x65: return readWordLower(VCRB.val);
     case 0x66 ... 0x67: return readWordLower(VCRC.val);
     case 0x68 ... 0x69: return readWordLower(VCRD.val);
+
+    case 0x71: return dmaChannels[0].ReadDRCR();
+    case 0x72: return dmaChannels[1].ReadDRCR();
+
     case 0x92 ... 0x9F: return readByteLower(CCR.u8);
     case 0xE0 ... 0xE1: return readWordLower(ICR.val);
     case 0xE2 ... 0xE3: return readWordLower(IPRA.val);
@@ -473,8 +477,20 @@ T SH2::OnChipRegRead(uint32 address) {
     case 0x114:
     case 0x134: return DVDNTL;
 
+    case 0x180: return dmaChannels[0].srcAddress;
+    case 0x184: return dmaChannels[0].dstAddress;
+    case 0x188: return dmaChannels[0].xferCount;
+    case 0x18C: return dmaChannels[0].ReadCHCR();
+
+    case 0x190: return dmaChannels[1].srcAddress;
+    case 0x194: return dmaChannels[1].dstAddress;
+    case 0x198: return dmaChannels[1].xferCount;
+    case 0x19C: return dmaChannels[1].ReadCHCR();
+
     case 0x1A0: return dmaChannels[0].vecNum;
     case 0x1A8: return dmaChannels[1].vecNum;
+
+    case 0x1B0: return DMAOR.u32;
 
     case 0x1E0 ... 0x1E2: return BCR1.u16;
     case 0x1E4 ... 0x1E6: return BCR2.u16;
@@ -544,6 +560,9 @@ void SH2::OnChipRegWrite(uint32 address, T baseValue) {
     case 0x68: writeWordLower(VCRD.val, value, 0x7F00); break;
     case 0x69: writeWordLower(VCRD.val, value, 0x7F00); break;
 
+    case 0x71: dmaChannels[0].WriteDRCR(value); break;
+    case 0x72: dmaChannels[1].WriteDRCR(value); break;
+
     case 0x92: WriteCCR(value); break;
 
     case 0xE0: writeWordLower(ICR.val, value, 0x0101); break;
@@ -579,8 +598,25 @@ void SH2::OnChipRegWrite(uint32 address, T baseValue) {
         DIVUBegin64();
         break;
 
+    case 0x180: dmaChannels[0].srcAddress = value; break;
+    case 0x184: dmaChannels[0].dstAddress = value; break;
+    case 0x188: dmaChannels[0].xferCount = bit::extract<0, 23>(value); break;
+    case 0x18C: dmaChannels[0].WriteCHCR(value); break;
+
+    case 0x190: dmaChannels[1].srcAddress = value; break;
+    case 0x194: dmaChannels[1].dstAddress = value; break;
+    case 0x198: dmaChannels[1].xferCount = bit::extract<0, 23>(value); break;
+    case 0x19C: dmaChannels[1].WriteCHCR(value); break;
+
     case 0x1A0: dmaChannels[0].vecNum = value; break;
     case 0x1A8: dmaChannels[1].vecNum = value; break;
+
+    case 0x1B0:
+        DMAOR.DMAE = bit::extract<0>(value);
+        DMAOR.NMIF &= ~bit::extract<1>(value);
+        DMAOR.AE &= ~bit::extract<2>(value);
+        DMAOR.PR = bit::extract<3>(value);
+        break;
 
     case 0x1E0: // BCR1
         // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
