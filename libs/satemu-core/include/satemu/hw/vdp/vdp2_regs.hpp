@@ -1241,40 +1241,40 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadWCTLA() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, bgParams[1].windowInverted[0]);
-        bit::deposit_into<1>(value, bgParams[1].windowEnable[0]);
-        bit::deposit_into<2>(value, bgParams[1].windowInverted[1]);
-        bit::deposit_into<3>(value, bgParams[1].windowEnable[1]);
-        bit::deposit_into<4>(value, bgParams[1].windowInverted[2]);
-        bit::deposit_into<5>(value, bgParams[1].windowEnable[2]);
-        bit::deposit_into<7>(value, static_cast<uint16>(bgParams[1].windowLogic));
+        bit::deposit_into<0>(value, bgParams[1].windowSet.inverted[0]);
+        bit::deposit_into<1>(value, bgParams[1].windowSet.enabled[0]);
+        bit::deposit_into<2>(value, bgParams[1].windowSet.inverted[1]);
+        bit::deposit_into<3>(value, bgParams[1].windowSet.enabled[1]);
+        bit::deposit_into<4>(value, bgParams[1].windowSet.inverted[2]);
+        bit::deposit_into<5>(value, bgParams[1].windowSet.enabled[2]);
+        bit::deposit_into<7>(value, static_cast<uint16>(bgParams[1].windowSet.logic));
 
-        bit::deposit_into<8>(value, bgParams[2].windowInverted[0]);
-        bit::deposit_into<9>(value, bgParams[2].windowEnable[0]);
-        bit::deposit_into<10>(value, bgParams[2].windowInverted[1]);
-        bit::deposit_into<11>(value, bgParams[2].windowEnable[1]);
-        bit::deposit_into<12>(value, bgParams[2].windowInverted[2]);
-        bit::deposit_into<13>(value, bgParams[2].windowEnable[2]);
-        bit::deposit_into<15>(value, static_cast<uint16>(bgParams[2].windowLogic));
+        bit::deposit_into<8>(value, bgParams[2].windowSet.inverted[0]);
+        bit::deposit_into<9>(value, bgParams[2].windowSet.enabled[0]);
+        bit::deposit_into<10>(value, bgParams[2].windowSet.inverted[1]);
+        bit::deposit_into<11>(value, bgParams[2].windowSet.enabled[1]);
+        bit::deposit_into<12>(value, bgParams[2].windowSet.inverted[2]);
+        bit::deposit_into<13>(value, bgParams[2].windowSet.enabled[2]);
+        bit::deposit_into<15>(value, static_cast<uint16>(bgParams[2].windowSet.logic));
         return value;
     }
 
     FORCE_INLINE void WriteWCTLA(uint16 value) {
-        bgParams[1].windowInverted[0] = bit::extract<0>(value);
-        bgParams[1].windowEnable[0] = bit::extract<1>(value);
-        bgParams[1].windowInverted[1] = bit::extract<2>(value);
-        bgParams[1].windowEnable[1] = bit::extract<3>(value);
-        bgParams[1].windowInverted[2] = bit::extract<4>(value);
-        bgParams[1].windowEnable[2] = bit::extract<5>(value);
-        bgParams[1].windowLogic = static_cast<WindowLogic>(bit::extract<7>(value));
+        bgParams[1].windowSet.inverted[0] = bit::extract<0>(value);
+        bgParams[1].windowSet.enabled[0] = bit::extract<1>(value);
+        bgParams[1].windowSet.inverted[1] = bit::extract<2>(value);
+        bgParams[1].windowSet.enabled[1] = bit::extract<3>(value);
+        bgParams[1].windowSet.inverted[2] = bit::extract<4>(value);
+        bgParams[1].windowSet.enabled[2] = bit::extract<5>(value);
+        bgParams[1].windowSet.logic = static_cast<WindowLogic>(bit::extract<7>(value));
 
-        bgParams[2].windowInverted[0] = bit::extract<8>(value);
-        bgParams[2].windowEnable[0] = bit::extract<9>(value);
-        bgParams[2].windowInverted[1] = bit::extract<10>(value);
-        bgParams[2].windowEnable[1] = bit::extract<11>(value);
-        bgParams[2].windowInverted[2] = bit::extract<12>(value);
-        bgParams[2].windowEnable[2] = bit::extract<13>(value);
-        bgParams[2].windowLogic = static_cast<WindowLogic>(bit::extract<15>(value));
+        bgParams[2].windowSet.inverted[0] = bit::extract<8>(value);
+        bgParams[2].windowSet.enabled[0] = bit::extract<9>(value);
+        bgParams[2].windowSet.inverted[1] = bit::extract<10>(value);
+        bgParams[2].windowSet.enabled[1] = bit::extract<11>(value);
+        bgParams[2].windowSet.inverted[2] = bit::extract<12>(value);
+        bgParams[2].windowSet.enabled[2] = bit::extract<13>(value);
+        bgParams[2].windowSet.logic = static_cast<WindowLogic>(bit::extract<15>(value));
     }
 
     // 1800D2   WCTLB   NBG2 and NBG3 Window Control
@@ -1299,40 +1299,40 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadWCTLB() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, bgParams[3].windowInverted[0]);
-        bit::deposit_into<1>(value, bgParams[3].windowEnable[0]);
-        bit::deposit_into<2>(value, bgParams[3].windowInverted[1]);
-        bit::deposit_into<3>(value, bgParams[3].windowEnable[1]);
-        bit::deposit_into<4>(value, bgParams[3].windowInverted[2]);
-        bit::deposit_into<5>(value, bgParams[3].windowEnable[2]);
-        bit::deposit_into<7>(value, static_cast<uint16>(bgParams[3].windowLogic));
+        bit::deposit_into<0>(value, bgParams[3].windowSet.inverted[0]);
+        bit::deposit_into<1>(value, bgParams[3].windowSet.enabled[0]);
+        bit::deposit_into<2>(value, bgParams[3].windowSet.inverted[1]);
+        bit::deposit_into<3>(value, bgParams[3].windowSet.enabled[1]);
+        bit::deposit_into<4>(value, bgParams[3].windowSet.inverted[2]);
+        bit::deposit_into<5>(value, bgParams[3].windowSet.enabled[2]);
+        bit::deposit_into<7>(value, static_cast<uint16>(bgParams[3].windowSet.logic));
 
-        bit::deposit_into<8>(value, bgParams[4].windowInverted[0]);
-        bit::deposit_into<9>(value, bgParams[4].windowEnable[0]);
-        bit::deposit_into<10>(value, bgParams[4].windowInverted[1]);
-        bit::deposit_into<11>(value, bgParams[4].windowEnable[1]);
-        bit::deposit_into<12>(value, bgParams[4].windowInverted[2]);
-        bit::deposit_into<13>(value, bgParams[4].windowEnable[2]);
-        bit::deposit_into<15>(value, static_cast<uint16>(bgParams[4].windowLogic));
+        bit::deposit_into<8>(value, bgParams[4].windowSet.inverted[0]);
+        bit::deposit_into<9>(value, bgParams[4].windowSet.enabled[0]);
+        bit::deposit_into<10>(value, bgParams[4].windowSet.inverted[1]);
+        bit::deposit_into<11>(value, bgParams[4].windowSet.enabled[1]);
+        bit::deposit_into<12>(value, bgParams[4].windowSet.inverted[2]);
+        bit::deposit_into<13>(value, bgParams[4].windowSet.enabled[2]);
+        bit::deposit_into<15>(value, static_cast<uint16>(bgParams[4].windowSet.logic));
         return value;
     }
 
     FORCE_INLINE void WriteWCTLB(uint16 value) {
-        bgParams[3].windowInverted[0] = bit::extract<0>(value);
-        bgParams[3].windowEnable[0] = bit::extract<1>(value);
-        bgParams[3].windowInverted[1] = bit::extract<2>(value);
-        bgParams[3].windowEnable[1] = bit::extract<3>(value);
-        bgParams[3].windowInverted[2] = bit::extract<4>(value);
-        bgParams[3].windowEnable[2] = bit::extract<5>(value);
-        bgParams[3].windowLogic = static_cast<WindowLogic>(bit::extract<7>(value));
+        bgParams[3].windowSet.inverted[0] = bit::extract<0>(value);
+        bgParams[3].windowSet.enabled[0] = bit::extract<1>(value);
+        bgParams[3].windowSet.inverted[1] = bit::extract<2>(value);
+        bgParams[3].windowSet.enabled[1] = bit::extract<3>(value);
+        bgParams[3].windowSet.inverted[2] = bit::extract<4>(value);
+        bgParams[3].windowSet.enabled[2] = bit::extract<5>(value);
+        bgParams[3].windowSet.logic = static_cast<WindowLogic>(bit::extract<7>(value));
 
-        bgParams[4].windowInverted[0] = bit::extract<8>(value);
-        bgParams[4].windowEnable[0] = bit::extract<9>(value);
-        bgParams[4].windowInverted[1] = bit::extract<10>(value);
-        bgParams[4].windowEnable[1] = bit::extract<11>(value);
-        bgParams[4].windowInverted[2] = bit::extract<12>(value);
-        bgParams[4].windowEnable[2] = bit::extract<13>(value);
-        bgParams[4].windowLogic = static_cast<WindowLogic>(bit::extract<15>(value));
+        bgParams[4].windowSet.inverted[0] = bit::extract<8>(value);
+        bgParams[4].windowSet.enabled[0] = bit::extract<9>(value);
+        bgParams[4].windowSet.inverted[1] = bit::extract<10>(value);
+        bgParams[4].windowSet.enabled[1] = bit::extract<11>(value);
+        bgParams[4].windowSet.inverted[2] = bit::extract<12>(value);
+        bgParams[4].windowSet.enabled[2] = bit::extract<13>(value);
+        bgParams[4].windowSet.logic = static_cast<WindowLogic>(bit::extract<15>(value));
     }
 
     // 1800D4   WCTLC   RBG0 and Sprite Window Control
@@ -1357,40 +1357,40 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadWCTLC() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, bgParams[0].windowInverted[0]);
-        bit::deposit_into<1>(value, bgParams[0].windowEnable[0]);
-        bit::deposit_into<2>(value, bgParams[0].windowInverted[1]);
-        bit::deposit_into<3>(value, bgParams[0].windowEnable[1]);
-        bit::deposit_into<4>(value, bgParams[0].windowInverted[2]);
-        bit::deposit_into<5>(value, bgParams[0].windowEnable[2]);
-        bit::deposit_into<7>(value, static_cast<uint16>(bgParams[0].windowLogic));
+        bit::deposit_into<0>(value, bgParams[0].windowSet.inverted[0]);
+        bit::deposit_into<1>(value, bgParams[0].windowSet.enabled[0]);
+        bit::deposit_into<2>(value, bgParams[0].windowSet.inverted[1]);
+        bit::deposit_into<3>(value, bgParams[0].windowSet.enabled[1]);
+        bit::deposit_into<4>(value, bgParams[0].windowSet.inverted[2]);
+        bit::deposit_into<5>(value, bgParams[0].windowSet.enabled[2]);
+        bit::deposit_into<7>(value, static_cast<uint16>(bgParams[0].windowSet.logic));
 
-        bit::deposit_into<8>(value, spriteParams.windowInverted[0]);
-        bit::deposit_into<9>(value, spriteParams.windowEnable[0]);
-        bit::deposit_into<10>(value, spriteParams.windowInverted[1]);
-        bit::deposit_into<11>(value, spriteParams.windowEnable[1]);
-        bit::deposit_into<12>(value, spriteParams.windowInverted[2]);
-        bit::deposit_into<13>(value, spriteParams.windowEnable[2]);
-        bit::deposit_into<15>(value, static_cast<uint16>(spriteParams.windowLogic));
+        bit::deposit_into<8>(value, spriteParams.windowSet.inverted[0]);
+        bit::deposit_into<9>(value, spriteParams.windowSet.enabled[0]);
+        bit::deposit_into<10>(value, spriteParams.windowSet.inverted[1]);
+        bit::deposit_into<11>(value, spriteParams.windowSet.enabled[1]);
+        bit::deposit_into<12>(value, spriteParams.windowSet.inverted[2]);
+        bit::deposit_into<13>(value, spriteParams.windowSet.enabled[2]);
+        bit::deposit_into<15>(value, static_cast<uint16>(spriteParams.windowSet.logic));
         return value;
     }
 
     FORCE_INLINE void WriteWCTLC(uint16 value) {
-        bgParams[0].windowInverted[0] = bit::extract<0>(value);
-        bgParams[0].windowEnable[0] = bit::extract<1>(value);
-        bgParams[0].windowInverted[1] = bit::extract<2>(value);
-        bgParams[0].windowEnable[1] = bit::extract<3>(value);
-        bgParams[0].windowInverted[2] = bit::extract<4>(value);
-        bgParams[0].windowEnable[2] = bit::extract<5>(value);
-        bgParams[0].windowLogic = static_cast<WindowLogic>(bit::extract<7>(value));
+        bgParams[0].windowSet.inverted[0] = bit::extract<0>(value);
+        bgParams[0].windowSet.enabled[0] = bit::extract<1>(value);
+        bgParams[0].windowSet.inverted[1] = bit::extract<2>(value);
+        bgParams[0].windowSet.enabled[1] = bit::extract<3>(value);
+        bgParams[0].windowSet.inverted[2] = bit::extract<4>(value);
+        bgParams[0].windowSet.enabled[2] = bit::extract<5>(value);
+        bgParams[0].windowSet.logic = static_cast<WindowLogic>(bit::extract<7>(value));
 
-        spriteParams.windowInverted[0] = bit::extract<8>(value);
-        spriteParams.windowEnable[0] = bit::extract<9>(value);
-        spriteParams.windowInverted[1] = bit::extract<10>(value);
-        spriteParams.windowEnable[1] = bit::extract<11>(value);
-        spriteParams.windowInverted[2] = bit::extract<12>(value);
-        spriteParams.windowEnable[2] = bit::extract<13>(value);
-        spriteParams.windowLogic = static_cast<WindowLogic>(bit::extract<15>(value));
+        spriteParams.windowSet.inverted[0] = bit::extract<8>(value);
+        spriteParams.windowSet.enabled[0] = bit::extract<9>(value);
+        spriteParams.windowSet.inverted[1] = bit::extract<10>(value);
+        spriteParams.windowSet.enabled[1] = bit::extract<11>(value);
+        spriteParams.windowSet.inverted[2] = bit::extract<12>(value);
+        spriteParams.windowSet.enabled[2] = bit::extract<13>(value);
+        spriteParams.windowSet.logic = static_cast<WindowLogic>(bit::extract<15>(value));
     }
 
     // 1800D6   WCTLD   Rotation Window and Color Calculation Window Control
@@ -1413,36 +1413,36 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadWCTLD() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, commonRotParams.windowInverted[0]);
-        bit::deposit_into<1>(value, commonRotParams.windowEnable[0]);
-        bit::deposit_into<2>(value, commonRotParams.windowInverted[1]);
-        bit::deposit_into<3>(value, commonRotParams.windowEnable[1]);
-        bit::deposit_into<7>(value, static_cast<uint16>(commonRotParams.windowLogic));
+        bit::deposit_into<0>(value, commonRotParams.windowSet.inverted[0]);
+        bit::deposit_into<1>(value, commonRotParams.windowSet.enabled[0]);
+        bit::deposit_into<2>(value, commonRotParams.windowSet.inverted[1]);
+        bit::deposit_into<3>(value, commonRotParams.windowSet.enabled[1]);
+        bit::deposit_into<7>(value, static_cast<uint16>(commonRotParams.windowSet.logic));
 
-        bit::deposit_into<8>(value, colorCalcParams.windowInverted[0]);
-        bit::deposit_into<9>(value, colorCalcParams.windowEnable[0]);
-        bit::deposit_into<10>(value, colorCalcParams.windowInverted[1]);
-        bit::deposit_into<11>(value, colorCalcParams.windowEnable[1]);
-        bit::deposit_into<12>(value, colorCalcParams.windowInverted[2]);
-        bit::deposit_into<13>(value, colorCalcParams.windowEnable[2]);
-        bit::deposit_into<15>(value, static_cast<uint16>(colorCalcParams.windowLogic));
+        bit::deposit_into<8>(value, colorCalcParams.windowSet.inverted[0]);
+        bit::deposit_into<9>(value, colorCalcParams.windowSet.enabled[0]);
+        bit::deposit_into<10>(value, colorCalcParams.windowSet.inverted[1]);
+        bit::deposit_into<11>(value, colorCalcParams.windowSet.enabled[1]);
+        bit::deposit_into<12>(value, colorCalcParams.windowSet.inverted[2]);
+        bit::deposit_into<13>(value, colorCalcParams.windowSet.enabled[2]);
+        bit::deposit_into<15>(value, static_cast<uint16>(colorCalcParams.windowSet.logic));
         return value;
     }
 
     FORCE_INLINE void WriteWCTLD(uint16 value) {
-        commonRotParams.windowInverted[0] = bit::extract<0>(value);
-        commonRotParams.windowEnable[0] = bit::extract<1>(value);
-        commonRotParams.windowInverted[1] = bit::extract<2>(value);
-        commonRotParams.windowEnable[1] = bit::extract<3>(value);
-        commonRotParams.windowLogic = static_cast<WindowLogic>(bit::extract<7>(value));
+        commonRotParams.windowSet.inverted[0] = bit::extract<0>(value);
+        commonRotParams.windowSet.enabled[0] = bit::extract<1>(value);
+        commonRotParams.windowSet.inverted[1] = bit::extract<2>(value);
+        commonRotParams.windowSet.enabled[1] = bit::extract<3>(value);
+        commonRotParams.windowSet.logic = static_cast<WindowLogic>(bit::extract<7>(value));
 
-        colorCalcParams.windowInverted[0] = bit::extract<8>(value);
-        colorCalcParams.windowEnable[0] = bit::extract<9>(value);
-        colorCalcParams.windowInverted[1] = bit::extract<10>(value);
-        colorCalcParams.windowEnable[1] = bit::extract<11>(value);
-        colorCalcParams.windowInverted[2] = bit::extract<12>(value);
-        colorCalcParams.windowEnable[2] = bit::extract<13>(value);
-        colorCalcParams.windowLogic = static_cast<WindowLogic>(bit::extract<15>(value));
+        colorCalcParams.windowSet.inverted[0] = bit::extract<8>(value);
+        colorCalcParams.windowSet.enabled[0] = bit::extract<9>(value);
+        colorCalcParams.windowSet.inverted[1] = bit::extract<10>(value);
+        colorCalcParams.windowSet.enabled[1] = bit::extract<11>(value);
+        colorCalcParams.windowSet.inverted[2] = bit::extract<12>(value);
+        colorCalcParams.windowSet.enabled[2] = bit::extract<13>(value);
+        colorCalcParams.windowSet.logic = static_cast<WindowLogic>(bit::extract<15>(value));
     }
 
     // 1800D8   LWTA0U  Window 0 Line Window Table Address (upper)

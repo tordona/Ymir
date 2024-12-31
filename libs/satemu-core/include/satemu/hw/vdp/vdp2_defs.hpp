@@ -40,6 +40,37 @@ enum class SpecialColorCalcMode : uint8 {
 
 enum class WindowLogic : uint8 { Or, And };
 
+template <bool hasSpriteWindow>
+struct WindowSet {
+    WindowSet() {
+        Reset();
+    }
+
+    void Reset() {
+        enabled.fill(false);
+        inverted.fill(false);
+        logic = WindowLogic::Or;
+    }
+
+    // Window enable flags for:
+    // [0] Window 0
+    // [1] Window 1
+    // [2] Sprite Window  (if hasSpriteWindow is true)
+    // Derived from WCTLA/B/C/D.xxW0E, xxW1E and xxSWE
+    std::array<bool, 3> enabled;
+
+    // Determines if the active area of the window is inside (false) or outside (true) for:
+    // [0] Window 0
+    // [1] Window 1
+    // [2] Sprite Window  (if hasSpriteWindow is true)
+    // Derived from WCTLA/B/C/D.xxW0A, xxW1A and xxSWA
+    std::array<bool, 3> inverted;
+
+    // Window combination logic mode.
+    // Derived from WCTLA/B/C/D.xxLOG
+    WindowLogic logic;
+};
+
 // Map index mask lookup table
 // [Character Size][Pattern Name Data Size ^ 1][Plane Size]
 inline constexpr uint32 kMapIndexMasks[2][2][4] = {
@@ -130,9 +161,7 @@ struct BGParams {
         colorCalcRatio = 0;
         specialColorCalcMode = SpecialColorCalcMode::PerScreen;
 
-        windowEnable.fill(false);
-        windowInverted.fill(false);
-        windowLogic = WindowLogic::Or;
+        windowSet.Reset();
 
         shadowEnable = false;
 
@@ -305,23 +334,9 @@ struct BGParams {
     // Derived from SFCCMD.xxSCCMn
     SpecialColorCalcMode specialColorCalcMode;
 
-    // Window enable flags for:
-    // [0] Window 0
-    // [1] Window 1
-    // [2] Sprite Window
-    // Derived from WCTLA/B/C.xxW0E, xxW1E and xxSWE
-    std::array<bool, 3> windowEnable;
-
-    // Determines if the active area of the window is inside (false) or outside (true) for:
-    // [0] Window 0
-    // [1] Window 1
-    // [2] Sprite Window
-    // Derived from WCTLA/B/C.xxW0A, xxW1A and xxSWA
-    std::array<bool, 3> windowInverted;
-
-    // Window combination logic mode.
-    // Derived from WCTLA/B/C.xxLOG
-    WindowLogic windowLogic;
+    // Window parameters.
+    // Derived from WCTLA/B/C/D
+    WindowSet<true> windowSet;
 
     // Enable shadow rendering on this background layer.
     // Derived from SDCTL.xxSDEN
@@ -364,9 +379,7 @@ struct CommonRotationParams {
     void Reset() {
         baseAddress = 0;
         rotParamMode = RotationParamMode::RotationParamA;
-        windowEnable.fill(false);
-        windowInverted.fill(false);
-        windowLogic = WindowLogic::Or;
+        windowSet.Reset();
     }
 
     // Rotation parameters table base address.
@@ -377,21 +390,9 @@ struct CommonRotationParams {
     // Derived from RPMD.RPMD1-0
     RotationParamMode rotParamMode;
 
-    // Window enable flags for:
-    // [0] Window 0
-    // [1] Window 1
-    // Derived from WCTLD.RPW0E and RPW1E
-    std::array<bool, 2> windowEnable;
-
-    // Determines if the active area of the window is inside (false) or outside (true) for:
-    // [0] Window 0
-    // [1] Window 1
-    // Derived from WCTLD.RPW0A and RPW1A
-    std::array<bool, 2> windowInverted;
-
-    // Window combination logic mode.
-    // Derived from WCTLD.RPLOG
-    WindowLogic windowLogic;
+    // Window parameters.
+    // Derived from WCTLA/B/C/D
+    WindowSet<false> windowSet;
 };
 
 enum class CoefficientDataMode : uint8 { ScaleCoeffXY, ScaleCoeffX, ScaleCoeffY, ViewpointX };
@@ -590,9 +591,7 @@ struct SpriteParams {
         colorOffsetEnable = false;
         colorOffsetSelect = false;
         lineColorScreenEnable = false;
-        windowEnable.fill(false);
-        windowInverted.fill(false);
-        windowLogic = WindowLogic::Or;
+        windowSet.Reset();
     }
 
     // The sprite type (0..F).
@@ -644,23 +643,9 @@ struct SpriteParams {
     // Derived from LNCLEN.SPLCEN
     bool lineColorScreenEnable;
 
-    // Window enable flags for:
-    // [0] Window 0
-    // [1] Window 1
-    // [2] Sprite Window
-    // Derived from WCTLC.SPW0E, SPW1E and SPSWE
-    std::array<bool, 3> windowEnable;
-
-    // Determines if the active area of the window is inside (false) or outside (true) for:
-    // [0] Window 0
-    // [1] Window 1
-    // [2] Sprite Window
-    // Derived from WCTLC.SPW0A, SPW1A and SPSWA
-    std::array<bool, 3> windowInverted;
-
-    // Window combination logic mode.
-    // Derived from WCTLC.SPLOG
-    WindowLogic windowLogic;
+    // Window parameters.
+    // Derived from WCTLA/B/C/D
+    WindowSet<true> windowSet;
 };
 
 struct SpriteData {
@@ -764,9 +749,7 @@ struct ColorCalcParams {
         extendedColorCalcEnable = false;
         useSecondScreenRatio = false;
         useAdditiveBlend = false;
-        windowEnable.fill(false);
-        windowInverted.fill(false);
-        windowLogic = WindowLogic::Or;
+        windowSet.Reset();
     }
 
     // Enables color gradation.
@@ -789,23 +772,9 @@ struct ColorCalcParams {
     // Derived from CCCTL.CCMD
     bool useAdditiveBlend;
 
-    // Window enable flags for:
-    // [0] Window 0
-    // [1] Window 1
-    // [2] Sprite Window
-    // Derived from WCTLD.CCW0E, CCW1E and CCSWE
-    std::array<bool, 3> windowEnable;
-
-    // Determines if the active area of the window is inside (false) or outside (true) for:
-    // [0] Window 0
-    // [1] Window 1
-    // [2] Sprite Window
-    // Derived from WCTLD.CCW0A, CCW1A and CCSWA
-    std::array<bool, 3> windowInverted;
-
-    // Window combination logic mode.
-    // Derived from WCTLD.CCLOG
-    WindowLogic windowLogic;
+    // Window parameters.
+    // Derived from WCTLA/B/C/D
+    WindowSet<true> windowSet;
 };
 
 struct WindowParams {
