@@ -2293,7 +2293,7 @@ FORCE_INLINE VDP::Pixel VDP::VDPFetchScrollBGPixel(const BGParams &bgParams, std
 
     // Fetch character
     const uint32 pageBaseAddress = pageBaseAddresses[plane];
-    const uint32 pageOffset = page * kPageSizes[fourCellChar][twoWordChar];
+    const uint32 pageOffset = page << kPageSizes[fourCellChar][twoWordChar];
     const uint32 pageAddress = pageBaseAddress + pageOffset;
     constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
     const Character ch =
