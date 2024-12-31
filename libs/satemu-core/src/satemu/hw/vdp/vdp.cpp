@@ -2156,12 +2156,13 @@ FORCE_INLINE VDP::Pixel VDP::VDPFetchScrollBGPixel(const BGParams &bgParams, std
     //
     // These addresses are precomputed in bgParams.pageBaseAddresses.
     //
-    //         Plane
-    // +---------+---------+
-    // |         |         |
-    // | Page 1  | Page 2  |
-    // |         |         |
-    // +---------+---------+
+    //       2x2 Plane               2x1 Plane          1x1 Plane
+    //        PLSZ=3                  PLSZ=1             PLSZ=0
+    // +---------+---------+   +---------+---------+   +---------+
+    // |         |         |   |         |         |   |         |
+    // | Page 1  | Page 2  |   | Page 1  | Page 2  |   | Page 1  |
+    // |         |         |   |         |         |   |         |
+    // +---------+---------+   +---------+---------+   +---------+
     // |         |         |
     // | Page 3  | Page 4  |
     // |         |         |
@@ -2256,8 +2257,9 @@ FORCE_INLINE VDP::Pixel VDP::VDPFetchScrollBGPixel(const BGParams &bgParams, std
     //   - 16-bit 5:5:5 RGB, 2048 words
     //   - 32-bit 8:8:8 RGB, 1024 longwords
 
-    static constexpr std::size_t planeMSB = 9 + rot;
-    static constexpr std::size_t planeWidth = rot ? 4u : 2u;
+    static constexpr std::size_t planeMSB = rot ? 12 : 11;
+    static constexpr uint32 planeWidth = rot ? 4u : 2u;
+    static constexpr uint32 planeMask = planeWidth - 1;
 
     static constexpr bool twoWordChar = charMode == CharacterMode::TwoWord;
     static constexpr bool extChar = charMode == CharacterMode::OneWordExtended;
@@ -2265,8 +2267,8 @@ FORCE_INLINE VDP::Pixel VDP::VDPFetchScrollBGPixel(const BGParams &bgParams, std
     auto [scrollX, scrollY] = scrollCoord;
 
     // Determine plane index from the scroll coordinates
-    const uint32 planeX = bit::extract<9, planeMSB>(scrollX) >> bgParams.pageShiftH;
-    const uint32 planeY = bit::extract<9, planeMSB>(scrollY) >> bgParams.pageShiftV;
+    const uint32 planeX = (bit::extract<9, planeMSB>(scrollX) >> bgParams.pageShiftH) & planeMask;
+    const uint32 planeY = (bit::extract<9, planeMSB>(scrollY) >> bgParams.pageShiftV) & planeMask;
     const uint32 plane = planeX + planeY * planeWidth;
 
     // Determine page index from the scroll coordinates
