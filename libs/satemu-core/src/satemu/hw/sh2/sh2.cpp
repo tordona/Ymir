@@ -55,12 +55,15 @@ void SH2::Reset(bool hard) {
     IPRA.val.u16 = 0x0000;
     VCRWDT.val.u16 = 0x0000;
     VCRDIV = 0x0000; // undefined initial value
-    VCRDMA0 = 0x00;  // undefined initial value
-    VCRDMA1 = 0x00;  // undefined initial value
     BCR1.u15 = 0x03F0;
     BCR2.u16 = 0x00FC;
     WCR.u16 = 0xAAFF;
     MCR.u16 = 0x0000;
+
+    for (auto &ch : dmaChannels) {
+        ch.Reset();
+    }
+    DMAOR.u32 = 0x00000000;
 
     cacheEntries.fill({});
     WriteCCR(0x00);
@@ -470,8 +473,8 @@ T SH2::OnChipRegRead(uint32 address) {
     case 0x114:
     case 0x134: return DVDNTL;
 
-    case 0x1A0: return VCRDMA0;
-    case 0x1A8: return VCRDMA1;
+    case 0x1A0: return dmaChannels[0].vecNum;
+    case 0x1A8: return dmaChannels[1].vecNum;
 
     case 0x1E0 ... 0x1E2: return BCR1.u16;
     case 0x1E4 ... 0x1E6: return BCR2.u16;
@@ -576,8 +579,8 @@ void SH2::OnChipRegWrite(uint32 address, T baseValue) {
         DIVUBegin64();
         break;
 
-    case 0x1A0: VCRDMA0 = value; break;
-    case 0x1A8: VCRDMA1 = value; break;
+    case 0x1A0: dmaChannels[0].vecNum = value; break;
+    case 0x1A8: dmaChannels[1].vecNum = value; break;
 
     case 0x1E0: // BCR1
         // Only accepts 32-bit writes and the top 16 bits must be 0xA55A

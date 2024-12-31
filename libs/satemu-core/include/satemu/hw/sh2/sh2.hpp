@@ -156,6 +156,9 @@ private:
 
     // --- DMAC module ---
 
+    std::array<DMAChannel, 2> dmaChannels;
+    RegDMAOR DMAOR;
+
     // --- WDT module ---
 
     // --- Power-down module ---
@@ -195,11 +198,6 @@ private:
     // --- UBC module (channel A) ---
 
     // --- UBC module (channel B) ---
-
-    // --- DMAC module ---
-
-    RegVCRDMA0 VCRDMA0; // 1A0  R/W  32       ud        VCRDMA0 DMA vector number register 0
-    RegVCRDMA1 VCRDMA1; // 1A8  R/W  32       ud        VCRDMA1 DMA vector number register 1
 
     // --- BSC module ---
 

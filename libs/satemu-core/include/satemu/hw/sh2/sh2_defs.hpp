@@ -221,11 +221,6 @@ union RegVCRWDT {
     };
 };
 
-// --- DMAC module ---
-//
-// 071  ?    8        ??        DRCR0   ???
-// 072  ?    8        ??        DRCR1   ???
-//
 // --- WDT module ---
 //
 // 080  R    8        ??        WTCSR   ???
@@ -355,33 +350,165 @@ using RegDVDNTL = uint32;
 //
 // --- DMAC module ---
 
-// 180  ?    32?      ??        SAR0    ???
-// 184  ?    32?      ??        DAR0    ???
-// 188  ?    32?      ??        TCR0    ???
-// 18C  ?    32?      ??        CHCR0   ???
+enum class DMATransferMode { Fixed, Increment, Decrement, Reserved };
+enum class DMATransferSize { Byte, Word, Longword, QuadLongword };
+enum class DMATransferBusMode : uint8 { CycleSteal, Burst };
+enum class DMATransferAddressMode : uint8 { Dual, Single };
+enum class SignalDetectionMode : uint8 { Level, Edge };
+enum class DMAResourceSelect : uint8 { DREQ, RXI, TXI, Reserved };
 
-// 1A0  R/W  32       ud        VCRDMA0 DMA vector number register 0
+struct DMAChannel {
+    DMAChannel() {
+        Reset();
+    }
+
+    void Reset() {
+        xferSize = DMATransferSize::Byte;
+        srcMode = DMATransferMode::Fixed;
+        dstMode = DMATransferMode::Fixed;
+        autoRequest = false;
+        ackXferMode = false;
+        ackLevel = false;
+        dreqSelect = SignalDetectionMode::Level;
+        dreqLevel = false;
+        xferBusMode = DMATransferBusMode::CycleSteal;
+        xferAddressMode = DMATransferAddressMode::Dual;
+        irqEnable = false;
+        xferEnded = false;
+        xferEnabled = false;
+        resSelect = DMAResourceSelect::DREQ;
+    }
+
+    // 180  R/W  32       ud        SAR0    DMA source address register 0
+    // 190  R/W  32       ud        SAR1    DMA source address register 1
+    //
+    //   bits   r/w  code   description
+    //   31-0   R/W  -      Source address
+    uint32 srcAddress;
+
+    // 184  R/W  32       ud        DAR0    DMA destination address register 0
+    // 194  R/W  32       ud        DAR1    DMA destination address register 1
+    //
+    //   bits   r/w  code   description
+    //   31-0   R/W  -      Destination address
+    uint32 dstAddress;
+
+    // 188  R/W  32       ud        TCR0    DMA transfer counter register 0
+    // 198  R/W  32       ud        TCR1    DMA transfer counter register 1
+    //
+    //   bits   r/w  code   description
+    //  31-24   R    -      Reserved - must be zero
+    //   23-0   R/W  -      Transfer count
+    uint32 xferCount;
+
+    // 18C  R/W  32       00000000  CHCR0   DMA channel control register 0
+    // 19C  R/W  32       00000000  CHCR1   DMA channel control register 1
+    //
+    //   bits   r/w  code   description
+    //  31-16   R    -      Reserved - must be zero
+    //  15-14   R/W  DM1-0  Destination address mode
+    //                        00 (0) = Fixed
+    //                        01 (1) = Increment by transfer unit size
+    //                        10 (2) = Decrement by transfer unit size
+    //                        11 (3) = Reserved
+    //  13-12   R/W  SM1-0  Source address mode
+    //                        00 (0) = Fixed
+    //                        01 (1) = Increment by transfer unit size
+    //                        10 (2) = Decrement by transfer unit size
+    //                        11 (3) = Reserved
+    //  11-10   R/W  TS1-0  Transfer size
+    //                        00 (0) = Byte unit
+    //                        01 (1) = Word unit (2 bytes)
+    //                        10 (2) = Longword unit (4 bytes)
+    //                        11 (3) = 16-byte unit (4 longwords)
+    //      9   R/W  AR     Auto-request mode
+    //                        0 = Module request mode - external or on-chip SCI
+    //                        1 = Auto request mode - generated within DMAC
+    //      8   R/W  AM     Acknowledge/Transfer mode
+    //                        In dual address mode (TA=0):
+    //                          0 = output DACK signal during the data read cycle
+    //                          1 = output DACK signal during the data write cycle
+    //                        In single address mode (TA=1):
+    //                          0 = transfer from memory to device
+    //                          1 = transfer from device to memory
+    //      7   R/W  AL     Acknowledge level (DACK signal: 0=active-high, 1=active-low)
+    //      6   R/W  DS     DREQ select (0=detect by level, 1=detect by edge)
+    //      5   R/W  DL     DREQ level (0=low level/falling edge, 1=high level/rising edge)
+    //      4   R/W  TB     Transfer bus mode (0=cycle-steal, 1=burst)
+    //      3   R/W  TA     Transfer address mode (0=dual address, 1=single address)
+    //      2   R/W  IE     Interrupt enable (0=disable, 1=enable)
+    //      1   R/W* TE     Transfer-end flag
+    //                        read: current transfer end status
+    //                          0 = in progress or aborted
+    //                          1 = completed
+    //                        write:
+    //                          0 = clear flag if it was set to 1
+    //                          1 = no effect
+    //      0   R/W  DE     DMA enable (0=transfer disabled, 1=transfer enabled)
+
+    DMATransferSize xferSize;
+    DMATransferMode srcMode;
+    DMATransferMode dstMode;
+    bool autoRequest;
+    bool ackXferMode;
+    bool ackLevel;
+    SignalDetectionMode dreqSelect;
+    bool dreqLevel;
+    DMATransferBusMode xferBusMode;
+    DMATransferAddressMode xferAddressMode;
+    bool irqEnable;
+    bool xferEnded;
+    bool xferEnabled;
+
+    // 1A0  R/W  32       ud        VCRDMA0 DMA vector number register 0
+    // 1A8  R/W  32       ud        VCRDMA1 DMA vector number register 1
+    //
+    //   bits   r/w  code   description
+    //   31-8   R    -      Reserved - must be zero
+    //    7-0   R/W  VC7-0  Vector Number
+    uint8 vecNum;
+
+    // 071  R/W  8        00        DRCR0   DMA request/response selection control register 0
+    // 072  R/W  8        00        DRCR1   DMA request/response selection control register 1
+    //
+    //   bits   r/w  code   description
+    //    7-2   R    -      Reserved - must be zero
+    //    1-0   R/W  RS1-0  Resource select
+    //                        00 (0) = DREQ (external request)
+    //                        01 (1) = RXI (on-chip SCI receive-data-full interrupt transfer request)
+    //                        10 (2) = TXI (on-chip SCI transmit-data-empty interrupt transfer request)
+    //                        11 (3) = Reserved
+    DMAResourceSelect resSelect;
+};
+
+// 1B0  R/W  32       00000000  DMAOR   DMA operation register
 //
 //   bits   r/w  code   description
-//   31-8   R    -      Reserved - must be zero
-//    7-0   R/W  VC7-0  Vector Number
-using RegVCRDMA0 = uint8;
+//   31-4   R    -      Reserved - must be zero
+//      3   R/W  PR     Priority mode
+//                        0 = Fixed (channel 0 > channel 1)
+//                        1 = Round-robin
+//      2   R/W  AE     Address error flag
+//                        read: current status (0=no error, 1=error occurred)
+//                        write:
+//                          0 = clear flag if it was set to 1
+//                          1 = no effect
+//      1   R/W  NMIF   NMI flag
+//                        read: current status (0=no NMI, 1=NMI occurred)
+//                        write:
+//                          0 = clear flag if it was set to 1
+//                          1 = no effect
+//      0   R/W  DMAE   DMA master enable (0=disable all channels, 1=enable all channels)
+union RegDMAOR {
+    uint32 u32;
+    struct {
+        uint32 DMAE : 1;
+        uint32 NMIF : 1;
+        uint32 AE : 1;
+        uint32 PR : 1;
+    };
+};
 
-//
-// 190  ?    32?      ??        SAR1    ???
-// 194  ?    32?      ??        DAR1    ???
-// 198  ?    32?      ??        TCR1    ???
-// 19C  ?    32?      ??        CHCR1   ???
-
-// 1A8  R/W  32       ud        VCRDMA1 DMA vector number register 1
-//
-//   bits   r/w  code   description
-//   31-8   R    -      Reserved - must be zero
-//    7-0   R/W  VC7-0  Vector Number
-using RegVCRDMA1 = uint8;
-
-// 1B0  ?    32?      ??        DMAOR   ???
-//
 // --- BSC module ---
 //
 // 1E0  R/W  16,32    03F0      BCR1    Bus Control Register 1
