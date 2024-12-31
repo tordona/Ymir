@@ -2096,8 +2096,7 @@ bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32
 
         // Read line window if enabled
         if (windowParam.lineWindowTableEnable) {
-            const uint32 yPos = m_VCounter - windowParam.startY;
-            const uint32 address = windowParam.lineWindowTableAddress + yPos * sizeof(uint16) * 2;
+            const uint32 address = windowParam.lineWindowTableAddress + m_VCounter * sizeof(uint16) * 2;
             startX = bit::extract<0, 9>(VDP2ReadVRAM<uint16>(address + 0));
             endX = bit::extract<0, 9>(VDP2ReadVRAM<uint16>(address + 2));
         }
