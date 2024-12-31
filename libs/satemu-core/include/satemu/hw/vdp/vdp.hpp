@@ -735,11 +735,12 @@ private:
         bool flipV;         // Vertical flip
     };
 
-    // Common pixel data: color, transparency and priority.
+    // Common pixel data: color, transparency, priority and special color calculation flag.
     struct Pixel {
         Color888 color = {.u32 = 0};
         bool transparent = true;
         uint8 priority = 0;
+        bool specialColorCalc = false;
     };
 
     // Layer state, containing the pixel output for the current scanline.
@@ -1087,16 +1088,6 @@ private:
     Pixel VDPFetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses,
                                 CoordU32 scrollCoord);
 
-    // Fetches a bitmap background pixel at the given coordinates.
-    //
-    // bgParams contains the parameters for the BG to draw.
-    // scrollX and scrollY are the integer coordinates of the scroll screen.
-    //
-    // colorFormat is the color format for bitmap data.
-    // colorMode is the CRAM color mode.
-    template <bool rot, ColorFormat colorFormat, uint32 colorMode>
-    Pixel VDPFetchBitmapBGPixel(const BGParams &bgParams, CoordU32 scrollCoord);
-
     // Fetches a two-word character from VRAM.
     //
     // pageBaseAddress specifies the base address of the page of character patterns.
@@ -1114,29 +1105,27 @@ private:
     template <bool fourCellChar, bool largePalette, bool extChar>
     Character VDP2FetchOneWordCharacter(const BGParams &bgParams, uint32 pageBaseAddress, uint32 charIndex);
 
-    // Fetches a color from a pixel in the specified cell in a 2x2 character pattern.
+    // Fetches a pixel in the specified cell in a 2x2 character pattern.
     //
     // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
-    // colorData is an output variable where bits 3-1 of the palette color data from VRAM is stored.
-    // transparent is an output variable where the transparency of a pixel is set.
-    // ch contains character parameters.
-    // dotX and dotY specify the coordinates of the pixel within the cell, both ranging from 0 to 7.
+    // ch is the character's parameters.
+    // dotCoord specify the coordinates of the pixel within the cell, ranging from 0 to 7.
     // cellIndex is the index of the cell in the character pattern, ranging from 0 to 3.
+    //
     // colorFormat is the value of CHCTLA/CHCTLB.xxCHCNn.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    Color888 VDP2FetchCharacterColor(uint32 cramOffset, uint8 &colorData, bool &transparent, Character ch,
-                                     CoordU32 dotCoord, uint32 cellIndex);
+    Pixel VDP2FetchCharacterPixel(const BGParams &bgParams, Character ch, CoordU32 dotCoord, uint32 cellIndex);
 
-    // Fetches a color from a bitmap pixel.
+    // Fetches a bitmap pixel at the given coordinates.
     //
-    // bgParams contains the bitmap parameters.
-    // transparent is an output variable where the transparency of a pixel is set.
-    // dotX and dotY specify the coordinates of the pixel within the bitmap.
+    // bgParams contains the parameters for the BG to draw.
+    // dotCoord specify the coordinates of the pixel within the bitmap.
+    //
     // colorFormat is the color format for pixel data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    Color888 VDP2FetchBitmapColor(const BGParams &bgParams, bool &transparent, CoordU32 dotCoord);
+    Pixel VDP2FetchBitmapPixel(const BGParams &bgParams, CoordU32 dotCoord);
 
     // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
     //

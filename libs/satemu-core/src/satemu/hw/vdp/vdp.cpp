@@ -1716,12 +1716,24 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
             }
         };
 
+        const bool isTopLayerColorCalcEnabled = [&] {
+            if (!isColorCalcEnabled(layers[0])) {
+                return false;
+            }
+            if (VDP2IsInsideWindow(m_VDP2.colorCalcParams.windowSet, x)) {
+                return false;
+            }
+            if (layers[0] == LYR_Back || layers[0] == LYR_Sprite) {
+                return true;
+            }
+            return m_layerStates[layers[0]].pixels[x].specialColorCalc;
+        }();
+
         const auto &colorCalcParams = m_VDP2.colorCalcParams;
 
         // Calculate color
-        // TODO: handle specialColorCalcMode directly in rendering code
         Color888 outputColor{};
-        if (isColorCalcEnabled(layers[0]) && !VDP2IsInsideWindow(m_VDP2.colorCalcParams.windowSet, x)) {
+        if (isTopLayerColorCalcEnabled) {
             const Color888 topColor = getLayerColor(layers[0]);
             Color888 btmColor = getLayerColor(layers[1]);
 
@@ -1909,7 +1921,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState 
             const CoordU32 scrollCoord{scrollX, scrollY};
 
             // Plot pixel
-            layerState.pixels[x] = VDPFetchBitmapBGPixel<false, colorFormat, colorMode>(bgParams, scrollCoord);
+            layerState.pixels[x] = VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, scrollCoord);
         }
 
         // Increment horizontal coordinate
@@ -1985,7 +1997,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
             layerState.pixels[x].transparent = true;
         } else {
             // Plot pixel
-            layerState.pixels[x] = VDPFetchBitmapBGPixel<true, colorFormat, colorMode>(bgParams, scrollCoord);
+            layerState.pixels[x] = VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, scrollCoord);
         }
     }
 }
@@ -2287,45 +2299,7 @@ FORCE_INLINE VDP::Pixel VDP::VDPFetchScrollBGPixel(const BGParams &bgParams, std
                     : VDP2FetchOneWordCharacter<fourCellChar, largePalette, extChar>(bgParams, pageAddress, charIndex);
 
     // Fetch dot color using character data
-    Pixel pixel{};
-    uint8 colorData{};
-    pixel.color = VDP2FetchCharacterColor<colorFormat, colorMode>(bgParams.cramOffset, colorData, pixel.transparent, ch,
-                                                                  dotCoord, cellIndex);
-    pixel.transparent &= bgParams.enableTransparency;
-
-    // Compute priority
-    pixel.priority = bgParams.priorityNumber;
-    if (bgParams.priorityMode == PriorityMode::PerCharacter) {
-        pixel.priority &= ~1;
-        pixel.priority |= ch.specPriority;
-    } else if (bgParams.priorityMode == PriorityMode::PerDot) {
-        if constexpr (IsPaletteColorFormat(colorFormat)) {
-            const auto &specialFunctionCodes = m_VDP2.specialFunctionCodes[bgParams.specialFunctionSelect];
-            pixel.priority &= ~1;
-            if (ch.specPriority && specialFunctionCodes.colorMatches[colorData]) {
-                pixel.priority |= 1;
-            }
-        }
-    }
-
-    return pixel;
-}
-
-template <bool rot, ColorFormat colorFormat, uint32 colorMode>
-VDP::Pixel VDP::VDPFetchBitmapBGPixel(const BGParams &bgParams, CoordU32 scrollCoord) {
-    // Fetch dot color from bitmap
-    Pixel pixel{};
-    pixel.color = VDP2FetchBitmapColor<colorFormat, colorMode>(bgParams, pixel.transparent, scrollCoord);
-    pixel.transparent &= bgParams.enableTransparency;
-
-    // Compute priority
-    pixel.priority = bgParams.priorityNumber;
-    if (bgParams.priorityMode == PriorityMode::PerCharacter || bgParams.priorityMode == PriorityMode::PerDot) {
-        pixel.priority &= ~1;
-        pixel.priority |= bgParams.supplBitmapSpecialPriority;
-    }
-
-    return pixel;
+    return VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, ch, dotCoord, cellIndex);
 }
 
 FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex) {
@@ -2395,9 +2369,11 @@ FORCE_INLINE VDP::Character VDP::VDP2FetchOneWordCharacter(const BGParams &bgPar
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-FORCE_INLINE Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &colorData, bool &transparent, Character ch,
-                                                   CoordU32 dotCoord, uint32 cellIndex) {
+FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, Character ch, CoordU32 dotCoord,
+                                                     uint32 cellIndex) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
+
+    Pixel pixel{};
 
     auto [dotX, dotY] = dotCoord;
 
@@ -2418,43 +2394,81 @@ FORCE_INLINE Color888 VDP::VDP2FetchCharacterColor(uint32 cramOffset, uint8 &col
     const uint32 cellAddress = (ch.charNum + cellIndex * 2) * 0x20;
     const uint32 dotOffset = dotX + dotY * 8;
 
+    // Determine special color calculation flag
+    const auto &specFuncCode = m_VDP2.specialFunctionCodes[bgParams.specialFunctionSelect];
+    auto getSpecialColorCalcFlag = [&](uint8 colorData) {
+        using enum SpecialColorCalcMode;
+        switch (bgParams.specialColorCalcMode) {
+        case PerScreen: return bgParams.colorCalcEnable;
+        case PerCharacter: return bgParams.colorCalcEnable && ch.specColorCalc;
+        case PerDot: return bgParams.colorCalcEnable && ch.specColorCalc && specFuncCode.colorMatches[colorData];
+        case ColorDataMSB: return bgParams.colorCalcEnable && bit::extract<2>(colorData);
+        }
+    };
+
+    // Fetch color and determine transparency.
+    // Also determine special color calculation flag if using per-dot or color data MSB.
+    uint8 colorData = 0;
     if constexpr (colorFormat == ColorFormat::Palette16) {
         const uint32 dotAddress = cellAddress + (dotOffset >> 1u);
         const uint8 dotData = (VDP2ReadVRAM<uint8>(dotAddress) >> (((dotX & 1) ^ 1) * 4)) & 0xF;
         const uint32 colorIndex = (ch.palNum << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
-        transparent = dotData == 0;
-        return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
+        pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
+        pixel.transparent = bgParams.enableTransparency && dotData == 0;
+        pixel.specialColorCalc = getSpecialColorCalcFlag(colorData);
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = cellAddress + dotOffset;
         const uint8 dotData = VDP2ReadVRAM<uint8>(dotAddress);
         const uint32 colorIndex = ((ch.palNum & 0x70) << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
-        transparent = dotData == 0;
-        return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
+        pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
+        pixel.transparent = bgParams.enableTransparency && dotData == 0;
+        pixel.specialColorCalc = getSpecialColorCalcFlag(colorData);
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint16);
         const uint16 dotData = VDP2ReadVRAM<uint16>(dotAddress);
         const uint32 colorIndex = dotData & 0x7FF;
         colorData = bit::extract<1, 3>(dotData);
-        transparent = (dotData & 0x7FF) == 0;
-        return VDP2FetchCRAMColor<colorMode>(cramOffset, colorIndex);
+        pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
+        pixel.transparent = bgParams.enableTransparency && (dotData & 0x7FF) == 0;
+        pixel.specialColorCalc = getSpecialColorCalcFlag(colorData);
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint16);
         const uint16 dotData = VDP2ReadVRAM<uint16>(dotAddress);
-        transparent = bit::extract<15>(dotData) == 0;
-        return ConvertRGB555to888(Color555{.u16 = dotData});
+        pixel.color = ConvertRGB555to888(Color555{.u16 = dotData});
+        pixel.transparent = bgParams.enableTransparency && bit::extract<15>(dotData) == 0;
+        pixel.specialColorCalc = getSpecialColorCalcFlag(0b111);
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
         const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint32);
         const uint32 dotData = VDP2ReadVRAM<uint32>(dotAddress);
-        transparent = bit::extract<31>(dotData) == 0;
-        return Color888{.u32 = dotData};
+        pixel.color.u32 = dotData;
+        pixel.transparent = bgParams.enableTransparency && bit::extract<31>(dotData) == 0;
+        pixel.specialColorCalc = getSpecialColorCalcFlag(0b111);
     }
+
+    // Compute priority
+    pixel.priority = bgParams.priorityNumber;
+    if (bgParams.priorityMode == PriorityMode::PerCharacter) {
+        pixel.priority &= ~1;
+        pixel.priority |= ch.specPriority;
+    } else if (bgParams.priorityMode == PriorityMode::PerDot) {
+        if constexpr (IsPaletteColorFormat(colorFormat)) {
+            pixel.priority &= ~1;
+            if (ch.specPriority && specFuncCode.colorMatches[colorData]) {
+                pixel.priority |= 1;
+            }
+        }
+    }
+
+    return pixel;
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-FORCE_INLINE Color888 VDP::VDP2FetchBitmapColor(const BGParams &bgParams, bool &transparent, CoordU32 dotCoord) {
+FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, CoordU32 dotCoord) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
+
+    Pixel pixel{};
 
     auto [dotX, dotY] = dotCoord;
 
@@ -2467,35 +2481,60 @@ FORCE_INLINE Color888 VDP::VDP2FetchBitmapColor(const BGParams &bgParams, bool &
     const uint32 dotOffset = dotX + dotY * bgParams.bitmapSizeH;
     const uint32 palNum = bgParams.supplBitmapPalNum;
 
+    // Determine special color calculation flag
+    auto getSpecialColorCalcFlag = [&](bool colorDataMSB) {
+        using enum SpecialColorCalcMode;
+        switch (bgParams.specialColorCalcMode) {
+        case PerScreen: return bgParams.colorCalcEnable;
+        case PerCharacter: return bgParams.colorCalcEnable && bgParams.supplBitmapSpecialColorCalc;
+        case PerDot: return bgParams.colorCalcEnable && bgParams.supplBitmapSpecialColorCalc;
+        case ColorDataMSB: return bgParams.colorCalcEnable && colorDataMSB;
+        }
+    };
+
     if constexpr (colorFormat == ColorFormat::Palette16) {
         const uint32 dotAddress = bitmapBaseAddress + (dotOffset >> 1u);
         const uint8 dotData = (VDP2ReadVRAM<uint8>(dotAddress) >> (((dotX & 1) ^ 1) * 4)) & 0xF;
         const uint32 colorIndex = palNum | dotData;
-        transparent = dotData == 0;
-        return VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
+        pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
+        pixel.transparent = bgParams.enableTransparency && dotData == 0;
+        pixel.specialColorCalc = getSpecialColorCalcFlag(bit::extract<3>(dotData));
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset;
         const uint8 dotData = VDP2ReadVRAM<uint8>(dotAddress);
         const uint32 colorIndex = palNum | dotData;
-        transparent = dotData == 0;
-        return VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
+        pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
+        pixel.transparent = bgParams.enableTransparency && dotData == 0;
+        pixel.specialColorCalc = getSpecialColorCalcFlag(bit::extract<3>(dotData));
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
         const uint16 dotData = VDP2ReadVRAM<uint16>(dotAddress);
         const uint32 colorIndex = dotData & 0x7FF;
-        transparent = (dotData & 0x7FF) == 0;
-        return VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
+        pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
+        pixel.transparent = bgParams.enableTransparency && (dotData & 0x7FF) == 0;
+        pixel.specialColorCalc = getSpecialColorCalcFlag(bit::extract<3>(dotData));
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
         const uint16 dotData = VDP2ReadVRAM<uint16>(dotAddress);
-        transparent = bit::extract<15>(dotData) == 0;
-        return ConvertRGB555to888(Color555{.u16 = dotData});
+        pixel.color = ConvertRGB555to888(Color555{.u16 = dotData});
+        pixel.transparent = bgParams.enableTransparency && bit::extract<15>(dotData) == 0;
+        pixel.specialColorCalc = getSpecialColorCalcFlag(true);
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint32);
         const uint32 dotData = VDP2ReadVRAM<uint32>(dotAddress);
-        transparent = bit::extract<31>(dotData) == 0;
-        return Color888{.u32 = dotData};
+        pixel.color = Color888{.u32 = dotData};
+        pixel.transparent = bgParams.enableTransparency && bit::extract<31>(dotData) == 0;
+        pixel.specialColorCalc = getSpecialColorCalcFlag(true);
     }
+
+    // Compute priority
+    pixel.priority = bgParams.priorityNumber;
+    if (bgParams.priorityMode == PriorityMode::PerCharacter || bgParams.priorityMode == PriorityMode::PerDot) {
+        pixel.priority &= ~1;
+        pixel.priority |= bgParams.supplBitmapSpecialPriority;
+    }
+
+    return pixel;
 }
 
 template <uint32 colorMode>
