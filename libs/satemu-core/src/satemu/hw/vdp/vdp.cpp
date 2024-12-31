@@ -94,8 +94,6 @@ void VDP::UpdateResolution() {
     static constexpr uint32 hRes[] = {320, 352, 640, 704};
     static constexpr uint32 vRes[] = {224, 240, 256, 256};
 
-    // TODO: wait until next frame to update timings and etc.
-    // - not sure how the hardware behaves if TVMODE is changed mid-frame
     // TODO: check for NTSC, PAL or exclusive monitor; assuming NTSC for now
     // TODO: exclusive monitor: even hRes entries are valid for 31 KHz monitors, odd are for Hi-Vision
     m_HRes = hRes[m_VDP2.TVMD.HRESOn];
@@ -251,7 +249,7 @@ void VDP::BeginVPhaseVerticalSync() {
 void VDP::BeginVPhaseTopBlanking() {
     // fmt::println("VDP2: (VCNT = {:3d})  entering top blanking phase", m_VCounter);
 
-    // TODO: end frame
+    // End frame
     m_cbFrameComplete(m_framebuffer, m_HRes, m_VRes);
 
     UpdateResolution();
