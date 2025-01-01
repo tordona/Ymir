@@ -38,14 +38,15 @@ std::vector<uint8> loadFile(std::filesystem::path romPath) {
 void runEmulator(satemu::Saturn &saturn) {
     using clk = std::chrono::steady_clock;
     using namespace std::chrono_literals;
+    using namespace satemu;
 
     // Screen parameters
-    // TODO: adjust dynamically
-    // NOTE: double-horizontal res should halve horizontal scale
-    // NOTE: add room for borders
-    const uint32 screenWidth = 320;
-    const uint32 screenHeight = 224;
-    const uint32 scale = 3;
+    struct ScreenParams {
+        uint32 width = 320;
+        uint32 height = 224;
+        uint32 scale = 3;
+        SDL_Window *window = nullptr;
+    } screen;
 
     // ---------------------------------
     // Initialize SDL video subsystem
@@ -69,17 +70,17 @@ void runEmulator(satemu::Saturn &saturn) {
     // Assume the following calls succeed
     SDL_SetStringProperty(windowProps, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Unnamed Sega Saturn emulator");
     SDL_SetBooleanProperty(windowProps, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, false);
-    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, screenWidth * scale);
-    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, screenHeight * scale);
+    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, screen.width * screen.scale);
+    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, screen.height * screen.scale);
     SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
     SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
 
-    auto window = SDL_CreateWindowWithProperties(windowProps);
-    if (window == nullptr) {
+    screen.window = SDL_CreateWindowWithProperties(windowProps);
+    if (screen.window == nullptr) {
         SDL_Log("Unable to create window: %s", SDL_GetError());
         return;
     }
-    ScopeGuard sgDestroyWindow{[&] { SDL_DestroyWindow(window); }};
+    ScopeGuard sgDestroyWindow{[&] { SDL_DestroyWindow(screen.window); }};
 
     // ---------------------------------
     // Create renderer
@@ -92,7 +93,7 @@ void runEmulator(satemu::Saturn &saturn) {
     ScopeGuard sgDestroyRendererProps{[&] { SDL_DestroyProperties(rendererProps); }};
 
     // Assume the following calls succeed
-    SDL_SetPointerProperty(rendererProps, SDL_PROP_RENDERER_CREATE_WINDOW_POINTER, window);
+    SDL_SetPointerProperty(rendererProps, SDL_PROP_RENDERER_CREATE_WINDOW_POINTER, screen.window);
     SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, SDL_RENDERER_VSYNC_DISABLED);
     // SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, SDL_RENDERER_VSYNC_ADAPTIVE);
     // SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, 1);
@@ -107,8 +108,8 @@ void runEmulator(satemu::Saturn &saturn) {
     // ---------------------------------
     // Create texture to render on
 
-    auto texture =
-        SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, screenWidth, screenHeight);
+    auto texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, vdp::kMaxResH,
+                                     vdp::kMaxResV);
     if (texture == nullptr) {
         SDL_Log("Unable to create texture: %s", SDL_GetError());
         return;
@@ -123,8 +124,27 @@ void runEmulator(satemu::Saturn &saturn) {
     saturn.Reset(true);
 
     // Configure single framebuffer
-    std::vector<uint32> framebuffer(704 * 480);
-    saturn.VDP.SetCallbacks({framebuffer.data(), [](uint32, uint32, void *ctx) { return (uint32 *)ctx; }}, {});
+    std::vector<uint32> framebuffer(vdp::kMaxResH * vdp::kMaxResV);
+    saturn.VDP.SetCallbacks(
+        {framebuffer.data(), [](uint32, uint32, void *ctx) { return (uint32 *)ctx; }},
+        {&screen, [](vdp::FramebufferColor *, uint32 width, uint32 height, void *ctx) {
+             auto &screen = *static_cast<ScreenParams *>(ctx);
+             if (width != screen.width || height != screen.height) {
+                 int wx, wy;
+                 SDL_GetWindowPosition(screen.window, &wx, &wy);
+                 int dx = width - screen.width;
+                 int dy = height - screen.height;
+                 screen.width = width;
+                 screen.height = height;
+
+                 // Adjust window size dynamically
+                 // TODO: double-horizontal res should halve horizontal scale
+                 // - won't work well with odd integer scale
+                 // TODO: add room for borders
+                 SDL_SetWindowSize(screen.window, screen.width * screen.scale, screen.height * screen.scale);
+                 SDL_SetWindowPosition(screen.window, wx - dx * screen.scale / 2, wy - dy * screen.scale / 2);
+             }
+         }});
 
     auto t = clk::now();
     uint64 frames = 0;
@@ -141,22 +161,22 @@ void runEmulator(satemu::Saturn &saturn) {
 
     auto updateButton = [&](SDL_Scancode scancode, bool pressed) {
         switch (scancode) {
-        case SDL_SCANCODE_W: setClearButton(satemu::smpc::kButtonUp, pressed); break;
-        case SDL_SCANCODE_A: setClearButton(satemu::smpc::kButtonLeft, pressed); break;
-        case SDL_SCANCODE_S: setClearButton(satemu::smpc::kButtonDown, pressed); break;
-        case SDL_SCANCODE_D: setClearButton(satemu::smpc::kButtonRight, pressed); break;
-        case SDL_SCANCODE_Q: setClearButton(satemu::smpc::kButtonL, pressed); break;
-        case SDL_SCANCODE_E: setClearButton(satemu::smpc::kButtonR, pressed); break;
-        case SDL_SCANCODE_J: setClearButton(satemu::smpc::kButtonA, pressed); break;
-        case SDL_SCANCODE_K: setClearButton(satemu::smpc::kButtonB, pressed); break;
-        case SDL_SCANCODE_L: setClearButton(satemu::smpc::kButtonC, pressed); break;
-        case SDL_SCANCODE_U: setClearButton(satemu::smpc::kButtonX, pressed); break;
-        case SDL_SCANCODE_I: setClearButton(satemu::smpc::kButtonY, pressed); break;
-        case SDL_SCANCODE_O: setClearButton(satemu::smpc::kButtonZ, pressed); break;
-        case SDL_SCANCODE_G: setClearButton(satemu::smpc::kButtonStart, pressed); break;
-        case SDL_SCANCODE_H: setClearButton(satemu::smpc::kButtonStart, pressed); break;
-        case SDL_SCANCODE_RETURN: setClearButton(satemu::smpc::kButtonStart, pressed); break;
-        case SDL_SCANCODE_RETURN2: setClearButton(satemu::smpc::kButtonStart, pressed); break;
+        case SDL_SCANCODE_W: setClearButton(smpc::kButtonUp, pressed); break;
+        case SDL_SCANCODE_A: setClearButton(smpc::kButtonLeft, pressed); break;
+        case SDL_SCANCODE_S: setClearButton(smpc::kButtonDown, pressed); break;
+        case SDL_SCANCODE_D: setClearButton(smpc::kButtonRight, pressed); break;
+        case SDL_SCANCODE_Q: setClearButton(smpc::kButtonL, pressed); break;
+        case SDL_SCANCODE_E: setClearButton(smpc::kButtonR, pressed); break;
+        case SDL_SCANCODE_J: setClearButton(smpc::kButtonA, pressed); break;
+        case SDL_SCANCODE_K: setClearButton(smpc::kButtonB, pressed); break;
+        case SDL_SCANCODE_L: setClearButton(smpc::kButtonC, pressed); break;
+        case SDL_SCANCODE_U: setClearButton(smpc::kButtonX, pressed); break;
+        case SDL_SCANCODE_I: setClearButton(smpc::kButtonY, pressed); break;
+        case SDL_SCANCODE_O: setClearButton(smpc::kButtonZ, pressed); break;
+        case SDL_SCANCODE_G: setClearButton(smpc::kButtonStart, pressed); break;
+        case SDL_SCANCODE_H: setClearButton(smpc::kButtonStart, pressed); break;
+        case SDL_SCANCODE_RETURN: setClearButton(smpc::kButtonStart, pressed); break;
+        case SDL_SCANCODE_RETURN2: setClearButton(smpc::kButtonStart, pressed); break;
         default: break;
         }
     };
@@ -197,7 +217,7 @@ void runEmulator(satemu::Saturn &saturn) {
         auto t2 = clk::now();
         if (t2 - t >= 1s) {
             auto title = fmt::format("{} fps", frames);
-            SDL_SetWindowTitle(window, title.c_str());
+            SDL_SetWindowTitle(screen.window, title.c_str());
             frames = 0;
             t = t2;
         }
@@ -205,20 +225,21 @@ void runEmulator(satemu::Saturn &saturn) {
         uint32 *pixels = nullptr;
         int pitch = 0;
         if (SDL_LockTexture(texture, nullptr, (void **)&pixels, &pitch)) {
-            std::copy_n(framebuffer.begin(), screenWidth * screenHeight, pixels);
+            for (uint32 y = 0; y < screen.height; y++) {
+                std::copy_n(&framebuffer[y * screen.width], screen.width, &pixels[y * vdp::kMaxResH]);
+            }
             SDL_UnlockTexture(texture);
         }
 
         SDL_RenderClear(renderer);
-        SDL_RenderTexture(renderer, texture, nullptr, nullptr);
+        SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
+        SDL_RenderTexture(renderer, texture, &srcRect, nullptr);
         SDL_RenderPresent(renderer);
     }
 
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
 }
-
-using namespace satemu::vdp;
 
 struct Sandbox {
     Sandbox(uint32 width, uint32 height)
@@ -250,6 +271,8 @@ struct Sandbox {
     }
 
     void Frame() {
+        using namespace satemu::vdp;
+
         const double dt = DeltaTime();
         const double speed = 100.0;
 
