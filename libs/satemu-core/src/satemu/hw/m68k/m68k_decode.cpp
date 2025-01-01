@@ -62,8 +62,6 @@ static constexpr auto kValidAlterableAddrModes = [] {
     std::array<bool, 0b111'111 + 1> arr = kValidAddrModes;
     arr[0b111'010] = false; // (disp, PC)
     arr[0b111'011] = false; // (disp, PC, Xn)
-    arr[0b111'000] = false; // (xxx).w
-    arr[0b111'001] = false; // (xxx).l
     arr[0b111'100] = false; // #imm
     return arr;
 }();
@@ -95,15 +93,6 @@ static constexpr auto kValidControlAlterableAddrModes = [] {
     return arr;
 }();
 
-// Valid absolute data addressing modes
-static constexpr auto kValidAbsoluteDataAddrModes = [] {
-    std::array<bool, 0b111'111 + 1> arr{};
-    arr.fill(false);
-    arr[0b111'000] = true; // (xxx).w
-    arr[0b111'001] = true; // (xxx).l
-    return arr;
-}();
-
 DecodeTable BuildDecodeTable() {
     DecodeTable table{};
     table.opcodeTypes.fill(OpcodeType::Undecoded);
@@ -117,7 +106,11 @@ DecodeTable BuildDecodeTable() {
         case 0x0: {
             const uint16 ea = bit::extract<0, 5>(instr);
             const uint16 sz = bit::extract<6, 7>(instr);
-            if (instr == 0x023C) {
+            if (instr == 0x003C) {
+                // TODO: OrI_CCR
+            } else if (instr == 0x007C) {
+                // TODO: OrI_SR
+            } else if (instr == 0x023C) {
                 // TODO: AndI_CCR
             } else if (instr == 0x027C) {
                 // TODO: AndI_SR
@@ -135,6 +128,8 @@ DecodeTable BuildDecodeTable() {
                 } else {
                     opcode = OpcodeType::BTst_I_EA;
                 }
+            } else if (bit::extract<8, 11>(instr) == 0b0000) {
+                opcode = legalIf(OpcodeType::OrI_EA, sz != 0b11 && kValidDataAlterableAddrModes[ea]);
             } else if (bit::extract<8, 11>(instr) == 0b0010) {
                 opcode = legalIf(OpcodeType::AndI_EA, sz != 0b11 && kValidDataAlterableAddrModes[ea]);
             } else if (bit::extract<8, 11>(instr) == 0b0100) {
@@ -156,9 +151,7 @@ DecodeTable BuildDecodeTable() {
             } else {
                 const uint16 srcEA = bit::extract<0, 5>(instr);
                 const uint16 dstEA = (bit::extract<6, 8>(instr) << 3) | bit::extract<9, 11>(instr);
-                opcode = legalIf(OpcodeType::Move_EA_EA,
-                                 (kValidDataAlterableAddrModes[dstEA] || kValidAbsoluteDataAddrModes[dstEA]) &&
-                                     kValidAddrModes[srcEA]);
+                opcode = legalIf(OpcodeType::Move_EA_EA, kValidDataAlterableAddrModes[dstEA] && kValidAddrModes[srcEA]);
             }
             break;
         case 0x4: {

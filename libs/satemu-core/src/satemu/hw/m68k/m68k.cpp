@@ -1,4 +1,3 @@
-#define DISABLE_FORCE_INLINE
 #include <satemu/hw/m68k/m68k.hpp>
 
 #include <satemu/hw/scsp/scsp.hpp> // because M68kBus *is* SCSP
@@ -463,6 +462,7 @@ void MC68EC000::Execute() {
     case OpcodeType::Eor_Dn_EA: Instr_Eor_Dn_EA(instr); break;
     case OpcodeType::Or_Dn_EA: Instr_Or_Dn_EA(instr); break;
     case OpcodeType::Or_EA_Dn: Instr_Or_EA_Dn(instr); break;
+    case OpcodeType::OrI_EA: Instr_OrI_EA(instr); break;
     case OpcodeType::SubI: Instr_SubI(instr); break;
     case OpcodeType::SubQ_An: Instr_SubQ_An(instr); break;
     case OpcodeType::SubQ_EA: Instr_SubQ_EA(instr); break;
@@ -868,6 +868,30 @@ FORCE_INLINE void MC68EC000::Instr_Or_EA_Dn(uint16 instr) {
         const T result = op2 | op1;
         bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Dn], result);
         SetLogicFlags(result);
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+FORCE_INLINE void MC68EC000::Instr_OrI_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+
+    auto op = [&]<std::integral T>() {
+        T op1 = FetchInstruction();
+        if constexpr (sizeof(T) == sizeof(uint32)) {
+            op1 = (op1 << 16u) | FetchInstruction();
+        }
+        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+            const T result = op2 | op1;
+            SetLogicFlags(result);
+            return result;
+        });
     };
 
     switch (sz) {
