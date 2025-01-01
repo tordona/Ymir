@@ -139,6 +139,7 @@ private:
     void WriteCOMREG(uint8 value);
     void WriteSF(uint8 value);
     void WriteIOSEL(uint8 value);
+    void WriteEXLE(uint8 value);
 
     uint8 ReadPDR1() const;
     void WritePDR1(uint8 value);
@@ -163,22 +164,30 @@ private:
     bool m_pioMode1;
     bool m_pioMode2;
 
+    // External latch enable flags
+    bool m_extLatchEnable1;
+    bool m_extLatchEnable2;
+
     // INTBACK request parameters
-    bool m_getSMPCStatus;
     bool m_getPeripheralData;
     uint8 m_port1mode;
     uint8 m_port2mode;
 
     // INTBACK output control
     bool m_intbackInProgress;
-    bool m_emittedSMPCStatus;  // have we emitted the SMPC status? (valid only if SMPC status requested)
+    bool m_firstPeripheralReport;
+
+    // HACK: simulate port 1 having a standard Saturn pad
     bool m_emittedPort1Status; // have we emitted port 1 status? (valid only if peripheral data requested)
-    // TODO: port 2 data
+    // TODO: read port 1 data properly into an array
+    // - keep track of how many bytes have been read so that subsequent report requests can continue from that point
+    // TODO: read port 2 data
     // TODO: support multitap
     // TODO: support controllers with longer reports
     // - does the report split into two parts, or does it have to be in a single report?
 
-    void UpdateINTBACK();
+    void WriteINTBACKStatusReport();
+    void WriteINTBACKPeripheralReport();
 
     // -------------------------------------------------------------------------
     // Commands

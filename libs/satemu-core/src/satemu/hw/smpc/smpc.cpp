@@ -33,13 +33,15 @@ void SMPC::Reset(bool hard) {
     m_pioMode1 = false;
     m_pioMode2 = false;
 
-    m_getSMPCStatus = false;
+    m_extLatchEnable1 = false;
+    m_extLatchEnable2 = false;
+
     m_getPeripheralData = false;
     m_port1mode = 0;
     m_port2mode = 0;
 
     m_intbackInProgress = false;
-    m_emittedSMPCStatus = false;
+    m_firstPeripheralReport = false;
     m_emittedPort1Status = false;
 }
 
@@ -51,6 +53,7 @@ uint8 SMPC::Read(uint32 address) {
     case 0x75: return ReadPDR1();
     case 0x77: return ReadPDR2();
     case 0x7D: return 0; // IOSEL is write-only
+    case 0x7F: return 0; // EXLE is write-only
     default: fmt::println("unhandled SMPC read from {:02X}", address); return m_busValue;
     }
 }
@@ -58,7 +61,24 @@ uint8 SMPC::Read(uint32 address) {
 void SMPC::Write(uint32 address, uint8 value) {
     m_busValue = value;
     switch (address) {
-    case 0x01 ... 0x0D: WriteIREG(address >> 1, value); break;
+    case 0x01:
+        WriteIREG(0x00, value);
+        if (m_intbackInProgress) {
+            // Handle INTBACK continue/break requests
+            const bool continueFlag = bit::extract<7>(IREG[0]);
+            const bool breakFlag = bit::extract<6>(IREG[0]);
+            if (breakFlag) {
+                // fmt::println("SMPC: INTBACK break request");
+                m_intbackInProgress = false;
+                SR.NPE = 0;
+                SR.PDL = 0;
+            } else if (continueFlag) {
+                // fmt::println("SMPC: INTBACK continue request");
+                INTBACK();
+            }
+        }
+        break;
+    case 0x03 ... 0x0D: WriteIREG(address >> 1u, value); break;
     case 0x1F: WriteCOMREG(value); break;
     case 0x63: WriteSF(value); break;
     case 0x75: WritePDR1(value); break;
@@ -66,6 +86,7 @@ void SMPC::Write(uint32 address, uint8 value) {
     case 0x79: WriteDDR1(value); break;
     case 0x7B: WriteDDR2(value); break;
     case 0x7D: WriteIOSEL(value); break;
+    case 0x7F: WriteEXLE(value); break;
     default: fmt::println("unhandled SMPC write to {:02X} = {:02X}", address, value); break;
     }
 }
@@ -110,6 +131,11 @@ FORCE_INLINE void SMPC::WriteSF(uint8 value) {
 FORCE_INLINE void SMPC::WriteIOSEL(uint8 value) {
     m_pioMode1 = bit::extract<0>(value);
     m_pioMode2 = bit::extract<1>(value);
+}
+
+void SMPC::WriteEXLE(uint8 value) {
+    m_extLatchEnable1 = bit::extract<0>(value);
+    m_extLatchEnable2 = bit::extract<1>(value);
 }
 
 FORCE_INLINE uint8 SMPC::ReadPDR1() const {
@@ -203,90 +229,103 @@ void SMPC::RESDISA() {
 
 void SMPC::INTBACK() {
     // fmt::println("SMPC: processing INTBACK {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
-    // TODO: implement properly
 
     if (m_intbackInProgress) {
-        // const bool continueFlag = bit::extract<7>(IREG[0]);
-        const bool breakFlag = bit::extract<6>(IREG[0]);
-        if (breakFlag) {
-            m_intbackInProgress = false;
-        }
+        WriteINTBACKPeripheralReport();
     } else {
         m_intbackInProgress = true;
-        m_emittedSMPCStatus = false;
-        m_emittedPort1Status = false;
 
-        m_getSMPCStatus = IREG[0];
-    }
-    // m_optimize = bit::extract<1>(IREG[1]);
-    m_getPeripheralData = bit::extract<3>(IREG[1]);
-    m_port1mode = bit::extract<4, 5>(IREG[1]);
-    m_port2mode = bit::extract<6, 7>(IREG[1]);
-    if (IREG[2] != 0xF0) {
-        // TODO: log invalid INTBACK command
-        // TODO: does SMPC reject the command in this case?
+        // m_optimize = bit::extract<1>(IREG[1]);
+        m_getPeripheralData = bit::extract<3>(IREG[1]);
+        m_port1mode = bit::extract<4, 5>(IREG[1]);
+        m_port2mode = bit::extract<6, 7>(IREG[1]);
+        if (IREG[2] != 0xF0) {
+            // TODO: log invalid INTBACK command
+            // TODO: does SMPC reject the command in this case?
+        }
+
+        m_emittedPort1Status = false;
+        m_firstPeripheralReport = true;
+
+        const bool getSMPCStatus = IREG[0] == 0x01;
+        if (getSMPCStatus) {
+            WriteINTBACKStatusReport();
+        } else if (m_getPeripheralData) {
+            WriteINTBACKPeripheralReport();
+        }
     }
 
     SF = 0; // done processing
 
-    UpdateINTBACK();
-
     m_SCU.TriggerSystemManager();
 }
 
-void SMPC::UpdateINTBACK() {
-    if (!m_intbackInProgress) {
-        return;
-    }
+void SMPC::WriteINTBACKStatusReport() {
+    // fmt::println("SMPC: INTBACK status report");
 
-    if (m_getSMPCStatus && !m_emittedSMPCStatus) {
-        m_emittedSMPCStatus = true;
+    SR.bit7 = 0;                  // fixed 0
+    SR.PDL = 1;                   // fixed 1 for status report
+    SR.NPE = m_getPeripheralData; // 0=no peripheral data, 1=has peripheral data
+    SR.RESB = 0;                  // reset button state (0=off, 1=on)
+    SR.P1MDn = m_port1mode;
+    SR.P2MDn = m_port2mode;
 
-        SR.bit7 = 0;                   // fixed 0
-        SR.PDL = !m_getPeripheralData; // peripheral data on: 0=2nd+ report, 1=1st report
-        SR.NPE = m_getPeripheralData;  // 0=no remaining data, 1=more data
-        SR.RESB = 0;                   // reset button state (0=off, 1=on)
+    // TODO: simulate full system reset (STE clear)
+    OREG[0] = 0x80; // STE set, RESD clear
 
-        OREG[0] = 0x80; // STE set, RESD clear
+    // TODO: read from RTC
+    // the date/time below refers to this project's very first commit
+    OREG[1] = 0x20; // Year 1000s, Year 100s (BCD)
+    OREG[2] = 0x24; // Year 10s, Year 1s (BCD)
+    OREG[3] = 0x0B; // Day of week (0=sun), Month (hex, 1=jan)
+    OREG[4] = 0x17; // Day (BCD)
+    OREG[5] = 0x17; // Hour (BCD)
+    OREG[6] = 0x01; // Minute (BCD)
+    OREG[7] = 0x20; // Second (BCD)
 
-        OREG[1] = 0x20; // Year 1000s, Year 100s (BCD)
-        OREG[2] = 0x24; // Year 10s, Year 1s (BCD)
-        OREG[3] = 0x3B; // Day of week (0=sun), Month (hex, 1=jan)
-        OREG[4] = 0x20; // Day (BCD)
-        OREG[5] = 0x12; // Hour (BCD)
-        OREG[6] = 0x34; // Minute (BCD)
-        OREG[7] = 0x56; // Second (BCD)
+    // TODO: read from cartridge
+    // TODO: allow setting area code
+    OREG[8] = 0x00; // Cartridge code (CTG1-0) == 0b00
+    OREG[9] = 0x04; // Area code (0x01=JP, 0x04=NA)
 
-        OREG[8] = 0x00; // Cartridge code (CTG1-0) == 0b00
-        OREG[9] = 0x04; // Area code (0x01=JP, 0x04=NA)
+    // TODO: update flags accordingly
+    OREG[10] = 0b00110100; // System status 1 (TODO: 6=DOTSEL, 3=MSHNMI, 1=SYSRES, 0=SNDRES)
+    OREG[11] = 0b00000000; // System status 2 (TODO: 6=CDRES)
 
-        OREG[10] = 0b00111110; // System status 1 (DOTSEL, MSHNMI, SYSRES, SNDRES)
-        OREG[11] = 0b00000010; // System status 2 (CDRES)
+    OREG[12] = SMEM[0]; // SMEM 1 Saved Data
+    OREG[13] = SMEM[1]; // SMEM 2 Saved Data
+    OREG[14] = SMEM[2]; // SMEM 3 Saved Data
+    OREG[15] = SMEM[3]; // SMEM 4 Saved Data
 
-        OREG[12] = SMEM[0]; // SMEM 1 Saved Data
-        OREG[13] = SMEM[1]; // SMEM 2 Saved Data
-        OREG[14] = SMEM[2]; // SMEM 3 Saved Data
-        OREG[15] = SMEM[3]; // SMEM 4 Saved Data
+    OREG[31] = 0x10;
 
-        OREG[31] = 0x00;
-    } else if (m_getPeripheralData && !m_emittedPort1Status) {
-        m_emittedPort1Status = true;
+    m_intbackInProgress = m_getPeripheralData;
+}
 
-        SR.bit7 = 1;               // fixed 1
-        SR.PDL = !m_getSMPCStatus; // 1=first data, 2=second+ data
-        SR.NPE = 0;                // 0=no remaining data, 1=more data
-        SR.RESB = 0;               // reset button state (0=off, 1=on)
-        SR.P1MDn = m_port1mode;    // port 1 mode \  0=15 byte, 1=255 byte
-        SR.P2MDn = m_port2mode;    // port 2 mode /  2=unused,  3=0 byte
+void SMPC::WriteINTBACKPeripheralReport() {
+    // fmt::println("SMPC: INTBACK peripheral report - first? {}", m_firstPeripheralReport);
 
-        OREG.fill(0xFF);
-        OREG[0] = 0xF1;                           // 7-4 = F=no multitap/device directly connected; 3-0 = 1 device
-        OREG[1] = 0x02;                           // 7-4 = 0=standard pad; 3-0 = 2 data bytes
-        OREG[2] = bit::extract<8, 15>(m_buttons); // 7-0 = left, right, down, up, start, A, C, B  \ button state
-        OREG[3] = bit::extract<0, 7>(m_buttons);  // 7-3 = R, X, Y, Z, L; 2-0 = nothing           / is inverted!
-    }
+    // TODO: read from the report generated by the device
 
-    m_intbackInProgress = SR.NPE;
+    SR.bit7 = 1;                      // fixed 1
+    SR.PDL = m_firstPeripheralReport; // 1=first data, 2=second+ data
+    SR.NPE = 0;                       // 0=no remaining data, 1=more data
+    SR.RESB = 0;                      // reset button state (0=off, 1=on)
+    SR.P1MDn = m_port1mode;           // port 1 mode \  0=15 byte, 1=255 byte
+    SR.P2MDn = m_port2mode;           // port 2 mode /  2=unused,  3=0 byte
+
+    OREG.fill(0x00);
+    OREG[0] = 0xF1;                               // 7-4 = F=no multitap/device directly connected; 3-0 = 1 device
+    OREG[1] = 0x02;                               // 7-4 = 0=standard pad; 3-0 = 2 data bytes
+    OREG[2] = bit::extract<8, 15>(m_buttons);     // 7-0 = left, right, down, up, start, A, C, B  \ button state
+    OREG[3] = bit::extract<3, 7>(m_buttons) << 3; // 7-3 = R, X, Y, Z, L; 2-0 = nothing           / is inverted!
+
+    // Port 2 = no connected device
+    OREG[4] = 0xF0;
+
+    m_emittedPort1Status = true; // HACK to keep track of the current report position
+    m_firstPeripheralReport = false;
+    m_intbackInProgress = false; // TODO: should clear the flag only if all reports have been generated
 }
 
 void SMPC::SETSMEM() {
