@@ -60,6 +60,8 @@ void SH2::Reset(bool hard) {
     WCR.u16 = 0xAAFF;
     MCR.u16 = 0x0000;
 
+    FRT.Reset();
+
     for (auto &ch : dmaChannels) {
         ch.Reset();
     }
@@ -85,7 +87,7 @@ void SH2::Reset(bool hard) {
     m_delaySlotTarget = 0;
 }
 
-FLATTEN void SH2::Step() {
+FLATTEN void SH2::Advance(uint64 cycles) {
     // TODO: optimize active DMA channel check
     // TODO: proper timings, cycle-stealing, etc. (suspend instructions if not cached)
     // TODO: prioritize channels based on DMAOR.PR
@@ -165,20 +167,25 @@ FLATTEN void SH2::Step() {
         }
     }
 
-    /*auto bit = [](bool value, std::string_view bit) { return value ? fmt::format(" {}", bit) : ""; };
+    FRT.Advance(cycles);
 
-    dbg_println(" R0 = {:08X}   R4 = {:08X}   R8 = {:08X}  R12 = {:08X}", R[0], R[4], R[8], R[12]);
-    dbg_println(" R1 = {:08X}   R5 = {:08X}   R9 = {:08X}  R13 = {:08X}", R[1], R[5], R[9], R[13]);
-    dbg_println(" R2 = {:08X}   R6 = {:08X}  R10 = {:08X}  R14 = {:08X}", R[2], R[6], R[10], R[14]);
-    dbg_println(" R3 = {:08X}   R7 = {:08X}  R11 = {:08X}  R15 = {:08X}", R[3], R[7], R[11], R[15]);
-    dbg_println("GBR = {:08X}  VBR = {:08X}  MAC = {:08X}.{:08X}", GBR, VBR, MAC.H, MAC.L);
-    dbg_println(" PC = {:08X}   PR = {:08X}   SR = {:08X} {}{}{}{}{}{}{}{}", PC, PR, SR.u32, bit(SR.M, "M"),
-                bit(SR.Q, "Q"), bit(SR.I3, "I3"), bit(SR.I2, "I2"), bit(SR.I1, "I1"), bit(SR.I0, "I0"), bit(SR.S, "S"),
-                bit(SR.T, "T"));*/
+    // TODO: proper cycle counting
+    for (uint64 cy = 0; cy < cycles; cy++) {
+        /*auto bit = [](bool value, std::string_view bit) { return value ? fmt::format(" {}", bit) : ""; };
 
-    // TODO: choose between interpreter (cached or uncached) and JIT recompiler
-    Execute(PC);
-    // dbg_println("");
+        dbg_println(" R0 = {:08X}   R4 = {:08X}   R8 = {:08X}  R12 = {:08X}", R[0], R[4], R[8], R[12]);
+        dbg_println(" R1 = {:08X}   R5 = {:08X}   R9 = {:08X}  R13 = {:08X}", R[1], R[5], R[9], R[13]);
+        dbg_println(" R2 = {:08X}   R6 = {:08X}  R10 = {:08X}  R14 = {:08X}", R[2], R[6], R[10], R[14]);
+        dbg_println(" R3 = {:08X}   R7 = {:08X}  R11 = {:08X}  R15 = {:08X}", R[3], R[7], R[11], R[15]);
+        dbg_println("GBR = {:08X}  VBR = {:08X}  MAC = {:08X}.{:08X}", GBR, VBR, MAC.H, MAC.L);
+        dbg_println(" PC = {:08X}   PR = {:08X}   SR = {:08X} {}{}{}{}{}{}{}{}", PC, PR, SR.u32, bit(SR.M, "M"),
+                    bit(SR.Q, "Q"), bit(SR.I3, "I3"), bit(SR.I2, "I2"), bit(SR.I1, "I1"), bit(SR.I0, "I0"), bit(SR.S,
+        "S"), bit(SR.T, "T"));*/
+
+        // TODO: choose between interpreter (cached or uncached) and JIT recompiler
+        Execute(PC);
+        // dbg_println("");
+    }
 }
 
 void SH2::SetExternalInterrupt(uint8 level, uint8 vecNum) {
@@ -548,6 +555,17 @@ T SH2::OnChipRegRead(uint32 address) {
     // https://quick-bench.com/q/vB2HZ3bzAIlqIazYoVxy7A0ooKg
 
     switch (address) {
+    case 0x10: return FRT.ReadTIER();
+    case 0x11: return FRT.ReadFTCSR();
+    case 0x12: return FRT.ReadFRCH();
+    case 0x13: return FRT.ReadFRCL();
+    case 0x14: return FRT.ReadOCRH();
+    case 0x15: return FRT.ReadOCRL();
+    case 0x16: return FRT.ReadTCR();
+    case 0x17: return FRT.ReadTOCR();
+    case 0x18: return FRT.ReadICRH();
+    case 0x19: return FRT.ReadICRL();
+
     case 0x60 ... 0x61: return readWordLower(IPRB.val);
     case 0x62 ... 0x63: return readWordLower(VCRA.val);
     case 0x64 ... 0x65: return readWordLower(VCRB.val);
@@ -653,6 +671,17 @@ void SH2::OnChipRegWrite(uint32 address, T baseValue) {
     // https://godbolt.org/z/5nbPxqd5d
 
     switch (address) {
+    case 0x10: FRT.WriteTIER(value); break;
+    case 0x11: FRT.WriteFTCSR(value); break;
+    case 0x12: FRT.WriteFRCH(value); break;
+    case 0x13: FRT.WriteFRCL(value); break;
+    case 0x14: FRT.WriteOCRH(value); break;
+    case 0x15: FRT.WriteOCRL(value); break;
+    case 0x16: FRT.WriteTCR(value); break;
+    case 0x17: FRT.WriteTOCR(value); break;
+    case 0x18: /* ICRH is read-only */ break;
+    case 0x19: /* ICRL is read-only */ break;
+
     case 0x60: writeWordLower(IPRB.val, value, 0xFF00); break;
     case 0x61: writeWordLower(IPRB.val, value, 0xFF00); break;
     case 0x62: writeWordLower(VCRA.val, value, 0x7F7F); break;
@@ -849,7 +878,17 @@ bool SH2::CheckInterrupts() {
     // TODO: DMAC0, DMAC1 transfer end
     // TODO: WDT ITI, BSC REF CMI
     // TODO: SCI ERI, RXI, TXI, TEI
-    // TODO: FRT ICI, OCI, OVI
+
+    // Free-running timer interrupts
+    if (FRT.FTCSR.ICF && FRT.TIER.ICIE) {
+        update(VCRC.FICVn, IPRB.FRTIPn);
+    }
+    if ((FRT.FTCSR.OCFA && FRT.TIER.OCIAE) || (FRT.FTCSR.OCFB && FRT.TIER.OCIBE)) {
+        update(VCRC.FOCVn, IPRB.FRTIPn);
+    }
+    if (FRT.FTCSR.OVF && FRT.TIER.OVIE) {
+        update(VCRD.FOVVn, IPRB.FRTIPn);
+    }
 
     const bool result = m_pendingInterrupt.priority > SR.ILevel;
     const bool usingExternalIntr =

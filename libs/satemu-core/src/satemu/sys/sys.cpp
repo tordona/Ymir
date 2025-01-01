@@ -86,9 +86,9 @@ void Saturn::Step() {
     //   20,000,000   14112  ~20,000,155 (error: ~0.00001%)
     //    4,000,000   70560   ~4,000,031 (error: ~0.00001%)
 
-    SH2.master.Step();
+    SH2.master.Advance(1);
     if (SH2.slaveEnabled) {
-        SH2.slave.Step();
+        SH2.slave.Advance(1);
     }
 
     // TODO: replace with scheduler events

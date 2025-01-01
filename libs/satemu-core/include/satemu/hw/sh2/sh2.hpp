@@ -29,7 +29,7 @@ public:
 
     void Reset(bool hard);
 
-    void Step();
+    void Advance(uint64 cycles);
 
     void SetExternalInterrupt(uint8 level, uint8 vecNum);
     void SetNMI();
@@ -143,6 +143,8 @@ private:
     // --- SCI module ---
 
     // --- FRT module ---
+
+    FreeRunningTimer FRT;
 
     // --- INTC module ---
 
