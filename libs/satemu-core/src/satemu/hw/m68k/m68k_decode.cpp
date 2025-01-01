@@ -95,6 +95,15 @@ static constexpr auto kValidControlAlterableAddrModes = [] {
     return arr;
 }();
 
+// Valid absolute data addressing modes
+static constexpr auto kValidAbsoluteDataAddrModes = [] {
+    std::array<bool, 0b111'111 + 1> arr{};
+    arr.fill(false);
+    arr[0b111'000] = true; // (xxx).w
+    arr[0b111'001] = true; // (xxx).l
+    return arr;
+}();
+
 DecodeTable BuildDecodeTable() {
     DecodeTable table{};
     table.opcodeTypes.fill(OpcodeType::Undecoded);
@@ -147,7 +156,9 @@ DecodeTable BuildDecodeTable() {
             } else {
                 const uint16 srcEA = bit::extract<0, 5>(instr);
                 const uint16 dstEA = (bit::extract<6, 8>(instr) << 3) | bit::extract<9, 11>(instr);
-                opcode = legalIf(OpcodeType::Move_EA_EA, kValidDataAlterableAddrModes[dstEA] && kValidAddrModes[srcEA]);
+                opcode = legalIf(OpcodeType::Move_EA_EA,
+                                 (kValidDataAlterableAddrModes[dstEA] || kValidAbsoluteDataAddrModes[dstEA]) &&
+                                     kValidAddrModes[srcEA]);
             }
             break;
         case 0x4: {

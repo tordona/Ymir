@@ -44,6 +44,9 @@ void MC68EC000::SetExternalInterruptLevel(uint8 level) {
 
 template <mem_primitive T, bool instrFetch>
 T MC68EC000::MemRead(uint32 address) {
+    static constexpr uint32 addrMask = (~0 << (sizeof(T) - 1)) & 0xFFFFFF;
+    address &= addrMask;
+
     if constexpr (std::is_same_v<T, uint32>) {
         const uint32 hi = m_bus.Read<uint16, instrFetch>(address + 0);
         const uint32 lo = m_bus.Read<uint16, instrFetch>(address + 2);
@@ -55,6 +58,9 @@ T MC68EC000::MemRead(uint32 address) {
 
 template <mem_primitive T>
 void MC68EC000::MemWrite(uint32 address, T value) {
+    static constexpr uint32 addrMask = (~0 << (sizeof(T) - 1)) & 0xFFFFFF;
+    address &= addrMask;
+
     if constexpr (std::is_same_v<T, uint32>) {
         m_bus.Write<uint16>(address + 0, value >> 16u);
         m_bus.Write<uint16>(address + 2, value >> 0u);
@@ -95,7 +101,7 @@ FLATTEN FORCE_INLINE void MC68EC000::MemWriteLong(uint32 address, uint32 value) 
 
 FORCE_INLINE void MC68EC000::SetSR(uint16 value) {
     const bool oldS = SR.S;
-    SR.u16 = value;
+    SR.u16 = value & 0xA71F;
 
     if (SR.S != oldS) {
         std::swap(regs.SP, SP_swap);
@@ -119,10 +125,10 @@ FORCE_INLINE void MC68EC000::HandleExceptionCommon(ExceptionVector vector, uint8
     SR.T = 0;
     SR.IPM = intrLevel;
 
-    regs.SP -= 4;
-    MemWrite<uint32>(regs.SP, PC);
-    regs.SP -= 2;
-    MemWrite<uint16>(regs.SP, oldSR);
+    MemWrite<uint16>(regs.SP - 2, PC);
+    MemWrite<uint16>(regs.SP - 6, oldSR);
+    MemWrite<uint16>(regs.SP - 4, PC >> 16u);
+    regs.SP -= 6;
     PC = static_cast<uint32>(vector) << 2u;
 }
 
@@ -130,8 +136,9 @@ FORCE_INLINE bool MC68EC000::CheckPrivilege() {
     if (!SR.S) {
         PC -= 2;
         EnterException(ExceptionVector::PrivilegeViolation);
+        return false;
     }
-    return SR.S;
+    return true;
 }
 
 FORCE_INLINE void MC68EC000::CheckInterrupt() {
