@@ -204,7 +204,11 @@ DecodeTable BuildDecodeTable() {
                 const bool isAn = M == 0b001;
                 const bool isByte = sz == 0b00;
                 if (bit::extract<8>(instr) == 1) {
-                    // TODO: SUBQ
+                    if (isAn) {
+                        opcode = legalIf(OpcodeType::SubQ_An, !isByte);
+                    } else {
+                        opcode = legalIf(OpcodeType::SubQ_EA, kValidAlterableAddrModes[ea]);
+                    }
                 } else {
                     if (isAn) {
                         opcode = legalIf(OpcodeType::AddQ_An, !isByte);

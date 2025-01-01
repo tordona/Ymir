@@ -457,6 +457,8 @@ void MC68EC000::Execute() {
     case OpcodeType::Or_Dn_EA: Instr_Or_Dn_EA(instr); break;
     case OpcodeType::Or_EA_Dn: Instr_Or_EA_Dn(instr); break;
     case OpcodeType::SubI: Instr_SubI(instr); break;
+    case OpcodeType::SubQ_An: Instr_SubQ_An(instr); break;
+    case OpcodeType::SubQ_EA: Instr_SubQ_EA(instr); break;
 
     case OpcodeType::LSL_I: Instr_LSL_I(instr); break;
     case OpcodeType::LSL_M: Instr_LSL_M(instr); break;
@@ -878,6 +880,46 @@ FORCE_INLINE void MC68EC000::Instr_SubI(uint16 instr) {
         if constexpr (sizeof(T) == sizeof(uint32)) {
             op1 = (op1 << 16u) | FetchInstruction();
         }
+        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+            const T result = op2 - op1;
+            SetSubtractionFlags(op1, op2, result);
+            return result;
+        });
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+FORCE_INLINE void MC68EC000::Instr_SubQ_An(uint16 instr) {
+    const uint16 An = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const uint32 op1 = static_cast<std::make_signed_t<T>>(bit::extract<9, 11>(instr));
+        const uint32 op2 = regs.A[An];
+        const uint32 result = op2 - op1;
+        regs.A[An] = result;
+        SetSubtractionFlags(op1, op2, result);
+    };
+
+    switch (sz) {
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+FORCE_INLINE void MC68EC000::Instr_SubQ_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 data = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T op1 = data == 0 ? 8 : data;
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 - op1;
             SetSubtractionFlags(op1, op2, result);
