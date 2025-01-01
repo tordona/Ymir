@@ -74,6 +74,8 @@ void SH2::Reset(bool hard) {
     DVDNTH = 0x0; // undefined initial value
     DVDNTL = 0x0; // undefined initial value
 
+    m_NMI = false;
+
     m_pendingExternalIntrLevel = 0;
     m_pendingExternalIntrVecNum = 0;
     m_pendingInterrupt.priority = 0;
@@ -183,6 +185,12 @@ void SH2::SetExternalInterrupt(uint8 level, uint8 vecNum) {
     assert(level < 16);
     m_pendingExternalIntrLevel = level;
     m_pendingExternalIntrVecNum = vecNum;
+}
+
+void SH2::SetNMI() {
+    // HACK: should be edge-detected
+    m_NMI = true;
+    ICR.NMIL = 1;
 }
 
 // -------------------------------------------------------------------------
@@ -787,19 +795,31 @@ bool SH2::CheckInterrupts() {
     //   FRT OVI          IPRB.FRTIPn    VCRD.FOVVn
     // Use the vector number of the exception with highest priority
 
-    // TODO: NMI, user break (before IRLs)
-
-    bool usingExternalIntr = true;
-    m_pendingInterrupt.priority = m_pendingExternalIntrLevel;
-    m_pendingInterrupt.vecNum = ICR.VECMD ? m_pendingExternalIntrVecNum : 0x40 + (m_pendingExternalIntrLevel >> 1u);
+    m_pendingInterrupt.priority = 0;
+    m_pendingInterrupt.vecNum = 0x00;
 
     auto update = [&](uint8 intrPriority, uint8 vecNum) {
         if (intrPriority > m_pendingInterrupt.priority) {
             m_pendingInterrupt.priority = intrPriority;
             m_pendingInterrupt.vecNum = vecNum;
-            usingExternalIntr = false;
         }
     };
+
+    // HACK: should be edge-detected
+    // this only works because NMI has the highest priority and can't be masked
+    if (m_NMI) {
+        // Set NMI interrupt: vector 0x0B, priority 16
+        m_NMI = false;
+        update(16, 0x0B);
+        return true;
+    }
+
+    // TODO: user break
+
+    // IRLs
+    const uint8 externalIntrVecNum =
+        ICR.VECMD ? m_pendingExternalIntrVecNum : 0x40 + (m_pendingExternalIntrLevel >> 1u);
+    update(m_pendingExternalIntrLevel, externalIntrVecNum);
 
     if (DVCR.OVF && DVCR.OVFIE) {
         update(IPRA.DIVUIPn, VCRDIV);
@@ -811,6 +831,8 @@ bool SH2::CheckInterrupts() {
     // TODO: FRT ICI, OCI, OVI
 
     const bool result = m_pendingInterrupt.priority > SR.ILevel;
+    const bool usingExternalIntr =
+        m_pendingInterrupt.priority == m_pendingExternalIntrLevel && m_pendingInterrupt.vecNum == externalIntrVecNum;
     if (result && usingExternalIntr) {
         m_bus.AcknowledgeExternalInterrupt();
     }

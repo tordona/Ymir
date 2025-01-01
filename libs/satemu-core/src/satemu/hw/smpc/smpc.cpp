@@ -2,13 +2,17 @@
 
 #include <satemu/hw/scsp/scsp.hpp>
 #include <satemu/hw/scu/scu.hpp>
+#include <satemu/hw/sh2/sh2_block.hpp>
+#include <satemu/hw/vdp/vdp.hpp>
 
 #include <satemu/util/inline.hpp>
 
 namespace satemu::smpc {
 
-SMPC::SMPC(scu::SCU &scu, scsp::SCSP &scsp)
-    : m_SCU(scu)
+SMPC::SMPC(sh2::SH2Block &sh2, vdp::VDP &vdp, scu::SCU &scu, scsp::SCSP &scsp)
+    : m_SH2(sh2)
+    , m_VDP(vdp)
+    , m_SCU(scu)
     , m_SCSP(scsp) {
     Reset(true);
 }
@@ -113,8 +117,12 @@ FORCE_INLINE void SMPC::WriteCOMREG(uint8 value) {
 
     // TODO: should delay execution
     switch (COMREG) {
+    case Command::MSHON: MSHON(); break;
+    case Command::SSHOFF: SSHOFF(); break;
     case Command::SNDON: SNDON(); break;
     case Command::SNDOFF: SNDOFF(); break;
+    case Command::CKCHG352: CKCHG352(); break;
+    case Command::CKCHG320: CKCHG320(); break;
     case Command::RESENAB: RESENAB(); break;
     case Command::RESDISA: RESDISA(); break;
     case Command::INTBACK: INTBACK(); break;
@@ -189,6 +197,24 @@ FORCE_INLINE void SMPC::WriteDDR2(uint8 value) {
     DDR2 = value;
 }
 
+void SMPC::MSHON() {
+    // TODO: is this supposed to do something...?
+
+    SF = 0; // done processing
+
+    OREG[31] = 0x00;
+}
+
+void SMPC::SSHOFF() {
+    // TODO: turn off slave SH-2
+
+    __debugbreak();
+
+    SF = 0; // done processing
+
+    OREG[31] = 0x03;
+}
+
 void SMPC::SNDON() {
     // fmt::println("SMPC: processing SNDON");
 
@@ -207,6 +233,25 @@ void SMPC::SNDOFF() {
     SF = 0; // done processing
 
     OREG[31] = 0x07;
+}
+
+void SMPC::CKCHG352() {
+    // fmt::println("SMPC: processing CKCHG352");
+
+    ClockChange(true);
+
+    SF = 0; // done processing
+
+    OREG[31] = 0x0E;
+}
+void SMPC::CKCHG320() {
+    // fmt::println("SMPC: processing CKCHG320");
+
+    ClockChange(false);
+
+    SF = 0; // done processing
+
+    OREG[31] = 0x0F;
 }
 
 void SMPC::RESENAB() {
@@ -360,6 +405,20 @@ void SMPC::SETTIME() {
     SF = 0; // done processing
 
     OREG[31] = 0x16;
+}
+
+void SMPC::ClockChange(bool fast) {
+    m_VDP.Reset(false);
+    m_SCU.Reset(false);
+    m_SCSP.Reset(false);
+
+    // TODO: clear VDP VRAMs
+
+    // TODO: stop slave SH2
+
+    m_SH2.master.SetNMI();
+
+    // TODO: update system clock
 }
 
 } // namespace satemu::smpc

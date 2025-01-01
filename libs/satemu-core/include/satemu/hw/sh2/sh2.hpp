@@ -32,6 +32,7 @@ public:
     void Step();
 
     void SetExternalInterrupt(uint8 level, uint8 vecNum);
+    void SetNMI();
 
 private:
     // -------------------------------------------------------------------------
@@ -224,6 +225,8 @@ private:
 
     uint8 m_pendingExternalIntrLevel;
     uint8 m_pendingExternalIntrVecNum;
+
+    bool m_NMI; // HACK: should be edge-detected
 
     struct PendingInterruptInfo {
         uint8 priority;

@@ -12,6 +12,18 @@
 // -----------------------------------------------------------------------------
 // Forward declarations
 
+namespace satemu::sh2 {
+
+class SH2Block;
+
+} // namespace satemu::sh2
+
+namespace satemu::vdp {
+
+class VDP;
+
+} // namespace satemu::vdp
+
 namespace satemu::scu {
 
 class SCU;
@@ -44,7 +56,7 @@ inline constexpr uint16 kButtonL = (1u << 3u);
 
 class SMPC {
 public:
-    SMPC(scu::SCU &scu, scsp::SCSP &scsp);
+    SMPC(sh2::SH2Block &sh2, vdp::VDP &vdp, scu::SCU &scu, scsp::SCSP &scsp);
 
     void Reset(bool hard);
 
@@ -64,6 +76,8 @@ private:
 
     std::array<uint8, 4> SMEM;
 
+    sh2::SH2Block &m_SH2;
+    vdp::VDP &m_VDP;
     scu::SCU &m_SCU;
     scsp::SCSP &m_SCSP;
 
@@ -192,13 +206,19 @@ private:
     // -------------------------------------------------------------------------
     // Commands
 
+    void MSHON();
+    void SSHOFF();
     void SNDON();
     void SNDOFF();
+    void CKCHG352();
+    void CKCHG320();
     void RESENAB();
     void RESDISA();
     void INTBACK();
     void SETSMEM();
     void SETTIME();
+
+    void ClockChange(bool fast);
 };
 
 } // namespace satemu::smpc
