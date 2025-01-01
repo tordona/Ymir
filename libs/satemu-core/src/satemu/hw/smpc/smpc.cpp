@@ -213,7 +213,7 @@ void SMPC::SSHON() {
 
     // Turn on and reset slave SH-2
     m_SH2.slaveEnabled = true;
-    m_SH2.Reset(true);
+    m_SH2.slave.Reset(true);
 
     SF = 0; // done processing
 
