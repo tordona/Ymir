@@ -211,7 +211,9 @@ void SMPC::MSHON() {
 void SMPC::SSHON() {
     // fmt::println("SMPC: processing SSHON");
 
-    // TODO: turn on slave SH-2
+    // Turn on and reset slave SH-2
+    m_SH2.slaveEnabled = true;
+    m_SH2.Reset(true);
 
     SF = 0; // done processing
 
@@ -221,7 +223,8 @@ void SMPC::SSHON() {
 void SMPC::SSHOFF() {
     // fmt::println("SMPC: processing SSHOFF");
 
-    // TODO: turn off slave SH-2
+    // Turn off slave SH-2
+    m_SH2.slaveEnabled = false;
 
     SF = 0; // done processing
 

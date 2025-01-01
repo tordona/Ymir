@@ -16,9 +16,13 @@ public:
     SH2 master;
     SH2 slave;
 
+    bool slaveEnabled;
+
     void Reset(bool hard) {
         master.Reset(hard);
         slave.Reset(hard);
+
+        slaveEnabled = false;
     }
 };
 
