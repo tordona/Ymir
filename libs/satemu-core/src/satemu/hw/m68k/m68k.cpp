@@ -8,7 +8,6 @@
 
 #include <cassert>
 
-
 namespace satemu::m68k {
 
 MC68EC000::MC68EC000(M68kBus &bus)
@@ -203,19 +202,22 @@ FORCE_INLINE T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
         switch (Xn) {
         case 0b010: return MemRead<T, false>(PC + static_cast<sint16>(FetchInstruction()));
         case 0b011: {
-            const uint16 briefExtWord = FetchInstruction();
+            const uint32 pc = PC;
+            const uint16 extWord = FetchInstruction();
 
-            const uint32 address = PC + static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
-            const bool s = bit::extract<11>(briefExtWord);
-            const uint8 extXn = bit::extract<12, 14>(briefExtWord);
-            const bool m = bit::extract<15>(briefExtWord);
+            const sint8 disp = bit::extract_signed<0, 7>(extWord);
+            const bool wl = bit::extract<11>(extWord);
+            const uint8 extXn = bit::extract<12, 14>(extWord);
+            const bool da = bit::extract<15>(extWord);
 
-            sint32 index = m ? regs.A[extXn] : regs.D[extXn];
-            if (!s) {
+            sint32 index = da ? regs.A[extXn] : regs.D[extXn];
+            if (!wl) {
                 // Word index
                 index = static_cast<sint16>(index);
             }
-            return MemRead<T, false>(address + index);
+
+            const uint32 address = pc + static_cast<sint8>(disp) + index;
+            return MemRead<T, false>(address);
         }
         case 0b000: {
             const uint16 address = FetchInstruction();
