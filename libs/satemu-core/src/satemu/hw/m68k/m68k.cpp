@@ -26,6 +26,7 @@ void MC68EC000::Reset(bool hard) {
     SP_swap = 0;
 
     PC = MemReadLong(0x00000004);
+    FullPrefetch();
 
     SR.u16 = 0;
     SR.S = 1;
@@ -130,6 +131,7 @@ FORCE_INLINE void MC68EC000::HandleExceptionCommon(ExceptionVector vector, uint8
     MemWrite<uint16>(regs.SP - 4, PC >> 16u);
     regs.SP -= 6;
     PC = MemRead<uint32, false>(static_cast<uint32>(vector) << 2u);
+    FullPrefetch();
 }
 
 FORCE_INLINE bool MC68EC000::CheckPrivilege() {
@@ -179,11 +181,11 @@ FORCE_INLINE T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
     }
     case 0b100: regs.A[Xn] -= sizeof(T); return MemRead<T, false>(regs.A[Xn]);
     case 0b101: {
-        const sint16 disp = static_cast<sint16>(FetchInstruction());
+        const sint16 disp = static_cast<sint16>(PrefetchNext());
         return MemRead<T, false>(regs.A[Xn] + disp);
     }
     case 0b110: {
-        const uint16 briefExtWord = FetchInstruction();
+        const uint16 briefExtWord = PrefetchNext();
 
         const sint8 disp = static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
         const bool s = bit::extract<11>(briefExtWord);
@@ -199,10 +201,10 @@ FORCE_INLINE T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
     }
     case 0b111:
         switch (Xn) {
-        case 0b010: return MemRead<T, false>(PC + static_cast<sint16>(FetchInstruction()));
+        case 0b010: return MemRead<T, false>(PC - 2 + static_cast<sint16>(PrefetchNext()));
         case 0b011: {
-            const uint32 pc = PC;
-            const uint16 extWord = FetchInstruction();
+            const uint32 pc = PC - 2;
+            const uint16 extWord = PrefetchNext();
 
             const sint8 disp = bit::extract_signed<0, 7>(extWord);
             const bool wl = bit::extract<11>(extWord);
@@ -219,18 +221,18 @@ FORCE_INLINE T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
             return MemRead<T, false>(address);
         }
         case 0b000: {
-            const uint16 address = FetchInstruction();
+            const uint16 address = PrefetchNext();
             return MemRead<T, false>(address);
         }
         case 0b001: {
-            const uint32 addressHigh = FetchInstruction();
-            const uint32 addressLow = FetchInstruction();
+            const uint32 addressHigh = PrefetchNext();
+            const uint32 addressLow = PrefetchNext();
             return MemRead<T, false>((addressHigh << 16u) | addressLow);
         }
         case 0b100: {
-            uint32 value = FetchInstruction();
+            uint32 value = PrefetchNext();
             if constexpr (std::is_same_v<T, uint32>) {
-                value = (value << 16u) | FetchInstruction();
+                value = (value << 16u) | PrefetchNext();
             }
             return value;
         }
@@ -255,12 +257,12 @@ FORCE_INLINE void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
         MemWrite<T>(regs.A[Xn], value);
         break;
     case 0b101: {
-        const sint16 disp = static_cast<sint16>(FetchInstruction());
+        const sint16 disp = static_cast<sint16>(PrefetchNext());
         MemWrite<T>(regs.A[Xn] + disp, value);
         break;
     }
     case 0b110: {
-        const uint16 briefExtWord = FetchInstruction();
+        const uint16 briefExtWord = PrefetchNext();
 
         const sint8 disp = static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
         const bool s = bit::extract<11>(briefExtWord);
@@ -312,7 +314,7 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
         break;
     }
     case 0b101: {
-        const sint16 disp = static_cast<sint16>(FetchInstruction());
+        const sint16 disp = static_cast<sint16>(PrefetchNext());
         const uint32 address = regs.A[Xn] + disp;
         const T value = MemRead<T, false>(address);
         const T result = modify(value);
@@ -320,7 +322,7 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
         break;
     }
     case 0b110: {
-        const uint16 briefExtWord = FetchInstruction();
+        const uint16 briefExtWord = PrefetchNext();
 
         const sint8 disp = static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
         const bool s = bit::extract<11>(briefExtWord);
@@ -345,11 +347,11 @@ FORCE_INLINE uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
     switch (M) {
     case 0b010: return regs.A[Xn];
     case 0b101: {
-        const sint16 disp = static_cast<sint16>(FetchInstruction());
+        const sint16 disp = static_cast<sint16>(PrefetchNext());
         return regs.A[Xn] + disp;
     }
     case 0b110: {
-        const uint16 briefExtWord = FetchInstruction();
+        const uint16 briefExtWord = PrefetchNext();
 
         const sint8 disp = static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
         const bool s = bit::extract<11>(briefExtWord);
@@ -365,11 +367,11 @@ FORCE_INLINE uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
     }
     case 0b111:
         switch (Xn) {
-        case 0b010: return PC + static_cast<sint16>(FetchInstruction());
+        case 0b010: return PC - 2 + static_cast<sint16>(PrefetchNext());
         case 0b011: {
-            const uint16 briefExtWord = FetchInstruction();
+            const uint16 briefExtWord = PrefetchNext();
 
-            const uint32 address = PC + static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
+            const uint32 address = PC - 2 + static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
             const bool s = bit::extract<11>(briefExtWord);
             const uint8 extXn = bit::extract<12, 14>(briefExtWord);
             const bool m = bit::extract<15>(briefExtWord);
@@ -382,12 +384,12 @@ FORCE_INLINE uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
             return address + index;
         }
         case 0b000: {
-            const uint16 address = FetchInstruction();
+            const uint16 address = PrefetchNext();
             return address;
         }
         case 0b001: {
-            const uint32 addressHigh = FetchInstruction();
-            const uint32 addressLow = FetchInstruction();
+            const uint32 addressHigh = PrefetchNext();
+            const uint32 addressLow = PrefetchNext();
             return (addressHigh << 16u) | addressLow;
         }
         }
@@ -431,12 +433,33 @@ FORCE_INLINE void MC68EC000::SetShiftFlags(T result, bool carry) {
 }
 
 // -----------------------------------------------------------------------------
+// Prefetch queue
+
+FLATTEN FORCE_INLINE void MC68EC000::FullPrefetch() {
+    PrefetchNext();
+    PrefetchTransfer();
+}
+
+FORCE_INLINE uint16 MC68EC000::PrefetchNext() {
+    const uint16 prev = m_prefetchQueue[0];
+    m_prefetchQueue[0] = FetchInstruction();
+    return prev;
+}
+
+FORCE_INLINE void MC68EC000::PrefetchTransfer() {
+    // NOTE: consolidating IRC -> IR and IR -> IRD steps here
+    // technically they should be separate
+    m_prefetchQueue[1] = m_prefetchQueue[0];
+    PrefetchNext();
+}
+
+// -----------------------------------------------------------------------------
 // Interpreter
 
 void MC68EC000::Execute() {
     CheckInterrupt();
 
-    const uint16 instr = FetchInstruction();
+    const uint16 instr = m_prefetchQueue[1];
 
     const OpcodeType type = g_decodeTable.opcodeTypes[instr];
     switch (type) {
@@ -534,6 +557,8 @@ FORCE_INLINE void MC68EC000::Instr_Move_EA_EA(uint16 instr) {
     case 0b11: move.template operator()<uint16>(); break;
     case 0b10: move.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Move_EA_SR(uint16 instr) {
@@ -541,6 +566,8 @@ FORCE_INLINE void MC68EC000::Instr_Move_EA_SR(uint16 instr) {
         const uint16 Xn = bit::extract<0, 2>(instr);
         const uint16 M = bit::extract<3, 5>(instr);
         SetSR(ReadEffectiveAddress<uint16>(M, Xn) & 0xF71F);
+
+        PrefetchTransfer();
     }
 }
 
@@ -554,13 +581,15 @@ FORCE_INLINE void MC68EC000::Instr_MoveA(uint16 instr) {
     case 0b11: regs.A[An] = static_cast<sint16>(ReadEffectiveAddress<uint16>(M, Xn)); break;
     case 0b10: regs.A[An] = ReadEffectiveAddress<uint32>(M, Xn); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_MoveM_EA_Rs(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const bool sz = bit::extract<6>(instr);
-    const uint16 regList = FetchInstruction();
+    const uint16 regList = PrefetchNext();
     uint32 address = CalcEffectiveAddress(M, Xn);
 
     auto xfer = [&]<std::integral T>(uint32 regIndex) {
@@ -574,12 +603,14 @@ FORCE_INLINE void MC68EC000::Instr_MoveM_EA_Rs(uint16 instr) {
             sz ? xfer.template operator()<uint32>(i) : xfer.template operator()<uint16>(i);
         }
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_MoveM_PI_Rs(uint16 instr) {
     const uint16 An = bit::extract<0, 2>(instr);
     const bool sz = bit::extract<6>(instr);
-    const uint16 regList = FetchInstruction();
+    const uint16 regList = PrefetchNext();
 
     auto xfer = [&]<std::integral T>(uint32 regIndex) {
         const uint32 address = regs.A[An];
@@ -593,13 +624,15 @@ FORCE_INLINE void MC68EC000::Instr_MoveM_PI_Rs(uint16 instr) {
             sz ? xfer.template operator()<uint32>(i) : xfer.template operator()<uint16>(i);
         }
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_MoveM_Rs_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const bool sz = bit::extract<6>(instr);
-    const uint16 regList = FetchInstruction();
+    const uint16 regList = PrefetchNext();
     uint32 address = CalcEffectiveAddress(M, Xn);
 
     auto xfer = [&]<std::integral T>(uint32 regIndex) {
@@ -613,12 +646,14 @@ FORCE_INLINE void MC68EC000::Instr_MoveM_Rs_EA(uint16 instr) {
             sz ? xfer.template operator()<uint32>(i) : xfer.template operator()<uint16>(i);
         }
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_MoveM_Rs_PD(uint16 instr) {
     const uint16 An = bit::extract<0, 2>(instr);
     const bool sz = bit::extract<6>(instr);
-    const uint16 regList = FetchInstruction();
+    const uint16 regList = PrefetchNext();
 
     auto xfer = [&]<std::integral T>(uint32 regIndex) {
         const uint32 address = regs.A[An] - sizeof(T);
@@ -632,6 +667,8 @@ FORCE_INLINE void MC68EC000::Instr_MoveM_Rs_PD(uint16 instr) {
             sz ? xfer.template operator()<uint32>(i) : xfer.template operator()<uint16>(i);
         }
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_MoveQ(uint16 instr) {
@@ -639,6 +676,8 @@ FORCE_INLINE void MC68EC000::Instr_MoveQ(uint16 instr) {
     const uint32 reg = bit::extract<9, 11>(instr);
     regs.D[reg] = value;
     SetLogicFlags(value);
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Clr(uint16 instr) {
@@ -659,6 +698,8 @@ FORCE_INLINE void MC68EC000::Instr_Clr(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Swap(uint16 instr) {
@@ -666,6 +707,8 @@ FORCE_INLINE void MC68EC000::Instr_Swap(uint16 instr) {
     const uint32 value = (regs.D[reg] >> 16u) | (regs.D[reg] << 16u);
     regs.D[reg] = value;
     SetLogicFlags(value);
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Add_Dn_EA(uint16 instr) {
@@ -688,6 +731,8 @@ FORCE_INLINE void MC68EC000::Instr_Add_Dn_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Add_EA_Dn(uint16 instr) {
@@ -709,6 +754,8 @@ FORCE_INLINE void MC68EC000::Instr_Add_EA_Dn(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_AddA(uint16 instr) {
@@ -722,6 +769,8 @@ FORCE_INLINE void MC68EC000::Instr_AddA(uint16 instr) {
     } else {
         regs.A[An] += ReadEffectiveAddress<uint16>(M, Xn);
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_AddI(uint16 instr) {
@@ -730,9 +779,9 @@ FORCE_INLINE void MC68EC000::Instr_AddI(uint16 instr) {
     const uint16 sz = bit::extract<6, 7>(instr);
 
     auto op = [&]<std::integral T>() {
-        T op1 = FetchInstruction();
+        T op1 = PrefetchNext();
         if constexpr (sizeof(T) == sizeof(uint32)) {
-            op1 = (op1 << 16u) | FetchInstruction();
+            op1 = (op1 << 16u) | PrefetchNext();
         }
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 + op1;
@@ -746,6 +795,8 @@ FORCE_INLINE void MC68EC000::Instr_AddI(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_AddQ_An(uint16 instr) {
@@ -764,6 +815,8 @@ FORCE_INLINE void MC68EC000::Instr_AddQ_An(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_AddQ_EA(uint16 instr) {
@@ -786,6 +839,8 @@ FORCE_INLINE void MC68EC000::Instr_AddQ_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_AndI_EA(uint16 instr) {
@@ -794,9 +849,9 @@ FORCE_INLINE void MC68EC000::Instr_AndI_EA(uint16 instr) {
     const uint16 sz = bit::extract<6, 7>(instr);
 
     auto op = [&]<std::integral T>() {
-        T op1 = FetchInstruction();
+        T op1 = PrefetchNext();
         if constexpr (sizeof(T) == sizeof(uint32)) {
-            op1 = (op1 << 16u) | FetchInstruction();
+            op1 = (op1 << 16u) | PrefetchNext();
         }
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 & op1;
@@ -810,6 +865,8 @@ FORCE_INLINE void MC68EC000::Instr_AndI_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Eor_Dn_EA(uint16 instr) {
@@ -832,6 +889,8 @@ FORCE_INLINE void MC68EC000::Instr_Eor_Dn_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Or_Dn_EA(uint16 instr) {
@@ -854,6 +913,8 @@ FORCE_INLINE void MC68EC000::Instr_Or_Dn_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Or_EA_Dn(uint16 instr) {
@@ -875,6 +936,8 @@ FORCE_INLINE void MC68EC000::Instr_Or_EA_Dn(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_OrI_EA(uint16 instr) {
@@ -883,9 +946,9 @@ FORCE_INLINE void MC68EC000::Instr_OrI_EA(uint16 instr) {
     const uint16 sz = bit::extract<6, 7>(instr);
 
     auto op = [&]<std::integral T>() {
-        T op1 = FetchInstruction();
+        T op1 = PrefetchNext();
         if constexpr (sizeof(T) == sizeof(uint32)) {
-            op1 = (op1 << 16u) | FetchInstruction();
+            op1 = (op1 << 16u) | PrefetchNext();
         }
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 | op1;
@@ -899,6 +962,8 @@ FORCE_INLINE void MC68EC000::Instr_OrI_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_SubI(uint16 instr) {
@@ -907,9 +972,9 @@ FORCE_INLINE void MC68EC000::Instr_SubI(uint16 instr) {
     const uint16 sz = bit::extract<6, 7>(instr);
 
     auto op = [&]<std::integral T>() {
-        T op1 = FetchInstruction();
+        T op1 = PrefetchNext();
         if constexpr (sizeof(T) == sizeof(uint32)) {
-            op1 = (op1 << 16u) | FetchInstruction();
+            op1 = (op1 << 16u) | PrefetchNext();
         }
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 - op1;
@@ -923,6 +988,8 @@ FORCE_INLINE void MC68EC000::Instr_SubI(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_SubQ_An(uint16 instr) {
@@ -941,6 +1008,8 @@ FORCE_INLINE void MC68EC000::Instr_SubQ_An(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_SubQ_EA(uint16 instr) {
@@ -963,6 +1032,8 @@ FORCE_INLINE void MC68EC000::Instr_SubQ_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_LSL_I(uint16 instr) {
@@ -994,6 +1065,8 @@ FORCE_INLINE void MC68EC000::Instr_LSL_I(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_LSL_M(uint16 instr) {
@@ -1006,6 +1079,8 @@ FORCE_INLINE void MC68EC000::Instr_LSL_M(uint16 instr) {
         SetShiftFlags(result, carry);
         return result;
     });
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_LSL_R(uint16 instr) {
@@ -1040,6 +1115,8 @@ FORCE_INLINE void MC68EC000::Instr_LSL_R(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_LSR_I(uint16 instr) {
@@ -1071,6 +1148,8 @@ FORCE_INLINE void MC68EC000::Instr_LSR_I(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_LSR_M(uint16 instr) {
@@ -1083,6 +1162,8 @@ FORCE_INLINE void MC68EC000::Instr_LSR_M(uint16 instr) {
         SetShiftFlags(result, carry);
         return result;
     });
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_LSR_R(uint16 instr) {
@@ -1117,6 +1198,8 @@ FORCE_INLINE void MC68EC000::Instr_LSR_R(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Cmp(uint16 instr) {
@@ -1137,6 +1220,8 @@ FORCE_INLINE void MC68EC000::Instr_Cmp(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_CmpA(uint16 instr) {
@@ -1157,6 +1242,8 @@ FORCE_INLINE void MC68EC000::Instr_CmpA(uint16 instr) {
     } else {
         op.template operator()<uint16>();
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_CmpI(uint16 instr) {
@@ -1165,9 +1252,9 @@ FORCE_INLINE void MC68EC000::Instr_CmpI(uint16 instr) {
     const uint16 sz = bit::extract<6, 7>(instr);
 
     auto op = [&]<std::integral T>() {
-        T op1 = FetchInstruction();
+        T op1 = PrefetchNext();
         if constexpr (sizeof(T) == sizeof(uint32)) {
-            op1 = (op1 << 16u) | FetchInstruction();
+            op1 = (op1 << 16u) | PrefetchNext();
         }
         const T op2 = ReadEffectiveAddress<T>(M, Xn);
         const T result = op2 - op1;
@@ -1179,23 +1266,29 @@ FORCE_INLINE void MC68EC000::Instr_CmpI(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_BTst_I_Dn(uint16 instr) {
     const uint16 Dn = bit::extract<0, 2>(instr);
-    const uint16 index = FetchInstruction() & 31;
+    const uint16 index = PrefetchNext() & 31;
 
     const uint32 value = regs.D[Dn];
     SR.Z = (value >> index) & 1;
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_BTst_I_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 index = FetchInstruction() & 7;
+    const uint16 index = PrefetchNext() & 7;
 
     const uint8 value = ReadEffectiveAddress<uint8>(M, Xn);
     SR.Z = (value >> index) & 1;
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_BTst_R_Dn(uint16 instr) {
@@ -1205,6 +1298,8 @@ FORCE_INLINE void MC68EC000::Instr_BTst_R_Dn(uint16 instr) {
 
     const uint32 value = regs.D[dstDn];
     SR.Z = (value >> index) & 1;
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_BTst_R_EA(uint16 instr) {
@@ -1215,6 +1310,8 @@ FORCE_INLINE void MC68EC000::Instr_BTst_R_EA(uint16 instr) {
 
     const uint8 value = ReadEffectiveAddress<uint8>(M, Xn);
     SR.Z = (value >> index) & 1;
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_LEA(uint16 instr) {
@@ -1223,54 +1320,66 @@ FORCE_INLINE void MC68EC000::Instr_LEA(uint16 instr) {
     const uint16 An = bit::extract<9, 11>(instr);
 
     regs.A[An] = CalcEffectiveAddress(M, Xn);
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_BRA(uint16 instr) {
-    const uint32 currPC = PC;
+    const uint32 currPC = PC - 2;
     sint16 disp = static_cast<sint8>(bit::extract<0, 7>(instr));
     if (disp == 0x00) {
-        disp = static_cast<sint16>(FetchInstruction());
+        disp = static_cast<sint16>(PrefetchNext());
     }
     PC = currPC + disp;
+    FullPrefetch();
 }
 
 FORCE_INLINE void MC68EC000::Instr_BSR(uint16 instr) {
-    const uint32 currPC = PC;
+    const uint32 currPC = PC - 2;
     sint16 disp = static_cast<sint8>(bit::extract<0, 7>(instr));
     if (disp == 0x00) {
-        disp = static_cast<sint16>(FetchInstruction());
+        disp = static_cast<sint16>(PrefetchNext());
     }
 
     regs.SP -= 4;
-    MemWriteLong(regs.SP, PC);
+    MemWriteLong(regs.SP, PC - 2);
     PC = currPC + disp;
+    FullPrefetch();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Bcc(uint16 instr) {
-    const uint32 currPC = PC;
+    const uint32 currPC = PC - 2;
     sint16 disp = static_cast<sint8>(bit::extract<0, 7>(instr));
     if (disp == 0x00) {
-        disp = static_cast<sint16>(FetchInstruction());
+        disp = static_cast<sint16>(PrefetchNext());
     }
     const uint32 cond = bit::extract<8, 11>(instr);
     if (kCondTable[(cond << 4u) | SR.flags]) {
         PC = currPC + disp;
+        FullPrefetch();
+        return;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_DBcc(uint16 instr) {
-    const uint32 currPC = PC;
+    const uint32 currPC = PC - 2;
     const uint32 Dn = bit::extract<0, 2>(instr);
     const uint32 cond = bit::extract<8, 11>(instr);
-    const sint16 disp = static_cast<sint16>(FetchInstruction());
+    const sint16 disp = static_cast<sint16>(PrefetchNext());
 
     if (!kCondTable[(cond << 4u) | SR.flags]) {
         const uint16 value = regs.D[Dn] - 1;
         regs.D[Dn] = (regs.D[Dn] & 0xFFFF0000) | value;
         if (value != 0xFFFFu) {
             PC = currPC + disp;
+            FullPrefetch();
+            return;
         }
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_JSR(uint16 instr) {
@@ -1280,8 +1389,9 @@ FORCE_INLINE void MC68EC000::Instr_JSR(uint16 instr) {
     const uint32 target = CalcEffectiveAddress(M, Xn);
 
     regs.SP -= 4;
-    MemWriteLong(regs.SP, PC);
+    MemWriteLong(regs.SP, PC - 2);
     PC = target;
+    FullPrefetch();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Jmp(uint16 instr) {
@@ -1290,10 +1400,12 @@ FORCE_INLINE void MC68EC000::Instr_Jmp(uint16 instr) {
 
     const uint32 target = CalcEffectiveAddress(M, Xn);
     PC = target;
+    FullPrefetch();
 }
 
 FORCE_INLINE void MC68EC000::Instr_RTS(uint16 instr) {
     PC = MemReadLong(regs.SP);
+    FullPrefetch();
     regs.SP += 4;
 }
 
@@ -1305,11 +1417,16 @@ FORCE_INLINE void MC68EC000::Instr_Trap(uint16 instr) {
 FORCE_INLINE void MC68EC000::Instr_TrapV(uint16 instr) {
     if (SR.V) {
         EnterException(ExceptionVector::TRAPVInstruction);
+        return;
     }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Noop(uint16 instr) {
     // TODO: synchronize integer pipeline
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Illegal(uint16 instr) {

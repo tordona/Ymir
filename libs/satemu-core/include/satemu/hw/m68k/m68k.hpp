@@ -224,6 +224,26 @@ private:
     void SetShiftFlags(T result, bool carry);
 
     // -------------------------------------------------------------------------
+    // Prefetch queue
+
+    // Instruction prefetch queue, containing IRC and IRD in that order.
+    // The full prefetch queue actually has 3 registers:
+    // - IRC: the instruction prefetched from external memory
+    // - IR:  the instruction being decoded
+    // - IRD: the instruction being executed
+    // IR is omitted for performance.
+    std::array<uint16, 2> m_prefetchQueue;
+
+    // Refills the entire prefetch queue.
+    void FullPrefetch();
+
+    // Prefetches the next instruction from external memory into IRC and returns the previous value of IRC.
+    uint16 PrefetchNext();
+
+    // Transfers IRC into IR, prefetches the next instruction from external memory into IRC and transfers IR into IRD.
+    void PrefetchTransfer(); // IRC -> IR; prefetch next into IRC; IR -> IRD
+
+    // -------------------------------------------------------------------------
     // Interpreter
 
     void Execute();
