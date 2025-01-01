@@ -1,3 +1,4 @@
+#define DISABLE_FORCE_INLINE
 #include <satemu/hw/m68k/m68k.hpp>
 
 #include <satemu/hw/scsp/scsp.hpp> // because M68kBus *is* SCSP
@@ -6,6 +7,7 @@
 #include <satemu/util/unreachable.hpp>
 
 #include <cassert>
+
 
 namespace satemu::m68k {
 
@@ -44,7 +46,7 @@ void MC68EC000::SetExternalInterruptLevel(uint8 level) {
 
 template <mem_primitive T, bool instrFetch>
 T MC68EC000::MemRead(uint32 address) {
-    static constexpr uint32 addrMask = (~0 << (sizeof(T) - 1)) & 0xFFFFFF;
+    static constexpr uint32 addrMask = ~(sizeof(T) - 1) & 0xFFFFFF;
     address &= addrMask;
 
     if constexpr (std::is_same_v<T, uint32>) {
@@ -58,7 +60,7 @@ T MC68EC000::MemRead(uint32 address) {
 
 template <mem_primitive T>
 void MC68EC000::MemWrite(uint32 address, T value) {
-    static constexpr uint32 addrMask = (~0 << (sizeof(T) - 1)) & 0xFFFFFF;
+    static constexpr uint32 addrMask = ~(sizeof(T) - 1) & 0xFFFFFF;
     address &= addrMask;
 
     if constexpr (std::is_same_v<T, uint32>) {
