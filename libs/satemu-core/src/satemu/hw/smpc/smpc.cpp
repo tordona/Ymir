@@ -283,8 +283,8 @@ void SMPC::WriteINTBACKStatusReport() {
     OREG[6] = 0x01; // Minute (BCD)
     OREG[7] = 0x20; // Second (BCD)
 
-    // TODO: read from cartridge
-    // TODO: allow setting area code
+    // TODO: read cartridge code from cartridge
+    // TODO: allow setting or auto-detecting area code
     OREG[8] = 0x00; // Cartridge code (CTG1-0) == 0b00
     OREG[9] = 0x04; // Area code (0x01=JP, 0x04=NA)
 
