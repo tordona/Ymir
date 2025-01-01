@@ -134,10 +134,11 @@ private:
     uint8 m_playRepeatParam; // playback repeat count parameter
 
     // Playback status/parameters
-    uint32 m_playStartPos; // starting frame address for playback
-    uint32 m_playEndPos;   // ending frame address for playback
-    uint8 m_playMaxRepeat; // max repeat count (0=no repeat, 1..14=N repeats, 15=infinite repeats)
-    bool m_playFile;       // is playback reading a file?
+    uint32 m_playStartPos;  // starting frame address for playback
+    uint32 m_playEndPos;    // ending frame address for playback
+    uint8 m_playMaxRepeat;  // max repeat count (0=no repeat, 1..14=N repeats, 15=infinite repeats)
+    bool m_playFile;        // is playback reading a file?
+    bool m_bufferFullPause; // paused because of running out of buffers?
 
     uint8 m_readSpeed;
 

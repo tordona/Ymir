@@ -36,6 +36,7 @@ void CDBlock::Reset(bool hard) {
     m_playEndPos = 0;
     m_playMaxRepeat = 0;
     m_playFile = false;
+    m_bufferFullPause = false;
 
     m_readSpeed = 1;
 
@@ -311,6 +312,13 @@ void CDBlock::ProcessDriveState() {
         m_status.frameAddress = m_playStartPos;
         break;
     case kStatusCodePlay: ProcessDriveStatePlay(); break;
+    case kStatusCodePause:
+        // Resume playback if paused due to running out of buffers
+        if (m_bufferFullPause && m_bufferManager.FreeBufferCount() > 0) {
+            m_bufferFullPause = false;
+            m_status.statusCode = kStatusCodePlay;
+        }
+        break;
     }
 }
 
@@ -326,8 +334,11 @@ void CDBlock::ProcessDriveStatePlay() {
             if (buffer == nullptr) [[unlikely]] {
                 fmt::println("CDBlock: playback: no free buffer available");
 
+                // TODO: what is the correct status code here?
+                // TODO: there really should be a separate state machine for handling this...
                 m_status.statusCode = kStatusCodePause;
                 SetInterrupt(kHIRQ_BFUL);
+                m_bufferFullPause = true;
                 // TODO: when buffer no longer full, switch to Play if we paused because of BFUL
                 // - or maybe if frameAddress <= m_playEndPos
             } else if (m_disc.sessions.empty()) [[unlikely]] {
@@ -374,6 +385,8 @@ void CDBlock::ProcessDriveStatePlay() {
                         }
                     }
 
+                    m_status.frameAddress++;
+
                     SetInterrupt(kHIRQ_CSCT);
                 } else {
                     // This shouldn't really happen unless we're given an invalid disc image
@@ -386,8 +399,6 @@ void CDBlock::ProcessDriveStatePlay() {
         } else {
             fmt::println("CDBlock: playback: read from {:06X} discarded", frameAddress);
         }
-
-        m_status.frameAddress++;
     }
 
     if (m_status.frameAddress > m_playEndPos) {
