@@ -809,6 +809,13 @@ bool SH2::CheckInterrupts() {
     //   FRT OVI          IPRB.FRTIPn    VCRD.FOVVn
     // Use the vector number of the exception with highest priority
 
+    // TODO: optimize
+    // potential solutions:
+    // - use a sorted vector of unique interrupts
+    // - precompute highest priority interrupt whenever they change
+    //   - adding an interrupt is easy
+    //   - removing is a problem
+
     m_pendingInterrupt.priority = 0;
     m_pendingInterrupt.vecNum = 0x00;
 
