@@ -29,8 +29,8 @@ FORCE_INLINE constexpr T extract(T value) {
 
     using UT = std::make_unsigned_t<T>;
 
-    constexpr std::size_t length = end - start + 1;
-    constexpr UT mask = static_cast<UT>(~(~0 << length));
+    constexpr std::size_t length = end - start;
+    constexpr UT mask = static_cast<UT>(~(~0 << length << 1));
     return (value >> start) & mask;
 }
 
@@ -51,8 +51,8 @@ FORCE_INLINE constexpr T deposit(T base, TV value) {
 
     using UT = std::make_unsigned_t<T>;
 
-    constexpr std::size_t length = end - start + 1;
-    constexpr UT mask = static_cast<UT>(~(~0 << length));
+    constexpr std::size_t length = end - start;
+    constexpr UT mask = static_cast<UT>(~(~0 << length << 1));
     base &= ~(mask << start);
     base |= (value & mask) << start;
     return base;

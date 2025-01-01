@@ -129,7 +129,7 @@ FORCE_INLINE void MC68EC000::HandleExceptionCommon(ExceptionVector vector, uint8
     MemWrite<uint16>(regs.SP - 6, oldSR);
     MemWrite<uint16>(regs.SP - 4, PC >> 16u);
     regs.SP -= 6;
-    PC = static_cast<uint32>(vector) << 2u;
+    PC = MemRead<uint32, false>(static_cast<uint32>(vector) << 2u);
 }
 
 FORCE_INLINE bool MC68EC000::CheckPrivilege() {
@@ -239,10 +239,8 @@ FORCE_INLINE T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
 
 template <mem_primitive T>
 FORCE_INLINE void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
-    static constexpr uint32 regMask = ~0u << (sizeof(T) * 8u - 1u) << 1u;
-
     switch (M) {
-    case 0b000: regs.D[Xn] = (regs.D[Xn] & regMask) | value; break;
+    case 0b000: bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Xn], value); break;
     case 0b001: regs.A[Xn] = value; break;
     case 0b010: MemWrite<T>(regs.A[Xn], value); break;
     case 0b011:
@@ -279,12 +277,10 @@ FORCE_INLINE void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
 
 template <mem_primitive T, typename FnModify>
 FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify &&modify) {
-    static constexpr uint32 regMask = ~0u << (sizeof(T) * 8u - 1u) << 1u;
-
     switch (M) {
     case 0b000: {
         const T value = modify(regs.D[Xn]);
-        regs.D[Xn] = (regs.D[Xn] & regMask) | value;
+        bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Xn], value);
         break;
     }
     case 0b001: {
@@ -700,7 +696,7 @@ FORCE_INLINE void MC68EC000::Instr_Add_EA_Dn(uint16 instr) {
         const T op1 = ReadEffectiveAddress<T>(M, Xn);
         const T op2 = regs.D[Dn];
         const T result = op2 + op1;
-        regs.D[Dn] = result;
+        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
         SetAdditionFlags(op1, op2, result);
     };
 
@@ -866,7 +862,7 @@ FORCE_INLINE void MC68EC000::Instr_Or_EA_Dn(uint16 instr) {
         const T op1 = ReadEffectiveAddress<T>(M, Xn);
         const T op2 = regs.D[Dn];
         const T result = op2 | op1;
-        regs.D[Dn] = result;
+        bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Dn], result);
         SetLogicFlags(result);
     };
 
@@ -954,13 +950,13 @@ FORCE_INLINE void MC68EC000::Instr_LSL_I(uint16 instr) {
             const T value = regs.D[Dn];
             const T result = 0;
             const bool carry = value >> 7;
-            regs.D[Dn] = result;
+            bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
             SetShiftFlags(result, carry);
         } else {
             const T value = regs.D[Dn];
             const T result = value << shift;
             const bool carry = (value >> (sizeof(T) * 8 - shift)) & 1;
-            regs.D[Dn] = result;
+            bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
             SetShiftFlags(result, carry);
         }
     };
@@ -1007,7 +1003,7 @@ FORCE_INLINE void MC68EC000::Instr_LSL_R(uint16 instr) {
             result = value;
             carry = false;
         }
-        regs.D[Dn] = result;
+        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
         SetShiftFlags(result, carry);
     };
 
@@ -1031,13 +1027,13 @@ FORCE_INLINE void MC68EC000::Instr_LSR_I(uint16 instr) {
             const T value = regs.D[Dn];
             const T result = 0;
             const bool carry = value & 1;
-            regs.D[Dn] = result;
+            bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
             SetShiftFlags(result, carry);
         } else {
             const T value = regs.D[Dn];
             const T result = value >> shift;
             const bool carry = (value >> (shift - 1)) & 1;
-            regs.D[Dn] = result;
+            bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
             SetShiftFlags(result, carry);
         }
     };
@@ -1084,7 +1080,7 @@ FORCE_INLINE void MC68EC000::Instr_LSR_R(uint16 instr) {
             result = value;
             carry = false;
         }
-        regs.D[Dn] = result;
+        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
         SetShiftFlags(result, carry);
     };
 
