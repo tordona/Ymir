@@ -118,6 +118,7 @@ FORCE_INLINE void SMPC::WriteCOMREG(uint8 value) {
     // TODO: should delay execution
     switch (COMREG) {
     case Command::MSHON: MSHON(); break;
+    case Command::SSHON: SSHON(); break;
     case Command::SSHOFF: SSHOFF(); break;
     case Command::SNDON: SNDON(); break;
     case Command::SNDOFF: SNDOFF(); break;
@@ -198,6 +199,8 @@ FORCE_INLINE void SMPC::WriteDDR2(uint8 value) {
 }
 
 void SMPC::MSHON() {
+    // fmt::println("SMPC: processing MSHON");
+
     // TODO: is this supposed to do something...?
 
     SF = 0; // done processing
@@ -205,10 +208,20 @@ void SMPC::MSHON() {
     OREG[31] = 0x00;
 }
 
-void SMPC::SSHOFF() {
-    // TODO: turn off slave SH-2
+void SMPC::SSHON() {
+    // fmt::println("SMPC: processing SSHON");
 
-    __debugbreak();
+    // TODO: turn on slave SH-2
+
+    SF = 0; // done processing
+
+    OREG[31] = 0x02;
+}
+
+void SMPC::SSHOFF() {
+    // fmt::println("SMPC: processing SSHOFF");
+
+    // TODO: turn off slave SH-2
 
     SF = 0; // done processing
 

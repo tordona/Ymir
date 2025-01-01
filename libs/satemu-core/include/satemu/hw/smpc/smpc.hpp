@@ -207,6 +207,7 @@ private:
     // Commands
 
     void MSHON();
+    void SSHON();
     void SSHOFF();
     void SNDON();
     void SNDOFF();
