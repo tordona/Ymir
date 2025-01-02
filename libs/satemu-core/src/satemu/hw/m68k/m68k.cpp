@@ -1304,7 +1304,7 @@ FORCE_INLINE void MC68EC000::Instr_BTst_I_Dn(uint16 instr) {
     const uint16 index = PrefetchNext() & 31;
 
     const uint32 value = regs.D[Dn];
-    SR.Z = (value >> index) & 1;
+    SR.Z = !((value >> index) & 1);
 
     PrefetchTransfer();
 }
@@ -1315,7 +1315,7 @@ FORCE_INLINE void MC68EC000::Instr_BTst_I_EA(uint16 instr) {
     const uint16 index = PrefetchNext() & 7;
 
     const uint8 value = ReadEffectiveAddress<uint8>(M, Xn);
-    SR.Z = (value >> index) & 1;
+    SR.Z = !((value >> index) & 1);
 
     PrefetchTransfer();
 }
@@ -1326,7 +1326,7 @@ FORCE_INLINE void MC68EC000::Instr_BTst_R_Dn(uint16 instr) {
     const uint16 index = regs.D[srcDn] & 31;
 
     const uint32 value = regs.D[dstDn];
-    SR.Z = (value >> index) & 1;
+    SR.Z = !((value >> index) & 1);
 
     PrefetchTransfer();
 }
@@ -1335,10 +1335,10 @@ FORCE_INLINE void MC68EC000::Instr_BTst_R_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 srcDn = bit::extract<9, 11>(instr);
-    const uint16 index = regs.D[srcDn] & 8;
+    const uint16 index = regs.D[srcDn] & 7;
 
     const uint8 value = ReadEffectiveAddress<uint8>(M, Xn);
-    SR.Z = (value >> index) & 1;
+    SR.Z = !((value >> index) & 1);
 
     PrefetchTransfer();
 }
