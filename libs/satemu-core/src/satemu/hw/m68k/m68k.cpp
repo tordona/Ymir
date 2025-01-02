@@ -280,6 +280,21 @@ FORCE_INLINE void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
         MemWrite<T>(regs.A[Xn] + disp + index, value);
         break;
     }
+    case 0b111:
+        switch (Xn) {
+        case 0b000: {
+            const uint16 address = PrefetchNext();
+            MemWrite<T>(address, value);
+            break;
+        }
+        case 0b001: {
+            const uint32 addressHigh = PrefetchNext();
+            const uint32 addressLow = PrefetchNext();
+            MemWrite<T>((addressHigh << 16u) | addressLow, value);
+            break;
+        }
+        }
+        break;
     }
 }
 
@@ -350,6 +365,28 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
         MemWrite<T>(address, result);
         break;
     }
+    case 0b111:
+        switch (Xn) {
+        case 0b000: {
+            const uint16 address = PrefetchNext();
+            const T value = MemRead<T, false>(address);
+            const T result = modify(value);
+            PrefetchTransfer();
+            MemWrite<T>(address, result);
+            break;
+        }
+        case 0b001: {
+            const uint32 addressHigh = PrefetchNext();
+            const uint32 addressLow = PrefetchNext();
+            const uint32 address = (addressHigh << 16u) | addressLow;
+            const T value = MemRead<T, false>(address);
+            const T result = modify(value);
+            PrefetchTransfer();
+            MemWrite<T>(address, result);
+            break;
+        }
+        }
+        break;
     }
 }
 
