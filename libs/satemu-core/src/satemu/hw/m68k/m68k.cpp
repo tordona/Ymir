@@ -1,5 +1,3 @@
-#define DISABLE_FORCE_INLINE
-
 #include <satemu/hw/m68k/m68k.hpp>
 
 #include <satemu/hw/scsp/scsp.hpp> // because M68kBus *is* SCSP
@@ -154,20 +152,10 @@ FORCE_INLINE T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
     case 0b010: return MemRead<T, false>(regs.A[Xn]);
     case 0b011: {
         const T value = MemRead<T, false>(regs.A[Xn]);
-        if (Xn == 7 && sizeof(T) == 1) {
-            regs.A[Xn] += sizeof(uint16);
-        } else {
-            regs.A[Xn] += sizeof(T);
-        }
+        AdvanceAddress<T, true>(Xn);
         return value;
     }
-    case 0b100:
-        if (Xn == 7 && sizeof(T) == 1) {
-            regs.A[Xn] -= sizeof(uint16);
-        } else {
-            regs.A[Xn] -= sizeof(T);
-        }
-        return MemRead<T, false>(regs.A[Xn]);
+    case 0b100: AdvanceAddress<T, false>(Xn); return MemRead<T, false>(regs.A[Xn]);
     case 0b101: {
         const sint16 disp = static_cast<sint16>(PrefetchNext());
         return MemRead<T, false>(regs.A[Xn] + disp);
@@ -242,18 +230,10 @@ FORCE_INLINE void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
     case 0b010: MemWrite<T>(regs.A[Xn], value); break;
     case 0b011:
         MemWrite<T>(regs.A[Xn], value);
-        if (Xn == 7 && sizeof(T) == 1) {
-            regs.A[Xn] += sizeof(uint16);
-        } else {
-            regs.A[Xn] += sizeof(T);
-        }
+        AdvanceAddress<T, true>(Xn);
         break;
     case 0b100:
-        if (Xn == 7 && sizeof(T) == 1) {
-            regs.A[Xn] -= sizeof(uint16);
-        } else {
-            regs.A[Xn] -= sizeof(T);
-        }
+        AdvanceAddress<T, false>(Xn);
         MemWrite<T>(regs.A[Xn], value);
         break;
     case 0b101: {
@@ -322,19 +302,11 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
         const T result = modify(value);
         PrefetchTransfer();
         MemWrite<T>(regs.A[Xn], result);
-        if (Xn == 7 && sizeof(T) == 1) {
-            regs.A[Xn] += sizeof(uint16);
-        } else {
-            regs.A[Xn] += sizeof(T);
-        }
+        AdvanceAddress<T, true>(Xn);
         break;
     }
     case 0b100: {
-        if (Xn == 7 && sizeof(T) == 1) {
-            regs.A[Xn] -= sizeof(uint16);
-        } else {
-            regs.A[Xn] -= sizeof(T);
-        }
+        AdvanceAddress<T, false>(Xn);
         const T value = MemRead<T, false>(regs.A[Xn]);
         const T result = modify(value);
         PrefetchTransfer();
@@ -460,10 +432,11 @@ FORCE_INLINE void MC68EC000::SetArithFlags(T op1, T op2, T result) {
     SR.Z = result == 0;
     if constexpr (sub) {
         SR.V = ((op1 ^ op2) & (result ^ op2)) >> shift;
+        SR.C = (op1 >> shift) - (op2 >> shift) + (result >> shift) > 0;
     } else {
         SR.V = ((result ^ op1) & (result ^ op2)) >> shift;
+        SR.C = result < op1;
     }
-    SR.C = result < op1;
     if constexpr (setX) {
         SR.X = SR.C;
     }
@@ -485,6 +458,20 @@ FORCE_INLINE void MC68EC000::SetShiftFlags(T result, bool carry) {
     SR.Z = result == 0;
     SR.V = 0;
     SR.C = SR.X = carry;
+}
+
+template <std::integral T, bool increment>
+FORCE_INLINE void MC68EC000::AdvanceAddress(uint32 An) {
+    sint32 amount = sizeof(T);
+    if (An == 7 && sizeof(T) == 1) {
+        // Turn byte-sized increments into word-sized increments if targeting SP
+        amount = sizeof(uint16);
+    }
+    if constexpr (increment) {
+        regs.A[An] += amount;
+    } else {
+        regs.A[An] -= amount;
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -555,6 +542,7 @@ void MC68EC000::Execute() {
     case OpcodeType::Cmp: Instr_Cmp(instr); break;
     case OpcodeType::CmpA: Instr_CmpA(instr); break;
     case OpcodeType::CmpI: Instr_CmpI(instr); break;
+    case OpcodeType::CmpM: Instr_CmpM(instr); break;
     case OpcodeType::BTst_I_Dn: Instr_BTst_I_Dn(instr); break;
     case OpcodeType::BTst_I_EA: Instr_BTst_I_EA(instr); break;
     case OpcodeType::BTst_R_Dn: Instr_BTst_R_Dn(instr); break;
@@ -1288,6 +1276,29 @@ FORCE_INLINE void MC68EC000::Instr_CmpI(uint16 instr) {
         const T op2 = ReadEffectiveAddress<T>(M, Xn);
         const T result = op2 - op1;
         SetCompareFlags(op1, op2, result);
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_CmpM(uint16 instr) {
+    const uint16 Ay = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 Ax = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T op1 = regs.A[Ay];
+        const T op2 = regs.A[Ax];
+        const T result = op2 - op1;
+        SetCompareFlags(op1, op2, result);
+        AdvanceAddress<T, true>(Ax);
+        AdvanceAddress<T, true>(Ay);
     };
 
     switch (sz) {

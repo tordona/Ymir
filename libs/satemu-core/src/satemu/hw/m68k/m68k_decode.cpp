@@ -252,7 +252,7 @@ DecodeTable BuildDecodeTable() {
             } else if (bit::extract<8>(instr) == 0) {
                 opcode = legalIf(OpcodeType::Cmp, kValidAddrModes[ea]);
             } else if (bit::extract<3, 5>(instr) == 0b001) {
-                // TODO: CMPM
+                opcode = OpcodeType::CmpM;
             } else {
                 opcode = legalIf(OpcodeType::Eor_Dn_EA, kValidDataAlterableAddrModes[ea]);
             }

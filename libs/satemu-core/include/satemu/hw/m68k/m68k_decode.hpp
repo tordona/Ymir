@@ -78,6 +78,7 @@ enum class OpcodeType : uint8 {
     Cmp,       // cmp.<sz> <ea>, An
     CmpA,      // cmpa <ea>, An
     CmpI,      // cmpi.<sz> #<data>, <ea>
+    CmpM,      // cmpm.<sz> (Ay)+, (Ax)+
     BTst_I_Dn, // btst.<sz> #<data>, Dn
     BTst_I_EA, // btst.<sz> #<data>, <ea>
     BTst_R_Dn, // btst.<sz> Dn, Dn

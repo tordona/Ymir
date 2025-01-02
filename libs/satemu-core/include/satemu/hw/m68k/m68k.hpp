@@ -215,6 +215,11 @@ private:
     template <std::integral T>
     void SetShiftFlags(T result, bool carry);
 
+    // Increments or decrements an address register by a single unit of the specified type.
+    // Handles the special case of byte-sized SP increments, which are forced to word-sized increments.
+    template <std::integral T, bool increment>
+    void AdvanceAddress(uint32 An);
+
     // -------------------------------------------------------------------------
     // Prefetch queue
 
@@ -280,6 +285,7 @@ private:
     void Instr_Cmp(uint16 instr);
     void Instr_CmpA(uint16 instr);
     void Instr_CmpI(uint16 instr);
+    void Instr_CmpM(uint16 instr);
     void Instr_BTst_I_Dn(uint16 instr);
     void Instr_BTst_I_EA(uint16 instr);
     void Instr_BTst_R_Dn(uint16 instr);
