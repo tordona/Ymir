@@ -164,6 +164,8 @@ DecodeTable BuildDecodeTable() {
             const uint16 ea = bit::extract<0, 5>(instr);
             if (instr == 0x4E71) {
                 opcode = OpcodeType::Noop;
+            } else if (instr == 0x4E72) {
+                opcode = OpcodeType::Stop;
             } else if (instr == 0x4E75) {
                 opcode = OpcodeType::RTS;
             } else if (instr == 0x4E76) {
