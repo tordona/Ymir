@@ -57,9 +57,11 @@ enum class OpcodeType : uint8 {
     Add_EA_Dn, // add.<sz> <ea>, Dn
     AddA,      // adda.<sz> <ea>, An
     AddI,      // addi.<sz> #<data>, <ea>
-    AndI_EA,   // andi.<sz> #<data>, <ea>
     AddQ_An,   // addq.<sz> #<data>, An
     AddQ_EA,   // addq.<sz> #<data>, <ea>
+    AddX_M,    // addx.<sz> -(Ay), -(Ax)
+    AddX_R,    // addx.<sz> Dy, Dx
+    AndI_EA,   // andi.<sz> #<data>, <ea>
     Eor_Dn_EA, // eor.<sz> Dn, <ea>
     EorI_EA,   // eori.<sz> #<data>, <ea>
     Or_Dn_EA,  // or.<sz> Dn, <ea>
@@ -91,7 +93,7 @@ enum class OpcodeType : uint8 {
     BTst_R_EA, // btst.<sz> Dn, <ea>
     TAS,       // tas <ea>
     Tst,       // tst.<sz> <ea>
-    
+
     LEA, // lea <ea>, An
 
     Link,   // link An, #<disp>

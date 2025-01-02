@@ -199,7 +199,7 @@ private:
     //  N is set if the result is negative (MSB set)
     //  Z is set if the result is zero
     //  V is set if the result overflows
-    //  C and X are set if the operation resulted in a carry or borrow
+    //  C and X are set if the operation resulted in a carry
     template <std::integral T>
     void SetAdditionFlags(T op1, T op2, T result) {
         return SetArithFlags<T, false, true, false>(op1, op2, result);
@@ -209,17 +209,27 @@ private:
     //  N is set if the result is negative (MSB set)
     //  Z is set if the result is zero
     //  V is set if the result overflows
-    //  C and X are set if the operation resulted in a carry or borrow
+    //  C and X are set if the operation resulted in a borrow
     template <std::integral T>
     void SetSubtractionFlags(T op1, T op2, T result) {
         return SetArithFlags<T, true, true, false>(op1, op2, result);
+    }
+
+    // Update XNZVC flags based on the result of an extended addition:
+    //  N is set if the result is negative (MSB set)
+    //  Z is cleared if the result is non-zero; preserved otherwise
+    //  V is set if the result overflows
+    //  C and X are set if the operation resulted in a carry
+    template <std::integral T>
+    void SetExtendedAdditionFlags(T op1, T op2, T result) {
+        return SetArithFlags<T, false, true, true>(op1, op2, result);
     }
 
     // Update XNZVC flags based on the result of an extended subtraction:
     //  N is set if the result is negative (MSB set)
     //  Z is cleared if the result is non-zero; preserved otherwise
     //  V is set if the result overflows
-    //  C and X are set if the operation resulted in a carry or borrow
+    //  C and X are set if the operation resulted in a borrow
     template <std::integral T>
     void SetExtendedSubtractionFlags(T op1, T op2, T result) {
         return SetArithFlags<T, true, true, true>(op1, op2, result);
@@ -303,6 +313,8 @@ private:
     void Instr_AddI(uint16 instr);
     void Instr_AddQ_An(uint16 instr);
     void Instr_AddQ_EA(uint16 instr);
+    void Instr_AddX_M(uint16 instr);
+    void Instr_AddX_R(uint16 instr);
     void Instr_AndI_EA(uint16 instr);
     void Instr_Eor_Dn_EA(uint16 instr);
     void Instr_EorI_EA(uint16 instr);

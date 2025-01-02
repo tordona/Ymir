@@ -574,8 +574,8 @@ FORCE_INLINE void MC68EC000::SetArithFlags(T op1, T op2, T result) {
         SR.V = ((op1 ^ op2) & (result ^ op2)) >> shift;
         SR.C = ((op1 & result) | (~op2 & (op1 | result))) >> shift;
     } else {
-        SR.V = ((result ^ op1) & (result ^ op2)) >> shift;
-        SR.C = result < op1;
+        SR.V = ((op1 ^ result) & (op2 ^ result)) >> shift;
+        SR.C = ((op1 & op2) | (~result & (op1 | op2))) >> shift;
     }
     if constexpr (setX) {
         SR.X = SR.C;
@@ -663,6 +663,8 @@ void MC68EC000::Execute() {
     case OpcodeType::AddI: Instr_AddI(instr); break;
     case OpcodeType::AddQ_An: Instr_AddQ_An(instr); break;
     case OpcodeType::AddQ_EA: Instr_AddQ_EA(instr); break;
+    case OpcodeType::AddX_M: Instr_AddX_M(instr); break;
+    case OpcodeType::AddX_R: Instr_AddX_R(instr); break;
     case OpcodeType::AndI_EA: Instr_AndI_EA(instr); break;
     case OpcodeType::Eor_Dn_EA: Instr_Eor_Dn_EA(instr); break;
     case OpcodeType::Or_Dn_EA: Instr_Or_Dn_EA(instr); break;
@@ -1033,6 +1035,58 @@ FORCE_INLINE void MC68EC000::Instr_AddQ_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+}
+
+FORCE_INLINE void MC68EC000::Instr_AddX_M(uint16 instr) {
+    const uint16 Ry = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 Rx = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        AdvanceAddress<T, false>(Ry);
+        const T op1 = MemReadDesc<T, false>(regs.A[Ry]);
+        AdvanceAddress<T, false>(Rx);
+        const T op2 = MemReadDesc<T, false>(regs.A[Rx]);
+        const T result = op2 + op1 + SR.X;
+        SetExtendedAdditionFlags(op1, op2, result);
+
+        if constexpr (std::is_same_v<T, uint32>) {
+            MemWrite<uint16>(regs.A[Rx] + 2, result >> 0u);
+            PrefetchTransfer();
+            MemWrite<uint16>(regs.A[Rx] + 0, result >> 16u);
+        } else {
+            PrefetchTransfer();
+            MemWrite<T>(regs.A[Rx], result);
+        }
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+FORCE_INLINE void MC68EC000::Instr_AddX_R(uint16 instr) {
+    const uint16 Ry = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 Rx = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T op1 = regs.D[Ry];
+        const T op2 = regs.D[Rx];
+        const T result = op2 + op1 + SR.X;
+        SetExtendedAdditionFlags(op1, op2, result);
+        bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Rx], result);
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_AndI_EA(uint16 instr) {

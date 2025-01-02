@@ -298,7 +298,12 @@ DecodeTable BuildDecodeTable() {
             if (bit::extract<6, 7>(instr) == 0b11) {
                 opcode = legalIf(OpcodeType::AddA, kValidAddrModes[bit::extract<0, 5>(instr)]);
             } else if (bit::extract<4, 5>(instr) == 0b00 && bit::extract<8>(instr) == 1) {
-                // TODO: ADDX
+                const bool rm = bit::extract<3>(instr);
+                if (rm) {
+                    opcode = OpcodeType::AddX_M;
+                } else {
+                    opcode = OpcodeType::AddX_R;
+                }
             } else {
                 const bool dir = bit::extract<8>(instr);
                 if (dir) {
