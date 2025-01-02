@@ -1248,9 +1248,9 @@ FORCE_INLINE void MC68EC000::Instr_CmpA(uint16 instr) {
     const uint16 An = bit::extract<9, 11>(instr);
 
     auto op = [&]<std::integral T>() {
-        const T op1 = static_cast<std::make_signed_t<T>>(ReadEffectiveAddress<T>(M, Xn));
-        const T op2 = regs.A[An];
-        const T result = op2 - op1;
+        const uint32 op1 = static_cast<std::make_signed_t<T>>(ReadEffectiveAddress<T>(M, Xn));
+        const uint32 op2 = regs.A[An];
+        const uint32 result = op2 - op1;
         SetCompareFlags(op1, op2, result);
     };
 
