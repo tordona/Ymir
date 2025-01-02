@@ -62,8 +62,8 @@ T MC68EC000::MemRead(uint32 address) {
 template <mem_primitive T>
 void MC68EC000::MemWrite(uint32 address, T value) {
     if constexpr (std::is_same_v<T, uint32>) {
-        MemWrite<uint16>(address + 0, value >> 16u);
         MemWrite<uint16>(address + 2, value >> 0u);
+        MemWrite<uint16>(address + 0, value >> 16u);
     } else {
         static constexpr uint32 addrMask = ~(sizeof(T) - 1) & 0xFFFFFF;
         address &= addrMask;
