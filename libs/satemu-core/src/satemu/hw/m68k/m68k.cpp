@@ -923,6 +923,30 @@ FORCE_INLINE void MC68EC000::Instr_Eor_Dn_EA(uint16 instr) {
     }
 }
 
+FORCE_INLINE void MC68EC000::Instr_EorI_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+
+    auto op = [&]<std::integral T>() {
+        T op1 = PrefetchNext();
+        if constexpr (sizeof(T) == sizeof(uint32)) {
+            op1 = (op1 << 16u) | PrefetchNext();
+        }
+        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+            const T result = op2 ^ op1;
+            SetLogicFlags(result);
+            return result;
+        });
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
 FORCE_INLINE void MC68EC000::Instr_Or_Dn_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);

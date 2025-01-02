@@ -114,6 +114,10 @@ DecodeTable BuildDecodeTable() {
                 // TODO: AndI_CCR
             } else if (instr == 0x027C) {
                 // TODO: AndI_SR
+            } else if (instr == 0x0A3C) {
+                // TODO: EorI_CCR
+            } else if (instr == 0x0A7C) {
+                // TODO: EorI_SR
             } else if (bit::extract<3, 5>(instr) == 0b001 && bit::extract<8>(instr) == 1) {
                 // TODO: MOVEP
             } else if (bit::extract<6, 8>(instr) == 0b100) {
@@ -132,6 +136,8 @@ DecodeTable BuildDecodeTable() {
                 opcode = legalIf(OpcodeType::OrI_EA, sz != 0b11 && kValidDataAlterableAddrModes[ea]);
             } else if (bit::extract<8, 11>(instr) == 0b0010) {
                 opcode = legalIf(OpcodeType::AndI_EA, sz != 0b11 && kValidDataAlterableAddrModes[ea]);
+            } else if (bit::extract<8, 11>(instr) == 0b1010) {
+                opcode = legalIf(OpcodeType::EorI_EA, sz != 0b11 && kValidDataAlterableAddrModes[ea]);
             } else if (bit::extract<8, 11>(instr) == 0b0100) {
                 opcode = legalIf(OpcodeType::SubI, sz != 0b11 && kValidDataAlterableAddrModes[ea]);
             } else if (bit::extract<8, 11>(instr) == 0b0110) {
