@@ -47,27 +47,27 @@ void MC68EC000::SetExternalInterruptLevel(uint8 level) {
 
 template <mem_primitive T, bool instrFetch>
 T MC68EC000::MemRead(uint32 address) {
-    static constexpr uint32 addrMask = ~(sizeof(T) - 1) & 0xFFFFFF;
-    address &= addrMask;
-
     if constexpr (std::is_same_v<T, uint32>) {
-        const uint32 hi = m_bus.Read<uint16, instrFetch>(address + 0);
-        const uint32 lo = m_bus.Read<uint16, instrFetch>(address + 2);
+        const uint32 hi = MemRead<uint16, instrFetch>(address + 0);
+        const uint32 lo = MemRead<uint16, instrFetch>(address + 2);
         return (hi << 16u) | lo;
     } else {
+        static constexpr uint32 addrMask = ~(sizeof(T) - 1) & 0xFFFFFF;
+        address &= addrMask;
+
         return m_bus.Read<T, instrFetch>(address);
     }
 }
 
 template <mem_primitive T>
 void MC68EC000::MemWrite(uint32 address, T value) {
-    static constexpr uint32 addrMask = ~(sizeof(T) - 1) & 0xFFFFFF;
-    address &= addrMask;
-
     if constexpr (std::is_same_v<T, uint32>) {
-        m_bus.Write<uint16>(address + 0, value >> 16u);
-        m_bus.Write<uint16>(address + 2, value >> 0u);
+        MemWrite<uint16>(address + 0, value >> 16u);
+        MemWrite<uint16>(address + 2, value >> 0u);
     } else {
+        static constexpr uint32 addrMask = ~(sizeof(T) - 1) & 0xFFFFFF;
+        address &= addrMask;
+
         m_bus.Write<T>(address, value);
     }
 }
