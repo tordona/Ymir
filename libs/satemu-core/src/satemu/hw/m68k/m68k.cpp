@@ -223,7 +223,7 @@ FORCE_INLINE T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
             return MemRead<T, true>(address);
         }
         case 0b000: {
-            const uint16 address = PrefetchNext();
+            const sint32 address = static_cast<sint16>(PrefetchNext());
             return MemRead<T, false>(address);
         }
         case 0b001: {
@@ -283,7 +283,7 @@ FORCE_INLINE void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
     case 0b111:
         switch (Xn) {
         case 0b000: {
-            const uint16 address = PrefetchNext();
+            const sint32 address = static_cast<sint16>(PrefetchNext());
             MemWrite<T>(address, value);
             break;
         }
@@ -368,7 +368,7 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
     case 0b111:
         switch (Xn) {
         case 0b000: {
-            const uint16 address = PrefetchNext();
+            const sint32 address = static_cast<sint16>(PrefetchNext());
             const T value = MemRead<T, false>(address);
             const T result = modify(value);
             PrefetchTransfer();
