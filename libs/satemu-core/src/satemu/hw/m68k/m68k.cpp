@@ -1403,14 +1403,17 @@ FORCE_INLINE void MC68EC000::Instr_BSR(uint16 instr) {
 FORCE_INLINE void MC68EC000::Instr_Bcc(uint16 instr) {
     const uint32 currPC = PC - 2;
     sint16 disp = static_cast<sint8>(bit::extract<0, 7>(instr));
-    if (disp == 0x00) {
-        disp = static_cast<sint16>(PrefetchNext());
+    const bool longDisp = disp == 0;
+    if (longDisp) {
+        disp = static_cast<sint16>(m_prefetchQueue[0]);
     }
     const uint32 cond = bit::extract<8, 11>(instr);
     if (kCondTable[(cond << 4u) | SR.flags]) {
         PC = currPC + disp;
         FullPrefetch();
         return;
+    } else if (longDisp) {
+        PrefetchNext();
     }
 
     PrefetchTransfer();
