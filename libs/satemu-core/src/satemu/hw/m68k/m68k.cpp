@@ -1,3 +1,5 @@
+#define DISABLE_FORCE_INLINE
+
 #include <satemu/hw/m68k/m68k.hpp>
 
 #include <satemu/hw/scsp/scsp.hpp> // because M68kBus *is* SCSP
@@ -237,6 +239,7 @@ FORCE_INLINE T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
             return value;
         }
         }
+        break;
     }
 
     util::unreachable();
@@ -285,23 +288,27 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
     switch (M) {
     case 0b000: {
         const T value = modify(regs.D[Xn]);
+        PrefetchTransfer();
         bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Xn], value);
         break;
     }
     case 0b001: {
         const uint32 value = modify(regs.A[Xn]);
+        PrefetchTransfer();
         regs.A[Xn] = value;
         break;
     }
     case 0b010: {
         const T value = MemRead<T, false>(regs.A[Xn]);
         const T result = modify(value);
+        PrefetchTransfer();
         MemWrite<T>(regs.A[Xn], result);
         break;
     }
     case 0b011: {
         const T value = MemRead<T, false>(regs.A[Xn]);
         const T result = modify(value);
+        PrefetchTransfer();
         MemWrite<T>(regs.A[Xn], result);
         regs.A[Xn] += sizeof(T);
         break;
@@ -310,6 +317,7 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
         regs.A[Xn] -= sizeof(T);
         const T value = MemRead<T, false>(regs.A[Xn]);
         const T result = modify(value);
+        PrefetchTransfer();
         MemWrite<T>(regs.A[Xn], result);
         break;
     }
@@ -318,6 +326,7 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
         const uint32 address = regs.A[Xn] + disp;
         const T value = MemRead<T, false>(address);
         const T result = modify(value);
+        PrefetchTransfer();
         MemWrite<T>(address, result);
         break;
     }
@@ -337,6 +346,7 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
         const uint32 address = regs.A[Xn] + disp + index;
         const T value = MemRead<T, false>(address);
         const T result = modify(value);
+        PrefetchTransfer();
         MemWrite<T>(address, result);
         break;
     }
@@ -698,8 +708,6 @@ FORCE_INLINE void MC68EC000::Instr_Clr(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
-
-    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Swap(uint16 instr) {
@@ -731,8 +739,6 @@ FORCE_INLINE void MC68EC000::Instr_Add_Dn_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
-
-    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Add_EA_Dn(uint16 instr) {
@@ -795,8 +801,6 @@ FORCE_INLINE void MC68EC000::Instr_AddI(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
-
-    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_AddQ_An(uint16 instr) {
@@ -839,8 +843,6 @@ FORCE_INLINE void MC68EC000::Instr_AddQ_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
-
-    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_AndI_EA(uint16 instr) {
@@ -865,8 +867,6 @@ FORCE_INLINE void MC68EC000::Instr_AndI_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
-
-    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Eor_Dn_EA(uint16 instr) {
@@ -889,8 +889,6 @@ FORCE_INLINE void MC68EC000::Instr_Eor_Dn_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
-
-    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Or_Dn_EA(uint16 instr) {
@@ -913,8 +911,6 @@ FORCE_INLINE void MC68EC000::Instr_Or_Dn_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
-
-    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Or_EA_Dn(uint16 instr) {
@@ -962,8 +958,6 @@ FORCE_INLINE void MC68EC000::Instr_OrI_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
-
-    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_SubI(uint16 instr) {
@@ -988,8 +982,6 @@ FORCE_INLINE void MC68EC000::Instr_SubI(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
-
-    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_SubQ_An(uint16 instr) {
@@ -1032,8 +1024,6 @@ FORCE_INLINE void MC68EC000::Instr_SubQ_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
-
-    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_LSL_I(uint16 instr) {
@@ -1079,8 +1069,6 @@ FORCE_INLINE void MC68EC000::Instr_LSL_M(uint16 instr) {
         SetShiftFlags(result, carry);
         return result;
     });
-
-    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_LSL_R(uint16 instr) {
@@ -1162,8 +1150,6 @@ FORCE_INLINE void MC68EC000::Instr_LSR_M(uint16 instr) {
         SetShiftFlags(result, carry);
         return result;
     });
-
-    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_LSR_R(uint16 instr) {
