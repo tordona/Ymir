@@ -110,14 +110,6 @@ private:
 
     uint16 FetchInstruction();
 
-    uint8 MemReadByte(uint32 address);
-    uint16 MemReadWord(uint32 address);
-    uint32 MemReadLong(uint32 address);
-
-    void MemWriteByte(uint32 address, uint8 value);
-    void MemWriteWord(uint32 address, uint16 value);
-    void MemWriteLong(uint32 address, uint32 value);
-
     // -------------------------------------------------------------------------
     // Exception handling
 

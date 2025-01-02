@@ -24,10 +24,10 @@ void MC68EC000::Reset(bool hard) {
         m_externalInterruptLevel = 0;
     }
 
-    regs.SP = MemReadLong(0x00000000);
+    regs.SP = MemRead<uint32, false>(0x00000000);
     SP_swap = 0;
 
-    PC = MemReadLong(0x00000004);
+    PC = MemRead<uint32, false>(0x00000004);
     FullPrefetch();
 
     SR.u16 = 0;
@@ -76,30 +76,6 @@ FLATTEN FORCE_INLINE uint16 MC68EC000::FetchInstruction() {
     uint16 instr = MemRead<uint16, true>(PC);
     PC += 2;
     return instr;
-}
-
-FLATTEN FORCE_INLINE uint8 MC68EC000::MemReadByte(uint32 address) {
-    return MemRead<uint8, false>(address);
-}
-
-FLATTEN FORCE_INLINE uint16 MC68EC000::MemReadWord(uint32 address) {
-    return MemRead<uint16, false>(address);
-}
-
-FLATTEN FORCE_INLINE uint32 MC68EC000::MemReadLong(uint32 address) {
-    return MemRead<uint32, false>(address);
-}
-
-FLATTEN FORCE_INLINE void MC68EC000::MemWriteByte(uint32 address, uint8 value) {
-    MemWrite<uint8>(address, value);
-}
-
-FLATTEN FORCE_INLINE void MC68EC000::MemWriteWord(uint32 address, uint16 value) {
-    MemWrite<uint16>(address, value);
-}
-
-FLATTEN FORCE_INLINE void MC68EC000::MemWriteLong(uint32 address, uint32 value) {
-    MemWrite<uint32>(address, value);
 }
 
 FORCE_INLINE void MC68EC000::SetSR(uint16 value) {
@@ -1390,12 +1366,15 @@ FORCE_INLINE void MC68EC000::Instr_BRA(uint16 instr) {
 FORCE_INLINE void MC68EC000::Instr_BSR(uint16 instr) {
     const uint32 currPC = PC - 2;
     sint16 disp = static_cast<sint8>(bit::extract<0, 7>(instr));
-    if (disp == 0x00) {
-        disp = static_cast<sint16>(PrefetchNext());
+    const bool longDisp = disp == 0;
+    if (longDisp) {
+        disp = static_cast<sint16>(m_prefetchQueue[0]);
+        PC += 2;
     }
 
     regs.SP -= 4;
-    MemWriteLong(regs.SP, PC - 2);
+    MemWrite<uint16>(regs.SP + 0, (PC - 2) >> 16u);
+    MemWrite<uint16>(regs.SP + 2, (PC - 2) >> 0u);
     PC = currPC + disp;
     FullPrefetch();
 }
@@ -1445,7 +1424,8 @@ FORCE_INLINE void MC68EC000::Instr_JSR(uint16 instr) {
     const uint32 target = CalcEffectiveAddress(M, Xn);
 
     regs.SP -= 4;
-    MemWriteLong(regs.SP, PC - 2);
+    MemWrite<uint16>(regs.SP + 0, (PC - 2) >> 16u);
+    MemWrite<uint16>(regs.SP + 2, (PC - 2) >> 0u);
     PC = target;
     FullPrefetch();
 }
@@ -1460,7 +1440,7 @@ FORCE_INLINE void MC68EC000::Instr_Jmp(uint16 instr) {
 }
 
 FORCE_INLINE void MC68EC000::Instr_RTS(uint16 instr) {
-    PC = MemReadLong(regs.SP);
+    PC = MemRead<uint32, false>(regs.SP);
     FullPrefetch();
     regs.SP += 4;
 }
