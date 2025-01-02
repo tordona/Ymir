@@ -1413,7 +1413,7 @@ FORCE_INLINE void MC68EC000::Instr_DBcc(uint16 instr) {
     const uint32 currPC = PC - 2;
     const uint32 Dn = bit::extract<0, 2>(instr);
     const uint32 cond = bit::extract<8, 11>(instr);
-    const sint16 disp = static_cast<sint16>(PrefetchNext());
+    const sint16 disp = static_cast<sint16>(m_prefetchQueue[0]);
 
     if (!kCondTable[(cond << 4u) | SR.flags]) {
         const uint16 value = regs.D[Dn] - 1;
@@ -1423,6 +1423,8 @@ FORCE_INLINE void MC68EC000::Instr_DBcc(uint16 instr) {
             FullPrefetch();
             return;
         }
+    } else {
+        PrefetchNext();
     }
 
     PrefetchTransfer();
