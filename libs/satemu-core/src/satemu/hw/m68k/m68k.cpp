@@ -178,10 +178,20 @@ FORCE_INLINE T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
     case 0b010: return MemRead<T, false>(regs.A[Xn]);
     case 0b011: {
         const T value = MemRead<T, false>(regs.A[Xn]);
-        regs.A[Xn] += sizeof(T);
+        if (Xn == 7 && sizeof(T) == 1) {
+            regs.A[Xn] += sizeof(uint16);
+        } else {
+            regs.A[Xn] += sizeof(T);
+        }
         return value;
     }
-    case 0b100: regs.A[Xn] -= sizeof(T); return MemRead<T, false>(regs.A[Xn]);
+    case 0b100:
+        if (Xn == 7 && sizeof(T) == 1) {
+            regs.A[Xn] -= sizeof(uint16);
+        } else {
+            regs.A[Xn] -= sizeof(T);
+        }
+        return MemRead<T, false>(regs.A[Xn]);
     case 0b101: {
         const sint16 disp = static_cast<sint16>(PrefetchNext());
         return MemRead<T, false>(regs.A[Xn] + disp);
@@ -203,7 +213,10 @@ FORCE_INLINE T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
     }
     case 0b111:
         switch (Xn) {
-        case 0b010: return MemRead<T, true>(PC - 2 + static_cast<sint16>(PrefetchNext()));
+        case 0b010: {
+            const sint16 disp = static_cast<sint16>(PrefetchNext());
+            return MemRead<T, true>(PC - 4 + disp);
+        }
         case 0b011: {
             const uint32 pc = PC - 2;
             const uint16 extWord = PrefetchNext();
@@ -253,10 +266,18 @@ FORCE_INLINE void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
     case 0b010: MemWrite<T>(regs.A[Xn], value); break;
     case 0b011:
         MemWrite<T>(regs.A[Xn], value);
-        regs.A[Xn] += sizeof(T);
+        if (Xn == 7 && sizeof(T) == 1) {
+            regs.A[Xn] += sizeof(uint16);
+        } else {
+            regs.A[Xn] += sizeof(T);
+        }
         break;
     case 0b100:
-        regs.A[Xn] -= sizeof(T);
+        if (Xn == 7 && sizeof(T) == 1) {
+            regs.A[Xn] -= sizeof(uint16);
+        } else {
+            regs.A[Xn] -= sizeof(T);
+        }
         MemWrite<T>(regs.A[Xn], value);
         break;
     case 0b101: {
@@ -325,11 +346,19 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
         const T result = modify(value);
         PrefetchTransfer();
         MemWrite<T>(regs.A[Xn], result);
-        regs.A[Xn] += sizeof(T);
+        if (Xn == 7 && sizeof(T) == 1) {
+            regs.A[Xn] += sizeof(uint16);
+        } else {
+            regs.A[Xn] += sizeof(T);
+        }
         break;
     }
     case 0b100: {
-        regs.A[Xn] -= sizeof(T);
+        if (Xn == 7 && sizeof(T) == 1) {
+            regs.A[Xn] -= sizeof(uint16);
+        } else {
+            regs.A[Xn] -= sizeof(T);
+        }
         const T value = MemRead<T, false>(regs.A[Xn]);
         const T result = modify(value);
         PrefetchTransfer();
@@ -414,7 +443,10 @@ FORCE_INLINE uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
     }
     case 0b111:
         switch (Xn) {
-        case 0b010: return PC - 2 + static_cast<sint16>(PrefetchNext());
+        case 0b010: {
+            const sint16 disp = static_cast<sint16>(PrefetchNext());
+            return PC - 4 + disp;
+        }
         case 0b011: {
             const uint16 briefExtWord = PrefetchNext();
 
