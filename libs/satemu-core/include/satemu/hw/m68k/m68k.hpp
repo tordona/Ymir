@@ -157,6 +157,9 @@ private:
     void ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify &&modify);
 
     // Calculates effective addresses for instructions that use control addresses (LEA, JSR, JMP, MOVEM, etc.)
+    // The fetch flag indicates if the last instruction fetch (if any are needed) should access external memory (true)
+    // or the prefetch queue (false), resulting in no external memory access for the last instruction fetch.
+    template <bool fetch = true>
     uint32 CalcEffectiveAddress(uint8 M, uint8 Xn);
 
     // Update XNZVC flags based on the result of an arithmetic operation:

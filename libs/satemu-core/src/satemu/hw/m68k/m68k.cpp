@@ -367,15 +367,24 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
     }
 }
 
+template <bool fetch>
 FORCE_INLINE uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
+    auto prefetchLast = [&]() -> uint16 {
+        if constexpr (fetch) {
+            return PrefetchNext();
+        } else {
+            return m_prefetchQueue[0];
+        }
+    };
+
     switch (M) {
     case 0b010: return regs.A[Xn];
     case 0b101: {
-        const sint16 disp = static_cast<sint16>(PrefetchNext());
+        const sint16 disp = static_cast<sint16>(prefetchLast());
         return regs.A[Xn] + disp;
     }
     case 0b110: {
-        const uint16 briefExtWord = PrefetchNext();
+        const uint16 briefExtWord = prefetchLast();
 
         const sint8 disp = static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
         const bool s = bit::extract<11>(briefExtWord);
@@ -385,18 +394,18 @@ FORCE_INLINE uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
         uint32 index = m ? regs.A[extXn] : regs.D[extXn];
         if (!s) {
             // Word index
-            index &= 0xFFFF;
+            index = static_cast<sint16>(index);
         }
         return regs.A[Xn] + disp + index;
     }
     case 0b111:
         switch (Xn) {
         case 0b010: {
-            const sint16 disp = static_cast<sint16>(PrefetchNext());
-            return PC - 4 + disp;
+            const sint16 disp = static_cast<sint16>(prefetchLast());
+            return PC - 2 + disp;
         }
         case 0b011: {
-            const uint16 briefExtWord = PrefetchNext();
+            const uint16 briefExtWord = prefetchLast();
 
             const uint32 address = PC - 2 + static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
             const bool s = bit::extract<11>(briefExtWord);
@@ -411,12 +420,12 @@ FORCE_INLINE uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
             return address + index;
         }
         case 0b000: {
-            const uint16 address = PrefetchNext();
+            const sint32 address = static_cast<sint16>(prefetchLast());
             return address;
         }
         case 0b001: {
             const uint32 addressHigh = PrefetchNext();
-            const uint32 addressLow = PrefetchNext();
+            const uint32 addressLow = prefetchLast();
             return (addressHigh << 16u) | addressLow;
         }
         }
@@ -1458,7 +1467,7 @@ FORCE_INLINE void MC68EC000::Instr_JSR(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
 
-    const uint32 target = CalcEffectiveAddress(M, Xn);
+    const uint32 target = CalcEffectiveAddress<false>(M, Xn);
 
     regs.SP -= 4;
     MemWrite<uint16>(regs.SP + 0, (PC - 2) >> 16u);
@@ -1471,7 +1480,7 @@ FORCE_INLINE void MC68EC000::Instr_Jmp(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
 
-    const uint32 target = CalcEffectiveAddress(M, Xn);
+    const uint32 target = CalcEffectiveAddress<false>(M, Xn);
     PC = target;
     FullPrefetch();
 }
