@@ -652,6 +652,7 @@ void MC68EC000::Execute() {
     case OpcodeType::OrI_EA: Instr_OrI_EA(instr); break;
     case OpcodeType::Sub_Dn_EA: Instr_Sub_Dn_EA(instr); break;
     case OpcodeType::Sub_EA_Dn: Instr_Sub_EA_Dn(instr); break;
+    case OpcodeType::SubA: Instr_SubA(instr); break;
     case OpcodeType::SubI: Instr_SubI(instr); break;
     case OpcodeType::SubQ_An: Instr_SubQ_An(instr); break;
     case OpcodeType::SubQ_EA: Instr_SubQ_EA(instr); break;
@@ -1197,6 +1198,21 @@ FORCE_INLINE void MC68EC000::Instr_OrI_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+}
+
+FORCE_INLINE void MC68EC000::Instr_SubA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const bool sz = bit::extract<8>(instr);
+    const uint16 An = bit::extract<9, 11>(instr);
+
+    if (sz) {
+        regs.A[An] -= ReadEffectiveAddress<uint32>(M, Xn);
+    } else {
+        regs.A[An] -= static_cast<sint16>(ReadEffectiveAddress<uint16>(M, Xn));
+    }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_SubI(uint16 instr) {

@@ -258,8 +258,7 @@ DecodeTable BuildDecodeTable() {
         case 0x9: {
             const uint16 ea = bit::extract<0, 5>(instr);
             if (bit::extract<6, 7>(instr) == 0b11) {
-                // TODO: SUBA
-                // opcode = legalIf(OpcodeType::SubA, kValidAddrModes[bit::extract<0, 5>(instr)]);
+                opcode = legalIf(OpcodeType::SubA, kValidAddrModes[bit::extract<0, 5>(instr)]);
             } else if (bit::extract<4, 5>(instr) == 0b00 && bit::extract<8>(instr) == 1) {
                 const bool rm = bit::extract<3>(instr);
                 if (rm) {
