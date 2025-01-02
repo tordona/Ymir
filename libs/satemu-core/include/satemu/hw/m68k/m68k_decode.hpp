@@ -108,6 +108,7 @@ enum class OpcodeType : uint8 {
 
     RTS, // rts
 
+    Reset, // reset
     Stop,  // stop #<imm>
     Trap,  // trap #<vector>
     TrapV, // trapv

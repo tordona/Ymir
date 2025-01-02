@@ -711,6 +711,7 @@ void MC68EC000::Execute() {
 
     case OpcodeType::RTS: Instr_RTS(instr); break;
 
+    case OpcodeType::Reset: Instr_Reset(instr); break;
     case OpcodeType::Stop: Instr_Stop(instr); break;
     case OpcodeType::Trap: Instr_Trap(instr); break;
     case OpcodeType::TrapV: Instr_TrapV(instr); break;
@@ -1873,6 +1874,15 @@ FORCE_INLINE void MC68EC000::Instr_RTS(uint16 instr) {
     PC = MemRead<uint32, false>(regs.SP);
     FullPrefetch();
     regs.SP += 4;
+}
+
+FORCE_INLINE void MC68EC000::Instr_Reset(uint16 instr) {
+    PC -= 2;
+    if (CheckPrivilege()) {
+        PC += 2;
+        // TODO: assert RESET signal, causing all external devices to be reset
+        PrefetchTransfer();
+    }
 }
 
 FORCE_INLINE void MC68EC000::Instr_Stop(uint16 instr) {

@@ -162,7 +162,9 @@ DecodeTable BuildDecodeTable() {
             break;
         case 0x4: {
             const uint16 ea = bit::extract<0, 5>(instr);
-            if (instr == 0x4E71) {
+            if (instr == 0x4E70) {
+                opcode = OpcodeType::Reset;
+            } else if (instr == 0x4E71) {
                 opcode = OpcodeType::Noop;
             } else if (instr == 0x4E72) {
                 opcode = OpcodeType::Stop;
