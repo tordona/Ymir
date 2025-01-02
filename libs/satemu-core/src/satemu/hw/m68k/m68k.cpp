@@ -432,7 +432,7 @@ FORCE_INLINE void MC68EC000::SetArithFlags(T op1, T op2, T result) {
     SR.Z = result == 0;
     if constexpr (sub) {
         SR.V = ((op1 ^ op2) & (result ^ op2)) >> shift;
-        SR.C = (op1 >> shift) - (op2 >> shift) + (result >> shift) > 0;
+        SR.C = ((op1 & result) | (~op2 & (op1 | result))) >> shift;
     } else {
         SR.V = ((result ^ op1) & (result ^ op2)) >> shift;
         SR.C = result < op1;
