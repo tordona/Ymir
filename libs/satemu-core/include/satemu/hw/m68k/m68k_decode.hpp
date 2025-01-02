@@ -70,6 +70,8 @@ enum class OpcodeType : uint8 {
     SubI,      // subi.<sz> #<data>, <ea>
     SubQ_An,   // subq.<sz> #<data>, An
     SubQ_EA,   // subq.<sz> #<data>, <ea>
+    SubX_M,    // subx.<sz> -(Ay), -(Ax)
+    SubX_R,    // subx.<sz> Dy, Dx
 
     LSL_I, // lsl.<sz> #<data>, <ea>
     LSL_M, // lsl.<sz> <ea>

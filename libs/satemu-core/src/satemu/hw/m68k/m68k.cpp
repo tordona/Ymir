@@ -57,6 +57,17 @@ T MC68EC000::MemRead(uint32 address) {
     }
 }
 
+template <mem_primitive T, bool instrFetch>
+T MC68EC000::MemReadDesc(uint32 address) {
+    if constexpr (std::is_same_v<T, uint32>) {
+        T value = MemRead<uint16, instrFetch>(address + 2);
+        value |= MemRead<uint16, instrFetch>(address + 0) << 16u;
+        return value;
+    } else {
+        return MemRead<T, instrFetch>(address);
+    }
+}
+
 template <mem_primitive T>
 void MC68EC000::MemWrite(uint32 address, T value) {
     if constexpr (std::is_same_v<T, uint32>) {
@@ -532,11 +543,15 @@ FORCE_INLINE uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
     util::unreachable();
 }
 
-template <std::integral T, bool sub, bool setX>
+template <std::integral T, bool sub, bool setX, bool andZ>
 FORCE_INLINE void MC68EC000::SetArithFlags(T op1, T op2, T result) {
     static constexpr T shift = sizeof(T) * 8 - 1;
     SR.N = result >> shift;
-    SR.Z = result == 0;
+    if constexpr (andZ) {
+        SR.Z &= result == 0;
+    } else {
+        SR.Z = result == 0;
+    }
     if constexpr (sub) {
         SR.V = ((op1 ^ op2) & (result ^ op2)) >> shift;
         SR.C = ((op1 & result) | (~op2 & (op1 | result))) >> shift;
@@ -640,6 +655,8 @@ void MC68EC000::Execute() {
     case OpcodeType::SubI: Instr_SubI(instr); break;
     case OpcodeType::SubQ_An: Instr_SubQ_An(instr); break;
     case OpcodeType::SubQ_EA: Instr_SubQ_EA(instr); break;
+    case OpcodeType::SubX_M: Instr_SubX_M(instr); break;
+    case OpcodeType::SubX_R: Instr_SubX_R(instr); break;
 
     case OpcodeType::LSL_I: Instr_LSL_I(instr); break;
     case OpcodeType::LSL_M: Instr_LSL_M(instr); break;
@@ -1245,6 +1262,58 @@ FORCE_INLINE void MC68EC000::Instr_SubQ_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+}
+
+FORCE_INLINE void MC68EC000::Instr_SubX_M(uint16 instr) {
+    const uint16 Ry = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 Rx = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        AdvanceAddress<T, false>(Ry);
+        const T op1 = MemReadDesc<T, false>(regs.A[Ry]);
+        AdvanceAddress<T, false>(Rx);
+        const T op2 = MemReadDesc<T, false>(regs.A[Rx]);
+        const T result = op2 - op1 - SR.X;
+        SetExtendedSubtractionFlags(op1, op2, result);
+
+        if constexpr (std::is_same_v<T, uint32>) {
+            MemWrite<uint16>(regs.A[Rx] + 2, result >> 0u);
+            PrefetchTransfer();
+            MemWrite<uint16>(regs.A[Rx] + 0, result >> 16u);
+        } else {
+            PrefetchTransfer();
+            MemWrite<T>(regs.A[Rx], result);
+        }
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+FORCE_INLINE void MC68EC000::Instr_SubX_R(uint16 instr) {
+    const uint16 Ry = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 Rx = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T op1 = regs.D[Ry];
+        const T op2 = regs.D[Rx];
+        const T result = op2 - op1 - SR.X;
+        SetExtendedSubtractionFlags(op1, op2, result);
+        bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Rx], result);
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_LSL_I(uint16 instr) {

@@ -102,15 +102,30 @@ private:
 
     M68kBus &m_bus;
 
+    // Reads a value from memory.
+    // 32-bit reads are be split into two 16-bit reads in ascending address order.
+    // instrFetch determines if this is an program (true) or data (false) read.
     template <mem_primitive T, bool instrFetch>
     T MemRead(uint32 address);
 
+    // Reads a value from memory.
+    // 32-bit reads are be split into two 16-bit reads in descending address order.
+    // instrFetch determines if this is an program (true) or data (false) read.
+    template <mem_primitive T, bool instrFetch>
+    T MemReadDesc(uint32 address);
+
+    // Writes a value to memory.
+    // 32-bit write are be split into two 16-bit reads in descending address order.
     template <mem_primitive T>
     void MemWrite(uint32 address, T value);
 
+    // Writes a value to memory.
+    // 32-bit write are be split into two 16-bit reads in ascending address order.
     template <mem_primitive T>
     void MemWriteAsc(uint32 address, T value);
 
+    // Fetches an instruction from memory and advances PC.
+    // Returns the fetched instruction.
     uint16 FetchInstruction();
 
     // -------------------------------------------------------------------------
@@ -175,7 +190,8 @@ private:
     //  V is set if the result overflows (addition if sub=false, subtraction if sub=true)
     //  C is set if the operation resulted in a carry or borrow
     //  X is set to C if setX is true
-    template <std::integral T, bool sub, bool setX = false>
+    // If andZ is set, Z will be preserved if the result is zero.
+    template <std::integral T, bool sub, bool setX, bool andZ>
     void SetArithFlags(T op1, T op2, T result);
 
     // Update XNZVC flags based on the result of an addition:
@@ -185,7 +201,7 @@ private:
     //  C and X are set if the operation resulted in a carry or borrow
     template <std::integral T>
     void SetAdditionFlags(T op1, T op2, T result) {
-        return SetArithFlags<T, false, true>(op1, op2, result);
+        return SetArithFlags<T, false, true, false>(op1, op2, result);
     }
 
     // Update XNZVC flags based on the result of a subtraction:
@@ -195,7 +211,17 @@ private:
     //  C and X are set if the operation resulted in a carry or borrow
     template <std::integral T>
     void SetSubtractionFlags(T op1, T op2, T result) {
-        return SetArithFlags<T, true, true>(op1, op2, result);
+        return SetArithFlags<T, true, true, false>(op1, op2, result);
+    }
+
+    // Update XNZVC flags based on the result of an extended subtraction:
+    //  N is set if the result is negative (MSB set)
+    //  Z is cleared if the result is non-zero; preserved otherwise
+    //  V is set if the result overflows
+    //  C and X are set if the operation resulted in a carry or borrow
+    template <std::integral T>
+    void SetExtendedSubtractionFlags(T op1, T op2, T result) {
+        return SetArithFlags<T, true, true, true>(op1, op2, result);
     }
 
     // Update XNZVC flags based on the result of a comparison operation:
@@ -206,7 +232,7 @@ private:
     //  X is not changed
     template <std::integral T>
     void SetCompareFlags(T op1, T op2, T result) {
-        return SetArithFlags<T, true, false>(op1, op2, result);
+        return SetArithFlags<T, true, false, false>(op1, op2, result);
     }
 
     // Update NZVC flags based on the result of a logic or move operation.
@@ -287,6 +313,8 @@ private:
     void Instr_SubI(uint16 instr);
     void Instr_SubQ_An(uint16 instr);
     void Instr_SubQ_EA(uint16 instr);
+    void Instr_SubX_M(uint16 instr);
+    void Instr_SubX_R(uint16 instr);
 
     void Instr_LSL_I(uint16 instr);
     void Instr_LSL_M(uint16 instr);

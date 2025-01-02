@@ -261,7 +261,12 @@ DecodeTable BuildDecodeTable() {
                 // TODO: SUBA
                 // opcode = legalIf(OpcodeType::SubA, kValidAddrModes[bit::extract<0, 5>(instr)]);
             } else if (bit::extract<4, 5>(instr) == 0b00 && bit::extract<8>(instr) == 1) {
-                // TODO: SUBX
+                const bool rm = bit::extract<3>(instr);
+                if (rm) {
+                    opcode = OpcodeType::SubX_M;
+                } else {
+                    opcode = OpcodeType::SubX_R;
+                }
             } else {
                 const bool dir = bit::extract<8>(instr);
                 if (dir) {
