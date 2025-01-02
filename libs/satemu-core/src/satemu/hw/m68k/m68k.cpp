@@ -656,6 +656,7 @@ void MC68EC000::Execute() {
     case OpcodeType::BTst_I_EA: Instr_BTst_I_EA(instr); break;
     case OpcodeType::BTst_R_Dn: Instr_BTst_R_Dn(instr); break;
     case OpcodeType::BTst_R_EA: Instr_BTst_R_EA(instr); break;
+    case OpcodeType::Tst: Instr_Tst(instr); break;
 
     case OpcodeType::LEA: Instr_LEA(instr); break;
 
@@ -1553,6 +1554,25 @@ FORCE_INLINE void MC68EC000::Instr_BTst_R_EA(uint16 instr) {
     PrefetchTransfer();
 }
 
+FORCE_INLINE void MC68EC000::Instr_Tst(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T value = ReadEffectiveAddress<T>(M, Xn);
+        SetLogicFlags(value);
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
+}
+
 FORCE_INLINE void MC68EC000::Instr_LEA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
@@ -1684,12 +1704,15 @@ FORCE_INLINE void MC68EC000::Instr_RTS(uint16 instr) {
 }
 
 FORCE_INLINE void MC68EC000::Instr_Trap(uint16 instr) {
+    PC -= 2;
     const uint8 vector = bit::extract<0, 3>(instr);
     EnterException(static_cast<ExceptionVector>(0x20 + vector));
 }
 
 FORCE_INLINE void MC68EC000::Instr_TrapV(uint16 instr) {
     if (SR.V) {
+        PrefetchNext();
+        PC -= 4;
         EnterException(ExceptionVector::TRAPVInstruction);
         return;
     }
