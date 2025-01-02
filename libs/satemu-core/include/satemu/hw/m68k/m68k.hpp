@@ -108,6 +108,9 @@ private:
     template <mem_primitive T>
     void MemWrite(uint32 address, T value);
 
+    template <mem_primitive T>
+    void MemWriteAsc(uint32 address, T value);
+
     uint16 FetchInstruction();
 
     // -------------------------------------------------------------------------
@@ -155,6 +158,10 @@ private:
     // Read-modify-write an effective address
     template <mem_primitive T, typename FnModify>
     void ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify &&modify);
+
+    // Moves between effective addresses and returns the moved value
+    template <mem_primitive T>
+    T MoveEffectiveAddress(uint8 srcM, uint8 srcXn, uint8 dstM, uint8 dstXn);
 
     // Calculates effective addresses for instructions that use control addresses (LEA, JSR, JMP, MOVEM, etc.)
     // The fetch flag indicates if the last instruction fetch (if any are needed) should access external memory (true)

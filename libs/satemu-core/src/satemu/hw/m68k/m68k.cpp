@@ -70,6 +70,16 @@ void MC68EC000::MemWrite(uint32 address, T value) {
     }
 }
 
+template <mem_primitive T>
+void MC68EC000::MemWriteAsc(uint32 address, T value) {
+    if constexpr (std::is_same_v<T, uint32>) {
+        MemWrite<uint16>(address + 0, value >> 16u);
+        MemWrite<uint16>(address + 2, value >> 0u);
+    } else {
+        MemWrite<T>(address, value);
+    }
+}
+
 FLATTEN FORCE_INLINE uint16 MC68EC000::FetchInstruction() {
     uint16 instr = MemRead<uint16, true>(PC);
     PC += 2;
@@ -266,8 +276,9 @@ FORCE_INLINE void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
         }
         case 0b001: {
             const uint32 addressHigh = PrefetchNext();
-            const uint32 addressLow = PrefetchNext();
+            const uint32 addressLow = m_prefetchQueue[0];
             MemWrite<T>((addressHigh << 16u) | addressLow, value);
+            PrefetchNext();
             break;
         }
         }
@@ -365,6 +376,91 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
         }
         break;
     }
+}
+
+template <mem_primitive T>
+FORCE_INLINE T MC68EC000::MoveEffectiveAddress(uint8 srcM, uint8 srcXn, uint8 dstM, uint8 dstXn) {
+    const T value = ReadEffectiveAddress<T>(srcM, srcXn);
+
+    switch (dstM) {
+    case 0b000:
+        bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[dstXn], value);
+        PrefetchTransfer();
+        break;
+    case 0b001:
+        regs.A[dstXn] = value;
+        PrefetchTransfer();
+        break;
+    case 0b010: {
+        MemWriteAsc<T>(regs.A[dstXn], value);
+        PrefetchTransfer();
+        break;
+    }
+    case 0b011: {
+        MemWriteAsc<T>(regs.A[dstXn], value);
+        AdvanceAddress<T, true>(dstXn);
+        PrefetchTransfer();
+        break;
+    }
+    case 0b100: {
+        AdvanceAddress<T, false>(dstXn);
+        PrefetchTransfer();
+        MemWrite<T>(regs.A[dstXn], value);
+        break;
+    }
+    case 0b101: {
+        const sint16 disp = static_cast<sint16>(PrefetchNext());
+        const uint32 address = regs.A[dstXn] + disp;
+        MemWriteAsc<T>(address, value);
+        PrefetchTransfer();
+        break;
+    }
+    case 0b110: {
+        const uint16 briefExtWord = PrefetchNext();
+
+        const sint8 disp = static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
+        const bool s = bit::extract<11>(briefExtWord);
+        const uint8 extXn = bit::extract<12, 14>(briefExtWord);
+        const bool m = bit::extract<15>(briefExtWord);
+
+        sint32 index = m ? regs.A[extXn] : regs.D[extXn];
+        if (!s) {
+            // Word index
+            index = static_cast<sint16>(index);
+        }
+        const uint32 address = regs.A[dstXn] + disp + index;
+        MemWriteAsc<T>(address, value);
+        PrefetchTransfer();
+        break;
+    }
+    case 0b111:
+        switch (dstXn) {
+        case 0b000: {
+            const sint32 address = static_cast<sint16>(PrefetchNext());
+            MemWriteAsc<T>(address, value);
+            PrefetchTransfer();
+            break;
+        }
+        case 0b001: {
+            const uint32 addressHigh = PrefetchNext();
+            const uint32 addressLow = m_prefetchQueue[0];
+            const uint32 address = (addressHigh << 16u) | addressLow;
+            const bool prefetchEarly = srcM < 2 || (srcM == 7 && srcXn == 4);
+            if (prefetchEarly) {
+                PrefetchNext();
+            }
+            MemWriteAsc<T>(address, value);
+            if (!prefetchEarly) {
+                PrefetchNext();
+            }
+            PrefetchTransfer();
+            break;
+        }
+        }
+        break;
+    }
+
+    return value;
 }
 
 template <bool fetch>
@@ -599,9 +695,8 @@ FORCE_INLINE void MC68EC000::Instr_Move_EA_EA(uint16 instr) {
     const uint32 srcXn = bit::extract<0, 2>(instr);
     const uint32 srcM = bit::extract<3, 5>(instr);
 
-    auto move = [&]<std::integral T>() {
-        const T value = ReadEffectiveAddress<T>(srcM, srcXn);
-        WriteEffectiveAddress<T>(dstM, dstXn, value);
+    auto move = [&]<mem_primitive T>() {
+        const T value = MoveEffectiveAddress<T>(srcM, srcXn, dstM, dstXn);
         SetLogicFlags(value);
     };
 
@@ -611,8 +706,6 @@ FORCE_INLINE void MC68EC000::Instr_Move_EA_EA(uint16 instr) {
     case 0b11: move.template operator()<uint16>(); break;
     case 0b10: move.template operator()<uint32>(); break;
     }
-
-    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Move_EA_SR(uint16 instr) {
