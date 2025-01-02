@@ -812,7 +812,6 @@ FORCE_INLINE void MC68EC000::Instr_AddQ_An(uint16 instr) {
         const uint32 op2 = regs.A[An];
         const uint32 result = op2 + op1;
         regs.A[An] = result;
-        SetAdditionFlags(op1, op2, result);
     };
 
     switch (sz) {
@@ -993,7 +992,6 @@ FORCE_INLINE void MC68EC000::Instr_SubQ_An(uint16 instr) {
         const uint32 op2 = regs.A[An];
         const uint32 result = op2 - op1;
         regs.A[An] = result;
-        SetSubtractionFlags(op1, op2, result);
     };
 
     switch (sz) {
