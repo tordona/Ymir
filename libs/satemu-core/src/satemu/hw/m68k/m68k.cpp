@@ -738,10 +738,15 @@ FORCE_INLINE void MC68EC000::Instr_MoveM_EA_Rs(uint16 instr) {
     const bool sz = bit::extract<6>(instr);
     const uint16 regList = PrefetchNext();
     uint32 address = CalcEffectiveAddress(M, Xn);
+    const bool isProgramAccess = M == 7 && (Xn == 2 || Xn == 3);
+
+    auto read = [&]<std::integral T>() {
+        return isProgramAccess ? MemRead<T, true>(address) : MemRead<T, false>(address);
+    };
 
     auto xfer = [&]<std::integral T>(uint32 regIndex) {
-        const T value = MemRead<T, false>(address);
-        regs.DA[regIndex] = value;
+        const T value = read.template operator()<T>();
+        regs.DA[regIndex] = static_cast<std::make_signed_t<T>>(value);
         address += sizeof(T);
     };
 
@@ -750,6 +755,8 @@ FORCE_INLINE void MC68EC000::Instr_MoveM_EA_Rs(uint16 instr) {
             sz ? xfer.template operator()<uint32>(i) : xfer.template operator()<uint16>(i);
         }
     }
+    // An extra memory fetch occurs after the transfers are done
+    read.template operator()<uint16>();
 
     PrefetchTransfer();
 }
@@ -762,7 +769,7 @@ FORCE_INLINE void MC68EC000::Instr_MoveM_PI_Rs(uint16 instr) {
     auto xfer = [&]<std::integral T>(uint32 regIndex) {
         const uint32 address = regs.A[An];
         const T value = MemRead<T, false>(address);
-        regs.DA[regIndex] = value;
+        regs.DA[regIndex] = static_cast<std::make_signed_t<T>>(value);
         regs.A[An] = address + sizeof(T);
     };
 
@@ -771,6 +778,8 @@ FORCE_INLINE void MC68EC000::Instr_MoveM_PI_Rs(uint16 instr) {
             sz ? xfer.template operator()<uint32>(i) : xfer.template operator()<uint16>(i);
         }
     }
+    // An extra memory fetch occurs after the transfers are done
+    MemRead<uint16, false>(regs.A[An]);
 
     PrefetchTransfer();
 }
@@ -784,7 +793,7 @@ FORCE_INLINE void MC68EC000::Instr_MoveM_Rs_EA(uint16 instr) {
 
     auto xfer = [&]<std::integral T>(uint32 regIndex) {
         const T value = regs.DA[regIndex];
-        MemWrite<T>(address, value);
+        MemWriteAsc<T>(address, value);
         address += sizeof(T);
     };
 
@@ -802,9 +811,11 @@ FORCE_INLINE void MC68EC000::Instr_MoveM_Rs_PD(uint16 instr) {
     const bool sz = bit::extract<6>(instr);
     const uint16 regList = PrefetchNext();
 
+    const uint32 baseAddress = regs.A[An];
+
     auto xfer = [&]<std::integral T>(uint32 regIndex) {
         const uint32 address = regs.A[An] - sizeof(T);
-        const T value = regs.DA[15 - regIndex];
+        const T value = 7 - regIndex == An ? baseAddress : regs.DA[15 - regIndex];
         MemWrite<T>(address, value);
         regs.A[An] = address;
     };
