@@ -1483,10 +1483,12 @@ FORCE_INLINE void MC68EC000::Instr_Illegal(uint16 instr) {
 }
 
 FORCE_INLINE void MC68EC000::Instr_Illegal1010(uint16 instr) {
+    PC -= 4;
     EnterException(ExceptionVector::Line1010Emulator);
 }
 
 FORCE_INLINE void MC68EC000::Instr_Illegal1111(uint16 instr) {
+    PC -= 4;
     EnterException(ExceptionVector::Line1111Emulator);
 }
 
