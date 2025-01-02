@@ -1293,12 +1293,12 @@ FORCE_INLINE void MC68EC000::Instr_CmpM(uint16 instr) {
     const uint16 Ax = bit::extract<9, 11>(instr);
 
     auto op = [&]<std::integral T>() {
-        const T op1 = regs.A[Ay];
-        const T op2 = regs.A[Ax];
+        const T op1 = MemRead<T, false>(regs.A[Ay]);
+        AdvanceAddress<T, true>(Ay);
+        const T op2 = MemRead<T, false>(regs.A[Ax]);
+        AdvanceAddress<T, true>(Ax);
         const T result = op2 - op1;
         SetCompareFlags(op1, op2, result);
-        AdvanceAddress<T, true>(Ax);
-        AdvanceAddress<T, true>(Ay);
     };
 
     switch (sz) {
