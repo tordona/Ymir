@@ -1470,12 +1470,14 @@ FORCE_INLINE void MC68EC000::Instr_JSR(uint16 instr) {
     const uint16 M = bit::extract<3, 5>(instr);
 
     const uint32 target = CalcEffectiveAddress<false>(M, Xn);
+    const uint32 currPC = M == 2 ? PC - 2 : PC;
 
     regs.SP -= 4;
-    MemWrite<uint16>(regs.SP + 0, (PC - 2) >> 16u);
-    MemWrite<uint16>(regs.SP + 2, (PC - 2) >> 0u);
     PC = target;
-    FullPrefetch();
+    PrefetchNext();
+    MemWrite<uint16>(regs.SP + 0, currPC >> 16u);
+    MemWrite<uint16>(regs.SP + 2, currPC >> 0u);
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_Jmp(uint16 instr) {
