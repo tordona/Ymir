@@ -847,7 +847,7 @@ FORCE_INLINE void MC68EC000::Instr_AddQ_An(uint16 instr) {
     auto op = [&]<std::integral T>() {
         const uint32 op1 = static_cast<std::make_signed_t<T>>(bit::extract<9, 11>(instr));
         const uint32 op2 = regs.A[An];
-        const uint32 result = op2 + op1;
+        const uint32 result = op2 + (op1 == 0 ? 8 : op1);
         regs.A[An] = result;
     };
 
@@ -1027,7 +1027,7 @@ FORCE_INLINE void MC68EC000::Instr_SubQ_An(uint16 instr) {
     auto op = [&]<std::integral T>() {
         const uint32 op1 = static_cast<std::make_signed_t<T>>(bit::extract<9, 11>(instr));
         const uint32 op2 = regs.A[An];
-        const uint32 result = op2 - op1;
+        const uint32 result = op2 - (op1 == 0 ? 8 : op1);
         regs.A[An] = result;
     };
 
