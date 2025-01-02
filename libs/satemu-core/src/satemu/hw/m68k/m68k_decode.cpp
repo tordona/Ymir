@@ -249,7 +249,23 @@ DecodeTable BuildDecodeTable() {
             }
             break;
         }
-        case 0x9: break;
+        case 0x9: {
+            const uint16 ea = bit::extract<0, 5>(instr);
+            if (bit::extract<6, 7>(instr) == 0b11) {
+                // TODO: SUBA
+                // opcode = legalIf(OpcodeType::SubA, kValidAddrModes[bit::extract<0, 5>(instr)]);
+            } else if (bit::extract<4, 5>(instr) == 0b00 && bit::extract<8>(instr) == 1) {
+                // TODO: SUBX
+            } else {
+                const bool dir = bit::extract<8>(instr);
+                if (dir) {
+                    opcode = legalIf(OpcodeType::Sub_Dn_EA, kValidMemoryAlterableAddrModes[ea]);
+                } else {
+                    opcode = legalIf(OpcodeType::Sub_EA_Dn, kValidAddrModes[ea]);
+                }
+            }
+            break;
+        }
         case 0xA: opcode = OpcodeType::Illegal1010; break;
         case 0xB: {
             const uint16 ea = bit::extract<0, 5>(instr);

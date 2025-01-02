@@ -282,6 +282,8 @@ private:
     void Instr_Or_Dn_EA(uint16 instr);
     void Instr_Or_EA_Dn(uint16 instr);
     void Instr_OrI_EA(uint16 instr);
+    void Instr_Sub_Dn_EA(uint16 instr);
+    void Instr_Sub_EA_Dn(uint16 instr);
     void Instr_SubI(uint16 instr);
     void Instr_SubQ_An(uint16 instr);
     void Instr_SubQ_EA(uint16 instr);

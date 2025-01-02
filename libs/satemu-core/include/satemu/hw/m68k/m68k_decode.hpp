@@ -65,6 +65,8 @@ enum class OpcodeType : uint8 {
     Or_Dn_EA,  // or.<sz> Dn, <ea>
     Or_EA_Dn,  // or.<sz> <ea>, Dn
     OrI_EA,    // ori.<sz> #<data>, <ea>
+    Sub_Dn_EA, // sub.<sz> Dn, <ea>
+    Sub_EA_Dn, // sub.<sz> <ea>, Dn
     SubI,      // subi.<sz> #<data>, <ea>
     SubQ_An,   // subq.<sz> #<data>, An
     SubQ_EA,   // subq.<sz> #<data>, <ea>

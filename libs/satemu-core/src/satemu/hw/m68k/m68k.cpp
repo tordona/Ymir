@@ -635,6 +635,8 @@ void MC68EC000::Execute() {
     case OpcodeType::Or_Dn_EA: Instr_Or_Dn_EA(instr); break;
     case OpcodeType::Or_EA_Dn: Instr_Or_EA_Dn(instr); break;
     case OpcodeType::OrI_EA: Instr_OrI_EA(instr); break;
+    case OpcodeType::Sub_Dn_EA: Instr_Sub_Dn_EA(instr); break;
+    case OpcodeType::Sub_EA_Dn: Instr_Sub_EA_Dn(instr); break;
     case OpcodeType::SubI: Instr_SubI(instr); break;
     case OpcodeType::SubQ_An: Instr_SubQ_An(instr); break;
     case OpcodeType::SubQ_EA: Instr_SubQ_EA(instr); break;
@@ -1096,6 +1098,51 @@ FORCE_INLINE void MC68EC000::Instr_Or_EA_Dn(uint16 instr) {
         const T result = op2 | op1;
         bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Dn], result);
         SetLogicFlags(result);
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_Sub_Dn_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T op1 = regs.D[Dn];
+        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+            const T result = op2 - op1;
+            SetSubtractionFlags(op1, op2, result);
+            return result;
+        });
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+FORCE_INLINE void MC68EC000::Instr_Sub_EA_Dn(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T op1 = ReadEffectiveAddress<T>(M, Xn);
+        const T op2 = regs.D[Dn];
+        const T result = op2 - op1;
+        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+        SetSubtractionFlags(op1, op2, result);
     };
 
     switch (sz) {
