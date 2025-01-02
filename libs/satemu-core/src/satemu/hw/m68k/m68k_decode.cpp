@@ -172,6 +172,10 @@ DecodeTable BuildDecodeTable() {
                 opcode = OpcodeType::Illegal;
             } else if (bit::extract<3, 11>(instr) == 0b100001000) {
                 opcode = OpcodeType::Swap;
+            } else if (bit::extract<3, 11>(instr) == 0b111001010) {
+                opcode = OpcodeType::Link;
+            } else if (bit::extract<3, 11>(instr) == 0b111001011) {
+                opcode = OpcodeType::Unlink;
             } else if (bit::extract<4, 11>(instr) == 0b11100100) {
                 opcode = OpcodeType::Trap;
             } else if (bit::extract<6, 11>(instr) == 0b011011) {

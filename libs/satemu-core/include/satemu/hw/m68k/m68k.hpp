@@ -306,6 +306,9 @@ private:
 
     void Instr_LEA(uint16 instr);
 
+    void Instr_Link(uint16 instr);
+    void Instr_Unlink(uint16 instr);
+
     void Instr_BRA(uint16 instr);
     void Instr_BSR(uint16 instr);
     void Instr_Bcc(uint16 instr);

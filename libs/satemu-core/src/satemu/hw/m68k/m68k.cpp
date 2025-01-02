@@ -659,6 +659,9 @@ void MC68EC000::Execute() {
 
     case OpcodeType::LEA: Instr_LEA(instr); break;
 
+    case OpcodeType::Link: Instr_Link(instr); break;
+    case OpcodeType::Unlink: Instr_Unlink(instr); break;
+
     case OpcodeType::BRA: Instr_BRA(instr); break;
     case OpcodeType::BSR: Instr_BSR(instr); break;
     case OpcodeType::Bcc: Instr_Bcc(instr); break;
@@ -1556,6 +1559,30 @@ FORCE_INLINE void MC68EC000::Instr_LEA(uint16 instr) {
     const uint16 An = bit::extract<9, 11>(instr);
 
     regs.A[An] = CalcEffectiveAddress(M, Xn);
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_Link(uint16 instr) {
+    const uint16 An = bit::extract<0, 2>(instr);
+    const sint16 disp = PrefetchNext();
+
+    MemWriteAsc<uint32>(regs.SP - 4, regs.A[An]);
+    regs.SP -= 4;
+    regs.A[An] = regs.SP;
+    regs.SP += disp;
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_Unlink(uint16 instr) {
+    const uint16 An = bit::extract<0, 2>(instr);
+
+    regs.SP = regs.A[An];
+    regs.A[An] = MemRead<uint32, false>(regs.SP);
+    if (An != 7) {
+        regs.SP += 4;
+    }
 
     PrefetchTransfer();
 }

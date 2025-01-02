@@ -89,6 +89,9 @@ enum class OpcodeType : uint8 {
 
     LEA, // lea <ea>, An
 
+    Link,   // link An, #<disp>
+    Unlink, // unlk An
+
     BRA,  // bra <label>
     BSR,  // bsr <label>
     Bcc,  // b<cc> <label>
