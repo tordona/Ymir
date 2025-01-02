@@ -377,6 +377,8 @@ FORCE_INLINE uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
         }
     };
 
+    static constexpr uint32 pcOffset = fetch ? 4 : 2;
+
     switch (M) {
     case 0b010: return regs.A[Xn];
     case 0b101: {
@@ -402,12 +404,12 @@ FORCE_INLINE uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
         switch (Xn) {
         case 0b010: {
             const sint16 disp = static_cast<sint16>(prefetchLast());
-            return PC - 2 + disp;
+            return PC - pcOffset + disp;
         }
         case 0b011: {
             const uint16 briefExtWord = prefetchLast();
 
-            const uint32 address = PC - 2 + static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
+            const uint32 address = PC - pcOffset + static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
             const bool s = bit::extract<11>(briefExtWord);
             const uint8 extXn = bit::extract<12, 14>(briefExtWord);
             const bool m = bit::extract<15>(briefExtWord);
