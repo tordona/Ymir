@@ -297,32 +297,40 @@ FORCE_INLINE void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
     }
 }
 
-template <mem_primitive T, typename FnModify>
+template <mem_primitive T, bool prefetch, typename FnModify>
 FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify &&modify) {
     switch (M) {
     case 0b000: {
         const T value = modify(regs.D[Xn]);
-        PrefetchTransfer();
+        if constexpr (prefetch) {
+            PrefetchTransfer();
+        }
         bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Xn], value);
         break;
     }
     case 0b001: {
         const uint32 value = modify(regs.A[Xn]);
-        PrefetchTransfer();
+        if constexpr (prefetch) {
+            PrefetchTransfer();
+        }
         regs.A[Xn] = value;
         break;
     }
     case 0b010: {
         const T value = MemRead<T, false>(regs.A[Xn]);
         const T result = modify(value);
-        PrefetchTransfer();
+        if constexpr (prefetch) {
+            PrefetchTransfer();
+        }
         MemWrite<T>(regs.A[Xn], result);
         break;
     }
     case 0b011: {
         const T value = MemRead<T, false>(regs.A[Xn]);
         const T result = modify(value);
-        PrefetchTransfer();
+        if constexpr (prefetch) {
+            PrefetchTransfer();
+        }
         MemWrite<T>(regs.A[Xn], result);
         AdvanceAddress<T, true>(Xn);
         break;
@@ -331,7 +339,9 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
         AdvanceAddress<T, false>(Xn);
         const T value = MemRead<T, false>(regs.A[Xn]);
         const T result = modify(value);
-        PrefetchTransfer();
+        if constexpr (prefetch) {
+            PrefetchTransfer();
+        }
         MemWrite<T>(regs.A[Xn], result);
         break;
     }
@@ -340,7 +350,9 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
         const uint32 address = regs.A[Xn] + disp;
         const T value = MemRead<T, false>(address);
         const T result = modify(value);
-        PrefetchTransfer();
+        if constexpr (prefetch) {
+            PrefetchTransfer();
+        }
         MemWrite<T>(address, result);
         break;
     }
@@ -360,7 +372,9 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
         const uint32 address = regs.A[Xn] + disp + index;
         const T value = MemRead<T, false>(address);
         const T result = modify(value);
-        PrefetchTransfer();
+        if constexpr (prefetch) {
+            PrefetchTransfer();
+        }
         MemWrite<T>(address, result);
         break;
     }
@@ -370,7 +384,9 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
             const sint32 address = static_cast<sint16>(PrefetchNext());
             const T value = MemRead<T, false>(address);
             const T result = modify(value);
-            PrefetchTransfer();
+            if constexpr (prefetch) {
+                PrefetchTransfer();
+            }
             MemWrite<T>(address, result);
             break;
         }
@@ -380,7 +396,9 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
             const uint32 address = (addressHigh << 16u) | addressLow;
             const T value = MemRead<T, false>(address);
             const T result = modify(value);
-            PrefetchTransfer();
+            if constexpr (prefetch) {
+                PrefetchTransfer();
+            }
             MemWrite<T>(address, result);
             break;
         }
@@ -674,6 +692,7 @@ void MC68EC000::Execute() {
     case OpcodeType::BTst_I_EA: Instr_BTst_I_EA(instr); break;
     case OpcodeType::BTst_R_Dn: Instr_BTst_R_Dn(instr); break;
     case OpcodeType::BTst_R_EA: Instr_BTst_R_EA(instr); break;
+    case OpcodeType::TAS: Instr_TAS(instr); break;
     case OpcodeType::Tst: Instr_Tst(instr); break;
 
     case OpcodeType::LEA: Instr_LEA(instr); break;
@@ -1635,6 +1654,19 @@ FORCE_INLINE void MC68EC000::Instr_BTst_R_EA(uint16 instr) {
 
     const uint8 value = ReadEffectiveAddress<uint8>(M, Xn);
     SR.Z = !((value >> index) & 1);
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_TAS(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+
+    // NOTE: this should be indivisible
+    ModifyEffectiveAddress<uint8, false>(M, Xn, [&](uint8 value) {
+        SetLogicFlags(value);
+        return value | 0x80;
+    });
 
     PrefetchTransfer();
 }

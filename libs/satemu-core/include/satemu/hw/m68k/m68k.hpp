@@ -171,7 +171,8 @@ private:
     void WriteEffectiveAddress(uint8 M, uint8 Xn, T value);
 
     // Read-modify-write an effective address
-    template <mem_primitive T, typename FnModify>
+    // The prefetch flag specifies if instruction prefetching should be done
+    template <mem_primitive T, bool prefetch = true, typename FnModify>
     void ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify &&modify);
 
     // Moves between effective addresses and returns the moved value
@@ -332,6 +333,7 @@ private:
     void Instr_BTst_I_EA(uint16 instr);
     void Instr_BTst_R_Dn(uint16 instr);
     void Instr_BTst_R_EA(uint16 instr);
+    void Instr_TAS(uint16 instr);
     void Instr_Tst(uint16 instr);
 
     void Instr_LEA(uint16 instr);
