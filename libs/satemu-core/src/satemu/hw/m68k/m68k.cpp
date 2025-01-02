@@ -1104,7 +1104,7 @@ FORCE_INLINE void MC68EC000::Instr_LSL_I(uint16 instr) {
         if (sizeof(T) == sizeof(uint8) && shift == 8) {
             const T value = regs.D[Dn];
             const T result = 0;
-            const bool carry = value >> 7;
+            const bool carry = value & 1;
             bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
             SetShiftFlags(result, carry);
         } else {
@@ -1161,7 +1161,12 @@ FORCE_INLINE void MC68EC000::Instr_LSL_R(uint16 instr) {
             carry = false;
         }
         bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
-        SetShiftFlags(result, carry);
+        if (shift != 0) {
+            SetShiftFlags(result, carry);
+        } else {
+            SetLogicFlags(result);
+            SR.C = false;
+        }
     };
 
     switch (sz) {
@@ -1185,7 +1190,7 @@ FORCE_INLINE void MC68EC000::Instr_LSR_I(uint16 instr) {
         if (sizeof(T) == sizeof(uint8) && shift == 8) {
             const T value = regs.D[Dn];
             const T result = 0;
-            const bool carry = value & 1;
+            const bool carry = value >> 7;
             bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
             SetShiftFlags(result, carry);
         } else {
@@ -1242,7 +1247,12 @@ FORCE_INLINE void MC68EC000::Instr_LSR_R(uint16 instr) {
             carry = false;
         }
         bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
-        SetShiftFlags(result, carry);
+        if (shift != 0) {
+            SetShiftFlags(result, carry);
+        } else {
+            SetLogicFlags(result);
+            SR.C = false;
+        }
     };
 
     switch (sz) {
