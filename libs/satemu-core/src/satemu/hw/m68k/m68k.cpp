@@ -759,6 +759,15 @@ void MC68EC000::Execute() {
     case OpcodeType::SubX_M: Instr_SubX_M(instr); break;
     case OpcodeType::SubX_R: Instr_SubX_R(instr); break;
 
+    case OpcodeType::BSet_I_Dn: Instr_BSet_I_Dn(instr); break;
+    case OpcodeType::BSet_I_EA: Instr_BSet_I_EA(instr); break;
+    case OpcodeType::BSet_R_Dn: Instr_BSet_R_Dn(instr); break;
+    case OpcodeType::BSet_R_EA: Instr_BSet_R_EA(instr); break;
+    case OpcodeType::BTst_I_Dn: Instr_BTst_I_Dn(instr); break;
+    case OpcodeType::BTst_I_EA: Instr_BTst_I_EA(instr); break;
+    case OpcodeType::BTst_R_Dn: Instr_BTst_R_Dn(instr); break;
+    case OpcodeType::BTst_R_EA: Instr_BTst_R_EA(instr); break;
+
     case OpcodeType::ASL_I: Instr_ASL_I(instr); break;
     case OpcodeType::ASL_M: Instr_ASL_M(instr); break;
     case OpcodeType::ASL_R: Instr_ASL_R(instr); break;
@@ -788,10 +797,6 @@ void MC68EC000::Execute() {
     case OpcodeType::CmpA: Instr_CmpA(instr); break;
     case OpcodeType::CmpI: Instr_CmpI(instr); break;
     case OpcodeType::CmpM: Instr_CmpM(instr); break;
-    case OpcodeType::BTst_I_Dn: Instr_BTst_I_Dn(instr); break;
-    case OpcodeType::BTst_I_EA: Instr_BTst_I_EA(instr); break;
-    case OpcodeType::BTst_R_Dn: Instr_BTst_R_Dn(instr); break;
-    case OpcodeType::BTst_R_EA: Instr_BTst_R_EA(instr); break;
     case OpcodeType::Scc: Instr_Scc(instr); break;
     case OpcodeType::TAS: Instr_TAS(instr); break;
     case OpcodeType::Tst: Instr_Tst(instr); break;
@@ -1634,6 +1639,100 @@ FORCE_INLINE void MC68EC000::Instr_SubX_R(uint16 instr) {
     PrefetchTransfer();
 }
 
+FORCE_INLINE void MC68EC000::Instr_BSet_I_Dn(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 index = PrefetchNext() & 31;
+
+    const uint32 bit = 1 << index;
+    const uint32 value = regs.D[Dn];
+    SR.Z = (value & bit) == 0;
+    regs.D[Dn] |= bit;
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_BSet_I_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 index = PrefetchNext() & 7;
+
+    const uint8 bit = 1 << index;
+    ModifyEffectiveAddress<uint8>(M, Xn, [&](uint8 value) {
+        SR.Z = (value & bit) == 0;
+        return value | bit;
+    });
+}
+
+FORCE_INLINE void MC68EC000::Instr_BSet_R_Dn(uint16 instr) {
+    const uint16 dstDn = bit::extract<0, 2>(instr);
+    const uint16 srcDn = bit::extract<9, 11>(instr);
+    const uint16 index = regs.D[srcDn] & 31;
+
+    const uint32 bit = 1 << index;
+    const uint32 value = regs.D[dstDn];
+    SR.Z = (value & bit) == 0;
+    regs.D[dstDn] |= bit;
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_BSet_R_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 srcDn = bit::extract<9, 11>(instr);
+    const uint16 index = regs.D[srcDn] & 7;
+
+    const uint8 bit = 1 << index;
+    ModifyEffectiveAddress<uint8>(M, Xn, [&](uint8 value) {
+        SR.Z = (value & bit) == 0;
+        return value | bit;
+    });
+}
+
+FORCE_INLINE void MC68EC000::Instr_BTst_I_Dn(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 index = PrefetchNext() & 31;
+
+    const uint32 value = regs.D[Dn];
+    SR.Z = !((value >> index) & 1);
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_BTst_I_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 index = PrefetchNext() & 7;
+
+    const uint8 value = ReadEffectiveAddress<uint8>(M, Xn);
+    SR.Z = !((value >> index) & 1);
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_BTst_R_Dn(uint16 instr) {
+    const uint16 dstDn = bit::extract<0, 2>(instr);
+    const uint16 srcDn = bit::extract<9, 11>(instr);
+    const uint16 index = regs.D[srcDn] & 31;
+
+    const uint32 value = regs.D[dstDn];
+    SR.Z = !((value >> index) & 1);
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_BTst_R_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 srcDn = bit::extract<9, 11>(instr);
+    const uint16 index = regs.D[srcDn] & 7;
+
+    const uint8 value = ReadEffectiveAddress<uint8>(M, Xn);
+    SR.Z = !((value >> index) & 1);
+
+    PrefetchTransfer();
+}
+
 FORCE_INLINE void MC68EC000::Instr_ASL_I(uint16 instr) {
     const uint16 Dn = bit::extract<0, 2>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
@@ -2435,50 +2534,6 @@ FORCE_INLINE void MC68EC000::Instr_CmpM(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
-
-    PrefetchTransfer();
-}
-
-FORCE_INLINE void MC68EC000::Instr_BTst_I_Dn(uint16 instr) {
-    const uint16 Dn = bit::extract<0, 2>(instr);
-    const uint16 index = PrefetchNext() & 31;
-
-    const uint32 value = regs.D[Dn];
-    SR.Z = !((value >> index) & 1);
-
-    PrefetchTransfer();
-}
-
-FORCE_INLINE void MC68EC000::Instr_BTst_I_EA(uint16 instr) {
-    const uint16 Xn = bit::extract<0, 2>(instr);
-    const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 index = PrefetchNext() & 7;
-
-    const uint8 value = ReadEffectiveAddress<uint8>(M, Xn);
-    SR.Z = !((value >> index) & 1);
-
-    PrefetchTransfer();
-}
-
-FORCE_INLINE void MC68EC000::Instr_BTst_R_Dn(uint16 instr) {
-    const uint16 dstDn = bit::extract<0, 2>(instr);
-    const uint16 srcDn = bit::extract<9, 11>(instr);
-    const uint16 index = regs.D[srcDn] & 31;
-
-    const uint32 value = regs.D[dstDn];
-    SR.Z = !((value >> index) & 1);
-
-    PrefetchTransfer();
-}
-
-FORCE_INLINE void MC68EC000::Instr_BTst_R_EA(uint16 instr) {
-    const uint16 Xn = bit::extract<0, 2>(instr);
-    const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 srcDn = bit::extract<9, 11>(instr);
-    const uint16 index = regs.D[srcDn] & 7;
-
-    const uint8 value = ReadEffectiveAddress<uint8>(M, Xn);
-    SR.Z = !((value >> index) & 1);
 
     PrefetchTransfer();
 }

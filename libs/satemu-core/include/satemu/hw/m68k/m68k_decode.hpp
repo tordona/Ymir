@@ -79,6 +79,15 @@ enum class OpcodeType : uint8 {
     SubX_M,    // subx.<sz> -(Ay), -(Ax)
     SubX_R,    // subx.<sz> Dy, Dx
 
+    BSet_I_Dn, // bset.<sz> #<data>, Dn
+    BSet_I_EA, // bset.<sz> #<data>, <ea>
+    BSet_R_Dn, // bset.<sz> Dn, Dn
+    BSet_R_EA, // bset.<sz> Dn, <ea>
+    BTst_I_Dn, // btst.<sz> #<data>, Dn
+    BTst_I_EA, // btst.<sz> #<data>, <ea>
+    BTst_R_Dn, // btst.<sz> Dn, Dn
+    BTst_R_EA, // btst.<sz> Dn, <ea>
+
     ASL_I,  // asl.<sz> #<data>, <ea>
     ASL_M,  // asl.<sz> <ea>
     ASL_R,  // asl.<sz> Dn, <ea>
@@ -104,17 +113,13 @@ enum class OpcodeType : uint8 {
     ROXR_M, // roxr.<sz> <ea>
     ROXR_R, // roxr.<sz> Dn, <ea>
 
-    Cmp,       // cmp.<sz> <ea>, An
-    CmpA,      // cmpa <ea>, An
-    CmpI,      // cmpi.<sz> #<data>, <ea>
-    CmpM,      // cmpm.<sz> (Ay)+, (Ax)+
-    BTst_I_Dn, // btst.<sz> #<data>, Dn
-    BTst_I_EA, // btst.<sz> #<data>, <ea>
-    BTst_R_Dn, // btst.<sz> Dn, Dn
-    BTst_R_EA, // btst.<sz> Dn, <ea>
-    Scc,       // scc <ea>
-    TAS,       // tas <ea>
-    Tst,       // tst.<sz> <ea>
+    Cmp,  // cmp.<sz> <ea>, An
+    CmpA, // cmpa <ea>, An
+    CmpI, // cmpi.<sz> #<data>, <ea>
+    CmpM, // cmpm.<sz> (Ay)+, (Ax)+
+    Scc,  // scc <ea>
+    TAS,  // tas <ea>
+    Tst,  // tst.<sz> <ea>
 
     LEA, // lea <ea>, An
 

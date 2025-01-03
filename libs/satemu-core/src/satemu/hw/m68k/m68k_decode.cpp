@@ -126,11 +126,23 @@ DecodeTable BuildDecodeTable() {
                 } else {
                     opcode = legalIf(OpcodeType::BTst_R_EA, kValidDataAddrModes[ea]);
                 }
+            } else if (bit::extract<6, 8>(instr) == 0b111) {
+                if ((ea >> 3u) == 0b000) {
+                    opcode = OpcodeType::BSet_R_Dn;
+                } else {
+                    opcode = legalIf(OpcodeType::BSet_R_EA, kValidDataAddrModes[ea]);
+                }
             } else if (bit::extract<6, 11>(instr) == 0b100000) {
                 if ((ea >> 3u) == 0b000) {
                     opcode = OpcodeType::BTst_I_Dn;
                 } else {
                     opcode = OpcodeType::BTst_I_EA;
+                }
+            } else if (bit::extract<6, 11>(instr) == 0b100011) {
+                if ((ea >> 3u) == 0b000) {
+                    opcode = OpcodeType::BSet_I_Dn;
+                } else {
+                    opcode = OpcodeType::BSet_I_EA;
                 }
             } else if (bit::extract<8, 11>(instr) == 0b0000) {
                 opcode = legalIf(OpcodeType::OrI_EA, sz != 0b11 && kValidDataAlterableAddrModes[ea]);

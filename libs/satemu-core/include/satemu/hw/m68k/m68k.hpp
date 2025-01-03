@@ -260,6 +260,15 @@ private:
     void Instr_SubX_M(uint16 instr);
     void Instr_SubX_R(uint16 instr);
 
+    void Instr_BSet_I_Dn(uint16 instr);
+    void Instr_BSet_I_EA(uint16 instr);
+    void Instr_BSet_R_Dn(uint16 instr);
+    void Instr_BSet_R_EA(uint16 instr);
+    void Instr_BTst_I_Dn(uint16 instr);
+    void Instr_BTst_I_EA(uint16 instr);
+    void Instr_BTst_R_Dn(uint16 instr);
+    void Instr_BTst_R_EA(uint16 instr);
+
     void Instr_ASL_I(uint16 instr);
     void Instr_ASL_M(uint16 instr);
     void Instr_ASL_R(uint16 instr);
@@ -289,10 +298,6 @@ private:
     void Instr_CmpA(uint16 instr);
     void Instr_CmpI(uint16 instr);
     void Instr_CmpM(uint16 instr);
-    void Instr_BTst_I_Dn(uint16 instr);
-    void Instr_BTst_I_EA(uint16 instr);
-    void Instr_BTst_R_Dn(uint16 instr);
-    void Instr_BTst_R_EA(uint16 instr);
     void Instr_Scc(uint16 instr);
     void Instr_TAS(uint16 instr);
     void Instr_Tst(uint16 instr);
