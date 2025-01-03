@@ -250,8 +250,8 @@ T SH2::MemRead(uint32 address) {
     case 0b010: // associative purge
 
         // TODO: implement
-        fmt::println("{}SH2: unhandled {}-bit SH-2 associative purge read from {:08X}", (BCR1.MASTER ? "S" : "M"),
-                     sizeof(T) * 8, address);
+        /*fmt::println("{}SH2: unhandled {}-bit SH-2 associative purge read from {:08X}", (BCR1.MASTER ? "S" : "M"),
+                     sizeof(T) * 8, address);*/
         return (address & 1) ? static_cast<T>(0x12231223) : static_cast<T>(0x23122312);
     case 0b011: { // cache address array
         uint32 entry = (address >> 4u) & 0x3F;
@@ -261,14 +261,14 @@ T SH2::MemRead(uint32 address) {
     case 0b110: // cache data array
 
         // TODO: implement
-        fmt::println("{}SH2: unhandled {}-bit SH-2 cache data array read from {:08X}", (BCR1.MASTER ? "S" : "M"),
-                     sizeof(T) * 8, address);
+        /*fmt::println("{}SH2: unhandled {}-bit SH-2 cache data array read from {:08X}", (BCR1.MASTER ? "S" : "M"),
+                     sizeof(T) * 8, address);*/
         return 0;
     case 0b111: // I/O area
         if constexpr (instrFetch) {
             // TODO: raise CPU address error due to attempt to fetch instruction from I/O area
-            fmt::println("{}SH2: attempted to fetch instruction from I/O area at {:08X}", (BCR1.MASTER ? "S" : "M"),
-                         address);
+            /*fmt::println("{}SH2: attempted to fetch instruction from I/O area at {:08X}", (BCR1.MASTER ? "S" : "M"),
+                         address);*/
             return 0;
         } else if ((address & 0xE0004000) == 0xE0004000) {
             // bits 31-29 and 14 must be set
@@ -281,8 +281,8 @@ T SH2::MemRead(uint32 address) {
             }
         } else {
             // TODO: implement
-            fmt::println("{}SH2: unhandled {}-bit SH-2 I/O area read from {:08X}", (BCR1.MASTER ? "S" : "M"),
-                         sizeof(T) * 8, address);
+            /*fmt::println("{}SH2: unhandled {}-bit SH-2 I/O area read from {:08X}", (BCR1.MASTER ? "S" : "M"),
+                         sizeof(T) * 8, address);*/
             return 0;
         }
     }
@@ -311,8 +311,8 @@ void SH2::MemWrite(uint32 address, T value) {
         break;
     case 0b010: // associative purge
         // TODO: implement
-        fmt::println("{}SH2: unhandled {}-bit SH-2 associative purge write to {:08X} = {:X}", (BCR1.MASTER ? "S" : "M"),
-                     sizeof(T) * 8, address, value);
+        /*fmt::println("{}SH2: unhandled {}-bit SH-2 associative purge write to {:08X} = {:X}", (BCR1.MASTER ? "S" : "M"),
+                     sizeof(T) * 8, address, value);*/
         break;
     case 0b011: { // cache address array
         uint32 entry = (address >> 4u) & 0x3F;
@@ -323,8 +323,8 @@ void SH2::MemWrite(uint32 address, T value) {
     case 0b100:
     case 0b110: // cache data array
         // TODO: implement
-        fmt::println("{}SH2: unhandled {}-bit SH-2 cache data array write to {:08X} = {:X}", (BCR1.MASTER ? "S" : "M"),
-                     sizeof(T) * 8, address, value);
+        /*fmt::println("{}SH2: unhandled {}-bit SH-2 cache data array write to {:08X} = {:X}", (BCR1.MASTER ? "S" : "M"),
+                     sizeof(T) * 8, address, value);*/
         break;
     case 0b111: // I/O area
         if ((address & 0xE0004000) == 0xE0004000) {
@@ -344,14 +344,14 @@ void SH2::MemWrite(uint32 address, T value) {
             case 0xFFFF8888: fmt::println("{}SH2: 32-bit CAS latency 2", (BCR1.MASTER ? "S" : "M")); break;
             case 0xFFFF88C8: fmt::println("{}SH2: 32-bit CAS latency 3", (BCR1.MASTER ? "S" : "M")); break;
             default:
-                fmt::println("{}SH2: unhandled {}-bit SH-2 I/O area read from {:08X}", (BCR1.MASTER ? "S" : "M"),
-                             sizeof(T) * 8, address);
+                /*fmt::println("{}SH2: unhandled {}-bit SH-2 I/O area read from {:08X}", (BCR1.MASTER ? "S" : "M"),
+                             sizeof(T) * 8, address);*/
                 break;
             }
         } else {
             // TODO: implement
-            fmt::println("{}SH2: unhandled {}-bit SH-2 I/O area write to {:08X} = {:X}", (BCR1.MASTER ? "S" : "M"),
-                         sizeof(T) * 8, address, value);
+            /*fmt::println("{}SH2: unhandled {}-bit SH-2 I/O area write to {:08X} = {:X}", (BCR1.MASTER ? "S" : "M"),
+                         sizeof(T) * 8, address, value);*/
         }
         break;
     }
