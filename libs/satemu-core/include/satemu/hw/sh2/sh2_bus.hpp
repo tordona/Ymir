@@ -11,6 +11,17 @@
 
 #include <span>
 
+// -----------------------------------------------------------------------------
+// Forward declarations
+
+namespace satemu::sh2 {
+
+class SH2;
+
+} // namespace satemu::sh2
+
+// -----------------------------------------------------------------------------
+
 namespace satemu::sh2 {
 
 // SH-2 memory map
@@ -46,7 +57,7 @@ namespace satemu::sh2 {
 // SCSP contains the MC68EC000 and 512 KiB of RAM
 class SH2Bus {
 public:
-    SH2Bus(scu::SCU &scu, smpc::SMPC &smpc);
+    SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu, smpc::SMPC &smpc);
 
     void Reset(bool hard);
 
@@ -84,6 +95,14 @@ public:
             m_SMPC.Write((address & 0x7F) | 1, value);
         } else if (AddressInRange<0x020'0000, 0x02F'FFFF>(address)) {
             WriteBE<T>(&WRAMLow[address & 0xFFFFF], value);
+        } else if (AddressInRange<0x100'0000, 0x17F'FFFF>(address)) {
+            if constexpr (std::is_same_v<T, uint16>) {
+                WriteMINIT(value);
+            }
+        } else if (AddressInRange<0x180'0000, 0x1FF'FFFF>(address)) {
+            if constexpr (std::is_same_v<T, uint16>) {
+                WriteSINIT(value);
+            }
         } else if (AddressInRange<0x200'0000, 0x5FF'FFFF>(address)) {
             m_SCU.Write<T>(address, value);
         } else if (AddressInRange<0x600'0000, 0x7FF'FFFF>(address)) {
@@ -100,8 +119,13 @@ public:
     std::array<uint8, kWRAMHighSize> WRAMHigh;
 
 private:
+    SH2 &m_masterSH2;
+    SH2 &m_slaveSH2;
     scu::SCU &m_SCU;
     smpc::SMPC &m_SMPC;
+
+    void WriteMINIT(uint16 value);
+    void WriteSINIT(uint16 value);
 };
 
 } // namespace satemu::sh2

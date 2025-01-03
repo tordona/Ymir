@@ -1,9 +1,13 @@
 #include <satemu/hw/sh2/sh2_bus.hpp>
 
+#include <satemu/hw/sh2/sh2_block.hpp>
+
 namespace satemu::sh2 {
 
-SH2Bus::SH2Bus(scu::SCU &scu, smpc::SMPC &smpc)
-    : m_SCU(scu)
+SH2Bus::SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu, smpc::SMPC &smpc)
+    : m_masterSH2(masterSH2)
+    , m_slaveSH2(slaveSH2)
+    , m_SCU(scu)
     , m_SMPC(smpc) {
     IPL.fill(0);
     Reset(true);
@@ -20,6 +24,14 @@ void SH2Bus::LoadIPL(std::span<uint8, kIPLSize> ipl) {
 
 void SH2Bus::AcknowledgeExternalInterrupt() {
     m_SCU.AcknowledgeExternalInterrupt();
+}
+
+void SH2Bus::WriteMINIT(uint16 value) {
+    m_slaveSH2.WriteFRTInput(value);
+}
+
+void SH2Bus::WriteSINIT(uint16 value) {
+    m_masterSH2.WriteFRTInput(value);
 }
 
 } // namespace satemu::sh2

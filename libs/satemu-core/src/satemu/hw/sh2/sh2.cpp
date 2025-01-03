@@ -200,6 +200,11 @@ void SH2::SetNMI() {
     ICR.NMIL = 1;
 }
 
+void SH2::WriteFRTInput(uint16 value) {
+    FRT.ICR = value;
+    FRT.FTCSR.ICF = 1;
+}
+
 // -------------------------------------------------------------------------
 // Debugging functions
 
