@@ -188,7 +188,6 @@ enum class OpcodeType : uint8 {
     Illegal,     // any illegal instruction, including the designated ILLEGAL instruction 0100 1010 1111 1100
     Illegal1010, // illegal instructions with bits 15-12 = 1010
     Illegal1111, // illegal instructions with bits 15-12 = 1111
-    Undecoded,   // instructions that the decoding table is missing; should not happen
 };
 
 struct DecodeTable {

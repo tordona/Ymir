@@ -95,7 +95,7 @@ static constexpr auto kValidControlAlterableAddrModes = [] {
 
 DecodeTable BuildDecodeTable() {
     DecodeTable table{};
-    table.opcodeTypes.fill(OpcodeType::Undecoded);
+    table.opcodeTypes.fill(OpcodeType::Illegal);
 
     for (uint32 instr = 0; instr < 0x10000; instr++) {
         auto &opcode = table.opcodeTypes[instr];

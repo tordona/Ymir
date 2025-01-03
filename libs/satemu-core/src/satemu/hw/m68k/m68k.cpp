@@ -869,13 +869,15 @@ void MC68EC000::Execute() {
     case OpcodeType::Illegal1010: Instr_Illegal1010(instr); break;
     case OpcodeType::Illegal1111: Instr_Illegal1111(instr); break;
 
-    case OpcodeType::Undecoded:
-        fmt::println("M68K: found undecoded instruction {:04X} at {:08X} -- this is a bug!", instr, PC - 2);
-        break;
     default:
+#ifndef NDEBUG
+        // this should absolutely never happen
         fmt::println("M68K: unexpected instruction type {} for opcode {:04X} at {:08X} -- this is a bug!",
                      static_cast<uint32>(type), instr, PC - 2);
         break;
+#else
+        util::unreachable();
+#endif
     }
 }
 
