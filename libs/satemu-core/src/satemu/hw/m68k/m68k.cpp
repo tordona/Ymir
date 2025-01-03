@@ -1094,7 +1094,7 @@ FORCE_INLINE void MC68EC000::Instr_AddA(uint16 instr) {
     if (sz) {
         regs.A[An] += ReadEffectiveAddress<uint32>(M, Xn);
     } else {
-        regs.A[An] += ReadEffectiveAddress<uint16>(M, Xn);
+        regs.A[An] += static_cast<sint16>(ReadEffectiveAddress<uint16>(M, Xn));
     }
 
     PrefetchTransfer();
