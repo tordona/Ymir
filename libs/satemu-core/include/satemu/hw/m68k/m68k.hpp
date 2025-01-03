@@ -94,7 +94,8 @@ private:
             uint16 /*T0*/ : 1;   // Trace enable 0 (always zero on MC68EC000)
             uint16 /*T1*/ T : 1; // Trace enable 1
         };
-        uint16 flags : 4;
+        uint16 flags : 4;  // NZVC
+        uint16 xflags : 5; // XNZVC
     } SR;
 
     // -------------------------------------------------------------------------
@@ -161,6 +162,9 @@ private:
 
     // Sets SR to the specified value and handles privilege mode switching
     void SetSR(uint16 value);
+
+    // Sets the current SSP (based on SR.S) to the specified value
+    void SetSSP(uint32 value);
 
     // Reads from an effective address
     template <mem_primitive T>
@@ -360,6 +364,8 @@ private:
     void Instr_JSR(uint16 instr);
     void Instr_Jmp(uint16 instr);
 
+    void Instr_RTE(uint16 instr);
+    void Instr_RTR(uint16 instr);
     void Instr_RTS(uint16 instr);
 
     void Instr_Reset(uint16 instr);

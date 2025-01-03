@@ -106,6 +106,14 @@ FORCE_INLINE void MC68EC000::SetSR(uint16 value) {
     }
 }
 
+FORCE_INLINE void MC68EC000::SetSSP(uint32 value) {
+    if (SR.S) {
+        regs.SP = value;
+    } else {
+        SP_swap = value;
+    }
+}
+
 FORCE_INLINE void MC68EC000::EnterException(ExceptionVector vector) {
     HandleExceptionCommon(vector, SR.IPM);
 }
@@ -709,6 +717,8 @@ void MC68EC000::Execute() {
     case OpcodeType::JSR: Instr_JSR(instr); break;
     case OpcodeType::Jmp: Instr_Jmp(instr); break;
 
+    case OpcodeType::RTE: Instr_RTE(instr); break;
+    case OpcodeType::RTR: Instr_RTR(instr); break;
     case OpcodeType::RTS: Instr_RTS(instr); break;
 
     case OpcodeType::Reset: Instr_Reset(instr); break;
@@ -1868,6 +1878,27 @@ FORCE_INLINE void MC68EC000::Instr_Jmp(uint16 instr) {
     const uint32 target = CalcEffectiveAddress<false>(M, Xn);
     PC = target;
     FullPrefetch();
+}
+
+FORCE_INLINE void MC68EC000::Instr_RTE(uint16 instr) {
+    PC -= 2;
+    if (CheckPrivilege()) {
+        uint32 SP = regs.SP;
+        SetSR(MemRead<uint16, false>(SP));
+        SP += 2;
+        PC = MemRead<uint32, false>(SP);
+        FullPrefetch();
+        SP += 4;
+        SetSSP(SP);
+    }
+}
+
+FORCE_INLINE void MC68EC000::Instr_RTR(uint16 instr) {
+    SR.xflags = MemRead<uint16, false>(regs.SP);
+    regs.SP += 2;
+    PC = MemRead<uint32, false>(regs.SP);
+    FullPrefetch();
+    regs.SP += 4;
 }
 
 FORCE_INLINE void MC68EC000::Instr_RTS(uint16 instr) {

@@ -106,6 +106,8 @@ enum class OpcodeType : uint8 {
     JSR,  // jsr <ea>
     Jmp,  // jmp <ea>
 
+    RTE, // rte
+    RTR, // rtr
     RTS, // rts
 
     Reset, // reset

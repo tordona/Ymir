@@ -168,10 +168,14 @@ DecodeTable BuildDecodeTable() {
                 opcode = OpcodeType::Noop;
             } else if (instr == 0x4E72) {
                 opcode = OpcodeType::Stop;
+            } else if (instr == 0x4E73) {
+                opcode = OpcodeType::RTE;
             } else if (instr == 0x4E75) {
                 opcode = OpcodeType::RTS;
             } else if (instr == 0x4E76) {
                 opcode = OpcodeType::TrapV;
+            } else if (instr == 0x4E77) {
+                opcode = OpcodeType::RTR;
             } else if (instr == 0x4AFC) {
                 opcode = OpcodeType::Illegal;
             } else if (bit::extract<3, 11>(instr) == 0b100001000) {
