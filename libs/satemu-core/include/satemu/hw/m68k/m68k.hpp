@@ -349,6 +349,7 @@ private:
     void Instr_BTst_I_EA(uint16 instr);
     void Instr_BTst_R_Dn(uint16 instr);
     void Instr_BTst_R_EA(uint16 instr);
+    void Instr_Scc(uint16 instr);
     void Instr_TAS(uint16 instr);
     void Instr_Tst(uint16 instr);
 

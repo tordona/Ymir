@@ -91,6 +91,7 @@ enum class OpcodeType : uint8 {
     BTst_I_EA, // btst.<sz> #<data>, <ea>
     BTst_R_Dn, // btst.<sz> Dn, Dn
     BTst_R_EA, // btst.<sz> Dn, <ea>
+    Scc,       // scc <ea>
     TAS,       // tas <ea>
     Tst,       // tst.<sz> <ea>
 

@@ -223,7 +223,7 @@ DecodeTable BuildDecodeTable() {
             if (bit::extract<3, 7>(instr) == 0b11001) {
                 opcode = OpcodeType::DBcc;
             } else if (bit::extract<6, 7>(instr) == 0b11) {
-                // TODO: Scc
+                opcode = legalIf(OpcodeType::Scc, kValidDataAlterableAddrModes[ea]);
             } else {
                 const uint16 M = bit::extract<3, 5>(instr);
                 const uint16 sz = bit::extract<6, 7>(instr);

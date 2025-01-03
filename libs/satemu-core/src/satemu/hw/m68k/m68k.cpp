@@ -702,6 +702,7 @@ void MC68EC000::Execute() {
     case OpcodeType::BTst_I_EA: Instr_BTst_I_EA(instr); break;
     case OpcodeType::BTst_R_Dn: Instr_BTst_R_Dn(instr); break;
     case OpcodeType::BTst_R_EA: Instr_BTst_R_EA(instr); break;
+    case OpcodeType::Scc: Instr_Scc(instr); break;
     case OpcodeType::TAS: Instr_TAS(instr); break;
     case OpcodeType::Tst: Instr_Tst(instr); break;
 
@@ -1722,6 +1723,15 @@ FORCE_INLINE void MC68EC000::Instr_BTst_R_EA(uint16 instr) {
     SR.Z = !((value >> index) & 1);
 
     PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_Scc(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint32 cond = bit::extract<8, 11>(instr);
+
+    const uint8 value = kCondTable[(cond << 4u) | SR.flags] * 0xFF;
+    ModifyEffectiveAddress<uint8>(M, Xn, [&](uint8) { return value; });
 }
 
 FORCE_INLINE void MC68EC000::Instr_TAS(uint16 instr) {
