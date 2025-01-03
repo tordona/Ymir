@@ -73,8 +73,10 @@ void SH2::Reset(bool hard) {
     DVSR = 0x0;  // undefined initial value
     DVDNT = 0x0; // undefined initial value
     DVCR.u32 = 0x00000000;
-    DVDNTH = 0x0; // undefined initial value
-    DVDNTL = 0x0; // undefined initial value
+    DVDNTH = 0x0;  // undefined initial value
+    DVDNTL = 0x0;  // undefined initial value
+    DVDNTUH = 0x0; // undefined initial value
+    DVDNTUL = 0x0; // undefined initial value
 
     m_NMI = false;
 
@@ -311,8 +313,8 @@ void SH2::MemWrite(uint32 address, T value) {
         break;
     case 0b010: // associative purge
         // TODO: implement
-        /*fmt::println("{}SH2: unhandled {}-bit SH-2 associative purge write to {:08X} = {:X}", (BCR1.MASTER ? "S" : "M"),
-                     sizeof(T) * 8, address, value);*/
+        /*fmt::println("{}SH2: unhandled {}-bit SH-2 associative purge write to {:08X} = {:X}", (BCR1.MASTER ? "S" :
+           "M"), sizeof(T) * 8, address, value);*/
         break;
     case 0b011: { // cache address array
         uint32 entry = (address >> 4u) & 0x3F;
@@ -323,8 +325,8 @@ void SH2::MemWrite(uint32 address, T value) {
     case 0b100:
     case 0b110: // cache data array
         // TODO: implement
-        /*fmt::println("{}SH2: unhandled {}-bit SH-2 cache data array write to {:08X} = {:X}", (BCR1.MASTER ? "S" : "M"),
-                     sizeof(T) * 8, address, value);*/
+        /*fmt::println("{}SH2: unhandled {}-bit SH-2 cache data array write to {:08X} = {:X}", (BCR1.MASTER ? "S" :
+           "M"), sizeof(T) * 8, address, value);*/
         break;
     case 0b111: // I/O area
         if ((address & 0xE0004000) == 0xE0004000) {
@@ -454,6 +456,9 @@ void SH2::DIVUBegin32() {
             // TODO: trigger interrupt
         }
     }
+
+    DVDNTUH = DVDNTH;
+    DVDNTUL = DVDNTL;
 }
 
 void SH2::DIVUBegin64() {
@@ -512,6 +517,9 @@ void SH2::DIVUBegin64() {
         }
         DVDNTH = dividend >> 32ll;
     }
+
+    DVDNTUH = DVDNTH;
+    DVDNTUL = DVDNTL;
 }
 
 template <mem_primitive T>
@@ -602,6 +610,12 @@ T SH2::OnChipRegRead(uint32 address) {
 
     case 0x114:
     case 0x134: return DVDNTL;
+
+    case 0x118:
+    case 0x138: return DVDNTUH;
+
+    case 0x11C:
+    case 0x13C: return DVDNTUL;
 
     case 0x180: return dmaChannels[0].srcAddress;
     case 0x184: return dmaChannels[0].dstAddress;
@@ -735,6 +749,12 @@ void SH2::OnChipRegWrite(uint32 address, T baseValue) {
         DVDNTL = value;
         DIVUBegin64();
         break;
+
+    case 0x118:
+    case 0x138: DVDNTUH = value; break;
+
+    case 0x11C:
+    case 0x13C: DVDNTUL = value; break;
 
     case 0x180: dmaChannels[0].srcAddress = value; break;
     case 0x184: dmaChannels[0].dstAddress = value; break;

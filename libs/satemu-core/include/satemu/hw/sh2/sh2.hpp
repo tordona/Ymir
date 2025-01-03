@@ -182,13 +182,16 @@ private:
 
     // --- DIVU module ---
 
-    RegDVSR DVSR;     // 100  R/W  32       ud        DVSR    Divisor register
-    RegDVDNT DVDNT;   // 104  R/W  32       ud        DVDNT   Dividend register L for 32-bit division
-    RegDVCR DVCR;     // 108  R/W  16,32    00000000  DVCR    Division control register
-    RegVCRDIV VCRDIV; // 10C  R/W  16,32    ud        VCRDIV  Vector number register setting DIV
-    RegDVDNTH DVDNTH; // 110  R/W  32       ud        DVDNTH  Dividend register H
-    RegDVDNTL DVDNTL; // 114  R/W  32       ud        DVDNTL  Dividend register L
-                      // 120..13F are mirrors of 100..11F
+    RegDVSR DVSR;       // 100  R/W  32       ud        DVSR    Divisor register
+    RegDVDNT DVDNT;     // 104  R/W  32       ud        DVDNT   Dividend register L for 32-bit division
+    RegDVCR DVCR;       // 108  R/W  16,32    00000000  DVCR    Division control register
+    RegVCRDIV VCRDIV;   // 10C  R/W  16,32    ud        VCRDIV  Vector number register setting DIV
+    RegDVDNTH DVDNTH;   // 110  R/W  32       ud        DVDNTH  Dividend register H
+    RegDVDNTL DVDNTL;   // 114  R/W  32       ud        DVDNTL  Dividend register L
+    RegDVDNTUH DVDNTUH; // 118  R/W  32       ud        DVDNTUH Undocumented dividend register H
+    RegDVDNTUL DVDNTUL; // 11C  R/W  32       ud        DVDNTUL Undocumented dividend register L
+
+    // 120..13F are mirrors of 100..11F
 
     // Both division calculations take 39 cycles to complete, or 6 if it results in overflow.
     // On overflow, the OVF bit is set and an overflow interrupt is generated if DVCR.OVFIE=1.

@@ -548,6 +548,18 @@ using RegDVDNTH = uint32;
 //   31-0   R/W  -      64-bit dividend number (lower half)
 using RegDVDNTL = uint32;
 
+// 118  R/W  32       ud        DVDNTUH Undocumented dividend register H
+//
+//   bits   r/w  code   description
+//   31-0   R/W  -      64-bit dividend number (upper half)
+using RegDVDNTUH = uint32;
+
+// 11C  R/W  32       ud        DVDNTUL Undocumented dividend register L
+//
+//   bits   r/w  code   description
+//   31-0   R/W  -      64-bit dividend number (lower half)
+using RegDVDNTUL = uint32;
+
 // 120..13F are mirrors of 100..11F
 
 // --- UBC module (channel A) ---
