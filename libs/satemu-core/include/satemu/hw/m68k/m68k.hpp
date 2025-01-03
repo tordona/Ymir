@@ -242,6 +242,8 @@ private:
     void Instr_AddQ_EA(uint16 instr);
     void Instr_AddX_M(uint16 instr);
     void Instr_AddX_R(uint16 instr);
+    void Instr_And_Dn_EA(uint16 instr);
+    void Instr_And_EA_Dn(uint16 instr);
     void Instr_AndI_EA(uint16 instr);
     void Instr_Eor_Dn_EA(uint16 instr);
     void Instr_EorI_EA(uint16 instr);

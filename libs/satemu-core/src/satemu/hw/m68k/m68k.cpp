@@ -741,6 +741,8 @@ void MC68EC000::Execute() {
     case OpcodeType::AddQ_EA: Instr_AddQ_EA(instr); break;
     case OpcodeType::AddX_M: Instr_AddX_M(instr); break;
     case OpcodeType::AddX_R: Instr_AddX_R(instr); break;
+    case OpcodeType::And_Dn_EA: Instr_And_Dn_EA(instr); break;
+    case OpcodeType::And_EA_Dn: Instr_And_EA_Dn(instr); break;
     case OpcodeType::AndI_EA: Instr_AndI_EA(instr); break;
     case OpcodeType::Eor_Dn_EA: Instr_Eor_Dn_EA(instr); break;
     case OpcodeType::EorI_EA: Instr_EorI_EA(instr); break;
@@ -1220,6 +1222,55 @@ FORCE_INLINE void MC68EC000::Instr_AddX_R(uint16 instr) {
         SR.V = IsAddOverflow(op1, op2, result);
         SR.C = SR.X = IsAddCarry(op1, op2, result);
         bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Rx], result);
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_And_Dn_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T op1 = regs.D[Dn];
+        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+            const T result = op2 & op1;
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = SR.C = 0;
+            return result;
+        });
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+FORCE_INLINE void MC68EC000::Instr_And_EA_Dn(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T op1 = ReadEffectiveAddress<T>(M, Xn);
+        const T op2 = regs.D[Dn];
+        const T result = op2 & op1;
+        bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Dn], result);
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = SR.C = 0;
     };
 
     switch (sz) {

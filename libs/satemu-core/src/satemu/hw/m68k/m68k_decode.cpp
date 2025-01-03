@@ -183,8 +183,8 @@ DecodeTable BuildDecodeTable() {
             }
             break;
         }
-        case 0x1:
-        case 0x2:
+        case 0x1: // fallthrough
+        case 0x2: // fallthrough
         case 0x3:
             if (bit::extract<6, 8>(instr) == 0b001) {
                 if ((instr >> 12u) != 0b01) {
@@ -345,7 +345,22 @@ DecodeTable BuildDecodeTable() {
             }
             break;
         }
-        case 0xC: break;
+        case 0xC: {
+            const uint16 ea = bit::extract<0, 5>(instr);
+            if (bit::extract<4, 8>(instr) == 0b10000) {
+                // TODO: ABCD
+            } else if (bit::extract<6, 8>(instr) == 0b011) {
+                // TODO: MULU
+            } else if (bit::extract<6, 8>(instr) == 0b111) {
+                // TODO: MULS
+            } else if (bit::extract<4, 5>(instr) == 0b00 && bit::extract<8>(instr) == 1) {
+                // TODO: EXG
+            } else {
+                const uint16 dir = bit::extract<8>(instr);
+                opcode = legalIf(dir ? OpcodeType::And_Dn_EA : OpcodeType::And_EA_Dn, kValidDataAddrModes[ea]);
+            }
+            break;
+        }
         case 0xD: {
             const uint16 ea = bit::extract<0, 5>(instr);
             if (bit::extract<6, 7>(instr) == 0b11) {
