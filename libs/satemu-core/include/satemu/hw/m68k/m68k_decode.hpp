@@ -79,6 +79,14 @@ enum class OpcodeType : uint8 {
     SubX_M,    // subx.<sz> -(Ay), -(Ax)
     SubX_R,    // subx.<sz> Dy, Dx
 
+    BChg_I_Dn, // bchg.<sz> #<data>, Dn
+    BChg_I_EA, // bchg.<sz> #<data>, <ea>
+    BChg_R_Dn, // bchg.<sz> Dn, Dn
+    BChg_R_EA, // bchg.<sz> Dn, <ea>
+    BClr_I_Dn, // bclr.<sz> #<data>, Dn
+    BClr_I_EA, // bclr.<sz> #<data>, <ea>
+    BClr_R_Dn, // bclr.<sz> Dn, Dn
+    BClr_R_EA, // bclr.<sz> Dn, <ea>
     BSet_I_Dn, // bset.<sz> #<data>, Dn
     BSet_I_EA, // bset.<sz> #<data>, <ea>
     BSet_R_Dn, // bset.<sz> Dn, Dn

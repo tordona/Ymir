@@ -759,6 +759,14 @@ void MC68EC000::Execute() {
     case OpcodeType::SubX_M: Instr_SubX_M(instr); break;
     case OpcodeType::SubX_R: Instr_SubX_R(instr); break;
 
+    case OpcodeType::BChg_I_Dn: Instr_BChg_I_Dn(instr); break;
+    case OpcodeType::BChg_I_EA: Instr_BChg_I_EA(instr); break;
+    case OpcodeType::BChg_R_Dn: Instr_BChg_R_Dn(instr); break;
+    case OpcodeType::BChg_R_EA: Instr_BChg_R_EA(instr); break;
+    case OpcodeType::BClr_I_Dn: Instr_BClr_I_Dn(instr); break;
+    case OpcodeType::BClr_I_EA: Instr_BClr_I_EA(instr); break;
+    case OpcodeType::BClr_R_Dn: Instr_BClr_R_Dn(instr); break;
+    case OpcodeType::BClr_R_EA: Instr_BClr_R_EA(instr); break;
     case OpcodeType::BSet_I_Dn: Instr_BSet_I_Dn(instr); break;
     case OpcodeType::BSet_I_EA: Instr_BSet_I_EA(instr); break;
     case OpcodeType::BSet_R_Dn: Instr_BSet_R_Dn(instr); break;
@@ -1637,6 +1645,106 @@ FORCE_INLINE void MC68EC000::Instr_SubX_R(uint16 instr) {
     }
 
     PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_BChg_I_Dn(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 index = PrefetchNext() & 31;
+
+    const uint32 bit = 1 << index;
+    const uint32 value = regs.D[Dn];
+    SR.Z = (value & bit) == 0;
+    regs.D[Dn] ^= bit;
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_BChg_I_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 index = PrefetchNext() & 7;
+
+    const uint8 bit = 1 << index;
+    ModifyEffectiveAddress<uint8>(M, Xn, [&](uint8 value) {
+        SR.Z = (value & bit) == 0;
+        return value ^ bit;
+    });
+}
+
+FORCE_INLINE void MC68EC000::Instr_BChg_R_Dn(uint16 instr) {
+    const uint16 dstDn = bit::extract<0, 2>(instr);
+    const uint16 srcDn = bit::extract<9, 11>(instr);
+    const uint16 index = regs.D[srcDn] & 31;
+
+    const uint32 bit = 1 << index;
+    const uint32 value = regs.D[dstDn];
+    SR.Z = (value & bit) == 0;
+    regs.D[dstDn] ^= bit;
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_BChg_R_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 srcDn = bit::extract<9, 11>(instr);
+    const uint16 index = regs.D[srcDn] & 7;
+
+    const uint8 bit = 1 << index;
+    ModifyEffectiveAddress<uint8>(M, Xn, [&](uint8 value) {
+        SR.Z = (value & bit) == 0;
+        return value ^ bit;
+    });
+}
+
+FORCE_INLINE void MC68EC000::Instr_BClr_I_Dn(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 index = PrefetchNext() & 31;
+
+    const uint32 bit = 1 << index;
+    const uint32 value = regs.D[Dn];
+    SR.Z = (value & bit) == 0;
+    regs.D[Dn] &= ~bit;
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_BClr_I_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 index = PrefetchNext() & 7;
+
+    const uint8 bit = 1 << index;
+    ModifyEffectiveAddress<uint8>(M, Xn, [&](uint8 value) {
+        SR.Z = (value & bit) == 0;
+        return value & ~bit;
+    });
+}
+
+FORCE_INLINE void MC68EC000::Instr_BClr_R_Dn(uint16 instr) {
+    const uint16 dstDn = bit::extract<0, 2>(instr);
+    const uint16 srcDn = bit::extract<9, 11>(instr);
+    const uint16 index = regs.D[srcDn] & 31;
+
+    const uint32 bit = 1 << index;
+    const uint32 value = regs.D[dstDn];
+    SR.Z = (value & bit) == 0;
+    regs.D[dstDn] &= ~bit;
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_BClr_R_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 srcDn = bit::extract<9, 11>(instr);
+    const uint16 index = regs.D[srcDn] & 7;
+
+    const uint8 bit = 1 << index;
+    ModifyEffectiveAddress<uint8>(M, Xn, [&](uint8 value) {
+        SR.Z = (value & bit) == 0;
+        return value & ~bit;
+    });
 }
 
 FORCE_INLINE void MC68EC000::Instr_BSet_I_Dn(uint16 instr) {

@@ -260,6 +260,14 @@ private:
     void Instr_SubX_M(uint16 instr);
     void Instr_SubX_R(uint16 instr);
 
+    void Instr_BChg_I_Dn(uint16 instr);
+    void Instr_BChg_I_EA(uint16 instr);
+    void Instr_BChg_R_Dn(uint16 instr);
+    void Instr_BChg_R_EA(uint16 instr);
+    void Instr_BClr_I_Dn(uint16 instr);
+    void Instr_BClr_I_EA(uint16 instr);
+    void Instr_BClr_R_Dn(uint16 instr);
+    void Instr_BClr_R_EA(uint16 instr);
     void Instr_BSet_I_Dn(uint16 instr);
     void Instr_BSet_I_EA(uint16 instr);
     void Instr_BSet_R_Dn(uint16 instr);

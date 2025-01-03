@@ -126,6 +126,18 @@ DecodeTable BuildDecodeTable() {
                 } else {
                     opcode = legalIf(OpcodeType::BTst_R_EA, kValidDataAddrModes[ea]);
                 }
+            } else if (bit::extract<6, 8>(instr) == 0b101) {
+                if ((ea >> 3u) == 0b000) {
+                    opcode = OpcodeType::BChg_R_Dn;
+                } else {
+                    opcode = legalIf(OpcodeType::BChg_R_EA, kValidDataAddrModes[ea]);
+                }
+            } else if (bit::extract<6, 8>(instr) == 0b110) {
+                if ((ea >> 3u) == 0b000) {
+                    opcode = OpcodeType::BClr_R_Dn;
+                } else {
+                    opcode = legalIf(OpcodeType::BClr_R_EA, kValidDataAddrModes[ea]);
+                }
             } else if (bit::extract<6, 8>(instr) == 0b111) {
                 if ((ea >> 3u) == 0b000) {
                     opcode = OpcodeType::BSet_R_Dn;
@@ -137,6 +149,18 @@ DecodeTable BuildDecodeTable() {
                     opcode = OpcodeType::BTst_I_Dn;
                 } else {
                     opcode = OpcodeType::BTst_I_EA;
+                }
+            } else if (bit::extract<6, 11>(instr) == 0b100001) {
+                if ((ea >> 3u) == 0b000) {
+                    opcode = OpcodeType::BChg_I_Dn;
+                } else {
+                    opcode = OpcodeType::BChg_I_EA;
+                }
+            } else if (bit::extract<6, 11>(instr) == 0b100010) {
+                if ((ea >> 3u) == 0b000) {
+                    opcode = OpcodeType::BClr_I_Dn;
+                } else {
+                    opcode = OpcodeType::BClr_I_EA;
                 }
             } else if (bit::extract<6, 11>(instr) == 0b100011) {
                 if ((ea >> 3u) == 0b000) {
