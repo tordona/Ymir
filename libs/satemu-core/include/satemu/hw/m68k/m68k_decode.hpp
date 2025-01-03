@@ -48,6 +48,8 @@ enum class OpcodeType : uint8 {
     MoveM_PI_Rs, // movem.<sz> (An)+, <list>
     MoveM_Rs_EA, // movem.<sz> <list>, <ea>
     MoveM_Rs_PD, // movem.<sz> <list>, -(An)
+    MoveP_Ay_Dx, // movep.<sz> (disp,Ay), Dx
+    MoveP_Dx_Ay, // movep.<sz> Dx, (disp,Ay)
     MoveQ,       // moveq #<imm>, Dn
 
     Clr,       // clr.<sz> <ea>

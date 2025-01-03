@@ -119,7 +119,11 @@ DecodeTable BuildDecodeTable() {
             } else if (instr == 0x0A7C) {
                 // TODO: EorI_SR
             } else if (bit::extract<3, 5>(instr) == 0b001 && bit::extract<8>(instr) == 1) {
-                // TODO: MOVEP
+                if (bit::extract<7>(instr)) {
+                    opcode = OpcodeType::MoveP_Dx_Ay;
+                } else {
+                    opcode = OpcodeType::MoveP_Ay_Dx;
+                }
             } else if (bit::extract<6, 8>(instr) == 0b100) {
                 if ((ea >> 3u) == 0b000) {
                     opcode = OpcodeType::BTst_R_Dn;

@@ -229,6 +229,8 @@ private:
     void Instr_MoveM_PI_Rs(uint16 instr);
     void Instr_MoveM_Rs_EA(uint16 instr);
     void Instr_MoveM_Rs_PD(uint16 instr);
+    void Instr_MoveP_Ay_Dx(uint16 instr);
+    void Instr_MoveP_Dx_Ay(uint16 instr);
     void Instr_MoveQ(uint16 instr);
 
     void Instr_Clr(uint16 instr);

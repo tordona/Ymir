@@ -728,6 +728,8 @@ void MC68EC000::Execute() {
     case OpcodeType::MoveM_PI_Rs: Instr_MoveM_PI_Rs(instr); break;
     case OpcodeType::MoveM_Rs_EA: Instr_MoveM_Rs_EA(instr); break;
     case OpcodeType::MoveM_Rs_PD: Instr_MoveM_Rs_PD(instr); break;
+    case OpcodeType::MoveP_Ay_Dx: Instr_MoveP_Ay_Dx(instr); break;
+    case OpcodeType::MoveP_Dx_Ay: Instr_MoveP_Dx_Ay(instr); break;
     case OpcodeType::MoveQ: Instr_MoveQ(instr); break;
 
     case OpcodeType::Clr: Instr_Clr(instr); break;
@@ -997,6 +999,50 @@ FORCE_INLINE void MC68EC000::Instr_MoveM_Rs_PD(uint16 instr) {
             sz ? xfer.template operator()<uint32>(i) : xfer.template operator()<uint16>(i);
         }
     }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_MoveP_Ay_Dx(uint16 instr) {
+    const uint16 Ay = bit::extract<0, 2>(instr);
+    const bool sz = bit::extract<6>(instr);
+    const uint16 Dx = bit::extract<9, 11>(instr);
+
+    const sint16 disp = PrefetchNext();
+    const uint32 baseAddress = regs.A[Ay] + disp;
+
+    auto xfer = [&]<std::integral T>() {
+        T finalValue = 0;
+        for (uint32 i = 0; i < sizeof(T); i++) {
+            const uint32 address = baseAddress + i * sizeof(uint16);
+            const uint8 value = MemRead<uint8, false>(address);
+            finalValue = (finalValue << 8u) | value;
+        }
+        bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Dx], finalValue);
+    };
+
+    sz ? xfer.template operator()<uint32>() : xfer.template operator()<uint16>();
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_MoveP_Dx_Ay(uint16 instr) {
+    const uint16 Ay = bit::extract<0, 2>(instr);
+    const bool sz = bit::extract<6>(instr);
+    const uint16 Dx = bit::extract<9, 11>(instr);
+
+    const sint16 disp = PrefetchNext();
+    const uint32 baseAddress = regs.A[Ay] + disp;
+
+    auto xfer = [&]<std::integral T>() {
+        for (uint32 i = 0; i < sizeof(T); i++) {
+            const uint8 value = regs.D[Dx] >> ((sizeof(T) - 1 - i) * 8u);
+            const uint32 address = baseAddress + i * sizeof(uint16);
+            MemWrite<uint8>(address, value);
+        }
+    };
+
+    sz ? xfer.template operator()<uint32>() : xfer.template operator()<uint16>();
 
     PrefetchTransfer();
 }
