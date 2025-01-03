@@ -324,8 +324,10 @@ DecodeTable BuildDecodeTable() {
         case 0x7: opcode = legalIf(OpcodeType::MoveQ, bit::extract<8>(instr) == 0); break;
         case 0x8: {
             const uint16 ea = bit::extract<0, 5>(instr);
-            if (bit::extract<6, 7>(instr) == 0b11) {
-                // TODO: DIVU, DIVS
+            if (bit::extract<6, 8>(instr) == 0b011) {
+                opcode = legalIf(OpcodeType::DivU, kValidDataAddrModes[ea]);
+            } else if (bit::extract<6, 8>(instr) == 0b111) {
+                opcode = legalIf(OpcodeType::DivS, kValidDataAddrModes[ea]);
             } else if (bit::extract<3, 8>(instr) == 0b100000) {
                 opcode = OpcodeType::SBCD_R;
             } else if (bit::extract<3, 8>(instr) == 0b100001) {
@@ -384,9 +386,9 @@ DecodeTable BuildDecodeTable() {
             } else if (bit::extract<3, 8>(instr) == 0b110001) {
                 opcode = OpcodeType::Exg_Dn_An;
             } else if (bit::extract<6, 8>(instr) == 0b011) {
-                // TODO: MULU
+                opcode = legalIf(OpcodeType::MulU, kValidDataAddrModes[ea]);
             } else if (bit::extract<6, 8>(instr) == 0b111) {
-                // TODO: MULS
+                opcode = legalIf(OpcodeType::MulS, kValidDataAddrModes[ea]);
             } else {
                 const uint16 dir = bit::extract<8>(instr);
                 opcode = legalIf(dir ? OpcodeType::And_Dn_EA : OpcodeType::And_EA_Dn, kValidDataAddrModes[ea]);

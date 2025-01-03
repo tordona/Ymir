@@ -785,6 +785,11 @@ void MC68EC000::Execute() {
     case OpcodeType::SubX_M: Instr_SubX_M(instr); break;
     case OpcodeType::SubX_R: Instr_SubX_R(instr); break;
 
+    case OpcodeType::DivS: Instr_DivS(instr); break;
+    case OpcodeType::DivU: Instr_DivU(instr); break;
+    case OpcodeType::MulS: Instr_MulS(instr); break;
+    case OpcodeType::MulU: Instr_MulU(instr); break;
+
     case OpcodeType::BChg_I_Dn: Instr_BChg_I_Dn(instr); break;
     case OpcodeType::BChg_I_EA: Instr_BChg_I_EA(instr); break;
     case OpcodeType::BChg_R_Dn: Instr_BChg_R_Dn(instr); break;
@@ -2074,6 +2079,118 @@ FORCE_INLINE void MC68EC000::Instr_SubX_R(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_DivS(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    sint32 dividend = regs.D[Dn];
+    sint16 divisor = ReadEffectiveAddress<uint16>(M, Xn);
+
+    if (divisor == 0) {
+        EnterException(ExceptionVector::ZeroDivide);
+        SR.N = 0;
+        SR.Z = 0;
+        SR.V = 0;
+        SR.C = 0;
+        return;
+    }
+
+    SR.Z = 0;
+    SR.C = 0;
+
+    const sint32 quotient = dividend / divisor;
+    const sint32 remainder = dividend % divisor;
+
+    const uint32 udividend = static_cast<uint32>(abs(dividend));
+    const uint32 udivisor = static_cast<uint32>(abs(divisor)) << 16u;
+
+    if (udividend >= udivisor && divisor != -0x8000) {
+        SR.N = 1;
+        SR.V = 1;
+    } else {
+        SR.Z = quotient == 0;
+        SR.V = quotient != static_cast<sint16>(quotient);
+        if (SR.V) {
+            SR.N = 1;
+        } else {
+            regs.D[Dn] = static_cast<uint16>(quotient) | (static_cast<uint16>(remainder) << 16u);
+            SR.N = IsNegative<uint16>(quotient);
+        }
+    }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_DivU(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    uint32 dividend = regs.D[Dn];
+    uint16 divisor = ReadEffectiveAddress<uint16>(M, Xn);
+
+    if (divisor == 0) {
+        EnterException(ExceptionVector::ZeroDivide);
+        SR.N = 0;
+        SR.Z = 0;
+        SR.V = 0;
+        SR.C = 0;
+        return;
+    }
+
+    SR.Z = 0;
+    SR.C = 0;
+
+    const uint32 quotient = dividend / divisor;
+    const uint32 remainder = dividend % divisor;
+
+    SR.Z = quotient == 0;
+    SR.V = quotient != static_cast<uint16>(quotient);
+    if (SR.V) {
+        SR.N = 1;
+    } else {
+        regs.D[Dn] = static_cast<uint16>(quotient) | (static_cast<uint16>(remainder) << 16u);
+        SR.N = IsNegative<uint16>(quotient);
+    }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_MulS(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    const sint16 op1 = ReadEffectiveAddress<uint16>(M, Xn);
+    const sint16 op2 = regs.D[Dn];
+    const sint32 result = static_cast<sint32>(op2) * op1;
+    regs.D[Dn] = result;
+    SR.N = IsNegative(result);
+    SR.Z = result == 0;
+    SR.V = 0;
+    SR.C = 0;
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_MulU(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    const uint16 op1 = ReadEffectiveAddress<uint16>(M, Xn);
+    const uint16 op2 = regs.D[Dn];
+    const uint32 result = static_cast<uint32>(op2) * op1;
+    regs.D[Dn] = result;
+    SR.N = IsNegative(result);
+    SR.Z = result == 0;
+    SR.V = 0;
+    SR.C = 0;
 
     PrefetchTransfer();
 }

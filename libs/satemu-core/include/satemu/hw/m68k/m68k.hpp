@@ -286,6 +286,11 @@ private:
     void Instr_SubX_M(uint16 instr);
     void Instr_SubX_R(uint16 instr);
 
+    void Instr_DivS(uint16 instr);
+    void Instr_DivU(uint16 instr);
+    void Instr_MulS(uint16 instr);
+    void Instr_MulU(uint16 instr);
+
     void Instr_BChg_I_Dn(uint16 instr);
     void Instr_BChg_I_EA(uint16 instr);
     void Instr_BChg_R_Dn(uint16 instr);
