@@ -745,6 +745,12 @@ void MC68EC000::Execute() {
     case OpcodeType::Ext_L: Instr_Ext_L(instr); break;
     case OpcodeType::Swap: Instr_Swap(instr); break;
 
+    case OpcodeType::ABCD_M: Instr_ABCD_M(instr); break;
+    case OpcodeType::ABCD_R: Instr_ABCD_R(instr); break;
+    case OpcodeType::NBCD: Instr_NBCD(instr); break;
+    case OpcodeType::SBCD_M: Instr_SBCD_M(instr); break;
+    case OpcodeType::SBCD_R: Instr_SBCD_R(instr); break;
+
     case OpcodeType::Add_Dn_EA: Instr_Add_Dn_EA(instr); break;
     case OpcodeType::Add_EA_Dn: Instr_Add_EA_Dn(instr); break;
     case OpcodeType::AddA: Instr_AddA(instr); break;
@@ -1200,6 +1206,143 @@ FORCE_INLINE void MC68EC000::Instr_Swap(uint16 instr) {
     SR.N = IsNegative(value);
     SR.Z = value == 0;
     SR.V = SR.C = 0;
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_ABCD_M(uint16 instr) {
+    const uint16 Ay = bit::extract<0, 2>(instr);
+    const uint16 Ax = bit::extract<9, 11>(instr);
+
+    AdvanceAddress<uint8, false>(Ay);
+    const uint8 op1 = MemRead<uint8, false>(regs.A[Ay]);
+    AdvanceAddress<uint8, false>(Ax);
+    const uint8 op2 = MemRead<uint8, false>(regs.A[Ax]);
+
+    // Thanks to raddad772 for the implementation
+
+    const uint16 unadjustedResult = op1 + op2 + SR.X;
+    sint16 result = (op2 & 0xF) + (op1 & 0xF) + SR.X;
+    result += (op2 & 0xF0) + (op1 & 0xF0) + (((9 - result) >> 4) & 6);
+    result += ((0x9F - result) >> 4) & 0x60;
+
+    SR.Z &= (result & 0xFF) == 0;
+    SR.X = SR.C = result > 0xFF;
+    SR.N = IsNegative<uint8>(result);
+    SR.V = IsNegative<uint8>(~unadjustedResult & result);
+
+    PrefetchTransfer();
+
+    MemWrite<uint8>(regs.A[Ax], result);
+}
+
+FORCE_INLINE void MC68EC000::Instr_ABCD_R(uint16 instr) {
+    const uint16 Dy = bit::extract<0, 2>(instr);
+    const uint16 Dx = bit::extract<9, 11>(instr);
+
+    const uint8 op1 = regs.D[Dy];
+    const uint8 op2 = regs.D[Dx];
+
+    // Thanks to raddad772 for the implementation
+
+    const uint16 unadjustedResult = op2 + op1 + SR.X;
+    sint16 result = (op2 & 0xF) + (op1 & 0xF) + SR.X;
+    result += (op2 & 0xF0) + (op1 & 0xF0) + (((9 - result) >> 4) & 6);
+    result += ((0x9F - result) >> 4) & 0x60;
+
+    SR.Z &= (result & 0xFF) == 0;
+    SR.X = SR.C = result > 0xFF;
+    SR.N = IsNegative<uint8>(result);
+    SR.V = IsNegative<uint8>(~unadjustedResult & result);
+
+    bit::deposit_into<0, 7>(regs.D[Dx], result);
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_NBCD(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+
+    ModifyEffectiveAddress<uint8>(M, Xn, [&](uint8 op1) {
+        // Thanks to raddad772/ares for the implementation
+
+        uint16 result = 0 - op1 - SR.X;
+        const bool adjustLo = bit::extract<4>(op1 ^ result);
+        const bool adjustHi = bit::extract<8>(result);
+
+        bool c = false;
+        bool v = false;
+
+        if (adjustLo) {
+            uint16 previous = result;
+            result -= 0x06;
+            c = bit::extract<7>(~previous & result);
+            v |= bit::extract<7>(previous & ~result);
+        }
+        if (adjustHi) {
+            uint16 previous = result;
+            result -= 0x60;
+            c = true;
+            v |= bit::extract<7>(previous & ~result);
+        }
+
+        SR.Z &= (result & 0xFF) == 0;
+        SR.X = SR.C = c;
+        SR.N = IsNegative<uint8>(result);
+        SR.V = v;
+
+        bit::deposit_into<0, 7>(op1, result);
+        return op1;
+    });
+}
+
+FORCE_INLINE void MC68EC000::Instr_SBCD_M(uint16 instr) {
+    const uint16 Ay = bit::extract<0, 2>(instr);
+    const uint16 Ax = bit::extract<9, 11>(instr);
+
+    AdvanceAddress<uint8, false>(Ay);
+    const uint8 op1 = MemRead<uint8, false>(regs.A[Ay]);
+    AdvanceAddress<uint8, false>(Ax);
+    const uint8 op2 = MemRead<uint8, false>(regs.A[Ax]);
+
+    // Thanks to raddad772 for the implementation
+
+    const uint16 unadjustedResult = op2 - op1 - SR.X;
+    const sint16 top = (op2 & 0xF0) - (op1 & 0xF0) - (0x60 & (unadjustedResult >> 4));
+    sint16 result = (op2 & 0xF) - (op1 & 0xF) - SR.X;
+    const sint16 lowAdjustment = 0x06 & (result >> 4);
+    result += top - lowAdjustment;
+    SR.Z &= (result & 0xFF) == 0;
+    SR.X = SR.C = bit::extract<8, 9>(unadjustedResult - lowAdjustment) != 0;
+    SR.N = IsNegative<uint8>(result);
+    SR.V = IsNegative<uint8>(unadjustedResult & ~result);
+
+    PrefetchTransfer();
+
+    MemWrite<uint8>(regs.A[Ax], result);
+}
+
+FORCE_INLINE void MC68EC000::Instr_SBCD_R(uint16 instr) {
+    const uint16 Dy = bit::extract<0, 2>(instr);
+    const uint16 Dx = bit::extract<9, 11>(instr);
+
+    const uint8 op1 = regs.D[Dy];
+    const uint8 op2 = regs.D[Dx];
+
+    // Thanks to raddad772 for the implementation
+
+    const uint16 unadjustedResult = op2 - op1 - SR.X;
+    const sint16 top = (op2 & 0xF0) - (op1 & 0xF0) - (0x60 & (unadjustedResult >> 4));
+    sint16 result = (op2 & 0xF) - (op1 & 0xF) - SR.X;
+    const sint16 lowAdjustment = 0x06 & (result >> 4);
+    result += top - lowAdjustment;
+    SR.Z &= (result & 0xFF) == 0;
+    SR.X = SR.C = bit::extract<8, 9>(unadjustedResult - lowAdjustment) != 0;
+    SR.N = IsNegative<uint8>(result);
+    SR.V = IsNegative<uint8>(unadjustedResult & ~result);
+
+    bit::deposit_into<0, 7>(regs.D[Dx], result);
 
     PrefetchTransfer();
 }

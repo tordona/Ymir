@@ -242,6 +242,8 @@ DecodeTable BuildDecodeTable() {
                 opcode = legalIf(OpcodeType::Move_EA_CCR, kValidDataAddrModes[ea]);
             } else if (bit::extract<6, 11>(instr) == 0b011011) {
                 opcode = legalIf(OpcodeType::Move_EA_SR, kValidDataAddrModes[ea]);
+            } else if (bit::extract<6, 11>(instr) == 0b100000) {
+                opcode = legalIf(OpcodeType::NBCD, kValidDataAlterableAddrModes[ea]);
             } else if (bit::extract<6, 11>(instr) == 0b101011) {
                 opcode = legalIf(OpcodeType::TAS, kValidDataAlterableAddrModes[ea]);
             } else if (bit::extract<6, 11>(instr) == 0b100001) {
@@ -324,8 +326,10 @@ DecodeTable BuildDecodeTable() {
             const uint16 ea = bit::extract<0, 5>(instr);
             if (bit::extract<6, 7>(instr) == 0b11) {
                 // TODO: DIVU, DIVS
-            } else if (bit::extract<4, 8>(instr) == 0b10000) {
-                // TODO: SBCD
+            } else if (bit::extract<3, 8>(instr) == 0b100000) {
+                opcode = OpcodeType::SBCD_R;
+            } else if (bit::extract<3, 8>(instr) == 0b100001) {
+                opcode = OpcodeType::SBCD_M;
             } else {
                 const uint16 dir = bit::extract<8>(instr);
                 opcode = legalIf(dir ? OpcodeType::Or_Dn_EA : OpcodeType::Or_EA_Dn, kValidDataAddrModes[ea]);
@@ -369,14 +373,16 @@ DecodeTable BuildDecodeTable() {
         }
         case 0xC: {
             const uint16 ea = bit::extract<0, 5>(instr);
-            if (bit::extract<3, 8>(instr) == 0b101000) {
+            if (bit::extract<3, 8>(instr) == 0b100000) {
+                opcode = OpcodeType::ABCD_R;
+            } else if (bit::extract<3, 8>(instr) == 0b100001) {
+                opcode = OpcodeType::ABCD_M;
+            } else if (bit::extract<3, 8>(instr) == 0b101000) {
                 opcode = OpcodeType::Exg_Dn_Dn;
             } else if (bit::extract<3, 8>(instr) == 0b101001) {
                 opcode = OpcodeType::Exg_An_An;
             } else if (bit::extract<3, 8>(instr) == 0b110001) {
                 opcode = OpcodeType::Exg_Dn_An;
-            } else if (bit::extract<4, 8>(instr) == 0b10000) {
-                // TODO: ABCD
             } else if (bit::extract<6, 8>(instr) == 0b011) {
                 // TODO: MULU
             } else if (bit::extract<6, 8>(instr) == 0b111) {

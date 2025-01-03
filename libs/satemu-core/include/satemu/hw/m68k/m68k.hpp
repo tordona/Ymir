@@ -246,6 +246,12 @@ private:
     void Instr_Ext_L(uint16 instr);
     void Instr_Swap(uint16 instr);
 
+    void Instr_ABCD_M(uint16 instr);
+    void Instr_ABCD_R(uint16 instr);
+    void Instr_NBCD(uint16 instr);
+    void Instr_SBCD_M(uint16 instr);
+    void Instr_SBCD_R(uint16 instr);
+
     void Instr_Add_Dn_EA(uint16 instr);
     void Instr_Add_EA_Dn(uint16 instr);
     void Instr_AddA(uint16 instr);
