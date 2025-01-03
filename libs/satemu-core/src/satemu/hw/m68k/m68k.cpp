@@ -602,6 +602,7 @@ FORCE_INLINE static bool IsSubOverflow(T op1, T op2, T result) {
     static constexpr T shift = sizeof(T) * 8 - 1;
     return ((op1 ^ op2) & (result ^ op2)) >> shift;
 }
+
 template <std::integral T>
 static constexpr auto kShiftTable = [] {
     std::array<T, 65> table{};
@@ -742,6 +743,7 @@ void MC68EC000::Execute() {
     case OpcodeType::AddX_R: Instr_AddX_R(instr); break;
     case OpcodeType::AndI_EA: Instr_AndI_EA(instr); break;
     case OpcodeType::Eor_Dn_EA: Instr_Eor_Dn_EA(instr); break;
+    case OpcodeType::EorI_EA: Instr_EorI_EA(instr); break;
     case OpcodeType::Neg: Instr_Neg(instr); break;
     case OpcodeType::NegX: Instr_NegX(instr); break;
     case OpcodeType::Not: Instr_Not(instr); break;
@@ -2333,6 +2335,7 @@ FORCE_INLINE void MC68EC000::Instr_ROXR_R(uint16 instr) {
 
     PrefetchTransfer();
 }
+
 FORCE_INLINE void MC68EC000::Instr_Cmp(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
@@ -2615,14 +2618,10 @@ FORCE_INLINE void MC68EC000::Instr_DBcc(uint16 instr) {
         regs.D[Dn] = (regs.D[Dn] & 0xFFFF0000) | value;
         if (value != 0xFFFFu) {
             PC = currPC + disp;
-            FullPrefetch();
-            return;
         }
-    } else {
-        PrefetchNext();
     }
 
-    PrefetchTransfer();
+    FullPrefetch();
 }
 
 FORCE_INLINE void MC68EC000::Instr_JSR(uint16 instr) {
