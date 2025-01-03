@@ -569,43 +569,38 @@ FORCE_INLINE uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
     util::unreachable();
 }
 
-template <std::integral T, bool sub, bool setX, bool andZ>
-FORCE_INLINE void MC68EC000::SetArithFlags(T op1, T op2, T result) {
-    static constexpr T shift = sizeof(T) * 8 - 1;
-    SR.N = result >> shift;
-    if constexpr (andZ) {
-        SR.Z &= result == 0;
-    } else {
-        SR.Z = result == 0;
-    }
-    if constexpr (sub) {
-        SR.V = ((op1 ^ op2) & (result ^ op2)) >> shift;
-        SR.C = ((op1 & result) | (~op2 & (op1 | result))) >> shift;
-    } else {
-        SR.V = ((op1 ^ result) & (op2 ^ result)) >> shift;
-        SR.C = ((op1 & op2) | (~result & (op1 | op2))) >> shift;
-    }
-    if constexpr (setX) {
-        SR.X = SR.C;
-    }
+// Determines if the value is negative
+template <std::integral T>
+FORCE_INLINE static bool IsNegative(T value) {
+    return static_cast<std::make_signed_t<T>>(value) < 0;
 }
 
+// Determines if op2+op1 results in a carry
 template <std::integral T>
-FORCE_INLINE void MC68EC000::SetLogicFlags(T result) {
+FORCE_INLINE static bool IsAddCarry(T op1, T op2, T result) {
     static constexpr T shift = sizeof(T) * 8 - 1;
-    SR.N = result >> shift;
-    SR.Z = result == 0;
-    SR.V = 0;
-    SR.C = 0;
+    return ((op1 & op2) | (~result & (op1 | op2))) >> shift;
 }
 
+// Determines if op2-op1 results in a borrow
 template <std::integral T>
-FORCE_INLINE void MC68EC000::SetShiftFlags(T result, bool carry) {
+FORCE_INLINE static bool IsSubCarry(T op1, T op2, T result) {
     static constexpr T shift = sizeof(T) * 8 - 1;
-    SR.N = result >> shift;
-    SR.Z = result == 0;
-    SR.V = 0;
-    SR.C = SR.X = carry;
+    return ((op1 & result) | (~op2 & (op1 | result))) >> shift;
+}
+
+// Determines if op2+op1 results in an overflow
+template <std::integral T>
+FORCE_INLINE static bool IsAddOverflow(T op1, T op2, T result) {
+    static constexpr T shift = sizeof(T) * 8 - 1;
+    return ((op1 ^ result) & (op2 ^ result)) >> shift;
+}
+
+// Determines if op2-op1 results in an overflow
+template <std::integral T>
+FORCE_INLINE static bool IsSubOverflow(T op1, T op2, T result) {
+    static constexpr T shift = sizeof(T) * 8 - 1;
+    return ((op1 ^ op2) & (result ^ op2)) >> shift;
 }
 
 template <std::integral T, bool increment>
@@ -758,7 +753,9 @@ FORCE_INLINE void MC68EC000::Instr_Move_EA_EA(uint16 instr) {
 
     auto move = [&]<mem_primitive T>() {
         const T value = MoveEffectiveAddress<T>(srcM, srcXn, dstM, dstXn);
-        SetLogicFlags(value);
+        SR.N = IsNegative(value);
+        SR.Z = value == 0;
+        SR.V = SR.C = 0;
     };
 
     // Note the swapped bit order between word and longword moves
@@ -894,7 +891,9 @@ FORCE_INLINE void MC68EC000::Instr_MoveQ(uint16 instr) {
     const sint32 value = static_cast<sint8>(bit::extract<0, 7>(instr));
     const uint32 reg = bit::extract<9, 11>(instr);
     regs.D[reg] = value;
-    SetLogicFlags(value);
+    SR.N = IsNegative(value);
+    SR.Z = value == 0;
+    SR.V = SR.C = 0;
 
     PrefetchTransfer();
 }
@@ -923,7 +922,9 @@ FORCE_INLINE void MC68EC000::Instr_Swap(uint16 instr) {
     const uint32 reg = bit::extract<0, 3>(instr);
     const uint32 value = (regs.D[reg] >> 16u) | (regs.D[reg] << 16u);
     regs.D[reg] = value;
-    SetLogicFlags(value);
+    SR.N = IsNegative(value);
+    SR.Z = value == 0;
+    SR.V = SR.C = 0;
 
     PrefetchTransfer();
 }
@@ -938,7 +939,10 @@ FORCE_INLINE void MC68EC000::Instr_Add_Dn_EA(uint16 instr) {
         const T op1 = regs.D[Dn];
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 + op1;
-            SetAdditionFlags(op1, op2, result);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = IsAddOverflow(op1, op2, result);
+            SR.C = SR.X = IsAddCarry(op1, op2, result);
             return result;
         });
     };
@@ -961,7 +965,10 @@ FORCE_INLINE void MC68EC000::Instr_Add_EA_Dn(uint16 instr) {
         const T op2 = regs.D[Dn];
         const T result = op2 + op1;
         bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
-        SetAdditionFlags(op1, op2, result);
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = IsAddOverflow(op1, op2, result);
+        SR.C = SR.X = IsAddCarry(op1, op2, result);
     };
 
     switch (sz) {
@@ -1000,7 +1007,11 @@ FORCE_INLINE void MC68EC000::Instr_AddI(uint16 instr) {
         }
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 + op1;
-            SetAdditionFlags(op1, op2, result);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = IsAddOverflow(op1, op2, result);
+            SR.C = SR.X = IsAddCarry(op1, op2, result);
+
             return result;
         });
     };
@@ -1041,7 +1052,11 @@ FORCE_INLINE void MC68EC000::Instr_AddQ_EA(uint16 instr) {
         const T op1 = data == 0 ? 8 : data;
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 + op1;
-            SetAdditionFlags(op1, op2, result);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = IsAddOverflow(op1, op2, result);
+            SR.C = SR.X = IsAddCarry(op1, op2, result);
+
             return result;
         });
     };
@@ -1064,7 +1079,10 @@ FORCE_INLINE void MC68EC000::Instr_AddX_M(uint16 instr) {
         AdvanceAddress<T, false>(Rx);
         const T op2 = MemReadDesc<T, false>(regs.A[Rx]);
         const T result = op2 + op1 + SR.X;
-        SetExtendedAdditionFlags(op1, op2, result);
+        SR.N = IsNegative(result);
+        SR.Z &= result == 0;
+        SR.V = IsAddOverflow(op1, op2, result);
+        SR.C = SR.X = IsAddCarry(op1, op2, result);
 
         if constexpr (std::is_same_v<T, uint32>) {
             MemWrite<uint16>(regs.A[Rx] + 2, result >> 0u);
@@ -1092,7 +1110,10 @@ FORCE_INLINE void MC68EC000::Instr_AddX_R(uint16 instr) {
         const T op1 = regs.D[Ry];
         const T op2 = regs.D[Rx];
         const T result = op2 + op1 + SR.X;
-        SetExtendedAdditionFlags(op1, op2, result);
+        SR.N = IsNegative(result);
+        SR.Z &= result == 0;
+        SR.V = IsAddOverflow(op1, op2, result);
+        SR.C = SR.X = IsAddCarry(op1, op2, result);
         bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Rx], result);
     };
 
@@ -1117,7 +1138,9 @@ FORCE_INLINE void MC68EC000::Instr_AndI_EA(uint16 instr) {
         }
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 & op1;
-            SetLogicFlags(result);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = SR.C = 0;
             return result;
         });
     };
@@ -1139,7 +1162,9 @@ FORCE_INLINE void MC68EC000::Instr_Eor_Dn_EA(uint16 instr) {
         const T op1 = regs.D[Dn];
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 ^ op1;
-            SetLogicFlags(result);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = SR.C = 0;
             return result;
         });
     };
@@ -1163,7 +1188,9 @@ FORCE_INLINE void MC68EC000::Instr_EorI_EA(uint16 instr) {
         }
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 ^ op1;
-            SetLogicFlags(result);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = SR.C = 0;
             return result;
         });
     };
@@ -1183,7 +1210,8 @@ FORCE_INLINE void MC68EC000::Instr_Neg(uint16 instr) {
     auto op = [&]<std::integral T>() {
         ModifyEffectiveAddress<T>(M, Xn, [&](T value) {
             const T result = 0 - value;
-            SetLogicFlags(result);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
             SR.V = static_cast<std::make_signed_t<T>>(value & result) < 0;
             SR.C = SR.X = ~SR.Z;
             return result;
@@ -1228,7 +1256,9 @@ FORCE_INLINE void MC68EC000::Instr_Not(uint16 instr) {
     auto op = [&]<std::integral T>() {
         ModifyEffectiveAddress<T>(M, Xn, [&](T value) {
             const T result = ~value;
-            SetLogicFlags(result);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = SR.C = 0;
             return result;
         });
     };
@@ -1250,7 +1280,9 @@ FORCE_INLINE void MC68EC000::Instr_Or_Dn_EA(uint16 instr) {
         const T op1 = regs.D[Dn];
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 | op1;
-            SetLogicFlags(result);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = SR.C = 0;
             return result;
         });
     };
@@ -1273,52 +1305,9 @@ FORCE_INLINE void MC68EC000::Instr_Or_EA_Dn(uint16 instr) {
         const T op2 = regs.D[Dn];
         const T result = op2 | op1;
         bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Dn], result);
-        SetLogicFlags(result);
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
-
-    PrefetchTransfer();
-}
-
-FORCE_INLINE void MC68EC000::Instr_Sub_Dn_EA(uint16 instr) {
-    const uint16 Xn = bit::extract<0, 2>(instr);
-    const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
-    const uint16 Dn = bit::extract<9, 11>(instr);
-
-    auto op = [&]<std::integral T>() {
-        const T op1 = regs.D[Dn];
-        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
-            const T result = op2 - op1;
-            SetSubtractionFlags(op1, op2, result);
-            return result;
-        });
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
-}
-
-FORCE_INLINE void MC68EC000::Instr_Sub_EA_Dn(uint16 instr) {
-    const uint16 Xn = bit::extract<0, 2>(instr);
-    const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
-    const uint16 Dn = bit::extract<9, 11>(instr);
-
-    auto op = [&]<std::integral T>() {
-        const T op1 = ReadEffectiveAddress<T>(M, Xn);
-        const T op2 = regs.D[Dn];
-        const T result = op2 - op1;
-        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
-        SetSubtractionFlags(op1, op2, result);
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = SR.C = 0;
     };
 
     switch (sz) {
@@ -1342,7 +1331,9 @@ FORCE_INLINE void MC68EC000::Instr_OrI_EA(uint16 instr) {
         }
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 | op1;
-            SetLogicFlags(result);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = SR.C = 0;
             return result;
         });
     };
@@ -1352,6 +1343,57 @@ FORCE_INLINE void MC68EC000::Instr_OrI_EA(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
+}
+
+FORCE_INLINE void MC68EC000::Instr_Sub_Dn_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T op1 = regs.D[Dn];
+        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+            const T result = op2 - op1;
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = IsSubOverflow(op1, op2, result);
+            SR.C = SR.X = IsSubCarry(op1, op2, result);
+            return result;
+        });
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+FORCE_INLINE void MC68EC000::Instr_Sub_EA_Dn(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    auto op = [&]<std::integral T>() {
+        const T op1 = ReadEffectiveAddress<T>(M, Xn);
+        const T op2 = regs.D[Dn];
+        const T result = op2 - op1;
+        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = IsSubOverflow(op1, op2, result);
+        SR.C = SR.X = IsSubCarry(op1, op2, result);
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
 }
 
 FORCE_INLINE void MC68EC000::Instr_SubA(uint16 instr) {
@@ -1381,7 +1423,11 @@ FORCE_INLINE void MC68EC000::Instr_SubI(uint16 instr) {
         }
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 - op1;
-            SetSubtractionFlags(op1, op2, result);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = IsSubOverflow(op1, op2, result);
+            SR.C = SR.X = IsSubCarry(op1, op2, result);
+
             return result;
         });
     };
@@ -1422,7 +1468,11 @@ FORCE_INLINE void MC68EC000::Instr_SubQ_EA(uint16 instr) {
         const T op1 = data == 0 ? 8 : data;
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 - op1;
-            SetSubtractionFlags(op1, op2, result);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = IsSubOverflow(op1, op2, result);
+            SR.C = SR.X = IsSubCarry(op1, op2, result);
+
             return result;
         });
     };
@@ -1445,7 +1495,10 @@ FORCE_INLINE void MC68EC000::Instr_SubX_M(uint16 instr) {
         AdvanceAddress<T, false>(Rx);
         const T op2 = MemReadDesc<T, false>(regs.A[Rx]);
         const T result = op2 - op1 - SR.X;
-        SetExtendedSubtractionFlags(op1, op2, result);
+        SR.N = IsNegative(result);
+        SR.Z &= result == 0;
+        SR.V = IsSubOverflow(op1, op2, result);
+        SR.C = SR.X = IsSubCarry(op1, op2, result);
 
         if constexpr (std::is_same_v<T, uint32>) {
             MemWrite<uint16>(regs.A[Rx] + 2, result >> 0u);
@@ -1473,7 +1526,10 @@ FORCE_INLINE void MC68EC000::Instr_SubX_R(uint16 instr) {
         const T op1 = regs.D[Ry];
         const T op2 = regs.D[Rx];
         const T result = op2 - op1 - SR.X;
-        SetExtendedSubtractionFlags(op1, op2, result);
+        SR.N = IsNegative(result);
+        SR.Z &= result == 0;
+        SR.V = IsSubOverflow(op1, op2, result);
+        SR.C = SR.X = IsSubCarry(op1, op2, result);
         bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Rx], result);
     };
 
@@ -1500,13 +1556,20 @@ FORCE_INLINE void MC68EC000::Instr_LSL_I(uint16 instr) {
             const T result = 0;
             const bool carry = value & 1;
             bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
-            SetShiftFlags(result, carry);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = 0;
+            SR.C = SR.X = carry;
+
         } else {
             const T value = regs.D[Dn];
             const T result = value << shift;
             const bool carry = (value >> (sizeof(T) * 8 - shift)) & 1;
             bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
-            SetShiftFlags(result, carry);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = 0;
+            SR.C = SR.X = carry;
         }
     };
 
@@ -1526,7 +1589,11 @@ FORCE_INLINE void MC68EC000::Instr_LSL_M(uint16 instr) {
     ModifyEffectiveAddress<uint16>(M, Xn, [&](uint16 value) {
         const uint16 result = value << 1u;
         const bool carry = value >> 15u;
-        SetShiftFlags(result, carry);
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = 0;
+        SR.C = SR.X = carry;
+
         return result;
     });
 }
@@ -1556,10 +1623,14 @@ FORCE_INLINE void MC68EC000::Instr_LSL_R(uint16 instr) {
         }
         bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
         if (shift != 0) {
-            SetShiftFlags(result, carry);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = 0;
+            SR.C = SR.X = carry;
         } else {
-            SetLogicFlags(result);
-            SR.C = false;
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = SR.C = 0;
         }
     };
 
@@ -1586,13 +1657,20 @@ FORCE_INLINE void MC68EC000::Instr_LSR_I(uint16 instr) {
             const T result = 0;
             const bool carry = value >> 7;
             bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
-            SetShiftFlags(result, carry);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = 0;
+            SR.C = SR.X = carry;
+
         } else {
             const T value = regs.D[Dn];
             const T result = value >> shift;
             const bool carry = (value >> (shift - 1)) & 1;
             bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
-            SetShiftFlags(result, carry);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = 0;
+            SR.C = SR.X = carry;
         }
     };
 
@@ -1612,7 +1690,11 @@ FORCE_INLINE void MC68EC000::Instr_LSR_M(uint16 instr) {
     ModifyEffectiveAddress<uint16>(M, Xn, [&](uint16 value) {
         const uint16 result = value >> 1u;
         const bool carry = value & 1u;
-        SetShiftFlags(result, carry);
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = 0;
+        SR.C = SR.X = carry;
+
         return result;
     });
 }
@@ -1642,10 +1724,14 @@ FORCE_INLINE void MC68EC000::Instr_LSR_R(uint16 instr) {
         }
         bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
         if (shift != 0) {
-            SetShiftFlags(result, carry);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = 0;
+            SR.C = SR.X = carry;
         } else {
-            SetLogicFlags(result);
-            SR.C = false;
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = SR.C = 0;
         }
     };
 
@@ -1668,7 +1754,10 @@ FORCE_INLINE void MC68EC000::Instr_Cmp(uint16 instr) {
         const T op1 = ReadEffectiveAddress<T>(M, Xn);
         const T op2 = regs.D[Dn];
         const T result = op2 - op1;
-        SetCompareFlags(op1, op2, result);
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = IsSubOverflow(op1, op2, result);
+        SR.C = IsSubCarry(op1, op2, result);
     };
 
     switch (sz) {
@@ -1690,7 +1779,10 @@ FORCE_INLINE void MC68EC000::Instr_CmpA(uint16 instr) {
         const uint32 op1 = static_cast<std::make_signed_t<T>>(ReadEffectiveAddress<T>(M, Xn));
         const uint32 op2 = regs.A[An];
         const uint32 result = op2 - op1;
-        SetCompareFlags(op1, op2, result);
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = IsSubOverflow(op1, op2, result);
+        SR.C = IsSubCarry(op1, op2, result);
     };
 
     if (sz) {
@@ -1714,7 +1806,10 @@ FORCE_INLINE void MC68EC000::Instr_CmpI(uint16 instr) {
         }
         const T op2 = ReadEffectiveAddress<T>(M, Xn);
         const T result = op2 - op1;
-        SetCompareFlags(op1, op2, result);
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = IsSubOverflow(op1, op2, result);
+        SR.C = IsSubCarry(op1, op2, result);
     };
 
     switch (sz) {
@@ -1737,7 +1832,10 @@ FORCE_INLINE void MC68EC000::Instr_CmpM(uint16 instr) {
         const T op2 = MemRead<T, false>(regs.A[Ax]);
         AdvanceAddress<T, true>(Ax);
         const T result = op2 - op1;
-        SetCompareFlags(op1, op2, result);
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = IsSubOverflow(op1, op2, result);
+        SR.C = IsSubCarry(op1, op2, result);
     };
 
     switch (sz) {
@@ -1808,7 +1906,9 @@ FORCE_INLINE void MC68EC000::Instr_TAS(uint16 instr) {
 
     // NOTE: this should be indivisible
     ModifyEffectiveAddress<uint8, false>(M, Xn, [&](uint8 value) {
-        SetLogicFlags(value);
+        SR.N = IsNegative(value);
+        SR.Z = value == 0;
+        SR.V = SR.C = 0;
         return value | 0x80;
     });
 
@@ -1822,7 +1922,9 @@ FORCE_INLINE void MC68EC000::Instr_Tst(uint16 instr) {
 
     auto op = [&]<std::integral T>() {
         const T value = ReadEffectiveAddress<T>(M, Xn);
-        SetLogicFlags(value);
+        SR.N = IsNegative(value);
+        SR.Z = value == 0;
+        SR.V = SR.C = 0;
     };
 
     switch (sz) {
