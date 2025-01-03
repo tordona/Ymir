@@ -54,6 +54,8 @@ enum class OpcodeType : uint8 {
     Exg_An_An, // exg Ax, Ay
     Exg_Dn_An, // exg Dx, Ay
     Exg_Dn_Dn, // exg Dx, Dy
+    Ext_W,     // ext.w Dn
+    Ext_L,     // ext.l Dn
     Swap,      // swap Dn
 
     Add_Dn_EA, // add.<sz> Dn, <ea>

@@ -216,6 +216,10 @@ DecodeTable BuildDecodeTable() {
                 opcode = OpcodeType::Illegal;
             } else if (bit::extract<3, 11>(instr) == 0b100001000) {
                 opcode = OpcodeType::Swap;
+            } else if (bit::extract<3, 11>(instr) == 0b100010000) {
+                opcode = OpcodeType::Ext_W;
+            } else if (bit::extract<3, 11>(instr) == 0b100011000) {
+                opcode = OpcodeType::Ext_L;
             } else if (bit::extract<3, 11>(instr) == 0b111001010) {
                 opcode = OpcodeType::Link;
             } else if (bit::extract<3, 11>(instr) == 0b111001011) {

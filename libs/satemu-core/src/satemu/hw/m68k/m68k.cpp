@@ -734,6 +734,8 @@ void MC68EC000::Execute() {
     case OpcodeType::Exg_An_An: Instr_Exg_An_An(instr); break;
     case OpcodeType::Exg_Dn_An: Instr_Exg_Dn_An(instr); break;
     case OpcodeType::Exg_Dn_Dn: Instr_Exg_Dn_Dn(instr); break;
+    case OpcodeType::Ext_W: Instr_Ext_W(instr); break;
+    case OpcodeType::Ext_L: Instr_Ext_L(instr); break;
     case OpcodeType::Swap: Instr_Swap(instr); break;
 
     case OpcodeType::Add_Dn_EA: Instr_Add_Dn_EA(instr); break;
@@ -1053,6 +1055,32 @@ FORCE_INLINE void MC68EC000::Instr_Exg_Dn_Dn(uint16 instr) {
     const uint32 Rx = bit::extract<9, 11>(instr);
 
     std::swap(regs.D[Rx], regs.D[Ry]);
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_Ext_W(uint16 instr) {
+    const uint32 Dn = bit::extract<0, 2>(instr);
+
+    const sint8 value = regs.D[Dn];
+    bit::deposit_into<0, 15>(regs.D[Dn], value);
+    SR.N = value < 0;
+    SR.Z = value == 0;
+    SR.V = 0;
+    SR.C = 0;
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_Ext_L(uint16 instr) {
+    const uint32 Dn = bit::extract<0, 2>(instr);
+
+    const sint16 value = regs.D[Dn];
+    regs.D[Dn] = value;
+    SR.N = value < 0;
+    SR.Z = value == 0;
+    SR.V = 0;
+    SR.C = 0;
 
     PrefetchTransfer();
 }

@@ -235,6 +235,8 @@ private:
     void Instr_Exg_An_An(uint16 instr);
     void Instr_Exg_Dn_An(uint16 instr);
     void Instr_Exg_Dn_Dn(uint16 instr);
+    void Instr_Ext_W(uint16 instr);
+    void Instr_Ext_L(uint16 instr);
     void Instr_Swap(uint16 instr);
 
     void Instr_Add_Dn_EA(uint16 instr);
