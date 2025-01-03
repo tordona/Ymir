@@ -675,6 +675,9 @@ void MC68EC000::Execute() {
     case OpcodeType::AddX_R: Instr_AddX_R(instr); break;
     case OpcodeType::AndI_EA: Instr_AndI_EA(instr); break;
     case OpcodeType::Eor_Dn_EA: Instr_Eor_Dn_EA(instr); break;
+    case OpcodeType::Neg: Instr_Neg(instr); break;
+    case OpcodeType::NegX: Instr_NegX(instr); break;
+    case OpcodeType::Not: Instr_Not(instr); break;
     case OpcodeType::Or_Dn_EA: Instr_Or_Dn_EA(instr); break;
     case OpcodeType::Or_EA_Dn: Instr_Or_EA_Dn(instr); break;
     case OpcodeType::OrI_EA: Instr_OrI_EA(instr); break;
@@ -1160,6 +1163,71 @@ FORCE_INLINE void MC68EC000::Instr_EorI_EA(uint16 instr) {
         }
         ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
             const T result = op2 ^ op1;
+            SetLogicFlags(result);
+            return result;
+        });
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+FORCE_INLINE void MC68EC000::Instr_Neg(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+
+    auto op = [&]<std::integral T>() {
+        ModifyEffectiveAddress<T>(M, Xn, [&](T value) {
+            const T result = 0 - value;
+            SetLogicFlags(result);
+            SR.V = static_cast<std::make_signed_t<T>>(value & result) < 0;
+            SR.C = SR.X = ~SR.Z;
+            return result;
+        });
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+FORCE_INLINE void MC68EC000::Instr_NegX(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+
+    auto op = [&]<std::integral T>() {
+        ModifyEffectiveAddress<T>(M, Xn, [&](T value) {
+            const T result = 0 - value - SR.X;
+            SR.N = result >> (sizeof(T) * 8 - 1);
+            SR.Z &= result == 0;
+            SR.V = static_cast<std::make_signed_t<T>>(value & result) < 0;
+            SR.X = SR.C = (value | result) >> (sizeof(T) * 8 - 1);
+            return result;
+        });
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+FORCE_INLINE void MC68EC000::Instr_Not(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+
+    auto op = [&]<std::integral T>() {
+        ModifyEffectiveAddress<T>(M, Xn, [&](T value) {
+            const T result = ~value;
             SetLogicFlags(result);
             return result;
         });
