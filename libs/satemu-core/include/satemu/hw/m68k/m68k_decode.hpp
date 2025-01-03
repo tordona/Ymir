@@ -42,7 +42,12 @@ inline constexpr auto kCondTable = [] {
 
 enum class OpcodeType : uint8 {
     Move_EA_EA,  // move.<sz> <ea_src>, <ea_dst>
+    Move_EA_CCR, // move.w <ea>, CCR
     Move_EA_SR,  // move.w <ea>, SR
+    Move_CCR_EA, // move.w CCR, <ea>
+    Move_SR_EA,  // move.w SR, <ea>
+    Move_An_USP, // move An, USP
+    Move_USP_An, // move USP, An
     MoveA,       // movea.<sz> <ea>, An
     MoveM_EA_Rs, // movem.<sz> <ea>, <list>
     MoveM_PI_Rs, // movem.<sz> (An)+, <list>
@@ -71,14 +76,20 @@ enum class OpcodeType : uint8 {
     And_Dn_EA, // and.<sz> Dn, <ea>
     And_EA_Dn, // and.<sz> <ea>, Dn
     AndI_EA,   // andi.<sz> #<data>, <ea>
+    AndI_CCR,  // andi.w #<data>, CCR
+    AndI_SR,   // andi.w #<data>, SR
     Eor_Dn_EA, // eor.<sz> Dn, <ea>
     EorI_EA,   // eori.<sz> #<data>, <ea>
+    EorI_CCR,  // eori.w #<data>, CCR
+    EorI_SR,   // eori.w #<data>, SR
     Neg,       // neg.<sz> <ea>
     NegX,      // negx.<sz> <ea>
     Not,       // not.<sz> <ea>
     Or_Dn_EA,  // or.<sz> Dn, <ea>
     Or_EA_Dn,  // or.<sz> <ea>, Dn
     OrI_EA,    // ori.<sz> #<data>, <ea>
+    OrI_CCR,   // ori.w #<data>, CCR
+    OrI_SR,    // ori.w #<data>, SR
     Sub_Dn_EA, // sub.<sz> Dn, <ea>
     Sub_EA_Dn, // sub.<sz> <ea>, Dn
     SubA,      // suba.<sz> <ea>, An

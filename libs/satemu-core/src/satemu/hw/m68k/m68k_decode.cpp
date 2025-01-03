@@ -107,17 +107,17 @@ DecodeTable BuildDecodeTable() {
             const uint16 ea = bit::extract<0, 5>(instr);
             const uint16 sz = bit::extract<6, 7>(instr);
             if (instr == 0x003C) {
-                // TODO: OrI_CCR
+                opcode = OpcodeType::OrI_CCR;
             } else if (instr == 0x007C) {
-                // TODO: OrI_SR
+                opcode = OpcodeType::OrI_SR;
             } else if (instr == 0x023C) {
-                // TODO: AndI_CCR
+                opcode = OpcodeType::AndI_CCR;
             } else if (instr == 0x027C) {
-                // TODO: AndI_SR
+                opcode = OpcodeType::AndI_SR;
             } else if (instr == 0x0A3C) {
-                // TODO: EorI_CCR
+                opcode = OpcodeType::EorI_CCR;
             } else if (instr == 0x0A7C) {
-                // TODO: EorI_SR
+                opcode = OpcodeType::EorI_SR;
             } else if (bit::extract<3, 5>(instr) == 0b001 && bit::extract<8>(instr) == 1) {
                 if (bit::extract<7>(instr)) {
                     opcode = OpcodeType::MoveP_Dx_Ay;
@@ -228,8 +228,18 @@ DecodeTable BuildDecodeTable() {
                 opcode = OpcodeType::Link;
             } else if (bit::extract<3, 11>(instr) == 0b111001011) {
                 opcode = OpcodeType::Unlink;
+            } else if (bit::extract<3, 11>(instr) == 0b111001100) {
+                opcode = OpcodeType::Move_An_USP;
+            } else if (bit::extract<3, 11>(instr) == 0b111001101) {
+                opcode = OpcodeType::Move_USP_An;
             } else if (bit::extract<4, 11>(instr) == 0b11100100) {
                 opcode = OpcodeType::Trap;
+            } else if (bit::extract<6, 11>(instr) == 0b000011) {
+                opcode = legalIf(OpcodeType::Move_SR_EA, kValidDataAlterableAddrModes[ea]);
+            } else if (bit::extract<6, 11>(instr) == 0b001011) {
+                opcode = legalIf(OpcodeType::Move_CCR_EA, kValidDataAlterableAddrModes[ea]);
+            } else if (bit::extract<6, 11>(instr) == 0b010011) {
+                opcode = legalIf(OpcodeType::Move_EA_CCR, kValidDataAddrModes[ea]);
             } else if (bit::extract<6, 11>(instr) == 0b011011) {
                 opcode = legalIf(OpcodeType::Move_EA_SR, kValidDataAddrModes[ea]);
             } else if (bit::extract<6, 11>(instr) == 0b101011) {

@@ -722,7 +722,12 @@ void MC68EC000::Execute() {
     const OpcodeType type = g_decodeTable.opcodeTypes[instr];
     switch (type) {
     case OpcodeType::Move_EA_EA: Instr_Move_EA_EA(instr); break;
+    case OpcodeType::Move_EA_CCR: Instr_Move_EA_CCR(instr); break;
     case OpcodeType::Move_EA_SR: Instr_Move_EA_SR(instr); break;
+    case OpcodeType::Move_CCR_EA: Instr_Move_CCR_EA(instr); break;
+    case OpcodeType::Move_SR_EA: Instr_Move_SR_EA(instr); break;
+    case OpcodeType::Move_An_USP: Instr_Move_An_USP(instr); break;
+    case OpcodeType::Move_USP_An: Instr_Move_USP_An(instr); break;
     case OpcodeType::MoveA: Instr_MoveA(instr); break;
     case OpcodeType::MoveM_EA_Rs: Instr_MoveM_EA_Rs(instr); break;
     case OpcodeType::MoveM_PI_Rs: Instr_MoveM_PI_Rs(instr); break;
@@ -751,14 +756,20 @@ void MC68EC000::Execute() {
     case OpcodeType::And_Dn_EA: Instr_And_Dn_EA(instr); break;
     case OpcodeType::And_EA_Dn: Instr_And_EA_Dn(instr); break;
     case OpcodeType::AndI_EA: Instr_AndI_EA(instr); break;
+    case OpcodeType::AndI_CCR: Instr_AndI_CCR(instr); break;
+    case OpcodeType::AndI_SR: Instr_AndI_SR(instr); break;
     case OpcodeType::Eor_Dn_EA: Instr_Eor_Dn_EA(instr); break;
     case OpcodeType::EorI_EA: Instr_EorI_EA(instr); break;
+    case OpcodeType::EorI_CCR: Instr_EorI_CCR(instr); break;
+    case OpcodeType::EorI_SR: Instr_EorI_SR(instr); break;
     case OpcodeType::Neg: Instr_Neg(instr); break;
     case OpcodeType::NegX: Instr_NegX(instr); break;
     case OpcodeType::Not: Instr_Not(instr); break;
     case OpcodeType::Or_Dn_EA: Instr_Or_Dn_EA(instr); break;
     case OpcodeType::Or_EA_Dn: Instr_Or_EA_Dn(instr); break;
     case OpcodeType::OrI_EA: Instr_OrI_EA(instr); break;
+    case OpcodeType::OrI_CCR: Instr_OrI_CCR(instr); break;
+    case OpcodeType::OrI_SR: Instr_OrI_SR(instr); break;
     case OpcodeType::Sub_Dn_EA: Instr_Sub_Dn_EA(instr); break;
     case OpcodeType::Sub_EA_Dn: Instr_Sub_EA_Dn(instr); break;
     case OpcodeType::SubA: Instr_SubA(instr); break;
@@ -882,11 +893,62 @@ FORCE_INLINE void MC68EC000::Instr_Move_EA_EA(uint16 instr) {
     }
 }
 
+FORCE_INLINE void MC68EC000::Instr_Move_EA_CCR(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 value = ReadEffectiveAddress<uint16>(M, Xn);
+    SR.xflags = value;
+
+    PC -= 2;
+    FullPrefetch();
+}
+
 FORCE_INLINE void MC68EC000::Instr_Move_EA_SR(uint16 instr) {
+    PC -= 2;
     if (CheckPrivilege()) {
+        PC += 2;
         const uint16 Xn = bit::extract<0, 2>(instr);
         const uint16 M = bit::extract<3, 5>(instr);
-        SetSR(ReadEffectiveAddress<uint16>(M, Xn) & 0xF71F);
+        const uint16 value = ReadEffectiveAddress<uint16>(M, Xn);
+        SetSR(value);
+
+        PC -= 2;
+        FullPrefetch();
+    }
+}
+
+FORCE_INLINE void MC68EC000::Instr_Move_CCR_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 value = SR.xflags;
+    WriteEffectiveAddress<uint16>(M, Xn, value);
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_Move_SR_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    ModifyEffectiveAddress<uint16>(M, Xn, [&](uint16) { return SR.u16; });
+}
+
+FORCE_INLINE void MC68EC000::Instr_Move_An_USP(uint16 instr) {
+    PC -= 2;
+    if (CheckPrivilege()) {
+        PC += 2;
+        const uint16 An = bit::extract<0, 2>(instr);
+        SP_swap = regs.A[An];
+
+        PrefetchTransfer();
+    }
+}
+
+FORCE_INLINE void MC68EC000::Instr_Move_USP_An(uint16 instr) {
+    PC -= 2;
+    if (CheckPrivilege()) {
+        PC += 2;
+        const uint16 An = bit::extract<0, 2>(instr);
+        regs.A[An] = SP_swap;
 
         PrefetchTransfer();
     }
@@ -1414,6 +1476,29 @@ FORCE_INLINE void MC68EC000::Instr_AndI_EA(uint16 instr) {
     }
 }
 
+FORCE_INLINE void MC68EC000::Instr_AndI_CCR(uint16 instr) {
+    const uint8 value = PrefetchNext();
+    SR.xflags &= value;
+
+    PC -= 2;
+    PrefetchNext();
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_AndI_SR(uint16 instr) {
+    PC -= 2;
+    if (CheckPrivilege()) {
+        PC += 2;
+        const uint16 value = PrefetchNext();
+        const uint16 newSR = SR.u16 & value;
+        PC -= 2;
+        SetSR(newSR);
+
+        PrefetchNext();
+        PrefetchTransfer();
+    }
+}
+
 FORCE_INLINE void MC68EC000::Instr_Eor_Dn_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
@@ -1461,6 +1546,29 @@ FORCE_INLINE void MC68EC000::Instr_EorI_EA(uint16 instr) {
     case 0b00: op.template operator()<uint8>(); break;
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+FORCE_INLINE void MC68EC000::Instr_EorI_CCR(uint16 instr) {
+    const uint8 value = PrefetchNext();
+    SR.xflags ^= value;
+
+    PC -= 2;
+    PrefetchNext();
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_EorI_SR(uint16 instr) {
+    PC -= 2;
+    if (CheckPrivilege()) {
+        PC += 2;
+        const uint16 value = PrefetchNext();
+        const uint16 newSR = SR.u16 ^ value;
+        PC -= 2;
+        SetSR(newSR);
+
+        PrefetchNext();
+        PrefetchTransfer();
     }
 }
 
@@ -1604,6 +1712,29 @@ FORCE_INLINE void MC68EC000::Instr_OrI_EA(uint16 instr) {
     case 0b00: op.template operator()<uint8>(); break;
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
+    }
+}
+
+FORCE_INLINE void MC68EC000::Instr_OrI_CCR(uint16 instr) {
+    const uint8 value = PrefetchNext();
+    SR.xflags |= value;
+
+    PC -= 2;
+    PrefetchNext();
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_OrI_SR(uint16 instr) {
+    PC -= 2;
+    if (CheckPrivilege()) {
+        PC += 2;
+        const uint16 value = PrefetchNext();
+        const uint16 newSR = SR.u16 | value;
+        PC -= 2;
+        SetSR(newSR);
+
+        PrefetchNext();
+        PrefetchTransfer();
     }
 }
 

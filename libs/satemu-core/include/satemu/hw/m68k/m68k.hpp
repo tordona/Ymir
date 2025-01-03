@@ -223,7 +223,12 @@ private:
     // Instruction interpreters
 
     void Instr_Move_EA_EA(uint16 instr);
+    void Instr_Move_EA_CCR(uint16 instr);
     void Instr_Move_EA_SR(uint16 instr);
+    void Instr_Move_CCR_EA(uint16 instr);
+    void Instr_Move_SR_EA(uint16 instr);
+    void Instr_Move_An_USP(uint16 instr);
+    void Instr_Move_USP_An(uint16 instr);
     void Instr_MoveA(uint16 instr);
     void Instr_MoveM_EA_Rs(uint16 instr);
     void Instr_MoveM_PI_Rs(uint16 instr);
@@ -252,14 +257,20 @@ private:
     void Instr_And_Dn_EA(uint16 instr);
     void Instr_And_EA_Dn(uint16 instr);
     void Instr_AndI_EA(uint16 instr);
+    void Instr_AndI_CCR(uint16 instr);
+    void Instr_AndI_SR(uint16 instr);
     void Instr_Eor_Dn_EA(uint16 instr);
     void Instr_EorI_EA(uint16 instr);
+    void Instr_EorI_CCR(uint16 instr);
+    void Instr_EorI_SR(uint16 instr);
     void Instr_Neg(uint16 instr);
     void Instr_NegX(uint16 instr);
     void Instr_Not(uint16 instr);
     void Instr_Or_Dn_EA(uint16 instr);
     void Instr_Or_EA_Dn(uint16 instr);
     void Instr_OrI_EA(uint16 instr);
+    void Instr_OrI_CCR(uint16 instr);
+    void Instr_OrI_SR(uint16 instr);
     void Instr_Sub_Dn_EA(uint16 instr);
     void Instr_Sub_EA_Dn(uint16 instr);
     void Instr_SubA(uint16 instr);
