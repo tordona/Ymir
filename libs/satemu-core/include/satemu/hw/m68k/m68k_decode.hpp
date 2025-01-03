@@ -79,12 +79,30 @@ enum class OpcodeType : uint8 {
     SubX_M,    // subx.<sz> -(Ay), -(Ax)
     SubX_R,    // subx.<sz> Dy, Dx
 
-    LSL_I, // lsl.<sz> #<data>, <ea>
-    LSL_M, // lsl.<sz> <ea>
-    LSL_R, // lsl.<sz> Dn, <ea>
-    LSR_I, // lsr.<sz> #<data>, <ea>
-    LSR_M, // lsr.<sz> <ea>
-    LSR_R, // lsr.<sz> Dn, <ea>
+    ASL_I,  // asl.<sz> #<data>, <ea>
+    ASL_M,  // asl.<sz> <ea>
+    ASL_R,  // asl.<sz> Dn, <ea>
+    ASR_I,  // asr.<sz> #<data>, <ea>
+    ASR_M,  // asr.<sz> <ea>
+    ASR_R,  // asr.<sz> Dn, <ea>
+    LSL_I,  // lsl.<sz> #<data>, <ea>
+    LSL_M,  // lsl.<sz> <ea>
+    LSL_R,  // lsl.<sz> Dn, <ea>
+    LSR_I,  // lsr.<sz> #<data>, <ea>
+    LSR_M,  // lsr.<sz> <ea>
+    LSR_R,  // lsr.<sz> Dn, <ea>
+    ROL_I,  // rol.<sz> #<data>, <ea>
+    ROL_M,  // rol.<sz> <ea>
+    ROL_R,  // rol.<sz> Dn, <ea>
+    ROR_I,  // ror.<sz> #<data>, <ea>
+    ROR_M,  // ror.<sz> <ea>
+    ROR_R,  // ror.<sz> Dn, <ea>
+    ROXL_I, // roxl.<sz> #<data>, <ea>
+    ROXL_M, // roxl.<sz> <ea>
+    ROXL_R, // roxl.<sz> Dn, <ea>
+    ROXR_I, // roxr.<sz> #<data>, <ea>
+    ROXR_M, // roxr.<sz> <ea>
+    ROXR_R, // roxr.<sz> Dn, <ea>
 
     Cmp,       // cmp.<sz> <ea>, An
     CmpA,      // cmpa <ea>, An

@@ -332,21 +332,36 @@ DecodeTable BuildDecodeTable() {
             break;
         }
         case 0xE:
-            if (bit::extract<6, 7>(instr) == 0b11) {
+            if (bit::extract<6, 7>(instr) == 0b11 && bit::extract<11>(instr) == 0) {
                 const uint16 ea = bit::extract<0, 5>(instr);
                 const bool dir = bit::extract<8>(instr);
-                opcode = legalIf(dir ? OpcodeType::LSL_M : OpcodeType::LSR_M, kValidMemoryAlterableAddrModes[ea]);
+                switch (bit::extract<9, 10>(instr)) {
+                case 0b00: opcode = dir ? OpcodeType::ASL_M : OpcodeType::ASR_M; break;
+                case 0b01: opcode = dir ? OpcodeType::LSL_M : OpcodeType::LSR_M; break;
+                case 0b10: opcode = dir ? OpcodeType::ROXL_M : OpcodeType::ROXR_M; break;
+                case 0b11: opcode = dir ? OpcodeType::ROL_M : OpcodeType::ROR_M; break;
+                }
+                opcode = legalIf(opcode, kValidMemoryAlterableAddrModes[ea]);
             } else {
                 const bool reg = bit::extract<5>(instr);
                 const bool dir = bit::extract<8>(instr);
                 switch (bit::extract<3, 4>(instr)) {
-                case 0b00: /* TODO: ASL/ASR */ break;
+                case 0b00:
+                    opcode = reg ? (dir ? OpcodeType::ASL_R : OpcodeType::ASR_R)
+                                 : (dir ? OpcodeType::ASL_I : OpcodeType::ASR_I);
+                    break;
                 case 0b01:
                     opcode = reg ? (dir ? OpcodeType::LSL_R : OpcodeType::LSR_R)
                                  : (dir ? OpcodeType::LSL_I : OpcodeType::LSR_I);
                     break;
-                case 0b10: /* TODO: ROXL/ROXR */ break;
-                case 0b11: /* TODO: ROL/ROR */ break;
+                case 0b10:
+                    opcode = reg ? (dir ? OpcodeType::ROXL_R : OpcodeType::ROXR_R)
+                                 : (dir ? OpcodeType::ROXL_I : OpcodeType::ROXR_I);
+                    break;
+                case 0b11:
+                    opcode = reg ? (dir ? OpcodeType::ROL_R : OpcodeType::ROR_R)
+                                 : (dir ? OpcodeType::ROL_I : OpcodeType::ROR_I);
+                    break;
                 }
             }
             break;

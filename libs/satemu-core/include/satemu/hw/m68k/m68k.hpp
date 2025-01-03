@@ -260,12 +260,30 @@ private:
     void Instr_SubX_M(uint16 instr);
     void Instr_SubX_R(uint16 instr);
 
+    void Instr_ASL_I(uint16 instr);
+    void Instr_ASL_M(uint16 instr);
+    void Instr_ASL_R(uint16 instr);
+    void Instr_ASR_I(uint16 instr);
+    void Instr_ASR_M(uint16 instr);
+    void Instr_ASR_R(uint16 instr);
     void Instr_LSL_I(uint16 instr);
     void Instr_LSL_M(uint16 instr);
     void Instr_LSL_R(uint16 instr);
     void Instr_LSR_I(uint16 instr);
     void Instr_LSR_M(uint16 instr);
     void Instr_LSR_R(uint16 instr);
+    void Instr_ROL_I(uint16 instr);
+    void Instr_ROL_M(uint16 instr);
+    void Instr_ROL_R(uint16 instr);
+    void Instr_ROR_I(uint16 instr);
+    void Instr_ROR_M(uint16 instr);
+    void Instr_ROR_R(uint16 instr);
+    void Instr_ROXL_I(uint16 instr);
+    void Instr_ROXL_M(uint16 instr);
+    void Instr_ROXL_R(uint16 instr);
+    void Instr_ROXR_I(uint16 instr);
+    void Instr_ROXR_M(uint16 instr);
+    void Instr_ROXR_R(uint16 instr);
 
     void Instr_Cmp(uint16 instr);
     void Instr_CmpA(uint16 instr);

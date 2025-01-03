@@ -602,6 +602,31 @@ FORCE_INLINE static bool IsSubOverflow(T op1, T op2, T result) {
     static constexpr T shift = sizeof(T) * 8 - 1;
     return ((op1 ^ op2) & (result ^ op2)) >> shift;
 }
+template <std::integral T>
+static constexpr auto kShiftTable = [] {
+    std::array<T, 65> table{};
+    for (T i = 0; i < 65; i++) {
+        if (i == 0) {
+            table[i] = 0;
+        } else if (i < sizeof(T) * 8) {
+            table[i] = ~static_cast<T>(0) << (sizeof(T) * 8 - i);
+        } else {
+            table[i] = ~static_cast<T>(0);
+        }
+    }
+    return table;
+}();
+
+// Determines if a left shift causes the most significant bit of the value to change
+template <std::integral T>
+FORCE_INLINE static bool IsLeftShiftOverflow(T value, T shift) {
+    if (shift < sizeof(T) * 8) {
+        value &= kShiftTable<T>[shift + 1];
+        return value != 0 && value != kShiftTable<T>[shift + 1];
+    } else {
+        return value != 0;
+    }
+}
 
 template <std::integral T, bool increment>
 FORCE_INLINE void MC68EC000::AdvanceAddress(uint32 An) {
@@ -615,6 +640,53 @@ FORCE_INLINE void MC68EC000::AdvanceAddress(uint32 An) {
     } else {
         regs.A[An] -= amount;
     }
+}
+
+// -----------------------------------------------------------------------------
+// Helper functions for rotates through X flag
+
+template <typename T>
+struct ROXOut {
+    T value;
+    bool X;
+};
+
+template <std::integral T>
+FORCE_INLINE T shl(T val, T shift) {
+    if (shift < sizeof(T) * 8) {
+        return val << shift;
+    } else {
+        return 0;
+    }
+}
+
+template <std::integral T>
+FORCE_INLINE T shr(T val, T shift) {
+    if (shift < sizeof(T) * 8) {
+        return val >> shift;
+    } else {
+        return 0;
+    }
+}
+
+template <typename T>
+FORCE_INLINE ROXOut<T> roxl(T val, T shift, bool X) {
+    constexpr auto numBits = sizeof(T) * 8 + 1u;
+    shift %= numBits;
+    return {
+        .value = static_cast<T>(shl<T>(val, shift) | shr<T>(val, numBits - shift) | shl<T>(X, shift - 1u)),
+        .X = (shift == 0) ? X : static_cast<bool>(shr<T>(val, numBits - shift - 1u) & 1),
+    };
+}
+
+template <typename T>
+FORCE_INLINE ROXOut<T> roxr(T val, T shift, bool X) {
+    constexpr auto numBits = sizeof(T) * 8 + 1u;
+    shift %= numBits;
+    return {
+        .value = static_cast<T>(shr<T>(val, shift) | shl<T>(val, numBits - shift) | shl<T>(X, numBits - shift - 1u)),
+        .X = (shift == 0) ? X : static_cast<bool>(shr<T>(val, shift - 1u) & 1),
+    };
 }
 
 // -----------------------------------------------------------------------------
@@ -685,12 +757,30 @@ void MC68EC000::Execute() {
     case OpcodeType::SubX_M: Instr_SubX_M(instr); break;
     case OpcodeType::SubX_R: Instr_SubX_R(instr); break;
 
+    case OpcodeType::ASL_I: Instr_ASL_I(instr); break;
+    case OpcodeType::ASL_M: Instr_ASL_M(instr); break;
+    case OpcodeType::ASL_R: Instr_ASL_R(instr); break;
+    case OpcodeType::ASR_I: Instr_ASR_I(instr); break;
+    case OpcodeType::ASR_M: Instr_ASR_M(instr); break;
+    case OpcodeType::ASR_R: Instr_ASR_R(instr); break;
     case OpcodeType::LSL_I: Instr_LSL_I(instr); break;
     case OpcodeType::LSL_M: Instr_LSL_M(instr); break;
     case OpcodeType::LSL_R: Instr_LSL_R(instr); break;
     case OpcodeType::LSR_I: Instr_LSR_I(instr); break;
     case OpcodeType::LSR_M: Instr_LSR_M(instr); break;
     case OpcodeType::LSR_R: Instr_LSR_R(instr); break;
+    case OpcodeType::ROL_I: Instr_ROL_I(instr); break;
+    case OpcodeType::ROL_M: Instr_ROL_M(instr); break;
+    case OpcodeType::ROL_R: Instr_ROL_R(instr); break;
+    case OpcodeType::ROR_I: Instr_ROR_I(instr); break;
+    case OpcodeType::ROR_M: Instr_ROR_M(instr); break;
+    case OpcodeType::ROR_R: Instr_ROR_R(instr); break;
+    case OpcodeType::ROXL_I: Instr_ROXL_I(instr); break;
+    case OpcodeType::ROXL_M: Instr_ROXL_M(instr); break;
+    case OpcodeType::ROXL_R: Instr_ROXL_R(instr); break;
+    case OpcodeType::ROXR_I: Instr_ROXR_I(instr); break;
+    case OpcodeType::ROXR_M: Instr_ROXR_M(instr); break;
+    case OpcodeType::ROXR_R: Instr_ROXR_R(instr); break;
 
     case OpcodeType::Cmp: Instr_Cmp(instr); break;
     case OpcodeType::CmpA: Instr_CmpA(instr); break;
@@ -1542,6 +1632,206 @@ FORCE_INLINE void MC68EC000::Instr_SubX_R(uint16 instr) {
     PrefetchTransfer();
 }
 
+FORCE_INLINE void MC68EC000::Instr_ASL_I(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    uint32 shift = bit::extract<9, 11>(instr);
+    if (shift == 0) {
+        shift = 8;
+    }
+
+    auto op = [&]<std::integral T>() {
+        if (sizeof(T) == sizeof(uint8) && shift == 8) {
+            const T value = regs.D[Dn];
+            const T result = 0;
+            const bool carry = value & 1;
+            bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = IsLeftShiftOverflow<T>(value, shift);
+            SR.C = SR.X = carry;
+        } else {
+            const T value = regs.D[Dn];
+            const T result = value << shift;
+            const bool carry = (value >> (sizeof(T) * 8 - shift)) & 1;
+            bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = IsLeftShiftOverflow<T>(value, shift);
+            SR.C = SR.X = carry;
+        }
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_ASL_M(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+
+    ModifyEffectiveAddress<uint16>(M, Xn, [&](uint16 value) {
+        const uint16 result = value << 1u;
+        const bool carry = value >> 15u;
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = IsLeftShiftOverflow<uint16>(value, 1u);
+        SR.C = SR.X = carry;
+        return result;
+    });
+}
+
+FORCE_INLINE void MC68EC000::Instr_ASL_R(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 shiftReg = bit::extract<9, 11>(instr);
+    const uint32 shift = regs.D[shiftReg] & 63;
+
+    auto op = [&]<std::integral T>() {
+        const T value = regs.D[Dn];
+        T result;
+        bool carry;
+        if (shift > sizeof(T) * 8) {
+            result = 0;
+            carry = false;
+        } else if (shift == sizeof(T) * 8) {
+            result = 0;
+            carry = value & 1;
+        } else if (shift != 0) {
+            result = value << shift;
+            carry = (value >> (sizeof(T) * 8 - shift)) & 1;
+        } else {
+            result = value;
+            carry = false;
+        }
+        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+        if (shift != 0) {
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = IsLeftShiftOverflow<T>(value, shift);
+            SR.C = SR.X = carry;
+        } else {
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = SR.C = 0;
+        }
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_ASR_I(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    uint32 shift = bit::extract<9, 11>(instr);
+    if (shift == 0) {
+        shift = 8;
+    }
+
+    auto op = [&]<std::integral T>() {
+        using ST = std::make_signed_t<T>;
+
+        if (sizeof(T) == sizeof(uint8) && shift == 8) {
+            const ST value = regs.D[Dn];
+            const ST result = value >> 7;
+            const bool carry = value >> 7;
+            bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = 0;
+            SR.C = SR.X = carry;
+        } else {
+            const ST value = regs.D[Dn];
+            const ST result = value >> shift;
+            const bool carry = (value >> (shift - 1)) & 1;
+            bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = 0;
+            SR.C = SR.X = carry;
+        }
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_ASR_M(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+
+    ModifyEffectiveAddress<uint16>(M, Xn, [&](uint16 value) {
+        const uint16 result = static_cast<sint16>(value) >> 1u;
+        const bool carry = value & 1u;
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = 0;
+        SR.C = SR.X = carry;
+
+        return result;
+    });
+}
+
+FORCE_INLINE void MC68EC000::Instr_ASR_R(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 shiftReg = bit::extract<9, 11>(instr);
+    const uint32 shift = regs.D[shiftReg] & 63;
+
+    auto op = [&]<std::integral T>() {
+        using ST = std::make_signed_t<T>;
+
+        const ST value = regs.D[Dn];
+        ST result;
+        bool carry;
+        if (shift >= sizeof(T) * 8) {
+            result = value >> (sizeof(T) * 8 - 1);
+            carry = value >> (sizeof(T) * 8 - 1);
+        } else if (shift != 0) {
+            result = value >> shift;
+            carry = (value >> (shift - 1)) & 1;
+        } else {
+            result = value;
+            carry = false;
+        }
+        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+        if (shift != 0) {
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = 0;
+            SR.C = SR.X = carry;
+        } else {
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = SR.C = 0;
+        }
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
+}
+
 FORCE_INLINE void MC68EC000::Instr_LSL_I(uint16 instr) {
     const uint16 Dn = bit::extract<0, 2>(instr);
     const uint16 sz = bit::extract<6, 7>(instr);
@@ -1744,6 +2034,305 @@ FORCE_INLINE void MC68EC000::Instr_LSR_R(uint16 instr) {
     PrefetchTransfer();
 }
 
+FORCE_INLINE void MC68EC000::Instr_ROL_I(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    uint32 shift = bit::extract<9, 11>(instr);
+    if (shift == 0) {
+        shift = 8;
+    }
+
+    auto op = [&]<std::integral T>() {
+        const T value = regs.D[Dn];
+        const T result = std::rotl(value, shift);
+        const bool carry = result & 1;
+        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = 0;
+        SR.C = carry;
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_ROL_M(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+
+    ModifyEffectiveAddress<uint16>(M, Xn, [&](uint16 value) {
+        const uint16 result = std::rotl(value, 1u);
+        const bool carry = result & 1;
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = 0;
+        SR.C = carry;
+
+        return result;
+    });
+}
+
+FORCE_INLINE void MC68EC000::Instr_ROL_R(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 shiftReg = bit::extract<9, 11>(instr);
+    const uint32 shift = regs.D[shiftReg] & 63;
+
+    auto op = [&]<std::integral T>() {
+        const T value = regs.D[Dn];
+        const T result = std::rotl(value, shift);
+        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+        if (shift != 0) {
+            const bool carry = result & 1;
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = 0;
+            SR.C = carry;
+        } else {
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = SR.C = 0;
+        }
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_ROR_I(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    uint32 shift = bit::extract<9, 11>(instr);
+    if (shift == 0) {
+        shift = 8;
+    }
+
+    auto op = [&]<std::integral T>() {
+        const T value = regs.D[Dn];
+        const T result = std::rotr(value, shift);
+        const bool carry = result >> (sizeof(T) * 8 - 1);
+        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = 0;
+        SR.C = carry;
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_ROR_M(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+
+    ModifyEffectiveAddress<uint16>(M, Xn, [&](uint16 value) {
+        const uint16 result = std::rotr(value, 1u);
+        const bool carry = result >> 15;
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = 0;
+        SR.C = carry;
+
+        return result;
+    });
+}
+
+FORCE_INLINE void MC68EC000::Instr_ROR_R(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 shiftReg = bit::extract<9, 11>(instr);
+    const uint32 shift = regs.D[shiftReg] & 63;
+
+    auto op = [&]<std::integral T>() {
+        const T value = regs.D[Dn];
+        const T result = std::rotr(value, shift);
+        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+        if (shift != 0) {
+            const bool carry = result >> (sizeof(T) * 8 - 1);
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = 0;
+            SR.C = carry;
+        } else {
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = SR.C = 0;
+        }
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_ROXL_I(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    uint32 shift = bit::extract<9, 11>(instr);
+    if (shift == 0) {
+        shift = 8;
+    }
+
+    auto op = [&]<std::integral T>() {
+        const T value = regs.D[Dn];
+        auto [result, carry] = roxl<T>(value, shift, SR.X);
+        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = 0;
+        SR.C = SR.X = carry;
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_ROXL_M(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+
+    ModifyEffectiveAddress<uint16>(M, Xn, [&](uint16 value) {
+        auto [result, carry] = roxl<uint16>(value, 1u, SR.X);
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = 0;
+        SR.C = SR.X = carry;
+
+        return result;
+    });
+}
+
+FORCE_INLINE void MC68EC000::Instr_ROXL_R(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 shiftReg = bit::extract<9, 11>(instr);
+    const uint32 shift = regs.D[shiftReg] & 63;
+
+    auto op = [&]<std::integral T>() {
+        const T value = regs.D[Dn];
+        auto [result, carry] = roxl<T>(value, shift, SR.X);
+        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+        if (shift != 0) {
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = 0;
+            SR.C = SR.X = carry;
+        } else {
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = 0;
+            SR.C = SR.X;
+        }
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_ROXR_I(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    uint32 shift = bit::extract<9, 11>(instr);
+    if (shift == 0) {
+        shift = 8;
+    }
+
+    auto op = [&]<std::integral T>() {
+        const T value = regs.D[Dn];
+        auto [result, carry] = roxr<T>(value, shift, SR.X);
+        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = 0;
+        SR.C = SR.X = carry;
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
+}
+
+FORCE_INLINE void MC68EC000::Instr_ROXR_M(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+
+    ModifyEffectiveAddress<uint16>(M, Xn, [&](uint16 value) {
+        auto [result, carry] = roxr<uint16>(value, 1u, SR.X);
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = 0;
+        SR.C = SR.X = carry;
+
+        return result;
+    });
+}
+
+FORCE_INLINE void MC68EC000::Instr_ROXR_R(uint16 instr) {
+    const uint16 Dn = bit::extract<0, 2>(instr);
+    const uint16 sz = bit::extract<6, 7>(instr);
+    const uint16 shiftReg = bit::extract<9, 11>(instr);
+    const uint32 shift = regs.D[shiftReg] & 63;
+
+    auto op = [&]<std::integral T>() {
+        const T value = regs.D[Dn];
+        auto [result, carry] = roxr<T>(value, shift, SR.X);
+        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+        if (shift != 0) {
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = 0;
+            SR.C = SR.X = carry;
+        } else {
+            SR.N = IsNegative(result);
+            SR.Z = result == 0;
+            SR.V = 0;
+            SR.C = SR.X;
+        }
+    };
+
+    switch (sz) {
+    case 0b00: op.template operator()<uint8>(); break;
+    case 0b01: op.template operator()<uint16>(); break;
+    case 0b10: op.template operator()<uint32>(); break;
+    }
+
+    PrefetchTransfer();
+}
 FORCE_INLINE void MC68EC000::Instr_Cmp(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
