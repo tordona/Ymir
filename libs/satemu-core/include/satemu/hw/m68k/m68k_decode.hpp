@@ -132,6 +132,7 @@ enum class OpcodeType : uint8 {
     Tst,  // tst.<sz> <ea>
 
     LEA, // lea <ea>, An
+    PEA, // pea <ea>
 
     Link,   // link An, #<disp>
     Unlink, // unlk An

@@ -313,6 +313,7 @@ private:
     void Instr_Tst(uint16 instr);
 
     void Instr_LEA(uint16 instr);
+    void Instr_PEA(uint16 instr);
 
     void Instr_Link(uint16 instr);
     void Instr_Unlink(uint16 instr);

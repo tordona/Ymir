@@ -226,6 +226,8 @@ DecodeTable BuildDecodeTable() {
                 opcode = legalIf(OpcodeType::Move_EA_SR, kValidDataAddrModes[ea]);
             } else if (bit::extract<6, 11>(instr) == 0b101011) {
                 opcode = legalIf(OpcodeType::TAS, kValidDataAlterableAddrModes[ea]);
+            } else if (bit::extract<6, 11>(instr) == 0b100001) {
+                opcode = legalIf(OpcodeType::PEA, kValidControlAddrModes[ea]);
             } else if (bit::extract<6, 11>(instr) == 0b111010) {
                 opcode = legalIf(OpcodeType::JSR, kValidControlAddrModes[ea]);
             } else if (bit::extract<6, 11>(instr) == 0b111011) {
