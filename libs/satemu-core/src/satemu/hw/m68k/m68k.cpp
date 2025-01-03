@@ -827,6 +827,7 @@ void MC68EC000::Execute() {
     case OpcodeType::RTR: Instr_RTR(instr); break;
     case OpcodeType::RTS: Instr_RTS(instr); break;
 
+    case OpcodeType::Chk: Instr_Chk(instr); break;
     case OpcodeType::Reset: Instr_Reset(instr); break;
     case OpcodeType::Stop: Instr_Stop(instr); break;
     case OpcodeType::Trap: Instr_Trap(instr); break;
@@ -2887,6 +2888,26 @@ FORCE_INLINE void MC68EC000::Instr_RTS(uint16 instr) {
     PC = MemRead<uint32, false>(regs.SP);
     FullPrefetch();
     regs.SP += 4;
+}
+
+FORCE_INLINE void MC68EC000::Instr_Chk(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    const sint16 upperBound = ReadEffectiveAddress<uint16>(M, Xn);
+    const sint16 value = regs.D[Dn];
+    SR.Z = value == 0; // undocumented
+    SR.V = 0;          // undefined
+    SR.C = 0;          // undefined
+    if (value < 0 || value > upperBound) {
+        SR.N = (value < 0);
+        PC -= 2;
+        EnterException(ExceptionVector::CHKInstruction);
+    } else {
+        SR.N = 0;
+        PrefetchTransfer();
+    }
 }
 
 FORCE_INLINE void MC68EC000::Instr_Reset(uint16 instr) {

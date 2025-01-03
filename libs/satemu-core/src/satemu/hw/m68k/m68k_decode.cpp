@@ -258,6 +258,8 @@ DecodeTable BuildDecodeTable() {
                 opcode = legalIf(OpcodeType::Not, sz != 0b11 && kValidDataAlterableAddrModes[ea]);
             } else if (bit::extract<8, 11>(instr) == 0b1010) {
                 opcode = legalIf(OpcodeType::Tst, kValidDataAlterableAddrModes[ea]);
+            } else if (bit::extract<6, 8>(instr) == 0b110) {
+                opcode = legalIf(OpcodeType::Chk, kValidDataAddrModes[ea]);
             } else if (bit::extract<6, 8>(instr) == 0b111) {
                 opcode = legalIf(OpcodeType::LEA, kValidControlAddrModes[ea]);
             }

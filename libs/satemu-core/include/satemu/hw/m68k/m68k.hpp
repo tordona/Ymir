@@ -328,6 +328,7 @@ private:
     void Instr_RTR(uint16 instr);
     void Instr_RTS(uint16 instr);
 
+    void Instr_Chk(uint16 instr);
     void Instr_Reset(uint16 instr);
     void Instr_Stop(uint16 instr);
     void Instr_Trap(uint16 instr);

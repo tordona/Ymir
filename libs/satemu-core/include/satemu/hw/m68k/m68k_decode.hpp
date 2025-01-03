@@ -147,6 +147,7 @@ enum class OpcodeType : uint8 {
     RTR, // rtr
     RTS, // rts
 
+    Chk,   // chk <ea>, Dn
     Reset, // reset
     Stop,  // stop #<imm>
     Trap,  // trap #<vector>
