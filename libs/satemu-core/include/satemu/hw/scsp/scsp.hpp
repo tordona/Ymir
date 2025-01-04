@@ -63,7 +63,7 @@ public:
 
 private:
     m68k::MC68EC000 m_m68k;
-    bool m_cpuEnabled;
+    bool m_m68kEnabled;
 
     alignas(16) std::array<uint8, m68k::kM68KWRAMSize> m_WRAM;
 

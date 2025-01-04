@@ -16,7 +16,7 @@ void SCSP::Reset(bool hard) {
     m_m68k.Reset(true);
     m_WRAM.fill(0);
 
-    m_cpuEnabled = false;
+    m_m68kEnabled = false;
 
     m_accumSampleCycles = 0;
     m_sampleCounter = 0;
@@ -43,26 +43,26 @@ void SCSP::Reset(bool hard) {
 }
 
 void SCSP::Advance(uint64 cycles) {
-    if (m_cpuEnabled) {
-        // TODO: proper cycle counting
-        for (uint64 i = 0; i < cycles; i++) {
-            m_m68k.Step();
-        }
-    }
     m_accumSampleCycles += cycles;
     while (m_accumSampleCycles >= kCyclesPerSample) {
         m_accumSampleCycles -= kCyclesPerSample;
+        if (m_m68kEnabled && (m_sampleCounter & 1) == 0) {
+            // TODO: proper cycle counting
+            m_m68k.Step();
+        }
         m_sampleCounter++;
         ProcessSample();
     }
 }
 
 void SCSP::SetCPUEnabled(bool enabled) {
-    fmt::println("SCSP: {} the MC68EC00 processor", (enabled ? "enabling" : "disabling"));
-    if (enabled) {
-        m_m68k.Reset(true); // false? does it matter?
+    if (m_m68kEnabled != enabled) {
+        fmt::println("SCSP: {} the MC68EC00 processor", (enabled ? "enabling" : "disabling"));
+        if (enabled) {
+            m_m68k.Reset(true); // false? does it matter?
+        }
+        m_m68kEnabled = enabled;
     }
-    m_cpuEnabled = enabled;
 }
 
 void SCSP::SetInterrupt(uint16 intr, bool level) {
