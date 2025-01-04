@@ -885,6 +885,7 @@ bool SH2::CheckInterrupts() {
     if (m_NMI) {
         // Set NMI interrupt: vector 0x0B, priority 16
         m_NMI = false;
+        // fmt::println("{}SH2: NMI raised", (BCR1.MASTER ? "S" : "M"));
         update(16, 0x0B);
         return true;
     }
@@ -1208,8 +1209,9 @@ FORCE_INLINE void SH2::NOP() {
 FORCE_INLINE void SH2::SLEEP() {
     // dbg_println("sleep");
     PC -= 2;
-    // TODO: wait for exception
-    __debugbreak();
+    // TODO: enter sleep or standby mode depending on SBYCR.SBY
+    //__debugbreak();
+    // fmt::println("{}SH2: entering standby", (BCR1.MASTER ? "S" : "M"));
 }
 
 FORCE_INLINE void SH2::MOV(InstrNM instr) {
