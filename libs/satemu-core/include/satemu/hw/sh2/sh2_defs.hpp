@@ -91,8 +91,6 @@ struct FreeRunningTimer {
         const uint64 steps = cycleCount >> clockDividerShift;
         cycleCount -= steps << clockDividerShift;
 
-        // TODO: input capture
-
         uint64 nextFRC = FRC + steps;
         if (FRC < OCRA && nextFRC >= OCRA) {
             FTCSR.OCFA = TOCR.OLVLA;
