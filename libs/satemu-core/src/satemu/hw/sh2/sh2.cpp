@@ -947,7 +947,7 @@ void SH2::Execute(uint32 address) {
         // fmt::println("{}SH2: >> intr level {:02X} vec {:02X}", (BCR1.MASTER ? "S" : "M"),
         // m_pendingInterrupt.priority, m_pendingInterrupt.vecNum);
         EnterException(m_pendingInterrupt.vecNum);
-        SR.ILevel = m_pendingInterrupt.priority;
+        SR.ILevel = std::min<uint8>(m_pendingInterrupt.priority, 0xF);
         address = PC;
     }
 
