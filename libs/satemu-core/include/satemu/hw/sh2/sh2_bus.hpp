@@ -9,6 +9,8 @@
 
 #include <satemu/util/data_ops.hpp>
 
+#include <mio/mmap.hpp> // HACK: should be used in a binary reader/writer object
+
 #include <span>
 
 // -----------------------------------------------------------------------------
@@ -73,6 +75,8 @@ public:
             return ReadBE<T>(&IPL[address & 0x7FFFF]);
         } else if (AddressInRange<0x010'0000, 0x017'FFFF>(address)) {
             return m_SMPC.Read((address & 0x7F) | 1);
+        } else if (AddressInRange<0x018'0000, 0x01F'FFFF>(address)) {
+            return ReadBE<T>((const uint8 *)&internalBackupRAM.data()[address & 0xFFFF]);
         } else if (AddressInRange<0x020'0000, 0x02F'FFFF>(address)) {
             return ReadBE<T>(&WRAMLow[address & 0xFFFFF]);
         } else if (AddressInRange<0x200'0000, 0x5FF'FFFF>(address)) {
@@ -93,6 +97,8 @@ public:
 
         /****/ if (AddressInRange<0x010'0000, 0x017'FFFF>(address)) {
             m_SMPC.Write((address & 0x7F) | 1, value);
+        } else if (AddressInRange<0x018'0000, 0x01F'FFFF>(address)) {
+            WriteBE<T>((uint8 *)&internalBackupRAM.data()[address & 0xFFFF], value);
         } else if (AddressInRange<0x020'0000, 0x02F'FFFF>(address)) {
             WriteBE<T>(&WRAMLow[address & 0xFFFFF], value);
         } else if (AddressInRange<0x100'0000, 0x17F'FFFF>(address)) {
@@ -117,6 +123,11 @@ public:
     std::array<uint8, kIPLSize> IPL; // aka BIOS ROM
     std::array<uint8, kWRAMLowSize> WRAMLow;
     std::array<uint8, kWRAMHighSize> WRAMHigh;
+    // TODO: don't hardcode this
+    // TODO: use an abstraction
+    // TODO: move to its own class
+    // std::array<uint8, kInternalBackupRAMSize> internalBackupRAM;
+    mio::mmap_sink internalBackupRAM{"internal_backup_ram.bin"};
 
 private:
     SH2 &m_masterSH2;
