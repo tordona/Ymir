@@ -2392,6 +2392,13 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
         cellIndex ^= 2;
     }
 
+    // Adjust cell index based on color format
+    if constexpr (colorFormat == ColorFormat::RGB888) {
+        cellIndex <<= 2;
+    } else if constexpr (colorFormat != ColorFormat::Palette16) {
+        cellIndex <<= 1;
+    }
+
     // Cell addressing uses a fixed offset of 32 bytes
     const uint32 cellAddress = (ch.charNum + cellIndex) * 0x20;
     const uint32 dotOffset = dotX + dotY * 8;
