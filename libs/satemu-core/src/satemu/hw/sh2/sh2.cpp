@@ -906,13 +906,13 @@ bool SH2::CheckInterrupts() {
 
     // Free-running timer interrupts
     if (FRT.FTCSR.ICF && FRT.TIER.ICIE) {
-        update(VCRC.FICVn, IPRB.FRTIPn);
+        update(IPRB.FRTIPn, VCRC.FICVn);
     }
     if ((FRT.FTCSR.OCFA && FRT.TIER.OCIAE) || (FRT.FTCSR.OCFB && FRT.TIER.OCIBE)) {
-        update(VCRC.FOCVn, IPRB.FRTIPn);
+        update(IPRB.FRTIPn, VCRC.FOCVn);
     }
     if (FRT.FTCSR.OVF && FRT.TIER.OVIE) {
-        update(VCRD.FOVVn, IPRB.FRTIPn);
+        update(IPRB.FRTIPn, VCRD.FOVVn);
     }
 
     const bool result = m_pendingInterrupt.priority > SR.ILevel;
