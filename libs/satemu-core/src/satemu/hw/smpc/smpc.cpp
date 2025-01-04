@@ -430,7 +430,7 @@ void SMPC::ClockChange(bool fast) {
 
     // TODO: clear VDP VRAMs
 
-    // TODO: stop slave SH2
+    m_SH2.slaveEnabled = false;
 
     m_SH2.master.SetNMI();
 
