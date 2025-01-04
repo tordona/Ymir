@@ -202,8 +202,9 @@ void SH2::SetNMI() {
     ICR.NMIL = 1;
 }
 
-void SH2::WriteFRTInput(uint16 value) {
-    FRT.ICR = value;
+void SH2::TriggerFRTInputCapture() {
+    // TODO: FRT.TCR.IEDGA
+    FRT.ICR = FRT.FRC;
     FRT.FTCSR.ICF = 1;
 }
 

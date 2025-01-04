@@ -34,7 +34,7 @@ public:
     void SetExternalInterrupt(uint8 level, uint8 vecNum);
     void SetNMI();
 
-    void WriteFRTInput(uint16 value);
+    void TriggerFRTInputCapture();
 
 private:
     // -------------------------------------------------------------------------

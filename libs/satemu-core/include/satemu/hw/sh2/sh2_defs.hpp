@@ -133,7 +133,7 @@ struct FreeRunningTimer {
     }
 
     FORCE_INLINE void WriteTIER(uint8 value) {
-        TIER.u8 = value & 0x8E;
+        TIER.u8 = (value & 0x8E) | 1;
     }
 
     // 011  R/W  8        00        FTCSR   Free-running timer control/status register

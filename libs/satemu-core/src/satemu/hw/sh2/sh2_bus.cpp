@@ -1,6 +1,6 @@
 #include <satemu/hw/sh2/sh2_bus.hpp>
 
-#include <satemu/hw/sh2/sh2_block.hpp>
+#include <satemu/hw/sh2/sh2.hpp>
 
 namespace satemu::sh2 {
 
@@ -27,11 +27,11 @@ void SH2Bus::AcknowledgeExternalInterrupt() {
 }
 
 void SH2Bus::WriteMINIT(uint16 value) {
-    m_slaveSH2.WriteFRTInput(value);
+    m_slaveSH2.TriggerFRTInputCapture();
 }
 
 void SH2Bus::WriteSINIT(uint16 value) {
-    m_masterSH2.WriteFRTInput(value);
+    m_masterSH2.TriggerFRTInputCapture();
 }
 
 } // namespace satemu::sh2
