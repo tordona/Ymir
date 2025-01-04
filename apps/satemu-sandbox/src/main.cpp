@@ -132,8 +132,8 @@ void runEmulator(satemu::Saturn &saturn) {
              if (width != screen.width || height != screen.height) {
                  int wx, wy;
                  SDL_GetWindowPosition(screen.window, &wx, &wy);
-                 int dx = width - screen.width;
-                 int dy = height - screen.height;
+                 int dx = (int)width - (int)screen.width;
+                 int dy = (int)height - (int)screen.height;
                  screen.width = width;
                  screen.height = height;
 
@@ -142,7 +142,7 @@ void runEmulator(satemu::Saturn &saturn) {
                  // - won't work well with odd integer scale
                  // TODO: add room for borders
                  SDL_SetWindowSize(screen.window, screen.width * screen.scale, screen.height * screen.scale);
-                 SDL_SetWindowPosition(screen.window, wx - dx * screen.scale / 2, wy - dy * screen.scale / 2);
+                 SDL_SetWindowPosition(screen.window, wx - dx * (int)screen.scale / 2, wy - dy * (int)screen.scale / 2);
              }
          }});
 
@@ -224,10 +224,12 @@ void runEmulator(satemu::Saturn &saturn) {
 
         uint32 *pixels = nullptr;
         int pitch = 0;
-        if (SDL_LockTexture(texture, nullptr, (void **)&pixels, &pitch)) {
+        SDL_Rect area{.x = 0, .y = 0, .w = (int)screen.width, .h = (int)screen.height};
+        if (SDL_LockTexture(texture, &area, (void **)&pixels, &pitch)) {
             for (uint32 y = 0; y < screen.height; y++) {
-                std::copy_n(&framebuffer[y * screen.width], screen.width, &pixels[y * vdp::kMaxResH]);
+                std::copy_n(&framebuffer[y * screen.width], screen.width, &pixels[y * pitch / sizeof(uint32)]);
             }
+            // std::copy_n(framebuffer.begin(), screen.width * screen.height, pixels);
             SDL_UnlockTexture(texture);
         }
 
