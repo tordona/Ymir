@@ -2197,12 +2197,12 @@ FORCE_INLINE VDP::Pixel VDP::VDPFetchScrollBGPixel(const BGParams &bgParams, std
     // fourCellChar specifies the size of the character patterns (1x1 when false, 2x2 when true) and, by extension, the
     // dimensions of the page (32x32 or 64x64 respectively).
     //
-    //   Character Pattern
-    // +---------+---------+
-    // |         |         |
-    // | Cell 1  | Cell 2  |
-    // |         |         |
-    // +---------+---------+
+    // 2x2 Character Pattern     1x1 C.P.
+    // +---------+---------+   +---------+
+    // |         |         |   |         |
+    // | Cell 1  | Cell 2  |   | Cell 1  |
+    // |         |         |   |         |
+    // +---------+---------+   +---------+
     // |         |         |
     // | Cell 3  | Cell 4  |
     // |         |         |
