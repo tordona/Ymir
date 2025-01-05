@@ -199,7 +199,7 @@ FORCE_INLINE void SMPC::WriteDDR2(uint8 value) {
 }
 
 void SMPC::MSHON() {
-    // fmt::println("SMPC: processing MSHON");
+    fmt::println("SMPC: processing MSHON");
 
     // TODO: is this supposed to do something...?
 
@@ -209,7 +209,7 @@ void SMPC::MSHON() {
 }
 
 void SMPC::SSHON() {
-    // fmt::println("SMPC: processing SSHON");
+    fmt::println("SMPC: processing SSHON");
 
     // Turn on and reset slave SH-2
     m_SH2.slaveEnabled = true;
@@ -221,7 +221,7 @@ void SMPC::SSHON() {
 }
 
 void SMPC::SSHOFF() {
-    // fmt::println("SMPC: processing SSHOFF");
+    fmt::println("SMPC: processing SSHOFF");
 
     // Turn off slave SH-2
     m_SH2.slaveEnabled = false;
@@ -232,7 +232,7 @@ void SMPC::SSHOFF() {
 }
 
 void SMPC::SNDON() {
-    // fmt::println("SMPC: processing SNDON");
+    fmt::println("SMPC: processing SNDON");
 
     m_SCSP.SetCPUEnabled(true);
 
@@ -242,7 +242,7 @@ void SMPC::SNDON() {
 }
 
 void SMPC::SNDOFF() {
-    // fmt::println("SMPC: processing SNDOFF");
+    fmt::println("SMPC: processing SNDOFF");
 
     m_SCSP.SetCPUEnabled(false);
 
@@ -252,7 +252,7 @@ void SMPC::SNDOFF() {
 }
 
 void SMPC::CKCHG352() {
-    // fmt::println("SMPC: processing CKCHG352");
+    fmt::println("SMPC: processing CKCHG352");
 
     ClockChange(true);
 
@@ -261,7 +261,7 @@ void SMPC::CKCHG352() {
     OREG[31] = 0x0E;
 }
 void SMPC::CKCHG320() {
-    // fmt::println("SMPC: processing CKCHG320");
+    fmt::println("SMPC: processing CKCHG320");
 
     ClockChange(false);
 
