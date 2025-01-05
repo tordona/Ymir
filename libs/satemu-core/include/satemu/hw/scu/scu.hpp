@@ -108,6 +108,7 @@ public:
     void TriggerDSPEnd();
     void TriggerSoundRequest(bool level);
     void TriggerSystemManager();
+    void TriggerDMAEnd(uint32 level);
     void TriggerSpriteDrawEnd();
 
     void TriggerExternalInterrupt0();
@@ -300,7 +301,7 @@ private:
 
     void RunDMA(uint64 cycles);
 
-    void TriggerDMA(DMATrigger trigger);
+    void TriggerDMATransfer(DMATrigger trigger);
 
     // -------------------------------------------------------------------------
     // DSP

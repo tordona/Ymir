@@ -53,14 +53,14 @@ void SCU::Advance(uint64 cycles) {
 void SCU::TriggerVBlankIN() {
     m_intrStatus.VDP2_VBlankIN = 1;
     UpdateInterruptLevel(false);
-    TriggerDMA(DMATrigger::VBlankIN);
+    TriggerDMATransfer(DMATrigger::VBlankIN);
 }
 
 void SCU::TriggerVBlankOUT() {
     m_intrStatus.VDP2_VBlankOUT = 1;
     m_timer0Counter = 0;
     UpdateInterruptLevel(false);
-    TriggerDMA(DMATrigger::VBlankOUT);
+    TriggerDMATransfer(DMATrigger::VBlankOUT);
 }
 
 void SCU::TriggerHBlankIN() {
@@ -71,19 +71,19 @@ void SCU::TriggerHBlankIN() {
     }
     m_timer1Counter = m_timer1Reload;
     UpdateInterruptLevel(false);
-    TriggerDMA(DMATrigger::HBlankIN);
+    TriggerDMATransfer(DMATrigger::HBlankIN);
 }
 
 void SCU::TriggerTimer0() {
     m_intrStatus.SCU_Timer0 = 1;
     UpdateInterruptLevel(false);
-    TriggerDMA(DMATrigger::Timer0);
+    TriggerDMATransfer(DMATrigger::Timer0);
 }
 
 void SCU::TriggerTimer1() {
     m_intrStatus.SCU_Timer1 = 1;
     UpdateInterruptLevel(false);
-    TriggerDMA(DMATrigger::Timer1);
+    TriggerDMATransfer(DMATrigger::Timer1);
 }
 
 void SCU::TriggerDSPEnd() {
@@ -94,7 +94,7 @@ void SCU::TriggerDSPEnd() {
 void SCU::TriggerSoundRequest(bool level) {
     m_intrStatus.SCSP_SoundRequest = level;
     UpdateInterruptLevel(false);
-    TriggerDMA(DMATrigger::SoundRequest);
+    TriggerDMATransfer(DMATrigger::SoundRequest);
 }
 
 void SCU::TriggerSystemManager() {
@@ -102,10 +102,21 @@ void SCU::TriggerSystemManager() {
     UpdateInterruptLevel(false);
 }
 
+void SCU::TriggerDMAEnd(uint32 level) {
+    assert(level < 3);
+    switch (level) {
+    case 0: m_intrStatus.ABus_Level0DMAEnd = 1; break;
+    case 1: m_intrStatus.ABus_Level1DMAEnd = 1; break;
+    case 2: m_intrStatus.ABus_Level2DMAEnd = 1; break;
+    }
+    UpdateInterruptLevel(false);
+    TriggerDMATransfer(DMATrigger::SpriteDrawEnd);
+}
+
 void SCU::TriggerSpriteDrawEnd() {
     m_intrStatus.VDP1_SpriteDrawEnd = 1;
     UpdateInterruptLevel(false);
-    TriggerDMA(DMATrigger::SpriteDrawEnd);
+    TriggerDMATransfer(DMATrigger::SpriteDrawEnd);
 }
 
 void SCU::TriggerExternalInterrupt0() {
@@ -188,12 +199,13 @@ void SCU::RunDMA(uint64 cycles) {
                 if (ch.updateDstAddr) {
                     ch.dstAddr = ch.currDstAddr;
                 }
+                TriggerDMAEnd(level);
             }
         }
     }
 }
 
-void SCU::TriggerDMA(DMATrigger trigger) {
+void SCU::TriggerDMATransfer(DMATrigger trigger) {
     for (auto &ch : m_dmaChannels) {
         if (ch.enabled && !ch.active && ch.trigger == trigger) {
             ch.start = true;
