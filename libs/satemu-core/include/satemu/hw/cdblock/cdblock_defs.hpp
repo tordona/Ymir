@@ -57,4 +57,9 @@ inline constexpr uint32 kCyclesPerSecond = 20000000;
 inline constexpr uint32 kDriveCyclesNotPlaying = 1000000;
 inline constexpr uint32 kDriveCyclesPlaying1x = 800000;
 
+// Buffers and filters
+inline constexpr uint32 kNumBuffers = 200;   // total number of buffers
+inline constexpr uint32 kNumFilters = 24;    // total number of filters
+inline constexpr uint32 kNumPartitions = 24; // total number of buffer partitions
+
 } // namespace satemu::cdblock

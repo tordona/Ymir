@@ -51,7 +51,6 @@ void CDBlock::Reset(bool hard) {
     m_xferLength = 0;
     m_xferCount = 0xFFFFFF;
 
-    m_bufferManager.Reset();
     m_partitionManager.Reset();
 
     for (int i = 0; auto &filter : m_filters) {
@@ -330,8 +329,12 @@ void CDBlock::ProcessDriveStatePlay() {
 
             // fmt::println("CDBlock: playback: read from frame address {:06X}", frameAddress);
 
-            Buffer *buffer = m_bufferManager.Allocate();
-            if (buffer == nullptr) [[unlikely]] {
+            if (m_disc.sessions.empty()) [[unlikely]] {
+                // fmt::println("CDBlock: playback: disc removed");
+
+                m_status.statusCode = kStatusCodeNoDisc; // TODO: is this correct?
+                SetInterrupt(kHIRQ_DCHG);
+            } else if (m_partitionManager.GetFreeBufferCount() == 0) [[unlikely]] {
                 // fmt::println("CDBlock: playback: no free buffer available");
 
                 // TODO: what is the correct status code here?
@@ -341,30 +344,27 @@ void CDBlock::ProcessDriveStatePlay() {
                 m_bufferFullPause = true;
                 // TODO: when buffer no longer full, switch to Play if we paused because of BFUL
                 // - or maybe if frameAddress <= m_playEndPos
-            } else if (m_disc.sessions.empty()) [[unlikely]] {
-                // fmt::println("CDBlock: playback: disc removed");
-
-                m_status.statusCode = kStatusCodeNoDisc; // TODO: is this correct?
-                SetInterrupt(kHIRQ_DCHG);
-            } else {
+            }
+            {
                 // TODO: consider caching the track pointer
                 const media::Session &session = m_disc.sessions.back();
                 const media::Track *track = session.FindTrack(frameAddress);
 
+                Buffer &buffer = m_scratchBuffer;
+
                 // Sanity check: is the track valid?
-                if (track != nullptr && track->ReadSector(frameAddress, buffer->data, m_getSectorLength)) [[likely]] {
-                    buffer->size = m_getSectorLength;
+                if (track != nullptr && track->ReadSector(frameAddress, buffer.data, m_getSectorLength)) [[likely]] {
+                    buffer.size = m_getSectorLength;
 
                     // fmt::println("CDBlock: playback: read {} bytes", buffer->size);
 
                     // Check against filter and send data to the appropriate destination
                     uint8 filterNum = m_cdDeviceConnection;
-                    for (int i = 0; i < 24 && filterNum != media::Filter::kDisconnected; i++) {
+                    for (int i = 0; i < kNumFilters && filterNum != media::Filter::kDisconnected; i++) {
                         const media::Filter &filter = m_filters[filterNum];
-                        if (filter.Test({buffer->data.begin(), buffer->size})) {
+                        if (filter.Test({buffer.data.begin(), buffer.size})) {
                             if (filter.trueOutput == media::Filter::kDisconnected) [[unlikely]] {
                                 // fmt::println("CDBlock: passed filter; output disconnected - discarded");
-                                m_bufferManager.Free(buffer);
                             } else {
                                 assert(filter.trueOutput < m_filters.size());
                                 // fmt::println("CDBlock: passed filter; sent to buffer partition {}",
@@ -376,7 +376,6 @@ void CDBlock::ProcessDriveStatePlay() {
                         } else {
                             if (filter.falseOutput == media::Filter::kDisconnected) [[unlikely]] {
                                 // fmt::println("CDBlock: failed filter; output disconnected - discarded");
-                                m_bufferManager.Free(buffer);
                                 break;
                             } else {
                                 assert(filter.falseOutput < m_filters.size());
@@ -389,11 +388,17 @@ void CDBlock::ProcessDriveStatePlay() {
                     m_status.frameAddress++;
 
                     SetInterrupt(kHIRQ_CSCT);
-                } else {
+                } else if (track == nullptr) {
                     // This shouldn't really happen unless we're given an invalid disc image
                     // Let's pretend this is a disc read error
                     // TODO: what happens on a real disc read error?
                     // fmt::println("CDBlock: playback: track not found");
+                    m_status.statusCode = kStatusCodeError;
+                } else {
+                    // The disc image is truncated or corrupted
+                    // Let's pretend this is a disc read error
+                    // TODO: what happens on a real disc read error?
+                    // fmt::println("CDBlock: playback: Could not read sector - disc image is truncated or corrupted");
                     m_status.statusCode = kStatusCodeError;
                 }
             }
@@ -850,6 +855,7 @@ void CDBlock::CmdInitializeCDSystem() {
 
     if (softReset) {
         fmt::println("CDBlock: Soft reset");
+        // TODO: use Reset(false)
         // TODO: switch to Busy for a bit before NoDisc/Pause
         if (m_disc.sessions.empty()) {
             m_status.statusCode = kStatusCodeNoDisc;
@@ -1112,12 +1118,12 @@ void CDBlock::CmdSetFilterRange() {
     // frame address count bits 15-0
     const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
 
-    if (filterNumber < 24) {
-        const uint32 startFrameAddress = (bit::extract<0, 7>(m_CR[0]) << 16u) | m_CR[1];
-        const uint32 frameAddressCount = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
+    if (filterNumber < kNumFilters) {
+        const uint32 start = (bit::extract<0, 7>(m_CR[0]) << 16u) | m_CR[1];
+        const uint32 count = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
         auto &filter = m_filters[filterNumber];
-        filter.startFrameAddress = startFrameAddress;
-        filter.frameAddressCount = frameAddressCount;
+        filter.startFrameAddress = start;
+        filter.frameAddressCount = count;
 
         // Output structure: standard CD status data
         ReportCDStatus();
@@ -1138,7 +1144,7 @@ void CDBlock::CmdGetFilterRange() {
     // <blank>
     const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
 
-    if (filterNumber < 24) {
+    if (filterNumber < kNumFilters) {
         // Output structure:
         // status code    start frame address bits 23-16
         // start frame address bits 15-0
@@ -1166,7 +1172,7 @@ void CDBlock::CmdSetFilterSubheaderConditions() {
     // submode value  coding info value
     const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
 
-    if (filterNumber < 24) {
+    if (filterNumber < kNumFilters) {
         const uint8 chanNum = bit::extract<0, 7>(m_CR[0]);
         const uint8 submodeMask = bit::extract<8, 15>(m_CR[1]);
         const uint8 codingInfoMask = bit::extract<0, 7>(m_CR[1]);
@@ -1201,7 +1207,7 @@ void CDBlock::CmdGetFilterSubheaderConditions() {
     // <blank>
     const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
 
-    if (filterNumber < 24) {
+    if (filterNumber < kNumFilters) {
         // Output structure:
         // status code    channel
         // submode mask   coding info mask
@@ -1257,7 +1263,7 @@ void CDBlock::CmdGetFilterMode() {
     // <blank>
     const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
 
-    if (filterNumber < 24) {
+    if (filterNumber < kNumFilters) {
         // Output structure:
         // status code    mode
         // <blank>
@@ -1289,7 +1295,7 @@ void CDBlock::CmdSetFilterConnection() {
     const uint8 falseConn = bit::extract<0, 7>(m_CR[1]);
     const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
 
-    if (filterNumber < 24) {
+    if (filterNumber < kNumFilters) {
         auto &filter = m_filters[filterNumber];
         if (setTrueConn) {
             filter.trueOutput = trueConn;
@@ -1318,7 +1324,7 @@ void CDBlock::CmdGetFilterConnection() {
     // <blank>
     const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
 
-    if (filterNumber < 24) {
+    if (filterNumber < kNumFilters) {
         // Output structure:
         // status code    <blank>
         // true conn      false conn
@@ -1350,7 +1356,7 @@ void CDBlock::CmdResetSelector() {
     if (resetFlags == 0) {
         const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
         // fmt::println("CDBlock: clearing buffer partition {}", partitionNumber);
-        if (partitionNumber < 24) {
+        if (partitionNumber < kNumFilters) {
             m_partitionManager.Clear(partitionNumber);
         } else {
             reject = true;
@@ -1423,10 +1429,11 @@ void CDBlock::CmdGetBufferSize() {
     // free buffer count
     // total filter count   <blank>
     // total buffer count
+    const uint32 freeBuffers = m_partitionManager.GetFreeBufferCount();
     m_CR[0] = m_status.statusCode << 8u;
-    m_CR[1] = m_bufferManager.FreeBufferCount();
+    m_CR[1] = freeBuffers;
     m_CR[2] = m_filters.size() << 8u;
-    m_CR[3] = m_bufferManager.TotalBufferCount();
+    m_CR[3] = kNumBuffers;
 
     SetInterrupt(kHIRQ_CMOK);
 }
@@ -1440,6 +1447,7 @@ void CDBlock::CmdGetSectorNumber() {
     // partition number  <blank>
     // <blank>
     const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
+    const uint8 sectorCount = m_partitionManager.GetBufferCount(partitionNumber);
 
     // Output structure:
     // status code      <blank>
@@ -1449,7 +1457,7 @@ void CDBlock::CmdGetSectorNumber() {
     m_CR[0] = (m_status.statusCode << 8u);
     m_CR[1] = 0x0000;
     m_CR[2] = 0x0000;
-    m_CR[3] = m_partitionManager.GetBufferCount(partitionNumber);
+    m_CR[3] = sectorCount;
 
     SetInterrupt(kHIRQ_CMOK);
 }
@@ -1467,7 +1475,7 @@ void CDBlock::CmdCalculateActualSize() {
     const uint16 sectorNumber = m_CR[3];
 
     bool reject = false;
-    if (partitionNumber > m_partitionManager.PartitionCount()) [[unlikely]] {
+    if (partitionNumber > kNumPartitions) [[unlikely]] {
         reject = true;
     } else {
         const uint8 bufferCount = m_partitionManager.GetBufferCount(partitionNumber);
@@ -1536,7 +1544,7 @@ void CDBlock::CmdGetSectorInfo() {
     // const uint8 sectorNumber = bit::extract<0, 7>(m_CR[1]);
     // const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
 
-    // TODO:
+    // TODO: implement
 
     // Output structure:
     // status code          sector frame address bits 23-16
@@ -1580,6 +1588,8 @@ void CDBlock::CmdGetFADSearchResults() {
     // <blank>
     // <blank>
     // <blank>
+
+    // TODO: return search FAD results
 
     // Output structure:
     // status code        <blank>
@@ -1639,7 +1649,7 @@ void CDBlock::CmdGetSectorData() {
     const uint16 sectorNumber = m_CR[3];
 
     bool reject = false;
-    if (partitionNumber >= m_partitionManager.PartitionCount()) [[unlikely]] {
+    if (partitionNumber >= kNumPartitions) [[unlikely]] {
         reject = true;
     } else if (m_partitionManager.GetBufferCount(partitionNumber) == 0) [[unlikely]] {
         reject = true;
@@ -1671,7 +1681,7 @@ void CDBlock::CmdDeleteSectorData() {
     const uint16 sectorNumber = m_CR[3];
 
     bool reject = false;
-    if (partitionNumber >= m_partitionManager.PartitionCount()) [[unlikely]] {
+    if (partitionNumber >= kNumPartitions) [[unlikely]] {
         reject = true;
     } else if (m_partitionManager.GetBufferCount(partitionNumber) == 0) [[unlikely]] {
         reject = true;
@@ -1704,7 +1714,7 @@ void CDBlock::CmdGetThenDeleteSectorData() {
     const uint16 sectorNumber = m_CR[3];
 
     bool reject = false;
-    if (partitionNumber >= m_partitionManager.PartitionCount()) [[unlikely]] {
+    if (partitionNumber >= kNumPartitions) [[unlikely]] {
         reject = true;
     } else if (m_partitionManager.GetBufferCount(partitionNumber) == 0) [[unlikely]] {
         reject = true;
@@ -1817,14 +1827,15 @@ void CDBlock::CmdChangeDirectory() {
     // <blank>
     // filter number   file ID bits 23-16
     // file ID bits 15-0
-    const uint8 filterNum = bit::extract<8, 15>(m_CR[2]);
+    const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
     const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
 
     // Output structure: standard CD status data
     bool reject = false;
-    if (filterNum < m_filters.size()) {
-        reject = !m_fs.ChangeDirectory(fileID, m_filters[filterNum]);
+    if (filterNumber < m_filters.size()) {
+        reject = !m_fs.ChangeDirectory(fileID, m_filters[filterNumber]);
     } else if (filterNum == 0xFF) {
+    } else if (filterNumber == 0xFF) {
         reject = true;
     }
 
@@ -1876,7 +1887,7 @@ void CDBlock::CmdGetFileSystemScope() {
     const uint32 fileCount = m_fs.GetFileCount();
     const bool endOfDirectory = fileOffset + 254 >= fileCount;
     m_CR[0] = m_status.statusCode << 8u;
-    m_CR[1] = m_fs.GetFileCount();
+    m_CR[1] = fileCount;
     m_CR[2] = (endOfDirectory << 8u) | bit::extract<16, 23>(fileOffset);
     m_CR[3] = bit::extract<0, 15>(fileOffset);
 

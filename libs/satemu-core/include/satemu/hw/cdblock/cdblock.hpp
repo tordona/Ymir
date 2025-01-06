@@ -11,6 +11,7 @@
 
 #include <array>
 #include <cassert>
+#include <deque>
 #include <utility>
 
 // -----------------------------------------------------------------------------
@@ -261,165 +262,27 @@ private:
     struct Buffer {
         std::array<uint8, 2352> data;
         uint16 size;
-        Buffer *prev;
-        Buffer *next;
-    };
-
-    class BufferManager {
-    public:
-        BufferManager() {
-            Reset();
-        }
-
-        void Reset() {
-            Buffer *prev = nullptr;
-            for (auto &buffer : m_buffers) {
-                buffer.data.fill(0);
-                buffer.prev = prev;
-                buffer.next = nullptr;
-                if (prev) {
-                    prev->next = &buffer;
-                }
-                prev = &buffer;
-            }
-
-            m_freeListHead = &m_buffers[0];
-            m_freeCount = m_buffers.size();
-        }
-
-        // Attempts to allocate a buffer.
-        // Returns nullptr if there are no free buffers.
-        Buffer *Allocate() {
-            if (m_freeListHead == nullptr) {
-                return nullptr;
-            }
-            assert(m_freeCount > 0 && m_freeCount <= m_buffers.size());
-
-            // Remove buffer from free list head
-            Buffer *buffer = m_freeListHead;
-            m_freeListHead = buffer->next;
-            m_freeCount--;
-            assert((m_freeListHead == nullptr) == (m_freeCount == 0));
-
-            // Detach buffer from linked list
-            if (m_freeListHead != nullptr) {
-                m_freeListHead->prev = nullptr;
-            }
-            buffer->next = nullptr;
-            assert(buffer->prev == nullptr);
-
-            return buffer;
-        }
-
-        void Free(Buffer *buffer) {
-            // Detach buffer from existing linked list
-            if (buffer->prev) {
-                buffer->prev->next = buffer->next;
-            }
-            if (buffer->next) {
-                buffer->next->prev = buffer->prev;
-            }
-
-            // Insert it at the head of the free buffer list
-            if (m_freeListHead != nullptr) {
-                m_freeListHead->prev = buffer;
-            }
-            buffer->prev = nullptr;
-            buffer->next = m_freeListHead;
-            m_freeListHead = buffer;
-
-            m_freeCount++;
-        }
-
-        // Frees an entire chain of buffers.
-        // head must point to the head of the chain.
-        void FreeAll(Buffer *head) {
-            if (head == nullptr) [[unlikely]] {
-                return;
-            }
-            assert(head->prev == nullptr);
-
-            // Find the tail and relink the free list from it
-            Buffer *tail = head;
-            m_freeCount++;
-            for (; tail->next != nullptr; tail = tail->next) {
-                m_freeCount++;
-            }
-
-            tail->next = m_freeListHead;
-            m_freeListHead->prev = tail;
-            m_freeListHead = head;
-        }
-
-        // Frees a range of buffers.
-        // head and tail must either be both null or both non-null and belong to the same chain.
-        // Returns the distance between head and tail plus one, or zero if the parameters are invalid.
-        uint32 FreeRange(Buffer *head, Buffer *tail) {
-            if (head == nullptr || tail == nullptr) {
-                return 0;
-            }
-            assert(head->prev == nullptr);
-            assert(tail->next == nullptr);
-
-            const uint32 distance = Distance(head, tail);
-            assert(distance > 0);
-            m_freeCount += distance;
-
-            // Relink the range from the tail
-            tail->next = m_freeListHead;
-            m_freeListHead->prev = tail;
-            m_freeListHead = head;
-
-            return distance;
-        }
-
-        uint8 FreeBufferCount() const {
-            return m_freeCount;
-        }
-
-        constexpr uint8 TotalBufferCount() const {
-            return m_buffers.size();
-        }
-
-    private:
-        std::array<Buffer, 200> m_buffers;
-        Buffer *m_freeListHead;
-        uint8 m_freeCount;
-
-        static uint32 Distance(Buffer *head, Buffer *tail) {
-            assert(head != nullptr);
-            assert(tail != nullptr);
-
-            uint32 dist = 1;
-            do {
-                if (head == tail) {
-                    return dist;
-                }
-                head = head->next;
-                dist++;
-            } while (head != nullptr);
-
-            // head and tail do not belong to the same chain
-            assert(false);
-            return 0;
-        }
     };
 
     class PartitionManager {
     public:
-        PartitionManager(BufferManager &bufferManager)
-            : m_bufferManager(bufferManager) {
+        PartitionManager() {
             Reset();
         }
 
         void Reset() {
             m_partitions.fill({});
+            m_freeBuffers = kNumBuffers;
+                }
+
+        uint32 GetFreeBufferCount() const {
+            return m_freeBuffers;
         }
 
-        void InsertHead(uint8 partitionIndex, Buffer *buffer) {
+        void InsertHead(uint8 partitionIndex, Buffer &buffer) {
             assert(partitionIndex < m_partitions.size());
-            assert(buffer != nullptr);
-
+            assert(m_freeBuffers > 0);
+            m_freeBuffers--;
             m_partitions[partitionIndex].InsertHead(buffer);
         }
 
@@ -433,20 +296,9 @@ private:
             return m_partitions[partitionIndex].GetTail();
         }
 
-        Buffer *RemoveHead(uint8 partitionIndex) {
+        void RemoveTail(uint8 partitionIndex) {
             assert(partitionIndex < m_partitions.size());
-
-            Buffer *buffer = m_partitions[partitionIndex].RemoveHead();
-            m_bufferManager.Free(buffer);
-            return buffer;
-        }
-
-        Buffer *RemoveTail(uint8 partitionIndex) {
-            assert(partitionIndex < m_partitions.size());
-
-            Buffer *buffer = m_partitions[partitionIndex].RemoveTail();
-            m_bufferManager.Free(buffer);
-            return buffer;
+            m_partitions[partitionIndex].RemoveTail();
         }
 
         uint32 DeleteSectors(uint8 partitionIndex, uint16 sectorPos, uint16 sectorCount) {
@@ -464,23 +316,23 @@ private:
             }
             start = std::min<uint16>(start, sectorCount - 1);
             end = std::min<uint16>(end, sectorCount - 1);
-            auto [head, tail] = partition.RemoveRange(start, end);
-            return m_bufferManager.FreeRange(head, tail);
+            const uint32 bufferCount = partition.RemoveRange(start, end);
+            m_freeBuffers += bufferCount;
+            return bufferCount;
         }
 
         void ClearAll() {
             for (auto &partition : m_partitions) {
-                Buffer *head = partition.Clear();
-                m_bufferManager.FreeAll(head);
+                partition.Clear();
             }
+            m_freeBuffers = kNumBuffers;
         }
 
         void Clear(uint8 partitionIndex) {
-            if (partitionIndex < m_partitions.size()) [[likely]] {
-                Buffer *head = m_partitions[partitionIndex].Clear();
-                m_bufferManager.FreeAll(head);
+            assert(partitionIndex < m_partitions.size());
+            m_freeBuffers += m_partitions[partitionIndex].GetBufferCount();
+            m_partitions[partitionIndex].Clear();
             }
-        }
 
         uint8 GetBufferCount(uint8 partitionIndex) const {
             assert(partitionIndex < m_partitions.size());
@@ -501,172 +353,60 @@ private:
 
     private:
         struct Partition {
-            // NOTE: must free the buffers manually!
-            Buffer *Clear() {
-                Buffer *head = m_head;
-                m_head = m_tail = nullptr;
-                m_bufferCount = 0;
-                return head;
+            void Clear() {
+                m_buffers.clear();
             }
 
-            void InsertHead(Buffer *buffer) {
-                if (m_head == nullptr) {
-                    assert(m_tail == nullptr);
-                    assert(m_bufferCount == 0);
-                    m_head = m_tail = buffer;
-                    m_bufferCount = 1;
-                } else {
-                    assert(buffer->prev == nullptr);
-                    assert(buffer->next == nullptr);
-                    buffer->next = m_head;
-                    m_head->prev = buffer;
-                    m_head = buffer;
-                    m_bufferCount++;
+            void InsertHead(Buffer &buffer) {
+                m_buffers.push_front(buffer);
                 }
+
+            Buffer *GetHead() {
+                return m_buffers.empty() ? nullptr : &m_buffers.front();
             }
 
-            Buffer *GetHead() const {
-                return m_head;
+            Buffer *GetTail() {
+                return m_buffers.empty() ? nullptr : &m_buffers.back();
             }
 
-            Buffer *GetTail() const {
-                return m_tail;
-            }
-
-            Buffer *RemoveHead() {
-                Buffer *head = m_head;
-                if (head == nullptr) [[unlikely]] {
-                    return nullptr;
-                }
-                assert(m_head->prev == nullptr);
-                assert(m_bufferCount > 0);
-                m_head = m_head->next;
-                head->next = nullptr;
-                if (m_head != nullptr) {
-                    m_head->prev = nullptr;
-                } else {
-                    assert(head == m_tail);
-                    assert(m_bufferCount == 1);
-                    m_tail = nullptr;
-                }
-                m_bufferCount--;
-
-                return head;
-            }
-
-            Buffer *RemoveTail() {
-                Buffer *tail = m_tail;
-                if (tail == nullptr) [[unlikely]] {
-                    return nullptr;
-                }
-                assert(m_tail->next == nullptr);
-                assert(m_bufferCount > 0);
-                m_tail = m_tail->prev;
-                tail->prev = nullptr;
-                if (m_tail != nullptr) {
-                    m_tail->next = nullptr;
-                } else {
-                    assert(tail == m_head);
-                    assert(m_bufferCount == 1);
-                    m_head = nullptr;
-                }
-                m_bufferCount--;
-
-                return tail;
-            }
-
-            // Returns [head, tail].
-            // Both will be nullptr if the specified range is out of range.
-            // Both will be set otherwise.
-            std::pair<Buffer *, Buffer *> RemoveRange(uint32 start, uint32 end) {
-                Buffer *buf = m_tail;
-                uint16 pos = 0;
-                while (pos < start) {
-                    if (buf == nullptr) [[unlikely]] {
-                        return {nullptr, nullptr};
-                    }
-                    buf = buf->prev;
-                    pos++;
+            void RemoveTail() {
+                m_buffers.pop_back();
                 }
 
-                Buffer *tail = buf;
-                Buffer *head = buf;
-                uint32 count = 1;
-                while (pos < end) {
-                    if (buf == nullptr) [[unlikely]] {
-                        return {nullptr, nullptr};
-                    }
-                    head = buf;
-                    buf = buf->prev;
-                    pos++;
-                    count++;
+            uint32 RemoveRange(uint32 start, uint32 end) {
+                start = std::min<uint32>(start, m_buffers.size() - 1);
+                end = std::min<uint32>(end, m_buffers.size() - 1);
+                m_buffers.erase(m_buffers.begin() + start, m_buffers.begin() + end);
+                return end - start + 1;
                 }
-                if (count == 0) {
-                    return {nullptr, nullptr};
-                }
-
-                assert(count <= m_bufferCount);
-
-                m_bufferCount -= count;
-                if (head->prev != nullptr) {
-                    head->prev->next = tail->next;
-                }
-                if (tail->next != nullptr) {
-                    tail->next->prev = head->prev;
-                }
-                head->prev = nullptr;
-                tail->next = nullptr;
-
-                if (head == m_head) {
-                    m_head = head->next;
-                }
-                if (tail == m_tail) {
-                    m_tail = tail->prev;
-                }
-
-                return {head, tail};
-            }
 
             uint8 GetBufferCount() const {
-                return m_bufferCount;
+                return m_buffers.size();
             }
 
             uint32 CalculateSize(uint32 start, uint32 end) const {
-                uint32 pos = 0;
-                Buffer *buf = m_tail;
-                while (pos < start) {
-                    if (buf == nullptr) [[unlikely]] {
-                        return 0;
-                    }
-                    buf = buf->prev;
-                    pos++;
-                }
-
+                start = std::min<uint32>(start, m_buffers.size() - 1);
+                end = std::min<uint32>(end, m_buffers.size() - 1);
                 uint32 size = 0;
-                while (pos <= end) {
-                    if (buf == nullptr) [[unlikely]] {
-                        break;
-                    }
-                    size += buf->size;
-                    buf = buf->prev;
-                    pos++;
+                for (auto i = m_buffers.rbegin() + start; i <= m_buffers.rbegin() + end; i++) {
+                    size += i->size;
                 }
                 return size;
             }
 
         private:
-            Buffer *m_head = nullptr;
-            Buffer *m_tail = nullptr;
-            uint8 m_bufferCount = 0;
+            std::deque<Buffer> m_buffers;
         };
 
-        std::array<Partition, 24> m_partitions;
-        BufferManager &m_bufferManager;
+        std::array<Partition, kNumPartitions> m_partitions;
+
+        uint32 m_freeBuffers;
     };
 
-    BufferManager m_bufferManager;
-    PartitionManager m_partitionManager{m_bufferManager};
-    std::array<media::Filter, 24> m_filters;
+    PartitionManager m_partitionManager;
+    std::array<media::Filter, kNumFilters> m_filters;
+
+    Buffer m_scratchBuffer;
 
     uint8 m_cdDeviceConnection;
     uint8 m_lastCDWritePartition;
