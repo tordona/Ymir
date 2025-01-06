@@ -7,6 +7,8 @@
 #include <satemu/media/disc.hpp>
 #include <satemu/media/filesystem.hpp>
 
+#include <satemu/util/debug_print.hpp>
+
 #include <fmt/format.h>
 
 #include <array>
@@ -28,6 +30,8 @@ class SCU;
 namespace satemu::cdblock {
 
 class CDBlock {
+    static constexpr const dbg::Category &regsLog = dbg::cat::CDBlock;
+
 public:
     CDBlock(scu::SCU &scu);
 
@@ -44,13 +48,13 @@ public:
 
     template <mem_primitive T>
     T ReadReg(uint32 address) {
-        /*T value = ReadRegImpl<T>(address);
-        fmt::println("{}-bit CD Block register read from {:02X} = {:X}", sizeof(T) * 8, address, value);
+        T value = ReadRegImpl<T>(address);
+        regsLog.trace("{}-bit register read from {:02X} = {:X}", sizeof(T) * 8, address, value);
         return value;
     }
 
     template <mem_primitive T>
-    T ReadRegImpl(uint32 address) {*/
+    T ReadRegImpl(uint32 address) {
         switch (address) {
         case 0x00: return DoReadTransfer();
         case 0x02: return DoReadTransfer();
@@ -63,13 +67,13 @@ public:
             m_processingCommand = false;
             m_readyForPeriodicReports = true;
             return m_CR[3];
-        default: fmt::println("unhandled {}-bit CD Block register read from {:02X}", sizeof(T) * 8, address); return 0;
+        default: regsLog.debug("unhandled {}-bit register read from {:02X}", sizeof(T) * 8, address); return 0;
         }
     }
 
     template <mem_primitive T>
     void WriteReg(uint32 address, T value) {
-        // fmt::println("{}-bit CD Block register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+        regsLog.trace("{}-bit register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
         switch (address) {
         case 0x00: DoWriteTransfer(value); break;
         case 0x02: DoWriteTransfer(value); break;
@@ -94,7 +98,7 @@ public:
             break;
 
         default:
-            fmt::println("unhandled {}-bit CD Block register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+            regsLog.debug("unhandled {}-bit register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
             break;
         }
     }
@@ -273,7 +277,7 @@ private:
         void Reset() {
             m_partitions.fill({});
             m_freeBuffers = kNumBuffers;
-                }
+        }
 
         uint32 GetFreeBufferCount() const {
             return m_freeBuffers;
@@ -332,7 +336,7 @@ private:
             assert(partitionIndex < m_partitions.size());
             m_freeBuffers += m_partitions[partitionIndex].GetBufferCount();
             m_partitions[partitionIndex].Clear();
-            }
+        }
 
         uint8 GetBufferCount(uint8 partitionIndex) const {
             assert(partitionIndex < m_partitions.size());
@@ -359,7 +363,7 @@ private:
 
             void InsertHead(Buffer &buffer) {
                 m_buffers.push_front(buffer);
-                }
+            }
 
             Buffer *GetHead() {
                 return m_buffers.empty() ? nullptr : &m_buffers.front();
@@ -371,14 +375,14 @@ private:
 
             void RemoveTail() {
                 m_buffers.pop_back();
-                }
+            }
 
             uint32 RemoveRange(uint32 start, uint32 end) {
                 start = std::min<uint32>(start, m_buffers.size() - 1);
                 end = std::min<uint32>(end, m_buffers.size() - 1);
                 m_buffers.erase(m_buffers.begin() + start, m_buffers.begin() + end);
                 return end - start + 1;
-                }
+            }
 
             uint8 GetBufferCount() const {
                 return m_buffers.size();
