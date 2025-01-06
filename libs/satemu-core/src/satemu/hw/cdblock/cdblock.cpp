@@ -965,18 +965,31 @@ void CDBlock::CmdSeekDisc() {
     // <blank>
     // <blank>
     const uint32 startPos = (bit::extract<0, 7>(m_CR[0]) << 16u) | m_CR[1];
-    // const bool isStartFAD = bit::extract<23>(startPos);
+    const bool isStartFAD = bit::extract<23>(startPos);
 
     fmt::println("CDBlock: Seek start {:06X}", startPos);
+    if (startPos == 0xFFFFFF) {
+        m_status.statusCode = kStatusCodePause;
+        m_targetDriveCycles = kDriveCyclesNotPlaying;
+    } else if (startPos == 0x000000) {
+        m_status.statusCode = kStatusCodeStandby;
+        m_status.frameAddress = 0xFFFFFF;
+        m_status.flags = 0xF;
+        m_status.repeatCount = 0xF;
+        m_status.controlADR = 0xFF;
+        m_status.track = 0xFF;
+        m_status.index = 0xFF;
+        m_targetDriveCycles = kDriveCyclesNotPlaying;
+    } else if (isStartFAD) {
     // TODO: implement
-    // isStartFAD:
-    //   true: startPos is FAD (& 0x7FFFFF)
-    //   false: startPos is track number
+        // switch to Paused if FAD is in valid range
+        // switch to Standby otherwise
+    } else {
     // stops playing if status is Play
-    // status after running the command: -> Paused
-    // setting invalid track: -> Standby
-    // startPos = 0xFFFFFF: stops playing and -> Paused
-    // startPos = 0x000000: stops playing and -> Standby, and clear status values to all FFs
+        // TODO: implement
+        // switch to Paused if track is in valid range
+        // switch to Standby otherwise
+    }
 
     // Output structure: standard CD status data
     ReportCDStatus();
