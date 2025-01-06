@@ -415,7 +415,7 @@ void CDBlock::ProcessDriveStatePlay() {
             m_status.repeatCount++;
         } else {
             // fmt::println("CDBlock: playback ended");
-            m_status.frameAddress = m_playEndPos;
+            m_status.frameAddress = m_playEndPos + 1;
             m_status.statusCode = kStatusCodePause;
             m_targetDriveCycles = kDriveCyclesNotPlaying;
             SetInterrupt(kHIRQ_PEND);
