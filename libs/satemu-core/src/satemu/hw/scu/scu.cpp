@@ -138,11 +138,12 @@ void SCU::RunDMA(uint64 cycles) {
         }
 
         auto readIndirect = [&] {
-            ch.currSrcAddr = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 0);
+            ch.currXferCount = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 0);
             ch.currDstAddr = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 4);
-            ch.currXferCount = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 8);
+            ch.currSrcAddr = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 8);
             ch.currIndirectSrc += 3 * sizeof(uint32);
-            ch.endIndirect = bit::extract<31>(ch.currXferCount);
+            ch.endIndirect = bit::extract<31>(ch.currSrcAddr);
+            ch.currSrcAddr &= 0x7FFF'FFFF;
             if (level == 0) {
                 ch.currXferCount = bit::extract<0, 19>(ch.currXferCount);
             } else {
@@ -172,12 +173,12 @@ void SCU::RunDMA(uint64 cycles) {
             const uint32 value = m_SH2.bus.Read<uint32>(ch.currSrcAddr & 0x7FF'FFFF);
             m_SH2.bus.Write<uint32>(ch.currDstAddr & 0x7FF'FFFF, value);
 
-            if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currSrcAddr)) {
+            if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currSrcAddr & 0x7FF'FFFF)) {
                 ch.currSrcAddr += ch.srcAddrInc * 2;
             } else {
                 ch.currSrcAddr += ch.srcAddrInc;
             }
-            if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currDstAddr)) {
+            if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currDstAddr & 0x7FF'FFFF)) {
                 ch.currDstAddr += ch.dstAddrInc * 2;
             } else {
                 ch.currDstAddr += ch.dstAddrInc;
