@@ -17,6 +17,7 @@ SCU::SCU(vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2Blo
 void SCU::Reset(bool hard) {
     m_intrMask.u32 = 0;
     m_intrStatus.u32 = 0;
+    m_abusIntrAck = false;
 
     for (auto &ch : m_dmaChannels) {
         ch.Reset();
@@ -786,15 +787,31 @@ void SCU::UpdateInterruptLevel(bool acknowledge) {
                 m_intrStatus.u32 &= ~(1u << (intrIndexABus + 16u));
             }
             m_SH2.master.SetExternalInterrupt(0, 0);
+            m_SH2.slave.SetExternalInterrupt(0, 0);
         } else {
             if (intrLevelBase >= intrLevelABus) {
                 m_SH2.master.SetExternalInterrupt(intrLevelBase, intrIndexBase + 0x40);
-            } else {
+
+                // Also send VBlank IN and HBlank IN to slave SH2 if it is enabled
+                if (intrIndexBase == 0) {
+                    m_SH2.slave.SetExternalInterrupt(2, 0x43);
+                } else if (intrIndexBase == 2) {
+                    m_SH2.slave.SetExternalInterrupt(1, 0x41);
+                } else {
+                    m_SH2.slave.SetExternalInterrupt(0, 0);
+                }
+            } else if (m_abusIntrAck) {
+                m_abusIntrAck = false;
                 m_SH2.master.SetExternalInterrupt(intrLevelABus, intrIndexABus + 0x50);
+                m_SH2.slave.SetExternalInterrupt(0, 0);
+            } else {
+                m_SH2.master.SetExternalInterrupt(0, 0);
+                m_SH2.slave.SetExternalInterrupt(0, 0);
             }
         }
     } else {
         m_SH2.master.SetExternalInterrupt(0, 0);
+        m_SH2.slave.SetExternalInterrupt(0, 0);
     }
 }
 

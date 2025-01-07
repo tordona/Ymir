@@ -234,6 +234,7 @@ private:
 
     InterruptMask m_intrMask;
     InterruptStatus m_intrStatus;
+    bool m_abusIntrAck;
 
     // -------------------------------------------------------------------------
     // DMA
@@ -618,9 +619,7 @@ private:
         case 0xA4: // Interrupt Status
             return m_intrStatus.u32;
         case 0xA8: // A-Bus Interrupt Acknowledge
-            // TODO: not yet sure how this works
-            fmt::println("unhandled A-Bus Interrupt Acknowledge read");
-            return 0;
+            return m_abusIntrAck;
 
         case 0xB0: // A-Bus Set (part 1) (write-only)
             return 0;
@@ -775,8 +774,8 @@ private:
             m_intrStatus.u32 &= value;
             break;
         case 0xA8: // A-Bus Interrupt Acknowledge
-            // TODO: not yet sure how this works
-            fmt::println("unhandled A-Bus Interrupt Acknowledge write = {:X}", value);
+            m_abusIntrAck = bit::extract<0>(value);
+            UpdateInterruptLevel(false);
             break;
 
         case 0xB0: // A-Bus Set (part 1)
