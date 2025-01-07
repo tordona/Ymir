@@ -6,6 +6,8 @@
 #include <satemu/core_types.hpp>
 #include <satemu/hw/hw_defs.hpp>
 
+#include <satemu/util/debug_print.hpp>
+
 #include <array>
 #include <vector>
 
@@ -137,6 +139,11 @@ private:
             uint32 H;
         };
     } MAC;
+
+    // -------------------------------------------------------------------------
+    // Debug logging
+
+    const dbg::Category &m_log;
 
     // -------------------------------------------------------------------------
     // Memory accessors

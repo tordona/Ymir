@@ -13,6 +13,13 @@
 
 namespace satemu::sh2 {
 
+inline constexpr dbg::Category MSH2{"SH2-M"};
+inline constexpr dbg::Category SSH2{"SH2-S"};
+
+inline constexpr const dbg::Category &Logger(bool master) {
+    return master ? MSH2 : SSH2;
+}
+
 RealSH2StackTracer::RealSH2StackTracer(bool master)
     : m_master(master) {
     Reset();
@@ -23,27 +30,31 @@ void RealSH2StackTracer::Reset() {
 }
 
 void RealSH2StackTracer::Dump() {
-    const char cpuType = m_master ? 'M' : 'S';
-    fmt::println("{}SH2: stack trace:", cpuType);
+    const auto &log = Logger(m_master);
+
+    log.debug("Stack trace:");
+    auto buf = fmt::memory_buffer();
+    auto inserter = std::back_inserter(buf);
     for (auto it = m_entries.rbegin(); it != m_entries.rend(); it++) {
-        fmt::print("{}SH2:   ", cpuType);
-        fmt::print("R0-15:");
+        fmt::format_to(inserter, "  R0-15:");
         for (int i = 0; i < 16; i++) {
-            fmt::print(" {:08X}", it->regs.R[i]);
+            fmt::format_to(inserter, " {:08X}", it->regs.R[i]);
         }
-        fmt::print(" PC={:08X}", it->regs.PC);
-        fmt::print(" PR={:08X}", it->regs.PR);
-        fmt::print(" SR={:08X}", it->regs.SR);
-        fmt::print(" GBR={:08X}", it->regs.GBR);
-        fmt::print(" VBR={:08X}", it->regs.VBR);
-        fmt::print(" MAC={:016X}", it->regs.MAC);
+        fmt::format_to(inserter, " PC={:08X}", it->regs.PC);
+        fmt::format_to(inserter, " PR={:08X}", it->regs.PR);
+        fmt::format_to(inserter, " SR={:08X}", it->regs.SR);
+        fmt::format_to(inserter, " GBR={:08X}", it->regs.GBR);
+        fmt::format_to(inserter, " VBR={:08X}", it->regs.VBR);
+        fmt::format_to(inserter, " MAC={:016X}", it->regs.MAC);
         switch (it->type) {
-        case SH2BranchType::JSR: fmt::println(" JSR"); break;
-        case SH2BranchType::BSR: fmt::println(" BSR"); break;
-        case SH2BranchType::TRAPA: fmt::println(" TRAPA"); break;
-        case SH2BranchType::Exception: fmt::println(" Exception vector {}", it->vec); break;
-        case SH2BranchType::UserCapture: fmt::println(" User capture"); break;
+        case SH2BranchType::JSR: fmt::format_to(inserter, " JSR"); break;
+        case SH2BranchType::BSR: fmt::format_to(inserter, " BSR"); break;
+        case SH2BranchType::TRAPA: fmt::format_to(inserter, " TRAPA"); break;
+        case SH2BranchType::Exception: fmt::format_to(inserter, " Exception vector {}", it->vec); break;
+        case SH2BranchType::UserCapture: fmt::format_to(inserter, " User capture"); break;
         }
+        log.debug("{}", fmt::to_string(buf));
+        buf.clear();
     }
 }
 
@@ -84,7 +95,8 @@ void RealSH2StackTracer::RTS(SH2Regs regs) {
 }
 
 SH2::SH2(SH2Bus &bus, bool master)
-    : m_bus(bus)
+    : m_log(Logger(master))
+    , m_bus(bus)
     , m_stackTracer(master) {
     BCR1.MASTER = !master;
     Reset(true);
@@ -262,7 +274,7 @@ FLATTEN void SH2::Advance(uint64 cycles) {
 
         // dump stack trace on SYS_EXECDMP
         if ((PC & 0x1FFFFFFF) == 0x186C) {
-            fmt::println("{}SH2: SYS_EXECDMP triggered", (BCR1.MASTER ? "S" : "M"));
+            m_log.debug("SYS_EXECDMP triggered");
             m_stackTracer.UserCapture({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
             m_stackTracer.Dump();
             m_stackTracer.Reset();
@@ -297,8 +309,7 @@ template <mem_primitive T, bool instrFetch>
 T SH2::MemRead(uint32 address) {
     const uint32 partition = (address >> 29u) & 0b111;
     if (address & static_cast<uint32>(sizeof(T) - 1)) {
-        fmt::println("{}SH2: WARNING: misaligned {}-bit read from {:08X}", (BCR1.MASTER ? "S" : "M"), sizeof(T) * 8,
-                     address);
+        m_log.warn("WARNING: misaligned {}-bit read from {:08X}", sizeof(T) * 8, address);
         // TODO: raise CPU address error due to misaligned access
         // - might have to store data in a class member instead of returning
     }
@@ -315,8 +326,7 @@ T SH2::MemRead(uint32 address) {
     case 0b010: // associative purge
 
         // TODO: implement
-        /*fmt::println("{}SH2: unhandled {}-bit SH-2 associative purge read from {:08X}", (BCR1.MASTER ? "S" : "M"),
-                     sizeof(T) * 8, address);*/
+        m_log.debug("Unhandled {}-bit SH-2 associative purge read from {:08X}", sizeof(T) * 8, address);
         return (address & 1) ? static_cast<T>(0x12231223) : static_cast<T>(0x23122312);
     case 0b011: { // cache address array
         uint32 entry = (address >> 4u) & 0x3F;
@@ -326,14 +336,12 @@ T SH2::MemRead(uint32 address) {
     case 0b110: // cache data array
 
         // TODO: implement
-        /*fmt::println("{}SH2: unhandled {}-bit SH-2 cache data array read from {:08X}", (BCR1.MASTER ? "S" : "M"),
-                     sizeof(T) * 8, address);*/
+        m_log.debug("Unhandled {}-bit SH-2 cache data array read from {:08X}", sizeof(T) * 8, address);
         return 0;
     case 0b111: // I/O area
         if constexpr (instrFetch) {
             // TODO: raise CPU address error due to attempt to fetch instruction from I/O area
-            /*fmt::println("{}SH2: attempted to fetch instruction from I/O area at {:08X}", (BCR1.MASTER ? "S" : "M"),
-                         address);*/
+            m_log.debug("Attempted to fetch instruction from I/O area at {:08X}", address);
             return 0;
         } else if ((address & 0xE0004000) == 0xE0004000) {
             // bits 31-29 and 14 must be set
@@ -346,8 +354,7 @@ T SH2::MemRead(uint32 address) {
             }
         } else {
             // TODO: implement
-            /*fmt::println("{}SH2: unhandled {}-bit SH-2 I/O area read from {:08X}", (BCR1.MASTER ? "S" : "M"),
-                         sizeof(T) * 8, address);*/
+            m_log.debug("Unhandled {}-bit SH-2 I/O area read from {:08X}", sizeof(T) * 8, address);
             return 0;
         }
     }
@@ -359,8 +366,7 @@ template <mem_primitive T>
 void SH2::MemWrite(uint32 address, T value) {
     const uint32 partition = address >> 29u;
     if (address & static_cast<uint32>(sizeof(T) - 1)) {
-        fmt::println("{}SH2: WARNING: misaligned {}-bit write to {:08X} = {:X}", (BCR1.MASTER ? "S" : "M"),
-                     sizeof(T) * 8, address, value);
+        m_log.warn("WARNING: misaligned {}-bit write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         // TODO: address error (misaligned access)
     }
 
@@ -376,8 +382,7 @@ void SH2::MemWrite(uint32 address, T value) {
         break;
     case 0b010: // associative purge
         // TODO: implement
-        /*fmt::println("{}SH2: unhandled {}-bit SH-2 associative purge write to {:08X} = {:X}", (BCR1.MASTER ? "S" :
-           "M"), sizeof(T) * 8, address, value);*/
+        m_log.debug("Unhandled {}-bit SH-2 associative purge write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         break;
     case 0b011: { // cache address array
         uint32 entry = (address >> 4u) & 0x3F;
@@ -388,8 +393,7 @@ void SH2::MemWrite(uint32 address, T value) {
     case 0b100:
     case 0b110: // cache data array
         // TODO: implement
-        /*fmt::println("{}SH2: unhandled {}-bit SH-2 cache data array write to {:08X} = {:X}", (BCR1.MASTER ? "S" :
-           "M"), sizeof(T) * 8, address, value);*/
+        m_log.debug("Unhandled {}-bit SH-2 cache data array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         break;
     case 0b111: // I/O area
         if ((address & 0xE0004000) == 0xE0004000) {
@@ -402,21 +406,17 @@ void SH2::MemWrite(uint32 address, T value) {
         } else if ((address >> 12u) == 0xFFFF8) {
             // DRAM setup stuff
             switch (address) {
-            case 0xFFFF8426: fmt::println("{}SH2: 16-bit CAS latency 1", (BCR1.MASTER ? "S" : "M")); break;
-            case 0xFFFF8446: fmt::println("{}SH2: 16-bit CAS latency 2", (BCR1.MASTER ? "S" : "M")); break;
-            case 0xFFFF8466: fmt::println("{}SH2: 16-bit CAS latency 3", (BCR1.MASTER ? "S" : "M")); break;
-            case 0xFFFF8848: fmt::println("{}SH2: 32-bit CAS latency 1", (BCR1.MASTER ? "S" : "M")); break;
-            case 0xFFFF8888: fmt::println("{}SH2: 32-bit CAS latency 2", (BCR1.MASTER ? "S" : "M")); break;
-            case 0xFFFF88C8: fmt::println("{}SH2: 32-bit CAS latency 3", (BCR1.MASTER ? "S" : "M")); break;
-            default:
-                /*fmt::println("{}SH2: unhandled {}-bit SH-2 I/O area read from {:08X}", (BCR1.MASTER ? "S" : "M"),
-                             sizeof(T) * 8, address);*/
-                break;
+            case 0xFFFF8426: m_log.trace("16-bit CAS latency 1"); break;
+            case 0xFFFF8446: m_log.trace("16-bit CAS latency 2"); break;
+            case 0xFFFF8466: m_log.trace("16-bit CAS latency 3"); break;
+            case 0xFFFF8848: m_log.trace("32-bit CAS latency 1"); break;
+            case 0xFFFF8888: m_log.trace("32-bit CAS latency 2"); break;
+            case 0xFFFF88C8: m_log.trace("32-bit CAS latency 3"); break;
+            default: m_log.debug("Unhandled {}-bit SH-2 I/O area read from {:08X}", sizeof(T) * 8, address); break;
             }
         } else {
             // TODO: implement
-            /*fmt::println("{}SH2: unhandled {}-bit SH-2 I/O area write to {:08X} = {:X}", (BCR1.MASTER ? "S" : "M"),
-                         sizeof(T) * 8, address, value);*/
+            m_log.debug("Unhandled {}-bit SH-2 I/O area write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         }
         break;
     }
@@ -704,8 +704,7 @@ T SH2::OnChipRegRead(uint32 address) {
     case 0x1F8 ... 0x1FA: return RTCOR;
 
     default: //
-        fmt::println("{}SH2: unhandled {}-bit on-chip register read from {:02X}", (BCR1.MASTER ? "S" : "M"),
-                     sizeof(T) * 8, address);
+        m_log.debug("Unhandled {}-bit on-chip register read from {:02X}", sizeof(T) * 8, address);
         return 0;
     }
 }
@@ -897,8 +896,7 @@ void SH2::OnChipRegWrite(uint32 address, T baseValue) {
         }
         break;
     default: //
-        fmt::println("{}SH2: unhandled {}-bit on-chip register write to {:02X} = {:X}", (BCR1.MASTER ? "S" : "M"),
-                     sizeof(T) * 8, address, value);
+        m_log.debug("Unhandled {}-bit on-chip register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
         break;
     }
 }
@@ -948,7 +946,7 @@ bool SH2::CheckInterrupts() {
     if (m_NMI) {
         // Set NMI interrupt: vector 0x0B, priority 16
         m_NMI = false;
-        // fmt::println("{}SH2: NMI raised", (BCR1.MASTER ? "S" : "M"));
+        m_log.trace("NMI raised");
         update(16, 0x0B);
         return true;
     }
@@ -1009,8 +1007,8 @@ FORCE_INLINE void SH2::EnterException(uint8 vectorNumber) {
 
 void SH2::Execute(uint32 address) {
     if (!m_delaySlot && CheckInterrupts()) [[unlikely]] {
-        // fmt::println("{}SH2: >> intr level {:02X} vec {:02X}", (BCR1.MASTER ? "S" : "M"),
-        // m_pendingInterrupt.priority, m_pendingInterrupt.vecNum);
+        m_log.trace("Handling interrupt level {:02X}, vector number {:02X}", m_pendingInterrupt.priority,
+                    m_pendingInterrupt.vecNum);
         EnterException(m_pendingInterrupt.vecNum);
         SR.ILevel = std::min<uint8>(m_pendingInterrupt.priority, 0xF);
         address = PC;
@@ -1264,7 +1262,7 @@ FORCE_INLINE void SH2::SLEEP() {
     PC -= 2;
     // TODO: enter sleep or standby mode depending on SBYCR.SBY
     //__debugbreak();
-    // fmt::println("{}SH2: entering standby", (BCR1.MASTER ? "S" : "M"));
+    m_log.debug("Entering standby");
 }
 
 FORCE_INLINE void SH2::MOV(InstrNM instr) {

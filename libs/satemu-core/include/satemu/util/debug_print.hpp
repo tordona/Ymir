@@ -172,9 +172,6 @@ struct Category {
 // TODO: subcategories? tree of categories?
 
 namespace cat {
-    inline constexpr Category MSH2{"SH2-M"};
-    inline constexpr Category SSH2{"SH2-S"};
-
     inline constexpr Category M68K{"M68K"};
 } // namespace cat
 
