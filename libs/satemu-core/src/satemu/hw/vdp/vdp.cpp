@@ -64,6 +64,10 @@ void VDP::Advance(uint64 cycles) {
     // Update timings and fire events
     // TODO: use scheduler events
 
+    for (uint64 cy = 0; cy < cycles; cy++) {
+        VDP1ProcessCommands();
+    }
+
     m_currCycles += cycles;
     while (m_currCycles >= m_HTimings[static_cast<uint32>(m_HPhase)]) {
         auto nextPhase = static_cast<uint32>(m_HPhase) + 1;
@@ -334,88 +338,88 @@ void VDP::VDP1BeginFrame() {
     m_VDP1.prevFrameEnded = m_VDP1.currFrameEnded;
     m_VDP1.currFrameEnded = false;
 
-    // TODO: process while advancing cycles
+    m_VDP1RenderContext.rendering = true;
+
     VDP1ProcessCommands();
 }
 
 void VDP::VDP1EndFrame() {
+    // fmt::println("VDP1: ending frame");
+    m_VDP1RenderContext.rendering = false;
     m_VDP1.currFrameEnded = true;
 }
 
 void VDP::VDP1ProcessCommands() {
     static constexpr uint16 kNoReturn = ~0;
 
+    if (!m_VDP1RenderContext.rendering) {
+        return;
+    }
+
     auto &cmdAddress = m_VDP1.currCommandAddress;
 
-    // Run up to 10000 commands to avoid infinite loops
-    // TODO: cycle counting
-    for (int i = 0; i < 10000; i++) {
-        const VDP1Command::Control control{.u16 = VDP1ReadVRAM<uint16>(cmdAddress)};
-        if (control.end) {
-            // fmt::println("VDP1: End of command list");
+    const VDP1Command::Control control{.u16 = VDP1ReadVRAM<uint16>(cmdAddress)};
+    // fmt::println("VDP1 command: {:04X}", control.u16);
+    if (control.end) [[unlikely]] {
+        // fmt::println("VDP1: End of command list");
+        VDP1EndFrame();
+        m_SCU.TriggerSpriteDrawEnd();
+    } else if (!control.skip) {
+        // Process command
+        using enum VDP1Command::CommandType;
+
+        switch (control.command) {
+        case DrawNormalSprite: VDP1Cmd_DrawNormalSprite(cmdAddress, control); break;
+        case DrawScaledSprite: VDP1Cmd_DrawScaledSprite(cmdAddress, control); break;
+        case DrawDistortedSprite: // fallthrough
+        case DrawDistortedSpriteAlt: VDP1Cmd_DrawDistortedSprite(cmdAddress, control); break;
+
+        case DrawPolygon: VDP1Cmd_DrawPolygon(cmdAddress); break;
+        case DrawPolylines: // fallthrough
+        case DrawPolylinesAlt: VDP1Cmd_DrawPolylines(cmdAddress); break;
+        case DrawLine: VDP1Cmd_DrawLine(cmdAddress); break;
+
+        case UserClipping: // fallthrough
+        case UserClippingAlt: VDP1Cmd_SetUserClipping(cmdAddress); break;
+        case SystemClipping: VDP1Cmd_SetSystemClipping(cmdAddress); break;
+        case SetLocalCoordinates: VDP1Cmd_SetLocalCoordinates(cmdAddress); break;
+
+        default:
+            fmt::println("VDP1: Unexpected command type {:X}", static_cast<uint16>(control.command));
             VDP1EndFrame();
-            m_SCU.TriggerSpriteDrawEnd();
             return;
         }
+    }
 
-        // Process command
-        if (!control.skip) {
-            using enum VDP1Command::CommandType;
+    // Go to the next command
+    {
+        using enum VDP1Command::JumpType;
 
-            switch (control.command) {
-            case DrawNormalSprite: VDP1Cmd_DrawNormalSprite(cmdAddress, control); break;
-            case DrawScaledSprite: VDP1Cmd_DrawScaledSprite(cmdAddress, control); break;
-            case DrawDistortedSprite: // fallthrough
-            case DrawDistortedSpriteAlt: VDP1Cmd_DrawDistortedSprite(cmdAddress, control); break;
-
-            case DrawPolygon: VDP1Cmd_DrawPolygon(cmdAddress); break;
-            case DrawPolylines: // fallthrough
-            case DrawPolylinesAlt: VDP1Cmd_DrawPolylines(cmdAddress); break;
-            case DrawLine: VDP1Cmd_DrawLine(cmdAddress); break;
-
-            case UserClipping: // fallthrough
-            case UserClippingAlt: VDP1Cmd_SetUserClipping(cmdAddress); break;
-            case SystemClipping: VDP1Cmd_SetSystemClipping(cmdAddress); break;
-            case SetLocalCoordinates: VDP1Cmd_SetLocalCoordinates(cmdAddress); break;
-
-            default:
-                fmt::println("VDP1: Unexpected command type {:X}", static_cast<uint16>(control.command));
-                VDP1EndFrame();
-                return;
-            }
+        switch (control.jumpMode) {
+        case Next: cmdAddress += 0x20; break;
+        case Assign: {
+            cmdAddress = VDP1ReadVRAM<uint16>(cmdAddress + 0x02) << 3u;
+            break;
         }
-
-        // Go to the next command
-        {
-            using enum VDP1Command::JumpType;
-
-            switch (control.jumpMode) {
-            case Next: cmdAddress += 0x20; break;
-            case Assign: {
-                cmdAddress = VDP1ReadVRAM<uint16>(cmdAddress + 0x02) << 3u;
-                break;
+        case Call: {
+            // Nested calls seem to not update the return address
+            if (m_VDP1.returnAddress == kNoReturn) {
+                m_VDP1.returnAddress = cmdAddress + 0x20;
             }
-            case Call: {
-                // Nested calls seem to not update the return address
-                if (m_VDP1.returnAddress == kNoReturn) {
-                    m_VDP1.returnAddress = cmdAddress + 0x20;
-                }
-                cmdAddress = VDP1ReadVRAM<uint16>(cmdAddress + 0x02) << 3u;
-                break;
-            }
-            case Return: {
-                // Return seems to only return if there was a previous Call
-                if (m_VDP1.returnAddress != kNoReturn) {
-                    cmdAddress = m_VDP1.returnAddress;
-                    m_VDP1.returnAddress = kNoReturn;
-                } else {
-                    cmdAddress += 0x20;
-                }
-                break;
-            }
-            }
+            cmdAddress = VDP1ReadVRAM<uint16>(cmdAddress + 0x02) << 3u;
+            break;
         }
-
+        case Return: {
+            // Return seems to only return if there was a previous Call
+            if (m_VDP1.returnAddress != kNoReturn) {
+                cmdAddress = m_VDP1.returnAddress;
+                m_VDP1.returnAddress = kNoReturn;
+            } else {
+                cmdAddress += 0x20;
+            }
+            break;
+        }
+        }
         cmdAddress &= 0x7FFFF;
     }
 }

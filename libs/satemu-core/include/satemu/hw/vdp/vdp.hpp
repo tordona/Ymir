@@ -674,6 +674,8 @@ private:
 
             localCoordX = 0;
             localCoordY = 0;
+
+            rendering = false;
         }
 
         // System clipping dimensions
@@ -691,6 +693,8 @@ private:
         // Local coordinates offset
         sint32 localCoordX;
         sint32 localCoordY;
+
+        bool rendering;
     } m_VDP1RenderContext;
 
     struct VDP1GouraudParams {
