@@ -176,8 +176,6 @@ namespace cat {
     inline constexpr Category SSH2{"SH2-S"};
 
     inline constexpr Category M68K{"M68K"};
-    inline constexpr Category VDP1{"VDP1"};
-    inline constexpr Category VDP2{"VDP2"};
 } // namespace cat
 
 } // namespace dbg

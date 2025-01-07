@@ -107,12 +107,12 @@ void VDP::UpdateResolution() {
         m_VRes *= 2;
     }
 
-    fmt::println("VDP2: screen resolution set to {}x{}", m_HRes, m_VRes);
+    rootLog2.info("Screen resolution set to {}x{}", m_HRes, m_VRes);
     switch (m_VDP2.TVMD.LSMDn) {
-    case 0: fmt::println("VDP2: non-interlace mode"); break;
-    case 1: fmt::println("VDP2: invalid interlace mode"); break;
-    case 2: fmt::println("VDP2: single interlace mode"); break;
-    case 3: fmt::println("VDP2: double interlace mode"); break;
+    case 0: rootLog2.info("Non-interlace mode"); break;
+    case 1: rootLog2.info("Invalid interlace mode"); break;
+    case 2: rootLog2.info("Single interlace mode"); break;
+    case 3: rootLog2.info("Double interlace mode"); break;
     }
 
     // Timing tables
@@ -167,8 +167,7 @@ void VDP::UpdateResolution() {
     }
     m_dotClockMult = dotClockMult;
 
-    fmt::println("VDP2: dot clock mult = {}", dotClockMult);
-    fmt::println("VDP2: display {}", m_VDP2.TVMD.DISP ? "ON" : "OFF");
+    rootLog2.info("Dot clock mult = {}, display {}", dotClockMult, (m_VDP2.TVMD.DISP ? "ON" : "OFF"));
 }
 
 FORCE_INLINE void VDP::IncrementVCounter() {
@@ -196,11 +195,11 @@ FORCE_INLINE void VDP::IncrementVCounter() {
 // ----
 
 void VDP::BeginHPhaseActiveDisplay() {
-    // fmt::println("VDP2: (VCNT = {:3d})  entering horizontal active display phase", m_VCounter);
+    rootLog2.trace("(VCNT = {:3d})  Entering horizontal active display phase", m_VCounter);
     if (m_VPhase == VerticalPhase::Active) {
         if (m_VCounter == 0) {
             m_framebuffer = m_cbRequestFramebuffer(m_HRes, m_VRes);
-            // fmt::println("VDP: begin frame, VDP1 fb {}", m_drawFB ^ 1);
+            rootLog2.trace("Begin frame, VDP1 framebuffer {}", m_drawFB ^ 1);
 
             VDP2InitFrame();
         }
@@ -209,26 +208,26 @@ void VDP::BeginHPhaseActiveDisplay() {
 }
 
 void VDP::BeginHPhaseRightBorder() {
-    // fmt::println("VDP2: (VCNT = {:3d})  entering right border phase", m_VCounter);
+    rootLog2.trace("(VCNT = {:3d})  Entering right border phase", m_VCounter);
 }
 
 void VDP::BeginHPhaseHorizontalSync() {
     IncrementVCounter();
-    // fmt::println("VDP2: (VCNT = {:3d})  entering horizontal sync phase", m_VCounter);
+    rootLog2.trace("(VCNT = {:3d})  Entering horizontal sync phase", m_VCounter);
 
     m_VDP2.TVSTAT.HBLANK = 1;
     m_SCU.TriggerHBlankIN();
 }
 
 void VDP::BeginHPhaseLeftBorder() {
-    // fmt::println("VDP2: (VCNT = {:3d})  entering left border phase", m_VCounter);
+    rootLog2.trace("(VCNT = {:3d})  Entering left border phase", m_VCounter);
     m_VDP2.TVSTAT.HBLANK = 0;
 }
 
 // ----
 
 void VDP::BeginVPhaseActiveDisplay() {
-    // fmt::println("VDP2: (VCNT = {:3d})  entering vertical active display phase", m_VCounter);
+    rootLog2.trace("(VCNT = {:3d})  Entering vertical active display phase", m_VCounter);
     if (m_VDP2.TVMD.LSMDn != 0) {
         m_VDP2.TVSTAT.ODD ^= 1;
     } else {
@@ -237,21 +236,21 @@ void VDP::BeginVPhaseActiveDisplay() {
 }
 
 void VDP::BeginVPhaseBottomBorder() {
-    // fmt::println("VDP2: (VCNT = {:3d})  entering bottom border phase", m_VCounter);
+    rootLog2.trace("(VCNT = {:3d})  Entering bottom border phase", m_VCounter);
 }
 
 void VDP::BeginVPhaseBottomBlanking() {
-    // fmt::println("VDP2: (VCNT = {:3d})  entering bottom blanking phase", m_VCounter);
+    rootLog2.trace("(VCNT = {:3d})  Entering bottom blanking phase", m_VCounter);
 }
 
 void VDP::BeginVPhaseVerticalSync() {
-    // fmt::println("VDP2: (VCNT = {:3d})  entering vertical sync phase", m_VCounter);
+    rootLog2.trace("(VCNT = {:3d})  Entering vertical sync phase", m_VCounter);
     m_VDP2.TVSTAT.VBLANK = 1;
     m_SCU.TriggerVBlankIN();
 }
 
 void VDP::BeginVPhaseTopBlanking() {
-    // fmt::println("VDP2: (VCNT = {:3d})  entering top blanking phase", m_VCounter);
+    rootLog2.trace("(VCNT = {:3d})  Entering top blanking phase", m_VCounter);
 
     // End frame
     m_cbFrameComplete(m_framebuffer, m_HRes, m_VRes);
@@ -260,18 +259,18 @@ void VDP::BeginVPhaseTopBlanking() {
 }
 
 void VDP::BeginVPhaseTopBorder() {
-    // fmt::println("VDP2: (VCNT = {:3d})  entering top border phase", m_VCounter);
+    rootLog2.trace("(VCNT = {:3d})  Entering top border phase", m_VCounter);
 }
 
 void VDP::BeginVPhaseLastLine() {
-    // fmt::println("VDP2: (VCNT = {:3d})  entering last line phase", m_VCounter);
+    rootLog2.trace("(VCNT = {:3d})  Entering last line phase", m_VCounter);
 
     m_VDP2.TVSTAT.VBLANK = 0;
     m_SCU.TriggerVBlankOUT();
 
-    // fmt::println("VDP: VBlank OUT  VBE={:d} FCM={:d} FCT={:d} PTM={:d} mswap={:d} merase={:d}", m_VDP1.vblankErase,
-    //              m_VDP1.fbSwapMode, m_VDP1.fbSwapTrigger, m_VDP1.plotTrigger, m_VDP1.fbManualSwap,
-    //              m_VDP1.fbManualErase);
+    rootLog2.trace("VBlank OUT  VBE={:d} FCM={:d} FCT={:d} PTM={:d} mswap={:d} merase={:d}", m_VDP1.vblankErase,
+                   m_VDP1.fbSwapMode, m_VDP1.fbSwapTrigger, m_VDP1.plotTrigger, m_VDP1.fbManualSwap,
+                   m_VDP1.fbManualErase);
 
     bool swapFB = false;
     if (m_VDP1.fbManualSwap) {
@@ -315,19 +314,19 @@ FORCE_INLINE std::array<uint8, kVDP1FramebufferRAMSize> &VDP::VDP1GetDisplayFB()
 }
 
 FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
-    // fmt::println("VDP1: Erasing framebuffer {}", m_drawFB ^ 1);
+    renderLog1.trace("Erasing framebuffer {}", m_drawFB ^ 1);
     // TODO: erase only the specified region
     VDP1GetDisplayFB().fill(m_VDP1.eraseWriteValue);
 }
 
 FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
-    // fmt::println("VDP1: Swapping framebuffers - draw {}, display {}", m_drawFB ^ 1, m_drawFB);
+    renderLog1.trace("Swapping framebuffers - draw {}, display {}", m_drawFB ^ 1, m_drawFB);
     m_drawFB ^= 1;
 }
 
 void VDP::VDP1BeginFrame() {
-    // fmt::println("VDP1: starting frame on framebuffer {} - VBE={:d} FCT={:d} FCM={:d}", m_drawFB, m_VDP1.vblankErase,
-    //              m_VDP1.fbSwapTrigger, m_VDP1.fbSwapMode);
+    renderLog1.trace("Starting frame on framebuffer {} - VBE={:d} FCT={:d} FCM={:d}", m_drawFB, m_VDP1.vblankErase,
+                     m_VDP1.fbSwapTrigger, m_VDP1.fbSwapMode);
 
     // TODO: setup rendering
     // TODO: figure out VDP1 timings
@@ -344,7 +343,7 @@ void VDP::VDP1BeginFrame() {
 }
 
 void VDP::VDP1EndFrame() {
-    // fmt::println("VDP1: ending frame");
+    renderLog1.trace("Ending frame");
     m_VDP1RenderContext.rendering = false;
     m_VDP1.currFrameEnded = true;
 }
@@ -359,9 +358,9 @@ void VDP::VDP1ProcessCommands() {
     auto &cmdAddress = m_VDP1.currCommandAddress;
 
     const VDP1Command::Control control{.u16 = VDP1ReadVRAM<uint16>(cmdAddress)};
-    // fmt::println("VDP1 command: {:04X}", control.u16);
+    renderLog1.trace("Processing command: {:04X}", control.u16);
     if (control.end) [[unlikely]] {
-        // fmt::println("VDP1: End of command list");
+        renderLog1.trace("End of command list");
         VDP1EndFrame();
         m_SCU.TriggerSpriteDrawEnd();
     } else if (!control.skip) {
@@ -385,7 +384,7 @@ void VDP::VDP1ProcessCommands() {
         case SetLocalCoordinates: VDP1Cmd_SetLocalCoordinates(cmdAddress); break;
 
         default:
-            fmt::println("VDP1: Unexpected command type {:X}", static_cast<uint16>(control.command));
+            renderLog1.debug("Unexpected command type {:X}", static_cast<uint16>(control.command));
             VDP1EndFrame();
             return;
         }
@@ -723,14 +722,14 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
     const sint32 rx = xa + charSizeH; // right X
     const sint32 by = ya + charSizeV; // bottom Y
 
-    const CoordS32 coordA{xa, ya};
+    const CoordS32 coordA{lx, ty};
     const CoordS32 coordB{rx, ty};
     const CoordS32 coordC{rx, by};
     const CoordS32 coordD{lx, by};
 
-    // fmt::println("VDP1: Draw normal sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
-    //              "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
-    //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
+    renderLog1.trace("Draw normal sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
+                     "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
+                     lx, ty, rx, ty, rx, by, lx, by, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
 
     if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
         return;
@@ -868,10 +867,10 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
     const CoordS32 coordC{qxc, qyc};
     const CoordS32 coordD{qxd, qyd};
 
-    // fmt::println("VDP1: Draw scaled sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
-    //              "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
-    //              qxa, qya, qxb, qyb, qxc, qyc, qxd, qyd, color, gouraudTable, mode.u16, charSizeH, charSizeV,
-    //              charAddr);
+    renderLog1.trace("Draw scaled sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
+                     "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
+                     qxa, qya, qxb, qyb, qxc, qyc, qxd, qyd, color, gouraudTable, mode.u16, charSizeH, charSizeV,
+                     charAddr);
 
     if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
         return;
@@ -928,9 +927,9 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control co
     const CoordS32 coordC{xc, yc};
     const CoordS32 coordD{xd, yd};
 
-    // fmt::println("VDP1: Draw distorted sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
-    //              "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
-    //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
+    renderLog1.trace("Draw distorted sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
+                     "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
+                     xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
 
     if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
         return;
@@ -983,9 +982,9 @@ void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
     const CoordS32 coordC{xc, yc};
     const CoordS32 coordD{xd, yd};
 
-    // fmt::println(
-    // "VDP1: Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
-    //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16);
+    renderLog1.trace(
+        "VDP1: Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa, ya,
+        xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16);
 
     if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
         return;
@@ -1035,9 +1034,8 @@ void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
     const CoordS32 coordC{xc, yc};
     const CoordS32 coordD{xd, yd};
 
-    // fmt::println(
-    // "VDP1: Draw polylines: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
-    //              xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, mode.u16);
+    renderLog1.trace("Draw polylines: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
+                     xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, mode.u16);
 
     if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
         return;
@@ -1078,8 +1076,8 @@ void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
     const CoordS32 coordA{xa, ya};
     const CoordS32 coordB{xb, yb};
 
-    // fmt::println("VDP1: Draw line: {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa, ya, xb, yb,
-    //              color, gouraudTable, mode.u16);
+    renderLog1.trace("Draw line: {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa, ya, xb, yb,
+                     color, gouraudTable, mode.u16);
 
     if (VDP1IsLineSystemClipped(coordA, coordB)) {
         return;
@@ -1103,7 +1101,7 @@ void VDP::VDP1Cmd_SetSystemClipping(uint32 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     ctx.sysClipH = bit::extract<0, 9>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14));
     ctx.sysClipV = bit::extract<0, 8>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16));
-    // fmt::println("VDP1: Set system clipping: {}x{}", ctx.sysClipH, ctx.sysClipV);
+    renderLog1.trace("Set system clipping: {}x{}", ctx.sysClipH, ctx.sysClipV);
 }
 
 void VDP::VDP1Cmd_SetUserClipping(uint32 cmdAddress) {
@@ -1112,15 +1110,15 @@ void VDP::VDP1Cmd_SetUserClipping(uint32 cmdAddress) {
     ctx.userClipY0 = bit::extract<0, 8>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E));
     ctx.userClipX1 = bit::extract<0, 9>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14));
     ctx.userClipY1 = bit::extract<0, 8>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16));
-    // fmt::println("VDP1: Set user clipping: {}x{} - {}x{}", ctx.userClipX0, ctx.userClipY0, ctx.userClipX1,
-    //              ctx.userClipY1);
+    renderLog1.trace("Set user clipping: {}x{} - {}x{}", ctx.userClipX0, ctx.userClipY0, ctx.userClipX1,
+                     ctx.userClipY1);
 }
 
 void VDP::VDP1Cmd_SetLocalCoordinates(uint32 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     ctx.localCoordX = bit::sign_extend<16>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0C));
     ctx.localCoordY = bit::sign_extend<16>(VDP1ReadVRAM<uint16>(cmdAddress + 0x0E));
-    // fmt::println("VDP1: Set local coordinates: {}x{}", ctx.localCoordX, ctx.localCoordY);
+    renderLog1.trace("Set local coordinates: {}x{}", ctx.localCoordX, ctx.localCoordY);
 }
 
 // -----------------------------------------------------------------------------
@@ -1331,7 +1329,7 @@ void VDP::VDP2LoadRotationParameterTables() {
 }
 
 void VDP::VDP2DrawLine() {
-    // fmt::println("VDP2: drawing line {}", m_VCounter);
+    renderLog2.trace("Drawing line {}", m_VCounter);
 
     using FnDrawLayer = void (VDP::*)();
 

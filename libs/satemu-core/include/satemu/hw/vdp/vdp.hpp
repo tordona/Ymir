@@ -9,9 +9,8 @@
 
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/data_ops.hpp>
+#include <satemu/util/debug_print.hpp>
 #include <satemu/util/inline.hpp>
-
-#include <fmt/format.h>
 
 #include <array>
 #include <span>
@@ -31,6 +30,14 @@ namespace satemu::vdp {
 
 // Contains both VDP1 and VDP2
 class VDP {
+    static constexpr dbg::Category rootLog1{"VDP1"};
+    static constexpr dbg::Category regsLog1{rootLog1, "Regs"};
+    static constexpr dbg::Category renderLog1{rootLog1, "Render"};
+
+    static constexpr dbg::Category rootLog2{"VDP2"};
+    static constexpr dbg::Category regsLog2{rootLog2, "Regs"};
+    static constexpr dbg::Category renderLog2{rootLog2, "Render"};
+
 public:
     VDP(scu::SCU &scu);
 
@@ -85,7 +92,7 @@ public:
         case 0x14: return m_VDP1.ReadCOPR();
         case 0x16: return m_VDP1.ReadMODR();
 
-        default: fmt::println("unhandled {}-bit VDP1 register read from {:02X}", sizeof(T) * 8, address); return 0;
+        default: regsLog1.debug("unhandled {}-bit VDP1 register read from {:02X}", sizeof(T) * 8, address); return 0;
         }
     }
 
@@ -113,7 +120,7 @@ public:
         case 0x16: break; // MODR is read-only
 
         default:
-            fmt::println("unhandled {}-bit VDP1 register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+            regsLog1.debug("unhandled {}-bit VDP1 register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
             break;
         }
     }
@@ -125,16 +132,15 @@ public:
 
     template <mem_primitive T>
     T VDP2ReadVRAM(uint32 address) {
-        /*address &= 0x7FFFF;
-        T value = util::ReadBE<T>(&m_VRAM[address]);
-        fmt::println("{}-bit VDP2 VRAM read from {:05X} = {:X}", sizeof(T) * 8, address, value);
-        return value;*/
-        return util::ReadBE<T>(&m_VRAM2[address & 0x7FFFF]);
+        address &= 0x7FFFF;
+        T value = util::ReadBE<T>(&m_VRAM2[address & 0x7FFFF]);
+        regsLog2.trace("{}-bit VDP2 VRAM read from {:05X} = {:X}", sizeof(T) * 8, address & 0x7FFFF, value);
+        return value;
     }
 
     template <mem_primitive T>
     void VDP2WriteVRAM(uint32 address, T value) {
-        // fmt::println("{}-bit VDP2 VRAM write to {:05X} = {:X}", sizeof(T) * 8, address & 0x7FFFF, value);
+        regsLog2.trace("{}-bit VDP2 VRAM write to {:05X} = {:X}", sizeof(T) * 8, address & 0x7FFFF, value);
         util::WriteBE<T>(&m_VRAM2[address & 0x7FFFF], value);
     }
 
@@ -146,11 +152,10 @@ public:
             return value;
         }
 
-        /*address &= MapCRAMAddress(address);
+        address = MapCRAMAddress(address);
         T value = util::ReadBE<T>(&m_CRAM[address]);
-        fmt::println("{}-bit VDP2 CRAM read from {:03X} = {:X}", sizeof(T) * 8, address, value);
-        return value;*/
-        return util::ReadBE<T>(&m_CRAM[MapCRAMAddress(address)]);
+        regsLog2.trace("{}-bit VDP2 CRAM read from {:03X} = {:X}", sizeof(T) * 8, address, value);
+        return value;
     }
 
     template <mem_primitive T>
@@ -162,10 +167,10 @@ public:
         }
 
         address = MapCRAMAddress(address);
-        // fmt::println("{}-bit VDP2 CRAM write to {:05X} = {:X}", sizeof(T) * 8, address, value);
+        regsLog2.trace("{}-bit VDP2 CRAM write to {:05X} = {:X}", sizeof(T) * 8, address, value);
         util::WriteBE<T>(&m_CRAM[address], value);
         if (m_VDP2.RAMCTL.CRMDn == 0) {
-            // fmt::println("   replicated to {:05X}", address ^ 0x800);
+            regsLog2.trace("   replicated to {:05X}", address ^ 0x800);
             util::WriteBE<T>(&m_CRAM[address ^ 0x800], value);
         }
     }
@@ -317,7 +322,7 @@ public:
         case 0x11A: return m_VDP2.ReadCOxR(1);   // write-only?
         case 0x11C: return m_VDP2.ReadCOxG(1);   // write-only?
         case 0x11E: return m_VDP2.ReadCOxB(1);   // write-only?
-        default: fmt::println("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
+        default: regsLog2.debug("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
         }
     }
 
@@ -474,7 +479,7 @@ public:
         case 0x11C: m_VDP2.WriteCOxG(1, value); break;
         case 0x11E: m_VDP2.WriteCOxB(1, value); break;
         default:
-            fmt::println("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
+            regsLog2.debug("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
             break;
         }
     }
