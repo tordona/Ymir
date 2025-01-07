@@ -2,12 +2,9 @@
 
 #include "smpc_defs.hpp"
 
-#include <satemu/util/bit_ops.hpp>
+#include <satemu/util/debug_print.hpp>
 
 #include <array>
-#include <cassert>
-
-#include <fmt/format.h>
 
 // -----------------------------------------------------------------------------
 // Forward declarations
@@ -55,6 +52,9 @@ inline constexpr uint16 kButtonZ = (1u << 4u);
 inline constexpr uint16 kButtonL = (1u << 3u);
 
 class SMPC {
+    static constexpr dbg::Category rootLog{"SMPC"};
+    static constexpr dbg::Category regsLog{rootLog, "Regs"};
+
 public:
     SMPC(sh2::SH2Block &sh2, vdp::VDP &vdp, scu::SCU &scu, scsp::SCSP &scsp);
 

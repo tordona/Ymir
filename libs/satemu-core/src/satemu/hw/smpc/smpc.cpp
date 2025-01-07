@@ -5,7 +5,10 @@
 #include <satemu/hw/sh2/sh2_block.hpp>
 #include <satemu/hw/vdp/vdp.hpp>
 
+#include <satemu/util/bit_ops.hpp>
 #include <satemu/util/inline.hpp>
+
+#include <cassert>
 
 namespace satemu::smpc {
 
@@ -58,7 +61,7 @@ uint8 SMPC::Read(uint32 address) {
     case 0x77: return ReadPDR2();
     case 0x7D: return 0; // IOSEL is write-only
     case 0x7F: return 0; // EXLE is write-only
-    default: fmt::println("unhandled SMPC read from {:02X}", address); return m_busValue;
+    default: regsLog.debug("unhandled SMPC read from {:02X}", address); return m_busValue;
     }
 }
 
@@ -72,12 +75,12 @@ void SMPC::Write(uint32 address, uint8 value) {
             const bool continueFlag = bit::extract<7>(IREG[0]);
             const bool breakFlag = bit::extract<6>(IREG[0]);
             if (breakFlag) {
-                // fmt::println("SMPC: INTBACK break request");
+                rootLog.trace("INTBACK break request");
                 m_intbackInProgress = false;
                 SR.NPE = 0;
                 SR.PDL = 0;
             } else if (continueFlag) {
-                // fmt::println("SMPC: INTBACK continue request");
+                rootLog.trace("INTBACK continue request");
                 INTBACK();
             }
         }
@@ -91,7 +94,7 @@ void SMPC::Write(uint32 address, uint8 value) {
     case 0x7B: WriteDDR2(value); break;
     case 0x7D: WriteIOSEL(value); break;
     case 0x7F: WriteEXLE(value); break;
-    default: fmt::println("unhandled SMPC write to {:02X} = {:02X}", address, value); break;
+    default: regsLog.debug("unhandled SMPC write to {:02X} = {:02X}", address, value); break;
     }
 }
 
@@ -129,7 +132,7 @@ FORCE_INLINE void SMPC::WriteCOMREG(uint8 value) {
     case Command::INTBACK: INTBACK(); break;
     case Command::SETSMEM: SETSMEM(); break;
     case Command::SETTIME: SETTIME(); break;
-    default: fmt::println("unhandled SMPC command {:02X}", static_cast<uint8>(COMREG)); break;
+    default: rootLog.debug("unhandled SMPC command {:02X}", static_cast<uint8>(COMREG)); break;
     }
 }
 
@@ -179,7 +182,6 @@ FORCE_INLINE void SMPC::WritePDR1(uint8 value) {
             break;
         }
     }
-    // fmt::println("SMPC: {:02X} {:02X} -> {:02X}  buttons {:04X}", DDR1, value, PDR1, m_buttons);
 }
 
 FORCE_INLINE void SMPC::WriteDDR1(uint8 value) {
@@ -199,7 +201,7 @@ FORCE_INLINE void SMPC::WriteDDR2(uint8 value) {
 }
 
 void SMPC::MSHON() {
-    fmt::println("SMPC: processing MSHON");
+    rootLog.debug("Processing MSHON");
 
     // TODO: is this supposed to do something...?
 
@@ -209,7 +211,7 @@ void SMPC::MSHON() {
 }
 
 void SMPC::SSHON() {
-    fmt::println("SMPC: processing SSHON");
+    rootLog.debug("Processing SSHON");
 
     // Turn on and reset slave SH-2
     m_SH2.slaveEnabled = true;
@@ -221,7 +223,7 @@ void SMPC::SSHON() {
 }
 
 void SMPC::SSHOFF() {
-    fmt::println("SMPC: processing SSHOFF");
+    rootLog.debug("Processing SSHOFF");
 
     // Turn off slave SH-2
     m_SH2.slaveEnabled = false;
@@ -232,7 +234,7 @@ void SMPC::SSHOFF() {
 }
 
 void SMPC::SNDON() {
-    fmt::println("SMPC: processing SNDON");
+    rootLog.debug("Processing SNDON");
 
     m_SCSP.SetCPUEnabled(true);
 
@@ -242,7 +244,7 @@ void SMPC::SNDON() {
 }
 
 void SMPC::SNDOFF() {
-    fmt::println("SMPC: processing SNDOFF");
+    rootLog.debug("Processing SNDOFF");
 
     m_SCSP.SetCPUEnabled(false);
 
@@ -252,7 +254,7 @@ void SMPC::SNDOFF() {
 }
 
 void SMPC::CKCHG352() {
-    fmt::println("SMPC: processing CKCHG352");
+    rootLog.debug("Processing CKCHG352");
 
     ClockChange(true);
 
@@ -261,7 +263,7 @@ void SMPC::CKCHG352() {
     OREG[31] = 0x0E;
 }
 void SMPC::CKCHG320() {
-    fmt::println("SMPC: processing CKCHG320");
+    rootLog.debug("Processing CKCHG320");
 
     ClockChange(false);
 
@@ -271,7 +273,7 @@ void SMPC::CKCHG320() {
 }
 
 void SMPC::RESENAB() {
-    // fmt::println("SMPC: processing RESENAB");
+    // rootLog.debug("Processing RESENAB");
     // TODO: enable reset NMI
 
     SF = 0; // done processing
@@ -280,7 +282,7 @@ void SMPC::RESENAB() {
 }
 
 void SMPC::RESDISA() {
-    // fmt::println("SMPC: processing RESDISA");
+    // rootLog.debug("Processing RESDISA");
     // TODO: disable reset NMI
 
     SF = 0; // done processing
@@ -289,7 +291,7 @@ void SMPC::RESDISA() {
 }
 
 void SMPC::INTBACK() {
-    // fmt::println("SMPC: processing INTBACK {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
+    // rootLog.debug("Processing INTBACK {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
 
     if (m_intbackInProgress) {
         WriteINTBACKPeripheralReport();
@@ -322,7 +324,7 @@ void SMPC::INTBACK() {
 }
 
 void SMPC::WriteINTBACKStatusReport() {
-    // fmt::println("SMPC: INTBACK status report");
+    rootLog.trace("INTBACK status report");
 
     SR.bit7 = 0;                  // fixed 0
     SR.PDL = 1;                   // fixed 1 for status report
@@ -364,7 +366,7 @@ void SMPC::WriteINTBACKStatusReport() {
 }
 
 void SMPC::WriteINTBACKPeripheralReport() {
-    // fmt::println("SMPC: INTBACK peripheral report - first? {}", m_firstPeripheralReport);
+    rootLog.trace("INTBACK peripheral report - first? {}", m_firstPeripheralReport);
 
     // TODO: read from the report generated by the device
 
@@ -390,7 +392,7 @@ void SMPC::WriteINTBACKPeripheralReport() {
 }
 
 void SMPC::SETSMEM() {
-    fmt::println("SMPC: processing SETSMEM {:02X} {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2], IREG[3]);
+    rootLog.debug("Processing SETSMEM {:02X} {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2], IREG[3]);
 
     SMEM[0] = IREG[0];
     SMEM[1] = IREG[1];
@@ -404,8 +406,8 @@ void SMPC::SETSMEM() {
 }
 
 void SMPC::SETTIME() {
-    fmt::println("SMPC: processing SETTIME year={:02X}{:02X} day/month={:02X} day={:02X} time={:02X}:{:02X}:{:02X}",
-                 IREG[0], IREG[1], IREG[2], IREG[3], IREG[4], IREG[5], IREG[6]);
+    rootLog.debug("Processing SETTIME year={:02X}{:02X} day/month={:02X} day={:02X} time={:02X}:{:02X}:{:02X}", IREG[0],
+                  IREG[1], IREG[2], IREG[3], IREG[4], IREG[5], IREG[6]);
 
     // const uint8 bcdYear100s = IREG[0];
     // const uint8 bcdYear1s = IREG[1];
