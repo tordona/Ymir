@@ -270,139 +270,27 @@ private:
 
     class PartitionManager {
     public:
-        PartitionManager() {
-            Reset();
-        }
+        PartitionManager();
 
-        void Reset() {
-            m_partitions.fill({});
-            m_freeBuffers = kNumBuffers;
-        }
+        void Reset();
 
-        uint32 GetFreeBufferCount() const {
-            return m_freeBuffers;
-        }
+        uint8 GetBufferCount(uint8 partitionIndex) const;
+        uint32 GetFreeBufferCount() const;
 
-        void InsertHead(uint8 partitionIndex, Buffer &buffer) {
-            assert(partitionIndex < m_partitions.size());
-            assert(m_freeBuffers > 0);
-            m_freeBuffers--;
-            m_partitions[partitionIndex].InsertHead(buffer);
-        }
+        void InsertHead(uint8 partitionIndex, Buffer &buffer);
+        Buffer *GetTail(uint8 partitionIndex);
+        bool RemoveTail(uint8 partitionIndex);
 
-        Buffer *GetHead(uint8 partitionIndex) {
-            assert(partitionIndex < m_partitions.size());
-            return m_partitions[partitionIndex].GetHead();
-        }
+        uint32 DeleteSectors(uint8 partitionIndex, uint16 sectorPos, uint16 sectorCount);
 
-        Buffer *GetTail(uint8 partitionIndex) {
-            assert(partitionIndex < m_partitions.size());
-            return m_partitions[partitionIndex].GetTail();
-        }
+        void Clear(uint8 partitionIndex);
 
-        void RemoveTail(uint8 partitionIndex) {
-            assert(partitionIndex < m_partitions.size());
-            m_partitions[partitionIndex].RemoveTail();
-        }
-
-        uint32 DeleteSectors(uint8 partitionIndex, uint16 sectorPos, uint16 sectorCount) {
-            assert(partitionIndex < m_partitions.size());
-
-            auto &partition = m_partitions[partitionIndex];
-            const uint32 totalSectors = partition.GetBufferCount();
-            uint16 start, end;
-            if (sectorPos == 0xFFFF) {
-                start = totalSectors - 1;
-                end = start - sectorCount + 1;
-            } else {
-                start = sectorPos;
-                end = sectorPos + sectorCount - 1;
-            }
-            start = std::min<uint16>(start, sectorCount - 1);
-            end = std::min<uint16>(end, sectorCount - 1);
-            const uint32 bufferCount = partition.RemoveRange(start, end);
-            m_freeBuffers += bufferCount;
-            return bufferCount;
-        }
-
-        void ClearAll() {
-            for (auto &partition : m_partitions) {
-                partition.Clear();
-            }
-            m_freeBuffers = kNumBuffers;
-        }
-
-        void Clear(uint8 partitionIndex) {
-            assert(partitionIndex < m_partitions.size());
-            m_freeBuffers += m_partitions[partitionIndex].GetBufferCount();
-            m_partitions[partitionIndex].Clear();
-        }
-
-        uint8 GetBufferCount(uint8 partitionIndex) const {
-            assert(partitionIndex < m_partitions.size());
-            return m_partitions[partitionIndex].GetBufferCount();
-        }
-
-        constexpr uint8 PartitionCount() const {
-            return m_partitions.size();
-        }
-
-        uint32 CalculateSize(uint8 partitionIndex, uint32 start, uint32 end) const {
-            assert(partitionIndex < m_partitions.size());
-            return m_partitions[partitionIndex].CalculateSize(start, end);
-        }
+        uint32 CalculateSize(uint8 partitionIndex, uint32 start, uint32 end) const;
 
         // TODO: get buffer at index?
-        // TODO: remove buffer range
 
     private:
-        struct Partition {
-            void Clear() {
-                m_buffers.clear();
-            }
-
-            void InsertHead(Buffer &buffer) {
-                m_buffers.push_front(buffer);
-            }
-
-            Buffer *GetHead() {
-                return m_buffers.empty() ? nullptr : &m_buffers.front();
-            }
-
-            Buffer *GetTail() {
-                return m_buffers.empty() ? nullptr : &m_buffers.back();
-            }
-
-            void RemoveTail() {
-                m_buffers.pop_back();
-            }
-
-            uint32 RemoveRange(uint32 start, uint32 end) {
-                start = std::min<uint32>(start, m_buffers.size() - 1);
-                end = std::min<uint32>(end, m_buffers.size() - 1);
-                m_buffers.erase(m_buffers.begin() + start, m_buffers.begin() + end);
-                return end - start + 1;
-            }
-
-            uint8 GetBufferCount() const {
-                return m_buffers.size();
-            }
-
-            uint32 CalculateSize(uint32 start, uint32 end) const {
-                start = std::min<uint32>(start, m_buffers.size() - 1);
-                end = std::min<uint32>(end, m_buffers.size() - 1);
-                uint32 size = 0;
-                for (auto i = m_buffers.rbegin() + start; i <= m_buffers.rbegin() + end; i++) {
-                    size += i->size;
-                }
-                return size;
-            }
-
-        private:
-            std::deque<Buffer> m_buffers;
-        };
-
-        std::array<Partition, kNumPartitions> m_partitions;
+        std::array<std::deque<Buffer>, kNumPartitions> m_partitions;
 
         uint32 m_freeBuffers;
     };

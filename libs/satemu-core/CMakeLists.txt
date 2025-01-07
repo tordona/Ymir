@@ -70,6 +70,7 @@ add_library(satemu-core
     src/satemu/satemu.cpp
 
     src/satemu/hw/cdblock/cdblock.cpp
+    src/satemu/hw/cdblock/cdblock_partition_manager.cpp
     
     src/satemu/hw/m68k/m68k.cpp
     src/satemu/hw/m68k/m68k_decode.cpp
@@ -127,6 +128,7 @@ target_precompile_headers(satemu-core
         <fstream>
         <limits>
         <memory>
+        <numeric>
         <set>
         <span>
         <sstream>
@@ -138,7 +140,7 @@ target_precompile_headers(satemu-core
         <fmt/format.h>
         <fmt/xchar.h>
 
-         <mio/mmap.hpp>
+        <mio/mmap.hpp>
 )
 
 ## Define version macros

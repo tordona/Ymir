@@ -1412,7 +1412,7 @@ void CDBlock::CmdResetSelector() {
 
         if (clearBufferData) {
             rootLog.debug("Clearing all buffer partitions");
-            m_partitionManager.ClearAll();
+            m_partitionManager.Reset();
         }
         if (clearPartitionOutputs) {
             rootLog.debug("Clearing all partition output connectors");
@@ -1473,10 +1473,10 @@ void CDBlock::CmdGetBufferSize() {
     const uint32 freeBuffers = m_partitionManager.GetFreeBufferCount();
     m_CR[0] = m_status.statusCode << 8u;
     m_CR[1] = freeBuffers;
-    m_CR[2] = m_filters.size() << 8u;
+    m_CR[2] = kNumFilters << 8u;
     m_CR[3] = kNumBuffers;
 
-    rootLog.debug("Free buffers: {}", freeBuffers);
+    rootLog.debug("Get buffer size: free buffers = {}", freeBuffers);
 
     SetInterrupt(kHIRQ_CMOK);
 }
@@ -1889,7 +1889,7 @@ void CDBlock::CmdChangeDirectory() {
     if (filterNumber < m_filters.size()) {
         reject = !m_fs.ChangeDirectory(fileID, m_filters[filterNumber]);
         if (!reject) {
-            rootLog.debug("Changed directory to file ID {} using filter {}", fileID, filterNumber);
+            rootLog.debug("Changed directory to file ID {:X} using filter {}", fileID, filterNumber);
         }
     } else if (filterNumber == 0xFF) {
         reject = true;

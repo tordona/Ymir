@@ -185,6 +185,7 @@ namespace cat {
     inline constexpr Category CDBlockPlayInit{CDBlock, "PlayInit"};
     inline constexpr Category CDBlockPlay{CDBlock, "Play"};
     inline constexpr Category CDBlockXfer{CDBlock, "Transfer"};
+    inline constexpr Category CDBlockPartMgr{CDBlock, "PartMgr"};
 } // namespace cat
 
 } // namespace dbg

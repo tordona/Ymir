@@ -1,0 +1,103 @@
+#include <satemu/hw/cdblock/cdblock.hpp>
+
+#include <satemu/util/debug_print.hpp>
+
+#include <numeric>
+
+namespace satemu::cdblock {
+
+static constexpr const dbg::Category &partLog = dbg::cat::CDBlockPartMgr;
+
+CDBlock::PartitionManager::PartitionManager() {
+    Reset();
+}
+
+void CDBlock::PartitionManager::Reset() {
+    m_partitions.fill({});
+    m_freeBuffers = kNumBuffers;
+    partLog.debug("Cleared partitions; free buffers = {}", m_freeBuffers);
+}
+
+uint8 CDBlock::PartitionManager::GetBufferCount(uint8 partitionIndex) const {
+    assert(partitionIndex < m_partitions.size());
+    partLog.trace("Partition {} has {} buffers", partitionIndex, m_partitions[partitionIndex].size());
+    return m_partitions[partitionIndex].size();
+}
+
+uint32 CDBlock::PartitionManager::GetFreeBufferCount() const {
+    partLog.trace("Free buffers = {}", m_freeBuffers);
+    return m_freeBuffers;
+}
+
+void CDBlock::PartitionManager::InsertHead(uint8 partitionIndex, Buffer &buffer) {
+    assert(partitionIndex < m_partitions.size());
+    assert(m_freeBuffers > 0);
+    auto &partition = m_partitions[partitionIndex];
+    partition.push_back(buffer);
+    m_freeBuffers--;
+    partLog.debug("Inserted buffer into partition {} -> {} buffers; free buffers = {}", partitionIndex,
+                  partition.size(), m_freeBuffers);
+}
+
+CDBlock::Buffer *CDBlock::PartitionManager::GetTail(uint8 partitionIndex) {
+    assert(partitionIndex < m_partitions.size());
+    auto &partition = m_partitions[partitionIndex];
+    return partition.empty() ? nullptr : &partition.front();
+}
+
+bool CDBlock::PartitionManager::RemoveTail(uint8 partitionIndex) {
+    assert(partitionIndex < m_partitions.size());
+    auto &partition = m_partitions[partitionIndex];
+    if (!partition.empty()) {
+        partition.pop_front();
+        m_freeBuffers++;
+        partLog.debug("Removed buffer from partition {} -> {} buffers; free buffers = {}", partitionIndex,
+                      partition.size(), m_freeBuffers);
+        return true;
+    }
+    return false;
+}
+
+uint32 CDBlock::PartitionManager::DeleteSectors(uint8 partitionIndex, uint16 sectorPos, uint16 sectorCount) {
+    assert(partitionIndex < m_partitions.size());
+
+    auto &partition = m_partitions[partitionIndex];
+    const uint32 totalSectors = partition.size();
+    uint16 start, end;
+    if (sectorPos == 0xFFFF) {
+        start = totalSectors - 1;
+        end = start - sectorCount + 1;
+    } else {
+        start = sectorPos;
+        end = sectorPos + sectorCount - 1;
+    }
+    sectorCount = std::min<uint16>(sectorCount, partition.size());
+    start = std::min<uint16>(start, sectorCount - 1);
+    end = std::min<uint16>(end, sectorCount - 1);
+    partition.erase(partition.begin() + start, partition.begin() + end);
+    partLog.debug("Removed {} buffers from partition {} -> {} buffers; free buffers = {}", end - start + 1,
+                  partitionIndex, partition.size(), m_freeBuffers);
+    return end - start + 1;
+}
+
+void CDBlock::PartitionManager::Clear(uint8 partitionIndex) {
+    assert(partitionIndex < m_partitions.size());
+    auto &partition = m_partitions[partitionIndex];
+    m_freeBuffers += partition.size();
+    partLog.debug("Cleared all {} buffers from partition {}; free buffers = {}", partition.size(), partitionIndex,
+                  m_freeBuffers);
+    partition.clear();
+}
+
+uint32 CDBlock::PartitionManager::CalculateSize(uint8 partitionIndex, uint32 start, uint32 end) const {
+    assert(partitionIndex < m_partitions.size());
+    auto &partition = m_partitions[partitionIndex];
+    start = std::min<uint32>(start, partition.size() - 1);
+    end = std::min<uint32>(end, partition.size() - 1);
+    const uint32 size = std::accumulate(partition.begin() + start, partition.begin() + end + 1, 0u,
+                                        [](const uint32 lhs, const Buffer &rhs) { return lhs + rhs.size; });
+    partLog.debug("Calculated partition {} size from {} to {} = {}", partitionIndex, start, end, size);
+    return size;
+}
+
+} // namespace satemu::cdblock
