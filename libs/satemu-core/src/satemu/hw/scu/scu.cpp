@@ -171,8 +171,11 @@ void SCU::RunDMA(uint64 cycles) {
         }
 
         if (ch.active) {
-            const uint32 value = m_SH2.bus.Read<uint32>(ch.currSrcAddr & 0x7FF'FFFF);
-            m_SH2.bus.Write<uint32>(ch.currDstAddr & 0x7FF'FFFF, value);
+            uint16 value = m_SH2.bus.Read<uint16>((ch.currSrcAddr & 0x7FF'FFFF) + 0);
+            m_SH2.bus.Write<uint16>((ch.currDstAddr & 0x7FF'FFFF) + 0, value);
+
+            value = m_SH2.bus.Read<uint16>((ch.currSrcAddr & 0x7FF'FFFF) + 2);
+            m_SH2.bus.Write<uint16>((ch.currDstAddr & 0x7FF'FFFF) + 2, value);
 
             if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currSrcAddr & 0x7FF'FFFF)) {
                 ch.currSrcAddr += ch.srcAddrInc * 2;
