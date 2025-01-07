@@ -8,9 +8,8 @@
 #include <satemu/hw/m68k/m68k_defs.hpp>
 
 #include <satemu/util/data_ops.hpp>
+#include <satemu/util/debug_print.hpp>
 #include <satemu/util/inline.hpp>
-
-#include <fmt/format.h>
 
 #include <array>
 
@@ -28,6 +27,9 @@ class SCU;
 namespace satemu::scsp {
 
 class SCSP {
+    static constexpr dbg::Category rootLog{"SCSP"};
+    static constexpr dbg::Category regsLog{rootLog, "Regs"};
+
 public:
     SCSP(scu::SCU &scu);
 
@@ -183,8 +185,8 @@ private:
             case 0x42F: return 0; // MCIRE is write-only
 
             default:
-                fmt::println("unhandled {}-bit SCSP register read via {} from {:03X}", sizeof(T) * 8,
-                             (fromM68K ? "M68K" : "SCU"), address);
+                regsLog.debug("unhandled {}-bit SCSP register read via {} from {:03X}", sizeof(T) * 8,
+                              (fromM68K ? "M68K" : "SCU"), address);
                 break;
             }
         }
@@ -247,8 +249,8 @@ private:
         case 0x42F: WriteMCIRE<true, is16>(value16); break;
 
         default:
-            fmt::println("unhandled {}-bit SCSP register write via {} to {:03X} = {:X}", sizeof(T) * 8,
-                         (fromM68K ? "M68K" : "SCU"), address, value);
+            regsLog.debug("unhandled {}-bit SCSP register write via {} to {:03X} = {:X}", sizeof(T) * 8,
+                          (fromM68K ? "M68K" : "SCU"), address, value);
             break;
         }
     }

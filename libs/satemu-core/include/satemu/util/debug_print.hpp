@@ -175,7 +175,6 @@ namespace cat {
     inline constexpr Category MSH2{"SH2-M"};
     inline constexpr Category SSH2{"SH2-S"};
 
-    inline constexpr Category SCSP{"SCSP"};
     inline constexpr Category M68K{"M68K"};
     inline constexpr Category VDP1{"VDP1"};
     inline constexpr Category VDP2{"VDP2"};

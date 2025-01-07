@@ -57,7 +57,7 @@ void SCSP::Advance(uint64 cycles) {
 
 void SCSP::SetCPUEnabled(bool enabled) {
     if (m_m68kEnabled != enabled) {
-        fmt::println("SCSP: {} the MC68EC00 processor", (enabled ? "enabling" : "disabling"));
+        rootLog.info("SCSP: {} the MC68EC00 processor", (enabled ? "enabling" : "disabling"));
         if (enabled) {
             m_m68k.Reset(true); // false? does it matter?
         }
