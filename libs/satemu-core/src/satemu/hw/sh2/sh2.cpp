@@ -208,26 +208,6 @@ void SH2::TriggerFRTInputCapture() {
     FRT.FTCSR.ICF = 1;
 }
 
-// -------------------------------------------------------------------------
-// Debugging functions
-
-/*uint64 dbg_count = 0;
-static constexpr uint64 dbg_minCount = 99999999999; // 17635778; // 10489689; // 9302150; // 9547530;
-
-template <typename... T>
-void dbg_print(fmt::format_string<T...> fmt, T &&...args) {
-    if (dbg_count >= dbg_minCount) {
-        fmt::print(fmt, static_cast<T &&>(args)...);
-    }
-}
-
-template <typename... T>
-void dbg_println(fmt::format_string<T...> fmt, T &&...args) {
-    if (dbg_count >= dbg_minCount) {
-        fmt::println(fmt, static_cast<T &&>(args)...);
-    }
-}*/
-
 // -----------------------------------------------------------------------------
 // Memory accessors
 
@@ -958,17 +938,6 @@ void SH2::Execute(uint32 address) {
     // - perhaps decoding instructions beforehand
 
     const uint16 instr = FetchInstruction(address);
-
-    /*static uint64 dbg_count = 0;
-    ++dbg_count;
-    // dbg_print("[{:10}] {:08X}{} {:04X}  ", dbg_count, address, delaySlot ? '*' : ' ', instr);
-    if (dbg_count > 14000000) {
-        fmt::print("{:08X}{} {:04X}  ", address, delaySlot ? '*' : ' ', instr);
-        for (int i = 0; i < 16; i++) {
-            fmt::print(" {:08X}", R[i]);
-        }
-        fmt::println("  pr = {:08X}  sr = {:08X}  gbr = {:08X}  vbr = {:08X}", PR, SR.u32, GBR, VBR);
-    }*/
 
     auto advancePC = [&] {
         if (m_delaySlot) {
