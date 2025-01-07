@@ -7,6 +7,7 @@
 #include <satemu/hw/hw_defs.hpp>
 
 #include <array>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // Forward declarations
@@ -20,6 +21,67 @@ class SH2Bus;
 // -----------------------------------------------------------------------------
 
 namespace satemu::sh2 {
+
+enum class SH2BranchType { JSR, BSR, TRAPA, Exception, UserCapture };
+
+struct SH2Regs {
+    std::array<uint32, 16> R;
+    uint32 PC;
+    uint32 PR;
+    uint32 SR;
+    uint32 GBR;
+    uint32 VBR;
+    uint64 MAC;
+};
+
+class NullSH2StackTracer {
+public:
+    NullSH2StackTracer(bool) {}
+
+    void Reset() {}
+    void Dump() {}
+
+    void JSR(SH2Regs regs) {}
+    void BSR(SH2Regs regs) {}
+    void TRAPA(SH2Regs regs) {}
+    void Exception(SH2Regs regs, uint8 vec) {}
+    void UserCapture(SH2Regs regs) {}
+
+    void RTE(SH2Regs regs) {}
+    void RTS(SH2Regs regs) {}
+};
+
+class RealSH2StackTracer {
+public:
+    RealSH2StackTracer(bool master);
+
+    void Reset();
+    void Dump();
+
+    void JSR(SH2Regs regs);
+    void BSR(SH2Regs regs);
+    void TRAPA(SH2Regs regs);
+    void Exception(SH2Regs regs, uint8 vec);
+    void UserCapture(SH2Regs regs);
+
+    void RTE(SH2Regs regs);
+    void RTS(SH2Regs regs);
+
+private:
+    struct Entry {
+        SH2BranchType type;
+        SH2Regs regs;
+        uint8 vec;
+    };
+
+    bool m_master;
+    std::vector<Entry> m_entries;
+};
+
+// using SH2StackTracer = NullSH2StackTracer;
+using SH2StackTracer = RealSH2StackTracer;
+
+// -----------------------------------------------------------------------------
 
 class SH2 {
 public:
@@ -251,6 +313,8 @@ private:
 
     // -------------------------------------------------------------------------
     // Interpreter
+
+    SH2StackTracer m_stackTracer;
 
     void Execute(uint32 address);
 

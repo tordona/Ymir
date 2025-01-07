@@ -13,8 +13,79 @@
 
 namespace satemu::sh2 {
 
+RealSH2StackTracer::RealSH2StackTracer(bool master)
+    : m_master(master) {
+    Reset();
+}
+
+void RealSH2StackTracer::Reset() {
+    m_entries.clear();
+}
+
+void RealSH2StackTracer::Dump() {
+    const char cpuType = m_master ? 'M' : 'S';
+    fmt::println("{}SH2: stack trace:", cpuType);
+    for (auto it = m_entries.rbegin(); it != m_entries.rend(); it++) {
+        fmt::print("{}SH2:   ", cpuType);
+        fmt::print("R0-15:");
+        for (int i = 0; i < 16; i++) {
+            fmt::print(" {:08X}", it->regs.R[i]);
+        }
+        fmt::print(" PC={:08X}", it->regs.PC);
+        fmt::print(" PR={:08X}", it->regs.PR);
+        fmt::print(" SR={:08X}", it->regs.SR);
+        fmt::print(" GBR={:08X}", it->regs.GBR);
+        fmt::print(" VBR={:08X}", it->regs.VBR);
+        fmt::print(" MAC={:016X}", it->regs.MAC);
+        switch (it->type) {
+        case SH2BranchType::JSR: fmt::println(" JSR"); break;
+        case SH2BranchType::BSR: fmt::println(" BSR"); break;
+        case SH2BranchType::TRAPA: fmt::println(" TRAPA"); break;
+        case SH2BranchType::Exception: fmt::println(" Exception vector {}", it->vec); break;
+        case SH2BranchType::UserCapture: fmt::println(" User capture"); break;
+        }
+    }
+}
+
+void RealSH2StackTracer::JSR(SH2Regs regs) {
+    m_entries.push_back({SH2BranchType::JSR, regs});
+}
+
+void RealSH2StackTracer::BSR(SH2Regs regs) {
+    m_entries.push_back({SH2BranchType::BSR, regs});
+}
+
+void RealSH2StackTracer::TRAPA(SH2Regs regs) {
+    m_entries.push_back({SH2BranchType::TRAPA, regs});
+}
+
+void RealSH2StackTracer::Exception(SH2Regs regs, uint8 vec) {
+    m_entries.push_back({SH2BranchType::Exception, regs});
+}
+
+void RealSH2StackTracer::UserCapture(SH2Regs regs) {
+    m_entries.push_back({SH2BranchType::UserCapture, regs});
+}
+
+void RealSH2StackTracer::RTE(SH2Regs regs) {
+    // auto &entry = m_entries.back();
+    // TODO: check if it was an exception?
+    if (!m_entries.empty()) {
+        m_entries.pop_back();
+    }
+}
+
+void RealSH2StackTracer::RTS(SH2Regs regs) {
+    // auto &entry = m_entries.back();
+    // TODO: check if it was a BSR or JSR?
+    if (!m_entries.empty()) {
+        m_entries.pop_back();
+    }
+}
+
 SH2::SH2(SH2Bus &bus, bool master)
-    : m_bus(bus) {
+    : m_bus(bus)
+    , m_stackTracer(master) {
     BCR1.MASTER = !master;
     Reset(true);
 }
@@ -87,6 +158,8 @@ void SH2::Reset(bool hard) {
 
     m_delaySlot = false;
     m_delaySlotTarget = 0;
+
+    m_stackTracer.Reset();
 }
 
 FLATTEN void SH2::Advance(uint64 cycles) {
@@ -186,6 +259,15 @@ FLATTEN void SH2::Advance(uint64 cycles) {
 
         // TODO: choose between interpreter (cached or uncached) and JIT recompiler
         Execute(PC);
+
+        // dump stack trace on SYS_EXECDMP
+        if ((PC & 0x1FFFFFFF) == 0x186C) {
+            fmt::println("{}SH2: SYS_EXECDMP triggered", (BCR1.MASTER ? "S" : "M"));
+            m_stackTracer.UserCapture({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
+            m_stackTracer.Dump();
+            m_stackTracer.Reset();
+        }
+
         // dbg_println("");
     }
 }
@@ -915,6 +997,7 @@ FORCE_INLINE void SH2::SetupDelaySlot(uint32 targetAddress) {
 }
 
 FORCE_INLINE void SH2::EnterException(uint8 vectorNumber) {
+    m_stackTracer.Exception({R, PC, PR, SR.u32, VBR, GBR, MAC.u64}, vectorNumber);
     R[15] -= 4;
     MemWriteLong(R[15], SR.u32);
     R[15] -= 4;
@@ -2044,6 +2127,7 @@ FORCE_INLINE void SH2::BRAF(InstrM instr) {
 }
 
 FORCE_INLINE void SH2::BSR(InstrD12 instr) {
+    m_stackTracer.BSR({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
     const sint32 sdisp = (bit::sign_extend<12>(instr.disp) << 1) + 4;
     // dbg_println("bsr 0x{:08X}", PC + sdisp);
 
@@ -2053,6 +2137,7 @@ FORCE_INLINE void SH2::BSR(InstrD12 instr) {
 }
 
 FORCE_INLINE void SH2::BSRF(InstrM instr) {
+    m_stackTracer.BSR({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
     // dbg_println("bsrf r{}", instr.Rm);
     PR = PC;
     SetupDelaySlot(PC + R[instr.Rm] + 4);
@@ -2067,12 +2152,14 @@ FORCE_INLINE void SH2::JMP(InstrM instr) {
 
 FORCE_INLINE void SH2::JSR(InstrM instr) {
     // dbg_println("jsr @r{}", instr.Rm);
+    m_stackTracer.JSR({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
     PR = PC;
     SetupDelaySlot(R[instr.Rm]);
     PC += 2;
 }
 
 FORCE_INLINE void SH2::TRAPA(InstrI instr) {
+    m_stackTracer.TRAPA({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
     // dbg_println("trapa #0x{:X}", instr.imm);
     R[15] -= 4;
     MemWriteLong(R[15], SR.u32);
@@ -2082,6 +2169,7 @@ FORCE_INLINE void SH2::TRAPA(InstrI instr) {
 }
 
 FORCE_INLINE void SH2::RTE() {
+    m_stackTracer.RTE({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
     // dbg_println("rte");
     SetupDelaySlot(MemReadLong(R[15]) + 4);
     PC += 2;
@@ -2091,6 +2179,7 @@ FORCE_INLINE void SH2::RTE() {
 }
 
 FORCE_INLINE void SH2::RTS() {
+    m_stackTracer.RTS({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
     // dbg_println("rts");
     SetupDelaySlot(PR + 4);
     PC += 2;
