@@ -157,7 +157,7 @@ void SCU::RunDMA(uint64 cycles) {
             ch.start = false;
             ch.active = true;
             if (ch.indirect) {
-                ch.currIndirectSrc = ch.srcAddr;
+                ch.currIndirectSrc = ch.dstAddr;
                 readIndirect();
             } else {
                 fmt::println("SCU DMA{}: Starting direct transfer from {:08X} to {:08X} - {:05X} bytes", level,
