@@ -150,7 +150,7 @@ void SCU::RunDMA(uint64 cycles) {
             } else {
                 ch.currXferCount = bit::extract<0, 11>(ch.currXferCount);
             }
-            fmt::println("SCU DMA{}: Starting indirect transfer at {:08X} - from {:08X} to {:08X} - {:05X} bytes{}",
+            dmaLog.trace("SCU DMA{}: Starting indirect transfer at {:08X} - from {:08X} to {:08X} - {:05X} bytes{}",
                          level, ch.currIndirectSrc - 3 * sizeof(uint32), ch.currSrcAddr, ch.currDstAddr,
                          ch.currXferCount, (ch.endIndirect ? " (final)" : ""));
         };
@@ -162,7 +162,7 @@ void SCU::RunDMA(uint64 cycles) {
                 ch.currIndirectSrc = ch.dstAddr;
                 readIndirect();
             } else {
-                fmt::println("SCU DMA{}: Starting direct transfer from {:08X} to {:08X} - {:05X} bytes", level,
+                dmaLog.trace("SCU DMA{}: Starting direct transfer from {:08X} to {:08X} - {:05X} bytes", level,
                              ch.srcAddr, ch.dstAddr, ch.xferCount);
                 ch.currSrcAddr = ch.srcAddr;
                 ch.currDstAddr = ch.dstAddr;
@@ -195,7 +195,7 @@ void SCU::RunDMA(uint64 cycles) {
                 readIndirect();
                 break; // higher-level DMA transfers interrupt lower-level ones
             } else {
-                // fmt::println("SCU DMA{}: Finished transfer", level);
+                dmaLog.trace("SCU DMA{}: Finished transfer", level);
                 ch.active = false;
                 ch.currXferCount = 0;
                 if (ch.updateSrcAddr) {

@@ -174,18 +174,11 @@ struct Category {
 namespace cat {
     inline constexpr Category MSH2{"SH2-M"};
     inline constexpr Category SSH2{"SH2-S"};
-    inline constexpr Category SCU{"SCU"};
+
     inline constexpr Category SCSP{"SCSP"};
     inline constexpr Category M68K{"M68K"};
     inline constexpr Category VDP1{"VDP1"};
     inline constexpr Category VDP2{"VDP2"};
-
-    inline constexpr Category CDBlock{"CDBlock"};
-    inline constexpr Category CDBlockRegs{CDBlock, "Regs"};
-    inline constexpr Category CDBlockPlayInit{CDBlock, "PlayInit"};
-    inline constexpr Category CDBlockPlay{CDBlock, "Play"};
-    inline constexpr Category CDBlockXfer{CDBlock, "Transfer"};
-    inline constexpr Category CDBlockPartMgr{CDBlock, "PartMgr"};
 } // namespace cat
 
 } // namespace dbg

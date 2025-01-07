@@ -1,14 +1,10 @@
 #include <satemu/hw/cdblock/cdblock.hpp>
 
-#include <satemu/util/debug_print.hpp>
-
 #include <cassert>
 #include <numeric>
 #include <utility>
 
 namespace satemu::cdblock {
-
-static constexpr const dbg::Category &partLog = dbg::cat::CDBlockPartMgr;
 
 CDBlock::PartitionManager::PartitionManager() {
     Reset();

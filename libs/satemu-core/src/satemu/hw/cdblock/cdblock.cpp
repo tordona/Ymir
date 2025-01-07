@@ -9,11 +9,6 @@
 
 namespace satemu::cdblock {
 
-static constexpr const dbg::Category &rootLog = dbg::cat::CDBlock;
-static constexpr const dbg::Category &playInitLog = dbg::cat::CDBlockPlayInit;
-static constexpr const dbg::Category &playLog = dbg::cat::CDBlockPlay;
-static constexpr const dbg::Category &xferLog = dbg::cat::CDBlockXfer;
-
 CDBlock::CDBlock(scu::SCU &scu)
     : m_scu(scu) {
     Reset(true);

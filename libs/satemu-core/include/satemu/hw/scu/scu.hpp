@@ -8,8 +8,7 @@
 #include <satemu/hw/vdp/vdp.hpp>
 
 #include <satemu/util/data_ops.hpp>
-
-#include <fmt/format.h>
+#include <satemu/util/debug_print.hpp>
 
 // -----------------------------------------------------------------------------
 // Forward declarations
@@ -59,6 +58,10 @@ namespace satemu::scu {
 //   - [TODO] Byte writes write garbage to the odd/even byte counterpart
 //   - Byte reads work normally
 class SCU {
+    static constexpr dbg::Category rootLog{"SCU"};
+    static constexpr dbg::Category regsLog{rootLog, "Regs"};
+    static constexpr dbg::Category dmaLog{rootLog, "DMA"};
+
 public:
     SCU(vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2Block &sh2);
 
@@ -77,7 +80,7 @@ public:
         } else if (util::AddressInRange<0x5C0'0000, 0x5FF'FFFF>(address)) {
             return ReadReg<T>(address & 0xFF);
         } else {
-            fmt::println("unexpected {}-bit SCU read from {:05X}", sizeof(T) * 8, address);
+            regsLog.debug("unexpected {}-bit read from {:05X}", sizeof(T) * 8, address);
             return 0;
         }
     }
@@ -93,7 +96,7 @@ public:
         } else if (util::AddressInRange<0x5C0'0000, 0x5FF'FFFF>(address)) {
             WriteReg<T>(address & 0xFF, value);
         } else {
-            fmt::println("unexpected {}-bit SCU write to {:05X} = {:X}", sizeof(T) * 8, address, value);
+            regsLog.debug("unexpected {}-bit write to {:05X} = {:X}", sizeof(T) * 8, address, value);
         }
     }
 
@@ -139,7 +142,7 @@ private:
                 return m_CDBlock.ReadReg<T>(address & 0x3F);
             }
         }
-        fmt::println("unhandled {}-bit SCU A-Bus read from {:05X}", sizeof(T) * 8, address);
+        regsLog.debug("unhandled {}-bit SCU A-Bus read from {:05X}", sizeof(T) * 8, address);
         return 0;
     }
 
@@ -172,7 +175,7 @@ private:
             return m_VDP.VDP2ReadReg<T>(address & 0x1FF);
 
         } else {
-            fmt::println("unhandled {}-bit SCU B-Bus read from {:05X}", sizeof(T) * 8, address);
+            regsLog.debug("unhandled {}-bit SCU B-Bus read from {:05X}", sizeof(T) * 8, address);
             return 0;
         }
     }
@@ -194,7 +197,7 @@ private:
                 return;
             }
         }
-        fmt::println("unhandled {}-bit SCU A-Bus write to {:05X} = {:X}", sizeof(T) * 8, address, value);
+        regsLog.debug("unhandled {}-bit SCU A-Bus write to {:05X} = {:X}", sizeof(T) * 8, address, value);
     }
 
     template <mem_primitive T>
@@ -225,7 +228,7 @@ private:
             m_VDP.VDP2WriteReg<T>(address & 0x1FF, value);
 
         } else {
-            fmt::println("unhandled {}-bit SCU B-Bus write to {:05X} = {:X}", sizeof(T) * 8, address, value);
+            regsLog.debug("unhandled {}-bit SCU B-Bus write to {:05X} = {:X}", sizeof(T) * 8, address, value);
         }
     }
 
@@ -634,7 +637,7 @@ private:
             return 0x4;
 
         default: //
-            fmt::println("unhandled {}-bit SCU register read from {:02X}", sizeof(T) * 8, address);
+            regsLog.debug("unhandled {}-bit SCU register read from {:02X}", sizeof(T) * 8, address);
             return 0;
         }
     }
@@ -687,11 +690,10 @@ private:
                 auto &ch = m_dmaChannels[address >> 5u];
                 ch.enabled = bit::extract<8>(value);
                 if (ch.enabled && ch.trigger == DMATrigger::Immediate && bit::extract<0>(value)) {
-                    /*if (ch.active) {
-                        fmt::println(
-                            "SCU DMA{}: Triggering immediate DMA transfer while another transfer is in progress",
-                            (address >> 5u));
-                    }*/
+                    if (ch.active) {
+                        dmaLog.trace("DMA{} triggering immediate transfer while another transfer is in progress",
+                                     (address >> 5u));
+                    }
                     ch.start = true;
                 }
             }
@@ -795,7 +797,7 @@ private:
             break;
 
         default:
-            fmt::println("unhandled {}-bit SCU register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+            regsLog.debug("unhandled {}-bit SCU register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
             break;
         }
     }
