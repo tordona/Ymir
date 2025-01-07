@@ -76,7 +76,8 @@ uint32 CDBlock::PartitionManager::DeleteSectors(uint8 partitionIndex, uint16 sec
     sectorCount = std::min<uint16>(sectorCount, partition.size());
     start = std::min<uint16>(start, sectorCount - 1);
     end = std::min<uint16>(end, sectorCount - 1);
-    partition.erase(partition.begin() + start, partition.begin() + end);
+    partition.erase(partition.begin() + start, partition.begin() + end + 1);
+    m_freeBuffers += end - start + 1;
     partLog.debug("Removed {} buffers from partition {} -> {} buffers; free buffers = {}", end - start + 1,
                   partitionIndex, partition.size(), m_freeBuffers);
     return end - start + 1;

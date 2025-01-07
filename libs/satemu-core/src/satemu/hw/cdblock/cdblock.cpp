@@ -862,15 +862,22 @@ void CDBlock::CmdInitializeCDSystem() {
     // const uint8 ecc = bit::extract<8, 15>(m_CR[3]);
     // const uint8 retryCount = bit::extract<0, 7>(m_CR[3]);
 
-    if (softReset) {
-        rootLog.debug("Soft reset");
-        // TODO: use Reset(false)
+    if ((m_status.statusCode & 0xF) != kStatusCodeOpen && (m_status.statusCode & 0xF) != kStatusCodeNoDisc) {
         // TODO: switch to Busy for a bit before NoDisc/Pause
         if (m_disc.sessions.empty()) {
             m_status.statusCode = kStatusCodeNoDisc;
         } else {
             m_status.statusCode = kStatusCodePause;
         }
+        m_status.frameAddress = 150;
+
+        // TODO: should it also reset playback state?
+    }
+
+    if (softReset) {
+        rootLog.debug("Soft reset");
+        // TODO: use Reset(false)
+        // TODO: switch to Busy for a bit before NoDisc/Pause
         m_targetDriveCycles = kDriveCyclesNotPlaying;
 
         // Reset state and configuration
@@ -1504,7 +1511,7 @@ void CDBlock::CmdGetSectorNumber() {
     m_CR[2] = 0x0000;
     m_CR[3] = sectorCount;
 
-    rootLog.debug("Partition {} has {} sectors", partitionNumber, sectorCount);
+    rootLog.trace("Partition {} has {} sectors", partitionNumber, sectorCount);
 
     SetInterrupt(kHIRQ_CMOK);
 }
