@@ -9,12 +9,8 @@
 
 #include <satemu/util/debug_print.hpp>
 
-#include <fmt/format.h>
-
 #include <array>
-#include <cassert>
 #include <deque>
-#include <utility>
 
 // -----------------------------------------------------------------------------
 // Forward declarations
@@ -30,7 +26,7 @@ class SCU;
 namespace satemu::cdblock {
 
 class CDBlock {
-    static constexpr const dbg::Category &regsLog = dbg::cat::CDBlock;
+    static constexpr dbg::Category regsLog = dbg::cat::CDBlockRegs;
 
 public:
     CDBlock(scu::SCU &scu);

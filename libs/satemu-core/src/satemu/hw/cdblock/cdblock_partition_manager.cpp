@@ -2,7 +2,9 @@
 
 #include <satemu/util/debug_print.hpp>
 
+#include <cassert>
 #include <numeric>
+#include <utility>
 
 namespace satemu::cdblock {
 

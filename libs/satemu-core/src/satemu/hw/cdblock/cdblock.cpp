@@ -4,6 +4,9 @@
 
 #include <satemu/util/debug_print.hpp>
 
+#include <cassert>
+#include <utility>
+
 namespace satemu::cdblock {
 
 static constexpr const dbg::Category &rootLog = dbg::cat::CDBlock;
