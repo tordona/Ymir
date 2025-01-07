@@ -350,8 +350,7 @@ void CDBlock::ProcessDriveStatePlay() {
                 m_bufferFullPause = true;
                 // TODO: when buffer no longer full, switch to Play if we paused because of BFUL
                 // - or maybe if frameAddress <= m_playEndPos
-            }
-            {
+            } else {
                 // TODO: consider caching the track pointer
                 const media::Session &session = m_disc.sessions.back();
                 const media::Track *track = session.FindTrack(frameAddress);
