@@ -46,7 +46,7 @@ void SCSP::Advance(uint64 cycles) {
     m_accumSampleCycles += cycles;
     while (m_accumSampleCycles >= kCyclesPerSample) {
         m_accumSampleCycles -= kCyclesPerSample;
-        if (m_m68kEnabled && (m_sampleCounter & 1) == 0) {
+        if (m_m68kEnabled && (m_sampleCounter % kCyclesPerM68KCycle) == 0) {
             // TODO: proper cycle counting
             m_m68k.Step();
         }

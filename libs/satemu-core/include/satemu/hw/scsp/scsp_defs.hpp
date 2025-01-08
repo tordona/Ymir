@@ -15,6 +15,9 @@ inline constexpr uint64 kAudioFreq = 44100;
 // Number of SCSP cycles for each sample output
 inline constexpr uint64 kCyclesPerSample = 512;
 
+// Number of SCSP cycles for each MC68EC000 cycle
+inline constexpr uint64 kCyclesPerM68KCycle = 2;
+
 // SCSP clock frequency: 22,579,200 Hz = 44,100 Hz * 512 cycles per sample
 inline constexpr uint64 kClockFreq = kAudioFreq * kCyclesPerSample;
 
