@@ -105,12 +105,14 @@ private:
 
     template <mem_primitive T, bool fromM68K, bool instrFetch>
     T ReadWRAM(uint32 address) {
+        static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP WRAM read size");
         // TODO: handle memory size bit
         return util::ReadBE<T>(&m_WRAM[address & 0x7FFFF]);
     }
 
     template <mem_primitive T, bool fromM68K>
     void WriteWRAM(uint32 address, T value) {
+        static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP WRAM write size");
         // TODO: handle memory size bit
         util::WriteBE<T>(&m_WRAM[address & 0x7FFFF], value);
     }
@@ -129,6 +131,7 @@ private:
 
     template <mem_primitive T, bool fromM68K, bool instrFetch>
     T ReadReg(uint32 address) {
+        static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP register read size");
         static constexpr bool is16 = std::is_same_v<T, uint16>;
 
         auto shiftByte = [](uint16 value) {
@@ -195,6 +198,8 @@ private:
 
     template <mem_primitive T, bool fromM68K>
     void WriteReg(uint32 address, T value) {
+        static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP register write size");
+
         if (address < 0x400) {
             const uint32 slotIndex = address >> 5;
             auto &slot = m_slots[slotIndex];
