@@ -36,9 +36,9 @@ struct SH2Regs {
     uint64 MAC;
 };
 
-class NullSH2StackTracer {
+class NullSH2Tracer {
 public:
-    NullSH2StackTracer(bool) {}
+    NullSH2Tracer(bool) {}
 
     void Reset() {}
     void Dump() {}
@@ -53,12 +53,14 @@ public:
     void RTS(SH2Regs regs) {}
 };
 
-class RealSH2StackTracer {
+class RealSH2Tracer {
 public:
-    RealSH2StackTracer(bool master);
+    RealSH2Tracer(bool master);
 
     void Reset();
     void Dump();
+
+    void ExecTrace(SH2Regs regs);
 
     void JSR(SH2Regs regs);
     void BSR(SH2Regs regs);
@@ -78,10 +80,13 @@ private:
 
     bool m_master;
     std::vector<Entry> m_entries;
+    std::array<SH2Regs, 256> m_execTrace;
+    std::size_t m_execTraceHead;
+    std::size_t m_execTraceCount;
 };
 
-// using SH2StackTracer = NullSH2StackTracer;
-using SH2StackTracer = RealSH2StackTracer;
+// using SH2Tracer = NullSH2Tracer;
+using SH2Tracer = RealSH2Tracer;
 
 // -----------------------------------------------------------------------------
 
@@ -321,7 +326,7 @@ private:
     // -------------------------------------------------------------------------
     // Interpreter
 
-    SH2StackTracer m_stackTracer;
+    SH2Tracer m_tracer;
 
     void Execute(uint32 address);
 

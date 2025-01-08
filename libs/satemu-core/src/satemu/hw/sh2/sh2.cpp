@@ -16,36 +16,41 @@ namespace satemu::sh2 {
 inline constexpr dbg::Category MSH2{"SH2-M"};
 inline constexpr dbg::Category SSH2{"SH2-S"};
 
-inline constexpr const dbg::Category &Logger(bool master) {
+static constexpr const dbg::Category &Logger(bool master) {
     return master ? MSH2 : SSH2;
 }
 
-RealSH2StackTracer::RealSH2StackTracer(bool master)
+RealSH2Tracer::RealSH2Tracer(bool master)
     : m_master(master) {
     Reset();
 }
 
-void RealSH2StackTracer::Reset() {
+void RealSH2Tracer::Reset() {
     m_entries.clear();
 }
 
-void RealSH2StackTracer::Dump() {
+void RealSH2Tracer::Dump() {
     const auto &log = Logger(m_master);
 
-    log.debug("Stack trace:");
     auto buf = fmt::memory_buffer();
     auto inserter = std::back_inserter(buf);
-    for (auto it = m_entries.rbegin(); it != m_entries.rend(); it++) {
+
+    auto formatRegs = [&](const SH2Regs &regs) {
         fmt::format_to(inserter, "  R0-15:");
         for (int i = 0; i < 16; i++) {
-            fmt::format_to(inserter, " {:08X}", it->regs.R[i]);
+            fmt::format_to(inserter, " {:08X}", regs.R[i]);
         }
-        fmt::format_to(inserter, " PC={:08X}", it->regs.PC);
-        fmt::format_to(inserter, " PR={:08X}", it->regs.PR);
-        fmt::format_to(inserter, " SR={:08X}", it->regs.SR);
-        fmt::format_to(inserter, " GBR={:08X}", it->regs.GBR);
-        fmt::format_to(inserter, " VBR={:08X}", it->regs.VBR);
-        fmt::format_to(inserter, " MAC={:016X}", it->regs.MAC);
+        fmt::format_to(inserter, " PC={:08X}", regs.PC);
+        fmt::format_to(inserter, " PR={:08X}", regs.PR);
+        fmt::format_to(inserter, " SR={:08X}", regs.SR);
+        fmt::format_to(inserter, " GBR={:08X}", regs.GBR);
+        fmt::format_to(inserter, " VBR={:08X}", regs.VBR);
+        fmt::format_to(inserter, " MAC={:016X}", regs.MAC);
+    };
+
+    log.debug("Stack trace:");
+    for (auto it = m_entries.rbegin(); it != m_entries.rend(); it++) {
+        formatRegs(it->regs);
         switch (it->type) {
         case SH2BranchType::JSR: fmt::format_to(inserter, " JSR"); break;
         case SH2BranchType::BSR: fmt::format_to(inserter, " BSR"); break;
@@ -56,29 +61,49 @@ void RealSH2StackTracer::Dump() {
         log.debug("{}", fmt::to_string(buf));
         buf.clear();
     }
+
+    log.debug("Execution backtrace:");
+    std::size_t execTracePos = m_execTraceHead + m_execTrace.size() - m_execTraceCount;
+    if (execTracePos >= m_execTrace.size()) {
+        execTracePos -= m_execTrace.size();
+    }
+    for (std::size_t i = 0; i < m_execTraceCount; i++) {
+        formatRegs(m_execTrace[execTracePos]);
+        log.debug("{}", fmt::to_string(buf));
+        buf.clear();
+        execTracePos = (execTracePos + 1) % m_execTrace.size();
+    }
 }
 
-void RealSH2StackTracer::JSR(SH2Regs regs) {
+void RealSH2Tracer::ExecTrace(SH2Regs regs) {
+    m_execTrace[m_execTraceHead] = regs;
+    m_execTraceHead = (m_execTraceHead + 1) % m_execTrace.size();
+    if (m_execTraceCount < m_execTrace.size()) {
+        m_execTraceCount++;
+    }
+}
+
+void RealSH2Tracer::JSR(SH2Regs regs) {
     m_entries.push_back({SH2BranchType::JSR, regs});
 }
 
-void RealSH2StackTracer::BSR(SH2Regs regs) {
+void RealSH2Tracer::BSR(SH2Regs regs) {
     m_entries.push_back({SH2BranchType::BSR, regs});
 }
 
-void RealSH2StackTracer::TRAPA(SH2Regs regs) {
+void RealSH2Tracer::TRAPA(SH2Regs regs) {
     m_entries.push_back({SH2BranchType::TRAPA, regs});
 }
 
-void RealSH2StackTracer::Exception(SH2Regs regs, uint8 vec) {
+void RealSH2Tracer::Exception(SH2Regs regs, uint8 vec) {
     m_entries.push_back({SH2BranchType::Exception, regs});
 }
 
-void RealSH2StackTracer::UserCapture(SH2Regs regs) {
+void RealSH2Tracer::UserCapture(SH2Regs regs) {
     m_entries.push_back({SH2BranchType::UserCapture, regs});
 }
 
-void RealSH2StackTracer::RTE(SH2Regs regs) {
+void RealSH2Tracer::RTE(SH2Regs regs) {
     // auto &entry = m_entries.back();
     // TODO: check if it was an exception?
     if (!m_entries.empty()) {
@@ -86,7 +111,7 @@ void RealSH2StackTracer::RTE(SH2Regs regs) {
     }
 }
 
-void RealSH2StackTracer::RTS(SH2Regs regs) {
+void RealSH2Tracer::RTS(SH2Regs regs) {
     // auto &entry = m_entries.back();
     // TODO: check if it was a BSR or JSR?
     if (!m_entries.empty()) {
@@ -97,7 +122,7 @@ void RealSH2StackTracer::RTS(SH2Regs regs) {
 SH2::SH2(SH2Bus &bus, bool master)
     : m_log(Logger(master))
     , m_bus(bus)
-    , m_stackTracer(master) {
+    , m_tracer(master) {
     BCR1.MASTER = !master;
     Reset(true);
 }
@@ -171,7 +196,7 @@ void SH2::Reset(bool hard) {
     m_delaySlot = false;
     m_delaySlotTarget = 0;
 
-    m_stackTracer.Reset();
+    m_tracer.Reset();
 }
 
 FLATTEN void SH2::Advance(uint64 cycles) {
@@ -270,14 +295,15 @@ FLATTEN void SH2::Advance(uint64 cycles) {
         "S"), bit(SR.T, "T"));*/
 
         // TODO: choose between interpreter (cached or uncached) and JIT recompiler
+        m_tracer.ExecTrace({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
         Execute(PC);
 
         // dump stack trace on SYS_EXECDMP
         if ((PC & 0x1FFFFFFF) == 0x186C) {
             m_log.debug("SYS_EXECDMP triggered");
-            m_stackTracer.UserCapture({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
-            m_stackTracer.Dump();
-            m_stackTracer.Reset();
+            m_tracer.UserCapture({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
+            m_tracer.Dump();
+            m_tracer.Reset();
         }
 
         // dbg_println("");
@@ -309,7 +335,7 @@ template <mem_primitive T, bool instrFetch>
 T SH2::MemRead(uint32 address) {
     const uint32 partition = (address >> 29u) & 0b111;
     if (address & static_cast<uint32>(sizeof(T) - 1)) {
-        m_log.warn("WARNING: misaligned {}-bit read from {:08X}", sizeof(T) * 8, address);
+        m_log.trace("WARNING: misaligned {}-bit read from {:08X}", sizeof(T) * 8, address);
         // TODO: raise CPU address error due to misaligned access
         // - might have to store data in a class member instead of returning
     }
@@ -326,7 +352,7 @@ T SH2::MemRead(uint32 address) {
     case 0b010: // associative purge
 
         // TODO: implement
-        m_log.debug("Unhandled {}-bit SH-2 associative purge read from {:08X}", sizeof(T) * 8, address);
+        m_log.trace("Unhandled {}-bit SH-2 associative purge read from {:08X}", sizeof(T) * 8, address);
         return (address & 1) ? static_cast<T>(0x12231223) : static_cast<T>(0x23122312);
     case 0b011: { // cache address array
         uint32 entry = (address >> 4u) & 0x3F;
@@ -336,12 +362,12 @@ T SH2::MemRead(uint32 address) {
     case 0b110: // cache data array
 
         // TODO: implement
-        m_log.debug("Unhandled {}-bit SH-2 cache data array read from {:08X}", sizeof(T) * 8, address);
+        m_log.trace("Unhandled {}-bit SH-2 cache data array read from {:08X}", sizeof(T) * 8, address);
         return 0;
     case 0b111: // I/O area
         if constexpr (instrFetch) {
             // TODO: raise CPU address error due to attempt to fetch instruction from I/O area
-            m_log.debug("Attempted to fetch instruction from I/O area at {:08X}", address);
+            m_log.trace("Attempted to fetch instruction from I/O area at {:08X}", address);
             return 0;
         } else if ((address & 0xE0004000) == 0xE0004000) {
             // bits 31-29 and 14 must be set
@@ -354,7 +380,7 @@ T SH2::MemRead(uint32 address) {
             }
         } else {
             // TODO: implement
-            m_log.debug("Unhandled {}-bit SH-2 I/O area read from {:08X}", sizeof(T) * 8, address);
+            m_log.trace("Unhandled {}-bit SH-2 I/O area read from {:08X}", sizeof(T) * 8, address);
             return 0;
         }
     }
@@ -366,7 +392,7 @@ template <mem_primitive T>
 void SH2::MemWrite(uint32 address, T value) {
     const uint32 partition = address >> 29u;
     if (address & static_cast<uint32>(sizeof(T) - 1)) {
-        m_log.warn("WARNING: misaligned {}-bit write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+        m_log.trace("WARNING: misaligned {}-bit write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         // TODO: address error (misaligned access)
     }
 
@@ -382,7 +408,7 @@ void SH2::MemWrite(uint32 address, T value) {
         break;
     case 0b010: // associative purge
         // TODO: implement
-        m_log.debug("Unhandled {}-bit SH-2 associative purge write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+        m_log.trace("Unhandled {}-bit SH-2 associative purge write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         break;
     case 0b011: { // cache address array
         uint32 entry = (address >> 4u) & 0x3F;
@@ -393,7 +419,7 @@ void SH2::MemWrite(uint32 address, T value) {
     case 0b100:
     case 0b110: // cache data array
         // TODO: implement
-        m_log.debug("Unhandled {}-bit SH-2 cache data array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+        m_log.trace("Unhandled {}-bit SH-2 cache data array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         break;
     case 0b111: // I/O area
         if ((address & 0xE0004000) == 0xE0004000) {
@@ -416,7 +442,7 @@ void SH2::MemWrite(uint32 address, T value) {
             }
         } else {
             // TODO: implement
-            m_log.debug("Unhandled {}-bit SH-2 I/O area write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+            m_log.trace("Unhandled {}-bit SH-2 I/O area write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         }
         break;
     }
@@ -995,7 +1021,7 @@ FORCE_INLINE void SH2::SetupDelaySlot(uint32 targetAddress) {
 }
 
 FORCE_INLINE void SH2::EnterException(uint8 vectorNumber) {
-    m_stackTracer.Exception({R, PC, PR, SR.u32, VBR, GBR, MAC.u64}, vectorNumber);
+    m_tracer.Exception({R, PC, PR, SR.u32, VBR, GBR, MAC.u64}, vectorNumber);
     R[15] -= 4;
     MemWriteLong(R[15], SR.u32);
     R[15] -= 4;
@@ -2125,7 +2151,7 @@ FORCE_INLINE void SH2::BRAF(InstrM instr) {
 }
 
 FORCE_INLINE void SH2::BSR(InstrD12 instr) {
-    m_stackTracer.BSR({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
+    m_tracer.BSR({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
     const sint32 sdisp = (bit::sign_extend<12>(instr.disp) << 1) + 4;
     // dbg_println("bsr 0x{:08X}", PC + sdisp);
 
@@ -2135,7 +2161,7 @@ FORCE_INLINE void SH2::BSR(InstrD12 instr) {
 }
 
 FORCE_INLINE void SH2::BSRF(InstrM instr) {
-    m_stackTracer.BSR({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
+    m_tracer.BSR({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
     // dbg_println("bsrf r{}", instr.Rm);
     PR = PC;
     SetupDelaySlot(PC + R[instr.Rm] + 4);
@@ -2150,14 +2176,14 @@ FORCE_INLINE void SH2::JMP(InstrM instr) {
 
 FORCE_INLINE void SH2::JSR(InstrM instr) {
     // dbg_println("jsr @r{}", instr.Rm);
-    m_stackTracer.JSR({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
+    m_tracer.JSR({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
     PR = PC;
     SetupDelaySlot(R[instr.Rm]);
     PC += 2;
 }
 
 FORCE_INLINE void SH2::TRAPA(InstrI instr) {
-    m_stackTracer.TRAPA({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
+    m_tracer.TRAPA({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
     // dbg_println("trapa #0x{:X}", instr.imm);
     R[15] -= 4;
     MemWriteLong(R[15], SR.u32);
@@ -2167,7 +2193,7 @@ FORCE_INLINE void SH2::TRAPA(InstrI instr) {
 }
 
 FORCE_INLINE void SH2::RTE() {
-    m_stackTracer.RTE({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
+    m_tracer.RTE({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
     // dbg_println("rte");
     SetupDelaySlot(MemReadLong(R[15]) + 4);
     PC += 2;
@@ -2177,7 +2203,7 @@ FORCE_INLINE void SH2::RTE() {
 }
 
 FORCE_INLINE void SH2::RTS() {
-    m_stackTracer.RTS({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
+    m_tracer.RTS({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
     // dbg_println("rts");
     SetupDelaySlot(PR + 4);
     PC += 2;
