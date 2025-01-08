@@ -95,7 +95,9 @@ void SCU::TriggerDSPEnd() {
 void SCU::TriggerSoundRequest(bool level) {
     m_intrStatus.SCSP_SoundRequest = level;
     UpdateInterruptLevel(false);
-    TriggerDMATransfer(DMATrigger::SoundRequest);
+    if (level) {
+        TriggerDMATransfer(DMATrigger::SoundRequest);
+    }
 }
 
 void SCU::TriggerSystemManager() {
