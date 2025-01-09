@@ -657,6 +657,7 @@ T SH2::OnChipRegRead(uint32 address) {
     // https://quick-bench.com/q/vB2HZ3bzAIlqIazYoVxy7A0ooKg
 
     switch (address) {
+    case 0x04: return 0; // TODO: SCI SSR
     case 0x10: return FRT.ReadTIER();
     case 0x11: return FRT.ReadFTCSR();
     case 0x12: return FRT.ReadFRCH();
