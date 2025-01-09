@@ -139,6 +139,16 @@ void SCU::RunDMA(uint64 cycles) {
         if (!ch.enabled) {
             continue;
         }
+        auto adjustZeroSizeXferCount = [&](uint32 xferCount) -> uint32 {
+            if (xferCount != 0) {
+                return xferCount;
+            }
+            if (level == 0) {
+                return 0x100000u;
+            } else {
+                return 0x1000u;
+            }
+        };
 
         auto readIndirect = [&] {
             ch.currXferCount = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 0);
@@ -152,6 +162,7 @@ void SCU::RunDMA(uint64 cycles) {
             } else {
                 ch.currXferCount = bit::extract<0, 11>(ch.currXferCount);
             }
+            ch.currXferCount = adjustZeroSizeXferCount(ch.currXferCount);
             dmaLog.debug("SCU DMA{}: Starting indirect transfer at {:08X} - from {:08X} to {:08X} - {:05X} bytes{}",
                          level, ch.currIndirectSrc - 3 * sizeof(uint32), ch.currSrcAddr, ch.currDstAddr,
                          ch.currXferCount, (ch.endIndirect ? " (final)" : ""));
@@ -164,11 +175,11 @@ void SCU::RunDMA(uint64 cycles) {
                 ch.currIndirectSrc = ch.dstAddr;
                 readIndirect();
             } else {
-                dmaLog.debug("SCU DMA{}: Starting direct transfer from {:08X} to {:08X} - {:05X} bytes", level,
-                             ch.srcAddr, ch.dstAddr, ch.xferCount);
                 ch.currSrcAddr = ch.srcAddr;
                 ch.currDstAddr = ch.dstAddr;
-                ch.currXferCount = ch.xferCount;
+                ch.currXferCount = adjustZeroSizeXferCount(ch.xferCount);
+                dmaLog.debug("SCU DMA{}: Starting direct transfer from {:08X} to {:08X} - {:05X} bytes", level,
+                             ch.currSrcAddr, ch.currDstAddr, ch.currXferCount);
             }
         }
 
