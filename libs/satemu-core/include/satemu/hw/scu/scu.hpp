@@ -520,6 +520,14 @@ private:
 
     template <mem_primitive T>
     T ReadReg(uint32 address) {
+        if constexpr (std::is_same_v<T, uint8>) {
+            const uint32 value = ReadReg<uint32>(address & ~3u);
+            return value >> (((address & 3u) ^ 3u) * 8u);
+        } else if constexpr (std::is_same_v<T, uint16>) {
+            const uint32 value = ReadReg<uint32>(address & ~3u);
+            return value >> ((((address >> 1u) & 1u) ^ 1u) * 16u);
+        }
+
         switch (address) {
         case 0x00: // Level 0 DMA Read Address
         case 0x20: // Level 1 DMA Read Address
@@ -644,6 +652,8 @@ private:
 
     template <mem_primitive T>
     void WriteReg(uint32 address, T value) {
+        // TODO: handle 8-bit and 16-bit register writes if needed
+
         switch (address) {
         case 0x00: // Level 0 DMA Read Address
         case 0x20: // Level 1 DMA Read Address
