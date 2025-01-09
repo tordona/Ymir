@@ -419,6 +419,8 @@ private:
     void UpdateSCUInterrupts();
 
     // --- DMA Transfer Register ---
+    
+    // --- Sound slots ---
 
     std::array<Slot, 32> m_slots;
 
