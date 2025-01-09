@@ -43,14 +43,16 @@ public:
     void Reset() {}
     void Dump() {}
 
-    void JSR(SH2Regs regs) {}
-    void BSR(SH2Regs regs) {}
-    void TRAPA(SH2Regs regs) {}
-    void Exception(SH2Regs regs, uint8 vec) {}
-    void UserCapture(SH2Regs regs) {}
+    void ExecTrace(SH2Regs) {}
 
-    void RTE(SH2Regs regs) {}
-    void RTS(SH2Regs regs) {}
+    void JSR(SH2Regs) {}
+    void BSR(SH2Regs) {}
+    void TRAPA(SH2Regs) {}
+    void Exception(SH2Regs, uint8) {}
+    void UserCapture(SH2Regs) {}
+
+    void RTE(SH2Regs) {}
+    void RTS(SH2Regs) {}
 };
 
 class RealSH2Tracer {
@@ -85,8 +87,8 @@ private:
     std::size_t m_execTraceCount;
 };
 
-// using SH2Tracer = NullSH2Tracer;
-using SH2Tracer = RealSH2Tracer;
+using SH2Tracer = NullSH2Tracer;
+// using SH2Tracer = RealSH2Tracer;
 
 // -----------------------------------------------------------------------------
 
