@@ -988,7 +988,13 @@ bool SH2::CheckInterrupts() {
         update(IPRA.DIVUIPn, VCRDIV);
     }
 
-    // TODO: DMAC0, DMAC1 transfer end
+    if (dmaChannels[0].xferEnded && dmaChannels[0].irqEnable) {
+        update(IPRA.DMACIPn, dmaChannels[0].vecNum);
+    }
+    if (dmaChannels[1].xferEnded && dmaChannels[1].irqEnable) {
+        update(IPRA.DMACIPn, dmaChannels[1].vecNum);
+    }
+
     // TODO: WDT ITI, BSC REF CMI
     // TODO: SCI ERI, RXI, TXI, TEI
 
