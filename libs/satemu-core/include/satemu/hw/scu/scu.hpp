@@ -570,11 +570,11 @@ private:
             // bit::deposit_into<0>(value, m_dspState.dmaRun); // TODO: is this correct?
             // bit::deposit_into<1>(value, m_dspState.dmaStandby?);
             bit::deposit_into<4>(value, m_dmaChannels[0].active);
-            bit::deposit_into<5>(value, !m_dmaChannels[0].active && m_dmaChannels[0].enabled);
+            // TODO: bit 5: DMA0 standby
             bit::deposit_into<8>(value, m_dmaChannels[1].active);
-            bit::deposit_into<9>(value, !m_dmaChannels[1].active && m_dmaChannels[1].enabled);
+            // TODO: bit 9: DMA1 standby
             bit::deposit_into<12>(value, m_dmaChannels[2].active);
-            bit::deposit_into<13>(value, !m_dmaChannels[2].active && m_dmaChannels[2].enabled);
+            // TODO: bit 13: DMA2 standby
             bit::deposit_into<16>(value,
                                   m_dmaChannels[0].active && (m_dmaChannels[1].active || m_dmaChannels[2].active));
             bit::deposit_into<17>(value, m_dmaChannels[1].active && m_dmaChannels[2].active);
