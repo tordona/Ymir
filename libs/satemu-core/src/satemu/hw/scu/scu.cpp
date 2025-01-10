@@ -157,12 +157,6 @@ void SCU::RunDMA(uint64 cycles) {
             ch.currIndirectSrc += 3 * sizeof(uint32);
             ch.endIndirect = bit::extract<31>(ch.currSrcAddr);
             ch.currSrcAddr &= 0x7FFF'FFFF;
-            if (level == 0) {
-                ch.currXferCount = bit::extract<0, 19>(ch.currXferCount);
-            } else {
-                ch.currXferCount = bit::extract<0, 11>(ch.currXferCount);
-            }
-            ch.currXferCount = adjustZeroSizeXferCount(ch.currXferCount);
             dmaLog.debug("SCU DMA{}: Starting indirect transfer at {:08X} - from {:08X} to {:08X} - {:05X} bytes{}",
                          level, ch.currIndirectSrc - 3 * sizeof(uint32), ch.currSrcAddr, ch.currDstAddr,
                          ch.currXferCount, (ch.endIndirect ? " (final)" : ""));
