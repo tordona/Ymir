@@ -41,10 +41,12 @@ void runEmulator(satemu::Saturn &saturn) {
     using namespace satemu;
 
     // Screen parameters
+    const uint32 scale = 3;
     struct ScreenParams {
         uint32 width = 320;
         uint32 height = 224;
-        uint32 scale = 3;
+        float scaleX = scale;
+        float scaleY = scale;
         SDL_Window *window = nullptr;
     } screen;
 
@@ -70,8 +72,8 @@ void runEmulator(satemu::Saturn &saturn) {
     // Assume the following calls succeed
     SDL_SetStringProperty(windowProps, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Unnamed Sega Saturn emulator");
     SDL_SetBooleanProperty(windowProps, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, false);
-    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, screen.width * screen.scale);
-    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, screen.height * screen.scale);
+    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, screen.width * screen.scaleX);
+    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, screen.height * screen.scaleY);
     SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
     SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
 
@@ -125,26 +127,31 @@ void runEmulator(satemu::Saturn &saturn) {
 
     // Configure single framebuffer
     std::vector<uint32> framebuffer(vdp::kMaxResH * vdp::kMaxResV);
-    saturn.VDP.SetCallbacks(
-        {framebuffer.data(), [](uint32, uint32, void *ctx) { return (uint32 *)ctx; }},
-        {&screen, [](vdp::FramebufferColor *, uint32 width, uint32 height, void *ctx) {
-             auto &screen = *static_cast<ScreenParams *>(ctx);
-             if (width != screen.width || height != screen.height) {
-                 int wx, wy;
-                 SDL_GetWindowPosition(screen.window, &wx, &wy);
-                 int dx = (int)width - (int)screen.width;
-                 int dy = (int)height - (int)screen.height;
-                 screen.width = width;
-                 screen.height = height;
+    saturn.VDP.SetCallbacks({framebuffer.data(), [](uint32, uint32, void *ctx) { return (uint32 *)ctx; }},
+                            {&screen, [](vdp::FramebufferColor *, uint32 width, uint32 height, void *ctx) {
+                                 auto &screen = *static_cast<ScreenParams *>(ctx);
+                                 if (width != screen.width || height != screen.height) {
+                                     const bool doubleWidth = width >= 640;
+                                     const bool doubleHeight = height >= 400;
 
-                 // Adjust window size dynamically
-                 // TODO: double-horizontal res should halve horizontal scale
-                 // - won't work well with odd integer scale
-                 // TODO: add room for borders
-                 SDL_SetWindowSize(screen.window, screen.width * screen.scale, screen.height * screen.scale);
-                 SDL_SetWindowPosition(screen.window, wx - dx * (int)screen.scale / 2, wy - dy * (int)screen.scale / 2);
-             }
-         }});
+                                     const float scaleX = doubleWidth ? scale * 0.5f : scale;
+                                     const float scaleY = doubleHeight ? scale * 0.5f : scale;
+
+                                     int wx, wy;
+                                     SDL_GetWindowPosition(screen.window, &wx, &wy);
+                                     const int dx = (doubleWidth ? (int)width / 2 : (int)width) - (int)screen.width;
+                                     const int dy = (doubleHeight ? (int)height / 2 : (int)height) - (int)screen.height;
+                                     screen.width = width;
+                                     screen.height = height;
+
+                                     // Adjust window size dynamically
+                                     // TODO: double-horizontal res should halve horizontal scale
+                                     // - won't work well with odd integer scale
+                                     // TODO: add room for borders
+                                     SDL_SetWindowSize(screen.window, screen.width * scaleX, screen.height * scaleY);
+                                     SDL_SetWindowPosition(screen.window, wx - dx * scaleX / 2, wy - dy * scaleY / 2);
+                                 }
+                             }});
 
     auto t = clk::now();
     uint64 frames = 0;
