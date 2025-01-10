@@ -58,6 +58,8 @@ namespace satemu::sh2 {
 // VDP2 has 516 KiB RAM (4x 128 KiB VRAM banks A0 A1 B0 B1 + 4 KiB color RAM)
 // SCSP contains the MC68EC000 and 512 KiB of RAM
 class SH2Bus {
+    static constexpr dbg::Category rootLog{"SH2Bus"};
+
 public:
     SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu, smpc::SMPC &smpc);
 
@@ -84,7 +86,7 @@ public:
         } else if (AddressInRange<0x600'0000, 0x7FF'FFFF>(address)) {
             return ReadBE<T>(&WRAMHigh[address & 0xFFFFF]);
         } else {
-            fmt::println("unhandled {}-bit SH2 bus read from {:08X}", sizeof(T) * 8, address);
+            rootLog.trace("unhandled {}-bit SH2 bus read from {:08X}", sizeof(T) * 8, address);
             return 0;
         }
     }
@@ -114,7 +116,7 @@ public:
         } else if (AddressInRange<0x600'0000, 0x7FF'FFFF>(address)) {
             WriteBE<T>(&WRAMHigh[address & 0xFFFFF], value);
         } else {
-            fmt::println("unhandled {}-bit SH2 bus write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+            rootLog.trace("unhandled {}-bit SH2 bus write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         }
     }
 
