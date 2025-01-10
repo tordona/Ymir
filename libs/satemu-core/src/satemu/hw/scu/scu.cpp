@@ -157,9 +157,10 @@ void SCU::RunDMA(uint64 cycles) {
             ch.currIndirectSrc += 3 * sizeof(uint32);
             ch.endIndirect = bit::extract<31>(ch.currSrcAddr);
             ch.currSrcAddr &= 0x7FFF'FFFF;
-            dmaLog.debug("SCU DMA{}: Starting indirect transfer at {:08X} - from {:08X} to {:08X} - {:05X} bytes{}",
-                         level, ch.currIndirectSrc - 3 * sizeof(uint32), ch.currSrcAddr, ch.currDstAddr,
-                         ch.currXferCount, (ch.endIndirect ? " (final)" : ""));
+            dmaLog.debug("SCU DMA{}: Starting indirect transfer at {:08X} - {:06X} bytes from {:08X} (+{:02X}) to "
+                         "{:08X} (+{:02X}){}",
+                         level, ch.currIndirectSrc - 3 * sizeof(uint32), ch.currXferCount, ch.currSrcAddr,
+                         ch.srcAddrInc, ch.currDstAddr, ch.dstAddrInc, (ch.endIndirect ? " (final)" : ""));
         };
 
         if (ch.start && !ch.active) {
@@ -172,26 +173,34 @@ void SCU::RunDMA(uint64 cycles) {
                 ch.currSrcAddr = ch.srcAddr;
                 ch.currDstAddr = ch.dstAddr;
                 ch.currXferCount = adjustZeroSizeXferCount(ch.xferCount);
-                dmaLog.debug("SCU DMA{}: Starting direct transfer from {:08X} to {:08X} - {:05X} bytes", level,
-                             ch.currSrcAddr, ch.currDstAddr, ch.currXferCount);
+                dmaLog.debug(
+                    "SCU DMA{}: Starting direct transfer of {:06X} bytes from {:08X} (+{:02X}) to {:08X} (+{:02X})",
+                    level, ch.currXferCount, ch.currSrcAddr, ch.srcAddrInc, ch.currDstAddr, ch.dstAddrInc);
             }
         }
 
         if (ch.active) {
-            uint16 value = m_SH2.bus.Read<uint16>((ch.currSrcAddr & 0x7FF'FFFF) + 0);
-            m_SH2.bus.Write<uint16>((ch.currDstAddr & 0x7FF'FFFF) + 0, value);
+            const bool srcBBus = util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currSrcAddr & 0x7FF'FFFF);
+            const bool dstBBus = util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currDstAddr & 0x7FF'FFFF);
 
-            value = m_SH2.bus.Read<uint16>((ch.currSrcAddr & 0x7FF'FFFF) + 2);
-            m_SH2.bus.Write<uint16>((ch.currDstAddr & 0x7FF'FFFF) + 2, value);
-
-            if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currSrcAddr & 0x7FF'FFFF)) {
-                ch.currSrcAddr += ch.srcAddrInc * 2;
+            uint32 value{};
+            if (srcBBus) {
+                value = m_SH2.bus.Read<uint16>(ch.currSrcAddr & 0x7FF'FFFF) << 16u;
+                ch.currSrcAddr += ch.srcAddrInc / 2u;
+                value |= m_SH2.bus.Read<uint16>(ch.currSrcAddr & 0x7FF'FFFF) << 0u;
+                ch.currSrcAddr += ch.srcAddrInc / 2u;
             } else {
+                value = m_SH2.bus.Read<uint32>(ch.currSrcAddr & 0x7FF'FFFF);
                 ch.currSrcAddr += ch.srcAddrInc;
             }
-            if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currDstAddr & 0x7FF'FFFF)) {
-                ch.currDstAddr += ch.dstAddrInc * 2;
+
+            if (dstBBus) {
+                m_SH2.bus.Write<uint16>(ch.currDstAddr & 0x7FF'FFFF, value >> 16u);
+                ch.currDstAddr += ch.dstAddrInc;
+                m_SH2.bus.Write<uint16>(ch.currDstAddr & 0x7FF'FFFF, value >> 0u);
+                ch.currDstAddr += ch.dstAddrInc;
             } else {
+                m_SH2.bus.Write<uint32>(ch.currDstAddr & 0x7FF'FFFF, value);
                 ch.currDstAddr += ch.dstAddrInc;
             }
 
