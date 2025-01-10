@@ -137,10 +137,13 @@ void runEmulator(satemu::Saturn &saturn) {
                                      const float scaleX = doubleWidth ? scale * 0.5f : scale;
                                      const float scaleY = doubleHeight ? scale * 0.5f : scale;
 
+                                     auto normalizeW = [](int width) { return (width >= 640) ? width / 2 : width; };
+                                     auto normalizeH = [](int height) { return (height >= 400) ? height / 2 : height; };
+
                                      int wx, wy;
                                      SDL_GetWindowPosition(screen.window, &wx, &wy);
-                                     const int dx = (doubleWidth ? (int)width / 2 : (int)width) - (int)screen.width;
-                                     const int dy = (doubleHeight ? (int)height / 2 : (int)height) - (int)screen.height;
+                                     const int dx = (int)normalizeW(width) - (int)normalizeW(screen.width);
+                                     const int dy = (int)normalizeH(height) - (int)normalizeH(screen.height);
                                      screen.width = width;
                                      screen.height = height;
 
