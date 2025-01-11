@@ -146,7 +146,7 @@ private:
             if (address < 0x400) {
                 const uint32 slotIndex = address >> 5;
                 auto &slot = m_slots[slotIndex];
-                return slot.ReadReg<T, fromM68K>(address);
+                return slot.ReadReg<T, fromM68K>(address & 0x1F);
             }
             if (address >= 0x700) {
                 // TODO: DSP
@@ -200,22 +200,29 @@ private:
     void WriteReg(uint32 address, T value) {
         static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP register write size");
 
-        if (address < 0x400) {
-            const uint32 slotIndex = address >> 5;
-            auto &slot = m_slots[slotIndex];
-            slot.WriteReg<T, fromM68K>(address, value);
-            return;
-        }
-        if (address >= 0x700) {
-            // TODO: DSP
-        }
-
         static constexpr bool is16 = std::is_same_v<T, uint16>;
         uint16 value16 = value;
         if constexpr (!is16) {
             if ((address & 1) == 0) {
                 value16 <<= 8u;
             }
+        }
+
+        if (address < 0x400) {
+            const uint32 slotIndex = address >> 5;
+            auto &slot = m_slots[slotIndex];
+            slot.WriteReg<T, fromM68K>(address & 0x1F, value);
+            
+            // Handle KYONEX
+            if ((address & 0x1F) == 0 && bit::extract<12>(value16)) {
+                for (auto &slot : m_slots) {
+                    slot.TriggerKeyOn();
+                }
+            }
+            return;
+        }
+        if (address >= 0x700) {
+            // TODO: DSP
         }
 
         switch (address) {
@@ -419,7 +426,7 @@ private:
     void UpdateSCUInterrupts();
 
     // --- DMA Transfer Register ---
-    
+
     // --- Sound slots ---
 
     std::array<Slot, 32> m_slots;

@@ -86,15 +86,221 @@ struct Slot {
         keyOn = false;
     }
 
+    void TriggerKeyOn() {
+        if (keyOn != keyOnBit) {
+            keyOn = keyOnBit;
+            // TODO: handle envelope generator and etc.
+        }
+    }
+
     template <typename T, bool fromM68K>
     T ReadReg(uint32 address) {
-        // TODO: implement similar to SCSP::ReadReg
-        return 0;
+        static constexpr bool is16 = std::is_same_v<T, uint16>;
+        auto shiftByte = [](uint16 value) {
+            if constexpr (is16) {
+                return value >> 16u;
+            } else {
+                return value;
+            }
+        };
+
+        switch (address) {
+        case 0x00: return shiftByte(ReadReg00<is16, true>());
+        case 0x01: return ReadReg00<true, is16>();
+        case 0x02: return shiftByte(ReadReg02<is16, true>());
+        case 0x03: return ReadReg02<true, is16>();
+        case 0x04: return shiftByte(ReadReg04<is16, true>());
+        case 0x05: return ReadReg04<true, is16>();
+        case 0x06: return shiftByte(ReadReg06<is16, true>());
+        case 0x07: return ReadReg06<true, is16>();
+        case 0x08: return shiftByte(ReadReg08<is16, true>());
+        case 0x09: return ReadReg08<true, is16>();
+        case 0x0A: return shiftByte(ReadReg0A<is16, true>());
+        case 0x0B: return ReadReg0A<true, is16>();
+        case 0x0C: return shiftByte(ReadReg0C<is16, true>());
+        case 0x0D: return ReadReg0C<true, is16>();
+        case 0x0E: return shiftByte(ReadReg0E<is16, true>());
+        case 0x0F: return ReadReg0E<true, is16>();
+        case 0x10: return shiftByte(ReadReg10<is16, true>());
+        case 0x11: return ReadReg10<true, is16>();
+        case 0x12: return shiftByte(ReadReg12<is16, true>());
+        case 0x13: return ReadReg12<true, is16>();
+        case 0x14: return shiftByte(ReadReg14<is16, true>());
+        case 0x15: return ReadReg14<true, is16>();
+        case 0x16: return shiftByte(ReadReg16<is16, true>());
+        case 0x17: return ReadReg16<true, is16>();
+        default: return 0;
+        }
     }
 
     template <typename T, bool fromM68K>
     void WriteReg(uint32 address, T value) {
-        // TODO: implement similar to SCSP::WriteReg
+        static constexpr bool is16 = std::is_same_v<T, uint16>;
+        uint16 value16 = value;
+        if constexpr (!is16) {
+            if ((address & 1) == 0) {
+                value16 <<= 8u;
+            }
+        }
+
+        switch (address) {
+        case 0x00: WriteReg00<is16, true>(value16); break;
+        case 0x01: WriteReg00<true, is16>(value16); break;
+        case 0x02: WriteReg02<is16, true>(value16); break;
+        case 0x03: WriteReg02<true, is16>(value16); break;
+        case 0x04: WriteReg04<is16, true>(value16); break;
+        case 0x05: WriteReg04<true, is16>(value16); break;
+        case 0x06: WriteReg06<is16, true>(value16); break;
+        case 0x07: WriteReg06<true, is16>(value16); break;
+        case 0x08: WriteReg08<is16, true>(value16); break;
+        case 0x09: WriteReg08<true, is16>(value16); break;
+        case 0x0A: WriteReg0A<is16, true>(value16); break;
+        case 0x0B: WriteReg0A<true, is16>(value16); break;
+        case 0x0C: WriteReg0C<is16, true>(value16); break;
+        case 0x0D: WriteReg0C<true, is16>(value16); break;
+        case 0x0E: WriteReg0E<is16, true>(value16); break;
+        case 0x0F: WriteReg0E<true, is16>(value16); break;
+        case 0x10: WriteReg10<is16, true>(value16); break;
+        case 0x11: WriteReg10<true, is16>(value16); break;
+        case 0x12: WriteReg12<is16, true>(value16); break;
+        case 0x13: WriteReg12<true, is16>(value16); break;
+        case 0x14: WriteReg14<is16, true>(value16); break;
+        case 0x15: WriteReg14<true, is16>(value16); break;
+        case 0x16: WriteReg16<is16, true>(value16); break;
+        case 0x17: WriteReg16<true, is16>(value16); break;
+        }
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    uint16 ReadReg00() {
+        // TODO: implement
+        return 0;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteReg00(uint16 value) {
+        // TODO: implement
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    uint16 ReadReg02() {
+        // TODO: implement
+        return 0;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteReg02(uint16 value) {
+        // TODO: implement
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    uint16 ReadReg04() {
+        // TODO: implement
+        return 0;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteReg04(uint16 value) {
+        // TODO: implement
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    uint16 ReadReg06() {
+        // TODO: implement
+        return 0;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteReg06(uint16 value) {
+        // TODO: implement
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    uint16 ReadReg08() {
+        // TODO: implement
+        return 0;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteReg08(uint16 value) {
+        // TODO: implement
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    uint16 ReadReg0A() {
+        // TODO: implement
+        return 0;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteReg0A(uint16 value) {
+        // TODO: implement
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    uint16 ReadReg0C() {
+        // TODO: implement
+        return 0;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteReg0C(uint16 value) {
+        // TODO: implement
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    uint16 ReadReg0E() {
+        // TODO: implement
+        return 0;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteReg0E(uint16 value) {
+        // TODO: implement
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    uint16 ReadReg10() {
+        // TODO: implement
+        return 0;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteReg10(uint16 value) {
+        // TODO: implement
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    uint16 ReadReg12() {
+        // TODO: implement
+        return 0;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteReg12(uint16 value) {
+        // TODO: implement
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    uint16 ReadReg14() {
+        // TODO: implement
+        return 0;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteReg14(uint16 value) {
+        // TODO: implement
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    uint16 ReadReg16() {
+        // TODO: implement
+        return 0;
+    }
+
+    template <bool lowerHalf, bool upperHalf>
+    void WriteReg16(uint16 value) {
+        // TODO: implement
     }
 
     // -------------------------------------------------------------------------
