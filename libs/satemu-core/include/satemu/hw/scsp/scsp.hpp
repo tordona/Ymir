@@ -169,7 +169,9 @@ private:
             } else if (AddressInRange<0x780, 0x7BF>(address)) {
                 return read16(m_dspAddrs[(address & 0x3F) >> 1]);
             } else if (AddressInRange<0x800, 0xBFF>(address)) {
-                // TODO: DSP micro program
+                const uint32 index = (address & 0x3FF) >> 3u;
+                const uint32 subindex = (address & 0x7) >> 1;
+                return read16(m_dspProgram[index].u16[subindex]);
             } else if (AddressInRange<0xC00, 0xEE3>(address)) {
                 // TODO: DSP internal buffer
             }
@@ -257,16 +259,18 @@ private:
         } else if (AddressInRange<0x600, 0x67F>(address)) {
             const uint32 gen = address >> 6;
             const uint32 idx = (address & 0x3F) >> 1;
-            write16(m_soundDataStack[gen][idx], value16);
-            return;
+            return write16(m_soundDataStack[gen][idx], value16);
         } else if (AddressInRange<0x700, 0x77F>(address)) {
-            write16(m_dspCoeffs[(address & 0x7F) >> 1], value16 >> 3);
-            return;
+            return write16(m_dspCoeffs[(address & 0x7F) >> 1], value16 >> 3);
         } else if (AddressInRange<0x780, 0x7BF>(address)) {
-            write16(m_dspAddrs[(address & 0x3F) >> 1], value16);
+            return write16(m_dspAddrs[(address & 0x3F) >> 1], value16);
+        } else if (AddressInRange<0x7C0, 0x7FF>(address)) {
+            // Some games try to write to this empty area
             return;
         } else if (AddressInRange<0x800, 0xBFF>(address)) {
-            // TODO: DSP micro program
+            const uint32 index = (address & 0x3FF) >> 3u;
+            const uint32 subindex = (address & 0x7) >> 1;
+            return write16(m_dspProgram[index].u16[subindex], value16);
         } else if (AddressInRange<0xC00, 0xEE3>(address)) {
             // TODO: DSP internal buffer
         }
@@ -488,6 +492,7 @@ private:
 
     std::array<uint16, 64> m_dspCoeffs;
     std::array<uint16, 32> m_dspAddrs;
+    std::array<DSPInstr, 128> m_dspProgram;
 
     // -------------------------------------------------------------------------
     // Audio processing
