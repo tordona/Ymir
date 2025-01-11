@@ -1493,11 +1493,6 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 colorMode) {
     LayerState &layerState = m_layerStates[bgIndex + 2];
     NormBGLayerState &bgState = m_normBGLayerStates[bgIndex];
 
-    bgState.mosaicCounterY++;
-    if (bgState.mosaicCounterY >= m_VDP2.mosaicV) {
-        bgState.mosaicCounterY = 0;
-    }
-
     if constexpr (bgIndex < 2) {
         VDP2UpdateLineScreenScroll(bgParams, bgState);
     }
@@ -1513,6 +1508,11 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 colorMode) {
                                                : exc ? CharacterMode::OneWordExtended
                                                      : CharacterMode::OneWordStandard);
         (this->*fnDrawScroll[chm][fcc][cf][colorMode])(bgParams, layerState, bgState);
+    }
+
+    bgState.mosaicCounterY++;
+    if (bgState.mosaicCounterY >= m_VDP2.mosaicV) {
+        bgState.mosaicCounterY = 0;
     }
 }
 
