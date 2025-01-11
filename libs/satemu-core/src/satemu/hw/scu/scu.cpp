@@ -825,45 +825,56 @@ void SCU::UpdateInterruptLevel(bool acknowledge) {
     //   30   5E     1  A-Bus   External Interrupt 0E
     //   31   5F     1  A-Bus   External Interrupt 0F
 
-    static constexpr uint32 kBaseIntrLevels[] = {0xF, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8, //
+    static constexpr uint32 kInternalLevels[] = {0xF, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8, //
                                                  0x8, 0x6, 0x6, 0x5, 0x3, 0x2, 0x0, 0x0, //
                                                  0x0};
-    static constexpr uint32 kABusIntrLevels[] = {0x7, 0x7, 0x7, 0x7, 0x4, 0x4, 0x4, 0x4, //
+    static constexpr uint32 kExternalLevels[] = {0x7, 0x7, 0x7, 0x7, 0x4, 0x4, 0x4, 0x4, //
                                                  0x1, 0x1, 0x1, 0x1, 0x1, 0x1, 0x1, 0x1, //
                                                  0x0};
-    const uint32 intrBits = m_intrStatus.u32 & ~m_intrMask.u16;
-    if (intrBits != 0) {
-        const uint16 intrIndexBase = std::countr_zero<uint16>(intrBits >> 0u);
-        const uint16 intrIndexABus = std::countr_zero<uint16>(intrBits >> 16u);
+    const uint16 internalBits = m_intrStatus.internal & ~m_intrMask.internal;
+    const uint16 externalBits = m_intrMask.ABus_ExtIntrs ? m_intrStatus.external : 0u;
+    if (internalBits != 0 || externalBits != 0) {
+        const uint16 internalIndex = std::countr_zero(internalBits);
+        const uint16 externalIndex = std::countr_zero(externalBits);
 
-        const uint8 intrLevelBase = kBaseIntrLevels[intrIndexBase];
-        const uint8 intrLevelABus = kABusIntrLevels[intrIndexABus];
+        const uint8 internalLevel = kInternalLevels[internalIndex];
+        const uint8 externalLevel = kExternalLevels[externalIndex];
+        rootLog.trace("Intr states:  {:04X} {:04X}", m_intrStatus.internal, m_intrStatus.external);
+        rootLog.trace("Intr masks:   {:04X} {:04X} {}", (uint16)m_intrMask.internal, m_intrMask.ABus_ExtIntrs * 0xFFFF,
+                      m_abusIntrAck);
+        rootLog.trace("Intr bits:    {:04X} {:04X}", internalBits, externalBits);
+        rootLog.trace("Intr indices: {:X} {:X}", internalIndex, externalIndex);
+        rootLog.trace("Intr levels:  {:X} {:X}", internalLevel, externalLevel);
 
         if (acknowledge) {
-            if (intrLevelBase >= intrLevelABus) {
-                m_intrStatus.u32 &= ~(1u << intrIndexBase);
+            if (internalLevel >= externalLevel) {
+                m_intrStatus.internal &= ~(1u << internalIndex);
+                rootLog.trace("Acknowledging internal interrupt {:X}", internalIndex);
             } else {
-                m_intrStatus.u32 &= ~(1u << (intrIndexABus + 16u));
+                m_intrStatus.external &= ~(1u << externalIndex);
+                rootLog.trace("Acknowledging external interrupt {:X}", externalIndex);
             }
-            m_SH2.master.SetExternalInterrupt(0, 0);
-            m_SH2.slave.SetExternalInterrupt(0, 0);
+            UpdateInterruptLevel(false);
         } else {
-            if (intrLevelBase >= intrLevelABus) {
-                m_SH2.master.SetExternalInterrupt(intrLevelBase, intrIndexBase + 0x40);
+            if (internalLevel >= externalLevel) {
+                m_SH2.master.SetExternalInterrupt(internalLevel, internalIndex + 0x40);
+                rootLog.trace("Raising internal interrupt {:X}", internalIndex);
 
                 // Also send VBlank IN and HBlank IN to slave SH2 if it is enabled
-                if (intrIndexBase == 0) {
+                if (internalIndex == 0) {
                     m_SH2.slave.SetExternalInterrupt(2, 0x43);
-                } else if (intrIndexBase == 2) {
+                } else if (internalIndex == 2) {
                     m_SH2.slave.SetExternalInterrupt(1, 0x41);
                 } else {
                     m_SH2.slave.SetExternalInterrupt(0, 0);
                 }
             } else if (m_abusIntrAck) {
+                rootLog.trace("Raising external interrupt {:X}", externalIndex);
                 m_abusIntrAck = false;
-                m_SH2.master.SetExternalInterrupt(intrLevelABus, intrIndexABus + 0x50);
+                m_SH2.master.SetExternalInterrupt(externalLevel, externalIndex + 0x50);
                 m_SH2.slave.SetExternalInterrupt(0, 0);
             } else {
+                rootLog.trace("Lowering interrupt signal");
                 m_SH2.master.SetExternalInterrupt(0, 0);
                 m_SH2.slave.SetExternalInterrupt(0, 0);
             }

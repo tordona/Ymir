@@ -41,6 +41,10 @@ namespace satemu::scu {
 union InterruptStatus {
     uint32 u32;
     struct {
+        uint16 internal;
+        uint16 external;
+    };
+    struct {
         uint32 VDP2_VBlankIN : 1;
         uint32 VDP2_VBlankOUT : 1;
         uint32 VDP2_HBlankIN : 1;
@@ -83,7 +87,7 @@ static_assert(sizeof(InterruptStatus) == sizeof(uint32));
 
 union InterruptMask {
     uint32 u32;
-    uint16 u16; // excludes A-Bus external interrupts bit
+    uint16 internal : 15; // excludes A-Bus external interrupts bit
     struct {
         uint32 VDP2_VBlankIN : 1;
         uint32 VDP2_VBlankOUT : 1;
