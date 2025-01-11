@@ -39,19 +39,23 @@ void SCU::Reset(bool hard) {
     m_intrStatus.u32 = 0;
     m_abusIntrAck = false;
 
-    for (auto &ch : m_dmaChannels) {
-        ch.Reset();
+    if (hard) {
+        for (auto &ch : m_dmaChannels) {
+            ch.Reset();
+        }
     }
 
-    m_dspState.Reset();
+    m_dspState.Reset(hard);
 
-    m_timer0Counter = 0;
-    m_timer0Compare = 0;
+    if (hard) {
+        m_timer0Counter = 0;
+        m_timer0Compare = 0;
 
-    m_timer1Counter = 0;
-    m_timer1Reload = 0;
-    m_timer1Enable = false;
-    m_timer1Mode = false;
+        m_timer1Counter = 0;
+        m_timer1Reload = 0;
+        m_timer1Enable = false;
+        m_timer1Mode = false;
+    }
 
     m_WRAMSizeSelect = false;
 }

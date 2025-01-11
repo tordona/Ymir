@@ -314,13 +314,15 @@ private:
 
     struct DSPState {
         DSPState() {
-            Reset();
+            Reset(true);
         }
 
-        void Reset() {
-            programRAM.fill(0);
-            for (auto &bank : dataRAM) {
-                bank.fill(0);
+        void Reset(bool hard) {
+            if (hard) {
+                programRAM.fill(0);
+                for (auto &bank : dataRAM) {
+                    bank.fill(0);
+                }
             }
 
             programExecuting = false;

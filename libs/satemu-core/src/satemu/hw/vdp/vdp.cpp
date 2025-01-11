@@ -22,7 +22,18 @@ VDP::VDP(scu::SCU &scu)
 
 void VDP::Reset(bool hard) {
     if (hard) {
-    m_VRAM1.fill(0);
+        for (uint32 addr = 0; addr < m_VRAM1.size(); addr++) {
+            if ((addr & 0x1F) == 0) {
+                m_VRAM1[addr] = 0x80;
+            } else if ((addr & 0x1F) == 1) {
+                m_VRAM1[addr] = 0x00;
+            } else if ((addr & 2) == 2) {
+                m_VRAM1[addr] = 0x55;
+            } else {
+                m_VRAM1[addr] = 0xAA;
+            }
+        }
+
     m_VRAM2.fill(0);
     m_CRAM.fill(0);
     for (auto &fb : m_spriteFB) {
