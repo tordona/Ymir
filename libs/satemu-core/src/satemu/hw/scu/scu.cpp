@@ -202,7 +202,8 @@ void SCU::RunDMA(uint64 cycles) {
             ch.currSrcAddr = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 8);
             ch.currIndirectSrc += 3 * sizeof(uint32);
             ch.endIndirect = bit::extract<31>(ch.currSrcAddr);
-            ch.currSrcAddr &= 0x7FFF'FFFF;
+            ch.currSrcAddr &= 0x7FF'FFFF;
+            ch.currDstAddr &= 0x7FF'FFFF;
             setXferIncs();
 
             dmaLog.debug("SCU DMA{}: Starting indirect transfer at {:08X} - {:06X} bytes from {:08X} (+{:02X}) to "
