@@ -291,7 +291,7 @@ void SMPC::RESDISA() {
 }
 
 void SMPC::INTBACK() {
-    // rootLog.debug("Processing INTBACK {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
+    rootLog.trace("Processing INTBACK {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
 
     if (m_intbackInProgress) {
         WriteINTBACKPeripheralReport();
