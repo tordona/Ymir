@@ -17,7 +17,7 @@ static Bus GetBus(uint32 address) {
     address &= 0x7FF'FFFF;
     /**/ if (util::AddressInRange<0x200'0000, 0x58F'FFFF>(address)) {
         return Bus::ABus;
-    } else if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(address)) {
+    } else if (util::AddressInRange<0x5A0'0000, 0x5FB'FFFF>(address)) {
         return Bus::BBus;
     } else if (address >= 0x600'0000) {
         return Bus::WRAM;
@@ -174,8 +174,9 @@ void SCU::RunDMA(uint64 cycles) {
             // source address increment:
             // - either 0 or 4 bytes when in CS2 area
             // - always 4 bytes elsewhere
-            const bool srcCS2 = util::AddressInRange<0x580'0000, 0x58F'FFFF>(ch.currSrcAddr & 0x7FF'FFFF);
-            if (srcCS2) {
+            const bool srcCS2 = util::AddressInRange<0x580'0000, 0x58F'FFFF>(ch.currSrcAddr);
+            const bool srcWRAM = ch.currSrcAddr >= 0x600'0000;
+            if (srcCS2 || srcWRAM) {
                 ch.currSrcAddrInc = ch.srcAddrInc;
             } else {
                 ch.currSrcAddrInc = 4u;
@@ -185,11 +186,12 @@ void SCU::RunDMA(uint64 cycles) {
             // - 0, 2, 4, 8, 16, 32, 64 or 128 bytes when in B-Bus
             // - 0 or 4 bytes when in CS2
             // - always 4 bytes elsewhere
-            const bool dstBBus = util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currDstAddr & 0x7FF'FFFF);
-            const bool dstCS2 = util::AddressInRange<0x580'0000, 0x58F'FFFF>(ch.currDstAddr & 0x7FF'FFFF);
+            const bool dstBBus = util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currDstAddr);
+            const bool dstCS2 = util::AddressInRange<0x580'0000, 0x58F'FFFF>(ch.currDstAddr);
+            const bool dstWRAM = ch.currDstAddr >= 0x600'0000;
             if (dstBBus) {
                 ch.currDstAddrInc = ch.dstAddrInc;
-            } else if (dstCS2) {
+            } else if (dstCS2 || dstWRAM) {
                 ch.currDstAddrInc = ch.dstAddrInc ? 4u : 0u;
             } else {
                 ch.currDstAddrInc = 4u;
@@ -235,7 +237,7 @@ void SCU::RunDMA(uint64 cycles) {
             const Bus srcBus = GetBus(ch.currSrcAddr);
             const Bus dstBus = GetBus(ch.currDstAddr);
 
-            if (srcBus != dstBus) {
+            if (srcBus != dstBus || srcBus == Bus::None || dstBus == Bus::None) {
                 uint32 value{};
                 if (srcBus == Bus::BBus) {
                     value = m_SH2.bus.Read<uint16>(ch.currSrcAddr) << 16u;
@@ -268,8 +270,12 @@ void SCU::RunDMA(uint64 cycles) {
 
                 dmaLog.trace("SCU DMA{}: Addresses incremented to {:08X}, {:08X}", level, ch.currSrcAddr,
                              ch.currDstAddr);
-            } else {
-                dmaLog.trace("SCU DMA{}: Invalid same-bus transfer ignored", level);
+            } else if (srcBus == dstBus) {
+                dmaLog.trace("SCU DMA{}: Invalid same-bus transfer; ignored", level);
+            } else if (srcBus == Bus::None) {
+                dmaLog.trace("SCU DMA{}: Invalid source bus; transfer ignored", level);
+            } else if (dstBus == Bus::None) {
+                dmaLog.trace("SCU DMA{}: Invalid destination bus; transfer ignored", level);
             }
 
             if (ch.currXferCount > sizeof(uint32)) {
