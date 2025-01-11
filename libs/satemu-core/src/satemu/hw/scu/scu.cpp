@@ -237,7 +237,7 @@ void SCU::RunDMA(uint64 cycles) {
             const Bus srcBus = GetBus(ch.currSrcAddr);
             const Bus dstBus = GetBus(ch.currDstAddr);
 
-            if (srcBus != dstBus || srcBus == Bus::None || dstBus == Bus::None) {
+            if (srcBus != dstBus && srcBus != Bus::None && dstBus != Bus::None) {
                 uint32 value{};
                 if (srcBus == Bus::BBus) {
                     value = m_SH2.bus.Read<uint16>(ch.currSrcAddr) << 16u;
