@@ -1070,6 +1070,16 @@ void SH2::Execute(uint32 address) {
         }
     };
 
+    auto dump = [&] {
+        static bool dumped = false;
+        if (!dumped) {
+            dumped = true;
+            m_tracer.UserCapture({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
+            m_tracer.Dump();
+            m_tracer.Reset();
+        }
+    };
+
     switch (instr >> 12u) {
     case 0x0:
         switch (instr) {
@@ -1102,7 +1112,10 @@ void SH2::Execute(uint32 address) {
                 case 0xD: MOVWL0(instr), advancePC(); break; // nm   0000 nnnn mmmm 1101   MOV.W @(R0,Rm), Rn
                 case 0xE: MOVLL0(instr), advancePC(); break; // nm   0000 nnnn mmmm 1110   MOV.L @(R0,Rm), Rn
                 case 0xF: MACL(instr), advancePC(); break;   // nm   0000 nnnn mmmm 1111   MAC.L @Rm+, @Rn+
-                default: /*dbg_println("unhandled 0000 instruction");*/ __debugbreak(); break;
+                default:
+                    // dbg_println("unhandled 0000 instruction");
+                    dump();
+                    break;
                 }
                 break;
             }
@@ -1128,7 +1141,10 @@ void SH2::Execute(uint32 address) {
         case 0xD: XTRCT(instr), advancePC(); break;  // nm   0010 nnnn mmmm 1101   XTRCT Rm, Rn
         case 0xE: MULU(instr), advancePC(); break;   // nm   0010 nnnn mmmm 1110   MULU.W Rm, Rn
         case 0xF: MULS(instr), advancePC(); break;   // nm   0010 nnnn mmmm 1111   MULS.W Rm, Rn
-        default: /*dbg_println("unhandled 0010 instruction");*/ __debugbreak(); break;
+        default:
+            // dbg_println("unhandled 0010 instruction");
+            dump();
+            break;
         }
         break;
     }
@@ -1150,7 +1166,10 @@ void SH2::Execute(uint32 address) {
         case 0xD: DMULS(instr), advancePC(); break; // nm   0011 nnnn mmmm 1101   DMULS.L Rm, Rn
         case 0xE: ADDC(instr), advancePC(); break;  // nm   0011 nnnn mmmm 1110   ADDC Rm, Rn
         case 0xF: ADDV(instr), advancePC(); break;  // nm   0011 nnnn mmmm 1110   ADDV Rm, Rn
-        default: /*dbg_println("unhandled 0011 instruction");*/ __debugbreak(); break;
+        default:
+            // dbg_println("unhandled 0011 instruction");
+            dump();
+            break;
         }
         break;
     case 0x4:
@@ -1203,7 +1222,10 @@ void SH2::Execute(uint32 address) {
 
             case 0x2E: LDCVBR(instr), advancePC(); break; // m    0110 mmmm 0010 1110   LDC Rm, VBR
 
-            default: /*dbg_println("unhandled 0100 instruction");*/ __debugbreak(); break;
+            default:
+                // dbg_println("unhandled 0100 instruction");
+                dump();
+                break;
             }
         }
         break;
@@ -1246,7 +1268,10 @@ void SH2::Execute(uint32 address) {
 
         case 0xF: nonDelaySlot(&SH2::BFS, instr); break; // d    1000 1111 dddd dddd   BF/S <label>
 
-        default: /*dbg_println("unhandled 1000 instruction");*/ __debugbreak(); break;
+        default:
+            // dbg_println("unhandled 1000 instruction");
+            dump();
+            break;
         }
         break;
     case 0x9: MOVWI(instr), advancePC(); break;      // nd8  1001 nnnn dddd dddd   MOV.W @(disp,PC), Rn
@@ -1273,13 +1298,19 @@ void SH2::Execute(uint32 address) {
         case 0xD: ANDM(instr), advancePC(); break;   // i    1100 1001 iiii iiii   AND #imm, @(R0,GBR)
         case 0xE: XORM(instr), advancePC(); break;   // i    1100 1001 iiii iiii   XOR #imm, @(R0,GBR)
         case 0xF: ORM(instr), advancePC(); break;    // i    1100 1001 iiii iiii   OR #imm, @(R0,GBR)
-        default: /*dbg_println("unhandled 1100 instruction");*/ __debugbreak(); break;
+        default:
+            // dbg_println("unhandled 1100 instruction");
+            dump();
+            break;
         }
         break;
     case 0xD: MOVLI(instr), advancePC(); break; // nd8  1101 nnnn dddd dddd   MOV.L @(disp,PC), Rn
     case 0xE: MOVI(instr), advancePC(); break;  // ni   1110 nnnn iiii iiii   MOV #imm, Rn
 
-    default: /*dbg_println("unhandled instruction");*/ __debugbreak(); break;
+    default:
+        // dbg_println("unhandled instruction");
+        dump();
+        break;
     }
 }
 
