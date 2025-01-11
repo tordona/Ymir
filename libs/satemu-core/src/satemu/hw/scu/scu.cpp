@@ -6,6 +6,26 @@
 
 namespace satemu::scu {
 
+enum class Bus {
+    ABus,
+    BBus,
+    WRAM,
+    None,
+};
+
+static Bus GetBus(uint32 address) {
+    address &= 0x7FF'FFFF;
+    /**/ if (util::AddressInRange<0x200'0000, 0x58F'FFFF>(address)) {
+        return Bus::ABus;
+    } else if (util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(address)) {
+        return Bus::BBus;
+    } else if (address >= 0x600'0000) {
+        return Bus::WRAM;
+    } else {
+        return Bus::None;
+    }
+}
+
 SCU::SCU(vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2Block &sh2)
     : m_VDP(vdp)
     , m_SCSP(scsp)
@@ -198,8 +218,8 @@ void SCU::RunDMA(uint64 cycles) {
                 ch.currIndirectSrc = ch.dstAddr;
                 readIndirect();
             } else {
-                ch.currSrcAddr = ch.srcAddr;
-                ch.currDstAddr = ch.dstAddr;
+                ch.currSrcAddr = ch.srcAddr & 0x7FF'FFFF;
+                ch.currDstAddr = ch.dstAddr & 0x7FF'FFFF;
                 ch.currXferCount = adjustZeroSizeXferCount(ch.xferCount);
                 ch.currDstAddrInc = ch.dstAddrInc;
                 setXferIncs();
@@ -211,37 +231,45 @@ void SCU::RunDMA(uint64 cycles) {
         }
 
         if (ch.active) {
-            const bool srcBBus = util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currSrcAddr & 0x7FF'FFFF);
-            const bool dstBBus = util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currDstAddr & 0x7FF'FFFF);
+            const Bus srcBus = GetBus(ch.currSrcAddr);
+            const Bus dstBus = GetBus(ch.currDstAddr);
 
-            uint32 value{};
-            if (srcBBus) {
-                value = m_SH2.bus.Read<uint16>(ch.currSrcAddr & 0x7FF'FFFF) << 16u;
-                dmaLog.trace("SCU DMA{}: B-Bus read from {:08X} -> {:04X}", level, ch.currSrcAddr, value >> 16u);
-                ch.currSrcAddr += ch.currSrcAddrInc / 2u;
-                value |= m_SH2.bus.Read<uint16>(ch.currSrcAddr & 0x7FF'FFFF) << 0u;
-                dmaLog.trace("SCU DMA{}: B-Bus read from {:08X} -> {:04X}", level, ch.currSrcAddr, value & 0xFFFF);
-                ch.currSrcAddr += ch.currSrcAddrInc / 2u;
+            if (srcBus != dstBus) {
+                uint32 value{};
+                if (srcBus == Bus::BBus) {
+                    value = m_SH2.bus.Read<uint16>(ch.currSrcAddr) << 16u;
+                    dmaLog.trace("SCU DMA{}: B-Bus read from {:08X} -> {:04X}", level, ch.currSrcAddr, value >> 16u);
+                    ch.currSrcAddr += ch.currSrcAddrInc / 2u;
+                    value |= m_SH2.bus.Read<uint16>(ch.currSrcAddr) << 0u;
+                    dmaLog.trace("SCU DMA{}: B-Bus read from {:08X} -> {:04X}", level, ch.currSrcAddr, value & 0xFFFF);
+                    ch.currSrcAddr += ch.currSrcAddrInc / 2u;
+                } else {
+                    value = m_SH2.bus.Read<uint32>(ch.currSrcAddr);
+                    dmaLog.trace("SCU DMA{}: Read from {:08X} -> {:08X}", level, ch.currSrcAddr, value);
+                    ch.currSrcAddr += ch.currSrcAddrInc;
+                }
+
+                if (dstBus == Bus::BBus) {
+                    m_SH2.bus.Write<uint16>(ch.currDstAddr, value >> 16u);
+                    dmaLog.trace("SCU DMA{}: B-Bus write to {:08X} -> {:04X}", level, ch.currDstAddr, value >> 16u);
+                    ch.currDstAddr += ch.currDstAddrInc;
+                    m_SH2.bus.Write<uint16>(ch.currDstAddr, value >> 0u);
+                    dmaLog.trace("SCU DMA{}: B-Bus write to {:08X} -> {:04X}", level, ch.currDstAddr, value & 0xFFFF);
+                    ch.currDstAddr += ch.currDstAddrInc;
+                } else {
+                    m_SH2.bus.Write<uint32>(ch.currDstAddr, value);
+                    dmaLog.trace("SCU DMA{}: Write to {:08X} -> {:08X}", level, ch.currDstAddr, value);
+                    ch.currDstAddr += ch.currDstAddrInc;
+                }
+
+                ch.currSrcAddr &= 0x7FF'FFFF;
+                ch.currDstAddr &= 0x7FF'FFFF;
+
+                dmaLog.trace("SCU DMA{}: Addresses incremented to {:08X}, {:08X}", level, ch.currSrcAddr,
+                             ch.currDstAddr);
             } else {
-                value = m_SH2.bus.Read<uint32>(ch.currSrcAddr & 0x7FF'FFFF);
-                dmaLog.trace("SCU DMA{}: Read from {:08X} -> {:08X}", level, ch.currSrcAddr, value);
-                ch.currSrcAddr += ch.currSrcAddrInc;
+                dmaLog.trace("SCU DMA{}: Invalid same-bus transfer ignored", level);
             }
-
-            if (dstBBus) {
-                m_SH2.bus.Write<uint16>(ch.currDstAddr & 0x7FF'FFFF, value >> 16u);
-                dmaLog.trace("SCU DMA{}: B-Bus write to {:08X} -> {:04X}", level, ch.currDstAddr, value >> 16u);
-                ch.currDstAddr += ch.currDstAddrInc;
-                m_SH2.bus.Write<uint16>(ch.currDstAddr & 0x7FF'FFFF, value >> 0u);
-                dmaLog.trace("SCU DMA{}: B-Bus write to {:08X} -> {:04X}", level, ch.currDstAddr, value & 0xFFFF);
-                ch.currDstAddr += ch.currDstAddrInc;
-            } else {
-                m_SH2.bus.Write<uint32>(ch.currDstAddr & 0x7FF'FFFF, value);
-                dmaLog.trace("SCU DMA{}: Write to {:08X} -> {:08X}", level, ch.currDstAddr, value);
-                ch.currDstAddr += ch.currDstAddrInc;
-            }
-
-            dmaLog.trace("SCU DMA{}: Addresses incremented to {:08X}, {:08X}", level, ch.currSrcAddr, ch.currDstAddr);
 
             if (ch.currXferCount > sizeof(uint32)) {
                 ch.currXferCount -= sizeof(uint32);
@@ -328,19 +356,9 @@ void SCU::RunDSPDMA(uint64 cycles) {
         return;
     }
 
-    enum class Bus {
-        ABus,
-        BBus,
-        WRAM,
-        None,
-    };
-
     const bool toD0 = m_dspState.dmaToD0;
     uint32 addrD0 = toD0 ? m_dspState.dmaWriteAddr : m_dspState.dmaReadAddr;
-    const Bus bus = util::AddressInRange<0x200'0000, 0x58F'FFFF>(addrD0)   ? Bus::ABus
-                    : util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(addrD0) ? Bus::BBus
-                    : addrD0 >= 0x600'0000                                 ? Bus::WRAM
-                                                                           : Bus::None;
+    const Bus bus = GetBus(addrD0);
 
     // Run transfer
     // TODO: should iterate through transfers based on cycle count
