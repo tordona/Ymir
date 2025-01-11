@@ -21,6 +21,7 @@ VDP::VDP(scu::SCU &scu)
 }
 
 void VDP::Reset(bool hard) {
+    if (hard) {
     m_VRAM1.fill(0);
     m_VRAM2.fill(0);
     m_CRAM.fill(0);
@@ -28,6 +29,7 @@ void VDP::Reset(bool hard) {
         fb.fill(0);
     }
     m_drawFB = 0;
+    }
 
     m_VDP1.Reset();
     m_VDP2.Reset();
