@@ -377,11 +377,13 @@ void SMPC::WriteINTBACKPeripheralReport() {
     SR.P1MDn = m_port1mode;           // port 1 mode \  0=15 byte, 1=255 byte
     SR.P2MDn = m_port2mode;           // port 2 mode /  2=unused,  3=0 byte
 
+    const uint8 btnHi = bit::extract<8, 15>(m_buttons);
+    const uint8 btnLo = (bit::extract<3, 7>(m_buttons) << 3) | 0x7;
     OREG.fill(0x00);
-    OREG[0] = 0xF1;                               // 7-4 = F=no multitap/device directly connected; 3-0 = 1 device
-    OREG[1] = 0x02;                               // 7-4 = 0=standard pad; 3-0 = 2 data bytes
-    OREG[2] = bit::extract<8, 15>(m_buttons);     // 7-0 = left, right, down, up, start, A, C, B  \ button state
-    OREG[3] = bit::extract<3, 7>(m_buttons) << 3; // 7-3 = R, X, Y, Z, L; 2-0 = nothing           / is inverted!
+    OREG[0] = 0xF1;  // 7-4 = F=no multitap/device directly connected; 3-0 = 1 device
+    OREG[1] = 0x02;  // 7-4 = 0=standard pad; 3-0 = 2 data bytes
+    OREG[2] = btnHi; // 7-0 = left, right, down, up, start, A, C, B  \ button state
+    OREG[3] = btnLo; // 7-3 = R, X, Y, Z, L; 2-0 = nothing           / is inverted!
 
     // Port 2 = no connected device
     OREG[4] = 0xF0;
