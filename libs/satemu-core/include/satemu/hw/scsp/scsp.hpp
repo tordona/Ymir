@@ -136,7 +136,7 @@ private:
 
         auto shiftByte = [](uint16 value) {
             if constexpr (is16) {
-                return value >> 16u;
+                return value >> 8u;
             } else {
                 return value;
             }
@@ -150,6 +150,20 @@ private:
             }
             if (address >= 0x700) {
                 // TODO: DSP
+            }
+            if (address >= 0x600) {
+                const uint32 gen = address >> 6;
+                const uint32 idx = (address & 0x3F) >> 1;
+                const uint16 stack = m_soundDataStack[gen][idx];
+                if constexpr (is16) {
+                    return stack;
+                } else {
+                    if (address & 1) {
+                        return stack >> 0u;
+                    } else {
+                        return stack >> 8u;
+                    }
+                }
             }
 
             switch (address) {
@@ -224,6 +238,21 @@ private:
         if (address >= 0x700) {
             // TODO: DSP
         }
+        if (address >= 0x600) {
+            const uint32 gen = address >> 6;
+            const uint32 idx = (address & 0x3F) >> 1;
+            uint16 &stack = m_soundDataStack[gen][idx];
+            if constexpr (is16) {
+                stack = value;
+            } else {
+                if (address & 1) {
+                    stack = (stack & 0xFF00) | (value << 0u);
+                } else {
+                    stack = (stack & 0x00FF) | (value << 8u);
+                }
+            }
+            return;
+        }
 
         switch (address) {
         case 0x400: WriteReg400<is16, true>(value16); break;
@@ -268,6 +297,7 @@ private:
     }
 
     // --- Mixer Register ---
+
     // --- Sound Memory Configuration Register ---
 
     template <bool lowerHalf, bool upperHalf>
@@ -432,6 +462,10 @@ private:
     // --- DMA Transfer Register ---
 
     // TODO
+
+    // --- Direct Sound Data Stack ---
+
+    std::array<std::array<uint16, 32>, 2> m_soundDataStack;
 
     // --- DSP Registers ---
 

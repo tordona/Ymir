@@ -98,7 +98,7 @@ struct Slot {
         static constexpr bool is16 = std::is_same_v<T, uint16>;
         auto shiftByte = [](uint16 value) {
             if constexpr (is16) {
-                return value >> 16u;
+                return value >> 8u;
             } else {
                 return value;
             }

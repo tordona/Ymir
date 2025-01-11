@@ -40,6 +40,10 @@ void SCSP::Reset(bool hard) {
     m_m68kEnabledInterrupts = 0;
     m_m68kPendingInterrupts = 0;
     m_m68kInterruptLevels.fill(0);
+
+    for (auto &sds : m_soundDataStack) {
+        sds.fill(0);
+    }
 }
 
 void SCSP::Advance(uint64 cycles) {
