@@ -150,6 +150,32 @@ void SCU::RunDMA(uint64 cycles) {
             }
         };
 
+        auto setXferIncs = [&] {
+            // source address increment:
+            // - either 0 or 4 bytes when in CS2 area
+            // - always 4 bytes elsewhere
+            const bool srcCS2 = util::AddressInRange<0x580'0000, 0x58F'FFFF>(ch.currSrcAddr & 0x7FF'FFFF);
+            if (srcCS2) {
+                ch.currSrcAddrInc = ch.srcAddrInc;
+            } else {
+                ch.currSrcAddrInc = 4u;
+            }
+
+            // destination address increment:
+            // - 0, 2, 4, 8, 16, 32, 64 or 128 bytes when in B-Bus
+            // - 0 or 4 bytes when in CS2
+            // - always 4 bytes elsewhere
+            const bool dstBBus = util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currDstAddr & 0x7FF'FFFF);
+            const bool dstCS2 = util::AddressInRange<0x580'0000, 0x58F'FFFF>(ch.currDstAddr & 0x7FF'FFFF);
+            if (dstBBus) {
+                ch.currDstAddrInc = ch.dstAddrInc;
+            } else if (dstCS2) {
+                ch.currDstAddrInc = ch.dstAddrInc ? 4u : 0u;
+            } else {
+                ch.currDstAddrInc = 4u;
+            }
+        };
+
         auto readIndirect = [&] {
             ch.currXferCount = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 0);
             ch.currDstAddr = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 4);
@@ -157,10 +183,12 @@ void SCU::RunDMA(uint64 cycles) {
             ch.currIndirectSrc += 3 * sizeof(uint32);
             ch.endIndirect = bit::extract<31>(ch.currSrcAddr);
             ch.currSrcAddr &= 0x7FFF'FFFF;
+            setXferIncs();
+
             dmaLog.debug("SCU DMA{}: Starting indirect transfer at {:08X} - {:06X} bytes from {:08X} (+{:02X}) to "
                          "{:08X} (+{:02X}){}",
                          level, ch.currIndirectSrc - 3 * sizeof(uint32), ch.currXferCount, ch.currSrcAddr,
-                         ch.srcAddrInc, ch.currDstAddr, ch.dstAddrInc, (ch.endIndirect ? " (final)" : ""));
+                         ch.currSrcAddrInc, ch.currDstAddr, ch.currDstAddrInc, (ch.endIndirect ? " (final)" : ""));
         };
 
         if (ch.start && !ch.active) {
@@ -173,9 +201,12 @@ void SCU::RunDMA(uint64 cycles) {
                 ch.currSrcAddr = ch.srcAddr;
                 ch.currDstAddr = ch.dstAddr;
                 ch.currXferCount = adjustZeroSizeXferCount(ch.xferCount);
+                ch.currDstAddrInc = ch.dstAddrInc;
+                setXferIncs();
+
                 dmaLog.debug(
                     "SCU DMA{}: Starting direct transfer of {:06X} bytes from {:08X} (+{:02X}) to {:08X} (+{:02X})",
-                    level, ch.currXferCount, ch.currSrcAddr, ch.srcAddrInc, ch.currDstAddr, ch.dstAddrInc);
+                    level, ch.currXferCount, ch.currSrcAddr, ch.currSrcAddrInc, ch.currDstAddr, ch.currDstAddrInc);
             }
         }
 
@@ -186,26 +217,35 @@ void SCU::RunDMA(uint64 cycles) {
             uint32 value{};
             if (srcBBus) {
                 value = m_SH2.bus.Read<uint16>(ch.currSrcAddr & 0x7FF'FFFF) << 16u;
-                ch.currSrcAddr += ch.srcAddrInc / 2u;
+                dmaLog.trace("SCU DMA{}: B-Bus read from {:08X} -> {:04X}", level, ch.currSrcAddr, value >> 16u);
+                ch.currSrcAddr += ch.currSrcAddrInc / 2u;
                 value |= m_SH2.bus.Read<uint16>(ch.currSrcAddr & 0x7FF'FFFF) << 0u;
-                ch.currSrcAddr += ch.srcAddrInc / 2u;
+                dmaLog.trace("SCU DMA{}: B-Bus read from {:08X} -> {:04X}", level, ch.currSrcAddr, value & 0xFFFF);
+                ch.currSrcAddr += ch.currSrcAddrInc / 2u;
             } else {
                 value = m_SH2.bus.Read<uint32>(ch.currSrcAddr & 0x7FF'FFFF);
-                ch.currSrcAddr += ch.srcAddrInc;
+                dmaLog.trace("SCU DMA{}: Read from {:08X} -> {:08X}", level, ch.currSrcAddr, value);
+                ch.currSrcAddr += ch.currSrcAddrInc;
             }
 
             if (dstBBus) {
                 m_SH2.bus.Write<uint16>(ch.currDstAddr & 0x7FF'FFFF, value >> 16u);
-                ch.currDstAddr += ch.dstAddrInc;
+                dmaLog.trace("SCU DMA{}: B-Bus write to {:08X} -> {:04X}", level, ch.currDstAddr, value >> 16u);
+                ch.currDstAddr += ch.currDstAddrInc;
                 m_SH2.bus.Write<uint16>(ch.currDstAddr & 0x7FF'FFFF, value >> 0u);
-                ch.currDstAddr += ch.dstAddrInc;
+                dmaLog.trace("SCU DMA{}: B-Bus write to {:08X} -> {:04X}", level, ch.currDstAddr, value & 0xFFFF);
+                ch.currDstAddr += ch.currDstAddrInc;
             } else {
                 m_SH2.bus.Write<uint32>(ch.currDstAddr & 0x7FF'FFFF, value);
-                ch.currDstAddr += ch.dstAddrInc;
+                dmaLog.trace("SCU DMA{}: Write to {:08X} -> {:08X}", level, ch.currDstAddr, value);
+                ch.currDstAddr += ch.currDstAddrInc;
             }
+
+            dmaLog.trace("SCU DMA{}: Addresses incremented to {:08X}, {:08X}", level, ch.currSrcAddr, ch.currDstAddr);
 
             if (ch.currXferCount > sizeof(uint32)) {
                 ch.currXferCount -= sizeof(uint32);
+                dmaLog.trace("SCU DMA{}: Transfer remaining: {:X} bytes", level, ch.currXferCount);
                 break; // higher-level DMA transfers interrupt lower-level ones
             } else if (ch.indirect && !ch.endIndirect) {
                 readIndirect();

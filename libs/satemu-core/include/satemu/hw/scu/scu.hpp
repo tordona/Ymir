@@ -292,10 +292,12 @@ private:
         bool indirect;      // DxMOD - Mode (false=direct, true=indirect)
         DMATrigger trigger; // DxFT2-0 - DMA Starting Factor
 
-        bool start;           // Start transfer on next cycle
-        uint32 currSrcAddr;   // Current read address
-        uint32 currDstAddr;   // Current write address
-        uint32 currXferCount; // Current transfer count (stops when == xferCount)
+        bool start;            // Start transfer on next cycle
+        uint32 currSrcAddr;    // Current read address
+        uint32 currDstAddr;    // Current write address
+        uint32 currXferCount;  // Current transfer count (stops when == xferCount)
+        uint32 currSrcAddrInc; // Current read address increment
+        uint32 currDstAddrInc; // Current write address increment
 
         uint32 currIndirectSrc; // Indirect data transfer source address
         bool endIndirect;       // Whether the end flag was sent on the current indirect transfer
