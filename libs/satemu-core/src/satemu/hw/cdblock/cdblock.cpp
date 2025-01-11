@@ -427,7 +427,7 @@ void CDBlock::ProcessDriveStatePlay() {
             m_targetDriveCycles = kDriveCyclesNotPlaying;
             SetInterrupt(kHIRQ_PEND);
             if (m_playFile) {
-                SetInterrupt(kHIRQ_EFLS);
+                SetInterrupt(kHIRQ_EFLS | kHIRQ_EHST);
             }
         }
     }
