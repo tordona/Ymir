@@ -212,7 +212,7 @@ private:
             const uint32 slotIndex = address >> 5;
             auto &slot = m_slots[slotIndex];
             slot.WriteReg<T, fromM68K>(address & 0x1F, value);
-            
+
             // Handle KYONEX
             if ((address & 0x1F) == 0 && bit::extract<12>(value16)) {
                 for (auto &slot : m_slots) {
@@ -389,6 +389,10 @@ private:
     // -------------------------------------------------------------------------
     // Registers
 
+    // --- Sound slots ---
+
+    std::array<Slot, 32> m_slots;
+
     // --- Mixer Register ---
 
     uint32 m_masterVolume; // (W) MVOL - master volume adjustment after all audio processing
@@ -427,9 +431,11 @@ private:
 
     // --- DMA Transfer Register ---
 
-    // --- Sound slots ---
+    // TODO
 
-    std::array<Slot, 32> m_slots;
+    // --- DSP Registers ---
+
+    // TODO
 
     // -------------------------------------------------------------------------
     // Audio processing

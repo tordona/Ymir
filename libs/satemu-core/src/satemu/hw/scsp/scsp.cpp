@@ -21,6 +21,10 @@ void SCSP::Reset(bool hard) {
     m_accumSampleCycles = 0;
     m_sampleCounter = 0;
 
+    for (auto &slot : m_slots) {
+        slot.Reset();
+    }
+
     m_masterVolume = 0;
     m_mem4MB = false;
     m_dac18Bits = false;
@@ -36,10 +40,6 @@ void SCSP::Reset(bool hard) {
     m_m68kEnabledInterrupts = 0;
     m_m68kPendingInterrupts = 0;
     m_m68kInterruptLevels.fill(0);
-
-    for (auto &slot : m_slots) {
-        slot.Reset();
-    }
 }
 
 void SCSP::Advance(uint64 cycles) {
