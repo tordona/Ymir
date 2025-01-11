@@ -44,6 +44,9 @@ void SCSP::Reset(bool hard) {
     for (auto &sds : m_soundDataStack) {
         sds.fill(0);
     }
+
+    m_dspCoeffs.fill(0);
+    m_dspAddrs.fill(0);
 }
 
 void SCSP::Advance(uint64 cycles) {

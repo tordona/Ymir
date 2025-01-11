@@ -134,6 +134,8 @@ private:
         static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP register read size");
         static constexpr bool is16 = std::is_same_v<T, uint16>;
 
+        using namespace util;
+
         auto shiftByte = [](uint16 value) {
             if constexpr (is16) {
                 return value >> 8u;
@@ -142,28 +144,34 @@ private:
             }
         };
 
+        auto read16 = [=](uint16 value) {
+            if constexpr (is16) {
+                return value;
+            } else if (address & 1) {
+                return value >> 0u;
+            } else {
+                return value >> 8u;
+            }
+        };
+
         if constexpr (!instrFetch) {
-            if (address < 0x400) {
+            /**/ if (AddressInRange<0x000, 0x3FF>(address)) {
                 const uint32 slotIndex = address >> 5;
                 auto &slot = m_slots[slotIndex];
                 return slot.ReadReg<T, fromM68K>(address & 0x1F);
-            }
-            if (address >= 0x700) {
-                // TODO: DSP
-            }
-            if (address >= 0x600) {
+            } else if (AddressInRange<0x600, 0x67F>(address)) {
                 const uint32 gen = address >> 6;
                 const uint32 idx = (address & 0x3F) >> 1;
                 const uint16 stack = m_soundDataStack[gen][idx];
-                if constexpr (is16) {
-                    return stack;
-                } else {
-                    if (address & 1) {
-                        return stack >> 0u;
-                    } else {
-                        return stack >> 8u;
-                    }
-                }
+                return read16(stack);
+            } else if (AddressInRange<0x700, 0x77F>(address)) {
+                return read16(m_dspCoeffs[(address & 0x7F) >> 1]);
+            } else if (AddressInRange<0x780, 0x7BF>(address)) {
+                return read16(m_dspAddrs[(address & 0x3F) >> 1]);
+            } else if (AddressInRange<0x800, 0xBFF>(address)) {
+                // TODO: DSP micro program
+            } else if (AddressInRange<0xC00, 0xEE3>(address)) {
+                // TODO: DSP internal buffer
             }
 
             switch (address) {
@@ -213,8 +221,10 @@ private:
     template <mem_primitive T, bool fromM68K>
     void WriteReg(uint32 address, T value) {
         static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP register write size");
-
         static constexpr bool is16 = std::is_same_v<T, uint16>;
+
+        using namespace util;
+
         uint16 value16 = value;
         if constexpr (!is16) {
             if ((address & 1) == 0) {
@@ -222,7 +232,17 @@ private:
             }
         }
 
-        if (address < 0x400) {
+        auto write16 = [=](uint16 &reg, uint16 value) {
+            if constexpr (is16) {
+                reg = value;
+            } else if (address & 1) {
+                reg = (reg & 0xFF00) | value;
+            } else {
+                reg = (reg & 0x00FF) | value;
+            }
+        };
+
+        /**/ if (AddressInRange<0x000, 0x3FF>(address)) {
             const uint32 slotIndex = address >> 5;
             auto &slot = m_slots[slotIndex];
             slot.WriteReg<T, fromM68K>(address & 0x1F, value);
@@ -234,24 +254,21 @@ private:
                 }
             }
             return;
-        }
-        if (address >= 0x700) {
-            // TODO: DSP
-        }
-        if (address >= 0x600) {
+        } else if (AddressInRange<0x600, 0x67F>(address)) {
             const uint32 gen = address >> 6;
             const uint32 idx = (address & 0x3F) >> 1;
-            uint16 &stack = m_soundDataStack[gen][idx];
-            if constexpr (is16) {
-                stack = value;
-            } else {
-                if (address & 1) {
-                    stack = (stack & 0xFF00) | (value << 0u);
-                } else {
-                    stack = (stack & 0x00FF) | (value << 8u);
-                }
-            }
+            write16(m_soundDataStack[gen][idx], value16);
             return;
+        } else if (AddressInRange<0x700, 0x77F>(address)) {
+            write16(m_dspCoeffs[(address & 0x7F) >> 1], value16 >> 3);
+            return;
+        } else if (AddressInRange<0x780, 0x7BF>(address)) {
+            write16(m_dspAddrs[(address & 0x3F) >> 1], value16);
+            return;
+        } else if (AddressInRange<0x800, 0xBFF>(address)) {
+            // TODO: DSP micro program
+        } else if (AddressInRange<0xC00, 0xEE3>(address)) {
+            // TODO: DSP internal buffer
         }
 
         switch (address) {
@@ -469,7 +486,8 @@ private:
 
     // --- DSP Registers ---
 
-    // TODO
+    std::array<uint16, 64> m_dspCoeffs;
+    std::array<uint16, 32> m_dspAddrs;
 
     // -------------------------------------------------------------------------
     // Audio processing
