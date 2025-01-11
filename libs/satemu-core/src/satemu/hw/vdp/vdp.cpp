@@ -2395,7 +2395,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
     }
 
     // Adjust cell index based on color format
-    if constexpr (colorFormat == ColorFormat::RGB888) {
+    if constexpr (!IsPaletteColorFormat(colorFormat)) {
         cellIndex <<= 2;
     } else if constexpr (colorFormat != ColorFormat::Palette16) {
         cellIndex <<= 1;
