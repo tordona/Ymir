@@ -595,7 +595,7 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteMPOFR(uint16 value) {
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 16; i++) {
             bit::deposit_into<6, 8>(rotParams[0].mapIndices[i], bit::extract<0, 2>(value));
             bit::deposit_into<6, 8>(rotParams[1].mapIndices[i], bit::extract<4, 6>(value));
         }
