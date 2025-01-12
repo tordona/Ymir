@@ -245,8 +245,7 @@ void SCU::RunDMA(uint64 cycles) {
                 uint32 value{};
                 if (ch.currSrcAddr & 1) {
                     // TODO: handle unaligned transfer
-                    dmaLog.trace("SCU DMA{}: Unaligned 16-bit read from {:08X}", level, ch.currSrcAddr);
-                    ch.currSrcAddr &= ~1;
+                    dmaLog.trace("SCU DMA{}: Unaligned read from {:08X}", level, ch.currSrcAddr);
                 }
                 if (srcBus == Bus::BBus) {
                     value = m_SH2.bus.Read<uint16>(ch.currSrcAddr) << 16u;
@@ -264,8 +263,7 @@ void SCU::RunDMA(uint64 cycles) {
 
                 if (ch.currDstAddr & 1) {
                     // TODO: handle unaligned transfer
-                    dmaLog.trace("SCU DMA{}: Unaligned 16-bit write to {:08X}", level, ch.currDstAddr);
-                    ch.currDstAddr &= ~1;
+                    dmaLog.trace("SCU DMA{}: Unaligned write to {:08X}", level, ch.currDstAddr);
                 }
                 if (dstBus == Bus::BBus) {
                     m_SH2.bus.Write<uint16>(ch.currDstAddr, value >> 16u);
