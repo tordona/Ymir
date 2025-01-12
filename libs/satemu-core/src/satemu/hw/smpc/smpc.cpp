@@ -273,7 +273,7 @@ void SMPC::CKCHG320() {
 }
 
 void SMPC::RESENAB() {
-    // rootLog.debug("Processing RESENAB");
+    rootLog.debug("Processing RESENAB");
     // TODO: enable reset NMI
 
     SF = 0; // done processing
@@ -282,7 +282,7 @@ void SMPC::RESENAB() {
 }
 
 void SMPC::RESDISA() {
-    // rootLog.debug("Processing RESDISA");
+    rootLog.debug("Processing RESDISA");
     // TODO: disable reset NMI
 
     SF = 0; // done processing
@@ -293,13 +293,18 @@ void SMPC::RESDISA() {
 void SMPC::INTBACK() {
     rootLog.trace("Processing INTBACK {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
 
+    m_getPeripheralData = bit::extract<3>(IREG[1]);
+
     if (m_intbackInProgress) {
-        WriteINTBACKPeripheralReport();
+        if (m_getPeripheralData) {
+            WriteINTBACKPeripheralReport();
+        } else {
+            WriteINTBACKStatusReport();
+        }
     } else {
         m_intbackInProgress = true;
 
         // m_optimize = bit::extract<1>(IREG[1]);
-        m_getPeripheralData = bit::extract<3>(IREG[1]);
         m_port1mode = bit::extract<4, 5>(IREG[1]);
         m_port2mode = bit::extract<6, 7>(IREG[1]);
         if (IREG[2] != 0xF0) {
