@@ -1953,20 +1953,20 @@ FORCE_INLINE void SH2::CLRMAC() {
 FORCE_INLINE void SH2::MACW(InstrNM instr) {
     // dbg_println("mac.w @r{}+, @r{}+)", instr.Rm, instr.Rn);
 
-    const sint32 op2 = bit::sign_extend<16, sint32>(MemReadWord(R[instr.Rn]));
+    const sint32 op2 = static_cast<sint16>(MemReadWord(R[instr.Rn]));
     R[instr.Rn] += 2;
-    const sint32 op1 = bit::sign_extend<16, sint32>(MemReadWord(R[instr.Rm]));
+    const sint32 op1 = static_cast<sint16>(MemReadWord(R[instr.Rm]));
     R[instr.Rm] += 2;
 
     const sint32 mul = op1 * op2;
     if (SR.S) {
         const sint64 result = static_cast<sint64>(static_cast<sint32>(MAC.L)) + mul;
-        const sint32 saturatedResult = std::clamp<sint64>(result, 0xFFFFFFFF'80000000, 0x00000000'7FFFFFFF);
+        const sint32 saturatedResult = std::clamp<sint64>(result, -0x80000000LL, 0x7FFFFFFFLL);
         if (result == saturatedResult) {
             MAC.L = result;
         } else {
             MAC.L = saturatedResult;
-            MAC.H = 1;
+            MAC.H |= 1;
         }
     } else {
         MAC.u64 += mul;
@@ -1986,12 +1986,12 @@ FORCE_INLINE void SH2::MACL(InstrNM instr) {
     if (SR.S) {
         if (bit::extract<63>((result ^ MAC.u64) & (result ^ mul))) {
             if (bit::extract<63>(MAC.u64)) {
-                result = 0xFFFF8000'00000000;
+                result = -0x8000'00000000LL;
             } else {
-                result = 0x00007FFF'FFFFFFFF;
+                result = 0x7FFF'FFFFFFFFLL;
             }
         } else {
-            result = std::clamp<sint64>(result, 0xFFFF8000'00000000, 0x00007FFF'FFFFFFFF);
+            result = std::clamp<sint64>(result, -0x8000'00000000LL, 0x7FFF'FFFFFFFFLL);
         }
     }
     MAC.u64 = result;
