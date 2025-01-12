@@ -313,7 +313,7 @@ FLATTEN void SH2::Advance(uint64 cycles) {
         Execute(PC);
 
         // dump stack trace on SYS_EXECDMP
-        if ((PC & 0x1FFFFFFF) == 0x186C) {
+        if ((PC & 0x7FFFFFF) == 0x186C) {
             m_log.debug("SYS_EXECDMP triggered");
             m_tracer.UserCapture({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
             m_tracer.Dump();
