@@ -203,7 +203,7 @@ FLATTEN void SH2::Advance(uint64 cycles) {
     // TODO: optimize active DMA channel check
     // TODO: proper timings, cycle-stealing, etc. (suspend instructions if not cached)
     // TODO: prioritize channels based on DMAOR.PR
-    for (auto &ch : dmaChannels) {
+    for (int index = 0; auto &ch : dmaChannels) {
         if (!IsDMATransferActive(ch)) {
             continue;
         }
@@ -240,43 +240,57 @@ FLATTEN void SH2::Advance(uint64 cycles) {
         switch (ch.xferSize) {
         case DMATransferSize::Byte: {
             const uint8 value = MemReadByte(ch.srcAddress);
+            m_log.trace("DMAC{} 8-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress,
+                        value);
             MemWriteByte(ch.dstAddress, value);
             break;
         }
         case DMATransferSize::Word: {
             const uint16 value = MemReadWord(ch.srcAddress);
+            m_log.trace("DMAC{} 16-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress,
+                        value);
             MemWriteWord(ch.dstAddress, value);
             break;
         }
         case DMATransferSize::Longword: {
             const uint32 value = MemReadLong(ch.srcAddress);
+            m_log.trace("DMAC{} 32-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress,
+                        value);
             MemWriteLong(ch.dstAddress, value);
             break;
         }
         case DMATransferSize::QuadLongword:
             for (int i = 0; i < 4; i++) {
                 const uint32 value = MemReadLong(ch.srcAddress + i * sizeof(uint32));
+                m_log.trace("DMAC{} 16-byte transfer {:d} from {:08X} to {:08X} -> {:X}", index, i, ch.srcAddress,
+                            ch.dstAddress, value);
                 MemWriteLong(ch.dstAddress + i * sizeof(uint32), value);
             }
             break;
         }
 
+        // Update address and remaining count
         ch.srcAddress = incAddress(ch.srcAddress, ch.srcMode);
         ch.dstAddress = incAddress(ch.dstAddress, ch.dstMode);
 
-        // Check if transfer ended
         if (ch.xferSize == DMATransferSize::QuadLongword) {
-            ch.xferCount -= 4;
+            if (ch.xferCount >= 4) {
+                ch.xferCount -= 4;
+            } else {
+                m_log.trace("DMAC{} 16-byte transfer count misaligned", index);
+                ch.xferCount = 0;
+            }
         } else {
             ch.xferCount--;
         }
+
+        // Check if transfer ended
         if (ch.xferCount == 0) {
-            // Raise DEI interrupt if requested
-            if (ch.irqEnable) {
-                // TODO: raise DEI interrupt
-            }
             ch.xferEnded = true;
+            m_log.trace("DMAC{} transfer finished", index);
         }
+
+        index++;
     }
 
     FRT.Advance(cycles);
