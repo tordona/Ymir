@@ -242,6 +242,8 @@ private:
     // A transfer is active if DE = 1, DME = 1, TE = 0, NMIF = 0 and AE = 0.
     bool IsDMATransferActive(const DMAChannel &ch) const;
 
+    void AdvanceDMAC(uint64 cycles);
+
     // --- WDT module ---
 
     // --- Power-down module ---

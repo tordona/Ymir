@@ -200,98 +200,7 @@ void SH2::Reset(bool hard) {
 }
 
 FLATTEN void SH2::Advance(uint64 cycles) {
-    // TODO: optimize active DMA channel check
-    // TODO: proper timings, cycle-stealing, etc. (suspend instructions if not cached)
-    // TODO: prioritize channels based on DMAOR.PR
-    for (int index = 0; auto &ch : dmaChannels) {
-        if (!IsDMATransferActive(ch)) {
-            continue;
-        }
-
-        // Auto request mode will start the transfer right now.
-        // Module request mode checks if the signal from the configured source has been raised.
-        if (!ch.autoRequest) {
-            bool signal = false;
-            switch (ch.resSelect) {
-            case DMAResourceSelect::DREQ: /*TODO*/ signal = false; break;
-            case DMAResourceSelect::RXI: /*TODO*/ signal = false; break;
-            case DMAResourceSelect::TXI: /*TODO*/ signal = false; break;
-            case DMAResourceSelect::Reserved: signal = false; break;
-            }
-            if (!signal) {
-                continue;
-            }
-        }
-
-        static constexpr uint32 kXferSize[] = {1, 2, 4, 16};
-        const uint32 xferSize = kXferSize[static_cast<uint32>(ch.xferSize)];
-
-        auto incAddress = [&](uint32 address, DMATransferIncrementMode mode) -> uint32 {
-            using enum DMATransferIncrementMode;
-            switch (mode) {
-            case Fixed: return address;
-            case Increment: return address + xferSize;
-            case Decrement: return address - xferSize;
-            case Reserved: return address;
-            }
-        };
-
-        // Perform one unit of transfer
-        switch (ch.xferSize) {
-        case DMATransferSize::Byte: {
-            const uint8 value = MemReadByte(ch.srcAddress);
-            m_log.trace("DMAC{} 8-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress,
-                        value);
-            MemWriteByte(ch.dstAddress, value);
-            break;
-        }
-        case DMATransferSize::Word: {
-            const uint16 value = MemReadWord(ch.srcAddress);
-            m_log.trace("DMAC{} 16-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress,
-                        value);
-            MemWriteWord(ch.dstAddress, value);
-            break;
-        }
-        case DMATransferSize::Longword: {
-            const uint32 value = MemReadLong(ch.srcAddress);
-            m_log.trace("DMAC{} 32-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress,
-                        value);
-            MemWriteLong(ch.dstAddress, value);
-            break;
-        }
-        case DMATransferSize::QuadLongword:
-            for (int i = 0; i < 4; i++) {
-                const uint32 value = MemReadLong(ch.srcAddress + i * sizeof(uint32));
-                m_log.trace("DMAC{} 16-byte transfer {:d} from {:08X} to {:08X} -> {:X}", index, i, ch.srcAddress,
-                            ch.dstAddress, value);
-                MemWriteLong(ch.dstAddress + i * sizeof(uint32), value);
-            }
-            break;
-        }
-
-        // Update address and remaining count
-        ch.srcAddress = incAddress(ch.srcAddress, ch.srcMode);
-        ch.dstAddress = incAddress(ch.dstAddress, ch.dstMode);
-
-        if (ch.xferSize == DMATransferSize::QuadLongword) {
-            if (ch.xferCount >= 4) {
-                ch.xferCount -= 4;
-            } else {
-                m_log.trace("DMAC{} 16-byte transfer count misaligned", index);
-                ch.xferCount = 0;
-            }
-        } else {
-            ch.xferCount--;
-        }
-
-        // Check if transfer ended
-        if (ch.xferCount == 0) {
-            ch.xferEnded = true;
-            m_log.trace("DMAC{} transfer finished", index);
-        }
-
-        index++;
-    }
+    AdvanceDMAC(cycles);
 
     FRT.Advance(cycles);
 
@@ -507,6 +416,101 @@ T SH2::OpenBusSeqRead(uint32 address) {
 
 FLATTEN FORCE_INLINE bool SH2::IsDMATransferActive(const DMAChannel &ch) const {
     return ch.IsEnabled() && DMAOR.DME && !DMAOR.NMIF && !DMAOR.AE;
+}
+
+void SH2::AdvanceDMAC(uint64 cycles) {
+    // TODO: optimize active DMA channel check
+    // TODO: proper timings, cycle-stealing, etc. (suspend instructions if not cached)
+    // TODO: prioritize channels based on DMAOR.PR
+    for (int index = 0; auto &ch : dmaChannels) {
+        if (!IsDMATransferActive(ch)) {
+            continue;
+        }
+
+        // Auto request mode will start the transfer right now.
+        // Module request mode checks if the signal from the configured source has been raised.
+        if (!ch.autoRequest) {
+            bool signal = false;
+            switch (ch.resSelect) {
+            case DMAResourceSelect::DREQ: /*TODO*/ signal = false; break;
+            case DMAResourceSelect::RXI: /*TODO*/ signal = false; break;
+            case DMAResourceSelect::TXI: /*TODO*/ signal = false; break;
+            case DMAResourceSelect::Reserved: signal = false; break;
+            }
+            if (!signal) {
+                continue;
+            }
+        }
+
+        static constexpr uint32 kXferSize[] = {1, 2, 4, 16};
+        const uint32 xferSize = kXferSize[static_cast<uint32>(ch.xferSize)];
+
+        auto incAddress = [&](uint32 address, DMATransferIncrementMode mode) -> uint32 {
+            using enum DMATransferIncrementMode;
+            switch (mode) {
+            case Fixed: return address;
+            case Increment: return address + xferSize;
+            case Decrement: return address - xferSize;
+            case Reserved: return address;
+            }
+        };
+
+        // Perform one unit of transfer
+        switch (ch.xferSize) {
+        case DMATransferSize::Byte: {
+            const uint8 value = MemReadByte(ch.srcAddress);
+            m_log.trace("DMAC{} 8-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress,
+                        value);
+            MemWriteByte(ch.dstAddress, value);
+            break;
+        }
+        case DMATransferSize::Word: {
+            const uint16 value = MemReadWord(ch.srcAddress);
+            m_log.trace("DMAC{} 16-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress,
+                        value);
+            MemWriteWord(ch.dstAddress, value);
+            break;
+        }
+        case DMATransferSize::Longword: {
+            const uint32 value = MemReadLong(ch.srcAddress);
+            m_log.trace("DMAC{} 32-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress,
+                        value);
+            MemWriteLong(ch.dstAddress, value);
+            break;
+        }
+        case DMATransferSize::QuadLongword:
+            for (int i = 0; i < 4; i++) {
+                const uint32 value = MemReadLong(ch.srcAddress + i * sizeof(uint32));
+                m_log.trace("DMAC{} 16-byte transfer {:d} from {:08X} to {:08X} -> {:X}", index, i, ch.srcAddress,
+                            ch.dstAddress, value);
+                MemWriteLong(ch.dstAddress + i * sizeof(uint32), value);
+            }
+            break;
+        }
+
+        // Update address and remaining count
+        ch.srcAddress = incAddress(ch.srcAddress, ch.srcMode);
+        ch.dstAddress = incAddress(ch.dstAddress, ch.dstMode);
+
+        if (ch.xferSize == DMATransferSize::QuadLongword) {
+            if (ch.xferCount >= 4) {
+                ch.xferCount -= 4;
+            } else {
+                m_log.trace("DMAC{} 16-byte transfer count misaligned", index);
+                ch.xferCount = 0;
+            }
+        } else {
+            ch.xferCount--;
+        }
+
+        // Check if transfer ended
+        if (ch.xferCount == 0) {
+            ch.xferEnded = true;
+            m_log.trace("DMAC{} transfer finished", index);
+        }
+
+        index++;
+    }
 }
 
 void SH2::WriteCCR(uint8 value) {
