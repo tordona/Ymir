@@ -193,9 +193,9 @@ void SCU::RunDMA(uint64 cycles) {
             const bool dstBBus = util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currDstAddr);
             const bool dstCS2 = util::AddressInRange<0x580'0000, 0x58F'FFFF>(ch.currDstAddr);
             const bool dstWRAM = ch.currDstAddr >= 0x600'0000;
-            if (dstBBus) {
+            if (dstBBus || dstWRAM) {
                 ch.currDstAddrInc = ch.dstAddrInc;
-            } else if (dstCS2 || dstWRAM) {
+            } else if (dstCS2) {
                 ch.currDstAddrInc = ch.dstAddrInc ? 4u : 0u;
             } else {
                 ch.currDstAddrInc = 4u;
