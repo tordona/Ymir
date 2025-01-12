@@ -499,6 +499,7 @@ private:
 
     void ProcessSample();
 
+    uint64 m_m68kCycles;        // MC68EC000 cycle counter
     uint64 m_accumSampleCycles; // number of SCSP cycles toward the next sample tick
     uint64 m_sampleCounter;     // total number of samples
 

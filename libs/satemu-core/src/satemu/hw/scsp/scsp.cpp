@@ -18,6 +18,7 @@ void SCSP::Reset(bool hard) {
 
     m_m68kEnabled = false;
 
+    m_m68kCycles = 0;
     m_accumSampleCycles = 0;
     m_sampleCounter = 0;
 
@@ -51,13 +52,18 @@ void SCSP::Reset(bool hard) {
 }
 
 void SCSP::Advance(uint64 cycles) {
+    if (m_m68kEnabled) {
+        m_m68kCycles += cycles;
+        while (m_m68kCycles >= 2) {
+            // TODO: proper cycle counting
+            m_m68k.Step();
+            m_m68kCycles -= 2;
+        }
+    }
+
     m_accumSampleCycles += cycles;
     while (m_accumSampleCycles >= kCyclesPerSample) {
         m_accumSampleCycles -= kCyclesPerSample;
-        if (m_m68kEnabled && (m_sampleCounter % kCyclesPerM68KCycle) == 0) {
-            // TODO: proper cycle counting
-            m_m68k.Step();
-        }
         m_sampleCounter++;
         ProcessSample();
     }
