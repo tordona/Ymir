@@ -187,6 +187,38 @@ void runEmulator(satemu::Saturn &saturn) {
         case SDL_SCANCODE_H: setClearButton(smpc::kButtonStart, pressed); break;
         case SDL_SCANCODE_RETURN: setClearButton(smpc::kButtonStart, pressed); break;
         case SDL_SCANCODE_RETURN2: setClearButton(smpc::kButtonStart, pressed); break;
+        case SDL_SCANCODE_F3: //
+        {
+            {
+                std::ofstream out{"wram-lo.bin", std::ios::binary};
+                saturn.SH2.bus.DumpWRAMLow(out);
+            }
+            {
+                std::ofstream out{"wram-hi.bin", std::ios::binary};
+                saturn.SH2.bus.DumpWRAMHigh(out);
+            }
+            {
+                std::ofstream out{"vdp1-vram.bin", std::ios::binary};
+                saturn.VDP.DumpVDP1VRAM(out);
+            }
+            {
+                std::ofstream out{"vdp1-fbs.bin", std::ios::binary};
+                saturn.VDP.DumpVDP1Framebuffers(out);
+            }
+            {
+                std::ofstream out{"vdp2-vram.bin", std::ios::binary};
+                saturn.VDP.DumpVDP2VRAM(out);
+            }
+            {
+                std::ofstream out{"vdp2-cram.bin", std::ios::binary};
+                saturn.VDP.DumpVDP2CRAM(out);
+            }
+            // TODO: dump SCU DSP program and data RAM
+            // TODO: saturn.SCSP.DumpWRAM(std::ofstream{"scsp-ram.bin", std::ios::binary});
+            // TODO: saturn.SCSP.DumpDSPProgram(std::ofstream{"scsp-dspprog.bin", std::ios::binary});
+            // TODO: dump whatever else is needed for SCSP DSP analysis
+            break;
+        }
         default: break;
         }
     };

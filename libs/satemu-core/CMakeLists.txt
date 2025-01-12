@@ -126,6 +126,7 @@ target_precompile_headers(satemu-core
         <deque>
         <filesystem>
         <fstream>
+        <iostream>
         <limits>
         <memory>
         <numeric>

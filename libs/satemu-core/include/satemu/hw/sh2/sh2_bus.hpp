@@ -11,6 +11,7 @@
 
 #include <mio/mmap.hpp> // HACK: should be used in a binary reader/writer object
 
+#include <iostream>
 #include <span>
 
 // -----------------------------------------------------------------------------
@@ -66,6 +67,9 @@ public:
     void Reset(bool hard);
 
     void LoadIPL(std::span<uint8, kIPLSize> ipl);
+
+    void DumpWRAMLow(std::ostream &out);
+    void DumpWRAMHigh(std::ostream &out);
 
     template <mem_primitive T>
     T Read(uint32 address) {

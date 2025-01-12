@@ -13,6 +13,7 @@
 #include <satemu/util/inline.hpp>
 
 #include <array>
+#include <iostream>
 #include <span>
 
 // -----------------------------------------------------------------------------
@@ -50,6 +51,13 @@ public:
 
     // TODO: replace with scheduler events
     void Advance(uint64 cycles);
+
+    void DumpVDP1VRAM(std::ostream &out);
+    void DumpVDP2VRAM(std::ostream &out);
+    void DumpVDP2CRAM(std::ostream &out);
+
+    // Dumps draw then display
+    void DumpVDP1Framebuffers(std::ostream &out);
 
     // -------------------------------------------------------------------------
     // VDP1 memory/register access

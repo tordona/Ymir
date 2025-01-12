@@ -22,6 +22,14 @@ void SH2Bus::LoadIPL(std::span<uint8, kIPLSize> ipl) {
     std::copy(ipl.begin(), ipl.end(), IPL.begin());
 }
 
+void SH2Bus::DumpWRAMLow(std::ostream &out) {
+    out.write((const char *)WRAMLow.data(), WRAMLow.size());
+}
+
+void SH2Bus::DumpWRAMHigh(std::ostream &out) {
+    out.write((const char *)WRAMHigh.data(), WRAMHigh.size());
+}
+
 void SH2Bus::AcknowledgeExternalInterrupt() {
     m_SCU.AcknowledgeExternalInterrupt();
 }
