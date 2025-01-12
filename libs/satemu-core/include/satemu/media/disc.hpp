@@ -5,6 +5,7 @@
 #include <satemu/media/binary_reader/binary_reader.hpp>
 
 #include <array>
+#include <cassert>
 #include <memory>
 #include <span>
 #include <vector>
@@ -50,10 +51,9 @@ struct Track {
     // Returns false if the sector could not be fully read, the frame address is out of range or the requested size is
     // unsupported.
     bool ReadSector(uint32 frameAddress, std::span<uint8, 2352> outBuf, uint32 targetSize) const {
+        assert(targetSize == 2048 || targetSize == 2336 || targetSize == 2340 || targetSize == 2352);
+
         if (frameAddress < startFrameAddress || frameAddress > endFrameAddress) [[unlikely]] {
-            return false;
-        }
-        if (targetSize != 2048 && targetSize != 2336 && targetSize != 2340 && targetSize != 2352) [[unlikely]] {
             return false;
         }
 
