@@ -2186,7 +2186,7 @@ FORCE_INLINE VDP::Pixel VDP::VDPFetchScrollBGPixel(const BGParams &bgParams, std
     //            8-6  Map Offset Register (MPOFN)
     //            5-0  Map Register (MPxxN#)
     //
-    // These addresses are precomputed in bgParams.pageBaseAddresses.
+    // These addresses are precomputed in pageBaseAddresses.
     //
     //       2x2 Plane               2x1 Plane          1x1 Plane
     //        PLSZ=3                  PLSZ=1             PLSZ=0
