@@ -4,6 +4,8 @@
 
 #include <satemu/media/binary_reader/binary_reader.hpp>
 
+// #include <fmt/format.h>
+
 #include <array>
 #include <cassert>
 #include <memory>
@@ -78,11 +80,16 @@ struct Track {
             return false;
         }
 
+        /*fmt::println("== SECTOR DUMP - FAD {:X} ==", frameAddress);
+        fmt::println("Track sector size: {} bytes", sectorSize);
+        fmt::println("Requested size:    {} bytes", targetSize);*/
+
         // Fill in any missing data
         if (needsSyncBytes && !hasSyncBytes) {
             static constexpr std::array<uint8, 12> syncBytes = {0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                                                                 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00};
             std::copy(syncBytes.begin(), syncBytes.end(), outBuf.begin());
+            // fmt::println("  Added sync bytes");
         }
         if (needsHeader && !hasHeader) {
             // Convert absolute frame address to min:sec:frac
@@ -104,13 +111,25 @@ struct Track {
                 // Audio track
                 outBuf[0xF] = 0x00;
             }
+            // fmt::println("  Added header");
         }
         if (needsSubheader && !hasSubheader) {
             // Fill out checksums after user data
             // TODO: actually calculate checksums
             // for now, we'll fill the checksums with zeros and hope that no software ever checks them
             std::fill_n(outBuf.begin() + writeOffset + 2048, 288, 0x00);
+            // fmt::println("  Added subheader");
         }
+        /*fmt::println("Raw sector data:");
+        for (uint32 i = 0; i < targetSize; i++) {
+            fmt::print("{:02X}", outBuf[i]);
+            if (i % 32 == 31) {
+                fmt::println("");
+            } else {
+                fmt::print(" ");
+            }
+        }
+        fmt::println("");*/
 
         return true;
     }
