@@ -243,6 +243,11 @@ void SCU::RunDMA(uint64 cycles) {
 
             if (srcBus != dstBus && srcBus != Bus::None && dstBus != Bus::None) {
                 uint32 value{};
+                if (ch.currSrcAddr & 1) {
+                    // TODO: handle unaligned transfer
+                    dmaLog.trace("SCU DMA{}: Unaligned 16-bit read from {:08X}", level, ch.currSrcAddr);
+                    ch.currSrcAddr &= ~1;
+                }
                 if (srcBus == Bus::BBus) {
                     value = m_SH2.bus.Read<uint16>(ch.currSrcAddr) << 16u;
                     dmaLog.trace("SCU DMA{}: B-Bus read from {:08X} -> {:04X}", level, ch.currSrcAddr, value >> 16u);
@@ -251,11 +256,17 @@ void SCU::RunDMA(uint64 cycles) {
                     dmaLog.trace("SCU DMA{}: B-Bus read from {:08X} -> {:04X}", level, ch.currSrcAddr, value & 0xFFFF);
                     ch.currSrcAddr += ch.currSrcAddrInc / 2u;
                 } else {
-                    value = m_SH2.bus.Read<uint32>(ch.currSrcAddr);
+                    value = m_SH2.bus.Read<uint16>(ch.currSrcAddr + 0) << 16u;
+                    value |= m_SH2.bus.Read<uint16>(ch.currSrcAddr + 2) << 0u;
                     dmaLog.trace("SCU DMA{}: Read from {:08X} -> {:08X}", level, ch.currSrcAddr, value);
                     ch.currSrcAddr += ch.currSrcAddrInc;
                 }
 
+                if (ch.currDstAddr & 1) {
+                    // TODO: handle unaligned transfer
+                    dmaLog.trace("SCU DMA{}: Unaligned 16-bit write to {:08X}", level, ch.currDstAddr);
+                    ch.currDstAddr &= ~1;
+                }
                 if (dstBus == Bus::BBus) {
                     m_SH2.bus.Write<uint16>(ch.currDstAddr, value >> 16u);
                     dmaLog.trace("SCU DMA{}: B-Bus write to {:08X} -> {:04X}", level, ch.currDstAddr, value >> 16u);
@@ -264,7 +275,8 @@ void SCU::RunDMA(uint64 cycles) {
                     dmaLog.trace("SCU DMA{}: B-Bus write to {:08X} -> {:04X}", level, ch.currDstAddr, value & 0xFFFF);
                     ch.currDstAddr += ch.currDstAddrInc;
                 } else {
-                    m_SH2.bus.Write<uint32>(ch.currDstAddr, value);
+                    m_SH2.bus.Write<uint16>(ch.currDstAddr + 0, value >> 16u);
+                    m_SH2.bus.Write<uint16>(ch.currDstAddr + 2, value >> 0u);
                     dmaLog.trace("SCU DMA{}: Write to {:08X} -> {:08X}", level, ch.currDstAddr, value);
                     ch.currDstAddr += ch.currDstAddrInc;
                 }
