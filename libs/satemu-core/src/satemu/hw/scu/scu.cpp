@@ -300,7 +300,7 @@ void SCU::RunDMA(uint64 cycles) {
                 readIndirect();
                 break; // higher-level DMA transfers interrupt lower-level ones
             } else {
-                dmaLog.debug("SCU DMA{}: Finished transfer", level);
+                dmaLog.trace("SCU DMA{}: Finished transfer", level);
                 ch.active = false;
                 ch.currXferCount = 0;
                 if (ch.updateSrcAddr) {
