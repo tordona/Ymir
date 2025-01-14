@@ -2,6 +2,8 @@
 
 #include <satemu/hw/sh2/sh2.hpp>
 
+#include <fstream>
+
 namespace satemu::sh2 {
 
 SH2Bus::SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu, smpc::SMPC &smpc)
@@ -9,6 +11,21 @@ SH2Bus::SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu, smpc::SMPC &smpc)
     , m_slaveSH2(slaveSH2)
     , m_SCU(scu)
     , m_SMPC(smpc) {
+
+    std::filesystem::path bupRAMPath = "internal_backup_ram.bin";
+    std::error_code err{};
+    if (!std::filesystem::is_regular_file(bupRAMPath)) {
+        std::ofstream out{bupRAMPath, std::ios::binary};
+        out.seekp(kInternalBackupRAMSize - 1);
+        out.put(0);
+    }
+    if (std::filesystem::file_size(bupRAMPath) < kInternalBackupRAMSize) {
+        std::ofstream out{bupRAMPath, std::ios::binary | std::ios::ate};
+        out.seekp(kInternalBackupRAMSize - 1);
+        out.put(0);
+    }
+    internalBackupRAM = mio::make_mmap_sink(bupRAMPath.string(), err);
+
     IPL.fill(0);
     Reset(true);
 }

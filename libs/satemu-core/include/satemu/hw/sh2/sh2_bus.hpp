@@ -133,7 +133,7 @@ public:
     // TODO: use an abstraction
     // TODO: move to its own class
     // std::array<uint8, kInternalBackupRAMSize> internalBackupRAM;
-    mio::mmap_sink internalBackupRAM{"internal_backup_ram.bin"};
+    mio::mmap_sink internalBackupRAM;
 
 private:
     SH2 &m_masterSH2;
