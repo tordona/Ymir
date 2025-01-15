@@ -267,6 +267,7 @@ private:
     struct Buffer {
         std::array<uint8, 2352> data;
         uint16 size;
+        uint32 frameAddress;
     };
 
     class PartitionManager {
@@ -279,8 +280,8 @@ private:
         uint32 GetFreeBufferCount() const;
 
         void InsertHead(uint8 partitionIndex, Buffer &buffer);
-        Buffer *GetTail(uint8 partitionIndex);
-        bool RemoveTail(uint8 partitionIndex);
+        Buffer *GetTail(uint8 partitionIndex, uint8 offset);
+        bool RemoveTail(uint8 partitionIndex, uint8 offset);
 
         uint32 DeleteSectors(uint8 partitionIndex, uint16 sectorPos, uint16 sectorCount);
 

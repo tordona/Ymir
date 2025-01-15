@@ -358,8 +358,9 @@ void CDBlock::ProcessDriveStatePlay() {
                 // Sanity check: is the track valid?
                 if (track != nullptr && track->ReadSector(frameAddress, buffer.data, m_getSectorLength)) [[likely]] {
                     buffer.size = m_getSectorLength;
+                    buffer.frameAddress = frameAddress;
 
-                    playLog.debug("Read {} bytes", buffer.size);
+                    playLog.debug("Read {} bytes from frame address {:06X}", buffer.size, buffer.frameAddress);
 
                     // Check against filter and send data to the appropriate destination
                     uint8 filterNum = m_cdDeviceConnection;
@@ -483,9 +484,6 @@ void CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8
     }
     m_xferPartition = partitionNumber;
 
-    if (m_xferSectorPos)
-        __debugbreak(); // this is not currently implemented
-
     m_xferType = del ? TransferType::GetThenDeleteSector : TransferType::GetSector;
     m_xferPos = 0;
     m_xferLength = m_getSectorLength / sizeof(uint16) * (m_xferSectorEnd - m_xferSectorPos + 1);
@@ -558,20 +556,29 @@ uint16 CDBlock::DoReadTransfer() {
 
     case TransferType::GetSector:
     case TransferType::GetThenDeleteSector: {
-        // TODO: honor m_xferSectorPos (or at least the initial offset)
         // TODO: cache buffer
-        Buffer *buffer = m_partitionManager.GetTail(m_xferPartition);
+        Buffer *buffer = m_partitionManager.GetTail(m_xferPartition, m_xferSectorPos);
 
-        const uint16 bufferPos = (m_xferPos * sizeof(uint16)) & 2047;
-        value = util::ReadBE<uint16>(&buffer->data[bufferPos]);
-
-        if (m_xferType == TransferType::GetThenDeleteSector) {
-            // Delete sector once fully read
-            // TODO: fix this super hacky end-of-sector "detection"
-            // - should also honor m_xferSectorPos (or at least the initial offset)
-            if (bufferPos >= 2046) {
-                m_partitionManager.RemoveTail(m_xferPartition);
+        if (buffer != nullptr) {
+            const uint16 bufferPos = (m_xferPos * sizeof(uint16)) & 2047;
+            value = util::ReadBE<uint16>(&buffer->data[bufferPos]);
+            if (bufferPos == 0) {
+                xferLog.debug("Starting transfer from sector at frame address {:08X} - sector {}", buffer->frameAddress,
+                              m_xferSectorPos);
             }
+
+            if (bufferPos >= 2046) {
+                if (m_xferType == TransferType::GetThenDeleteSector) {
+                    // Delete sector once fully read
+                    m_partitionManager.RemoveTail(m_xferPartition, m_xferSectorPos);
+                    xferLog.debug("Sector freed");
+                } else {
+                    m_xferSectorPos++;
+                    xferLog.debug("Going to sector {}", m_xferSectorPos);
+                }
+            }
+        } else {
+            xferLog.warn("Out of bounds transfer - sector {}", m_xferSectorPos);
         }
         break;
     }
