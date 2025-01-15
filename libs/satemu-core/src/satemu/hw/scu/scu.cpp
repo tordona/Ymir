@@ -212,10 +212,16 @@ void SCU::RunDMA(uint64 cycles) {
             ch.currDstAddr &= 0x7FF'FFFF;
             setXferIncs();
 
-            dmaLog.debug("SCU DMA{}: Starting indirect transfer at {:08X} - {:06X} bytes from {:08X} (+{:02X}) to "
+            dmaLog.trace("SCU DMA{}: Starting indirect transfer at {:08X} - {:06X} bytes from {:08X} (+{:02X}) to "
                          "{:08X} (+{:02X}){}",
                          level, ch.currIndirectSrc - 3 * sizeof(uint32), ch.currXferCount, ch.currSrcAddr,
                          ch.currSrcAddrInc, ch.currDstAddr, ch.currDstAddrInc, (ch.endIndirect ? " (final)" : ""));
+            if (ch.currSrcAddr & 1) {
+                dmaLog.debug("SCU DMA{}: Unaligned indirect transfer read from {:08X}", level, ch.currSrcAddr);
+            }
+            if (ch.currDstAddr & 1) {
+                dmaLog.debug("SCU DMA{}: Unaligned indirect transfer write to {:08X}", level, ch.currDstAddr);
+            }
         };
 
         if (ch.start && !ch.active) {
@@ -231,9 +237,15 @@ void SCU::RunDMA(uint64 cycles) {
                 ch.currDstAddrInc = ch.dstAddrInc;
                 setXferIncs();
 
-                dmaLog.debug(
+                dmaLog.trace(
                     "SCU DMA{}: Starting direct transfer of {:06X} bytes from {:08X} (+{:02X}) to {:08X} (+{:02X})",
                     level, ch.currXferCount, ch.currSrcAddr, ch.currSrcAddrInc, ch.currDstAddr, ch.currDstAddrInc);
+                if (ch.currSrcAddr & 1) {
+                    dmaLog.debug("SCU DMA{}: Unaligned direct transfer read from {:08X}", level, ch.currSrcAddr);
+                }
+                if (ch.currDstAddr & 1) {
+                    dmaLog.debug("SCU DMA{}: Unaligned direct transfer write to {:08X}", level, ch.currDstAddr);
+                }
             }
         }
 
