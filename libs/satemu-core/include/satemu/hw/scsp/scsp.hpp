@@ -138,9 +138,9 @@ private:
 
         auto shiftByte = [](uint16 value) {
             if constexpr (is16) {
-                return value >> 8u;
-            } else {
                 return value;
+            } else {
+                return value >> 8u;
             }
         };
 
@@ -387,7 +387,7 @@ private:
 
     template <bool lowerHalf, bool upperHalf>
     void WriteSCIRE(uint16 value) {
-        m_m68kEnabledInterrupts &= ~value;
+        m_m68kPendingInterrupts &= ~value;
         UpdateM68KInterrupts();
     }
 
@@ -419,7 +419,7 @@ private:
 
     template <bool lowerHalf, bool upperHalf>
     void WriteMCIRE(uint16 value) {
-        m_scuEnabledInterrupts &= ~value;
+        m_scuPendingInterrupts &= ~value;
         UpdateSCUInterrupts();
     }
 
