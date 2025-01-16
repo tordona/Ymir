@@ -134,6 +134,9 @@ private:
         static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP register read size");
         static constexpr bool is16 = std::is_same_v<T, uint16>;
 
+        regsLog.trace("{}-bit SCSP register read via {} from {:03X}", sizeof(T) * 8, (fromM68K ? "M68K" : "SCU"),
+                      address);
+
         using namespace util;
 
         auto shiftByte = [](uint16 value) {
@@ -224,6 +227,9 @@ private:
     void WriteReg(uint32 address, T value) {
         static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP register write size");
         static constexpr bool is16 = std::is_same_v<T, uint16>;
+
+        regsLog.trace("{}-bit SCSP register write via {} to {:03X} = {:X}", sizeof(T) * 8, (fromM68K ? "M68K" : "SCU"),
+                      address, value);
 
         using namespace util;
 
