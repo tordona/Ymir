@@ -462,7 +462,7 @@ struct Timer {
 
     void WriteTxCTL(uint8 value) {
         incrementInterval = bit::extract<0, 2>(value);
-        incrementMask = ((1u << value) - 1);
+        incrementMask = (1ull << incrementInterval) - 1;
     }
 
     // -------------------------------------------------------------------------
