@@ -13,7 +13,7 @@ CDBlock::PartitionManager::PartitionManager() {
 void CDBlock::PartitionManager::Reset() {
     m_partitions.fill({});
     m_freeBuffers = kNumBuffers;
-    partLog.debug("Cleared partitions; free buffers = {}", m_freeBuffers);
+    partLog.trace("Cleared partitions; free buffers = {}", m_freeBuffers);
 }
 
 uint8 CDBlock::PartitionManager::GetBufferCount(uint8 partitionIndex) const {
@@ -33,7 +33,7 @@ void CDBlock::PartitionManager::InsertHead(uint8 partitionIndex, Buffer &buffer)
     auto &partition = m_partitions[partitionIndex];
     partition.push_back(buffer);
     m_freeBuffers--;
-    partLog.debug("Inserted buffer into partition {} -> {} buffers; free buffers = {}", partitionIndex,
+    partLog.trace("Inserted buffer into partition {} -> {} buffers; free buffers = {}", partitionIndex,
                   partition.size(), m_freeBuffers);
 }
 
@@ -49,7 +49,7 @@ bool CDBlock::PartitionManager::RemoveTail(uint8 partitionIndex, uint8 offset) {
     if (offset < partition.size()) {
         partition.erase(partition.begin() + offset);
         m_freeBuffers++;
-        partLog.debug("Removed buffer from partition {} -> {} buffers; free buffers = {}", partitionIndex,
+        partLog.trace("Removed buffer from partition {} -> {} buffers; free buffers = {}", partitionIndex,
                       partition.size(), m_freeBuffers);
         return true;
     }
@@ -74,7 +74,7 @@ uint32 CDBlock::PartitionManager::DeleteSectors(uint8 partitionIndex, uint16 sec
     end = std::min<uint16>(end, sectorCount - 1);
     partition.erase(partition.begin() + start, partition.begin() + end + 1);
     m_freeBuffers += end - start + 1;
-    partLog.debug("Removed {} buffers from partition {} -> {} buffers; free buffers = {}", end - start + 1,
+    partLog.trace("Removed {} buffers from partition {} -> {} buffers; free buffers = {}", end - start + 1,
                   partitionIndex, partition.size(), m_freeBuffers);
     return end - start + 1;
 }
@@ -83,7 +83,7 @@ void CDBlock::PartitionManager::Clear(uint8 partitionIndex) {
     assert(partitionIndex < m_partitions.size());
     auto &partition = m_partitions[partitionIndex];
     m_freeBuffers += partition.size();
-    partLog.debug("Cleared all {} buffers from partition {}; free buffers = {}", partition.size(), partitionIndex,
+    partLog.trace("Cleared all {} buffers from partition {}; free buffers = {}", partition.size(), partitionIndex,
                   m_freeBuffers);
     partition.clear();
 }
@@ -95,7 +95,7 @@ uint32 CDBlock::PartitionManager::CalculateSize(uint8 partitionIndex, uint32 sta
     end = std::min<uint32>(end, partition.size() - 1);
     const uint32 size = std::accumulate(partition.begin() + start, partition.begin() + end + 1, 0u,
                                         [](const uint32 lhs, const Buffer &rhs) { return lhs + rhs.size; });
-    partLog.debug("Calculated partition {} size from {} to {} = {} bytes", partitionIndex, start, end, size);
+    partLog.trace("Calculated partition {} size from {} to {} = {} bytes", partitionIndex, start, end, size);
     return size;
 }
 

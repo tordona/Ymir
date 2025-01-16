@@ -331,7 +331,7 @@ void CDBlock::ProcessDriveStatePlay() {
         if (m_cdDeviceConnection != media::Filter::kDisconnected) [[likely]] {
             assert(m_cdDeviceConnection < m_filters.size());
 
-            playLog.debug("Read from frame address {:06X}", frameAddress);
+            playLog.trace("Read from frame address {:06X}", frameAddress);
 
             if (m_disc.sessions.empty()) [[unlikely]] {
                 playLog.debug("Disc removed");
@@ -339,7 +339,7 @@ void CDBlock::ProcessDriveStatePlay() {
                 m_status.statusCode = kStatusCodeNoDisc; // TODO: is this correct?
                 SetInterrupt(kHIRQ_DCHG);
             } else if (m_partitionManager.GetFreeBufferCount() == 0) [[unlikely]] {
-                playLog.debug("No free buffer available");
+                playLog.trace("No free buffer available");
 
                 // TODO: what is the correct status code here?
                 // TODO: there really should be a separate state machine for handling this...
@@ -360,7 +360,7 @@ void CDBlock::ProcessDriveStatePlay() {
                     buffer.size = m_getSectorLength;
                     buffer.frameAddress = frameAddress;
 
-                    playLog.debug("Read {} bytes from frame address {:06X}", buffer.size, buffer.frameAddress);
+                    playLog.trace("Read {} bytes from frame address {:06X}", buffer.size, buffer.frameAddress);
 
                     // Check against filter and send data to the appropriate destination
                     uint8 filterNum = m_cdDeviceConnection;
@@ -368,21 +368,21 @@ void CDBlock::ProcessDriveStatePlay() {
                         const media::Filter &filter = m_filters[filterNum];
                         if (filter.Test({buffer.data.begin(), buffer.size})) {
                             if (filter.trueOutput == media::Filter::kDisconnected) [[unlikely]] {
-                                playLog.debug("Passed filter; output disconnected - discarded");
+                                playLog.trace("Passed filter; output disconnected - discarded");
                             } else {
                                 assert(filter.trueOutput < m_filters.size());
-                                playLog.debug("Passed filter; sent to buffer partition {}", filter.trueOutput);
+                                playLog.trace("Passed filter; sent to buffer partition {}", filter.trueOutput);
                                 m_partitionManager.InsertHead(filter.trueOutput, buffer);
                                 m_lastCDWritePartition = filter.trueOutput;
                             }
                             break;
                         } else {
                             if (filter.falseOutput == media::Filter::kDisconnected) [[unlikely]] {
-                                playLog.debug("Failed filter; output disconnected - discarded");
+                                playLog.trace("Failed filter; output disconnected - discarded");
                                 break;
                             } else {
                                 assert(filter.falseOutput < m_filters.size());
-                                playLog.debug("Failed filter; sent to filter {}", filter.falseOutput);
+                                playLog.trace("Failed filter; sent to filter {}", filter.falseOutput);
                                 filterNum = filter.falseOutput;
                             }
                         }
@@ -468,7 +468,7 @@ void CDBlock::SetupTOCTransfer() {
 }
 
 void CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8 partitionNumber, bool del) {
-    xferLog.debug("Starting sector {} transfer - sectors {} to {} into buffer partition {}",
+    xferLog.trace("Starting sector {} transfer - sectors {} to {} into buffer partition {}",
                   (del ? "read then delete" : "read"), sectorPos, sectorPos + sectorCount - 1, partitionNumber);
 
     const uint8 partitionSize = m_partitionManager.GetBufferCount(partitionNumber);
@@ -520,7 +520,7 @@ void CDBlock::EndTransfer() {
         return;
     }
 
-    xferLog.debug("Ending transfer at {} of {} words", m_xferPos, m_xferLength);
+    xferLog.trace("Ending transfer at {} of {} words", m_xferPos, m_xferLength);
     if (m_xferExtraCount > 0) {
         xferLog.debug("{} unexpected transfer attempts", m_xferExtraCount);
     }
@@ -563,7 +563,7 @@ uint16 CDBlock::DoReadTransfer() {
             const uint16 bufferPos = (m_xferPos * sizeof(uint16)) & 2047;
             value = util::ReadBE<uint16>(&buffer->data[bufferPos]);
             if (bufferPos == 0) {
-                xferLog.debug("Starting transfer from sector at frame address {:08X} - sector {}", buffer->frameAddress,
+                xferLog.trace("Starting transfer from sector at frame address {:08X} - sector {}", buffer->frameAddress,
                               m_xferSectorPos);
             }
 
@@ -571,10 +571,10 @@ uint16 CDBlock::DoReadTransfer() {
                 if (m_xferType == TransferType::GetThenDeleteSector) {
                     // Delete sector once fully read
                     m_partitionManager.RemoveTail(m_xferPartition, m_xferSectorPos);
-                    xferLog.debug("Sector freed");
+                    xferLog.trace("Sector freed");
                 } else {
                     m_xferSectorPos++;
-                    xferLog.debug("Going to sector {}", m_xferSectorPos);
+                    xferLog.trace("Going to sector {}", m_xferSectorPos);
                 }
             }
         } else {
@@ -622,7 +622,7 @@ void CDBlock::AdvanceTransfer() {
     m_xferPos++;
     m_xferCount++;
     if (m_xferPos >= m_xferLength) {
-        xferLog.info("Transfer finished - {} of {} words transferred", m_xferCount, m_xferLength);
+        xferLog.trace("Transfer finished - {} of {} words transferred", m_xferCount, m_xferLength);
         m_xferType = TransferType::None;
         m_xferPos = 0;
         m_xferLength = 0;
@@ -735,7 +735,7 @@ void CDBlock::ProcessCommand() {
         break;
         // case 0xE2: CmdGetMpegROM(); break;
 
-    default: rootLog.debug("Unimplemented command {:02X}", cmd); break;
+    default: rootLog.warn("Unimplemented command {:02X}", cmd); break;
     }
 
     rootLog.trace("Response: {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
@@ -1407,7 +1407,7 @@ void CDBlock::CmdResetSelector() {
     bool reject = false;
     if (resetFlags == 0) {
         const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
-        rootLog.debug("Clearing buffer partition {}", partitionNumber);
+        rootLog.trace("Clearing buffer partition {}", partitionNumber);
         if (partitionNumber < kNumFilters) {
             m_partitionManager.Clear(partitionNumber);
         } else {
@@ -1487,7 +1487,7 @@ void CDBlock::CmdGetBufferSize() {
     m_CR[2] = kNumFilters << 8u;
     m_CR[3] = kNumBuffers;
 
-    rootLog.debug("Get buffer size: free buffers = {}", freeBuffers);
+    rootLog.trace("Get buffer size: free buffers = {}", freeBuffers);
 
     SetInterrupt(kHIRQ_CMOK);
 }
@@ -1553,7 +1553,7 @@ void CDBlock::CmdCalculateActualSize() {
             }
             m_calculatedPartitionSize =
                 m_partitionManager.CalculateSize(partitionNumber, startSector, endSector) / sizeof(uint16);
-            rootLog.debug("Actual size of partition {} from sector {} to {} = {} words", partitionNumber, startSector,
+            rootLog.trace("Actual size of partition {} from sector {} to {} = {} words", partitionNumber, startSector,
                           endSector, m_calculatedPartitionSize);
         }
     }
@@ -1747,7 +1747,7 @@ void CDBlock::CmdDeleteSectorData() {
         reject = true;
     } else {
         const uint32 numFreedSectors = m_partitionManager.DeleteSectors(partitionNumber, sectorOffset, sectorNumber);
-        rootLog.debug("Freed {} sectors from partition {} at offset {}", numFreedSectors, partitionNumber,
+        rootLog.trace("Freed {} sectors from partition {} at offset {}", numFreedSectors, partitionNumber,
                       sectorOffset);
     }
 
