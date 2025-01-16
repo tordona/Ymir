@@ -69,6 +69,10 @@ void SCSP::Advance(uint64 cycles) {
     }
 }
 
+void SCSP::DumpWRAM(std::ostream &out) {
+    out.write((const char *)m_WRAM.data(), m_WRAM.size());
+}
+
 void SCSP::SetCPUEnabled(bool enabled) {
     if (m_m68kEnabled != enabled) {
         rootLog.info("{} the MC68EC00 processor", (enabled ? "enabling" : "disabling"));

@@ -213,6 +213,10 @@ void runEmulator(satemu::Saturn &saturn) {
                 std::ofstream out{"vdp2-cram.bin", std::ios::binary};
                 saturn.VDP.DumpVDP2CRAM(out);
             }
+            {
+                std::ofstream out{"scsp-wram.bin", std::ios::binary};
+                saturn.SCSP.DumpWRAM(out);
+            }
             // TODO: dump SCU DSP program and data RAM
             // TODO: saturn.SCSP.DumpWRAM(std::ofstream{"scsp-ram.bin", std::ios::binary});
             // TODO: saturn.SCSP.DumpDSPProgram(std::ofstream{"scsp-dspprog.bin", std::ios::binary});

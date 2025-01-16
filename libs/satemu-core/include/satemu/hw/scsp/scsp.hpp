@@ -12,6 +12,7 @@
 #include <satemu/util/inline.hpp>
 
 #include <array>
+#include <iostream>
 
 // -----------------------------------------------------------------------------
 // Forward declarations
@@ -36,6 +37,8 @@ public:
     void Reset(bool hard);
 
     void Advance(uint64 cycles);
+
+    void DumpWRAM(std::ostream &out);
 
     // -------------------------------------------------------------------------
     // SCU-facing bus
