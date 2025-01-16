@@ -13,10 +13,10 @@
 
 namespace satemu::sh2 {
 
-inline constexpr dbg::Category MSH2{"SH2-M"};
-inline constexpr dbg::Category SSH2{"SH2-S"};
+inline constexpr dbg::Category<sh2DebugLevel> MSH2{"SH2-M"};
+inline constexpr dbg::Category<sh2DebugLevel> SSH2{"SH2-S"};
 
-static constexpr const dbg::Category &Logger(bool master) {
+static constexpr const dbg::Category<sh2DebugLevel> &Logger(bool master) {
     return master ? MSH2 : SSH2;
 }
 

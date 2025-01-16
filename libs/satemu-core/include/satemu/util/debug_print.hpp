@@ -101,6 +101,7 @@ constexpr void error(fmt::format_string<T...> fmt, T &&...args) {
 // -----------------------------------------------------------------------------
 // Debug categories
 
+template <Level level = debugLevel>
 struct Category {
     constexpr Category(const char *name, bool enabled = true)
         : name(name)
@@ -131,12 +132,12 @@ struct Category {
         }
     }
 
-    template <Level level, typename... T>
+    template <Level printLevel, typename... T>
     constexpr void print(fmt::format_string<T...> fmt, T &&...args) const {
-        if constexpr (level >= debugLevel) {
+        if constexpr (printLevel >= level) {
             if (Enabled()) {
-                detail::print_level<level>();
-                detail::print_raw<level>("{:16s} | ", Name());
+                detail::print_level<printLevel>();
+                detail::print_raw<printLevel>("{:16s} | ", Name());
                 fmt::println(fmt, static_cast<T &&>(args)...);
             }
         }
@@ -169,7 +170,6 @@ struct Category {
         print<level::error>(fmt, static_cast<T &&>(args)...);
     }
 };
-// TODO: subcategories? tree of categories?
 
 namespace cat {
     inline constexpr Category M68K{"M68K"};

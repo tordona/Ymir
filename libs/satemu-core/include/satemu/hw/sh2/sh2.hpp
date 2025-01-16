@@ -24,6 +24,8 @@ class SH2Bus;
 
 namespace satemu::sh2 {
 
+inline constexpr dbg::Level sh2DebugLevel = dbg::debugLevel;
+
 enum class SH2BranchType { JSR, BSR, TRAPA, Exception, UserCapture };
 
 struct SH2Regs {
@@ -150,7 +152,7 @@ private:
     // -------------------------------------------------------------------------
     // Debug logging
 
-    const dbg::Category &m_log;
+    const dbg::Category<sh2DebugLevel> &m_log;
 
     // -------------------------------------------------------------------------
     // Memory accessors
