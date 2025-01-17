@@ -577,7 +577,6 @@ private:
             return 0;
         case 0x7C: // DMA Status
         {
-            // TODO: check if the standby flags are correct (bit 5, 9, 13)
             uint32 value = 0;
             // bit::deposit_into<0>(value, m_dspState.dmaRun); // TODO: is this correct?
             // bit::deposit_into<1>(value, m_dspState.dmaStandby?);

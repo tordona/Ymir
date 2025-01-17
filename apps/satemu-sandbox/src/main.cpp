@@ -148,8 +148,6 @@ void runEmulator(satemu::Saturn &saturn) {
                                      screen.height = height;
 
                                      // Adjust window size dynamically
-                                     // TODO: double-horizontal res should halve horizontal scale
-                                     // - won't work well with odd integer scale
                                      // TODO: add room for borders
                                      SDL_SetWindowSize(screen.window, screen.width * scaleX, screen.height * scaleY);
                                      SDL_SetWindowPosition(screen.window, wx - dx * scaleX / 2, wy - dy * scaleY / 2);
@@ -218,7 +216,6 @@ void runEmulator(satemu::Saturn &saturn) {
                 saturn.SCSP.DumpWRAM(out);
             }
             // TODO: dump SCU DSP program and data RAM
-            // TODO: saturn.SCSP.DumpWRAM(std::ofstream{"scsp-ram.bin", std::ios::binary});
             // TODO: saturn.SCSP.DumpDSPProgram(std::ofstream{"scsp-dspprog.bin", std::ios::binary});
             // TODO: dump whatever else is needed for SCSP DSP analysis
             break;

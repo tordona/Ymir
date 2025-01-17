@@ -289,8 +289,6 @@ private:
 
         uint32 CalculateSize(uint8 partitionIndex, uint32 start, uint32 end) const;
 
-        // TODO: get buffer at index?
-
     private:
         std::array<std::deque<Buffer>, kNumPartitions> m_partitions;
 
