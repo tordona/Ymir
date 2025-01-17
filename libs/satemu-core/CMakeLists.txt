@@ -12,6 +12,7 @@ add_library(satemu-core
     include/satemu/hw/m68k/m68k_decode.hpp
     include/satemu/hw/m68k/m68k_defs.hpp
 
+    include/satemu/hw/scsp/envelope_generator.hpp
     include/satemu/hw/scsp/scsp.hpp
     include/satemu/hw/scsp/scsp_defs.hpp
 

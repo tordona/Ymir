@@ -172,6 +172,11 @@ void SCSP::UpdateSCUInterrupts() {
 }
 
 void SCSP::ProcessSample() {
+    for (auto &slot : m_slots) {
+        slot.Step();
+    }
+    // TODO: process sample
+
     // Trigger sample interrupt
     SetInterrupt(kIntrSample, true);
 

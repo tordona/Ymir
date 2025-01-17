@@ -3,6 +3,8 @@
 #include <satemu/core_types.hpp>
 #include <satemu/hw/hw_defs.hpp>
 
+#include "envelope_generator.hpp"
+
 #include <satemu/util/bit_ops.hpp>
 
 #include <array>
@@ -12,10 +14,10 @@ namespace satemu::scsp {
 // Audio sampling rate in Hz
 inline constexpr uint64 kAudioFreq = 44100;
 
-// Number of SCSP cycles for each sample output
+// Number of SCSP cycles per sample
 inline constexpr uint64 kCyclesPerSample = 512;
 
-// Number of SCSP cycles for each MC68EC000 cycle
+// Number of SCSP cycles per MC68EC000 cycle
 inline constexpr uint64 kCyclesPerM68KCycle = 2;
 
 // SCSP clock frequency: 22,579,200 Hz = 44,100 Hz * 512 cycles per sample
@@ -49,14 +51,7 @@ struct Slot {
         sampleXOR = 0x0000;
         soundSource = SoundSource::SoundRAM;
 
-        attackRate = 0;
-        decay1Rate = 0;
-        decay2Rate = 0;
-        releaseRate = 0;
-        decayLevel = 0;
-        keyRateScaling = 0;
-        loopStateLink = false;
-        egHold = false;
+        envGen.Reset();
 
         modulationLevel = 0;
         modXSelect = 0;
@@ -89,8 +84,12 @@ struct Slot {
     void TriggerKeyOn() {
         if (keyOn != keyOnBit) {
             keyOn = keyOnBit;
-            // TODO: handle envelope generator and etc.
+            envGen.TriggerKey(keyOn);
         }
+    }
+
+    void Step() {
+        envGen.Step();
     }
 
     template <typename T, bool fromM68K>
@@ -355,30 +354,7 @@ struct Slot {
 
     // --- Envelope Generator Register ---
 
-    // States: Attack, Decay 1, Decay 2, Release
-    //
-    // Starts from Attack on Key ON.
-    // While Key ON is held, goes through Attack -> Decay 1 -> Decay 2 and stays at the minimum value of Decay 2.
-    // On Key OFF, it will immediately skip to Release state, decrementing the envelope from whatever point it was.
-    //
-    // Values range from 0x3FF (minimum) to 0x000 (maximum) - 10 bits.
-
-    // Value ranges are from minimum to maximum.
-    uint8 attackRate;     // (R/W) AR  - 0x00 to 0x1F
-    uint8 decay1Rate;     // (R/W) D1R - 0x00 to 0x1F
-    uint8 decay2Rate;     // (R/W) D2R - 0x00 to 0x1F
-    uint8 releaseRate;    // (R/W) RR  - 0x00 to 0x1F
-    uint8 decayLevel;     // (R/W) DL  - 0x1F to 0x00
-                          //   specifies the MSB 5 bits of the EG value where to switch from decay 1 to decay 2
-    uint8 keyRateScaling; // (R/W) KRS - 0x00 to 0x0E; 0x0F turns off scaling
-    bool loopStateLink;   // (R/W) LPSLNK
-                          //   true:  switches to decay 1 state on LSA
-                          //          attack state is interrupted if too slow or held if too fast
-                          //          if the state change happens below DL, decay 2 state is never reached
-                          //   false: state changes are dictated by rates only
-    bool egHold;          // (R/W) EGHOLD
-                          //   true:  volume raises during attack state
-                          //   false: volume is set to maximum during attack phase while maintaining the same duration
+    EnvelopeGenerator envGen;
 
     // --- FM Modulation Control Register ---
 
