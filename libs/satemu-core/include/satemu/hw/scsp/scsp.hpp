@@ -324,22 +324,7 @@ private:
             const uint32 slotIndex = address >> 5;
             auto &slot = m_slots[slotIndex];
             slot.WriteReg<T>(address & 0x1F, value);
-
-            // Handle KYONEX
-            if ((address & 0x1F) == 0 && bit::extract<12>(value16)) {
-                for (int i = 0; auto &slot : m_slots) {
-                    const bool prevKeyOn = slot.keyOn;
-                    slot.TriggerKeyOn();
-                    if (prevKeyOn != slot.keyOn) {
-                        regsLog.debug("Slot {} key {}, start address {:X}, loop {:X}-{:X}, octave {}, FNS 0x{:03X}, EG "
-                                      "rates: {} {} {} {}",
-                                      i, (slot.keyOn ? "ON" : "OFF"), slot.startAddress, slot.loopStartAddress,
-                                      slot.loopEndAddress, slot.octave, slot.freqNumSwitch, slot.envGen.attackRate,
-                                      slot.envGen.decay1Rate, slot.envGen.decay2Rate, slot.envGen.releaseRate);
-                    }
-                    i++;
-                }
-            }
+            m_keyOnEx |= bit::extract<12>(value16);
             return;
         } else if (AddressInRange<0x600, 0x67F>(address)) {
             const uint32 gen = address >> 6u;
@@ -479,7 +464,7 @@ private:
     template <bool lowerByte, bool upperByte>
     uint16 ReadSlotStatus() {
         uint16 value = 0;
-        bit::deposit_into<7, 10>(value, m_slots[m_monitorSlotCall].sampleCount >> 12u);
+        bit::deposit_into<7, 10>(value, m_slots[m_monitorSlotCall].currAddress >> 12u);
         return value;
     }
 
@@ -670,6 +655,8 @@ private:
 
     uint8 m_monitorSlotCall; // (W) MSLC - selects a slot to monitor the current sample offset from SA
                              // (R) CA - Call Address - the offset from SA of the current sample (in 4 KiB units?)
+
+    bool m_keyOnEx; // (W) KYONEX - executes key on/off on all slots on next sample
 
     // --- MIDI Register ---
 

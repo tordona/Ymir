@@ -45,28 +45,22 @@ void Slot::Reset() {
     effectSendLevel = 0;
     effectPan = 0;
 
-    keyOn = false;
-
     currAddress = 0;
-    addressInc = 0;
-    latchedLoopStartAddress = 0;
-    latchedLoopEndAddress = 0;
-    sampleCount = 0;
 }
 
-void Slot::TriggerKeyOn() {
-    if (keyOn != keyOnBit) {
-        keyOn = keyOnBit;
-        envGen.TriggerKey(keyOn);
-        if (keyOn) {
-            // Latch parameters
+bool Slot::TriggerKeyOn() {
+    // Key ON only triggers when EG is in Release state
+    // Key OFF only triggers when EG is in any other state
+    const bool trigger = envGen.IsReleaseState() == keyOnBit;
+    if (trigger) {
+        envGen.TriggerKey(keyOnBit);
+        if (keyOnBit) {
+            // Initialize state
             currAddress = startAddress;
-            addressInc = ((0x400 + freqNumSwitch) << 7u) >> (15u - ((octave + 8u) & 15u));
-            latchedLoopStartAddress = loopStartAddress;
-            latchedLoopEndAddress = loopEndAddress;
-            sampleCount = 0;
+            currAddressFrac = 0;
         }
     }
+    return trigger;
 }
 
 void Slot::Step() {
@@ -74,9 +68,10 @@ void Slot::Step() {
         return;
     }
 
-    // TODO: scale step according to pitch LFO + FM
-    sampleCount += addressInc;
-    // TODO: increment currAddress and obey loop parameters
+    const uint32 pitchLFO = 0; // TODO: compute pitch LFO
+    currAddressFrac += (((0x400 ^ freqNumSwitch) + pitchLFO) << (octave ^ 8)) >> 4;
+    currAddress += currAddressFrac >> 14;
+    currAddressFrac &= 0x3FFF;
 }
 
 template <typename T>

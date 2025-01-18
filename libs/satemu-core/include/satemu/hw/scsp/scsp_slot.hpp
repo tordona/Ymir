@@ -13,7 +13,7 @@ struct Slot {
 
     void Reset();
 
-    void TriggerKeyOn();
+    bool TriggerKeyOn();
 
     void Step();
 
@@ -192,16 +192,8 @@ struct Slot {
     // -------------------------------------------------------------------------
     // State
 
-    // KYONEX is a write-only register that applies the value of keyOnBit (KYONB) to this variable.
-    // If changed, triggers the new state (e.g. begin ADSR attack phase on key ON or release phase on key OFF).
-    // Writing 1 to KYONEX on any slot will apply KYONB on every slot.
-    bool keyOn; // current key on state
-
-    uint32 currAddress;             // Current sample address
-    uint32 addressInc;              // Address increment per step
-    uint32 latchedLoopStartAddress; // LSA latched on key ON
-    uint32 latchedLoopEndAddress;   // LEA latched on key ON
-    uint32 sampleCount;             // Number of processed samples
+    uint32 currAddress;     // Current sample address
+    uint32 currAddressFrac; // Current sample address (fractional part)
 };
 
 } // namespace satemu::scsp

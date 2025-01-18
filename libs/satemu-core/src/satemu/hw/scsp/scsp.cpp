@@ -79,8 +79,8 @@ void SCSP::Advance(uint64 cycles) {
     m_accumSampleCycles += cycles;
     while (m_accumSampleCycles >= kCyclesPerSample) {
         m_accumSampleCycles -= kCyclesPerSample;
-        m_sampleCounter++;
         ProcessSample();
+        m_sampleCounter++;
     }
 
     // Send interrupt signals
@@ -212,10 +212,27 @@ void SCSP::ExecuteDMA() {
 }
 
 void SCSP::ProcessSample() {
-    for (auto &slot : m_slots) {
+    // TODO: run DSP
+
+    m_dspMixStack.fill(0);
+
+    // Handle KYONEX
+    for (int i = 0; auto &slot : m_slots) {
+        if (m_keyOnEx && slot.TriggerKeyOn()) {
+            regsLog.debug(
+                "Slot {} key {}, start address {:X}, loop {:X}-{:X}, octave {}, FNS 0x{:03X}, EG rates: {} {} {} {}", i,
+                (slot.keyOnBit ? "ON" : "OFF"), slot.startAddress, slot.loopStartAddress, slot.loopEndAddress,
+                slot.octave, slot.freqNumSwitch, slot.envGen.attackRate, slot.envGen.decay1Rate, slot.envGen.decay2Rate,
+                slot.envGen.releaseRate);
+        }
+
         slot.Step();
+        i++;
     }
-    // TODO: run DSP, mix samples, etc.
+
+    m_keyOnEx = false;
+
+    // TODO: mix samples, etc.
 
     // Trigger sample interrupt
     SetInterrupt(kIntrSample, true);

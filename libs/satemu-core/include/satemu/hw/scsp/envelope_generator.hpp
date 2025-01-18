@@ -85,7 +85,7 @@ struct EnvelopeGenerator {
             break;
         case State::Release:
             currLevel += releaseRate;
-            if (currLevel > 0x3FF) {
+            if (currLevel >= 0x3FF) {
                 currLevel = 0x3FF;
                 return false;
             }
@@ -100,6 +100,10 @@ struct EnvelopeGenerator {
         } else {
             return currLevel;
         }
+    }
+
+    bool IsReleaseState() const {
+        return state == State::Release;
     }
 
     void TriggerKey(bool keyOn) {
