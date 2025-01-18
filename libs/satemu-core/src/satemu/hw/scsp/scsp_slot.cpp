@@ -74,7 +74,7 @@ void Slot::Step() {
     // TODO: increment currAddress and obey loop parameters
 }
 
-template <typename T, bool fromM68K>
+template <typename T>
 T Slot::ReadReg(uint32 address) {
     static constexpr bool is16 = std::is_same_v<T, uint16>;
     auto shiftByte = [](uint16 value) {
@@ -114,12 +114,10 @@ T Slot::ReadReg(uint32 address) {
     }
 }
 
-template uint8 Slot::ReadReg<uint8, false>(uint32 address);
-template uint16 Slot::ReadReg<uint16, false>(uint32 address);
-template uint8 Slot::ReadReg<uint8, true>(uint32 address);
-template uint16 Slot::ReadReg<uint16, true>(uint32 address);
+template uint8 Slot::ReadReg<uint8>(uint32 address);
+template uint16 Slot::ReadReg<uint16>(uint32 address);
 
-template <typename T, bool fromM68K>
+template <typename T>
 void Slot::WriteReg(uint32 address, T value) {
     static constexpr bool is16 = std::is_same_v<T, uint16>;
     uint16 value16 = value;
@@ -157,10 +155,8 @@ void Slot::WriteReg(uint32 address, T value) {
     }
 }
 
-template void Slot::WriteReg<uint8, false>(uint32 address, uint8 value);
-template void Slot::WriteReg<uint16, false>(uint32 address, uint16 value);
-template void Slot::WriteReg<uint8, true>(uint32 address, uint8 value);
-template void Slot::WriteReg<uint16, true>(uint32 address, uint16 value);
+template void Slot::WriteReg<uint8>(uint32 address, uint8 value);
+template void Slot::WriteReg<uint16>(uint32 address, uint16 value);
 
 template <bool lowerByte, bool upperByte>
 uint16 Slot::ReadReg00() {

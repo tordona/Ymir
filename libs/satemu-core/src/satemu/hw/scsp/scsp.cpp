@@ -42,6 +42,13 @@ void SCSP::Reset(bool hard) {
     m_m68kPendingInterrupts = 0;
     m_m68kInterruptLevels.fill(0);
 
+    m_dmaMemAddress = 0;
+    m_dmaRegAddress = 0;
+    m_dmaXferLength = 0;
+    m_dmaExec = false;
+    m_dmaXferToMem = false;
+    m_dmaGate = false;
+
     for (auto &sds : m_soundDataStack) {
         sds.fill(0);
     }
@@ -49,9 +56,14 @@ void SCSP::Reset(bool hard) {
     m_dspCoeffs.fill(0);
     m_dspAddrs.fill(0);
     m_dspProgram.fill({.u64 = 0});
+
+    m_dspRingBufferLeadAddress = 0;
+    m_dspRingBufferLength = 0;
 }
 
 void SCSP::Advance(uint64 cycles) {
+    ExecuteDMA(cycles);
+
     if (m_m68kEnabled) {
         m_m68kCycles += cycles;
         while (m_m68kCycles >= 2) {
@@ -169,6 +181,27 @@ void SCSP::UpdateM68KInterrupts() {
 
 void SCSP::UpdateSCUInterrupts() {
     m_scu.TriggerSoundRequest(m_scuPendingInterrupts & m_scuEnabledInterrupts);
+}
+
+void SCSP::ExecuteDMA(uint64 cycles) {
+    while (m_dmaExec && cycles > 0) {
+        if (m_dmaXferToMem) {
+            const uint16 value = m_dmaGate ? 0u : ReadReg<uint16>(m_dmaRegAddress);
+            dmaLog.debug("Register {:03X} -> Memory {:06X} = {:04X}", m_dmaRegAddress, m_dmaMemAddress, value);
+            WriteWRAM<uint16>(m_dmaMemAddress, value);
+        } else {
+            const uint16 value = m_dmaGate ? 0u : ReadWRAM<uint16>(m_dmaMemAddress);
+            dmaLog.debug("Memory {:06X} -> Register {:03X} = {:04X}", m_dmaMemAddress, m_dmaRegAddress, value);
+            WriteReg<uint16>(m_dmaRegAddress, value);
+        }
+        m_dmaMemAddress = (m_dmaMemAddress + sizeof(uint16)) & 0x7FFFE;
+        m_dmaRegAddress = (m_dmaRegAddress + sizeof(uint16)) & 0xFFE;
+        m_dmaXferLength--;
+        if (m_dmaXferLength == 0) {
+            m_dmaExec = false;
+        }
+        cycles--;
+    }
 }
 
 void SCSP::ProcessSample() {

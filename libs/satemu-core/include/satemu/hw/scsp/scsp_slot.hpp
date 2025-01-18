@@ -19,10 +19,10 @@ struct Slot {
 
     // -------------------------------------------------------------------------
 
-    template <typename T, bool fromM68K>
+    template <typename T>
     T ReadReg(uint32 address);
 
-    template <typename T, bool fromM68K>
+    template <typename T>
     void WriteReg(uint32 address, T value);
 
     template <bool lowerByte, bool upperByte>

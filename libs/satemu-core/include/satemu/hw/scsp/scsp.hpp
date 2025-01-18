@@ -30,9 +30,38 @@ class SCU;
 
 namespace satemu::scsp {
 
+enum class SCSPAccessType { SCU, M68kCode, M68kData, DMA };
+
+template <SCSPAccessType accessType>
+struct SCSPAccessTypeInfo;
+
+template <>
+struct SCSPAccessTypeInfo<SCSPAccessType::SCU> {
+    static constexpr const char *name = "SCU";
+};
+
+template <>
+struct SCSPAccessTypeInfo<SCSPAccessType::M68kCode> {
+    static constexpr const char *name = "M68K code";
+};
+
+template <>
+struct SCSPAccessTypeInfo<SCSPAccessType::M68kData> {
+    static constexpr const char *name = "M68K data";
+};
+
+template <>
+struct SCSPAccessTypeInfo<SCSPAccessType::DMA> {
+    static constexpr const char *name = "DMA";
+};
+
+template <SCSPAccessType accessType>
+constexpr const char *accessTypeName = SCSPAccessTypeInfo<accessType>::name;
+
 class SCSP {
     static constexpr dbg::Category rootLog{"SCSP"};
     static constexpr dbg::Category regsLog{rootLog, "Regs"};
+    static constexpr dbg::Category dmaLog{rootLog, "DMA"};
 
 public:
     SCSP(scu::SCU &scu);
@@ -49,22 +78,26 @@ public:
 
     template <mem_primitive T>
     FLATTEN T ReadWRAM(uint32 address) {
-        return ReadWRAM<T, false, false>(address);
+        static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP WRAM read size");
+        // TODO: handle memory size bit
+        return util::ReadBE<T>(&m_WRAM[address & 0x7FFFF]);
     }
 
     template <mem_primitive T>
     FLATTEN void WriteWRAM(uint32 address, T value) {
-        WriteWRAM<T, false>(address, value);
+        static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP WRAM write size");
+        // TODO: handle memory size bit
+        util::WriteBE<T>(&m_WRAM[address & 0x7FFFF], value);
     }
 
     template <mem_primitive T>
     T ReadReg(uint32 address) {
-        return ReadReg<T, false, false>(address);
+        return ReadReg<T, SCSPAccessType::SCU>(address);
     }
 
     template <mem_primitive T>
     void WriteReg(uint32 address, T value) {
-        WriteReg<T, false>(address, value);
+        WriteReg<T, SCSPAccessType::SCU>(address, value);
     }
 
     void SetCPUEnabled(bool enabled);
@@ -85,11 +118,13 @@ private:
 
     template <mem_primitive T, bool instrFetch>
     T Read(uint32 address) {
+        static constexpr SCSPAccessType accessType = instrFetch ? SCSPAccessType::M68kCode : SCSPAccessType::M68kData;
+
         if (util::AddressInRange<0x000000, 0x0FFFFF>(address)) {
             // TODO: handle memory size bit
-            return ReadWRAM<T, true, instrFetch>(address);
+            return ReadWRAM<T>(address);
         } else if (util::AddressInRange<0x100000, 0x1FFFFF>(address)) {
-            return ReadReg<T, true, instrFetch>(address & 0xFFF);
+            return ReadReg<T, accessType>(address & 0xFFF);
         } else {
             return 0;
         }
@@ -98,30 +133,15 @@ private:
     template <mem_primitive T>
     void Write(uint32 address, T value) {
         if (util::AddressInRange<0x000000, 0x0FFFFF>(address)) {
-            WriteWRAM<T, true>(address, value);
+            WriteWRAM<T>(address, value);
         } else if (util::AddressInRange<0x100000, 0x1FFFFF>(address)) {
-            WriteReg<T, true>(address & 0xFFF, value);
+            WriteReg<T, SCSPAccessType::M68kData>(address & 0xFFF, value);
         }
     }
 
     // -------------------------------------------------------------------------
     // Generic accessors
-    // fromM68K: false=SCU, true=MC68EC000
     // T is either uint8 or uint16, never uint32
-
-    template <mem_primitive T, bool fromM68K, bool instrFetch>
-    T ReadWRAM(uint32 address) {
-        static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP WRAM read size");
-        // TODO: handle memory size bit
-        return util::ReadBE<T>(&m_WRAM[address & 0x7FFFF]);
-    }
-
-    template <mem_primitive T, bool fromM68K>
-    void WriteWRAM(uint32 address, T value) {
-        static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP WRAM write size");
-        // TODO: handle memory size bit
-        util::WriteBE<T>(&m_WRAM[address & 0x7FFFF], value);
-    }
 
     // Register accesses are handled by individual templated methods that use flags for each half of the 16-bit value.
     // 16-bit accesses have both flags set, while 8-bit writes only have the flag for the corresponding half set
@@ -135,12 +155,12 @@ private:
     //   8-bit on even addresses   8-bit value in bits 15-8
     //   8-bit on odd addresses    8-bit value in bits 7-0
 
-    template <mem_primitive T, bool fromM68K, bool instrFetch>
+    template <mem_primitive T, SCSPAccessType accessType>
     T ReadReg(uint32 address) {
         static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP register read size");
         static constexpr bool is16 = std::is_same_v<T, uint16>;
 
-        regsLog.trace("{}-bit SCSP register read via {} from {:03X}", sizeof(T) * 8, (fromM68K ? "M68K" : "SCU"),
+        regsLog.trace("{}-bit SCSP register read via {} from {:03X}", sizeof(T) * 8, accessTypeName<accessType>,
                       address);
 
         using namespace util;
@@ -163,78 +183,96 @@ private:
             }
         };
 
-        if constexpr (!instrFetch) {
-            /**/ if (AddressInRange<0x000, 0x3FF>(address)) {
-                const uint32 slotIndex = address >> 5;
-                auto &slot = m_slots[slotIndex];
-                return slot.ReadReg<T, fromM68K>(address & 0x1F);
-            } else if (AddressInRange<0x600, 0x67F>(address)) {
-                const uint32 gen = address >> 6;
-                const uint32 idx = (address & 0x3F) >> 1;
-                const uint16 stack = m_soundDataStack[gen][idx];
-                return read16(stack);
-            } else if (AddressInRange<0x700, 0x77F>(address)) {
-                return read16(m_dspCoeffs[(address & 0x7F) >> 1]);
-            } else if (AddressInRange<0x780, 0x7BF>(address)) {
-                return read16(m_dspAddrs[(address & 0x3F) >> 1]);
-            } else if (AddressInRange<0x800, 0xBFF>(address)) {
-                const uint32 index = (address & 0x3FF) >> 3u;
-                const uint32 subindex = (address & 0x7) >> 1;
-                return read16(m_dspProgram[index].u16[subindex]);
-            } else if (AddressInRange<0xC00, 0xEE3>(address)) {
-                // TODO: DSP internal buffer
-            }
-
-            switch (address) {
-            case 0x400: return 0; // Write-only
-            case 0x401: return 0; // Only VER is readable, and it is 0
-
-            case 0x408: return shiftByte(ReadReg408<is16, true>());
-            case 0x409: return ReadReg408<true, is16>();
-
-            case 0x418: return 0; // Timers are write-only
-            case 0x419: return 0; // Timers are write-only
-            case 0x41A: return 0; // Timers are write-only
-            case 0x41B: return 0; // Timers are write-only
-            case 0x41C: return 0; // Timers are write-only
-            case 0x41D: return 0; // Timers are write-only
-
-            case 0x41E: return shiftByte(ReadSCIEB());
-            case 0x41F: return ReadSCIEB();
-            case 0x420: return shiftByte(ReadSCIPD());
-            case 0x421: return ReadSCIPD();
-            case 0x422: return 0; // SCIRE is write-only
-            case 0x423: return 0; // SCIRE is write-only
-
-            case 0x424: return shiftByte(ReadSCILV(0));
-            case 0x425: return ReadSCILV(0);
-            case 0x426: return shiftByte(ReadSCILV(1));
-            case 0x427: return ReadSCILV(1);
-            case 0x428: return shiftByte(ReadSCILV(2));
-            case 0x429: return ReadSCILV(2);
-
-            case 0x42A: return shiftByte(ReadMCIEB());
-            case 0x42B: return ReadMCIEB();
-            case 0x42C: return shiftByte(ReadMCIPD());
-            case 0x42D: return ReadMCIPD();
-            case 0x42E: return 0; // MCIRE is write-only
-            case 0x42F: return 0; // MCIRE is write-only
-
-            default:
-                regsLog.debug("unhandled {}-bit SCSP register read via {} from {:03X}", sizeof(T) * 8,
-                              (fromM68K ? "M68K" : "SCU"), address);
-                break;
-            }
+        if constexpr (accessType == SCSPAccessType::M68kCode) {
+            regsLog.debug("M68K attempted to fetch instruction from SCSP register area at {:03X}", address);
+            return 0;
         }
+
+        /**/ if (AddressInRange<0x000, 0x3FF>(address)) {
+            const uint32 slotIndex = address >> 5;
+            auto &slot = m_slots[slotIndex];
+            return slot.ReadReg<T>(address & 0x1F);
+        } else if (AddressInRange<0x600, 0x67F>(address)) {
+            const uint32 gen = address >> 6;
+            const uint32 idx = (address & 0x3F) >> 1;
+            const uint16 stack = m_soundDataStack[gen][idx];
+            return read16(stack);
+        } else if (AddressInRange<0x700, 0x77F>(address)) {
+            return read16(m_dspCoeffs[(address & 0x7F) >> 1]);
+        } else if (AddressInRange<0x780, 0x7BF>(address)) {
+            return read16(m_dspAddrs[(address & 0x3F) >> 1]);
+        } else if (AddressInRange<0x800, 0xBFF>(address)) {
+            const uint32 index = (address & 0x3FF) >> 3u;
+            const uint32 subindex = (address & 0x7) >> 1;
+            return read16(m_dspProgram[index].u16[subindex]);
+        } else if (AddressInRange<0xC00, 0xEE3>(address)) {
+            // TODO: DSP internal buffer
+        }
+
+        switch (address) {
+        case 0x400: return 0; // MVOL, DAC18B, MEM4MB are write-only
+        case 0x401: return 0; // Only VER is readable, and it is 0
+        case 0x402: return 0; // RBP and RBL are write-only
+        case 0x403: return 0; // RBP and RBL are write-only
+
+        case 0x404: return shiftByte(ReadMIDIIn<is16, true>());
+        case 0x405: return ReadMIDIIn<true, is16>();
+        case 0x406: return 0; // MOBUF is write-only
+        case 0x407: return 0; // MOBUF is write-only
+
+        case 0x408: return shiftByte(ReadSlotStatus<is16, true>());
+        case 0x409: return ReadSlotStatus<true, is16>();
+
+        case 0x412: return 0; // DMEA is write-only
+        case 0x413: return 0; // DMEA is write-only
+        case 0x414: return 0; // DMEA and DRGA are write-only
+        case 0x415: return 0; // DMEA and DRGA are write-only
+        case 0x416: return shiftByte(ReadDMAStatus<is16, true>());
+        case 0x417: return ReadDMAStatus<true, is16>();
+
+        case 0x418: return 0; // Timers are write-only
+        case 0x419: return 0; // Timers are write-only
+        case 0x41A: return 0; // Timers are write-only
+        case 0x41B: return 0; // Timers are write-only
+        case 0x41C: return 0; // Timers are write-only
+        case 0x41D: return 0; // Timers are write-only
+
+        case 0x41E: return shiftByte(ReadSCIEB());
+        case 0x41F: return ReadSCIEB();
+        case 0x420: return shiftByte(ReadSCIPD());
+        case 0x421: return ReadSCIPD();
+        case 0x422: return 0; // SCIRE is write-only
+        case 0x423: return 0; // SCIRE is write-only
+
+        case 0x424: return shiftByte(ReadSCILV(0));
+        case 0x425: return ReadSCILV(0);
+        case 0x426: return shiftByte(ReadSCILV(1));
+        case 0x427: return ReadSCILV(1);
+        case 0x428: return shiftByte(ReadSCILV(2));
+        case 0x429: return ReadSCILV(2);
+
+        case 0x42A: return shiftByte(ReadMCIEB());
+        case 0x42B: return ReadMCIEB();
+        case 0x42C: return shiftByte(ReadMCIPD());
+        case 0x42D: return ReadMCIPD();
+        case 0x42E: return 0; // MCIRE is write-only
+        case 0x42F: return 0; // MCIRE is write-only
+
+        default:
+            regsLog.debug("unhandled {}-bit SCSP register read via {} from {:03X}", sizeof(T) * 8,
+                          accessTypeName<accessType>, address);
+            break;
+        }
+
         return 0;
     }
 
-    template <mem_primitive T, bool fromM68K>
+    template <mem_primitive T, SCSPAccessType accessType>
     void WriteReg(uint32 address, T value) {
         static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP register write size");
         static constexpr bool is16 = std::is_same_v<T, uint16>;
 
-        regsLog.trace("{}-bit SCSP register write via {} to {:03X} = {:X}", sizeof(T) * 8, (fromM68K ? "M68K" : "SCU"),
+        regsLog.trace("{}-bit SCSP register write via {} to {:03X} = {:X}", sizeof(T) * 8, accessTypeName<accessType>,
                       address, value);
 
         using namespace util;
@@ -259,7 +297,7 @@ private:
         /**/ if (AddressInRange<0x000, 0x3FF>(address)) {
             const uint32 slotIndex = address >> 5;
             auto &slot = m_slots[slotIndex];
-            slot.WriteReg<T, fromM68K>(address & 0x1F, value);
+            slot.WriteReg<T>(address & 0x1F, value);
 
             // Handle KYONEX
             if ((address & 0x1F) == 0 && bit::extract<12>(value16)) {
@@ -297,9 +335,23 @@ private:
         switch (address) {
         case 0x400: WriteReg400<is16, true>(value16); break;
         case 0x401: WriteReg400<true, is16>(value16); break;
+        case 0x402: WriteReg402<is16, true>(value16); break;
+        case 0x403: WriteReg402<true, is16>(value16); break;
 
-        case 0x408: WriteReg408<is16, true>(value16); break;
-        case 0x409: WriteReg408<true, is16>(value16); break;
+        case 0x404: // MIDI In registers are read-only
+        case 0x405: // MIDI In registers are read-only
+        case 0x406: WriteMIDIOut<is16, true>(value16); break;
+        case 0x407: WriteMIDIOut<true, is16>(value16); break;
+
+        case 0x408: WriteSlotStatus<is16, true>(value16); break;
+        case 0x409: WriteSlotStatus<true, is16>(value16); break;
+
+        case 0x412: WriteReg412<is16, true>(value16); break;
+        case 0x413: WriteReg412<true, is16>(value16); break;
+        case 0x414: WriteReg414<is16, true>(value16); break;
+        case 0x415: WriteReg414<true, is16>(value16); break;
+        case 0x416: WriteReg416<is16, true>(value16); break;
+        case 0x417: WriteReg416<true, is16>(value16); break;
 
         case 0x418: WriteTimer<is16, true>(0, value16); break;
         case 0x419: WriteTimer<true, is16>(0, value16); break;
@@ -331,13 +383,12 @@ private:
 
         default:
             regsLog.debug("unhandled {}-bit SCSP register write via {} to {:03X} = {:X}", sizeof(T) * 8,
-                          (fromM68K ? "M68K" : "SCU"), address, value);
+                          accessTypeName<accessType>, address, value);
             break;
         }
     }
 
     // --- Mixer Register ---
-
     // --- Sound Memory Configuration Register ---
 
     template <bool lowerByte, bool upperByte>
@@ -351,17 +402,35 @@ private:
         }
     }
 
+    // --- Slot Status Register ---
+
     template <bool lowerByte, bool upperByte>
-    uint16 ReadReg408() {
+    uint16 ReadSlotStatus() {
         uint16 value = 0;
         bit::deposit_into<7, 10>(value, m_slots[m_monitorSlotCall].sampleCount >> 12u);
         return value;
     }
 
     template <bool lowerByte, bool upperByte>
-    void WriteReg408(uint16 value) {
+    void WriteSlotStatus(uint16 value) {
         if constexpr (upperByte) {
             m_monitorSlotCall = bit::extract<11, 15>(value);
+        }
+    }
+
+    // --- MIDI Register ---
+
+    template <bool lowerByte, bool upperByte>
+    uint16 ReadMIDIIn() {
+        regsLog.debug("Read from MIDI IN is unimplemented");
+        return 0;
+    }
+
+    template <bool lowerByte, bool upperByte>
+    void WriteMIDIOut(uint16 value) {
+        if constexpr (lowerByte) {
+            regsLog.debug("Write to MIDI OUT is unimplemented - {:02X}", value);
+            // TODO: write bit::extract<0, 7>(value) to MIDI out buffer
         }
     }
 
@@ -451,6 +520,63 @@ private:
         }
     }
 
+    // --- DMA Transfer Register ---
+
+    template <bool lowerByte, bool upperByte>
+    void WriteReg412(uint16 value) {
+        if constexpr (lowerByte) {
+            bit::deposit_into<1, 7>(m_dmaMemAddress, bit::extract<1, 7>(value));
+        }
+        if constexpr (upperByte) {
+            bit::deposit_into<8, 15>(m_dmaMemAddress, bit::extract<8, 15>(value));
+        }
+    }
+
+    template <bool lowerByte, bool upperByte>
+    void WriteReg414(uint16 value) {
+        if constexpr (lowerByte) {
+            bit::deposit_into<1, 7>(m_dmaRegAddress, bit::extract<1, 7>(value));
+        }
+        if constexpr (upperByte) {
+            bit::deposit_into<8, 11>(m_dmaRegAddress, bit::extract<8, 11>(value));
+            bit::deposit_into<16, 19>(m_dmaMemAddress, bit::extract<12, 15>(value));
+        }
+    }
+
+    template <bool lowerByte, bool upperByte>
+    uint16 ReadDMAStatus() {
+        uint16 value = 0;
+        if constexpr (upperByte) {
+            bit::deposit_into<12>(value, m_dmaExec);
+            bit::deposit_into<13>(value, m_dmaXferToMem);
+            bit::deposit_into<14>(value, m_dmaGate);
+        }
+        return value;
+    }
+
+    template <bool lowerByte, bool upperByte>
+    void WriteReg416(uint16 value) {
+        if constexpr (lowerByte) {
+            bit::deposit_into<1, 7>(m_dmaXferLength, bit::extract<1, 7>(value));
+        }
+        if constexpr (upperByte) {
+            bit::deposit_into<8, 11>(m_dmaXferLength, bit::extract<8, 11>(value));
+            m_dmaExec |= bit::extract<12>(value);
+            m_dmaXferToMem = bit::extract<13>(value);
+            m_dmaGate = bit::extract<14>(value);
+        }
+    }
+
+    // --- DSP Registers ---
+
+    template <bool lowerByte, bool upperByte>
+    void WriteReg402(uint16 value) {
+        if constexpr (lowerByte) {
+            m_dspRingBufferLeadAddress = bit::extract<0, 6>(value);
+        }
+        util::SplitWriteWord<lowerByte, upperByte, 7, 8>(m_dspRingBufferLength, value);
+    }
+
     // -------------------------------------------------------------------------
     // Registers
 
@@ -496,7 +622,14 @@ private:
 
     // --- DMA Transfer Register ---
 
-    // TODO
+    uint32 m_dmaMemAddress; // (W) DMEA - DMA Memory Start Address
+    uint32 m_dmaRegAddress; // (W) DRGA - DMA Register Start Address
+    uint32 m_dmaXferLength; // (W) DTLG - DMA Transfer Length
+    bool m_dmaExec;         // (R/W) DEXE - DMA Execution
+    bool m_dmaXferToMem;    // (R/W) DDIR - DMA Transfer Direction (0=mem->reg, 1=reg->mem)
+    bool m_dmaGate;         // (R/W) DGATE - DMA Gate (0=mem/reg->dst, 1=zero->dest)
+
+    void ExecuteDMA(uint64 cycles);
 
     // --- Direct Sound Data Stack ---
 
@@ -507,6 +640,9 @@ private:
     std::array<uint16, 64> m_dspCoeffs;
     std::array<uint16, 32> m_dspAddrs;
     std::array<DSPInstr, 128> m_dspProgram;
+
+    uint32 m_dspRingBufferLeadAddress;
+    uint8 m_dspRingBufferLength;
 
     // -------------------------------------------------------------------------
     // Audio processing
