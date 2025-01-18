@@ -1,6 +1,9 @@
 #pragma once
 
 #include "scsp_defs.hpp"
+#include "scsp_dsp.hpp"
+#include "scsp_slot.hpp"
+#include "scsp_timer.hpp"
 
 #include <satemu/hw/hw_defs.hpp>
 
@@ -12,7 +15,7 @@
 #include <satemu/util/inline.hpp>
 
 #include <array>
-#include <iostream>
+#include <iosfwd>
 
 // -----------------------------------------------------------------------------
 // Forward declarations
@@ -351,8 +354,7 @@ private:
     template <bool lowerByte, bool upperByte>
     uint16 ReadReg408() {
         uint16 value = 0;
-        // TODO: implement
-        // bit::deposit_into<7, 10>(m_slots[m_monitorSlotCall].samplePosition >> 12u);
+        bit::deposit_into<7, 10>(value, m_slots[m_monitorSlotCall].sampleCount >> 12u);
         return value;
     }
 

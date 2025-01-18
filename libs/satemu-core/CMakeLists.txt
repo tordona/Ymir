@@ -15,6 +15,9 @@ add_library(satemu-core
     include/satemu/hw/scsp/envelope_generator.hpp
     include/satemu/hw/scsp/scsp.hpp
     include/satemu/hw/scsp/scsp_defs.hpp
+    include/satemu/hw/scsp/scsp_dsp.hpp
+    include/satemu/hw/scsp/scsp_slot.hpp
+    include/satemu/hw/scsp/scsp_timer.hpp
 
     include/satemu/hw/scu/scu.hpp
     include/satemu/hw/scu/scu_defs.hpp
@@ -77,6 +80,8 @@ add_library(satemu-core
     src/satemu/hw/m68k/m68k_decode.cpp
     
     src/satemu/hw/scsp/scsp.cpp
+    src/satemu/hw/scsp/scsp_dsp.cpp
+    src/satemu/hw/scsp/scsp_slot.cpp
     
     src/satemu/hw/scu/scu.cpp
 
@@ -127,6 +132,7 @@ target_precompile_headers(satemu-core
         <deque>
         <filesystem>
         <fstream>
+        <iosfwd>
         <iostream>
         <limits>
         <memory>

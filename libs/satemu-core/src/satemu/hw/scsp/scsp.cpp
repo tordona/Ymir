@@ -175,7 +175,7 @@ void SCSP::ProcessSample() {
     for (auto &slot : m_slots) {
         slot.Step();
     }
-    // TODO: process sample
+    // TODO: run DSP, mix samples, etc.
 
     // Trigger sample interrupt
     SetInterrupt(kIntrSample, true);
