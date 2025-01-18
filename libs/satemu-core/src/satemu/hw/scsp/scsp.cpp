@@ -53,9 +53,10 @@ void SCSP::Reset(bool hard) {
         sds.fill(0);
     }
 
-    m_dspCoeffs.fill(0);
-    m_dspAddrs.fill(0);
     m_dspProgram.fill({.u64 = 0});
+    m_dspCoeffs.fill(0);
+    m_dspTemp.fill({.u32 = 0});
+    m_dspAddrs.fill(0);
 
     m_dspRingBufferLeadAddress = 0;
     m_dspRingBufferLength = 0;

@@ -205,7 +205,11 @@ private:
             const uint32 index = (address & 0x3FF) >> 3u;
             const uint32 subindex = (address & 0x7) >> 1;
             return read16(m_dspProgram[index].u16[subindex]);
-        } else if (AddressInRange<0xC00, 0xEE3>(address)) {
+        } else if (AddressInRange<0xC00, 0xDFF>(address)) {
+            const uint32 offset = (address >> 1) & 1;
+            const uint32 index = address >> 2;
+            return read16(m_dspTemp[index].u16[offset]);
+        } else if (AddressInRange<0xD00, 0xEE3>(address)) {
             // TODO: DSP internal buffer
         }
 
@@ -305,9 +309,9 @@ private:
                     const bool prevKeyOn = slot.keyOn;
                     slot.TriggerKeyOn();
                     if (prevKeyOn != slot.keyOn) {
-                        regsLog.debug("Slot {} key {}, start address {:X}, loop {:X}-{:X}", i,
+                        regsLog.debug("Slot {} key {}, start address {:X}, loop {:X}-{:X}, octave {}, FNS 0x{:03X}", i,
                                       (slot.keyOn ? "ON" : "OFF"), slot.startAddress, slot.loopStartAddress,
-                                      slot.loopEndAddress);
+                                      slot.loopEndAddress, slot.octave, slot.freqNumSwitch);
                     }
                     i++;
                 }
@@ -322,14 +326,22 @@ private:
         } else if (AddressInRange<0x780, 0x7BF>(address)) {
             return write16(m_dspAddrs[(address & 0x3F) >> 1], value16);
         } else if (AddressInRange<0x7C0, 0x7FF>(address)) {
-            // Some games try to write to this empty area
+            // Some games and even the IPL ROM try to write to this empty area
+            regsLog.trace("Unexpected write to {:03X} = {:X}", address, value);
             return;
         } else if (AddressInRange<0x800, 0xBFF>(address)) {
             const uint32 index = (address & 0x3FF) >> 3u;
             const uint32 subindex = (address & 0x7) >> 1;
             return write16(m_dspProgram[index].u16[subindex], value16);
-        } else if (AddressInRange<0xC00, 0xEE3>(address)) {
-            // TODO: DSP internal buffer
+        } else if (AddressInRange<0xC00, 0xDFF>(address)) {
+            const uint32 offset = (address >> 1) & 1;
+            const uint32 index = address >> 2;
+            if (offset == 0) {
+                value16 &= 0x00FF;
+            }
+            return write16(m_dspTemp[index].u16[offset], value16);
+        } else if (AddressInRange<0xD00, 0xEE3>(address)) {
+            regsLog.debug("Unimplemented write to DSP area at {:03X} = {:X}", address, value);
         }
 
         switch (address) {
@@ -422,14 +434,14 @@ private:
 
     template <bool lowerByte, bool upperByte>
     uint16 ReadMIDIIn() {
-        regsLog.debug("Read from MIDI IN is unimplemented");
+        regsLog.trace("Read from MIDI IN is unimplemented");
         return 0;
     }
 
     template <bool lowerByte, bool upperByte>
     void WriteMIDIOut(uint16 value) {
         if constexpr (lowerByte) {
-            regsLog.debug("Write to MIDI OUT is unimplemented - {:02X}", value);
+            regsLog.trace("Write to MIDI OUT is unimplemented - {:02X}", value);
             // TODO: write bit::extract<0, 7>(value) to MIDI out buffer
         }
     }
@@ -637,9 +649,15 @@ private:
 
     // --- DSP Registers ---
 
-    std::array<uint16, 64> m_dspCoeffs;
+    union DSPValue {
+        uint32 u32;
+        uint16 u16[2];
+    };
+
+    std::array<DSPInstr, 128> m_dspProgram; // (128x 60-bit) DSP program RAM
+    std::array<uint16, 64> m_dspCoeffs;     // (64x 13-bit) DSP coefficient data RAM
+    std::array<DSPValue, 128> m_dspTemp;    // (128x 24-bit) DSP temporary (universal) RAM
     std::array<uint16, 32> m_dspAddrs;
-    std::array<DSPInstr, 128> m_dspProgram;
 
     uint32 m_dspRingBufferLeadAddress;
     uint8 m_dspRingBufferLength;
