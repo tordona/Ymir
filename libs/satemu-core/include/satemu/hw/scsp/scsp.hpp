@@ -298,8 +298,8 @@ private:
         static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP register write size");
         static constexpr bool is16 = std::is_same_v<T, uint16>;
 
-        regsLog.trace("{}-bit SCSP register write via {} bus to {:03X} = {:X}", sizeof(T) * 8, accessTypeName<accessType>,
-                      address, value);
+        regsLog.trace("{}-bit SCSP register write via {} bus to {:03X} = {:X}", sizeof(T) * 8,
+                      accessTypeName<accessType>, address, value);
 
         using namespace util;
 
@@ -636,6 +636,7 @@ private:
             m_dmaExec |= bit::extract<12>(value);
             m_dmaXferToMem = bit::extract<13>(value);
             m_dmaGate = bit::extract<14>(value);
+            ExecuteDMA();
         }
     }
 
@@ -701,7 +702,7 @@ private:
     uint16 m_dmaRegAddress; // (W) DRGA - DMA Register Start Address
     uint16 m_dmaXferLength; // (W) DTLG - DMA Transfer Length
 
-    void ExecuteDMA(uint64 cycles);
+    void ExecuteDMA();
 
     // --- Direct Sound Data Stack ---
 

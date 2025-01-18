@@ -122,8 +122,8 @@ struct EnvelopeGenerator {
         currLevel = 0x3FF;
     }
 
-    enum class State { Attack, Decay1, Decay2, Release };
-    State state;
+    // -------------------------------------------------------------------------
+    // Registers
 
     // Value ranges are from minimum to maximum.
     uint16 attackRate;  // (R/W) AR  - 0x00 to 0x1F
@@ -145,6 +145,12 @@ struct EnvelopeGenerator {
                         //          attack state is interrupted if too slow or held if too fast
                         //          if the state change happens below DL, decay 2 state is never reached
                         //   false: state changes are dictated by rates only
+
+    // -------------------------------------------------------------------------
+    // State
+
+    enum class State { Attack, Decay1, Decay2, Release };
+    State state;
 
     // Current envelope level.
     // Ranges from 0x3FF (minimum) to 0x000 (maximum) - 10 bits.
