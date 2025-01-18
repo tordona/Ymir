@@ -204,6 +204,7 @@ void SCSP::ExecuteDMA(uint64 cycles) {
         m_dmaXferLength--;
         if (m_dmaXferLength == 0) {
             m_dmaExec = false;
+            SetInterrupt(kIntrDMATransferEnd, true);
         }
         cycles--;
     }
