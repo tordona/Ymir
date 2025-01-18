@@ -13,9 +13,9 @@ SCSP::SCSP(scu::SCU &scu)
 }
 
 void SCSP::Reset(bool hard) {
-    m_m68k.Reset(true);
     m_WRAM.fill(0);
 
+    m_m68k.Reset(true);
     m_m68kEnabled = false;
 
     m_m68kCycles = 0;
@@ -42,21 +42,25 @@ void SCSP::Reset(bool hard) {
     m_m68kPendingInterrupts = 0;
     m_m68kInterruptLevels.fill(0);
 
-    m_dmaMemAddress = 0;
-    m_dmaRegAddress = 0;
-    m_dmaXferLength = 0;
     m_dmaExec = false;
     m_dmaXferToMem = false;
     m_dmaGate = false;
+    m_dmaMemAddress = 0;
+    m_dmaRegAddress = 0;
+    m_dmaXferLength = 0;
 
     for (auto &sds : m_soundDataStack) {
         sds.fill(0);
     }
 
     m_dspProgram.fill({.u64 = 0});
+    m_dspTemp.fill(0);
+    m_dspSoundMem.fill(0);
     m_dspCoeffs.fill(0);
-    m_dspTemp.fill({.u32 = 0});
     m_dspAddrs.fill(0);
+    m_dspMixStack.fill(0);
+    m_dspEffectOut.fill(0);
+    m_dspAudioIn.fill(0);
 
     m_dspRingBufferLeadAddress = 0;
     m_dspRingBufferLength = 0;
