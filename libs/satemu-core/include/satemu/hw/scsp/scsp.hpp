@@ -160,7 +160,7 @@ private:
         static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP register read size");
         static constexpr bool is16 = std::is_same_v<T, uint16>;
 
-        regsLog.trace("{}-bit SCSP register read via {} from {:03X}", sizeof(T) * 8, accessTypeName<accessType>,
+        regsLog.trace("{}-bit SCSP register read via {} bus from {:03X}", sizeof(T) * 8, accessTypeName<accessType>,
                       address);
 
         using namespace util;
@@ -285,7 +285,7 @@ private:
         case 0x42F: return 0; // MCIRE is write-only
 
         default:
-            regsLog.debug("unhandled {}-bit SCSP register read via {} from {:03X}", sizeof(T) * 8,
+            regsLog.debug("unhandled {}-bit SCSP register read via {} bus from {:03X}", sizeof(T) * 8,
                           accessTypeName<accessType>, address);
             break;
         }
@@ -298,7 +298,7 @@ private:
         static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP register write size");
         static constexpr bool is16 = std::is_same_v<T, uint16>;
 
-        regsLog.trace("{}-bit SCSP register write via {} to {:03X} = {:X}", sizeof(T) * 8, accessTypeName<accessType>,
+        regsLog.trace("{}-bit SCSP register write via {} bus to {:03X} = {:X}", sizeof(T) * 8, accessTypeName<accessType>,
                       address, value);
 
         using namespace util;
@@ -454,7 +454,7 @@ private:
         case 0x42F: WriteMCIRE<true, is16>(value16); break;
 
         default:
-            regsLog.debug("unhandled {}-bit SCSP register write via {} to {:03X} = {:X}", sizeof(T) * 8,
+            regsLog.debug("unhandled {}-bit SCSP register write via {} bus to {:03X} = {:X}", sizeof(T) * 8,
                           accessTypeName<accessType>, address, value);
             break;
         }
