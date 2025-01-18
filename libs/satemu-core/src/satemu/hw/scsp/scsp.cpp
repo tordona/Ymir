@@ -82,6 +82,10 @@ void SCSP::Advance(uint64 cycles) {
         m_sampleCounter++;
         ProcessSample();
     }
+
+    // Send interrupt signals
+    UpdateM68KInterrupts();
+    UpdateSCUInterrupts();
 }
 
 void SCSP::DumpWRAM(std::ostream &out) {
@@ -224,10 +228,6 @@ void SCSP::ProcessSample() {
             SetInterrupt(kIntrTimerA + i, true);
         }
     }
-
-    // Send interrupt signals
-    UpdateM68KInterrupts();
-    UpdateSCUInterrupts();
 }
 
 ExceptionVector SCSP::AcknowledgeInterrupt(uint8 level) {
