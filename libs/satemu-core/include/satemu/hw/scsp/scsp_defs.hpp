@@ -6,6 +6,7 @@
 #include "envelope_generator.hpp"
 
 #include <satemu/util/bit_ops.hpp>
+#include <satemu/util/data_ops.hpp>
 
 #include <array>
 
@@ -170,32 +171,6 @@ struct Slot {
         }
     }
 
-    template <bool lowerByte, bool upperByte, uint32 lb, uint32 ub>
-    void SplitRead(uint16 &dstValue, uint16 srcValue) {
-        static constexpr uint32 dstlb = lowerByte ? lb : 8;
-        static constexpr uint32 dstub = upperByte ? ub : 7;
-
-        static constexpr uint32 srclb = dstlb - lb;
-        static constexpr uint32 srcub = dstub - lb;
-
-        bit::deposit_into<dstlb, dstub>(dstValue, bit::extract<srclb, srcub>(srcValue));
-    }
-
-    template <bool lowerByte, bool upperByte, uint32 lb, uint32 ub, std::integral TDst>
-    void SplitWrite(TDst &dstValue, uint16 srcValue) {
-        if constexpr (lowerByte && upperByte) {
-            dstValue = bit::extract<lb, ub>(srcValue);
-        } else {
-            static constexpr uint32 srclb = lowerByte ? lb : 8;
-            static constexpr uint32 srcub = upperByte ? ub : 7;
-
-            static constexpr uint32 dstlb = srclb - lb;
-            static constexpr uint32 dstub = srcub - lb;
-
-            bit::deposit_into<dstlb, dstub>(dstValue, bit::extract<srclb, srcub>(srcValue));
-        }
-    }
-
     template <bool lowerByte, bool upperByte>
     uint16 ReadReg00() {
         uint16 value = 0;
@@ -205,7 +180,7 @@ struct Slot {
             bit::deposit_into<5, 6>(value, static_cast<uint16>(loopControl));
         }
 
-        SplitRead<lowerByte, upperByte, 7, 8>(value, static_cast<uint16>(soundSource));
+        util::SplitReadWord<lowerByte, upperByte, 7, 8>(value, static_cast<uint16>(soundSource));
 
         if constexpr (upperByte) {
             bit::deposit_into<9, 10>(value, bit::extract<14, 15>(sampleXOR));
@@ -223,7 +198,7 @@ struct Slot {
         }
 
         auto soundSourceValue = static_cast<uint16>(soundSource);
-        SplitWrite<lowerByte, upperByte, 7, 8>(soundSourceValue, value);
+        util::SplitWriteWord<lowerByte, upperByte, 7, 8>(soundSourceValue, value);
         soundSource = static_cast<SoundSource>(soundSourceValue);
 
         if constexpr (upperByte) {
@@ -275,7 +250,7 @@ struct Slot {
             bit::deposit_into<5>(value, envGen.egHold);
         }
 
-        SplitRead<lowerByte, upperByte, 6, 10>(value, envGen.decay1Rate);
+        util::SplitReadWord<lowerByte, upperByte, 6, 10>(value, envGen.decay1Rate);
 
         if constexpr (upperByte) {
             bit::deposit_into<11, 15>(value, envGen.decay2Rate);
@@ -290,7 +265,7 @@ struct Slot {
             envGen.egHold = bit::extract<5>(value);
         }
 
-        SplitWrite<lowerByte, upperByte, 6, 10>(envGen.decay1Rate, value);
+        util::SplitWriteWord<lowerByte, upperByte, 6, 10>(envGen.decay1Rate, value);
 
         if constexpr (upperByte) {
             envGen.decay2Rate = bit::extract<11, 15>(value);
@@ -304,7 +279,7 @@ struct Slot {
             bit::deposit_into<0, 4>(value, envGen.releaseRate);
         }
 
-        SplitRead<lowerByte, upperByte, 5, 9>(value, envGen.decayLevel);
+        util::SplitReadWord<lowerByte, upperByte, 5, 9>(value, envGen.decayLevel);
 
         if constexpr (upperByte) {
             bit::deposit_into<10, 13>(value, envGen.keyRateScaling);
@@ -319,7 +294,7 @@ struct Slot {
             envGen.releaseRate = bit::extract<0, 4>(value);
         }
 
-        SplitWrite<lowerByte, upperByte, 5, 9>(envGen.decayLevel, value);
+        util::SplitWriteWord<lowerByte, upperByte, 5, 9>(envGen.decayLevel, value);
 
         if constexpr (upperByte) {
             envGen.keyRateScaling = bit::extract<10, 13>(value);
@@ -360,7 +335,7 @@ struct Slot {
             bit::deposit_into<0, 5>(value, modYSelect);
         }
 
-        SplitRead<lowerByte, upperByte, 6, 10>(value, modXSelect);
+        util::SplitReadWord<lowerByte, upperByte, 6, 10>(value, modXSelect);
 
         if constexpr (upperByte) {
             bit::deposit_into<11, 15>(value, modLevel);
@@ -374,7 +349,7 @@ struct Slot {
             modYSelect = bit::extract<0, 5>(value);
         }
 
-        SplitWrite<lowerByte, upperByte, 6, 10>(modXSelect, value);
+        util::SplitWriteWord<lowerByte, upperByte, 6, 10>(modXSelect, value);
 
         if constexpr (upperByte) {
             modLevel = bit::extract<11, 15>(value);
@@ -385,7 +360,7 @@ struct Slot {
     uint16 ReadReg10() {
         uint16 value = 0;
 
-        SplitRead<lowerByte, upperByte, 0, 9>(value, freqNumSwitch);
+        util::SplitReadWord<lowerByte, upperByte, 0, 9>(value, freqNumSwitch);
 
         if constexpr (upperByte) {
             bit::deposit_into<11, 14>(value, octave);
@@ -395,7 +370,7 @@ struct Slot {
 
     template <bool lowerByte, bool upperByte>
     void WriteReg10(uint16 value) {
-        SplitWrite<lowerByte, upperByte, 0, 9>(freqNumSwitch, value);
+        util::SplitWriteWord<lowerByte, upperByte, 0, 9>(freqNumSwitch, value);
 
         if constexpr (upperByte) {
             octave = bit::extract<11, 14>(value);

@@ -2,6 +2,7 @@
 
 #include <satemu/core_types.hpp>
 
+#include "bit_ops.hpp"
 #include "inline.hpp"
 
 #include <concepts>
@@ -57,6 +58,32 @@ FORCE_INLINE T DecimalToInt(std::span<uint8> numericText) {
         result = result * 10 + (static_cast<T>(ch) - '0');
     }
     return result;
+}
+
+template <bool lowerByte, bool upperByte, uint32 lb, uint32 ub, std::integral TSrc>
+FORCE_INLINE void SplitReadWord(uint16 &dstValue, TSrc srcValue) {
+    static constexpr uint32 dstlb = lowerByte ? lb : 8;
+    static constexpr uint32 dstub = upperByte ? ub : 7;
+
+    static constexpr uint32 srclb = dstlb - lb;
+    static constexpr uint32 srcub = dstub - lb;
+
+    bit::deposit_into<dstlb, dstub>(dstValue, bit::extract<srclb, srcub>(srcValue));
+}
+
+template <bool lowerByte, bool upperByte, uint32 lb, uint32 ub, std::integral TDst>
+FORCE_INLINE void SplitWriteWord(TDst &dstValue, uint16 srcValue) {
+    if constexpr (lowerByte && upperByte) {
+        dstValue = bit::extract<lb, ub>(srcValue);
+    } else {
+        static constexpr uint32 srclb = lowerByte ? lb : 8;
+        static constexpr uint32 srcub = upperByte ? ub : 7;
+
+        static constexpr uint32 dstlb = srclb - lb;
+        static constexpr uint32 dstub = srcub - lb;
+
+        bit::deposit_into<dstlb, dstub>(dstValue, bit::extract<srclb, srcub>(srcValue));
+    }
 }
 
 } // namespace util

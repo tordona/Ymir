@@ -376,9 +376,7 @@ private:
 
     template <bool lowerByte, bool upperByte>
     void WriteSCIEB(uint16 value) {
-        static constexpr uint32 lb = lowerByte ? 0 : 8;
-        static constexpr uint32 ub = upperByte ? 10 : 7;
-        bit::deposit_into<lb, ub>(m_m68kEnabledInterrupts, bit::extract<lb, ub>(value));
+        util::SplitWriteWord<lowerByte, upperByte, 0, 10>(m_m68kEnabledInterrupts, value);
         UpdateM68KInterrupts();
     }
 
@@ -408,9 +406,7 @@ private:
 
     template <bool lowerByte, bool upperByte>
     void WriteMCIEB(uint16 value) {
-        static constexpr uint32 lb = lowerByte ? 0 : 8;
-        static constexpr uint32 ub = upperByte ? 10 : 7;
-        bit::deposit_into<lb, ub>(m_scuEnabledInterrupts, bit::extract<lb, ub>(value));
+        util::SplitWriteWord<lowerByte, upperByte, 0, 10>(m_scuEnabledInterrupts, value);
         UpdateSCUInterrupts();
     }
 
