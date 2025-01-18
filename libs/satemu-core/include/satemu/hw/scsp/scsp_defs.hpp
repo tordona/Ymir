@@ -53,7 +53,7 @@ struct Slot {
 
         envGen.Reset();
 
-        modulationLevel = 0;
+        modLevel = 0;
         modXSelect = 0;
         modYSelect = 0;
         stackWriteInhibit = false;
@@ -65,7 +65,7 @@ struct Slot {
         freqNumSwitch = 0;
 
         lfoReset = false;
-        lfof = 0;
+        lfofRaw = 0;
         lfoFreq = s_lfoFreqTbl[0];
         ampLFOSens = 0;
         ampLFOWaveform = Waveform::Saw;
@@ -106,12 +106,12 @@ struct Slot {
         switch (address) {
         case 0x00: return shiftByte(ReadReg00<is16, true>());
         case 0x01: return ReadReg00<true, is16>();
-        case 0x02: return shiftByte(ReadReg02<is16, true>());
-        case 0x03: return ReadReg02<true, is16>();
-        case 0x04: return shiftByte(ReadReg04<is16, true>());
-        case 0x05: return ReadReg04<true, is16>();
-        case 0x06: return shiftByte(ReadReg06<is16, true>());
-        case 0x07: return ReadReg06<true, is16>();
+        case 0x02: return shiftByte(ReadReg02());
+        case 0x03: return ReadReg02();
+        case 0x04: return shiftByte(ReadReg04());
+        case 0x05: return ReadReg04();
+        case 0x06: return shiftByte(ReadReg06());
+        case 0x07: return ReadReg06();
         case 0x08: return shiftByte(ReadReg08<is16, true>());
         case 0x09: return ReadReg08<true, is16>();
         case 0x0A: return shiftByte(ReadReg0A<is16, true>());
@@ -170,136 +170,312 @@ struct Slot {
         }
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte, uint32 lb, uint32 ub>
+    void SplitRead(uint16 &dstValue, uint16 srcValue) {
+        static constexpr uint32 dstlb = lowerByte ? lb : 8;
+        static constexpr uint32 dstub = upperByte ? ub : 7;
+
+        static constexpr uint32 srclb = dstlb - lb;
+        static constexpr uint32 srcub = dstub - lb;
+
+        bit::deposit_into<dstlb, dstub>(dstValue, bit::extract<srclb, srcub>(srcValue));
+    }
+
+    template <bool lowerByte, bool upperByte, uint32 lb, uint32 ub, std::integral TDst>
+    void SplitWrite(TDst &dstValue, uint16 srcValue) {
+        if constexpr (lowerByte && upperByte) {
+            dstValue = bit::extract<lb, ub>(srcValue);
+        } else {
+            static constexpr uint32 srclb = lowerByte ? lb : 8;
+            static constexpr uint32 srcub = upperByte ? ub : 7;
+
+            static constexpr uint32 dstlb = srclb - lb;
+            static constexpr uint32 dstub = srcub - lb;
+
+            bit::deposit_into<dstlb, dstub>(dstValue, bit::extract<srclb, srcub>(srcValue));
+        }
+    }
+
+    template <bool lowerByte, bool upperByte>
     uint16 ReadReg00() {
-        // TODO: implement
-        return 0;
+        uint16 value = 0;
+        if constexpr (lowerByte) {
+            bit::deposit_into<0, 3>(value, bit::extract<16, 19>(startAddress));
+            bit::deposit_into<4>(value, pcm8Bit);
+            bit::deposit_into<5, 6>(value, static_cast<uint16>(loopControl));
+        }
+
+        SplitRead<lowerByte, upperByte, 7, 8>(value, static_cast<uint16>(soundSource));
+
+        if constexpr (upperByte) {
+            bit::deposit_into<9, 10>(value, bit::extract<14, 15>(sampleXOR));
+            bit::deposit_into<11>(value, keyOnBit);
+        }
+        return value;
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteReg00(uint16 value) {
-        // TODO: implement
+        if constexpr (lowerByte) {
+            bit::deposit_into<16, 19>(startAddress, bit::extract<0, 3>(value));
+            pcm8Bit = bit::extract<4>(value);
+            loopControl = static_cast<LoopControl>(bit::extract<5, 6>(value));
+        }
+
+        auto soundSourceValue = static_cast<uint16>(soundSource);
+        SplitWrite<lowerByte, upperByte, 7, 8>(soundSourceValue, value);
+        soundSource = static_cast<SoundSource>(soundSourceValue);
+
+        if constexpr (upperByte) {
+            static constexpr uint16 kSampleXORTable[] = {0x0000, 0x7FFF, 0x8000, 0xFFFF};
+            sampleXOR = kSampleXORTable[bit::extract<9, 10>(value)];
+            keyOnBit = bit::extract<11>(value);
+            // NOTE: bit 12 is KYONEX, handled in SCSP::WriteReg
+        }
     }
 
-    template <bool lowerHalf, bool upperHalf>
     uint16 ReadReg02() {
-        // TODO: implement
-        return 0;
+        return bit::extract<0, 15>(startAddress);
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteReg02(uint16 value) {
-        // TODO: implement
+        static constexpr uint32 lb = lowerByte ? 0 : 8;
+        static constexpr uint32 ub = upperByte ? 15 : 7;
+        bit::deposit_into<lb, ub>(startAddress, bit::extract<lb, ub>(value));
     }
 
-    template <bool lowerHalf, bool upperHalf>
     uint16 ReadReg04() {
-        // TODO: implement
-        return 0;
+        return loopStartAddress;
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteReg04(uint16 value) {
-        // TODO: implement
+        static constexpr uint32 lb = lowerByte ? 0 : 8;
+        static constexpr uint32 ub = upperByte ? 15 : 7;
+        bit::deposit_into<lb, ub>(loopStartAddress, bit::extract<lb, ub>(value));
     }
 
-    template <bool lowerHalf, bool upperHalf>
     uint16 ReadReg06() {
-        // TODO: implement
-        return 0;
+        return loopEndAddress;
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteReg06(uint16 value) {
-        // TODO: implement
+        static constexpr uint32 lb = lowerByte ? 0 : 8;
+        static constexpr uint32 ub = upperByte ? 15 : 7;
+        bit::deposit_into<lb, ub>(loopEndAddress, bit::extract<lb, ub>(value));
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     uint16 ReadReg08() {
-        // TODO: implement
-        return 0;
+        uint16 value = 0;
+        if constexpr (lowerByte) {
+            bit::deposit_into<0, 4>(value, envGen.attackRate);
+            bit::deposit_into<5>(value, envGen.egHold);
+        }
+
+        SplitRead<lowerByte, upperByte, 6, 10>(value, envGen.decay1Rate);
+
+        if constexpr (upperByte) {
+            bit::deposit_into<11, 15>(value, envGen.decay2Rate);
+        }
+        return value;
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteReg08(uint16 value) {
-        // TODO: implement
+        if constexpr (lowerByte) {
+            envGen.attackRate = bit::extract<0, 4>(value);
+            envGen.egHold = bit::extract<5>(value);
+        }
+
+        SplitWrite<lowerByte, upperByte, 6, 10>(envGen.decay1Rate, value);
+
+        if constexpr (upperByte) {
+            envGen.decay2Rate = bit::extract<11, 15>(value);
+        }
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     uint16 ReadReg0A() {
-        // TODO: implement
-        return 0;
+        uint16 value = 0;
+        if constexpr (lowerByte) {
+            bit::deposit_into<0, 4>(value, envGen.releaseRate);
+        }
+
+        SplitRead<lowerByte, upperByte, 5, 9>(value, envGen.decayLevel);
+
+        if constexpr (upperByte) {
+            bit::deposit_into<10, 13>(value, envGen.keyRateScaling);
+            bit::deposit_into<14>(value, envGen.loopStartLink);
+        }
+        return value;
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteReg0A(uint16 value) {
-        // TODO: implement
+        if constexpr (lowerByte) {
+            envGen.releaseRate = bit::extract<0, 4>(value);
+        }
+
+        SplitWrite<lowerByte, upperByte, 5, 9>(envGen.decayLevel, value);
+
+        if constexpr (upperByte) {
+            envGen.keyRateScaling = bit::extract<10, 13>(value);
+            envGen.loopStartLink = bit::extract<14>(value);
+        }
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     uint16 ReadReg0C() {
-        // TODO: implement
+        uint16 value = 0;
+        if constexpr (lowerByte) {
+            bit::deposit_into<0, 7>(value, totalLevel);
+        }
+
+        if constexpr (upperByte) {
+            bit::deposit_into<8>(value, soundDirect);
+            bit::deposit_into<9>(value, stackWriteInhibit);
+        }
         return 0;
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteReg0C(uint16 value) {
-        // TODO: implement
+        if constexpr (lowerByte) {
+            totalLevel = bit::extract<0, 7>(value);
+        }
+
+        if constexpr (upperByte) {
+            soundDirect = bit::extract<8>(value);
+            stackWriteInhibit = bit::extract<9>(value);
+        }
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     uint16 ReadReg0E() {
-        // TODO: implement
-        return 0;
+        uint16 value = 0;
+        if constexpr (lowerByte) {
+            bit::deposit_into<0, 5>(value, modYSelect);
+        }
+
+        SplitRead<lowerByte, upperByte, 6, 10>(value, modXSelect);
+
+        if constexpr (upperByte) {
+            bit::deposit_into<11, 15>(value, modLevel);
+        }
+        return value;
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteReg0E(uint16 value) {
-        // TODO: implement
+        if constexpr (lowerByte) {
+            modYSelect = bit::extract<0, 5>(value);
+        }
+
+        SplitWrite<lowerByte, upperByte, 6, 10>(modXSelect, value);
+
+        if constexpr (upperByte) {
+            modLevel = bit::extract<11, 15>(value);
+        }
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     uint16 ReadReg10() {
-        // TODO: implement
-        return 0;
+        uint16 value = 0;
+
+        SplitRead<lowerByte, upperByte, 0, 9>(value, freqNumSwitch);
+
+        if constexpr (upperByte) {
+            bit::deposit_into<11, 14>(value, octave);
+        }
+        return value;
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteReg10(uint16 value) {
-        // TODO: implement
+        SplitWrite<lowerByte, upperByte, 0, 9>(freqNumSwitch, value);
+
+        if constexpr (upperByte) {
+            octave = bit::extract<11, 14>(value);
+        }
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     uint16 ReadReg12() {
-        // TODO: implement
-        return 0;
+        uint16 value = 0;
+        if constexpr (lowerByte) {
+            bit::deposit_into<0, 2>(value, ampLFOSens);
+            bit::deposit_into<3, 4>(value, static_cast<uint16>(ampLFOWaveform));
+            bit::deposit_into<5, 7>(value, pitchLFOSens);
+        }
+
+        if constexpr (upperByte) {
+            bit::deposit_into<8, 9>(value, static_cast<uint16>(pitchLFOWaveform));
+            bit::deposit_into<10, 14>(value, lfofRaw);
+            bit::deposit_into<15>(value, lfoReset);
+        }
+        return value;
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteReg12(uint16 value) {
-        // TODO: implement
+        if constexpr (lowerByte) {
+            ampLFOSens = bit::extract<0, 2>(value);
+            ampLFOWaveform = static_cast<Waveform>(bit::extract<3, 4>(value));
+            pitchLFOSens = bit::extract<5, 7>(value);
+        }
+
+        if constexpr (upperByte) {
+            pitchLFOWaveform = static_cast<Waveform>(bit::extract<8, 9>(value));
+            lfofRaw = bit::extract<10, 14>(value);
+            lfoReset = bit::extract<15>(value);
+        }
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     uint16 ReadReg14() {
-        // TODO: implement
-        return 0;
+        uint16 value = 0;
+        if constexpr (lowerByte) {
+            bit::deposit_into<0, 2>(value, inputMixingLevel);
+            bit::deposit_into<3, 6>(value, inputSelect);
+        }
+        return value;
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteReg14(uint16 value) {
-        // TODO: implement
+        if constexpr (lowerByte) {
+            inputMixingLevel = bit::extract<0, 2>(value);
+            inputSelect = bit::extract<3, 6>(value);
+        }
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     uint16 ReadReg16() {
-        // TODO: implement
-        return 0;
+        uint16 value = 0;
+        if constexpr (lowerByte) {
+            bit::deposit_into<0, 4>(value, effectPan);
+            bit::deposit_into<5, 7>(value, effectSendLevel);
+        }
+        if constexpr (upperByte) {
+            bit::deposit_into<8, 12>(value, directPan);
+            bit::deposit_into<13, 15>(value, directSendLevel);
+        }
+        return value;
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteReg16(uint16 value) {
-        // TODO: implement
+        if constexpr (lowerByte) {
+            effectPan = bit::extract<0, 4>(value);
+            effectSendLevel = bit::extract<5, 7>(value);
+        }
+        if constexpr (upperByte) {
+            directPan = bit::extract<8, 12>(value);
+            directSendLevel = bit::extract<13, 15>(value);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -307,11 +483,11 @@ struct Slot {
 
     // --- Loop Control Register ---
 
-    uint32 startAddress;     // (R/W) SA
-    uint32 loopStartAddress; // (R/W) LSA
-    uint32 loopEndAddress;   // (R/W) LEA
-    bool pcm8Bit;            // (R/W) PCM8B
-    bool keyOnBit;           // (R/W) KYONB
+    uint32 startAddress;     // (R/W) SA - Start Address
+    uint32 loopStartAddress; // (R/W) LSA - Loop Start Address
+    uint32 loopEndAddress;   // (R/W) LEA - Loop End Address
+    bool pcm8Bit;            // (R/W) PCM8B - Wave format (true=8-bit PCM, false=16-bit PCM)
+    bool keyOnBit;           // (R/W) KYONB - Key On Bit
 
     // Loop control specifies how the loop segment is played if the sound is held continuously.
     // All modes play the segment between SA and LSA forwards.
@@ -342,12 +518,10 @@ struct Slot {
     //   bit 0 flips every bit other than the sign bit
     //   bit 1 flips the sign bit
     // This is useful for supporting samples in different formats (e.g. unsigned)
-    uint16 sampleXOR; // (R/W) SBCTL0/1
     // Implementation notes:
     //   SBCTL0: 0x7FFF
     //   SBCTL1: 0x8000
-    // Make a simple LUT: 0x0000, 0x7FFF, 0x8000, 0xFFFF
-    // To read back the value, simply look at bits 14 and 15.
+    uint16 sampleXOR; // (R/W) SBCTL0/1
 
     enum class SoundSource { SoundRAM, Noise, Silence, Unknown };
     SoundSource soundSource; // (R/W) SSCTL
@@ -358,7 +532,7 @@ struct Slot {
 
     // --- FM Modulation Control Register ---
 
-    uint8 modulationLevel;  // (R/W) MDL - add +- n * pi where n is:
+    uint8 modLevel;         // (R/W) MDL - add +- n * pi where n is:
                             // 0-4   5     6    7    8   9  A  B  C  D   E   F
                             //  0   1/16  1/8  1/4  1/2  1  2  4  8  16  32  64
     uint8 modXSelect;       // (R/W) MDXSL - selects modulation input X
@@ -383,8 +557,8 @@ struct Slot {
                                                             156,  124, 108, 92,  76,  60,  52,  44,  36,  28,  24,
                                                             20,   16,  12,  10,  8,   6,   4,   3,   2,   1};
 
-    bool lfoReset;             // (R/W) LFORE - true resets the LFO
-    uint8 lfof;                // (R/W) LFOF - 0x00 to 0x1F (raw value)
+    bool lfoReset;             // (R/W) LFORE - true resets the LFO (TODO: is this a one-shot action?)
+    uint8 lfofRaw;             // (R/W) LFOF - 0x00 to 0x1F (raw value)
     uint32 lfoFreq;            // (R/W) LFOF - determines the LFO increment interval (from s_lfoFreqTbl)
     uint8 ampLFOSens;          // (R/W) ALFOS - 0 (none) to 7 (maximum) intensity of tremor effect
     uint8 pitchLFOSens;        // (R/W) PLFOS - 0 (none) to 7 (maximum) intensity of tremolo effect

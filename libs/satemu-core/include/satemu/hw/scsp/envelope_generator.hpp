@@ -50,19 +50,20 @@ struct EnvelopeGenerator {
 
         egHold = false;
 
-        loopStateLink = false;
+        loopStartLink = false;
 
         currLevel = 0x3FF;
     }
 
     void Step() {
+        // TODO: use keyRateScaling somehow
         switch (state) {
         case State::Attack:
             if (attackRate < currLevel) {
                 currLevel -= attackRate;
             } else {
                 currLevel = 0;
-                if (!loopStateLink) {
+                if (!loopStartLink) {
                     state = State::Decay1;
                 }
             }
@@ -109,7 +110,7 @@ struct EnvelopeGenerator {
     }
 
     void TriggerLoopStart() {
-        if (loopStateLink && state == State::Attack) {
+        if (loopStartLink && state == State::Attack) {
             state = State::Decay1;
         }
     }
@@ -118,21 +119,21 @@ struct EnvelopeGenerator {
     State state;
 
     // Value ranges are from minimum to maximum.
-    uint8 attackRate;  // (R/W) AR  - 0x00 to 0x1F
-    uint8 decay1Rate;  // (R/W) D1R - 0x00 to 0x1F
-    uint8 decay2Rate;  // (R/W) D2R - 0x00 to 0x1F
-    uint8 releaseRate; // (R/W) RR  - 0x00 to 0x1F
+    uint16 attackRate;  // (R/W) AR  - 0x00 to 0x1F
+    uint16 decay1Rate;  // (R/W) D1R - 0x00 to 0x1F
+    uint16 decay2Rate;  // (R/W) D2R - 0x00 to 0x1F
+    uint16 releaseRate; // (R/W) RR  - 0x00 to 0x1F
 
-    uint8 decayLevel; // (R/W) DL  - 0x1F to 0x00
-                      //   specifies the MSB 5 bits of the EG value where to switch from decay 1 to decay 2
+    uint16 decayLevel; // (R/W) DL  - 0x1F to 0x00
+                       //   specifies the MSB 5 bits of the EG value where to switch from decay 1 to decay 2
 
-    uint8 keyRateScaling; // (R/W) KRS - 0x00 to 0x0E; 0x0F turns off scaling
+    uint16 keyRateScaling; // (R/W) KRS - 0x00 to 0x0E; 0x0F turns off scaling
 
     bool egHold; // (R/W) EGHOLD
                  //   true:  volume raises during attack state
                  //   false: volume is set to maximum during attack phase while maintaining the same duration
 
-    bool loopStateLink; // (R/W) LPSLNK
+    bool loopStartLink; // (R/W) LPSLNK
                         //   true:  switches to decay 1 state on LSA
                         //          attack state is interrupted if too slow or held if too fast
                         //          if the state change happens below DL, decay 2 state is never reached

@@ -330,18 +330,18 @@ private:
 
     // --- Sound Memory Configuration Register ---
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteReg400(uint16 value) {
-        if constexpr (lowerHalf) {
+        if constexpr (lowerByte) {
             m_masterVolume = bit::extract<0, 3>(value);
         }
-        if constexpr (upperHalf) {
+        if constexpr (upperByte) {
             m_mem4MB = bit::extract<8>(value);
             m_dac18Bits = bit::extract<9>(value);
         }
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     uint16 ReadReg408() {
         uint16 value = 0;
         // TODO: implement
@@ -349,21 +349,21 @@ private:
         return value;
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteReg408(uint16 value) {
-        if constexpr (upperHalf) {
+        if constexpr (upperByte) {
             m_monitorSlotCall = bit::extract<11, 15>(value);
         }
     }
 
     // --- Timer Register ---
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteTimer(uint32 index, uint16 value) {
-        if constexpr (lowerHalf) {
+        if constexpr (lowerByte) {
             m_timers[index].WriteTIMx(bit::extract<0, 7>(value));
         }
-        if constexpr (upperHalf) {
+        if constexpr (upperByte) {
             m_timers[index].WriteTxCTL(bit::extract<8, 10>(value));
         }
     }
@@ -374,10 +374,10 @@ private:
         return m_m68kEnabledInterrupts;
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteSCIEB(uint16 value) {
-        static constexpr uint32 lb = lowerHalf ? 0 : 8;
-        static constexpr uint32 ub = upperHalf ? 10 : 7;
+        static constexpr uint32 lb = lowerByte ? 0 : 8;
+        static constexpr uint32 ub = upperByte ? 10 : 7;
         bit::deposit_into<lb, ub>(m_m68kEnabledInterrupts, bit::extract<lb, ub>(value));
         UpdateM68KInterrupts();
     }
@@ -386,15 +386,15 @@ private:
         return m_m68kPendingInterrupts;
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteSCIPD(uint16 value) {
-        if constexpr (lowerHalf) {
+        if constexpr (lowerByte) {
             bit::deposit_into<5>(m_m68kPendingInterrupts, bit::extract<5>(value));
             UpdateM68KInterrupts();
         }
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteSCIRE(uint16 value) {
         m_m68kPendingInterrupts &= ~value;
         UpdateM68KInterrupts();
@@ -406,10 +406,10 @@ private:
         return m_scuEnabledInterrupts;
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteMCIEB(uint16 value) {
-        static constexpr uint32 lb = lowerHalf ? 0 : 8;
-        static constexpr uint32 ub = upperHalf ? 10 : 7;
+        static constexpr uint32 lb = lowerByte ? 0 : 8;
+        static constexpr uint32 ub = upperByte ? 10 : 7;
         bit::deposit_into<lb, ub>(m_scuEnabledInterrupts, bit::extract<lb, ub>(value));
         UpdateSCUInterrupts();
     }
@@ -418,15 +418,15 @@ private:
         return m_scuPendingInterrupts;
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteMCIPD(uint16 value) {
-        if constexpr (lowerHalf) {
+        if constexpr (lowerByte) {
             bit::deposit_into<5>(m_scuPendingInterrupts, bit::extract<5>(value));
             UpdateSCUInterrupts();
         }
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteMCIRE(uint16 value) {
         m_scuPendingInterrupts &= ~value;
         UpdateSCUInterrupts();
@@ -438,9 +438,9 @@ private:
         return m_m68kInterruptLevels[index];
     }
 
-    template <bool lowerHalf, bool upperHalf>
+    template <bool lowerByte, bool upperByte>
     void WriteSCILV(uint32 index, uint16 value) {
-        if constexpr (lowerHalf) {
+        if constexpr (lowerByte) {
             m_m68kInterruptLevels[index] = bit::extract<0, 7>(value);
             UpdateM68KInterrupts();
         }
