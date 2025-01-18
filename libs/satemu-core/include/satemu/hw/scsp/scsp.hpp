@@ -260,8 +260,15 @@ private:
 
             // Handle KYONEX
             if ((address & 0x1F) == 0 && bit::extract<12>(value16)) {
-                for (auto &slot : m_slots) {
+                for (int i = 0; auto &slot : m_slots) {
+                    const bool prevKeyOn = slot.keyOn;
                     slot.TriggerKeyOn();
+                    if (prevKeyOn != slot.keyOn) {
+                        regsLog.debug("Slot {} key {}, start address {:X}, loop {:X}-{:X}", i,
+                                      (slot.keyOn ? "ON" : "OFF"), slot.startAddress, slot.loopStartAddress,
+                                      slot.loopEndAddress);
+                    }
+                    i++;
                 }
             }
             return;
