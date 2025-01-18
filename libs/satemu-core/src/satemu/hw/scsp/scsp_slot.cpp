@@ -48,6 +48,7 @@ void Slot::Reset() {
     keyOn = false;
 
     currAddress = 0;
+    addressInc = 0;
     latchedLoopStartAddress = 0;
     latchedLoopEndAddress = 0;
     sampleCount = 0;
@@ -60,17 +61,21 @@ void Slot::TriggerKeyOn() {
         if (keyOn) {
             // Latch parameters
             currAddress = startAddress;
+            addressInc = ((0x400 + freqNumSwitch) << 7u) >> (15u - ((octave + 8u) & 15u));
             latchedLoopStartAddress = loopStartAddress;
             latchedLoopEndAddress = loopEndAddress;
+            sampleCount = 0;
         }
     }
 }
 
 void Slot::Step() {
-    envGen.Step();
+    if (!envGen.Step()) {
+        return;
+    }
 
-    // TODO: scale step according to octave + freqNumShift + pitch LFO + FM
-    sampleCount += 0x100;
+    // TODO: scale step according to pitch LFO + FM
+    sampleCount += addressInc;
     // TODO: increment currAddress and obey loop parameters
 }
 

@@ -198,6 +198,7 @@ struct Slot {
     bool keyOn; // current key on state
 
     uint32 currAddress;             // Current sample address
+    uint32 addressInc;              // Address increment per step
     uint32 latchedLoopStartAddress; // LSA latched on key ON
     uint32 latchedLoopEndAddress;   // LEA latched on key ON
     uint32 sampleCount;             // Number of processed samples

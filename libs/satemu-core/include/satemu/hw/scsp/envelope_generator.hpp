@@ -55,7 +55,7 @@ struct EnvelopeGenerator {
         currLevel = 0x3FF;
     }
 
-    void Step() {
+    bool Step() {
         // TODO: use keyRateScaling somehow
         switch (state) {
         case State::Attack:
@@ -87,9 +87,11 @@ struct EnvelopeGenerator {
             currLevel += releaseRate;
             if (currLevel > 0x3FF) {
                 currLevel = 0x3FF;
+                return false;
             }
             break;
         }
+        return true;
     }
 
     uint16 GetLevel() const {
