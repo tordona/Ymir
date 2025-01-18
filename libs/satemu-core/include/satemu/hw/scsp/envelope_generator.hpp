@@ -115,6 +115,11 @@ struct EnvelopeGenerator {
         }
     }
 
+    void TriggerLoopEnd() {
+        state = State::Release;
+        currLevel = 0x3FF;
+    }
+
     enum class State { Attack, Decay1, Decay2, Release };
     State state;
 
