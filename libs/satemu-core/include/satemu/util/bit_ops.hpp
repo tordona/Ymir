@@ -11,7 +11,7 @@ namespace bit {
 // Sign-extend from a constant bit width.
 // The return type is the signed equivalent of T.
 template <unsigned B, std::integral T>
-FORCE_INLINE constexpr auto sign_extend(T x) {
+[[nodiscard]] FORCE_INLINE constexpr auto sign_extend(T x) {
     using ST = std::make_signed_t<T>;
     struct {
         ST x : B;
@@ -22,7 +22,7 @@ FORCE_INLINE constexpr auto sign_extend(T x) {
 // Extracts a range of bits from the value.
 // start and end are both inclusive.
 template <std::size_t start, std::size_t end = start, typename T>
-FORCE_INLINE constexpr T extract(T value) {
+[[nodiscard]] FORCE_INLINE constexpr T extract(T value) {
     static_assert(start < sizeof(T) * 8, "start out of range");
     static_assert(end < sizeof(T) * 8, "end out of range");
     static_assert(end >= start, "end cannot be before start");
@@ -37,14 +37,14 @@ FORCE_INLINE constexpr T extract(T value) {
 // Extracts a range of bits from the value, converting them into a signed integer.
 // start and end are both inclusive.
 template <std::size_t start, std::size_t end = start, typename T>
-FORCE_INLINE auto extract_signed(T value) {
+[[nodiscard]] FORCE_INLINE auto extract_signed(T value) {
     return sign_extend<end - start + 1>(extract<start, end>(value));
 }
 
 // Deposits a range of bits into the value and returns the modified value.
 // start and end are both inclusive.
 template <std::size_t start, std::size_t end = start, typename T, typename TV = T>
-FORCE_INLINE constexpr T deposit(T base, TV value) {
+[[nodiscard]] FORCE_INLINE constexpr T deposit(T base, TV value) {
     static_assert(start < sizeof(T) * 8, "start out of range");
     static_assert(end < sizeof(T) * 8, "end out of range");
     static_assert(end >= start, "end cannot be before start");
