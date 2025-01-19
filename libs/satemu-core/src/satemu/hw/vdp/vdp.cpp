@@ -1573,7 +1573,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 colorMode) {
             const CharacterMode chmEnum = static_cast<CharacterMode>(chm);
             const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = clm <= 2 ? clm : 2;
-            arr[chm][fcc][cf][clm] = &VDP::VDP2DrawRotationScrollBG<bgIndex, chmEnum, fcc, cfEnum, colorMode>;
+            arr[chm][fcc][cf][clm] = &VDP::VDP2DrawRotationScrollBG<bgIndex == 0, chmEnum, fcc, cfEnum, colorMode>;
         });
 
         return arr;
@@ -1590,7 +1590,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 colorMode) {
 
             const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = cm <= 2 ? cm : 2;
-            arr[cf][cm] = &VDP::VDP2DrawRotationBitmapBG<bgIndex, cfEnum, colorMode>;
+            arr[cf][cm] = &VDP::VDP2DrawRotationBitmapBG<bgIndex == 0, cfEnum, colorMode>;
         });
 
         return arr;
@@ -1988,7 +1988,8 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
         const RotationParamState &rotParamState = m_rotParamStates[rotParamSelector];
 
         // Handle transparent pixels in coefficient table
-        if (rotParams.coeffTableEnable && rotParamState.transparent[x]) {
+        if ((!selRotParam || commonRotParams.rotParamMode != RotationParamMode::Coefficient) &&
+            rotParams.coeffTableEnable && rotParamState.transparent[x]) {
             pixel.transparent = true;
             continue;
         }
@@ -2003,10 +2004,10 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
 
         if (commonRotParams.rotParamMode != RotationParamMode::Window && VDP2IsInsideWindow(bgParams.windowSet, x)) {
             // Make pixel transparent if inside a window and not using window-based rotation parameter selection
-            layerState.pixels[x].transparent = true;
+            pixel.transparent = true;
         } else {
             // Plot pixel
-            layerState.pixels[x] = VDPFetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
+            pixel = VDPFetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
                 bgParams, rotParamState.pageBaseAddresses, scrollCoord);
         }
     }
@@ -2025,7 +2026,8 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
         const RotationParamState &rotParamState = m_rotParamStates[rotParamSelector];
 
         // Handle transparent pixels in coefficient table
-        if (rotParams.coeffTableEnable && rotParamState.transparent[x]) {
+        if ((!selRotParam || commonRotParams.rotParamMode != RotationParamMode::Coefficient) &&
+            rotParams.coeffTableEnable && rotParamState.transparent[x]) {
             pixel.transparent = true;
             continue;
         }
@@ -2040,10 +2042,10 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
 
         if (commonRotParams.rotParamMode != RotationParamMode::Window && VDP2IsInsideWindow(bgParams.windowSet, x)) {
             // Make pixel transparent if inside a window and not using window-based rotation parameter selection
-            layerState.pixels[x].transparent = true;
+            pixel.transparent = true;
         } else {
             // Plot pixel
-            layerState.pixels[x] = VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, scrollCoord);
+            pixel = VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, scrollCoord);
         }
     }
 }
