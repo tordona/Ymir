@@ -249,7 +249,7 @@ void SCU::RunDMA(uint64 cycles) {
             }
         }
 
-        if (ch.active) {
+        while (ch.active) {
             const Bus srcBus = GetBus(ch.currSrcAddr);
             const Bus dstBus = GetBus(ch.currDstAddr);
 
