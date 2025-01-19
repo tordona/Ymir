@@ -34,12 +34,12 @@ void VDP::Reset(bool hard) {
             }
         }
 
-    m_VRAM2.fill(0);
-    m_CRAM.fill(0);
-    for (auto &fb : m_spriteFB) {
-        fb.fill(0);
-    }
-    m_drawFB = 0;
+        m_VRAM2.fill(0);
+        m_CRAM.fill(0);
+        for (auto &fb : m_spriteFB) {
+            fb.fill(0);
+        }
+        m_drawFB = 0;
     }
 
     m_VDP1.Reset();
@@ -109,7 +109,7 @@ void VDP::DumpVDP2VRAM(std::ostream &out) {
 
 void VDP::DumpVDP2CRAM(std::ostream &out) {
     out.write((const char *)m_CRAM.data(), m_CRAM.size());
-    }
+}
 
 void VDP::DumpVDP1Framebuffers(std::ostream &out) {
     out.write((const char *)m_spriteFB[m_drawFB].data(), m_spriteFB[m_drawFB].size());
@@ -141,8 +141,8 @@ void VDP::UpdateResolution() {
     switch (m_VDP2.TVMD.LSMDn) {
     case 0: rootLog2.info("Non-interlace mode"); break;
     case 1: rootLog2.info("Invalid interlace mode"); break;
-    case 2: rootLog2.info("Single interlace mode"); break;
-    case 3: rootLog2.info("Double interlace mode"); break;
+    case 2: rootLog2.info("Single-density interlace mode"); break;
+    case 3: rootLog2.info("Double-density interlace mode"); break;
     }
 
     // Timing tables
@@ -189,6 +189,11 @@ void VDP::UpdateResolution() {
         }},
     }};
     m_VTimings = vTimings[m_VDP2.TVSTAT.PAL][m_VDP2.TVMD.VRESOn];
+    if (m_VDP2.TVMD.LSMDn == 3) {
+        for (uint32 &timing : m_VTimings) {
+            timing *= 2;
+        }
+    }
 
     // Adjust for dot clock
     const uint32 dotClockMult = (m_VDP2.TVMD.HRESOn & 2) ? 2 : 4;
@@ -230,6 +235,33 @@ void VDP::BeginHPhaseActiveDisplay() {
         if (m_VCounter == 0) {
             m_framebuffer = m_cbRequestFramebuffer(m_HRes, m_VRes);
             rootLog2.trace("Begin frame, VDP1 framebuffer {}", m_drawFB ^ 1);
+            rootLog2.trace("VBE={:d} FCM={:d} FCT={:d} PTM={:d} mswap={:d} merase={:d}", m_VDP1.vblankErase,
+                           m_VDP1.fbSwapMode, m_VDP1.fbSwapTrigger, m_VDP1.plotTrigger, m_VDP1.fbManualSwap,
+                           m_VDP1.fbManualErase);
+
+            bool swapFB = false;
+            if (m_VDP1.fbManualSwap) {
+                m_VDP1.fbManualSwap = false;
+                swapFB = true;
+            }
+
+            if (!m_VDP1.fbSwapMode) {
+                swapFB = true;
+            }
+
+            // Swap framebuffers and trigger:
+            // - Manual erase
+            // - VDP1 draw if PMTR.PTM == 0b10
+            if (swapFB) {
+                if (m_VDP1.fbManualErase) {
+                    m_VDP1.fbManualErase = false;
+                    VDP1EraseFramebuffer();
+                }
+                VDP1SwapFramebuffer();
+                if (m_VDP1.plotTrigger == 0b10) {
+                    VDP1BeginFrame();
+                }
+            }
 
             VDP2InitFrame();
         }
@@ -283,6 +315,7 @@ void VDP::BeginVPhaseTopBlanking() {
     rootLog2.trace("(VCNT = {:3d})  Entering top blanking phase", m_VCounter);
 
     // End frame
+    rootLog2.trace("Ending frame");
     m_cbFrameComplete(m_framebuffer, m_HRes, m_VRes);
 
     UpdateResolution();
@@ -298,37 +331,11 @@ void VDP::BeginVPhaseLastLine() {
     m_VDP2.TVSTAT.VBLANK = 0;
     m_SCU.TriggerVBlankOUT();
 
-    rootLog2.trace("VBlank OUT  VBE={:d} FCM={:d} FCT={:d} PTM={:d} mswap={:d} merase={:d}", m_VDP1.vblankErase,
-                   m_VDP1.fbSwapMode, m_VDP1.fbSwapTrigger, m_VDP1.plotTrigger, m_VDP1.fbManualSwap,
-                   m_VDP1.fbManualErase);
-
-    bool swapFB = false;
-    if (m_VDP1.fbManualSwap) {
-        m_VDP1.fbManualSwap = false;
-        swapFB = true;
-    }
-
-    if (!m_VDP1.fbSwapMode) {
-        swapFB = true;
-    }
+    rootLog2.trace("VBlank OUT  VBE={:d} FCM={:d}", m_VDP1.vblankErase, m_VDP1.fbSwapMode);
 
     // VBlank erase or 1-cycle mode
     if (m_VDP1.vblankErase || !m_VDP1.fbSwapMode) {
         VDP1EraseFramebuffer();
-    }
-
-    // Swap framebuffers and trigger:
-    // - Manual erase
-    // - VDP1 draw if PMTR.PTM == 0b10
-    if (swapFB) {
-        if (m_VDP1.fbManualErase) {
-            m_VDP1.fbManualErase = false;
-            VDP1EraseFramebuffer();
-        }
-        VDP1SwapFramebuffer();
-        if (m_VDP1.plotTrigger == 0b10) {
-            VDP1BeginFrame();
-        }
     }
 }
 
@@ -1616,6 +1623,12 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
     }
 
     const uint32 y = m_VCounter;
+
+    if (!m_VDP2.TVMD.DISP) {
+        std::fill_n(&m_framebuffer[y * m_HRes], m_HRes, 0);
+        return;
+    }
+
     for (uint32 x = 0; x < m_HRes; x++) {
         std::array<Layer, 3> layers = {LYR_Back, LYR_Back, LYR_Back};
         std::array<uint8, 3> layerPrios = {0, 0, 0};
