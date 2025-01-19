@@ -1158,7 +1158,7 @@ void SH2::Execute(uint32 address) {
         case 0x4: MOVBM(instr), advancePC(); break;  // nm   0010 nnnn mmmm 0100   MOV.B Rm, @-Rn
         case 0x5: MOVWM(instr), advancePC(); break;  // nm   0010 nnnn mmmm 0101   MOV.W Rm, @-Rn
         case 0x6: MOVLM(instr), advancePC(); break;  // nm   0010 nnnn mmmm 0110   MOV.L Rm, @-Rn
-        case 0x7: DIV0S(instr), advancePC(); break;  // nm   0010 nnnn mmmm 0110   DIV0S Rm, Rn
+        case 0x7: DIV0S(instr), advancePC(); break;  // nm   0010 nnnn mmmm 0111   DIV0S Rm, Rn
         case 0x8: TST(instr), advancePC(); break;    // nm   0010 nnnn mmmm 1000   TST Rm, Rn
         case 0x9: AND(instr), advancePC(); break;    // nm   0010 nnnn mmmm 1001   AND Rm, Rn
         case 0xA: XOR(instr), advancePC(); break;    // nm   0010 nnnn mmmm 1010   XOR Rm, Rn
@@ -1191,7 +1191,7 @@ void SH2::Execute(uint32 address) {
         case 0xC: ADD(instr), advancePC(); break;   // nm   0011 nnnn mmmm 1100   ADD Rm, Rn
         case 0xD: DMULS(instr), advancePC(); break; // nm   0011 nnnn mmmm 1101   DMULS.L Rm, Rn
         case 0xE: ADDC(instr), advancePC(); break;  // nm   0011 nnnn mmmm 1110   ADDC Rm, Rn
-        case 0xF: ADDV(instr), advancePC(); break;  // nm   0011 nnnn mmmm 1110   ADDV Rm, Rn
+        case 0xF: ADDV(instr), advancePC(); break;  // nm   0011 nnnn mmmm 1111   ADDV Rm, Rn
         default:
             // dbg_println("unhandled 0011 instruction");
             dump();
@@ -1200,13 +1200,14 @@ void SH2::Execute(uint32 address) {
         break;
     case 0x4:
         if ((instr & 0xF) == 0xF) {
-            // nMACW(instr),advancePC();break;m   0100 nnnn mmmm 1111   MAC.W @Rm+, @Rn+
+            MACW(instr), advancePC(); // nm   0100 nnnn mmmm 1111   MAC.W @Rm+, @Rn+
+            break;
         } else {
             switch (instr & 0xFF) {
             case 0x00: SHLL(instr), advancePC(); break;       // n    0100 nnnn 0000 0000   SHLL Rn
             case 0x01: SHLR(instr), advancePC(); break;       // n    0100 nnnn 0000 0001   SHLR Rn
             case 0x02: STSMMACH(instr), advancePC(); break;   // n    0100 nnnn 0000 0010   STS.L MACH, @-Rn
-            case 0x03: STCMSR(instr), advancePC(); break;     // n    0100 nnnn 0000 0010   STC.L SR, @-Rn
+            case 0x03: STCMSR(instr), advancePC(); break;     // n    0100 nnnn 0000 0011   STC.L SR, @-Rn
             case 0x04: ROTL(instr), advancePC(); break;       // n    0100 nnnn 0000 0100   ROTL Rn
             case 0x05: ROTR(instr), advancePC(); break;       // n    0100 nnnn 0000 0101   ROTR Rn
             case 0x06: LDSMMACH(instr), advancePC(); break;   // m    0100 mmmm 0000 0110   LDS.L @Rm+, MACH
@@ -1231,7 +1232,7 @@ void SH2::Execute(uint32 address) {
             case 0x1A: LDSMACL(instr), advancePC(); break;  // m    0100 mmmm 0001 1010   LDS Rm, MACL
             case 0x1B: TAS(instr), advancePC(); break;      // n    0100 nnnn 0001 1011   TAS.B @Rn
 
-            case 0x1E: LDCGBR(instr), advancePC(); break; // m    0110 mmmm 0001 1110   LDC Rm, GBR
+            case 0x1E: LDCGBR(instr), advancePC(); break; // m    0100 mmmm 0001 1110   LDC Rm, GBR
 
             case 0x20: SHAL(instr), advancePC(); break;       // n    0100 nnnn 0010 0000   SHAL Rn
             case 0x21: SHAR(instr), advancePC(); break;       // n    0100 nnnn 0010 0001   SHAR Rn
@@ -1246,7 +1247,7 @@ void SH2::Execute(uint32 address) {
             case 0x2A: LDSPR(instr), advancePC(); break;      // m    0100 mmmm 0010 1010   LDS Rm, PR
             case 0x2B: nonDelaySlot(&SH2::JMP, instr); break; // m    0100 mmmm 0010 1011   JMP @Rm
 
-            case 0x2E: LDCVBR(instr), advancePC(); break; // m    0110 mmmm 0010 1110   LDC Rm, VBR
+            case 0x2E: LDCVBR(instr), advancePC(); break; // m    0100 mmmm 0010 1110   LDC Rm, VBR
 
             default:
                 // dbg_println("unhandled 0100 instruction");
@@ -1261,9 +1262,9 @@ void SH2::Execute(uint32 address) {
         case 0x0: MOVBL(instr), advancePC(); break; // nm   0110 nnnn mmmm 0000   MOV.B @Rm, Rn
         case 0x1: MOVWL(instr), advancePC(); break; // nm   0110 nnnn mmmm 0001   MOV.W @Rm, Rn
         case 0x2: MOVLL(instr), advancePC(); break; // nm   0110 nnnn mmmm 0010   MOV.L @Rm, Rn
-        case 0x3: MOV(instr), advancePC(); break;   // nm   0110 nnnn mmmm 0010   MOV Rm, Rn
-        case 0x4: MOVBP(instr), advancePC(); break; // nm   0110 nnnn mmmm 0110   MOV.B @Rm+, Rn
-        case 0x5: MOVWP(instr), advancePC(); break; // nm   0110 nnnn mmmm 0110   MOV.W @Rm+, Rn
+        case 0x3: MOV(instr), advancePC(); break;   // nm   0110 nnnn mmmm 0011   MOV Rm, Rn
+        case 0x4: MOVBP(instr), advancePC(); break; // nm   0110 nnnn mmmm 0100   MOV.B @Rm+, Rn
+        case 0x5: MOVWP(instr), advancePC(); break; // nm   0110 nnnn mmmm 0101   MOV.W @Rm+, Rn
         case 0x6: MOVLP(instr), advancePC(); break; // nm   0110 nnnn mmmm 0110   MOV.L @Rm+, Rn
         case 0x7: NOT(instr), advancePC(); break;   // nm   0110 nnnn mmmm 0111   NOT Rm, Rn
         case 0x8: SWAPB(instr), advancePC(); break; // nm   0110 nnnn mmmm 1000   SWAP.B Rm, Rn
@@ -1321,9 +1322,9 @@ void SH2::Execute(uint32 address) {
         case 0xA: XORI(instr), advancePC(); break;   // i    1100 1010 iiii iiii   XOR #imm, R0
         case 0xB: ORI(instr), advancePC(); break;    // i    1100 1011 iiii iiii   OR #imm, R0
         case 0xC: TSTM(instr), advancePC(); break;   // i    1100 1100 iiii iiii   TST.B #imm, @(R0,GBR)
-        case 0xD: ANDM(instr), advancePC(); break;   // i    1100 1001 iiii iiii   AND #imm, @(R0,GBR)
-        case 0xE: XORM(instr), advancePC(); break;   // i    1100 1001 iiii iiii   XOR #imm, @(R0,GBR)
-        case 0xF: ORM(instr), advancePC(); break;    // i    1100 1001 iiii iiii   OR #imm, @(R0,GBR)
+        case 0xD: ANDM(instr), advancePC(); break;   // i    1100 1101 iiii iiii   AND #imm, @(R0,GBR)
+        case 0xE: XORM(instr), advancePC(); break;   // i    1100 1110 iiii iiii   XOR #imm, @(R0,GBR)
+        case 0xF: ORM(instr), advancePC(); break;    // i    1100 1111 iiii iiii   OR #imm, @(R0,GBR)
         default:
             // dbg_println("unhandled 1100 instruction");
             dump();
