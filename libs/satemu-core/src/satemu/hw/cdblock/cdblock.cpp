@@ -1003,11 +1003,69 @@ void CDBlock::CmdSeekDisc() {
         m_status.index = 0xFF;
         m_targetDriveCycles = kDriveCyclesNotPlaying;
     } else if (isStartFAD) {
-        rootLog.debug("Seeking to FAD is unimplemented");
-        // TODO: implement
-        // switch to Paused if FAD is in valid range
-        // switch to Standby otherwise
+        const uint32 frameAddress = startPos & 0x7FFFFF;
+        rootLog.debug("Seeking to frame address {:06X}", frameAddress);
+        if (m_disc.sessions.empty()) {
+            rootLog.debug("No disc in drive - stopped");
+            m_status.statusCode = kStatusCodeNoDisc;
+            m_status.frameAddress = 0xFFFFFF;
+            m_status.flags = 0xF;
+            m_status.repeatCount = 0xF;
+            m_status.controlADR = 0xFF;
+            m_status.track = 0xFF;
+            m_status.index = 0xFF;
+            m_targetDriveCycles = kDriveCyclesNotPlaying;
+        } else {
+            const auto &session = m_disc.sessions.back();
+            const media::Track *track = session.FindTrack(frameAddress);
+            if (track != nullptr) {
+                m_status.frameAddress = frameAddress;
+                m_status.statusCode = kStatusCodePause;
+                m_targetDriveCycles = kDriveCyclesNotPlaying;
+            } else {
+                rootLog.debug("Frame address out of range - stopped");
+                m_status.statusCode = kStatusCodeStandby;
+                m_status.frameAddress = 0xFFFFFF;
+                m_status.flags = 0xF;
+                m_status.repeatCount = 0xF;
+                m_status.controlADR = 0xFF;
+                m_status.track = 0xFF;
+                m_status.index = 0xFF;
+                m_targetDriveCycles = kDriveCyclesNotPlaying;
+            }
+        }
     } else {
+        const uint32 trackNum = bit::extract<8, 14>(startPos);
+        const uint32 indexNum = bit::extract<8, 14>(startPos);
+        rootLog.debug("Seeking to track:index {}:{}", trackNum, indexNum);
+        if (m_disc.sessions.empty()) {
+            rootLog.debug("No disc in drive - stopped");
+            m_status.statusCode = kStatusCodeNoDisc;
+            m_status.frameAddress = 0xFFFFFF;
+            m_status.flags = 0xF;
+            m_status.repeatCount = 0xF;
+            m_status.controlADR = 0xFF;
+            m_status.track = 0xFF;
+            m_status.index = 0xFF;
+            m_targetDriveCycles = kDriveCyclesNotPlaying;
+        } else {
+            const auto &session = m_disc.sessions.back();
+            if (trackNum >= session.firstTrackIndex && trackNum <= session.firstTrackIndex + session.numTracks - 1) {
+                m_status.frameAddress = session.tracks[trackNum - 1].startFrameAddress;
+                m_status.statusCode = kStatusCodePause;
+                m_targetDriveCycles = kDriveCyclesNotPlaying;
+            } else {
+                rootLog.debug("Track:index out of range - stopped");
+                m_status.statusCode = kStatusCodeStandby;
+                m_status.frameAddress = 0xFFFFFF;
+                m_status.flags = 0xF;
+                m_status.repeatCount = 0xF;
+                m_status.controlADR = 0xFF;
+                m_status.track = 0xFF;
+                m_status.index = 0xFF;
+                m_targetDriveCycles = kDriveCyclesNotPlaying;
+            }
+        }
         rootLog.debug("Seeking to track is unimplemented");
         // TODO: implement
         // switch to Paused if track is in valid range
