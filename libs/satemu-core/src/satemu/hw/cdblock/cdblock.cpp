@@ -1017,10 +1017,12 @@ void CDBlock::CmdSeekDisc() {
             m_targetDriveCycles = kDriveCyclesNotPlaying;
         } else {
             const auto &session = m_disc.sessions.back();
-            const media::Track *track = session.FindTrack(frameAddress);
-            if (track != nullptr) {
+            const uint8 trackIndex = session.FindTrackIndex(frameAddress);
+            if (trackIndex <= 99) {
                 m_status.frameAddress = frameAddress;
                 m_status.statusCode = kStatusCodePause;
+                m_status.track = trackIndex;
+                m_status.index = 1;
                 m_targetDriveCycles = kDriveCyclesNotPlaying;
             } else {
                 rootLog.debug("Frame address out of range - stopped");
@@ -1036,7 +1038,7 @@ void CDBlock::CmdSeekDisc() {
         }
     } else {
         const uint32 trackNum = bit::extract<8, 14>(startPos);
-        const uint32 indexNum = bit::extract<8, 14>(startPos);
+        const uint32 indexNum = bit::extract<0, 6>(startPos);
         rootLog.debug("Seeking to track:index {}:{}", trackNum, indexNum);
         if (m_disc.sessions.empty()) {
             rootLog.debug("No disc in drive - stopped");
@@ -1050,9 +1052,12 @@ void CDBlock::CmdSeekDisc() {
             m_targetDriveCycles = kDriveCyclesNotPlaying;
         } else {
             const auto &session = m_disc.sessions.back();
-            if (trackNum >= session.firstTrackIndex && trackNum <= session.firstTrackIndex + session.numTracks - 1) {
+            if (trackNum - 1 >= session.firstTrackIndex &&
+                trackNum - 1 <= session.firstTrackIndex + session.numTracks - 1) {
                 m_status.frameAddress = session.tracks[trackNum - 1].startFrameAddress;
                 m_status.statusCode = kStatusCodePause;
+                m_status.track = trackNum;
+                m_status.index = 1;
                 m_targetDriveCycles = kDriveCyclesNotPlaying;
             } else {
                 rootLog.debug("Track:index out of range - stopped");
@@ -1066,10 +1071,6 @@ void CDBlock::CmdSeekDisc() {
                 m_targetDriveCycles = kDriveCyclesNotPlaying;
             }
         }
-        rootLog.debug("Seeking to track is unimplemented");
-        // TODO: implement
-        // switch to Paused if track is in valid range
-        // switch to Standby otherwise
     }
 
     // Output structure: standard CD status data
