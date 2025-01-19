@@ -529,7 +529,7 @@ void SH2::DIVUBegin32() {
     static constexpr sint32 kMinValue = std::numeric_limits<sint32>::min();
     static constexpr sint32 kMaxValue = std::numeric_limits<sint32>::max();
 
-    const sint32 dividend = static_cast<sint32>(DVDNT);
+    const sint32 dividend = static_cast<sint32>(DVDNTL);
     const sint32 divisor = static_cast<sint32>(DVSR);
 
     if (divisor != 0) {
@@ -577,6 +577,13 @@ void SH2::DIVUBegin64() {
     const sint32 divisor = static_cast<sint32>(DVSR);
 
     bool overflow = divisor == 0;
+
+    if (dividend == -0x80000000ll && divisor == -1) {
+        DVDNTH = DVDNTUH = 0;
+        DVDNTL = DVDNTUL = -0x80000000l;
+        return;
+    }
+
     if (!overflow) {
         const sint64 quotient = dividend / divisor;
         const sint32 remainder = dividend % divisor;
@@ -599,6 +606,7 @@ void SH2::DIVUBegin64() {
 
         // Perform partial division
         // The division unit uses 3 cycles to set up flags, leaving 3 cycles for calculations
+        const sint64 origDividend = dividend;
         bool Q = dividend < 0;
         const bool M = divisor < 0;
         for (int i = 0; i < 3; i++) {
@@ -620,7 +628,7 @@ void SH2::DIVUBegin64() {
             DVDNTL = DVDNT = dividend;
         } else {
             // DVDNT/DVDNTL is saturated if the interrupt signal is disabled
-            DVDNTL = DVDNT = dividend < 0 ? kMinValue32 : kMaxValue32;
+            DVDNTL = DVDNT = static_cast<sint32>((origDividend >> 32) ^ divisor) < 0 ? kMinValue32 : kMaxValue32;
         }
         DVDNTH = dividend >> 32ll;
     }
