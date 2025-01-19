@@ -2217,7 +2217,7 @@ FORCE_INLINE void SH2::BSR(InstrD12 instr) {
     const sint32 sdisp = (bit::sign_extend<12>(instr.disp) << 1) + 4;
     // dbg_println("bsr 0x{:08X}", PC + sdisp);
 
-    PR = PC;
+    PR = PC + 4;
     SetupDelaySlot(PC + sdisp);
     PC += 2;
 }
@@ -2225,7 +2225,7 @@ FORCE_INLINE void SH2::BSR(InstrD12 instr) {
 FORCE_INLINE void SH2::BSRF(InstrM instr) {
     m_tracer.BSR({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
     // dbg_println("bsrf r{}", instr.Rm);
-    PR = PC;
+    PR = PC + 4;
     SetupDelaySlot(PC + R[instr.Rm] + 4);
     PC += 2;
 }
@@ -2239,7 +2239,7 @@ FORCE_INLINE void SH2::JMP(InstrM instr) {
 FORCE_INLINE void SH2::JSR(InstrM instr) {
     // dbg_println("jsr @r{}", instr.Rm);
     m_tracer.JSR({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
-    PR = PC;
+    PR = PC + 4;
     SetupDelaySlot(R[instr.Rm]);
     PC += 2;
 }
@@ -2267,7 +2267,7 @@ FORCE_INLINE void SH2::RTE() {
 FORCE_INLINE void SH2::RTS() {
     m_tracer.RTS({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
     // dbg_println("rts");
-    SetupDelaySlot(PR + 4);
+    SetupDelaySlot(PR);
     PC += 2;
 }
 
