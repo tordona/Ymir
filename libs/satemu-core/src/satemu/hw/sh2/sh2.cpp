@@ -1200,7 +1200,8 @@ void SH2::Execute(uint32 address) {
         break;
     case 0x4:
         if ((instr & 0xF) == 0xF) {
-            MACW(instr), advancePC(); // nm   0100 nnnn mmmm 1111   MAC.W @Rm+, @Rn+
+            MACW(instr); // nm   0100 nnnn mmmm 1111   MAC.W @Rm+, @Rn+
+            advancePC();
             break;
         } else {
             switch (instr & 0xFF) {
@@ -1966,10 +1967,10 @@ FORCE_INLINE void SH2::CLRMAC() {
 FORCE_INLINE void SH2::MACW(InstrNM instr) {
     // dbg_println("mac.w @r{}+, @r{}+)", instr.Rm, instr.Rn);
 
-    const sint32 op2 = static_cast<sint16>(MemReadWord(R[instr.Rn]));
-    R[instr.Rn] += 2;
     const sint32 op1 = static_cast<sint16>(MemReadWord(R[instr.Rm]));
     R[instr.Rm] += 2;
+    const sint32 op2 = static_cast<sint16>(MemReadWord(R[instr.Rn]));
+    R[instr.Rn] += 2;
 
     const sint32 mul = op1 * op2;
     if (SR.S) {
@@ -1989,22 +1990,18 @@ FORCE_INLINE void SH2::MACW(InstrNM instr) {
 FORCE_INLINE void SH2::MACL(InstrNM instr) {
     // dbg_println("mac.l @r{}+, @r{}+)", instr.Rm, instr.Rn);
 
-    const sint64 op2 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[instr.Rn])));
-    R[instr.Rn] += 4;
     const sint64 op1 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[instr.Rm])));
     R[instr.Rm] += 4;
+    const sint64 op2 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[instr.Rn])));
+    R[instr.Rn] += 4;
 
     const sint64 mul = op1 * op2;
     sint64 result = mul + MAC.u64;
-    if (SR.S) {
-        if (bit::extract<63>((result ^ MAC.u64) & (result ^ mul))) {
-            if (bit::extract<63>(MAC.u64)) {
-                result = -0x8000'00000000LL;
-            } else {
-                result = 0x7FFF'FFFFFFFFLL;
-            }
+    if (SR.S && result > 0x00007FFFFFFFFFFFull && result < 0xFFFF800000000000ull) {
+        if (static_cast<sint32>(op1 ^ op2) < 0) {
+            result = 0xFFFF800000000000ull;
         } else {
-            result = std::clamp<sint64>(result, -0x8000'00000000LL, 0x7FFF'FFFFFFFFLL);
+            result = 0x00007FFFFFFFFFFFull;
         }
     }
     MAC.u64 = result;
