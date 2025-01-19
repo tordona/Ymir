@@ -82,7 +82,7 @@ public:
         } else if (AddressInRange<0x010'0000, 0x017'FFFF>(address)) {
             return m_SMPC.Read((address & 0x7F) | 1);
         } else if (AddressInRange<0x018'0000, 0x01F'FFFF>(address)) {
-            return ReadBE<T>((const uint8 *)&internalBackupRAM.data()[address & 0xFFFF]);
+            return ReadBE<T>((const uint8 *)&internalBackupRAM.data()[address & kInternalBackupRAMSize - 1]);
         } else if (AddressInRange<0x020'0000, 0x02F'FFFF>(address)) {
             return ReadBE<T>(&WRAMLow[address & 0xFFFFF]);
         } else if (AddressInRange<0x200'0000, 0x5FF'FFFF>(address)) {
