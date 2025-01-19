@@ -119,6 +119,7 @@ FORCE_INLINE void MC68EC000::EnterException(ExceptionVector vector) {
 }
 
 FORCE_INLINE void MC68EC000::HandleInterrupt(ExceptionVector vector, uint8 level) {
+    PC -= 4;
     HandleExceptionCommon(vector, level);
 }
 
