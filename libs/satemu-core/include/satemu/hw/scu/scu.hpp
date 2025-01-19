@@ -48,8 +48,8 @@ namespace satemu::scu {
 // - Unless otherwise specified, all regions are mirrored across the designated area
 // - Addresses 0x200'0000..0x58F'FFFF comprise the SCU A-Bus
 // - Addresses 0x5A0'0000..0x5FB'FFFF comprise the SCU B-Bus
-// - [TODO] A-Bus and B-Bus reads are always 32-bit (split into two 16-bit reads internally)
-// - [TODO] A-Bus and B-Bus 32-bit writes are split into two 16-bit writes internally
+// - A-Bus and B-Bus reads are always 32-bit (split into two 16-bit reads internally)
+// - A-Bus and B-Bus 32-bit writes are split into two 16-bit writes internally
 // - 68000 Work RAM
 //   - [TODO] Area size depends on MEM4MB bit setting:
 //       0=only first 256 KiB are used/mirrored

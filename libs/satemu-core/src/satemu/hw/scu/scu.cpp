@@ -428,7 +428,7 @@ void SCU::RunDSPDMA(uint64 cycles) {
                 addrD0 += 4;
             } else if (bus == Bus::WRAM) {
                 // WRAM -> one 32-bit read
-                value = util::ReadBE<uint32>(&m_SH2.bus.WRAMHigh[addrD0 & 0xFFFFF]);
+                value = util::ReadBE<uint32>(&m_SH2.bus.WRAMHigh[addrD0 & 0xFFFFC]);
                 addrD0 += m_dspState.dmaAddrInc;
             }
             if (useDataRAM) {
@@ -520,9 +520,9 @@ void SCU::DSPWriteImm(uint8 index, uint32 value) {
     case 0b0101: m_dspState.P.s64 = static_cast<sint32>(value); break;
     case 0b0110: m_dspState.dmaReadAddr = (value << 2u) & 0x7FF'FFFC; break;
     case 0b0111: m_dspState.dmaWriteAddr = (value << 2u) & 0x7FF'FFFC; break;
-    case 0b1010: m_dspState.loopCount = value; break;
+    case 0b1010: m_dspState.loopCount = value & 0xFFF; break;
     case 0b1100:
-        m_dspState.loopTop = m_dspState.PC;
+        m_dspState.loopTop = m_dspState.PC - 1;
         DSPDelayedJump(value);
         break;
     }
@@ -556,7 +556,7 @@ FORCE_INLINE bool SCU::DSPCondCheck(uint8 cond) const {
 }
 
 FORCE_INLINE void SCU::DSPDelayedJump(uint8 target) {
-    m_dspState.nextPC = target;
+    m_dspState.nextPC = target & 0xFF;
     m_dspState.jmpCounter = 2;
 }
 
@@ -621,7 +621,7 @@ FORCE_INLINE void SCU::DSPCmd_Operation(uint32 command) {
         setZS48(result);
         m_dspState.carry = bit::extract<48>(result);
         m_dspState.overflow = bit::extract<47>((~(op1 ^ op2)) & (op1 ^ result));
-        m_dspState.ALU.u64 = result;
+        m_dspState.ALU.s64 = result;
         break;
     }
     case 0b1000: // SR
@@ -695,16 +695,16 @@ FORCE_INLINE void SCU::DSPCmd_Operation(uint32 command) {
     // 111    MOV [s],A   MOV [s],Y
     if (bit::extract<17, 18>(command) == 0b01) {
         // CLR A
-        m_dspState.AC.u64 = 0;
+        m_dspState.AC.s64 = 0;
     } else if (bit::extract<17, 18>(command) == 0b10) {
         // MOV ALU,A
-        m_dspState.AC.u64 = m_dspState.ALU.u64;
+        m_dspState.AC.s64 = m_dspState.ALU.s64;
     }
     if (bit::extract<17, 19>(command) >= 0b11) {
         const sint32 value = DSPReadSource(bit::extract<14, 16>(command));
         if (bit::extract<17, 18>(command) == 0b11) {
             // MOV [s],A
-            m_dspState.AC.u64 = static_cast<sint64>(value);
+            m_dspState.AC.s64 = static_cast<sint64>(value);
         }
         if (bit::extract<19>(command)) {
             // MOV [s],Y
@@ -717,14 +717,14 @@ FORCE_INLINE void SCU::DSPCmd_Operation(uint32 command) {
     case 0b01: // MOV SImm, [d]
     {
         const sint32 imm = bit::extract_signed<0, 7>(command);
-        const uint32 dst = bit::extract<8, 11>(command);
+        const uint8 dst = bit::extract<8, 11>(command);
         DSPWriteD1Bus(dst, imm);
         break;
     }
     case 0b11: // MOV [s], [d]
     {
         const uint8 src = bit::extract<0, 3>(command);
-        const uint32 dst = bit::extract<8, 11>(command);
+        const uint8 dst = bit::extract<8, 11>(command);
         const uint32 value = DSPReadSource(src);
         DSPWriteD1Bus(dst, value);
         break;
@@ -823,7 +823,7 @@ FORCE_INLINE void SCU::DSPCmd_Special_LoopBottom(uint32 command) {
         m_dspState.loopCount--;
         if (bit::extract<27>(command)) {
             // LPS
-            DSPDelayedJump(m_dspState.PC);
+            DSPDelayedJump(m_dspState.PC - 1);
         } else {
             // BTM
             DSPDelayedJump(m_dspState.loopTop);
