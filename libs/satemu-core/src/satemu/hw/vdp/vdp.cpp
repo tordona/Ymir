@@ -355,9 +355,16 @@ FORCE_INLINE std::array<uint8, kVDP1FramebufferRAMSize> &VDP::VDP1GetDisplayFB()
 }
 
 FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
-    renderLog1.trace("Erasing framebuffer {}", m_drawFB ^ 1);
-    // TODO: erase only the specified region
-    VDP1GetDisplayFB().fill(m_VDP1.eraseWriteValue);
+    renderLog1.trace("Erasing framebuffer {} - {}x{} to {}x{} -> {:04X}", m_drawFB ^ 1, m_VDP1.eraseX1, m_VDP1.eraseY1,
+                     m_VDP1.eraseX3, m_VDP1.eraseY3, m_VDP1.eraseWriteValue);
+
+    auto &fb = VDP1GetDisplayFB();
+    for (uint32 y = m_VDP1.eraseY1; y <= m_VDP1.eraseY3; y++) {
+        for (uint32 x = m_VDP1.eraseX1; x <= m_VDP1.eraseX3; x++) {
+            const uint32 address = (y * 512 + x) * 2;
+            util::WriteBE<uint16>(&fb[address & 0x3FFFE], m_VDP1.eraseWriteValue);
+        }
+    }
 }
 
 FORCE_INLINE void VDP::VDP1SwapFramebuffer() {

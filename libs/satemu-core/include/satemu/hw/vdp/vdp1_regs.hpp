@@ -246,7 +246,7 @@ struct VDP1Regs {
 
     FORCE_INLINE void WriteEWLR(uint16 value) {
         eraseY1 = bit::extract<0, 8>(value);
-        eraseX1 = bit::extract<9, 14>(value);
+        eraseX1 = bit::extract<9, 14>(value) << 3;
     }
 
     // 10000A   EWRR  Erase/write Bottom-right Coordinate
@@ -257,7 +257,7 @@ struct VDP1Regs {
 
     FORCE_INLINE void WriteEWRR(uint16 value) {
         eraseY3 = bit::extract<0, 8>(value);
-        eraseX3 = bit::extract<9, 15>(value);
+        eraseX3 = bit::extract<9, 15>(value) << 3;
     }
 
     // 10000C   ENDR  Draw Forced Termination
