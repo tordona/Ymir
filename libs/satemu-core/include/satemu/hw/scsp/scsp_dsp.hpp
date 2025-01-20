@@ -39,4 +39,13 @@ union DSPInstr {
     };
 };
 
+class DSP {
+public:
+    DSP();
+
+    void Reset();
+
+    // TODO
+};
+
 } // namespace satemu::scsp

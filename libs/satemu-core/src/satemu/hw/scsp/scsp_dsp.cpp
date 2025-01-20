@@ -2,8 +2,12 @@
 
 namespace satemu::scsp {
 
-class DSP {
+DSP::DSP() {
+    Reset();
+}
+
+void DSP::Reset() {
     // TODO
-};
+}
 
 } // namespace satemu::scsp
