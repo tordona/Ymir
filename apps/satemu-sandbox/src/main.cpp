@@ -167,12 +167,16 @@ void runEmulator(satemu::Saturn &saturn) {
         }
     };
 
-    auto updateButton = [&](SDL_Scancode scancode, bool pressed) {
+    auto updateButton = [&](SDL_Scancode scancode, SDL_Keymod mod, bool pressed) {
         switch (scancode) {
         case SDL_SCANCODE_W: setClearButton(smpc::kButtonUp, pressed); break;
         case SDL_SCANCODE_A: setClearButton(smpc::kButtonLeft, pressed); break;
         case SDL_SCANCODE_S: setClearButton(smpc::kButtonDown, pressed); break;
         case SDL_SCANCODE_D: setClearButton(smpc::kButtonRight, pressed); break;
+        case SDL_SCANCODE_UP: setClearButton(smpc::kButtonUp, pressed); break;
+        case SDL_SCANCODE_LEFT: setClearButton(smpc::kButtonLeft, pressed); break;
+        case SDL_SCANCODE_DOWN: setClearButton(smpc::kButtonDown, pressed); break;
+        case SDL_SCANCODE_RIGHT: setClearButton(smpc::kButtonRight, pressed); break;
         case SDL_SCANCODE_Q: setClearButton(smpc::kButtonL, pressed); break;
         case SDL_SCANCODE_E: setClearButton(smpc::kButtonR, pressed); break;
         case SDL_SCANCODE_J: setClearButton(smpc::kButtonA, pressed); break;
@@ -185,6 +189,11 @@ void runEmulator(satemu::Saturn &saturn) {
         case SDL_SCANCODE_H: setClearButton(smpc::kButtonStart, pressed); break;
         case SDL_SCANCODE_RETURN: setClearButton(smpc::kButtonStart, pressed); break;
         case SDL_SCANCODE_RETURN2: setClearButton(smpc::kButtonStart, pressed); break;
+        case SDL_SCANCODE_R:
+            if (pressed && (mod & SDL_KMOD_CTRL)) {
+                saturn.Reset(true);
+            }
+            break;
         case SDL_SCANCODE_F3: //
         {
             {
@@ -228,8 +237,8 @@ void runEmulator(satemu::Saturn &saturn) {
         SDL_Event evt{};
         while (SDL_PollEvent(&evt)) {
             switch (evt.type) {
-            case SDL_EVENT_KEY_DOWN: updateButton(evt.key.scancode, true); break;
-            case SDL_EVENT_KEY_UP: updateButton(evt.key.scancode, false); break;
+            case SDL_EVENT_KEY_DOWN: updateButton(evt.key.scancode, evt.key.mod, true); break;
+            case SDL_EVENT_KEY_UP: updateButton(evt.key.scancode, evt.key.mod, false); break;
             case SDL_EVENT_QUIT: running = false; break;
             }
         }
