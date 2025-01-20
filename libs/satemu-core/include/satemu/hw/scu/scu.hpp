@@ -10,6 +10,8 @@
 #include <satemu/util/data_ops.hpp>
 #include <satemu/util/debug_print.hpp>
 
+#include <mio/mmap.hpp> // HACK: should be used in a binary reader/writer object
+
 // -----------------------------------------------------------------------------
 // Forward declarations
 
@@ -123,6 +125,12 @@ private:
     cdblock::CDBlock &m_CDBlock;
     sh2::SH2Block &m_SH2;
 
+    // TODO: don't hardcode this
+    // TODO: use an abstraction
+    // TODO: move to its own class
+    // std::array<uint8, kInternalBackupRAMSize> internalBackupRAM;
+    mio::mmap_sink m_externalBackupRAM;
+
     // -------------------------------------------------------------------------
     // A-Bus and B-Bus accessors
 
@@ -135,6 +143,23 @@ private:
             uint32 value = ReadABus<uint16>(address + 0) << 16u;
             value |= ReadABus<uint16>(address + 2) << 0u;
             return value;
+
+        } else if (AddressInRange<0x400'0000, 0x4FF'FFFF>(address)) {
+            // HACK: emulate 32 Mbit backup RAM cartridge
+            if (address >= 0x4FF'FFFC) {
+                // Return ID for 32 Mbit Backup RAM cartridge
+                if constexpr (std::is_same_v<T, uint8>) {
+                    if ((address & 1) == 0) {
+                        return 0xFF;
+                    } else {
+                        return 0x24;
+                    }
+                } else {
+                    return 0xFF24;
+                }
+            } else {
+                return util::ReadBE<T>((const uint8 *)&m_externalBackupRAM.data()[address & 0x7FFFFF]);
+            }
         } else if (AddressInRange<0x580'0000, 0x58F'FFFF>(address)) {
             if ((address & 0x7FFF) < 0x1000) {
                 // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
@@ -155,6 +180,7 @@ private:
             uint32 value = ReadBBus<uint16>(address + 0) << 16u;
             value |= ReadBBus<uint16>(address + 2) << 0u;
             return value;
+
         } else if (AddressInRange<0x5A0'0000, 0x5AF'FFFF>(address)) {
             return m_SCSP.ReadWRAM<T>(address & 0x7FFFF);
         } else if (AddressInRange<0x5B0'0000, 0x5BF'FFFF>(address)) {
@@ -188,16 +214,20 @@ private:
             // 32-bit writes are split into two 16-bit writes
             WriteABus<uint16>(address + 0, value >> 16u);
             WriteABus<uint16>(address + 2, value >> 0u);
-            return;
+
+        } else if (AddressInRange<0x400'0000, 0x4FF'FFFF>(address)) {
+            // HACK: emulate 32 Mbit backup RAM cartridge
+            util::WriteBE<T>((uint8 *)&m_externalBackupRAM.data()[address & 0x7FFFFF], value);
         } else if (AddressInRange<0x580'0000, 0x58F'FFFF>(address)) {
             if ((address & 0x7FFF) < 0x1000) {
                 // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
                 // These 4 KiB blocks are mapped every 32 KiB.
                 m_CDBlock.WriteReg<T>(address & 0x3F, value);
-                return;
             }
+
+        } else {
+            regsLog.debug("unhandled {}-bit SCU A-Bus write to {:05X} = {:X}", sizeof(T) * 8, address, value);
         }
-        regsLog.debug("unhandled {}-bit SCU A-Bus write to {:05X} = {:X}", sizeof(T) * 8, address, value);
     }
 
     template <mem_primitive T>

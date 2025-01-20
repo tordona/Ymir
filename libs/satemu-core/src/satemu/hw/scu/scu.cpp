@@ -31,6 +31,39 @@ SCU::SCU(vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2Blo
     , m_SCSP(scsp)
     , m_CDBlock(cdblock)
     , m_SH2(sh2) {
+
+    // HACK: should be in its own class, shared with internal backup RAM
+    static constexpr std::size_t kExternalBackupRAMSize = 8_MiB;
+    static constexpr std::string_view kHeader = "BackUpRam Format";
+    std::filesystem::path bupRAMPath = "bup-ext.bin";
+
+    // Create file if it doesn't exist or expand if it's too short
+    if (!std::filesystem::is_regular_file(bupRAMPath) ||
+        std::filesystem::file_size(bupRAMPath) < kExternalBackupRAMSize) {
+        std::ofstream out{bupRAMPath, std::ios::binary};
+
+        // Write header at the beginning
+        for (int i = 0; i < 4; i++) {
+            for (char ch : kHeader) {
+                out.put(0xFF);
+                out.put(ch);
+            }
+        }
+
+        // Clear the rest of the file
+        out.seekp(0, std::ios::end);
+        if (out.tellp() & 1) {
+            out.put(0);
+        }
+        for (size_t i = out.tellp(); i < kExternalBackupRAMSize; i += 2) {
+            out.put(0xFF);
+            out.put(0);
+        }
+    }
+    std::error_code err{};
+    m_externalBackupRAM = mio::make_mmap_sink(bupRAMPath.string(), err);
+    // TODO: handle error
+
     Reset(true);
 }
 
