@@ -8,8 +8,6 @@
 #include <satemu/util/constexpr_for.hpp>
 #include <satemu/util/unreachable.hpp>
 
-#include <fmt/format.h>
-
 #include <cassert>
 
 namespace satemu::vdp {
