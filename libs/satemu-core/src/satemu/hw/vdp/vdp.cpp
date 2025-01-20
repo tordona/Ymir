@@ -361,7 +361,7 @@ FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
     auto &fb = VDP1GetDisplayFB();
     for (uint32 y = m_VDP1.eraseY1; y <= m_VDP1.eraseY3; y++) {
         for (uint32 x = m_VDP1.eraseX1; x <= m_VDP1.eraseX3; x++) {
-            const uint32 address = (y * 512 + x) * 2;
+            const uint32 address = y * (m_VDP1.pixel8Bits ? 512 : 1024) + x * 2;
             util::WriteBE<uint16>(&fb[address & 0x3FFFE], m_VDP1.eraseWriteValue);
         }
     }
