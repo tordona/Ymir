@@ -145,12 +145,12 @@ struct VDP1Regs {
     // - When using HDTV modes, rotation must be disabled and the bit depth must be set to 16bpp
     // - TVM changes must be done between the 2nd HBlank IN from VBlank IN and the 1st HBlank IN after VBlank OUT.
     // - The frame buffer screen size varies based on TVM:
-    //     TVM   Frame buffer screen size
-    //     000    512x256
-    //     001   1024x256
-    //     010    512x256
-    //     011    512x512
-    //     100    512x256
+    //     TVM   Name          Frame buffer screen size
+    //     000   Normal         512x256
+    //     001   Hi-Res        1024x256
+    //     010   Rotation 16    512x256
+    //     011   Rotation 8     512x512
+    //     100   HDTV           512x256
 
     FORCE_INLINE void WriteTVMR(uint16 value) {
         vblankErase = bit::extract<3>(value);
