@@ -9,29 +9,11 @@
 // -----------------------------------------------------------------------------
 // Forward declarations
 
-namespace satemu::sh2 {
+namespace satemu {
 
-class SH2Block;
+struct Saturn;
 
-} // namespace satemu::sh2
-
-namespace satemu::vdp {
-
-class VDP;
-
-} // namespace satemu::vdp
-
-namespace satemu::scu {
-
-class SCU;
-
-} // namespace satemu::scu
-
-namespace satemu::scsp {
-
-class SCSP;
-
-} // namespace satemu::scsp
+} // namespace satemu
 
 // -----------------------------------------------------------------------------
 
@@ -56,7 +38,7 @@ class SMPC {
     static constexpr dbg::Category regsLog{rootLog, "Regs"};
 
 public:
-    SMPC(sh2::SH2Block &sh2, vdp::VDP &vdp, scu::SCU &scu, scsp::SCSP &scsp);
+    SMPC(Saturn &saturn);
 
     void Reset(bool hard);
 
@@ -76,10 +58,7 @@ private:
 
     std::array<uint8, 4> SMEM;
 
-    sh2::SH2Block &m_SH2;
-    vdp::VDP &m_VDP;
-    scu::SCU &m_SCU;
-    scsp::SCSP &m_SCSP;
+    Saturn &m_saturn;
 
     enum class Command : uint8 {
         // Resetable system management commands
@@ -211,6 +190,7 @@ private:
     void SSHOFF();
     void SNDON();
     void SNDOFF();
+    void SYSRES();
     void CKCHG352();
     void CKCHG320();
     void RESENAB();

@@ -1,9 +1,6 @@
 #include <satemu/hw/smpc/smpc.hpp>
 
-#include <satemu/hw/scsp/scsp.hpp>
-#include <satemu/hw/scu/scu.hpp>
-#include <satemu/hw/sh2/sh2_block.hpp>
-#include <satemu/hw/vdp/vdp.hpp>
+#include <satemu/sys/sys.hpp>
 
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/inline.hpp>
@@ -12,11 +9,8 @@
 
 namespace satemu::smpc {
 
-SMPC::SMPC(sh2::SH2Block &sh2, vdp::VDP &vdp, scu::SCU &scu, scsp::SCSP &scsp)
-    : m_SH2(sh2)
-    , m_VDP(vdp)
-    , m_SCU(scu)
-    , m_SCSP(scsp) {
+SMPC::SMPC(Saturn &saturn)
+    : m_saturn(saturn) {
     Reset(true);
 }
 
@@ -125,6 +119,7 @@ FORCE_INLINE void SMPC::WriteCOMREG(uint8 value) {
     case Command::SSHOFF: SSHOFF(); break;
     case Command::SNDON: SNDON(); break;
     case Command::SNDOFF: SNDOFF(); break;
+    case Command::SYSRES: SYSRES(); break;
     case Command::CKCHG352: CKCHG352(); break;
     case Command::CKCHG320: CKCHG320(); break;
     case Command::RESENAB: RESENAB(); break;
@@ -214,8 +209,8 @@ void SMPC::SSHON() {
     rootLog.debug("Processing SSHON");
 
     // Turn on and reset slave SH-2
-    m_SH2.slaveEnabled = true;
-    m_SH2.slave.Reset(true);
+    m_saturn.SH2.slaveEnabled = true;
+    m_saturn.SH2.slave.Reset(true);
 
     SF = 0; // done processing
 
@@ -226,7 +221,7 @@ void SMPC::SSHOFF() {
     rootLog.debug("Processing SSHOFF");
 
     // Turn off slave SH-2
-    m_SH2.slaveEnabled = false;
+    m_saturn.SH2.slaveEnabled = false;
 
     SF = 0; // done processing
 
@@ -236,7 +231,7 @@ void SMPC::SSHOFF() {
 void SMPC::SNDON() {
     rootLog.debug("Processing SNDON");
 
-    m_SCSP.SetCPUEnabled(true);
+    m_saturn.SCSP.SetCPUEnabled(true);
 
     SF = 0; // done processing
 
@@ -246,11 +241,21 @@ void SMPC::SNDON() {
 void SMPC::SNDOFF() {
     rootLog.debug("Processing SNDOFF");
 
-    m_SCSP.SetCPUEnabled(false);
+    m_saturn.SCSP.SetCPUEnabled(false);
 
     SF = 0; // done processing
 
     OREG[31] = 0x07;
+}
+
+void SMPC::SYSRES() {
+    rootLog.debug("Processing SYSRES");
+
+    m_saturn.Reset(false);
+
+    SF = 0; // done processing
+
+    OREG[31] = 0x0D;
 }
 
 void SMPC::CKCHG352() {
@@ -325,7 +330,7 @@ void SMPC::INTBACK() {
 
     SF = 0; // done processing
 
-    m_SCU.TriggerSystemManager();
+    m_saturn.SCU.TriggerSystemManager();
 }
 
 void SMPC::WriteINTBACKStatusReport() {
@@ -433,15 +438,15 @@ void SMPC::SETTIME() {
 }
 
 void SMPC::ClockChange(bool fast) {
-    m_VDP.Reset(false);
-    m_SCU.Reset(false);
-    m_SCSP.Reset(false);
+    m_saturn.VDP.Reset(false);
+    m_saturn.SCU.Reset(false);
+    m_saturn.SCSP.Reset(false);
 
     // TODO: clear VDP VRAMs
 
-    m_SH2.slaveEnabled = false;
+    m_saturn.SH2.slaveEnabled = false;
 
-    m_SH2.master.SetNMI();
+    m_saturn.SH2.master.SetNMI();
 
     // TODO: update system clock
 }
