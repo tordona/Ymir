@@ -1449,9 +1449,22 @@ template <uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawSpriteLayer() {
     const uint32 y = m_VCounter;
 
+    // VDP1 scaling:
+    //          VDP2   VDP1
+    //          HRESO  TVM
+    // 2x horz:  01x   000
+    // 2x vert:  1xx   00x
+    // 2x vert:  0xx   00x   when using double-interlace
+    const bool tvmZeroBits = !m_VDP1.hdtvEnable && !m_VDP1.fbRotEnable;
+    const bool doubleScaleH = tvmZeroBits && !m_VDP1.pixel8Bits && (m_VDP2.TVMD.HRESOn & 0b110) == 0b010;
+    const bool doubleScaleV = tvmZeroBits && ((m_VDP2.TVMD.HRESOn & 0b100) == 0b100 || m_VDP2.TVMD.LSMDn == 0b11);
+
+    const uint32 scaleShiftH = doubleScaleH ? 1 : 0;
+    const uint32 scaleShiftV = doubleScaleV ? 1 : 0;
+
     for (uint32 x = 0; x < m_HRes; x++) {
         const auto &spriteFB = VDP1GetDisplayFB();
-        const uint32 spriteFBOffset = x + y * m_VDP1.fbSizeH;
+        const uint32 spriteFBOffset = (x >> scaleShiftH) + (y >> scaleShiftV) * m_VDP1.fbSizeH;
 
         const SpriteParams &params = m_VDP2.spriteParams;
         auto &pixel = m_layerStates[0].pixels[x];
