@@ -16,6 +16,9 @@ namespace satemu::vdp {
 
 VDP::VDP(scu::SCU &scu)
     : m_SCU(scu) {
+
+    m_framebuffer = nullptr;
+
     // TODO: set PAL flag
     Reset(true);
 }
@@ -145,6 +148,8 @@ void VDP::UpdateResolution() {
     case 3: rootLog2.info("Double-density interlace mode"); break;
     }
 
+    m_framebuffer = m_cbRequestFramebuffer(m_HRes, m_VRes);
+
     // Timing tables
     // NOTE: the timings indicate when the specified phase begins
 
@@ -233,7 +238,6 @@ void VDP::BeginHPhaseActiveDisplay() {
     rootLog2.trace("(VCNT = {:3d})  Entering horizontal active display phase", m_VCounter);
     if (m_VPhase == VerticalPhase::Active) {
         if (m_VCounter == 0) {
-            m_framebuffer = m_cbRequestFramebuffer(m_HRes, m_VRes);
             rootLog2.trace("Begin frame, VDP1 framebuffer {}", m_drawFB ^ 1);
             rootLog2.trace("VBE={:d} FCM={:d} FCT={:d} PTM={:d} mswap={:d} merase={:d}", m_VDP1.vblankErase,
                            m_VDP1.fbSwapMode, m_VDP1.fbSwapTrigger, m_VDP1.plotTrigger, m_VDP1.fbManualSwap,
@@ -1450,7 +1454,7 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
 
         bool isPaletteData = true;
         if (params.mixedFormat) {
-            const uint16 spriteDataValue = util::ReadBE<uint16>(&spriteFB[spriteFBOffset * sizeof(uint16)]);
+            const uint16 spriteDataValue = util::ReadBE<uint16>(&spriteFB[(spriteFBOffset * sizeof(uint16)) & 0x3FFFE]);
             if (bit::extract<15>(spriteDataValue)) {
                 // RGB data
                 pixel.color = ConvertRGB555to888(Color555{spriteDataValue});
