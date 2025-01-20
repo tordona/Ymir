@@ -129,6 +129,7 @@ public:
     std::array<uint8, kIPLSize> IPL; // aka BIOS ROM
     std::array<uint8, kWRAMLowSize> WRAMLow;
     std::array<uint8, kWRAMHighSize> WRAMHigh;
+
     // TODO: don't hardcode this
     // TODO: use an abstraction
     // TODO: move to its own class

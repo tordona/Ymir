@@ -12,19 +12,34 @@ SH2Bus::SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu, smpc::SMPC &smpc)
     , m_SCU(scu)
     , m_SMPC(smpc) {
 
-    std::filesystem::path bupRAMPath = "internal_backup_ram.bin";
-    std::error_code err{};
-    if (!std::filesystem::is_regular_file(bupRAMPath)) {
+    // HACK: should be in its own class, shared with external backup RAM cartridges
+    static constexpr std::string_view kHeader = "BackUpRam Format";
+    std::filesystem::path bupRAMPath = "bup-int.bin";
+    if (!std::filesystem::is_regular_file(bupRAMPath) ||
+        std::filesystem::file_size(bupRAMPath) < kInternalBackupRAMSize) {
         std::ofstream out{bupRAMPath, std::ios::binary};
-        out.seekp(kInternalBackupRAMSize - 1);
-        out.put(0);
+
+        // Write header at the beginning
+        for (int i = 0; i < 4; i++) {
+            for (char ch : kHeader) {
+                out.put(0xFF);
+                out.put(ch);
+            }
+        }
+
+        // Clear the rest of the file
+        out.seekp(0, std::ios::end);
+        if (out.tellp() & 1) {
+            out.put(0);
+        }
+        for (size_t i = out.tellp(); i < kInternalBackupRAMSize; i += 2) {
+            out.put(0xFF);
+            out.put(0);
+        }
     }
-    if (std::filesystem::file_size(bupRAMPath) < kInternalBackupRAMSize) {
-        std::ofstream out{bupRAMPath, std::ios::binary | std::ios::ate};
-        out.seekp(kInternalBackupRAMSize - 1);
-        out.put(0);
-    }
+    std::error_code err{};
     internalBackupRAM = mio::make_mmap_sink(bupRAMPath.string(), err);
+    // TODO: handle error
 
     IPL.fill(0);
     Reset(true);
