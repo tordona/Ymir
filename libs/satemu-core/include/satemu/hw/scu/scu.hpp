@@ -63,6 +63,7 @@ class SCU {
     static constexpr dbg::Category rootLog{"SCU"};
     static constexpr dbg::Category regsLog{rootLog, "Regs"};
     static constexpr dbg::Category dmaLog{rootLog, "DMA"};
+    static constexpr dbg::Category debugLog{rootLog, "Debug"};
 
 public:
     SCU(vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2Block &sh2);
@@ -130,6 +131,8 @@ private:
     // TODO: move to its own class
     // std::array<uint8, kInternalBackupRAMSize> internalBackupRAM;
     mio::mmap_sink m_externalBackupRAM;
+
+    std::string m_debugOutput;
 
     // -------------------------------------------------------------------------
     // A-Bus and B-Bus accessors
@@ -215,6 +218,16 @@ private:
             WriteABus<uint16>(address + 0, value >> 16u);
             WriteABus<uint16>(address + 2, value >> 0u);
 
+        } else if (address == 0x210'0001) [[unlikely]] {
+            if constexpr (std::is_same_v<T, uint8>) {
+                // mednafen debug port
+                if (value == '\n') {
+                    debugLog.debug("{}", m_debugOutput);
+                    m_debugOutput.clear();
+                } else if (value != '\r') {
+                    m_debugOutput.push_back(value);
+                }
+            }
         } else if (AddressInRange<0x400'0000, 0x4FF'FFFF>(address)) {
             // HACK: emulate 32 Mbit backup RAM cartridge
             util::WriteBE<T>((uint8 *)&m_externalBackupRAM.data()[address & 0x7FFFFF], value);
