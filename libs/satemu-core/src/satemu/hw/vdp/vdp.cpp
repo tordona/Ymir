@@ -681,6 +681,7 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
     uint16 color = 0;
     bool transparent = true;
     const bool flipU = control.flipH;
+    int endCodeCount = 0;
     for (TexturedLineStepper line{coord1, coord2, charSizeH, flipU}; line.CanStep(); line.Step()) {
         // Load new texel if U coordinate changed.
         // Note that the very first pixel in the line always passes the check.
@@ -691,43 +692,59 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
                 break;
             }
 
-            // TODO: process end codes, unless mode.endCodeDisable || mode.highSpeedShrink
-            // TODO: handle mode.highSpeedShrink
+            const bool useHighSpeedShrink = mode.highSpeedShrink && line.uinc > Slope::kFracOne;
+            const uint32 adjustedU = useHighSpeedShrink ? ((u & ~1) | m_VDP1.evenOddCoordSelect) : u;
 
-            const uint32 charIndex = u + v * charSizeH;
+            const uint32 charIndex = adjustedU + v * charSizeH;
+
+            auto processEndCode = [&](bool endCode) {
+                if (endCode && !mode.endCodeDisable && !useHighSpeedShrink) {
+                    endCodeCount++;
+                }
+            };
 
             // Read next texel
             switch (mode.colorMode) {
             case 0: // 4 bpp, 16 colors, bank mode
                 color = VDP1ReadVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
                 color = (color >> (((u ^ 1) & 1) * 4)) & 0xF;
+                processEndCode(color == 0xF);
                 transparent = color == 0x0;
                 color |= lineParams.colorBank;
                 break;
             case 1: // 4 bpp, 16 colors, lookup table mode
                 color = VDP1ReadVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
                 color = (color >> (((u ^ 1) & 1) * 4)) & 0xF;
+                processEndCode(color == 0xF);
                 transparent = color == 0x0;
                 color = VDP1ReadVRAM<uint16>(color * sizeof(uint16) + lineParams.colorBank * 8);
                 break;
             case 2: // 8 bpp, 64 colors, bank mode
                 color = VDP1ReadVRAM<uint8>(lineParams.charAddr + charIndex) & 0x3F;
+                processEndCode(color == 0xFF);
                 transparent = color == 0x0;
                 color |= lineParams.colorBank & 0xFFC0;
                 break;
             case 3: // 8 bpp, 128 colors, bank mode
                 color = VDP1ReadVRAM<uint8>(lineParams.charAddr + charIndex) & 0x7F;
+                processEndCode(color == 0xFF);
                 transparent = color == 0x00;
                 color |= lineParams.colorBank & 0xFF80;
                 break;
             case 4: // 8 bpp, 256 colors, bank mode
                 color = VDP1ReadVRAM<uint8>(lineParams.charAddr + charIndex);
+                processEndCode(color == 0xFF);
                 transparent = color == 0x00;
                 color |= lineParams.colorBank & 0xFF00;
                 break;
             case 5: // 16 bpp, 32768 colors, RGB mode
                 color = VDP1ReadVRAM<uint16>(lineParams.charAddr + charIndex * sizeof(uint16));
+                processEndCode(color == 0x7FFF);
                 transparent = color == 0x0000;
+                break;
+            }
+
+            if (endCodeCount == 2) {
                 break;
             }
         }
