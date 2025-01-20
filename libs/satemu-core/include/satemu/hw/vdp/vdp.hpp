@@ -1102,8 +1102,8 @@ private:
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
     template <bool rot, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
-    Pixel VDPFetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses,
-                                CoordU32 scrollCoord);
+    Pixel VDP2FetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses,
+                                 CoordU32 scrollCoord);
 
     // Fetches a two-word character from VRAM.
     //

@@ -1915,7 +1915,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState 
             const CoordU32 scrollCoord{scrollX, scrollY};
 
             // Plot pixel
-            layerState.pixels[x] = VDPFetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
+            layerState.pixels[x] = VDP2FetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
                 bgParams, bgParams.pageBaseAddresses, scrollCoord);
         }
 
@@ -2016,7 +2016,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
             pixel.transparent = true;
         } else {
             // Plot pixel
-            pixel = VDPFetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
+            pixel = VDP2FetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
                 bgParams, rotParamState.pageBaseAddresses, scrollCoord);
         }
     }
@@ -2190,8 +2190,8 @@ bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32
 }
 
 template <bool rot, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
-FORCE_INLINE VDP::Pixel VDP::VDPFetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses,
-                                                   CoordU32 scrollCoord) {
+FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses,
+                                                    CoordU32 scrollCoord) {
     //      Map (NBGs)              Map (RBGs)
     // +---------+---------+   +----+----+----+----+
     // |         |         |   | A  | B  | C  | D  |
