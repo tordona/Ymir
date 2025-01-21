@@ -6,6 +6,7 @@
 
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/constexpr_for.hpp>
+#include <satemu/util/scope_guard.hpp>
 #include <satemu/util/unreachable.hpp>
 
 #include <cassert>
@@ -1365,15 +1366,12 @@ void VDP::VDP2CalcRotationParameterTables() {
         sint32 scrY = state.scrY;
         uint32 KA = state.KA;
 
-        // Preincrement when using double-interlace mode if drawing odd field
-        /*if (m_VDP2.TVMD.LSMDn == 3 && m_VDP2.TVSTAT.ODD && m_VCounter == 0) {
-            scrX += scrXIncV;
-            scrY += scrYIncV;
-            KA += t.dKAst;
-        }*/
+        const bool doubleResH = m_VDP2.TVMD.HRESOn & 0b010;
+        const uint32 xShift = doubleResH ? 1 : 0;
+        const uint32 maxX = m_HRes >> xShift;
 
         // Precompute whole line
-        for (uint32 x = 0; x < m_HRes; x++) {
+        for (uint32 x = 0; x < maxX; x++) {
             // Replace parameters with those obtained from the coefficient table if enabled
             if (params.coeffTableEnable) {
                 const Coefficient coeff = VDP2FetchRotationCoefficient(params, KA);
@@ -1405,13 +1403,6 @@ void VDP::VDP2CalcRotationParameterTables() {
         state.scrX += scrXIncV;
         state.scrY += scrYIncV;
         state.KA += t.dKAst;
-
-        // Increment once more if in double-interlace mode
-        /*if (m_VDP2.TVMD.LSMDn == 3) {
-            state.scrX += scrXIncV;
-            state.scrY += scrYIncV;
-            state.KA += t.dKAst;
-        }*/
 
         // Disable read flags now that we've dealt with them
         params.readXst = false;
@@ -2052,8 +2043,18 @@ template <bool selRotParam, VDP::CharacterMode charMode, bool fourCellChar, Colo
 NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState) {
     const CommonRotationParams &commonRotParams = m_VDP2.commonRotParams;
 
-    for (uint32 x = 0; x < m_HRes; x++) {
-        auto &pixel = layerState.pixels[x];
+    const bool doubleResH = m_VDP2.TVMD.HRESOn & 0b010;
+    const uint32 xShift = doubleResH ? 1 : 0;
+    const uint32 maxX = m_HRes >> xShift;
+
+    for (uint32 x = 0; x < maxX; x++) {
+        const uint32 xx = x << xShift;
+        auto &pixel = layerState.pixels[xx];
+        util::ScopeGuard sgDoublePixel{[&] {
+            if (doubleResH) {
+                layerState.pixels[xx + 1] = pixel;
+            }
+        }};
 
         const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(bgParams, x) : RotParamA;
 
@@ -2075,13 +2076,32 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
         const uint32 scrollY = fracScrollY >> 16u;
         const CoordU32 scrollCoord{scrollX, scrollY};
 
+        // Determine maximum coordinates and screen over process
+        const bool usingFixed512 = rotParams.screenOverProcess == ScreenOverProcess::Fixed512;
+        const bool usingRepeat = rotParams.screenOverProcess == ScreenOverProcess::Repeat;
+        const uint32 maxScrollX = usingFixed512 ? 512 : 512 * 4 << bgParams.pageShiftH;
+        const uint32 maxScrollY = usingFixed512 ? 512 : 512 * 4 << bgParams.pageShiftV;
+
         if (commonRotParams.rotParamMode != RotationParamMode::Window && VDP2IsInsideWindow(bgParams.windowSet, x)) {
             // Make pixel transparent if inside a window and not using window-based rotation parameter selection
             pixel.transparent = true;
-        } else {
+        } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
             // Plot pixel
             pixel = VDP2FetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
                 bgParams, rotParamState.pageBaseAddresses, scrollCoord);
+        } else if (rotParams.screenOverProcess == ScreenOverProcess::RepeatChar) {
+            // Out of bounds - repeat character
+            Character ch{};
+            ch.charNum = rotParams.screenOverPatternName;
+            ch.flipH = false;
+            ch.flipV = false;
+            ch.palNum = 0;
+            ch.specColorCalc = false;
+            ch.specPriority = false;
+            pixel = VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, ch, scrollCoord, 0);
+        } else {
+            // Out of bounds - transparent
+            pixel.transparent = true;
         }
     }
 }
@@ -2090,8 +2110,12 @@ template <bool selRotParam, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerState &layerState) {
     const CommonRotationParams &commonRotParams = m_VDP2.commonRotParams;
 
-    for (uint32 x = 0; x < m_HRes; x++) {
-        auto &pixel = layerState.pixels[x];
+    const bool doubleResH = m_VDP2.TVMD.HRESOn & 0b010;
+    const uint32 xShift = doubleResH ? 1 : 0;
+    const uint32 maxX = m_HRes >> xShift;
+
+    for (uint32 x = 0; x < maxX; x++) {
+        auto &pixel = layerState.pixels[x << xShift];
 
         const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(bgParams, x) : RotParamA;
 
@@ -2113,12 +2137,24 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
         const uint32 scrollY = fracScrollY >> 16u;
         const CoordU32 scrollCoord{scrollX, scrollY};
 
+        const bool usingFixed512 = rotParams.screenOverProcess == ScreenOverProcess::Fixed512;
+        const bool usingRepeat = rotParams.screenOverProcess == ScreenOverProcess::Repeat;
+        const uint32 maxScrollX = usingFixed512 ? 512 : bgParams.bitmapSizeH;
+        const uint32 maxScrollY = usingFixed512 ? 512 : bgParams.bitmapSizeV;
+
         if (commonRotParams.rotParamMode != RotationParamMode::Window && VDP2IsInsideWindow(bgParams.windowSet, x)) {
             // Make pixel transparent if inside a window and not using window-based rotation parameter selection
             pixel.transparent = true;
-        } else {
+        } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
             // Plot pixel
             pixel = VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, scrollCoord);
+        } else {
+            // Out of bounds and no repeat
+            pixel.transparent = true;
+        }
+
+        if (doubleResH) {
+            layerState.pixels[(x << xShift) + 1] = pixel;
         }
     }
 }
