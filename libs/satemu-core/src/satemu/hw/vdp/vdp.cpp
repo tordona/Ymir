@@ -353,13 +353,28 @@ FORCE_INLINE std::array<uint8, kVDP1FramebufferRAMSize> &VDP::VDP1GetDisplayFB()
 }
 
 FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
-    renderLog1.trace("Erasing framebuffer {} - {}x{} to {}x{} -> {:04X}", m_drawFB ^ 1, m_VDP1.eraseX1, m_VDP1.eraseY1,
-                     m_VDP1.eraseX3, m_VDP1.eraseY3, m_VDP1.eraseWriteValue);
+    renderLog1.trace("Erasing framebuffer {} - {}x{} to {}x{} -> {:04X}  {}x{}  {}-bit", m_drawFB ^ 1, m_VDP1.eraseX1,
+                     m_VDP1.eraseY1, m_VDP1.eraseX3, m_VDP1.eraseY3, m_VDP1.eraseWriteValue, m_VDP1.fbSizeH,
+                     m_VDP1.fbSizeV, (m_VDP1.pixel8Bits ? 8 : 16));
 
     auto &fb = VDP1GetDisplayFB();
-    for (uint32 y = m_VDP1.eraseY1; y <= m_VDP1.eraseY3; y++) {
-        for (uint32 x = m_VDP1.eraseX1; x <= m_VDP1.eraseX3; x++) {
-            const uint32 address = y * (m_VDP1.pixel8Bits ? 512 : 1024) + x * 2;
+
+    // Horizontal scale is doubled in hi-res modes
+    const uint32 scaleH = (m_VDP2.TVMD.HRESOn & 0b010) ? 1 : 0;
+    // Vertical scale is doubled in double-interlace mode
+    const uint32 scaleV = m_VDP2.TVMD.LSMDn == 3 ? 1 : 0;
+
+    const uint32 offsetShift = m_VDP1.pixel8Bits ? 0 : 1;
+
+    const uint32 x1 = m_VDP1.eraseX1 << scaleH;
+    const uint32 x3 = m_VDP1.eraseX3 << scaleH;
+    const uint32 y1 = m_VDP1.eraseY1 << scaleV;
+    const uint32 y3 = m_VDP1.eraseY3 << scaleV;
+
+    for (uint32 y = y1; y <= y3; y++) {
+        const uint32 fbOffset = y * m_VDP1.fbSizeH;
+        for (uint32 x = x1; x <= x3; x++) {
+            const uint32 address = (fbOffset + x) << offsetShift;
             util::WriteBE<uint16>(&fb[address & 0x3FFFE], m_VDP1.eraseWriteValue);
         }
     }
