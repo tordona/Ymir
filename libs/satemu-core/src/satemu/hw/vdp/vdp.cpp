@@ -2115,8 +2115,13 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
     const uint32 maxX = m_HRes >> xShift;
 
     for (uint32 x = 0; x < maxX; x++) {
-        auto &pixel = layerState.pixels[x << xShift];
-
+        const uint32 xx = x << xShift;
+        auto &pixel = layerState.pixels[xx];
+        util::ScopeGuard sgDoublePixel{[&] {
+            if (doubleResH) {
+                layerState.pixels[xx + 1] = pixel;
+            }
+        }};
         const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(bgParams, x) : RotParamA;
 
         const RotationParams &rotParams = m_VDP2.rotParams[rotParamSelector];
@@ -2151,10 +2156,6 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
         } else {
             // Out of bounds and no repeat
             pixel.transparent = true;
-        }
-
-        if (doubleResH) {
-            layerState.pixels[(x << xShift) + 1] = pixel;
         }
     }
 }
