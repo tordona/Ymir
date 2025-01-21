@@ -1366,11 +1366,11 @@ void VDP::VDP2CalcRotationParameterTables() {
         uint32 KA = state.KA;
 
         // Preincrement when using double-interlace mode if drawing odd field
-        if (m_VDP2.TVMD.LSMDn == 3 && m_VDP2.TVSTAT.ODD && m_VCounter == 0) {
+        /*if (m_VDP2.TVMD.LSMDn == 3 && m_VDP2.TVSTAT.ODD && m_VCounter == 0) {
             scrX += scrXIncV;
             scrY += scrYIncV;
             KA += t.dKAst;
-        }
+        }*/
 
         // Precompute whole line
         for (uint32 x = 0; x < m_HRes; x++) {
