@@ -986,7 +986,7 @@ private:
     void VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayerState &bgState);
 
     // Loads rotation parameter tables and calculates coefficients and increments.
-    void VDP2LoadRotationParameterTables();
+    void VDP2CalcRotationParameterTables();
 
     // Draws the current VDP2 scanline.
     void VDP2DrawLine();
@@ -1176,6 +1176,11 @@ private:
     // colorDataBits specifies the bit width of the color data.
     template <uint32 colorDataBits>
     static bool VDP2IsNormalShadow(uint16 colorData);
+
+    // Retrieves the Y display coordinate based on the current interlace mode.
+    //
+    // y is the Y coordinate to translate
+    uint32 VDP2GetY(uint32 y) const;
 };
 
 } // namespace satemu::vdp

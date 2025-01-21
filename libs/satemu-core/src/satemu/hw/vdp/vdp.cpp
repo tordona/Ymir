@@ -192,11 +192,6 @@ void VDP::UpdateResolution() {
         }},
     }};
     m_VTimings = vTimings[m_VDP2.TVSTAT.PAL][m_VDP2.TVMD.VRESOn];
-    if (m_VDP2.TVMD.LSMDn == 3) {
-        for (uint32 &timing : m_VTimings) {
-            timing *= 2;
-        }
-    }
 
     // Adjust for dot clock
     const uint32 dotClockMult = (m_VDP2.TVMD.HRESOn & 2) ? 2 : 4;
@@ -551,6 +546,12 @@ bool VDP::VDP1IsQuadSystemClipped(CoordS32 coord1, CoordS32 coord2, CoordS32 coo
 FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams,
                                      const VDP1GouraudParams &gouraudParams) {
     auto [x, y] = coord;
+    if (m_VDP2.TVMD.LSMDn == 3) {
+        if ((y & 1) == m_VDP2.TVSTAT.ODD) {
+            return;
+        }
+        y = (y >> 1);
+    }
     if (pixelParams.mode.meshEnable && ((x ^ y) & 1)) {
         return;
     }
@@ -1227,6 +1228,10 @@ FORCE_INLINE void VDP::VDP2InitNormalBG() {
     NormBGLayerState &bgState = m_normBGLayerStates[index];
     bgState.fracScrollX = bgParams.scrollAmountH;
     bgState.fracScrollY = bgParams.scrollAmountV;
+    if (m_VDP2.TVMD.LSMDn == 3 && m_VDP2.TVSTAT.ODD) {
+        bgState.fracScrollY += bgParams.scrollIncV;
+    }
+
     bgState.scrollIncH = bgParams.scrollIncH;
     bgState.mosaicCounterY = 0;
     if constexpr (index < 2) {
@@ -1297,7 +1302,7 @@ void VDP::VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayerState 
     }
 }
 
-void VDP::VDP2LoadRotationParameterTables() {
+void VDP::VDP2CalcRotationParameterTables() {
     const uint32 baseAddress = m_VDP2.commonRotParams.baseAddress;
     const bool readAll = m_VCounter == 0;
 
@@ -1345,19 +1350,30 @@ void VDP::VDP2LoadRotationParameterTables() {
         sint64 kx = t.kx;
         sint64 ky = t.ky;
 
+        if (readXst) {
+            state.scrX = Xsp;
+        }
+        if (readYst) {
+            state.scrY = Ysp;
+        }
+        if (readKAst) {
+            state.KA = t.KAst;
+        }
+
         // Current screen coordinates (16 frac bits) and coefficient address (10 frac bits)
         sint32 scrX = state.scrX;
         sint32 scrY = state.scrY;
         uint32 KA = state.KA;
 
+        // Preincrement when using double-interlace mode if drawing odd field
+        if (m_VDP2.TVMD.LSMDn == 3 && m_VDP2.TVSTAT.ODD && m_VCounter == 0) {
+            scrX += scrXIncV;
+            scrY += scrYIncV;
+            KA += t.dKAst;
+        }
+
         // Precompute whole line
         for (uint32 x = 0; x < m_HRes; x++) {
-            if (x == 0) {
-                if (readKAst) {
-                    KA = state.KA = t.KAst;
-                }
-            }
-
             // Replace parameters with those obtained from the coefficient table if enabled
             if (params.coeffTableEnable) {
                 const Coefficient coeff = VDP2FetchRotationCoefficient(params, KA);
@@ -1376,15 +1392,6 @@ void VDP::VDP2LoadRotationParameterTables() {
                 KA += t.dKAx;
             }
 
-            if (x == 0) {
-                if (readXst) {
-                    scrX = state.scrX = Xsp;
-                }
-                if (readYst) {
-                    scrY = state.scrY = Ysp;
-                }
-            }
-
             // Store screen coordinates
             state.screenCoords[x].x = ((kx * scrX) >> 16ll) + Xp;
             state.screenCoords[x].y = ((ky * scrY) >> 16ll) + Yp;
@@ -1398,6 +1405,13 @@ void VDP::VDP2LoadRotationParameterTables() {
         state.scrX += scrXIncV;
         state.scrY += scrYIncV;
         state.KA += t.dKAst;
+
+        // Increment once more if in double-interlace mode
+        /*if (m_VDP2.TVMD.LSMDn == 3) {
+            state.scrX += scrXIncV;
+            state.scrY += scrYIncV;
+            state.KA += t.dKAst;
+        }*/
 
         // Disable read flags now that we've dealt with them
         params.readXst = false;
@@ -1429,7 +1443,7 @@ void VDP::VDP2DrawLine() {
     const uint32 colorMode = m_VDP2.RAMCTL.CRMDn;
 
     // Load rotation parameters if requested
-    VDP2LoadRotationParameterTables();
+    VDP2CalcRotationParameterTables();
 
     // Draw line color and back screen layers
     VDP2DrawLineColorAndBackScreens();
@@ -1486,10 +1500,9 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
     //          HRESO  TVM
     // 2x horz:  01x   000
     // 2x vert:  1xx   00x
-    // 2x vert:  0xx   00x   when using double-interlace
     const bool tvmZeroBits = !m_VDP1.hdtvEnable && !m_VDP1.fbRotEnable;
     const bool doubleScaleH = tvmZeroBits && !m_VDP1.pixel8Bits && (m_VDP2.TVMD.HRESOn & 0b110) == 0b010;
-    const bool doubleScaleV = tvmZeroBits && ((m_VDP2.TVMD.HRESOn & 0b100) == 0b100 || m_VDP2.TVMD.LSMDn == 0b11);
+    const bool doubleScaleV = tvmZeroBits && (m_VDP2.TVMD.HRESOn & 0b100) == 0b100;
 
     const uint32 scaleShiftH = doubleScaleH ? 1 : 0;
     const uint32 scaleShiftV = doubleScaleV ? 1 : 0;
@@ -1676,7 +1689,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
         return;
     }
 
-    const uint32 y = m_VCounter;
+    const uint32 y = VDP2GetY(m_VCounter);
 
     if (!m_VDP2.TVMD.DISP) {
         std::fill_n(&m_framebuffer[y * m_HRes], m_HRes, 0);
@@ -1906,6 +1919,9 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState 
     uint32 fracScrollX = bgState.fracScrollX;
     const uint32 fracScrollY = bgState.fracScrollY;
     bgState.fracScrollY += bgParams.scrollIncV;
+    if (m_VDP2.TVMD.LSMDn == 3) {
+        bgState.fracScrollY += bgParams.scrollIncV;
+    }
 
     uint32 cellScrollTableAddress = m_VDP2.verticalCellScrollTableAddress;
 
@@ -1975,6 +1991,9 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState 
     uint32 fracScrollX = bgState.fracScrollX;
     const uint32 fracScrollY = bgState.fracScrollY;
     bgState.fracScrollY += bgParams.scrollIncV;
+    if (m_VDP2.TVMD.LSMDn == 3) {
+        bgState.fracScrollY += bgParams.scrollIncV;
+    }
 
     uint32 cellScrollTableAddress = m_VDP2.verticalCellScrollTableAddress;
 
@@ -2182,7 +2201,8 @@ bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32
         const bool inverted = windowSet.inverted[i];
 
         // Check vertical coordinate
-        const bool insideY = m_VCounter >= windowParam.startY && m_VCounter <= windowParam.endY;
+        const uint32 y = VDP2GetY(m_VCounter);
+        const bool insideY = y >= windowParam.startY && y <= windowParam.endY;
 
         uint16 startX = windowParam.startX;
         uint16 endX = windowParam.endX;
@@ -2818,6 +2838,14 @@ FORCE_INLINE bool VDP::VDP2IsNormalShadow(uint16 colorData) {
     // Check against normal shadow pattern (LSB = 0, rest of the bits = 1)
     static constexpr uint16 kNormalShadowValue = ~(~0 << (colorDataBits + 1)) & ~1;
     return (colorData == kNormalShadowValue);
+}
+
+FORCE_INLINE uint32 VDP::VDP2GetY(uint32 y) const {
+    if (m_VDP2.TVMD.LSMDn == 3) {
+        return (y << 1) | m_VDP2.TVSTAT.ODD;
+    } else {
+        return y;
+    }
 }
 
 } // namespace satemu::vdp

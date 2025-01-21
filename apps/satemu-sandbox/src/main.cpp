@@ -41,7 +41,7 @@ void runEmulator(satemu::Saturn &saturn) {
     using namespace satemu;
 
     // Screen parameters
-    const uint32 scale = 3;
+    const uint32 scale = 4;
     struct ScreenParams {
         uint32 width = 320;
         uint32 height = 224;
