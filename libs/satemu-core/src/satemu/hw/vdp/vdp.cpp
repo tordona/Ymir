@@ -2542,11 +2542,15 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
     // Flip dot coordinates if requested
     if (ch.flipH) {
         dotX ^= 7;
-        cellIndex ^= 1;
+        if (bgParams.cellSizeShift > 0) {
+            cellIndex ^= 1;
+        }
     }
     if (ch.flipV) {
         dotY ^= 7;
-        cellIndex ^= 2;
+        if (bgParams.cellSizeShift > 0) {
+            cellIndex ^= 2;
+        }
     }
 
     // Adjust cell index based on color format
