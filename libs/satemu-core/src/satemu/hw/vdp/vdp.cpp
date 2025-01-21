@@ -2166,16 +2166,8 @@ bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32
         const WindowParams &windowParam = m_VDP2.windowParams[i];
         const bool inverted = windowSet.inverted[i];
 
-        // Truth table: (state: false=outside, true=inside)
-        // state  inverted  result   st != ao
-        // false  false     outside  false
-        // true   false     inside   true
-        // false  true      inside   true
-        // true   true      outside  false
-        auto isInside = [&](bool state) { return state != inverted; };
-
         // Check vertical coordinate
-        const bool insideY = isInside(m_VCounter >= windowParam.startY && m_VCounter <= windowParam.endY);
+        const bool insideY = m_VCounter >= windowParam.startY && m_VCounter <= windowParam.endY;
 
         uint16 startX = windowParam.startX;
         uint16 endX = windowParam.endX;
@@ -2194,12 +2186,19 @@ bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32
         }
 
         // Check horizontal coordinate
-        const bool insideX = isInside(x >= startX && x <= endX);
+        const bool insideX = x >= startX && x <= endX;
+
+        // Truth table: (state: false=outside, true=inside)
+        // state  inverted  result   st != ao
+        // false  false     outside  false
+        // true   false     inside   true
+        // false  true      inside   true
+        // true   true      outside  false
+        const bool inside = (insideX && insideY) != inverted;
 
         // Short-circuit the output if the logic allows for it
         // true short-circuits OR logic
         // false short-circuits AND logic
-        const bool inside = insideX && insideY;
         if (inside == (windowSet.logic == WindowLogic::Or)) {
             return inside;
         }
