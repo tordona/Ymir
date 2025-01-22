@@ -302,14 +302,6 @@ struct FreeRunningTimer {
 //    7-0   R/W  Reserved   Must be zero
 //
 //   Interrupt priority levels range from 0 to 15.
-union RegIPRB {
-    Reg16 val;
-    struct {
-        uint16 _rsvd0_7 : 8;
-        uint16 FRTIPn : 4;
-        uint16 SCIIPn : 4;
-    };
-};
 
 // 062  R/W  8,16     0000      VCRA    Vector number setting register A
 //
@@ -318,15 +310,6 @@ union RegIPRB {
 //   14-8   R/W  SERV6-0  Serial Communication Interface (SCI) Receive-Error Interrupt Vector Number
 //      7   R    -        Reserved - must be zero
 //    6-0   R/W  SRXV6-0  Serial Communication Interface (SCI) Receive-Data-Full Interrupt Vector Number
-union RegVCRA {
-    Reg16 val;
-    struct {
-        uint16 SRXVn : 7;
-        uint16 _rsvd7 : 1;
-        uint16 SERVn : 7;
-        uint16 _rsvd15 : 1;
-    };
-};
 
 // 064  R/W  8,16     0000      VCRB    Vector number setting register B
 //
@@ -335,15 +318,6 @@ union RegVCRA {
 //   14-8   R/W  STXV6-0  Serial Communication Interface (SCI) Transmit-Data-Empty Interrupt Vector Number
 //      7   R    -        Reserved - must be zero
 //    6-0   R/W  STEV6-0  Serial Communication Interface (SCI) Transmit-End Interrupt Vector Number
-union RegVCRB {
-    Reg16 val;
-    struct {
-        uint16 STEVn : 7;
-        uint16 _rsvd7 : 1;
-        uint16 STXVn : 7;
-        uint16 _rsvd15 : 1;
-    };
-};
 
 // 066  R/W  8,16     0000      VCRC    Vector number setting register C
 //
@@ -352,15 +326,6 @@ union RegVCRB {
 //   14-8   R/W  FICV6-0  Free-Running Timer (FRT) Input-Capture Interrupt Vector Number
 //      7   R    -        Reserved - must be zero
 //    6-0   R/W  FOCV6-0  Free-Running Timer (FRT) Output-Compare Interrupt Vector Number
-union RegVCRC {
-    Reg16 val;
-    struct {
-        uint16 FOCVn : 7;
-        uint16 _rsvd7 : 1;
-        uint16 FICVn : 7;
-        uint16 _rsvd15 : 1;
-    };
-};
 
 // 068  R/W  8,16     0000      VCRD    Vector number setting register D
 //
@@ -368,14 +333,6 @@ union RegVCRC {
 //     15   R    -        Reserved - must be zero
 //   14-8   R/W  FOVV6-0  Free-Running Timer (FRT) Overflow Interrupt Vector Number
 //    7-0   R    -        Reserved - must be zero
-union RegVCRD {
-    Reg16 val;
-    struct {
-        uint16 _rsvd0_7 : 8;
-        uint16 FOVVn : 7;
-        uint16 _rsvd15 : 1;
-    };
-};
 
 // 0E0  R/W  8,16     0000      ICR     Interrupt control register
 //
@@ -390,7 +347,7 @@ union RegVCRD {
 //
 //    The default value may be either 8000 or 0000 because NMIL is an external signal.
 union RegICR {
-    Reg16 val;
+    uint16 u16;
     struct {
         uint16 VECMD : 1;
         uint16 _rsvd1_7 : 7;
@@ -415,15 +372,6 @@ union RegICR {
 //
 //   WDTIP3-0 includes both the watchdog timer and bus state controller (BSC).
 //   WDT interrupt has priority over BSC.
-union RegIPRA {
-    Reg16 val;
-    struct {
-        uint16 _rsvd0_3 : 4;
-        uint16 WDTIPn : 4;
-        uint16 DMACIPn : 4;
-        uint16 DIVUIPn : 4;
-    };
-};
 
 // 0E4  R/W  8,16     0000      VCRWDT  Vector number setting register WDT
 //
@@ -432,15 +380,6 @@ union RegIPRA {
 //   14-8   R/W  WITV6-0  Watchdog Timer (WDT) Interval Interrupt Vector Number
 //      7   R    -        Reserved - must be zero
 //    6-0   R/W  BCMV6-0  Bus State Controller (BSC) Compare Match Interrupt Vector Number
-union RegVCRWDT {
-    Reg16 val;
-    struct {
-        uint16 BCMVn : 7;
-        uint16 _rsvd7 : 1;
-        uint16 WITVn : 7;
-        uint16 _rsvd15 : 1;
-    };
-};
 
 // --- WDT module ---
 //
@@ -530,9 +469,8 @@ union RegDVCR {
 // 10C  R/W  16,32    ud        VCRDIV  Vector number register setting DIV
 //
 //   bits   r/w  code   description
-//  31-16   R    -      Reserved - must be zero
-//   15-0   R/W  -      Interrupt Vector Number
-using RegVCRDIV = uint16;
+//   31-7   R    -      Reserved - must be zero
+//    6-0   R/W  -      Interrupt Vector Number
 
 // 110  R/W  32       ud        DVDNTH  Dividend register H
 //
@@ -741,7 +679,6 @@ struct DMAChannel {
     //   bits   r/w  code   description
     //   31-8   R    -      Reserved - must be zero
     //    7-0   R/W  VC7-0  Vector Number
-    uint8 vecNum;
 
     // 071  R/W  8        00        DRCR0   DMA request/response selection control register 0
     // 072  R/W  8        00        DRCR1   DMA request/response selection control register 1

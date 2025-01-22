@@ -226,14 +226,7 @@ private:
 
     // --- INTC module ---
 
-    RegIPRB IPRB;     // 060  R/W  8,16     0000      IPRB    Interrupt priority setting register B
-    RegVCRA VCRA;     // 062  R/W  8,16     0000      VCRA    Vector number setting register A
-    RegVCRB VCRB;     // 064  R/W  8,16     0000      VCRB    Vector number setting register B
-    RegVCRC VCRC;     // 066  R/W  8,16     0000      VCRC    Vector number setting register C
-    RegVCRD VCRD;     // 068  R/W  8,16     0000      VCRD    Vector number setting register D
-    RegICR ICR;       // 0E0  R/W  8,16     0000      ICR     Interrupt control register
-    RegIPRA IPRA;     // 0E2  R/W  8,16     0000      IPRA    Interrupt priority setting register A
-    RegVCRWDT VCRWDT; // 0E4  R/W  8,16     0000      VCRWDT  Vector number setting register WDT
+    RegICR ICR; // 0E0  R/W  8,16     0000      ICR     Interrupt control register
 
     // --- DMAC module ---
 
@@ -263,7 +256,7 @@ private:
     RegDVSR DVSR;       // 100  R/W  32       ud        DVSR    Divisor register
     RegDVDNT DVDNT;     // 104  R/W  32       ud        DVDNT   Dividend register L for 32-bit division
     RegDVCR DVCR;       // 108  R/W  16,32    00000000  DVCR    Division control register
-    RegVCRDIV VCRDIV;   // 10C  R/W  16,32    ud        VCRDIV  Vector number register setting DIV
+                        // 10C  R/W  16,32    ud        VCRDIV  Vector number register setting DIV
     RegDVDNTH DVDNTH;   // 110  R/W  32       ud        DVDNTH  Dividend register H
     RegDVDNTL DVDNTL;   // 114  R/W  32       ud        DVDNTL  Dividend register L
     RegDVDNTUH DVDNTUH; // 118  R/W  32       ud        DVDNTUH Undocumented dividend register H
@@ -302,22 +295,77 @@ private:
     template <mem_primitive T>
     T OnChipRegRead(uint32 address);
 
+    uint8 OnChipRegReadByte(uint32 address);
+    uint16 OnChipRegReadWord(uint32 address);
+    uint32 OnChipRegReadLong(uint32 address);
+
     template <mem_primitive T>
-    void OnChipRegWrite(uint32 address, T baseValue);
+    void OnChipRegWrite(uint32 address, T value);
+
+    void OnChipRegWriteByte(uint32 address, uint8 value);
+    void OnChipRegWriteWord(uint32 address, uint16 value);
+    void OnChipRegWriteLong(uint32 address, uint32 value);
 
     // -------------------------------------------------------------------------
     // Interrupts
 
-    uint8 m_pendingExternalIntrLevel;
-    uint8 m_pendingExternalIntrVecNum;
+    // Interrupt sources, sorted by default priority from lowest to highest
+    enum class InterruptSource : uint8 {
+        None,          // Priority       Vector
+        FRT_OVI,       // IPRB.FRTIPn    VCRD.FOVVn
+        FRT_OCI,       // IPRB.FRTIPn    VCRC.FOCVn
+        FRT_ICI,       // IPRB.FRTIPn    VCRC.FICVn
+        SCI_TEI,       // IPRB.SCIIPn    VCRB.STEVn
+        SCI_TXI,       // IPRB.SCIIPn    VCRB.STXVn
+        SCI_RXI,       // IPRB.SCIIPn    VCRA.SRXVn
+        SCI_ERI,       // IPRB.SCIIPn    VCRA.SERVn
+        BSC_REF_CMI,   // IPRA.WDTIPn    VCRWDT
+        WDT_ITI,       // IPRA.WDTIPn    VCRWDT
+        DMAC1_XferEnd, // IPRA.DMACIPn   VCRDMA1
+        DMAC0_XferEnd, // IPRA.DMACIPn   VCRDMA0
+        DIVU_OVFI,     // IPRA.DIVUIPn   VCRDIV
+        IRL,           // 15-1           0x40 + (level >> 1)
+        UserBreak,     // 15             0x0C
+        NMI            // 16             0x0B
+    };
 
-    bool m_NMI; // HACK: should be edge-detected
+    std::array<uint8, 16> m_intrLevels;
+    std::array<uint8, 16> m_intrVectors;
 
     struct PendingInterruptInfo {
-        uint8 priority;
-        uint8 vecNum;
+        InterruptSource source;
+        uint8 level;
     } m_pendingInterrupt;
 
+    bool m_NMI;
+    uint8 m_externalIntrVector;
+
+    // Gets the interrupt vector number for the specified interrupt source.
+    uint8 GetInterruptVector(InterruptSource source);
+
+    // Sets the interrupt vector number for the specified interrupt source.
+    void SetInterruptVector(InterruptSource source, uint8 vector);
+
+    // Gets the interrupt level for the specified interrupt source.
+    uint8 GetInterruptLevel(InterruptSource source);
+
+    // Sets the interrupt level for the specified interrupt source.
+    void SetInterruptLevel(InterruptSource source, uint8 level);
+
+    // Raises the interrupt signal of the specified source.
+    void RaiseInterrupt(InterruptSource source);
+
+    // Lowers the interrupt signal of the specified source.
+    void LowerInterrupt(InterruptSource source);
+
+    // Updates the pending interrupt level if it matches one of the specified sources.
+    template <InterruptSource source, InterruptSource... sources>
+    void UpdateInterruptLevels();
+
+    // Recalculates the highest priority interrupt to be serviced.
+    void RecalcInterrupts();
+
+    // Checks if the CPU should service an interrupt.
     bool CheckInterrupts();
 
     // -------------------------------------------------------------------------

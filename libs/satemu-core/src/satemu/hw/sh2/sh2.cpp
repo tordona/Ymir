@@ -154,15 +154,7 @@ void SH2::Reset(bool hard) {
     R[15] = MemReadLong(0x00000004);
 
     // On-chip registers
-    IPRB.val.u16 = 0x0000;
-    VCRA.val.u16 = 0x0000;
-    VCRB.val.u16 = 0x0000;
-    VCRC.val.u16 = 0x0000;
-    VCRD.val.u16 = 0x0000;
-    ICR.val.u16 = 0x0000;
-    IPRA.val.u16 = 0x0000;
-    VCRWDT.val.u16 = 0x0000;
-    VCRDIV = 0x0000; // undefined initial value
+    ICR.u16 = 0x0000;
     BCR1.u15 = 0x03F0;
     BCR2.u16 = 0x00FC;
     WCR.u16 = 0xAAFF;
@@ -186,12 +178,24 @@ void SH2::Reset(bool hard) {
     DVDNTUH = 0x0; // undefined initial value
     DVDNTUL = 0x0; // undefined initial value
 
+    m_intrLevels.fill(0);
+    m_intrVectors.fill(0);
+
+    SetInterruptLevel(InterruptSource::IRL, 1);
+    SetInterruptVector(InterruptSource::IRL, 0x40);
+
+    SetInterruptLevel(InterruptSource::UserBreak, 15);
+    SetInterruptVector(InterruptSource::UserBreak, 0x0C);
+
+    SetInterruptLevel(InterruptSource::NMI, 16);
+    SetInterruptVector(InterruptSource::NMI, 0x0B);
+
     m_NMI = false;
 
-    m_pendingExternalIntrLevel = 0;
-    m_pendingExternalIntrVecNum = 0;
-    m_pendingInterrupt.priority = 0;
-    m_pendingInterrupt.vecNum = 0;
+    m_pendingInterrupt.source = InterruptSource::None;
+    m_pendingInterrupt.level = 0;
+
+    m_externalIntrVector = 0;
 
     m_delaySlot = false;
     m_delaySlotTarget = 0;
@@ -233,22 +237,41 @@ FLATTEN void SH2::Advance(uint64 cycles) {
     }
 }
 
-void SH2::SetExternalInterrupt(uint8 level, uint8 vecNum) {
+void SH2::SetExternalInterrupt(uint8 level, uint8 vector) {
     assert(level < 16);
-    m_pendingExternalIntrLevel = level;
-    m_pendingExternalIntrVecNum = vecNum;
+
+    const InterruptSource source = InterruptSource::IRL;
+
+    m_externalIntrVector = vector;
+
+    SetInterruptLevel(source, level);
+
+    if (level > 0) {
+        if (ICR.VECMD) {
+            SetInterruptVector(source, vector);
+        } else {
+            const uint8 level = GetInterruptLevel(source);
+            SetInterruptVector(source, 0x40 + (level >> 1u));
+        }
+        RaiseInterrupt(source);
+    } else {
+        SetInterruptVector(source, 0);
+        LowerInterrupt(source);
+    }
 }
 
 void SH2::SetNMI() {
     // HACK: should be edge-detected
-    m_NMI = true;
     ICR.NMIL = 1;
+    m_NMI = true;
+    RaiseInterrupt(InterruptSource::NMI);
 }
 
 void SH2::TriggerFRTInputCapture() {
     // TODO: FRT.TCR.IEDGA
     FRT.ICR = FRT.FRC;
     FRT.FTCSR.ICF = 1;
+    RaiseInterrupt(InterruptSource::FRT_ICI);
 }
 
 // -----------------------------------------------------------------------------
@@ -507,6 +530,12 @@ void SH2::AdvanceDMAC(uint64 cycles) {
         if (ch.xferCount == 0) {
             ch.xferEnded = true;
             m_log.trace("DMAC{} transfer finished", index);
+            if (ch.irqEnable) {
+                switch (index) {
+                case 0: RaiseInterrupt(InterruptSource::DMAC0_XferEnd); break;
+                case 1: RaiseInterrupt(InterruptSource::DMAC1_XferEnd); break;
+                }
+            }
         }
 
         index++;
@@ -560,7 +589,7 @@ void SH2::DIVUBegin32() {
         // Signal overflow
         DVCR.OVF = 1;
         if (DVCR.OVFIE) {
-            // TODO: trigger interrupt
+            RaiseInterrupt(InterruptSource::DIVU_OVFI);
         }
     }
 
@@ -620,9 +649,6 @@ void SH2::DIVUBegin64() {
             dividend = (dividend << 1ll) | (Q == M);
         }
 
-        // Signal overflow
-        DVCR.OVF = 1;
-
         // Update output registers
         if (DVCR.OVFIE) {
             DVDNTL = DVDNT = dividend;
@@ -631,6 +657,12 @@ void SH2::DIVUBegin64() {
             DVDNTL = DVDNT = static_cast<sint32>((origDividend >> 32) ^ divisor) < 0 ? kMinValue32 : kMaxValue32;
         }
         DVDNTH = dividend >> 32ll;
+
+        // Signal overflow
+        DVCR.OVF = 1;
+        if (DVCR.OVFIE) {
+            RaiseInterrupt(InterruptSource::DIVU_OVFI);
+        }
     }
 
     DVDNTUH = DVDNTH;
@@ -639,8 +671,7 @@ void SH2::DIVUBegin64() {
 
 template <mem_primitive T>
 T SH2::OnChipRegRead(uint32 address) {
-    // Misaligned memory accesses raise an address error, meaning all accesses here are aligned.
-    // Therefore:
+    // Misaligned memory accesses raise an address error, therefore:
     //   (address & 3) == 2 is only valid for 16-bit accesses
     //   (address & 1) == 1 is only valid for 8-bit accesses
     // Additionally:
@@ -649,38 +680,22 @@ T SH2::OnChipRegRead(uint32 address) {
     //     16-bit read from a 8-bit register: (r << 8u) | r
     //     Every other access returns just r
 
-    // Registers 0-255 do not accept 32-bit accesses
     if constexpr (std::is_same_v<T, uint32>) {
-        if (address < 0x100) {
-            // TODO: raise CPU address error
-        }
+        return OnChipRegReadLong(address);
+    } else if constexpr (std::is_same_v<T, uint16>) {
+        return OnChipRegReadWord(address);
+    } else if constexpr (std::is_same_v<T, uint8>) {
+        return OnChipRegReadByte(address);
     }
+}
 
-    // Registers 256-511 do not accept 8-bit accesses
-    if constexpr (std::is_same_v<T, uint8>) {
-        if (address >= 0x100) {
-            // TODO: raise CPU address error
-        }
+uint8 SH2::OnChipRegReadByte(uint32 address) {
+    if (address >= 0x100) {
+        // Registers 0x100-0x1FF do not accept 8-bit accesses
+        // TODO: raise CPU address error
+        m_log.debug("Illegal 8-bit on-chip register read from {:03X}", address);
+        return 0;
     }
-
-    auto readWordLower = [&](Reg16 value) -> T {
-        if constexpr (std::is_same_v<T, uint8>) {
-            return value.u8[(address & 1) ^ 1];
-        } else {
-            return value.u16;
-        }
-    };
-    auto readByteLower = [&](uint8 value) -> T {
-        if constexpr (std::is_same_v<T, uint16>) {
-            return (address & 1) ? value : ((value << 8u) | value);
-        } else {
-            return value;
-        }
-    };
-
-    // Note: Clang generates marginally faster code with case ranges here.
-    // See:
-    // https://quick-bench.com/q/vB2HZ3bzAIlqIazYoVxy7A0ooKg
 
     switch (address) {
     case 0x04: return 0; // TODO: SCI SSR
@@ -695,20 +710,58 @@ T SH2::OnChipRegRead(uint32 address) {
     case 0x18: return FRT.ReadICRH();
     case 0x19: return FRT.ReadICRL();
 
-    case 0x60 ... 0x61: return readWordLower(IPRB.val);
-    case 0x62 ... 0x63: return readWordLower(VCRA.val);
-    case 0x64 ... 0x65: return readWordLower(VCRB.val);
-    case 0x66 ... 0x67: return readWordLower(VCRC.val);
-    case 0x68 ... 0x69: return readWordLower(VCRD.val);
+    case 0x60: return (GetInterruptLevel(InterruptSource::SCI_ERI) << 4u) | GetInterruptLevel(InterruptSource::FRT_ICI);
+    case 0x61: return 0;
+    case 0x62: return GetInterruptVector(InterruptSource::SCI_ERI);
+    case 0x63: return GetInterruptVector(InterruptSource::SCI_RXI);
+    case 0x64: return GetInterruptVector(InterruptSource::SCI_TXI);
+    case 0x65: return GetInterruptVector(InterruptSource::SCI_TEI);
+    case 0x66: return GetInterruptVector(InterruptSource::FRT_ICI);
+    case 0x67: return GetInterruptVector(InterruptSource::FRT_OCI);
+    case 0x68: return GetInterruptVector(InterruptSource::FRT_OVI);
+    case 0x69: return 0;
 
     case 0x71: return dmaChannels[0].ReadDRCR();
     case 0x72: return dmaChannels[1].ReadDRCR();
 
-    case 0x92 ... 0x9F: return readByteLower(CCR.u8);
-    case 0xE0 ... 0xE1: return readWordLower(ICR.val);
-    case 0xE2 ... 0xE3: return readWordLower(IPRA.val);
-    case 0xE4 ... 0xE5: return readWordLower(VCRWDT.val);
+    case 0x92 ... 0x9F: return CCR.u8;
 
+    case 0xE0: return OnChipRegReadWord(address) >> 8u;
+    case 0xE1: return OnChipRegReadWord(address & ~1) >> 0u;
+    case 0xE2:
+        return (GetInterruptLevel(InterruptSource::DIVU_OVFI) << 4u) |
+               GetInterruptLevel(InterruptSource::DMAC0_XferEnd);
+    case 0xE3: return GetInterruptLevel(InterruptSource::WDT_ITI) << 4u;
+    case 0xE4: return GetInterruptVector(InterruptSource::WDT_ITI);
+    case 0xE5: return GetInterruptVector(InterruptSource::BSC_REF_CMI);
+
+    default: //
+        m_log.debug("Unhandled 8-bit on-chip register read from {:03X}", address);
+        return 0;
+    }
+}
+
+uint16 SH2::OnChipRegReadWord(uint32 address) {
+    if (address < 0x100) {
+        if (address == 0xE0) {
+            return ICR.u16;
+        }
+        const uint16 value = OnChipRegReadByte(address);
+        return (value << 8u) | value;
+    } else {
+        return OnChipRegReadLong(address & ~2);
+    }
+}
+
+uint32 SH2::OnChipRegReadLong(uint32 address) {
+    if (address < 0x100) {
+        // Registers 0x000-0x0FF do not accept 32-bit accesses
+        // TODO: raise CPU address error
+        m_log.debug("Illegal 32-bit on-chip register read from {:03X}", address);
+        return 0;
+    }
+
+    switch (address) {
     case 0x100:
     case 0x120: return DVSR;
 
@@ -719,7 +772,7 @@ T SH2::OnChipRegRead(uint32 address) {
     case 0x128: return DVCR.u32;
 
     case 0x10C:
-    case 0x12C: return VCRDIV;
+    case 0x12C: return GetInterruptVector(InterruptSource::DIVU_OVFI);
 
     case 0x110:
     case 0x130: return DVDNTH;
@@ -743,66 +796,46 @@ T SH2::OnChipRegRead(uint32 address) {
     case 0x198: return dmaChannels[1].xferCount;
     case 0x19C: return dmaChannels[1].ReadCHCR();
 
-    case 0x1A0: return dmaChannels[0].vecNum;
-    case 0x1A8: return dmaChannels[1].vecNum;
+    case 0x1A0: return GetInterruptVector(InterruptSource::DMAC0_XferEnd);
+    case 0x1A8: return GetInterruptVector(InterruptSource::DMAC1_XferEnd);
 
     case 0x1B0: return DMAOR.u32;
 
-    case 0x1E0 ... 0x1E2: return BCR1.u16;
-    case 0x1E4 ... 0x1E6: return BCR2.u16;
-    case 0x1E8 ... 0x1EA: return WCR.u16;
-    case 0x1EC ... 0x1EE: return MCR.u16;
-    case 0x1F0 ... 0x1F2: return RTCSR.u16;
-    case 0x1F4 ... 0x1F6: return RTCNT;
-    case 0x1F8 ... 0x1FA: return RTCOR;
+    case 0x1E0: return BCR1.u16;
+    case 0x1E4: return BCR2.u16;
+    case 0x1E8: return WCR.u16;
+    case 0x1EC: return MCR.u16;
+    case 0x1F0: return RTCSR.u16;
+    case 0x1F4: return RTCNT;
+    case 0x1F8: return RTCOR;
 
     default: //
-        m_log.debug("Unhandled {}-bit on-chip register read from {:02X}", sizeof(T) * 8, address);
+        m_log.debug("Unhandled 32-bit on-chip register read from {:03X}", address);
         return 0;
     }
 }
 
 template <mem_primitive T>
-void SH2::OnChipRegWrite(uint32 address, T baseValue) {
-    // Misaligned memory accesses raise an address error, meaning all accesses here are aligned.
-    // Therefore:
+void SH2::OnChipRegWrite(uint32 address, T value) {
+    // Misaligned memory accesses raise an address error, therefore:
     //   (address & 3) == 2 is only valid for 16-bit accesses
     //   (address & 1) == 1 is only valid for 8-bit accesses
-
-    // Registers 0-255 do not accept 32-bit accesses
     if constexpr (std::is_same_v<T, uint32>) {
-        if (address < 0x100) {
-            // TODO: raise an address error
-        }
+        OnChipRegWriteLong(address, value);
+    } else if constexpr (std::is_same_v<T, uint16>) {
+        OnChipRegWriteWord(address, value);
+    } else if constexpr (std::is_same_v<T, uint8>) {
+        OnChipRegWriteByte(address, value);
     }
+}
 
-    // Registers 256-511 do not accept 8-bit accesses
-    uint32 value = baseValue;
-    if constexpr (std::is_same_v<T, uint8>) {
-        if (address >= 0x100) {
-            // TODO: raise an address error
-            value |= value << 8u;
-        }
+void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
+    if (address >= 0x100) {
+        // Registers 0x100-0x1FF do not accept 8-bit accesses
+        // TODO: raise CPU address error
+        m_log.debug("Illegal 8-bit on-chip register write to {:03X} = {:X}", address, value);
+        return;
     }
-
-    // For registers 0-255, 8-bit writes to 16-bit registers change the corresponding byte
-    auto writeWordLower = [&](Reg16 &reg, T value, uint16 mask) {
-        if constexpr (std::is_same_v<T, uint8>) {
-            uint32 index = ((address & 1) ^ 1);
-            mask >>= index * 8;
-            if ((mask & 0xFF) != 0) {
-                reg.u8[index] = value & mask;
-            }
-        } else {
-            reg.u16 = value & mask;
-        }
-    };
-
-    // Note: the repeated cases below might seem redundant, but it actually causes Clang to generate better code.
-    // Case ranges (case 0x61 ... 0x62) or fallthrough (case 0x61: case 0x62) generate suboptimal code.
-    // See:
-    // https://quick-bench.com/q/j3XUHw-u-Y75chqoIPnxwyF3JXw
-    // https://godbolt.org/z/5nbPxqd5d
 
     switch (address) {
     case 0x10: FRT.WriteTIER(value); break;
@@ -816,29 +849,130 @@ void SH2::OnChipRegWrite(uint32 address, T baseValue) {
     case 0x18: /* ICRH is read-only */ break;
     case 0x19: /* ICRL is read-only */ break;
 
-    case 0x60: writeWordLower(IPRB.val, value, 0xFF00); break;
-    case 0x61: writeWordLower(IPRB.val, value, 0xFF00); break;
-    case 0x62: writeWordLower(VCRA.val, value, 0x7F7F); break;
-    case 0x63: writeWordLower(VCRA.val, value, 0x7F7F); break;
-    case 0x64: writeWordLower(VCRB.val, value, 0x7F7F); break;
-    case 0x65: writeWordLower(VCRB.val, value, 0x7F7F); break;
-    case 0x66: writeWordLower(VCRC.val, value, 0x7F7F); break;
-    case 0x67: writeWordLower(VCRC.val, value, 0x7F7F); break;
-    case 0x68: writeWordLower(VCRD.val, value, 0x7F00); break;
-    case 0x69: writeWordLower(VCRD.val, value, 0x7F00); break;
+    case 0x60: //
+    {
+        const uint8 frtIntrLevel = bit::extract<0, 3>(value);
+        const uint8 sciIntrLevel = bit::extract<4, 7>(value);
+
+        using enum InterruptSource;
+        SetInterruptLevel(FRT_ICI, frtIntrLevel);
+        SetInterruptLevel(FRT_OCI, frtIntrLevel);
+        SetInterruptLevel(FRT_OVI, frtIntrLevel);
+        SetInterruptLevel(SCI_ERI, sciIntrLevel);
+        SetInterruptLevel(SCI_RXI, sciIntrLevel);
+        SetInterruptLevel(SCI_TXI, sciIntrLevel);
+        SetInterruptLevel(SCI_TEI, sciIntrLevel);
+        UpdateInterruptLevels<FRT_ICI, FRT_OCI, FRT_OVI, SCI_ERI, SCI_RXI, SCI_TXI, SCI_TEI>();
+        break;
+    }
+    case 0x61: /* IPRB bits 7-0 are all reserved */ break;
+    case 0x62: SetInterruptVector(InterruptSource::SCI_ERI, bit::extract<0, 6>(value)); break;
+    case 0x63: SetInterruptVector(InterruptSource::SCI_RXI, bit::extract<0, 6>(value)); break;
+    case 0x64: SetInterruptVector(InterruptSource::SCI_TXI, bit::extract<0, 6>(value)); break;
+    case 0x65: SetInterruptVector(InterruptSource::SCI_TEI, bit::extract<0, 6>(value)); break;
+    case 0x66: SetInterruptVector(InterruptSource::FRT_ICI, bit::extract<0, 6>(value)); break;
+    case 0x67: SetInterruptVector(InterruptSource::FRT_OCI, bit::extract<0, 6>(value)); break;
+    case 0x68: SetInterruptVector(InterruptSource::FRT_OVI, bit::extract<0, 6>(value)); break;
+    case 0x69: /* VCRD bits 7-0 are all reserved */ break;
 
     case 0x71: dmaChannels[0].WriteDRCR(value); break;
     case 0x72: dmaChannels[1].WriteDRCR(value); break;
 
     case 0x92: WriteCCR(value); break;
 
-    case 0xE0: writeWordLower(ICR.val, value, 0x0101); break;
-    case 0xE1: writeWordLower(ICR.val, value, 0x0101); break;
-    case 0xE2: writeWordLower(IPRA.val, value, 0xFFF0); break;
-    case 0xE3: writeWordLower(IPRA.val, value, 0xFFF0); break;
-    case 0xE4: writeWordLower(VCRWDT.val, value, 0x7F7F); break;
-    case 0xE5: writeWordLower(VCRWDT.val, value, 0x7F7F); break;
+    case 0xE0: ICR.NMIE = bit::extract<0>(value); break;
+    case 0xE1: //
+    {
+        ICR.VECMD = bit::extract<0>(value);
+        if (ICR.VECMD) {
+            SetInterruptVector(InterruptSource::IRL, m_externalIntrVector);
+        } else {
+            const uint8 level = GetInterruptLevel(InterruptSource::IRL);
+            SetInterruptVector(InterruptSource::IRL, 0x40 + (level >> 1u));
+        }
+        break;
+    }
+    case 0xE2: //
+    {
+        const uint8 dmacIntrLevel = bit::extract<0, 3>(value);
+        const uint8 divuIntrLevel = bit::extract<4, 7>(value);
 
+        using enum InterruptSource;
+        SetInterruptLevel(DMAC0_XferEnd, dmacIntrLevel);
+        SetInterruptLevel(DMAC1_XferEnd, dmacIntrLevel);
+        SetInterruptLevel(DIVU_OVFI, divuIntrLevel);
+        UpdateInterruptLevels<DMAC0_XferEnd, DMAC1_XferEnd, DIVU_OVFI>();
+        break;
+    }
+    case 0xE3: //
+    {
+        const uint8 wdtIntrLevel = bit::extract<4, 7>(value);
+
+        using enum InterruptSource;
+        SetInterruptLevel(WDT_ITI, wdtIntrLevel);
+        UpdateInterruptLevels<WDT_ITI>();
+        break;
+    }
+    case 0xE4: SetInterruptVector(InterruptSource::WDT_ITI, bit::extract<0, 6>(value)); break;
+    case 0xE5: SetInterruptVector(InterruptSource::BSC_REF_CMI, bit::extract<0, 6>(value)); break;
+
+    default: //
+        m_log.debug("Unhandled 8-bit on-chip register write to {:03X} = {:X}", address, value);
+        break;
+    }
+}
+
+void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
+    switch (address) {
+    case 0x60:
+    case 0x61:
+    case 0x62:
+    case 0x63:
+    case 0x64:
+    case 0x65:
+    case 0x66:
+    case 0x67:
+    case 0x68:
+    case 0x69:
+
+    case 0xE0:
+    case 0xE1:
+    case 0xE2:
+    case 0xE3:
+    case 0xE4:
+    case 0xE5:
+        OnChipRegWriteByte(address & ~1, value >> 8u);
+        OnChipRegWriteByte(address | 1, value >> 0u);
+        break;
+
+    case 0x108:
+    case 0x10C:
+
+    case 0x1E0:
+    case 0x1E4:
+    case 0x1E8:
+    case 0x1EC:
+    case 0x1F0:
+    case 0x1F4:
+    case 0x1F8: //
+        OnChipRegWriteLong(address & ~3, value);
+        break;
+
+    default: //
+        m_log.debug("Illegal 16-bit on-chip register write to {:03X} = {:X}", address, value);
+        break;
+    }
+}
+
+void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
+    if (address < 0x100) {
+        // Registers 0x000-0x0FF do not accept 32-bit accesses
+        // TODO: raise CPU address error
+        m_log.debug("Illegal 32-bit on-chip register write to {:03X} = {:X}", address, value);
+        return;
+    }
+
+    switch (address) {
     case 0x100:
     case 0x120: DVSR = value; break;
 
@@ -854,7 +988,7 @@ void SH2::OnChipRegWrite(uint32 address, T baseValue) {
     case 0x128: DVCR.u32 = value & 0x00000003; break;
 
     case 0x10C:
-    case 0x12C: VCRDIV = value; break;
+    case 0x12C: SetInterruptVector(InterruptSource::DIVU_OVFI, bit::extract<0, 6>(value)); break;
 
     case 0x110:
     case 0x130: DVDNTH = value; break;
@@ -881,8 +1015,8 @@ void SH2::OnChipRegWrite(uint32 address, T baseValue) {
     case 0x198: dmaChannels[1].xferCount = bit::extract<0, 23>(value); break;
     case 0x19C: dmaChannels[1].WriteCHCR(value); break;
 
-    case 0x1A0: dmaChannels[0].vecNum = value; break;
-    case 0x1A8: dmaChannels[1].vecNum = value; break;
+    case 0x1A0: SetInterruptVector(InterruptSource::DMAC0_XferEnd, bit::extract<0, 6>(value)); break;
+    case 0x1A8: SetInterruptVector(InterruptSource::DMAC1_XferEnd, bit::extract<0, 6>(value)); break;
 
     case 0x1B0:
         DMAOR.DME = bit::extract<0>(value);
@@ -892,64 +1026,43 @@ void SH2::OnChipRegWrite(uint32 address, T baseValue) {
         break;
 
     case 0x1E0: // BCR1
-        // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
-        if constexpr (std::is_same_v<T, uint32>) {
-            if ((value >> 16u) == 0xA55A) {
-                BCR1.u15 = value & 0x1FF7;
-            }
+        if ((value >> 16u) == 0xA55A) {
+            BCR1.u15 = value & 0x1FF7;
         }
         break;
     case 0x1E4: // BCR2
-        // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
-        if constexpr (std::is_same_v<T, uint32>) {
-            if ((value >> 16u) == 0xA55A) {
-                BCR2.u16 = value & 0xFC;
-            }
+        if ((value >> 16u) == 0xA55A) {
+            BCR2.u16 = value & 0xFC;
         }
         break;
     case 0x1E8: // WCR
-        // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
-        if constexpr (std::is_same_v<T, uint32>) {
-            if ((value >> 16u) == 0xA55A) {
-                WCR.u16 = value;
-            }
+        if ((value >> 16u) == 0xA55A) {
+            WCR.u16 = value;
         }
         break;
     case 0x1EC: // MCR
-        // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
-        if constexpr (std::is_same_v<T, uint32>) {
-            if ((value >> 16u) == 0xA55A) {
-                MCR.u16 = value & 0xFEFC;
-            }
+        if ((value >> 16u) == 0xA55A) {
+            MCR.u16 = value & 0xFEFC;
         }
         break;
     case 0x1F0: // RTCSR
-        // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
-        if constexpr (std::is_same_v<T, uint32>) {
-            if ((value >> 16u) == 0xA55A) {
-                // TODO: implement the set/clear rules for RTCSR.CMF
-                RTCSR.u16 = (value & 0x78) | (RTCSR.u16 & 0x80);
-            }
+        if ((value >> 16u) == 0xA55A) {
+            // TODO: implement the set/clear rules for RTCSR.CMF
+            RTCSR.u16 = (value & 0x78) | (RTCSR.u16 & 0x80);
         }
         break;
     case 0x1F4: // RTCNT
-        // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
-        if constexpr (std::is_same_v<T, uint32>) {
-            if ((value >> 16u) == 0xA55A) {
-                RTCNT = value;
-            }
+        if ((value >> 16u) == 0xA55A) {
+            RTCNT = value;
         }
         break;
     case 0x1F8: // RTCOR
-        // Only accepts 32-bit writes and the top 16 bits must be 0xA55A
-        if constexpr (std::is_same_v<T, uint32>) {
-            if ((value >> 16u) == 0xA55A) {
-                RTCOR = value;
-            }
+        if ((value >> 16u) == 0xA55A) {
+            RTCOR = value;
         }
         break;
     default: //
-        m_log.debug("Unhandled {}-bit on-chip register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+        m_log.debug("Unhandled 32-bit on-chip register write to {:03X} = {:X}", address, value);
         break;
     }
 }
@@ -957,7 +1070,60 @@ void SH2::OnChipRegWrite(uint32 address, T baseValue) {
 // -----------------------------------------------------------------------------
 // Interrupts
 
-bool SH2::CheckInterrupts() {
+FORCE_INLINE uint8 SH2::GetInterruptVector(InterruptSource source) {
+    return m_intrVectors[static_cast<size_t>(source)];
+}
+
+FORCE_INLINE void SH2::SetInterruptVector(InterruptSource source, uint8 vector) {
+    m_intrVectors[static_cast<size_t>(source)] = vector;
+}
+
+FORCE_INLINE uint8 SH2::GetInterruptLevel(InterruptSource source) {
+    return m_intrLevels[static_cast<size_t>(source)];
+}
+
+FORCE_INLINE void SH2::SetInterruptLevel(InterruptSource source, uint8 priority) {
+    m_intrLevels[static_cast<size_t>(source)] = priority;
+}
+
+FORCE_INLINE void SH2::RaiseInterrupt(InterruptSource source) {
+    const uint8 level = GetInterruptLevel(source);
+    if (level < m_pendingInterrupt.level) {
+        return;
+    }
+    if (level == m_pendingInterrupt.level &&
+        static_cast<uint8>(source) < static_cast<uint8>(m_pendingInterrupt.source)) {
+        return;
+    }
+    m_pendingInterrupt.level = level;
+    m_pendingInterrupt.source = source;
+}
+
+FORCE_INLINE void SH2::LowerInterrupt(InterruptSource source) {
+    if (m_pendingInterrupt.source == source) {
+        RecalcInterrupts();
+    }
+}
+
+template <SH2::InterruptSource source, SH2::InterruptSource... sources>
+void SH2::UpdateInterruptLevels() {
+    if (m_pendingInterrupt.source == source) {
+        const uint8 newLevel = GetInterruptLevel(source);
+        if (newLevel < m_pendingInterrupt.level) {
+            // Interrupt may no longer have the highest priority; recalculate
+            RecalcInterrupts();
+        } else {
+            // Interrupt still has the highest priority; update
+            m_pendingInterrupt.level = newLevel;
+        }
+        return;
+    }
+    if constexpr (sizeof...(sources) > 1) {
+        UpdateInterruptLevels<sources...>();
+    }
+}
+
+void SH2::RecalcInterrupts() {
     // Check interrupts from these sources (in order of priority, when priority numbers are the same):
     //   name             priority       vecnum
     //   NMI              16             0x0B
@@ -977,72 +1143,92 @@ bool SH2::CheckInterrupts() {
     //   FRT OVI          IPRB.FRTIPn    VCRD.FOVVn
     // Use the vector number of the exception with highest priority
 
-    // TODO: optimize
-    // potential solutions:
-    // - use a sorted vector of unique interrupts
-    // - precompute highest priority interrupt whenever they change
-    //   - adding an interrupt is easy
-    //   - removing is a problem
-
-    m_pendingInterrupt.priority = 0;
-    m_pendingInterrupt.vecNum = 0x00;
-
-    auto update = [&](uint8 intrPriority, uint8 vecNum) {
-        if (intrPriority > m_pendingInterrupt.priority) {
-            m_pendingInterrupt.priority = intrPriority;
-            m_pendingInterrupt.vecNum = vecNum;
-        }
-    };
+    m_pendingInterrupt.level = 0;
+    m_pendingInterrupt.source = InterruptSource::None;
 
     // HACK: should be edge-detected
-    // this only works because NMI has the highest priority and can't be masked
     if (m_NMI) {
-        // Set NMI interrupt: vector 0x0B, priority 16
         m_NMI = false;
-        m_log.trace("NMI raised");
-        update(16, 0x0B);
-        return true;
+        RaiseInterrupt(InterruptSource::NMI);
+        return;
     }
 
     // TODO: user break
+    /*if (...) {
+        RaiseInterrupt(InterruptSource::UserBreak);
+        return;
+    }*/
 
     // IRLs
-    const uint8 externalIntrVecNum =
-        ICR.VECMD ? m_pendingExternalIntrVecNum : 0x40 + (m_pendingExternalIntrLevel >> 1u);
-    update(m_pendingExternalIntrLevel, externalIntrVecNum);
-
-    if (DVCR.OVF && DVCR.OVFIE) {
-        update(IPRA.DIVUIPn, VCRDIV);
+    if (GetInterruptLevel(InterruptSource::IRL) > 0) {
+        RaiseInterrupt(InterruptSource::IRL);
+        return;
     }
 
+    // Division overflow
+    if (DVCR.OVF && DVCR.OVFIE) {
+        RaiseInterrupt(InterruptSource::DIVU_OVFI);
+        return;
+    }
+
+    // DMA channel transfer end
     if (dmaChannels[0].xferEnded && dmaChannels[0].irqEnable) {
-        update(IPRA.DMACIPn, dmaChannels[0].vecNum);
+        RaiseInterrupt(InterruptSource::DMAC0_XferEnd);
+        return;
     }
     if (dmaChannels[1].xferEnded && dmaChannels[1].irqEnable) {
-        update(IPRA.DMACIPn, dmaChannels[1].vecNum);
+        RaiseInterrupt(InterruptSource::DMAC1_XferEnd);
+        return;
     }
 
-    // TODO: WDT ITI, BSC REF CMI
+    // TODO: WDT ITI
+    // Watchdog timer
+    /*if (...) {
+        RaiseInterrupt(InterruptSource::WDT_ITI);
+        return;
+    }*/
+
+    // TODO: BSC REF CMI
+    /*if (...) {
+        RaiseInterrupt(InterruptSource::BSC_REF_CMI);
+        return;
+    }*/
+
     // TODO: SCI ERI, RXI, TXI, TEI
+    /*if (...) {
+        RaiseInterrupt(InterruptSource::SCI_ERI);
+        return;
+    }*/
+    /*if (...) {
+        RaiseInterrupt(InterruptSource::SCI_RXI);
+        return;
+    }*/
+    /*if (...) {
+        RaiseInterrupt(InterruptSource::SCI_TXI);
+        return;
+    }*/
+    /*if (...) {
+        RaiseInterrupt(InterruptSource::SCI_TEI);
+        return;
+    }*/
 
     // Free-running timer interrupts
     if (FRT.FTCSR.ICF && FRT.TIER.ICIE) {
-        update(IPRB.FRTIPn, VCRC.FICVn);
+        RaiseInterrupt(InterruptSource::FRT_ICI);
+        return;
     }
     if ((FRT.FTCSR.OCFA && FRT.TIER.OCIAE) || (FRT.FTCSR.OCFB && FRT.TIER.OCIBE)) {
-        update(IPRB.FRTIPn, VCRC.FOCVn);
+        RaiseInterrupt(InterruptSource::FRT_OCI);
+        return;
     }
     if (FRT.FTCSR.OVF && FRT.TIER.OVIE) {
-        update(IPRB.FRTIPn, VCRD.FOVVn);
+        RaiseInterrupt(InterruptSource::FRT_OVI);
+        return;
     }
+}
 
-    const bool result = m_pendingInterrupt.priority > SR.ILevel;
-    const bool usingExternalIntr =
-        m_pendingInterrupt.priority == m_pendingExternalIntrLevel && m_pendingInterrupt.vecNum == externalIntrVecNum;
-    if (result && usingExternalIntr) {
-        m_bus.AcknowledgeExternalInterrupt();
-    }
-    return result;
+FORCE_INLINE bool SH2::CheckInterrupts() {
+    return m_pendingInterrupt.level > SR.ILevel;
 }
 
 // -------------------------------------------------------------------------
@@ -1066,11 +1252,22 @@ FORCE_INLINE void SH2::EnterException(uint8 vectorNumber) {
 
 void SH2::Execute(uint32 address) {
     if (!m_delaySlot && CheckInterrupts()) [[unlikely]] {
-        m_log.trace("Handling interrupt level {:02X}, vector number {:02X}", m_pendingInterrupt.priority,
-                    m_pendingInterrupt.vecNum);
-        EnterException(m_pendingInterrupt.vecNum);
-        SR.ILevel = std::min<uint8>(m_pendingInterrupt.priority, 0xF);
+        // Service interrupt
+        const uint8 vecNum = GetInterruptVector(m_pendingInterrupt.source);
+        m_log.trace("Handling interrupt level {:02X}, vector number {:02X}", m_pendingInterrupt.level, vecNum);
+        EnterException(vecNum);
+        SR.ILevel = std::min<uint8>(m_pendingInterrupt.level, 0xF);
         address = PC;
+
+        // Acknowledge interrupt
+        switch (m_pendingInterrupt.source) {
+        case InterruptSource::IRL: m_bus.AcknowledgeExternalInterrupt(); break;
+        case InterruptSource::NMI:
+            m_NMI = false;
+            LowerInterrupt(InterruptSource::NMI);
+            break;
+        default: break;
+        }
     }
 
     // TODO: emulate fetch - decode - execute - memory access - writeback pipeline
