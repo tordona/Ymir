@@ -397,152 +397,152 @@ private:
 
     void SLEEP(); // sleep
 
-    void MOV(InstrNM instr);     // mov   Rm, Rn
-    void MOVBL(InstrNM instr);   // mov.b @Rm, Rn
-    void MOVWL(InstrNM instr);   // mov.w @Rm, Rn
-    void MOVLL(InstrNM instr);   // mov.l @Rm, Rn
-    void MOVBL0(InstrNM instr);  // mov.b @(R0,Rm), Rn
-    void MOVWL0(InstrNM instr);  // mov.w @(R0,Rm), Rn
-    void MOVLL0(InstrNM instr);  // mov.l @(R0,Rm), Rn
-    void MOVBL4(InstrMD instr);  // mov.b @(disp,Rm), R0
-    void MOVWL4(InstrMD instr);  // mov.w @(disp,Rm), R0
-    void MOVLL4(InstrNMD instr); // mov.l @(disp,Rm), Rn
-    void MOVBLG(InstrD instr);   // mov.b @(disp,GBR), R0
-    void MOVWLG(InstrD instr);   // mov.w @(disp,GBR), R0
-    void MOVLLG(InstrD instr);   // mov.l @(disp,GBR), R0
-    void MOVBM(InstrNM instr);   // mov.b Rm, @-Rn
-    void MOVWM(InstrNM instr);   // mov.w Rm, @-Rn
-    void MOVLM(InstrNM instr);   // mov.l Rm, @-Rn
-    void MOVBP(InstrNM instr);   // mov.b @Rm+, Rn
-    void MOVWP(InstrNM instr);   // mov.w @Rm+, Rn
-    void MOVLP(InstrNM instr);   // mov.l @Rm+, Rn
-    void MOVBS(InstrNM instr);   // mov.b Rm, @Rn
-    void MOVWS(InstrNM instr);   // mov.w Rm, @Rn
-    void MOVLS(InstrNM instr);   // mov.l Rm, @Rn
-    void MOVBS0(InstrNM instr);  // mov.b Rm, @(R0,Rn)
-    void MOVWS0(InstrNM instr);  // mov.w Rm, @(R0,Rn)
-    void MOVLS0(InstrNM instr);  // mov.l Rm, @(R0,Rn)
-    void MOVBS4(InstrND4 instr); // mov.b R0, @(disp,Rn)
-    void MOVWS4(InstrND4 instr); // mov.w R0, @(disp,Rn)
-    void MOVLS4(InstrNMD instr); // mov.l Rm, @(disp,Rn)
-    void MOVBSG(InstrD instr);   // mov.b R0, @(disp,GBR)
-    void MOVWSG(InstrD instr);   // mov.w R0, @(disp,GBR)
-    void MOVLSG(InstrD instr);   // mov.l R0, @(disp,GBR)
-    void MOVI(InstrNI instr);    // mov   #imm, Rn
-    void MOVWI(InstrND8 instr);  // mov.w @(disp,PC), Rn
-    void MOVLI(InstrND8 instr);  // mov.l @(disp,PC), Rn
-    void MOVA(InstrD instr);     // mova  @(disp,PC), R0
-    void MOVT(InstrN instr);     // movt  Rn
-    void CLRT();                 // clrt
-    void SETT();                 // sett
+    void MOV(const DecodedArgs &args);    // mov   Rm, Rn
+    void MOVBL(const DecodedArgs &args);  // mov.b @Rm, Rn
+    void MOVWL(const DecodedArgs &args);  // mov.w @Rm, Rn
+    void MOVLL(const DecodedArgs &args);  // mov.l @Rm, Rn
+    void MOVBL0(const DecodedArgs &args); // mov.b @(R0,Rm), Rn
+    void MOVWL0(const DecodedArgs &args); // mov.w @(R0,Rm), Rn
+    void MOVLL0(const DecodedArgs &args); // mov.l @(R0,Rm), Rn
+    void MOVBL4(const DecodedArgs &args); // mov.b @(disp,Rm), R0
+    void MOVWL4(const DecodedArgs &args); // mov.w @(disp,Rm), R0
+    void MOVLL4(const DecodedArgs &args); // mov.l @(disp,Rm), Rn
+    void MOVBLG(const DecodedArgs &args); // mov.b @(disp,GBR), R0
+    void MOVWLG(const DecodedArgs &args); // mov.w @(disp,GBR), R0
+    void MOVLLG(const DecodedArgs &args); // mov.l @(disp,GBR), R0
+    void MOVBM(const DecodedArgs &args);  // mov.b Rm, @-Rn
+    void MOVWM(const DecodedArgs &args);  // mov.w Rm, @-Rn
+    void MOVLM(const DecodedArgs &args);  // mov.l Rm, @-Rn
+    void MOVBP(const DecodedArgs &args);  // mov.b @Rm+, Rn
+    void MOVWP(const DecodedArgs &args);  // mov.w @Rm+, Rn
+    void MOVLP(const DecodedArgs &args);  // mov.l @Rm+, Rn
+    void MOVBS(const DecodedArgs &args);  // mov.b Rm, @Rn
+    void MOVWS(const DecodedArgs &args);  // mov.w Rm, @Rn
+    void MOVLS(const DecodedArgs &args);  // mov.l Rm, @Rn
+    void MOVBS0(const DecodedArgs &args); // mov.b Rm, @(R0,Rn)
+    void MOVWS0(const DecodedArgs &args); // mov.w Rm, @(R0,Rn)
+    void MOVLS0(const DecodedArgs &args); // mov.l Rm, @(R0,Rn)
+    void MOVBS4(const DecodedArgs &args); // mov.b R0, @(disp,Rn)
+    void MOVWS4(const DecodedArgs &args); // mov.w R0, @(disp,Rn)
+    void MOVLS4(const DecodedArgs &args); // mov.l Rm, @(disp,Rn)
+    void MOVBSG(const DecodedArgs &args); // mov.b R0, @(disp,GBR)
+    void MOVWSG(const DecodedArgs &args); // mov.w R0, @(disp,GBR)
+    void MOVLSG(const DecodedArgs &args); // mov.l R0, @(disp,GBR)
+    void MOVI(const DecodedArgs &args);   // mov   #imm, Rn
+    void MOVWI(const DecodedArgs &args);  // mov.w @(disp,PC), Rn
+    void MOVLI(const DecodedArgs &args);  // mov.l @(disp,PC), Rn
+    void MOVA(const DecodedArgs &args);   // mova  @(disp,PC), R0
+    void MOVT(const DecodedArgs &args);   // movt  Rn
+    void CLRT();                          // clrt
+    void SETT();                          // sett
 
-    void EXTSB(InstrNM instr); // exts.b Rm, Rn
-    void EXTSW(InstrNM instr); // exts.w Rm, Rn
-    void EXTUB(InstrNM instr); // extu.b Rm, Rn
-    void EXTUW(InstrNM instr); // extu.w Rm, Rn
-    void SWAPB(InstrNM instr); // swap.b Rm, Rn
-    void SWAPW(InstrNM instr); // swap.w Rm, Rn
-    void XTRCT(InstrNM instr); // xtrct  Rm, Rn
+    void EXTSB(const DecodedArgs &args); // exts.b Rm, Rn
+    void EXTSW(const DecodedArgs &args); // exts.w Rm, Rn
+    void EXTUB(const DecodedArgs &args); // extu.b Rm, Rn
+    void EXTUW(const DecodedArgs &args); // extu.w Rm, Rn
+    void SWAPB(const DecodedArgs &args); // swap.b Rm, Rn
+    void SWAPW(const DecodedArgs &args); // swap.w Rm, Rn
+    void XTRCT(const DecodedArgs &args); // xtrct  Rm, Rn
 
-    void LDCGBR(InstrM instr);   // ldc   Rm, GBR
-    void LDCSR(InstrM instr);    // ldc   Rm, SR
-    void LDCVBR(InstrM instr);   // ldc   Rm, VBR
-    void LDCMGBR(InstrM instr);  // ldc.l @Rm+, GBR
-    void LDCMSR(InstrM instr);   // ldc.l @Rm+, SR
-    void LDCMVBR(InstrM instr);  // ldc.l @Rm+, VBR
-    void LDSMACH(InstrM instr);  // lds   Rm, MACH
-    void LDSMACL(InstrM instr);  // lds   Rm, MACL
-    void LDSPR(InstrM instr);    // lds   Rm, PR
-    void LDSMMACH(InstrM instr); // lds.l @Rm+, MACH
-    void LDSMMACL(InstrM instr); // lds.l @Rm+, MACL
-    void LDSMPR(InstrM instr);   // lds.l @Rm+, PR
-    void STCGBR(InstrN instr);   // stc   GBR, Rn
-    void STCSR(InstrN instr);    // stc   SR, Rn
-    void STCVBR(InstrN instr);   // stc   VBR, Rn
-    void STCMGBR(InstrN instr);  // stc.l GBR, @-Rn
-    void STCMSR(InstrN instr);   // stc.l SR, @-Rn
-    void STCMVBR(InstrN instr);  // stc.l VBR, @-Rn
-    void STSMACH(InstrN instr);  // sts   MACH, Rn
-    void STSMACL(InstrN instr);  // sts   MACL, Rn
-    void STSPR(InstrN instr);    // sts   PR, Rn
-    void STSMMACH(InstrN instr); // sts.l MACH, @-Rn
-    void STSMMACL(InstrN instr); // sts.l MACL, @-Rn
-    void STSMPR(InstrN instr);   // sts.l PR, @-Rn
+    void LDCGBR(const DecodedArgs &args);   // ldc   Rm, GBR
+    void LDCSR(const DecodedArgs &args);    // ldc   Rm, SR
+    void LDCVBR(const DecodedArgs &args);   // ldc   Rm, VBR
+    void LDCMGBR(const DecodedArgs &args);  // ldc.l @Rm+, GBR
+    void LDCMSR(const DecodedArgs &args);   // ldc.l @Rm+, SR
+    void LDCMVBR(const DecodedArgs &args);  // ldc.l @Rm+, VBR
+    void LDSMACH(const DecodedArgs &args);  // lds   Rm, MACH
+    void LDSMACL(const DecodedArgs &args);  // lds   Rm, MACL
+    void LDSPR(const DecodedArgs &args);    // lds   Rm, PR
+    void LDSMMACH(const DecodedArgs &args); // lds.l @Rm+, MACH
+    void LDSMMACL(const DecodedArgs &args); // lds.l @Rm+, MACL
+    void LDSMPR(const DecodedArgs &args);   // lds.l @Rm+, PR
+    void STCGBR(const DecodedArgs &args);   // stc   GBR, Rn
+    void STCSR(const DecodedArgs &args);    // stc   SR, Rn
+    void STCVBR(const DecodedArgs &args);   // stc   VBR, Rn
+    void STCMGBR(const DecodedArgs &args);  // stc.l GBR, @-Rn
+    void STCMSR(const DecodedArgs &args);   // stc.l SR, @-Rn
+    void STCMVBR(const DecodedArgs &args);  // stc.l VBR, @-Rn
+    void STSMACH(const DecodedArgs &args);  // sts   MACH, Rn
+    void STSMACL(const DecodedArgs &args);  // sts   MACL, Rn
+    void STSPR(const DecodedArgs &args);    // sts   PR, Rn
+    void STSMMACH(const DecodedArgs &args); // sts.l MACH, @-Rn
+    void STSMMACL(const DecodedArgs &args); // sts.l MACL, @-Rn
+    void STSMPR(const DecodedArgs &args);   // sts.l PR, @-Rn
 
-    void ADD(InstrNM instr);   // add    Rm, Rn
-    void ADDI(InstrNI instr);  // add    imm, Rn
-    void ADDC(InstrNM instr);  // addc   Rm, Rn
-    void ADDV(InstrNM instr);  // addv   Rm, Rn
-    void AND(InstrNM instr);   // and    Rm, Rn
-    void ANDI(InstrI instr);   // and    imm, R0
-    void ANDM(InstrI instr);   // and.   b imm, @(R0,GBR)
-    void NEG(InstrNM instr);   // neg    Rm, Rn
-    void NEGC(InstrNM instr);  // negc   Rm, Rn
-    void NOT(InstrNM instr);   // not    Rm, Rn
-    void OR(InstrNM instr);    // or     Rm, Rn
-    void ORI(InstrI instr);    // or     imm, Rn
-    void ORM(InstrI instr);    // or.b   imm, @(R0,GBR)
-    void ROTCL(InstrN instr);  // rotcl  Rn
-    void ROTCR(InstrN instr);  // rotcr  Rn
-    void ROTL(InstrN instr);   // rotl   Rn
-    void ROTR(InstrN instr);   // rotr   Rn
-    void SHAL(InstrN instr);   // shal   Rn
-    void SHAR(InstrN instr);   // shar   Rn
-    void SHLL(InstrN instr);   // shll   Rn
-    void SHLL2(InstrN instr);  // shll2  Rn
-    void SHLL8(InstrN instr);  // shll8  Rn
-    void SHLL16(InstrN instr); // shll16 Rn
-    void SHLR(InstrN instr);   // shlr   Rn
-    void SHLR2(InstrN instr);  // shlr2  Rn
-    void SHLR8(InstrN instr);  // shlr8  Rn
-    void SHLR16(InstrN instr); // shlr16 Rn
-    void SUB(InstrNM instr);   // sub    Rm, Rn
-    void SUBC(InstrNM instr);  // subc   Rm, Rn
-    void SUBV(InstrNM instr);  // subv   Rm, Rn
-    void XOR(InstrNM instr);   // xor    Rm, Rn
-    void XORI(InstrI instr);   // xor    imm, Rn
-    void XORM(InstrI instr);   // xor.b  imm, @(R0,GBR)
+    void ADD(const DecodedArgs &args);    // add    Rm, Rn
+    void ADDI(const DecodedArgs &args);   // add    imm, Rn
+    void ADDC(const DecodedArgs &args);   // addc   Rm, Rn
+    void ADDV(const DecodedArgs &args);   // addv   Rm, Rn
+    void AND(const DecodedArgs &args);    // and    Rm, Rn
+    void ANDI(const DecodedArgs &args);   // and    imm, R0
+    void ANDM(const DecodedArgs &args);   // and.   b imm, @(R0,GBR)
+    void NEG(const DecodedArgs &args);    // neg    Rm, Rn
+    void NEGC(const DecodedArgs &args);   // negc   Rm, Rn
+    void NOT(const DecodedArgs &args);    // not    Rm, Rn
+    void OR(const DecodedArgs &args);     // or     Rm, Rn
+    void ORI(const DecodedArgs &args);    // or     imm, Rn
+    void ORM(const DecodedArgs &args);    // or.b   imm, @(R0,GBR)
+    void ROTCL(const DecodedArgs &args);  // rotcl  Rn
+    void ROTCR(const DecodedArgs &args);  // rotcr  Rn
+    void ROTL(const DecodedArgs &args);   // rotl   Rn
+    void ROTR(const DecodedArgs &args);   // rotr   Rn
+    void SHAL(const DecodedArgs &args);   // shal   Rn
+    void SHAR(const DecodedArgs &args);   // shar   Rn
+    void SHLL(const DecodedArgs &args);   // shll   Rn
+    void SHLL2(const DecodedArgs &args);  // shll2  Rn
+    void SHLL8(const DecodedArgs &args);  // shll8  Rn
+    void SHLL16(const DecodedArgs &args); // shll16 Rn
+    void SHLR(const DecodedArgs &args);   // shlr   Rn
+    void SHLR2(const DecodedArgs &args);  // shlr2  Rn
+    void SHLR8(const DecodedArgs &args);  // shlr8  Rn
+    void SHLR16(const DecodedArgs &args); // shlr16 Rn
+    void SUB(const DecodedArgs &args);    // sub    Rm, Rn
+    void SUBC(const DecodedArgs &args);   // subc   Rm, Rn
+    void SUBV(const DecodedArgs &args);   // subv   Rm, Rn
+    void XOR(const DecodedArgs &args);    // xor    Rm, Rn
+    void XORI(const DecodedArgs &args);   // xor    imm, Rn
+    void XORM(const DecodedArgs &args);   // xor.b  imm, @(R0,GBR)
 
-    void DT(InstrN instr); // dt Rn
+    void DT(const DecodedArgs &args); // dt Rn
 
-    void CLRMAC();             // clrmac
-    void MACW(InstrNM instr);  // mac.w   @Rm+, @Rn+
-    void MACL(InstrNM instr);  // mac.l   @Rm+, @Rn+
-    void MULL(InstrNM instr);  // mul.l   Rm, Rn
-    void MULS(InstrNM instr);  // muls.w  Rm, Rn
-    void MULU(InstrNM instr);  // mulu.w  Rm, Rn
-    void DMULS(InstrNM instr); // dmuls.l Rm, Rn
-    void DMULU(InstrNM instr); // dmulu.l Rm, Rn
+    void CLRMAC();                       // clrmac
+    void MACW(const DecodedArgs &args);  // mac.w   @Rm+, @Rn+
+    void MACL(const DecodedArgs &args);  // mac.l   @Rm+, @Rn+
+    void MULL(const DecodedArgs &args);  // mul.l   Rm, Rn
+    void MULS(const DecodedArgs &args);  // muls.w  Rm, Rn
+    void MULU(const DecodedArgs &args);  // mulu.w  Rm, Rn
+    void DMULS(const DecodedArgs &args); // dmuls.l Rm, Rn
+    void DMULU(const DecodedArgs &args); // dmulu.l Rm, Rn
 
-    void DIV0S(InstrNM instr); // div0s Rm, Rn
-    void DIV0U();              // div0u
-    void DIV1(InstrNM instr);  // div1  Rm, Rn
+    void DIV0S(const DecodedArgs &args); // div0s Rm, Rn
+    void DIV0U();                        // div0u
+    void DIV1(const DecodedArgs &args);  // div1  Rm, Rn
 
-    void CMPIM(InstrI instr);   // cmp/eq  imm, R0
-    void CMPEQ(InstrNM instr);  // cmp/eq  Rm, Rn
-    void CMPGE(InstrNM instr);  // cmp/ge  Rm, Rn
-    void CMPGT(InstrNM instr);  // cmp/gt  Rm, Rn
-    void CMPHI(InstrNM instr);  // cmp/hi  Rm, Rn
-    void CMPHS(InstrNM instr);  // cmp/hs  Rm, Rn
-    void CMPPL(InstrN instr);   // cmp/pl  Rn
-    void CMPPZ(InstrN instr);   // cmp/pz  Rn
-    void CMPSTR(InstrNM instr); // cmp/str Rm, Rn
-    void TAS(InstrN instr);     // tas.b   @Rn
-    void TST(InstrNM instr);    // tst     Rm, Rn
-    void TSTI(InstrI instr);    // tst     imm, R0
-    void TSTM(InstrI instr);    // tst.b   imm, @(R0,GBR)
+    void CMPIM(const DecodedArgs &args);  // cmp/eq  imm, R0
+    void CMPEQ(const DecodedArgs &args);  // cmp/eq  Rm, Rn
+    void CMPGE(const DecodedArgs &args);  // cmp/ge  Rm, Rn
+    void CMPGT(const DecodedArgs &args);  // cmp/gt  Rm, Rn
+    void CMPHI(const DecodedArgs &args);  // cmp/hi  Rm, Rn
+    void CMPHS(const DecodedArgs &args);  // cmp/hs  Rm, Rn
+    void CMPPL(const DecodedArgs &args);  // cmp/pl  Rn
+    void CMPPZ(const DecodedArgs &args);  // cmp/pz  Rn
+    void CMPSTR(const DecodedArgs &args); // cmp/str Rm, Rn
+    void TAS(const DecodedArgs &args);    // tas.b   @Rn
+    void TST(const DecodedArgs &args);    // tst     Rm, Rn
+    void TSTI(const DecodedArgs &args);   // tst     imm, R0
+    void TSTM(const DecodedArgs &args);   // tst.b   imm, @(R0,GBR)
 
-    void BF(InstrD instr);    // bf    disp
-    void BFS(InstrD instr);   // bf/s  disp
-    void BT(InstrD instr);    // bt    disp
-    void BTS(InstrD instr);   // bt/s  disp
-    void BRA(InstrD12 instr); // bra   disp
-    void BRAF(InstrM instr);  // braf  Rm
-    void BSR(InstrD12 instr); // bsr   disp
-    void BSRF(InstrM instr);  // bsrf  Rm
-    void JMP(InstrM instr);   // jmp   @Rm
-    void JSR(InstrM instr);   // jsr   @Rm
-    void TRAPA(InstrI instr); // trapa imm
+    void BF(const DecodedArgs &args);    // bf    disp
+    void BFS(const DecodedArgs &args);   // bf/s  disp
+    void BT(const DecodedArgs &args);    // bt    disp
+    void BTS(const DecodedArgs &args);   // bt/s  disp
+    void BRA(const DecodedArgs &args);   // bra   disp
+    void BRAF(const DecodedArgs &args);  // braf  Rm
+    void BSR(const DecodedArgs &args);   // bsr   disp
+    void BSRF(const DecodedArgs &args);  // bsrf  Rm
+    void JMP(const DecodedArgs &args);   // jmp   @Rm
+    void JSR(const DecodedArgs &args);   // jsr   @Rm
+    void TRAPA(const DecodedArgs &args); // trapa imm
 
     void RTE(); // rte
     void RTS(); // rts
