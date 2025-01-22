@@ -203,7 +203,7 @@ void SH2::Reset(bool hard) {
     m_tracer.Reset();
 }
 
-/*FLATTEN*/ void SH2::Advance(uint64 cycles) {
+FLATTEN void SH2::Advance(uint64 cycles) {
     AdvanceDMAC(cycles);
     AdvanceFRT(cycles);
 
