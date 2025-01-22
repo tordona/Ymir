@@ -689,7 +689,7 @@ T SH2::OnChipRegRead(uint32 address) {
     }
 }
 
-uint8 SH2::OnChipRegReadByte(uint32 address) {
+FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     if (address >= 0x100) {
         // Registers 0x100-0x1FF do not accept 8-bit accesses
         // TODO: raise CPU address error
@@ -741,7 +741,7 @@ uint8 SH2::OnChipRegReadByte(uint32 address) {
     }
 }
 
-uint16 SH2::OnChipRegReadWord(uint32 address) {
+FORCE_INLINE uint16 SH2::OnChipRegReadWord(uint32 address) {
     if (address < 0x100) {
         if (address == 0xE0) {
             return ICR.u16;
@@ -753,7 +753,7 @@ uint16 SH2::OnChipRegReadWord(uint32 address) {
     }
 }
 
-uint32 SH2::OnChipRegReadLong(uint32 address) {
+FORCE_INLINE uint32 SH2::OnChipRegReadLong(uint32 address) {
     if (address < 0x100) {
         // Registers 0x000-0x0FF do not accept 32-bit accesses
         // TODO: raise CPU address error
@@ -829,7 +829,7 @@ void SH2::OnChipRegWrite(uint32 address, T value) {
     }
 }
 
-void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
+FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     if (address >= 0x100) {
         // Registers 0x100-0x1FF do not accept 8-bit accesses
         // TODO: raise CPU address error
@@ -922,7 +922,7 @@ void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     }
 }
 
-void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
+FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
     switch (address) {
     case 0x60:
     case 0x61:
@@ -964,7 +964,7 @@ void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
     }
 }
 
-void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
+FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     if (address < 0x100) {
         // Registers 0x000-0x0FF do not accept 32-bit accesses
         // TODO: raise CPU address error
