@@ -113,7 +113,7 @@ private:
 
     // R0 through R15.
     // R15 is also used as the hardware stack pointer (SP).
-    std::array<uint32, 16> R;
+    alignas(std::hardware_destructive_interference_size) std::array<uint32, 16> R;
 
     uint32 PC;
     uint32 PR;
