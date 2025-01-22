@@ -136,6 +136,7 @@ target_precompile_headers(satemu-core
         <iostream>
         <limits>
         <memory>
+        <new>
         <numeric>
         <set>
         <span>

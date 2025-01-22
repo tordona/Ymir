@@ -9,6 +9,7 @@
 #include <satemu/util/debug_print.hpp>
 
 #include <array>
+#include <new>
 #include <vector>
 
 // -----------------------------------------------------------------------------
