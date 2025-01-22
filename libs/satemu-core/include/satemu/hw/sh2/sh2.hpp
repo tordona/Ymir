@@ -224,6 +224,8 @@ private:
 
     FreeRunningTimer FRT;
 
+    void AdvanceFRT(uint64 cycles);
+
     // --- INTC module ---
 
     RegICR ICR; // 0E0  R/W  8,16     0000      ICR     Interrupt control register

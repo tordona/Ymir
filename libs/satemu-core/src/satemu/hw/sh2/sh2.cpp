@@ -205,8 +205,7 @@ void SH2::Reset(bool hard) {
 
 FLATTEN void SH2::Advance(uint64 cycles) {
     AdvanceDMAC(cycles);
-
-    FRT.Advance(cycles);
+    AdvanceFRT(cycles);
 
     // TODO: proper cycle counting
     for (uint64 cy = 0; cy < cycles; cy++) {
@@ -436,6 +435,45 @@ T SH2::OpenBusSeqRead(uint32 address) {
 
 // -----------------------------------------------------------------------------
 // On-chip peripherals
+
+FORCE_INLINE void SH2::AdvanceFRT(uint64 cycles) {
+    FRT.cycleCount += cycles;
+    const uint64 steps = FRT.cycleCount >> FRT.clockDividerShift;
+    FRT.cycleCount -= steps << FRT.clockDividerShift;
+
+    bool oviIntr = false;
+    bool ociIntr = false;
+
+    uint64 nextFRC = FRT.FRC + steps;
+    if (FRT.FRC < FRT.OCRA && nextFRC >= FRT.OCRA) {
+        FRT.FTCSR.OCFA = FRT.TOCR.OLVLA;
+        if (FRT.FTCSR.CCLRA) {
+            nextFRC = 0;
+        }
+        if (FRT.TIER.OCIAE) {
+            ociIntr = true;
+        }
+    }
+    if (FRT.FRC < FRT.OCRB && nextFRC >= FRT.OCRB) {
+        FRT.FTCSR.OCFB = FRT.TOCR.OLVLB;
+        if (FRT.TIER.OCIBE) {
+            ociIntr = true;
+        }
+    }
+    if (nextFRC >= 0x10000) {
+        FRT.FTCSR.OVF = 1;
+        if (FRT.TIER.OVIE) {
+            oviIntr = true;
+        }
+    }
+    FRT.FRC = nextFRC;
+
+    if (oviIntr) {
+        RaiseInterrupt(InterruptSource::FRT_OVI);
+    } else if (ociIntr) {
+        RaiseInterrupt(InterruptSource::FRT_OCI);
+    }
+}
 
 FLATTEN FORCE_INLINE bool SH2::IsDMATransferActive(const DMAChannel &ch) const {
     return ch.IsEnabled() && DMAOR.DME && !DMAOR.NMIF && !DMAOR.AE;

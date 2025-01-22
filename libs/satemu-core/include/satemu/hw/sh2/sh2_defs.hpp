@@ -86,27 +86,6 @@ struct FreeRunningTimer {
         clockDividerShift = 3;
     }
 
-    void Advance(uint64 cycles) {
-        cycleCount += cycles;
-        const uint64 steps = cycleCount >> clockDividerShift;
-        cycleCount -= steps << clockDividerShift;
-
-        uint64 nextFRC = FRC + steps;
-        if (FRC < OCRA && nextFRC >= OCRA) {
-            FTCSR.OCFA = TOCR.OLVLA;
-            if (FTCSR.CCLRA) {
-                nextFRC = 0;
-            }
-        }
-        if (FRC < OCRB && nextFRC >= OCRB) {
-            FTCSR.OCFB = TOCR.OLVLB;
-        }
-        if (nextFRC >= 0x10000) {
-            FTCSR.OVF = 1;
-        }
-        FRC = nextFRC;
-    }
-
     // 010  R/W  8        01        TIER    Timer interrupt enable register
     //
     //   bits   r/w  code     description
