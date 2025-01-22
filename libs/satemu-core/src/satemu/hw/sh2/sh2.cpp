@@ -203,7 +203,7 @@ void SH2::Reset(bool hard) {
     m_tracer.Reset();
 }
 
-FLATTEN void SH2::Advance(uint64 cycles) {
+/*FLATTEN*/ void SH2::Advance(uint64 cycles) {
     AdvanceDMAC(cycles);
     AdvanceFRT(cycles);
 
@@ -270,7 +270,9 @@ void SH2::TriggerFRTInputCapture() {
     // TODO: FRT.TCR.IEDGA
     FRT.ICR = FRT.FRC;
     FRT.FTCSR.ICF = 1;
-    RaiseInterrupt(InterruptSource::FRT_ICI);
+    if (FRT.TIER.ICIE) {
+        RaiseInterrupt(InterruptSource::FRT_ICI);
+    }
 }
 
 // -----------------------------------------------------------------------------
