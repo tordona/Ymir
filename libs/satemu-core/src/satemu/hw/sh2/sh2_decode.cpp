@@ -12,7 +12,11 @@ DecodeTable BuildDecodeTable() {
         auto &regularOpcode = table.opcodes[0][instr];
         auto &delayOpcode = table.opcodes[1][instr];
 
-        auto setOpcode = [&](OpcodeType type) { regularOpcode = delayOpcode = type; };
+        auto setOpcode = [&](OpcodeType type) {
+            static constexpr uint16 delayOffset = static_cast<uint16>(OpcodeType::Delay_NOP);
+            regularOpcode = type;
+            delayOpcode = static_cast<OpcodeType>(static_cast<uint16>(type) + delayOffset);
+        };
         auto setNonDelayOpcode = [&](OpcodeType type) {
             regularOpcode = type;
             delayOpcode = OpcodeType::IllegalSlot;
