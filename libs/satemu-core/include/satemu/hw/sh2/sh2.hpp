@@ -119,6 +119,14 @@ private:
     uint32 PC;
     uint32 PR;
 
+    union RegMAC {
+        uint64 u64;
+        struct {
+            uint32 L;
+            uint32 H;
+        };
+    } MAC;
+
     union RegSR {
         uint32 u32;
         struct {
@@ -142,16 +150,13 @@ private:
     uint32 GBR;
     uint32 VBR;
 
-    union RegMAC {
-        uint64 u64;
-        struct {
-            uint32 L;
-            uint32 H;
-        };
-    } MAC;
+    uint32 m_delaySlotTarget;
+    bool m_delaySlot;
 
     // -------------------------------------------------------------------------
     // Debug logging
+
+    SH2Tracer m_tracer;
 
     const dbg::Category<sh2DebugLevel> &m_log;
 
@@ -219,23 +224,38 @@ private:
     // -------------------------------------------------------------------------
     // On-chip peripherals
 
+    template <mem_primitive T>
+    T OnChipRegRead(uint32 address);
+
+    uint8 OnChipRegReadByte(uint32 address);
+    uint16 OnChipRegReadWord(uint32 address);
+    uint32 OnChipRegReadLong(uint32 address);
+
+    template <mem_primitive T>
+    void OnChipRegWrite(uint32 address, T value);
+
+    void OnChipRegWriteByte(uint32 address, uint8 value);
+    void OnChipRegWriteWord(uint32 address, uint16 value);
+    void OnChipRegWriteLong(uint32 address, uint32 value);
+
     // --- SCI module ---
+    // TODO
 
-    // --- FRT module ---
+    // --- BSC module ---
 
-    FreeRunningTimer FRT;
-
-    void AdvanceFRT(uint64 cycles);
-
-    // --- INTC module ---
-
-    RegICR ICR; // 0E0  R/W  8,16     0000      ICR     Interrupt control register
+    RegBCR1 BCR1;   // 1E0  R/W  16,32    03F0      BCR1    Bus Control Register 1
+    RegBCR2 BCR2;   // 1E4  R/W  16,32    00FC      BCR2    Bus Control Register 2
+    RegWCR WCR;     // 1E8  R/W  16,32    AAFF      WCR     Wait Control Register
+    RegMCR MCR;     // 1EC  R/W  16,32    0000      MCR     Individual Memory Control Register
+    RegRTCSR RTCSR; // 1F0  R/W  16,32    0000      RTCSR   Refresh Timer Control/Status Register
+    RegRTCNT RTCNT; // 1F4  R/W  16,32    0000      RTCNT   Refresh Timer Counter
+    RegRTCOR RTCOR; // 1F8  R/W  16,32    0000      RTCOR   Refresh Timer Constant Register
 
     // --- DMAC module ---
 
-    std::array<DMAChannel, 2> dmaChannels;
     RegDMAOR DMAOR;
     uint32 m_activeDMAChannel;
+    std::array<DMAChannel, 2> dmaChannels;
 
     // Determines if a DMA transfer is active for the specified channel.
     // A transfer is active if DE = 1, DME = 1, TE = 0, NMIF = 0 and AE = 0.
@@ -246,16 +266,10 @@ private:
     void AdvanceDMAC(uint64 cycles);
 
     // --- WDT module ---
+    // TODO
 
     // --- Power-down module ---
-
-    // --- Cache module ---
-
-    alignas(16) std::array<CacheEntry, kCacheEntries> cacheEntries;
-
-    RegCCR CCR; // 092  R/W  8        00        CCR     Cache Control Register
-
-    void WriteCCR(uint8 value);
+    // TODO
 
     // --- DIVU module ---
 
@@ -288,32 +302,16 @@ private:
 
     // --- UBC module (channel B) ---
 
-    // --- BSC module ---
+    // --- FRT module ---
 
-    RegBCR1 BCR1;   // 1E0  R/W  16,32    03F0      BCR1    Bus Control Register 1
-    RegBCR2 BCR2;   // 1E4  R/W  16,32    00FC      BCR2    Bus Control Register 2
-    RegWCR WCR;     // 1E8  R/W  16,32    AAFF      WCR     Wait Control Register
-    RegMCR MCR;     // 1EC  R/W  16,32    0000      MCR     Individual Memory Control Register
-    RegRTCSR RTCSR; // 1F0  R/W  16,32    0000      RTCSR   Refresh Timer Control/Status Register
-    RegRTCNT RTCNT; // 1F4  R/W  16,32    0000      RTCNT   Refresh Timer Counter
-    RegRTCOR RTCOR; // 1F8  R/W  16,32    0000      RTCOR   Refresh Timer Constant Register
+    FreeRunningTimer FRT;
 
-    template <mem_primitive T>
-    T OnChipRegRead(uint32 address);
-
-    uint8 OnChipRegReadByte(uint32 address);
-    uint16 OnChipRegReadWord(uint32 address);
-    uint32 OnChipRegReadLong(uint32 address);
-
-    template <mem_primitive T>
-    void OnChipRegWrite(uint32 address, T value);
-
-    void OnChipRegWriteByte(uint32 address, uint8 value);
-    void OnChipRegWriteWord(uint32 address, uint16 value);
-    void OnChipRegWriteLong(uint32 address, uint32 value);
+    void AdvanceFRT(uint64 cycles);
 
     // -------------------------------------------------------------------------
     // Interrupts
+
+    RegICR ICR; // 0E0  R/W  8,16     0000      ICR     Interrupt control register
 
     // Interrupt sources, sorted by default priority from lowest to highest
     enum class InterruptSource : uint8 {
@@ -380,13 +378,17 @@ private:
     void SetupDelaySlot(uint32 targetAddress);
     void EnterException(uint8 vectorNumber);
 
-    bool m_delaySlot;
-    uint32 m_delaySlotTarget;
+    // -------------------------------------------------------------------------
+    // Cache
+
+    RegCCR CCR; // 092  R/W  8        00        CCR     Cache Control Register
+
+    alignas(16) std::array<CacheEntry, kCacheEntries> cacheEntries;
+
+    void WriteCCR(uint8 value);
 
     // -------------------------------------------------------------------------
     // Interpreter
-
-    SH2Tracer m_tracer;
 
     void Execute();
 

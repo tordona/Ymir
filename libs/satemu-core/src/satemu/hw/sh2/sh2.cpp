@@ -120,9 +120,9 @@ void RealSH2Tracer::RTS(SH2Regs regs) {
 }
 
 SH2::SH2(SH2Bus &bus, bool master)
-    : m_log(Logger(master))
-    , m_bus(bus)
-    , m_tracer(master) {
+    : m_tracer(master)
+    , m_log(Logger(master))
+    , m_bus(bus) {
     BCR1.MASTER = !master;
     Reset(true);
 }
@@ -143,33 +143,30 @@ void SH2::Reset(bool hard) {
     R.fill(0);
     PR = 0;
 
+    MAC.u64 = 0;
+
     SR.u32 = 0;
     SR.I0 = SR.I1 = SR.I2 = SR.I3 = 1;
     GBR = 0;
     VBR = 0x00000000;
 
-    MAC.u64 = 0;
-
     PC = MemReadLong(0x00000000);
     R[15] = MemReadLong(0x00000004);
 
     // On-chip registers
-    ICR.u16 = 0x0000;
     BCR1.u15 = 0x03F0;
     BCR2.u16 = 0x00FC;
     WCR.u16 = 0xAAFF;
     MCR.u16 = 0x0000;
+    RTCSR.u16 = 0x0000;
+    RTCNT = 0x0000;
+    RTCOR = 0x0000;
 
-    FRT.Reset();
-
+    DMAOR.u32 = 0x00000000;
+    m_activeDMAChannel = dmaChannels.size();
     for (auto &ch : dmaChannels) {
         ch.Reset();
     }
-    DMAOR.u32 = 0x00000000;
-    m_activeDMAChannel = dmaChannels.size();
-
-    cacheEntries.fill({});
-    WriteCCR(0x00);
 
     DVSR = 0x0;  // undefined initial value
     DVDNT = 0x0; // undefined initial value
@@ -178,6 +175,10 @@ void SH2::Reset(bool hard) {
     DVDNTL = 0x0;  // undefined initial value
     DVDNTUH = 0x0; // undefined initial value
     DVDNTUL = 0x0; // undefined initial value
+
+    FRT.Reset();
+
+    ICR.u16 = 0x0000;
 
     m_intrLevels.fill(0);
     m_intrVectors.fill(0);
@@ -198,8 +199,11 @@ void SH2::Reset(bool hard) {
 
     m_externalIntrVector = 0;
 
-    m_delaySlot = false;
     m_delaySlotTarget = 0;
+    m_delaySlot = false;
+
+    WriteCCR(0x00);
+    cacheEntries.fill({});
 
     m_tracer.Reset();
 }
@@ -438,288 +442,6 @@ T SH2::OpenBusSeqRead(uint32 address) {
 
 // -----------------------------------------------------------------------------
 // On-chip peripherals
-
-FORCE_INLINE void SH2::AdvanceFRT(uint64 cycles) {
-    FRT.cycleCount += cycles;
-    const uint64 steps = FRT.cycleCount >> FRT.clockDividerShift;
-    FRT.cycleCount -= steps << FRT.clockDividerShift;
-
-    bool oviIntr = false;
-    bool ociIntr = false;
-
-    uint64 nextFRC = FRT.FRC + steps;
-    if (FRT.FRC < FRT.OCRA && nextFRC >= FRT.OCRA) {
-        FRT.FTCSR.OCFA = FRT.TOCR.OLVLA;
-        if (FRT.FTCSR.CCLRA) {
-            nextFRC = 0;
-        }
-        if (FRT.TIER.OCIAE) {
-            ociIntr = true;
-        }
-    }
-    if (FRT.FRC < FRT.OCRB && nextFRC >= FRT.OCRB) {
-        FRT.FTCSR.OCFB = FRT.TOCR.OLVLB;
-        if (FRT.TIER.OCIBE) {
-            ociIntr = true;
-        }
-    }
-    if (nextFRC >= 0x10000) {
-        FRT.FTCSR.OVF = 1;
-        if (FRT.TIER.OVIE) {
-            oviIntr = true;
-        }
-    }
-    FRT.FRC = nextFRC;
-
-    if (oviIntr) {
-        RaiseInterrupt(InterruptSource::FRT_OVI);
-    } else if (ociIntr) {
-        RaiseInterrupt(InterruptSource::FRT_OCI);
-    }
-}
-
-FLATTEN FORCE_INLINE bool SH2::IsDMATransferActive(const DMAChannel &ch) const {
-    return ch.IsEnabled() && DMAOR.DME && !DMAOR.NMIF && !DMAOR.AE;
-}
-
-void SH2::UpdateDMAC() {
-    m_activeDMAChannel = dmaChannels.size();
-
-    for (uint32 index = 0; auto &ch : dmaChannels) {
-        if (!IsDMATransferActive(ch)) {
-            index++;
-            continue;
-        }
-
-        // Auto request mode will start the transfer right now.
-        // Module request mode checks if the signal from the configured source has been raised.
-        if (!ch.autoRequest) {
-            bool signal = false;
-            switch (ch.resSelect) {
-            case DMAResourceSelect::DREQ: /*TODO*/ signal = false; break;
-            case DMAResourceSelect::RXI: /*TODO*/ signal = false; break;
-            case DMAResourceSelect::TXI: /*TODO*/ signal = false; break;
-            case DMAResourceSelect::Reserved: signal = false; break;
-            }
-            if (!signal) {
-                index++;
-                continue;
-            }
-        }
-
-        // TODO: prioritize channels based on DMAOR.PR
-        m_activeDMAChannel = index;
-        break;
-    }
-}
-
-void SH2::AdvanceDMAC(uint64 cycles) {
-    const uint32 index = m_activeDMAChannel;
-    if (index >= dmaChannels.size()) {
-        return;
-    }
-
-    auto &ch = dmaChannels[index];
-
-    // TODO: proper timings, cycle-stealing, etc. (suspend instructions if not cached)
-    static constexpr uint32 kXferSize[] = {1, 2, 4, 16};
-    const uint32 xferSize = kXferSize[static_cast<uint32>(ch.xferSize)];
-
-    auto incAddress = [&](uint32 address, DMATransferIncrementMode mode) -> uint32 {
-        using enum DMATransferIncrementMode;
-        switch (mode) {
-        case Fixed: return address;
-        case Increment: return address + xferSize;
-        case Decrement: return address - xferSize;
-        case Reserved: return address;
-        }
-    };
-
-    // Perform one unit of transfer
-    switch (ch.xferSize) {
-    case DMATransferSize::Byte: {
-        const uint8 value = MemReadByte(ch.srcAddress);
-        m_log.trace("DMAC{} 8-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress, value);
-        MemWriteByte(ch.dstAddress, value);
-        break;
-    }
-    case DMATransferSize::Word: {
-        const uint16 value = MemReadWord(ch.srcAddress);
-        m_log.trace("DMAC{} 16-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress, value);
-        MemWriteWord(ch.dstAddress, value);
-        break;
-    }
-    case DMATransferSize::Longword: {
-        const uint32 value = MemReadLong(ch.srcAddress);
-        m_log.trace("DMAC{} 32-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress, value);
-        MemWriteLong(ch.dstAddress, value);
-        break;
-    }
-    case DMATransferSize::QuadLongword:
-        for (int i = 0; i < 4; i++) {
-            const uint32 value = MemReadLong(ch.srcAddress + i * sizeof(uint32));
-            m_log.trace("DMAC{} 16-byte transfer {:d} from {:08X} to {:08X} -> {:X}", index, i, ch.srcAddress,
-                        ch.dstAddress, value);
-            MemWriteLong(ch.dstAddress + i * sizeof(uint32), value);
-        }
-        break;
-    }
-
-    // Update address and remaining count
-    ch.srcAddress = incAddress(ch.srcAddress, ch.srcMode);
-    ch.dstAddress = incAddress(ch.dstAddress, ch.dstMode);
-
-    if (ch.xferSize == DMATransferSize::QuadLongword) {
-        if (ch.xferCount >= 4) {
-            ch.xferCount -= 4;
-        } else {
-            m_log.trace("DMAC{} 16-byte transfer count misaligned", index);
-            ch.xferCount = 0;
-        }
-    } else {
-        ch.xferCount--;
-    }
-
-    // Check if transfer ended
-    if (ch.xferCount == 0) {
-        ch.xferEnded = true;
-        m_log.trace("DMAC{} transfer finished", index);
-        if (ch.irqEnable) {
-            switch (index) {
-            case 0: RaiseInterrupt(InterruptSource::DMAC0_XferEnd); break;
-            case 1: RaiseInterrupt(InterruptSource::DMAC1_XferEnd); break;
-            }
-        }
-        UpdateDMAC();
-    }
-}
-
-void SH2::WriteCCR(uint8 value) {
-    if (CCR.u8 == value) {
-        return;
-    }
-
-    CCR.u8 = value;
-    if (CCR.CP) {
-        // TODO: purge cache
-        CCR.CP = 0;
-    }
-}
-
-void SH2::DIVUBegin32() {
-    static constexpr sint32 kMinValue = std::numeric_limits<sint32>::min();
-    static constexpr sint32 kMaxValue = std::numeric_limits<sint32>::max();
-
-    const sint32 dividend = static_cast<sint32>(DVDNTL);
-    const sint32 divisor = static_cast<sint32>(DVSR);
-
-    if (divisor != 0) {
-        // TODO: schedule event to run this after 39 cycles
-
-        if (dividend == kMinValue && divisor == -1) [[unlikely]] {
-            // Handle extreme case
-            DVDNTL = DVDNT = kMinValue;
-            DVDNTH = 0;
-        } else {
-            DVDNTL = DVDNT = dividend / divisor;
-            DVDNTH = dividend % divisor;
-        }
-    } else {
-        // Overflow
-        // TODO: schedule event to run this after 6 cycles
-
-        // Perform partial division
-        // The division unit uses 3 cycles to set up flags, leaving 3 cycles for calculations
-        DVDNTH = dividend >> 29;
-        if (DVCR.OVFIE) {
-            DVDNTL = DVDNT = (dividend << 3) | ((dividend >> 31) & 7);
-        } else {
-            // DVDNT/DVDNTL is saturated if the interrupt signal is disabled
-            DVDNTL = DVDNT = dividend < 0 ? kMinValue : kMaxValue;
-        }
-
-        // Signal overflow
-        DVCR.OVF = 1;
-        if (DVCR.OVFIE) {
-            RaiseInterrupt(InterruptSource::DIVU_OVFI);
-        }
-    }
-
-    DVDNTUH = DVDNTH;
-    DVDNTUL = DVDNTL;
-}
-
-void SH2::DIVUBegin64() {
-    static constexpr sint32 kMinValue32 = std::numeric_limits<sint32>::min();
-    static constexpr sint32 kMaxValue32 = std::numeric_limits<sint32>::max();
-    static constexpr sint64 kMinValue64 = std::numeric_limits<sint64>::min();
-
-    sint64 dividend = (static_cast<sint64>(DVDNTH) << 32ll) | static_cast<sint64>(DVDNTL);
-    const sint32 divisor = static_cast<sint32>(DVSR);
-
-    bool overflow = divisor == 0;
-
-    if (dividend == -0x80000000ll && divisor == -1) {
-        DVDNTH = DVDNTUH = 0;
-        DVDNTL = DVDNTUL = -0x80000000l;
-        return;
-    }
-
-    if (!overflow) {
-        const sint64 quotient = dividend / divisor;
-        const sint32 remainder = dividend % divisor;
-
-        if (quotient <= kMinValue32 || quotient > kMaxValue32) [[unlikely]] {
-            // Overflow cases
-            overflow = true;
-        } else if (dividend == kMinValue64 && divisor == -1) [[unlikely]] {
-            // Handle extreme case
-            overflow = true;
-        } else {
-            // TODO: schedule event to run this after 39 cycles
-            DVDNTL = DVDNT = quotient;
-            DVDNTH = remainder;
-        }
-    }
-
-    if (overflow) {
-        // Overflow is detected after 6 cycles
-
-        // Perform partial division
-        // The division unit uses 3 cycles to set up flags, leaving 3 cycles for calculations
-        const sint64 origDividend = dividend;
-        bool Q = dividend < 0;
-        const bool M = divisor < 0;
-        for (int i = 0; i < 3; i++) {
-            if (Q == M) {
-                dividend -= static_cast<uint64>(divisor) << 32ull;
-            } else {
-                dividend += static_cast<uint64>(divisor) << 32ull;
-            }
-
-            Q = dividend < 0;
-            dividend = (dividend << 1ll) | (Q == M);
-        }
-
-        // Update output registers
-        if (DVCR.OVFIE) {
-            DVDNTL = DVDNT = dividend;
-        } else {
-            // DVDNT/DVDNTL is saturated if the interrupt signal is disabled
-            DVDNTL = DVDNT = static_cast<sint32>((origDividend >> 32) ^ divisor) < 0 ? kMinValue32 : kMaxValue32;
-        }
-        DVDNTH = dividend >> 32ll;
-
-        // Signal overflow
-        DVCR.OVF = 1;
-        if (DVCR.OVFIE) {
-            RaiseInterrupt(InterruptSource::DIVU_OVFI);
-        }
-    }
-
-    DVDNTUH = DVDNTH;
-    DVDNTUL = DVDNTL;
-}
 
 template <mem_primitive T>
 T SH2::OnChipRegRead(uint32 address) {
@@ -1123,6 +845,288 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     default: //
         m_log.debug("Unhandled 32-bit on-chip register write to {:03X} = {:X}", address, value);
         break;
+    }
+}
+
+FLATTEN FORCE_INLINE bool SH2::IsDMATransferActive(const DMAChannel &ch) const {
+    return ch.IsEnabled() && DMAOR.DME && !DMAOR.NMIF && !DMAOR.AE;
+}
+
+void SH2::UpdateDMAC() {
+    m_activeDMAChannel = dmaChannels.size();
+
+    for (uint32 index = 0; auto &ch : dmaChannels) {
+        if (!IsDMATransferActive(ch)) {
+            index++;
+            continue;
+        }
+
+        // Auto request mode will start the transfer right now.
+        // Module request mode checks if the signal from the configured source has been raised.
+        if (!ch.autoRequest) {
+            bool signal = false;
+            switch (ch.resSelect) {
+            case DMAResourceSelect::DREQ: /*TODO*/ signal = false; break;
+            case DMAResourceSelect::RXI: /*TODO*/ signal = false; break;
+            case DMAResourceSelect::TXI: /*TODO*/ signal = false; break;
+            case DMAResourceSelect::Reserved: signal = false; break;
+            }
+            if (!signal) {
+                index++;
+                continue;
+            }
+        }
+
+        // TODO: prioritize channels based on DMAOR.PR
+        m_activeDMAChannel = index;
+        break;
+    }
+}
+
+void SH2::AdvanceDMAC(uint64 cycles) {
+    const uint32 index = m_activeDMAChannel;
+    if (index >= dmaChannels.size()) {
+        return;
+    }
+
+    auto &ch = dmaChannels[index];
+
+    // TODO: proper timings, cycle-stealing, etc. (suspend instructions if not cached)
+    static constexpr uint32 kXferSize[] = {1, 2, 4, 16};
+    const uint32 xferSize = kXferSize[static_cast<uint32>(ch.xferSize)];
+
+    auto incAddress = [&](uint32 address, DMATransferIncrementMode mode) -> uint32 {
+        using enum DMATransferIncrementMode;
+        switch (mode) {
+        case Fixed: return address;
+        case Increment: return address + xferSize;
+        case Decrement: return address - xferSize;
+        case Reserved: return address;
+        }
+    };
+
+    // Perform one unit of transfer
+    switch (ch.xferSize) {
+    case DMATransferSize::Byte: {
+        const uint8 value = MemReadByte(ch.srcAddress);
+        m_log.trace("DMAC{} 8-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress, value);
+        MemWriteByte(ch.dstAddress, value);
+        break;
+    }
+    case DMATransferSize::Word: {
+        const uint16 value = MemReadWord(ch.srcAddress);
+        m_log.trace("DMAC{} 16-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress, value);
+        MemWriteWord(ch.dstAddress, value);
+        break;
+    }
+    case DMATransferSize::Longword: {
+        const uint32 value = MemReadLong(ch.srcAddress);
+        m_log.trace("DMAC{} 32-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress, value);
+        MemWriteLong(ch.dstAddress, value);
+        break;
+    }
+    case DMATransferSize::QuadLongword:
+        for (int i = 0; i < 4; i++) {
+            const uint32 value = MemReadLong(ch.srcAddress + i * sizeof(uint32));
+            m_log.trace("DMAC{} 16-byte transfer {:d} from {:08X} to {:08X} -> {:X}", index, i, ch.srcAddress,
+                        ch.dstAddress, value);
+            MemWriteLong(ch.dstAddress + i * sizeof(uint32), value);
+        }
+        break;
+    }
+
+    // Update address and remaining count
+    ch.srcAddress = incAddress(ch.srcAddress, ch.srcMode);
+    ch.dstAddress = incAddress(ch.dstAddress, ch.dstMode);
+
+    if (ch.xferSize == DMATransferSize::QuadLongword) {
+        if (ch.xferCount >= 4) {
+            ch.xferCount -= 4;
+        } else {
+            m_log.trace("DMAC{} 16-byte transfer count misaligned", index);
+            ch.xferCount = 0;
+        }
+    } else {
+        ch.xferCount--;
+    }
+
+    // Check if transfer ended
+    if (ch.xferCount == 0) {
+        ch.xferEnded = true;
+        m_log.trace("DMAC{} transfer finished", index);
+        if (ch.irqEnable) {
+            switch (index) {
+            case 0: RaiseInterrupt(InterruptSource::DMAC0_XferEnd); break;
+            case 1: RaiseInterrupt(InterruptSource::DMAC1_XferEnd); break;
+            }
+        }
+        UpdateDMAC();
+    }
+}
+
+void SH2::WriteCCR(uint8 value) {
+    if (CCR.u8 == value) {
+        return;
+    }
+
+    CCR.u8 = value;
+    if (CCR.CP) {
+        // TODO: purge cache
+        CCR.CP = 0;
+    }
+}
+
+void SH2::DIVUBegin32() {
+    static constexpr sint32 kMinValue = std::numeric_limits<sint32>::min();
+    static constexpr sint32 kMaxValue = std::numeric_limits<sint32>::max();
+
+    const sint32 dividend = static_cast<sint32>(DVDNTL);
+    const sint32 divisor = static_cast<sint32>(DVSR);
+
+    if (divisor != 0) {
+        // TODO: schedule event to run this after 39 cycles
+
+        if (dividend == kMinValue && divisor == -1) [[unlikely]] {
+            // Handle extreme case
+            DVDNTL = DVDNT = kMinValue;
+            DVDNTH = 0;
+        } else {
+            DVDNTL = DVDNT = dividend / divisor;
+            DVDNTH = dividend % divisor;
+        }
+    } else {
+        // Overflow
+        // TODO: schedule event to run this after 6 cycles
+
+        // Perform partial division
+        // The division unit uses 3 cycles to set up flags, leaving 3 cycles for calculations
+        DVDNTH = dividend >> 29;
+        if (DVCR.OVFIE) {
+            DVDNTL = DVDNT = (dividend << 3) | ((dividend >> 31) & 7);
+        } else {
+            // DVDNT/DVDNTL is saturated if the interrupt signal is disabled
+            DVDNTL = DVDNT = dividend < 0 ? kMinValue : kMaxValue;
+        }
+
+        // Signal overflow
+        DVCR.OVF = 1;
+        if (DVCR.OVFIE) {
+            RaiseInterrupt(InterruptSource::DIVU_OVFI);
+        }
+    }
+
+    DVDNTUH = DVDNTH;
+    DVDNTUL = DVDNTL;
+}
+
+void SH2::DIVUBegin64() {
+    static constexpr sint32 kMinValue32 = std::numeric_limits<sint32>::min();
+    static constexpr sint32 kMaxValue32 = std::numeric_limits<sint32>::max();
+    static constexpr sint64 kMinValue64 = std::numeric_limits<sint64>::min();
+
+    sint64 dividend = (static_cast<sint64>(DVDNTH) << 32ll) | static_cast<sint64>(DVDNTL);
+    const sint32 divisor = static_cast<sint32>(DVSR);
+
+    bool overflow = divisor == 0;
+
+    if (dividend == -0x80000000ll && divisor == -1) {
+        DVDNTH = DVDNTUH = 0;
+        DVDNTL = DVDNTUL = -0x80000000l;
+        return;
+    }
+
+    if (!overflow) {
+        const sint64 quotient = dividend / divisor;
+        const sint32 remainder = dividend % divisor;
+
+        if (quotient <= kMinValue32 || quotient > kMaxValue32) [[unlikely]] {
+            // Overflow cases
+            overflow = true;
+        } else if (dividend == kMinValue64 && divisor == -1) [[unlikely]] {
+            // Handle extreme case
+            overflow = true;
+        } else {
+            // TODO: schedule event to run this after 39 cycles
+            DVDNTL = DVDNT = quotient;
+            DVDNTH = remainder;
+        }
+    }
+
+    if (overflow) {
+        // Overflow is detected after 6 cycles
+
+        // Perform partial division
+        // The division unit uses 3 cycles to set up flags, leaving 3 cycles for calculations
+        const sint64 origDividend = dividend;
+        bool Q = dividend < 0;
+        const bool M = divisor < 0;
+        for (int i = 0; i < 3; i++) {
+            if (Q == M) {
+                dividend -= static_cast<uint64>(divisor) << 32ull;
+            } else {
+                dividend += static_cast<uint64>(divisor) << 32ull;
+            }
+
+            Q = dividend < 0;
+            dividend = (dividend << 1ll) | (Q == M);
+        }
+
+        // Update output registers
+        if (DVCR.OVFIE) {
+            DVDNTL = DVDNT = dividend;
+        } else {
+            // DVDNT/DVDNTL is saturated if the interrupt signal is disabled
+            DVDNTL = DVDNT = static_cast<sint32>((origDividend >> 32) ^ divisor) < 0 ? kMinValue32 : kMaxValue32;
+        }
+        DVDNTH = dividend >> 32ll;
+
+        // Signal overflow
+        DVCR.OVF = 1;
+        if (DVCR.OVFIE) {
+            RaiseInterrupt(InterruptSource::DIVU_OVFI);
+        }
+    }
+
+    DVDNTUH = DVDNTH;
+    DVDNTUL = DVDNTL;
+}
+
+FORCE_INLINE void SH2::AdvanceFRT(uint64 cycles) {
+    FRT.cycleCount += cycles;
+    const uint64 steps = FRT.cycleCount >> FRT.clockDividerShift;
+    FRT.cycleCount -= steps << FRT.clockDividerShift;
+
+    bool oviIntr = false;
+    bool ociIntr = false;
+
+    uint64 nextFRC = FRT.FRC + steps;
+    if (FRT.FRC < FRT.OCRA && nextFRC >= FRT.OCRA) {
+        FRT.FTCSR.OCFA = FRT.TOCR.OLVLA;
+        if (FRT.FTCSR.CCLRA) {
+            nextFRC = 0;
+        }
+        if (FRT.TIER.OCIAE) {
+            ociIntr = true;
+        }
+    }
+    if (FRT.FRC < FRT.OCRB && nextFRC >= FRT.OCRB) {
+        FRT.FTCSR.OCFB = FRT.TOCR.OLVLB;
+        if (FRT.TIER.OCIBE) {
+            ociIntr = true;
+        }
+    }
+    if (nextFRC >= 0x10000) {
+        FRT.FTCSR.OVF = 1;
+        if (FRT.TIER.OVIE) {
+            oviIntr = true;
+        }
+    }
+    FRT.FRC = nextFRC;
+
+    if (oviIntr) {
+        RaiseInterrupt(InterruptSource::FRT_OVI);
+    } else if (ociIntr) {
+        RaiseInterrupt(InterruptSource::FRT_OCI);
     }
 }
 
