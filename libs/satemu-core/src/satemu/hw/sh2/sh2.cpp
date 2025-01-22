@@ -1332,22 +1332,12 @@ void SH2::Execute() {
     // TODO: figure out a way to optimize delay slots for performance
     // - perhaps decoding instructions beforehand
 
-    const uint16 instr = FetchInstruction(PC);
-
     auto advancePC = [&] {
         if (m_delaySlot) {
             PC = m_delaySlotTarget;
             m_delaySlot = false;
         } else {
             PC += 2;
-        }
-    };
-
-    auto nonDelaySlot = [&](auto instr, auto... params) {
-        if (m_delaySlot) {
-            EnterException(xvSlotIllegalInstr);
-        } else {
-            (this->*instr)(params...);
         }
     };
 
@@ -1361,239 +1351,166 @@ void SH2::Execute() {
         }
     };
 
-    switch (instr >> 12u) {
-    case 0x0:
-        switch (instr) {
-        case 0x0008: CLRT(), advancePC(); break;     // 0    0000 0000 0000 1000   CLRT
-        case 0x0009: NOP(), advancePC(); break;      // 0    0000 0000 0000 1001   NOP
-        case 0x000B: nonDelaySlot(&SH2::RTS); break; // 0    0000 0000 0000 1011   RTS
-        case 0x0018: SETT(), advancePC(); break;     // 0    0000 0000 0001 1000   SETT
-        case 0x0019: DIV0U(), advancePC(); break;    // 0    0000 0000 0001 1001   DIV0U
-        case 0x001B: SLEEP(), advancePC(); break;    // 0    0000 0000 0001 1011   SLEEP
-        case 0x0028: CLRMAC(), advancePC(); break;   // 0    0000 0000 0010 1000   CLRMAC
-        case 0x002B: nonDelaySlot(&SH2::RTE); break; // 0    0000 0000 0010 1011   RTE
-        default:
-            switch (instr & 0xFF) {
-            case 0x02: STCSR(instr), advancePC(); break;       // n    0000 nnnn 0000 0010   STC SR, Rn
-            case 0x03: nonDelaySlot(&SH2::BSRF, instr); break; // m    0000 mmmm 0000 0011   BSRF Rm
-            case 0x0A: STSMACH(instr), advancePC(); break;     // n    0000 nnnn 0000 1010   STS MACH, Rn
-            case 0x12: STCGBR(instr), advancePC(); break;      // n    0000 nnnn 0001 0010   STC GBR, Rn
-            case 0x1A: STSMACL(instr), advancePC(); break;     // n    0000 nnnn 0001 1010   STS MACL, Rn
-            case 0x22: STCVBR(instr), advancePC(); break;      // n    0000 nnnn 0010 0010   STC VBR, Rn
-            case 0x23: nonDelaySlot(&SH2::BRAF, instr); break; // m    0000 mmmm 0010 0011   BRAF Rm
-            case 0x29: MOVT(instr), advancePC(); break;        // n    0000 nnnn 0010 1001   MOVT Rn
-            case 0x2A: STSPR(instr), advancePC(); break;       // n    0000 nnnn 0010 1010   STS PR, Rn
-            default:
-                switch (instr & 0xF) {
-                case 0x4: MOVBS0(instr), advancePC(); break; // nm   0000 nnnn mmmm 0100   MOV.B Rm, @(R0,Rn)
-                case 0x5: MOVWS0(instr), advancePC(); break; // nm   0000 nnnn mmmm 0101   MOV.W Rm, @(R0,Rn)
-                case 0x6: MOVLS0(instr), advancePC(); break; // nm   0000 nnnn mmmm 0110   MOV.L Rm, @(R0,Rn)
-                case 0x7: MULL(instr), advancePC(); break;   // nm   0000 nnnn mmmm 0111   MUL.L Rm, Rn
-                case 0xC: MOVBL0(instr), advancePC(); break; // nm   0000 nnnn mmmm 1100   MOV.B @(R0,Rm), Rn
-                case 0xD: MOVWL0(instr), advancePC(); break; // nm   0000 nnnn mmmm 1101   MOV.W @(R0,Rm), Rn
-                case 0xE: MOVLL0(instr), advancePC(); break; // nm   0000 nnnn mmmm 1110   MOV.L @(R0,Rm), Rn
-                case 0xF: MACL(instr), advancePC(); break;   // nm   0000 nnnn mmmm 1111   MAC.L @Rm+, @Rn+
-                default:
-                    // dbg_println("unhandled 0000 instruction");
-                    dump();
-                    break;
-                }
-                break;
-            }
-            break;
-        }
-        break;
-    case 0x1: MOVLS4(instr), advancePC(); break; // nmd  0001 nnnn mmmm dddd   MOV.L Rm, @(disp,Rn)
-    case 0x2: {
-        switch (instr & 0xF) {
-        case 0x0: MOVBS(instr), advancePC(); break; // nm   0010 nnnn mmmm 0000   MOV.B Rm, @Rn
-        case 0x1: MOVWS(instr), advancePC(); break; // nm   0010 nnnn mmmm 0001   MOV.W Rm, @Rn
-        case 0x2: MOVLS(instr), advancePC(); break; // nm   0010 nnnn mmmm 0010   MOV.L Rm, @Rn
+    const uint16 instr = FetchInstruction(PC);
+    const OpcodeType opcode = g_decodeTable.opcodes[m_delaySlot][instr];
 
-        case 0x4: MOVBM(instr), advancePC(); break;  // nm   0010 nnnn mmmm 0100   MOV.B Rm, @-Rn
-        case 0x5: MOVWM(instr), advancePC(); break;  // nm   0010 nnnn mmmm 0101   MOV.W Rm, @-Rn
-        case 0x6: MOVLM(instr), advancePC(); break;  // nm   0010 nnnn mmmm 0110   MOV.L Rm, @-Rn
-        case 0x7: DIV0S(instr), advancePC(); break;  // nm   0010 nnnn mmmm 0111   DIV0S Rm, Rn
-        case 0x8: TST(instr), advancePC(); break;    // nm   0010 nnnn mmmm 1000   TST Rm, Rn
-        case 0x9: AND(instr), advancePC(); break;    // nm   0010 nnnn mmmm 1001   AND Rm, Rn
-        case 0xA: XOR(instr), advancePC(); break;    // nm   0010 nnnn mmmm 1010   XOR Rm, Rn
-        case 0xB: OR(instr), advancePC(); break;     // nm   0010 nnnn mmmm 1011   OR Rm, Rn
-        case 0xC: CMPSTR(instr), advancePC(); break; // nm   0010 nnnn mmmm 1100   CMP/STR Rm, Rn
-        case 0xD: XTRCT(instr), advancePC(); break;  // nm   0010 nnnn mmmm 1101   XTRCT Rm, Rn
-        case 0xE: MULU(instr), advancePC(); break;   // nm   0010 nnnn mmmm 1110   MULU.W Rm, Rn
-        case 0xF: MULS(instr), advancePC(); break;   // nm   0010 nnnn mmmm 1111   MULS.W Rm, Rn
-        default:
-            // dbg_println("unhandled 0010 instruction");
-            dump();
-            break;
-        }
-        break;
-    }
-    case 0x3:
-        switch (instr & 0xF) {
-        case 0x0: CMPEQ(instr), advancePC(); break; // nm   0011 nnnn mmmm 0000   CMP/EQ Rm, Rn
-        case 0x2: CMPHS(instr), advancePC(); break; // nm   0011 nnnn mmmm 0010   CMP/HS Rm, Rn
-        case 0x3: CMPGE(instr), advancePC(); break; // nm   0011 nnnn mmmm 0011   CMP/GE Rm, Rn
-        case 0x4: DIV1(instr), advancePC(); break;  // nm   0011 nnnn mmmm 0100   DIV1 Rm, Rn
-        case 0x5: DMULU(instr), advancePC(); break; // nm   0011 nnnn mmmm 0101   DMULU.L Rm, Rn
-        case 0x6: CMPHI(instr), advancePC(); break; // nm   0011 nnnn mmmm 0110   CMP/HI Rm, Rn
-        case 0x7: CMPGT(instr), advancePC(); break; // nm   0011 nnnn mmmm 0111   CMP/GT Rm, Rn
-        case 0x8: SUB(instr), advancePC(); break;   // nm   0011 nnnn mmmm 1000   SUB Rm, Rn
+    switch (opcode) {
+    case OpcodeType::NOP: NOP(), advancePC(); break;
 
-        case 0xA: SUBC(instr), advancePC(); break; // nm   0011 nnnn mmmm 1010   SUBC Rm, Rn
-        case 0xB: SUBV(instr), advancePC(); break; // nm   0011 nnnn mmmm 1011   SUBV Rm, Rn
+    case OpcodeType::SLEEP: SLEEP(), advancePC(); break;
 
-        case 0xC: ADD(instr), advancePC(); break;   // nm   0011 nnnn mmmm 1100   ADD Rm, Rn
-        case 0xD: DMULS(instr), advancePC(); break; // nm   0011 nnnn mmmm 1101   DMULS.L Rm, Rn
-        case 0xE: ADDC(instr), advancePC(); break;  // nm   0011 nnnn mmmm 1110   ADDC Rm, Rn
-        case 0xF: ADDV(instr), advancePC(); break;  // nm   0011 nnnn mmmm 1111   ADDV Rm, Rn
-        default:
-            // dbg_println("unhandled 0011 instruction");
-            dump();
-            break;
-        }
-        break;
-    case 0x4:
-        if ((instr & 0xF) == 0xF) {
-            MACW(instr); // nm   0100 nnnn mmmm 1111   MAC.W @Rm+, @Rn+
-            advancePC();
-            break;
-        } else {
-            switch (instr & 0xFF) {
-            case 0x00: SHLL(instr), advancePC(); break;       // n    0100 nnnn 0000 0000   SHLL Rn
-            case 0x01: SHLR(instr), advancePC(); break;       // n    0100 nnnn 0000 0001   SHLR Rn
-            case 0x02: STSMMACH(instr), advancePC(); break;   // n    0100 nnnn 0000 0010   STS.L MACH, @-Rn
-            case 0x03: STCMSR(instr), advancePC(); break;     // n    0100 nnnn 0000 0011   STC.L SR, @-Rn
-            case 0x04: ROTL(instr), advancePC(); break;       // n    0100 nnnn 0000 0100   ROTL Rn
-            case 0x05: ROTR(instr), advancePC(); break;       // n    0100 nnnn 0000 0101   ROTR Rn
-            case 0x06: LDSMMACH(instr), advancePC(); break;   // m    0100 mmmm 0000 0110   LDS.L @Rm+, MACH
-            case 0x07: LDCMSR(instr), advancePC(); break;     // m    0100 mmmm 0000 0111   LDC.L @Rm+, SR
-            case 0x08: SHLL2(instr), advancePC(); break;      // n    0100 nnnn 0000 1000   SHLL2 Rn
-            case 0x09: SHLR2(instr), advancePC(); break;      // n    0100 nnnn 0000 1001   SHLR2 Rn
-            case 0x0A: LDSMACH(instr), advancePC(); break;    // m    0100 mmmm 0000 1010   LDS Rm, MACH
-            case 0x0B: nonDelaySlot(&SH2::JSR, instr); break; // m    0100 mmmm 0000 1011   JSR @Rm
+    case OpcodeType::MOV_R: MOV(instr), advancePC(); break;
+    case OpcodeType::MOVB_L: MOVBL(instr), advancePC(); break;
+    case OpcodeType::MOVW_L: MOVWL(instr), advancePC(); break;
+    case OpcodeType::MOVL_L: MOVLL(instr), advancePC(); break;
+    case OpcodeType::MOVB_L0: MOVBL0(instr), advancePC(); break;
+    case OpcodeType::MOVW_L0: MOVWL0(instr), advancePC(); break;
+    case OpcodeType::MOVL_L0: MOVLL0(instr), advancePC(); break;
+    case OpcodeType::MOVB_L4: MOVBL4(instr), advancePC(); break;
+    case OpcodeType::MOVW_L4: MOVWL4(instr), advancePC(); break;
+    case OpcodeType::MOVL_L4: MOVLL4(instr), advancePC(); break;
+    case OpcodeType::MOVB_LG: MOVBLG(instr), advancePC(); break;
+    case OpcodeType::MOVW_LG: MOVWLG(instr), advancePC(); break;
+    case OpcodeType::MOVL_LG: MOVLLG(instr), advancePC(); break;
+    case OpcodeType::MOVB_M: MOVBM(instr), advancePC(); break;
+    case OpcodeType::MOVW_M: MOVWM(instr), advancePC(); break;
+    case OpcodeType::MOVL_M: MOVLM(instr), advancePC(); break;
+    case OpcodeType::MOVB_P: MOVBP(instr), advancePC(); break;
+    case OpcodeType::MOVW_P: MOVWP(instr), advancePC(); break;
+    case OpcodeType::MOVL_P: MOVLP(instr), advancePC(); break;
+    case OpcodeType::MOVB_S: MOVBS(instr), advancePC(); break;
+    case OpcodeType::MOVW_S: MOVWS(instr), advancePC(); break;
+    case OpcodeType::MOVL_S: MOVLS(instr), advancePC(); break;
+    case OpcodeType::MOVB_S0: MOVBS0(instr), advancePC(); break;
+    case OpcodeType::MOVW_S0: MOVWS0(instr), advancePC(); break;
+    case OpcodeType::MOVL_S0: MOVLS0(instr), advancePC(); break;
+    case OpcodeType::MOVB_S4: MOVBS4(instr), advancePC(); break;
+    case OpcodeType::MOVW_S4: MOVWS4(instr), advancePC(); break;
+    case OpcodeType::MOVL_S4: MOVLS4(instr), advancePC(); break;
+    case OpcodeType::MOVB_SG: MOVBSG(instr), advancePC(); break;
+    case OpcodeType::MOVW_SG: MOVWSG(instr), advancePC(); break;
+    case OpcodeType::MOVL_SG: MOVLSG(instr), advancePC(); break;
+    case OpcodeType::MOV_I: MOVI(instr), advancePC(); break;
+    case OpcodeType::MOVW_I: MOVWI(instr), advancePC(); break;
+    case OpcodeType::MOVL_I: MOVLI(instr), advancePC(); break;
+    case OpcodeType::MOVA: MOVA(instr), advancePC(); break;
+    case OpcodeType::MOVT: MOVT(instr), advancePC(); break;
+    case OpcodeType::CLRT: CLRT(), advancePC(); break;
+    case OpcodeType::SETT: SETT(), advancePC(); break;
 
-            case 0x0E: LDCSR(instr), advancePC(); break; // m    0100 mmmm 0000 1110   LDC Rm, SR
+    case OpcodeType::EXTUB: EXTUB(instr), advancePC(); break;
+    case OpcodeType::EXTUW: EXTUW(instr), advancePC(); break;
+    case OpcodeType::EXTSB: EXTSB(instr), advancePC(); break;
+    case OpcodeType::EXTSW: EXTSW(instr), advancePC(); break;
+    case OpcodeType::SWAPB: SWAPB(instr), advancePC(); break;
+    case OpcodeType::SWAPW: SWAPW(instr), advancePC(); break;
+    case OpcodeType::XTRCT: XTRCT(instr), advancePC(); break;
 
-            case 0x10: DT(instr), advancePC(); break;       // n    0100 nnnn 0001 0000   DT Rn
-            case 0x11: CMPPZ(instr), advancePC(); break;    // n    0100 nnnn 0001 0001   CMP/PZ Rn
-            case 0x12: STSMMACL(instr), advancePC(); break; // n    0100 nnnn 0001 0010   STS.L MACL, @-Rn
-            case 0x13: STCMGBR(instr), advancePC(); break;  // n    0100 nnnn 0001 0011   STC.L GBR, @-Rn
+    case OpcodeType::LDC_GBR_R: LDCGBR(instr), advancePC(); break;
+    case OpcodeType::LDC_SR_R: LDCSR(instr), advancePC(); break;
+    case OpcodeType::LDC_VBR_R: LDCVBR(instr), advancePC(); break;
+    case OpcodeType::LDC_GBR_M: LDCMGBR(instr), advancePC(); break;
+    case OpcodeType::LDC_SR_M: LDCMSR(instr), advancePC(); break;
+    case OpcodeType::LDC_VBR_M: LDCMVBR(instr), advancePC(); break;
+    case OpcodeType::LDS_MACH_R: LDSMACH(instr), advancePC(); break;
+    case OpcodeType::LDS_MACL_R: LDSMACL(instr), advancePC(); break;
+    case OpcodeType::LDS_PR_R: LDSPR(instr), advancePC(); break;
+    case OpcodeType::LDS_MACH_M: LDSMMACH(instr), advancePC(); break;
+    case OpcodeType::LDS_MACL_M: LDSMMACL(instr), advancePC(); break;
+    case OpcodeType::LDS_PR_M: LDSMPR(instr), advancePC(); break;
+    case OpcodeType::STC_GBR_R: STCGBR(instr), advancePC(); break;
+    case OpcodeType::STC_SR_R: STCSR(instr), advancePC(); break;
+    case OpcodeType::STC_VBR_R: STCVBR(instr), advancePC(); break;
+    case OpcodeType::STC_GBR_M: STCMGBR(instr), advancePC(); break;
+    case OpcodeType::STC_SR_M: STCMSR(instr), advancePC(); break;
+    case OpcodeType::STC_VBR_M: STCMVBR(instr), advancePC(); break;
+    case OpcodeType::STS_MACH_R: STSMACH(instr), advancePC(); break;
+    case OpcodeType::STS_MACL_R: STSMACL(instr), advancePC(); break;
+    case OpcodeType::STS_PR_R: STSPR(instr), advancePC(); break;
+    case OpcodeType::STS_MACH_M: STSMMACH(instr), advancePC(); break;
+    case OpcodeType::STS_MACL_M: STSMMACL(instr), advancePC(); break;
+    case OpcodeType::STS_PR_M: STSMPR(instr), advancePC(); break;
 
-            case 0x15: CMPPL(instr), advancePC(); break;    // n    0100 nnnn 0001 0101   CMP/PL Rn
-            case 0x16: LDSMMACL(instr), advancePC(); break; // m    0100 mmmm 0001 0110   LDS.L @Rm+, MACL
-            case 0x17: LDCMGBR(instr), advancePC(); break;  // m    0100 mmmm 0001 0111   LDC.L @Rm+, GBR
-            case 0x18: SHLL8(instr), advancePC(); break;    // n    0100 nnnn 0001 1000   SHLL8 Rn
-            case 0x19: SHLR8(instr), advancePC(); break;    // n    0100 nnnn 0001 1001   SHLR8 Rn
-            case 0x1A: LDSMACL(instr), advancePC(); break;  // m    0100 mmmm 0001 1010   LDS Rm, MACL
-            case 0x1B: TAS(instr), advancePC(); break;      // n    0100 nnnn 0001 1011   TAS.B @Rn
+    case OpcodeType::ADD: ADD(instr), advancePC(); break;
+    case OpcodeType::ADD_I: ADDI(instr), advancePC(); break;
+    case OpcodeType::ADDC: ADDC(instr), advancePC(); break;
+    case OpcodeType::ADDV: ADDV(instr), advancePC(); break;
+    case OpcodeType::AND_R: AND(instr), advancePC(); break;
+    case OpcodeType::AND_I: ANDI(instr), advancePC(); break;
+    case OpcodeType::AND_M: ANDM(instr), advancePC(); break;
+    case OpcodeType::NEG: NEG(instr), advancePC(); break;
+    case OpcodeType::NEGC: NEGC(instr), advancePC(); break;
+    case OpcodeType::NOT: NOT(instr), advancePC(); break;
+    case OpcodeType::OR_R: OR(instr), advancePC(); break;
+    case OpcodeType::OR_I: ORI(instr), advancePC(); break;
+    case OpcodeType::OR_M: ORM(instr), advancePC(); break;
+    case OpcodeType::ROTCL: ROTCL(instr), advancePC(); break;
+    case OpcodeType::ROTCR: ROTCR(instr), advancePC(); break;
+    case OpcodeType::ROTL: ROTL(instr), advancePC(); break;
+    case OpcodeType::ROTR: ROTR(instr), advancePC(); break;
+    case OpcodeType::SHAL: SHAL(instr), advancePC(); break;
+    case OpcodeType::SHAR: SHAR(instr), advancePC(); break;
+    case OpcodeType::SHLL: SHLL(instr), advancePC(); break;
+    case OpcodeType::SHLL2: SHLL2(instr), advancePC(); break;
+    case OpcodeType::SHLL8: SHLL8(instr), advancePC(); break;
+    case OpcodeType::SHLL16: SHLL16(instr), advancePC(); break;
+    case OpcodeType::SHLR: SHLR(instr), advancePC(); break;
+    case OpcodeType::SHLR2: SHLR2(instr), advancePC(); break;
+    case OpcodeType::SHLR8: SHLR8(instr), advancePC(); break;
+    case OpcodeType::SHLR16: SHLR16(instr), advancePC(); break;
+    case OpcodeType::SUB: SUB(instr), advancePC(); break;
+    case OpcodeType::SUBC: SUBC(instr), advancePC(); break;
+    case OpcodeType::SUBV: SUBV(instr), advancePC(); break;
+    case OpcodeType::XOR_R: XOR(instr), advancePC(); break;
+    case OpcodeType::XOR_I: XORI(instr), advancePC(); break;
+    case OpcodeType::XOR_M: XORM(instr), advancePC(); break;
 
-            case 0x1E: LDCGBR(instr), advancePC(); break; // m    0100 mmmm 0001 1110   LDC Rm, GBR
+    case OpcodeType::DT: DT(instr), advancePC(); break;
 
-            case 0x20: SHAL(instr), advancePC(); break;       // n    0100 nnnn 0010 0000   SHAL Rn
-            case 0x21: SHAR(instr), advancePC(); break;       // n    0100 nnnn 0010 0001   SHAR Rn
-            case 0x22: STSMPR(instr), advancePC(); break;     // n    0100 nnnn 0010 0010   STS.L PR, @-Rn
-            case 0x23: STCMVBR(instr), advancePC(); break;    // n    0100 nnnn 0010 0011   STC.L VBR, @-Rn
-            case 0x24: ROTCL(instr), advancePC(); break;      // n    0100 nnnn 0010 0100   ROTCL Rn
-            case 0x25: ROTCR(instr), advancePC(); break;      // n    0100 nnnn 0010 0101   ROTCR Rn
-            case 0x26: LDSMPR(instr), advancePC(); break;     // m    0100 mmmm 0010 0110   LDS.L @Rm+, PR
-            case 0x27: LDCMVBR(instr), advancePC(); break;    // m    0100 mmmm 0010 0111   LDC.L @Rm+, VBR
-            case 0x28: SHLL16(instr), advancePC(); break;     // n    0100 nnnn 0010 1000   SHLL16 Rn
-            case 0x29: SHLR16(instr), advancePC(); break;     // n    0100 nnnn 0010 1001   SHLR16 Rn
-            case 0x2A: LDSPR(instr), advancePC(); break;      // m    0100 mmmm 0010 1010   LDS Rm, PR
-            case 0x2B: nonDelaySlot(&SH2::JMP, instr); break; // m    0100 mmmm 0010 1011   JMP @Rm
+    case OpcodeType::CLRMAC: CLRMAC(), advancePC(); break;
+    case OpcodeType::MACW: MACW(instr), advancePC(); break;
+    case OpcodeType::MACL: MACL(instr), advancePC(); break;
+    case OpcodeType::MUL: MULL(instr), advancePC(); break;
+    case OpcodeType::MULS: MULS(instr), advancePC(); break;
+    case OpcodeType::MULU: MULU(instr), advancePC(); break;
+    case OpcodeType::DMULS: DMULS(instr), advancePC(); break;
+    case OpcodeType::DMULU: DMULU(instr), advancePC(); break;
 
-            case 0x2E: LDCVBR(instr), advancePC(); break; // m    0100 mmmm 0010 1110   LDC Rm, VBR
+    case OpcodeType::DIV0S: DIV0S(instr), advancePC(); break;
+    case OpcodeType::DIV0U: DIV0U(), advancePC(); break;
+    case OpcodeType::DIV1: DIV1(instr), advancePC(); break;
 
-            default:
-                // dbg_println("unhandled 0100 instruction");
-                dump();
-                break;
-            }
-        }
-        break;
-    case 0x5: MOVLL4(instr), advancePC(); break; // nmd  0101 nnnn mmmm dddd   MOV.L @(disp,Rm), Rn
-    case 0x6:
-        switch (instr & 0xF) {
-        case 0x0: MOVBL(instr), advancePC(); break; // nm   0110 nnnn mmmm 0000   MOV.B @Rm, Rn
-        case 0x1: MOVWL(instr), advancePC(); break; // nm   0110 nnnn mmmm 0001   MOV.W @Rm, Rn
-        case 0x2: MOVLL(instr), advancePC(); break; // nm   0110 nnnn mmmm 0010   MOV.L @Rm, Rn
-        case 0x3: MOV(instr), advancePC(); break;   // nm   0110 nnnn mmmm 0011   MOV Rm, Rn
-        case 0x4: MOVBP(instr), advancePC(); break; // nm   0110 nnnn mmmm 0100   MOV.B @Rm+, Rn
-        case 0x5: MOVWP(instr), advancePC(); break; // nm   0110 nnnn mmmm 0101   MOV.W @Rm+, Rn
-        case 0x6: MOVLP(instr), advancePC(); break; // nm   0110 nnnn mmmm 0110   MOV.L @Rm+, Rn
-        case 0x7: NOT(instr), advancePC(); break;   // nm   0110 nnnn mmmm 0111   NOT Rm, Rn
-        case 0x8: SWAPB(instr), advancePC(); break; // nm   0110 nnnn mmmm 1000   SWAP.B Rm, Rn
-        case 0x9: SWAPW(instr), advancePC(); break; // nm   0110 nnnn mmmm 1001   SWAP.W Rm, Rn
-        case 0xA: NEGC(instr), advancePC(); break;  // nm   0110 nnnn mmmm 1010   NEGC Rm, Rn
-        case 0xB: NEG(instr), advancePC(); break;   // nm   0110 nnnn mmmm 1011   NEG Rm, Rn
-        case 0xC: EXTUB(instr), advancePC(); break; // nm   0110 nnnn mmmm 1100   EXTU.B Rm, Rn
-        case 0xD: EXTUW(instr), advancePC(); break; // nm   0110 nnnn mmmm 1101   EXTU.W Rm, Rn
-        case 0xE: EXTSB(instr), advancePC(); break; // nm   0110 nnnn mmmm 1110   EXTS.B Rm, Rn
-        case 0xF: EXTSW(instr), advancePC(); break; // nm   0110 nnnn mmmm 1111   EXTS.W Rm, Rn
-        }
-        break;
-    case 0x7: ADDI(instr), advancePC(); break; // ni   0111 nnnn iiii iiii   ADD #imm, Rn
-    case 0x8:
-        switch ((instr >> 8u) & 0xF) {
-        case 0x0: MOVBS4(instr), advancePC(); break; // nd4  1000 0000 nnnn dddd   MOV.B R0, @(disp,Rn)
-        case 0x1: MOVWS4(instr), advancePC(); break; // nd4  1000 0001 nnnn dddd   MOV.W R0, @(disp,Rn)
+    case OpcodeType::CMP_EQ_I: CMPIM(instr), advancePC(); break;
+    case OpcodeType::CMP_EQ_R: CMPEQ(instr), advancePC(); break;
+    case OpcodeType::CMP_GE: CMPGE(instr), advancePC(); break;
+    case OpcodeType::CMP_GT: CMPGT(instr), advancePC(); break;
+    case OpcodeType::CMP_HI: CMPHI(instr), advancePC(); break;
+    case OpcodeType::CMP_HS: CMPHS(instr), advancePC(); break;
+    case OpcodeType::CMP_PL: CMPPL(instr), advancePC(); break;
+    case OpcodeType::CMP_PZ: CMPPZ(instr), advancePC(); break;
+    case OpcodeType::CMP_STR: CMPSTR(instr), advancePC(); break;
+    case OpcodeType::TAS: TAS(instr), advancePC(); break;
+    case OpcodeType::TST_R: TST(instr), advancePC(); break;
+    case OpcodeType::TST_I: TSTI(instr), advancePC(); break;
+    case OpcodeType::TST_M: TSTM(instr), advancePC(); break;
 
-        case 0x4: MOVBL4(instr), advancePC(); break; // md   1000 0100 mmmm dddd   MOV.B @(disp,Rm), R0
-        case 0x5: MOVWL4(instr), advancePC(); break; // md   1000 0101 mmmm dddd   MOV.W @(disp,Rm), R0
+    case OpcodeType::BF: BF(instr); break;
+    case OpcodeType::BFS: BFS(instr); break;
+    case OpcodeType::BT: BT(instr); break;
+    case OpcodeType::BTS: BTS(instr); break;
+    case OpcodeType::BRA: BRA(instr); break;
+    case OpcodeType::BRAF: BRAF(instr); break;
+    case OpcodeType::BSR: BSR(instr); break;
+    case OpcodeType::BSRF: BSRF(instr); break;
+    case OpcodeType::JMP: JMP(instr); break;
+    case OpcodeType::JSR: JSR(instr); break;
+    case OpcodeType::TRAPA: TRAPA(instr); break;
 
-        case 0x8: CMPIM(instr), advancePC(); break;     // i    1000 1000 iiii iiii   CMP/EQ #imm, R0
-        case 0x9: nonDelaySlot(&SH2::BT, instr); break; // d    1000 1001 dddd dddd   BT <label>
+    case OpcodeType::RTE: RTE(); break;
+    case OpcodeType::RTS: RTS(); break;
 
-        case 0xB: nonDelaySlot(&SH2::BF, instr); break; // d    1000 1011 dddd dddd   BF <label>
-
-        case 0xD: nonDelaySlot(&SH2::BTS, instr); break; // d    1000 1101 dddd dddd   BT/S <label>
-
-        case 0xF: nonDelaySlot(&SH2::BFS, instr); break; // d    1000 1111 dddd dddd   BF/S <label>
-
-        default:
-            // dbg_println("unhandled 1000 instruction");
-            dump();
-            break;
-        }
-        break;
-    case 0x9: MOVWI(instr), advancePC(); break;      // nd8  1001 nnnn dddd dddd   MOV.W @(disp,PC), Rn
-    case 0xA: nonDelaySlot(&SH2::BRA, instr); break; // d12  1010 dddd dddd dddd   BRA <label>
-
-    case 0xB: nonDelaySlot(&SH2::BSR, instr); break; // d12  1011 dddd dddd dddd   BSR <label>
-
-    case 0xC:
-        switch ((instr >> 8u) & 0xF) {
-        case 0x0: MOVBSG(instr), advancePC(); break;       // d    1100 0000 dddd dddd   MOV.B R0, @(disp,GBR)
-        case 0x1: MOVWSG(instr), advancePC(); break;       // d    1100 0001 dddd dddd   MOV.W R0, @(disp,GBR)
-        case 0x2: MOVLSG(instr), advancePC(); break;       // d    1100 0010 dddd dddd   MOV.L R0, @(disp,GBR)
-        case 0x3: nonDelaySlot(&SH2::TRAPA, instr); break; // i    1100 0011 iiii iiii   TRAPA #imm
-
-        case 0x4: MOVBLG(instr), advancePC(); break; // d    1100 0100 dddd dddd   MOV.B @(disp,GBR), R0
-        case 0x5: MOVWLG(instr), advancePC(); break; // d    1100 0101 dddd dddd   MOV.W @(disp,GBR), R0
-        case 0x6: MOVLLG(instr), advancePC(); break; // d    1100 0110 dddd dddd   MOV.L @(disp,GBR), R0
-        case 0x7: MOVA(instr), advancePC(); break;   // d    1100 0111 dddd dddd   MOVA @(disp,PC), R0
-        case 0x8: TSTI(instr), advancePC(); break;   // i    1100 1000 iiii iiii   TST #imm, R0
-        case 0x9: ANDI(instr), advancePC(); break;   // i    1100 1001 iiii iiii   AND #imm, R0
-        case 0xA: XORI(instr), advancePC(); break;   // i    1100 1010 iiii iiii   XOR #imm, R0
-        case 0xB: ORI(instr), advancePC(); break;    // i    1100 1011 iiii iiii   OR #imm, R0
-        case 0xC: TSTM(instr), advancePC(); break;   // i    1100 1100 iiii iiii   TST.B #imm, @(R0,GBR)
-        case 0xD: ANDM(instr), advancePC(); break;   // i    1100 1101 iiii iiii   AND #imm, @(R0,GBR)
-        case 0xE: XORM(instr), advancePC(); break;   // i    1100 1110 iiii iiii   XOR #imm, @(R0,GBR)
-        case 0xF: ORM(instr), advancePC(); break;    // i    1100 1111 iiii iiii   OR #imm, @(R0,GBR)
-        default:
-            // dbg_println("unhandled 1100 instruction");
-            dump();
-            break;
-        }
-        break;
-    case 0xD: MOVLI(instr), advancePC(); break; // nd8  1101 nnnn dddd dddd   MOV.L @(disp,PC), Rn
-    case 0xE: MOVI(instr), advancePC(); break;  // ni   1110 nnnn iiii iiii   MOV #imm, Rn
-
-    default:
-        // dbg_println("unhandled instruction");
-        dump();
-        break;
+    case OpcodeType::Illegal: EnterException(xvGenIllegalInstr), dump(); break;
+    case OpcodeType::IllegalSlot: EnterException(xvSlotIllegalInstr), dump(); break;
     }
 }
 

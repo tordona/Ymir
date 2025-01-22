@@ -89,6 +89,7 @@ add_library(satemu-core
 
     src/satemu/hw/sh2/sh2.cpp
     src/satemu/hw/sh2/sh2_bus.cpp
+    src/satemu/hw/sh2/sh2_decode.cpp
 
     src/satemu/hw/vdp/slope.hpp
     src/satemu/hw/vdp/vdp.cpp
