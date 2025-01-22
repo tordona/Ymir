@@ -384,7 +384,7 @@ private:
 
     SH2Tracer m_tracer;
 
-    void Execute(uint32 address);
+    void Execute();
 
     // -------------------------------------------------------------------------
     // Instruction interpreters

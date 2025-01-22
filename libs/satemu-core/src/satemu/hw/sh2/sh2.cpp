@@ -222,7 +222,7 @@ FLATTEN void SH2::Advance(uint64 cycles) {
 
         // TODO: choose between interpreter (cached or uncached) and JIT recompiler
         m_tracer.ExecTrace({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
-        Execute(PC);
+        Execute();
 
         // dump stack trace on SYS_EXECDMP
         if ((PC & 0x7FFFFFF) == 0x186C) {
@@ -1290,14 +1290,13 @@ FORCE_INLINE void SH2::EnterException(uint8 vectorNumber) {
 // -----------------------------------------------------------------------------
 // Interpreter
 
-void SH2::Execute(uint32 address) {
+void SH2::Execute() {
     if (!m_delaySlot && CheckInterrupts()) [[unlikely]] {
         // Service interrupt
         const uint8 vecNum = GetInterruptVector(m_pendingInterrupt.source);
         m_log.trace("Handling interrupt level {:02X}, vector number {:02X}", m_pendingInterrupt.level, vecNum);
         EnterException(vecNum);
         SR.ILevel = std::min<uint8>(m_pendingInterrupt.level, 0xF);
-        address = PC;
 
         // Acknowledge interrupt
         switch (m_pendingInterrupt.source) {
@@ -1314,7 +1313,7 @@ void SH2::Execute(uint32 address) {
     // TODO: figure out a way to optimize delay slots for performance
     // - perhaps decoding instructions beforehand
 
-    const uint16 instr = FetchInstruction(address);
+    const uint16 instr = FetchInstruction(PC);
 
     auto advancePC = [&] {
         if (m_delaySlot) {
