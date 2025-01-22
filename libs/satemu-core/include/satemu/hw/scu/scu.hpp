@@ -347,8 +347,11 @@ private:
     };
 
     std::array<DMAChannel, 3> m_dmaChannels;
+    uint8 m_activeDMAChannelLevel;
 
     void RunDMA(uint64 cycles);
+
+    void RecalcDMAChannel();
 
     void TriggerDMATransfer(DMATrigger trigger);
 
@@ -751,6 +754,7 @@ private:
                                      (address >> 5u));
                     }
                     ch.start = true;
+                    RecalcDMAChannel();
                 }
             }
             break;
@@ -771,6 +775,7 @@ private:
                 for (auto &ch : m_dmaChannels) {
                     ch.active = false;
                 }
+                m_activeDMAChannelLevel = m_dmaChannels.size();
             }
             break;
         case 0x7C: // DMA Status (read-only)
