@@ -82,10 +82,6 @@ void SCSP::Advance(uint64 cycles) {
         ProcessSample();
         m_sampleCounter++;
     }
-
-    // Send interrupt signals
-    UpdateM68KInterrupts();
-    UpdateSCUInterrupts();
 }
 
 void SCSP::DumpWRAM(std::ostream &out) {
@@ -207,6 +203,10 @@ void SCSP::ExecuteDMA() {
         if (m_dmaXferLength == 0) {
             m_dmaExec = false;
             SetInterrupt(kIntrDMATransferEnd, true);
+
+            // Send interrupt signals
+            UpdateM68KInterrupts();
+            UpdateSCUInterrupts();
         }
     }
 }
@@ -245,6 +245,10 @@ void SCSP::ProcessSample() {
             SetInterrupt(kIntrTimerA + i, true);
         }
     }
+
+    // Send interrupt signals
+    UpdateM68KInterrupts();
+    UpdateSCUInterrupts();
 }
 
 ExceptionVector SCSP::AcknowledgeInterrupt(uint8 level) {
