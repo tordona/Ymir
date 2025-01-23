@@ -752,12 +752,19 @@ private:
         case 0x30: // Level 1 DMA Enable
         case 0x50: // Level 2 DMA Enable
             if constexpr (std::is_same_v<T, uint32>) {
-                auto &ch = m_dmaChannels[address >> 5u];
+                const uint32 index = address >> 5u;
+                auto &ch = m_dmaChannels[index];
                 ch.enabled = bit::extract<8>(value);
+                if (ch.enabled) {
+                    dmaLog.trace("DMA{} enabled - {:08X} (+{:02X}) -> {:08X} (+{:02X})", index, ch.srcAddr,
+                                 ch.srcAddrInc, ch.dstAddr, ch.dstAddrInc);
+                }
                 if (ch.enabled && ch.trigger == DMATrigger::Immediate && bit::extract<0>(value)) {
                     if (ch.active) {
                         dmaLog.trace("DMA{} triggering immediate transfer while another transfer is in progress",
-                                     (address >> 5u));
+                                     index);
+                        // Finish previous transfer
+                        RunDMA(1);
                     }
                     ch.start = true;
                     RecalcDMAChannel();

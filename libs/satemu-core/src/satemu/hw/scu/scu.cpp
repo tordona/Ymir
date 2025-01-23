@@ -187,7 +187,7 @@ void SCU::AcknowledgeExternalInterrupt() {
     UpdateInterruptLevel(true);
 }
 
-FORCE_INLINE void SCU::RunDMA(uint64 cycles) {
+void SCU::RunDMA(uint64 cycles) {
     const uint8 level = m_activeDMAChannelLevel;
     if (level >= m_dmaChannels.size()) {
         return;
