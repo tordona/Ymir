@@ -85,9 +85,6 @@ void VDP::Reset(bool hard) {
 }
 
 void VDP::Advance(uint64 cycles) {
-    // Update timings and fire events
-    // TODO: use scheduler events
-
     for (uint64 cy = 0; cy < cycles; cy++) {
         VDP1ProcessCommands();
     }

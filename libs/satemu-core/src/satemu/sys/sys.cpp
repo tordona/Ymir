@@ -107,7 +107,7 @@ void Saturn::Step() {
         SCSP.Advance(scspCycleCount);
     }
 
-    // TODO: advanceSMPC
+    // TODO: advance SMPC
     /*m_smpcCycles += cycles * 2464;
     const uint64 smpcCycleCount = m_smpcCycles / 17640;
     if (smpcCycleCount > 0) {
