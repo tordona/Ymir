@@ -719,6 +719,8 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
         OnChipRegWriteByte(address | 1, value >> 0u);
         break;
 
+    case 0x92: WriteCCR(value); break;
+
     case 0x108:
     case 0x10C:
 
