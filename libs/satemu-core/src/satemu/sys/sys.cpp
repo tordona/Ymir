@@ -4,16 +4,18 @@ namespace satemu {
 
 Saturn::Saturn()
     : SH2(SCU, SMPC)
-    , SCU(VDP, SCSP, CDBlock, SH2)
-    , VDP(SCU)
+    , SCU(m_scheduler, VDP, SCSP, CDBlock, SH2)
+    , VDP(m_scheduler, SCU)
     , SMPC(*this)
-    , SCSP(SCU)
-    , CDBlock(SCU) {
+    , SCSP(m_scheduler, SCU)
+    , CDBlock(m_scheduler, SCU) {
 
     Reset(true);
 }
 
 void Saturn::Reset(bool hard) {
+    m_scheduler.Reset();
+
     SH2.Reset(hard);
     SCU.Reset(hard);
     VDP.Reset(hard);
@@ -22,7 +24,6 @@ void Saturn::Reset(bool hard) {
     CDBlock.Reset(hard);
 
     m_scspCycles = 0;
-    m_cdbCycles = 0;
 }
 
 void Saturn::LoadIPL(std::span<uint8, sh2::kIPLSize> ipl) {
@@ -86,32 +87,35 @@ void Saturn::Step() {
     //   20,000,000   14112  ~20,000,155 (error: ~0.00001%)
     //    4,000,000   70560   ~4,000,031 (error: ~0.00001%)
 
-    SH2.master.Advance(1);
+    static constexpr uint64 kMaxStep = 64; // 512;
+
+    const uint64 cycles = std::min<uint64>(m_scheduler.NextCount(), kMaxStep);
+
+    SH2.master.Advance(cycles);
     if (SH2.slaveEnabled) {
-        SH2.slave.Advance(1);
+        SH2.slave.Advance(cycles);
     }
 
-    // TODO: replace with scheduler events
-    SCU.Advance(1);
+    SCU.Advance(cycles);
 
-    // TODO: replace with scheduler events
-    VDP.Advance(1);
+    VDP.Advance(cycles);
 
-    m_scspCycles += 2464;
-    if (m_scspCycles >= 3125) {
-        m_scspCycles -= 3125;
-        // TODO: replace with scheduler events
-        SCSP.Advance(1);
+    m_scspCycles += cycles * 2464;
+    const uint64 scspCycleCount = m_scspCycles / 3125;
+    if (scspCycleCount > 0) {
+        m_scspCycles -= scspCycleCount * 3125;
+        SCSP.Advance(scspCycleCount);
     }
 
-    m_cdbCycles += 2464;
-    if (m_cdbCycles >= 3528) {
-        m_cdbCycles -= 3528;
-        // TODO: replace with scheduler events
-        CDBlock.Advance(1);
+    // TODO: advanceSMPC
+    /*m_smpcCycles += cycles * 2464;
+    const uint64 smpcCycleCount = m_smpcCycles / 17640;
+    if (smpcCycleCount > 0) {
+        m_smpcCycles -= smpcCycleCount * 17640;
+        SMPC.Advance(smpcCycleCount);
+    }*/
 
-        // TODO: advance SMPC once every 5 ticks
-    }
+    m_scheduler.Advance(cycles);
 }
 
 } // namespace satemu

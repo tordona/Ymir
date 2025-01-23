@@ -26,11 +26,18 @@ static Bus GetBus(uint32 address) {
     }
 }
 
-SCU::SCU(vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2Block &sh2)
+SCU::SCU(core::Scheduler &scheduler, vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2Block &sh2)
     : m_VDP(vdp)
     , m_SCSP(scsp)
     , m_CDBlock(cdblock)
-    , m_SH2(sh2) {
+    , m_SH2(sh2)
+    , m_scheduler(scheduler) {
+
+    m_timer1Event = m_scheduler.RegisterEvent(
+        core::events::SCUTimer1, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+            auto &scu = *static_cast<SCU *>(userContext);
+            scu.TickTimer1();
+        });
 
     // HACK: should be in its own class, shared with internal backup RAM
     static constexpr std::size_t kExternalBackupRAMSize = 8_MiB;
@@ -85,7 +92,7 @@ void SCU::Reset(bool hard) {
         m_timer0Counter = 0;
         m_timer0Compare = 0;
 
-        m_timer1Counter = 0;
+        m_scheduler.Cancel(m_timer1Event);
         m_timer1Reload = 0;
         m_timer1Enable = false;
         m_timer1Mode = false;
@@ -98,15 +105,6 @@ void SCU::Advance(uint64 cycles) {
     RunDMA(cycles);
 
     RunDSP(cycles);
-
-    if (cycles >= m_timer1Counter) {
-        m_timer1Counter = 0;
-        if (m_timer1Enable && (!m_timer1Mode || m_timer0Counter == m_timer0Compare)) {
-            TriggerTimer1();
-        }
-    } else {
-        m_timer1Counter -= cycles;
-    }
 }
 
 void SCU::TriggerVBlankIN() {
@@ -128,7 +126,7 @@ void SCU::TriggerHBlankIN() {
     if (m_timer0Counter == m_timer0Compare) {
         TriggerTimer0();
     }
-    m_timer1Counter = m_timer1Reload;
+    m_scheduler.ScheduleFromNow(m_timer1Event, m_timer1Reload);
     UpdateInterruptLevel(false);
     TriggerDMATransfer(DMATrigger::HBlankIN);
 }
@@ -938,6 +936,12 @@ FORCE_INLINE void SCU::DSPCmd_Special_End(uint32 command) {
     m_dspState.programEnded = true;
     if (setEndIntr) {
         TriggerDSPEnd();
+    }
+}
+
+FORCE_INLINE void SCU::TickTimer1() {
+    if (m_timer1Enable && (!m_timer1Mode || m_timer0Counter == m_timer0Compare)) {
+        TriggerTimer1();
     }
 }
 

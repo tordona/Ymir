@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/core/scheduler.hpp>
+
 #include <satemu/hw/cdblock/cdblock.hpp>
 #include <satemu/hw/scsp/scsp.hpp>
 #include <satemu/hw/scu/scu.hpp>
@@ -27,8 +29,17 @@ struct Saturn {
     void CloseTray();
 
     void RunFrame();
-    void Step();
+    void Step(); // FIXME: misnomer -- actually steps until next scheduled event
 
+private:
+    // -------------------------------------------------------------------------
+    // Cycle counting
+
+    core::Scheduler m_scheduler;
+
+    uint64 m_scspCycles; // SCSP, M68K
+
+public:
     // -------------------------------------------------------------------------
     // Components
 
@@ -40,11 +51,6 @@ struct Saturn {
     cdblock::CDBlock CDBlock; // CD block and media
 
 private:
-    // -------------------------------------------------------------------------
-    // Cycle counting
-
-    uint64 m_scspCycles; // SCSP, M68K
-    uint64 m_cdbCycles;  // CD Block, SH1, SMPC (1/5)
 };
 
 } // namespace satemu

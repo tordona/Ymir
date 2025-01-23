@@ -3,6 +3,8 @@ add_library(satemu-core
     include/satemu/core_types.hpp
     include/satemu/satemu.hpp
 
+    include/satemu/core/scheduler.hpp
+
     include/satemu/hw/hw_defs.hpp
 
     include/satemu/hw/cdblock/cdblock.hpp

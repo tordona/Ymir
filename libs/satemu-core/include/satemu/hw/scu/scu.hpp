@@ -2,6 +2,8 @@
 
 #include "scu_defs.hpp"
 
+#include <satemu/core/scheduler.hpp>
+
 #include <satemu/hw/cdblock/cdblock.hpp>
 #include <satemu/hw/hw_defs.hpp>
 #include <satemu/hw/scsp/scsp.hpp>
@@ -66,7 +68,7 @@ class SCU {
     static constexpr dbg::Category debugLog{rootLog, "Debug"};
 
 public:
-    SCU(vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2Block &sh2);
+    SCU(core::Scheduler &scheduler, vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2Block &sh2);
 
     void Reset(bool hard);
 
@@ -125,6 +127,9 @@ private:
     scsp::SCSP &m_SCSP;
     cdblock::CDBlock &m_CDBlock;
     sh2::SH2Block &m_SH2;
+
+    core::Scheduler &m_scheduler;
+    core::EventID m_timer1Event;
 
     // TODO: don't hardcode this
     // TODO: use an abstraction
@@ -558,10 +563,11 @@ private:
     // Raises interrupt when counter == 0 depending on mode:
     // - false: every line
     // - true: only if Timer 0 counter matched on previous line
-    uint16 m_timer1Counter; // 2 fractional bits
-    uint16 m_timer1Reload;  // 2 fractional bits
+    uint16 m_timer1Reload; // 2 fractional bits
     bool m_timer1Enable;
     bool m_timer1Mode;
+
+    void TickTimer1();
 
     // -------------------------------------------------------------------------
     // SCU registers

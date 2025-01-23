@@ -6,9 +6,18 @@ using namespace satemu::m68k;
 
 namespace satemu::scsp {
 
-SCSP::SCSP(scu::SCU &scu)
+SCSP::SCSP(core::Scheduler &scheduler, scu::SCU &scu)
     : m_m68k(*this)
-    , m_scu(scu) {
+    , m_scu(scu)
+    , m_scheduler(scheduler) {
+
+    m_sampleTickEvent = m_scheduler.RegisterEvent(
+        core::events::SCSPSample, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+            auto &scsp = *static_cast<SCSP *>(userContext);
+            scsp.ProcessSample();
+            eventContext.RescheduleFromNow(kCyclesPerSample);
+        });
+
     Reset(true);
 }
 
@@ -19,8 +28,9 @@ void SCSP::Reset(bool hard) {
     m_m68kEnabled = false;
 
     m_m68kCycles = 0;
-    m_accumSampleCycles = 0;
     m_sampleCounter = 0;
+
+    m_scheduler.ScheduleFromNow(m_sampleTickEvent, 0);
 
     for (auto &slot : m_slots) {
         slot.Reset();
@@ -74,13 +84,6 @@ void SCSP::Advance(uint64 cycles) {
             m_m68k.Step();
             m_m68kCycles -= 2;
         }
-    }
-
-    m_accumSampleCycles += cycles;
-    while (m_accumSampleCycles >= kCyclesPerSample) {
-        m_accumSampleCycles -= kCyclesPerSample;
-        ProcessSample();
-        m_sampleCounter++;
     }
 }
 
@@ -211,7 +214,7 @@ void SCSP::ExecuteDMA() {
     }
 }
 
-void SCSP::ProcessSample() {
+FORCE_INLINE void SCSP::ProcessSample() {
     // TODO: run DSP
 
     m_dspMixStack.fill(0);

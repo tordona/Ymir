@@ -5,6 +5,8 @@
 #include "vdp1_regs.hpp"
 #include "vdp2_regs.hpp"
 
+#include <satemu/core/scheduler.hpp>
+
 #include <satemu/hw/hw_defs.hpp>
 
 #include <satemu/util/bit_ops.hpp>
@@ -40,7 +42,7 @@ class VDP {
     static constexpr dbg::Category renderLog2{rootLog2, "Render"};
 
 public:
-    VDP(scu::SCU &scu);
+    VDP(core::Scheduler &scheduler, scu::SCU &scu);
 
     void Reset(bool hard);
 
@@ -505,6 +507,9 @@ private:
 
     scu::SCU &m_SCU;
 
+    core::Scheduler &m_scheduler;
+    core::EventID m_phaseUpdateEvent;
+
     // -------------------------------------------------------------------------
     // Frontend callbacks
 
@@ -601,12 +606,6 @@ private:
     enum class VerticalPhase { Active, BottomBorder, BottomBlanking, VerticalSync, TopBlanking, TopBorder, LastLine };
     VerticalPhase m_VPhase; // Current vertical display phase
 
-    // Current cycles (for phase timing) measured in system cycles.
-    // HCNT is derived from this.
-    // TODO: replace with scheduler
-    uint64 m_currCycles;
-    uint32 m_dotClockMult;
-
     // 180008   HCNT    H Counter
     //
     //   bits   r/w  code          description
@@ -644,6 +643,12 @@ private:
     // Display timings
     std::array<uint32, 4> m_HTimings;
     std::array<uint32, 7> m_VTimings;
+
+    // Moves to the next phase.
+    void UpdatePhase();
+
+    // Returns the number of cycles between the current and the next phase.
+    uint64 GetPhaseCycles() const;
 
     // Updates the display resolution and timings based on TVMODE if it is dirty
     void UpdateResolution();

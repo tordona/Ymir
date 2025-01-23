@@ -9,8 +9,25 @@
 
 namespace satemu::cdblock {
 
-CDBlock::CDBlock(scu::SCU &scu)
-    : m_scu(scu) {
+CDBlock::CDBlock(core::Scheduler &scheduler, scu::SCU &scu)
+    : m_scu(scu)
+    , m_scheduler(scheduler) {
+
+    // TODO: this event counts by 3 cycles per cycle
+    m_driveStateUpdateEvent =
+        m_scheduler.RegisterEvent(core::events::CDBlockDriveState, 3, this,
+                                  [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+                                      auto &cdb = *static_cast<CDBlock *>(userContext);
+                                      cdb.ProcessDriveState();
+                                      eventContext.RescheduleFromNow(cdb.m_targetDriveCycles);
+                                  });
+
+    m_commandExecEvent = m_scheduler.RegisterEvent(
+        core::events::CDBlockCommand, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+            auto &cdb = *static_cast<CDBlock *>(userContext);
+            cdb.ProcessCommand();
+        });
+
     Reset(true);
 }
 
@@ -32,6 +49,7 @@ void CDBlock::Reset(bool hard) {
 
     m_currDriveCycles = 0;
     m_targetDriveCycles = kDriveCyclesNotPlaying;
+    m_scheduler.ScheduleFromNow(m_driveStateUpdateEvent, 0);
 
     m_playStartParam = 0;
     m_playEndParam = 0;
@@ -72,8 +90,6 @@ void CDBlock::Reset(bool hard) {
     m_putSectorLength = 2048;
 
     m_processingCommand = false;
-    m_currCommandCycles = 0;
-    m_targetCommandCycles = 0;
 }
 
 void CDBlock::LoadDisc(media::Disc &&disc) {
@@ -99,33 +115,6 @@ void CDBlock::OpenTray() {
 
 void CDBlock::CloseTray() {
     // TODO: implement
-}
-
-void CDBlock::Advance(uint64 cycles) {
-    if (m_targetCommandCycles > 0) {
-        m_currCommandCycles += cycles;
-        if (m_currCommandCycles >= m_targetCommandCycles) {
-            ProcessCommand();
-            m_targetCommandCycles = 0;
-        }
-    }
-
-    m_currDriveCycles += cycles * 3;
-    if (m_currDriveCycles >= m_targetDriveCycles) {
-        m_currDriveCycles -= m_targetDriveCycles;
-        ProcessDriveState();
-
-        if (m_readyForPeriodicReports && !m_processingCommand) {
-            // HACK to ensure the system detects the absence of a disc properly
-            if (m_disc.sessions.empty()) {
-                m_status.statusCode = kStatusCodeNoDisc;
-                m_targetDriveCycles = kDriveCyclesNotPlaying;
-            }
-            m_status.statusCode |= kStatusFlagPeriodic;
-            ReportCDStatus();
-            SetInterrupt(kHIRQ_SCDQ);
-        }
-    }
 }
 
 bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 repeatParam) {
@@ -322,6 +311,17 @@ void CDBlock::ProcessDriveState() {
             m_status.statusCode = kStatusCodePlay;
         }
         break;
+    }
+
+    if (m_readyForPeriodicReports && !m_processingCommand) {
+        // HACK to ensure the system detects the absence of a disc properly
+        if (m_disc.sessions.empty()) {
+            m_status.statusCode = kStatusCodeNoDisc;
+            m_targetDriveCycles = kDriveCyclesNotPlaying;
+        }
+        m_status.statusCode |= kStatusFlagPeriodic;
+        ReportCDStatus();
+        SetInterrupt(kHIRQ_SCDQ);
     }
 }
 
@@ -656,10 +656,10 @@ void CDBlock::DisconnectFilterInput(uint8 filterNumber) {
 }
 
 void CDBlock::SetupCommand() {
-    m_targetCommandCycles = 50;
+    m_scheduler.ScheduleFromNow(m_commandExecEvent, 50);
 }
 
-void CDBlock::ProcessCommand() {
+FORCE_INLINE void CDBlock::ProcessCommand() {
     const uint8 cmd = m_CR[0] >> 8u;
     rootLog.trace("Processing command {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
 

@@ -13,8 +13,17 @@
 
 namespace satemu::vdp {
 
-VDP::VDP(scu::SCU &scu)
-    : m_SCU(scu) {
+VDP::VDP(core::Scheduler &scheduler, scu::SCU &scu)
+    : m_SCU(scu)
+    , m_scheduler(scheduler) {
+
+    m_phaseUpdateEvent = scheduler.RegisterEvent(
+        core::events::VDPPhase, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+            auto &vdp = *static_cast<VDP *>(userContext);
+            vdp.UpdatePhase();
+            const uint64 cycles = vdp.GetPhaseCycles();
+            eventContext.RescheduleFromPrevious(cycles);
+        });
 
     m_framebuffer = nullptr;
 
@@ -49,8 +58,6 @@ void VDP::Reset(bool hard) {
 
     m_HPhase = HorizontalPhase::Active;
     m_VPhase = VerticalPhase::Active;
-    m_currCycles = 0;
-    m_dotClockMult = 2;
     m_VCounter = 0;
     m_HRes = 320;
     m_VRes = 224;
@@ -72,6 +79,8 @@ void VDP::Reset(bool hard) {
     BeginHPhaseActiveDisplay();
     BeginVPhaseActiveDisplay();
 
+    m_scheduler.ScheduleFromNow(m_phaseUpdateEvent, GetPhaseCycles());
+
     UpdateResolution();
 }
 
@@ -81,23 +90,6 @@ void VDP::Advance(uint64 cycles) {
 
     for (uint64 cy = 0; cy < cycles; cy++) {
         VDP1ProcessCommands();
-    }
-
-    m_currCycles += cycles;
-    while (m_currCycles >= m_HTimings[static_cast<uint32>(m_HPhase)]) {
-        auto nextPhase = static_cast<uint32>(m_HPhase) + 1;
-        if (nextPhase == 4) {
-            m_currCycles -= m_HTimings[3];
-            nextPhase = 0;
-        }
-
-        m_HPhase = static_cast<HorizontalPhase>(nextPhase);
-        switch (m_HPhase) {
-        case HorizontalPhase::Active: BeginHPhaseActiveDisplay(); break;
-        case HorizontalPhase::RightBorder: BeginHPhaseRightBorder(); break;
-        case HorizontalPhase::HorizontalSync: BeginHPhaseHorizontalSync(); break;
-        case HorizontalPhase::LeftBorder: BeginHPhaseLeftBorder(); break;
-        }
     }
 }
 
@@ -116,6 +108,25 @@ void VDP::DumpVDP2CRAM(std::ostream &out) {
 void VDP::DumpVDP1Framebuffers(std::ostream &out) {
     out.write((const char *)m_spriteFB[m_drawFB].data(), m_spriteFB[m_drawFB].size());
     out.write((const char *)m_spriteFB[m_drawFB ^ 1].data(), m_spriteFB[m_drawFB ^ 1].size());
+}
+
+FORCE_INLINE void VDP::UpdatePhase() {
+    auto nextPhase = static_cast<uint32>(m_HPhase) + 1;
+    if (nextPhase == 4) {
+        nextPhase = 0;
+    }
+
+    m_HPhase = static_cast<HorizontalPhase>(nextPhase);
+    switch (m_HPhase) {
+    case HorizontalPhase::Active: BeginHPhaseActiveDisplay(); break;
+    case HorizontalPhase::RightBorder: BeginHPhaseRightBorder(); break;
+    case HorizontalPhase::HorizontalSync: BeginHPhaseHorizontalSync(); break;
+    case HorizontalPhase::LeftBorder: BeginHPhaseLeftBorder(); break;
+    }
+}
+
+FORCE_INLINE uint64 VDP::GetPhaseCycles() const {
+    return m_HTimings[static_cast<uint32>(m_HPhase)];
 }
 
 void VDP::UpdateResolution() {
@@ -152,21 +163,21 @@ void VDP::UpdateResolution() {
     // Timing tables
     // NOTE: the timings indicate when the specified phase begins
 
-    // Horizontal phase timings
+    // Horizontal phase timings (cycles until):
     //   RBd = Right Border
     //   HSy = Horizontal Sync
     //   LBd = Left Border
     //   ADp = Active Display
     static constexpr std::array<std::array<uint32, 4>, 8> hTimings{{
         // RBd, HSy, LBd, ADp
-        {320, 347, 400, 427},
-        {352, 375, 432, 455},
-        {640, 694, 800, 854},
-        {704, 375, 864, 910},
+        {320, 27, 53, 27},  // {320, 347, 400, 427},
+        {352, 23, 57, 23},  // {352, 375, 432, 455},
+        {640, 54, 106, 54}, // {640, 694, 800, 854},
+        {704, 46, 114, 46}, // {704, 750, 864, 910},
     }};
     m_HTimings = hTimings[m_VDP2.TVMD.HRESOn & 3]; // TODO: check exclusive monitor timings
 
-    // Vertical phase timings
+    // Vertical phase timings (to reach):
     //   BBd = Bottom Border
     //   BBl = Bottom Blanking
     //   VSy = Vertical Sync
@@ -199,7 +210,6 @@ void VDP::UpdateResolution() {
     for (auto &timing : m_HTimings) {
         timing *= dotClockMult;
     }
-    m_dotClockMult = dotClockMult;
 
     rootLog2.info("Dot clock mult = {}, display {}", dotClockMult, (m_VDP2.TVMD.DISP ? "ON" : "OFF"));
 }

@@ -5,6 +5,8 @@
 #include "scsp_slot.hpp"
 #include "scsp_timer.hpp"
 
+#include <satemu/core/scheduler.hpp>
+
 #include <satemu/hw/hw_defs.hpp>
 
 #include <satemu/hw/m68k/m68k.hpp>
@@ -64,7 +66,7 @@ class SCSP {
     static constexpr dbg::Category dmaLog{rootLog, "DMA"};
 
 public:
-    SCSP(scu::SCU &scu);
+    SCSP(core::Scheduler &scheduler, scu::SCU &scu);
 
     void Reset(bool hard);
 
@@ -109,6 +111,9 @@ private:
     bool m_m68kEnabled;
 
     scu::SCU &m_scu;
+
+    core::Scheduler &m_scheduler;
+    core::EventID m_sampleTickEvent;
 
     // -------------------------------------------------------------------------
     // MC68EC000-facing bus
@@ -714,9 +719,8 @@ private:
 
     void ProcessSample();
 
-    uint64 m_m68kCycles;        // MC68EC000 cycle counter
-    uint64 m_accumSampleCycles; // number of SCSP cycles toward the next sample tick
-    uint64 m_sampleCounter;     // total number of samples
+    uint64 m_m68kCycles;    // MC68EC000 cycle counter
+    uint64 m_sampleCounter; // total number of samples
 
     // -------------------------------------------------------------------------
     // Interrupt handling

@@ -2,6 +2,8 @@
 
 #include "cdblock_defs.hpp"
 
+#include <satemu/core/scheduler.hpp>
+
 #include <satemu/hw/hw_defs.hpp>
 
 #include <satemu/media/disc.hpp>
@@ -34,7 +36,7 @@ class CDBlock {
     static constexpr dbg::Category partLog{rootLog, "PartMgr"};
 
 public:
-    CDBlock(scu::SCU &scu);
+    CDBlock(core::Scheduler &scheduler, scu::SCU &scu);
 
     void Reset(bool hard);
 
@@ -42,8 +44,6 @@ public:
     void EjectDisc();
     void OpenTray();
     void CloseTray();
-
-    void Advance(uint64 cycles);
 
     // TODO: handle 8-bit and 32-bit accesses properly
 
@@ -106,6 +106,10 @@ public:
 
 private:
     scu::SCU &m_scu;
+
+    core::Scheduler &m_scheduler;
+    core::EventID m_driveStateUpdateEvent;
+    core::EventID m_commandExecEvent;
 
     alignas(uint64) std::array<uint16, 4> m_CR;
 
@@ -315,9 +319,7 @@ private:
     // -------------------------------------------------------------------------
     // Commands
 
-    bool m_processingCommand;     // true if a command is in progress
-    uint32 m_currCommandCycles;   // current cycle count for commands
-    uint32 m_targetCommandCycles; // command is executed when current >= target
+    bool m_processingCommand; // true if a command is in progress
 
     void SetupCommand();
 
