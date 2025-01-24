@@ -163,8 +163,7 @@ void SH2::Reset(bool hard) {
     RTCOR = 0x0000;
 
     DMAOR.u32 = 0x00000000;
-    m_activeDMAChannel = dmaChannels.size();
-    for (auto &ch : dmaChannels) {
+    for (auto &ch : m_dmaChannels) {
         ch.Reset();
     }
 
@@ -209,11 +208,9 @@ void SH2::Reset(bool hard) {
 }
 
 FLATTEN void SH2::Advance(uint64 cycles) {
-    AdvanceDMAC(cycles);
-    AdvanceFRT(cycles);
-
     // TODO: proper cycle counting
     for (uint64 cy = 0; cy < cycles; cy++) {
+        AdvanceFRT(1);
         /*auto bit = [](bool value, std::string_view bit) { return value ? fmt::format(" {}", bit) : ""; };
 
         dbg_println(" R0 = {:08X}   R4 = {:08X}   R8 = {:08X}  R12 = {:08X}", R[0], R[4], R[8], R[12]);
@@ -495,8 +492,8 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     case 0x68: return GetInterruptVector(InterruptSource::FRT_OVI);
     case 0x69: return 0;
 
-    case 0x71: return dmaChannels[0].ReadDRCR();
-    case 0x72: return dmaChannels[1].ReadDRCR();
+    case 0x71: return m_dmaChannels[0].ReadDRCR();
+    case 0x72: return m_dmaChannels[1].ReadDRCR();
 
     case 0x92 ... 0x9F: return CCR.u8;
 
@@ -560,15 +557,15 @@ FORCE_INLINE uint32 SH2::OnChipRegReadLong(uint32 address) {
     case 0x11C:
     case 0x13C: return DVDNTUL;
 
-    case 0x180: return dmaChannels[0].srcAddress;
-    case 0x184: return dmaChannels[0].dstAddress;
-    case 0x188: return dmaChannels[0].xferCount;
-    case 0x18C: return dmaChannels[0].ReadCHCR();
+    case 0x180: return m_dmaChannels[0].srcAddress;
+    case 0x184: return m_dmaChannels[0].dstAddress;
+    case 0x188: return m_dmaChannels[0].xferCount;
+    case 0x18C: return m_dmaChannels[0].ReadCHCR();
 
-    case 0x190: return dmaChannels[1].srcAddress;
-    case 0x194: return dmaChannels[1].dstAddress;
-    case 0x198: return dmaChannels[1].xferCount;
-    case 0x19C: return dmaChannels[1].ReadCHCR();
+    case 0x190: return m_dmaChannels[1].srcAddress;
+    case 0x194: return m_dmaChannels[1].dstAddress;
+    case 0x198: return m_dmaChannels[1].xferCount;
+    case 0x19C: return m_dmaChannels[1].ReadCHCR();
 
     case 0x1A0: return GetInterruptVector(InterruptSource::DMAC0_XferEnd);
     case 0x1A8: return GetInterruptVector(InterruptSource::DMAC1_XferEnd);
@@ -649,8 +646,8 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     case 0x68: SetInterruptVector(InterruptSource::FRT_OVI, bit::extract<0, 6>(value)); break;
     case 0x69: /* VCRD bits 7-0 are all reserved */ break;
 
-    case 0x71: dmaChannels[0].WriteDRCR(value); break;
-    case 0x72: dmaChannels[1].WriteDRCR(value); break;
+    case 0x71: m_dmaChannels[0].WriteDRCR(value); break;
+    case 0x72: m_dmaChannels[1].WriteDRCR(value); break;
 
     case 0x92: WriteCCR(value); break;
 
@@ -781,20 +778,20 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     case 0x11C:
     case 0x13C: DVDNTUL = value; break;
 
-    case 0x180: dmaChannels[0].srcAddress = value; break;
-    case 0x184: dmaChannels[0].dstAddress = value; break;
-    case 0x188: dmaChannels[0].xferCount = bit::extract<0, 23>(value); break;
+    case 0x180: m_dmaChannels[0].srcAddress = value; break;
+    case 0x184: m_dmaChannels[0].dstAddress = value; break;
+    case 0x188: m_dmaChannels[0].xferCount = bit::extract<0, 23>(value); break;
     case 0x18C:
-        dmaChannels[0].WriteCHCR(value);
-        UpdateDMAC();
+        m_dmaChannels[0].WriteCHCR(value);
+        RunDMAC(0); // TODO: should be scheduled
         break;
 
-    case 0x190: dmaChannels[1].srcAddress = value; break;
-    case 0x194: dmaChannels[1].dstAddress = value; break;
-    case 0x198: dmaChannels[1].xferCount = bit::extract<0, 23>(value); break;
+    case 0x190: m_dmaChannels[1].srcAddress = value; break;
+    case 0x194: m_dmaChannels[1].dstAddress = value; break;
+    case 0x198: m_dmaChannels[1].xferCount = bit::extract<0, 23>(value); break;
     case 0x19C:
-        dmaChannels[1].WriteCHCR(value);
-        UpdateDMAC();
+        m_dmaChannels[1].WriteCHCR(value);
+        RunDMAC(1); // TODO: should be scheduled
         break;
 
     case 0x1A0: SetInterruptVector(InterruptSource::DMAC0_XferEnd, bit::extract<0, 6>(value)); break;
@@ -805,7 +802,8 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
         DMAOR.NMIF &= bit::extract<1>(value);
         DMAOR.AE &= bit::extract<2>(value);
         DMAOR.PR = bit::extract<3>(value);
-        UpdateDMAC();
+        RunDMAC(0); // TODO: should be scheduled
+        RunDMAC(1); // TODO: should be scheduled
         break;
 
     case 0x1E0: // BCR1
@@ -854,15 +852,14 @@ FLATTEN FORCE_INLINE bool SH2::IsDMATransferActive(const DMAChannel &ch) const {
     return ch.IsEnabled() && DMAOR.DME && !DMAOR.NMIF && !DMAOR.AE;
 }
 
-void SH2::UpdateDMAC() {
-    m_activeDMAChannel = dmaChannels.size();
+void SH2::RunDMAC(uint32 channel) {
+    auto &ch = m_dmaChannels[channel];
 
-    for (uint32 index = 0; auto &ch : dmaChannels) {
-        if (!IsDMATransferActive(ch)) {
-            index++;
-            continue;
-        }
+    if (!IsDMATransferActive(ch)) {
+        return;
+    }
 
+    do {
         // Auto request mode will start the transfer right now.
         // Module request mode checks if the signal from the configured source has been raised.
         if (!ch.autoRequest) {
@@ -874,95 +871,81 @@ void SH2::UpdateDMAC() {
             case DMAResourceSelect::Reserved: signal = false; break;
             }
             if (!signal) {
-                index++;
-                continue;
+                return;
             }
         }
 
         // TODO: prioritize channels based on DMAOR.PR
-        m_activeDMAChannel = index;
-        break;
-    }
-}
+        // TODO: proper timings, cycle-stealing, etc. (suspend instructions if not cached)
+        static constexpr uint32 kXferSize[] = {1, 2, 4, 16};
+        const uint32 xferSize = kXferSize[static_cast<uint32>(ch.xferSize)];
 
-void SH2::AdvanceDMAC(uint64 cycles) {
-    const uint32 index = m_activeDMAChannel;
-    if (index >= dmaChannels.size()) {
-        return;
-    }
-
-    auto &ch = dmaChannels[index];
-
-    // TODO: proper timings, cycle-stealing, etc. (suspend instructions if not cached)
-    static constexpr uint32 kXferSize[] = {1, 2, 4, 16};
-    const uint32 xferSize = kXferSize[static_cast<uint32>(ch.xferSize)];
-
-    auto incAddress = [&](uint32 address, DMATransferIncrementMode mode) -> uint32 {
-        using enum DMATransferIncrementMode;
-        switch (mode) {
-        case Fixed: return address;
-        case Increment: return address + xferSize;
-        case Decrement: return address - xferSize;
-        case Reserved: return address;
-        }
-    };
-
-    // Perform one unit of transfer
-    switch (ch.xferSize) {
-    case DMATransferSize::Byte: {
-        const uint8 value = MemReadByte(ch.srcAddress);
-        m_log.trace("DMAC{} 8-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress, value);
-        MemWriteByte(ch.dstAddress, value);
-        break;
-    }
-    case DMATransferSize::Word: {
-        const uint16 value = MemReadWord(ch.srcAddress);
-        m_log.trace("DMAC{} 16-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress, value);
-        MemWriteWord(ch.dstAddress, value);
-        break;
-    }
-    case DMATransferSize::Longword: {
-        const uint32 value = MemReadLong(ch.srcAddress);
-        m_log.trace("DMAC{} 32-bit transfer from {:08X} to {:08X} -> {:X}", index, ch.srcAddress, ch.dstAddress, value);
-        MemWriteLong(ch.dstAddress, value);
-        break;
-    }
-    case DMATransferSize::QuadLongword:
-        for (int i = 0; i < 4; i++) {
-            const uint32 value = MemReadLong(ch.srcAddress + i * sizeof(uint32));
-            m_log.trace("DMAC{} 16-byte transfer {:d} from {:08X} to {:08X} -> {:X}", index, i, ch.srcAddress,
-                        ch.dstAddress, value);
-            MemWriteLong(ch.dstAddress + i * sizeof(uint32), value);
-        }
-        break;
-    }
-
-    // Update address and remaining count
-    ch.srcAddress = incAddress(ch.srcAddress, ch.srcMode);
-    ch.dstAddress = incAddress(ch.dstAddress, ch.dstMode);
-
-    if (ch.xferSize == DMATransferSize::QuadLongword) {
-        if (ch.xferCount >= 4) {
-            ch.xferCount -= 4;
-        } else {
-            m_log.trace("DMAC{} 16-byte transfer count misaligned", index);
-            ch.xferCount = 0;
-        }
-    } else {
-        ch.xferCount--;
-    }
-
-    // Check if transfer ended
-    if (ch.xferCount == 0) {
-        ch.xferEnded = true;
-        m_log.trace("DMAC{} transfer finished", index);
-        if (ch.irqEnable) {
-            switch (index) {
-            case 0: RaiseInterrupt(InterruptSource::DMAC0_XferEnd); break;
-            case 1: RaiseInterrupt(InterruptSource::DMAC1_XferEnd); break;
+        auto incAddress = [&](uint32 address, DMATransferIncrementMode mode) -> uint32 {
+            using enum DMATransferIncrementMode;
+            switch (mode) {
+            case Fixed: return address;
+            case Increment: return address + xferSize;
+            case Decrement: return address - xferSize;
+            case Reserved: return address;
             }
+        };
+
+        // Perform one unit of transfer
+        switch (ch.xferSize) {
+        case DMATransferSize::Byte: {
+            const uint8 value = MemReadByte(ch.srcAddress);
+            m_log.trace("DMAC{} 8-bit transfer from {:08X} to {:08X} -> {:X}", channel, ch.srcAddress, ch.dstAddress,
+                        value);
+            MemWriteByte(ch.dstAddress, value);
+            break;
         }
-        UpdateDMAC();
+        case DMATransferSize::Word: {
+            const uint16 value = MemReadWord(ch.srcAddress);
+            m_log.trace("DMAC{} 16-bit transfer from {:08X} to {:08X} -> {:X}", channel, ch.srcAddress, ch.dstAddress,
+                        value);
+            MemWriteWord(ch.dstAddress, value);
+            break;
+        }
+        case DMATransferSize::Longword: {
+            const uint32 value = MemReadLong(ch.srcAddress);
+            m_log.trace("DMAC{} 32-bit transfer from {:08X} to {:08X} -> {:X}", channel, ch.srcAddress, ch.dstAddress,
+                        value);
+            MemWriteLong(ch.dstAddress, value);
+            break;
+        }
+        case DMATransferSize::QuadLongword:
+            for (int i = 0; i < 4; i++) {
+                const uint32 value = MemReadLong(ch.srcAddress + i * sizeof(uint32));
+                m_log.trace("DMAC{} 16-byte transfer {:d} from {:08X} to {:08X} -> {:X}", channel, i, ch.srcAddress,
+                            ch.dstAddress, value);
+                MemWriteLong(ch.dstAddress + i * sizeof(uint32), value);
+            }
+            break;
+        }
+
+        // Update address and remaining count
+        ch.srcAddress = incAddress(ch.srcAddress, ch.srcMode);
+        ch.dstAddress = incAddress(ch.dstAddress, ch.dstMode);
+
+        if (ch.xferSize == DMATransferSize::QuadLongword) {
+            if (ch.xferCount >= 4) {
+                ch.xferCount -= 4;
+            } else {
+                m_log.trace("DMAC{} 16-byte transfer count misaligned", channel);
+                ch.xferCount = 0;
+            }
+        } else {
+            ch.xferCount--;
+        }
+    } while (ch.xferCount > 0);
+
+    ch.xferEnded = true;
+    m_log.trace("DMAC{} transfer finished", channel);
+    if (ch.irqEnable) {
+        switch (channel) {
+        case 0: RaiseInterrupt(InterruptSource::DMAC0_XferEnd); break;
+        case 1: RaiseInterrupt(InterruptSource::DMAC1_XferEnd); break;
+        }
     }
 }
 
@@ -1237,11 +1220,11 @@ void SH2::RecalcInterrupts() {
     }
 
     // DMA channel transfer end
-    if (dmaChannels[0].xferEnded && dmaChannels[0].irqEnable) {
+    if (m_dmaChannels[0].xferEnded && m_dmaChannels[0].irqEnable) {
         RaiseInterrupt(InterruptSource::DMAC0_XferEnd);
         return;
     }
-    if (dmaChannels[1].xferEnded && dmaChannels[1].irqEnable) {
+    if (m_dmaChannels[1].xferEnded && m_dmaChannels[1].irqEnable) {
         RaiseInterrupt(InterruptSource::DMAC1_XferEnd);
         return;
     }

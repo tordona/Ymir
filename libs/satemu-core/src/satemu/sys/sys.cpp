@@ -87,9 +87,9 @@ void Saturn::Step() {
     //   20,000,000   14112  ~20,000,155 (error: ~0.00001%)
     //    4,000,000   70560   ~4,000,031 (error: ~0.00001%)
 
-    static constexpr uint64 kMaxStep = 2;
+    static constexpr uint64 kMaxStep = 512;
 
-    const uint64 cycles = std::min<uint64>(m_scheduler.NextCount(), kMaxStep);
+    const uint64 cycles = std::min<uint64>(m_scheduler.RemainingCount(), kMaxStep);
 
     SH2.master.Advance(cycles);
     if (SH2.slaveEnabled) {

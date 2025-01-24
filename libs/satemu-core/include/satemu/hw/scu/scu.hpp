@@ -354,7 +354,7 @@ private:
     std::array<DMAChannel, 3> m_dmaChannels;
     uint8 m_activeDMAChannelLevel;
 
-    void RunDMA(uint64 cycles);
+    void RunDMA();
 
     void RecalcDMAChannel();
 
@@ -764,10 +764,11 @@ private:
                         dmaLog.trace("DMA{} triggering immediate transfer while another transfer is in progress",
                                      index);
                         // Finish previous transfer
-                        RunDMA(1);
+                        RunDMA();
                     }
                     ch.start = true;
                     RecalcDMAChannel();
+                    RunDMA(); // HACK: run immediate DMA transfers immediately and instantly
                 }
             }
             break;

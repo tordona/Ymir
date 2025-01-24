@@ -102,7 +102,7 @@ void SCU::Reset(bool hard) {
 }
 
 void SCU::Advance(uint64 cycles) {
-    RunDMA(cycles);
+    // RunDMA(cycles);
 
     RunDSP(cycles);
 }
@@ -187,7 +187,7 @@ void SCU::AcknowledgeExternalInterrupt() {
     UpdateInterruptLevel(true);
 }
 
-void SCU::RunDMA(uint64 cycles) {
+void SCU::RunDMA() {
     const uint8 level = m_activeDMAChannelLevel;
     if (level >= m_dmaChannels.size()) {
         return;
@@ -432,6 +432,7 @@ void SCU::TriggerDMATransfer(DMATrigger trigger) {
         }
     }
     RecalcDMAChannel();
+    RunDMA(); // HACK: run all event-triggered DMA transfers immediately
 }
 
 void SCU::RunDSP(uint64 cycles) {

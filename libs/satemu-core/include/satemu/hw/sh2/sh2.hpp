@@ -254,16 +254,13 @@ private:
     // --- DMAC module ---
 
     RegDMAOR DMAOR;
-    uint32 m_activeDMAChannel;
-    std::array<DMAChannel, 2> dmaChannels;
+    std::array<DMAChannel, 2> m_dmaChannels;
 
     // Determines if a DMA transfer is active for the specified channel.
     // A transfer is active if DE = 1, DME = 1, TE = 0, NMIF = 0 and AE = 0.
     bool IsDMATransferActive(const DMAChannel &ch) const;
 
-    void UpdateDMAC();
-
-    void AdvanceDMAC(uint64 cycles);
+    void RunDMAC(uint32 channel);
 
     // --- WDT module ---
     // TODO
