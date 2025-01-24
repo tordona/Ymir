@@ -313,6 +313,7 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
     } else {
         slot.output = static_cast<sint16>(ReadWRAM<uint16>(slot.currAddress));
     }
+    slot.output ^= slot.sampleXOR;
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
