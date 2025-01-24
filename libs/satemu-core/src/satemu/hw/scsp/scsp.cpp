@@ -273,20 +273,10 @@ FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
         return;
     }
 
-    // -----
-    // Phase generation
-
-    const uint32 freqNumSwitch = slot.freqNumSwitch ^ 0x400u;
-    const uint32 octave = slot.octave ^ 8u;
-    const uint32 phaseInc = freqNumSwitch << octave;
-
-    // -----
-    // Pitch LFO calculation
-
     // TODO: compute pitch LFO
     const uint32 pitchLFO = (0 << slot.pitchLFOSens) >> 2u;
 
-    slot.currPhase = (slot.currPhase & 0x3FFFF) + phaseInc + pitchLFO;
+    slot.IncrementPhase(pitchLFO);
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
@@ -294,57 +284,7 @@ FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
         return;
     }
 
-    // -----
-    // Address pointer calculation
-
-    if (slot.reverse) {
-        slot.currSample -= slot.currPhase >> 18u;
-    } else {
-        slot.currSample += slot.currPhase >> 18u;
-    }
-
-    using enum Slot::LoopControl;
-    switch (slot.loopControl) {
-    case Off:
-        if (slot.currSample >= slot.loopEndAddress) {
-            slot.envGen.TriggerLoopEnd();
-        }
-        break;
-    case Normal:
-        while (slot.currSample >= slot.loopEndAddress) {
-            slot.currSample -= slot.loopEndAddress - slot.loopStartAddress;
-        }
-        break;
-    case Reverse:
-        if (slot.reverse) {
-            while (slot.currSample <= slot.loopStartAddress) {
-                slot.currSample += slot.loopEndAddress - slot.loopStartAddress;
-            }
-        } else {
-            if (slot.currSample >= slot.loopStartAddress) {
-                slot.reverse = true;
-                slot.currSample = slot.loopEndAddress - slot.currSample + slot.loopStartAddress;
-            }
-        }
-        break;
-    case Alternate:
-        if (slot.reverse) {
-            while (slot.currSample <= slot.loopStartAddress) {
-                slot.reverse = false;
-                slot.currSample += slot.loopEndAddress - slot.loopStartAddress;
-            }
-        } else {
-            while (slot.currSample >= slot.loopEndAddress) {
-                slot.reverse = true;
-                slot.currSample -= slot.loopEndAddress - slot.loopStartAddress;
-            }
-        }
-        break;
-    }
-
-    // -----
-    // X/Y modulation data read
-
+    // Compute modulation if enabled
     sint32 modulation = 0;
     if (slot.modLevel > 0) {
         const uint16 modShift = slot.modLevel ^ 0xF;
@@ -354,8 +294,8 @@ FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
         modulation = zd >> modShift;
     }
 
-    const uint32 addressInc = (slot.currSample + modulation) << (slot.pcm8Bit ? 0 : 1);
-    slot.currAddress = slot.startAddress + addressInc;
+    slot.IncrementSampleCounter();
+    slot.IncrementAddress(modulation);
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
@@ -363,9 +303,7 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
         return;
     }
 
-    // -----
-    // Waveform read
-
+    // Read waveform data
     if (slot.pcm8Bit) {
         slot.output = static_cast<sint8>(ReadWRAM<uint8>(slot.currAddress)) << 8;
     } else {

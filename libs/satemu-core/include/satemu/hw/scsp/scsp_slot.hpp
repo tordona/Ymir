@@ -2,6 +2,8 @@
 
 #include "envelope_generator.hpp"
 
+#include <satemu/util/inline.hpp>
+
 #include <satemu/core_types.hpp>
 
 #include <array>
@@ -202,6 +204,64 @@ struct Slot {
     bool reverse;
 
     sint16 output;
+
+    // TODO: move these to the .cpp file once LTO is solved
+
+    FORCE_INLINE void IncrementPhase(uint32 pitchLFO) {
+        const uint32 phaseInc = (freqNumSwitch ^ 0x400u) << (octave ^ 8u);
+        currPhase = (currPhase & 0x3FFFF) + phaseInc + pitchLFO;
+    }
+
+    FORCE_INLINE void IncrementSampleCounter() {
+        if (reverse) {
+            currSample -= currPhase >> 18u;
+        } else {
+            currSample += currPhase >> 18u;
+        }
+
+        switch (loopControl) {
+        case LoopControl::Off:
+            if (currSample >= loopEndAddress) {
+                envGen.TriggerLoopEnd();
+            }
+            break;
+        case LoopControl::Normal:
+            while (currSample >= loopEndAddress) {
+                currSample -= loopEndAddress - loopStartAddress;
+            }
+            break;
+        case LoopControl::Reverse:
+            if (reverse) {
+                while (currSample <= loopStartAddress) {
+                    currSample += loopEndAddress - loopStartAddress;
+                }
+            } else {
+                if (currSample >= loopStartAddress) {
+                    reverse = true;
+                    currSample = loopEndAddress - currSample + loopStartAddress;
+                }
+            }
+            break;
+        case LoopControl::Alternate:
+            if (reverse) {
+                while (currSample <= loopStartAddress) {
+                    reverse = false;
+                    currSample += loopEndAddress - loopStartAddress;
+                }
+            } else {
+                while (currSample >= loopEndAddress) {
+                    reverse = true;
+                    currSample -= loopEndAddress - loopStartAddress;
+                }
+            }
+            break;
+        }
+    }
+
+    FORCE_INLINE void IncrementAddress(sint32 modulation) {
+        const uint32 addressInc = (currSample + modulation) << (pcm8Bit ? 0 : 1);
+        currAddress = startAddress + addressInc;
+    }
 };
 
 } // namespace satemu::scsp
