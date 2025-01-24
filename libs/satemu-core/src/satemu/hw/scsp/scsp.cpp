@@ -218,10 +218,6 @@ void SCSP::ExecuteDMA() {
 }
 
 FORCE_INLINE void SCSP::ProcessSample() {
-    // TODO: run DSP
-
-    m_dspMixStack.fill(0);
-
     // Handle KYONEX
     for (int i = 0; auto &slot : m_slots) {
         if (m_keyOnEx && slot.TriggerKeyOn()) {
@@ -246,10 +242,20 @@ FORCE_INLINE void SCSP::ProcessSample() {
         SlotProcessStep6(m_slots[(i - 5u) & 31]);
         SlotProcessStep7(m_slots[(i - 6u) & 31]);
 
+        // TODO: direct mixing straight to final output (slot DISDL, DIPAN)
+        // TODO: mix into MIXS DSP input (slot IMXL, ISEL)
+
         m_soundStackIndex = (m_soundStackIndex + 1) & 63;
     }
 
-    // TODO: mix samples, etc.
+    // TODO: copy CDDA data to DSP EXTS (0=left, 1=right)
+
+    // TODO: run DSP
+
+    m_dspMixStack.fill(0);
+
+    // TODO: effect mixing (slot EFSDL, EFPAN) over the EFREG array, then the EXTS array -> straight to output
+    // TODO: shift down final output by MVOL^0xF
 
     // Trigger sample interrupt
     SetInterrupt(kIntrSample, true);

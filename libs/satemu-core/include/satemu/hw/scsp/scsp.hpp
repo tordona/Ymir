@@ -710,8 +710,8 @@ private:
     alignas(16) std::array<uint16, 16> m_dspEffectOut;  // (16-bit) EFREG - DSP effected data output
     alignas(16) std::array<uint16, 2> m_dspAudioIn;     // (16-bit) EXTS - DSP digital audio input
 
-    uint32 m_dspRingBufferLeadAddress;
-    uint8 m_dspRingBufferLength;
+    uint32 m_dspRingBufferLeadAddress; // (W) RBP - DSP Ring Buffer Lead Address
+    uint8 m_dspRingBufferLength;       // (W) RBL - DSP Ring Buffer Length
 
     // -------------------------------------------------------------------------
     // Audio processing
