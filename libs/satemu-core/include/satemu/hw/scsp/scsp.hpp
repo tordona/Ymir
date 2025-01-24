@@ -198,9 +198,8 @@ private:
             auto &slot = m_slots[slotIndex];
             return slot.ReadReg<T>(address & 0x1F);
         } else if (AddressInRange<0x600, 0x67F>(address)) {
-            const uint32 gen = address >> 6u;
-            const uint32 idx = (address >> 1u) & 0x1F;
-            const uint16 stack = m_soundDataStack[gen][idx];
+            const uint32 idx = (address >> 1u) & 0x3F;
+            const uint16 stack = m_soundStack[idx];
             return read16(stack);
         } else if (AddressInRange<0x700, 0x77F>(address)) {
             return read16(m_dspCoeffs[(address >> 1u) & 0x3F]);
@@ -332,9 +331,8 @@ private:
             m_keyOnEx |= bit::extract<12>(value16);
             return;
         } else if (AddressInRange<0x600, 0x67F>(address)) {
-            const uint32 gen = address >> 6u;
-            const uint32 idx = (address >> 1u) & 0x1F;
-            return write16(m_soundDataStack[gen][idx], value16);
+            const uint32 idx = (address >> 1u) & 0x3F;
+            return write16(m_soundStack[idx], value16);
         } else if (AddressInRange<0x700, 0x77F>(address)) {
             return write16(m_dspCoeffs[(address >> 1u) & 0x3F], value16 >> 3);
         } else if (AddressInRange<0x780, 0x7BF>(address)) {
@@ -698,7 +696,8 @@ private:
 
     // --- Direct Sound Data Stack ---
 
-    alignas(16) std::array<std::array<uint16, 32>, 2> m_soundDataStack;
+    alignas(16) std::array<uint16, 64> m_soundStack;
+    uint32 m_soundStackIndex;
 
     // --- DSP Registers ---
 
@@ -718,6 +717,14 @@ private:
     // Audio processing
 
     void ProcessSample();
+
+    void SlotProcessStep1(Slot &slot); // Phase generation and pitch LFO
+    void SlotProcessStep2(Slot &slot); // Address pointer calculation and X/Y modulation data read
+    void SlotProcessStep3(Slot &slot); // Waveform read
+    void SlotProcessStep4(Slot &slot); // Interpolation, envelope generator update and amplitude LFO calculation
+    void SlotProcessStep5(Slot &slot); // Level calculation part 1
+    void SlotProcessStep6(Slot &slot); // Level calculation part 2
+    void SlotProcessStep7(Slot &slot); // Sound stack write
 
     uint64 m_m68kCycles;    // MC68EC000 cycle counter
     uint64 m_sampleCounter; // total number of samples

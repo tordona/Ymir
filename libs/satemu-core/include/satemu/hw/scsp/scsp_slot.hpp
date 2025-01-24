@@ -15,8 +15,6 @@ struct Slot {
 
     bool TriggerKeyOn();
 
-    void Step();
-
     // -------------------------------------------------------------------------
 
     template <typename T>
@@ -93,6 +91,12 @@ struct Slot {
 
     template <bool lowerByte, bool upperByte>
     void WriteReg16(uint16 value);
+
+    // -------------------------------------------------------------------------
+    // Parameters
+
+    // This slot's index
+    uint32 index;
 
     // -------------------------------------------------------------------------
     // Registers
@@ -192,8 +196,12 @@ struct Slot {
     // -------------------------------------------------------------------------
     // State
 
-    uint32 currAddress;     // Current sample address
-    uint32 currAddressFrac; // Current sample address (fractional part)
+    uint32 currAddress;
+    uint32 currSample;
+    uint32 currPhase;
+    bool reverse;
+
+    sint16 output;
 };
 
 } // namespace satemu::scsp

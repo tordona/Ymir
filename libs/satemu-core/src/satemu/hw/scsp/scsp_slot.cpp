@@ -46,6 +46,11 @@ void Slot::Reset() {
     effectPan = 0;
 
     currAddress = 0;
+    currSample = 0;
+    currPhase = 0;
+    reverse = false;
+
+    output = 0;
 }
 
 bool Slot::TriggerKeyOn() {
@@ -56,22 +61,15 @@ bool Slot::TriggerKeyOn() {
         envGen.TriggerKey(keyOnBit);
         if (keyOnBit) {
             // Initialize state
-            currAddress = startAddress;
-            currAddressFrac = 0;
+            currAddress = 0;
+            currSample = 0;
+            currPhase = 0;
+            reverse = false;
+
+            output = 0;
         }
     }
     return trigger;
-}
-
-void Slot::Step() {
-    if (!envGen.Step()) {
-        return;
-    }
-
-    const uint32 pitchLFO = 0; // TODO: compute pitch LFO
-    currAddressFrac += (((0x400 ^ freqNumSwitch) + pitchLFO) << (octave ^ 8)) >> 4;
-    currAddress += currAddressFrac >> 14;
-    currAddressFrac &= 0x3FFF;
 }
 
 template <typename T>
@@ -322,10 +320,10 @@ uint16 Slot::ReadReg0E() {
         bit::deposit_into<0, 5>(value, modYSelect);
     }
 
-    util::SplitReadWord<lowerByte, upperByte, 6, 10>(value, modXSelect);
+    util::SplitReadWord<lowerByte, upperByte, 6, 11>(value, modXSelect);
 
     if constexpr (upperByte) {
-        bit::deposit_into<11, 15>(value, modLevel);
+        bit::deposit_into<12, 15>(value, modLevel);
     }
     return value;
 }
@@ -336,10 +334,10 @@ void Slot::WriteReg0E(uint16 value) {
         modYSelect = bit::extract<0, 5>(value);
     }
 
-    util::SplitWriteWord<lowerByte, upperByte, 6, 10>(modXSelect, value);
+    util::SplitWriteWord<lowerByte, upperByte, 6, 11>(modXSelect, value);
 
     if constexpr (upperByte) {
-        modLevel = bit::extract<11, 15>(value);
+        modLevel = bit::extract<12, 15>(value);
     }
 }
 

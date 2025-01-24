@@ -18,6 +18,10 @@ SCSP::SCSP(core::Scheduler &scheduler, scu::SCU &scu)
             eventContext.RescheduleFromNow(kCyclesPerSample);
         });
 
+    for (uint32 i = 0; i < 32; i++) {
+        m_slots[i].index = i;
+    }
+
     Reset(true);
 }
 
@@ -59,9 +63,8 @@ void SCSP::Reset(bool hard) {
     m_dmaRegAddress = 0;
     m_dmaXferLength = 0;
 
-    for (auto &sds : m_soundDataStack) {
-        sds.fill(0);
-    }
+    m_soundStack.fill(0);
+    m_soundStackIndex = 0;
 
     m_dspProgram.fill({.u64 = 0});
     m_dspTemp.fill(0);
@@ -229,11 +232,22 @@ FORCE_INLINE void SCSP::ProcessSample() {
                 slot.envGen.releaseRate);
         }
 
-        slot.Step();
         i++;
     }
-
     m_keyOnEx = false;
+
+    // Process slots
+    for (uint32 i = 0; i < 32; i++) {
+        SlotProcessStep1(m_slots[i]);
+        SlotProcessStep2(m_slots[(i - 1u) & 31]);
+        SlotProcessStep3(m_slots[(i - 2u) & 31]);
+        SlotProcessStep4(m_slots[(i - 3u) & 31]);
+        SlotProcessStep5(m_slots[(i - 4u) & 31]);
+        SlotProcessStep6(m_slots[(i - 5u) & 31]);
+        SlotProcessStep7(m_slots[(i - 6u) & 31]);
+
+        m_soundStackIndex = (m_soundStackIndex + 1) & 63;
+    }
 
     // TODO: mix samples, etc.
 
@@ -254,8 +268,160 @@ FORCE_INLINE void SCSP::ProcessSample() {
     UpdateSCUInterrupts();
 }
 
+FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
+    if (slot.envGen.GetLevel() >= 0x3BF) {
+        return;
+    }
+
+    // -----
+    // Phase generation
+
+    const uint32 freqNumSwitch = slot.freqNumSwitch ^ 0x400u;
+    const uint32 octave = slot.octave ^ 8u;
+    const uint32 phaseInc = freqNumSwitch << octave;
+
+    // -----
+    // Pitch LFO calculation
+
+    // TODO: compute pitch LFO
+    const uint32 pitchLFO = (0 << slot.pitchLFOSens) >> 2u;
+
+    slot.currPhase = (slot.currPhase & 0x3FFFF) + phaseInc + pitchLFO;
+}
+
+FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
+    if (slot.envGen.GetLevel() >= 0x3BF) {
+        return;
+    }
+
+    // -----
+    // Address pointer calculation
+
+    if (slot.reverse) {
+        slot.currSample -= slot.currPhase >> 18u;
+    } else {
+        slot.currSample += slot.currPhase >> 18u;
+    }
+
+    using enum Slot::LoopControl;
+    switch (slot.loopControl) {
+    case Off:
+        if (slot.currSample >= slot.loopEndAddress) {
+            slot.envGen.TriggerLoopEnd();
+        }
+        break;
+    case Normal:
+        while (slot.currSample >= slot.loopEndAddress) {
+            slot.currSample -= slot.loopEndAddress - slot.loopStartAddress;
+        }
+        break;
+    case Reverse:
+        if (slot.reverse) {
+            while (slot.currSample <= slot.loopStartAddress) {
+                slot.currSample += slot.loopEndAddress - slot.loopStartAddress;
+            }
+        } else {
+            if (slot.currSample >= slot.loopStartAddress) {
+                slot.reverse = true;
+                slot.currSample = slot.loopEndAddress - slot.currSample + slot.loopStartAddress;
+            }
+        }
+        break;
+    case Alternate:
+        if (slot.reverse) {
+            while (slot.currSample <= slot.loopStartAddress) {
+                slot.reverse = false;
+                slot.currSample += slot.loopEndAddress - slot.loopStartAddress;
+            }
+        } else {
+            while (slot.currSample >= slot.loopEndAddress) {
+                slot.reverse = true;
+                slot.currSample -= slot.loopEndAddress - slot.loopStartAddress;
+            }
+        }
+        break;
+    }
+
+    // -----
+    // X/Y modulation data read
+
+    sint32 modulation = 0;
+    if (slot.modLevel > 0) {
+        const uint16 modShift = slot.modLevel ^ 0xF;
+        const sint16 xd = m_soundStack[(slot.index + slot.modXSelect) & 63];
+        const sint16 yd = m_soundStack[(slot.index + slot.modYSelect) & 63];
+        const sint32 zd = (xd + yd) / 2;
+        modulation = zd >> modShift;
+    }
+
+    const uint32 addressInc = (slot.currSample + modulation) << (slot.pcm8Bit ? 0 : 1);
+    slot.currAddress = slot.startAddress + addressInc;
+}
+
+FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
+    if (slot.envGen.GetLevel() >= 0x3BF) {
+        return;
+    }
+
+    // -----
+    // Waveform read
+
+    if (slot.pcm8Bit) {
+        slot.output = static_cast<sint8>(ReadWRAM<uint8>(slot.currAddress)) << 8;
+    } else {
+        slot.output = static_cast<sint16>(ReadWRAM<uint16>(slot.currAddress));
+    }
+}
+
+FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
+    if (slot.envGen.GetLevel() >= 0x3BF) {
+        return;
+    }
+
+    // -----
+    // Interpolation
+
+    // TODO: should this do anything?
+
+    // -----
+    // Envelope generator update
+
+    // TODO: check/fix EG calculation
+    slot.envGen.Step();
+
+    // -----
+    // Amplitude LFO calculation
+
+    // TODO: should this do anything?
+}
+
+FORCE_INLINE void SCSP::SlotProcessStep5(Slot &slot) {
+    if (slot.envGen.GetLevel() >= 0x3BF) {
+        slot.output = 0;
+        return;
+    }
+
+    // -----
+    // Level calculation part 1
+
+    // TODO: implement
+}
+
+FORCE_INLINE void SCSP::SlotProcessStep6(Slot &slot) {
+    // -----
+    // Level calculation part 2
+
+    // TODO: how is the calculation split?
+}
+
+FORCE_INLINE void SCSP::SlotProcessStep7(Slot &slot) {
+    // -----
+    // Sound stack write
+
+    m_soundStack[m_soundStackIndex] = slot.output;
+}
+
 ExceptionVector SCSP::AcknowledgeInterrupt(uint8 level) {
-    // TODO: does the SCSP allow setting specific vector numbers?
     return ExceptionVector::AutoVectorRequest;
 }
 
