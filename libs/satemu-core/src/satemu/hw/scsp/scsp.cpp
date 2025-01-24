@@ -284,7 +284,6 @@ FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
         return;
     }
 
-    // Compute modulation if enabled
     sint32 modulation = 0;
     if (slot.modLevel > 0) {
         const uint16 modShift = slot.modLevel ^ 0xF;
@@ -303,7 +302,6 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
         return;
     }
 
-    // Read waveform data
     if (slot.pcm8Bit) {
         slot.output = static_cast<sint8>(ReadWRAM<uint8>(slot.currAddress)) << 8;
     } else {
@@ -316,21 +314,11 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
         return;
     }
 
-    // -----
-    // Interpolation
-
-    // TODO: should this do anything?
-
-    // -----
-    // Envelope generator update
+    // TODO: what does "interpolation" entail here?
+    // TODO: what does the ALFO calculation deliver here?
 
     // TODO: check/fix EG calculation
     slot.envGen.Step();
-
-    // -----
-    // Amplitude LFO calculation
-
-    // TODO: should this do anything?
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep5(Slot &slot) {
@@ -339,23 +327,14 @@ FORCE_INLINE void SCSP::SlotProcessStep5(Slot &slot) {
         return;
     }
 
-    // -----
-    // Level calculation part 1
-
-    // TODO: implement
+    // TODO: implement level calculation part 1
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep6(Slot &slot) {
-    // -----
-    // Level calculation part 2
-
-    // TODO: how is the calculation split?
+    // TODO: implement level calculation part 2
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep7(Slot &slot) {
-    // -----
-    // Sound stack write
-
     m_soundStack[m_soundStackIndex] = slot.output;
 }
 
