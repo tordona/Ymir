@@ -389,7 +389,9 @@ FORCE_INLINE void SCSP::SlotProcessStep6(Slot &slot) {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep7(Slot &slot) {
-    m_soundStack[m_soundStackIndex] = slot.output;
+    if (!slot.stackWriteInhibit) {
+        m_soundStack[m_soundStackIndex] = slot.output;
+    }
 }
 
 ExceptionVector SCSP::AcknowledgeInterrupt(uint8 level) {
