@@ -727,7 +727,12 @@ private:
     // -------------------------------------------------------------------------
     // Audio processing
 
-    void ProcessSample();
+    void Tick();
+
+    void RunM68K();
+    void HandleKYONEX();
+    void GenerateSample();
+    void UpdateTimers();
 
     void SlotProcessStep1(Slot &slot); // Phase generation and pitch LFO
     void SlotProcessStep2(Slot &slot); // Address pointer calculation and X/Y modulation data read

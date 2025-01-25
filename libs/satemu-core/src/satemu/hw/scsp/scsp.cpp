@@ -17,7 +17,7 @@ SCSP::SCSP(core::Scheduler &scheduler, scu::SCU &scu)
     m_sampleTickEvent = m_scheduler.RegisterEvent(
         core::events::SCSPSample, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
             auto &scsp = *static_cast<SCSP *>(userContext);
-            scsp.ProcessSample();
+            scsp.Tick();
             eventContext.RescheduleFromNow(kCyclesPerSample);
         });
     m_scheduler.SetEventCountFactor(m_sampleTickEvent, 2464, 3125);
@@ -210,15 +210,25 @@ void SCSP::ExecuteDMA() {
     }
 }
 
-FORCE_INLINE void SCSP::ProcessSample() {
+FORCE_INLINE void SCSP::Tick() {
+    RunM68K();
+    HandleKYONEX();
+    GenerateSample();
+    UpdateTimers();
+    UpdateM68KInterrupts();
+    UpdateSCUInterrupts();
+}
+
+FORCE_INLINE void SCSP::RunM68K() {
     if (m_m68kEnabled) {
         for (uint64 cy = 0; cy < kM68KCyclesPerSample; cy++) {
             // TODO: proper cycle counting
             m_m68k.Step();
         }
     }
+}
 
-    // Handle KYONEX
+FORCE_INLINE void SCSP::HandleKYONEX() {
     for (int i = 0; auto &slot : m_slots) {
         if (m_keyOnEx && slot.TriggerKeyOn()) {
             regsLog.debug("Slot {:02d} key {}, start address {:05X}, loop {:04X}-{:04X}, octave {:02d}, FNS 0x{:03X}, "
@@ -231,7 +241,9 @@ FORCE_INLINE void SCSP::ProcessSample() {
         i++;
     }
     m_keyOnEx = false;
+}
 
+FORCE_INLINE void SCSP::GenerateSample() {
     sint32 outL = 0;
     sint32 outR = 0;
 
@@ -299,10 +311,12 @@ FORCE_INLINE void SCSP::ProcessSample() {
 
     m_cbOutputSample(outL, outR);
 
-    // Trigger sample interrupt
-    SetInterrupt(kIntrSample, true);
+    m_sampleCounter++;
 
-    // Update timers and trigger interrupts
+    SetInterrupt(kIntrSample, true);
+}
+
+FORCE_INLINE void SCSP::UpdateTimers() {
     for (int i = 0; i < 3; i++) {
         auto &timer = m_timers[i];
         const bool trigger = (m_sampleCounter & timer.incrementMask) == 0;
@@ -310,12 +324,6 @@ FORCE_INLINE void SCSP::ProcessSample() {
             SetInterrupt(kIntrTimerA + i, true);
         }
     }
-
-    // Send interrupt signals
-    UpdateM68KInterrupts();
-    UpdateSCUInterrupts();
-
-    m_sampleCounter++;
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
