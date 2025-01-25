@@ -95,18 +95,10 @@ void Saturn::Step() {
     if (SH2.slaveEnabled) {
         SH2.slave.Advance(cycles);
     }
-
     SCU.Advance(cycles);
-
     VDP.Advance(cycles);
 
-    static constexpr uint64 kScspStep = 3125;
-    m_scspCycles += cycles * 2464;
-    const uint64 scspCycleCount = m_scspCycles / kScspStep;
-    if (scspCycleCount > 0) {
-        m_scspCycles -= scspCycleCount * kScspStep;
-        SCSP.Advance(scspCycleCount);
-    }
+    // SCSP and CD block are ticked by the scheduler
 
     // TODO: advance SMPC
     /*m_smpcCycles += cycles * 2464;

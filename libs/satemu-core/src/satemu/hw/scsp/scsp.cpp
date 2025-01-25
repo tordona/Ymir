@@ -38,7 +38,7 @@ void SCSP::Reset(bool hard) {
     m_m68kCycles = 0;
     m_sampleCounter = 0;
 
-    m_scheduler.ScheduleFromNow(m_sampleTickEvent, 0);
+    m_scheduler.ScheduleFromNow(m_sampleTickEvent, kCyclesPerSample);
 
     for (auto &slot : m_slots) {
         slot.Reset();
@@ -81,17 +81,6 @@ void SCSP::Reset(bool hard) {
 
     m_dspRingBufferLeadAddress = 0;
     m_dspRingBufferLength = 0;
-}
-
-void SCSP::Advance(uint64 cycles) {
-    if (m_m68kEnabled) {
-        m_m68kCycles += cycles;
-        while (m_m68kCycles >= kCyclesPerM68KCycle) {
-            // TODO: proper cycle counting
-            m_m68k.Step();
-            m_m68kCycles -= kCyclesPerM68KCycle;
-        }
-    }
 }
 
 void SCSP::DumpWRAM(std::ostream &out) {
@@ -222,6 +211,13 @@ void SCSP::ExecuteDMA() {
 }
 
 FORCE_INLINE void SCSP::ProcessSample() {
+    if (m_m68kEnabled) {
+        for (uint64 cy = 0; cy < kM68KCyclesPerSample; cy++) {
+            // TODO: proper cycle counting
+            m_m68k.Step();
+        }
+    }
+
     // Handle KYONEX
     for (int i = 0; auto &slot : m_slots) {
         if (m_keyOnEx && slot.TriggerKeyOn()) {
