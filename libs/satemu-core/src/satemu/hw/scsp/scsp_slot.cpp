@@ -18,7 +18,18 @@ void Slot::Reset() {
     sampleXOR = 0x0000;
     soundSource = SoundSource::SoundRAM;
 
-    envGen.Reset();
+    attackRate = 0;
+    decay1Rate = 0;
+    decay2Rate = 0;
+    releaseRate = 0;
+
+    decayLevel = 0;
+
+    keyRateScaling = 0;
+
+    egHold = false;
+
+    loopStartLink = false;
 
     modLevel = 0;
     modXSelect = 0;
@@ -45,6 +56,12 @@ void Slot::Reset() {
     effectSendLevel = 0;
     effectPan = 0;
 
+    egState = EGState::Release;
+
+    currLevel = 0x3FF;
+
+    computedKeyRateScaling = 0;
+
     currAddress = 0;
     currSample = 0;
     currPhase = 0;
@@ -60,11 +77,12 @@ void Slot::Reset() {
 bool Slot::TriggerKeyOn() {
     // Key ON only triggers when EG is in Release state
     // Key OFF only triggers when EG is in any other state
-    const bool trigger = envGen.IsReleaseState() == keyOnBit;
+    const bool trigger = (egState == EGState::Release) == keyOnBit;
     if (trigger) {
-        envGen.TriggerKey(keyOnBit);
         if (keyOnBit) {
-            // Initialize state
+            egState = EGState::Attack;
+            currLevel = 0x3FF;
+
             currAddress = 0;
             currSample = 0;
             currPhase = 0;
@@ -75,6 +93,8 @@ bool Slot::TriggerKeyOn() {
             sample2 = 0;
 
             output = 0;
+        } else {
+            egState = EGState::Release;
         }
     }
     return trigger;
@@ -239,14 +259,14 @@ template <bool lowerByte, bool upperByte>
 uint16 Slot::ReadReg08() {
     uint16 value = 0;
     if constexpr (lowerByte) {
-        bit::deposit_into<0, 4>(value, envGen.attackRate);
-        bit::deposit_into<5>(value, envGen.egHold);
+        bit::deposit_into<0, 4>(value, attackRate);
+        bit::deposit_into<5>(value, egHold);
     }
 
-    util::SplitReadWord<lowerByte, upperByte, 6, 10>(value, envGen.decay1Rate);
+    util::SplitReadWord<lowerByte, upperByte, 6, 10>(value, decay1Rate);
 
     if constexpr (upperByte) {
-        bit::deposit_into<11, 15>(value, envGen.decay2Rate);
+        bit::deposit_into<11, 15>(value, decay2Rate);
     }
     return value;
 }
@@ -254,14 +274,14 @@ uint16 Slot::ReadReg08() {
 template <bool lowerByte, bool upperByte>
 void Slot::WriteReg08(uint16 value) {
     if constexpr (lowerByte) {
-        envGen.attackRate = bit::extract<0, 4>(value);
-        envGen.egHold = bit::extract<5>(value);
+        attackRate = bit::extract<0, 4>(value);
+        egHold = bit::extract<5>(value);
     }
 
-    util::SplitWriteWord<lowerByte, upperByte, 6, 10>(envGen.decay1Rate, value);
+    util::SplitWriteWord<lowerByte, upperByte, 6, 10>(decay1Rate, value);
 
     if constexpr (upperByte) {
-        envGen.decay2Rate = bit::extract<11, 15>(value);
+        decay2Rate = bit::extract<11, 15>(value);
     }
 }
 
@@ -269,14 +289,14 @@ template <bool lowerByte, bool upperByte>
 uint16 Slot::ReadReg0A() {
     uint16 value = 0;
     if constexpr (lowerByte) {
-        bit::deposit_into<0, 4>(value, envGen.releaseRate);
+        bit::deposit_into<0, 4>(value, releaseRate);
     }
 
-    util::SplitReadWord<lowerByte, upperByte, 5, 9>(value, envGen.decayLevel);
+    util::SplitReadWord<lowerByte, upperByte, 5, 9>(value, decayLevel);
 
     if constexpr (upperByte) {
-        bit::deposit_into<10, 13>(value, envGen.keyRateScaling);
-        bit::deposit_into<14>(value, envGen.loopStartLink);
+        bit::deposit_into<10, 13>(value, keyRateScaling);
+        bit::deposit_into<14>(value, loopStartLink);
     }
     return value;
 }
@@ -284,15 +304,15 @@ uint16 Slot::ReadReg0A() {
 template <bool lowerByte, bool upperByte>
 void Slot::WriteReg0A(uint16 value) {
     if constexpr (lowerByte) {
-        envGen.releaseRate = bit::extract<0, 4>(value);
+        releaseRate = bit::extract<0, 4>(value);
     }
 
-    util::SplitWriteWord<lowerByte, upperByte, 5, 9>(envGen.decayLevel, value);
+    util::SplitWriteWord<lowerByte, upperByte, 5, 9>(decayLevel, value);
 
     if constexpr (upperByte) {
-        envGen.keyRateScaling = bit::extract<10, 13>(value);
-        envGen.loopStartLink = bit::extract<14>(value);
-        envGen.ComputeKeyRateScaling(octave);
+        keyRateScaling = bit::extract<10, 13>(value);
+        loopStartLink = bit::extract<14>(value);
+        ComputeKeyRateScaling();
     }
 }
 
@@ -368,7 +388,7 @@ void Slot::WriteReg10(uint16 value) {
 
     if constexpr (upperByte) {
         octave = bit::extract<11, 14>(value);
-        envGen.ComputeKeyRateScaling(octave);
+        ComputeKeyRateScaling();
     }
 }
 
@@ -446,6 +466,87 @@ void Slot::WriteReg16(uint16 value) {
         directPan = bit::extract<8, 12>(value);
         directSendLevel = bit::extract<13, 15>(value);
     }
+}
+
+void Slot::ComputeKeyRateScaling() {
+    if (keyRateScaling == 0) {
+        computedKeyRateScaling = 0;
+    } else {
+        const sint8 signedOctave = static_cast<sint8>(octave ^ 8) - 8;
+        computedKeyRateScaling = std::clamp(keyRateScaling + signedOctave, 0x0, 0xF);
+    }
+}
+
+uint16 Slot::GetEGLevel() const {
+    if (egState == EGState::Attack && !egHold) {
+        return 0x000;
+    } else {
+        return currLevel;
+    }
+}
+
+void Slot::IncrementPhase(uint32 pitchLFO) {
+    // NOTE: freqNumSwitch already has 0x400u added to it
+    const uint32 phaseInc = freqNumSwitch << (octave ^ 8u);
+    currPhase = (currPhase & 0x3FFFF) + phaseInc + pitchLFO;
+}
+
+void Slot::IncrementSampleCounter() {
+    if (reverse) {
+        currSample -= currPhase >> 18u;
+    } else {
+        currSample += currPhase >> 18u;
+        if (!crossedLoopStart && currSample >= loopStartAddress) {
+            crossedLoopStart = true;
+            if (loopStartLink && egState == EGState::Attack) {
+                egState = EGState::Decay1;
+            }
+        }
+    }
+
+    switch (loopControl) {
+    case LoopControl::Off:
+        if (currSample >= loopEndAddress) {
+            egState = EGState::Release;
+            currLevel = 0x3FF;
+        }
+        break;
+    case LoopControl::Normal:
+        while (currSample >= loopEndAddress) {
+            currSample -= loopEndAddress - loopStartAddress;
+        }
+        break;
+    case LoopControl::Reverse:
+        if (reverse) {
+            while (currSample <= loopStartAddress) {
+                currSample += loopEndAddress - loopStartAddress;
+            }
+        } else {
+            if (currSample >= loopStartAddress) {
+                reverse = true;
+                currSample = loopEndAddress - currSample + loopStartAddress;
+            }
+        }
+        break;
+    case LoopControl::Alternate:
+        if (reverse) {
+            while (currSample <= loopStartAddress) {
+                reverse = false;
+                currSample += loopEndAddress - loopStartAddress;
+            }
+        } else {
+            while (currSample >= loopEndAddress) {
+                reverse = true;
+                currSample -= loopEndAddress - loopStartAddress;
+            }
+        }
+        break;
+    }
+}
+
+void Slot::IncrementAddress(sint32 modulation) {
+    const uint32 addressInc = (currSample + modulation) << (pcm8Bit ? 0 : 1);
+    currAddress = startAddress + addressInc;
 }
 
 } // namespace satemu::scsp

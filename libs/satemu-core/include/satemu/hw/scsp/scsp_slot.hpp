@@ -1,7 +1,5 @@
 #pragma once
 
-#include "envelope_generator.hpp"
-
 #include <satemu/util/inline.hpp>
 
 #include <satemu/core_types.hpp>
@@ -126,9 +124,10 @@ struct Slot {
     //            |       +--->------->   LEA and always plays forwards
     //            |       +--->------->
     //            |       |           |
-    //   Reverse  +--->--->  >  >  >  |   sample skips LSA, plays backwards
-    //            |       <-------<---+   from LEA and repeats from LEA upon
-    //            |       <-------<---+   reaching LSA; always plays in reverse
+    //   Reverse  +--->--->  >  >  >  |   sample skips LSA,
+    //            |       <-------<---+   plays backwards from LEA,
+    //            |       <-------<---+   and repeats from LEA upon reaching LSA;
+    //            |       <-------<---+   always plays in reverse
     //            |       |           |
     // Alternate  +--->---+--->------->   sample plays forwards until LEA
     //            |       <-------<---+   then plays backwards until LSA,
@@ -150,7 +149,52 @@ struct Slot {
 
     // --- Envelope Generator Register ---
 
-    EnvelopeGenerator envGen;
+    // Starts from Attack on Key ON.
+    // While Key ON is held, goes through Attack -> Decay 1 -> Decay 2 and stays at the minimum value of Decay 2.
+    // On Key OFF, it will immediately skip to Release state, decrementing the envelope from whatever point it was.
+    //
+    // when EGHOLD=1:
+    // 0x000       _
+    //            /|\
+    //           / | \
+    //          /  |  +-__
+    //         /   |  |   -+ DL
+    // 0x3FF  /    |  |    |\_____...
+    //       |atk  |d1|d2  |release
+    // Key ON^     Key OFF^
+    //
+    // when EGHOLD=0:
+    // 0x000 _______
+    //       |     |\
+    //       |     | \
+    //       |     |  +-__
+    //       |     |  |   -+ DL
+    // 0x3FF |     |  |    |\_____...
+    //       |atk  |d1|d2  |release
+    // Key ON^        OFF^
+    //
+    // Note: attack takes the same amount of time it would take if going from 0x3FF to 0x000 normally
+
+    // Value ranges are from minimum to maximum.
+    uint16 attackRate;  // (R/W) AR  - 0x00 to 0x1F
+    uint16 decay1Rate;  // (R/W) D1R - 0x00 to 0x1F
+    uint16 decay2Rate;  // (R/W) D2R - 0x00 to 0x1F
+    uint16 releaseRate; // (R/W) RR  - 0x00 to 0x1F
+
+    uint16 decayLevel; // (R/W) DL  - 0x1F to 0x00
+                       //   specifies the MSB 5 bits of the EG value where to switch from decay 1 to decay 2
+
+    uint16 keyRateScaling; // (R/W) KRS - 0x00 to 0x0E; 0x0F turns off scaling
+
+    bool egHold; // (R/W) EGHOLD
+                 //   true:  volume raises during attack state
+                 //   false: volume is set to maximum during attack phase while maintaining the same duration
+
+    bool loopStartLink; // (R/W) LPSLNK
+                        //   true:  switches to decay 1 state on LSA
+                        //          attack state is interrupted if too slow or held if too fast
+                        //          if the state change happens below DL, decay 2 state is never reached
+                        //   false: state changes are dictated by rates only
 
     // --- FM Modulation Control Register ---
 
@@ -198,6 +242,16 @@ struct Slot {
     // -------------------------------------------------------------------------
     // State
 
+    enum class EGState { Attack, Decay1, Decay2, Release };
+    EGState egState;
+
+    // Current envelope level.
+    // Ranges from 0x3FF (minimum) to 0x000 (maximum) - 10 bits.
+    uint16 currLevel;
+
+    // Precalculated key rate scaling based on the slot's octave and this envelope generator's KRS.
+    uint32 computedKeyRateScaling;
+
     uint32 currAddress;
     uint32 currSample;
     uint32 currPhase;
@@ -208,68 +262,13 @@ struct Slot {
     sint16 sample2;
     sint16 output;
 
-    // TODO: move these to the .cpp file once LTO is solved
+    void ComputeKeyRateScaling();
 
-    FORCE_INLINE void IncrementPhase(uint32 pitchLFO) {
-        // NOTE: freqNumSwitch already has 0x400u added to it
-        const uint32 phaseInc = freqNumSwitch << (octave ^ 8u);
-        currPhase = (currPhase & 0x3FFFF) + phaseInc + pitchLFO;
-    }
+    uint16 GetEGLevel() const;
 
-    FORCE_INLINE void IncrementSampleCounter() {
-        if (reverse) {
-            currSample -= currPhase >> 18u;
-        } else {
-            currSample += currPhase >> 18u;
-            if (!crossedLoopStart && currSample >= loopStartAddress) {
-                crossedLoopStart = true;
-                envGen.TriggerLoopStart();
-            }
-        }
-
-        switch (loopControl) {
-        case LoopControl::Off:
-            if (currSample >= loopEndAddress) {
-                envGen.TriggerLoopEnd();
-            }
-            break;
-        case LoopControl::Normal:
-            while (currSample >= loopEndAddress) {
-                currSample -= loopEndAddress - loopStartAddress;
-            }
-            break;
-        case LoopControl::Reverse:
-            if (reverse) {
-                while (currSample <= loopStartAddress) {
-                    currSample += loopEndAddress - loopStartAddress;
-                }
-            } else {
-                if (currSample >= loopStartAddress) {
-                    reverse = true;
-                    currSample = loopEndAddress - currSample + loopStartAddress;
-                }
-            }
-            break;
-        case LoopControl::Alternate:
-            if (reverse) {
-                while (currSample <= loopStartAddress) {
-                    reverse = false;
-                    currSample += loopEndAddress - loopStartAddress;
-                }
-            } else {
-                while (currSample >= loopEndAddress) {
-                    reverse = true;
-                    currSample -= loopEndAddress - loopStartAddress;
-                }
-            }
-            break;
-        }
-    }
-
-    FORCE_INLINE void IncrementAddress(sint32 modulation) {
-        const uint32 addressInc = (currSample + modulation) << (pcm8Bit ? 0 : 1);
-        currAddress = startAddress + addressInc;
-    }
+    void IncrementPhase(uint32 pitchLFO);
+    void IncrementSampleCounter();
+    void IncrementAddress(sint32 modulation);
 };
 
 } // namespace satemu::scsp

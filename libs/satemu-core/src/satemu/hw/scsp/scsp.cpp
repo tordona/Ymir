@@ -234,8 +234,8 @@ FORCE_INLINE void SCSP::HandleKYONEX() {
             regsLog.debug("Slot {:02d} key {}, start address {:05X}, loop {:04X}-{:04X}, octave {:02d}, FNS 0x{:03X}, "
                           "EG rates: {:02d} {:02d} {:02d} {:02d}",
                           i, (slot.keyOnBit ? " ON" : "OFF"), slot.startAddress, slot.loopStartAddress,
-                          slot.loopEndAddress, slot.octave, slot.freqNumSwitch, slot.envGen.attackRate,
-                          slot.envGen.decay1Rate, slot.envGen.decay2Rate, slot.envGen.releaseRate);
+                          slot.loopEndAddress, slot.octave, slot.freqNumSwitch, slot.attackRate, slot.decay1Rate,
+                          slot.decay2Rate, slot.releaseRate);
         }
 
         i++;
@@ -327,7 +327,7 @@ FORCE_INLINE void SCSP::UpdateTimers() {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
-    if (slot.envGen.GetLevel() >= 0x3BF) {
+    if (slot.GetEGLevel() >= 0x3BF) {
         return;
     }
 
@@ -338,7 +338,7 @@ FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
-    if (slot.envGen.GetLevel() >= 0x3BF) {
+    if (slot.GetEGLevel() >= 0x3BF) {
         return;
     }
 
@@ -356,7 +356,7 @@ FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
-    if (slot.envGen.GetLevel() >= 0x3BF) {
+    if (slot.GetEGLevel() >= 0x3BF) {
         return;
     }
 
@@ -386,7 +386,7 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
-    if (slot.envGen.GetLevel() >= 0x3BF) {
+    if (slot.GetEGLevel() >= 0x3BF) {
         return;
     }
 
@@ -403,11 +403,43 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
     // TODO: what does the ALFO calculation deliver here?
 
     // TODO: check/fix EG calculation
-    slot.envGen.Step();
+    switch (slot.egState) {
+    case Slot::EGState::Attack:
+        if (slot.attackRate < slot.currLevel) {
+            slot.currLevel -= slot.attackRate;
+        } else {
+            slot.currLevel = 0;
+            if (!slot.loopStartLink) {
+                slot.egState = Slot::EGState::Decay1;
+            }
+        }
+        break;
+    case Slot::EGState::Decay1:
+        slot.currLevel += slot.decay1Rate;
+        if (slot.currLevel > 0x3FF) {
+            slot.currLevel = 0x3FF;
+        }
+        if ((slot.currLevel >> 5u) >= slot.decayLevel) {
+            slot.egState = Slot::EGState::Decay2;
+        }
+        break;
+    case Slot::EGState::Decay2:
+        slot.currLevel += slot.decay2Rate;
+        if (slot.currLevel > 0x3FF) {
+            slot.currLevel = 0x3FF;
+        }
+        break;
+    case Slot::EGState::Release:
+        slot.currLevel += slot.releaseRate;
+        if (slot.currLevel >= 0x3FF) {
+            slot.currLevel = 0x3FF;
+        }
+        break;
+    }
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep5(Slot &slot) {
-    if (slot.envGen.GetLevel() >= 0x3BF) {
+    if (slot.GetEGLevel() >= 0x3BF) {
         slot.output = 0;
         return;
     }
@@ -415,7 +447,7 @@ FORCE_INLINE void SCSP::SlotProcessStep5(Slot &slot) {
     if (!slot.soundDirect) {
         // TODO: compute ALFO
         const sint32 alfoLevel = 0;
-        const sint32 envLevel = slot.envGen.GetLevel();
+        const sint32 envLevel = slot.GetEGLevel();
         const sint32 totalLevel = slot.totalLevel << 2u;
         const sint32 level = std::min<sint32>(alfoLevel + envLevel + totalLevel, 0x3FF);
         slot.output = (slot.output * ((level & 0x3F) ^ 0x7F)) >> ((level >> 6) + 7);
