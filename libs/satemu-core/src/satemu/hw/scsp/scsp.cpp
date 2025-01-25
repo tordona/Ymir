@@ -2,6 +2,9 @@
 
 #include <satemu/hw/scu/scu.hpp>
 
+#include <algorithm>
+#include <limits>
+
 using namespace satemu::m68k;
 
 namespace satemu::scsp {
@@ -82,10 +85,10 @@ void SCSP::Reset(bool hard) {
 void SCSP::Advance(uint64 cycles) {
     if (m_m68kEnabled) {
         m_m68kCycles += cycles;
-        while (m_m68kCycles >= 2) {
+        while (m_m68kCycles >= kCyclesPerM68KCycle) {
             // TODO: proper cycle counting
             m_m68k.Step();
-            m_m68kCycles -= 2;
+            m_m68kCycles -= kCyclesPerM68KCycle;
         }
     }
 }
@@ -232,6 +235,18 @@ FORCE_INLINE void SCSP::ProcessSample() {
     }
     m_keyOnEx = false;
 
+    sint32 outL = 0;
+    sint32 outR = 0;
+
+    auto adjustSendLevel = [](sint16 output, uint8 sendLevel) { return output >> (sendLevel ^ 7); };
+
+    auto addPannedOutput = [&](sint16 output, uint8 pan) {
+        const sint32 panL = pan < 0x10 ? pan : 0;
+        const sint32 panR = pan < 0x10 ? 0 : (pan & 0xF);
+        outL += output >> (panL + 1);
+        outR += output >> (panR + 1);
+    };
+
     // Process slots
     for (uint32 i = 0; i < 32; i++) {
         SlotProcessStep1(m_slots[i]);
@@ -242,20 +257,50 @@ FORCE_INLINE void SCSP::ProcessSample() {
         SlotProcessStep6(m_slots[(i - 5u) & 31]);
         SlotProcessStep7(m_slots[(i - 6u) & 31]);
 
-        // TODO: direct mixing straight to final output (slot DISDL, DIPAN)
-        // TODO: mix into MIXS DSP input (slot IMXL, ISEL)
+        Slot &outputSlot = m_slots[(i - 6u) & 31];
+        if (outputSlot.directSendLevel > 0) {
+            const sint16 directOutput = adjustSendLevel(outputSlot.output, outputSlot.directSendLevel);
+            addPannedOutput(directOutput, outputSlot.directPan);
+        }
+
+        if (outputSlot.inputMixingLevel > 0) {
+            const sint16 mixsOutput = adjustSendLevel(outputSlot.output, outputSlot.inputMixingLevel);
+            m_dspMixStack[outputSlot.inputSelect] += mixsOutput << 4;
+        }
 
         m_soundStackIndex = (m_soundStackIndex + 1) & 63;
     }
 
     // TODO: copy CDDA data to DSP EXTS (0=left, 1=right)
+    m_dspAudioIn[0] = 0;
+    m_dspAudioIn[1] = 0;
 
     // TODO: run DSP
 
     m_dspMixStack.fill(0);
 
-    // TODO: effect mixing (slot EFSDL, EFPAN) over the EFREG array, then the EXTS array -> straight to output
-    // TODO: shift down final output by MVOL^0xF
+    for (uint32 i = 0; i < 16; i++) {
+        const Slot &slot = m_slots[i];
+        if (slot.effectSendLevel > 0) {
+            const sint16 dspOutput = adjustSendLevel(m_dspEffectOut[i], slot.effectSendLevel);
+            addPannedOutput(dspOutput, slot.effectPan);
+        }
+    }
+    for (uint32 i = 0; i < 2; i++) {
+        const Slot &slot = m_slots[i + 16];
+        if (slot.effectSendLevel > 0) {
+            const sint16 dspOutput = adjustSendLevel(m_dspAudioIn[i], slot.effectSendLevel);
+            addPannedOutput(dspOutput, slot.effectPan);
+        }
+    }
+
+    outL >>= m_masterVolume ^ 0xF;
+    outR >>= m_masterVolume ^ 0xF;
+
+    outL = std::clamp<sint32>(outL, std::numeric_limits<sint16>::min(), std::numeric_limits<sint16>::max());
+    outR = std::clamp<sint32>(outR, std::numeric_limits<sint16>::min(), std::numeric_limits<sint16>::max());
+
+    m_cbOutputSample(outL, outR);
 
     // Trigger sample interrupt
     SetInterrupt(kIntrSample, true);
@@ -272,6 +317,8 @@ FORCE_INLINE void SCSP::ProcessSample() {
     // Send interrupt signals
     UpdateM68KInterrupts();
     UpdateSCUInterrupts();
+
+    m_sampleCounter++;
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {

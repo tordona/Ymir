@@ -12,6 +12,7 @@
 #include <satemu/hw/m68k/m68k.hpp>
 #include <satemu/hw/m68k/m68k_defs.hpp>
 
+#include <satemu/util/callback.hpp>
 #include <satemu/util/data_ops.hpp>
 #include <satemu/util/debug_print.hpp>
 #include <satemu/util/inline.hpp>
@@ -60,6 +61,8 @@ struct SCSPAccessTypeInfo<SCSPAccessType::DMA> {
 template <SCSPAccessType accessType>
 constexpr const char *accessTypeName = SCSPAccessTypeInfo<accessType>::name;
 
+using CBOutputSample = util::Callback<void(sint16 left, sint16 right)>;
+
 class SCSP {
     static constexpr dbg::Category rootLog{"SCSP"};
     static constexpr dbg::Category regsLog{rootLog, "Regs"};
@@ -69,6 +72,10 @@ public:
     SCSP(core::Scheduler &scheduler, scu::SCU &scu);
 
     void Reset(bool hard);
+
+    FORCE_INLINE void SetCallback(CBOutputSample cbOutputSample) {
+        m_cbOutputSample = cbOutputSample;
+    }
 
     void Advance(uint64 cycles);
 
@@ -114,6 +121,8 @@ private:
 
     core::Scheduler &m_scheduler;
     core::EventID m_sampleTickEvent;
+
+    CBOutputSample m_cbOutputSample;
 
     // -------------------------------------------------------------------------
     // MC68EC000-facing bus
@@ -314,7 +323,7 @@ private:
             }
         }
 
-        auto write16 = [=](uint16 &reg, uint16 value) {
+        auto write16 = [=](auto &reg, uint16 value) {
             if constexpr (is16) {
                 reg = value;
             } else if (address & 1) {
@@ -706,9 +715,9 @@ private:
     alignas(16) std::array<uint32, 64> m_dspSoundMem;   // (24-bit) SMEM - DSP sound memory
     alignas(16) std::array<uint16, 64> m_dspCoeffs;     // (13-bit) COEF - DSP coefficient data RAM
     alignas(16) std::array<uint16, 32> m_dspAddrs;      // (16-bit) MADRS - DSP memory address registers
-    alignas(16) std::array<uint32, 16> m_dspMixStack;   // (20-bit) MIXS - DSP mix sound slot data stack
-    alignas(16) std::array<uint16, 16> m_dspEffectOut;  // (16-bit) EFREG - DSP effected data output
-    alignas(16) std::array<uint16, 2> m_dspAudioIn;     // (16-bit) EXTS - DSP digital audio input
+    alignas(16) std::array<sint32, 16> m_dspMixStack;   // (20-bit) MIXS - DSP mix sound slot data stack (4 frac bits)
+    alignas(16) std::array<sint16, 16> m_dspEffectOut;  // (16-bit) EFREG - DSP effected data output
+    alignas(16) std::array<sint16, 2> m_dspAudioIn;     // (16-bit) EXTS - DSP digital audio input
 
     uint32 m_dspRingBufferLeadAddress; // (W) RBP - DSP Ring Buffer Lead Address
     uint8 m_dspRingBufferLength;       // (W) RBL - DSP Ring Buffer Length

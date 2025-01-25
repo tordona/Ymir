@@ -13,6 +13,7 @@
 #include <fstream>
 #include <memory>
 #include <span>
+#include <thread>
 #include <vector>
 
 using namespace util;
@@ -53,7 +54,7 @@ void runEmulator(satemu::Saturn &saturn) {
     // ---------------------------------
     // Initialize SDL video subsystem
 
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS)) {
         SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
         return;
     }
@@ -119,6 +120,86 @@ void runEmulator(satemu::Saturn &saturn) {
     ScopeGuard sgDestroyTexture{[&] { SDL_DestroyTexture(texture); }};
 
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+
+    // ---------------------------------
+    // Create audio buffer and stream and set up callbacks
+
+    struct AudioBuffer {
+        std::array<sint16, 4096> buffer{};
+        uint32 readPos = 0;
+        uint32 writePos = 0;
+    } audioBuffer{};
+
+    SDL_AudioSpec audioSpec{};
+    audioSpec.freq = 44100;
+    audioSpec.format = SDL_AUDIO_S16;
+    audioSpec.channels = 2;
+    auto audioStream = SDL_OpenAudioDeviceStream(
+        SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &audioSpec,
+        [](void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount) {
+            auto &buffer = *reinterpret_cast<AudioBuffer *>(userdata);
+            int sampleCount = additional_amount / sizeof(sint16);
+            int len1 = std::min<int>(sampleCount, buffer.buffer.size() - buffer.readPos);
+            int len2 = std::min<int>(sampleCount - len1, buffer.readPos);
+            SDL_PutAudioStreamData(stream, &buffer.buffer[buffer.readPos], len1 * sizeof(sint16));
+            SDL_PutAudioStreamData(stream, &buffer.buffer[0], len2 * sizeof(sint16));
+
+            buffer.readPos = (buffer.readPos + len1 + len2) % buffer.buffer.size();
+        },
+        &audioBuffer);
+    if (audioStream == nullptr) {
+        SDL_Log("Unable to create audio stream: %s", SDL_GetError());
+        return;
+    }
+    ScopeGuard sgDestroyAudioStream{[&] { SDL_DestroyAudioStream(audioStream); }};
+
+    // please don't burst my eardrums while I test audio
+    SDL_SetAudioStreamGain(audioStream, 0.1f);
+
+    if (!SDL_ResumeAudioStreamDevice(audioStream)) {
+        SDL_Log("Unable to start audio stream: %s", SDL_GetError());
+    }
+    {
+        SDL_AudioSpec srcSpec{};
+        SDL_AudioSpec dstSpec{};
+        SDL_GetAudioStreamFormat(audioStream, &srcSpec, &dstSpec);
+        auto formatName = [&] {
+            switch (srcSpec.format) {
+            case SDL_AUDIO_U8: return "unsigned 8-bit PCM";
+            case SDL_AUDIO_S8: return "signed 8-bit PCM";
+            case SDL_AUDIO_S16LE: return "signed 16-bit little-endian integer PCM";
+            case SDL_AUDIO_S16BE: return "signed 16-bit big-endian integer PCM";
+            case SDL_AUDIO_S32LE: return "signed 32-bit little-endian integer PCM";
+            case SDL_AUDIO_S32BE: return "signed 32-bit big-endian integer PCM";
+            case SDL_AUDIO_F32LE: return "32-bit little-endian floating point PCM";
+            case SDL_AUDIO_F32BE: return "32-bit big-endian floating point PCM";
+            default: return "unknown";
+            }
+        };
+
+        fmt::println("Audio stream opened: {} Hz, {} channel{}, {} format", srcSpec.freq, srcSpec.channels,
+                     (srcSpec.channels == 1 ? "" : "s"), formatName());
+        if (srcSpec.freq != audioSpec.freq || srcSpec.channels != audioSpec.channels ||
+            srcSpec.format != audioSpec.format) {
+            // Hopefully this never happens
+            fmt::println("Audio format mismatch");
+            return;
+        }
+    }
+
+    saturn.SCSP.SetCallback({&audioBuffer, [](sint16 left, sint16 right, void *ctx) {
+                                 auto &buffer = *reinterpret_cast<AudioBuffer *>(ctx);
+                                 while ((buffer.writePos + 1) % buffer.buffer.size() == buffer.readPos) {
+                                     std::this_thread::yield();
+                                 }
+                                 buffer.buffer[buffer.writePos] = left;
+                                 buffer.writePos = (buffer.writePos + 1) % buffer.buffer.size();
+                                 while ((buffer.writePos + 1) % buffer.buffer.size() == buffer.readPos) {
+                                     std::this_thread::yield();
+                                 }
+                                 buffer.buffer[buffer.writePos] = right;
+                                 buffer.writePos = (buffer.writePos + 1) % buffer.buffer.size();
+                             }});
 
     // ---------------------------------
     // Main emulator loop
