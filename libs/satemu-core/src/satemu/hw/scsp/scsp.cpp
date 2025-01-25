@@ -224,11 +224,11 @@ FORCE_INLINE void SCSP::ProcessSample() {
     // Handle KYONEX
     for (int i = 0; auto &slot : m_slots) {
         if (m_keyOnEx && slot.TriggerKeyOn()) {
-            regsLog.debug(
-                "Slot {} key {}, start address {:X}, loop {:X}-{:X}, octave {}, FNS 0x{:03X}, EG rates: {} {} {} {}", i,
-                (slot.keyOnBit ? "ON" : "OFF"), slot.startAddress, slot.loopStartAddress, slot.loopEndAddress,
-                slot.octave, slot.freqNumSwitch, slot.envGen.attackRate, slot.envGen.decay1Rate, slot.envGen.decay2Rate,
-                slot.envGen.releaseRate);
+            regsLog.debug("Slot {:02d} key {}, start address {:05X}, loop {:04X}-{:04X}, octave {:02d}, FNS 0x{:03X}, "
+                          "EG rates: {:02d} {:02d} {:02d} {:02d}",
+                          i, (slot.keyOnBit ? " ON" : "OFF"), slot.startAddress, slot.loopStartAddress,
+                          slot.loopEndAddress, slot.octave, slot.freqNumSwitch, slot.envGen.attackRate,
+                          slot.envGen.decay1Rate, slot.envGen.decay2Rate, slot.envGen.releaseRate);
         }
 
         i++;
