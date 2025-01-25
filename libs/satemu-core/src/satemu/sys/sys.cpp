@@ -73,14 +73,14 @@ void Saturn::Step() {
     // We use the fastest clocks as a reference, incrementing the cycle counts of the other clocks by the same amount.
     // When a counter reaches the threshold, a full cycle is completed on that clock.
     //
-    // Subcycles for NTSC system:
+    // Cycle ratios for NTSC system:
     //   Clock rate    Step   Actual clock rate (error)
     //   28,636,360    2464   28,636,360 (reference)
     //   22,579,200    3125  ~22,579,197 (error: ~0.000001%)
     //   20,000,000    3528  ~19,999,997 (error: ~0.000001%)
     //    4,000,000   17640   ~3,999,999 (error: ~0.000001%)
     //
-    // Subcycles for PAL system:
+    // Cycle ratios for PAL system:
     //   Clock rate    Step   Actual clock rate (error)
     //   28,437,500    9925   28,437,500 (reference)
     //   22,579,200   12500   22,579,375 (error: ~0.00001%)
