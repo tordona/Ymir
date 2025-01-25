@@ -29,7 +29,7 @@ void Slot::Reset() {
     soundDirect = false;
 
     octave = 0;
-    freqNumSwitch = 0;
+    freqNumSwitch = 0x400u;
 
     lfoReset = false;
     lfofRaw = 0;

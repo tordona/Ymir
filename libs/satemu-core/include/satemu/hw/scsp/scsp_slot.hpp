@@ -168,8 +168,8 @@ struct Slot {
 
     // --- Pitch Register ---
 
-    uint8 octave;         // (R/W) OCT
-    uint16 freqNumSwitch; // (R/W) FNS
+    uint8 octave;         // (R/W) OCT - octave
+    uint16 freqNumSwitch; // (R/W) FNS - frequency number switch
 
     // --- LFO Register ---
 
@@ -208,7 +208,8 @@ struct Slot {
     // TODO: move these to the .cpp file once LTO is solved
 
     FORCE_INLINE void IncrementPhase(uint32 pitchLFO) {
-        const uint32 phaseInc = (freqNumSwitch ^ 0x400u) << (octave ^ 8u);
+        // NOTE: freqNumSwitch already has 0x400u added to it
+        const uint32 phaseInc = freqNumSwitch << (octave ^ 8u);
         currPhase = (currPhase & 0x3FFFF) + phaseInc + pitchLFO;
     }
 

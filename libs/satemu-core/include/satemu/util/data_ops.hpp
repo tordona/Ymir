@@ -74,7 +74,7 @@ FORCE_INLINE void SplitReadWord(uint16 &dstValue, TSrc srcValue) {
 template <bool lowerByte, bool upperByte, uint32 lb, uint32 ub, std::integral TDst>
 FORCE_INLINE void SplitWriteWord(TDst &dstValue, uint16 srcValue) {
     if constexpr (lowerByte && upperByte) {
-        dstValue = bit::extract<lb, ub>(srcValue);
+        bit::deposit_into<0, ub - lb>(dstValue, bit::extract<lb, ub>(srcValue));
     } else {
         static constexpr uint32 srclb = lowerByte ? lb : 8;
         static constexpr uint32 srcub = upperByte ? ub : 7;
