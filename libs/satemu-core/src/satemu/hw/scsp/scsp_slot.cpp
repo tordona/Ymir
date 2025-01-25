@@ -49,6 +49,10 @@ void Slot::Reset() {
     currSample = 0;
     currPhase = 0;
     reverse = false;
+    crossedLoopStart = false;
+
+    sample1 = 0;
+    sample2 = 0;
 
     output = 0;
 }
@@ -65,6 +69,10 @@ bool Slot::TriggerKeyOn() {
             currSample = 0;
             currPhase = 0;
             reverse = false;
+            crossedLoopStart = false;
+
+            sample1 = 0;
+            sample2 = 0;
 
             output = 0;
         }

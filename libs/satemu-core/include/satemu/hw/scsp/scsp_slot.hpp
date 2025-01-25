@@ -202,6 +202,7 @@ struct Slot {
     uint32 currSample;
     uint32 currPhase;
     bool reverse;
+    bool crossedLoopStart;
 
     sint16 sample1;
     sint16 sample2;
@@ -220,6 +221,10 @@ struct Slot {
             currSample -= currPhase >> 18u;
         } else {
             currSample += currPhase >> 18u;
+            if (!crossedLoopStart && currSample >= loopStartAddress) {
+                crossedLoopStart = true;
+                envGen.TriggerLoopStart();
+            }
         }
 
         switch (loopControl) {
