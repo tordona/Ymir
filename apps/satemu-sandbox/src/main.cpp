@@ -124,6 +124,9 @@ void runEmulator(satemu::Saturn &saturn) {
     // ---------------------------------
     // Create audio buffer and stream and set up callbacks
 
+    // Use a smaller buffer to reduce audio latency
+    SDL_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, "512");
+
     struct AudioBuffer {
         std::array<sint16, 4096> buffer{};
         uint32 readPos = 0;
@@ -154,7 +157,7 @@ void runEmulator(satemu::Saturn &saturn) {
     ScopeGuard sgDestroyAudioStream{[&] { SDL_DestroyAudioStream(audioStream); }};
 
     // please don't burst my eardrums while I test audio
-    SDL_SetAudioStreamGain(audioStream, 0.1f);
+    SDL_SetAudioStreamGain(audioStream, 0.15f);
 
     if (!SDL_ResumeAudioStreamDevice(audioStream)) {
         SDL_Log("Unable to start audio stream: %s", SDL_GetError());
