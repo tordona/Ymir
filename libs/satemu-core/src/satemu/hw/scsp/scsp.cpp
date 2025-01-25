@@ -378,7 +378,14 @@ FORCE_INLINE void SCSP::SlotProcessStep5(Slot &slot) {
         return;
     }
 
-    // TODO: implement level calculation part 1
+    if (!slot.soundDirect) {
+        // TODO: compute ALFO
+        const sint32 alfoLevel = 0;
+        const sint32 envLevel = slot.envGen.GetLevel();
+        const sint32 totalLevel = slot.totalLevel << 2u;
+        const sint32 level = std::min<sint32>(alfoLevel + envLevel + totalLevel, 0x3FF);
+        slot.output = (slot.output * ((level & 0x3F) ^ 0x7F)) >> ((level >> 6) + 7);
+    }
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep6(Slot &slot) {
