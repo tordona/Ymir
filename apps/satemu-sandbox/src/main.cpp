@@ -189,11 +189,14 @@ void runEmulator(satemu::Saturn &saturn) {
 
     saturn.SCSP.SetCallback({&audioBuffer, [](sint16 left, sint16 right, void *ctx) {
                                  auto &buffer = *reinterpret_cast<AudioBuffer *>(ctx);
+
+                                 // TODO: these busy waits should go away
                                  while ((buffer.writePos + 1) % buffer.buffer.size() == buffer.readPos) {
                                      std::this_thread::yield();
                                  }
                                  buffer.buffer[buffer.writePos] = left;
                                  buffer.writePos = (buffer.writePos + 1) % buffer.buffer.size();
+
                                  while ((buffer.writePos + 1) % buffer.buffer.size() == buffer.readPos) {
                                      std::this_thread::yield();
                                  }
