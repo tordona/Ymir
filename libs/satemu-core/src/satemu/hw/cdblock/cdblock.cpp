@@ -15,12 +15,13 @@ CDBlock::CDBlock(core::Scheduler &scheduler, scu::SCU &scu)
 
     // TODO: this event counts by 3 cycles per cycle
     m_driveStateUpdateEvent =
-        m_scheduler.RegisterEvent(core::events::CDBlockDriveState, 3, this,
+        m_scheduler.RegisterEvent(core::events::CDBlockDriveState, this,
                                   [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
                                       auto &cdb = *static_cast<CDBlock *>(userContext);
                                       cdb.ProcessDriveState();
                                       eventContext.RescheduleFromNow(cdb.m_targetDriveCycles);
                                   });
+    m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, 3, 1);
 
     m_commandExecEvent = m_scheduler.RegisterEvent(
         core::events::CDBlockCommand, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {

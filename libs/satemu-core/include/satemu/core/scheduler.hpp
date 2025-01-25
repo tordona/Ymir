@@ -69,7 +69,9 @@ public:
 
     Scheduler() {
         m_eventPtrs.fill(kInvalidEvent);
-        m_eventTarget.fill(kNoDeadline);
+        for (Event &event : m_events) {
+            event.target = kNoDeadline;
+        }
         m_nextEventIndex = 0;
         Reset();
     }
@@ -78,40 +80,46 @@ public:
     void Reset() {
         m_currCount = 0;
         m_nextCount = kNoDeadline;
-        for (auto target : m_eventTarget) {
-            m_nextCount = std::min(m_nextCount, target);
+        for (const Event &event : m_events) {
+            m_nextCount = std::min(m_nextCount, event.target);
         }
     }
 
     // Registers an event. The returned ID must be used to refer to the event.
-    EventID RegisterEvent(UserID userID, uint64 countFactor, void *userContext, EventCallback callback) {
+    EventID RegisterEvent(UserID userID, void *userContext, EventCallback callback) {
         assert(m_eventPtrs[userID] == kInvalidEvent);                    // ensure user IDs are unique
         assert(m_nextEventIndex <= std::numeric_limits<EventID>::max()); // IDtype value space exhausted
         EventID id = m_nextEventIndex;
         m_eventPtrs[userID] = id;
-        m_eventId[m_nextEventIndex] = id;
-        m_eventUserID[m_nextEventIndex] = userID;
-        m_eventUserContext[m_nextEventIndex] = userContext;
-        m_eventCallback[m_nextEventIndex] = callback;
-        m_eventCountFactor[m_nextEventIndex] = countFactor;
+        Event &event = m_events[id];
+        event.id = id;
+        event.userID = userID;
+        event.userContext = userContext;
+        event.callback = callback;
+        event.countNumerator = 1;
+        event.countDenominator = 1;
         ++m_nextEventIndex;
         return id;
     }
 
-    EventID RegisterEvent(UserID userID, void *userContext, EventCallback callback) {
-        return RegisterEvent(userID, 1, userContext, callback);
+    // Sets the event cycle counting factor.
+    void SetEventCountFactor(EventID id, uint64 numerator, uint64 denominator) {
+        assert(numerator > 0);
+        assert(denominator > 0);
+        Event &event = m_events[id];
+        event.countNumerator = numerator;
+        event.countDenominator = denominator;
+        if (m_nextCount == event.target) {
+            RecalcSchedule();
+        }
     }
 
     // Changes an event's callback.
-    void SetEventCallback(EventID id, EventCallback callback) {
+    void SetEventCallback(EventID id, void *userContext, EventCallback callback) {
         assert(id < kNumEvents);
-        m_eventCallback[id] = callback;
-    }
-
-    // Changes an event's context.
-    void SetEventContext(EventID id, void *userContext) {
-        assert(id < kNumEvents);
-        m_eventUserContext[id] = userContext;
+        Event &event = m_events[id];
+        event.userContext = userContext;
+        event.callback = callback;
     }
 
     uint64 CurrentCount() const {
@@ -145,7 +153,8 @@ public:
     // Removes the specified event from the schedule
     void Cancel(EventID id) {
         assert(id < kNumEvents);
-        m_eventTarget[id] = kNoDeadline;
+        Event &event = m_events[id];
+        event.target = kNoDeadline;
     }
 
     // Advances the scheduler by the specified count and fire scheduled events
@@ -160,24 +169,41 @@ private:
     static constexpr uint64 kNoDeadline = ~static_cast<uint64>(0);
     static constexpr size_t kNumEvents = 5;
 
+    struct Event {
+        EventID id;
+        UserID userID;
+        uint64 target;
+        uint64 countNumerator;
+        uint64 countDenominator;
+        void *userContext;
+        EventCallback callback;
+
+        FORCE_INLINE uint64 CalcInverseScaledTarget() const {
+            return (target * countDenominator + countNumerator - 1) / countNumerator;
+        }
+    };
+
     // Schedules an event to execute at the specified time
-    void ScheduleEvent(EventID id, uint64 target) {
-        m_eventTarget[id] = target;
-        m_nextCount = std::min(m_nextCount, target);
+    FORCE_INLINE void ScheduleEvent(EventID id, uint64 target) {
+        Event &event = m_events[id];
+        event.target = target;
+        const uint64 scaledTarget = event.CalcInverseScaledTarget();
+        m_nextCount = std::min(m_nextCount, scaledTarget);
     }
 
     // Executes all scheduled events up to the current count
     FORCE_INLINE void Execute() {
         const uint64 currCount = m_currCount;
         for (size_t index = 0; index < kNumEvents; ++index) {
-            if (m_eventTarget[index] == kNoDeadline) {
+            Event &event = m_events[index];
+            if (event.target == kNoDeadline) {
                 continue;
             }
-            uint64 target = m_eventTarget[index];
-            const uint64 scaledCurrCount = currCount * m_eventCountFactor[index];
+            uint64 target = event.target;
+            const uint64 scaledCurrCount = currCount * event.countNumerator / event.countDenominator;
             if (scaledCurrCount >= target) {
-                const EventCallback callback = m_eventCallback[index];
-                void *const userContext = m_eventUserContext[index];
+                const EventCallback callback = event.callback;
+                void *const userContext = event.userContext;
                 while (scaledCurrCount >= target) {
                     EventContext eventContext;
                     callback(eventContext, userContext, scaledCurrCount - target);
@@ -189,23 +215,27 @@ private:
                     case EventContext::Action::RescheduleFromPrevious: target += eventContext.interval; break;
                     }
                 }
-                m_eventTarget[index] = target;
+                event.target = target;
             }
         }
-        m_nextCount = m_eventTarget[0];
-        for (size_t i = 1; i < m_eventTarget.size(); ++i) {
-            m_nextCount = std::min(m_nextCount, m_eventTarget[i]);
+
+        RecalcSchedule();
+    }
+
+    FORCE_INLINE void RecalcSchedule() {
+        m_nextCount = kNoDeadline;
+        for (const Event &event : m_events) {
+            if (event.target == kNoDeadline) {
+                continue;
+            }
+            const uint64 scaledTarget = event.CalcInverseScaledTarget();
+            m_nextCount = std::min(m_nextCount, scaledTarget);
         }
     }
 
     uint64 m_currCount;
     uint64 m_nextCount;
-    std::array<EventID, kNumEvents> m_eventId;
-    std::array<uint64, kNumEvents> m_eventTarget;
-    std::array<uint64, kNumEvents> m_eventCountFactor;
-    std::array<UserID, kNumEvents> m_eventUserID;
-    std::array<void *, kNumEvents> m_eventUserContext;
-    std::array<EventCallback, kNumEvents> m_eventCallback;
+    std::array<Event, kNumEvents> m_events;
     size_t m_nextEventIndex;
     std::array<EventID, std::numeric_limits<UserID>::max() + 1> m_eventPtrs;
 };

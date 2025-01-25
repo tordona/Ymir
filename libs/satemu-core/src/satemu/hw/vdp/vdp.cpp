@@ -79,9 +79,9 @@ void VDP::Reset(bool hard) {
     BeginHPhaseActiveDisplay();
     BeginVPhaseActiveDisplay();
 
-    m_scheduler.ScheduleFromNow(m_phaseUpdateEvent, GetPhaseCycles());
-
     UpdateResolution();
+
+    m_scheduler.ScheduleFromNow(m_phaseUpdateEvent, GetPhaseCycles());
 }
 
 void VDP::Advance(uint64 cycles) {

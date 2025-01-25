@@ -100,10 +100,11 @@ void Saturn::Step() {
 
     VDP.Advance(cycles);
 
+    static constexpr uint64 kScspStep = 3125;
     m_scspCycles += cycles * 2464;
-    const uint64 scspCycleCount = m_scspCycles / 3125;
+    const uint64 scspCycleCount = m_scspCycles / kScspStep;
     if (scspCycleCount > 0) {
-        m_scspCycles -= scspCycleCount * 3125;
+        m_scspCycles -= scspCycleCount * kScspStep;
         SCSP.Advance(scspCycleCount);
     }
 

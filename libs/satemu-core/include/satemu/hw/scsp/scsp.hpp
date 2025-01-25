@@ -740,7 +740,8 @@ private:
     void SlotProcessStep7(Slot &slot); // Sound stack write
 
     uint64 m_m68kCycles;    // MC68EC000 cycle counter
-    uint64 m_sampleCounter; // total number of samples
+    uint64 m_sampleCycles;  // Sample cycle counter
+    uint64 m_sampleCounter; // Total number of samples
 
     // -------------------------------------------------------------------------
     // Interrupt handling

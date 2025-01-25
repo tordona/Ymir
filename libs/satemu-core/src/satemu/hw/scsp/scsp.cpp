@@ -20,6 +20,7 @@ SCSP::SCSP(core::Scheduler &scheduler, scu::SCU &scu)
             scsp.ProcessSample();
             eventContext.RescheduleFromNow(kCyclesPerSample);
         });
+    m_scheduler.SetEventCountFactor(m_sampleTickEvent, 2464, 3125);
 
     for (uint32 i = 0; i < 32; i++) {
         m_slots[i].index = i;
