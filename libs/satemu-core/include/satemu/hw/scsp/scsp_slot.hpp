@@ -203,6 +203,8 @@ struct Slot {
     uint32 currPhase;
     bool reverse;
 
+    sint16 sample1;
+    sint16 sample2;
     sint16 output;
 
     // TODO: move these to the .cpp file once LTO is solved
