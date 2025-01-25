@@ -2,6 +2,8 @@
 
 #include <satemu/core_types.hpp>
 
+#include <algorithm>
+
 namespace satemu::scsp {
 
 // States: Attack, Decay 1, Decay 2, Release
@@ -53,6 +55,8 @@ struct EnvelopeGenerator {
         loopStartLink = false;
 
         currLevel = 0x3FF;
+
+        computedKeyRateScaling = 0;
     }
 
     bool Step() {
@@ -126,6 +130,15 @@ struct EnvelopeGenerator {
         currLevel = 0x3FF;
     }
 
+    void ComputeKeyRateScaling(uint8 octave) {
+        if (keyRateScaling == 0) {
+            computedKeyRateScaling = 0;
+        } else {
+            const sint8 signedOctave = static_cast<sint8>(octave ^ 8) - 8;
+            computedKeyRateScaling = std::clamp(keyRateScaling + signedOctave, 0x0, 0xF);
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Registers
 
@@ -159,6 +172,9 @@ struct EnvelopeGenerator {
     // Current envelope level.
     // Ranges from 0x3FF (minimum) to 0x000 (maximum) - 10 bits.
     uint16 currLevel;
+
+    // Precalculated key rate scaling based on the slot's octave and this envelope generator's KRS.
+    uint32 computedKeyRateScaling;
 };
 
 } // namespace satemu::scsp

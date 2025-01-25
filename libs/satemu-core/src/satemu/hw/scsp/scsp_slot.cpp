@@ -292,6 +292,7 @@ void Slot::WriteReg0A(uint16 value) {
     if constexpr (upperByte) {
         envGen.keyRateScaling = bit::extract<10, 13>(value);
         envGen.loopStartLink = bit::extract<14>(value);
+        envGen.ComputeKeyRateScaling(octave);
     }
 }
 
@@ -367,6 +368,7 @@ void Slot::WriteReg10(uint16 value) {
 
     if constexpr (upperByte) {
         octave = bit::extract<11, 14>(value);
+        envGen.ComputeKeyRateScaling(octave);
     }
 }
 
