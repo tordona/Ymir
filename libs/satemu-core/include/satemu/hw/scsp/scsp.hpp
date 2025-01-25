@@ -476,7 +476,11 @@ private:
     template <bool lowerByte, bool upperByte>
     uint16 ReadSlotStatus() {
         uint16 value = 0;
-        bit::deposit_into<7, 10>(value, m_slots[m_monitorSlotCall].currAddress >> 12u);
+        const Slot &slot = m_slots[m_monitorSlotCall];
+        bit::deposit_into<0, 4>(value, slot.envGen.currLevel >> 5u);
+        bit::deposit_into<5, 6>(value, static_cast<uint8>(slot.envGen.state));
+        bit::deposit_into<7, 10>(value, slot.currAddress >> 12u);
+        regsLog.trace("Monitor slot {} read -> {:04X}", m_monitorSlotCall, value);
         return value;
     }
 
