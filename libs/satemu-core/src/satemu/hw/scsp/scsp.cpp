@@ -536,7 +536,8 @@ FORCE_INLINE void SCSP::SlotProcessStep6(Slot &slot) {
 
 FORCE_INLINE void SCSP::SlotProcessStep7(Slot &slot) {
     if (!slot.stackWriteInhibit) {
-        m_soundStack[m_soundStackIndex] = slot.output;
+        const uint32 stackIndex = (m_soundStackIndex - 6) & 63;
+        m_soundStack[stackIndex] = slot.output;
     }
 
     slot.sampleCount++;
