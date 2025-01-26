@@ -235,9 +235,13 @@ struct Slot {
     uint8 inputMixingLevel; // (R/W) IMXL - 0 (no mix) to 7 (maximum) - into MIXS DSP stack
     uint8 inputSelect;      // (R/W) ISEL - 0 to 15 - indexes a MIXS DSP stack
     uint8 directSendLevel;  // (R/W) DISDL - 0 (no send) to 7 (maximum)
-    uint8 directPan;        // (R/W) DIPAN - 0 to 31  [100% left]  31..16  [center]  0..15  [100% right]
-    uint8 effectSendLevel;  // (R/W) EFSDL - 0 (no send) to 7 (maximum)
-    uint8 effectPan;        // (R/W) EFPAN - 0 to 31  [100% left]  31..16  [center]  0..15  [100% right]
+    uint8 directPan;        // (R/W) DIPAN - 0 to 31 - [100% left]  31..16  [center]  0..15  [100% right]
+
+    // These are not tied to slots, but they exist within the slot register address space.
+    // "Slots" 0 through 15 refer to DSP.EFREG[0-15].
+    // "Slots" 16 and 17 refer to DSP.EXTS[0-1].
+    uint8 effectSendLevel; // (R/W) EFSDL - 0 (no send) to 7 (maximum)
+    uint8 effectPan;       // (R/W) EFPAN - 0 to 31 - [100% left]  31..16  [center]  0..15  [100% right]
 
     // -------------------------------------------------------------------------
     // State
