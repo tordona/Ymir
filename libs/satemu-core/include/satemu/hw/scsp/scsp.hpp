@@ -335,7 +335,9 @@ private:
             const uint32 slotIndex = address >> 5;
             auto &slot = m_slots[slotIndex];
             slot.WriteReg<T>(address & 0x1F, value);
+            if ((address & 0x1E) == 0x00) {
             m_keyOnEx |= bit::extract<12>(value16);
+            }
             return;
         } else if (AddressInRange<0x600, 0x67F>(address)) {
             const uint32 idx = (address >> 1u) & 0x3F;
