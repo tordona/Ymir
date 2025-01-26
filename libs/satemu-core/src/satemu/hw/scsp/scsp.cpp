@@ -99,6 +99,23 @@ void SCSP::SetCPUEnabled(bool enabled) {
     }
 }
 
+void SCSP::HandleKYONEX() {
+    fmt::memory_buffer buf{};
+    for (int i = 0; auto &slot : m_slots) {
+        fmt::format_to(std::back_inserter(buf), "{}", (slot.keyOnBit ? '+' : '_'));
+        if (slot.TriggerKeyOn()) {
+            regsLog.debug("Slot {:02d} key {}, start address {:05X}, loop {:04X}-{:04X}, octave {:02d}, FNS 0x{:03X}, "
+                          "EG rates: {:02d} {:02d} {:02d} {:02d}",
+                          i, (slot.keyOnBit ? " ON" : "OFF"), slot.startAddress, slot.loopStartAddress,
+                          slot.loopEndAddress, slot.octave, slot.freqNumSwitch, slot.attackRate, slot.decay1Rate,
+                          slot.decay2Rate, slot.releaseRate);
+        }
+
+        i++;
+    }
+    regsLog.debug("KYONEX: {}", fmt::to_string(buf));
+}
+
 void SCSP::SetInterrupt(uint16 intr, bool level) {
     m_m68kPendingInterrupts &= ~(1 << intr);
     m_m68kPendingInterrupts |= level << intr;
@@ -214,7 +231,6 @@ void SCSP::ExecuteDMA() {
 
 FORCE_INLINE void SCSP::Tick() {
     RunM68K();
-    HandleKYONEX();
     GenerateSample();
     UpdateTimers();
     UpdateM68KInterrupts();
@@ -228,27 +244,6 @@ FORCE_INLINE void SCSP::RunM68K() {
             m_m68k.Step();
         }
     }
-}
-
-FORCE_INLINE void SCSP::HandleKYONEX() {
-    if (m_keyOnEx) {
-        fmt::memory_buffer buf{};
-        for (int i = 0; auto &slot : m_slots) {
-            fmt::format_to(std::back_inserter(buf), "{}", (slot.keyOnBit ? '+' : '_'));
-            if (slot.TriggerKeyOn()) {
-                regsLog.debug(
-                    "Slot {:02d} key {}, start address {:05X}, loop {:04X}-{:04X}, octave {:02d}, FNS 0x{:03X}, "
-                    "EG rates: {:02d} {:02d} {:02d} {:02d}",
-                    i, (slot.keyOnBit ? " ON" : "OFF"), slot.startAddress, slot.loopStartAddress, slot.loopEndAddress,
-                    slot.octave, slot.freqNumSwitch, slot.attackRate, slot.decay1Rate, slot.decay2Rate,
-                    slot.releaseRate);
-            }
-
-            i++;
-        }
-        regsLog.debug("KYONEX: {}", fmt::to_string(buf));
-    }
-    m_keyOnEx = false;
 }
 
 FORCE_INLINE void SCSP::GenerateSample() {

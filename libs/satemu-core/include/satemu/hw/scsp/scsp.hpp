@@ -203,7 +203,8 @@ private:
         /**/ if (AddressInRange<0x000, 0x3FF>(address)) {
             const uint32 slotIndex = address >> 5;
             auto &slot = m_slots[slotIndex];
-            return slot.ReadReg<T>(address & 0x1F);
+            const T value = slot.ReadReg<T>(address & 0x1F);
+            return value;
         } else if (AddressInRange<0x600, 0x67F>(address)) {
             const uint32 idx = (address >> 1u) & 0x3F;
             const uint16 stack = m_soundStack[idx];
@@ -335,8 +336,8 @@ private:
             const uint32 slotIndex = address >> 5;
             auto &slot = m_slots[slotIndex];
             slot.WriteReg<T>(address & 0x1F, value);
-            if ((address & 0x1E) == 0x00) {
-                m_keyOnEx |= bit::extract<12>(value16);
+            if ((address & 0x1E) == 0x00 && bit::extract<12>(value16)) {
+                HandleKYONEX();
             }
             return;
         } else if (AddressInRange<0x600, 0x67F>(address)) {
@@ -658,6 +659,8 @@ private:
 
     alignas(16) std::array<Slot, 32> m_slots;
 
+    void HandleKYONEX();
+
     // --- Mixer Register ---
 
     uint32 m_masterVolume; // (W) MVOL - master volume adjustment after all audio processing
@@ -671,8 +674,6 @@ private:
 
     uint8 m_monitorSlotCall; // (W) MSLC - selects a slot to monitor the current sample offset from SA
                              // (R) CA - Call Address - the offset from SA of the current sample (in 4 KiB units?)
-
-    bool m_keyOnEx; // (W) KYONEX - executes key on/off on all slots on next sample
 
     // --- MIDI Register ---
 
@@ -732,7 +733,6 @@ private:
     void Tick();
 
     void RunM68K();
-    void HandleKYONEX();
     void GenerateSample();
     void UpdateTimers();
 
