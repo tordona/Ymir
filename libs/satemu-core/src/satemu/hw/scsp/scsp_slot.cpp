@@ -2,6 +2,8 @@
 
 #include <satemu/util/data_ops.hpp>
 
+#include <algorithm>
+
 namespace satemu::scsp {
 
 Slot::Slot() {
@@ -61,7 +63,6 @@ void Slot::Reset() {
     egState = EGState::Release;
 
     egLevel = 0x3FF;
-    egRate = 0;
 
     sampleCount = 0;
     currAddress = 0;
@@ -76,7 +77,7 @@ void Slot::Reset() {
     output = 0;
 }
 
-bool Slot::TriggerKeyOn() {
+bool Slot::TriggerKey() {
     // Key ON only triggers when EG is in Release state
     // Key OFF only triggers when EG is in any other state
     const bool trigger = (egState == EGState::Release) == keyOnBit;
@@ -86,8 +87,9 @@ bool Slot::TriggerKeyOn() {
 
             egState = EGState::Attack;
 
-            egLevel = 0x280;
-            egRate = CalcEffectiveRate(attackRate);
+            const uint8 krs =
+                (keyRateScaling == 0xF) ? 0x0 : std ::clamp<uint8>(keyRateScaling + (octave ^ 8) - 8, 0x0, 0xF);
+            egLevel = (attackRate + krs >= 0x20) ? 0x000 : 0x280;
 
             sampleCount = 0;
             currAddress = 0;
@@ -283,21 +285,12 @@ void Slot::WriteReg08(uint16 value) {
     if constexpr (lowerByte) {
         attackRate = bit::extract<0, 4>(value);
         egHold = bit::extract<5>(value);
-        if (egState == EGState::Attack) {
-            egRate = CalcEffectiveRate(attackRate);
-        }
     }
 
     util::SplitWriteWord<lowerByte, upperByte, 6, 10>(decay1Rate, value);
-    if (egState == EGState::Decay1) {
-        egRate = CalcEffectiveRate(decay1Rate);
-    }
 
     if constexpr (upperByte) {
         decay2Rate = bit::extract<11, 15>(value);
-        if (egState == EGState::Decay2) {
-            egRate = CalcEffectiveRate(decay2Rate);
-        }
     }
 }
 
@@ -321,9 +314,6 @@ template <bool lowerByte, bool upperByte>
 void Slot::WriteReg0A(uint16 value) {
     if constexpr (lowerByte) {
         releaseRate = bit::extract<0, 4>(value);
-        if (egState == EGState::Release) {
-            egRate = CalcEffectiveRate(releaseRate);
-        }
     }
 
     util::SplitWriteWord<lowerByte, upperByte, 5, 9>(decayLevel, value);
@@ -331,7 +321,6 @@ void Slot::WriteReg0A(uint16 value) {
     if constexpr (upperByte) {
         keyRateScaling = bit::extract<10, 13>(value);
         loopStartLink = bit::extract<14>(value);
-        egRate = CalcEffectiveRate(GetCurrentEGRate());
     }
 }
 
@@ -408,8 +397,6 @@ void Slot::WriteReg10(uint16 value) {
     if constexpr (upperByte) {
         octave = bit::extract<11, 14>(value);
     }
-
-    egRate = CalcEffectiveRate(GetCurrentEGRate());
 }
 
 template <bool lowerByte, bool upperByte>
@@ -511,7 +498,7 @@ uint8 Slot::GetCurrentEGRate() const {
 }
 
 uint16 Slot::GetEGLevel() const {
-    if (egState == EGState::Attack && !egHold) {
+    if (egState == EGState::Attack && egHold) {
         return 0x000;
     } else {
         return egLevel;

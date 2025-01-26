@@ -13,7 +13,7 @@ struct Slot {
 
     void Reset();
 
-    bool TriggerKeyOn();
+    bool TriggerKey();
 
     // -------------------------------------------------------------------------
 
@@ -187,8 +187,8 @@ struct Slot {
     uint8 keyRateScaling; // (R/W) KRS - 0x00 to 0x0E; 0x0F turns off scaling
 
     bool egHold; // (R/W) EGHOLD
-                 //   true:  volume raises during attack state
-                 //   false: volume is set to maximum during attack phase while maintaining the same duration
+                 //   false: volume raises during attack state
+                 //   true:  volume is set to maximum during attack phase while maintaining the same duration
 
     bool loopStartLink; // (R/W) LPSLNK
                         //   true:  switches to decay 1 state on LSA
@@ -250,9 +250,6 @@ struct Slot {
     // Current envelope level.
     // Ranges from 0x3FF (minimum) to 0x000 (maximum) - 10 bits.
     uint16 egLevel;
-
-    // Current envelope effective rate, based on current EG state.
-    uint32 egRate;
 
     uint32 sampleCount;
     uint32 currAddress;

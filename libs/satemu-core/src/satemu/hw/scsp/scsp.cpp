@@ -103,14 +103,15 @@ void SCSP::HandleKYONEX() {
     fmt::memory_buffer buf{};
     for (int i = 0; auto &slot : m_slots) {
         fmt::format_to(std::back_inserter(buf), "{}", (slot.keyOnBit ? '+' : '_'));
-        if (slot.TriggerKeyOn()) {
+        if (slot.TriggerKey()) {
             static constexpr const char *loopNames[] = {"->|", ">->", "<-<", ">-<"};
-            regsLog.debug(
-                "Slot {:02d} key {}, start address {:05X}, loop {:04X}-{:04X} {}, octave {:02d}, FNS 0x{:03X}, "
-                "EG rates: {:02d} {:02d} {:02d} {:02d}",
-                i, (slot.keyOnBit ? " ON" : "OFF"), slot.startAddress, slot.loopStartAddress, slot.loopEndAddress,
-                loopNames[static_cast<uint32>(slot.loopControl)], slot.octave, slot.freqNumSwitch, slot.attackRate,
-                slot.decay1Rate, slot.decay2Rate, slot.releaseRate);
+            regsLog.debug("Slot {:02d} key {} addr={:05X} loop={:04X}-{:04X} {} OCT={:02d} FNS={:03X} KRS={:X} "
+                          "EG: {:02d} {:02d} {:02d} {:02d} DL={:03X} EGHOLD={} LPSLNK={}",
+                          i, (slot.keyOnBit ? " ON" : "OFF"), slot.startAddress, slot.loopStartAddress,
+                          slot.loopEndAddress, loopNames[static_cast<uint32>(slot.loopControl)], slot.octave,
+                          slot.freqNumSwitch, slot.keyRateScaling, slot.attackRate, slot.decay1Rate, slot.decay2Rate,
+                          slot.releaseRate, slot.decayLevel, static_cast<uint8>(slot.egHold),
+                          static_cast<uint8>(slot.loopStartLink));
         }
 
         i++;
@@ -483,9 +484,8 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
     case Slot::EGState::Attack:
         if (slot.egLevel == 0 && !slot.loopStartLink) {
             slot.egState = Slot::EGState::Decay1;
-        } else if (inc > 0 && slot.egLevel > 0 && slot.CalcEffectiveRate(slot.GetCurrentEGRate()) < 0x3E) {
+        } else if (inc > 0 && slot.egLevel > 0 && rate < 0x3E) {
             slot.egLevel += static_cast<sint32>(~static_cast<uint32>(slot.egLevel) * inc) >> 4;
-            // rootLog.debug("slot {} in attack phase, level = {:03X}", slot.index, slot.egLevel);
         }
         break;
     case Slot::EGState::Decay1:
