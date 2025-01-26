@@ -72,17 +72,7 @@ void SCSP::Reset(bool hard) {
     m_soundStack.fill(0);
     m_soundStackIndex = 0;
 
-    m_dspProgram.fill({.u64 = 0});
-    m_dspTemp.fill(0);
-    m_dspSoundMem.fill(0);
-    m_dspCoeffs.fill(0);
-    m_dspAddrs.fill(0);
-    m_dspMixStack.fill(0);
-    m_dspEffectOut.fill(0);
-    m_dspAudioIn.fill(0);
-
-    m_dspRingBufferLeadAddress = 0;
-    m_dspRingBufferLength = 0;
+    m_dsp.Reset();
 }
 
 void SCSP::DumpWRAM(std::ostream &out) {
@@ -284,31 +274,31 @@ FORCE_INLINE void SCSP::GenerateSample() {
 
         if (outputSlot.inputMixingLevel > 0) {
             const sint16 mixsOutput = adjustSendLevel(outputSlot.output, outputSlot.inputMixingLevel);
-            m_dspMixStack[outputSlot.inputSelect] += mixsOutput << 4;
+            m_dsp.mixStack[outputSlot.inputSelect] += mixsOutput << 4;
         }
 
         m_soundStackIndex = (m_soundStackIndex + 1) & 63;
     }
 
     // TODO: copy CDDA data to DSP EXTS (0=left, 1=right)
-    m_dspAudioIn[0] = 0;
-    m_dspAudioIn[1] = 0;
+    m_dsp.audioIn[0] = 0;
+    m_dsp.audioIn[1] = 0;
 
     // TODO: run DSP
 
-    m_dspMixStack.fill(0);
+    m_dsp.mixStack.fill(0);
 
     for (uint32 i = 0; i < 16; i++) {
         const Slot &slot = m_slots[i];
         if (slot.effectSendLevel > 0) {
-            const sint16 dspOutput = adjustSendLevel(m_dspEffectOut[i], slot.effectSendLevel);
+            const sint16 dspOutput = adjustSendLevel(m_dsp.effectOut[i], slot.effectSendLevel);
             addPannedOutput(dspOutput, slot.effectPan);
         }
     }
     for (uint32 i = 0; i < 2; i++) {
         const Slot &slot = m_slots[i + 16];
         if (slot.effectSendLevel > 0) {
-            const sint16 dspOutput = adjustSendLevel(m_dspAudioIn[i], slot.effectSendLevel);
+            const sint16 dspOutput = adjustSendLevel(m_dsp.audioIn[i], slot.effectSendLevel);
             addPannedOutput(dspOutput, slot.effectPan);
         }
     }

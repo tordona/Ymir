@@ -2,6 +2,8 @@
 
 #include <satemu/core_types.hpp>
 
+#include <array>
+
 namespace satemu::scsp {
 
 union DSPInstr {
@@ -45,7 +47,17 @@ public:
 
     void Reset();
 
-    // TODO
+    alignas(16) std::array<DSPInstr, 128> program; // (60-bit) MPRO - DSP program RAM
+    alignas(16) std::array<uint32, 256> temp;      // (24-bit) TEMP - DSP temporary (universal) RAM
+    alignas(16) std::array<uint32, 64> soundMem;   // (24-bit) SMEM - DSP sound memory
+    alignas(16) std::array<uint16, 64> coeffs;     // (13-bit) COEF - DSP coefficient data RAM
+    alignas(16) std::array<uint16, 32> addrs;      // (16-bit) MADRS - DSP memory address registers
+    alignas(16) std::array<sint32, 16> mixStack;   // (20-bit) MIXS - DSP mix sound slot data stack (4 frac bits)
+    alignas(16) std::array<sint16, 16> effectOut;  // (16-bit) EFREG - DSP effected data output
+    alignas(16) std::array<sint16, 2> audioIn;     // (16-bit) EXTS - DSP digital audio input
+
+    uint32 ringBufferLeadAddress; // (W) RBP - DSP Ring Buffer Lead Address
+    uint8 ringBufferLength;       // (W) RBL - DSP Ring Buffer Length
 };
 
 } // namespace satemu::scsp

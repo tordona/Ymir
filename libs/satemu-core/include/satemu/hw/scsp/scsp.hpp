@@ -210,41 +210,41 @@ private:
             const uint16 stack = m_soundStack[idx];
             return read16(stack);
         } else if (AddressInRange<0x700, 0x77F>(address)) {
-            return read16(m_dspCoeffs[(address >> 1u) & 0x3F]);
+            return read16(m_dsp.coeffs[(address >> 1u) & 0x3F]);
         } else if (AddressInRange<0x780, 0x7BF>(address)) {
-            return read16(m_dspAddrs[(address >> 1u) & 0x1F]);
+            return read16(m_dsp.addrs[(address >> 1u) & 0x1F]);
         } else if (AddressInRange<0x800, 0xBFF>(address)) {
             const uint32 index = (address >> 3u) & 0x7F;
             const uint32 subindex = (address >> 1u) & 0x3;
-            return read16(m_dspProgram[index].u16[subindex]);
+            return read16(m_dsp.program[index].u16[subindex]);
         } else if (AddressInRange<0xC00, 0xDFF>(address)) {
             const uint32 offset = (address >> 1u) & 0x1;
             const uint32 index = (address >> 2u) & 0xFF;
             if (offset == 0) {
-                return read16(bit::extract<0, 7>(m_dspTemp[index]));
+                return read16(bit::extract<0, 7>(m_dsp.temp[index]));
             } else {
-                return read16(bit::extract<8, 23>(m_dspTemp[index]));
+                return read16(bit::extract<8, 23>(m_dsp.temp[index]));
             }
         } else if (AddressInRange<0xE00, 0xE7F>(address)) {
             const uint32 offset = (address >> 1u) & 0x1;
             const uint32 index = (address >> 2u) & 0x3F;
             if (offset == 0) {
-                return read16(bit::extract<0, 7>(m_dspSoundMem[index]));
+                return read16(bit::extract<0, 7>(m_dsp.soundMem[index]));
             } else {
-                return read16(bit::extract<8, 23>(m_dspSoundMem[index]));
+                return read16(bit::extract<8, 23>(m_dsp.soundMem[index]));
             }
         } else if (AddressInRange<0xE80, 0xEBF>(address)) {
             const uint32 offset = (address >> 1u) & 0x1;
             const uint32 index = (address >> 2u) & 0xF;
             if (offset == 0) {
-                return read16(bit::extract<0, 3>(m_dspMixStack[index]));
+                return read16(bit::extract<0, 3>(m_dsp.mixStack[index]));
             } else {
-                return read16(bit::extract<4, 19>(m_dspMixStack[index]));
+                return read16(bit::extract<4, 19>(m_dsp.mixStack[index]));
             }
         } else if (AddressInRange<0xEC0, 0xEDF>(address)) {
-            return read16(m_dspEffectOut[(address >> 1u) & 0xF]);
+            return read16(m_dsp.effectOut[(address >> 1u) & 0xF]);
         } else if (AddressInRange<0xEE0, 0xEE3>(address)) {
-            return read16(m_dspAudioIn[(address >> 1u) & 0x1]);
+            return read16(m_dsp.audioIn[(address >> 1u) & 0x1]);
         }
 
         switch (address) {
@@ -344,9 +344,9 @@ private:
             const uint32 idx = (address >> 1u) & 0x3F;
             return write16(m_soundStack[idx], value16);
         } else if (AddressInRange<0x700, 0x77F>(address)) {
-            return write16(m_dspCoeffs[(address >> 1u) & 0x3F], value16 >> 3);
+            return write16(m_dsp.coeffs[(address >> 1u) & 0x3F], value16 >> 3);
         } else if (AddressInRange<0x780, 0x7BF>(address)) {
-            return write16(m_dspAddrs[(address >> 1u) & 0x1F], value16);
+            return write16(m_dsp.addrs[(address >> 1u) & 0x1F], value16);
         } else if (AddressInRange<0x7C0, 0x7FF>(address)) {
             // Some games and even the IPL ROM try to write to this empty area
             regsLog.trace("Unexpected write to {:03X} = {:X}", address, value);
@@ -354,52 +354,52 @@ private:
         } else if (AddressInRange<0x800, 0xBFF>(address)) {
             const uint32 index = (address >> 3u) & 0x7F;
             const uint32 subindex = (address >> 1u) & 0x3;
-            return write16(m_dspProgram[index].u16[subindex], value16);
+            return write16(m_dsp.program[index].u16[subindex], value16);
         } else if (AddressInRange<0xC00, 0xDFF>(address)) {
             const uint32 offset = (address >> 1u) & 0x1;
             const uint32 index = (address >> 2u) & 0xFF;
             if (offset == 0) {
-                uint16 tmpValue = bit::extract<0, 7>(m_dspTemp[index]);
+                uint16 tmpValue = bit::extract<0, 7>(m_dsp.temp[index]);
                 write16(tmpValue, value16);
-                bit::deposit_into<0, 7>(m_dspTemp[index], tmpValue);
+                bit::deposit_into<0, 7>(m_dsp.temp[index], tmpValue);
             } else {
-                uint16 tmpValue = bit::extract<8, 23>(m_dspTemp[index]);
+                uint16 tmpValue = bit::extract<8, 23>(m_dsp.temp[index]);
                 write16(tmpValue, value16);
-                bit::deposit_into<8, 23>(m_dspTemp[index], tmpValue);
+                bit::deposit_into<8, 23>(m_dsp.temp[index], tmpValue);
             }
             return;
         } else if (AddressInRange<0xE00, 0xE7F>(address)) {
             const uint32 offset = (address >> 1u) & 0x1;
             const uint32 index = (address >> 2u) & 0x3F;
             if (offset == 0) {
-                uint16 tmpValue = bit::extract<0, 7>(m_dspSoundMem[index]);
+                uint16 tmpValue = bit::extract<0, 7>(m_dsp.soundMem[index]);
                 write16(tmpValue, value16);
-                bit::deposit_into<0, 7>(m_dspSoundMem[index], tmpValue);
+                bit::deposit_into<0, 7>(m_dsp.soundMem[index], tmpValue);
             } else {
-                uint16 tmpValue = bit::extract<8, 23>(m_dspSoundMem[index]);
+                uint16 tmpValue = bit::extract<8, 23>(m_dsp.soundMem[index]);
                 write16(tmpValue, value16);
-                bit::deposit_into<8, 23>(m_dspSoundMem[index], tmpValue);
+                bit::deposit_into<8, 23>(m_dsp.soundMem[index], tmpValue);
             }
             return;
         } else if (AddressInRange<0xE80, 0xEBF>(address)) {
             const uint32 offset = (address >> 1u) & 1;
             const uint32 index = (address >> 2u) & 0xF;
             if (offset == 0) {
-                uint16 tmpValue = bit::extract<0, 3>(m_dspMixStack[index]);
+                uint16 tmpValue = bit::extract<0, 3>(m_dsp.mixStack[index]);
                 write16(tmpValue, value16);
-                bit::deposit_into<0, 3>(m_dspMixStack[index], tmpValue);
+                bit::deposit_into<0, 3>(m_dsp.mixStack[index], tmpValue);
             } else {
-                uint16 tmpValue = bit::extract<4, 19>(m_dspMixStack[index]);
+                uint16 tmpValue = bit::extract<4, 19>(m_dsp.mixStack[index]);
                 write16(tmpValue, value16);
-                bit::deposit_into<4, 19>(m_dspMixStack[index], tmpValue);
+                bit::deposit_into<4, 19>(m_dsp.mixStack[index], tmpValue);
             }
             return;
         } else if (AddressInRange<0xEC0, 0xEDF>(address)) {
             const uint32 index = (address >> 1u) & 0xF;
-            return write16(m_dspEffectOut[index], value16);
+            return write16(m_dsp.effectOut[index], value16);
         } else if (AddressInRange<0xEE0, 0xEE3>(address)) {
             const uint32 index = (address >> 1u) & 0x1;
-            return write16(m_dspAudioIn[index], value16);
+            return write16(m_dsp.audioIn[index], value16);
         }
 
         switch (address) {
@@ -647,9 +647,9 @@ private:
     template <bool lowerByte, bool upperByte>
     void WriteReg402(uint16 value) {
         if constexpr (lowerByte) {
-            m_dspRingBufferLeadAddress = bit::extract<0, 6>(value);
+            m_dsp.ringBufferLeadAddress = bit::extract<0, 6>(value);
         }
-        util::SplitWriteWord<lowerByte, upperByte, 7, 8>(m_dspRingBufferLength, value);
+        util::SplitWriteWord<lowerByte, upperByte, 7, 8>(m_dsp.ringBufferLength, value);
     }
 
     // -------------------------------------------------------------------------
@@ -715,17 +715,7 @@ private:
 
     // --- DSP Registers ---
 
-    alignas(16) std::array<DSPInstr, 128> m_dspProgram; // (60-bit) MPRO - DSP program RAM
-    alignas(16) std::array<uint32, 256> m_dspTemp;      // (24-bit) TEMP - DSP temporary (universal) RAM
-    alignas(16) std::array<uint32, 64> m_dspSoundMem;   // (24-bit) SMEM - DSP sound memory
-    alignas(16) std::array<uint16, 64> m_dspCoeffs;     // (13-bit) COEF - DSP coefficient data RAM
-    alignas(16) std::array<uint16, 32> m_dspAddrs;      // (16-bit) MADRS - DSP memory address registers
-    alignas(16) std::array<sint32, 16> m_dspMixStack;   // (20-bit) MIXS - DSP mix sound slot data stack (4 frac bits)
-    alignas(16) std::array<sint16, 16> m_dspEffectOut;  // (16-bit) EFREG - DSP effected data output
-    alignas(16) std::array<sint16, 2> m_dspAudioIn;     // (16-bit) EXTS - DSP digital audio input
-
-    uint32 m_dspRingBufferLeadAddress; // (W) RBP - DSP Ring Buffer Lead Address
-    uint8 m_dspRingBufferLength;       // (W) RBL - DSP Ring Buffer Length
+    DSP m_dsp;
 
     // -------------------------------------------------------------------------
     // Audio processing
