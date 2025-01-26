@@ -76,7 +76,7 @@ void DSP::Reset() {
 }
 
 void DSP::Run() {
-    for (auto instr : program) {
+    for (DSPInstr instr : program) {
         if (instr.IRA <= 0x1F) {
             // MEMS area: 24 -> 24 bits
             INPUTS = soundMem[instr.IRA];
@@ -107,7 +107,6 @@ void DSP::Run() {
         }
 
         sint32 shifterOut = static_cast<uint32>(bit::sign_extend<26>(SFT_REG)) << (instr.SHFT0 ^ instr.SHFT1);
-
         if (instr.SHFT1 == 0) {
             shifterOut = std::clamp(shifterOut, -0x800000, 0x7FFFFF);
         }
@@ -121,14 +120,17 @@ void DSP::Run() {
             }
         }
 
-        const uint32 sgaInputs[2] = {static_cast<uint32>(temp), SFT_REG};
         const uint32 product = (bit::sign_extend<13, sint64>(yselInputs[instr.YSEL]) * xselInputs[instr.XSEL]) >> 12;
 
         uint32 sgaOutput;
         if (instr.ZERO) {
             sgaOutput = 0;
         } else {
-            sgaOutput = sgaInputs[instr.BSEL];
+            if (instr.BSEL) {
+                sgaOutput = SFT_REG;
+            } else {
+                sgaOutput = temp;
+            }
             if (instr.NEGB) {
                 sgaOutput = -sgaOutput;
             }
@@ -161,7 +163,7 @@ void DSP::Run() {
             addr += bit::sign_extend<12>(ADRS_REG);
         }
 
-        if (instr.TABLE == 0) {
+        if (!instr.TABLE) {
             addr = (addr + MDEC_CT) & ((0x2000 << ringBufferLength) - 1);
         }
 

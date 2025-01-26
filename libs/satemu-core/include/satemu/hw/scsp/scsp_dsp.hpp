@@ -56,7 +56,7 @@ public:
     // Registers
 
     alignas(16) std::array<DSPInstr, 128> program; // (60-bit) MPRO - DSP program RAM
-    alignas(16) std::array<uint32, 256> tempMem;   // (24-bit) TEMP - DSP temporary (universal) RAM
+    alignas(16) std::array<uint32, 128> tempMem;   // (24-bit) TEMP - DSP temporary (universal) RAM
     alignas(16) std::array<uint32, 64> soundMem;   // (24-bit) MEMS - DSP sound memory
     alignas(16) std::array<uint16, 64> coeffs;     // (13-bit) COEF - DSP coefficient data RAM
     alignas(16) std::array<uint16, 32> addrs;      // (16-bit) MADRS - DSP memory address registers
