@@ -249,10 +249,6 @@ struct Slot {
     // Ranges from 0x3FF (minimum) to 0x000 (maximum) - 10 bits.
     uint16 egLevel;
 
-    // Number of steps taken by the envelope generator.
-    // The EG is updated every other sample.
-    uint32 egStepCount;
-
     // Current envelope effective rate, based on current EG state.
     uint32 egRate;
 
@@ -268,7 +264,6 @@ struct Slot {
     sint16 output;
 
     uint32 CalcEffectiveRate(uint8 rate) const;
-    uint32 CalcEGIncrement() const;
 
     uint8 GetCurrentEGRate() const;
     uint16 GetEGLevel() const;

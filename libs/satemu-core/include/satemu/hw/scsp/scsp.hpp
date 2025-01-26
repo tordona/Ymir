@@ -336,7 +336,7 @@ private:
             auto &slot = m_slots[slotIndex];
             slot.WriteReg<T>(address & 0x1F, value);
             if ((address & 0x1E) == 0x00) {
-            m_keyOnEx |= bit::extract<12>(value16);
+                m_keyOnEx |= bit::extract<12>(value16);
             }
             return;
         } else if (AddressInRange<0x600, 0x67F>(address)) {
@@ -747,6 +747,9 @@ private:
     uint64 m_m68kCycles;    // MC68EC000 cycle counter
     uint64 m_sampleCycles;  // Sample cycle counter
     uint64 m_sampleCounter; // Total number of samples
+
+    uint16 m_egCycle; // Current envelope generator cycle, updated every other sample
+    bool m_egStep;    // Whether the EG should be updated on this cycle
 
     // -------------------------------------------------------------------------
     // Interrupt handling

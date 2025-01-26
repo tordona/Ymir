@@ -37,6 +37,8 @@ void SCSP::Reset(bool hard) {
 
     m_m68kCycles = 0;
     m_sampleCounter = 0;
+    m_egCycle = 0;
+    m_egStep = false;
 
     m_scheduler.ScheduleFromNow(m_sampleTickEvent, kCyclesPerSample);
 
@@ -229,16 +231,22 @@ FORCE_INLINE void SCSP::RunM68K() {
 }
 
 FORCE_INLINE void SCSP::HandleKYONEX() {
-    for (int i = 0; auto &slot : m_slots) {
-        if (m_keyOnEx && slot.TriggerKeyOn()) {
-            regsLog.debug("Slot {:02d} key {}, start address {:05X}, loop {:04X}-{:04X}, octave {:02d}, FNS 0x{:03X}, "
-                          "EG rates: {:02d} {:02d} {:02d} {:02d}",
-                          i, (slot.keyOnBit ? " ON" : "OFF"), slot.startAddress, slot.loopStartAddress,
-                          slot.loopEndAddress, slot.octave, slot.freqNumSwitch, slot.attackRate, slot.decay1Rate,
-                          slot.decay2Rate, slot.releaseRate);
-        }
+    if (m_keyOnEx) {
+        fmt::memory_buffer buf{};
+        for (int i = 0; auto &slot : m_slots) {
+            fmt::format_to(std::back_inserter(buf), "{}", (slot.keyOnBit ? '+' : '_'));
+            if (slot.TriggerKeyOn()) {
+                regsLog.debug(
+                    "Slot {:02d} key {}, start address {:05X}, loop {:04X}-{:04X}, octave {:02d}, FNS 0x{:03X}, "
+                    "EG rates: {:02d} {:02d} {:02d} {:02d}",
+                    i, (slot.keyOnBit ? " ON" : "OFF"), slot.startAddress, slot.loopStartAddress, slot.loopEndAddress,
+                    slot.octave, slot.freqNumSwitch, slot.attackRate, slot.decay1Rate, slot.decay2Rate,
+                    slot.releaseRate);
+            }
 
-        i++;
+            i++;
+        }
+        regsLog.debug("KYONEX: {}", fmt::to_string(buf));
     }
     m_keyOnEx = false;
 }
@@ -312,6 +320,13 @@ FORCE_INLINE void SCSP::GenerateSample() {
     m_cbOutputSample(outL, outR);
 
     m_sampleCounter++;
+    m_egStep = m_sampleCounter & 1;
+    if (m_egStep) {
+        m_egCycle++;
+        if (m_egCycle == 0x1000) {
+            m_egCycle = 1;
+        }
+    }
 
     SetInterrupt(kIntrSample, true);
 }
@@ -403,25 +418,78 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
     // TODO: what does the ALFO calculation deliver here?
 
     // Advance envelope generator
-
-    // EG is advanced every other sample
-    if ((m_sampleCounter & 1) == 0) {
+    if (!m_egStep) {
         return;
     }
 
-    slot.egStepCount++;
-    if (slot.egStepCount == 0x1000) {
-        slot.egStepCount = 1;
-    }
+    static constexpr uint32 kCounterShiftTable[] = {11, 11, 11, 11, // 0-3    (0x00-0x03)
+                                                    10, 10, 10, 10, // 4-7    (0x04-0x07)
+                                                    9,  9,  9,  9,  // 8-11   (0x08-0x0B)
+                                                    8,  8,  8,  8,  // 12-15  (0x0C-0x0F)
+                                                    7,  7,  7,  7,  // 16-19  (0x10-0x13)
+                                                    6,  6,  6,  6,  // 20-23  (0x14-0x17)
+                                                    5,  5,  5,  5,  // 24-27  (0x18-0x1B)
+                                                    4,  4,  4,  4,  // 28-31  (0x1C-0x1F)
+                                                    3,  3,  3,  3,  // 32-35  (0x20-0x23)
+                                                    2,  2,  2,  2,  // 36-39  (0x24-0x27)
+                                                    1,  1,  1,  1,  // 40-43  (0x28-0x2B)
+                                                    0,  0,  0,  0,  // 44-47  (0x2C-0x2F)
+                                                    0,  0,  0,  0,  // 48-51  (0x30-0x33)
+                                                    0,  0,  0,  0,  // 52-55  (0x34-0x37)
+                                                    0,  0,  0,  0,  // 56-59  (0x38-0x3B)
+                                                    0,  0,  0,  0}; // 60-63  (0x3C-0x3F)
 
-    const uint32 inc = slot.CalcEGIncrement();
+    static constexpr uint32 kIncrementTable[][8] = {
+        {0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0},  // 0-1    (0x00-0x01)
+        {0, 1, 1, 1, 0, 1, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1},  // 2-3    (0x02-0x03)
+        {0, 1, 0, 1, 0, 1, 0, 1}, {0, 1, 0, 1, 1, 1, 0, 1},  // 4-5    (0x04-0x05)
+        {0, 1, 1, 1, 0, 1, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1},  // 6-7    (0x06-0x07)
+        {0, 1, 0, 1, 0, 1, 0, 1}, {0, 1, 0, 1, 1, 1, 0, 1},  // 8-9    (0x08-0x09)
+        {0, 1, 1, 1, 0, 1, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1},  // 10-11  (0x0A-0x0B)
+        {0, 1, 0, 1, 0, 1, 0, 1}, {0, 1, 0, 1, 1, 1, 0, 1},  // 12-13  (0x0C-0x0D)
+        {0, 1, 1, 1, 0, 1, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1},  // 14-15  (0x0E-0x0F)
+        {0, 1, 0, 1, 0, 1, 0, 1}, {0, 1, 0, 1, 1, 1, 0, 1},  // 16-17  (0x10-0x11)
+        {0, 1, 1, 1, 0, 1, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1},  // 18-19  (0x12-0x13)
+        {0, 1, 0, 1, 0, 1, 0, 1}, {0, 1, 0, 1, 1, 1, 0, 1},  // 20-21  (0x14-0x15)
+        {0, 1, 1, 1, 0, 1, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1},  // 22-23  (0x18-0x17)
+        {0, 1, 0, 1, 0, 1, 0, 1}, {0, 1, 0, 1, 1, 1, 0, 1},  // 24-25  (0x18-0x19)
+        {0, 1, 1, 1, 0, 1, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1},  // 26-27  (0x1A-0x1B)
+        {0, 1, 0, 1, 0, 1, 0, 1}, {0, 1, 0, 1, 1, 1, 0, 1},  // 28-29  (0x1C-0x1D)
+        {0, 1, 1, 1, 0, 1, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1},  // 30-31  (0x1E-0x1F)
+        {0, 1, 0, 1, 0, 1, 0, 1}, {0, 1, 0, 1, 1, 1, 0, 1},  // 32-33  (0x20-0x21)
+        {0, 1, 1, 1, 0, 1, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1},  // 34-35  (0x22-0x23)
+        {0, 1, 0, 1, 0, 1, 0, 1}, {0, 1, 0, 1, 1, 1, 0, 1},  // 36-37  (0x24-0x25)
+        {0, 1, 1, 1, 0, 1, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1},  // 38-39  (0x26-0x27)
+        {0, 1, 0, 1, 0, 1, 0, 1}, {0, 1, 0, 1, 1, 1, 0, 1},  // 40-41  (0x28-0x29)
+        {0, 1, 1, 1, 0, 1, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1},  // 42-43  (0x2A-0x2B)
+        {0, 1, 0, 1, 0, 1, 0, 1}, {0, 1, 0, 1, 1, 1, 0, 1},  // 44-45  (0x2C-0x2D)
+        {0, 1, 1, 1, 0, 1, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1},  // 46-47  (0x2E-0x2F)
+        {1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 2, 1, 1, 1, 2},  // 48-49  (0x30-0x31)
+        {1, 2, 1, 2, 1, 2, 1, 2}, {1, 2, 2, 2, 1, 2, 2, 2},  // 50-51  (0x32-0x33)
+        {2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 4, 2, 2, 2, 4},  // 52-53  (0x34-0x35)
+        {2, 4, 2, 4, 2, 4, 2, 4}, {2, 4, 4, 4, 2, 4, 4, 4},  // 54-55  (0x36-0x37)
+        {4, 4, 4, 4, 4, 4, 4, 4}, {4, 4, 4, 8, 4, 4, 4, 8},  // 56-57  (0x38-0x39)
+        {4, 8, 4, 8, 4, 8, 4, 8}, {4, 8, 8, 8, 4, 8, 8, 8},  // 58-59  (0x3A-0x3B)
+        {8, 8, 8, 8, 8, 8, 8, 8}, {8, 8, 8, 8, 8, 8, 8, 8},  // 60-61  (0x3C-0x3D)
+        {8, 8, 8, 8, 8, 8, 8, 8}, {8, 8, 8, 8, 8, 8, 8, 8}}; // 62-63  (0x3E-0x3F)
+
+    const uint32 rate = slot.CalcEffectiveRate(slot.GetCurrentEGRate());
+    const uint32 shift = kCounterShiftTable[rate];
+    uint32 inc{};
+    if (m_egCycle & ((1 << shift) - 1)) {
+        inc = 0;
+    } else {
+        inc = kIncrementTable[rate][(m_egCycle >> shift) & 7];
+    }
 
     switch (slot.egState) {
     case Slot::EGState::Attack:
         if (slot.egLevel == 0 && !slot.loopStartLink) {
             slot.egState = Slot::EGState::Decay1;
+            // rootLog.debug("slot {} going to decay 1 phase", slot.index);
         } else if (inc > 0 && slot.egLevel > 0 && slot.CalcEffectiveRate(slot.GetCurrentEGRate()) < 0x3E) {
             slot.egLevel += static_cast<sint32>(~static_cast<uint32>(slot.egLevel) * inc) >> 4;
+            // rootLog.debug("slot {} in attack phase, level = {:03X}", slot.index, slot.egLevel);
         }
         break;
     case Slot::EGState::Decay1:
