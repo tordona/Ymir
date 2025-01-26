@@ -402,39 +402,36 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
 
     // TODO: what does the ALFO calculation deliver here?
 
-    // TODO: check/fix EG calculation
+    // Advance envelope generator
+
+    // EG is advanced every other sample
+    if ((m_sampleCounter & 1) == 0) {
+        return;
+    }
+
+    slot.egStepCount++;
+    if (slot.egStepCount == 0x1000) {
+        slot.egStepCount = 1;
+    }
+
+    const uint32 inc = slot.CalcEGIncrement();
+
     switch (slot.egState) {
     case Slot::EGState::Attack:
-        if (slot.attackRate < slot.currLevel) {
-            slot.currLevel -= slot.attackRate;
-        } else {
-            slot.currLevel = 0;
-            if (!slot.loopStartLink) {
-                slot.egState = Slot::EGState::Decay1;
-            }
+        if (slot.egLevel == 0 && !slot.loopStartLink) {
+            slot.egState = Slot::EGState::Decay1;
+        } else if (inc > 0 && slot.egLevel > 0 && slot.CalcEffectiveRate(slot.GetCurrentEGRate()) < 0x3E) {
+            slot.egLevel += static_cast<sint32>(~static_cast<uint32>(slot.egLevel) * inc) >> 4;
         }
         break;
     case Slot::EGState::Decay1:
-        slot.currLevel += slot.decay1Rate;
-        if (slot.currLevel > 0x3FF) {
-            slot.currLevel = 0x3FF;
-        }
-        if ((slot.currLevel >> 5u) >= slot.decayLevel) {
+        if ((slot.egLevel >> 5u) >= slot.decayLevel) {
             slot.egState = Slot::EGState::Decay2;
         }
-        break;
-    case Slot::EGState::Decay2:
-        slot.currLevel += slot.decay2Rate;
-        if (slot.currLevel > 0x3FF) {
-            slot.currLevel = 0x3FF;
-        }
-        break;
-    case Slot::EGState::Release:
-        slot.currLevel += slot.releaseRate;
-        if (slot.currLevel >= 0x3FF) {
-            slot.currLevel = 0x3FF;
-        }
-        break;
+        // fallthrough
+    case Slot::EGState::Decay2:  // fallthrough
+    case Slot::EGState::Release: //
+        slot.egLevel = std::min<uint16>(slot.egLevel + inc, 0x3FF);
     }
 }
 
@@ -462,6 +459,8 @@ FORCE_INLINE void SCSP::SlotProcessStep7(Slot &slot) {
     if (!slot.stackWriteInhibit) {
         m_soundStack[m_soundStackIndex] = slot.output;
     }
+
+    slot.sampleCount++;
 }
 
 ExceptionVector SCSP::AcknowledgeInterrupt(uint8 level) {

@@ -176,15 +176,15 @@ struct Slot {
     // Note: attack takes the same amount of time it would take if going from 0x3FF to 0x000 normally
 
     // Value ranges are from minimum to maximum.
-    uint16 attackRate;  // (R/W) AR  - 0x00 to 0x1F
-    uint16 decay1Rate;  // (R/W) D1R - 0x00 to 0x1F
-    uint16 decay2Rate;  // (R/W) D2R - 0x00 to 0x1F
-    uint16 releaseRate; // (R/W) RR  - 0x00 to 0x1F
+    uint8 attackRate;  // (R/W) AR  - 0x00 to 0x1F
+    uint8 decay1Rate;  // (R/W) D1R - 0x00 to 0x1F
+    uint8 decay2Rate;  // (R/W) D2R - 0x00 to 0x1F
+    uint8 releaseRate; // (R/W) RR  - 0x00 to 0x1F
 
-    uint16 decayLevel; // (R/W) DL  - 0x1F to 0x00
-                       //   specifies the MSB 5 bits of the EG value where to switch from decay 1 to decay 2
+    uint8 decayLevel; // (R/W) DL  - 0x1F to 0x00
+                      //   specifies the MSB 5 bits of the EG value where to switch from decay 1 to decay 2
 
-    uint16 keyRateScaling; // (R/W) KRS - 0x00 to 0x0E; 0x0F turns off scaling
+    uint8 keyRateScaling; // (R/W) KRS - 0x00 to 0x0E; 0x0F turns off scaling
 
     bool egHold; // (R/W) EGHOLD
                  //   true:  volume raises during attack state
@@ -247,11 +247,16 @@ struct Slot {
 
     // Current envelope level.
     // Ranges from 0x3FF (minimum) to 0x000 (maximum) - 10 bits.
-    uint16 currLevel;
+    uint16 egLevel;
 
-    // Precalculated key rate scaling based on the slot's octave and this envelope generator's KRS.
-    uint32 computedKeyRateScaling;
+    // Number of steps taken by the envelope generator.
+    // The EG is updated every other sample.
+    uint32 egStepCount;
 
+    // Current envelope effective rate, based on current EG state.
+    uint32 egRate;
+
+    uint32 sampleCount;
     uint32 currAddress;
     uint32 currSample;
     uint32 currPhase;
@@ -262,8 +267,10 @@ struct Slot {
     sint16 sample2;
     sint16 output;
 
-    void ComputeKeyRateScaling();
+    uint32 CalcEffectiveRate(uint8 rate) const;
+    uint32 CalcEGIncrement() const;
 
+    uint8 GetCurrentEGRate() const;
     uint16 GetEGLevel() const;
 
     void IncrementPhase(uint32 pitchLFO);
