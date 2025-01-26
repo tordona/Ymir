@@ -12,7 +12,8 @@ namespace satemu::scsp {
 SCSP::SCSP(core::Scheduler &scheduler, scu::SCU &scu)
     : m_m68k(*this)
     , m_scu(scu)
-    , m_scheduler(scheduler) {
+    , m_scheduler(scheduler)
+    , m_dsp(m_WRAM.data()) {
 
     m_sampleTickEvent = m_scheduler.RegisterEvent(
         core::events::SCSPSample, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
@@ -281,12 +282,10 @@ FORCE_INLINE void SCSP::GenerateSample() {
     }
 
     // TODO: copy CDDA data to DSP EXTS (0=left, 1=right)
-    m_dsp.audioIn[0] = 0;
-    m_dsp.audioIn[1] = 0;
+    m_dsp.audioInOut[0] = 0;
+    m_dsp.audioInOut[1] = 0;
 
     m_dsp.Run();
-
-    m_dsp.mixStack.fill(0);
 
     for (uint32 i = 0; i < 16; i++) {
         const Slot &slot = m_slots[i];
@@ -298,7 +297,7 @@ FORCE_INLINE void SCSP::GenerateSample() {
     for (uint32 i = 0; i < 2; i++) {
         const Slot &slot = m_slots[i + 16];
         if (slot.effectSendLevel > 0) {
-            const sint16 dspOutput = adjustSendLevel(m_dsp.audioIn[i], slot.effectSendLevel);
+            const sint16 dspOutput = adjustSendLevel(m_dsp.audioInOut[i], slot.effectSendLevel);
             addPannedOutput(dspOutput, slot.effectPan);
         }
     }
