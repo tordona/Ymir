@@ -104,11 +104,13 @@ void SCSP::HandleKYONEX() {
     for (int i = 0; auto &slot : m_slots) {
         fmt::format_to(std::back_inserter(buf), "{}", (slot.keyOnBit ? '+' : '_'));
         if (slot.TriggerKeyOn()) {
-            regsLog.debug("Slot {:02d} key {}, start address {:05X}, loop {:04X}-{:04X}, octave {:02d}, FNS 0x{:03X}, "
-                          "EG rates: {:02d} {:02d} {:02d} {:02d}",
-                          i, (slot.keyOnBit ? " ON" : "OFF"), slot.startAddress, slot.loopStartAddress,
-                          slot.loopEndAddress, slot.octave, slot.freqNumSwitch, slot.attackRate, slot.decay1Rate,
-                          slot.decay2Rate, slot.releaseRate);
+            static constexpr const char *loopNames[] = {"->|", ">->", "<-<", ">-<"};
+            regsLog.debug(
+                "Slot {:02d} key {}, start address {:05X}, loop {:04X}-{:04X} {}, octave {:02d}, FNS 0x{:03X}, "
+                "EG rates: {:02d} {:02d} {:02d} {:02d}",
+                i, (slot.keyOnBit ? " ON" : "OFF"), slot.startAddress, slot.loopStartAddress, slot.loopEndAddress,
+                loopNames[static_cast<uint32>(slot.loopControl)], slot.octave, slot.freqNumSwitch, slot.attackRate,
+                slot.decay1Rate, slot.decay2Rate, slot.releaseRate);
         }
 
         i++;
@@ -337,7 +339,7 @@ FORCE_INLINE void SCSP::UpdateTimers() {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
-    if (slot.GetEGLevel() >= 0x3BF) {
+    if (!slot.active) {
         return;
     }
 
@@ -348,7 +350,7 @@ FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
-    if (slot.GetEGLevel() >= 0x3BF) {
+    if (!slot.active) {
         return;
     }
 
@@ -366,7 +368,7 @@ FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
-    if (slot.GetEGLevel() >= 0x3BF) {
+    if (!slot.active) {
         return;
     }
 
@@ -396,7 +398,7 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
-    if (slot.GetEGLevel() >= 0x3BF) {
+    if (!slot.active) {
         return;
     }
 
@@ -481,7 +483,6 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
     case Slot::EGState::Attack:
         if (slot.egLevel == 0 && !slot.loopStartLink) {
             slot.egState = Slot::EGState::Decay1;
-            // rootLog.debug("slot {} going to decay 1 phase", slot.index);
         } else if (inc > 0 && slot.egLevel > 0 && slot.CalcEffectiveRate(slot.GetCurrentEGRate()) < 0x3E) {
             slot.egLevel += static_cast<sint32>(~static_cast<uint32>(slot.egLevel) * inc) >> 4;
             // rootLog.debug("slot {} in attack phase, level = {:03X}", slot.index, slot.egLevel);
@@ -495,11 +496,14 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
     case Slot::EGState::Decay2:  // fallthrough
     case Slot::EGState::Release: //
         slot.egLevel = std::min<uint16>(slot.egLevel + inc, 0x3FF);
+        if (slot.egLevel == 0x3FF) {
+            slot.active = false;
+        }
     }
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep5(Slot &slot) {
-    if (slot.GetEGLevel() >= 0x3BF) {
+    if (!slot.active) {
         slot.output = 0;
         return;
     }

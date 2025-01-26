@@ -242,7 +242,9 @@ struct Slot {
     // -------------------------------------------------------------------------
     // State
 
-    enum class EGState { Attack, Decay1, Decay2, Release };
+    bool active;
+
+    enum class EGState : uint8 { Attack, Decay1, Decay2, Release };
     EGState egState;
 
     // Current envelope level.

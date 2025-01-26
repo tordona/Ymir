@@ -56,6 +56,8 @@ void Slot::Reset() {
     effectSendLevel = 0;
     effectPan = 0;
 
+    active = false;
+
     egState = EGState::Release;
 
     egLevel = 0x3FF;
@@ -80,6 +82,8 @@ bool Slot::TriggerKeyOn() {
     const bool trigger = (egState == EGState::Release) == keyOnBit;
     if (trigger) {
         if (keyOnBit) {
+            active = true;
+
             egState = EGState::Attack;
 
             egLevel = 0x280;
@@ -536,8 +540,8 @@ void Slot::IncrementSampleCounter() {
     switch (loopControl) {
     case LoopControl::Off:
         if (currSample >= loopEndAddress) {
-            egState = EGState::Release;
-            egLevel = 0x3FF;
+            active = false;
+            keyOnBit = false;
         }
         break;
     case LoopControl::Normal:
