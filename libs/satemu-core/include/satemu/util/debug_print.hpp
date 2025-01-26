@@ -143,11 +143,6 @@ struct Category {
         }
     }
 
-    template <Level printLevel>
-    static constexpr bool IsLogEnabled() {
-        return printLevel >= level;
-    }
-
     // Convenience functions that log with a specific level
     template <typename... T>
     constexpr void trace(fmt::format_string<T...> fmt, T &&...args) const {
