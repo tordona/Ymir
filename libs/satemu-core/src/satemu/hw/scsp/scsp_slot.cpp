@@ -87,9 +87,13 @@ bool Slot::TriggerKey() {
 
             egState = EGState::Attack;
 
-            const uint8 krs =
-                (keyRateScaling == 0xF) ? 0x0 : std ::clamp<uint8>(keyRateScaling + (octave ^ 8) - 8, 0x0, 0xF);
-            egLevel = (attackRate + krs >= 0x20) ? 0x000 : 0x280;
+            if (keyRateScaling == 0xF) {
+                egLevel = 0x280;
+            } else {
+                const sint8 oct = static_cast<sint8>(octave ^ 8) - 8;
+                const uint8 krs = std::clamp<uint8>(keyRateScaling + oct, 0x0, 0xF);
+                egLevel = (attackRate + krs >= 0x20) ? 0x000 : 0x280;
+            }
 
             sampleCount = 0;
             currAddress = 0;

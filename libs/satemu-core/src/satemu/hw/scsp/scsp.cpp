@@ -495,7 +495,7 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
     case Slot::EGState::Attack:
         if (slot.egLevel == 0 && !slot.loopStartLink) {
             slot.egState = Slot::EGState::Decay1;
-        } else if (inc > 0 && slot.egLevel > 0 && rate < 0x3E) {
+        } else if (inc > 0 && slot.egLevel > 0 /*&& rate < 0x3E*/) {
             slot.egLevel += static_cast<sint32>(~static_cast<uint32>(slot.egLevel) * inc) >> 4;
         }
         break;
