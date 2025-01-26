@@ -20,4 +20,8 @@ void DSP::Reset() {
     ringBufferLength = 0;
 }
 
+void DSP::Run() {
+    // TODO
+}
+
 } // namespace satemu::scsp

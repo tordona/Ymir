@@ -47,6 +47,8 @@ public:
 
     void Reset();
 
+    void Run();
+
     alignas(16) std::array<DSPInstr, 128> program; // (60-bit) MPRO - DSP program RAM
     alignas(16) std::array<uint32, 256> temp;      // (24-bit) TEMP - DSP temporary (universal) RAM
     alignas(16) std::array<uint32, 64> soundMem;   // (24-bit) SMEM - DSP sound memory

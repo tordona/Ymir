@@ -284,7 +284,7 @@ FORCE_INLINE void SCSP::GenerateSample() {
     m_dsp.audioIn[0] = 0;
     m_dsp.audioIn[1] = 0;
 
-    // TODO: run DSP
+    m_dsp.Run();
 
     m_dsp.mixStack.fill(0);
 
