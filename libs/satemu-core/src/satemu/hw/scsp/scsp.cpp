@@ -100,35 +100,42 @@ void SCSP::SetCPUEnabled(bool enabled) {
 }
 
 void SCSP::HandleKYONEX() {
-    fmt::memory_buffer buf{};
-    for (int i = 0; auto &slot : m_slots) {
-        fmt::format_to(std::back_inserter(buf), "{}", (slot.keyOnBit ? '+' : '_'));
-        if (slot.TriggerKey()) {
-            static constexpr const char *loopNames[] = {"->|", ">->", "<-<", ">-<"};
-            fmt::memory_buffer slotBuf{};
-            auto slotBufIns = std::back_inserter(slotBuf);
+    static constexpr auto logLevel = dbg::level::debug;
+    if constexpr (regsLog.IsLogEnabled<logLevel>()) {
+        fmt::memory_buffer buf{};
+        for (int i = 0; auto &slot : m_slots) {
+            fmt::format_to(std::back_inserter(buf), "{}", (slot.keyOnBit ? '+' : '_'));
+            if (slot.TriggerKey()) {
+                static constexpr const char *loopNames[] = {"->|", ">->", "<-<", ">-<"};
+                fmt::memory_buffer slotBuf{};
+                auto slotBufIns = std::back_inserter(slotBuf);
 
-            fmt::format_to(slotBufIns, "Slot {:02d} key {}", i, (slot.keyOnBit ? " ON" : "OFF"));
-            fmt::format_to(slotBufIns, " addr={:05X}", slot.startAddress);
-            fmt::format_to(slotBufIns, " loop={:04X}-{:04X} {}", slot.loopStartAddress, slot.loopEndAddress,
-                           loopNames[static_cast<uint32>(slot.loopControl)]);
-            fmt::format_to(slotBufIns, " OCT={:02d}", slot.octave);
-            fmt::format_to(slotBufIns, " FNS={:03X}", slot.freqNumSwitch);
-            fmt::format_to(slotBufIns, " KRS={:X}", slot.keyRateScaling);
-            fmt::format_to(slotBufIns, " EG {:02d} {:02d} {:02d} {:02d}", slot.attackRate, slot.decay1Rate,
-                           slot.decay2Rate, slot.releaseRate);
-            fmt::format_to(slotBufIns, " DL={:03X}", slot.decayLevel);
-            fmt::format_to(slotBufIns, " EGHOLD={}", static_cast<uint8>(slot.egHold));
-            fmt::format_to(slotBufIns, " LPSLNK={}", static_cast<uint8>(slot.loopStartLink));
-            fmt::format_to(slotBufIns, " mod X={:02X} Y={:02X} lv={:X}", slot.modXSelect, slot.modYSelect,
-                           slot.modLevel);
+                fmt::format_to(slotBufIns, "Slot {:02d} key {}", i, (slot.keyOnBit ? " ON" : "OFF"));
+                fmt::format_to(slotBufIns, " addr={:05X}", slot.startAddress);
+                fmt::format_to(slotBufIns, " loop={:04X}-{:04X} {}", slot.loopStartAddress, slot.loopEndAddress,
+                               loopNames[static_cast<uint32>(slot.loopControl)]);
+                fmt::format_to(slotBufIns, " OCT={:02d}", slot.octave);
+                fmt::format_to(slotBufIns, " FNS={:03X}", slot.freqNumSwitch);
+                fmt::format_to(slotBufIns, " KRS={:X}", slot.keyRateScaling);
+                fmt::format_to(slotBufIns, " EG {:02d} {:02d} {:02d} {:02d}", slot.attackRate, slot.decay1Rate,
+                               slot.decay2Rate, slot.releaseRate);
+                fmt::format_to(slotBufIns, " DL={:03X}", slot.decayLevel);
+                fmt::format_to(slotBufIns, " EGHOLD={}", static_cast<uint8>(slot.egHold));
+                fmt::format_to(slotBufIns, " LPSLNK={}", static_cast<uint8>(slot.loopStartLink));
+                fmt::format_to(slotBufIns, " mod X={:02X} Y={:02X} lv={:X}", slot.modXSelect, slot.modYSelect,
+                               slot.modLevel);
 
-            regsLog.debug("{}", fmt::to_string(slotBuf));
+                regsLog.print<logLevel>("{}", fmt::to_string(slotBuf));
+            }
+
+            i++;
         }
-
-        i++;
+        regsLog.print<logLevel>("KYONEX: {}", fmt::to_string(buf));
+    } else {
+        for (auto &slot : m_slots) {
+            slot.TriggerKey();
+        }
     }
-    regsLog.debug("KYONEX: {}", fmt::to_string(buf));
 }
 
 void SCSP::SetInterrupt(uint16 intr, bool level) {
