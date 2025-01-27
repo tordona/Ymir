@@ -1,5 +1,7 @@
 #include <satemu/sys/sys.hpp>
 
+#include <satemu/config.hpp>
+
 namespace satemu {
 
 Saturn::Saturn()
@@ -98,7 +100,17 @@ void Saturn::Step() {
     SCU.Advance(cycles);
     VDP.Advance(cycles);
 
-    // SCSP and CD block are ticked by the scheduler
+    if constexpr (!satemu::config::runM68KOnSCSPTick) {
+        static constexpr uint64 kScspStep = 3125;
+        m_scspCycles += cycles * 2464;
+        const uint64 scspCycleCount = m_scspCycles / kScspStep;
+        if (scspCycleCount > 0) {
+            m_scspCycles -= scspCycleCount * kScspStep;
+            SCSP.Advance(scspCycleCount);
+        }
+    }
+
+    // CD block is ticked by the scheduler
 
     // TODO: advance SMPC
     /*m_smpcCycles += cycles * 2464;

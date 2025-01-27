@@ -77,6 +77,8 @@ public:
         m_cbOutputSample = cbOutputSample;
     }
 
+    void Advance(uint64 cycles);
+
     void DumpWRAM(std::ostream &out) const;
 
     void DumpDSP_MPRO(std::ostream &out) const;

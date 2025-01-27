@@ -2,6 +2,8 @@
 
 #include <satemu/hw/scu/scu.hpp>
 
+#include <satemu/config.hpp>
+
 #include <algorithm>
 #include <limits>
 
@@ -74,6 +76,17 @@ void SCSP::Reset(bool hard) {
     m_soundStackIndex = 0;
 
     m_dsp.Reset();
+}
+
+void SCSP::Advance(uint64 cycles) {
+    if (m_m68kEnabled) {
+        m_m68kCycles += cycles;
+        while (m_m68kCycles >= kCyclesPerM68KCycle) {
+            // TODO: proper cycle counting
+            m_m68k.Step();
+            m_m68kCycles -= kCyclesPerM68KCycle;
+        }
+    }
 }
 
 void SCSP::DumpWRAM(std::ostream &out) const {
@@ -265,7 +278,9 @@ void SCSP::ExecuteDMA() {
 }
 
 FORCE_INLINE void SCSP::Tick() {
-    RunM68K();
+    if constexpr (config::runM68KOnSCSPTick) {
+        RunM68K();
+    }
     GenerateSample();
     UpdateTimers();
     UpdateM68KInterrupts();
