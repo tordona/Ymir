@@ -32,6 +32,9 @@ namespace events {
     // SCU timer 1 interrupt
     inline constexpr UserID SCUTimer1 = 0x40;
 
+    // SMPC command processing
+    inline constexpr UserID SMPCCommand = 0x50;
+
 } // namespace events
 
 class Scheduler;
@@ -167,7 +170,7 @@ public:
 
 private:
     static constexpr uint64 kNoDeadline = ~static_cast<uint64>(0);
-    static constexpr size_t kNumEvents = 5;
+    static constexpr size_t kNumEvents = 6;
 
     struct Event {
         EventID id;

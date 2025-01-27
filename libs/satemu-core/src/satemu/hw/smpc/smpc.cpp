@@ -9,8 +9,15 @@
 
 namespace satemu::smpc {
 
-SMPC::SMPC(Saturn &saturn)
-    : m_saturn(saturn) {
+SMPC::SMPC(core::Scheduler &scheduler, Saturn &saturn)
+    : m_saturn(saturn)
+    , m_scheduler(scheduler) {
+
+    m_commandEvent = m_scheduler.RegisterEvent(
+        core::events::SMPCCommand, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+            auto &smpc = *static_cast<SMPC *>(userContext);
+            smpc.ProcessCommand();
+        });
     Reset(true);
 }
 
@@ -112,23 +119,7 @@ FORCE_INLINE void SMPC::WriteIREG(uint8 offset, uint8 value) {
 FORCE_INLINE void SMPC::WriteCOMREG(uint8 value) {
     COMREG = static_cast<Command>(value);
 
-    // TODO: should delay execution
-    switch (COMREG) {
-    case Command::MSHON: MSHON(); break;
-    case Command::SSHON: SSHON(); break;
-    case Command::SSHOFF: SSHOFF(); break;
-    case Command::SNDON: SNDON(); break;
-    case Command::SNDOFF: SNDOFF(); break;
-    case Command::SYSRES: SYSRES(); break;
-    case Command::CKCHG352: CKCHG352(); break;
-    case Command::CKCHG320: CKCHG320(); break;
-    case Command::RESENAB: RESENAB(); break;
-    case Command::RESDISA: RESDISA(); break;
-    case Command::INTBACK: INTBACK(); break;
-    case Command::SETSMEM: SETSMEM(); break;
-    case Command::SETTIME: SETTIME(); break;
-    default: rootLog.debug("unhandled SMPC command {:02X}", static_cast<uint8>(COMREG)); break;
-    }
+    m_scheduler.ScheduleFromNow(m_commandEvent, 500);
 }
 
 FORCE_INLINE void SMPC::WriteSF(uint8 value) {
@@ -195,12 +186,31 @@ FORCE_INLINE void SMPC::WriteDDR2(uint8 value) {
     DDR2 = value;
 }
 
+void SMPC::ProcessCommand() {
+    switch (COMREG) {
+    case Command::MSHON: MSHON(); break;
+    case Command::SSHON: SSHON(); break;
+    case Command::SSHOFF: SSHOFF(); break;
+    case Command::SNDON: SNDON(); break;
+    case Command::SNDOFF: SNDOFF(); break;
+    case Command::SYSRES: SYSRES(); break;
+    case Command::CKCHG352: CKCHG352(); break;
+    case Command::CKCHG320: CKCHG320(); break;
+    case Command::RESENAB: RESENAB(); break;
+    case Command::RESDISA: RESDISA(); break;
+    case Command::INTBACK: INTBACK(); break;
+    case Command::SETSMEM: SETSMEM(); break;
+    case Command::SETTIME: SETTIME(); break;
+    default: rootLog.debug("unhandled SMPC command {:02X}", static_cast<uint8>(COMREG)); break;
+    }
+}
+
 void SMPC::MSHON() {
     rootLog.debug("Processing MSHON");
 
     // TODO: is this supposed to do something...?
 
-    SF = 0; // done processing
+    SF = false; // done processing
 
     OREG[31] = 0x00;
 }
@@ -212,7 +222,7 @@ void SMPC::SSHON() {
     m_saturn.SH2.slaveEnabled = true;
     m_saturn.SH2.slave.Reset(true);
 
-    SF = 0; // done processing
+    SF = false; // done processing
 
     OREG[31] = 0x02;
 }
@@ -223,7 +233,7 @@ void SMPC::SSHOFF() {
     // Turn off slave SH-2
     m_saturn.SH2.slaveEnabled = false;
 
-    SF = 0; // done processing
+    SF = false; // done processing
 
     OREG[31] = 0x03;
 }
@@ -233,7 +243,7 @@ void SMPC::SNDON() {
 
     m_saturn.SCSP.SetCPUEnabled(true);
 
-    SF = 0; // done processing
+    SF = false; // done processing
 
     OREG[31] = 0x06;
 }
@@ -243,7 +253,7 @@ void SMPC::SNDOFF() {
 
     m_saturn.SCSP.SetCPUEnabled(false);
 
-    SF = 0; // done processing
+    SF = false; // done processing
 
     OREG[31] = 0x07;
 }
@@ -253,7 +263,7 @@ void SMPC::SYSRES() {
 
     m_saturn.Reset(false);
 
-    SF = 0; // done processing
+    SF = false; // done processing
 
     OREG[31] = 0x0D;
 }
@@ -263,7 +273,7 @@ void SMPC::CKCHG352() {
 
     ClockChange(true);
 
-    SF = 0; // done processing
+    SF = false; // done processing
 
     OREG[31] = 0x0E;
 }
@@ -272,7 +282,7 @@ void SMPC::CKCHG320() {
 
     ClockChange(false);
 
-    SF = 0; // done processing
+    SF = false; // done processing
 
     OREG[31] = 0x0F;
 }
@@ -281,7 +291,7 @@ void SMPC::RESENAB() {
     rootLog.debug("Processing RESENAB");
     // TODO: enable reset NMI
 
-    SF = 0; // done processing
+    SF = false; // done processing
 
     OREG[31] = 0x19;
 }
@@ -290,7 +300,7 @@ void SMPC::RESDISA() {
     rootLog.debug("Processing RESDISA");
     // TODO: disable reset NMI
 
-    SF = 0; // done processing
+    SF = false; // done processing
 
     OREG[31] = 0x1A;
 }
@@ -328,7 +338,7 @@ void SMPC::INTBACK() {
         }
     }
 
-    SF = 0; // done processing
+    SF = false; // done processing
 
     m_saturn.SCU.TriggerSystemManager();
 }
@@ -412,7 +422,7 @@ void SMPC::SETSMEM() {
     SMEM[3] = IREG[3];
     // TODO: persist
 
-    SF = 0; // done processing
+    SF = false; // done processing
 
     OREG[31] = 0x17;
 }
@@ -432,7 +442,7 @@ void SMPC::SETTIME() {
 
     // TODO: update time
 
-    SF = 0; // done processing
+    SF = false; // done processing
 
     OREG[31] = 0x16;
 }

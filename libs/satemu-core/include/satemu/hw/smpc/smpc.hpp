@@ -2,6 +2,8 @@
 
 #include "smpc_defs.hpp"
 
+#include <satemu/core/scheduler.hpp>
+
 #include <satemu/util/debug_print.hpp>
 
 #include <array>
@@ -38,7 +40,7 @@ class SMPC {
     static constexpr dbg::Category regsLog{rootLog, "Regs"};
 
 public:
-    SMPC(Saturn &saturn);
+    SMPC(core::Scheduler &scheduler, Saturn &saturn);
 
     void Reset(bool hard);
 
@@ -59,6 +61,8 @@ private:
     std::array<uint8, 4> SMEM;
 
     Saturn &m_saturn;
+    core::Scheduler &m_scheduler;
+    core::EventID m_commandEvent;
 
     enum class Command : uint8 {
         // Resetable system management commands
@@ -184,6 +188,8 @@ private:
 
     // -------------------------------------------------------------------------
     // Commands
+
+    void ProcessCommand();
 
     void MSHON();
     void SSHON();

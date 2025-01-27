@@ -8,7 +8,7 @@ Saturn::Saturn()
     : SH2(SCU, SMPC)
     , SCU(m_scheduler, VDP, SCSP, CDBlock, SH2)
     , VDP(m_scheduler, SCU)
-    , SMPC(*this)
+    , SMPC(m_scheduler, *this)
     , SCSP(m_scheduler, SCU)
     , CDBlock(m_scheduler, SCU) {
 
