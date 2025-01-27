@@ -374,6 +374,7 @@ private:
             uint16 coef = m_dsp.coeffs[idx] << 3u;
             write16(coef, value16);
             m_dsp.coeffs[idx] = coef >> 3u;
+            return;
         } else if (AddressInRange<0x780, 0x7FF>(address)) {
             // DSP MADRS (mirrored)
             return write16(m_dsp.addrs[(address >> 1u) & 0x1F], value16);
