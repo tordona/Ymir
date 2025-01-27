@@ -493,6 +493,14 @@ void SCU::RunDSPDMA(uint64 cycles) {
     uint32 addrD0 = toD0 ? m_dspState.dmaWriteAddr : m_dspState.dmaReadAddr;
     const Bus bus = GetBus(addrD0);
 
+    if (m_dspState.dmaToD0) {
+        dspLog.trace("Running DSP DMA transfer: DSP -> {:08X} (+{:X}), {} longwords", addrD0, m_dspState.dmaAddrInc,
+                     m_dspState.dmaCount);
+    } else {
+        dspLog.trace("Running DSP DMA transfer: {:08X} -> DSP (+{:X}), {} longwords", addrD0, m_dspState.dmaAddrInc,
+                     m_dspState.dmaCount);
+    }
+
     // Run transfer
     // TODO: should iterate through transfers based on cycle count
     for (uint32 i = 0; i < m_dspState.dmaCount; i++) {
@@ -906,6 +914,8 @@ FORCE_INLINE void SCU::DSPCmd_Special_DMA(uint32 command) {
         m_dspState.dmaDst = bit::extract<8, 10>(command);
         m_dspState.dmaAddrInc = (1 << (addrInc & 0x2)) & ~1;
     }
+
+    dspLog.trace("DSP DMA command: {:04X} @ {:02X}", command, m_dspState.PC);
 }
 
 FORCE_INLINE void SCU::DSPCmd_Special_Jump(uint32 command) {

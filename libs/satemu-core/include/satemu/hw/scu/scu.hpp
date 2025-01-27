@@ -65,6 +65,7 @@ class SCU {
     static constexpr dbg::Category rootLog{"SCU"};
     static constexpr dbg::Category regsLog{rootLog, "Regs"};
     static constexpr dbg::Category dmaLog{rootLog, "DMA"};
+    static constexpr dbg::Category dspLog{rootLog, "DSP"};
     static constexpr dbg::Category debugLog{rootLog, "Debug"};
 
 public:
