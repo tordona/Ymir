@@ -178,14 +178,13 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
             ins >> trackNum >> format;
 
             if (nextTrackNum == 0) {
-                nextTrackNum = trackNum;
+                nextTrackNum = trackNum + 1;
                 session.firstTrackIndex = trackNum - 1;
-            } else if (trackNum != nextTrackNum) {
+            } else if (trackNum <= nextTrackNum) {
                 // fmt::println("BIN/CUE: Unexpected track order: expected {} but found {} (line {})", nextTrackNum,
                 //              trackNum, lineNum);
                 return false;
             }
-            nextTrackNum++;
 
             // fmt::println("BIN/CUE:   Track {:02d} - {}", trackNum, format);
             uint32 sectorSize{};
