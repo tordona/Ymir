@@ -159,7 +159,7 @@ void DSP::Run() {
 
         uint16 addr = addrs[instr.MASA] + instr.NXADDR;
 
-        if (instr.ADRGB) {
+        if (instr.ADREB) {
             addr += bit::sign_extend<12>(ADRS_REG);
         }
 
