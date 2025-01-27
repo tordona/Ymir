@@ -266,7 +266,8 @@ private:
     // TODO
 
     // --- Power-down module ---
-    // TODO
+
+    RegSBYCR SBYCR; // 091  R/W  8        00        SBYCR   Standby Control Register
 
     // --- DIVU module ---
 

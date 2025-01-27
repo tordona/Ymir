@@ -167,6 +167,8 @@ void SH2::Reset(bool hard) {
         ch.Reset();
     }
 
+    SBYCR.u8 = 0x00;
+
     DVSR = 0x0;  // undefined initial value
     DVDNT = 0x0; // undefined initial value
     DVCR.u32 = 0x00000000;
@@ -495,6 +497,7 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     case 0x71: return m_dmaChannels[0].ReadDRCR();
     case 0x72: return m_dmaChannels[1].ReadDRCR();
 
+    case 0x91: return SBYCR.u8;
     case 0x92 ... 0x9F: return CCR.u8;
 
     case 0xE0: return OnChipRegReadWord(address) >> 8u;
@@ -649,6 +652,7 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     case 0x71: m_dmaChannels[0].WriteDRCR(value); break;
     case 0x72: m_dmaChannels[1].WriteDRCR(value); break;
 
+    case 0x91: SBYCR.u8 = value & 0xDF; break;
     case 0x92: WriteCCR(value); break;
 
     case 0xE0: ICR.NMIE = bit::extract<0>(value); break;
@@ -1196,7 +1200,6 @@ void SH2::RecalcInterrupts() {
 
     // HACK: should be edge-detected
     if (m_NMI) {
-        m_NMI = false;
         RaiseInterrupt(InterruptSource::NMI);
         return;
     }
@@ -1649,9 +1652,24 @@ FORCE_INLINE void SH2::NOP() {
 FORCE_INLINE void SH2::SLEEP() {
     // dbg_println("sleep");
     PC -= 2;
+
+    if (SBYCR.SBY) {
+        m_log.debug("Entering standby");
+
+        // Initialize DMAC, FRT, WDT and SCI
+        for (auto &ch : m_dmaChannels) {
+            ch.WriteCHCR(0);
+        }
+        DMAOR.u32 = 0x0;
+        FRT.Reset();
+        // TODO: reset WDT
+        // TODO: reset SCI
+
+        // TODO: set standby flag
+    } else {
+        m_log.debug("Entering sleep");
+    }
     // TODO: enter sleep or standby mode depending on SBYCR.SBY
-    //__debugbreak();
-    m_log.debug("Entering standby");
 }
 
 FORCE_INLINE void SH2::MOV(const DecodedArgs &args) {
