@@ -440,45 +440,47 @@ void SCU::RunDSP(uint64 cycles) {
 
     RunDSPDMA(cycles);
 
-    // Bail out if not executing
-    if (!m_dspState.programExecuting && !m_dspState.programStep) {
-        return;
-    }
-
-    // Bail out if paused
-    if (m_dspState.programPaused) {
-        return;
-    }
-
-    // Execute next command
-    const uint32 command = m_dspState.programRAM[m_dspState.PC++];
-    const uint32 cmdCategory = bit::extract<30, 31>(command);
-    switch (cmdCategory) {
-    case 0b00: DSPCmd_Operation(command); break;
-    case 0b10: DSPCmd_LoadImm(command); break;
-    case 0b11: DSPCmd_Special(command); break;
-    }
-
-    // Update PC
-    if (m_dspState.jmpCounter > 0) {
-        m_dspState.jmpCounter--;
-        if (m_dspState.jmpCounter == 0) {
-            m_dspState.PC = m_dspState.nextPC;
-            m_dspState.nextPC = ~0;
+    for (uint64 cy = 0; cy < cycles; cy++) {
+        // Bail out if not executing
+        if (!m_dspState.programExecuting && !m_dspState.programStep) {
+            return;
         }
-    }
 
-    // Update CT0-3
-    for (int i = 0; i < 4; i++) {
-        if (m_dspState.incCT[i]) {
-            m_dspState.CT[i]++;
-            m_dspState.CT[i] &= 0x3F;
+        // Bail out if paused
+        if (m_dspState.programPaused) {
+            return;
         }
-    }
-    m_dspState.incCT.fill(false);
 
-    // Clear stepping flag to ensure the DSP only runs one command when stepping
-    m_dspState.programStep = false;
+        // Execute next command
+        const uint32 command = m_dspState.programRAM[m_dspState.PC++];
+        const uint32 cmdCategory = bit::extract<30, 31>(command);
+        switch (cmdCategory) {
+        case 0b00: DSPCmd_Operation(command); break;
+        case 0b10: DSPCmd_LoadImm(command); break;
+        case 0b11: DSPCmd_Special(command); break;
+        }
+
+        // Update PC
+        if (m_dspState.jmpCounter > 0) {
+            m_dspState.jmpCounter--;
+            if (m_dspState.jmpCounter == 0) {
+                m_dspState.PC = m_dspState.nextPC;
+                m_dspState.nextPC = ~0;
+            }
+        }
+
+        // Update CT0-3
+        for (int i = 0; i < 4; i++) {
+            if (m_dspState.incCT[i]) {
+                m_dspState.CT[i]++;
+                m_dspState.CT[i] &= 0x3F;
+            }
+        }
+        m_dspState.incCT.fill(false);
+
+        // Clear stepping flag to ensure the DSP only runs one command when stepping
+        m_dspState.programStep = false;
+    }
 }
 
 void SCU::RunDSPDMA(uint64 cycles) {
