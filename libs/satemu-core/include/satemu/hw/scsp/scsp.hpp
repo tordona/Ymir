@@ -223,7 +223,8 @@ private:
             return read16(stack);
         } else if (AddressInRange<0x700, 0x77F>(address)) {
             // DSP COEF
-            return read16(m_dsp.coeffs[(address >> 1u) & 0x3F]);
+            const uint16 coef = m_dsp.coeffs[(address >> 1u) & 0x3F] << 3u;
+            return read16(coef);
         } else if (AddressInRange<0x780, 0x7FF>(address)) {
             // DSP MADRS (mirrored)
             return read16(m_dsp.addrs[(address >> 1u) & 0x1F]);
@@ -369,7 +370,10 @@ private:
             return write16(m_soundStack[idx], value16);
         } else if (AddressInRange<0x700, 0x77F>(address)) {
             // DSP COEF
-            return write16(m_dsp.coeffs[(address >> 1u) & 0x3F], value16 >> 3);
+            const uint32 idx = (address >> 1u) & 0x3F;
+            uint16 coef = m_dsp.coeffs[idx] << 3u;
+            write16(coef, value16);
+            m_dsp.coeffs[idx] = coef >> 3u;
         } else if (AddressInRange<0x780, 0x7FF>(address)) {
             // DSP MADRS (mirrored)
             return write16(m_dsp.addrs[(address >> 1u) & 0x1F], value16);
