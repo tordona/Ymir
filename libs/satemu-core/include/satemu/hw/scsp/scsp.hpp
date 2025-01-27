@@ -517,8 +517,10 @@ private:
         const Slot &slot = m_slots[m_monitorSlotCall];
         bit::deposit_into<0, 4>(value, slot.egLevel >> 5u);
         bit::deposit_into<5, 6>(value, static_cast<uint8>(slot.egState));
-        bit::deposit_into<7, 10>(value, slot.currAddress >> 12u);
-        regsLog.trace("Monitor slot {} read -> {:04X}", m_monitorSlotCall, value);
+        bit::deposit_into<7, 10>(value, slot.currSample >> 12u);
+        regsLog.trace("Monitor slot {} read -> {:04X}  address={:05X} sample={:04X} egstate={} eglevel={:03X}",
+                      m_monitorSlotCall, value, slot.currAddress, slot.currSample, static_cast<uint8>(slot.egState),
+                      slot.egLevel);
         return value;
     }
 
