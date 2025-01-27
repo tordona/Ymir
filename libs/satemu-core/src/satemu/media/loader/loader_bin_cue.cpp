@@ -180,7 +180,7 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
             if (nextTrackNum == 0) {
                 nextTrackNum = trackNum + 1;
                 session.firstTrackIndex = trackNum - 1;
-            } else if (trackNum <= nextTrackNum) {
+            } else if (trackNum < nextTrackNum) {
                 // fmt::println("BIN/CUE: Unexpected track order: expected {} but found {} (line {})", nextTrackNum,
                 //              trackNum, lineNum);
                 return false;
