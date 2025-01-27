@@ -235,7 +235,7 @@ private:
         } else if (AddressInRange<0xC00, 0xDFF>(address)) {
             // DSP TEMP
             const uint32 offset = (address >> 1u) & 0x1;
-            const uint32 index = (address >> 2u) & 0xFF;
+            const uint32 index = (address >> 2u) & 0x7F;
             if (offset == 0) {
                 return read16(bit::extract<0, 7>(m_dsp.tempMem[index]));
             } else {
@@ -244,7 +244,7 @@ private:
         } else if (AddressInRange<0xE00, 0xE7F>(address)) {
             // DSP SMEM
             const uint32 offset = (address >> 1u) & 0x1;
-            const uint32 index = (address >> 2u) & 0x3F;
+            const uint32 index = (address >> 2u) & 0x1F;
             if (offset == 0) {
                 return read16(bit::extract<0, 7>(m_dsp.soundMem[index]));
             } else {
@@ -395,7 +395,7 @@ private:
         } else if (AddressInRange<0xE00, 0xE7F>(address)) {
             // DSP SMEM
             const uint32 offset = (address >> 1u) & 0x1;
-            const uint32 index = (address >> 2u) & 0x3F;
+            const uint32 index = (address >> 2u) & 0x1F;
             if (offset == 0) {
                 uint16 tmpValue = bit::extract<0, 7>(m_dsp.soundMem[index]);
                 write16(tmpValue, value16);
