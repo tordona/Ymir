@@ -2,8 +2,6 @@
 
 #include <satemu/hw/scu/scu.hpp>
 
-#include <satemu/config.hpp>
-
 #include <algorithm>
 #include <limits>
 
@@ -43,7 +41,9 @@ void SCSP::Reset(bool hard) {
     m_egCycle = 0;
     m_egStep = false;
 
-    m_scheduler.ScheduleFromNow(m_sampleTickEvent, kCyclesPerSample);
+    if (hard) {
+        m_scheduler.ScheduleFromNow(m_sampleTickEvent, kCyclesPerSample);
+    }
 
     for (auto &slot : m_slots) {
         slot.Reset();
@@ -278,9 +278,7 @@ void SCSP::ExecuteDMA() {
 }
 
 FORCE_INLINE void SCSP::Tick() {
-    if constexpr (config::runM68KOnSCSPTick) {
-        RunM68K();
-    }
+    RunM68K();
     GenerateSample();
     UpdateTimers();
     UpdateM68KInterrupts();

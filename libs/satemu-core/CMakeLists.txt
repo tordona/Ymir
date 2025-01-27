@@ -72,7 +72,6 @@ add_library(satemu-core
     include/satemu/util/unreachable.hpp
 
 
-    src/satemu/config.hpp
     src/satemu/satemu.cpp
 
     src/satemu/hw/cdblock/cdblock.cpp
