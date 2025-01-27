@@ -195,7 +195,7 @@ void DSP::Run() {
     mixStack.fill(0);
 }
 
-void DSP::DumpRegs(std::ostream &out) {
+void DSP::DumpRegs(std::ostream &out) const {
     auto write = [&](const auto &reg) { out.write((const char *)&reg, sizeof(reg)); };
     write(ringBufferLeadAddress);
     write(ringBufferLength);

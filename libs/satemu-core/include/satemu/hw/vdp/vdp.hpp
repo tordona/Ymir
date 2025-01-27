@@ -54,12 +54,12 @@ public:
     // TODO: replace with scheduler events
     void Advance(uint64 cycles);
 
-    void DumpVDP1VRAM(std::ostream &out);
-    void DumpVDP2VRAM(std::ostream &out);
-    void DumpVDP2CRAM(std::ostream &out);
+    void DumpVDP1VRAM(std::ostream &out) const;
+    void DumpVDP2VRAM(std::ostream &out) const;
+    void DumpVDP2CRAM(std::ostream &out) const;
 
     // Dumps draw then display
-    void DumpVDP1Framebuffers(std::ostream &out);
+    void DumpVDP1Framebuffers(std::ostream &out) const;
 
     // -------------------------------------------------------------------------
     // VDP1 memory/register access

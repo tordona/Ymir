@@ -53,7 +53,7 @@ public:
 
     void Run();
 
-    void DumpRegs(std::ostream &out);
+    void DumpRegs(std::ostream &out) const;
 
     // -------------------------------------------------------------------------
     // Registers

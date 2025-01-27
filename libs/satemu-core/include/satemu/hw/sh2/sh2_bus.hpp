@@ -68,8 +68,8 @@ public:
 
     void LoadIPL(std::span<uint8, kIPLSize> ipl);
 
-    void DumpWRAMLow(std::ostream &out);
-    void DumpWRAMHigh(std::ostream &out);
+    void DumpWRAMLow(std::ostream &out) const;
+    void DumpWRAMHigh(std::ostream &out) const;
 
     template <mem_primitive T>
     T Read(uint32 address) {

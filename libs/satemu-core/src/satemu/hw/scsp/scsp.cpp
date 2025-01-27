@@ -76,43 +76,43 @@ void SCSP::Reset(bool hard) {
     m_dsp.Reset();
 }
 
-void SCSP::DumpWRAM(std::ostream &out) {
+void SCSP::DumpWRAM(std::ostream &out) const {
     out.write((const char *)m_WRAM.data(), m_WRAM.size());
 }
 
-void SCSP::DumpDSP_MPRO(std::ostream &out) {
+void SCSP::DumpDSP_MPRO(std::ostream &out) const {
     out.write((const char *)m_dsp.program.data(), sizeof(m_dsp.program));
 }
 
-void SCSP::DumpDSP_TEMP(std::ostream &out) {
+void SCSP::DumpDSP_TEMP(std::ostream &out) const {
     out.write((const char *)m_dsp.tempMem.data(), sizeof(m_dsp.tempMem));
 }
 
-void SCSP::DumpDSP_MEMS(std::ostream &out) {
+void SCSP::DumpDSP_MEMS(std::ostream &out) const {
     out.write((const char *)m_dsp.soundMem.data(), sizeof(m_dsp.soundMem));
 }
 
-void SCSP::DumpDSP_COEF(std::ostream &out) {
+void SCSP::DumpDSP_COEF(std::ostream &out) const {
     out.write((const char *)m_dsp.coeffs.data(), sizeof(m_dsp.coeffs));
 }
 
-void SCSP::DumpDSP_MADRS(std::ostream &out) {
+void SCSP::DumpDSP_MADRS(std::ostream &out) const {
     out.write((const char *)m_dsp.addrs.data(), sizeof(m_dsp.addrs));
 }
 
-void SCSP::DumpDSP_MIXS(std::ostream &out) {
+void SCSP::DumpDSP_MIXS(std::ostream &out) const {
     out.write((const char *)m_dsp.mixStack.data(), sizeof(m_dsp.mixStack));
 }
 
-void SCSP::DumpDSP_EFREG(std::ostream &out) {
+void SCSP::DumpDSP_EFREG(std::ostream &out) const {
     out.write((const char *)m_dsp.effectOut.data(), sizeof(m_dsp.effectOut));
 }
 
-void SCSP::DumpDSP_EXTS(std::ostream &out) {
+void SCSP::DumpDSP_EXTS(std::ostream &out) const {
     out.write((const char *)m_dsp.audioInOut.data(), sizeof(m_dsp.audioInOut));
 }
 
-void SCSP::DumpDSPRegs(std::ostream &out) {
+void SCSP::DumpDSPRegs(std::ostream &out) const {
     m_dsp.DumpRegs(out);
 }
 

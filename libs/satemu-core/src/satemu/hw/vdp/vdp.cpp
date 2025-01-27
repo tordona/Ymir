@@ -90,19 +90,19 @@ void VDP::Advance(uint64 cycles) {
     }
 }
 
-void VDP::DumpVDP1VRAM(std::ostream &out) {
+void VDP::DumpVDP1VRAM(std::ostream &out) const {
     out.write((const char *)m_VRAM1.data(), m_VRAM1.size());
 }
 
-void VDP::DumpVDP2VRAM(std::ostream &out) {
+void VDP::DumpVDP2VRAM(std::ostream &out) const {
     out.write((const char *)m_VRAM2.data(), m_VRAM2.size());
 }
 
-void VDP::DumpVDP2CRAM(std::ostream &out) {
+void VDP::DumpVDP2CRAM(std::ostream &out) const {
     out.write((const char *)m_CRAM.data(), m_CRAM.size());
 }
 
-void VDP::DumpVDP1Framebuffers(std::ostream &out) {
+void VDP::DumpVDP1Framebuffers(std::ostream &out) const {
     out.write((const char *)m_spriteFB[m_drawFB].data(), m_spriteFB[m_drawFB].size());
     out.write((const char *)m_spriteFB[m_drawFB ^ 1].data(), m_spriteFB[m_drawFB ^ 1].size());
 }
