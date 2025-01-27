@@ -281,41 +281,74 @@ void runEmulator(satemu::Saturn &saturn) {
                 saturn.Reset(true);
             }
             break;
-        case SDL_SCANCODE_F3: //
-        {
-            {
-                std::ofstream out{"wram-lo.bin", std::ios::binary};
-                saturn.SH2.bus.DumpWRAMLow(out);
+        case SDL_SCANCODE_F3:
+            if (pressed) {
+                {
+                    std::ofstream out{"wram-lo.bin", std::ios::binary};
+                    saturn.SH2.bus.DumpWRAMLow(out);
+                }
+                {
+                    std::ofstream out{"wram-hi.bin", std::ios::binary};
+                    saturn.SH2.bus.DumpWRAMHigh(out);
+                }
+                {
+                    std::ofstream out{"vdp1-vram.bin", std::ios::binary};
+                    saturn.VDP.DumpVDP1VRAM(out);
+                }
+                {
+                    std::ofstream out{"vdp1-fbs.bin", std::ios::binary};
+                    saturn.VDP.DumpVDP1Framebuffers(out);
+                }
+                {
+                    std::ofstream out{"vdp2-vram.bin", std::ios::binary};
+                    saturn.VDP.DumpVDP2VRAM(out);
+                }
+                {
+                    std::ofstream out{"vdp2-cram.bin", std::ios::binary};
+                    saturn.VDP.DumpVDP2CRAM(out);
+                }
+                {
+                    std::ofstream out{"scsp-wram.bin", std::ios::binary};
+                    saturn.SCSP.DumpWRAM(out);
+                }
+                {
+                    std::ofstream out{"scsp-dsp-mpro.bin", std::ios::binary};
+                    saturn.SCSP.DumpDSP_MPRO(out);
+                }
+                {
+                    std::ofstream out{"scsp-dsp-temp.bin", std::ios::binary};
+                    saturn.SCSP.DumpDSP_TEMP(out);
+                }
+                {
+                    std::ofstream out{"scsp-dsp-mems.bin", std::ios::binary};
+                    saturn.SCSP.DumpDSP_MEMS(out);
+                }
+                {
+                    std::ofstream out{"scsp-dsp-coef.bin", std::ios::binary};
+                    saturn.SCSP.DumpDSP_COEF(out);
+                }
+                {
+                    std::ofstream out{"scsp-dsp-madrs.bin", std::ios::binary};
+                    saturn.SCSP.DumpDSP_MADRS(out);
+                }
+                {
+                    std::ofstream out{"scsp-dsp-mixs.bin", std::ios::binary};
+                    saturn.SCSP.DumpDSP_MIXS(out);
+                }
+                {
+                    std::ofstream out{"scsp-dsp-efreg.bin", std::ios::binary};
+                    saturn.SCSP.DumpDSP_EFREG(out);
+                }
+                {
+                    std::ofstream out{"scsp-dsp-exts.bin", std::ios::binary};
+                    saturn.SCSP.DumpDSP_EXTS(out);
+                }
+                {
+                    std::ofstream out{"scsp-dsp-regs.bin", std::ios::binary};
+                    saturn.SCSP.DumpDSPRegs(out);
+                }
             }
-            {
-                std::ofstream out{"wram-hi.bin", std::ios::binary};
-                saturn.SH2.bus.DumpWRAMHigh(out);
-            }
-            {
-                std::ofstream out{"vdp1-vram.bin", std::ios::binary};
-                saturn.VDP.DumpVDP1VRAM(out);
-            }
-            {
-                std::ofstream out{"vdp1-fbs.bin", std::ios::binary};
-                saturn.VDP.DumpVDP1Framebuffers(out);
-            }
-            {
-                std::ofstream out{"vdp2-vram.bin", std::ios::binary};
-                saturn.VDP.DumpVDP2VRAM(out);
-            }
-            {
-                std::ofstream out{"vdp2-cram.bin", std::ios::binary};
-                saturn.VDP.DumpVDP2CRAM(out);
-            }
-            {
-                std::ofstream out{"scsp-wram.bin", std::ios::binary};
-                saturn.SCSP.DumpWRAM(out);
-            }
-            // TODO: dump SCU DSP program and data RAM
-            // TODO: saturn.SCSP.DumpDSPProgram(std::ofstream{"scsp-dspprog.bin", std::ios::binary});
-            // TODO: dump whatever else is needed for SCSP DSP analysis
             break;
-        }
         default: break;
         }
     };

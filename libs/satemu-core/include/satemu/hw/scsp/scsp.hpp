@@ -79,6 +79,16 @@ public:
 
     void DumpWRAM(std::ostream &out);
 
+    void DumpDSP_MPRO(std::ostream &out);
+    void DumpDSP_TEMP(std::ostream &out);
+    void DumpDSP_MEMS(std::ostream &out);
+    void DumpDSP_COEF(std::ostream &out);
+    void DumpDSP_MADRS(std::ostream &out);
+    void DumpDSP_MIXS(std::ostream &out);
+    void DumpDSP_EFREG(std::ostream &out);
+    void DumpDSP_EXTS(std::ostream &out);
+    void DumpDSPRegs(std::ostream &out);
+
     // -------------------------------------------------------------------------
     // SCU-facing bus
     // 16-bit reads, 8- or 16-bit writes

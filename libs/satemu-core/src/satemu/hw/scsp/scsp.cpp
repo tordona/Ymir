@@ -80,6 +80,42 @@ void SCSP::DumpWRAM(std::ostream &out) {
     out.write((const char *)m_WRAM.data(), m_WRAM.size());
 }
 
+void SCSP::DumpDSP_MPRO(std::ostream &out) {
+    out.write((const char *)m_dsp.program.data(), sizeof(m_dsp.program));
+}
+
+void SCSP::DumpDSP_TEMP(std::ostream &out) {
+    out.write((const char *)m_dsp.tempMem.data(), sizeof(m_dsp.tempMem));
+}
+
+void SCSP::DumpDSP_MEMS(std::ostream &out) {
+    out.write((const char *)m_dsp.soundMem.data(), sizeof(m_dsp.soundMem));
+}
+
+void SCSP::DumpDSP_COEF(std::ostream &out) {
+    out.write((const char *)m_dsp.coeffs.data(), sizeof(m_dsp.coeffs));
+}
+
+void SCSP::DumpDSP_MADRS(std::ostream &out) {
+    out.write((const char *)m_dsp.addrs.data(), sizeof(m_dsp.addrs));
+}
+
+void SCSP::DumpDSP_MIXS(std::ostream &out) {
+    out.write((const char *)m_dsp.mixStack.data(), sizeof(m_dsp.mixStack));
+}
+
+void SCSP::DumpDSP_EFREG(std::ostream &out) {
+    out.write((const char *)m_dsp.effectOut.data(), sizeof(m_dsp.effectOut));
+}
+
+void SCSP::DumpDSP_EXTS(std::ostream &out) {
+    out.write((const char *)m_dsp.audioInOut.data(), sizeof(m_dsp.audioInOut));
+}
+
+void SCSP::DumpDSPRegs(std::ostream &out) {
+    m_dsp.DumpRegs(out);
+}
+
 void SCSP::SetCPUEnabled(bool enabled) {
     if (m_m68kEnabled != enabled) {
         rootLog.info("{} the MC68EC00 processor", (enabled ? "enabling" : "disabling"));

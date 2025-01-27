@@ -25,10 +25,10 @@ FORCE_INLINE static uint32 FloatToInt(const uint16 inv) {
 
 FORCE_INLINE static uint32 IntToFloat(const uint32 inv) {
     const uint32 invsl8 = inv << 8;
-    const uint32 sign_xor = static_cast<sint32>(invsl8 >> 31);
+    const uint32 sign_xor = static_cast<sint32>(invsl8) >> 31;
     uint32 ret;
 
-    uint32 exp = std::countl_zero(((invsl8 ^ sign_xor) << 1) | (1 << 19));
+    uint32 exp = std::min(0x1F, std::countl_zero(((invsl8 ^ sign_xor) << 1) | (1 << 19)));
     uint32 shift = exp - (exp == 12);
 
     ret = static_cast<sint32>(invsl8) >> (19 - shift);
@@ -193,6 +193,29 @@ void DSP::Run() {
     MDEC_CT--;
 
     mixStack.fill(0);
+}
+
+void DSP::DumpRegs(std::ostream &out) {
+    auto write = [&](const auto &reg) { out.write((const char *)&reg, sizeof(reg)); };
+    write(ringBufferLeadAddress);
+    write(ringBufferLength);
+    write(INPUTS);
+
+    write(SFT_REG);
+    write(FRC_REG);
+    write(Y_REG);
+    write(ADRS_REG);
+
+    write(MDEC_CT);
+
+    write(m_readPending);
+    write(m_readNOFL);
+    write(m_readValue);
+
+    write(m_writePending);
+    write(m_writeValue);
+
+    write(m_readWriteAddr);
 }
 
 uint16 DSP::ReadWRAM(uint32 address) {
