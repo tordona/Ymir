@@ -153,7 +153,7 @@ struct Slot {
     // While Key ON is held, goes through Attack -> Decay 1 -> Decay 2 and stays at the minimum value of Decay 2.
     // On Key OFF, it will immediately skip to Release state, decrementing the envelope from whatever point it was.
     //
-    // when EGHOLD=1:
+    // when EGHOLD=0:
     // 0x000       _
     //            /|\
     //           / | \
@@ -163,7 +163,7 @@ struct Slot {
     //       |atk  |d1|d2  |release
     // Key ON^     Key OFF^
     //
-    // when EGHOLD=0:
+    // when EGHOLD=1:
     // 0x000 _______
     //       |     |\
     //       |     | \
