@@ -119,7 +119,14 @@ FORCE_INLINE void SMPC::WriteIREG(uint8 offset, uint8 value) {
 FORCE_INLINE void SMPC::WriteCOMREG(uint8 value) {
     COMREG = static_cast<Command>(value);
 
-    m_scheduler.ScheduleFromNow(m_commandEvent, 500);
+    if (COMREG == Command::SYSRES || COMREG == Command::CKCHG352 || COMREG == Command::CKCHG320) {
+        // TODO: these should take ~100ms (about 2.8 million SH-2 cycles) to complete
+        // Doing a shorter delay here to make it snappier
+        m_scheduler.ScheduleFromNow(m_commandEvent, 200000);
+    } else {
+        // TODO: CDON and CDOFF execute in 40 microseconds; all other commands take 30 microseconds to complete
+        ProcessCommand();
+    }
 }
 
 FORCE_INLINE void SMPC::WriteSF(uint8 value) {
