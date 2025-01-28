@@ -131,6 +131,7 @@ void runEmulator(satemu::Saturn &saturn) {
         std::array<sint16, 4096> buffer{};
         uint32 readPos = 0;
         uint32 writePos = 0;
+        bool sync = true;
     } audioBuffer{};
 
     SDL_AudioSpec audioSpec{};
@@ -194,13 +195,13 @@ void runEmulator(satemu::Saturn &saturn) {
                                  auto &buffer = *reinterpret_cast<AudioBuffer *>(ctx);
 
                                  // TODO: these busy waits should go away
-                                 while ((buffer.writePos + 1) % buffer.buffer.size() == buffer.readPos) {
+                                 while (buffer.sync && (buffer.writePos + 1) % buffer.buffer.size() == buffer.readPos) {
                                      std::this_thread::yield();
                                  }
                                  buffer.buffer[buffer.writePos] = left;
                                  buffer.writePos = (buffer.writePos + 1) % buffer.buffer.size();
 
-                                 while ((buffer.writePos + 1) % buffer.buffer.size() == buffer.readPos) {
+                                 while (buffer.sync && (buffer.writePos + 1) % buffer.buffer.size() == buffer.readPos) {
                                      std::this_thread::yield();
                                  }
                                  buffer.buffer[buffer.writePos] = right;
@@ -281,6 +282,7 @@ void runEmulator(satemu::Saturn &saturn) {
                 saturn.Reset(true);
             }
             break;
+        case SDL_SCANCODE_TAB: audioBuffer.sync = !pressed; break;
         case SDL_SCANCODE_F3:
             if (pressed) {
                 {
