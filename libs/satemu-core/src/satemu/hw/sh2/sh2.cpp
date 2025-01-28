@@ -1654,7 +1654,7 @@ FORCE_INLINE void SH2::SLEEP() {
     PC -= 2;
 
     if (SBYCR.SBY) {
-        m_log.debug("Entering standby");
+        m_log.trace("Entering standby");
 
         // Initialize DMAC, FRT, WDT and SCI
         for (auto &ch : m_dmaChannels) {
@@ -1665,11 +1665,11 @@ FORCE_INLINE void SH2::SLEEP() {
         // TODO: reset WDT
         // TODO: reset SCI
 
-        // TODO: set standby flag
+        // TODO: enter standby state
     } else {
-        m_log.debug("Entering sleep");
+        m_log.trace("Entering sleep");
+        // TODO: enter sleep state
     }
-    // TODO: enter sleep or standby mode depending on SBYCR.SBY
 }
 
 FORCE_INLINE void SH2::MOV(const DecodedArgs &args) {
