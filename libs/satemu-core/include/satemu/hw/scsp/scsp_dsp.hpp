@@ -94,8 +94,8 @@ private:
 
     uint8 *m_WRAM;
 
-    uint16 ReadWRAM(uint32 address);
-    void WriteWRAM(uint32 address, uint16 value);
+    uint16 ReadWRAM() const;
+    void WriteWRAM();
 };
 
 } // namespace satemu::scsp

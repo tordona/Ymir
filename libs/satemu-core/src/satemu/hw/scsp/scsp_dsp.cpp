@@ -148,12 +148,12 @@ void DSP::Run() {
         }
 
         if (m_readPending) {
-            uint16 tmp = ReadWRAM(m_readWriteAddr * sizeof(uint16));
+            uint16 tmp = ReadWRAM();
             m_readValue = (m_readPending && m_readNOFL) ? (tmp << 8) : FloatToInt(tmp);
             m_readPending = false;
             m_readNOFL = false;
         } else if (m_writePending) {
-            WriteWRAM(m_readWriteAddr * sizeof(uint16), m_writeValue);
+            WriteWRAM();
             m_writePending = false;
         }
 
@@ -218,12 +218,20 @@ void DSP::DumpRegs(std::ostream &out) const {
     write(m_readWriteAddr);
 }
 
-uint16 DSP::ReadWRAM(uint32 address) {
-    return util::ReadBE<uint16>(&m_WRAM[address & 0x7FFFF]);
+uint16 DSP::ReadWRAM() const {
+    const uint32 address = m_readWriteAddr * sizeof(uint16);
+    if (address < 0x80000) {
+        return util::ReadBE<uint16>(&m_WRAM[address]);
+    } else {
+        return 0;
+    }
 }
 
-void DSP::WriteWRAM(uint32 address, uint16 value) {
-    util::WriteBE<uint16>(&m_WRAM[address & 0x7FFFF], value);
+void DSP::WriteWRAM() {
+    const uint32 address = m_readWriteAddr * sizeof(uint16);
+    if (address < 0x80000) {
+        util::WriteBE<uint16>(&m_WRAM[address], m_writeValue);
+    }
 }
 
 } // namespace satemu::scsp
