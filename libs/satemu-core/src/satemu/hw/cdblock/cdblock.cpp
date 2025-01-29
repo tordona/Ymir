@@ -230,15 +230,15 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
         // TODO: tracks need to store index information
 
         // Play frame address range for the specified tracks
-        m_playStartPos = session.tracks[firstTrack - 1].startFrameAddress;
-        m_playEndPos = session.tracks[lastTrack - 1].endFrameAddress;
+        m_playStartPos = session.tracks[startTrack - 1].startFrameAddress;
+        m_playEndPos = session.tracks[endTrack - 1].endFrameAddress;
 
         // Switch to seek mode
         m_status.statusCode = kStatusCodeSeek;
         m_status.flags = 0x8;     // CD-ROM decoding flag
         m_status.repeatCount = 0; // first repeat
-        m_status.controlADR = session.tracks[firstTrack - 1].controlADR;
-        m_status.track = firstTrack;
+        m_status.controlADR = session.tracks[startTrack - 1].controlADR;
+        m_status.track = startTrack;
         m_status.index = 1; // TODO: handle indexes
 
         // TODO: delay seek for a realistic amount of time
@@ -315,7 +315,12 @@ bool CDBlock::SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber
 void CDBlock::ProcessDriveState() {
     switch (m_status.statusCode & 0xF) {
     case kStatusCodeSeek:
-        m_targetDriveCycles = kDriveCyclesPlaying1x / m_readSpeed;
+        if (m_status.controlADR == 0x41) {
+            m_targetDriveCycles = kDriveCyclesPlaying1x / m_readSpeed;
+        } else {
+            // Force 1x speed if playing audio track
+            m_targetDriveCycles = kDriveCyclesPlaying1x;
+        }
         m_status.statusCode = kStatusCodePlay;
         m_status.frameAddress = m_playStartPos;
         break;
@@ -344,85 +349,86 @@ void CDBlock::ProcessDriveState() {
 void CDBlock::ProcessDriveStatePlay() {
     const uint32 frameAddress = m_status.frameAddress;
     if (frameAddress <= m_playEndPos) {
-        if (m_cdDeviceConnection != media::Filter::kDisconnected) [[likely]] {
-            assert(m_cdDeviceConnection < m_filters.size());
+        assert(m_cdDeviceConnection < m_filters.size());
 
-            playLog.trace("Read from frame address {:06X}", frameAddress);
+        playLog.trace("Read from frame address {:06X}", frameAddress);
 
-            if (m_disc.sessions.empty()) [[unlikely]] {
-                playLog.debug("Disc removed");
+        if (m_disc.sessions.empty()) [[unlikely]] {
+            playLog.debug("Disc removed");
 
-                m_status.statusCode = kStatusCodeNoDisc; // TODO: is this correct?
-                SetInterrupt(kHIRQ_DCHG);
-            } else if (m_partitionManager.GetFreeBufferCount() == 0) [[unlikely]] {
-                playLog.trace("No free buffer available");
+            m_status.statusCode = kStatusCodeNoDisc; // TODO: is this correct?
+            SetInterrupt(kHIRQ_DCHG);
+        } else if (m_partitionManager.GetFreeBufferCount() == 0) [[unlikely]] {
+            playLog.trace("No free buffer available");
 
-                // TODO: what is the correct status code here?
-                // TODO: there really should be a separate state machine for handling this...
-                m_status.statusCode = kStatusCodePause;
-                SetInterrupt(kHIRQ_BFUL);
-                m_bufferFullPause = true;
-                // TODO: when buffer no longer full, switch to Play if we paused because of BFUL
-                // - or maybe if frameAddress <= m_playEndPos
-            } else {
-                // TODO: consider caching the track pointer
-                const media::Session &session = m_disc.sessions.back();
-                const media::Track *track = session.FindTrack(frameAddress);
+            // TODO: what is the correct status code here?
+            // TODO: there really should be a separate state machine for handling this...
+            m_status.statusCode = kStatusCodePause;
+            SetInterrupt(kHIRQ_BFUL);
+            m_bufferFullPause = true;
+            // TODO: when buffer no longer full, switch to Play if we paused because of BFUL
+            // - or maybe if frameAddress <= m_playEndPos
+        } else {
+            // TODO: consider caching the track pointer
+            const media::Session &session = m_disc.sessions.back();
+            const media::Track *track = session.FindTrack(frameAddress);
 
-                Buffer &buffer = m_scratchBuffer;
+            Buffer &buffer = m_scratchBuffer;
 
-                // Sanity check: is the track valid?
-                if (track != nullptr && track->ReadSector(frameAddress, buffer.data, m_getSectorLength)) [[likely]] {
-                    buffer.size = m_getSectorLength;
-                    buffer.frameAddress = frameAddress;
+            // Sanity check: is the track valid?
+            if (track != nullptr && track->ReadSector(frameAddress, buffer.data, m_getSectorLength)) [[likely]] {
+                buffer.size = m_getSectorLength;
+                buffer.frameAddress = frameAddress;
 
-                    playLog.trace("Read {} bytes from frame address {:06X}", buffer.size, buffer.frameAddress);
+                playLog.trace("Read {} bytes from frame address {:06X}", buffer.size, buffer.frameAddress);
 
-                    // Check against filter and send data to the appropriate destination
-                    uint8 filterNum = m_cdDeviceConnection;
-                    for (int i = 0; i < kNumFilters && filterNum != media::Filter::kDisconnected; i++) {
-                        const media::Filter &filter = m_filters[filterNum];
-                        if (filter.Test({buffer.data.begin(), buffer.size})) {
-                            if (filter.trueOutput == media::Filter::kDisconnected) [[unlikely]] {
-                                playLog.trace("Passed filter; output disconnected - discarded");
-                            } else {
-                                assert(filter.trueOutput < m_filters.size());
-                                playLog.trace("Passed filter; sent to buffer partition {}", filter.trueOutput);
-                                m_partitionManager.InsertHead(filter.trueOutput, buffer);
-                                m_lastCDWritePartition = filter.trueOutput;
-                            }
+                // Check against CD device filter and send data to the appropriate destination
+                uint8 filterNum = m_cdDeviceConnection;
+                for (int i = 0; i < kNumFilters && filterNum != media::Filter::kDisconnected; i++) {
+                    const media::Filter &filter = m_filters[filterNum];
+                    if (filter.Test({buffer.data.begin(), buffer.size})) {
+                        if (filter.trueOutput == media::Filter::kDisconnected) [[unlikely]] {
+                            playLog.trace("Passed filter; output disconnected - discarded");
+                        } else {
+                            assert(filter.trueOutput < m_filters.size());
+                            playLog.trace("Passed filter; sent to buffer partition {}", filter.trueOutput);
+                            m_partitionManager.InsertHead(filter.trueOutput, buffer);
+                            m_lastCDWritePartition = filter.trueOutput;
+                        }
+                        break;
+                    } else {
+                        if (filter.falseOutput == media::Filter::kDisconnected) [[unlikely]] {
+                            playLog.trace("Failed filter; output disconnected - discarded");
                             break;
                         } else {
-                            if (filter.falseOutput == media::Filter::kDisconnected) [[unlikely]] {
-                                playLog.trace("Failed filter; output disconnected - discarded");
-                                break;
-                            } else {
-                                assert(filter.falseOutput < m_filters.size());
-                                playLog.trace("Failed filter; sent to filter {}", filter.falseOutput);
-                                filterNum = filter.falseOutput;
-                            }
+                            assert(filter.falseOutput < m_filters.size());
+                            playLog.trace("Failed filter; sent to filter {}", filter.falseOutput);
+                            filterNum = filter.falseOutput;
                         }
                     }
-
-                    m_status.frameAddress++;
-
-                    SetInterrupt(kHIRQ_CSCT);
-                } else if (track == nullptr) {
-                    // This shouldn't really happen unless we're given an invalid disc image
-                    // Let's pretend this is a disc read error
-                    // TODO: what happens on a real disc read error?
-                    playLog.debug("Track not found");
-                    m_status.statusCode = kStatusCodeError;
-                } else {
-                    // The disc image is truncated or corrupted
-                    // Let's pretend this is a disc read error
-                    // TODO: what happens on a real disc read error?
-                    playLog.debug("Could not read sector - disc image is truncated or corrupted");
-                    m_status.statusCode = kStatusCodeError;
                 }
+
+                // If playing an audio track, send to SCSP
+                if (track->controlADR == 0x01) {
+                    // TODO: send to SCSP
+                }
+
+                m_status.frameAddress++;
+
+                SetInterrupt(kHIRQ_CSCT);
+            } else if (track == nullptr) {
+                // This shouldn't really happen unless we're given an invalid disc image
+                // Let's pretend this is a disc read error
+                // TODO: what happens on a real disc read error?
+                playLog.debug("Track not found");
+                m_status.statusCode = kStatusCodeError;
+            } else {
+                // The disc image is truncated or corrupted
+                // Let's pretend this is a disc read error
+                // TODO: what happens on a real disc read error?
+                playLog.debug("Could not read sector - disc image is truncated or corrupted");
+                m_status.statusCode = kStatusCodeError;
             }
-        } else {
-            playLog.debug("Read from {:06X} discarded", frameAddress);
         }
     }
 
@@ -1100,7 +1106,7 @@ void CDBlock::CmdSeekDisc() {
     const uint32 startPos = (bit::extract<0, 7>(m_CR[0]) << 16u) | m_CR[1];
     const bool isStartFAD = bit::extract<23>(startPos);
 
-    rootLog.debug("Seek position: {:06X}", startPos);
+    rootLog.trace("Seek position: {:06X}", startPos);
     if (startPos == 0xFFFFFF) {
         rootLog.debug("Paused");
         m_status.statusCode = kStatusCodePause;
