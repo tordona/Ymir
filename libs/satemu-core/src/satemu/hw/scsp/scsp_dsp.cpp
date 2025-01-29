@@ -8,11 +8,11 @@
 
 namespace satemu::scsp {
 
-FORCE_INLINE static uint32 FloatToInt(const uint16 inv) {
-    const uint32 signXor = static_cast<sint32>((inv & 0x8000) << 16) >> 1;
-    const uint32 exp = (inv >> 11) & 0xF;
+FORCE_INLINE static uint32 FloatToInt(const uint16 value) {
+    const uint32 signXor = static_cast<sint32>((value & 0x8000) << 16) >> 1;
+    const uint32 exp = (value >> 11) & 0xF;
 
-    uint32 ret = inv & 0x7FF;
+    uint32 ret = value & 0x7FF;
     if (exp < 12) {
         ret |= 0x800;
     }
@@ -23,15 +23,15 @@ FORCE_INLINE static uint32 FloatToInt(const uint16 inv) {
     return ret & 0xFFFFFF;
 }
 
-FORCE_INLINE static uint32 IntToFloat(const uint32 inv) {
-    const uint32 invsl8 = inv << 8;
-    const uint32 sign_xor = static_cast<sint32>(invsl8) >> 31;
+FORCE_INLINE static uint32 IntToFloat(const uint32 value) {
+    const uint32 shiftedValue = value << 8;
+    const uint32 signXor = static_cast<sint32>(shiftedValue) >> 31;
     uint32 ret;
 
-    uint32 exp = std::min(0x1F, std::countl_zero(((invsl8 ^ sign_xor) << 1) | (1 << 19)));
+    uint32 exp = std::min(0x1F, std::countl_zero(((shiftedValue ^ signXor) << 1) | (1 << 19)));
     uint32 shift = exp - (exp == 12);
 
-    ret = static_cast<sint32>(invsl8) >> (19 - shift);
+    ret = static_cast<sint32>(shiftedValue) >> (19 - shift);
     ret &= 0x87FF;
     ret |= exp << 11;
 
@@ -157,7 +157,7 @@ void DSP::Run() {
             m_writePending = false;
         }
 
-        uint16 addr = addrs[instr.MASA] + instr.NXADDR;
+        uint16 addr = addrs[instr.MASA] + instr.NXADR;
 
         if (instr.ADREB) {
             addr += bit::sign_extend<12>(ADRS_REG);

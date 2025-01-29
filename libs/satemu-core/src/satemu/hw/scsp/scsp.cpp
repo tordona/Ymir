@@ -355,8 +355,11 @@ FORCE_INLINE void SCSP::GenerateSample() {
     outL >>= m_masterVolume ^ 0xF;
     outR >>= m_masterVolume ^ 0xF;
 
-    outL = std::clamp<sint32>(outL, std::numeric_limits<sint16>::min(), std::numeric_limits<sint16>::max());
-    outR = std::clamp<sint32>(outR, std::numeric_limits<sint16>::min(), std::numeric_limits<sint16>::max());
+    static constexpr sint32 outMin = std::numeric_limits<sint16>::min();
+    static constexpr sint32 outMax = std::numeric_limits<sint16>::max();
+
+    outL = std::clamp<sint32>(outL, outMin, outMax);
+    outR = std::clamp<sint32>(outR, outMin, outMax);
 
     m_cbOutputSample(outL, outR);
 
