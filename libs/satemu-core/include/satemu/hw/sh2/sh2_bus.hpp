@@ -126,9 +126,9 @@ public:
 
     void AcknowledgeExternalInterrupt();
 
-    std::array<uint8, kIPLSize> IPL; // aka BIOS ROM
-    std::array<uint8, kWRAMLowSize> WRAMLow;
-    std::array<uint8, kWRAMHighSize> WRAMHigh;
+    alignas(16) std::array<uint8, kIPLSize> IPL; // aka BIOS ROM
+    alignas(16) std::array<uint8, kWRAMLowSize> WRAMLow;
+    alignas(16) std::array<uint8, kWRAMHighSize> WRAMHigh;
 
     // TODO: don't hardcode this
     // TODO: use an abstraction
