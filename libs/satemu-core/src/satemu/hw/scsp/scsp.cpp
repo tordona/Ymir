@@ -143,7 +143,7 @@ void SCSP::HandleKYONEX() {
     for (auto &slot : m_slots) {
         if (slot.TriggerKey()) {
             static constexpr const char *loopNames[] = {"->|", ">->", "<-<", ">-<"};
-            regsLog.debug(
+            regsLog.trace(
                 "Slot {:02d} key {} {:2d}-bit addr={:05X} loop={:04X}-{:04X} {} OCT={:02d} FNS={:03X} KRS={:X} "
                 "EG {:02d} {:02d} {:02d} {:02d} DL={:03X} EGHOLD={} LPSLNK={} mod X={:02X} Y={:02X} lv={:X}",
                 slot.index, (slot.keyOnBit ? " ON" : "OFF"), (slot.pcm8Bit ? 8 : 16), slot.startAddress,
