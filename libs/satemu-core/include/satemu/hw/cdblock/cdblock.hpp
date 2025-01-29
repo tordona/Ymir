@@ -193,7 +193,7 @@ private:
     // -------------------------------------------------------------------------
     // Data transfers
 
-    enum class TransferType { None, TOC, GetSector, GetThenDeleteSector, FileInfo };
+    enum class TransferType { None, TOC, GetSector, GetThenDeleteSector, FileInfo, Subcode };
 
     // General transfer parameters
     TransferType m_xferType; // Type of transfer in progress
@@ -210,12 +210,18 @@ private:
     // Parameters for file info transfers
     uint32 m_xferCurrFileID; // Current file ID to read
 
+    // Buffer for subcode transfers
+    std::array<uint8, 24> m_xferSubcodeBuffer; // Buffer for subcode transfer data
+    uint32 m_xferSubcodeFrameAddress;          // Last subcode R-W frame address
+    uint32 m_xferSubcodeGroup;                 // Last subcode R-W group
+
     // Debugging data
     uint32 m_xferExtraCount; // Number of additional/unexpected reads/writes
 
     void SetupTOCTransfer();
     void SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8 partitionNumber, bool del);
     uint32 SetupFileInfoTransfer(uint32 fileID);
+    bool SetupSubcodeTransfer(uint8 type);
     void EndTransfer();
 
     uint16 DoReadTransfer();

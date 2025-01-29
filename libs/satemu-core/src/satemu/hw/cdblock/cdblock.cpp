@@ -74,6 +74,10 @@ void CDBlock::Reset(bool hard) {
     m_xferLength = 0;
     m_xferCount = 0xFFFFFF;
 
+    m_xferSubcodeBuffer.fill(0);
+    m_xferSubcodeFrameAddress = 0;
+    m_xferSubcodeGroup = 0;
+
     m_partitionManager.Reset();
 
     for (int i = 0; auto &filter : m_filters) {
@@ -527,6 +531,93 @@ uint32 CDBlock::SetupFileInfoTransfer(uint32 fileID) {
     return numFileInfos;
 }
 
+bool CDBlock::SetupSubcodeTransfer(uint8 type) {
+    if (m_disc.sessions.empty()) {
+        return false;
+    }
+
+    struct MSF {
+        uint8 m, s, f;
+    };
+
+    auto toMSF = [](uint32 fad) {
+        MSF msf{};
+        msf.m = fad / 75 / 60;
+        msf.s = fad / 75 % 60;
+        msf.f = fad % 75;
+        return msf;
+    };
+
+    auto toBCD = [](uint8 value) { return value % 10 + value / 10 * 16; };
+
+    if (type == 0) {
+        xferLog.trace("Starting subcode Q transfer");
+
+        m_xferType = TransferType::Subcode;
+        m_xferPos = 0;
+        m_xferLength = 5;
+        m_xferCount = 0;
+        m_xferExtraCount = 0;
+
+        const uint32 relativeFAD =
+            m_status.frameAddress - m_disc.sessions.back().tracks[m_status.track - 1].startFrameAddress;
+
+        auto [m, s, f] = toMSF(m_status.frameAddress);
+        auto [relM, relS, relF] = toMSF(relativeFAD);
+
+        m_xferSubcodeBuffer[0] = m_status.controlADR;
+        m_xferSubcodeBuffer[1] = toBCD(m_status.track);
+        m_xferSubcodeBuffer[2] = toBCD(m_status.index);
+        m_xferSubcodeBuffer[3] = toBCD(relM);
+        m_xferSubcodeBuffer[4] = toBCD(relS);
+        m_xferSubcodeBuffer[5] = toBCD(relF);
+        m_xferSubcodeBuffer[6] = 0;
+        m_xferSubcodeBuffer[7] = toBCD(m);
+        m_xferSubcodeBuffer[8] = toBCD(s);
+        m_xferSubcodeBuffer[9] = toBCD(f);
+
+        m_CR[0] = m_status.statusCode << 8u;
+        m_CR[1] = 5;
+        m_CR[2] = 0x0000;
+        m_CR[3] = 0x0000;
+
+        return true;
+    } else if (type == 1) {
+        xferLog.trace("Starting subcode R-W transfer");
+
+        m_xferType = TransferType::Subcode;
+        m_xferPos = 0;
+        m_xferLength = 12;
+        m_xferCount = 0;
+        m_xferExtraCount = 0;
+
+        if (m_status.frameAddress != m_xferSubcodeFrameAddress) {
+            m_xferSubcodeFrameAddress = m_status.frameAddress;
+            m_xferSubcodeGroup = 0;
+        } else {
+            m_xferSubcodeGroup++;
+        }
+
+        // TODO: read subcode R-W from current sector (24 bytes starting at 2352 + 24*group), & 0x3F all bytes
+        // - only works with discs that have 2448 byte sectors
+        if (m_disc.sessions.back().tracks[m_status.track - 1].sectorSize < 2448) {
+            m_xferSubcodeBuffer.fill(0xFF);
+        } else {
+            xferLog.debug("Subcode R-W transfer is unimplemented");
+            m_xferSubcodeBuffer.fill(0xFF);
+        }
+
+        m_CR[0] = m_status.statusCode << 8u;
+        m_CR[1] = 12;
+        m_CR[2] = 0x0000;
+        m_CR[3] = m_xferSubcodeGroup;
+
+        return true;
+    }
+
+    return false;
+}
+
 void CDBlock::EndTransfer() {
     if (m_xferType == TransferType::None) {
         return;
@@ -567,7 +658,8 @@ uint16 CDBlock::DoReadTransfer() {
         break;
 
     case TransferType::GetSector:
-    case TransferType::GetThenDeleteSector: {
+    case TransferType::GetThenDeleteSector: //
+    {
         // TODO: cache buffer
         Buffer *buffer = m_partitionManager.GetTail(m_xferPartition, m_xferSectorPos);
 
@@ -595,7 +687,8 @@ uint16 CDBlock::DoReadTransfer() {
         break;
     }
 
-    case TransferType::FileInfo: {
+    case TransferType::FileInfo: //
+    {
         const media::fs::FileInfo &fileInfo = m_fs.GetFileInfoWithOffset(m_xferCurrFileID);
         // TODO: improve/simplify this
         switch (m_xferPos % 6) {
@@ -608,6 +701,14 @@ uint16 CDBlock::DoReadTransfer() {
             value = (fileInfo.fileNumber << 8u) | fileInfo.attributes;
             m_xferCurrFileID++;
             break;
+        }
+        break;
+    }
+
+    case TransferType::Subcode: //
+    {
+        if (m_xferPos < 24) {
+            value = util::ReadBE<uint16>(&m_xferSubcodeBuffer[m_xferPos * 2]);
         }
         break;
     }
@@ -1121,34 +1222,30 @@ void CDBlock::CmdGetSubcodeQ_RW() {
     // <blank>
     // <blank>
     // <blank>
-    // const uint8 type = bit::extract<0, 7>(m_CR[0]);
+    const uint8 type = bit::extract<0, 7>(m_CR[0]);
 
     // TODO: handle types
     //   type 0 = Q subcode
     //   type 1 = R-W subcodes
+    if (SetupSubcodeTransfer(type)) {
+        // Output structure if valid (handled by SetupSubcodeTransfer):
+        // status code     <blank>
+        // Q/RW size in words (Q = 5, RW = 12)
+        // <blank>
+        // subcode flags
 
-    // Output structure if valid:
-    // status code     <blank>
-    // Q/RW size in words (Q = 5, RW = 12)
-    // <blank>
-    // subcode flags
-    //
-    // TODO: raise kHIRQ_DRDY if valid
-    // TODO: setup read transfer if valid
-    // - subcode Q: 5 words
-    // - subcodes R-W: 12 words
-
-    rootLog.info("Get Subcode Q/R-W is unimplemented");
-
-    // Output structure if invalid:
-    // 0x20   <blank>
-    // <blank>
-    // <blank>
-    // <blank>
-    m_CR[0] = 0x8000;
-    m_CR[1] = 0x0000;
-    m_CR[2] = 0x0000;
-    m_CR[3] = 0x0000;
+        SetInterrupt(kHIRQ_DRDY);
+    } else {
+        // Output structure if invalid:
+        // 0x80   <blank>
+        // <blank>
+        // <blank>
+        // <blank>
+        m_CR[0] = 0x8000;
+        m_CR[1] = 0x0000;
+        m_CR[2] = 0x0000;
+        m_CR[3] = 0x0000;
+    }
 
     SetInterrupt(kHIRQ_CMOK);
 }
