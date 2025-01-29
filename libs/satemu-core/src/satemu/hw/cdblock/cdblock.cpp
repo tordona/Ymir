@@ -215,24 +215,36 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
 
         // TODO: implement; the code below is incorrect and untested
 
-        /*
         // Clamp track numbers to what's available in the disc
         // If end < start, ProcessDriveState() will switch to the Pause state automatically
         uint8 firstTrack = session.firstTrackIndex + 1;
-        uint8 lastTrack = firstTrack + session.numTracks - 1;
+        uint8 lastTrack = session.lastTrackIndex + 1;
         startTrack = std::clamp(startTrack, firstTrack, lastTrack);
         endTrack = std::clamp(endTrack, firstTrack, lastTrack);
+        playInitLog.debug("Track range after clamping {:02d}-{:02d}", startTrack, endTrack);
 
-        // TODO: Track needs to store Index information
+        // TODO: tracks need to store index information
 
-        fmt::println("CDBlock: playback start: track range after clamping {:02d}-{:02d}", startTrack, endTrack);
+        // Play frame address range for the specified tracks
+        m_playStartPos = session.tracks[firstTrack - 1].startFrameAddress;
+        m_playEndPos = session.tracks[lastTrack - 1].endFrameAddress;
 
-        // Get frame address range for the specified tracks
-        if (m_status.statusCode != kStatusCodePause) {
-            m_playStartParam = session.tracks[startTrack - 1].startFrameAddress;
-            m_playEndParam = session.tracks[endTrack - 1].endFrameAddress;
-            fmt::println("CDBlock: playback start: track FAD range {:06X}-{:06X}", m_playStartParam, m_playEndParam);
-        }*/
+        // Switch to seek mode
+        m_status.statusCode = kStatusCodeSeek;
+        m_status.flags = 0x8;     // CD-ROM decoding flag
+        m_status.repeatCount = 0; // first repeat
+        m_status.controlADR = session.tracks[firstTrack - 1].controlADR;
+        m_status.track = firstTrack;
+        m_status.index = 1; // TODO: handle indexes
+
+        // TODO: delay seek for a realistic amount of time
+        if (m_status.controlADR == 0x41) {
+            m_targetDriveCycles = kDriveCyclesPlaying1x / m_readSpeed;
+        } else {
+            // Force 1x speed if playing audio track
+            m_targetDriveCycles = kDriveCyclesPlaying1x;
+        }
+        playInitLog.debug("Track FAD range {:06X}-{:06X}", m_playStartPos, m_playEndPos);
     }
 
     return true;
@@ -674,7 +686,7 @@ FORCE_INLINE void CDBlock::ProcessCommand() {
     case 0x10: CmdPlayDisc(); break;
     case 0x11: CmdSeekDisc(); break;
     // case 0x12: CmdScanDisc(); break;
-    // case 0x20: CmdGetSubcodeQ_RW(); break;
+    case 0x20: CmdGetSubcodeQ_RW(); break;
     case 0x30: CmdSetCDDeviceConnection(); break;
     case 0x31: CmdGetCDDeviceConnection(); break;
     case 0x32: CmdGetLastBufferDest(); break;
