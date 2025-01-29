@@ -58,6 +58,7 @@ bool Load(std::filesystem::path isoPath, Disc &disc) {
     auto &session = disc.sessions.emplace_back();
     session.numTracks = 1;
     session.firstTrackIndex = 0;
+    session.lastTrackIndex = 0;
     session.startFrameAddress = 0;
     session.endFrameAddress = session.startFrameAddress + frames + 150;
 

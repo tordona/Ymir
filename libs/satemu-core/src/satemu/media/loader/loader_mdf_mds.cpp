@@ -300,6 +300,7 @@ bool Load(std::filesystem::path mdsPath, Disc &disc) {
         // Finish session
         session.numTracks = sessionData.lastTrack - sessionData.firstTrack + 1;
         session.firstTrackIndex = sessionData.firstTrack - 1;
+        session.lastTrackIndex = sessionData.lastTrack - 1;
         session.startFrameAddress = sessionData.sessionStart + 150;
         session.endFrameAddress = endFrameAddress;
         session.BuildTOC();

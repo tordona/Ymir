@@ -13,7 +13,6 @@ CDBlock::CDBlock(core::Scheduler &scheduler, scu::SCU &scu)
     : m_scu(scu)
     , m_scheduler(scheduler) {
 
-    // TODO: this event counts by 3 cycles per cycle
     m_driveStateUpdateEvent =
         m_scheduler.RegisterEvent(core::events::CDBlockDriveState, this,
                                   [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
@@ -208,11 +207,11 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
             startIndex = 1;
         }
         if (endParam == 0) {
-            endTrack = session.firstTrackIndex + session.numTracks;
+            endTrack = session.lastTrackIndex + 1;
             endIndex = 1;
         }
 
-        playInitLog.debug("Track:Index range {:02d}:{:02d}-{:02d}{:02d} ", startTrack, startIndex, endTrack, endIndex);
+        playInitLog.debug("Track:Index range {:02d}:{:02d}-{:02d}:{:02d} ", startTrack, startIndex, endTrack, endIndex);
 
         // TODO: implement; the code below is incorrect and untested
 
@@ -1053,8 +1052,7 @@ void CDBlock::CmdSeekDisc() {
             m_targetDriveCycles = kDriveCyclesNotPlaying;
         } else {
             const auto &session = m_disc.sessions.back();
-            if (trackNum - 1 >= session.firstTrackIndex &&
-                trackNum - 1 <= session.firstTrackIndex + session.numTracks - 1) {
+            if (trackNum - 1 >= session.firstTrackIndex && trackNum - 1 <= session.lastTrackIndex) {
                 m_status.frameAddress = session.tracks[trackNum - 1].startFrameAddress;
                 m_status.statusCode = kStatusCodePause;
                 m_status.track = trackNum;
@@ -1131,7 +1129,7 @@ void CDBlock::CmdGetSubcodeQ_RW() {
     rootLog.info("Get Subcode Q/R-W is unimplemented");
 
     // Output structure if invalid:
-    // 0x80   <blank>
+    // 0x20   <blank>
     // <blank>
     // <blank>
     // <blank>

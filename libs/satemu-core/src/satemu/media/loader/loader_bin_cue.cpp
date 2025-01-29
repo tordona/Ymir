@@ -185,6 +185,7 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
                 //              trackNum, lineNum);
                 return false;
             }
+            session.lastTrackIndex = trackNum - 1;
 
             // fmt::println("BIN/CUE:   Track {:02d} - {}", trackNum, format);
             uint32 sectorSize{};
