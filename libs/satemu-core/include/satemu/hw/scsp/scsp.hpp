@@ -227,9 +227,12 @@ private:
             // DSP COEF
             const uint16 coef = m_dsp.coeffs[(address >> 1u) & 0x3F] << 3u;
             return read16(coef);
-        } else if (AddressInRange<0x780, 0x7FF>(address)) {
-            // DSP MADRS (mirrored)
+        } else if (AddressInRange<0x780, 0x7BF>(address)) {
+            // DSP MADRS
             return read16(m_dsp.addrs[(address >> 1u) & 0x1F]);
+        } else if (AddressInRange<0x7C0, 0x7FF>(address)) {
+            // TODO: what's supposed to be in here? MADRS mirror? nothing?
+            return 0;
         } else if (AddressInRange<0x800, 0xBFF>(address)) {
             // DSP MPRO
             const uint32 index = (address >> 3u) & 0x7F;
@@ -377,9 +380,12 @@ private:
             write16(coef, value16);
             m_dsp.coeffs[idx] = coef >> 3u;
             return;
-        } else if (AddressInRange<0x780, 0x7FF>(address)) {
-            // DSP MADRS (mirrored)
+        } else if (AddressInRange<0x780, 0x7BF>(address)) {
+            // DSP MADRS
             return write16(m_dsp.addrs[(address >> 1u) & 0x1F], value16);
+        } else if (AddressInRange<0x7C0, 0x7FF>(address)) {
+            // TODO: what's supposed to be in here? MADRS mirror? nothing?
+            return;
         } else if (AddressInRange<0x800, 0xBFF>(address)) {
             // DSP MPRO
             const uint32 index = (address >> 3u) & 0x7F;
