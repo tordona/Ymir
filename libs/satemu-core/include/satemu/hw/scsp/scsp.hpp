@@ -126,9 +126,13 @@ public:
 
 private:
     alignas(16) std::array<uint8, m68k::kM68KWRAMSize> m_WRAM;
+
     alignas(16) std::array<uint8, 2048 * 75> m_cddaBuffer;
     uint32 m_cddaReadPos;
     uint32 m_cddaWritePos;
+    // set to true when there's enough audio data to be read by the SCSP
+    // set to false when the CDDA buffer is empty
+    bool m_cddaReady;
 
     m68k::MC68EC000 m_m68k;
     bool m_m68kEnabled;

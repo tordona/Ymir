@@ -36,6 +36,7 @@ void SCSP::Reset(bool hard) {
     m_cddaBuffer.fill(0);
     m_cddaReadPos = 0;
     m_cddaWritePos = 0;
+    m_cddaReady = false;
 
     m_m68k.Reset(true);
     m_m68kEnabled = false;
@@ -96,6 +97,13 @@ void SCSP::Advance(uint64 cycles) {
 void SCSP::ReceiveCDDA(std::span<uint8, 2048> data) {
     std::copy_n(data.begin(), 2048, m_cddaBuffer.begin() + m_cddaWritePos);
     m_cddaWritePos = (m_cddaWritePos + 2048) % m_cddaBuffer.size();
+    sint32 len = static_cast<sint32>(m_cddaWritePos) - m_cddaReadPos;
+    if (len < 0) {
+        len += m_cddaBuffer.size();
+    }
+    if (len >= 2048 * 4) {
+        m_cddaReady = true;
+    }
 }
 
 void SCSP::DumpWRAM(std::ostream &out) const {
@@ -341,7 +349,7 @@ FORCE_INLINE void SCSP::GenerateSample() {
     }
 
     // Copy CDDA data to DSP EXTS (0=left, 1=right)
-    if (m_cddaReadPos != m_cddaWritePos) {
+    if (m_cddaReady && m_cddaReadPos != m_cddaWritePos) {
         m_dsp.audioInOut[0] = util::ReadLE<uint16>(&m_cddaBuffer[m_cddaReadPos + 0]);
         m_dsp.audioInOut[1] = util::ReadLE<uint16>(&m_cddaBuffer[m_cddaReadPos + 2]);
         m_cddaReadPos = (m_cddaReadPos + 2 * sizeof(uint16)) % m_cddaBuffer.size();
@@ -349,6 +357,7 @@ FORCE_INLINE void SCSP::GenerateSample() {
         // Buffer underrun
         m_dsp.audioInOut[0] = 0;
         m_dsp.audioInOut[1] = 0;
+        m_cddaReady = false;
     }
 
     m_dsp.Run();

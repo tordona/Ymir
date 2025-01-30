@@ -23,6 +23,7 @@ CDBlock::CDBlock(core::Scheduler &scheduler, scu::SCU &scu, scsp::SCSP &scsp)
                                   });
     // FIXME: audio track playback is too slow with the correct timing below
     // - even with the SCSP timing, it still causes a lot of clicking
+    // - might have to pace the CD block reads based on how full the SCSP buffer is
     m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, 2464 * 3, 3125);
     // m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, 2464 * 3, 3528);
 
