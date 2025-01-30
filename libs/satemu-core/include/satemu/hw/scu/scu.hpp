@@ -708,82 +708,130 @@ private:
 
     template <mem_primitive T>
     void WriteReg(uint32 address, T value) {
+        if constexpr (std::is_same_v<T, uint32>) {
+            WriteRegLong(address, value);
+        } else if constexpr (std::is_same_v<T, uint16>) {
+            WriteRegWord(address, value);
+        } else if constexpr (std::is_same_v<T, uint8>) {
+            WriteRegByte(address, value);
+        }
+    }
+
+    void WriteRegByte(uint32 address, uint8 value) {
+        // TODO: implement registers as needed
+
+        switch (address) {
+        case 0xA0 ... 0xA1: break;                                     // Interrupt Mask (bits 16-31)
+        case 0xA2: m_intrMask.u32 = (value << 8u) & 0x0000BF00; break; // Interrupt Mask (bits 8-15)
+        case 0xA3: m_intrMask.u32 = (value << 0u) & 0x000000FF; break; // Interrupt Mask (bits 0-7)
+
+        case 0xA4: m_intrStatus.u32 &= (value << 24u) | 0x00FFFFFF; break; // Interrupt Status (bits 24-31)
+        case 0xA5: m_intrStatus.u32 &= (value << 16u) | 0xFF00FFFF; break; // Interrupt Status (bits 16-23)
+        case 0xA6: m_intrStatus.u32 &= (value << 8u) | 0xFFFF00FF; break;  // Interrupt Status (bits 8-15)
+        case 0xA7: m_intrStatus.u32 &= (value << 0u) | 0xFFFFFF00; break;  // Interrupt Status (bits 0-7)
+
+        case 0xA8 ... 0xAA: break; // A-Bus Interrupt Acknowledge (bits 8-31)
+        case 0xAB:                 // A-Bus Interrupt Acknowledge (bits 0-7)
+            m_abusIntrAck = bit::extract<0>(value);
+            UpdateInterruptLevel(false);
+            break;
+
+        case 0xB0 ... 0xB3: // A-Bus Set (part 1)
+            // ignored for now
+            break;
+        case 0xB4 ... 0xB7: // A-Bus Set (part 2)
+            // ignored for now
+            break;
+        case 0xB8 ... 0xBB: // A-Bus Refresh
+            // ignored for now
+            break;
+
+        case 0xC8 ... 0xCB: // SCU Version (read-only)
+            break;
+
+        default:
+            regsLog.debug("unhandled 8-bit SCU register write to {:02X} = {:X}", address, value);
+            __debugbreak();
+            break;
+        }
+    }
+
+    void WriteRegWord(uint32 address, uint16 value) {
+        // TODO: implement registers as needed
+
+        regsLog.debug("unhandled 16-bit SCU register write to {:02X} = {:X}", address, value);
+        __debugbreak();
+    }
+
+    void WriteRegLong(uint32 address, uint32 value) {
         // TODO: handle 8-bit and 16-bit register writes if needed
 
         switch (address) {
         case 0x00: // Level 0 DMA Read Address
         case 0x20: // Level 1 DMA Read Address
         case 0x40: // Level 2 DMA Read Address
-            if constexpr (std::is_same_v<T, uint32>) {
-                auto &ch = m_dmaChannels[address >> 5u];
-                ch.srcAddr = bit::extract<0, 26>(value);
-            }
-            break;
+        {
+            auto &ch = m_dmaChannels[address >> 5u];
+            ch.srcAddr = bit::extract<0, 26>(value);
+        } break;
         case 0x04: // Level 0 DMA Write Address
         case 0x24: // Level 1 DMA Write Address
         case 0x44: // Level 2 DMA Write Address
-            if constexpr (std::is_same_v<T, uint32>) {
-                auto &ch = m_dmaChannels[address >> 5u];
-                ch.dstAddr = bit::extract<0, 26>(value);
-            }
-            break;
+        {
+            auto &ch = m_dmaChannels[address >> 5u];
+            ch.dstAddr = bit::extract<0, 26>(value);
+        } break;
         case 0x08: // Level 0 DMA Transfer Number
-            if constexpr (std::is_same_v<T, uint32>) {
-                auto &ch = m_dmaChannels[address >> 5u];
-                ch.xferCount = bit::extract<0, 19>(value);
-            }
-            break;
+        {
+            auto &ch = m_dmaChannels[address >> 5u];
+            ch.xferCount = bit::extract<0, 19>(value);
+        } break;
         case 0x28: // Level 1 DMA Transfer Number
         case 0x48: // Level 2 DMA Transfer Number
-            if constexpr (std::is_same_v<T, uint32>) {
-                auto &ch = m_dmaChannels[address >> 5u];
-                ch.xferCount = bit::extract<0, 11>(value);
-            }
-            break;
+        {
+            auto &ch = m_dmaChannels[address >> 5u];
+            ch.xferCount = bit::extract<0, 11>(value);
+        } break;
         case 0x0C: // Level 0 DMA Increment
         case 0x2C: // Level 1 DMA Increment
         case 0x4C: // Level 2 DMA Increment
-            if constexpr (std::is_same_v<T, uint32>) {
-                auto &ch = m_dmaChannels[address >> 5u];
-                ch.srcAddrInc = bit::extract<8>(value) * 4u;
-                ch.dstAddrInc = (1u << bit::extract<0, 2>(value)) & ~1u;
-            }
-            break;
+        {
+            auto &ch = m_dmaChannels[address >> 5u];
+            ch.srcAddrInc = bit::extract<8>(value) * 4u;
+            ch.dstAddrInc = (1u << bit::extract<0, 2>(value)) & ~1u;
+        } break;
         case 0x10: // Level 0 DMA Enable
         case 0x30: // Level 1 DMA Enable
         case 0x50: // Level 2 DMA Enable
-            if constexpr (std::is_same_v<T, uint32>) {
-                const uint32 index = address >> 5u;
-                auto &ch = m_dmaChannels[index];
-                ch.enabled = bit::extract<8>(value);
-                if (ch.enabled) {
-                    dmaLog.trace("DMA{} enabled - {:08X} (+{:02X}) -> {:08X} (+{:02X})", index, ch.srcAddr,
-                                 ch.srcAddrInc, ch.dstAddr, ch.dstAddrInc);
-                }
-                if (ch.enabled && ch.trigger == DMATrigger::Immediate && bit::extract<0>(value)) {
-                    if (ch.active) {
-                        dmaLog.trace("DMA{} triggering immediate transfer while another transfer is in progress",
-                                     index);
-                        // Finish previous transfer
-                        RunDMA();
-                    }
-                    ch.start = true;
-                    RecalcDMAChannel();
-                    RunDMA(); // HACK: run immediate DMA transfers immediately and instantly
-                }
+        {
+            const uint32 index = address >> 5u;
+            auto &ch = m_dmaChannels[index];
+            ch.enabled = bit::extract<8>(value);
+            if (ch.enabled) {
+                dmaLog.trace("DMA{} enabled - {:08X} (+{:02X}) -> {:08X} (+{:02X})", index, ch.srcAddr, ch.srcAddrInc,
+                             ch.dstAddr, ch.dstAddrInc);
             }
-            break;
+            if (ch.enabled && ch.trigger == DMATrigger::Immediate && bit::extract<0>(value)) {
+                if (ch.active) {
+                    dmaLog.trace("DMA{} triggering immediate transfer while another transfer is in progress", index);
+                    // Finish previous transfer
+                    RunDMA();
+                }
+                ch.start = true;
+                RecalcDMAChannel();
+                RunDMA(); // HACK: run immediate DMA transfers immediately and instantly
+            }
+        } break;
         case 0x14: // Level 0 DMA Mode
         case 0x34: // Level 1 DMA Mode
         case 0x54: // Level 2 DMA Mode
-            if constexpr (std::is_same_v<T, uint32>) {
-                auto &ch = m_dmaChannels[address >> 5u];
-                ch.indirect = bit::extract<24>(value);
-                ch.updateSrcAddr = bit::extract<16>(value);
-                ch.updateDstAddr = bit::extract<8>(value);
-                ch.trigger = static_cast<DMATrigger>(bit::extract<0, 2>(value));
-            }
-            break;
+        {
+            auto &ch = m_dmaChannels[address >> 5u];
+            ch.indirect = bit::extract<24>(value);
+            ch.updateSrcAddr = bit::extract<16>(value);
+            ch.updateDstAddr = bit::extract<8>(value);
+            ch.trigger = static_cast<DMATrigger>(bit::extract<0, 2>(value));
+        } break;
 
         case 0x60: // DMA Force Stop
             if (bit::extract<0>(value)) {
@@ -797,52 +845,38 @@ private:
             break;
 
         case 0x80: // DSP Program Control Port
-            if constexpr (std::is_same_v<T, uint32>) {
-                if (bit::extract<15>(value)) {
-                    m_dspState.PC = bit::extract<0, 7>(value);
-                }
-                if (bit::extract<25>(value)) {
-                    m_dspState.programPaused = true;
-                } else if (bit::extract<26>(value)) {
-                    m_dspState.programPaused = false;
-                } else if (!m_dspState.programExecuting) {
-                    m_dspState.programExecuting = bit::extract<16>(value);
-                    m_dspState.programStep = bit::extract<17>(value);
-                    m_dspState.programEnded = false;
-                }
+            if (bit::extract<15>(value)) {
+                m_dspState.PC = bit::extract<0, 7>(value);
+            }
+            if (bit::extract<25>(value)) {
+                m_dspState.programPaused = true;
+            } else if (bit::extract<26>(value)) {
+                m_dspState.programPaused = false;
+            } else if (!m_dspState.programExecuting) {
+                m_dspState.programExecuting = bit::extract<16>(value);
+                m_dspState.programStep = bit::extract<17>(value);
+                m_dspState.programEnded = false;
             }
             break;
         case 0x84: // DSP Program RAM Data Port
-            if constexpr (std::is_same_v<T, uint32>) {
-                m_dspState.WriteProgram(value);
-            }
+            m_dspState.WriteProgram(value);
             break;
         case 0x88: // DSP Data RAM Address Port
-            if constexpr (std::is_same_v<T, uint32>) {
-                m_dspState.dataAddress = bit::extract<0, 7>(value);
-            }
+            m_dspState.dataAddress = bit::extract<0, 7>(value);
             break;
         case 0x8C: // DSP Data RAM Data Port
-            if constexpr (std::is_same_v<T, uint32>) {
-                m_dspState.WriteData(value);
-            }
+            m_dspState.WriteData(value);
             break;
 
         case 0x90: // Timer 0 Compare
-            if constexpr (std::is_same_v<T, uint32>) {
-                m_timer0Compare = bit::extract<0, 9>(value);
-            }
+            m_timer0Compare = bit::extract<0, 9>(value);
             break;
         case 0x94: // Timer 1 Set Data
-            if constexpr (std::is_same_v<T, uint32>) {
-                m_timer1Reload = bit::extract<0, 8>(value) << 2u;
-            }
+            m_timer1Reload = bit::extract<0, 8>(value) << 2u;
             break;
         case 0x98: // Timer 1 Mode
-            if constexpr (std::is_same_v<T, uint32>) {
-                m_timer1Enable = bit::extract<0>(value);
-                m_timer1Mode = bit::extract<8>(value);
-            }
+            m_timer1Enable = bit::extract<0>(value);
+            m_timer1Mode = bit::extract<8>(value);
             break;
 
         case 0xA0: // Interrupt Mask
@@ -873,7 +907,8 @@ private:
             break;
 
         default:
-            regsLog.debug("unhandled {}-bit SCU register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+            regsLog.debug("unhandled 32-bit SCU register write to {:02X} = {:X}", address, value);
+            __debugbreak();
             break;
         }
     }
