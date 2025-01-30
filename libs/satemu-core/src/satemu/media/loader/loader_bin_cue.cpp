@@ -304,7 +304,8 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
                     }
                     binFileOffset += binFileLength;
                 }
-                fmt::println("track {} offset = {:X}  {:02d}:{:02d}:{:02d}", currTrackIndex, binFileOffset, m, s, f);
+                // fmt::println("BIN/CUE: Track {} offset = {:X}  {:02d}:{:02d}:{:02d}", currTrackIndex, binFileOffset,
+                // m, s, f);
 
                 // Start new track
                 track.startFrameAddress = frameAddress;
