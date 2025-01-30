@@ -218,8 +218,6 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
 
         playInitLog.debug("Track:Index range {:02d}:{:02d}-{:02d}:{:02d} ", startTrack, startIndex, endTrack, endIndex);
 
-        // TODO: implement; the code below is incorrect and untested
-
         // Clamp track numbers to what's available in the disc
         // If end < start, ProcessDriveState() will switch to the Pause state automatically
         uint8 firstTrack = session.firstTrackIndex + 1;
@@ -393,6 +391,7 @@ void CDBlock::ProcessDriveStatePlay() {
                             playLog.trace("Passed filter; sent to buffer partition {}", filter.trueOutput);
                             m_partitionManager.InsertHead(filter.trueOutput, buffer);
                             m_lastCDWritePartition = filter.trueOutput;
+                            SetInterrupt(kHIRQ_CSCT);
                         }
                         break;
                     } else {
@@ -408,14 +407,12 @@ void CDBlock::ProcessDriveStatePlay() {
                 }
 
                 // If playing an audio track, send to SCSP
-                if (track->controlADR == 0x01 &&
-                    track->ReadSectorUserData(frameAddress, std::span<uint8, 2048>{buffer.data.begin(), 2048})) {
-                    m_SCSP.ReceiveCDDA(std::span<uint8, 2048>{buffer.data.begin(), 2048});
+                if (track->controlADR == 0x01) {
+                    const uint32 userDataOffset = m_getSectorLength == 2352 ? 16 : 0;
+                    m_SCSP.ReceiveCDDA(std::span<uint8, 2048>{buffer.data.begin() + userDataOffset, 2048});
                 }
 
                 m_status.frameAddress++;
-
-                SetInterrupt(kHIRQ_CSCT);
             } else if (track == nullptr) {
                 // This shouldn't really happen unless we're given an invalid disc image
                 // Let's pretend this is a disc read error
@@ -1137,9 +1134,12 @@ void CDBlock::CmdSeekDisc() {
         } else {
             const auto &session = m_disc.sessions.back();
             const uint8 trackIndex = session.FindTrackIndex(frameAddress);
-            if (trackIndex <= 99) {
-                m_status.frameAddress = frameAddress;
+            if (trackIndex < 99) {
+                const auto &track = session.tracks[trackIndex];
                 m_status.statusCode = kStatusCodePause;
+                m_status.frameAddress = frameAddress;
+                m_status.flags = track.controlADR == 0x01 ? 0x8 : 0x0;
+                m_status.controlADR = track.controlADR;
                 m_status.track = trackIndex;
                 m_status.index = 1;
                 m_targetDriveCycles = kDriveCyclesNotPlaying;
@@ -1172,8 +1172,11 @@ void CDBlock::CmdSeekDisc() {
         } else {
             const auto &session = m_disc.sessions.back();
             if (trackNum - 1 >= session.firstTrackIndex && trackNum - 1 <= session.lastTrackIndex) {
-                m_status.frameAddress = session.tracks[trackNum - 1].startFrameAddress;
+                const auto &track = session.tracks[trackNum - 1];
                 m_status.statusCode = kStatusCodePause;
+                m_status.frameAddress = track.startFrameAddress;
+                m_status.flags = track.controlADR == 0x01 ? 0x8 : 0x0;
+                m_status.controlADR = track.controlADR;
                 m_status.track = trackNum;
                 m_status.index = 1;
                 m_targetDriveCycles = kDriveCyclesNotPlaying;

@@ -126,7 +126,7 @@ public:
 
 private:
     alignas(16) std::array<uint8, m68k::kM68KWRAMSize> m_WRAM;
-    alignas(16) std::array<uint8, 2048 * 75 * 2> m_cddaBuffer;
+    alignas(16) std::array<uint8, 2048 * 75> m_cddaBuffer;
     uint32 m_cddaReadPos;
     uint32 m_cddaWritePos;
 
