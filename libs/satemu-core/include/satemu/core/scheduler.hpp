@@ -144,7 +144,9 @@ public:
     // Schedules the specified event to happen $interval cycles from the current count
     void ScheduleFromNow(EventID id, uint64 interval) {
         assert(id < kNumEvents);
-        ScheduleEvent(id, m_currCount + interval);
+        Event &event = m_events[id];
+        const uint64 scaledCount = m_currCount * event.countNumerator / event.countDenominator;
+        ScheduleEvent(id, scaledCount + interval);
     }
 
     // Schedules the specified event to happen at the specified cycle count
