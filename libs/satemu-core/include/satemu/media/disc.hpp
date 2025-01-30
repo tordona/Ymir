@@ -16,14 +16,14 @@ namespace satemu::media {
 
 struct Track {
     std::unique_ptr<IBinaryReader> binaryReader;
-    uint32 index;
-    uint32 sectorSize;
-    uint32 userDataOffset;
-    uint8 controlADR;
-    bool interleavedSubchannel; // true=96-byte PW subchannel, interleaved
+    uint32 index = 0;
+    uint32 sectorSize = 0;
+    uint32 userDataOffset = 0;
+    uint8 controlADR = 0;
+    bool interleavedSubchannel = false; // true=96-byte PW subchannel, interleaved
 
-    uint32 startFrameAddress;
-    uint32 endFrameAddress;
+    uint32 startFrameAddress = 0;
+    uint32 endFrameAddress = 0;
 
     void SetSectorSize(uint32 size) {
         sectorSize = size;

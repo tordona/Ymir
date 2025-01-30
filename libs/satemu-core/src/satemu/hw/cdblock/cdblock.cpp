@@ -333,7 +333,9 @@ void CDBlock::ProcessDriveState() {
             m_targetDriveCycles = kDriveCyclesPlaying1x;
         }
         m_status.statusCode = kStatusCodePlay;
-        m_status.frameAddress = m_playStartPos;
+        if (m_status.frameAddress < m_playStartPos || m_status.frameAddress > m_playEndPos) {
+            m_status.frameAddress = m_playStartPos;
+        }
         break;
     case kStatusCodePlay: ProcessDriveStatePlay(); break;
     case kStatusCodePause:
