@@ -247,32 +247,39 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
         }
 
         const media::Track *track = session.FindTrack(frameAddress);
-        assert(track != nullptr);
 
-        // Switch to seek mode
-        // FIXME: horribly broken! somehow causes VF2 to crash
-        //*
-        m_status.statusCode = kStatusCodeSeek;
-        m_status.repeatCount = 0; // first repeat
-        m_status.controlADR = track->controlADR;
-        m_status.track = track->index;
-        m_status.index = 1; // TODO: handle indexes
-        m_status.flags = m_status.controlADR == 0x01 ? 0x8 : 0x0;
+        if (track != nullptr) [[likely]] {
+            // Switch to seek mode
+            // FIXME: horribly broken! somehow causes VF2 to crash
+            //*
+            m_status.statusCode = kStatusCodeSeek;
+            m_status.repeatCount = 0; // first repeat
+            m_status.controlADR = track->controlADR;
+            m_status.track = track->index;
+            m_status.index = 1; // TODO: handle indexes
+            m_status.flags = m_status.controlADR == 0x01 ? 0x8 : 0x0;
 
-        // TODO: delay seek for a realistic amount of time
-        if (m_status.controlADR == 0x41) {
-            m_targetDriveCycles = kDriveCyclesPlaying1x / m_readSpeed;
+            // TODO: delay seek for a realistic amount of time
+            if (m_status.controlADR == 0x41) {
+                m_targetDriveCycles = kDriveCyclesPlaying1x / m_readSpeed;
+            } else {
+                // Force 1x speed if playing audio track
+                m_targetDriveCycles = kDriveCyclesPlaying1x;
+            }
+            playInitLog.debug("Track FAD range {:06X}-{:06X}", m_playStartPos, m_playEndPos);
+
+            if (resetPos) {
+                m_status.frameAddress = m_playStartPos;
+                playInitLog.debug("Reset playback position to {:06X}", m_status.frameAddress);
+            }
+            //*/
         } else {
-            // Force 1x speed if playing audio track
-            m_targetDriveCycles = kDriveCyclesPlaying1x;
+            // The disc image is truncated or corrupted
+            // Let's pretend this is a disc read error
+            // TODO: what happens on a real disc read error?
+            playLog.debug("Could not find track - disc image is truncated or corrupted");
+            return false;
         }
-        playInitLog.debug("Track FAD range {:06X}-{:06X}", m_playStartPos, m_playEndPos);
-
-        if (resetPos) {
-            m_status.frameAddress = m_playStartPos;
-            playInitLog.debug("Reset playback position to {:06X}", m_status.frameAddress);
-        }
-        //*/
     }
 
     return true;
