@@ -237,6 +237,8 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
         m_playEndPos = session.tracks[endTrack - 1].endFrameAddress;
 
         // Switch to seek mode
+        // FIXME: horribly broken! somehow causes VF2 to crash
+        /*
         m_status.statusCode = kStatusCodeSeek;
         m_status.flags = 0x8;     // CD-ROM decoding flag
         m_status.repeatCount = 0; // first repeat
@@ -252,6 +254,7 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
             m_targetDriveCycles = kDriveCyclesPlaying1x;
         }
         playInitLog.debug("Track FAD range {:06X}-{:06X}", m_playStartPos, m_playEndPos);
+        //*/
     }
 
     return true;
@@ -782,7 +785,6 @@ void CDBlock::SetupCommand() {
 
 FORCE_INLINE void CDBlock::ProcessCommand() {
     const uint8 cmd = m_CR[0] >> 8u;
-    rootLog.trace("Processing command {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
 
     switch (cmd) {
     case 0x00: CmdGetStatus(); break;
