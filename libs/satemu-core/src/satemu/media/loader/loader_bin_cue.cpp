@@ -82,6 +82,9 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
     uint32 currTrackIndex = ~0;
     uintmax_t binFileOffset = 0;
     uintmax_t binFileSize = 0;
+    uint32 prevM = 0;
+    uint32 prevS = 0;
+    uint32 prevF = 0;
     std::array<uintmax_t, 99> trackFileOffsets{};
 
     // File format validation flags
@@ -161,6 +164,9 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
 
             binFileOffset = 0;
             binFileSize = binaryReader->Size();
+            prevM = 0;
+            prevS = 0;
+            prevF = 0;
 
             // fmt::println("BIN/CUE: File {} - {} bytes", filename, binFileSize);
 
@@ -207,6 +213,7 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
             } else if (format == "CDG") {
                 // Karaoke CD+G track
                 sectorSize = 2448;
+                // TODO: control/ADR?
             } else if (format == "AUDIO") {
                 // Audio track
                 sectorSize = 2048;
@@ -281,28 +288,32 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
             // We don't care about subindices for now
 
             if (startTrack) {
-                const uintmax_t prevBinFileOffset = binFileOffset;
-                binFileOffset = TimestampToFileOffset(m, s, f, track.sectorSize);
                 binFileOffset += static_cast<uintmax_t>(prevPregapFrames) * track.sectorSize;
 
                 // Close previous track
                 if (currTrackIndex > 0) {
                     auto &prevTrack = session.tracks[currTrackIndex - 1];
+                    const uintmax_t binFileLength = TimestampToFileOffset(m, s, f, prevTrack.sectorSize) -
+                                                    TimestampToFileOffset(prevM, prevS, prevF, prevTrack.sectorSize);
                     if (prevTrack.endFrameAddress < prevTrack.startFrameAddress) {
-                        const uintmax_t length = binFileOffset - prevBinFileOffset;
-                        const uint32 frames = length / prevTrack.sectorSize;
+                        const uint32 frames = binFileLength / prevTrack.sectorSize;
                         prevTrack.endFrameAddress = prevTrack.startFrameAddress + frames - 1;
                         prevTrack.binaryReader = std::make_unique<SharedSubviewBinaryReader>(
-                            binaryReader, trackFileOffsets[currTrackIndex - 1], length);
+                            binaryReader, trackFileOffsets[currTrackIndex - 1], binFileLength);
                         frameAddress += frames;
                     }
+                    binFileOffset += binFileLength;
                 }
+                fmt::println("track {} offset = {:X}  {:02d}:{:02d}:{:02d}", currTrackIndex, binFileOffset, m, s, f);
 
                 // Start new track
                 track.startFrameAddress = frameAddress;
                 trackFileOffsets[currTrackIndex] = binFileOffset;
             }
 
+            prevM = m;
+            prevS = s;
+            prevF = f;
             hasIndex = true;
         } else if (keyword == "PREGAP") {
             // PREGAP [mm:ss:ff]
