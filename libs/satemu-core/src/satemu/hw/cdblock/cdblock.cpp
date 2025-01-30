@@ -407,6 +407,7 @@ void CDBlock::ProcessDriveStatePlay() {
             if (track != nullptr && track->ReadSector(frameAddress, buffer.data, m_getSectorLength)) [[likely]] {
                 buffer.size = m_getSectorLength;
                 buffer.frameAddress = frameAddress;
+                track->ReadSectorSubheader(frameAddress, buffer.subheader);
 
                 playLog.trace("Read {} bytes from frame address {:06X}", buffer.size, buffer.frameAddress);
 

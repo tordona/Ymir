@@ -41,22 +41,37 @@ struct Filter {
     }
 
     bool Test(const Buffer &buffer) const {
-        // TODO: implement
-        // const bool invertSubheaderConds = bit::extract<4>(mode);
+        bool subheaderPass = true;
+        // Filter by file number
         if (bit::extract<0>(mode)) {
-            // TODO: filter by file number; honor invert flag
+            subheaderPass &= buffer.subheader.fileNum == fileNum;
         }
+        // Filter by channel number
         if (bit::extract<1>(mode)) {
-            // TODO: filter by channel number; honor invert flag
+            subheaderPass &= buffer.subheader.chanNum == chanNum;
         }
+        // Filter by submode
         if (bit::extract<2>(mode)) {
-            // TODO: filter by submode; honor invert flag
+            subheaderPass &= (buffer.subheader.submode & submodeMask) == submodeValue;
         }
+        // Filter by coding information
         if (bit::extract<3>(mode)) {
-            // TODO: filter by coding information; honor invert flag
+            subheaderPass &= (buffer.subheader.codingInfo & codingInfoMask) == codingInfoValue;
         }
+        if (bit::extract<4>(mode)) {
+            // Invert subheader conditions
+            subheaderPass = !subheaderPass;
+        }
+        if (!subheaderPass) {
+            return false;
+        }
+
+        // Filter by frame address
         if (bit::extract<6>(mode)) {
-            // TODO: filter by frame address range
+            if (buffer.frameAddress < startFrameAddress ||
+                buffer.frameAddress >= startFrameAddress + frameAddressCount) {
+                return false;
+            }
         }
         return true;
     }

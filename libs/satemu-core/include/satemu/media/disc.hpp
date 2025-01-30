@@ -4,6 +4,8 @@
 
 #include <satemu/media/binary_reader/binary_reader.hpp>
 
+#include "subheader.hpp"
+
 // #include <fmt/format.h>
 
 #include <array>
@@ -133,6 +135,40 @@ struct Track {
         fmt::println("");*/
 
         return true;
+    }
+
+    void ReadSectorSubheader(uint32 frameAddress, Subheader &subheader) const {
+        subheader.fileNum = 0;
+        subheader.chanNum = 0;
+        subheader.submode = 0;
+        subheader.codingInfo = 0;
+
+        if (frameAddress < startFrameAddress || frameAddress > endFrameAddress) [[unlikely]] {
+            return;
+        }
+
+        // Subheader is only present when the raw sector size is at least 2336 bytes long
+        if (sectorSize < 2336) {
+            return;
+        }
+
+        // Read mode byte and subheader
+        const bool hasSyncBytes = sectorSize >= 2352;
+        std::array<uint8, 5> modeAndSubheader{};
+        if (binaryReader->Read(hasSyncBytes ? 0xF : 0x3, 5, modeAndSubheader) < 5) {
+            return;
+        }
+
+        // Subheader is only present in mode 2 tracks
+        if (modeAndSubheader[0] != 0x02) {
+            return;
+        }
+
+        // Fill in subheader data
+        subheader.fileNum = modeAndSubheader[1];
+        subheader.chanNum = modeAndSubheader[2];
+        subheader.submode = modeAndSubheader[3];
+        subheader.codingInfo = modeAndSubheader[4];
     }
 };
 
