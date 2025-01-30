@@ -19,6 +19,7 @@
 
 #include <array>
 #include <iosfwd>
+#include <span>
 
 // -----------------------------------------------------------------------------
 // Forward declarations
@@ -79,6 +80,8 @@ public:
 
     void Advance(uint64 cycles);
 
+    void ReceiveCDDA(std::span<uint8, 2048> data);
+
     void DumpWRAM(std::ostream &out) const;
 
     void DumpDSP_MPRO(std::ostream &out) const;
@@ -123,6 +126,9 @@ public:
 
 private:
     alignas(16) std::array<uint8, m68k::kM68KWRAMSize> m_WRAM;
+    alignas(16) std::array<uint8, 2048 * 75 * 2> m_cddaBuffer;
+    uint32 m_cddaReadPos;
+    uint32 m_cddaWritePos;
 
     m68k::MC68EC000 m_m68k;
     bool m_m68kEnabled;

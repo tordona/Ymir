@@ -9,8 +9,9 @@
 
 namespace satemu::cdblock {
 
-CDBlock::CDBlock(core::Scheduler &scheduler, scu::SCU &scu)
-    : m_scu(scu)
+CDBlock::CDBlock(core::Scheduler &scheduler, scu::SCU &scu, scsp::SCSP &scsp)
+    : m_SCU(scu)
+    , m_SCSP(scsp)
     , m_scheduler(scheduler) {
 
     m_driveStateUpdateEvent =
@@ -349,8 +350,6 @@ void CDBlock::ProcessDriveState() {
 void CDBlock::ProcessDriveStatePlay() {
     const uint32 frameAddress = m_status.frameAddress;
     if (frameAddress <= m_playEndPos) {
-        assert(m_cdDeviceConnection < m_filters.size());
-
         playLog.trace("Read from frame address {:06X}", frameAddress);
 
         if (m_disc.sessions.empty()) [[unlikely]] {
@@ -409,8 +408,9 @@ void CDBlock::ProcessDriveStatePlay() {
                 }
 
                 // If playing an audio track, send to SCSP
-                if (track->controlADR == 0x01) {
-                    // TODO: send to SCSP
+                if (track->controlADR == 0x01 &&
+                    track->ReadSectorUserData(frameAddress, std::span<uint8, 2048>{buffer.data.begin(), 2048})) {
+                    m_SCSP.ReceiveCDDA(std::span<uint8, 2048>{buffer.data.begin(), 2048});
                 }
 
                 m_status.frameAddress++;
@@ -464,7 +464,7 @@ void CDBlock::SetInterrupt(uint16 bits) {
 void CDBlock::UpdateInterrupts() {
     rootLog.trace("HIRQ = {:04X}  mask = {:04X}  active = {:04X}", m_HIRQ, m_HIRQMASK, m_HIRQ & m_HIRQMASK);
     if (m_HIRQ & m_HIRQMASK) {
-        m_scu.TriggerExternalInterrupt0();
+        m_SCU.TriggerExternalInterrupt0();
     }
 }
 

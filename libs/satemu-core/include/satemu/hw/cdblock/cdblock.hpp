@@ -23,6 +23,12 @@ class SCU;
 
 } // namespace satemu::scu
 
+namespace satemu::scsp {
+
+class SCSP;
+
+} // namespace satemu::scsp
+
 // -----------------------------------------------------------------------------
 
 namespace satemu::cdblock {
@@ -36,7 +42,7 @@ class CDBlock {
     static constexpr dbg::Category partLog{rootLog, "PartMgr"};
 
 public:
-    CDBlock(core::Scheduler &scheduler, scu::SCU &scu);
+    CDBlock(core::Scheduler &scheduler, scu::SCU &scu, scsp::SCSP &scsp);
 
     void Reset(bool hard);
 
@@ -105,7 +111,8 @@ public:
     }
 
 private:
-    scu::SCU &m_scu;
+    scu::SCU &m_SCU;
+    scsp::SCSP &m_SCSP;
 
     core::Scheduler &m_scheduler;
     core::EventID m_driveStateUpdateEvent;
