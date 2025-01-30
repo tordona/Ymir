@@ -21,13 +21,17 @@ CDBlock::CDBlock(core::Scheduler &scheduler, scu::SCU &scu, scsp::SCSP &scsp)
                                       cdb.ProcessDriveState();
                                       eventContext.RescheduleFromNow(cdb.m_targetDriveCycles);
                                   });
-    m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, 3, 1);
+    // FIXME: audio track playback is too slow with the correct timing below
+    // - even with the SCSP timing, it still causes a lot of clicking
+    m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, 2464 * 3, 3125);
+    // m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, 2464 * 3, 3528);
 
     m_commandExecEvent = m_scheduler.RegisterEvent(
         core::events::CDBlockCommand, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
             auto &cdb = *static_cast<CDBlock *>(userContext);
             cdb.ProcessCommand();
         });
+    m_scheduler.SetEventCountFactor(m_commandExecEvent, 2464, 3528);
 
     Reset(true);
 }
