@@ -172,8 +172,13 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
 
         playInitLog.debug("FAD range {:06X} to {:06X}", m_playStartPos, m_playEndPos);
 
+        uint32 frameAddress = m_status.frameAddress;
+        if (resetPos || frameAddress < m_playStartPos || frameAddress > m_playEndPos) {
+            frameAddress = m_playStartPos;
+        }
+
         // Find track containing the requested start frame address
-        const uint8 trackIndex = session.FindTrackIndex(m_playStartPos);
+        const uint8 trackIndex = session.FindTrackIndex(frameAddress);
         if (trackIndex != 0xFF) {
             m_status.statusCode = kStatusCodeSeek;
             m_status.flags = 0x8;     // CD-ROM decoding flag
@@ -236,15 +241,23 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
         m_playStartPos = session.tracks[startTrack - 1].startFrameAddress;
         m_playEndPos = session.tracks[endTrack - 1].endFrameAddress;
 
+        uint32 frameAddress = m_status.frameAddress;
+        if (resetPos || frameAddress < m_playStartPos || frameAddress > m_playEndPos) {
+            frameAddress = m_playStartPos;
+        }
+
+        const media::Track *track = session.FindTrack(frameAddress);
+        assert(track != nullptr);
+
         // Switch to seek mode
         // FIXME: horribly broken! somehow causes VF2 to crash
         //*
         m_status.statusCode = kStatusCodeSeek;
-        m_status.flags = 0x8;     // CD-ROM decoding flag
         m_status.repeatCount = 0; // first repeat
-        m_status.controlADR = session.tracks[startTrack - 1].controlADR;
-        m_status.track = startTrack;
+        m_status.controlADR = track->controlADR;
+        m_status.track = track->index;
         m_status.index = 1; // TODO: handle indexes
+        m_status.flags = m_status.controlADR == 0x01 ? 0x8 : 0x0;
 
         // TODO: delay seek for a realistic amount of time
         if (m_status.controlADR == 0x41) {
@@ -446,6 +459,7 @@ void CDBlock::ProcessDriveStatePlay() {
                 m_status.track = track->index;
                 m_status.index = 1; // TODO: handle indexes
                 m_status.controlADR = track->controlADR;
+                m_status.flags = track->controlADR == 0x41 ? 0x8 : 0x0;
             } else if (track == nullptr) {
                 // This shouldn't really happen unless we're given an invalid disc image
                 // Let's pretend this is a disc read error
@@ -1172,7 +1186,7 @@ void CDBlock::CmdSeekDisc() {
                 const auto &track = session.tracks[trackIndex];
                 m_status.statusCode = kStatusCodePause;
                 m_status.frameAddress = frameAddress;
-                m_status.flags = track.controlADR == 0x01 ? 0x8 : 0x0;
+                m_status.flags = track.controlADR == 0x41 ? 0x8 : 0x0;
                 m_status.controlADR = track.controlADR;
                 m_status.track = trackIndex;
                 m_status.index = 1;
@@ -1209,7 +1223,7 @@ void CDBlock::CmdSeekDisc() {
                 const auto &track = session.tracks[trackNum - 1];
                 m_status.statusCode = kStatusCodePause;
                 m_status.frameAddress = track.startFrameAddress;
-                m_status.flags = track.controlADR == 0x01 ? 0x8 : 0x0;
+                m_status.flags = track.controlADR == 0x41 ? 0x8 : 0x0;
                 m_status.controlADR = track.controlADR;
                 m_status.track = trackNum;
                 m_status.index = 1;
