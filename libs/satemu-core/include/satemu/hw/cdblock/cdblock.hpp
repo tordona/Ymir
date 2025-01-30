@@ -2,6 +2,9 @@
 
 #include "cdblock_defs.hpp"
 
+#include "cdblock_buffer.hpp"
+#include "cdblock_filter.hpp"
+
 #include <satemu/core/scheduler.hpp>
 
 #include <satemu/hw/hw_defs.hpp>
@@ -281,12 +284,6 @@ private:
     //
     // Disconnected filter output connectors will result in dropping the data.
 
-    struct Buffer {
-        std::array<uint8, 2352> data;
-        uint16 size;
-        uint32 frameAddress;
-    };
-
     class PartitionManager {
     public:
         PartitionManager();
@@ -313,7 +310,7 @@ private:
     };
 
     PartitionManager m_partitionManager;
-    std::array<media::Filter, kNumFilters> m_filters;
+    std::array<Filter, kNumFilters> m_filters;
 
     Buffer m_scratchBuffer;
 

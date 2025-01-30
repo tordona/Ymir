@@ -1,12 +1,14 @@
 #pragma once
 
+#include "cdblock_buffer.hpp"
+
 #include <satemu/core_types.hpp>
 
 #include <satemu/util/bit_ops.hpp>
 
 #include <span>
 
-namespace satemu::media {
+namespace satemu::cdblock {
 
 struct Filter {
     static constexpr uint8 kDisconnected = 0xFF;
@@ -38,7 +40,7 @@ struct Filter {
         codingInfoValue = 0;
     }
 
-    bool Test(std::span<uint8> data) const {
+    bool Test(const Buffer &buffer) const {
         // TODO: implement
         // const bool invertSubheaderConds = bit::extract<4>(mode);
         if (bit::extract<0>(mode)) {
@@ -91,4 +93,4 @@ struct Filter {
     uint8 falseOutput; // filter number; 0xFF = disconnected
 };
 
-} // namespace satemu::media
+} // namespace satemu::cdblock

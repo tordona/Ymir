@@ -8,7 +8,9 @@ add_library(satemu-core
     include/satemu/hw/hw_defs.hpp
 
     include/satemu/hw/cdblock/cdblock.hpp
+    include/satemu/hw/cdblock/cdblock_buffer.hpp
     include/satemu/hw/cdblock/cdblock_defs.hpp
+    include/satemu/hw/cdblock/cdblock_filter.hpp
 
     include/satemu/hw/m68k/m68k.hpp
     include/satemu/hw/m68k/m68k_decode.hpp
@@ -42,7 +44,6 @@ add_library(satemu-core
 
     include/satemu/media/disc.hpp
     include/satemu/media/filesystem.hpp
-    include/satemu/media/filter.hpp
     include/satemu/media/frame_address.hpp
     include/satemu/media/iso9660.hpp
     

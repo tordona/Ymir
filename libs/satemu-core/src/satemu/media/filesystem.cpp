@@ -88,9 +88,7 @@ bool Filesystem::Read(const Disc &disc) {
     return false;
 }
 
-bool Filesystem::ChangeDirectory(uint32 fileID, const Filter &filter) {
-    // TODO: use filter somehow
-
+bool Filesystem::ChangeDirectory(uint32 fileID) {
     if (!IsValid()) {
         return false;
     }

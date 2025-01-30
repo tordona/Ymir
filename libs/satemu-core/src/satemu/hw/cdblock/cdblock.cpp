@@ -89,7 +89,7 @@ void CDBlock::Reset(bool hard) {
         filter.trueOutput = i;
         i++;
     }
-    m_cdDeviceConnection = media::Filter::kDisconnected;
+    m_cdDeviceConnection = Filter::kDisconnected;
     m_lastCDWritePartition = ~0;
 
     m_calculatedPartitionSize = 0;
@@ -250,8 +250,6 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
 
         if (track != nullptr) [[likely]] {
             // Switch to seek mode
-            // FIXME: horribly broken! somehow causes VF2 to crash
-            //*
             m_status.statusCode = kStatusCodeSeek;
             m_status.repeatCount = 0; // first repeat
             m_status.controlADR = track->controlADR;
@@ -272,7 +270,6 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
                 m_status.frameAddress = m_playStartPos;
                 playInitLog.debug("Reset playback position to {:06X}", m_status.frameAddress);
             }
-            //*/
         } else {
             // The disc image is truncated or corrupted
             // Let's pretend this is a disc read error
@@ -415,10 +412,10 @@ void CDBlock::ProcessDriveStatePlay() {
 
                 // Check against CD device filter and send data to the appropriate destination
                 uint8 filterNum = m_cdDeviceConnection;
-                for (int i = 0; i < kNumFilters && filterNum != media::Filter::kDisconnected; i++) {
-                    const media::Filter &filter = m_filters[filterNum];
-                    if (filter.Test({buffer.data.begin(), buffer.size})) {
-                        if (filter.trueOutput == media::Filter::kDisconnected) [[unlikely]] {
+                for (int i = 0; i < kNumFilters && filterNum != Filter::kDisconnected; i++) {
+                    const Filter &filter = m_filters[filterNum];
+                    if (filter.Test(buffer)) {
+                        if (filter.trueOutput == Filter::kDisconnected) [[unlikely]] {
                             playLog.trace("Passed filter; output disconnected - discarded");
                         } else {
                             assert(filter.trueOutput < m_filters.size());
@@ -429,7 +426,7 @@ void CDBlock::ProcessDriveStatePlay() {
                         }
                         break;
                     } else {
-                        if (filter.falseOutput == media::Filter::kDisconnected) [[unlikely]] {
+                        if (filter.falseOutput == Filter::kDisconnected) [[unlikely]] {
                             playLog.trace("Failed filter; output disconnected - discarded");
                             break;
                         } else {
@@ -804,9 +801,9 @@ bool CDBlock::ConnectCDDevice(uint8 filterNumber) {
         // Connect CD to specified filter
         DisconnectFilterInput(filterNumber);
         m_cdDeviceConnection = filterNumber;
-    } else if (filterNumber == media::Filter::kDisconnected) {
+    } else if (filterNumber == Filter::kDisconnected) {
         // Disconnect CD
-        m_cdDeviceConnection = media::Filter::kDisconnected;
+        m_cdDeviceConnection = Filter::kDisconnected;
     } else {
         return false;
     }
@@ -815,11 +812,11 @@ bool CDBlock::ConnectCDDevice(uint8 filterNumber) {
 
 void CDBlock::DisconnectFilterInput(uint8 filterNumber) {
     if (m_cdDeviceConnection == filterNumber) {
-        m_cdDeviceConnection = media::Filter::kDisconnected;
+        m_cdDeviceConnection = Filter::kDisconnected;
     }
     for (auto &filter : m_filters) {
         if (filter.falseOutput == filterNumber) {
-            filter.falseOutput = media::Filter::kDisconnected;
+            filter.falseOutput = Filter::kDisconnected;
             break; // there can be only one input connection to a filter
         }
     }
@@ -1669,9 +1666,9 @@ void CDBlock::CmdResetSelector() {
         if (clearFilterInputs) {
             rootLog.debug("Clearing all filter input connectors");
             for (auto &filter : m_filters) {
-                filter.falseOutput = media::Filter::kDisconnected;
+                filter.falseOutput = Filter::kDisconnected;
             }
-            m_cdDeviceConnection = media::Filter::kDisconnected;
+            m_cdDeviceConnection = Filter::kDisconnected;
         }
         if (clearFilterTrueOutputs) {
             rootLog.debug("Clearing all true filter output connectors");
@@ -1683,7 +1680,7 @@ void CDBlock::CmdResetSelector() {
         if (clearFilterFalseOutputs) {
             rootLog.debug("Clearing all false filter output connectors");
             for (auto &filter : m_filters) {
-                filter.falseOutput = media::Filter::kDisconnected;
+                filter.falseOutput = Filter::kDisconnected;
             }
         }
     }
@@ -2129,7 +2126,8 @@ void CDBlock::CmdChangeDirectory() {
     // Output structure: standard CD status data
     bool reject = false;
     if (filterNumber < m_filters.size()) {
-        reject = !m_fs.ChangeDirectory(fileID, m_filters[filterNumber]);
+        // TODO: use filter to read the sector(s) containing the directory record
+        reject = !m_fs.ChangeDirectory(fileID);
         if (!reject) {
             rootLog.debug("Changed directory to file ID {:X} using filter {}", fileID, filterNumber);
         }
