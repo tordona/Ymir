@@ -26,7 +26,7 @@ struct Track {
 
     void SetSectorSize(uint32 size) {
         sectorSize = size;
-        userDataOffset = size == 2352 ? 16 : 0;
+        userDataOffset = size == 2352 ? 16 : size == 2340 ? 4 : 0;
     }
 
     // Reads the user data portion of a sector.

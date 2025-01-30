@@ -408,8 +408,9 @@ void CDBlock::ProcessDriveStatePlay() {
 
                 // If playing an audio track, send to SCSP
                 if (track->controlADR == 0x01) {
-                    const uint32 userDataOffset = m_getSectorLength == 2352 ? 16 : 0;
+                    const uint32 userDataOffset = m_getSectorLength == 2352 ? 16 : m_getSectorLength == 2340 ? 4 : 0;
                     m_SCSP.ReceiveCDDA(std::span<uint8, 2048>{buffer.data.begin() + userDataOffset, 2048});
+                    playLog.trace("Sector {:06X} sent to SCSP", frameAddress);
                 }
 
                 m_status.frameAddress++;
