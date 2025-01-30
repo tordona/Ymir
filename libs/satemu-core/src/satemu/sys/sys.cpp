@@ -60,7 +60,7 @@ void Saturn::RunFrame() {
 
 void Saturn::Step() {
     // Clock speeds:
-    // - SH2:
+    // - SH-2:
     //   - 320 mode: 26.846591 MHz (NTSC) / 26.660156 MHz (PAL)
     //   - 352 mode: 28.636364 MHz (NTSC) / 28.437500 MHz (PAL)
     // - VDP1, VDP2, SCU share the SH2 clock
@@ -71,43 +71,36 @@ void Saturn::Step() {
     // - CD Block SH1: 20.000000 MHz
     // - SMPC MCU: 4.000000 MHz
 
-    // Subcycle counting is needed to accurately emulate the timings between these components.
-    // We use the fastest clocks as a reference, incrementing the cycle counts of the other clocks by the same amount.
-    // When a counter reaches the threshold, a full cycle is completed on that clock.
-    //
-    // Exact clock ratios are listed below for each mode:
+    // The listed ratios below are all exact and relative to the primary system clock (SH-2/VDPs/SCU).
+    // These ratios are used in the scheduler to accurately schedule events relative to each clock.
     //
     // NTSC system at clock 352 mode:
-    //   Clock rate       Step   Actual clock rate
-    //   28,636,363.64    2464   28,636,363.64
-    //   22,579,200.00    3125   22,579,200.00
-    //   20,000,000.00    3528   20,000,000.00
-    //    4,000,000.00   17640    4,000,000.00
-    //  (64-bit counter overflows in over 3.9 million years at 59.97 fps)
+    //   Clock rate         Ratio       Minimized ratio
+    //   28,636,363.64   2464:2464            1:1
+    //   22,579,200.00   2464:3125         2464:3125
+    //   20,000,000.00   2464:3528           44:63
+    //    4,000,000.00   2464:17640          44:315
     //
     // NTSC system at clock 320 mode:
-    //   Clock rate       Step   Actual clock rate
-    //   26,846,590.91   39424   26,846,590.91
-    //   22,579,200.00   46875   22,579,200.00
-    //   20,000,000.00   52920   20,000,000.00
-    //    4,000,000.00  264600    4,000,000.00
-    //  (64-bit counter overflows in over 240 thousand years at 59.97 fps)
+    //   Clock rate         Ratio       Minimized ratio
+    //   26,846,590.91   39424:39424          1:1
+    //   22,579,200.00   39424:46875      39424:46875
+    //   20,000,000.00   39424:52920        704:945
+    //    4,000,000.00   39424:264600       704:4725
     //
     // PAL system at clock 352 mode:
-    //   Clock rate       Step   Actual clock rate
-    //   28,437,500.00   32256   28,437,500.00
-    //   22,579,200.00   40625   22,579,200.00
-    //   20,000,000.00   45864   20,000,000.00
-    //    4,000,000.00  229320    4,000,000.00
-    //  (64-bit counter overflows in over 360 thousand years at 50 fps)
+    //   Clock rate         Ratio       Minimized ratio
+    //   28,437,500.00   32256:32256          1:1
+    //   22,579,200.00   32256:40625      32256:40625
+    //   20,000,000.00   32256:45864         64:91
+    //    4,000,000.00   32256:229320        64:455
     //
     // PAL system at clock 320 mode:
-    //   Clock rate        Step   Actual clock rate
-    //   26,660,156.25   172032   26,660,156.25
-    //   22,579,200.00   203125   22,579,200.00
-    //   20,000,000.00   229320   20,000,000.00
-    //    4,000,000.00  1146600    4,000,000.00
-    //  (64-bit counter overflows in over 67 thousand years at 50 fps)
+    //   Clock rate         Ratio       Minimized ratio
+    //   26,660,156.25   172032:172032        1:1
+    //   22,579,200.00   172032:203125   172032:203125
+    //   20,000,000.00   172032:229320     1024:1365
+    //    4,000,000.00   172032:1146600    1024:6825
 
     static constexpr uint64 kMaxStep = 64;
 
