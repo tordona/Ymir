@@ -127,14 +127,15 @@ void CDBlock::CloseTray() {
 
 bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 repeatParam) {
     // Handle "no change" parameters
-    if (startParam == 0xFFFFFF) {
-        startParam = m_playStartParam;
-    }
-    if (endParam == 0xFFFFFF) {
-        endParam = m_playEndParam;
-    }
-    if (repeatParam == 0xFF) {
-        repeatParam = m_playRepeatParam;
+    if (startParam == 0xFFFFFF || endParam == 0xFFFFFF || repeatParam == 0xFF) {
+        // "No change" must be specified on all parameters at once, and is only valid while paused
+        if (startParam == 0xFFFFFF && endParam == 0xFFFFFF && repeatParam == 0xFF) {
+            if ((m_status.statusCode & 0xF) == kStatusCodePause) {
+                m_status.statusCode = kStatusCodePlay;
+                return true;
+            }
+        }
+        return false;
     }
 
     const bool isStartFAD = bit::extract<23>(startParam);
@@ -205,8 +206,8 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
 
         // startParam and endParam contain the track number on the upper byte and index on the lower byte
         uint8 startTrack = bit::extract<8, 15>(startParam);
-        uint8 endTrack = bit::extract<8, 15>(endParam);
         uint8 startIndex = bit::extract<0, 7>(startParam);
+        uint8 endTrack = bit::extract<8, 15>(endParam);
         uint8 endIndex = bit::extract<0, 7>(endParam);
 
         // Handle default parameters - use first or last track and index in the disc
@@ -237,7 +238,7 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
 
         // Switch to seek mode
         // FIXME: horribly broken! somehow causes VF2 to crash
-        /*
+        //*
         m_status.statusCode = kStatusCodeSeek;
         m_status.flags = 0x8;     // CD-ROM decoding flag
         m_status.repeatCount = 0; // first repeat
@@ -253,6 +254,11 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
             m_targetDriveCycles = kDriveCyclesPlaying1x;
         }
         playInitLog.debug("Track FAD range {:06X}-{:06X}", m_playStartPos, m_playEndPos);
+
+        if (resetPos) {
+            m_status.frameAddress = m_playStartPos;
+            playInitLog.debug("Reset playback position to {:06X}", m_status.frameAddress);
+        }
         //*/
     }
 
@@ -435,6 +441,9 @@ void CDBlock::ProcessDriveStatePlay() {
                 }
 
                 m_status.frameAddress++;
+                m_status.track = track->index;
+                m_status.index = 1; // TODO: handle indexes
+                m_status.controlADR = track->controlADR;
             } else if (track == nullptr) {
                 // This shouldn't really happen unless we're given an invalid disc image
                 // Let's pretend this is a disc read error
@@ -798,6 +807,8 @@ void CDBlock::SetupCommand() {
 }
 
 FORCE_INLINE void CDBlock::ProcessCommand() {
+    rootLog.trace("Processing command {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
+
     const uint8 cmd = m_CR[0] >> 8u;
 
     switch (cmd) {
@@ -875,7 +886,7 @@ FORCE_INLINE void CDBlock::ProcessCommand() {
     default: rootLog.warn("Unimplemented command {:02X}", cmd); break;
     }
 
-    rootLog.trace("Response: {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
+    rootLog.trace("Command response:  {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
 }
 
 void CDBlock::CmdGetStatus() {

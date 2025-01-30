@@ -158,7 +158,7 @@ void runEmulator(satemu::Saturn &saturn) {
     ScopeGuard sgDestroyAudioStream{[&] { SDL_DestroyAudioStream(audioStream); }};
 
     // please don't burst my eardrums while I test audio
-    SDL_SetAudioStreamGain(audioStream, 0.5f);
+    SDL_SetAudioStreamGain(audioStream, 0.8f);
 
     if (!SDL_ResumeAudioStreamDevice(audioStream)) {
         SDL_Log("Unable to start audio stream: %s", SDL_GetError());

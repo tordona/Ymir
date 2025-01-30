@@ -16,6 +16,7 @@ namespace satemu::media {
 
 struct Track {
     std::unique_ptr<IBinaryReader> binaryReader;
+    uint32 index;
     uint32 sectorSize;
     uint32 userDataOffset;
     uint8 controlADR;
@@ -137,12 +138,18 @@ struct Track {
 
 struct Session {
     std::array<Track, 99> tracks;
-    uint32 numTracks;
-    uint32 firstTrackIndex;
-    uint32 lastTrackIndex;
+    uint32 numTracks = 0;
+    uint32 firstTrackIndex = 0;
+    uint32 lastTrackIndex = 0;
 
-    uint32 startFrameAddress;
-    uint32 endFrameAddress;
+    uint32 startFrameAddress = 0;
+    uint32 endFrameAddress = 0;
+
+    Session() {
+        for (int i = 0; i < tracks.size(); i++) {
+            tracks[i].index = i + 1;
+        }
+    }
 
     const Track *FindTrack(uint32 absFrameAddress) const {
         const uint8 trackIndex = FindTrackIndex(absFrameAddress);
