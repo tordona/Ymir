@@ -94,7 +94,7 @@ void SCSP::Advance(uint64 cycles) {
     }
 }
 
-void SCSP::ReceiveCDDA(std::span<uint8, 2048> data) {
+uint32 SCSP::ReceiveCDDA(std::span<uint8, 2048> data) {
     std::copy_n(data.begin(), 2048, m_cddaBuffer.begin() + m_cddaWritePos);
     m_cddaWritePos = (m_cddaWritePos + 2048) % m_cddaBuffer.size();
     sint32 len = static_cast<sint32>(m_cddaWritePos) - m_cddaReadPos;
@@ -104,6 +104,7 @@ void SCSP::ReceiveCDDA(std::span<uint8, 2048> data) {
     if (len >= 2048 * 4) {
         m_cddaReady = true;
     }
+    return len;
 }
 
 void SCSP::DumpWRAM(std::ostream &out) const {

@@ -21,9 +21,7 @@ CDBlock::CDBlock(core::Scheduler &scheduler, scu::SCU &scu, scsp::SCSP &scsp)
                                       cdb.ProcessDriveState();
                                       eventContext.RescheduleFromNow(cdb.m_targetDriveCycles);
                                   });
-    // FIXME: audio track playback is too slow with the correct timing below
-    // - even with the SCSP timing, it still causes a lot of clicking
-    // - might have to pace the CD block reads based on how full the SCSP buffer is
+    // FIXME: audio track playback is too slow with the correct ratio of 2464/3528
     m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, 2464 * 3, 3125);
     // m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, 2464 * 3, 3528);
 
@@ -417,7 +415,22 @@ void CDBlock::ProcessDriveStatePlay() {
                 // If playing an audio track, send to SCSP
                 if (track->controlADR == 0x01) {
                     const uint32 userDataOffset = m_getSectorLength == 2352 ? 16 : m_getSectorLength == 2340 ? 4 : 0;
-                    m_SCSP.ReceiveCDDA(std::span<uint8, 2048>{buffer.data.begin() + userDataOffset, 2048});
+                    const uint32 currBufferLength =
+                        m_SCSP.ReceiveCDDA(std::span<uint8, 2048>{buffer.data.begin() + userDataOffset, 2048});
+                    const uint32 maxBufferLength = m_SCSP.GetCDDABufferSize();
+
+                    // Adjust pace based on how full the SCSP CDDA buffer is
+                    if (currBufferLength < maxBufferLength / 3) {
+                        // Run faster if the buffer is less than a third full
+                        m_targetDriveCycles = kDriveCyclesPlaying1x - (kDriveCyclesPlaying1x >> 2);
+                    } else if (currBufferLength >= maxBufferLength * 2 / 3) {
+                        // Run slower if the buffer is more than two-thirds full
+                        m_targetDriveCycles = kDriveCyclesPlaying1x + (kDriveCyclesPlaying1x >> 2);
+                    } else {
+                        // Normal speed otherwise
+                        m_targetDriveCycles = kDriveCyclesPlaying1x;
+                    }
+
                     playLog.trace("Sector {:06X} sent to SCSP", frameAddress);
                 }
 

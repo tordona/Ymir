@@ -80,7 +80,11 @@ public:
 
     void Advance(uint64 cycles);
 
-    void ReceiveCDDA(std::span<uint8, 2048> data);
+    // Feeds CDDA data into the buffer and returns the current buffer size
+    uint32 ReceiveCDDA(std::span<uint8, 2048> data);
+    uint32 GetCDDABufferSize() const {
+        return m_cddaBuffer.size();
+    }
 
     void DumpWRAM(std::ostream &out) const;
 
@@ -177,13 +181,13 @@ private:
     // Generic accessors
     // T is either uint8 or uint16, never uint32
 
-    // Register accesses are handled by individual templated methods that use flags for each half of the 16-bit value.
-    // 16-bit accesses have both flags set, while 8-bit writes only have the flag for the corresponding half set
-    // (upper for even addresses, lower for odd addresses).
+    // Register accesses are handled by individual templated methods that use flags for each half of the 16-bit
+    // value. 16-bit accesses have both flags set, while 8-bit writes only have the flag for the corresponding half
+    // set (upper for even addresses, lower for odd addresses).
     //
-    // These methods receive a 16-bit value containing either the full 16-bit value or the 8-bit value shifted into the
-    // appropriate place so that all three cases are handled consistently and efficiently, including values that span
-    // both halves:
+    // These methods receive a 16-bit value containing either the full 16-bit value or the 8-bit value shifted into
+    // the appropriate place so that all three cases are handled consistently and efficiently, including values that
+    // span both halves:
     //   Access                    Contents of 16-bit value sent to accessor methods
     //   16-bit                    The entire value, unmodified
     //   8-bit on even addresses   8-bit value in bits 15-8
