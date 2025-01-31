@@ -14,6 +14,8 @@
 
 #include <mio/mmap.hpp> // HACK: should be used in a binary reader/writer object
 
+#include <iosfwd>
+
 // -----------------------------------------------------------------------------
 // Forward declarations
 
@@ -122,6 +124,13 @@ public:
 
     void TriggerExternalInterrupt0();
     void AcknowledgeExternalInterrupt();
+
+    // -------------------------------------------------------------------------
+    // RAM/register dumps
+
+    void DumpDSPProgramRAM(std::ostream &out);
+    void DumpDSPDataRAM(std::ostream &out);
+    void DumpDSPRegs(std::ostream &out);
 
 private:
     vdp::VDP &m_VDP;

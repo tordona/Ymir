@@ -187,6 +187,47 @@ void SCU::AcknowledgeExternalInterrupt() {
     UpdateInterruptLevel(true);
 }
 
+void SCU::DumpDSPProgramRAM(std::ostream &out) {
+    out.write((const char *)m_dspState.programRAM.data(), sizeof(m_dspState.programRAM));
+}
+
+void SCU::DumpDSPDataRAM(std::ostream &out) {
+    out.write((const char *)m_dspState.dataRAM.data(), sizeof(m_dspState.dataRAM));
+}
+
+void SCU::DumpDSPRegs(std::ostream &out) {
+    auto write = [&](const auto &reg) { out.write((const char *)&reg, sizeof(reg)); };
+    write(m_dspState.programExecuting);
+    write(m_dspState.programPaused);
+    write(m_dspState.programEnded);
+    write(m_dspState.programStep);
+    write(m_dspState.PC);
+    write(m_dspState.dataAddress);
+    write(m_dspState.nextPC);
+    write(m_dspState.jmpCounter);
+    write(m_dspState.sign);
+    write(m_dspState.zero);
+    write(m_dspState.carry);
+    write(m_dspState.overflow);
+    write(m_dspState.CT);
+    write(m_dspState.ALU);
+    write(m_dspState.AC);
+    write(m_dspState.P);
+    write(m_dspState.RX);
+    write(m_dspState.RY);
+    write(m_dspState.loopTop);
+    write(m_dspState.loopCount);
+    write(m_dspState.dmaRun);
+    write(m_dspState.dmaToD0);
+    write(m_dspState.dmaHold);
+    write(m_dspState.dmaCount);
+    write(m_dspState.dmaSrc);
+    write(m_dspState.dmaDst);
+    write(m_dspState.dmaReadAddr);
+    write(m_dspState.dmaWriteAddr);
+    write(m_dspState.dmaAddrInc);
+}
+
 void SCU::RunDMA() {
     const uint8 level = m_activeDMAChannelLevel;
     if (level >= m_dmaChannels.size()) {
