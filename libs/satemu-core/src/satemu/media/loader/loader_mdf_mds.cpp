@@ -210,8 +210,14 @@ bool Load(std::filesystem::path mdsPath, Disc &disc) {
 
             if (trackData.trackNum <= 99) {
                 auto &track = session.tracks[trackIndex];
-                track.SetSectorSize(trackData.sectorSize);
                 track.controlADR = (trackData.controlADR << 4u) | (trackData.controlADR >> 4u);
+                if (track.controlADR == 0x01 && trackData.sectorSize != 2048) {
+                    // FIXME: is the dump bad or is this supposed to happen? should we "fix" the sector size like this?
+                    fmt::println("MDF/MDS: Session {} audio track {:3d} has unexpected sector size: {}; forcing 2048",
+                                 sessionData.sessionNumber, trackData.trackNum, trackData.sectorSize);
+                    trackData.sectorSize = 2048;
+                }
+                track.SetSectorSize(trackData.sectorSize);
 
                 track.startFrameAddress = trackData.startSector + 150;
                 track.interleavedSubchannel = trackData.subchannelMode != 0;
