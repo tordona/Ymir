@@ -386,16 +386,6 @@ void CDBlock::ProcessDriveStatePlay() {
 
             m_status.statusCode = kStatusCodeNoDisc; // TODO: is this correct?
             SetInterrupt(kHIRQ_DCHG);
-        } else if (m_partitionManager.GetFreeBufferCount() == 0) [[unlikely]] {
-            playLog.trace("No free buffer available");
-
-            // TODO: what is the correct status code here?
-            // TODO: there really should be a separate state machine for handling this...
-            m_status.statusCode = kStatusCodePause;
-            SetInterrupt(kHIRQ_BFUL);
-            m_bufferFullPause = true;
-            // TODO: when buffer no longer full, switch to Play if we paused because of BFUL
-            // - or maybe if frameAddress <= m_playEndPos
         } else {
             // TODO: consider caching the track pointer
             const media::Session &session = m_disc.sessions.back();
@@ -411,35 +401,8 @@ void CDBlock::ProcessDriveStatePlay() {
 
                 playLog.trace("Read {} bytes from frame address {:06X}", buffer.size, buffer.frameAddress);
 
-                // Check against CD device filter and send data to the appropriate destination
-                uint8 filterNum = m_cdDeviceConnection;
-                for (int i = 0; i < kNumFilters && filterNum != Filter::kDisconnected; i++) {
-                    const Filter &filter = m_filters[filterNum];
-                    if (filter.Test(buffer)) {
-                        if (filter.trueOutput == Filter::kDisconnected) [[unlikely]] {
-                            playLog.trace("Passed filter; output disconnected - discarded");
-                        } else {
-                            assert(filter.trueOutput < m_filters.size());
-                            playLog.trace("Passed filter; sent to buffer partition {}", filter.trueOutput);
-                            m_partitionManager.InsertHead(filter.trueOutput, buffer);
-                            m_lastCDWritePartition = filter.trueOutput;
-                            SetInterrupt(kHIRQ_CSCT);
-                        }
-                        break;
-                    } else {
-                        if (filter.falseOutput == Filter::kDisconnected) [[unlikely]] {
-                            playLog.trace("Failed filter; output disconnected - discarded");
-                            break;
-                        } else {
-                            assert(filter.falseOutput < m_filters.size());
-                            playLog.trace("Failed filter; sent to filter {}", filter.falseOutput);
-                            filterNum = filter.falseOutput;
-                        }
-                    }
-                }
-
-                // If playing an audio track, send to SCSP
                 if (track->controlADR == 0x01) {
+                    // If playing an audio track, send to SCSP
                     const uint32 userDataOffset = m_getSectorLength == 2352 ? 16 : m_getSectorLength == 2340 ? 4 : 0;
                     const uint32 currBufferLength =
                         m_SCSP.ReceiveCDDA(std::span<uint8, 2048>{buffer.data.begin() + userDataOffset, 2048});
@@ -458,13 +421,52 @@ void CDBlock::ProcessDriveStatePlay() {
                     }
 
                     playLog.trace("Sector {:06X} sent to SCSP", frameAddress);
+                } else if (m_partitionManager.GetFreeBufferCount() == 0) [[unlikely]] {
+                    playLog.debug("No free buffer available");
+
+                    // TODO: what is the correct status code here?
+                    // TODO: there really should be a separate state machine for handling this...
+                    m_status.statusCode = kStatusCodePause;
+                    SetInterrupt(kHIRQ_BFUL);
+                    m_bufferFullPause = true;
+                    // TODO: when buffer no longer full, switch to Play if we paused because of BFUL
+                    // - or maybe if frameAddress <= m_playEndPos
+                } else {
+                    // Check against CD device filter and send data to the appropriate destination
+                    uint8 filterNum = m_cdDeviceConnection;
+                    for (int i = 0; i < kNumFilters && filterNum != Filter::kDisconnected; i++) {
+                        const Filter &filter = m_filters[filterNum];
+                        if (filter.Test(buffer)) {
+                            if (filter.trueOutput == Filter::kDisconnected) [[unlikely]] {
+                                playLog.trace("Passed filter; output disconnected - discarded");
+                            } else {
+                                assert(filter.trueOutput < m_filters.size());
+                                playLog.trace("Passed filter; sent to buffer partition {}", filter.trueOutput);
+                                m_partitionManager.InsertHead(filter.trueOutput, buffer);
+                                m_lastCDWritePartition = filter.trueOutput;
+                                SetInterrupt(kHIRQ_CSCT);
+                            }
+                            break;
+                        } else {
+                            if (filter.falseOutput == Filter::kDisconnected) [[unlikely]] {
+                                playLog.trace("Filtered out; output disconnected - discarded");
+                                break;
+                            } else {
+                                assert(filter.falseOutput < m_filters.size());
+                                playLog.trace("Filtered out; sent to filter {}", filter.falseOutput);
+                                filterNum = filter.falseOutput;
+                            }
+                        }
+                    }
                 }
 
-                m_status.frameAddress++;
-                m_status.track = track->index;
-                m_status.index = 1; // TODO: handle indexes
-                m_status.controlADR = track->controlADR;
-                m_status.flags = track->controlADR == 0x41 ? 0x8 : 0x0;
+                if (!m_bufferFullPause) {
+                    m_status.frameAddress++;
+                    m_status.track = track->index;
+                    m_status.index = 1; // TODO: handle indexes
+                    m_status.controlADR = track->controlADR;
+                    m_status.flags = track->controlADR == 0x41 ? 0x8 : 0x0;
+                }
             } else if (track == nullptr) {
                 // This shouldn't really happen unless we're given an invalid disc image
                 // Let's pretend this is a disc read error
@@ -1838,11 +1840,11 @@ void CDBlock::CmdGetSectorInfo() {
         if (buffer == nullptr) {
             reject = true;
         } else {
-    // Output structure:
-    // status code          sector frame address bits 23-16
-    // sector frame address bits 15-0
-    // sector file number   sector coding number
-    // sector submode       sector coding info
+            // Output structure:
+            // status code          sector frame address bits 23-16
+            // sector frame address bits 15-0
+            // sector file number   sector coding number
+            // sector submode       sector coding info
             m_CR[0] = (m_status.statusCode << 8u) | (buffer->frameAddress >> 16u);
             m_CR[1] = buffer->frameAddress;
             m_CR[2] = (buffer->subheader.fileNum << 8u) | buffer->subheader.chanNum;
