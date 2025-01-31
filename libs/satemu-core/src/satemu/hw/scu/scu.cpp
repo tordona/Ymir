@@ -649,7 +649,7 @@ FORCE_INLINE void SCU::DSPWriteD1Bus(uint8 index, uint32 value) {
     case 0b0101: m_dspState.P.s64 = static_cast<sint32>(value); break;
     case 0b0110: m_dspState.dmaReadAddr = (value << 2u) & 0x7FF'FFFC; break;
     case 0b0111: m_dspState.dmaWriteAddr = (value << 2u) & 0x7FF'FFFC; break;
-    case 0b1010: m_dspState.loopCount = value; break;
+    case 0b1010: m_dspState.loopCount = value & 0xFFF; break;
     case 0b1011: m_dspState.loopTop = value; break;
     case 0b1100 ... 0b1111:
         m_dspState.CT[index & 3] = value & 0x3F;
@@ -978,6 +978,7 @@ FORCE_INLINE void SCU::DSPCmd_Special_Jump(uint32 command) {
 FORCE_INLINE void SCU::DSPCmd_Special_LoopBottom(uint32 command) {
     if (m_dspState.loopCount != 0) {
         m_dspState.loopCount--;
+        m_dspState.loopCount &= 0xFFF;
         if (bit::extract<27>(command)) {
             // LPS
             DSPDelayedJump(m_dspState.PC - 1);
