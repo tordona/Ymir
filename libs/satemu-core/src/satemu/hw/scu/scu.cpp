@@ -169,7 +169,6 @@ void SCU::TriggerDMAEnd(uint32 level) {
     case 2: m_intrStatus.ABus_Level2DMAEnd = 1; break;
     }
     UpdateInterruptLevel(false);
-    TriggerDMATransfer(DMATrigger::SpriteDrawEnd);
 }
 
 void SCU::TriggerSpriteDrawEnd() {

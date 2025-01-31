@@ -15,7 +15,7 @@
 #include <satemu/util/inline.hpp>
 
 #include <array>
-#include <iostream>
+#include <iosfwd>
 #include <span>
 
 // -----------------------------------------------------------------------------
