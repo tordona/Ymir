@@ -860,7 +860,7 @@ FORCE_INLINE void CDBlock::ProcessCommand() {
     case 0x51: CmdGetSectorNumber(); break;
     case 0x52: CmdCalculateActualSize(); break;
     case 0x53: CmdGetActualSize(); break;
-    // case 0x54: CmdGetSectorInfo(); break;
+    case 0x54: CmdGetSectorInfo(); break;
     // case 0x55: CmdExecuteFADSearch(); break;
     // case 0x56: CmdGetFADSearchResults(); break;
     case 0x60: CmdSetSectorLength(); break;
@@ -1827,21 +1827,32 @@ void CDBlock::CmdGetSectorInfo() {
     // <blank>            sector number
     // partition number   <blank>
     // <blank>
-    // const uint8 sectorNumber = bit::extract<0, 7>(m_CR[1]);
-    // const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
+    const uint8 sectorNumber = bit::extract<0, 7>(m_CR[1]);
+    const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
 
-    // TODO: implement
-    rootLog.info("Get sector info command is unimplemented");
-
+    bool reject = false;
+    if (partitionNumber > kNumPartitions) [[unlikely]] {
+        reject = true;
+    } else {
+        const Buffer *buffer = m_partitionManager.GetTail(partitionNumber, sectorNumber);
+        if (buffer == nullptr) {
+            reject = true;
+        } else {
     // Output structure:
     // status code          sector frame address bits 23-16
     // sector frame address bits 15-0
     // sector file number   sector coding number
     // sector submode       sector coding info
-    m_CR[0] = (m_status.statusCode << 8u); // TODO: frame address high
-    m_CR[1] = 0;                           // TODO: frame address low
-    m_CR[2] = 0;                           // TODO: file number, coding number
-    m_CR[3] = 0;                           // TODO: submode, coding info
+            m_CR[0] = (m_status.statusCode << 8u) | (buffer->frameAddress >> 16u);
+            m_CR[1] = buffer->frameAddress;
+            m_CR[2] = (buffer->subheader.fileNum << 8u) | buffer->subheader.chanNum;
+            m_CR[3] = (buffer->subheader.submode << 8u) | buffer->subheader.codingInfo;
+        }
+    }
+
+    if (reject) {
+        ReportCDStatus(kStatusReject);
+    }
 
     SetInterrupt(kHIRQ_CMOK);
 }
