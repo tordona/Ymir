@@ -535,6 +535,10 @@ void SCU::RunDSPDMA(uint64 cycles) {
     const bool toD0 = m_dspState.dmaToD0;
     uint32 addrD0 = toD0 ? m_dspState.dmaWriteAddr : m_dspState.dmaReadAddr;
     const Bus bus = GetBus(addrD0);
+    if (bus == Bus::None) {
+        m_dspState.dmaRun = false;
+        return;
+    }
 
     if (m_dspState.dmaToD0) {
         dspLog.trace("Running DSP DMA transfer: DSP -> {:08X} (+{:X}), {} longwords", addrD0, m_dspState.dmaAddrInc,
