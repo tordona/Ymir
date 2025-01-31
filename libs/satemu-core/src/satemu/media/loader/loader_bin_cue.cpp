@@ -77,8 +77,6 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
 
     uint32 nextTrackNum = 0;
     uint32 frameAddress = 150; // start with lead-in
-    uint32 pregapFrames = 0;
-    uint32 prevPregapFrames = 0;
     uint32 currTrackIndex = ~0;
     uintmax_t binFileOffset = 0;
     uintmax_t binFileSize = 0;
@@ -238,8 +236,6 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
                 return false;
             }
 
-            prevPregapFrames = pregapFrames;
-            pregapFrames = 0;
             hasTrack = true;
             hasIndex = false;
             hasIndex0 = false;
@@ -275,21 +271,17 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
                     return false;
                 }
 
-                // Audio tracks start on pregap
-                startTrack = track.controlADR == 0x01;
-
+                // Audio tracks start after pregap
                 hasPregap = true;
                 hasIndex0 = true;
             } else if (indexNum == 1) {
                 // Data tracks skip pregap
-                // Audio tracks start here if there is no INDEX 00
-                startTrack = track.controlADR == 0x41 || !hasIndex0;
+                // Audio tracks start here if there is an INDEX 00
+                startTrack = track.controlADR == 0x41 || hasIndex0;
             }
             // We don't care about subindices for now
 
             if (startTrack) {
-                binFileOffset += static_cast<uintmax_t>(prevPregapFrames) * track.sectorSize;
-
                 // Close previous track
                 if (currTrackIndex > 0) {
                     auto &prevTrack = session.tracks[currTrackIndex - 1];
@@ -330,12 +322,10 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
             std::string msf{};
             ins >> msf;
 
-            uint32 m = std::stoi(msf.substr(0, 2));
-            uint32 s = std::stoi(msf.substr(3, 5));
-            uint32 f = std::stoi(msf.substr(6, 8));
+            // uint32 m = std::stoi(msf.substr(0, 2));
+            // uint32 s = std::stoi(msf.substr(3, 5));
+            // uint32 f = std::stoi(msf.substr(6, 8));
             // fmt::println("BIN/CUE:     Pregap - {:02d}:{:02d}:{:02d}", m, s, f);
-
-            pregapFrames = TimestampToFrameAddress(m, s, f);
 
             hasPregap = true;
         } else if (keyword == "POSTGAP") {
