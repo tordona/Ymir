@@ -422,7 +422,7 @@ void VDP::VDP1ProcessCommands() {
     auto &cmdAddress = m_VDP1.currCommandAddress;
 
     const VDP1Command::Control control{.u16 = VDP1ReadVRAM<uint16>(cmdAddress)};
-    renderLog1.trace("Processing command: {:04X}", control.u16);
+    renderLog1.trace("Processing command {:04X} @ {:05X}", control.u16, cmdAddress);
     if (control.end) [[unlikely]] {
         renderLog1.trace("End of command list");
         VDP1EndFrame();
@@ -461,7 +461,8 @@ void VDP::VDP1ProcessCommands() {
         switch (control.jumpMode) {
         case Next: cmdAddress += 0x20; break;
         case Assign: {
-            cmdAddress = VDP1ReadVRAM<uint16>(cmdAddress + 0x02) << 3u;
+            cmdAddress = (VDP1ReadVRAM<uint16>(cmdAddress + 0x02) << 3u) & ~0x1F;
+            renderLog1.trace("Jump to {:05X}", cmdAddress);
             break;
         }
         case Call: {
@@ -469,7 +470,8 @@ void VDP::VDP1ProcessCommands() {
             if (m_VDP1.returnAddress == kNoReturn) {
                 m_VDP1.returnAddress = cmdAddress + 0x20;
             }
-            cmdAddress = VDP1ReadVRAM<uint16>(cmdAddress + 0x02) << 3u;
+            cmdAddress = (VDP1ReadVRAM<uint16>(cmdAddress + 0x02) << 3u) & ~0x1F;
+            renderLog1.trace("Call {:05X}", cmdAddress);
             break;
         }
         case Return: {
@@ -480,6 +482,7 @@ void VDP::VDP1ProcessCommands() {
             } else {
                 cmdAddress += 0x20;
             }
+            renderLog1.trace("Return to {:05X}", cmdAddress);
             break;
         }
         }
@@ -1069,9 +1072,8 @@ void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
     const CoordS32 coordC{xc, yc};
     const CoordS32 coordD{xd, yd};
 
-    renderLog1.trace(
-        "VDP1: Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa, ya,
-        xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16);
+    renderLog1.trace("Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
+                     xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16);
 
     if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
         return;
