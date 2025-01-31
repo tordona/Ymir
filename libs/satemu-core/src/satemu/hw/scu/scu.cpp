@@ -977,8 +977,6 @@ FORCE_INLINE void SCU::DSPCmd_Special_Jump(uint32 command) {
 
 FORCE_INLINE void SCU::DSPCmd_Special_LoopBottom(uint32 command) {
     if (m_dspState.loopCount != 0) {
-        m_dspState.loopCount--;
-        m_dspState.loopCount &= 0xFFF;
         if (bit::extract<27>(command)) {
             // LPS
             DSPDelayedJump(m_dspState.PC - 1);
@@ -987,6 +985,8 @@ FORCE_INLINE void SCU::DSPCmd_Special_LoopBottom(uint32 command) {
             DSPDelayedJump(m_dspState.loopTop);
         }
     }
+    m_dspState.loopCount--;
+    m_dspState.loopCount &= 0xFFF;
 }
 
 FORCE_INLINE void SCU::DSPCmd_Special_End(uint32 command) {
