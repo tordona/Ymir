@@ -770,9 +770,9 @@ FORCE_INLINE void SCU::DSPCmd_Operation(uint32 command) {
     }
     case 0b0110: // AD2
     {
-        const sint64 op1 = m_dspState.AC.s64;
-        const sint64 op2 = m_dspState.P.s64;
-        const sint64 result = op1 + op2;
+        const uint64 op1 = m_dspState.AC.u64;
+        const uint64 op2 = m_dspState.P.u64;
+        const uint64 result = op1 + op2;
         setZS48(result);
         m_dspState.carry = bit::extract<48>(result);
         m_dspState.overflow = bit::extract<47>((~(op1 ^ op2)) & (op1 ^ result));
