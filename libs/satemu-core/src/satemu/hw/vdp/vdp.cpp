@@ -420,6 +420,7 @@ void VDP::VDP1EndFrame() {
     renderLog1.trace("End VDP1 frame on framebuffer {}", m_drawFB);
     m_VDP1RenderContext.rendering = false;
     m_VDP1.currFrameEnded = true;
+    m_SCU.TriggerSpriteDrawEnd();
 }
 
 void VDP::VDP1ProcessCommands() {
@@ -436,7 +437,6 @@ void VDP::VDP1ProcessCommands() {
     if (control.end) [[unlikely]] {
         renderLog1.trace("End of command list");
         VDP1EndFrame();
-        m_SCU.TriggerSpriteDrawEnd();
     } else if (!control.skip) {
         // Process command
         using enum VDP1Command::CommandType;
@@ -473,6 +473,13 @@ void VDP::VDP1ProcessCommands() {
         case Assign: {
             cmdAddress = (VDP1ReadVRAM<uint16>(cmdAddress + 0x02) << 3u) & ~0x1F;
             renderLog1.trace("Jump to {:05X}", cmdAddress);
+
+            // HACK: Sonic R attempts to jump back to 0 in some cases
+            if (cmdAddress == 0) {
+                renderLog1.warn("Possible infinite loop detected; stopping");
+                VDP1EndFrame();
+                return;
+            }
             break;
         }
         case Call: {
