@@ -561,9 +561,9 @@ struct RotationParamTable {
 
 // Rotation coefficient entry.
 struct Coefficient {
-    sint32 value; // coefficient value, scaled to 16 fractional bits
-    uint8 lineColorData;
-    bool transparent;
+    sint32 value = 0; // coefficient value, scaled to 16 fractional bits
+    uint8 lineColorData = 0;
+    bool transparent = true;
 };
 
 enum class SpriteColorCalculationCondition : uint8 {
