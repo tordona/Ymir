@@ -122,6 +122,7 @@ public:
         case 0x0A: m_VDP1.WriteEWRR(value); break;
         case 0x0C: // ENDR
             // TODO: schedule drawing termination after 30 cycles
+            m_VDP1RenderContext.rendering = false;
             break;
 
         case 0x10: break; // EDSR is read-only
@@ -494,8 +495,8 @@ public:
         }
     }
 
-    bool InTopBlankingPhase() const {
-        return m_VPhase == VerticalPhase::TopBlanking;
+    bool InLastLinePhase() const {
+        return m_VPhase == VerticalPhase::LastLine;
     }
 
 private:
@@ -554,56 +555,57 @@ private:
     // -------------------------------------------------------------------------
     // Timings and signals
 
+    // Based on https://github.com/srg320/Saturn_hw/blob/main/VDP2/VDP2.xlsx
+
     // Horizontal display phases:
-    // NOTE: dots listed are for NTSC/PAL modes
-    // NOTE: each dot takes 4 system (SH-2) cycles
+    // NOTE: each dot takes 4 system (SH-2) cycles on standard resolutions, 2 system cycles on hi-res modes
+    // NOTE: hi-res modes doubles all HCNTs
     //
-    // 0             320/352        347/375     400/432       427/455 dots
-    // +----------------+--------------+-----------+-------------+
-    // | Active display | Right border | Horz sync | Left border | (no blanking intervals?)
-    // +-+--------------+-+------------+-----------+-+-----------+
-    //   |                |                          |
-    //   |                +------------+-------------+
-    //   |                             |
-    //   |      Either black (BDCLMD=0) or set to the border color as defined by the back screen.
-    //   |      The border is optional.
-    //   |
-    //   +-- Graphics data is shown here
+    //   320 352  dots
+    // --------------------------------
+    //     0   0  Active display area
+    //   320 352  Right border
+    //   347 375  Horizontal sync
+    //   374 403  VBlank OUT
+    //   400 432  Left border
+    //   426 454  Last dot
+    //   427 455  Total HCNT
     //
     // Vertical display phases:
-    // (from https://wiki.yabause.org/index.php5?title=VDP2, with extra notes by StrikerX3)
-    // NOTE: scanlines listed are for NTSC/PAL modes
+    // NOTE: bottom blanking, vertical sync and top blanking are consolidated into a single phase since no important
+    // events happen other than not drawing the border
     //
-    // +----------------+ Scanline 0
-    // |                |
-    // | Active display |   Graphics data is shown here.
-    // |                |
-    // +----------------+ Scanline 224, 240 or 256
-    // |                |   Either black (BDCLMD=0) or set to the border color as defined by the back screen.
-    // | Bottom border  |   The bottom border is optional.
-    // |                |
-    // +----------------+ Scanline 232, 240, 256, 264 or 272
-    // |                |
-    // | Bottom blanking|   Appears as light black.
-    // |                |
-    // +----------------+ Scanline 237, 245, 259, 267 or 275
-    // |                |
-    // | Vertical sync  |   Appears as pure black.
-    // |                |
-    // +----------------+ Scanline 240, 248, 262, 270 or 278
-    // |                |
-    // | Top blanking   |   Appears as light black.
-    // |                |
-    // +----------------+ Scanline 255, 263, 281, 289 or 297
-    // |                |   Either black (BDCLMD=0) or set to the border color as defined by the back screen.
-    // | Top border     |   The top border is optional.
-    // |                |
-    // +----------------+ Scanline 262 or 313
+    //    NTSC    --  PAL  --
+    //   224 240  224 240 256  lines
+    // ---------------------------------------------
+    //     0   0    0   0   0  Active display area
+    //   224 240  224 240 256  Bottom border
+    //   232 240  256 264 272  Bottom blanking | these are
+    //   237 245  259 267 275  Vertical sync   | merged into
+    //   240 248  262 270 278  Top blanking    | one phase
+    //   255 255  281 289 297  Top border
+    //   262 262  312 312 312  Last line
+    //   263 263  313 313 313  Total VCNT
+    //
+    // Events:
+    //   VBLANK signal is raised when entering bottom border V phase
+    //   VBLANK signal is lowered when entering VBlank clear H phase during last line V phase
+    //
+    //   HBLANK signal is raised when entering right border H phase (closest match, 4 cycles early)
+    //   HBLANK signal is lowered when entering left border H phase (closest match, 10 cycles early)
+    //
+    //   Even/odd field flag is flipped when entering last dot H phase during first line of bottom border V phase
+    //
+    //   VBlank IN/OUT interrupts are raised when the VBLANK signal is raised/lowered
+    //   HBlank IN interrupt is raised when the HBLANK signal is raised
+    //
+    //   Drawing happens when in both active display area phases
+    //   Border drawing happens when in any of the border phases
 
-    enum class HorizontalPhase { Active, RightBorder, HorizontalSync, LeftBorder };
+    enum class HorizontalPhase { Active, RightBorder, Sync, VBlankOut, LeftBorder, LastDot };
     HorizontalPhase m_HPhase; // Current horizontal display phase
 
-    enum class VerticalPhase { Active, BottomBorder, BottomBlanking, VerticalSync, TopBlanking, TopBorder, LastLine };
+    enum class VerticalPhase { Active, BottomBorder, BlankingAndSync, TopBorder, LastLine };
     VerticalPhase m_VPhase; // Current vertical display phase
 
     // 180008   HCNT    H Counter
@@ -641,8 +643,8 @@ private:
     uint32 m_VRes; // Vertical display resolution
 
     // Display timings
-    std::array<uint32, 4> m_HTimings;
-    std::array<uint32, 7> m_VTimings;
+    std::array<uint32, 6> m_HTimings;
+    std::array<uint32, 5> m_VTimings;
 
     // Moves to the next phase.
     void UpdatePhase();
@@ -658,14 +660,14 @@ private:
     // Phase handlers
     void BeginHPhaseActiveDisplay();
     void BeginHPhaseRightBorder();
-    void BeginHPhaseHorizontalSync();
+    void BeginHPhaseSync();
+    void BeginHPhaseVBlankOut();
     void BeginHPhaseLeftBorder();
+    void BeginHPhaseLastDot();
 
     void BeginVPhaseActiveDisplay();
     void BeginVPhaseBottomBorder();
-    void BeginVPhaseBottomBlanking();
-    void BeginVPhaseVerticalSync();
-    void BeginVPhaseTopBlanking();
+    void BeginVPhaseBlankingAndSync();
     void BeginVPhaseTopBorder();
     void BeginVPhaseLastLine();
 

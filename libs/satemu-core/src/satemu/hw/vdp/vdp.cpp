@@ -109,7 +109,7 @@ void VDP::DumpVDP1Framebuffers(std::ostream &out) const {
 
 FORCE_INLINE void VDP::UpdatePhase() {
     auto nextPhase = static_cast<uint32>(m_HPhase) + 1;
-    if (nextPhase == 4) {
+    if (nextPhase == m_HTimings.size()) {
         nextPhase = 0;
     }
 
@@ -117,8 +117,10 @@ FORCE_INLINE void VDP::UpdatePhase() {
     switch (m_HPhase) {
     case HorizontalPhase::Active: BeginHPhaseActiveDisplay(); break;
     case HorizontalPhase::RightBorder: BeginHPhaseRightBorder(); break;
-    case HorizontalPhase::HorizontalSync: BeginHPhaseHorizontalSync(); break;
+    case HorizontalPhase::Sync: BeginHPhaseSync(); break;
+    case HorizontalPhase::VBlankOut: BeginHPhaseVBlankOut(); break;
     case HorizontalPhase::LeftBorder: BeginHPhaseLeftBorder(); break;
+    case HorizontalPhase::LastDot: BeginHPhaseLastDot(); break;
     }
 }
 
@@ -158,46 +160,47 @@ void VDP::UpdateResolution() {
     m_framebuffer = m_cbRequestFramebuffer(m_HRes, m_VRes);
 
     // Timing tables
-    // NOTE: the timings indicate when the specified phase begins
 
     // Horizontal phase timings (cycles until):
     //   RBd = Right Border
     //   HSy = Horizontal Sync
+    //   VBC = VBlank Clear
     //   LBd = Left Border
+    //   LDt = Last Dot
     //   ADp = Active Display
-    static constexpr std::array<std::array<uint32, 4>, 8> hTimings{{
-        // RBd, HSy, LBd, ADp
-        {320, 27, 53, 27},  // {320, 347, 400, 427},
-        {352, 23, 57, 23},  // {352, 375, 432, 455},
-        {640, 54, 106, 54}, // {640, 694, 800, 854},
-        {704, 46, 114, 46}, // {704, 750, 864, 910},
+    // NOTE: these timings specify the HCNT to advance to the specified phase
+    static constexpr std::array<std::array<uint32, 6>, 8> hTimings{{
+        // RBd, HSy, VBC, LBd, LDt, ADp
+        {320, 27, 27, 26, 26, 1}, // {320, 347, 374, 400, 426, 427},
+        {352, 23, 28, 29, 22, 1}, // {352, 375, 403, 432, 454, 455},
+        {640, 54, 54, 52, 52, 2}, // {640, 694, 748, 800, 852, 854},
+        {704, 46, 56, 58, 44, 2}, // {704, 750, 806, 864, 908, 910},
     }};
     m_HTimings = hTimings[m_VDP2.TVMD.HRESOn & 3]; // TODO: check exclusive monitor timings
 
     // Vertical phase timings (to reach):
     //   BBd = Bottom Border
-    //   BBl = Bottom Blanking
-    //   VSy = Vertical Sync
-    //   TBl = Top Blanking
+    //   BSy = Blanking and Vertical Sync
     //   TBd = Top Border
     //   LLn = Last Line
     //   ADp = Active Display
-    static constexpr std::array<std::array<std::array<uint32, 7>, 4>, 2> vTimings{{
+    // NOTE: these timings indicate the VCNT at which the specified phase begins
+    static constexpr std::array<std::array<std::array<uint32, 5>, 4>, 2> vTimings{{
         // NTSC
         {{
-            // BBd, BBl, VSy, TBl, TBd, LLn, ADp
-            {224, 232, 237, 240, 255, 262, 263},
-            {240, 240, 245, 248, 262, 262, 263},
-            {224, 232, 237, 240, 255, 262, 263},
-            {240, 240, 245, 248, 262, 262, 263},
+            // BBd, BSy, TBd, LLn, ADp
+            {224, 232, 255, 262, 263},
+            {240, 240, 255, 262, 263},
+            {224, 232, 255, 262, 263},
+            {240, 240, 255, 262, 263},
         }},
         // PAL
         {{
-            // BBd, BBl, VSy, TBl, TBd, LLn, ADp
-            {224, 256, 259, 262, 281, 312, 313},
-            {240, 264, 267, 270, 289, 312, 313},
-            {256, 272, 275, 278, 297, 312, 313},
-            {256, 272, 275, 278, 297, 312, 313},
+            // BBd, BSy, TBd, LLn, ADp
+            {224, 256, 281, 312, 313},
+            {240, 264, 289, 312, 313},
+            {256, 272, 297, 312, 313},
+            {256, 272, 297, 312, 313},
         }},
     }};
     m_VTimings = vTimings[m_VDP2.TVSTAT.PAL][m_VDP2.TVMD.VRESOn];
@@ -215,7 +218,7 @@ FORCE_INLINE void VDP::IncrementVCounter() {
     ++m_VCounter;
     while (m_VCounter >= m_VTimings[static_cast<uint32>(m_VPhase)]) {
         auto nextPhase = static_cast<uint32>(m_VPhase) + 1;
-        if (nextPhase == 7) {
+        if (nextPhase == m_VTimings.size()) {
             m_VCounter = 0;
             nextPhase = 0;
         }
@@ -224,9 +227,7 @@ FORCE_INLINE void VDP::IncrementVCounter() {
         switch (m_VPhase) {
         case VerticalPhase::Active: BeginVPhaseActiveDisplay(); break;
         case VerticalPhase::BottomBorder: BeginVPhaseBottomBorder(); break;
-        case VerticalPhase::BottomBlanking: BeginVPhaseBottomBlanking(); break;
-        case VerticalPhase::VerticalSync: BeginVPhaseVerticalSync(); break;
-        case VerticalPhase::TopBlanking: BeginVPhaseTopBlanking(); break;
+        case VerticalPhase::BlankingAndSync: BeginVPhaseBlankingAndSync(); break;
         case VerticalPhase::TopBorder: BeginVPhaseTopBorder(); break;
         case VerticalPhase::LastLine: BeginVPhaseLastLine(); break;
         }
@@ -276,72 +277,89 @@ void VDP::BeginHPhaseActiveDisplay() {
 
 void VDP::BeginHPhaseRightBorder() {
     rootLog2.trace("(VCNT = {:3d})  Entering right border phase", m_VCounter);
-}
-
-void VDP::BeginHPhaseHorizontalSync() {
-    IncrementVCounter();
-    rootLog2.trace("(VCNT = {:3d})  Entering horizontal sync phase", m_VCounter);
 
     m_VDP2.TVSTAT.HBLANK = 1;
     m_SCU.TriggerHBlankIN();
+
+    // TODO: draw border
+}
+
+void VDP::BeginHPhaseSync() {
+    IncrementVCounter();
+    rootLog2.trace("(VCNT = {:3d})  Entering horizontal sync phase", m_VCounter);
+}
+
+void VDP::BeginHPhaseVBlankOut() {
+    rootLog2.trace("(VCNT = {:3d})  Entering VBlank OUT phase", m_VCounter);
+
+    if (m_VPhase == VerticalPhase::LastLine) {
+        m_VDP2.TVSTAT.VBLANK = 0;
+        m_SCU.TriggerVBlankOUT();
+
+        rootLog2.trace("VBlank OUT  VBE={:d} FCM={:d}", m_VDP1.vblankErase, m_VDP1.fbSwapMode);
+
+        // VBlank erase or 1-cycle mode
+        if (m_VDP1.vblankErase || !m_VDP1.fbSwapMode) {
+            VDP1EraseFramebuffer();
+        }
+    }
 }
 
 void VDP::BeginHPhaseLeftBorder() {
     rootLog2.trace("(VCNT = {:3d})  Entering left border phase", m_VCounter);
+
     m_VDP2.TVSTAT.HBLANK = 0;
+
+    // TODO: draw border
+}
+
+void VDP::BeginHPhaseLastDot() {
+    rootLog2.trace("(VCNT = {:3d})  Entering last dot phase", m_VCounter);
+
+    // If we just entered the bottom blanking vertical phase, switch fields
+    if (m_VCounter == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
+        if (m_VDP2.TVMD.LSMDn != 0) {
+            m_VDP2.TVSTAT.ODD ^= 1;
+            rootLog2.trace("Switched to {} field", (m_VDP2.TVSTAT.ODD ? "odd" : "even"));
+        } else {
+            m_VDP2.TVSTAT.ODD = 1;
+        }
+    }
 }
 
 // ----
 
 void VDP::BeginVPhaseActiveDisplay() {
     rootLog2.trace("(VCNT = {:3d})  Entering vertical active display phase", m_VCounter);
-    if (m_VDP2.TVMD.LSMDn != 0) {
-        m_VDP2.TVSTAT.ODD ^= 1;
-    } else {
-        m_VDP2.TVSTAT.ODD = 1;
-    }
 }
 
 void VDP::BeginVPhaseBottomBorder() {
     rootLog2.trace("(VCNT = {:3d})  Entering bottom border phase", m_VCounter);
-}
 
-void VDP::BeginVPhaseBottomBlanking() {
-    rootLog2.trace("(VCNT = {:3d})  Entering bottom blanking phase", m_VCounter);
-}
-
-void VDP::BeginVPhaseVerticalSync() {
-    rootLog2.trace("(VCNT = {:3d})  Entering vertical sync phase", m_VCounter);
     m_VDP2.TVSTAT.VBLANK = 1;
     m_SCU.TriggerVBlankIN();
+
+    // TODO: draw border
 }
 
-void VDP::BeginVPhaseTopBlanking() {
-    rootLog2.trace("(VCNT = {:3d})  Entering top blanking phase", m_VCounter);
+void VDP::BeginVPhaseBlankingAndSync() {
+    rootLog2.trace("(VCNT = {:3d})  Entering blanking/vertical sync phase", m_VCounter);
+}
+
+void VDP::BeginVPhaseTopBorder() {
+    rootLog2.trace("(VCNT = {:3d})  Entering top border phase", m_VCounter);
 
     // End frame
     rootLog2.trace("Ending frame");
     m_cbFrameComplete(m_framebuffer, m_HRes, m_VRes);
 
     UpdateResolution();
-}
 
-void VDP::BeginVPhaseTopBorder() {
-    rootLog2.trace("(VCNT = {:3d})  Entering top border phase", m_VCounter);
+    // TODO: draw border
 }
 
 void VDP::BeginVPhaseLastLine() {
     rootLog2.trace("(VCNT = {:3d})  Entering last line phase", m_VCounter);
-
-    m_VDP2.TVSTAT.VBLANK = 0;
-    m_SCU.TriggerVBlankOUT();
-
-    rootLog2.trace("VBlank OUT  VBE={:d} FCM={:d}", m_VDP1.vblankErase, m_VDP1.fbSwapMode);
-
-    // VBlank erase or 1-cycle mode
-    if (m_VDP1.vblankErase || !m_VDP1.fbSwapMode) {
-        VDP1EraseFramebuffer();
-    }
 }
 
 // -----------------------------------------------------------------------------

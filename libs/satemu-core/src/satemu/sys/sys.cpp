@@ -47,13 +47,11 @@ void Saturn::CloseTray() {
 }
 
 void Saturn::RunFrame() {
-    // Run until VDP exits top blanking phase
-    while (VDP.InTopBlankingPhase()) {
+    // Use the last line phase as reference to give some leeway if we overshoot the target cycles
+    while (VDP.InLastLinePhase()) {
         Step();
     }
-
-    // Run until VDP enters top blanking phase
-    while (!VDP.InTopBlankingPhase()) {
+    while (!VDP.InLastLinePhase()) {
         Step();
     }
 }
