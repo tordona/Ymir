@@ -1465,7 +1465,7 @@ void VDP::VDP2DrawLine() {
 
     // Load rotation parameters if any of the RBG layers is enabled
     if (m_VDP2.bgEnabled[4] || m_VDP2.bgEnabled[5]) {
-    VDP2CalcRotationParameterTables();
+        VDP2CalcRotationParameterTables();
     }
 
     // Draw line color and back screen layers
@@ -2223,6 +2223,47 @@ Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint
 
     const uint32 baseAddress = params.coeffTableAddressOffset;
     const uint32 offset = coeffAddress >> 10u;
+
+    // Check that the VRAM bank containing the coefficient table is designated for coefficient data.
+    // Return a default (transparent) coefficient if not.
+    if (!m_VDP2.RAMCTL.CRKTE) {
+        // Determine which bank is targeted
+        const uint32 address = ((baseAddress + offset) * sizeof(uint32)) >> params.coeffDataSize;
+
+        // Address is 19 bits wide when using 512 KiB VRAM.
+        // Bank is designated by bits 17-18.
+        uint32 bank = bit::extract<17, 18>(address);
+
+        // RAMCTL.VRAMD and VRBMD specify if VRAM A and B respectively are partitioned into two blocks (when set).
+        // If they're not partitioned, RDBSA0n/RDBSB0n designate the role of the whole block (VRAM-A or -B).
+        // RDBSA1n/RDBSB1n designates the roles of the second half of the partitioned banks (VRAM-A1 or -A2).
+        // Masking the bank index with VRAMD/VRBMD adjusts the bank index of the second half back to the first half so
+        // we can uniformly handle both cases with one simple switch table.
+        if (bank < 2) {
+            bank &= ~(m_VDP2.RAMCTL.VRAMD ^ 1);
+        } else {
+            bank &= ~(m_VDP2.RAMCTL.VRAMD ^ 1);
+        }
+
+        switch (bank) {
+        case 0: // VRAM-A0 or VRAM-A
+            if (m_VDP2.RAMCTL.RDBSA0n != 1) {
+                return coeff;
+            }
+        case 1: // VRAM-A1
+            if (m_VDP2.RAMCTL.RDBSA1n != 1) {
+                return coeff;
+            }
+        case 2: // VRAM-B0 or VRAM-B
+            if (m_VDP2.RAMCTL.RDBSB0n != 1) {
+                return coeff;
+            }
+        case 3: // VRAM-B1
+            if (m_VDP2.RAMCTL.RDBSB1n != 1) {
+                return coeff;
+            }
+        }
+    }
 
     if (params.coeffDataSize == 1) {
         // One-word coefficient data
