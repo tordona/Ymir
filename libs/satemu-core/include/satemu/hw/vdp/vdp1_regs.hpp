@@ -115,7 +115,7 @@ struct VDP1Regs {
 
     // Return address in the command table.
     // Used by commands that use the jump types Call and Return.
-    uint16 returnAddress;
+    uint32 returnAddress;
 
     bool fbManualErase; // Manual framebuffer erase requested
     bool fbManualSwap;  // Manual framebuffer swap requested

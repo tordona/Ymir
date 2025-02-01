@@ -413,7 +413,7 @@ void VDP::VDP1EndFrame() {
 }
 
 void VDP::VDP1ProcessCommands() {
-    static constexpr uint16 kNoReturn = ~0;
+    static constexpr uint32 kNoReturn = ~0;
 
     if (!m_VDP1RenderContext.rendering) {
         return;
