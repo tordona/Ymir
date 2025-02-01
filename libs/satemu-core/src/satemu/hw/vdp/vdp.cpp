@@ -2242,7 +2242,7 @@ Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint
         if (bank < 2) {
             bank &= ~(m_VDP2.RAMCTL.VRAMD ^ 1);
         } else {
-            bank &= ~(m_VDP2.RAMCTL.VRAMD ^ 1);
+            bank &= ~(m_VDP2.RAMCTL.VRBMD ^ 1);
         }
 
         switch (bank) {
@@ -2250,18 +2250,22 @@ Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint
             if (m_VDP2.RAMCTL.RDBSA0n != 1) {
                 return coeff;
             }
+            break;
         case 1: // VRAM-A1
             if (m_VDP2.RAMCTL.RDBSA1n != 1) {
                 return coeff;
             }
+            break;
         case 2: // VRAM-B0 or VRAM-B
             if (m_VDP2.RAMCTL.RDBSB0n != 1) {
                 return coeff;
             }
+            break;
         case 3: // VRAM-B1
             if (m_VDP2.RAMCTL.RDBSB1n != 1) {
                 return coeff;
             }
+            break;
         }
     }
 
