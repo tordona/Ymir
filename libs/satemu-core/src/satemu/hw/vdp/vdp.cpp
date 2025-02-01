@@ -240,34 +240,7 @@ void VDP::BeginHPhaseActiveDisplay() {
     rootLog2.trace("(VCNT = {:3d})  Entering horizontal active display phase", m_VCounter);
     if (m_VPhase == VerticalPhase::Active) {
         if (m_VCounter == 0) {
-            rootLog2.trace("Begin frame, VDP1 framebuffer {}", m_drawFB ^ 1);
-            rootLog2.trace("VBE={:d} FCM={:d} FCT={:d} PTM={:d} mswap={:d} merase={:d}", m_VDP1.vblankErase,
-                           m_VDP1.fbSwapMode, m_VDP1.fbSwapTrigger, m_VDP1.plotTrigger, m_VDP1.fbManualSwap,
-                           m_VDP1.fbManualErase);
-
-            bool swapFB = false;
-            if (m_VDP1.fbManualSwap) {
-                m_VDP1.fbManualSwap = false;
-                swapFB = true;
-            }
-
-            if (!m_VDP1.fbSwapMode) {
-                swapFB = true;
-            }
-
-            // Swap framebuffers and trigger:
-            // - Manual erase
-            // - VDP1 draw if PMTR.PTM == 0b10
-            if (swapFB) {
-                if (m_VDP1.fbManualErase) {
-                    m_VDP1.fbManualErase = false;
-                    VDP1EraseFramebuffer();
-                }
-                VDP1SwapFramebuffer();
-                if (m_VDP1.plotTrigger == 0b10) {
-                    VDP1BeginFrame();
-                }
-            }
+            rootLog2.trace("Begin VDP2 frame, VDP1 framebuffer {}", m_drawFB ^ 1);
 
             VDP2InitFrame();
         }
@@ -280,6 +253,18 @@ void VDP::BeginHPhaseRightBorder() {
 
     m_VDP2.TVSTAT.HBLANK = 1;
     m_SCU.TriggerHBlankIN();
+    rootLog2.trace("## HBlank IN");
+
+    // Start erasing if we just entered VBlank IN
+    if (m_VCounter == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
+        rootLog2.trace("## VBlank IN  VBE={:d} manualerase={:d}", m_VDP1.vblankErase, m_VDP1.fbManualErase);
+
+        if (m_VDP1.vblankErase || m_VDP1.fbManualErase || !m_VDP1.fbSwapMode) {
+            m_VDP1.fbManualErase = false;
+            // TODO: cycle-count the erase process, starting here
+            VDP1EraseFramebuffer();
+        }
+    }
 
     // TODO: draw border
 }
@@ -290,17 +275,16 @@ void VDP::BeginHPhaseSync() {
 }
 
 void VDP::BeginHPhaseVBlankOut() {
-    rootLog2.trace("(VCNT = {:3d})  Entering VBlank OUT phase", m_VCounter);
+    rootLog2.trace("(VCNT = {:3d})  Entering VBlank OUT horizontal phase", m_VCounter);
 
     if (m_VPhase == VerticalPhase::LastLine) {
-        m_VDP2.TVSTAT.VBLANK = 0;
-        m_SCU.TriggerVBlankOUT();
+        rootLog2.trace("## VBlank OUT part 2  FCM={:d} FCT={:d} manualswap={:d} PTM={:d}", m_VDP1.fbSwapMode,
+                       m_VDP1.fbSwapTrigger, m_VDP1.fbManualSwap, m_VDP1.plotTrigger);
 
-        rootLog2.trace("VBlank OUT  VBE={:d} FCM={:d}", m_VDP1.vblankErase, m_VDP1.fbSwapMode);
-
-        // VBlank erase or 1-cycle mode
-        if (m_VDP1.vblankErase || !m_VDP1.fbSwapMode) {
-            VDP1EraseFramebuffer();
+        // Swap framebuffer in manual swap requested or in 1-cycle mode
+        if ((!m_VDP1.fbSwapMode && !m_VDP1.fbSwapTrigger) || m_VDP1.fbManualSwap) {
+            m_VDP1.fbManualSwap = false;
+            VDP1SwapFramebuffer();
         }
     }
 }
@@ -350,7 +334,7 @@ void VDP::BeginVPhaseTopBorder() {
     rootLog2.trace("(VCNT = {:3d})  Entering top border phase", m_VCounter);
 
     // End frame
-    rootLog2.trace("Ending frame");
+    rootLog2.trace("End VDP2 frame");
     m_cbFrameComplete(m_framebuffer, m_HRes, m_VRes);
 
     UpdateResolution();
@@ -360,6 +344,11 @@ void VDP::BeginVPhaseTopBorder() {
 
 void VDP::BeginVPhaseLastLine() {
     rootLog2.trace("(VCNT = {:3d})  Entering last line phase", m_VCounter);
+
+    rootLog2.trace("## VBlank OUT");
+
+    m_VDP2.TVSTAT.VBLANK = 0;
+    m_SCU.TriggerVBlankOUT();
 }
 
 // -----------------------------------------------------------------------------
@@ -404,11 +393,14 @@ FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
 FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
     renderLog1.trace("Swapping framebuffers - draw {}, display {}", m_drawFB ^ 1, m_drawFB);
     m_drawFB ^= 1;
+
+    if (bit::extract<1>(m_VDP1.plotTrigger)) {
+        VDP1BeginFrame();
+    }
 }
 
 void VDP::VDP1BeginFrame() {
-    renderLog1.trace("Starting frame on framebuffer {} - VBE={:d} FCT={:d} FCM={:d}", m_drawFB, m_VDP1.vblankErase,
-                     m_VDP1.fbSwapTrigger, m_VDP1.fbSwapMode);
+    renderLog1.trace("Begin VDP1 frame on framebuffer {}", m_drawFB);
 
     // TODO: setup rendering
     // TODO: figure out VDP1 timings
@@ -425,7 +417,7 @@ void VDP::VDP1BeginFrame() {
 }
 
 void VDP::VDP1EndFrame() {
-    renderLog1.trace("Ending frame");
+    renderLog1.trace("End VDP1 frame on framebuffer {}", m_drawFB);
     m_VDP1RenderContext.rendering = false;
     m_VDP1.currFrameEnded = true;
 }
