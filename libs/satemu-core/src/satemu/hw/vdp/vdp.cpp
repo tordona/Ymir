@@ -708,6 +708,7 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
     uint16 color = 0;
     bool transparent = true;
     const bool flipU = control.flipH;
+    bool hasEndCode = false;
     int endCodeCount = 0;
     for (TexturedLineStepper line{coord1, coord2, charSizeH, flipU}; line.CanStep(); line.Step()) {
         // Load new texel if U coordinate changed.
@@ -726,7 +727,10 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
 
             auto processEndCode = [&](bool endCode) {
                 if (endCode && !mode.endCodeDisable && !useHighSpeedShrink) {
+                    hasEndCode = true;
                     endCodeCount++;
+                } else {
+                    hasEndCode = false;
                 }
             };
 
@@ -776,7 +780,7 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
             }
         }
 
-        if (transparent && !mode.transparentPixelDisable) {
+        if (hasEndCode || (transparent && !mode.transparentPixelDisable)) {
             continue;
         }
 
