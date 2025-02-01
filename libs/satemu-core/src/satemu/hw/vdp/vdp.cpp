@@ -1463,8 +1463,10 @@ void VDP::VDP2DrawLine() {
 
     const uint32 colorMode = m_VDP2.RAMCTL.CRMDn;
 
-    // Load rotation parameters if requested
+    // Load rotation parameters if any of the RBG layers is enabled
+    if (m_VDP2.bgEnabled[4] || m_VDP2.bgEnabled[5]) {
     VDP2CalcRotationParameterTables();
+    }
 
     // Draw line color and back screen layers
     VDP2DrawLineColorAndBackScreens();
