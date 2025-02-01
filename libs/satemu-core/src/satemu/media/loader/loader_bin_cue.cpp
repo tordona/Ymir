@@ -78,12 +78,17 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
     uint32 nextTrackNum = 0;
     uint32 frameAddress = 150; // start with lead-in
     uint32 currTrackIndex = ~0;
+    uint32 currFileIndex = 0;
     uintmax_t binFileOffset = 0;
     uintmax_t binFileSize = 0;
     uint32 prevM = 0;
     uint32 prevS = 0;
     uint32 prevF = 0;
+    uint32 pregapM = 0;
+    uint32 pregapS = 0;
+    uint32 pregapF = 0;
     std::array<uintmax_t, 99> trackFileOffsets{};
+    std::array<uint32, 99> trackFileIndices{};
 
     // File format validation flags
     bool hasFile = false;
@@ -170,6 +175,7 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
 
             hasTrack = false;
             hasFile = true;
+            currFileIndex++;
         } else if (keyword == "TRACK") {
             // TRACK [number] [datatype]
             if (!hasFile) {
@@ -241,6 +247,7 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
             hasIndex0 = false;
             hasPregap = false;
             hasPostgap = false;
+            trackFileIndices[currTrackIndex] = currFileIndex;
         } else if (keyword == "INDEX") {
             // INDEX [number] [mm:ss:ff]
             if (hasPostgap) {
@@ -261,32 +268,30 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
                 // fmt::println("BIN/CUE: Found INDEX before TRACK (line {})", lineNum);
                 return false;
             }
+            auto &track = session.tracks[currTrackIndex];
+
+            if (currTrackIndex > 0 && trackFileIndices[currTrackIndex] == trackFileIndices[currTrackIndex - 1]) {
+                auto &prevTrack = session.tracks[currTrackIndex - 1];
+                binFileOffset += (TimestampToFrameAddress(m, s, f) - TimestampToFrameAddress(prevM, prevS, prevF)) *
+                                 prevTrack.sectorSize;
+            }
+
+            // We don't care about subindices for now
 
             // Look for the data index only
-            auto &track = session.tracks[currTrackIndex];
-            bool startTrack = false;
             if (indexNum == 0) {
                 if (hasPregap) {
                     // fmt::println("BIN/CUE: Found INDEX 00 and PREGAP in the same TRACK (line {})", lineNum);
                     return false;
                 }
 
-                // Audio tracks start after pregap
                 hasPregap = true;
                 hasIndex0 = true;
             } else if (indexNum == 1) {
-                // Data tracks skip pregap
-                // Audio tracks start here if there is an INDEX 00
-                startTrack = track.controlADR == 0x41 || hasIndex0;
-            }
-            // We don't care about subindices for now
-
-            if (startTrack) {
                 // Close previous track
                 if (currTrackIndex > 0) {
                     auto &prevTrack = session.tracks[currTrackIndex - 1];
-                    const uintmax_t binFileLength = TimestampToFileOffset(m, s, f, prevTrack.sectorSize) -
-                                                    TimestampToFileOffset(prevM, prevS, prevF, prevTrack.sectorSize);
+                    const uintmax_t binFileLength = binFileOffset - trackFileOffsets[currTrackIndex - 1];
                     if (prevTrack.endFrameAddress < prevTrack.startFrameAddress) {
                         const uint32 frames = binFileLength / prevTrack.sectorSize;
                         prevTrack.endFrameAddress = prevTrack.startFrameAddress + frames - 1;
@@ -294,14 +299,38 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
                             binaryReader, trackFileOffsets[currTrackIndex - 1], binFileLength);
                         frameAddress += frames;
                     }
-                    binFileOffset += binFileLength;
                 }
-                // fmt::println("BIN/CUE: Track {} offset = {:X}  {:02d}:{:02d}:{:02d}", currTrackIndex, binFileOffset,
-                // m, s, f);
+
+                // If the pregap in audio tracks is actually silent, skip it
+                uintmax_t pregapOffset = 0;
+                if (hasPregap && track.controlADR == 0x01) {
+                    const uintmax_t pregapEnd = TimestampToFrameAddress(m, s, f);
+                    const uintmax_t pregapStart = hasIndex0
+                                                      ? TimestampToFrameAddress(prevM, prevS, prevF)
+                                                      : pregapEnd - TimestampToFrameAddress(pregapM, pregapS, pregapF);
+                    std::vector<uint8> sector{};
+                    sector.resize(track.sectorSize);
+                    bool isPregapSilent = true;
+                    for (uintmax_t frame = pregapStart; frame < pregapEnd; frame++) {
+                        binaryReader->Read(frame * track.sectorSize, track.sectorSize, sector);
+                        if (std::any_of(sector.begin(), sector.end(), [](uint8 v) { return v != 0; })) {
+                            isPregapSilent = false;
+                            break;
+                        }
+                    }
+                    if (isPregapSilent) {
+                        const uintmax_t delta = pregapEnd - pregapStart;
+                        // fmt::println("BIN/CUE: Track {} has silent pregap of {} frames; skipping", currTrackIndex,
+                        //              delta);
+                        pregapOffset = delta * track.sectorSize;
+                    }
+                }
 
                 // Start new track
                 track.startFrameAddress = frameAddress;
-                trackFileOffsets[currTrackIndex] = binFileOffset;
+                trackFileOffsets[currTrackIndex] = binFileOffset + pregapOffset;
+
+                // fmt::println("BIN/CUE: Track {} offset = {:X}", currTrackIndex, trackFileOffsets[currTrackIndex]);
             }
 
             prevM = m;
@@ -322,12 +351,15 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
             std::string msf{};
             ins >> msf;
 
-            // uint32 m = std::stoi(msf.substr(0, 2));
-            // uint32 s = std::stoi(msf.substr(3, 5));
-            // uint32 f = std::stoi(msf.substr(6, 8));
+            const uint32 m = std::stoi(msf.substr(0, 2));
+            const uint32 s = std::stoi(msf.substr(3, 5));
+            const uint32 f = std::stoi(msf.substr(6, 8));
             // fmt::println("BIN/CUE:     Pregap - {:02d}:{:02d}:{:02d}", m, s, f);
 
             hasPregap = true;
+            pregapM = m;
+            pregapS = s;
+            pregapF = f;
         } else if (keyword == "POSTGAP") {
             // POSTGAP [mm:ss:ff]
             if (!hasIndex) {
