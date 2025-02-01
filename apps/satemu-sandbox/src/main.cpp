@@ -477,6 +477,10 @@ struct Sandbox {
         if (keys[SDL_SCANCODE_X] && !prevKeys[SDL_SCANCODE_X]) {
             edgesOnTop = !edgesOnTop;
         }
+        if (keys[SDL_SCANCODE_C] && !prevKeys[SDL_SCANCODE_C]) {
+            uvGradient = !uvGradient;
+        }
+
         if (keys[SDL_SCANCODE_1] && !prevKeys[SDL_SCANCODE_1]) {
             ax = 32;
             ay = 38;
@@ -646,9 +650,13 @@ struct Sandbox {
             bool firstPixel = true;
             for (LineStepper line{coordL, coordR}; line.CanStep(); line.Step()) {
                 auto [x, y] = line.Coord();
-                // const uint32 color = firstPixel ? 0xc7997c : first ? 0x96674a : 0x75492e;
-                const uint32 color = ((line.FracPos() >> 8ll) & 0xFF) | (((edge.FracPos() >> 8ll) & 0xFF) << 8u) |
-                                     (firstPixel * 0xFF0000) | (first * 0x7F0000);
+                uint32 color;
+                if (uvGradient) {
+                    color = ((line.FracPos() >> 8ll) & 0xFF) | (((edge.FracPos() >> 8ll) & 0xFF) << 8u) |
+                            (firstPixel * 0xFF0000) | (first * 0x7F0000);
+                } else {
+                    color = firstPixel ? 0xc7997c : first ? 0x96674a : 0x75492e;
+                }
 
                 DrawPixel(x, y, color);
                 if (antialias && line.NeedsAntiAliasing()) {
@@ -706,6 +714,7 @@ struct Sandbox {
 
     bool edgesOnTop = true;
     bool antialias = true;
+    bool uvGradient = false;
 
     uint64 lastTicks;
 
