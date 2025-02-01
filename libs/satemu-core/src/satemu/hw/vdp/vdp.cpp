@@ -1334,7 +1334,7 @@ void VDP::VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayerState 
 }
 
 void VDP::VDP2CalcRotationParameterTables() {
-    const uint32 baseAddress = m_VDP2.commonRotParams.baseAddress;
+    const uint32 baseAddress = m_VDP2.commonRotParams.baseAddress & 0xFFF7C; // mask bit 6 (shifted left by 1)
     const bool readAll = m_VCounter == 0;
 
     for (int i = 0; i < 2; i++) {
