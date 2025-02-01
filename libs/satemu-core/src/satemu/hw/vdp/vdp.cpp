@@ -1524,8 +1524,8 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
     // 2x vert:  1xx   00x
     const bool tvmZeroBits = !m_VDP1.hdtvEnable && !m_VDP1.fbRotEnable;
     const bool doubleScaleH = tvmZeroBits && !m_VDP1.pixel8Bits && (m_VDP2.TVMD.HRESOn & 0b110) == 0b010;
-    // const bool doubleScaleV = tvmZeroBits && (m_VDP2.TVMD.HRESOn & 0b100) == 0b100;
-    const bool doubleScaleV = tvmZeroBits && m_VDP2.TVMD.LSMDn == 3;
+    const bool doubleScaleV = tvmZeroBits && (m_VDP2.TVMD.HRESOn & 0b100) == 0b100;
+    // const bool doubleScaleV = tvmZeroBits && m_VDP2.TVMD.LSMDn == 3;
 
     const uint32 scaleShiftH = doubleScaleH ? 1 : 0;
     const uint32 scaleShiftV = doubleScaleV ? 1 : 0;
