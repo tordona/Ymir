@@ -1141,7 +1141,7 @@ struct VDP2Regs {
     // 1800BE   RPTAL   Rotation Parameters Table Address (lower)
     //
     //   bits   r/w  code          description
-    //   15-1     W  RPTA15-1      Rotation Parameters Table Base Address (bits 15-0)
+    //   15-1     W  RPTA15-1      Rotation Parameters Table Base Address (bits 15-1)
     //      0        -             Reserved, must be zero
 
     FORCE_INLINE uint16 ReadRPTAU() const {
