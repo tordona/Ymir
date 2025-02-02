@@ -1088,6 +1088,14 @@ private:
     // x is the horizontal coordinate of the pixel
     RotParamSelector VDP2SelectRotationParameter(const BGParams &bgParams, uint32 x);
 
+    // Determines if a rotation coefficient entry can be fetched from the specified address.
+    // Coefficients can always be fetched from CRAM.
+    // Coefficients can only be fetched from VRAM if the corresponding bank is designated for coefficient data.
+    //
+    // params is the rotation parameter from which to retrieve the base address and coefficient data size.
+    // coeffAddress is the calculated coefficient address (KA).
+    bool VDP2CanFetchCoefficient(const RotationParams &params, uint32 coeffAddress) const;
+
     // Fetches a rotation coefficient entry from VRAM or CRAM (depending on RAMCTL.CRKTE) using the specified rotation
     // parameters.
     //

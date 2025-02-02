@@ -1432,7 +1432,9 @@ void VDP::VDP2CalcRotationParameterTables() {
                 // Increment coefficient table address by Hcnt if using per-dot coefficients
                 if (perDotCoeff) {
                     KA += t.dKAx;
-                    coeff = VDP2FetchRotationCoefficient(params, KA);
+                    if (VDP2CanFetchCoefficient(params, KA)) {
+                        coeff = VDP2FetchRotationCoefficient(params, KA);
+                    }
                 }
             }
 
@@ -2220,6 +2222,61 @@ VDP::RotParamSelector VDP::VDP2SelectRotationParameter(const BGParams &bgParams,
         return m_VDP2.rotParams[0].coeffTableEnable && m_rotParamStates[0].transparent[x] ? RotParamB : RotParamA;
     case Window: return VDP2IsInsideWindow(bgParams.windowSet, x) ? RotParamB : RotParamA;
     }
+}
+
+bool VDP::VDP2CanFetchCoefficient(const RotationParams &params, uint32 coeffAddress) const {
+    // Coefficients can always be fetched from CRAM
+    if (m_VDP2.RAMCTL.CRKTE) {
+        return true;
+    }
+
+    const uint32 baseAddress = params.coeffTableAddressOffset;
+    const uint32 offset = coeffAddress >> 10u;
+
+    // Check that the VRAM bank containing the coefficient table is designated for coefficient data.
+    // Return a default (transparent) coefficient if not.
+    // Determine which bank is targeted
+    const uint32 address = ((baseAddress + offset) * sizeof(uint32)) >> params.coeffDataSize;
+
+    // Address is 19 bits wide when using 512 KiB VRAM.
+    // Bank is designated by bits 17-18.
+    uint32 bank = bit::extract<17, 18>(address);
+
+    // RAMCTL.VRAMD and VRBMD specify if VRAM A and B respectively are partitioned into two blocks (when set).
+    // If they're not partitioned, RDBSA0n/RDBSB0n designate the role of the whole block (VRAM-A or -B).
+    // RDBSA1n/RDBSB1n designates the roles of the second half of the partitioned banks (VRAM-A1 or -A2).
+    // Masking the bank index with VRAMD/VRBMD adjusts the bank index of the second half back to the first half so
+    // we can uniformly handle both cases with one simple switch table.
+    if (bank < 2) {
+        bank &= ~(m_VDP2.RAMCTL.VRAMD ^ 1);
+    } else {
+        bank &= ~(m_VDP2.RAMCTL.VRBMD ^ 1);
+    }
+
+    switch (bank) {
+    case 0: // VRAM-A0 or VRAM-A
+        if (m_VDP2.RAMCTL.RDBSA0n != 1) {
+            return false;
+        }
+        break;
+    case 1: // VRAM-A1
+        if (m_VDP2.RAMCTL.RDBSA1n != 1) {
+            return false;
+        }
+        break;
+    case 2: // VRAM-B0 or VRAM-B
+        if (m_VDP2.RAMCTL.RDBSB0n != 1) {
+            return false;
+        }
+        break;
+    case 3: // VRAM-B1
+        if (m_VDP2.RAMCTL.RDBSB1n != 1) {
+            return false;
+        }
+        break;
+    }
+
+    return true;
 }
 
 Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint32 coeffAddress) {
