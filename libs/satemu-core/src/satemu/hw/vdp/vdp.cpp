@@ -2134,7 +2134,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
         const uint32 maxScrollY = usingFixed512 ? 512 : 512 * 4 << bgParams.pageShiftV;
 
         if (VDP2IsInsideWindow(bgParams.windowSet, x)) {
-            // Make pixel transparent if inside a window and not using window-based rotation parameter selection
+            // Make pixel transparent if inside a window
             pixel.transparent = true;
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
             // Plot pixel
@@ -2199,7 +2199,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
         const uint32 maxScrollY = usingFixed512 ? 512 : bgParams.bitmapSizeV;
 
         if (VDP2IsInsideWindow(bgParams.windowSet, x)) {
-            // Make pixel transparent if inside a window and not using window-based rotation parameter selection
+            // Make pixel transparent if inside a window
             pixel.transparent = true;
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
             // Plot pixel
