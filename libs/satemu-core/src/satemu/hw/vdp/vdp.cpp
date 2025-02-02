@@ -2351,8 +2351,11 @@ bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32
         // Read line window if enabled
         if (windowParam.lineWindowTableEnable) {
             const uint32 address = windowParam.lineWindowTableAddress + m_VCounter * sizeof(uint16) * 2;
-            startX = bit::extract<0, 9>(VDP2ReadVRAM<uint16>(address + 0));
-            endX = bit::extract<0, 9>(VDP2ReadVRAM<uint16>(address + 2));
+            // Panzer Dragoon 2 Zwei sets start = 0000, end = FFFE and expects this to be an empty window
+            const sint16 startVal = std::max<sint16>(0, VDP2ReadVRAM<uint16>(address + 0));
+            const sint16 endVal = std::max<sint16>(0, VDP2ReadVRAM<uint16>(address + 2));
+            startX = bit::extract<0, 9>(startVal);
+            endX = bit::extract<0, 9>(endVal);
         }
 
         // For normal screen modes, X coordinates don't use bit 0
