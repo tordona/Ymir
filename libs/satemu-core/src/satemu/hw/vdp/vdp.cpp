@@ -2422,15 +2422,36 @@ bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32
         const uint32 y = VDP2GetY(m_VCounter);
         const bool insideY = y >= windowParam.startY && y <= windowParam.endY;
 
-        uint16 startX = windowParam.startX;
-        uint16 endX = windowParam.endX;
+        sint16 startX = windowParam.startX;
+        sint16 endX = windowParam.endX;
 
         // Read line window if enabled
         if (windowParam.lineWindowTableEnable) {
             const uint32 address = windowParam.lineWindowTableAddress + m_VCounter * sizeof(uint16) * 2;
-            // Panzer Dragoon 2 Zwei sets start = 0000, end = FFFE and expects this to be an empty window
-            const sint16 startVal = std::max<sint16>(0, VDP2ReadVRAM<uint16>(address + 0));
-            const sint16 endVal = std::max<sint16>(0, VDP2ReadVRAM<uint16>(address + 2));
+            sint16 startVal = VDP2ReadVRAM<uint16>(address + 0);
+            sint16 endVal = VDP2ReadVRAM<uint16>(address + 2);
+
+            // Some games set out-of-range window parameters and expects them to work.
+            // It seems like window coordinates should be signed...
+            //
+            // Panzer Dragoon 2 Zwei:
+            //   0000 to FFFE -> empty window
+            //   FFFE to 02C0 -> full line
+            //
+            // Panzer Dragoon Saga:
+            //   0000 to FFFF -> empty window
+            //
+            // Handle these cases here
+            if (startVal < 0) {
+                startVal = 0;
+            }
+            if (endVal < 0) {
+                if (startVal >= endVal) {
+                    startVal = 0x3FF;
+                }
+                endVal = 0;
+            }
+
             startX = bit::extract<0, 9>(startVal);
             endX = bit::extract<0, 9>(endVal);
         }
