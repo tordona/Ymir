@@ -2178,8 +2178,8 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
         // Determine maximum coordinates and screen over process
         const bool usingFixed512 = rotParams.screenOverProcess == ScreenOverProcess::Fixed512;
         const bool usingRepeat = rotParams.screenOverProcess == ScreenOverProcess::Repeat;
-        const uint32 maxScrollX = usingFixed512 ? 512 : 512 * 4 << bgParams.pageShiftH;
-        const uint32 maxScrollY = usingFixed512 ? 512 : 512 * 4 << bgParams.pageShiftV;
+        const uint32 maxScrollX = usingFixed512 ? 512 : ((512 * 4) << bgParams.pageShiftH);
+        const uint32 maxScrollY = usingFixed512 ? 512 : ((512 * 4) << bgParams.pageShiftV);
 
         if (VDP2IsInsideWindow(bgParams.windowSet, x)) {
             // Make pixel transparent if inside a window
@@ -2190,13 +2190,43 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
                 bgParams, rotParamState.pageBaseAddresses, scrollCoord);
         } else if (rotParams.screenOverProcess == ScreenOverProcess::RepeatChar) {
             // Out of bounds - repeat character
+            const uint16 charData = rotParams.screenOverPatternName;
+
+            // FIXME: not quite correct... still draws garbage on Sonic R
+
+            // TODO: deduplicate code: VDP2FetchOneWordCharacter
+            static constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
+            static constexpr bool extChar = charMode == CharacterMode::OneWordExtended;
+
+            // Character number bit range from the 1-word character pattern data (charData)
+            static constexpr uint32 baseCharNumStart = 0;
+            static constexpr uint32 baseCharNumEnd = 9 + 2 * extChar;
+            static constexpr uint32 baseCharNumPos = 2 * fourCellChar;
+
+            // Upper character number bit range from the supplementary character number (bgParams.supplCharNum)
+            static constexpr uint32 supplCharNumStart = 2 * fourCellChar + 2 * extChar;
+            static constexpr uint32 supplCharNumEnd = 4;
+            static constexpr uint32 supplCharNumPos = 10 + supplCharNumStart;
+            // The lower bits are always in range 0..1 and only used if fourCellChar == true
+
+            const uint32 baseCharNum = bit::extract<baseCharNumStart, baseCharNumEnd>(charData);
+            const uint32 supplCharNum = bit::extract<supplCharNumStart, supplCharNumEnd>(bgParams.supplScrollCharNum);
+
             Character ch{};
-            ch.charNum = rotParams.screenOverPatternName;
-            ch.flipH = false;
-            ch.flipV = false;
-            ch.palNum = 0;
-            ch.specColorCalc = false;
-            ch.specPriority = false;
+            ch.charNum = (baseCharNum << baseCharNumPos) | (supplCharNum << supplCharNumPos);
+            if constexpr (fourCellChar) {
+                ch.charNum |= bit::extract<0, 1>(bgParams.supplScrollCharNum);
+            }
+            if constexpr (largePalette) {
+                ch.palNum = bit::extract<12, 14>(charData) << 4u;
+            } else {
+                ch.palNum = bit::extract<12, 15>(charData) | bgParams.supplScrollPalNum;
+            }
+            ch.specColorCalc = bgParams.supplScrollSpecialColorCalc;
+            ch.specPriority = bgParams.supplScrollSpecialPriority;
+            ch.flipH = !extChar && bit::extract<10>(charData);
+            ch.flipV = !extChar && bit::extract<11>(charData);
+
             pixel = VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, ch, scrollCoord, 0);
         } else {
             // Out of bounds - transparent
