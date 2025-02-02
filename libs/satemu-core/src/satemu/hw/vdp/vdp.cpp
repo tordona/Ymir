@@ -2107,7 +2107,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
             }
         }};
 
-        const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(bgParams, x) : RotParamA;
+        const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(x) : RotParamA;
 
         const RotationParams &rotParams = m_VDP2.rotParams[rotParamSelector];
         const RotationParamState &rotParamState = m_rotParamStates[rotParamSelector];
@@ -2133,7 +2133,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
         const uint32 maxScrollX = usingFixed512 ? 512 : 512 * 4 << bgParams.pageShiftH;
         const uint32 maxScrollY = usingFixed512 ? 512 : 512 * 4 << bgParams.pageShiftV;
 
-        if (commonRotParams.rotParamMode != RotationParamMode::Window && VDP2IsInsideWindow(bgParams.windowSet, x)) {
+        if (VDP2IsInsideWindow(bgParams.windowSet, x)) {
             // Make pixel transparent if inside a window and not using window-based rotation parameter selection
             pixel.transparent = true;
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
@@ -2173,7 +2173,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
                 layerState.pixels[xx + 1] = pixel;
             }
         }};
-        const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(bgParams, x) : RotParamA;
+        const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(x) : RotParamA;
 
         const RotationParams &rotParams = m_VDP2.rotParams[rotParamSelector];
         const RotationParamState &rotParamState = m_rotParamStates[rotParamSelector];
@@ -2198,7 +2198,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
         const uint32 maxScrollX = usingFixed512 ? 512 : bgParams.bitmapSizeH;
         const uint32 maxScrollY = usingFixed512 ? 512 : bgParams.bitmapSizeV;
 
-        if (commonRotParams.rotParamMode != RotationParamMode::Window && VDP2IsInsideWindow(bgParams.windowSet, x)) {
+        if (VDP2IsInsideWindow(bgParams.windowSet, x)) {
             // Make pixel transparent if inside a window and not using window-based rotation parameter selection
             pixel.transparent = true;
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
@@ -2211,7 +2211,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
     }
 }
 
-VDP::RotParamSelector VDP::VDP2SelectRotationParameter(const BGParams &bgParams, uint32 x) {
+VDP::RotParamSelector VDP::VDP2SelectRotationParameter(uint32 x) {
     const CommonRotationParams &commonRotParams = m_VDP2.commonRotParams;
 
     using enum RotationParamMode;
@@ -2220,7 +2220,7 @@ VDP::RotParamSelector VDP::VDP2SelectRotationParameter(const BGParams &bgParams,
     case RotationParamB: return RotParamB;
     case Coefficient:
         return m_VDP2.rotParams[0].coeffTableEnable && m_rotParamStates[0].transparent[x] ? RotParamB : RotParamA;
-    case Window: return VDP2IsInsideWindow(bgParams.windowSet, x) ? RotParamB : RotParamA;
+    case Window: return VDP2IsInsideWindow(m_VDP2.commonRotParams.windowSet, x) ? RotParamB : RotParamA;
     }
 }
 
@@ -2329,7 +2329,7 @@ Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint
 template <bool hasSpriteWindow>
 bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32 x) {
     // If no windows are enabled, consider the pixel outside of windows
-    if (!std::any_of(windowSet.enabled.begin(), windowSet.enabled.end(), std::identity())) {
+    if (!std::any_of(windowSet.enabled.begin(), windowSet.enabled.end(), std::identity{})) {
         return false;
     }
 

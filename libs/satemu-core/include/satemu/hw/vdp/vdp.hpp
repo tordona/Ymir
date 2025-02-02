@@ -1084,9 +1084,8 @@ private:
 
     // Selects a rotation parameter set based on the current parameter selection mode.
     //
-    // bgParams contains the parameters for the BG to draw.
     // x is the horizontal coordinate of the pixel
-    RotParamSelector VDP2SelectRotationParameter(const BGParams &bgParams, uint32 x);
+    RotParamSelector VDP2SelectRotationParameter(uint32 x);
 
     // Determines if a rotation coefficient entry can be fetched from the specified address.
     // Coefficients can always be fetched from CRAM.
