@@ -856,7 +856,7 @@ private:
         void Reset() {
             pageBaseAddresses.fill(0);
             screenCoords.fill({});
-            lineColorData.fill(0);
+            lineColor.fill({.u32 = 0});
             transparent.fill(0);
             scrX = scrY = 0;
             KA = 0;
@@ -870,9 +870,9 @@ private:
         // Precomputed screen coordinates (with 16 fractional bits).
         alignas(16) std::array<CoordS32, kMaxResH> screenCoords;
 
-        // Prefetched coefficient table line color data.
-        // Filled in only if the coefficient table is enabled.
-        alignas(16) std::array<uint8, kMaxResH> lineColorData;
+        // Precomputed coefficient table line color.
+        // Filled in only if the coefficient table is enabled and using line color data.
+        alignas(16) std::array<Color888, kMaxResH> lineColor;
 
         // Prefetched coefficient table transparency bits.
         // Filled in only if the coefficient table is enabled.

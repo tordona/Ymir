@@ -1412,21 +1412,35 @@ void VDP::VDP2CalcRotationParameterTables() {
             }
         }
 
+        // Precompute line color data parameters
+        const LineBackScreenParams &lineParams = m_VDP2.lineScreenParams;
+        const uint32 line = lineParams.perLine ? m_VCounter : 0;
+        const uint32 lineColorAddress = lineParams.baseAddress + line * sizeof(uint16);
+        const uint32 baseLineColorCRAMAddress = VDP2ReadVRAM<uint16>(lineColorAddress) * sizeof(uint16);
+
+        // Fetch first coefficient
         Coefficient coeff = VDP2FetchRotationCoefficient(params, KA);
 
         // Precompute whole line
         for (uint32 x = 0; x < maxX; x++) {
-            // Replace parameters with those obtained from the coefficient table if enabled
+            // Process coefficient table
             if (params.coeffTableEnable) {
-                state.lineColorData[x] = coeff.lineColorData;
                 state.transparent[x] = coeff.transparent;
 
+                // Replace parameters with those obtained from the coefficient table if enabled
                 using enum CoefficientDataMode;
                 switch (params.coeffDataMode) {
                 case ScaleCoeffXY: kx = ky = coeff.value; break;
                 case ScaleCoeffX: kx = coeff.value; break;
                 case ScaleCoeffY: ky = coeff.value; break;
                 case ViewpointX: Xp = coeff.value; break;
+                }
+
+                // Compute line colors
+                if (params.coeffUseLineColorData) {
+                    const uint32 cramAddress = bit::deposit<1, 8>(baseLineColorCRAMAddress, coeff.lineColorData);
+                    const Color555 color555{.u16 = VDP2ReadCRAM<uint16>(cramAddress)};
+                    state.lineColor[x] = ConvertRGB555to888(color555);
                 }
 
                 // Increment coefficient table address by Hcnt if using per-dot coefficients
@@ -1861,6 +1875,19 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
             }
         };
 
+        auto getLineColor = [&](Layer layer) {
+            if (layer == LYR_RBG0 || (layer == LYR_NBG0_RBG1 && m_VDP2.bgEnabled[5])) {
+                const auto &rotParams = m_VDP2.rotParams[layer - LYR_RBG0];
+                if (rotParams.coeffTableEnable && rotParams.coeffUseLineColorData) {
+                    return m_rotParamStates[layer - LYR_RBG0].lineColor[x];
+                } else {
+                    return m_lineBackLayerState.lineColor;
+                }
+            } else {
+                return m_lineBackLayerState.lineColor;
+            }
+        };
+
         auto isShadowEnabled = [&](Layer layer) {
             if (layer == LYR_Sprite) {
                 return m_spriteLayerState.attrs[x].shadowOrWindow;
@@ -1909,7 +1936,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
 
             // Insert and blend line color screen if top layer uses it
             if (isLineColorEnabled(layers[0])) {
-                const Color888 lineColor = m_lineBackLayerState.lineColor;
+                const Color888 lineColor = getLineColor(layers[0]);
                 if (useExtendedColorCalc) {
                     btmColor.r = (lineColor.r + btmColor.r) / 2;
                     btmColor.g = (lineColor.g + btmColor.g) / 2;
