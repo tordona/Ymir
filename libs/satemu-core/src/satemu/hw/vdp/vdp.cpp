@@ -2092,8 +2092,6 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState 
 
 template <bool selRotParam, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState) {
-    const CommonRotationParams &commonRotParams = m_VDP2.commonRotParams;
-
     const bool doubleResH = m_VDP2.TVMD.HRESOn & 0b010;
     const uint32 xShift = doubleResH ? 1 : 0;
     const uint32 maxX = m_HRes >> xShift;
@@ -2158,8 +2156,6 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
 
 template <bool selRotParam, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerState &layerState) {
-    const CommonRotationParams &commonRotParams = m_VDP2.commonRotParams;
-
     const bool doubleResH = m_VDP2.TVMD.HRESOn & 0b010;
     const uint32 xShift = doubleResH ? 1 : 0;
     const uint32 maxX = m_HRes >> xShift;
