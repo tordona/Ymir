@@ -2113,8 +2113,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
         const RotationParamState &rotParamState = m_rotParamStates[rotParamSelector];
 
         // Handle transparent pixels in coefficient table
-        if ((!selRotParam || commonRotParams.rotParamMode != RotationParamMode::Coefficient) &&
-            rotParams.coeffTableEnable && rotParamState.transparent[x]) {
+        if (rotParams.coeffTableEnable && rotParamState.transparent[x]) {
             pixel.transparent = true;
             continue;
         }
@@ -2179,8 +2178,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
         const RotationParamState &rotParamState = m_rotParamStates[rotParamSelector];
 
         // Handle transparent pixels in coefficient table
-        if ((!selRotParam || commonRotParams.rotParamMode != RotationParamMode::Coefficient) &&
-            rotParams.coeffTableEnable && rotParamState.transparent[x]) {
+        if (rotParams.coeffTableEnable && rotParamState.transparent[x]) {
             pixel.transparent = true;
             continue;
         }
