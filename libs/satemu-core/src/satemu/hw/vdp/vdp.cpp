@@ -861,6 +861,14 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
         .colorC{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 4u)},
         .colorD{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 6u)},
     };
+    if (control.flipH) {
+        std::swap(gouraudParams.colorA, gouraudParams.colorB);
+        std::swap(gouraudParams.colorD, gouraudParams.colorC);
+    }
+    if (control.flipV) {
+        std::swap(gouraudParams.colorA, gouraudParams.colorD);
+        std::swap(gouraudParams.colorB, gouraudParams.colorC);
+    }
 
     // Interpolate linearly over edges A-D and B-C
     const bool flipV = control.flipV;
@@ -1002,6 +1010,14 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
         .colorC{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 4u)},
         .colorD{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 6u)},
     };
+    if (control.flipH) {
+        std::swap(gouraudParams.colorA, gouraudParams.colorB);
+        std::swap(gouraudParams.colorD, gouraudParams.colorC);
+    }
+    if (control.flipV) {
+        std::swap(gouraudParams.colorA, gouraudParams.colorD);
+        std::swap(gouraudParams.colorB, gouraudParams.colorC);
+    }
 
     // Interpolate linearly over edges A-D and B-C
     const bool flipV = control.flipV;
@@ -1061,6 +1077,14 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control co
         .colorC{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 4u)},
         .colorD{.u16 = VDP1ReadVRAM<uint16>(gouraudTable + 6u)},
     };
+    if (control.flipH) {
+        std::swap(gouraudParams.colorA, gouraudParams.colorB);
+        std::swap(gouraudParams.colorD, gouraudParams.colorC);
+    }
+    if (control.flipV) {
+        std::swap(gouraudParams.colorA, gouraudParams.colorD);
+        std::swap(gouraudParams.colorB, gouraudParams.colorC);
+    }
 
     // Interpolate linearly over edges A-D and B-C
     const bool flipV = control.flipV;
