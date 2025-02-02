@@ -46,7 +46,7 @@ void Slot::Reset() {
 
     lfoReset = false;
     lfofRaw = 0;
-    lfoFreq = s_lfoFreqTbl[0];
+    lfoStepInterval = s_lfoStepTbl[0];
     ampLFOSens = 0;
     ampLFOWaveform = Waveform::Saw;
     pitchLFOWaveform = Waveform::Saw;
@@ -70,6 +70,9 @@ void Slot::Reset() {
     currPhase = 0;
     reverse = false;
     crossedLoopStart = false;
+
+    lfoCycles = 0;
+    lfoStep = 0;
 
     sample1 = 0;
     sample2 = 0;
@@ -509,7 +512,15 @@ uint16 Slot::GetEGLevel() const {
     }
 }
 
-void Slot::IncrementPhase(uint32 pitchLFO) {
+void Slot::IncrementLFO() {
+    lfoCycles++;
+    if (lfoCycles >= lfoStepInterval) {
+        lfoCycles = 0;
+        lfoStep++;
+    }
+}
+
+void Slot::IncrementPhase(sint32 pitchLFO) {
     // NOTE: freqNumSwitch already has 0x400u added to it
     const uint32 phaseInc = freqNumSwitch << (octave ^ 8u);
     currPhase = (currPhase & 0x3FFFF) + phaseInc + pitchLFO;

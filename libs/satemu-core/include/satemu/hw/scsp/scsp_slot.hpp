@@ -219,13 +219,13 @@ struct Slot {
 
     enum class Waveform { Saw, Square, Triangle, Noise };
 
-    static constexpr std::array<uint32, 32> s_lfoFreqTbl = {1020, 892, 764, 636, 508, 444, 380, 316, 252, 220, 188,
+    static constexpr std::array<uint32, 32> s_lfoStepTbl = {1020, 892, 764, 636, 508, 444, 380, 316, 252, 220, 188,
                                                             156,  124, 108, 92,  76,  60,  52,  44,  36,  28,  24,
                                                             20,   16,  12,  10,  8,   6,   4,   3,   2,   1};
 
     bool lfoReset;             // (R/W) LFORE - true resets the LFO (TODO: is this a one-shot action?)
     uint8 lfofRaw;             // (R/W) LFOF - 0x00 to 0x1F (raw value)
-    uint32 lfoFreq;            // (R/W) LFOF - determines the LFO increment interval (from s_lfoFreqTbl)
+    uint32 lfoStepInterval;    // (R/W) LFOF - determines the LFO increment interval (from s_lfoStepTbl)
     uint8 ampLFOSens;          // (R/W) ALFOS - 0 (none) to 7 (maximum) intensity of tremor effect
     uint8 pitchLFOSens;        // (R/W) PLFOS - 0 (none) to 7 (maximum) intensity of tremolo effect
     Waveform ampLFOWaveform;   // (R/W) ALFOWS - unsigned from 0x00 to 0xFF (all waveforms start at zero and increment)
@@ -262,6 +262,9 @@ struct Slot {
     bool reverse;
     bool crossedLoopStart;
 
+    uint32 lfoCycles; // Incremented every sample
+    uint8 lfoStep;    // Incremented when lfoCycles reaches lfoStepInterval
+
     sint16 sample1;
     sint16 sample2;
     sint16 output;
@@ -271,7 +274,9 @@ struct Slot {
     uint8 GetCurrentEGRate() const;
     uint16 GetEGLevel() const;
 
-    void IncrementPhase(uint32 pitchLFO);
+    void IncrementLFO();
+
+    void IncrementPhase(sint32 pitchLFO);
     void IncrementSampleCounter();
     void IncrementAddress(sint32 modulation);
 };

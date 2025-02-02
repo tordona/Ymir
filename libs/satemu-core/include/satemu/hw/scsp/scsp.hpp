@@ -800,6 +800,8 @@ private:
     uint16 m_egCycle; // Current envelope generator cycle, updated every other sample
     bool m_egStep;    // Whether the EG should be updated on this cycle
 
+    uint32 m_lfsr; // Noise LFSR
+
     // -------------------------------------------------------------------------
     // Interrupt handling
 

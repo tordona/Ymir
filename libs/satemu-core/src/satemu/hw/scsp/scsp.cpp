@@ -46,6 +46,8 @@ void SCSP::Reset(bool hard) {
     m_egCycle = 0;
     m_egStep = false;
 
+    m_lfsr = 1;
+
     if (hard) {
         m_scheduler.ScheduleFromNow(m_sampleTickEvent, kCyclesPerSample);
     }
@@ -416,10 +418,44 @@ FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
         return;
     }
 
-    // TODO: compute pitch LFO
-    const uint32 pitchLFO = (0 << slot.pitchLFOSens) >> 2u;
+    slot.IncrementLFO();
 
-    slot.IncrementPhase(pitchLFO);
+    // Pitch LFO waveform tables
+    static constexpr auto sawTable = [] {
+        std::array<sint8, 256> arr{};
+        for (uint32 i = 0; i < 256; i++) {
+            arr[i] = static_cast<sint8>(i);
+        }
+        return arr;
+    }();
+    static constexpr auto squareTable = [] {
+        std::array<sint8, 256> arr{};
+        for (uint32 i = 0; i < 256; i++) {
+            arr[i] = i < 128 ? 127 : -128;
+        }
+        return arr;
+    }();
+    static constexpr auto triangleTable = [] {
+        std::array<sint8, 256> arr{};
+        for (uint32 i = 0; i < 128; i++) {
+            const uint8 il = i - 64;
+            const uint8 ir = 255 - i - 64;
+            arr[il] = arr[ir] = i * 2 - 128;
+        }
+        return arr;
+    }();
+
+    // Compute pitch LFO
+    sint32 pitchLFO = 0;
+    using enum Slot::Waveform;
+    switch (slot.pitchLFOWaveform) {
+    case Saw: pitchLFO = sawTable[slot.lfoStep]; break;
+    case Square: pitchLFO = squareTable[slot.lfoStep]; break;
+    case Triangle: pitchLFO = triangleTable[slot.lfoStep]; break;
+    case Noise: pitchLFO = static_cast<sint8>(m_lfsr & ~1); break;
+    }
+
+    slot.IncrementPhase((pitchLFO << slot.pitchLFOSens) >> 2);
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
@@ -574,14 +610,48 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep5(Slot &slot) {
+    m_lfsr = (m_lfsr >> 1u) | (((m_lfsr >> 5u) ^ m_lfsr) & 1u) << 16u;
+
     if (!slot.active) {
         slot.output = 0;
         return;
     }
 
     if (!slot.soundDirect) {
-        // TODO: compute ALFO
-        const sint32 alfoLevel = 0;
+        static constexpr auto sawTable = [] {
+            std::array<uint8, 256> arr{};
+            for (uint32 i = 0; i < 256; i++) {
+                arr[i] = i;
+            }
+            return arr;
+        }();
+        static constexpr auto squareTable = [] {
+            std::array<uint8, 256> arr{};
+            for (uint32 i = 0; i < 256; i++) {
+                arr[i] = i < 128 ? 0x00 : 0xFF;
+            }
+            return arr;
+        }();
+        static constexpr auto triangleTable = [] {
+            std::array<uint8, 256> arr{};
+            for (uint32 i = 0; i < 128; i++) {
+                const uint8 il = i;
+                const uint8 ir = 255 - i;
+                arr[il] = arr[ir] = i * 2;
+            }
+            return arr;
+        }();
+
+        uint32 alfoLevel = 0u;
+        using enum Slot::Waveform;
+        switch (slot.ampLFOWaveform) {
+        case Saw: alfoLevel = sawTable[slot.lfoStep]; break;
+        case Square: alfoLevel = squareTable[slot.lfoStep]; break;
+        case Triangle: alfoLevel = triangleTable[slot.lfoStep]; break;
+        case Noise: alfoLevel = static_cast<uint8>(m_lfsr & ~1); break;
+        }
+
+        alfoLevel = ((alfoLevel + 1u) >> (7u - slot.ampLFOSens)) << 1u;
         const sint32 envLevel = slot.GetEGLevel();
         const sint32 totalLevel = slot.totalLevel << 2u;
         const sint32 level = std::min<sint32>(alfoLevel + envLevel + totalLevel, 0x3FF);
