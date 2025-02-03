@@ -2,6 +2,7 @@
 
 #include <satemu/hw/scu/scu.hpp>
 
+#include <satemu/util/arith_ops.hpp>
 #include <satemu/util/debug_print.hpp>
 
 #include <cassert>
@@ -605,8 +606,6 @@ bool CDBlock::SetupSubcodeTransfer(uint8 type) {
         return msf;
     };
 
-    auto toBCD = [](uint8 value) { return value % 10 + value / 10 * 16; };
-
     if (type == 0) {
         xferLog.trace("Starting subcode Q transfer");
 
@@ -623,15 +622,15 @@ bool CDBlock::SetupSubcodeTransfer(uint8 type) {
         auto [relM, relS, relF] = toMSF(relativeFAD);
 
         m_xferSubcodeBuffer[0] = m_status.controlADR;
-        m_xferSubcodeBuffer[1] = toBCD(m_status.track);
-        m_xferSubcodeBuffer[2] = toBCD(m_status.index);
-        m_xferSubcodeBuffer[3] = toBCD(relM);
-        m_xferSubcodeBuffer[4] = toBCD(relS);
-        m_xferSubcodeBuffer[5] = toBCD(relF);
+        m_xferSubcodeBuffer[1] = util::to_bcd(m_status.track);
+        m_xferSubcodeBuffer[2] = util::to_bcd(m_status.index);
+        m_xferSubcodeBuffer[3] = util::to_bcd(relM);
+        m_xferSubcodeBuffer[4] = util::to_bcd(relS);
+        m_xferSubcodeBuffer[5] = util::to_bcd(relF);
         m_xferSubcodeBuffer[6] = 0;
-        m_xferSubcodeBuffer[7] = toBCD(m);
-        m_xferSubcodeBuffer[8] = toBCD(s);
-        m_xferSubcodeBuffer[9] = toBCD(f);
+        m_xferSubcodeBuffer[7] = util::to_bcd(m);
+        m_xferSubcodeBuffer[8] = util::to_bcd(s);
+        m_xferSubcodeBuffer[9] = util::to_bcd(f);
 
         m_CR[0] = m_status.statusCode << 8u;
         m_CR[1] = 5;

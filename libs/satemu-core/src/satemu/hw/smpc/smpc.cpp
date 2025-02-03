@@ -2,7 +2,9 @@
 
 #include <satemu/sys/sys.hpp>
 
+#include <satemu/util/arith_ops.hpp>
 #include <satemu/util/bit_ops.hpp>
+#include <satemu/util/date_time.hpp>
 #include <satemu/util/inline.hpp>
 
 #include <cassert>
@@ -363,15 +365,25 @@ void SMPC::WriteINTBACKStatusReport() {
     // TODO: simulate full system reset (STE clear)
     OREG[0] = 0x80; // STE set, RESD clear
 
-    // TODO: read from RTC
+    // Read from host RTC
+    // TODO: emulated RTC
+    const auto dt = util::datetime::host();
+    OREG[1] = util::to_bcd(dt.year / 100);  // Year 1000s, Year 100s (BCD)
+    OREG[2] = util::to_bcd(dt.year % 100);  // Year 10s, Year 1s (BCD)
+    OREG[3] = (dt.weekday << 4) | dt.month; // Day of week (0=sun), Month (hex, 1=jan)
+    OREG[4] = util::to_bcd(dt.day);         // Day (BCD)
+    OREG[5] = util::to_bcd(dt.hour);        // Hour (BCD)
+    OREG[6] = util::to_bcd(dt.minute);      // Minute (BCD)
+    OREG[7] = util::to_bcd(dt.second);      // Second (BCD)
+
     // the date/time below refers to this project's very first commit
-    OREG[1] = 0x20; // Year 1000s, Year 100s (BCD)
+    /*OREG[1] = 0x20; // Year 1000s, Year 100s (BCD)
     OREG[2] = 0x24; // Year 10s, Year 1s (BCD)
     OREG[3] = 0x0B; // Day of week (0=sun), Month (hex, 1=jan)
     OREG[4] = 0x17; // Day (BCD)
     OREG[5] = 0x17; // Hour (BCD)
     OREG[6] = 0x01; // Minute (BCD)
-    OREG[7] = 0x20; // Second (BCD)
+    OREG[7] = 0x20; // Second (BCD)*/
 
     // TODO: read cartridge code from cartridge
     // TODO: allow setting or auto-detecting area code

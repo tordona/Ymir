@@ -63,9 +63,11 @@ add_library(satemu-core
 
     include/satemu/sys/sys.hpp
     
+    include/satemu/util/arith_ops.hpp
     include/satemu/util/bit_ops.hpp
     include/satemu/util/callback.hpp
     include/satemu/util/data_ops.hpp
+    include/satemu/util/date_time.hpp
     include/satemu/util/debug_print.hpp
     include/satemu/util/inline.hpp
     include/satemu/util/scope_guard.hpp
@@ -108,6 +110,7 @@ add_library(satemu-core
     src/satemu/sys/sys.cpp
 
     src/satemu/util/constexpr_for.hpp
+    src/satemu/util/date_time.cpp
 )
 add_library(satemu::satemu-core ALIAS satemu-core)
 set_target_properties(satemu-core PROPERTIES
