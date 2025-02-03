@@ -1,6 +1,7 @@
 #include <satemu/satemu.hpp>
 
 #include <satemu/util/scope_guard.hpp>
+#include <satemu/util/thread_name.hpp>
 
 #include "../../../libs/satemu-core/src/satemu/hw/vdp/slope.hpp"
 
@@ -37,6 +38,8 @@ std::vector<uint8> loadFile(std::filesystem::path romPath) {
 }
 
 void runEmulator(satemu::Saturn &saturn) {
+    util::SetCurrentThreadName("Main thread");
+
     using clk = std::chrono::steady_clock;
     using namespace std::chrono_literals;
     using namespace satemu;
@@ -120,6 +123,37 @@ void runEmulator(satemu::Saturn &saturn) {
     ScopeGuard sgDestroyTexture{[&] { SDL_DestroyTexture(texture); }};
 
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+
+    // ---------------------------------
+    // Setup framebuffer and render callbacks
+
+    std::vector<uint32> framebuffer(vdp::kMaxResH * vdp::kMaxResV);
+    saturn.VDP.SetCallbacks({framebuffer.data(), [](uint32, uint32, void *ctx) { return (uint32 *)ctx; }},
+                            {&screen, [](vdp::FramebufferColor *, uint32 width, uint32 height, void *ctx) {
+                                 auto &screen = *static_cast<ScreenParams *>(ctx);
+                                 if (width != screen.width || height != screen.height) {
+                                     const bool doubleWidth = width >= 640;
+                                     const bool doubleHeight = height >= 400;
+
+                                     const float scaleX = doubleWidth ? scale * 0.5f : scale;
+                                     const float scaleY = doubleHeight ? scale * 0.5f : scale;
+
+                                     auto normalizeW = [](int width) { return (width >= 640) ? width / 2 : width; };
+                                     auto normalizeH = [](int height) { return (height >= 400) ? height / 2 : height; };
+
+                                     int wx, wy;
+                                     SDL_GetWindowPosition(screen.window, &wx, &wy);
+                                     const int dx = (int)normalizeW(width) - (int)normalizeW(screen.width);
+                                     const int dy = (int)normalizeH(height) - (int)normalizeH(screen.height);
+                                     screen.width = width;
+                                     screen.height = height;
+
+                                     // Adjust window size dynamically
+                                     // TODO: add room for borders
+                                     SDL_SetWindowSize(screen.window, screen.width * scaleX, screen.height * scaleY);
+                                     SDL_SetWindowPosition(screen.window, wx - dx * scaleX / 2, wy - dy * scaleY / 2);
+                                 }
+                             }});
 
     // ---------------------------------
     // Create audio buffer and stream and set up callbacks
@@ -212,35 +246,6 @@ void runEmulator(satemu::Saturn &saturn) {
     // Main emulator loop
 
     saturn.Reset(true);
-
-    // Configure single framebuffer
-    std::vector<uint32> framebuffer(vdp::kMaxResH * vdp::kMaxResV);
-    saturn.VDP.SetCallbacks({framebuffer.data(), [](uint32, uint32, void *ctx) { return (uint32 *)ctx; }},
-                            {&screen, [](vdp::FramebufferColor *, uint32 width, uint32 height, void *ctx) {
-                                 auto &screen = *static_cast<ScreenParams *>(ctx);
-                                 if (width != screen.width || height != screen.height) {
-                                     const bool doubleWidth = width >= 640;
-                                     const bool doubleHeight = height >= 400;
-
-                                     const float scaleX = doubleWidth ? scale * 0.5f : scale;
-                                     const float scaleY = doubleHeight ? scale * 0.5f : scale;
-
-                                     auto normalizeW = [](int width) { return (width >= 640) ? width / 2 : width; };
-                                     auto normalizeH = [](int height) { return (height >= 400) ? height / 2 : height; };
-
-                                     int wx, wy;
-                                     SDL_GetWindowPosition(screen.window, &wx, &wy);
-                                     const int dx = (int)normalizeW(width) - (int)normalizeW(screen.width);
-                                     const int dy = (int)normalizeH(height) - (int)normalizeH(screen.height);
-                                     screen.width = width;
-                                     screen.height = height;
-
-                                     // Adjust window size dynamically
-                                     // TODO: add room for borders
-                                     SDL_SetWindowSize(screen.window, screen.width * scaleX, screen.height * scaleY);
-                                     SDL_SetWindowPosition(screen.window, wx - dx * scaleX / 2, wy - dy * scaleY / 2);
-                                 }
-                             }});
 
     auto t = clk::now();
     uint64 frames = 0;
