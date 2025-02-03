@@ -13,6 +13,17 @@
 
 namespace satemu::sh2 {
 
+namespace config {
+    // Detect and log SYS_EXECDMP invocations.
+    // The addres is specified by sysExecDumpAddress;
+    inline constexpr bool logSysExecDump = false;
+
+    // Address of SYS_EXECDMP function.
+    // 0x186C is valid in most BIOS images.
+    // 0x197C on JP (v1.003)
+    inline constexpr uint32 sysExecDumpAddress = 0x186C;
+} // namespace config
+
 inline constexpr dbg::Category<sh2DebugLevel> MSH2{"SH2-M"};
 inline constexpr dbg::Category<sh2DebugLevel> SSH2{"SH2-S"};
 
@@ -228,12 +239,14 @@ FLATTEN void SH2::Advance(uint64 cycles) {
         m_tracer.ExecTrace({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
         Execute();
 
-        // dump stack trace on SYS_EXECDMP
-        if ((PC & 0x7FFFFFF) == 0x186C) {
-            m_log.debug("SYS_EXECDMP triggered");
-            m_tracer.UserCapture({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
-            m_tracer.Dump();
-            m_tracer.Reset();
+        if constexpr (config::logSysExecDump) {
+            // Dump stack trace on SYS_EXECDMP
+            if ((PC & 0x7FFFFFF) == config::sysExecDumpAddress) {
+                m_log.debug("SYS_EXECDMP triggered");
+                m_tracer.UserCapture({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
+                m_tracer.Dump();
+                m_tracer.Reset();
+            }
         }
 
         // dbg_println("");
