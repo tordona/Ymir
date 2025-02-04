@@ -450,8 +450,7 @@ void SMPC::SETSMEM() {
 }
 
 void SMPC::SETTIME() {
-    rootLog.debug("Processing SETTIME year={:02X}{:02X} day/month={:02X} day={:02X} time={:02X}:{:02X}:{:02X}", IREG[0],
-                  IREG[1], IREG[2], IREG[3], IREG[4], IREG[5], IREG[6]);
+    rootLog.debug("Processing SETTIME");
 
     util::datetime::DateTime dt{};
     dt.year = util::from_bcd((IREG[0] << 8u) + IREG[1]);
@@ -462,8 +461,13 @@ void SMPC::SETTIME() {
     dt.minute = util::from_bcd(IREG[5]);
     dt.second = util::from_bcd(IREG[6]);
 
+    rootLog.debug("Setting time to {}/{:02d}/{:02d} {:02d}:{:02d}:{:02d}", dt.year, dt.month, dt.day, dt.hour,
+                  dt.minute, dt.second);
+
     // Update host time offset
     m_rtcOffset = util::datetime::delta_to_host(dt);
+
+    rootLog.debug("Host time offset: {} seconds", m_rtcOffset);
 
     // TODO: set emulated time if not using host time
 
