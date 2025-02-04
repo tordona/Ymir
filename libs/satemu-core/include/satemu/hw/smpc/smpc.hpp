@@ -147,6 +147,11 @@ private:
     void WriteDDR2(uint8 value);
 
     // -------------------------------------------------------------------------
+    // RTC
+
+    sint64 m_rtcOffset; // in seconds, added to host time; only applicable to host time
+
+    // -------------------------------------------------------------------------
     // Input, parallel I/O and INTBACK
 
     // TODO: support multiple controllers, multi-tap, different types of devices, etc.

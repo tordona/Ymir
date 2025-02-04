@@ -15,7 +15,10 @@ struct DateTime {
     uint8 second;  // The current second of the minute: 0 to 59
 };
 
-// Gets the current host (system) date and time.
-DateTime host();
+// Gets the current host (system) date and time with the specified offset in seconds.
+DateTime host(sint64 offsetSeconds = 0);
+
+// Computes the number of seconds between the given dateTime and the current host time.
+sint64 delta_to_host(const DateTime &dateTime);
 
 } // namespace util::datetime

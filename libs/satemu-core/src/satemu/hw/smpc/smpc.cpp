@@ -15,6 +15,12 @@ SMPC::SMPC(core::Scheduler &scheduler, Saturn &saturn)
     : m_saturn(saturn)
     , m_scheduler(scheduler) {
 
+    // TODO(SMPC): SMEM should be persisted
+    SMEM.fill(0);
+
+    // TODO(SMPC): RTC offset should be persisted
+    m_rtcOffset = 0;
+
     m_commandEvent = m_scheduler.RegisterEvent(
         core::events::SMPCCommand, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
             auto &smpc = *static_cast<SMPC *>(userContext);
@@ -34,9 +40,6 @@ void SMPC::Reset(bool hard) {
     PDR2 = 0;
     DDR1 = 0;
     DDR2 = 0;
-
-    // TODO(SMPC): SMEM should be persisted
-    SMEM.fill(0);
 
     m_busValue = 0x00;
 
@@ -367,7 +370,7 @@ void SMPC::WriteINTBACKStatusReport() {
 
     // Read from host RTC
     // TODO: emulated RTC
-    const auto dt = util::datetime::host();
+    const auto dt = util::datetime::host(m_rtcOffset);
     OREG[1] = util::to_bcd(dt.year / 100);  // Year 1000s, Year 100s (BCD)
     OREG[2] = util::to_bcd(dt.year % 100);  // Year 10s, Year 1s (BCD)
     OREG[3] = (dt.weekday << 4) | dt.month; // Day of week (0=sun), Month (hex, 1=jan)
@@ -450,16 +453,19 @@ void SMPC::SETTIME() {
     rootLog.debug("Processing SETTIME year={:02X}{:02X} day/month={:02X} day={:02X} time={:02X}:{:02X}:{:02X}", IREG[0],
                   IREG[1], IREG[2], IREG[3], IREG[4], IREG[5], IREG[6]);
 
-    // const uint8 bcdYear100s = IREG[0];
-    // const uint8 bcdYear1s = IREG[1];
-    // const uint8 day = bit::extract<4, 7>(IREG[2]);
-    // const uint8 month = bit::extract<0, 3>(IREG[2]);
-    // const uint8 bcdDay = IREG[3];
-    // const uint8 bcdHour = IREG[4];
-    // const uint8 bcdMinute = IREG[5];
-    // const uint8 bcdSecond = IREG[6];
+    util::datetime::DateTime dt{};
+    dt.year = util::from_bcd((IREG[0] << 8u) + IREG[1]);
+    dt.weekday = bit::extract<4, 7>(IREG[2]);
+    dt.month = bit::extract<0, 3>(IREG[2]);
+    dt.day = util::from_bcd(IREG[3]);
+    dt.hour = util::from_bcd(IREG[4]);
+    dt.minute = util::from_bcd(IREG[5]);
+    dt.second = util::from_bcd(IREG[6]);
 
-    // TODO: update time
+    // Update host time offset
+    m_rtcOffset = util::datetime::delta_to_host(dt);
+
+    // TODO: set emulated time if not using host time
 
     SF = false; // done processing
 

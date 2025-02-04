@@ -36,4 +36,18 @@ constexpr R to_bcd(T value) {
     return output;
 }
 
+// Converts the given number from binary-coded decimal representation (BCD) to hexadecimal.
+template <std::integral T, std::integral R = T>
+constexpr R from_bcd(T value) {
+    constexpr auto numDigits = sizeof(R) * 2u;
+
+    R output = 0;
+    R factor = 1;
+    for (int i = 0; i < numDigits; i++) {
+        output += ((value >> (4 * i)) & 0xF) * factor;
+        factor *= 10;
+    }
+    return output;
+}
+
 } // namespace util
