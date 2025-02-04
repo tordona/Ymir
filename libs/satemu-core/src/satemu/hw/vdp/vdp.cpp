@@ -574,14 +574,16 @@ bool VDP::VDP1IsQuadSystemClipped(CoordS32 coord1, CoordS32 coord2, CoordS32 coo
 FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams,
                                      const VDP1GouraudParams &gouraudParams) {
     auto [x, y] = coord;
-    if (m_VDP2.TVMD.LSMDn == 3) {
-        if ((y & 1) == m_VDP2.TVSTAT.ODD) {
-            return;
-        }
-        y = (y >> 1);
-    }
+
     if (pixelParams.mode.meshEnable && ((x ^ y) & 1)) {
         return;
+    }
+
+    if (m_VDP1.dblInterlaceEnable && m_VDP2.TVMD.LSMDn == 3) {
+        if ((y & 1) == m_VDP1.dblInterlaceDrawLine) {
+            return;
+        }
+        y >>= 1;
     }
 
     // Reject pixels outside of clipping area
@@ -1575,17 +1577,17 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
     const uint32 y = m_VCounter;
 
     // VDP1 scaling:
-    //          VDP2   VDP1
-    //          HRESO  TVM
-    // 2x horz:  01x   000
-    // 2x vert:  1xx   00x
-    const bool tvmZeroBits = !m_VDP1.hdtvEnable && !m_VDP1.fbRotEnable;
-    const bool doubleScaleH = tvmZeroBits && !m_VDP1.pixel8Bits && (m_VDP2.TVMD.HRESOn & 0b110) == 0b010;
-    const bool doubleScaleV = tvmZeroBits && (m_VDP2.TVMD.HRESOn & 0b100) == 0b100;
-    // const bool doubleScaleV = tvmZeroBits && m_VDP2.TVMD.LSMDn == 3;
+    // 2x horz: VDP1 TVM=000 and VDP2 HRESO=01x
+    // 2x vert: VDP1 DIE=0 and VDP2 LSMD=3
+    const bool doubleScaleH =
+        !m_VDP1.hdtvEnable && !m_VDP1.fbRotEnable && !m_VDP1.pixel8Bits && (m_VDP2.TVMD.HRESOn & 0b110) == 0b010;
+    const bool doubleScaleV = !m_VDP1.dblInterlaceEnable && m_VDP2.TVMD.LSMDn == 3;
 
     const uint32 scaleShiftH = doubleScaleH ? 1 : 0;
     const uint32 scaleShiftV = doubleScaleV ? 1 : 0;
+
+    // TODO: optimize
+    // - instead of shifting down the coordinates, step by twice the amount
 
     for (uint32 x = 0; x < m_HRes; x++) {
         const auto &spriteFB = VDP1GetDisplayFB();
