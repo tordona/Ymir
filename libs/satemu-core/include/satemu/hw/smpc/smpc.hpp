@@ -2,6 +2,8 @@
 
 #include "smpc_defs.hpp"
 
+#include "rtc.hpp"
+
 #include <satemu/core/scheduler.hpp>
 
 #include <satemu/util/debug_print.hpp>
@@ -20,20 +22,6 @@ struct Saturn;
 // -----------------------------------------------------------------------------
 
 namespace satemu::smpc {
-
-inline constexpr uint16 kButtonRight = (1u << 15u);
-inline constexpr uint16 kButtonLeft = (1u << 14u);
-inline constexpr uint16 kButtonDown = (1u << 13u);
-inline constexpr uint16 kButtonUp = (1u << 12u);
-inline constexpr uint16 kButtonStart = (1u << 11u);
-inline constexpr uint16 kButtonA = (1u << 10u);
-inline constexpr uint16 kButtonC = (1u << 9u);
-inline constexpr uint16 kButtonB = (1u << 8u);
-inline constexpr uint16 kButtonR = (1u << 7u);
-inline constexpr uint16 kButtonX = (1u << 6u);
-inline constexpr uint16 kButtonY = (1u << 5u);
-inline constexpr uint16 kButtonZ = (1u << 4u);
-inline constexpr uint16 kButtonL = (1u << 3u);
 
 class SMPC {
     static constexpr dbg::Category rootLog{"SMPC"};
@@ -149,41 +137,7 @@ private:
     // -------------------------------------------------------------------------
     // RTC
 
-    enum class RTCMode {
-        // Syncs RTC to host clock. Uses an offset to adjust time.
-        Host,
-
-        // Emulates RTC time, syncing to the main bus clock.
-        // Behavior on hard reset/power on can be configured to one of:
-        // - Resync to host clock
-        // - Resync to a fixed time point (for deterministic behavior)
-        // - Preserve current time
-        Emulated,
-    };
-
-    // Emulated RTC behavior on hard reset.
-    enum class RTCHardResetStrategy {
-        // Sync emulated RTC to host clock.
-        SyncToHost,
-
-        // Reset emulated RTC to a fixed timestamp. Useful for TAS since it has deterministic behavior.
-        ResetToFixedTime,
-
-        // Preserve current RTC timestamp.
-        Preserve,
-    };
-
-    RTCMode m_rtcMode;
-    RTCHardResetStrategy m_rtcHardResetStrategy;
-
-    // RTC host mode
-    sint64 m_rtcOffset; // Offset in seconds added to host time
-
-    // RTC emulated mode
-    sint64 m_rtcTimestamp;        // Current RTC timestamp in seconds since Unix epoch
-    sint64 m_rtcResetTimestamp;   // RTC timestamp to restore on hard reset when using ResetToFixedTime strategy
-    uint64 m_rtcSysClockCount;    // System clock count since last update to emulated RTC
-    uint64 m_rtcSysClockInterval; // Cycles per second
+    rtc::RTC m_rtc;
 
     // -------------------------------------------------------------------------
     // Input, parallel I/O and INTBACK

@@ -19,18 +19,6 @@ SMPC::SMPC(core::Scheduler &scheduler, Saturn &saturn)
     // TODO(SMPC): SMEM should be persisted
     SMEM.fill(0);
 
-    // TODO(SMPC): RTC offset should be persisted
-    m_rtcOffset = 0;
-
-    // TODO(SMPC): RTC configuration should be saved to the configuration file
-    m_rtcMode = RTCMode::Host;
-    // m_rtcMode = RTCMode::Emulated;
-    // m_rtcHardResetStrategy = RTCHardResetStrategy::SyncToHost;
-    // m_rtcHardResetStrategy = RTCHardResetStrategy::ResetToFixedTime;
-    m_rtcHardResetStrategy = RTCHardResetStrategy::Preserve;
-
-    m_rtcResetTimestamp = 0;
-
     m_commandEvent = m_scheduler.RegisterEvent(
         core::events::SMPCCommand, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
             auto &smpc = *static_cast<SMPC *>(userContext);
@@ -54,15 +42,8 @@ void SMPC::Reset(bool hard) {
 
     m_busValue = 0x00;
 
-    // TODO: different reset modes
-    switch (m_rtcHardResetStrategy) {
-    case RTCHardResetStrategy::SyncToHost: m_rtcTimestamp = util::datetime::to_timestamp(util::datetime::host()); break;
-    case RTCHardResetStrategy::ResetToFixedTime: m_rtcTimestamp = m_rtcResetTimestamp; break;
-    case RTCHardResetStrategy::Preserve: break;
-    }
-
-    m_rtcSysClockCount = 0;
-    m_rtcSysClockInterval = 28636364; // TODO: adjust based on system clock
+    m_rtc.Reset(hard);
+    m_rtc.SetSysClockRate(28636364); // TODO: adjust based on system clock
 
     m_pioMode1 = false;
     m_pioMode2 = false;
@@ -389,21 +370,10 @@ void SMPC::WriteINTBACKStatusReport() {
     // TODO: simulate full system reset (STE clear)
     OREG[0] = 0x80; // STE set, RESD clear
 
-    // Read from host RTC
-    // TODO: emulated RTC
-    const auto dt = [&] {
-        switch (m_rtcMode) {
-        case RTCMode::Host: return util::datetime::host(m_rtcOffset);
-        case RTCMode::Emulated: {
-            const uint64 clockDelta = m_scheduler.CurrentCount() - m_rtcSysClockCount;
-            const uint64 seconds = clockDelta / m_rtcSysClockInterval;
-            m_rtcSysClockCount += m_rtcSysClockInterval * seconds;
-            m_rtcTimestamp += seconds;
-            return util::datetime::from_timestamp(m_rtcTimestamp);
-        }
-        }
-        util::unreachable();
-    }();
+    if (m_rtc.GetMode() == rtc::RTC::Mode::Emulated) {
+        m_rtc.UpdateSysClock(m_scheduler.CurrentCount());
+    }
+    const auto dt = m_rtc.GetDateTime();
 
     OREG[1] = util::to_bcd(dt.year / 100);  // Year 1000s, Year 100s (BCD)
     OREG[2] = util::to_bcd(dt.year % 100);  // Year 10s, Year 1s (BCD)
@@ -498,18 +468,7 @@ void SMPC::SETTIME() {
     rootLog.debug("Setting time to {}/{:02d}/{:02d} {:02d}:{:02d}:{:02d}", dt.year, dt.month, dt.day, dt.hour,
                   dt.minute, dt.second);
 
-    switch (m_rtcMode) {
-    case RTCMode::Host:
-        // Update host time offset
-        m_rtcOffset = util::datetime::delta_to_host(dt);
-        rootLog.debug("Host time offset: {} seconds", m_rtcOffset);
-        break;
-    case RTCMode::Emulated:
-        // Update absolute timestamp
-        m_rtcTimestamp = util::datetime::to_timestamp(dt);
-        rootLog.debug("Absolute timestamp: {} seconds", m_rtcTimestamp);
-        break;
-    }
+    m_rtc.SetDateTime(dt);
 
     SF = false; // done processing
 
