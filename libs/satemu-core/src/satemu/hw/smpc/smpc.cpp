@@ -6,6 +6,7 @@
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/date_time.hpp>
 #include <satemu/util/inline.hpp>
+#include <satemu/util/unreachable.hpp>
 
 #include <cassert>
 
@@ -20,6 +21,10 @@ SMPC::SMPC(core::Scheduler &scheduler, Saturn &saturn)
 
     // TODO(SMPC): RTC offset should be persisted
     m_rtcOffset = 0;
+
+    // TODO(SMPC): RTC configuration should be saved to the configuration file
+    // m_rtcMode = RTCMode::Host;
+    m_rtcMode = RTCMode::Emulated;
 
     m_commandEvent = m_scheduler.RegisterEvent(
         core::events::SMPCCommand, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
@@ -42,6 +47,11 @@ void SMPC::Reset(bool hard) {
     DDR2 = 0;
 
     m_busValue = 0x00;
+
+    // TODO: different reset modes
+    m_rtcTimestamp = 0;
+    m_rtcSysClockCount = 0;
+    m_rtcSysClockInterval = 28636364; // TODO: adjust based on system clock
 
     m_pioMode1 = false;
     m_pioMode2 = false;
@@ -370,7 +380,20 @@ void SMPC::WriteINTBACKStatusReport() {
 
     // Read from host RTC
     // TODO: emulated RTC
-    const auto dt = util::datetime::host(m_rtcOffset);
+    const auto dt = [&] {
+        switch (m_rtcMode) {
+        case RTCMode::Host: return util::datetime::host(m_rtcOffset);
+        case RTCMode::Emulated: {
+            const uint64 clockDelta = m_scheduler.CurrentCount() - m_rtcSysClockCount;
+            const uint64 seconds = clockDelta / m_rtcSysClockInterval;
+            m_rtcSysClockCount += m_rtcSysClockInterval * seconds;
+            m_rtcTimestamp += seconds;
+            return util::datetime::from_timestamp(m_rtcTimestamp);
+        }
+        }
+        util::unreachable();
+    }();
+
     OREG[1] = util::to_bcd(dt.year / 100);  // Year 1000s, Year 100s (BCD)
     OREG[2] = util::to_bcd(dt.year % 100);  // Year 10s, Year 1s (BCD)
     OREG[3] = (dt.weekday << 4) | dt.month; // Day of week (0=sun), Month (hex, 1=jan)
@@ -464,10 +487,18 @@ void SMPC::SETTIME() {
     rootLog.debug("Setting time to {}/{:02d}/{:02d} {:02d}:{:02d}:{:02d}", dt.year, dt.month, dt.day, dt.hour,
                   dt.minute, dt.second);
 
-    // Update host time offset
-    m_rtcOffset = util::datetime::delta_to_host(dt);
-
-    rootLog.debug("Host time offset: {} seconds", m_rtcOffset);
+    switch (m_rtcMode) {
+    case RTCMode::Host:
+        // Update host time offset
+        m_rtcOffset = util::datetime::delta_to_host(dt);
+        rootLog.debug("Host time offset: {} seconds", m_rtcOffset);
+        break;
+    case RTCMode::Emulated:
+        // Update absolute timestamp
+        m_rtcTimestamp = util::datetime::to_timestamp(dt);
+        rootLog.debug("Absolute timestamp: {} seconds", m_rtcTimestamp);
+        break;
+    }
 
     // TODO: set emulated time if not using host time
 

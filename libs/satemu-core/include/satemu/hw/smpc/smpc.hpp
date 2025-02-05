@@ -149,7 +149,27 @@ private:
     // -------------------------------------------------------------------------
     // RTC
 
-    sint64 m_rtcOffset; // in seconds, added to host time; only applicable to host time
+    enum class RTCMode {
+        // Syncs RTC to host clock. Uses an offset to adjust time.
+        Host,
+
+        // Emulates RTC time, syncing to the main bus clock.
+        // Behavior on hard reset/power on can be configured to one of:
+        // - Resync to host clock
+        // - Resync to a fixed time point (for deterministic behavior)
+        // - Preserve current time
+        Emulated
+    };
+
+    RTCMode m_rtcMode;
+
+    // RTC host mode
+    sint64 m_rtcOffset; // Offset in seconds added to host time
+
+    // RTC emulated mode
+    sint64 m_rtcTimestamp;        // Current RTC timestamp in seconds since Unix epoch
+    uint64 m_rtcSysClockCount;    // System clock count since last update to emulated RTC
+    uint64 m_rtcSysClockInterval; // Cycles per second
 
     // -------------------------------------------------------------------------
     // Input, parallel I/O and INTBACK

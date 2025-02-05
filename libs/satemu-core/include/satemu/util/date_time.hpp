@@ -21,4 +21,10 @@ DateTime host(sint64 offsetSeconds = 0);
 // Computes the number of seconds between the given dateTime and the current host time.
 sint64 delta_to_host(const DateTime &dateTime);
 
+// Builds a DateTime from the given amount of seconds since Unix epoch (1970/01/01 00:00:00).
+DateTime from_timestamp(sint64 secondsSinceEpoch);
+
+// Converts a DateTime into an Unix timestamp with granularity in seconds.
+sint64 to_timestamp(const DateTime &dateTime);
+
 } // namespace util::datetime
