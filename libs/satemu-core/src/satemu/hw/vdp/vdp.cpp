@@ -251,16 +251,16 @@ void VDP::BeginHPhaseActiveDisplay() {
 void VDP::BeginHPhaseRightBorder() {
     rootLog2.trace("(VCNT = {:3d})  Entering right border phase", m_VCounter);
 
+    rootLog2.trace("## HBlank IN {:3d}", m_VCounter);
+
     m_VDP2.TVSTAT.HBLANK = 1;
     m_SCU.TriggerHBlankIN();
-    rootLog2.trace("## HBlank IN");
 
     // Start erasing if we just entered VBlank IN
     if (m_VCounter == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
-        rootLog2.trace("## VBlank IN  VBE={:d} manualerase={:d}", m_VDP1.vblankErase, m_VDP1.fbManualErase);
+        rootLog2.trace("## HBlank IN + VBlank IN  VBE={:d} manualerase={:d}", m_VDP1.vblankErase, m_VDP1.fbManualErase);
 
-        if (m_VDP1.vblankErase || m_VDP1.fbManualErase || !m_VDP1.fbSwapMode) {
-            m_VDP1.fbManualErase = false;
+        if (m_VDP1.vblankErase || !m_VDP1.fbSwapMode) {
             // TODO: cycle-count the erase process, starting here
             VDP1EraseFramebuffer();
         }
@@ -278,11 +278,11 @@ void VDP::BeginHPhaseVBlankOut() {
     rootLog2.trace("(VCNT = {:3d})  Entering VBlank OUT horizontal phase", m_VCounter);
 
     if (m_VPhase == VerticalPhase::LastLine) {
-        rootLog2.trace("## VBlank OUT part 2  FCM={:d} FCT={:d} manualswap={:d} PTM={:d}", m_VDP1.fbSwapMode,
+        rootLog2.trace("## HBlank half + VBlank OUT  FCM={:d} FCT={:d} manualswap={:d} PTM={:d}", m_VDP1.fbSwapMode,
                        m_VDP1.fbSwapTrigger, m_VDP1.fbManualSwap, m_VDP1.plotTrigger);
 
         // Swap framebuffer in manual swap requested or in 1-cycle mode
-        if ((!m_VDP1.fbSwapMode && !m_VDP1.fbSwapTrigger) || m_VDP1.fbManualSwap) {
+        if (!m_VDP1.fbSwapMode || m_VDP1.fbManualSwap) {
             m_VDP1.fbManualSwap = false;
             VDP1SwapFramebuffer();
         }
@@ -320,6 +320,8 @@ void VDP::BeginVPhaseActiveDisplay() {
 void VDP::BeginVPhaseBottomBorder() {
     rootLog2.trace("(VCNT = {:3d})  Entering bottom border phase", m_VCounter);
 
+    rootLog2.trace("## VBlank IN");
+
     m_VDP2.TVSTAT.VBLANK = 1;
     m_SCU.TriggerVBlankIN();
 
@@ -328,14 +330,14 @@ void VDP::BeginVPhaseBottomBorder() {
 
 void VDP::BeginVPhaseBlankingAndSync() {
     rootLog2.trace("(VCNT = {:3d})  Entering blanking/vertical sync phase", m_VCounter);
-}
-
-void VDP::BeginVPhaseTopBorder() {
-    rootLog2.trace("(VCNT = {:3d})  Entering top border phase", m_VCounter);
 
     // End frame
     rootLog2.trace("End VDP2 frame");
     m_cbFrameComplete(m_framebuffer, m_HRes, m_VRes);
+}
+
+void VDP::BeginVPhaseTopBorder() {
+    rootLog2.trace("(VCNT = {:3d})  Entering top border phase", m_VCounter);
 
     UpdateResolution();
 
@@ -392,6 +394,12 @@ FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
 
 FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
     renderLog1.trace("Swapping framebuffers - draw {}, display {}", m_drawFB ^ 1, m_drawFB);
+
+    if (m_VDP1.fbManualErase) {
+        m_VDP1.fbManualErase = false;
+        VDP1EraseFramebuffer();
+    }
+
     m_drawFB ^= 1;
 
     if (bit::extract<1>(m_VDP1.plotTrigger)) {

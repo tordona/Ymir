@@ -1,0 +1,72 @@
+=========================================================
+Games that are sensitive to VDP1 and video signal timings
+=========================================================
+
+Panzer Dragoon 1 (in-game)
+  Frame 1:
+    [VBlank IN]  VBE=1 -- expects the erase to happen at this line's HBlank IN
+    [VBlank OUT] VBE=0 FCM=1 FCT=1 -- expects the swap to happen at this line's HBlank IN (halfway through)
+  Frame 2: nothing
+  Frame 3: nothing
+
+If you don't delay VBE and FCT/FCT handling until HBlank, you get flashing VDP1 graphics due to swapping frames too late or erasing frames too early.
+
+-----
+
+Sonic R (during title screen, menus and in-game)
+  Frame 1:
+    [VBlank IN]  VBE=1 -- expects the erase to happen at this line's HBlank IN
+    [VBlank OUT] VBE=0 FCM=1 FCT=1 PTM=1 -- expects the swap to happen at this line's HBlank IN (halfway through)
+  Frame 2: nothing
+
+If you don't delay VBE and FCT/FCT handling until HBlank, you get unsorted, overlapping or flashing polygons.
+
+-----
+
+Virtua Fighter 1 (in-game)
+  Always uses VBE=0
+  Frame 1:
+    [VBlank IN] FCM=1 FCT=0 -- sets manual framebuffer erase, held until next framebuffer swap
+  Frame 2:
+    [VBlank IN] FCM=1 FCT=1 -- does manual erase then swap
+
+The manual framebuffer erase flag is *not* handled at VBlank IN HBlank IN. It is handled just before the next framebuffer swap.
+
+
+=======
+Context
+=======
+
+Relevant VDP1 registers:
+  VBE=0 disables VBlank Erase mode. VBE=1 enables it.
+
+  FCM=0 FCT=0 is 1-cycle mode - framebuffer erase happens at every VBlank IN HBlank IN and framebuffer swap happens halfway through HBlank on every VBlank OUT.
+  Presumably FCM=0 FCT=1 works the same.
+
+  PTM defines VDP1 rendering triggers:
+    0 = never
+    1 = immediately upon writing this value (but only if changed from something else)
+    2 = on framebuffer swap
+
+  Manual erase is set when writing FCM=1 FCT=0 to FBCR.
+  Manual swap is set when writing FCM=1 FCT=1 to FBCR.
+
+Relevant video signal events:
+  VBlank IN
+    Happens at the start of the first scanline past the display area (aka the first bottom border line)
+    Triggers the VBlank IN interrupt on the SCU
+      Most games use this to set up FCM, FCT, sometimes VBE and PTM
+  VBlank OUT
+    Happens at the start of the last scanline (at least in this emulator)
+    Triggers the VBlank OUT interrupt on the SCU
+      Some games use this to set VBE=0 and manually start VDP1 rendering with PTM=1
+      Some games also use this to set FCM=1 FCT=1 to immediately swap framebuffers
+  HBlank IN during first line of VBlank IN
+    Triggers the HBlank IN interrupt on the SCU (as does HBlank IN on any other line)
+    Triggers VDP1 framebuffer erase if FCM=0 (1-cycle mode) or VBE=1 (VBlank Erase)
+    Does not respond to manual framebuffer erase, nor does it clear the flag
+  Halfway through HBlank during VBlank OUT
+    Stops framebuffer erase if in progress
+    Triggers VDP1 framebuffer swap if FCM=0 FCT=0 (1-cycle mode) or a manual swap was requested
+      Clears the manual swap flag
+      Also triggers the manual framebuffer erase if requested just before the swap, and clears the manual erase flag
