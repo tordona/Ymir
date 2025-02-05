@@ -158,16 +158,30 @@ private:
         // - Resync to host clock
         // - Resync to a fixed time point (for deterministic behavior)
         // - Preserve current time
-        Emulated
+        Emulated,
+    };
+
+    // Emulated RTC behavior on hard reset.
+    enum class RTCHardResetStrategy {
+        // Sync emulated RTC to host clock.
+        SyncToHost,
+
+        // Reset emulated RTC to a fixed timestamp. Useful for TAS since it has deterministic behavior.
+        ResetToFixedTime,
+
+        // Preserve current RTC timestamp.
+        Preserve,
     };
 
     RTCMode m_rtcMode;
+    RTCHardResetStrategy m_rtcHardResetStrategy;
 
     // RTC host mode
     sint64 m_rtcOffset; // Offset in seconds added to host time
 
     // RTC emulated mode
     sint64 m_rtcTimestamp;        // Current RTC timestamp in seconds since Unix epoch
+    sint64 m_rtcResetTimestamp;   // RTC timestamp to restore on hard reset when using ResetToFixedTime strategy
     uint64 m_rtcSysClockCount;    // System clock count since last update to emulated RTC
     uint64 m_rtcSysClockInterval; // Cycles per second
 

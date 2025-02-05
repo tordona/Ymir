@@ -23,8 +23,13 @@ SMPC::SMPC(core::Scheduler &scheduler, Saturn &saturn)
     m_rtcOffset = 0;
 
     // TODO(SMPC): RTC configuration should be saved to the configuration file
-    // m_rtcMode = RTCMode::Host;
-    m_rtcMode = RTCMode::Emulated;
+    m_rtcMode = RTCMode::Host;
+    // m_rtcMode = RTCMode::Emulated;
+    // m_rtcHardResetStrategy = RTCHardResetStrategy::SyncToHost;
+    // m_rtcHardResetStrategy = RTCHardResetStrategy::ResetToFixedTime;
+    m_rtcHardResetStrategy = RTCHardResetStrategy::Preserve;
+
+    m_rtcResetTimestamp = 0;
 
     m_commandEvent = m_scheduler.RegisterEvent(
         core::events::SMPCCommand, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
@@ -50,7 +55,12 @@ void SMPC::Reset(bool hard) {
     m_busValue = 0x00;
 
     // TODO: different reset modes
-    m_rtcTimestamp = 0;
+    switch (m_rtcHardResetStrategy) {
+    case RTCHardResetStrategy::SyncToHost: m_rtcTimestamp = util::datetime::to_timestamp(util::datetime::host()); break;
+    case RTCHardResetStrategy::ResetToFixedTime: m_rtcTimestamp = m_rtcResetTimestamp; break;
+    case RTCHardResetStrategy::Preserve: break;
+    }
+
     m_rtcSysClockCount = 0;
     m_rtcSysClockInterval = 28636364; // TODO: adjust based on system clock
 
