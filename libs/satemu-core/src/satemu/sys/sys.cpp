@@ -58,13 +58,14 @@ void Saturn::RunFrame() {
 
 void Saturn::Step() {
     // Clock speeds:
-    // - SH-2:
+    // - Master clock - used by both SH-2s, VDP1, VDP2 and SCU:
     //   - 320 mode: 26.846591 MHz (NTSC) / 26.660156 MHz (PAL)
     //   - 352 mode: 28.636364 MHz (NTSC) / 28.437500 MHz (PAL)
-    // - VDP1, VDP2, SCU share the SH2 clock
+    //   - NTSC clock (352 mode) = 39375000 * 8/11
+    //   - 320 mode clock = 352 mode clock * 15/16
     //   - VDP pixel clock is 1/2 on hi-res modes or 1/4 at lo-res modes
     //   - SCU DSP runs at 1/2 clock speed
-    // - SCSP: 22.579200 MHz (44100 * 512)
+    // - SCSP: 22.579200 MHz (= 44100 * 512)
     //   - MC68EC000 runs at 1/2 SCSP clock
     // - CD Block SH1: 20.000000 MHz
     // - SMPC MCU: 4.000000 MHz
