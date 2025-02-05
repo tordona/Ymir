@@ -1578,26 +1578,31 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
 
     // VDP1 scaling:
     // 2x horz: VDP1 TVM=000 and VDP2 HRESO=01x
-    // 2x vert: VDP1 DIE=0 and VDP2 LSMD=3
-    const bool doubleScaleH =
+    const bool doubleResH =
         !m_VDP1.hdtvEnable && !m_VDP1.fbRotEnable && !m_VDP1.pixel8Bits && (m_VDP2.TVMD.HRESOn & 0b110) == 0b010;
-    const bool doubleScaleV = !m_VDP1.dblInterlaceEnable && m_VDP2.TVMD.LSMDn == 3;
+    const uint32 xShift = doubleResH ? 1 : 0;
+    const uint32 maxX = m_HRes >> xShift;
 
-    const uint32 scaleShiftH = doubleScaleH ? 1 : 0;
-    const uint32 scaleShiftV = doubleScaleV ? 1 : 0;
+    auto &layerState = m_layerStates[0];
+    auto &spriteLayerState = m_spriteLayerState;
 
-    // TODO: optimize
-    // - instead of shifting down the coordinates, step by twice the amount
+    for (uint32 x = 0; x < maxX; x++) {
+        const uint32 xx = x << xShift;
 
-    for (uint32 x = 0; x < m_HRes; x++) {
         const auto &spriteFB = VDP1GetDisplayFB();
-        const uint32 spriteFBOffset = (x >> scaleShiftH) + (y >> scaleShiftV) * m_VDP1.fbSizeH;
+        const uint32 spriteFBOffset = x + y * m_VDP1.fbSizeH;
 
         const SpriteParams &params = m_VDP2.spriteParams;
-        auto &pixel = m_layerStates[0].pixels[x];
-        auto &attr = m_spriteLayerState.attrs[x];
+        auto &pixel = layerState.pixels[xx];
+        auto &attr = spriteLayerState.attrs[xx];
 
-        bool isPaletteData = true;
+        util::ScopeGuard sgDoublePixel{[&] {
+            if (doubleResH) {
+                layerState.pixels[xx + 1] = pixel;
+                spriteLayerState.attrs[xx + 1] = attr;
+            }
+        }};
+
         if (params.mixedFormat) {
             const uint16 spriteDataValue = util::ReadBE<uint16>(&spriteFB[(spriteFBOffset * sizeof(uint16)) & 0x3FFFE]);
             if (bit::extract<15>(spriteDataValue)) {
@@ -1609,22 +1614,20 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
                 attr.colorCalcRatio = params.colorCalcRatios[0];
                 attr.shadowOrWindow = false;
                 attr.normalShadow = false;
-                isPaletteData = false;
+                continue;
             }
         }
 
-        if (isPaletteData) {
-            // Palette data
-            const SpriteData spriteData = VDP2FetchSpriteData(spriteFBOffset);
-            const uint32 colorIndex = params.colorDataOffset + spriteData.colorData;
-            pixel.color = VDP2FetchCRAMColor<colorMode>(0, colorIndex);
-            pixel.transparent = spriteData.colorData == 0;
-            pixel.priority = params.priorities[spriteData.priority];
-            attr.msbSet = spriteData.colorDataMSB;
-            attr.colorCalcRatio = params.colorCalcRatios[spriteData.colorCalcRatio];
-            attr.shadowOrWindow = spriteData.shadowOrWindow;
-            attr.normalShadow = spriteData.normalShadow;
-        }
+        // Palette data
+        const SpriteData spriteData = VDP2FetchSpriteData(spriteFBOffset);
+        const uint32 colorIndex = params.colorDataOffset + spriteData.colorData;
+        pixel.color = VDP2FetchCRAMColor<colorMode>(0, colorIndex);
+        pixel.transparent = spriteData.colorData == 0;
+        pixel.priority = params.priorities[spriteData.priority];
+        attr.msbSet = spriteData.colorDataMSB;
+        attr.colorCalcRatio = params.colorCalcRatios[spriteData.colorCalcRatio];
+        attr.shadowOrWindow = spriteData.shadowOrWindow;
+        attr.normalShadow = spriteData.normalShadow;
     }
 }
 

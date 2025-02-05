@@ -111,16 +111,19 @@ public:
         switch (address) {
         case 0x00:
             m_VDP1.WriteTVMR(value);
-            regsLog1.trace("write to VBE={:d}", m_VDP1.vblankErase);
+            regsLog1.trace("Write to TVM={:d}{:d}{:d}", m_VDP1.hdtvEnable, m_VDP1.fbRotEnable, m_VDP1.pixel8Bits);
+            regsLog1.trace("Write to VBE={:d}", m_VDP1.vblankErase);
             break;
-        case 0x02:
+        case 0x02: {
             m_VDP1.WriteFBCR(value);
-            regsLog1.trace("write to FCM={:d} FCT={:d} manualswap={:d} manualerase={:d}", m_VDP1.fbSwapMode,
+            regsLog1.trace("Write to DIE={:d} DIL={:d}", m_VDP1.dblInterlaceEnable, m_VDP1.dblInterlaceDrawLine);
+            regsLog1.trace("Write to FCM={:d} FCT={:d} manualswap={:d} manualerase={:d}", m_VDP1.fbSwapMode,
                            m_VDP1.fbSwapTrigger, m_VDP1.fbManualSwap, m_VDP1.fbManualErase);
             break;
+        }
         case 0x04:
             m_VDP1.WritePTMR(value);
-            regsLog1.trace("write to PTM={:d}", m_VDP1.plotTrigger);
+            regsLog1.trace("Write to PTM={:d}", m_VDP1.plotTrigger);
             if (m_VDP1.plotTrigger == 0b01) {
                 VDP1BeginFrame();
             }
