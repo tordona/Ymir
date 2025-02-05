@@ -31,6 +31,7 @@ SMPC::SMPC(core::Scheduler &scheduler, Saturn &saturn)
             auto &smpc = *static_cast<SMPC *>(userContext);
             smpc.ProcessCommand();
         });
+
     Reset(true);
 }
 
@@ -499,8 +500,6 @@ void SMPC::SETTIME() {
         rootLog.debug("Absolute timestamp: {} seconds", m_rtcTimestamp);
         break;
     }
-
-    // TODO: set emulated time if not using host time
 
     SF = false; // done processing
 
