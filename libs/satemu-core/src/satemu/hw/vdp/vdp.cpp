@@ -371,8 +371,8 @@ FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
 
     auto &fb = VDP1GetDisplayFB();
 
-    // Horizontal scale is doubled in hi-res modes
-    const uint32 scaleH = (m_VDP2.TVMD.HRESOn & 0b010) ? 1 : 0;
+    // Horizontal scale is doubled in hi-res modes or when targeting rotation background
+    const uint32 scaleH = (m_VDP2.TVMD.HRESOn & 0b010) || m_VDP1.fbRotEnable ? 1 : 0;
     // Vertical scale is doubled in double-interlace mode
     const uint32 scaleV = m_VDP2.TVMD.LSMDn == 3 ? 1 : 0;
 
@@ -1513,21 +1513,24 @@ void VDP::VDP2DrawLine() {
     using FnDrawLayer = void (VDP::*)();
 
     // Lookup table of sprite drawing functions
-    // Indexing: [colorMode]
+    // Indexing: [colorMode][rotate]
     static constexpr auto fnDrawSprite = [] {
-        std::array<FnDrawLayer, 4> arr{};
+        std::array<std::array<FnDrawLayer, 2>, 4> arr{};
 
-        util::constexpr_for<4>([&](auto index) {
+        util::constexpr_for<2 * 4>([&](auto index) {
             const uint32 cmIndex = bit::extract<0, 1>(index());
+            const uint32 rotIndex = bit::extract<2>(index());
 
             const uint32 colorMode = cmIndex <= 2 ? cmIndex : 2;
-            arr[cmIndex] = &VDP::VDP2DrawSpriteLayer<colorMode>;
+            const bool rotate = rotIndex;
+            arr[cmIndex][rotate] = &VDP::VDP2DrawSpriteLayer<colorMode, rotate>;
         });
 
         return arr;
     }();
 
     const uint32 colorMode = m_VDP2.RAMCTL.CRMDn;
+    const bool rotate = m_VDP1.fbRotEnable;
 
     // Load rotation parameters if any of the RBG layers is enabled
     if (m_VDP2.bgEnabled[4] || m_VDP2.bgEnabled[5]) {
@@ -1538,7 +1541,7 @@ void VDP::VDP2DrawLine() {
     VDP2DrawLineColorAndBackScreens();
 
     // Draw sprite layer
-    (this->*fnDrawSprite[colorMode])();
+    (this->*fnDrawSprite[colorMode][rotate])();
 
     // Draw background layers
     if (m_VDP2.bgEnabled[5]) {
@@ -1580,7 +1583,7 @@ void VDP::VDP2DrawLineColorAndBackScreens() {
     }
 }
 
-template <uint32 colorMode>
+template <uint32 colorMode, bool rotate>
 NO_INLINE void VDP::VDP2DrawSpriteLayer() {
     const uint32 y = m_VCounter;
 
@@ -1598,7 +1601,17 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
         const uint32 xx = x << xShift;
 
         const auto &spriteFB = VDP1GetDisplayFB();
-        const uint32 spriteFBOffset = x + y * m_VDP1.fbSizeH;
+        const uint32 spriteFBOffset = [&] {
+            if constexpr (rotate) {
+                const auto &rotParamState = m_rotParamStates[0];
+                const auto &screenCoord = rotParamState.screenCoords[x];
+                const sint32 sx = screenCoord.x >> 16;
+                const sint32 sy = screenCoord.y >> 16;
+                return sx + sy * m_VDP1.fbSizeH;
+            } else {
+                return x + y * m_VDP1.fbSizeH;
+            }
+        }();
 
         const SpriteParams &params = m_VDP2.spriteParams;
         auto &pixel = layerState.pixels[xx];

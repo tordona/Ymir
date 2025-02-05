@@ -1015,7 +1015,8 @@ private:
     // Draws the current VDP2 scanline of the sprite layer.
     //
     // colorMode is the CRAM color mode.
-    template <uint32 colorMode>
+    // rotate determines if Rotation Parameter A coordinates should be used to draw the sprite layer.
+    template <uint32 colorMode, bool rotate>
     void VDP2DrawSpriteLayer();
 
     // Draws the current VDP2 scanline of the specified normal background layer.
