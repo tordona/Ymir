@@ -70,7 +70,7 @@ void Saturn::Step() {
     // - CD Block SH1: 20.000000 MHz
     // - SMPC MCU: 4.000000 MHz
 
-    // The listed ratios below are all exact and relative to the primary system clock (SH-2/VDPs/SCU).
+    // The listed ratios below are all exact and relative to the master clock (SH-2/VDPs/SCU).
     // These ratios are used in the scheduler to accurately schedule events relative to each clock.
     //
     // NTSC system at clock 352 mode:
