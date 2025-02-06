@@ -202,6 +202,8 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
             if (resetPos) {
                 m_status.frameAddress = m_playStartPos;
                 playInitLog.debug("Reset playback position to {:06X}", m_status.frameAddress);
+            } else {
+                m_status.frameAddress = frameAddress;
             }
         } else {
             m_targetDriveCycles = kDriveCyclesNotPlaying;
@@ -270,6 +272,8 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
             if (resetPos) {
                 m_status.frameAddress = m_playStartPos;
                 playInitLog.debug("Reset playback position to {:06X}", m_status.frameAddress);
+            } else {
+                m_status.frameAddress = frameAddress;
             }
         } else {
             // The disc image is truncated or corrupted
@@ -430,8 +434,6 @@ void CDBlock::ProcessDriveStatePlay() {
                     m_status.statusCode = kStatusCodePause;
                     SetInterrupt(kHIRQ_BFUL);
                     m_bufferFullPause = true;
-                    // TODO: when buffer no longer full, switch to Play if we paused because of BFUL
-                    // - or maybe if frameAddress <= m_playEndPos
                 } else {
                     // Check against CD device filter and send data to the appropriate destination
                     uint8 filterNum = m_cdDeviceConnection;
