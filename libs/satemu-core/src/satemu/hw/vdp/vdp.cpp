@@ -2806,7 +2806,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
         case PerScreen: return bgParams.colorCalcEnable;
         case PerCharacter: return bgParams.colorCalcEnable && ch.specColorCalc;
         case PerDot: return bgParams.colorCalcEnable && ch.specColorCalc && specFuncCode.colorMatches[colorData];
-        case ColorDataMSB: return bgParams.colorCalcEnable && bit::extract<2>(colorData);
+        case ColorDataMSB: return bgParams.colorCalcEnable && ch.specColorCalc && bit::extract<2>(colorData);
         }
     };
 
