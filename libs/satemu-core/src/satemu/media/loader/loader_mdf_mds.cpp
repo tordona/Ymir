@@ -97,7 +97,7 @@ static_assert(sizeof(MDSFooter) == 0x10);
 bool Load(std::filesystem::path mdsPath, Disc &disc) {
     std::ifstream in{mdsPath, std::ios::binary};
 
-    util::ScopeGuard sgInvalidateDisc{[&] { disc.sessions.clear(); }};
+    util::ScopeGuard sgInvalidateDisc{[&] { disc.Invalidate(); }};
 
     if (!in) {
         // fmt::println("MDF/MDS: Could not load MDS file");
@@ -160,6 +160,7 @@ bool Load(std::filesystem::path mdsPath, Disc &disc) {
     // fmt::println("MDF/MDS: {} {}", header.numSessions, (header.numSessions > 1 ? "sessions" : "session"));
 
     // Housekeeping
+    bool hasHeader = false;
     uint32 endFrameAddress = 0;
     std::array<uint32, 99> trackStartOffsets{};
     std::array<fs::path, 99> trackMDFs{};
@@ -280,6 +281,40 @@ bool Load(std::filesystem::path mdsPath, Disc &disc) {
                     if (err) {
                         // fmt::println("MDF/MDS: Failed to load MDF file {} - {}", mdfPath.string(), err.message());
                         return false;
+                    }
+
+                    // Try to read the header
+                    if (!hasHeader) {
+                        auto &reader = files.at(mdfPath);
+
+                        // Check for sync bytes
+                        static constexpr std::array<uint8, 12> kSyncBytes = {
+                            0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00,
+                        };
+                        static constexpr std::array<uint8, 12> kSegaBytes = {
+                            0x53, 0x45, 0x47, 0x41, 0x20, 0x53, 0x45, 0x47, 0x41, 0x53, 0x41, 0x54,
+                        };
+
+                        uintmax_t offset = 0;
+                        std::array<uint8, 12> prefix{};
+
+                        reader->Read(0, 12, prefix);
+                        if (prefix == kSyncBytes) {
+                            offset = 16;
+                        } else if (prefix == kSegaBytes) {
+                            offset = 0;
+                        } else if (std::equal(prefix.begin() + 4, prefix.end(), kSegaBytes.begin())) {
+                            offset = 4;
+                        }
+
+                        std::array<uint8, 256> header{};
+                        const uintmax_t readSize = reader->Read(offset, 256, header);
+                        if (readSize < 256) {
+                            // fmt::println("MDF/MDS: Image file truncated");
+                            return false;
+                        }
+
+                        hasHeader = disc.header.ReadFrom(header);
                     }
                 }
 

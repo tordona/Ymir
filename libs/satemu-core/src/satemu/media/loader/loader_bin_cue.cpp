@@ -32,7 +32,7 @@ namespace fs = std::filesystem;
 bool Load(std::filesystem::path cuePath, Disc &disc) {
     std::ifstream in{cuePath, std::ios::binary};
 
-    util::ScopeGuard sgInvalidateDisc{[&] { disc.sessions.clear(); }};
+    util::ScopeGuard sgInvalidateDisc{[&] { disc.Invalidate(); }};
 
     if (!in) {
         // fmt::println("BIN/CUE: Could not load CUE file");
@@ -240,6 +240,21 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
             if (session.numTracks > 99) {
                 // fmt::println("BIN/CUE: Too many tracks");
                 return false;
+            }
+
+            // If this is the first track in the first file, read the header
+            if (currFileIndex == 1 && session.numTracks == 1) {
+                // Skip sync bytes and/or header if present
+                const uintmax_t userDataOffset = sectorSize == 2352 ? 16 : sectorSize == 2340 ? 4 : 0;
+
+                std::array<uint8, 256> header{};
+                const uintmax_t readSize = binaryReader->Read(userDataOffset, 256, header);
+                if (readSize < 256) {
+                    // fmt::println("BIN/CUE: File truncated");
+                    return false;
+                }
+
+                disc.header.ReadFrom(header);
             }
 
             hasTrack = true;

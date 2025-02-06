@@ -450,16 +450,7 @@ void SMPC::WriteINTBACKStatusReport() {
     // TODO: read cartridge code from cartridge
     // TODO: allow setting or auto-detecting area code
     OREG[8] = 0x00; // Cartridge code (CTG1-0) == 0b00
-    OREG[9] = 0x04; // Area code:
-                    //   0x1: Japan
-                    //   0x2: Asia NTSC
-                    //   0x4: North America
-                    //   0x5: Central/South America NTSC
-                    //   0x6: Korea
-                    //   0xA: Asia PAL
-                    //   0xC: Europe PAL
-                    //   0xD: Central/South America PAL
-                    // 0x0 and 0xF are prohibited; all others are reserved
+    OREG[9] = m_areaCode;
 
     // TODO: update flags accordingly
     OREG[10] = 0b00110100; // System status 1 (TODO: 6=DOTSEL, 3=MSHNMI, 1=SYSRES, 0=SNDRES)

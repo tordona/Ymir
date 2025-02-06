@@ -47,6 +47,7 @@ add_library(satemu-core
     include/satemu/media/filesystem.hpp
     include/satemu/media/frame_address.hpp
     include/satemu/media/iso9660.hpp
+    include/satemu/media/saturn_header.hpp
     include/satemu/media/subheader.hpp
     
     include/satemu/media/loader/loader.hpp
@@ -66,6 +67,7 @@ add_library(satemu-core
     
     include/satemu/util/arith_ops.hpp
     include/satemu/util/bit_ops.hpp
+    include/satemu/util/bitmask_enum.hpp
     include/satemu/util/callback.hpp
     include/satemu/util/data_ops.hpp
     include/satemu/util/date_time.hpp
@@ -102,6 +104,7 @@ add_library(satemu-core
     src/satemu/hw/vdp/vdp.cpp
 
     src/satemu/media/filesystem.cpp
+    src/satemu/media/saturn_header.cpp
 
     src/satemu/media/loader/loader.cpp
     src/satemu/media/loader/loader_bin_cue.cpp

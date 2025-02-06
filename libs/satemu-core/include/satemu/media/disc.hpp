@@ -4,6 +4,7 @@
 
 #include <satemu/media/binary_reader/binary_reader.hpp>
 
+#include "saturn_header.hpp"
 #include "subheader.hpp"
 
 // #include <fmt/format.h>
@@ -264,7 +265,12 @@ struct Session {
 struct Disc {
     std::vector<Session> sessions;
 
-    Disc() = default;
+    SaturnHeader header;
+
+    Disc() {
+        Invalidate();
+    }
+
     Disc(const Disc &) = delete;
     Disc(Disc &&) = default;
 
@@ -273,6 +279,12 @@ struct Disc {
 
     void Swap(Disc &&disc) {
         sessions.swap(disc.sessions);
+        header.Swap(std::move(disc.header));
+    }
+
+    void Invalidate() {
+        sessions.clear();
+        header.Invalidate();
     }
 };
 

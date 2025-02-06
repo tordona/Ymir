@@ -407,7 +407,9 @@ void runEmulator(satemu::Saturn &saturn) {
         ++frames;
         auto t2 = clk::now();
         if (t2 - t >= 1s) {
-            auto title = fmt::format("{} fps", frames);
+            const media::Disc &disc = saturn.CDBlock.GetDisc();
+            const media::SaturnHeader &header = disc.header;
+            auto title = fmt::format("[{}] {} - {} fps", header.productNumber, header.gameTitle, frames);
             SDL_SetWindowTitle(screen.window, title.c_str());
             frames = 0;
             t = t2;

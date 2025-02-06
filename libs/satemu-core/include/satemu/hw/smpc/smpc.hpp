@@ -36,6 +36,11 @@ public:
     uint8 Read(uint32 address);
     void Write(uint32 address, uint8 value);
 
+    void SetAreaCode(uint8 areaCode) {
+        rootLog.debug("Setting area code to {:X}", areaCode);
+        m_areaCode = areaCode;
+    }
+
     // HACK(SMPC): simple controller pad support
     // buttons is a bitmask with inverted state (0=pressed, 1=released)
     // use the kButton* constants to set/clear bits
@@ -49,7 +54,19 @@ private:
 
     std::array<uint8, 4> SMEM;
 
-    bool m_STE; // false=forces system configuration on boot up
+    bool m_STE; // false = forces system configuration on boot up
+
+    // Area code:
+    //   0x1: (J) Japan
+    //   0x2: (T) Asia NTSC
+    //   0x4: (U) North America
+    //   0x5: (B) Central/South America NTSC
+    //   0x6: (K) Korea
+    //   0xA: (A) Asia PAL
+    //   0xC: (E) Europe PAL
+    //   0xD: (L) Central/South America PAL
+    // 0x0 and 0xF are prohibited; all others are reserved
+    uint8 m_areaCode;
 
     Saturn &m_saturn;
     core::Scheduler &m_scheduler;

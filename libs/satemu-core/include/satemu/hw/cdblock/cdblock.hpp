@@ -54,6 +54,10 @@ public:
     void OpenTray();
     void CloseTray();
 
+    const media::Disc &GetDisc() const {
+        return m_disc;
+    }
+
     // TODO: handle 8-bit and 32-bit accesses properly
 
     template <mem_primitive T>

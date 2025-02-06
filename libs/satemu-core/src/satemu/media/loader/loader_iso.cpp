@@ -15,7 +15,7 @@ namespace satemu::media::loader::iso {
 bool Load(std::filesystem::path isoPath, Disc &disc) {
     std::ifstream in{isoPath, std::ios::binary};
 
-    util::ScopeGuard sgInvalidateDisc{[&] { disc.sessions.clear(); }};
+    util::ScopeGuard sgInvalidateDisc{[&] { disc.Invalidate(); }};
 
     if (!in) {
         // fmt::println("ISO: Could not load ISO file");
@@ -77,6 +77,18 @@ bool Load(std::filesystem::path isoPath, Disc &disc) {
     if (err) {
         // fmt::println("ISO: Could not create file reader: {}", err.message());
         return false;
+    }
+
+    // Read the header
+    {
+        std::array<uint8, 256> header{};
+        const uintmax_t readSize = track.binaryReader->Read(sectorSize == 2352 ? 16 : 0, 256, header);
+        if (readSize < 256) {
+            // fmt::println("ISO: Image file truncated");
+            return false;
+        }
+
+        disc.header.ReadFrom(header);
     }
 
     session.BuildTOC();

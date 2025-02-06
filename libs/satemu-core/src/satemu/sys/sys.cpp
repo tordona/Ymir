@@ -1,5 +1,7 @@
 #include <satemu/sys/sys.hpp>
 
+#include <bit>
+
 namespace satemu {
 
 Saturn::Saturn()
@@ -31,6 +33,31 @@ void Saturn::LoadIPL(std::span<uint8, sh2::kIPLSize> ipl) {
 }
 
 void Saturn::LoadDisc(media::Disc &&disc) {
+    // Configure area code based on compatible area codes from the disc
+    // TODO: make area code autoconfiguration optional
+    if (disc.header.compatAreaCode != media::AreaCode::None) {
+        // The area code enum is a bitmap where each bit corresponds to an SMPC area code
+        const auto areaCodeVal = static_cast<uint16>(disc.header.compatAreaCode);
+
+        // Pick from the preferred list if possible
+        bool hasSelectedAreaCode = false;
+        // TODO: make preferred order configurable
+        static media::AreaCode kPreferredOrder[] = {media::AreaCode::NorthAmerica, media::AreaCode::Japan};
+        for (auto areaCode : kPreferredOrder) {
+            if (BitmaskEnum(disc.header.compatAreaCode).AnyOf(areaCode)) {
+                SMPC.SetAreaCode(std::countr_zero(static_cast<uint16>(areaCode)));
+                hasSelectedAreaCode = true;
+                break;
+            }
+        }
+
+        // If none of the compatible area codes are in the preferred list, pick the first one available
+        if (!hasSelectedAreaCode) {
+            const uint8 selectedAreaCode = std::countr_zero<uint16>(areaCodeVal & -areaCodeVal);
+            SMPC.SetAreaCode(selectedAreaCode);
+        }
+    }
+
     CDBlock.LoadDisc(std::move(disc));
 }
 

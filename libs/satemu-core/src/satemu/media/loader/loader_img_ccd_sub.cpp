@@ -50,7 +50,7 @@ const std::set<std::string, CaseInsensitiveStringCompare> kValidSectionNames = {
 bool Load(std::filesystem::path ccdPath, Disc &disc) {
     std::ifstream in{ccdPath, std::ios::binary};
 
-    util::ScopeGuard sgInvalidateDisc{[&] { disc.sessions.clear(); }};
+    util::ScopeGuard sgInvalidateDisc{[&] { disc.Invalidate(); }};
 
     if (!in) {
         // fmt::println("IMG/CCD/SUB: Could not load CCD file");
@@ -237,6 +237,18 @@ bool Load(std::filesystem::path ccdPath, Disc &disc) {
     if (err) {
         // fmt::println("IMG/CCD/SUB: Failed to load image file {}: {}", imgPath.string(), err.message());
         return false;
+    }
+
+    // Read the header
+    {
+        std::array<uint8, 256> header{};
+        const uintmax_t readSize = imgFile->Read(16, 256, header);
+        if (readSize < 256) {
+            // fmt::println("IMG/CCD/SUB: Image file truncated");
+            return false;
+        }
+
+        disc.header.ReadFrom(header);
     }
 
     // Build the disc structure
