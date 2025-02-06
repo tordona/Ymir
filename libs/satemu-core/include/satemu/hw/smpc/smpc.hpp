@@ -29,6 +29,7 @@ class SMPC {
 
 public:
     SMPC(core::Scheduler &scheduler, Saturn &saturn);
+    ~SMPC();
 
     void Reset(bool hard);
 
@@ -48,9 +49,22 @@ private:
 
     std::array<uint8, 4> SMEM;
 
+    bool m_STE; // false=forces system configuration on boot up
+
     Saturn &m_saturn;
     core::Scheduler &m_scheduler;
     core::EventID m_commandEvent;
+
+    // -------------------------------------------------------------------------
+    // Persistent data
+
+    static constexpr uint8 kPersistentDataVersion = 0x01;
+
+    void ReadPersistentData();
+    void WritePersistentData();
+
+    // -------------------------------------------------------------------------
+    // Registers
 
     enum class Command : uint8 {
         // Resetable system management commands

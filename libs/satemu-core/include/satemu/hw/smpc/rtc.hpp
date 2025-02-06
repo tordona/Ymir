@@ -4,6 +4,8 @@
 
 #include <satemu/core_types.hpp>
 
+#include <iosfwd>
+
 namespace satemu::smpc::rtc {
 
 class RTC {
@@ -49,6 +51,10 @@ public:
 
     util::datetime::DateTime GetDateTime() const;
     void SetDateTime(const util::datetime::DateTime &dateTime);
+
+    // TODO: replace std iostream with custom I/O class with managed endianness
+    void ReadPersistentData(std::ifstream &in);
+    void WritePersistentData(std::ofstream &out);
 
 private:
     Mode m_mode;

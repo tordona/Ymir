@@ -6,9 +6,9 @@
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/date_time.hpp>
 #include <satemu/util/inline.hpp>
-#include <satemu/util/unreachable.hpp>
 
 #include <cassert>
+#include <filesystem>
 
 namespace satemu::smpc {
 
@@ -16,8 +16,10 @@ SMPC::SMPC(core::Scheduler &scheduler, Saturn &saturn)
     : m_saturn(saturn)
     , m_scheduler(scheduler) {
 
-    // TODO(SMPC): SMEM should be persisted
     SMEM.fill(0);
+    m_STE = false;
+
+    ReadPersistentData();
 
     m_commandEvent = m_scheduler.RegisterEvent(
         core::events::SMPCCommand, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
@@ -26,6 +28,10 @@ SMPC::SMPC(core::Scheduler &scheduler, Saturn &saturn)
         });
 
     Reset(true);
+}
+
+SMPC::~SMPC() {
+    WritePersistentData();
 }
 
 void SMPC::Reset(bool hard) {
@@ -104,6 +110,56 @@ void SMPC::Write(uint32 address, uint8 value) {
     case 0x7F: WriteEXLE(value); break;
     default: regsLog.debug("unhandled SMPC write to {:02X} = {:02X}", address, value); break;
     }
+}
+
+void SMPC::ReadPersistentData() {
+    // TODO(SMPC): configurable path
+    std::filesystem::path smpcPersistentDataPath = "smpc.bin";
+
+    // TODO: replace std iostream with custom I/O class with managed endianness
+    std::ifstream in{smpcPersistentDataPath, std::ios::binary};
+    if (!in) {
+        return;
+    }
+
+    int version = in.get();
+    if (version != kPersistentDataVersion || version < 0) {
+        return;
+    }
+    in.seekg(3, std::ios::cur); // skip 3 reserved bytes
+
+    std::array<uint8, 4> smem{};
+    bool ste{};
+
+    in.read((char *)&smem[0], sizeof(smem));
+    in.read((char *)&ste, sizeof(ste));
+    if (!in) {
+        return;
+    }
+    SMEM = smem;
+    m_STE = ste;
+
+    m_rtc.ReadPersistentData(in);
+}
+
+void SMPC::WritePersistentData() {
+    // TODO(SMPC): configurable path
+    std::filesystem::path smpcPersistentDataPath = "smpc.bin";
+
+    // TODO: replace std iostream with custom I/O class with managed endianness
+    std::ofstream out{smpcPersistentDataPath, std::ios::binary};
+    if (!out) {
+        return;
+    }
+
+    out.put(kPersistentDataVersion);
+    out.put(0x00); // reserved for future expansion
+    out.put(0x00); // reserved for future expansion
+    out.put(0x00); // reserved for future expansion
+    out.write((const char *)&SMEM[0], sizeof(SMEM));
+    out.write((const char *)&m_STE, sizeof(m_STE));
+
+    m_rtc.WritePersistentData(out);
 }
 
 FORCE_INLINE uint8 SMPC::ReadOREG(uint8 offset) const {
@@ -367,8 +423,7 @@ void SMPC::WriteINTBACKStatusReport() {
     SR.P1MDn = m_port1mode;
     SR.P2MDn = m_port2mode;
 
-    // TODO: simulate full system reset (STE clear)
-    OREG[0] = 0x80; // STE set, RESD clear
+    OREG[0] = m_STE << 7; // TODO: bit 6: RESD - reset disable flag
 
     if (m_rtc.GetMode() == rtc::RTC::Mode::Emulated) {
         m_rtc.UpdateSysClock(m_scheduler.CurrentCount());
@@ -395,7 +450,16 @@ void SMPC::WriteINTBACKStatusReport() {
     // TODO: read cartridge code from cartridge
     // TODO: allow setting or auto-detecting area code
     OREG[8] = 0x00; // Cartridge code (CTG1-0) == 0b00
-    OREG[9] = 0x04; // Area code (0x01=JP, 0x04=NA)
+    OREG[9] = 0x04; // Area code:
+                    //   0x1: Japan
+                    //   0x2: Asia NTSC
+                    //   0x4: North America
+                    //   0x5: Central/South America NTSC
+                    //   0x6: Korea
+                    //   0xA: Asia PAL
+                    //   0xC: Europe PAL
+                    //   0xD: Central/South America PAL
+                    // 0x0 and 0xF are prohibited; all others are reserved
 
     // TODO: update flags accordingly
     OREG[10] = 0b00110100; // System status 1 (TODO: 6=DOTSEL, 3=MSHNMI, 1=SYSRES, 0=SNDRES)
@@ -446,7 +510,8 @@ void SMPC::SETSMEM() {
     SMEM[1] = IREG[1];
     SMEM[2] = IREG[2];
     SMEM[3] = IREG[3];
-    // TODO: persist
+    m_STE = true;
+    WritePersistentData();
 
     SF = false; // done processing
 
@@ -469,6 +534,7 @@ void SMPC::SETTIME() {
                   dt.minute, dt.second);
 
     m_rtc.SetDateTime(dt);
+    WritePersistentData();
 
     SF = false; // done processing
 
