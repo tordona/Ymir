@@ -2253,7 +2253,10 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
             ch.flipH = !extChar && bit::extract<10>(charData);
             ch.flipV = !extChar && bit::extract<11>(charData);
 
-            pixel = VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, ch, scrollCoord, 0);
+            const uint32 dotX = bit::extract<0, 2>(scrollX);
+            const uint32 dotY = bit::extract<0, 2>(scrollY);
+            const CoordU32 dotCoord{dotX, dotY};
+            pixel = VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, ch, dotCoord, 0);
         } else {
             // Out of bounds - transparent
             pixel.transparent = true;
