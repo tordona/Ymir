@@ -2,6 +2,8 @@
 
 #include <satemu/hw/scu/scu.hpp>
 
+#include <satemu/sys/clocks.hpp>
+
 #include <satemu/util/arith_ops.hpp>
 #include <satemu/util/debug_print.hpp>
 
@@ -22,16 +24,12 @@ CDBlock::CDBlock(core::Scheduler &scheduler, scu::SCU &scu, scsp::SCSP &scsp)
                                       cdb.ProcessDriveState();
                                       eventContext.RescheduleFromNow(cdb.m_targetDriveCycles);
                                   });
-    // FIXME: audio track playback is too slow with the correct ratio of 2464/3528
-    m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, 2464 * 3, 3125);
-    // m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, 2464 * 3, 3528);
 
     m_commandExecEvent = m_scheduler.RegisterEvent(
         core::events::CDBlockCommand, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
             auto &cdb = *static_cast<CDBlock *>(userContext);
             cdb.ProcessCommand();
         });
-    m_scheduler.SetEventCountFactor(m_commandExecEvent, 2464, 3528);
 
     Reset(true);
 }
@@ -51,6 +49,9 @@ void CDBlock::Reset(bool hard) {
     m_status.index = 0xFF;
 
     m_readyForPeriodicReports = false;
+
+    // TODO: PAL flag
+    SetClockRatios(false, false);
 
     m_currDriveCycles = 0;
     m_targetDriveCycles = kDriveCyclesNotPlaying;
@@ -99,6 +100,15 @@ void CDBlock::Reset(bool hard) {
     m_putSectorLength = 2048;
 
     m_processingCommand = false;
+}
+
+void CDBlock::SetClockRatios(bool clock352, bool pal) {
+    const auto &clockRatios = GetClockRatios(clock352, pal);
+
+    // FIXME: audio track playback is too slow with the CD block ratio
+    m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.SCSPNum * 3, clockRatios.SCSPDen);
+    // m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.CDBlockNum * 3, clockRatios.CDBlockDen);
+    m_scheduler.SetEventCountFactor(m_commandExecEvent, clockRatios.CDBlockNum, clockRatios.CDBlockDen);
 }
 
 void CDBlock::LoadDisc(media::Disc &&disc) {

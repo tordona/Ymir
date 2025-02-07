@@ -574,7 +574,7 @@ void SMPC::ClockChange(bool fast) {
 
     m_saturn.SH2.master.SetNMI();
 
-    // TODO: update system clock
+    m_saturn.SetClockRatios(fast);
 }
 
 } // namespace satemu::smpc

@@ -11,6 +11,8 @@
 
 #include <satemu/media/disc.hpp>
 
+#include <satemu/sys/clocks.hpp>
+
 namespace satemu {
 
 struct Saturn {
@@ -31,13 +33,13 @@ struct Saturn {
     void RunFrame();
     void Step(); // FIXME: misnomer -- actually steps until next scheduled event
 
+    void SetClockRatios(bool clock352);
+
 private:
     // -------------------------------------------------------------------------
     // Cycle counting
 
     core::Scheduler m_scheduler;
-
-    uint64 m_scspCycles; // SCSP, M68K
 
 public:
     // -------------------------------------------------------------------------
@@ -49,8 +51,6 @@ public:
     smpc::SMPC SMPC;          // SMPC and input devices
     scsp::SCSP SCSP;          // SCSP and MC68EC000 CPU
     cdblock::CDBlock CDBlock; // CD block and media
-
-private:
 };
 
 } // namespace satemu

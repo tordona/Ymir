@@ -128,6 +128,8 @@ public:
 
     void SetCPUEnabled(bool enabled);
 
+    void SetClockRatios(bool clock352, bool pal);
+
 private:
     alignas(16) std::array<uint8, m68k::kM68KWRAMSize> m_WRAM;
 

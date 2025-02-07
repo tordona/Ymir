@@ -49,6 +49,8 @@ public:
 
     void Reset(bool hard);
 
+    void SetClockRatios(bool clock352, bool pal);
+
     void LoadDisc(media::Disc &&disc);
     void EjectDisc();
     void OpenTray();

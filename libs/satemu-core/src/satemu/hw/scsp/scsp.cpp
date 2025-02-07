@@ -2,6 +2,8 @@
 
 #include <satemu/hw/scu/scu.hpp>
 
+#include <satemu/sys/clocks.hpp>
+
 #include <algorithm>
 #include <limits>
 
@@ -21,7 +23,6 @@ SCSP::SCSP(core::Scheduler &scheduler, scu::SCU &scu)
             scsp.Tick();
             eventContext.RescheduleFromNow(kCyclesPerSample);
         });
-    m_scheduler.SetEventCountFactor(m_sampleTickEvent, 2464, 3125);
 
     for (uint32 i = 0; i < 32; i++) {
         m_slots[i].index = i;
@@ -49,6 +50,9 @@ void SCSP::Reset(bool hard) {
     m_lfsr = 1;
 
     if (hard) {
+        // TODO: PAL flag
+        SetClockRatios(false, false);
+
         m_scheduler.ScheduleFromNow(m_sampleTickEvent, kCyclesPerSample);
     }
 
@@ -157,6 +161,11 @@ void SCSP::SetCPUEnabled(bool enabled) {
         }
         m_m68kEnabled = enabled;
     }
+}
+
+void SCSP::SetClockRatios(bool clock352, bool pal) {
+    const auto &clockRatios = GetClockRatios(clock352, pal);
+    m_scheduler.SetEventCountFactor(m_sampleTickEvent, clockRatios.SCSPNum, clockRatios.SCSPDen);
 }
 
 void SCSP::HandleKYONEX() {

@@ -39,6 +39,7 @@ void RTC::Reset(bool hard) {
 }
 
 void RTC::SetSysClockRate(uint64 sysClockRate) {
+    // TODO: use integer numerator/denominator for exact calculations
     m_sysClockRate = sysClockRate;
 }
 

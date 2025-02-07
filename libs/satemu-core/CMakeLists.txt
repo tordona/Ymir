@@ -63,6 +63,7 @@ add_library(satemu-core
     include/satemu/media/binary_reader/binary_reader_mmap.hpp
     include/satemu/media/binary_reader/binary_reader_subview.hpp
 
+    include/satemu/sys/clocks.hpp
     include/satemu/sys/sys.hpp
     
     include/satemu/util/arith_ops.hpp
