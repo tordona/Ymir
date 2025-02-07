@@ -119,7 +119,6 @@ void SMPC::Write(uint32 address, uint8 value) {
 void SMPC::UpdateResetNMI() {
     if (!m_resetDisable && m_resetState) {
         m_saturn.SH2.master.SetNMI();
-        m_saturn.SH2.slave.SetNMI();
     }
 }
 
@@ -277,6 +276,7 @@ void SMPC::ProcessCommand() {
     case Command::SYSRES: SYSRES(); break;
     case Command::CKCHG352: CKCHG352(); break;
     case Command::CKCHG320: CKCHG320(); break;
+    case Command::NMIREQ: NMIREQ(); break;
     case Command::RESENAB: RESENAB(); break;
     case Command::RESDISA: RESDISA(); break;
     case Command::INTBACK: INTBACK(); break;
@@ -366,6 +366,16 @@ void SMPC::CKCHG320() {
     SF = false; // done processing
 
     OREG[31] = 0x0F;
+}
+
+void SMPC::NMIREQ() {
+    rootLog.debug("Processing NMIREQ");
+
+    m_saturn.SH2.master.SetNMI();
+
+    SF = false; // done processing
+
+    OREG[31] = 0x19;
 }
 
 void SMPC::RESENAB() {

@@ -236,6 +236,7 @@ private:
     void SYSRES();
     void CKCHG352();
     void CKCHG320();
+    void NMIREQ();
     void RESENAB();
     void RESDISA();
     void INTBACK();
