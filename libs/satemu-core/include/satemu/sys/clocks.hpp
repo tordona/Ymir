@@ -18,6 +18,7 @@ namespace satemu {
 //   - MC68EC000 runs at 1/2 SCSP clock
 // - CD Block SH1: 20.000000 MHz
 // - SMPC MCU: 4.000000 MHz
+// - RTC: 32768 Hz (but this emulator updates it at 1 Hz)
 //
 // The listed ratios below are all exact and relative to the master clock (SH-2/VDPs/SCU).
 // These ratios are used in the scheduler to accurately schedule events relative to each clock.
@@ -59,6 +60,9 @@ struct ClockRatios {
 
     uint64 SMPCNum;
     uint64 SMPCDen;
+
+    uint64 RTCNum;
+    uint64 RTCDen;
 };
 
 inline constexpr std::array<ClockRatios, 4> kClockRatios = {
@@ -70,6 +74,8 @@ inline constexpr std::array<ClockRatios, 4> kClockRatios = {
         .CDBlockDen = 945,
         .SMPCNum = 704,
         .SMPCDen = 4725,
+        .RTCNum = 11 * 16,
+        .RTCDen = 39375000ull * 8 * 15,
     },
 
     // [1] NTSC, 352 mode
@@ -80,6 +86,8 @@ inline constexpr std::array<ClockRatios, 4> kClockRatios = {
         .CDBlockDen = 63,
         .SMPCNum = 44,
         .SMPCDen = 315,
+        .RTCNum = 11,
+        .RTCDen = 39375000ull * 8,
     },
 
     // [2] PAL, 320 mode
@@ -90,6 +98,8 @@ inline constexpr std::array<ClockRatios, 4> kClockRatios = {
         .CDBlockDen = 1365,
         .SMPCNum = 1024,
         .SMPCDen = 6825,
+        .RTCNum = 1 * 16,
+        .RTCDen = 28437500ull * 15,
     },
 
     // [3] PAL, 352 mode
@@ -100,6 +110,8 @@ inline constexpr std::array<ClockRatios, 4> kClockRatios = {
         .CDBlockDen = 91,
         .SMPCNum = 64,
         .SMPCDen = 455,
+        .RTCNum = 1,
+        .RTCDen = 28437500ull,
     },
 };
 

@@ -46,7 +46,7 @@ public:
         m_mode = mode;
     }
 
-    void SetSysClockRate(uint64 sysClockRate);
+    void SetSysClockRatio(bool clock352, bool pal);
     void UpdateSysClock(uint64 sysClock);
 
     util::datetime::DateTime GetDateTime() const;
@@ -64,10 +64,11 @@ private:
     sint64 m_offset; // Offset in seconds added to host time
 
     // RTC emulated mode
-    sint64 m_timestamp;      // Current RTC timestamp in seconds since Unix epoch
-    sint64 m_resetTimestamp; // RTC timestamp to restore on hard reset when using ResetToFixedTime strategy
-    uint64 m_sysClockCount;  // System clock count since last update to emulated RTC
-    uint64 m_sysClockRate;   // Cycles per second
+    sint64 m_timestamp;       // Current RTC timestamp in seconds since Unix epoch
+    sint64 m_resetTimestamp;  // RTC timestamp to restore on hard reset when using ResetToFixedTime strategy
+    uint64 m_sysClockCount;   // System clock count since last update to emulated RTC
+    uint64 m_sysClockRateNum; // System clock ratio numerator
+    uint64 m_sysClockRateDen; // System clock ratio denominator
 };
 
 } // namespace satemu::smpc::rtc

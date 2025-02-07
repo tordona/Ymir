@@ -53,7 +53,7 @@ void SMPC::Reset(bool hard) {
     m_busValue = 0x00;
 
     m_rtc.Reset(hard);
-    m_rtc.SetSysClockRate(28636364); // TODO: adjust based on system clock
+    m_rtc.SetSysClockRatio(false, false);
 
     m_pioMode1 = false;
     m_pioMode2 = false;
@@ -575,6 +575,9 @@ void SMPC::ClockChange(bool fast) {
     m_saturn.SH2.master.SetNMI();
 
     m_saturn.SetClockRatios(fast);
+
+    // TODO: PAL flag
+    m_rtc.SetSysClockRatio(fast, false);
 }
 
 } // namespace satemu::smpc

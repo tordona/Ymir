@@ -3,6 +3,8 @@
 #include <satemu/util/debug_print.hpp>
 #include <satemu/util/unreachable.hpp>
 
+#include <satemu/sys/clocks.hpp>
+
 #include <fstream>
 
 namespace satemu::smpc::rtc {
@@ -23,6 +25,8 @@ RTC::RTC() {
     m_timestamp = 0;
     m_resetTimestamp = 0;
 
+    SetSysClockRatio(false, false);
+
     Reset(true);
 }
 
@@ -38,16 +42,19 @@ void RTC::Reset(bool hard) {
     m_sysClockCount = 0;
 }
 
-void RTC::SetSysClockRate(uint64 sysClockRate) {
-    // TODO: use integer numerator/denominator for exact calculations
-    m_sysClockRate = sysClockRate;
+void RTC::SetSysClockRatio(bool clock352, bool pal) {
+    const auto &clockRatios = GetClockRatios(clock352, false);
+    m_sysClockRateNum = clockRatios.RTCNum;
+    m_sysClockRateDen = clockRatios.RTCDen;
 }
 
 void RTC::UpdateSysClock(uint64 sysClock) {
     const uint64 clockDelta = sysClock - m_sysClockCount;
-    const uint64 seconds = clockDelta / m_sysClockRate;
-    m_sysClockCount += m_sysClockRate * seconds;
-    m_timestamp += seconds;
+    const uint64 seconds = clockDelta * m_sysClockRateNum / m_sysClockRateDen;
+    if (seconds > 0) [[unlikely]] {
+        m_sysClockCount += seconds * m_sysClockRateDen / m_sysClockRateNum;
+        m_timestamp += seconds;
+    }
 }
 
 util::datetime::DateTime RTC::GetDateTime() const {
