@@ -354,7 +354,11 @@ public:
         case 0x000: {
             const uint16 oldTVMD = m_VDP2.TVMD.u16;
             m_VDP2.TVMD.u16 = value & 0x81F7;
-            m_VDP2.TVMDDirty = m_VDP2.TVMD.u16 != oldTVMD;
+            m_VDP2.TVMDDirty |= m_VDP2.TVMD.u16 != oldTVMD;
+            regsLog2.trace("TVMD write: {:04X} - HRESO={:d} VRESO={:d} LSMD={:d} BDCLMD={:d} DISP={:d}{}",
+                           m_VDP2.TVMD.u16, (uint16)m_VDP2.TVMD.HRESOn, (uint16)m_VDP2.TVMD.VRESOn,
+                           (uint16)m_VDP2.TVMD.LSMDn, (uint16)m_VDP2.TVMD.BDCLMD, (uint16)m_VDP2.TVMD.DISP,
+                           (m_VDP2.TVMDDirty ? " (dirty)" : ""));
             break;
         }
         case 0x002: m_VDP2.EXTEN.u16 = value & 0x0303; break;
