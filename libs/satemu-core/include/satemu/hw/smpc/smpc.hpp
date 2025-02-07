@@ -36,6 +36,14 @@ public:
     uint8 Read(uint32 address);
     void Write(uint32 address, uint8 value);
 
+    void SetResetButtonState(bool pressed) {
+        bool prevState = m_resetState;
+        m_resetState = pressed;
+        if (prevState != m_resetState) {
+            UpdateResetNMI();
+        }
+    }
+
     void SetAreaCode(uint8 areaCode) {
         rootLog.debug("Setting area code to {:X}", areaCode);
         m_areaCode = areaCode;
@@ -55,6 +63,11 @@ private:
     std::array<uint8, 4> SMEM;
 
     bool m_STE; // false = forces system configuration on boot up
+
+    bool m_resetDisable; // RESD flag, masks the Reset state
+    bool m_resetState;   // State of the console's Reset button
+
+    void UpdateResetNMI();
 
     // Area code:
     //   0x1: (J) Japan

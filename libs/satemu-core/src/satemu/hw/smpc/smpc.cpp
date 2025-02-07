@@ -19,6 +19,8 @@ SMPC::SMPC(core::Scheduler &scheduler, Saturn &saturn)
     SMEM.fill(0);
     m_STE = false;
 
+    m_resetState = false;
+
     ReadPersistentData();
 
     m_commandEvent = m_scheduler.RegisterEvent(
@@ -35,6 +37,8 @@ SMPC::~SMPC() {
 }
 
 void SMPC::Reset(bool hard) {
+    m_resetDisable = true;
+
     IREG.fill(0x00);
     OREG.fill(0x00);
     COMREG = Command::None;
@@ -109,6 +113,13 @@ void SMPC::Write(uint32 address, uint8 value) {
     case 0x7D: WriteIOSEL(value); break;
     case 0x7F: WriteEXLE(value); break;
     default: regsLog.debug("unhandled SMPC write to {:02X} = {:02X}", address, value); break;
+    }
+}
+
+void SMPC::UpdateResetNMI() {
+    if (!m_resetDisable && m_resetState) {
+        m_saturn.SH2.master.SetNMI();
+        m_saturn.SH2.slave.SetNMI();
     }
 }
 
@@ -359,7 +370,12 @@ void SMPC::CKCHG320() {
 
 void SMPC::RESENAB() {
     rootLog.debug("Processing RESENAB");
-    // TODO: enable reset NMI
+
+    bool prevState = m_resetDisable;
+    m_resetDisable = false;
+    if (prevState != m_resetDisable) {
+        UpdateResetNMI();
+    }
 
     SF = false; // done processing
 
@@ -368,7 +384,12 @@ void SMPC::RESENAB() {
 
 void SMPC::RESDISA() {
     rootLog.debug("Processing RESDISA");
-    // TODO: disable reset NMI
+
+    bool prevState = m_resetDisable;
+    m_resetDisable = true;
+    if (prevState != m_resetDisable) {
+        UpdateResetNMI();
+    }
 
     SF = false; // done processing
 

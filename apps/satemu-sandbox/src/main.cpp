@@ -283,8 +283,13 @@ void runEmulator(satemu::Saturn &saturn) {
         case SDL_SCANCODE_RETURN: setClearButton(smpc::kButtonStart, pressed); break;
         case SDL_SCANCODE_RETURN2: setClearButton(smpc::kButtonStart, pressed); break;
         case SDL_SCANCODE_R:
-            if (pressed && (mod & SDL_KMOD_CTRL)) {
-                saturn.Reset(true);
+            if (pressed) {
+                if (mod & SDL_KMOD_CTRL) {
+                    saturn.Reset(true);
+                }
+            }
+            if (mod & SDL_KMOD_SHIFT) {
+                saturn.SMPC.SetResetButtonState(pressed);
             }
             break;
         case SDL_SCANCODE_TAB: audioBuffer.sync = !pressed; break;
