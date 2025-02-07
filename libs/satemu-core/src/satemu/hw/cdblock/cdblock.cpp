@@ -845,7 +845,7 @@ FORCE_INLINE void CDBlock::ProcessCommand() {
     case 0x06: CmdEndDataTransfer(); break;
     case 0x10: CmdPlayDisc(); break;
     case 0x11: CmdSeekDisc(); break;
-    // case 0x12: CmdScanDisc(); break;
+    case 0x12: CmdScanDisc(); break;
     case 0x20: CmdGetSubcodeQ_RW(); break;
     case 0x30: CmdSetCDDeviceConnection(); break;
     case 0x31: CmdGetCDDeviceConnection(); break;
@@ -1268,7 +1268,6 @@ void CDBlock::CmdScanDisc() {
 
     // Output structure: standard CD status data
     if (direction < 2) {
-        m_status.statusCode = kStatusCodeBusy;
         rootLog.info("Scan disc is unimplemented");
         // TODO: SetupScan(direction);
         ReportCDStatus();
