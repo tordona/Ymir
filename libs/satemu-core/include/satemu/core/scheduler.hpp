@@ -110,9 +110,17 @@ public:
         assert(numerator > 0);
         assert(denominator > 0);
         Event &event = m_events[id];
+
+        const uint64 oldTarget = event.target;
+        const uint64 oldScaledCount = m_currCount * event.countNumerator / event.countDenominator;
+        const sint64 remaining = oldTarget - oldScaledCount;
+        const sint64 rescaledCount = m_currCount * numerator / denominator;
+        event.target = rescaledCount + remaining;
+
         event.countNumerator = numerator;
         event.countDenominator = denominator;
-        if (m_nextCount == event.target) {
+
+        if (m_nextCount == oldTarget) {
             RecalcSchedule();
         }
     }
@@ -183,7 +191,7 @@ private:
         void *userContext;
         EventCallback callback;
 
-        FORCE_INLINE uint64 CalcInverseScaledTarget() const {
+        FORCE_INLINE uint64 CalcTargetScaledByReciprocal() const {
             return (target * countDenominator + countNumerator - 1) / countNumerator;
         }
     };
@@ -192,7 +200,7 @@ private:
     FORCE_INLINE void ScheduleEvent(EventID id, uint64 target) {
         Event &event = m_events[id];
         event.target = target;
-        const uint64 scaledTarget = event.CalcInverseScaledTarget();
+        const uint64 scaledTarget = event.CalcTargetScaledByReciprocal();
         m_nextCount = std::min(m_nextCount, scaledTarget);
     }
 
@@ -233,7 +241,7 @@ private:
             if (event.target == kNoDeadline) {
                 continue;
             }
-            const uint64 scaledTarget = event.CalcInverseScaledTarget();
+            const uint64 scaledTarget = event.CalcTargetScaledByReciprocal();
             m_nextCount = std::min(m_nextCount, scaledTarget);
         }
     }
