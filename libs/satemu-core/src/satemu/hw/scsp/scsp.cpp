@@ -151,7 +151,7 @@ void SCSP::DumpDSPRegs(std::ostream &out) const {
 
 void SCSP::SetCPUEnabled(bool enabled) {
     if (m_m68kEnabled != enabled) {
-        rootLog.info("{} the MC68EC00 processor", (enabled ? "enabling" : "disabling"));
+        rootLog.info("MC68EC00 processor {}", (enabled ? "enabled" : "disabled"));
         if (enabled) {
             m_m68k.Reset(true); // false? does it matter?
         }
