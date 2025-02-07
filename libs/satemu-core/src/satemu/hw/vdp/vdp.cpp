@@ -2096,7 +2096,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState 
 
             // Plot pixel
             layerState.pixels[x] = VDP2FetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
-                bgParams, bgParams.pageBaseAddresses, scrollCoord);
+                bgParams, bgParams.pageBaseAddresses, bgParams.pageShiftH, bgParams.pageShiftV, scrollCoord);
         }
 
         // Increment horizontal coordinate
@@ -2204,8 +2204,8 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
         // Determine maximum coordinates and screen over process
         const bool usingFixed512 = rotParams.screenOverProcess == ScreenOverProcess::Fixed512;
         const bool usingRepeat = rotParams.screenOverProcess == ScreenOverProcess::Repeat;
-        const uint32 maxScrollX = usingFixed512 ? 512 : ((512 * 4) << bgParams.pageShiftH);
-        const uint32 maxScrollY = usingFixed512 ? 512 : ((512 * 4) << bgParams.pageShiftV);
+        const uint32 maxScrollX = usingFixed512 ? 512 : ((512 * 4) << rotParams.pageShiftH);
+        const uint32 maxScrollY = usingFixed512 ? 512 : ((512 * 4) << rotParams.pageShiftV);
 
         if (VDP2IsInsideWindow(bgParams.windowSet, x)) {
             // Make pixel transparent if inside a window
@@ -2213,12 +2213,10 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
             // Plot pixel
             pixel = VDP2FetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
-                bgParams, rotParamState.pageBaseAddresses, scrollCoord);
+                bgParams, rotParamState.pageBaseAddresses, rotParams.pageShiftH, rotParams.pageShiftV, scrollCoord);
         } else if (rotParams.screenOverProcess == ScreenOverProcess::RepeatChar) {
             // Out of bounds - repeat character
             const uint16 charData = rotParams.screenOverPatternName;
-
-            // FIXME: not quite correct... still draws garbage on Sonic R
 
             // TODO: deduplicate code: VDP2FetchOneWordCharacter
             static constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
@@ -2524,9 +2522,10 @@ bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32
     return windowSet.logic == WindowLogic::And;
 }
 
+// TODO: optimize - remove pageShiftH and pageShiftV params
 template <bool rot, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
 FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses,
-                                                    CoordU32 scrollCoord) {
+                                                    uint32 pageShiftH, uint32 pageShiftV, CoordU32 scrollCoord) {
     //      Map (NBGs)              Map (RBGs)
     // +---------+---------+   +----+----+----+----+
     // |         |         |   | A  | B  | C  | D  |
@@ -2648,7 +2647,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, st
     //   - 16-bit 5:5:5 RGB, 2048 words
     //   - 32-bit 8:8:8 RGB, 1024 longwords
 
-    static constexpr std::size_t planeMSB = rot ? 12 : 11;
+    static constexpr std::size_t planeMSB = rot ? 11 : 10;
     static constexpr uint32 planeWidth = rot ? 4u : 2u;
     static constexpr uint32 planeMask = planeWidth - 1;
 
@@ -2658,13 +2657,13 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, st
     auto [scrollX, scrollY] = scrollCoord;
 
     // Determine plane index from the scroll coordinates
-    const uint32 planeX = (bit::extract<9, planeMSB>(scrollX) >> bgParams.pageShiftH) & planeMask;
-    const uint32 planeY = (bit::extract<9, planeMSB>(scrollY) >> bgParams.pageShiftV) & planeMask;
+    const uint32 planeX = (bit::extract<9, planeMSB>(scrollX) >> pageShiftH) & planeMask;
+    const uint32 planeY = (bit::extract<9, planeMSB>(scrollY) >> pageShiftV) & planeMask;
     const uint32 plane = planeX + planeY * planeWidth;
 
     // Determine page index from the scroll coordinates
-    const uint32 pageX = bit::extract<9>(scrollX) & bgParams.pageShiftH;
-    const uint32 pageY = bit::extract<9>(scrollY) & bgParams.pageShiftV;
+    const uint32 pageX = bit::extract<9>(scrollX) & pageShiftH;
+    const uint32 pageY = bit::extract<9>(scrollY) & pageShiftV;
     const uint32 page = pageX + pageY * 2u;
 
     // Determine character pattern from the scroll coordinates

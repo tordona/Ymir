@@ -1121,15 +1121,16 @@ private:
     //
     // bgParams contains the parameters for the BG to draw.
     // pageBaseAddresses is a reference to the table containing the planes' pages' base addresses.
-    // scrollX and scrollY are the integer coordinates of the scroll screen.
+    // pageShiftH and pageShiftV are address shifts derived from PLSZ to determine the plane and page indices.
+    // scrollCoord has the coordinates of the scroll screen.
     //
     // charMode indicates if character patterns use two words or one word with standard or extended character data.
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
     template <bool rot, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
-    Pixel VDP2FetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses,
-                                 CoordU32 scrollCoord);
+    Pixel VDP2FetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses, uint32 pageShiftH,
+                                 uint32 pageShiftV, CoordU32 scrollCoord);
 
     // Fetches a two-word character from VRAM.
     //
