@@ -317,7 +317,6 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
                 }
 
                 // If the pregap in audio tracks is actually silent, skip it
-                uintmax_t pregapOffset = 0;
                 if (hasPregap && track.controlADR == 0x01) {
                     const uintmax_t pregapEnd = TimestampToFrameAddress(m, s, f);
                     const uintmax_t pregapStart = hasIndex0
@@ -337,13 +336,13 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
                         const uintmax_t delta = pregapEnd - pregapStart;
                         // fmt::println("BIN/CUE: Track {} has silent pregap of {} frames; skipping", currTrackIndex,
                         //              delta);
-                        pregapOffset = delta * track.sectorSize;
+                        binFileOffset += delta * track.sectorSize;
                     }
                 }
 
                 // Start new track
                 track.startFrameAddress = frameAddress;
-                trackFileOffsets[currTrackIndex] = binFileOffset + pregapOffset;
+                trackFileOffsets[currTrackIndex] = binFileOffset;
 
                 // fmt::println("BIN/CUE: Track {} offset = {:X}", currTrackIndex, trackFileOffsets[currTrackIndex]);
             }
