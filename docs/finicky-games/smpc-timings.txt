@@ -1,0 +1,12 @@
+==============================================
+Games that require SMPC commands to be delayed
+==============================================
+
+Running SMPC commmands instantaneously cause issues with these games:
+
+Akumajou Dracula X
+Virtual Hydlide
+  Gets stuck on the SEGA logo screen if INTBACK executes instantly
+
+Soukyuu Gurentai
+  Doesn't respond to controller inputs if INTBACK executes instantly

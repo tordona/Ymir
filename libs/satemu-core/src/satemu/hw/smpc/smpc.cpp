@@ -198,7 +198,7 @@ FORCE_INLINE void SMPC::WriteCOMREG(uint8 value) {
         m_scheduler.ScheduleFromNow(m_commandEvent, 200000);
     } else {
         // TODO: CDON and CDOFF execute in 40 microseconds; all other commands take 30 microseconds to complete
-        ProcessCommand();
+        m_scheduler.ScheduleFromNow(m_commandEvent, 30);
     }
 }
 
