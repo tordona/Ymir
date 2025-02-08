@@ -322,14 +322,15 @@ bool CDBlock::SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber
     }
 
     // Reject if frame address doesn't point to a valid data track
+    const uint32 fileOffset = fileInfo.frameAddress + offset;
     const auto &session = m_disc.sessions.back();
-    const uint8 trackIndex = session.FindTrackIndex(m_playStartPos);
+    const uint8 trackIndex = session.FindTrackIndex(fileOffset);
     if (trackIndex == 0xFF) {
-        playInitLog.debug("Track not found for frame address {:06X}; rejecting playback request", m_playStartPos);
+        playInitLog.debug("Track not found for frame address {:06X}; rejecting playback request", fileOffset);
         return false;
     }
     if (session.tracks[trackIndex].controlADR != 0x41) {
-        playInitLog.debug("Not a data track at frame address {:06X}; rejecting playback request", m_playStartPos);
+        playInitLog.debug("Not a data track at frame address {:06X}; rejecting playback request", fileOffset);
         return false;
     }
 
