@@ -154,6 +154,7 @@ target_precompile_headers(satemu-core
         <set>
         <span>
         <sstream>
+        <string>
         <type_traits>
         <unordered_map>
         <utility>
