@@ -2,7 +2,7 @@
 
 #include "cdblock_buffer.hpp"
 
-#include <satemu/core_types.hpp>
+#include <satemu/core/types.hpp>
 
 #include <satemu/util/bit_ops.hpp>
 

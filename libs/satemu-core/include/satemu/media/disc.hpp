@@ -1,6 +1,6 @@
 #pragma once
 
-#include <satemu/core_types.hpp>
+#include <satemu/core/types.hpp>
 
 #include <satemu/media/binary_reader/binary_reader.hpp>
 

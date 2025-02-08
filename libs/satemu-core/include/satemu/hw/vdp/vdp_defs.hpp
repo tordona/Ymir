@@ -3,7 +3,7 @@
 #include "vdp1_defs.hpp"
 #include "vdp2_defs.hpp"
 
-#include <satemu/core_types.hpp>
+#include <satemu/core/types.hpp>
 
 #include <satemu/util/callback.hpp>
 #include <satemu/util/inline.hpp>

@@ -2,7 +2,7 @@
 
 #include <satemu/util/inline.hpp>
 
-#include <satemu/core_types.hpp>
+#include <satemu/core/types.hpp>
 
 #include <array>
 

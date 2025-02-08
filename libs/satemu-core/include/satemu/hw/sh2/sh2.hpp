@@ -3,7 +3,7 @@
 #include "sh2_decode.hpp"
 #include "sh2_defs.hpp"
 
-#include <satemu/core_types.hpp>
+#include <satemu/core/types.hpp>
 #include <satemu/hw/hw_defs.hpp>
 
 #include <satemu/util/debug_print.hpp>

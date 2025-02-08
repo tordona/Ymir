@@ -3,7 +3,7 @@
 #include "m68k_decode.hpp"
 #include "m68k_defs.hpp"
 
-#include <satemu/core_types.hpp>
+#include <satemu/core/types.hpp>
 #include <satemu/hw/hw_defs.hpp>
 
 #include <array>

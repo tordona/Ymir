@@ -4,7 +4,7 @@
 //
 // https://ecma-international.org/wp-content/uploads/ECMA-119_5th_edition_december_2024.pdf
 
-#include <satemu/core_types.hpp>
+#include <satemu/core/types.hpp>
 
 #include <satemu/util/data_ops.hpp>
 

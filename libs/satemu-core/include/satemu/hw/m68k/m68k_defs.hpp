@@ -2,7 +2,7 @@
 
 #include <satemu/util/size_ops.hpp>
 
-#include <satemu/core_types.hpp>
+#include <satemu/core/types.hpp>
 
 namespace satemu::m68k {
 
