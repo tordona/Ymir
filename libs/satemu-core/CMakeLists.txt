@@ -64,7 +64,7 @@ add_library(satemu-core
     include/satemu/media/binary_reader/binary_reader_subview.hpp
 
     include/satemu/sys/clocks.hpp
-    include/satemu/sys/sys.hpp
+    include/satemu/sys/saturn.hpp
     
     include/satemu/util/arith_ops.hpp
     include/satemu/util/bit_ops.hpp
@@ -113,7 +113,7 @@ add_library(satemu-core
     src/satemu/media/loader/loader_iso.cpp
     src/satemu/media/loader/loader_mdf_mds.cpp
 
-    src/satemu/sys/sys.cpp
+    src/satemu/sys/saturn.cpp
 
     src/satemu/util/constexpr_for.hpp
     src/satemu/util/date_time.cpp

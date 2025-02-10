@@ -11,8 +11,6 @@
 
 #include <satemu/media/disc.hpp>
 
-#include <satemu/sys/clocks.hpp>
-
 namespace satemu {
 
 struct Saturn {

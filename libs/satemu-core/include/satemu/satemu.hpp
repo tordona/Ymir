@@ -1,7 +1,7 @@
 #pragma once
 
 #include <satemu/media/loader/loader.hpp>
-#include <satemu/sys/sys.hpp>
+#include <satemu/sys/saturn.hpp>
 
 namespace satemu {
 
