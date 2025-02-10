@@ -85,6 +85,10 @@ else()
 endif()
 add_subdirectory_quiet(SDL)
 
+# cxxopts - https://github.com/jarro2783/cxxopts
+message(VERBOSE "==> cxxopts")
+add_subdirectory(cxxopts)
+
 # --------------------------------------------------------------------------------------------------
 
 # Place vendored library projects under a Vendored folder in Visual Studio solutions

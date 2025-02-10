@@ -7,3 +7,6 @@
 [submodule "vendor/mio"]
 	path = vendor/mio
 	url = git@github.com:StrikerX3/mio.git
+[submodule "vendor/cxxopts"]
+	path = vendor/cxxopts
+	url = git@github.com:jarro2783/cxxopts.git
