@@ -1,6 +1,7 @@
 ## Create the library target
 add_library(satemu-core
     include/satemu/satemu.hpp
+    include/satemu/version.hpp
 
     include/satemu/core/scheduler.hpp
     include/satemu/core/types.hpp

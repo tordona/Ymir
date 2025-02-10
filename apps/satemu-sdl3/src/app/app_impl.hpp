@@ -2,7 +2,7 @@
 
 #include "app.hpp"
 
-#include <satemu/satemu.hpp>
+#include <satemu/sys/saturn.hpp>
 
 namespace app {
 

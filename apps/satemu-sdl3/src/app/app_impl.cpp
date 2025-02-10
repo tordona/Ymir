@@ -1,5 +1,7 @@
 #include "app_impl.hpp"
 
+#include <satemu/satemu.hpp>
+
 #include <satemu/util/scope_guard.hpp>
 #include <satemu/util/thread_name.hpp>
 
