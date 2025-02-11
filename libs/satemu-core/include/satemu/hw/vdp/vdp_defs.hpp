@@ -26,7 +26,7 @@ inline constexpr std::size_t kVDP2CRAMSize = 4_KiB;
 // Common constants
 
 inline constexpr uint32 kMaxResH = 704; // Maximum horizontal resolution
-inline constexpr uint32 kMaxResV = 480; // Maximum vertical resolution
+inline constexpr uint32 kMaxResV = 512; // Maximum vertical resolution
 
 // -----------------------------------------------------------------------------
 // Basic types

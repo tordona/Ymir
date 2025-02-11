@@ -10,7 +10,7 @@ namespace satemu::vdp {
 struct VDP2Regs {
     void Reset() {
         TVMD.u16 = 0x0;
-        TVSTAT.u16 &= 0xFFFE; // Preserve PAL flag
+        TVSTAT.u16 &= ~0xFFFE; // Preserve PAL flag
         HCNT = 0x0;
         VCNT = 0x0;
         RAMCTL.u16 = 0x0;
