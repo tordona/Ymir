@@ -28,7 +28,7 @@ class SMPC {
     static constexpr dbg::Category regsLog{rootLog, "Regs"};
 
 public:
-    SMPC(core::Scheduler &scheduler, Saturn &saturn);
+    SMPC(sys::System &system, core::Scheduler &scheduler, Saturn &saturn);
     ~SMPC();
 
     void Reset(bool hard);
@@ -243,7 +243,7 @@ private:
     void SETSMEM();
     void SETTIME();
 
-    void ClockChange(bool fast);
+    void ClockChange(sys::ClockSpeed clockSpeed);
 };
 
 } // namespace satemu::smpc

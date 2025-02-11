@@ -8,16 +8,17 @@ Saturn::Saturn()
     : SH2(SCU, SMPC)
     , SCU(m_scheduler, VDP, SCSP, CDBlock, SH2)
     , VDP(m_scheduler, SCU)
-    , SMPC(m_scheduler, *this)
-    , SCSP(m_scheduler, SCU)
-    , CDBlock(m_scheduler, SCU, SCSP) {
+    , SMPC(m_system, m_scheduler, *this)
+    , SCSP(m_system, m_scheduler, SCU)
+    , CDBlock(m_system, m_scheduler, SCU, SCSP) {
 
     Reset(true);
 }
 
 void Saturn::Reset(bool hard) {
     if (hard) {
-        SetClockRatios(false);
+        m_system.clockSpeed = sys::ClockSpeed::_320;
+        UpdateClockRatios();
 
         m_scheduler.Reset();
     }
@@ -28,6 +29,17 @@ void Saturn::Reset(bool hard) {
     SMPC.Reset(hard);
     SCSP.Reset(hard);
     CDBlock.Reset(hard);
+}
+
+void Saturn::SetVideoStandard(sys::VideoStandard videoStandard) {
+    m_system.videoStandard = videoStandard;
+    VDP.SetVideoStandard(videoStandard);
+    UpdateClockRatios();
+}
+
+void Saturn::SetClockSpeed(sys::ClockSpeed clockSpeed) {
+    m_system.clockSpeed = clockSpeed;
+    UpdateClockRatios();
 }
 
 void Saturn::LoadIPL(std::span<uint8, sh2::kIPLSize> ipl) {
@@ -110,10 +122,9 @@ void Saturn::Step() {
     m_scheduler.Advance(cycles);
 }
 
-void Saturn::SetClockRatios(bool clock352) {
-    // TODO: PAL flag
-    SCSP.SetClockRatios(clock352, false);
-    CDBlock.SetClockRatios(clock352, false);
+void Saturn::UpdateClockRatios() {
+    SCSP.UpdateClockRatios();
+    CDBlock.UpdateClockRatios();
 }
 
 } // namespace satemu

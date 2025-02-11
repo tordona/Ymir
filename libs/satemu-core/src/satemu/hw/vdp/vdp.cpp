@@ -107,6 +107,14 @@ void VDP::DumpVDP1Framebuffers(std::ostream &out) const {
     out.write((const char *)m_spriteFB[m_drawFB ^ 1].data(), m_spriteFB[m_drawFB ^ 1].size());
 }
 
+void VDP::SetVideoStandard(sys::VideoStandard videoStandard) {
+    const bool pal = videoStandard == sys::VideoStandard::PAL;
+    if (m_VDP2.TVSTAT.PAL != pal) {
+        m_VDP2.TVSTAT.PAL = pal;
+        m_VDP2.TVMDDirty = true;
+    }
+}
+
 FORCE_INLINE void VDP::UpdatePhase() {
     auto nextPhase = static_cast<uint32>(m_HPhase) + 1;
     if (nextPhase == m_HTimings.size()) {

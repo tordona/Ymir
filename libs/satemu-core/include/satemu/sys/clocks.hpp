@@ -115,8 +115,4 @@ inline constexpr std::array<ClockRatios, 4> kClockRatios = {
     },
 };
 
-inline const ClockRatios &GetClockRatios(bool clock352, bool pal) {
-    return kClockRatios[clock352 | (pal << 1)];
-}
-
 } // namespace satemu

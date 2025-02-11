@@ -6,6 +6,7 @@
 #include "scsp_timer.hpp"
 
 #include <satemu/core/scheduler.hpp>
+#include <satemu/sys/system.hpp>
 
 #include <satemu/hw/hw_defs.hpp>
 
@@ -23,6 +24,12 @@
 
 // -----------------------------------------------------------------------------
 // Forward declarations
+
+namespace satemu {
+
+struct Saturn;
+
+} // namespace satemu
 
 namespace satemu::scu {
 
@@ -70,7 +77,7 @@ class SCSP {
     static constexpr dbg::Category dmaLog{rootLog, "DMA"};
 
 public:
-    SCSP(core::Scheduler &scheduler, scu::SCU &scu);
+    SCSP(sys::System &system, core::Scheduler &scheduler, scu::SCU &scu);
 
     void Reset(bool hard);
 
@@ -128,8 +135,6 @@ public:
 
     void SetCPUEnabled(bool enabled);
 
-    void SetClockRatios(bool clock352, bool pal);
-
 private:
     alignas(16) std::array<uint8, m68k::kM68KWRAMSize> m_WRAM;
 
@@ -143,12 +148,16 @@ private:
     m68k::MC68EC000 m_m68k;
     bool m_m68kEnabled;
 
+    sys::System &m_system;
     scu::SCU &m_scu;
 
     core::Scheduler &m_scheduler;
     core::EventID m_sampleTickEvent;
 
     CBOutputSample m_cbOutputSample;
+
+    friend struct satemu::Saturn;
+    void UpdateClockRatios();
 
     // -------------------------------------------------------------------------
     // MC68EC000-facing bus

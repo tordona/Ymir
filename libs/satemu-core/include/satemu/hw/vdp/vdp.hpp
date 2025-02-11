@@ -6,6 +6,7 @@
 #include "vdp2_regs.hpp"
 
 #include <satemu/core/scheduler.hpp>
+#include <satemu/sys/system.hpp>
 
 #include <satemu/hw/hw_defs.hpp>
 
@@ -20,6 +21,12 @@
 
 // -----------------------------------------------------------------------------
 // Forward declarations
+
+namespace satemu {
+
+struct Saturn;
+
+} // namespace satemu
 
 namespace satemu::scu {
 
@@ -45,6 +52,8 @@ public:
     VDP(core::Scheduler &scheduler, scu::SCU &scu);
 
     void Reset(bool hard);
+
+    void ClearVRAM();
 
     FORCE_INLINE void SetCallbacks(CBRequestFramebuffer cbRequestFramebuffer, CBFrameComplete cbFrameComplete) {
         m_cbRequestFramebuffer = cbRequestFramebuffer;
@@ -525,6 +534,9 @@ private:
 
     core::Scheduler &m_scheduler;
     core::EventID m_phaseUpdateEvent;
+
+    friend struct satemu::Saturn;
+    void SetVideoStandard(sys::VideoStandard videoStandard);
 
     // -------------------------------------------------------------------------
     // Frontend callbacks

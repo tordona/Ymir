@@ -1,10 +1,23 @@
 #pragma once
 
+#include <satemu/sys/system.hpp>
+
 #include <satemu/util/date_time.hpp>
 
 #include <satemu/core/types.hpp>
 
 #include <iosfwd>
+
+// -----------------------------------------------------------------------------
+// Forward declarations
+
+namespace satemu::smpc {
+
+class SMPC;
+
+} // namespace satemu::smpc
+
+// -----------------------------------------------------------------------------
 
 namespace satemu::smpc::rtc {
 
@@ -34,7 +47,7 @@ public:
         Preserve,
     };
 
-    RTC();
+    RTC(sys::System &system);
 
     void Reset(bool hard);
 
@@ -46,7 +59,6 @@ public:
         m_mode = mode;
     }
 
-    void SetSysClockRatio(bool clock352, bool pal);
     void UpdateSysClock(uint64 sysClock);
 
     util::datetime::DateTime GetDateTime() const;
@@ -54,9 +66,14 @@ public:
 
     // TODO: replace std iostream with custom I/O class with managed endianness
     void ReadPersistentData(std::ifstream &in);
-    void WritePersistentData(std::ofstream &out);
+    void WritePersistentData(std::ofstream &out) const;
 
 private:
+    sys::System &m_system;
+
+    friend class satemu::smpc::SMPC;
+    void UpdateClockRatios();
+
     Mode m_mode;
     HardResetStrategy m_hardResetStrategy;
 

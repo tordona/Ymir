@@ -11,8 +11,9 @@ using namespace satemu::m68k;
 
 namespace satemu::scsp {
 
-SCSP::SCSP(core::Scheduler &scheduler, scu::SCU &scu)
+SCSP::SCSP(sys::System &system, core::Scheduler &scheduler, scu::SCU &scu)
     : m_m68k(*this)
+    , m_system(system)
     , m_scu(scu)
     , m_scheduler(scheduler)
     , m_dsp(m_WRAM.data()) {
@@ -51,7 +52,7 @@ void SCSP::Reset(bool hard) {
 
     if (hard) {
         // TODO: PAL flag
-        SetClockRatios(false, false);
+        UpdateClockRatios();
 
         m_scheduler.ScheduleFromNow(m_sampleTickEvent, kCyclesPerSample);
     }
@@ -163,8 +164,8 @@ void SCSP::SetCPUEnabled(bool enabled) {
     }
 }
 
-void SCSP::SetClockRatios(bool clock352, bool pal) {
-    const auto &clockRatios = GetClockRatios(clock352, pal);
+void SCSP::UpdateClockRatios() {
+    const auto &clockRatios = m_system.GetClockRatios();
     m_scheduler.SetEventCountFactor(m_sampleTickEvent, clockRatios.SCSPNum, clockRatios.SCSPDen);
 }
 

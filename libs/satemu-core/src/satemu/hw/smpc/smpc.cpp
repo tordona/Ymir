@@ -12,9 +12,10 @@
 
 namespace satemu::smpc {
 
-SMPC::SMPC(core::Scheduler &scheduler, Saturn &saturn)
+SMPC::SMPC(sys::System &system, core::Scheduler &scheduler, Saturn &saturn)
     : m_saturn(saturn)
-    , m_scheduler(scheduler) {
+    , m_scheduler(scheduler)
+    , m_rtc(system) {
 
     SMEM.fill(0);
     m_STE = false;
@@ -53,7 +54,7 @@ void SMPC::Reset(bool hard) {
     m_busValue = 0x00;
 
     m_rtc.Reset(hard);
-    m_rtc.SetSysClockRatio(false, false);
+    m_rtc.UpdateClockRatios();
 
     m_pioMode1 = false;
     m_pioMode2 = false;
@@ -352,7 +353,7 @@ void SMPC::SYSRES() {
 void SMPC::CKCHG352() {
     rootLog.debug("Processing CKCHG352");
 
-    ClockChange(true);
+    ClockChange(sys::ClockSpeed::_352);
 
     SF = false; // done processing
 
@@ -361,7 +362,7 @@ void SMPC::CKCHG352() {
 void SMPC::CKCHG320() {
     rootLog.debug("Processing CKCHG320");
 
-    ClockChange(false);
+    ClockChange(sys::ClockSpeed::_320);
 
     SF = false; // done processing
 
@@ -563,21 +564,19 @@ void SMPC::SETTIME() {
     OREG[31] = 0x16;
 }
 
-void SMPC::ClockChange(bool fast) {
+void SMPC::ClockChange(sys::ClockSpeed clockSpeed) {
     m_saturn.VDP.Reset(false);
     m_saturn.SCU.Reset(false);
     m_saturn.SCSP.Reset(false);
 
-    // TODO: clear VDP VRAMs
+    // TODO: clear VDP VRAMs?
 
     m_saturn.SH2.slaveEnabled = false;
 
     m_saturn.SH2.master.SetNMI();
 
-    m_saturn.SetClockRatios(fast);
-
-    // TODO: PAL flag
-    m_rtc.SetSysClockRatio(fast, false);
+    m_saturn.SetClockSpeed(clockSpeed);
+    m_rtc.UpdateClockRatios();
 }
 
 } // namespace satemu::smpc

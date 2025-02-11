@@ -6,6 +6,7 @@
 #include "cdblock_filter.hpp"
 
 #include <satemu/core/scheduler.hpp>
+#include <satemu/sys/system.hpp>
 
 #include <satemu/hw/hw_defs.hpp>
 
@@ -19,6 +20,12 @@
 
 // -----------------------------------------------------------------------------
 // Forward declarations
+
+namespace satemu {
+
+struct Saturn;
+
+} // namespace satemu
 
 namespace satemu::scu {
 
@@ -45,11 +52,9 @@ class CDBlock {
     static constexpr dbg::Category partLog{rootLog, "PartMgr"};
 
 public:
-    CDBlock(core::Scheduler &scheduler, scu::SCU &scu, scsp::SCSP &scsp);
+    CDBlock(sys::System &system, core::Scheduler &scheduler, scu::SCU &scu, scsp::SCSP &scsp);
 
     void Reset(bool hard);
-
-    void SetClockRatios(bool clock352, bool pal);
 
     void LoadDisc(media::Disc &&disc);
     void EjectDisc();
@@ -120,12 +125,16 @@ public:
     }
 
 private:
+    sys::System &m_system;
     scu::SCU &m_SCU;
     scsp::SCSP &m_SCSP;
 
     core::Scheduler &m_scheduler;
     core::EventID m_driveStateUpdateEvent;
     core::EventID m_commandExecEvent;
+
+    friend struct satemu::Saturn;
+    void UpdateClockRatios();
 
     alignas(uint64) std::array<uint16, 4> m_CR;
 

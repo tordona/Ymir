@@ -2,6 +2,8 @@
 
 #include <satemu/core/scheduler.hpp>
 
+#include "system.hpp"
+
 #include <satemu/hw/cdblock/cdblock.hpp>
 #include <satemu/hw/scsp/scsp.hpp>
 #include <satemu/hw/scu/scu.hpp>
@@ -18,6 +20,9 @@ struct Saturn {
 
     void Reset(bool hard);
 
+    void SetVideoStandard(sys::VideoStandard videoStandard);
+    void SetClockSpeed(sys::ClockSpeed clockSpeed);
+
     // -------------------------------------------------------------------------
     // Convenience methods
 
@@ -31,13 +36,18 @@ struct Saturn {
     void RunFrame();
     void Step(); // FIXME: misnomer -- actually steps until next scheduled event
 
-    void SetClockRatios(bool clock352);
-
 private:
     // -------------------------------------------------------------------------
     // Cycle counting
 
     core::Scheduler m_scheduler;
+
+    // -------------------------------------------------------------------------
+    // Global components and state
+
+    sys::System m_system;
+
+    void UpdateClockRatios();
 
 public:
     // -------------------------------------------------------------------------

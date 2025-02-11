@@ -12,8 +12,9 @@
 
 namespace satemu::cdblock {
 
-CDBlock::CDBlock(core::Scheduler &scheduler, scu::SCU &scu, scsp::SCSP &scsp)
-    : m_SCU(scu)
+CDBlock::CDBlock(sys::System &system, core::Scheduler &scheduler, scu::SCU &scu, scsp::SCSP &scsp)
+    : m_system(system)
+    , m_SCU(scu)
     , m_SCSP(scsp)
     , m_scheduler(scheduler) {
 
@@ -50,8 +51,7 @@ void CDBlock::Reset(bool hard) {
 
     m_readyForPeriodicReports = false;
 
-    // TODO: PAL flag
-    SetClockRatios(false, false);
+    UpdateClockRatios();
 
     m_currDriveCycles = 0;
     m_targetDriveCycles = kDriveCyclesNotPlaying;
@@ -102,15 +102,6 @@ void CDBlock::Reset(bool hard) {
     m_processingCommand = false;
 }
 
-void CDBlock::SetClockRatios(bool clock352, bool pal) {
-    const auto &clockRatios = GetClockRatios(clock352, pal);
-
-    // FIXME: audio track playback is too slow with the CD block ratio
-    m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.SCSPNum * 3, clockRatios.SCSPDen);
-    // m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.CDBlockNum * 3, clockRatios.CDBlockDen);
-    m_scheduler.SetEventCountFactor(m_commandExecEvent, clockRatios.CDBlockNum, clockRatios.CDBlockDen);
-}
-
 void CDBlock::LoadDisc(media::Disc &&disc) {
     m_disc.Swap(std::move(disc));
     // TODO: update status
@@ -134,6 +125,15 @@ void CDBlock::OpenTray() {
 
 void CDBlock::CloseTray() {
     // TODO: implement
+}
+
+void CDBlock::UpdateClockRatios() {
+    const auto &clockRatios = m_system.GetClockRatios();
+
+    // FIXME: audio track playback is too slow with the CD block ratio
+    m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.SCSPNum * 3, clockRatios.SCSPDen);
+    // m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.CDBlockNum * 3, clockRatios.CDBlockDen);
+    m_scheduler.SetEventCountFactor(m_commandExecEvent, clockRatios.CDBlockNum, clockRatios.CDBlockDen);
 }
 
 bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 repeatParam) {

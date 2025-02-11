@@ -11,8 +11,8 @@ namespace satemu::smpc::rtc {
 
 static constexpr dbg::Category rootLog{"RTC"};
 
-RTC::RTC() {
-    // TODO(SMPC): RTC offset should be persisted
+RTC::RTC(sys::System &system)
+    : m_system(system) {
     m_offset = 0;
 
     // TODO(SMPC): RTC configuration should be saved to the configuration file
@@ -24,8 +24,6 @@ RTC::RTC() {
 
     m_timestamp = 0;
     m_resetTimestamp = 0;
-
-    SetSysClockRatio(false, false);
 
     Reset(true);
 }
@@ -40,12 +38,6 @@ void RTC::Reset(bool hard) {
     }
 
     m_sysClockCount = 0;
-}
-
-void RTC::SetSysClockRatio(bool clock352, bool pal) {
-    const auto &clockRatios = GetClockRatios(clock352, false);
-    m_sysClockRateNum = clockRatios.RTCNum;
-    m_sysClockRateDen = clockRatios.RTCDen;
 }
 
 void RTC::UpdateSysClock(uint64 sysClock) {
@@ -90,9 +82,15 @@ void RTC::ReadPersistentData(std::ifstream &in) {
     m_timestamp = timestamp;
 }
 
-void RTC::WritePersistentData(std::ofstream &out) {
+void RTC::WritePersistentData(std::ofstream &out) const {
     out.write((const char *)&m_offset, sizeof(m_offset));
     out.write((const char *)&m_timestamp, sizeof(m_timestamp));
+}
+
+void RTC::UpdateClockRatios() {
+    const auto &clockRatios = m_system.GetClockRatios();
+    m_sysClockRateNum = clockRatios.RTCNum;
+    m_sysClockRateDen = clockRatios.RTCDen;
 }
 
 } // namespace satemu::smpc::rtc

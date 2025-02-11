@@ -261,6 +261,7 @@ void App::Impl::RunEmulator() {
     // Main emulator loop
 
     m_saturn.Reset(true);
+    // m_saturn.SetVideoStandard(satemu::sys::VideoStandard::PAL);
 
     auto t = clk::now();
     uint64 frames = 0;
