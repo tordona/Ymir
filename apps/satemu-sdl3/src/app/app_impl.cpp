@@ -429,6 +429,10 @@ void App::Impl::RunEmulator() {
         SDL_RenderClear(renderer);
         SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
         SDL_RenderTexture(renderer, texture, &srcRect, nullptr);
+
+        // SDL_SetRenderDrawColor(renderer, 255, 0, 255, 160);
+        // SDL_RenderDebugText(renderer, 5.f, 5.f, "some text");
+
         SDL_RenderPresent(renderer);
     }
 
