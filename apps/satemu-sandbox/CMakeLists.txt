@@ -20,7 +20,4 @@ if (MSVC)
     set_target_properties(satemu-sandbox PROPERTIES FOLDER "satemu")
 endif ()
 
-## Include the install rules if requested
-if (satemu_INCLUDE_PACKAGING)
-    add_subdirectory(packaging)
-endif ()
+## No packaging for this project as it's meant to be testing grounds
