@@ -6,6 +6,7 @@
 
 #include <span>
 #include <string>
+#include <string_view>
 
 namespace satemu::media {
 
@@ -35,7 +36,7 @@ enum class PeripheralCode : uint16 {
 };
 
 struct SaturnHeader {
-    static constexpr std::string kExpectedHwId = "SEGA SEGASATURN";
+    static constexpr std::string_view kExpectedHwId = "SEGA SEGASATURN";
 
     SaturnHeader() {
         Invalidate();
