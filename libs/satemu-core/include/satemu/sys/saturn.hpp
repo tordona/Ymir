@@ -1,6 +1,7 @@
 #pragma once
 
 #include <satemu/core/scheduler.hpp>
+#include <satemu/debug/debug_probe.hpp>
 
 #include "system.hpp"
 
@@ -13,6 +14,8 @@
 
 #include <satemu/media/disc.hpp>
 
+#include <memory>
+
 namespace satemu {
 
 struct Saturn {
@@ -22,6 +25,15 @@ struct Saturn {
 
     void SetVideoStandard(sys::VideoStandard videoStandard);
     void SetClockSpeed(sys::ClockSpeed clockSpeed);
+
+    template <std::derived_from<debug::IProbe> T, typename... Args>
+    void SetDebugProbe(Args &&...args) {
+        m_debugProbe = std::make_unique<T>(std::forward<Args>(args)...);
+    }
+
+    void ClearDebugProbe() {
+        m_debugProbe.reset();
+    }
 
     // -------------------------------------------------------------------------
     // Convenience methods
@@ -33,6 +45,7 @@ struct Saturn {
     void OpenTray();
     void CloseTray();
 
+    template <bool debug = false>
     void RunFrame();
     void Step(); // FIXME: misnomer -- actually steps until next scheduled event
 
@@ -59,6 +72,12 @@ public:
     smpc::SMPC SMPC;          // SMPC and input devices
     scsp::SCSP SCSP;          // SCSP and MC68EC000 CPU
     cdblock::CDBlock CDBlock; // CD block and media
+
+private:
+    // -------------------------------------------------------------------------
+    // Debugger
+
+    std::unique_ptr<debug::IProbe> m_debugProbe;
 };
 
 } // namespace satemu

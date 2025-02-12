@@ -14,6 +14,20 @@ private:
     satemu::Saturn m_saturn;
 
     void RunEmulator();
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Debugger
+
+    void TestDebug();
+
+    struct AppProbe final : public satemu::debug::IProbe {
+        AppProbe(Impl &app);
+
+        void test() final;
+
+    private:
+        Impl &m_app;
+    };
 };
 
 } // namespace app

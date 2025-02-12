@@ -393,6 +393,8 @@ void App::Impl::RunEmulator() {
         }
     };
 
+    m_saturn.SetDebugProbe<AppProbe>(*this);
+
     while (running) {
         SDL_Event evt{};
         while (SDL_PollEvent(&evt)) {
@@ -403,7 +405,7 @@ void App::Impl::RunEmulator() {
             }
         }
 
-        m_saturn.RunFrame();
+        m_saturn.RunFrame<false>();
 
         ++frames;
         auto t2 = clk::now();
@@ -439,6 +441,18 @@ void App::Impl::RunEmulator() {
 
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
+}
+
+void App::Impl::TestDebug() {
+    fmt::println("App::Impl::TestDebug()");
+}
+
+App::Impl::AppProbe::AppProbe(Impl &app)
+    : m_app(app) {}
+
+void App::Impl::AppProbe::test() {
+    // fmt::println("AppProbe::test()");
+    // m_app.TestDebug();
 }
 
 } // namespace app

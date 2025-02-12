@@ -1,5 +1,7 @@
 #include <satemu/sys/saturn.hpp>
 
+#include <satemu/debug/debug_probe.hpp>
+
 #include <bit>
 
 namespace satemu {
@@ -87,7 +89,14 @@ void Saturn::CloseTray() {
     CDBlock.CloseTray();
 }
 
+template <bool debug>
 void Saturn::RunFrame() {
+    if constexpr (debug) {
+        if (m_debugProbe) {
+            m_debugProbe->test();
+        }
+    }
+
     // Use the last line phase as reference to give some leeway if we overshoot the target cycles
     while (VDP.InLastLinePhase()) {
         Step();
@@ -96,6 +105,9 @@ void Saturn::RunFrame() {
         Step();
     }
 }
+
+template void Saturn::RunFrame<false>();
+template void Saturn::RunFrame<true>();
 
 void Saturn::Step() {
     static constexpr uint64 kMaxStep = 64;
