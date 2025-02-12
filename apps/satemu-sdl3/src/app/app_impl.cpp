@@ -266,6 +266,7 @@ void App::Impl::RunEmulator() {
     auto t = clk::now();
     uint64 frames = 0;
     bool running = true;
+    bool debug = false;
     uint16 &buttons = m_saturn.SMPC.Buttons();
 
     auto setClearButton = [&](uint16 bits, bool pressed) {
@@ -389,11 +390,16 @@ void App::Impl::RunEmulator() {
                 }
             }
             break;
+        case SDL_SCANCODE_F11:
+            if (pressed) {
+                debug = !debug;
+                fmt::println("Debug mode {}", (debug ? "enabled" : "disabled"));
+            }
         default: break;
         }
     };
 
-    m_saturn.SetDebugProbe<AppProbe>(*this);
+    m_saturn.debugProbe.Use<AppProbe>(*this);
 
     while (running) {
         SDL_Event evt{};
@@ -405,7 +411,7 @@ void App::Impl::RunEmulator() {
             }
         }
 
-        m_saturn.RunFrame<false>();
+        m_saturn.RunFrame(debug);
 
         ++frames;
         auto t2 = clk::now();
@@ -451,8 +457,8 @@ App::Impl::AppProbe::AppProbe(Impl &app)
     : m_app(app) {}
 
 void App::Impl::AppProbe::test() {
-    // fmt::println("AppProbe::test()");
-    // m_app.TestDebug();
+    fmt::println("AppProbe::test()");
+    m_app.TestDebug();
 }
 
 } // namespace app

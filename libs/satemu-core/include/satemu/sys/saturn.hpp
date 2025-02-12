@@ -26,15 +26,6 @@ struct Saturn {
     void SetVideoStandard(sys::VideoStandard videoStandard);
     void SetClockSpeed(sys::ClockSpeed clockSpeed);
 
-    template <std::derived_from<debug::IProbe> T, typename... Args>
-    void SetDebugProbe(Args &&...args) {
-        m_debugProbe = std::make_unique<T>(std::forward<Args>(args)...);
-    }
-
-    void ClearDebugProbe() {
-        m_debugProbe.reset();
-    }
-
     // -------------------------------------------------------------------------
     // Convenience methods
 
@@ -45,11 +36,19 @@ struct Saturn {
     void OpenTray();
     void CloseTray();
 
+    void RunFrame(bool debug) {
+        if (debug) {
+            RunFrame<true>();
+        } else {
+            RunFrame<false>();
+        }
+    }
+
+private:
     template <bool debug = false>
     void RunFrame();
     void Step(); // FIXME: misnomer -- actually steps until next scheduled event
 
-private:
     // -------------------------------------------------------------------------
     // Cycle counting
 
@@ -73,11 +72,10 @@ public:
     scsp::SCSP SCSP;          // SCSP and MC68EC000 CPU
     cdblock::CDBlock CDBlock; // CD block and media
 
-private:
     // -------------------------------------------------------------------------
     // Debugger
 
-    std::unique_ptr<debug::IProbe> m_debugProbe;
+    debug::ProbeContext debugProbe;
 };
 
 } // namespace satemu

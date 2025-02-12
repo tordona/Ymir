@@ -91,11 +91,7 @@ void Saturn::CloseTray() {
 
 template <bool debug>
 void Saturn::RunFrame() {
-    if constexpr (debug) {
-        if (m_debugProbe) {
-            m_debugProbe->test();
-        }
-    }
+    debugProbe.test<debug>();
 
     // Use the last line phase as reference to give some leeway if we overshoot the target cycles
     while (VDP.InLastLinePhase()) {
