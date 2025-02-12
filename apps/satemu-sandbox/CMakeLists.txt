@@ -14,6 +14,31 @@ target_link_libraries(satemu-sandbox PRIVATE fmt)
 
 cmrk_copy_runtime_dlls(satemu-sandbox)
 
+## Enable LTO if supported
+include(CheckIPOSupported)
+check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
+
+if(IPO_SUPPORTED)
+    message(STATUS "IPO / LTO supported")
+    if(satemu_ENABLE_IPO)
+        message(STATUS "Enabling IPO / LTO for satemu-sandbox")
+        set_property(TARGET satemu-sandbox PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
+else()
+    message(STATUS "IPO / LTO not supported: ${IPO_ERROR}")
+endif()
+
+## Apply performance options
+if (satemu_AVX2)
+    if (MSVC)
+        target_compile_options(satemu-sandbox PUBLIC "/arch:AVX2")
+    else ()
+        target_compile_options(satemu-sandbox PUBLIC "-mavx2")
+        target_compile_options(satemu-sandbox PUBLIC "-mfma")
+        target_compile_options(satemu-sandbox PUBLIC "-mbmi")
+    endif ()
+endif ()
+
 ## Configure Visual Studio solution
 if (MSVC)
     vs_set_filters(TARGET satemu-sandbox)

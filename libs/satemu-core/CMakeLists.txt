@@ -193,6 +193,16 @@ else()
     message(STATUS "IPO / LTO not supported: ${IPO_ERROR}")
 endif()
 
+## Apply performance options
+if (satemu_AVX2)
+    if (MSVC)
+        target_compile_options(satemu-core PUBLIC "/arch:AVX2")
+    else ()
+        target_compile_options(satemu-core PUBLIC "-mavx2")
+        target_compile_options(satemu-core PUBLIC "-mfma")
+        target_compile_options(satemu-core PUBLIC "-mbmi")
+    endif ()
+endif ()
 
 ## Configure Visual Studio filters
 if (MSVC)

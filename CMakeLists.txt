@@ -14,6 +14,14 @@ string(COMPARE EQUAL "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}" is_top_
 option(satemu_INCLUDE_PACKAGING "Include packaging rules for satemu" "${is_top_level}")
 option(satemu_ENABLE_IPO "Enable IPO / LTO for satemu" ON)
 
+## Performance options
+option(satemu_AVX2 "Enable AVX2 instruction set for satemu" OFF)
+if (satemu_AVX2)
+    message(STATUS "satemu: Using AVX2 instruction set")
+else ()
+    message(STATUS "satemu: Using SSE2 instruction set")
+endif ()
+
 ## C++ language configuration boilerplate
 if (NOT DEFINED CMAKE_CXX_VISIBILITY_PRESET AND
     NOT DEFINED CMAKE_VISIBILITY_INLINES_HIDDEN)
