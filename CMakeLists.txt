@@ -47,5 +47,5 @@ endif ()
 
 ## Configure Visual Studio solution
 if (MSVC)
-    set_property(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}" PROPERTY VS_STARTUP_PROJECT satemu-sandbox)
+    set_property(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}" PROPERTY VS_STARTUP_PROJECT satemu-sdl3)
 endif ()

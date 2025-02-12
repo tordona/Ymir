@@ -30,6 +30,20 @@ generate_export_header(satemu-frontend-base EXPORT_FILE_NAME include/satemu/expo
 target_compile_definitions(satemu-frontend-base PUBLIC "$<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:satemu_frontend_base_STATIC_DEFINE>")
 target_include_directories(satemu-frontend-base PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>")
 
+## Enable LTO if supported
+include(CheckIPOSupported)
+check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
+
+if(IPO_SUPPORTED)
+    message(STATUS "IPO / LTO supported")
+    if(satemu_ENABLE_IPO)
+        message(STATUS "Enabling IPO / LTO for satemu-frontend-base")
+        set_property(TARGET satemu-frontend-base PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
+else()
+    message(STATUS "IPO / LTO not supported: ${IPO_ERROR}")
+endif()
+
 ## Configure Visual Studio filters
 if (MSVC)
     vs_set_filters(TARGET satemu-frontend-base)
