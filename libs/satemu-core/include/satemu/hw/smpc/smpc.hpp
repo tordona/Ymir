@@ -85,6 +85,9 @@ private:
     core::Scheduler &m_scheduler;
     core::EventID m_commandEvent;
 
+    template <bool debug>
+    static void OnCommandEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
+
     // -------------------------------------------------------------------------
     // Persistent data
 
@@ -226,6 +229,7 @@ private:
     // -------------------------------------------------------------------------
     // Commands
 
+    template <bool debug>
     void ProcessCommand();
 
     void MSHON();

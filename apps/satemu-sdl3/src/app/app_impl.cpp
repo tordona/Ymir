@@ -449,16 +449,7 @@ void App::Impl::RunEmulator() {
     SDL_DestroyRenderer(renderer);
 }
 
-void App::Impl::TestDebug() {
-    fmt::println("App::Impl::TestDebug()");
-}
-
 App::Impl::AppProbe::AppProbe(Impl &app)
     : m_app(app) {}
-
-void App::Impl::AppProbe::test() {
-    fmt::println("AppProbe::test()");
-    m_app.TestDebug();
-}
 
 } // namespace app

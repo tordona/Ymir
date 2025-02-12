@@ -91,31 +91,30 @@ void Saturn::CloseTray() {
 
 template <bool debug>
 void Saturn::RunFrame() {
-    debugProbe.test<debug>();
-
     // Use the last line phase as reference to give some leeway if we overshoot the target cycles
     while (VDP.InLastLinePhase()) {
-        Step();
+        Step<debug>();
     }
     while (!VDP.InLastLinePhase()) {
-        Step();
+        Step<debug>();
     }
 }
 
 template void Saturn::RunFrame<false>();
 template void Saturn::RunFrame<true>();
 
+template <bool debug>
 void Saturn::Step() {
     static constexpr uint64 kMaxStep = 64;
 
     const uint64 cycles = std::min<uint64>(m_scheduler.RemainingCount(), kMaxStep);
 
-    SH2.master.Advance(cycles);
+    SH2.master.Advance<debug>(cycles);
     if (SH2.slaveEnabled) {
-        SH2.slave.Advance(cycles);
+        SH2.slave.Advance<debug>(cycles);
     }
-    SCU.Advance(cycles);
-    VDP.Advance(cycles);
+    SCU.Advance<debug>(cycles);
+    VDP.Advance<debug>(cycles);
 
     // SCSP+M68K and CD block are ticked by the scheduler
 
@@ -124,10 +123,10 @@ void Saturn::Step() {
     const uint64 smpcCycleCount = m_smpcCycles / 17640;
     if (smpcCycleCount > 0) {
         m_smpcCycles -= smpcCycleCount * 17640;
-        SMPC.Advance(smpcCycleCount);
+        SMPC.Advance<debug>(smpcCycleCount);
     }*/
 
-    m_scheduler.Advance(cycles);
+    m_scheduler.Advance<debug>(cycles);
 }
 
 void Saturn::UpdateClockRatios() {

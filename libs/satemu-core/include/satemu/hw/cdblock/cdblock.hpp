@@ -133,6 +133,12 @@ private:
     core::EventID m_driveStateUpdateEvent;
     core::EventID m_commandExecEvent;
 
+    template <bool debug>
+    static void OnDriveStateUpdateEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
+
+    template <bool debug>
+    static void OnCommandExecEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
+
     friend struct satemu::Saturn;
     void UpdateClockRatios();
 
@@ -193,6 +199,7 @@ private:
     bool SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 repeatParam);
     bool SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber);
 
+    template <bool debug>
     void ProcessDriveState();
 
     void ProcessDriveStatePlay();
@@ -348,6 +355,7 @@ private:
 
     void SetupCommand();
 
+    template <bool debug>
     void ProcessCommand();
 
     // General CD block operations

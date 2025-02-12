@@ -45,8 +45,10 @@ struct Saturn {
     }
 
 private:
-    template <bool debug = false>
+    template <bool debug>
     void RunFrame();
+
+    template <bool debug>
     void Step(); // FIXME: misnomer -- actually steps until next scheduled event
 
     // -------------------------------------------------------------------------

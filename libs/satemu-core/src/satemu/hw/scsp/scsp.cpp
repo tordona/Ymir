@@ -18,12 +18,8 @@ SCSP::SCSP(sys::System &system, core::Scheduler &scheduler, scu::SCU &scu)
     , m_scheduler(scheduler)
     , m_dsp(m_WRAM.data()) {
 
-    m_sampleTickEvent = m_scheduler.RegisterEvent(
-        core::events::SCSPSample, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
-            auto &scsp = *static_cast<SCSP *>(userContext);
-            scsp.Tick();
-            eventContext.RescheduleFromNow(kCyclesPerSample);
-        });
+    m_sampleTickEvent =
+        m_scheduler.RegisterEvent(core::events::SCSPSample, this, OnSampleTickEvent<false>, OnSampleTickEvent<true>);
 
     for (uint32 i = 0; i < 32; i++) {
         m_slots[i].index = i;
@@ -162,6 +158,13 @@ void SCSP::SetCPUEnabled(bool enabled) {
         }
         m_m68kEnabled = enabled;
     }
+}
+
+template <bool debug>
+void SCSP::OnSampleTickEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+    auto &scsp = *static_cast<SCSP *>(userContext);
+    scsp.Tick<debug>();
+    eventContext.RescheduleFromNow(kCyclesPerSample);
 }
 
 void SCSP::UpdateClockRatios() {
@@ -307,6 +310,7 @@ void SCSP::ExecuteDMA() {
     }
 }
 
+template <bool debug>
 FORCE_INLINE void SCSP::Tick() {
     RunM68K();
     GenerateSample();

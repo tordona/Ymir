@@ -17,13 +17,8 @@ VDP::VDP(core::Scheduler &scheduler, scu::SCU &scu)
     : m_SCU(scu)
     , m_scheduler(scheduler) {
 
-    m_phaseUpdateEvent = scheduler.RegisterEvent(
-        core::events::VDPPhase, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
-            auto &vdp = *static_cast<VDP *>(userContext);
-            vdp.UpdatePhase();
-            const uint64 cycles = vdp.GetPhaseCycles();
-            eventContext.RescheduleFromPrevious(cycles);
-        });
+    m_phaseUpdateEvent =
+        scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent<false>, OnPhaseUpdateEvent<true>);
 
     m_framebuffer = nullptr;
 
@@ -84,11 +79,15 @@ void VDP::Reset(bool hard) {
     m_scheduler.ScheduleFromNow(m_phaseUpdateEvent, GetPhaseCycles());
 }
 
+template <bool debug>
 void VDP::Advance(uint64 cycles) {
     for (uint64 cy = 0; cy < cycles; cy++) {
         VDP1ProcessCommands();
     }
 }
+
+template void VDP::Advance<false>(uint64 cycles);
+template void VDP::Advance<true>(uint64 cycles);
 
 void VDP::DumpVDP1VRAM(std::ostream &out) const {
     out.write((const char *)m_VRAM1.data(), m_VRAM1.size());
@@ -107,6 +106,14 @@ void VDP::DumpVDP1Framebuffers(std::ostream &out) const {
     out.write((const char *)m_spriteFB[m_drawFB ^ 1].data(), m_spriteFB[m_drawFB ^ 1].size());
 }
 
+template <bool debug>
+void VDP::OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+    auto &vdp = *static_cast<VDP *>(userContext);
+    vdp.UpdatePhase<debug>();
+    const uint64 cycles = vdp.GetPhaseCycles();
+    eventContext.RescheduleFromPrevious(cycles);
+}
+
 void VDP::SetVideoStandard(sys::VideoStandard videoStandard) {
     const bool pal = videoStandard == sys::VideoStandard::PAL;
     if (m_VDP2.TVSTAT.PAL != pal) {
@@ -115,6 +122,7 @@ void VDP::SetVideoStandard(sys::VideoStandard videoStandard) {
     }
 }
 
+template <bool debug>
 FORCE_INLINE void VDP::UpdatePhase() {
     auto nextPhase = static_cast<uint32>(m_HPhase) + 1;
     if (nextPhase == m_HTimings.size()) {
@@ -1754,7 +1762,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 colorMode) {
             const CharacterMode chmEnum = static_cast<CharacterMode>(chm);
             const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = clm <= 2 ? clm : 2;
-            arr[chm][fcc][cf][clm] = &VDP::VDP2DrawRotationScrollBG<bgIndex == 0, chmEnum, fcc, cfEnum, colorMode>;
+            arr[chm][fcc][cf][clm] = &VDP::VDP2DrawRotationScrollBG < bgIndex == 0, chmEnum, fcc, cfEnum, colorMode > ;
         });
 
         return arr;
@@ -1771,7 +1779,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 colorMode) {
 
             const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = cm <= 2 ? cm : 2;
-            arr[cf][cm] = &VDP::VDP2DrawRotationBitmapBG<bgIndex == 0, cfEnum, colorMode>;
+            arr[cf][cm] = &VDP::VDP2DrawRotationBitmapBG < bgIndex == 0, cfEnum, colorMode > ;
         });
 
         return arr;

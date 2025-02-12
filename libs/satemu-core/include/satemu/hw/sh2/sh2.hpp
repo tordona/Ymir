@@ -101,6 +101,7 @@ public:
 
     void Reset(bool hard);
 
+    template <bool debug>
     void Advance(uint64 cycles);
 
     void SetExternalInterrupt(uint8 level, uint8 vecNum);

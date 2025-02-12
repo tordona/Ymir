@@ -220,6 +220,7 @@ void SH2::Reset(bool hard) {
     m_tracer.Reset();
 }
 
+template <bool debug>
 FLATTEN void SH2::Advance(uint64 cycles) {
     // TODO: proper cycle counting
     for (uint64 cy = 0; cy < cycles; cy++) {
@@ -252,6 +253,9 @@ FLATTEN void SH2::Advance(uint64 cycles) {
         // dbg_println("");
     }
 }
+
+template void SH2::Advance<false>(uint64 cycles);
+template void SH2::Advance<true>(uint64 cycles);
 
 void SH2::SetExternalInterrupt(uint8 level, uint8 vector) {
     assert(level < 16);

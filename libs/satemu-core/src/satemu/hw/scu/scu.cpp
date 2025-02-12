@@ -33,11 +33,7 @@ SCU::SCU(core::Scheduler &scheduler, vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::C
     , m_SH2(sh2)
     , m_scheduler(scheduler) {
 
-    m_timer1Event = m_scheduler.RegisterEvent(
-        core::events::SCUTimer1, this, [](core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
-            auto &scu = *static_cast<SCU *>(userContext);
-            scu.TickTimer1();
-        });
+    m_timer1Event = m_scheduler.RegisterEvent(core::events::SCUTimer1, this, OnTimer1Event<false>, OnTimer1Event<true>);
 
     // HACK: should be in its own class, shared with internal backup RAM
     static constexpr std::size_t kExternalBackupRAMSize = 8_MiB;
@@ -101,11 +97,15 @@ void SCU::Reset(bool hard) {
     m_WRAMSizeSelect = false;
 }
 
+template <bool debug>
 void SCU::Advance(uint64 cycles) {
     // RunDMA(cycles);
 
     RunDSP(cycles);
 }
+
+template void SCU::Advance<false>(uint64 cycles);
+template void SCU::Advance<true>(uint64 cycles);
 
 void SCU::TriggerVBlankIN() {
     m_intrStatus.VDP2_VBlankIN = 1;
@@ -225,6 +225,12 @@ void SCU::DumpDSPRegs(std::ostream &out) {
     write(m_dspState.dmaReadAddr);
     write(m_dspState.dmaWriteAddr);
     write(m_dspState.dmaAddrInc);
+}
+
+template <bool debug>
+void SCU::OnTimer1Event(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+    auto &scu = *static_cast<SCU *>(userContext);
+    scu.TickTimer1<debug>();
 }
 
 void SCU::RunDMA() {
@@ -997,6 +1003,7 @@ FORCE_INLINE void SCU::DSPCmd_Special_End(uint32 command) {
     }
 }
 
+template <bool debug>
 FORCE_INLINE void SCU::TickTimer1() {
     if (m_timer1Enable && (!m_timer1Mode || m_timer0Counter == m_timer0Compare)) {
         TriggerTimer1();

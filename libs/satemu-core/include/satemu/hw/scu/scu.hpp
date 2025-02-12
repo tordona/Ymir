@@ -75,6 +75,7 @@ public:
 
     void Reset(bool hard);
 
+    template <bool debug>
     void Advance(uint64 cycles);
 
     template <mem_primitive T>
@@ -140,6 +141,9 @@ private:
 
     core::Scheduler &m_scheduler;
     core::EventID m_timer1Event;
+
+    template <bool debug>
+    static void OnTimer1Event(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
 
     // TODO: don't hardcode this
     // TODO: use an abstraction
@@ -577,6 +581,7 @@ private:
     bool m_timer1Enable;
     bool m_timer1Mode;
 
+    template <bool debug>
     void TickTimer1();
 
     // -------------------------------------------------------------------------

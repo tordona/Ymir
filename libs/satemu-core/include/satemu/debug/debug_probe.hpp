@@ -9,8 +9,6 @@ namespace satemu::debug {
 // Interface for debug probes.
 struct IProbe {
     virtual ~IProbe() = default;
-
-    virtual void test() = 0;
 };
 
 // Holds a probe and simplifies probe usage.
@@ -39,7 +37,7 @@ struct ProbeContext {
     void test() {
         if constexpr (debug) {
             if (m_probe) {
-                return m_probe->test();
+                // return m_probe->test();
             }
         }
     }

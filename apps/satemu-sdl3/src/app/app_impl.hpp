@@ -18,12 +18,8 @@ private:
     // -----------------------------------------------------------------------------------------------------------------
     // Debugger
 
-    void TestDebug();
-
     struct AppProbe final : public satemu::debug::IProbe {
         AppProbe(Impl &app);
-
-        void test() final;
 
     private:
         Impl &m_app;
