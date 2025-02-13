@@ -8,6 +8,7 @@
 #include <satemu/hw/smpc/smpc.hpp>
 
 #include <satemu/util/data_ops.hpp>
+#include <satemu/util/unreachable.hpp>
 
 #include <mio/mmap.hpp> // HACK: should be used in a binary reader/writer object
 
@@ -61,7 +62,33 @@ namespace satemu::sh2 {
 class SH2Bus {
     static constexpr dbg::Category rootLog{"SH2Bus"};
 
+    static constexpr uint32 kAddressBits = 27;
+    static constexpr uint32 kAddressMask = (1u << kAddressBits) - 1;
+    static constexpr uint32 kPageGranularityBits = 16;
+    static constexpr uint32 kPageMask = (1u << kPageGranularityBits) - 1;
+    static constexpr uint32 kPageCount = (1u << (kAddressBits - kPageGranularityBits));
+
 public:
+    using FnRead8 = uint8 (*)(uint32 address, void *ctx);
+    using FnRead16 = uint16 (*)(uint32 address, void *ctx);
+    using FnRead32 = uint32 (*)(uint32 address, void *ctx);
+
+    using FnWrite8 = void (*)(uint32 address, uint8 value, void *ctx);
+    using FnWrite16 = void (*)(uint32 address, uint16 value, void *ctx);
+    using FnWrite32 = void (*)(uint32 address, uint32 value, void *ctx);
+
+    struct MemoryRegionEntry {
+        void *ctx = nullptr;
+
+        FnRead8 read8 = [](uint32, void *) -> uint8 { return 0; };
+        FnRead16 read16 = [](uint32, void *) -> uint16 { return 0; };
+        FnRead32 read32 = [](uint32, void *) -> uint32 { return 0; };
+
+        FnWrite8 write8 = [](uint32, uint8, void *) {};
+        FnWrite16 write16 = [](uint32, uint16, void *) {};
+        FnWrite32 write32 = [](uint32, uint32, void *) {};
+    };
+
     SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu, smpc::SMPC &smpc);
 
     void Reset(bool hard);
@@ -71,56 +98,42 @@ public:
     void DumpWRAMLow(std::ostream &out) const;
     void DumpWRAMHigh(std::ostream &out) const;
 
+    void MapMemory(uint32 start, uint32 end, MemoryRegionEntry entry);
+    void UnmapMemory(uint32 start, uint32 end);
+
     template <mem_primitive T>
     T Read(uint32 address) {
-        address &= ~(sizeof(T) - 1);
+        address &= kAddressMask & ~(sizeof(T) - 1);
 
-        using namespace util;
+        const MemoryRegionEntry &entry = m_pages[address >> kPageGranularityBits];
 
-        /****/ if (AddressInRange<0x000'0000, 0x00F'FFFF>(address)) {
-            return ReadBE<T>(&IPL[address & 0x7FFFF]);
-        } else if (AddressInRange<0x010'0000, 0x017'FFFF>(address)) {
-            return m_SMPC.Read((address & 0x7F) | 1);
-        } else if (AddressInRange<0x018'0000, 0x01F'FFFF>(address)) {
-            return ReadBE<T>((const uint8 *)&internalBackupRAM.data()[address & kInternalBackupRAMSize - 1]);
-        } else if (AddressInRange<0x020'0000, 0x02F'FFFF>(address)) {
-            return ReadBE<T>(&WRAMLow[address & 0xFFFFF]);
-        } else if (AddressInRange<0x200'0000, 0x5FF'FFFF>(address)) {
-            return m_SCU.Read<T>(address);
-        } else if (AddressInRange<0x600'0000, 0x7FF'FFFF>(address)) {
-            return ReadBE<T>(&WRAMHigh[address & 0xFFFFF]);
+        if constexpr (std::is_same_v<T, uint8>) {
+            return entry.read8(address, entry.ctx);
+        } else if constexpr (std::is_same_v<T, uint16>) {
+            return entry.read16(address, entry.ctx);
+        } else if constexpr (std::is_same_v<T, uint32>) {
+            return entry.read32(address, entry.ctx);
         } else {
-            rootLog.trace("unhandled {}-bit SH2 bus read from {:08X}", sizeof(T) * 8, address);
-            return 0;
+            // should never happen
+            util::unreachable();
         }
     }
 
     template <mem_primitive T>
     void Write(uint32 address, T value) {
-        address &= ~(sizeof(T) - 1);
+        address &= kAddressMask & ~(sizeof(T) - 1);
 
-        using namespace util;
+        const MemoryRegionEntry &entry = m_pages[address >> kPageGranularityBits];
 
-        /****/ if (AddressInRange<0x010'0000, 0x017'FFFF>(address)) {
-            m_SMPC.Write((address & 0x7F) | 1, value);
-        } else if (AddressInRange<0x018'0000, 0x01F'FFFF>(address)) {
-            WriteBE<T>((uint8 *)&internalBackupRAM.data()[address & 0xFFFF], value);
-        } else if (AddressInRange<0x020'0000, 0x02F'FFFF>(address)) {
-            WriteBE<T>(&WRAMLow[address & 0xFFFFF], value);
-        } else if (AddressInRange<0x100'0000, 0x17F'FFFF>(address)) {
-            if constexpr (std::is_same_v<T, uint16>) {
-                WriteMINIT(value);
-            }
-        } else if (AddressInRange<0x180'0000, 0x1FF'FFFF>(address)) {
-            if constexpr (std::is_same_v<T, uint16>) {
-                WriteSINIT(value);
-            }
-        } else if (AddressInRange<0x200'0000, 0x5FF'FFFF>(address)) {
-            m_SCU.Write<T>(address, value);
-        } else if (AddressInRange<0x600'0000, 0x7FF'FFFF>(address)) {
-            WriteBE<T>(&WRAMHigh[address & 0xFFFFF], value);
+        if constexpr (std::is_same_v<T, uint8>) {
+            entry.write8(address, value, entry.ctx);
+        } else if constexpr (std::is_same_v<T, uint16>) {
+            entry.write16(address, value, entry.ctx);
+        } else if constexpr (std::is_same_v<T, uint32>) {
+            entry.write32(address, value, entry.ctx);
         } else {
-            rootLog.trace("unhandled {}-bit SH2 bus write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+            // should never happen
+            util::unreachable();
         }
     }
 
@@ -141,6 +154,8 @@ private:
     SH2 &m_slaveSH2;
     scu::SCU &m_SCU;
     smpc::SMPC &m_SMPC;
+
+    std::array<MemoryRegionEntry, kPageCount> m_pages;
 
     void WriteMINIT(uint16 value);
     void WriteSINIT(uint16 value);

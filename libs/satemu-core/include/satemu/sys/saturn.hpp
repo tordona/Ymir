@@ -53,6 +53,7 @@ private:
 
     // -------------------------------------------------------------------------
     // Cycle counting
+    // NOTE: Scheduler must be initialized before other components as they use it to register events
 
     core::Scheduler m_scheduler;
 
