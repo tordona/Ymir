@@ -26,11 +26,8 @@ static Bus GetBus(uint32 address) {
     }
 }
 
-SCU::SCU(core::Scheduler &scheduler, vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2Block &sh2)
-    : m_VDP(vdp)
-    , m_SCSP(scsp)
-    , m_CDBlock(cdblock)
-    , m_SH2(sh2)
+SCU::SCU(core::Scheduler &scheduler, sh2::SH2Block &sh2)
+    : m_SH2(sh2)
     , m_scheduler(scheduler) {
 
     m_timer1Event = m_scheduler.RegisterEvent(core::events::SCUTimer1, this, OnTimer1Event<false>, OnTimer1Event<true>);
@@ -66,70 +63,6 @@ SCU::SCU(core::Scheduler &scheduler, vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::C
     std::error_code err{};
     m_externalBackupRAM = mio::make_mmap_sink(bupRAMPath.string(), err);
     // TODO: handle error
-
-    sh2.bus.MapMemory(0x200'0000, 0x58F'FFFF,
-                      {
-                          .ctx = this,
-                          .read8 = [](uint32 address, void *ctx) -> uint8 {
-                              return static_cast<scu::SCU *>(ctx)->ReadABus<uint8>(address);
-                          },
-                          .read16 = [](uint32 address, void *ctx) -> uint16 {
-                              return static_cast<scu::SCU *>(ctx)->ReadABus<uint16>(address);
-                          },
-                          .read32 = [](uint32 address, void *ctx) -> uint32 {
-                              return static_cast<scu::SCU *>(ctx)->ReadABus<uint32>(address);
-                          },
-                          .write8 = [](uint32 address, uint8 value,
-                                       void *ctx) { static_cast<scu::SCU *>(ctx)->WriteABus<uint8>(address, value); },
-                          .write16 = [](uint32 address, uint16 value,
-                                        void *ctx) { static_cast<scu::SCU *>(ctx)->WriteABus<uint16>(address, value); },
-                          .write32 = [](uint32 address, uint32 value,
-                                        void *ctx) { static_cast<scu::SCU *>(ctx)->WriteABus<uint32>(address, value); },
-                      });
-
-    sh2.bus.MapMemory(0x5A0'0000, 0x5FB'FFFF,
-                      {
-                          .ctx = this,
-                          .read8 = [](uint32 address, void *ctx) -> uint8 {
-                              return static_cast<scu::SCU *>(ctx)->ReadBBus<uint8>(address);
-                          },
-                          .read16 = [](uint32 address, void *ctx) -> uint16 {
-                              return static_cast<scu::SCU *>(ctx)->ReadBBus<uint16>(address);
-                          },
-                          .read32 = [](uint32 address, void *ctx) -> uint32 {
-                              return static_cast<scu::SCU *>(ctx)->ReadBBus<uint32>(address);
-                          },
-                          .write8 = [](uint32 address, uint8 value,
-                                       void *ctx) { static_cast<scu::SCU *>(ctx)->WriteBBus<uint8>(address, value); },
-                          .write16 = [](uint32 address, uint16 value,
-                                        void *ctx) { static_cast<scu::SCU *>(ctx)->WriteBBus<uint16>(address, value); },
-                          .write32 = [](uint32 address, uint32 value,
-                                        void *ctx) { static_cast<scu::SCU *>(ctx)->WriteBBus<uint32>(address, value); },
-                      });
-
-    // TODO: 0x5FC'0000..0x5FD'FFFF   -                 Reads 0x000E0000
-    // TODO: 0x5FF'0000..0x5FF'FFFF   0x100             Unknown registers
-
-    sh2.bus.MapMemory(
-        0x5FE'0000, 0x5FE'FFFF,
-        {
-            .ctx = this,
-            .read8 = [](uint32 address, void *ctx) -> uint8 {
-                return static_cast<scu::SCU *>(ctx)->ReadReg<uint8>(address & 0xFF);
-            },
-            .read16 = [](uint32 address, void *ctx) -> uint16 {
-                return static_cast<scu::SCU *>(ctx)->ReadReg<uint16>(address & 0xFF);
-            },
-            .read32 = [](uint32 address, void *ctx) -> uint32 {
-                return static_cast<scu::SCU *>(ctx)->ReadReg<uint32>(address & 0xFF);
-            },
-            .write8 = [](uint32 address, uint8 value,
-                         void *ctx) { static_cast<scu::SCU *>(ctx)->WriteRegByte(address & 0xFF, value); },
-            .write16 = [](uint32 address, uint16 value,
-                          void *ctx) { static_cast<scu::SCU *>(ctx)->WriteRegWord(address & 0xFF, value); },
-            .write32 = [](uint32 address, uint32 value,
-                          void *ctx) { static_cast<scu::SCU *>(ctx)->WriteRegLong(address & 0xFF, value); },
-        });
 
     Reset(true);
 }
@@ -295,6 +228,115 @@ template <bool debug>
 void SCU::OnTimer1Event(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
     auto &scu = *static_cast<SCU *>(userContext);
     scu.TickTimer1<debug>();
+}
+
+void SCU::MapMemory(sh2::SH2Bus &bus) {
+    // A-Bus CS0 and CS1 - Cartridge
+    // TODO: let the cartridge map itself
+    bus.MapMemory(0x200'0000, 0x4FF'FFFF,
+                  {
+                      .ctx = this,
+                      .read8 = [](uint32 address, void *ctx) -> uint8 {
+                          return static_cast<SCU *>(ctx)->ReadCartridge<uint8>(address);
+                      },
+                      .read16 = [](uint32 address, void *ctx) -> uint16 {
+                          return static_cast<SCU *>(ctx)->ReadCartridge<uint16>(address);
+                      },
+                      .read32 = [](uint32 address, void *ctx) -> uint32 {
+                          return static_cast<SCU *>(ctx)->ReadCartridge<uint32>(address);
+                      },
+                      .write8 = [](uint32 address, uint8 value,
+                                   void *ctx) { static_cast<SCU *>(ctx)->WriteCartridge<uint8>(address, value); },
+                      .write16 = [](uint32 address, uint16 value,
+                                    void *ctx) { static_cast<SCU *>(ctx)->WriteCartridge<uint16>(address, value); },
+                      .write32 = [](uint32 address, uint32 value,
+                                    void *ctx) { static_cast<SCU *>(ctx)->WriteCartridge<uint32>(address, value); },
+                  });
+
+    // A-Bus CS2 - 0x580'0000..0x58F'FFFF
+    // CD block maps itself here
+
+    // B-Bus - 0x5A0'0000..0x5FB'FFFF
+    // VDP and SCSP map themselves here
+
+    // TODO: 0x5FC'0000..0x5FD'FFFF - reads 0x000E0000
+
+    // SCU registers
+    bus.MapMemory(0x5FE'0000, 0x5FE'FFFF,
+                  {
+                      .ctx = this,
+                      .read8 = [](uint32 address, void *ctx) -> uint8 {
+                          return static_cast<SCU *>(ctx)->ReadReg<uint8>(address & 0xFF);
+                      },
+                      .read16 = [](uint32 address, void *ctx) -> uint16 {
+                          return static_cast<SCU *>(ctx)->ReadReg<uint16>(address & 0xFF);
+                      },
+                      .read32 = [](uint32 address, void *ctx) -> uint32 {
+                          return static_cast<SCU *>(ctx)->ReadReg<uint32>(address & 0xFF);
+                      },
+                      .write8 = [](uint32 address, uint8 value,
+                                   void *ctx) { static_cast<SCU *>(ctx)->WriteRegByte(address & 0xFF, value); },
+                      .write16 = [](uint32 address, uint16 value,
+                                    void *ctx) { static_cast<SCU *>(ctx)->WriteRegWord(address & 0xFF, value); },
+                      .write32 = [](uint32 address, uint32 value,
+                                    void *ctx) { static_cast<SCU *>(ctx)->WriteRegLong(address & 0xFF, value); },
+                  });
+
+    // TODO: 0x5FF'0000..0x5FF'FFFF - Unknown registers
+}
+
+template <mem_primitive T>
+T SCU::ReadCartridge(uint32 address) {
+    if constexpr (std::is_same_v<T, uint32>) {
+        // 32-bit reads are split into two 16-bit reads
+        uint32 value = ReadCartridge<uint16>(address + 0) << 16u;
+        value |= ReadCartridge<uint16>(address + 2) << 0u;
+        return value;
+    }
+
+    // HACK: emulate 32 Mbit backup RAM cartridge
+    if (address >= 0x400'0000) {
+        if (address >= 0x4FF'FFFC) {
+            // Return ID for 32 Mbit Backup RAM cartridge
+            if constexpr (std::is_same_v<T, uint8>) {
+                if ((address & 1) == 0) {
+                    return 0xFF;
+                } else {
+                    return 0x24;
+                }
+            } else {
+                return 0xFF24;
+            }
+        }
+        // TODO: shift address right by 1; insert FFs as needed on return value
+        return util::ReadBE<T>((const uint8 *)&m_externalBackupRAM[address & 0x7FFFFF]);
+    }
+
+    regsLog.trace("Unhandled {}-bit cartridge port read from {:05X}", sizeof(T) * 8, address);
+    return 0xFF;
+}
+
+template <mem_primitive T>
+void SCU::WriteCartridge(uint32 address, T value) {
+    if constexpr (std::is_same_v<T, uint32>) {
+        // 32-bit writes are split into two 16-bit writes
+        WriteCartridge<uint16>(address + 0, value >> 16u);
+        WriteCartridge<uint16>(address + 2, value >> 0u);
+    } else if (std::is_same_v<T, uint8> && address == 0x210'0001) [[unlikely]] {
+        // mednafen debug port
+        if (value == '\n') {
+            debugLog.debug("{}", m_debugOutput);
+            m_debugOutput.clear();
+        } else if (value != '\r') {
+            m_debugOutput.push_back(value);
+        }
+    } else if (address >= 0x400'0000) {
+        // HACK: emulate 32 Mbit backup RAM cartridge
+        // TODO: shift address right by 1; write least significant byte of value on 16-bit writes
+        util::WriteBE<T>((uint8 *)&m_externalBackupRAM[address & 0x7FFFFF], value);
+    } else {
+        regsLog.trace("Unhandled {}-bit cartridge port write to {:05X} = {:X}", sizeof(T) * 8, address, value);
+    }
 }
 
 void SCU::RunDMA() {
@@ -628,11 +670,12 @@ void SCU::RunDSPDMA(uint64 cycles) {
             const uint32 value = useDataRAM ? m_dspState.dataRAM[ctIndex][ctAddr] : m_dspState.programRAM[i & 0xFF];
             if (bus == Bus::ABus) {
                 // A-Bus -> one 32-bit write
-                WriteABus<uint32>(addrD0, value);
+                m_SH2.bus.Write<uint32>(addrD0, value);
                 addrD0 += m_dspState.dmaAddrInc;
             } else if (bus == Bus::BBus) {
                 // B-Bus -> two 16-bit writes
-                WriteBBus<uint32>(addrD0, value);
+                m_SH2.bus.Write<uint16>(addrD0 + 0, value >> 16u);
+                m_SH2.bus.Write<uint16>(addrD0 + 2, value >> 0u);
                 addrD0 += m_dspState.dmaAddrInc * 2;
             } else if (bus == Bus::WRAM) {
                 // WRAM -> one 32-bit write
@@ -644,11 +687,12 @@ void SCU::RunDSPDMA(uint64 cycles) {
             uint32 value = 0;
             if (bus == Bus::ABus) {
                 // A-Bus -> one 32-bit read
-                value = ReadABus<uint32>(addrD0);
+                value = m_SH2.bus.Read<uint32>(addrD0);
                 addrD0 += m_dspState.dmaAddrInc;
             } else if (bus == Bus::BBus) {
                 // B-Bus -> two 16-bit reads
-                value = ReadBBus<uint32>(addrD0);
+                value = m_SH2.bus.Read<uint16>(addrD0 + 0) << 16u;
+                value |= m_SH2.bus.Read<uint16>(addrD0 + 2) << 0u;
                 addrD0 += 4;
             } else if (bus == Bus::WRAM) {
                 // WRAM -> one 32-bit read

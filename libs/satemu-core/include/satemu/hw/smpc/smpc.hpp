@@ -19,6 +19,12 @@ struct Saturn;
 
 } // namespace satemu
 
+namespace satemu::sh2 {
+
+struct SH2Bus;
+
+} // namespace satemu::sh2
+
 // -----------------------------------------------------------------------------
 
 namespace satemu::smpc {
@@ -32,9 +38,6 @@ public:
     ~SMPC();
 
     void Reset(bool hard);
-
-    uint8 Read(uint32 address);
-    void Write(uint32 address, uint8 value);
 
     void SetResetButtonState(bool pressed) {
         bool prevState = m_resetState;
@@ -87,6 +90,15 @@ private:
 
     template <bool debug>
     static void OnCommandEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
+
+    // -------------------------------------------------------------------------
+    // Memory accessors
+
+    friend struct ::satemu::Saturn;
+    void MapMemory(sh2::SH2Bus &bus);
+
+    uint8 Read(uint32 address);
+    void Write(uint32 address, uint8 value);
 
     // -------------------------------------------------------------------------
     // Persistent data

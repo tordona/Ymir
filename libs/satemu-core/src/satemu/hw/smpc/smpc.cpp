@@ -68,6 +68,40 @@ void SMPC::Reset(bool hard) {
     m_emittedPort1Status = false;
 }
 
+void SMPC::UpdateResetNMI() {
+    if (!m_resetDisable && m_resetState) {
+        m_saturn.SH2.master.SetNMI();
+    }
+}
+
+template <bool debug>
+void SMPC::OnCommandEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+    auto &smpc = *static_cast<SMPC *>(userContext);
+    smpc.ProcessCommand<debug>();
+}
+
+void SMPC::MapMemory(sh2::SH2Bus &bus) {
+    bus.MapMemory(0x010'0000, 0x017'FFFF,
+                  {
+                      .ctx = this,
+                      .read8 = [](uint32 address, void *ctx) -> uint8 {
+                          return static_cast<SMPC *>(ctx)->Read((address & 0x7F) | 1);
+                      },
+                      .read16 = [](uint32 address, void *ctx) -> uint16 {
+                          return static_cast<SMPC *>(ctx)->Read((address & 0x7F) | 1);
+                      },
+                      .read32 = [](uint32 address, void *ctx) -> uint32 {
+                          return static_cast<SMPC *>(ctx)->Read((address & 0x7F) | 1);
+                      },
+                      .write8 = [](uint32 address, uint8 value,
+                                   void *ctx) { static_cast<SMPC *>(ctx)->Write((address & 0x7F) | 1, value); },
+                      .write16 = [](uint32 address, uint16 value,
+                                    void *ctx) { static_cast<SMPC *>(ctx)->Write((address & 0x7F) | 1, value); },
+                      .write32 = [](uint32 address, uint32 value,
+                                    void *ctx) { static_cast<SMPC *>(ctx)->Write((address & 0x7F) | 1, value); },
+                  });
+}
+
 uint8 SMPC::Read(uint32 address) {
     switch (address) {
     case 0x21 ... 0x5F: return ReadOREG((address - 0x20) >> 1);
@@ -112,18 +146,6 @@ void SMPC::Write(uint32 address, uint8 value) {
     case 0x7F: WriteEXLE(value); break;
     default: regsLog.debug("unhandled SMPC write to {:02X} = {:02X}", address, value); break;
     }
-}
-
-void SMPC::UpdateResetNMI() {
-    if (!m_resetDisable && m_resetState) {
-        m_saturn.SH2.master.SetNMI();
-    }
-}
-
-template <bool debug>
-void SMPC::OnCommandEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
-    auto &smpc = *static_cast<SMPC *>(userContext);
-    smpc.ProcessCommand<debug>();
 }
 
 void SMPC::ReadPersistentData() {

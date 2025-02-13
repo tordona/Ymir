@@ -1,6 +1,7 @@
 #include <satemu/hw/scsp/scsp.hpp>
 
 #include <satemu/hw/scu/scu.hpp>
+#include <satemu/hw/sh2/sh2_bus.hpp>
 
 #include <satemu/sys/clocks.hpp>
 
@@ -170,6 +171,60 @@ void SCSP::OnSampleTickEvent(core::EventContext &eventContext, void *userContext
 void SCSP::UpdateClockRatios() {
     const auto &clockRatios = m_system.GetClockRatios();
     m_scheduler.SetEventCountFactor(m_sampleTickEvent, clockRatios.SCSPNum, clockRatios.SCSPDen);
+}
+
+void SCSP::MapMemory(sh2::SH2Bus &bus) {
+    // WRAM
+    bus.MapMemory(0x5A0'0000, 0x5AF'FFFF,
+                  {
+                      .ctx = this,
+                      .read8 = [](uint32 address, void *ctx) -> uint8 {
+                          return static_cast<SCSP *>(ctx)->ReadWRAM<uint8>(address);
+                      },
+                      .read16 = [](uint32 address, void *ctx) -> uint16 {
+                          return static_cast<SCSP *>(ctx)->ReadWRAM<uint16>(address);
+                      },
+                      .read32 = [](uint32 address, void *ctx) -> uint32 {
+                          uint32 value = static_cast<SCSP *>(ctx)->ReadWRAM<uint16>(address + 0) << 16u;
+                          value |= static_cast<SCSP *>(ctx)->ReadWRAM<uint16>(address + 2) << 0u;
+                          return value;
+                      },
+                      .write8 = [](uint32 address, uint8 value,
+                                   void *ctx) { static_cast<SCSP *>(ctx)->WriteWRAM<uint8>(address, value); },
+                      .write16 = [](uint32 address, uint16 value,
+                                    void *ctx) { static_cast<SCSP *>(ctx)->WriteWRAM<uint16>(address, value); },
+                      .write32 =
+                          [](uint32 address, uint32 value, void *ctx) {
+                              static_cast<SCSP *>(ctx)->WriteWRAM<uint16>(address + 0, value >> 16u);
+                              static_cast<SCSP *>(ctx)->WriteWRAM<uint16>(address + 2, value >> 0u);
+                          },
+                  });
+
+    // Registers
+    bus.MapMemory(0x5B0'0000, 0x5BF'FFFF,
+                  {
+                      .ctx = this,
+                      .read8 = [](uint32 address, void *ctx) -> uint8 {
+                          return static_cast<SCSP *>(ctx)->ReadReg<uint8>(address);
+                      },
+                      .read16 = [](uint32 address, void *ctx) -> uint16 {
+                          return static_cast<SCSP *>(ctx)->ReadReg<uint16>(address);
+                      },
+                      .read32 = [](uint32 address, void *ctx) -> uint32 {
+                          uint32 value = static_cast<SCSP *>(ctx)->ReadReg<uint16>(address + 0) << 16u;
+                          value |= static_cast<SCSP *>(ctx)->ReadReg<uint16>(address + 2) << 0u;
+                          return value;
+                      },
+                      .write8 = [](uint32 address, uint8 value,
+                                   void *ctx) { static_cast<SCSP *>(ctx)->WriteReg<uint8>(address, value); },
+                      .write16 = [](uint32 address, uint16 value,
+                                    void *ctx) { static_cast<SCSP *>(ctx)->WriteReg<uint16>(address, value); },
+                      .write32 =
+                          [](uint32 address, uint32 value, void *ctx) {
+                              static_cast<SCSP *>(ctx)->WriteReg<uint16>(address + 0, value >> 16u);
+                              static_cast<SCSP *>(ctx)->WriteReg<uint16>(address + 2, value >> 0u);
+                          },
+                  });
 }
 
 void SCSP::HandleKYONEX() {

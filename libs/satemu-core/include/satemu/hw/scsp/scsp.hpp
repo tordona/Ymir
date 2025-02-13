@@ -31,6 +31,12 @@ struct Saturn;
 
 } // namespace satemu
 
+namespace satemu::sh2 {
+
+class SH2Bus;
+
+} // namespace satemu::sh2
+
 namespace satemu::scu {
 
 class SCU;
@@ -105,34 +111,6 @@ public:
     void DumpDSP_EXTS(std::ostream &out) const;
     void DumpDSPRegs(std::ostream &out) const;
 
-    // -------------------------------------------------------------------------
-    // SCU-facing bus
-    // 16-bit reads, 8- or 16-bit writes
-
-    template <mem_primitive T>
-    FLATTEN T ReadWRAM(uint32 address) {
-        static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP WRAM read size");
-        // TODO: handle memory size bit
-        return util::ReadBE<T>(&m_WRAM[address & 0x7FFFF]);
-    }
-
-    template <mem_primitive T>
-    FLATTEN void WriteWRAM(uint32 address, T value) {
-        static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP WRAM write size");
-        // TODO: handle memory size bit
-        util::WriteBE<T>(&m_WRAM[address & 0x7FFFF], value);
-    }
-
-    template <mem_primitive T>
-    T ReadReg(uint32 address) {
-        return ReadReg<T, SCSPAccessType::SCU>(address);
-    }
-
-    template <mem_primitive T>
-    void WriteReg(uint32 address, T value) {
-        WriteReg<T, SCSPAccessType::SCU>(address, value);
-    }
-
     void SetCPUEnabled(bool enabled);
 
 private:
@@ -161,6 +139,37 @@ private:
 
     friend struct satemu::Saturn;
     void UpdateClockRatios();
+
+    // -------------------------------------------------------------------------
+    // Memory accessors (SCU-facing bus)
+    // 16-bit reads, 8- or 16-bit writes
+
+    friend struct ::satemu::Saturn;
+    void MapMemory(sh2::SH2Bus &bus);
+
+    template <mem_primitive T>
+    FLATTEN T ReadWRAM(uint32 address) {
+        static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP WRAM read size");
+        // TODO: handle memory size bit
+        return util::ReadBE<T>(&m_WRAM[address & 0x7FFFF]);
+    }
+
+    template <mem_primitive T>
+    FLATTEN void WriteWRAM(uint32 address, T value) {
+        static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP WRAM write size");
+        // TODO: handle memory size bit
+        util::WriteBE<T>(&m_WRAM[address & 0x7FFFF], value);
+    }
+
+    template <mem_primitive T>
+    T ReadReg(uint32 address) {
+        return ReadReg<T, SCSPAccessType::SCU>(address);
+    }
+
+    template <mem_primitive T>
+    void WriteReg(uint32 address, T value) {
+        WriteReg<T, SCSPAccessType::SCU>(address, value);
+    }
 
     // -------------------------------------------------------------------------
     // MC68EC000-facing bus
@@ -211,6 +220,8 @@ private:
     T ReadReg(uint32 address) {
         static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP register read size");
         static constexpr bool is16 = std::is_same_v<T, uint16>;
+
+        address &= 0xFFF;
 
         regsLog.trace("{}-bit SCSP register read via {} bus from {:03X}", sizeof(T) * 8, accessTypeName<accessType>,
                       address);
@@ -365,6 +376,8 @@ private:
     void WriteReg(uint32 address, T value) {
         static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP register write size");
         static constexpr bool is16 = std::is_same_v<T, uint16>;
+
+        address &= 0xFFF;
 
         regsLog.trace("{}-bit SCSP register write via {} bus to {:03X} = {:X}", sizeof(T) * 8,
                       accessTypeName<accessType>, address, value);

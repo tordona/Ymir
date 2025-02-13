@@ -1,6 +1,7 @@
 #include <satemu/hw/vdp/vdp.hpp>
 
 #include <satemu/hw/scu/scu.hpp>
+#include <satemu/hw/sh2/sh2_bus.hpp>
 
 #include "slope.hpp"
 
@@ -119,6 +120,594 @@ void VDP::SetVideoStandard(sys::VideoStandard videoStandard) {
     if (m_VDP2.TVSTAT.PAL != pal) {
         m_VDP2.TVSTAT.PAL = pal;
         m_VDP2.TVMDDirty = true;
+    }
+}
+
+void VDP::MapMemory(sh2::SH2Bus &bus) {
+    // VDP1 VRAM
+    bus.MapMemory(0x5C0'0000, 0x5C7'FFFF,
+                  {
+                      .ctx = this,
+                      .read8 = [](uint32 address, void *ctx) -> uint8 {
+                          return static_cast<VDP *>(ctx)->VDP1ReadVRAM<uint8>(address);
+                      },
+                      .read16 = [](uint32 address, void *ctx) -> uint16 {
+                          return static_cast<VDP *>(ctx)->VDP1ReadVRAM<uint16>(address);
+                      },
+                      .read32 = [](uint32 address, void *ctx) -> uint32 {
+                          uint32 value = static_cast<VDP *>(ctx)->VDP1ReadVRAM<uint16>(address + 0) << 16u;
+                          value |= static_cast<VDP *>(ctx)->VDP1ReadVRAM<uint16>(address + 2) << 0u;
+                          return value;
+                      },
+                      .write8 = [](uint32 address, uint8 value,
+                                   void *ctx) { static_cast<VDP *>(ctx)->VDP1WriteVRAM<uint8>(address, value); },
+                      .write16 = [](uint32 address, uint16 value,
+                                    void *ctx) { static_cast<VDP *>(ctx)->VDP1WriteVRAM<uint16>(address, value); },
+                      .write32 =
+                          [](uint32 address, uint32 value, void *ctx) {
+                              static_cast<VDP *>(ctx)->VDP1WriteVRAM<uint16>(address + 0, value >> 16u);
+                              static_cast<VDP *>(ctx)->VDP1WriteVRAM<uint16>(address + 2, value >> 0u);
+                          },
+                  });
+
+    // VDP1 framebuffer
+    bus.MapMemory(0x5C8'0000, 0x5CF'FFFF,
+                  {
+                      .ctx = this,
+                      .read8 = [](uint32 address, void *ctx) -> uint8 {
+                          return static_cast<VDP *>(ctx)->VDP1ReadFB<uint8>(address);
+                      },
+                      .read16 = [](uint32 address, void *ctx) -> uint16 {
+                          return static_cast<VDP *>(ctx)->VDP1ReadFB<uint16>(address);
+                      },
+                      .read32 = [](uint32 address, void *ctx) -> uint32 {
+                          uint32 value = static_cast<VDP *>(ctx)->VDP1ReadFB<uint16>(address + 0) << 16u;
+                          value |= static_cast<VDP *>(ctx)->VDP1ReadFB<uint16>(address + 2) << 0u;
+                          return value;
+                      },
+                      .write8 = [](uint32 address, uint8 value,
+                                   void *ctx) { static_cast<VDP *>(ctx)->VDP1WriteFB<uint8>(address, value); },
+                      .write16 = [](uint32 address, uint16 value,
+                                    void *ctx) { static_cast<VDP *>(ctx)->VDP1WriteFB<uint16>(address, value); },
+                      .write32 =
+                          [](uint32 address, uint32 value, void *ctx) {
+                              static_cast<VDP *>(ctx)->VDP1WriteFB<uint16>(address + 0, value >> 16u);
+                              static_cast<VDP *>(ctx)->VDP1WriteFB<uint16>(address + 2, value >> 0u);
+                          },
+                  });
+
+    // VDP1 registers
+    bus.MapMemory(0x5D0'0000, 0x5D7'FFFF,
+                  {
+                      .ctx = this,
+                      .read16 = [](uint32 address, void *ctx) -> uint16 {
+                          return static_cast<VDP *>(ctx)->VDP1ReadReg<uint16>(address);
+                      },
+                      .read32 = [](uint32 address, void *ctx) -> uint32 {
+                          uint32 value = static_cast<VDP *>(ctx)->VDP1ReadReg<uint8>(address + 0) << 16u;
+                          value |= static_cast<VDP *>(ctx)->VDP1ReadReg<uint8>(address + 2) << 0u;
+                          return value;
+                      },
+                      .write16 = [](uint32 address, uint16 value,
+                                    void *ctx) { static_cast<VDP *>(ctx)->VDP1WriteReg<uint16>(address, value); },
+                      .write32 =
+                          [](uint32 address, uint32 value, void *ctx) {
+                              static_cast<VDP *>(ctx)->VDP1WriteReg<uint16>(address + 0, value >> 16u);
+                              static_cast<VDP *>(ctx)->VDP1WriteReg<uint16>(address + 2, value >> 0u);
+                          },
+                  });
+
+    // VDP2 VRAM
+    bus.MapMemory(0x5E0'0000, 0x5EF'FFFF,
+                  {
+                      .ctx = this,
+                      .read8 = [](uint32 address, void *ctx) -> uint8 {
+                          return static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint8>(address);
+                      },
+                      .read16 = [](uint32 address, void *ctx) -> uint16 {
+                          return static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint16>(address);
+                      },
+                      .read32 = [](uint32 address, void *ctx) -> uint32 {
+                          uint32 value = static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint8>(address + 0) << 16u;
+                          value |= static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint8>(address + 2) << 0u;
+                          return value;
+                      },
+                      .write8 = [](uint32 address, uint8 value,
+                                   void *ctx) { static_cast<VDP *>(ctx)->VDP2WriteVRAM<uint8>(address, value); },
+                      .write16 = [](uint32 address, uint16 value,
+                                    void *ctx) { static_cast<VDP *>(ctx)->VDP2WriteVRAM<uint16>(address, value); },
+                      .write32 =
+                          [](uint32 address, uint32 value, void *ctx) {
+                              static_cast<VDP *>(ctx)->VDP2WriteVRAM<uint16>(address + 0, value >> 16u);
+                              static_cast<VDP *>(ctx)->VDP2WriteVRAM<uint16>(address + 2, value >> 0u);
+                          },
+                  });
+
+    // VDP2 CRAM
+    bus.MapMemory(0x5F0'0000, 0x5F7'FFFF,
+                  {
+                      .ctx = this,
+                      .read16 = [](uint32 address, void *ctx) -> uint16 {
+                          return static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint16>(address);
+                      },
+                      .read32 = [](uint32 address, void *ctx) -> uint32 {
+                          uint32 value = static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint8>(address + 0) << 16u;
+                          value |= static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint8>(address + 2) << 0u;
+                          return value;
+                      },
+                      .write16 = [](uint32 address, uint16 value,
+                                    void *ctx) { static_cast<VDP *>(ctx)->VDP2WriteCRAM<uint16>(address, value); },
+                      .write32 =
+                          [](uint32 address, uint32 value, void *ctx) {
+                              static_cast<VDP *>(ctx)->VDP2WriteCRAM<uint16>(address + 0, value >> 16u);
+                              static_cast<VDP *>(ctx)->VDP2WriteCRAM<uint16>(address + 2, value >> 0u);
+                          },
+                  });
+
+    // VDP2 registers
+    bus.MapMemory(0x5F8'0000, 0x5FB'FFFF,
+                  {
+                      .ctx = this,
+                      .read16 = [](uint32 address, void *ctx) -> uint16 {
+                          return static_cast<VDP *>(ctx)->VDP2ReadReg<uint16>(address);
+                      },
+                      .read32 = [](uint32 address, void *ctx) -> uint32 {
+                          uint32 value = static_cast<VDP *>(ctx)->VDP2ReadReg<uint8>(address + 0) << 16u;
+                          value |= static_cast<VDP *>(ctx)->VDP2ReadReg<uint8>(address + 2) << 0u;
+                          return value;
+                      },
+                      .write16 = [](uint32 address, uint16 value,
+                                    void *ctx) { static_cast<VDP *>(ctx)->VDP2WriteReg<uint16>(address, value); },
+                      .write32 =
+                          [](uint32 address, uint32 value, void *ctx) {
+                              static_cast<VDP *>(ctx)->VDP2WriteReg<uint16>(address + 0, value >> 16u);
+                              static_cast<VDP *>(ctx)->VDP2WriteReg<uint16>(address + 2, value >> 0u);
+                          },
+                  });
+}
+
+template <mem_primitive T>
+FORCE_INLINE T VDP::VDP1ReadVRAM(uint32 address) {
+    return util::ReadBE<T>(&m_VRAM1[address & 0x7FFFF]);
+}
+
+template <mem_primitive T>
+FORCE_INLINE void VDP::VDP1WriteVRAM(uint32 address, T value) {
+    util::WriteBE<T>(&m_VRAM1[address & 0x7FFFF], value);
+}
+
+template <mem_primitive T>
+FORCE_INLINE T VDP::VDP1ReadFB(uint32 address) {
+    return util::ReadBE<T>(&m_spriteFB[m_drawFB][address & 0x3FFFF]);
+}
+
+template <mem_primitive T>
+FORCE_INLINE void VDP::VDP1WriteFB(uint32 address, T value) {
+    util::WriteBE<T>(&m_spriteFB[m_drawFB][address & 0x3FFFF], value);
+}
+
+template <mem_primitive T>
+FORCE_INLINE T VDP::VDP1ReadReg(uint32 address) {
+    address &= 0x7FFFF;
+
+    switch (address) {
+    case 0x00: return 0; // TVMR is write-only
+    case 0x02: return 0; // FBCR is write-only
+    case 0x04: return 0; // PTMR is write-only
+    case 0x06: return 0; // EWDR is write-only
+    case 0x08: return 0; // EWLR is write-only
+    case 0x0A: return 0; // EWRR is write-only
+    case 0x0C: return 0; // ENDR is write-only
+
+    case 0x10: return m_VDP1.ReadEDSR();
+    case 0x12: return m_VDP1.ReadLOPR();
+    case 0x14: return m_VDP1.ReadCOPR();
+    case 0x16: return m_VDP1.ReadMODR();
+
+    default: regsLog1.debug("unhandled {}-bit VDP1 register read from {:02X}", sizeof(T) * 8, address); return 0;
+    }
+}
+
+template <mem_primitive T>
+FORCE_INLINE void VDP::VDP1WriteReg(uint32 address, T value) {
+    address &= 0x7FFFF;
+
+    switch (address) {
+    case 0x00:
+        m_VDP1.WriteTVMR(value);
+        regsLog1.trace("Write to TVM={:d}{:d}{:d}", m_VDP1.hdtvEnable, m_VDP1.fbRotEnable, m_VDP1.pixel8Bits);
+        regsLog1.trace("Write to VBE={:d}", m_VDP1.vblankErase);
+        break;
+    case 0x02: {
+        m_VDP1.WriteFBCR(value);
+        regsLog1.trace("Write to DIE={:d} DIL={:d}", m_VDP1.dblInterlaceEnable, m_VDP1.dblInterlaceDrawLine);
+        regsLog1.trace("Write to FCM={:d} FCT={:d} manualswap={:d} manualerase={:d}", m_VDP1.fbSwapMode,
+                       m_VDP1.fbSwapTrigger, m_VDP1.fbManualSwap, m_VDP1.fbManualErase);
+        break;
+    }
+    case 0x04:
+        m_VDP1.WritePTMR(value);
+        regsLog1.trace("Write to PTM={:d}", m_VDP1.plotTrigger);
+        if (m_VDP1.plotTrigger == 0b01) {
+            VDP1BeginFrame();
+        }
+        break;
+    case 0x06: m_VDP1.WriteEWDR(value); break;
+    case 0x08: m_VDP1.WriteEWLR(value); break;
+    case 0x0A: m_VDP1.WriteEWRR(value); break;
+    case 0x0C: // ENDR
+        // TODO: schedule drawing termination after 30 cycles
+        m_VDP1RenderContext.rendering = false;
+        break;
+
+    case 0x10: break; // EDSR is read-only
+    case 0x12: break; // LOPR is read-only
+    case 0x14: break; // COPR is read-only
+    case 0x16: break; // MODR is read-only
+
+    default:
+        regsLog1.debug("unhandled {}-bit VDP1 register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+        break;
+    }
+}
+
+template <mem_primitive T>
+FORCE_INLINE T VDP::VDP2ReadVRAM(uint32 address) {
+    // TODO: handle VRSIZE.VRAMSZ
+    address &= 0x7FFFF;
+    return util::ReadBE<T>(&m_VRAM2[address & 0x7FFFF]);
+}
+
+template <mem_primitive T>
+FORCE_INLINE void VDP::VDP2WriteVRAM(uint32 address, T value) {
+    // TODO: handle VRSIZE.VRAMSZ
+    util::WriteBE<T>(&m_VRAM2[address & 0x7FFFF], value);
+}
+
+template <mem_primitive T>
+FORCE_INLINE T VDP::VDP2ReadCRAM(uint32 address) {
+    if constexpr (std::is_same_v<T, uint32>) {
+        uint32 value = VDP2ReadCRAM<uint16>(address + 0) << 16u;
+        value |= VDP2ReadCRAM<uint16>(address + 2) << 0u;
+        return value;
+    }
+
+    address = MapCRAMAddress(address);
+    T value = util::ReadBE<T>(&m_CRAM[address]);
+    regsLog2.trace("{}-bit VDP2 CRAM read from {:03X} = {:X}", sizeof(T) * 8, address, value);
+    return value;
+}
+
+template <mem_primitive T>
+FORCE_INLINE void VDP::VDP2WriteCRAM(uint32 address, T value) {
+    if constexpr (std::is_same_v<T, uint32>) {
+        VDP2WriteCRAM<uint16>(address + 0, value >> 16u);
+        VDP2WriteCRAM<uint16>(address + 2, value >> 0u);
+        return;
+    }
+
+    address = MapCRAMAddress(address);
+    regsLog2.trace("{}-bit VDP2 CRAM write to {:05X} = {:X}", sizeof(T) * 8, address, value);
+    util::WriteBE<T>(&m_CRAM[address], value);
+    if (m_VDP2.RAMCTL.CRMDn == 0) {
+        regsLog2.trace("   replicated to {:05X}", address ^ 0x800);
+        util::WriteBE<T>(&m_CRAM[address ^ 0x800], value);
+    }
+}
+
+template <mem_primitive T>
+FORCE_INLINE T VDP::VDP2ReadReg(uint32 address) {
+    address &= 0x1FF;
+
+    switch (address) {
+    case 0x000: return m_VDP2.TVMD.u16;
+    case 0x002: return m_VDP2.EXTEN.u16;
+    case 0x004: return m_VDP2.TVSTAT.u16;
+    case 0x006: return m_VDP2.VRSIZE.u16;
+    case 0x008: return m_VDP2.HCNT;
+    case 0x00A: return m_VDP2.VCNT;
+    case 0x00C: return 0; // unknown/hidden register
+    case 0x00E: return m_VDP2.RAMCTL.u16;
+    case 0x010: return m_VDP2.CYCA0.L.u16;   // write-only?
+    case 0x012: return m_VDP2.CYCA0.U.u16;   // write-only?
+    case 0x014: return m_VDP2.CYCA1.L.u16;   // write-only?
+    case 0x016: return m_VDP2.CYCA1.U.u16;   // write-only?
+    case 0x018: return m_VDP2.CYCB0.L.u16;   // write-only?
+    case 0x01A: return m_VDP2.CYCB0.U.u16;   // write-only?
+    case 0x01E: return m_VDP2.CYCB1.L.u16;   // write-only?
+    case 0x01C: return m_VDP2.CYCB1.U.u16;   // write-only?
+    case 0x020: return m_VDP2.ReadBGON();    // write-only?
+    case 0x022: return m_VDP2.ReadMZCTL();   // write-only?
+    case 0x024: return m_VDP2.ReadSFSEL();   // write-only?
+    case 0x026: return m_VDP2.ReadSFCODE();  // write-only?
+    case 0x028: return m_VDP2.ReadCHCTLA();  // write-only?
+    case 0x02A: return m_VDP2.ReadCHCTLB();  // write-only?
+    case 0x02C: return m_VDP2.ReadBMPNA();   // write-only?
+    case 0x02E: return m_VDP2.ReadBMPNB();   // write-only?
+    case 0x030: return m_VDP2.ReadPNCN(1);   // write-only?
+    case 0x032: return m_VDP2.ReadPNCN(2);   // write-only?
+    case 0x034: return m_VDP2.ReadPNCN(3);   // write-only?
+    case 0x036: return m_VDP2.ReadPNCN(4);   // write-only?
+    case 0x038: return m_VDP2.ReadPNCR();    // write-only?
+    case 0x03A: return m_VDP2.ReadPLSZ();    // write-only?
+    case 0x03C: return m_VDP2.ReadMPOFN();   // write-only?
+    case 0x03E: return m_VDP2.ReadMPOFR();   // write-only?
+    case 0x040: return m_VDP2.ReadMPN(1, 0); // write-only?
+    case 0x042: return m_VDP2.ReadMPN(1, 1); // write-only?
+    case 0x044: return m_VDP2.ReadMPN(2, 0); // write-only?
+    case 0x046: return m_VDP2.ReadMPN(2, 1); // write-only?
+    case 0x048: return m_VDP2.ReadMPN(3, 0); // write-only?
+    case 0x04A: return m_VDP2.ReadMPN(3, 1); // write-only?
+    case 0x04C: return m_VDP2.ReadMPN(4, 0); // write-only?
+    case 0x04E: return m_VDP2.ReadMPN(4, 1); // write-only?
+    case 0x050: return m_VDP2.ReadMPR(0, 0); // write-only?
+    case 0x052: return m_VDP2.ReadMPR(0, 1); // write-only?
+    case 0x054: return m_VDP2.ReadMPR(0, 2); // write-only?
+    case 0x056: return m_VDP2.ReadMPR(0, 3); // write-only?
+    case 0x058: return m_VDP2.ReadMPR(0, 4); // write-only?
+    case 0x05A: return m_VDP2.ReadMPR(0, 5); // write-only?
+    case 0x05C: return m_VDP2.ReadMPR(0, 6); // write-only?
+    case 0x05E: return m_VDP2.ReadMPR(0, 7); // write-only?
+    case 0x060: return m_VDP2.ReadMPR(1, 0); // write-only?
+    case 0x062: return m_VDP2.ReadMPR(1, 1); // write-only?
+    case 0x064: return m_VDP2.ReadMPR(1, 2); // write-only?
+    case 0x066: return m_VDP2.ReadMPR(1, 3); // write-only?
+    case 0x068: return m_VDP2.ReadMPR(1, 4); // write-only?
+    case 0x06A: return m_VDP2.ReadMPR(1, 5); // write-only?
+    case 0x06C: return m_VDP2.ReadMPR(1, 6); // write-only?
+    case 0x06E: return m_VDP2.ReadMPR(1, 7); // write-only?
+    case 0x070: return m_VDP2.ReadSCXIN(1);  // write-only?
+    case 0x072: return m_VDP2.ReadSCXDN(1);  // write-only?
+    case 0x074: return m_VDP2.ReadSCYIN(1);  // write-only?
+    case 0x076: return m_VDP2.ReadSCYDN(1);  // write-only?
+    case 0x078: return m_VDP2.ReadZMXIN(1);  // write-only?
+    case 0x07A: return m_VDP2.ReadZMXDN(1);  // write-only?
+    case 0x07C: return m_VDP2.ReadZMYIN(1);  // write-only?
+    case 0x07E: return m_VDP2.ReadZMYDN(1);  // write-only?
+    case 0x080: return m_VDP2.ReadSCXIN(2);  // write-only?
+    case 0x082: return m_VDP2.ReadSCXDN(2);  // write-only?
+    case 0x084: return m_VDP2.ReadSCYIN(2);  // write-only?
+    case 0x086: return m_VDP2.ReadSCYDN(2);  // write-only?
+    case 0x088: return m_VDP2.ReadZMXIN(2);  // write-only?
+    case 0x08A: return m_VDP2.ReadZMXDN(2);  // write-only?
+    case 0x08C: return m_VDP2.ReadZMYIN(2);  // write-only?
+    case 0x08E: return m_VDP2.ReadZMYDN(2);  // write-only?
+    case 0x090: return m_VDP2.ReadSCXIN(3);  // write-only?
+    case 0x092: return m_VDP2.ReadSCYIN(3);  // write-only?
+    case 0x094: return m_VDP2.ReadSCXIN(4);  // write-only?
+    case 0x096: return m_VDP2.ReadSCYIN(4);  // write-only?
+    case 0x098: return m_VDP2.ZMCTL.u16;     // write-only?
+    case 0x09A: return m_VDP2.ReadSCRCTL();  // write-only?
+    case 0x09C: return m_VDP2.ReadVCSTAU();  // write-only?
+    case 0x09E: return m_VDP2.ReadVCSTAL();  // write-only?
+    case 0x0A0: return m_VDP2.ReadLSTAnU(1); // write-only?
+    case 0x0A2: return m_VDP2.ReadLSTAnL(1); // write-only?
+    case 0x0A4: return m_VDP2.ReadLSTAnU(2); // write-only?
+    case 0x0A6: return m_VDP2.ReadLSTAnL(2); // write-only?
+    case 0x0A8: return m_VDP2.ReadLCTAU();   // write-only?
+    case 0x0AA: return m_VDP2.ReadLCTAL();   // write-only?
+    case 0x0AC: return m_VDP2.ReadBKTAU();   // write-only?
+    case 0x0AE: return m_VDP2.ReadBKTAL();   // write-only?
+    case 0x0B0: return m_VDP2.ReadRPMD();    // write-only?
+    case 0x0B2: return m_VDP2.ReadRPRCTL();  // write-only?
+    case 0x0B4: return m_VDP2.ReadKTCTL();   // write-only?
+    case 0x0B6: return m_VDP2.ReadKTAOF();   // write-only?
+    case 0x0B8: return m_VDP2.ReadOVPNRn(0); // write-only?
+    case 0x0BA: return m_VDP2.ReadOVPNRn(1); // write-only?
+    case 0x0BC: return m_VDP2.ReadRPTAU();   // write-only?
+    case 0x0BE: return m_VDP2.ReadRPTAL();   // write-only?
+    case 0x0C0: return m_VDP2.ReadWPSXn(0);  // write-only?
+    case 0x0C2: return m_VDP2.ReadWPSYn(0);  // write-only?
+    case 0x0C4: return m_VDP2.ReadWPEXn(0);  // write-only?
+    case 0x0C6: return m_VDP2.ReadWPEYn(0);  // write-only?
+    case 0x0C8: return m_VDP2.ReadWPSXn(1);  // write-only?
+    case 0x0CA: return m_VDP2.ReadWPSYn(1);  // write-only?
+    case 0x0CC: return m_VDP2.ReadWPEXn(1);  // write-only?
+    case 0x0CE: return m_VDP2.ReadWPEYn(1);  // write-only?
+    case 0x0D0: return m_VDP2.ReadWCTLA();   // write-only?
+    case 0x0D2: return m_VDP2.ReadWCTLB();   // write-only?
+    case 0x0D4: return m_VDP2.ReadWCTLC();   // write-only?
+    case 0x0D6: return m_VDP2.ReadWCTLD();   // write-only?
+    case 0x0D8: return m_VDP2.ReadLWTAnU(0); // write-only?
+    case 0x0DA: return m_VDP2.ReadLWTAnL(0); // write-only?
+    case 0x0DC: return m_VDP2.ReadLWTAnU(1); // write-only?
+    case 0x0DE: return m_VDP2.ReadLWTAnL(1); // write-only?
+    case 0x0E0: return m_VDP2.ReadSPCTL();   // write-only?
+    case 0x0E2: return m_VDP2.ReadSDCTL();   // write-only?
+    case 0x0E4: return m_VDP2.ReadCRAOFA();  // write-only?
+    case 0x0E6: return m_VDP2.ReadCRAOFB();  // write-only?
+    case 0x0E8: return m_VDP2.ReadLNCLEN();  // write-only?
+    case 0x0EA: return m_VDP2.ReadSFPRMD();  // write-only?
+    case 0x0EC: return m_VDP2.ReadCCCTL();   // write-only?
+    case 0x0EE: return m_VDP2.ReadSFCCMD();  // write-only?
+    case 0x0F0: return m_VDP2.ReadPRISn(0);  // write-only?
+    case 0x0F2: return m_VDP2.ReadPRISn(1);  // write-only?
+    case 0x0F4: return m_VDP2.ReadPRISn(2);  // write-only?
+    case 0x0F6: return m_VDP2.ReadPRISn(3);  // write-only?
+    case 0x0F8: return m_VDP2.ReadPRINA();   // write-only?
+    case 0x0FA: return m_VDP2.ReadPRINB();   // write-only?
+    case 0x0FC: return m_VDP2.ReadPRIR();    // write-only?
+    case 0x0FE: return 0;                    // supposedly reserved
+    case 0x100: return m_VDP2.ReadCCRSn(0);  // write-only?
+    case 0x102: return m_VDP2.ReadCCRSn(1);  // write-only?
+    case 0x104: return m_VDP2.ReadCCRSn(2);  // write-only?
+    case 0x106: return m_VDP2.ReadCCRSn(3);  // write-only?
+    case 0x108: return m_VDP2.ReadCCRNA();   // write-only?
+    case 0x10A: return m_VDP2.ReadCCRNB();   // write-only?
+    case 0x10C: return m_VDP2.ReadCCRR();    // write-only?
+    case 0x10E: return m_VDP2.ReadCCRLB();   // write-only?
+    case 0x110: return m_VDP2.ReadCLOFEN();  // write-only?
+    case 0x112: return m_VDP2.ReadCLOFSL();  // write-only?
+    case 0x114: return m_VDP2.ReadCOxR(0);   // write-only?
+    case 0x116: return m_VDP2.ReadCOxG(0);   // write-only?
+    case 0x118: return m_VDP2.ReadCOxB(0);   // write-only?
+    case 0x11A: return m_VDP2.ReadCOxR(1);   // write-only?
+    case 0x11C: return m_VDP2.ReadCOxG(1);   // write-only?
+    case 0x11E: return m_VDP2.ReadCOxB(1);   // write-only?
+    default: regsLog2.debug("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
+    }
+}
+
+template <mem_primitive T>
+FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, T value) {
+    address &= 0x1FF;
+
+    switch (address) {
+    case 0x000: {
+        const uint16 oldTVMD = m_VDP2.TVMD.u16;
+        m_VDP2.TVMD.u16 = value & 0x81F7;
+        m_VDP2.TVMDDirty |= m_VDP2.TVMD.u16 != oldTVMD;
+        regsLog2.trace("TVMD write: {:04X} - HRESO={:d} VRESO={:d} LSMD={:d} BDCLMD={:d} DISP={:d}{}", m_VDP2.TVMD.u16,
+                       (uint16)m_VDP2.TVMD.HRESOn, (uint16)m_VDP2.TVMD.VRESOn, (uint16)m_VDP2.TVMD.LSMDn,
+                       (uint16)m_VDP2.TVMD.BDCLMD, (uint16)m_VDP2.TVMD.DISP, (m_VDP2.TVMDDirty ? " (dirty)" : ""));
+        break;
+    }
+    case 0x002: m_VDP2.EXTEN.u16 = value & 0x0303; break;
+    case 0x004: /* TVSTAT is read-only */ break;
+    case 0x006: m_VDP2.VRSIZE.u16 = value & 0x8000; break;
+    case 0x008: /* HCNT is read-only */ break;
+    case 0x00A: /* VCNT is read-only */ break;
+    case 0x00C: /* unknown/hidden register */ break;
+    case 0x00E: m_VDP2.RAMCTL.u16 = value & 0xB3FF; break;
+    case 0x010: m_VDP2.CYCA0.L.u16 = value; break;
+    case 0x012: m_VDP2.CYCA0.U.u16 = value; break;
+    case 0x014: m_VDP2.CYCA1.L.u16 = value; break;
+    case 0x016: m_VDP2.CYCA1.U.u16 = value; break;
+    case 0x018: m_VDP2.CYCB0.L.u16 = value; break;
+    case 0x01A: m_VDP2.CYCB0.U.u16 = value; break;
+    case 0x01E: m_VDP2.CYCB1.U.u16 = value; break;
+    case 0x01C: m_VDP2.CYCB1.L.u16 = value; break;
+    case 0x020: m_VDP2.WriteBGON(value), VDP2UpdateEnabledBGs(); break;
+    case 0x022: m_VDP2.WriteMZCTL(value); break;
+    case 0x024: m_VDP2.WriteSFSEL(value); break;
+    case 0x026: m_VDP2.WriteSFCODE(value); break;
+    case 0x028: m_VDP2.WriteCHCTLA(value); break;
+    case 0x02A: m_VDP2.WriteCHCTLB(value); break;
+    case 0x02C: m_VDP2.WriteBMPNA(value); break;
+    case 0x02E: m_VDP2.WriteBMPNB(value); break;
+    case 0x030: m_VDP2.WritePNCN(1, value); break;
+    case 0x032: m_VDP2.WritePNCN(2, value); break;
+    case 0x034: m_VDP2.WritePNCN(3, value); break;
+    case 0x036: m_VDP2.WritePNCN(4, value); break;
+    case 0x038: m_VDP2.WritePNCR(value); break;
+    case 0x03A: m_VDP2.WritePLSZ(value); break;
+    case 0x03C: m_VDP2.WriteMPOFN(value); break;
+    case 0x03E: m_VDP2.WriteMPOFR(value); break;
+    case 0x040: m_VDP2.WriteMPN(1, 0, value); break;
+    case 0x042: m_VDP2.WriteMPN(1, 1, value); break;
+    case 0x044: m_VDP2.WriteMPN(2, 0, value); break;
+    case 0x046: m_VDP2.WriteMPN(2, 1, value); break;
+    case 0x048: m_VDP2.WriteMPN(3, 0, value); break;
+    case 0x04A: m_VDP2.WriteMPN(3, 1, value); break;
+    case 0x04C: m_VDP2.WriteMPN(4, 0, value); break;
+    case 0x04E: m_VDP2.WriteMPN(4, 1, value); break;
+    case 0x050: m_VDP2.WriteMPR(0, 0, value); break;
+    case 0x052: m_VDP2.WriteMPR(0, 1, value); break;
+    case 0x054: m_VDP2.WriteMPR(0, 2, value); break;
+    case 0x056: m_VDP2.WriteMPR(0, 3, value); break;
+    case 0x058: m_VDP2.WriteMPR(0, 4, value); break;
+    case 0x05A: m_VDP2.WriteMPR(0, 5, value); break;
+    case 0x05C: m_VDP2.WriteMPR(0, 6, value); break;
+    case 0x05E: m_VDP2.WriteMPR(0, 7, value); break;
+    case 0x060: m_VDP2.WriteMPR(1, 0, value); break;
+    case 0x062: m_VDP2.WriteMPR(1, 1, value); break;
+    case 0x064: m_VDP2.WriteMPR(1, 2, value); break;
+    case 0x066: m_VDP2.WriteMPR(1, 3, value); break;
+    case 0x068: m_VDP2.WriteMPR(1, 4, value); break;
+    case 0x06A: m_VDP2.WriteMPR(1, 5, value); break;
+    case 0x06C: m_VDP2.WriteMPR(1, 6, value); break;
+    case 0x06E: m_VDP2.WriteMPR(1, 7, value); break;
+    case 0x070: m_VDP2.WriteSCXIN(1, value); break;
+    case 0x072: m_VDP2.WriteSCXDN(1, value); break;
+    case 0x074: m_VDP2.WriteSCYIN(1, value); break;
+    case 0x076: m_VDP2.WriteSCYDN(1, value); break;
+    case 0x078: m_VDP2.WriteZMXIN(1, value); break;
+    case 0x07A: m_VDP2.WriteZMXDN(1, value); break;
+    case 0x07C: m_VDP2.WriteZMYIN(1, value); break;
+    case 0x07E: m_VDP2.WriteZMYDN(1, value); break;
+    case 0x080: m_VDP2.WriteSCXIN(2, value); break;
+    case 0x082: m_VDP2.WriteSCXDN(2, value); break;
+    case 0x084: m_VDP2.WriteSCYIN(2, value); break;
+    case 0x086: m_VDP2.WriteSCYDN(2, value); break;
+    case 0x088: m_VDP2.WriteZMXIN(2, value); break;
+    case 0x08A: m_VDP2.WriteZMXDN(2, value); break;
+    case 0x08C: m_VDP2.WriteZMYIN(2, value); break;
+    case 0x08E: m_VDP2.WriteZMYDN(2, value); break;
+    case 0x090: m_VDP2.WriteSCXIN(3, value); break;
+    case 0x092: m_VDP2.WriteSCYIN(3, value); break;
+    case 0x094: m_VDP2.WriteSCXIN(4, value); break;
+    case 0x096: m_VDP2.WriteSCYIN(4, value); break;
+    case 0x098: m_VDP2.ZMCTL.u16 = value & 0x0303; break;
+    case 0x09A: m_VDP2.WriteSCRCTL(value); break;
+    case 0x09C: m_VDP2.WriteVCSTAU(value); break;
+    case 0x09E: m_VDP2.WriteVCSTAL(value); break;
+    case 0x0A0: m_VDP2.WriteLSTAnU(1, value); break;
+    case 0x0A2: m_VDP2.WriteLSTAnL(1, value); break;
+    case 0x0A4: m_VDP2.WriteLSTAnU(2, value); break;
+    case 0x0A6: m_VDP2.WriteLSTAnL(2, value); break;
+    case 0x0A8: m_VDP2.WriteLCTAU(value); break;
+    case 0x0AA: m_VDP2.WriteLCTAL(value); break;
+    case 0x0AC: m_VDP2.WriteBKTAU(value); break;
+    case 0x0AE: m_VDP2.WriteBKTAL(value); break;
+    case 0x0B0: m_VDP2.WriteRPMD(value); break;
+    case 0x0B2: m_VDP2.WriteRPRCTL(value); break;
+    case 0x0B4: m_VDP2.WriteKTCTL(value); break;
+    case 0x0B6: m_VDP2.WriteKTAOF(value); break;
+    case 0x0B8: m_VDP2.WriteOVPNRn(0, value); break;
+    case 0x0BA: m_VDP2.WriteOVPNRn(1, value); break;
+    case 0x0BC: m_VDP2.WriteRPTAU(value); break;
+    case 0x0BE: m_VDP2.WriteRPTAL(value); break;
+    case 0x0C0: m_VDP2.WriteWPSXn(0, value); break;
+    case 0x0C2: m_VDP2.WriteWPSYn(0, value); break;
+    case 0x0C4: m_VDP2.WriteWPEXn(0, value); break;
+    case 0x0C6: m_VDP2.WriteWPEYn(0, value); break;
+    case 0x0C8: m_VDP2.WriteWPSXn(1, value); break;
+    case 0x0CA: m_VDP2.WriteWPSYn(1, value); break;
+    case 0x0CC: m_VDP2.WriteWPEXn(1, value); break;
+    case 0x0CE: m_VDP2.WriteWPEYn(1, value); break;
+    case 0x0D0: m_VDP2.WriteWCTLA(value); break;
+    case 0x0D2: m_VDP2.WriteWCTLB(value); break;
+    case 0x0D4: m_VDP2.WriteWCTLC(value); break;
+    case 0x0D6: m_VDP2.WriteWCTLD(value); break;
+    case 0x0D8: m_VDP2.WriteLWTAnU(0, value); break;
+    case 0x0DA: m_VDP2.WriteLWTAnL(0, value); break;
+    case 0x0DC: m_VDP2.WriteLWTAnU(1, value); break;
+    case 0x0DE: m_VDP2.WriteLWTAnL(1, value); break;
+    case 0x0E0: m_VDP2.WriteSPCTL(value); break;
+    case 0x0E2: m_VDP2.WriteSDCTL(value); break;
+    case 0x0E4: m_VDP2.WriteCRAOFA(value); break;
+    case 0x0E6: m_VDP2.WriteCRAOFB(value); break;
+    case 0x0E8: m_VDP2.WriteLNCLEN(value); break;
+    case 0x0EA: m_VDP2.WriteSFPRMD(value); break;
+    case 0x0EC: m_VDP2.WriteCCCTL(value); break;
+    case 0x0EE: m_VDP2.WriteSFCCMD(value); break;
+    case 0x0F0: m_VDP2.WritePRISn(0, value); break;
+    case 0x0F2: m_VDP2.WritePRISn(1, value); break;
+    case 0x0F4: m_VDP2.WritePRISn(2, value); break;
+    case 0x0F6: m_VDP2.WritePRISn(3, value); break;
+    case 0x0F8: m_VDP2.WritePRINA(value); break;
+    case 0x0FA: m_VDP2.WritePRINB(value); break;
+    case 0x0FC: m_VDP2.WritePRIR(value); break;
+    case 0x0FE: break; // supposedly reserved
+    case 0x100: m_VDP2.WriteCCRSn(0, value); break;
+    case 0x102: m_VDP2.WriteCCRSn(1, value); break;
+    case 0x104: m_VDP2.WriteCCRSn(2, value); break;
+    case 0x106: m_VDP2.WriteCCRSn(3, value); break;
+    case 0x108: m_VDP2.WriteCCRNA(value); break;
+    case 0x10A: m_VDP2.WriteCCRNB(value); break;
+    case 0x10C: m_VDP2.WriteCCRR(value); break;
+    case 0x10E: m_VDP2.WriteCCRLB(value); break;
+    case 0x110: m_VDP2.WriteCLOFEN(value); break;
+    case 0x112: m_VDP2.WriteCLOFSL(value); break;
+    case 0x114: m_VDP2.WriteCOxR(0, value); break;
+    case 0x116: m_VDP2.WriteCOxG(0, value); break;
+    case 0x118: m_VDP2.WriteCOxB(0, value); break;
+    case 0x11A: m_VDP2.WriteCOxR(1, value); break;
+    case 0x11C: m_VDP2.WriteCOxG(1, value); break;
+    case 0x11E: m_VDP2.WriteCOxB(1, value); break;
+    default:
+        regsLog2.debug("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
+        break;
     }
 }
 

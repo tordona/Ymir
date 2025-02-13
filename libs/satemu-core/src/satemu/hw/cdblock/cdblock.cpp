@@ -1,6 +1,8 @@
 #include <satemu/hw/cdblock/cdblock.hpp>
 
+#include <satemu/hw/scsp/scsp.hpp>
 #include <satemu/hw/scu/scu.hpp>
+#include <satemu/hw/sh2/sh2_bus.hpp>
 
 #include <satemu/sys/clocks.hpp>
 
@@ -139,6 +141,89 @@ void CDBlock::UpdateClockRatios() {
     m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.SCSPNum * 3, clockRatios.SCSPDen);
     // m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.CDBlockNum * 3, clockRatios.CDBlockDen);
     m_scheduler.SetEventCountFactor(m_commandExecEvent, clockRatios.CDBlockNum, clockRatios.CDBlockDen);
+}
+
+void CDBlock::MapMemory(sh2::SH2Bus &bus) {
+    // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
+    // These 4 KiB blocks are mapped every 32 KiB.
+    for (uint32 address = 0x580'0000; address <= 0x58F'FFFF; address += 0x8000) {
+        bus.MapMemory(address, address + 0xFFF,
+                      {
+                          .ctx = this,
+                          .read8 = [](uint32 address, void *ctx) -> uint8 {
+                              return static_cast<CDBlock *>(ctx)->ReadReg<uint8>(address);
+                          },
+                          .read16 = [](uint32 address, void *ctx) -> uint16 {
+                              return static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address);
+                          },
+                          .read32 = [](uint32 address, void *ctx) -> uint32 {
+                              uint32 value = static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address + 0) << 16u;
+                              value |= static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address + 2) << 0u;
+                              return value;
+                          },
+                          .write8 = [](uint32 address, uint8 value,
+                                       void *ctx) { static_cast<CDBlock *>(ctx)->WriteReg<uint8>(address, value); },
+                          .write16 = [](uint32 address, uint16 value,
+                                        void *ctx) { static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address, value); },
+                          .write32 =
+                              [](uint32 address, uint32 value, void *ctx) {
+                                  static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address + 0, value >> 16u);
+                                  static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address + 2, value >> 0u);
+                              },
+                      });
+    }
+}
+
+template <mem_primitive T>
+T CDBlock::ReadReg(uint32 address) {
+    address &= 0x3F;
+
+    switch (address) {
+    case 0x00: return DoReadTransfer();
+    case 0x02: return DoReadTransfer();
+    case 0x08: return m_HIRQ;
+    case 0x0C: return m_HIRQMASK;
+    case 0x18: return m_CR[0];
+    case 0x1C: return m_CR[1];
+    case 0x20: return m_CR[2];
+    case 0x24:
+        m_processingCommand = false;
+        m_readyForPeriodicReports = true;
+        return m_CR[3];
+    default: regsLog.debug("unhandled {}-bit register read from {:02X}", sizeof(T) * 8, address); return 0;
+    }
+}
+
+template <mem_primitive T>
+void CDBlock::WriteReg(uint32 address, T value) {
+    address &= 0x3F;
+
+    regsLog.trace("{}-bit register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+    switch (address) {
+    case 0x00: DoWriteTransfer(value); break;
+    case 0x02: DoWriteTransfer(value); break;
+    case 0x08:
+        m_HIRQ &= value;
+        UpdateInterrupts();
+        break;
+    case 0x0C:
+        m_HIRQMASK = value;
+        UpdateInterrupts();
+        break;
+    case 0x18:
+        m_processingCommand = true;
+        m_status.statusCode &= ~kStatusFlagPeriodic;
+        m_CR[0] = value;
+        break;
+    case 0x1C: m_CR[1] = value; break;
+    case 0x20: m_CR[2] = value; break;
+    case 0x24:
+        m_CR[3] = value;
+        SetupCommand();
+        break;
+
+    default: regsLog.debug("unhandled {}-bit register write to {:02X} = {:X}", sizeof(T) * 8, address, value); break;
+    }
 }
 
 bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 repeatParam) {

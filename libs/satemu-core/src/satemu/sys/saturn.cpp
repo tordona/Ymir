@@ -8,11 +8,17 @@ namespace satemu {
 
 Saturn::Saturn()
     : SH2(SCU, SMPC)
-    , SCU(m_scheduler, VDP, SCSP, CDBlock, SH2)
+    , SCU(m_scheduler, SH2)
     , VDP(m_scheduler, SCU)
     , SMPC(m_system, m_scheduler, *this)
     , SCSP(m_system, m_scheduler, SCU)
     , CDBlock(m_system, m_scheduler, SCU, SCSP) {
+
+    SCU.MapMemory(SH2.bus);
+    VDP.MapMemory(SH2.bus);
+    SMPC.MapMemory(SH2.bus);
+    SCSP.MapMemory(SH2.bus);
+    CDBlock.MapMemory(SH2.bus);
 
     Reset(true);
 }

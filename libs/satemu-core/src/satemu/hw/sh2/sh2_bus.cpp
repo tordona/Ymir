@@ -85,25 +85,7 @@ SH2Bus::SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu, smpc::SMPC &smpc)
                   .write32 = GenericWrite<uint32, 0x7FFFF>,
               });
 
-    MapMemory(0x010'0000, 0x017'FFFF,
-              {
-                  .ctx = &m_SMPC,
-                  .read8 = [](uint32 address, void *ctx) -> uint8 {
-                      return static_cast<smpc::SMPC *>(ctx)->Read((address & 0x7F) | 1);
-                  },
-                  .read16 = [](uint32 address, void *ctx) -> uint16 {
-                      return static_cast<smpc::SMPC *>(ctx)->Read((address & 0x7F) | 1);
-                  },
-                  .read32 = [](uint32 address, void *ctx) -> uint32 {
-                      return static_cast<smpc::SMPC *>(ctx)->Read((address & 0x7F) | 1);
-                  },
-                  .write8 = [](uint32 address, uint8 value,
-                               void *ctx) { static_cast<smpc::SMPC *>(ctx)->Write((address & 0x7F) | 1, value); },
-                  .write16 = [](uint32 address, uint16 value,
-                                void *ctx) { static_cast<smpc::SMPC *>(ctx)->Write((address & 0x7F) | 1, value); },
-                  .write32 = [](uint32 address, uint32 value,
-                                void *ctx) { static_cast<smpc::SMPC *>(ctx)->Write((address & 0x7F) | 1, value); },
-              });
+    // SMPC maps itself at 0x010'0000..0x017'FFFF
 
     MapMemory(0x018'0000, 0x01F'FFFF,
               {
@@ -141,26 +123,7 @@ SH2Bus::SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu, smpc::SMPC &smpc)
             .write16 = [](uint32 address, uint16 value, void *ctx) { static_cast<SH2Bus *>(ctx)->WriteSINIT(value); },
         });
 
-    // SCU maps itself in this region
-    /*MapMemory(0x200'0000, 0x5FF'FFFF,
-              {
-                  .ctx = &m_SCU,
-                  .read8 = [](uint32 address, void *ctx) -> uint8 {
-                      return static_cast<scu::SCU *>(ctx)->Read<uint8>(address);
-                  },
-                  .read16 = [](uint32 address, void *ctx) -> uint16 {
-                      return static_cast<scu::SCU *>(ctx)->Read<uint16>(address);
-                  },
-                  .read32 = [](uint32 address, void *ctx) -> uint32 {
-                      return static_cast<scu::SCU *>(ctx)->Read<uint32>(address);
-                  },
-                  .write8 = [](uint32 address, uint8 value,
-                               void *ctx) { static_cast<scu::SCU *>(ctx)->Write<uint8>(address, value); },
-                  .write16 = [](uint32 address, uint16 value,
-                                void *ctx) { static_cast<scu::SCU *>(ctx)->Write<uint16>(address, value); },
-                  .write32 = [](uint32 address, uint32 value,
-                                void *ctx) { static_cast<scu::SCU *>(ctx)->Write<uint32>(address, value); },
-              });*/
+    // SCU, VDP, SCSP, CD block and cartridge slot map themselves at 0x200'0000..0x5FF'FFFF
 
     MapMemory(0x600'0000, 0x7FF'FFFF,
               {

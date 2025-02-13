@@ -4,10 +4,7 @@
 
 #include <satemu/core/scheduler.hpp>
 
-#include <satemu/hw/cdblock/cdblock.hpp>
 #include <satemu/hw/hw_defs.hpp>
-#include <satemu/hw/scsp/scsp.hpp>
-#include <satemu/hw/vdp/vdp.hpp>
 
 #include <satemu/util/data_ops.hpp>
 #include <satemu/util/debug_print.hpp>
@@ -19,9 +16,16 @@
 // -----------------------------------------------------------------------------
 // Forward declarations
 
+namespace satemu {
+
+struct Saturn;
+
+} // namespace satemu
+
 namespace satemu::sh2 {
 
 class SH2Block;
+class SH2Bus;
 
 } // namespace satemu::sh2
 
@@ -71,7 +75,7 @@ class SCU {
     static constexpr dbg::Category debugLog{rootLog, "Debug"};
 
 public:
-    SCU(core::Scheduler &scheduler, vdp::VDP &vdp, scsp::SCSP &scsp, cdblock::CDBlock &cdblock, sh2::SH2Block &sh2);
+    SCU(core::Scheduler &scheduler, sh2::SH2Block &sh2);
 
     void Reset(bool hard);
 
@@ -103,9 +107,6 @@ public:
     void DumpDSPRegs(std::ostream &out);
 
 private:
-    vdp::VDP &m_VDP;
-    scsp::SCSP &m_SCSP;
-    cdblock::CDBlock &m_CDBlock;
     sh2::SH2Block &m_SH2;
 
     core::Scheduler &m_scheduler;
@@ -123,145 +124,16 @@ private:
     std::string m_debugOutput;
 
     // -------------------------------------------------------------------------
-    // A-Bus and B-Bus accessors
+    // Memory accessors
+
+    friend struct ::satemu::Saturn;
+    void MapMemory(sh2::SH2Bus &bus);
 
     template <mem_primitive T>
-    T ReadABus(uint32 address) {
-        using namespace util;
-
-        if constexpr (std::is_same_v<T, uint32>) {
-            // 32-bit reads are split into two 16-bit reads
-            uint32 value = ReadABus<uint16>(address + 0) << 16u;
-            value |= ReadABus<uint16>(address + 2) << 0u;
-            return value;
-
-        } else if (AddressInRange<0x400'0000, 0x4FF'FFFF>(address)) {
-            // HACK: emulate 32 Mbit backup RAM cartridge
-            if (address >= 0x4FF'FFFC) {
-                // Return ID for 32 Mbit Backup RAM cartridge
-                if constexpr (std::is_same_v<T, uint8>) {
-                    if ((address & 1) == 0) {
-                        return 0xFF;
-                    } else {
-                        return 0x24;
-                    }
-                } else {
-                    return 0xFF24;
-                }
-            } else {
-                return util::ReadBE<T>((const uint8 *)&m_externalBackupRAM.data()[address & 0x7FFFFF]);
-            }
-        } else if (AddressInRange<0x580'0000, 0x58F'FFFF>(address)) {
-            if ((address & 0x7FFF) < 0x1000) {
-                // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
-                // These 4 KiB blocks are mapped every 32 KiB.
-                return m_CDBlock.ReadReg<T>(address & 0x3F);
-            }
-        }
-        regsLog.debug("unhandled {}-bit SCU A-Bus read from {:05X}", sizeof(T) * 8, address);
-        return 0;
-    }
+    T ReadCartridge(uint32 address);
 
     template <mem_primitive T>
-    T ReadBBus(uint32 address) {
-        using namespace util;
-
-        if constexpr (std::is_same_v<T, uint32>) {
-            // 32-bit reads are split into two 16-bit reads
-            uint32 value = ReadBBus<uint16>(address + 0) << 16u;
-            value |= ReadBBus<uint16>(address + 2) << 0u;
-            return value;
-
-        } else if (AddressInRange<0x5A0'0000, 0x5AF'FFFF>(address)) {
-            return m_SCSP.ReadWRAM<T>(address & 0x7FFFF);
-        } else if (AddressInRange<0x5B0'0000, 0x5BF'FFFF>(address)) {
-            return m_SCSP.ReadReg<T>(address & 0xFFF);
-
-        } else if (AddressInRange<0x5C0'0000, 0x5C7'FFFF>(address)) {
-            return m_VDP.VDP1ReadVRAM<T>(address & 0x7FFFF);
-        } else if (AddressInRange<0x5C8'0000, 0x5CF'FFFF>(address)) {
-            return m_VDP.VDP1ReadFB<T>(address & 0x3FFFF);
-        } else if (AddressInRange<0x5D0'0000, 0x5D7'FFFF>(address)) {
-            return m_VDP.VDP1ReadReg<T>(address & 0x7FFFF);
-
-        } else if (AddressInRange<0x5E0'0000, 0x5EF'FFFF>(address)) {
-            return m_VDP.VDP2ReadVRAM<T>(address & 0x7FFFF);
-        } else if (AddressInRange<0x5F0'0000, 0x5F7'FFFF>(address)) {
-            return m_VDP.VDP2ReadCRAM<T>(address & 0xFFF);
-        } else if (AddressInRange<0x5F8'0000, 0x5FB'FFFF>(address)) {
-            return m_VDP.VDP2ReadReg<T>(address & 0x1FF);
-
-        } else {
-            regsLog.debug("unhandled {}-bit SCU B-Bus read from {:05X}", sizeof(T) * 8, address);
-            return 0;
-        }
-    }
-
-    template <mem_primitive T>
-    void WriteABus(uint32 address, T value) {
-        using namespace util;
-
-        if constexpr (std::is_same_v<T, uint32>) {
-            // 32-bit writes are split into two 16-bit writes
-            WriteABus<uint16>(address + 0, value >> 16u);
-            WriteABus<uint16>(address + 2, value >> 0u);
-
-        } else if (address == 0x210'0001) [[unlikely]] {
-            if constexpr (std::is_same_v<T, uint8>) {
-                // mednafen debug port
-                if (value == '\n') {
-                    debugLog.debug("{}", m_debugOutput);
-                    m_debugOutput.clear();
-                } else if (value != '\r') {
-                    m_debugOutput.push_back(value);
-                }
-            }
-        } else if (AddressInRange<0x400'0000, 0x4FF'FFFF>(address)) {
-            // HACK: emulate 32 Mbit backup RAM cartridge
-            util::WriteBE<T>((uint8 *)&m_externalBackupRAM.data()[address & 0x7FFFFF], value);
-        } else if (AddressInRange<0x580'0000, 0x58F'FFFF>(address)) {
-            if ((address & 0x7FFF) < 0x1000) {
-                // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
-                // These 4 KiB blocks are mapped every 32 KiB.
-                m_CDBlock.WriteReg<T>(address & 0x3F, value);
-            }
-
-        } else {
-            regsLog.debug("unhandled {}-bit SCU A-Bus write to {:05X} = {:X}", sizeof(T) * 8, address, value);
-        }
-    }
-
-    template <mem_primitive T>
-    void WriteBBus(uint32 address, T value) {
-        using namespace util;
-
-        if constexpr (std::is_same_v<T, uint32>) {
-            // 32-bit writes are split into two 16-bit writes
-            WriteBBus<uint16>(address + 0, value >> 16u);
-            WriteBBus<uint16>(address + 2, value >> 0u);
-        } else if (AddressInRange<0x5A0'0000, 0x5AF'FFFF>(address)) {
-            m_SCSP.WriteWRAM<T>(address & 0x7FFFF, value);
-        } else if (AddressInRange<0x5B0'0000, 0x5BF'FFFF>(address)) {
-            m_SCSP.WriteReg<T>(address & 0xFFF, value);
-
-        } else if (AddressInRange<0x5C0'0000, 0x5C7'FFFF>(address)) {
-            m_VDP.VDP1WriteVRAM<T>(address & 0x7FFFF, value);
-        } else if (AddressInRange<0x5C8'0000, 0x5CF'FFFF>(address)) {
-            m_VDP.VDP1WriteFB<T>(address & 0x3FFFF, value);
-        } else if (AddressInRange<0x5D0'0000, 0x5D7'FFFF>(address)) {
-            m_VDP.VDP1WriteReg<T>(address & 0x7FFFF, value);
-
-        } else if (AddressInRange<0x5E0'0000, 0x5EF'FFFF>(address)) {
-            m_VDP.VDP2WriteVRAM<T>(address & 0x7FFFF, value);
-        } else if (AddressInRange<0x5F0'0000, 0x5F7'FFFF>(address)) {
-            m_VDP.VDP2WriteCRAM<T>(address & 0xFFF, value);
-        } else if (AddressInRange<0x5F8'0000, 0x5FB'FFFF>(address)) {
-            m_VDP.VDP2WriteReg<T>(address & 0x1FF, value);
-
-        } else {
-            regsLog.debug("unhandled {}-bit SCU B-Bus write to {:05X} = {:X}", sizeof(T) * 8, address, value);
-        }
-    }
+    void WriteCartridge(uint32 address, T value);
 
     // -------------------------------------------------------------------------
     // Interrupts

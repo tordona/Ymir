@@ -27,6 +27,12 @@ struct Saturn;
 
 } // namespace satemu
 
+namespace satemu::sh2 {
+
+class SH2Bus;
+
+} // namespace satemu::sh2
+
 namespace satemu::scu {
 
 class SCU;
@@ -65,65 +71,6 @@ public:
         return m_disc;
     }
 
-    // TODO: handle 8-bit and 32-bit accesses properly
-
-    template <mem_primitive T>
-    T ReadReg(uint32 address) {
-        T value = ReadRegImpl<T>(address);
-        regsLog.trace("{}-bit register read from {:02X} = {:X}", sizeof(T) * 8, address, value);
-        return value;
-    }
-
-    template <mem_primitive T>
-    T ReadRegImpl(uint32 address) {
-        switch (address) {
-        case 0x00: return DoReadTransfer();
-        case 0x02: return DoReadTransfer();
-        case 0x08: return m_HIRQ;
-        case 0x0C: return m_HIRQMASK;
-        case 0x18: return m_CR[0];
-        case 0x1C: return m_CR[1];
-        case 0x20: return m_CR[2];
-        case 0x24:
-            m_processingCommand = false;
-            m_readyForPeriodicReports = true;
-            return m_CR[3];
-        default: regsLog.debug("unhandled {}-bit register read from {:02X}", sizeof(T) * 8, address); return 0;
-        }
-    }
-
-    template <mem_primitive T>
-    void WriteReg(uint32 address, T value) {
-        regsLog.trace("{}-bit register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
-        switch (address) {
-        case 0x00: DoWriteTransfer(value); break;
-        case 0x02: DoWriteTransfer(value); break;
-        case 0x08:
-            m_HIRQ &= value;
-            UpdateInterrupts();
-            break;
-        case 0x0C:
-            m_HIRQMASK = value;
-            UpdateInterrupts();
-            break;
-        case 0x18:
-            m_processingCommand = true;
-            m_status.statusCode &= ~kStatusFlagPeriodic;
-            m_CR[0] = value;
-            break;
-        case 0x1C: m_CR[1] = value; break;
-        case 0x20: m_CR[2] = value; break;
-        case 0x24:
-            m_CR[3] = value;
-            SetupCommand();
-            break;
-
-        default:
-            regsLog.debug("unhandled {}-bit register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
-            break;
-        }
-    }
-
 private:
     sys::System &m_system;
     scu::SCU &m_SCU;
@@ -147,6 +94,21 @@ private:
     // TODO: use a device instead, to support reading from real drives as well as disc images
     media::Disc m_disc;
     media::fs::Filesystem m_fs;
+
+    // -------------------------------------------------------------------------
+    // Memory accessors (SCU-facing bus)
+    // 16-bit reads, 8- or 16-bit writes
+
+    friend struct ::satemu::Saturn;
+    void MapMemory(sh2::SH2Bus &bus);
+
+    // TODO: handle 8-bit and 32-bit accesses properly
+
+    template <mem_primitive T>
+    T ReadReg(uint32 address);
+
+    template <mem_primitive T>
+    void WriteReg(uint32 address, T value);
 
     // -------------------------------------------------------------------------
     // Disc/drive state
