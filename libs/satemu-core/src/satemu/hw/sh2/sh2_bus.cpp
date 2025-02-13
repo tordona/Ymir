@@ -22,56 +22,37 @@ SH2Bus::SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu, smpc::SMPC &smpc)
     , m_SCU(scu)
     , m_SMPC(smpc) {
 
-    // HACK: should be in its own class, shared with external backup RAM cartridges
-    static constexpr std::string_view kHeader = "BackUpRam Format";
-    std::filesystem::path bupRAMPath = "bup-int.bin";
-    if (!std::filesystem::is_regular_file(bupRAMPath) ||
-        std::filesystem::file_size(bupRAMPath) < kInternalBackupRAMSize) {
-        std::ofstream out{bupRAMPath, std::ios::binary};
-
-        // Write header at the beginning
-        for (int i = 0; i < 4; i++) {
-            for (char ch : kHeader) {
-                out.put(0xFF);
-                out.put(ch);
-            }
-        }
-
-        // Clear the rest of the file
-        out.seekp(0, std::ios::end);
-        if (out.tellp() & 1) {
-            out.put(0);
-        }
-        for (size_t i = out.tellp(); i < kInternalBackupRAMSize; i += 2) {
-            out.put(0xFF);
-            out.put(0);
-        }
-    }
-    std::error_code err{};
-    internalBackupRAM = mio::make_mmap_sink(bupRAMPath.string(), err);
+    static constexpr std::size_t kInternalBackupRAMSize = 32_KiB; // HACK: should be in its own component
+    // TODO: configurable path and mode
+    std::error_code error{};
+    m_internalBackupRAM.LoadFrom("bup-int.bin", kInternalBackupRAMSize, error);
     // TODO: handle error
 
     MapMemory(
         0x000'0000, 0x7FF'FFFF,
         {
-            .read8 = [](uint32 address, void *ctx) -> uint8 {
+            .read8 = [](uint32 address, void * /*ctx*/) -> uint8 {
                 rootLog.debug("Unhandled 8-bit read from {:07X}", address);
                 return 0;
             },
-            .read16 = [](uint32 address, void *ctx) -> uint16 {
+            .read16 = [](uint32 address, void * /*ctx*/) -> uint16 {
                 rootLog.debug("Unhandled 16-bit read from {:07X}", address);
                 return 0;
             },
-            .read32 = [](uint32 address, void *ctx) -> uint32 {
+            .read32 = [](uint32 address, void * /*ctx*/) -> uint32 {
                 rootLog.debug("Unhandled 32-bit read from {:07X}", address);
                 return 0;
             },
             .write8 = [](uint32 address, uint8 value,
-                         void *ctx) { rootLog.debug("Unhandled 8-bit write to {:07X} = {:02X}", address, value); },
-            .write16 = [](uint32 address, uint16 value,
-                          void *ctx) { rootLog.debug("Unhandled 16-bit write to {:07X} = {:04X}", address, value); },
-            .write32 = [](uint32 address, uint32 value,
-                          void *ctx) { rootLog.debug("Unhandled 32-bit write to {:07X} = {:07X}", address, value); },
+                         void * /*ctx*/) { rootLog.debug("Unhandled 8-bit write to {:07X} = {:02X}", address, value); },
+            .write16 =
+                [](uint32 address, uint16 value, void * /*ctx*/) {
+                    rootLog.debug("Unhandled 16-bit write to {:07X} = {:04X}", address, value);
+                },
+            .write32 =
+                [](uint32 address, uint32 value, void * /*ctx*/) {
+                    rootLog.debug("Unhandled 32-bit write to {:07X} = {:07X}", address, value);
+                },
         });
 
     MapMemory(0x000'0000, 0x00F'FFFF,
@@ -89,13 +70,22 @@ SH2Bus::SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu, smpc::SMPC &smpc)
 
     MapMemory(0x018'0000, 0x01F'FFFF,
               {
-                  .ctx = internalBackupRAM.data(),
-                  .read8 = GenericRead<uint8, kInternalBackupRAMSize - 1>,
-                  .read16 = GenericRead<uint16, kInternalBackupRAMSize - 1>,
-                  .read32 = GenericRead<uint32, kInternalBackupRAMSize - 1>,
-                  .write8 = GenericWrite<uint8, kInternalBackupRAMSize - 1>,
-                  .write16 = GenericWrite<uint16, kInternalBackupRAMSize - 1>,
-                  .write32 = GenericWrite<uint32, kInternalBackupRAMSize - 1>,
+                  .ctx = &m_internalBackupRAM,
+                  .read8 = [](uint32 address, void *ctx) -> uint8 {
+                      return static_cast<bup::BackupMemory *>(ctx)->ReadByte(address);
+                  },
+                  .read16 = [](uint32 address, void *ctx) -> uint16 {
+                      return static_cast<bup::BackupMemory *>(ctx)->ReadWord(address);
+                  },
+                  .read32 = [](uint32 address, void *ctx) -> uint32 {
+                      return static_cast<bup::BackupMemory *>(ctx)->ReadLong(address);
+                  },
+                  .write8 = [](uint32 address, uint8 value,
+                               void *ctx) { static_cast<bup::BackupMemory *>(ctx)->WriteByte(address, value); },
+                  .write16 = [](uint32 address, uint16 value,
+                                void *ctx) { static_cast<bup::BackupMemory *>(ctx)->WriteWord(address, value); },
+                  .write32 = [](uint32 address, uint32 value,
+                                void *ctx) { static_cast<bup::BackupMemory *>(ctx)->WriteLong(address, value); },
               });
 
     MapMemory(0x020'0000, 0x02F'FFFF,
@@ -169,7 +159,7 @@ void SH2Bus::WriteSINIT(uint16 value) {
     m_masterSH2.TriggerFRTInputCapture();
 }
 
-void SH2Bus::MapMemory(uint32 start, uint32 end, MemoryRegionEntry entry) {
+void SH2Bus::MapMemory(uint32 start, uint32 end, MemoryPage entry) {
     const uint32 startIndex = start >> kPageGranularityBits;
     const uint32 endIndex = end >> kPageGranularityBits;
     for (uint32 i = startIndex; i <= endIndex; i++) {

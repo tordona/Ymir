@@ -8,6 +8,5 @@ inline constexpr std::size_t kIPLSize = 512_KiB;
 
 inline constexpr std::size_t kWRAMLowSize = 1_MiB;
 inline constexpr std::size_t kWRAMHighSize = 1_MiB;
-inline constexpr std::size_t kInternalBackupRAMSize = 64_KiB; // HACK: should be in its own component
 
 } // namespace satemu::sh2

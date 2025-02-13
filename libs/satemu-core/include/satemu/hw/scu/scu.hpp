@@ -6,10 +6,10 @@
 
 #include <satemu/hw/hw_defs.hpp>
 
+#include <satemu/sys/backup_ram.hpp>
+
 #include <satemu/util/data_ops.hpp>
 #include <satemu/util/debug_print.hpp>
-
-#include <mio/mmap.hpp> // HACK: should be used in a binary reader/writer object
 
 #include <iosfwd>
 
@@ -115,11 +115,8 @@ private:
     template <bool debug>
     static void OnTimer1Event(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
 
-    // TODO: don't hardcode this
-    // TODO: use an abstraction
-    // TODO: move to its own class
-    // std::array<uint8, kInternalBackupRAMSize> internalBackupRAM;
-    mio::mmap_sink m_externalBackupRAM;
+    // TODO: move to Backup RAM Cartridge implementation
+    bup::BackupMemory m_externalBackupRAM;
 
     std::string m_debugOutput;
 

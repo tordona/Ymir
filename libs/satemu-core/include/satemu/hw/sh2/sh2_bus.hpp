@@ -7,10 +7,10 @@
 #include <satemu/hw/scu/scu.hpp>
 #include <satemu/hw/smpc/smpc.hpp>
 
+#include <satemu/sys/backup_ram.hpp>
+
 #include <satemu/util/data_ops.hpp>
 #include <satemu/util/unreachable.hpp>
-
-#include <mio/mmap.hpp> // HACK: should be used in a binary reader/writer object
 
 #include <iostream>
 #include <span>
@@ -77,7 +77,7 @@ public:
     using FnWrite16 = void (*)(uint32 address, uint16 value, void *ctx);
     using FnWrite32 = void (*)(uint32 address, uint32 value, void *ctx);
 
-    struct MemoryRegionEntry {
+    struct MemoryPage {
         void *ctx = nullptr;
 
         FnRead8 read8 = [](uint32, void *) -> uint8 { return 0; };
@@ -98,14 +98,14 @@ public:
     void DumpWRAMLow(std::ostream &out) const;
     void DumpWRAMHigh(std::ostream &out) const;
 
-    void MapMemory(uint32 start, uint32 end, MemoryRegionEntry entry);
+    void MapMemory(uint32 start, uint32 end, MemoryPage entry);
     void UnmapMemory(uint32 start, uint32 end);
 
     template <mem_primitive T>
     T Read(uint32 address) {
         address &= kAddressMask & ~(sizeof(T) - 1);
 
-        const MemoryRegionEntry &entry = m_pages[address >> kPageGranularityBits];
+        const MemoryPage &entry = m_pages[address >> kPageGranularityBits];
 
         if constexpr (std::is_same_v<T, uint8>) {
             return entry.read8(address, entry.ctx);
@@ -123,7 +123,7 @@ public:
     void Write(uint32 address, T value) {
         address &= kAddressMask & ~(sizeof(T) - 1);
 
-        const MemoryRegionEntry &entry = m_pages[address >> kPageGranularityBits];
+        const MemoryPage &entry = m_pages[address >> kPageGranularityBits];
 
         if constexpr (std::is_same_v<T, uint8>) {
             entry.write8(address, value, entry.ctx);
@@ -143,19 +143,15 @@ public:
     alignas(16) std::array<uint8, kWRAMLowSize> WRAMLow;
     alignas(16) std::array<uint8, kWRAMHighSize> WRAMHigh;
 
-    // TODO: don't hardcode this
-    // TODO: use an abstraction
-    // TODO: move to its own class
-    // std::array<uint8, kInternalBackupRAMSize> internalBackupRAM;
-    mio::mmap_sink internalBackupRAM;
-
 private:
     SH2 &m_masterSH2;
     SH2 &m_slaveSH2;
     scu::SCU &m_SCU;
     smpc::SMPC &m_SMPC;
 
-    std::array<MemoryRegionEntry, kPageCount> m_pages;
+    std::array<MemoryPage, kPageCount> m_pages;
+
+    bup::BackupMemory m_internalBackupRAM;
 
     void WriteMINIT(uint16 value);
     void WriteSINIT(uint16 value);

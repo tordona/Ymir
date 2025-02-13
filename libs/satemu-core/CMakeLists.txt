@@ -66,6 +66,7 @@ add_library(satemu-core
     include/satemu/media/binary_reader/binary_reader_mmap.hpp
     include/satemu/media/binary_reader/binary_reader_subview.hpp
 
+    include/satemu/sys/backup_ram.hpp
     include/satemu/sys/clocks.hpp
     include/satemu/sys/saturn.hpp
     include/satemu/sys/system.hpp
@@ -117,6 +118,7 @@ add_library(satemu-core
     src/satemu/media/loader/loader_iso.cpp
     src/satemu/media/loader/loader_mdf_mds.cpp
 
+    src/satemu/sys/backup_ram.cpp
     src/satemu/sys/saturn.cpp
 
     src/satemu/util/constexpr_for.hpp

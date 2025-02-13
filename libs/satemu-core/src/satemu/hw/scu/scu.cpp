@@ -32,36 +32,10 @@ SCU::SCU(core::Scheduler &scheduler, sh2::SH2Block &sh2)
 
     m_timer1Event = m_scheduler.RegisterEvent(core::events::SCUTimer1, this, OnTimer1Event<false>, OnTimer1Event<true>);
 
-    // HACK: should be in its own class, shared with internal backup RAM
-    static constexpr std::size_t kExternalBackupRAMSize = 8_MiB;
-    static constexpr std::string_view kHeader = "BackUpRam Format";
-    std::filesystem::path bupRAMPath = "bup-ext.bin";
-
-    // Create file if it doesn't exist or expand if it's too short
-    if (!std::filesystem::is_regular_file(bupRAMPath) ||
-        std::filesystem::file_size(bupRAMPath) < kExternalBackupRAMSize) {
-        std::ofstream out{bupRAMPath, std::ios::binary};
-
-        // Write header at the beginning
-        for (int i = 0; i < 4; i++) {
-            for (char ch : kHeader) {
-                out.put(0xFF);
-                out.put(ch);
-            }
-        }
-
-        // Clear the rest of the file
-        out.seekp(0, std::ios::end);
-        if (out.tellp() & 1) {
-            out.put(0);
-        }
-        for (size_t i = out.tellp(); i < kExternalBackupRAMSize; i += 2) {
-            out.put(0xFF);
-            out.put(0);
-        }
-    }
-    std::error_code err{};
-    m_externalBackupRAM = mio::make_mmap_sink(bupRAMPath.string(), err);
+    static constexpr std::size_t kExternalBackupRAMSize = 4_MiB; // HACK: should be in its own class
+    // TODO: configurable path and mode
+    std::error_code error{};
+    m_externalBackupRAM.LoadFrom("bup-ext.bin", kExternalBackupRAMSize, error);
     // TODO: handle error
 
     Reset(true);
@@ -295,6 +269,7 @@ T SCU::ReadCartridge(uint32 address) {
     }
 
     // HACK: emulate 32 Mbit backup RAM cartridge
+    // TODO: move to Backup RAM Cartridge implementation
     if (address >= 0x400'0000) {
         if (address >= 0x4FF'FFFC) {
             // Return ID for 32 Mbit Backup RAM cartridge
@@ -308,8 +283,13 @@ T SCU::ReadCartridge(uint32 address) {
                 return 0xFF24;
             }
         }
-        // TODO: shift address right by 1; insert FFs as needed on return value
-        return util::ReadBE<T>((const uint8 *)&m_externalBackupRAM[address & 0x7FFFFF]);
+        if constexpr (std::is_same_v<T, uint8>) {
+            return m_externalBackupRAM.ReadByte(address);
+        } else if constexpr (std::is_same_v<T, uint16>) {
+            return m_externalBackupRAM.ReadWord(address);
+        } else if constexpr (std::is_same_v<T, uint32>) {
+            return m_externalBackupRAM.ReadLong(address);
+        }
     }
 
     regsLog.trace("Unhandled {}-bit cartridge port read from {:05X}", sizeof(T) * 8, address);
@@ -332,8 +312,14 @@ void SCU::WriteCartridge(uint32 address, T value) {
         }
     } else if (address >= 0x400'0000) {
         // HACK: emulate 32 Mbit backup RAM cartridge
-        // TODO: shift address right by 1; write least significant byte of value on 16-bit writes
-        util::WriteBE<T>((uint8 *)&m_externalBackupRAM[address & 0x7FFFFF], value);
+        // TODO: move to Backup RAM Cartridge implementation
+        if constexpr (std::is_same_v<T, uint8>) {
+            m_externalBackupRAM.WriteByte(address, value);
+        } else if constexpr (std::is_same_v<T, uint16>) {
+            m_externalBackupRAM.WriteWord(address, value);
+        } else if constexpr (std::is_same_v<T, uint32>) {
+            m_externalBackupRAM.WriteLong(address, value);
+        }
     } else {
         regsLog.trace("Unhandled {}-bit cartridge port write to {:05X} = {:X}", sizeof(T) * 8, address, value);
     }
