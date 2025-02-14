@@ -21,7 +21,7 @@ struct Saturn;
 
 namespace satemu::sh2 {
 
-struct SH2Bus;
+class SH2Bus;
 
 } // namespace satemu::sh2
 
