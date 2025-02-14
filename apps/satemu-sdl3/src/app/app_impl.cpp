@@ -262,7 +262,7 @@ void App::Impl::RunEmulator() {
 
     m_saturn.debugProbe.Use<AppProbe>(*this);
 
-    // TODO: pull from configuration
+    // TODO: pull from CommandLineOptions or configuration
     // m_saturn.SetVideoStandard(satemu::sys::VideoStandard::PAL);
 
     // TODO: pull from CommandLineOptions or configuration
@@ -275,6 +275,14 @@ void App::Impl::RunEmulator() {
     } else if (error) {
         fmt::println("Failed to load external backup memory: {}", error.message());
     }
+
+    /*if (m_saturn.InsertCartridge<satemu::cart::DRAM8MbitCartridge>()) {
+        fmt::println("8 Mbit DRAM cartridge inserted");
+    }*/
+
+    /*if (m_saturn.InsertCartridge<satemu::cart::DRAM32MbitCartridge>()) {
+        fmt::println("32 Mbit DRAM cartridge inserted");
+    }*/
 
     m_saturn.Reset(true);
 

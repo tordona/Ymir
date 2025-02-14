@@ -267,7 +267,7 @@ T SCU::ReadCartridge(uint32 address) {
     } else if constexpr (std::is_same_v<T, uint16>) {
         if (address >= 0x4FF'FFFE) [[unlikely]] {
             // Return cartridge ID
-            return 0xFF24;
+            return 0xFF00 | m_cartSlot.GetID();
         } else {
             return m_cartSlot.ReadWord(address);
         }
@@ -277,7 +277,7 @@ T SCU::ReadCartridge(uint32 address) {
             if ((address & 1) == 0) {
                 return 0xFF;
             } else {
-                return 0x24;
+                return m_cartSlot.GetID();
             }
         } else {
             return m_cartSlot.ReadByte(address);

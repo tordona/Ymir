@@ -12,6 +12,7 @@ add_library(satemu-core
 
     include/satemu/hw/cart/cart_base.hpp
     include/satemu/hw/cart/cart_impl_bup.hpp
+    include/satemu/hw/cart/cart_impl_dram.hpp
     include/satemu/hw/cart/cart_impl_none.hpp
     include/satemu/hw/cart/cart_slot.hpp
 

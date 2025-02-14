@@ -29,6 +29,10 @@ public:
 
     void Eject();
 
+    uint8 GetID() const {
+        return m_cart->GetID();
+    }
+
     uint8 ReadByte(uint32 address) const {
         return m_cart->ReadByte(address);
     }
