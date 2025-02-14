@@ -6,12 +6,16 @@
 
 namespace satemu::cart {
 
-BackupMemoryCartridge::BackupMemoryCartridge(Size size, const std::filesystem::path &path, std::error_code &error)
-    : BaseCartridge(0x21u + static_cast<uint8>(size)) {
-    static constexpr size_t kSizes[] = {512_KiB, 1_MiB, 2_MiB, 4_MiB};
+static constexpr size_t kSizes[] = {512_KiB, 1_MiB, 2_MiB, 4_MiB};
+static constexpr uint8 kIDs[] = {0x21, 0x22, 0x23, 0x24};
 
-    auto index = std::min<uint8>(static_cast<uint8>(size), std::size(kSizes));
-    m_backupRAM.LoadFrom(path, kSizes[index], error);
+static constexpr uint8 GetIndex(BackupMemoryCartridge::Size size) {
+    return std::min<uint8>(static_cast<uint8>(size), std::size(kSizes));
+}
+
+BackupMemoryCartridge::BackupMemoryCartridge(Size size, const std::filesystem::path &path, std::error_code &error)
+    : BaseCartridge(kIDs[GetIndex(size)]) {
+    m_backupRAM.LoadFrom(path, kSizes[GetIndex(size)], error);
 }
 
 } // namespace satemu::cart
