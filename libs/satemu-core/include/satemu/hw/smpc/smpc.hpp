@@ -9,6 +9,7 @@
 #include <satemu/util/debug_print.hpp>
 
 #include <array>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // Forward declarations
@@ -223,17 +224,11 @@ private:
     uint8 m_port2mode;
 
     // INTBACK output control
-    bool m_intbackInProgress;
-    bool m_firstPeripheralReport;
+    std::vector<uint8> m_intbackReport; // Full peripheral report for both ports
+    size_t m_intbackReportOffset;       // Offset into full peripheral report to continue reading
+    bool m_intbackInProgress;           // Whether an INTBACK peripheral report read is in progress
 
-    // HACK: simulate port 1 having a standard Saturn pad
-    bool m_emittedPort1Status; // have we emitted port 1 status? (valid only if peripheral data requested)
-    // TODO: read port 1 data properly into an array
-    // - keep track of how many bytes have been read so that subsequent report requests can continue from that point
-    // TODO: read port 2 data
-    // TODO: support multitap
-    // TODO: support controllers with longer reports
-    // - does the report split into two parts, or does it have to be in a single report?
+    void ReadPeripherals();
 
     void WriteINTBACKStatusReport();
     void WriteINTBACKPeripheralReport();
