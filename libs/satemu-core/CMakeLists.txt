@@ -10,6 +10,11 @@ add_library(satemu-core
 
     include/satemu/hw/hw_defs.hpp
 
+    include/satemu/hw/cart/cart_base.hpp
+    include/satemu/hw/cart/cart_impl_bup.hpp
+    include/satemu/hw/cart/cart_impl_none.hpp
+    include/satemu/hw/cart/cart_slot.hpp
+
     include/satemu/hw/cdblock/cdblock.hpp
     include/satemu/hw/cdblock/cdblock_buffer.hpp
     include/satemu/hw/cdblock/cdblock_defs.hpp
@@ -86,6 +91,9 @@ add_library(satemu-core
 
 
     src/satemu/satemu.cpp
+
+    src/satemu/hw/cart/cart_slot.cpp
+    src/satemu/hw/cart/cart_impl_bup.cpp
 
     src/satemu/hw/cdblock/cdblock.cpp
     src/satemu/hw/cdblock/cdblock_partition_manager.cpp

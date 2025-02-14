@@ -6,6 +6,8 @@
 
 #include <satemu/hw/hw_defs.hpp>
 
+#include <satemu/hw/cart/cart_slot.hpp>
+
 #include <satemu/sys/backup_ram.hpp>
 
 #include <satemu/util/data_ops.hpp>
@@ -83,6 +85,19 @@ public:
     void Advance(uint64 cycles);
 
     // -------------------------------------------------------------------------
+    // Cartridge slot
+
+    template <typename T, typename... Args>
+        requires std::derived_from<T, cart::BaseCartridge>
+    [[nodiscard]] bool InsertCartridge(Args &&...args) {
+        return m_cartSlot.Insert<T>(std::forward<Args>(args)...);
+    }
+
+    void EjectCartridge() {
+        m_cartSlot.Eject();
+    }
+
+    // -------------------------------------------------------------------------
     // External interrupt triggers
 
     void TriggerVBlankIN();
@@ -115,11 +130,6 @@ private:
     template <bool debug>
     static void OnTimer1Event(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
 
-    // TODO: move to Backup RAM Cartridge implementation
-    bup::BackupMemory m_externalBackupRAM;
-
-    std::string m_debugOutput;
-
     // -------------------------------------------------------------------------
     // Memory accessors
 
@@ -131,6 +141,12 @@ private:
 
     template <mem_primitive T>
     void WriteCartridge(uint32 address, T value);
+
+    // -------------------------------------------------------------------------
+    // Cartridge slot
+
+    cart::CartridgeSlot m_cartSlot;
+    std::string m_debugOutput; // mednafen debug port at 0x2100001, only accepts 8-bit writes
 
     // -------------------------------------------------------------------------
     // Interrupts

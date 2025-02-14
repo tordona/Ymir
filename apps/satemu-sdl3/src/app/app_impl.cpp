@@ -260,8 +260,23 @@ void App::Impl::RunEmulator() {
     // ---------------------------------
     // Main emulator loop
 
-    m_saturn.Reset(true);
+    m_saturn.debugProbe.Use<AppProbe>(*this);
+
+    // TODO: pull from configuration
     // m_saturn.SetVideoStandard(satemu::sys::VideoStandard::PAL);
+
+    // TODO: pull from CommandLineOptions or configuration
+    static constexpr std::string_view extBupPath = "bup-ext.bin";
+
+    std::error_code error{};
+    if (m_saturn.InsertCartridge<satemu::cart::BackupMemoryCartridge>(
+            satemu::cart::BackupMemoryCartridge::Size::_32Mbit, extBupPath, error)) {
+        fmt::println("External backup memory cartridge loaded from {}", extBupPath);
+    } else if (error) {
+        fmt::println("Failed to load external backup memory: {}", error.message());
+    }
+
+    m_saturn.Reset(true);
 
     auto t = clk::now();
     uint64 frames = 0;
@@ -398,8 +413,6 @@ void App::Impl::RunEmulator() {
         default: break;
         }
     };
-
-    m_saturn.debugProbe.Use<AppProbe>(*this);
 
     while (running) {
         SDL_Event evt{};

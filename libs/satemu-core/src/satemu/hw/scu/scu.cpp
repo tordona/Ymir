@@ -1,5 +1,6 @@
 #include <satemu/hw/scu/scu.hpp>
 
+#include <satemu/hw/cart/cart_impl_none.hpp>
 #include <satemu/hw/sh2/sh2_block.hpp>
 
 #include <bit>
@@ -30,18 +31,16 @@ SCU::SCU(core::Scheduler &scheduler, sh2::SH2Block &sh2)
     : m_SH2(sh2)
     , m_scheduler(scheduler) {
 
-    m_timer1Event = m_scheduler.RegisterEvent(core::events::SCUTimer1, this, OnTimer1Event<false>, OnTimer1Event<true>);
+    EjectCartridge();
 
-    static constexpr std::size_t kExternalBackupRAMSize = 4_MiB; // HACK: should be in its own class
-    // TODO: configurable path and mode
-    std::error_code error{};
-    m_externalBackupRAM.LoadFrom("bup-ext.bin", kExternalBackupRAMSize, error);
-    // TODO: handle error
+    m_timer1Event = m_scheduler.RegisterEvent(core::events::SCUTimer1, this, OnTimer1Event<false>, OnTimer1Event<true>);
 
     Reset(true);
 }
 
 void SCU::Reset(bool hard) {
+    m_cartSlot.Reset(hard);
+
     m_intrMask.u32 = 0;
     m_intrStatus.u32 = 0;
     m_abusIntrAck = false;
@@ -206,7 +205,6 @@ void SCU::OnTimer1Event(core::EventContext &eventContext, void *userContext, uin
 
 void SCU::MapMemory(sh2::SH2Bus &bus) {
     // A-Bus CS0 and CS1 - Cartridge
-    // TODO: let the cartridge map itself
     bus.MapMemory(0x200'0000, 0x4FF'FFFF,
                   {
                       .ctx = this,
@@ -266,34 +264,25 @@ T SCU::ReadCartridge(uint32 address) {
         uint32 value = ReadCartridge<uint16>(address + 0) << 16u;
         value |= ReadCartridge<uint16>(address + 2) << 0u;
         return value;
-    }
-
-    // HACK: emulate 32 Mbit backup RAM cartridge
-    // TODO: move to Backup RAM Cartridge implementation
-    if (address >= 0x400'0000) {
-        if (address >= 0x4FF'FFFC) {
-            // Return ID for 32 Mbit Backup RAM cartridge
-            if constexpr (std::is_same_v<T, uint8>) {
-                if ((address & 1) == 0) {
-                    return 0xFF;
-                } else {
-                    return 0x24;
-                }
+    } else if constexpr (std::is_same_v<T, uint16>) {
+        if (address >= 0x4FF'FFFE) [[unlikely]] {
+            // Return cartridge ID
+            return 0xFF24;
+        } else {
+            return m_cartSlot.ReadWord(address);
+        }
+    } else if constexpr (std::is_same_v<T, uint8>) {
+        if (address >= 0x4FF'FFFE) [[unlikely]] {
+            // Return cartridge ID
+            if ((address & 1) == 0) {
+                return 0xFF;
             } else {
-                return 0xFF24;
+                return 0x24;
             }
-        }
-        if constexpr (std::is_same_v<T, uint8>) {
-            return m_externalBackupRAM.ReadByte(address);
-        } else if constexpr (std::is_same_v<T, uint16>) {
-            return m_externalBackupRAM.ReadWord(address);
-        } else if constexpr (std::is_same_v<T, uint32>) {
-            return m_externalBackupRAM.ReadLong(address);
+        } else {
+            return m_cartSlot.ReadByte(address);
         }
     }
-
-    regsLog.trace("Unhandled {}-bit cartridge port read from {:05X}", sizeof(T) * 8, address);
-    return 0xFF;
 }
 
 template <mem_primitive T>
@@ -302,26 +291,20 @@ void SCU::WriteCartridge(uint32 address, T value) {
         // 32-bit writes are split into two 16-bit writes
         WriteCartridge<uint16>(address + 0, value >> 16u);
         WriteCartridge<uint16>(address + 2, value >> 0u);
-    } else if (std::is_same_v<T, uint8> && address == 0x210'0001) [[unlikely]] {
-        // mednafen debug port
-        if (value == '\n') {
-            debugLog.debug("{}", m_debugOutput);
-            m_debugOutput.clear();
-        } else if (value != '\r') {
-            m_debugOutput.push_back(value);
+    } else if constexpr (std::is_same_v<T, uint16>) {
+        m_cartSlot.WriteWord(address, value);
+    } else if constexpr (std::is_same_v<T, uint8>) {
+        if (address == 0x210'0001) [[unlikely]] {
+            // mednafen debug port
+            if (value == '\n') {
+                debugLog.debug("{}", m_debugOutput);
+                m_debugOutput.clear();
+            } else if (value != '\r') {
+                m_debugOutput.push_back(value);
+            }
+        } else {
+            m_cartSlot.WriteByte(address, value);
         }
-    } else if (address >= 0x400'0000) {
-        // HACK: emulate 32 Mbit backup RAM cartridge
-        // TODO: move to Backup RAM Cartridge implementation
-        if constexpr (std::is_same_v<T, uint8>) {
-            m_externalBackupRAM.WriteByte(address, value);
-        } else if constexpr (std::is_same_v<T, uint16>) {
-            m_externalBackupRAM.WriteWord(address, value);
-        } else if constexpr (std::is_same_v<T, uint32>) {
-            m_externalBackupRAM.WriteLong(address, value);
-        }
-    } else {
-        regsLog.trace("Unhandled {}-bit cartridge port write to {:05X} = {:X}", sizeof(T) * 8, address, value);
     }
 }
 

@@ -5,6 +5,8 @@
 
 #include "system.hpp"
 
+#include <satemu/hw/cart/cart.hpp>
+#include <satemu/hw/cart/cart_slot.hpp>
 #include <satemu/hw/cdblock/cdblock.hpp>
 #include <satemu/hw/scsp/scsp.hpp>
 #include <satemu/hw/scu/scu.hpp>
@@ -30,6 +32,16 @@ struct Saturn {
     // Convenience methods
 
     void LoadIPL(std::span<uint8, sh2::kIPLSize> ipl);
+
+    template <typename T, typename... Args>
+        requires std::derived_from<T, cart::BaseCartridge>
+    [[nodiscard]] bool InsertCartridge(Args &&...args) {
+        return SCU.InsertCartridge<T>(std::forward<Args>(args)...);
+    }
+
+    void EjectCartridge() {
+        SCU.EjectCartridge();
+    }
 
     void LoadDisc(media::Disc &&disc);
     void EjectDisc();
