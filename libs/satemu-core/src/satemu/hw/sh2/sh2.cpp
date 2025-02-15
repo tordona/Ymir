@@ -138,7 +138,7 @@ SH2::SH2(SH2Bus &bus, bool master)
     Reset(true);
 }
 
-void SH2::Reset(bool hard) {
+void SH2::Reset(bool hard, bool watchdogInitiated) {
     // Initial values:
     // - R0-R14 = undefined
     // - R15 = ReadLong(0x00000004)  [NOTE: ignores VBR]
@@ -150,6 +150,10 @@ void SH2::Reset(bool hard) {
     // - MACH, MACL = undefined
     // - PR = undefined
     // - PC = ReadLong(0x00000000)  [NOTE: ignores VBR]
+
+    // On-chip peripherals:
+    // - BSC, USB and FMR are not reset on power-on/hard reset
+    // - all other modules reset always
 
     R.fill(0);
     PR = 0;
@@ -177,6 +181,8 @@ void SH2::Reset(bool hard) {
     for (auto &ch : m_dmaChannels) {
         ch.Reset();
     }
+
+    WDT.Reset(watchdogInitiated);
 
     SBYCR.u8 = 0x00;
 
@@ -223,6 +229,7 @@ void SH2::Reset(bool hard) {
 template <bool debug>
 FLATTEN void SH2::Advance(uint64 cycles) {
     // TODO: proper cycle counting
+    AdvanceWDT(cycles);
     for (uint64 cy = 0; cy < cycles; cy++) {
         AdvanceFRT(1);
         /*auto bit = [](bool value, std::string_view bit) { return value ? fmt::format(" {}", bit) : ""; };
@@ -514,6 +521,10 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     case 0x71: return m_dmaChannels[0].ReadDRCR();
     case 0x72: return m_dmaChannels[1].ReadDRCR();
 
+    case 0x80: return WDT.ReadWTCSR();
+    case 0x81: return WDT.ReadWTCNT();
+    case 0x83: return WDT.ReadRSTCSR();
+
     case 0x91: return SBYCR.u8;
     case 0x92 ... 0x9F: return CCR.u8;
 
@@ -735,6 +746,21 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
     case 0xE5:
         OnChipRegWriteByte(address & ~1, value >> 8u);
         OnChipRegWriteByte(address | 1, value >> 0u);
+        break;
+
+    case 0x80:
+        if ((value >> 8u) == 0x5A) {
+            WDT.WriteWTCNT(value);
+        } else if ((value >> 8u) == 0xA5) {
+            WDT.WriteWTCSR(value);
+        }
+        break;
+    case 0x82:
+        if ((value >> 8u) == 0x5A) {
+            WDT.WriteRSTE_RSTS(value);
+        } else if ((value >> 8u) == 0xA5) {
+            WDT.WriteWOVF(value);
+        }
         break;
 
     case 0x92: WriteCCR(value); break;
@@ -980,6 +1006,33 @@ void SH2::WriteCCR(uint8 value) {
         // TODO: purge cache
         CCR.CP = 0;
     }
+}
+
+FORCE_INLINE void SH2::AdvanceWDT(uint64 cycles) {
+    if (!WDT.WTCSR.TME) {
+        return;
+    }
+
+    WDT.cycleCount += cycles;
+    const uint64 steps = WDT.cycleCount >> WDT.clockDividerShift;
+    WDT.cycleCount -= steps << WDT.clockDividerShift;
+
+    uint64 nextCount = WDT.WTCNT + steps;
+    if (nextCount >= 0x10000) {
+        if (WDT.WTCSR.WT_nIT) {
+            // Watchdog timer mode
+            WDT.RSTCSR.WOVF = 1;
+            if (WDT.RSTCSR.RSTE) {
+                // TODO: needs to preserve RSTCSR
+                Reset(WDT.RSTCSR.RSTS, true);
+            }
+        } else {
+            // Interval timer mode
+            WDT.WTCSR.OVF = 1;
+            RaiseInterrupt(InterruptSource::WDT_ITI);
+        }
+    }
+    WDT.WTCNT = nextCount;
 }
 
 void SH2::DIVUBegin32() {

@@ -99,7 +99,7 @@ class SH2 {
 public:
     SH2(SH2Bus &bus, bool master);
 
-    void Reset(bool hard);
+    void Reset(bool hard, bool watchdogInitiated = false);
 
     template <bool debug>
     void Advance(uint64 cycles);
@@ -264,7 +264,10 @@ private:
     void RunDMAC(uint32 channel);
 
     // --- WDT module ---
-    // TODO
+
+    WatchdogTimer WDT;
+
+    void AdvanceWDT(uint64 cycles);
 
     // --- Power-down module ---
 
