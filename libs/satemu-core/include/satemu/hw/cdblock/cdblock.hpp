@@ -66,6 +66,7 @@ public:
     void EjectDisc();
     void OpenTray();
     void CloseTray();
+    bool IsTrayOpen() const;
 
     const media::Disc &GetDisc() const {
         return m_disc;

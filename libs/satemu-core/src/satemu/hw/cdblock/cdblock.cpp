@@ -114,11 +114,38 @@ void CDBlock::EjectDisc() {
 }
 
 void CDBlock::OpenTray() {
-    // TODO: implement
+    if ((m_status.statusCode & 0xF) != kStatusCodeOpen) {
+        // TODO: stay in Busy status while disc stops spinning
+        m_status.statusCode = kStatusCodeOpen;
+        m_discAuthStatus = 0;
+
+        rootLog.info("Tray opened");
+    } else {
+        rootLog.info("Tried to open tray when it's already opened");
+    }
 }
 
 void CDBlock::CloseTray() {
-    // TODO: implement
+    if ((m_status.statusCode & 0xF) == kStatusCodeOpen) {
+        // TODO: stay in Busy status while drive scans disc
+        if (m_disc.sessions.empty()) {
+            m_status.statusCode = kStatusCodeNoDisc;
+            m_targetDriveCycles = kDriveCyclesNotPlaying;
+
+            rootLog.info("Tray closed - no disc");
+        } else {
+            m_status.statusCode = kStatusCodePause;
+            m_targetDriveCycles = kDriveCyclesNotPlaying;
+
+            rootLog.info("Tray closed - paused");
+        }
+    } else {
+        rootLog.info("Tried to close tray when it's already closed");
+    }
+}
+
+bool CDBlock::IsTrayOpen() const {
+    return (m_status.statusCode & 0xF) == kStatusCodeOpen;
 }
 
 template <bool debug>
@@ -944,7 +971,7 @@ FORCE_INLINE void CDBlock::ProcessCommand() {
     case 0x02: CmdGetTOC(); break;
     case 0x03: CmdGetSessionInfo(); break;
     case 0x04: CmdInitializeCDSystem(); break;
-    // case 0x05: CmdOpenTray(); break;
+    case 0x05: CmdOpenTray(); break;
     case 0x06: CmdEndDataTransfer(); break;
     case 0x10: CmdPlayDisc(); break;
     case 0x11: CmdSeekDisc(); break;
@@ -1189,11 +1216,7 @@ void CDBlock::CmdOpenTray() {
     // <blank>
     // <blank>
 
-    // TODO: stay in Busy status while disc stops spinning
-    m_status.statusCode = kStatusCodeOpen;
-    m_discAuthStatus = 0;
-
-    rootLog.info("Tray opened");
+    OpenTray();
 
     // Output structure: standard CD status data
     ReportCDStatus();

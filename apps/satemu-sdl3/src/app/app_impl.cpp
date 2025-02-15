@@ -343,6 +343,14 @@ void App::Impl::RunEmulator() {
         case SDL_SCANCODE_INSERT: setClearButton(*pad2, L, pressed); break;
         case SDL_SCANCODE_PAGEUP: setClearButton(*pad2, R, pressed); break;
 
+        case SDL_SCANCODE_F6:
+            if (pressed) {
+                if (m_saturn.CDBlock.IsTrayOpen()) {
+                    m_saturn.CDBlock.CloseTray();
+                } else {
+                    m_saturn.CDBlock.OpenTray();
+                }
+            }
         case SDL_SCANCODE_R:
             if (pressed) {
                 if (mod & SDL_KMOD_CTRL) {
