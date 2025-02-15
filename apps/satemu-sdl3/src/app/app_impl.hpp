@@ -12,6 +12,7 @@ public:
 
 private:
     satemu::Saturn m_saturn;
+    CommandLineOptions m_options;
 
     void RunEmulator();
 

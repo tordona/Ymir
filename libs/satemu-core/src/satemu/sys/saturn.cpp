@@ -95,6 +95,10 @@ void Saturn::CloseTray() {
     CDBlock.CloseTray();
 }
 
+bool Saturn::IsTrayOpen() const {
+    return CDBlock.IsTrayOpen();
+}
+
 template <bool debug>
 void Saturn::RunFrame() {
     // Use the last line phase as reference to give some leeway if we overshoot the target cycles

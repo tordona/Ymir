@@ -98,7 +98,13 @@ void CDBlock::Reset(bool hard) {
 
 void CDBlock::LoadDisc(media::Disc &&disc) {
     m_disc.Swap(std::move(disc));
-    // TODO: update status
+
+    if ((m_status.statusCode & 0xF) == kStatusCodeNoDisc || (m_status.statusCode & 0xF) == kStatusCodeOpen) {
+        // TODO: stay in Busy status while disc is read
+        m_status.statusCode = kStatusCodePause;
+        m_targetDriveCycles = kDriveCyclesNotPlaying;
+        m_discAuthStatus = 0;
+    }
 
     // Try building filesystem structure
     if (m_fs.Read(m_disc)) {
@@ -110,7 +116,14 @@ void CDBlock::LoadDisc(media::Disc &&disc) {
 
 void CDBlock::EjectDisc() {
     m_disc = {};
-    // TODO: update status
+    
+    m_status.statusCode = kStatusCodeNoDisc;
+    m_status.frameAddress = 0xFFFFFF;
+    m_status.flags = 0xF;
+    m_status.repeatCount = 0xF;
+    m_status.controlADR = 0xFF;
+    m_status.track = 0xFF;
+    m_status.index = 0xFF;
 }
 
 void CDBlock::OpenTray() {

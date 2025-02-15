@@ -47,6 +47,7 @@ struct Saturn {
     void EjectDisc();
     void OpenTray();
     void CloseTray();
+    bool IsTrayOpen() const;
 
     void RunFrame(bool debug) {
         if (debug) {

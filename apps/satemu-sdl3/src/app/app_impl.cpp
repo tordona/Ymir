@@ -19,6 +19,8 @@ namespace app {
 int App::Impl::Run(const CommandLineOptions &options) {
     fmt::println("satemu {}", satemu::version::string);
 
+    m_options = options;
+
     // Load IPL ROM
     {
         constexpr auto iplSize = satemu::sh2::kIPLSize;
@@ -341,16 +343,42 @@ void App::Impl::RunEmulator() {
         case SDL_SCANCODE_END: setClearButton(*pad2, Down, pressed); break;
         case SDL_SCANCODE_PAGEDOWN: setClearButton(*pad2, Right, pressed); break;
         case SDL_SCANCODE_INSERT: setClearButton(*pad2, L, pressed); break;
-        case SDL_SCANCODE_PAGEUP: setClearButton(*pad2, R, pressed); break;
+        case SDL_SCANCODE_PAGEUP:
+            setClearButton(*pad2, R, pressed);
+            break;
 
+            // ---- BEGIN TODO ----
+            // TODO: find better keybindings for these
         case SDL_SCANCODE_F6:
             if (pressed) {
-                if (m_saturn.CDBlock.IsTrayOpen()) {
-                    m_saturn.CDBlock.CloseTray();
+                if (m_saturn.IsTrayOpen()) {
+                    m_saturn.CloseTray();
                 } else {
-                    m_saturn.CDBlock.OpenTray();
+                    m_saturn.OpenTray();
                 }
             }
+            break;
+        case SDL_SCANCODE_F7:
+            if (pressed) {
+                // TODO: open file selector to let user pick a disc image
+                if (!m_options.gameDiscPath.empty()) {
+                    satemu::media::Disc disc{};
+                    if (satemu::media::LoadDisc(m_options.gameDiscPath, disc)) {
+                        fmt::println("Loaded disc image from {}", m_options.gameDiscPath.string());
+                        m_saturn.LoadDisc(std::move(disc));
+                    } else {
+                        fmt::println("Failed to disc image from {}", m_options.gameDiscPath.string());
+                    }
+                }
+            }
+            break;
+        case SDL_SCANCODE_F8:
+            if (pressed) {
+                m_saturn.EjectDisc();
+            }
+            break;
+            // ---- END TODO ----
+
         case SDL_SCANCODE_R:
             if (pressed) {
                 if (mod & SDL_KMOD_CTRL) {
