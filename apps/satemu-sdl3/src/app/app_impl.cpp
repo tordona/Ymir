@@ -291,40 +291,58 @@ void App::Impl::RunEmulator() {
     bool running = true;
     bool debug = false;
     auto &port1 = m_saturn.SMPC.GetPeripheralPort1();
+    auto &port2 = m_saturn.SMPC.GetPeripheralPort2();
     auto *pad1 = port1.ConnectStandardPad();
+    auto *pad2 = port2.ConnectStandardPad();
 
-    auto setClearButton = [&](peripheral::StandardPad::Button button, bool pressed) {
+    auto setClearButton = [](peripheral::StandardPad &pad, peripheral::StandardPad::Button button, bool pressed) {
         if (pressed) {
-            pad1->PressButton(button);
+            pad.PressButton(button);
         } else {
-            pad1->ReleaseButton(button);
+            pad.ReleaseButton(button);
         }
     };
 
     auto updateButton = [&](SDL_Scancode scancode, SDL_Keymod mod, bool pressed) {
         using enum peripheral::StandardPad::Button;
         switch (scancode) {
-        case SDL_SCANCODE_W: setClearButton(Up, pressed); break;
-        case SDL_SCANCODE_A: setClearButton(Left, pressed); break;
-        case SDL_SCANCODE_S: setClearButton(Down, pressed); break;
-        case SDL_SCANCODE_D: setClearButton(Right, pressed); break;
-        case SDL_SCANCODE_UP: setClearButton(Up, pressed); break;
-        case SDL_SCANCODE_LEFT: setClearButton(Left, pressed); break;
-        case SDL_SCANCODE_DOWN: setClearButton(Down, pressed); break;
-        case SDL_SCANCODE_RIGHT: setClearButton(Right, pressed); break;
-        case SDL_SCANCODE_Q: setClearButton(L, pressed); break;
-        case SDL_SCANCODE_E: setClearButton(R, pressed); break;
-        case SDL_SCANCODE_J: setClearButton(A, pressed); break;
-        case SDL_SCANCODE_K: setClearButton(B, pressed); break;
-        case SDL_SCANCODE_L: setClearButton(C, pressed); break;
-        case SDL_SCANCODE_U: setClearButton(X, pressed); break;
-        case SDL_SCANCODE_I: setClearButton(Y, pressed); break;
-        case SDL_SCANCODE_O: setClearButton(Z, pressed); break;
-        case SDL_SCANCODE_F: setClearButton(Start, pressed); break;
-        case SDL_SCANCODE_G: setClearButton(Start, pressed); break;
-        case SDL_SCANCODE_H: setClearButton(Start, pressed); break;
-        case SDL_SCANCODE_RETURN: setClearButton(Start, pressed); break;
-        case SDL_SCANCODE_RETURN2: setClearButton(Start, pressed); break;
+        case SDL_SCANCODE_W: setClearButton(*pad1, Up, pressed); break;
+        case SDL_SCANCODE_A: setClearButton(*pad1, Left, pressed); break;
+        case SDL_SCANCODE_S: setClearButton(*pad1, Down, pressed); break;
+        case SDL_SCANCODE_D: setClearButton(*pad1, Right, pressed); break;
+        case SDL_SCANCODE_Q: setClearButton(*pad1, L, pressed); break;
+        case SDL_SCANCODE_E: setClearButton(*pad1, R, pressed); break;
+        case SDL_SCANCODE_J: setClearButton(*pad1, A, pressed); break;
+        case SDL_SCANCODE_K: setClearButton(*pad1, B, pressed); break;
+        case SDL_SCANCODE_L: setClearButton(*pad1, C, pressed); break;
+        case SDL_SCANCODE_U: setClearButton(*pad1, X, pressed); break;
+        case SDL_SCANCODE_I: setClearButton(*pad1, Y, pressed); break;
+        case SDL_SCANCODE_O: setClearButton(*pad1, Z, pressed); break;
+        case SDL_SCANCODE_F: setClearButton(*pad1, Start, pressed); break;
+        case SDL_SCANCODE_G: setClearButton(*pad1, Start, pressed); break;
+        case SDL_SCANCODE_H: setClearButton(*pad1, Start, pressed); break;
+        case SDL_SCANCODE_RETURN: setClearButton(*pad1, Start, pressed); break;
+
+        case SDL_SCANCODE_UP: setClearButton(*pad2, Up, pressed); break;
+        case SDL_SCANCODE_LEFT: setClearButton(*pad2, Left, pressed); break;
+        case SDL_SCANCODE_DOWN: setClearButton(*pad2, Down, pressed); break;
+        case SDL_SCANCODE_RIGHT: setClearButton(*pad2, Right, pressed); break;
+        case SDL_SCANCODE_KP_7: setClearButton(*pad2, L, pressed); break;
+        case SDL_SCANCODE_KP_9: setClearButton(*pad2, R, pressed); break;
+        case SDL_SCANCODE_KP_1: setClearButton(*pad2, A, pressed); break;
+        case SDL_SCANCODE_KP_2: setClearButton(*pad2, B, pressed); break;
+        case SDL_SCANCODE_KP_3: setClearButton(*pad2, C, pressed); break;
+        case SDL_SCANCODE_KP_4: setClearButton(*pad2, X, pressed); break;
+        case SDL_SCANCODE_KP_5: setClearButton(*pad2, Y, pressed); break;
+        case SDL_SCANCODE_KP_6: setClearButton(*pad2, Z, pressed); break;
+        case SDL_SCANCODE_KP_ENTER: setClearButton(*pad2, Start, pressed); break;
+        case SDL_SCANCODE_HOME: setClearButton(*pad2, Up, pressed); break;
+        case SDL_SCANCODE_DELETE: setClearButton(*pad2, Left, pressed); break;
+        case SDL_SCANCODE_END: setClearButton(*pad2, Down, pressed); break;
+        case SDL_SCANCODE_PAGEDOWN: setClearButton(*pad2, Right, pressed); break;
+        case SDL_SCANCODE_INSERT: setClearButton(*pad2, L, pressed); break;
+        case SDL_SCANCODE_PAGEUP: setClearButton(*pad2, R, pressed); break;
+
         case SDL_SCANCODE_R:
             if (pressed) {
                 if (mod & SDL_KMOD_CTRL) {

@@ -451,10 +451,18 @@ void SMPC::ReadPeripherals() {
     m_intbackReportOffset = 0;
 
     const size_t port1Len = m_port1.GetReportLength();
-    const size_t port2Len = m_port1.GetReportLength();
+    const size_t port2Len = m_port2.GetReportLength();
     m_intbackReport.resize(port1Len + port2Len);
     m_port1.Read(std::span<uint8>{m_intbackReport.begin(), port1Len});
     m_port2.Read(std::span<uint8>{m_intbackReport.begin() + port1Len, port2Len});
+
+    /*fmt::memory_buffer buf{};
+    auto out = std::back_inserter(buf);
+    fmt::format_to(out, "periph data:");
+    for (auto b : m_intbackReport) {
+        fmt::format_to(out, " {:02X}", b);
+    }
+    rootLog.debug("{}", fmt::to_string(buf));*/
 }
 
 void SMPC::WriteINTBACKStatusReport() {
