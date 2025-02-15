@@ -59,8 +59,6 @@ public:
 
     void Reset(bool hard);
 
-    void ClearVRAM();
-
     FORCE_INLINE void SetCallbacks(CBRequestFramebuffer cbRequestFramebuffer, CBFrameComplete cbFrameComplete) {
         m_cbRequestFramebuffer = cbRequestFramebuffer;
         m_cbFrameComplete = cbFrameComplete;
