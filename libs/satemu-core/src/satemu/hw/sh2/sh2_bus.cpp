@@ -28,32 +28,7 @@ SH2Bus::SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu, smpc::SMPC &smpc)
     m_internalBackupRAM.LoadFrom("bup-int.bin", kInternalBackupRAMSize, error);
     // TODO: handle error
 
-    MapMemory(
-        0x000'0000, 0x7FF'FFFF,
-        {
-            .read8 = [](uint32 address, void * /*ctx*/) -> uint8 {
-                rootLog.debug("Unhandled 8-bit read from {:07X}", address);
-                return 0;
-            },
-            .read16 = [](uint32 address, void * /*ctx*/) -> uint16 {
-                rootLog.debug("Unhandled 16-bit read from {:07X}", address);
-                return 0;
-            },
-            .read32 = [](uint32 address, void * /*ctx*/) -> uint32 {
-                rootLog.debug("Unhandled 32-bit read from {:07X}", address);
-                return 0;
-            },
-            .write8 = [](uint32 address, uint8 value,
-                         void * /*ctx*/) { rootLog.debug("Unhandled 8-bit write to {:07X} = {:02X}", address, value); },
-            .write16 =
-                [](uint32 address, uint16 value, void * /*ctx*/) {
-                    rootLog.debug("Unhandled 16-bit write to {:07X} = {:04X}", address, value);
-                },
-            .write32 =
-                [](uint32 address, uint32 value, void * /*ctx*/) {
-                    rootLog.debug("Unhandled 32-bit write to {:07X} = {:07X}", address, value);
-                },
-        });
+    UnmapMemory(0x000'0000, 0x7FF'FFFF);
 
     MapMemory(0x000'0000, 0x00F'FFFF,
               {

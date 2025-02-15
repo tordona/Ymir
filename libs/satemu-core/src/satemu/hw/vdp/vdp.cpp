@@ -189,8 +189,8 @@ void VDP::MapMemory(sh2::SH2Bus &bus) {
                           return static_cast<VDP *>(ctx)->VDP1ReadReg<uint16>(address);
                       },
                       .read32 = [](uint32 address, void *ctx) -> uint32 {
-                          uint32 value = static_cast<VDP *>(ctx)->VDP1ReadReg<uint8>(address + 0) << 16u;
-                          value |= static_cast<VDP *>(ctx)->VDP1ReadReg<uint8>(address + 2) << 0u;
+                          uint32 value = static_cast<VDP *>(ctx)->VDP1ReadReg<uint16>(address + 0) << 16u;
+                          value |= static_cast<VDP *>(ctx)->VDP1ReadReg<uint16>(address + 2) << 0u;
                           return value;
                       },
                       .write8 =
@@ -218,8 +218,8 @@ void VDP::MapMemory(sh2::SH2Bus &bus) {
                           return static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint16>(address);
                       },
                       .read32 = [](uint32 address, void *ctx) -> uint32 {
-                          uint32 value = static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint8>(address + 0) << 16u;
-                          value |= static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint8>(address + 2) << 0u;
+                          uint32 value = static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint16>(address + 0) << 16u;
+                          value |= static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint16>(address + 2) << 0u;
                           return value;
                       },
                       .write8 = [](uint32 address, uint8 value,
@@ -246,8 +246,8 @@ void VDP::MapMemory(sh2::SH2Bus &bus) {
                           return static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint16>(address);
                       },
                       .read32 = [](uint32 address, void *ctx) -> uint32 {
-                          uint32 value = static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint8>(address + 0) << 16u;
-                          value |= static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint8>(address + 2) << 0u;
+                          uint32 value = static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint16>(address + 0) << 16u;
+                          value |= static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint16>(address + 2) << 0u;
                           return value;
                       },
                       .write8 =
@@ -277,8 +277,8 @@ void VDP::MapMemory(sh2::SH2Bus &bus) {
                           return static_cast<VDP *>(ctx)->VDP2ReadReg<uint16>(address);
                       },
                       .read32 = [](uint32 address, void *ctx) -> uint32 {
-                          uint32 value = static_cast<VDP *>(ctx)->VDP2ReadReg<uint8>(address + 0) << 16u;
-                          value |= static_cast<VDP *>(ctx)->VDP2ReadReg<uint8>(address + 2) << 0u;
+                          uint32 value = static_cast<VDP *>(ctx)->VDP2ReadReg<uint16>(address + 0) << 16u;
+                          value |= static_cast<VDP *>(ctx)->VDP2ReadReg<uint16>(address + 2) << 0u;
                           return value;
                       },
                       .write8 =

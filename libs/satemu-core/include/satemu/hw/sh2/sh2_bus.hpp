@@ -80,13 +80,28 @@ public:
     struct MemoryPage {
         void *ctx = nullptr;
 
-        FnRead8 read8 = [](uint32, void *) -> uint8 { return 0; };
-        FnRead16 read16 = [](uint32, void *) -> uint16 { return 0; };
-        FnRead32 read32 = [](uint32, void *) -> uint32 { return 0; };
+        FnRead8 read8 = [](uint32 address, void *) -> uint8 {
+            rootLog.debug("Unhandled 8-bit read from {:07X}", address);
+            return 0;
+        };
+        FnRead16 read16 = [](uint32 address, void *) -> uint16 {
+            rootLog.debug("Unhandled 16-bit read from {:07X}", address);
+            return 0;
+        };
+        FnRead32 read32 = [](uint32 address, void *) -> uint32 {
+            rootLog.debug("Unhandled 32-bit read from {:07X}", address);
+            return 0;
+        };
 
-        FnWrite8 write8 = [](uint32, uint8, void *) {};
-        FnWrite16 write16 = [](uint32, uint16, void *) {};
-        FnWrite32 write32 = [](uint32, uint32, void *) {};
+        FnWrite8 write8 = [](uint32 address, uint8 value, void *) {
+            rootLog.debug("Unhandled 8-bit write to {:07X} = {:02X}", address, value);
+        };
+        FnWrite16 write16 = [](uint32 address, uint16 value, void *) {
+            rootLog.debug("Unhandled 16-bit write to {:07X} = {:04X}", address, value);
+        };
+        FnWrite32 write32 = [](uint32 address, uint32 value, void *) {
+            rootLog.debug("Unhandled 32-bit write to {:07X} = {:07X}", address, value);
+        };
     };
 
     SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu, smpc::SMPC &smpc);
