@@ -1,7 +1,6 @@
 #pragma once
 
-#include "smpc_defs.hpp"
-
+#include "peripheral/peripheral_port.hpp"
 #include "rtc.hpp"
 
 #include <satemu/core/scheduler.hpp>
@@ -53,11 +52,12 @@ public:
         m_areaCode = areaCode;
     }
 
-    // HACK(SMPC): simple controller pad support
-    // buttons is a bitmask with inverted state (0=pressed, 1=released)
-    // use the kButton* constants to set/clear bits
-    uint16 &Buttons() {
-        return m_buttons;
+    peripheral::PeripheralPort &GetPeripheralPort1() {
+        return m_port1;
+    }
+
+    peripheral::PeripheralPort &GetPeripheralPort2() {
+        return m_port2;
     }
 
 private:
@@ -202,13 +202,8 @@ private:
     // -------------------------------------------------------------------------
     // Input, parallel I/O and INTBACK
 
-    // TODO: support multiple controllers, multi-tap, different types of devices, etc.
-    // for now, emulate just one standard Saturn pad (not analog)
-    //   15-12: right left down up
-    //   11-8:  start A C B
-    //    7-4:  R X Y Z
-    //    3-0:  L <one> <zero> <zero>
-    uint16 m_buttons = 0xFFFC;
+    peripheral::PeripheralPort m_port1;
+    peripheral::PeripheralPort m_port2;
 
     // Parallel I/O SMPC-controlled (false) or SH-2 direct mode (true)
     bool m_pioMode1;

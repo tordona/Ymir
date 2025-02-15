@@ -43,7 +43,11 @@ add_library(satemu-core
 
     include/satemu/hw/smpc/rtc.hpp
     include/satemu/hw/smpc/smpc.hpp
-    include/satemu/hw/smpc/smpc_defs.hpp
+    
+    include/satemu/hw/smpc/peripheral/peripheral_base.hpp
+    include/satemu/hw/smpc/peripheral/peripheral_impl_none.hpp
+    include/satemu/hw/smpc/peripheral/peripheral_impl_standard_pad.hpp
+    include/satemu/hw/smpc/peripheral/peripheral_port.hpp
 
     include/satemu/hw/vdp/vdp.hpp
     include/satemu/hw/vdp/vdp_defs.hpp
@@ -110,6 +114,8 @@ add_library(satemu-core
 
     src/satemu/hw/smpc/rtc.cpp
     src/satemu/hw/smpc/smpc.cpp
+
+    src/satemu/hw/smpc/peripheral/peripheral_impl_standard_pad.cpp
 
     src/satemu/hw/sh2/sh2.cpp
     src/satemu/hw/sh2/sh2_bus.cpp

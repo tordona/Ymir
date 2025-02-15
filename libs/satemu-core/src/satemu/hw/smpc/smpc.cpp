@@ -248,33 +248,7 @@ FORCE_INLINE uint8 SMPC::ReadPDR1() const {
 }
 
 FORCE_INLINE void SMPC::WritePDR1(uint8 value) {
-    // TODO: process port 1 peripheral properly
-
-    // HACK: read from our fixed standard Saturn pad
-    switch (DDR1 & 0x7F) {
-    case 0x40: // TH control mode
-        if (value & 0x40) {
-            PDR1 = 0x70 | bit::extract<0, 3>(m_buttons);
-        } else {
-            PDR1 = 0x30 | bit::extract<12, 15>(m_buttons);
-        }
-        break;
-    case 0x60: // TH/TR control mode
-        switch (value & 0x60) {
-        case 0x00: // R X Y Z
-            PDR1 = 0x10 | bit::extract<4, 7>(m_buttons);
-            break;
-        case 0x20: // right left down up
-            PDR1 = 0x30 | bit::extract<12, 15>(m_buttons);
-            break;
-        case 0x40: // start A C B
-            PDR1 = 0x50 | bit::extract<8, 11>(m_buttons);
-            break;
-        case 0x60: // L 1 0 0
-            PDR1 = 0x70 | bit::extract<0, 3>(m_buttons);
-            break;
-        }
-    }
+    PDR1 = m_port1.WritePDR(DDR1, value);
 }
 
 FORCE_INLINE void SMPC::WriteDDR1(uint8 value) {
@@ -286,7 +260,7 @@ FORCE_INLINE uint8 SMPC::ReadPDR2() const {
 }
 
 FORCE_INLINE void SMPC::WritePDR2(uint8 value) {
-    // TODO: process port 2 peripheral
+    PDR2 = m_port2.WritePDR(DDR2, value);
 }
 
 FORCE_INLINE void SMPC::WriteDDR2(uint8 value) {
@@ -475,23 +449,12 @@ void SMPC::INTBACK() {
 
 void SMPC::ReadPeripherals() {
     m_intbackReportOffset = 0;
-    m_intbackReport.clear();
 
-    // Port 1 report - standard Saturn Pad
-    // 0x00 = 0xF1 -> 7-4 = F=no multitap/device directly connected; 3-0 = 1 device
-    // 0x01 = 0x02 -> 7-4 = 0=standard pad; 3-0 = 2 data bytes
-    // 0x02        -> 7-0 = left, right, down, up, start, A, C, B  \ button state
-    // 0x02        -> 7-3 = R, X, Y, Z, L; 2-0 = nothing           / is inverted!
-    const uint8 btnHi = bit::extract<8, 15>(m_buttons);
-    const uint8 btnLo = (bit::extract<3, 7>(m_buttons) << 3) | 0x7;
-    m_intbackReport.push_back(0xF1);
-    m_intbackReport.push_back(0x02);
-    m_intbackReport.push_back(btnHi);
-    m_intbackReport.push_back(btnLo);
-
-    // Port 2 report - no device
-    // 0x00 = 0xF1 -> 7-4 = F=no multitap/device directly connected; 3-0 = 0 devices
-    m_intbackReport.push_back(0xF0);
+    const size_t port1Len = m_port1.GetReportLength();
+    const size_t port2Len = m_port1.GetReportLength();
+    m_intbackReport.resize(port1Len + port2Len);
+    m_port1.Read(std::span<uint8>{m_intbackReport.begin(), port1Len});
+    m_port2.Read(std::span<uint8>{m_intbackReport.begin() + port1Len, port2Len});
 }
 
 void SMPC::WriteINTBACKStatusReport() {
@@ -504,7 +467,7 @@ void SMPC::WriteINTBACKStatusReport() {
     SR.P1MDn = m_port1mode;
     SR.P2MDn = m_port2mode;
 
-    OREG[0] = m_STE << 7; // TODO: bit 6: RESD - reset disable flag
+    OREG[0] = (m_STE << 7) | (m_resetDisable << 6);
 
     if (m_rtc.GetMode() == rtc::RTC::Mode::Emulated) {
         m_rtc.UpdateSysClock(m_scheduler.CurrentCount());
