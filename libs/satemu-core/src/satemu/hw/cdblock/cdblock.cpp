@@ -115,15 +115,19 @@ void CDBlock::LoadDisc(media::Disc &&disc) {
 }
 
 void CDBlock::EjectDisc() {
-    m_disc = {};
-    
-    m_status.statusCode = kStatusCodeNoDisc;
-    m_status.frameAddress = 0xFFFFFF;
-    m_status.flags = 0xF;
-    m_status.repeatCount = 0xF;
-    m_status.controlADR = 0xFF;
-    m_status.track = 0xFF;
-    m_status.index = 0xFF;
+    if (!m_disc.sessions.empty()) {
+        m_disc = {};
+
+        m_status.statusCode = kStatusCodeNoDisc;
+        m_status.frameAddress = 0xFFFFFF;
+        m_status.flags = 0xF;
+        m_status.repeatCount = 0xF;
+        m_status.controlADR = 0xFF;
+        m_status.track = 0xFF;
+        m_status.index = 0xFF;
+
+        rootLog.debug("Ejected disc");
+    }
 }
 
 void CDBlock::OpenTray() {
