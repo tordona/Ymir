@@ -2365,6 +2365,8 @@ template <uint32 bgIndex>
 FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 colorMode) {
     static_assert(bgIndex < 2, "Invalid RBG index");
 
+    static constexpr bool selRotParam = bgIndex == 0;
+
     using FnDraw = void (VDP::*)(const BGParams &, LayerState &);
 
     // Lookup table of scroll BG drawing functions
@@ -2381,7 +2383,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 colorMode) {
             const CharacterMode chmEnum = static_cast<CharacterMode>(chm);
             const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = clm <= 2 ? clm : 2;
-            arr[chm][fcc][cf][clm] = &VDP::VDP2DrawRotationScrollBG < bgIndex == 0, chmEnum, fcc, cfEnum, colorMode > ;
+            arr[chm][fcc][cf][clm] = &VDP::VDP2DrawRotationScrollBG<selRotParam, chmEnum, fcc, cfEnum, colorMode>;
         });
 
         return arr;
@@ -2398,7 +2400,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 colorMode) {
 
             const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = cm <= 2 ? cm : 2;
-            arr[cf][cm] = &VDP::VDP2DrawRotationBitmapBG < bgIndex == 0, cfEnum, colorMode > ;
+            arr[cf][cm] = &VDP::VDP2DrawRotationBitmapBG<selRotParam, cfEnum, colorMode>;
         });
 
         return arr;
