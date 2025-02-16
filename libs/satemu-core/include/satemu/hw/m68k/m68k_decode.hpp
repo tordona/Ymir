@@ -90,12 +90,22 @@ enum class OpcodeType : uint8 {
     Add_EA_Dn_B, // add.b <ea>, Dn
     Add_EA_Dn_W, // add.w <ea>, Dn
     Add_EA_Dn_L, // add.l <ea>, Dn
-    AddA,        // adda.<sz> <ea>, An
-    AddI,        // addi.<sz> #<data>, <ea>
-    AddQ_An,     // addq.<sz> #<data>, An
-    AddQ_EA,     // addq.<sz> #<data>, <ea>
-    AddX_M,      // addx.<sz> -(Ay), -(Ax)
-    AddX_R,      // addx.<sz> Dy, Dx
+    AddA_W,      // adda.w <ea>, An
+    AddA_L,      // adda.l <ea>, An
+    AddI_B,      // addi.b #<data>, <ea>
+    AddI_W,      // addi.w #<data>, <ea>
+    AddI_L,      // addi.l #<data>, <ea>
+    AddQ_An_W,   // addq.w #<data>, An
+    AddQ_An_L,   // addq.l #<data>, An
+    AddQ_EA_B,   // addq.b #<data>, <ea>
+    AddQ_EA_W,   // addq.w #<data>, <ea>
+    AddQ_EA_L,   // addq.l #<data>, <ea>
+    AddX_M_B,    // addx.b -(Ay), -(Ax)
+    AddX_M_W,    // addx.w -(Ay), -(Ax)
+    AddX_M_L,    // addx.l -(Ay), -(Ax)
+    AddX_R_B,    // addx.b Dy, Dx
+    AddX_R_W,    // addx.w Dy, Dx
+    AddX_R_L,    // addx.l Dy, Dx
     And_Dn_EA,   // and.<sz> Dn, <ea>
     And_EA_Dn,   // and.<sz> <ea>, Dn
     AndI_EA,     // andi.<sz> #<data>, <ea>

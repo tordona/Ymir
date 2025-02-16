@@ -771,12 +771,22 @@ void MC68EC000::Execute() {
     case OpcodeType::Add_EA_Dn_B: Instr_Add_EA_Dn<uint8>(instr); break;
     case OpcodeType::Add_EA_Dn_W: Instr_Add_EA_Dn<uint16>(instr); break;
     case OpcodeType::Add_EA_Dn_L: Instr_Add_EA_Dn<uint32>(instr); break;
-    case OpcodeType::AddA: Instr_AddA(instr); break;
-    case OpcodeType::AddI: Instr_AddI(instr); break;
-    case OpcodeType::AddQ_An: Instr_AddQ_An(instr); break;
-    case OpcodeType::AddQ_EA: Instr_AddQ_EA(instr); break;
-    case OpcodeType::AddX_M: Instr_AddX_M(instr); break;
-    case OpcodeType::AddX_R: Instr_AddX_R(instr); break;
+    case OpcodeType::AddA_W: Instr_AddA<uint16>(instr); break;
+    case OpcodeType::AddA_L: Instr_AddA<uint32>(instr); break;
+    case OpcodeType::AddI_B: Instr_AddI<uint8>(instr); break;
+    case OpcodeType::AddI_W: Instr_AddI<uint16>(instr); break;
+    case OpcodeType::AddI_L: Instr_AddI<uint32>(instr); break;
+    case OpcodeType::AddQ_An_W: Instr_AddQ_An<uint16>(instr); break;
+    case OpcodeType::AddQ_An_L: Instr_AddQ_An<uint32>(instr); break;
+    case OpcodeType::AddQ_EA_B: Instr_AddQ_EA<uint8>(instr); break;
+    case OpcodeType::AddQ_EA_W: Instr_AddQ_EA<uint16>(instr); break;
+    case OpcodeType::AddQ_EA_L: Instr_AddQ_EA<uint32>(instr); break;
+    case OpcodeType::AddX_M_B: Instr_AddX_M<uint8>(instr); break;
+    case OpcodeType::AddX_M_W: Instr_AddX_M<uint16>(instr); break;
+    case OpcodeType::AddX_M_L: Instr_AddX_M<uint32>(instr); break;
+    case OpcodeType::AddX_R_B: Instr_AddX_R<uint8>(instr); break;
+    case OpcodeType::AddX_R_W: Instr_AddX_R<uint16>(instr); break;
+    case OpcodeType::AddX_R_L: Instr_AddX_R<uint32>(instr); break;
     case OpcodeType::And_Dn_EA: Instr_And_Dn_EA(instr); break;
     case OpcodeType::And_EA_Dn: Instr_And_EA_Dn(instr); break;
     case OpcodeType::AndI_EA: Instr_AndI_EA(instr); break;
@@ -1360,148 +1370,107 @@ FORCE_INLINE void MC68EC000::Instr_Add_EA_Dn(uint16 instr) {
     PrefetchTransfer();
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_AddA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const bool sz = bit::extract<8>(instr);
     const uint16 An = bit::extract<9, 11>(instr);
 
-    if (sz) {
-        regs.A[An] += ReadEffectiveAddress<uint32>(M, Xn);
-    } else {
-        regs.A[An] += static_cast<sint16>(ReadEffectiveAddress<uint16>(M, Xn));
-    }
+    using ST = std::make_signed_t<T>;
+
+    regs.A[An] += static_cast<ST>(ReadEffectiveAddress<T>(M, Xn));
 
     PrefetchTransfer();
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_AddI(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
 
-    auto op = [&]<std::integral T>() {
-        T op1 = PrefetchNext();
-        if constexpr (sizeof(T) == sizeof(uint32)) {
-            op1 = (op1 << 16u) | PrefetchNext();
-        }
-        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
-            const T result = op2 + op1;
-            SR.N = IsNegative(result);
-            SR.Z = result == 0;
-            SR.V = IsAddOverflow(op1, op2, result);
-            SR.C = SR.X = IsAddCarry(op1, op2, result);
-
-            return result;
-        });
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
+    T op1 = PrefetchNext();
+    if constexpr (sizeof(T) == sizeof(uint32)) {
+        op1 = (op1 << 16u) | PrefetchNext();
     }
+    ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+        const T result = op2 + op1;
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = IsAddOverflow(op1, op2, result);
+        SR.C = SR.X = IsAddCarry(op1, op2, result);
+
+        return result;
+    });
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_AddQ_An(uint16 instr) {
     const uint16 An = bit::extract<0, 2>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
 
-    auto op = [&]<std::integral T>() {
-        const uint32 op1 = static_cast<std::make_signed_t<T>>(bit::extract<9, 11>(instr));
-        const uint32 op2 = regs.A[An];
-        const uint32 result = op2 + (op1 == 0 ? 8 : op1);
-        regs.A[An] = result;
-    };
-
-    switch (sz) {
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
+    const uint32 op1 = static_cast<std::make_signed_t<T>>(bit::extract<9, 11>(instr));
+    const uint32 op2 = regs.A[An];
+    const uint32 result = op2 + (op1 == 0 ? 8 : op1);
+    regs.A[An] = result;
 
     PrefetchTransfer();
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_AddQ_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
     const uint16 data = bit::extract<9, 11>(instr);
 
-    auto op = [&]<std::integral T>() {
-        const T op1 = data == 0 ? 8 : data;
-        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
-            const T result = op2 + op1;
-            SR.N = IsNegative(result);
-            SR.Z = result == 0;
-            SR.V = IsAddOverflow(op1, op2, result);
-            SR.C = SR.X = IsAddCarry(op1, op2, result);
+    const T op1 = data == 0 ? 8 : data;
+    ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+        const T result = op2 + op1;
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = IsAddOverflow(op1, op2, result);
+        SR.C = SR.X = IsAddCarry(op1, op2, result);
 
-            return result;
-        });
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
+        return result;
+    });
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_AddX_M(uint16 instr) {
     const uint16 Ry = bit::extract<0, 2>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
     const uint16 Rx = bit::extract<9, 11>(instr);
 
-    auto op = [&]<std::integral T>() {
-        AdvanceAddress<T, false>(Ry);
-        const T op1 = MemReadDesc<T, false>(regs.A[Ry]);
-        AdvanceAddress<T, false>(Rx);
-        const T op2 = MemReadDesc<T, false>(regs.A[Rx]);
-        const T result = op2 + op1 + SR.X;
-        SR.N = IsNegative(result);
-        SR.Z &= result == 0;
-        SR.V = IsAddOverflow(op1, op2, result);
-        SR.C = SR.X = IsAddCarry(op1, op2, result);
+    AdvanceAddress<T, false>(Ry);
+    const T op1 = MemReadDesc<T, false>(regs.A[Ry]);
+    AdvanceAddress<T, false>(Rx);
+    const T op2 = MemReadDesc<T, false>(regs.A[Rx]);
+    const T result = op2 + op1 + SR.X;
+    SR.N = IsNegative(result);
+    SR.Z &= result == 0;
+    SR.V = IsAddOverflow(op1, op2, result);
+    SR.C = SR.X = IsAddCarry(op1, op2, result);
 
-        if constexpr (std::is_same_v<T, uint32>) {
-            MemWrite<uint16>(regs.A[Rx] + 2, result >> 0u);
-            PrefetchTransfer();
-            MemWrite<uint16>(regs.A[Rx] + 0, result >> 16u);
-        } else {
-            PrefetchTransfer();
-            MemWrite<T>(regs.A[Rx], result);
-        }
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
+    if constexpr (std::is_same_v<T, uint32>) {
+        MemWrite<uint16>(regs.A[Rx] + 2, result >> 0u);
+        PrefetchTransfer();
+        MemWrite<uint16>(regs.A[Rx] + 0, result >> 16u);
+    } else {
+        PrefetchTransfer();
+        MemWrite<T>(regs.A[Rx], result);
     }
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_AddX_R(uint16 instr) {
     const uint16 Ry = bit::extract<0, 2>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
     const uint16 Rx = bit::extract<9, 11>(instr);
 
-    auto op = [&]<std::integral T>() {
-        const T op1 = regs.D[Ry];
-        const T op2 = regs.D[Rx];
-        const T result = op2 + op1 + SR.X;
-        SR.N = IsNegative(result);
-        SR.Z &= result == 0;
-        SR.V = IsAddOverflow(op1, op2, result);
-        SR.C = SR.X = IsAddCarry(op1, op2, result);
-        bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Rx], result);
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
+    const T op1 = regs.D[Ry];
+    const T op2 = regs.D[Rx];
+    const T result = op2 + op1 + SR.X;
+    SR.N = IsNegative(result);
+    SR.Z &= result == 0;
+    SR.V = IsAddOverflow(op1, op2, result);
+    SR.C = SR.X = IsAddCarry(op1, op2, result);
+    bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Rx], result);
 
     PrefetchTransfer();
 }
