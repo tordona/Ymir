@@ -1978,23 +1978,25 @@ void VDP::VDP2UpdateEnabledBGs() {
 }
 
 void VDP::VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayerState &bgState) {
+    uint32 address = bgState.lineScrollTableAddress;
     auto read = [&] {
-        const uint32 address = bgState.lineScrollTableAddress & 0x7FFFF;
         const uint32 value = VDP2ReadVRAM<uint32>(address);
-        bgState.lineScrollTableAddress += sizeof(uint32);
+        address += sizeof(uint32);
         return value;
     };
 
-    if ((m_VCounter & ~(~0 << bgParams.lineScrollInterval)) == 0) {
-        if (bgParams.lineScrollXEnable) {
-            bgState.fracScrollX = bit::extract<8, 26>(read());
-        }
-        if (bgParams.lineScrollYEnable) {
-            bgState.fracScrollY = bit::extract<8, 26>(read());
-        }
-        if (bgParams.lineZoomEnable) {
-            bgState.scrollIncH = bit::extract<8, 18>(read());
-        }
+    if (bgParams.lineScrollXEnable) {
+        bgState.fracScrollX = bgParams.scrollAmountH + bit::extract<8, 26>(read());
+    }
+    if (bgParams.lineScrollYEnable) {
+        // TODO: check/optimize this
+        bgState.fracScrollY = bgParams.scrollAmountV + m_VCounter * bgParams.scrollIncV + bit::extract<8, 26>(read());
+    }
+    if (bgParams.lineZoomEnable) {
+        bgState.scrollIncH = bgParams.scrollIncH + bit::extract<8, 18>(read());
+    }
+    if (m_VCounter > 0 && (m_VCounter & ((1u << bgParams.lineScrollInterval) - 1)) == 0) {
+        bgState.lineScrollTableAddress = address;
     }
 }
 
