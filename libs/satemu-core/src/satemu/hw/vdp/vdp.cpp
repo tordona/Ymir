@@ -238,9 +238,7 @@ void VDP::MapMemory(sh2::SH2Bus &bus) {
                   {
                       .ctx = this,
                       .read8 = [](uint32 address, void *ctx) -> uint8 {
-                          address = static_cast<VDP *>(ctx)->MapCRAMAddress(address);
-                          regsLog1.debug("Illegal 8-bit VDP2 CRAM read from {:05X}", address);
-                          return 0;
+                          return static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint8>(address);
                       },
                       .read16 = [](uint32 address, void *ctx) -> uint16 {
                           return static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint16>(address);
@@ -250,11 +248,8 @@ void VDP::MapMemory(sh2::SH2Bus &bus) {
                           value |= static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint16>(address + 2) << 0u;
                           return value;
                       },
-                      .write8 =
-                          [](uint32 address, uint8 value, void *ctx) {
-                              address = static_cast<VDP *>(ctx)->MapCRAMAddress(address);
-                              regsLog1.debug("Illegal 8-bit VDP2 CRAM write to {:05X} = {:02X}", address, value);
-                          },
+                      .write8 = [](uint32 address, uint8 value,
+                                   void *ctx) { static_cast<VDP *>(ctx)->VDP2WriteCRAM<uint8>(address, value); },
                       .write16 = [](uint32 address, uint16 value,
                                     void *ctx) { static_cast<VDP *>(ctx)->VDP2WriteCRAM<uint16>(address, value); },
                       .write32 =
