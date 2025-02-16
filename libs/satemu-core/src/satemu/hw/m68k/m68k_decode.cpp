@@ -204,7 +204,11 @@ DecodeTable BuildDecodeTable() {
                 case 0b10: opcode = legalIf(OpcodeType::AddI_L, kValidDataAlterableAddrModes[ea]); break;
                 }
             } else if (bit::extract<8, 11>(instr) == 0b1100) {
-                opcode = legalIf(OpcodeType::CmpI, sz != 0b11 && kValidDataAddrModes[ea]);
+                switch (sz) {
+                case 0b00: opcode = legalIf(OpcodeType::CmpI_B, kValidDataAddrModes[ea]); break;
+                case 0b01: opcode = legalIf(OpcodeType::CmpI_W, kValidDataAddrModes[ea]); break;
+                case 0b10: opcode = legalIf(OpcodeType::CmpI_L, kValidDataAddrModes[ea]); break;
+                }
             }
             break;
         }
@@ -335,7 +339,11 @@ DecodeTable BuildDecodeTable() {
                 case 0b10: opcode = legalIf(OpcodeType::Not_L, kValidDataAlterableAddrModes[ea]); break;
                 }
             } else if (bit::extract<8, 11>(instr) == 0b1010) {
-                opcode = legalIf(OpcodeType::Tst, kValidDataAlterableAddrModes[ea]);
+                switch (sz) {
+                case 0b00: opcode = legalIf(OpcodeType::Tst_B, kValidDataAlterableAddrModes[ea]); break;
+                case 0b01: opcode = legalIf(OpcodeType::Tst_W, kValidDataAlterableAddrModes[ea]); break;
+                case 0b10: opcode = legalIf(OpcodeType::Tst_L, kValidDataAlterableAddrModes[ea]); break;
+                }
             } else if (bit::extract<6, 8>(instr) == 0b110) {
                 opcode = legalIf(OpcodeType::Chk, kValidDataAddrModes[ea]);
             } else if (bit::extract<6, 8>(instr) == 0b111) {
@@ -465,11 +473,20 @@ DecodeTable BuildDecodeTable() {
             const uint16 ea = bit::extract<0, 5>(instr);
             const uint16 sz = bit::extract<6, 7>(instr);
             if (sz == 0b11) {
-                opcode = legalIf(OpcodeType::CmpA, kValidAddrModes[ea]);
+                const bool szBit = bit::extract<8>(instr);
+                opcode = legalIf(szBit ? OpcodeType::CmpA_L : OpcodeType::CmpA_W, kValidAddrModes[ea]);
             } else if (bit::extract<8>(instr) == 0) {
-                opcode = legalIf(OpcodeType::Cmp, kValidAddrModes[ea]);
+                switch (sz) {
+                case 0b00: opcode = legalIf(OpcodeType::Cmp_B, kValidAddrModes[ea]); break;
+                case 0b01: opcode = legalIf(OpcodeType::Cmp_W, kValidAddrModes[ea]); break;
+                case 0b10: opcode = legalIf(OpcodeType::Cmp_L, kValidAddrModes[ea]); break;
+                }
             } else if (bit::extract<3, 5>(instr) == 0b001) {
-                opcode = OpcodeType::CmpM;
+                switch (sz) {
+                case 0b00: opcode = OpcodeType::CmpM_B; break;
+                case 0b01: opcode = OpcodeType::CmpM_W; break;
+                case 0b10: opcode = OpcodeType::CmpM_L; break;
+                }
             } else {
                 switch (sz) {
                 case 0b00: opcode = legalIf(OpcodeType::Eor_Dn_EA_B, kValidDataAlterableAddrModes[ea]); break;
@@ -567,23 +584,73 @@ DecodeTable BuildDecodeTable() {
                 opcode = legalIf(opcode, kValidMemoryAlterableAddrModes[ea]);
             } else {
                 const bool reg = bit::extract<5>(instr);
+                const uint16 sz = bit::extract<6, 7>(instr);
                 const bool dir = bit::extract<8>(instr);
+
                 switch (bit::extract<3, 4>(instr)) {
                 case 0b00:
-                    opcode = reg ? (dir ? OpcodeType::ASL_R : OpcodeType::ASR_R)
-                                 : (dir ? OpcodeType::ASL_I : OpcodeType::ASR_I);
+                    switch (sz) {
+                    case 0b00:
+                        opcode = reg ? (dir ? OpcodeType::ASL_R_B : OpcodeType::ASR_R_B)
+                                     : (dir ? OpcodeType::ASL_I_B : OpcodeType::ASR_I_B);
+                        break;
+                    case 0b01:
+                        opcode = reg ? (dir ? OpcodeType::ASL_R_W : OpcodeType::ASR_R_W)
+                                     : (dir ? OpcodeType::ASL_I_W : OpcodeType::ASR_I_W);
+                        break;
+                    case 0b10:
+                        opcode = reg ? (dir ? OpcodeType::ASL_R_L : OpcodeType::ASR_R_L)
+                                     : (dir ? OpcodeType::ASL_I_L : OpcodeType::ASR_I_L);
+                        break;
+                    }
                     break;
                 case 0b01:
-                    opcode = reg ? (dir ? OpcodeType::LSL_R : OpcodeType::LSR_R)
-                                 : (dir ? OpcodeType::LSL_I : OpcodeType::LSR_I);
+                    switch (sz) {
+                    case 0b00:
+                        opcode = reg ? (dir ? OpcodeType::LSL_R_B : OpcodeType::LSR_R_B)
+                                     : (dir ? OpcodeType::LSL_I_B : OpcodeType::LSR_I_B);
+                        break;
+                    case 0b01:
+                        opcode = reg ? (dir ? OpcodeType::LSL_R_W : OpcodeType::LSR_R_W)
+                                     : (dir ? OpcodeType::LSL_I_W : OpcodeType::LSR_I_W);
+                        break;
+                    case 0b10:
+                        opcode = reg ? (dir ? OpcodeType::LSL_R_L : OpcodeType::LSR_R_L)
+                                     : (dir ? OpcodeType::LSL_I_L : OpcodeType::LSR_I_L);
+                        break;
+                    }
                     break;
                 case 0b10:
-                    opcode = reg ? (dir ? OpcodeType::ROXL_R : OpcodeType::ROXR_R)
-                                 : (dir ? OpcodeType::ROXL_I : OpcodeType::ROXR_I);
+                    switch (sz) {
+                    case 0b00:
+                        opcode = reg ? (dir ? OpcodeType::ROXL_R_B : OpcodeType::ROXR_R_B)
+                                     : (dir ? OpcodeType::ROXL_I_B : OpcodeType::ROXR_I_B);
+                        break;
+                    case 0b01:
+                        opcode = reg ? (dir ? OpcodeType::ROXL_R_W : OpcodeType::ROXR_R_W)
+                                     : (dir ? OpcodeType::ROXL_I_W : OpcodeType::ROXR_I_W);
+                        break;
+                    case 0b10:
+                        opcode = reg ? (dir ? OpcodeType::ROXL_R_L : OpcodeType::ROXR_R_L)
+                                     : (dir ? OpcodeType::ROXL_I_L : OpcodeType::ROXR_I_L);
+                        break;
+                    }
                     break;
                 case 0b11:
-                    opcode = reg ? (dir ? OpcodeType::ROL_R : OpcodeType::ROR_R)
-                                 : (dir ? OpcodeType::ROL_I : OpcodeType::ROR_I);
+                    switch (sz) {
+                    case 0b00:
+                        opcode = reg ? (dir ? OpcodeType::ROL_R_B : OpcodeType::ROR_R_B)
+                                     : (dir ? OpcodeType::ROL_I_B : OpcodeType::ROR_I_B);
+                        break;
+                    case 0b01:
+                        opcode = reg ? (dir ? OpcodeType::ROL_R_W : OpcodeType::ROR_R_W)
+                                     : (dir ? OpcodeType::ROL_I_W : OpcodeType::ROR_I_W);
+                        break;
+                    case 0b10:
+                        opcode = reg ? (dir ? OpcodeType::ROL_R_L : OpcodeType::ROR_R_L)
+                                     : (dir ? OpcodeType::ROL_I_L : OpcodeType::ROR_I_L);
+                        break;
+                    }
                     break;
                 }
             }

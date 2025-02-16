@@ -173,55 +173,96 @@ enum class OpcodeType : uint8 {
     MulS, // muls <ea>, Dn
     MulU, // mulu <ea>, Dn
 
-    BChg_I_Dn, // bchg.<sz> #<data>, Dn
-    BChg_I_EA, // bchg.<sz> #<data>, <ea>
-    BChg_R_Dn, // bchg.<sz> Dn, Dn
-    BChg_R_EA, // bchg.<sz> Dn, <ea>
-    BClr_I_Dn, // bclr.<sz> #<data>, Dn
-    BClr_I_EA, // bclr.<sz> #<data>, <ea>
-    BClr_R_Dn, // bclr.<sz> Dn, Dn
-    BClr_R_EA, // bclr.<sz> Dn, <ea>
-    BSet_I_Dn, // bset.<sz> #<data>, Dn
-    BSet_I_EA, // bset.<sz> #<data>, <ea>
-    BSet_R_Dn, // bset.<sz> Dn, Dn
-    BSet_R_EA, // bset.<sz> Dn, <ea>
-    BTst_I_Dn, // btst.<sz> #<data>, Dn
-    BTst_I_EA, // btst.<sz> #<data>, <ea>
-    BTst_R_Dn, // btst.<sz> Dn, Dn
-    BTst_R_EA, // btst.<sz> Dn, <ea>
+    BChg_I_Dn, // bchg.l #<data>, Dn
+    BChg_I_EA, // bchg.b #<data>, <ea>
+    BChg_R_Dn, // bchg.l Dn, Dn
+    BChg_R_EA, // bchg.b Dn, <ea>
+    BClr_I_Dn, // bclr.l #<data>, Dn
+    BClr_I_EA, // bclr.b #<data>, <ea>
+    BClr_R_Dn, // bclr.l Dn, Dn
+    BClr_R_EA, // bclr.b Dn, <ea>
+    BSet_I_Dn, // bset.l #<data>, Dn
+    BSet_I_EA, // bset.b #<data>, <ea>
+    BSet_R_Dn, // bset.l Dn, Dn
+    BSet_R_EA, // bset.b Dn, <ea>
+    BTst_I_Dn, // btst.l #<data>, Dn
+    BTst_I_EA, // btst.b #<data>, <ea>
+    BTst_R_Dn, // btst.l Dn, Dn
+    BTst_R_EA, // btst.b Dn, <ea>
 
-    ASL_I,  // asl.<sz> #<data>, <ea>
-    ASL_M,  // asl.<sz> <ea>
-    ASL_R,  // asl.<sz> Dn, <ea>
-    ASR_I,  // asr.<sz> #<data>, <ea>
-    ASR_M,  // asr.<sz> <ea>
-    ASR_R,  // asr.<sz> Dn, <ea>
-    LSL_I,  // lsl.<sz> #<data>, <ea>
-    LSL_M,  // lsl.<sz> <ea>
-    LSL_R,  // lsl.<sz> Dn, <ea>
-    LSR_I,  // lsr.<sz> #<data>, <ea>
-    LSR_M,  // lsr.<sz> <ea>
-    LSR_R,  // lsr.<sz> Dn, <ea>
-    ROL_I,  // rol.<sz> #<data>, <ea>
-    ROL_M,  // rol.<sz> <ea>
-    ROL_R,  // rol.<sz> Dn, <ea>
-    ROR_I,  // ror.<sz> #<data>, <ea>
-    ROR_M,  // ror.<sz> <ea>
-    ROR_R,  // ror.<sz> Dn, <ea>
-    ROXL_I, // roxl.<sz> #<data>, <ea>
-    ROXL_M, // roxl.<sz> <ea>
-    ROXL_R, // roxl.<sz> Dn, <ea>
-    ROXR_I, // roxr.<sz> #<data>, <ea>
-    ROXR_M, // roxr.<sz> <ea>
-    ROXR_R, // roxr.<sz> Dn, <ea>
+    ASL_I_B,  // asl.b #<data>, <ea>
+    ASL_I_W,  // asl.w #<data>, <ea>
+    ASL_I_L,  // asl.l #<data>, <ea>
+    ASL_M,    // asl.w <ea>
+    ASL_R_B,  // asl.b Dn, <ea>
+    ASL_R_W,  // asl.w Dn, <ea>
+    ASL_R_L,  // asl.l Dn, <ea>
+    ASR_I_B,  // asr.b #<data>, <ea>
+    ASR_I_W,  // asr.w #<data>, <ea>
+    ASR_I_L,  // asr.l #<data>, <ea>
+    ASR_M,    // asr.w <ea>
+    ASR_R_B,  // asr.b Dn, <ea>
+    ASR_R_W,  // asr.w Dn, <ea>
+    ASR_R_L,  // asr.l Dn, <ea>
+    LSL_I_B,  // lsl.b #<data>, <ea>
+    LSL_I_W,  // lsl.w #<data>, <ea>
+    LSL_I_L,  // lsl.l #<data>, <ea>
+    LSL_M,    // lsl.w <ea>
+    LSL_R_B,  // lsl.b Dn, <ea>
+    LSL_R_W,  // lsl.w Dn, <ea>
+    LSL_R_L,  // lsl.l Dn, <ea>
+    LSR_I_B,  // lsr.b #<data>, <ea>
+    LSR_I_W,  // lsr.w #<data>, <ea>
+    LSR_I_L,  // lsr.l #<data>, <ea>
+    LSR_M,    // lsr.w <ea>
+    LSR_R_B,  // lsr.b Dn, <ea>
+    LSR_R_W,  // lsr.w Dn, <ea>
+    LSR_R_L,  // lsr.l Dn, <ea>
+    ROL_I_B,  // rol.b #<data>, <ea>
+    ROL_I_W,  // rol.w #<data>, <ea>
+    ROL_I_L,  // rol.l #<data>, <ea>
+    ROL_M,    // rol.w <ea>
+    ROL_R_B,  // rol.b Dn, <ea>
+    ROL_R_W,  // rol.w Dn, <ea>
+    ROL_R_L,  // rol.l Dn, <ea>
+    ROR_I_B,  // ror.b #<data>, <ea>
+    ROR_I_W,  // ror.w #<data>, <ea>
+    ROR_I_L,  // ror.l #<data>, <ea>
+    ROR_M,    // ror.w <ea>
+    ROR_R_B,  // ror.v Dn, <ea>
+    ROR_R_W,  // ror.v Dn, <ea>
+    ROR_R_L,  // ror.v Dn, <ea>
+    ROXL_I_B, // roxl.b #<data>, <ea>
+    ROXL_I_W, // roxl.w #<data>, <ea>
+    ROXL_I_L, // roxl.l #<data>, <ea>
+    ROXL_M,   // roxl.w <ea>
+    ROXL_R_B, // roxl.b Dn, <ea>
+    ROXL_R_W, // roxl.w Dn, <ea>
+    ROXL_R_L, // roxl.l Dn, <ea>
+    ROXR_I_B, // roxr.b #<data>, <ea>
+    ROXR_I_W, // roxr.w #<data>, <ea>
+    ROXR_I_L, // roxr.l #<data>, <ea>
+    ROXR_M,   // roxr.w <ea>
+    ROXR_R_B, // roxr.b Dn, <ea>
+    ROXR_R_W, // roxr.w Dn, <ea>
+    ROXR_R_L, // roxr.l Dn, <ea>
 
-    Cmp,  // cmp.<sz> <ea>, An
-    CmpA, // cmpa <ea>, An
-    CmpI, // cmpi.<sz> #<data>, <ea>
-    CmpM, // cmpm.<sz> (Ay)+, (Ax)+
-    Scc,  // scc <ea>
-    TAS,  // tas <ea>
-    Tst,  // tst.<sz> <ea>
+    Cmp_B,  // cmp.b <ea>, An
+    Cmp_W,  // cmp.w <ea>, An
+    Cmp_L,  // cmp.l <ea>, An
+    CmpA_W, // cmpa.w <ea>, An
+    CmpA_L, // cmpa.l <ea>, An
+    CmpI_B, // cmpi.b #<data>, <ea>
+    CmpI_W, // cmpi.w #<data>, <ea>
+    CmpI_L, // cmpi.l #<data>, <ea>
+    CmpM_B, // cmpm.b (Ay)+, (Ax)+
+    CmpM_W, // cmpm.w (Ay)+, (Ax)+
+    CmpM_L, // cmpm.l (Ay)+, (Ax)+
+    Scc,    // scc <ea>
+    TAS,    // tas <ea>
+    Tst_B,  // tst.b <ea>
+    Tst_W,  // tst.w <ea>
+    Tst_L,  // tst.l <ea>
 
     LEA, // lea <ea>, An
     PEA, // pea <ea>
@@ -232,7 +273,7 @@ enum class OpcodeType : uint8 {
     BRA,  // bra <label>
     BSR,  // bsr <label>
     Bcc,  // b<cc> <label>
-    DBcc, // db<cc>.<sz> Dn, <label>
+    DBcc, // db<cc>.w Dn, <label>
     JSR,  // jsr <ea>
     Jmp,  // jmp <ea>
 
