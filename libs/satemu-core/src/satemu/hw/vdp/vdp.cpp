@@ -2479,8 +2479,6 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
 
         // Retrieves the color of the given layer
         auto getLayerColor = [&](Layer layer) -> Color888 {
-            Color888 color{};
-
             if (layer == LYR_Back) {
                 return m_lineBackLayerState.backColor;
             } else {

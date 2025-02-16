@@ -52,6 +52,8 @@ uint8 StandardPad::WritePDR(uint8 ddr, uint8 value) {
             return 0x70 | bit::extract<0, 3>(btnValue);
         }
     }
+
+    return 0xFF;
 }
 
 } // namespace satemu::peripheral
