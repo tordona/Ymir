@@ -277,30 +277,49 @@ private:
     void Instr_AddX_M(uint16 instr);
     template <mem_primitive T>
     void Instr_AddX_R(uint16 instr);
+    template <mem_primitive T>
     void Instr_And_Dn_EA(uint16 instr);
+    template <mem_primitive T>
     void Instr_And_EA_Dn(uint16 instr);
+    template <mem_primitive T>
     void Instr_AndI_EA(uint16 instr);
     void Instr_AndI_CCR(uint16 instr);
     void Instr_AndI_SR(uint16 instr);
+    template <mem_primitive T>
     void Instr_Eor_Dn_EA(uint16 instr);
+    template <mem_primitive T>
     void Instr_EorI_EA(uint16 instr);
     void Instr_EorI_CCR(uint16 instr);
     void Instr_EorI_SR(uint16 instr);
+    template <mem_primitive T>
     void Instr_Neg(uint16 instr);
+    template <mem_primitive T>
     void Instr_NegX(uint16 instr);
+    template <mem_primitive T>
     void Instr_Not(uint16 instr);
+    template <mem_primitive T>
     void Instr_Or_Dn_EA(uint16 instr);
+    template <mem_primitive T>
     void Instr_Or_EA_Dn(uint16 instr);
+    template <mem_primitive T>
     void Instr_OrI_EA(uint16 instr);
     void Instr_OrI_CCR(uint16 instr);
     void Instr_OrI_SR(uint16 instr);
+    template <mem_primitive T>
     void Instr_Sub_Dn_EA(uint16 instr);
+    template <mem_primitive T>
     void Instr_Sub_EA_Dn(uint16 instr);
+    template <mem_primitive T>
     void Instr_SubA(uint16 instr);
+    template <mem_primitive T>
     void Instr_SubI(uint16 instr);
+    template <mem_primitive T>
     void Instr_SubQ_An(uint16 instr);
+    template <mem_primitive T>
     void Instr_SubQ_EA(uint16 instr);
+    template <mem_primitive T>
     void Instr_SubX_M(uint16 instr);
+    template <mem_primitive T>
     void Instr_SubX_R(uint16 instr);
 
     void Instr_DivS(uint16 instr);

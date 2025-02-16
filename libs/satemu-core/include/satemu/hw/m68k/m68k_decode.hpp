@@ -106,31 +106,67 @@ enum class OpcodeType : uint8 {
     AddX_R_B,    // addx.b Dy, Dx
     AddX_R_W,    // addx.w Dy, Dx
     AddX_R_L,    // addx.l Dy, Dx
-    And_Dn_EA,   // and.<sz> Dn, <ea>
-    And_EA_Dn,   // and.<sz> <ea>, Dn
-    AndI_EA,     // andi.<sz> #<data>, <ea>
+    And_Dn_EA_B, // and.b Dn, <ea>
+    And_Dn_EA_W, // and.w Dn, <ea>
+    And_Dn_EA_L, // and.l Dn, <ea>
+    And_EA_Dn_B, // and.b <ea>, Dn
+    And_EA_Dn_W, // and.w <ea>, Dn
+    And_EA_Dn_L, // and.l <ea>, Dn
+    AndI_EA_B,   // andi.b #<data>, <ea>
+    AndI_EA_W,   // andi.w #<data>, <ea>
+    AndI_EA_L,   // andi.l #<data>, <ea>
     AndI_CCR,    // andi.w #<data>, CCR
     AndI_SR,     // andi.w #<data>, SR
-    Eor_Dn_EA,   // eor.<sz> Dn, <ea>
-    EorI_EA,     // eori.<sz> #<data>, <ea>
+    Eor_Dn_EA_B, // eor.b Dn, <ea>
+    Eor_Dn_EA_W, // eor.w Dn, <ea>
+    Eor_Dn_EA_L, // eor.l Dn, <ea>
+    EorI_EA_B,   // eori.b #<data>, <ea>
+    EorI_EA_W,   // eori.w #<data>, <ea>
+    EorI_EA_L,   // eori.l #<data>, <ea>
     EorI_CCR,    // eori.w #<data>, CCR
     EorI_SR,     // eori.w #<data>, SR
-    Neg,         // neg.<sz> <ea>
-    NegX,        // negx.<sz> <ea>
-    Not,         // not.<sz> <ea>
-    Or_Dn_EA,    // or.<sz> Dn, <ea>
-    Or_EA_Dn,    // or.<sz> <ea>, Dn
-    OrI_EA,      // ori.<sz> #<data>, <ea>
+    Neg_B,       // neg.b <ea>
+    Neg_W,       // neg.w <ea>
+    Neg_L,       // neg.l <ea>
+    NegX_B,      // negx.b <ea>
+    NegX_W,      // negx.w <ea>
+    NegX_L,      // negx.l <ea>
+    Not_B,       // not.b <ea>
+    Not_W,       // not.w <ea>
+    Not_L,       // not.l <ea>
+    Or_Dn_EA_B,  // or.b Dn, <ea>
+    Or_Dn_EA_W,  // or.w Dn, <ea>
+    Or_Dn_EA_L,  // or.l Dn, <ea>
+    Or_EA_Dn_B,  // or.b <ea>, Dn
+    Or_EA_Dn_W,  // or.w <ea>, Dn
+    Or_EA_Dn_L,  // or.l <ea>, Dn
+    OrI_EA_B,    // ori.b #<data>, <ea>
+    OrI_EA_W,    // ori.w #<data>, <ea>
+    OrI_EA_L,    // ori.l #<data>, <ea>
     OrI_CCR,     // ori.w #<data>, CCR
     OrI_SR,      // ori.w #<data>, SR
-    Sub_Dn_EA,   // sub.<sz> Dn, <ea>
-    Sub_EA_Dn,   // sub.<sz> <ea>, Dn
-    SubA,        // suba.<sz> <ea>, An
-    SubI,        // subi.<sz> #<data>, <ea>
-    SubQ_An,     // subq.<sz> #<data>, An
-    SubQ_EA,     // subq.<sz> #<data>, <ea>
-    SubX_M,      // subx.<sz> -(Ay), -(Ax)
-    SubX_R,      // subx.<sz> Dy, Dx
+    Sub_Dn_EA_B, // sub.b Dn, <ea>
+    Sub_Dn_EA_W, // sub.w Dn, <ea>
+    Sub_Dn_EA_L, // sub.l Dn, <ea>
+    Sub_EA_Dn_B, // sub.b <ea>, Dn
+    Sub_EA_Dn_W, // sub.w <ea>, Dn
+    Sub_EA_Dn_L, // sub.l <ea>, Dn
+    SubA_W,      // suba.w <ea>, An
+    SubA_L,      // suba.l <ea>, An
+    SubI_B,      // subi.b #<data>, <ea>
+    SubI_W,      // subi.w #<data>, <ea>
+    SubI_L,      // subi.l #<data>, <ea>
+    SubQ_An_W,   // subq.w #<data>, An
+    SubQ_An_L,   // subq.l #<data>, An
+    SubQ_EA_B,   // subq.b #<data>, <ea>
+    SubQ_EA_W,   // subq.w #<data>, <ea>
+    SubQ_EA_L,   // subq.l #<data>, <ea>
+    SubX_M_B,    // subx.b -(Ay), -(Ax)
+    SubX_M_W,    // subx.w -(Ay), -(Ax)
+    SubX_M_L,    // subx.l -(Ay), -(Ax)
+    SubX_R_B,    // subx.b Dy, Dx
+    SubX_R_W,    // subx.w Dy, Dx
+    SubX_R_L,    // subx.l Dy, Dx
 
     DivS, // divs <ea>, Dn
     DivU, // divu <ea>, Dn

@@ -787,31 +787,67 @@ void MC68EC000::Execute() {
     case OpcodeType::AddX_R_B: Instr_AddX_R<uint8>(instr); break;
     case OpcodeType::AddX_R_W: Instr_AddX_R<uint16>(instr); break;
     case OpcodeType::AddX_R_L: Instr_AddX_R<uint32>(instr); break;
-    case OpcodeType::And_Dn_EA: Instr_And_Dn_EA(instr); break;
-    case OpcodeType::And_EA_Dn: Instr_And_EA_Dn(instr); break;
-    case OpcodeType::AndI_EA: Instr_AndI_EA(instr); break;
+    case OpcodeType::And_Dn_EA_B: Instr_And_Dn_EA<uint8>(instr); break;
+    case OpcodeType::And_Dn_EA_W: Instr_And_Dn_EA<uint16>(instr); break;
+    case OpcodeType::And_Dn_EA_L: Instr_And_Dn_EA<uint32>(instr); break;
+    case OpcodeType::And_EA_Dn_B: Instr_And_EA_Dn<uint8>(instr); break;
+    case OpcodeType::And_EA_Dn_W: Instr_And_EA_Dn<uint16>(instr); break;
+    case OpcodeType::And_EA_Dn_L: Instr_And_EA_Dn<uint32>(instr); break;
+    case OpcodeType::AndI_EA_B: Instr_AndI_EA<uint8>(instr); break;
+    case OpcodeType::AndI_EA_W: Instr_AndI_EA<uint16>(instr); break;
+    case OpcodeType::AndI_EA_L: Instr_AndI_EA<uint32>(instr); break;
     case OpcodeType::AndI_CCR: Instr_AndI_CCR(instr); break;
     case OpcodeType::AndI_SR: Instr_AndI_SR(instr); break;
-    case OpcodeType::Eor_Dn_EA: Instr_Eor_Dn_EA(instr); break;
-    case OpcodeType::EorI_EA: Instr_EorI_EA(instr); break;
+    case OpcodeType::Eor_Dn_EA_B: Instr_Eor_Dn_EA<uint8>(instr); break;
+    case OpcodeType::Eor_Dn_EA_W: Instr_Eor_Dn_EA<uint16>(instr); break;
+    case OpcodeType::Eor_Dn_EA_L: Instr_Eor_Dn_EA<uint32>(instr); break;
+    case OpcodeType::EorI_EA_B: Instr_EorI_EA<uint8>(instr); break;
+    case OpcodeType::EorI_EA_W: Instr_EorI_EA<uint16>(instr); break;
+    case OpcodeType::EorI_EA_L: Instr_EorI_EA<uint32>(instr); break;
     case OpcodeType::EorI_CCR: Instr_EorI_CCR(instr); break;
     case OpcodeType::EorI_SR: Instr_EorI_SR(instr); break;
-    case OpcodeType::Neg: Instr_Neg(instr); break;
-    case OpcodeType::NegX: Instr_NegX(instr); break;
-    case OpcodeType::Not: Instr_Not(instr); break;
-    case OpcodeType::Or_Dn_EA: Instr_Or_Dn_EA(instr); break;
-    case OpcodeType::Or_EA_Dn: Instr_Or_EA_Dn(instr); break;
-    case OpcodeType::OrI_EA: Instr_OrI_EA(instr); break;
+    case OpcodeType::Neg_B: Instr_Neg<uint8>(instr); break;
+    case OpcodeType::Neg_W: Instr_Neg<uint16>(instr); break;
+    case OpcodeType::Neg_L: Instr_Neg<uint32>(instr); break;
+    case OpcodeType::NegX_B: Instr_NegX<uint8>(instr); break;
+    case OpcodeType::NegX_W: Instr_NegX<uint16>(instr); break;
+    case OpcodeType::NegX_L: Instr_NegX<uint32>(instr); break;
+    case OpcodeType::Not_B: Instr_Not<uint8>(instr); break;
+    case OpcodeType::Not_W: Instr_Not<uint16>(instr); break;
+    case OpcodeType::Not_L: Instr_Not<uint32>(instr); break;
+    case OpcodeType::Or_Dn_EA_B: Instr_Or_Dn_EA<uint8>(instr); break;
+    case OpcodeType::Or_Dn_EA_W: Instr_Or_Dn_EA<uint16>(instr); break;
+    case OpcodeType::Or_Dn_EA_L: Instr_Or_Dn_EA<uint32>(instr); break;
+    case OpcodeType::Or_EA_Dn_B: Instr_Or_EA_Dn<uint8>(instr); break;
+    case OpcodeType::Or_EA_Dn_W: Instr_Or_EA_Dn<uint16>(instr); break;
+    case OpcodeType::Or_EA_Dn_L: Instr_Or_EA_Dn<uint32>(instr); break;
+    case OpcodeType::OrI_EA_B: Instr_OrI_EA<uint8>(instr); break;
+    case OpcodeType::OrI_EA_W: Instr_OrI_EA<uint16>(instr); break;
+    case OpcodeType::OrI_EA_L: Instr_OrI_EA<uint32>(instr); break;
     case OpcodeType::OrI_CCR: Instr_OrI_CCR(instr); break;
     case OpcodeType::OrI_SR: Instr_OrI_SR(instr); break;
-    case OpcodeType::Sub_Dn_EA: Instr_Sub_Dn_EA(instr); break;
-    case OpcodeType::Sub_EA_Dn: Instr_Sub_EA_Dn(instr); break;
-    case OpcodeType::SubA: Instr_SubA(instr); break;
-    case OpcodeType::SubI: Instr_SubI(instr); break;
-    case OpcodeType::SubQ_An: Instr_SubQ_An(instr); break;
-    case OpcodeType::SubQ_EA: Instr_SubQ_EA(instr); break;
-    case OpcodeType::SubX_M: Instr_SubX_M(instr); break;
-    case OpcodeType::SubX_R: Instr_SubX_R(instr); break;
+    case OpcodeType::Sub_Dn_EA_B: Instr_Sub_Dn_EA<uint8>(instr); break;
+    case OpcodeType::Sub_Dn_EA_W: Instr_Sub_Dn_EA<uint16>(instr); break;
+    case OpcodeType::Sub_Dn_EA_L: Instr_Sub_Dn_EA<uint32>(instr); break;
+    case OpcodeType::Sub_EA_Dn_B: Instr_Sub_EA_Dn<uint8>(instr); break;
+    case OpcodeType::Sub_EA_Dn_W: Instr_Sub_EA_Dn<uint16>(instr); break;
+    case OpcodeType::Sub_EA_Dn_L: Instr_Sub_EA_Dn<uint32>(instr); break;
+    case OpcodeType::SubA_W: Instr_SubA<uint16>(instr); break;
+    case OpcodeType::SubA_L: Instr_SubA<uint32>(instr); break;
+    case OpcodeType::SubI_B: Instr_SubI<uint8>(instr); break;
+    case OpcodeType::SubI_W: Instr_SubI<uint16>(instr); break;
+    case OpcodeType::SubI_L: Instr_SubI<uint32>(instr); break;
+    case OpcodeType::SubQ_An_W: Instr_SubQ_An<uint16>(instr); break;
+    case OpcodeType::SubQ_An_L: Instr_SubQ_An<uint32>(instr); break;
+    case OpcodeType::SubQ_EA_B: Instr_SubQ_EA<uint8>(instr); break;
+    case OpcodeType::SubQ_EA_W: Instr_SubQ_EA<uint16>(instr); break;
+    case OpcodeType::SubQ_EA_L: Instr_SubQ_EA<uint32>(instr); break;
+    case OpcodeType::SubX_M_B: Instr_SubX_M<uint8>(instr); break;
+    case OpcodeType::SubX_M_W: Instr_SubX_M<uint16>(instr); break;
+    case OpcodeType::SubX_M_L: Instr_SubX_M<uint32>(instr); break;
+    case OpcodeType::SubX_R_B: Instr_SubX_R<uint8>(instr); break;
+    case OpcodeType::SubX_R_W: Instr_SubX_R<uint16>(instr); break;
+    case OpcodeType::SubX_R_L: Instr_SubX_R<uint32>(instr); break;
 
     case OpcodeType::DivS: Instr_DivS(instr); break;
     case OpcodeType::DivU: Instr_DivU(instr); break;
@@ -1475,79 +1511,55 @@ FORCE_INLINE void MC68EC000::Instr_AddX_R(uint16 instr) {
     PrefetchTransfer();
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_And_Dn_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
     const uint16 Dn = bit::extract<9, 11>(instr);
 
-    auto op = [&]<std::integral T>() {
-        const T op1 = regs.D[Dn];
-        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
-            const T result = op2 & op1;
-            SR.N = IsNegative(result);
-            SR.Z = result == 0;
-            SR.V = SR.C = 0;
-            return result;
-        });
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
-}
-
-FORCE_INLINE void MC68EC000::Instr_And_EA_Dn(uint16 instr) {
-    const uint16 Xn = bit::extract<0, 2>(instr);
-    const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
-    const uint16 Dn = bit::extract<9, 11>(instr);
-
-    auto op = [&]<std::integral T>() {
-        const T op1 = ReadEffectiveAddress<T>(M, Xn);
-        const T op2 = regs.D[Dn];
+    const T op1 = regs.D[Dn];
+    ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
         const T result = op2 & op1;
-        bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Dn], result);
         SR.N = IsNegative(result);
         SR.Z = result == 0;
         SR.V = SR.C = 0;
-    };
+        return result;
+    });
+}
 
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
+template <mem_primitive T>
+FORCE_INLINE void MC68EC000::Instr_And_EA_Dn(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    const T op1 = ReadEffectiveAddress<T>(M, Xn);
+    const T op2 = regs.D[Dn];
+    const T result = op2 & op1;
+    bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Dn], result);
+    SR.N = IsNegative(result);
+    SR.Z = result == 0;
+    SR.V = SR.C = 0;
 
     PrefetchTransfer();
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_AndI_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
 
-    auto op = [&]<std::integral T>() {
-        T op1 = PrefetchNext();
-        if constexpr (sizeof(T) == sizeof(uint32)) {
-            op1 = (op1 << 16u) | PrefetchNext();
-        }
-        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
-            const T result = op2 & op1;
-            SR.N = IsNegative(result);
-            SR.Z = result == 0;
-            SR.V = SR.C = 0;
-            return result;
-        });
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
+    T op1 = PrefetchNext();
+    if constexpr (sizeof(T) == sizeof(uint32)) {
+        op1 = (op1 << 16u) | PrefetchNext();
     }
+    ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+        const T result = op2 & op1;
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = SR.C = 0;
+        return result;
+    });
 }
 
 FORCE_INLINE void MC68EC000::Instr_AndI_CCR(uint16 instr) {
@@ -1573,54 +1585,38 @@ FORCE_INLINE void MC68EC000::Instr_AndI_SR(uint16 instr) {
     }
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_Eor_Dn_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
     const uint16 Dn = bit::extract<9, 11>(instr);
 
-    auto op = [&]<std::integral T>() {
-        const T op1 = regs.D[Dn];
-        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
-            const T result = op2 ^ op1;
-            SR.N = IsNegative(result);
-            SR.Z = result == 0;
-            SR.V = SR.C = 0;
-            return result;
-        });
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
+    const T op1 = regs.D[Dn];
+    ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+        const T result = op2 ^ op1;
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = SR.C = 0;
+        return result;
+    });
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_EorI_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
 
-    auto op = [&]<std::integral T>() {
-        T op1 = PrefetchNext();
-        if constexpr (sizeof(T) == sizeof(uint32)) {
-            op1 = (op1 << 16u) | PrefetchNext();
-        }
-        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
-            const T result = op2 ^ op1;
-            SR.N = IsNegative(result);
-            SR.Z = result == 0;
-            SR.V = SR.C = 0;
-            return result;
-        });
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
+    T op1 = PrefetchNext();
+    if constexpr (sizeof(T) == sizeof(uint32)) {
+        op1 = (op1 << 16u) | PrefetchNext();
     }
+    ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+        const T result = op2 ^ op1;
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = SR.C = 0;
+        return result;
+    });
 }
 
 FORCE_INLINE void MC68EC000::Instr_EorI_CCR(uint16 instr) {
@@ -1646,147 +1642,99 @@ FORCE_INLINE void MC68EC000::Instr_EorI_SR(uint16 instr) {
     }
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_Neg(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
 
-    auto op = [&]<std::integral T>() {
-        ModifyEffectiveAddress<T>(M, Xn, [&](T value) {
-            const T result = 0 - value;
-            SR.N = IsNegative(result);
-            SR.Z = result == 0;
-            SR.V = static_cast<std::make_signed_t<T>>(value & result) < 0;
-            SR.C = SR.X = ~SR.Z;
-            return result;
-        });
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
+    ModifyEffectiveAddress<T>(M, Xn, [&](T value) {
+        const T result = 0 - value;
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = static_cast<std::make_signed_t<T>>(value & result) < 0;
+        SR.C = SR.X = ~SR.Z;
+        return result;
+    });
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_NegX(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
 
-    auto op = [&]<std::integral T>() {
-        ModifyEffectiveAddress<T>(M, Xn, [&](T value) {
-            const T result = 0 - value - SR.X;
-            SR.N = result >> (sizeof(T) * 8 - 1);
-            SR.Z &= result == 0;
-            SR.V = static_cast<std::make_signed_t<T>>(value & result) < 0;
-            SR.X = SR.C = (value | result) >> (sizeof(T) * 8 - 1);
-            return result;
-        });
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
+    ModifyEffectiveAddress<T>(M, Xn, [&](T value) {
+        const T result = 0 - value - SR.X;
+        SR.N = result >> (sizeof(T) * 8 - 1);
+        SR.Z &= result == 0;
+        SR.V = static_cast<std::make_signed_t<T>>(value & result) < 0;
+        SR.X = SR.C = (value | result) >> (sizeof(T) * 8 - 1);
+        return result;
+    });
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_Not(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
 
-    auto op = [&]<std::integral T>() {
-        ModifyEffectiveAddress<T>(M, Xn, [&](T value) {
-            const T result = ~value;
-            SR.N = IsNegative(result);
-            SR.Z = result == 0;
-            SR.V = SR.C = 0;
-            return result;
-        });
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
-}
-
-FORCE_INLINE void MC68EC000::Instr_Or_Dn_EA(uint16 instr) {
-    const uint16 Xn = bit::extract<0, 2>(instr);
-    const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
-    const uint16 Dn = bit::extract<9, 11>(instr);
-
-    auto op = [&]<std::integral T>() {
-        const T op1 = regs.D[Dn];
-        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
-            const T result = op2 | op1;
-            SR.N = IsNegative(result);
-            SR.Z = result == 0;
-            SR.V = SR.C = 0;
-            return result;
-        });
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
-}
-
-FORCE_INLINE void MC68EC000::Instr_Or_EA_Dn(uint16 instr) {
-    const uint16 Xn = bit::extract<0, 2>(instr);
-    const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
-    const uint16 Dn = bit::extract<9, 11>(instr);
-
-    auto op = [&]<std::integral T>() {
-        const T op1 = ReadEffectiveAddress<T>(M, Xn);
-        const T op2 = regs.D[Dn];
-        const T result = op2 | op1;
-        bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Dn], result);
+    ModifyEffectiveAddress<T>(M, Xn, [&](T value) {
+        const T result = ~value;
         SR.N = IsNegative(result);
         SR.Z = result == 0;
         SR.V = SR.C = 0;
-    };
+        return result;
+    });
+}
 
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
+template <mem_primitive T>
+FORCE_INLINE void MC68EC000::Instr_Or_Dn_EA(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    const T op1 = regs.D[Dn];
+    ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+        const T result = op2 | op1;
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = SR.C = 0;
+        return result;
+    });
+}
+
+template <mem_primitive T>
+FORCE_INLINE void MC68EC000::Instr_Or_EA_Dn(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    const T op1 = ReadEffectiveAddress<T>(M, Xn);
+    const T op2 = regs.D[Dn];
+    const T result = op2 | op1;
+    bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Dn], result);
+    SR.N = IsNegative(result);
+    SR.Z = result == 0;
+    SR.V = SR.C = 0;
 
     PrefetchTransfer();
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_OrI_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
 
-    auto op = [&]<std::integral T>() {
-        T op1 = PrefetchNext();
-        if constexpr (sizeof(T) == sizeof(uint32)) {
-            op1 = (op1 << 16u) | PrefetchNext();
-        }
-        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
-            const T result = op2 | op1;
-            SR.N = IsNegative(result);
-            SR.Z = result == 0;
-            SR.V = SR.C = 0;
-            return result;
-        });
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
+    T op1 = PrefetchNext();
+    if constexpr (sizeof(T) == sizeof(uint32)) {
+        op1 = (op1 << 16u) | PrefetchNext();
     }
+    ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+        const T result = op2 | op1;
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = SR.C = 0;
+        return result;
+    });
 }
 
 FORCE_INLINE void MC68EC000::Instr_OrI_CCR(uint16 instr) {
@@ -1812,199 +1760,142 @@ FORCE_INLINE void MC68EC000::Instr_OrI_SR(uint16 instr) {
     }
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_Sub_Dn_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
     const uint16 Dn = bit::extract<9, 11>(instr);
 
-    auto op = [&]<std::integral T>() {
-        const T op1 = regs.D[Dn];
-        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
-            const T result = op2 - op1;
-            SR.N = IsNegative(result);
-            SR.Z = result == 0;
-            SR.V = IsSubOverflow(op1, op2, result);
-            SR.C = SR.X = IsSubCarry(op1, op2, result);
-            return result;
-        });
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
-}
-
-FORCE_INLINE void MC68EC000::Instr_Sub_EA_Dn(uint16 instr) {
-    const uint16 Xn = bit::extract<0, 2>(instr);
-    const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
-    const uint16 Dn = bit::extract<9, 11>(instr);
-
-    auto op = [&]<std::integral T>() {
-        const T op1 = ReadEffectiveAddress<T>(M, Xn);
-        const T op2 = regs.D[Dn];
+    const T op1 = regs.D[Dn];
+    ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
         const T result = op2 - op1;
-        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
         SR.N = IsNegative(result);
         SR.Z = result == 0;
         SR.V = IsSubOverflow(op1, op2, result);
         SR.C = SR.X = IsSubCarry(op1, op2, result);
-    };
+        return result;
+    });
+}
 
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
+template <mem_primitive T>
+FORCE_INLINE void MC68EC000::Instr_Sub_EA_Dn(uint16 instr) {
+    const uint16 Xn = bit::extract<0, 2>(instr);
+    const uint16 M = bit::extract<3, 5>(instr);
+    const uint16 Dn = bit::extract<9, 11>(instr);
+
+    const T op1 = ReadEffectiveAddress<T>(M, Xn);
+    const T op2 = regs.D[Dn];
+    const T result = op2 - op1;
+    bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+    SR.N = IsNegative(result);
+    SR.Z = result == 0;
+    SR.V = IsSubOverflow(op1, op2, result);
+    SR.C = SR.X = IsSubCarry(op1, op2, result);
 
     PrefetchTransfer();
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_SubA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const bool sz = bit::extract<8>(instr);
     const uint16 An = bit::extract<9, 11>(instr);
 
-    if (sz) {
-        regs.A[An] -= ReadEffectiveAddress<uint32>(M, Xn);
-    } else {
-        regs.A[An] -= static_cast<sint16>(ReadEffectiveAddress<uint16>(M, Xn));
-    }
+    using ST = std::make_signed_t<T>;
+
+    regs.A[An] -= static_cast<ST>(ReadEffectiveAddress<T>(M, Xn));
 
     PrefetchTransfer();
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_SubI(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
 
-    auto op = [&]<std::integral T>() {
-        T op1 = PrefetchNext();
-        if constexpr (sizeof(T) == sizeof(uint32)) {
-            op1 = (op1 << 16u) | PrefetchNext();
-        }
-        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
-            const T result = op2 - op1;
-            SR.N = IsNegative(result);
-            SR.Z = result == 0;
-            SR.V = IsSubOverflow(op1, op2, result);
-            SR.C = SR.X = IsSubCarry(op1, op2, result);
-
-            return result;
-        });
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
+    T op1 = PrefetchNext();
+    if constexpr (sizeof(T) == sizeof(uint32)) {
+        op1 = (op1 << 16u) | PrefetchNext();
     }
+    ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+        const T result = op2 - op1;
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = IsSubOverflow(op1, op2, result);
+        SR.C = SR.X = IsSubCarry(op1, op2, result);
+
+        return result;
+    });
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_SubQ_An(uint16 instr) {
     const uint16 An = bit::extract<0, 2>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
 
-    auto op = [&]<std::integral T>() {
-        const uint32 op1 = static_cast<std::make_signed_t<T>>(bit::extract<9, 11>(instr));
-        const uint32 op2 = regs.A[An];
-        const uint32 result = op2 - (op1 == 0 ? 8 : op1);
-        regs.A[An] = result;
-    };
-
-    switch (sz) {
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
+    const uint32 op1 = static_cast<std::make_signed_t<T>>(bit::extract<9, 11>(instr));
+    const uint32 op2 = regs.A[An];
+    const uint32 result = op2 - (op1 == 0 ? 8 : op1);
+    regs.A[An] = result;
 
     PrefetchTransfer();
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_SubQ_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
     const uint16 data = bit::extract<9, 11>(instr);
 
-    auto op = [&]<std::integral T>() {
-        const T op1 = data == 0 ? 8 : data;
-        ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
-            const T result = op2 - op1;
-            SR.N = IsNegative(result);
-            SR.Z = result == 0;
-            SR.V = IsSubOverflow(op1, op2, result);
-            SR.C = SR.X = IsSubCarry(op1, op2, result);
+    const T op1 = data == 0 ? 8 : data;
+    ModifyEffectiveAddress<T>(M, Xn, [&](T op2) {
+        const T result = op2 - op1;
+        SR.N = IsNegative(result);
+        SR.Z = result == 0;
+        SR.V = IsSubOverflow(op1, op2, result);
+        SR.C = SR.X = IsSubCarry(op1, op2, result);
 
-            return result;
-        });
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
+        return result;
+    });
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_SubX_M(uint16 instr) {
     const uint16 Ry = bit::extract<0, 2>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
     const uint16 Rx = bit::extract<9, 11>(instr);
 
-    auto op = [&]<std::integral T>() {
-        AdvanceAddress<T, false>(Ry);
-        const T op1 = MemReadDesc<T, false>(regs.A[Ry]);
-        AdvanceAddress<T, false>(Rx);
-        const T op2 = MemReadDesc<T, false>(regs.A[Rx]);
-        const T result = op2 - op1 - SR.X;
-        SR.N = IsNegative(result);
-        SR.Z &= result == 0;
-        SR.V = IsSubOverflow(op1, op2, result);
-        SR.C = SR.X = IsSubCarry(op1, op2, result);
+    AdvanceAddress<T, false>(Ry);
+    const T op1 = MemReadDesc<T, false>(regs.A[Ry]);
+    AdvanceAddress<T, false>(Rx);
+    const T op2 = MemReadDesc<T, false>(regs.A[Rx]);
+    const T result = op2 - op1 - SR.X;
+    SR.N = IsNegative(result);
+    SR.Z &= result == 0;
+    SR.V = IsSubOverflow(op1, op2, result);
+    SR.C = SR.X = IsSubCarry(op1, op2, result);
 
-        if constexpr (std::is_same_v<T, uint32>) {
-            MemWrite<uint16>(regs.A[Rx] + 2, result >> 0u);
-            PrefetchTransfer();
-            MemWrite<uint16>(regs.A[Rx] + 0, result >> 16u);
-        } else {
-            PrefetchTransfer();
-            MemWrite<T>(regs.A[Rx], result);
-        }
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
+    if constexpr (std::is_same_v<T, uint32>) {
+        MemWrite<uint16>(regs.A[Rx] + 2, result >> 0u);
+        PrefetchTransfer();
+        MemWrite<uint16>(regs.A[Rx] + 0, result >> 16u);
+    } else {
+        PrefetchTransfer();
+        MemWrite<T>(regs.A[Rx], result);
     }
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_SubX_R(uint16 instr) {
     const uint16 Ry = bit::extract<0, 2>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
     const uint16 Rx = bit::extract<9, 11>(instr);
 
-    auto op = [&]<std::integral T>() {
-        const T op1 = regs.D[Ry];
-        const T op2 = regs.D[Rx];
-        const T result = op2 - op1 - SR.X;
-        SR.N = IsNegative(result);
-        SR.Z &= result == 0;
-        SR.V = IsSubOverflow(op1, op2, result);
-        SR.C = SR.X = IsSubCarry(op1, op2, result);
-        bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Rx], result);
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
+    const T op1 = regs.D[Ry];
+    const T op2 = regs.D[Rx];
+    const T result = op2 - op1 - SR.X;
+    SR.N = IsNegative(result);
+    SR.Z &= result == 0;
+    SR.V = IsSubOverflow(op1, op2, result);
+    SR.C = SR.X = IsSubCarry(op1, op2, result);
+    bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Rx], result);
 
     PrefetchTransfer();
 }
