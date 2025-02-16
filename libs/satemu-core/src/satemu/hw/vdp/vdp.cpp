@@ -2477,40 +2477,17 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
             }
         }
 
-        // Retrieves the color of the given layer and applies color offset
+        // Retrieves the color of the given layer
         auto getLayerColor = [&](Layer layer) -> Color888 {
-            bool colorOffsetEnable{};
-            bool colorOffsetSelect{};
             Color888 color{};
 
             if (layer == LYR_Back) {
-                const LineBackScreenParams &backParams = m_VDP2.backScreenParams;
-                color = m_lineBackLayerState.backColor;
-                colorOffsetEnable = backParams.colorOffsetEnable;
-                colorOffsetSelect = backParams.colorOffsetSelect;
+                return m_lineBackLayerState.backColor;
             } else {
                 const LayerState &state = m_layerStates[layer];
                 const Pixel &pixel = state.pixels[x];
-                color = pixel.color;
-                if (layer == LYR_Sprite) {
-                    const SpriteParams &spriteParams = m_VDP2.spriteParams;
-                    colorOffsetEnable = spriteParams.colorOffsetEnable;
-                    colorOffsetSelect = spriteParams.colorOffsetSelect;
-                } else {
-                    const BGParams &bgParams = m_VDP2.bgParams[layer - LYR_RBG0];
-                    colorOffsetEnable = bgParams.colorOffsetEnable;
-                    colorOffsetSelect = bgParams.colorOffsetSelect;
-                }
+                return pixel.color;
             }
-
-            // Apply color offset if enabled
-            if (colorOffsetEnable) {
-                const auto &colorOffset = m_VDP2.colorOffsetParams[colorOffsetSelect];
-                color.r = std::clamp(color.r + colorOffset.r, 0, 255);
-                color.g = std::clamp(color.g + colorOffset.g, 0, 255);
-                color.b = std::clamp(color.b + colorOffset.b, 0, 255);
-            }
-            return color;
         };
 
         auto isColorCalcEnabled = [&](Layer layer) {
@@ -2658,6 +2635,31 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
                 outputColor.g >>= 1u;
                 outputColor.b >>= 1u;
             }
+        }
+
+        // Get color offset parameters
+        bool colorOffsetEnable = false;
+        bool colorOffsetSelect = false;
+        if (layers[0] == LYR_Back) {
+            const LineBackScreenParams &backParams = m_VDP2.backScreenParams;
+            colorOffsetEnable = backParams.colorOffsetEnable;
+            colorOffsetSelect = backParams.colorOffsetSelect;
+        } else if (layers[0] == LYR_Sprite) {
+            const SpriteParams &spriteParams = m_VDP2.spriteParams;
+            colorOffsetEnable = spriteParams.colorOffsetEnable;
+            colorOffsetSelect = spriteParams.colorOffsetSelect;
+        } else {
+            const BGParams &bgParams = m_VDP2.bgParams[layers[0] - LYR_RBG0];
+            colorOffsetEnable = bgParams.colorOffsetEnable;
+            colorOffsetSelect = bgParams.colorOffsetSelect;
+        }
+
+        // Apply color offset if enabled
+        if (colorOffsetEnable) {
+            const auto &colorOffset = m_VDP2.colorOffsetParams[colorOffsetSelect];
+            outputColor.r = std::clamp(outputColor.r + colorOffset.r, 0, 255);
+            outputColor.g = std::clamp(outputColor.g + colorOffset.g, 0, 255);
+            outputColor.b = std::clamp(outputColor.b + colorOffset.b, 0, 255);
         }
 
         m_framebuffer[x + y * m_HRes] = outputColor.u32;
