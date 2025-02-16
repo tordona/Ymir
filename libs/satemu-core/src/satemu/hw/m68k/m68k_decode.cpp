@@ -424,7 +424,8 @@ DecodeTable BuildDecodeTable() {
         }
         case 0xD: {
             const uint16 ea = bit::extract<0, 5>(instr);
-            if (bit::extract<6, 7>(instr) == 0b11) {
+            const uint16 sz = bit::extract<6, 7>(instr);
+            if (sz == 0b11) {
                 opcode = legalIf(OpcodeType::AddA, kValidAddrModes[bit::extract<0, 5>(instr)]);
             } else if (bit::extract<4, 5>(instr) == 0b00 && bit::extract<8>(instr) == 1) {
                 const bool rm = bit::extract<3>(instr);
@@ -436,7 +437,11 @@ DecodeTable BuildDecodeTable() {
             } else {
                 const bool dir = bit::extract<8>(instr);
                 if (dir) {
-                    opcode = legalIf(OpcodeType::Add_Dn_EA, kValidMemoryAlterableAddrModes[ea]);
+                    switch (sz) {
+                    case 0b00: opcode = legalIf(OpcodeType::Add_Dn_EA_B, kValidMemoryAlterableAddrModes[ea]);
+                    case 0b01: opcode = legalIf(OpcodeType::Add_Dn_EA_W, kValidMemoryAlterableAddrModes[ea]);
+                    case 0b10: opcode = legalIf(OpcodeType::Add_Dn_EA_L, kValidMemoryAlterableAddrModes[ea]);
+                    }
                 } else {
                     opcode = legalIf(OpcodeType::Add_EA_Dn, kValidAddrModes[ea]);
                 }

@@ -261,6 +261,7 @@ private:
     void Instr_SBCD_M(uint16 instr);
     void Instr_SBCD_R(uint16 instr);
 
+    template <mem_primitive T>
     void Instr_Add_Dn_EA(uint16 instr);
     void Instr_Add_EA_Dn(uint16 instr);
     void Instr_AddA(uint16 instr);
