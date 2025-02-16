@@ -228,36 +228,51 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
 
 template <bool debug>
 FLATTEN void SH2::Advance(uint64 cycles) {
-    // TODO: proper cycle counting
-    AdvanceWDT(cycles);
-    for (uint64 cy = 0; cy < cycles; cy++) {
-        AdvanceFRT(1);
-        /*auto bit = [](bool value, std::string_view bit) { return value ? fmt::format(" {}", bit) : ""; };
+    while (cycles > 0) {
+        uint64 cyclesToRun = cycles;
 
-        dbg_println(" R0 = {:08X}   R4 = {:08X}   R8 = {:08X}  R12 = {:08X}", R[0], R[4], R[8], R[12]);
-        dbg_println(" R1 = {:08X}   R5 = {:08X}   R9 = {:08X}  R13 = {:08X}", R[1], R[5], R[9], R[13]);
-        dbg_println(" R2 = {:08X}   R6 = {:08X}  R10 = {:08X}  R14 = {:08X}", R[2], R[6], R[10], R[14]);
-        dbg_println(" R3 = {:08X}   R7 = {:08X}  R11 = {:08X}  R15 = {:08X}", R[3], R[7], R[11], R[15]);
-        dbg_println("GBR = {:08X}  VBR = {:08X}  MAC = {:08X}.{:08X}", GBR, VBR, MAC.H, MAC.L);
-        dbg_println(" PC = {:08X}   PR = {:08X}   SR = {:08X} {}{}{}{}{}{}{}{}", PC, PR, SR.u32, bit(SR.M, "M"),
-                    bit(SR.Q, "Q"), bit(SR.I3, "I3"), bit(SR.I2, "I2"), bit(SR.I1, "I1"), bit(SR.I0, "I0"), bit(SR.S,
-        "S"), bit(SR.T, "T"));*/
-
-        // TODO: choose between interpreter (cached or uncached) and JIT recompiler
-        m_tracer.ExecTrace({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
-        Execute();
-
-        if constexpr (config::logSysExecDump) {
-            // Dump stack trace on SYS_EXECDMP
-            if ((PC & 0x7FFFFFF) == config::sysExecDumpAddress) {
-                m_log.debug("SYS_EXECDMP triggered");
-                m_tracer.UserCapture({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
-                m_tracer.Dump();
-                m_tracer.Reset();
-            }
+        if (WDT.WTCSR.TME) {
+            cyclesToRun = std::min(cyclesToRun, WDT.CyclesUntilNextTick());
         }
+        // TODO: skip FRT updates if interrupt disabled
+        // - update on reads
+        // - needs to keep track of global cycle count to update properly
+        cyclesToRun = std::min(cyclesToRun, FRT.CyclesUntilNextTick());
 
-        // dbg_println("");
+        cycles -= cyclesToRun;
+
+        AdvanceWDT(cyclesToRun);
+        AdvanceFRT(cyclesToRun);
+
+        for (uint64 cy = 0; cy < cyclesToRun; cy++) {
+            /*auto bit = [](bool value, std::string_view bit) { return value ? fmt::format(" {}", bit) : ""; };
+
+            dbg_println(" R0 = {:08X}   R4 = {:08X}   R8 = {:08X}  R12 = {:08X}", R[0], R[4], R[8], R[12]);
+            dbg_println(" R1 = {:08X}   R5 = {:08X}   R9 = {:08X}  R13 = {:08X}", R[1], R[5], R[9], R[13]);
+            dbg_println(" R2 = {:08X}   R6 = {:08X}  R10 = {:08X}  R14 = {:08X}", R[2], R[6], R[10], R[14]);
+            dbg_println(" R3 = {:08X}   R7 = {:08X}  R11 = {:08X}  R15 = {:08X}", R[3], R[7], R[11], R[15]);
+            dbg_println("GBR = {:08X}  VBR = {:08X}  MAC = {:08X}.{:08X}", GBR, VBR, MAC.H, MAC.L);
+            dbg_println(" PC = {:08X}   PR = {:08X}   SR = {:08X} {}{}{}{}{}{}{}{}", PC, PR, SR.u32, bit(SR.M, "M"),
+                        bit(SR.Q, "Q"), bit(SR.I3, "I3"), bit(SR.I2, "I2"), bit(SR.I1, "I1"), bit(SR.I0, "I0"),
+            bit(SR.S, "S"), bit(SR.T, "T"));*/
+
+            // TODO: choose between interpreter (cached or uncached) and JIT recompiler
+            // TODO: proper instruction cycle counting
+            m_tracer.ExecTrace({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
+            Execute();
+
+            if constexpr (config::logSysExecDump) {
+                // Dump stack trace on SYS_EXECDMP
+                if ((PC & 0x7FFFFFF) == config::sysExecDumpAddress) {
+                    m_log.debug("SYS_EXECDMP triggered");
+                    m_tracer.UserCapture({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
+                    m_tracer.Dump();
+                    m_tracer.Reset();
+                }
+            }
+
+            // dbg_println("");
+        }
     }
 }
 

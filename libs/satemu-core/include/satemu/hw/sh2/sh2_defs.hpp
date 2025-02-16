@@ -67,6 +67,8 @@ union Reg16 {
 // --- FRT module ---
 
 struct FreeRunningTimer {
+    static constexpr uint64 kDividerShifts[] = {3, 5, 7, 0};
+
     FreeRunningTimer() {
         Reset();
     }
@@ -83,7 +85,8 @@ struct FreeRunningTimer {
         TEMP = 0x00;
 
         cycleCount = 0;
-        clockDividerShift = 3;
+        clockDividerShift = kDividerShifts[TCR.CKSn];
+        cycleCountMask = (1ull << clockDividerShift) - 1;
     }
 
     // 010  R/W  8        01        TIER    Timer interrupt enable register
@@ -221,9 +224,10 @@ struct FreeRunningTimer {
     }
 
     FORCE_INLINE void WriteTCR(uint8 value) {
-        static constexpr uint64 kDividerShifts[] = {3, 5, 7, 0};
         TCR.u8 = value & 0x83;
+
         clockDividerShift = kDividerShifts[TCR.CKSn];
+        cycleCountMask = (1ull << clockDividerShift) - 1;
     }
 
     // 017  R/W  8        E0        TOCR      Timer output compare control register
@@ -252,6 +256,7 @@ struct FreeRunningTimer {
     FORCE_INLINE void WriteTOCR(uint8 value) {
         TOCR.u8 = value & 0x13;
     }
+
     // 018  R    8        00        ICR H     Input capture register H
     // 019  R    8        00        ICR L     Input capture register L
     uint16 ICR;
@@ -267,8 +272,16 @@ struct FreeRunningTimer {
 
     mutable uint8 TEMP; // temporary storage to handle 16-bit transfers
 
+    // -------------------------------------------------------------------------
+    // State
+
     uint64 cycleCount;
-    uint64 clockDividerShift;
+    uint64 clockDividerShift; // derived from TCR.CKS
+    uint64 cycleCountMask;    // derived from TCR.CKS
+
+    uint64 CyclesUntilNextTick() const {
+        return (1ull << clockDividerShift) - (cycleCount & cycleCountMask);
+    }
 };
 
 // --- INTC module ---
@@ -363,6 +376,8 @@ union RegICR {
 // --- WDT module ---
 
 struct WatchdogTimer {
+    static constexpr uint64 kDividerShifts[] = {1, 6, 7, 8, 9, 10, 12, 13};
+
     WatchdogTimer() {
         Reset(false);
     }
@@ -375,7 +390,8 @@ struct WatchdogTimer {
         }
 
         cycleCount = 0;
-        clockDividerShift = kClockShifts[WTCSR.CKS];
+        clockDividerShift = kDividerShifts[WTCSR.CKSn];
+        cycleCountMask = (1ull << clockDividerShift) - 1;
     }
 
     // -------------------------------------------------------------------------
@@ -399,12 +415,10 @@ struct WatchdogTimer {
     //                          110 (6) = phi/4096
     //                          111 (7) = phi/8192
 
-    static constexpr uint64 kClockShifts[] = {1, 6, 7, 8, 9, 10, 12, 13};
-
     union RegWTCSR {
         uint8 u8;
         struct {
-            uint8 CKS : 3;
+            uint8 CKSn : 3;
             uint8 : 2;
             uint8 TME : 1;
             uint8 WT_nIT : 1;
@@ -420,8 +434,10 @@ struct WatchdogTimer {
         WTCSR.OVF &= bit::extract<7>(value);
         WTCSR.WT_nIT = bit::extract<6>(value);
         WTCSR.TME = bit::extract<5>(value);
-        WTCSR.CKS = bit::extract<0, 2>(value);
-        clockDividerShift = kClockShifts[WTCSR.CKS];
+        WTCSR.CKSn = bit::extract<0, 2>(value);
+
+        clockDividerShift = kDividerShifts[WTCSR.CKSn];
+        cycleCountMask = (1ull << clockDividerShift) - 1;
     }
 
     // 081  R    8        00        WTCNT   Watchdog Timer Counter
@@ -482,7 +498,12 @@ struct WatchdogTimer {
     // State
 
     uint64 cycleCount;
-    uint64 clockDividerShift; // derived from CKS
+    uint64 clockDividerShift; // derived from WTCSR.CKS
+    uint64 cycleCountMask;    // derived from WTCSR.CKS
+
+    uint64 CyclesUntilNextTick() const {
+        return (1ull << clockDividerShift) - (cycleCount & cycleCountMask);
+    }
 };
 
 // --- Power-down module ---
