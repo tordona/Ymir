@@ -537,7 +537,7 @@ FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
         const sint16 xd = m_soundStack[(m_soundStackIndex - 1 + slot.modXSelect) & 63];
         const sint16 yd = m_soundStack[(m_soundStackIndex - 1 + slot.modYSelect) & 63];
         const sint32 zd = (xd + yd) / 2;
-        modulation = (zd * 1024) >> (0x1A - slot.modLevel);
+        modulation = (zd << 5) >> (20 - slot.modLevel);
     }
 
     slot.IncrementSampleCounter();
