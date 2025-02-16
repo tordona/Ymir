@@ -222,6 +222,7 @@ private:
     // -------------------------------------------------------------------------
     // Instruction interpreters
 
+    template <mem_primitive T>
     void Instr_Move_EA_EA(uint16 instr);
     void Instr_Move_EA_CCR(uint16 instr);
     void Instr_Move_EA_SR(uint16 instr);
@@ -229,12 +230,19 @@ private:
     void Instr_Move_SR_EA(uint16 instr);
     void Instr_Move_An_USP(uint16 instr);
     void Instr_Move_USP_An(uint16 instr);
+    template <mem_primitive T>
     void Instr_MoveA(uint16 instr);
+    template <mem_primitive T, bool instrFetch>
     void Instr_MoveM_EA_Rs(uint16 instr);
+    template <mem_primitive T>
     void Instr_MoveM_PI_Rs(uint16 instr);
+    template <mem_primitive T>
     void Instr_MoveM_Rs_EA(uint16 instr);
+    template <mem_primitive T>
     void Instr_MoveM_Rs_PD(uint16 instr);
+    template <mem_primitive T>
     void Instr_MoveP_Ay_Dx(uint16 instr);
+    template <mem_primitive T>
     void Instr_MoveP_Dx_Ay(uint16 instr);
     void Instr_MoveQ(uint16 instr);
 

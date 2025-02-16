@@ -41,21 +41,32 @@ inline constexpr auto kCondTable = [] {
 // -----------------------------------------------------------------------------
 
 enum class OpcodeType : uint8 {
-    Move_EA_EA,  // move.<sz> <ea_src>, <ea_dst>
-    Move_EA_CCR, // move.w <ea>, CCR
-    Move_EA_SR,  // move.w <ea>, SR
-    Move_CCR_EA, // move.w CCR, <ea>
-    Move_SR_EA,  // move.w SR, <ea>
-    Move_An_USP, // move An, USP
-    Move_USP_An, // move USP, An
-    MoveA,       // movea.<sz> <ea>, An
-    MoveM_EA_Rs, // movem.<sz> <ea>, <list>
-    MoveM_PI_Rs, // movem.<sz> (An)+, <list>
-    MoveM_Rs_EA, // movem.<sz> <list>, <ea>
-    MoveM_Rs_PD, // movem.<sz> <list>, -(An)
-    MoveP_Ay_Dx, // movep.<sz> (disp,Ay), Dx
-    MoveP_Dx_Ay, // movep.<sz> Dx, (disp,Ay)
-    MoveQ,       // moveq #<imm>, Dn
+    Move_EA_EA_B,    // move.b <ea_src>, <ea_dst>
+    Move_EA_EA_W,    // move.w <ea_src>, <ea_dst>
+    Move_EA_EA_L,    // move.l <ea_src>, <ea_dst>
+    Move_EA_CCR,     // move.w <ea>, CCR
+    Move_EA_SR,      // move.w <ea>, SR
+    Move_CCR_EA,     // move.w CCR, <ea>
+    Move_SR_EA,      // move.w SR, <ea>
+    Move_An_USP,     // move An, USP
+    Move_USP_An,     // move USP, An
+    MoveA_W,         // movea.w <ea>, An
+    MoveA_L,         // movea.l <ea>, An
+    MoveM_EA_Rs_C_W, // movem.w <ea>, <list>  (<ea> uses PC)
+    MoveM_EA_Rs_C_L, // movem.l <ea>, <list>  (<ea> uses PC)
+    MoveM_EA_Rs_D_W, // movem.w <ea>, <list>  (<ea> does not use PC)
+    MoveM_EA_Rs_D_L, // movem.l <ea>, <list>  (<ea> does not use PC)
+    MoveM_PI_Rs_W,   // movem.w (An)+, <list>
+    MoveM_PI_Rs_L,   // movem.l (An)+, <list>
+    MoveM_Rs_EA_W,   // movem.w <list>, <ea>
+    MoveM_Rs_EA_L,   // movem.l <list>, <ea>
+    MoveM_Rs_PD_W,   // movem.w <list>, -(An)
+    MoveM_Rs_PD_L,   // movem.l <list>, -(An)
+    MoveP_Ay_Dx_W,   // movep.w (disp,Ay), Dx
+    MoveP_Ay_Dx_L,   // movep.l (disp,Ay), Dx
+    MoveP_Dx_Ay_W,   // movep.w Dx, (disp,Ay)
+    MoveP_Dx_Ay_L,   // movep.l Dx, (disp,Ay)
+    MoveQ,           // moveq #<imm>, Dn
 
     Clr,       // clr.<sz> <ea>
     Exg_An_An, // exg Ax, Ay

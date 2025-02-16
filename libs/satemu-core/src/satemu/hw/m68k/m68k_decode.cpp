@@ -119,10 +119,11 @@ DecodeTable BuildDecodeTable() {
             } else if (instr == 0x0A7C) {
                 opcode = OpcodeType::EorI_SR;
             } else if (bit::extract<3, 5>(instr) == 0b001 && bit::extract<8>(instr) == 1) {
+                const bool sz = bit::extract<6>(instr);
                 if (bit::extract<7>(instr)) {
-                    opcode = OpcodeType::MoveP_Dx_Ay;
+                    opcode = sz ? OpcodeType::MoveP_Dx_Ay_L : OpcodeType::MoveP_Dx_Ay_W;
                 } else {
-                    opcode = OpcodeType::MoveP_Ay_Dx;
+                    opcode = sz ? OpcodeType::MoveP_Ay_Dx_L : OpcodeType::MoveP_Ay_Dx_W;
                 }
             } else if (bit::extract<6, 8>(instr) == 0b100) {
                 if ((ea >> 3u) == 0b000) {
@@ -191,13 +192,23 @@ DecodeTable BuildDecodeTable() {
         case 0x2: // fallthrough
         case 0x3:
             if (bit::extract<6, 8>(instr) == 0b001) {
-                if ((instr >> 12u) != 0b01) {
-                    opcode = OpcodeType::MoveA;
+                const uint16 size = bit::extract<12, 13>(instr);
+                switch (size) {
+                case 0b11: opcode = OpcodeType::MoveA_W; break;
+                case 0b10: opcode = OpcodeType::MoveA_L; break;
                 }
             } else {
+                const uint16 size = bit::extract<12, 13>(instr);
                 const uint16 srcEA = bit::extract<0, 5>(instr);
                 const uint16 dstEA = (bit::extract<6, 8>(instr) << 3) | bit::extract<9, 11>(instr);
-                opcode = legalIf(OpcodeType::Move_EA_EA, kValidDataAlterableAddrModes[dstEA] && kValidAddrModes[srcEA]);
+
+                // Note the swapped bit order between word and longword moves
+                switch (size) {
+                case 0b01: opcode = OpcodeType::Move_EA_EA_B; break;
+                case 0b11: opcode = OpcodeType::Move_EA_EA_W; break;
+                case 0b10: opcode = OpcodeType::Move_EA_EA_L; break;
+            }
+                opcode = legalIf(opcode, kValidDataAlterableAddrModes[dstEA] && kValidAddrModes[srcEA]);
             }
             break;
         case 0x4: {
@@ -254,17 +265,29 @@ DecodeTable BuildDecodeTable() {
                 opcode = legalIf(OpcodeType::Jmp, kValidControlAddrModes[ea]);
             } else if (bit::extract<7, 11>(instr) == 0b10001) {
                 const bool isPredecrement = (ea >> 3u) == 0b100;
+                const bool sz = bit::extract<6>(instr);
                 if (isPredecrement) {
-                    opcode = OpcodeType::MoveM_Rs_PD;
+                    opcode = sz ? OpcodeType::MoveM_Rs_PD_L : OpcodeType::MoveM_Rs_PD_W;
                 } else {
-                    opcode = legalIf(OpcodeType::MoveM_Rs_EA, kValidControlAlterableAddrModes[ea]);
+                    opcode = legalIf(sz ? OpcodeType::MoveM_Rs_EA_L : OpcodeType::MoveM_Rs_EA_W,
+                                     kValidControlAlterableAddrModes[ea]);
                 }
             } else if (bit::extract<7, 11>(instr) == 0b11001) {
                 const bool isPostincrement = (ea >> 3u) == 0b011;
+                const bool sz = bit::extract<6>(instr);
                 if (isPostincrement) {
-                    opcode = OpcodeType::MoveM_PI_Rs;
+                    opcode = sz ? OpcodeType::MoveM_PI_Rs_L : OpcodeType::MoveM_PI_Rs_W;
                 } else {
-                    opcode = legalIf(OpcodeType::MoveM_EA_Rs, kValidControlAddrModes[ea]);
+                    const uint16 Xn = bit::extract<0, 2>(instr);
+                    const uint16 M = bit::extract<3, 5>(instr);
+                    const bool isProgramAccess = M == 7 && (Xn == 2 || Xn == 3);
+                    if (isProgramAccess) {
+                        opcode = legalIf(sz ? OpcodeType::MoveM_EA_Rs_C_L : OpcodeType::MoveM_EA_Rs_C_W,
+                                         kValidControlAddrModes[ea]);
+                    } else {
+                        opcode = legalIf(sz ? OpcodeType::MoveM_EA_Rs_D_L : OpcodeType::MoveM_EA_Rs_D_W,
+                                         kValidControlAddrModes[ea]);
+                }
                 }
             } else if (bit::extract<8, 11>(instr) == 0b0000) {
                 const uint16 sz = bit::extract<6, 7>(instr);

@@ -722,20 +722,31 @@ void MC68EC000::Execute() {
 
     const OpcodeType type = g_decodeTable.opcodeTypes[instr];
     switch (type) {
-    case OpcodeType::Move_EA_EA: Instr_Move_EA_EA(instr); break;
+    case OpcodeType::Move_EA_EA_B: Instr_Move_EA_EA<uint8>(instr); break;
+    case OpcodeType::Move_EA_EA_W: Instr_Move_EA_EA<uint16>(instr); break;
+    case OpcodeType::Move_EA_EA_L: Instr_Move_EA_EA<uint32>(instr); break;
     case OpcodeType::Move_EA_CCR: Instr_Move_EA_CCR(instr); break;
     case OpcodeType::Move_EA_SR: Instr_Move_EA_SR(instr); break;
     case OpcodeType::Move_CCR_EA: Instr_Move_CCR_EA(instr); break;
     case OpcodeType::Move_SR_EA: Instr_Move_SR_EA(instr); break;
     case OpcodeType::Move_An_USP: Instr_Move_An_USP(instr); break;
     case OpcodeType::Move_USP_An: Instr_Move_USP_An(instr); break;
-    case OpcodeType::MoveA: Instr_MoveA(instr); break;
-    case OpcodeType::MoveM_EA_Rs: Instr_MoveM_EA_Rs(instr); break;
-    case OpcodeType::MoveM_PI_Rs: Instr_MoveM_PI_Rs(instr); break;
-    case OpcodeType::MoveM_Rs_EA: Instr_MoveM_Rs_EA(instr); break;
-    case OpcodeType::MoveM_Rs_PD: Instr_MoveM_Rs_PD(instr); break;
-    case OpcodeType::MoveP_Ay_Dx: Instr_MoveP_Ay_Dx(instr); break;
-    case OpcodeType::MoveP_Dx_Ay: Instr_MoveP_Dx_Ay(instr); break;
+    case OpcodeType::MoveA_W: Instr_MoveA<uint16>(instr); break;
+    case OpcodeType::MoveA_L: Instr_MoveA<uint32>(instr); break;
+    case OpcodeType::MoveM_EA_Rs_C_W: Instr_MoveM_EA_Rs<uint16, true>(instr); break;
+    case OpcodeType::MoveM_EA_Rs_C_L: Instr_MoveM_EA_Rs<uint32, true>(instr); break;
+    case OpcodeType::MoveM_EA_Rs_D_W: Instr_MoveM_EA_Rs<uint16, false>(instr); break;
+    case OpcodeType::MoveM_EA_Rs_D_L: Instr_MoveM_EA_Rs<uint32, false>(instr); break;
+    case OpcodeType::MoveM_PI_Rs_W: Instr_MoveM_PI_Rs<uint16>(instr); break;
+    case OpcodeType::MoveM_PI_Rs_L: Instr_MoveM_PI_Rs<uint32>(instr); break;
+    case OpcodeType::MoveM_Rs_EA_W: Instr_MoveM_Rs_EA<uint16>(instr); break;
+    case OpcodeType::MoveM_Rs_EA_L: Instr_MoveM_Rs_EA<uint32>(instr); break;
+    case OpcodeType::MoveM_Rs_PD_W: Instr_MoveM_Rs_PD<uint16>(instr); break;
+    case OpcodeType::MoveM_Rs_PD_L: Instr_MoveM_Rs_PD<uint32>(instr); break;
+    case OpcodeType::MoveP_Ay_Dx_W: Instr_MoveP_Ay_Dx<uint16>(instr); break;
+    case OpcodeType::MoveP_Ay_Dx_L: Instr_MoveP_Ay_Dx<uint32>(instr); break;
+    case OpcodeType::MoveP_Dx_Ay_W: Instr_MoveP_Dx_Ay<uint16>(instr); break;
+    case OpcodeType::MoveP_Dx_Ay_L: Instr_MoveP_Dx_Ay<uint32>(instr); break;
     case OpcodeType::MoveQ: Instr_MoveQ(instr); break;
 
     case OpcodeType::Clr: Instr_Clr(instr); break;
@@ -885,27 +896,18 @@ void MC68EC000::Execute() {
 // -----------------------------------------------------------------------------
 // Instruction interpreters
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_Move_EA_EA(uint16 instr) {
-    const uint32 size = bit::extract<12, 13>(instr);
     const uint32 dstXn = bit::extract<9, 11>(instr);
     const uint32 dstM = bit::extract<6, 8>(instr);
     const uint32 srcXn = bit::extract<0, 2>(instr);
     const uint32 srcM = bit::extract<3, 5>(instr);
 
-    auto move = [&]<mem_primitive T>() {
         const T value = MoveEffectiveAddress<T>(srcM, srcXn, dstM, dstXn);
         SR.N = IsNegative(value);
         SR.Z = value == 0;
         SR.V = SR.C = 0;
-    };
-
-    // Note the swapped bit order between word and longword moves
-    switch (size) {
-    case 0b01: move.template operator()<uint8>(); break;
-    case 0b11: move.template operator()<uint16>(); break;
-    case 0b10: move.template operator()<uint32>(); break;
     }
-}
 
 FORCE_INLINE void MC68EC000::Instr_Move_EA_CCR(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
@@ -968,64 +970,50 @@ FORCE_INLINE void MC68EC000::Instr_Move_USP_An(uint16 instr) {
     }
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_MoveA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
     const uint16 An = bit::extract<9, 11>(instr);
-    const uint16 size = bit::extract<12, 13>(instr);
 
-    switch (size) {
-    case 0b11: regs.A[An] = static_cast<sint16>(ReadEffectiveAddress<uint16>(M, Xn)); break;
-    case 0b10: regs.A[An] = ReadEffectiveAddress<uint32>(M, Xn); break;
-    }
+    using ST = std::make_signed_t<T>;
+
+    regs.A[An] = static_cast<ST>(ReadEffectiveAddress<T>(M, Xn));
 
     PrefetchTransfer();
 }
 
+template <mem_primitive T, bool instrFetch>
 FORCE_INLINE void MC68EC000::Instr_MoveM_EA_Rs(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const bool sz = bit::extract<6>(instr);
     const uint16 regList = PrefetchNext();
     uint32 address = CalcEffectiveAddress(M, Xn);
-    const bool isProgramAccess = M == 7 && (Xn == 2 || Xn == 3);
-
-    auto read = [&]<std::integral T>() {
-        return isProgramAccess ? MemRead<T, true>(address) : MemRead<T, false>(address);
-    };
-
-    auto xfer = [&]<std::integral T>(uint32 regIndex) {
-        const T value = read.template operator()<T>();
-        regs.DA[regIndex] = static_cast<std::make_signed_t<T>>(value);
-        address += sizeof(T);
-    };
 
     for (uint32 i = 0; i < 16; i++) {
         if (regList & (1u << i)) {
-            sz ? xfer.template operator()<uint32>(i) : xfer.template operator()<uint16>(i);
+            const T value = MemRead<T, instrFetch>(address);
+            regs.DA[i] = static_cast<std::make_signed_t<T>>(value);
+            address += sizeof(T);
         }
     }
     // An extra memory fetch occurs after the transfers are done
-    read.template operator()<uint16>();
+    MemRead<T, instrFetch>(address);
 
     PrefetchTransfer();
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_MoveM_PI_Rs(uint16 instr) {
     const uint16 An = bit::extract<0, 2>(instr);
-    const bool sz = bit::extract<6>(instr);
     const uint16 regList = PrefetchNext();
-
-    auto xfer = [&]<std::integral T>(uint32 regIndex) {
-        const uint32 address = regs.A[An];
-        const T value = MemRead<T, false>(address);
-        regs.DA[regIndex] = static_cast<std::make_signed_t<T>>(value);
-        regs.A[An] = address + sizeof(T);
-    };
 
     for (uint32 i = 0; i < 16; i++) {
         if (regList & (1u << i)) {
-            sz ? xfer.template operator()<uint32>(i) : xfer.template operator()<uint16>(i);
+        const uint32 address = regs.A[An];
+        const T value = MemRead<T, false>(address);
+            regs.DA[i] = static_cast<std::make_signed_t<T>>(value);
+        regs.A[An] = address + sizeof(T);
         }
     }
     // An extra memory fetch occurs after the transfers are done
@@ -1034,60 +1022,51 @@ FORCE_INLINE void MC68EC000::Instr_MoveM_PI_Rs(uint16 instr) {
     PrefetchTransfer();
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_MoveM_Rs_EA(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const bool sz = bit::extract<6>(instr);
     const uint16 regList = PrefetchNext();
     uint32 address = CalcEffectiveAddress(M, Xn);
 
-    auto xfer = [&]<std::integral T>(uint32 regIndex) {
-        const T value = regs.DA[regIndex];
-        MemWriteAsc<T>(address, value);
-        address += sizeof(T);
-    };
-
     for (uint32 i = 0; i < 16; i++) {
         if (regList & (1u << i)) {
-            sz ? xfer.template operator()<uint32>(i) : xfer.template operator()<uint16>(i);
+            const T value = regs.DA[i];
+            MemWriteAsc<T>(address, value);
+            address += sizeof(T);
         }
     }
 
     PrefetchTransfer();
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_MoveM_Rs_PD(uint16 instr) {
     const uint16 An = bit::extract<0, 2>(instr);
-    const bool sz = bit::extract<6>(instr);
     const uint16 regList = PrefetchNext();
 
     const uint32 baseAddress = regs.A[An];
 
-    auto xfer = [&]<std::integral T>(uint32 regIndex) {
-        const uint32 address = regs.A[An] - sizeof(T);
-        const T value = 7 - regIndex == An ? baseAddress : regs.DA[15 - regIndex];
-        MemWrite<T>(address, value);
-        regs.A[An] = address;
-    };
-
     for (uint32 i = 0; i < 16; i++) {
         if (regList & (1u << i)) {
-            sz ? xfer.template operator()<uint32>(i) : xfer.template operator()<uint16>(i);
+        const uint32 address = regs.A[An] - sizeof(T);
+            const T value = 7 - i == An ? baseAddress : regs.DA[15 - i];
+        MemWrite<T>(address, value);
+        regs.A[An] = address;
         }
     }
 
     PrefetchTransfer();
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_MoveP_Ay_Dx(uint16 instr) {
     const uint16 Ay = bit::extract<0, 2>(instr);
-    const bool sz = bit::extract<6>(instr);
     const uint16 Dx = bit::extract<9, 11>(instr);
 
     const sint16 disp = PrefetchNext();
     const uint32 baseAddress = regs.A[Ay] + disp;
 
-    auto xfer = [&]<std::integral T>() {
         T finalValue = 0;
         for (uint32 i = 0; i < sizeof(T); i++) {
             const uint32 address = baseAddress + i * sizeof(uint16);
@@ -1095,30 +1074,23 @@ FORCE_INLINE void MC68EC000::Instr_MoveP_Ay_Dx(uint16 instr) {
             finalValue = (finalValue << 8u) | value;
         }
         bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Dx], finalValue);
-    };
-
-    sz ? xfer.template operator()<uint32>() : xfer.template operator()<uint16>();
 
     PrefetchTransfer();
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_MoveP_Dx_Ay(uint16 instr) {
     const uint16 Ay = bit::extract<0, 2>(instr);
-    const bool sz = bit::extract<6>(instr);
     const uint16 Dx = bit::extract<9, 11>(instr);
 
     const sint16 disp = PrefetchNext();
     const uint32 baseAddress = regs.A[Ay] + disp;
 
-    auto xfer = [&]<std::integral T>() {
         for (uint32 i = 0; i < sizeof(T); i++) {
             const uint8 value = regs.D[Dx] >> ((sizeof(T) - 1 - i) * 8u);
             const uint32 address = baseAddress + i * sizeof(uint16);
             MemWrite<uint8>(address, value);
         }
-    };
-
-    sz ? xfer.template operator()<uint32>() : xfer.template operator()<uint16>();
 
     PrefetchTransfer();
 }
@@ -1152,7 +1124,7 @@ FORCE_INLINE void MC68EC000::Instr_Clr(uint16 instr) {
     case 0b01: op.template operator()<uint16>(); break;
     case 0b10: op.template operator()<uint32>(); break;
     }
-}
+    }
 
 FORCE_INLINE void MC68EC000::Instr_Exg_An_An(uint16 instr) {
     const uint32 Ry = bit::extract<0, 2>(instr);
@@ -1273,7 +1245,7 @@ FORCE_INLINE void MC68EC000::Instr_NBCD(uint16 instr) {
     const uint16 M = bit::extract<3, 5>(instr);
 
     ModifyEffectiveAddress<uint8>(M, Xn, [&](uint8 op1) {
-        // Thanks to raddad772/ares for the implementation
+        // Thanks to raddad772 and the ares emulator for the implementation
 
         uint16 result = 0 - op1 - SR.X;
         const bool adjustLo = bit::extract<4>(op1 ^ result);
