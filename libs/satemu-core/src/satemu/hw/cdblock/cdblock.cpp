@@ -1665,7 +1665,11 @@ void CDBlock::CmdSetFilterMode() {
         auto &filter = m_filters[filterNumber];
         filter.mode = mode & 0x5F; // TODO: should it be masked?
 
-        rootLog.debug("Filter {} mode={:02X}", filterNumber, filter.mode);
+        rootLog.debug(
+            "Filter {} mode={:02X}{}{}{}{}{}{}", filterNumber, filter.mode,
+            (bit::extract<0>(filter.mode) ? " filenum" : ""), (bit::extract<1>(filter.mode) ? " channum" : ""),
+            (bit::extract<2>(filter.mode) ? " submode" : ""), (bit::extract<3>(filter.mode) ? " codinginfo" : ""),
+            (bit::extract<4>(filter.mode) ? " <- inverted" : ""), (bit::extract<6>(filter.mode) ? " fad" : ""));
 
         if (mode & 0x80) {
             rootLog.debug("Filter {} conditions reset", filterNumber);
