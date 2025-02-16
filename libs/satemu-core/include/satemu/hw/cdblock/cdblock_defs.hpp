@@ -19,6 +19,7 @@ inline constexpr uint16 kHIRQ_SCDQ = 0x0400; // Subcode Q updated
 inline constexpr uint16 kHIRQ_MPED = 0x0800; // MPEG processing finished
 inline constexpr uint16 kHIRQ_MPCM = 0x1000; // Long-running MPEG operation finished
 inline constexpr uint16 kHIRQ_MPST = 0x2000; // MPEG interrupt raised
+inline constexpr uint16 kHIRQ_mask = 0x3FFF; // all valid HIRQ bits
 
 // Status codes
 inline constexpr uint8 kStatusCodeBusy = 0x00;
