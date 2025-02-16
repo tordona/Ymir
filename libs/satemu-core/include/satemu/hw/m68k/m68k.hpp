@@ -246,6 +246,7 @@ private:
     void Instr_MoveP_Dx_Ay(uint16 instr);
     void Instr_MoveQ(uint16 instr);
 
+    template <mem_primitive T>
     void Instr_Clr(uint16 instr);
     void Instr_Exg_An_An(uint16 instr);
     void Instr_Exg_Dn_An(uint16 instr);

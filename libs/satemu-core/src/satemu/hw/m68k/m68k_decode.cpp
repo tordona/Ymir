@@ -207,7 +207,7 @@ DecodeTable BuildDecodeTable() {
                 case 0b01: opcode = OpcodeType::Move_EA_EA_B; break;
                 case 0b11: opcode = OpcodeType::Move_EA_EA_W; break;
                 case 0b10: opcode = OpcodeType::Move_EA_EA_L; break;
-            }
+                }
                 opcode = legalIf(opcode, kValidDataAlterableAddrModes[dstEA] && kValidAddrModes[srcEA]);
             }
             break;
@@ -287,14 +287,18 @@ DecodeTable BuildDecodeTable() {
                     } else {
                         opcode = legalIf(sz ? OpcodeType::MoveM_EA_Rs_D_L : OpcodeType::MoveM_EA_Rs_D_W,
                                          kValidControlAddrModes[ea]);
-                }
+                    }
                 }
             } else if (bit::extract<8, 11>(instr) == 0b0000) {
                 const uint16 sz = bit::extract<6, 7>(instr);
                 opcode = legalIf(OpcodeType::NegX, sz != 0b11 && kValidDataAlterableAddrModes[ea]);
             } else if (bit::extract<8, 11>(instr) == 0b0010) {
                 const uint16 sz = bit::extract<6, 7>(instr);
-                opcode = legalIf(OpcodeType::Clr, sz != 0b11 && kValidDataAlterableAddrModes[ea]);
+                switch (sz) {
+                case 0b00: opcode = legalIf(OpcodeType::Clr_B, kValidDataAlterableAddrModes[ea]); break;
+                case 0b01: opcode = legalIf(OpcodeType::Clr_W, kValidDataAlterableAddrModes[ea]); break;
+                case 0b10: opcode = legalIf(OpcodeType::Clr_L, kValidDataAlterableAddrModes[ea]); break;
+                }
             } else if (bit::extract<8, 11>(instr) == 0b0100) {
                 const uint16 sz = bit::extract<6, 7>(instr);
                 opcode = legalIf(OpcodeType::Neg, sz != 0b11 && kValidDataAlterableAddrModes[ea]);

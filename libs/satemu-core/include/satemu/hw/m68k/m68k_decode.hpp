@@ -68,7 +68,9 @@ enum class OpcodeType : uint8 {
     MoveP_Dx_Ay_L,   // movep.l Dx, (disp,Ay)
     MoveQ,           // moveq #<imm>, Dn
 
-    Clr,       // clr.<sz> <ea>
+    Clr_B,     // clr.b <ea>
+    Clr_W,     // clr.w <ea>
+    Clr_L,     // clr.l <ea>
     Exg_An_An, // exg Ax, Ay
     Exg_Dn_An, // exg Dx, Ay
     Exg_Dn_Dn, // exg Dx, Dy
