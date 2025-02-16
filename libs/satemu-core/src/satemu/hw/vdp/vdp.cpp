@@ -380,13 +380,14 @@ template <mem_primitive T>
 FORCE_INLINE T VDP::VDP2ReadVRAM(uint32 address) {
     // TODO: handle VRSIZE.VRAMSZ
     address &= 0x7FFFF;
-    return util::ReadBE<T>(&m_VRAM2[address & 0x7FFFF]);
+    return util::ReadBE<T>(&m_VRAM2[address]);
 }
 
 template <mem_primitive T>
 FORCE_INLINE void VDP::VDP2WriteVRAM(uint32 address, T value) {
     // TODO: handle VRSIZE.VRAMSZ
-    util::WriteBE<T>(&m_VRAM2[address & 0x7FFFF], value);
+    address &= 0x7FFFF;
+    util::WriteBE<T>(&m_VRAM2[address], value);
 }
 
 template <mem_primitive T>
