@@ -263,6 +263,7 @@ private:
 
     template <mem_primitive T>
     void Instr_Add_Dn_EA(uint16 instr);
+    template <mem_primitive T>
     void Instr_Add_EA_Dn(uint16 instr);
     void Instr_AddA(uint16 instr);
     void Instr_AddI(uint16 instr);

@@ -768,7 +768,9 @@ void MC68EC000::Execute() {
     case OpcodeType::Add_Dn_EA_B: Instr_Add_Dn_EA<uint8>(instr); break;
     case OpcodeType::Add_Dn_EA_W: Instr_Add_Dn_EA<uint16>(instr); break;
     case OpcodeType::Add_Dn_EA_L: Instr_Add_Dn_EA<uint32>(instr); break;
-    case OpcodeType::Add_EA_Dn: Instr_Add_EA_Dn(instr); break;
+    case OpcodeType::Add_EA_Dn_B: Instr_Add_EA_Dn<uint8>(instr); break;
+    case OpcodeType::Add_EA_Dn_W: Instr_Add_EA_Dn<uint16>(instr); break;
+    case OpcodeType::Add_EA_Dn_L: Instr_Add_EA_Dn<uint32>(instr); break;
     case OpcodeType::AddA: Instr_AddA(instr); break;
     case OpcodeType::AddI: Instr_AddI(instr); break;
     case OpcodeType::AddQ_An: Instr_AddQ_An(instr); break;
@@ -1340,28 +1342,20 @@ FORCE_INLINE void MC68EC000::Instr_Add_Dn_EA(uint16 instr) {
     });
 }
 
+template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_Add_EA_Dn(uint16 instr) {
     const uint16 Xn = bit::extract<0, 2>(instr);
     const uint16 M = bit::extract<3, 5>(instr);
-    const uint16 sz = bit::extract<6, 7>(instr);
     const uint16 Dn = bit::extract<9, 11>(instr);
 
-    auto op = [&]<std::integral T>() {
-        const T op1 = ReadEffectiveAddress<T>(M, Xn);
-        const T op2 = regs.D[Dn];
-        const T result = op2 + op1;
-        bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
-        SR.N = IsNegative(result);
-        SR.Z = result == 0;
-        SR.V = IsAddOverflow(op1, op2, result);
-        SR.C = SR.X = IsAddCarry(op1, op2, result);
-    };
-
-    switch (sz) {
-    case 0b00: op.template operator()<uint8>(); break;
-    case 0b01: op.template operator()<uint16>(); break;
-    case 0b10: op.template operator()<uint32>(); break;
-    }
+    const T op1 = ReadEffectiveAddress<T>(M, Xn);
+    const T op2 = regs.D[Dn];
+    const T result = op2 + op1;
+    bit::deposit_into<0, sizeof(T) * 8 - 1, uint32>(regs.D[Dn], result);
+    SR.N = IsNegative(result);
+    SR.Z = result == 0;
+    SR.V = IsAddOverflow(op1, op2, result);
+    SR.C = SR.X = IsAddCarry(op1, op2, result);
 
     PrefetchTransfer();
 }

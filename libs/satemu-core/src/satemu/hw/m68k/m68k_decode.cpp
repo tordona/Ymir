@@ -438,12 +438,16 @@ DecodeTable BuildDecodeTable() {
                 const bool dir = bit::extract<8>(instr);
                 if (dir) {
                     switch (sz) {
-                    case 0b00: opcode = legalIf(OpcodeType::Add_Dn_EA_B, kValidMemoryAlterableAddrModes[ea]);
-                    case 0b01: opcode = legalIf(OpcodeType::Add_Dn_EA_W, kValidMemoryAlterableAddrModes[ea]);
-                    case 0b10: opcode = legalIf(OpcodeType::Add_Dn_EA_L, kValidMemoryAlterableAddrModes[ea]);
+                    case 0b00: opcode = legalIf(OpcodeType::Add_Dn_EA_B, kValidMemoryAlterableAddrModes[ea]); break;
+                    case 0b01: opcode = legalIf(OpcodeType::Add_Dn_EA_W, kValidMemoryAlterableAddrModes[ea]); break;
+                    case 0b10: opcode = legalIf(OpcodeType::Add_Dn_EA_L, kValidMemoryAlterableAddrModes[ea]); break;
                     }
                 } else {
-                    opcode = legalIf(OpcodeType::Add_EA_Dn, kValidAddrModes[ea]);
+                    switch (sz) {
+                    case 0b00: opcode = legalIf(OpcodeType::Add_EA_Dn_B, kValidAddrModes[ea]); break;
+                    case 0b01: opcode = legalIf(OpcodeType::Add_EA_Dn_W, kValidAddrModes[ea]); break;
+                    case 0b10: opcode = legalIf(OpcodeType::Add_EA_Dn_L, kValidAddrModes[ea]); break;
+                    }
                 }
             }
             break;

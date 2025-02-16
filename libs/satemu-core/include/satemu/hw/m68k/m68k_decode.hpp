@@ -87,7 +87,9 @@ enum class OpcodeType : uint8 {
     Add_Dn_EA_B, // add.b Dn, <ea>
     Add_Dn_EA_W, // add.w Dn, <ea>
     Add_Dn_EA_L, // add.l Dn, <ea>
-    Add_EA_Dn,   // add.<sz> <ea>, Dn
+    Add_EA_Dn_B, // add.b <ea>, Dn
+    Add_EA_Dn_W, // add.w <ea>, Dn
+    Add_EA_Dn_L, // add.l <ea>, Dn
     AddA,        // adda.<sz> <ea>, An
     AddI,        // addi.<sz> #<data>, <ea>
     AddQ_An,     // addq.<sz> #<data>, An
