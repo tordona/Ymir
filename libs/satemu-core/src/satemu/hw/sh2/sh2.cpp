@@ -221,7 +221,7 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
     m_delaySlot = false;
 
     WriteCCR(0x00);
-    cacheEntries.fill({});
+    m_cacheEntries.fill({});
 
     m_tracer.Reset();
 }
@@ -333,6 +333,7 @@ T SH2::MemRead(uint32 address) {
     switch (partition) {
     case 0b000: // cache
         if (CCR.CE) {
+            m_log.trace("Unhandled {}-bit SH-2 cached area read from {:08X}", sizeof(T) * 8, address);
             // TODO: use cache
         }
         // fallthrough
@@ -340,20 +341,39 @@ T SH2::MemRead(uint32 address) {
     case 0b101: // cache-through
         return m_bus.Read<T>(address & 0x7FFFFFF);
     case 0b010: // associative purge
-
-        // TODO: implement
-        m_log.trace("Unhandled {}-bit SH-2 associative purge read from {:08X}", sizeof(T) * 8, address);
+    {
+        const uint32 index = bit::extract<4, 9>(address);
+        const uint32 tagAddress = bit::extract<10, 28>(address);
+        auto &entry = m_cacheEntries[index];
+        for (auto &tag : entry.tag) {
+            /*if (tag.tagAddress == tagAddress) {
+                tag.valid = false;
+            }*/
+            tag.valid &= tag.tagAddress != tagAddress;
+        }
+        m_log.trace("{}-bit SH-2 associative purge read from {:08X}", sizeof(T) * 8, address);
         return (address & 1) ? static_cast<T>(0x12231223) : static_cast<T>(0x23122312);
-    case 0b011: { // cache address array
-        uint32 entry = (address >> 4u) & 0x3F;
-        return cacheEntries[entry].tag[CCR.Wn]; // TODO: include LRU data
+    }
+    case 0b011: // cache address array
+    {
+        const uint32 index = bit::extract<4, 9>(address);
+        const auto &entry = m_cacheEntries[index];
+        const T value = entry.tag[CCR.Wn].u32;
+        m_log.trace("{}-bit SH-2 cache address array read from {:08X} = {:X}", sizeof(T) * 8, address, value);
+        return value;
     }
     case 0b100:
     case 0b110: // cache data array
-
-        // TODO: implement
-        m_log.trace("Unhandled {}-bit SH-2 cache data array read from {:08X}", sizeof(T) * 8, address);
-        return 0;
+    {
+        const uint32 index = bit::extract<4, 9>(address);
+        const uint32 way = bit::extract<10, 12>(address);
+        const uint32 byte = (bit::extract<0, 3>(address) & ~(sizeof(T) - 1)) ^ (4 - sizeof(T));
+        const auto &entry = m_cacheEntries[index];
+        const auto &line = entry.line[way];
+        const T value = util::ReadBE<T>(&line[byte]);
+        m_log.trace("{}-bit SH-2 cache data array read from {:08X} = {:X}", sizeof(T) * 8, address, value);
+        return value;
+    }
     case 0b111: // I/O area
         if constexpr (instrFetch) {
             // TODO: raise CPU address error due to attempt to fetch instruction from I/O area
@@ -389,6 +409,7 @@ void SH2::MemWrite(uint32 address, T value) {
     switch (partition) {
     case 0b000: // cache
         if (CCR.CE) {
+            m_log.trace("Unhandled {}-bit SH-2 cached area write to {:08X} = {:X}", sizeof(T) * 8, address, value);
             // TODO: use cache
         }
         // fallthrough
@@ -397,20 +418,39 @@ void SH2::MemWrite(uint32 address, T value) {
         m_bus.Write<T>(address & 0x7FFFFFF, value);
         break;
     case 0b010: // associative purge
-        // TODO: implement
-        m_log.trace("Unhandled {}-bit SH-2 associative purge write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+    {
+        const uint32 index = bit::extract<4, 9>(address);
+        const uint32 tagAddress = bit::extract<10, 28>(address);
+        auto &entry = m_cacheEntries[index];
+        for (auto &tag : entry.tag) {
+            /*if (tag.tagAddress == tagAddress) {
+                tag.valid = false;
+            }*/
+            tag.valid &= tag.tagAddress != tagAddress;
+        }
+        m_log.trace("{}-bit SH-2 associative purge write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         break;
-    case 0b011: { // cache address array
-        uint32 entry = (address >> 4u) & 0x3F;
-        cacheEntries[entry].tag[CCR.Wn] = address & 0x1FFFFC04;
-        // TODO: update LRU data
+    }
+    case 0b011: // cache address array
+    {
+        const uint32 index = bit::extract<4, 9>(address);
+        auto &entry = m_cacheEntries[index];
+        entry.tag[CCR.Wn].u32 = address & 0x1FFFFFF4;
+        m_log.trace("{}-bit SH-2 cache address array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         break;
     }
     case 0b100:
     case 0b110: // cache data array
-        // TODO: implement
-        m_log.trace("Unhandled {}-bit SH-2 cache data array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+    {
+        const uint32 index = bit::extract<4, 9>(address);
+        const uint32 way = bit::extract<10, 12>(address);
+        const uint32 byte = (bit::extract<0, 3>(address) & ~(sizeof(T) - 1)) ^ (4 - sizeof(T));
+        auto &entry = m_cacheEntries[index];
+        auto &line = entry.line[way];
+        util::WriteBE<T>(&line[byte], value);
+        m_log.trace("{}-bit SH-2 cache data array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         break;
+    }
     case 0b111: // I/O area
         if ((address & 0xE0004000) == 0xE0004000) {
             // bits 31-29 and 14 must be set

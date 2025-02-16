@@ -385,7 +385,7 @@ private:
 
     RegCCR CCR; // 092  R/W  8        00        CCR     Cache Control Register
 
-    alignas(16) std::array<CacheEntry, kCacheEntries> cacheEntries;
+    alignas(16) std::array<CacheEntry, kCacheEntries> m_cacheEntries;
 
     void WriteCCR(uint8 value);
 
