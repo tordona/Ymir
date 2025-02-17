@@ -565,14 +565,16 @@ void Slot::IncrementSampleCounter() {
         break;
     case LoopControl::Alternate:
         if (reverse) {
-            while (currSample <= loopStartAddress) {
+            if (currSample <= loopStartAddress) {
+                // Reflect over the start end address
+                currSample += (loopStartAddress - currSample) * 2;
                 reverse = false;
-                currSample += loopEndAddress - loopStartAddress;
             }
         } else {
-            while (currSample >= loopEndAddress) {
+            if (currSample >= loopEndAddress) {
+                // Reflect over the loop end address
+                currSample -= (currSample - loopEndAddress) * 2;
                 reverse = true;
-                currSample -= loopEndAddress - loopStartAddress;
             }
         }
         break;
