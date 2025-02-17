@@ -1,0 +1,19 @@
+======================================================
+Bugs that are actually game bugs and not emulator bugs
+======================================================
+
+Panzer Dragoon 2 Zwei
+---------------------
+  Sound corruption during boot up with save data on both System and Cartridge Memory
+  ----------------------------------------------------------------------------------
+  During startup, the game plays an intro video followed by the splash screen.
+  If you have a save file in both the system and cartridge memories, the game displays a memory select screen before everything else.
+
+  The game uses a routine to load sound data into sound WRAM for each episode that checks which sound bank has been loaded to avoid reloading the same bank repeatedly.
+  The portion of memory where the sound bank is loaded is shared with the video playback routine.
+  When you only have one save file, everything works fine: the video plays, then the game loads the sound bank for Episode 1, then it goes to the splash screen.
+  When there are two save files, the game loads the bank for Episode 1 to handle sounds in the memory select screen.
+  This happens *before* the intro video, which trashes part of the loaded sound bank.
+  The routine still thinks the Episode 1 bank is loaded correctly, so when it reaches the splash screen, it doesn't reload the bank.
+  When you go to Options and try to play the Episode 1 music, some of the samples are corrupted (notably the cymbal).
+  The sound bank gets fixed when you play any other Episode music then go back to Episode 1.
