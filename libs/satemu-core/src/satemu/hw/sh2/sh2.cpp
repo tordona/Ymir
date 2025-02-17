@@ -15,7 +15,7 @@ namespace satemu::sh2 {
 
 namespace config {
     // Detect and log SYS_EXECDMP invocations.
-    // The addres is specified by sysExecDumpAddress;
+    // The address is specified by sysExecDumpAddress;
     inline constexpr bool logSysExecDump = false;
 
     // Address of SYS_EXECDMP function.
@@ -24,6 +24,7 @@ namespace config {
     inline constexpr uint32 sysExecDumpAddress = 0x186C;
 
     // Enable cache emulation.
+    // TODO: fix bugs and optimize heavily
     inline constexpr bool enableCache = false;
 } // namespace config
 
