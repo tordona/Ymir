@@ -1990,10 +1990,10 @@ void VDP::VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayerState 
     }
     if (bgParams.lineScrollYEnable) {
         // TODO: check/optimize this
-        bgState.fracScrollY = bgParams.scrollAmountV + m_VCounter * bgParams.scrollIncV + bit::extract<8, 26>(read());
+        bgState.fracScrollY = bgParams.scrollAmountV + bit::extract<8, 26>(read());
     }
     if (bgParams.lineZoomEnable) {
-        bgState.scrollIncH = bgParams.scrollIncH + bit::extract<8, 18>(read());
+        bgState.scrollIncH = bit::extract<8, 18>(read());
     }
     if (m_VCounter > 0 && (m_VCounter & ((1u << bgParams.lineScrollInterval) - 1)) == 0) {
         bgState.lineScrollTableAddress = address;
