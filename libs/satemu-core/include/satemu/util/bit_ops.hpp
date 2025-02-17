@@ -2,6 +2,7 @@
 
 #include "inline.hpp"
 
+#include <bit>
 #include <concepts>
 #include <cstddef>
 #include <type_traits>
@@ -21,7 +22,7 @@ template <unsigned B, std::integral T>
 
 // Extracts a range of bits from the value.
 // start and end are both inclusive.
-template <std::size_t start, std::size_t end = start, typename T>
+template <std::size_t start, std::size_t end = start, std::integral T>
 [[nodiscard]] FORCE_INLINE constexpr T extract(T value) {
     static_assert(start < sizeof(T) * 8, "start out of range");
     static_assert(end < sizeof(T) * 8, "end out of range");
@@ -36,14 +37,14 @@ template <std::size_t start, std::size_t end = start, typename T>
 
 // Extracts a range of bits from the value, converting them into a signed integer.
 // start and end are both inclusive.
-template <std::size_t start, std::size_t end = start, typename T>
+template <std::size_t start, std::size_t end = start, std::integral T>
 [[nodiscard]] FORCE_INLINE auto extract_signed(T value) {
     return sign_extend<end - start + 1>(extract<start, end>(value));
 }
 
 // Deposits a range of bits into the value and returns the modified value.
 // start and end are both inclusive.
-template <std::size_t start, std::size_t end = start, typename T, typename TV = T>
+template <std::size_t start, std::size_t end = start, std::integral T, std::integral TV = T>
 [[nodiscard]] FORCE_INLINE constexpr T deposit(T base, TV value) {
     static_assert(start < sizeof(T) * 8, "start out of range");
     static_assert(end < sizeof(T) * 8, "end out of range");
@@ -60,9 +61,75 @@ template <std::size_t start, std::size_t end = start, typename T, typename TV = 
 
 // Deposits a range of bits into the destination value.
 // start and end are both inclusive.
-template <std::size_t start, std::size_t end = start, typename T, typename TV = T>
+template <std::size_t start, std::size_t end = start, std::integral T, std::integral TV = T>
 FORCE_INLINE constexpr void deposit_into(T &dest, TV value) {
     dest = deposit<start, end>(dest, value);
+}
+
+// Compresses the selected bits of the value into the least significant bits of the output.
+template <std::size_t mask, std::integral T>
+FORCE_INLINE constexpr T gather(T value) {
+    // TODO: use _pext_u32/64 if available
+
+    // Hacker's Delight, volume 2, page 153
+    value &= mask;               // Clear irrelevant bits
+    constexpr T mk = ~mask << 1; // We will count 0s to the right
+    T m = mask;
+
+    constexpr T iters = std::countr_zero(sizeof(T)) + 3;
+    for (T i = 0; i < iters; i++) {
+        T mp = mk ^ (mk << 1); // Parallel suffix
+        mp ^= mp << 2;
+        mp ^= mp << 4;
+        for (T j = 3; j < iters; j++) {
+            mp ^= mp << ((T)1 << j);
+        }
+
+        T mv = mp & m; // Bits to move
+
+        m = (m ^ mv) | (mv >> ((T)1 << i)); // Compress m
+        T t = value & mv;
+        value = (value ^ t) | (t >> ((T)1 << i)); // Compress x
+        mk &= ~mp;
+    }
+    return value;
+}
+
+// Expands the least significant bits of the value into the corresponding bits of the given mask.
+template <std::size_t mask, std::integral T>
+FORCE_INLINE constexpr T scatter(T value) {
+    // TODO: use _pdep_u32/64 if available
+
+    // Hacker's Delight, volume 2, page 157
+    T m0 = mask;                       // Save original mask
+    T mk = static_cast<T>(~mask << 1); // We will count 0s to the right
+    T m = mask;
+
+    constexpr T iters = std::countr_zero(sizeof(T)) + 3;
+    std::array<T, iters> array{};
+    for (T i = 0; i < iters; i++) {
+        T mp = mk ^ (mk << 1); // Parallel suffix
+        mp ^= mp << 2;
+        mp ^= mp << 4;
+        for (T j = 3; j < iters; j++) {
+            mp ^= mp << ((T)1 << j);
+        }
+
+        T mv = mp & m; // Bits to move
+
+        array[i] = mv;
+
+        m = (m ^ mv) | (mv >> ((T)1 << i)); // Compress m
+        mk &= ~mp;
+    }
+
+    for (T i = iters - 1; i >= 0 && i < iters; i--) {
+        T mv = array[i];
+        T t = value << ((T)1 << i);
+        value = (value & ~mv) | (t & mv);
+    }
+
+    return value & m0; // Clear out extraneous bits
 }
 
 } // namespace bit

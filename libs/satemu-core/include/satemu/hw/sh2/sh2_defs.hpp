@@ -542,7 +542,6 @@ inline constexpr std::size_t kCacheLineSize = 16;
 struct CacheEntry {
     // Tag layout:
     //   28..10: tag
-    //     9..4: LRU bits
     //        2: valid bit
     // All other bits must be zero
     // This matches the address array structure
@@ -551,8 +550,7 @@ struct CacheEntry {
         struct {
             uint32 : 2;
             uint32 valid : 1;
-            uint32 : 1;
-            uint32 LRU : 6;
+            uint32 : 7;
             uint32 tagAddress : 19;
             uint32 : 3;
         };
@@ -561,6 +559,12 @@ struct CacheEntry {
 
     alignas(16) std::array<Tag, kCacheWays> tag;
     alignas(16) std::array<std::array<uint8, kCacheLineSize>, kCacheWays> line;
+};
+
+// Stores the cache LRU update bits
+struct CacheLRUUpdateBits {
+    uint8 andMask;
+    uint8 orMask;
 };
 
 // 092  R/W  8        00        CCR     Cache Control Register

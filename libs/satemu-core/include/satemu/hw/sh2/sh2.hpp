@@ -386,6 +386,29 @@ private:
     RegCCR CCR; // 092  R/W  8        00        CCR     Cache Control Register
 
     alignas(16) std::array<CacheEntry, kCacheEntries> m_cacheEntries;
+    alignas(16) std::array<uint8, kCacheEntries> m_cacheLRU;
+    uint8 m_cacheReplaceANDMask;
+    std::array<uint8, 2> m_cacheReplaceORMask; // [0]=data, [1]=code
+
+    alignas(16) static constexpr std::array<CacheLRUUpdateBits, 4> kCacheLRUUpdateBits = {{
+        // AND mask       OR mask
+        {0b111000u, 0b000000u}, // way 0
+        {0b011001u, 0b100000u}, // way 1
+        {0b101010u, 0b010100u}, // way 2
+        {0b110100u, 0b001011u}, // way 3
+    }};
+
+    alignas(16) static constexpr auto kCacheLRUWaySelect = [] {
+        std::array<sint8, 64> arr{};
+        arr.fill(-1);
+        for (uint8 i = 0; i < 8; i++) {
+            arr[0b111000 | bit::scatter<0b000111>(i)] = 0; // way 0: 111...
+            arr[0b000110 | bit::scatter<0b011001>(i)] = 1; // way 1: 0..11.
+            arr[0b000001 | bit::scatter<0b101010>(i)] = 2; // way 2: .0.0.1
+            arr[0b000000 | bit::scatter<0b110100>(i)] = 3; // way 3: ..0.00
+        }
+        return arr;
+    }();
 
     void WriteCCR(uint8 value);
 
