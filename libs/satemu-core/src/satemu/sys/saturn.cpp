@@ -39,6 +39,11 @@ void Saturn::Reset(bool hard) {
     CDBlock.Reset(hard);
 }
 
+void Saturn::FactoryReset() {
+    SMPC.FactoryReset();
+    Reset(true);
+}
+
 void Saturn::SetVideoStandard(sys::VideoStandard videoStandard) {
     m_system.videoStandard = videoStandard;
     VDP.SetVideoStandard(videoStandard);

@@ -24,6 +24,7 @@ struct Saturn {
     Saturn();
 
     void Reset(bool hard);
+    void FactoryReset(); // Erases SMPC settings and does a hard reset
 
     void SetVideoStandard(sys::VideoStandard videoStandard);
     void SetClockSpeed(sys::ClockSpeed clockSpeed);

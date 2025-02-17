@@ -69,6 +69,17 @@ void SMPC::Reset(bool hard) {
     m_intbackInProgress = false;
 }
 
+void SMPC::FactoryReset() {
+    SMEM.fill(0x00);
+    m_STE = false;
+
+    if (m_rtc.GetMode() == rtc::RTC::Mode::Emulated) {
+        util::datetime::DateTime defaultDateTime{
+            .year = 1994, .month = 1, .day = 1, .hour = 0, .minute = 0, .second = 0};
+        m_rtc.SetDateTime(defaultDateTime);
+    }
+}
+
 void SMPC::UpdateResetNMI() {
     if (!m_resetDisable && m_resetState) {
         m_saturn.SH2.master.SetNMI();

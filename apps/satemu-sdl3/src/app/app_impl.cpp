@@ -381,7 +381,9 @@ void App::Impl::RunEmulator() {
 
         case SDL_SCANCODE_R:
             if (pressed) {
-                if (mod & SDL_KMOD_CTRL) {
+                if ((mod & SDL_KMOD_CTRL) && (mod & SDL_KMOD_SHIFT)) {
+                    m_saturn.FactoryReset();
+                } else if (mod & SDL_KMOD_CTRL) {
                     m_saturn.Reset(true);
                 }
             }

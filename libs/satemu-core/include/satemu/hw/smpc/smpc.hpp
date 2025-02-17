@@ -38,6 +38,7 @@ public:
     ~SMPC();
 
     void Reset(bool hard);
+    void FactoryReset();
 
     void SetResetButtonState(bool pressed) {
         bool prevState = m_resetState;
