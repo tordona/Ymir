@@ -24,70 +24,70 @@ struct Slot {
     void WriteReg(uint32 address, T value);
 
     template <bool lowerByte, bool upperByte>
-    uint16 ReadReg00();
+    uint16 ReadReg00() const;
 
     template <bool lowerByte, bool upperByte>
     void WriteReg00(uint16 value);
 
-    uint16 ReadReg02();
+    uint16 ReadReg02() const;
 
     template <bool lowerByte, bool upperByte>
     void WriteReg02(uint16 value);
 
-    uint16 ReadReg04();
+    uint16 ReadReg04() const;
 
     template <bool lowerByte, bool upperByte>
     void WriteReg04(uint16 value);
 
-    uint16 ReadReg06();
+    uint16 ReadReg06() const;
 
     template <bool lowerByte, bool upperByte>
     void WriteReg06(uint16 value);
 
     template <bool lowerByte, bool upperByte>
-    uint16 ReadReg08();
+    uint16 ReadReg08() const;
 
     template <bool lowerByte, bool upperByte>
     void WriteReg08(uint16 value);
 
     template <bool lowerByte, bool upperByte>
-    uint16 ReadReg0A();
+    uint16 ReadReg0A() const;
 
     template <bool lowerByte, bool upperByte>
     void WriteReg0A(uint16 value);
 
     template <bool lowerByte, bool upperByte>
-    uint16 ReadReg0C();
+    uint16 ReadReg0C() const;
 
     template <bool lowerByte, bool upperByte>
     void WriteReg0C(uint16 value);
 
     template <bool lowerByte, bool upperByte>
-    uint16 ReadReg0E();
+    uint16 ReadReg0E() const;
 
     template <bool lowerByte, bool upperByte>
     void WriteReg0E(uint16 value);
 
     template <bool lowerByte, bool upperByte>
-    uint16 ReadReg10();
+    uint16 ReadReg10() const;
 
     template <bool lowerByte, bool upperByte>
     void WriteReg10(uint16 value);
 
     template <bool lowerByte, bool upperByte>
-    uint16 ReadReg12();
+    uint16 ReadReg12() const;
 
     template <bool lowerByte, bool upperByte>
     void WriteReg12(uint16 value);
 
     template <bool lowerByte, bool upperByte>
-    uint16 ReadReg14();
+    uint16 ReadReg14() const;
 
     template <bool lowerByte, bool upperByte>
     void WriteReg14(uint16 value);
 
     template <bool lowerByte, bool upperByte>
-    uint16 ReadReg16();
+    uint16 ReadReg16() const;
 
     template <bool lowerByte, bool upperByte>
     void WriteReg16(uint16 value);

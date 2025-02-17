@@ -201,7 +201,7 @@ template void Slot::WriteReg<uint8>(uint32 address, uint8 value);
 template void Slot::WriteReg<uint16>(uint32 address, uint16 value);
 
 template <bool lowerByte, bool upperByte>
-uint16 Slot::ReadReg00() {
+uint16 Slot::ReadReg00() const {
     uint16 value = 0;
     if constexpr (lowerByte) {
         bit::deposit_into<0, 3>(value, bit::extract<16, 19>(startAddress));
@@ -238,7 +238,7 @@ void Slot::WriteReg00(uint16 value) {
     }
 }
 
-uint16 Slot::ReadReg02() {
+uint16 Slot::ReadReg02() const {
     return bit::extract<0, 15>(startAddress);
 }
 
@@ -249,7 +249,7 @@ void Slot::WriteReg02(uint16 value) {
     bit::deposit_into<lb, ub>(startAddress, bit::extract<lb, ub>(value));
 }
 
-uint16 Slot::ReadReg04() {
+uint16 Slot::ReadReg04() const {
     return loopStartAddress;
 }
 
@@ -260,7 +260,7 @@ void Slot::WriteReg04(uint16 value) {
     bit::deposit_into<lb, ub>(loopStartAddress, bit::extract<lb, ub>(value));
 }
 
-uint16 Slot::ReadReg06() {
+uint16 Slot::ReadReg06() const {
     return loopEndAddress;
 }
 
@@ -272,7 +272,7 @@ void Slot::WriteReg06(uint16 value) {
 }
 
 template <bool lowerByte, bool upperByte>
-uint16 Slot::ReadReg08() {
+uint16 Slot::ReadReg08() const {
     uint16 value = 0;
     if constexpr (lowerByte) {
         bit::deposit_into<0, 4>(value, attackRate);
@@ -302,7 +302,7 @@ void Slot::WriteReg08(uint16 value) {
 }
 
 template <bool lowerByte, bool upperByte>
-uint16 Slot::ReadReg0A() {
+uint16 Slot::ReadReg0A() const {
     uint16 value = 0;
     if constexpr (lowerByte) {
         bit::deposit_into<0, 4>(value, releaseRate);
@@ -332,7 +332,7 @@ void Slot::WriteReg0A(uint16 value) {
 }
 
 template <bool lowerByte, bool upperByte>
-uint16 Slot::ReadReg0C() {
+uint16 Slot::ReadReg0C() const {
     uint16 value = 0;
     if constexpr (lowerByte) {
         bit::deposit_into<0, 7>(value, totalLevel);
@@ -358,7 +358,7 @@ void Slot::WriteReg0C(uint16 value) {
 }
 
 template <bool lowerByte, bool upperByte>
-uint16 Slot::ReadReg0E() {
+uint16 Slot::ReadReg0E() const {
     uint16 value = 0;
     if constexpr (lowerByte) {
         bit::deposit_into<0, 5>(value, modYSelect);
@@ -386,7 +386,7 @@ void Slot::WriteReg0E(uint16 value) {
 }
 
 template <bool lowerByte, bool upperByte>
-uint16 Slot::ReadReg10() {
+uint16 Slot::ReadReg10() const {
     uint16 value = 0;
 
     util::SplitReadWord<lowerByte, upperByte, 0, 9>(value, freqNumSwitch);
@@ -407,7 +407,7 @@ void Slot::WriteReg10(uint16 value) {
 }
 
 template <bool lowerByte, bool upperByte>
-uint16 Slot::ReadReg12() {
+uint16 Slot::ReadReg12() const {
     uint16 value = 0;
     if constexpr (lowerByte) {
         bit::deposit_into<0, 2>(value, ampLFOSens);
@@ -439,7 +439,7 @@ void Slot::WriteReg12(uint16 value) {
 }
 
 template <bool lowerByte, bool upperByte>
-uint16 Slot::ReadReg14() {
+uint16 Slot::ReadReg14() const {
     uint16 value = 0;
     if constexpr (lowerByte) {
         bit::deposit_into<0, 2>(value, inputMixingLevel);
@@ -457,7 +457,7 @@ void Slot::WriteReg14(uint16 value) {
 }
 
 template <bool lowerByte, bool upperByte>
-uint16 Slot::ReadReg16() {
+uint16 Slot::ReadReg16() const {
     uint16 value = 0;
     if constexpr (lowerByte) {
         bit::deposit_into<0, 4>(value, effectPan);
