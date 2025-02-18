@@ -307,6 +307,10 @@ void SH2::SetExternalInterrupt(uint8 level, uint8 vector) {
     }
 }
 
+bool SH2::GetNMI() const {
+    return ICR.NMIL;
+}
+
 void SH2::SetNMI() {
     // HACK: should be edge-detected
     ICR.NMIL = 1;

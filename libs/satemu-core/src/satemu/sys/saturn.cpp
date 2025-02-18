@@ -44,10 +44,18 @@ void Saturn::FactoryReset() {
     Reset(true);
 }
 
+sys::VideoStandard Saturn::GetVideoStandard() const {
+    return m_system.videoStandard;
+}
+
 void Saturn::SetVideoStandard(sys::VideoStandard videoStandard) {
     m_system.videoStandard = videoStandard;
     VDP.SetVideoStandard(videoStandard);
     UpdateClockRatios();
+}
+
+sys::ClockSpeed Saturn::GetClockSpeed() const {
+    return m_system.clockSpeed;
 }
 
 void Saturn::SetClockSpeed(sys::ClockSpeed clockSpeed) {

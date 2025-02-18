@@ -516,8 +516,10 @@ void SMPC::WriteINTBACKStatusReport() {
     OREG[9] = m_areaCode;
 
     // TODO: update flags accordingly
-    OREG[10] = 0b00110100; // System status 1 (TODO: 6=DOTSEL, 3=MSHNMI, 1=SYSRES, 0=SNDRES)
-    OREG[11] = 0b00000000; // System status 2 (TODO: 6=CDRES)
+    const bool dotsel = m_saturn.GetClockSpeed() == sys::ClockSpeed::_352;
+    const bool mshnmi = m_saturn.SH2.master.GetNMI();
+    OREG[10] = 0b00110100 | (dotsel << 6u) | (mshnmi << 3u); // System status 1 (TODO: 1=SYSRES, 0=SNDRES)
+    OREG[11] = 0b00000000;                                   // System status 2 (TODO: 6=CDRES)
 
     OREG[12] = SMEM[0]; // SMEM 1 Saved Data
     OREG[13] = SMEM[1]; // SMEM 2 Saved Data

@@ -105,6 +105,8 @@ public:
     void Advance(uint64 cycles);
 
     void SetExternalInterrupt(uint8 level, uint8 vecNum);
+
+    bool GetNMI() const;
     void SetNMI();
 
     void TriggerFRTInputCapture();
