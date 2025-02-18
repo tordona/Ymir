@@ -442,14 +442,14 @@ void SMPC::INTBACK() {
         m_port1mode = bit::extract<4, 5>(IREG[1]);
         m_port2mode = bit::extract<6, 7>(IREG[1]);
 
-        if (m_getPeripheralData && !m_optimize) {
+        if (m_getPeripheralData) {
             ReadPeripherals();
         }
 
         const bool getSMPCStatus = IREG[0] == 0x01;
         if (getSMPCStatus) {
             WriteINTBACKStatusReport();
-        } else if (m_getPeripheralData && !m_optimize) {
+        } else if (m_getPeripheralData) {
             WriteINTBACKPeripheralReport();
         }
     }
