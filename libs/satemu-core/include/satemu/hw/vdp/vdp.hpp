@@ -40,6 +40,12 @@ class SCU;
 
 } // namespace satemu::scu
 
+namespace satemu::smpc {
+
+class SMPC;
+
+} // namespace satemu::smpc
+
 // -----------------------------------------------------------------------------
 
 namespace satemu::vdp {
@@ -55,7 +61,7 @@ class VDP {
     static constexpr dbg::Category renderLog2{rootLog2, "Render"};
 
 public:
-    VDP(core::Scheduler &scheduler, scu::SCU &scu);
+    VDP(core::Scheduler &scheduler, scu::SCU &scu, smpc::SMPC &smpc);
 
     void Reset(bool hard);
 
@@ -87,6 +93,7 @@ private:
     std::size_t m_drawFB; // index of current sprite draw buffer; opposite buffer is CPU-accessible
 
     scu::SCU &m_SCU;
+    smpc::SMPC &m_SMPC;
 
     core::Scheduler &m_scheduler;
     core::EventID m_phaseUpdateEvent;

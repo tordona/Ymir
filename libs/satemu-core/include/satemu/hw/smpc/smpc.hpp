@@ -25,6 +25,12 @@ class SH2Bus;
 
 } // namespace satemu::sh2
 
+namespace satemu::vdp {
+
+class VDP;
+
+} // namespace satemu::vdp
+
 // -----------------------------------------------------------------------------
 
 namespace satemu::smpc {
@@ -216,6 +222,7 @@ private:
 
     // INTBACK request parameters
     bool m_getPeripheralData;
+    bool m_optimize;
     uint8 m_port1mode;
     uint8 m_port2mode;
 
@@ -223,6 +230,9 @@ private:
     std::vector<uint8> m_intbackReport; // Full peripheral report for both ports
     size_t m_intbackReportOffset;       // Offset into full peripheral report to continue reading
     bool m_intbackInProgress;           // Whether an INTBACK peripheral report read is in progress
+
+    friend class vdp::VDP;
+    void TriggerOptimizedINTBACKRead();
 
     void ReadPeripherals();
 

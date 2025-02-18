@@ -14,8 +14,9 @@
 
 namespace satemu::vdp {
 
-VDP::VDP(core::Scheduler &scheduler, scu::SCU &scu)
+VDP::VDP(core::Scheduler &scheduler, scu::SCU &scu, smpc::SMPC &smpc)
     : m_SCU(scu)
+    , m_SMPC(smpc)
     , m_scheduler(scheduler) {
 
     m_phaseUpdateEvent =
@@ -874,6 +875,8 @@ void VDP::BeginHPhaseActiveDisplay() {
             rootLog2.trace("Begin VDP2 frame, VDP1 framebuffer {}", m_drawFB ^ 1);
 
             VDP2InitFrame();
+        } else if (m_VCounter == m_VRes - 14) { // ~1ms before VBlank IN
+            m_SMPC.TriggerOptimizedINTBACKRead();
         }
         VDP2DrawLine();
     }

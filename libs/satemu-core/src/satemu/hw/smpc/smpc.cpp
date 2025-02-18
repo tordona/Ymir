@@ -431,24 +431,25 @@ void SMPC::INTBACK() {
             WriteINTBACKStatusReport();
         }
     } else {
-        m_intbackInProgress = true;
-
-        // m_optimize = bit::extract<1>(IREG[1]);
-        m_port1mode = bit::extract<4, 5>(IREG[1]);
-        m_port2mode = bit::extract<6, 7>(IREG[1]);
         if (IREG[2] != 0xF0) {
-            // TODO: log invalid INTBACK command
+            rootLog.debug("Unexpected INTBACK IREG2: {:02X}", IREG[2]);
             // TODO: does SMPC reject the command in this case?
         }
 
-        if (m_getPeripheralData) {
+        m_intbackInProgress = true;
+
+        m_optimize = bit::extract<1>(IREG[1]);
+        m_port1mode = bit::extract<4, 5>(IREG[1]);
+        m_port2mode = bit::extract<6, 7>(IREG[1]);
+
+        if (m_getPeripheralData && !m_optimize) {
             ReadPeripherals();
         }
 
         const bool getSMPCStatus = IREG[0] == 0x01;
         if (getSMPCStatus) {
             WriteINTBACKStatusReport();
-        } else if (m_getPeripheralData) {
+        } else if (m_getPeripheralData && !m_optimize) {
             WriteINTBACKPeripheralReport();
         }
     }
@@ -456,6 +457,15 @@ void SMPC::INTBACK() {
     SF = false; // done processing
 
     m_saturn.SCU.TriggerSystemManager();
+}
+
+void SMPC::TriggerOptimizedINTBACKRead() {
+    if (m_optimize) {
+        m_optimize = false;
+
+        ReadPeripherals();
+        m_saturn.SCU.TriggerSystemManager();
+    }
 }
 
 void SMPC::ReadPeripherals() {

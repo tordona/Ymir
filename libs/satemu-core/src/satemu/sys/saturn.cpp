@@ -9,7 +9,7 @@ namespace satemu {
 Saturn::Saturn()
     : SH2(SCU, SMPC)
     , SCU(m_scheduler, SH2)
-    , VDP(m_scheduler, SCU)
+    , VDP(m_scheduler, SCU, SMPC)
     , SMPC(m_system, m_scheduler, *this)
     , SCSP(m_system, m_scheduler, SCU)
     , CDBlock(m_system, m_scheduler, SCU, SCSP) {
