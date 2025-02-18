@@ -875,7 +875,7 @@ void VDP::BeginHPhaseActiveDisplay() {
             rootLog2.trace("Begin VDP2 frame, VDP1 framebuffer {}", m_drawFB ^ 1);
 
             VDP2InitFrame();
-        } else if (m_VCounter == m_VRes - 14) { // ~1ms before VBlank IN
+        } else if (m_VCounter == 210) { // ~1ms before VBlank IN
             m_SMPC.TriggerOptimizedINTBACKRead();
         }
         VDP2DrawLine();
