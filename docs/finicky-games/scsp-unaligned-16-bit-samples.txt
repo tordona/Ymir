@@ -1,0 +1,7 @@
+=====================================================
+Games that play 16-bit samples at unaligned addresses
+=====================================================
+
+These games play 16-bit samples with an unaligned address (odd addresses)
+
+Radiant Silvergun

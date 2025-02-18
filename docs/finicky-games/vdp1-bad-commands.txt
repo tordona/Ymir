@@ -4,4 +4,4 @@ Games that create infinite loops in the VDP1 command table
 
 Sonic R
   On the first in-game frame when starting a race, it creates an infinite loop by jumping from command at 0x00060 back to 0x00000
-  Does not apply to attract mode races
+  Does not occur on attract mode races

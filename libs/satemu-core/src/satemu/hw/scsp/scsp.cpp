@@ -563,9 +563,9 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
     } else {
         const uint32 address1 = slot.currAddress;
         const uint32 address2 = slot.currAddress + inc * sizeof(uint16);
-        slot.sample1 = static_cast<sint16>(ReadWRAM<uint16>(address1));
+        slot.sample1 = static_cast<sint16>(ReadWRAM<uint16>(address1 & ~1));
         if (address2 >= slot.startAddress && address2 < slot.startAddress + slot.loopEndAddress * sizeof(uint16)) {
-            slot.sample2 = static_cast<sint16>(ReadWRAM<uint16>(address2));
+            slot.sample2 = static_cast<sint16>(ReadWRAM<uint16>(address2 & ~1));
         } else {
             slot.sample2 = slot.sample1;
         }
