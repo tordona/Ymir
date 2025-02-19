@@ -519,53 +519,53 @@ void App::RunEmulator() {
         SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
         SDL_RenderTexture(renderer, texture, &srcRect, nullptr);
 
-        /*auto drawText = [&](int x, int y, const char *text) {
+        auto drawText = [&](int x, int y, const char *text) {
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             for (int yy = -2; yy <= 2; yy++) {
                 for (int xx = -2; xx <= 2; xx++) {
                     SDL_RenderDebugText(renderer, x + xx, y + yy, text);
                 }
             }
-            SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255);
+            SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255);
             SDL_RenderDebugText(renderer, x, y, text);
-        };*/
+        };
 
-        /*{
+        {
             std::string str{};
 
             auto &debugProbe = m_saturn.debugProbe;
-            auto &msh2 = debugProbe.masterSH2;
+            auto &msh2 = debugProbe.GetMasterSH2();
             auto &msh2Regs = msh2.GetGPRs();
-            str = fmt::format("MSH2: {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} "
-                              "{:08X} {:08X} {:08X} {:08X} {:08X} | {:08X}",
-                              msh2Regs[0], msh2Regs[1], msh2Regs[2], msh2Regs[3], msh2Regs[4], msh2Regs[5], msh2Regs[6],
-                              msh2Regs[7], msh2Regs[8], msh2Regs[9], msh2Regs[10], msh2Regs[11], msh2Regs[12],
-                              msh2Regs[13], msh2Regs[14], msh2Regs[15], msh2.GetPC());
-            drawText(5, 5, str.c_str());
+            drawText(5, 5, "MSH2");
+            drawText(5, 15, "----");
+            for (uint32 i = 0; i < 16; i++) {
+                str = fmt::format("{:08X}", msh2Regs[i]);
+                drawText(5, 25 + i * 10, str.c_str());
+            }
 
-            auto &ssh2 = debugProbe.slaveSH2;
+            auto &ssh2 = debugProbe.GetSlaveSH2();
             auto &ssh2Regs = ssh2.GetGPRs();
-            str = fmt::format("SSH2: {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} "
-                              "{:08X} {:08X} {:08X} {:08X} {:08X} | {:08X}",
-                              ssh2Regs[0], ssh2Regs[1], ssh2Regs[2], ssh2Regs[3], ssh2Regs[4], ssh2Regs[5], ssh2Regs[6],
-                              ssh2Regs[7], ssh2Regs[8], ssh2Regs[9], ssh2Regs[10], ssh2Regs[11], ssh2Regs[12],
-                              ssh2Regs[13], ssh2Regs[14], ssh2Regs[15], ssh2.GetPC());
-            drawText(5, 15, str.c_str());
-        }*/
+            drawText(115, 5, "SSH2");
+            drawText(115, 15, "----");
+            for (uint32 i = 0; i < 16; i++) {
+                str = fmt::format("{:08X}", ssh2Regs[i]);
+                drawText(115, 25 + i * 10, str.c_str());
+            }
+        }
 
-        /*for (size_t i = 0; i < m_masterSH2InterruptsCount; i++) {
+        for (size_t i = 0; i < m_masterSH2InterruptsCount; i++) {
             size_t pos = (m_masterSH2InterruptsPos - m_masterSH2InterruptsCount + i) % m_masterSH2Interrupts.size();
             auto str = fmt::format("INT {:02X} lv {:02X}", m_masterSH2Interrupts[pos].vecNum,
                                    m_masterSH2Interrupts[pos].level);
-            drawText(5, 5 + i * 10, str.c_str());
+            drawText(5, 190 + i * 10, str.c_str());
         }
 
         for (size_t i = 0; i < m_slaveSH2InterruptsCount; i++) {
             size_t pos = (m_slaveSH2InterruptsPos - m_slaveSH2InterruptsCount + i) % m_slaveSH2Interrupts.size();
             auto str =
                 fmt::format("INT {:02X} lv {:02X}", m_slaveSH2Interrupts[pos].vecNum, m_slaveSH2Interrupts[pos].level);
-            drawText(115, 5 + i * 10, str.c_str());
-        }*/
+            drawText(115, 190 + i * 10, str.c_str());
+        }
 
         SDL_RenderPresent(renderer);
     }

@@ -25,6 +25,7 @@ struct ITracer {
 
     virtual ISH2Tracer &GetMasterSH2Tracer() = 0;
     virtual ISH2Tracer &GetSlaveSH2Tracer() = 0;
+
     // virtual IVDPTracer &GetVDPTracer() = 0;
 };
 

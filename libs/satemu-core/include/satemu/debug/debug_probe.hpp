@@ -1,6 +1,6 @@
 #pragma once
 
-#include "debug_probe_sh2.hpp"
+#include <memory>
 
 // -----------------------------------------------------------------------------
 // Forward declarations
@@ -15,12 +15,19 @@ struct Saturn;
 
 namespace satemu::debug {
 
+struct SH2DebugProbe;
+
 // Grants controlled access to the internal state of the emulator.
 struct DebugProbe {
     DebugProbe(Saturn &saturn);
+    ~DebugProbe();
 
-    SH2DebugProbe masterSH2;
-    SH2DebugProbe slaveSH2;
+    SH2DebugProbe &GetMasterSH2();
+    SH2DebugProbe &GetSlaveSH2();
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> m_impl;
 };
 
 } // namespace satemu::debug
