@@ -574,9 +574,10 @@ void App::Impl::RunEmulator() {
     SDL_DestroyRenderer(renderer);
 }
 
-void App::Impl::TraceSH2Interrupt(bool master, uint8 vecnum, uint8 level) {
+void App::Impl::TraceSH2Interrupt(bool master, uint8 vecNum, uint8 level) {
+    // TODO: clean up this quick'n'dirty implementation
     if (master) {
-        m_masterSH2Interrupts[m_masterSH2InterruptsPos++] = {vecnum, level};
+        m_masterSH2Interrupts[m_masterSH2InterruptsPos++] = {vecNum, level};
         if (m_masterSH2InterruptsPos >= m_masterSH2Interrupts.size()) {
             m_masterSH2InterruptsPos = 0;
         }
@@ -584,7 +585,7 @@ void App::Impl::TraceSH2Interrupt(bool master, uint8 vecnum, uint8 level) {
             m_masterSH2InterruptsCount++;
         }
     } else {
-        m_slaveSH2Interrupts[m_slaveSH2InterruptsPos++] = {vecnum, level};
+        m_slaveSH2Interrupts[m_slaveSH2InterruptsPos++] = {vecNum, level};
         if (m_slaveSH2InterruptsPos >= m_slaveSH2Interrupts.size()) {
             m_slaveSH2InterruptsPos = 0;
         }
@@ -597,8 +598,8 @@ void App::Impl::TraceSH2Interrupt(bool master, uint8 vecnum, uint8 level) {
 App::Impl::AppTracer::AppTracer(Impl &app)
     : m_app(app) {}
 
-void App::Impl::AppTracer::SH2_Interrupt(bool master, uint8 vecnum, uint8 level) {
-    m_app.TraceSH2Interrupt(master, vecnum, level);
+void App::Impl::AppTracer::SH2_Interrupt(bool master, uint8 vecNum, uint8 level) {
+    m_app.TraceSH2Interrupt(master, vecNum, level);
 }
 
 } // namespace app

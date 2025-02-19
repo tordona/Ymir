@@ -31,12 +31,12 @@ private:
     size_t m_slaveSH2InterruptsPos = 0;
     size_t m_slaveSH2InterruptsCount = 0;
 
-    void TraceSH2Interrupt(bool master, uint8 vecnum, uint8 level);
+    void TraceSH2Interrupt(bool master, uint8 vecNum, uint8 level);
 
     struct AppTracer final : public satemu::debug::ITracer {
         AppTracer(Impl &app);
 
-        void SH2_Interrupt(bool master, uint8 vecnum, uint8 level) final;
+        void SH2_Interrupt(bool master, uint8 vecNum, uint8 level) final;
 
     private:
         Impl &m_app;

@@ -14,7 +14,7 @@ struct ITracer {
     virtual ~ITracer() = default;
 
     // Invoked when an SH2 CPU handles an interrupt.
-    virtual void SH2_Interrupt(bool master, uint8 vecnum, uint8 level) = 0;
+    virtual void SH2_Interrupt(bool master, uint8 vecNum, uint8 level) = 0;
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -52,10 +52,10 @@ struct TracerContext {
     // }
 
     template <bool debug>
-    void SH2_Interrupt(bool master, uint8 vecnum, uint8 level) {
+    void SH2_Interrupt(bool master, uint8 vecNum, uint8 level) {
         if constexpr (debug) {
             if (m_tracer) {
-                return m_tracer->SH2_Interrupt(master, vecnum, level);
+                return m_tracer->SH2_Interrupt(master, vecNum, level);
             }
         }
     }
