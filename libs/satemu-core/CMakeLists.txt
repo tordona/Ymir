@@ -6,6 +6,8 @@ add_library(satemu-core
     include/satemu/core/scheduler.hpp
     include/satemu/core/types.hpp
 
+    include/satemu/debug/debug_probe.hpp
+    include/satemu/debug/debug_probe_sh2.hpp
     include/satemu/debug/debug_tracer.hpp
 
     include/satemu/hw/hw_defs.hpp
@@ -97,6 +99,8 @@ add_library(satemu-core
 
     src/satemu/satemu.cpp
 
+    src/satemu/debug/debug_probe_sh2.cpp
+
     src/satemu/hw/cart/cart_slot.cpp
     src/satemu/hw/cart/cart_impl_bup.cpp
 
@@ -138,7 +142,7 @@ add_library(satemu-core
 
     src/satemu/util/constexpr_for.hpp
     src/satemu/util/date_time.cpp
-)
+ "src/satemu/debug/debug_probe.cpp")
 add_library(satemu::satemu-core ALIAS satemu-core)
 set_target_properties(satemu-core PROPERTIES
                       VERSION ${satemu_core_VERSION}

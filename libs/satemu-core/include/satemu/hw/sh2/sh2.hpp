@@ -15,6 +15,12 @@
 // -----------------------------------------------------------------------------
 // Forward declarations
 
+namespace satemu::debug {
+
+struct SH2DebugProbe;
+
+} // namespace satemu::debug
+
 namespace satemu::sh2 {
 
 class SH2Bus;
@@ -157,7 +163,9 @@ private:
     bool m_delaySlot;
 
     // -------------------------------------------------------------------------
-    // Debug logging
+    // Debugger
+
+    friend struct debug::SH2DebugProbe;
 
     SH2Tracer m_tracer;
 
