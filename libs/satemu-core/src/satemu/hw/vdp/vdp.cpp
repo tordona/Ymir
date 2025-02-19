@@ -1061,7 +1061,6 @@ void VDP::VDP1BeginFrame() {
 void VDP::VDP1EndFrame() {
     renderLog1.trace("End VDP1 frame on framebuffer {}", m_drawFB);
     m_VDP1RenderContext.rendering = false;
-    m_VDP1.currFrameEnded = true;
     m_SCU.TriggerSpriteDrawEnd();
 }
 
@@ -1078,6 +1077,7 @@ void VDP::VDP1ProcessCommands() {
     renderLog1.trace("Processing command {:04X} @ {:05X}", control.u16, cmdAddress);
     if (control.end) [[unlikely]] {
         renderLog1.trace("End of command list");
+        m_VDP1.currFrameEnded = true;
         VDP1EndFrame();
     } else if (!control.skip) {
         // Process command
@@ -1100,7 +1100,7 @@ void VDP::VDP1ProcessCommands() {
         case SetLocalCoordinates: VDP1Cmd_SetLocalCoordinates(cmdAddress); break;
 
         default:
-            renderLog1.debug("Unexpected command type {:X}", static_cast<uint16>(control.command));
+            renderLog1.debug("Unexpected command type {:X}; aborting", static_cast<uint16>(control.command));
             VDP1EndFrame();
             return;
         }
@@ -1118,7 +1118,7 @@ void VDP::VDP1ProcessCommands() {
 
             // HACK: Sonic R attempts to jump back to 0 in some cases
             if (cmdAddress == 0) {
-                renderLog1.warn("Possible infinite loop detected; stopping");
+                renderLog1.warn("Possible infinite loop detected; aborting");
                 VDP1EndFrame();
                 return;
             }
