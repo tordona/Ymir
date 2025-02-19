@@ -519,6 +519,17 @@ void App::Impl::RunEmulator() {
         SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
         SDL_RenderTexture(renderer, texture, &srcRect, nullptr);
 
+        /*auto drawText = [&](int x, int y, const char *text) {
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            for (int yy = -2; yy <= 2; yy++) {
+                for (int xx = -2; xx <= 2; xx++) {
+                    SDL_RenderDebugText(renderer, x + xx, y + yy, text);
+                }
+            }
+            SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255);
+            SDL_RenderDebugText(renderer, x, y, text);
+        };*/
+
         /*{
             std::string str{};
 
@@ -530,14 +541,7 @@ void App::Impl::RunEmulator() {
                               msh2Regs[0], msh2Regs[1], msh2Regs[2], msh2Regs[3], msh2Regs[4], msh2Regs[5], msh2Regs[6],
                               msh2Regs[7], msh2Regs[8], msh2Regs[9], msh2Regs[10], msh2Regs[11], msh2Regs[12],
                               msh2Regs[13], msh2Regs[14], msh2Regs[15], msh2.GetPC());
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-            for (int y = -2; y <= 2; y++) {
-                for (int x = -2; x <= 2; x++) {
-                    SDL_RenderDebugText(renderer, 5.f + x, 5.f + y, str.c_str());
-                }
-            }
-            SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255);
-            SDL_RenderDebugText(renderer, 5.f, 5.f, str.c_str());
+            drawText(5, 5, str.c_str());
 
             auto &ssh2 = debugProbe.slaveSH2;
             auto &ssh2Regs = ssh2.GetGPRs();
@@ -546,14 +550,21 @@ void App::Impl::RunEmulator() {
                               ssh2Regs[0], ssh2Regs[1], ssh2Regs[2], ssh2Regs[3], ssh2Regs[4], ssh2Regs[5], ssh2Regs[6],
                               ssh2Regs[7], ssh2Regs[8], ssh2Regs[9], ssh2Regs[10], ssh2Regs[11], ssh2Regs[12],
                               ssh2Regs[13], ssh2Regs[14], ssh2Regs[15], ssh2.GetPC());
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-            for (int y = -2; y <= 2; y++) {
-                for (int x = -2; x <= 2; x++) {
-                    SDL_RenderDebugText(renderer, 5.f + x, 15.f + y, str.c_str());
-                }
-            }
-            SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255);
-            SDL_RenderDebugText(renderer, 5.f, 15.f, str.c_str());
+            drawText(5, 15, str.c_str());
+        }*/
+
+        /*for (size_t i = 0; i < m_masterSH2InterruptsCount; i++) {
+            size_t pos = (m_masterSH2InterruptsPos - m_masterSH2InterruptsCount + i) % m_masterSH2Interrupts.size();
+            auto str = fmt::format("INT {:02X} lv {:02X}", m_masterSH2Interrupts[pos].vecNum,
+                                   m_masterSH2Interrupts[pos].level);
+            drawText(5, 5 + i * 10, str.c_str());
+        }
+
+        for (size_t i = 0; i < m_slaveSH2InterruptsCount; i++) {
+            size_t pos = (m_slaveSH2InterruptsPos - m_slaveSH2InterruptsCount + i) % m_slaveSH2Interrupts.size();
+            auto str =
+                fmt::format("INT {:02X} lv {:02X}", m_slaveSH2Interrupts[pos].vecNum, m_slaveSH2Interrupts[pos].level);
+            drawText(115, 5 + i * 10, str.c_str());
         }*/
 
         SDL_RenderPresent(renderer);
@@ -563,7 +574,31 @@ void App::Impl::RunEmulator() {
     SDL_DestroyRenderer(renderer);
 }
 
+void App::Impl::TraceSH2Interrupt(bool master, uint8 vecnum, uint8 level) {
+    if (master) {
+        m_masterSH2Interrupts[m_masterSH2InterruptsPos++] = {vecnum, level};
+        if (m_masterSH2InterruptsPos >= m_masterSH2Interrupts.size()) {
+            m_masterSH2InterruptsPos = 0;
+        }
+        if (m_masterSH2InterruptsCount < m_masterSH2Interrupts.size()) {
+            m_masterSH2InterruptsCount++;
+        }
+    } else {
+        m_slaveSH2Interrupts[m_slaveSH2InterruptsPos++] = {vecnum, level};
+        if (m_slaveSH2InterruptsPos >= m_slaveSH2Interrupts.size()) {
+            m_slaveSH2InterruptsPos = 0;
+        }
+        if (m_slaveSH2InterruptsCount < m_slaveSH2Interrupts.size()) {
+            m_slaveSH2InterruptsCount++;
+        }
+    }
+}
+
 App::Impl::AppTracer::AppTracer(Impl &app)
     : m_app(app) {}
+
+void App::Impl::AppTracer::SH2_Interrupt(bool master, uint8 vecnum, uint8 level) {
+    m_app.TraceSH2Interrupt(master, vecnum, level);
+}
 
 } // namespace app

@@ -6,10 +6,18 @@
 
 namespace satemu::debug {
 
-// Interface for debug tracers - objects that receive internal data from the emulator while it is executing.
+// Interface for debug tracers - objects that receive internal state from the emulator while it is executing.
+//
+// Must be implemented by users of the core library and instantiated with the `Use` method of the `TracerContext`
+// instance in `satemu::Saturn`.
 struct ITracer {
     virtual ~ITracer() = default;
+
+    // Invoked when an SH2 CPU handles an interrupt.
+    virtual void SH2_Interrupt(bool master, uint8 vecnum, uint8 level) = 0;
 };
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 // Holds a tracer and simplifies tracer usage.
 struct TracerContext {
@@ -32,12 +40,22 @@ struct TracerContext {
     // Methods must take a `bool debug` template parameter and perform a no-op or identity operation if false.
     // Methods must also null-check `m_tracer` before invoking the function.
     // If the target function returns a value, it must be returned unmodified.
+    // In short, these wrappers should look like this:
+    //
+    // template <bool debug>
+    // <return-type> method(<args>) {
+    //     if constexpr (debug) {
+    //         if (m_tracer) {
+    //             return m_tracer->method(<args>);
+    //         }
+    //     }
+    // }
 
     template <bool debug>
-    void test() {
+    void SH2_Interrupt(bool master, uint8 vecnum, uint8 level) {
         if constexpr (debug) {
             if (m_tracer) {
-                // return m_tracer->test();
+                return m_tracer->SH2_Interrupt(master, vecnum, level);
             }
         }
     }

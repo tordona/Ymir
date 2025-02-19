@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/debug/debug_tracer.hpp>
+
 #include "sh2.hpp"
 #include "sh2_bus.hpp"
 
@@ -7,10 +9,10 @@ namespace satemu::sh2 {
 
 class SH2Block {
 public:
-    SH2Block(scu::SCU &scu, smpc::SMPC &smpc)
+    SH2Block(scu::SCU &scu, smpc::SMPC &smpc, debug::TracerContext &debugTracer)
         : bus(master, slave, scu, smpc)
-        , master(bus, true)
-        , slave(bus, false) {}
+        , master(bus, true, debugTracer)
+        , slave(bus, false, debugTracer) {}
 
     SH2Bus bus;
     SH2 master;

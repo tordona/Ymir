@@ -134,8 +134,9 @@ void RealSH2Tracer::RTS(SH2Regs regs) {
     }
 }
 
-SH2::SH2(SH2Bus &bus, bool master)
+SH2::SH2(SH2Bus &bus, bool master, debug::TracerContext &debugTracer)
     : m_tracer(master)
+    , m_debugTracer(debugTracer)
     , m_log(Logger(master))
     , m_bus(bus) {
     BCR1.MASTER = !master;
@@ -264,7 +265,7 @@ FLATTEN void SH2::Advance(uint64 cycles) {
             // TODO: choose between interpreter (cached or uncached) and JIT recompiler
             // TODO: proper instruction cycle counting
             m_tracer.ExecTrace({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
-            Execute();
+            Execute<debug>();
 
             if constexpr (config::logSysExecDump) {
                 // Dump stack trace on SYS_EXECDMP
@@ -1510,10 +1511,12 @@ FORCE_INLINE void SH2::EnterException(uint8 vectorNumber) {
 // -----------------------------------------------------------------------------
 // Interpreter
 
+template <bool debug>
 void SH2::Execute() {
     if (!m_delaySlot && CheckInterrupts()) [[unlikely]] {
         // Service interrupt
         const uint8 vecNum = GetInterruptVector(m_pendingInterrupt.source);
+        m_debugTracer.SH2_Interrupt<debug>(!BCR1.MASTER, vecNum, m_pendingInterrupt.level);
         m_log.trace("Handling interrupt level {:02X}, vector number {:02X}", m_pendingInterrupt.level, vecNum);
         EnterException(vecNum);
         SR.ILevel = std::min<uint8>(m_pendingInterrupt.level, 0xF);

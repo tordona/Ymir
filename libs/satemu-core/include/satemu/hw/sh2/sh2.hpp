@@ -6,6 +6,8 @@
 #include <satemu/core/types.hpp>
 #include <satemu/hw/hw_defs.hpp>
 
+#include <satemu/debug/debug_tracer.hpp>
+
 #include <satemu/util/debug_print.hpp>
 
 #include <array>
@@ -103,7 +105,7 @@ using SH2Tracer = NullSH2Tracer;
 
 class SH2 {
 public:
-    SH2(SH2Bus &bus, bool master);
+    SH2(SH2Bus &bus, bool master, debug::TracerContext &debugTracer);
 
     void Reset(bool hard, bool watchdogInitiated = false);
 
@@ -168,6 +170,7 @@ private:
     friend struct debug::SH2DebugProbe;
 
     SH2Tracer m_tracer;
+    debug::TracerContext &m_debugTracer;
 
     const dbg::Category<sh2DebugLevel> &m_log;
 
@@ -425,6 +428,7 @@ private:
     // -------------------------------------------------------------------------
     // Interpreter
 
+    template <bool debug>
     void Execute();
 
     // -------------------------------------------------------------------------
