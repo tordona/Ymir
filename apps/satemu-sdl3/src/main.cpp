@@ -3,6 +3,8 @@
 #include <cxxopts.hpp>
 #include <fmt/format.h>
 
+#include <memory>
+
 int main(int argc, char **argv) {
     bool showHelp = false;
 
@@ -21,8 +23,8 @@ int main(int argc, char **argv) {
             return 0;
         }
 
-        app::App app{};
-        return app.Run(progOpts);
+        auto app = std::make_unique<app::App>();
+        return app->Run(progOpts);
     } catch (const cxxopts::exceptions::exception &e) {
         fmt::println("Failed to parse arguments: {}", e.what());
         return -1;

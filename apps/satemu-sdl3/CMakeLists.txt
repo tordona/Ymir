@@ -5,8 +5,7 @@ add_executable(satemu-sdl3
 
     src/app/app.cpp
     src/app/app.hpp
-    src/app/app_impl.cpp
-    src/app/app_impl.hpp
+    
     src/app/cmdline_opts.hpp
 
     src/util/rom_loader.cpp
