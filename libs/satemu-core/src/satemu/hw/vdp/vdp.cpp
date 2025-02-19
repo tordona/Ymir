@@ -1550,70 +1550,60 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
 
     const uint8 zoomPointH = bit::extract<0, 1>(control.zoomPoint);
     const uint8 zoomPointV = bit::extract<2, 3>(control.zoomPoint);
-    if (zoomPointH == 0 || zoomPointV == 0) {
-        const sint32 xc = bit::sign_extend<16>(VDP1ReadVRAM<uint16>(cmdAddress + 0x14));
-        const sint32 yc = bit::sign_extend<16>(VDP1ReadVRAM<uint16>(cmdAddress + 0x16));
 
-        // Top-left coordinates on vertex A
-        // Bottom-right coordinates on vertex C
+    const uint32 zoomPointHOffset = zoomPointH == 0 ? 0x14 : 0x10; // 0=XC; 1,2,3=XB
+    const uint32 zoomPointVOffset = zoomPointV == 0 ? 0x16 : 0x12; // 0=YC; 1,2,3=YB
+
+    const sint32 xbc = bit::sign_extend<16>(VDP1ReadVRAM<uint16>(cmdAddress + zoomPointHOffset));
+    const sint32 ybc = bit::sign_extend<16>(VDP1ReadVRAM<uint16>(cmdAddress + zoomPointVOffset));
+
+    // Zoom origin on vertex A
+    // Zoom dimensions on vertex B
+
+    // X axis
+    switch (zoomPointH) {
+    case 0: // left
+    case 1: // left
         qxa = xa;
-        qya = ya;
-        qxb = xc;
-        qyb = ya;
-        qxc = xc;
-        qyc = yc;
+        qxb = xa + xbc;
+        qxc = xa + xbc;
         qxd = xa;
-        qyd = yc;
-    } else {
-        const sint32 xb = bit::sign_extend<16>(VDP1ReadVRAM<uint16>(cmdAddress + 0x10));
-        const sint32 yb = bit::sign_extend<16>(VDP1ReadVRAM<uint16>(cmdAddress + 0x12));
+        break;
+    case 2: // center
+        qxa = xa - xbc / 2;
+        qxb = xa + (xbc + 1) / 2;
+        qxc = xa + (xbc + 1) / 2;
+        qxd = xa - xbc / 2;
+        break;
+    case 3: // right
+        qxa = xa - xbc;
+        qxb = xa;
+        qxc = xa;
+        qxd = xa - xbc;
+        break;
+    }
 
-        // Zoom origin on vertex A
-        // Zoom dimensions on vertex B
-
-        // X axis
-        switch (zoomPointH) {
-        case 1: // left
-            qxa = xa;
-            qxb = xa + xb;
-            qxc = xa + xb;
-            qxd = xa;
-            break;
-        case 2: // center
-            qxa = xa - xb / 2;
-            qxb = xa + (xb + 1) / 2;
-            qxc = xa + (xb + 1) / 2;
-            qxd = xa - xb / 2;
-            break;
-        case 3: // right
-            qxa = xa - xb;
-            qxb = xa;
-            qxc = xa;
-            qxd = xa - xb;
-            break;
-        }
-
-        // Y axis
-        switch (zoomPointV) {
-        case 1: // upper
-            qya = ya;
-            qyb = ya;
-            qyc = ya + yb;
-            qyd = ya + yb;
-            break;
-        case 2: // center
-            qya = ya - yb / 2;
-            qyb = ya - yb / 2;
-            qyc = ya + (yb + 1) / 2;
-            qyd = ya + (yb + 1) / 2;
-            break;
-        case 3: // lower
-            qya = ya - yb;
-            qyb = ya - yb;
-            qyc = ya;
-            qyd = ya;
-            break;
-        }
+    // Y axis
+    switch (zoomPointV) {
+    case 0: // top
+    case 1: // top
+        qya = ya;
+        qyb = ya;
+        qyc = ya + ybc;
+        qyd = ya + ybc;
+        break;
+    case 2: // center
+        qya = ya - ybc / 2;
+        qyb = ya - ybc / 2;
+        qyc = ya + (ybc + 1) / 2;
+        qyd = ya + (ybc + 1) / 2;
+        break;
+    case 3: // bottom
+        qya = ya - ybc;
+        qyb = ya - ybc;
+        qyc = ya;
+        qyd = ya;
+        break;
     }
 
     qxa += ctx.localCoordX;
