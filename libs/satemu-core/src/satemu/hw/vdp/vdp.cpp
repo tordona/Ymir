@@ -1010,12 +1010,16 @@ FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
     // Vertical scale is doubled in double-interlace mode
     const uint32 scaleV = m_VDP2.TVMD.LSMDn == 3 ? 1 : 0;
 
+    // Constrain erase area to certain limits based on current resolution
+    const uint32 maxH = (m_VDP2.TVMD.HRESOn & 1) ? 428 : 400;
+    const uint32 maxV = m_VRes >> scaleV;
+
     const uint32 offsetShift = m_VDP1.pixel8Bits ? 0 : 1;
 
-    const uint32 x1 = m_VDP1.eraseX1 << scaleH;
-    const uint32 x3 = m_VDP1.eraseX3 << scaleH;
-    const uint32 y1 = m_VDP1.eraseY1 << scaleV;
-    const uint32 y3 = m_VDP1.eraseY3 << scaleV;
+    const uint32 x1 = std::min<uint32>(m_VDP1.eraseX1, maxH) << scaleH;
+    const uint32 x3 = std::min<uint32>(m_VDP1.eraseX3, maxH) << scaleH;
+    const uint32 y1 = std::min<uint32>(m_VDP1.eraseY1, maxV) << scaleV;
+    const uint32 y3 = std::min<uint32>(m_VDP1.eraseY3, maxV) << scaleV;
 
     for (uint32 y = y1; y <= y3; y++) {
         const uint32 fbOffset = y * m_VDP1.fbSizeH;
