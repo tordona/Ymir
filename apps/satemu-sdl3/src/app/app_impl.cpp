@@ -262,7 +262,7 @@ void App::Impl::RunEmulator() {
     // ---------------------------------
     // Main emulator loop
 
-    m_saturn.debugProbe.Use<AppProbe>(*this);
+    m_saturn.debugTracer.Use<AppTracer>(*this);
 
     // TODO: pull from CommandLineOptions or configuration
     // m_saturn.SetVideoStandard(satemu::sys::VideoStandard::PAL);
@@ -529,7 +529,7 @@ void App::Impl::RunEmulator() {
     SDL_DestroyRenderer(renderer);
 }
 
-App::Impl::AppProbe::AppProbe(Impl &app)
+App::Impl::AppTracer::AppTracer(Impl &app)
     : m_app(app) {}
 
 } // namespace app

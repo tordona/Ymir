@@ -1,7 +1,5 @@
 #include <satemu/sys/saturn.hpp>
 
-#include <satemu/debug/debug_probe.hpp>
-
 #include <bit>
 
 namespace satemu {

@@ -19,8 +19,8 @@ private:
     // -----------------------------------------------------------------------------------------------------------------
     // Debugger
 
-    struct AppProbe final : public satemu::debug::IProbe {
-        AppProbe(Impl &app);
+    struct AppTracer final : public satemu::debug::ITracer {
+        AppTracer(Impl &app);
 
     private:
         Impl &m_app;

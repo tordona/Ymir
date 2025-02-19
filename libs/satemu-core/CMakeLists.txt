@@ -6,7 +6,7 @@ add_library(satemu-core
     include/satemu/core/scheduler.hpp
     include/satemu/core/types.hpp
 
-    include/satemu/debug/debug_probe.hpp
+    include/satemu/debug/debug_tracer.hpp
 
     include/satemu/hw/hw_defs.hpp
 
