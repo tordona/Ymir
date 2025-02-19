@@ -4,7 +4,7 @@
 
 #include <satemu/sys/saturn.hpp>
 
-#include <satemu/debug/debug_tracer_sh2.hpp>
+#include <satemu/debug/debug.hpp>
 
 namespace app {
 
