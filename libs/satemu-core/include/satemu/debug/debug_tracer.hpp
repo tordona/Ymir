@@ -6,6 +6,16 @@
 
 namespace satemu::debug {
 
+// -----------------------------------------------------------------------------------------------------------------
+// Forward declarations
+
+// Interfaces for debug tracers for each component
+
+struct ISH2Tracer;
+// struct IVDPTracer;
+
+// -----------------------------------------------------------------------------------------------------------------
+
 // Interface for debug tracers - objects that receive internal state from the emulator while it is executing.
 //
 // Must be implemented by users of the core library and instantiated with the `Use` method of the `TracerContext`
@@ -13,8 +23,9 @@ namespace satemu::debug {
 struct ITracer {
     virtual ~ITracer() = default;
 
-    // Invoked when an SH2 CPU handles an interrupt.
-    virtual void SH2_Interrupt(bool master, uint8 vecNum, uint8 level) = 0;
+    virtual ISH2Tracer &GetMasterSH2Tracer() = 0;
+    virtual ISH2Tracer &GetSlaveSH2Tracer() = 0;
+    // virtual IVDPTracer &GetVDPTracer() = 0;
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -52,13 +63,7 @@ struct TracerContext {
     // }
 
     template <bool debug>
-    void SH2_Interrupt(bool master, uint8 vecNum, uint8 level) {
-        if constexpr (debug) {
-            if (m_tracer) {
-                return m_tracer->SH2_Interrupt(master, vecNum, level);
-            }
-        }
-    }
+    void SH2_Interrupt(bool master, uint8 vecNum, uint8 level);
 
 private:
     std::unique_ptr<ITracer> m_tracer;

@@ -4,6 +4,8 @@
 
 #include <satemu/sys/saturn.hpp>
 
+#include <satemu/debug/debug_tracer_sh2.hpp>
+
 namespace app {
 
 class App::Impl {
@@ -33,13 +35,26 @@ private:
 
     void TraceSH2Interrupt(bool master, uint8 vecNum, uint8 level);
 
-    struct AppTracer final : public satemu::debug::ITracer {
-        AppTracer(Impl &app);
+    struct AppSH2Tracer final : public satemu::debug::ISH2Tracer {
+        AppSH2Tracer(Impl &app, bool master);
 
-        void SH2_Interrupt(bool master, uint8 vecNum, uint8 level) final;
+        void Interrupt(uint8 vecNum, uint8 level) final;
 
     private:
         Impl &m_app;
+        bool m_master;
+    };
+
+    struct AppTracer final : public satemu::debug::ITracer {
+        AppTracer(Impl &app);
+
+        AppSH2Tracer &GetMasterSH2Tracer() final;
+        AppSH2Tracer &GetSlaveSH2Tracer() final;
+
+    private:
+        Impl &m_app;
+        AppSH2Tracer m_masterSH2Tracer;
+        AppSH2Tracer m_slaveSH2Tracer;
     };
 };
 

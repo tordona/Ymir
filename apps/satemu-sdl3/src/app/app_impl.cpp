@@ -596,10 +596,24 @@ void App::Impl::TraceSH2Interrupt(bool master, uint8 vecNum, uint8 level) {
 }
 
 App::Impl::AppTracer::AppTracer(Impl &app)
-    : m_app(app) {}
+    : m_app(app)
+    , m_masterSH2Tracer(app, true)
+    , m_slaveSH2Tracer(app, false) {}
 
-void App::Impl::AppTracer::SH2_Interrupt(bool master, uint8 vecNum, uint8 level) {
-    m_app.TraceSH2Interrupt(master, vecNum, level);
+App::Impl::AppSH2Tracer &App::Impl::AppTracer::GetMasterSH2Tracer() {
+    return m_masterSH2Tracer;
+}
+
+App::Impl::AppSH2Tracer &App::Impl::AppTracer::GetSlaveSH2Tracer() {
+    return m_slaveSH2Tracer;
+}
+
+App::Impl::AppSH2Tracer::AppSH2Tracer(Impl &app, bool master)
+    : m_app(app)
+    , m_master(master) {}
+
+void App::Impl::AppSH2Tracer::Interrupt(uint8 vecNum, uint8 level) {
+    m_app.TraceSH2Interrupt(m_master, vecNum, level);
 }
 
 } // namespace app

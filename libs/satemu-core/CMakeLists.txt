@@ -9,6 +9,7 @@ add_library(satemu-core
     include/satemu/debug/debug_probe.hpp
     include/satemu/debug/debug_probe_sh2.hpp
     include/satemu/debug/debug_tracer.hpp
+    include/satemu/debug/debug_tracer_sh2.hpp
 
     include/satemu/hw/hw_defs.hpp
 

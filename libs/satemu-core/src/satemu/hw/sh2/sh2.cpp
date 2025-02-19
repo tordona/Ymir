@@ -2,6 +2,8 @@
 
 #include <satemu/hw/sh2/sh2_bus.hpp>
 
+#include <satemu/debug/debug_tracer_sh2.hpp>
+
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/inline.hpp>
 #include <satemu/util/unreachable.hpp>
