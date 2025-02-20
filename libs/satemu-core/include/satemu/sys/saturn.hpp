@@ -62,15 +62,8 @@ struct Saturn {
         }
     }
 
-    // Instantiates the specified tracer with the arguments passed to its constructor.
-    template <std::derived_from<debug::ISystemTracer> T, typename... Args>
-    void UseTracer(Args &&...args) {
-        m_tracer.Use<T, Args...>(std::forward<Args>(args)...);
-    }
-
-    // Frees the tracer.
-    void ClearTracer() {
-        m_tracer.Clear();
+    void UseTracer(debug::ISystemTracer *tracer) {
+        m_tracer.Use(tracer);
     }
 
 private:

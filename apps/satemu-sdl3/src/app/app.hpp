@@ -23,32 +23,20 @@ private:
         uint8 vecNum;
         uint8 level;
     };
-    std::array<SH2InterruptInfo, 16> m_masterSH2Interrupts;
-    size_t m_masterSH2InterruptsPos = 0;
-    size_t m_masterSH2InterruptsCount = 0;
 
-    std::array<SH2InterruptInfo, 16> m_slaveSH2Interrupts;
-    size_t m_slaveSH2InterruptsPos = 0;
-    size_t m_slaveSH2InterruptsCount = 0;
+    struct SystemTracer final : public satemu::debug::ISystemTracer {};
 
-    void TraceSH2Interrupt(bool master, uint8 vecNum, uint8 level);
-
-    struct AppSystemTracer final : public satemu::debug::ISystemTracer {
-        AppSystemTracer(App &app);
-
-    private:
-        App &m_app;
-    };
-
-    struct AppSH2Tracer final : public satemu::debug::ISH2Tracer {
-        AppSH2Tracer(App &app, bool master);
-
+    struct SH2Tracer final : public satemu::debug::ISH2Tracer {
         void Interrupt(uint8 vecNum, uint8 level) final;
 
-    private:
-        App &m_app;
-        bool m_master;
+        std::array<SH2InterruptInfo, 16> interrupts;
+        size_t interruptsPos = 0;
+        size_t interruptsCount = 0;
     };
+
+    SystemTracer m_systemTracer;
+    SH2Tracer m_masterSH2Tracer;
+    SH2Tracer m_slaveSH2Tracer;
 };
 
 } // namespace app

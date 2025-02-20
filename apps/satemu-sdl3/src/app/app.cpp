@@ -262,9 +262,9 @@ void App::RunEmulator() {
     // ---------------------------------
     // Main emulator loop
 
-    m_saturn.UseTracer<AppSystemTracer>(*this);
-    m_saturn.SH2.master.UseTracer<AppSH2Tracer>(*this, true);
-    m_saturn.SH2.slave.UseTracer<AppSH2Tracer>(*this, false);
+    m_saturn.UseTracer(&m_systemTracer);
+    m_saturn.SH2.master.UseTracer(&m_masterSH2Tracer);
+    m_saturn.SH2.slave.UseTracer(&m_slaveSH2Tracer);
 
     // TODO: pull from CommandLineOptions or configuration
     // m_saturn.SetVideoStandard(satemu::sys::VideoStandard::PAL);
@@ -531,8 +531,12 @@ void App::RunEmulator() {
 
         auto drawText = [&](int x, int y, std::string text) {
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            // TODO: this is a horribly inefficient way to draw contours!
             for (int yy = -2; yy <= 2; yy++) {
                 for (int xx = -2; xx <= 2; xx++) {
+                    if (xx == 0 && yy == 0) {
+                        continue;
+                    }
                     SDL_RenderDebugText(renderer, x + xx, y + yy, text.c_str());
                 }
             }
@@ -545,7 +549,7 @@ void App::RunEmulator() {
 
             auto bit = [](bool value, std::string_view bit) { return value ? fmt::format("{}", bit) : "."; };
 
-            auto displaySH2 = [&](sh2::SH2 &sh2, bool master, bool enabled, int x, int y) {
+            auto displaySH2 = [&](SH2Tracer &tracer, sh2::SH2 &sh2, bool master, bool enabled, int x, int y) {
                 auto &regs = sh2.GetGPRs();
                 drawText(x, y, fmt::format("{}SH2", master ? "M" : "S"));
                 drawText(x, y + 10, "----");
@@ -568,6 +572,14 @@ void App::RunEmulator() {
 
                     drawText(x, y + 250, fmt::format("{:08X}", sh2.GetGBR()));
                     drawText(x, y + 260, fmt::format("{:08X}", sh2.GetVBR()));
+
+                    drawText(x, y + 275, "vec lv");
+                    for (size_t i = 0; i < tracer.interruptsCount; i++) {
+                        size_t pos = (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
+                        drawText(
+                            x, y + 285 + i * 10,
+                            fmt::format("{:02X}  {:02X}", tracer.interrupts[pos].vecNum, tracer.interrupts[pos].level));
+                    }
                 } else {
                     drawText(x, y + 20, "(disabled)");
                 }
@@ -589,25 +601,13 @@ void App::RunEmulator() {
                 drawText(x, y + 250, "GBR");
                 drawText(x, y + 260, "VBR");
 
-                displaySH2(m_saturn.SH2.master, true, true, x + 50, y);
-                displaySH2(m_saturn.SH2.slave, false, m_saturn.SH2.slaveEnabled, x + 150, y);
+                drawText(x, y + 275, "INTs");
+
+                displaySH2(m_masterSH2Tracer, m_saturn.SH2.master, true, true, x + 50, y);
+                displaySH2(m_slaveSH2Tracer, m_saturn.SH2.slave, false, m_saturn.SH2.slaveEnabled, x + 150, y);
             };
 
             displaySH2s(5, 5);
-
-            for (size_t i = 0; i < m_masterSH2InterruptsCount; i++) {
-                size_t pos = (m_masterSH2InterruptsPos - m_masterSH2InterruptsCount + i) % m_masterSH2Interrupts.size();
-                drawText(5, 280 + i * 10,
-                         fmt::format("INT {:02X} lv {:02X}", m_masterSH2Interrupts[pos].vecNum,
-                                     m_masterSH2Interrupts[pos].level));
-            }
-
-            for (size_t i = 0; i < m_slaveSH2InterruptsCount; i++) {
-                size_t pos = (m_slaveSH2InterruptsPos - m_slaveSH2InterruptsCount + i) % m_slaveSH2Interrupts.size();
-                drawText(115, 280 + i * 10,
-                         fmt::format("INT {:02X} lv {:02X}", m_slaveSH2Interrupts[pos].vecNum,
-                                     m_slaveSH2Interrupts[pos].level));
-            }
         }
 
         SDL_RenderPresent(renderer);
@@ -617,36 +617,14 @@ void App::RunEmulator() {
     SDL_DestroyRenderer(renderer);
 }
 
-void App::TraceSH2Interrupt(bool master, uint8 vecNum, uint8 level) {
-    // TODO: clean up this quick'n'dirty implementation
-    if (master) {
-        m_masterSH2Interrupts[m_masterSH2InterruptsPos++] = {vecNum, level};
-        if (m_masterSH2InterruptsPos >= m_masterSH2Interrupts.size()) {
-            m_masterSH2InterruptsPos = 0;
-        }
-        if (m_masterSH2InterruptsCount < m_masterSH2Interrupts.size()) {
-            m_masterSH2InterruptsCount++;
-        }
-    } else {
-        m_slaveSH2Interrupts[m_slaveSH2InterruptsPos++] = {vecNum, level};
-        if (m_slaveSH2InterruptsPos >= m_slaveSH2Interrupts.size()) {
-            m_slaveSH2InterruptsPos = 0;
-        }
-        if (m_slaveSH2InterruptsCount < m_slaveSH2Interrupts.size()) {
-            m_slaveSH2InterruptsCount++;
-        }
+void App::SH2Tracer::Interrupt(uint8 vecNum, uint8 level) {
+    interrupts[interruptsPos++] = {vecNum, level};
+    if (interruptsPos >= interrupts.size()) {
+        interruptsPos = 0;
     }
-}
-
-App::AppSystemTracer::AppSystemTracer(App &app)
-    : m_app(app) {}
-
-App::AppSH2Tracer::AppSH2Tracer(App &app, bool master)
-    : m_app(app)
-    , m_master(master) {}
-
-void App::AppSH2Tracer::Interrupt(uint8 vecNum, uint8 level) {
-    m_app.TraceSH2Interrupt(m_master, vecNum, level);
+    if (interruptsCount < interrupts.size()) {
+        interruptsCount++;
+    }
 }
 
 } // namespace app

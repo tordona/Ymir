@@ -3,21 +3,15 @@
 #include "sh2_tracer.hpp"
 
 #include <concepts>
-#include <memory>
 
 namespace satemu::debug {
 
 // Holds an SH2 tracer and simplifies tracer usage.
 struct SH2TracerContext {
-    // Instantiates the specified tracer with the arguments passed to its constructor.
-    template <std::derived_from<debug::ISH2Tracer> T, typename... Args>
-    void Use(Args &&...args) {
-        m_tracer = std::make_unique<T>(std::forward<Args>(args)...);
-    }
-
-    // Frees the tracer.
-    void Clear() {
-        m_tracer.reset();
+    // Makes the context use the specified tracer.
+    // Set to nullptr to disable tracing for this component.
+    void Use(ISH2Tracer *tracer) {
+        m_tracer = tracer;
     }
 
     template <bool debug>
@@ -30,7 +24,7 @@ struct SH2TracerContext {
     }
 
 private:
-    std::unique_ptr<ISH2Tracer> m_tracer;
+    ISH2Tracer *m_tracer = nullptr;
 };
 
 } // namespace satemu::debug

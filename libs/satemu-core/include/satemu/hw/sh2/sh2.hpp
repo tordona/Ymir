@@ -142,14 +142,8 @@ public:
 
     void TriggerFRTInputCapture();
 
-    template <std::derived_from<debug::ISH2Tracer> T, typename... Args>
-    void UseTracer(Args &&...args) {
-        m_debugTracer.Use<T, Args...>(std::forward<Args>(args)...);
-    }
-
-    // Frees the tracer.
-    void ClearTracer() {
-        m_debugTracer.Clear();
+    void UseTracer(debug::ISH2Tracer *tracer) {
+        m_debugTracer.Use(tracer);
     }
 
 private:
