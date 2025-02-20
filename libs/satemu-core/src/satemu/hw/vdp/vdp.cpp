@@ -83,8 +83,14 @@ void VDP::Reset(bool hard) {
 
 template <bool debug>
 void VDP::Advance(uint64 cycles) {
-    for (uint64 cy = 0; cy < cycles; cy++) {
-        VDP1ProcessCommands();
+    static constexpr uint64 kCyclesPerCommand = 6;
+
+    m_VDP1RenderContext.cycleCount += cycles;
+    const uint64 steps = m_VDP1RenderContext.cycleCount / kCyclesPerCommand;
+    m_VDP1RenderContext.cycleCount %= kCyclesPerCommand;
+
+    for (uint64 i = 0; i < steps; i++) {
+        VDP1ProcessCommand();
     }
 }
 
@@ -1058,8 +1064,6 @@ void VDP::VDP1BeginFrame() {
     m_VDP1.currFrameEnded = false;
 
     m_VDP1RenderContext.rendering = true;
-
-    VDP1ProcessCommands();
 }
 
 void VDP::VDP1EndFrame() {
@@ -1068,7 +1072,7 @@ void VDP::VDP1EndFrame() {
     m_SCU.TriggerSpriteDrawEnd();
 }
 
-void VDP::VDP1ProcessCommands() {
+void VDP::VDP1ProcessCommand() {
     static constexpr uint32 kNoReturn = ~0;
 
     if (!m_VDP1RenderContext.rendering) {

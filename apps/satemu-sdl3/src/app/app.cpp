@@ -292,7 +292,7 @@ void App::RunEmulator() {
     auto t = clk::now();
     uint64 frames = 0;
     bool running = true;
-    bool debug = false;
+    bool debugTrace = false;
     bool drawDebug = false;
     auto &port1 = m_saturn.SMPC.GetPeripheralPort1();
     auto &port2 = m_saturn.SMPC.GetPeripheralPort2();
@@ -482,8 +482,8 @@ void App::RunEmulator() {
             break;
         case SDL_SCANCODE_F11:
             if (pressed) {
-                debug = !debug;
-                fmt::println("Debug mode {}", (debug ? "enabled" : "disabled"));
+                debugTrace = !debugTrace;
+                fmt::println("Debug tracing {}", (debugTrace ? "enabled" : "disabled"));
             }
             break;
         default: break;
@@ -500,7 +500,7 @@ void App::RunEmulator() {
             }
         }
 
-        m_saturn.RunFrame(debug);
+        m_saturn.RunFrame(debugTrace);
 
         ++frames;
         auto t2 = clk::now();

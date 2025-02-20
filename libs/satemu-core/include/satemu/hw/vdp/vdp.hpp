@@ -337,6 +337,8 @@ private:
             localCoordY = 0;
 
             rendering = false;
+
+            cycleCount = 0;
         }
 
         // System clipping dimensions
@@ -356,6 +358,8 @@ private:
         sint32 localCoordY;
 
         bool rendering;
+
+        uint64 cycleCount;
     } m_VDP1RenderContext;
 
     struct VDP1GouraudParams {
@@ -581,8 +585,8 @@ private:
     // Ends the current VDP1 frame.
     void VDP1EndFrame();
 
-    // Processes the VDP1 command table.
-    void VDP1ProcessCommands();
+    // Processes a single commmand from the VDP1 command table.
+    void VDP1ProcessCommand();
 
     bool VDP1IsPixelUserClipped(CoordS32 coord) const;
     bool VDP1IsPixelSystemClipped(CoordS32 coord) const;
