@@ -8,8 +8,6 @@ add_library(satemu-core
 
     include/satemu/debug/sh2_tracer.hpp
     include/satemu/debug/sh2_tracer_ctx.hpp
-    include/satemu/debug/sys_tracer.hpp
-    include/satemu/debug/sys_tracer_ctx.hpp
 
     include/satemu/hw/hw_defs.hpp
 

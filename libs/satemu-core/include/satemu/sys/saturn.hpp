@@ -2,8 +2,6 @@
 
 #include <satemu/core/scheduler.hpp>
 
-#include <satemu/debug/sys_tracer_ctx.hpp>
-
 #include "system.hpp"
 
 #include <satemu/hw/cart/cart.hpp>
@@ -62,10 +60,6 @@ struct Saturn {
         }
     }
 
-    void UseTracer(debug::ISystemTracer *tracer) {
-        m_tracer.Use(tracer);
-    }
-
 private:
     template <bool debug>
     void RunFrame();
@@ -85,11 +79,6 @@ private:
     sys::System m_system;
 
     void UpdateClockRatios();
-
-    // -------------------------------------------------------------------------
-    // Debugger
-
-    debug::SystemTracerContext m_tracer;
 
 public:
     // -------------------------------------------------------------------------

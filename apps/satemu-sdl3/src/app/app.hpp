@@ -24,8 +24,6 @@ private:
         uint8 level;
     };
 
-    struct SystemTracer final : public satemu::debug::ISystemTracer {};
-
     struct SH2Tracer final : public satemu::debug::ISH2Tracer {
         void Interrupt(uint8 vecNum, uint8 level) final;
 
@@ -34,7 +32,6 @@ private:
         size_t interruptsCount = 0;
     };
 
-    SystemTracer m_systemTracer;
     SH2Tracer m_masterSH2Tracer;
     SH2Tracer m_slaveSH2Tracer;
 };

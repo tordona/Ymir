@@ -262,7 +262,6 @@ void App::RunEmulator() {
     // ---------------------------------
     // Main emulator loop
 
-    m_saturn.UseTracer(&m_systemTracer);
     m_saturn.SH2.master.UseTracer(&m_masterSH2Tracer);
     m_saturn.SH2.slave.UseTracer(&m_slaveSH2Tracer);
 
