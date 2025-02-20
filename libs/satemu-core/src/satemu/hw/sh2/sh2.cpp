@@ -2,8 +2,6 @@
 
 #include <satemu/hw/sh2/sh2_bus.hpp>
 
-#include <satemu/debug/debug_tracer_sh2.hpp>
-
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/inline.hpp>
 #include <satemu/util/unreachable.hpp>
@@ -1517,7 +1515,7 @@ void SH2::Execute() {
     if (!m_delaySlot && CheckInterrupts()) [[unlikely]] {
         // Service interrupt
         const uint8 vecNum = GetInterruptVector(m_pendingInterrupt.source);
-        m_debugTracer->Interrupt<debug>(vecNum, m_pendingInterrupt.level);
+        m_debugTracer.Interrupt<debug>(vecNum, m_pendingInterrupt.level);
         m_log.trace("Handling interrupt level {:02X}, vector number {:02X}", m_pendingInterrupt.level, vecNum);
         EnterException(vecNum);
         SR.ILevel = std::min<uint8>(m_pendingInterrupt.level, 0xF);

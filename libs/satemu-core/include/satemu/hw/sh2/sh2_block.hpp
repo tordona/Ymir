@@ -1,7 +1,5 @@
 #pragma once
 
-#include <satemu/debug/debug_tracer.hpp>
-
 #include "sh2.hpp"
 #include "sh2_bus.hpp"
 
@@ -36,13 +34,6 @@ public:
         slave.Reset(hard);
 
         slaveEnabled = false;
-    }
-
-private:
-    friend class ::satemu::Saturn;
-    void AttachDebugger(debug::TracerContext &debugTracer) {
-        master.AttachDebugger(debugTracer.GetMasterSH2Tracer());
-        slave.AttachDebugger(debugTracer.GetSlaveSH2Tracer());
     }
 };
 

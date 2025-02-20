@@ -6,7 +6,7 @@
 #include <satemu/core/types.hpp>
 #include <satemu/hw/hw_defs.hpp>
 
-#include <satemu/debug/debug_tracer_sh2.hpp>
+#include <satemu/debug/sh2_tracer_ctx.hpp>
 
 #include <satemu/util/debug_print.hpp>
 
@@ -142,6 +142,16 @@ public:
 
     void TriggerFRTInputCapture();
 
+    template <std::derived_from<debug::ISH2Tracer> T, typename... Args>
+    void UseTracer(Args &&...args) {
+        m_debugTracer.Use<T, Args...>(std::forward<Args>(args)...);
+    }
+
+    // Frees the tracer.
+    void ClearTracer() {
+        m_debugTracer.Clear();
+    }
+
 private:
     // -------------------------------------------------------------------------
     // CPU state
@@ -167,12 +177,7 @@ private:
     // Debugger
 
     SH2Tracer m_tracer;
-    debug::TracerContext::SH2 *m_debugTracer;
-
-    friend class SH2Block;
-    void AttachDebugger(debug::TracerContext::SH2 &debugTracer) {
-        m_debugTracer = &debugTracer;
-    }
+    debug::SH2TracerContext m_debugTracer;
 
     const dbg::Category<sh2DebugLevel> &m_log;
 

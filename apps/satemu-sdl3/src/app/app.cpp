@@ -262,7 +262,9 @@ void App::RunEmulator() {
     // ---------------------------------
     // Main emulator loop
 
-    m_saturn.debugTracer.Use<AppTracer>(*this);
+    m_saturn.UseTracer<AppSystemTracer>(*this);
+    m_saturn.SH2.master.UseTracer<AppSH2Tracer>(*this, true);
+    m_saturn.SH2.slave.UseTracer<AppSH2Tracer>(*this, false);
 
     // TODO: pull from CommandLineOptions or configuration
     // m_saturn.SetVideoStandard(satemu::sys::VideoStandard::PAL);
@@ -636,18 +638,8 @@ void App::TraceSH2Interrupt(bool master, uint8 vecNum, uint8 level) {
     }
 }
 
-App::AppTracer::AppTracer(App &app)
-    : m_app(app)
-    , m_masterSH2Tracer(app, true)
-    , m_slaveSH2Tracer(app, false) {}
-
-App::AppSH2Tracer &App::AppTracer::GetMasterSH2Tracer() {
-    return m_masterSH2Tracer;
-}
-
-App::AppSH2Tracer &App::AppTracer::GetSlaveSH2Tracer() {
-    return m_slaveSH2Tracer;
-}
+App::AppSystemTracer::AppSystemTracer(App &app)
+    : m_app(app) {}
 
 App::AppSH2Tracer::AppSH2Tracer(App &app, bool master)
     : m_app(app)

@@ -1,7 +1,8 @@
 #pragma once
 
 #include <satemu/core/scheduler.hpp>
-#include <satemu/debug/debug_tracer.hpp>
+
+#include <satemu/debug/sys_tracer_ctx.hpp>
 
 #include "system.hpp"
 
@@ -61,6 +62,17 @@ struct Saturn {
         }
     }
 
+    // Instantiates the specified tracer with the arguments passed to its constructor.
+    template <std::derived_from<debug::ISystemTracer> T, typename... Args>
+    void UseTracer(Args &&...args) {
+        m_tracer.Use<T, Args...>(std::forward<Args>(args)...);
+    }
+
+    // Frees the tracer.
+    void ClearTracer() {
+        m_tracer.Clear();
+    }
+
 private:
     template <bool debug>
     void RunFrame();
@@ -81,6 +93,11 @@ private:
 
     void UpdateClockRatios();
 
+    // -------------------------------------------------------------------------
+    // Debugger
+
+    debug::SystemTracerContext m_tracer;
+
 public:
     // -------------------------------------------------------------------------
     // Components
@@ -91,11 +108,6 @@ public:
     smpc::SMPC SMPC;          // SMPC and input devices
     scsp::SCSP SCSP;          // SCSP and MC68EC000 CPU
     cdblock::CDBlock CDBlock; // CD block and media
-
-    // -------------------------------------------------------------------------
-    // Debugger
-
-    debug::TracerContext debugTracer;
 };
 
 } // namespace satemu

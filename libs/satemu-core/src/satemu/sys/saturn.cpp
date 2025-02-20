@@ -12,8 +12,6 @@ Saturn::Saturn()
     , SCSP(m_system, m_scheduler, SCU)
     , CDBlock(m_system, m_scheduler, SCU, SCSP) {
 
-    SH2.AttachDebugger(debugTracer);
-
     SCU.MapMemory(SH2.bus);
     VDP.MapMemory(SH2.bus);
     SMPC.MapMemory(SH2.bus);

@@ -6,9 +6,10 @@ add_library(satemu-core
     include/satemu/core/scheduler.hpp
     include/satemu/core/types.hpp
 
-    include/satemu/debug/debug.hpp
-    include/satemu/debug/debug_tracer.hpp
-    include/satemu/debug/debug_tracer_sh2.hpp
+    include/satemu/debug/sh2_tracer.hpp
+    include/satemu/debug/sh2_tracer_ctx.hpp
+    include/satemu/debug/sys_tracer.hpp
+    include/satemu/debug/sys_tracer_ctx.hpp
 
     include/satemu/hw/hw_defs.hpp
 
@@ -98,8 +99,6 @@ add_library(satemu-core
 
 
     src/satemu/satemu.cpp
-
-    src/satemu/debug/debug_tracer.cpp
 
     src/satemu/hw/cart/cart_slot.cpp
     src/satemu/hw/cart/cart_impl_bup.cpp
