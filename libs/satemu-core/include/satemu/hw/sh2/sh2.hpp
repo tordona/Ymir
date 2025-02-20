@@ -124,8 +124,20 @@ public:
         return PC;
     }
 
-    void SetPC(uint32 pc) {
-        PC = pc;
+    RegMAC GetMAC() const {
+        return MAC;
+    }
+
+    RegSR GetSR() const {
+        return SR;
+    }
+
+    uint32 GetGBR() const {
+        return GBR;
+    }
+
+    uint32 GetVBR() const {
+        return VBR;
     }
 
     void SetExternalInterrupt(uint8 level, uint8 vecNum);
@@ -146,34 +158,10 @@ private:
     uint32 PC;
     uint32 PR;
 
-    union RegMAC {
-        uint64 u64;
-        struct {
-            uint32 L;
-            uint32 H;
-        };
-    } MAC;
+    RegMAC MAC;
 
-    union RegSR {
-        uint32 u32;
-        struct {
-            uint32 T : 1;
-            uint32 S : 1;
-            uint32 : 2;
-            uint32 I0 : 1;
-            uint32 I1 : 1;
-            uint32 I2 : 1;
-            uint32 I3 : 1;
-            uint32 Q : 1;
-            uint32 M : 1;
-        };
-        struct {
-            uint32 : 1;
-            uint32 : 1;
-            uint32 : 2;
-            uint32 ILevel : 4;
-        };
-    } SR;
+    RegSR SR;
+
     uint32 GBR;
     uint32 VBR;
 

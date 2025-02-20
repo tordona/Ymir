@@ -35,6 +35,36 @@ inline constexpr uint8 xvIntrLevelsEF = 0x47;     // 47* 0000011C  IRL14 and IRL
                                                   // vectors 05, 07, 08, 0D through 1F are reserved
                                                   // vectors 20 through 3F are reserved for TRAPA
 
+// MACH and MACL
+union RegMAC {
+    uint64 u64;
+    struct {
+        uint32 L;
+        uint32 H;
+    };
+};
+
+union RegSR {
+    uint32 u32;
+    struct {
+        uint32 T : 1;
+        uint32 S : 1;
+        uint32 : 2;
+        uint32 I0 : 1;
+        uint32 I1 : 1;
+        uint32 I2 : 1;
+        uint32 I3 : 1;
+        uint32 Q : 1;
+        uint32 M : 1;
+    };
+    struct {
+        uint32 : 1;
+        uint32 : 1;
+        uint32 : 2;
+        uint32 ILevel : 4;
+    };
+};
+
 // Represents a 16-bit register with each byte individually accessible
 union Reg16 {
     uint16 u16;

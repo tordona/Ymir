@@ -292,6 +292,7 @@ void App::RunEmulator() {
     uint64 frames = 0;
     bool running = true;
     bool debug = false;
+    bool drawDebug = false;
     auto &port1 = m_saturn.SMPC.GetPeripheralPort1();
     auto &port2 = m_saturn.SMPC.GetPeripheralPort2();
     auto *pad1 = port1.ConnectStandardPad();
@@ -472,11 +473,18 @@ void App::RunEmulator() {
                 }
             }
             break;
+        case SDL_SCANCODE_F10:
+            if (pressed) {
+                drawDebug = !drawDebug;
+                fmt::println("Debug display {}", (drawDebug ? "enabled" : "disabled"));
+            }
+            break;
         case SDL_SCANCODE_F11:
             if (pressed) {
                 debug = !debug;
                 fmt::println("Debug mode {}", (debug ? "enabled" : "disabled"));
             }
+            break;
         default: break;
         }
     };
@@ -530,44 +538,74 @@ void App::RunEmulator() {
             SDL_RenderDebugText(renderer, x, y, text.c_str());
         };
 
-        {
+        if (debug) {
             std::string str{};
 
-            auto &msh2 = m_saturn.SH2.master;
-            auto &msh2Regs = msh2.GetGPRs();
-            drawText(5, 5, "MSH2");
-            drawText(5, 15, "----");
-            for (uint32 i = 0; i < 16; i++) {
-                drawText(5, 25 + i * 10, fmt::format("{:08X}", msh2Regs[i]));
-            }
-            drawText(5, 185, fmt::format("{:08X}", msh2.GetPC()));
+            auto bit = [](bool value, std::string_view bit) { return value ? fmt::format("{}", bit) : "."; };
 
-            auto &ssh2 = m_saturn.SH2.slave;
-            auto &ssh2Regs = ssh2.GetGPRs();
-            drawText(115, 5, "SSH2");
-            drawText(115, 15, "----");
-            if (m_saturn.SH2.slaveEnabled) {
-                for (uint32 i = 0; i < 16; i++) {
-                    drawText(115, 25 + i * 10, fmt::format("{:08X}", ssh2Regs[i]));
+            auto displaySH2 = [&](sh2::SH2 &sh2, bool master, bool enabled, int x, int y) {
+                auto &regs = sh2.GetGPRs();
+                drawText(x, y, fmt::format("{}SH2", master ? "M" : "S"));
+                drawText(x, y + 10, "----");
+                if (enabled) {
+                    for (uint32 i = 0; i < 16; i++) {
+                        drawText(x, y + 20 + i * 10, fmt::format("{:08X}", regs[i]));
+                    }
+
+                    drawText(x, y + 185, fmt::format("{:08X}", sh2.GetPC()));
+
+                    auto mac = sh2.GetMAC();
+                    drawText(x, y + 200, fmt::format("{:08X}", mac.H));
+                    drawText(x, y + 210, fmt::format("{:08X}", mac.L));
+
+                    auto sr = sh2.GetSR();
+                    drawText(x, y + 225, fmt::format("{:08X}", sr.u32));
+                    drawText(x, y + 235,
+                             fmt::format("{}{}{}{} I={:X}", bit(sr.M, "M"), bit(sr.Q, "Q"), bit(sr.S, "S"),
+                                         bit(sr.T, "T"), (uint8)sr.ILevel));
+
+                    drawText(x, y + 250, fmt::format("{:08X}", sh2.GetGBR()));
+                    drawText(x, y + 260, fmt::format("{:08X}", sh2.GetVBR()));
+                } else {
+                    drawText(x, y + 20, "(disabled)");
                 }
-                drawText(115, 185, fmt::format("{:08X}", ssh2.GetPC()));
-            } else {
-                drawText(115, 25, "(disabled)");
+            };
+
+            auto displaySH2s = [&](int x, int y) {
+                for (uint32 i = 0; i < 16; i++) {
+                    drawText(x, y + 20 + i * 10, fmt::format("R{}", i));
+                }
+
+                drawText(x, y + 185, "PC");
+
+                drawText(x, y + 200, "MACH");
+                drawText(x, y + 210, "MACL");
+
+                drawText(x, y + 225, "SR");
+                drawText(x, y + 235, "flags");
+
+                drawText(x, y + 250, "GBR");
+                drawText(x, y + 260, "VBR");
+
+                displaySH2(m_saturn.SH2.master, true, true, x + 50, y);
+                displaySH2(m_saturn.SH2.slave, false, m_saturn.SH2.slaveEnabled, x + 150, y);
+            };
+
+            displaySH2s(5, 5);
+
+            for (size_t i = 0; i < m_masterSH2InterruptsCount; i++) {
+                size_t pos = (m_masterSH2InterruptsPos - m_masterSH2InterruptsCount + i) % m_masterSH2Interrupts.size();
+                drawText(5, 280 + i * 10,
+                         fmt::format("INT {:02X} lv {:02X}", m_masterSH2Interrupts[pos].vecNum,
+                                     m_masterSH2Interrupts[pos].level));
             }
-        }
 
-        for (size_t i = 0; i < m_masterSH2InterruptsCount; i++) {
-            size_t pos = (m_masterSH2InterruptsPos - m_masterSH2InterruptsCount + i) % m_masterSH2Interrupts.size();
-            drawText(5, 200 + i * 10,
-                     fmt::format("INT {:02X} lv {:02X}", m_masterSH2Interrupts[pos].vecNum,
-                                 m_masterSH2Interrupts[pos].level));
-        }
-
-        for (size_t i = 0; i < m_slaveSH2InterruptsCount; i++) {
-            size_t pos = (m_slaveSH2InterruptsPos - m_slaveSH2InterruptsCount + i) % m_slaveSH2Interrupts.size();
-            drawText(
-                115, 200 + i * 10,
-                fmt::format("INT {:02X} lv {:02X}", m_slaveSH2Interrupts[pos].vecNum, m_slaveSH2Interrupts[pos].level));
+            for (size_t i = 0; i < m_slaveSH2InterruptsCount; i++) {
+                size_t pos = (m_slaveSH2InterruptsPos - m_slaveSH2InterruptsCount + i) % m_slaveSH2Interrupts.size();
+                drawText(115, 280 + i * 10,
+                         fmt::format("INT {:02X} lv {:02X}", m_slaveSH2Interrupts[pos].vecNum,
+                                     m_slaveSH2Interrupts[pos].level));
+            }
         }
 
         SDL_RenderPresent(renderer);
