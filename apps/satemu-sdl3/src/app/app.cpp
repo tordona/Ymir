@@ -547,9 +547,13 @@ void App::RunEmulator() {
             auto &ssh2Regs = ssh2.GetGPRs();
             drawText(115, 5, "SSH2");
             drawText(115, 15, "----");
-            for (uint32 i = 0; i < 16; i++) {
-                str = fmt::format("{:08X}", ssh2Regs[i]);
-                drawText(115, 25 + i * 10, str.c_str());
+            if (m_saturn.SH2.slaveEnabled) {
+                for (uint32 i = 0; i < 16; i++) {
+                    str = fmt::format("{:08X}", ssh2Regs[i]);
+                    drawText(115, 25 + i * 10, str.c_str());
+                }
+            } else {
+                drawText(115, 25, "(disabled)");
             }
         }
 
