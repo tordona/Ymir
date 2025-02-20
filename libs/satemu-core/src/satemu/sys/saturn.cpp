@@ -10,8 +10,7 @@ Saturn::Saturn()
     , VDP(m_scheduler, SCU, SMPC)
     , SMPC(m_system, m_scheduler, *this)
     , SCSP(m_system, m_scheduler, SCU)
-    , CDBlock(m_system, m_scheduler, SCU, SCSP)
-    , debugProbe(*this) {
+    , CDBlock(m_system, m_scheduler, SCU, SCSP) {
 
     SCU.MapMemory(SH2.bus);
     VDP.MapMemory(SH2.bus);

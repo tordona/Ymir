@@ -112,6 +112,22 @@ public:
     template <bool debug>
     void Advance(uint64 cycles);
 
+    std::array<uint32, 16> &GetGPRs() {
+        return R;
+    }
+
+    const std::array<uint32, 16> &GetGPRs() const {
+        return R;
+    }
+
+    uint32 GetPC() const {
+        return PC;
+    }
+
+    void SetPC(uint32 pc) {
+        PC = pc;
+    }
+
     void SetExternalInterrupt(uint8 level, uint8 vecNum);
 
     bool GetNMI() const;

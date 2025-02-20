@@ -1,7 +1,6 @@
 #pragma once
 
 #include <satemu/core/scheduler.hpp>
-#include <satemu/debug/debug_probe.hpp>
 #include <satemu/debug/debug_tracer.hpp>
 
 #include "system.hpp"
@@ -96,7 +95,6 @@ public:
     // -------------------------------------------------------------------------
     // Debugger
 
-    debug::DebugProbe debugProbe;
     debug::TracerContext debugTracer;
 };
 
