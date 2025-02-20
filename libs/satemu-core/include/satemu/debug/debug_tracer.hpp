@@ -33,15 +33,20 @@ struct ITracer {
 
 // Holds a tracer and simplifies tracer usage.
 struct TracerContext {
+    TracerContext();
+    ~TracerContext();
+
     // Instantiates the specified tracer with the arguments passed to its constructor.
     template <std::derived_from<debug::ITracer> T, typename... Args>
     void Use(Args &&...args) {
         m_tracer = std::make_unique<T>(std::forward<Args>(args)...);
+        UpdateContexts();
     }
 
     // Frees the tracer.
     void Clear() {
         m_tracer.reset();
+        UpdateContexts();
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -63,11 +68,23 @@ struct TracerContext {
     //     }
     // }
 
-    template <bool debug>
-    void SH2_Interrupt(bool master, uint8 vecNum, uint8 level);
+    struct SH2;
+
+    SH2 &GetMasterSH2Tracer() {
+        return *m_masterSH2;
+    }
+
+    SH2 &GetSlaveSH2Tracer() {
+        return *m_slaveSH2;
+    }
 
 private:
     std::unique_ptr<ITracer> m_tracer;
+
+    std::unique_ptr<SH2> m_masterSH2;
+    std::unique_ptr<SH2> m_slaveSH2;
+
+    void UpdateContexts();
 };
 
 } // namespace satemu::debug

@@ -5,14 +5,25 @@
 #include "sh2.hpp"
 #include "sh2_bus.hpp"
 
+// -----------------------------------------------------------------------------
+// Forward declarations
+
+namespace satemu {
+
+struct Saturn;
+
+} // namespace satemu
+
+// -----------------------------------------------------------------------------
+
 namespace satemu::sh2 {
 
 class SH2Block {
 public:
-    SH2Block(scu::SCU &scu, smpc::SMPC &smpc, debug::TracerContext &debugTracer)
+    SH2Block(scu::SCU &scu, smpc::SMPC &smpc)
         : bus(master, slave, scu, smpc)
-        , master(bus, true, debugTracer)
-        , slave(bus, false, debugTracer) {}
+        , master(bus, true)
+        , slave(bus, false) {}
 
     SH2Bus bus;
     SH2 master;
@@ -25,6 +36,13 @@ public:
         slave.Reset(hard);
 
         slaveEnabled = false;
+    }
+
+private:
+    friend class ::satemu::Saturn;
+    void AttachDebugger(debug::TracerContext &debugTracer) {
+        master.AttachDebugger(debugTracer.GetMasterSH2Tracer());
+        slave.AttachDebugger(debugTracer.GetSlaveSH2Tracer());
     }
 };
 

@@ -6,7 +6,7 @@
 #include <satemu/core/types.hpp>
 #include <satemu/hw/hw_defs.hpp>
 
-#include <satemu/debug/debug_tracer.hpp>
+#include <satemu/debug/debug_tracer_sh2.hpp>
 
 #include <satemu/util/debug_print.hpp>
 
@@ -17,15 +17,10 @@
 // -----------------------------------------------------------------------------
 // Forward declarations
 
-namespace satemu::debug {
-
-struct SH2DebugProbe;
-
-} // namespace satemu::debug
-
 namespace satemu::sh2 {
 
 class SH2Bus;
+class SH2Block;
 
 } // namespace satemu::sh2
 
@@ -105,7 +100,7 @@ using SH2Tracer = NullSH2Tracer;
 
 class SH2 {
 public:
-    SH2(SH2Bus &bus, bool master, debug::TracerContext &debugTracer);
+    SH2(SH2Bus &bus, bool master);
 
     void Reset(bool hard, bool watchdogInitiated = false);
 
@@ -171,10 +166,13 @@ private:
     // -------------------------------------------------------------------------
     // Debugger
 
-    friend struct debug::SH2DebugProbe;
-
     SH2Tracer m_tracer;
-    debug::TracerContext &m_debugTracer;
+    debug::TracerContext::SH2 *m_debugTracer;
+
+    friend class SH2Block;
+    void AttachDebugger(debug::TracerContext::SH2 &debugTracer) {
+        m_debugTracer = &debugTracer;
+    }
 
     const dbg::Category<sh2DebugLevel> &m_log;
 

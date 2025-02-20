@@ -136,9 +136,8 @@ void RealSH2Tracer::RTS(SH2Regs regs) {
     }
 }
 
-SH2::SH2(SH2Bus &bus, bool master, debug::TracerContext &debugTracer)
+SH2::SH2(SH2Bus &bus, bool master)
     : m_tracer(master)
-    , m_debugTracer(debugTracer)
     , m_log(Logger(master))
     , m_bus(bus) {
     BCR1.MASTER = !master;
@@ -1518,7 +1517,7 @@ void SH2::Execute() {
     if (!m_delaySlot && CheckInterrupts()) [[unlikely]] {
         // Service interrupt
         const uint8 vecNum = GetInterruptVector(m_pendingInterrupt.source);
-        m_debugTracer.SH2_Interrupt<debug>(!BCR1.MASTER, vecNum, m_pendingInterrupt.level);
+        m_debugTracer->Interrupt<debug>(vecNum, m_pendingInterrupt.level);
         m_log.trace("Handling interrupt level {:02X}, vector number {:02X}", m_pendingInterrupt.level, vecNum);
         EnterException(vecNum);
         SR.ILevel = std::min<uint8>(m_pendingInterrupt.level, 0xF);

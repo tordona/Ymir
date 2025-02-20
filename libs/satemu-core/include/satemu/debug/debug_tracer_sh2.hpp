@@ -2,6 +2,8 @@
 
 #include <satemu/debug/debug_tracer.hpp>
 
+#include <satemu/core/types.hpp>
+
 namespace satemu::debug {
 
 struct ISH2Tracer {
@@ -9,14 +11,21 @@ struct ISH2Tracer {
     virtual void Interrupt(uint8 vecNum, uint8 level) = 0;
 };
 
-template <bool debug>
-void TracerContext::SH2_Interrupt(bool master, uint8 vecNum, uint8 level) {
-    if constexpr (debug) {
-        if (m_tracer) {
-            auto &sh2Tracer = master ? m_tracer->GetMasterSH2Tracer() : m_tracer->GetSlaveSH2Tracer();
-            return sh2Tracer.Interrupt(vecNum, level);
+struct TracerContext::SH2 {
+    SH2(bool master)
+        : master(master) {}
+
+    ISH2Tracer *tracer = nullptr;
+    bool master;
+
+    template <bool debug>
+    void Interrupt(uint8 vecNum, uint8 level) {
+        if constexpr (debug) {
+            if (tracer) {
+                return tracer->Interrupt(vecNum, level);
+            }
         }
     }
-}
+};
 
 } // namespace satemu::debug
