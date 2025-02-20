@@ -538,7 +538,7 @@ void App::RunEmulator() {
             SDL_RenderDebugText(renderer, x, y, text.c_str());
         };
 
-        if (debug) {
+        if (drawDebug) {
             std::string str{};
 
             auto bit = [](bool value, std::string_view bit) { return value ? fmt::format("{}", bit) : "."; };
