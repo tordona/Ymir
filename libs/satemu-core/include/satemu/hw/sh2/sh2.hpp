@@ -119,6 +119,10 @@ public:
         return PC;
     }
 
+    uint32 GetPR() const {
+        return PR;
+    }
+
     RegMAC GetMAC() const {
         return MAC;
     }

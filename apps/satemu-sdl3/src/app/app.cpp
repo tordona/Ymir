@@ -558,25 +558,26 @@ void App::RunEmulator() {
                     }
 
                     drawText(x, y + 185, fmt::format("{:08X}", sh2.GetPC()));
+                    drawText(x, y + 195, fmt::format("{:08X}", sh2.GetPR()));
 
                     auto mac = sh2.GetMAC();
-                    drawText(x, y + 200, fmt::format("{:08X}", mac.H));
-                    drawText(x, y + 210, fmt::format("{:08X}", mac.L));
+                    drawText(x, y + 210, fmt::format("{:08X}", mac.H));
+                    drawText(x, y + 220, fmt::format("{:08X}", mac.L));
 
                     auto sr = sh2.GetSR();
-                    drawText(x, y + 225, fmt::format("{:08X}", sr.u32));
-                    drawText(x, y + 235,
+                    drawText(x, y + 235, fmt::format("{:08X}", sr.u32));
+                    drawText(x, y + 245,
                              fmt::format("{}{}{}{} I={:X}", bit(sr.M, "M"), bit(sr.Q, "Q"), bit(sr.S, "S"),
                                          bit(sr.T, "T"), (uint8)sr.ILevel));
 
-                    drawText(x, y + 250, fmt::format("{:08X}", sh2.GetGBR()));
-                    drawText(x, y + 260, fmt::format("{:08X}", sh2.GetVBR()));
+                    drawText(x, y + 260, fmt::format("{:08X}", sh2.GetGBR()));
+                    drawText(x, y + 270, fmt::format("{:08X}", sh2.GetVBR()));
 
-                    drawText(x, y + 275, "vec lv");
+                    drawText(x, y + 285, "vec lv");
                     for (size_t i = 0; i < tracer.interruptsCount; i++) {
                         size_t pos = (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
                         drawText(
-                            x, y + 285 + i * 10,
+                            x, y + 295 + i * 10,
                             fmt::format("{:02X}  {:02X}", tracer.interrupts[pos].vecNum, tracer.interrupts[pos].level));
                     }
                 } else {
@@ -590,17 +591,18 @@ void App::RunEmulator() {
                 }
 
                 drawText(x, y + 185, "PC");
+                drawText(x, y + 195, "PR");
 
-                drawText(x, y + 200, "MACH");
-                drawText(x, y + 210, "MACL");
+                drawText(x, y + 210, "MACH");
+                drawText(x, y + 220, "MACL");
 
-                drawText(x, y + 225, "SR");
-                drawText(x, y + 235, "flags");
+                drawText(x, y + 235, "SR");
+                drawText(x, y + 245, "flags");
 
-                drawText(x, y + 250, "GBR");
-                drawText(x, y + 260, "VBR");
+                drawText(x, y + 260, "GBR");
+                drawText(x, y + 270, "VBR");
 
-                drawText(x, y + 275, "INTs");
+                drawText(x, y + 285, "INTs");
 
                 displaySH2(m_masterSH2Tracer, m_saturn.SH2.master, true, true, x + 50, y);
                 displaySH2(m_slaveSH2Tracer, m_saturn.SH2.slave, false, m_saturn.SH2.slaveEnabled, x + 150, y);
