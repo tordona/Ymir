@@ -438,7 +438,9 @@ void SMPC::INTBACK() {
 
         m_intbackInProgress = true;
 
-        m_optimize = bit::extract<1>(IREG[1]);
+        // TODO: when not optimized, should delay peripheral reports until a bit after VBlank OUT
+        // maybe around line 1 or 2?
+        m_optimize = true; // bit::extract<1>(IREG[1]);
         m_port1mode = bit::extract<4, 5>(IREG[1]);
         m_port2mode = bit::extract<6, 7>(IREG[1]);
 
@@ -545,19 +547,22 @@ void SMPC::WriteINTBACKPeripheralReport() {
     const bool firstReport = m_intbackReportOffset == 0;
     rootLog.trace("INTBACK peripheral report - first? {}", firstReport);
 
-    SR.bit7 = 1;            // fixed 1
-    SR.PDL = firstReport;   // 1=first data, 0=second+ data
-    SR.NPE = 0;             // 0=no remaining data, 1=more data
-    SR.RESB = 0;            // reset button state (0=off, 1=on)
-    SR.P1MDn = m_port1mode; // port 1 mode \  0=15 byte, 1=255 byte
-    SR.P2MDn = m_port2mode; // port 2 mode /  2=unused,  3=0 byte
-
     const uint8 reportLength = std::min<uint8>(32, m_intbackReport.size() - m_intbackReportOffset);
     std::copy_n(m_intbackReport.begin() + m_intbackReportOffset, reportLength, OREG.begin());
+    if (reportLength < 32) {
+        std::fill(OREG.begin() + reportLength, OREG.end(), 0xFF);
+    }
     m_intbackReportOffset += reportLength;
     if (m_intbackReportOffset == m_intbackReport.size()) {
         m_intbackInProgress = false;
     }
+
+    SR.bit7 = 1;                  // fixed 1
+    SR.PDL = firstReport;         // 1=first data, 0=second+ data
+    SR.NPE = m_intbackInProgress; // 0=no remaining data, 1=more data
+    SR.RESB = 0;                  // reset button state (0=off, 1=on)
+    SR.P1MDn = m_port1mode;       // port 1 mode \  0=15 byte, 1=255 byte
+    SR.P2MDn = m_port2mode;       // port 2 mode /  2=unused,  3=0 byte
 }
 
 void SMPC::SETSMEM() {
