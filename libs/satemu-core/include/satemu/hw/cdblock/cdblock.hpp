@@ -132,10 +132,12 @@ private:
     uint32 m_currDriveCycles;   // current cycle count for drive state processing
     uint32 m_targetDriveCycles; // number of cycles until the next drive state update
 
-    // PlayDisc parameters
+    // PlayDisc/ScanDisc parameters
     uint32 m_playStartParam; // starting frame address or track/index
     uint32 m_playEndParam;   // ending frame address or track/index
     uint8 m_playRepeatParam; // playback repeat count parameter
+    bool m_scanDirection;    // scan direction (false=forward, true=backward)
+    uint8 m_scanCounter;     // scan frame counter, to determine when to skip sectors
 
     // Playback status/parameters
     uint32 m_playStartPos;  // starting frame address for playback
@@ -161,6 +163,7 @@ private:
 
     bool SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 repeatParam);
     bool SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber);
+    bool SetupScan(uint8 direction);
 
     template <bool debug>
     void ProcessDriveState();
@@ -314,7 +317,7 @@ private:
     // -------------------------------------------------------------------------
     // Commands
 
-    bool m_processingCommand; // true if a command is in progress
+    bool m_processingCommand; // true if a command being processed
 
     void SetupCommand();
 

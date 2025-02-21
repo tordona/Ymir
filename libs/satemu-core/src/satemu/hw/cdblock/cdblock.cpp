@@ -54,6 +54,8 @@ void CDBlock::Reset(bool hard) {
     m_playStartParam = 0;
     m_playEndParam = 0;
     m_playRepeatParam = 0;
+    m_scanDirection = false;
+    m_scanCounter = 0;
 
     m_playStartPos = 0;
     m_playEndPos = 0;
@@ -279,7 +281,7 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
     if (startParam == 0xFFFFFF || endParam == 0xFFFFFF || repeatParam == 0xFF) {
         // "No change" must be specified on all parameters at once, and is only valid while paused
         if (startParam == 0xFFFFFF && endParam == 0xFFFFFF && repeatParam == 0xFF) {
-            if ((m_status.statusCode & 0xF) == kStatusCodePause) {
+            if ((m_status.statusCode & 0xF) == kStatusCodePause || (m_status.statusCode & 0xF) == kStatusCodeScan) {
                 m_status.statusCode = kStatusCodePlay;
                 return true;
             }
@@ -494,6 +496,21 @@ bool CDBlock::SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber
     return true;
 }
 
+bool CDBlock::SetupScan(uint8 direction) {
+    if (direction >= 2) {
+        return false;
+    }
+
+    m_scanDirection = direction;
+    m_scanCounter = 0;
+
+    m_status.statusCode = kStatusCodeScan;
+
+    rootLog.info("Scan disc {}", (m_scanDirection ? "backward" : "forward"));
+
+    return true;
+}
+
 template <bool debug>
 void CDBlock::ProcessDriveState() {
     switch (m_status.statusCode & 0xF) {
@@ -509,7 +526,8 @@ void CDBlock::ProcessDriveState() {
             m_status.frameAddress = m_playStartPos;
         }
         break;
-    case kStatusCodePlay: ProcessDriveStatePlay(); break;
+    case kStatusCodePlay: // fallthrough
+    case kStatusCodeScan: ProcessDriveStatePlay(); break;
     case kStatusCodePause:
         // Resume playback if paused due to running out of buffers
         if (m_bufferFullPause && m_partitionManager.GetFreeBufferCount() > 0) {
@@ -532,6 +550,7 @@ void CDBlock::ProcessDriveState() {
 }
 
 void CDBlock::ProcessDriveStatePlay() {
+    const bool scan = (m_status.statusCode & 0xF) == kStatusCodeScan;
     const uint32 frameAddress = m_status.frameAddress;
     if (frameAddress <= m_playEndPos) {
         playLog.trace("Read from frame address {:06X}", frameAddress);
@@ -559,8 +578,14 @@ void CDBlock::ProcessDriveStatePlay() {
                 if (track->controlADR == 0x01) {
                     // If playing an audio track, send to SCSP
                     const uint32 userDataOffset = m_getSectorLength == 2352 ? 16 : m_getSectorLength == 2340 ? 4 : 0;
-                    const uint32 currBufferLength =
-                        m_SCSP.ReceiveCDDA(std::span<uint8, 2048>{buffer.data.begin() + userDataOffset, 2048});
+                    std::span<uint8, 2048> dataSpan{buffer.data.begin() + userDataOffset, 2048};
+                    if (scan) {
+                        // While scanning, lower volume by 12 dB
+                        for (uint32 offset = 0; offset < 2048; offset += 2) {
+                            util::WriteLE<sint16>(&dataSpan[offset], util::ReadLE<sint16>(&dataSpan[offset]) >> 2u);
+                        }
+                    }
+                    const uint32 currBufferLength = m_SCSP.ReceiveCDDA(dataSpan);
                     const uint32 maxBufferLength = m_SCSP.GetCDDABufferSize();
 
                     // Adjust pace based on how full the SCSP CDDA buffer is
@@ -614,6 +639,25 @@ void CDBlock::ProcessDriveStatePlay() {
                 }
 
                 if (!m_bufferFullPause) {
+                    // Skip frames while scanning
+                    if (scan) {
+                        constexpr uint8 kScanCounter = 15;
+                        constexpr uint8 kScanFrameSkip = 75;
+                        static_assert(
+                            kScanFrameSkip >= kScanCounter,
+                            "scan frame skip includes the frame counter, so it cannot be shorter than the counter");
+
+                        m_scanCounter++;
+                        if (m_scanCounter >= kScanCounter) {
+                            m_scanCounter = 0;
+                            if (m_scanDirection) {
+                                m_status.frameAddress -= kScanFrameSkip + kScanCounter;
+                            } else {
+                                m_status.frameAddress += kScanFrameSkip - kScanCounter;
+                            }
+                        }
+                    }
+
                     m_status.frameAddress++;
                     m_status.track = track->index;
                     m_status.index = 1; // TODO: handle indexes
@@ -1414,9 +1458,7 @@ void CDBlock::CmdScanDisc() {
     const uint8 direction = bit::extract<0, 7>(m_CR[0]);
 
     // Output structure: standard CD status data
-    if (direction < 2) {
-        rootLog.info("Scan disc is unimplemented");
-        // TODO: SetupScan(direction);
+    if (SetupScan(direction)) {
         ReportCDStatus();
     } else {
         ReportCDStatus(kStatusReject);
