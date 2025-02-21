@@ -1069,6 +1069,7 @@ void VDP::VDP1BeginFrame() {
 void VDP::VDP1EndFrame() {
     renderLog1.trace("End VDP1 frame on framebuffer {}", m_drawFB);
     m_VDP1RenderContext.rendering = false;
+    m_VDP1.currFrameEnded = true;
     m_SCU.TriggerSpriteDrawEnd();
 }
 
@@ -1085,7 +1086,6 @@ void VDP::VDP1ProcessCommand() {
     renderLog1.trace("Processing command {:04X} @ {:05X}", control.u16, cmdAddress);
     if (control.end) [[unlikely]] {
         renderLog1.trace("End of command list");
-        m_VDP1.currFrameEnded = true;
         VDP1EndFrame();
     } else if (!control.skip) {
         // Process command
