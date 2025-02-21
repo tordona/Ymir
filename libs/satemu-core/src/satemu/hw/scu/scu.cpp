@@ -759,7 +759,7 @@ void SCU::DSPWriteImm(uint8 index, uint32 value) {
     case 0b0111: m_dspState.dmaWriteAddr = (value << 2u) & 0x7FF'FFFC; break;
     case 0b1010: m_dspState.loopCount = value & 0xFFF; break;
     case 0b1100:
-        m_dspState.loopTop = m_dspState.PC - 1;
+        m_dspState.loopTop = m_dspState.PC;
         DSPDelayedJump(value);
         break;
     }
