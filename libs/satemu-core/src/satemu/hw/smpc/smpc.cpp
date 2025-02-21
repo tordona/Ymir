@@ -143,6 +143,8 @@ void SMPC::Write(uint32 address, uint8 value) {
                 SR.PDL = 0;
             } else if (continueFlag) {
                 rootLog.trace("INTBACK continue request");
+                // HACK: delay by a long while to fix Virtua Racing which expects the status report before VBlank OUT
+                // and the peripheral reports after VBlank OUT
                 m_scheduler.ScheduleFromNow(m_commandEvent, 300000);
                 // INTBACK();
             }
@@ -439,8 +441,6 @@ void SMPC::INTBACK() {
 
         m_intbackInProgress = true;
 
-        // TODO: fix timing for Virtua Racing
-        // expects status report before VBlank OUT, but peripheral reports after VBlank OUT
         m_optimize = bit::extract<1>(IREG[1]);
         m_port1mode = bit::extract<4, 5>(IREG[1]);
         m_port2mode = bit::extract<6, 7>(IREG[1]);
