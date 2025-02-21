@@ -438,9 +438,9 @@ void SMPC::INTBACK() {
 
         m_intbackInProgress = true;
 
-        // TODO: when not optimized, should delay peripheral reports until a bit after VBlank OUT
-        // maybe around line 1 or 2?
-        m_optimize = true; // bit::extract<1>(IREG[1]);
+        // TODO: fix timing for Virtua Racing
+        // expects status report before VBlank OUT, but peripheral reports after VBlank OUT
+        m_optimize = bit::extract<1>(IREG[1]);
         m_port1mode = bit::extract<4, 5>(IREG[1]);
         m_port2mode = bit::extract<6, 7>(IREG[1]);
 
