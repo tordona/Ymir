@@ -143,7 +143,8 @@ void SMPC::Write(uint32 address, uint8 value) {
                 SR.PDL = 0;
             } else if (continueFlag) {
                 rootLog.trace("INTBACK continue request");
-                INTBACK();
+                m_scheduler.ScheduleFromNow(m_commandEvent, 300000);
+                // INTBACK();
             }
         }
         break;
