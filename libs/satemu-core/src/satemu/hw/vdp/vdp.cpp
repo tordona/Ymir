@@ -83,6 +83,7 @@ void VDP::Reset(bool hard) {
 
 template <bool debug>
 void VDP::Advance(uint64 cycles) {
+    // TODO: proper cycle counting
     static constexpr uint64 kCyclesPerCommand = 6;
 
     m_VDP1RenderContext.cycleCount += cycles;
