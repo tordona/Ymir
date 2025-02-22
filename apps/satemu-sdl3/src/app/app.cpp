@@ -671,7 +671,7 @@ void App::RunEmulator() {
 
                         const auto &intr = tracer.interrupts[pos];
                         if (intr.level == 0xFF) {
-                            drawText(x, y + 50 + i * 10, fmt::format("{:15s} [ACK]", kNames[intr.index], intr.level));
+                            drawText(x, y + 50 + i * 10, fmt::format("{:15s}  ack", kNames[intr.index], intr.level));
                         } else {
                             drawText(x, y + 50 + i * 10, fmt::format("{:15s}  {:02X}", kNames[intr.index], intr.level));
                         }
@@ -689,7 +689,8 @@ void App::RunEmulator() {
             SDL_GetWindowSize(screen.window, &ww, &wh);
 
             if (!debugTrace) {
-                drawText(5, wh - 15,
+                SDL_SetRenderDrawColor(renderer, 232, 117, 23, 255);
+                drawText(5, wh - 5 - 8,
                          "Advanced tracing disabled - some features are not available. Press F11 to enable");
             }
 
