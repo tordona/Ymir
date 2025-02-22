@@ -534,9 +534,13 @@ void App::RunEmulator() {
         SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
         SDL_RenderTexture(renderer, texture, &srcRect, nullptr);
 
+        SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255);
+
         auto drawText = [&](int x, int y, std::string text) {
+            uint8 r, g, b, a;
+            SDL_GetRenderDrawColor(renderer, &r, &g, &b, &a);
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-            // TODO: this is a horribly inefficient way to draw contours!
+            // FIXME: this is a horribly inefficient way to draw contours!
             for (int yy = -2; yy <= 2; yy++) {
                 for (int xx = -2; xx <= 2; xx++) {
                     if (xx == 0 && yy == 0) {
@@ -545,7 +549,7 @@ void App::RunEmulator() {
                     SDL_RenderDebugText(renderer, x + xx, y + yy, text.c_str());
                 }
             }
-            SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255);
+            SDL_SetRenderDrawColor(renderer, r, g, b, a);
             SDL_RenderDebugText(renderer, x, y, text.c_str());
         };
 
