@@ -2,8 +2,6 @@
 
 #include "sh2_tracer.hpp"
 
-#include <concepts>
-
 namespace satemu::debug {
 
 // Holds an SH2 tracer and simplifies tracer usage.
