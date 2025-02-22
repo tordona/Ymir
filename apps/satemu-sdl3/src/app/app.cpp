@@ -262,10 +262,6 @@ void App::RunEmulator() {
     // ---------------------------------
     // Main emulator loop
 
-    m_saturn.SH2.master.UseTracer(&m_masterSH2Tracer);
-    m_saturn.SH2.slave.UseTracer(&m_slaveSH2Tracer);
-    m_saturn.SCU.UseTracer(&m_scuTracer);
-
     // TODO: pull from CommandLineOptions or configuration
     // m_saturn.SetVideoStandard(satemu::sys::VideoStandard::PAL);
 
@@ -484,6 +480,15 @@ void App::RunEmulator() {
         case SDL_SCANCODE_F11:
             if (pressed) {
                 debugTrace = !debugTrace;
+                if (debugTrace) {
+                    m_saturn.SH2.master.UseTracer(&m_masterSH2Tracer);
+                    m_saturn.SH2.slave.UseTracer(&m_slaveSH2Tracer);
+                    m_saturn.SCU.UseTracer(&m_scuTracer);
+                } else {
+                    m_saturn.SH2.master.UseTracer(nullptr);
+                    m_saturn.SH2.slave.UseTracer(nullptr);
+                    m_saturn.SCU.UseTracer(nullptr);
+                }
                 fmt::println("Advanced debug tracing {}", (debugTrace ? "enabled" : "disabled"));
             }
             break;
@@ -607,7 +612,7 @@ void App::RunEmulator() {
                 drawText(x, y + 280, "INTs");
 
                 if (!debugTrace) {
-                    drawText(x, y + 290, "(advanced tracing disabled)");
+                    drawText(x, y + 290, "(trace unavailable)");
                 }
 
                 displaySH2(m_masterSH2Tracer, m_saturn.SH2.master, true, true, x + 50, y);
@@ -623,53 +628,62 @@ void App::RunEmulator() {
                 drawText(x, y + 25, fmt::format("{:08X} mask", scu.GetInterruptMask().u32));
                 drawText(x, y + 35, fmt::format("{:08X} status", scu.GetInterruptStatus().u32));
 
-                auto &tracer = m_scuTracer;
-                for (size_t i = 0; i < tracer.interruptsCount; i++) {
-                    size_t pos = (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
-                    constexpr const char *kNames[] = {"VBlank IN",
-                                                      "VBlank OUT",
-                                                      "HBlank IN",
-                                                      "Timer 0",
-                                                      "Timer 1",
-                                                      "DSP End",
-                                                      "Sound Request",
-                                                      "System Manager",
-                                                      "PAD Interrupt",
-                                                      "Level 2 DMA End",
-                                                      "Level 1 DMA End",
-                                                      "Level 0 DMA End",
-                                                      "DMA-illegal",
-                                                      "Sprite Draw End",
-                                                      "(0E)",
-                                                      "(0F)",
-                                                      "External 0",
-                                                      "External 1",
-                                                      "External 2",
-                                                      "External 3",
-                                                      "External 4",
-                                                      "External 5",
-                                                      "External 6",
-                                                      "External 7",
-                                                      "External 8",
-                                                      "External 9",
-                                                      "External A",
-                                                      "External B",
-                                                      "External C",
-                                                      "External D",
-                                                      "External E",
-                                                      "External F"};
+                if (debugTrace) {
+                    auto &tracer = m_scuTracer;
+                    for (size_t i = 0; i < tracer.interruptsCount; i++) {
+                        size_t pos = (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
+                        constexpr const char *kNames[] = {"VBlank IN",
+                                                          "VBlank OUT",
+                                                          "HBlank IN",
+                                                          "Timer 0",
+                                                          "Timer 1",
+                                                          "DSP End",
+                                                          "Sound Request",
+                                                          "System Manager",
+                                                          "PAD Interrupt",
+                                                          "Level 2 DMA End",
+                                                          "Level 1 DMA End",
+                                                          "Level 0 DMA End",
+                                                          "DMA-illegal",
+                                                          "Sprite Draw End",
+                                                          "(0E)",
+                                                          "(0F)",
+                                                          "External 0",
+                                                          "External 1",
+                                                          "External 2",
+                                                          "External 3",
+                                                          "External 4",
+                                                          "External 5",
+                                                          "External 6",
+                                                          "External 7",
+                                                          "External 8",
+                                                          "External 9",
+                                                          "External A",
+                                                          "External B",
+                                                          "External C",
+                                                          "External D",
+                                                          "External E",
+                                                          "External F"};
 
-                    const auto &intr = tracer.interrupts[pos];
-                    if (intr.level == 0xFF) {
-                        drawText(x, y + 50 + i * 10, fmt::format("{:15s}  ==ACK==", kNames[intr.index], intr.level));
-                    } else {
-                        drawText(x, y + 50 + i * 10, fmt::format("{:15s}  {:02X}", kNames[intr.index], intr.level));
+                        const auto &intr = tracer.interrupts[pos];
+                        if (intr.level == 0xFF) {
+                            drawText(x, y + 50 + i * 10, fmt::format("{:15s} [ACK]", kNames[intr.index], intr.level));
+                        } else {
+                            drawText(x, y + 50 + i * 10, fmt::format("{:15s}  {:02X}", kNames[intr.index], intr.level));
+                        }
                     }
+                } else {
+                    drawText(x, y + 50, "(trace unavailable)");
                 }
             };
 
             displaySH2s(5, 5);
             displaySCU(250, 5);
+
+            if (!debugTrace) {
+                drawText(5, screen.height * screen.scaleY - 15,
+                         "Advanced tracing disabled - some features are not available. Press F11 to enable");
+            }
         }
 
         SDL_RenderPresent(renderer);
