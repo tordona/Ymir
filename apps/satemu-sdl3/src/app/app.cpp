@@ -182,6 +182,7 @@ void App::RunEmulator() {
         uint32 readPos = 0;
         uint32 writePos = 0;
         bool sync = true;
+        bool silent = false;
     } audioBuffer{};
 
     SDL_AudioSpec audioSpec{};
@@ -192,13 +193,21 @@ void App::RunEmulator() {
         SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &audioSpec,
         [](void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount) {
             auto &buffer = *reinterpret_cast<AudioBuffer *>(userdata);
-            int sampleCount = additional_amount / sizeof(sint16);
-            int len1 = std::min<int>(sampleCount, buffer.buffer.size() - buffer.readPos);
-            int len2 = std::min<int>(sampleCount - len1, buffer.readPos);
-            SDL_PutAudioStreamData(stream, &buffer.buffer[buffer.readPos], len1 * sizeof(sint16));
-            SDL_PutAudioStreamData(stream, &buffer.buffer[0], len2 * sizeof(sint16));
 
-            buffer.readPos = (buffer.readPos + len1 + len2) % buffer.buffer.size();
+            int sampleCount = additional_amount / sizeof(sint16);
+            if (buffer.silent) {
+                const sint16 zero = 0;
+                for (int i = 0; i < sampleCount; i++) {
+                    SDL_PutAudioStreamData(stream, &zero, sizeof(zero));
+                }
+            } else {
+                int len1 = std::min<int>(sampleCount, buffer.buffer.size() - buffer.readPos);
+                int len2 = std::min<int>(sampleCount - len1, buffer.readPos);
+                SDL_PutAudioStreamData(stream, &buffer.buffer[buffer.readPos], len1 * sizeof(sint16));
+                SDL_PutAudioStreamData(stream, &buffer.buffer[0], len2 * sizeof(sint16));
+
+                buffer.readPos = (buffer.readPos + len1 + len2) % buffer.buffer.size();
+            }
         },
         &audioBuffer);
     if (audioStream == nullptr) {
@@ -288,7 +297,8 @@ void App::RunEmulator() {
 
     auto t = clk::now();
     uint64 frames = 0;
-    bool running = true;
+    bool paused = false;
+    bool frameStep = false;
     bool debugTrace = false;
     bool drawDebug = false;
     auto &port1 = m_saturn.SMPC.GetPeripheralPort1();
@@ -377,6 +387,19 @@ void App::RunEmulator() {
             }
             break;
             // ---- END TODO ----
+
+        case SDL_SCANCODE_EQUALS:
+            if (pressed) {
+                frameStep = true;
+                paused = false;
+                audioBuffer.silent = false;
+            }
+            break;
+        case SDL_SCANCODE_PAUSE:
+            if (pressed) {
+                paused = !paused;
+                audioBuffer.silent = paused;
+            }
 
         case SDL_SCANCODE_R:
             if (pressed) {
@@ -496,24 +519,34 @@ void App::RunEmulator() {
         }
     };
 
-    while (running) {
+    while (true) {
         SDL_Event evt{};
-        while (SDL_PollEvent(&evt)) {
+        while (paused ? SDL_WaitEvent(&evt) : SDL_PollEvent(&evt)) {
             switch (evt.type) {
             case SDL_EVENT_KEY_DOWN: updateButton(evt.key.scancode, evt.key.mod, true); break;
             case SDL_EVENT_KEY_UP: updateButton(evt.key.scancode, evt.key.mod, false); break;
-            case SDL_EVENT_QUIT: running = false; break;
+            case SDL_EVENT_QUIT: goto end_loop; break;
             }
         }
 
         m_saturn.RunFrame(debugTrace);
+        if (frameStep) {
+            frameStep = false;
+            paused = true;
+            audioBuffer.silent = true;
+        }
 
         ++frames;
         auto t2 = clk::now();
         if (t2 - t >= 1s) {
             const media::Disc &disc = m_saturn.CDBlock.GetDisc();
             const media::SaturnHeader &header = disc.header;
-            auto title = fmt::format("[{}] {} - {} fps", header.productNumber, header.gameTitle, frames);
+            std::string title{};
+            if (paused) {
+                title = fmt::format("[{}] {} - paused", header.productNumber, header.gameTitle);
+            } else {
+                title = fmt::format("[{}] {} - {} fps", header.productNumber, header.gameTitle, frames);
+            }
             SDL_SetWindowTitle(screen.window, title.c_str());
             frames = 0;
             t = t2;
@@ -701,6 +734,7 @@ void App::RunEmulator() {
         SDL_RenderPresent(renderer);
     }
 
+end_loop:
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
 }
