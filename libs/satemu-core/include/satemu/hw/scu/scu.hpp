@@ -456,7 +456,6 @@ private:
     bool m_timer1Enable;
     bool m_timer1Mode;
 
-    template <bool debug>
     void TickTimer1();
 
     // -------------------------------------------------------------------------

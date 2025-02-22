@@ -200,7 +200,7 @@ void SCU::DumpDSPRegs(std::ostream &out) {
 template <bool debug>
 void SCU::OnTimer1Event(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
     auto &scu = *static_cast<SCU *>(userContext);
-    scu.TickTimer1<debug>();
+    scu.TickTimer1();
 }
 
 void SCU::MapMemory(sh2::SH2Bus &bus) {
@@ -1080,7 +1080,6 @@ FORCE_INLINE void SCU::DSPCmd_Special_End(uint32 command) {
     }
 }
 
-template <bool debug>
 FORCE_INLINE void SCU::TickTimer1() {
     if (m_timer1Enable && (!m_timer1Mode || m_timer0Counter == m_timer0Compare)) {
         TriggerTimer1();
