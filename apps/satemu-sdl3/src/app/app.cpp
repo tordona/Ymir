@@ -685,7 +685,9 @@ void App::RunEmulator() {
             displaySCU(250, 5);
 
             if (!debugTrace) {
-                drawText(5, screen.height * screen.scaleY - 15,
+                int wh{};
+                SDL_GetWindowSize(screen.window, nullptr, &wh);
+                drawText(5, wh - 15,
                          "Advanced tracing disabled - some features are not available. Press F11 to enable");
             }
         }
