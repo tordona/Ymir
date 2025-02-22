@@ -65,6 +65,7 @@ void App::RunEmulator() {
         float scaleX = scale;
         float scaleY = scale;
         SDL_Window *window = nullptr;
+        uint64 frames = 0;
     } screen;
 
     // ---------------------------------
@@ -169,6 +170,7 @@ void App::RunEmulator() {
                                        SDL_SetWindowSize(screen.window, screen.width * scaleX, screen.height * scaleY);
                                        SDL_SetWindowPosition(screen.window, wx - dx * scaleX / 2, wy - dy * scaleY / 2);
                                    }
+                                   ++screen.frames;
                                }});
 
     // ---------------------------------
@@ -296,7 +298,6 @@ void App::RunEmulator() {
     m_saturn.Reset(true);
 
     auto t = clk::now();
-    uint64 frames = 0;
     bool paused = false;
     bool frameStep = false;
     bool debugTrace = false;
@@ -536,7 +537,6 @@ void App::RunEmulator() {
             audioBuffer.silent = true;
         }
 
-        ++frames;
         auto t2 = clk::now();
         if (t2 - t >= 1s) {
             const media::Disc &disc = m_saturn.CDBlock.GetDisc();
@@ -545,10 +545,10 @@ void App::RunEmulator() {
             if (paused) {
                 title = fmt::format("[{}] {} - paused", header.productNumber, header.gameTitle);
             } else {
-                title = fmt::format("[{}] {} - {} fps", header.productNumber, header.gameTitle, frames);
+                title = fmt::format("[{}] {} - {} fps", header.productNumber, header.gameTitle, screen.frames);
             }
             SDL_SetWindowTitle(screen.window, title.c_str());
-            frames = 0;
+            screen.frames = 0;
             t = t2;
         }
 
