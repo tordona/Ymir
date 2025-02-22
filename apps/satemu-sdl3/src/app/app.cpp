@@ -684,12 +684,17 @@ void App::RunEmulator() {
             displaySH2s(5, 5);
             displaySCU(250, 5);
 
+            int ww{};
+            int wh{};
+            SDL_GetWindowSize(screen.window, &ww, &wh);
+
             if (!debugTrace) {
-                int wh{};
-                SDL_GetWindowSize(screen.window, nullptr, &wh);
                 drawText(5, wh - 15,
                          "Advanced tracing disabled - some features are not available. Press F11 to enable");
             }
+
+            std::string res = fmt::format("{}x{}", screen.width, screen.height);
+            drawText(ww - 5 - res.size() * 8, 5, res);
         }
 
         SDL_RenderPresent(renderer);
