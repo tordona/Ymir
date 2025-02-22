@@ -264,6 +264,7 @@ void App::RunEmulator() {
 
     m_saturn.SH2.master.UseTracer(&m_masterSH2Tracer);
     m_saturn.SH2.slave.UseTracer(&m_slaveSH2Tracer);
+    m_saturn.SCU.UseTracer(&m_scuTracer);
 
     // TODO: pull from CommandLineOptions or configuration
     // m_saturn.SetVideoStandard(satemu::sys::VideoStandard::PAL);
@@ -483,7 +484,7 @@ void App::RunEmulator() {
         case SDL_SCANCODE_F11:
             if (pressed) {
                 debugTrace = !debugTrace;
-                fmt::println("Debug tracing {}", (debugTrace ? "enabled" : "disabled"));
+                fmt::println("Advanced debug tracing {}", (debugTrace ? "enabled" : "disabled"));
             }
             break;
         default: break;
@@ -572,12 +573,14 @@ void App::RunEmulator() {
                     drawText(x, y + 255, fmt::format("{:08X}", sh2.GetGBR()));
                     drawText(x, y + 265, fmt::format("{:08X}", sh2.GetVBR()));
 
-                    drawText(x, y + 280, "vec lv");
-                    for (size_t i = 0; i < tracer.interruptsCount; i++) {
-                        size_t pos = (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
-                        drawText(
-                            x, y + 290 + i * 10,
-                            fmt::format("{:02X}  {:02X}", tracer.interrupts[pos].vecNum, tracer.interrupts[pos].level));
+                    if (debugTrace) {
+                        drawText(x, y + 280, "vec lv");
+                        for (size_t i = 0; i < tracer.interruptsCount; i++) {
+                            const size_t pos =
+                                (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
+                            const auto &intr = tracer.interrupts[pos];
+                            drawText(x, y + 290 + i * 10, fmt::format("{:02X}  {:02X}", intr.vecNum, intr.level));
+                        }
                     }
                 } else {
                     drawText(x, y + 15, "(disabled)");
@@ -603,11 +606,70 @@ void App::RunEmulator() {
 
                 drawText(x, y + 280, "INTs");
 
+                if (!debugTrace) {
+                    drawText(x, y + 290, "(advanced tracing disabled)");
+                }
+
                 displaySH2(m_masterSH2Tracer, m_saturn.SH2.master, true, true, x + 50, y);
                 displaySH2(m_slaveSH2Tracer, m_saturn.SH2.slave, false, m_saturn.SH2.slaveEnabled, x + 150, y);
             };
 
+            auto displaySCU = [&](int x, int y) {
+                auto &scu = m_saturn.SCU;
+
+                drawText(x, y, "SCU");
+
+                drawText(x, y + 15, "Interrupts");
+                drawText(x, y + 25, fmt::format("{:08X} mask", scu.GetInterruptMask().u32));
+                drawText(x, y + 35, fmt::format("{:08X} status", scu.GetInterruptStatus().u32));
+
+                auto &tracer = m_scuTracer;
+                for (size_t i = 0; i < tracer.interruptsCount; i++) {
+                    size_t pos = (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
+                    constexpr const char *kNames[] = {"VBlank IN",
+                                                      "VBlank OUT",
+                                                      "HBlank IN",
+                                                      "Timer 0",
+                                                      "Timer 1",
+                                                      "DSP End",
+                                                      "Sound Request",
+                                                      "System Manager",
+                                                      "PAD Interrupt",
+                                                      "Level 2 DMA End",
+                                                      "Level 1 DMA End",
+                                                      "Level 0 DMA End",
+                                                      "DMA-illegal",
+                                                      "Sprite Draw End",
+                                                      "(0E)",
+                                                      "(0F)",
+                                                      "External 0",
+                                                      "External 1",
+                                                      "External 2",
+                                                      "External 3",
+                                                      "External 4",
+                                                      "External 5",
+                                                      "External 6",
+                                                      "External 7",
+                                                      "External 8",
+                                                      "External 9",
+                                                      "External A",
+                                                      "External B",
+                                                      "External C",
+                                                      "External D",
+                                                      "External E",
+                                                      "External F"};
+
+                    const auto &intr = tracer.interrupts[pos];
+                    if (intr.level == 0xFF) {
+                        drawText(x, y + 50 + i * 10, fmt::format("{:15s}  ==ACK==", kNames[intr.index], intr.level));
+                    } else {
+                        drawText(x, y + 50 + i * 10, fmt::format("{:15s}  {:02X}", kNames[intr.index], intr.level));
+                    }
+                }
+            };
+
             displaySH2s(5, 5);
+            displaySCU(250, 5);
         }
 
         SDL_RenderPresent(renderer);
@@ -619,6 +681,24 @@ void App::RunEmulator() {
 
 void App::SH2Tracer::Interrupt(uint8 vecNum, uint8 level) {
     interrupts[interruptsPos++] = {vecNum, level};
+    if (interruptsPos >= interrupts.size()) {
+        interruptsPos = 0;
+    }
+    if (interruptsCount < interrupts.size()) {
+        interruptsCount++;
+    }
+}
+
+void App::SCUTracer::RaiseInterrupt(uint8 index, uint8 level) {
+    PushInterrupt({index, level});
+}
+
+void App::SCUTracer::AcknowledgeInterrupt(uint8 index) {
+    PushInterrupt({index, 0xFF});
+}
+
+void App::SCUTracer::PushInterrupt(InterruptInfo info) {
+    interrupts[interruptsPos++] = info;
     if (interruptsPos >= interrupts.size()) {
         interruptsPos = 0;
     }

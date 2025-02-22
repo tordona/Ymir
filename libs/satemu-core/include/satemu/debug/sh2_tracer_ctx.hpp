@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/util/inline.hpp>
+
 #include "sh2_tracer.hpp"
 
 namespace satemu::debug {
@@ -13,7 +15,7 @@ struct SH2TracerContext {
     }
 
     template <bool debug>
-    void Interrupt(uint8 vecNum, uint8 level) {
+    FORCE_INLINE void Interrupt(uint8 vecNum, uint8 level) {
         if constexpr (debug) {
             if (m_tracer) {
                 return m_tracer->Interrupt(vecNum, level);

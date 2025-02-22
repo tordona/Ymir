@@ -1467,15 +1467,18 @@ void SCU::UpdateInterruptLevel(bool acknowledge) {
             if (internalLevel >= externalLevel) {
                 m_intrStatus.internal &= ~(1u << internalIndex);
                 rootLog.trace("Acknowledging internal interrupt {:X}", internalIndex);
+                m_tracer.AcknowledgeInterrupt(internalIndex);
             } else {
                 m_intrStatus.external &= ~(1u << externalIndex);
                 rootLog.trace("Acknowledging external interrupt {:X}", externalIndex);
+                m_tracer.AcknowledgeInterrupt(externalIndex + 16);
             }
             UpdateInterruptLevel(false);
         } else {
             if (internalLevel >= externalLevel) {
                 m_SH2.master.SetExternalInterrupt(internalLevel, internalIndex + 0x40);
                 rootLog.trace("Raising internal interrupt {:X}", internalIndex);
+                m_tracer.RaiseInterrupt(internalIndex, internalLevel);
 
                 // Also send VBlank IN and HBlank IN to slave SH2 if it is enabled
                 if (internalIndex == 0) {
@@ -1487,6 +1490,7 @@ void SCU::UpdateInterruptLevel(bool acknowledge) {
                 }
             } else if (m_abusIntrAck) {
                 rootLog.trace("Raising external interrupt {:X}", externalIndex);
+                m_tracer.RaiseInterrupt(externalIndex + 16, externalLevel);
                 m_abusIntrAck = false;
                 m_SH2.master.SetExternalInterrupt(externalLevel, externalIndex + 0x50);
                 m_SH2.slave.SetExternalInterrupt(0, 0);

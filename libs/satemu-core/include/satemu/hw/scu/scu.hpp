@@ -4,6 +4,8 @@
 
 #include <satemu/core/scheduler.hpp>
 
+#include <satemu/debug/scu_tracer_ctx.hpp>
+
 #include <satemu/hw/hw_defs.hpp>
 
 #include <satemu/hw/cart/cart_slot.hpp>
@@ -120,6 +122,25 @@ public:
     void DumpDSPProgramRAM(std::ostream &out);
     void DumpDSPDataRAM(std::ostream &out);
     void DumpDSPRegs(std::ostream &out);
+
+    // -------------------------------------------------------------------------
+    // Debugger, state
+
+    void UseTracer(debug::ISCUTracer *tracer) {
+        m_tracer.Use(tracer);
+    }
+
+    InterruptMask GetInterruptMask() const {
+        return m_intrMask;
+    }
+
+    InterruptStatus GetInterruptStatus() const {
+        return m_intrStatus;
+    }
+
+    bool GetABusInterruptAcknowledge() const {
+        return m_abusIntrAck;
+    }
 
 private:
     sh2::SH2Block &m_SH2;
@@ -451,6 +472,11 @@ private:
     void WriteRegLong(uint32 address, uint32 value);
 
     void UpdateInterruptLevel(bool acknowledge);
+
+    // -------------------------------------------------------------------------
+    // Debugger
+
+    debug::SCUTracerContext m_tracer;
 };
 
 } // namespace satemu::scu
