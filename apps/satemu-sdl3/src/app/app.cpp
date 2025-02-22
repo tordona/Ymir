@@ -551,58 +551,57 @@ void App::RunEmulator() {
             auto displaySH2 = [&](SH2Tracer &tracer, sh2::SH2 &sh2, bool master, bool enabled, int x, int y) {
                 auto &regs = sh2.GetGPRs();
                 drawText(x, y, fmt::format("{}SH2", master ? "M" : "S"));
-                drawText(x, y + 10, "----");
                 if (enabled) {
                     for (uint32 i = 0; i < 16; i++) {
-                        drawText(x, y + 20 + i * 10, fmt::format("{:08X}", regs[i]));
+                        drawText(x, y + 15 + i * 10, fmt::format("{:08X}", regs[i]));
                     }
 
-                    drawText(x, y + 185, fmt::format("{:08X}", sh2.GetPC()));
-                    drawText(x, y + 195, fmt::format("{:08X}", sh2.GetPR()));
+                    drawText(x, y + 180, fmt::format("{:08X}", sh2.GetPC()));
+                    drawText(x, y + 190, fmt::format("{:08X}", sh2.GetPR()));
 
                     auto mac = sh2.GetMAC();
-                    drawText(x, y + 210, fmt::format("{:08X}", mac.H));
-                    drawText(x, y + 220, fmt::format("{:08X}", mac.L));
+                    drawText(x, y + 205, fmt::format("{:08X}", mac.H));
+                    drawText(x, y + 215, fmt::format("{:08X}", mac.L));
 
                     auto sr = sh2.GetSR();
-                    drawText(x, y + 235, fmt::format("{:08X}", sr.u32));
-                    drawText(x, y + 245,
+                    drawText(x, y + 230, fmt::format("{:08X}", sr.u32));
+                    drawText(x, y + 240,
                              fmt::format("{}{}{}{} I={:X}", bit(sr.M, "M"), bit(sr.Q, "Q"), bit(sr.S, "S"),
                                          bit(sr.T, "T"), (uint8)sr.ILevel));
 
-                    drawText(x, y + 260, fmt::format("{:08X}", sh2.GetGBR()));
-                    drawText(x, y + 270, fmt::format("{:08X}", sh2.GetVBR()));
+                    drawText(x, y + 255, fmt::format("{:08X}", sh2.GetGBR()));
+                    drawText(x, y + 265, fmt::format("{:08X}", sh2.GetVBR()));
 
-                    drawText(x, y + 285, "vec lv");
+                    drawText(x, y + 280, "vec lv");
                     for (size_t i = 0; i < tracer.interruptsCount; i++) {
                         size_t pos = (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
                         drawText(
-                            x, y + 295 + i * 10,
+                            x, y + 290 + i * 10,
                             fmt::format("{:02X}  {:02X}", tracer.interrupts[pos].vecNum, tracer.interrupts[pos].level));
                     }
                 } else {
-                    drawText(x, y + 20, "(disabled)");
+                    drawText(x, y + 15, "(disabled)");
                 }
             };
 
             auto displaySH2s = [&](int x, int y) {
                 for (uint32 i = 0; i < 16; i++) {
-                    drawText(x, y + 20 + i * 10, fmt::format("R{}", i));
+                    drawText(x, y + 15 + i * 10, fmt::format("R{}", i));
                 }
 
-                drawText(x, y + 185, "PC");
-                drawText(x, y + 195, "PR");
+                drawText(x, y + 180, "PC");
+                drawText(x, y + 190, "PR");
 
-                drawText(x, y + 210, "MACH");
-                drawText(x, y + 220, "MACL");
+                drawText(x, y + 205, "MACH");
+                drawText(x, y + 215, "MACL");
 
-                drawText(x, y + 235, "SR");
-                drawText(x, y + 245, "flags");
+                drawText(x, y + 230, "SR");
+                drawText(x, y + 240, "flags");
 
-                drawText(x, y + 260, "GBR");
-                drawText(x, y + 270, "VBR");
+                drawText(x, y + 255, "GBR");
+                drawText(x, y + 265, "VBR");
 
-                drawText(x, y + 285, "INTs");
+                drawText(x, y + 280, "INTs");
 
                 displaySH2(m_masterSH2Tracer, m_saturn.SH2.master, true, true, x + 50, y);
                 displaySH2(m_slaveSH2Tracer, m_saturn.SH2.slave, false, m_saturn.SH2.slaveEnabled, x + 150, y);
