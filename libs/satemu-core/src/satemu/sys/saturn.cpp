@@ -114,10 +114,10 @@ template <bool debug>
 void Saturn::RunFrame() {
     // Use the last line phase as reference to give some leeway if we overshoot the target cycles
     while (VDP.InLastLinePhase()) {
-        Step<debug>();
+        Run<debug>();
     }
     while (!VDP.InLastLinePhase()) {
-        Step<debug>();
+        Run<debug>();
     }
 }
 
@@ -125,7 +125,7 @@ template void Saturn::RunFrame<false>();
 template void Saturn::RunFrame<true>();
 
 template <bool debug>
-void Saturn::Step() {
+void Saturn::Run() {
     static constexpr uint64 kMaxStep = 64;
 
     const uint64 cycles = std::min<uint64>(m_scheduler.RemainingCount(), kMaxStep);

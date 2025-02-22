@@ -52,6 +52,9 @@ struct Saturn {
     void CloseTray();
     bool IsTrayOpen() const;
 
+    // Runs the emulator until the end of the current frame.
+    //
+    // `debug` enables advanced debug tracing, which may impact performance.
     void RunFrame(bool debug) {
         if (debug) {
             RunFrame<true>();
@@ -61,11 +64,13 @@ struct Saturn {
     }
 
 private:
+    // Runs the emulator until the end of the current frame
     template <bool debug>
     void RunFrame();
 
+    // Runs the emulator until the next scheduled event
     template <bool debug>
-    void Step(); // FIXME: misnomer -- actually steps until next scheduled event
+    void Run();
 
     // -------------------------------------------------------------------------
     // Cycle counting
