@@ -89,7 +89,7 @@ public:
     }
 
     // Registers an event. The returned ID must be used to refer to the event.
-    EventID RegisterEvent(UserID userID, void *userContext, EventCallback callback, EventCallback debugCallback) {
+    EventID RegisterEvent(UserID userID, void *userContext, EventCallback callback) {
         assert(m_eventPtrs[userID] == kInvalidEvent);                    // ensure user IDs are unique
         assert(m_nextEventIndex <= std::numeric_limits<EventID>::max()); // IDtype value space exhausted
         EventID id = m_nextEventIndex;
@@ -99,7 +99,6 @@ public:
         event.userID = userID;
         event.userContext = userContext;
         event.callback = callback;
-        event.debugCallback = debugCallback;
         event.countNumerator = 1;
         event.countDenominator = 1;
         ++m_nextEventIndex;
@@ -164,11 +163,10 @@ public:
     }
 
     // Advances the scheduler by the specified count and fire scheduled events
-    template <bool debug>
     FORCE_INLINE void Advance(uint64 count) {
         m_currCount += count;
         if (m_currCount >= m_nextCount) {
-            Execute<debug>();
+            Execute();
         }
     }
 
@@ -184,7 +182,6 @@ private:
         uint64 countDenominator;
         void *userContext;
         EventCallback callback;
-        EventCallback debugCallback;
 
         FORCE_INLINE uint64 CalcTargetScaledByReciprocal() const {
             return (target * countDenominator + countNumerator - 1) / countNumerator;
@@ -200,7 +197,6 @@ private:
     }
 
     // Executes all scheduled events up to the current count
-    template <bool debug>
     FORCE_INLINE void Execute() {
         const uint64 currCount = m_currCount;
         for (size_t index = 0; index < kNumEvents; ++index) {
@@ -211,7 +207,7 @@ private:
             uint64 target = event.target;
             const uint64 scaledCurrCount = currCount * event.countNumerator / event.countDenominator;
             if (scaledCurrCount >= target) {
-                const EventCallback callback = debug ? event.debugCallback : event.callback;
+                const EventCallback callback = event.callback;
                 void *const userContext = event.userContext;
                 while (scaledCurrCount >= target) {
                     EventContext eventContext;

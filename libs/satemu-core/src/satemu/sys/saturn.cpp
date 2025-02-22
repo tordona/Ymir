@@ -147,7 +147,7 @@ void Saturn::Step() {
         SMPC.Advance<debug>(smpcCycleCount);
     }*/
 
-    m_scheduler.Advance<debug>(cycles);
+    m_scheduler.Advance(cycles);
 }
 
 void Saturn::UpdateClockRatios() {

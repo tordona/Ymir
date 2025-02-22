@@ -19,8 +19,7 @@ VDP::VDP(core::Scheduler &scheduler, scu::SCU &scu, smpc::SMPC &smpc)
     , m_SMPC(smpc)
     , m_scheduler(scheduler) {
 
-    m_phaseUpdateEvent =
-        scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent<false>, OnPhaseUpdateEvent<true>);
+    m_phaseUpdateEvent = scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent);
 
     m_framebuffer = nullptr;
 
@@ -115,10 +114,9 @@ void VDP::DumpVDP1Framebuffers(std::ostream &out) const {
     out.write((const char *)m_spriteFB[m_drawFB ^ 1].data(), m_spriteFB[m_drawFB ^ 1].size());
 }
 
-template <bool debug>
 void VDP::OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
     auto &vdp = *static_cast<VDP *>(userContext);
-    vdp.UpdatePhase<debug>();
+    vdp.UpdatePhase();
     const uint64 cycles = vdp.GetPhaseCycles();
     eventContext.RescheduleFromPrevious(cycles);
 }
@@ -745,7 +743,6 @@ FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, T value) {
     }
 }
 
-template <bool debug>
 FORCE_INLINE void VDP::UpdatePhase() {
     auto nextPhase = static_cast<uint32>(m_HPhase) + 1;
     if (nextPhase == m_HTimings.size()) {

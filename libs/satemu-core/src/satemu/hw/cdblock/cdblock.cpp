@@ -20,11 +20,8 @@ CDBlock::CDBlock(sys::System &system, core::Scheduler &scheduler, scu::SCU &scu,
     , m_SCSP(scsp)
     , m_scheduler(scheduler) {
 
-    m_driveStateUpdateEvent = m_scheduler.RegisterEvent(core::events::CDBlockDriveState, this,
-                                                        OnDriveStateUpdateEvent<false>, OnDriveStateUpdateEvent<true>);
-
-    m_commandExecEvent = m_scheduler.RegisterEvent(core::events::CDBlockCommand, this, OnCommandExecEvent<false>,
-                                                   OnCommandExecEvent<true>);
+    m_driveStateUpdateEvent = m_scheduler.RegisterEvent(core::events::CDBlockDriveState, this, OnDriveStateUpdateEvent);
+    m_commandExecEvent = m_scheduler.RegisterEvent(core::events::CDBlockCommand, this, OnCommandExecEvent);
 
     Reset(true);
 }
@@ -171,17 +168,15 @@ bool CDBlock::IsTrayOpen() const {
     return (m_status.statusCode & 0xF) == kStatusCodeOpen;
 }
 
-template <bool debug>
 void CDBlock::OnDriveStateUpdateEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
     auto &cdb = *static_cast<CDBlock *>(userContext);
-    cdb.ProcessDriveState<debug>();
+    cdb.ProcessDriveState();
     eventContext.RescheduleFromNow(cdb.m_targetDriveCycles);
 }
 
-template <bool debug>
 void CDBlock::OnCommandExecEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
     auto &cdb = *static_cast<CDBlock *>(userContext);
-    cdb.ProcessCommand<debug>();
+    cdb.ProcessCommand();
 }
 
 void CDBlock::UpdateClockRatios() {
@@ -511,7 +506,6 @@ bool CDBlock::SetupScan(uint8 direction) {
     return true;
 }
 
-template <bool debug>
 void CDBlock::ProcessDriveState() {
     switch (m_status.statusCode & 0xF) {
     case kStatusCodeSeek:
@@ -1024,7 +1018,6 @@ void CDBlock::SetupCommand() {
     m_scheduler.ScheduleFromNow(m_commandExecEvent, 50);
 }
 
-template <bool debug>
 FORCE_INLINE void CDBlock::ProcessCommand() {
     rootLog.trace("Processing command {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
 

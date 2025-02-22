@@ -148,7 +148,6 @@ private:
     core::Scheduler &m_scheduler;
     core::EventID m_timer1Event;
 
-    template <bool debug>
     static void OnTimer1Event(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
 
     // -------------------------------------------------------------------------

@@ -132,7 +132,6 @@ private:
     core::Scheduler &m_scheduler;
     core::EventID m_sampleTickEvent;
 
-    template <bool debug>
     static void OnSampleTickEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
 
     CBOutputSample m_cbOutputSample;
@@ -806,7 +805,6 @@ private:
     // -------------------------------------------------------------------------
     // Audio processing
 
-    template <bool debug>
     void Tick();
 
     void RunM68K();

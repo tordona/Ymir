@@ -33,7 +33,7 @@ SCU::SCU(core::Scheduler &scheduler, sh2::SH2Block &sh2)
 
     EjectCartridge();
 
-    m_timer1Event = m_scheduler.RegisterEvent(core::events::SCUTimer1, this, OnTimer1Event<false>, OnTimer1Event<true>);
+    m_timer1Event = m_scheduler.RegisterEvent(core::events::SCUTimer1, this, OnTimer1Event);
 
     Reset(true);
 }
@@ -197,7 +197,6 @@ void SCU::DumpDSPRegs(std::ostream &out) {
     write(m_dspState.dmaAddrInc);
 }
 
-template <bool debug>
 void SCU::OnTimer1Event(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
     auto &scu = *static_cast<SCU *>(userContext);
     scu.TickTimer1();

@@ -24,8 +24,7 @@ SMPC::SMPC(sys::System &system, core::Scheduler &scheduler, Saturn &saturn)
 
     ReadPersistentData();
 
-    m_commandEvent =
-        m_scheduler.RegisterEvent(core::events::SMPCCommand, this, OnCommandEvent<false>, OnCommandEvent<true>);
+    m_commandEvent = m_scheduler.RegisterEvent(core::events::SMPCCommand, this, OnCommandEvent);
 
     Reset(true);
 }
@@ -86,10 +85,9 @@ void SMPC::UpdateResetNMI() {
     }
 }
 
-template <bool debug>
 void SMPC::OnCommandEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
     auto &smpc = *static_cast<SMPC *>(userContext);
-    smpc.ProcessCommand<debug>();
+    smpc.ProcessCommand();
 }
 
 void SMPC::MapMemory(sh2::SH2Bus &bus) {
@@ -281,7 +279,6 @@ FORCE_INLINE void SMPC::WriteDDR2(uint8 value) {
     DDR2 = value;
 }
 
-template <bool debug>
 void SMPC::ProcessCommand() {
     switch (COMREG) {
     case Command::MSHON: MSHON(); break;

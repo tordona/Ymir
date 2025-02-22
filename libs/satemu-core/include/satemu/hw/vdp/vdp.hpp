@@ -98,7 +98,6 @@ private:
     core::Scheduler &m_scheduler;
     core::EventID m_phaseUpdateEvent;
 
-    template <bool debug>
     static void OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
 
     friend struct satemu::Saturn;
@@ -287,7 +286,6 @@ private:
     std::array<uint32, 5> m_VTimings;
 
     // Moves to the next phase.
-    template <bool debug>
     void UpdatePhase();
 
     // Returns the number of cycles between the current and the next phase.
