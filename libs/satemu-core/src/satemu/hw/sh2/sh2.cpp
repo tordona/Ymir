@@ -398,28 +398,30 @@ T SH2::MemRead(uint32 address) {
     case 0b101: // cache-through
         return m_bus.Read<T>(address & 0x7FFFFFF);
     case 0b010: // associative purge
-    {
-        const uint32 index = bit::extract<4, 9>(address);
-        const uint32 tagAddress = bit::extract<10, 28>(address);
-        auto &entry = m_cacheEntries[index];
-        for (auto &tag : entry.tag) {
-            /*if (tag.tagAddress == tagAddress) {
-                tag.valid = false;
-            }*/
-            tag.valid &= tag.tagAddress != tagAddress;
+        if constexpr (std::is_same_v<T, uint32>) {
+            const uint32 index = bit::extract<4, 9>(address);
+            const uint32 tagAddress = bit::extract<10, 28>(address);
+            auto &entry = m_cacheEntries[index];
+            for (auto &tag : entry.tag) {
+                /*if (tag.tagAddress == tagAddress) {
+                    tag.valid = false;
+                }*/
+                tag.valid &= tag.tagAddress != tagAddress;
+            }
+            m_log.trace("{}-bit SH-2 associative purge read from {:08X}", sizeof(T) * 8, address);
         }
-        m_log.trace("{}-bit SH-2 associative purge read from {:08X}", sizeof(T) * 8, address);
         return (address & 1) ? static_cast<T>(0x12231223) : static_cast<T>(0x23122312);
-    }
     case 0b011: // cache address array
-    {
-        const uint32 index = bit::extract<4, 9>(address);
-        const auto &entry = m_cacheEntries[index];
-        auto &lru = m_cacheLRU[index];
-        const T value = entry.tag[CCR.Wn].u32 | (lru << 4u);
-        m_log.trace("{}-bit SH-2 cache address array read from {:08X} = {:X}", sizeof(T) * 8, address, value);
-        return value;
-    }
+        if constexpr (std::is_same_v<T, uint32>) {
+            const uint32 index = bit::extract<4, 9>(address);
+            const auto &entry = m_cacheEntries[index];
+            auto &lru = m_cacheLRU[index];
+            const T value = entry.tag[CCR.Wn].u32 | (lru << 4u);
+            m_log.trace("{}-bit SH-2 cache address array read from {:08X} = {:X}", sizeof(T) * 8, address, value);
+            return value;
+        } else {
+            return 0;
+        }
     case 0b100:
     case 0b110: // cache data array
     {
@@ -493,29 +495,29 @@ void SH2::MemWrite(uint32 address, T value) {
         m_bus.Write<T>(address & 0x7FFFFFF, value);
         break;
     case 0b010: // associative purge
-    {
-        const uint32 index = bit::extract<4, 9>(address);
-        const uint32 tagAddress = bit::extract<10, 28>(address);
-        auto &entry = m_cacheEntries[index];
-        for (auto &tag : entry.tag) {
-            /*if (tag.tagAddress == tagAddress) {
-                tag.valid = false;
-            }*/
-            tag.valid &= tag.tagAddress != tagAddress;
+        if constexpr (std::is_same_v<T, uint32>) {
+            const uint32 index = bit::extract<4, 9>(address);
+            const uint32 tagAddress = bit::extract<10, 28>(address);
+            auto &entry = m_cacheEntries[index];
+            for (auto &tag : entry.tag) {
+                /*if (tag.tagAddress == tagAddress) {
+                    tag.valid = false;
+                }*/
+                tag.valid &= tag.tagAddress != tagAddress;
+            }
+            m_log.trace("{}-bit SH-2 associative purge write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         }
-        m_log.trace("{}-bit SH-2 associative purge write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         break;
-    }
     case 0b011: // cache address array
-    {
-        const uint32 index = bit::extract<4, 9>(address);
-        auto &entry = m_cacheEntries[index];
-        auto &lru = m_cacheLRU[index];
-        entry.tag[CCR.Wn].u32 = address & 0x1FFFFC04;
-        lru = bit::extract<4, 9>(address);
-        m_log.trace("{}-bit SH-2 cache address array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+        if constexpr (std::is_same_v<T, uint32>) {
+            const uint32 index = bit::extract<4, 9>(address);
+            auto &entry = m_cacheEntries[index];
+            auto &lru = m_cacheLRU[index];
+            entry.tag[CCR.Wn].u32 = value & 0x1FFFFC04;
+            lru = bit::extract<4, 9>(value);
+            m_log.trace("{}-bit SH-2 cache address array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+        }
         break;
-    }
     case 0b100:
     case 0b110: // cache data array
     {
