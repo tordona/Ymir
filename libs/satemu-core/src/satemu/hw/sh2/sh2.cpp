@@ -507,7 +507,7 @@ void SH2::MemWrite(uint32 address, T value) {
     case 0b011: // cache address array
         if constexpr (std::is_same_v<T, uint32>) {
             const uint32 index = bit::extract<4, 9>(address);
-            m_cacheEntries[index].tag[CCR.Wn].u32 = value & 0x1FFFFC04;
+            m_cacheEntries[index].tag[CCR.Wn].u32 = address & 0x1FFFFC04;
             m_cacheLRU[index] = bit::extract<4, 9>(value);
             m_log.trace("{}-bit SH-2 cache address array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         }
