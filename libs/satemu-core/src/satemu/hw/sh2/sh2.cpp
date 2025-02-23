@@ -368,6 +368,7 @@ T SH2::MemRead(uint32 address) {
                     way = kCacheLRUWaySelect[lru & m_cacheReplaceANDMask] | m_cacheReplaceORMask[instrFetch];
                     if (way != -1) {
                         entry.tag[way].tagAddress = tagAddress;
+                        entry.tag[way].valid = 1;
 
                         // Fill line
                         const uint32 baseAddress = address & ~0xF;
