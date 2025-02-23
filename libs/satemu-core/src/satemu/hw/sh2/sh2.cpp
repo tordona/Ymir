@@ -424,7 +424,7 @@ T SH2::MemRead(uint32 address) {
     case 0b110: // cache data array
     {
         const uint32 index = bit::extract<4, 9>(address);
-        const uint32 way = bit::extract<10, 12>(address);
+        const uint32 way = bit::extract<10, 11>(address);
         // const uint32 byte = (bit::extract<0, 3>(address) & ~(sizeof(T) - 1)) ^ (4 - sizeof(T));
         const uint32 byte = bit::extract<0, 3>(address);
         const auto &line = m_cacheEntries[index].line[way];
@@ -516,7 +516,7 @@ void SH2::MemWrite(uint32 address, T value) {
     case 0b110: // cache data array
     {
         const uint32 index = bit::extract<4, 9>(address);
-        const uint32 way = bit::extract<10, 12>(address);
+        const uint32 way = bit::extract<10, 11>(address);
         // const uint32 byte = (bit::extract<0, 3>(address) & ~(sizeof(T) - 1)) ^ (4 - sizeof(T));
         const uint32 byte = bit::extract<0, 3>(address);
         auto &line = m_cacheEntries[index].line[way];
