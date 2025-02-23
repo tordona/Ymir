@@ -401,8 +401,7 @@ T SH2::MemRead(uint32 address) {
         if constexpr (std::is_same_v<T, uint32>) {
             const uint32 index = bit::extract<4, 9>(address);
             const uint32 tagAddress = bit::extract<10, 28>(address);
-            auto &entry = m_cacheEntries[index];
-            for (auto &tag : entry.tag) {
+            for (auto &tag : m_cacheEntries[index].tag) {
                 /*if (tag.tagAddress == tagAddress) {
                     tag.valid = false;
                 }*/
@@ -414,9 +413,8 @@ T SH2::MemRead(uint32 address) {
     case 0b011: // cache address array
         if constexpr (std::is_same_v<T, uint32>) {
             const uint32 index = bit::extract<4, 9>(address);
-            const auto &entry = m_cacheEntries[index];
             auto &lru = m_cacheLRU[index];
-            const T value = entry.tag[CCR.Wn].u32 | (lru << 4u);
+            const T value = m_cacheEntries[index].tag[CCR.Wn].u32 | (lru << 4u);
             m_log.trace("{}-bit SH-2 cache address array read from {:08X} = {:X}", sizeof(T) * 8, address, value);
             return value;
         } else {
@@ -429,8 +427,7 @@ T SH2::MemRead(uint32 address) {
         const uint32 way = bit::extract<10, 12>(address);
         // const uint32 byte = (bit::extract<0, 3>(address) & ~(sizeof(T) - 1)) ^ (4 - sizeof(T));
         const uint32 byte = bit::extract<0, 3>(address);
-        const auto &entry = m_cacheEntries[index];
-        const auto &line = entry.line[way];
+        const auto &line = m_cacheEntries[index].line[way];
         const T value = util::ReadBE<T>(&line[byte]);
         m_log.trace("{}-bit SH-2 cache data array read from {:08X} = {:X}", sizeof(T) * 8, address, value);
         return value;
@@ -498,8 +495,7 @@ void SH2::MemWrite(uint32 address, T value) {
         if constexpr (std::is_same_v<T, uint32>) {
             const uint32 index = bit::extract<4, 9>(address);
             const uint32 tagAddress = bit::extract<10, 28>(address);
-            auto &entry = m_cacheEntries[index];
-            for (auto &tag : entry.tag) {
+            for (auto &tag : m_cacheEntries[index].tag) {
                 /*if (tag.tagAddress == tagAddress) {
                     tag.valid = false;
                 }*/
@@ -511,10 +507,8 @@ void SH2::MemWrite(uint32 address, T value) {
     case 0b011: // cache address array
         if constexpr (std::is_same_v<T, uint32>) {
             const uint32 index = bit::extract<4, 9>(address);
-            auto &entry = m_cacheEntries[index];
-            auto &lru = m_cacheLRU[index];
-            entry.tag[CCR.Wn].u32 = value & 0x1FFFFC04;
-            lru = bit::extract<4, 9>(value);
+            m_cacheEntries[index].tag[CCR.Wn].u32 = value & 0x1FFFFC04;
+            m_cacheLRU[index] = bit::extract<4, 9>(value);
             m_log.trace("{}-bit SH-2 cache address array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         }
         break;
@@ -525,8 +519,7 @@ void SH2::MemWrite(uint32 address, T value) {
         const uint32 way = bit::extract<10, 12>(address);
         // const uint32 byte = (bit::extract<0, 3>(address) & ~(sizeof(T) - 1)) ^ (4 - sizeof(T));
         const uint32 byte = bit::extract<0, 3>(address);
-        auto &entry = m_cacheEntries[index];
-        auto &line = entry.line[way];
+        auto &line = m_cacheEntries[index].line[way];
         util::WriteBE<T>(&line[byte], value);
         m_log.trace("{}-bit SH-2 cache data array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         break;
