@@ -406,7 +406,7 @@ private:
     alignas(16) std::array<CacheEntry, kCacheEntries> m_cacheEntries;
     alignas(16) std::array<uint8, kCacheEntries> m_cacheLRU;
     uint8 m_cacheReplaceANDMask;
-    std::array<uint8, 2> m_cacheReplaceORMask; // [0]=data, [1]=code
+    std::array<sint8, 2> m_cacheReplaceORMask; // [0]=data, [1]=code
 
     alignas(16) static constexpr std::array<CacheLRUUpdateBits, 4> kCacheLRUUpdateBits = {{
         // AND mask       OR mask

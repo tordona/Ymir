@@ -227,6 +227,9 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
     WriteCCR(0x00);
     m_cacheEntries.fill({});
     m_cacheLRU.fill(0);
+    m_cacheReplaceANDMask = 0x3Fu;
+    m_cacheReplaceORMask[false] = 0u;
+    m_cacheReplaceORMask[true] = 0u;
 
     m_tracer.Reset();
 }
@@ -361,10 +364,8 @@ T SH2::MemRead(uint32 address) {
 
                 if (way == -1) {
                     // Cache miss
-                    uint32 lru = m_cacheLRU[index];
-                    lru &= m_cacheReplaceANDMask;
-                    lru |= m_cacheReplaceORMask[instrFetch];
-                    way = kCacheLRUWaySelect[lru];
+                    uint8 lru = m_cacheLRU[index];
+                    way = kCacheLRUWaySelect[lru & m_cacheReplaceANDMask] | m_cacheReplaceORMask[instrFetch];
                     if (way != -1) {
                         entry.tag[way].tagAddress = tagAddress;
 
@@ -1134,8 +1135,8 @@ void SH2::WriteCCR(uint8 value) {
 
     CCR.u8 = value;
     m_cacheReplaceANDMask = CCR.TW ? 0x1u : 0x3Fu;
-    m_cacheReplaceORMask[false] = CCR.OD ? -1 : 0u;
-    m_cacheReplaceORMask[true] = CCR.ID ? -1 : 0u;
+    m_cacheReplaceORMask[false] = CCR.OD ? -1 : 0;
+    m_cacheReplaceORMask[true] = CCR.ID ? -1 : 0;
     if (CCR.CP) {
         for (uint32 index = 0; index < 64; index++) {
             for (auto &tag : m_cacheEntries[index].tag) {
