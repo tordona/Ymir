@@ -410,10 +410,10 @@ private:
 
     alignas(16) static constexpr std::array<CacheLRUUpdateBits, 4> kCacheLRUUpdateBits = {{
         // AND mask       OR mask
-        {0b111000u, 0b000000u}, // way 0
-        {0b011001u, 0b100000u}, // way 1
-        {0b101010u, 0b010100u}, // way 2
-        {0b110100u, 0b001011u}, // way 3
+        {0b111000u, 0b000000u}, // way 0: 000...
+        {0b011001u, 0b100000u}, // way 1: 1..00.
+        {0b101010u, 0b010100u}, // way 2: .1.1.0
+        {0b110100u, 0b001011u}, // way 3: ..1.11
     }};
 
     alignas(16) static constexpr auto kCacheLRUWaySelect = [] {
