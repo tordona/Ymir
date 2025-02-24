@@ -2,13 +2,12 @@
 
 #include "sh2_bus_defs.hpp"
 
-#include <satemu/hw/cdblock/cdblock.hpp>
 #include <satemu/hw/hw_defs.hpp>
-#include <satemu/hw/scu/scu.hpp>
 
 #include <satemu/sys/backup_ram.hpp>
 
 #include <satemu/util/data_ops.hpp>
+#include <satemu/util/debug_print.hpp>
 #include <satemu/util/unreachable.hpp>
 
 #include <iostream>
@@ -22,6 +21,12 @@ namespace satemu::sh2 {
 class SH2;
 
 } // namespace satemu::sh2
+
+namespace satemu::scu {
+
+class SCU;
+
+}
 
 // -----------------------------------------------------------------------------
 

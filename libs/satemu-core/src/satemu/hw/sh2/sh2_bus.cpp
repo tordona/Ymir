@@ -1,8 +1,7 @@
 #include <satemu/hw/sh2/sh2_bus.hpp>
 
+#include <satemu/hw/scu/scu.hpp>
 #include <satemu/hw/sh2/sh2.hpp>
-
-#include <fstream>
 
 namespace satemu::sh2 {
 

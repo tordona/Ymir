@@ -20,7 +20,6 @@
 namespace satemu::sh2 {
 
 class SH2Bus;
-class SH2Block;
 
 } // namespace satemu::sh2
 
