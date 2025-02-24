@@ -1,0 +1,21 @@
+==================================
+Games that contain race conditions
+==================================
+
+Virtua Fighter
+  The game stores a matrix stack pointer at 0x60435E8, which points to the stack starting at 0x6042FE8 where each matrix
+  takes 0x30 bytes. The pointer and the stack are read and written by both SH-2 CPUs simultaneously.
+
+  The master CPU runs a routine at 0x60279AC that clears the cache address array (6xxxxxxx), requests the slave CPU to
+  run its routine, then proceeds with vector/matrix calculations using the matrix stack pointer.
+
+  The slave CPU routine at 0x601B11C clears the cache address array, overwrites the matrix at the top of the stack then
+  does vector/matrix math with the same pointer as above.
+
+  The routines make no attempt to synchronize execution between them.
+
+  The two CPUs compete for the stack and the pointer, which is incremented or decremented in steps of 0x30. Because the
+  game stores VDP2 parameters before the matrix stack, NBGs get corrupted when the pointer decrements past 0x6042FE8,
+  breaking the UI and background. If the pointer increments past 0x60435E8, the pointer gets corrupted and the game
+  attempts to read from random areas, usually resulting in a Ring Out for player 1, some serious 3D graphics distortion
+  or everything disappearing.

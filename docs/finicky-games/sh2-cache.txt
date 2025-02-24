@@ -4,22 +4,3 @@ Games that rely on SH-2 cache features
 
 NiGHTS into Dreams...
   Uses the cache data array (Cxxxxxxx) on the slave SH-2 as scratch memory for transfers
-
-Virtua Fighter
-  Uses the cache to avoid a race condition when performing vector/matrix calculations.
-
-  The game stores a matrix stack pointer at 0x60435E8, which points to the stack starting at 0x6042FE8 where each matrix
-  takes 0x30 bytes. The pointer and the stack are read and written by both SH-2 CPUs simultaneously.
-
-  The master CPU runs a routine at 0x60279AC that clears the cache address array (6xxxxxxx), requests the slave CPU to
-  run its routine, then proceeds with vector/matrix calculations using the matrix stack pointer.
-
-  The slave CPU routine at 0x601B11C clears the cache address array, overwrites the matrix at the top of the stack then
-  does vector/matrix math with the same pointer as above. It reads the stack pointer immediately after clearing the
-  cache to ensure it is cached as soon as possible.
-
-  Without the cache, the two CPUs compete for the stack and may occasionally write stale data - sometimes the pointer is
-  incremented by 0x30, sometimes decremented. Because the game stores VDP2 parameters before the matrix stack, NBGs get
-  corrupted when the pointer decrements past 0x6042FE8, breaking the UI and background.
-
-  The routines make no attempt to synchronize execution between them.
