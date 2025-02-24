@@ -5,7 +5,6 @@
 #include <satemu/hw/cdblock/cdblock.hpp>
 #include <satemu/hw/hw_defs.hpp>
 #include <satemu/hw/scu/scu.hpp>
-#include <satemu/hw/smpc/smpc.hpp>
 
 #include <satemu/sys/backup_ram.hpp>
 
@@ -104,7 +103,7 @@ public:
         };
     };
 
-    SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu, smpc::SMPC &smpc);
+    SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu);
 
     void Reset(bool hard);
 
@@ -162,7 +161,6 @@ private:
     SH2 &m_masterSH2;
     SH2 &m_slaveSH2;
     scu::SCU &m_SCU;
-    smpc::SMPC &m_SMPC;
 
     std::array<MemoryPage, kPageCount> m_pages;
 

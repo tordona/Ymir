@@ -16,11 +16,10 @@ static void GenericWrite(uint32 address, T value, void *ctx) {
     util::WriteBE<T>(static_cast<uint8 *>(ctx) + (address & mask), value);
 }
 
-SH2Bus::SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu, smpc::SMPC &smpc)
+SH2Bus::SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu)
     : m_masterSH2(masterSH2)
     , m_slaveSH2(slaveSH2)
-    , m_SCU(scu)
-    , m_SMPC(smpc) {
+    , m_SCU(scu) {
 
     static constexpr std::size_t kInternalBackupRAMSize = 32_KiB; // HACK: should be in its own component
     // TODO: configurable path and mode
