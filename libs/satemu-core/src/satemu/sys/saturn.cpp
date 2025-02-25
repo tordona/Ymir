@@ -5,12 +5,17 @@
 namespace satemu {
 
 Saturn::Saturn()
-    : SH2(SCU)
-    , SCU(m_scheduler, SH2)
+    : SCU(m_scheduler, SH2)
     , VDP(m_scheduler, SCU, SMPC)
     , SMPC(m_system, m_scheduler, *this)
     , SCSP(m_system, m_scheduler, SCU)
     , CDBlock(m_system, m_scheduler, SCU, SCSP) {
+
+    SH2.master.SetExternalInterruptAcknowledgeCallback(
+        {&SCU, [](void *ctx) { static_cast<scu::SCU *>(ctx)->AcknowledgeExternalInterrupt(); }});
+
+    SH2.slave.SetExternalInterruptAcknowledgeCallback(
+        {&SCU, [](void *ctx) { static_cast<scu::SCU *>(ctx)->AcknowledgeExternalInterrupt(); }});
 
     SCU.MapMemory(SH2.bus);
     VDP.MapMemory(SH2.bus);

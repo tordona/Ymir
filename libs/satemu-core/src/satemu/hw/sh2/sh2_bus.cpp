@@ -1,6 +1,5 @@
 #include <satemu/hw/sh2/sh2_bus.hpp>
 
-#include <satemu/hw/scu/scu.hpp>
 #include <satemu/hw/sh2/sh2.hpp>
 
 namespace satemu::sh2 {
@@ -15,8 +14,7 @@ static void GenericWrite(uint32 address, T value, void *ctx) {
     util::WriteBE<T>(static_cast<uint8 *>(ctx) + (address & mask), value);
 }
 
-SH2Bus::SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu)
-    : m_SCU(scu) {
+SH2Bus::SH2Bus(SH2 &masterSH2, SH2 &slaveSH2) {
     static constexpr std::size_t kInternalBackupRAMSize = 32_KiB; // HACK: should be in its own component
     // TODO: configurable path and mode
     std::error_code error{};
@@ -115,10 +113,6 @@ void SH2Bus::DumpWRAMLow(std::ostream &out) const {
 
 void SH2Bus::DumpWRAMHigh(std::ostream &out) const {
     out.write((const char *)WRAMHigh.data(), WRAMHigh.size());
-}
-
-void SH2Bus::AcknowledgeExternalInterrupt() {
-    m_SCU.AcknowledgeExternalInterrupt();
 }
 
 void SH2Bus::MapMemory(uint32 start, uint32 end, MemoryPage entry) {

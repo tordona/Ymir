@@ -8,6 +8,7 @@
 
 #include <satemu/debug/sh2_tracer_ctx.hpp>
 
+#include <satemu/util/callback.hpp>
 #include <satemu/util/debug_print.hpp>
 
 #include <array>
@@ -97,6 +98,8 @@ using SH2Tracer = NullSH2Tracer;
 
 // -----------------------------------------------------------------------------
 
+using CBAcknowledgeExternalInterrupt = util::Callback<void()>;
+
 class SH2 {
 public:
     SH2(SH2Bus &bus, bool master);
@@ -139,6 +142,9 @@ public:
     }
 
     void SetExternalInterrupt(uint8 level, uint8 vecNum);
+    void SetExternalInterruptAcknowledgeCallback(CBAcknowledgeExternalInterrupt callback) {
+        m_cbAcknowledgeExternalInterrupt = callback;
+    }
 
     bool GetNMI() const;
     void SetNMI();
@@ -169,6 +175,8 @@ private:
 
     uint32 m_delaySlotTarget;
     bool m_delaySlot;
+
+    CBAcknowledgeExternalInterrupt m_cbAcknowledgeExternalInterrupt;
 
     // -------------------------------------------------------------------------
     // Debugger

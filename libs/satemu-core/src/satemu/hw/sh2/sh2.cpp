@@ -1519,7 +1519,7 @@ void SH2::Execute() {
 
         // Acknowledge interrupt
         switch (m_pendingInterrupt.source) {
-        case InterruptSource::IRL: m_bus.AcknowledgeExternalInterrupt(); break;
+        case InterruptSource::IRL: m_cbAcknowledgeExternalInterrupt(); break;
         case InterruptSource::NMI:
             m_NMI = false;
             LowerInterrupt(InterruptSource::NMI);

@@ -18,8 +18,8 @@ namespace satemu::sh2 {
 
 class SH2Block {
 public:
-    SH2Block(scu::SCU &scu)
-        : bus(master, slave, scu)
+    SH2Block()
+        : bus(master, slave)
         , master(bus, true)
         , slave(bus, false) {}
 

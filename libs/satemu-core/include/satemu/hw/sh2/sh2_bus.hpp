@@ -22,12 +22,6 @@ class SH2;
 
 } // namespace satemu::sh2
 
-namespace satemu::scu {
-
-class SCU;
-
-}
-
 // -----------------------------------------------------------------------------
 
 namespace satemu::sh2 {
@@ -108,7 +102,7 @@ public:
         };
     };
 
-    SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu);
+    SH2Bus(SH2 &masterSH2, SH2 &slaveSH2);
 
     void Reset(bool hard);
 
@@ -156,15 +150,11 @@ public:
         }
     }
 
-    void AcknowledgeExternalInterrupt();
-
     alignas(16) std::array<uint8, kIPLSize> IPL; // aka BIOS ROM
     alignas(16) std::array<uint8, kWRAMLowSize> WRAMLow;
     alignas(16) std::array<uint8, kWRAMHighSize> WRAMHigh;
 
 private:
-    scu::SCU &m_SCU;
-
     std::array<MemoryPage, kPageCount> m_pages;
 
     bup::BackupMemory m_internalBackupRAM;
