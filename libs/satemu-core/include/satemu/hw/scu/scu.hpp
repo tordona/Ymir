@@ -18,17 +18,6 @@
 
 #include <iosfwd>
 
-// -----------------------------------------------------------------------------
-// Forward declarations
-
-namespace satemu::sh2 {
-
-class SH2Block;
-
-} // namespace satemu::sh2
-
-// -----------------------------------------------------------------------------
-
 namespace satemu::scu {
 
 // SCU memory map
@@ -73,11 +62,16 @@ class SCU {
     static constexpr dbg::Category debugLog{rootLog, "Debug"};
 
 public:
-    SCU(core::Scheduler &scheduler, sh2::SH2Block &sh2);
+    SCU(core::Scheduler &scheduler, sys::Bus &bus);
 
     void Reset(bool hard);
 
     void MapMemory(sys::Bus &bus);
+
+    void SetExternalInterruptCallbacks(CBExternalInterrupt master, CBExternalInterrupt slave) {
+        m_cbExternalMasterInterrupt = master;
+        m_cbExternalSlaveInterrupt = slave;
+    }
 
     template <bool debug>
     void Advance(uint64 cycles);
@@ -139,7 +133,10 @@ public:
     }
 
 private:
-    sh2::SH2Block &m_SH2;
+    sys::Bus &m_bus;
+
+    CBExternalInterrupt m_cbExternalMasterInterrupt;
+    CBExternalInterrupt m_cbExternalSlaveInterrupt;
 
     core::Scheduler &m_scheduler;
     core::EventID m_timer1Event;

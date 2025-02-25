@@ -1,8 +1,5 @@
 #include <satemu/hw/scu/scu.hpp>
 
-#include <satemu/hw/cart/cart_impl_none.hpp>
-#include <satemu/hw/sh2/sh2_block.hpp>
-
 #include <satemu/util/inline.hpp>
 
 #include <bit>
@@ -29,8 +26,8 @@ static Bus GetBus(uint32 address) {
     }
 }
 
-SCU::SCU(core::Scheduler &scheduler, sh2::SH2Block &sh2)
-    : m_SH2(sh2)
+SCU::SCU(core::Scheduler &scheduler, sys::Bus &bus)
+    : m_bus(bus)
     , m_scheduler(scheduler) {
 
     EjectCartridge();
@@ -349,9 +346,9 @@ void SCU::RunDMA() {
     };
 
     auto readIndirect = [&] {
-        ch.currXferCount = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 0);
-        ch.currDstAddr = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 4);
-        ch.currSrcAddr = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 8);
+        ch.currXferCount = m_bus.Read<uint32>(ch.currIndirectSrc + 0);
+        ch.currDstAddr = m_bus.Read<uint32>(ch.currIndirectSrc + 4);
+        ch.currSrcAddr = m_bus.Read<uint32>(ch.currIndirectSrc + 8);
         ch.currIndirectSrc += 3 * sizeof(uint32);
         ch.endIndirect = bit::extract<31>(ch.currSrcAddr);
         ch.currSrcAddr &= 0x7FF'FFFF;
@@ -381,15 +378,15 @@ void SCU::RunDMA() {
                 dmaLog.trace("SCU DMA{}: Unaligned read from {:08X}", level, ch.currSrcAddr);
             }
             if (srcBus == Bus::BBus) {
-                value = m_SH2.bus.Read<uint16>(ch.currSrcAddr) << 16u;
+                value = m_bus.Read<uint16>(ch.currSrcAddr) << 16u;
                 dmaLog.trace("SCU DMA{}: B-Bus read from {:08X} -> {:04X}", level, ch.currSrcAddr, value >> 16u);
                 ch.currSrcAddr += ch.currSrcAddrInc / 2u;
-                value |= m_SH2.bus.Read<uint16>(ch.currSrcAddr) << 0u;
+                value |= m_bus.Read<uint16>(ch.currSrcAddr) << 0u;
                 dmaLog.trace("SCU DMA{}: B-Bus read from {:08X} -> {:04X}", level, ch.currSrcAddr, value & 0xFFFF);
                 ch.currSrcAddr += ch.currSrcAddrInc / 2u;
             } else {
-                value = m_SH2.bus.Read<uint16>(ch.currSrcAddr + 0) << 16u;
-                value |= m_SH2.bus.Read<uint16>(ch.currSrcAddr + 2) << 0u;
+                value = m_bus.Read<uint16>(ch.currSrcAddr + 0) << 16u;
+                value |= m_bus.Read<uint16>(ch.currSrcAddr + 2) << 0u;
                 dmaLog.trace("SCU DMA{}: Read from {:08X} -> {:08X}", level, ch.currSrcAddr, value);
                 ch.currSrcAddr += ch.currSrcAddrInc;
             }
@@ -399,15 +396,15 @@ void SCU::RunDMA() {
                 dmaLog.trace("SCU DMA{}: Unaligned write to {:08X}", level, ch.currDstAddr);
             }
             if (dstBus == Bus::BBus) {
-                m_SH2.bus.Write<uint16>(ch.currDstAddr, value >> 16u);
+                m_bus.Write<uint16>(ch.currDstAddr, value >> 16u);
                 dmaLog.trace("SCU DMA{}: B-Bus write to {:08X} -> {:04X}", level, ch.currDstAddr, value >> 16u);
                 ch.currDstAddr += ch.currDstAddrInc;
-                m_SH2.bus.Write<uint16>(ch.currDstAddr, value >> 0u);
+                m_bus.Write<uint16>(ch.currDstAddr, value >> 0u);
                 dmaLog.trace("SCU DMA{}: B-Bus write to {:08X} -> {:04X}", level, ch.currDstAddr, value & 0xFFFF);
                 ch.currDstAddr += ch.currDstAddrInc;
             } else {
-                m_SH2.bus.Write<uint16>(ch.currDstAddr + 0, value >> 16u);
-                m_SH2.bus.Write<uint16>(ch.currDstAddr + 2, value >> 0u);
+                m_bus.Write<uint16>(ch.currDstAddr + 0, value >> 16u);
+                m_bus.Write<uint16>(ch.currDstAddr + 2, value >> 0u);
                 dmaLog.trace("SCU DMA{}: Write to {:08X} -> {:08X}", level, ch.currDstAddr, value);
                 ch.currDstAddr += ch.currDstAddrInc;
             }
@@ -497,9 +494,9 @@ void SCU::RecalcDMAChannel() {
         };
 
         auto readIndirect = [&] {
-            ch.currXferCount = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 0);
-            ch.currDstAddr = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 4);
-            ch.currSrcAddr = m_SH2.bus.Read<uint32>(ch.currIndirectSrc + 8);
+            ch.currXferCount = m_bus.Read<uint32>(ch.currIndirectSrc + 0);
+            ch.currDstAddr = m_bus.Read<uint32>(ch.currIndirectSrc + 4);
+            ch.currSrcAddr = m_bus.Read<uint32>(ch.currIndirectSrc + 8);
             ch.currIndirectSrc += 3 * sizeof(uint32);
             ch.endIndirect = bit::extract<31>(ch.currSrcAddr);
             ch.currSrcAddr &= 0x7FF'FFFF;
@@ -640,16 +637,16 @@ void SCU::RunDSPDMA(uint64 cycles) {
             const uint32 value = useDataRAM ? m_dspState.dataRAM[ctIndex][ctAddr] : m_dspState.programRAM[i & 0xFF];
             if (bus == Bus::ABus) {
                 // A-Bus -> one 32-bit write
-                m_SH2.bus.Write<uint32>(addrD0, value);
+                m_bus.Write<uint32>(addrD0, value);
                 addrD0 += m_dspState.dmaAddrInc;
             } else if (bus == Bus::BBus) {
                 // B-Bus -> two 16-bit writes
-                m_SH2.bus.Write<uint16>(addrD0 + 0, value >> 16u);
-                m_SH2.bus.Write<uint16>(addrD0 + 2, value >> 0u);
+                m_bus.Write<uint16>(addrD0 + 0, value >> 16u);
+                m_bus.Write<uint16>(addrD0 + 2, value >> 0u);
                 addrD0 += m_dspState.dmaAddrInc * 2;
             } else if (bus == Bus::WRAM) {
                 // WRAM -> one 32-bit write
-                m_SH2.bus.Write<uint32>(addrD0, value);
+                m_bus.Write<uint32>(addrD0, value);
                 addrD0 += m_dspState.dmaAddrInc;
             }
         } else {
@@ -657,16 +654,16 @@ void SCU::RunDSPDMA(uint64 cycles) {
             uint32 value = 0;
             if (bus == Bus::ABus) {
                 // A-Bus -> one 32-bit read
-                value = m_SH2.bus.Read<uint32>(addrD0);
+                value = m_bus.Read<uint32>(addrD0);
                 addrD0 += m_dspState.dmaAddrInc;
             } else if (bus == Bus::BBus) {
                 // B-Bus -> two 16-bit reads
-                value = m_SH2.bus.Read<uint16>(addrD0 + 0) << 16u;
-                value |= m_SH2.bus.Read<uint16>(addrD0 + 2) << 0u;
+                value = m_bus.Read<uint16>(addrD0 + 0) << 16u;
+                value |= m_bus.Read<uint16>(addrD0 + 2) << 0u;
                 addrD0 += 4;
             } else if (bus == Bus::WRAM) {
                 // WRAM -> one 32-bit read
-                value = m_SH2.bus.Read<uint32>(addrD0);
+                value = m_bus.Read<uint32>(addrD0);
                 addrD0 += m_dspState.dmaAddrInc;
             }
             if (useDataRAM) {
@@ -1477,33 +1474,33 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
             UpdateInterruptLevel<false>();
         } else {
             if (internalLevel >= externalLevel) {
-                m_SH2.master.SetExternalInterrupt(internalLevel, internalIndex + 0x40);
+                m_cbExternalMasterInterrupt(internalLevel, internalIndex + 0x40);
                 rootLog.trace("Raising internal interrupt {:X}", internalIndex);
                 m_tracer.RaiseInterrupt(internalIndex, internalLevel);
 
                 // Also send VBlank IN and HBlank IN to slave SH2 if it is enabled
                 if (internalIndex == 0) {
-                    m_SH2.slave.SetExternalInterrupt(2, 0x43);
+                    m_cbExternalSlaveInterrupt(2, 0x43);
                 } else if (internalIndex == 2) {
-                    m_SH2.slave.SetExternalInterrupt(1, 0x41);
+                    m_cbExternalSlaveInterrupt(1, 0x41);
                 } else {
-                    m_SH2.slave.SetExternalInterrupt(0, 0);
+                    m_cbExternalSlaveInterrupt(0, 0);
                 }
             } else if (m_abusIntrAck) {
                 rootLog.trace("Raising external interrupt {:X}", externalIndex);
                 m_tracer.RaiseInterrupt(externalIndex + 16, externalLevel);
                 m_abusIntrAck = false;
-                m_SH2.master.SetExternalInterrupt(externalLevel, externalIndex + 0x50);
-                m_SH2.slave.SetExternalInterrupt(0, 0);
+                m_cbExternalMasterInterrupt(externalLevel, externalIndex + 0x50);
+                m_cbExternalSlaveInterrupt(0, 0);
             } else {
                 rootLog.trace("Lowering interrupt signal");
-                m_SH2.master.SetExternalInterrupt(0, 0);
-                m_SH2.slave.SetExternalInterrupt(0, 0);
+                m_cbExternalMasterInterrupt(0, 0);
+                m_cbExternalSlaveInterrupt(0, 0);
             }
         }
     } else {
-        m_SH2.master.SetExternalInterrupt(0, 0);
-        m_SH2.slave.SetExternalInterrupt(0, 0);
+        m_cbExternalMasterInterrupt(0, 0);
+        m_cbExternalSlaveInterrupt(0, 0);
     }
 }
 

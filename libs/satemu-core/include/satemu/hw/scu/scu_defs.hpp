@@ -2,6 +2,8 @@
 
 #include <satemu/core/types.hpp>
 
+#include <satemu/util/callback.hpp>
+
 namespace satemu::scu {
 
 // SCU interrupts
@@ -108,5 +110,7 @@ union InterruptMask {
     };
 };
 static_assert(sizeof(InterruptMask) == sizeof(uint32));
+
+using CBExternalInterrupt = util::RequiredCallback<void(uint8 level, uint8 vector)>;
 
 } // namespace satemu::scu

@@ -5,7 +5,7 @@
 namespace satemu {
 
 Saturn::Saturn()
-    : SCU(m_scheduler, SH2)
+    : SCU(m_scheduler, SH2.bus)
     , VDP(m_scheduler, SCU, SMPC)
     , SMPC(m_system, m_scheduler, *this)
     , SCSP(m_system, m_scheduler, SCU)
@@ -14,6 +14,10 @@ Saturn::Saturn()
     auto ackIntrCallback = util::MakeClassMemberRequiredCallback<&scu::SCU::AcknowledgeExternalInterrupt>(&SCU);
     SH2.master.SetExternalInterruptAcknowledgeCallback(ackIntrCallback);
     SH2.slave.SetExternalInterruptAcknowledgeCallback(ackIntrCallback);
+
+    SCU.SetExternalInterruptCallbacks(
+        util::MakeClassMemberRequiredCallback<&sh2::SH2::SetExternalInterrupt>(&SH2.master),
+        util::MakeClassMemberRequiredCallback<&sh2::SH2::SetExternalInterrupt>(&SH2.slave));
 
     mem.MapMemory(SH2.bus);
     SH2.master.MapMemory(SH2.bus);

@@ -90,9 +90,9 @@ public:
     // -------------------------------------------------------------------------
     // Components
 
-    sys::SystemMemory mem;
+    sys::SystemMemory mem;    // IPL ROM, low and high WRAM, internal backup memory
     sh2::SH2Block SH2;        // Master and slave SH-2 CPUs
-    scu::SCU SCU;             // SCU and its DSP
+    scu::SCU SCU;             // SCU and its DSP, and the cartridge slot
     vdp::VDP VDP;             // VDP1 and VDP2
     smpc::SMPC SMPC;          // SMPC and input devices
     scsp::SCSP SCSP;          // SCSP and MC68EC000 CPU
