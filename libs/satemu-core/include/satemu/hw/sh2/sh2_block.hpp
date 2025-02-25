@@ -3,17 +3,6 @@
 #include "sh2.hpp"
 #include "sh2_bus.hpp"
 
-// -----------------------------------------------------------------------------
-// Forward declarations
-
-namespace satemu {
-
-struct Saturn;
-
-} // namespace satemu
-
-// -----------------------------------------------------------------------------
-
 namespace satemu::sh2 {
 
 class SH2Block {
