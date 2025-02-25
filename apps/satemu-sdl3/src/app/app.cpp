@@ -252,7 +252,7 @@ void App::RunEmulator() {
         }
     }
 
-    m_saturn.SCSP.SetCallback(
+    m_saturn.SCSP.SetSampleCallback(
         {&audioBuffer, [](sint16 left, sint16 right, void *ctx) {
              auto &buffer = *reinterpret_cast<AudioBuffer *>(ctx);
 

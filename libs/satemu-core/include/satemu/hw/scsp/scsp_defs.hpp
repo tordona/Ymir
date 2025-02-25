@@ -37,4 +37,7 @@ inline constexpr uint16 kIntrSample = 10;        // Once every sample tick
 // Sample output callback, invoked every sample
 using CBOutputSample = util::OptionalCallback<void(sint16 left, sint16 right)>;
 
+// SCU sound request interrupt trigger callback
+using CBTriggerSoundRequestInterrupt = util::RequiredCallback<void(bool level)>;
+
 } // namespace satemu::scsp

@@ -1,7 +1,5 @@
 #include <satemu/hw/scsp/scsp.hpp>
 
-#include <satemu/hw/scu/scu.hpp>
-
 #include <satemu/sys/clocks.hpp>
 
 #include <algorithm>
@@ -11,10 +9,9 @@ using namespace satemu::m68k;
 
 namespace satemu::scsp {
 
-SCSP::SCSP(sys::System &system, core::Scheduler &scheduler, scu::SCU &scu)
+SCSP::SCSP(sys::System &system, core::Scheduler &scheduler)
     : m_m68k(*this)
     , m_system(system)
-    , m_scu(scu)
     , m_scheduler(scheduler)
     , m_dsp(m_WRAM.data()) {
 
@@ -331,10 +328,6 @@ void SCSP::UpdateM68KInterrupts() {
     }
 
     m_m68k.SetExternalInterruptLevel(level);
-}
-
-void SCSP::UpdateSCUInterrupts() {
-    m_scu.TriggerSoundRequest(m_scuPendingInterrupts & m_scuEnabledInterrupts);
 }
 
 void SCSP::ExecuteDMA() {

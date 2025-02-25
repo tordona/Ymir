@@ -31,12 +31,6 @@ struct Saturn;
 
 } // namespace satemu
 
-namespace satemu::scu {
-
-class SCU;
-
-} // namespace satemu::scu
-
 // -----------------------------------------------------------------------------
 
 namespace satemu::scsp {
@@ -75,14 +69,18 @@ class SCSP {
     static constexpr dbg::Category dmaLog{rootLog, "DMA"};
 
 public:
-    SCSP(sys::System &system, core::Scheduler &scheduler, scu::SCU &scu);
+    SCSP(sys::System &system, core::Scheduler &scheduler);
 
     void Reset(bool hard);
 
     void MapMemory(sys::Bus &bus);
 
-    FORCE_INLINE void SetCallback(CBOutputSample cbOutputSample) {
-        m_cbOutputSample = cbOutputSample;
+    void SetSampleCallback(CBOutputSample callback) {
+        m_cbOutputSample = callback;
+    }
+
+    void SetTriggerSoundRequestInterruptCallback(CBTriggerSoundRequestInterrupt callback) {
+        m_cbTriggerSoundRequestInterrupt = callback;
     }
 
     void Advance(uint64 cycles);
@@ -121,7 +119,6 @@ private:
     bool m_m68kEnabled;
 
     sys::System &m_system;
-    scu::SCU &m_scu;
 
     core::Scheduler &m_scheduler;
     core::EventID m_sampleTickEvent;
@@ -129,6 +126,7 @@ private:
     static void OnSampleTickEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
 
     CBOutputSample m_cbOutputSample;
+    CBTriggerSoundRequestInterrupt m_cbTriggerSoundRequestInterrupt;
 
     friend struct satemu::Saturn;
     void UpdateClockRatios();
@@ -771,7 +769,9 @@ private:
     void SetInterrupt(uint16 intr, bool level);
 
     void UpdateM68KInterrupts();
-    void UpdateSCUInterrupts();
+    void UpdateSCUInterrupts() {
+        m_cbTriggerSoundRequestInterrupt(m_scuPendingInterrupts & m_scuEnabledInterrupts);
+    }
 
     // --- DMA Transfer Register ---
 
