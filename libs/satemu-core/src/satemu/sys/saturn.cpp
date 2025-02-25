@@ -12,10 +12,10 @@ Saturn::Saturn()
     , CDBlock(m_system, m_scheduler, SCU, SCSP) {
 
     SH2.master.SetExternalInterruptAcknowledgeCallback(
-        {&SCU, [](void *ctx) { static_cast<scu::SCU *>(ctx)->AcknowledgeExternalInterrupt(); }});
+        util::MakeClassMemberCallback<&scu::SCU::AcknowledgeExternalInterrupt>(&SCU));
 
     SH2.slave.SetExternalInterruptAcknowledgeCallback(
-        {&SCU, [](void *ctx) { static_cast<scu::SCU *>(ctx)->AcknowledgeExternalInterrupt(); }});
+        util::MakeClassMemberCallback<&scu::SCU::AcknowledgeExternalInterrupt>(&SCU));
 
     SCU.MapMemory(SH2.bus);
     VDP.MapMemory(SH2.bus);
