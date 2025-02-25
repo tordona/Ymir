@@ -92,9 +92,14 @@ namespace detail {
 
 } // namespace detail
 
+// Defines a "required" callback - one that is guaranteed to be always set to a valid function at runtime.
+// Callbacks include a context pointer that is passed as the last argument to the specified function call.
+// Use with care, as it does not check for nullptr for performance.
 template <typename TFunc>
 using RequiredCallback = detail::Callback<TFunc, true>;
 
+// Defines an "optional" callback which may be set to nullptr to disable it, or a valid function pointer to enable it.
+// Callbacks include a context pointer that is passed as the last argument to the specified function call.
 template <typename TFunc>
 using OptionalCallback = detail::Callback<TFunc, false>;
 
@@ -133,12 +138,14 @@ namespace detail {
 
 } // namespace detail
 
+// Creates a required callback to a member function pointer that will be invoked on the given instance of the class.
 template <auto mfp>
     requires std::is_member_function_pointer_v<decltype(mfp)>
 auto MakeClassMemberRequiredCallback(typename detail::MFPCallbackMaker<decltype(mfp)>::class_type *context) {
     return detail::MFPCallbackMaker<decltype(mfp)>::template GetCallback<mfp, true>(context);
 }
 
+// Creates an optional callback to a member function pointer that will be invoked on the given instance of the class.
 template <auto mfp>
     requires std::is_member_function_pointer_v<decltype(mfp)>
 auto MakeClassMemberOptionalCallback(typename detail::MFPCallbackMaker<decltype(mfp)>::class_type *context) {
