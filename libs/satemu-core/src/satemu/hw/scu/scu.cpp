@@ -3,6 +3,8 @@
 #include <satemu/hw/cart/cart_impl_none.hpp>
 #include <satemu/hw/sh2/sh2_block.hpp>
 
+#include <satemu/util/inline.hpp>
+
 #include <bit>
 
 namespace satemu::scu {
@@ -1405,7 +1407,7 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
 }
 
 template <bool acknowledge>
-void SCU::UpdateInterruptLevel() {
+FORCE_INLINE void SCU::UpdateInterruptLevel() {
     // SCU interrupts
     //  bit  vec   lvl  source  reason
     //    0   40     F  VDP2    VBlank IN
