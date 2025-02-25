@@ -79,14 +79,14 @@ template void SCU::Advance<true>(uint64 cycles);
 
 void SCU::TriggerVBlankIN() {
     m_intrStatus.VDP2_VBlankIN = 1;
-    UpdateInterruptLevel(false);
+    UpdateInterruptLevel<false>();
     TriggerDMATransfer(DMATrigger::VBlankIN);
 }
 
 void SCU::TriggerVBlankOUT() {
     m_intrStatus.VDP2_VBlankOUT = 1;
     m_timer0Counter = 0;
-    UpdateInterruptLevel(false);
+    UpdateInterruptLevel<false>();
     TriggerDMATransfer(DMATrigger::VBlankOUT);
 }
 
@@ -97,30 +97,30 @@ void SCU::TriggerHBlankIN() {
         TriggerTimer0();
     }
     m_scheduler.ScheduleFromNow(m_timer1Event, m_timer1Reload);
-    UpdateInterruptLevel(false);
+    UpdateInterruptLevel<false>();
     TriggerDMATransfer(DMATrigger::HBlankIN);
 }
 
 void SCU::TriggerTimer0() {
     m_intrStatus.SCU_Timer0 = 1;
-    UpdateInterruptLevel(false);
+    UpdateInterruptLevel<false>();
     TriggerDMATransfer(DMATrigger::Timer0);
 }
 
 void SCU::TriggerTimer1() {
     m_intrStatus.SCU_Timer1 = 1;
-    UpdateInterruptLevel(false);
+    UpdateInterruptLevel<false>();
     TriggerDMATransfer(DMATrigger::Timer1);
 }
 
 void SCU::TriggerDSPEnd() {
     m_intrStatus.SCU_DSPEnd = 1;
-    UpdateInterruptLevel(false);
+    UpdateInterruptLevel<false>();
 }
 
 void SCU::TriggerSoundRequest(bool level) {
     m_intrStatus.SCSP_SoundRequest = level;
-    UpdateInterruptLevel(false);
+    UpdateInterruptLevel<false>();
     if (level) {
         TriggerDMATransfer(DMATrigger::SoundRequest);
     }
@@ -128,7 +128,7 @@ void SCU::TriggerSoundRequest(bool level) {
 
 void SCU::TriggerSystemManager() {
     m_intrStatus.SM_SystemManager = 1;
-    UpdateInterruptLevel(false);
+    UpdateInterruptLevel<false>();
 }
 
 void SCU::TriggerDMAEnd(uint32 level) {
@@ -138,22 +138,22 @@ void SCU::TriggerDMAEnd(uint32 level) {
     case 1: m_intrStatus.ABus_Level1DMAEnd = 1; break;
     case 2: m_intrStatus.ABus_Level2DMAEnd = 1; break;
     }
-    UpdateInterruptLevel(false);
+    UpdateInterruptLevel<false>();
 }
 
 void SCU::TriggerSpriteDrawEnd() {
     m_intrStatus.VDP1_SpriteDrawEnd = 1;
-    UpdateInterruptLevel(false);
+    UpdateInterruptLevel<false>();
     TriggerDMATransfer(DMATrigger::SpriteDrawEnd);
 }
 
 void SCU::TriggerExternalInterrupt0() {
     m_intrStatus.ABus_ExtIntr0 = 1;
-    UpdateInterruptLevel(false);
+    UpdateInterruptLevel<false>();
 }
 
 void SCU::AcknowledgeExternalInterrupt() {
-    UpdateInterruptLevel(true);
+    UpdateInterruptLevel<true>();
 }
 
 void SCU::DumpDSPProgramRAM(std::ostream &out) {
@@ -1231,7 +1231,7 @@ FORCE_INLINE void SCU::WriteRegByte(uint32 address, uint8 value) {
     case 0xA8 ... 0xAA: break; // A-Bus Interrupt Acknowledge (bits 8-31)
     case 0xAB:                 // A-Bus Interrupt Acknowledge (bits 0-7)
         m_abusIntrAck = bit::extract<0>(value);
-        UpdateInterruptLevel(false);
+        UpdateInterruptLevel<false>();
         break;
 
     case 0xB0 ... 0xB3: // A-Bus Set (part 1)
@@ -1381,7 +1381,7 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
         break;
     case 0xA8: // A-Bus Interrupt Acknowledge
         m_abusIntrAck = bit::extract<0>(value);
-        UpdateInterruptLevel(false);
+        UpdateInterruptLevel<false>();
         break;
 
     case 0xB0: // A-Bus Set (part 1)
@@ -1404,7 +1404,8 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
     }
 }
 
-void SCU::UpdateInterruptLevel(bool acknowledge) {
+template <bool acknowledge>
+void SCU::UpdateInterruptLevel() {
     // SCU interrupts
     //  bit  vec   lvl  source  reason
     //    0   40     F  VDP2    VBlank IN
@@ -1461,7 +1462,7 @@ void SCU::UpdateInterruptLevel(bool acknowledge) {
         rootLog.trace("Intr indices: {:X} {:X}", internalIndex, externalIndex);
         rootLog.trace("Intr levels:  {:X} {:X}", internalLevel, externalLevel);
 
-        if (acknowledge) {
+        if constexpr (acknowledge) {
             if (internalLevel >= externalLevel) {
                 m_intrStatus.internal &= ~(1u << internalIndex);
                 rootLog.trace("Acknowledging internal interrupt {:X}", internalIndex);
@@ -1471,7 +1472,7 @@ void SCU::UpdateInterruptLevel(bool acknowledge) {
                 rootLog.trace("Acknowledging external interrupt {:X}", externalIndex);
                 m_tracer.AcknowledgeInterrupt(externalIndex + 16);
             }
-            UpdateInterruptLevel(false);
+            UpdateInterruptLevel<false>();
         } else {
             if (internalLevel >= externalLevel) {
                 m_SH2.master.SetExternalInterrupt(internalLevel, internalIndex + 0x40);

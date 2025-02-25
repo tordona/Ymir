@@ -469,7 +469,8 @@ private:
     void WriteRegWord(uint32 address, uint16 value);
     void WriteRegLong(uint32 address, uint32 value);
 
-    void UpdateInterruptLevel(bool acknowledge);
+    template <bool acknowledge>
+    void UpdateInterruptLevel();
 
     // -------------------------------------------------------------------------
     // Debugger
