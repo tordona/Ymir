@@ -163,16 +163,11 @@ public:
     alignas(16) std::array<uint8, kWRAMHighSize> WRAMHigh;
 
 private:
-    SH2 &m_masterSH2;
-    SH2 &m_slaveSH2;
     scu::SCU &m_SCU;
 
     std::array<MemoryPage, kPageCount> m_pages;
 
     bup::BackupMemory m_internalBackupRAM;
-
-    void WriteMINIT(uint16 value);
-    void WriteSINIT(uint16 value);
 };
 
 } // namespace satemu::sh2

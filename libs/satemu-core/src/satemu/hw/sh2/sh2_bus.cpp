@@ -16,10 +16,7 @@ static void GenericWrite(uint32 address, T value, void *ctx) {
 }
 
 SH2Bus::SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu)
-    : m_masterSH2(masterSH2)
-    , m_slaveSH2(slaveSH2)
-    , m_SCU(scu) {
-
+    : m_SCU(scu) {
     static constexpr std::size_t kInternalBackupRAMSize = 32_KiB; // HACK: should be in its own component
     // TODO: configurable path and mode
     std::error_code error{};
@@ -75,15 +72,15 @@ SH2Bus::SH2Bus(SH2 &masterSH2, SH2 &slaveSH2, scu::SCU &scu)
     MapMemory(
         0x100'0000, 0x17F'FFFF,
         {
-            .ctx = this,
-            .write16 = [](uint32 address, uint16 value, void *ctx) { static_cast<SH2Bus *>(ctx)->WriteMINIT(value); },
+            .ctx = &slaveSH2,
+            .write16 = [](uint32 address, uint16, void *ctx) { static_cast<SH2 *>(ctx)->TriggerFRTInputCapture(); },
         });
 
     MapMemory(
         0x180'0000, 0x1FF'FFFF,
         {
-            .ctx = this,
-            .write16 = [](uint32 address, uint16 value, void *ctx) { static_cast<SH2Bus *>(ctx)->WriteSINIT(value); },
+            .ctx = &masterSH2,
+            .write16 = [](uint32 address, uint16, void *ctx) { static_cast<SH2 *>(ctx)->TriggerFRTInputCapture(); },
         });
 
     // SCU, VDP, SCSP, CD block and cartridge slot map themselves at 0x200'0000..0x5FF'FFFF
@@ -122,14 +119,6 @@ void SH2Bus::DumpWRAMHigh(std::ostream &out) const {
 
 void SH2Bus::AcknowledgeExternalInterrupt() {
     m_SCU.AcknowledgeExternalInterrupt();
-}
-
-void SH2Bus::WriteMINIT(uint16 value) {
-    m_slaveSH2.TriggerFRTInputCapture();
-}
-
-void SH2Bus::WriteSINIT(uint16 value) {
-    m_masterSH2.TriggerFRTInputCapture();
 }
 
 void SH2Bus::MapMemory(uint32 start, uint32 end, MemoryPage entry) {
