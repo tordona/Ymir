@@ -39,8 +39,6 @@ add_library(satemu-core
 
     include/satemu/hw/sh2/sh2.hpp
     include/satemu/hw/sh2/sh2_block.hpp
-    include/satemu/hw/sh2/sh2_bus.hpp
-    include/satemu/hw/sh2/sh2_bus_defs.hpp
     include/satemu/hw/sh2/sh2_decode.hpp
     include/satemu/hw/sh2/sh2_defs.hpp
 
@@ -81,6 +79,8 @@ add_library(satemu-core
 
     include/satemu/sys/backup_ram.hpp
     include/satemu/sys/clocks.hpp
+    include/satemu/sys/memory.hpp
+    include/satemu/sys/bus.hpp
     include/satemu/sys/saturn.hpp
     include/satemu/sys/system.hpp
     
@@ -121,7 +121,7 @@ add_library(satemu-core
     src/satemu/hw/smpc/peripheral/peripheral_impl_standard_pad.cpp
 
     src/satemu/hw/sh2/sh2.cpp
-    src/satemu/hw/sh2/sh2_bus.cpp
+    
     src/satemu/hw/sh2/sh2_decode.cpp
 
     src/satemu/hw/vdp/slope.hpp
@@ -137,6 +137,8 @@ add_library(satemu-core
     src/satemu/media/loader/loader_mdf_mds.cpp
 
     src/satemu/sys/backup_ram.cpp
+    src/satemu/sys/bus.cpp
+    src/satemu/sys/memory.cpp
     src/satemu/sys/saturn.cpp
 
     src/satemu/util/constexpr_for.hpp

@@ -15,6 +15,9 @@ Saturn::Saturn()
     SH2.master.SetExternalInterruptAcknowledgeCallback(ackIntrCallback);
     SH2.slave.SetExternalInterruptAcknowledgeCallback(ackIntrCallback);
 
+    mem.MapMemory(SH2.bus);
+    SH2.master.MapMemory(SH2.bus);
+    SH2.slave.MapMemory(SH2.bus);
     SCU.MapMemory(SH2.bus);
     VDP.MapMemory(SH2.bus);
     SMPC.MapMemory(SH2.bus);
@@ -64,8 +67,8 @@ void Saturn::SetClockSpeed(sys::ClockSpeed clockSpeed) {
     UpdateClockRatios();
 }
 
-void Saturn::LoadIPL(std::span<uint8, sh2::kIPLSize> ipl) {
-    SH2.bus.LoadIPL(ipl);
+void Saturn::LoadIPL(std::span<uint8, sys::kIPLSize> ipl) {
+    mem.LoadIPL(ipl);
 }
 
 void Saturn::LoadDisc(media::Disc &&disc) {

@@ -23,7 +23,7 @@ int App::Run(const CommandLineOptions &options) {
 
     // Load IPL ROM
     {
-        constexpr auto iplSize = satemu::sh2::kIPLSize;
+        constexpr auto iplSize = satemu::sys::kIPLSize;
         auto rom = util::LoadFile(options.biosPath);
         if (rom.size() != iplSize) {
             fmt::println("IPL ROM size mismatch: expected {} bytes, got {} bytes", iplSize, rom.size());
@@ -419,11 +419,11 @@ void App::RunEmulator() {
             if (pressed) {
                 {
                     std::ofstream out{"wram-lo.bin", std::ios::binary};
-                    m_saturn.SH2.bus.DumpWRAMLow(out);
+                    m_saturn.mem.DumpWRAMLow(out);
                 }
                 {
                     std::ofstream out{"wram-hi.bin", std::ios::binary};
-                    m_saturn.SH2.bus.DumpWRAMHigh(out);
+                    m_saturn.mem.DumpWRAMHigh(out);
                 }
                 {
                     std::ofstream out{"vdp1-vram.bin", std::ios::binary};

@@ -69,6 +69,60 @@ void SCU::Reset(bool hard) {
     m_WRAMSizeSelect = false;
 }
 
+void SCU::MapMemory(sys::Bus &bus) {
+    // A-Bus CS0 and CS1 - Cartridge
+    bus.MapMemory(0x200'0000, 0x4FF'FFFF,
+                  {
+                      .ctx = this,
+                      .read8 = [](uint32 address, void *ctx) -> uint8 {
+                          return static_cast<SCU *>(ctx)->ReadCartridge<uint8>(address);
+                      },
+                      .read16 = [](uint32 address, void *ctx) -> uint16 {
+                          return static_cast<SCU *>(ctx)->ReadCartridge<uint16>(address);
+                      },
+                      .read32 = [](uint32 address, void *ctx) -> uint32 {
+                          return static_cast<SCU *>(ctx)->ReadCartridge<uint32>(address);
+                      },
+                      .write8 = [](uint32 address, uint8 value,
+                                   void *ctx) { static_cast<SCU *>(ctx)->WriteCartridge<uint8>(address, value); },
+                      .write16 = [](uint32 address, uint16 value,
+                                    void *ctx) { static_cast<SCU *>(ctx)->WriteCartridge<uint16>(address, value); },
+                      .write32 = [](uint32 address, uint32 value,
+                                    void *ctx) { static_cast<SCU *>(ctx)->WriteCartridge<uint32>(address, value); },
+                  });
+
+    // A-Bus CS2 - 0x580'0000..0x58F'FFFF
+    // CD block maps itself here
+
+    // B-Bus - 0x5A0'0000..0x5FB'FFFF
+    // VDP and SCSP map themselves here
+
+    // TODO: 0x5FC'0000..0x5FD'FFFF - reads 0x000E0000
+
+    // SCU registers
+    bus.MapMemory(0x5FE'0000, 0x5FE'FFFF,
+                  {
+                      .ctx = this,
+                      .read8 = [](uint32 address, void *ctx) -> uint8 {
+                          return static_cast<SCU *>(ctx)->ReadReg<uint8>(address & 0xFF);
+                      },
+                      .read16 = [](uint32 address, void *ctx) -> uint16 {
+                          return static_cast<SCU *>(ctx)->ReadReg<uint16>(address & 0xFF);
+                      },
+                      .read32 = [](uint32 address, void *ctx) -> uint32 {
+                          return static_cast<SCU *>(ctx)->ReadReg<uint32>(address & 0xFF);
+                      },
+                      .write8 = [](uint32 address, uint8 value,
+                                   void *ctx) { static_cast<SCU *>(ctx)->WriteRegByte(address & 0xFF, value); },
+                      .write16 = [](uint32 address, uint16 value,
+                                    void *ctx) { static_cast<SCU *>(ctx)->WriteRegWord(address & 0xFF, value); },
+                      .write32 = [](uint32 address, uint32 value,
+                                    void *ctx) { static_cast<SCU *>(ctx)->WriteRegLong(address & 0xFF, value); },
+                  });
+
+    // TODO: 0x5FF'0000..0x5FF'FFFF - Unknown registers
+}
+
 template <bool debug>
 void SCU::Advance(uint64 cycles) {
     // RunDMA(cycles);
@@ -202,60 +256,6 @@ void SCU::DumpDSPRegs(std::ostream &out) {
 void SCU::OnTimer1Event(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
     auto &scu = *static_cast<SCU *>(userContext);
     scu.TickTimer1();
-}
-
-void SCU::MapMemory(sh2::SH2Bus &bus) {
-    // A-Bus CS0 and CS1 - Cartridge
-    bus.MapMemory(0x200'0000, 0x4FF'FFFF,
-                  {
-                      .ctx = this,
-                      .read8 = [](uint32 address, void *ctx) -> uint8 {
-                          return static_cast<SCU *>(ctx)->ReadCartridge<uint8>(address);
-                      },
-                      .read16 = [](uint32 address, void *ctx) -> uint16 {
-                          return static_cast<SCU *>(ctx)->ReadCartridge<uint16>(address);
-                      },
-                      .read32 = [](uint32 address, void *ctx) -> uint32 {
-                          return static_cast<SCU *>(ctx)->ReadCartridge<uint32>(address);
-                      },
-                      .write8 = [](uint32 address, uint8 value,
-                                   void *ctx) { static_cast<SCU *>(ctx)->WriteCartridge<uint8>(address, value); },
-                      .write16 = [](uint32 address, uint16 value,
-                                    void *ctx) { static_cast<SCU *>(ctx)->WriteCartridge<uint16>(address, value); },
-                      .write32 = [](uint32 address, uint32 value,
-                                    void *ctx) { static_cast<SCU *>(ctx)->WriteCartridge<uint32>(address, value); },
-                  });
-
-    // A-Bus CS2 - 0x580'0000..0x58F'FFFF
-    // CD block maps itself here
-
-    // B-Bus - 0x5A0'0000..0x5FB'FFFF
-    // VDP and SCSP map themselves here
-
-    // TODO: 0x5FC'0000..0x5FD'FFFF - reads 0x000E0000
-
-    // SCU registers
-    bus.MapMemory(0x5FE'0000, 0x5FE'FFFF,
-                  {
-                      .ctx = this,
-                      .read8 = [](uint32 address, void *ctx) -> uint8 {
-                          return static_cast<SCU *>(ctx)->ReadReg<uint8>(address & 0xFF);
-                      },
-                      .read16 = [](uint32 address, void *ctx) -> uint16 {
-                          return static_cast<SCU *>(ctx)->ReadReg<uint16>(address & 0xFF);
-                      },
-                      .read32 = [](uint32 address, void *ctx) -> uint32 {
-                          return static_cast<SCU *>(ctx)->ReadReg<uint32>(address & 0xFF);
-                      },
-                      .write8 = [](uint32 address, uint8 value,
-                                   void *ctx) { static_cast<SCU *>(ctx)->WriteRegByte(address & 0xFF, value); },
-                      .write16 = [](uint32 address, uint16 value,
-                                    void *ctx) { static_cast<SCU *>(ctx)->WriteRegWord(address & 0xFF, value); },
-                      .write32 = [](uint32 address, uint32 value,
-                                    void *ctx) { static_cast<SCU *>(ctx)->WriteRegLong(address & 0xFF, value); },
-                  });
-
-    // TODO: 0x5FF'0000..0x5FF'FFFF - Unknown registers
 }
 
 template <mem_primitive T>
@@ -649,7 +649,7 @@ void SCU::RunDSPDMA(uint64 cycles) {
                 addrD0 += m_dspState.dmaAddrInc * 2;
             } else if (bus == Bus::WRAM) {
                 // WRAM -> one 32-bit write
-                util::WriteBE<uint32>(&m_SH2.bus.WRAMHigh[addrD0 & 0xFFFFC], value);
+                m_SH2.bus.Write<uint32>(addrD0, value);
                 addrD0 += m_dspState.dmaAddrInc;
             }
         } else {
@@ -666,7 +666,7 @@ void SCU::RunDSPDMA(uint64 cycles) {
                 addrD0 += 4;
             } else if (bus == Bus::WRAM) {
                 // WRAM -> one 32-bit read
-                value = util::ReadBE<uint32>(&m_SH2.bus.WRAMHigh[addrD0 & 0xFFFFC]);
+                value = m_SH2.bus.Read<uint32>(addrD0);
                 addrD0 += m_dspState.dmaAddrInc;
             }
             if (useDataRAM) {

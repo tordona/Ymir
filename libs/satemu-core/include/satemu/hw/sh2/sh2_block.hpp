@@ -1,18 +1,18 @@
 #pragma once
 
 #include "sh2.hpp"
-#include "sh2_bus.hpp"
+
+#include <satemu/sys/bus.hpp>
 
 namespace satemu::sh2 {
 
 class SH2Block {
 public:
     SH2Block()
-        : bus(master, slave)
-        , master(bus, true)
+        : master(bus, true)
         , slave(bus, false) {}
 
-    SH2Bus bus;
+    sys::Bus bus;
     SH2 master;
     SH2 slave;
 

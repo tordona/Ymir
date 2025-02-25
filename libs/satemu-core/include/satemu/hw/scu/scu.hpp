@@ -11,6 +11,7 @@
 #include <satemu/hw/cart/cart_slot.hpp>
 
 #include <satemu/sys/backup_ram.hpp>
+#include <satemu/sys/bus.hpp>
 
 #include <satemu/util/data_ops.hpp>
 #include <satemu/util/debug_print.hpp>
@@ -20,16 +21,9 @@
 // -----------------------------------------------------------------------------
 // Forward declarations
 
-namespace satemu {
-
-struct Saturn;
-
-} // namespace satemu
-
 namespace satemu::sh2 {
 
 class SH2Block;
-class SH2Bus;
 
 } // namespace satemu::sh2
 
@@ -82,6 +76,8 @@ public:
     SCU(core::Scheduler &scheduler, sh2::SH2Block &sh2);
 
     void Reset(bool hard);
+
+    void MapMemory(sys::Bus &bus);
 
     template <bool debug>
     void Advance(uint64 cycles);
@@ -152,9 +148,6 @@ private:
 
     // -------------------------------------------------------------------------
     // Memory accessors
-
-    friend struct ::satemu::Saturn;
-    void MapMemory(sh2::SH2Bus &bus);
 
     template <mem_primitive T>
     T ReadCartridge(uint32 address);

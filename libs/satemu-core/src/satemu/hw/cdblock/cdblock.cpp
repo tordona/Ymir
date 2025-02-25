@@ -2,7 +2,6 @@
 
 #include <satemu/hw/scsp/scsp.hpp>
 #include <satemu/hw/scu/scu.hpp>
-#include <satemu/hw/sh2/sh2_bus.hpp>
 
 #include <satemu/sys/clocks.hpp>
 
@@ -99,6 +98,37 @@ void CDBlock::Reset(bool hard) {
     m_processingCommand = false;
 }
 
+void CDBlock::MapMemory(sys::Bus &bus) {
+    // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
+    // These 4 KiB blocks are mapped every 32 KiB.
+    for (uint32 address = 0x580'0000; address <= 0x58F'FFFF; address += 0x8000) {
+        bus.MapMemory(address, address + 0xFFF,
+                      {
+                          .ctx = this,
+                          .read8 = [](uint32 address, void *ctx) -> uint8 {
+                              return static_cast<CDBlock *>(ctx)->ReadReg<uint8>(address);
+                          },
+                          .read16 = [](uint32 address, void *ctx) -> uint16 {
+                              return static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address);
+                          },
+                          .read32 = [](uint32 address, void *ctx) -> uint32 {
+                              uint32 value = static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address + 0) << 16u;
+                              value |= static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address + 2) << 0u;
+                              return value;
+                          },
+                          .write8 = [](uint32 address, uint8 value,
+                                       void *ctx) { static_cast<CDBlock *>(ctx)->WriteReg<uint8>(address, value); },
+                          .write16 = [](uint32 address, uint16 value,
+                                        void *ctx) { static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address, value); },
+                          .write32 =
+                              [](uint32 address, uint32 value, void *ctx) {
+                                  static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address + 0, value >> 16u);
+                                  static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address + 2, value >> 0u);
+                              },
+                      });
+    }
+}
+
 void CDBlock::LoadDisc(media::Disc &&disc) {
     m_disc.Swap(std::move(disc));
 
@@ -186,37 +216,6 @@ void CDBlock::UpdateClockRatios() {
     m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.SCSPNum * 3, clockRatios.SCSPDen);
     // m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.CDBlockNum * 3, clockRatios.CDBlockDen);
     m_scheduler.SetEventCountFactor(m_commandExecEvent, clockRatios.CDBlockNum, clockRatios.CDBlockDen);
-}
-
-void CDBlock::MapMemory(sh2::SH2Bus &bus) {
-    // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
-    // These 4 KiB blocks are mapped every 32 KiB.
-    for (uint32 address = 0x580'0000; address <= 0x58F'FFFF; address += 0x8000) {
-        bus.MapMemory(address, address + 0xFFF,
-                      {
-                          .ctx = this,
-                          .read8 = [](uint32 address, void *ctx) -> uint8 {
-                              return static_cast<CDBlock *>(ctx)->ReadReg<uint8>(address);
-                          },
-                          .read16 = [](uint32 address, void *ctx) -> uint16 {
-                              return static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address);
-                          },
-                          .read32 = [](uint32 address, void *ctx) -> uint32 {
-                              uint32 value = static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address + 0) << 16u;
-                              value |= static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address + 2) << 0u;
-                              return value;
-                          },
-                          .write8 = [](uint32 address, uint8 value,
-                                       void *ctx) { static_cast<CDBlock *>(ctx)->WriteReg<uint8>(address, value); },
-                          .write16 = [](uint32 address, uint16 value,
-                                        void *ctx) { static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address, value); },
-                          .write32 =
-                              [](uint32 address, uint32 value, void *ctx) {
-                                  static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address + 0, value >> 16u);
-                                  static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address + 2, value >> 0u);
-                              },
-                      });
-    }
 }
 
 template <mem_primitive T>

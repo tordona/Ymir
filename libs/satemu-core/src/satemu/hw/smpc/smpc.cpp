@@ -79,18 +79,7 @@ void SMPC::FactoryReset() {
     }
 }
 
-void SMPC::UpdateResetNMI() {
-    if (!m_resetDisable && m_resetState) {
-        m_saturn.SH2.master.SetNMI();
-    }
-}
-
-void SMPC::OnCommandEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
-    auto &smpc = *static_cast<SMPC *>(userContext);
-    smpc.ProcessCommand();
-}
-
-void SMPC::MapMemory(sh2::SH2Bus &bus) {
+void SMPC::MapMemory(sys::Bus &bus) {
     bus.MapMemory(0x010'0000, 0x017'FFFF,
                   {
                       .ctx = this,
@@ -110,6 +99,17 @@ void SMPC::MapMemory(sh2::SH2Bus &bus) {
                       .write32 = [](uint32 address, uint32 value,
                                     void *ctx) { static_cast<SMPC *>(ctx)->Write((address & 0x7F) | 1, value); },
                   });
+}
+
+void SMPC::UpdateResetNMI() {
+    if (!m_resetDisable && m_resetState) {
+        m_saturn.SH2.master.SetNMI();
+    }
+}
+
+void SMPC::OnCommandEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+    auto &smpc = *static_cast<SMPC *>(userContext);
+    smpc.ProcessCommand();
 }
 
 uint8 SMPC::Read(uint32 address) {

@@ -4,6 +4,7 @@
 #include "rtc.hpp"
 
 #include <satemu/core/scheduler.hpp>
+#include <satemu/sys/bus.hpp>
 
 #include <satemu/util/debug_print.hpp>
 
@@ -18,12 +19,6 @@ namespace satemu {
 struct Saturn;
 
 } // namespace satemu
-
-namespace satemu::sh2 {
-
-class SH2Bus;
-
-} // namespace satemu::sh2
 
 namespace satemu::vdp {
 
@@ -45,6 +40,8 @@ public:
 
     void Reset(bool hard);
     void FactoryReset();
+
+    void MapMemory(sys::Bus &bus);
 
     void SetResetButtonState(bool pressed) {
         bool prevState = m_resetState;
@@ -100,9 +97,6 @@ private:
 
     // -------------------------------------------------------------------------
     // Memory accessors
-
-    friend struct ::satemu::Saturn;
-    void MapMemory(sh2::SH2Bus &bus);
 
     uint8 Read(uint32 address);
     void Write(uint32 address, uint8 value);

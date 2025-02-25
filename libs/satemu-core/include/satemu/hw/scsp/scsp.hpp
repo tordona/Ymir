@@ -6,6 +6,7 @@
 #include "scsp_timer.hpp"
 
 #include <satemu/core/scheduler.hpp>
+#include <satemu/sys/bus.hpp>
 #include <satemu/sys/system.hpp>
 
 #include <satemu/hw/hw_defs.hpp>
@@ -29,12 +30,6 @@ namespace satemu {
 struct Saturn;
 
 } // namespace satemu
-
-namespace satemu::sh2 {
-
-class SH2Bus;
-
-} // namespace satemu::sh2
 
 namespace satemu::scu {
 
@@ -83,6 +78,8 @@ public:
     SCSP(sys::System &system, core::Scheduler &scheduler, scu::SCU &scu);
 
     void Reset(bool hard);
+
+    void MapMemory(sys::Bus &bus);
 
     FORCE_INLINE void SetCallback(CBOutputSample cbOutputSample) {
         m_cbOutputSample = cbOutputSample;
@@ -139,9 +136,6 @@ private:
     // -------------------------------------------------------------------------
     // Memory accessors (SCU-facing bus)
     // 16-bit reads, 8- or 16-bit writes
-
-    friend struct ::satemu::Saturn;
-    void MapMemory(sh2::SH2Bus &bus);
 
     template <mem_primitive T>
     FLATTEN T ReadWRAM(uint32 address) {

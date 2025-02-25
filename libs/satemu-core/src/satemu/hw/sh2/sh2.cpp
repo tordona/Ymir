@@ -1,8 +1,7 @@
 #include <satemu/hw/sh2/sh2.hpp>
 
-#include <satemu/hw/sh2/sh2_bus.hpp>
-
 #include <satemu/util/bit_ops.hpp>
+#include <satemu/util/data_ops.hpp>
 #include <satemu/util/inline.hpp>
 #include <satemu/util/unreachable.hpp>
 
@@ -134,7 +133,7 @@ void RealSH2Tracer::RTS(SH2Regs regs) {
     }
 }
 
-SH2::SH2(SH2Bus &bus, bool master)
+SH2::SH2(sys::Bus &bus, bool master)
     : m_tracer(master)
     , m_log(Logger(master))
     , m_bus(bus) {
@@ -232,6 +231,16 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
     m_cacheReplaceORMask[true] = 0u;
 
     m_tracer.Reset();
+}
+
+void SH2::MapMemory(sys::Bus &bus) {
+    const uint32 addressOffset = !BCR1.MASTER * 0x80'0000;
+    bus.MapMemory(
+        0x100'0000 + addressOffset, 0x17F'FFFF + addressOffset,
+        {
+            .ctx = this,
+            .write16 = [](uint32 address, uint16, void *ctx) { static_cast<SH2 *>(ctx)->TriggerFRTInputCapture(); },
+        });
 }
 
 template <bool debug>

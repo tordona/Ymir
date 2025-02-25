@@ -6,6 +6,8 @@
 #include <satemu/core/types.hpp>
 #include <satemu/hw/hw_defs.hpp>
 
+#include <satemu/sys/bus.hpp>
+
 #include <satemu/debug/sh2_tracer_ctx.hpp>
 
 #include <satemu/util/callback.hpp>
@@ -14,17 +16,6 @@
 #include <array>
 #include <new>
 #include <vector>
-
-// -----------------------------------------------------------------------------
-// Forward declarations
-
-namespace satemu::sh2 {
-
-class SH2Bus;
-
-} // namespace satemu::sh2
-
-// -----------------------------------------------------------------------------
 
 namespace satemu::sh2 {
 
@@ -102,9 +93,11 @@ using CBAcknowledgeExternalInterrupt = util::RequiredCallback<void()>;
 
 class SH2 {
 public:
-    SH2(SH2Bus &bus, bool master);
+    SH2(sys::Bus &bus, bool master);
 
     void Reset(bool hard, bool watchdogInitiated = false);
+
+    void MapMemory(sys::Bus &bus);
 
     template <bool debug>
     void Advance(uint64 cycles);
@@ -189,7 +182,7 @@ private:
     // -------------------------------------------------------------------------
     // Memory accessors
 
-    SH2Bus &m_bus;
+    sys::Bus &m_bus;
 
     // According to the SH7604 manual, the address space is divided into these areas:
     //

@@ -2,6 +2,7 @@
 
 #include <satemu/core/scheduler.hpp>
 
+#include "memory.hpp"
 #include "system.hpp"
 
 #include <satemu/hw/cart/cart.hpp>
@@ -34,7 +35,7 @@ struct Saturn {
     // -------------------------------------------------------------------------
     // Convenience methods
 
-    void LoadIPL(std::span<uint8, sh2::kIPLSize> ipl);
+    void LoadIPL(std::span<uint8, sys::kIPLSize> ipl);
 
     template <typename T, typename... Args>
         requires std::derived_from<T, cart::BaseCartridge>
@@ -89,6 +90,7 @@ public:
     // -------------------------------------------------------------------------
     // Components
 
+    sys::SystemMemory mem;
     sh2::SH2Block SH2;        // Master and slave SH-2 CPUs
     scu::SCU SCU;             // SCU and its DSP
     vdp::VDP VDP;             // VDP1 and VDP2

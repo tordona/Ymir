@@ -6,6 +6,7 @@
 #include "vdp2_regs.hpp"
 
 #include <satemu/core/scheduler.hpp>
+#include <satemu/sys/bus.hpp>
 #include <satemu/sys/system.hpp>
 
 #include <satemu/hw/hw_defs.hpp>
@@ -27,12 +28,6 @@ namespace satemu {
 struct Saturn;
 
 } // namespace satemu
-
-namespace satemu::sh2 {
-
-class SH2Bus;
-
-} // namespace satemu::sh2
 
 namespace satemu::scu {
 
@@ -64,6 +59,8 @@ public:
     VDP(core::Scheduler &scheduler, scu::SCU &scu, smpc::SMPC &smpc);
 
     void Reset(bool hard);
+
+    void MapMemory(sys::Bus &bus);
 
     FORCE_INLINE void SetCallbacks(CBRequestFramebuffer cbRequestFramebuffer, CBFrameComplete cbFrameComplete) {
         m_cbRequestFramebuffer = cbRequestFramebuffer;
@@ -102,11 +99,6 @@ private:
 
     friend struct satemu::Saturn;
     void SetVideoStandard(sys::VideoStandard videoStandard);
-
-    // -------------------------------------------------------------------------
-    // Memory accessors
-
-    void MapMemory(sh2::SH2Bus &bus);
 
     // -------------------------------------------------------------------------
     // VDP1 memory/register access

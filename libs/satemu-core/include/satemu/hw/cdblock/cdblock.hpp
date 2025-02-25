@@ -6,6 +6,7 @@
 #include "cdblock_filter.hpp"
 
 #include <satemu/core/scheduler.hpp>
+#include <satemu/sys/bus.hpp>
 #include <satemu/sys/system.hpp>
 
 #include <satemu/hw/hw_defs.hpp>
@@ -26,12 +27,6 @@ namespace satemu {
 struct Saturn;
 
 } // namespace satemu
-
-namespace satemu::sh2 {
-
-class SH2Bus;
-
-} // namespace satemu::sh2
 
 namespace satemu::scu {
 
@@ -61,6 +56,8 @@ public:
     CDBlock(sys::System &system, core::Scheduler &scheduler, scu::SCU &scu, scsp::SCSP &scsp);
 
     void Reset(bool hard);
+
+    void MapMemory(sys::Bus &bus);
 
     void LoadDisc(media::Disc &&disc);
     void EjectDisc();
@@ -96,9 +93,6 @@ private:
     // -------------------------------------------------------------------------
     // Memory accessors (SCU-facing bus)
     // 16-bit reads, 8- or 16-bit writes
-
-    friend struct ::satemu::Saturn;
-    void MapMemory(sh2::SH2Bus &bus);
 
     // TODO: handle 8-bit and 32-bit accesses properly
 

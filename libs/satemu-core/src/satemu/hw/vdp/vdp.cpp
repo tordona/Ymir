@@ -1,7 +1,6 @@
 #include <satemu/hw/vdp/vdp.hpp>
 
 #include <satemu/hw/scu/scu.hpp>
-#include <satemu/hw/sh2/sh2_bus.hpp>
 #include <satemu/hw/smpc/smpc.hpp>
 
 #include "slope.hpp"
@@ -81,56 +80,7 @@ void VDP::Reset(bool hard) {
     m_scheduler.ScheduleFromNow(m_phaseUpdateEvent, GetPhaseCycles());
 }
 
-template <bool debug>
-void VDP::Advance(uint64 cycles) {
-    // TODO: proper cycle counting
-    static constexpr uint64 kCyclesPerCommand = 6;
-
-    m_VDP1RenderContext.cycleCount += cycles;
-    const uint64 steps = m_VDP1RenderContext.cycleCount / kCyclesPerCommand;
-    m_VDP1RenderContext.cycleCount %= kCyclesPerCommand;
-
-    for (uint64 i = 0; i < steps; i++) {
-        VDP1ProcessCommand();
-    }
-}
-
-template void VDP::Advance<false>(uint64 cycles);
-template void VDP::Advance<true>(uint64 cycles);
-
-void VDP::DumpVDP1VRAM(std::ostream &out) const {
-    out.write((const char *)m_VRAM1.data(), m_VRAM1.size());
-}
-
-void VDP::DumpVDP2VRAM(std::ostream &out) const {
-    out.write((const char *)m_VRAM2.data(), m_VRAM2.size());
-}
-
-void VDP::DumpVDP2CRAM(std::ostream &out) const {
-    out.write((const char *)m_CRAM.data(), m_CRAM.size());
-}
-
-void VDP::DumpVDP1Framebuffers(std::ostream &out) const {
-    out.write((const char *)m_spriteFB[m_drawFB].data(), m_spriteFB[m_drawFB].size());
-    out.write((const char *)m_spriteFB[m_drawFB ^ 1].data(), m_spriteFB[m_drawFB ^ 1].size());
-}
-
-void VDP::OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
-    auto &vdp = *static_cast<VDP *>(userContext);
-    vdp.UpdatePhase();
-    const uint64 cycles = vdp.GetPhaseCycles();
-    eventContext.RescheduleFromPrevious(cycles);
-}
-
-void VDP::SetVideoStandard(sys::VideoStandard videoStandard) {
-    const bool pal = videoStandard == sys::VideoStandard::PAL;
-    if (m_VDP2.TVSTAT.PAL != pal) {
-        m_VDP2.TVSTAT.PAL = pal;
-        m_VDP2.TVMDDirty = true;
-    }
-}
-
-void VDP::MapMemory(sh2::SH2Bus &bus) {
+void VDP::MapMemory(sys::Bus &bus) {
     // VDP1 VRAM
     bus.MapMemory(0x5C0'0000, 0x5C7'FFFF,
                   {
@@ -296,6 +246,55 @@ void VDP::MapMemory(sh2::SH2Bus &bus) {
                               static_cast<VDP *>(ctx)->VDP2WriteReg<uint16>(address + 2, value >> 0u);
                           },
                   });
+}
+
+template <bool debug>
+void VDP::Advance(uint64 cycles) {
+    // TODO: proper cycle counting
+    static constexpr uint64 kCyclesPerCommand = 6;
+
+    m_VDP1RenderContext.cycleCount += cycles;
+    const uint64 steps = m_VDP1RenderContext.cycleCount / kCyclesPerCommand;
+    m_VDP1RenderContext.cycleCount %= kCyclesPerCommand;
+
+    for (uint64 i = 0; i < steps; i++) {
+        VDP1ProcessCommand();
+    }
+}
+
+template void VDP::Advance<false>(uint64 cycles);
+template void VDP::Advance<true>(uint64 cycles);
+
+void VDP::DumpVDP1VRAM(std::ostream &out) const {
+    out.write((const char *)m_VRAM1.data(), m_VRAM1.size());
+}
+
+void VDP::DumpVDP2VRAM(std::ostream &out) const {
+    out.write((const char *)m_VRAM2.data(), m_VRAM2.size());
+}
+
+void VDP::DumpVDP2CRAM(std::ostream &out) const {
+    out.write((const char *)m_CRAM.data(), m_CRAM.size());
+}
+
+void VDP::DumpVDP1Framebuffers(std::ostream &out) const {
+    out.write((const char *)m_spriteFB[m_drawFB].data(), m_spriteFB[m_drawFB].size());
+    out.write((const char *)m_spriteFB[m_drawFB ^ 1].data(), m_spriteFB[m_drawFB ^ 1].size());
+}
+
+void VDP::OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+    auto &vdp = *static_cast<VDP *>(userContext);
+    vdp.UpdatePhase();
+    const uint64 cycles = vdp.GetPhaseCycles();
+    eventContext.RescheduleFromPrevious(cycles);
+}
+
+void VDP::SetVideoStandard(sys::VideoStandard videoStandard) {
+    const bool pal = videoStandard == sys::VideoStandard::PAL;
+    if (m_VDP2.TVSTAT.PAL != pal) {
+        m_VDP2.TVSTAT.PAL = pal;
+        m_VDP2.TVMDDirty = true;
+    }
 }
 
 template <mem_primitive T>
