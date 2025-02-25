@@ -5,6 +5,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "inline.hpp"
+
 namespace util {
 
 namespace detail {
@@ -40,7 +42,7 @@ namespace detail {
             m_fn = fn;
         }
 
-        ReturnType operator()(TArgs... args) {
+        FLATTEN FORCE_INLINE ReturnType operator()(TArgs... args) {
             if constexpr (!skipNullCheck) {
                 if (m_fn == nullptr) [[unlikely]] {
                     if constexpr (std::is_void_v<ReturnType>) {

@@ -235,7 +235,7 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
 }
 
 template <bool debug>
-FLATTEN void SH2::Advance(uint64 cycles) {
+ void SH2::Advance(uint64 cycles) {
     while (cycles > 0) {
         uint64 cyclesToRun = cycles;
 
