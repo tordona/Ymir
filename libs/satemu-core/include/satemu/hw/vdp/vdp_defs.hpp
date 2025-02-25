@@ -66,8 +66,8 @@ FORCE_INLINE Color888 ConvertRGB555to888(Color555 color) {
 using FramebufferColor = uint32;
 
 // TODO: move these to a "renderer defs" header
-using CBRequestFramebuffer = util::Callback<FramebufferColor *(uint32 width, uint32 height)>;
-using CBFrameComplete = util::Callback<void(FramebufferColor *fb, uint32 width, uint32 height)>;
+using CBRequestFramebuffer = util::OptionalCallback<FramebufferColor *(uint32 width, uint32 height)>;
+using CBFrameComplete = util::OptionalCallback<void(FramebufferColor *fb, uint32 width, uint32 height)>;
 
 template <std::integral T>
 struct Coord {

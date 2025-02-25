@@ -98,7 +98,7 @@ using SH2Tracer = NullSH2Tracer;
 
 // -----------------------------------------------------------------------------
 
-using CBAcknowledgeExternalInterrupt = util::Callback<void()>;
+using CBAcknowledgeExternalInterrupt = util::RequiredCallback<void()>;
 
 class SH2 {
 public:

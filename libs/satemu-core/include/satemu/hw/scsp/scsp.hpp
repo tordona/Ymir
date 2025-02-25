@@ -13,7 +13,6 @@
 #include <satemu/hw/m68k/m68k.hpp>
 #include <satemu/hw/m68k/m68k_defs.hpp>
 
-#include <satemu/util/callback.hpp>
 #include <satemu/util/data_ops.hpp>
 #include <satemu/util/debug_print.hpp>
 #include <satemu/util/inline.hpp>
@@ -74,8 +73,6 @@ struct SCSPAccessTypeInfo<SCSPAccessType::DMA> {
 
 template <SCSPAccessType accessType>
 constexpr const char *accessTypeName = SCSPAccessTypeInfo<accessType>::name;
-
-using CBOutputSample = util::Callback<void(sint16 left, sint16 right)>;
 
 class SCSP {
     static constexpr dbg::Category rootLog{"SCSP"};
