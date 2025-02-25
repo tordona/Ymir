@@ -38,7 +38,6 @@ add_library(satemu-core
     include/satemu/hw/scu/scu_defs.hpp
 
     include/satemu/hw/sh2/sh2.hpp
-    include/satemu/hw/sh2/sh2_block.hpp
     include/satemu/hw/sh2/sh2_decode.hpp
     include/satemu/hw/sh2/sh2_defs.hpp
 

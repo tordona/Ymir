@@ -10,7 +10,7 @@
 #include <satemu/hw/cdblock/cdblock.hpp>
 #include <satemu/hw/scsp/scsp.hpp>
 #include <satemu/hw/scu/scu.hpp>
-#include <satemu/hw/sh2/sh2_block.hpp>
+#include <satemu/hw/sh2/sh2.hpp>
 #include <satemu/hw/smpc/smpc.hpp>
 #include <satemu/hw/vdp/vdp.hpp>
 
@@ -91,7 +91,10 @@ public:
     // Components
 
     sys::SystemMemory mem;    // IPL ROM, low and high WRAM, internal backup memory
-    sh2::SH2Block SH2;        // Master and slave SH-2 CPUs
+    sys::Bus mainBus;         // Primary system bus
+    sh2::SH2 masterSH2;       // Master SH-2
+    sh2::SH2 slaveSH2;        // Slave SH-2
+    bool slaveSH2Enabled;     // Slave SH-2 enable flag
     scu::SCU SCU;             // SCU and its DSP, and the cartridge slot
     vdp::VDP VDP;             // VDP1 and VDP2
     smpc::SMPC SMPC;          // SMPC and input devices

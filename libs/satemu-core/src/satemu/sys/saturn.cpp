@@ -5,28 +5,30 @@
 namespace satemu {
 
 Saturn::Saturn()
-    : SCU(m_scheduler, SH2.bus)
+    : masterSH2(mainBus, true)
+    , slaveSH2(mainBus, false)
+    , SCU(m_scheduler, mainBus)
     , VDP(m_scheduler, SCU, SMPC)
     , SMPC(m_system, m_scheduler, *this)
     , SCSP(m_system, m_scheduler, SCU)
     , CDBlock(m_system, m_scheduler, SCU, SCSP) {
 
     auto ackIntrCallback = util::MakeClassMemberRequiredCallback<&scu::SCU::AcknowledgeExternalInterrupt>(&SCU);
-    SH2.master.SetExternalInterruptAcknowledgeCallback(ackIntrCallback);
-    SH2.slave.SetExternalInterruptAcknowledgeCallback(ackIntrCallback);
+    masterSH2.SetExternalInterruptAcknowledgeCallback(ackIntrCallback);
+    slaveSH2.SetExternalInterruptAcknowledgeCallback(ackIntrCallback);
 
     SCU.SetExternalInterruptCallbacks(
-        util::MakeClassMemberRequiredCallback<&sh2::SH2::SetExternalInterrupt>(&SH2.master),
-        util::MakeClassMemberRequiredCallback<&sh2::SH2::SetExternalInterrupt>(&SH2.slave));
+        util::MakeClassMemberRequiredCallback<&sh2::SH2::SetExternalInterrupt>(&masterSH2),
+        util::MakeClassMemberRequiredCallback<&sh2::SH2::SetExternalInterrupt>(&slaveSH2));
 
-    mem.MapMemory(SH2.bus);
-    SH2.master.MapMemory(SH2.bus);
-    SH2.slave.MapMemory(SH2.bus);
-    SCU.MapMemory(SH2.bus);
-    VDP.MapMemory(SH2.bus);
-    SMPC.MapMemory(SH2.bus);
-    SCSP.MapMemory(SH2.bus);
-    CDBlock.MapMemory(SH2.bus);
+    mem.MapMemory(mainBus);
+    masterSH2.MapMemory(mainBus);
+    slaveSH2.MapMemory(mainBus);
+    SCU.MapMemory(mainBus);
+    VDP.MapMemory(mainBus);
+    SMPC.MapMemory(mainBus);
+    SCSP.MapMemory(mainBus);
+    CDBlock.MapMemory(mainBus);
 
     Reset(true);
 }
@@ -39,7 +41,10 @@ void Saturn::Reset(bool hard) {
         m_scheduler.Reset();
     }
 
-    SH2.Reset(hard);
+    masterSH2.Reset(hard);
+    slaveSH2.Reset(hard);
+    slaveSH2Enabled = false;
+
     SCU.Reset(hard);
     VDP.Reset(hard);
     SMPC.Reset(hard);
@@ -140,9 +145,9 @@ void Saturn::Run() {
 
     const uint64 cycles = std::min<uint64>(m_scheduler.RemainingCount(), kMaxStep);
 
-    SH2.master.Advance<debug>(cycles);
-    if (SH2.slaveEnabled) {
-        SH2.slave.Advance<debug>(cycles);
+    masterSH2.Advance<debug>(cycles);
+    if (slaveSH2Enabled) {
+        slaveSH2.Advance<debug>(cycles);
     }
     SCU.Advance<debug>(cycles);
     VDP.Advance<debug>(cycles);

@@ -505,12 +505,12 @@ void App::RunEmulator() {
             if (pressed) {
                 debugTrace = !debugTrace;
                 if (debugTrace) {
-                    m_saturn.SH2.master.UseTracer(&m_masterSH2Tracer);
-                    m_saturn.SH2.slave.UseTracer(&m_slaveSH2Tracer);
+                    m_saturn.masterSH2.UseTracer(&m_masterSH2Tracer);
+                    m_saturn.slaveSH2.UseTracer(&m_slaveSH2Tracer);
                     m_saturn.SCU.UseTracer(&m_scuTracer);
                 } else {
-                    m_saturn.SH2.master.UseTracer(nullptr);
-                    m_saturn.SH2.slave.UseTracer(nullptr);
+                    m_saturn.masterSH2.UseTracer(nullptr);
+                    m_saturn.slaveSH2.UseTracer(nullptr);
                     m_saturn.SCU.UseTracer(nullptr);
                 }
                 fmt::println("Advanced debug tracing {}", (debugTrace ? "enabled" : "disabled"));
@@ -652,8 +652,8 @@ void App::RunEmulator() {
                     drawText(x, y + 290, "(trace unavailable)");
                 }
 
-                displaySH2(m_masterSH2Tracer, m_saturn.SH2.master, true, true, x + 50, y);
-                displaySH2(m_slaveSH2Tracer, m_saturn.SH2.slave, false, m_saturn.SH2.slaveEnabled, x + 150, y);
+                displaySH2(m_masterSH2Tracer, m_saturn.masterSH2, true, true, x + 50, y);
+                displaySH2(m_slaveSH2Tracer, m_saturn.slaveSH2, false, m_saturn.slaveSH2Enabled, x + 150, y);
             };
 
             auto displaySCU = [&](int x, int y) {

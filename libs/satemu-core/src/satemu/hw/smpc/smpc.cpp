@@ -103,7 +103,7 @@ void SMPC::MapMemory(sys::Bus &bus) {
 
 void SMPC::UpdateResetNMI() {
     if (!m_resetDisable && m_resetState) {
-        m_saturn.SH2.master.SetNMI();
+        m_saturn.masterSH2.SetNMI();
     }
 }
 
@@ -313,8 +313,8 @@ void SMPC::SSHON() {
     rootLog.debug("Processing SSHON");
 
     // Turn on and reset slave SH-2
-    m_saturn.SH2.slaveEnabled = true;
-    m_saturn.SH2.slave.Reset(true);
+    m_saturn.slaveSH2Enabled = true;
+    m_saturn.slaveSH2.Reset(true);
 
     SF = false; // done processing
 
@@ -325,7 +325,7 @@ void SMPC::SSHOFF() {
     rootLog.debug("Processing SSHOFF");
 
     // Turn off slave SH-2
-    m_saturn.SH2.slaveEnabled = false;
+    m_saturn.slaveSH2Enabled = false;
 
     SF = false; // done processing
 
@@ -384,7 +384,7 @@ void SMPC::CKCHG320() {
 void SMPC::NMIREQ() {
     rootLog.debug("Processing NMIREQ");
 
-    m_saturn.SH2.master.SetNMI();
+    m_saturn.masterSH2.SetNMI();
 
     SF = false; // done processing
 
@@ -527,7 +527,7 @@ void SMPC::WriteINTBACKStatusReport() {
 
     // TODO: update flags accordingly
     const bool dotsel = m_saturn.GetClockSpeed() == sys::ClockSpeed::_352;
-    const bool mshnmi = m_saturn.SH2.master.GetNMI();
+    const bool mshnmi = m_saturn.masterSH2.GetNMI();
     OREG[10] = 0b00110100 | (dotsel << 6u) | (mshnmi << 3u); // System status 1 (TODO: 1=SYSRES, 0=SNDRES)
     OREG[11] = 0b00000000;                                   // System status 2 (TODO: 6=CDRES)
 
@@ -608,9 +608,9 @@ void SMPC::ClockChange(sys::ClockSpeed clockSpeed) {
 
     // TODO: clear VDP VRAMs?
 
-    m_saturn.SH2.slaveEnabled = false;
+    m_saturn.slaveSH2Enabled = false;
 
-    m_saturn.SH2.master.SetNMI();
+    m_saturn.masterSH2.SetNMI();
 
     m_saturn.SetClockSpeed(clockSpeed);
     m_rtc.UpdateClockRatios();
