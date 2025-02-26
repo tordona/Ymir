@@ -96,7 +96,7 @@ private:
     core::Scheduler &m_scheduler;
     core::EventID m_phaseUpdateEvent;
 
-    static void OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
+    static void OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext);
 
     friend struct satemu::Saturn;
     void SetVideoStandard(sys::VideoStandard videoStandard);

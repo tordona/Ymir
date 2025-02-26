@@ -141,7 +141,7 @@ private:
     core::Scheduler &m_scheduler;
     core::EventID m_timer1Event;
 
-    static void OnTimer1Event(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
+    static void OnTimer1Event(core::EventContext &eventContext, void *userContext);
 
     // -------------------------------------------------------------------------
     // Memory accessors

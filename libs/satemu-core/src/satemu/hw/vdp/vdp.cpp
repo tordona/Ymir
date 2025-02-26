@@ -277,7 +277,7 @@ void VDP::DumpVDP1Framebuffers(std::ostream &out) const {
     out.write((const char *)m_spriteFB[m_drawFB ^ 1].data(), m_spriteFB[m_drawFB ^ 1].size());
 }
 
-void VDP::OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+void VDP::OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext) {
     auto &vdp = *static_cast<VDP *>(userContext);
     vdp.UpdatePhase();
     const uint64 cycles = vdp.GetPhaseCycles();

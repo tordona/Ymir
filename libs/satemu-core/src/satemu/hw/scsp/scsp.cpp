@@ -210,7 +210,7 @@ void SCSP::SetCPUEnabled(bool enabled) {
     }
 }
 
-void SCSP::OnSampleTickEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+void SCSP::OnSampleTickEvent(core::EventContext &eventContext, void *userContext) {
     auto &scsp = *static_cast<SCSP *>(userContext);
     scsp.Tick();
     eventContext.RescheduleFromNow(kCyclesPerSample);

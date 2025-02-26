@@ -25,6 +25,7 @@ struct Saturn;
 
 namespace satemu::smpc {
 
+// Invoked when INTBACK finishes processing to raise the SCU System Manager interrupt signal.
 using CBSystemManagerInterruptCallback = util::RequiredCallback<void()>;
 
 class SMPC {
@@ -96,7 +97,7 @@ private:
     core::Scheduler &m_scheduler;
     core::EventID m_commandEvent;
 
-    static void OnCommandEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
+    static void OnCommandEvent(core::EventContext &eventContext, void *userContext);
 
     // -------------------------------------------------------------------------
     // Memory accessors

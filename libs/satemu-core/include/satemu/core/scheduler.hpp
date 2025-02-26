@@ -66,7 +66,7 @@ private:
 class Scheduler {
 public:
     // Callback signature for scheduled events
-    using EventCallback = void (*)(EventContext &eventContext, void *userContext, uint64 cyclesLate);
+    using EventCallback = void (*)(EventContext &eventContext, void *userContext);
 
     static constexpr EventID kInvalidEvent = ~static_cast<EventID>(0);
 
@@ -211,7 +211,7 @@ private:
                 void *const userContext = event.userContext;
                 while (scaledCurrCount >= target) {
                     EventContext eventContext;
-                    callback(eventContext, userContext, scaledCurrCount - target);
+                    callback(eventContext, userContext);
                     switch (eventContext.action) {
                     case EventContext::Action::Unschedule: target = kNoDeadline; break;
                     case EventContext::Action::RescheduleFromNow:

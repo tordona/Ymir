@@ -107,7 +107,7 @@ void SMPC::UpdateResetNMI() {
     }
 }
 
-void SMPC::OnCommandEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+void SMPC::OnCommandEvent(core::EventContext &eventContext, void *userContext) {
     auto &smpc = *static_cast<SMPC *>(userContext);
     smpc.ProcessCommand();
 }

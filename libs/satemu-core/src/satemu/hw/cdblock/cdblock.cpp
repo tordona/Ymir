@@ -193,13 +193,13 @@ bool CDBlock::IsTrayOpen() const {
     return (m_status.statusCode & 0xF) == kStatusCodeOpen;
 }
 
-void CDBlock::OnDriveStateUpdateEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+void CDBlock::OnDriveStateUpdateEvent(core::EventContext &eventContext, void *userContext) {
     auto &cdb = *static_cast<CDBlock *>(userContext);
     cdb.ProcessDriveState();
     eventContext.RescheduleFromNow(cdb.m_targetDriveCycles);
 }
 
-void CDBlock::OnCommandExecEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+void CDBlock::OnCommandExecEvent(core::EventContext &eventContext, void *userContext) {
     auto &cdb = *static_cast<CDBlock *>(userContext);
     cdb.ProcessCommand();
 }

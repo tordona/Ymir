@@ -250,7 +250,7 @@ void SCU::DumpDSPRegs(std::ostream &out) {
     write(m_dspState.dmaAddrInc);
 }
 
-void SCU::OnTimer1Event(core::EventContext &eventContext, void *userContext, uint64 cyclesLate) {
+void SCU::OnTimer1Event(core::EventContext &eventContext, void *userContext) {
     auto &scu = *static_cast<SCU *>(userContext);
     scu.TickTimer1();
 }

@@ -120,7 +120,7 @@ private:
     core::Scheduler &m_scheduler;
     core::EventID m_sampleTickEvent;
 
-    static void OnSampleTickEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
+    static void OnSampleTickEvent(core::EventContext &eventContext, void *userContext);
 
     CBOutputSample m_cbOutputSample;
     CBTriggerSoundRequestInterrupt m_cbTriggerSoundRequestInterrupt;

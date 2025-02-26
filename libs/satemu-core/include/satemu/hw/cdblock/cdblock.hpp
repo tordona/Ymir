@@ -74,8 +74,8 @@ private:
     core::EventID m_driveStateUpdateEvent;
     core::EventID m_commandExecEvent;
 
-    static void OnDriveStateUpdateEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
-    static void OnCommandExecEvent(core::EventContext &eventContext, void *userContext, uint64 cyclesLate);
+    static void OnDriveStateUpdateEvent(core::EventContext &eventContext, void *userContext);
+    static void OnCommandExecEvent(core::EventContext &eventContext, void *userContext);
 
     friend struct satemu::Saturn;
     void UpdateClockRatios();
