@@ -157,7 +157,7 @@ uint32 SCSP::ReceiveCDDA(std::span<uint8, 2048> data) {
     if (len >= 2048 * 4) {
         m_cddaReady = true;
     }
-    return len;
+    return len * 3 / m_cddaBuffer.size();
 }
 
 void SCSP::DumpWRAM(std::ostream &out) const {

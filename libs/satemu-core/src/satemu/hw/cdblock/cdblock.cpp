@@ -1,7 +1,5 @@
 #include <satemu/hw/cdblock/cdblock.hpp>
 
-#include <satemu/hw/scsp/scsp.hpp>
-
 #include <satemu/sys/clocks.hpp>
 
 #include <satemu/util/arith_ops.hpp>
@@ -12,9 +10,8 @@
 
 namespace satemu::cdblock {
 
-CDBlock::CDBlock(sys::System &system, core::Scheduler &scheduler, scsp::SCSP &scsp)
+CDBlock::CDBlock(sys::System &system, core::Scheduler &scheduler)
     : m_system(system)
-    , m_SCSP(scsp)
     , m_scheduler(scheduler) {
 
     m_driveStateUpdateEvent = m_scheduler.RegisterEvent(core::events::CDBlockDriveState, this, OnDriveStateUpdateEvent);
@@ -576,14 +573,15 @@ void CDBlock::ProcessDriveStatePlay() {
                             util::WriteLE<sint16>(&dataSpan[offset], util::ReadLE<sint16>(&dataSpan[offset]) >> 2u);
                         }
                     }
-                    const uint32 currBufferLength = m_SCSP.ReceiveCDDA(dataSpan);
-                    const uint32 maxBufferLength = m_SCSP.GetCDDABufferSize();
+
+                    // The callback returns how many thirds of the buffer are full
+                    const uint32 currBufferLength = m_cbCDDASector(dataSpan);
 
                     // Adjust pace based on how full the SCSP CDDA buffer is
-                    if (currBufferLength < maxBufferLength / 3) {
+                    if (currBufferLength < 1) {
                         // Run faster if the buffer is less than a third full
                         m_targetDriveCycles = kDriveCyclesPlaying1x - (kDriveCyclesPlaying1x >> 2);
-                    } else if (currBufferLength >= maxBufferLength * 2 / 3) {
+                    } else if (currBufferLength >= 2) {
                         // Run slower if the buffer is more than two-thirds full
                         m_targetDriveCycles = kDriveCyclesPlaying1x + (kDriveCyclesPlaying1x >> 2);
                     } else {

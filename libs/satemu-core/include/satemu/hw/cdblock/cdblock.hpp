@@ -28,12 +28,6 @@ struct Saturn;
 
 } // namespace satemu
 
-namespace satemu::scsp {
-
-class SCSP;
-
-} // namespace satemu::scsp
-
 // -----------------------------------------------------------------------------
 
 namespace satemu::cdblock {
@@ -47,12 +41,15 @@ class CDBlock {
     static constexpr dbg::Category partLog{rootLog, "PartMgr"};
 
 public:
-    CDBlock(sys::System &system, core::Scheduler &scheduler, scsp::SCSP &scsp);
+    CDBlock(sys::System &system, core::Scheduler &scheduler);
 
     void Reset(bool hard);
 
     void SetTriggerExternalInterrupt0Callback(CBTriggerExternalInterrupt0 callback) {
         m_cbTriggerExternalInterrupt0 = callback;
+    }
+    void SetCDDASectorCallback(CBCDDASector callback) {
+        m_cbCDDASector = callback;
     }
 
     void MapMemory(sys::Bus &bus);
@@ -69,9 +66,9 @@ public:
 
 private:
     sys::System &m_system;
-    scsp::SCSP &m_SCSP;
 
     CBTriggerExternalInterrupt0 m_cbTriggerExternalInterrupt0;
+    CBCDDASector m_cbCDDASector;
 
     core::Scheduler &m_scheduler;
     core::EventID m_driveStateUpdateEvent;
