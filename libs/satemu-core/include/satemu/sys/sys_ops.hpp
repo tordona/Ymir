@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/sys/clocks.hpp>
+
 namespace satemu::sys {
 
 // The subset of system operations used by the SMPC.
@@ -17,8 +19,8 @@ public:
     virtual void SoftResetSystem() = 0;      // Soft resets the entire system
     virtual void ClockChangeSoftReset() = 0; // Soft resets VDP, SCU and SCSP after a clock change
 
-    virtual sys::ClockSpeed GetClockSpeed() const = 0;
-    virtual void SetClockSpeed(sys::ClockSpeed clockSpeed) = 0;
+    virtual ClockSpeed GetClockSpeed() const = 0;
+    virtual void SetClockSpeed(ClockSpeed clockSpeed) = 0;
 };
 
 } // namespace satemu::sys

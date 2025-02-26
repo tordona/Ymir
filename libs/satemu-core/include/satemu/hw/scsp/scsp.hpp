@@ -7,7 +7,7 @@
 
 #include <satemu/core/scheduler.hpp>
 #include <satemu/sys/bus.hpp>
-#include <satemu/sys/system.hpp>
+#include <satemu/sys/clocks.hpp>
 
 #include <satemu/hw/hw_defs.hpp>
 
@@ -21,17 +21,6 @@
 #include <array>
 #include <iosfwd>
 #include <span>
-
-// -----------------------------------------------------------------------------
-// Forward declarations
-
-namespace satemu {
-
-struct Saturn;
-
-} // namespace satemu
-
-// -----------------------------------------------------------------------------
 
 namespace satemu::scsp {
 
@@ -69,11 +58,9 @@ class SCSP {
     static constexpr dbg::Category dmaLog{rootLog, "DMA"};
 
 public:
-    SCSP(sys::System &system, core::Scheduler &scheduler);
+    SCSP(core::Scheduler &scheduler);
 
     void Reset(bool hard);
-
-    void MapMemory(sys::Bus &bus);
 
     void SetSampleCallback(CBOutputSample callback) {
         m_cbOutputSample = callback;
@@ -82,6 +69,10 @@ public:
     void SetTriggerSoundRequestInterruptCallback(CBTriggerSoundRequestInterrupt callback) {
         m_cbTriggerSoundRequestInterrupt = callback;
     }
+
+    void MapMemory(sys::Bus &bus);
+
+    void UpdateClockRatios(const sys::ClockRatios &clockRatios);
 
     void Advance(uint64 cycles);
 
@@ -115,8 +106,6 @@ private:
     m68k::MC68EC000 m_m68k;
     bool m_m68kEnabled;
 
-    sys::System &m_system;
-
     core::Scheduler &m_scheduler;
     core::EventID m_sampleTickEvent;
 
@@ -124,9 +113,6 @@ private:
 
     CBOutputSample m_cbOutputSample;
     CBTriggerSoundRequestInterrupt m_cbTriggerSoundRequestInterrupt;
-
-    friend struct satemu::Saturn;
-    void UpdateClockRatios();
 
     // -------------------------------------------------------------------------
     // Memory accessors (SCU-facing bus)

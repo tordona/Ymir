@@ -86,8 +86,6 @@ private:
 
     sys::System m_system;
 
-    void UpdateClockRatios();
-
 public:
     // -------------------------------------------------------------------------
     // Components
@@ -100,7 +98,7 @@ public:
     scu::SCU SCU;             // SCU and its DSP, and the cartridge slot
     vdp::VDP VDP;             // VDP1 and VDP2
     smpc::SMPC SMPC;          // SMPC and input devices
-    scsp::SCSP SCSP;          // SCSP and MC68EC000 CPU
+    scsp::SCSP SCSP;          // SCSP and its DSP, and MC68EC000 CPU
     cdblock::CDBlock CDBlock; // CD block and media
 
 private:

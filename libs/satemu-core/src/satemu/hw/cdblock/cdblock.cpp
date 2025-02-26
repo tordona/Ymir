@@ -10,9 +10,8 @@
 
 namespace satemu::cdblock {
 
-CDBlock::CDBlock(sys::System &system, core::Scheduler &scheduler)
-    : m_system(system)
-    , m_scheduler(scheduler) {
+CDBlock::CDBlock(core::Scheduler &scheduler)
+    : m_scheduler(scheduler) {
 
     m_driveStateUpdateEvent = m_scheduler.RegisterEvent(core::events::CDBlockDriveState, this, OnDriveStateUpdateEvent);
     m_commandExecEvent = m_scheduler.RegisterEvent(core::events::CDBlockCommand, this, OnCommandExecEvent);
@@ -35,8 +34,6 @@ void CDBlock::Reset(bool hard) {
     m_status.index = 0xFF;
 
     m_readyForPeriodicReports = false;
-
-    UpdateClockRatios();
 
     m_currDriveCycles = 0;
     m_targetDriveCycles = kDriveCyclesNotPlaying;
@@ -124,6 +121,13 @@ void CDBlock::MapMemory(sys::Bus &bus) {
     }
 }
 
+void CDBlock::UpdateClockRatios(const sys::ClockRatios &clockRatios) {
+    // FIXME: audio track playback is too slow with the CD block ratio
+    m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.SCSPNum * 3, clockRatios.SCSPDen);
+    // m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.CDBlockNum * 3, clockRatios.CDBlockDen);
+    m_scheduler.SetEventCountFactor(m_commandExecEvent, clockRatios.CDBlockNum, clockRatios.CDBlockDen);
+}
+
 void CDBlock::LoadDisc(media::Disc &&disc) {
     m_disc.Swap(std::move(disc));
 
@@ -202,15 +206,6 @@ void CDBlock::OnDriveStateUpdateEvent(core::EventContext &eventContext, void *us
 void CDBlock::OnCommandExecEvent(core::EventContext &eventContext, void *userContext) {
     auto &cdb = *static_cast<CDBlock *>(userContext);
     cdb.ProcessCommand();
-}
-
-void CDBlock::UpdateClockRatios() {
-    const auto &clockRatios = m_system.GetClockRatios();
-
-    // FIXME: audio track playback is too slow with the CD block ratio
-    m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.SCSPNum * 3, clockRatios.SCSPDen);
-    // m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.CDBlockNum * 3, clockRatios.CDBlockDen);
-    m_scheduler.SetEventCountFactor(m_commandExecEvent, clockRatios.CDBlockNum, clockRatios.CDBlockDen);
 }
 
 template <mem_primitive T>

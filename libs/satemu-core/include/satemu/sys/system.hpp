@@ -2,20 +2,33 @@
 
 #include "clocks.hpp"
 
+#include <satemu/util/callback.hpp>
+
+#include <vector>
+
 namespace satemu::sys {
 
-enum class VideoStandard { NTSC, PAL };
-enum class ClockSpeed { _320, _352 };
+using CBClockSpeedChange = util::RequiredCallback<void(const ClockRatios &clockRatios)>;
 
 struct System {
     VideoStandard videoStandard = VideoStandard::NTSC;
     ClockSpeed clockSpeed = ClockSpeed::_320;
 
-    const ClockRatios &GetClockRatios() const {
+    void UpdateClockRatios() {
         const bool clock352 = clockSpeed == ClockSpeed::_352;
         const bool pal = videoStandard == VideoStandard::PAL;
-        return kClockRatios[clock352 | (pal << 1)];
+        const ClockRatios &clockRatios = kClockRatios[clock352 | (pal << 1)];
+        for (auto &cb : m_clockSpeedChangeCallbacks) {
+            cb(clockRatios);
+        }
     }
+
+    void AddClockSpeedChangeCallback(CBClockSpeedChange callback) {
+        m_clockSpeedChangeCallbacks.push_back(callback);
+    }
+
+private:
+    std::vector<CBClockSpeedChange> m_clockSpeedChangeCallbacks;
 };
 
 } // namespace satemu::sys

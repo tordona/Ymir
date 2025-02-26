@@ -4,7 +4,10 @@
 
 #include <array>
 
-namespace satemu {
+namespace satemu::sys {
+
+enum class VideoStandard { NTSC, PAL };
+enum class ClockSpeed { _320, _352 };
 
 // Clock speeds:
 // - Master clock - used by both SH-2s, VDP1, VDP2 and SCU:
@@ -115,4 +118,4 @@ inline constexpr std::array<ClockRatios, 4> kClockRatios = {
     },
 };
 
-} // namespace satemu
+} // namespace satemu::sys

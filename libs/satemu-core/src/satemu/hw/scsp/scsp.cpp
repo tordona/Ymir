@@ -9,9 +9,8 @@ using namespace satemu::m68k;
 
 namespace satemu::scsp {
 
-SCSP::SCSP(sys::System &system, core::Scheduler &scheduler)
+SCSP::SCSP(core::Scheduler &scheduler)
     : m_m68k(*this)
-    , m_system(system)
     , m_scheduler(scheduler)
     , m_dsp(m_WRAM.data()) {
 
@@ -43,9 +42,6 @@ void SCSP::Reset(bool hard) {
     m_lfsr = 1;
 
     if (hard) {
-        // TODO: PAL flag
-        UpdateClockRatios();
-
         m_scheduler.ScheduleFromNow(m_sampleTickEvent, kCyclesPerSample);
     }
 
@@ -136,6 +132,10 @@ void SCSP::MapMemory(sys::Bus &bus) {
                   });
 }
 
+void SCSP::UpdateClockRatios(const sys::ClockRatios &clockRatios) {
+    m_scheduler.SetEventCountFactor(m_sampleTickEvent, clockRatios.SCSPNum, clockRatios.SCSPDen);
+}
+
 void SCSP::Advance(uint64 cycles) {
     if (m_m68kEnabled) {
         m_m68kCycles += cycles;
@@ -214,11 +214,6 @@ void SCSP::OnSampleTickEvent(core::EventContext &eventContext, void *userContext
     auto &scsp = *static_cast<SCSP *>(userContext);
     scsp.Tick();
     eventContext.RescheduleFromNow(kCyclesPerSample);
-}
-
-void SCSP::UpdateClockRatios() {
-    const auto &clockRatios = m_system.GetClockRatios();
-    m_scheduler.SetEventCountFactor(m_sampleTickEvent, clockRatios.SCSPNum, clockRatios.SCSPDen);
 }
 
 void SCSP::HandleKYONEX() {

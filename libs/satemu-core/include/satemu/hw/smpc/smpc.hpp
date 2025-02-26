@@ -36,7 +36,7 @@ class SMPC {
     static constexpr dbg::Category regsLog{rootLog, "Regs"};
 
 public:
-    SMPC(sys::System &system, core::Scheduler &scheduler, sys::ISystemOperations &sysOps);
+    SMPC(core::Scheduler &scheduler, sys::ISystemOperations &sysOps);
     ~SMPC();
 
     void Reset(bool hard);
@@ -47,6 +47,8 @@ public:
     }
 
     void MapMemory(sys::Bus &bus);
+
+    void UpdateClockRatios(const sys::ClockRatios &clockRatios);
 
     void SetResetButtonState(bool pressed) {
         bool prevState = m_resetState;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <satemu/sys/system.hpp>
+#include <satemu/sys/clocks.hpp>
 
 #include <satemu/util/date_time.hpp>
 
@@ -47,7 +47,7 @@ public:
         Preserve,
     };
 
-    RTC(sys::System &system);
+    RTC();
 
     void Reset(bool hard);
 
@@ -69,10 +69,8 @@ public:
     void WritePersistentData(std::ofstream &out) const;
 
 private:
-    sys::System &m_system;
-
     friend class satemu::smpc::SMPC;
-    void UpdateClockRatios();
+    void UpdateClockRatios(const sys::ClockRatios &clockRatios);
 
     Mode m_mode;
     HardResetStrategy m_hardResetStrategy;

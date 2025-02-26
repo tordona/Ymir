@@ -11,8 +11,7 @@ namespace satemu::smpc::rtc {
 
 static constexpr dbg::Category rootLog{"RTC"};
 
-RTC::RTC(sys::System &system)
-    : m_system(system) {
+RTC::RTC() {
     m_offset = 0;
 
     // TODO(SMPC): RTC configuration should be saved to the configuration file
@@ -87,8 +86,7 @@ void RTC::WritePersistentData(std::ofstream &out) const {
     out.write((const char *)&m_timestamp, sizeof(m_timestamp));
 }
 
-void RTC::UpdateClockRatios() {
-    const auto &clockRatios = m_system.GetClockRatios();
+void RTC::UpdateClockRatios(const sys::ClockRatios &clockRatios) {
     m_sysClockRateNum = clockRatios.RTCNum;
     m_sysClockRateDen = clockRatios.RTCDen;
 }

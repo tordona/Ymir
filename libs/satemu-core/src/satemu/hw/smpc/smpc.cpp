@@ -12,10 +12,9 @@
 
 namespace satemu::smpc {
 
-SMPC::SMPC(sys::System &system, core::Scheduler &scheduler, sys::ISystemOperations &sysOps)
+SMPC::SMPC(core::Scheduler &scheduler, sys::ISystemOperations &sysOps)
     : m_sysOps(sysOps)
-    , m_scheduler(scheduler)
-    , m_rtc(system) {
+    , m_scheduler(scheduler) {
 
     SMEM.fill(0);
     m_STE = false;
@@ -50,7 +49,6 @@ void SMPC::Reset(bool hard) {
     m_busValue = 0x00;
 
     m_rtc.Reset(hard);
-    m_rtc.UpdateClockRatios();
 
     m_pioMode1 = false;
     m_pioMode2 = false;
@@ -99,6 +97,10 @@ void SMPC::MapMemory(sys::Bus &bus) {
                       .write32 = [](uint32 address, uint32 value,
                                     void *ctx) { static_cast<SMPC *>(ctx)->Write((address & 0x7F) | 1, value); },
                   });
+}
+
+FLATTEN void SMPC::UpdateClockRatios(const sys::ClockRatios &clockRatios) {
+    m_rtc.UpdateClockRatios(clockRatios);
 }
 
 void SMPC::UpdateResetNMI() {
@@ -602,15 +604,10 @@ void SMPC::SETTIME() {
 
 void SMPC::ClockChange(sys::ClockSpeed clockSpeed) {
     m_sysOps.ClockChangeSoftReset();
-
     // TODO: clear VDP VRAMs?
-
     m_sysOps.DisableSlaveSH2();
-
     m_sysOps.RaiseNMI();
-
     m_sysOps.SetClockSpeed(clockSpeed);
-    m_rtc.UpdateClockRatios();
 }
 
 } // namespace satemu::smpc

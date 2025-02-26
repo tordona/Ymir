@@ -7,7 +7,7 @@
 
 #include <satemu/core/scheduler.hpp>
 #include <satemu/sys/bus.hpp>
-#include <satemu/sys/system.hpp>
+#include <satemu/sys/clocks.hpp>
 
 #include <satemu/hw/hw_defs.hpp>
 
@@ -18,17 +18,6 @@
 
 #include <array>
 #include <deque>
-
-// -----------------------------------------------------------------------------
-// Forward declarations
-
-namespace satemu {
-
-struct Saturn;
-
-} // namespace satemu
-
-// -----------------------------------------------------------------------------
 
 namespace satemu::cdblock {
 
@@ -41,7 +30,7 @@ class CDBlock {
     static constexpr dbg::Category partLog{rootLog, "PartMgr"};
 
 public:
-    CDBlock(sys::System &system, core::Scheduler &scheduler);
+    CDBlock(core::Scheduler &scheduler);
 
     void Reset(bool hard);
 
@@ -54,6 +43,8 @@ public:
 
     void MapMemory(sys::Bus &bus);
 
+    void UpdateClockRatios(const sys::ClockRatios &clockRatios);
+
     void LoadDisc(media::Disc &&disc);
     void EjectDisc();
     void OpenTray();
@@ -65,8 +56,6 @@ public:
     }
 
 private:
-    sys::System &m_system;
-
     CBTriggerExternalInterrupt0 m_cbTriggerExternalInterrupt0;
     CBCDDASector m_cbCDDASector;
 
@@ -76,9 +65,6 @@ private:
 
     static void OnDriveStateUpdateEvent(core::EventContext &eventContext, void *userContext);
     static void OnCommandExecEvent(core::EventContext &eventContext, void *userContext);
-
-    friend struct satemu::Saturn;
-    void UpdateClockRatios();
 
     alignas(uint64) std::array<uint16, 4> m_CR;
 

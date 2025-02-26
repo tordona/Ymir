@@ -9,9 +9,9 @@ Saturn::Saturn()
     , slaveSH2(mainBus, false)
     , SCU(m_scheduler, mainBus)
     , VDP(m_scheduler)
-    , SMPC(m_system, m_scheduler, *this)
-    , SCSP(m_system, m_scheduler)
-    , CDBlock(m_system, m_scheduler) {
+    , SMPC(m_scheduler, *this)
+    , SCSP(m_scheduler)
+    , CDBlock(m_scheduler) {
 
     auto ackIntrCallback = util::MakeClassMemberRequiredCallback<&scu::SCU::AcknowledgeExternalInterrupt>(&SCU);
     masterSH2.SetExternalInterruptAcknowledgeCallback(ackIntrCallback);
@@ -37,6 +37,12 @@ Saturn::Saturn()
         util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerExternalInterrupt0>(&SCU));
     CDBlock.SetCDDASectorCallback(util::MakeClassMemberRequiredCallback<&scsp::SCSP::ReceiveCDDA>(&SCSP));
 
+    // TODO: register clock speed change callbacks
+    m_system.AddClockSpeedChangeCallback(util::MakeClassMemberRequiredCallback<&scsp::SCSP::UpdateClockRatios>(&SCSP));
+    m_system.AddClockSpeedChangeCallback(util::MakeClassMemberRequiredCallback<&smpc::SMPC::UpdateClockRatios>(&SMPC));
+    m_system.AddClockSpeedChangeCallback(
+        util::MakeClassMemberRequiredCallback<&cdblock::CDBlock::UpdateClockRatios>(&CDBlock));
+
     mem.MapMemory(mainBus);
     masterSH2.MapMemory(mainBus);
     slaveSH2.MapMemory(mainBus);
@@ -52,7 +58,7 @@ Saturn::Saturn()
 void Saturn::Reset(bool hard) {
     if (hard) {
         m_system.clockSpeed = sys::ClockSpeed::_320;
-        UpdateClockRatios();
+        m_system.UpdateClockRatios();
 
         m_scheduler.Reset();
     }
@@ -80,7 +86,7 @@ sys::VideoStandard Saturn::GetVideoStandard() const {
 void Saturn::SetVideoStandard(sys::VideoStandard videoStandard) {
     m_system.videoStandard = videoStandard;
     VDP.SetVideoStandard(videoStandard);
-    UpdateClockRatios();
+    m_system.UpdateClockRatios();
 }
 
 sys::ClockSpeed Saturn::GetClockSpeed() const {
@@ -89,7 +95,7 @@ sys::ClockSpeed Saturn::GetClockSpeed() const {
 
 void Saturn::SetClockSpeed(sys::ClockSpeed clockSpeed) {
     m_system.clockSpeed = clockSpeed;
-    UpdateClockRatios();
+    m_system.UpdateClockRatios();
 }
 
 void Saturn::LoadIPL(std::span<uint8, sys::kIPLSize> ipl) {
@@ -179,11 +185,6 @@ void Saturn::Run() {
     }*/
 
     m_scheduler.Advance(cycles);
-}
-
-void Saturn::UpdateClockRatios() {
-    SCSP.UpdateClockRatios();
-    CDBlock.UpdateClockRatios();
 }
 
 bool Saturn::GetNMI() const {
