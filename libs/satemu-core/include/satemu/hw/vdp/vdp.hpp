@@ -29,12 +29,6 @@ struct Saturn;
 
 } // namespace satemu
 
-namespace satemu::smpc {
-
-class SMPC;
-
-} // namespace satemu::smpc
-
 // -----------------------------------------------------------------------------
 
 namespace satemu::vdp {
@@ -50,7 +44,7 @@ class VDP {
     static constexpr dbg::Category renderLog2{rootLog2, "Render"};
 
 public:
-    VDP(core::Scheduler &scheduler, smpc::SMPC &smpc);
+    VDP(core::Scheduler &scheduler);
 
     void Reset(bool hard);
 
@@ -62,11 +56,13 @@ public:
     }
 
     void SetInterruptCallbacks(CBTriggerInterrupt cbHBlankIN, CBTriggerInterrupt cbVBlankIN,
-                               CBTriggerInterrupt cbVBlankOUT, CBTriggerInterrupt cbSpriteDrawEnd) {
+                               CBTriggerInterrupt cbVBlankOUT, CBTriggerInterrupt cbSpriteDrawEnd,
+                               CBTriggerEvent cbOptimizedINTBACKRead) {
         m_cbTriggerHBlankIN = cbHBlankIN;
         m_cbTriggerVBlankIN = cbVBlankIN;
         m_cbTriggerVBlankOUT = cbVBlankOUT;
         m_cbTriggerSpriteDrawEnd = cbSpriteDrawEnd;
+        m_cbTriggerOptimizedINTBACKRead = cbOptimizedINTBACKRead;
     }
 
     // TODO: replace with scheduler events
@@ -95,8 +91,7 @@ private:
     CBTriggerInterrupt m_cbTriggerVBlankIN;
     CBTriggerInterrupt m_cbTriggerVBlankOUT;
     CBTriggerInterrupt m_cbTriggerSpriteDrawEnd;
-
-    smpc::SMPC &m_SMPC;
+    CBTriggerEvent m_cbTriggerOptimizedINTBACKRead;
 
     core::Scheduler &m_scheduler;
     core::EventID m_phaseUpdateEvent;

@@ -85,5 +85,6 @@ using CBRequestFramebuffer = util::OptionalCallback<FramebufferColor *(uint32 wi
 using CBFrameComplete = util::OptionalCallback<void(FramebufferColor *fb, uint32 width, uint32 height)>;
 
 using CBTriggerInterrupt = util::RequiredCallback<void()>;
+using CBTriggerEvent = util::RequiredCallback<void()>;
 
 } // namespace satemu::vdp

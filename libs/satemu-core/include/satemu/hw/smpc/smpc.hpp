@@ -224,7 +224,7 @@ private:
     size_t m_intbackReportOffset;       // Offset into full peripheral report to continue reading
     bool m_intbackInProgress;           // Whether an INTBACK peripheral report read is in progress
 
-    friend class vdp::VDP;
+    friend struct ::satemu::Saturn;
     void TriggerOptimizedINTBACKRead();
 
     void ReadPeripherals();

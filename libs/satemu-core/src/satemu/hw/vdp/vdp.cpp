@@ -1,7 +1,5 @@
 #include <satemu/hw/vdp/vdp.hpp>
 
-#include <satemu/hw/smpc/smpc.hpp>
-
 #include "slope.hpp"
 
 #include <satemu/util/bit_ops.hpp>
@@ -13,9 +11,8 @@
 
 namespace satemu::vdp {
 
-VDP::VDP(core::Scheduler &scheduler, smpc::SMPC &smpc)
-    : m_SMPC(smpc)
-    , m_scheduler(scheduler) {
+VDP::VDP(core::Scheduler &scheduler)
+    : m_scheduler(scheduler) {
 
     m_phaseUpdateEvent = scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent);
 
@@ -878,7 +875,7 @@ void VDP::BeginHPhaseActiveDisplay() {
 
             VDP2InitFrame();
         } else if (m_VCounter == 210) { // ~1ms before VBlank IN
-            m_SMPC.TriggerOptimizedINTBACKRead();
+            m_cbTriggerOptimizedINTBACKRead();
         }
         VDP2DrawLine();
     }
