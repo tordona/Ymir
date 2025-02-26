@@ -6,6 +6,7 @@
 #include <satemu/core/scheduler.hpp>
 #include <satemu/sys/bus.hpp>
 
+#include <satemu/util/callback.hpp>
 #include <satemu/util/debug_print.hpp>
 
 #include <array>
@@ -20,15 +21,11 @@ struct Saturn;
 
 } // namespace satemu
 
-namespace satemu::vdp {
-
-class VDP;
-
-} // namespace satemu::vdp
-
 // -----------------------------------------------------------------------------
 
 namespace satemu::smpc {
+
+using CBSystemManagerInterruptCallback = util::RequiredCallback<void()>;
 
 class SMPC {
     static constexpr dbg::Category rootLog{"SMPC"};
@@ -40,6 +37,10 @@ public:
 
     void Reset(bool hard);
     void FactoryReset();
+
+    void SetSystemManagerInterruptCallback(CBSystemManagerInterruptCallback callback) {
+        m_cbSystemManagerInterruptCallback = callback;
+    }
 
     void MapMemory(sys::Bus &bus);
 
@@ -88,6 +89,8 @@ private:
     //   0xD: (L) Central/South America PAL
     // 0x0 and 0xF are prohibited; all others are reserved
     uint8 m_areaCode;
+
+    CBSystemManagerInterruptCallback m_cbSystemManagerInterruptCallback;
 
     Saturn &m_saturn;
     core::Scheduler &m_scheduler;

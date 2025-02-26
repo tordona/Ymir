@@ -456,7 +456,7 @@ void SMPC::INTBACK() {
 
     SF = false; // done processing
 
-    m_saturn.SCU.TriggerSystemManager();
+    m_cbSystemManagerInterruptCallback();
 }
 
 void SMPC::TriggerOptimizedINTBACKRead() {
@@ -464,7 +464,7 @@ void SMPC::TriggerOptimizedINTBACKRead() {
         m_optimize = false;
 
         ReadPeripherals();
-        m_saturn.SCU.TriggerSystemManager();
+        m_cbSystemManagerInterruptCallback();
     }
 }
 

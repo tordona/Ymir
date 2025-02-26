@@ -27,6 +27,9 @@ Saturn::Saturn()
                               util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerSpriteDrawEnd>(&SCU),
                               util::MakeClassMemberRequiredCallback<&smpc::SMPC::TriggerOptimizedINTBACKRead>(&SMPC));
 
+    SMPC.SetSystemManagerInterruptCallback(
+        util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerSystemManager>(&SCU));
+
     SCSP.SetTriggerSoundRequestInterruptCallback(
         util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerSoundRequest>(&SCU));
 
