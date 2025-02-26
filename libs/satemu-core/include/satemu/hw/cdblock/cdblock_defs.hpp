@@ -2,6 +2,8 @@
 
 #include <satemu/core/types.hpp>
 
+#include <satemu/util/callback.hpp>
+
 namespace satemu::cdblock {
 
 // HIRQ flags
@@ -62,5 +64,7 @@ inline constexpr uint32 kDriveCyclesPlaying1x = 800000;
 inline constexpr uint32 kNumBuffers = 200;   // total number of buffers
 inline constexpr uint32 kNumFilters = 24;    // total number of filters
 inline constexpr uint32 kNumPartitions = 24; // total number of buffer partitions
+
+using CBTriggerExternalInterrupt0 = util::RequiredCallback<void()>;
 
 } // namespace satemu::cdblock

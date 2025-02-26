@@ -1,7 +1,6 @@
 #include <satemu/hw/cdblock/cdblock.hpp>
 
 #include <satemu/hw/scsp/scsp.hpp>
-#include <satemu/hw/scu/scu.hpp>
 
 #include <satemu/sys/clocks.hpp>
 
@@ -13,9 +12,8 @@
 
 namespace satemu::cdblock {
 
-CDBlock::CDBlock(sys::System &system, core::Scheduler &scheduler, scu::SCU &scu, scsp::SCSP &scsp)
+CDBlock::CDBlock(sys::System &system, core::Scheduler &scheduler, scsp::SCSP &scsp)
     : m_system(system)
-    , m_SCU(scu)
     , m_SCSP(scsp)
     , m_scheduler(scheduler) {
 
@@ -705,7 +703,7 @@ void CDBlock::SetInterrupt(uint16 bits) {
 void CDBlock::UpdateInterrupts() {
     rootLog.trace("HIRQ = {:04X}  mask = {:04X}  active = {:04X}", m_HIRQ, m_HIRQMASK, m_HIRQ & m_HIRQMASK);
     if (m_HIRQ & m_HIRQMASK) {
-        m_SCU.TriggerExternalInterrupt0();
+        m_cbTriggerExternalInterrupt0();
     }
 }
 
