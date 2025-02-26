@@ -186,4 +186,39 @@ void Saturn::UpdateClockRatios() {
     CDBlock.UpdateClockRatios();
 }
 
+bool Saturn::GetNMI() const {
+    return masterSH2.GetNMI();
+}
+
+void Saturn::RaiseNMI() {
+    masterSH2.SetNMI();
+}
+
+void Saturn::EnableAndResetSlaveSH2() {
+    slaveSH2Enabled = true;
+    slaveSH2.Reset(true);
+}
+
+void Saturn::DisableSlaveSH2() {
+    slaveSH2Enabled = false;
+}
+
+void Saturn::EnableAndResetM68K() {
+    SCSP.SetCPUEnabled(true);
+}
+
+void Saturn::DisableM68K() {
+    SCSP.SetCPUEnabled(false);
+}
+
+void Saturn::SoftResetSystem() {
+    Reset(false);
+}
+
+void Saturn::ClockChangeSoftReset() {
+    VDP.Reset(false);
+    SCU.Reset(false);
+    SCSP.Reset(false);
+}
+
 } // namespace satemu

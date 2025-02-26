@@ -5,6 +5,7 @@
 
 #include <satemu/core/scheduler.hpp>
 #include <satemu/sys/bus.hpp>
+#include <satemu/sys/sys_ops.hpp>
 
 #include <satemu/util/callback.hpp>
 #include <satemu/util/debug_print.hpp>
@@ -28,12 +29,14 @@ namespace satemu::smpc {
 // Invoked when INTBACK finishes processing to raise the SCU System Manager interrupt signal.
 using CBSystemManagerInterruptCallback = util::RequiredCallback<void()>;
 
+// -----------------------------------------------------------------------------
+
 class SMPC {
     static constexpr dbg::Category rootLog{"SMPC"};
     static constexpr dbg::Category regsLog{rootLog, "Regs"};
 
 public:
-    SMPC(sys::System &system, core::Scheduler &scheduler, Saturn &saturn);
+    SMPC(sys::System &system, core::Scheduler &scheduler, sys::ISystemOperations &sysOps);
     ~SMPC();
 
     void Reset(bool hard);
@@ -93,7 +96,7 @@ private:
 
     CBSystemManagerInterruptCallback m_cbSystemManagerInterruptCallback;
 
-    Saturn &m_saturn;
+    sys::ISystemOperations &m_sysOps;
     core::Scheduler &m_scheduler;
     core::EventID m_commandEvent;
 

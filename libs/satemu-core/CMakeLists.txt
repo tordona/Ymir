@@ -82,6 +82,7 @@ add_library(satemu-core
     include/satemu/sys/bus.hpp
     include/satemu/sys/saturn.hpp
     include/satemu/sys/system.hpp
+    include/satemu/sys/sys_ops.hpp
     
     include/satemu/util/arith_ops.hpp
     include/satemu/util/bit_ops.hpp

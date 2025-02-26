@@ -14,13 +14,15 @@
 #include <satemu/hw/smpc/smpc.hpp>
 #include <satemu/hw/vdp/vdp.hpp>
 
+#include <satemu/sys/sys_ops.hpp>
+
 #include <satemu/media/disc.hpp>
 
 #include <memory>
 
 namespace satemu {
 
-struct Saturn {
+struct Saturn : sys::ISystemOperations {
     Saturn();
 
     void Reset(bool hard);
@@ -100,6 +102,22 @@ public:
     smpc::SMPC SMPC;          // SMPC and input devices
     scsp::SCSP SCSP;          // SCSP and MC68EC000 CPU
     cdblock::CDBlock CDBlock; // CD block and media
+
+private:
+    // -------------------------------------------------------------------------
+    // System operations (SMPC) - sys::ISystemOperations implementation
+
+    bool GetNMI() const final;
+    void RaiseNMI() final;
+
+    void EnableAndResetSlaveSH2() final;
+    void DisableSlaveSH2() final;
+
+    void EnableAndResetM68K() final;
+    void DisableM68K() final;
+
+    void SoftResetSystem() final;      // Soft resets the entire system
+    void ClockChangeSoftReset() final; // Soft resets VDP, SCU and SCSP after a clock change
 };
 
 } // namespace satemu
