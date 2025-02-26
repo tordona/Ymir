@@ -143,35 +143,34 @@ void App::RunEmulator() {
     // Setup framebuffer and render callbacks
 
     std::vector<uint32> framebuffer(vdp::kMaxResH * vdp::kMaxResV);
-    m_saturn.VDP.SetCallbacks({framebuffer.data(), [](uint32, uint32, void *ctx) { return (uint32 *)ctx; }},
-                              {&screen, [](vdp::FramebufferColor *, uint32 width, uint32 height, void *ctx) {
-                                   auto &screen = *static_cast<ScreenParams *>(ctx);
-                                   if (width != screen.width || height != screen.height) {
-                                       const bool doubleWidth = width >= 640;
-                                       const bool doubleHeight = height >= 400;
+    m_saturn.VDP.SetRenderCallbacks(
+        {framebuffer.data(), [](uint32, uint32, void *ctx) { return (uint32 *)ctx; }},
+        {&screen, [](vdp::FramebufferColor *, uint32 width, uint32 height, void *ctx) {
+             auto &screen = *static_cast<ScreenParams *>(ctx);
+             if (width != screen.width || height != screen.height) {
+                 const bool doubleWidth = width >= 640;
+                 const bool doubleHeight = height >= 400;
 
-                                       const float scaleX = doubleWidth ? scale * 0.5f : scale;
-                                       const float scaleY = doubleHeight ? scale * 0.5f : scale;
+                 const float scaleX = doubleWidth ? scale * 0.5f : scale;
+                 const float scaleY = doubleHeight ? scale * 0.5f : scale;
 
-                                       auto normalizeW = [](int width) { return (width >= 640) ? width / 2 : width; };
-                                       auto normalizeH = [](int height) {
-                                           return (height >= 400) ? height / 2 : height;
-                                       };
+                 auto normalizeW = [](int width) { return (width >= 640) ? width / 2 : width; };
+                 auto normalizeH = [](int height) { return (height >= 400) ? height / 2 : height; };
 
-                                       int wx, wy;
-                                       SDL_GetWindowPosition(screen.window, &wx, &wy);
-                                       const int dx = (int)normalizeW(width) - (int)normalizeW(screen.width);
-                                       const int dy = (int)normalizeH(height) - (int)normalizeH(screen.height);
-                                       screen.width = width;
-                                       screen.height = height;
+                 int wx, wy;
+                 SDL_GetWindowPosition(screen.window, &wx, &wy);
+                 const int dx = (int)normalizeW(width) - (int)normalizeW(screen.width);
+                 const int dy = (int)normalizeH(height) - (int)normalizeH(screen.height);
+                 screen.width = width;
+                 screen.height = height;
 
-                                       // Adjust window size dynamically
-                                       // TODO: add room for borders
-                                       SDL_SetWindowSize(screen.window, screen.width * scaleX, screen.height * scaleY);
-                                       SDL_SetWindowPosition(screen.window, wx - dx * scaleX / 2, wy - dy * scaleY / 2);
-                                   }
-                                   ++screen.frames;
-                               }});
+                 // Adjust window size dynamically
+                 // TODO: add room for borders
+                 SDL_SetWindowSize(screen.window, screen.width * scaleX, screen.height * scaleY);
+                 SDL_SetWindowPosition(screen.window, wx - dx * scaleX / 2, wy - dy * scaleY / 2);
+             }
+             ++screen.frames;
+         }});
 
     // ---------------------------------
     // Create audio buffer and stream and set up callbacks

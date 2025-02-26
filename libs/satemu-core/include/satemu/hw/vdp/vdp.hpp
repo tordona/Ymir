@@ -29,12 +29,6 @@ struct Saturn;
 
 } // namespace satemu
 
-namespace satemu::scu {
-
-class SCU;
-
-} // namespace satemu::scu
-
 namespace satemu::smpc {
 
 class SMPC;
@@ -56,15 +50,23 @@ class VDP {
     static constexpr dbg::Category renderLog2{rootLog2, "Render"};
 
 public:
-    VDP(core::Scheduler &scheduler, scu::SCU &scu, smpc::SMPC &smpc);
+    VDP(core::Scheduler &scheduler, smpc::SMPC &smpc);
 
     void Reset(bool hard);
 
     void MapMemory(sys::Bus &bus);
 
-    FORCE_INLINE void SetCallbacks(CBRequestFramebuffer cbRequestFramebuffer, CBFrameComplete cbFrameComplete) {
+    void SetRenderCallbacks(CBRequestFramebuffer cbRequestFramebuffer, CBFrameComplete cbFrameComplete) {
         m_cbRequestFramebuffer = cbRequestFramebuffer;
         m_cbFrameComplete = cbFrameComplete;
+    }
+
+    void SetInterruptCallbacks(CBTriggerInterrupt cbHBlankIN, CBTriggerInterrupt cbVBlankIN,
+                               CBTriggerInterrupt cbVBlankOUT, CBTriggerInterrupt cbSpriteDrawEnd) {
+        m_cbTriggerHBlankIN = cbHBlankIN;
+        m_cbTriggerVBlankIN = cbVBlankIN;
+        m_cbTriggerVBlankOUT = cbVBlankOUT;
+        m_cbTriggerSpriteDrawEnd = cbSpriteDrawEnd;
     }
 
     // TODO: replace with scheduler events
@@ -89,7 +91,11 @@ private:
     alignas(16) std::array<std::array<uint8, kVDP1FramebufferRAMSize>, 2> m_spriteFB;
     std::size_t m_drawFB; // index of current sprite draw buffer; opposite buffer is CPU-accessible
 
-    scu::SCU &m_SCU;
+    CBTriggerInterrupt m_cbTriggerHBlankIN;
+    CBTriggerInterrupt m_cbTriggerVBlankIN;
+    CBTriggerInterrupt m_cbTriggerVBlankOUT;
+    CBTriggerInterrupt m_cbTriggerSpriteDrawEnd;
+
     smpc::SMPC &m_SMPC;
 
     core::Scheduler &m_scheduler;

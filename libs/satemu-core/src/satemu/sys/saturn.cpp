@@ -8,7 +8,7 @@ Saturn::Saturn()
     : masterSH2(mainBus, true)
     , slaveSH2(mainBus, false)
     , SCU(m_scheduler, mainBus)
-    , VDP(m_scheduler, SCU, SMPC)
+    , VDP(m_scheduler, SMPC)
     , SMPC(m_system, m_scheduler, *this)
     , SCSP(m_system, m_scheduler)
     , CDBlock(m_system, m_scheduler, SCSP) {
@@ -20,6 +20,11 @@ Saturn::Saturn()
     SCU.SetExternalInterruptCallbacks(
         util::MakeClassMemberRequiredCallback<&sh2::SH2::SetExternalInterrupt>(&masterSH2),
         util::MakeClassMemberRequiredCallback<&sh2::SH2::SetExternalInterrupt>(&slaveSH2));
+
+    VDP.SetInterruptCallbacks(util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerHBlankIN>(&SCU),
+                              util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerVBlankIN>(&SCU),
+                              util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerVBlankOUT>(&SCU),
+                              util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerSpriteDrawEnd>(&SCU));
 
     SCSP.SetTriggerSoundRequestInterruptCallback(
         util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerSoundRequest>(&SCU));

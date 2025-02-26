@@ -1,6 +1,5 @@
 #include <satemu/hw/vdp/vdp.hpp>
 
-#include <satemu/hw/scu/scu.hpp>
 #include <satemu/hw/smpc/smpc.hpp>
 
 #include "slope.hpp"
@@ -14,9 +13,8 @@
 
 namespace satemu::vdp {
 
-VDP::VDP(core::Scheduler &scheduler, scu::SCU &scu, smpc::SMPC &smpc)
-    : m_SCU(scu)
-    , m_SMPC(smpc)
+VDP::VDP(core::Scheduler &scheduler, smpc::SMPC &smpc)
+    : m_SMPC(smpc)
     , m_scheduler(scheduler) {
 
     m_phaseUpdateEvent = scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent);
@@ -892,7 +890,7 @@ void VDP::BeginHPhaseRightBorder() {
     rootLog2.trace("## HBlank IN {:3d}", m_VCounter);
 
     m_VDP2.TVSTAT.HBLANK = 1;
-    m_SCU.TriggerHBlankIN();
+    m_cbTriggerHBlankIN();
 
     // Start erasing if we just entered VBlank IN
     if (m_VCounter == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
@@ -961,7 +959,7 @@ void VDP::BeginVPhaseBottomBorder() {
     rootLog2.trace("## VBlank IN");
 
     m_VDP2.TVSTAT.VBLANK = 1;
-    m_SCU.TriggerVBlankIN();
+    m_cbTriggerVBlankIN();
 
     // TODO: draw border
 }
@@ -988,7 +986,7 @@ void VDP::BeginVPhaseLastLine() {
     rootLog2.trace("## VBlank OUT");
 
     m_VDP2.TVSTAT.VBLANK = 0;
-    m_SCU.TriggerVBlankOUT();
+    m_cbTriggerVBlankOUT();
 }
 
 // -----------------------------------------------------------------------------
@@ -1068,7 +1066,7 @@ void VDP::VDP1EndFrame() {
     renderLog1.trace("End VDP1 frame on framebuffer {}", m_drawFB);
     m_VDP1RenderContext.rendering = false;
     m_VDP1.currFrameEnded = true;
-    m_SCU.TriggerSpriteDrawEnd();
+    m_cbTriggerSpriteDrawEnd();
 }
 
 void VDP::VDP1ProcessCommand() {

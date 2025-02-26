@@ -61,14 +61,6 @@ FORCE_INLINE Color888 ConvertRGB555to888(Color555 color) {
     };
 }
 
-// TODO: move this to a "renderer defs" header
-// Framebuffer color is in little-endian XRGB8888 format
-using FramebufferColor = uint32;
-
-// TODO: move these to a "renderer defs" header
-using CBRequestFramebuffer = util::OptionalCallback<FramebufferColor *(uint32 width, uint32 height)>;
-using CBFrameComplete = util::OptionalCallback<void(FramebufferColor *fb, uint32 width, uint32 height)>;
-
 template <std::integral T>
 struct Coord {
     Coord() = default;
@@ -83,5 +75,15 @@ struct Coord {
 
 using CoordS32 = Coord<sint32>;
 using CoordU32 = Coord<uint32>;
+
+// TODO: move this to a "renderer defs" header
+// Framebuffer color is in little-endian XRGB8888 format
+using FramebufferColor = uint32;
+
+// TODO: move these to a "renderer defs" header
+using CBRequestFramebuffer = util::OptionalCallback<FramebufferColor *(uint32 width, uint32 height)>;
+using CBFrameComplete = util::OptionalCallback<void(FramebufferColor *fb, uint32 width, uint32 height)>;
+
+using CBTriggerInterrupt = util::RequiredCallback<void()>;
 
 } // namespace satemu::vdp
