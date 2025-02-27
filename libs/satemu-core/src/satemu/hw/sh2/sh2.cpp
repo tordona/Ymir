@@ -1221,7 +1221,7 @@ FORCE_INLINE void SH2::AdvanceFRT(uint64 cycles) {
 // -----------------------------------------------------------------------------
 // Interrupts
 
-FORCE_INLINE uint8 SH2::GetInterruptVector(InterruptSource source) {
+FORCE_INLINE uint8 SH2::GetInterruptVector(InterruptSource source) const {
     return m_intrVectors[static_cast<size_t>(source)];
 }
 
@@ -1229,7 +1229,7 @@ FORCE_INLINE void SH2::SetInterruptVector(InterruptSource source, uint8 vector) 
     m_intrVectors[static_cast<size_t>(source)] = vector;
 }
 
-FORCE_INLINE uint8 SH2::GetInterruptLevel(InterruptSource source) {
+FORCE_INLINE uint8 SH2::GetInterruptLevel(InterruptSource source) const {
     return m_intrLevels[static_cast<size_t>(source)];
 }
 
@@ -1331,12 +1331,11 @@ void SH2::RecalcInterrupts() {
         return;
     }
 
-    // TODO: WDT ITI
     // Watchdog timer
-    /*if (...) {
+    if (WDT.WTCSR.OVF && !WDT.WTCSR.WT_nIT) {
         RaiseInterrupt(InterruptSource::WDT_ITI);
         return;
-    }*/
+    }
 
     // TODO: BSC REF CMI
     /*if (...) {
@@ -1377,7 +1376,7 @@ void SH2::RecalcInterrupts() {
     }
 }
 
-FORCE_INLINE bool SH2::CheckInterrupts() {
+FORCE_INLINE bool SH2::CheckInterrupts() const {
     return m_pendingInterrupt.level > SR.ILevel;
 }
 

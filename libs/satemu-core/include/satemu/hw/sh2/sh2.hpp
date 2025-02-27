@@ -358,13 +358,13 @@ private:
     uint8 m_externalIntrVector;
 
     // Gets the interrupt vector number for the specified interrupt source.
-    uint8 GetInterruptVector(InterruptSource source);
+    uint8 GetInterruptVector(InterruptSource source) const;
 
     // Sets the interrupt vector number for the specified interrupt source.
     void SetInterruptVector(InterruptSource source, uint8 vector);
 
     // Gets the interrupt level for the specified interrupt source.
-    uint8 GetInterruptLevel(InterruptSource source);
+    uint8 GetInterruptLevel(InterruptSource source) const;
 
     // Sets the interrupt level for the specified interrupt source.
     void SetInterruptLevel(InterruptSource source, uint8 level);
@@ -383,7 +383,7 @@ private:
     void RecalcInterrupts();
 
     // Checks if the CPU should service an interrupt.
-    bool CheckInterrupts();
+    bool CheckInterrupts() const;
 
     // -------------------------------------------------------------------------
     // Helper functions
