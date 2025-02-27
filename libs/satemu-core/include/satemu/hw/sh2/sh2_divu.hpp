@@ -8,6 +8,7 @@
 
 namespace satemu::sh2 {
 
+// addr r/w  access   init      code    name
 // 100  R/W  32       ud        DVSR    Divisor register
 //
 //   bits   r/w  code   description

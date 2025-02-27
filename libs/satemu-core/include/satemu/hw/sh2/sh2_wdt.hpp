@@ -29,6 +29,7 @@ struct WatchdogTimer {
     // -------------------------------------------------------------------------
     // Registers
 
+    // addr r/w  access   init      code    name
     // 080  R    8        18        WTCSR   Watchdog Timer Control/Status Register
     // 080  W    8        18        WTCSR   Watchdog Timer Control/Status Register
     //

@@ -30,6 +30,10 @@ struct FreeRunningTimer {
         cycleCountMask = (1ull << clockDividerShift) - 1;
     }
 
+    // -------------------------------------------------------------------------
+    // Registers
+
+    // addr r/w  access   init      code    name
     // 010  R/W  8        01        TIER    Timer interrupt enable register
     //
     //   bits   r/w  code     description

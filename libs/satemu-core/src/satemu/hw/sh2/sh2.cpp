@@ -164,7 +164,7 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
     MAC.u64 = 0;
 
     SR.u32 = 0;
-    SR.I0 = SR.I1 = SR.I2 = SR.I3 = 1;
+    SR.ILevel = 0xF;
     GBR = 0;
     VBR = 0x00000000;
 

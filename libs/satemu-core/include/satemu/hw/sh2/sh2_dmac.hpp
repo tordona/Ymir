@@ -44,6 +44,7 @@ struct DMAChannel {
         return xferEnabled && !xferEnded;
     }
 
+    // addr r/w  access   init      code    name
     // 180  R/W  32       ud        SAR0    DMA source address register 0
     // 190  R/W  32       ud        SAR1    DMA source address register 1
     //

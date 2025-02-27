@@ -1,10 +1,19 @@
 #pragma once
 
+#include "sh2_excpt.hpp"
+#include "sh2_regs.hpp"
+
 #include "sh2_decode.hpp"
-#include "sh2_defs.hpp"
+
+#include "sh2_bsc.hpp"
+#include "sh2_cache.hpp"
 #include "sh2_divu.hpp"
 #include "sh2_dmac.hpp"
 #include "sh2_frt.hpp"
+#include "sh2_intc.hpp"
+#include "sh2_power.hpp"
+#include "sh2_sci.hpp"
+#include "sh2_ubc.hpp"
 #include "sh2_wdt.hpp"
 
 #include <satemu/core/types.hpp>
