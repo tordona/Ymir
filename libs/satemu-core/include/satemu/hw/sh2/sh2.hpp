@@ -2,6 +2,7 @@
 
 #include "sh2_decode.hpp"
 #include "sh2_defs.hpp"
+#include "sh2_divu.hpp"
 
 #include <satemu/core/types.hpp>
 #include <satemu/hw/hw_defs.hpp>
