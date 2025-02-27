@@ -1,7 +1,5 @@
 ## Create the executable target
 add_executable(satemu-core-tests
-    src/tests_main.cpp
-
     src/hw/sh2/sh2_divu_tests.cpp
 )
 add_executable(satemu::satemu-core-tests ALIAS satemu-core-tests)
