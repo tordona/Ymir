@@ -76,6 +76,8 @@ add_subdirectory(mio)
 message(VERBOSE "==> SDL")
 set(SDL_DISABLE_UNINSTALL ON)
 set(SDL_TEST_LIBRARY OFF)
+set(SDL_TESTS OFF)
+set(SDL_EXAMPLES OFF)
 if(BUILD_SHARED_LIBS)
     set(SDL_SHARED ON)
     set(SDL_STATIC OFF)
@@ -88,6 +90,12 @@ add_subdirectory_quiet(SDL)
 # cxxopts - https://github.com/jarro2783/cxxopts
 message(VERBOSE "==> cxxopts")
 add_subdirectory(cxxopts)
+
+if(satemu_ENABLE_TESTS)
+    # Catch2 - https://github.com/catchorg/Catch2
+    message(VERBOSE "==> Catch2")
+    add_subdirectory(Catch2)
+endif()
 
 # --------------------------------------------------------------------------------------------------
 

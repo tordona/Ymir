@@ -12,6 +12,7 @@ include(cmake/CopyRuntimeDLLs.cmake)
 string(COMPARE EQUAL "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}" is_top_level)
 
 option(satemu_INCLUDE_PACKAGING "Include packaging rules for satemu" "${is_top_level}")
+option(satemu_ENABLE_TESTS "Enable tests for satemu" "${is_top_level}")
 option(satemu_ENABLE_IPO "Enable IPO / LTO for satemu" ON)
 
 ## Performance options
@@ -51,6 +52,11 @@ add_subdirectory(apps)
 ## Include the install rules if the user wanted them (included by default when top-level)
 if (satemu_INCLUDE_PACKAGING)
     add_subdirectory(packaging)
+endif ()
+
+## Include the unit tests if the user wanted them (included by default when top-level)
+if (satemu_ENABLE_TESTS)
+    add_subdirectory(tests)
 endif ()
 
 ## Configure Visual Studio solution
