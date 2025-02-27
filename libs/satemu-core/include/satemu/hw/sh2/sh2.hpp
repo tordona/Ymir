@@ -324,50 +324,7 @@ private:
     // -------------------------------------------------------------------------
     // Interrupts
 
-    RegICR ICR; // 0E0  R/W  8,16     0000      ICR     Interrupt control register
-
-    // Interrupt sources, sorted by default priority from lowest to highest
-    enum class InterruptSource : uint8 {
-        None,          // Priority       Vector
-        FRT_OVI,       // IPRB.FRTIPn    VCRD.FOVVn
-        FRT_OCI,       // IPRB.FRTIPn    VCRC.FOCVn
-        FRT_ICI,       // IPRB.FRTIPn    VCRC.FICVn
-        SCI_TEI,       // IPRB.SCIIPn    VCRB.STEVn
-        SCI_TXI,       // IPRB.SCIIPn    VCRB.STXVn
-        SCI_RXI,       // IPRB.SCIIPn    VCRA.SRXVn
-        SCI_ERI,       // IPRB.SCIIPn    VCRA.SERVn
-        BSC_REF_CMI,   // IPRA.WDTIPn    VCRWDT
-        WDT_ITI,       // IPRA.WDTIPn    VCRWDT
-        DMAC1_XferEnd, // IPRA.DMACIPn   VCRDMA1
-        DMAC0_XferEnd, // IPRA.DMACIPn   VCRDMA0
-        DIVU_OVFI,     // IPRA.DIVUIPn   VCRDIV
-        IRL,           // 15-1           0x40 + (level >> 1)
-        UserBreak,     // 15             0x0C
-        NMI            // 16             0x0B
-    };
-
-    std::array<uint8, 16> m_intrLevels;
-    std::array<uint8, 16> m_intrVectors;
-
-    struct PendingInterruptInfo {
-        InterruptSource source;
-        uint8 level;
-    } m_pendingInterrupt;
-
-    bool m_NMI;
-    uint8 m_externalIntrVector;
-
-    // Gets the interrupt vector number for the specified interrupt source.
-    uint8 GetInterruptVector(InterruptSource source) const;
-
-    // Sets the interrupt vector number for the specified interrupt source.
-    void SetInterruptVector(InterruptSource source, uint8 vector);
-
-    // Gets the interrupt level for the specified interrupt source.
-    uint8 GetInterruptLevel(InterruptSource source) const;
-
-    // Sets the interrupt level for the specified interrupt source.
-    void SetInterruptLevel(InterruptSource source, uint8 level);
+    InterruptController INTC;
 
     // Raises the interrupt signal of the specified source.
     void RaiseInterrupt(InterruptSource source);

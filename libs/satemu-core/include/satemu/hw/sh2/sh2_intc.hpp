@@ -2,6 +2,8 @@
 
 #include <satemu/core/types.hpp>
 
+#include <satemu/util/inline.hpp>
+
 namespace satemu::sh2 {
 
 // addr r/w  access   init      code    name
@@ -91,5 +93,89 @@ union RegICR {
 //   14-8   R/W  WITV6-0  Watchdog Timer (WDT) Interval Interrupt Vector Number
 //      7   R    -        Reserved - must be zero
 //    6-0   R/W  BCMV6-0  Bus State Controller (BSC) Compare Match Interrupt Vector Number
+
+// -----------------------------------------------------------------------------
+
+// Interrupt sources, sorted by default priority from lowest to highest
+enum class InterruptSource : uint8 {
+    None,          // Priority       Vector
+    FRT_OVI,       // IPRB.FRTIPn    VCRD.FOVVn
+    FRT_OCI,       // IPRB.FRTIPn    VCRC.FOCVn
+    FRT_ICI,       // IPRB.FRTIPn    VCRC.FICVn
+    SCI_TEI,       // IPRB.SCIIPn    VCRB.STEVn
+    SCI_TXI,       // IPRB.SCIIPn    VCRB.STXVn
+    SCI_RXI,       // IPRB.SCIIPn    VCRA.SRXVn
+    SCI_ERI,       // IPRB.SCIIPn    VCRA.SERVn
+    BSC_REF_CMI,   // IPRA.WDTIPn    VCRWDT
+    WDT_ITI,       // IPRA.WDTIPn    VCRWDT
+    DMAC1_XferEnd, // IPRA.DMACIPn   VCRDMA1
+    DMAC0_XferEnd, // IPRA.DMACIPn   VCRDMA0
+    DIVU_OVFI,     // IPRA.DIVUIPn   VCRDIV
+    IRL,           // 15-1           0x40 + (level >> 1)
+    UserBreak,     // 15             0x0C
+    NMI            // 16             0x0B
+};
+
+struct InterruptController {
+    InterruptController() {
+        Reset();
+    }
+
+    void Reset() {
+        ICR.u16 = 0x0000;
+
+        levels.fill(0);
+        vectors.fill(0);
+
+        SetLevel(InterruptSource::IRL, 1);
+        SetVector(InterruptSource::IRL, 0x40);
+
+        SetLevel(InterruptSource::UserBreak, 15);
+        SetVector(InterruptSource::UserBreak, 0x0C);
+
+        SetLevel(InterruptSource::NMI, 16);
+        SetVector(InterruptSource::NMI, 0x0B);
+
+        NMI = false;
+
+        pending.source = InterruptSource::None;
+        pending.level = 0;
+
+        externalVector = 0;
+    }
+
+    RegICR ICR; // 0E0  R/W  8,16     0000      ICR     Interrupt control register
+
+    std::array<uint8, 16> levels;
+    std::array<uint8, 16> vectors;
+
+    struct PendingInterruptInfo {
+        InterruptSource source;
+        uint8 level;
+    } pending;
+
+    bool NMI;
+    uint8 externalVector;
+
+    // Gets the interrupt vector number for the specified interrupt source.
+    FORCE_INLINE uint8 GetVector(InterruptSource source) const {
+        return vectors[static_cast<size_t>(source)];
+    }
+
+    // Sets the interrupt vector number for the specified interrupt source.
+    FORCE_INLINE void SetVector(InterruptSource source, uint8 vector) {
+        vectors[static_cast<size_t>(source)] = vector;
+    }
+
+    // Gets the interrupt level for the specified interrupt source.
+    FORCE_INLINE uint8 GetLevel(InterruptSource source) const {
+        return levels[static_cast<size_t>(source)];
+    }
+
+    // Sets the interrupt level for the specified interrupt source.
+    FORCE_INLINE void SetLevel(InterruptSource source, uint8 priority) {
+        levels[static_cast<size_t>(source)] = priority;
+    }
+};
 
 } // namespace satemu::sh2

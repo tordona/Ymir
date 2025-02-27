@@ -190,29 +190,8 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
     SBYCR.u8 = 0x00;
 
     DIVU.Reset();
-
     FRT.Reset();
-
-    ICR.u16 = 0x0000;
-
-    m_intrLevels.fill(0);
-    m_intrVectors.fill(0);
-
-    SetInterruptLevel(InterruptSource::IRL, 1);
-    SetInterruptVector(InterruptSource::IRL, 0x40);
-
-    SetInterruptLevel(InterruptSource::UserBreak, 15);
-    SetInterruptVector(InterruptSource::UserBreak, 0x0C);
-
-    SetInterruptLevel(InterruptSource::NMI, 16);
-    SetInterruptVector(InterruptSource::NMI, 0x0B);
-
-    m_NMI = false;
-
-    m_pendingInterrupt.source = InterruptSource::None;
-    m_pendingInterrupt.level = 0;
-
-    m_externalIntrVector = 0;
+    INTC.Reset();
 
     m_delaySlotTarget = 0;
     m_delaySlot = false;
@@ -295,32 +274,32 @@ void SH2::SetExternalInterrupt(uint8 level, uint8 vector) {
 
     const InterruptSource source = InterruptSource::IRL;
 
-    m_externalIntrVector = vector;
+    INTC.externalVector = vector;
 
-    SetInterruptLevel(source, level);
+    INTC.SetLevel(source, level);
 
     if (level > 0) {
-        if (ICR.VECMD) {
-            SetInterruptVector(source, vector);
+        if (INTC.ICR.VECMD) {
+            INTC.SetVector(source, vector);
         } else {
-            const uint8 level = GetInterruptLevel(source);
-            SetInterruptVector(source, 0x40 + (level >> 1u));
+            const uint8 level = INTC.GetLevel(source);
+            INTC.SetVector(source, 0x40 + (level >> 1u));
         }
         RaiseInterrupt(source);
     } else {
-        SetInterruptVector(source, 0);
+        INTC.SetVector(source, 0);
         LowerInterrupt(source);
     }
 }
 
 bool SH2::GetNMI() const {
-    return ICR.NMIL;
+    return INTC.ICR.NMIL;
 }
 
 void SH2::SetNMI() {
     // HACK: should be edge-detected
-    ICR.NMIL = 1;
-    m_NMI = true;
+    INTC.ICR.NMIL = 1;
+    INTC.NMI = true;
     RaiseInterrupt(InterruptSource::NMI);
 }
 
@@ -638,15 +617,15 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     case 0x18: return FRT.ReadICRH();
     case 0x19: return FRT.ReadICRL();
 
-    case 0x60: return (GetInterruptLevel(InterruptSource::SCI_ERI) << 4u) | GetInterruptLevel(InterruptSource::FRT_ICI);
+    case 0x60: return (INTC.GetLevel(InterruptSource::SCI_ERI) << 4u) | INTC.GetLevel(InterruptSource::FRT_ICI);
     case 0x61: return 0;
-    case 0x62: return GetInterruptVector(InterruptSource::SCI_ERI);
-    case 0x63: return GetInterruptVector(InterruptSource::SCI_RXI);
-    case 0x64: return GetInterruptVector(InterruptSource::SCI_TXI);
-    case 0x65: return GetInterruptVector(InterruptSource::SCI_TEI);
-    case 0x66: return GetInterruptVector(InterruptSource::FRT_ICI);
-    case 0x67: return GetInterruptVector(InterruptSource::FRT_OCI);
-    case 0x68: return GetInterruptVector(InterruptSource::FRT_OVI);
+    case 0x62: return INTC.GetVector(InterruptSource::SCI_ERI);
+    case 0x63: return INTC.GetVector(InterruptSource::SCI_RXI);
+    case 0x64: return INTC.GetVector(InterruptSource::SCI_TXI);
+    case 0x65: return INTC.GetVector(InterruptSource::SCI_TEI);
+    case 0x66: return INTC.GetVector(InterruptSource::FRT_ICI);
+    case 0x67: return INTC.GetVector(InterruptSource::FRT_OCI);
+    case 0x68: return INTC.GetVector(InterruptSource::FRT_OVI);
     case 0x69: return 0;
 
     case 0x71: return m_dmaChannels[0].ReadDRCR();
@@ -661,12 +640,10 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
 
     case 0xE0: return OnChipRegReadWord(address) >> 8u;
     case 0xE1: return OnChipRegReadWord(address & ~1) >> 0u;
-    case 0xE2:
-        return (GetInterruptLevel(InterruptSource::DIVU_OVFI) << 4u) |
-               GetInterruptLevel(InterruptSource::DMAC0_XferEnd);
-    case 0xE3: return GetInterruptLevel(InterruptSource::WDT_ITI) << 4u;
-    case 0xE4: return GetInterruptVector(InterruptSource::WDT_ITI);
-    case 0xE5: return GetInterruptVector(InterruptSource::BSC_REF_CMI);
+    case 0xE2: return (INTC.GetLevel(InterruptSource::DIVU_OVFI) << 4u) | INTC.GetLevel(InterruptSource::DMAC0_XferEnd);
+    case 0xE3: return INTC.GetLevel(InterruptSource::WDT_ITI) << 4u;
+    case 0xE4: return INTC.GetVector(InterruptSource::WDT_ITI);
+    case 0xE5: return INTC.GetVector(InterruptSource::BSC_REF_CMI);
 
     default: //
         m_log.debug("Unhandled 8-bit on-chip register read from {:03X}", address);
@@ -677,7 +654,7 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
 FORCE_INLINE uint16 SH2::OnChipRegReadWord(uint32 address) {
     if (address < 0x100) {
         if (address == 0xE0) {
-            return ICR.u16;
+            return INTC.ICR.u16;
         }
         const uint16 value = OnChipRegReadByte(address);
         return (value << 8u) | value;
@@ -705,7 +682,7 @@ FORCE_INLINE uint32 SH2::OnChipRegReadLong(uint32 address) {
     case 0x128: return DIVU.DVCR.u32;
 
     case 0x10C:
-    case 0x12C: return GetInterruptVector(InterruptSource::DIVU_OVFI);
+    case 0x12C: return INTC.GetVector(InterruptSource::DIVU_OVFI);
 
     case 0x110:
     case 0x130: return DIVU.DVDNTH;
@@ -729,8 +706,8 @@ FORCE_INLINE uint32 SH2::OnChipRegReadLong(uint32 address) {
     case 0x198: return m_dmaChannels[1].xferCount;
     case 0x19C: return m_dmaChannels[1].ReadCHCR();
 
-    case 0x1A0: return GetInterruptVector(InterruptSource::DMAC0_XferEnd);
-    case 0x1A8: return GetInterruptVector(InterruptSource::DMAC1_XferEnd);
+    case 0x1A0: return INTC.GetVector(InterruptSource::DMAC0_XferEnd);
+    case 0x1A8: return INTC.GetVector(InterruptSource::DMAC1_XferEnd);
 
     case 0x1B0: return DMAOR.u32;
 
@@ -788,24 +765,24 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
         const uint8 sciIntrLevel = bit::extract<4, 7>(value);
 
         using enum InterruptSource;
-        SetInterruptLevel(FRT_ICI, frtIntrLevel);
-        SetInterruptLevel(FRT_OCI, frtIntrLevel);
-        SetInterruptLevel(FRT_OVI, frtIntrLevel);
-        SetInterruptLevel(SCI_ERI, sciIntrLevel);
-        SetInterruptLevel(SCI_RXI, sciIntrLevel);
-        SetInterruptLevel(SCI_TXI, sciIntrLevel);
-        SetInterruptLevel(SCI_TEI, sciIntrLevel);
+        INTC.SetLevel(FRT_ICI, frtIntrLevel);
+        INTC.SetLevel(FRT_OCI, frtIntrLevel);
+        INTC.SetLevel(FRT_OVI, frtIntrLevel);
+        INTC.SetLevel(SCI_ERI, sciIntrLevel);
+        INTC.SetLevel(SCI_RXI, sciIntrLevel);
+        INTC.SetLevel(SCI_TXI, sciIntrLevel);
+        INTC.SetLevel(SCI_TEI, sciIntrLevel);
         UpdateInterruptLevels<FRT_ICI, FRT_OCI, FRT_OVI, SCI_ERI, SCI_RXI, SCI_TXI, SCI_TEI>();
         break;
     }
     case 0x61: /* IPRB bits 7-0 are all reserved */ break;
-    case 0x62: SetInterruptVector(InterruptSource::SCI_ERI, bit::extract<0, 6>(value)); break;
-    case 0x63: SetInterruptVector(InterruptSource::SCI_RXI, bit::extract<0, 6>(value)); break;
-    case 0x64: SetInterruptVector(InterruptSource::SCI_TXI, bit::extract<0, 6>(value)); break;
-    case 0x65: SetInterruptVector(InterruptSource::SCI_TEI, bit::extract<0, 6>(value)); break;
-    case 0x66: SetInterruptVector(InterruptSource::FRT_ICI, bit::extract<0, 6>(value)); break;
-    case 0x67: SetInterruptVector(InterruptSource::FRT_OCI, bit::extract<0, 6>(value)); break;
-    case 0x68: SetInterruptVector(InterruptSource::FRT_OVI, bit::extract<0, 6>(value)); break;
+    case 0x62: INTC.SetVector(InterruptSource::SCI_ERI, bit::extract<0, 6>(value)); break;
+    case 0x63: INTC.SetVector(InterruptSource::SCI_RXI, bit::extract<0, 6>(value)); break;
+    case 0x64: INTC.SetVector(InterruptSource::SCI_TXI, bit::extract<0, 6>(value)); break;
+    case 0x65: INTC.SetVector(InterruptSource::SCI_TEI, bit::extract<0, 6>(value)); break;
+    case 0x66: INTC.SetVector(InterruptSource::FRT_ICI, bit::extract<0, 6>(value)); break;
+    case 0x67: INTC.SetVector(InterruptSource::FRT_OCI, bit::extract<0, 6>(value)); break;
+    case 0x68: INTC.SetVector(InterruptSource::FRT_OVI, bit::extract<0, 6>(value)); break;
     case 0x69: /* VCRD bits 7-0 are all reserved */ break;
 
     case 0x71: m_dmaChannels[0].WriteDRCR(value); break;
@@ -814,15 +791,15 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     case 0x91: SBYCR.u8 = value & 0xDF; break;
     case 0x92: WriteCCR(value); break;
 
-    case 0xE0: ICR.NMIE = bit::extract<0>(value); break;
+    case 0xE0: INTC.ICR.NMIE = bit::extract<0>(value); break;
     case 0xE1: //
     {
-        ICR.VECMD = bit::extract<0>(value);
-        if (ICR.VECMD) {
-            SetInterruptVector(InterruptSource::IRL, m_externalIntrVector);
+        INTC.ICR.VECMD = bit::extract<0>(value);
+        if (INTC.ICR.VECMD) {
+            INTC.SetVector(InterruptSource::IRL, INTC.externalVector);
         } else {
-            const uint8 level = GetInterruptLevel(InterruptSource::IRL);
-            SetInterruptVector(InterruptSource::IRL, 0x40 + (level >> 1u));
+            const uint8 level = INTC.GetLevel(InterruptSource::IRL);
+            INTC.SetVector(InterruptSource::IRL, 0x40 + (level >> 1u));
         }
         break;
     }
@@ -832,9 +809,9 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
         const uint8 divuIntrLevel = bit::extract<4, 7>(value);
 
         using enum InterruptSource;
-        SetInterruptLevel(DMAC0_XferEnd, dmacIntrLevel);
-        SetInterruptLevel(DMAC1_XferEnd, dmacIntrLevel);
-        SetInterruptLevel(DIVU_OVFI, divuIntrLevel);
+        INTC.SetLevel(DMAC0_XferEnd, dmacIntrLevel);
+        INTC.SetLevel(DMAC1_XferEnd, dmacIntrLevel);
+        INTC.SetLevel(DIVU_OVFI, divuIntrLevel);
         UpdateInterruptLevels<DMAC0_XferEnd, DMAC1_XferEnd, DIVU_OVFI>();
         break;
     }
@@ -843,12 +820,12 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
         const uint8 wdtIntrLevel = bit::extract<4, 7>(value);
 
         using enum InterruptSource;
-        SetInterruptLevel(WDT_ITI, wdtIntrLevel);
+        INTC.SetLevel(WDT_ITI, wdtIntrLevel);
         UpdateInterruptLevels<WDT_ITI>();
         break;
     }
-    case 0xE4: SetInterruptVector(InterruptSource::WDT_ITI, bit::extract<0, 6>(value)); break;
-    case 0xE5: SetInterruptVector(InterruptSource::BSC_REF_CMI, bit::extract<0, 6>(value)); break;
+    case 0xE4: INTC.SetVector(InterruptSource::WDT_ITI, bit::extract<0, 6>(value)); break;
+    case 0xE5: INTC.SetVector(InterruptSource::BSC_REF_CMI, bit::extract<0, 6>(value)); break;
 
     default: //
         m_log.debug("Unhandled 8-bit on-chip register write to {:03X} = {:X}", address, value);
@@ -942,7 +919,7 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     case 0x128: DIVU.DVCR.u32 = value & 0x00000003; break;
 
     case 0x10C:
-    case 0x12C: SetInterruptVector(InterruptSource::DIVU_OVFI, bit::extract<0, 6>(value)); break;
+    case 0x12C: INTC.SetVector(InterruptSource::DIVU_OVFI, bit::extract<0, 6>(value)); break;
 
     case 0x110:
     case 0x130: DIVU.DVDNTH = value; break;
@@ -978,8 +955,8 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
         RunDMAC(1); // TODO: should be scheduled
         break;
 
-    case 0x1A0: SetInterruptVector(InterruptSource::DMAC0_XferEnd, bit::extract<0, 6>(value)); break;
-    case 0x1A8: SetInterruptVector(InterruptSource::DMAC1_XferEnd, bit::extract<0, 6>(value)); break;
+    case 0x1A0: INTC.SetVector(InterruptSource::DMAC0_XferEnd, bit::extract<0, 6>(value)); break;
+    case 0x1A8: INTC.SetVector(InterruptSource::DMAC1_XferEnd, bit::extract<0, 6>(value)); break;
 
     case 0x1B0:
         DMAOR.DME = bit::extract<0>(value);
@@ -1221,51 +1198,34 @@ FORCE_INLINE void SH2::AdvanceFRT(uint64 cycles) {
 // -----------------------------------------------------------------------------
 // Interrupts
 
-FORCE_INLINE uint8 SH2::GetInterruptVector(InterruptSource source) const {
-    return m_intrVectors[static_cast<size_t>(source)];
-}
-
-FORCE_INLINE void SH2::SetInterruptVector(InterruptSource source, uint8 vector) {
-    m_intrVectors[static_cast<size_t>(source)] = vector;
-}
-
-FORCE_INLINE uint8 SH2::GetInterruptLevel(InterruptSource source) const {
-    return m_intrLevels[static_cast<size_t>(source)];
-}
-
-FORCE_INLINE void SH2::SetInterruptLevel(InterruptSource source, uint8 priority) {
-    m_intrLevels[static_cast<size_t>(source)] = priority;
-}
-
 FORCE_INLINE void SH2::RaiseInterrupt(InterruptSource source) {
-    const uint8 level = GetInterruptLevel(source);
-    if (level < m_pendingInterrupt.level) {
+    const uint8 level = INTC.GetLevel(source);
+    if (level < INTC.pending.level) {
         return;
     }
-    if (level == m_pendingInterrupt.level &&
-        static_cast<uint8>(source) < static_cast<uint8>(m_pendingInterrupt.source)) {
+    if (level == INTC.pending.level && static_cast<uint8>(source) < static_cast<uint8>(INTC.pending.source)) {
         return;
     }
-    m_pendingInterrupt.level = level;
-    m_pendingInterrupt.source = source;
+    INTC.pending.level = level;
+    INTC.pending.source = source;
 }
 
 FORCE_INLINE void SH2::LowerInterrupt(InterruptSource source) {
-    if (m_pendingInterrupt.source == source) {
+    if (INTC.pending.source == source) {
         RecalcInterrupts();
     }
 }
 
-template <SH2::InterruptSource source, SH2::InterruptSource... sources>
+template <InterruptSource source, InterruptSource... sources>
 void SH2::UpdateInterruptLevels() {
-    if (m_pendingInterrupt.source == source) {
-        const uint8 newLevel = GetInterruptLevel(source);
-        if (newLevel < m_pendingInterrupt.level) {
+    if (INTC.pending.source == source) {
+        const uint8 newLevel = INTC.GetLevel(source);
+        if (newLevel < INTC.pending.level) {
             // Interrupt may no longer have the highest priority; recalculate
             RecalcInterrupts();
         } else {
             // Interrupt still has the highest priority; update
-            m_pendingInterrupt.level = newLevel;
+            INTC.pending.level = newLevel;
         }
         return;
     }
@@ -1294,11 +1254,11 @@ void SH2::RecalcInterrupts() {
     //   FRT OVI          IPRB.FRTIPn    VCRD.FOVVn
     // Use the vector number of the exception with highest priority
 
-    m_pendingInterrupt.level = 0;
-    m_pendingInterrupt.source = InterruptSource::None;
+    INTC.pending.level = 0;
+    INTC.pending.source = InterruptSource::None;
 
     // HACK: should be edge-detected
-    if (m_NMI) {
+    if (INTC.NMI) {
         RaiseInterrupt(InterruptSource::NMI);
         return;
     }
@@ -1310,7 +1270,7 @@ void SH2::RecalcInterrupts() {
     }*/
 
     // IRLs
-    if (GetInterruptLevel(InterruptSource::IRL) > 0) {
+    if (INTC.GetLevel(InterruptSource::IRL) > 0) {
         RaiseInterrupt(InterruptSource::IRL);
         return;
     }
@@ -1377,7 +1337,7 @@ void SH2::RecalcInterrupts() {
 }
 
 FORCE_INLINE bool SH2::CheckInterrupts() const {
-    return m_pendingInterrupt.level > SR.ILevel;
+    return INTC.pending.level > SR.ILevel;
 }
 
 // -------------------------------------------------------------------------
@@ -1403,17 +1363,17 @@ template <bool debug>
 void SH2::Execute() {
     if (!m_delaySlot && CheckInterrupts()) [[unlikely]] {
         // Service interrupt
-        const uint8 vecNum = GetInterruptVector(m_pendingInterrupt.source);
-        m_debugTracer.Interrupt<debug>(vecNum, m_pendingInterrupt.level);
-        m_log.trace("Handling interrupt level {:02X}, vector number {:02X}", m_pendingInterrupt.level, vecNum);
+        const uint8 vecNum = INTC.GetVector(INTC.pending.source);
+        m_debugTracer.Interrupt<debug>(vecNum, INTC.pending.level);
+        m_log.trace("Handling interrupt level {:02X}, vector number {:02X}", INTC.pending.level, vecNum);
         EnterException(vecNum);
-        SR.ILevel = std::min<uint8>(m_pendingInterrupt.level, 0xF);
+        SR.ILevel = std::min<uint8>(INTC.pending.level, 0xF);
 
         // Acknowledge interrupt
-        switch (m_pendingInterrupt.source) {
+        switch (INTC.pending.source) {
         case InterruptSource::IRL: m_cbAcknowledgeExternalInterrupt(); break;
         case InterruptSource::NMI:
-            m_NMI = false;
+            INTC.NMI = false;
             LowerInterrupt(InterruptSource::NMI);
             break;
         default: break;
