@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
-#include <satemu/hw/sh2/sh2.hpp>
+#include <satemu/hw/sh2/sh2_defs.hpp>
 
 #include <satemu/core/types.hpp>
 
