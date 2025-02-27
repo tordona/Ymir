@@ -3,8 +3,6 @@
 
 #include <satemu/hw/sh2/sh2_divu.hpp>
 
-#include <satemu/core/types.hpp>
-
 struct TestData {
     struct Regs {
         uint32 DVSR;
