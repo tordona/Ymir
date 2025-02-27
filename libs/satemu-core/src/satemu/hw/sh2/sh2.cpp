@@ -189,13 +189,7 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
 
     SBYCR.u8 = 0x00;
 
-    DVSR = 0x0;  // undefined initial value
-    DVDNT = 0x0; // undefined initial value
-    DVCR.u32 = 0x00000000;
-    DVDNTH = 0x0;  // undefined initial value
-    DVDNTL = 0x0;  // undefined initial value
-    DVDNTUH = 0x0; // undefined initial value
-    DVDNTUL = 0x0; // undefined initial value
+    DIVU.Reset();
 
     FRT.Reset();
 
@@ -702,28 +696,28 @@ FORCE_INLINE uint32 SH2::OnChipRegReadLong(uint32 address) {
 
     switch (address) {
     case 0x100:
-    case 0x120: return DVSR;
+    case 0x120: return DIVU.DVSR;
 
     case 0x104:
-    case 0x124: return DVDNT;
+    case 0x124: return DIVU.DVDNT;
 
     case 0x108:
-    case 0x128: return DVCR.u32;
+    case 0x128: return DIVU.DVCR.u32;
 
     case 0x10C:
     case 0x12C: return GetInterruptVector(InterruptSource::DIVU_OVFI);
 
     case 0x110:
-    case 0x130: return DVDNTH;
+    case 0x130: return DIVU.DVDNTH;
 
     case 0x114:
-    case 0x134: return DVDNTL;
+    case 0x134: return DIVU.DVDNTL;
 
     case 0x118:
-    case 0x138: return DVDNTUH;
+    case 0x138: return DIVU.DVDNTUH;
 
     case 0x11C:
-    case 0x13C: return DVDNTUL;
+    case 0x13C: return DIVU.DVDNTUL;
 
     case 0x180: return m_dmaChannels[0].srcAddress;
     case 0x184: return m_dmaChannels[0].dstAddress;
@@ -931,36 +925,42 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
 
     switch (address) {
     case 0x100:
-    case 0x120: DVSR = value; break;
+    case 0x120: DIVU.DVSR = value; break;
 
     case 0x104:
     case 0x124:
-        DVDNT = value;
-        DVDNTL = value;
-        DVDNTH = static_cast<sint32>(value) >> 31;
-        DIVUBegin32();
+        DIVU.DVDNT = value;
+        DIVU.DVDNTL = value;
+        DIVU.DVDNTH = static_cast<sint32>(value) >> 31;
+        DIVU.Calc32();
+        if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
+            RaiseInterrupt(InterruptSource::DIVU_OVFI);
+        }
         break;
 
     case 0x108:
-    case 0x128: DVCR.u32 = value & 0x00000003; break;
+    case 0x128: DIVU.DVCR.u32 = value & 0x00000003; break;
 
     case 0x10C:
     case 0x12C: SetInterruptVector(InterruptSource::DIVU_OVFI, bit::extract<0, 6>(value)); break;
 
     case 0x110:
-    case 0x130: DVDNTH = value; break;
+    case 0x130: DIVU.DVDNTH = value; break;
 
     case 0x114:
     case 0x134:
-        DVDNTL = value;
-        DIVUBegin64();
+        DIVU.DVDNTL = value;
+        DIVU.Calc64();
+        if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
+            RaiseInterrupt(InterruptSource::DIVU_OVFI);
+        }
         break;
 
     case 0x118:
-    case 0x138: DVDNTUH = value; break;
+    case 0x138: DIVU.DVDNTUH = value; break;
 
     case 0x11C:
-    case 0x13C: DVDNTUL = value; break;
+    case 0x13C: DIVU.DVDNTUL = value; break;
 
     case 0x180: m_dmaChannels[0].srcAddress = value; break;
     case 0x184: m_dmaChannels[0].dstAddress = value; break;
@@ -1180,121 +1180,6 @@ FORCE_INLINE void SH2::AdvanceWDT(uint64 cycles) {
     WDT.WTCNT = nextCount;
 }
 
-void SH2::DIVUBegin32() {
-    static constexpr sint32 kMinValue = std::numeric_limits<sint32>::min();
-    static constexpr sint32 kMaxValue = std::numeric_limits<sint32>::max();
-
-    const sint32 dividend = static_cast<sint32>(DVDNTL);
-    const sint32 divisor = static_cast<sint32>(DVSR);
-
-    if (divisor != 0) {
-        // TODO: schedule event to run this after 39 cycles
-
-        if (dividend == kMinValue && divisor == -1) [[unlikely]] {
-            // Handle extreme case
-            DVDNTL = DVDNT = kMinValue;
-            DVDNTH = 0;
-        } else {
-            DVDNTL = DVDNT = dividend / divisor;
-            DVDNTH = dividend % divisor;
-        }
-    } else {
-        // Overflow
-        // TODO: schedule event to run this after 6 cycles
-
-        // Perform partial division
-        // The division unit uses 3 cycles to set up flags, leaving 3 cycles for calculations
-        DVDNTH = dividend >> 29;
-        if (DVCR.OVFIE) {
-            DVDNTL = DVDNT = (dividend << 3) | ((dividend >> 31) & 7);
-        } else {
-            // DVDNT/DVDNTL is saturated if the interrupt signal is disabled
-            DVDNTL = DVDNT = dividend < 0 ? kMinValue : kMaxValue;
-        }
-
-        // Signal overflow
-        DVCR.OVF = 1;
-        if (DVCR.OVFIE) {
-            RaiseInterrupt(InterruptSource::DIVU_OVFI);
-        }
-    }
-
-    DVDNTUH = DVDNTH;
-    DVDNTUL = DVDNTL;
-}
-
-void SH2::DIVUBegin64() {
-    static constexpr sint32 kMinValue32 = std::numeric_limits<sint32>::min();
-    static constexpr sint32 kMaxValue32 = std::numeric_limits<sint32>::max();
-    static constexpr sint64 kMinValue64 = std::numeric_limits<sint64>::min();
-
-    sint64 dividend = (static_cast<sint64>(DVDNTH) << 32ll) | static_cast<sint64>(DVDNTL);
-    const sint32 divisor = static_cast<sint32>(DVSR);
-
-    bool overflow = divisor == 0;
-
-    if (dividend == -0x80000000ll && divisor == -1) {
-        DVDNTH = DVDNTUH = 0;
-        DVDNTL = DVDNTUL = -0x80000000l;
-        return;
-    }
-
-    if (!overflow) {
-        const sint64 quotient = dividend / divisor;
-        const sint32 remainder = dividend % divisor;
-
-        if (quotient <= kMinValue32 || quotient > kMaxValue32) [[unlikely]] {
-            // Overflow cases
-            overflow = true;
-        } else if (dividend == kMinValue64 && divisor == -1) [[unlikely]] {
-            // Handle extreme case
-            overflow = true;
-        } else {
-            // TODO: schedule event to run this after 39 cycles
-            DVDNTL = DVDNT = quotient;
-            DVDNTH = remainder;
-        }
-    }
-
-    if (overflow) {
-        // Overflow is detected after 6 cycles
-
-        // Perform partial division
-        // The division unit uses 3 cycles to set up flags, leaving 3 cycles for calculations
-        const sint64 origDividend = dividend;
-        bool Q = dividend < 0;
-        const bool M = divisor < 0;
-        for (int i = 0; i < 3; i++) {
-            if (Q == M) {
-                dividend -= static_cast<uint64>(divisor) << 32ull;
-            } else {
-                dividend += static_cast<uint64>(divisor) << 32ull;
-            }
-
-            Q = dividend < 0;
-            dividend = (dividend << 1ll) | (Q == M);
-        }
-
-        // Update output registers
-        if (DVCR.OVFIE) {
-            DVDNTL = DVDNT = dividend;
-        } else {
-            // DVDNT/DVDNTL is saturated if the interrupt signal is disabled
-            DVDNTL = DVDNT = static_cast<sint32>((origDividend >> 32) ^ divisor) < 0 ? kMinValue32 : kMaxValue32;
-        }
-        DVDNTH = dividend >> 32ll;
-
-        // Signal overflow
-        DVCR.OVF = 1;
-        if (DVCR.OVFIE) {
-            RaiseInterrupt(InterruptSource::DIVU_OVFI);
-        }
-    }
-
-    DVDNTUH = DVDNTH;
-    DVDNTUL = DVDNTL;
-}
-
 FORCE_INLINE void SH2::AdvanceFRT(uint64 cycles) {
     FRT.cycleCount += cycles;
     const uint64 steps = FRT.cycleCount >> FRT.clockDividerShift;
@@ -1432,7 +1317,7 @@ void SH2::RecalcInterrupts() {
     }
 
     // Division overflow
-    if (DVCR.OVF && DVCR.OVFIE) {
+    if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
         RaiseInterrupt(InterruptSource::DIVU_OVFI);
         return;
     }

@@ -2,7 +2,7 @@
 add_executable(satemu-core-tests
     src/tests_main.cpp
 
-    src/hw/sh2/sh2_tests.cpp
+    src/hw/sh2/sh2_divu_tests.cpp
 )
 add_executable(satemu::satemu-core-tests ALIAS satemu-core-tests)
 set_target_properties(satemu-core-tests PROPERTIES

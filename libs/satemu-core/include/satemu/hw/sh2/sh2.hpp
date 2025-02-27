@@ -144,6 +144,9 @@ public:
 
     void TriggerFRTInputCapture();
 
+    // -------------------------------------------------------------------------
+    // Debugger and testing
+
     void UseTracer(debug::ISH2Tracer *tracer) {
         m_debugTracer.Use(tracer);
     }
@@ -293,30 +296,7 @@ private:
 
     // --- DIVU module ---
 
-    RegDVSR DVSR;       // 100  R/W  32       ud        DVSR    Divisor register
-    RegDVDNT DVDNT;     // 104  R/W  32       ud        DVDNT   Dividend register L for 32-bit division
-    RegDVCR DVCR;       // 108  R/W  16,32    00000000  DVCR    Division control register
-                        // 10C  R/W  16,32    ud        VCRDIV  Vector number register setting DIV
-    RegDVDNTH DVDNTH;   // 110  R/W  32       ud        DVDNTH  Dividend register H
-    RegDVDNTL DVDNTL;   // 114  R/W  32       ud        DVDNTL  Dividend register L
-    RegDVDNTUH DVDNTUH; // 118  R/W  32       ud        DVDNTUH Undocumented dividend register H
-    RegDVDNTUL DVDNTUL; // 11C  R/W  32       ud        DVDNTUL Undocumented dividend register L
-
-    // 120..13F are mirrors of 100..11F
-
-    // Both division calculations take 39 cycles to complete, or 6 if it results in overflow.
-    // On overflow, the OVF bit is set and an overflow interrupt is generated if DVCR.OVFIE=1.
-    // DVDNTH and DVDNTL will contain the partial results of the operation after 6 cycles.
-    // If DVCR.OFVIE=0, DVDNTL will be saturated to 0x7FFFFFFF or 0x80000000 depending on the sign.
-    // For 32-bit by 32-bit divisions, DVDNT receives a copy of DVDNTL.
-
-    // Begins a 32-bit by 32-bit signed division calculation, storing the 32-bit quotient in DVDNT
-    // and the 32-bit remainder in DVDNTH.
-    void DIVUBegin32();
-
-    // Begins a 64-bit by 32-bit signed division calculation, storing the 32-bit quotient in DVDNTL
-    // and the 32-bit remainder in DVDNTH.
-    void DIVUBegin64();
+    DivisionUnit DIVU;
 
     // --- UBC module (channel A) ---
 
