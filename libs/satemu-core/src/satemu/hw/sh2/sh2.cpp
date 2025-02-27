@@ -1168,7 +1168,6 @@ FORCE_INLINE void SH2::AdvanceWDT(uint64 cycles) {
             // Watchdog timer mode
             WDT.RSTCSR.WOVF = 1;
             if (WDT.RSTCSR.RSTE) {
-                // TODO: needs to preserve RSTCSR
                 Reset(WDT.RSTCSR.RSTS, true);
             }
         } else {

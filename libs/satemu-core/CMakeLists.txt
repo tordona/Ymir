@@ -41,6 +41,9 @@ add_library(satemu-core
     include/satemu/hw/sh2/sh2_decode.hpp
     include/satemu/hw/sh2/sh2_defs.hpp
     include/satemu/hw/sh2/sh2_divu.hpp
+    include/satemu/hw/sh2/sh2_dmac.hpp
+    include/satemu/hw/sh2/sh2_frt.hpp
+    include/satemu/hw/sh2/sh2_wdt.hpp
 
     include/satemu/hw/smpc/rtc.hpp
     include/satemu/hw/smpc/smpc.hpp

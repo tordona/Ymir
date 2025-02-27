@@ -3,6 +3,9 @@
 #include "sh2_decode.hpp"
 #include "sh2_defs.hpp"
 #include "sh2_divu.hpp"
+#include "sh2_dmac.hpp"
+#include "sh2_frt.hpp"
+#include "sh2_wdt.hpp"
 
 #include <satemu/core/types.hpp>
 #include <satemu/hw/hw_defs.hpp>
@@ -390,7 +393,7 @@ private:
     std::array<sint8, 2> m_cacheReplaceORMask; // [0]=data, [1]=code
 
     alignas(16) static constexpr std::array<CacheLRUUpdateBits, 4> kCacheLRUUpdateBits = {{
-        // AND mask       OR mask
+        // AND      OR
         {0b111000u, 0b000000u}, // way 0: 000...
         {0b011001u, 0b100000u}, // way 1: 1..00.
         {0b101010u, 0b010100u}, // way 2: .1.1.0
