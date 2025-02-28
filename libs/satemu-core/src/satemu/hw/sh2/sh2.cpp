@@ -2,7 +2,6 @@
 
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/data_ops.hpp>
-#include <satemu/util/inline.hpp>
 #include <satemu/util/unreachable.hpp>
 
 #include <fmt/format.h>
@@ -1198,24 +1197,6 @@ FORCE_INLINE void SH2::AdvanceFRT(uint64 cycles) {
 // -----------------------------------------------------------------------------
 // Interrupts
 
-FORCE_INLINE void SH2::RaiseInterrupt(InterruptSource source) {
-    const uint8 level = INTC.GetLevel(source);
-    if (level < INTC.pending.level) {
-        return;
-    }
-    if (level == INTC.pending.level && static_cast<uint8>(source) < static_cast<uint8>(INTC.pending.source)) {
-        return;
-    }
-    INTC.pending.level = level;
-    INTC.pending.source = source;
-}
-
-FORCE_INLINE void SH2::LowerInterrupt(InterruptSource source) {
-    if (INTC.pending.source == source) {
-        RecalcInterrupts();
-    }
-}
-
 template <InterruptSource source, InterruptSource... sources>
 void SH2::UpdateInterruptLevels() {
     if (INTC.pending.source == source) {
@@ -1334,10 +1315,6 @@ void SH2::RecalcInterrupts() {
         RaiseInterrupt(InterruptSource::FRT_OVI);
         return;
     }
-}
-
-FORCE_INLINE bool SH2::CheckInterrupts() const {
-    return INTC.pending.level > SR.ILevel;
 }
 
 // -------------------------------------------------------------------------

@@ -98,22 +98,22 @@ union RegICR {
 
 // Interrupt sources, sorted by default priority from lowest to highest
 enum class InterruptSource : uint8 {
-    None,          // Priority       Vector
-    FRT_OVI,       // IPRB.FRTIPn    VCRD.FOVVn
-    FRT_OCI,       // IPRB.FRTIPn    VCRC.FOCVn
-    FRT_ICI,       // IPRB.FRTIPn    VCRC.FICVn
-    SCI_TEI,       // IPRB.SCIIPn    VCRB.STEVn
-    SCI_TXI,       // IPRB.SCIIPn    VCRB.STXVn
-    SCI_RXI,       // IPRB.SCIIPn    VCRA.SRXVn
-    SCI_ERI,       // IPRB.SCIIPn    VCRA.SERVn
-    BSC_REF_CMI,   // IPRA.WDTIPn    VCRWDT
-    WDT_ITI,       // IPRA.WDTIPn    VCRWDT
-    DMAC1_XferEnd, // IPRA.DMACIPn   VCRDMA1
-    DMAC0_XferEnd, // IPRA.DMACIPn   VCRDMA0
-    DIVU_OVFI,     // IPRA.DIVUIPn   VCRDIV
-    IRL,           // 15-1           0x40 + (level >> 1)
-    UserBreak,     // 15             0x0C
-    NMI            // 16             0x0B
+    None,          // #   Source        Priority       Vector
+    FRT_OVI,       // 1   FRT OVI       IPRB.FRTIPn    VCRD.FOVVn
+    FRT_OCI,       // 2   FRT OCI       IPRB.FRTIPn    VCRC.FOCVn
+    FRT_ICI,       // 3   FRT ICI       IPRB.FRTIPn    VCRC.FICVn
+    SCI_TEI,       // 4   SCI TEI       IPRB.SCIIPn    VCRB.STEVn
+    SCI_TXI,       // 5   SCI TXI       IPRB.SCIIPn    VCRB.STXVn
+    SCI_RXI,       // 6   SCI RXI       IPRB.SCIIPn    VCRA.SRXVn
+    SCI_ERI,       // 7   SCI ERI       IPRB.SCIIPn    VCRA.SERVn
+    BSC_REF_CMI,   // 8   BSC REF CMI   IPRA.WDTIPn    VCRWDT
+    WDT_ITI,       // 9   WDT ITI       IPRA.WDTIPn    VCRWDT
+    DMAC1_XferEnd, // 10  DMAC1 end     IPRA.DMACIPn   VCRDMA1
+    DMAC0_XferEnd, // 11  DMAC2 end     IPRA.DMACIPn   VCRDMA0
+    DIVU_OVFI,     // 12  DIVU OVFI     IPRA.DIVUIPn   VCRDIV
+    IRL,           // 13  IRL#          15-1           0x40 + (level >> 1)
+    UserBreak,     // 14  UBC break     15             0x0C
+    NMI            // 15  NMI           16             0x0B
 };
 
 struct InterruptController {

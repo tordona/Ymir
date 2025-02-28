@@ -25,6 +25,7 @@
 
 #include <satemu/util/callback.hpp>
 #include <satemu/util/debug_print.hpp>
+#include <satemu/util/inline.hpp>
 
 #include <array>
 #include <new>
@@ -165,6 +166,8 @@ public:
     }
 
 private:
+    friend struct PrivateAccess;
+
     // -------------------------------------------------------------------------
     // CPU state
 
@@ -327,10 +330,24 @@ private:
     InterruptController INTC;
 
     // Raises the interrupt signal of the specified source.
-    void RaiseInterrupt(InterruptSource source);
+    FORCE_INLINE void RaiseInterrupt(InterruptSource source) {
+        const uint8 level = INTC.GetLevel(source);
+        if (level < INTC.pending.level) {
+            return;
+        }
+        if (level == INTC.pending.level && static_cast<uint8>(source) < static_cast<uint8>(INTC.pending.source)) {
+            return;
+        }
+        INTC.pending.level = level;
+        INTC.pending.source = source;
+    }
 
     // Lowers the interrupt signal of the specified source.
-    void LowerInterrupt(InterruptSource source);
+    FORCE_INLINE void LowerInterrupt(InterruptSource source) {
+        if (INTC.pending.source == source) {
+            RecalcInterrupts();
+        }
+    }
 
     // Updates the pending interrupt level if it matches one of the specified sources.
     template <InterruptSource source, InterruptSource... sources>
@@ -340,7 +357,9 @@ private:
     void RecalcInterrupts();
 
     // Checks if the CPU should service an interrupt.
-    bool CheckInterrupts() const;
+    FORCE_INLINE bool CheckInterrupts() const {
+        return INTC.pending.level > SR.ILevel;
+    }
 
     // -------------------------------------------------------------------------
     // Helper functions
