@@ -42,6 +42,8 @@ struct TestSubject : debug::ISH2Tracer {
         // Setup tracer to collect interrupts into a vector
         sh2.UseTracer(this);
 
+        sh2.SetExternalInterruptAcknowledgeCallback(util::MakeClassMemberRequiredCallback<&TestSubject::IntrAck>(this));
+
         // TODO: set up predictable vector table
         bus.MapMemory(0x000'0000, 0x7FF'FFFF,
                       {
@@ -62,6 +64,19 @@ struct TestSubject : debug::ISH2Tracer {
                           .write32 = [](uint32 address, uint32 value,
                                         void *ctx) { static_cast<TestSubject *>(ctx)->Write32(address, value); },
                       });
+    }
+
+    void Clear() const {
+        interrupts.clear();
+        memoryAccesses.clear();
+        intrAcked = false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Callbacks
+
+    void IntrAck() {
+        intrAcked = true;
     }
 
     // -------------------------------------------------------------------------
@@ -121,19 +136,74 @@ struct TestSubject : debug::ISH2Tracer {
 
     mutable std::vector<InterruptInfo> interrupts;
     mutable std::vector<MemoryAccessInfo> memoryAccesses;
+    mutable bool intrAcked;
 };
 
 // -----------------------------------------------------------------------------
 // Tests
 
+TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", "[sh2][intc][flow]") {
+    sh2.Reset(true);
+    Clear();
+
+    sh2::PrivateAccess::SR(sh2).ILevel = 0;
+
+    // TODO: test interrupt entry and exit (with RTE instruction)
+    // - setup interrupt handler somewhere in memory with just the RTE instruction (0x002B)
+    // - setup vector table such that vector 0x70 points to the interrupt handler
+    // - place stack pointer (r15) somewhere else
+    sh2::PrivateAccess::INTC(sh2).ICR.VECMD = 1; // use external interrupt vector
+    sh2::PrivateAccess::INTC(sh2).SetVector(sh2::InterruptSource::IRL, 0x70);
+    sh2::PrivateAccess::INTC(sh2).SetLevel(sh2::InterruptSource::IRL, 5);
+    sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::IRL);
+    REQUIRE(sh2::PrivateAccess::CheckInterrupts(sh2));
+
+    // Jump to interrupt handler
+    sh2.Advance<true>(1);
+
+    REQUIRE(interrupts.size() == 1);
+    CHECK(interrupts[0].vecNum == 0x70);
+    CHECK(interrupts[0].level == 5);
+    CHECK(intrAcked);        // external interrupt should be acknowledged
+    CHECK(sh2.GetPC() == 0); // TODO: proper PC
+    CHECK(sh2.GetSR().ILevel == 5);
+    // TODO: check memory accesses
+
+    Clear();
+
+    // This should be the RTE instruction
+    sh2.Advance<true>(1);
+
+    REQUIRE(interrupts.empty());
+    CHECK(sh2.GetPC() == 0); // TODO: should be back to the starting PC
+    // TODO: check memory accesses
+}
+
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly", "[sh2][intc][single]") {
     sh2.Reset(true);
-    interrupts.clear();
-    memoryAccesses.clear();
+    Clear();
 
     sh2::PrivateAccess::SR(sh2).ILevel = 0;
 
     // TODO: test every interrupt individually, including NMI
+
+    /*
+    FRT_OVI,       // 1   FRT OVI       IPRB.FRTIPn    VCRD.FOVVn
+    FRT_OCI,       // 2   FRT OCI       IPRB.FRTIPn    VCRC.FOCVn
+    FRT_ICI,       // 3   FRT ICI       IPRB.FRTIPn    VCRC.FICVn
+    SCI_TEI,       // 4   SCI TEI       IPRB.SCIIPn    VCRB.STEVn
+    SCI_TXI,       // 5   SCI TXI       IPRB.SCIIPn    VCRB.STXVn
+    SCI_RXI,       // 6   SCI RXI       IPRB.SCIIPn    VCRA.SRXVn
+    SCI_ERI,       // 7   SCI ERI       IPRB.SCIIPn    VCRA.SERVn
+    BSC_REF_CMI,   // 8   BSC REF CMI   IPRA.WDTIPn    VCRWDT
+    WDT_ITI,       // 9   WDT ITI       IPRA.WDTIPn    VCRWDT
+    DMAC1_XferEnd, // 10  DMAC1 end     IPRA.DMACIPn   VCRDMA1
+    DMAC0_XferEnd, // 11  DMAC2 end     IPRA.DMACIPn   VCRDMA0
+    DIVU_OVFI,     // 12  DIVU OVFI     IPRA.DIVUIPn   VCRDIV
+    IRL,           // 13  IRL#          15-1           0x40 + (level >> 1)
+    UserBreak,     // 14  UBC break     15             0x0C
+    NMI            // 15  NMI           16             0x0B
+    */
 
     SECTION("WDT ITI interrupt") {
         sh2::PrivateAccess::INTC(sh2).SetVector(sh2::InterruptSource::WDT_ITI, 0x70);
@@ -147,47 +217,34 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
         CHECK(interrupts[0].vecNum == 0x70);
         CHECK(interrupts[0].level == 5);
         CHECK(sh2.GetPC() == 0); // TODO: proper PC
-        // TODO: check memory reads and writes
+        CHECK(sh2.GetSR().ILevel == 5);
+        // TODO: check memory accesses
     }
 }
 
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are raised from sources", "[sh2][intc][sources]") {
     sh2.Reset(true);
-    interrupts.clear();
-    memoryAccesses.clear();
+    Clear();
 
     sh2::PrivateAccess::SR(sh2).ILevel = 0;
 
     // TODO: test interrupts being raised by the actual sources
 }
 
-TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts priorities are handled correctly",
-                             "[sh2][intc][priorities]") {
+TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are prioritized correctly", "[sh2][intc][priorities]") {
     sh2.Reset(true);
-    interrupts.clear();
-    memoryAccesses.clear();
+    Clear();
 
     sh2::PrivateAccess::SR(sh2).ILevel = 0;
 
     // TODO: test interrupt priorities
 }
 
-TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt masking is handled correctly", "[sh2][intc][level-mask]") {
+TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are masked correctly", "[sh2][intc][level-mask]") {
     sh2.Reset(true);
-    interrupts.clear();
-    memoryAccesses.clear();
+    Clear();
 
     sh2::PrivateAccess::SR(sh2).ILevel = 0;
 
     // TODO: test interrupts being masked by SR.ILevel
-}
-
-TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", "[sh2][intc][flow]") {
-    sh2.Reset(true);
-    interrupts.clear();
-    memoryAccesses.clear();
-
-    sh2::PrivateAccess::SR(sh2).ILevel = 0;
-
-    // TODO: test interrupt entry and exit (with RTE instruction)
 }
