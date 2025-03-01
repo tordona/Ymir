@@ -206,6 +206,9 @@ struct TestSubject : debug::ISH2Tracer {
 // -----------------------------------------------------------------------------
 // Tests
 
+inline constexpr uint16 instrNOP = 0x0009;
+inline constexpr uint16 instrRTE = 0x002B;
+
 // Test full interrupt flow:
 // - Entry and exit (with RTE instruction)
 // - VBR handling
@@ -222,9 +225,6 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     constexpr uint32 startVBR2 = 0x100000;
     constexpr uint8 intrVec = 0x70;
     constexpr uint8 intrLevel = 5;
-
-    constexpr uint16 instrNOP = 0x0009;
-    constexpr uint16 instrRTE = 0x002B;
 
     // Setup interrupt handlers with NOP, RTE, NOP (delay slot)
     MockMemoryRead16(intrPC1 + 0, instrNOP);
@@ -416,45 +416,180 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     CHECK(memoryAccesses[0] == MemoryAccessInfo{intrPC2 + 4, instrNOP, false, sizeof(uint16)});
 }
 
+// Test that interrupts raised from each source map to the corresponding vector and level.
+// Also test IRLs using autovector and external vector fetch/acknowledge.
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly", "[sh2][intc][single]") {
     ClearAll();
 
-    sh2::PrivateAccess::SR(sh2).ILevel = 0;
+    constexpr uint32 startPC = 0x1000;
+    constexpr uint32 startSP = 0x2000;
+    constexpr uint32 startSR = 0x0;
+    constexpr uint32 startVBR = 0x0;
+    constexpr uint32 baseIntrPC = 0x10000;
+    constexpr uint32 irlIntrPC = 0x20000;
+    constexpr uint32 irlExIntrPC = 0x28000;
+    constexpr uint32 ubcIntrPC = 0x30000;
+    constexpr uint32 nmiIntrPC = 0x40000;
+    constexpr uint8 irlExIntrVec = 0x60;
+    constexpr uint8 irlExIntrLevel = 6;
 
-    // TODO: test every interrupt individually, including NMI
+    sh2::PrivateAccess::PC(sh2) = startPC;
+    sh2::PrivateAccess::R(sh2)[15] = startSP;
+    sh2::PrivateAccess::SR(sh2).u32 = startSR;
+    sh2::PrivateAccess::VBR(sh2) = startVBR;
 
-    /*
-    FRT_OVI,       // 1   FRT OVI       IPRB.FRTIPn    VCRD.FOVVn
-    FRT_OCI,       // 2   FRT OCI       IPRB.FRTIPn    VCRC.FOCVn
-    FRT_ICI,       // 3   FRT ICI       IPRB.FRTIPn    VCRC.FICVn
-    SCI_TEI,       // 4   SCI TEI       IPRB.SCIIPn    VCRB.STEVn
-    SCI_TXI,       // 5   SCI TXI       IPRB.SCIIPn    VCRB.STXVn
-    SCI_RXI,       // 6   SCI RXI       IPRB.SCIIPn    VCRA.SRXVn
-    SCI_ERI,       // 7   SCI ERI       IPRB.SCIIPn    VCRA.SERVn
-    BSC_REF_CMI,   // 8   BSC REF CMI   IPRA.WDTIPn    VCRWDT
-    WDT_ITI,       // 9   WDT ITI       IPRA.WDTIPn    VCRWDT
-    DMAC1_XferEnd, // 10  DMAC1 end     IPRA.DMACIPn   VCRDMA1
-    DMAC0_XferEnd, // 11  DMAC2 end     IPRA.DMACIPn   VCRDMA0
-    DIVU_OVFI,     // 12  DIVU OVFI     IPRA.DIVUIPn   VCRDIV
-    IRL,           // 13  IRL#          15-1           0x40 + (level >> 1)
-    UserBreak,     // 14  UBC break     15             0x0C
-    NMI            // 15  NMI           16             0x0B
-    */
+    // Set up different vectors and levels for every interrupt source (although this is impossible on real hardware)
+    // IRLs have fixed levels and need special testing for autovector and external vector
+    // User break and NMI have fixed levels and vectors
+    using enum sh2::InterruptSource;
+    static constexpr sh2::InterruptSource kSources[] = {FRT_OVI, FRT_OCI,       FRT_ICI,       SCI_TEI,
+                                                        SCI_TXI, SCI_RXI,       SCI_ERI,       BSC_REF_CMI,
+                                                        WDT_ITI, DMAC1_XferEnd, DMAC0_XferEnd, DIVU_OVFI};
+    auto &intc = sh2::PrivateAccess::INTC(sh2);
+    for (auto source : kSources) {
+        const uint8 i = static_cast<uint8>(source);
+        const uint8 vecNum = 0x70 + i;
+        const uint8 level = i;
+        const uint32 routineAddr = baseIntrPC + i * sizeof(uint16) * 2;
+        intc.SetVector(source, vecNum);
+        intc.SetLevel(source, level);
+        MockMemoryRead32(startVBR + vecNum * sizeof(uint32), routineAddr);
+        MockMemoryRead16(routineAddr + 0, instrRTE);
+        MockMemoryRead16(routineAddr + 2, instrNOP);
+    }
 
-    SECTION("WDT ITI interrupt") {
-        sh2::PrivateAccess::INTC(sh2).SetVector(sh2::InterruptSource::WDT_ITI, 0x70);
-        sh2::PrivateAccess::INTC(sh2).SetLevel(sh2::InterruptSource::WDT_ITI, 5);
-        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
+    // IRL autovector
+    MockMemoryRead32(startVBR + 0x40 * sizeof(uint32), irlIntrPC);
+    MockMemoryRead16(irlIntrPC + 0, instrRTE);
+    MockMemoryRead16(irlIntrPC + 2, instrNOP);
+
+    // IRL external vector
+    MockMemoryRead32(startVBR + irlExIntrVec * sizeof(uint32), irlExIntrPC);
+    MockMemoryRead16(irlExIntrPC + 0, instrRTE);
+    MockMemoryRead16(irlExIntrPC + 2, instrNOP);
+
+    // User break
+    MockMemoryRead32(startVBR + 0x0C * sizeof(uint32), ubcIntrPC);
+    MockMemoryRead16(ubcIntrPC + 0, instrRTE);
+    MockMemoryRead16(ubcIntrPC + 2, instrNOP);
+
+    // NMI
+    MockMemoryRead32(startVBR + 0x0B * sizeof(uint32), nmiIntrPC);
+    MockMemoryRead16(nmiIntrPC + 0, instrRTE);
+    MockMemoryRead16(nmiIntrPC + 2, instrNOP);
+
+    auto testIntr = [&](sh2::InterruptSource source, uint8 vecNum, uint8 level, uint32 intrHandlerAddr) {
+        sh2::PrivateAccess::RaiseInterrupt(sh2, source);
         REQUIRE(sh2::PrivateAccess::CheckInterrupts(sh2));
 
         sh2.Advance<true>(1);
 
+        // Check results:
+        // - FRT OVI interrupt at starting PC
         REQUIRE(interrupts.size() == 1);
-        CHECK(interrupts[0].vecNum == 0x70);
-        CHECK(interrupts[0].level == 5);
-        CHECK(sh2.GetPC() == 0); // TODO: proper PC
-        CHECK(sh2.GetSR().ILevel == 5);
-        // TODO: check memory accesses
+        CHECK(interrupts[0].vecNum == vecNum);
+        CHECK(interrupts[0].level == level);
+        CHECK(interrupts[0].pc == startPC);
+        // - exception at FRT OVI vector at starting PC with starting SR
+        REQUIRE(exceptions.size() == 1);
+        CHECK(exceptions[0].vecNum == vecNum);
+        CHECK(exceptions[0].pc == startPC);
+        CHECK(exceptions[0].sr == startSR);
+        // - PC at the NOP instruction in the delay slot of the RTE
+        CHECK(sh2.GetPC() == intrHandlerAddr + sizeof(uint16));
+        // - SR unchanged due to RTE executing immediately
+        CHECK(sh2.GetSR().u32 == startSR);
+        // - memory accesses
+        //   [0] push SR to stack
+        //   [1] push PC-4 to stack
+        //   [2] read PC from VBR + vecNum*4
+        //   [3] read instruction from PC (RTE)
+        //   [4] pop PC-4 from stack
+        //   [5] pop SR from stack
+        const uint32 vecAddr = startVBR + vecNum * sizeof(uint32);
+        REQUIRE(memoryAccesses.size() == 6);
+        CHECK(memoryAccesses[0] == MemoryAccessInfo{startSP - 4, startSR, true, sizeof(uint32)});
+        CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC - 4, true, sizeof(uint32)});
+        CHECK(memoryAccesses[2] == MemoryAccessInfo{vecAddr, intrHandlerAddr, false, sizeof(uint32)});
+        CHECK(memoryAccesses[3] == MemoryAccessInfo{intrHandlerAddr, instrRTE, false, sizeof(uint16)});
+        CHECK(memoryAccesses[4] == MemoryAccessInfo{startSP - 8, startPC - 4, false, sizeof(uint32)});
+        CHECK(memoryAccesses[5] == MemoryAccessInfo{startSP - 4, startSR, false, sizeof(uint32)});
+    };
+
+    auto testIndexedIntr = [&](sh2::InterruptSource source) {
+        const uint8 index = static_cast<uint8>(source);
+        const uint32 intrHandlerAddr = baseIntrPC + index * sizeof(uint16) * 2;
+        testIntr(source, 0x70 + index, index, intrHandlerAddr);
+    };
+
+    SECTION("FRT OVI interrupt") {
+        testIndexedIntr(FRT_OVI);
+    }
+
+    SECTION("FRT OCI interrupt") {
+        testIndexedIntr(FRT_OCI);
+    }
+
+    SECTION("FRT ICI interrupt") {
+        testIndexedIntr(FRT_ICI);
+    }
+
+    SECTION("SCI TEI interrupt") {
+        testIndexedIntr(SCI_TEI);
+    }
+
+    SECTION("SCI TXI interrupt") {
+        testIndexedIntr(SCI_TXI);
+    }
+
+    SECTION("SCI RXI interrupt") {
+        testIndexedIntr(SCI_RXI);
+    }
+
+    SECTION("SCI ERI interrupt") {
+        testIndexedIntr(SCI_ERI);
+    }
+
+    SECTION("BSC REF CMI interrupt") {
+        testIndexedIntr(BSC_REF_CMI);
+    }
+
+    SECTION("WDT ITI interrupt") {
+        testIndexedIntr(WDT_ITI);
+    }
+
+    SECTION("DMAC channel 1 transfer end interrupt") {
+        testIndexedIntr(DMAC1_XferEnd);
+    }
+
+    SECTION("DMAC channel 0 transfer end interrupt") {
+        testIndexedIntr(DMAC0_XferEnd);
+    }
+
+    SECTION("DIVU OVFI transfer end interrupt") {
+        testIndexedIntr(DIVU_OVFI);
+    }
+
+    SECTION("UBC user break interrupt") {
+        testIntr(UserBreak, 0x0C, 15, ubcIntrPC);
+    }
+
+    SECTION("NMI") {
+        testIntr(NMI, 0x0B, 16, nmiIntrPC);
+    }
+
+    SECTION("IRL autovector interrupt") {
+        sh2::PrivateAccess::INTC(sh2).ICR.VECMD = 0; // use autovector
+        testIntr(IRL, 0x40, 1, irlIntrPC);
+        CHECK(intrAcked);
+    }
+
+    SECTION("IRL external vector interrupt") {
+        sh2::PrivateAccess::INTC(sh2).ICR.VECMD = 1; // use external interrupt vector
+        sh2::PrivateAccess::INTC(sh2).SetVector(sh2::InterruptSource::IRL, irlExIntrVec);
+        sh2::PrivateAccess::INTC(sh2).SetLevel(sh2::InterruptSource::IRL, irlExIntrLevel);
+        testIntr(IRL, irlExIntrVec, irlExIntrLevel, irlExIntrPC);
+        CHECK(intrAcked);
     }
 }
 
