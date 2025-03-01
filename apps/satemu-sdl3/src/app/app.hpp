@@ -21,15 +21,26 @@ private:
 
     struct SH2Tracer final : public satemu::debug::ISH2Tracer {
         void Interrupt(uint8 vecNum, uint8 level) final;
+        void Exception(uint8 vecNum, uint32 pc, uint32 sr) final;
 
         struct InterruptInfo {
             uint8 vecNum;
             uint8 level;
         };
 
+        struct ExceptionInfo {
+            uint8 vecNum;
+            uint32 pc;
+            uint32 sr;
+        };
+
         std::array<InterruptInfo, 16> interrupts;
         size_t interruptsPos = 0;
         size_t interruptsCount = 0;
+
+        std::array<ExceptionInfo, 16> exceptions;
+        size_t exceptionsPos = 0;
+        size_t exceptionsCount = 0;
     };
 
     struct SCUTracer final : public satemu::debug::ISCUTracer {

@@ -748,6 +748,16 @@ void App::SH2Tracer::Interrupt(uint8 vecNum, uint8 level) {
     }
 }
 
+void App::SH2Tracer::Exception(uint8 vecNum, uint32 pc, uint32 sr) {
+    exceptions[exceptionsPos++] = {vecNum, pc, sr};
+    if (exceptionsPos >= exceptions.size()) {
+        exceptionsPos = 0;
+    }
+    if (exceptionsCount < exceptions.size()) {
+        exceptionsCount++;
+    }
+}
+
 void App::SCUTracer::RaiseInterrupt(uint8 index, uint8 level) {
     PushInterrupt({index, level});
 }

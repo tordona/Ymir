@@ -23,6 +23,15 @@ struct SH2TracerContext {
         }
     }
 
+    template <bool debug>
+    FORCE_INLINE void Exception(uint8 vecNum, uint32 pc, uint32 sr) {
+        if constexpr (debug) {
+            if (m_tracer) {
+                return m_tracer->Exception(vecNum, pc, sr);
+            }
+        }
+    }
+
 private:
     ISH2Tracer *m_tracer = nullptr;
 };

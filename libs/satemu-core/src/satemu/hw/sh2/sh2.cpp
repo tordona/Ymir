@@ -1325,8 +1325,10 @@ FORCE_INLINE void SH2::SetupDelaySlot(uint32 targetAddress) {
     m_delaySlotTarget = targetAddress;
 }
 
+template <bool debug>
 FORCE_INLINE void SH2::EnterException(uint8 vectorNumber) {
     m_tracer.Exception({R, PC, PR, SR.u32, VBR, GBR, MAC.u64}, vectorNumber);
+    m_debugTracer.Exception<debug>(vectorNumber, PC, SR.u32);
     R[15] -= 4;
     MemWriteLong(R[15], SR.u32);
     R[15] -= 4;
@@ -1343,7 +1345,7 @@ void SH2::Execute() {
         const uint8 vecNum = INTC.GetVector(INTC.pending.source);
         m_debugTracer.Interrupt<debug>(vecNum, INTC.pending.level);
         m_log.trace("Handling interrupt level {:02X}, vector number {:02X}", INTC.pending.level, vecNum);
-        EnterException(vecNum);
+        EnterException<debug>(vecNum);
         SR.ILevel = std::min<uint8>(INTC.pending.level, 0xF);
 
         // Acknowledge interrupt
@@ -1674,8 +1676,8 @@ void SH2::Execute() {
     case OpcodeType::RTE: RTE(); break;
     case OpcodeType::RTS: RTS(); break;
 
-    case OpcodeType::Illegal: EnterException(xvGenIllegalInstr), dump(); break;
-    case OpcodeType::IllegalSlot: EnterException(xvSlotIllegalInstr), dump(); break;
+    case OpcodeType::Illegal: EnterException<debug>(xvGenIllegalInstr), dump(); break;
+    case OpcodeType::IllegalSlot: EnterException<debug>(xvSlotIllegalInstr), dump(); break;
     }
 }
 

@@ -365,6 +365,8 @@ private:
     // Helper functions
 
     void SetupDelaySlot(uint32 targetAddress);
+
+    template <bool debug>
     void EnterException(uint8 vectorNumber);
 
     // -------------------------------------------------------------------------

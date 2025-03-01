@@ -13,6 +13,9 @@ struct ISH2Tracer {
 
     // Invoked when an SH2 CPU handles an interrupt.
     virtual void Interrupt(uint8 vecNum, uint8 level) = 0;
+
+    // Invoked when an SH2 CPU handles an exception.
+    virtual void Exception(uint8 vecNum, uint32 pc, uint32 sr) = 0;
 };
 
 } // namespace satemu::debug

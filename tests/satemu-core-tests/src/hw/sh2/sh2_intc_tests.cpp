@@ -89,6 +89,7 @@ struct TestSubject : debug::ISH2Tracer {
 
     void ClearCaptures() const {
         interrupts.clear();
+        exceptions.clear();
         memoryAccesses.clear();
         intrAcked = false;
     }
@@ -164,7 +165,9 @@ struct TestSubject : debug::ISH2Tracer {
         interrupts.push_back({vecNum, level});
     }
 
-    // TODO: trace exceptions
+    void Exception(uint8 vecNum, uint32 pc, uint32 sr) override {
+        exceptions.push_back({vecNum, pc, sr});
+    }
 
     // -------------------------------------------------------------------------
     // Traces and mocked data
@@ -172,6 +175,12 @@ struct TestSubject : debug::ISH2Tracer {
     struct InterruptInfo {
         uint8 vecNum;
         uint8 level;
+    };
+
+    struct ExceptionInfo {
+        uint8 vecNum;
+        uint32 pc;
+        uint32 sr;
     };
 
     struct MemoryAccessInfo {
@@ -184,6 +193,7 @@ struct TestSubject : debug::ISH2Tracer {
     };
 
     mutable std::vector<InterruptInfo> interrupts;
+    mutable std::vector<ExceptionInfo> exceptions;
     mutable std::vector<MemoryAccessInfo> memoryAccesses;
     mutable bool intrAcked;
 
@@ -246,6 +256,11 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     REQUIRE(interrupts.size() == 1);
     CHECK(interrupts[0].vecNum == intrVec);
     CHECK(interrupts[0].level == intrLevel);
+    // - one exception of the specified vector at the starting PC with the starting SR
+    REQUIRE(exceptions.size() == 1);
+    CHECK(exceptions[0].vecNum == intrVec);
+    CHECK(exceptions[0].pc == startPC);
+    CHECK(exceptions[0].sr == startSR);
     // - external interrupt acknowledged
     CHECK(intrAcked);
     // - PC at the interrupt vector + 2 (since it executed one instruction of the interrupt handler)
@@ -273,6 +288,8 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // Check results:
     // - no interrupts
     REQUIRE(interrupts.empty());
+    // - no exceptions
+    REQUIRE(exceptions.empty());
     // - PC at the NOP instruction in the delay slot of the RTE
     CHECK(sh2.GetPC() == intrPC1 + 4);
     // - PC and SR popped from the stack
@@ -296,6 +313,8 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // Check results:
     // - no interrupts
     REQUIRE(interrupts.empty());
+    // - no exceptions
+    REQUIRE(exceptions.empty());
     // - PC back to the starting point
     CHECK(sh2.GetPC() == startPC);
     // - no stack operations
@@ -323,6 +342,11 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     REQUIRE(interrupts.size() == 1);
     CHECK(interrupts[0].vecNum == intrVec);
     CHECK(interrupts[0].level == intrLevel);
+    // - one exception of the specified vector at the starting PC with the starting SR
+    REQUIRE(exceptions.size() == 1);
+    CHECK(exceptions[0].vecNum == intrVec);
+    CHECK(exceptions[0].pc == startPC);
+    CHECK(exceptions[0].sr == startSR);
     // - external interrupt acknowledged
     CHECK(intrAcked);
     // - PC at the interrupt vector + 2 (since it executed one instruction of the interrupt handler)
@@ -350,6 +374,8 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // Check results:
     // - no interrupts
     REQUIRE(interrupts.empty());
+    // - no exceptions
+    REQUIRE(exceptions.empty());
     // - PC at the NOP instruction in the delay slot of the RTE
     CHECK(sh2.GetPC() == intrPC2 + 4);
     // - PC and SR popped from the stack
@@ -373,6 +399,8 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // Check results:
     // - no interrupts
     REQUIRE(interrupts.empty());
+    // - no exceptions
+    REQUIRE(exceptions.empty());
     // - PC back to the starting point
     CHECK(sh2.GetPC() == startPC);
     // - no stack operations
