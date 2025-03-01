@@ -4,6 +4,8 @@
 
 #include "sh2_private_access.hpp"
 
+#include <fmt/format.h>
+
 #include <map>
 #include <vector>
 
@@ -140,12 +142,16 @@ struct TestSubject : debug::ISH2Tracer {
         uint8 vecNum;
         uint8 level;
         uint32 pc;
+
+        constexpr auto operator<=>(const InterruptInfo &) const = default;
     };
 
     struct ExceptionInfo {
         uint8 vecNum;
         uint32 pc;
         uint32 sr;
+
+        constexpr auto operator<=>(const ExceptionInfo &) const = default;
     };
 
     struct MemoryAccessInfo {
@@ -166,6 +172,22 @@ struct TestSubject : debug::ISH2Tracer {
     mutable std::map<uint32, uint16> mockedReads16;
     mutable std::map<uint32, uint32> mockedReads32;
 };
+
+std::ostream &operator<<(std::ostream &os, TestSubject::InterruptInfo const &value) {
+    os << fmt::format("INT 0x{:02X} level {} @ 0x{:X}", value.vecNum, value.level, value.pc);
+    return os;
+}
+
+std::ostream &operator<<(std::ostream &os, TestSubject::ExceptionInfo const &value) {
+    os << fmt::format("Exception 0x{:02X} @ 0x{:X}, SR={:X}", value.vecNum, value.pc, value.sr);
+    return os;
+}
+
+std::ostream &operator<<(std::ostream &os, TestSubject::MemoryAccessInfo const &value) {
+    os << fmt::format("{}-bit {} from 0x{:08X} -> 0x{:X}", value.size * 8, (value.write ? "write" : "read"),
+                      value.address, value.data);
+    return os;
+}
 
 // -----------------------------------------------------------------------------
 // Tests
@@ -219,14 +241,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // Check results:
     // - one interrupt of the specified vector+level at the starting PC
     REQUIRE(interrupts.size() == 1);
-    CHECK(interrupts[0].vecNum == intrVec);
-    CHECK(interrupts[0].level == intrLevel);
-    CHECK(interrupts[0].pc == startPC);
+    CHECK(interrupts[0] == InterruptInfo{intrVec, intrLevel, startPC});
     // - one exception of the specified vector at the starting PC with the starting SR
     REQUIRE(exceptions.size() == 1);
-    CHECK(exceptions[0].vecNum == intrVec);
-    CHECK(exceptions[0].pc == startPC);
-    CHECK(exceptions[0].sr == startSR);
+    CHECK(exceptions[0] == ExceptionInfo{intrVec, startPC, startSR});
     // - external interrupt acknowledged
     CHECK(intrAcked);
     // - PC at the interrupt vector + 2 (since it executed one instruction of the interrupt handler)
@@ -306,14 +324,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // Check results:
     // - one interrupt of the specified vector+level at the starting PC
     REQUIRE(interrupts.size() == 1);
-    CHECK(interrupts[0].vecNum == intrVec);
-    CHECK(interrupts[0].level == intrLevel);
-    CHECK(interrupts[0].pc == startPC);
+    CHECK(interrupts[0] == InterruptInfo{intrVec, intrLevel, startPC});
     // - one exception of the specified vector at the starting PC with the starting SR
     REQUIRE(exceptions.size() == 1);
-    CHECK(exceptions[0].vecNum == intrVec);
-    CHECK(exceptions[0].pc == startPC);
-    CHECK(exceptions[0].sr == startSR);
+    CHECK(exceptions[0] == ExceptionInfo{intrVec, startPC, startSR});
     // - external interrupt acknowledged
     CHECK(intrAcked);
     // - PC at the interrupt vector + 2 (since it executed one instruction of the interrupt handler)
@@ -451,14 +465,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
         // Check results:
         // - FRT OVI interrupt at starting PC
         REQUIRE(interrupts.size() == 1);
-        CHECK(interrupts[0].vecNum == vecNum);
-        CHECK(interrupts[0].level == level);
-        CHECK(interrupts[0].pc == startPC);
+        CHECK(interrupts[0] == InterruptInfo{vecNum, level, startPC});
         // - exception at FRT OVI vector at starting PC with starting SR
         REQUIRE(exceptions.size() == 1);
-        CHECK(exceptions[0].vecNum == vecNum);
-        CHECK(exceptions[0].pc == startPC);
-        CHECK(exceptions[0].sr == startSR);
+        CHECK(exceptions[0] == ExceptionInfo{vecNum, startPC, startSR});
         // - PC at the NOP instruction in the delay slot of the RTE
         CHECK(sh2.GetPC() == intrHandlerAddr + sizeof(uint16));
         // - SR unchanged due to RTE executing immediately

@@ -3,6 +3,8 @@
 
 #include <satemu/hw/sh2/sh2_divu.hpp>
 
+#include <fmt/format.h>
+
 namespace sh2_divu {
 
 struct TestData {
@@ -22,6 +24,13 @@ struct TestData {
     Regs output32;
     Regs output64;
 };
+
+std::ostream &operator<<(std::ostream &os, TestData::Regs const &value) {
+    os << fmt::format(
+        "Regs{{DVSR={:08X} DVDNT={:08X} DVDNTL={:08X} DVDNTH={:08X} DVDNTUL={:08X} DVDNTUH={:08X} DVCR={:X}}}",
+        value.DVSR, value.DVDNT, value.DVDNTL, value.DVDNTH, value.DVDNTUL, value.DVDNTUH, value.DVCR);
+    return os;
+}
 
 struct TestSubject {
     mutable satemu::sh2::DivisionUnit divu{};

@@ -5,6 +5,8 @@
 
 #include "sh2_private_access.hpp"
 
+#include <fmt/format.h>
+
 #include <map>
 #include <vector>
 
@@ -14,7 +16,7 @@ struct TestData {
     uint32 rn;
     uint32 rm;
     uint64 macIn;
-    uint32 s;
+    bool s;
 
     uint64 macw;
     uint64 macl;
@@ -138,6 +140,12 @@ struct TestSubject {
     mutable std::map<uint32, uint16> mockedReads16;
     mutable std::map<uint32, uint32> mockedReads32;
 };
+
+std::ostream &operator<<(std::ostream &os, TestSubject::MemoryAccessInfo const &value) {
+    os << fmt::format("{}-bit {} from 0x{:08X} -> 0x{:X}", value.size * 8, (value.write ? "write" : "read"),
+                      value.address, value.data);
+    return os;
+}
 
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 MACW/MACL operations are computed correctly", "[sh2][macwl]") {
     ClearAll();
