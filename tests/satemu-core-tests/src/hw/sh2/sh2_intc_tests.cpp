@@ -810,6 +810,19 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are masked correctly",
         CHECK(intc.pending.source == sh2::InterruptSource::WDT_ITI);
         CHECK(intc.pending.level == 3);
     }
+
+    SECTION("NMI is never masked") {
+        auto &intc = sh2::PrivateAccess::INTC(sh2);
+
+        sh2::PrivateAccess::SR(sh2).ILevel = 0xF;
+
+        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::NMI);
+
+        // NMI is always serviced even with maximum SR.ILevel
+        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2) == true);
+        CHECK(intc.pending.source == sh2::InterruptSource::NMI);
+        CHECK(intc.pending.level == 16);
+    }
 }
 
 } // namespace sh2_intr
