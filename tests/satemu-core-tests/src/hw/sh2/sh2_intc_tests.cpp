@@ -5,10 +5,10 @@
 #include <map>
 #include <vector>
 
-namespace satemu::sh2 {
-
 // -----------------------------------------------------------------------------
 // Private access to SH2 members
+
+namespace satemu::sh2 {
 
 struct PrivateAccess {
     static std::array<uint32, 16> &R(SH2 &sh2) {

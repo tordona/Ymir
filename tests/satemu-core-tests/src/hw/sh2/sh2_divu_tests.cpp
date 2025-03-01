@@ -3,6 +3,8 @@
 
 #include <satemu/hw/sh2/sh2_divu.hpp>
 
+namespace sh2_divu {
+
 struct TestData {
     struct Regs {
         uint32 DVSR;
@@ -20,8 +22,6 @@ struct TestData {
     Regs output32;
     Regs output64;
 };
-
-namespace sh2_divu {
 
 struct TestSubject {
     mutable satemu::sh2::DivisionUnit divu{};
