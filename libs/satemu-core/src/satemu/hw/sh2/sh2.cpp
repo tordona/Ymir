@@ -1252,7 +1252,6 @@ void SH2::RecalcInterrupts() {
     // IRLs
     if (INTC.GetLevel(InterruptSource::IRL) > 0) {
         RaiseInterrupt(InterruptSource::IRL);
-        return;
     }
 
     // Division overflow

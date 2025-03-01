@@ -32,7 +32,72 @@ struct PrivateAccess {
     }
 
     static void RaiseInterrupt(SH2 &sh2, InterruptSource source) {
+        // Set the corresponding signals
+        switch (source) {
+        case InterruptSource::None: break;
+        case InterruptSource::FRT_OVI:
+            sh2.FRT.FTCSR.OVF = 1;
+            sh2.FRT.TIER.OVIE = 1;
+            break;
+        case InterruptSource::FRT_OCI:
+            sh2.FRT.FTCSR.OCFA = 1;
+            sh2.FRT.TIER.OCIAE = 1;
+            break;
+        case InterruptSource::FRT_ICI:
+            sh2.FRT.FTCSR.ICF = 1;
+            sh2.FRT.TIER.ICIE = 1;
+            break;
+        case InterruptSource::SCI_TEI: /*TODO*/ break;
+        case InterruptSource::SCI_TXI: /*TODO*/ break;
+        case InterruptSource::SCI_RXI: /*TODO*/ break;
+        case InterruptSource::SCI_ERI: /*TODO*/ break;
+        case InterruptSource::BSC_REF_CMI: /*TODO*/ break;
+        case InterruptSource::WDT_ITI:
+            sh2.WDT.WTCSR.OVF = 1;
+            sh2.WDT.WTCSR.WT_nIT = 0;
+            break;
+        case InterruptSource::DMAC1_XferEnd:
+            sh2.m_dmaChannels[1].xferEnded = true;
+            sh2.m_dmaChannels[1].irqEnable = true;
+            break;
+        case InterruptSource::DMAC0_XferEnd:
+            sh2.m_dmaChannels[0].xferEnded = true;
+            sh2.m_dmaChannels[0].irqEnable = true;
+            break;
+        case InterruptSource::DIVU_OVFI:
+            sh2.DIVU.DVCR.OVF = 1;
+            sh2.DIVU.DVCR.OVFIE = 1;
+            break;
+        case InterruptSource::IRL: /*nothing to do*/ break;
+        case InterruptSource::UserBreak: /*TODO*/ break;
+        case InterruptSource::NMI: sh2.INTC.NMI = 1; break;
+        }
+
         sh2.RaiseInterrupt(source);
+    }
+
+    static void LowerInterrupt(SH2 &sh2, InterruptSource source) {
+        // Clear the corresponding signals
+        switch (source) {
+        case InterruptSource::None: break;
+        case InterruptSource::FRT_OVI: sh2.FRT.FTCSR.OVF = 0; break;
+        case InterruptSource::FRT_OCI: sh2.FRT.FTCSR.OCFA = 0; break;
+        case InterruptSource::FRT_ICI: sh2.FRT.FTCSR.ICF = 0; break;
+        case InterruptSource::SCI_TEI: /*TODO*/ break;
+        case InterruptSource::SCI_TXI: /*TODO*/ break;
+        case InterruptSource::SCI_RXI: /*TODO*/ break;
+        case InterruptSource::SCI_ERI: /*TODO*/ break;
+        case InterruptSource::BSC_REF_CMI: /*TODO*/ break;
+        case InterruptSource::WDT_ITI: sh2.WDT.WTCSR.OVF = 0; break;
+        case InterruptSource::DMAC1_XferEnd: sh2.m_dmaChannels[1].xferEnded = false; break;
+        case InterruptSource::DMAC0_XferEnd: sh2.m_dmaChannels[0].xferEnded = false; break;
+        case InterruptSource::DIVU_OVFI: sh2.DIVU.DVCR.OVF = 0; break;
+        case InterruptSource::IRL: /*nothing to do*/ break;
+        case InterruptSource::UserBreak: /*TODO*/ break;
+        case InterruptSource::NMI: sh2.INTC.NMI = 0; break;
+        }
+
+        sh2.LowerInterrupt(source);
     }
 
     static bool CheckInterrupts(SH2 &sh2) {
@@ -593,28 +658,158 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
     }
 }
 
-TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are raised from sources", "[sh2][intc][sources]") {
-    ClearAll();
-
-    sh2::PrivateAccess::SR(sh2).ILevel = 0;
-
-    // TODO: test interrupts being raised by the actual sources
-}
-
+// Test interrupt prioritization, including tiebreakers
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are prioritized correctly", "[sh2][intc][priorities]") {
     ClearAll();
 
-    sh2::PrivateAccess::SR(sh2).ILevel = 0;
+    SECTION("Basic priority handling - low priority before high priority") {
+        auto &intc = sh2::PrivateAccess::INTC(sh2);
 
-    // TODO: test interrupt priorities
+        // Set up interrupts such that WDT ITI has higher priority than DIVU OVFI
+        intc.SetVector(sh2::InterruptSource::DIVU_OVFI, 0x60);
+        intc.SetLevel(sh2::InterruptSource::DIVU_OVFI, 6);
+        intc.SetVector(sh2::InterruptSource::WDT_ITI, 0x70);
+        intc.SetLevel(sh2::InterruptSource::WDT_ITI, 7);
+
+        sh2::PrivateAccess::SR(sh2).ILevel = 0;
+        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::DIVU_OVFI);
+        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
+
+        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2));
+        CHECK(intc.pending.source == sh2::InterruptSource::WDT_ITI);
+        CHECK(intc.pending.level == 7);
+    }
+
+    SECTION("Basic priority handling - high priority before low priority") {
+        auto &intc = sh2::PrivateAccess::INTC(sh2);
+
+        // Set up interrupts such that WDT ITI has higher priority than DIVU OVFI
+        intc.SetVector(sh2::InterruptSource::DIVU_OVFI, 0x60);
+        intc.SetLevel(sh2::InterruptSource::DIVU_OVFI, 6);
+        intc.SetVector(sh2::InterruptSource::WDT_ITI, 0x70);
+        intc.SetLevel(sh2::InterruptSource::WDT_ITI, 7);
+
+        sh2::PrivateAccess::SR(sh2).ILevel = 0;
+        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
+        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::DIVU_OVFI);
+
+        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2));
+        CHECK(intc.pending.source == sh2::InterruptSource::WDT_ITI);
+        CHECK(intc.pending.level == 7);
+    }
+
+    SECTION("Basic priority handling - raise high priority before low priority, then lower high priority") {
+        auto &intc = sh2::PrivateAccess::INTC(sh2);
+
+        // Set up interrupts such that WDT ITI has higher priority than DIVU OVFI
+        intc.SetVector(sh2::InterruptSource::DIVU_OVFI, 0x60);
+        intc.SetLevel(sh2::InterruptSource::DIVU_OVFI, 6);
+        intc.SetVector(sh2::InterruptSource::WDT_ITI, 0x70);
+        intc.SetLevel(sh2::InterruptSource::WDT_ITI, 7);
+
+        // We need to force the actual OVFI flag to be set here
+
+        sh2::PrivateAccess::SR(sh2).ILevel = 0;
+        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
+        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::DIVU_OVFI);
+        sh2::PrivateAccess::LowerInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
+
+        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2));
+        CHECK(intc.pending.source == sh2::InterruptSource::DIVU_OVFI);
+        CHECK(intc.pending.level == 6);
+    }
+
+    SECTION("Tiebreaker - low priority before high priority") {
+        auto &intc = sh2::PrivateAccess::INTC(sh2);
+
+        // Set up interrupts such that WDT ITI has the same priority as DIVU OVFI.
+        intc.SetVector(sh2::InterruptSource::DIVU_OVFI, 0x60);
+        intc.SetLevel(sh2::InterruptSource::DIVU_OVFI, 6);
+        intc.SetVector(sh2::InterruptSource::WDT_ITI, 0x61);
+        intc.SetLevel(sh2::InterruptSource::WDT_ITI, 6);
+
+        sh2::PrivateAccess::SR(sh2).ILevel = 0;
+        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
+        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::DIVU_OVFI);
+
+        // DIVU OVFI should be prioritized
+        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2));
+        CHECK(intc.pending.source == sh2::InterruptSource::DIVU_OVFI);
+        CHECK(intc.pending.level == 6);
+    }
+
+    SECTION("Tiebreaker - high priority before low priority") {
+        auto &intc = sh2::PrivateAccess::INTC(sh2);
+
+        // Set up interrupts such that WDT ITI has the same priority as DIVU OVFI.
+        intc.SetVector(sh2::InterruptSource::DIVU_OVFI, 0x60);
+        intc.SetLevel(sh2::InterruptSource::DIVU_OVFI, 6);
+        intc.SetVector(sh2::InterruptSource::WDT_ITI, 0x61);
+        intc.SetLevel(sh2::InterruptSource::WDT_ITI, 6);
+
+        sh2::PrivateAccess::SR(sh2).ILevel = 0;
+        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::DIVU_OVFI);
+        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
+
+        // DIVU OVFI should be prioritized
+        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2));
+        CHECK(intc.pending.source == sh2::InterruptSource::DIVU_OVFI);
+        CHECK(intc.pending.level == 6);
+    }
 }
 
+// Test that interrupts are masked by the SR.I3-0 setting.
+// Test that NMI is never masked.
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are masked correctly", "[sh2][intc][level-mask]") {
     ClearAll();
 
-    sh2::PrivateAccess::SR(sh2).ILevel = 0;
+    SECTION("Interrupt is not masked when priority is greater than SR.I3-0") {
+        auto &intc = sh2::PrivateAccess::INTC(sh2);
 
-    // TODO: test interrupts being masked by SR.ILevel
+        // Set up interrupt with higher priority than SR.I3-0
+        sh2::PrivateAccess::SR(sh2).ILevel = 4;
+        intc.SetVector(sh2::InterruptSource::WDT_ITI, 0x60);
+        intc.SetLevel(sh2::InterruptSource::WDT_ITI, 5);
+
+        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
+
+        // The interrupt is pending and about to be serviced
+        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2) == true);
+        CHECK(intc.pending.source == sh2::InterruptSource::WDT_ITI);
+        CHECK(intc.pending.level == 5);
+    }
+
+    SECTION("Interrupt is masked when priority is equal to SR.I3-0") {
+        auto &intc = sh2::PrivateAccess::INTC(sh2);
+
+        // Set up interrupt with same priority as SR.I3-0
+        sh2::PrivateAccess::SR(sh2).ILevel = 4;
+        intc.SetVector(sh2::InterruptSource::WDT_ITI, 0x60);
+        intc.SetLevel(sh2::InterruptSource::WDT_ITI, 4);
+
+        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
+
+        // The interrupt is left pending, but not serviced
+        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2) == false);
+        CHECK(intc.pending.source == sh2::InterruptSource::WDT_ITI);
+        CHECK(intc.pending.level == 4);
+    }
+
+    SECTION("Interrupt is masked when priority is less than SR.I3-0") {
+        auto &intc = sh2::PrivateAccess::INTC(sh2);
+
+        // Set up interrupt with lower priority than SR.I3-0
+        sh2::PrivateAccess::SR(sh2).ILevel = 4;
+        intc.SetVector(sh2::InterruptSource::WDT_ITI, 0x60);
+        intc.SetLevel(sh2::InterruptSource::WDT_ITI, 3);
+
+        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
+
+        // The interrupt is left pending, but not serviced
+        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2) == false);
+        CHECK(intc.pending.source == sh2::InterruptSource::WDT_ITI);
+        CHECK(intc.pending.level == 3);
+    }
 }
 
 } // namespace sh2_intr
