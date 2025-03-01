@@ -1343,7 +1343,7 @@ void SH2::Execute() {
     if (!m_delaySlot && CheckInterrupts()) [[unlikely]] {
         // Service interrupt
         const uint8 vecNum = INTC.GetVector(INTC.pending.source);
-        m_debugTracer.Interrupt<debug>(vecNum, INTC.pending.level);
+        m_debugTracer.Interrupt<debug>(vecNum, INTC.pending.level, PC);
         m_log.trace("Handling interrupt level {:02X}, vector number {:02X}", INTC.pending.level, vecNum);
         EnterException<debug>(vecNum);
         SR.ILevel = std::min<uint8>(INTC.pending.level, 0xF);

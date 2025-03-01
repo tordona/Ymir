@@ -161,8 +161,8 @@ struct TestSubject : debug::ISH2Tracer {
     // -------------------------------------------------------------------------
     // ISH2Tracer implementation
 
-    void Interrupt(uint8 vecNum, uint8 level) override {
-        interrupts.push_back({vecNum, level});
+    void Interrupt(uint8 vecNum, uint8 level, uint32 pc) override {
+        interrupts.push_back({vecNum, level, pc});
     }
 
     void Exception(uint8 vecNum, uint32 pc, uint32 sr) override {
@@ -175,6 +175,7 @@ struct TestSubject : debug::ISH2Tracer {
     struct InterruptInfo {
         uint8 vecNum;
         uint8 level;
+        uint32 pc;
     };
 
     struct ExceptionInfo {
@@ -252,10 +253,11 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     sh2.Advance<true>(1);
 
     // Check results:
-    // - one interrupt of the specified vector+level
+    // - one interrupt of the specified vector+level at the starting PC
     REQUIRE(interrupts.size() == 1);
     CHECK(interrupts[0].vecNum == intrVec);
     CHECK(interrupts[0].level == intrLevel);
+    CHECK(interrupts[0].pc == startPC);
     // - one exception of the specified vector at the starting PC with the starting SR
     REQUIRE(exceptions.size() == 1);
     CHECK(exceptions[0].vecNum == intrVec);
@@ -338,10 +340,11 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     sh2.Advance<true>(1);
 
     // Check results:
-    // - one interrupt of the specified vector+level
+    // - one interrupt of the specified vector+level at the starting PC
     REQUIRE(interrupts.size() == 1);
     CHECK(interrupts[0].vecNum == intrVec);
     CHECK(interrupts[0].level == intrLevel);
+    CHECK(interrupts[0].pc == startPC);
     // - one exception of the specified vector at the starting PC with the starting SR
     REQUIRE(exceptions.size() == 1);
     CHECK(exceptions[0].vecNum == intrVec);

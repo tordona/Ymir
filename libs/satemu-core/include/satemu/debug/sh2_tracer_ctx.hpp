@@ -15,10 +15,10 @@ struct SH2TracerContext {
     }
 
     template <bool debug>
-    FORCE_INLINE void Interrupt(uint8 vecNum, uint8 level) {
+    FORCE_INLINE void Interrupt(uint8 vecNum, uint8 level, uint32 pc) {
         if constexpr (debug) {
             if (m_tracer) {
-                return m_tracer->Interrupt(vecNum, level);
+                return m_tracer->Interrupt(vecNum, level, pc);
             }
         }
     }

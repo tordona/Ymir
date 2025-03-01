@@ -738,8 +738,8 @@ end_loop:
     SDL_DestroyRenderer(renderer);
 }
 
-void App::SH2Tracer::Interrupt(uint8 vecNum, uint8 level) {
-    interrupts[interruptsPos++] = {vecNum, level};
+void App::SH2Tracer::Interrupt(uint8 vecNum, uint8 level, uint32 pc) {
+    interrupts[interruptsPos++] = {vecNum, level, pc};
     if (interruptsPos >= interrupts.size()) {
         interruptsPos = 0;
     }

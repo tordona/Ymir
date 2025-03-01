@@ -12,7 +12,7 @@ struct ISH2Tracer {
     virtual ~ISH2Tracer() = default;
 
     // Invoked when an SH2 CPU handles an interrupt.
-    virtual void Interrupt(uint8 vecNum, uint8 level) = 0;
+    virtual void Interrupt(uint8 vecNum, uint8 level, uint32 pc) = 0;
 
     // Invoked when an SH2 CPU handles an exception.
     virtual void Exception(uint8 vecNum, uint32 pc, uint32 sr) = 0;
