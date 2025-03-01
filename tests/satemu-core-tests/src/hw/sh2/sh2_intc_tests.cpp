@@ -43,7 +43,6 @@ struct TestSubject : debug::ISH2Tracer {
         sh2.UseTracer(this);
 
         // TODO: set up predictable vector table
-        // TODO: record all accesses
         bus.MapMemory(0x000'0000, 0x7FF'FFFF,
                       {
                           .ctx = this,
@@ -69,33 +68,33 @@ struct TestSubject : debug::ISH2Tracer {
     // Memory accessors
 
     uint8 Read8(uint32 address) {
-        // TODO: record access
+        memoryAccesses.push_back({address, 0, false, sizeof(uint8)});
         // TODO: return mocked data if present
         return 0;
     }
 
     uint16 Read16(uint32 address) {
-        // TODO: record access
+        memoryAccesses.push_back({address, 0, false, sizeof(uint16)});
         // TODO: return mocked data if present
         return 0;
     }
 
     uint32 Read32(uint32 address) {
-        // TODO: record access
+        memoryAccesses.push_back({address, 0, false, sizeof(uint32)});
         // TODO: return mocked data if present
         return 0;
     }
 
     void Write8(uint32 address, uint8 value) {
-        // TODO: record access
+        memoryAccesses.push_back({address, value, true, sizeof(uint8)});
     }
 
     void Write16(uint32 address, uint16 value) {
-        // TODO: record access
+        memoryAccesses.push_back({address, value, true, sizeof(uint16)});
     }
 
     void Write32(uint32 address, uint32 value) {
-        // TODO: record access
+        memoryAccesses.push_back({address, value, true, sizeof(uint32)});
     }
 
     // -------------------------------------------------------------------------
@@ -113,7 +112,15 @@ struct TestSubject : debug::ISH2Tracer {
         uint8 level;
     };
 
+    struct MemoryAccessInfo {
+        uint32 address;
+        uint32 data;
+        bool write;
+        uint32 size;
+    };
+
     mutable std::vector<InterruptInfo> interrupts;
+    mutable std::vector<MemoryAccessInfo> memoryAccesses;
 };
 
 // -----------------------------------------------------------------------------
@@ -122,6 +129,7 @@ struct TestSubject : debug::ISH2Tracer {
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly", "[sh2][intc][single]") {
     sh2.Reset(true);
     interrupts.clear();
+    memoryAccesses.clear();
 
     sh2::PrivateAccess::SR(sh2).ILevel = 0;
 
@@ -145,6 +153,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
 
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are raised from sources", "[sh2][intc][sources]") {
     sh2.Reset(true);
+    interrupts.clear();
+    memoryAccesses.clear();
+
+    sh2::PrivateAccess::SR(sh2).ILevel = 0;
 
     // TODO: test interrupts being raised by the actual sources
 }
@@ -152,18 +164,30 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are raised from source
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts priorities are handled correctly",
                              "[sh2][intc][priorities]") {
     sh2.Reset(true);
+    interrupts.clear();
+    memoryAccesses.clear();
+
+    sh2::PrivateAccess::SR(sh2).ILevel = 0;
 
     // TODO: test interrupt priorities
 }
 
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt masking is handled correctly", "[sh2][intc][level-mask]") {
     sh2.Reset(true);
+    interrupts.clear();
+    memoryAccesses.clear();
+
+    sh2::PrivateAccess::SR(sh2).ILevel = 0;
 
     // TODO: test interrupts being masked by SR.ILevel
 }
 
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", "[sh2][intc][flow]") {
     sh2.Reset(true);
+    interrupts.clear();
+    memoryAccesses.clear();
+
+    sh2::PrivateAccess::SR(sh2).ILevel = 0;
 
     // TODO: test interrupt entry and exit (with RTE instruction)
 }
