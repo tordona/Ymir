@@ -1198,17 +1198,16 @@ FORCE_INLINE void SH2::AdvanceFRT(uint64 cycles) {
 // Interrupts
 
 template <InterruptSource source, InterruptSource... sources>
-void SH2::UpdateInterruptLevels() {
+FLATTEN FORCE_INLINE void SH2::UpdateInterruptLevels() {
     if (INTC.pending.source == source) {
         const uint8 newLevel = INTC.GetLevel(source);
         if (newLevel < INTC.pending.level) {
             // Interrupt may no longer have the highest priority; recalculate
             RecalcInterrupts();
         } else {
-            // Interrupt still has the highest priority; update
+            // Interrupt still has the highest priority; update level
             INTC.pending.level = newLevel;
         }
-        return;
     }
     if constexpr (sizeof...(sources) > 1) {
         UpdateInterruptLevels<sources...>();
