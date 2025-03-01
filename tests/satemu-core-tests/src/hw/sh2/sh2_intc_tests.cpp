@@ -10,8 +10,20 @@ namespace satemu::sh2 {
 // Private access to SH2 members
 
 struct PrivateAccess {
+    static std::array<uint32, 16> &R(SH2 &sh2) {
+        return sh2.R;
+    }
+
+    static uint32 &PC(SH2 &sh2) {
+        return sh2.PC;
+    }
+
     static RegSR &SR(SH2 &sh2) {
         return sh2.SR;
+    }
+
+    static uint32 &VBR(SH2 &sh2) {
+        return sh2.VBR;
     }
 
     static InterruptController &INTC(SH2 &sh2) {
@@ -66,10 +78,19 @@ struct TestSubject : debug::ISH2Tracer {
                       });
     }
 
-    void Clear() const {
+    void ClearCaptures() const {
         interrupts.clear();
         memoryAccesses.clear();
         intrAcked = false;
+    }
+
+    void ClearMemoryMocks() const {
+        // TODO
+    }
+
+    template <mem_primitive T>
+    void MockMemoryRead(uint32 address, T value) const {
+        // TODO
     }
 
     // -------------------------------------------------------------------------
@@ -142,19 +163,44 @@ struct TestSubject : debug::ISH2Tracer {
 // -----------------------------------------------------------------------------
 // Tests
 
+// Test full interrupt flow:
+// - Entry and exit (with RTE instruction)
+// - VBR handling
+// - External interrupt vector fetch and acknowledgement
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", "[sh2][intc][flow]") {
     sh2.Reset(true);
-    Clear();
+    ClearCaptures();
+    ClearMemoryMocks();
 
-    sh2::PrivateAccess::SR(sh2).ILevel = 0;
+    constexpr uint32 startPC = 0x1000;
+    constexpr uint32 startSP = 0x2000;
+    constexpr uint8 startILevel = 0;
+    constexpr uint32 intrPC1 = 0x10000;
+    constexpr uint32 intrPC2 = 0x20000;
+    constexpr uint32 startVBR1 = 0;
+    constexpr uint32 startVBR2 = 0x100000;
+    constexpr uint8 intrVec = 0x70;
+    constexpr uint8 intrLevel = 5;
 
-    // TODO: test interrupt entry and exit (with RTE instruction)
-    // - setup interrupt handler somewhere in memory with just the RTE instruction (0x002B)
-    // - setup vector table such that vector 0x70 points to the interrupt handler
-    // - place stack pointer (r15) somewhere else
+    constexpr uint16 instrRTE = 0x002B;
+
+    // Setup interrupt handlers with just the RTE instruction
+    MockMemoryRead<uint16>(intrPC1, instrRTE);
+    MockMemoryRead<uint16>(intrPC2, instrRTE);
+
+    // Setup interrupt vectors at two different locations
+    MockMemoryRead<uint32>(startVBR1 + intrVec * sizeof(uint32), intrPC1);
+    MockMemoryRead<uint32>(startVBR2 + intrVec * sizeof(uint32), intrPC2);
+
+    // TODO: need to somehow preserve memory writes to the stack
+
+    sh2::PrivateAccess::PC(sh2) = startPC;    // point PC somewhere
+    sh2::PrivateAccess::R(sh2)[15] = startSP; // point stack pointer elsewhere
+    sh2::PrivateAccess::VBR(sh2) = startVBR1; // point VBR to the first table
+    sh2::PrivateAccess::SR(sh2).ILevel = startILevel;
     sh2::PrivateAccess::INTC(sh2).ICR.VECMD = 1; // use external interrupt vector
-    sh2::PrivateAccess::INTC(sh2).SetVector(sh2::InterruptSource::IRL, 0x70);
-    sh2::PrivateAccess::INTC(sh2).SetLevel(sh2::InterruptSource::IRL, 5);
+    sh2::PrivateAccess::INTC(sh2).SetVector(sh2::InterruptSource::IRL, intrVec);
+    sh2::PrivateAccess::INTC(sh2).SetLevel(sh2::InterruptSource::IRL, intrLevel);
     sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::IRL);
     REQUIRE(sh2::PrivateAccess::CheckInterrupts(sh2));
 
@@ -162,26 +208,58 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     sh2.Advance<true>(1);
 
     REQUIRE(interrupts.size() == 1);
-    CHECK(interrupts[0].vecNum == 0x70);
-    CHECK(interrupts[0].level == 5);
-    CHECK(intrAcked);        // external interrupt should be acknowledged
-    CHECK(sh2.GetPC() == 0); // TODO: proper PC
-    CHECK(sh2.GetSR().ILevel == 5);
+    CHECK(interrupts[0].vecNum == intrVec);
+    CHECK(interrupts[0].level == intrLevel);
+    CHECK(intrAcked);
+    CHECK(sh2.GetPC() == intrPC1);
+    CHECK(sh2.GetGPRs()[15] == startSP - 8); // should write PC and SR
+    CHECK(sh2.GetSR().ILevel == intrLevel);
     // TODO: check memory accesses
 
-    Clear();
+    ClearCaptures();
 
     // This should be the RTE instruction
     sh2.Advance<true>(1);
 
     REQUIRE(interrupts.empty());
-    CHECK(sh2.GetPC() == 0); // TODO: should be back to the starting PC
+    CHECK(sh2.GetPC() == startPC);       // TODO: should be back to the starting PC
+    CHECK(sh2.GetGPRs()[15] == startSP); // should read back PC and SR
+    CHECK(sh2.GetSR().ILevel == startILevel);
+    // TODO: check memory accesses
+
+    // -----
+
+    sh2::PrivateAccess::VBR(sh2) = startVBR2; // point VBR to the second table
+    sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::IRL);
+    REQUIRE(sh2::PrivateAccess::CheckInterrupts(sh2));
+
+    // Jump to interrupt handler
+    sh2.Advance<true>(1);
+
+    REQUIRE(interrupts.size() == 1);
+    CHECK(interrupts[0].vecNum == intrVec);
+    CHECK(interrupts[0].level == intrLevel);
+    CHECK(intrAcked);
+    CHECK(sh2.GetPC() == intrPC2);
+    CHECK(sh2.GetGPRs()[15] == startSP - 8); // should write PC and SR
+    CHECK(sh2.GetSR().ILevel == intrLevel);
+    // TODO: check memory accesses
+
+    ClearCaptures();
+
+    // This should be the RTE instruction
+    sh2.Advance<true>(1);
+
+    REQUIRE(interrupts.empty());
+    CHECK(sh2.GetPC() == startPC);       // TODO: should be back to the starting PC
+    CHECK(sh2.GetGPRs()[15] == startSP); // should read back PC and SR
+    CHECK(sh2.GetSR().ILevel == startILevel);
     // TODO: check memory accesses
 }
 
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly", "[sh2][intc][single]") {
     sh2.Reset(true);
-    Clear();
+    ClearCaptures();
 
     sh2::PrivateAccess::SR(sh2).ILevel = 0;
 
@@ -224,7 +302,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
 
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are raised from sources", "[sh2][intc][sources]") {
     sh2.Reset(true);
-    Clear();
+    ClearCaptures();
 
     sh2::PrivateAccess::SR(sh2).ILevel = 0;
 
@@ -233,7 +311,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are raised from source
 
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are prioritized correctly", "[sh2][intc][priorities]") {
     sh2.Reset(true);
-    Clear();
+    ClearCaptures();
 
     sh2::PrivateAccess::SR(sh2).ILevel = 0;
 
@@ -242,7 +320,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are prioritized correc
 
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are masked correctly", "[sh2][intc][level-mask]") {
     sh2.Reset(true);
-    Clear();
+    ClearCaptures();
 
     sh2::PrivateAccess::SR(sh2).ILevel = 0;
 
