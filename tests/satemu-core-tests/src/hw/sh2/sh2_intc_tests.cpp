@@ -2,11 +2,12 @@
 
 #include <satemu/hw/sh2/sh2.hpp>
 
-#include <fmt/format.h>
-
 #include <vector>
 
 namespace satemu::sh2 {
+
+// -----------------------------------------------------------------------------
+// Private access to SH2 members
 
 struct PrivateAccess {
     static RegSR &SR(SH2 &sh2) {
@@ -28,13 +29,14 @@ struct PrivateAccess {
 
 } // namespace satemu::sh2
 
+// -----------------------------------------------------------------------------
+// Test subject class
+
 using namespace satemu;
 
 struct TestSubject : debug::ISH2Tracer {
     mutable sys::Bus bus{};
     mutable sh2::SH2 sh2{bus, true};
-
-    // TODO: cleanup Bus + SH2 initialization to not output those "unhandled 32-bit read" log messages
 
     TestSubject() {
         // Setup tracer to collect interrupts into a vector
@@ -42,20 +44,59 @@ struct TestSubject : debug::ISH2Tracer {
 
         // TODO: set up predictable vector table
         // TODO: record all accesses
-        bus.MapMemory(0x00000, 0x10000,
+        bus.MapMemory(0x000'0000, 0x7FF'FFFF,
                       {
-                          .read8 = [](uint32 address, void *) -> uint8 { return 0; },
-                          .read16 = [](uint32 address, void *) -> uint16 { return 0; },
-                          .read32 = [](uint32 address, void *) -> uint32 { return 0; },
+                          .ctx = this,
+                          .read8 = [](uint32 address, void *ctx) -> uint8 {
+                              return static_cast<TestSubject *>(ctx)->Read8(address);
+                          },
+                          .read16 = [](uint32 address, void *ctx) -> uint16 {
+                              return static_cast<TestSubject *>(ctx)->Read16(address);
+                          },
+                          .read32 = [](uint32 address, void *ctx) -> uint32 {
+                              return static_cast<TestSubject *>(ctx)->Read32(address);
+                          },
+                          .write8 = [](uint32 address, uint8 value,
+                                       void *ctx) { static_cast<TestSubject *>(ctx)->Write8(address, value); },
+                          .write16 = [](uint32 address, uint16 value,
+                                        void *ctx) { static_cast<TestSubject *>(ctx)->Write16(address, value); },
+                          .write32 = [](uint32 address, uint32 value,
+                                        void *ctx) { static_cast<TestSubject *>(ctx)->Write32(address, value); },
                       });
     }
 
-    struct InterruptInfo {
-        uint8 vecNum;
-        uint8 level;
-    };
+    // -------------------------------------------------------------------------
+    // Memory accessors
 
-    mutable std::vector<InterruptInfo> interrupts;
+    uint8 Read8(uint32 address) {
+        // TODO: record access
+        // TODO: return mocked data if present
+        return 0;
+    }
+
+    uint16 Read16(uint32 address) {
+        // TODO: record access
+        // TODO: return mocked data if present
+        return 0;
+    }
+
+    uint32 Read32(uint32 address) {
+        // TODO: record access
+        // TODO: return mocked data if present
+        return 0;
+    }
+
+    void Write8(uint32 address, uint8 value) {
+        // TODO: record access
+    }
+
+    void Write16(uint32 address, uint16 value) {
+        // TODO: record access
+    }
+
+    void Write32(uint32 address, uint32 value) {
+        // TODO: record access
+    }
 
     // -------------------------------------------------------------------------
     // ISH2Tracer implementation
@@ -63,7 +104,20 @@ struct TestSubject : debug::ISH2Tracer {
     void Interrupt(uint8 vecNum, uint8 level) override {
         interrupts.push_back({vecNum, level});
     }
+
+    // -------------------------------------------------------------------------
+    // Traces and mocked data
+
+    struct InterruptInfo {
+        uint8 vecNum;
+        uint8 level;
+    };
+
+    mutable std::vector<InterruptInfo> interrupts;
 };
+
+// -----------------------------------------------------------------------------
+// Tests
 
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly", "[sh2][intc][single]") {
     sh2.Reset(true);
@@ -106,4 +160,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt masking is handled corr
     sh2.Reset(true);
 
     // TODO: test interrupts being masked by SR.ILevel
+}
+
+TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", "[sh2][intc][flow]") {
+    sh2.Reset(true);
+
+    // TODO: test interrupt entry and exit (with RTE instruction)
 }
