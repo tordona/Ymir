@@ -21,6 +21,8 @@ struct TestData {
     Regs output64;
 };
 
+namespace sh2_divu {
+
 struct TestSubject {
     mutable satemu::sh2::DivisionUnit divu{};
 
@@ -67,3 +69,5 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 DIVU divisions are computed corre
     CHECK(Compute32(testData.input) == testData.output32);
     CHECK(Compute64(testData.input) == testData.output64);
 }
+
+} // namespace sh2_divu
