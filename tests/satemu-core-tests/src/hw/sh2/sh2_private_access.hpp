@@ -13,12 +13,20 @@ struct PrivateAccess {
         return sh2.PC;
     }
 
+    static uint32 &PR(SH2 &sh2) {
+        return sh2.PR;
+    }
+
     static RegMAC &MAC(SH2 &sh2) {
         return sh2.MAC;
     }
 
     static RegSR &SR(SH2 &sh2) {
         return sh2.SR;
+    }
+
+    static uint32 &GBR(SH2 &sh2) {
+        return sh2.GBR;
     }
 
     static uint32 &VBR(SH2 &sh2) {
