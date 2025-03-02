@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.29)
 project(satemu VERSION 0.1.0)
 
 include(cmake/AddVersionDefines.cmake)
+include(cmake/CMakeRC.cmake)
 include(cmake/CopyRuntimeDLLs.cmake)
 
 # CMake project structured adapted from Alex Reinking's SharedStaticStarter
