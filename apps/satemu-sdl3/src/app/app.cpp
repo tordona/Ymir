@@ -550,7 +550,7 @@ void App::RunEmulator() {
             if (paused) {
                 title = fmt::format("[{}] {} - paused", header.productNumber, header.gameTitle);
             } else {
-                title = fmt::format("[{}] {} - emulator: {} fps - VDP1: {} fps", header.productNumber, header.gameTitle,
+                title = fmt::format("[{}] {} - VDP2: {} fps - VDP1: {} fps", header.productNumber, header.gameTitle,
                                     screen.frames, screen.vdp1Frames);
             }
             SDL_SetWindowTitle(screen.window, title.c_str());
