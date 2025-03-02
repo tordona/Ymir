@@ -174,7 +174,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 MACW/MACL operations are computed
     // Run MAC.L
     sh2::PrivateAccess::MAC(sh2).u64 = testData.macIn;
     sh2::PrivateAccess::SR(sh2).S = testData.s;
-    sh2.Advance<false>(1);
+    sh2.Step<false>();
 
     // Check results:
     // - increment both R1 and R2 by 4
@@ -196,7 +196,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 MACW/MACL operations are computed
     // Run MAC.W
     sh2::PrivateAccess::MAC(sh2).u64 = testData.macIn;
     sh2::PrivateAccess::SR(sh2).S = testData.s;
-    sh2.Advance<false>(1);
+    sh2.Step<false>();
 
     // Check results:
     // - increment both R1 and R2 by 2

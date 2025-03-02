@@ -236,7 +236,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     REQUIRE(sh2::PrivateAccess::CheckInterrupts(sh2));
 
     // Jump to interrupt handler and execute first instruction (should be a NOP)
-    sh2.Advance<true>(1);
+    sh2.Step<true>();
 
     // Check results:
     // - one interrupt of the specified vector+level at the starting PC
@@ -267,7 +267,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     ClearCaptures();
 
     // This should be the RTE instruction
-    sh2.Advance<true>(1);
+    sh2.Step<true>();
 
     // Check results:
     // - no interrupts
@@ -292,7 +292,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     ClearCaptures();
 
     // This should be the NOP instruction in the delay slot
-    sh2.Advance<true>(1);
+    sh2.Step<true>();
 
     // Check results:
     // - no interrupts
@@ -319,7 +319,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     REQUIRE(sh2::PrivateAccess::CheckInterrupts(sh2));
 
     // Jump to interrupt handler and execute first instruction (should be a NOP)
-    sh2.Advance<true>(1);
+    sh2.Step<true>();
 
     // Check results:
     // - one interrupt of the specified vector+level at the starting PC
@@ -350,7 +350,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     ClearCaptures();
 
     // This should be the RTE instruction
-    sh2.Advance<true>(1);
+    sh2.Step<true>();
 
     // Check results:
     // - no interrupts
@@ -375,7 +375,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     ClearCaptures();
 
     // This should be the NOP instruction in the delay slot
-    sh2.Advance<true>(1);
+    sh2.Step<true>();
 
     // Check results:
     // - no interrupts
@@ -460,7 +460,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
         sh2::PrivateAccess::RaiseInterrupt(sh2, source);
         REQUIRE(sh2::PrivateAccess::CheckInterrupts(sh2));
 
-        sh2.Advance<true>(1);
+        sh2.Step<true>();
 
         // Check results:
         // - FRT OVI interrupt at starting PC
