@@ -411,6 +411,11 @@ private:
     // -------------------------------------------------------------------------
     // Instruction interpreters
 
+    // Interprets the next instruction.
+    // Returns the number of cycles executed.
+    template <bool debug>
+    uint64 InterpretNext();
+
     void NOP(); // nop
 
     void SLEEP(); // sleep

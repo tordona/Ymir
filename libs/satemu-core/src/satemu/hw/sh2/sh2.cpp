@@ -235,7 +235,7 @@ FLATTEN uint64 SH2::Advance(uint64 cycles) {
         while (cyclesExecuted <= deadline) {
             // TODO: choose between interpreter (cached or uncached) and JIT recompiler
             m_tracer.ExecTrace({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
-            cyclesExecuted += Step<debug>();
+            cyclesExecuted += InterpretNext<debug>();
 
             if constexpr (config::logSysExecDump) {
                 // Dump stack trace on SYS_EXECDMP
@@ -248,6 +248,8 @@ FLATTEN uint64 SH2::Advance(uint64 cycles) {
             }
         }
     }
+    AdvanceWDT(cyclesExecuted - cycles);
+    AdvanceFRT(cyclesExecuted - cycles);
     return cyclesExecuted;
 }
 
@@ -255,346 +257,11 @@ template uint64 SH2::Advance<false>(uint64 cycles);
 template uint64 SH2::Advance<true>(uint64 cycles);
 
 template <bool debug>
-uint64 SH2::Step() {
-    if (!m_delaySlot && CheckInterrupts()) [[unlikely]] {
-        // Service interrupt
-        const uint8 vecNum = INTC.GetVector(INTC.pending.source);
-        m_debugTracer.Interrupt<debug>(vecNum, INTC.pending.level, PC);
-        m_log.trace("Handling interrupt level {:02X}, vector number {:02X}", INTC.pending.level, vecNum);
-        EnterException<debug>(vecNum);
-        SR.ILevel = std::min<uint8>(INTC.pending.level, 0xF);
-
-        // Acknowledge interrupt
-        switch (INTC.pending.source) {
-        case InterruptSource::IRL: m_cbAcknowledgeExternalInterrupt(); break;
-        case InterruptSource::NMI:
-            INTC.NMI = false;
-            LowerInterrupt(InterruptSource::NMI);
-            break;
-        default: break;
-        }
-    }
-
-    // TODO: emulate fetch - decode - execute - memory access - writeback pipeline
-    // TODO: figure out a way to optimize delay slots for performance
-    // - perhaps decoding instructions beforehand
-
-    auto jumpToDelaySlot = [&] {
-        PC = m_delaySlotTarget;
-        m_delaySlot = false;
-    };
-
-    auto dump = [&] {
-        static bool dumped = false;
-        if (!dumped) {
-            dumped = true;
-            m_tracer.UserCapture({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
-            m_tracer.Dump();
-            m_tracer.Reset();
-        }
-    };
-
-    const uint16 instr = FetchInstruction(PC);
-    const OpcodeType opcode = g_decodeTable.opcodes[m_delaySlot][instr];
-    const DecodedArgs &args = g_decodeTable.args[instr];
-
-    switch (opcode) {
-    case OpcodeType::NOP: NOP(), PC += 2; return 1;
-
-    case OpcodeType::SLEEP: SLEEP(), PC += 2; return 3;
-
-    case OpcodeType::MOV_R: MOV(args), PC += 2; return 1;
-    case OpcodeType::MOVB_L: MOVBL(args), PC += 2; return 1;
-    case OpcodeType::MOVW_L: MOVWL(args), PC += 2; return 1;
-    case OpcodeType::MOVL_L: MOVLL(args), PC += 2; return 1;
-    case OpcodeType::MOVB_L0: MOVBL0(args), PC += 2; return 1;
-    case OpcodeType::MOVW_L0: MOVWL0(args), PC += 2; return 1;
-    case OpcodeType::MOVL_L0: MOVLL0(args), PC += 2; return 1;
-    case OpcodeType::MOVB_L4: MOVBL4(args), PC += 2; return 1;
-    case OpcodeType::MOVW_L4: MOVWL4(args), PC += 2; return 1;
-    case OpcodeType::MOVL_L4: MOVLL4(args), PC += 2; return 1;
-    case OpcodeType::MOVB_LG: MOVBLG(args), PC += 2; return 1;
-    case OpcodeType::MOVW_LG: MOVWLG(args), PC += 2; return 1;
-    case OpcodeType::MOVL_LG: MOVLLG(args), PC += 2; return 1;
-    case OpcodeType::MOVB_M: MOVBM(args), PC += 2; return 1;
-    case OpcodeType::MOVW_M: MOVWM(args), PC += 2; return 1;
-    case OpcodeType::MOVL_M: MOVLM(args), PC += 2; return 1;
-    case OpcodeType::MOVB_P: MOVBP(args), PC += 2; return 1;
-    case OpcodeType::MOVW_P: MOVWP(args), PC += 2; return 1;
-    case OpcodeType::MOVL_P: MOVLP(args), PC += 2; return 1;
-    case OpcodeType::MOVB_S: MOVBS(args), PC += 2; return 1;
-    case OpcodeType::MOVW_S: MOVWS(args), PC += 2; return 1;
-    case OpcodeType::MOVL_S: MOVLS(args), PC += 2; return 1;
-    case OpcodeType::MOVB_S0: MOVBS0(args), PC += 2; return 1;
-    case OpcodeType::MOVW_S0: MOVWS0(args), PC += 2; return 1;
-    case OpcodeType::MOVL_S0: MOVLS0(args), PC += 2; return 1;
-    case OpcodeType::MOVB_S4: MOVBS4(args), PC += 2; return 1;
-    case OpcodeType::MOVW_S4: MOVWS4(args), PC += 2; return 1;
-    case OpcodeType::MOVL_S4: MOVLS4(args), PC += 2; return 1;
-    case OpcodeType::MOVB_SG: MOVBSG(args), PC += 2; return 1;
-    case OpcodeType::MOVW_SG: MOVWSG(args), PC += 2; return 1;
-    case OpcodeType::MOVL_SG: MOVLSG(args), PC += 2; return 1;
-    case OpcodeType::MOV_I: MOVI(args), PC += 2; return 1;
-    case OpcodeType::MOVW_I: MOVWI(args), PC += 2; return 1;
-    case OpcodeType::MOVL_I: MOVLI(args), PC += 2; return 1;
-    case OpcodeType::MOVA: MOVA(args), PC += 2; return 1;
-    case OpcodeType::MOVT: MOVT(args), PC += 2; return 1;
-    case OpcodeType::CLRT: CLRT(), PC += 2; return 1;
-    case OpcodeType::SETT: SETT(), PC += 2; return 1;
-
-    case OpcodeType::EXTUB: EXTUB(args), PC += 2; return 1;
-    case OpcodeType::EXTUW: EXTUW(args), PC += 2; return 1;
-    case OpcodeType::EXTSB: EXTSB(args), PC += 2; return 1;
-    case OpcodeType::EXTSW: EXTSW(args), PC += 2; return 1;
-    case OpcodeType::SWAPB: SWAPB(args), PC += 2; return 1;
-    case OpcodeType::SWAPW: SWAPW(args), PC += 2; return 1;
-    case OpcodeType::XTRCT: XTRCT(args), PC += 2; return 1;
-
-    case OpcodeType::LDC_GBR_R: LDCGBR(args), PC += 2; return 1;
-    case OpcodeType::LDC_SR_R: LDCSR(args), PC += 2; return 1;
-    case OpcodeType::LDC_VBR_R: LDCVBR(args), PC += 2; return 1;
-    case OpcodeType::LDC_GBR_M: LDCMGBR(args), PC += 2; return 3;
-    case OpcodeType::LDC_SR_M: LDCMSR(args), PC += 2; return 3;
-    case OpcodeType::LDC_VBR_M: LDCMVBR(args), PC += 2; return 3;
-    case OpcodeType::LDS_MACH_R: LDSMACH(args), PC += 2; return 1;
-    case OpcodeType::LDS_MACL_R: LDSMACL(args), PC += 2; return 1;
-    case OpcodeType::LDS_PR_R: LDSPR(args), PC += 2; return 1;
-    case OpcodeType::LDS_MACH_M: LDSMMACH(args), PC += 2; return 1;
-    case OpcodeType::LDS_MACL_M: LDSMMACL(args), PC += 2; return 1;
-    case OpcodeType::LDS_PR_M: LDSMPR(args), PC += 2; return 1;
-    case OpcodeType::STC_GBR_R: STCGBR(args), PC += 2; return 1;
-    case OpcodeType::STC_SR_R: STCSR(args), PC += 2; return 1;
-    case OpcodeType::STC_VBR_R: STCVBR(args), PC += 2; return 1;
-    case OpcodeType::STC_GBR_M: STCMGBR(args), PC += 2; return 2;
-    case OpcodeType::STC_SR_M: STCMSR(args), PC += 2; return 2;
-    case OpcodeType::STC_VBR_M: STCMVBR(args), PC += 2; return 2;
-    case OpcodeType::STS_MACH_R: STSMACH(args), PC += 2; return 1;
-    case OpcodeType::STS_MACL_R: STSMACL(args), PC += 2; return 1;
-    case OpcodeType::STS_PR_R: STSPR(args), PC += 2; return 1;
-    case OpcodeType::STS_MACH_M: STSMMACH(args), PC += 2; return 1;
-    case OpcodeType::STS_MACL_M: STSMMACL(args), PC += 2; return 1;
-    case OpcodeType::STS_PR_M: STSMPR(args), PC += 2; return 1;
-
-    case OpcodeType::ADD: ADD(args), PC += 2; return 1;
-    case OpcodeType::ADD_I: ADDI(args), PC += 2; return 1;
-    case OpcodeType::ADDC: ADDC(args), PC += 2; return 1;
-    case OpcodeType::ADDV: ADDV(args), PC += 2; return 1;
-    case OpcodeType::AND_R: AND(args), PC += 2; return 1;
-    case OpcodeType::AND_I: ANDI(args), PC += 2; return 1;
-    case OpcodeType::AND_M: ANDM(args), PC += 2; return 3;
-    case OpcodeType::NEG: NEG(args), PC += 2; return 1;
-    case OpcodeType::NEGC: NEGC(args), PC += 2; return 1;
-    case OpcodeType::NOT: NOT(args), PC += 2; return 1;
-    case OpcodeType::OR_R: OR(args), PC += 2; return 1;
-    case OpcodeType::OR_I: ORI(args), PC += 2; return 1;
-    case OpcodeType::OR_M: ORM(args), PC += 2; return 3;
-    case OpcodeType::ROTCL: ROTCL(args), PC += 2; return 1;
-    case OpcodeType::ROTCR: ROTCR(args), PC += 2; return 1;
-    case OpcodeType::ROTL: ROTL(args), PC += 2; return 1;
-    case OpcodeType::ROTR: ROTR(args), PC += 2; return 1;
-    case OpcodeType::SHAL: SHAL(args), PC += 2; return 1;
-    case OpcodeType::SHAR: SHAR(args), PC += 2; return 1;
-    case OpcodeType::SHLL: SHLL(args), PC += 2; return 1;
-    case OpcodeType::SHLL2: SHLL2(args), PC += 2; return 1;
-    case OpcodeType::SHLL8: SHLL8(args), PC += 2; return 1;
-    case OpcodeType::SHLL16: SHLL16(args), PC += 2; return 1;
-    case OpcodeType::SHLR: SHLR(args), PC += 2; return 1;
-    case OpcodeType::SHLR2: SHLR2(args), PC += 2; return 1;
-    case OpcodeType::SHLR8: SHLR8(args), PC += 2; return 1;
-    case OpcodeType::SHLR16: SHLR16(args), PC += 2; return 1;
-    case OpcodeType::SUB: SUB(args), PC += 2; return 1;
-    case OpcodeType::SUBC: SUBC(args), PC += 2; return 1;
-    case OpcodeType::SUBV: SUBV(args), PC += 2; return 1;
-    case OpcodeType::XOR_R: XOR(args), PC += 2; return 1;
-    case OpcodeType::XOR_I: XORI(args), PC += 2; return 1;
-    case OpcodeType::XOR_M: XORM(args), PC += 2; return 3;
-
-    case OpcodeType::DT: DT(args), PC += 2; return 1;
-
-    case OpcodeType::CLRMAC: CLRMAC(), PC += 2; return 1;
-    case OpcodeType::MACW: MACW(args), PC += 2; return 2;
-    case OpcodeType::MACL: MACL(args), PC += 2; return 2;
-    case OpcodeType::MUL: MULL(args), PC += 2; return 2;
-    case OpcodeType::MULS: MULS(args), PC += 2; return 1;
-    case OpcodeType::MULU: MULU(args), PC += 2; return 1;
-    case OpcodeType::DMULS: DMULS(args), PC += 2; return 2;
-    case OpcodeType::DMULU: DMULU(args), PC += 2; return 2;
-
-    case OpcodeType::DIV0S: DIV0S(args), PC += 2; return 1;
-    case OpcodeType::DIV0U: DIV0U(), PC += 2; return 1;
-    case OpcodeType::DIV1: DIV1(args), PC += 2; return 1;
-
-    case OpcodeType::CMP_EQ_I: CMPIM(args), PC += 2; return 1;
-    case OpcodeType::CMP_EQ_R: CMPEQ(args), PC += 2; return 1;
-    case OpcodeType::CMP_GE: CMPGE(args), PC += 2; return 1;
-    case OpcodeType::CMP_GT: CMPGT(args), PC += 2; return 1;
-    case OpcodeType::CMP_HI: CMPHI(args), PC += 2; return 1;
-    case OpcodeType::CMP_HS: CMPHS(args), PC += 2; return 1;
-    case OpcodeType::CMP_PL: CMPPL(args), PC += 2; return 1;
-    case OpcodeType::CMP_PZ: CMPPZ(args), PC += 2; return 1;
-    case OpcodeType::CMP_STR: CMPSTR(args), PC += 2; return 1;
-    case OpcodeType::TAS: TAS(args), PC += 2; return 4;
-    case OpcodeType::TST_R: TST(args), PC += 2; return 1;
-    case OpcodeType::TST_I: TSTI(args), PC += 2; return 1;
-    case OpcodeType::TST_M: TSTM(args), PC += 2; return 3;
-
-    case OpcodeType::Delay_NOP: NOP(), jumpToDelaySlot(); return 1;
-
-    case OpcodeType::Delay_SLEEP: SLEEP(), jumpToDelaySlot(); return 3;
-
-    case OpcodeType::Delay_MOV_R: MOV(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_L: MOVBL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_L: MOVWL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_L: MOVLL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_L0: MOVBL0(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_L0: MOVWL0(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_L0: MOVLL0(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_L4: MOVBL4(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_L4: MOVWL4(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_L4: MOVLL4(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_LG: MOVBLG(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_LG: MOVWLG(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_LG: MOVLLG(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_M: MOVBM(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_M: MOVWM(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_M: MOVLM(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_P: MOVBP(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_P: MOVWP(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_P: MOVLP(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_S: MOVBS(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_S: MOVWS(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_S: MOVLS(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_S0: MOVBS0(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_S0: MOVWS0(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_S0: MOVLS0(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_S4: MOVBS4(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_S4: MOVWS4(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_S4: MOVLS4(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_SG: MOVBSG(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_SG: MOVWSG(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_SG: MOVLSG(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOV_I: MOVI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_I: MOVWI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_I: MOVLI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVA: MOVA(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVT: MOVT(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_CLRT: CLRT(), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_SETT: SETT(), jumpToDelaySlot(); return 1;
-
-    case OpcodeType::Delay_EXTUB: EXTUB(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_EXTUW: EXTUW(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_EXTSB: EXTSB(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_EXTSW: EXTSW(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_SWAPB: SWAPB(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_SWAPW: SWAPW(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_XTRCT: XTRCT(args), jumpToDelaySlot(); return 1;
-
-    case OpcodeType::Delay_LDC_GBR_R: LDCGBR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_LDC_SR_R: LDCSR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_LDC_VBR_R: LDCVBR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_LDC_GBR_M: LDCMGBR(args), jumpToDelaySlot(); return 3;
-    case OpcodeType::Delay_LDC_SR_M: LDCMSR(args), jumpToDelaySlot(); return 3;
-    case OpcodeType::Delay_LDC_VBR_M: LDCMVBR(args), jumpToDelaySlot(); return 3;
-    case OpcodeType::Delay_LDS_MACH_R: LDSMACH(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_LDS_MACL_R: LDSMACL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_LDS_PR_R: LDSPR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_LDS_MACH_M: LDSMMACH(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_LDS_MACL_M: LDSMMACL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_LDS_PR_M: LDSMPR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STC_GBR_R: STCGBR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STC_SR_R: STCSR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STC_VBR_R: STCVBR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STC_GBR_M: STCMGBR(args), jumpToDelaySlot(); return 2;
-    case OpcodeType::Delay_STC_SR_M: STCMSR(args), jumpToDelaySlot(); return 2;
-    case OpcodeType::Delay_STC_VBR_M: STCMVBR(args), jumpToDelaySlot(); return 2;
-    case OpcodeType::Delay_STS_MACH_R: STSMACH(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STS_MACL_R: STSMACL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STS_PR_R: STSPR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STS_MACH_M: STSMMACH(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STS_MACL_M: STSMMACL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STS_PR_M: STSMPR(args), jumpToDelaySlot(); return 1;
-
-    case OpcodeType::Delay_ADD: ADD(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_ADD_I: ADDI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_ADDC: ADDC(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_ADDV: ADDV(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_AND_R: AND(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_AND_I: ANDI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_AND_M: ANDM(args), jumpToDelaySlot(); return 3;
-    case OpcodeType::Delay_NEG: NEG(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_NEGC: NEGC(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_NOT: NOT(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_OR_R: OR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_OR_I: ORI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_OR_M: ORM(args), jumpToDelaySlot(); return 3;
-    case OpcodeType::Delay_ROTCL: ROTCL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_ROTCR: ROTCR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_ROTL: ROTL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_ROTR: ROTR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_SHAL: SHAL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_SHAR: SHAR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_SHLL: SHLL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_SHLL2: SHLL2(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_SHLL8: SHLL8(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_SHLL16: SHLL16(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_SHLR: SHLR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_SHLR2: SHLR2(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_SHLR8: SHLR8(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_SHLR16: SHLR16(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_SUB: SUB(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_SUBC: SUBC(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_SUBV: SUBV(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_XOR_R: XOR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_XOR_I: XORI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_XOR_M: XORM(args), jumpToDelaySlot(); return 3;
-
-    case OpcodeType::Delay_DT: DT(args), jumpToDelaySlot(); return 1;
-
-    case OpcodeType::Delay_CLRMAC: CLRMAC(), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MACW: MACW(args), jumpToDelaySlot(); return 2;
-    case OpcodeType::Delay_MACL: MACL(args), jumpToDelaySlot(); return 2;
-    case OpcodeType::Delay_MUL: MULL(args), jumpToDelaySlot(); return 2;
-    case OpcodeType::Delay_MULS: MULS(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MULU: MULU(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_DMULS: DMULS(args), jumpToDelaySlot(); return 2;
-    case OpcodeType::Delay_DMULU: DMULU(args), jumpToDelaySlot(); return 2;
-
-    case OpcodeType::Delay_DIV0S: DIV0S(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_DIV0U: DIV0U(), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_DIV1: DIV1(args), jumpToDelaySlot(); return 1;
-
-    case OpcodeType::Delay_CMP_EQ_I: CMPIM(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_CMP_EQ_R: CMPEQ(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_CMP_GE: CMPGE(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_CMP_GT: CMPGT(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_CMP_HI: CMPHI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_CMP_HS: CMPHS(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_CMP_PL: CMPPL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_CMP_PZ: CMPPZ(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_CMP_STR: CMPSTR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_TAS: TAS(args), jumpToDelaySlot(); return 4;
-    case OpcodeType::Delay_TST_R: TST(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_TST_I: TSTI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_TST_M: TSTM(args), jumpToDelaySlot(); return 3;
-
-    case OpcodeType::BF: return BF(args);
-    case OpcodeType::BFS: return BFS(args);
-    case OpcodeType::BT: return BT(args);
-    case OpcodeType::BTS: return BTS(args);
-    case OpcodeType::BRA: BRA(args); return 2;
-    case OpcodeType::BRAF: BRAF(args); return 2;
-    case OpcodeType::BSR: BSR(args); return 2;
-    case OpcodeType::BSRF: BSRF(args); return 2;
-    case OpcodeType::JMP: JMP(args); return 2;
-    case OpcodeType::JSR: JSR(args); return 2;
-    case OpcodeType::TRAPA: TRAPA(args); return 8;
-
-    case OpcodeType::RTE: RTE(); return 4;
-    case OpcodeType::RTS: RTS(); return 2;
-
-    case OpcodeType::Illegal: EnterException<debug>(xvGenIllegalInstr), dump(); return 8;
-    case OpcodeType::IllegalSlot: EnterException<debug>(xvSlotIllegalInstr), dump(); return 8;
-    }
+FLATTEN uint64 SH2::Step() {
+    uint64 cyclesExecuted = InterpretNext<debug>();
+    AdvanceWDT(cyclesExecuted);
+    AdvanceFRT(cyclesExecuted);
+    return cyclesExecuted;
 }
 
 template uint64 SH2::Step<false>();
@@ -1668,6 +1335,351 @@ FORCE_INLINE void SH2::EnterException(uint8 vectorNumber) {
 
 // -----------------------------------------------------------------------------
 // Instruction interpreters
+template <bool debug>
+FORCE_INLINE uint64 SH2::InterpretNext() {
+    if (!m_delaySlot && CheckInterrupts()) [[unlikely]] {
+        // Service interrupt
+        const uint8 vecNum = INTC.GetVector(INTC.pending.source);
+        m_debugTracer.Interrupt<debug>(vecNum, INTC.pending.level, PC);
+        m_log.trace("Handling interrupt level {:02X}, vector number {:02X}", INTC.pending.level, vecNum);
+        EnterException<debug>(vecNum);
+        SR.ILevel = std::min<uint8>(INTC.pending.level, 0xF);
+
+        // Acknowledge interrupt
+        switch (INTC.pending.source) {
+        case InterruptSource::IRL: m_cbAcknowledgeExternalInterrupt(); break;
+        case InterruptSource::NMI:
+            INTC.NMI = false;
+            LowerInterrupt(InterruptSource::NMI);
+            break;
+        default: break;
+        }
+    }
+
+    // TODO: emulate fetch - decode - execute - memory access - writeback pipeline
+    // TODO: figure out a way to optimize delay slots for performance
+    // - perhaps decoding instructions beforehand
+
+    auto jumpToDelaySlot = [&] {
+        PC = m_delaySlotTarget;
+        m_delaySlot = false;
+    };
+
+    auto dump = [&] {
+        static bool dumped = false;
+        if (!dumped) {
+            dumped = true;
+            m_tracer.UserCapture({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
+            m_tracer.Dump();
+            m_tracer.Reset();
+        }
+    };
+
+    const uint16 instr = FetchInstruction(PC);
+    const OpcodeType opcode = g_decodeTable.opcodes[m_delaySlot][instr];
+    const DecodedArgs &args = g_decodeTable.args[instr];
+
+    switch (opcode) {
+    case OpcodeType::NOP: NOP(), PC += 2; return 1;
+
+    case OpcodeType::SLEEP: SLEEP(), PC += 2; return 3;
+
+    case OpcodeType::MOV_R: MOV(args), PC += 2; return 1;
+    case OpcodeType::MOVB_L: MOVBL(args), PC += 2; return 1;
+    case OpcodeType::MOVW_L: MOVWL(args), PC += 2; return 1;
+    case OpcodeType::MOVL_L: MOVLL(args), PC += 2; return 1;
+    case OpcodeType::MOVB_L0: MOVBL0(args), PC += 2; return 1;
+    case OpcodeType::MOVW_L0: MOVWL0(args), PC += 2; return 1;
+    case OpcodeType::MOVL_L0: MOVLL0(args), PC += 2; return 1;
+    case OpcodeType::MOVB_L4: MOVBL4(args), PC += 2; return 1;
+    case OpcodeType::MOVW_L4: MOVWL4(args), PC += 2; return 1;
+    case OpcodeType::MOVL_L4: MOVLL4(args), PC += 2; return 1;
+    case OpcodeType::MOVB_LG: MOVBLG(args), PC += 2; return 1;
+    case OpcodeType::MOVW_LG: MOVWLG(args), PC += 2; return 1;
+    case OpcodeType::MOVL_LG: MOVLLG(args), PC += 2; return 1;
+    case OpcodeType::MOVB_M: MOVBM(args), PC += 2; return 1;
+    case OpcodeType::MOVW_M: MOVWM(args), PC += 2; return 1;
+    case OpcodeType::MOVL_M: MOVLM(args), PC += 2; return 1;
+    case OpcodeType::MOVB_P: MOVBP(args), PC += 2; return 1;
+    case OpcodeType::MOVW_P: MOVWP(args), PC += 2; return 1;
+    case OpcodeType::MOVL_P: MOVLP(args), PC += 2; return 1;
+    case OpcodeType::MOVB_S: MOVBS(args), PC += 2; return 1;
+    case OpcodeType::MOVW_S: MOVWS(args), PC += 2; return 1;
+    case OpcodeType::MOVL_S: MOVLS(args), PC += 2; return 1;
+    case OpcodeType::MOVB_S0: MOVBS0(args), PC += 2; return 1;
+    case OpcodeType::MOVW_S0: MOVWS0(args), PC += 2; return 1;
+    case OpcodeType::MOVL_S0: MOVLS0(args), PC += 2; return 1;
+    case OpcodeType::MOVB_S4: MOVBS4(args), PC += 2; return 1;
+    case OpcodeType::MOVW_S4: MOVWS4(args), PC += 2; return 1;
+    case OpcodeType::MOVL_S4: MOVLS4(args), PC += 2; return 1;
+    case OpcodeType::MOVB_SG: MOVBSG(args), PC += 2; return 1;
+    case OpcodeType::MOVW_SG: MOVWSG(args), PC += 2; return 1;
+    case OpcodeType::MOVL_SG: MOVLSG(args), PC += 2; return 1;
+    case OpcodeType::MOV_I: MOVI(args), PC += 2; return 1;
+    case OpcodeType::MOVW_I: MOVWI(args), PC += 2; return 1;
+    case OpcodeType::MOVL_I: MOVLI(args), PC += 2; return 1;
+    case OpcodeType::MOVA: MOVA(args), PC += 2; return 1;
+    case OpcodeType::MOVT: MOVT(args), PC += 2; return 1;
+    case OpcodeType::CLRT: CLRT(), PC += 2; return 1;
+    case OpcodeType::SETT: SETT(), PC += 2; return 1;
+
+    case OpcodeType::EXTUB: EXTUB(args), PC += 2; return 1;
+    case OpcodeType::EXTUW: EXTUW(args), PC += 2; return 1;
+    case OpcodeType::EXTSB: EXTSB(args), PC += 2; return 1;
+    case OpcodeType::EXTSW: EXTSW(args), PC += 2; return 1;
+    case OpcodeType::SWAPB: SWAPB(args), PC += 2; return 1;
+    case OpcodeType::SWAPW: SWAPW(args), PC += 2; return 1;
+    case OpcodeType::XTRCT: XTRCT(args), PC += 2; return 1;
+
+    case OpcodeType::LDC_GBR_R: LDCGBR(args), PC += 2; return 1;
+    case OpcodeType::LDC_SR_R: LDCSR(args), PC += 2; return 1;
+    case OpcodeType::LDC_VBR_R: LDCVBR(args), PC += 2; return 1;
+    case OpcodeType::LDC_GBR_M: LDCMGBR(args), PC += 2; return 3;
+    case OpcodeType::LDC_SR_M: LDCMSR(args), PC += 2; return 3;
+    case OpcodeType::LDC_VBR_M: LDCMVBR(args), PC += 2; return 3;
+    case OpcodeType::LDS_MACH_R: LDSMACH(args), PC += 2; return 1;
+    case OpcodeType::LDS_MACL_R: LDSMACL(args), PC += 2; return 1;
+    case OpcodeType::LDS_PR_R: LDSPR(args), PC += 2; return 1;
+    case OpcodeType::LDS_MACH_M: LDSMMACH(args), PC += 2; return 1;
+    case OpcodeType::LDS_MACL_M: LDSMMACL(args), PC += 2; return 1;
+    case OpcodeType::LDS_PR_M: LDSMPR(args), PC += 2; return 1;
+    case OpcodeType::STC_GBR_R: STCGBR(args), PC += 2; return 1;
+    case OpcodeType::STC_SR_R: STCSR(args), PC += 2; return 1;
+    case OpcodeType::STC_VBR_R: STCVBR(args), PC += 2; return 1;
+    case OpcodeType::STC_GBR_M: STCMGBR(args), PC += 2; return 2;
+    case OpcodeType::STC_SR_M: STCMSR(args), PC += 2; return 2;
+    case OpcodeType::STC_VBR_M: STCMVBR(args), PC += 2; return 2;
+    case OpcodeType::STS_MACH_R: STSMACH(args), PC += 2; return 1;
+    case OpcodeType::STS_MACL_R: STSMACL(args), PC += 2; return 1;
+    case OpcodeType::STS_PR_R: STSPR(args), PC += 2; return 1;
+    case OpcodeType::STS_MACH_M: STSMMACH(args), PC += 2; return 1;
+    case OpcodeType::STS_MACL_M: STSMMACL(args), PC += 2; return 1;
+    case OpcodeType::STS_PR_M: STSMPR(args), PC += 2; return 1;
+
+    case OpcodeType::ADD: ADD(args), PC += 2; return 1;
+    case OpcodeType::ADD_I: ADDI(args), PC += 2; return 1;
+    case OpcodeType::ADDC: ADDC(args), PC += 2; return 1;
+    case OpcodeType::ADDV: ADDV(args), PC += 2; return 1;
+    case OpcodeType::AND_R: AND(args), PC += 2; return 1;
+    case OpcodeType::AND_I: ANDI(args), PC += 2; return 1;
+    case OpcodeType::AND_M: ANDM(args), PC += 2; return 3;
+    case OpcodeType::NEG: NEG(args), PC += 2; return 1;
+    case OpcodeType::NEGC: NEGC(args), PC += 2; return 1;
+    case OpcodeType::NOT: NOT(args), PC += 2; return 1;
+    case OpcodeType::OR_R: OR(args), PC += 2; return 1;
+    case OpcodeType::OR_I: ORI(args), PC += 2; return 1;
+    case OpcodeType::OR_M: ORM(args), PC += 2; return 3;
+    case OpcodeType::ROTCL: ROTCL(args), PC += 2; return 1;
+    case OpcodeType::ROTCR: ROTCR(args), PC += 2; return 1;
+    case OpcodeType::ROTL: ROTL(args), PC += 2; return 1;
+    case OpcodeType::ROTR: ROTR(args), PC += 2; return 1;
+    case OpcodeType::SHAL: SHAL(args), PC += 2; return 1;
+    case OpcodeType::SHAR: SHAR(args), PC += 2; return 1;
+    case OpcodeType::SHLL: SHLL(args), PC += 2; return 1;
+    case OpcodeType::SHLL2: SHLL2(args), PC += 2; return 1;
+    case OpcodeType::SHLL8: SHLL8(args), PC += 2; return 1;
+    case OpcodeType::SHLL16: SHLL16(args), PC += 2; return 1;
+    case OpcodeType::SHLR: SHLR(args), PC += 2; return 1;
+    case OpcodeType::SHLR2: SHLR2(args), PC += 2; return 1;
+    case OpcodeType::SHLR8: SHLR8(args), PC += 2; return 1;
+    case OpcodeType::SHLR16: SHLR16(args), PC += 2; return 1;
+    case OpcodeType::SUB: SUB(args), PC += 2; return 1;
+    case OpcodeType::SUBC: SUBC(args), PC += 2; return 1;
+    case OpcodeType::SUBV: SUBV(args), PC += 2; return 1;
+    case OpcodeType::XOR_R: XOR(args), PC += 2; return 1;
+    case OpcodeType::XOR_I: XORI(args), PC += 2; return 1;
+    case OpcodeType::XOR_M: XORM(args), PC += 2; return 3;
+
+    case OpcodeType::DT: DT(args), PC += 2; return 1;
+
+    case OpcodeType::CLRMAC: CLRMAC(), PC += 2; return 1;
+    case OpcodeType::MACW: MACW(args), PC += 2; return 2;
+    case OpcodeType::MACL: MACL(args), PC += 2; return 2;
+    case OpcodeType::MUL: MULL(args), PC += 2; return 2;
+    case OpcodeType::MULS: MULS(args), PC += 2; return 1;
+    case OpcodeType::MULU: MULU(args), PC += 2; return 1;
+    case OpcodeType::DMULS: DMULS(args), PC += 2; return 2;
+    case OpcodeType::DMULU: DMULU(args), PC += 2; return 2;
+
+    case OpcodeType::DIV0S: DIV0S(args), PC += 2; return 1;
+    case OpcodeType::DIV0U: DIV0U(), PC += 2; return 1;
+    case OpcodeType::DIV1: DIV1(args), PC += 2; return 1;
+
+    case OpcodeType::CMP_EQ_I: CMPIM(args), PC += 2; return 1;
+    case OpcodeType::CMP_EQ_R: CMPEQ(args), PC += 2; return 1;
+    case OpcodeType::CMP_GE: CMPGE(args), PC += 2; return 1;
+    case OpcodeType::CMP_GT: CMPGT(args), PC += 2; return 1;
+    case OpcodeType::CMP_HI: CMPHI(args), PC += 2; return 1;
+    case OpcodeType::CMP_HS: CMPHS(args), PC += 2; return 1;
+    case OpcodeType::CMP_PL: CMPPL(args), PC += 2; return 1;
+    case OpcodeType::CMP_PZ: CMPPZ(args), PC += 2; return 1;
+    case OpcodeType::CMP_STR: CMPSTR(args), PC += 2; return 1;
+    case OpcodeType::TAS: TAS(args), PC += 2; return 4;
+    case OpcodeType::TST_R: TST(args), PC += 2; return 1;
+    case OpcodeType::TST_I: TSTI(args), PC += 2; return 1;
+    case OpcodeType::TST_M: TSTM(args), PC += 2; return 3;
+
+    case OpcodeType::Delay_NOP: NOP(), jumpToDelaySlot(); return 1;
+
+    case OpcodeType::Delay_SLEEP: SLEEP(), jumpToDelaySlot(); return 3;
+
+    case OpcodeType::Delay_MOV_R: MOV(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_L: MOVBL(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_L: MOVWL(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_L: MOVLL(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_L0: MOVBL0(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_L0: MOVWL0(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_L0: MOVLL0(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_L4: MOVBL4(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_L4: MOVWL4(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_L4: MOVLL4(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_LG: MOVBLG(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_LG: MOVWLG(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_LG: MOVLLG(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_M: MOVBM(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_M: MOVWM(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_M: MOVLM(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_P: MOVBP(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_P: MOVWP(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_P: MOVLP(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_S: MOVBS(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_S: MOVWS(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_S: MOVLS(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_S0: MOVBS0(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_S0: MOVWS0(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_S0: MOVLS0(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_S4: MOVBS4(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_S4: MOVWS4(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_S4: MOVLS4(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_SG: MOVBSG(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_SG: MOVWSG(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_SG: MOVLSG(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOV_I: MOVI(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_I: MOVWI(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_I: MOVLI(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVA: MOVA(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVT: MOVT(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_CLRT: CLRT(), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_SETT: SETT(), jumpToDelaySlot(); return 1;
+
+    case OpcodeType::Delay_EXTUB: EXTUB(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_EXTUW: EXTUW(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_EXTSB: EXTSB(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_EXTSW: EXTSW(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_SWAPB: SWAPB(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_SWAPW: SWAPW(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_XTRCT: XTRCT(args), jumpToDelaySlot(); return 1;
+
+    case OpcodeType::Delay_LDC_GBR_R: LDCGBR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_LDC_SR_R: LDCSR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_LDC_VBR_R: LDCVBR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_LDC_GBR_M: LDCMGBR(args), jumpToDelaySlot(); return 3;
+    case OpcodeType::Delay_LDC_SR_M: LDCMSR(args), jumpToDelaySlot(); return 3;
+    case OpcodeType::Delay_LDC_VBR_M: LDCMVBR(args), jumpToDelaySlot(); return 3;
+    case OpcodeType::Delay_LDS_MACH_R: LDSMACH(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_LDS_MACL_R: LDSMACL(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_LDS_PR_R: LDSPR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_LDS_MACH_M: LDSMMACH(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_LDS_MACL_M: LDSMMACL(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_LDS_PR_M: LDSMPR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_STC_GBR_R: STCGBR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_STC_SR_R: STCSR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_STC_VBR_R: STCVBR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_STC_GBR_M: STCMGBR(args), jumpToDelaySlot(); return 2;
+    case OpcodeType::Delay_STC_SR_M: STCMSR(args), jumpToDelaySlot(); return 2;
+    case OpcodeType::Delay_STC_VBR_M: STCMVBR(args), jumpToDelaySlot(); return 2;
+    case OpcodeType::Delay_STS_MACH_R: STSMACH(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_STS_MACL_R: STSMACL(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_STS_PR_R: STSPR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_STS_MACH_M: STSMMACH(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_STS_MACL_M: STSMMACL(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_STS_PR_M: STSMPR(args), jumpToDelaySlot(); return 1;
+
+    case OpcodeType::Delay_ADD: ADD(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_ADD_I: ADDI(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_ADDC: ADDC(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_ADDV: ADDV(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_AND_R: AND(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_AND_I: ANDI(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_AND_M: ANDM(args), jumpToDelaySlot(); return 3;
+    case OpcodeType::Delay_NEG: NEG(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_NEGC: NEGC(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_NOT: NOT(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_OR_R: OR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_OR_I: ORI(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_OR_M: ORM(args), jumpToDelaySlot(); return 3;
+    case OpcodeType::Delay_ROTCL: ROTCL(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_ROTCR: ROTCR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_ROTL: ROTL(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_ROTR: ROTR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_SHAL: SHAL(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_SHAR: SHAR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_SHLL: SHLL(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_SHLL2: SHLL2(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_SHLL8: SHLL8(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_SHLL16: SHLL16(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_SHLR: SHLR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_SHLR2: SHLR2(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_SHLR8: SHLR8(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_SHLR16: SHLR16(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_SUB: SUB(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_SUBC: SUBC(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_SUBV: SUBV(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_XOR_R: XOR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_XOR_I: XORI(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_XOR_M: XORM(args), jumpToDelaySlot(); return 3;
+
+    case OpcodeType::Delay_DT: DT(args), jumpToDelaySlot(); return 1;
+
+    case OpcodeType::Delay_CLRMAC: CLRMAC(), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MACW: MACW(args), jumpToDelaySlot(); return 2;
+    case OpcodeType::Delay_MACL: MACL(args), jumpToDelaySlot(); return 2;
+    case OpcodeType::Delay_MUL: MULL(args), jumpToDelaySlot(); return 2;
+    case OpcodeType::Delay_MULS: MULS(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MULU: MULU(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_DMULS: DMULS(args), jumpToDelaySlot(); return 2;
+    case OpcodeType::Delay_DMULU: DMULU(args), jumpToDelaySlot(); return 2;
+
+    case OpcodeType::Delay_DIV0S: DIV0S(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_DIV0U: DIV0U(), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_DIV1: DIV1(args), jumpToDelaySlot(); return 1;
+
+    case OpcodeType::Delay_CMP_EQ_I: CMPIM(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_CMP_EQ_R: CMPEQ(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_CMP_GE: CMPGE(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_CMP_GT: CMPGT(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_CMP_HI: CMPHI(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_CMP_HS: CMPHS(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_CMP_PL: CMPPL(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_CMP_PZ: CMPPZ(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_CMP_STR: CMPSTR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_TAS: TAS(args), jumpToDelaySlot(); return 4;
+    case OpcodeType::Delay_TST_R: TST(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_TST_I: TSTI(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_TST_M: TSTM(args), jumpToDelaySlot(); return 3;
+
+    case OpcodeType::BF: return BF(args);
+    case OpcodeType::BFS: return BFS(args);
+    case OpcodeType::BT: return BT(args);
+    case OpcodeType::BTS: return BTS(args);
+    case OpcodeType::BRA: BRA(args); return 2;
+    case OpcodeType::BRAF: BRAF(args); return 2;
+    case OpcodeType::BSR: BSR(args); return 2;
+    case OpcodeType::BSRF: BSRF(args); return 2;
+    case OpcodeType::JMP: JMP(args); return 2;
+    case OpcodeType::JSR: JSR(args); return 2;
+    case OpcodeType::TRAPA: TRAPA(args); return 8;
+
+    case OpcodeType::RTE: RTE(); return 4;
+    case OpcodeType::RTS: RTS(); return 2;
+
+    case OpcodeType::Illegal: EnterException<debug>(xvGenIllegalInstr), dump(); return 8;
+    case OpcodeType::IllegalSlot: EnterException<debug>(xvSlotIllegalInstr), dump(); return 8;
+    }
+}
+
+template uint64 SH2::InterpretNext<false>();
+template uint64 SH2::InterpretNext<true>();
 
 FORCE_INLINE void SH2::NOP() {
     // dbg_println("nop");
