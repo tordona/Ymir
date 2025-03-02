@@ -246,7 +246,8 @@ void VDP::MapMemory(sys::Bus &bus) {
 template <bool debug>
 void VDP::Advance(uint64 cycles) {
     // TODO: proper cycle counting
-    static constexpr uint64 kCyclesPerCommand = 6;
+    // HACK: slow down VDP1 commands to avoid FMV freezes on Virtua Racing
+    static constexpr uint64 kCyclesPerCommand = 12;
 
     m_VDP1RenderContext.cycleCount += cycles;
     const uint64 steps = m_VDP1RenderContext.cycleCount / kCyclesPerCommand;
