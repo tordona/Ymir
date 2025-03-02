@@ -707,7 +707,7 @@ FORCE_INLINE uint32 SCU::DSPReadSource(uint8 index) {
         return m_dspState.dataRAM[ctIndex][ctAddr];
     }
     case 0b1001: return m_dspState.ALU.L;
-    case 0b1010: return m_dspState.ALU.H;
+    case 0b1010: return m_dspState.ALU.u64 >> 16ull;
     default: return ~0;
     }
 }
