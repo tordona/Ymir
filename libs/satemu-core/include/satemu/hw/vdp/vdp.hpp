@@ -55,6 +55,10 @@ public:
         m_cbFrameComplete = cbFrameComplete;
     }
 
+    void SetVDP1Callbacks(CBVDP1FrameComplete cbFrameComplete) {
+        m_cbVDP1FrameComplete = cbFrameComplete;
+    }
+
     void SetInterruptCallbacks(CBTriggerInterrupt cbHBlankIN, CBTriggerInterrupt cbVBlankIN,
                                CBTriggerInterrupt cbVBlankOUT, CBTriggerInterrupt cbSpriteDrawEnd,
                                CBTriggerEvent cbOptimizedINTBACKRead) {
@@ -150,7 +154,10 @@ private:
     // render the screen. The frame will contain <width> x <height> pixels in XBGR8888 little-endian format.
     CBRequestFramebuffer m_cbRequestFramebuffer;
 
-    // Invoked whne the renderer finishes drawing a frame.
+    // Invoked when the VDP1 finishes drawing a frame.
+    CBVDP1FrameComplete m_cbVDP1FrameComplete;
+
+    // Invoked when the renderer finishes drawing a frame.
     CBFrameComplete m_cbFrameComplete;
 
     // -------------------------------------------------------------------------

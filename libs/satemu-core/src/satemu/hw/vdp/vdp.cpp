@@ -1064,6 +1064,7 @@ void VDP::VDP1EndFrame() {
     m_VDP1RenderContext.rendering = false;
     m_VDP1.currFrameEnded = true;
     m_cbTriggerSpriteDrawEnd();
+    m_cbVDP1FrameComplete();
 }
 
 void VDP::VDP1ProcessCommand() {

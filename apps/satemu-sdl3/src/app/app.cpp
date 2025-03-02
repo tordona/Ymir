@@ -66,6 +66,7 @@ void App::RunEmulator() {
         float scaleY = scale;
         SDL_Window *window = nullptr;
         uint64 frames = 0;
+        uint64 vdp1Frames = 0;
     } screen;
 
     // ---------------------------------
@@ -171,6 +172,11 @@ void App::RunEmulator() {
              }
              ++screen.frames;
          }});
+
+    m_saturn.VDP.SetVDP1Callbacks({&screen, [](void *ctx) {
+                                       auto &screen = *static_cast<ScreenParams *>(ctx);
+                                       ++screen.vdp1Frames;
+                                   }});
 
     // ---------------------------------
     // Create audio buffer and stream and set up callbacks
@@ -544,10 +550,12 @@ void App::RunEmulator() {
             if (paused) {
                 title = fmt::format("[{}] {} - paused", header.productNumber, header.gameTitle);
             } else {
-                title = fmt::format("[{}] {} - {} fps", header.productNumber, header.gameTitle, screen.frames);
+                title = fmt::format("[{}] {} - emulator: {} fps - VDP1: {} fps", header.productNumber, header.gameTitle,
+                                    screen.frames, screen.vdp1Frames);
             }
             SDL_SetWindowTitle(screen.window, title.c_str());
             screen.frames = 0;
+            screen.vdp1Frames = 0;
             t = t2;
         }
 
