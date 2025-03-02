@@ -405,7 +405,7 @@ private:
     // Interpreter
 
     template <bool debug>
-    void Execute();
+    uint64 Execute();
 
     // -------------------------------------------------------------------------
     // Instruction interpreters
@@ -549,10 +549,10 @@ private:
     void TSTI(const DecodedArgs &args);   // tst     imm, R0
     void TSTM(const DecodedArgs &args);   // tst.b   imm, @(R0,GBR)
 
-    void BF(const DecodedArgs &args);    // bf    disp
-    void BFS(const DecodedArgs &args);   // bf/s  disp
-    void BT(const DecodedArgs &args);    // bt    disp
-    void BTS(const DecodedArgs &args);   // bt/s  disp
+    uint64 BF(const DecodedArgs &args);  // bf    disp
+    uint64 BFS(const DecodedArgs &args); // bf/s  disp
+    uint64 BT(const DecodedArgs &args);  // bt    disp
+    uint64 BTS(const DecodedArgs &args); // bt/s  disp
     void BRA(const DecodedArgs &args);   // bra   disp
     void BRAF(const DecodedArgs &args);  // braf  Rm
     void BSR(const DecodedArgs &args);   // bsr   disp
