@@ -147,7 +147,8 @@ std::ostream &operator<<(std::ostream &os, TestSubject::MemoryAccessInfo const &
     return os;
 }
 
-TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 MACW/MACL operations are computed correctly", "[sh2][macwl]") {
+TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 MACW/MACL operations are computed correctly",
+                             "[sh2][instructions][macwl]") {
     ClearAll();
 
     const auto &testData = GENERATE(values<TestData>(testdata));
