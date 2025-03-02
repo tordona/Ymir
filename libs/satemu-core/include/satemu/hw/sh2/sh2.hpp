@@ -113,8 +113,15 @@ public:
 
     void MapMemory(sys::Bus &bus);
 
+    // Advances the SH2 for at least the specified number of cycles.
+    // Returns the total number of cycles executed.
     template <bool debug>
-    void Advance(uint64 cycles);
+    uint64 Advance(uint64 cycles);
+
+    // Executes a single instruction.
+    // Returns the number of cycles executed.
+    template <bool debug>
+    uint64 Step();
 
     std::array<uint32, 16> &GetGPRs() {
         return R;
@@ -400,12 +407,6 @@ private:
     }();
 
     void WriteCCR(uint8 value);
-
-    // -------------------------------------------------------------------------
-    // Interpreter
-
-    template <bool debug>
-    uint64 Execute();
 
     // -------------------------------------------------------------------------
     // Instruction interpreters
