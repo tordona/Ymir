@@ -23,8 +23,8 @@ namespace satemu::scu {
 // SCU memory map
 //
 // TODO? Address range            Mirror size       Description
-// TODO  0x200'0000..0x3FF'FFFF   -                 A-Bus CS0
-// TODO  0x400'0000..0x4FF'FFFF   -                 A-Bus CS1
+//       0x200'0000..0x3FF'FFFF   -                 A-Bus CS0
+//       0x400'0000..0x4FF'FFFF   -                 A-Bus CS1
 // TODO  0x500'0000..0x57F'FFFF   -                 A-Bus Dummy
 //       0x580'0000..0x58F'FFFF   -                 A-Bus CS2 (includes CD-ROM registers)
 // TODO  0x590'0000..0x59F'FFFF   -                 Lockup when read

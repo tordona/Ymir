@@ -241,7 +241,7 @@ private:
             // DSP MADRS
             return read16(m_dsp.addrs[(address >> 1u) & 0x1F]);
         } else if (AddressInRange<0x7C0, 0x7FF>(address)) {
-            // TODO: what's supposed to be in here? MADRS mirror? nothing?
+            // TODO: what's supposed to be in here? nothing?
             return 0;
         } else if (AddressInRange<0x800, 0xBFF>(address)) {
             // DSP MPRO
@@ -396,7 +396,7 @@ private:
             // DSP MADRS
             return write16(m_dsp.addrs[(address >> 1u) & 0x1F], value16);
         } else if (AddressInRange<0x7C0, 0x7FF>(address)) {
-            // TODO: what's supposed to be in here? MADRS mirror? nothing?
+            // TODO: what's supposed to be in here? nothing?
             return;
         } else if (AddressInRange<0x800, 0xBFF>(address)) {
             // DSP MPRO

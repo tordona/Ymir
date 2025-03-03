@@ -18,7 +18,6 @@ VDP::VDP(core::Scheduler &scheduler)
 
     m_framebuffer = nullptr;
 
-    // TODO: set PAL flag
     Reset(true);
 }
 
@@ -2711,7 +2710,6 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState 
             }
         } else if (bgParams.mosaicEnable) {
             // Apply horizontal mosaic
-            // TODO: should mosaic have priority over vertical cell scroll?
             const uint8 currMosaicCounterX = mosaicCounterX;
             mosaicCounterX++;
             if (mosaicCounterX >= m_VDP2.mosaicH) {
@@ -2775,7 +2773,6 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState 
             }
         } else if (bgParams.mosaicEnable) {
             // Apply horizontal mosaic
-            // TODO: should mosaic have priority over vertical cell scroll?
             const uint8 currMosaicCounterX = mosaicCounterX;
             mosaicCounterX++;
             if (mosaicCounterX >= m_VDP2.mosaicH) {

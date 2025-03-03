@@ -37,7 +37,6 @@ Saturn::Saturn()
         util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerExternalInterrupt0>(&SCU));
     CDBlock.SetCDDASectorCallback(util::MakeClassMemberRequiredCallback<&scsp::SCSP::ReceiveCDDA>(&SCSP));
 
-    // TODO: register clock speed change callbacks
     m_system.AddClockSpeedChangeCallback(util::MakeClassMemberRequiredCallback<&scsp::SCSP::UpdateClockRatios>(&SCSP));
     m_system.AddClockSpeedChangeCallback(util::MakeClassMemberRequiredCallback<&smpc::SMPC::UpdateClockRatios>(&SMPC));
     m_system.AddClockSpeedChangeCallback(

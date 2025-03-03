@@ -808,8 +808,6 @@ struct WindowParams {
     uint32 lineWindowTableAddress;
 };
 
-// TODO: consider splitting unions into individual fields for performance
-
 // 180000   TVMD    TV Screen Mode
 //
 //   bits   r/w  code          description

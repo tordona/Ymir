@@ -274,7 +274,7 @@ private:
     //       bit 0 contains interlaced field (0=odd, 1=even)
     //     All other modes: bits 8-0 shifted left by 1; VCT0 is invalid
 
-    // TODO: store latched HCounter
+    // TODO: store latched H/V counters
     uint16 m_VCounter;
 
     // Display resolution (derived from TVMODE)

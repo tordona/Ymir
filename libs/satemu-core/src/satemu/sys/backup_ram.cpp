@@ -9,7 +9,6 @@ static constexpr std::string_view kHeader = "BackUpRam Format";
 void BackupMemory::LoadFrom(const std::filesystem::path &path, size_t size, std::error_code &error) {
     assert(size != 0 && (size & (size - 1)) == 0); // size must be a power of two
 
-    // HACK: should be in its own class, shared with external backup RAM cartridges
     if (!std::filesystem::is_regular_file(path) || std::filesystem::file_size(path) < size) {
         std::ofstream out{path, std::ios::binary};
 

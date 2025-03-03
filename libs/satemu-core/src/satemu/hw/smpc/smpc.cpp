@@ -522,7 +522,6 @@ void SMPC::WriteINTBACKStatusReport() {
     OREG[7] = 0x20; // Second (BCD)*/
 
     // TODO: read cartridge code from cartridge
-    // TODO: allow setting or auto-detecting area code
     OREG[8] = 0x00; // Cartridge code (CTG1-0) == 0b00
     OREG[9] = m_areaCode;
 

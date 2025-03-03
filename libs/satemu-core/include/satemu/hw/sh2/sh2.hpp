@@ -284,6 +284,7 @@ private:
     void OnChipRegWriteLong(uint32 address, uint32 value);
 
     // --- SCI module ---
+
     // TODO
 
     // --- BSC module ---

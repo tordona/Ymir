@@ -1215,8 +1215,6 @@ FORCE_INLINE T SCU::ReadReg(uint32 address) {
 }
 
 FORCE_INLINE void SCU::WriteRegByte(uint32 address, uint8 value) {
-    // TODO: implement registers as needed
-
     switch (address) {
     case 0xA0 ... 0xA1: break;                                     // Interrupt Mask (bits 16-31)
     case 0xA2: m_intrMask.u32 = (value << 8u) & 0x0000BF00; break; // Interrupt Mask (bits 8-15)
@@ -1251,8 +1249,6 @@ FORCE_INLINE void SCU::WriteRegByte(uint32 address, uint8 value) {
 }
 
 FORCE_INLINE void SCU::WriteRegWord(uint32 address, uint16 value) {
-    // TODO: implement registers as needed
-
     regsLog.debug("unhandled 16-bit SCU register write to {:02X} = {:X}", address, value);
 }
 
