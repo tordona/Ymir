@@ -71,7 +71,7 @@ enum class OpcodeType : uint16 {
     STC_SR_R,   // n    0000 nnnn 0000 0010   stc    SR,   Rn
     STC_VBR_R,  // n    0000 nnnn 0010 0010   stc    VBR,  Rn
     STC_GBR_M,  // n    0100 nnnn 0001 0011   stc.l  GBR,  @-Rn
-    STC_SR_M,   // n    0100 nnnn 0000 0010   stc.l  SR,   @-Rn
+    STC_SR_M,   // n    0100 nnnn 0000 0011   stc.l  SR,   @-Rn
     STC_VBR_M,  // n    0100 nnnn 0010 0011   stc.l  VBR,  @-Rn
     STS_MACH_R, // n    0000 nnnn 0000 1010   sts    MACH, Rn
     STS_MACL_R, // n    0000 nnnn 0001 1010   sts    MACL, Rn
@@ -82,16 +82,16 @@ enum class OpcodeType : uint16 {
     ADD,        // nm   0011 nnnn mmmm 1100   add     Rm, Rn
     ADD_I,      // ni   0111 nnnn iiii iiii   add     #imm, Rn
     ADDC,       // nm   0011 nnnn mmmm 1110   addc    Rm, Rn
-    ADDV,       // nm   0011 nnnn mmmm 1110   addv    Rm, Rn
+    ADDV,       // nm   0011 nnnn mmmm 1111   addv    Rm, Rn
     AND_R,      // nm   0010 nnnn mmmm 1001   and     Rm, Rn
     AND_I,      // i    1100 1001 iiii iiii   and     #imm, R0
-    AND_M,      // i    1100 1001 iiii iiii   and.b   #imm, @(R0,GBR)
+    AND_M,      // i    1100 1101 iiii iiii   and.b   #imm, @(R0,GBR)
     NEG,        // nm   0110 nnnn mmmm 1011   neg     Rm, Rn
     NEGC,       // nm   0110 nnnn mmmm 1010   negc    Rm, Rn
     NOT,        // nm   0110 nnnn mmmm 0111   not     Rm, Rn
     OR_R,       // nm   0010 nnnn mmmm 1011   or      Rm, Rn
     OR_I,       // i    1100 1011 iiii iiii   or      #imm, R0
-    OR_M,       // i    1100 1001 iiii iiii   or.b    #imm, @(R0,GBR)
+    OR_M,       // i    1100 1111 iiii iiii   or.b    #imm, @(R0,GBR)
     ROTCL,      // n    0100 nnnn 0010 0100   rotcl   Rn
     ROTCR,      // n    0100 nnnn 0010 0101   rotcr   Rn
     ROTL,       // n    0100 nnnn 0000 0100   rotl    Rn
@@ -111,7 +111,7 @@ enum class OpcodeType : uint16 {
     SUBV,       // nm   0011 nnnn mmmm 1011   subv    Rm, Rn
     XOR_R,      // nm   0010 nnnn mmmm 1010   xor     Rm, Rn
     XOR_I,      // i    1100 1010 iiii iiii   xor     #imm, R0
-    XOR_M,      // i    1100 1001 iiii iiii   xor     #imm, @(R0,GBR)
+    XOR_M,      // i    1100 1110 iiii iiii   xor     #imm, @(R0,GBR)
     DT,         // n    0100 nnnn 0001 0000   dt Rn
     CLRMAC,     // 0    0000 0000 0010 1000   clrmac
     MACW,       // nm   0100 nnnn mmmm 1111   mac.w    @Rm+, @Rn+
