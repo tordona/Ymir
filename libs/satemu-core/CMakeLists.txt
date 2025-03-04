@@ -36,6 +36,7 @@ add_library(satemu-core
 
     include/satemu/hw/scu/scu.hpp
     include/satemu/hw/scu/scu_defs.hpp
+    include/satemu/hw/scu/scu_dsp.hpp
 
     include/satemu/hw/sh2/sh2.hpp
     include/satemu/hw/sh2/sh2_bsc.hpp
@@ -125,6 +126,7 @@ add_library(satemu-core
     src/satemu/hw/scsp/scsp_slot.cpp
     
     src/satemu/hw/scu/scu.cpp
+    src/satemu/hw/scu/scu_dsp.cpp
 
     src/satemu/hw/smpc/rtc.cpp
     src/satemu/hw/smpc/smpc.cpp

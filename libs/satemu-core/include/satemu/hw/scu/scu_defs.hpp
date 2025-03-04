@@ -3,6 +3,7 @@
 #include <satemu/core/types.hpp>
 
 #include <satemu/util/callback.hpp>
+#include <satemu/util/data_ops.hpp>
 
 namespace satemu::scu {
 
@@ -110,6 +111,26 @@ union InterruptMask {
     };
 };
 static_assert(sizeof(InterruptMask) == sizeof(uint32));
+
+enum class Bus {
+    ABus,
+    BBus,
+    WRAM,
+    None,
+};
+
+inline Bus GetBus(uint32 address) {
+    address &= 0x7FF'FFFF;
+    /**/ if (util::AddressInRange<0x200'0000, 0x58F'FFFF>(address)) {
+        return Bus::ABus;
+    } else if (util::AddressInRange<0x5A0'0000, 0x5FB'FFFF>(address)) {
+        return Bus::BBus;
+    } else if (address >= 0x600'0000) {
+        return Bus::WRAM;
+    } else {
+        return Bus::None;
+    }
+}
 
 using CBExternalInterrupt = util::RequiredCallback<void(uint8 level, uint8 vector)>;
 

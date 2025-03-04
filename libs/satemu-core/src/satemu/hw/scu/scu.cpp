@@ -6,29 +6,12 @@
 
 namespace satemu::scu {
 
-enum class Bus {
-    ABus,
-    BBus,
-    WRAM,
-    None,
-};
-
-static Bus GetBus(uint32 address) {
-    address &= 0x7FF'FFFF;
-    /**/ if (util::AddressInRange<0x200'0000, 0x58F'FFFF>(address)) {
-        return Bus::ABus;
-    } else if (util::AddressInRange<0x5A0'0000, 0x5FB'FFFF>(address)) {
-        return Bus::BBus;
-    } else if (address >= 0x600'0000) {
-        return Bus::WRAM;
-    } else {
-        return Bus::None;
-    }
-}
-
 SCU::SCU(core::Scheduler &scheduler, sys::Bus &bus)
     : m_bus(bus)
-    , m_scheduler(scheduler) {
+    , m_scheduler(scheduler)
+    , m_dsp(bus) {
+
+    m_dsp.SetTriggerDSPEndCallback(util::MakeClassMemberRequiredCallback<&SCU::TriggerDSPEnd>(this));
 
     EjectCartridge();
 
@@ -51,7 +34,7 @@ void SCU::Reset(bool hard) {
         m_activeDMAChannelLevel = m_dmaChannels.size();
     }
 
-    m_dspState.Reset(hard);
+    m_dsp.Reset(hard);
 
     if (hard) {
         m_timer0Counter = 0;
@@ -124,7 +107,7 @@ template <bool debug>
 void SCU::Advance(uint64 cycles) {
     // RunDMA(cycles);
 
-    RunDSP(cycles);
+    m_dsp.Run(cycles);
 }
 
 template void SCU::Advance<false>(uint64 cycles);
@@ -210,44 +193,44 @@ void SCU::AcknowledgeExternalInterrupt() {
 }
 
 void SCU::DumpDSPProgramRAM(std::ostream &out) {
-    out.write((const char *)m_dspState.programRAM.data(), sizeof(m_dspState.programRAM));
+    out.write((const char *)m_dsp.programRAM.data(), sizeof(m_dsp.programRAM));
 }
 
 void SCU::DumpDSPDataRAM(std::ostream &out) {
-    out.write((const char *)m_dspState.dataRAM.data(), sizeof(m_dspState.dataRAM));
+    out.write((const char *)m_dsp.dataRAM.data(), sizeof(m_dsp.dataRAM));
 }
 
 void SCU::DumpDSPRegs(std::ostream &out) {
     auto write = [&](const auto &reg) { out.write((const char *)&reg, sizeof(reg)); };
-    write(m_dspState.programExecuting);
-    write(m_dspState.programPaused);
-    write(m_dspState.programEnded);
-    write(m_dspState.programStep);
-    write(m_dspState.PC);
-    write(m_dspState.dataAddress);
-    write(m_dspState.nextPC);
-    write(m_dspState.jmpCounter);
-    write(m_dspState.sign);
-    write(m_dspState.zero);
-    write(m_dspState.carry);
-    write(m_dspState.overflow);
-    write(m_dspState.CT);
-    write(m_dspState.ALU);
-    write(m_dspState.AC);
-    write(m_dspState.P);
-    write(m_dspState.RX);
-    write(m_dspState.RY);
-    write(m_dspState.loopTop);
-    write(m_dspState.loopCount);
-    write(m_dspState.dmaRun);
-    write(m_dspState.dmaToD0);
-    write(m_dspState.dmaHold);
-    write(m_dspState.dmaCount);
-    write(m_dspState.dmaSrc);
-    write(m_dspState.dmaDst);
-    write(m_dspState.dmaReadAddr);
-    write(m_dspState.dmaWriteAddr);
-    write(m_dspState.dmaAddrInc);
+    write(m_dsp.programExecuting);
+    write(m_dsp.programPaused);
+    write(m_dsp.programEnded);
+    write(m_dsp.programStep);
+    write(m_dsp.PC);
+    write(m_dsp.dataAddress);
+    write(m_dsp.nextPC);
+    write(m_dsp.jmpCounter);
+    write(m_dsp.sign);
+    write(m_dsp.zero);
+    write(m_dsp.carry);
+    write(m_dsp.overflow);
+    write(m_dsp.CT);
+    write(m_dsp.ALU);
+    write(m_dsp.AC);
+    write(m_dsp.P);
+    write(m_dsp.RX);
+    write(m_dsp.RY);
+    write(m_dsp.loopTop);
+    write(m_dsp.loopCount);
+    write(m_dsp.dmaRun);
+    write(m_dsp.dmaToD0);
+    write(m_dsp.dmaHold);
+    write(m_dsp.dmaCount);
+    write(m_dsp.dmaSrc);
+    write(m_dsp.dmaDst);
+    write(m_dsp.dmaReadAddr);
+    write(m_dsp.dmaWriteAddr);
+    write(m_dsp.dmaAddrInc);
 }
 
 void SCU::OnTimer1Event(core::EventContext &eventContext, void *userContext) {
@@ -554,530 +537,6 @@ void SCU::TriggerDMATransfer(DMATrigger trigger) {
     RunDMA(); // HACK: run all event-triggered DMA transfers immediately
 }
 
-void SCU::RunDSP(uint64 cycles) {
-    // TODO: proper cycle counting
-
-    RunDSPDMA(cycles);
-
-    for (uint64 cy = 0; cy < cycles; cy++) {
-        // Bail out if not executing
-        if (!m_dspState.programExecuting && !m_dspState.programStep) {
-            return;
-        }
-
-        // Bail out if paused
-        if (m_dspState.programPaused) {
-            return;
-        }
-
-        // Execute next command
-        const uint32 command = m_dspState.programRAM[m_dspState.PC++];
-        const uint32 cmdCategory = bit::extract<30, 31>(command);
-        switch (cmdCategory) {
-        case 0b00: DSPCmd_Operation(command); break;
-        case 0b10: DSPCmd_LoadImm(command); break;
-        case 0b11: DSPCmd_Special(command); break;
-        }
-
-        // Update PC
-        if (m_dspState.jmpCounter > 0) {
-            m_dspState.jmpCounter--;
-            if (m_dspState.jmpCounter == 0) {
-                m_dspState.PC = m_dspState.nextPC;
-                m_dspState.nextPC = ~0;
-            }
-        }
-
-        // Update CT0-3
-        for (int i = 0; i < 4; i++) {
-            if (m_dspState.incCT[i]) {
-                m_dspState.CT[i]++;
-                m_dspState.CT[i] &= 0x3F;
-            }
-        }
-        m_dspState.incCT.fill(false);
-
-        // Clear stepping flag to ensure the DSP only runs one command when stepping
-        m_dspState.programStep = false;
-    }
-}
-
-void SCU::RunDSPDMA(uint64 cycles) {
-    // TODO: proper cycle counting
-
-    // Bail out if DMA is not running
-    if (!m_dspState.dmaRun) {
-        return;
-    }
-
-    const bool toD0 = m_dspState.dmaToD0;
-    uint32 addrD0 = toD0 ? m_dspState.dmaWriteAddr : m_dspState.dmaReadAddr;
-    const Bus bus = GetBus(addrD0);
-    if (bus == Bus::None) {
-        m_dspState.dmaRun = false;
-        return;
-    }
-
-    if (m_dspState.dmaToD0) {
-        dspLog.trace("Running DSP DMA transfer: DSP -> {:08X} (+{:X}), {} longwords", addrD0, m_dspState.dmaAddrInc,
-                     m_dspState.dmaCount);
-    } else {
-        dspLog.trace("Running DSP DMA transfer: {:08X} -> DSP (+{:X}), {} longwords", addrD0, m_dspState.dmaAddrInc,
-                     m_dspState.dmaCount);
-    }
-
-    // Run transfer
-    // TODO: should iterate through transfers based on cycle count
-    for (uint32 i = 0; i < m_dspState.dmaCount; i++) {
-        const uint32 ctIndex = toD0 ? m_dspState.dmaSrc : m_dspState.dmaDst;
-        const bool useDataRAM = ctIndex <= 3; // else: use program RAM
-        const uint32 ctAddr = useDataRAM ? m_dspState.CT[ctIndex] : 0;
-        if (toD0) {
-            // Data RAM -> D0
-            const uint32 value = useDataRAM ? m_dspState.dataRAM[ctIndex][ctAddr] : m_dspState.programRAM[i & 0xFF];
-            if (bus == Bus::ABus) {
-                // A-Bus -> one 32-bit write
-                m_bus.Write<uint32>(addrD0, value);
-                addrD0 += m_dspState.dmaAddrInc;
-            } else if (bus == Bus::BBus) {
-                // B-Bus -> two 16-bit writes
-                m_bus.Write<uint16>(addrD0 + 0, value >> 16u);
-                m_bus.Write<uint16>(addrD0 + 2, value >> 0u);
-                addrD0 += m_dspState.dmaAddrInc * 2;
-            } else if (bus == Bus::WRAM) {
-                // WRAM -> one 32-bit write
-                m_bus.Write<uint32>(addrD0, value);
-                addrD0 += m_dspState.dmaAddrInc;
-            }
-        } else {
-            // D0 -> Data/Program RAM
-            uint32 value = 0;
-            if (bus == Bus::ABus) {
-                // A-Bus -> one 32-bit read
-                value = m_bus.Read<uint32>(addrD0);
-                addrD0 += m_dspState.dmaAddrInc;
-            } else if (bus == Bus::BBus) {
-                // B-Bus -> two 16-bit reads
-                value = m_bus.Read<uint16>(addrD0 + 0) << 16u;
-                value |= m_bus.Read<uint16>(addrD0 + 2) << 0u;
-                addrD0 += 4;
-            } else if (bus == Bus::WRAM) {
-                // WRAM -> one 32-bit read
-                value = m_bus.Read<uint32>(addrD0);
-                addrD0 += m_dspState.dmaAddrInc;
-            }
-            if (useDataRAM) {
-                m_dspState.dataRAM[ctIndex][ctAddr] = value;
-            } else {
-                m_dspState.programRAM[i & 0xFF] = value;
-            }
-        }
-        addrD0 &= 0x7FF'FFFC;
-        if (useDataRAM) {
-            m_dspState.CT[ctIndex]++;
-            m_dspState.CT[ctIndex] &= 0x3F;
-        }
-    }
-
-    // Update RA0/WA0 if not holding address
-    if (!m_dspState.dmaHold) {
-        if (toD0) {
-            m_dspState.dmaWriteAddr = addrD0;
-        } else {
-            m_dspState.dmaReadAddr = addrD0;
-        }
-    }
-
-    m_dspState.dmaRun = false;
-}
-
-FORCE_INLINE uint32 SCU::DSPReadSource(uint8 index) {
-    switch (index) {
-    case 0b0000 ... 0b0111: {
-        const uint8 ctIndex = bit::extract<0, 1>(index);
-        const bool inc = bit::extract<2>(index);
-
-        // Finish previous DMA transfer
-        if (m_dspState.dmaRun) {
-            RunDSPDMA(1); // TODO: cycles?
-        }
-
-        m_dspState.incCT[ctIndex] |= inc;
-        const uint32 ctAddr = m_dspState.CT[ctIndex];
-        return m_dspState.dataRAM[ctIndex][ctAddr];
-    }
-    case 0b1001: return m_dspState.ALU.L;
-    case 0b1010: return m_dspState.ALU.u64 >> 16ull;
-    default: return ~0;
-    }
-}
-
-FORCE_INLINE void SCU::DSPWriteD1Bus(uint8 index, uint32 value) {
-    // Finish previous DMA transfer
-    if (m_dspState.dmaRun) {
-        RunDSPDMA(1); // TODO: cycles?
-    }
-
-    switch (index) {
-    case 0b0000 ... 0b0011: {
-        const uint32 addr = m_dspState.CT[index];
-        m_dspState.dataRAM[index][addr] = value;
-        m_dspState.incCT[index] = true;
-        break;
-    }
-    case 0b0100: m_dspState.RX = value; break;
-    case 0b0101: m_dspState.P.s64 = static_cast<sint32>(value); break;
-    case 0b0110: m_dspState.dmaReadAddr = (value << 2u) & 0x7FF'FFFC; break;
-    case 0b0111: m_dspState.dmaWriteAddr = (value << 2u) & 0x7FF'FFFC; break;
-    case 0b1010: m_dspState.loopCount = value & 0xFFF; break;
-    case 0b1011: m_dspState.loopTop = value; break;
-    case 0b1100 ... 0b1111:
-        m_dspState.CT[index & 3] = value & 0x3F;
-        m_dspState.incCT[index & 3] = false;
-        break;
-    }
-}
-
-void SCU::DSPWriteImm(uint8 index, uint32 value) {
-    // Finish previous DMA transfer
-    if (m_dspState.dmaRun) {
-        RunDSPDMA(1); // TODO: cycles?
-    }
-
-    switch (index) {
-    case 0b0000 ... 0b0011: {
-        const uint32 addr = m_dspState.CT[index];
-        m_dspState.dataRAM[index][addr] = value;
-        m_dspState.incCT[index] = true;
-        break;
-    }
-    case 0b0100: m_dspState.RX = value; break;
-    case 0b0101: m_dspState.P.s64 = static_cast<sint32>(value); break;
-    case 0b0110: m_dspState.dmaReadAddr = (value << 2u) & 0x7FF'FFFC; break;
-    case 0b0111: m_dspState.dmaWriteAddr = (value << 2u) & 0x7FF'FFFC; break;
-    case 0b1010: m_dspState.loopCount = value & 0xFFF; break;
-    case 0b1100:
-        m_dspState.loopTop = m_dspState.PC;
-        DSPDelayedJump(value);
-        break;
-    }
-}
-
-FORCE_INLINE bool SCU::DSPCondCheck(uint8 cond) const {
-    // 000001: NZ  (Z=0)
-    // 000010: NS  (S=0)
-    // 000011: NZS (Z=0 && S=0)
-    // 000100: NC  (C=0)
-    // 001000: NT0 (T0=0)
-    // 100001: Z   (Z=1)
-    // 100010: S   (S=1)
-    // 100011: ZS  (Z=1 || S=1)
-    // 100100: C   (C=1)
-    // 101000: T0  (T0=1)
-    switch (cond) {
-    case 0b000001: return !m_dspState.zero;
-    case 0b000010: return !m_dspState.sign;
-    case 0b000011: return !m_dspState.zero && !m_dspState.sign;
-    case 0b000100: return !m_dspState.carry;
-    case 0b001000: return !m_dspState.dmaRun;
-
-    case 0b100001: return m_dspState.zero;
-    case 0b100010: return m_dspState.sign;
-    case 0b100011: return m_dspState.zero || m_dspState.sign;
-    case 0b100100: return m_dspState.carry;
-    case 0b101000: return m_dspState.dmaRun;
-    }
-    return false;
-}
-
-FORCE_INLINE void SCU::DSPDelayedJump(uint8 target) {
-    m_dspState.nextPC = target & 0xFF;
-    m_dspState.jmpCounter = 2;
-}
-
-FORCE_INLINE void SCU::DSPCmd_Operation(uint32 command) {
-    auto setZS32 = [&](uint32 value) {
-        m_dspState.zero = value == 0;
-        m_dspState.sign = static_cast<sint32>(value) < 0;
-    };
-
-    auto setZS48 = [&](uint64 value) {
-        value <<= 16ull;
-        m_dspState.zero = value == 0;
-        m_dspState.sign = static_cast<sint64>(value) < 0;
-    };
-
-    // ALU
-    switch (bit::extract<26, 29>(command)) {
-    case 0b0000: // NOP
-        break;
-    case 0b0001: // AND
-        m_dspState.ALU.L = m_dspState.AC.L & m_dspState.P.L;
-        setZS32(m_dspState.ALU.L);
-        m_dspState.carry = 0;
-        break;
-    case 0b0010: // OR
-        m_dspState.ALU.L = m_dspState.AC.L | m_dspState.P.L;
-        setZS32(m_dspState.ALU.L);
-        m_dspState.carry = 0;
-        break;
-    case 0b0011: // XOR
-        m_dspState.ALU.L = m_dspState.AC.L ^ m_dspState.P.L;
-        setZS32(m_dspState.ALU.L);
-        m_dspState.carry = 0;
-        break;
-    case 0b0100: // ADD
-    {
-        const uint64 op1 = m_dspState.AC.L;
-        const uint64 op2 = m_dspState.P.L;
-        const uint64 result = op1 + op2;
-        setZS32(result);
-        m_dspState.carry = bit::extract<32>(result);
-        m_dspState.overflow = bit::extract<31>((~(op1 ^ op2)) & (op1 ^ result));
-        m_dspState.ALU.L = result;
-        break;
-    }
-    case 0b0101: // SUB
-    {
-        const uint64 op1 = m_dspState.AC.L;
-        const uint64 op2 = m_dspState.P.L;
-        const uint64 result = op1 - op2;
-        setZS32(result);
-        m_dspState.carry = bit::extract<32>(result);
-        m_dspState.overflow = bit::extract<31>((op1 ^ op2) & (op1 ^ result));
-        m_dspState.ALU.L = result;
-        break;
-    }
-    case 0b0110: // AD2
-    {
-        const uint64 op1 = m_dspState.AC.u64;
-        const uint64 op2 = m_dspState.P.u64;
-        const uint64 result = op1 + op2;
-        setZS48(result);
-        m_dspState.carry = bit::extract<48>(result);
-        m_dspState.overflow = bit::extract<47>((~(op1 ^ op2)) & (op1 ^ result));
-        m_dspState.ALU.s64 = result;
-        break;
-    }
-    case 0b1000: // SR
-        m_dspState.carry = bit::extract<0>(m_dspState.AC.L);
-        m_dspState.ALU.L = static_cast<sint32>(m_dspState.AC.L) >> 1;
-        setZS32(m_dspState.ALU.L);
-        break;
-    case 0b1001: // RR
-        m_dspState.carry = bit::extract<0>(m_dspState.AC.L);
-        m_dspState.ALU.L = std::rotr(m_dspState.AC.L, 1);
-        setZS32(m_dspState.ALU.L);
-        break;
-    case 0b1010: // SL
-        m_dspState.carry = bit::extract<31>(m_dspState.AC.L);
-        m_dspState.ALU.L = m_dspState.AC.L << 1u;
-        setZS32(m_dspState.ALU.L);
-        break;
-    case 0b1011: // RL
-        m_dspState.carry = bit::extract<31>(m_dspState.AC.L);
-        m_dspState.ALU.L = std::rotl(m_dspState.AC.L, 1);
-        setZS32(m_dspState.ALU.L);
-        break;
-    case 0b1111: // RL8
-        m_dspState.carry = bit::extract<24>(m_dspState.AC.L);
-        m_dspState.ALU.L = std::rotl(m_dspState.AC.L, 8);
-        setZS32(m_dspState.ALU.L);
-        break;
-    }
-
-    // X-Bus
-    //
-    // X-Bus writes simultaneously to P and X in some cases:
-    // bits
-    // 25-23  executed operations
-    //  000
-    //  001
-    //  010   MOV MUL,P
-    //  011   MOV [s],P
-    //  100               MOV [s],X
-    //  101               MOV [s],X
-    //  110   MOV MUL,P   MOV [s],X
-    //  111   MOV [s],P   MOV [s],X
-    if (bit::extract<23, 24>(command) == 0b10) {
-        // MOV MUL,P
-        m_dspState.P.s64 = static_cast<sint64>(m_dspState.RX) * static_cast<sint64>(m_dspState.RY);
-    }
-    if (bit::extract<23, 25>(command) >= 0b011) {
-        const sint32 value = DSPReadSource(bit::extract<20, 22>(command));
-        if (bit::extract<23, 24>(command) == 0b11) {
-            // MOV [s],P
-            m_dspState.P.s64 = static_cast<sint64>(value);
-        }
-        if (bit::extract<25>(command)) {
-            // MOV [s],X
-            m_dspState.RX = value;
-        }
-    }
-
-    // Y-Bus
-    //
-    // Y-Bus writes simultaneously to A and Y in some cases:
-    // bits
-    // 19-17  executed operations
-    // 000
-    // 001    CLR A
-    // 010    MOV ALU,A
-    // 011    MOV [s],A
-    // 100                MOV [s],Y
-    // 101    CLR A       MOV [s],Y
-    // 110    MOV ALU,A   MOV [s],Y
-    // 111    MOV [s],A   MOV [s],Y
-    if (bit::extract<17, 18>(command) == 0b01) {
-        // CLR A
-        m_dspState.AC.s64 = 0;
-    } else if (bit::extract<17, 18>(command) == 0b10) {
-        // MOV ALU,A
-        m_dspState.AC.s64 = m_dspState.ALU.s64;
-    }
-    if (bit::extract<17, 19>(command) >= 0b11) {
-        const sint32 value = DSPReadSource(bit::extract<14, 16>(command));
-        if (bit::extract<17, 18>(command) == 0b11) {
-            // MOV [s],A
-            m_dspState.AC.s64 = static_cast<sint64>(value);
-        }
-        if (bit::extract<19>(command)) {
-            // MOV [s],Y
-            m_dspState.RY = value;
-        }
-    }
-
-    // D1-Bus
-    switch (bit::extract<12, 13>(command)) {
-    case 0b01: // MOV SImm, [d]
-    {
-        const sint32 imm = bit::extract_signed<0, 7>(command);
-        const uint8 dst = bit::extract<8, 11>(command);
-        DSPWriteD1Bus(dst, imm);
-        break;
-    }
-    case 0b11: // MOV [s], [d]
-    {
-        const uint8 src = bit::extract<0, 3>(command);
-        const uint8 dst = bit::extract<8, 11>(command);
-        const uint32 value = DSPReadSource(src);
-        DSPWriteD1Bus(dst, value);
-        break;
-    }
-    }
-}
-
-FORCE_INLINE void SCU::DSPCmd_LoadImm(uint32 command) {
-    const uint32 dst = bit::extract<26, 29>(command);
-    sint32 imm;
-    if (bit::extract<25>(command)) {
-        // Conditional transfer
-        imm = bit::extract_signed<0, 18>(command);
-
-        const uint8 cond = bit::extract<19, 24>(command);
-        if (!DSPCondCheck(cond)) {
-            return;
-        }
-    } else {
-        // Unconditional transfer
-        imm = bit::extract_signed<0, 24>(command);
-    }
-
-    DSPWriteImm(dst, imm);
-}
-
-FORCE_INLINE void SCU::DSPCmd_Special(uint32 command) {
-    const uint32 cmdSubcategory = bit::extract<28, 29>(command);
-    switch (cmdSubcategory) {
-    case 0b00: DSPCmd_Special_DMA(command); break;
-    case 0b01: DSPCmd_Special_Jump(command); break;
-    case 0b10: DSPCmd_Special_LoopBottom(command); break;
-    case 0b11: DSPCmd_Special_End(command); break;
-    }
-}
-
-FORCE_INLINE void SCU::DSPCmd_Special_DMA(uint32 command) {
-    // Finish previous DMA transfer
-    if (m_dspState.dmaRun) {
-        RunDSPDMA(1); // TODO: cycles?
-    }
-
-    m_dspState.dmaRun = true;
-    m_dspState.dmaToD0 = bit::extract<12>(command);
-    m_dspState.dmaHold = bit::extract<14>(command);
-
-    // Get DMA transfer length
-    if (bit::extract<13>(command)) {
-        const uint8 ctIndex = bit::extract<0, 1>(command);
-        const bool inc = bit::extract<2>(command);
-        const uint32 ctAddr = m_dspState.CT[ctIndex];
-        m_dspState.dmaCount = m_dspState.dataRAM[ctIndex][ctAddr];
-        if (inc) {
-            m_dspState.CT[ctIndex]++;
-            m_dspState.CT[ctIndex] &= 0x3F;
-        }
-    } else {
-        m_dspState.dmaCount = bit::extract<0, 7>(command);
-    }
-
-    // Get [RAM] source/destination register (CT) index and address increment
-    const uint8 addrInc = bit::extract<15, 17>(command);
-    if (m_dspState.dmaToD0) {
-        // DMA [RAM],D0,SImm
-        // DMA [RAM],D0,[s]
-        // DMAH [RAM],D0,SImm
-        // DMAH [RAM],D0,[s]
-        m_dspState.dmaSrc = bit::extract<8, 9>(command);
-        m_dspState.dmaAddrInc = (1 << addrInc) & ~1;
-    } else if (bit::extract<10, 14>(command) == 0b00000) {
-        // DMA D0,[RAM],SImm
-        // Cannot write to program RAM, but can increment by up to 64 units
-        m_dspState.dmaDst = bit::extract<8, 9>(command);
-        m_dspState.dmaAddrInc = (1 << (addrInc & 0x2)) & ~1;
-    } else {
-        // DMA D0,[RAM],[s]
-        // DMAH D0,[RAM],SImm
-        // DMAH D0,[RAM],[s]
-        m_dspState.dmaDst = bit::extract<8, 10>(command);
-        m_dspState.dmaAddrInc = (1 << (addrInc & 0x2)) & ~1;
-    }
-
-    dspLog.trace("DSP DMA command: {:04X} @ {:02X}", command, m_dspState.PC);
-}
-
-FORCE_INLINE void SCU::DSPCmd_Special_Jump(uint32 command) {
-    const uint32 cond = bit::extract<19, 24>(command);
-    if (cond != 0 && !DSPCondCheck(cond)) {
-        return;
-    }
-
-    const uint8 target = bit::extract<0, 7>(command);
-    DSPDelayedJump(target);
-}
-
-FORCE_INLINE void SCU::DSPCmd_Special_LoopBottom(uint32 command) {
-    if (m_dspState.loopCount != 0) {
-        if (bit::extract<27>(command)) {
-            // LPS
-            DSPDelayedJump(m_dspState.PC - 1);
-        } else {
-            // BTM
-            DSPDelayedJump(m_dspState.loopTop);
-        }
-    }
-    m_dspState.loopCount--;
-    m_dspState.loopCount &= 0xFFF;
-}
-
-FORCE_INLINE void SCU::DSPCmd_Special_End(uint32 command) {
-    const bool setEndIntr = bit::extract<27>(command);
-    m_dspState.programExecuting = false;
-    m_dspState.programEnded = true;
-    if (setEndIntr) {
-        TriggerDSPEnd();
-    }
-}
-
 FORCE_INLINE void SCU::TickTimer1() {
     if (m_timer1Enable && (!m_timer1Mode || m_timer0Counter == m_timer0Compare)) {
         TriggerTimer1();
@@ -1140,8 +599,8 @@ FORCE_INLINE T SCU::ReadReg(uint32 address) {
     case 0x7C: // DMA Status
     {
         uint32 value = 0;
-        // bit::deposit_into<0>(value, m_dspState.dmaRun); // TODO: is this correct?
-        // bit::deposit_into<1>(value, m_dspState.dmaStandby?);
+        // bit::deposit_into<0>(value, m_dsp.dmaRun); // TODO: is this correct?
+        // bit::deposit_into<1>(value, m_dsp.dmaStandby?);
         bit::deposit_into<4>(value, m_dmaChannels[0].active);
         // TODO: bit 5: DMA0 standby
         bit::deposit_into<8>(value, m_dmaChannels[1].active);
@@ -1159,14 +618,14 @@ FORCE_INLINE T SCU::ReadReg(uint32 address) {
     case 0x80: // DSP Program Control Port
         if constexpr (std::is_same_v<T, uint32>) {
             uint32 value = 0;
-            bit::deposit_into<0, 7>(value, m_dspState.PC);
-            bit::deposit_into<16>(value, m_dspState.programExecuting);
-            bit::deposit_into<18>(value, m_dspState.programEnded);
-            bit::deposit_into<19>(value, m_dspState.overflow);
-            bit::deposit_into<20>(value, m_dspState.carry);
-            bit::deposit_into<21>(value, m_dspState.zero);
-            bit::deposit_into<22>(value, m_dspState.sign);
-            bit::deposit_into<23>(value, m_dspState.dmaRun);
+            bit::deposit_into<0, 7>(value, m_dsp.PC);
+            bit::deposit_into<16>(value, m_dsp.programExecuting);
+            bit::deposit_into<18>(value, m_dsp.programEnded);
+            bit::deposit_into<19>(value, m_dsp.overflow);
+            bit::deposit_into<20>(value, m_dsp.carry);
+            bit::deposit_into<21>(value, m_dsp.zero);
+            bit::deposit_into<22>(value, m_dsp.sign);
+            bit::deposit_into<23>(value, m_dsp.dmaRun);
             return value;
         } else {
             return 0;
@@ -1177,7 +636,7 @@ FORCE_INLINE T SCU::ReadReg(uint32 address) {
         return 0;
     case 0x8C: // DSP Data RAM Data Port
         if constexpr (std::is_same_v<T, uint32>) {
-            return m_dspState.ReadData();
+            return m_dsp.ReadData();
         } else {
             return 0;
         }
@@ -1335,26 +794,26 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
 
     case 0x80: // DSP Program Control Port
         if (bit::extract<15>(value)) {
-            m_dspState.PC = bit::extract<0, 7>(value);
+            m_dsp.PC = bit::extract<0, 7>(value);
         }
         if (bit::extract<25>(value)) {
-            m_dspState.programPaused = true;
+            m_dsp.programPaused = true;
         } else if (bit::extract<26>(value)) {
-            m_dspState.programPaused = false;
-        } else if (!m_dspState.programExecuting) {
-            m_dspState.programExecuting = bit::extract<16>(value);
-            m_dspState.programStep = bit::extract<17>(value);
-            m_dspState.programEnded = false;
+            m_dsp.programPaused = false;
+        } else if (!m_dsp.programExecuting) {
+            m_dsp.programExecuting = bit::extract<16>(value);
+            m_dsp.programStep = bit::extract<17>(value);
+            m_dsp.programEnded = false;
         }
         break;
     case 0x84: // DSP Program RAM Data Port
-        m_dspState.WriteProgram(value);
+        m_dsp.WriteProgram(value);
         break;
     case 0x88: // DSP Data RAM Address Port
-        m_dspState.dataAddress = bit::extract<0, 7>(value);
+        m_dsp.dataAddress = bit::extract<0, 7>(value);
         break;
     case 0x8C: // DSP Data RAM Data Port
-        m_dspState.WriteData(value);
+        m_dsp.WriteData(value);
         break;
 
     case 0x90: // Timer 0 Compare

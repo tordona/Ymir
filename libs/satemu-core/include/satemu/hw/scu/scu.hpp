@@ -1,6 +1,7 @@
 #pragma once
 
 #include "scu_defs.hpp"
+#include "scu_dsp.hpp"
 
 #include <satemu/core/scheduler.hpp>
 
@@ -58,7 +59,6 @@ class SCU {
     static constexpr dbg::Category rootLog{"SCU"};
     static constexpr dbg::Category regsLog{rootLog, "Regs"};
     static constexpr dbg::Category dmaLog{rootLog, "DMA"};
-    static constexpr dbg::Category dspLog{rootLog, "DSP"};
     static constexpr dbg::Category debugLog{rootLog, "Debug"};
 
 public:
@@ -241,191 +241,7 @@ private:
     // -------------------------------------------------------------------------
     // DSP
 
-    struct DSPState {
-        DSPState() {
-            Reset(true);
-        }
-
-        void Reset(bool hard) {
-            if (hard) {
-                programRAM.fill(0);
-                for (auto &bank : dataRAM) {
-                    bank.fill(0);
-                }
-            }
-
-            programExecuting = false;
-            programPaused = false;
-            programEnded = false;
-            programStep = false;
-
-            PC = 0;
-            dataAddress = 0;
-
-            nextPC = ~0;
-            jmpCounter = 0;
-
-            sign = false;
-            zero = false;
-            carry = false;
-            overflow = false;
-
-            CT.fill(0);
-            incCT.fill(false);
-
-            ALU.u64 = 0;
-            AC.u64 = 0;
-            P.u64 = 0;
-            RX = 0;
-            RY = 0;
-
-            loopTop = 0;
-            loopCount = 0;
-
-            dmaRun = false;
-            dmaToD0 = false;
-            dmaHold = false;
-            dmaCount = 0;
-            dmaSrc = 0;
-            dmaDst = 0;
-            dmaReadAddr = 0;
-            dmaWriteAddr = 0;
-            dmaAddrInc = 0;
-        }
-
-        std::array<uint32, 256> programRAM;
-        std::array<std::array<uint32, 64>, 4> dataRAM;
-
-        bool programExecuting;
-        bool programPaused;
-        bool programEnded;
-        bool programStep;
-
-        uint8 PC; // program address
-        uint8 dataAddress;
-
-        uint32 nextPC;    // jump target
-        uint8 jmpCounter; // when it reaches zero, perform the jump
-
-        bool sign;
-        bool zero;
-        bool carry;
-        bool overflow;
-
-        // DSP data address
-        std::array<uint8, 4> CT;
-        std::array<bool, 4> incCT; // whether CT must be incremented after this iteration
-
-        // ALU operation output
-        union {
-            uint64 u64 : 48;
-            sint64 s64 : 48;
-            struct {
-                uint32 L;
-                uint16 H;
-            };
-        } ALU;
-
-        // ALU operation input 1
-        union {
-            uint64 u64 : 48;
-            sint64 s64 : 48;
-            struct {
-                uint32 L;
-                uint16 H;
-            };
-        } AC;
-
-        // ALU operation input 2
-        // Multiplication output
-        union {
-            uint64 u64 : 48;
-            sint64 s64 : 48;
-            struct {
-                uint32 L;
-                uint16 H;
-            };
-        } P;
-
-        sint32 RX; // Multiplication input 1
-        sint32 RY; // Multiplication input 2
-
-        uint8 loopTop;    // TOP
-        uint16 loopCount; // LOP
-
-        bool dmaRun;         // DMA transfer in progress (T0)
-        bool dmaToD0;        // DMA transfer direction: false=D0 to DSP, true=DSP to D0
-        bool dmaHold;        // DMA transfer hold address
-        uint8 dmaCount;      // DMA transfer length
-        uint8 dmaSrc;        // DMA source register (CT0-3 or program RAM)
-        uint8 dmaDst;        // DMA destination register (CT0-3 or program RAM)
-        uint32 dmaReadAddr;  // DMA read address (RA0)
-        uint32 dmaWriteAddr; // DMA write address (WA0)
-        uint32 dmaAddrInc;   // DMA address increment
-
-        void WriteProgram(uint32 value) {
-            // Cannot write while program is executing
-            if (programExecuting) {
-                return;
-            }
-
-            programRAM[PC++] = value;
-        }
-
-        uint32 ReadData() {
-            // Cannot read while program is executing
-            if (programExecuting) {
-                return 0;
-            }
-
-            const uint8 bank = bit::extract<6, 7>(dataAddress);
-            const uint8 offset = bit::extract<0, 5>(dataAddress);
-            dataAddress++;
-            return dataRAM[bank][offset];
-        }
-
-        void WriteData(uint32 value) {
-            // Cannot write while program is executing
-            if (programExecuting) {
-                return;
-            }
-
-            const uint8 bank = bit::extract<6, 7>(dataAddress);
-            const uint8 offset = bit::extract<0, 5>(dataAddress);
-            dataAddress++;
-            dataRAM[bank][offset] = value;
-        }
-    } m_dspState;
-
-    void RunDSP(uint64 cycles);
-    void RunDSPDMA(uint64 cycles);
-
-    // DSP memory/register accessors
-
-    // X-Bus, Y-Bus and D1-Bus reads from [s]
-    uint32 DSPReadSource(uint8 index);
-
-    // D1-Bus writes to [d]
-    void DSPWriteD1Bus(uint8 index, uint32 value);
-
-    // Immediate writes to [d]
-    void DSPWriteImm(uint8 index, uint32 value);
-
-    // Checks if the current DSP flags pass the given condition
-    bool DSPCondCheck(uint8 cond) const;
-
-    // Prepares a delayed jump to the given target address
-    void DSPDelayedJump(uint8 target);
-
-    // DSP command interpreters
-
-    void DSPCmd_Operation(uint32 command);
-    void DSPCmd_LoadImm(uint32 command);
-    void DSPCmd_Special(uint32 command);
-    void DSPCmd_Special_DMA(uint32 command);
-    void DSPCmd_Special_Jump(uint32 command);
-    void DSPCmd_Special_LoopBottom(uint32 command);
-    void DSPCmd_Special_End(uint32 command);
+    SCUDSP m_dsp;
 
     // -------------------------------------------------------------------------
     // Timers
