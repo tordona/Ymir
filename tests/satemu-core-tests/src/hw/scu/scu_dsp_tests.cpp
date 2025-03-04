@@ -1026,7 +1026,6 @@ struct TestData {
 };
 
 // TODO: test the rest of the instructions
-// "ALU - SUB"
 // "ALU - AD2"
 // "ALU - SR"
 // "ALU - RR"
