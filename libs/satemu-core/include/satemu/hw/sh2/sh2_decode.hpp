@@ -26,8 +26,8 @@ enum class OpcodeType : uint16 {
     MOVB_M,     // nm   0010 nnnn mmmm 0100   mov.b  Rm, @-Rn
     MOVW_M,     // nm   0010 nnnn mmmm 0101   mov.w  Rm, @-Rn
     MOVL_M,     // nm   0010 nnnn mmmm 0110   mov.l  Rm, @-Rn
-    MOVB_P,     // nm   0110 nnnn mmmm 0110   mov.b  @Rm+, Rn
-    MOVW_P,     // nm   0110 nnnn mmmm 0110   mov.w  @Rm+, Rn
+    MOVB_P,     // nm   0110 nnnn mmmm 0100   mov.b  @Rm+, Rn
+    MOVW_P,     // nm   0110 nnnn mmmm 0101   mov.w  @Rm+, Rn
     MOVL_P,     // nm   0110 nnnn mmmm 0110   mov.l  @Rm+, Rn
     MOVB_S,     // nm   0010 nnnn mmmm 0000   mov.b  Rm, @Rn
     MOVW_S,     // nm   0010 nnnn mmmm 0001   mov.w  Rm, @Rn
