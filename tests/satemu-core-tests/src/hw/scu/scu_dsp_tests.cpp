@@ -1085,59 +1085,20 @@ struct TestData {
 
 constexpr auto testdata = {
     TestData{
-        .name = "ALU - AND",
+        .name = "NOP",
         .initialState =
             {
-                .programRAM = {0x4000000},
-                .dataRAM = {{
-                    {},
-                    {},
-                    {},
-                    {},
-                }},
+                .programRAM = {0x00000000},
                 .PC = 0,
-                .sign = false,
-                .zero = false,
-                .carry = false,
-                .overflow = false,
-                .CT = {0, 0, 0, 0},
-                .ALU = 0,
-                .AC = 0x9F00F,
-                .P = 0xCFF00,
-                .RX = 0,
-                .RY = 0,
-                .LOP = 0,
-                .TOP = 0,
-                .RA0 = 0,
-                .WA0 = 0,
             },
         .finalState =
             {
-                .programRAM = {0x4000000},
-                .dataRAM = {{
-                    {},
-                    {},
-                    {},
-                    {},
-                }},
+                .programRAM = {0x00000000},
                 .PC = 1,
-                .sign = false,
-                .zero = false,
-                .carry = false,
-                .overflow = false,
-                .CT = {0, 0, 0, 0},
-                .ALU = 0x8F000,
-                .AC = 0x9F00F,
-                .P = 0xCFF00,
-                .RX = 0,
-                .RY = 0,
-                .LOP = 0,
-                .TOP = 0,
-                .RA0 = 0,
-                .WA0 = 0,
             },
         .numSteps = 1,
     },
+#include "scu_dsp_testdata.inc"
 };
 
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP instructions execute correctly", "[scu][scudsp][instructions]") {
