@@ -1033,13 +1033,56 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP instructions execute correctl
     // [d] = CT0..CT3, MC0..MC3, RX, P, RA0, WA0, LOP, TOP
     SECTION("D1-Bus - MOV [s],[d]") {}
 
-    SECTION("Combined - AND  MOV MUL,P  MOV[s],X  MOV ALU,A  MOV [s],Y  MOV [s],[d]") {}
+    // [s] (X,Y) = CT0..CT3, MC0..MC3
+    // [s] (D1)  = CT0..CT3, MC0..MC3, ALUL, ALUH
+    // [d] (D1)  = CT0..CT3, MC0..MC3, RX, P, RA0, WA0, LOP, TOP
+    SECTION("Combined - AND  MOV MUL,P  MOV [s],X  MOV ALU,A  MOV [s],Y  MOV [s],[d]") {}
+
+    // [RAM]=Data RAM 0..3 or Program RAM
+    SECTION("DMA [RAM],D0,SImm") {}
+
+    // [RAM]=Data RAM 0..3 or Program RAM
+    // [s]=SCU A-Bus, SCU B-Bus or WRAM High
+    SECTION("DMA [RAM],D0,[s]") {}
+
+    // [RAM]=Data RAM 0..3 or Program RAM
+    SECTION("DMAH [RAM],D0,SImm") {}
+
+    // [RAM]=Data RAM 0..3 or Program RAM
+    // [s]=SCU A-Bus, SCU B-Bus or WRAM High
+    SECTION("DMAH [RAM],D0,[s]") {}
+
+    // [RAM]=Data RAM 0..3 or Program RAM
+    SECTION("DMA D0,[RAM],SImm") {}
+
+    // [RAM]=Data RAM 0..3 or Program RAM
+    // [s]=SCU A-Bus, SCU B-Bus or WRAM High
+    SECTION("DMA D0,[RAM],[s]") {}
+
+    // [RAM]=Data RAM 0..3 or Program RAM
+    SECTION("DMAH D0,[RAM],SImm") {}
+
+    // [RAM]=Data RAM 0..3 or Program RAM
+    // [s]=SCU A-Bus, SCU B-Bus or WRAM High
+    SECTION("DMAH D0,[RAM],[s]") {}
 
     // [d] = CT0..CT3, RX, P, RA0, WA0, LOP, TOP
     SECTION("MVI SImm,[d]") {}
 
     // [d] = CT0..CT3, RX, P, RA0, WA0, LOP, TOP
     SECTION("MVI <cond>,SImm,[d]") {}
+
+    SECTION("JMP Imm") {}
+
+    SECTION("JMP <cond>,Imm") {}
+
+    SECTION("LPS") {}
+
+    SECTION("BTM") {}
+
+    SECTION("END") {}
+
+    SECTION("ENDI") {}
 }
 
 // TODO: test complete programs

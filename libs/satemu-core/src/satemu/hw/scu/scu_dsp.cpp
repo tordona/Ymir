@@ -294,6 +294,7 @@ FORCE_INLINE void SCUDSP::Cmd_LoadImm(uint32 command) {
     sint32 imm;
     if (bit::extract<25>(command)) {
         // Conditional transfer
+        // MVI <cond>,SImm,[d]
         imm = bit::extract_signed<0, 18>(command);
 
         const uint8 cond = bit::extract<19, 24>(command);
@@ -302,6 +303,7 @@ FORCE_INLINE void SCUDSP::Cmd_LoadImm(uint32 command) {
         }
     } else {
         // Unconditional transfer
+        // MVI SImm,[d]
         imm = bit::extract_signed<0, 24>(command);
     }
 
@@ -368,6 +370,8 @@ FORCE_INLINE void SCUDSP::Cmd_Special_DMA(uint32 command) {
 }
 
 FORCE_INLINE void SCUDSP::Cmd_Special_Jump(uint32 command) {
+    // JMP <cond>,SImm
+    // JMP SImm
     const uint32 cond = bit::extract<19, 24>(command);
     if (cond != 0 && !CondCheck(cond)) {
         return;
@@ -392,6 +396,8 @@ FORCE_INLINE void SCUDSP::Cmd_Special_LoopBottom(uint32 command) {
 }
 
 FORCE_INLINE void SCUDSP::Cmd_Special_End(uint32 command) {
+    // END
+    // ENDI
     const bool setEndIntr = bit::extract<27>(command);
     programExecuting = false;
     programEnded = true;
