@@ -824,7 +824,70 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
         CHECK(dsp.ALU.H == 0xDEAD);
     }
 
-    SECTION("RL") {}
+    SECTION("RL") {
+        dsp.overflow = true;
+        dsp.ALU.H = 0xDEAD;
+
+        SECTION("no flags") {
+            dsp.zero = true;
+            dsp.sign = true;
+            dsp.carry = true;
+
+            dsp.AC.L = 0x10;
+            dsp.ALU_RL();
+
+            CHECK(dsp.ALU.L == 0x20);
+            CHECK(dsp.zero == false);
+            CHECK(dsp.sign == false);
+            CHECK(dsp.carry == false);
+        }
+
+        SECTION("zero") {
+            dsp.zero = false;
+            dsp.sign = true;
+            dsp.carry = true;
+
+            dsp.AC.L = 0x0;
+            dsp.ALU_RL();
+
+            CHECK(dsp.ALU.L == 0x0);
+            CHECK(dsp.zero == true);
+            CHECK(dsp.sign == false);
+            CHECK(dsp.carry == false);
+        }
+
+        SECTION("sign") {
+            dsp.zero = true;
+            dsp.sign = false;
+            dsp.carry = true;
+
+            dsp.AC.L = 0x40000000;
+            dsp.ALU_RL();
+
+            CHECK(dsp.ALU.L == 0x80000000);
+            CHECK(dsp.zero == false);
+            CHECK(dsp.sign == true);
+            CHECK(dsp.carry == false);
+        }
+
+        SECTION("sign, carry") {
+            dsp.zero = true;
+            dsp.sign = true;
+            dsp.carry = false;
+
+            dsp.AC.L = 0x80000000;
+            dsp.ALU_RL();
+
+            CHECK(dsp.ALU.L == 0x1);
+            CHECK(dsp.zero == false);
+            CHECK(dsp.sign == false);
+            CHECK(dsp.carry == true);
+        }
+
+        // These should not be modified
+        CHECK(dsp.overflow == true);
+        CHECK(dsp.ALU.H == 0xDEAD);
+    }
 
     SECTION("RL8") {}
 }
