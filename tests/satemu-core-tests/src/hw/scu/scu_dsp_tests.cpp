@@ -2,6 +2,8 @@
 
 #include <satemu/hw/scu/scu_dsp.hpp>
 
+#include <string_view>
+
 using namespace satemu;
 
 namespace scu_dsp {
@@ -25,6 +27,8 @@ struct TestSubject {
         dspEndTriggered = true;
     }
 };
+
+// -----------------------------------------------------------------------------
 
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correctly", "[scu][scudsp][alu]") {
     ClearAll();
@@ -983,110 +987,220 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
     }
 }
 
+// -----------------------------------------------------------------------------
+
+struct DSPState {
+    std::array<uint32, 256> programRAM;
+    std::array<std::array<uint32, 64>, 4> dataRAM;
+
+    uint8 PC; // program address
+
+    bool sign;
+    bool zero;
+    bool carry;
+    bool overflow;
+
+    // DSP data address
+    std::array<uint8, 4> CT;
+
+    uint64 ALU; // ALU operation output
+    uint64 AC;  // ALU operation input 1
+    uint64 P;   // ALU operation input 2 / Multiplication output
+    sint32 RX;  // Multiplication input 1
+    sint32 RY;  // Multiplication input 2
+
+    uint16 LOP; // Loop count
+    uint8 TOP;  // loop top
+
+    uint32 RA0; // DMA read address
+    uint32 WA0; // DMA write address
+};
+
+struct TestData {
+    std::string_view name;
+    DSPState initialState;
+    DSPState finalState;
+    uint32 numSteps;
+    // TODO: bus accesses
+    // TODO: mocked memory
+};
+
+// TODO: test the rest of the instructions
+// "ALU - OR"
+// "ALU - XOR"
+// "ALU - ADD"
+// "ALU - SUB"
+// "ALU - AD2"
+// "ALU - SR"
+// "ALU - RR"
+// "ALU - SL"
+// "ALU - RL"
+// "ALU - RL8"
+
+// [s] = CT0..CT3, MC0..MC3
+// "X-Bus - MOV MUL,P"
+// "X-Bus - MOV [s],P"
+// "X-Bus - MOV [s],X"
+
+// [s] = CT0..CT3, MC0..MC3
+// "Y-Bus - CLR A"
+// "Y-Bus - MOV ALU,A"
+// "Y-Bus - MOV [s],A"
+// "Y-Bus - MOV [s],Y"
+
+// [s] = CT0..CT3, MC0..MC3, ALUL, ALUH
+// [d] = CT0..CT3, MC0..MC3, RX, P, RA0, WA0, LOP, TOP
+// "D1-Bus - MOV SImm,[d]"
+// "D1-Bus - MOV [s],[d]"
+
+// [s] (X,Y) = CT0..CT3, MC0..MC3
+// [s] (D1)  = CT0..CT3, MC0..MC3, ALUL, ALUH
+// [d] (D1)  = CT0..CT3, MC0..MC3, RX, P, RA0, WA0, LOP, TOP
+// "Combined - AND  MOV MUL,P  MOV [s],X  MOV ALU,A  MOV [s],Y  MOV [s],[d]"
+
+// [RAM]=Data RAM 0..3 or Program RAM
+// D0=SCU A-Bus, SCU B-Bus or WRAM High
+// [s]=CT0..CT3, MC0..MC3
+// "DMA [RAM],D0,SImm"
+// "DMA [RAM],D0,[s]"
+// "DMAH [RAM],D0,SImm"
+// "DMAH [RAM],D0,[s]"
+// "DMA D0,[RAM],SImm"
+// "DMA D0,[RAM],[s]"
+// "DMAH D0,[RAM],SImm"
+// "DMAH D0,[RAM],[s]"
+
+// [d] = CT0..CT3, RX, P, RA0, WA0, LOP, TOP
+// "MVI SImm,[d]"
+// "MVI <cond>,SImm,[d]"
+
+// "JMP Imm"
+// "JMP <cond>,Imm"
+
+// "LPS"
+// "BTM"
+
+// "END"
+// "ENDI"
+
+constexpr auto testdata = {
+    TestData{
+        .name = "ALU - AND",
+        .initialState =
+            {
+                .programRAM = {0x4000000},
+                .dataRAM = {{
+                    {},
+                    {},
+                    {},
+                    {},
+                }},
+                .PC = 0,
+                .sign = false,
+                .zero = false,
+                .carry = false,
+                .overflow = false,
+                .CT = {0, 0, 0, 0},
+                .ALU = 0,
+                .AC = 0x9F00F,
+                .P = 0xCFF00,
+                .RX = 0,
+                .RY = 0,
+                .LOP = 0,
+                .TOP = 0,
+                .RA0 = 0,
+                .WA0 = 0,
+            },
+        .finalState =
+            {
+                .programRAM = {0x4000000},
+                .dataRAM = {{
+                    {},
+                    {},
+                    {},
+                    {},
+                }},
+                .PC = 1,
+                .sign = false,
+                .zero = false,
+                .carry = false,
+                .overflow = false,
+                .CT = {0, 0, 0, 0},
+                .ALU = 0x8F000,
+                .AC = 0x9F00F,
+                .P = 0xCFF00,
+                .RX = 0,
+                .RY = 0,
+                .LOP = 0,
+                .TOP = 0,
+                .RA0 = 0,
+                .WA0 = 0,
+            },
+        .numSteps = 1,
+    },
+};
+
 TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP instructions execute correctly", "[scu][scudsp][instructions]") {
     dsp.Reset(true);
 
-    SECTION("ALU - AND") {}
+    for (const auto &test : testdata) {
+        DYNAMIC_SECTION(test.name) {
+            // Initialize DSP state
+            dsp.programRAM = test.initialState.programRAM;
+            dsp.dataRAM = test.initialState.dataRAM;
+            dsp.PC = test.initialState.PC;
+            dsp.sign = test.initialState.sign;
+            dsp.zero = test.initialState.zero;
+            dsp.carry = test.initialState.carry;
+            dsp.overflow = test.initialState.overflow;
+            dsp.CT = test.initialState.CT;
+            dsp.ALU.u64 = test.initialState.ALU;
+            dsp.AC.u64 = test.initialState.AC;
+            dsp.P.u64 = test.initialState.P;
+            dsp.RX = test.initialState.RX;
+            dsp.RY = test.initialState.RY;
+            dsp.loopCount = test.initialState.LOP;
+            dsp.loopTop = test.initialState.TOP;
+            dsp.dmaReadAddr = test.initialState.RA0;
+            dsp.dmaWriteAddr = test.initialState.WA0;
 
-    SECTION("ALU - OR") {}
+            // Setup execution
+            dsp.PC = 0;
+            dsp.programExecuting = true;
+            dsp.programEnded = false;
+            dsp.programPaused = false;
+            dsp.programStep = false;
 
-    SECTION("ALU - XOR") {}
+            // Run for the specified number of cycles
+            dsp.Run(test.numSteps);
 
-    SECTION("ALU - ADD") {}
-
-    SECTION("ALU - SUB") {}
-
-    SECTION("ALU - AD2") {}
-
-    SECTION("ALU - SR") {}
-
-    SECTION("ALU - RR") {}
-
-    SECTION("ALU - SL") {}
-
-    SECTION("ALU - RL") {}
-
-    SECTION("ALU - RL8") {}
-
-    SECTION("X-Bus - MOV MUL,P") {}
-
-    // [s] = CT0..CT3, MC0..MC3
-    SECTION("X-Bus - MOV [s],P") {}
-
-    // [s] = CT0..CT3, MC0..MC3
-    SECTION("X-Bus - MOV [s],X") {}
-
-    SECTION("Y-Bus - CLR A") {}
-
-    SECTION("Y-Bus - MOV ALU,A") {}
-
-    // [s] = CT0..CT3, MC0..MC3
-    SECTION("Y-Bus - MOV [s],A") {}
-
-    // [s] = CT0..CT3, MC0..MC3
-    SECTION("Y-Bus - MOV [s],Y") {}
-
-    // [d] = CT0..CT3, MC0..MC3, RX, P, RA0, WA0, LOP, TOP
-    SECTION("D1-Bus - MOV SImm,[d]") {}
-
-    // [s] = CT0..CT3, MC0..MC3, ALUL, ALUH
-    // [d] = CT0..CT3, MC0..MC3, RX, P, RA0, WA0, LOP, TOP
-    SECTION("D1-Bus - MOV [s],[d]") {}
-
-    // [s] (X,Y) = CT0..CT3, MC0..MC3
-    // [s] (D1)  = CT0..CT3, MC0..MC3, ALUL, ALUH
-    // [d] (D1)  = CT0..CT3, MC0..MC3, RX, P, RA0, WA0, LOP, TOP
-    SECTION("Combined - AND  MOV MUL,P  MOV [s],X  MOV ALU,A  MOV [s],Y  MOV [s],[d]") {}
-
-    // [RAM]=Data RAM 0..3 or Program RAM
-    SECTION("DMA [RAM],D0,SImm") {}
-
-    // [RAM]=Data RAM 0..3 or Program RAM
-    // [s]=SCU A-Bus, SCU B-Bus or WRAM High
-    SECTION("DMA [RAM],D0,[s]") {}
-
-    // [RAM]=Data RAM 0..3 or Program RAM
-    SECTION("DMAH [RAM],D0,SImm") {}
-
-    // [RAM]=Data RAM 0..3 or Program RAM
-    // [s]=SCU A-Bus, SCU B-Bus or WRAM High
-    SECTION("DMAH [RAM],D0,[s]") {}
-
-    // [RAM]=Data RAM 0..3 or Program RAM
-    SECTION("DMA D0,[RAM],SImm") {}
-
-    // [RAM]=Data RAM 0..3 or Program RAM
-    // [s]=SCU A-Bus, SCU B-Bus or WRAM High
-    SECTION("DMA D0,[RAM],[s]") {}
-
-    // [RAM]=Data RAM 0..3 or Program RAM
-    SECTION("DMAH D0,[RAM],SImm") {}
-
-    // [RAM]=Data RAM 0..3 or Program RAM
-    // [s]=SCU A-Bus, SCU B-Bus or WRAM High
-    SECTION("DMAH D0,[RAM],[s]") {}
-
-    // [d] = CT0..CT3, RX, P, RA0, WA0, LOP, TOP
-    SECTION("MVI SImm,[d]") {}
-
-    // [d] = CT0..CT3, RX, P, RA0, WA0, LOP, TOP
-    SECTION("MVI <cond>,SImm,[d]") {}
-
-    SECTION("JMP Imm") {}
-
-    SECTION("JMP <cond>,Imm") {}
-
-    SECTION("LPS") {}
-
-    SECTION("BTM") {}
-
-    SECTION("END") {}
-
-    SECTION("ENDI") {}
+            // Compare DSP state against expected state
+            CHECK(dsp.programRAM == test.finalState.programRAM);
+            CHECK(dsp.dataRAM == test.finalState.dataRAM);
+            CHECK(dsp.PC == test.finalState.PC);
+            CHECK(dsp.sign == test.finalState.sign);
+            CHECK(dsp.zero == test.finalState.zero);
+            CHECK(dsp.carry == test.finalState.carry);
+            CHECK(dsp.overflow == test.finalState.overflow);
+            CHECK(dsp.CT == test.finalState.CT);
+            CHECK(dsp.ALU.u64 == test.finalState.ALU);
+            CHECK(dsp.AC.u64 == test.finalState.AC);
+            CHECK(dsp.P.u64 == test.finalState.P);
+            CHECK(dsp.RX == test.finalState.RX);
+            CHECK(dsp.RY == test.finalState.RY);
+            CHECK(dsp.loopCount == test.finalState.LOP);
+            CHECK(dsp.loopTop == test.finalState.TOP);
+            CHECK(dsp.dmaReadAddr == test.finalState.RA0);
+            CHECK(dsp.dmaWriteAddr == test.finalState.WA0);
+        }
+    }
 }
 
 // TODO: test complete programs
 
-// TODO: test DMA
+// TODO: test DSP control (start, stop, pause, step, etc.)
+
+// TODO: test additional behavior
+// - program and data RAM cannot be accessed externally while DSP is running
 
 } // namespace scu_dsp
