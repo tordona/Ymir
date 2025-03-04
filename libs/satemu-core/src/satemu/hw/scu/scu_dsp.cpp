@@ -2,8 +2,6 @@
 
 #include <satemu/hw/scu/scu_defs.hpp>
 
-#include <satemu/util/inline.hpp>
-
 namespace satemu::scu {
 
 SCUDSP::SCUDSP(sys::Bus &bus)
@@ -193,199 +191,26 @@ void SCUDSP::RunDMA(uint64 cycles) {
     dmaRun = false;
 }
 
-FORCE_INLINE uint32 SCUDSP::ReadSource(uint8 index) {
-    switch (index) {
-    case 0b0000 ... 0b0111: {
-        const uint8 ctIndex = bit::extract<0, 1>(index);
-        const bool inc = bit::extract<2>(index);
-
-        // Finish previous DMA transfer
-        if (dmaRun) {
-            RunDMA(1); // TODO: cycles?
-        }
-
-        incCT[ctIndex] |= inc;
-        const uint32 ctAddr = CT[ctIndex];
-        return dataRAM[ctIndex][ctAddr];
-    }
-    case 0b1001: return ALU.L;
-    case 0b1010: return ALU.u64 >> 16ull;
-    default: return ~0;
-    }
-}
-
-FORCE_INLINE void SCUDSP::WriteD1Bus(uint8 index, uint32 value) {
-    // Finish previous DMA transfer
-    if (dmaRun) {
-        RunDMA(1); // TODO: cycles?
-    }
-
-    switch (index) {
-    case 0b0000 ... 0b0011: {
-        const uint32 addr = CT[index];
-        dataRAM[index][addr] = value;
-        incCT[index] = true;
-        break;
-    }
-    case 0b0100: RX = value; break;
-    case 0b0101: P.s64 = static_cast<sint32>(value); break;
-    case 0b0110: dmaReadAddr = (value << 2u) & 0x7FF'FFFC; break;
-    case 0b0111: dmaWriteAddr = (value << 2u) & 0x7FF'FFFC; break;
-    case 0b1010: loopCount = value & 0xFFF; break;
-    case 0b1011: loopTop = value; break;
-    case 0b1100 ... 0b1111:
-        CT[index & 3] = value & 0x3F;
-        incCT[index & 3] = false;
-        break;
-    }
-}
-
-FORCE_INLINE void SCUDSP::WriteImm(uint8 index, uint32 value) {
-    // Finish previous DMA transfer
-    if (dmaRun) {
-        RunDMA(1); // TODO: cycles?
-    }
-
-    switch (index) {
-    case 0b0000 ... 0b0011: {
-        const uint32 addr = CT[index];
-        dataRAM[index][addr] = value;
-        incCT[index] = true;
-        break;
-    }
-    case 0b0100: RX = value; break;
-    case 0b0101: P.s64 = static_cast<sint32>(value); break;
-    case 0b0110: dmaReadAddr = (value << 2u) & 0x7FF'FFFC; break;
-    case 0b0111: dmaWriteAddr = (value << 2u) & 0x7FF'FFFC; break;
-    case 0b1010: loopCount = value & 0xFFF; break;
-    case 0b1100:
-        loopTop = PC;
-        DelayedJump(value);
-        break;
-    }
-}
-
-FORCE_INLINE bool SCUDSP::CondCheck(uint8 cond) const {
-    // 000001: NZ  (Z=0)
-    // 000010: NS  (S=0)
-    // 000011: NZS (Z=0 && S=0)
-    // 000100: NC  (C=0)
-    // 001000: NT0 (T0=0)
-    // 100001: Z   (Z=1)
-    // 100010: S   (S=1)
-    // 100011: ZS  (Z=1 || S=1)
-    // 100100: C   (C=1)
-    // 101000: T0  (T0=1)
-    switch (cond) {
-    case 0b000001: return !zero;
-    case 0b000010: return !sign;
-    case 0b000011: return !zero && !sign;
-    case 0b000100: return !carry;
-    case 0b001000: return !dmaRun;
-
-    case 0b100001: return zero;
-    case 0b100010: return sign;
-    case 0b100011: return zero || sign;
-    case 0b100100: return carry;
-    case 0b101000: return dmaRun;
-    }
-    return false;
-}
-
-FORCE_INLINE void SCUDSP::DelayedJump(uint8 target) {
-    nextPC = target & 0xFF;
-    jmpCounter = 2;
-}
-
 FORCE_INLINE void SCUDSP::Cmd_Operation(uint32 command) {
     auto setZS32 = [&](uint32 value) {
         zero = value == 0;
         sign = static_cast<sint32>(value) < 0;
     };
 
-    auto setZS48 = [&](uint64 value) {
-        value <<= 16ull;
-        zero = value == 0;
-        sign = static_cast<sint64>(value) < 0;
-    };
-
     // ALU
     switch (bit::extract<26, 29>(command)) {
-    case 0b0000: // NOP
-        break;
-    case 0b0001: // AND
-        ALU.L = AC.L & P.L;
-        setZS32(ALU.L);
-        carry = 0;
-        break;
-    case 0b0010: // OR
-        ALU.L = AC.L | P.L;
-        setZS32(ALU.L);
-        carry = 0;
-        break;
-    case 0b0011: // XOR
-        ALU.L = AC.L ^ P.L;
-        setZS32(ALU.L);
-        carry = 0;
-        break;
-    case 0b0100: // ADD
-    {
-        const uint64 op1 = AC.L;
-        const uint64 op2 = P.L;
-        const uint64 result = op1 + op2;
-        setZS32(result);
-        carry = bit::extract<32>(result);
-        overflow = bit::extract<31>((~(op1 ^ op2)) & (op1 ^ result));
-        ALU.L = result;
-        break;
-    }
-    case 0b0101: // SUB
-    {
-        const uint64 op1 = AC.L;
-        const uint64 op2 = P.L;
-        const uint64 result = op1 - op2;
-        setZS32(result);
-        carry = bit::extract<32>(result);
-        overflow = bit::extract<31>((op1 ^ op2) & (op1 ^ result));
-        ALU.L = result;
-        break;
-    }
-    case 0b0110: // AD2
-    {
-        const uint64 op1 = AC.u64;
-        const uint64 op2 = P.u64;
-        const uint64 result = op1 + op2;
-        setZS48(result);
-        carry = bit::extract<48>(result);
-        overflow = bit::extract<47>((~(op1 ^ op2)) & (op1 ^ result));
-        ALU.s64 = result;
-        break;
-    }
-    case 0b1000: // SR
-        carry = bit::extract<0>(AC.L);
-        ALU.L = static_cast<sint32>(AC.L) >> 1;
-        setZS32(ALU.L);
-        break;
-    case 0b1001: // RR
-        carry = bit::extract<0>(AC.L);
-        ALU.L = std::rotr(AC.L, 1);
-        setZS32(ALU.L);
-        break;
-    case 0b1010: // SL
-        carry = bit::extract<31>(AC.L);
-        ALU.L = AC.L << 1u;
-        setZS32(ALU.L);
-        break;
-    case 0b1011: // RL
-        carry = bit::extract<31>(AC.L);
-        ALU.L = std::rotl(AC.L, 1);
-        setZS32(ALU.L);
-        break;
-    case 0b1111: // RL8
-        carry = bit::extract<24>(AC.L);
-        ALU.L = std::rotl(AC.L, 8);
-        setZS32(ALU.L);
-        break;
+    case 0b0000: break;            // NOP
+    case 0b0001: ALU_AND(); break; // AND
+    case 0b0010: ALU_OR(); break;  // OR
+    case 0b0011: ALU_XOR(); break; // XOR
+    case 0b0100: ALU_ADD(); break; // ADD
+    case 0b0101: ALU_SUB(); break; // SUB
+    case 0b0110: ALU_AD2(); break; // AD2
+    case 0b1000: ALU_SR(); break;  // SR
+    case 0b1001: ALU_RR(); break;  // RR
+    case 0b1010: ALU_SL(); break;  // SL
+    case 0b1011: ALU_RL(); break;  // RL
+    case 0b1111: ALU_RL8(); break; // RL8
     }
 
     // X-Bus

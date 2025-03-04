@@ -68,7 +68,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP instructions execute correctl
     // [s] = CT0..CT3, MC0..MC3
     SECTION("Y-Bus - MOV [s],Y") {}
 
-    // [d] =
+    // [d] = CT0..CT3, MC0..MC3, RX, P, RA0, WA0, LOP, TOP
     SECTION("D1-Bus - MOV SImm,[d]") {}
 
     // [s] = CT0..CT3, MC0..MC3, ALUL, ALUH
@@ -76,6 +76,9 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP instructions execute correctl
     SECTION("D1-Bus - MOV [s],[d]") {}
 
     SECTION("Combined - AND  MOV MUL,P  MOV[s],X  MOV ALU,A  MOV [s],Y  MOV [s],[d]") {}
+
+    // [d] =
+    SECTION("MVI SImm,[d]") {}
 }
 
 // TODO: test complete programs
