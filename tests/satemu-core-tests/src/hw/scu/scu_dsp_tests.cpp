@@ -1025,55 +1025,6 @@ struct TestData {
     // TODO: mocked memory
 };
 
-// TODO: test the rest of the instructions
-// "ALU - RL8"
-
-// [s] = CT0..CT3, MC0..MC3
-// "X-Bus - MOV MUL,P"
-// "X-Bus - MOV [s],P"
-// "X-Bus - MOV [s],X"
-
-// [s] = CT0..CT3, MC0..MC3
-// "Y-Bus - CLR A"
-// "Y-Bus - MOV ALU,A"
-// "Y-Bus - MOV [s],A"
-// "Y-Bus - MOV [s],Y"
-
-// [s] = CT0..CT3, MC0..MC3, ALUL, ALUH
-// [d] = CT0..CT3, MC0..MC3, RX, P, RA0, WA0, LOP, TOP
-// "D1-Bus - MOV SImm,[d]"
-// "D1-Bus - MOV [s],[d]"
-
-// [s] (X,Y) = CT0..CT3, MC0..MC3
-// [s] (D1)  = CT0..CT3, MC0..MC3, ALUL, ALUH
-// [d] (D1)  = CT0..CT3, MC0..MC3, RX, P, RA0, WA0, LOP, TOP
-// "Combined - AND  MOV MUL,P  MOV [s],X  MOV ALU,A  MOV [s],Y  MOV [s],[d]"
-
-// [RAM]=Data RAM 0..3 or Program RAM
-// D0=SCU A-Bus, SCU B-Bus or WRAM High
-// [s]=CT0..CT3, MC0..MC3
-// "DMA [RAM],D0,SImm"
-// "DMA [RAM],D0,[s]"
-// "DMAH [RAM],D0,SImm"
-// "DMAH [RAM],D0,[s]"
-// "DMA D0,[RAM],SImm"
-// "DMA D0,[RAM],[s]"
-// "DMAH D0,[RAM],SImm"
-// "DMAH D0,[RAM],[s]"
-
-// [d] = CT0..CT3, RX, P, RA0, WA0, LOP, TOP
-// "MVI SImm,[d]"
-// "MVI <cond>,SImm,[d]"
-
-// "JMP Imm"
-// "JMP <cond>,Imm"
-
-// "LPS"
-// "BTM"
-
-// "END"
-// "ENDI"
-
 constexpr auto testdata = {
     TestData{
         .name = "NOP",
