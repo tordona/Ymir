@@ -219,7 +219,7 @@ template <bool debug>
 FLATTEN uint64 SH2::Advance(uint64 cycles) {
     uint64 cyclesExecuted = 0;
     while (cyclesExecuted < cycles) {
-        uint64 deadline = cyclesExecuted;
+        uint64 deadline = cycles;
 
         if (WDT.WTCSR.TME) {
             deadline = std::min(deadline, cyclesExecuted + WDT.CyclesUntilNextTick());
@@ -229,9 +229,7 @@ FLATTEN uint64 SH2::Advance(uint64 cycles) {
         // - needs to keep track of global cycle count to update properly
         deadline = std::min(deadline, cyclesExecuted + FRT.CyclesUntilNextTick());
 
-        AdvanceWDT(deadline - cyclesExecuted);
-        AdvanceFRT(deadline - cyclesExecuted);
-
+        const uint64 prevCyclesExecuted = cyclesExecuted;
         while (cyclesExecuted <= deadline) {
             // TODO: choose between interpreter (cached or uncached) and JIT recompiler
             m_tracer.ExecTrace({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
@@ -247,9 +245,10 @@ FLATTEN uint64 SH2::Advance(uint64 cycles) {
                 }
             }
         }
+        const uint64 cyclesExecutedNow = cyclesExecuted - prevCyclesExecuted;
+        AdvanceWDT(cyclesExecutedNow);
+        AdvanceFRT(cyclesExecutedNow);
     }
-    AdvanceWDT(cyclesExecuted - cycles);
-    AdvanceFRT(cyclesExecuted - cycles);
     return cyclesExecuted;
 }
 
