@@ -184,7 +184,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             CHECK(dsp.overflow == false);
         }
 
-        SECTION("zero") {
+        SECTION("zero (with zeros)") {
             dsp.zero = true;
             dsp.sign = true;
             dsp.carry = true;
@@ -467,7 +467,160 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
         CHECK(dsp.ALU.H == 0xDEAD);
     }
 
-    SECTION("AD2") {}
+    SECTION("AD2") {
+        SECTION("no flags") {
+            dsp.zero = true;
+            dsp.sign = true;
+            dsp.carry = true;
+            dsp.overflow = true;
+
+            dsp.AC.u64 = 123;
+            dsp.P.u64 = 321;
+            dsp.ALU_AD2();
+
+            CHECK(dsp.ALU.u64 == 444);
+            CHECK(dsp.zero == false);
+            CHECK(dsp.sign == false);
+            CHECK(dsp.carry == false);
+            CHECK(dsp.overflow == false);
+        }
+
+        SECTION("zero") {
+            dsp.zero = true;
+            dsp.sign = true;
+            dsp.carry = true;
+            dsp.overflow = true;
+
+            dsp.AC.u64 = 0;
+            dsp.P.u64 = 0;
+            dsp.ALU_AD2();
+
+            CHECK(dsp.ALU.u64 == 0);
+            CHECK(dsp.zero == true);
+            CHECK(dsp.sign == false);
+            CHECK(dsp.carry == false);
+            CHECK(dsp.overflow == false);
+        }
+
+        SECTION("zero, carry") {
+            dsp.zero = true;
+            dsp.sign = true;
+            dsp.carry = true;
+            dsp.overflow = true;
+
+            dsp.AC.u64 = -1;
+            dsp.P.u64 = 1;
+            dsp.ALU_AD2();
+
+            CHECK(dsp.ALU.u64 == 0);
+            CHECK(dsp.zero == true);
+            CHECK(dsp.sign == false);
+            CHECK(dsp.carry == true);
+            CHECK(dsp.overflow == false);
+        }
+
+        SECTION("zero, carry, overflow") {
+            dsp.zero = true;
+            dsp.sign = true;
+            dsp.carry = true;
+            dsp.overflow = true;
+
+            dsp.AC.u64 = 0x800000000000;
+            dsp.P.u64 = 0x800000000000;
+            dsp.ALU_AD2();
+
+            CHECK(dsp.ALU.u64 == 0);
+            CHECK(dsp.zero == true);
+            CHECK(dsp.sign == false);
+            CHECK(dsp.carry == true);
+            CHECK(dsp.overflow == true);
+        }
+
+        SECTION("sign") {
+            dsp.zero = true;
+            dsp.sign = true;
+            dsp.carry = true;
+            dsp.overflow = true;
+
+            dsp.AC.u64 = -123;
+            dsp.P.u64 = 1;
+            dsp.ALU_AD2();
+
+            CHECK(dsp.ALU.s64 == -122);
+            CHECK(dsp.zero == false);
+            CHECK(dsp.sign == true);
+            CHECK(dsp.carry == false);
+            CHECK(dsp.overflow == false);
+        }
+
+        SECTION("sign, carry") {
+            dsp.zero = true;
+            dsp.sign = true;
+            dsp.carry = true;
+            dsp.overflow = true;
+
+            dsp.AC.u64 = -123;
+            dsp.P.u64 = -1;
+            dsp.ALU_AD2();
+
+            CHECK(dsp.ALU.s64 == -124);
+            CHECK(dsp.zero == false);
+            CHECK(dsp.sign == true);
+            CHECK(dsp.carry == true);
+            CHECK(dsp.overflow == false);
+        }
+
+        SECTION("sign, overflow") {
+            dsp.zero = true;
+            dsp.sign = true;
+            dsp.carry = true;
+            dsp.overflow = true;
+
+            dsp.AC.u64 = 0x7FFFFFFFFFFF;
+            dsp.P.u64 = 1;
+            dsp.ALU_AD2();
+
+            CHECK(dsp.ALU.u64 == 0x800000000000);
+            CHECK(dsp.zero == false);
+            CHECK(dsp.sign == true);
+            CHECK(dsp.carry == false);
+            CHECK(dsp.overflow == true);
+        }
+
+        SECTION("carry") {
+            dsp.zero = true;
+            dsp.sign = true;
+            dsp.carry = true;
+            dsp.overflow = true;
+
+            dsp.AC.u64 = 100;
+            dsp.P.u64 = -1;
+            dsp.ALU_AD2();
+
+            CHECK(dsp.ALU.u64 == 99);
+            CHECK(dsp.zero == false);
+            CHECK(dsp.sign == false);
+            CHECK(dsp.carry == true);
+            CHECK(dsp.overflow == false);
+        }
+
+        SECTION("carry, overflow") {
+            dsp.zero = true;
+            dsp.sign = true;
+            dsp.carry = true;
+            dsp.overflow = true;
+
+            dsp.AC.u64 = 0x800000000000;
+            dsp.P.u64 = -1;
+            dsp.ALU_AD2();
+
+            CHECK(dsp.ALU.u64 == 0x7FFFFFFFFFFF);
+            CHECK(dsp.zero == false);
+            CHECK(dsp.sign == false);
+            CHECK(dsp.carry == true);
+            CHECK(dsp.overflow == true);
+        }
+    }
 
     SECTION("SR") {}
 
@@ -532,8 +685,11 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP instructions execute correctl
 
     SECTION("Combined - AND  MOV MUL,P  MOV[s],X  MOV ALU,A  MOV [s],Y  MOV [s],[d]") {}
 
-    // [d] =
+    // [d] = CT0..CT3, RX, P, RA0, WA0, LOP, TOP
     SECTION("MVI SImm,[d]") {}
+
+    // [d] = CT0..CT3, RX, P, RA0, WA0, LOP, TOP
+    SECTION("MVI <cond>,SImm,[d]") {}
 }
 
 // TODO: test complete programs
