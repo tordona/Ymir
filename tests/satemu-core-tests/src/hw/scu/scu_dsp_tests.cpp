@@ -30,8 +30,6 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
     ClearAll();
 
     SECTION("AND") {
-        dsp.zero = true;
-        dsp.sign = true;
         dsp.carry = true;
         dsp.overflow = true;
         dsp.ALU.H = 0xDEAD;
@@ -84,8 +82,6 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
     }
 
     SECTION("OR") {
-        dsp.zero = true;
-        dsp.sign = true;
         dsp.carry = true;
         dsp.overflow = true;
         dsp.ALU.H = 0xDEAD;
@@ -647,7 +643,70 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
         }
     }
 
-    SECTION("SR") {}
+    SECTION("SR") {
+        dsp.overflow = true;
+        dsp.ALU.H = 0xDEAD;
+
+        SECTION("no flags") {
+            dsp.zero = true;
+            dsp.sign = true;
+            dsp.carry = true;
+
+            dsp.AC.L = 0x10;
+            dsp.ALU_SR();
+
+            CHECK(dsp.ALU.L == 0x8);
+            CHECK(dsp.zero == false);
+            CHECK(dsp.sign == false);
+            CHECK(dsp.carry == false);
+        }
+
+        SECTION("zero") {
+            dsp.zero = false;
+            dsp.sign = true;
+            dsp.carry = true;
+
+            dsp.AC.L = 0x0;
+            dsp.ALU_SR();
+
+            CHECK(dsp.ALU.L == 0x0);
+            CHECK(dsp.zero == true);
+            CHECK(dsp.sign == false);
+            CHECK(dsp.carry == false);
+        }
+
+        SECTION("zero, carry") {
+            dsp.zero = false;
+            dsp.sign = true;
+            dsp.carry = false;
+
+            dsp.AC.L = 0x1;
+            dsp.ALU_SR();
+
+            CHECK(dsp.ALU.L == 0x0);
+            CHECK(dsp.zero == true);
+            CHECK(dsp.sign == false);
+            CHECK(dsp.carry == true);
+        }
+
+        SECTION("carry") {
+            dsp.zero = true;
+            dsp.sign = true;
+            dsp.carry = false;
+
+            dsp.AC.L = 0x11;
+            dsp.ALU_SR();
+
+            CHECK(dsp.ALU.L == 0x8);
+            CHECK(dsp.zero == false);
+            CHECK(dsp.sign == false);
+            CHECK(dsp.carry == true);
+        }
+
+        // These should not be modified
+        CHECK(dsp.overflow == true);
+        CHECK(dsp.ALU.H == 0xDEAD);
+    }
 
     SECTION("RR") {}
 

@@ -172,7 +172,7 @@ public:
         carry = bit::extract<0>(AC.L);
         ALU.L = static_cast<sint32>(AC.L) >> 1;
         zero = ALU.L == 0;
-        sign = static_cast<sint32>(ALU.L) < 0;
+        sign = false;
     }
 
     FORCE_INLINE void ALU_RR() {
