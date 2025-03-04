@@ -1026,10 +1026,6 @@ struct TestData {
 };
 
 // TODO: test the rest of the instructions
-// "ALU - SR"
-// "ALU - RR"
-// "ALU - SL"
-// "ALU - RL"
 // "ALU - RL8"
 
 // [s] = CT0..CT3, MC0..MC3
