@@ -192,11 +192,6 @@ void SCUDSP::RunDMA(uint64 cycles) {
 }
 
 FORCE_INLINE void SCUDSP::Cmd_Operation(uint32 command) {
-    auto setZS32 = [&](uint32 value) {
-        zero = value == 0;
-        sign = static_cast<sint32>(value) < 0;
-    };
-
     // ALU
     switch (bit::extract<26, 29>(command)) {
     case 0b0000: break;            // NOP

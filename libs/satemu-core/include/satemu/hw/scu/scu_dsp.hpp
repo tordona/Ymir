@@ -139,22 +139,22 @@ public:
         const uint64 op1 = AC.L;
         const uint64 op2 = P.L;
         const uint64 result = op1 + op2;
-        zero = result == 0;
+        ALU.L = result;
+        zero = ALU.L == 0;
         sign = static_cast<sint32>(result) < 0;
         carry = bit::extract<32>(result);
         overflow = bit::extract<31>((~(op1 ^ op2)) & (op1 ^ result));
-        ALU.L = result;
     }
 
     FORCE_INLINE void ALU_SUB() {
         const uint64 op1 = AC.L;
         const uint64 op2 = P.L;
         const uint64 result = op1 - op2;
-        zero = result == 0;
+        ALU.L = result;
+        zero = ALU.L == 0;
         sign = static_cast<sint32>(result) < 0;
         carry = bit::extract<32>(result);
         overflow = bit::extract<31>((op1 ^ op2) & (op1 ^ result));
-        ALU.L = result;
     }
 
     FORCE_INLINE void ALU_AD2() {
