@@ -1610,11 +1610,62 @@ TestData{
     },
     .numSteps = 1,
 },
+TestData{
+    .name = "Y-Bus - MOV ALU,A",
+    .initialState = {
+        .programRAM = {0x00040000},
+        .dataRAM = {{
+            {1},
+            {2, 3},
+            {4, 5, 6},
+            {7, 8, 9, 10},
+        }},
+        .PC = 0,
+        .sign = false,
+        .zero = false,
+        .carry = false,
+        .overflow = false,
+        .CT = {0, 1, 2, 3},
+        .ALU = 0x1234,
+        .AC = 0x5678,
+        .P = 0x9ABC,
+        .RX = 123,
+        .RY = 456,
+        .LOP = 0,
+        .TOP = 0,
+        .RA0 = 0,
+        .WA0 = 0,
+    },
+    .finalState = {
+        .programRAM = {0x00040000},
+        .dataRAM = {{
+            {1},
+            {2, 3},
+            {4, 5, 6},
+            {7, 8, 9, 10},
+        }},
+        .PC = 1,
+        .sign = false,
+        .zero = false,
+        .carry = false,
+        .overflow = false,
+        .CT = {0, 1, 2, 3},
+        .ALU = 0x1234,
+        .AC = 0x1234,
+        .P = 0x9ABC,
+        .RX = 123,
+        .RY = 456,
+        .LOP = 0,
+        .TOP = 0,
+        .RA0 = 0,
+        .WA0 = 0,
+    },
+    .numSteps = 1,
+},
 
 // TODO: test the rest of the instructions
 
 // [s] = CT0..CT3, MC0..MC3
-// "Y-Bus - MOV ALU,A"
 // "Y-Bus - MOV [s],A"
 // "Y-Bus - MOV [s],Y"
 
