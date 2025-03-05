@@ -1099,6 +1099,23 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP instructions execute correctl
     }
 }
 
+// TODO: test DMA transfers
+// [RAM]=Data RAM 0..3 or Program RAM
+// D0=SCU A-Bus, SCU B-Bus or WRAM High
+// [s]=CT0..CT3, MC0..MC3
+// "DMA [RAM],D0,SImm"
+// "DMA [RAM],D0,[s]"
+// "DMAH [RAM],D0,SImm"
+// "DMAH [RAM],D0,[s]"
+// "DMA D0,[RAM],SImm"
+// "DMA D0,[RAM],[s]"
+// "DMAH D0,[RAM],SImm"
+// "DMAH D0,[RAM],[s]"
+//
+// Also test NT0 and T0 conditions with:
+// "MVI <cond>,SImm,[d]"
+// "JMP <cond>,Imm"
+
 // TODO: test complete programs
 
 // TODO: test DSP control (start, stop, pause, step, etc.)

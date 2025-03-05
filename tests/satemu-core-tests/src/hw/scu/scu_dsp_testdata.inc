@@ -1247,7 +1247,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - MOV CT2,P",
+    .name = "X-Bus - MOV CT2,X",
     .initialState = {
         .programRAM = {0x02200000},
         .dataRAM = {{
@@ -1677,24 +1677,18 @@ TestData{
 // [s] (X,Y) = CT0..CT3, MC0..MC3
 // [s] (D1)  = CT0..CT3, MC0..MC3, ALUL, ALUH
 // [d] (D1)  = CT0..CT3, MC0..MC3, RX, P, RA0, WA0, LOP, TOP
-// "Combined - AND  MOV MUL,P  MOV [s],X  MOV ALU,A  MOV [s],Y  MOV [s],[d]"
-
-// [RAM]=Data RAM 0..3 or Program RAM
-// D0=SCU A-Bus, SCU B-Bus or WRAM High
-// [s]=CT0..CT3, MC0..MC3
-// "DMA [RAM],D0,SImm"
-// "DMA [RAM],D0,[s]"
-// "DMAH [RAM],D0,SImm"
-// "DMAH [RAM],D0,[s]"
-// "DMA D0,[RAM],SImm"
-// "DMA D0,[RAM],[s]"
-// "DMAH D0,[RAM],SImm"
-// "DMAH D0,[RAM],[s]"
+// "Six instructions - AD2  MOV MUL,P  MOV MC0,X  MOV ALU,A  MOV CT1,Y  MOV ALUH,RA0" // 0x1B4C760A
+// "Repeated MCs - MOV MC0,X  MOV MC0,Y  MOV MC0,P" // 0x02490504
+// "Distinct MCs - MOV MC0,X  MOV MC1,Y  MOV MC2,P" // 0x02494506
+// "Multiple writes to RX - MOV CT0,X  MOV CT1,RX"  // 0x02003401
+// "Multiple writes to P - MOV CT0,P  MOV CT1,P"    // 0x01803501
 
 // [d] = CT0..CT3, RX, P, RA0, WA0, LOP, TOP
+// <cond> = NZ, NS, NZS, NC, NT0, Z, S, ZS, C, T0
 // "MVI SImm,[d]"
 // "MVI <cond>,SImm,[d]"
 
+// <cond> = NZ, NS, NZS, NC, NT0, Z, S, ZS, C, T0
 // "JMP Imm"
 // "JMP <cond>,Imm"
 
