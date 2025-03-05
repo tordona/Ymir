@@ -727,7 +727,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - X-Bus - MOV CT0,P",
+    .name = "X-Bus - MOV CT0,P",
     .initialState = {
         .programRAM = {0x01800000},
         .dataRAM = {{
@@ -779,7 +779,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - X-Bus - MOV CT1,P",
+    .name = "X-Bus - MOV CT1,P",
     .initialState = {
         .programRAM = {0x01900000},
         .dataRAM = {{
@@ -831,7 +831,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - X-Bus - MOV CT2,P",
+    .name = "X-Bus - MOV CT2,P",
     .initialState = {
         .programRAM = {0x01A00000},
         .dataRAM = {{
@@ -883,7 +883,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - X-Bus - MOV CT3,P",
+    .name = "X-Bus - MOV CT3,P",
     .initialState = {
         .programRAM = {0x01B00000},
         .dataRAM = {{
@@ -935,7 +935,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - X-Bus - MOV MC0,P",
+    .name = "X-Bus - MOV MC0,P",
     .initialState = {
         .programRAM = {0x01C00000},
         .dataRAM = {{
@@ -987,7 +987,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - X-Bus - MOV MC1,P",
+    .name = "X-Bus - MOV MC1,P",
     .initialState = {
         .programRAM = {0x01D00000},
         .dataRAM = {{
@@ -1039,7 +1039,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - X-Bus - MOV MC2,P",
+    .name = "X-Bus - MOV MC2,P",
     .initialState = {
         .programRAM = {0x01E00000},
         .dataRAM = {{
@@ -1091,7 +1091,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - X-Bus - MOV MC3,P",
+    .name = "X-Bus - MOV MC3,P",
     .initialState = {
         .programRAM = {0x01F00000},
         .dataRAM = {{
@@ -1143,7 +1143,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - X-Bus - MOV CT0,X",
+    .name = "X-Bus - MOV CT0,X",
     .initialState = {
         .programRAM = {0x02000000},
         .dataRAM = {{
@@ -1195,7 +1195,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - X-Bus - MOV CT1,X",
+    .name = "X-Bus - MOV CT1,X",
     .initialState = {
         .programRAM = {0x02100000},
         .dataRAM = {{
@@ -1247,7 +1247,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - X-Bus - MOV CT2,P",
+    .name = "X-Bus - MOV CT2,P",
     .initialState = {
         .programRAM = {0x02200000},
         .dataRAM = {{
@@ -1299,7 +1299,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - X-Bus - MOV CT3,X",
+    .name = "X-Bus - MOV CT3,X",
     .initialState = {
         .programRAM = {0x02300000},
         .dataRAM = {{
@@ -1351,7 +1351,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - X-Bus - MOV MC0,X",
+    .name = "X-Bus - MOV MC0,X",
     .initialState = {
         .programRAM = {0x02400000},
         .dataRAM = {{
@@ -1403,7 +1403,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - X-Bus - MOV MC1,X",
+    .name = "X-Bus - MOV MC1,X",
     .initialState = {
         .programRAM = {0x02500000},
         .dataRAM = {{
@@ -1455,7 +1455,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - X-Bus - MOV MC2,X",
+    .name = "X-Bus - MOV MC2,X",
     .initialState = {
         .programRAM = {0x02600000},
         .dataRAM = {{
@@ -1507,7 +1507,7 @@ TestData{
     .numSteps = 1,
 },
 TestData{
-    .name = "X-Bus - X-Bus - MOV MC3,X",
+    .name = "X-Bus - MOV MC3,X",
     .initialState = {
         .programRAM = {0x02700000},
         .dataRAM = {{
@@ -1551,6 +1551,58 @@ TestData{
         .P = 0,
         .RX = 10,
         .RY = 0,
+        .LOP = 0,
+        .TOP = 0,
+        .RA0 = 0,
+        .WA0 = 0,
+    },
+    .numSteps = 1,
+},
+TestData{
+    .name = "Y-Bus - CLR A",
+    .initialState = {
+        .programRAM = {0x00020000},
+        .dataRAM = {{
+            {1},
+            {2, 3},
+            {4, 5, 6},
+            {7, 8, 9, 10},
+        }},
+        .PC = 0,
+        .sign = false,
+        .zero = false,
+        .carry = false,
+        .overflow = false,
+        .CT = {0, 1, 2, 3},
+        .ALU = 0x1234,
+        .AC = 0x5678,
+        .P = 0x9ABC,
+        .RX = 123,
+        .RY = 456,
+        .LOP = 0,
+        .TOP = 0,
+        .RA0 = 0,
+        .WA0 = 0,
+    },
+    .finalState = {
+        .programRAM = {0x00020000},
+        .dataRAM = {{
+            {1},
+            {2, 3},
+            {4, 5, 6},
+            {7, 8, 9, 10},
+        }},
+        .PC = 1,
+        .sign = false,
+        .zero = false,
+        .carry = false,
+        .overflow = false,
+        .CT = {0, 1, 2, 3},
+        .ALU = 0x1234,
+        .AC = 0,
+        .P = 0x9ABC,
+        .RX = 123,
+        .RY = 456,
         .LOP = 0,
         .TOP = 0,
         .RA0 = 0,
@@ -1562,7 +1614,6 @@ TestData{
 // TODO: test the rest of the instructions
 
 // [s] = CT0..CT3, MC0..MC3
-// "Y-Bus - CLR A"
 // "Y-Bus - MOV ALU,A"
 // "Y-Bus - MOV [s],A"
 // "Y-Bus - MOV [s],Y"
