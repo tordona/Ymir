@@ -1295,7 +1295,45 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
     }
 }
 
-// TODO: test end of program - END, ENDI
+TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP end instructions execute correctly", "[scu][scudsp][instructions]") {
+    dsp.Reset(true);
+
+    SECTION("END") {
+        dsp.programRAM[0] = 0xF0000000; // END
+
+        // Setup execution
+        dsp.PC = 0;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.programExecuting == false);
+        CHECK(dsp.programEnded == true);
+        CHECK(dspEndTriggered == false);
+    }
+
+    SECTION("ENDI") {
+        dsp.programRAM[0] = 0xF8000000; // ENDI
+
+        // Setup execution
+        dsp.PC = 0;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.programExecuting == false);
+        CHECK(dsp.programEnded == true);
+        CHECK(dspEndTriggered == true);
+    }
+}
 
 // TODO: test DMA transfers
 // [RAM]=Data RAM 0..3 or Program RAM
