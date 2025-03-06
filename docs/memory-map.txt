@@ -1,6 +1,6 @@
 SH-2 address space
 ------------------
-Adapted from the SH7604 Hardware Manual
+Adapted from the SH7604/SH7095 Hardware Manuals
 
 Address range            Space
 0x00000000..0x01FFFFFF   CS0 space, cache area

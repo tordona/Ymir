@@ -210,7 +210,7 @@ private:
 
     sys::Bus &m_bus;
 
-    // According to the SH7604 manual, the address space is divided into these areas:
+    // According to the SH7604/SH7095 manuals, the address space is divided into these areas:
     //
     // Address range            Space                           Memory
     // 0x00000000..0x01FFFFFF   CS0 space, cache area           Ordinary space or burst ROM
