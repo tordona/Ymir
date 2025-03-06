@@ -1099,7 +1099,201 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP instructions execute correctl
     }
 }
 
-// TODO: test loops - LPS, BTM
+TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute correctly",
+                             "[scu][scudsp][instructions]") {
+    dsp.Reset(true);
+
+    SECTION("LPS") {
+        dsp.programRAM[0] = 0xE8000000; // LPS
+        dsp.programRAM[1] = 0x10040000; // ADD  MOV ALU,A
+        dsp.AC.u64 = 1;
+        dsp.P.u64 = 1;
+        dsp.loopCount = 2;
+
+        // Setup execution
+        dsp.PC = 0;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        // Run step 1 - LPS
+        // LOP > 0 => set TOP = PC and LOP = LOP-1
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.loopTop == 0);
+        CHECK(dsp.loopCount == 1);
+        CHECK(dsp.ALU.u64 == 0);
+        CHECK(dsp.AC.u64 == 1);
+        CHECK(dsp.P.u64 == 1);
+
+        // Run step 2 - ADD  MOV ALU,A
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 0);
+        CHECK(dsp.loopTop == 0);
+        CHECK(dsp.loopCount == 1);
+        CHECK(dsp.ALU.u64 == 2);
+        CHECK(dsp.AC.u64 == 2);
+        CHECK(dsp.P.u64 == 1);
+
+        // Run step 3 - LPS
+        // LOP > 0 => set TOP = PC and LOP = LOP-1
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.loopTop == 0);
+        CHECK(dsp.loopCount == 0);
+        CHECK(dsp.ALU.u64 == 2);
+        CHECK(dsp.AC.u64 == 2);
+        CHECK(dsp.P.u64 == 1);
+
+        // Run step 4 - ADD  MOV ALU,A
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 0);
+        CHECK(dsp.loopTop == 0);
+        CHECK(dsp.loopCount == 0);
+        CHECK(dsp.ALU.u64 == 3);
+        CHECK(dsp.AC.u64 == 3);
+        CHECK(dsp.P.u64 == 1);
+
+        // Run step 5 - LPS
+        // LOP = 0 => skip instruction and set LOP = LOP-1
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.loopTop == 0);
+        CHECK(dsp.loopCount == 0xFFF);
+        CHECK(dsp.ALU.u64 == 3);
+        CHECK(dsp.AC.u64 == 3);
+        CHECK(dsp.P.u64 == 1);
+
+        // Run step 6 - ADD  MOV ALU,A
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 2);
+        CHECK(dsp.loopTop == 0);
+        CHECK(dsp.loopCount == 0xFFF);
+        CHECK(dsp.ALU.u64 == 4);
+        CHECK(dsp.AC.u64 == 4);
+        CHECK(dsp.P.u64 == 1);
+    }
+
+    SECTION("BTM") {
+        dsp.programRAM[0] = 0x00000000; // NOP
+        dsp.programRAM[1] = 0x10040000; // ADD  MOV ALU,A
+        dsp.programRAM[2] = 0xE0000000; // BTM
+        dsp.programRAM[3] = 0x28040000; // SL   MOV ALU,A
+        dsp.AC.u64 = 1;
+        dsp.P.u64 = 1;
+        dsp.loopTop = 1;
+        dsp.loopCount = 2;
+
+        // Setup execution
+        dsp.PC = 1;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        // Run step 1 - ADD  MOV ALU,A
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 2);
+        CHECK(dsp.loopTop == 1);
+        CHECK(dsp.loopCount == 2);
+        CHECK(dsp.ALU.u64 == 2);
+        CHECK(dsp.AC.u64 == 2);
+        CHECK(dsp.P.u64 == 1);
+
+        // Run step 2 - BTM
+        // LOP > 0 => setup delayed jump and set LOP = LOP-1
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 3);
+        CHECK(dsp.loopTop == 1);
+        CHECK(dsp.loopCount == 1);
+        CHECK(dsp.ALU.u64 == 2);
+        CHECK(dsp.AC.u64 == 2);
+        CHECK(dsp.P.u64 == 1);
+
+        // Run step 3 - SL   MOV ALU,A
+        // Jump back to TOP
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.loopTop == 1);
+        CHECK(dsp.loopCount == 1);
+        CHECK(dsp.ALU.u64 == 4);
+        CHECK(dsp.AC.u64 == 4);
+        CHECK(dsp.P.u64 == 1);
+
+        // Run step 4 - ADD  MOV ALU,A
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 2);
+        CHECK(dsp.loopTop == 1);
+        CHECK(dsp.loopCount == 1);
+        CHECK(dsp.ALU.u64 == 5);
+        CHECK(dsp.AC.u64 == 5);
+        CHECK(dsp.P.u64 == 1);
+
+        // Run step 5 - BTM
+        // LOP > 0 => setup delayed jump and set LOP = LOP-1
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 3);
+        CHECK(dsp.loopTop == 1);
+        CHECK(dsp.loopCount == 0);
+        CHECK(dsp.ALU.u64 == 5);
+        CHECK(dsp.AC.u64 == 5);
+        CHECK(dsp.P.u64 == 1);
+
+        // Run step 6 - SL   MOV ALU,A
+        // Jump back to TOP
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.loopTop == 1);
+        CHECK(dsp.loopCount == 0);
+        CHECK(dsp.ALU.u64 == 10);
+        CHECK(dsp.AC.u64 == 10);
+        CHECK(dsp.P.u64 == 1);
+
+        // Run step 7 - ADD  MOV ALU,A
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 2);
+        CHECK(dsp.loopTop == 1);
+        CHECK(dsp.loopCount == 0);
+        CHECK(dsp.ALU.u64 == 11);
+        CHECK(dsp.AC.u64 == 11);
+        CHECK(dsp.P.u64 == 1);
+
+        // Run step 8 - BTM
+        // LOP = 0 => skip instruction and set LOP = LOP-1
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 3);
+        CHECK(dsp.loopTop == 1);
+        CHECK(dsp.loopCount == 0xFFF);
+        CHECK(dsp.ALU.u64 == 11);
+        CHECK(dsp.AC.u64 == 11);
+        CHECK(dsp.P.u64 == 1);
+
+        // Run step 9 - SL   MOV ALU,A
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 4);
+        CHECK(dsp.loopTop == 1);
+        CHECK(dsp.loopCount == 0xFFF);
+        CHECK(dsp.ALU.u64 == 22);
+        CHECK(dsp.AC.u64 == 22);
+        CHECK(dsp.P.u64 == 1);
+    }
+}
 
 // TODO: test end of program - END, ENDI
 
