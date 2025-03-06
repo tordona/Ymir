@@ -6082,11 +6082,3 @@ TestData{
     },
     .numSteps = 2,
 },
-
-// TODO: test the rest of the instructions
-
-// "LPS"
-// "BTM"
-
-// "END"
-// "ENDI"

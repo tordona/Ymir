@@ -1099,6 +1099,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP instructions execute correctl
     }
 }
 
+// TODO: test loops - LPS, BTM
+
+// TODO: test end of program - END, ENDI
+
 // TODO: test DMA transfers
 // [RAM]=Data RAM 0..3 or Program RAM
 // D0=SCU A-Bus, SCU B-Bus or WRAM High
