@@ -294,7 +294,7 @@ FORCE_INLINE void SCUDSP::Cmd_LoadImm(uint32 command) {
     sint32 imm;
     if (bit::extract<25>(command)) {
         // Conditional transfer
-        // MVI <cond>,SImm,[d]
+        // MVI SImm,[d],<cond>
         imm = bit::extract_signed<0, 18>(command);
 
         const uint8 cond = bit::extract<19, 24>(command);
