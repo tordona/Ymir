@@ -1336,9 +1336,9 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP end instructions execute corr
 }
 
 // TODO: test DMA transfers
-// [RAM]=Data RAM 0..3 or Program RAM
+// [RAM]=MC0..3 or PRG
 // D0=SCU A-Bus, SCU B-Bus or WRAM High
-// [s]=CT0..CT3, MC0..MC3
+// [s]=M0..M3, MC0..MC3
 // "DMA [RAM],D0,SImm"
 // "DMA [RAM],D0,[s]"
 // "DMAH [RAM],D0,SImm"
