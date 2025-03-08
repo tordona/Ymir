@@ -74,8 +74,6 @@ public:
 
     void UpdateClockRatios(const sys::ClockRatios &clockRatios);
 
-    void Advance(uint64 cycles);
-
     // Feeds CDDA data into the buffer and returns how many thirds of the buffer are used
     uint32 ReceiveCDDA(std::span<uint8, 2048> data);
 
