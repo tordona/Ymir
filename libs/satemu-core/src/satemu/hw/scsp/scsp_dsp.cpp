@@ -73,10 +73,27 @@ void DSP::Reset() {
     m_writeValue = 0;
 
     m_readWriteAddr = 0;
+
+    programDirty = false;
+    m_programLength = 0;
 }
 
 void DSP::Run() {
-    for (DSPInstr instr : program) {
+    if (programDirty) [[unlikely]] {
+        programDirty = false;
+        m_programLength = program.size();
+        while (m_programLength > 0 && program[m_programLength - 1].u64 == 0) {
+            m_programLength--;
+        }
+        fmt::println("updated program length to {:d}", m_programLength);
+    }
+
+    for (uint8 i = 0; i < m_programLength; i++) {
+        DSPInstr instr = program[i];
+        if (instr.u64 == 0) {
+            continue;
+        }
+
         if (instr.IRA <= 0x1F) {
             // MEMS area: 24 -> 24 bits
             INPUTS = soundMem[instr.IRA];

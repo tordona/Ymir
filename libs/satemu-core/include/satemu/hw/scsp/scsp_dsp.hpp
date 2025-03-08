@@ -70,6 +70,8 @@ public:
     uint8 ringBufferLeadAddress; // (W) RBP - DSP Ring Buffer Lead Address
     uint8 ringBufferLength;      // (W) RBL - DSP Ring Buffer Length
 
+    bool programDirty;
+
 private:
     // -------------------------------------------------------------------------
     // State
@@ -91,6 +93,8 @@ private:
     uint16 m_writeValue;
 
     uint32 m_readWriteAddr;
+
+    uint8 m_programLength;
 
     uint8 *m_WRAM;
 
