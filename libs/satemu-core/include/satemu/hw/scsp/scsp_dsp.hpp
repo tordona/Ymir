@@ -51,6 +51,8 @@ public:
 
     void Reset();
 
+    void UpdateProgramLength(uint8 writeIndex);
+
     void Run();
 
     void DumpRegs(std::ostream &out) const;
@@ -69,8 +71,6 @@ public:
 
     uint8 ringBufferLeadAddress; // (W) RBP - DSP Ring Buffer Lead Address
     uint8 ringBufferLength;      // (W) RBL - DSP Ring Buffer Length
-
-    bool programDirty;
 
 private:
     // -------------------------------------------------------------------------

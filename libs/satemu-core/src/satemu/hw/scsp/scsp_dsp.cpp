@@ -74,23 +74,31 @@ void DSP::Reset() {
 
     m_readWriteAddr = 0;
 
-    programDirty = false;
     m_programLength = 0;
 }
 
-void DSP::Run() {
-    if (programDirty) [[unlikely]] {
-        programDirty = false;
-        m_programLength = program.size();
+void DSP::UpdateProgramLength(uint8 writeIndex) {
+    const bool wroteNOP = program[writeIndex].u64 == 0;
+    bool updated = false;
+    if (wroteNOP && writeIndex == m_programLength - 1) {
+        // If writing a NOP to the last instruction, shrink the program and recalculate
         while (m_programLength > 0 && program[m_programLength - 1].u64 == 0) {
             --m_programLength;
         }
-        // Add one extra step if needed to allow the write to take place
-        if (m_programLength < program.size() && program[m_programLength - 1].MWT) {
-            ++m_programLength;
-        }
+        updated = true;
+    } else if (!wroteNOP && writeIndex >= m_programLength) {
+        // If writing anything other than a NOP past the current program length, increase program length
+        m_programLength = writeIndex + 1;
+        updated = true;
     }
 
+    // Add one extra step if needed to allow a memory write in the last step to take place
+    if (updated && m_programLength < program.size() && program[m_programLength - 1].MWT) {
+        ++m_programLength;
+    }
+}
+
+void DSP::Run() {
     for (uint8 i = 0; i < m_programLength; i++) {
         DSPInstr instr = program[i];
         if (instr.u64 == 0) {
