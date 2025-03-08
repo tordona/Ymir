@@ -32,6 +32,7 @@ void SCSP::Reset(bool hard) {
     m_cddaReady = false;
 
     m_m68k.Reset(true);
+    m_m68kSpilloverCycles = 0;
     m_m68kEnabled = false;
 
     m_m68kCycles = 0;
@@ -194,6 +195,7 @@ void SCSP::SetCPUEnabled(bool enabled) {
         rootLog.info("MC68EC00 processor {}", (enabled ? "enabled" : "disabled"));
         if (enabled) {
             m_m68k.Reset(true); // false? does it matter?
+            m_m68kSpilloverCycles = 0;
         }
         m_m68kEnabled = enabled;
     }
@@ -349,10 +351,11 @@ FORCE_INLINE void SCSP::Tick() {
 
 FORCE_INLINE void SCSP::RunM68K() {
     if (m_m68kEnabled) {
-        for (uint64 cy = 0; cy < kM68KCyclesPerSample; cy++) {
-            // TODO: proper cycle counting
-            m_m68k.Step();
+        uint64 cy = m_m68kSpilloverCycles;
+        while (cy < kM68KCyclesPerSample) {
+            cy += m_m68k.Step();
         }
+        m_m68kSpilloverCycles = cy - kM68KCyclesPerSample;
     }
 }
 

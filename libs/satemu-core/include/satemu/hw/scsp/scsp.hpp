@@ -102,6 +102,7 @@ private:
     bool m_cddaReady;
 
     m68k::MC68EC000 m_m68k;
+    uint64 m_m68kSpilloverCycles;
     bool m_m68kEnabled;
 
     core::Scheduler &m_scheduler;

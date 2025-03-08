@@ -30,7 +30,7 @@ public:
 
     void Reset(bool hard);
 
-    void Step();
+    uint64 Step();
 
     void SetExternalInterruptLevel(uint8 level);
 
@@ -217,7 +217,7 @@ private:
     // -------------------------------------------------------------------------
     // Interpreter
 
-    void Execute();
+    uint64 Execute();
 
     // -------------------------------------------------------------------------
     // Instruction interpreters
