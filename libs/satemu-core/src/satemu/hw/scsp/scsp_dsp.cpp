@@ -83,9 +83,12 @@ void DSP::Run() {
         programDirty = false;
         m_programLength = program.size();
         while (m_programLength > 0 && program[m_programLength - 1].u64 == 0) {
-            m_programLength--;
+            --m_programLength;
         }
-        fmt::println("updated program length to {:d}", m_programLength);
+        // Add one extra step if needed to allow the write to take place
+        if (m_programLength < program.size() && program[m_programLength - 1].MWT) {
+            ++m_programLength;
+        }
     }
 
     for (uint8 i = 0; i < m_programLength; i++) {

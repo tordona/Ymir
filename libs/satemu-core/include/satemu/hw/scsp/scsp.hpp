@@ -401,9 +401,8 @@ private:
             // DSP MPRO
             const uint32 index = (address >> 3u) & 0x7F;
             const uint32 subindex = ((address >> 1u) & 0x3) ^ 3;
-            const uint16 prevValue = m_dsp.program[index].u16[subindex];
             write16(m_dsp.program[index].u16[subindex], value16);
-            m_dsp.programDirty = prevValue != m_dsp.program[index].u16[subindex];
+            m_dsp.programDirty = true;
             return;
         } else if (AddressInRange<0xC00, 0xDFF>(address)) {
             // DSP TEMP
