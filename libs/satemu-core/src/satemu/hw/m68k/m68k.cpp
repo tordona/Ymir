@@ -149,7 +149,7 @@ FORCE_INLINE bool MC68EC000::CheckPrivilege() {
     return true;
 }
 
-FORCE_INLINE void MC68EC000::CheckInterrupt() {
+FORCE_INLINE bool MC68EC000::CheckInterrupt() {
     const uint8 level = m_externalInterruptLevel;
     if (level == 7 || level > SR.IPM) {
         ExceptionVector vector = m_bus.AcknowledgeInterrupt(level);
@@ -157,7 +157,9 @@ FORCE_INLINE void MC68EC000::CheckInterrupt() {
             vector = static_cast<ExceptionVector>(static_cast<uint32>(ExceptionVector::BaseAutovector) + level);
         }
         HandleInterrupt(vector, level);
+        return true;
     }
+    return false;
 }
 
 // M   Xn
@@ -716,7 +718,9 @@ FORCE_INLINE void MC68EC000::PrefetchTransfer() {
 // Interpreter
 
 uint64 MC68EC000::Execute() {
-    CheckInterrupt();
+    if (CheckInterrupt()) [[unlikely]] {
+        return 44;
+    }
 
     const uint16 instr = m_prefetchQueue[1];
 

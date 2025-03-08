@@ -155,7 +155,8 @@ private:
     bool CheckPrivilege();
 
     // Enters the interrupt exception handler if there is a pending interrupt not masked by the current interrupt level.
-    void CheckInterrupt();
+    // Returns true if an interrupt was handled.
+    bool CheckInterrupt();
 
     // -------------------------------------------------------------------------
     // Helper functions
