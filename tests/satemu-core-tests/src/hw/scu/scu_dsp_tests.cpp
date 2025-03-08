@@ -1876,14 +1876,68 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(memoryAccesses[3] == MemoryAccessInfo{0x600200C, 10, true, sizeof(uint32)});
     }
 
+    SECTION("DMAH MC3,D0,#4 (WRAM High)") {
+        dsp.programRAM[0] = 0xC0015304;
+        dsp.dataRAM[0][0] = 1;
+        dsp.dataRAM[1][0] = 2;
+        dsp.dataRAM[1][1] = 3;
+        dsp.dataRAM[2][0] = 4;
+        dsp.dataRAM[2][1] = 5;
+        dsp.dataRAM[2][2] = 6;
+        dsp.dataRAM[3][0] = 7;
+        dsp.dataRAM[3][1] = 8;
+        dsp.dataRAM[3][2] = 9;
+        dsp.dataRAM[3][3] = 10;
+        dsp.CT[0] = 0;
+        dsp.CT[1] = 1;
+        dsp.CT[2] = 2;
+        dsp.CT[3] = 0;
+
+        // Setup execution
+        dsp.PC = 0;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        dsp.dmaReadAddr = 0x6001000;
+        dsp.dmaWriteAddr = 0x6002000;
+
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.CT[0] == 0);
+        CHECK(dsp.CT[1] == 1);
+        CHECK(dsp.CT[2] == 2);
+        CHECK(dsp.CT[3] == 0);
+        CHECK(dsp.dmaRun == true);
+        CHECK(dsp.dmaToD0 == true);
+        CHECK(dsp.dmaHold == true);
+        CHECK(dsp.dmaCount == 4);
+        CHECK(dsp.dmaSrc == 3);
+        CHECK(dsp.dmaAddrInc == 4);
+
+        // TODO: should cycle count properly
+        dsp.RunDMA(dsp.dmaCount);
+
+        CHECK(dsp.dmaRun == false);
+        CHECK(dsp.dmaToD0 == true);
+        CHECK(dsp.dmaHold == true);
+        CHECK(dsp.dmaReadAddr == 0x6001000);  // not used = maintain address
+        CHECK(dsp.dmaWriteAddr == 0x6002000); // hold = maintain address
+        REQUIRE(memoryAccesses.size() == 4);
+        CHECK(memoryAccesses[0] == MemoryAccessInfo{0x6002000, 7, true, sizeof(uint32)});
+        CHECK(memoryAccesses[1] == MemoryAccessInfo{0x6002004, 8, true, sizeof(uint32)});
+        CHECK(memoryAccesses[2] == MemoryAccessInfo{0x6002008, 9, true, sizeof(uint32)});
+        CHECK(memoryAccesses[3] == MemoryAccessInfo{0x600200C, 10, true, sizeof(uint32)});
+    }
+
     // TODO: test DMA transfers
     //
     // [RAM]=MC0..3 (also PRG if destination)
     // [s]=M0..M3, MC0..MC3
     //
-    // "DMA [RAM],D0,SImm"
     // "DMA [RAM],D0,[s]"
-    // "DMAH [RAM],D0,SImm"
     // "DMAH [RAM],D0,[s]"
     // "DMA D0,[RAM],SImm"
     // "DMA D0,[RAM],[s]"
