@@ -1353,6 +1353,7 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
             break;
         default: break;
         }
+        return 9;
     }
 
     // TODO: emulate fetch - decode - execute - memory access - writeback pipeline
