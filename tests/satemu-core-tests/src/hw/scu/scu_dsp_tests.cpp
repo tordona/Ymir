@@ -2493,17 +2493,698 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(memoryAccesses[9] == MemoryAccessInfo{0x6002024, 91, true, sizeof(uint32)});
     }
 
-    // TODO: test DMA transfers
-    //
-    // [RAM]=MC0..3 (also PRG if destination)
-    // [s]=M0..M3, MC0..MC3
-    //
-    // "DMA D0,[RAM],SImm"
-    // "DMA D0,[RAM],[s]"
-    // "DMAH D0,[RAM],SImm"
-    // "DMAH D0,[RAM],[s]"
-    //
-    // Also test NT0 and T0 conditions with:
+    SECTION("DMA D0,MC0,#1 (invalid region)") {
+        dsp.programRAM[0] = 0xC0000001;
+        dsp.dataRAM[0][0] = 1;
+        dsp.dataRAM[1][0] = 2;
+        dsp.dataRAM[1][1] = 3;
+        dsp.dataRAM[2][0] = 4;
+        dsp.dataRAM[2][1] = 5;
+        dsp.dataRAM[2][2] = 6;
+        dsp.dataRAM[3][0] = 7;
+        dsp.dataRAM[3][1] = 8;
+        dsp.dataRAM[3][2] = 9;
+        dsp.dataRAM[3][3] = 10;
+        dsp.CT[0] = 0;
+        dsp.CT[1] = 1;
+        dsp.CT[2] = 2;
+        dsp.CT[3] = 3;
+
+        // Setup execution
+        dsp.PC = 0;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        dsp.dmaReadAddr = 0x1001000;
+        dsp.dmaWriteAddr = 0x1002000;
+
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.CT[0] == 0);
+        CHECK(dsp.CT[1] == 1);
+        CHECK(dsp.CT[2] == 2);
+        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.dmaRun == true);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaCount == 1);
+        CHECK(dsp.dmaDst == 0);
+        CHECK(dsp.dmaAddrInc == 0);
+
+        // TODO: should cycle count properly
+        dsp.RunDMA(dsp.dmaCount);
+
+        CHECK(dsp.dmaRun == false);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaReadAddr == 0x1001000);  // no hold = update address
+        CHECK(dsp.dmaWriteAddr == 0x1002000); // not used = maintain address
+        CHECK(dsp.dataRAM[0][0] == 1);
+        REQUIRE(memoryAccesses.size() == 0); // no access for invalid region
+    }
+
+    SECTION("DMA D0,MC0,#1 (A-Bus)") {
+        dsp.programRAM[0] = 0xC0000001;
+        dsp.dataRAM[0][0] = 1;
+        dsp.dataRAM[1][0] = 2;
+        dsp.dataRAM[1][1] = 3;
+        dsp.dataRAM[2][0] = 4;
+        dsp.dataRAM[2][1] = 5;
+        dsp.dataRAM[2][2] = 6;
+        dsp.dataRAM[3][0] = 7;
+        dsp.dataRAM[3][1] = 8;
+        dsp.dataRAM[3][2] = 9;
+        dsp.dataRAM[3][3] = 10;
+        dsp.CT[0] = 0;
+        dsp.CT[1] = 1;
+        dsp.CT[2] = 2;
+        dsp.CT[3] = 3;
+
+        MockMemoryRead32(0x2001000, 0x12345678);
+
+        // Setup execution
+        dsp.PC = 0;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        dsp.dmaReadAddr = 0x2001000;
+        dsp.dmaWriteAddr = 0x2002000;
+
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.CT[0] == 0);
+        CHECK(dsp.CT[1] == 1);
+        CHECK(dsp.CT[2] == 2);
+        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.dmaRun == true);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaCount == 1);
+        CHECK(dsp.dmaDst == 0);
+        CHECK(dsp.dmaAddrInc == 0);
+
+        // TODO: should cycle count properly
+        dsp.RunDMA(dsp.dmaCount);
+
+        CHECK(dsp.dmaRun == false);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaReadAddr == 0x2001000);  // no hold = update address
+        CHECK(dsp.dmaWriteAddr == 0x2002000); // not used = maintain address
+        CHECK(dsp.dataRAM[0][0] == 0x12345678);
+        REQUIRE(memoryAccesses.size() == 1);
+        CHECK(memoryAccesses[0] == MemoryAccessInfo{0x2001000, 0x12345678, false, sizeof(uint32)});
+    }
+
+    SECTION("DMA D0,MC0,#1 (B-Bus)") {
+        dsp.programRAM[0] = 0xC0000001;
+        dsp.dataRAM[0][0] = 1;
+        dsp.dataRAM[1][0] = 2;
+        dsp.dataRAM[1][1] = 3;
+        dsp.dataRAM[2][0] = 4;
+        dsp.dataRAM[2][1] = 5;
+        dsp.dataRAM[2][2] = 6;
+        dsp.dataRAM[3][0] = 7;
+        dsp.dataRAM[3][1] = 8;
+        dsp.dataRAM[3][2] = 9;
+        dsp.dataRAM[3][3] = 10;
+        dsp.CT[0] = 0;
+        dsp.CT[1] = 1;
+        dsp.CT[2] = 2;
+        dsp.CT[3] = 3;
+
+        MockMemoryRead16(0x5A01000, 0x1234);
+        MockMemoryRead16(0x5A01002, 0x5678);
+
+        // Setup execution
+        dsp.PC = 0;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        dsp.dmaReadAddr = 0x5A01000;
+        dsp.dmaWriteAddr = 0x5A02000;
+
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.CT[0] == 0);
+        CHECK(dsp.CT[1] == 1);
+        CHECK(dsp.CT[2] == 2);
+        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.dmaRun == true);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaCount == 1);
+        CHECK(dsp.dmaDst == 0);
+        CHECK(dsp.dmaAddrInc == 0);
+
+        // TODO: should cycle count properly
+        dsp.RunDMA(dsp.dmaCount);
+
+        CHECK(dsp.dmaRun == false);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaReadAddr == 0x5A01004);  // no hold = update address; B-Bus write always increments by 4
+        CHECK(dsp.dmaWriteAddr == 0x5A02000); // not used = maintain address
+        CHECK(dsp.dataRAM[0][0] == 0x12345678);
+        REQUIRE(memoryAccesses.size() == 2); // 32-bit access broken down into two 16-bit accesses
+        CHECK(memoryAccesses[0] == MemoryAccessInfo{0x5A01000, 0x1234, false, sizeof(uint16)});
+        CHECK(memoryAccesses[1] == MemoryAccessInfo{0x5A01002, 0x5678, false, sizeof(uint16)});
+    }
+
+    SECTION("DMA D0,MC0,#1 (WRAM High)") {
+        dsp.programRAM[0] = 0xC0000001;
+        dsp.dataRAM[0][0] = 1;
+        dsp.dataRAM[1][0] = 2;
+        dsp.dataRAM[1][1] = 3;
+        dsp.dataRAM[2][0] = 4;
+        dsp.dataRAM[2][1] = 5;
+        dsp.dataRAM[2][2] = 6;
+        dsp.dataRAM[3][0] = 7;
+        dsp.dataRAM[3][1] = 8;
+        dsp.dataRAM[3][2] = 9;
+        dsp.dataRAM[3][3] = 10;
+        dsp.CT[0] = 0;
+        dsp.CT[1] = 1;
+        dsp.CT[2] = 2;
+        dsp.CT[3] = 3;
+
+        MockMemoryRead32(0x6001000, 0x12345678);
+
+        // Setup execution
+        dsp.PC = 0;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        dsp.dmaReadAddr = 0x6001000;
+        dsp.dmaWriteAddr = 0x6002000;
+
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.CT[0] == 0);
+        CHECK(dsp.CT[1] == 1);
+        CHECK(dsp.CT[2] == 2);
+        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.dmaRun == true);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaCount == 1);
+        CHECK(dsp.dmaDst == 0);
+        CHECK(dsp.dmaAddrInc == 0);
+
+        // TODO: should cycle count properly
+        dsp.RunDMA(dsp.dmaCount);
+
+        CHECK(dsp.dmaRun == false);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaReadAddr == 0x6001000);  // no hold = update address
+        CHECK(dsp.dmaWriteAddr == 0x6002000); // not used = maintain address
+        CHECK(dsp.dataRAM[0][0] == 0x12345678);
+        REQUIRE(memoryAccesses.size() == 1);
+        CHECK(memoryAccesses[0] == MemoryAccessInfo{0x6001000, 0x12345678, false, sizeof(uint32)});
+    }
+
+    SECTION("DMA D0,MC1,#1 (WRAM High)") {
+        dsp.programRAM[0] = 0xC0000101;
+        dsp.dataRAM[0][0] = 1;
+        dsp.dataRAM[1][0] = 2;
+        dsp.dataRAM[1][1] = 3;
+        dsp.dataRAM[2][0] = 4;
+        dsp.dataRAM[2][1] = 5;
+        dsp.dataRAM[2][2] = 6;
+        dsp.dataRAM[3][0] = 7;
+        dsp.dataRAM[3][1] = 8;
+        dsp.dataRAM[3][2] = 9;
+        dsp.dataRAM[3][3] = 10;
+        dsp.CT[0] = 0;
+        dsp.CT[1] = 1;
+        dsp.CT[2] = 2;
+        dsp.CT[3] = 3;
+
+        MockMemoryRead32(0x6001000, 0x12345678);
+
+        // Setup execution
+        dsp.PC = 0;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        dsp.dmaReadAddr = 0x6001000;
+        dsp.dmaWriteAddr = 0x6002000;
+
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.CT[0] == 0);
+        CHECK(dsp.CT[1] == 1);
+        CHECK(dsp.CT[2] == 2);
+        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.dmaRun == true);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaCount == 1);
+        CHECK(dsp.dmaDst == 1);
+        CHECK(dsp.dmaAddrInc == 0);
+
+        // TODO: should cycle count properly
+        dsp.RunDMA(dsp.dmaCount);
+
+        CHECK(dsp.dmaRun == false);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaReadAddr == 0x6001000);  // no hold = update address
+        CHECK(dsp.dmaWriteAddr == 0x6002000); // not used = maintain address
+        CHECK(dsp.dataRAM[1][1] == 0x12345678);
+        REQUIRE(memoryAccesses.size() == 1);
+        CHECK(memoryAccesses[0] == MemoryAccessInfo{0x6001000, 0x12345678, false, sizeof(uint32)});
+    }
+
+    SECTION("DMA D0,MC2,#1 (WRAM High)") {
+        dsp.programRAM[0] = 0xC0000201;
+        dsp.dataRAM[0][0] = 1;
+        dsp.dataRAM[1][0] = 2;
+        dsp.dataRAM[1][1] = 3;
+        dsp.dataRAM[2][0] = 4;
+        dsp.dataRAM[2][1] = 5;
+        dsp.dataRAM[2][2] = 6;
+        dsp.dataRAM[3][0] = 7;
+        dsp.dataRAM[3][1] = 8;
+        dsp.dataRAM[3][2] = 9;
+        dsp.dataRAM[3][3] = 10;
+        dsp.CT[0] = 0;
+        dsp.CT[1] = 1;
+        dsp.CT[2] = 2;
+        dsp.CT[3] = 3;
+
+        MockMemoryRead32(0x6001000, 0x12345678);
+
+        // Setup execution
+        dsp.PC = 0;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        dsp.dmaReadAddr = 0x6001000;
+        dsp.dmaWriteAddr = 0x6002000;
+
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.CT[0] == 0);
+        CHECK(dsp.CT[1] == 1);
+        CHECK(dsp.CT[2] == 2);
+        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.dmaRun == true);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaCount == 1);
+        CHECK(dsp.dmaDst == 2);
+        CHECK(dsp.dmaAddrInc == 0);
+
+        // TODO: should cycle count properly
+        dsp.RunDMA(dsp.dmaCount);
+
+        CHECK(dsp.dmaRun == false);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaReadAddr == 0x6001000);  // no hold = update address
+        CHECK(dsp.dmaWriteAddr == 0x6002000); // not used = maintain address
+        CHECK(dsp.dataRAM[2][2] == 0x12345678);
+        REQUIRE(memoryAccesses.size() == 1);
+        CHECK(memoryAccesses[0] == MemoryAccessInfo{0x6001000, 0x12345678, false, sizeof(uint32)});
+    }
+
+    SECTION("DMA D0,MC3,#1 (WRAM High)") {
+        dsp.programRAM[0] = 0xC0000301;
+        dsp.dataRAM[0][0] = 1;
+        dsp.dataRAM[1][0] = 2;
+        dsp.dataRAM[1][1] = 3;
+        dsp.dataRAM[2][0] = 4;
+        dsp.dataRAM[2][1] = 5;
+        dsp.dataRAM[2][2] = 6;
+        dsp.dataRAM[3][0] = 7;
+        dsp.dataRAM[3][1] = 8;
+        dsp.dataRAM[3][2] = 9;
+        dsp.dataRAM[3][3] = 10;
+        dsp.CT[0] = 0;
+        dsp.CT[1] = 1;
+        dsp.CT[2] = 2;
+        dsp.CT[3] = 3;
+
+        MockMemoryRead32(0x6001000, 0x12345678);
+
+        // Setup execution
+        dsp.PC = 0;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        dsp.dmaReadAddr = 0x6001000;
+        dsp.dmaWriteAddr = 0x6002000;
+
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.CT[0] == 0);
+        CHECK(dsp.CT[1] == 1);
+        CHECK(dsp.CT[2] == 2);
+        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.dmaRun == true);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaCount == 1);
+        CHECK(dsp.dmaDst == 3);
+        CHECK(dsp.dmaAddrInc == 0);
+
+        // TODO: should cycle count properly
+        dsp.RunDMA(dsp.dmaCount);
+
+        CHECK(dsp.dmaRun == false);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaReadAddr == 0x6001000);  // no hold = update address
+        CHECK(dsp.dmaWriteAddr == 0x6002000); // not used = maintain address
+        CHECK(dsp.dataRAM[3][3] == 0x12345678);
+        REQUIRE(memoryAccesses.size() == 1);
+        CHECK(memoryAccesses[0] == MemoryAccessInfo{0x6001000, 0x12345678, false, sizeof(uint32)});
+    }
+
+    SECTION("DMA D0,MC3,#4 (WRAM High)") {
+        dsp.programRAM[0] = 0xC0010304;
+        dsp.dataRAM[0][0] = 1;
+        dsp.dataRAM[1][0] = 2;
+        dsp.dataRAM[1][1] = 3;
+        dsp.dataRAM[2][0] = 4;
+        dsp.dataRAM[2][1] = 5;
+        dsp.dataRAM[2][2] = 6;
+        dsp.dataRAM[3][0] = 7;
+        dsp.dataRAM[3][1] = 8;
+        dsp.dataRAM[3][2] = 9;
+        dsp.dataRAM[3][3] = 10;
+        dsp.CT[0] = 0;
+        dsp.CT[1] = 1;
+        dsp.CT[2] = 2;
+        dsp.CT[3] = 0;
+
+        MockMemoryRead32(0x6001000, 0x12345678);
+        MockMemoryRead32(0x6001004, 0xDEADBEEF);
+        MockMemoryRead32(0x6001008, 0xCAFEBABE);
+        MockMemoryRead32(0x600100C, 0xABADF00D);
+
+        // Setup execution
+        dsp.PC = 0;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        dsp.dmaReadAddr = 0x6001000;
+        dsp.dmaWriteAddr = 0x6002000;
+
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.CT[0] == 0);
+        CHECK(dsp.CT[1] == 1);
+        CHECK(dsp.CT[2] == 2);
+        CHECK(dsp.CT[3] == 0);
+        CHECK(dsp.dmaRun == true);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaCount == 4);
+        CHECK(dsp.dmaDst == 3);
+        CHECK(dsp.dmaAddrInc == 4);
+
+        // TODO: should cycle count properly
+        dsp.RunDMA(dsp.dmaCount);
+
+        CHECK(dsp.dmaRun == false);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaReadAddr == 0x6001010);  // no hold = update address
+        CHECK(dsp.dmaWriteAddr == 0x6002000); // not used = maintain address
+        CHECK(dsp.dataRAM[3][0] == 0x12345678);
+        CHECK(dsp.dataRAM[3][1] == 0xDEADBEEF);
+        CHECK(dsp.dataRAM[3][2] == 0xCAFEBABE);
+        CHECK(dsp.dataRAM[3][3] == 0xABADF00D);
+        REQUIRE(memoryAccesses.size() == 4);
+        CHECK(memoryAccesses[0] == MemoryAccessInfo{0x6001000, 0x12345678, false, sizeof(uint32)});
+        CHECK(memoryAccesses[1] == MemoryAccessInfo{0x6001004, 0xDEADBEEF, false, sizeof(uint32)});
+        CHECK(memoryAccesses[2] == MemoryAccessInfo{0x6001008, 0xCAFEBABE, false, sizeof(uint32)});
+        CHECK(memoryAccesses[3] == MemoryAccessInfo{0x600100C, 0xABADF00D, false, sizeof(uint32)});
+    }
+
+    SECTION("DMAH D0,MC3,#4 (WRAM High)") {
+        dsp.programRAM[0] = 0xC0014304;
+        dsp.dataRAM[0][0] = 1;
+        dsp.dataRAM[1][0] = 2;
+        dsp.dataRAM[1][1] = 3;
+        dsp.dataRAM[2][0] = 4;
+        dsp.dataRAM[2][1] = 5;
+        dsp.dataRAM[2][2] = 6;
+        dsp.dataRAM[3][0] = 7;
+        dsp.dataRAM[3][1] = 8;
+        dsp.dataRAM[3][2] = 9;
+        dsp.dataRAM[3][3] = 10;
+        dsp.CT[0] = 0;
+        dsp.CT[1] = 1;
+        dsp.CT[2] = 2;
+        dsp.CT[3] = 0;
+
+        MockMemoryRead32(0x6001000, 0x12345678);
+        MockMemoryRead32(0x6001004, 0xDEADBEEF);
+        MockMemoryRead32(0x6001008, 0xCAFEBABE);
+        MockMemoryRead32(0x600100C, 0xABADF00D);
+
+        // Setup execution
+        dsp.PC = 0;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        dsp.dmaReadAddr = 0x6001000;
+        dsp.dmaWriteAddr = 0x6002000;
+
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.CT[0] == 0);
+        CHECK(dsp.CT[1] == 1);
+        CHECK(dsp.CT[2] == 2);
+        CHECK(dsp.CT[3] == 0);
+        CHECK(dsp.dmaRun == true);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == true);
+        CHECK(dsp.dmaCount == 4);
+        CHECK(dsp.dmaDst == 3);
+        CHECK(dsp.dmaAddrInc == 4);
+
+        // TODO: should cycle count properly
+        dsp.RunDMA(dsp.dmaCount);
+
+        CHECK(dsp.dmaRun == false);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == true);
+        CHECK(dsp.dmaReadAddr == 0x6001000);  // hold = maintain address
+        CHECK(dsp.dmaWriteAddr == 0x6002000); // not used = maintain address
+        CHECK(dsp.dataRAM[3][0] == 0x12345678);
+        CHECK(dsp.dataRAM[3][1] == 0xDEADBEEF);
+        CHECK(dsp.dataRAM[3][2] == 0xCAFEBABE);
+        CHECK(dsp.dataRAM[3][3] == 0xABADF00D);
+        REQUIRE(memoryAccesses.size() == 4);
+        CHECK(memoryAccesses[0] == MemoryAccessInfo{0x6001000, 0x12345678, false, sizeof(uint32)});
+        CHECK(memoryAccesses[1] == MemoryAccessInfo{0x6001004, 0xDEADBEEF, false, sizeof(uint32)});
+        CHECK(memoryAccesses[2] == MemoryAccessInfo{0x6001008, 0xCAFEBABE, false, sizeof(uint32)});
+        CHECK(memoryAccesses[3] == MemoryAccessInfo{0x600100C, 0xABADF00D, false, sizeof(uint32)});
+    }
+
+    SECTION("DMA D0,MC0,M0 (WRAM High)") {
+        dsp.programRAM[0] = 0xC0012000;
+        dsp.dataRAM[0][0] = 1;
+        dsp.dataRAM[1][0] = 2;
+        dsp.dataRAM[1][1] = 3;
+        dsp.dataRAM[2][0] = 4;
+        dsp.dataRAM[2][1] = 5;
+        dsp.dataRAM[2][2] = 6;
+        dsp.dataRAM[3][0] = 7;
+        dsp.dataRAM[3][1] = 8;
+        dsp.dataRAM[3][2] = 9;
+        dsp.dataRAM[3][3] = 10;
+        dsp.CT[0] = 0;
+        dsp.CT[1] = 1;
+        dsp.CT[2] = 2;
+        dsp.CT[3] = 3;
+
+        MockMemoryRead32(0x6001000, 0x12345678);
+
+        // Setup execution
+        dsp.PC = 0;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        dsp.dmaReadAddr = 0x6001000;
+        dsp.dmaWriteAddr = 0x6002000;
+
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.CT[0] == 0);
+        CHECK(dsp.CT[1] == 1);
+        CHECK(dsp.CT[2] == 2);
+        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.dmaRun == true);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaCount == 1);
+        CHECK(dsp.dmaDst == 0);
+        CHECK(dsp.dmaAddrInc == 4);
+
+        // TODO: should cycle count properly
+        dsp.RunDMA(dsp.dmaCount);
+
+        CHECK(dsp.dmaRun == false);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaReadAddr == 0x6001004);  // no hold = update address
+        CHECK(dsp.dmaWriteAddr == 0x6002000); // not used = maintain address
+        CHECK(dsp.dataRAM[0][0] == 0x12345678);
+        REQUIRE(memoryAccesses.size() == 1);
+        CHECK(memoryAccesses[0] == MemoryAccessInfo{0x6001000, 0x12345678, false, sizeof(uint32)});
+    }
+
+    SECTION("DMA D0,PRG,M0 (WRAM High)") {
+        dsp.programRAM[0] = 0xC0012400;
+        dsp.dataRAM[0][0] = 1;
+        dsp.dataRAM[1][0] = 2;
+        dsp.dataRAM[1][1] = 3;
+        dsp.dataRAM[2][0] = 4;
+        dsp.dataRAM[2][1] = 5;
+        dsp.dataRAM[2][2] = 6;
+        dsp.dataRAM[3][0] = 7;
+        dsp.dataRAM[3][1] = 8;
+        dsp.dataRAM[3][2] = 9;
+        dsp.dataRAM[3][3] = 10;
+        dsp.CT[0] = 0;
+        dsp.CT[1] = 1;
+        dsp.CT[2] = 2;
+        dsp.CT[3] = 3;
+
+        MockMemoryRead32(0x6001000, 0x12345678);
+
+        // Setup execution
+        dsp.PC = 0;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        dsp.dmaReadAddr = 0x6001000;
+        dsp.dmaWriteAddr = 0x6002000;
+
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.CT[0] == 0);
+        CHECK(dsp.CT[1] == 1);
+        CHECK(dsp.CT[2] == 2);
+        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.dmaRun == true);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaCount == 1);
+        CHECK(dsp.dmaDst == 4);
+        CHECK(dsp.dmaAddrInc == 4);
+
+        // TODO: should cycle count properly
+        dsp.RunDMA(dsp.dmaCount);
+
+        CHECK(dsp.dmaRun == false);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == false);
+        CHECK(dsp.dmaReadAddr == 0x6001004);  // no hold = update address
+        CHECK(dsp.dmaWriteAddr == 0x6002000); // not used = maintain address
+        CHECK(dsp.dataRAM[0][0] == 1);
+        CHECK(dsp.programRAM[0] == 0x12345678);
+        REQUIRE(memoryAccesses.size() == 1);
+        CHECK(memoryAccesses[0] == MemoryAccessInfo{0x6001000, 0x12345678, false, sizeof(uint32)});
+    }
+
+    SECTION("DMAH D0,PRG,M0 (WRAM High)") {
+        dsp.programRAM[0] = 0xC0016400;
+        dsp.dataRAM[0][0] = 1;
+        dsp.dataRAM[1][0] = 2;
+        dsp.dataRAM[1][1] = 3;
+        dsp.dataRAM[2][0] = 4;
+        dsp.dataRAM[2][1] = 5;
+        dsp.dataRAM[2][2] = 6;
+        dsp.dataRAM[3][0] = 7;
+        dsp.dataRAM[3][1] = 8;
+        dsp.dataRAM[3][2] = 9;
+        dsp.dataRAM[3][3] = 10;
+        dsp.CT[0] = 0;
+        dsp.CT[1] = 1;
+        dsp.CT[2] = 2;
+        dsp.CT[3] = 3;
+
+        MockMemoryRead32(0x6001000, 0x12345678);
+
+        // Setup execution
+        dsp.PC = 0;
+        dsp.programExecuting = true;
+        dsp.programEnded = false;
+        dsp.programPaused = false;
+        dsp.programStep = false;
+
+        dsp.dmaReadAddr = 0x6001000;
+        dsp.dmaWriteAddr = 0x6002000;
+
+        dsp.Run(1);
+
+        CHECK(dsp.PC == 1);
+        CHECK(dsp.CT[0] == 0);
+        CHECK(dsp.CT[1] == 1);
+        CHECK(dsp.CT[2] == 2);
+        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.dmaRun == true);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == true);
+        CHECK(dsp.dmaCount == 1);
+        CHECK(dsp.dmaDst == 4);
+        CHECK(dsp.dmaAddrInc == 4);
+
+        // TODO: should cycle count properly
+        dsp.RunDMA(dsp.dmaCount);
+
+        CHECK(dsp.dmaRun == false);
+        CHECK(dsp.dmaToD0 == false);
+        CHECK(dsp.dmaHold == true);
+        CHECK(dsp.dmaReadAddr == 0x6001000);  // hold = maintain address
+        CHECK(dsp.dmaWriteAddr == 0x6002000); // not used = maintain address
+        CHECK(dsp.dataRAM[0][0] == 1);
+        CHECK(dsp.programRAM[0] == 0x12345678);
+        REQUIRE(memoryAccesses.size() == 1);
+        CHECK(memoryAccesses[0] == MemoryAccessInfo{0x6001000, 0x12345678, false, sizeof(uint32)});
+    }
+
+    // TODO: test NT0 and T0 conditions with:
     // "MVI <cond>,SImm,[d]"
     // "JMP <cond>,Imm"
     //

@@ -128,13 +128,13 @@ void SCUDSP::RunDMA(uint64 cycles) {
 
     // Run transfer
     // TODO: should iterate through transfers based on cycle count
+    const uint32 ctIndex = toD0 ? dmaSrc : dmaDst;
+    const bool useDataRAM = ctIndex <= 3; // else: use program RAM
     for (uint32 i = 0; i < dmaCount; i++) {
-        const uint32 ctIndex = toD0 ? dmaSrc : dmaDst;
-        const bool useDataRAM = ctIndex <= 3; // else: use program RAM
-        const uint32 ctAddr = useDataRAM ? CT[ctIndex] : 0;
+        uint32 &ramValue = useDataRAM ? dataRAM[ctIndex][CT[ctIndex]] : programRAM[i & 0xFF];
         if (toD0) {
             // Data RAM -> D0
-            const uint32 value = useDataRAM ? dataRAM[ctIndex][ctAddr] : programRAM[i & 0xFF];
+            const uint32 value = ramValue;
             if (bus == Bus::ABus) {
                 // A-Bus -> one 32-bit write
                 m_bus.Write<uint32>(addrD0, value);
@@ -166,11 +166,7 @@ void SCUDSP::RunDMA(uint64 cycles) {
                 value = m_bus.Read<uint32>(addrD0);
                 addrD0 += dmaAddrInc;
             }
-            if (useDataRAM) {
-                dataRAM[ctIndex][ctAddr] = value;
-            } else {
-                programRAM[i & 0xFF] = value;
-            }
+            ramValue = value;
         }
         addrD0 &= 0x7FF'FFFC;
         if (useDataRAM) {
