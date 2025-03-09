@@ -2,6 +2,7 @@
 
 #include <satemu/satemu.hpp>
 
+#include <satemu/util/event.hpp>
 #include <satemu/util/scope_guard.hpp>
 #include <satemu/util/thread_name.hpp>
 
@@ -10,6 +11,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
 
+#include <atomic>
 #include <span>
 #include <thread>
 #include <vector>
@@ -184,13 +186,18 @@ void App::RunEmulator() {
     // Use a smaller buffer to reduce audio latency
     SDL_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, "512");
 
-    struct AudioBuffer {
-        std::array<sint16, 4096> buffer{};
-        uint32 readPos = 0;
+    struct Sample {
+        sint16 left, right;
+    };
+
+    struct AudioState {
+        std::array<Sample, 2048> buffer{};
+        std::atomic_uint32_t readPos = 0;
         uint32 writePos = 0;
+        util::Event bufferNotFullEvent{true};
         bool sync = true;
         bool silent = false;
-    } audioBuffer{};
+    } audioState{};
 
     SDL_AudioSpec audioSpec{};
     audioSpec.freq = 44100;
@@ -199,24 +206,26 @@ void App::RunEmulator() {
     auto audioStream = SDL_OpenAudioDeviceStream(
         SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &audioSpec,
         [](void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount) {
-            auto &buffer = *reinterpret_cast<AudioBuffer *>(userdata);
+            auto &state = *reinterpret_cast<AudioState *>(userdata);
 
-            int sampleCount = additional_amount / sizeof(sint16);
-            if (buffer.silent) {
+            int sampleCount = additional_amount / sizeof(Sample);
+            if (state.silent) {
                 const sint16 zero = 0;
                 for (int i = 0; i < sampleCount; i++) {
                     SDL_PutAudioStreamData(stream, &zero, sizeof(zero));
                 }
             } else {
-                int len1 = std::min<int>(sampleCount, buffer.buffer.size() - buffer.readPos);
-                int len2 = std::min<int>(sampleCount - len1, buffer.readPos);
-                SDL_PutAudioStreamData(stream, &buffer.buffer[buffer.readPos], len1 * sizeof(sint16));
-                SDL_PutAudioStreamData(stream, &buffer.buffer[0], len2 * sizeof(sint16));
+                const uint32 readPos = state.readPos.load(std::memory_order_acquire);
+                int len1 = std::min<int>(sampleCount, state.buffer.size() - readPos);
+                int len2 = std::min<int>(sampleCount - len1, readPos);
+                SDL_PutAudioStreamData(stream, &state.buffer[readPos], len1 * sizeof(Sample));
+                SDL_PutAudioStreamData(stream, &state.buffer[0], len2 * sizeof(Sample));
 
-                buffer.readPos = (buffer.readPos + len1 + len2) % buffer.buffer.size();
+                state.readPos.store((state.readPos + len1 + len2) % state.buffer.size(), std::memory_order_release);
+                state.bufferNotFullEvent.Set();
             }
         },
-        &audioBuffer);
+        &audioState);
     if (audioStream == nullptr) {
         SDL_Log("Unable to create audio stream: %s", SDL_GetError());
         return;
@@ -257,23 +266,18 @@ void App::RunEmulator() {
         }
     }
 
-    m_saturn.SCSP.SetSampleCallback(
-        {&audioBuffer, [](sint16 left, sint16 right, void *ctx) {
-             auto &buffer = *reinterpret_cast<AudioBuffer *>(ctx);
+    m_saturn.SCSP.SetSampleCallback({&audioState, [](sint16 left, sint16 right, void *ctx) {
+                                         auto &state = *reinterpret_cast<AudioState *>(ctx);
 
-             // TODO: these busy waits should go away
-             while (buffer.sync && (buffer.writePos + 1) % buffer.buffer.size() == buffer.readPos) {
-                 std::this_thread::yield();
-             }
-             buffer.buffer[buffer.writePos] = left;
-             buffer.writePos = (buffer.writePos + 1) % buffer.buffer.size();
-
-             while (buffer.sync && (buffer.writePos + 1) % buffer.buffer.size() == buffer.readPos) {
-                 std::this_thread::yield();
-             }
-             buffer.buffer[buffer.writePos] = right;
-             buffer.writePos = (buffer.writePos + 1) % buffer.buffer.size();
-         }});
+                                         if (state.sync) {
+                                             state.bufferNotFullEvent.Wait(false);
+                                         }
+                                         state.buffer[state.writePos] = {left, right};
+                                         state.writePos = (state.writePos + 1) % state.buffer.size();
+                                         if (state.writePos == state.readPos) {
+                                             state.bufferNotFullEvent.Reset();
+                                         }
+                                     }});
 
     // ---------------------------------
     // Main emulator loop
@@ -398,13 +402,13 @@ void App::RunEmulator() {
             if (pressed) {
                 frameStep = true;
                 paused = false;
-                audioBuffer.silent = false;
+                audioState.silent = false;
             }
             break;
         case SDL_SCANCODE_PAUSE:
             if (pressed) {
                 paused = !paused;
-                audioBuffer.silent = paused;
+                audioState.silent = paused;
             }
 
         case SDL_SCANCODE_R:
@@ -419,7 +423,7 @@ void App::RunEmulator() {
                 m_saturn.SMPC.SetResetButtonState(pressed);
             }
             break;
-        case SDL_SCANCODE_TAB: audioBuffer.sync = !pressed; break;
+        case SDL_SCANCODE_TAB: audioState.sync = !pressed; break;
         case SDL_SCANCODE_F3:
             if (pressed) {
                 {
@@ -539,7 +543,7 @@ void App::RunEmulator() {
         if (frameStep) {
             frameStep = false;
             paused = true;
-            audioBuffer.silent = true;
+            audioState.silent = true;
         }
 
         auto t2 = clk::now();

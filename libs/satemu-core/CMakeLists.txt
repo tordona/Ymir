@@ -103,6 +103,7 @@ add_library(satemu-core
     include/satemu/util/data_ops.hpp
     include/satemu/util/date_time.hpp
     include/satemu/util/debug_print.hpp
+    include/satemu/util/event.hpp
     include/satemu/util/inline.hpp
     include/satemu/util/scope_guard.hpp
     include/satemu/util/size_ops.hpp
