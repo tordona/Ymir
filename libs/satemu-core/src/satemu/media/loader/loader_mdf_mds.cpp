@@ -12,8 +12,6 @@
 #include <fstream>
 #include <unordered_map>
 
-namespace fs = std::filesystem;
-
 namespace satemu::media::loader::mdfmds {
 
 // Format parsing based on reverse-engineering work by Henrik Stokseth.
@@ -163,8 +161,8 @@ bool Load(std::filesystem::path mdsPath, Disc &disc) {
     bool hasHeader = false;
     uint32 endFrameAddress = 0;
     std::array<uint32, 99> trackStartOffsets{};
-    std::array<fs::path, 99> trackMDFs{};
-    std::unordered_map<fs::path, std::shared_ptr<IBinaryReader>> files{};
+    std::array<std::filesystem::path, 99> trackMDFs{};
+    std::unordered_map<std::filesystem::path, std::shared_ptr<IBinaryReader>> files{};
 
     // Build sessions
     disc.sessions.clear();
@@ -252,8 +250,8 @@ bool Load(std::filesystem::path mdsPath, Disc &disc) {
                     return false;
                 }
 
-                // Convert from wchar/char to fs::path
-                fs::path mdfPath{};
+                // Convert from wchar/char to std::filesystem::path
+                std::filesystem::path mdfPath{};
                 if (footerData.charType) {
                     std::wifstream win{mdsPath, std::ios::binary};
                     std::wstring filename{};

@@ -8,8 +8,6 @@
 
 #include <fstream>
 
-namespace fs = std::filesystem;
-
 namespace satemu::media::loader::iso {
 
 bool Load(std::filesystem::path isoPath, Disc &disc) {
@@ -46,7 +44,7 @@ bool Load(std::filesystem::path isoPath, Disc &disc) {
     // fmt::println("ISO: Sector size: {} bytes", sectorSize);
 
     // Sanity check: ensure file contains an exact multiple of the sector size
-    const uintmax_t fileSize = fs::file_size(isoPath);
+    const uintmax_t fileSize = std::filesystem::file_size(isoPath);
     if (fileSize % sectorSize != 0) {
         // fmt::println("ISO: File is truncated");
         return false;

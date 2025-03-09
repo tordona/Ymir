@@ -14,8 +14,6 @@
 #include <sstream>
 #include <vector>
 
-namespace fs = std::filesystem;
-
 namespace satemu::media::loader::ccd {
 
 struct CloneCDTocEntry {
@@ -227,7 +225,7 @@ bool Load(std::filesystem::path ccdPath, Disc &disc) {
     }
 
     // Try loading the image file
-    fs::path imgPath = ccdPath;
+    std::filesystem::path imgPath = ccdPath;
     imgPath.replace_extension("img");
     std::error_code err{};
     // TODO: dynamically choose implementation from configuration
