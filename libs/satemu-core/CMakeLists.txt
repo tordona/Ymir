@@ -239,6 +239,10 @@ if (satemu_AVX2)
     endif ()
 endif ()
 
+## Enable unity build
+#set_target_properties(satemu-core PROPERTIES UNITY_BUILD ON)
+#set_target_properties(satemu-core PROPERTIES UNITY_BUILD_BATCH_SIZE 0)
+
 ## Configure Visual Studio filters
 if (MSVC)
     vs_set_filters(TARGET satemu-core)
