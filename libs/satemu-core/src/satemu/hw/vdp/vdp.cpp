@@ -2654,10 +2654,9 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
                     btmColor.b = (lineColor.b + btmColor.b) / 2;
                 } else {
                     const uint8 ratio = regs.lineScreenParams.colorCalcRatio;
-                    const uint8 complRatio = 32 - ratio;
-                    btmColor.r = (lineColor.r * complRatio + btmColor.r * ratio) / 32;
-                    btmColor.g = (lineColor.g * complRatio + btmColor.g * ratio) / 32;
-                    btmColor.b = (lineColor.b * complRatio + btmColor.b * ratio) / 32;
+                    btmColor.r = lineColor.r + (btmColor.r - lineColor.r) * ratio / 32;
+                    btmColor.g = lineColor.g + (btmColor.g - lineColor.g) * ratio / 32;
+                    btmColor.b = lineColor.b + (btmColor.b - lineColor.b) * ratio / 32;
                 }
             }
 
@@ -2668,10 +2667,9 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
                 outputColor.b = std::min(topColor.b + btmColor.b, 255);
             } else {
                 const uint8 ratio = getColorCalcRatio(colorCalcParams.useSecondScreenRatio ? layers[1] : layers[0]);
-                const uint8 complRatio = 32 - ratio;
-                outputColor.r = (topColor.r * complRatio + btmColor.r * ratio) / 32;
-                outputColor.g = (topColor.g * complRatio + btmColor.g * ratio) / 32;
-                outputColor.b = (topColor.b * complRatio + btmColor.b * ratio) / 32;
+                outputColor.r = topColor.r + (btmColor.r - topColor.r) * ratio / 32;
+                outputColor.g = topColor.g + (btmColor.g - topColor.g) * ratio / 32;
+                outputColor.b = topColor.b + (btmColor.b - topColor.b) * ratio / 32;
             }
         } else {
             outputColor = getLayerColor(layers[0]);
