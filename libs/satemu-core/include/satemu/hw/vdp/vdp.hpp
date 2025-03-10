@@ -315,9 +315,46 @@ private:
     void BeginVPhaseLastLine();
 
     // -------------------------------------------------------------------------
-    // Rendering
+    // VDP1 rendering
 
     // TODO: split out rendering code
+
+    std::thread m_VDP1RenderThread;
+
+    struct VDP1RenderEvent {
+        enum class Type {
+            BeginFrame,
+            // ProcessCommands,
+
+            Shutdown,
+        };
+
+        static VDP1RenderEvent BeginFrame() {
+            return {Type::BeginFrame};
+        }
+
+        /*static VDP1RenderEvent ProcessCommands(uint64 steps) {
+            return {Type::ProcessCommands, {.processCommands = {.steps = steps}}};
+        }*/
+
+        static VDP1RenderEvent Shutdown() {
+            return {Type::Shutdown};
+        }
+
+        Type type;
+        /*union {
+            struct {
+                uint64 steps;
+            } processCommands;
+        };*/
+    };
+
+    util::ConcurrentQueue<VDP1RenderEvent> m_VDP1RenderEvents;
+
+    void VDP1RenderThread();
+
+    // -------------------------------------------------------------------------
+    // VDP2 rendering
 
     std::thread m_VDP2RenderThread;
 

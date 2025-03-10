@@ -14,6 +14,7 @@ namespace satemu::vdp {
 
 VDP::VDP(core::Scheduler &scheduler)
     : m_scheduler(scheduler)
+    , m_VDP1RenderThread([&] { VDP1RenderThread(); })
     , m_VDP2RenderFinishedEvent(false)
     , m_VDP2RenderThread([&] { VDP2RenderThread(); }) {
 
@@ -25,7 +26,11 @@ VDP::VDP(core::Scheduler &scheduler)
 }
 
 VDP::~VDP() {
+    m_VDP1RenderEvents.Offer(VDP1RenderEvent::Shutdown());
     m_VDP2RenderEvents.Offer(VDP2RenderEvent::Shutdown());
+    if (m_VDP1RenderThread.joinable()) {
+        m_VDP1RenderThread.join();
+    }
     if (m_VDP2RenderThread.joinable()) {
         m_VDP2RenderThread.join();
     }
@@ -262,9 +267,9 @@ void VDP::Advance(uint64 cycles) {
     const uint64 steps = m_VDP1RenderContext.cycleCount / kCyclesPerCommand;
     m_VDP1RenderContext.cycleCount %= kCyclesPerCommand;
 
-    for (uint64 i = 0; i < steps; i++) {
+    /*for (uint64 i = 0; i < steps; i++) {
         VDP1ProcessCommand();
-    }
+    }*/
 }
 
 template void VDP::Advance<false>(uint64 cycles);
@@ -1002,8 +1007,31 @@ void VDP::BeginVPhaseLastLine() {
 // -----------------------------------------------------------------------------
 // Rendering
 
+void VDP::VDP1RenderThread() {
+    util::SetCurrentThreadName("VDP1 render thread");
+
+    bool running = true;
+    while (running) {
+        VDP1RenderEvent event{};
+        m_VDP1RenderEvents.Poll(event);
+        switch (event.type) {
+        case VDP1RenderEvent::Type::BeginFrame:
+            for (int i = 0; i < 1000000 && m_VDP1RenderContext.rendering; i++) {
+                VDP1ProcessCommand();
+            }
+            break;
+        /*case VDP1RenderEvent::Type::ProcessCommands:
+            for (uint64 i = 0; i < event.processCommands.steps; i++) {
+                VDP1ProcessCommand();
+            }
+            break;*/
+        case VDP1RenderEvent::Type::Shutdown: running = false; break;
+        }
+    }
+}
+
 void VDP::VDP2RenderThread() {
-    util::SetCurrentThreadName("VDP renderer thread");
+    util::SetCurrentThreadName("VDP2 render thread");
 
     bool running = true;
     while (running) {
@@ -1088,6 +1116,7 @@ void VDP::VDP1BeginFrame() {
     m_VDP1.currFrameEnded = false;
 
     m_VDP1RenderContext.rendering = true;
+    m_VDP1RenderEvents.Offer(VDP1RenderEvent::BeginFrame());
 }
 
 void VDP::VDP1EndFrame() {
