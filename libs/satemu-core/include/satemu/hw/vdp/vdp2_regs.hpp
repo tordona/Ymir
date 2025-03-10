@@ -2433,12 +2433,18 @@ struct VDP2Regs {
 
     FORCE_INLINE void WriteCOxR(uint8 select, uint16 value) {
         colorOffset[select].r = bit::extract<0, 8>(value);
+        colorOffset[select].nonZero =
+            colorOffset[select].r != 0 || colorOffset[select].g != 0 || colorOffset[select].b != 0;
     }
     FORCE_INLINE void WriteCOxG(uint8 select, uint16 value) {
         colorOffset[select].g = bit::extract<0, 8>(value);
+        colorOffset[select].nonZero =
+            colorOffset[select].r != 0 || colorOffset[select].g != 0 || colorOffset[select].b != 0;
     }
     FORCE_INLINE void WriteCOxB(uint8 select, uint16 value) {
         colorOffset[select].b = bit::extract<0, 8>(value);
+        colorOffset[select].nonZero =
+            colorOffset[select].r != 0 || colorOffset[select].g != 0 || colorOffset[select].b != 0;
     }
 
     // -------------------------------------------------------------------------

@@ -2690,9 +2690,11 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
         // Apply color offset if enabled
         if (regs.colorOffsetEnable[layers[0]]) {
             const auto &colorOffset = regs.colorOffset[regs.colorOffsetSelect[layers[0]]];
-            outputColor.r = kColorOffsetLUT[colorOffset.r][outputColor.r];
-            outputColor.g = kColorOffsetLUT[colorOffset.g][outputColor.g];
-            outputColor.b = kColorOffsetLUT[colorOffset.b][outputColor.b];
+            if (colorOffset.nonZero) {
+                outputColor.r = kColorOffsetLUT[colorOffset.r][outputColor.r];
+                outputColor.g = kColorOffsetLUT[colorOffset.g][outputColor.g];
+                outputColor.b = kColorOffsetLUT[colorOffset.b][outputColor.b];
+            }
         }
 
         fbPtr[x] = outputColor.u32;

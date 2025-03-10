@@ -715,6 +715,7 @@ struct ColorOffset {
         r = 0;
         g = 0;
         b = 0;
+        nonZero = false;
     }
 
     // Color offset values as unsigned 9-bit indices into a lookup table.
@@ -722,6 +723,9 @@ struct ColorOffset {
     uint16 r;
     uint16 g;
     uint16 b;
+
+    // Set when at least one of the offsets is non-zero.
+    bool nonZero;
 };
 
 // Lookup table for color offset effects.
