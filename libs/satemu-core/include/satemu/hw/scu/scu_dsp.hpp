@@ -247,7 +247,7 @@ public:
         case 0b1011: loopTop = value; break;
         case 0b1100 ... 0b1111:
             CT[index & 3] = value & 0x3F;
-            // incCT[index & 3] = false;
+            incCT[index & 3] = false;
             break;
         }
     }
