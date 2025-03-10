@@ -516,6 +516,7 @@ private:
             vdp2.regs.Reset();
             vdp2.VRAM.fill(0);
             vdp2.CRAM.fill(0);
+            vdp2.CRAMCache.fill({.u32 = 0});
             displayFB = 1;
         }
 
