@@ -737,36 +737,52 @@ void VDP::VDPRenderThread() {
                 util::WriteBE<uint16>(&rctx.vdp2.VRAM[event.write.address], event.write.value);
                 break;
             case EvtType::VDP2CRAMWriteByte:
-                rctx.vdp2.CRAM[event.write.address] = event.write.value;
                 // Update CRAM cache if color RAM mode changed is in one of the RGB555 modes
                 if (rctx.vdp2.regs.vramControl.colorRAMMode <= 1) {
-                    const uint32 cramAddress = event.write.address & ~1;
-                    const uint16 colorValue = VDP2ReadRendererCRAM<uint16>(cramAddress);
-                    const Color555 color5{.u16 = colorValue};
-                    rctx.vdp2.CRAMCache[cramAddress / sizeof(uint16)] = ConvertRGB555to888(color5);
+                    const uint8 oldValue = rctx.vdp2.CRAM[event.write.address];
+                    rctx.vdp2.CRAM[event.write.address] = event.write.value;
+
+                    if (oldValue != event.write.value) {
+                        const uint32 cramAddress = event.write.address & ~1;
+                        const uint16 colorValue = VDP2ReadRendererCRAM<uint16>(cramAddress);
+                        const Color555 color5{.u16 = colorValue};
+                        rctx.vdp2.CRAMCache[cramAddress / sizeof(uint16)] = ConvertRGB555to888(color5);
+                    }
+                } else {
+                    rctx.vdp2.CRAM[event.write.address] = event.write.value;
                 }
                 break;
             case EvtType::VDP2CRAMWriteWord:
-                util::WriteBE<uint16>(&rctx.vdp2.CRAM[event.write.address], event.write.value);
-                // Update CRAM cache if color RAM mode changed is in one of the RGB555 modes
+                // Update CRAM cache if color RAM mode is in one of the RGB555 modes
                 if (rctx.vdp2.regs.vramControl.colorRAMMode <= 1) {
-                    const uint32 cramAddress = event.write.address & ~1;
-                    const uint16 colorValue = VDP2ReadRendererCRAM<uint16>(cramAddress);
-                    const Color555 color5{.u16 = colorValue};
-                    rctx.vdp2.CRAMCache[cramAddress / sizeof(uint16)] = ConvertRGB555to888(color5);
+                    const uint16 oldValue = util::ReadBE<uint16>(&rctx.vdp2.CRAM[event.write.address]);
+                    util::WriteBE<uint16>(&rctx.vdp2.CRAM[event.write.address], event.write.value);
+
+                    if (oldValue != event.write.value) {
+                        const uint32 cramAddress = event.write.address & ~1;
+                        const Color555 color5{.u16 = (uint16)event.write.value};
+                        rctx.vdp2.CRAMCache[cramAddress / sizeof(uint16)] = ConvertRGB555to888(color5);
+                    }
+                } else {
+                    util::WriteBE<uint16>(&rctx.vdp2.CRAM[event.write.address], event.write.value);
                 }
                 break;
             case EvtType::VDP2RegWrite:
-                rctx.vdp2.regs.Write(event.write.address, event.write.value);
+                // Refill CRAM cache if color RAM mode changed to one of the RGB555 modes
                 if (event.write.address == 0x00E) {
-                    // Refill CRAM cache if color RAM mode changed to one of the RGB555 modes
-                    if (rctx.vdp2.regs.vramControl.colorRAMMode <= 1) {
+                    const uint8 oldMode = rctx.vdp2.regs.vramControl.colorRAMMode;
+                    rctx.vdp2.regs.WriteRAMCTL(event.write.value);
+
+                    const uint8 newMode = rctx.vdp2.regs.vramControl.colorRAMMode;
+                    if (newMode != oldMode && newMode <= 1) {
                         for (uint32 addr = 0; addr < rctx.vdp2.CRAM.size(); addr += sizeof(uint16)) {
                             const uint16 colorValue = VDP2ReadRendererCRAM<uint16>(addr);
                             const Color555 color5{.u16 = colorValue};
                             rctx.vdp2.CRAMCache[addr / sizeof(uint16)] = ConvertRGB555to888(color5);
                         }
                     }
+                } else {
+                    rctx.vdp2.regs.Write(event.write.address, event.write.value);
                 }
                 break;
 
