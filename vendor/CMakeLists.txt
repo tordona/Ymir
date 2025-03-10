@@ -57,6 +57,10 @@ add_subdirectory_quiet(SDL)
 message(VERBOSE "==> cxxopts")
 add_subdirectory(cxxopts)
 
+# readerwriterqueue - https://github.com/cameron314/readerwriterqueue
+message(VERBOSE "=>> readerwriterqueue")
+add_subdirectory(readerwriterqueue)
+
 if(satemu_ENABLE_TESTS)
     # Catch2 - https://github.com/catchorg/Catch2
     message(VERBOSE "==> Catch2")

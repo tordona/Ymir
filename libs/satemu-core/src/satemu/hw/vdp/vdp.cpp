@@ -26,8 +26,8 @@ VDP::VDP(core::Scheduler &scheduler)
 }
 
 VDP::~VDP() {
-    m_VDP1RenderEvents.Offer(VDP1RenderEvent::Shutdown());
-    m_VDP2RenderEvents.Offer(VDP2RenderEvent::Shutdown());
+    m_VDP1RenderEvents.enqueue(VDP1RenderEvent::Shutdown());
+    m_VDP2RenderEvents.enqueue(VDP2RenderEvent::Shutdown());
     if (m_VDP1RenderThread.joinable()) {
         m_VDP1RenderThread.join();
     }
@@ -893,7 +893,7 @@ void VDP::BeginHPhaseActiveDisplay() {
             m_cbTriggerOptimizedINTBACKRead();
         }
         // VDP2DrawLine(m_VCounter);
-        m_VDP2RenderEvents.Offer(VDP2RenderEvent::DrawLine(m_VCounter));
+        m_VDP2RenderEvents.enqueue(VDP2RenderEvent::DrawLine(m_VCounter));
     }
 }
 
@@ -982,7 +982,7 @@ void VDP::BeginVPhaseBlankingAndSync() {
 
     // End frame
     rootLog2.trace("End VDP2 frame");
-    m_VDP2RenderEvents.Offer(VDP2RenderEvent::EndFrame());
+    m_VDP2RenderEvents.enqueue(VDP2RenderEvent::EndFrame());
     m_VDP2RenderFinishedEvent.Wait(true);
     m_cbFrameComplete(m_framebuffer, m_HRes, m_VRes);
 }
@@ -1013,7 +1013,7 @@ void VDP::VDP1RenderThread() {
     bool running = true;
     while (running) {
         VDP1RenderEvent event{};
-        m_VDP1RenderEvents.Poll(event);
+        m_VDP1RenderEvents.wait_dequeue(event);
         switch (event.type) {
         case VDP1RenderEvent::Type::BeginFrame:
             for (int i = 0; i < 1000000 && m_VDP1RenderContext.rendering; i++) {
@@ -1036,7 +1036,7 @@ void VDP::VDP2RenderThread() {
     bool running = true;
     while (running) {
         VDP2RenderEvent event{};
-        m_VDP2RenderEvents.Poll(event);
+        m_VDP2RenderEvents.wait_dequeue(event);
         switch (event.type) {
         case VDP2RenderEvent::Type::DrawLine: VDP2DrawLine(event.drawLine.vcnt); break;
         case VDP2RenderEvent::Type::EndFrame: m_VDP2RenderFinishedEvent.Set(); break;
@@ -1116,7 +1116,7 @@ void VDP::VDP1BeginFrame() {
     m_VDP1.currFrameEnded = false;
 
     m_VDP1RenderContext.rendering = true;
-    m_VDP1RenderEvents.Offer(VDP1RenderEvent::BeginFrame());
+    m_VDP1RenderEvents.enqueue(VDP1RenderEvent::BeginFrame());
 }
 
 void VDP::VDP1EndFrame() {

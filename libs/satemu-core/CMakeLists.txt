@@ -100,7 +100,6 @@ add_library(satemu-core
     include/satemu/util/bit_ops.hpp
     include/satemu/util/bitmask_enum.hpp
     include/satemu/util/callback.hpp
-    include/satemu/util/concurrent_queue.hpp
     include/satemu/util/data_ops.hpp
     include/satemu/util/date_time.hpp
     include/satemu/util/debug_print.hpp
@@ -170,7 +169,7 @@ target_include_directories(satemu-core
 target_compile_features(satemu-core PUBLIC cxx_std_20)
 
 ## Add dependencies
-target_link_libraries(satemu-core PUBLIC fmt mio)
+target_link_libraries(satemu-core PUBLIC fmt mio readerwriterqueue)
 
 # Build precompiled header
 target_precompile_headers(satemu-core

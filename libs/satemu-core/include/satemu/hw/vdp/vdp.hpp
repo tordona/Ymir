@@ -12,11 +12,12 @@
 #include <satemu/hw/hw_defs.hpp>
 
 #include <satemu/util/bit_ops.hpp>
-#include <satemu/util/concurrent_queue.hpp>
 #include <satemu/util/data_ops.hpp>
 #include <satemu/util/debug_print.hpp>
 #include <satemu/util/event.hpp>
 #include <satemu/util/inline.hpp>
+
+#include <readerwriterqueue.h>
 
 #include <array>
 #include <iosfwd>
@@ -349,7 +350,7 @@ private:
         };*/
     };
 
-    util::ConcurrentQueue<VDP1RenderEvent> m_VDP1RenderEvents;
+    moodycamel::BlockingReaderWriterQueue<VDP1RenderEvent> m_VDP1RenderEvents;
 
     void VDP1RenderThread();
 
@@ -386,7 +387,7 @@ private:
         };
     };
 
-    util::ConcurrentQueue<VDP2RenderEvent> m_VDP2RenderEvents;
+    moodycamel::BlockingReaderWriterQueue<VDP2RenderEvent> m_VDP2RenderEvents;
     util::Event m_VDP2RenderFinishedEvent;
 
     void VDP2RenderThread();
