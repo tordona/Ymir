@@ -146,11 +146,8 @@ private:
     template <mem_primitive T>
     void VDP2WriteCRAM(uint32 address, T value);
 
-    template <mem_primitive T>
-    T VDP2ReadReg(uint32 address);
-
-    template <mem_primitive T>
-    void VDP2WriteReg(uint32 address, T value);
+    uint16 VDP2ReadReg(uint32 address);
+    void VDP2WriteReg(uint32 address, uint16 value);
 
     // -------------------------------------------------------------------------
     // Frontend callbacks
@@ -359,42 +356,143 @@ private:
     // -------------------------------------------------------------------------
     // VDP2 rendering
 
-    std::thread m_VDP2RenderThread;
-
     struct VDP2RenderEvent {
         enum class Type {
+            Reset,
             DrawLine,
+            OddField,
             EndFrame,
+
+            VRAMWriteByte,
+            VRAMWriteWord,
+            VRAMWriteLong,
+            CRAMWriteByte,
+            CRAMWriteWord,
+            RegWrite,
 
             Shutdown,
         };
-
-        static VDP2RenderEvent DrawLine(uint32 vcnt) {
-            return {Type::DrawLine, {.drawLine = {.vcnt = vcnt}}};
-        }
-
-        static VDP2RenderEvent EndFrame() {
-            return {Type::EndFrame};
-        }
-
-        static VDP2RenderEvent Shutdown() {
-            return {Type::Shutdown};
-        }
 
         Type type;
         union {
             struct {
                 uint32 vcnt;
             } drawLine;
+
+            struct {
+                bool odd;
+            } oddField;
+
+            struct {
+                uint32 address;
+                uint32 value;
+            } ramWrite;
+
+            struct {
+                uint32 address;
+                uint16 value;
+            } regWrite;
         };
+
+        static VDP2RenderEvent Reset() {
+            return {Type::Reset};
+        }
+
+        static VDP2RenderEvent DrawLine(uint32 vcnt) {
+            return {Type::DrawLine, {.drawLine = {.vcnt = vcnt}}};
+        }
+
+        static VDP2RenderEvent OddField(bool odd) {
+            return {Type::OddField, {.oddField = {.odd = odd}}};
+        }
+
+        static VDP2RenderEvent EndFrame() {
+            return {Type::EndFrame};
+        }
+
+        template <mem_primitive T>
+        static VDP2RenderEvent VRAMWrite(uint32 address, T value) {
+            if constexpr (std::is_same_v<T, uint8>) {
+                return VRAMWriteByte(address, value);
+            } else if constexpr (std::is_same_v<T, uint16>) {
+                return VRAMWriteWord(address, value);
+            } else if constexpr (std::is_same_v<T, uint32>) {
+                return VRAMWriteLong(address, value);
+            }
+        }
+
+        static VDP2RenderEvent VRAMWriteByte(uint32 address, uint8 value) {
+            return {Type::VRAMWriteByte, {.ramWrite = {.address = address, .value = value}}};
+        }
+
+        static VDP2RenderEvent VRAMWriteWord(uint32 address, uint16 value) {
+            return {Type::VRAMWriteWord, {.ramWrite = {.address = address, .value = value}}};
+        }
+
+        static VDP2RenderEvent VRAMWriteLong(uint32 address, uint32 value) {
+            return {Type::VRAMWriteLong, {.ramWrite = {.address = address, .value = value}}};
+        }
+
+        template <mem_primitive T>
+        static VDP2RenderEvent CRAMWrite(uint32 address, T value) {
+            if constexpr (std::is_same_v<T, uint8>) {
+                return CRAMWriteByte(address, value);
+            } else if constexpr (std::is_same_v<T, uint16>) {
+                return CRAMWriteWord(address, value);
+            }
+        }
+
+        static VDP2RenderEvent CRAMWriteByte(uint32 address, uint8 value) {
+            return {Type::CRAMWriteByte, {.ramWrite = {.address = address, .value = value}}};
+        }
+
+        static VDP2RenderEvent CRAMWriteWord(uint32 address, uint16 value) {
+            return {Type::CRAMWriteWord, {.ramWrite = {.address = address, .value = value}}};
+        }
+
+        static VDP2RenderEvent RegWrite(uint32 address, uint16 value) {
+            return {Type::RegWrite, {.regWrite = {.address = address, .value = value}}};
+        }
+
+        static VDP2RenderEvent Shutdown() {
+            return {Type::Shutdown};
+        }
     };
 
-    moodycamel::BlockingConcurrentQueue<VDP2RenderEvent> m_VDP2RenderEvents;
-    moodycamel::ProducerToken m_VDP2ProducerToken;
-    moodycamel::ConsumerToken m_VDP2ConsumerToken;
-    util::Event m_VDP2RenderFinishedEvent;
+    struct VDP2RendererContext {
+        moodycamel::BlockingConcurrentQueue<VDP2RenderEvent> eventQueue;
+        moodycamel::ProducerToken pTok{eventQueue};
+        moodycamel::ConsumerToken cTok{eventQueue};
+        util::Event renderFinishedSignal{false};
+
+        VDP2Regs regs;
+        alignas(16) std::array<uint8, kVDP2VRAMSize> VRAM; // 4x 128 KiB banks: A0, A1, B0, B1
+        alignas(16) std::array<uint8, kVDP2CRAMSize> CRAM;
+
+        void Reset() {
+            regs.Reset();
+            VRAM.fill(0);
+            CRAM.fill(0);
+        }
+
+        void EnqueueEvent(VDP2RenderEvent &&event) {
+            eventQueue.enqueue(pTok, std::move(event));
+        }
+
+        void DequeueEvent(VDP2RenderEvent &event) {
+            eventQueue.wait_dequeue(cTok, event);
+        }
+    } m_VDP2RenderContext;
+
+    std::thread m_VDP2RenderThread;
 
     void VDP2RenderThread();
+
+    template <mem_primitive T>
+    T VDP2ReadRendererVRAM(uint32 address);
+
+    template <mem_primitive T>
+    T VDP2ReadRendererCRAM(uint32 address);
 
     // -------------------------------------------------------------------------
     // VDP1

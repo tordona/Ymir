@@ -17,10 +17,7 @@ VDP::VDP(core::Scheduler &scheduler)
     , m_VDP1RenderThread([&] { VDP1RenderThread(); })
     , m_VDP1ProducerToken(m_VDP1RenderEvents)
     , m_VDP1ConsumerToken(m_VDP1RenderEvents)
-    , m_VDP2RenderFinishedEvent(false)
-    , m_VDP2RenderThread([&] { VDP2RenderThread(); })
-    , m_VDP2ProducerToken(m_VDP2RenderEvents)
-    , m_VDP2ConsumerToken(m_VDP2RenderEvents) {
+    , m_VDP2RenderThread([&] { VDP2RenderThread(); }) {
 
     m_phaseUpdateEvent = scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent);
 
@@ -31,7 +28,7 @@ VDP::VDP(core::Scheduler &scheduler)
 
 VDP::~VDP() {
     m_VDP1RenderEvents.enqueue(m_VDP1ProducerToken, VDP1RenderEvent::Shutdown());
-    m_VDP2RenderEvents.enqueue(m_VDP2ProducerToken, VDP2RenderEvent::Shutdown());
+    m_VDP2RenderContext.EnqueueEvent(VDP2RenderEvent::Shutdown());
     if (m_VDP1RenderThread.joinable()) {
         m_VDP1RenderThread.join();
     }
@@ -64,6 +61,8 @@ void VDP::Reset(bool hard) {
 
     m_VDP1.Reset();
     m_VDP2.Reset();
+
+    m_VDP2RenderContext.EnqueueEvent(VDP2RenderEvent::Reset());
 
     m_HPhase = HorizontalPhase::Active;
     m_VPhase = VerticalPhase::Active;
@@ -230,48 +229,49 @@ void VDP::MapMemory(sys::Bus &bus) {
                   });
 
     // VDP2 registers
-    bus.MapMemory(0x5F8'0000, 0x5FB'FFFF,
-                  {
-                      .ctx = this,
-                      .read8 = [](uint32 address, void * /*ctx*/) -> uint8 {
-                          address &= 0x1FF;
-                          regsLog1.debug("Illegal 8-bit VDP2 register read from {:05X}", address);
-                          return 0;
-                      },
-                      .read16 = [](uint32 address, void *ctx) -> uint16 {
-                          return static_cast<VDP *>(ctx)->VDP2ReadReg<uint16>(address);
-                      },
-                      .read32 = [](uint32 address, void *ctx) -> uint32 {
-                          uint32 value = static_cast<VDP *>(ctx)->VDP2ReadReg<uint16>(address + 0) << 16u;
-                          value |= static_cast<VDP *>(ctx)->VDP2ReadReg<uint16>(address + 2) << 0u;
-                          return value;
-                      },
-                      .write8 =
-                          [](uint32 address, uint8 value, void * /*ctx*/) {
-                              address &= 0x1FF;
-                              regsLog1.debug("Illegal 8-bit VDP2 register write to {:05X} = {:02X}", address, value);
-                          },
-                      .write16 = [](uint32 address, uint16 value,
-                                    void *ctx) { static_cast<VDP *>(ctx)->VDP2WriteReg<uint16>(address, value); },
-                      .write32 =
-                          [](uint32 address, uint32 value, void *ctx) {
-                              static_cast<VDP *>(ctx)->VDP2WriteReg<uint16>(address + 0, value >> 16u);
-                              static_cast<VDP *>(ctx)->VDP2WriteReg<uint16>(address + 2, value >> 0u);
-                          },
-                  });
+    bus.MapMemory(
+        0x5F8'0000, 0x5FB'FFFF,
+        {
+            .ctx = this,
+            .read8 = [](uint32 address, void * /*ctx*/) -> uint8 {
+                address &= 0x1FF;
+                regsLog1.debug("Illegal 8-bit VDP2 register read from {:05X}", address);
+                return 0;
+            },
+            .read16 = [](uint32 address, void *ctx) -> uint16 { return static_cast<VDP *>(ctx)->VDP2ReadReg(address); },
+            .read32 = [](uint32 address, void *ctx) -> uint32 {
+                uint32 value = static_cast<VDP *>(ctx)->VDP2ReadReg(address + 0) << 16u;
+                value |= static_cast<VDP *>(ctx)->VDP2ReadReg(address + 2) << 0u;
+                return value;
+            },
+            .write8 =
+                [](uint32 address, uint8 value, void * /*ctx*/) {
+                    address &= 0x1FF;
+                    regsLog1.debug("Illegal 8-bit VDP2 register write to {:05X} = {:02X}", address, value);
+                },
+            .write16 = [](uint32 address, uint16 value,
+                          void *ctx) { static_cast<VDP *>(ctx)->VDP2WriteReg(address, value); },
+            .write32 =
+                [](uint32 address, uint32 value, void *ctx) {
+                    static_cast<VDP *>(ctx)->VDP2WriteReg(address + 0, value >> 16u);
+                    static_cast<VDP *>(ctx)->VDP2WriteReg(address + 2, value >> 0u);
+                },
+        });
 }
 
 template <bool debug>
 void VDP::Advance(uint64 cycles) {
     // TODO: proper cycle counting
     // HACK: slow down VDP1 commands to avoid FMV freezes on Virtua Racing
-    static constexpr uint64 kCyclesPerCommand = 12;
+
+    // TODO: use this in the threaded renderer
+    /*static constexpr uint64 kCyclesPerCommand = 12;
 
     m_VDP1RenderContext.cycleCount += cycles;
     const uint64 steps = m_VDP1RenderContext.cycleCount / kCyclesPerCommand;
     m_VDP1RenderContext.cycleCount %= kCyclesPerCommand;
 
-    /*for (uint64 i = 0; i < steps; i++) {
+    for (uint64 i = 0; i < steps; i++) {
         VDP1ProcessCommand();
     }*/
 }
@@ -408,6 +408,7 @@ FORCE_INLINE void VDP::VDP2WriteVRAM(uint32 address, T value) {
     // TODO: handle VRSIZE.VRAMSZ
     address &= 0x7FFFF;
     util::WriteBE<T>(&m_VRAM2[address], value);
+    m_VDP2RenderContext.EnqueueEvent(VDP2RenderEvent::VRAMWrite<T>(address, value));
 }
 
 template <mem_primitive T>
@@ -435,325 +436,32 @@ FORCE_INLINE void VDP::VDP2WriteCRAM(uint32 address, T value) {
     address = MapCRAMAddress(address);
     regsLog2.trace("{}-bit VDP2 CRAM write to {:05X} = {:X}", sizeof(T) * 8, address, value);
     util::WriteBE<T>(&m_CRAM[address], value);
+    m_VDP2RenderContext.EnqueueEvent(VDP2RenderEvent::CRAMWrite<T>(address, value));
     if (m_VDP2.RAMCTL.CRMDn == 0) {
         regsLog2.trace("   replicated to {:05X}", address ^ 0x800);
         util::WriteBE<T>(&m_CRAM[address ^ 0x800], value);
+        m_VDP2RenderContext.EnqueueEvent(VDP2RenderEvent::CRAMWrite<T>(address ^ 0x800, value));
     }
 }
 
-template <mem_primitive T>
-FORCE_INLINE T VDP::VDP2ReadReg(uint32 address) {
-    address &= 0x1FF;
-
-    switch (address) {
-    case 0x000: return m_VDP2.TVMD.u16;
-    case 0x002: return m_VDP2.EXTEN.u16;
-    case 0x004: return m_VDP2.TVSTAT.u16;
-    case 0x006: return m_VDP2.VRSIZE.u16;
-    case 0x008: return m_VDP2.HCNT;
-    case 0x00A: return m_VDP2.VCNT;
-    case 0x00C: return 0; // unknown/hidden register
-    case 0x00E: return m_VDP2.RAMCTL.u16;
-    case 0x010: return m_VDP2.CYCA0.L.u16;   // write-only?
-    case 0x012: return m_VDP2.CYCA0.U.u16;   // write-only?
-    case 0x014: return m_VDP2.CYCA1.L.u16;   // write-only?
-    case 0x016: return m_VDP2.CYCA1.U.u16;   // write-only?
-    case 0x018: return m_VDP2.CYCB0.L.u16;   // write-only?
-    case 0x01A: return m_VDP2.CYCB0.U.u16;   // write-only?
-    case 0x01E: return m_VDP2.CYCB1.L.u16;   // write-only?
-    case 0x01C: return m_VDP2.CYCB1.U.u16;   // write-only?
-    case 0x020: return m_VDP2.ReadBGON();    // write-only?
-    case 0x022: return m_VDP2.ReadMZCTL();   // write-only?
-    case 0x024: return m_VDP2.ReadSFSEL();   // write-only?
-    case 0x026: return m_VDP2.ReadSFCODE();  // write-only?
-    case 0x028: return m_VDP2.ReadCHCTLA();  // write-only?
-    case 0x02A: return m_VDP2.ReadCHCTLB();  // write-only?
-    case 0x02C: return m_VDP2.ReadBMPNA();   // write-only?
-    case 0x02E: return m_VDP2.ReadBMPNB();   // write-only?
-    case 0x030: return m_VDP2.ReadPNCN(1);   // write-only?
-    case 0x032: return m_VDP2.ReadPNCN(2);   // write-only?
-    case 0x034: return m_VDP2.ReadPNCN(3);   // write-only?
-    case 0x036: return m_VDP2.ReadPNCN(4);   // write-only?
-    case 0x038: return m_VDP2.ReadPNCR();    // write-only?
-    case 0x03A: return m_VDP2.ReadPLSZ();    // write-only?
-    case 0x03C: return m_VDP2.ReadMPOFN();   // write-only?
-    case 0x03E: return m_VDP2.ReadMPOFR();   // write-only?
-    case 0x040: return m_VDP2.ReadMPN(1, 0); // write-only?
-    case 0x042: return m_VDP2.ReadMPN(1, 1); // write-only?
-    case 0x044: return m_VDP2.ReadMPN(2, 0); // write-only?
-    case 0x046: return m_VDP2.ReadMPN(2, 1); // write-only?
-    case 0x048: return m_VDP2.ReadMPN(3, 0); // write-only?
-    case 0x04A: return m_VDP2.ReadMPN(3, 1); // write-only?
-    case 0x04C: return m_VDP2.ReadMPN(4, 0); // write-only?
-    case 0x04E: return m_VDP2.ReadMPN(4, 1); // write-only?
-    case 0x050: return m_VDP2.ReadMPR(0, 0); // write-only?
-    case 0x052: return m_VDP2.ReadMPR(0, 1); // write-only?
-    case 0x054: return m_VDP2.ReadMPR(0, 2); // write-only?
-    case 0x056: return m_VDP2.ReadMPR(0, 3); // write-only?
-    case 0x058: return m_VDP2.ReadMPR(0, 4); // write-only?
-    case 0x05A: return m_VDP2.ReadMPR(0, 5); // write-only?
-    case 0x05C: return m_VDP2.ReadMPR(0, 6); // write-only?
-    case 0x05E: return m_VDP2.ReadMPR(0, 7); // write-only?
-    case 0x060: return m_VDP2.ReadMPR(1, 0); // write-only?
-    case 0x062: return m_VDP2.ReadMPR(1, 1); // write-only?
-    case 0x064: return m_VDP2.ReadMPR(1, 2); // write-only?
-    case 0x066: return m_VDP2.ReadMPR(1, 3); // write-only?
-    case 0x068: return m_VDP2.ReadMPR(1, 4); // write-only?
-    case 0x06A: return m_VDP2.ReadMPR(1, 5); // write-only?
-    case 0x06C: return m_VDP2.ReadMPR(1, 6); // write-only?
-    case 0x06E: return m_VDP2.ReadMPR(1, 7); // write-only?
-    case 0x070: return m_VDP2.ReadSCXIN(1);  // write-only?
-    case 0x072: return m_VDP2.ReadSCXDN(1);  // write-only?
-    case 0x074: return m_VDP2.ReadSCYIN(1);  // write-only?
-    case 0x076: return m_VDP2.ReadSCYDN(1);  // write-only?
-    case 0x078: return m_VDP2.ReadZMXIN(1);  // write-only?
-    case 0x07A: return m_VDP2.ReadZMXDN(1);  // write-only?
-    case 0x07C: return m_VDP2.ReadZMYIN(1);  // write-only?
-    case 0x07E: return m_VDP2.ReadZMYDN(1);  // write-only?
-    case 0x080: return m_VDP2.ReadSCXIN(2);  // write-only?
-    case 0x082: return m_VDP2.ReadSCXDN(2);  // write-only?
-    case 0x084: return m_VDP2.ReadSCYIN(2);  // write-only?
-    case 0x086: return m_VDP2.ReadSCYDN(2);  // write-only?
-    case 0x088: return m_VDP2.ReadZMXIN(2);  // write-only?
-    case 0x08A: return m_VDP2.ReadZMXDN(2);  // write-only?
-    case 0x08C: return m_VDP2.ReadZMYIN(2);  // write-only?
-    case 0x08E: return m_VDP2.ReadZMYDN(2);  // write-only?
-    case 0x090: return m_VDP2.ReadSCXIN(3);  // write-only?
-    case 0x092: return m_VDP2.ReadSCYIN(3);  // write-only?
-    case 0x094: return m_VDP2.ReadSCXIN(4);  // write-only?
-    case 0x096: return m_VDP2.ReadSCYIN(4);  // write-only?
-    case 0x098: return m_VDP2.ZMCTL.u16;     // write-only?
-    case 0x09A: return m_VDP2.ReadSCRCTL();  // write-only?
-    case 0x09C: return m_VDP2.ReadVCSTAU();  // write-only?
-    case 0x09E: return m_VDP2.ReadVCSTAL();  // write-only?
-    case 0x0A0: return m_VDP2.ReadLSTAnU(1); // write-only?
-    case 0x0A2: return m_VDP2.ReadLSTAnL(1); // write-only?
-    case 0x0A4: return m_VDP2.ReadLSTAnU(2); // write-only?
-    case 0x0A6: return m_VDP2.ReadLSTAnL(2); // write-only?
-    case 0x0A8: return m_VDP2.ReadLCTAU();   // write-only?
-    case 0x0AA: return m_VDP2.ReadLCTAL();   // write-only?
-    case 0x0AC: return m_VDP2.ReadBKTAU();   // write-only?
-    case 0x0AE: return m_VDP2.ReadBKTAL();   // write-only?
-    case 0x0B0: return m_VDP2.ReadRPMD();    // write-only?
-    case 0x0B2: return m_VDP2.ReadRPRCTL();  // write-only?
-    case 0x0B4: return m_VDP2.ReadKTCTL();   // write-only?
-    case 0x0B6: return m_VDP2.ReadKTAOF();   // write-only?
-    case 0x0B8: return m_VDP2.ReadOVPNRn(0); // write-only?
-    case 0x0BA: return m_VDP2.ReadOVPNRn(1); // write-only?
-    case 0x0BC: return m_VDP2.ReadRPTAU();   // write-only?
-    case 0x0BE: return m_VDP2.ReadRPTAL();   // write-only?
-    case 0x0C0: return m_VDP2.ReadWPSXn(0);  // write-only?
-    case 0x0C2: return m_VDP2.ReadWPSYn(0);  // write-only?
-    case 0x0C4: return m_VDP2.ReadWPEXn(0);  // write-only?
-    case 0x0C6: return m_VDP2.ReadWPEYn(0);  // write-only?
-    case 0x0C8: return m_VDP2.ReadWPSXn(1);  // write-only?
-    case 0x0CA: return m_VDP2.ReadWPSYn(1);  // write-only?
-    case 0x0CC: return m_VDP2.ReadWPEXn(1);  // write-only?
-    case 0x0CE: return m_VDP2.ReadWPEYn(1);  // write-only?
-    case 0x0D0: return m_VDP2.ReadWCTLA();   // write-only?
-    case 0x0D2: return m_VDP2.ReadWCTLB();   // write-only?
-    case 0x0D4: return m_VDP2.ReadWCTLC();   // write-only?
-    case 0x0D6: return m_VDP2.ReadWCTLD();   // write-only?
-    case 0x0D8: return m_VDP2.ReadLWTAnU(0); // write-only?
-    case 0x0DA: return m_VDP2.ReadLWTAnL(0); // write-only?
-    case 0x0DC: return m_VDP2.ReadLWTAnU(1); // write-only?
-    case 0x0DE: return m_VDP2.ReadLWTAnL(1); // write-only?
-    case 0x0E0: return m_VDP2.ReadSPCTL();   // write-only?
-    case 0x0E2: return m_VDP2.ReadSDCTL();   // write-only?
-    case 0x0E4: return m_VDP2.ReadCRAOFA();  // write-only?
-    case 0x0E6: return m_VDP2.ReadCRAOFB();  // write-only?
-    case 0x0E8: return m_VDP2.ReadLNCLEN();  // write-only?
-    case 0x0EA: return m_VDP2.ReadSFPRMD();  // write-only?
-    case 0x0EC: return m_VDP2.ReadCCCTL();   // write-only?
-    case 0x0EE: return m_VDP2.ReadSFCCMD();  // write-only?
-    case 0x0F0: return m_VDP2.ReadPRISn(0);  // write-only?
-    case 0x0F2: return m_VDP2.ReadPRISn(1);  // write-only?
-    case 0x0F4: return m_VDP2.ReadPRISn(2);  // write-only?
-    case 0x0F6: return m_VDP2.ReadPRISn(3);  // write-only?
-    case 0x0F8: return m_VDP2.ReadPRINA();   // write-only?
-    case 0x0FA: return m_VDP2.ReadPRINB();   // write-only?
-    case 0x0FC: return m_VDP2.ReadPRIR();    // write-only?
-    case 0x0FE: return 0;                    // supposedly reserved
-    case 0x100: return m_VDP2.ReadCCRSn(0);  // write-only?
-    case 0x102: return m_VDP2.ReadCCRSn(1);  // write-only?
-    case 0x104: return m_VDP2.ReadCCRSn(2);  // write-only?
-    case 0x106: return m_VDP2.ReadCCRSn(3);  // write-only?
-    case 0x108: return m_VDP2.ReadCCRNA();   // write-only?
-    case 0x10A: return m_VDP2.ReadCCRNB();   // write-only?
-    case 0x10C: return m_VDP2.ReadCCRR();    // write-only?
-    case 0x10E: return m_VDP2.ReadCCRLB();   // write-only?
-    case 0x110: return m_VDP2.ReadCLOFEN();  // write-only?
-    case 0x112: return m_VDP2.ReadCLOFSL();  // write-only?
-    case 0x114: return m_VDP2.ReadCOxR(0);   // write-only?
-    case 0x116: return m_VDP2.ReadCOxG(0);   // write-only?
-    case 0x118: return m_VDP2.ReadCOxB(0);   // write-only?
-    case 0x11A: return m_VDP2.ReadCOxR(1);   // write-only?
-    case 0x11C: return m_VDP2.ReadCOxG(1);   // write-only?
-    case 0x11E: return m_VDP2.ReadCOxB(1);   // write-only?
-    default: regsLog2.debug("unhandled {}-bit VDP2 register read from {:03X}", sizeof(T) * 8, address); return 0;
-    }
+FORCE_INLINE uint16 VDP::VDP2ReadReg(uint32 address) {
+    return m_VDP2.Read(address);
 }
 
-template <mem_primitive T>
-FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, T value) {
+FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, uint16 value) {
     address &= 0x1FF;
 
+    m_VDP2RenderContext.EnqueueEvent(VDP2RenderEvent::RegWrite(address, value));
+
+    m_VDP2.Write(address, value);
+
     switch (address) {
-    case 0x000: {
-        const uint16 oldTVMD = m_VDP2.TVMD.u16;
-        m_VDP2.TVMD.u16 = value & 0x81F7;
-        m_VDP2.TVMDDirty |= m_VDP2.TVMD.u16 != oldTVMD;
+    case 0x000:
         regsLog2.trace("TVMD write: {:04X} - HRESO={:d} VRESO={:d} LSMD={:d} BDCLMD={:d} DISP={:d}{}", m_VDP2.TVMD.u16,
                        (uint16)m_VDP2.TVMD.HRESOn, (uint16)m_VDP2.TVMD.VRESOn, (uint16)m_VDP2.TVMD.LSMDn,
                        (uint16)m_VDP2.TVMD.BDCLMD, (uint16)m_VDP2.TVMD.DISP, (m_VDP2.TVMDDirty ? " (dirty)" : ""));
         break;
-    }
-    case 0x002: m_VDP2.EXTEN.u16 = value & 0x0303; break;
-    case 0x004: /* TVSTAT is read-only */ break;
-    case 0x006: m_VDP2.VRSIZE.u16 = value & 0x8000; break;
-    case 0x008: /* HCNT is read-only */ break;
-    case 0x00A: /* VCNT is read-only */ break;
-    case 0x00C: /* unknown/hidden register */ break;
-    case 0x00E: m_VDP2.RAMCTL.u16 = value & 0xB3FF; break;
-    case 0x010: m_VDP2.CYCA0.L.u16 = value; break;
-    case 0x012: m_VDP2.CYCA0.U.u16 = value; break;
-    case 0x014: m_VDP2.CYCA1.L.u16 = value; break;
-    case 0x016: m_VDP2.CYCA1.U.u16 = value; break;
-    case 0x018: m_VDP2.CYCB0.L.u16 = value; break;
-    case 0x01A: m_VDP2.CYCB0.U.u16 = value; break;
-    case 0x01E: m_VDP2.CYCB1.U.u16 = value; break;
-    case 0x01C: m_VDP2.CYCB1.L.u16 = value; break;
-    case 0x020: m_VDP2.WriteBGON(value), VDP2UpdateEnabledBGs(); break;
-    case 0x022: m_VDP2.WriteMZCTL(value); break;
-    case 0x024: m_VDP2.WriteSFSEL(value); break;
-    case 0x026: m_VDP2.WriteSFCODE(value); break;
-    case 0x028: m_VDP2.WriteCHCTLA(value); break;
-    case 0x02A: m_VDP2.WriteCHCTLB(value); break;
-    case 0x02C: m_VDP2.WriteBMPNA(value); break;
-    case 0x02E: m_VDP2.WriteBMPNB(value); break;
-    case 0x030: m_VDP2.WritePNCN(1, value); break;
-    case 0x032: m_VDP2.WritePNCN(2, value); break;
-    case 0x034: m_VDP2.WritePNCN(3, value); break;
-    case 0x036: m_VDP2.WritePNCN(4, value); break;
-    case 0x038: m_VDP2.WritePNCR(value); break;
-    case 0x03A: m_VDP2.WritePLSZ(value); break;
-    case 0x03C: m_VDP2.WriteMPOFN(value); break;
-    case 0x03E: m_VDP2.WriteMPOFR(value); break;
-    case 0x040: m_VDP2.WriteMPN(1, 0, value); break;
-    case 0x042: m_VDP2.WriteMPN(1, 1, value); break;
-    case 0x044: m_VDP2.WriteMPN(2, 0, value); break;
-    case 0x046: m_VDP2.WriteMPN(2, 1, value); break;
-    case 0x048: m_VDP2.WriteMPN(3, 0, value); break;
-    case 0x04A: m_VDP2.WriteMPN(3, 1, value); break;
-    case 0x04C: m_VDP2.WriteMPN(4, 0, value); break;
-    case 0x04E: m_VDP2.WriteMPN(4, 1, value); break;
-    case 0x050: m_VDP2.WriteMPR(0, 0, value); break;
-    case 0x052: m_VDP2.WriteMPR(0, 1, value); break;
-    case 0x054: m_VDP2.WriteMPR(0, 2, value); break;
-    case 0x056: m_VDP2.WriteMPR(0, 3, value); break;
-    case 0x058: m_VDP2.WriteMPR(0, 4, value); break;
-    case 0x05A: m_VDP2.WriteMPR(0, 5, value); break;
-    case 0x05C: m_VDP2.WriteMPR(0, 6, value); break;
-    case 0x05E: m_VDP2.WriteMPR(0, 7, value); break;
-    case 0x060: m_VDP2.WriteMPR(1, 0, value); break;
-    case 0x062: m_VDP2.WriteMPR(1, 1, value); break;
-    case 0x064: m_VDP2.WriteMPR(1, 2, value); break;
-    case 0x066: m_VDP2.WriteMPR(1, 3, value); break;
-    case 0x068: m_VDP2.WriteMPR(1, 4, value); break;
-    case 0x06A: m_VDP2.WriteMPR(1, 5, value); break;
-    case 0x06C: m_VDP2.WriteMPR(1, 6, value); break;
-    case 0x06E: m_VDP2.WriteMPR(1, 7, value); break;
-    case 0x070: m_VDP2.WriteSCXIN(1, value); break;
-    case 0x072: m_VDP2.WriteSCXDN(1, value); break;
-    case 0x074: m_VDP2.WriteSCYIN(1, value); break;
-    case 0x076: m_VDP2.WriteSCYDN(1, value); break;
-    case 0x078: m_VDP2.WriteZMXIN(1, value); break;
-    case 0x07A: m_VDP2.WriteZMXDN(1, value); break;
-    case 0x07C: m_VDP2.WriteZMYIN(1, value); break;
-    case 0x07E: m_VDP2.WriteZMYDN(1, value); break;
-    case 0x080: m_VDP2.WriteSCXIN(2, value); break;
-    case 0x082: m_VDP2.WriteSCXDN(2, value); break;
-    case 0x084: m_VDP2.WriteSCYIN(2, value); break;
-    case 0x086: m_VDP2.WriteSCYDN(2, value); break;
-    case 0x088: m_VDP2.WriteZMXIN(2, value); break;
-    case 0x08A: m_VDP2.WriteZMXDN(2, value); break;
-    case 0x08C: m_VDP2.WriteZMYIN(2, value); break;
-    case 0x08E: m_VDP2.WriteZMYDN(2, value); break;
-    case 0x090: m_VDP2.WriteSCXIN(3, value); break;
-    case 0x092: m_VDP2.WriteSCYIN(3, value); break;
-    case 0x094: m_VDP2.WriteSCXIN(4, value); break;
-    case 0x096: m_VDP2.WriteSCYIN(4, value); break;
-    case 0x098: m_VDP2.ZMCTL.u16 = value & 0x0303; break;
-    case 0x09A: m_VDP2.WriteSCRCTL(value); break;
-    case 0x09C: m_VDP2.WriteVCSTAU(value); break;
-    case 0x09E: m_VDP2.WriteVCSTAL(value); break;
-    case 0x0A0: m_VDP2.WriteLSTAnU(1, value); break;
-    case 0x0A2: m_VDP2.WriteLSTAnL(1, value); break;
-    case 0x0A4: m_VDP2.WriteLSTAnU(2, value); break;
-    case 0x0A6: m_VDP2.WriteLSTAnL(2, value); break;
-    case 0x0A8: m_VDP2.WriteLCTAU(value); break;
-    case 0x0AA: m_VDP2.WriteLCTAL(value); break;
-    case 0x0AC: m_VDP2.WriteBKTAU(value); break;
-    case 0x0AE: m_VDP2.WriteBKTAL(value); break;
-    case 0x0B0: m_VDP2.WriteRPMD(value); break;
-    case 0x0B2: m_VDP2.WriteRPRCTL(value); break;
-    case 0x0B4: m_VDP2.WriteKTCTL(value); break;
-    case 0x0B6: m_VDP2.WriteKTAOF(value); break;
-    case 0x0B8: m_VDP2.WriteOVPNRn(0, value); break;
-    case 0x0BA: m_VDP2.WriteOVPNRn(1, value); break;
-    case 0x0BC: m_VDP2.WriteRPTAU(value); break;
-    case 0x0BE: m_VDP2.WriteRPTAL(value); break;
-    case 0x0C0: m_VDP2.WriteWPSXn(0, value); break;
-    case 0x0C2: m_VDP2.WriteWPSYn(0, value); break;
-    case 0x0C4: m_VDP2.WriteWPEXn(0, value); break;
-    case 0x0C6: m_VDP2.WriteWPEYn(0, value); break;
-    case 0x0C8: m_VDP2.WriteWPSXn(1, value); break;
-    case 0x0CA: m_VDP2.WriteWPSYn(1, value); break;
-    case 0x0CC: m_VDP2.WriteWPEXn(1, value); break;
-    case 0x0CE: m_VDP2.WriteWPEYn(1, value); break;
-    case 0x0D0: m_VDP2.WriteWCTLA(value); break;
-    case 0x0D2: m_VDP2.WriteWCTLB(value); break;
-    case 0x0D4: m_VDP2.WriteWCTLC(value); break;
-    case 0x0D6: m_VDP2.WriteWCTLD(value); break;
-    case 0x0D8: m_VDP2.WriteLWTAnU(0, value); break;
-    case 0x0DA: m_VDP2.WriteLWTAnL(0, value); break;
-    case 0x0DC: m_VDP2.WriteLWTAnU(1, value); break;
-    case 0x0DE: m_VDP2.WriteLWTAnL(1, value); break;
-    case 0x0E0: m_VDP2.WriteSPCTL(value); break;
-    case 0x0E2: m_VDP2.WriteSDCTL(value); break;
-    case 0x0E4: m_VDP2.WriteCRAOFA(value); break;
-    case 0x0E6: m_VDP2.WriteCRAOFB(value); break;
-    case 0x0E8: m_VDP2.WriteLNCLEN(value); break;
-    case 0x0EA: m_VDP2.WriteSFPRMD(value); break;
-    case 0x0EC: m_VDP2.WriteCCCTL(value); break;
-    case 0x0EE: m_VDP2.WriteSFCCMD(value); break;
-    case 0x0F0: m_VDP2.WritePRISn(0, value); break;
-    case 0x0F2: m_VDP2.WritePRISn(1, value); break;
-    case 0x0F4: m_VDP2.WritePRISn(2, value); break;
-    case 0x0F6: m_VDP2.WritePRISn(3, value); break;
-    case 0x0F8: m_VDP2.WritePRINA(value); break;
-    case 0x0FA: m_VDP2.WritePRINB(value); break;
-    case 0x0FC: m_VDP2.WritePRIR(value); break;
-    case 0x0FE: break; // supposedly reserved
-    case 0x100: m_VDP2.WriteCCRSn(0, value); break;
-    case 0x102: m_VDP2.WriteCCRSn(1, value); break;
-    case 0x104: m_VDP2.WriteCCRSn(2, value); break;
-    case 0x106: m_VDP2.WriteCCRSn(3, value); break;
-    case 0x108: m_VDP2.WriteCCRNA(value); break;
-    case 0x10A: m_VDP2.WriteCCRNB(value); break;
-    case 0x10C: m_VDP2.WriteCCRR(value); break;
-    case 0x10E: m_VDP2.WriteCCRLB(value); break;
-    case 0x110: m_VDP2.WriteCLOFEN(value); break;
-    case 0x112: m_VDP2.WriteCLOFSL(value); break;
-    case 0x114: m_VDP2.WriteCOxR(0, value); break;
-    case 0x116: m_VDP2.WriteCOxG(0, value); break;
-    case 0x118: m_VDP2.WriteCOxB(0, value); break;
-    case 0x11A: m_VDP2.WriteCOxR(1, value); break;
-    case 0x11C: m_VDP2.WriteCOxG(1, value); break;
-    case 0x11E: m_VDP2.WriteCOxB(1, value); break;
-    default:
-        regsLog2.debug("unhandled {}-bit VDP2 register write to {:03X} = {:X}", sizeof(T) * 8, address, value);
-        break;
+    case 0x020: VDP2UpdateEnabledBGs(); break;
     }
 }
 
@@ -897,7 +605,7 @@ void VDP::BeginHPhaseActiveDisplay() {
             m_cbTriggerOptimizedINTBACKRead();
         }
         // VDP2DrawLine(m_VCounter);
-        m_VDP2RenderEvents.enqueue(m_VDP2ProducerToken, VDP2RenderEvent::DrawLine(m_VCounter));
+        m_VDP2RenderContext.EnqueueEvent(VDP2RenderEvent::DrawLine(m_VCounter));
     }
 }
 
@@ -961,6 +669,7 @@ void VDP::BeginHPhaseLastDot() {
         } else {
             m_VDP2.TVSTAT.ODD = 1;
         }
+        m_VDP2RenderContext.EnqueueEvent(VDP2RenderEvent::OddField(m_VDP2.TVSTAT.ODD));
     }
 }
 
@@ -986,8 +695,8 @@ void VDP::BeginVPhaseBlankingAndSync() {
 
     // End frame
     rootLog2.trace("End VDP2 frame");
-    m_VDP2RenderEvents.enqueue(m_VDP2ProducerToken, VDP2RenderEvent::EndFrame());
-    m_VDP2RenderFinishedEvent.Wait(true);
+    m_VDP2RenderContext.EnqueueEvent(VDP2RenderEvent::EndFrame());
+    m_VDP2RenderContext.renderFinishedSignal.Wait(true);
     m_cbFrameComplete(m_framebuffer, m_HRes, m_VRes);
 }
 
@@ -1040,13 +749,50 @@ void VDP::VDP2RenderThread() {
     bool running = true;
     while (running) {
         VDP2RenderEvent event{};
-        m_VDP2RenderEvents.wait_dequeue(m_VDP2ConsumerToken, event);
+        m_VDP2RenderContext.DequeueEvent(event);
+
+        using EvtType = VDP2RenderEvent::Type;
         switch (event.type) {
-        case VDP2RenderEvent::Type::DrawLine: VDP2DrawLine(event.drawLine.vcnt); break;
-        case VDP2RenderEvent::Type::EndFrame: m_VDP2RenderFinishedEvent.Set(); break;
-        case VDP2RenderEvent::Type::Shutdown: running = false; break;
+        case EvtType::Reset: m_VDP2RenderContext.Reset(); break;
+        case EvtType::DrawLine: VDP2DrawLine(event.drawLine.vcnt); break;
+        case EvtType::OddField: m_VDP2RenderContext.regs.TVSTAT.ODD = event.oddField.odd; break;
+        case EvtType::EndFrame: m_VDP2RenderContext.renderFinishedSignal.Set(); break;
+
+        case EvtType::VRAMWriteByte: m_VDP2RenderContext.VRAM[event.ramWrite.address] = event.ramWrite.value; break;
+        case EvtType::VRAMWriteWord:
+            util::WriteBE<uint16>(&m_VDP2RenderContext.VRAM[event.ramWrite.address], event.ramWrite.value);
+            break;
+        case EvtType::VRAMWriteLong:
+            util::WriteBE<uint32>(&m_VDP2RenderContext.VRAM[event.ramWrite.address], event.ramWrite.value);
+            break;
+        case EvtType::CRAMWriteByte: m_VDP2RenderContext.CRAM[event.ramWrite.address] = event.ramWrite.value; break;
+        case EvtType::CRAMWriteWord:
+            util::WriteBE<uint16>(&m_VDP2RenderContext.CRAM[event.ramWrite.address], event.ramWrite.value);
+            break;
+        case EvtType::RegWrite: m_VDP2RenderContext.regs.Write(event.regWrite.address, event.regWrite.value); break;
+
+        case EvtType::Shutdown: running = false; break;
         }
     }
+}
+
+template <mem_primitive T>
+T VDP::VDP2ReadRendererVRAM(uint32 address) {
+    // TODO: handle VRSIZE.VRAMSZ
+    address &= 0x7FFFF;
+    return util::ReadBE<T>(&m_VDP2RenderContext.VRAM[address]);
+}
+
+template <mem_primitive T>
+T VDP::VDP2ReadRendererCRAM(uint32 address) {
+    if constexpr (std::is_same_v<T, uint32>) {
+        uint32 value = VDP2ReadRendererCRAM<uint16>(address + 0) << 16u;
+        value |= VDP2ReadRendererCRAM<uint16>(address + 2) << 0u;
+        return value;
+    }
+
+    address = MapCRAMAddress(address);
+    return util::ReadBE<T>(&m_CRAM[address]);
 }
 
 // -----------------------------------------------------------------------------
@@ -2050,7 +1796,7 @@ void VDP::VDP2UpdateEnabledBGs() {
 void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgParams, NormBGLayerState &bgState) {
     uint32 address = bgState.lineScrollTableAddress;
     auto read = [&] {
-        const uint32 value = VDP2ReadVRAM<uint32>(address);
+        const uint32 value = VDP2ReadRendererVRAM<uint32>(address);
         address += sizeof(uint32);
         return value;
     };
@@ -2071,11 +1817,12 @@ void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgParams, NormBGL
 }
 
 void VDP::VDP2CalcRotationParameterTables(uint32 y) {
-    const uint32 baseAddress = m_VDP2.commonRotParams.baseAddress & 0xFFF7C; // mask bit 6 (shifted left by 1)
+    const uint32 baseAddress =
+        m_VDP2RenderContext.regs.commonRotParams.baseAddress & 0xFFF7C; // mask bit 6 (shifted left by 1)
     const bool readAll = y == 0;
 
     for (int i = 0; i < 2; i++) {
-        RotationParams &params = m_VDP2.rotParams[i];
+        RotationParams &params = m_VDP2RenderContext.regs.rotParams[i];
         RotationParamState &state = m_rotParamStates[i];
 
         const bool readXst = readAll || params.readXst;
@@ -2085,7 +1832,7 @@ void VDP::VDP2CalcRotationParameterTables(uint32 y) {
         // Tables are located at the base address 0x80 bytes apart
         RotationParamTable t{};
         const uint32 address = baseAddress + i * 0x80;
-        t.ReadFrom(&m_VRAM2[address & 0x7FFFF]);
+        t.ReadFrom(&m_VDP2RenderContext.VRAM[address & 0x7FFFF]);
 
         // Calculate parameters
 
@@ -2133,27 +1880,27 @@ void VDP::VDP2CalcRotationParameterTables(uint32 y) {
         sint32 scrY = state.scrY;
         uint32 KA = state.KA;
 
-        const bool doubleResH = m_VDP2.TVMD.HRESOn & 0b010;
+        const bool doubleResH = m_VDP2RenderContext.regs.TVMD.HRESOn & 0b010;
         const uint32 xShift = doubleResH ? 1 : 0;
         const uint32 maxX = m_HRes >> xShift;
 
         // Use per-dot coefficient if reading from CRAM or if any of the VRAM banks was designated as coefficient data
-        bool perDotCoeff = m_VDP2.RAMCTL.CRKTE;
-        if (!m_VDP2.RAMCTL.CRKTE) {
-            perDotCoeff = m_VDP2.RAMCTL.RDBSA0n == 1 || m_VDP2.RAMCTL.RDBSB0n == 1;
-            if (m_VDP2.RAMCTL.VRAMD) {
-                perDotCoeff |= m_VDP2.RAMCTL.RDBSA1n == 1;
+        bool perDotCoeff = m_VDP2RenderContext.regs.RAMCTL.CRKTE;
+        if (!m_VDP2RenderContext.regs.RAMCTL.CRKTE) {
+            perDotCoeff = m_VDP2RenderContext.regs.RAMCTL.RDBSA0n == 1 || m_VDP2RenderContext.regs.RAMCTL.RDBSB0n == 1;
+            if (m_VDP2RenderContext.regs.RAMCTL.VRAMD) {
+                perDotCoeff |= m_VDP2RenderContext.regs.RAMCTL.RDBSA1n == 1;
             }
-            if (m_VDP2.RAMCTL.VRBMD) {
-                perDotCoeff |= m_VDP2.RAMCTL.RDBSB1n == 1;
+            if (m_VDP2RenderContext.regs.RAMCTL.VRBMD) {
+                perDotCoeff |= m_VDP2RenderContext.regs.RAMCTL.RDBSB1n == 1;
             }
         }
 
         // Precompute line color data parameters
-        const LineBackScreenParams &lineParams = m_VDP2.lineScreenParams;
+        const LineBackScreenParams &lineParams = m_VDP2RenderContext.regs.lineScreenParams;
         const uint32 line = lineParams.perLine ? y : 0;
         const uint32 lineColorAddress = lineParams.baseAddress + line * sizeof(uint16);
-        const uint32 baseLineColorCRAMAddress = VDP2ReadVRAM<uint16>(lineColorAddress) * sizeof(uint16);
+        const uint32 baseLineColorCRAMAddress = VDP2ReadRendererVRAM<uint16>(lineColorAddress) * sizeof(uint16);
 
         // Fetch first coefficient
         Coefficient coeff = VDP2FetchRotationCoefficient(params, KA);
@@ -2176,7 +1923,7 @@ void VDP::VDP2CalcRotationParameterTables(uint32 y) {
                 // Compute line colors
                 if (params.coeffUseLineColorData) {
                     const uint32 cramAddress = bit::deposit<1, 8>(baseLineColorCRAMAddress, coeff.lineColorData);
-                    const Color555 color555{.u16 = VDP2ReadCRAM<uint16>(cramAddress)};
+                    const Color555 color555{.u16 = VDP2ReadRendererCRAM<uint16>(cramAddress)};
                     state.lineColor[x] = ConvertRGB555to888(color555);
                 }
 
@@ -2232,11 +1979,11 @@ void VDP::VDP2DrawLine(uint32 y) {
         return arr;
     }();
 
-    const uint32 colorMode = m_VDP2.RAMCTL.CRMDn;
+    const uint32 colorMode = m_VDP2RenderContext.regs.RAMCTL.CRMDn;
     const bool rotate = m_VDP1.fbRotEnable;
 
     // Load rotation parameters if any of the RBG layers is enabled
-    if (m_VDP2.bgEnabled[4] || m_VDP2.bgEnabled[5]) {
+    if (m_VDP2RenderContext.regs.bgEnabled[4] || m_VDP2RenderContext.regs.bgEnabled[5]) {
         VDP2CalcRotationParameterTables(y);
     }
 
@@ -2247,7 +1994,7 @@ void VDP::VDP2DrawLine(uint32 y) {
     (this->*fnDrawSprite[colorMode][rotate])(y);
 
     // Draw background layers
-    if (m_VDP2.bgEnabled[5]) {
+    if (m_VDP2RenderContext.regs.bgEnabled[5]) {
         VDP2DrawRotationBG<0>(y, colorMode); // RBG0
         VDP2DrawRotationBG<1>(y, colorMode); // RBG1
     } else {
@@ -2263,15 +2010,15 @@ void VDP::VDP2DrawLine(uint32 y) {
 }
 
 void VDP::VDP2DrawLineColorAndBackScreens(uint32 y) {
-    const LineBackScreenParams &lineParams = m_VDP2.lineScreenParams;
-    const LineBackScreenParams &backParams = m_VDP2.backScreenParams;
+    const LineBackScreenParams &lineParams = m_VDP2RenderContext.regs.lineScreenParams;
+    const LineBackScreenParams &backParams = m_VDP2RenderContext.regs.backScreenParams;
 
     // Read line color screen color
     {
         const uint32 line = lineParams.perLine ? y : 0;
         const uint32 address = lineParams.baseAddress + line * sizeof(uint16);
-        const uint32 cramAddress = VDP2ReadVRAM<uint16>(address) * sizeof(uint16);
-        const Color555 color555{.u16 = VDP2ReadCRAM<uint16>(cramAddress)};
+        const uint32 cramAddress = VDP2ReadRendererVRAM<uint16>(address) * sizeof(uint16);
+        const Color555 color555{.u16 = VDP2ReadRendererCRAM<uint16>(cramAddress)};
         m_lineBackLayerState.lineColor = ConvertRGB555to888(color555);
     }
 
@@ -2279,7 +2026,7 @@ void VDP::VDP2DrawLineColorAndBackScreens(uint32 y) {
     {
         const uint32 line = backParams.perLine ? y : 0;
         const uint32 address = backParams.baseAddress + line * sizeof(Color555);
-        const Color555 color555{.u16 = VDP2ReadVRAM<uint16>(address)};
+        const Color555 color555{.u16 = VDP2ReadRendererVRAM<uint16>(address)};
         m_lineBackLayerState.backColor = ConvertRGB555to888(color555);
     }
 }
@@ -2288,8 +2035,8 @@ template <uint32 colorMode, bool rotate>
 NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
     // VDP1 scaling:
     // 2x horz: VDP1 TVM=000 and VDP2 HRESO=01x
-    const bool doubleResH =
-        !m_VDP1.hdtvEnable && !m_VDP1.fbRotEnable && !m_VDP1.pixel8Bits && (m_VDP2.TVMD.HRESOn & 0b110) == 0b010;
+    const bool doubleResH = !m_VDP1.hdtvEnable && !m_VDP1.fbRotEnable && !m_VDP1.pixel8Bits &&
+                            (m_VDP2RenderContext.regs.TVMD.HRESOn & 0b110) == 0b010;
     const uint32 xShift = doubleResH ? 1 : 0;
     const uint32 maxX = m_HRes >> xShift;
 
@@ -2312,7 +2059,7 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
             }
         }();
 
-        const SpriteParams &params = m_VDP2.spriteParams;
+        const SpriteParams &params = m_VDP2RenderContext.regs.spriteParams;
         auto &pixel = layerState.pixels[xx];
         auto &attr = spriteLayerState.attrs[xx];
 
@@ -2394,11 +2141,11 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
         return arr;
     }();
 
-    if (!m_VDP2.bgEnabled[bgIndex]) {
+    if (!m_VDP2RenderContext.regs.bgEnabled[bgIndex]) {
         return;
     }
 
-    const BGParams &bgParams = m_VDP2.bgParams[bgIndex + 1];
+    const BGParams &bgParams = m_VDP2RenderContext.regs.bgParams[bgIndex + 1];
     LayerState &layerState = m_layerStates[bgIndex + 2];
     NormBGLayerState &bgState = m_normBGLayerStates[bgIndex];
 
@@ -2420,7 +2167,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
     }
 
     bgState.mosaicCounterY++;
-    if (bgState.mosaicCounterY >= m_VDP2.mosaicV) {
+    if (bgState.mosaicCounterY >= m_VDP2RenderContext.regs.mosaicV) {
         bgState.mosaicCounterY = 0;
     }
 }
@@ -2470,11 +2217,11 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
         return arr;
     }();
 
-    if (!m_VDP2.bgEnabled[bgIndex + 4]) {
+    if (!m_VDP2RenderContext.regs.bgEnabled[bgIndex + 4]) {
         return;
     }
 
-    const BGParams &bgParams = m_VDP2.bgParams[bgIndex];
+    const BGParams &bgParams = m_VDP2RenderContext.regs.bgParams[bgIndex];
     LayerState &layerState = m_layerStates[bgIndex + 1];
 
     const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
@@ -2498,7 +2245,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
 
     y = VDP2GetY(y);
 
-    if (!m_VDP2.TVMD.DISP) {
+    if (!m_VDP2RenderContext.regs.TVMD.DISP) {
         std::fill_n(&m_framebuffer[y * m_HRes], m_HRes, 0);
         return;
     }
@@ -2559,7 +2306,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
 
         auto isColorCalcEnabled = [&](Layer layer) {
             if (layer == LYR_Sprite) {
-                const SpriteParams &spriteParams = m_VDP2.spriteParams;
+                const SpriteParams &spriteParams = m_VDP2RenderContext.regs.spriteParams;
                 if (!spriteParams.colorCalcEnable) {
                     return false;
                 }
@@ -2575,9 +2322,9 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
                 default: util::unreachable();
                 }
             } else if (layer == LYR_Back) {
-                return m_VDP2.backScreenParams.colorCalcEnable;
+                return m_VDP2RenderContext.regs.backScreenParams.colorCalcEnable;
             } else {
-                return m_VDP2.bgParams[layer - LYR_RBG0].colorCalcEnable;
+                return m_VDP2RenderContext.regs.bgParams[layer - LYR_RBG0].colorCalcEnable;
             }
         };
 
@@ -2585,25 +2332,25 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             if (layer == LYR_Sprite) {
                 return m_spriteLayerState.attrs[x].colorCalcRatio;
             } else if (layer == LYR_Back) {
-                return m_VDP2.backScreenParams.colorCalcRatio;
+                return m_VDP2RenderContext.regs.backScreenParams.colorCalcRatio;
             } else {
-                return m_VDP2.bgParams[layer - LYR_RBG0].colorCalcRatio;
+                return m_VDP2RenderContext.regs.bgParams[layer - LYR_RBG0].colorCalcRatio;
             }
         };
 
         auto isLineColorEnabled = [&](Layer layer) {
             if (layer == LYR_Sprite) {
-                return m_VDP2.spriteParams.lineColorScreenEnable;
+                return m_VDP2RenderContext.regs.spriteParams.lineColorScreenEnable;
             } else if (layer == LYR_Back) {
                 return false;
             } else {
-                return m_VDP2.bgParams[layer - LYR_RBG0].lineColorScreenEnable;
+                return m_VDP2RenderContext.regs.bgParams[layer - LYR_RBG0].lineColorScreenEnable;
             }
         };
 
         auto getLineColor = [&](Layer layer) {
-            if (layer == LYR_RBG0 || (layer == LYR_NBG0_RBG1 && m_VDP2.bgEnabled[5])) {
-                const auto &rotParams = m_VDP2.rotParams[layer - LYR_RBG0];
+            if (layer == LYR_RBG0 || (layer == LYR_NBG0_RBG1 && m_VDP2RenderContext.regs.bgEnabled[5])) {
+                const auto &rotParams = m_VDP2RenderContext.regs.rotParams[layer - LYR_RBG0];
                 if (rotParams.coeffTableEnable && rotParams.coeffUseLineColorData) {
                     return m_rotParamStates[layer - LYR_RBG0].lineColor[x];
                 } else {
@@ -2618,9 +2365,9 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             if (layer == LYR_Sprite) {
                 return m_spriteLayerState.attrs[x].shadowOrWindow;
             } else if (layer == LYR_Back) {
-                return m_VDP2.backScreenParams.shadowEnable;
+                return m_VDP2RenderContext.regs.backScreenParams.shadowEnable;
             } else {
-                return m_VDP2.bgParams[layer - LYR_RBG0].shadowEnable;
+                return m_VDP2RenderContext.regs.bgParams[layer - LYR_RBG0].shadowEnable;
             }
         };
 
@@ -2628,7 +2375,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             if (!isColorCalcEnabled(layers[0])) {
                 return false;
             }
-            if (VDP2IsInsideWindow(m_VDP2.colorCalcParams.windowSet, x, y)) {
+            if (VDP2IsInsideWindow(m_VDP2RenderContext.regs.colorCalcParams.windowSet, x, y)) {
                 return false;
             }
             if (layers[0] == LYR_Back || layers[0] == LYR_Sprite) {
@@ -2637,7 +2384,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             return m_layerStates[layers[0]].pixels[x].specialColorCalc;
         }();
 
-        const auto &colorCalcParams = m_VDP2.colorCalcParams;
+        const auto &colorCalcParams = m_VDP2RenderContext.regs.colorCalcParams;
 
         // Calculate color
         Color888 outputColor{};
@@ -2646,7 +2393,8 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             Color888 btmColor = getLayerColor(layers[1]);
 
             // Apply extended color calculations (only in normal TV modes)
-            const bool useExtendedColorCalc = colorCalcParams.extendedColorCalcEnable && m_VDP2.TVMD.HRESOn < 2;
+            const bool useExtendedColorCalc =
+                colorCalcParams.extendedColorCalcEnable && m_VDP2RenderContext.regs.TVMD.HRESOn < 2;
             if (useExtendedColorCalc) {
                 // TODO: honor color RAM mode + palette/RGB format restrictions
                 // - modes 1 and 2 don't blend layers if the bottom layer uses palette color
@@ -2668,7 +2416,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
                     btmColor.g = (lineColor.g + btmColor.g) / 2;
                     btmColor.b = (lineColor.b + btmColor.b) / 2;
                 } else {
-                    const uint8 ratio = m_VDP2.lineScreenParams.colorCalcRatio;
+                    const uint8 ratio = m_VDP2RenderContext.regs.lineScreenParams.colorCalcRatio;
                     const uint8 complRatio = 32 - ratio;
                     btmColor.r = (lineColor.r * complRatio + btmColor.r * ratio) / 32;
                     btmColor.g = (lineColor.g * complRatio + btmColor.g * ratio) / 32;
@@ -2696,7 +2444,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
         if (isShadowEnabled(layers[0])) {
             const bool isNormalShadow = m_spriteLayerState.attrs[x].normalShadow;
             const bool isMSBShadow =
-                !m_VDP2.spriteParams.spriteWindowEnable && m_spriteLayerState.attrs[x].shadowOrWindow;
+                !m_VDP2RenderContext.regs.spriteParams.spriteWindowEnable && m_spriteLayerState.attrs[x].shadowOrWindow;
             if (isNormalShadow || isMSBShadow) {
                 outputColor.r >>= 1u;
                 outputColor.g >>= 1u;
@@ -2708,22 +2456,22 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
         bool colorOffsetEnable = false;
         bool colorOffsetSelect = false;
         if (layers[0] == LYR_Back) {
-            const LineBackScreenParams &backParams = m_VDP2.backScreenParams;
+            const LineBackScreenParams &backParams = m_VDP2RenderContext.regs.backScreenParams;
             colorOffsetEnable = backParams.colorOffsetEnable;
             colorOffsetSelect = backParams.colorOffsetSelect;
         } else if (layers[0] == LYR_Sprite) {
-            const SpriteParams &spriteParams = m_VDP2.spriteParams;
+            const SpriteParams &spriteParams = m_VDP2RenderContext.regs.spriteParams;
             colorOffsetEnable = spriteParams.colorOffsetEnable;
             colorOffsetSelect = spriteParams.colorOffsetSelect;
         } else {
-            const BGParams &bgParams = m_VDP2.bgParams[layers[0] - LYR_RBG0];
+            const BGParams &bgParams = m_VDP2RenderContext.regs.bgParams[layers[0] - LYR_RBG0];
             colorOffsetEnable = bgParams.colorOffsetEnable;
             colorOffsetSelect = bgParams.colorOffsetSelect;
         }
 
         // Apply color offset if enabled
         if (colorOffsetEnable) {
-            const auto &colorOffset = m_VDP2.colorOffsetParams[colorOffsetSelect];
+            const auto &colorOffset = m_VDP2RenderContext.regs.colorOffsetParams[colorOffsetSelect];
             outputColor.r = std::clamp(outputColor.r + colorOffset.r, 0, 255);
             outputColor.g = std::clamp(outputColor.g + colorOffset.g, 0, 255);
             outputColor.b = std::clamp(outputColor.b + colorOffset.b, 0, 255);
@@ -2739,14 +2487,14 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
     uint32 fracScrollX = bgState.fracScrollX;
     const uint32 fracScrollY = bgState.fracScrollY;
     bgState.fracScrollY += bgParams.scrollIncV;
-    if (m_VDP2.TVMD.LSMDn == 3) {
+    if (m_VDP2RenderContext.regs.TVMD.LSMDn == 3) {
         bgState.fracScrollY += bgParams.scrollIncV;
     }
 
-    uint32 cellScrollTableAddress = m_VDP2.verticalCellScrollTableAddress;
+    uint32 cellScrollTableAddress = m_VDP2RenderContext.regs.verticalCellScrollTableAddress;
 
     auto readCellScrollY = [&] {
-        const uint32 value = VDP2ReadVRAM<uint32>(cellScrollTableAddress);
+        const uint32 value = VDP2ReadRendererVRAM<uint32>(cellScrollTableAddress);
         cellScrollTableAddress += sizeof(uint32);
         return bit::extract<8, 26>(value);
     };
@@ -2772,7 +2520,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
             // Apply horizontal mosaic
             const uint8 currMosaicCounterX = mosaicCounterX;
             mosaicCounterX++;
-            if (mosaicCounterX >= m_VDP2.mosaicH) {
+            if (mosaicCounterX >= m_VDP2RenderContext.regs.mosaicH) {
                 mosaicCounterX = 0;
             }
             if (currMosaicCounterX > 0) {
@@ -2810,14 +2558,14 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
     uint32 fracScrollX = bgState.fracScrollX;
     const uint32 fracScrollY = bgState.fracScrollY;
     bgState.fracScrollY += bgParams.scrollIncV;
-    if (m_VDP2.TVMD.LSMDn == 3) {
+    if (m_VDP2RenderContext.regs.TVMD.LSMDn == 3) {
         bgState.fracScrollY += bgParams.scrollIncV;
     }
 
-    uint32 cellScrollTableAddress = m_VDP2.verticalCellScrollTableAddress;
+    uint32 cellScrollTableAddress = m_VDP2RenderContext.regs.verticalCellScrollTableAddress;
 
     auto readCellScrollY = [&] {
-        const uint32 value = VDP2ReadVRAM<uint32>(cellScrollTableAddress);
+        const uint32 value = VDP2ReadRendererVRAM<uint32>(cellScrollTableAddress);
         cellScrollTableAddress += sizeof(uint32);
         return bit::extract<8, 26>(value);
     };
@@ -2835,7 +2583,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
             // Apply horizontal mosaic
             const uint8 currMosaicCounterX = mosaicCounterX;
             mosaicCounterX++;
-            if (mosaicCounterX >= m_VDP2.mosaicH) {
+            if (mosaicCounterX >= m_VDP2RenderContext.regs.mosaicH) {
                 mosaicCounterX = 0;
             }
             if (currMosaicCounterX > 0) {
@@ -2868,7 +2616,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
 
 template <bool selRotParam, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState) {
-    const bool doubleResH = m_VDP2.TVMD.HRESOn & 0b010;
+    const bool doubleResH = m_VDP2RenderContext.regs.TVMD.HRESOn & 0b010;
     const uint32 xShift = doubleResH ? 1 : 0;
     const uint32 maxX = m_HRes >> xShift;
 
@@ -2883,7 +2631,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
 
         const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(x, y) : RotParamA;
 
-        const RotationParams &rotParams = m_VDP2.rotParams[rotParamSelector];
+        const RotationParams &rotParams = m_VDP2RenderContext.regs.rotParams[rotParamSelector];
         const RotationParamState &rotParamState = m_rotParamStates[rotParamSelector];
 
         // Handle transparent pixels in coefficient table
@@ -2963,7 +2711,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
 
 template <bool selRotParam, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState) {
-    const bool doubleResH = m_VDP2.TVMD.HRESOn & 0b010;
+    const bool doubleResH = m_VDP2RenderContext.regs.TVMD.HRESOn & 0b010;
     const uint32 xShift = doubleResH ? 1 : 0;
     const uint32 maxX = m_HRes >> xShift;
 
@@ -2977,7 +2725,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
         }};
         const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(x, y) : RotParamA;
 
-        const RotationParams &rotParams = m_VDP2.rotParams[rotParamSelector];
+        const RotationParams &rotParams = m_VDP2RenderContext.regs.rotParams[rotParamSelector];
         const RotationParamState &rotParamState = m_rotParamStates[rotParamSelector];
 
         // Handle transparent pixels in coefficient table
@@ -3013,21 +2761,23 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
 }
 
 VDP::RotParamSelector VDP::VDP2SelectRotationParameter(uint32 x, uint32 y) {
-    const CommonRotationParams &commonRotParams = m_VDP2.commonRotParams;
+    const CommonRotationParams &commonRotParams = m_VDP2RenderContext.regs.commonRotParams;
 
     using enum RotationParamMode;
     switch (commonRotParams.rotParamMode) {
     case RotationParamA: return RotParamA;
     case RotationParamB: return RotParamB;
     case Coefficient:
-        return m_VDP2.rotParams[0].coeffTableEnable && m_rotParamStates[0].transparent[x] ? RotParamB : RotParamA;
-    case Window: return VDP2IsInsideWindow(m_VDP2.commonRotParams.windowSet, x, y) ? RotParamB : RotParamA;
+        return m_VDP2RenderContext.regs.rotParams[0].coeffTableEnable && m_rotParamStates[0].transparent[x] ? RotParamB
+                                                                                                            : RotParamA;
+    case Window:
+        return VDP2IsInsideWindow(m_VDP2RenderContext.regs.commonRotParams.windowSet, x, y) ? RotParamB : RotParamA;
     }
 }
 
 bool VDP::VDP2CanFetchCoefficient(const RotationParams &params, uint32 coeffAddress) const {
     // Coefficients can always be fetched from CRAM
-    if (m_VDP2.RAMCTL.CRKTE) {
+    if (m_VDP2RenderContext.regs.RAMCTL.CRKTE) {
         return true;
     }
 
@@ -3049,29 +2799,29 @@ bool VDP::VDP2CanFetchCoefficient(const RotationParams &params, uint32 coeffAddr
     // Masking the bank index with VRAMD/VRBMD adjusts the bank index of the second half back to the first half so
     // we can uniformly handle both cases with one simple switch table.
     if (bank < 2) {
-        bank &= ~(m_VDP2.RAMCTL.VRAMD ^ 1);
+        bank &= ~(m_VDP2RenderContext.regs.RAMCTL.VRAMD ^ 1);
     } else {
-        bank &= ~(m_VDP2.RAMCTL.VRBMD ^ 1);
+        bank &= ~(m_VDP2RenderContext.regs.RAMCTL.VRBMD ^ 1);
     }
 
     switch (bank) {
     case 0: // VRAM-A0 or VRAM-A
-        if (m_VDP2.RAMCTL.RDBSA0n != 1) {
+        if (m_VDP2RenderContext.regs.RAMCTL.RDBSA0n != 1) {
             return false;
         }
         break;
     case 1: // VRAM-A1
-        if (m_VDP2.RAMCTL.RDBSA1n != 1) {
+        if (m_VDP2RenderContext.regs.RAMCTL.RDBSA1n != 1) {
             return false;
         }
         break;
     case 2: // VRAM-B0 or VRAM-B
-        if (m_VDP2.RAMCTL.RDBSB0n != 1) {
+        if (m_VDP2RenderContext.regs.RAMCTL.RDBSB0n != 1) {
             return false;
         }
         break;
     case 3: // VRAM-B1
-        if (m_VDP2.RAMCTL.RDBSB1n != 1) {
+        if (m_VDP2RenderContext.regs.RAMCTL.RDBSB1n != 1) {
             return false;
         }
         break;
@@ -3101,7 +2851,8 @@ Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint
     if (params.coeffDataSize == 1) {
         // One-word coefficient data
         const uint32 address = (baseAddress + offset) * sizeof(uint16);
-        const uint16 data = m_VDP2.RAMCTL.CRKTE ? VDP2ReadCRAM<uint16>(address | 0x800) : VDP2ReadVRAM<uint16>(address);
+        const uint16 data = m_VDP2RenderContext.regs.RAMCTL.CRKTE ? VDP2ReadRendererCRAM<uint16>(address | 0x800)
+                                                                  : VDP2ReadRendererVRAM<uint16>(address);
         coeff.value = bit::extract_signed<0, 14>(data);
         coeff.lineColorData = 0;
         coeff.transparent = bit::extract<15>(data);
@@ -3114,7 +2865,8 @@ Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint
     } else {
         // Two-word coefficient data
         const uint32 address = (baseAddress + offset) * sizeof(uint32);
-        const uint32 data = m_VDP2.RAMCTL.CRKTE ? VDP2ReadCRAM<uint32>(address | 0x800) : VDP2ReadVRAM<uint32>(address);
+        const uint32 data = m_VDP2RenderContext.regs.RAMCTL.CRKTE ? VDP2ReadRendererCRAM<uint32>(address | 0x800)
+                                                                  : VDP2ReadRendererVRAM<uint32>(address);
         coeff.value = bit::extract_signed<0, 23>(data);
         coeff.lineColorData = bit::extract<24, 30>(data);
         coeff.transparent = bit::extract<31>(data);
@@ -3143,7 +2895,7 @@ bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32
             continue;
         }
 
-        const WindowParams &windowParam = m_VDP2.windowParams[i];
+        const WindowParams &windowParam = m_VDP2RenderContext.regs.windowParams[i];
         const bool inverted = windowSet.inverted[i];
 
         // Check vertical coordinate
@@ -3155,8 +2907,8 @@ bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32
         // Read line window if enabled
         if (windowParam.lineWindowTableEnable) {
             const uint32 address = windowParam.lineWindowTableAddress + y * sizeof(uint16) * 2;
-            sint16 startVal = VDP2ReadVRAM<uint16>(address + 0);
-            sint16 endVal = VDP2ReadVRAM<uint16>(address + 2);
+            sint16 startVal = VDP2ReadRendererVRAM<uint16>(address + 0);
+            sint16 endVal = VDP2ReadRendererVRAM<uint16>(address + 2);
 
             // Some games set out-of-range window parameters and expects them to work.
             // It seems like window coordinates should be signed...
@@ -3184,7 +2936,7 @@ bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32
         }
 
         // For normal screen modes, X coordinates don't use bit 0
-        if (m_VDP2.TVMD.HRESOn < 2) {
+        if (m_VDP2RenderContext.regs.TVMD.HRESOn < 2) {
             startX >>= 1;
             endX >>= 1;
         }
@@ -3396,7 +3148,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, st
 
 FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex) {
     const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint32);
-    const uint32 charData = VDP2ReadVRAM<uint32>(charAddress);
+    const uint32 charData = VDP2ReadRendererVRAM<uint32>(charAddress);
 
     Character ch{};
     ch.charNum = bit::extract<0, 14>(charData);
@@ -3427,7 +3179,7 @@ FORCE_INLINE VDP::Character VDP::VDP2FetchOneWordCharacter(const BGParams &bgPar
     //  T   T   T  |--| PN 6-4 |       character number 13-2      |    |PR|CC|--------|cn|-----|CN1-0|   cn=CN14
 
     const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint16);
-    const uint16 charData = VDP2ReadVRAM<uint16>(charAddress);
+    const uint16 charData = VDP2ReadRendererVRAM<uint16>(charAddress);
 
     // Character number bit range from the 1-word character pattern data (charData)
     static constexpr uint32 baseCharNumStart = 0;
@@ -3498,7 +3250,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
     const uint32 dotOffset = dotX + dotY * 8;
 
     // Determine special color calculation flag
-    const auto &specFuncCode = m_VDP2.specialFunctionCodes[bgParams.specialFunctionSelect];
+    const auto &specFuncCode = m_VDP2RenderContext.regs.specialFunctionCodes[bgParams.specialFunctionSelect];
     auto getSpecialColorCalcFlag = [&](uint8 colorData) {
         using enum SpecialColorCalcMode;
         switch (bgParams.specialColorCalcMode) {
@@ -3514,7 +3266,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
     uint8 colorData = 0;
     if constexpr (colorFormat == ColorFormat::Palette16) {
         const uint32 dotAddress = cellAddress + (dotOffset >> 1u);
-        const uint8 dotData = (VDP2ReadVRAM<uint8>(dotAddress) >> (((dotX & 1) ^ 1) * 4)) & 0xF;
+        const uint8 dotData = (VDP2ReadRendererVRAM<uint8>(dotAddress) >> (((dotX & 1) ^ 1) * 4)) & 0xF;
         const uint32 colorIndex = (ch.palNum << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
@@ -3522,7 +3274,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
         pixel.specialColorCalc = getSpecialColorCalcFlag(colorData);
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = cellAddress + dotOffset;
-        const uint8 dotData = VDP2ReadVRAM<uint8>(dotAddress);
+        const uint8 dotData = VDP2ReadRendererVRAM<uint8>(dotAddress);
         const uint32 colorIndex = ((ch.palNum & 0x70) << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
@@ -3530,7 +3282,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
         pixel.specialColorCalc = getSpecialColorCalcFlag(colorData);
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint16);
-        const uint16 dotData = VDP2ReadVRAM<uint16>(dotAddress);
+        const uint16 dotData = VDP2ReadRendererVRAM<uint16>(dotAddress);
         const uint32 colorIndex = dotData & 0x7FF;
         colorData = bit::extract<1, 3>(dotData);
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
@@ -3538,13 +3290,13 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
         pixel.specialColorCalc = getSpecialColorCalcFlag(colorData);
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint16);
-        const uint16 dotData = VDP2ReadVRAM<uint16>(dotAddress);
+        const uint16 dotData = VDP2ReadRendererVRAM<uint16>(dotAddress);
         pixel.color = ConvertRGB555to888(Color555{.u16 = dotData});
         pixel.transparent = bgParams.enableTransparency && bit::extract<15>(dotData) == 0;
         pixel.specialColorCalc = getSpecialColorCalcFlag(0b111);
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
         const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint32);
-        const uint32 dotData = VDP2ReadVRAM<uint32>(dotAddress);
+        const uint32 dotData = VDP2ReadRendererVRAM<uint32>(dotAddress);
         pixel.color.u32 = dotData;
         pixel.transparent = bgParams.enableTransparency && bit::extract<31>(dotData) == 0;
         pixel.specialColorCalc = getSpecialColorCalcFlag(0b111);
@@ -3597,34 +3349,34 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, Coor
 
     if constexpr (colorFormat == ColorFormat::Palette16) {
         const uint32 dotAddress = bitmapBaseAddress + (dotOffset >> 1u);
-        const uint8 dotData = (VDP2ReadVRAM<uint8>(dotAddress) >> (((dotX & 1) ^ 1) * 4)) & 0xF;
+        const uint8 dotData = (VDP2ReadRendererVRAM<uint8>(dotAddress) >> (((dotX & 1) ^ 1) * 4)) & 0xF;
         const uint32 colorIndex = palNum | dotData;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
         pixel.transparent = bgParams.enableTransparency && dotData == 0;
         pixel.specialColorCalc = getSpecialColorCalcFlag(bit::extract<3>(dotData));
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset;
-        const uint8 dotData = VDP2ReadVRAM<uint8>(dotAddress);
+        const uint8 dotData = VDP2ReadRendererVRAM<uint8>(dotAddress);
         const uint32 colorIndex = palNum | dotData;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
         pixel.transparent = bgParams.enableTransparency && dotData == 0;
         pixel.specialColorCalc = getSpecialColorCalcFlag(bit::extract<3>(dotData));
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
-        const uint16 dotData = VDP2ReadVRAM<uint16>(dotAddress);
+        const uint16 dotData = VDP2ReadRendererVRAM<uint16>(dotAddress);
         const uint32 colorIndex = dotData & 0x7FF;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
         pixel.transparent = bgParams.enableTransparency && (dotData & 0x7FF) == 0;
         pixel.specialColorCalc = getSpecialColorCalcFlag(bit::extract<3>(dotData));
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
-        const uint16 dotData = VDP2ReadVRAM<uint16>(dotAddress);
+        const uint16 dotData = VDP2ReadRendererVRAM<uint16>(dotAddress);
         pixel.color = ConvertRGB555to888(Color555{.u16 = dotData});
         pixel.transparent = bgParams.enableTransparency && bit::extract<15>(dotData) == 0;
         pixel.specialColorCalc = getSpecialColorCalcFlag(true);
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint32);
-        const uint32 dotData = VDP2ReadVRAM<uint32>(dotAddress);
+        const uint32 dotData = VDP2ReadRendererVRAM<uint32>(dotAddress);
         pixel.color = Color888{.u32 = dotData};
         pixel.transparent = bgParams.enableTransparency && bit::extract<31>(dotData) == 0;
         pixel.specialColorCalc = getSpecialColorCalcFlag(true);
@@ -3647,25 +3399,25 @@ FORCE_INLINE Color888 VDP::VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorInd
     if constexpr (colorMode == 0) {
         // RGB 5:5:5, 1024 words
         const uint32 address = (cramOffset + colorIndex) * sizeof(uint16);
-        const uint16 data = VDP2ReadCRAM<uint16>(address & 0x7FF);
+        const uint16 data = VDP2ReadRendererCRAM<uint16>(address & 0x7FF);
         Color555 clr555{.u16 = data};
         return ConvertRGB555to888(clr555);
     } else if constexpr (colorMode == 1) {
         // RGB 5:5:5, 2048 words
         const uint32 address = (cramOffset + colorIndex) * sizeof(uint16);
-        const uint16 data = VDP2ReadCRAM<uint16>(address);
+        const uint16 data = VDP2ReadRendererCRAM<uint16>(address);
         Color555 clr555{.u16 = data};
         return ConvertRGB555to888(clr555);
     } else { // colorMode == 2
         // RGB 8:8:8, 1024 words
         const uint32 address = (cramOffset + colorIndex) * sizeof(uint32);
-        const uint32 data = VDP2ReadCRAM<uint32>(address);
+        const uint32 data = VDP2ReadRendererCRAM<uint32>(address);
         return Color888{.u32 = data};
     }
 }
 
 FLATTEN FORCE_INLINE SpriteData VDP::VDP2FetchSpriteData(uint32 fbOffset) {
-    const uint8 type = m_VDP2.spriteParams.type;
+    const uint8 type = m_VDP2RenderContext.regs.spriteParams.type;
     if (type < 8) {
         return VDP2FetchWordSpriteData(fbOffset * sizeof(uint16), type);
     } else {
@@ -3679,7 +3431,7 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
     const uint16 rawData = util::ReadBE<uint16>(&VDP1GetDisplayFB()[fbOffset & 0x3FFFE]);
 
     SpriteData data{};
-    switch (m_VDP2.spriteParams.type) {
+    switch (m_VDP2RenderContext.regs.spriteParams.type) {
     case 0x0:
         data.colorData = bit::extract<0, 10>(rawData);
         data.colorDataMSB = bit::extract<10>(rawData);
@@ -3752,7 +3504,7 @@ FORCE_INLINE SpriteData VDP::VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type
     const uint8 rawData = VDP1GetDisplayFB()[fbOffset & 0x3FFFF];
 
     SpriteData data{};
-    switch (m_VDP2.spriteParams.type) {
+    switch (m_VDP2RenderContext.regs.spriteParams.type) {
     case 0x8:
         data.colorData = bit::extract<0, 6>(rawData);
         data.colorDataMSB = bit::extract<6>(rawData);
@@ -3815,8 +3567,8 @@ FORCE_INLINE bool VDP::VDP2IsNormalShadow(uint16 colorData) {
 }
 
 FORCE_INLINE uint32 VDP::VDP2GetY(uint32 y) const {
-    if (m_VDP2.TVMD.LSMDn == 3) {
-        return (y << 1) | m_VDP2.TVSTAT.ODD;
+    if (m_VDP2RenderContext.regs.TVMD.LSMDn == 3) {
+        return (y << 1) | m_VDP2RenderContext.regs.TVSTAT.ODD;
     } else {
         return y;
     }
