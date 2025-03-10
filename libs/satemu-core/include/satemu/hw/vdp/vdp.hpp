@@ -474,7 +474,14 @@ private:
     };
 
     struct VDPRenderContext {
-        moodycamel::BlockingConcurrentQueue<VDPRenderEvent> eventQueue;
+        struct QueueTraits : moodycamel::ConcurrentQueueDefaultTraits {
+            static const size_t BLOCK_SIZE = 64;
+            static const size_t EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD = 64;
+            static const std::uint32_t EXPLICIT_CONSUMER_CONSUMPTION_QUOTA_BEFORE_ROTATE = 512;
+            static const int MAX_SEMA_SPINS = 25000;
+        };
+
+        moodycamel::BlockingConcurrentQueue<VDPRenderEvent, QueueTraits> eventQueue;
         moodycamel::ProducerToken pTok{eventQueue};
         moodycamel::ConsumerToken cTok{eventQueue};
         util::Event renderFinishedSignal{false};

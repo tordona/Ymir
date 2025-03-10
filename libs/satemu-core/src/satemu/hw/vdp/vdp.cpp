@@ -692,7 +692,7 @@ void VDP::VDPRenderThread() {
 
     auto &rctx = m_VDPRenderContext;
 
-    std::array<VDPRenderEvent, 32> events{};
+    std::array<VDPRenderEvent, 64> events{};
 
     bool running = true;
     while (running) {
