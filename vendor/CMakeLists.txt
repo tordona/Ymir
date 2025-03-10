@@ -61,6 +61,10 @@ add_subdirectory(cxxopts)
 message(VERBOSE "=>> readerwriterqueue")
 add_subdirectory(readerwriterqueue)
 
+# concurrentqueue - https://github.com/cameron314/concurrentqueue
+message(VERBOSE "=>> concurrentqueue")
+add_subdirectory(concurrentqueue)
+
 if(satemu_ENABLE_TESTS)
     # Catch2 - https://github.com/catchorg/Catch2
     message(VERBOSE "==> Catch2")

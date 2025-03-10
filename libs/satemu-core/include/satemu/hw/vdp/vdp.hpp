@@ -17,7 +17,7 @@
 #include <satemu/util/event.hpp>
 #include <satemu/util/inline.hpp>
 
-#include <readerwriterqueue.h>
+#include <blockingconcurrentqueue.h>
 
 #include <array>
 #include <iosfwd>
@@ -350,7 +350,9 @@ private:
         };*/
     };
 
-    moodycamel::BlockingReaderWriterQueue<VDP1RenderEvent> m_VDP1RenderEvents;
+    moodycamel::BlockingConcurrentQueue<VDP1RenderEvent> m_VDP1RenderEvents;
+    moodycamel::ProducerToken m_VDP1ProducerToken;
+    moodycamel::ConsumerToken m_VDP1ConsumerToken;
 
     void VDP1RenderThread();
 
@@ -387,7 +389,9 @@ private:
         };
     };
 
-    moodycamel::BlockingReaderWriterQueue<VDP2RenderEvent> m_VDP2RenderEvents;
+    moodycamel::BlockingConcurrentQueue<VDP2RenderEvent> m_VDP2RenderEvents;
+    moodycamel::ProducerToken m_VDP2ProducerToken;
+    moodycamel::ConsumerToken m_VDP2ConsumerToken;
     util::Event m_VDP2RenderFinishedEvent;
 
     void VDP2RenderThread();

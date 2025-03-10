@@ -169,7 +169,7 @@ target_include_directories(satemu-core
 target_compile_features(satemu-core PUBLIC cxx_std_20)
 
 ## Add dependencies
-target_link_libraries(satemu-core PUBLIC fmt mio readerwriterqueue)
+target_link_libraries(satemu-core PUBLIC fmt mio concurrentqueue)
 
 # Build precompiled header
 target_precompile_headers(satemu-core

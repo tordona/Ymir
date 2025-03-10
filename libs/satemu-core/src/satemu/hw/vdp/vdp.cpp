@@ -15,8 +15,12 @@ namespace satemu::vdp {
 VDP::VDP(core::Scheduler &scheduler)
     : m_scheduler(scheduler)
     , m_VDP1RenderThread([&] { VDP1RenderThread(); })
+    , m_VDP1ProducerToken(m_VDP1RenderEvents)
+    , m_VDP1ConsumerToken(m_VDP1RenderEvents)
     , m_VDP2RenderFinishedEvent(false)
-    , m_VDP2RenderThread([&] { VDP2RenderThread(); }) {
+    , m_VDP2RenderThread([&] { VDP2RenderThread(); })
+    , m_VDP2ProducerToken(m_VDP2RenderEvents)
+    , m_VDP2ConsumerToken(m_VDP2RenderEvents) {
 
     m_phaseUpdateEvent = scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent);
 
@@ -26,8 +30,8 @@ VDP::VDP(core::Scheduler &scheduler)
 }
 
 VDP::~VDP() {
-    m_VDP1RenderEvents.enqueue(VDP1RenderEvent::Shutdown());
-    m_VDP2RenderEvents.enqueue(VDP2RenderEvent::Shutdown());
+    m_VDP1RenderEvents.enqueue(m_VDP1ProducerToken, VDP1RenderEvent::Shutdown());
+    m_VDP2RenderEvents.enqueue(m_VDP2ProducerToken, VDP2RenderEvent::Shutdown());
     if (m_VDP1RenderThread.joinable()) {
         m_VDP1RenderThread.join();
     }
@@ -893,7 +897,7 @@ void VDP::BeginHPhaseActiveDisplay() {
             m_cbTriggerOptimizedINTBACKRead();
         }
         // VDP2DrawLine(m_VCounter);
-        m_VDP2RenderEvents.enqueue(VDP2RenderEvent::DrawLine(m_VCounter));
+        m_VDP2RenderEvents.enqueue(m_VDP2ProducerToken, VDP2RenderEvent::DrawLine(m_VCounter));
     }
 }
 
@@ -982,7 +986,7 @@ void VDP::BeginVPhaseBlankingAndSync() {
 
     // End frame
     rootLog2.trace("End VDP2 frame");
-    m_VDP2RenderEvents.enqueue(VDP2RenderEvent::EndFrame());
+    m_VDP2RenderEvents.enqueue(m_VDP2ProducerToken, VDP2RenderEvent::EndFrame());
     m_VDP2RenderFinishedEvent.Wait(true);
     m_cbFrameComplete(m_framebuffer, m_HRes, m_VRes);
 }
@@ -1013,7 +1017,7 @@ void VDP::VDP1RenderThread() {
     bool running = true;
     while (running) {
         VDP1RenderEvent event{};
-        m_VDP1RenderEvents.wait_dequeue(event);
+        m_VDP1RenderEvents.wait_dequeue(m_VDP1ConsumerToken, event);
         switch (event.type) {
         case VDP1RenderEvent::Type::BeginFrame:
             for (int i = 0; i < 1000000 && m_VDP1RenderContext.rendering; i++) {
@@ -1036,7 +1040,7 @@ void VDP::VDP2RenderThread() {
     bool running = true;
     while (running) {
         VDP2RenderEvent event{};
-        m_VDP2RenderEvents.wait_dequeue(event);
+        m_VDP2RenderEvents.wait_dequeue(m_VDP2ConsumerToken, event);
         switch (event.type) {
         case VDP2RenderEvent::Type::DrawLine: VDP2DrawLine(event.drawLine.vcnt); break;
         case VDP2RenderEvent::Type::EndFrame: m_VDP2RenderFinishedEvent.Set(); break;
@@ -1116,7 +1120,7 @@ void VDP::VDP1BeginFrame() {
     m_VDP1.currFrameEnded = false;
 
     m_VDP1RenderContext.rendering = true;
-    m_VDP1RenderEvents.enqueue(VDP1RenderEvent::BeginFrame());
+    m_VDP1RenderEvents.enqueue(m_VDP1ProducerToken, VDP1RenderEvent::BeginFrame());
 }
 
 void VDP::VDP1EndFrame() {
