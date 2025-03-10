@@ -769,7 +769,7 @@ FORCE_INLINE T VDP::VDP2ReadRendererCRAM(uint32 address) {
     }
 
     address = MapRendererCRAMAddress(address);
-    return util::ReadBE<T>(&m_CRAM[address]);
+    return util::ReadBE<T>(&m_VDPRenderContext.vdp2.CRAM[address]);
 }
 
 // -----------------------------------------------------------------------------
