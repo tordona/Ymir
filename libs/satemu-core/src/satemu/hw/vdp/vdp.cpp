@@ -2246,6 +2246,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
         return;
     }
 
+    FramebufferColor *fbPtr = &m_framebuffer[y * m_HRes];
     for (uint32 x = 0; x < m_HRes; x++) {
         std::array<Layer, 3> layers = {LYR_Back, LYR_Back, LYR_Back};
         std::array<uint8, 3> layerPrios = {0, 0, 0};
@@ -2472,7 +2473,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             outputColor.b = std::clamp(outputColor.b + colorOffset.b, 0, 255);
         }
 
-        m_framebuffer[x + y * m_HRes] = outputColor.u32;
+        fbPtr[x] = outputColor.u32;
     }
 }
 
