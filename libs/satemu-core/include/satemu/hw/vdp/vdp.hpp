@@ -478,7 +478,7 @@ private:
             static const size_t BLOCK_SIZE = 64;
             static const size_t EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD = 64;
             static const std::uint32_t EXPLICIT_CONSUMER_CONSUMPTION_QUOTA_BEFORE_ROTATE = 512;
-            static const int MAX_SEMA_SPINS = 25000;
+            static const int MAX_SEMA_SPINS = 20000;
         };
 
         moodycamel::BlockingConcurrentQueue<VDPRenderEvent, QueueTraits> eventQueue;
@@ -486,6 +486,9 @@ private:
         moodycamel::ConsumerToken cTok{eventQueue};
         util::Event renderFinishedSignal{false};
         util::Event framebufferSwapSignal{false};
+
+        std::array<VDPRenderEvent, 64> pendingWrites;
+        size_t pendingWritesCount;
 
         struct VDP1 {
             VDP1Regs regs;
@@ -528,7 +531,32 @@ private:
         }
 
         void EnqueueEvent(VDPRenderEvent &&event) {
-            eventQueue.enqueue(pTok, std::move(event));
+            switch (event.type) {
+            case VDPRenderEvent::Type::VDP1VRAMWriteByte:
+            case VDPRenderEvent::Type::VDP1VRAMWriteWord:
+            case VDPRenderEvent::Type::VDP1RegWrite:
+            case VDPRenderEvent::Type::VDP2VRAMWriteByte:
+            case VDPRenderEvent::Type::VDP2VRAMWriteWord:
+            case VDPRenderEvent::Type::VDP2CRAMWriteByte:
+            case VDPRenderEvent::Type::VDP2CRAMWriteWord:
+            case VDPRenderEvent::Type::VDP2RegWrite:
+                // Batch VRAM, CRAM and register writes to send in bulk
+                pendingWrites[pendingWritesCount++] = std::move(event);
+                if (pendingWritesCount == pendingWrites.size()) {
+                    eventQueue.enqueue_bulk(pTok, pendingWrites.begin(), pendingWritesCount);
+                    pendingWritesCount = 0;
+                }
+                break;
+            case VDPRenderEvent::Type::VDP1BeginFrame:
+            case VDPRenderEvent::Type::VDP2DrawLine:
+                // Send any pending writes before rendering
+                if (pendingWritesCount > 0) {
+                    eventQueue.enqueue_bulk(pTok, pendingWrites.begin(), pendingWritesCount);
+                    pendingWritesCount = 0;
+                }
+                // fallthrough
+            default: eventQueue.enqueue(pTok, std::move(event)); break;
+            }
         }
 
         template <typename It>
