@@ -479,8 +479,9 @@ private:
             eventQueue.enqueue(pTok, std::move(event));
         }
 
-        void DequeueEvent(VDP2RenderEvent &event) {
-            eventQueue.wait_dequeue(cTok, event);
+        template <typename It>
+        size_t DequeueEvents(It first, size_t count) {
+            return eventQueue.wait_dequeue_bulk(cTok, first, count);
         }
     } m_VDP2RenderContext;
 

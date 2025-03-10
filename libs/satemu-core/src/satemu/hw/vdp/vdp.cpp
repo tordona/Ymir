@@ -748,30 +748,33 @@ void VDP::VDP2RenderThread() {
 
     bool running = true;
     while (running) {
-        VDP2RenderEvent event{};
-        m_VDP2RenderContext.DequeueEvent(event);
+        std::array<VDP2RenderEvent, 32> events{};
+        const size_t count = m_VDP2RenderContext.DequeueEvents(events.begin(), events.size());
 
-        using EvtType = VDP2RenderEvent::Type;
-        switch (event.type) {
-        case EvtType::Reset: m_VDP2RenderContext.Reset(); break;
-        case EvtType::DrawLine: VDP2DrawLine(event.drawLine.vcnt); break;
-        case EvtType::OddField: m_VDP2RenderContext.regs.TVSTAT.ODD = event.oddField.odd; break;
-        case EvtType::EndFrame: m_VDP2RenderContext.renderFinishedSignal.Set(); break;
+        for (size_t i = 0; i < count; ++i) {
+            auto &event = events[i];
+            using EvtType = VDP2RenderEvent::Type;
+            switch (event.type) {
+            case EvtType::Reset: m_VDP2RenderContext.Reset(); break;
+            case EvtType::DrawLine: VDP2DrawLine(event.drawLine.vcnt); break;
+            case EvtType::OddField: m_VDP2RenderContext.regs.TVSTAT.ODD = event.oddField.odd; break;
+            case EvtType::EndFrame: m_VDP2RenderContext.renderFinishedSignal.Set(); break;
 
-        case EvtType::VRAMWriteByte: m_VDP2RenderContext.VRAM[event.ramWrite.address] = event.ramWrite.value; break;
-        case EvtType::VRAMWriteWord:
-            util::WriteBE<uint16>(&m_VDP2RenderContext.VRAM[event.ramWrite.address], event.ramWrite.value);
-            break;
-        case EvtType::VRAMWriteLong:
-            util::WriteBE<uint32>(&m_VDP2RenderContext.VRAM[event.ramWrite.address], event.ramWrite.value);
-            break;
-        case EvtType::CRAMWriteByte: m_VDP2RenderContext.CRAM[event.ramWrite.address] = event.ramWrite.value; break;
-        case EvtType::CRAMWriteWord:
-            util::WriteBE<uint16>(&m_VDP2RenderContext.CRAM[event.ramWrite.address], event.ramWrite.value);
-            break;
-        case EvtType::RegWrite: m_VDP2RenderContext.regs.Write(event.regWrite.address, event.regWrite.value); break;
+            case EvtType::VRAMWriteByte: m_VDP2RenderContext.VRAM[event.ramWrite.address] = event.ramWrite.value; break;
+            case EvtType::VRAMWriteWord:
+                util::WriteBE<uint16>(&m_VDP2RenderContext.VRAM[event.ramWrite.address], event.ramWrite.value);
+                break;
+            case EvtType::VRAMWriteLong:
+                util::WriteBE<uint32>(&m_VDP2RenderContext.VRAM[event.ramWrite.address], event.ramWrite.value);
+                break;
+            case EvtType::CRAMWriteByte: m_VDP2RenderContext.CRAM[event.ramWrite.address] = event.ramWrite.value; break;
+            case EvtType::CRAMWriteWord:
+                util::WriteBE<uint16>(&m_VDP2RenderContext.CRAM[event.ramWrite.address], event.ramWrite.value);
+                break;
+            case EvtType::RegWrite: m_VDP2RenderContext.regs.Write(event.regWrite.address, event.regWrite.value); break;
 
-        case EvtType::Shutdown: running = false; break;
+            case EvtType::Shutdown: running = false; break;
+            }
         }
     }
 }
