@@ -861,6 +861,11 @@ private:
     // y is the scanline to draw
     void VDP2CalcRotationParameterTables(uint32 y);
 
+    // Precalculate all window state for the scanline.
+    //
+    // y is the scanline to draw
+    void VDP2CalcWindows(uint32 y);
+
     // Draws the specified VDP2 scanline.
     //
     // y is the scanline to draw

@@ -1939,6 +1939,10 @@ FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
     }
 }
 
+FORCE_INLINE void VDP::VDP2CalcWindows(uint32 y) {
+    // TODO: implement
+}
+
 void VDP::VDP2DrawLine(uint32 y) {
     renderLog2.trace("Drawing line {}", y);
 
@@ -1966,6 +1970,9 @@ void VDP::VDP2DrawLine(uint32 y) {
 
     const uint32 colorMode = regs2.RAMCTL.CRMDn;
     const bool rotate = regs1.fbRotEnable;
+
+    // Precalculate window state
+    VDP2CalcWindows(y);
 
     // Load rotation parameters if any of the RBG layers is enabled
     if (regs2.bgEnabled[4] || regs2.bgEnabled[5]) {
