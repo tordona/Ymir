@@ -12,13 +12,16 @@
 #include <satemu/hw/hw_defs.hpp>
 
 #include <satemu/util/bit_ops.hpp>
+#include <satemu/util/concurrent_queue.hpp>
 #include <satemu/util/data_ops.hpp>
 #include <satemu/util/debug_print.hpp>
+#include <satemu/util/event.hpp>
 #include <satemu/util/inline.hpp>
 
 #include <array>
 #include <iosfwd>
 #include <span>
+#include <thread>
 
 // -----------------------------------------------------------------------------
 // Forward declarations
@@ -45,6 +48,7 @@ class VDP {
 
 public:
     VDP(core::Scheduler &scheduler);
+    ~VDP();
 
     void Reset(bool hard);
 
@@ -311,9 +315,52 @@ private:
     void BeginVPhaseLastLine();
 
     // -------------------------------------------------------------------------
-    // VDP1
+    // Rendering
 
     // TODO: split out rendering code
+
+    std::jthread m_renderThread;
+
+    struct RenderEvent {
+        enum class Type {
+            BeginFrame,
+            DrawLine,
+            EndFrame,
+
+            Shutdown,
+        };
+
+        static RenderEvent BeginFrame() {
+            return {Type::BeginFrame};
+        }
+
+        static RenderEvent DrawLine(uint32 vcnt) {
+            return {Type::DrawLine, {.drawLine = {.vcnt = vcnt}}};
+        }
+
+        static RenderEvent EndFrame() {
+            return {Type::EndFrame};
+        }
+
+        static RenderEvent Shutdown() {
+            return {Type::Shutdown};
+        }
+
+        Type type;
+        union {
+            struct {
+                uint32 vcnt;
+            } drawLine;
+        };
+    };
+
+    util::ConcurrentQueue<RenderEvent> m_renderEvents;
+    util::Event m_renderFinishedEvent;
+
+    void RenderThread();
+
+    // -------------------------------------------------------------------------
+    // VDP1
 
     // VDP1 renderer parameters and state
     struct VDP1RenderContext {

@@ -100,6 +100,7 @@ add_library(satemu-core
     include/satemu/util/bit_ops.hpp
     include/satemu/util/bitmask_enum.hpp
     include/satemu/util/callback.hpp
+    include/satemu/util/concurrent_queue.hpp
     include/satemu/util/data_ops.hpp
     include/satemu/util/date_time.hpp
     include/satemu/util/debug_print.hpp
@@ -176,10 +177,12 @@ target_precompile_headers(satemu-core
     PUBLIC
         <algorithm>
         <array>
+        <atomic>
         <bit>
         <cassert>
         <cmath>
         <concepts>
+        <condition_variable>
         <cstddef>
         <cstdint>
         <deque>
@@ -189,12 +192,15 @@ target_precompile_headers(satemu-core
         <iostream>
         <limits>
         <memory>
+        <mutex>
         <new>
         <numeric>
+        <queue>
         <set>
         <span>
         <sstream>
         <string>
+        <thread>
         <type_traits>
         <unordered_map>
         <utility>

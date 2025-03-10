@@ -5,6 +5,7 @@
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/constexpr_for.hpp>
 #include <satemu/util/scope_guard.hpp>
+#include <satemu/util/thread_name.hpp>
 #include <satemu/util/unreachable.hpp>
 
 #include <cassert>
@@ -12,13 +13,19 @@
 namespace satemu::vdp {
 
 VDP::VDP(core::Scheduler &scheduler)
-    : m_scheduler(scheduler) {
+    : m_scheduler(scheduler)
+    , m_renderFinishedEvent(false)
+    , m_renderThread([&] { RenderThread(); }) {
 
     m_phaseUpdateEvent = scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent);
 
     m_framebuffer = nullptr;
 
     Reset(true);
+}
+
+VDP::~VDP() {
+    m_renderEvents.Offer(RenderEvent::Shutdown());
 }
 
 void VDP::Reset(bool hard) {
@@ -874,10 +881,13 @@ void VDP::BeginHPhaseActiveDisplay() {
             rootLog2.trace("Begin VDP2 frame, VDP1 framebuffer {}", m_drawFB ^ 1);
 
             VDP2InitFrame();
+
+            m_renderEvents.Offer(RenderEvent::BeginFrame());
         } else if (m_VCounter == 210) { // ~1ms before VBlank IN
             m_cbTriggerOptimizedINTBACKRead();
         }
-        VDP2DrawLine(m_VCounter);
+        // VDP2DrawLine(m_VCounter);
+        m_renderEvents.Offer(RenderEvent::DrawLine(m_VCounter));
     }
 }
 
@@ -966,6 +976,8 @@ void VDP::BeginVPhaseBlankingAndSync() {
 
     // End frame
     rootLog2.trace("End VDP2 frame");
+    m_renderEvents.Offer(RenderEvent::EndFrame());
+    m_renderFinishedEvent.Wait(true);
     m_cbFrameComplete(m_framebuffer, m_HRes, m_VRes);
 }
 
@@ -984,6 +996,25 @@ void VDP::BeginVPhaseLastLine() {
 
     m_VDP2.TVSTAT.VBLANK = 0;
     m_cbTriggerVBlankOUT();
+}
+
+// -----------------------------------------------------------------------------
+// Rendering
+
+void VDP::RenderThread() {
+    util::SetCurrentThreadName("VDP renderer thread");
+
+    bool running = true;
+    while (running) {
+        RenderEvent event{};
+        m_renderEvents.Poll(event);
+        switch (event.type) {
+        case RenderEvent::Type::BeginFrame: break;
+        case RenderEvent::Type::DrawLine: VDP2DrawLine(event.drawLine.vcnt); break;
+        case RenderEvent::Type::EndFrame: m_renderFinishedEvent.Set(); break;
+        case RenderEvent::Type::Shutdown: running = false; break;
+        }
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -3070,6 +3101,8 @@ bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32
         return false;
     }
 
+    y = VDP2GetY(y);
+
     // Check normal windows
     for (int i = 0; i < 2; i++) {
         // Skip if disabled
@@ -3081,7 +3114,6 @@ bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32
         const bool inverted = windowSet.inverted[i];
 
         // Check vertical coordinate
-        y = VDP2GetY(y);
         const bool insideY = y >= windowParam.startY && y <= windowParam.endY;
 
         sint16 startX = windowParam.startX;
