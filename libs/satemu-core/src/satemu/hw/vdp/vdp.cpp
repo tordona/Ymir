@@ -749,19 +749,19 @@ void VDP::VDPRenderThread() {
 }
 
 template <mem_primitive T>
-T VDP::VDP1ReadRendererVRAM(uint32 address) {
+FORCE_INLINE T VDP::VDP1ReadRendererVRAM(uint32 address) {
     return util::ReadBE<T>(&m_VDPRenderContext.vdp1.VRAM[address & 0x7FFFF]);
 }
 
 template <mem_primitive T>
-T VDP::VDP2ReadRendererVRAM(uint32 address) {
+FORCE_INLINE T VDP::VDP2ReadRendererVRAM(uint32 address) {
     // TODO: handle VRSIZE.VRAMSZ
     address &= 0x7FFFF;
     return util::ReadBE<T>(&m_VDPRenderContext.vdp2.VRAM[address]);
 }
 
 template <mem_primitive T>
-T VDP::VDP2ReadRendererCRAM(uint32 address) {
+FORCE_INLINE T VDP::VDP2ReadRendererCRAM(uint32 address) {
     if constexpr (std::is_same_v<T, uint32>) {
         uint32 value = VDP2ReadRendererCRAM<uint16>(address + 0) << 16u;
         value |= VDP2ReadRendererCRAM<uint16>(address + 2) << 0u;
@@ -1774,7 +1774,7 @@ void VDP::VDP2UpdateEnabledBGs() {
     }
 }
 
-void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgParams, NormBGLayerState &bgState) {
+FORCE_INLINE void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgParams, NormBGLayerState &bgState) {
     uint32 address = bgState.lineScrollTableAddress;
     auto read = [&] {
         const uint32 value = VDP2ReadRendererVRAM<uint32>(address);
@@ -1797,7 +1797,7 @@ void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgParams, NormBGL
     }
 }
 
-void VDP::VDP2CalcRotationParameterTables(uint32 y) {
+FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
     VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
 
     const uint32 baseAddress = regs.commonRotParams.baseAddress & 0xFFF7C; // mask bit 6 (shifted left by 1)
@@ -1994,7 +1994,7 @@ void VDP::VDP2DrawLine(uint32 y) {
     VDP2ComposeLine(y);
 }
 
-void VDP::VDP2DrawLineColorAndBackScreens(uint32 y) {
+FORCE_INLINE void VDP::VDP2DrawLineColorAndBackScreens(uint32 y) {
     const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
 
     const LineBackScreenParams &lineParams = regs.lineScreenParams;
@@ -2764,7 +2764,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
     }
 }
 
-VDP::RotParamSelector VDP::VDP2SelectRotationParameter(uint32 x, uint32 y) {
+FORCE_INLINE VDP::RotParamSelector VDP::VDP2SelectRotationParameter(uint32 x, uint32 y) {
     const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
 
     const CommonRotationParams &commonRotParams = regs.commonRotParams;
@@ -2779,7 +2779,7 @@ VDP::RotParamSelector VDP::VDP2SelectRotationParameter(uint32 x, uint32 y) {
     }
 }
 
-bool VDP::VDP2CanFetchCoefficient(const RotationParams &params, uint32 coeffAddress) const {
+FORCE_INLINE bool VDP::VDP2CanFetchCoefficient(const RotationParams &params, uint32 coeffAddress) const {
     const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
 
     // Coefficients can always be fetched from CRAM
@@ -2836,7 +2836,7 @@ bool VDP::VDP2CanFetchCoefficient(const RotationParams &params, uint32 coeffAddr
     return true;
 }
 
-Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint32 coeffAddress) {
+FORCE_INLINE Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint32 coeffAddress) {
     const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
 
     Coefficient coeff{};
@@ -2888,7 +2888,7 @@ Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint
 }
 
 template <bool hasSpriteWindow>
-bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32 x, uint32 y) {
+FORCE_INLINE bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32 x, uint32 y) {
     // If no windows are enabled, consider the pixel outside of windows
     if (!std::any_of(windowSet.enabled.begin(), windowSet.enabled.end(), std::identity{})) {
         return false;
