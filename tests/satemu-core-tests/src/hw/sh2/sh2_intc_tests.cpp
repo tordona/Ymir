@@ -235,7 +235,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::IRL);
     REQUIRE(sh2::PrivateAccess::CheckInterrupts(sh2));
 
-    // Jump to interrupt handler and execute first instruction (should be a NOP)
+    // Jump to interrupt handler
     sh2.Step<true>();
 
     // Check results:
@@ -247,8 +247,8 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     CHECK(exceptions[0] == ExceptionInfo{intrVec, startPC, startSR});
     // - external interrupt acknowledged
     CHECK(intrAcked);
-    // - PC at the interrupt vector + 2 (since it executed one instruction of the interrupt handler)
-    CHECK(sh2.GetPC() == intrPC1 + 2);
+    // - PC at the interrupt vector
+    CHECK(sh2.GetPC() == intrPC1);
     // - PC and SR pushed to the stack
     CHECK(sh2.GetGPRs()[15] == startSP - 8); // should write PC and SR
     // - SR.I3-0 set to the interrupt level
@@ -257,12 +257,31 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     //   [0] push SR to stack
     //   [1] push PC-4 to stack
     //   [2] read PC from VBR + vector*4
-    //   [3] read NOP instruction from PC
-    REQUIRE(memoryAccesses.size() == 4);
+    REQUIRE(memoryAccesses.size() == 3);
     CHECK(memoryAccesses[0] == MemoryAccessInfo{startSP - 4, startSR, true, sizeof(uint32)});
     CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC - 4, true, sizeof(uint32)});
     CHECK(memoryAccesses[2] == MemoryAccessInfo{startVBR1 + intrVec * sizeof(uint32), intrPC1, false, sizeof(uint32)});
-    CHECK(memoryAccesses[3] == MemoryAccessInfo{intrPC1, instrNOP, false, sizeof(uint16)});
+
+    ClearCaptures();
+
+    // Execute first instruction in the interrupt handler (should be a NOP)
+    sh2.Step<true>();
+
+    // Check results:
+    // - no interrupts
+    REQUIRE(interrupts.empty());
+    // - no exceptions
+    REQUIRE(exceptions.empty());
+    // - PC at the interrupt vector + 2
+    CHECK(sh2.GetPC() == intrPC1 + 2);
+    // - no change to the stack
+    CHECK(sh2.GetGPRs()[15] == startSP - 8);
+    // - no change to SR.I3-0
+    CHECK(sh2.GetSR().ILevel == intrLevel);
+    // - memory accesses:
+    //   [0] read NOP instruction from PC
+    REQUIRE(memoryAccesses.size() == 1);
+    CHECK(memoryAccesses[0] == MemoryAccessInfo{intrPC1, instrNOP, false, sizeof(uint16)});
 
     ClearCaptures();
 
@@ -318,7 +337,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::IRL);
     REQUIRE(sh2::PrivateAccess::CheckInterrupts(sh2));
 
-    // Jump to interrupt handler and execute first instruction (should be a NOP)
+    // Jump to interrupt handler
     sh2.Step<true>();
 
     // Check results:
@@ -330,8 +349,8 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     CHECK(exceptions[0] == ExceptionInfo{intrVec, startPC, startSR});
     // - external interrupt acknowledged
     CHECK(intrAcked);
-    // - PC at the interrupt vector + 2 (since it executed one instruction of the interrupt handler)
-    CHECK(sh2.GetPC() == intrPC2 + 2);
+    // - PC at the interrupt vector
+    CHECK(sh2.GetPC() == intrPC2);
     // - PC and SR pushed to the stack
     CHECK(sh2.GetGPRs()[15] == startSP - 8); // should write PC and SR
     // - SR.I3-0 set to the interrupt level
@@ -340,12 +359,31 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     //   [0] push SR to stack
     //   [1] push PC-4 to stack
     //   [2] read PC from VBR + vector*4
-    //   [3] read NOP instruction from PC
-    REQUIRE(memoryAccesses.size() == 4);
+    REQUIRE(memoryAccesses.size() == 3);
     CHECK(memoryAccesses[0] == MemoryAccessInfo{startSP - 4, startSR, true, sizeof(uint32)});
     CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC - 4, true, sizeof(uint32)});
     CHECK(memoryAccesses[2] == MemoryAccessInfo{startVBR2 + intrVec * sizeof(uint32), intrPC2, false, sizeof(uint32)});
-    CHECK(memoryAccesses[3] == MemoryAccessInfo{intrPC2, instrNOP, false, sizeof(uint16)});
+
+    ClearCaptures();
+
+    // Execute first instruction in the interrupt handler (should be a NOP)
+    sh2.Step<true>();
+
+    // Check results:
+    // - no interrupts
+    REQUIRE(interrupts.empty());
+    // - no exceptions
+    REQUIRE(exceptions.empty());
+    // - PC at the interrupt vector + 2
+    CHECK(sh2.GetPC() == intrPC2 + 2);
+    // - no change to the stack
+    CHECK(sh2.GetGPRs()[15] == startSP - 8);
+    // - no change to SR.I3-0
+    CHECK(sh2.GetSR().ILevel == intrLevel);
+    // - memory accesses:
+    //   [0] read NOP instruction from PC
+    REQUIRE(memoryAccesses.size() == 1);
+    CHECK(memoryAccesses[0] == MemoryAccessInfo{intrPC2, instrNOP, false, sizeof(uint16)});
 
     ClearCaptures();
 
@@ -460,6 +498,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
         sh2::PrivateAccess::RaiseInterrupt(sh2, source);
         REQUIRE(sh2::PrivateAccess::CheckInterrupts(sh2));
 
+        // Enter interrupt handler
         sh2.Step<true>();
 
         // Check results:
@@ -469,25 +508,52 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
         // - exception at FRT OVI vector at starting PC with starting SR
         REQUIRE(exceptions.size() == 1);
         CHECK(exceptions[0] == ExceptionInfo{vecNum, startPC, startSR});
-        // - PC at the NOP instruction in the delay slot of the RTE
-        CHECK(sh2.GetPC() == intrHandlerAddr + sizeof(uint16));
-        // - SR unchanged due to RTE executing immediately
-        CHECK(sh2.GetSR().u32 == startSR);
+        // - PC at the RTE instruction
+        CHECK(sh2.GetPC() == intrHandlerAddr);
+        // - SR.I3-0 set to the interrupt level (NMI sets level to 15)
+        if (source == sh2::InterruptSource::NMI) {
+            CHECK(sh2.GetSR().ILevel == 15);
+        } else {
+            CHECK(sh2.GetSR().ILevel == level);
+        }
         // - memory accesses
         //   [0] push SR to stack
         //   [1] push PC-4 to stack
         //   [2] read PC from VBR + vecNum*4
-        //   [3] read instruction from PC (RTE)
-        //   [4] pop PC-4 from stack
-        //   [5] pop SR from stack
         const uint32 vecAddr = startVBR + vecNum * sizeof(uint32);
-        REQUIRE(memoryAccesses.size() == 6);
+        REQUIRE(memoryAccesses.size() == 3);
         CHECK(memoryAccesses[0] == MemoryAccessInfo{startSP - 4, startSR, true, sizeof(uint32)});
         CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC - 4, true, sizeof(uint32)});
         CHECK(memoryAccesses[2] == MemoryAccessInfo{vecAddr, intrHandlerAddr, false, sizeof(uint32)});
-        CHECK(memoryAccesses[3] == MemoryAccessInfo{intrHandlerAddr, instrRTE, false, sizeof(uint16)});
-        CHECK(memoryAccesses[4] == MemoryAccessInfo{startSP - 8, startPC - 4, false, sizeof(uint32)});
-        CHECK(memoryAccesses[5] == MemoryAccessInfo{startSP - 4, startSR, false, sizeof(uint32)});
+        // - IRL interrupt acknowledged; no other interrupt should be acknowledged
+        if (source == sh2::InterruptSource::IRL) {
+            CHECK(intrAcked == true);
+        } else {
+            CHECK(intrAcked == false);
+        }
+
+        ClearCaptures();
+
+        // Step through RTE instruction
+        sh2.Step<true>();
+
+        // Check results:
+        // - no interrupts
+        REQUIRE(interrupts.empty());
+        // - no exceptions
+        REQUIRE(exceptions.empty());
+        // - PC at the NOP instruction in the delay slot of the RTE
+        CHECK(sh2.GetPC() == intrHandlerAddr + sizeof(uint16));
+        // - SR restored to starting value by RTE
+        CHECK(sh2.GetSR().u32 == startSR);
+        // - memory accesses
+        //   [0] read instruction from PC (RTE)
+        //   [1] pop PC-4 from stack
+        //   [2] pop SR from stack
+        REQUIRE(memoryAccesses.size() == 3);
+        CHECK(memoryAccesses[0] == MemoryAccessInfo{intrHandlerAddr, instrRTE, false, sizeof(uint16)});
+        CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC - 4, false, sizeof(uint32)});
+        CHECK(memoryAccesses[2] == MemoryAccessInfo{startSP - 4, startSR, false, sizeof(uint32)});
     };
 
     auto testIndexedIntr = [&](sh2::InterruptSource source) {
@@ -555,7 +621,6 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
     SECTION("IRL autovector interrupt") {
         sh2::PrivateAccess::INTC(sh2).ICR.VECMD = 0; // use autovector
         testIntr(IRL, 0x40, 1, irlIntrPC);
-        CHECK(intrAcked);
     }
 
     SECTION("IRL external vector interrupt") {
@@ -563,7 +628,6 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
         sh2::PrivateAccess::INTC(sh2).SetVector(sh2::InterruptSource::IRL, irlExIntrVec);
         sh2::PrivateAccess::INTC(sh2).SetLevel(sh2::InterruptSource::IRL, irlExIntrLevel);
         testIntr(IRL, irlExIntrVec, irlExIntrLevel, irlExIntrPC);
-        CHECK(intrAcked);
     }
 }
 
