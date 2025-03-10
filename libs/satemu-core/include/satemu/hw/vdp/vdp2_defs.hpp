@@ -99,7 +99,7 @@ inline constexpr uint32 CalcPageBaseAddress(uint32 chsz, uint32 pnds, uint32 pls
 }
 
 // NBG and RBG parameters.
-struct BGParams {
+struct alignas(128) BGParams {
     BGParams() {
         Reset();
     }
