@@ -43,6 +43,44 @@ struct VDP1Regs {
         UpdateTVMR();
     }
 
+    uint16 Read(uint32 address) const {
+        address &= 0x7FFFF;
+
+        switch (address) {
+        case 0x00: return 0; // TVMR is write-only
+        case 0x02: return 0; // FBCR is write-only
+        case 0x04: return 0; // PTMR is write-only
+        case 0x06: return 0; // EWDR is write-only
+        case 0x08: return 0; // EWLR is write-only
+        case 0x0A: return 0; // EWRR is write-only
+        case 0x0C: return 0; // ENDR is write-only
+
+        case 0x10: return ReadEDSR();
+        case 0x12: return ReadLOPR();
+        case 0x14: return ReadCOPR();
+        case 0x16: return ReadMODR();
+
+        default: return 0;
+        }
+    }
+
+    void Write(uint32 address, uint16 value) {
+        switch (address) {
+        case 0x00: WriteTVMR(value); break;
+        case 0x02: WriteFBCR(value); break;
+        case 0x04: WritePTMR(value); break;
+        case 0x06: WriteEWDR(value); break;
+        case 0x08: WriteEWLR(value); break;
+        case 0x0A: WriteEWRR(value); break;
+        case 0x0C: break; // ENDR, handled in VDP class
+
+        case 0x10: break; // EDSR is read-only
+        case 0x12: break; // LOPR is read-only
+        case 0x14: break; // COPR is read-only
+        case 0x16: break; // MODR is read-only
+        }
+    }
+
     // Erase the framebuffer on VBlank.
     // Derived from TVMR.VBE
     bool vblankErase;
