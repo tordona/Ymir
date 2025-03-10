@@ -692,9 +692,10 @@ void VDP::VDPRenderThread() {
 
     auto &rctx = m_VDPRenderContext;
 
+    std::array<VDPRenderEvent, 32> events{};
+
     bool running = true;
     while (running) {
-        std::array<VDPRenderEvent, 32> events{};
         const size_t count = rctx.DequeueEvents(events.begin(), events.size());
 
         for (size_t i = 0; i < count; ++i) {
