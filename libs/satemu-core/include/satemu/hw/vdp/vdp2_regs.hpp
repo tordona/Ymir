@@ -2432,13 +2432,13 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCOxR(uint8 select, uint16 value) {
-        colorOffset[select].r = bit::extract_signed<0, 8>(value);
+        colorOffset[select].r = bit::extract<0, 8>(value);
     }
     FORCE_INLINE void WriteCOxG(uint8 select, uint16 value) {
-        colorOffset[select].g = bit::extract_signed<0, 8>(value);
+        colorOffset[select].g = bit::extract<0, 8>(value);
     }
     FORCE_INLINE void WriteCOxB(uint8 select, uint16 value) {
-        colorOffset[select].b = bit::extract_signed<0, 8>(value);
+        colorOffset[select].b = bit::extract<0, 8>(value);
     }
 
     // -------------------------------------------------------------------------

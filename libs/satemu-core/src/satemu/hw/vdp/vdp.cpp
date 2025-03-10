@@ -2690,9 +2690,9 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
         // Apply color offset if enabled
         if (regs.colorOffsetEnable[layers[0]]) {
             const auto &colorOffset = regs.colorOffset[regs.colorOffsetSelect[layers[0]]];
-            outputColor.r = std::clamp(outputColor.r + colorOffset.r, 0, 255);
-            outputColor.g = std::clamp(outputColor.g + colorOffset.g, 0, 255);
-            outputColor.b = std::clamp(outputColor.b + colorOffset.b, 0, 255);
+            outputColor.r = kColorOffsetLUT[colorOffset.r][outputColor.r];
+            outputColor.g = kColorOffsetLUT[colorOffset.g][outputColor.g];
+            outputColor.b = kColorOffsetLUT[colorOffset.b][outputColor.b];
         }
 
         fbPtr[x] = outputColor.u32;

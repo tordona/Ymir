@@ -717,12 +717,25 @@ struct ColorOffset {
         b = 0;
     }
 
-    // Color offset values as signed 9-bit integers.
+    // Color offset values as unsigned 9-bit indices into a lookup table.
     // Derived from COAR/G/B and COBR/G/B
-    sint16 r;
-    sint16 g;
-    sint16 b;
+    uint16 r;
+    uint16 g;
+    uint16 b;
 };
+
+// Lookup table for color offset effects.
+// Indexing: [colorOffset][channelValue]
+inline const auto kColorOffsetLUT = [] {
+    std::array<std::array<uint8, 256>, 512> arr{};
+    for (uint32 i = 0; i < 512; i++) {
+        const sint32 ofs = bit::sign_extend<9>(i);
+        for (uint32 c = 0; c < 256; c++) {
+            arr[i][c] = std::clamp<sint32>(c + ofs, 0, 255);
+        }
+    }
+    return arr;
+}();
 
 enum class ColorGradScreen : uint8 { Sprite, RBG0, NBG0_RBG1, Invalid3, NBG1_EXBG, NBG2, NBG3, Invalid7 };
 
