@@ -490,6 +490,8 @@ private:
         std::array<VDPRenderEvent, 64> pendingEvents;
         size_t pendingEventsCount;
 
+        bool vdp1Done;
+
         struct VDP1 {
             VDP1Regs regs;
             alignas(16) std::array<uint8, kVDP1VRAMSize> VRAM;
@@ -528,6 +530,8 @@ private:
             vdp2.CRAM.fill(0);
             vdp2.CRAMCache.fill({.u32 = 0});
             displayFB = 1;
+
+            vdp1Done = false;
         }
 
         void EnqueueEvent(VDPRenderEvent &&event) {

@@ -570,6 +570,13 @@ void VDP::BeginHPhaseActiveDisplay() {
         } else if (m_VCounter == 210) { // ~1ms before VBlank IN
             m_cbTriggerOptimizedINTBACKRead();
         }
+        if (m_VDPRenderContext.vdp1Done) {
+            m_VDP1.currFrameEnded = true;
+            m_cbTriggerSpriteDrawEnd();
+            m_cbVDP1FrameComplete();
+            m_VDPRenderContext.vdp1Done = false;
+        }
+
         // VDP2DrawLine(m_VCounter);
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2DrawLine(m_VCounter));
     }
@@ -713,6 +720,7 @@ void VDP::VDPRenderThread() {
                 rctx.framebufferSwapSignal.Set();
                 break;
             case EvtType::VDP1BeginFrame:
+                m_VDPRenderContext.vdp1Done = false;
                 for (int i = 0; i < 1000000 && m_VDP1RenderContext.rendering; i++) {
                     VDP1ProcessCommand();
                 }
@@ -881,7 +889,7 @@ FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
 }
 
 void VDP::VDP1BeginFrame() {
-    renderLog1.trace("Begin VDP1 frame on framebuffer {}", m_drawFB);
+    renderLog1.trace("Begin VDP1 frame on framebuffer {}", m_VDPRenderContext.displayFB ^ 1);
 
     // TODO: setup rendering
     // TODO: figure out VDP1 timings
@@ -897,11 +905,9 @@ void VDP::VDP1BeginFrame() {
 }
 
 void VDP::VDP1EndFrame() {
-    renderLog1.trace("End VDP1 frame on framebuffer {}", m_drawFB);
+    renderLog1.trace("End VDP1 frame on framebuffer {}", m_VDPRenderContext.displayFB ^ 1);
     m_VDP1RenderContext.rendering = false;
-    m_VDP1.currFrameEnded = true;
-    m_cbTriggerSpriteDrawEnd();
-    m_cbVDP1FrameComplete();
+    m_VDPRenderContext.vdp1Done = true;
 }
 
 void VDP::VDP1ProcessCommand() {
