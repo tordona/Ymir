@@ -637,7 +637,7 @@ private:
     };
 
     // Layer state, containing the pixel output for the current scanline.
-    struct LayerState {
+    struct alignas(4096) LayerState {
         LayerState() {
             Reset();
         }

@@ -44,8 +44,10 @@ struct VDP2Regs {
         mosaicH = 1;
         mosaicV = 1;
 
-        for (auto &colorOffset : colorOffsetParams) {
-            colorOffset.Reset();
+        colorOffsetEnable.fill(false);
+        colorOffsetSelect.fill(false);
+        for (auto &coParams : colorOffset) {
+            coParams.Reset();
         }
 
         colorCalcParams.Reset();
@@ -2348,24 +2350,24 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadCLOFEN() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, bgParams[1].colorOffsetEnable);
-        bit::deposit_into<1>(value, bgParams[2].colorOffsetEnable);
-        bit::deposit_into<2>(value, bgParams[3].colorOffsetEnable);
-        bit::deposit_into<3>(value, bgParams[4].colorOffsetEnable);
-        bit::deposit_into<4>(value, bgParams[0].colorOffsetEnable);
-        bit::deposit_into<5>(value, backScreenParams.colorOffsetEnable);
-        bit::deposit_into<6>(value, spriteParams.colorOffsetEnable);
+        bit::deposit_into<0>(value, colorOffsetEnable[2]);
+        bit::deposit_into<1>(value, colorOffsetEnable[3]);
+        bit::deposit_into<2>(value, colorOffsetEnable[4]);
+        bit::deposit_into<3>(value, colorOffsetEnable[5]);
+        bit::deposit_into<4>(value, colorOffsetEnable[1]);
+        bit::deposit_into<5>(value, colorOffsetEnable[6]);
+        bit::deposit_into<6>(value, colorOffsetEnable[0]);
         return value;
     }
 
     FORCE_INLINE void WriteCLOFEN(uint16 value) {
-        bgParams[1].colorOffsetEnable = bit::extract<0>(value);
-        bgParams[2].colorOffsetEnable = bit::extract<1>(value);
-        bgParams[3].colorOffsetEnable = bit::extract<2>(value);
-        bgParams[4].colorOffsetEnable = bit::extract<3>(value);
-        bgParams[0].colorOffsetEnable = bit::extract<4>(value);
-        backScreenParams.colorOffsetEnable = bit::extract<5>(value);
-        spriteParams.colorOffsetEnable = bit::extract<6>(value);
+        colorOffsetEnable[2] = bit::extract<0>(value);
+        colorOffsetEnable[3] = bit::extract<1>(value);
+        colorOffsetEnable[4] = bit::extract<2>(value);
+        colorOffsetEnable[5] = bit::extract<3>(value);
+        colorOffsetEnable[1] = bit::extract<4>(value);
+        colorOffsetEnable[6] = bit::extract<5>(value);
+        colorOffsetEnable[0] = bit::extract<6>(value);
     }
 
     // 180112   CLOFSL  Color Offset Select
@@ -2386,24 +2388,24 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadCLOFSL() const {
         uint16 value = 0;
-        bit::deposit_into<0>(value, bgParams[1].colorOffsetSelect);
-        bit::deposit_into<1>(value, bgParams[2].colorOffsetSelect);
-        bit::deposit_into<2>(value, bgParams[3].colorOffsetSelect);
-        bit::deposit_into<3>(value, bgParams[4].colorOffsetSelect);
-        bit::deposit_into<4>(value, bgParams[0].colorOffsetSelect);
-        bit::deposit_into<5>(value, backScreenParams.colorOffsetSelect);
-        bit::deposit_into<6>(value, spriteParams.colorOffsetSelect);
+        bit::deposit_into<0>(value, colorOffsetSelect[2]);
+        bit::deposit_into<1>(value, colorOffsetSelect[3]);
+        bit::deposit_into<2>(value, colorOffsetSelect[4]);
+        bit::deposit_into<3>(value, colorOffsetSelect[5]);
+        bit::deposit_into<4>(value, colorOffsetSelect[1]);
+        bit::deposit_into<5>(value, colorOffsetSelect[6]);
+        bit::deposit_into<6>(value, colorOffsetSelect[0]);
         return value;
     }
 
     FORCE_INLINE void WriteCLOFSL(uint16 value) {
-        bgParams[1].colorOffsetSelect = bit::extract<0>(value);
-        bgParams[2].colorOffsetSelect = bit::extract<1>(value);
-        bgParams[3].colorOffsetSelect = bit::extract<2>(value);
-        bgParams[4].colorOffsetSelect = bit::extract<3>(value);
-        bgParams[0].colorOffsetSelect = bit::extract<4>(value);
-        backScreenParams.colorOffsetSelect = bit::extract<5>(value);
-        spriteParams.colorOffsetSelect = bit::extract<6>(value);
+        colorOffsetSelect[2] = bit::extract<0>(value);
+        colorOffsetSelect[3] = bit::extract<1>(value);
+        colorOffsetSelect[4] = bit::extract<2>(value);
+        colorOffsetSelect[5] = bit::extract<3>(value);
+        colorOffsetSelect[1] = bit::extract<4>(value);
+        colorOffsetSelect[6] = bit::extract<5>(value);
+        colorOffsetSelect[0] = bit::extract<6>(value);
     }
 
     // 180114   COAR    Color Offset A - Red
@@ -2420,23 +2422,23 @@ struct VDP2Regs {
     // x: A,B; c: R,G,B
 
     FORCE_INLINE uint16 ReadCOxR(uint8 select) const {
-        return colorOffsetParams[select].r;
+        return colorOffset[select].r;
     }
     FORCE_INLINE uint16 ReadCOxG(uint8 select) const {
-        return colorOffsetParams[select].g;
+        return colorOffset[select].g;
     }
     FORCE_INLINE uint16 ReadCOxB(uint8 select) const {
-        return colorOffsetParams[select].b;
+        return colorOffset[select].b;
     }
 
     FORCE_INLINE void WriteCOxR(uint8 select, uint16 value) {
-        colorOffsetParams[select].r = bit::extract_signed<0, 8>(value);
+        colorOffset[select].r = bit::extract_signed<0, 8>(value);
     }
     FORCE_INLINE void WriteCOxG(uint8 select, uint16 value) {
-        colorOffsetParams[select].g = bit::extract_signed<0, 8>(value);
+        colorOffset[select].g = bit::extract_signed<0, 8>(value);
     }
     FORCE_INLINE void WriteCOxB(uint8 select, uint16 value) {
-        colorOffsetParams[select].b = bit::extract_signed<0, 8>(value);
+        colorOffset[select].b = bit::extract_signed<0, 8>(value);
     }
 
     // -------------------------------------------------------------------------
@@ -2491,9 +2493,32 @@ struct VDP2Regs {
     uint8 mosaicH; // Horizontal mosaic size
     uint8 mosaicV; // Vertical mosaic size
 
+    // Color offset enable for:
+    // [0] Sprite
+    // [1] RBG0
+    // [2] NBG0/RBG1
+    // [3] NBG1/EXBG
+    // [4] NBG2
+    // [5] NBG3
+    // [6] Back screen
+    // Derived from CLOFEN.xxCOEN
+    alignas(16) std::array<bool, 7> colorOffsetEnable;
+
+    // Color offset select for:
+    // [0] Sprite
+    // [1] RBG0
+    // [2] NBG0/RBG1
+    // [3] NBG1/EXBG
+    // [4] NBG2
+    // [5] NBG3
+    // [6] Back screen
+    // false selects color offset A; true selects color offset B
+    // Derived from CLOFSL.xxCOSL
+    alignas(16) std::array<bool, 7> colorOffsetSelect;
+
     // Color offset parameters.
     // Derived from COAR/G/B and COBR/G/B
-    std::array<ColorOffsetParams, 2> colorOffsetParams;
+    std::array<ColorOffset, 2> colorOffset;
 
     // Color calculation parameters.
     // Derived from CCTL, CCRNA/B, CCRR and CCRLB

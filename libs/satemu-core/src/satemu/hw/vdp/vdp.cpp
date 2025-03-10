@@ -2689,26 +2689,9 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             }
         }
 
-        // Get color offset parameters
-        bool colorOffsetEnable = false;
-        bool colorOffsetSelect = false;
-        if (layers[0] == LYR_Back) {
-            const LineBackScreenParams &backParams = regs.backScreenParams;
-            colorOffsetEnable = backParams.colorOffsetEnable;
-            colorOffsetSelect = backParams.colorOffsetSelect;
-        } else if (layers[0] == LYR_Sprite) {
-            const SpriteParams &spriteParams = regs.spriteParams;
-            colorOffsetEnable = spriteParams.colorOffsetEnable;
-            colorOffsetSelect = spriteParams.colorOffsetSelect;
-        } else {
-            const BGParams &bgParams = regs.bgParams[layers[0] - LYR_RBG0];
-            colorOffsetEnable = bgParams.colorOffsetEnable;
-            colorOffsetSelect = bgParams.colorOffsetSelect;
-        }
-
         // Apply color offset if enabled
-        if (colorOffsetEnable) {
-            const auto &colorOffset = regs.colorOffsetParams[colorOffsetSelect];
+        if (regs.colorOffsetEnable[layers[0]]) {
+            const auto &colorOffset = regs.colorOffset[regs.colorOffsetSelect[layers[0]]];
             outputColor.r = std::clamp(outputColor.r + colorOffset.r, 0, 255);
             outputColor.g = std::clamp(outputColor.g + colorOffset.g, 0, 255);
             outputColor.b = std::clamp(outputColor.b + colorOffset.b, 0, 255);

@@ -156,9 +156,6 @@ struct BGParams {
 
         mosaicEnable = false;
 
-        colorOffsetEnable = false;
-        colorOffsetSelect = false;
-
         colorCalcEnable = false;
         colorCalcRatio = 0;
         specialColorCalcMode = SpecialColorCalcMode::PerScreen;
@@ -314,14 +311,6 @@ struct BGParams {
     // If vertical cell scroll is also enabled, the mosaic effect is bypassed.
     // Derived from MZCTL.xxMZE
     bool mosaicEnable;
-
-    // Enables the color offset effect.
-    // Derived from CLOFEN.xxCOEN
-    bool colorOffsetEnable;
-
-    // Selects the color offset parameters to use: A (false) or B (true).
-    // Derived from CLOFEN.xxCOSL
-    bool colorOffsetSelect;
 
     // Enables color calculation.
     // Derived from CCCTL.xxCCEN
@@ -590,8 +579,6 @@ struct SpriteParams {
         priorities.fill(0);
         colorCalcRatios.fill(0);
         colorDataOffset = 0;
-        colorOffsetEnable = false;
-        colorOffsetSelect = false;
         lineColorScreenEnable = false;
         windowSet.Reset();
     }
@@ -633,14 +620,6 @@ struct SpriteParams {
     // Derived from CRAOFB.SPCAOSn
     uint32 colorDataOffset;
 
-    // Enables the color offset effect.
-    // Derived from CLOFEN.SPCOEN
-    bool colorOffsetEnable;
-
-    // Selects the color offset parameters to use: A (false) or B (true).
-    // Derived from CLOFEN.SPCOSL
-    bool colorOffsetSelect;
-
     // Enables LNCL screen insertion if this BG is the topmost layer.
     // Derived from LNCLEN.SPLCEN
     bool lineColorScreenEnable;
@@ -681,8 +660,6 @@ struct LineBackScreenParams {
     void Reset() {
         perLine = false;
         baseAddress = 0;
-        colorOffsetEnable = false;
-        colorOffsetSelect = false;
         colorCalcEnable = false;
         colorCalcRatio = 0;
         shadowEnable = false;
@@ -695,16 +672,6 @@ struct LineBackScreenParams {
     // Base address of line/back screen data.
     // Derived from LCTAU/L.LCTA18-0 or BKTAU/L.BKTA18-0
     uint32 baseAddress;
-
-    // Enables the color offset effect.
-    // Only valid for the back screen.
-    // Derived from CLOFEN.BKCOEN
-    bool colorOffsetEnable;
-
-    // Selects the color offset parameters to use: A (false) or B (true).
-    // Only valid for the back screen.
-    // Derived from CLOFEN.BKCOSL
-    bool colorOffsetSelect;
 
     // Enables color calculation.
     // Derived from CCCTL.LCCCEN
@@ -722,6 +689,25 @@ struct LineBackScreenParams {
 
 struct ColorOffsetParams {
     ColorOffsetParams() {
+        Reset();
+    }
+
+    void Reset() {
+        enable = false;
+        select = false;
+    }
+
+    // Enables the color offset effect.
+    // Derived from CLOFEN.xxCOEN
+    bool enable;
+
+    // Selects the color offset parameters to use: A (false) or B (true).
+    // Derived from CLOFSL.xxCOSL
+    bool select;
+};
+
+struct ColorOffset {
+    ColorOffset() {
         Reset();
     }
 
