@@ -1940,7 +1940,238 @@ FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
 }
 
 FORCE_INLINE void VDP::VDP2CalcWindows(uint32 y) {
-    // TODO: implement
+    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+
+    y = VDP2GetY(y);
+
+    // Calculate window for NBGs and RBGs
+    for (int i = 0; i < 5; i++) {
+        auto &bgParams = regs.bgParams[i];
+        auto &bgWindow = m_bgWindows[i];
+
+        VDP2CalcWindow(y, bgParams.windowSet, regs.windowParams, bgWindow);
+    }
+
+    // Calculate window for rotation parameters
+    VDP2CalcWindow(y, regs.commonRotParams.windowSet, regs.windowParams, m_rotParamsWindow);
+
+    // Calculate window for sprite layer
+    VDP2CalcWindow(y, regs.spriteParams.windowSet, regs.windowParams, m_spriteLayerState.window);
+
+    // Calculate window for color calculations
+    VDP2CalcWindow(y, regs.colorCalcParams.windowSet, regs.windowParams, m_colorCalcWindow);
+}
+
+template <bool hasSpriteWindow>
+FORCE_INLINE void VDP::VDP2CalcWindow(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
+                                      const std::array<WindowParams, 2> &windowParams,
+                                      std::array<bool, kMaxResH> &windowState) {
+    // If no windows are enabled, consider the pixel outside of windows
+    if (!std::any_of(windowSet.enabled.begin(), windowSet.enabled.end(), std::identity{})) {
+        windowState.fill(false);
+        return;
+    }
+
+    if (windowSet.logic == WindowLogic::And) {
+        VDP2CalcWindowAnd(y, windowSet, windowParams, windowState);
+    } else {
+        VDP2CalcWindowOr(y, windowSet, windowParams, windowState);
+    }
+}
+
+template <bool hasSpriteWindow>
+FORCE_INLINE void VDP::VDP2CalcWindowAnd(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
+                                         const std::array<WindowParams, 2> &windowParams,
+                                         std::array<bool, kMaxResH> &windowState) {
+    // Initialize to all inside if using AND logic
+    windowState.fill(true);
+
+    // Check normal windows
+    for (int i = 0; i < 2; i++) {
+        // Skip if disabled
+        if (!windowSet.enabled[i]) {
+            continue;
+        }
+
+        const WindowParams &windowParam = windowParams[i];
+        const bool inverted = windowSet.inverted[i];
+
+        // Check vertical coordinate
+        //
+        // Truth table: (state: false=outside, true=inside)
+        // state  inverted  result   st != ao
+        // false  false     outside  false
+        // true   false     inside   true
+        // false  true      inside   true
+        // true   true      outside  false
+        const bool insideY = y >= windowParam.startY && y <= windowParam.endY;
+        if (!insideY && !inverted) {
+            // Short-circuit
+            windowState.fill(false);
+            return;
+        }
+
+        sint16 startX = windowParam.startX;
+        sint16 endX = windowParam.endX;
+
+        // Read line window if enabled
+        if (windowParam.lineWindowTableEnable) {
+            const uint32 address = windowParam.lineWindowTableAddress + y * sizeof(uint16) * 2;
+            sint16 startVal = VDP2ReadRendererVRAM<uint16>(address + 0);
+            sint16 endVal = VDP2ReadRendererVRAM<uint16>(address + 2);
+
+            // Some games set out-of-range window parameters and expects them to work.
+            // It seems like window coordinates should be signed...
+            //
+            // Panzer Dragoon 2 Zwei:
+            //   0000 to FFFE -> empty window
+            //   FFFE to 02C0 -> full line
+            //
+            // Panzer Dragoon Saga:
+            //   0000 to FFFF -> empty window
+            //
+            // Handle these cases here
+            if (startVal < 0) {
+                startVal = 0;
+            }
+            if (endVal < 0) {
+                if (startVal >= endVal) {
+                    startVal = 0x3FF;
+                }
+                endVal = 0;
+            }
+
+            startX = bit::extract<0, 9>(startVal);
+            endX = bit::extract<0, 9>(endVal);
+        }
+
+        // For normal screen modes, X coordinates don't use bit 0
+        if (m_VDPRenderContext.vdp2.regs.TVMD.HRESOn < 2) {
+            startX >>= 1;
+            endX >>= 1;
+        }
+
+        // Fill in horizontal coordinate
+        if (inverted) {
+            if (startX < windowState.size()) {
+                endX = std::min<sint16>(endX, windowState.size() - 1);
+                std::fill(windowState.begin() + startX, windowState.begin() + endX + 1, false);
+            }
+        } else {
+            std::fill_n(windowState.begin(), startX, false);
+            if (endX < windowState.size()) {
+                std::fill(windowState.begin() + endX + 1, windowState.end(), false);
+            }
+        }
+    }
+
+    // Check sprite window
+    if constexpr (hasSpriteWindow) {
+        if (windowSet.enabled[2]) {
+            const bool inverted = windowSet.inverted[2];
+            for (uint32 x = 0; x < m_HRes; x++) {
+                windowState[x] &= m_spriteLayerState.attrs[x].shadowOrWindow != inverted;
+            }
+        }
+    }
+}
+
+template <bool hasSpriteWindow>
+FORCE_INLINE void VDP::VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
+                                        const std::array<WindowParams, 2> &windowParams,
+                                        std::array<bool, kMaxResH> &windowState) {
+    // Initialize to all outside if using OR logic
+    windowState.fill(false);
+
+    // Check normal windows
+    for (int i = 0; i < 2; i++) {
+        // Skip if disabled
+        if (!windowSet.enabled[i]) {
+            continue;
+        }
+
+        const WindowParams &windowParam = windowParams[i];
+        const bool inverted = windowSet.inverted[i];
+
+        // Check vertical coordinate
+        //
+        // Truth table: (state: false=outside, true=inside)
+        // state  inverted  result   st != ao
+        // false  false     outside  false
+        // true   false     inside   true
+        // false  true      inside   true
+        // true   true      outside  false
+        const bool insideY = y >= windowParam.startY && y <= windowParam.endY;
+        if (!insideY && inverted) {
+            // Short-circuit
+            windowState.fill(true);
+            return;
+        }
+
+        sint16 startX = windowParam.startX;
+        sint16 endX = windowParam.endX;
+
+        // Read line window if enabled
+        if (windowParam.lineWindowTableEnable) {
+            const uint32 address = windowParam.lineWindowTableAddress + y * sizeof(uint16) * 2;
+            sint16 startVal = VDP2ReadRendererVRAM<uint16>(address + 0);
+            sint16 endVal = VDP2ReadRendererVRAM<uint16>(address + 2);
+
+            // Some games set out-of-range window parameters and expects them to work.
+            // It seems like window coordinates should be signed...
+            //
+            // Panzer Dragoon 2 Zwei:
+            //   0000 to FFFE -> empty window
+            //   FFFE to 02C0 -> full line
+            //
+            // Panzer Dragoon Saga:
+            //   0000 to FFFF -> empty window
+            //
+            // Handle these cases here
+            if (startVal < 0) {
+                startVal = 0;
+            }
+            if (endVal < 0) {
+                if (startVal >= endVal) {
+                    startVal = 0x3FF;
+                }
+                endVal = 0;
+            }
+
+            startX = bit::extract<0, 9>(startVal);
+            endX = bit::extract<0, 9>(endVal);
+        }
+
+        // For normal screen modes, X coordinates don't use bit 0
+        if (m_VDPRenderContext.vdp2.regs.TVMD.HRESOn < 2) {
+            startX >>= 1;
+            endX >>= 1;
+        }
+
+        // Fill in horizontal coordinate
+        if (inverted) {
+            std::fill_n(windowState.begin(), startX, true);
+            if (endX < windowState.size()) {
+                std::fill(windowState.begin() + endX + 1, windowState.end(), true);
+            }
+
+        } else {
+            if (startX < windowState.size()) {
+                endX = std::min<sint16>(endX, windowState.size() - 1);
+                std::fill(windowState.begin() + startX, windowState.begin() + endX + 1, true);
+            }
+        }
+    }
+
+    // Check sprite window
+    if constexpr (hasSpriteWindow) {
+        if (windowSet.enabled[2]) {
+            const bool inverted = windowSet.inverted[2];
+            for (uint32 x = 0; x < m_HRes; x++) {
+                windowState[x] |= m_spriteLayerState.attrs[x].shadowOrWindow != inverted;
+            }
+        }
+    }
 }
 
 void VDP::VDP2DrawLine(uint32 y) {
@@ -2099,7 +2330,8 @@ template <uint32 bgIndex>
 FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
     static_assert(bgIndex < 4, "Invalid NBG index");
 
-    using FnDraw = void (VDP::*)(uint32 y, const BGParams &, LayerState &, NormBGLayerState &);
+    using FnDraw =
+        void (VDP::*)(uint32 y, const BGParams &, LayerState &, NormBGLayerState &, const std::array<bool, kMaxResH> &);
 
     // Lookup table of scroll BG drawing functions
     // Indexing: [charMode][fourCellChar][colorFormat][colorMode]
@@ -2147,6 +2379,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
     const BGParams &bgParams = regs.bgParams[bgIndex + 1];
     LayerState &layerState = m_layerStates[bgIndex + 2];
     NormBGLayerState &bgState = m_normBGLayerStates[bgIndex];
+    const auto &windowState = m_bgWindows[bgIndex + 1];
 
     if constexpr (bgIndex < 2) {
         VDP2UpdateLineScreenScroll(y, bgParams, bgState);
@@ -2154,7 +2387,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
 
     const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
     if (bgParams.bitmap) {
-        (this->*fnDrawBitmap[cf][colorMode])(y, bgParams, layerState, bgState);
+        (this->*fnDrawBitmap[cf][colorMode])(y, bgParams, layerState, bgState, windowState);
     } else {
         const bool twc = bgParams.twoWordChar;
         const bool fcc = bgParams.cellSizeShift;
@@ -2162,7 +2395,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
         const uint32 chm = static_cast<uint32>(twc   ? CharacterMode::TwoWord
                                                : exc ? CharacterMode::OneWordExtended
                                                      : CharacterMode::OneWordStandard);
-        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(y, bgParams, layerState, bgState);
+        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(y, bgParams, layerState, bgState, windowState);
     }
 
     bgState.mosaicCounterY++;
@@ -2177,7 +2410,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
 
     static constexpr bool selRotParam = bgIndex == 0;
 
-    using FnDraw = void (VDP::*)(uint32 y, const BGParams &, LayerState &);
+    using FnDraw = void (VDP::*)(uint32 y, const BGParams &, LayerState &, const std::array<bool, kMaxResH> &);
 
     // Lookup table of scroll BG drawing functions
     // Indexing: [charMode][fourCellChar][colorFormat][colorMode]
@@ -2224,10 +2457,11 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
 
     const BGParams &bgParams = regs.bgParams[bgIndex];
     LayerState &layerState = m_layerStates[bgIndex + 1];
+    const auto &windowState = m_bgWindows[bgIndex];
 
     const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
     if (bgParams.bitmap) {
-        (this->*fnDrawBitmap[cf][colorMode])(y, bgParams, layerState);
+        (this->*fnDrawBitmap[cf][colorMode])(y, bgParams, layerState, windowState);
     } else {
         const bool twc = bgParams.twoWordChar;
         const bool fcc = bgParams.cellSizeShift;
@@ -2235,7 +2469,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
         const uint32 chm = static_cast<uint32>(twc   ? CharacterMode::TwoWord
                                                : exc ? CharacterMode::OneWordExtended
                                                      : CharacterMode::OneWordStandard);
-        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(y, bgParams, layerState);
+        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(y, bgParams, layerState, windowState);
     }
 }
 
@@ -2379,7 +2613,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             if (!isColorCalcEnabled(layers[0])) {
                 return false;
             }
-            if (VDP2IsInsideWindow(regs.colorCalcParams.windowSet, x, y)) {
+            if (m_colorCalcWindow[x]) {
                 return false;
             }
             if (layers[0] == LYR_Back || layers[0] == LYR_Sprite) {
@@ -2486,7 +2720,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
 
 template <VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                           NormBGLayerState &bgState) {
+                                           NormBGLayerState &bgState, const std::array<bool, kMaxResH> &windowState) {
     const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
 
     uint32 fracScrollX = bgState.fracScrollX;
@@ -2538,7 +2772,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
             }
         }
 
-        if (VDP2IsInsideWindow(bgParams.windowSet, x, y)) {
+        if (windowState[x]) {
             // Make pixel transparent if inside active window area
             layerState.pixels[x].transparent = true;
         } else {
@@ -2559,7 +2793,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
 
 template <ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                           NormBGLayerState &bgState) {
+                                           NormBGLayerState &bgState, const std::array<bool, kMaxResH> &windowState) {
     const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
 
     uint32 fracScrollX = bgState.fracScrollX;
@@ -2603,7 +2837,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
             }
         }
 
-        if (VDP2IsInsideWindow(bgParams.windowSet, x, y)) {
+        if (windowState[x]) {
             // Make pixel transparent if inside active window area
             layerState.pixels[x].transparent = true;
         } else {
@@ -2622,7 +2856,8 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
 }
 
 template <bool selRotParam, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState) {
+NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
+                                             const std::array<bool, kMaxResH> &windowState) {
     const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
 
     const bool doubleResH = regs.TVMD.HRESOn & 0b010;
@@ -2663,7 +2898,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
         const uint32 maxScrollX = usingFixed512 ? 512 : ((512 * 4) << rotParams.pageShiftH);
         const uint32 maxScrollY = usingFixed512 ? 512 : ((512 * 4) << rotParams.pageShiftV);
 
-        if (VDP2IsInsideWindow(bgParams.windowSet, x, y)) {
+        if (windowState[x]) {
             // Make pixel transparent if inside a window
             pixel.transparent = true;
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
@@ -2719,7 +2954,8 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
 }
 
 template <bool selRotParam, ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState) {
+NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
+                                             const std::array<bool, kMaxResH> &windowState) {
     const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
 
     const bool doubleResH = regs.TVMD.HRESOn & 0b010;
@@ -2758,7 +2994,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
         const uint32 maxScrollX = usingFixed512 ? 512 : bgParams.bitmapSizeH;
         const uint32 maxScrollY = usingFixed512 ? 512 : bgParams.bitmapSizeV;
 
-        if (VDP2IsInsideWindow(bgParams.windowSet, x, y)) {
+        if (windowState[x]) {
             // Make pixel transparent if inside a window
             pixel.transparent = true;
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
@@ -2782,7 +3018,7 @@ FORCE_INLINE VDP::RotParamSelector VDP::VDP2SelectRotationParameter(uint32 x, ui
     case RotationParamB: return RotParamB;
     case Coefficient:
         return regs.rotParams[0].coeffTableEnable && m_rotParamStates[0].transparent[x] ? RotParamB : RotParamA;
-    case Window: return VDP2IsInsideWindow(regs.commonRotParams.windowSet, x, y) ? RotParamB : RotParamA;
+    case Window: return m_rotParamsWindow[x] ? RotParamB : RotParamA;
     }
 }
 
@@ -2892,103 +3128,6 @@ FORCE_INLINE Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams 
     }
 
     return coeff;
-}
-
-template <bool hasSpriteWindow>
-FORCE_INLINE bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32 x, uint32 y) {
-    // If no windows are enabled, consider the pixel outside of windows
-    if (!std::any_of(windowSet.enabled.begin(), windowSet.enabled.end(), std::identity{})) {
-        return false;
-    }
-
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
-
-    y = VDP2GetY(y);
-
-    // Check normal windows
-    for (int i = 0; i < 2; i++) {
-        // Skip if disabled
-        if (!windowSet.enabled[i]) {
-            continue;
-        }
-
-        const WindowParams &windowParam = regs.windowParams[i];
-        const bool inverted = windowSet.inverted[i];
-
-        // Check vertical coordinate
-        const bool insideY = y >= windowParam.startY && y <= windowParam.endY;
-
-        sint16 startX = windowParam.startX;
-        sint16 endX = windowParam.endX;
-
-        // Read line window if enabled
-        if (windowParam.lineWindowTableEnable) {
-            const uint32 address = windowParam.lineWindowTableAddress + y * sizeof(uint16) * 2;
-            sint16 startVal = VDP2ReadRendererVRAM<uint16>(address + 0);
-            sint16 endVal = VDP2ReadRendererVRAM<uint16>(address + 2);
-
-            // Some games set out-of-range window parameters and expects them to work.
-            // It seems like window coordinates should be signed...
-            //
-            // Panzer Dragoon 2 Zwei:
-            //   0000 to FFFE -> empty window
-            //   FFFE to 02C0 -> full line
-            //
-            // Panzer Dragoon Saga:
-            //   0000 to FFFF -> empty window
-            //
-            // Handle these cases here
-            if (startVal < 0) {
-                startVal = 0;
-            }
-            if (endVal < 0) {
-                if (startVal >= endVal) {
-                    startVal = 0x3FF;
-                }
-                endVal = 0;
-            }
-
-            startX = bit::extract<0, 9>(startVal);
-            endX = bit::extract<0, 9>(endVal);
-        }
-
-        // For normal screen modes, X coordinates don't use bit 0
-        if (regs.TVMD.HRESOn < 2) {
-            startX >>= 1;
-            endX >>= 1;
-        }
-
-        // Check horizontal coordinate
-        const bool insideX = x >= startX && x <= endX;
-
-        // Truth table: (state: false=outside, true=inside)
-        // state  inverted  result   st != ao
-        // false  false     outside  false
-        // true   false     inside   true
-        // false  true      inside   true
-        // true   true      outside  false
-        const bool inside = (insideX && insideY) != inverted;
-
-        // Short-circuit the output if the logic allows for it
-        // true short-circuits OR logic
-        // false short-circuits AND logic
-        if (inside == (windowSet.logic == WindowLogic::Or)) {
-            return inside;
-        }
-    }
-
-    // Check sprite window
-    if constexpr (hasSpriteWindow) {
-        if (windowSet.enabled[2]) {
-            const bool inverted = windowSet.inverted[2];
-            return m_spriteLayerState.attrs[x].shadowOrWindow != inverted;
-        }
-    }
-
-    // Return the appropriate value for the given logic mode.
-    // If we got to this point using OR logic, then the pixel is outside all enabled windows.
-    // If we got to this point using AND logic, then the pixel is inside all enabled windows.
-    return windowSet.logic == WindowLogic::And;
 }
 
 // TODO: optimize - remove pageShiftH and pageShiftV params

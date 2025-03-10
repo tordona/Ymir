@@ -671,6 +671,7 @@ private:
         };
 
         alignas(16) std::array<Attributes, kMaxResH> attrs;
+        alignas(16) std::array<bool, kMaxResH> window;
     };
 
     // NBG layer state, including coordinate counters, increments and addresses.
@@ -788,6 +789,20 @@ private:
     // State for the line color and back screens.
     LineBackLayerState m_lineBackLayerState;
 
+    // Window state for NBGs and RBGs.
+    // [0] RBG0
+    // [1] NBG0/RBG1
+    // [2] NBG1/EXBG
+    // [3] NBG2
+    // [4] NBG3
+    alignas(16) std::array<std::array<bool, kMaxResH>, 5> m_bgWindows;
+
+    // Window state for rotation parameters.
+    alignas(16) std::array<bool, kMaxResH> m_rotParamsWindow;
+
+    // Window state for color calculation.
+    alignas(16) std::array<bool, kMaxResH> m_colorCalcWindow;
+
     // Framebuffer provided by the frontend to render the current frame into
     FramebufferColor *m_framebuffer;
 
@@ -861,10 +876,40 @@ private:
     // y is the scanline to draw
     void VDP2CalcRotationParameterTables(uint32 y);
 
-    // Precalculate all window state for the scanline.
+    // Precalculates all window state for the scanline.
     //
     // y is the scanline to draw
     void VDP2CalcWindows(uint32 y);
+
+    // Precalculates window state for a given set of parameters.
+    //
+    // y is the scanline to draw
+    // windowSet contains the windows
+    // windowParams contains additional window parameters
+    // windowState is the window state output
+    template <bool hasSpriteWindow>
+    void VDP2CalcWindow(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
+                        const std::array<WindowParams, 2> &windowParams, std::array<bool, kMaxResH> &windowState);
+
+    // Precalculates window state for a given set of parameters using AND logic.
+    //
+    // y is the scanline to draw
+    // windowSet contains the windows
+    // windowParams contains additional window parameters
+    // windowState is the window state output
+    template <bool hasSpriteWindow>
+    void VDP2CalcWindowAnd(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
+                           const std::array<WindowParams, 2> &windowParams, std::array<bool, kMaxResH> &windowState);
+
+    // Precalculates window state for a given set of parameters using OR logic.
+    //
+    // y is the scanline to draw
+    // windowSet contains the windows
+    // windowParams contains additional window parameters
+    // windowState is the window state output
+    template <bool hasSpriteWindow>
+    void VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
+                          const std::array<WindowParams, 2> &windowParams, std::array<bool, kMaxResH> &windowState);
 
     // Draws the specified VDP2 scanline.
     //
@@ -914,13 +959,15 @@ private:
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
     // bgState is a reference to the background layer state for the background.
+    // windowState is a reference to the window state for the layer.
     //
     // charMode indicates if character patterns use two words or one word with standard or extended character data.
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
     template <CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState);
+    void VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState,
+                                const std::array<bool, kMaxResH> &windowState);
 
     // Draws a normal bitmap BG scanline.
     //
@@ -928,17 +975,20 @@ private:
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
     // bgState is a reference to the background layer state for the background.
+    // windowState is a reference to the window state for the layer.
     //
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState);
+    void VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState,
+                                const std::array<bool, kMaxResH> &windowState);
 
     // Draws a rotation scroll BG scanline.
     //
     // y is the scanline to draw
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
+    // windowState is a reference to the window state for the layer.
     //
     // selRotParam enables dynamic rotation parameter selection (for RBG0).
     // charMode indicates if character patterns use two words or one word with standard or extended character data.
@@ -946,19 +996,22 @@ private:
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
     template <bool selRotParam, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState);
+    void VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
+                                  const std::array<bool, kMaxResH> &windowState);
 
     // Draws a rotation bitmap BG scanline.
     //
     // y is the scanline to draw
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
+    // windowState is a reference to the window state for the layer.
     //
     // selRotParam enables dynamic rotation parameter selection (for RBG0).
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
     template <bool selRotParam, ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState);
+    void VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
+                                  const std::array<bool, kMaxResH> &windowState);
 
     // Selects a rotation parameter set based on the current parameter selection mode.
     //
@@ -980,18 +1033,6 @@ private:
     // params is the rotation parameter from which to retrieve the base address and coefficient data size.
     // coeffAddress is the calculated coefficient address (KA).
     Coefficient VDP2FetchRotationCoefficient(const RotationParams &params, uint32 coeffAddress);
-
-    // Checks if the pixel at the given (X, VCounter) coordinate is inside the specified windows.
-    // Retrusn true if the pixel is inside a window.
-    // Returns false if the pixel is outside all windows or no windows are enabled.
-    //
-    // windowSet contains the window set to check.
-    // x is the horizontal coordinate of the pixel.
-    // y is the vertical coordinate of the pixel
-    //
-    // hasSpriteWindow determines if the window set contains the sprite window (SW).
-    template <bool hasSpriteWindow>
-    bool VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32 x, uint32 y);
 
     // Fetches a scroll background pixel at the given coordinates.
     //
