@@ -487,8 +487,8 @@ private:
         util::Event renderFinishedSignal{false};
         util::Event framebufferSwapSignal{false};
 
-        std::array<VDPRenderEvent, 64> pendingWrites;
-        size_t pendingWritesCount;
+        std::array<VDPRenderEvent, 64> pendingEvents;
+        size_t pendingEventsCount;
 
         struct VDP1 {
             VDP1Regs regs;
@@ -541,21 +541,20 @@ private:
             case VDPRenderEvent::Type::VDP2CRAMWriteWord:
             case VDPRenderEvent::Type::VDP2RegWrite:
                 // Batch VRAM, CRAM and register writes to send in bulk
-                pendingWrites[pendingWritesCount++] = std::move(event);
-                if (pendingWritesCount == pendingWrites.size()) {
-                    eventQueue.enqueue_bulk(pTok, pendingWrites.begin(), pendingWritesCount);
-                    pendingWritesCount = 0;
+                pendingEvents[pendingEventsCount++] = event;
+                if (pendingEventsCount == pendingEvents.size()) {
+                    eventQueue.enqueue_bulk(pTok, pendingEvents.begin(), pendingEventsCount);
+                    pendingEventsCount = 0;
                 }
                 break;
-            case VDPRenderEvent::Type::VDP1BeginFrame:
-            case VDPRenderEvent::Type::VDP2DrawLine:
+            default:
                 // Send any pending writes before rendering
-                if (pendingWritesCount > 0) {
-                    eventQueue.enqueue_bulk(pTok, pendingWrites.begin(), pendingWritesCount);
-                    pendingWritesCount = 0;
+                if (pendingEventsCount > 0) {
+                    eventQueue.enqueue_bulk(pTok, pendingEvents.begin(), pendingEventsCount);
+                    pendingEventsCount = 0;
                 }
-                // fallthrough
-            default: eventQueue.enqueue(pTok, std::move(event)); break;
+                eventQueue.enqueue(pTok, std::move(event));
+                break;
             }
         }
 
