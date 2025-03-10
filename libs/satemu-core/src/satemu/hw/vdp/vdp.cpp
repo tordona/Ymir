@@ -877,7 +877,7 @@ void VDP::BeginHPhaseActiveDisplay() {
         } else if (m_VCounter == 210) { // ~1ms before VBlank IN
             m_cbTriggerOptimizedINTBACKRead();
         }
-        VDP2DrawLine();
+        VDP2DrawLine(m_VCounter);
     }
 }
 
@@ -1983,7 +1983,7 @@ void VDP::VDP2UpdateEnabledBGs() {
     }
 }
 
-void VDP::VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayerState &bgState) {
+void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgParams, NormBGLayerState &bgState) {
     uint32 address = bgState.lineScrollTableAddress;
     auto read = [&] {
         const uint32 value = VDP2ReadVRAM<uint32>(address);
@@ -2001,14 +2001,14 @@ void VDP::VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayerState 
     if (bgParams.lineZoomEnable) {
         bgState.scrollIncH = bit::extract<8, 18>(read());
     }
-    if (m_VCounter > 0 && (m_VCounter & ((1u << bgParams.lineScrollInterval) - 1)) == 0) {
+    if (y > 0 && (y & ((1u << bgParams.lineScrollInterval) - 1)) == 0) {
         bgState.lineScrollTableAddress = address;
     }
 }
 
-void VDP::VDP2CalcRotationParameterTables() {
+void VDP::VDP2CalcRotationParameterTables(uint32 y) {
     const uint32 baseAddress = m_VDP2.commonRotParams.baseAddress & 0xFFF7C; // mask bit 6 (shifted left by 1)
-    const bool readAll = m_VCounter == 0;
+    const bool readAll = y == 0;
 
     for (int i = 0; i < 2; i++) {
         RotationParams &params = m_VDP2.rotParams[i];
@@ -2087,7 +2087,7 @@ void VDP::VDP2CalcRotationParameterTables() {
 
         // Precompute line color data parameters
         const LineBackScreenParams &lineParams = m_VDP2.lineScreenParams;
-        const uint32 line = lineParams.perLine ? m_VCounter : 0;
+        const uint32 line = lineParams.perLine ? y : 0;
         const uint32 lineColorAddress = lineParams.baseAddress + line * sizeof(uint16);
         const uint32 baseLineColorCRAMAddress = VDP2ReadVRAM<uint16>(lineColorAddress) * sizeof(uint16);
 
@@ -2146,10 +2146,10 @@ void VDP::VDP2CalcRotationParameterTables() {
     }
 }
 
-void VDP::VDP2DrawLine() {
-    renderLog2.trace("Drawing line {}", m_VCounter);
+void VDP::VDP2DrawLine(uint32 y) {
+    renderLog2.trace("Drawing line {}", y);
 
-    using FnDrawLayer = void (VDP::*)();
+    using FnDrawLayer = void (VDP::*)(uint32 y);
 
     // Lookup table of sprite drawing functions
     // Indexing: [colorMode][rotate]
@@ -2173,36 +2173,34 @@ void VDP::VDP2DrawLine() {
 
     // Load rotation parameters if any of the RBG layers is enabled
     if (m_VDP2.bgEnabled[4] || m_VDP2.bgEnabled[5]) {
-        VDP2CalcRotationParameterTables();
+        VDP2CalcRotationParameterTables(y);
     }
 
     // Draw line color and back screen layers
-    VDP2DrawLineColorAndBackScreens();
+    VDP2DrawLineColorAndBackScreens(y);
 
     // Draw sprite layer
-    (this->*fnDrawSprite[colorMode][rotate])();
+    (this->*fnDrawSprite[colorMode][rotate])(y);
 
     // Draw background layers
     if (m_VDP2.bgEnabled[5]) {
-        VDP2DrawRotationBG<0>(colorMode); // RBG0
-        VDP2DrawRotationBG<1>(colorMode); // RBG1
+        VDP2DrawRotationBG<0>(y, colorMode); // RBG0
+        VDP2DrawRotationBG<1>(y, colorMode); // RBG1
     } else {
-        VDP2DrawRotationBG<0>(colorMode); // RBG0
-        VDP2DrawNormalBG<0>(colorMode);   // NBG0
-        VDP2DrawNormalBG<1>(colorMode);   // NBG1
-        VDP2DrawNormalBG<2>(colorMode);   // NBG2
-        VDP2DrawNormalBG<3>(colorMode);   // NBG3
+        VDP2DrawRotationBG<0>(y, colorMode); // RBG0
+        VDP2DrawNormalBG<0>(y, colorMode);   // NBG0
+        VDP2DrawNormalBG<1>(y, colorMode);   // NBG1
+        VDP2DrawNormalBG<2>(y, colorMode);   // NBG2
+        VDP2DrawNormalBG<3>(y, colorMode);   // NBG3
     }
 
     // Compose image
-    VDP2ComposeLine();
+    VDP2ComposeLine(y);
 }
 
-void VDP::VDP2DrawLineColorAndBackScreens() {
+void VDP::VDP2DrawLineColorAndBackScreens(uint32 y) {
     const LineBackScreenParams &lineParams = m_VDP2.lineScreenParams;
     const LineBackScreenParams &backParams = m_VDP2.backScreenParams;
-
-    const uint32 y = m_VCounter;
 
     // Read line color screen color
     {
@@ -2223,9 +2221,7 @@ void VDP::VDP2DrawLineColorAndBackScreens() {
 }
 
 template <uint32 colorMode, bool rotate>
-NO_INLINE void VDP::VDP2DrawSpriteLayer() {
-    const uint32 y = m_VCounter;
-
+NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
     // VDP1 scaling:
     // 2x horz: VDP1 TVM=000 and VDP2 HRESO=01x
     const bool doubleResH =
@@ -2292,10 +2288,10 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer() {
 }
 
 template <uint32 bgIndex>
-FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 colorMode) {
+FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
     static_assert(bgIndex < 4, "Invalid NBG index");
 
-    using FnDraw = void (VDP::*)(const BGParams &, LayerState &, NormBGLayerState &);
+    using FnDraw = void (VDP::*)(uint32 y, const BGParams &, LayerState &, NormBGLayerState &);
 
     // Lookup table of scroll BG drawing functions
     // Indexing: [charMode][fourCellChar][colorFormat][colorMode]
@@ -2343,12 +2339,12 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 colorMode) {
     NormBGLayerState &bgState = m_normBGLayerStates[bgIndex];
 
     if constexpr (bgIndex < 2) {
-        VDP2UpdateLineScreenScroll(bgParams, bgState);
+        VDP2UpdateLineScreenScroll(y, bgParams, bgState);
     }
 
     const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
     if (bgParams.bitmap) {
-        (this->*fnDrawBitmap[cf][colorMode])(bgParams, layerState, bgState);
+        (this->*fnDrawBitmap[cf][colorMode])(y, bgParams, layerState, bgState);
     } else {
         const bool twc = bgParams.twoWordChar;
         const bool fcc = bgParams.cellSizeShift;
@@ -2356,7 +2352,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 colorMode) {
         const uint32 chm = static_cast<uint32>(twc   ? CharacterMode::TwoWord
                                                : exc ? CharacterMode::OneWordExtended
                                                      : CharacterMode::OneWordStandard);
-        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(bgParams, layerState, bgState);
+        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(y, bgParams, layerState, bgState);
     }
 
     bgState.mosaicCounterY++;
@@ -2366,12 +2362,12 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 colorMode) {
 }
 
 template <uint32 bgIndex>
-FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 colorMode) {
+FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
     static_assert(bgIndex < 2, "Invalid RBG index");
 
     static constexpr bool selRotParam = bgIndex == 0;
 
-    using FnDraw = void (VDP::*)(const BGParams &, LayerState &);
+    using FnDraw = void (VDP::*)(uint32 y, const BGParams &, LayerState &);
 
     // Lookup table of scroll BG drawing functions
     // Indexing: [charMode][fourCellChar][colorFormat][colorMode]
@@ -2419,7 +2415,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 colorMode) {
 
     const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
     if (bgParams.bitmap) {
-        (this->*fnDrawBitmap[cf][colorMode])(bgParams, layerState);
+        (this->*fnDrawBitmap[cf][colorMode])(y, bgParams, layerState);
     } else {
         const bool twc = bgParams.twoWordChar;
         const bool fcc = bgParams.cellSizeShift;
@@ -2427,16 +2423,16 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 colorMode) {
         const uint32 chm = static_cast<uint32>(twc   ? CharacterMode::TwoWord
                                                : exc ? CharacterMode::OneWordExtended
                                                      : CharacterMode::OneWordStandard);
-        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(bgParams, layerState);
+        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(y, bgParams, layerState);
     }
 }
 
-FORCE_INLINE void VDP::VDP2ComposeLine() {
+FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     if (m_framebuffer == nullptr) {
         return;
     }
 
-    const uint32 y = VDP2GetY(m_VCounter);
+    y = VDP2GetY(y);
 
     if (!m_VDP2.TVMD.DISP) {
         std::fill_n(&m_framebuffer[y * m_HRes], m_HRes, 0);
@@ -2568,7 +2564,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
             if (!isColorCalcEnabled(layers[0])) {
                 return false;
             }
-            if (VDP2IsInsideWindow(m_VDP2.colorCalcParams.windowSet, x)) {
+            if (VDP2IsInsideWindow(m_VDP2.colorCalcParams.windowSet, x, y)) {
                 return false;
             }
             if (layers[0] == LYR_Back || layers[0] == LYR_Sprite) {
@@ -2674,7 +2670,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine() {
 }
 
 template <VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState &layerState,
+NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
                                            NormBGLayerState &bgState) {
     uint32 fracScrollX = bgState.fracScrollX;
     const uint32 fracScrollY = bgState.fracScrollY;
@@ -2725,7 +2721,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState 
             }
         }
 
-        if (VDP2IsInsideWindow(bgParams.windowSet, x)) {
+        if (VDP2IsInsideWindow(bgParams.windowSet, x, y)) {
             // Make pixel transparent if inside active window area
             layerState.pixels[x].transparent = true;
         } else {
@@ -2745,7 +2741,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState 
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState &layerState,
+NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
                                            NormBGLayerState &bgState) {
     uint32 fracScrollX = bgState.fracScrollX;
     const uint32 fracScrollY = bgState.fracScrollY;
@@ -2788,7 +2784,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState 
             }
         }
 
-        if (VDP2IsInsideWindow(bgParams.windowSet, x)) {
+        if (VDP2IsInsideWindow(bgParams.windowSet, x, y)) {
             // Make pixel transparent if inside active window area
             layerState.pixels[x].transparent = true;
         } else {
@@ -2807,7 +2803,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState 
 }
 
 template <bool selRotParam, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState) {
+NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState) {
     const bool doubleResH = m_VDP2.TVMD.HRESOn & 0b010;
     const uint32 xShift = doubleResH ? 1 : 0;
     const uint32 maxX = m_HRes >> xShift;
@@ -2821,7 +2817,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
             }
         }};
 
-        const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(x) : RotParamA;
+        const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(x, y) : RotParamA;
 
         const RotationParams &rotParams = m_VDP2.rotParams[rotParamSelector];
         const RotationParamState &rotParamState = m_rotParamStates[rotParamSelector];
@@ -2846,7 +2842,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
         const uint32 maxScrollX = usingFixed512 ? 512 : ((512 * 4) << rotParams.pageShiftH);
         const uint32 maxScrollY = usingFixed512 ? 512 : ((512 * 4) << rotParams.pageShiftV);
 
-        if (VDP2IsInsideWindow(bgParams.windowSet, x)) {
+        if (VDP2IsInsideWindow(bgParams.windowSet, x, y)) {
             // Make pixel transparent if inside a window
             pixel.transparent = true;
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
@@ -2902,7 +2898,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerStat
 }
 
 template <bool selRotParam, ColorFormat colorFormat, uint32 colorMode>
-NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerState &layerState) {
+NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState) {
     const bool doubleResH = m_VDP2.TVMD.HRESOn & 0b010;
     const uint32 xShift = doubleResH ? 1 : 0;
     const uint32 maxX = m_HRes >> xShift;
@@ -2915,7 +2911,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
                 layerState.pixels[xx + 1] = pixel;
             }
         }};
-        const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(x) : RotParamA;
+        const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(x, y) : RotParamA;
 
         const RotationParams &rotParams = m_VDP2.rotParams[rotParamSelector];
         const RotationParamState &rotParamState = m_rotParamStates[rotParamSelector];
@@ -2939,7 +2935,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
         const uint32 maxScrollX = usingFixed512 ? 512 : bgParams.bitmapSizeH;
         const uint32 maxScrollY = usingFixed512 ? 512 : bgParams.bitmapSizeV;
 
-        if (VDP2IsInsideWindow(bgParams.windowSet, x)) {
+        if (VDP2IsInsideWindow(bgParams.windowSet, x, y)) {
             // Make pixel transparent if inside a window
             pixel.transparent = true;
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
@@ -2952,7 +2948,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerStat
     }
 }
 
-VDP::RotParamSelector VDP::VDP2SelectRotationParameter(uint32 x) {
+VDP::RotParamSelector VDP::VDP2SelectRotationParameter(uint32 x, uint32 y) {
     const CommonRotationParams &commonRotParams = m_VDP2.commonRotParams;
 
     using enum RotationParamMode;
@@ -2961,7 +2957,7 @@ VDP::RotParamSelector VDP::VDP2SelectRotationParameter(uint32 x) {
     case RotationParamB: return RotParamB;
     case Coefficient:
         return m_VDP2.rotParams[0].coeffTableEnable && m_rotParamStates[0].transparent[x] ? RotParamB : RotParamA;
-    case Window: return VDP2IsInsideWindow(m_VDP2.commonRotParams.windowSet, x) ? RotParamB : RotParamA;
+    case Window: return VDP2IsInsideWindow(m_VDP2.commonRotParams.windowSet, x, y) ? RotParamB : RotParamA;
     }
 }
 
@@ -3068,7 +3064,7 @@ Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint
 }
 
 template <bool hasSpriteWindow>
-bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32 x) {
+bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32 x, uint32 y) {
     // If no windows are enabled, consider the pixel outside of windows
     if (!std::any_of(windowSet.enabled.begin(), windowSet.enabled.end(), std::identity{})) {
         return false;
@@ -3085,7 +3081,7 @@ bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32
         const bool inverted = windowSet.inverted[i];
 
         // Check vertical coordinate
-        const uint32 y = VDP2GetY(m_VCounter);
+        y = VDP2GetY(y);
         const bool insideY = y >= windowParam.startY && y <= windowParam.endY;
 
         sint16 startX = windowParam.startX;
@@ -3093,7 +3089,7 @@ bool VDP::VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32
 
         // Read line window if enabled
         if (windowParam.lineWindowTableEnable) {
-            const uint32 address = windowParam.lineWindowTableAddress + m_VCounter * sizeof(uint16) * 2;
+            const uint32 address = windowParam.lineWindowTableAddress + y * sizeof(uint16) * 2;
             sint16 startVal = VDP2ReadVRAM<uint16>(address + 0);
             sint16 endVal = VDP2ReadVRAM<uint16>(address + 2);
 

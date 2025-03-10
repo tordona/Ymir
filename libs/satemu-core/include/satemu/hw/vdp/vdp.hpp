@@ -631,47 +631,61 @@ private:
     // Updates the line screen scroll parameters for the given background.
     // Only valid for NBG0 and NBG1.
     //
+    // y is the scanline to draw
     // bgParams contains the parameters for the BG to draw.
     // bgState is a reference to the background layer state for the background.
-    void VDP2UpdateLineScreenScroll(const BGParams &bgParams, NormBGLayerState &bgState);
+    void VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgParams, NormBGLayerState &bgState);
 
     // Loads rotation parameter tables and calculates coefficients and increments.
-    void VDP2CalcRotationParameterTables();
+    //
+    // y is the scanline to draw
+    void VDP2CalcRotationParameterTables(uint32 y);
 
-    // Draws the current VDP2 scanline.
-    void VDP2DrawLine();
+    // Draws the specified VDP2 scanline.
+    //
+    // y is the scanline to draw
+    void VDP2DrawLine(uint32 y);
 
     // Draws the line color and back screens.
-    void VDP2DrawLineColorAndBackScreens();
+    //
+    // y is the scanline to draw
+    void VDP2DrawLineColorAndBackScreens(uint32 y);
 
     // Draws the current VDP2 scanline of the sprite layer.
+    //
+    // y is the scanline to draw
     //
     // colorMode is the CRAM color mode.
     // rotate determines if Rotation Parameter A coordinates should be used to draw the sprite layer.
     template <uint32 colorMode, bool rotate>
-    void VDP2DrawSpriteLayer();
+    void VDP2DrawSpriteLayer(uint32 y);
 
     // Draws the current VDP2 scanline of the specified normal background layer.
     //
+    // y is the scanline to draw
     // colorMode is the CRAM color mode.
     //
     // bgIndex specifies the normal background index, from 0 to 3.
     template <uint32 bgIndex>
-    void VDP2DrawNormalBG(uint32 colorMode);
+    void VDP2DrawNormalBG(uint32 y, uint32 colorMode);
 
     // Draws the current VDP2 scanline of the specified rotation background layer.
     //
+    // y is the scanline to draw
     // colorMode is the CRAM color mode.
     //
     // bgIndex specifies the rotation background index, from 0 to 1.
     template <uint32 bgIndex>
-    void VDP2DrawRotationBG(uint32 colorMode);
+    void VDP2DrawRotationBG(uint32 y, uint32 colorMode);
 
     // Composes the current VDP2 scanline out of the rendered lines.
-    void VDP2ComposeLine();
+    //
+    // y is the scanline to draw
+    void VDP2ComposeLine(uint32 y);
 
     // Draws a normal scroll BG scanline.
     //
+    // y is the scanline to draw
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
     // bgState is a reference to the background layer state for the background.
@@ -681,10 +695,11 @@ private:
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
     template <CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawNormalScrollBG(const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState);
+    void VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState);
 
     // Draws a normal bitmap BG scanline.
     //
+    // y is the scanline to draw
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
     // bgState is a reference to the background layer state for the background.
@@ -692,10 +707,11 @@ private:
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawNormalBitmapBG(const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState);
+    void VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState);
 
     // Draws a rotation scroll BG scanline.
     //
+    // y is the scanline to draw
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
     //
@@ -705,10 +721,11 @@ private:
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
     template <bool selRotParam, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawRotationScrollBG(const BGParams &bgParams, LayerState &layerState);
+    void VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState);
 
     // Draws a rotation bitmap BG scanline.
     //
+    // y is the scanline to draw
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
     //
@@ -716,12 +733,13 @@ private:
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
     template <bool selRotParam, ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawRotationBitmapBG(const BGParams &bgParams, LayerState &layerState);
+    void VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState);
 
     // Selects a rotation parameter set based on the current parameter selection mode.
     //
     // x is the horizontal coordinate of the pixel
-    RotParamSelector VDP2SelectRotationParameter(uint32 x);
+    // y is the vertical coordinate of the pixel
+    RotParamSelector VDP2SelectRotationParameter(uint32 x, uint32 y);
 
     // Determines if a rotation coefficient entry can be fetched from the specified address.
     // Coefficients can always be fetched from CRAM.
@@ -744,10 +762,11 @@ private:
     //
     // windowSet contains the window set to check.
     // x is the horizontal coordinate of the pixel.
+    // y is the vertical coordinate of the pixel
     //
     // hasSpriteWindow determines if the window set contains the sprite window (SW).
     template <bool hasSpriteWindow>
-    bool VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32 x);
+    bool VDP2IsInsideWindow(const WindowSet<hasSpriteWindow> &windowSet, uint32 x, uint32 y);
 
     // Fetches a scroll background pixel at the given coordinates.
     //
