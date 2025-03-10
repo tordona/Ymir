@@ -736,11 +736,39 @@ void VDP::VDPRenderThread() {
             case EvtType::VDP2VRAMWriteWord:
                 util::WriteBE<uint16>(&rctx.vdp2.VRAM[event.write.address], event.write.value);
                 break;
-            case EvtType::VDP2CRAMWriteByte: rctx.vdp2.CRAM[event.write.address] = event.write.value; break;
+            case EvtType::VDP2CRAMWriteByte:
+                rctx.vdp2.CRAM[event.write.address] = event.write.value;
+                // Update CRAM cache if color RAM mode changed is in one of the RGB555 modes
+                if (rctx.vdp2.regs.vramControl.colorRAMMode <= 1) {
+                    const uint32 cramAddress = event.write.address & ~1;
+                    const uint16 colorValue = VDP2ReadRendererCRAM<uint16>(cramAddress);
+                    const Color555 color5{.u16 = colorValue};
+                    rctx.vdp2.CRAMCache[cramAddress / sizeof(uint16)] = ConvertRGB555to888(color5);
+                }
+                break;
             case EvtType::VDP2CRAMWriteWord:
                 util::WriteBE<uint16>(&rctx.vdp2.CRAM[event.write.address], event.write.value);
+                // Update CRAM cache if color RAM mode changed is in one of the RGB555 modes
+                if (rctx.vdp2.regs.vramControl.colorRAMMode <= 1) {
+                    const uint32 cramAddress = event.write.address & ~1;
+                    const uint16 colorValue = VDP2ReadRendererCRAM<uint16>(cramAddress);
+                    const Color555 color5{.u16 = colorValue};
+                    rctx.vdp2.CRAMCache[cramAddress / sizeof(uint16)] = ConvertRGB555to888(color5);
+                }
                 break;
-            case EvtType::VDP2RegWrite: rctx.vdp2.regs.Write(event.write.address, event.write.value); break;
+            case EvtType::VDP2RegWrite:
+                rctx.vdp2.regs.Write(event.write.address, event.write.value);
+                if (event.write.address == 0x00E) {
+                    // Refill CRAM cache if color RAM mode changed to one of the RGB555 modes
+                    if (rctx.vdp2.regs.vramControl.colorRAMMode <= 1) {
+                        for (uint32 addr = 0; addr < rctx.vdp2.CRAM.size(); addr += sizeof(uint16)) {
+                            const uint16 colorValue = VDP2ReadRendererCRAM<uint16>(addr);
+                            const Color555 color5{.u16 = colorValue};
+                            rctx.vdp2.CRAMCache[addr / sizeof(uint16)] = ConvertRGB555to888(color5);
+                        }
+                    }
+                }
+                break;
 
             case EvtType::Shutdown: running = false; break;
             }
@@ -770,6 +798,10 @@ FORCE_INLINE T VDP::VDP2ReadRendererCRAM(uint32 address) {
 
     address = MapRendererCRAMAddress(address);
     return util::ReadBE<T>(&m_VDPRenderContext.vdp2.CRAM[address]);
+}
+
+FORCE_INLINE Color888 VDP::VDP2ReadRendererColor5to8(uint32 address) {
+    return m_VDPRenderContext.vdp2.CRAMCache[address / sizeof(uint16)];
 }
 
 // -----------------------------------------------------------------------------
@@ -1905,8 +1937,7 @@ FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
                 // Compute line colors
                 if (params.coeffUseLineColorData) {
                     const uint32 cramAddress = bit::deposit<1, 8>(baseLineColorCRAMAddress, coeff.lineColorData);
-                    const Color555 color555{.u16 = VDP2ReadRendererCRAM<uint16>(cramAddress)};
-                    state.lineColor[x] = ConvertRGB555to888(color555);
+                    state.lineColor[x] = VDP2ReadRendererColor5to8(cramAddress);
                 }
 
                 // Increment coefficient table address by Hcnt if using per-dot coefficients
@@ -2243,8 +2274,7 @@ FORCE_INLINE void VDP::VDP2DrawLineColorAndBackScreens(uint32 y) {
         const uint32 line = lineParams.perLine ? y : 0;
         const uint32 address = lineParams.baseAddress + line * sizeof(uint16);
         const uint32 cramAddress = VDP2ReadRendererVRAM<uint16>(address) * sizeof(uint16);
-        const Color555 color555{.u16 = VDP2ReadRendererCRAM<uint16>(cramAddress)};
-        m_lineBackLayerState.lineColor = ConvertRGB555to888(color555);
+        m_lineBackLayerState.lineColor = VDP2ReadRendererColor5to8(cramAddress);
     }
 
     // Read back screen color
@@ -3538,15 +3568,11 @@ FORCE_INLINE Color888 VDP::VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorInd
     if constexpr (colorMode == 0) {
         // RGB 5:5:5, 1024 words
         const uint32 address = (cramOffset + colorIndex) * sizeof(uint16);
-        const uint16 data = VDP2ReadRendererCRAM<uint16>(address & 0x7FF);
-        Color555 clr555{.u16 = data};
-        return ConvertRGB555to888(clr555);
+        return VDP2ReadRendererColor5to8(address & 0x7FF);
     } else if constexpr (colorMode == 1) {
         // RGB 5:5:5, 2048 words
         const uint32 address = (cramOffset + colorIndex) * sizeof(uint16);
-        const uint16 data = VDP2ReadRendererCRAM<uint16>(address);
-        Color555 clr555{.u16 = data};
-        return ConvertRGB555to888(clr555);
+        return VDP2ReadRendererColor5to8(address);
     } else { // colorMode == 2
         // RGB 8:8:8, 1024 words
         const uint32 address = (cramOffset + colorIndex) * sizeof(uint32);

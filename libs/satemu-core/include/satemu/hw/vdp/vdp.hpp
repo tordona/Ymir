@@ -490,6 +490,10 @@ private:
             VDP2Regs regs;
             alignas(16) std::array<uint8, kVDP2VRAMSize> VRAM;
             alignas(16) std::array<uint8, kVDP2CRAMSize> CRAM;
+
+            // Cached CRAM colors converted from RGB555 to RGB888.
+            // Only valid when color RAM mode is one of the RGB555 modes.
+            alignas(16) std::array<Color888, kVDP2CRAMSize / sizeof(uint16)> CRAMCache;
         } vdp2;
         size_t displayFB;
 
@@ -537,6 +541,8 @@ private:
 
     template <mem_primitive T>
     T VDP2ReadRendererCRAM(uint32 address);
+
+    Color888 VDP2ReadRendererColor5to8(uint32 address);
 
     // -------------------------------------------------------------------------
     // VDP1
