@@ -1,4 +1,4 @@
-#include <satemu/util/scope_guard.hpp>
+﻿#include <satemu/util/scope_guard.hpp>
 
 #include "../../../libs/satemu-core/src/satemu/hw/vdp/slope.hpp"
 
@@ -129,64 +129,64 @@ struct Sandbox {
             ax += inc;
         }
 
-        if (keys[SDL_SCANCODE_HOME]) {
+        if (keys[SDL_SCANCODE_T]) {
             by -= inc;
         }
-        if (keys[SDL_SCANCODE_END]) {
+        if (keys[SDL_SCANCODE_G]) {
             by += inc;
         }
-        if (keys[SDL_SCANCODE_DELETE]) {
+        if (keys[SDL_SCANCODE_F]) {
             bx -= inc;
         }
-        if (keys[SDL_SCANCODE_PAGEDOWN]) {
+        if (keys[SDL_SCANCODE_H]) {
             bx += inc;
         }
 
-        if (keys[SDL_SCANCODE_UP]) {
+        if (keys[SDL_SCANCODE_I]) {
             cy -= inc;
         }
-        if (keys[SDL_SCANCODE_DOWN]) {
+        if (keys[SDL_SCANCODE_K]) {
             cy += inc;
         }
-        if (keys[SDL_SCANCODE_LEFT]) {
+        if (keys[SDL_SCANCODE_J]) {
             cx -= inc;
         }
-        if (keys[SDL_SCANCODE_RIGHT]) {
+        if (keys[SDL_SCANCODE_L]) {
             cx += inc;
         }
 
-        if (keys[SDL_SCANCODE_I]) {
+        if (keys[SDL_SCANCODE_UP]) {
             dy -= inc;
         }
-        if (keys[SDL_SCANCODE_K]) {
+        if (keys[SDL_SCANCODE_DOWN]) {
             dy += inc;
         }
-        if (keys[SDL_SCANCODE_J]) {
+        if (keys[SDL_SCANCODE_LEFT]) {
             dx -= inc;
         }
-        if (keys[SDL_SCANCODE_L]) {
+        if (keys[SDL_SCANCODE_RIGHT]) {
             dx += inc;
         }
 
-        if (keys[SDL_SCANCODE_T]) {
+        if (keys[SDL_SCANCODE_KP_8]) {
             ay -= inc;
             by -= inc;
             cy -= inc;
             dy -= inc;
         }
-        if (keys[SDL_SCANCODE_G]) {
+        if (keys[SDL_SCANCODE_KP_5]) {
             ay += inc;
             by += inc;
             cy += inc;
             dy += inc;
         }
-        if (keys[SDL_SCANCODE_F]) {
+        if (keys[SDL_SCANCODE_KP_4]) {
             ax -= inc;
             bx -= inc;
             cx -= inc;
             dx -= inc;
         }
-        if (keys[SDL_SCANCODE_H]) {
+        if (keys[SDL_SCANCODE_KP_6]) {
             ax += inc;
             bx += inc;
             cx += inc;
@@ -360,9 +360,9 @@ void runSandbox() {
 
     // Assume the following calls succeed
     SDL_SetPointerProperty(rendererProps, SDL_PROP_RENDERER_CREATE_WINDOW_POINTER, window);
-    SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, SDL_RENDERER_VSYNC_DISABLED);
+    // SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, SDL_RENDERER_VSYNC_DISABLED);
     // SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, SDL_RENDERER_VSYNC_ADAPTIVE);
-    // SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, 1);
+    SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, 1);
 
     auto renderer = SDL_CreateRendererWithProperties(rendererProps);
     if (renderer == nullptr) {
@@ -390,6 +390,7 @@ void runSandbox() {
     auto t = clk::now();
     uint64 frames = 0;
     bool running = true;
+    bool showHelp = true;
 
     Sandbox sandbox{screenWidth, screenHeight};
 
@@ -397,7 +398,12 @@ void runSandbox() {
         SDL_Event evt{};
         while (SDL_PollEvent(&evt)) {
             switch (evt.type) {
-            case SDL_EVENT_KEY_DOWN: sandbox.KeyDown(evt); break;
+            case SDL_EVENT_KEY_DOWN:
+                sandbox.KeyDown(evt);
+                if (evt.key.scancode == SDL_SCANCODE_F1) {
+                    showHelp = !showHelp;
+                }
+                break;
             case SDL_EVENT_KEY_UP: sandbox.KeyUp(evt); break;
             case SDL_EVENT_QUIT: running = false; break;
             }
@@ -423,6 +429,51 @@ void runSandbox() {
 
         SDL_RenderClear(renderer);
         SDL_RenderTexture(renderer, texture, nullptr, nullptr);
+
+        if (showHelp) {
+            SDL_FRect rect{187, 49, 10, 10};
+            SDL_SetRenderDrawColor(renderer, 255, 82, 79, 128);
+            SDL_RenderFillRect(renderer, &rect);
+
+            rect.y += 10;
+            SDL_SetRenderDrawColor(renderer, 152, 255, 79, 128);
+            SDL_RenderFillRect(renderer, &rect);
+
+            rect.y += 10;
+            SDL_SetRenderDrawColor(renderer, 79, 167, 255, 128);
+            SDL_RenderFillRect(renderer, &rect);
+
+            rect.y += 10;
+            SDL_SetRenderDrawColor(renderer, 182, 79, 255, 128);
+            SDL_RenderFillRect(renderer, &rect);
+
+            SDL_SetRenderDrawColor(renderer, 255, 233, 80, 255);
+            SDL_RenderDebugText(renderer, 5, 5,
+                                fmt::format("[Z] Antialias {}", (sandbox.antialias ? "ON" : "OFF")).c_str());
+            SDL_RenderDebugText(renderer, 5, 15,
+                                fmt::format("[X] Draw edges on {}", (sandbox.edgesOnTop ? "top" : "bottom")).c_str());
+            SDL_RenderDebugText(renderer, 5, 25,
+                                fmt::format("[C] Draw UV gradient {}", (sandbox.uvGradient ? "ON" : "OFF")).c_str());
+            SDL_RenderDebugText(renderer, 5, 35, "[12345] Select preset shape");
+
+            SDL_RenderDebugText(
+                renderer, 5, 50,
+                fmt::format("[WASD]   Move vertex A   {}x{}", (int)sandbox.ax, (int)sandbox.ay).c_str());
+            SDL_RenderDebugText(
+                renderer, 5, 60,
+                fmt::format("[TFGH]   Move vertex B   {}x{}", (int)sandbox.bx, (int)sandbox.by).c_str());
+            SDL_RenderDebugText(
+                renderer, 5, 70,
+                fmt::format("[IJKL]   Move vertex C   {}x{}", (int)sandbox.cx, (int)sandbox.cy).c_str());
+            SDL_RenderDebugText(
+                renderer, 5, 80,
+                fmt::format("[Arrows] Move vertex D   {}x{}", (int)sandbox.dx, (int)sandbox.dy).c_str());
+            SDL_RenderDebugText(renderer, 5, 90, "[KP8456] Move polygon");
+            SDL_RenderDebugText(renderer, 5, 100, "[Shift]  Hold to speed up");
+            SDL_RenderDebugText(renderer, 5, 110, "[Space]  Print out coordinates to stdout");
+            SDL_RenderDebugText(renderer, 5, 125, "[F1] Show/hide this text");
+        }
+
         SDL_RenderPresent(renderer);
     }
 
