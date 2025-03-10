@@ -633,10 +633,13 @@ void VDP::BeginHPhaseLastDot() {
         if (m_VDP2.TVMD.LSMDn != 0) {
             m_VDP2.TVSTAT.ODD ^= 1;
             rootLog2.trace("Switched to {} field", (m_VDP2.TVSTAT.ODD ? "odd" : "even"));
+            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_VDP2.TVSTAT.ODD));
         } else {
-            m_VDP2.TVSTAT.ODD = 1;
+            if (m_VDP2.TVSTAT.ODD != 1) {
+                m_VDP2.TVSTAT.ODD = 1;
+                m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_VDP2.TVSTAT.ODD));
+            }
         }
-        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_VDP2.TVSTAT.ODD));
     }
 }
 
