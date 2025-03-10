@@ -13,9 +13,6 @@
 [submodule "vendor/Catch2"]
 	path = vendor/Catch2
 	url = git@github.com:catchorg/Catch2.git
-[submodule "vendor/readerwriterqueue"]
-	path = vendor/readerwriterqueue
-	url = git@github.com:cameron314/readerwriterqueue.git
 [submodule "vendor/concurrentqueue"]
 	path = vendor/concurrentqueue
 	url = git@github.com:cameron314/concurrentqueue.git

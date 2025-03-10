@@ -57,10 +57,6 @@ add_subdirectory_quiet(SDL)
 message(VERBOSE "==> cxxopts")
 add_subdirectory(cxxopts)
 
-# readerwriterqueue - https://github.com/cameron314/readerwriterqueue
-message(VERBOSE "=>> readerwriterqueue")
-add_subdirectory(readerwriterqueue)
-
 # concurrentqueue - https://github.com/cameron314/concurrentqueue
 message(VERBOSE "=>> concurrentqueue")
 add_subdirectory(concurrentqueue)
