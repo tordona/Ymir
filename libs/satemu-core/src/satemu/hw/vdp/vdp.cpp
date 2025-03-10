@@ -1224,14 +1224,14 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
             switch (mode.colorMode) {
             case 0: // 4 bpp, 16 colors, bank mode
                 color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
-                color = (color >> (((u ^ 1) & 1) * 4)) & 0xF;
+                color = (color >> ((~u & 1) * 4)) & 0xF;
                 processEndCode(color == 0xF);
                 transparent = color == 0x0;
                 color |= lineParams.colorBank;
                 break;
             case 1: // 4 bpp, 16 colors, lookup table mode
                 color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
-                color = (color >> (((u ^ 1) & 1) * 4)) & 0xF;
+                color = (color >> ((~u & 1) * 4)) & 0xF;
                 processEndCode(color == 0xF);
                 transparent = color == 0x0;
                 color = VDP1ReadRendererVRAM<uint16>(color * sizeof(uint16) + lineParams.colorBank * 8);
@@ -3437,7 +3437,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
     uint8 colorData = 0;
     if constexpr (colorFormat == ColorFormat::Palette16) {
         const uint32 dotAddress = cellAddress + (dotOffset >> 1u);
-        const uint8 dotData = (VDP2ReadRendererVRAM<uint8>(dotAddress) >> (((dotX & 1) ^ 1) * 4)) & 0xF;
+        const uint8 dotData = (VDP2ReadRendererVRAM<uint8>(dotAddress) >> ((~dotX & 1) * 4)) & 0xF;
         const uint32 colorIndex = (ch.palNum << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
@@ -3518,7 +3518,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, Coor
 
     if constexpr (colorFormat == ColorFormat::Palette16) {
         const uint32 dotAddress = bitmapBaseAddress + (dotOffset >> 1u);
-        const uint8 dotData = (VDP2ReadRendererVRAM<uint8>(dotAddress) >> (((dotX & 1) ^ 1) * 4)) & 0xF;
+        const uint8 dotData = (VDP2ReadRendererVRAM<uint8>(dotAddress) >> ((~dotX & 1) * 4)) & 0xF;
         const uint32 colorIndex = palNum | dotData;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
         pixel.transparent = bgParams.enableTransparency && dotData == 0;
