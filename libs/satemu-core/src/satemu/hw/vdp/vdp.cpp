@@ -403,7 +403,7 @@ FORCE_INLINE void VDP::VDP2WriteCRAM(uint32 address, T value) {
     regsLog2.trace("{}-bit VDP2 CRAM write to {:05X} = {:X}", sizeof(T) * 8, address, value);
     util::WriteBE<T>(&m_CRAM[address], value);
     m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address, value));
-    if (m_VDP2.RAMCTL.CRMDn == 0) {
+    if (m_VDP2.vramControl.colorRAMMode == 0) {
         regsLog2.trace("   replicated to {:05X}", address ^ 0x800);
         util::WriteBE<T>(&m_CRAM[address ^ 0x800], value);
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address ^ 0x800, value));
@@ -768,7 +768,7 @@ FORCE_INLINE T VDP::VDP2ReadRendererCRAM(uint32 address) {
         return value;
     }
 
-    address = MapCRAMAddress(address);
+    address = MapRendererCRAMAddress(address);
     return util::ReadBE<T>(&m_CRAM[address]);
 }
 
@@ -1867,14 +1867,14 @@ FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
         const uint32 maxX = m_HRes >> xShift;
 
         // Use per-dot coefficient if reading from CRAM or if any of the VRAM banks was designated as coefficient data
-        bool perDotCoeff = regs.RAMCTL.CRKTE;
-        if (!regs.RAMCTL.CRKTE) {
-            perDotCoeff = regs.RAMCTL.RDBSA0n == 1 || regs.RAMCTL.RDBSB0n == 1;
-            if (regs.RAMCTL.VRAMD) {
-                perDotCoeff |= regs.RAMCTL.RDBSA1n == 1;
+        bool perDotCoeff = regs.vramControl.colorRAMCoeffTableEnable;
+        if (!perDotCoeff) {
+            perDotCoeff = regs.vramControl.rotDataBankSelA0 == 1 || regs.vramControl.rotDataBankSelB0 == 1;
+            if (regs.vramControl.partitionVRAMA) {
+                perDotCoeff |= regs.vramControl.rotDataBankSelA1 == 1;
             }
-            if (regs.RAMCTL.VRBMD) {
-                perDotCoeff |= regs.RAMCTL.RDBSB1n == 1;
+            if (regs.vramControl.partitionVRAMB) {
+                perDotCoeff |= regs.vramControl.rotDataBankSelB1 == 1;
             }
         }
 
@@ -2199,7 +2199,7 @@ void VDP::VDP2DrawLine(uint32 y) {
         return arr;
     }();
 
-    const uint32 colorMode = regs2.RAMCTL.CRMDn;
+    const uint32 colorMode = regs2.vramControl.colorRAMMode;
     const bool rotate = regs1.fbRotEnable;
 
     // Precalculate window state
@@ -3026,7 +3026,7 @@ FORCE_INLINE bool VDP::VDP2CanFetchCoefficient(const RotationParams &params, uin
     const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
 
     // Coefficients can always be fetched from CRAM
-    if (regs.RAMCTL.CRKTE) {
+    if (regs.vramControl.colorRAMCoeffTableEnable) {
         return true;
     }
 
@@ -3048,29 +3048,29 @@ FORCE_INLINE bool VDP::VDP2CanFetchCoefficient(const RotationParams &params, uin
     // Masking the bank index with VRAMD/VRBMD adjusts the bank index of the second half back to the first half so
     // we can uniformly handle both cases with one simple switch table.
     if (bank < 2) {
-        bank &= ~(regs.RAMCTL.VRAMD ^ 1);
+        bank &= ~(regs.vramControl.partitionVRAMA ^ 1);
     } else {
-        bank &= ~(regs.RAMCTL.VRBMD ^ 1);
+        bank &= ~(regs.vramControl.partitionVRAMB ^ 1);
     }
 
     switch (bank) {
     case 0: // VRAM-A0 or VRAM-A
-        if (regs.RAMCTL.RDBSA0n != 1) {
+        if (regs.vramControl.rotDataBankSelA0 != 1) {
             return false;
         }
         break;
     case 1: // VRAM-A1
-        if (regs.RAMCTL.RDBSA1n != 1) {
+        if (regs.vramControl.rotDataBankSelA1 != 1) {
             return false;
         }
         break;
     case 2: // VRAM-B0 or VRAM-B
-        if (regs.RAMCTL.RDBSB0n != 1) {
+        if (regs.vramControl.rotDataBankSelB0 != 1) {
             return false;
         }
         break;
     case 3: // VRAM-B1
-        if (regs.RAMCTL.RDBSB1n != 1) {
+        if (regs.vramControl.rotDataBankSelB1 != 1) {
             return false;
         }
         break;
@@ -3102,8 +3102,8 @@ FORCE_INLINE Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams 
     if (params.coeffDataSize == 1) {
         // One-word coefficient data
         const uint32 address = (baseAddress + offset) * sizeof(uint16);
-        const uint16 data =
-            regs.RAMCTL.CRKTE ? VDP2ReadRendererCRAM<uint16>(address | 0x800) : VDP2ReadRendererVRAM<uint16>(address);
+        const uint16 data = regs.vramControl.colorRAMCoeffTableEnable ? VDP2ReadRendererCRAM<uint16>(address | 0x800)
+                                                                      : VDP2ReadRendererVRAM<uint16>(address);
         coeff.value = bit::extract_signed<0, 14>(data);
         coeff.lineColorData = 0;
         coeff.transparent = bit::extract<15>(data);
@@ -3116,8 +3116,8 @@ FORCE_INLINE Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams 
     } else {
         // Two-word coefficient data
         const uint32 address = (baseAddress + offset) * sizeof(uint32);
-        const uint32 data =
-            regs.RAMCTL.CRKTE ? VDP2ReadRendererCRAM<uint32>(address | 0x800) : VDP2ReadRendererVRAM<uint32>(address);
+        const uint32 data = regs.vramControl.colorRAMCoeffTableEnable ? VDP2ReadRendererCRAM<uint32>(address | 0x800)
+                                                                      : VDP2ReadRendererVRAM<uint32>(address);
         coeff.value = bit::extract_signed<0, 23>(data);
         coeff.lineColorData = bit::extract<24, 30>(data);
         coeff.transparent = bit::extract<31>(data);
@@ -3468,9 +3468,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
     } else if (bgParams.priorityMode == PriorityMode::PerDot) {
         if constexpr (IsPaletteColorFormat(colorFormat)) {
             pixel.priority &= ~1;
-            if (ch.specPriority && specFuncCode.colorMatches[colorData]) {
-                pixel.priority |= 1;
-            }
+            pixel.priority |= ch.specPriority && specFuncCode.colorMatches[colorData];
         }
     }
 

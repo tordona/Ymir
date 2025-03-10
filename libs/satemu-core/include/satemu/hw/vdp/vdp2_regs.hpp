@@ -13,7 +13,7 @@ struct VDP2Regs {
         TVSTAT.u16 &= ~0xFFFE; // Preserve PAL flag
         HCNT = 0x0;
         VCNT = 0x0;
-        RAMCTL.u16 = 0x0;
+        vramControl.Reset();
         VRSIZE.u16 = 0x0;
         CYCA0.u32 = 0x0;
         CYCA1.u32 = 0x0;
@@ -70,7 +70,7 @@ struct VDP2Regs {
         case 0x008: return HCNT;
         case 0x00A: return VCNT;
         case 0x00C: return 0; // unknown/hidden register
-        case 0x00E: return RAMCTL.u16;
+        case 0x00E: return ReadRAMCTL();
         case 0x010: return CYCA0.L.u16;   // write-only?
         case 0x012: return CYCA0.U.u16;   // write-only?
         case 0x014: return CYCA1.L.u16;   // write-only?
@@ -227,7 +227,7 @@ struct VDP2Regs {
         case 0x008: /* HCNT is read-only */ break;
         case 0x00A: /* VCNT is read-only */ break;
         case 0x00C: /* unknown/hidden register */ break;
-        case 0x00E: RAMCTL.u16 = value & 0xB3FF; break;
+        case 0x00E: WriteRAMCTL(value); break;
         case 0x010: CYCA0.L.u16 = value; break;
         case 0x012: CYCA0.U.u16 = value; break;
         case 0x014: CYCA1.L.u16 = value; break;
@@ -374,15 +374,65 @@ struct VDP2Regs {
     uint16 HCNT;      // 180008   HCNT    H Counter (read-only)
     uint16 VCNT;      // 18000A   VCNT    V Counter (read-only)
                       // 18000C   -       Reserved (but not really)
-    RegRAMCTL RAMCTL; // 18000E   RAMCTL  RAM Control
-                      // 180010   CYCA0L  VRAM Cycle Pattern A0 Lower
-    RegCYC CYCA0;     // 180012   CYCA0U  VRAM Cycle Pattern A0 Upper
-                      // 180014   CYCA1L  VRAM Cycle Pattern A1 Lower
-    RegCYC CYCA1;     // 180016   CYCA1U  VRAM Cycle Pattern A1 Upper
-                      // 180018   CYCB0L  VRAM Cycle Pattern B0 Lower
-    RegCYC CYCB0;     // 18001A   CYCB0U  VRAM Cycle Pattern B0 Upper
-                      // 18001C   CYCB1L  VRAM Cycle Pattern B1 Lower
-    RegCYC CYCB1;     // 18001E   CYCB1U  VRAM Cycle Pattern B1 Upper
+
+    // 18000E   RAMCTL  RAM Control
+    //
+    //   bits   r/w  code          description
+    //     15   R/W  CRKTE         Color RAM Coefficient Table Enable
+    //                               If enabled, Color RAM Mode should be set to 01
+    //     14        -             Reserved, must be zero
+    //  13-12   R/W  CRMD1-0       Color RAM Mode
+    //                               00 (0) = RGB 5:5:5, 1024 words
+    //                               01 (1) = RGB 5:5:5, 2048 words
+    //                               10 (2) = RGB 8:8:8, 1024 words
+    //                               11 (3) = RGB 8:8:8, 1024 words  (same as mode 2, undocumented)
+    //  11-10        -             Reserved, must be zero
+    //      9   R/W  VRBMD         VRAM-B Mode (0=single partition, 1=two partitions)
+    //      8   R/W  VRAMD         VRAM-A Mode (0=single partition, 1=two partitions)
+    //    7-6   R/W  RDBSB1(1-0)   Rotation Data Bank Select for VRAM-B1
+    //    5-4   R/W  RDBSB0(1-0)   Rotation Data Bank Select for VRAM-B0 (or VRAM-B)
+    //    3-2   R/W  RDBSA1(1-0)   Rotation Data Bank Select for VRAM-A1
+    //    1-0   R/W  RDBSA0(1-0)   Rotation Data Bank Select for VRAM-A0 (or VRAM-A)
+    //
+    // RDBSxn(1-0):
+    //   00 (0) = bank not used by rotation backgrounds
+    //   01 (1) = bank used for coefficient table
+    //   10 (2) = bank used for pattern name table
+    //   11 (3) = bank used for character/bitmap pattern table
+    VRAMControl vramControl;
+
+    FORCE_INLINE uint16 ReadRAMCTL() const {
+        uint16 value = 0;
+        bit::deposit_into<0, 1>(value, vramControl.rotDataBankSelA0);
+        bit::deposit_into<2, 3>(value, vramControl.rotDataBankSelA1);
+        bit::deposit_into<4, 5>(value, vramControl.rotDataBankSelB0);
+        bit::deposit_into<6, 7>(value, vramControl.rotDataBankSelB1);
+        bit::deposit_into<8>(value, vramControl.partitionVRAMA);
+        bit::deposit_into<9>(value, vramControl.partitionVRAMB);
+        bit::deposit_into<12, 13>(value, vramControl.colorRAMMode);
+        bit::deposit_into<15>(value, vramControl.colorRAMCoeffTableEnable);
+        return value;
+    }
+
+    FORCE_INLINE void WriteRAMCTL(uint16 value) {
+        vramControl.rotDataBankSelA0 = bit::extract<0, 1>(value);
+        vramControl.rotDataBankSelA1 = bit::extract<2, 3>(value);
+        vramControl.rotDataBankSelB0 = bit::extract<4, 5>(value);
+        vramControl.rotDataBankSelB1 = bit::extract<6, 7>(value);
+        vramControl.partitionVRAMA = bit::extract<8>(value);
+        vramControl.partitionVRAMB = bit::extract<9>(value);
+        vramControl.colorRAMMode = bit::extract<12, 13>(value);
+        vramControl.colorRAMCoeffTableEnable = bit::extract<15>(value);
+    }
+
+    /**/          // 180010   CYCA0L  VRAM Cycle Pattern A0 Lower
+    RegCYC CYCA0; // 180012   CYCA0U  VRAM Cycle Pattern A0 Upper
+                  // 180014   CYCA1L  VRAM Cycle Pattern A1 Lower
+    RegCYC CYCA1; // 180016   CYCA1U  VRAM Cycle Pattern A1 Upper
+                  // 180018   CYCB0L  VRAM Cycle Pattern B0 Lower
+    RegCYC CYCB0; // 18001A   CYCB0U  VRAM Cycle Pattern B0 Upper
+                  // 18001C   CYCB1L  VRAM Cycle Pattern B1 Lower
+    RegCYC CYCB1; // 18001E   CYCB1U  VRAM Cycle Pattern B1 Upper
 
     // 180020   BGON    Screen Display Enable
     //

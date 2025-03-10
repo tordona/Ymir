@@ -167,27 +167,27 @@ private:
 
     // -------------------------------------------------------------------------
 
+    static constexpr auto kCRAMAddressMapping = [] {
+        std::array<std::array<uint32, 4096>, 2> addrs{};
+        for (uint32 addr = 0; addr < 4096; addr++) {
+            addrs[0][addr] = addr;
+            addrs[1][addr] = bit::extract<0>(addr) | (bit::extract<11>(addr) << 1u) | (bit::extract<1, 10>(addr) << 2u);
+        }
+        return addrs;
+    }();
+
     // RAMCTL.CRMD modes 2 and 3 shuffle address bits as follows:
     //   10 09 08 07 06 05 04 03 02 01 11 00
     //   in short, bits 10-01 are shifted left and bit 11 takes place of bit 01
     FORCE_INLINE uint32 MapCRAMAddress(uint32 address) const {
-        static constexpr auto kMapping = [] {
-            std::array<std::array<uint32, 4096>, 2> addrs{};
-            for (uint32 addr = 0; addr < 4096; addr++) {
-                addrs[0][addr] = addr;
-                addrs[1][addr] =
-                    bit::extract<0>(addr) | (bit::extract<11>(addr) << 1u) | (bit::extract<1, 10>(addr) << 2u);
-            }
-            return addrs;
-        }();
+        return kCRAMAddressMapping[m_VDP2.vramControl.colorRAMMode >> 1][address & 0xFFF];
+    }
 
-        return kMapping[m_VDP2.RAMCTL.CRMDn >> 1][address & 0xFFF];
-
-        /*if (m_VDP2.RAMCTL.CRMDn == 2 || m_VDP2.RAMCTL.CRMDn == 3) {
-            address =
-                bit::extract<0>(address) | (bit::extract<11>(address) << 1u) | (bit::extract<1, 10>(address) << 2u);
-        }
-        return address & 0xFFF;*/
+    // RAMCTL.CRMD modes 2 and 3 shuffle address bits as follows:
+    //   10 09 08 07 06 05 04 03 02 01 11 00
+    //   in short, bits 10-01 are shifted left and bit 11 takes place of bit 01
+    FORCE_INLINE uint32 MapRendererCRAMAddress(uint32 address) const {
+        return kCRAMAddressMapping[m_VDPRenderContext.vdp2.regs.vramControl.colorRAMMode >> 1][address & 0xFFF];
     }
 
     // -------------------------------------------------------------------------
@@ -1068,7 +1068,7 @@ private:
 
     // Fetches a pixel in the specified cell in a 2x2 character pattern.
     //
-    // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
+    // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and vramControl.colorRAMMode.
     // ch is the character's parameters.
     // dotCoord specify the coordinates of the pixel within the cell, ranging from 0 to 7.
     // cellIndex is the index of the cell in the character pattern, ranging from 0 to 3.
@@ -1088,9 +1088,9 @@ private:
     template <ColorFormat colorFormat, uint32 colorMode>
     Pixel VDP2FetchBitmapPixel(const BGParams &bgParams, CoordU32 dotCoord);
 
-    // Fetches a color from CRAM using the current color mode specified by RAMCTL.CRMDn.
+    // Fetches a color from CRAM using the current color mode specified by vramControl.colorRAMMode.
     //
-    // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and RAMCTL.CRMDn.
+    // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and vramControl.colorRAMMode.
     // colorIndex specifies the color index.
     // colorMode is the CRAM color mode.
     template <uint32 colorMode>

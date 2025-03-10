@@ -808,6 +808,54 @@ struct WindowParams {
     uint32 lineWindowTableAddress;
 };
 
+struct VRAMControl {
+    VRAMControl() {
+        Reset();
+    }
+
+    void Reset() {
+        rotDataBankSelA0 = 0;
+        rotDataBankSelA1 = 0;
+        rotDataBankSelB0 = 0;
+        rotDataBankSelB1 = 0;
+        partitionVRAMA = false;
+        partitionVRAMB = false;
+        colorRAMMode = 0;
+        colorRAMCoeffTableEnable = false;
+    }
+
+    // Select VRAM bank usage for rotation parameters:
+    //   0 = bank not used by rotation backgrounds
+    //   1 = bank used for coefficient table
+    //   2 = bank used for pattern name table
+    //   3 = bank used for character/bitmap pattern table
+    // Derived from RDBS(A-B)(0-1)(1-0)
+    uint8 rotDataBankSelA0; // Rotation data bank select for VRAM-A0 or VRAM-A
+    uint8 rotDataBankSelA1; // Rotation data bank select for VRAM-A1
+    uint8 rotDataBankSelB0; // Rotation data bank select for VRAM-B0 or VRAM-B
+    uint8 rotDataBankSelB1; // Rotation data bank select for VRAM-B1
+
+    // If set, partition VRAM A into two blocks: A0 and A1.
+    // Derived from RAMCTL.VRAMD
+    bool partitionVRAMA;
+
+    // If set, partition VRAM B into two blocks: B0 and B1.
+    // Derived from RAMCTL.VRBMD
+    bool partitionVRAMB;
+
+    // Selects color RAM mode:
+    //   0 = RGB 5:5:5, 1024 words
+    //   1 = RGB 5:5:5, 2048 words
+    //   2 = RGB 8:8:8, 1024 words
+    //   3 = RGB 8:8:8, 1024 words  (same as mode 2, undocumented)
+    // Derived from RAMCTL.CRMD1-0
+    uint8 colorRAMMode;
+
+    // Enables use of coefficient tables in CRAM.
+    // Derived from RAMCTL.CRKTE
+    bool colorRAMCoeffTableEnable;
+};
+
 // 180000   TVMD    TV Screen Mode
 //
 //   bits   r/w  code          description
@@ -905,46 +953,6 @@ union RegVRSIZE {
         uint16 VERn : 4;
         uint16 _rsvd4_14 : 11;
         uint16 VRAMSZ : 1;
-    };
-};
-
-// 18000E   RAMCTL  RAM Control
-//
-//   bits   r/w  code          description
-//     15   R/W  CRKTE         Color RAM Coefficient Table Enable
-//                               If enabled, Color RAM Mode should be set to 01
-//     14        -             Reserved, must be zero
-//  13-12   R/W  CRMD1-0       Color RAM Mode
-//                               00 (0) = RGB 5:5:5, 1024 words
-//                               01 (1) = RGB 5:5:5, 2048 words
-//                               10 (2) = RGB 8:8:8, 1024 words
-//                               11 (3) = RGB 8:8:8, 1024 words  (same as mode 2, undocumented)
-//  11-10        -             Reserved, must be zero
-//      9   R/W  VRBMD         VRAM-B Mode (0=single partition, 1=two partitions)
-//      8   R/W  VRAMD         VRAM-A Mode (0=single partition, 1=two partitions)
-//    7-6   R/W  RDBSB1(1-0)   Rotation Data Bank Select for VRAM-B1
-//    5-4   R/W  RDBSB0(1-0)   Rotation Data Bank Select for VRAM-B0 (or VRAM-B)
-//    3-2   R/W  RDBSA1(1-0)   Rotation Data Bank Select for VRAM-A1
-//    1-0   R/W  RDBSA0(1-0)   Rotation Data Bank Select for VRAM-A0 (or VRAM-A)
-//
-// RDBSxn(1-0):
-//   00 (0) = bank not used by rotation backgrounds
-//   01 (1) = bank used for coefficient table
-//   10 (2) = bank used for pattern name table
-//   11 (3) = bank used for character/bitmap pattern table
-union RegRAMCTL {
-    uint16 u16;
-    struct {
-        uint16 RDBSA0n : 2;
-        uint16 RDBSA1n : 2;
-        uint16 RDBSB0n : 2;
-        uint16 RDBSB1n : 2;
-        uint16 VRAMD : 1;
-        uint16 VRBMD : 1;
-        uint16 _rsvd10_11 : 2;
-        uint16 CRMDn : 2;
-        uint16 _rsvd14 : 1;
-        uint16 CRKTE : 1;
     };
 };
 
