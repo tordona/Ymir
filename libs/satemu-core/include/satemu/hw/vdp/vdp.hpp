@@ -319,30 +319,25 @@ private:
 
     // TODO: split out rendering code
 
-    std::jthread m_renderThread;
+    std::thread m_VDP2RenderThread;
 
-    struct RenderEvent {
+    struct VDP2RenderEvent {
         enum class Type {
-            BeginFrame,
             DrawLine,
             EndFrame,
 
             Shutdown,
         };
 
-        static RenderEvent BeginFrame() {
-            return {Type::BeginFrame};
-        }
-
-        static RenderEvent DrawLine(uint32 vcnt) {
+        static VDP2RenderEvent DrawLine(uint32 vcnt) {
             return {Type::DrawLine, {.drawLine = {.vcnt = vcnt}}};
         }
 
-        static RenderEvent EndFrame() {
+        static VDP2RenderEvent EndFrame() {
             return {Type::EndFrame};
         }
 
-        static RenderEvent Shutdown() {
+        static VDP2RenderEvent Shutdown() {
             return {Type::Shutdown};
         }
 
@@ -354,10 +349,10 @@ private:
         };
     };
 
-    util::ConcurrentQueue<RenderEvent> m_renderEvents;
-    util::Event m_renderFinishedEvent;
+    util::ConcurrentQueue<VDP2RenderEvent> m_VDP2RenderEvents;
+    util::Event m_VDP2RenderFinishedEvent;
 
-    void RenderThread();
+    void VDP2RenderThread();
 
     // -------------------------------------------------------------------------
     // VDP1

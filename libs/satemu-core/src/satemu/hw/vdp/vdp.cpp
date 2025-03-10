@@ -14,8 +14,8 @@ namespace satemu::vdp {
 
 VDP::VDP(core::Scheduler &scheduler)
     : m_scheduler(scheduler)
-    , m_renderFinishedEvent(false)
-    , m_renderThread([&] { RenderThread(); }) {
+    , m_VDP2RenderFinishedEvent(false)
+    , m_VDP2RenderThread([&] { VDP2RenderThread(); }) {
 
     m_phaseUpdateEvent = scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent);
 
@@ -25,7 +25,10 @@ VDP::VDP(core::Scheduler &scheduler)
 }
 
 VDP::~VDP() {
-    m_renderEvents.Offer(RenderEvent::Shutdown());
+    m_VDP2RenderEvents.Offer(VDP2RenderEvent::Shutdown());
+    if (m_VDP2RenderThread.joinable()) {
+        m_VDP2RenderThread.join();
+    }
 }
 
 void VDP::Reset(bool hard) {
@@ -881,13 +884,11 @@ void VDP::BeginHPhaseActiveDisplay() {
             rootLog2.trace("Begin VDP2 frame, VDP1 framebuffer {}", m_drawFB ^ 1);
 
             VDP2InitFrame();
-
-            m_renderEvents.Offer(RenderEvent::BeginFrame());
         } else if (m_VCounter == 210) { // ~1ms before VBlank IN
             m_cbTriggerOptimizedINTBACKRead();
         }
         // VDP2DrawLine(m_VCounter);
-        m_renderEvents.Offer(RenderEvent::DrawLine(m_VCounter));
+        m_VDP2RenderEvents.Offer(VDP2RenderEvent::DrawLine(m_VCounter));
     }
 }
 
@@ -976,8 +977,8 @@ void VDP::BeginVPhaseBlankingAndSync() {
 
     // End frame
     rootLog2.trace("End VDP2 frame");
-    m_renderEvents.Offer(RenderEvent::EndFrame());
-    m_renderFinishedEvent.Wait(true);
+    m_VDP2RenderEvents.Offer(VDP2RenderEvent::EndFrame());
+    m_VDP2RenderFinishedEvent.Wait(true);
     m_cbFrameComplete(m_framebuffer, m_HRes, m_VRes);
 }
 
@@ -1001,18 +1002,17 @@ void VDP::BeginVPhaseLastLine() {
 // -----------------------------------------------------------------------------
 // Rendering
 
-void VDP::RenderThread() {
+void VDP::VDP2RenderThread() {
     util::SetCurrentThreadName("VDP renderer thread");
 
     bool running = true;
     while (running) {
-        RenderEvent event{};
-        m_renderEvents.Poll(event);
+        VDP2RenderEvent event{};
+        m_VDP2RenderEvents.Poll(event);
         switch (event.type) {
-        case RenderEvent::Type::BeginFrame: break;
-        case RenderEvent::Type::DrawLine: VDP2DrawLine(event.drawLine.vcnt); break;
-        case RenderEvent::Type::EndFrame: m_renderFinishedEvent.Set(); break;
-        case RenderEvent::Type::Shutdown: running = false; break;
+        case VDP2RenderEvent::Type::DrawLine: VDP2DrawLine(event.drawLine.vcnt); break;
+        case VDP2RenderEvent::Type::EndFrame: m_VDP2RenderFinishedEvent.Set(); break;
+        case VDP2RenderEvent::Type::Shutdown: running = false; break;
         }
     }
 }
