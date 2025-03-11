@@ -15,6 +15,10 @@ add_executable(satemu::satemu-sdl3 ALIAS satemu-sdl3)
 set_target_properties(satemu-sdl3 PROPERTIES
                       VERSION ${satemu_VERSION}
                       SOVERSION ${satemu_VERSION_MAJOR})
+target_include_directories(satemu-sdl3
+    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+    PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>"
+)
 target_link_libraries(satemu-sdl3 PRIVATE satemu::satemu-frontend-base SDL3::SDL3 cxxopts)
 target_compile_features(satemu-sdl3 PUBLIC cxx_std_20)
 

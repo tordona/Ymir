@@ -6,7 +6,7 @@
 #include <satemu/util/scope_guard.hpp>
 #include <satemu/util/thread_name.hpp>
 
-#include "../util/rom_loader.hpp"
+#include <util/rom_loader.hpp>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
