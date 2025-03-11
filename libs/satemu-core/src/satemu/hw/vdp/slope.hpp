@@ -177,8 +177,8 @@ public:
         Slope &majslope = MajSlope();
         Slope &minslope = MinSlope();
 
-        minmajinc = SafeDiv(minslope.majinc * minslope.dmaj, majslope.dmaj);
-        minmininc = SafeDiv(minslope.mininc * minslope.dmaj, majslope.dmaj);
+        mininc = SafeDiv(Slope::kFracOne * minslope.dmaj, majslope.dmaj);
+        minstep = 0;
     }
 
     // Steps both slopes of the edge to the next coordinate.
@@ -189,9 +189,11 @@ public:
         MajSlope().Step();
 
         // Step minor slope by a fraction proportional to minslope.dmaj / majslope.dmaj
-        Slope &minslope = MinSlope();
-        minslope.majcounter += minmajinc;
-        minslope.mincounter += minmininc;
+        minstep += mininc;
+        if (minstep >= Slope::kFracOne) {
+            minstep -= Slope::kFracOne;
+            MinSlope().Step();
+        }
     }
 
     // Determines if the edge can be stepped
@@ -233,7 +235,8 @@ protected:
     Slope slopeL; // left slope (A-D)
     Slope slopeR; // right slope (B-C)
 
-    sint64 minmajinc, minmininc; // fractional minor slope interpolation increments
+    sint64 mininc;  // fractional minor slope interpolation increments
+    sint64 minstep; // accumulated fractional step on minor slope
 
     bool swapped; // whether the original slopes have been swapped
 
