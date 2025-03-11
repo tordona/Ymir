@@ -130,7 +130,6 @@ struct Sandbox {
             dx = 200;
             dy = 200;
         }
-
         if (keys[SDL_SCANCODE_5] && !prevKeys[SDL_SCANCODE_5]) {
             ax = 250;
             ay = 150;
@@ -140,6 +139,16 @@ struct Sandbox {
             cy = 151;
             dx = 250;
             dy = 151;
+        }
+        if (keys[SDL_SCANCODE_6] && !prevKeys[SDL_SCANCODE_6]) {
+            ax = 197;
+            ay = 341;
+            bx = 58;
+            by = 97;
+            cx = 302;
+            cy = -41;
+            dx = 441;
+            dy = 202;
         }
 
         if (keyRepeat[SDL_SCANCODE_KP_PLUS]) {
@@ -238,6 +247,76 @@ struct Sandbox {
             bx += inc;
             cx += inc;
             dx += inc;
+        }
+
+        if (keys[SDL_SCANCODE_HOME]) {
+            double centerx = (ax + bx + cx + dx) / 4.0;
+            double centery = (ay + by + cy + dy) / 4.0;
+            ax += (ax - centerx) * inc * 0.01;
+            ay += (ay - centery) * inc * 0.01;
+            bx += (bx - centerx) * inc * 0.01;
+            by += (by - centery) * inc * 0.01;
+            cx += (cx - centerx) * inc * 0.01;
+            cy += (cy - centery) * inc * 0.01;
+            dx += (dx - centerx) * inc * 0.01;
+            dy += (dy - centery) * inc * 0.01;
+        }
+        if (keys[SDL_SCANCODE_END]) {
+            double centerx = (ax + bx + cx + dx) / 4.0;
+            double centery = (ay + by + cy + dy) / 4.0;
+            ax -= (ax - centerx) * inc * 0.01;
+            ay -= (ay - centery) * inc * 0.01;
+            bx -= (bx - centerx) * inc * 0.01;
+            by -= (by - centery) * inc * 0.01;
+            cx -= (cx - centerx) * inc * 0.01;
+            cy -= (cy - centery) * inc * 0.01;
+            dx -= (dx - centerx) * inc * 0.01;
+            dy -= (dy - centery) * inc * 0.01;
+        }
+
+        if (keys[SDL_SCANCODE_PAGEUP]) {
+            double centerx = (ax + bx + cx + dx) / 4.0;
+            double centery = (ay + by + cy + dy) / 4.0;
+            double s = sin(-inc / 150.0);
+            double c = cos(-inc / 150.0);
+            double nax = (ax - centerx) * c - (ay - centery) * s + centerx;
+            double nay = (ax - centerx) * s + (ay - centery) * c + centery;
+            double nbx = (bx - centerx) * c - (by - centery) * s + centerx;
+            double nby = (bx - centerx) * s + (by - centery) * c + centery;
+            double ncx = (cx - centerx) * c - (cy - centery) * s + centerx;
+            double ncy = (cx - centerx) * s + (cy - centery) * c + centery;
+            double ndx = (dx - centerx) * c - (dy - centery) * s + centerx;
+            double ndy = (dx - centerx) * s + (dy - centery) * c + centery;
+            ax = nax;
+            ay = nay;
+            bx = nbx;
+            by = nby;
+            cx = ncx;
+            cy = ncy;
+            dx = ndx;
+            dy = ndy;
+        }
+        if (keys[SDL_SCANCODE_PAGEDOWN]) {
+            double centerx = (ax + bx + cx + dx) / 4.0;
+            double centery = (ay + by + cy + dy) / 4.0;
+            double s = sin(inc / 150.0);
+            double c = cos(inc / 150.0);
+            double nax = (ax - centerx) * c - (ay - centery) * s + centerx;
+            double nay = (ax - centerx) * s + (ay - centery) * c + centery;
+            double nbx = (bx - centerx) * c - (by - centery) * s + centerx;
+            double nby = (bx - centerx) * s + (by - centery) * c + centery;
+            double ncx = (cx - centerx) * c - (cy - centery) * s + centerx;
+            double ncy = (cx - centerx) * s + (cy - centery) * c + centery;
+            double ndx = (dx - centerx) * c - (dy - centery) * s + centerx;
+            double ndy = (dx - centerx) * s + (dy - centery) * c + centery;
+            ax = nax;
+            ay = nay;
+            bx = nbx;
+            by = nby;
+            cx = ncx;
+            cy = ncy;
+            dx = ndx;
+            dy = ndy;
         }
 
         if (keys[SDL_SCANCODE_SPACE] && !prevKeys[SDL_SCANCODE_SPACE]) {
@@ -527,7 +606,7 @@ void runSandbox() {
                                                       : sandbox.polygonFillMode == 2 ? "8x8 checkerboard"
                                                                                      : "32x32 checkerboard"))
                     .c_str());
-            SDL_RenderDebugText(renderer, 5, 35, "[12345] Select preset shape");
+            SDL_RenderDebugText(renderer, 5, 35, "[123456] Select preset shape");
 
             SDL_RenderDebugText(
                 renderer, 5, 50,
@@ -541,18 +620,20 @@ void runSandbox() {
             SDL_RenderDebugText(
                 renderer, 5, 80,
                 fmt::format("[Arrows] Move vertex D   {}x{}", (int)sandbox.dx, (int)sandbox.dy).c_str());
-            SDL_RenderDebugText(renderer, 5, 90, "[KP8456] Move polygon");
-            SDL_RenderDebugText(renderer, 5, 100, "[Shift]  Hold to speed up");
-            SDL_RenderDebugText(renderer, 5, 110, "[Space]  Print out coordinates to stdout");
+            SDL_RenderDebugText(renderer, 5, 90, "[KP8456]     Translate polygon");
+            SDL_RenderDebugText(renderer, 5, 100, "[Home/End]  Scale polygon relative to center");
+            SDL_RenderDebugText(renderer, 5, 110, "[PgUp/PgDn] Rotate polygon around center");
+            SDL_RenderDebugText(renderer, 5, 120, "[Shift]  Hold to speed up");
+            SDL_RenderDebugText(renderer, 5, 130, "[Space]  Print out coordinates to stdout");
             if (sandbox.lineStep == 1) {
-                SDL_RenderDebugText(renderer, 5, 125, "[KP+-] Draw every line");
+                SDL_RenderDebugText(renderer, 5, 145, "[KP+-] Draw every line");
             } else {
-                SDL_RenderDebugText(renderer, 5, 125,
+                SDL_RenderDebugText(renderer, 5, 145,
                                     fmt::format("[KP+-] Draw every {} lines", sandbox.lineStep).c_str());
             }
-            SDL_RenderDebugText(renderer, 5, 135,
+            SDL_RenderDebugText(renderer, 5, 155,
                                 fmt::format("[KP*/] ... starting from line {}", sandbox.lineOffset).c_str());
-            SDL_RenderDebugText(renderer, 5, 150, "[F1] Show/hide this text");
+            SDL_RenderDebugText(renderer, 5, 170, "[F1] Show/hide this text");
         }
 
         SDL_RenderPresent(renderer);
