@@ -150,6 +150,16 @@ struct Sandbox {
             dx = 441;
             dy = 202;
         }
+        if (keys[SDL_SCANCODE_7] && !prevKeys[SDL_SCANCODE_7]) {
+            ax = 325;
+            ay = 175;
+            bx = 322;
+            by = 12;
+            cx = 112;
+            cy = 84;
+            dx = 115;
+            dy = 280;
+        }
 
         if (keyRepeat[SDL_SCANCODE_KP_PLUS]) {
             lineStep++;
@@ -387,6 +397,8 @@ struct Sandbox {
                 }
             }
             lineIndex++;
+            // DrawPixel(coordL.x, coordL.y, 0xFF00FF);
+            // DrawPixel(coordR.x, coordR.y, 0xFF00FF);
             if (first) {
                 // swapped = edge.Swapped();
                 first = false;
@@ -606,7 +618,7 @@ void runSandbox() {
                                                       : sandbox.polygonFillMode == 2 ? "8x8 checkerboard"
                                                                                      : "32x32 checkerboard"))
                     .c_str());
-            SDL_RenderDebugText(renderer, 5, 35, "[123456] Select preset shape");
+            SDL_RenderDebugText(renderer, 5, 35, "[1234567] Select preset shape");
 
             SDL_RenderDebugText(
                 renderer, 5, 50,
@@ -620,7 +632,7 @@ void runSandbox() {
             SDL_RenderDebugText(
                 renderer, 5, 80,
                 fmt::format("[Arrows] Move vertex D   {}x{}", (int)sandbox.dx, (int)sandbox.dy).c_str());
-            SDL_RenderDebugText(renderer, 5, 90, "[KP8456]     Translate polygon");
+            SDL_RenderDebugText(renderer, 5, 90, "[KP8456]    Translate polygon");
             SDL_RenderDebugText(renderer, 5, 100, "[Home/End]  Scale polygon relative to center");
             SDL_RenderDebugText(renderer, 5, 110, "[PgUp/PgDn] Rotate polygon around center");
             SDL_RenderDebugText(renderer, 5, 120, "[Shift]  Hold to speed up");
