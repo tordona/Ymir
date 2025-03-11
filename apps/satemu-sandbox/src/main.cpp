@@ -47,6 +47,21 @@ struct Sandbox {
         const double dt = DeltaTime();
         const double speed = 100.0;
 
+        const double keyRepeatInterval = 1.0 / 25.0;
+
+        for (int i = 0; i < SDL_SCANCODE_COUNT; i++) {
+            keyRepeat[i] = false;
+            if (keys[i]) {
+                keyDownLen[i] += dt;
+                if (keyDownLen[i] >= keyRepeatInterval) {
+                    keyRepeat[i] = true;
+                    keyDownLen[i] -= keyRepeatInterval;
+                }
+            } else {
+                keyDownLen[i] = 0.0;
+            }
+        }
+
         double factor = 1.0;
         if (keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT]) {
             factor = 5.0;
@@ -114,6 +129,27 @@ struct Sandbox {
             cy = 151;
             dx = 250;
             dy = 151;
+        }
+
+        if (keyRepeat[SDL_SCANCODE_KP_PLUS]) {
+            lineStep++;
+        }
+        if (keyRepeat[SDL_SCANCODE_KP_MINUS]) {
+            if (lineStep > 1) {
+                lineStep--;
+                lineOffset = lineOffset % lineStep;
+            }
+        }
+        if (keyRepeat[SDL_SCANCODE_KP_MULTIPLY]) {
+            lineOffset++;
+            lineOffset = lineOffset % lineStep;
+        }
+        if (keyRepeat[SDL_SCANCODE_KP_DIVIDE]) {
+            if (lineOffset > 0) {
+                lineOffset--;
+            } else {
+                lineOffset = lineStep - 1;
+            }
         }
 
         if (keys[SDL_SCANCODE_W]) {
@@ -226,28 +262,32 @@ struct Sandbox {
 
         // bool swapped;
         bool first = true;
+        int lineIndex = 0;
         for (QuadEdgesStepper edge{coordA, coordB, coordC, coordD}; edge.CanStep(); edge.Step()) {
             const CoordS32 coordL{edge.LX(), edge.LY()};
             const CoordS32 coordR{edge.RX(), edge.RY()};
 
             bool firstPixel = true;
-            for (LineStepper line{coordL, coordR}; line.CanStep(); line.Step()) {
-                auto [x, y] = line.Coord();
-                uint32 color;
-                if (uvGradient) {
-                    color = ((line.FracPos() >> 8ll) & 0xFF) | (((edge.FracPos() >> 8ll) & 0xFF) << 8u) |
-                            (firstPixel * 0xFF0000) | (first * 0x7F0000);
-                } else {
-                    color = firstPixel ? 0xc7997c : first ? 0x96674a : 0x75492e;
-                }
+            if (lineIndex % lineStep == lineOffset) {
+                for (LineStepper line{coordL, coordR}; line.CanStep(); line.Step()) {
+                    auto [x, y] = line.Coord();
+                    uint32 color;
+                    if (uvGradient) {
+                        color = ((line.FracPos() >> 8ll) & 0xFF) | (((edge.FracPos() >> 8ll) & 0xFF) << 8u) |
+                                (firstPixel * 0xFF0000) | (first * 0x7F0000);
+                    } else {
+                        color = firstPixel ? 0xc7997c : first ? 0x96674a : 0x75492e;
+                    }
 
-                DrawPixel(x, y, color);
-                if (antialias && line.NeedsAntiAliasing()) {
-                    auto [aax, aay] = line.AACoord();
-                    DrawPixel(aax, aay, color);
+                    DrawPixel(x, y, color);
+                    if (antialias && line.NeedsAntiAliasing()) {
+                        auto [aax, aay] = line.AACoord();
+                        DrawPixel(aax, aay, color);
+                    }
+                    firstPixel = false;
                 }
-                firstPixel = false;
             }
+            lineIndex++;
             if (first) {
                 // swapped = edge.Swapped();
                 first = false;
@@ -299,10 +339,15 @@ struct Sandbox {
     bool antialias = true;
     bool uvGradient = false;
 
+    int lineStep = 1;
+    int lineOffset = 0;
+
     uint64 lastTicks;
 
     std::array<bool, SDL_SCANCODE_COUNT> keys;
     std::array<bool, SDL_SCANCODE_COUNT> prevKeys;
+    std::array<double, SDL_SCANCODE_COUNT> keyDownLen;
+    std::array<bool, SDL_SCANCODE_COUNT> keyRepeat;
 };
 
 void runSandbox() {
@@ -450,8 +495,9 @@ void runSandbox() {
             SDL_SetRenderDrawColor(renderer, 255, 233, 80, 255);
             SDL_RenderDebugText(renderer, 5, 5,
                                 fmt::format("[Z] Antialias {}", (sandbox.antialias ? "ON" : "OFF")).c_str());
-            SDL_RenderDebugText(renderer, 5, 15,
-                                fmt::format("[X] Draw edges on {}", (sandbox.edgesOnTop ? "top" : "bottom")).c_str());
+            SDL_RenderDebugText(
+                renderer, 5, 15,
+                fmt::format("[X] Draw edges {} polygon", (sandbox.edgesOnTop ? "above" : "below")).c_str());
             SDL_RenderDebugText(renderer, 5, 25,
                                 fmt::format("[C] Draw UV gradient {}", (sandbox.uvGradient ? "ON" : "OFF")).c_str());
             SDL_RenderDebugText(renderer, 5, 35, "[12345] Select preset shape");
@@ -471,7 +517,15 @@ void runSandbox() {
             SDL_RenderDebugText(renderer, 5, 90, "[KP8456] Move polygon");
             SDL_RenderDebugText(renderer, 5, 100, "[Shift]  Hold to speed up");
             SDL_RenderDebugText(renderer, 5, 110, "[Space]  Print out coordinates to stdout");
-            SDL_RenderDebugText(renderer, 5, 125, "[F1] Show/hide this text");
+            if (sandbox.lineStep == 1) {
+                SDL_RenderDebugText(renderer, 5, 125, "[KP+-] Draw every line");
+            } else {
+                SDL_RenderDebugText(renderer, 5, 125,
+                                    fmt::format("[KP+-] Draw every {} lines", sandbox.lineStep).c_str());
+            }
+            SDL_RenderDebugText(renderer, 5, 135,
+                                fmt::format("[KP*/] ... starting from line {}", sandbox.lineOffset).c_str());
+            SDL_RenderDebugText(renderer, 5, 150, "[F1] Show/hide this text");
         }
 
         SDL_RenderPresent(renderer);
