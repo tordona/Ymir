@@ -354,6 +354,16 @@ struct Sandbox {
                 DrawPixel(x, y, 0xc45183);
             }
 
+            for (LineStepper line{coordA, coordB}; line.CanStep(); line.Step()) {
+                auto [x, y] = line.Coord();
+                DrawPixel(x, y, 0xb7c451);
+            }
+
+            for (LineStepper line{coordC, coordD}; line.CanStep(); line.Step()) {
+                auto [x, y] = line.Coord();
+                DrawPixel(x, y, 0x5183c4);
+            }
+
             DrawPixel(ax, ay, 0x4f52ff);
             DrawPixel(bx, by, 0x4fff98);
             DrawPixel(cx, cy, 0xffa74f);
@@ -414,6 +424,16 @@ struct Sandbox {
             for (LineStepper line{coordB, coordC}; line.CanStep(); line.Step()) {
                 auto [x, y] = line.Coord();
                 DrawPixel(x, y, 0xc45183);
+            }
+
+            for (LineStepper line{coordA, coordB}; line.CanStep(); line.Step()) {
+                auto [x, y] = line.Coord();
+                DrawPixel(x, y, 0xb7c451);
+            }
+
+            for (LineStepper line{coordC, coordD}; line.CanStep(); line.Step()) {
+                auto [x, y] = line.Coord();
+                DrawPixel(x, y, 0x5183c4);
             }
 
             DrawPixel(ax, ay, 0x4f52ff);

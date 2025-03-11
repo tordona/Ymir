@@ -178,7 +178,7 @@ public:
         Slope &minslope = MinSlope();
 
         mininc = SafeDiv(Slope::kFracOne * minslope.dmaj, majslope.dmaj);
-        minstep = 0;
+        minstep = Slope::kFracOne >> 1ll;
     }
 
     // Steps both slopes of the edge to the next coordinate.
