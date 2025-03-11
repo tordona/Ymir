@@ -76,7 +76,18 @@ struct Sandbox {
             edgesOnTop = !edgesOnTop;
         }
         if (keys[SDL_SCANCODE_C] && !prevKeys[SDL_SCANCODE_C]) {
-            uvGradient = !uvGradient;
+            if (polygonFillMode > 0) {
+                polygonFillMode--;
+            } else {
+                polygonFillMode = 3;
+            }
+        }
+        if (keys[SDL_SCANCODE_V] && !prevKeys[SDL_SCANCODE_V]) {
+            if (polygonFillMode < 3) {
+                polygonFillMode++;
+            } else {
+                polygonFillMode = 0;
+            }
         }
 
         if (keys[SDL_SCANCODE_1] && !prevKeys[SDL_SCANCODE_1]) {
@@ -272,11 +283,20 @@ struct Sandbox {
                 for (LineStepper line{coordL, coordR}; line.CanStep(); line.Step()) {
                     auto [x, y] = line.Coord();
                     uint32 color;
-                    if (uvGradient) {
+                    switch (polygonFillMode) {
+                    case 0: color = firstPixel ? 0xc7997c : first ? 0x96674a : 0x75492e; break;
+                    case 1:
                         color = ((line.FracPos() >> 8ll) & 0xFF) | (((edge.FracPos() >> 8ll) & 0xFF) << 8u) |
                                 (firstPixel * 0xFF0000) | (first * 0x7F0000);
-                    } else {
-                        color = firstPixel ? 0xc7997c : first ? 0x96674a : 0x75492e;
+                        break;
+                    case 2:
+                        color = (((line.FracPos() ^ edge.FracPos()) >> 13ll) & 1) ? 0xFFFFFF : 0x000000;
+                        color ^= (firstPixel * 0xFF0000) | (first * 0x7F0000);
+                        break;
+                    case 3:
+                        color = (((line.FracPos() ^ edge.FracPos()) >> 11ll) & 1) ? 0xFFFFFF : 0x000000;
+                        color ^= (firstPixel * 0xFF0000) | (first * 0x7F0000);
+                        break;
                     }
 
                     DrawPixel(x, y, color);
@@ -337,7 +357,9 @@ struct Sandbox {
 
     bool edgesOnTop = true;
     bool antialias = true;
-    bool uvGradient = false;
+
+    // 0 = solid blue, 1 = UV gradient, 2 = 8x8 checkerboard texture, 3 = 32x32 checkerboard texture
+    int polygonFillMode = 0;
 
     int lineStep = 1;
     int lineOffset = 0;
@@ -498,8 +520,13 @@ void runSandbox() {
             SDL_RenderDebugText(
                 renderer, 5, 15,
                 fmt::format("[X] Draw edges {} polygon", (sandbox.edgesOnTop ? "above" : "below")).c_str());
-            SDL_RenderDebugText(renderer, 5, 25,
-                                fmt::format("[C] Draw UV gradient {}", (sandbox.uvGradient ? "ON" : "OFF")).c_str());
+            SDL_RenderDebugText(
+                renderer, 5, 25,
+                fmt::format("[CV] Polygon fill: {}", (sandbox.polygonFillMode == 0   ? "solid color"
+                                                      : sandbox.polygonFillMode == 1 ? "UV gradient"
+                                                      : sandbox.polygonFillMode == 2 ? "8x8 checkerboard"
+                                                                                     : "32x32 checkerboard"))
+                    .c_str());
             SDL_RenderDebugText(renderer, 5, 35, "[12345] Select preset shape");
 
             SDL_RenderDebugText(
