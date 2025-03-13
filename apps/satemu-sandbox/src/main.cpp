@@ -89,6 +89,9 @@ struct Sandbox {
                 polygonFillMode = 0;
             }
         }
+        if (keys[SDL_SCANCODE_B] && !prevKeys[SDL_SCANCODE_B]) {
+            altUVCalc = !altUVCalc;
+        }
 
         if (keys[SDL_SCANCODE_1] && !prevKeys[SDL_SCANCODE_1]) {
             ax = 32;
@@ -159,6 +162,26 @@ struct Sandbox {
             cy = 84;
             dx = 115;
             dy = 280;
+        }
+        if (keys[SDL_SCANCODE_8] && !prevKeys[SDL_SCANCODE_8]) {
+            ax = 214;
+            ay = 60;
+            bx = 353;
+            by = 120;
+            cx = 285;
+            cy = 243;
+            dx = 144;
+            dy = 188;
+        }
+        if (keys[SDL_SCANCODE_9] && !prevKeys[SDL_SCANCODE_9]) {
+            ax = 372;
+            ay = 155;
+            bx = 244;
+            by = 272;
+            cx = 127;
+            cy = 144;
+            dx = 255;
+            dy = 27;
         }
 
         if (keyRepeat[SDL_SCANCODE_KP_PLUS]) {
@@ -371,29 +394,32 @@ struct Sandbox {
         }
 
         // bool swapped;
+        uint32 texSize = polygonFillMode == 2 ? 8 : polygonFillMode == 3 ? 32 : 256;
+        uint32 texShift = polygonFillMode == 2 ? 13 : polygonFillMode == 3 ? 11 : 8;
         bool first = true;
         int lineIndex = 0;
-        for (QuadEdgesStepper edge{coordA, coordB, coordC, coordD}; edge.CanStep(); edge.Step()) {
+        for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, texSize, false}; edge.CanStep();
+             edge.Step()) {
             const CoordS32 coordL{edge.LX(), edge.LY()};
             const CoordS32 coordR{edge.RX(), edge.RY()};
 
+            const uint32 v = altUVCalc ? (edge.FracPos() >> texShift) : edge.V();
+
             bool firstPixel = true;
             if (lineIndex % lineStep == lineOffset) {
-                for (LineStepper line{coordL, coordR}; line.CanStep(); line.Step()) {
+                for (TexturedLineStepper line{coordL, coordR, texSize, false}; line.CanStep(); line.Step()) {
                     auto [x, y] = line.Coord();
+                    const uint32 u = altUVCalc ? (line.FracPos() >> texShift) : line.U();
+
                     uint32 color;
                     switch (polygonFillMode) {
                     case 0: color = firstPixel ? 0xc7997c : first ? 0x96674a : 0x75492e; break;
                     case 1:
-                        color = ((line.FracPos() >> 8ll) & 0xFF) | (((edge.FracPos() >> 8ll) & 0xFF) << 8u) |
-                                (firstPixel * 0xFF0000) | (first * 0x7F0000);
+                        color = (u & 0xFF) | ((v & 0xFF) << 8u) | (firstPixel * 0xFF0000) | (first * 0x7F0000);
                         break;
                     case 2:
-                        color = (((line.FracPos() ^ edge.FracPos()) >> 13ll) & 1) ? 0xFFFFFF : 0x000000;
-                        color ^= (firstPixel * 0xFF0000) | (first * 0x7F0000);
-                        break;
                     case 3:
-                        color = (((line.FracPos() ^ edge.FracPos()) >> 11ll) & 1) ? 0xFFFFFF : 0x000000;
+                        color = ((u ^ v) & 1) ? 0xFFFFFF : 0x000000;
                         color ^= (firstPixel * 0xFF0000) | (first * 0x7F0000);
                         break;
                     }
@@ -468,6 +494,7 @@ struct Sandbox {
 
     bool edgesOnTop = true;
     bool antialias = true;
+    bool altUVCalc = false;
 
     // 0 = solid blue, 1 = UV gradient, 2 = 8x8 checkerboard texture, 3 = 32x32 checkerboard texture
     int polygonFillMode = 0;
@@ -638,34 +665,37 @@ void runSandbox() {
                                                       : sandbox.polygonFillMode == 2 ? "8x8 checkerboard"
                                                                                      : "32x32 checkerboard"))
                     .c_str());
-            SDL_RenderDebugText(renderer, 5, 35, "[1234567] Select preset shape");
+            SDL_RenderDebugText(
+                renderer, 5, 35,
+                fmt::format("[B] Use {} UV calculation", (sandbox.altUVCalc ? "alternate" : "primary")).c_str());
+            SDL_RenderDebugText(renderer, 5, 45, "[123456789] Select preset shape");
 
             SDL_RenderDebugText(
-                renderer, 5, 50,
+                renderer, 5, 60,
                 fmt::format("[WASD]   Move vertex A   {}x{}", (int)sandbox.ax, (int)sandbox.ay).c_str());
             SDL_RenderDebugText(
-                renderer, 5, 60,
+                renderer, 5, 70,
                 fmt::format("[TFGH]   Move vertex B   {}x{}", (int)sandbox.bx, (int)sandbox.by).c_str());
             SDL_RenderDebugText(
-                renderer, 5, 70,
+                renderer, 5, 80,
                 fmt::format("[IJKL]   Move vertex C   {}x{}", (int)sandbox.cx, (int)sandbox.cy).c_str());
             SDL_RenderDebugText(
-                renderer, 5, 80,
+                renderer, 5, 90,
                 fmt::format("[Arrows] Move vertex D   {}x{}", (int)sandbox.dx, (int)sandbox.dy).c_str());
-            SDL_RenderDebugText(renderer, 5, 90, "[KP8456]    Translate polygon");
-            SDL_RenderDebugText(renderer, 5, 100, "[Home/End]  Scale polygon relative to center");
-            SDL_RenderDebugText(renderer, 5, 110, "[PgUp/PgDn] Rotate polygon around center");
-            SDL_RenderDebugText(renderer, 5, 120, "[Shift]  Hold to speed up");
-            SDL_RenderDebugText(renderer, 5, 130, "[Space]  Print out coordinates to stdout");
+            SDL_RenderDebugText(renderer, 5, 100, "[KP8456]    Translate polygon");
+            SDL_RenderDebugText(renderer, 5, 110, "[Home/End]  Scale polygon relative to center");
+            SDL_RenderDebugText(renderer, 5, 120, "[PgUp/PgDn] Rotate polygon around center");
+            SDL_RenderDebugText(renderer, 5, 130, "[Shift]  Hold to speed up");
+            SDL_RenderDebugText(renderer, 5, 140, "[Space]  Print out coordinates to stdout");
             if (sandbox.lineStep == 1) {
-                SDL_RenderDebugText(renderer, 5, 145, "[KP+-] Draw every line");
+                SDL_RenderDebugText(renderer, 5, 155, "[KP+-] Draw every line");
             } else {
-                SDL_RenderDebugText(renderer, 5, 145,
+                SDL_RenderDebugText(renderer, 5, 155,
                                     fmt::format("[KP+-] Draw every {} lines", sandbox.lineStep).c_str());
             }
-            SDL_RenderDebugText(renderer, 5, 155,
+            SDL_RenderDebugText(renderer, 5, 165,
                                 fmt::format("[KP*/] ... starting from line {}", sandbox.lineOffset).c_str());
-            SDL_RenderDebugText(renderer, 5, 170, "[F1] Show/hide this text");
+            SDL_RenderDebugText(renderer, 5, 180, "[F1] Show/hide this text");
         }
 
         SDL_RenderPresent(renderer);
