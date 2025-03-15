@@ -1210,10 +1210,6 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
     const auto control = lineParams.control;
 
     const uint32 v = lineParams.texFracV >> Slope::kFracBits;
-    // Bail out if V coordinate is out of range
-    if (v >= charSizeV) {
-        return;
-    }
     gouraudParams.V = lineParams.texFracV / charSizeV;
 
     uint16 color = 0;
@@ -1226,10 +1222,6 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
         // Note that the very first pixel in the line always passes the check.
         if (line.UChanged()) {
             const uint32 u = line.U();
-            // Bail out if U coordinate is out of range
-            if (u >= charSizeH) {
-                break;
-            }
 
             const bool useHighSpeedShrink = mode.highSpeedShrink && line.uinc > Slope::kFracOne;
             const uint32 adjustedU = useHighSpeedShrink ? ((u & ~1) | regs.evenOddCoordSelect) : u;
@@ -1322,10 +1314,10 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
     const uint32 charSizeH = size.H * 8;
     const uint32 charSizeV = size.V;
 
-    const sint32 lx = xa;             // left X
-    const sint32 ty = ya;             // top Y
-    const sint32 rx = xa + charSizeH; // right X
-    const sint32 by = ya + charSizeV; // bottom Y
+    const sint32 lx = xa;                                // left X
+    const sint32 ty = ya;                                // top Y
+    const sint32 rx = xa + std::max(charSizeH, 1u) - 1u; // right X
+    const sint32 by = ya + std::max(charSizeV, 1u) - 1u; // bottom Y
 
     const CoordS32 coordA{lx, ty};
     const CoordS32 coordB{rx, ty};

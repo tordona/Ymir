@@ -266,7 +266,7 @@ class TexturedLineStepper : public LineStepper {
 public:
     TexturedLineStepper(CoordS32 coord1, CoordS32 coord2, uint32 charSizeH, bool flipU)
         : LineStepper(coord1, coord2) {
-        uinc = SafeDiv(ToFrac(charSizeH), dmaj);
+        uinc = SafeDiv(ToFrac(charSizeH), dmaj + 1);
         if (flipU) {
             uinc = -uinc;
         }
@@ -309,7 +309,7 @@ public:
     TexturedQuadEdgesStepper(CoordS32 coordA, CoordS32 coordB, CoordS32 coordC, CoordS32 coordD, uint32 charSizeV,
                              bool flipV)
         : QuadEdgesStepper(coordA, coordB, coordC, coordD) {
-        vinc = SafeDiv(Slope::ToFrac(charSizeV), MajSlope().DMajor());
+        vinc = SafeDiv(Slope::ToFrac(charSizeV), MajSlope().DMajor() + 1);
         if (flipV) {
             vinc = -vinc;
         }
