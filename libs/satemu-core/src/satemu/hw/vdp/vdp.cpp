@@ -3585,15 +3585,15 @@ FORCE_INLINE Color888 VDP::VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorInd
     if constexpr (colorMode == 0) {
         // RGB 5:5:5, 1024 words
         const uint32 address = (cramOffset + colorIndex) * sizeof(uint16);
-        return VDP2ReadRendererColor5to8(address & 0x7FF);
+        return VDP2ReadRendererColor5to8(address & 0x7FE);
     } else if constexpr (colorMode == 1) {
         // RGB 5:5:5, 2048 words
         const uint32 address = (cramOffset + colorIndex) * sizeof(uint16);
-        return VDP2ReadRendererColor5to8(address);
+        return VDP2ReadRendererColor5to8(address & 0xFFE);
     } else { // colorMode == 2
         // RGB 8:8:8, 1024 words
         const uint32 address = (cramOffset + colorIndex) * sizeof(uint32);
-        const uint32 data = VDP2ReadRendererCRAM<uint32>(address);
+        const uint32 data = VDP2ReadRendererCRAM<uint32>(address & 0xFFC);
         return Color888{.u32 = data};
     }
 }

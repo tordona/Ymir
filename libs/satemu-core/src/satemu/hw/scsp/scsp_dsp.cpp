@@ -93,7 +93,7 @@ void DSP::UpdateProgramLength(uint8 writeIndex) {
     }
 
     // Add one extra step if needed to allow a memory write in the last step to take place
-    if (updated && m_programLength < program.size() && program[m_programLength - 1].MWT) {
+    if (updated && m_programLength > 0 && m_programLength < program.size() && program[m_programLength - 1].MWT) {
         ++m_programLength;
     }
 }
