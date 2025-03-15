@@ -271,6 +271,7 @@ public:
             uinc = -uinc;
         }
         ustart = flipU ? Slope::ToFrac(static_cast<uint64>(charSizeH)) - 1 : 0u;
+        ustart += uinc >> 1;
         u = ustart;
     }
 
@@ -314,6 +315,7 @@ public:
             vinc = -vinc;
         }
         vstart = flipV ? Slope::ToFrac(static_cast<uint64>(charSizeV)) - 1 : 0u;
+        vstart += vinc >> 1;
         v = vstart;
     }
 
