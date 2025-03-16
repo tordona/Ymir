@@ -34,7 +34,7 @@ endif ()
 add_library(imgui::imgui ALIAS imgui)
 target_include_directories(imgui
     PUBLIC
-		"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+		"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/imgui>"
 		"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/satemu>"
     PRIVATE
 		"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/imgui>"

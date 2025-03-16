@@ -11,7 +11,9 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
 
-#include <imgui/imgui.h>
+#include <backends/imgui_impl_sdl3.h>
+#include <backends/imgui_impl_sdlrenderer3.h>
+#include <imgui.h>
 
 #include <atomic>
 #include <span>
@@ -139,6 +141,50 @@ void App::RunEmulator() {
     ScopeGuard sgDestroyTexture{[&] { SDL_DestroyTexture(texture); }};
 
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+
+    // ---------------------------------
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    // ImGui::StyleColorsLight();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplSDL3_InitForSDLRenderer(screen.window, renderer);
+    ImGui_ImplSDLRenderer3_Init(renderer);
+
+    // Load Fonts
+    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use
+    // ImGui::PushFont()/PopFont() to select them.
+    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
+    // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your
+    // application (e.g. use an assertion, or display an error and quit).
+    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling
+    // ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
+    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
+    // - Read 'docs/FONTS.md' for more instructions and details.
+    // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double
+    // backslash \\ !
+    // - Our Emscripten build process allows embedding fonts to be accessible at runtime from the "fonts/" folder. See
+    // Makefile.emscripten for details.
+    // io.Fonts->AddFontDefault();
+    // io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
+    // io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
+    // io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
+    // io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
+    // ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr,
+    // io.Fonts->GetGlyphRangesJapanese()); IM_ASSERT(font != nullptr);
+
+    // Our state
+    bool showDemoWindow = true;
+    ImVec4 clearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // ---------------------------------
     // Setup framebuffer and render callbacks
@@ -544,14 +590,37 @@ void App::RunEmulator() {
     };
 
     while (true) {
+        // ---------------------------------------------------------------------
+        // Process events
+
         SDL_Event evt{};
         while (paused ? SDL_WaitEvent(&evt) : SDL_PollEvent(&evt)) {
+            ImGui_ImplSDL3_ProcessEvent(&evt);
+            if (!io.WantCaptureKeyboard) {
+                // TODO: clear out all key presses
+            }
+
             switch (evt.type) {
-            case SDL_EVENT_KEY_DOWN: updateButton(evt.key.scancode, evt.key.mod, true); break;
-            case SDL_EVENT_KEY_UP: updateButton(evt.key.scancode, evt.key.mod, false); break;
+            case SDL_EVENT_KEY_DOWN:
+                if (!io.WantCaptureKeyboard) {
+                    updateButton(evt.key.scancode, evt.key.mod, true);
+                }
+                break;
+            case SDL_EVENT_KEY_UP:
+                if (!io.WantCaptureKeyboard) {
+                    updateButton(evt.key.scancode, evt.key.mod, false);
+                }
+                break;
             case SDL_EVENT_QUIT: goto end_loop; break;
+            case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+                if (evt.window.windowID == SDL_GetWindowID(screen.window)) {
+                    goto end_loop;
+                }
             }
         }
+
+        // ---------------------------------------------------------------------
+        // Emulate one frame
 
         m_saturn.RunFrame(debugTrace);
         if (frameStep) {
@@ -559,6 +628,9 @@ void App::RunEmulator() {
             paused = true;
             audioState.silent = true;
         }
+
+        // ---------------------------------------------------------------------
+        // Calculate performance and update title bar
 
         auto t2 = clk::now();
         if (t2 - t >= 1s) {
@@ -577,6 +649,9 @@ void App::RunEmulator() {
             t = t2;
         }
 
+        // ---------------------------------------------------------------------
+        // Update display
+
         uint32 *pixels = nullptr;
         int pitch = 0;
         SDL_Rect area{.x = 0, .y = 0, .w = (int)screen.width, .h = (int)screen.height};
@@ -588,10 +663,60 @@ void App::RunEmulator() {
             SDL_UnlockTexture(texture);
         }
 
+        // ---------------------------------------------------------------------
+        // Draw ImGui widgets
+
+        // Start the Dear ImGui frame
+        ImGui_ImplSDLRenderer3_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
+        ImGui::NewFrame();
+
+        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code
+        // to learn more about Dear ImGui!).
+        if (showDemoWindow) {
+            ImGui::ShowDemoWindow(&showDemoWindow);
+        }
+
+        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+        {
+            static float f = 0.0f;
+            static int counter = 0;
+
+            ImGui::Begin("Hello, world!"); // Create a window called "Hello, world!" and append into it.
+
+            ImGui::Text("This is some useful text.");        // Display some text (you can use a format strings too)
+            ImGui::Checkbox("Demo Window", &showDemoWindow); // Edit bools storing our window open/close state
+
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui::ColorEdit3("clear color", (float *)&clearColor); // Edit 3 floats representing a color
+
+            if (ImGui::Button(
+                    "Button")) // Buttons return true when clicked (most widgets return true when edited/activated)
+                counter++;
+            ImGui::SameLine();
+            ImGui::Text("counter = %d", counter);
+
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+            ImGui::End();
+        }
+
+        // ---------------------------------------------------------------------
+        // Render window
+
+        ImGui::Render();
+
+        // Clear screen
+        SDL_SetRenderDrawColorFloat(renderer, clearColor.x, clearColor.y, clearColor.z, clearColor.w);
         SDL_RenderClear(renderer);
+
+        // Render Saturn display covering the entire window
         SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
         SDL_RenderTexture(renderer, texture, &srcRect, nullptr);
 
+        // Render ImGui widgets
+        ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+
+        // (OBSOLETE; TO BE REMOVED) Render debug text
         SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255);
 
         auto drawText = [&](int x, int y, std::string text) {
@@ -752,6 +877,7 @@ void App::RunEmulator() {
                          "Advanced tracing disabled - some features are not available. Press F11 to enable");
             }
 
+            SDL_SetRenderDrawColor(renderer, 23, 148, 232, 255);
             std::string res = fmt::format("{}x{}", screen.width, screen.height);
             drawText(ww - 5 - res.size() * 8, 5, res);
         }
@@ -759,9 +885,9 @@ void App::RunEmulator() {
         SDL_RenderPresent(renderer);
     }
 
-end_loop:
-    SDL_DestroyTexture(texture);
-    SDL_DestroyRenderer(renderer);
+end_loop:; // the semicolon is not a typo!
+
+    // Everything is cleaned up automatically by ScopeGuards
 }
 
 void App::OpenDiscImageFileDialog(const char *const *filelist, int filter) {
