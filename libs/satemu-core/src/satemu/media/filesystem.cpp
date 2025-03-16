@@ -8,12 +8,15 @@ using namespace satemu::media::iso9660;
 
 namespace satemu::media::fs {
 
-bool Filesystem::Read(const Disc &disc) {
+void Filesystem::Clear() {
     m_directories.clear();
     m_currDirectory = ~0;
     m_currFileOffset = 0;
+}
 
-    util::ScopeGuard sgInvalidate = [&] { m_directories.clear(); };
+bool Filesystem::Read(const Disc &disc) {
+    Clear();
+    util::ScopeGuard sgInvalidate = [&] { Clear(); };
 
     // TODO: test multisession discs
 

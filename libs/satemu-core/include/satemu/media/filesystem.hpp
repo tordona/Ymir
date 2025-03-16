@@ -112,6 +112,9 @@ private:
 
 class Filesystem {
 public:
+    // Clears the loaded file system.
+    void Clear();
+
     // Attempts to read the filesystem structure from the specified disc.
     // Returns true if successful.
     // If this function returns false, the filesystem object is invalidated.

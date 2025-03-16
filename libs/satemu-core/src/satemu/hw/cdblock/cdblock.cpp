@@ -139,7 +139,7 @@ void CDBlock::LoadDisc(media::Disc &&disc) {
         m_targetDriveCycles = kDriveCyclesNotPlaying;
         m_discAuthStatus = 0;
     }
-    SetInterrupt(kHIRQ_DCHG);
+    SetInterrupt(kHIRQ_DCHG | kHIRQ_EFLS);
 
     // Try building filesystem structure
     if (m_fs.Read(m_disc)) {
@@ -161,6 +161,9 @@ void CDBlock::EjectDisc() {
         m_status.track = 0xFF;
         m_status.index = 0xFF;
 
+        m_fs.Clear();
+        SetInterrupt(kHIRQ_DCHG | kHIRQ_EFLS);
+
         rootLog.debug("Ejected disc");
     }
 }
@@ -170,6 +173,9 @@ void CDBlock::OpenTray() {
         // TODO: stay in Busy status while disc stops spinning
         m_status.statusCode = kStatusCodeOpen;
         m_discAuthStatus = 0;
+
+        m_fs.Clear();
+        SetInterrupt(kHIRQ_DCHG | kHIRQ_EFLS);
 
         rootLog.info("Tray opened");
     } else {
