@@ -74,7 +74,7 @@ void App::RunEmulator() {
     // ---------------------------------
     // Initialize SDL video subsystem
 
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS)) {
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS)) {
         SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
         return;
     }
