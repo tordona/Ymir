@@ -721,7 +721,7 @@ void VDP::VDPRenderThread() {
                 break;
             case EvtType::VDP1BeginFrame:
                 m_VDPRenderContext.vdp1Done = false;
-                for (int i = 0; i < 1000000 && m_VDP1RenderContext.rendering; i++) {
+                for (int i = 0; i < 100000 && m_VDP1RenderContext.rendering; i++) {
                     VDP1ProcessCommand();
                 }
                 break;
