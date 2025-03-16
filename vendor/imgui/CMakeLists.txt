@@ -17,10 +17,18 @@ add_library(imgui
 	imgui/backends/imgui_impl_sdlgpu3.cpp
 	imgui/backends/imgui_impl_sdlgpu3.h
 	imgui/backends/imgui_impl_sdlgpu3_shaders.h
+	# TODO: add other backends as needed
 
 	imgui/misc/cpp/imgui_stdlib.cpp
 	imgui/misc/cpp/imgui_stdlib.h
 )
+if (MSVC)
+	target_sources(imgui PRIVATE
+		imgui/misc/debuggers/imgui.natstepfilter
+		imgui/misc/debuggers/imgui.natvis
+	)
+endif ()
+
 add_library(imgui::imgui ALIAS imgui)
 target_include_directories(imgui
     PUBLIC
