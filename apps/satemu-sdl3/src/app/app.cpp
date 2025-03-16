@@ -883,42 +883,4 @@ void App::DrawDebug() {
     drawText(ww - 5 - res.size() * 8, 5, res);*/
 }
 
-void App::SH2Tracer::Interrupt(uint8 vecNum, uint8 level, uint32 pc) {
-    interrupts[interruptsPos++] = {vecNum, level, pc};
-    if (interruptsPos >= interrupts.size()) {
-        interruptsPos = 0;
-    }
-    if (interruptsCount < interrupts.size()) {
-        interruptsCount++;
-    }
-}
-
-void App::SH2Tracer::Exception(uint8 vecNum, uint32 pc, uint32 sr) {
-    exceptions[exceptionsPos++] = {vecNum, pc, sr};
-    if (exceptionsPos >= exceptions.size()) {
-        exceptionsPos = 0;
-    }
-    if (exceptionsCount < exceptions.size()) {
-        exceptionsCount++;
-    }
-}
-
-void App::SCUTracer::RaiseInterrupt(uint8 index, uint8 level) {
-    PushInterrupt({index, level});
-}
-
-void App::SCUTracer::AcknowledgeInterrupt(uint8 index) {
-    PushInterrupt({index, 0xFF});
-}
-
-void App::SCUTracer::PushInterrupt(InterruptInfo info) {
-    interrupts[interruptsPos++] = info;
-    if (interruptsPos >= interrupts.size()) {
-        interruptsPos = 0;
-    }
-    if (interruptsCount < interrupts.size()) {
-        interruptsCount++;
-    }
-}
-
 } // namespace app

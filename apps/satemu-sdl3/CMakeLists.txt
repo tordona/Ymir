@@ -8,6 +8,11 @@ add_executable(satemu-sdl3
     
     src/app/cmdline_opts.hpp
 
+    src/app/debug/sh2_tracer.cpp
+    src/app/debug/sh2_tracer.hpp
+    src/app/debug/scu_tracer.cpp
+    src/app/debug/scu_tracer.hpp
+
     src/util/rom_loader.cpp
     src/util/rom_loader.hpp
 )
