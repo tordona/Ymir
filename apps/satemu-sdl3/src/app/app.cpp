@@ -11,6 +11,8 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
 
+#include <imgui/imgui.h>
+
 #include <atomic>
 #include <span>
 #include <thread>

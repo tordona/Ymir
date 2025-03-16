@@ -1,19 +1,14 @@
 # For developers:
 #
 # Try to keep vendored dependencies at a minimum to minimize bloat and make it easier for other
-# developers to compile the code. Ideally they should be included as submodules under the vendor
-# directory.
+# developers to compile the code. Ideally they should be included as submodules under this folder.
 #
 # find_package(...) can be used with any dependencies that misbehave (e.g. libraries that always
 # include tests, or require tools that are unnecessary to consume it, like Python). Consider using
-# a simpler alternative library or coding your own solution if it is simple enough.
-# If you do add a library in this manner, list it below and in the README so that other developers
-# can provide them in the system to build this project.
-#
-# --------------------------------------------------------------------------------------------------
-#
-# Vendored libraries required but not included as a submodule:
-#   (None so far. If any are included, list their name and URL here, sorted alphabetically by name)
+# a simpler alternative library, creating a custom CMakeLists.txt or manually building the target
+# here from the source files.
+# If you do add a library with find_package(...), list in the README so that other developers can
+# provide them in the system to build this project.
 #
 # --------------------------------------------------------------------------------------------------
 
@@ -58,8 +53,16 @@ message(VERBOSE "==> cxxopts")
 add_subdirectory(cxxopts)
 
 # concurrentqueue - https://github.com/cameron314/concurrentqueue
-message(VERBOSE "=>> concurrentqueue")
+message(VERBOSE "==> concurrentqueue")
 add_subdirectory(concurrentqueue)
+
+# dear ImGui - https://github.com/ocornut/imgui
+# docking branch
+message(VERBOSE "==> dear ImGui")
+add_subdirectory(imgui)
+
+# --------------------------------------------------------------------------------------------------
+# Test dependencies
 
 if(satemu_ENABLE_TESTS)
     # Catch2 - https://github.com/catchorg/Catch2
@@ -78,4 +81,7 @@ if(MSVC)
         set_target_properties(SDL3-static PROPERTIES FOLDER Vendored)
     endif()
     set_target_properties(SDL_uclibc PROPERTIES FOLDER Vendored)
+    set_target_properties(Catch2 PROPERTIES FOLDER Vendored)
+    set_target_properties(Catch2WithMain PROPERTIES FOLDER Vendored)
+    set_target_properties(imgui PROPERTIES FOLDER Vendored)
 endif()
