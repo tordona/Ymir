@@ -16,6 +16,9 @@ private:
 
     void RunEmulator();
 
+    void OpenDiscImageFileDialog(const char *const *filelist, int filter);
+    bool LoadDiscImage(std::filesystem::path path);
+
     // -----------------------------------------------------------------------------------------------------------------
     // Debugger
 

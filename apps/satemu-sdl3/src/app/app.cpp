@@ -37,13 +37,9 @@ int App::Run(const CommandLineOptions &options) {
 
     // Load disc image if provided
     if (!options.gameDiscPath.empty()) {
-        satemu::media::Disc disc{};
-        if (!satemu::media::LoadDisc(options.gameDiscPath, disc)) {
-            fmt::println("Failed to disc image from {}", options.gameDiscPath.string());
+        if (!LoadDiscImage(options.gameDiscPath)) {
             return EXIT_FAILURE;
         }
-        fmt::println("Loaded disc image from {}", options.gameDiscPath.string());
-        m_saturn.LoadDisc(std::move(disc));
     }
 
     RunEmulator();
@@ -282,6 +278,25 @@ void App::RunEmulator() {
     // ---------------------------------
     // Main emulator loop
 
+    SDL_PropertiesID fileDialogProps = SDL_CreateProperties();
+    if (fileDialogProps == 0) {
+        SDL_Log("Failed to create file dialog properties: %s\n", SDL_GetError());
+        return;
+    }
+    ScopeGuard sgDestroyFileDialogProps{[&] { SDL_DestroyProperties(fileDialogProps); }};
+
+    static constexpr SDL_DialogFileFilter kFileFilters[] = {
+        {.name = "All supported formats", .pattern = "cue;mds;iso;ccd"}};
+
+    SDL_SetPointerProperty(fileDialogProps, SDL_PROP_FILE_DIALOG_WINDOW_POINTER, screen.window);
+    SDL_SetPointerProperty(fileDialogProps, SDL_PROP_FILE_DIALOG_FILTERS_POINTER, (void *)kFileFilters);
+    SDL_SetNumberProperty(fileDialogProps, SDL_PROP_FILE_DIALOG_NFILTERS_NUMBER, (int)std::size(kFileFilters));
+    SDL_SetBooleanProperty(fileDialogProps, SDL_PROP_FILE_DIALOG_MANY_BOOLEAN, false);
+    SDL_SetStringProperty(fileDialogProps, SDL_PROP_FILE_DIALOG_TITLE_STRING, "Load Sega Saturn disc image");
+    // const char *default_location = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_LOCATION_STRING, NULL);
+    // const char *accept = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_ACCEPT_STRING, NULL);
+    // const char *cancel = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_CANCEL_STRING, NULL);
+
     // TODO: pull from CommandLineOptions or configuration
     // m_saturn.SetVideoStandard(satemu::sys::VideoStandard::PAL);
 
@@ -338,7 +353,18 @@ void App::RunEmulator() {
         case SDL_SCANCODE_L: setClearButton(*pad1, C, pressed); break;
         case SDL_SCANCODE_U: setClearButton(*pad1, X, pressed); break;
         case SDL_SCANCODE_I: setClearButton(*pad1, Y, pressed); break;
-        case SDL_SCANCODE_O: setClearButton(*pad1, Z, pressed); break;
+        case SDL_SCANCODE_O:
+            if (mod == SDL_KMOD_NONE) {
+                setClearButton(*pad1, Z, pressed);
+            } else if (pressed && (mod & SDL_KMOD_CTRL)) {
+                SDL_ShowFileDialogWithProperties(
+                    SDL_FILEDIALOG_OPENFILE,
+                    [](void *userdata, const char *const *filelist, int filter) {
+                        static_cast<App *>(userdata)->OpenDiscImageFileDialog(filelist, filter);
+                    },
+                    this, fileDialogProps);
+            }
+            break;
         case SDL_SCANCODE_F: setClearButton(*pad1, Start, pressed); break;
         case SDL_SCANCODE_G: setClearButton(*pad1, Start, pressed); break;
         case SDL_SCANCODE_H: setClearButton(*pad1, Start, pressed); break;
@@ -374,20 +400,6 @@ void App::RunEmulator() {
                     m_saturn.CloseTray();
                 } else {
                     m_saturn.OpenTray();
-                }
-            }
-            break;
-        case SDL_SCANCODE_F7:
-            if (pressed) {
-                // TODO: open file selector to let user pick a disc image
-                if (!m_options.gameDiscPath.empty()) {
-                    satemu::media::Disc disc{};
-                    if (satemu::media::LoadDisc(m_options.gameDiscPath, disc)) {
-                        fmt::println("Loaded disc image from {}", m_options.gameDiscPath.string());
-                        m_saturn.LoadDisc(std::move(disc));
-                    } else {
-                        fmt::println("Failed to disc image from {}", m_options.gameDiscPath.string());
-                    }
                 }
             }
             break;
@@ -748,6 +760,30 @@ void App::RunEmulator() {
 end_loop:
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
+}
+
+void App::OpenDiscImageFileDialog(const char *const *filelist, int filter) {
+    if (filelist == nullptr) {
+        fmt::println("Failed to open file dialog: {}", SDL_GetError());
+    } else if (*filelist == nullptr) {
+        fmt::println("File dialog cancelled");
+    } else {
+        // Only one file should be selected
+        const char *file = *filelist;
+        LoadDiscImage(file);
+    }
+}
+
+bool App::LoadDiscImage(std::filesystem::path path) {
+    fmt::println("Loading disc image from {}", path.string());
+    satemu::media::Disc disc{};
+    if (!satemu::media::LoadDisc(path, disc)) {
+        fmt::println("Failed to load disc image from {}", path.string());
+        return false;
+    }
+    fmt::println("Loaded disc image from {}", path.string());
+    m_saturn.LoadDisc(std::move(disc));
+    return true;
 }
 
 void App::SH2Tracer::Interrupt(uint8 vecNum, uint8 level, uint32 pc) {

@@ -131,12 +131,15 @@ void CDBlock::UpdateClockRatios(const sys::ClockRatios &clockRatios) {
 void CDBlock::LoadDisc(media::Disc &&disc) {
     m_disc.Swap(std::move(disc));
 
-    if ((m_status.statusCode & 0xF) == kStatusCodeNoDisc || (m_status.statusCode & 0xF) == kStatusCodeOpen) {
+    const uint8 status = m_status.statusCode & 0xF;
+    if (status == kStatusCodeNoDisc || status == kStatusCodeOpen || status == kStatusCodePlay ||
+        status == kStatusCodeSeek || status == kStatusCodeBusy) {
         // TODO: stay in Busy status while disc is read
         m_status.statusCode = kStatusCodePause;
         m_targetDriveCycles = kDriveCyclesNotPlaying;
         m_discAuthStatus = 0;
     }
+    SetInterrupt(kHIRQ_DCHG);
 
     // Try building filesystem structure
     if (m_fs.Read(m_disc)) {
