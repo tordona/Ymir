@@ -3185,8 +3185,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     // TODO: test NT0 and T0 conditions with:
-    // "MVI <cond>,SImm,[d]"
+    // "MVI SImm,[d],<cond>"
     // "JMP <cond>,Imm"
+    //
+    // Needs proper cycle counting for it to work
     //
     // Test DMA region boundaries
     // - mednafen notes that GunBlaze-S does an overly large DMA that exceeds the end of VDP1 VRAM which would write
