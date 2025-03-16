@@ -1210,7 +1210,10 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
     const auto control = lineParams.control;
 
     const uint32 v = lineParams.texFracV >> Slope::kFracBits;
-    gouraudParams.V = lineParams.texFracV / charSizeV;
+    gouraudParams.V = lineParams.texFracV;
+    if (charSizeV != 0) {
+        gouraudParams.V /= charSizeV;
+    }
 
     uint16 color = 0;
     bool transparent = true;
@@ -1292,7 +1295,10 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
             .color = color,
         };
 
-        gouraudParams.U = line.FracU() / charSizeH;
+        gouraudParams.U = line.FracU();
+        if (charSizeH != 0) {
+            gouraudParams.U /= charSizeH;
+        }
 
         VDP1PlotPixel(line.Coord(), pixelParams, gouraudParams);
         if (line.NeedsAntiAliasing()) {
