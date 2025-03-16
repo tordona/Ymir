@@ -700,6 +700,10 @@ void App::RunEmulator() {
             ImGui::End();
         }
 
+        if (drawDebug) {
+            DrawDebug();
+        }
+
         // ---------------------------------------------------------------------
         // Render window
 
@@ -715,172 +719,6 @@ void App::RunEmulator() {
 
         // Render ImGui widgets
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
-
-        // (OBSOLETE; TO BE REMOVED) Render debug text
-        SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255);
-
-        auto drawText = [&](int x, int y, std::string text) {
-            uint8 r, g, b, a;
-            SDL_GetRenderDrawColor(renderer, &r, &g, &b, &a);
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-            // FIXME: this is a horribly inefficient way to draw contours!
-            for (int yy = -2; yy <= 2; yy++) {
-                for (int xx = -2; xx <= 2; xx++) {
-                    if (xx == 0 && yy == 0) {
-                        continue;
-                    }
-                    SDL_RenderDebugText(renderer, x + xx, y + yy, text.c_str());
-                }
-            }
-            SDL_SetRenderDrawColor(renderer, r, g, b, a);
-            SDL_RenderDebugText(renderer, x, y, text.c_str());
-        };
-
-        if (drawDebug) {
-            std::string str{};
-
-            auto bit = [](bool value, std::string_view bit) { return value ? fmt::format("{}", bit) : "."; };
-
-            auto displaySH2 = [&](SH2Tracer &tracer, sh2::SH2 &sh2, bool master, bool enabled, int x, int y) {
-                auto &regs = sh2.GetGPRs();
-                drawText(x, y, fmt::format("{}SH2", master ? "M" : "S"));
-                if (enabled) {
-                    for (uint32 i = 0; i < 16; i++) {
-                        drawText(x, y + 15 + i * 10, fmt::format("{:08X}", regs[i]));
-                    }
-
-                    drawText(x, y + 180, fmt::format("{:08X}", sh2.GetPC()));
-                    drawText(x, y + 190, fmt::format("{:08X}", sh2.GetPR()));
-
-                    auto mac = sh2.GetMAC();
-                    drawText(x, y + 205, fmt::format("{:08X}", mac.H));
-                    drawText(x, y + 215, fmt::format("{:08X}", mac.L));
-
-                    auto sr = sh2.GetSR();
-                    drawText(x, y + 230, fmt::format("{:08X}", sr.u32));
-                    drawText(x, y + 240,
-                             fmt::format("{}{}{}{} I={:X}", bit(sr.M, "M"), bit(sr.Q, "Q"), bit(sr.S, "S"),
-                                         bit(sr.T, "T"), (uint8)sr.ILevel));
-
-                    drawText(x, y + 255, fmt::format("{:08X}", sh2.GetGBR()));
-                    drawText(x, y + 265, fmt::format("{:08X}", sh2.GetVBR()));
-
-                    if (debugTrace) {
-                        drawText(x, y + 280, "vec lv");
-                        for (size_t i = 0; i < tracer.interruptsCount; i++) {
-                            const size_t pos =
-                                (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
-                            const auto &intr = tracer.interrupts[pos];
-                            drawText(x, y + 290 + i * 10, fmt::format("{:02X}  {:02X}", intr.vecNum, intr.level));
-                        }
-                    }
-                } else {
-                    drawText(x, y + 15, "(disabled)");
-                }
-            };
-
-            auto displaySH2s = [&](int x, int y) {
-                for (uint32 i = 0; i < 16; i++) {
-                    drawText(x, y + 15 + i * 10, fmt::format("R{}", i));
-                }
-
-                drawText(x, y + 180, "PC");
-                drawText(x, y + 190, "PR");
-
-                drawText(x, y + 205, "MACH");
-                drawText(x, y + 215, "MACL");
-
-                drawText(x, y + 230, "SR");
-                drawText(x, y + 240, "flags");
-
-                drawText(x, y + 255, "GBR");
-                drawText(x, y + 265, "VBR");
-
-                drawText(x, y + 280, "INTs");
-
-                if (!debugTrace) {
-                    drawText(x, y + 290, "(trace unavailable)");
-                }
-
-                displaySH2(m_masterSH2Tracer, m_saturn.masterSH2, true, true, x + 50, y);
-                displaySH2(m_slaveSH2Tracer, m_saturn.slaveSH2, false, m_saturn.slaveSH2Enabled, x + 150, y);
-            };
-
-            auto displaySCU = [&](int x, int y) {
-                auto &scu = m_saturn.SCU;
-
-                drawText(x, y, "SCU");
-
-                drawText(x, y + 15, "Interrupts");
-                drawText(x, y + 25, fmt::format("{:08X} mask", scu.GetInterruptMask().u32));
-                drawText(x, y + 35, fmt::format("{:08X} status", scu.GetInterruptStatus().u32));
-
-                if (debugTrace) {
-                    auto &tracer = m_scuTracer;
-                    for (size_t i = 0; i < tracer.interruptsCount; i++) {
-                        size_t pos = (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
-                        constexpr const char *kNames[] = {"VBlank IN",
-                                                          "VBlank OUT",
-                                                          "HBlank IN",
-                                                          "Timer 0",
-                                                          "Timer 1",
-                                                          "DSP End",
-                                                          "Sound Request",
-                                                          "System Manager",
-                                                          "PAD Interrupt",
-                                                          "Level 2 DMA End",
-                                                          "Level 1 DMA End",
-                                                          "Level 0 DMA End",
-                                                          "DMA-illegal",
-                                                          "Sprite Draw End",
-                                                          "(0E)",
-                                                          "(0F)",
-                                                          "External 0",
-                                                          "External 1",
-                                                          "External 2",
-                                                          "External 3",
-                                                          "External 4",
-                                                          "External 5",
-                                                          "External 6",
-                                                          "External 7",
-                                                          "External 8",
-                                                          "External 9",
-                                                          "External A",
-                                                          "External B",
-                                                          "External C",
-                                                          "External D",
-                                                          "External E",
-                                                          "External F"};
-
-                        const auto &intr = tracer.interrupts[pos];
-                        if (intr.level == 0xFF) {
-                            drawText(x, y + 50 + i * 10, fmt::format("{:15s}  ack", kNames[intr.index], intr.level));
-                        } else {
-                            drawText(x, y + 50 + i * 10, fmt::format("{:15s}  {:02X}", kNames[intr.index], intr.level));
-                        }
-                    }
-                } else {
-                    drawText(x, y + 50, "(trace unavailable)");
-                }
-            };
-
-            displaySH2s(5, 5);
-            displaySCU(250, 5);
-
-            int ww{};
-            int wh{};
-            SDL_GetWindowSize(screen.window, &ww, &wh);
-
-            if (!debugTrace) {
-                SDL_SetRenderDrawColor(renderer, 232, 117, 23, 255);
-                drawText(5, wh - 5 - 8,
-                         "Advanced tracing disabled - some features are not available. Press F11 to enable");
-            }
-
-            SDL_SetRenderDrawColor(renderer, 23, 148, 232, 255);
-            std::string res = fmt::format("{}x{}", screen.width, screen.height);
-            drawText(ww - 5 - res.size() * 8, 5, res);
-        }
 
         SDL_RenderPresent(renderer);
     }
@@ -912,6 +750,137 @@ bool App::LoadDiscImage(std::filesystem::path path) {
     fmt::println("Loaded disc image from {}", path.string());
     m_saturn.LoadDisc(std::move(disc));
     return true;
+}
+
+void App::DrawDebug() {
+    using namespace satemu;
+
+    std::string str{};
+
+    auto bit = [](bool value, char bit) { return value ? bit : '.'; };
+
+    auto displaySH2 = [&](SH2Tracer &tracer, sh2::SH2 &sh2, bool master, bool enabled, int x, int y) {
+        auto &regs = sh2.GetGPRs();
+        std::string name = fmt::format("{}SH2", master ? "M" : "S");
+        if (ImGui::Begin(name.c_str())) {
+            if (enabled) {
+                for (uint32 i = 0; i < 16; i++) {
+                    ImGui::Text("R%-2u  %08X", i, regs[i]);
+                }
+
+                ImGui::Text("PC   %08X", sh2.GetPC());
+                ImGui::Text("PR   %08X", sh2.GetPR());
+
+                auto mac = sh2.GetMAC();
+                ImGui::Text("MACH %08X", mac.H);
+                ImGui::Text("MACL %08X", mac.L);
+
+                auto sr = sh2.GetSR();
+                ImGui::Text("SR   %08X", sr.u32);
+                ImGui::Text("%c%c%c%c I=%X", bit(sr.M, 'M'), bit(sr.Q, 'Q'), bit(sr.S, 'S'), bit(sr.T, 'T'),
+                            (uint8)sr.ILevel);
+
+                ImGui::Text("GBR  %08X", sh2.GetGBR());
+                ImGui::Text("VBR  %08X", sh2.GetVBR());
+
+                /*if (debugTrace) {
+                    drawText(x, y + 280, "vec lv");
+                    for (size_t i = 0; i < tracer.interruptsCount; i++) {
+                        const size_t pos =
+                            (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
+                        const auto &intr = tracer.interrupts[pos];
+                        drawText(x, y + 290 + i * 10, fmt::format("{:02X}  {:02X}", intr.vecNum, intr.level));
+                    }
+                } else {
+                    ImGui::TextUnformatted("(trace disabled)");
+                }*/
+            } else {
+                ImGui::TextUnformatted("(disabled)");
+            }
+        }
+        ImGui::End();
+    };
+
+    auto displaySH2s = [&](int x, int y) {
+        displaySH2(m_masterSH2Tracer, m_saturn.masterSH2, true, true, x + 50, y);
+        displaySH2(m_slaveSH2Tracer, m_saturn.slaveSH2, false, m_saturn.slaveSH2Enabled, x + 150, y);
+    };
+
+    auto displaySCU = [&](int x, int y) {
+        auto &scu = m_saturn.SCU;
+
+        if (ImGui::Begin("SCU")) {
+
+            ImGui::TextUnformatted("Interrupts");
+            ImGui::Text("%08X mask", scu.GetInterruptMask().u32);
+            ImGui::Text("%08X status", scu.GetInterruptStatus().u32);
+
+            /*if (debugTrace) {
+                auto &tracer = m_scuTracer;
+                for (size_t i = 0; i < tracer.interruptsCount; i++) {
+                    size_t pos = (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
+                    constexpr const char *kNames[] = {"VBlank IN",
+                                                      "VBlank OUT",
+                                                      "HBlank IN",
+                                                      "Timer 0",
+                                                      "Timer 1",
+                                                      "DSP End",
+                                                      "Sound Request",
+                                                      "System Manager",
+                                                      "PAD Interrupt",
+                                                      "Level 2 DMA End",
+                                                      "Level 1 DMA End",
+                                                      "Level 0 DMA End",
+                                                      "DMA-illegal",
+                                                      "Sprite Draw End",
+                                                      "(0E)",
+                                                      "(0F)",
+                                                      "External 0",
+                                                      "External 1",
+                                                      "External 2",
+                                                      "External 3",
+                                                      "External 4",
+                                                      "External 5",
+                                                      "External 6",
+                                                      "External 7",
+                                                      "External 8",
+                                                      "External 9",
+                                                      "External A",
+                                                      "External B",
+                                                      "External C",
+                                                      "External D",
+                                                      "External E",
+                                                      "External F"};
+
+                    const auto &intr = tracer.interrupts[pos];
+                    if (intr.level == 0xFF) {
+                        drawText(x, y + 50 + i * 10, fmt::format("{:15s}  ack", kNames[intr.index], intr.level));
+                    } else {
+                        drawText(x, y + 50 + i * 10, fmt::format("{:15s}  {:02X}", kNames[intr.index], intr.level));
+                    }
+                }
+            } else {
+                ImGui::TextUnformatted("(trace unavailable)");
+            }*/
+        }
+        ImGui::End();
+    };
+
+    displaySH2s(5, 5);
+    displaySCU(250, 5);
+
+    /*int ww{};
+    int wh{};
+    SDL_GetWindowSize(screen.window, &ww, &wh);
+
+    if (!debugTrace) {
+        SDL_SetRenderDrawColor(renderer, 232, 117, 23, 255);
+        drawText(5, wh - 5 - 8, "Advanced tracing disabled - some features are not available. Press F11 to enable");
+    }
+
+    SDL_SetRenderDrawColor(renderer, 23, 148, 232, 255);
+    std::string res = fmt::format("{}x{}", screen.width, screen.height);
+    drawText(ww - 5 - res.size() * 8, 5, res);*/
 }
 
 void App::SH2Tracer::Interrupt(uint8 vecNum, uint8 level, uint32 pc) {

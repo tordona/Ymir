@@ -22,6 +22,8 @@ private:
     // -----------------------------------------------------------------------------------------------------------------
     // Debugger
 
+    void DrawDebug();
+
     struct SH2Tracer final : public satemu::debug::ISH2Tracer {
         void Interrupt(uint8 vecNum, uint8 level, uint32 pc) final;
         void Exception(uint8 vecNum, uint32 pc, uint32 sr) final;
