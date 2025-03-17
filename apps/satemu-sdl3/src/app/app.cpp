@@ -588,6 +588,9 @@ void App::RunEmulator() {
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
+        // TODO: add dockspace
+        // TODO: add menu
+
         // Show the big ImGui demo window if enabled
         if (showDemoWindow) {
             ImGui::ShowDemoWindow(&showDemoWindow);
@@ -634,33 +637,39 @@ void App::RunEmulator() {
         SDL_SetRenderDrawColorFloat(renderer, clearColor.x, clearColor.y, clearColor.z, clearColor.w);
         SDL_RenderClear(renderer);
 
+        // Draw Saturn screen
         if (!drawDebug || !showVideoOutputDebugWindow) {
             // TODO: make these parameters configurable
-            const bool forceAspectRatio = false;
             const bool forceIntegerScaling = true;
+            const bool forceAspectRatio = false;
             const float forcedAspect = 4.0f / 3.0f;
 
-            const float currentAspect = screen.width / screen.height;
-
+            // Get screen size
             const float baseWidth = forceAspectRatio ? screen.height * forcedAspect : screen.width;
             const float baseHeight = screen.height;
 
+            // Get window size
+            // TODO: compensate for menu height
             int ww, wh;
             SDL_GetWindowSize(screen.window, &ww, &wh);
+
+            // Compute maximum scale to fit the display given the constraints above
             const float scaleX = (float)ww / baseWidth;
             const float scaleY = (float)wh / baseHeight;
-            const float baseScale = std::min(scaleX, scaleY);
-            const float scale = forceIntegerScaling ? floor(baseScale) : baseScale;
-
+            float scale = std::min(scaleX, scaleY);
+            if (forceIntegerScaling) {
+                scale = floor(scale);
+            }
             const float scaledWidth = baseWidth * scale;
             const float scaledHeight = baseHeight * scale;
+
+            // Determine how much slack there is on each axis in order to center the image on the window
             const float slackX = ww - scaledWidth;
             const float slackY = wh - scaledHeight;
 
-            // Render Saturn display covering the entire window
             // TODO: if not using integer scaling, render to a texture using nearest interpolation and scaled up to
-            // ceil(current scale), then render that onto the screen with linear interpolation; otherwise just render
-            // the screen texture directly with nearest interpolation
+            // ceil(current scale), then render that onto the window with linear interpolation, otherwise just render
+            // the screen directly to the window with nearest interpolation
             SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
             SDL_FRect dstRect{.x = slackX * 0.5f, .y = slackY * 0.5f, .w = scaledWidth, .h = scaledHeight};
             SDL_RenderTexture(renderer, texture, &srcRect, &dstRect);
