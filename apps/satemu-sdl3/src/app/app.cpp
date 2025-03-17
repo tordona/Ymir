@@ -71,11 +71,15 @@ void App::RunEmulator() {
     // Screen parameters
     const uint32 scale = 4;
     struct ScreenParams {
+        SDL_Window *window = nullptr;
+
         uint32 width = 320;
         uint32 height = 224;
         float scaleX = scale;
         float scaleY = scale;
-        SDL_Window *window = nullptr;
+
+        bool updated = false;
+
         uint64 frames = 0;
         uint64 vdp1Frames = 0;
     } screen;
@@ -216,6 +220,7 @@ void App::RunEmulator() {
                  SDL_SetWindowPosition(screen.window, wx - dx * scaleX / 2, wy - dy * scaleY / 2);
              }
              ++screen.frames;
+             screen.updated = true;
          }});
 
     m_saturn.VDP.SetVDP1Callbacks({&screen, [](void *ctx) {
@@ -473,8 +478,6 @@ void App::RunEmulator() {
         }
     }};
 
-    std::array<GUICommand, 64> cmds{};
-
     while (true) {
         // Process SDL events
         SDL_Event evt{};
@@ -503,28 +506,18 @@ void App::RunEmulator() {
             }
         }
 
-        // Process GUI events
-        const size_t cmdCount = m_guiCommandQueue.try_dequeue_bulk(cmds.begin(), cmds.size());
-        for (size_t i = 0; i < cmdCount; i++) {
-            const GUICommand &cmd = cmds[i];
-            using enum GUICommand::Type;
-            switch (cmd.type) {
-            case Frame:
-                // Update display
-                {
-                    uint32 *pixels = nullptr;
-                    int pitch = 0;
-                    SDL_Rect area{.x = 0, .y = 0, .w = (int)screen.width, .h = (int)screen.height};
-                    if (SDL_LockTexture(texture, &area, (void **)&pixels, &pitch)) {
-                        for (uint32 y = 0; y < screen.height; y++) {
-                            std::copy_n(&framebuffer[y * screen.width], screen.width,
-                                        &pixels[y * pitch / sizeof(uint32)]);
-                        }
-                        // std::copy_n(framebuffer.begin(), screen.width * screen.height, pixels);
-                        SDL_UnlockTexture(texture);
-                    }
+        // Update display
+        // TODO: need to sync to avoid tearing
+        if (screen.updated) {
+            uint32 *pixels = nullptr;
+            int pitch = 0;
+            SDL_Rect area{.x = 0, .y = 0, .w = (int)screen.width, .h = (int)screen.height};
+            if (SDL_LockTexture(texture, &area, (void **)&pixels, &pitch)) {
+                for (uint32 y = 0; y < screen.height; y++) {
+                    std::copy_n(&framebuffer[y * screen.width], screen.width, &pixels[y * pitch / sizeof(uint32)]);
                 }
-                break;
+                // std::copy_n(framebuffer.begin(), screen.width * screen.height, pixels);
+                SDL_UnlockTexture(texture);
             }
         }
 
@@ -726,7 +719,6 @@ void App::EmulatorThread() {
             paused = true;
             m_audioSystem.SetSilent(true);
         }
-        m_guiCommandQueue.enqueue(GUICommand::Frame());
     }
 }
 

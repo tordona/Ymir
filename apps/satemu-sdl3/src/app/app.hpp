@@ -96,22 +96,6 @@ private:
     std::thread m_emuThread;
     moodycamel::BlockingConcurrentQueue<EmuCommand> m_emuCommandQueue;
 
-    struct GUICommand {
-        enum class Type { Frame };
-
-        Type type;
-
-        struct FrameInfo {};
-
-        std::variant<FrameInfo> value;
-
-        static GUICommand Frame() {
-            return {.type = Type::Frame, .value = FrameInfo{}};
-        }
-    };
-
-    moodycamel::BlockingConcurrentQueue<GUICommand> m_guiCommandQueue;
-
     AudioSystem m_audioSystem;
 
     void RunEmulator();
