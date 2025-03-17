@@ -83,6 +83,7 @@ void App::RunEmulator() {
         uint32 height;
         float scaleX;
         float scaleY;
+        float menuBarHeight = 0.0f;
 
         bool autoResizeWindow = true;
 
@@ -111,6 +112,35 @@ void App::RunEmulator() {
     } screen;
 
     // ---------------------------------
+    // Setup Dear ImGui context
+
+    // We need to do this before creating the window to avoid graphics artifacts on the very first frame
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
+
+    // Determine ImGui menu bar height
+    {
+        // Build atlas
+        unsigned char *tex_pixels = nullptr;
+        int tex_w, tex_h;
+        io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_w, &tex_h);
+        io.DisplaySize = {100, 100}; // Set a fake display size to satisfy ImGui
+        ImGui::NewFrame();
+        ImGui::BeginMainMenuBar();
+        screen.menuBarHeight = ImGui::GetWindowHeight();
+        ImGui::EndMainMenuBar();
+        ImGui::Render();
+    }
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    // ImGui::StyleColorsLight();
+
+    // ---------------------------------
     // Create window
 
     SDL_PropertiesID windowProps = SDL_CreateProperties();
@@ -124,7 +154,8 @@ void App::RunEmulator() {
     SDL_SetStringProperty(windowProps, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Unnamed Sega Saturn emulator");
     SDL_SetBooleanProperty(windowProps, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
     SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, screen.width * screen.scaleX);
-    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, screen.height * screen.scaleY);
+    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,
+                          screen.height * screen.scaleY + screen.menuBarHeight);
     SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
     SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
 
@@ -172,20 +203,8 @@ void App::RunEmulator() {
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
 
     // ---------------------------------
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO &io = ImGui::GetIO();
-    (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
+    // Setup Dear ImGui Platform/Renderer backends
 
-    // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-    // ImGui::StyleColorsLight();
-
-    // Setup Platform/Renderer backends
     ImGui_ImplSDL3_InitForSDLRenderer(screen.window, renderer);
     ImGui_ImplSDLRenderer3_Init(renderer);
 
@@ -210,6 +229,7 @@ void App::RunEmulator() {
     // io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
     // ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr,
     // io.Fonts->GetGlyphRangesJapanese()); IM_ASSERT(font != nullptr);
+    // io.Fonts->Build();
 
     // Our state
     bool showDemoWindow = false;
@@ -226,17 +246,20 @@ void App::RunEmulator() {
                                             screen.SetResolution(width, height, scale);
 
                                             // TODO: this conflicts with window resizes from the user
+                                            // - add toggle: "Auto-fit window to screen"
                                             if (screen.autoResizeWindow) {
                                                 int wx, wy;
                                                 SDL_GetWindowPosition(screen.window, &wx, &wy);
+                                                wy -= screen.menuBarHeight;
                                                 const int dx = (int)(width * screen.scaleX) - (int)prevWidth;
                                                 const int dy = (int)(height * screen.scaleY) - (int)prevHeight;
 
                                                 // Adjust window size dynamically
                                                 // TODO: add room for borders
                                                 SDL_SetWindowSize(screen.window, screen.width * screen.scaleX,
-                                                                  screen.height * screen.scaleY);
-                                                SDL_SetWindowPosition(screen.window, wx - dx / 2, wy - dy / 2);
+                                                                  screen.height * screen.scaleY + screen.menuBarHeight);
+                                                SDL_SetWindowPosition(screen.window, wx - dx / 2,
+                                                                      wy - dy / 2 + screen.menuBarHeight);
                                             }
                                         }
                                         ++screen.frames;
@@ -588,8 +611,37 @@ void App::RunEmulator() {
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
-        // TODO: add dockspace
-        // TODO: add menu
+        if (ImGui::BeginMainMenuBar()) {
+            if (ImGui::BeginMenu("File")) {
+                if (ImGui::MenuItem("Exit", "Alt+F4")) {
+                    // TODO: exit
+                }
+                ImGui::End();
+            }
+            if (ImGui::BeginMenu("View")) {
+                ImGui::End();
+            }
+            if (ImGui::BeginMenu("Emulator")) {
+                ImGui::End();
+            }
+            if (ImGui::BeginMenu("Settings")) {
+                ImGui::End();
+            }
+            if (ImGui::BeginMenu("Debug")) {
+                ImGui::MenuItem("Enable debugger", "F10", &drawDebug);
+                ImGui::MenuItem("Enable tracing", "F11", &debugTrace);
+                ImGui::Separator();
+                ImGui::MenuItem("Video output", nullptr, &showVideoOutputDebugWindow);
+                ImGui::End();
+            }
+            if (ImGui::BeginMenu("Help")) {
+                ImGui::MenuItem("ImGui demo window", nullptr, &showDemoWindow);
+                ImGui::End();
+            }
+            ImGui::EndMainMenuBar();
+        }
+
+        ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 
         // Show the big ImGui demo window if enabled
         if (showDemoWindow) {
@@ -649,9 +701,9 @@ void App::RunEmulator() {
             const float baseHeight = screen.height;
 
             // Get window size
-            // TODO: compensate for menu height
             int ww, wh;
             SDL_GetWindowSize(screen.window, &ww, &wh);
+            wh -= screen.menuBarHeight;
 
             // Compute maximum scale to fit the display given the constraints above
             const float scaleX = (float)ww / baseWidth;
@@ -671,7 +723,8 @@ void App::RunEmulator() {
             // ceil(current scale), then render that onto the window with linear interpolation, otherwise just render
             // the screen directly to the window with nearest interpolation
             SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
-            SDL_FRect dstRect{.x = slackX * 0.5f, .y = slackY * 0.5f, .w = scaledWidth, .h = scaledHeight};
+            SDL_FRect dstRect{
+                .x = slackX * 0.5f, .y = slackY * 0.5f + screen.menuBarHeight, .w = scaledWidth, .h = scaledHeight};
             SDL_RenderTexture(renderer, texture, &srcRect, &dstRect);
         }
 
