@@ -122,7 +122,7 @@ void App::RunEmulator() {
 
     // Assume the following calls succeed
     SDL_SetStringProperty(windowProps, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Unnamed Sega Saturn emulator");
-    SDL_SetBooleanProperty(windowProps, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, false);
+    SDL_SetBooleanProperty(windowProps, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
     SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, screen.width * screen.scaleX);
     SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, screen.height * screen.scaleY);
     SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
@@ -225,6 +225,7 @@ void App::RunEmulator() {
                                             const uint32 prevHeight = screen.height * screen.scaleY;
                                             screen.SetResolution(width, height, scale);
 
+                                            // TODO: this conflicts with window resizes from the user
                                             if (screen.autoResizeWindow) {
                                                 int wx, wy;
                                                 SDL_GetWindowPosition(screen.window, &wx, &wy);
@@ -358,7 +359,7 @@ void App::RunEmulator() {
     bool frameStep = false;
     bool debugTrace = false;
     bool drawDebug = false;
-    bool videoOutputDebugWindowVisible = false;
+    bool showVideoOutputDebugWindow = false;
     auto &port1 = m_saturn.SMPC.GetPeripheralPort1();
     auto &port2 = m_saturn.SMPC.GetPeripheralPort2();
     auto *pad1 = port1.ConnectStandardPad();
@@ -474,7 +475,7 @@ void App::RunEmulator() {
             break;
         case SDL_SCANCODE_F9:
             if (pressed) {
-                videoOutputDebugWindowVisible = !videoOutputDebugWindowVisible;
+                showVideoOutputDebugWindow = !showVideoOutputDebugWindow;
             }
             break;
         case SDL_SCANCODE_F10:
@@ -484,7 +485,7 @@ void App::RunEmulator() {
                 if (screen.autoResizeWindow) {
                     screen.ResizeWindow();
                 }
-                SDL_SetWindowResizable(screen.window, drawDebug);
+                // SDL_SetWindowResizable(screen.window, drawDebug);
                 fmt::println("Debug display {}", (drawDebug ? "enabled" : "disabled"));
             }
             break;
@@ -595,7 +596,7 @@ void App::RunEmulator() {
         // Draw debugger windows
         if (drawDebug) {
             // Draw video output as a window
-            if (videoOutputDebugWindowVisible) {
+            if (showVideoOutputDebugWindow) {
                 std::string title = fmt::format("Video Output - {}x{}###Display", screen.width, screen.height);
 
                 const float aspectRatio = (float)screen.height / screen.width;
@@ -608,7 +609,7 @@ void App::RunEmulator() {
                             (float)(int)(data->DesiredSize.x * aspectRatio) + ImGui::GetFrameHeightWithSpacing();
                     },
                     (void *)&aspectRatio);
-                if (ImGui::Begin(title.c_str(), &videoOutputDebugWindowVisible, ImGuiWindowFlags_NoNavInputs)) {
+                if (ImGui::Begin(title.c_str(), &showVideoOutputDebugWindow, ImGuiWindowFlags_NoNavInputs)) {
                     const ImVec2 avail = ImGui::GetContentRegionAvail();
                     const float scaleX = avail.x / screen.width;
                     const float scaleY = avail.y / screen.height;
@@ -633,15 +634,36 @@ void App::RunEmulator() {
         SDL_SetRenderDrawColorFloat(renderer, clearColor.x, clearColor.y, clearColor.z, clearColor.w);
         SDL_RenderClear(renderer);
 
-        if (!drawDebug || !videoOutputDebugWindowVisible) {
+        if (!drawDebug || !showVideoOutputDebugWindow) {
+            // TODO: make these parameters configurable
+            const bool forceAspectRatio = false;
+            const bool forceIntegerScaling = true;
+            const float forcedAspect = 4.0f / 3.0f;
+
+            const float currentAspect = screen.width / screen.height;
+
+            const float baseWidth = forceAspectRatio ? screen.height * forcedAspect : screen.width;
+            const float baseHeight = screen.height;
+
+            int ww, wh;
+            SDL_GetWindowSize(screen.window, &ww, &wh);
+            const float scaleX = (float)ww / baseWidth;
+            const float scaleY = (float)wh / baseHeight;
+            const float baseScale = std::min(scaleX, scaleY);
+            const float scale = forceIntegerScaling ? floor(baseScale) : baseScale;
+
+            const float scaledWidth = baseWidth * scale;
+            const float scaledHeight = baseHeight * scale;
+            const float slackX = ww - scaledWidth;
+            const float slackY = wh - scaledHeight;
+
             // Render Saturn display covering the entire window
-            // TODO: allow forcing aspect ratio to 4:3, 16:9 or square pixels
-            // TODO: maintain desired aspect ratio
-            // TODO: option to force integer scaling
-            // TODO: render to a texture using nearest interpolation and scaled up to ceil(current scale), then render
-            //       that onto the screen with linear interpolation
+            // TODO: if not using integer scaling, render to a texture using nearest interpolation and scaled up to
+            // ceil(current scale), then render that onto the screen with linear interpolation; otherwise just render
+            // the screen texture directly with nearest interpolation
             SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
-            SDL_RenderTexture(renderer, texture, &srcRect, nullptr);
+            SDL_FRect dstRect{.x = slackX * 0.5f, .y = slackY * 0.5f, .w = scaledWidth, .h = scaledHeight};
+            SDL_RenderTexture(renderer, texture, &srcRect, &dstRect);
         }
 
         // Render ImGui widgets
