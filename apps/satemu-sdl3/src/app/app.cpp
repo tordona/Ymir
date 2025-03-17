@@ -588,6 +588,8 @@ void App::RunEmulator() {
 
         // Draw debugger windows
         if (drawDebug) {
+            // Draw display as a window
+            // TODO: make this optional; display on background if disabled
             std::string title = fmt::format("Display - {}x{}###Display", screen.width, screen.height);
 
             const float aspectRatio = (float)screen.height / screen.width;
@@ -610,6 +612,7 @@ void App::RunEmulator() {
                              ImVec2((float)screen.width / vdp::kMaxResH, (float)screen.height / vdp::kMaxResV));
             }
             ImGui::End();
+            // --- End of display window ---
 
             DrawDebug();
         }
@@ -625,6 +628,12 @@ void App::RunEmulator() {
 
         if (!drawDebug) {
             // Render Saturn display covering the entire window
+            // TODO: make it possible to always display on the background (maybe by closing the debug display window?)
+            // TODO: allow forcing aspect ratio to 4:3, 16:9 or square pixels
+            // TODO: maintain desired aspect ratio
+            // TODO: option to force integer scaling
+            // TODO: render to a texture using nearest interpolation and scaled up to ceil(current scale), then render
+            //       that onto the screen with linear interpolation
             SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
             SDL_RenderTexture(renderer, texture, &srcRect, nullptr);
         }
