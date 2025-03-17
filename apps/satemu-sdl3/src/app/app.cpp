@@ -226,6 +226,7 @@ void App::RunEmulator() {
              }
              ++screen.frames;
 
+             // TODO: figure out frame pacing when sync to video is enabled
              if (screen.reduceLatency || !screen.updated) {
                  std::unique_lock lock{screen.mtxFramebuffer};
                  std::copy_n(fb, width * height, screen.framebuffer.data());
@@ -517,7 +518,7 @@ void App::RunEmulator() {
         }
 
         // Update display
-        // TODO: need to sync to avoid tearing
+        // TODO: figure out frame pacing when sync to video is enabled
         if (screen.updated) {
             screen.updated = false;
             std::unique_lock lock{screen.mtxFramebuffer};
