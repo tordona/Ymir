@@ -2,6 +2,8 @@
 
 #include "cmdline_opts.hpp"
 
+#include "audio_system.hpp"
+
 #include <satemu/sys/saturn.hpp>
 
 #include "debug/scu_tracer.hpp"
@@ -16,6 +18,8 @@ public:
 private:
     satemu::Saturn m_saturn;
     CommandLineOptions m_options;
+
+    AudioSystem m_audioSystem;
 
     void RunEmulator();
 

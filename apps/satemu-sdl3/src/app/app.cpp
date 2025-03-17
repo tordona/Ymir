@@ -27,6 +27,15 @@ int App::Run(const CommandLineOptions &options) {
 
     m_options = options;
 
+    // ---------------------------------
+    // Initialize SDL subsystems
+
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS)) {
+        SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
+        return EXIT_FAILURE;
+    }
+    util::ScopeGuard sgQuit{[&] { SDL_Quit(); }};
+
     // Load IPL ROM
     {
         constexpr auto iplSize = satemu::sys::kIPLSize;
@@ -70,15 +79,6 @@ void App::RunEmulator() {
         uint64 frames = 0;
         uint64 vdp1Frames = 0;
     } screen;
-
-    // ---------------------------------
-    // Initialize SDL video subsystem
-
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS)) {
-        SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
-        return;
-    }
-    ScopeGuard sgQuit{[] { SDL_Quit(); }};
 
     // ---------------------------------
     // Create window
@@ -225,69 +225,32 @@ void App::RunEmulator() {
                                    }});
 
     // ---------------------------------
-    // Create audio buffer and stream and set up callbacks
+    // Initialize audio system
 
-    // Use a smaller buffer to reduce audio latency
-    SDL_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, "512");
+    static constexpr int kSampleRate = 44100;
+    static constexpr SDL_AudioFormat kSampleFormat = SDL_AUDIO_S16;
+    static constexpr int kChannels = 2;
+    static constexpr uint32 kBufferSize = 512; // TODO: make this configurable
 
-    struct Sample {
-        sint16 left, right;
-    };
-
-    struct AudioState {
-        std::array<Sample, 2048> buffer{};
-        std::atomic_uint32_t readPos = 0;
-        uint32 writePos = 0;
-        util::Event bufferNotFullEvent{true};
-        bool sync = true;
-        bool silent = false;
-    } audioState{};
-
-    SDL_AudioSpec audioSpec{};
-    audioSpec.freq = 44100;
-    audioSpec.format = SDL_AUDIO_S16;
-    audioSpec.channels = 2;
-    auto audioStream = SDL_OpenAudioDeviceStream(
-        SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &audioSpec,
-        [](void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount) {
-            auto &state = *reinterpret_cast<AudioState *>(userdata);
-
-            int sampleCount = additional_amount / sizeof(Sample);
-            if (state.silent) {
-                const sint16 zero = 0;
-                for (int i = 0; i < sampleCount; i++) {
-                    SDL_PutAudioStreamData(stream, &zero, sizeof(zero));
-                }
-            } else {
-                const uint32 readPos = state.readPos.load(std::memory_order_acquire);
-                int len1 = std::min<int>(sampleCount, state.buffer.size() - readPos);
-                int len2 = std::min<int>(sampleCount - len1, readPos);
-                SDL_PutAudioStreamData(stream, &state.buffer[readPos], len1 * sizeof(Sample));
-                SDL_PutAudioStreamData(stream, &state.buffer[0], len2 * sizeof(Sample));
-
-                state.readPos.store((state.readPos + len1 + len2) % state.buffer.size(), std::memory_order_release);
-                state.bufferNotFullEvent.Set();
-            }
-        },
-        &audioState);
-    if (audioStream == nullptr) {
+    if (!m_audioSystem.Init(kSampleRate, kSampleFormat, kChannels, 512)) {
         SDL_Log("Unable to create audio stream: %s", SDL_GetError());
         return;
     }
-    ScopeGuard sgDestroyAudioStream{[&] { SDL_DestroyAudioStream(audioStream); }};
+    ScopeGuard sgDeinitAudio{[&] { m_audioSystem.Deinit(); }};
 
-    // please don't burst my eardrums while I test audio
-    SDL_SetAudioStreamGain(audioStream, 0.8f);
+    // Set gain to a reasonable level
+    m_audioSystem.SetGain(0.8f);
 
-    if (!SDL_ResumeAudioStreamDevice(audioStream)) {
-        SDL_Log("Unable to start audio stream: %s", SDL_GetError());
-    }
-    {
-        SDL_AudioSpec srcSpec{};
-        SDL_AudioSpec dstSpec{};
-        SDL_GetAudioStreamFormat(audioStream, &srcSpec, &dstSpec);
+    if (m_audioSystem.Start()) {
+        int sampleRate;
+        SDL_AudioFormat audioFormat;
+        int channels;
+        if (!m_audioSystem.GetAudioStreamFormat(&sampleRate, &audioFormat, &channels)) {
+            SDL_Log("Unable to get audio stream format: %s", SDL_GetError());
+            return;
+        }
         auto formatName = [&] {
-            switch (srcSpec.format) {
+            switch (audioFormat) {
             case SDL_AUDIO_U8: return "unsigned 8-bit PCM";
             case SDL_AUDIO_S8: return "signed 8-bit PCM";
             case SDL_AUDIO_S16LE: return "signed 16-bit little-endian integer PCM";
@@ -300,27 +263,19 @@ void App::RunEmulator() {
             }
         };
 
-        fmt::println("Audio stream opened: {} Hz, {} channel{}, {} format", srcSpec.freq, srcSpec.channels,
-                     (srcSpec.channels == 1 ? "" : "s"), formatName());
-        if (srcSpec.freq != audioSpec.freq || srcSpec.channels != audioSpec.channels ||
-            srcSpec.format != audioSpec.format) {
+        fmt::println("Audio stream opened: {} Hz, {} channel{}, {} format", sampleRate, channels,
+                     (channels == 1 ? "" : "s"), formatName());
+        if (sampleRate != kSampleRate || channels != kChannels || audioFormat != kSampleFormat) {
             // Hopefully this never happens
             fmt::println("Audio format mismatch");
             return;
         }
+    } else {
+        SDL_Log("Unable to start audio stream: %s", SDL_GetError());
     }
 
-    m_saturn.SCSP.SetSampleCallback({&audioState, [](sint16 left, sint16 right, void *ctx) {
-                                         auto &state = *reinterpret_cast<AudioState *>(ctx);
-
-                                         if (state.sync) {
-                                             state.bufferNotFullEvent.Wait(false);
-                                         }
-                                         state.buffer[state.writePos] = {left, right};
-                                         state.writePos = (state.writePos + 1) % state.buffer.size();
-                                         if (state.writePos == state.readPos) {
-                                             state.bufferNotFullEvent.Reset();
-                                         }
+    m_saturn.SCSP.SetSampleCallback({&m_audioSystem, [](sint16 left, sint16 right, void *ctx) {
+                                         static_cast<AudioSystem *>(ctx)->ReceiveSample(left, right);
                                      }});
 
     // ---------------------------------
@@ -462,13 +417,13 @@ void App::RunEmulator() {
             if (pressed) {
                 frameStep = true;
                 paused = false;
-                audioState.silent = false;
+                m_audioSystem.SetSilent(false);
             }
             break;
         case SDL_SCANCODE_PAUSE:
             if (pressed) {
                 paused = !paused;
-                audioState.silent = paused;
+                m_audioSystem.SetSilent(paused);
             }
 
         case SDL_SCANCODE_R:
@@ -483,7 +438,7 @@ void App::RunEmulator() {
                 m_saturn.SMPC.SetResetButtonState(pressed);
             }
             break;
-        case SDL_SCANCODE_TAB: audioState.sync = !pressed; break;
+        case SDL_SCANCODE_TAB: m_audioSystem.SetSync(!pressed); break;
         case SDL_SCANCODE_F3:
             if (pressed) {
                 {
@@ -626,7 +581,7 @@ void App::RunEmulator() {
         if (frameStep) {
             frameStep = false;
             paused = true;
-            audioState.silent = true;
+            m_audioSystem.SetSilent(true);
         }
 
         // ---------------------------------------------------------------------

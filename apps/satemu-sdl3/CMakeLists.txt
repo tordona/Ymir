@@ -5,6 +5,8 @@ add_executable(satemu-sdl3
 
     src/app/app.cpp
     src/app/app.hpp
+    src/app/audio_system.cpp
+    src/app/audio_system.hpp
     
     src/app/cmdline_opts.hpp
 
@@ -15,7 +17,7 @@ add_executable(satemu-sdl3
 
     src/util/rom_loader.cpp
     src/util/rom_loader.hpp
-)
+ )
 add_executable(satemu::satemu-sdl3 ALIAS satemu-sdl3)
 set_target_properties(satemu-sdl3 PROPERTIES
                       VERSION ${satemu_VERSION}
