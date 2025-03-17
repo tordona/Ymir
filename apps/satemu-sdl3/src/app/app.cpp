@@ -85,6 +85,7 @@ void App::RunEmulator() {
         std::vector<uint32> framebuffer;
         std::mutex mtxFramebuffer;
         bool updated = false;
+        bool reduceLatency = false; // false = more performance; true = update frames more often
 
         uint64 frames = 0;
         uint64 vdp1Frames = 0;
@@ -225,7 +226,7 @@ void App::RunEmulator() {
              }
              ++screen.frames;
 
-             if (!screen.updated) {
+             if (screen.reduceLatency || !screen.updated) {
                  std::unique_lock lock{screen.mtxFramebuffer};
                  std::copy_n(fb, width * height, screen.framebuffer.data());
                  screen.updated = true;
