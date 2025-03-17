@@ -18,8 +18,6 @@ VDP::VDP(core::Scheduler &scheduler)
 
     m_phaseUpdateEvent = scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent);
 
-    m_framebuffer = nullptr;
-
     Reset(true);
 }
 
@@ -481,8 +479,6 @@ void VDP::UpdateResolution() {
     case 3: rootLog2.info("Double-density interlace mode"); break;
     }
 
-    m_framebuffer = m_cbRequestFramebuffer(m_HRes, m_VRes);
-
     // Timing tables
 
     // Horizontal phase timings (cycles until):
@@ -674,7 +670,7 @@ void VDP::BeginVPhaseBlankingAndSync() {
     rootLog2.trace("End VDP2 frame");
     m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2EndFrame());
     m_VDPRenderContext.renderFinishedSignal.Wait(true);
-    m_cbFrameComplete(m_framebuffer, m_HRes, m_VRes);
+    m_cbFrameComplete(m_framebuffer.data(), m_HRes, m_VRes);
 }
 
 void VDP::BeginVPhaseTopBorder() {
@@ -2527,10 +2523,6 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
 }
 
 FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
-    if (m_framebuffer == nullptr) {
-        return;
-    }
-
     const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
 
     y = VDP2GetY(y);

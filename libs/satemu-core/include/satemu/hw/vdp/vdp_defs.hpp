@@ -81,7 +81,6 @@ using CoordU32 = Coord<uint32>;
 using FramebufferColor = uint32;
 
 // TODO: move these to a "renderer defs" header
-using CBRequestFramebuffer = util::OptionalCallback<FramebufferColor *(uint32 width, uint32 height)>;
 using CBVDP1FrameComplete = util::OptionalCallback<void()>;
 using CBFrameComplete = util::OptionalCallback<void(FramebufferColor *fb, uint32 width, uint32 height)>;
 

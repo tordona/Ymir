@@ -16,6 +16,7 @@
 #include <imgui.h>
 
 #include <atomic>
+#include <mutex>
 #include <span>
 #include <thread>
 #include <vector>
@@ -71,6 +72,9 @@ void App::RunEmulator() {
     // Screen parameters
     const uint32 scale = 4;
     struct ScreenParams {
+        ScreenParams()
+            : framebuffer(vdp::kMaxResH * vdp::kMaxResV) {}
+
         SDL_Window *window = nullptr;
 
         uint32 width = 320;
@@ -78,6 +82,8 @@ void App::RunEmulator() {
         float scaleX = scale;
         float scaleY = scale;
 
+        std::vector<uint32> framebuffer;
+        std::mutex mtxFramebuffer;
         bool updated = false;
 
         uint64 frames = 0;
@@ -192,10 +198,8 @@ void App::RunEmulator() {
     // ---------------------------------
     // Setup framebuffer and render callbacks
 
-    std::vector<uint32> framebuffer(vdp::kMaxResH * vdp::kMaxResV);
-    m_saturn.VDP.SetRenderCallbacks(
-        {framebuffer.data(), [](uint32, uint32, void *ctx) { return (uint32 *)ctx; }},
-        {&screen, [](vdp::FramebufferColor *, uint32 width, uint32 height, void *ctx) {
+    m_saturn.VDP.SetRenderCallback(
+        {&screen, [](vdp::FramebufferColor *fb, uint32 width, uint32 height, void *ctx) {
              auto &screen = *static_cast<ScreenParams *>(ctx);
              if (width != screen.width || height != screen.height) {
                  const bool doubleWidth = width >= 640;
@@ -220,13 +224,18 @@ void App::RunEmulator() {
                  SDL_SetWindowPosition(screen.window, wx - dx * scaleX / 2, wy - dy * scaleY / 2);
              }
              ++screen.frames;
-             screen.updated = true;
+
+             if (!screen.updated) {
+                 std::unique_lock lock{screen.mtxFramebuffer};
+                 std::copy_n(fb, width * height, screen.framebuffer.data());
+                 screen.updated = true;
+             }
          }});
 
-    m_saturn.VDP.SetVDP1Callbacks({&screen, [](void *ctx) {
-                                       auto &screen = *static_cast<ScreenParams *>(ctx);
-                                       ++screen.vdp1Frames;
-                                   }});
+    m_saturn.VDP.SetVDP1Callback({&screen, [](void *ctx) {
+                                      auto &screen = *static_cast<ScreenParams *>(ctx);
+                                      ++screen.vdp1Frames;
+                                  }});
 
     // ---------------------------------
     // Initialize audio system
@@ -509,12 +518,15 @@ void App::RunEmulator() {
         // Update display
         // TODO: need to sync to avoid tearing
         if (screen.updated) {
+            screen.updated = false;
+            std::unique_lock lock{screen.mtxFramebuffer};
             uint32 *pixels = nullptr;
             int pitch = 0;
             SDL_Rect area{.x = 0, .y = 0, .w = (int)screen.width, .h = (int)screen.height};
             if (SDL_LockTexture(texture, &area, (void **)&pixels, &pitch)) {
                 for (uint32 y = 0; y < screen.height; y++) {
-                    std::copy_n(&framebuffer[y * screen.width], screen.width, &pixels[y * pitch / sizeof(uint32)]);
+                    std::copy_n(&screen.framebuffer[y * screen.width], screen.width,
+                                &pixels[y * pitch / sizeof(uint32)]);
                 }
                 // std::copy_n(framebuffer.begin(), screen.width * screen.height, pixels);
                 SDL_UnlockTexture(texture);

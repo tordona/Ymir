@@ -55,12 +55,11 @@ public:
 
     void MapMemory(sys::Bus &bus);
 
-    void SetRenderCallbacks(CBRequestFramebuffer cbRequestFramebuffer, CBFrameComplete cbFrameComplete) {
-        m_cbRequestFramebuffer = cbRequestFramebuffer;
+    void SetRenderCallback(CBFrameComplete cbFrameComplete) {
         m_cbFrameComplete = cbFrameComplete;
     }
 
-    void SetVDP1Callbacks(CBVDP1FrameComplete cbFrameComplete) {
+    void SetVDP1Callback(CBVDP1FrameComplete cbFrameComplete) {
         m_cbVDP1FrameComplete = cbFrameComplete;
     }
 
@@ -148,10 +147,6 @@ private:
 
     // -------------------------------------------------------------------------
     // Frontend callbacks
-
-    // Invoked when the renderer is about to start a new frame, to retrieve a buffer from the frontend in which to
-    // render the screen. The frame will contain <width> x <height> pixels in XBGR8888 little-endian format.
-    CBRequestFramebuffer m_cbRequestFramebuffer;
 
     // Invoked when the VDP1 finishes drawing a frame.
     CBVDP1FrameComplete m_cbVDP1FrameComplete;
@@ -848,8 +843,8 @@ private:
     // Window state for color calculation.
     alignas(16) std::array<bool, kMaxResH> m_colorCalcWindow;
 
-    // Framebuffer provided by the frontend to render the current frame into
-    FramebufferColor *m_framebuffer;
+    // Current display framebuffer.
+    std::array<FramebufferColor, kMaxResH * kMaxResV> m_framebuffer;
 
     // Erases the current VDP1 display framebuffer.
     void VDP1EraseFramebuffer();
