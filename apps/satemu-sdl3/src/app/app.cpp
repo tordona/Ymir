@@ -117,10 +117,9 @@ void App::RunEmulator() {
 
     // Assume the following calls succeed
     SDL_SetPointerProperty(rendererProps, SDL_PROP_RENDERER_CREATE_WINDOW_POINTER, screen.window);
-    SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, SDL_RENDERER_VSYNC_DISABLED);
-    // SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER,
-    // SDL_RENDERER_VSYNC_ADAPTIVE); SDL_SetNumberProperty(rendererProps,
-    // SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, 1);
+    // SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, SDL_RENDERER_VSYNC_DISABLED);
+    // SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, SDL_RENDERER_VSYNC_ADAPTIVE);
+    SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, 1);
 
     auto renderer = SDL_CreateRendererWithProperties(rendererProps);
     if (renderer == nullptr) {
@@ -183,7 +182,7 @@ void App::RunEmulator() {
     // io.Fonts->GetGlyphRangesJapanese()); IM_ASSERT(font != nullptr);
 
     // Our state
-    bool showDemoWindow = true;
+    bool showDemoWindow = false;
     ImVec4 clearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // ---------------------------------
@@ -363,7 +362,7 @@ void App::RunEmulator() {
                 SDL_ShowFileDialogWithProperties(
                     SDL_FILEDIALOG_OPENFILE,
                     [](void *userdata, const char *const *filelist, int filter) {
-                        static_cast<App *>(userdata)->OpenDiscImageFileDialog(filelist, filter);
+                        static_cast<App *>(userdata)->ProcessOpenDiscImageFileDialogSelection(filelist, filter);
                     },
                     this, fileDialogProps);
             }
@@ -399,16 +398,12 @@ void App::RunEmulator() {
             // TODO: find better keybindings for these
         case SDL_SCANCODE_F6:
             if (pressed) {
-                if (m_saturn.IsTrayOpen()) {
-                    m_saturn.CloseTray();
-                } else {
-                    m_saturn.OpenTray();
-                }
+                m_emuCommandQueue.enqueue(EmuCommand::OpenCloseTray());
             }
             break;
         case SDL_SCANCODE_F8:
             if (pressed) {
-                m_saturn.EjectDisc();
+                m_emuCommandQueue.enqueue(EmuCommand::EjectDisc());
             }
             break;
             // ---- END TODO ----
@@ -418,29 +413,221 @@ void App::RunEmulator() {
                 frameStep = true;
                 paused = false;
                 m_audioSystem.SetSilent(false);
+                m_emuCommandQueue.enqueue(EmuCommand::FrameStep());
             }
             break;
         case SDL_SCANCODE_PAUSE:
             if (pressed) {
                 paused = !paused;
                 m_audioSystem.SetSilent(paused);
+                m_emuCommandQueue.enqueue(EmuCommand::SetPaused(paused));
             }
 
         case SDL_SCANCODE_R:
             if (pressed) {
                 if ((mod & SDL_KMOD_CTRL) && (mod & SDL_KMOD_SHIFT)) {
-                    m_saturn.FactoryReset();
+                    m_emuCommandQueue.enqueue(EmuCommand::FactoryReset());
                 } else if (mod & SDL_KMOD_CTRL) {
-                    m_saturn.Reset(true);
+                    m_emuCommandQueue.enqueue(EmuCommand::HardReset());
                 }
             }
             if (mod & SDL_KMOD_SHIFT) {
-                m_saturn.SMPC.SetResetButtonState(pressed);
+                m_emuCommandQueue.enqueue(EmuCommand::SoftReset(pressed));
             }
             break;
         case SDL_SCANCODE_TAB: m_audioSystem.SetSync(!pressed); break;
         case SDL_SCANCODE_F3:
             if (pressed) {
+                m_emuCommandQueue.enqueue(EmuCommand::MemoryDump());
+            }
+            break;
+        case SDL_SCANCODE_F10:
+            if (pressed) {
+                drawDebug = !drawDebug;
+                fmt::println("Debug display {}", (drawDebug ? "enabled" : "disabled"));
+            }
+            break;
+        case SDL_SCANCODE_F11:
+            if (pressed) {
+                debugTrace = !debugTrace;
+                m_emuCommandQueue.enqueue(EmuCommand::SetDebugTrace(debugTrace));
+                fmt::println("Advanced debug tracing {}", (debugTrace ? "enabled" : "disabled"));
+            }
+            break;
+        default: break;
+        }
+    };
+
+    // Start emulator thread
+    m_emuThread = std::thread([&] { EmulatorThread(); });
+    ScopeGuard sgStopEmuThread{[&] {
+        // TODO: fix this hacky mess
+        // HACK: unpause and unsilence audio system in order to unlock the emulator thread if it is waiting for free
+        // space in the audio buffer due to being paused
+        paused = false;
+        m_audioSystem.SetSilent(false);
+        m_emuCommandQueue.enqueue(EmuCommand::SetPaused(false));
+        m_emuCommandQueue.enqueue(EmuCommand::Shutdown());
+        if (m_emuThread.joinable()) {
+            m_emuThread.join();
+        }
+    }};
+
+    std::array<GUICommand, 64> cmds{};
+
+    while (true) {
+        // Process SDL events
+        SDL_Event evt{};
+        while (SDL_PollEvent(&evt)) {
+            ImGui_ImplSDL3_ProcessEvent(&evt);
+            if (!io.WantCaptureKeyboard) {
+                // TODO: clear out all key presses
+            }
+
+            switch (evt.type) {
+            case SDL_EVENT_KEY_DOWN:
+                if (!io.WantCaptureKeyboard) {
+                    updateButton(evt.key.scancode, evt.key.mod, true);
+                }
+                break;
+            case SDL_EVENT_KEY_UP:
+                if (!io.WantCaptureKeyboard) {
+                    updateButton(evt.key.scancode, evt.key.mod, false);
+                }
+                break;
+            case SDL_EVENT_QUIT: goto end_loop; break;
+            case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+                if (evt.window.windowID == SDL_GetWindowID(screen.window)) {
+                    goto end_loop;
+                }
+            }
+        }
+
+        // Process GUI events
+        const size_t cmdCount = m_guiCommandQueue.try_dequeue_bulk(cmds.begin(), cmds.size());
+        for (size_t i = 0; i < cmdCount; i++) {
+            const GUICommand &cmd = cmds[i];
+            using enum GUICommand::Type;
+            switch (cmd.type) {
+            case Frame:
+                // Update display
+                {
+                    uint32 *pixels = nullptr;
+                    int pitch = 0;
+                    SDL_Rect area{.x = 0, .y = 0, .w = (int)screen.width, .h = (int)screen.height};
+                    if (SDL_LockTexture(texture, &area, (void **)&pixels, &pitch)) {
+                        for (uint32 y = 0; y < screen.height; y++) {
+                            std::copy_n(&framebuffer[y * screen.width], screen.width,
+                                        &pixels[y * pitch / sizeof(uint32)]);
+                        }
+                        // std::copy_n(framebuffer.begin(), screen.width * screen.height, pixels);
+                        SDL_UnlockTexture(texture);
+                    }
+                }
+                break;
+            }
+        }
+
+        // Calculate performance and update title bar
+        auto t2 = clk::now();
+        if (t2 - t >= 1s) {
+            const media::Disc &disc = m_saturn.CDBlock.GetDisc();
+            const media::SaturnHeader &header = disc.header;
+            std::string title{};
+            if (paused) {
+                title =
+                    fmt::format("[{}] {} - paused | GUI: {} fps", header.productNumber, header.gameTitle, io.Framerate);
+            } else {
+                title = fmt::format("[{}] {} | VDP2: {} fps | VDP1: {} fps | GUI: {} fps", header.productNumber,
+                                    header.gameTitle, screen.frames, screen.vdp1Frames, io.Framerate);
+            }
+            SDL_SetWindowTitle(screen.window, title.c_str());
+            screen.frames = 0;
+            screen.vdp1Frames = 0;
+            t = t2;
+        }
+
+        // ---------------------------------------------------------------------
+        // Draw ImGui widgets
+
+        // Start the Dear ImGui frame
+        ImGui_ImplSDLRenderer3_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
+        ImGui::NewFrame();
+
+        // Show the big ImGui demo window if enabled
+        if (showDemoWindow) {
+            ImGui::ShowDemoWindow(&showDemoWindow);
+        }
+
+        // Draw debugger windows
+        if (drawDebug) {
+            DrawDebug();
+        }
+
+        // ---------------------------------------------------------------------
+        // Render window
+
+        ImGui::Render();
+
+        // Clear screen
+        SDL_SetRenderDrawColorFloat(renderer, clearColor.x, clearColor.y, clearColor.z, clearColor.w);
+        SDL_RenderClear(renderer);
+
+        // Render Saturn display covering the entire window
+        SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
+        SDL_RenderTexture(renderer, texture, &srcRect, nullptr);
+
+        // Render ImGui widgets
+        ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+
+        SDL_RenderPresent(renderer);
+    }
+
+end_loop:; // the semicolon is not a typo!
+
+    // Everything is cleaned up automatically by ScopeGuards
+}
+
+void App::EmulatorThread() {
+    util::SetCurrentThreadName("Emulator thread");
+
+    std::array<EmuCommand, 64> cmds{};
+
+    bool paused = false;
+    bool frameStep = false;
+    bool debugTrace = false;
+
+    while (true) {
+        // Process all pending commands
+        const size_t cmdCount = paused ? m_emuCommandQueue.wait_dequeue_bulk(cmds.begin(), cmds.size())
+                                       : m_emuCommandQueue.try_dequeue_bulk(cmds.begin(), cmds.size());
+        for (size_t i = 0; i < cmdCount; i++) {
+            const EmuCommand &cmd = cmds[i];
+            using enum EmuCommand::Type;
+            switch (cmd.type) {
+            case FactoryReset: m_saturn.FactoryReset(); break;
+            case HardReset: m_saturn.Reset(true); break;
+            case SoftReset: m_saturn.SMPC.SetResetButtonState(std::get<bool>(cmd.value)); break;
+            case FrameStep:
+                frameStep = true;
+                paused = false;
+                break;
+            case SetPaused: paused = std::get<bool>(cmd.value); break;
+            case SetDebugTrace:
+                debugTrace = std::get<bool>(cmd.value);
+                if (debugTrace) {
+                    m_saturn.masterSH2.UseTracer(&m_masterSH2Tracer);
+                    m_saturn.slaveSH2.UseTracer(&m_slaveSH2Tracer);
+                    m_saturn.SCU.UseTracer(&m_scuTracer);
+                } else {
+                    m_saturn.masterSH2.UseTracer(nullptr);
+                    m_saturn.slaveSH2.UseTracer(nullptr);
+                    m_saturn.SCU.UseTracer(nullptr);
+                }
+                break;
+            case MemoryDump: //
+            {
                 {
                     std::ofstream out{"wram-lo.bin", std::ios::binary};
                     m_saturn.mem.DumpWRAMLow(out);
@@ -517,173 +704,33 @@ void App::RunEmulator() {
                     std::ofstream out{"scsp-dsp-regs.bin", std::ios::binary};
                     m_saturn.SCSP.DumpDSPRegs(out);
                 }
+                break;
             }
-            break;
-        case SDL_SCANCODE_F10:
-            if (pressed) {
-                drawDebug = !drawDebug;
-                fmt::println("Debug display {}", (drawDebug ? "enabled" : "disabled"));
-            }
-            break;
-        case SDL_SCANCODE_F11:
-            if (pressed) {
-                debugTrace = !debugTrace;
-                if (debugTrace) {
-                    m_saturn.masterSH2.UseTracer(&m_masterSH2Tracer);
-                    m_saturn.slaveSH2.UseTracer(&m_slaveSH2Tracer);
-                    m_saturn.SCU.UseTracer(&m_scuTracer);
+            case OpenCloseTray:
+                if (m_saturn.IsTrayOpen()) {
+                    m_saturn.CloseTray();
                 } else {
-                    m_saturn.masterSH2.UseTracer(nullptr);
-                    m_saturn.slaveSH2.UseTracer(nullptr);
-                    m_saturn.SCU.UseTracer(nullptr);
-                }
-                fmt::println("Advanced debug tracing {}", (debugTrace ? "enabled" : "disabled"));
-            }
-            break;
-        default: break;
-        }
-    };
-
-    while (true) {
-        // ---------------------------------------------------------------------
-        // Process events
-
-        SDL_Event evt{};
-        while (paused ? SDL_WaitEvent(&evt) : SDL_PollEvent(&evt)) {
-            ImGui_ImplSDL3_ProcessEvent(&evt);
-            if (!io.WantCaptureKeyboard) {
-                // TODO: clear out all key presses
-            }
-
-            switch (evt.type) {
-            case SDL_EVENT_KEY_DOWN:
-                if (!io.WantCaptureKeyboard) {
-                    updateButton(evt.key.scancode, evt.key.mod, true);
+                    m_saturn.OpenTray();
                 }
                 break;
-            case SDL_EVENT_KEY_UP:
-                if (!io.WantCaptureKeyboard) {
-                    updateButton(evt.key.scancode, evt.key.mod, false);
-                }
-                break;
-            case SDL_EVENT_QUIT: goto end_loop; break;
-            case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
-                if (evt.window.windowID == SDL_GetWindowID(screen.window)) {
-                    goto end_loop;
-                }
+            case LoadDisc: LoadDiscImage(std::get<std::string>(cmd.value)); break;
+            case EjectDisc: m_saturn.EjectDisc(); break;
+            case Shutdown: return;
             }
         }
 
-        // ---------------------------------------------------------------------
         // Emulate one frame
-
         m_saturn.RunFrame(debugTrace);
         if (frameStep) {
             frameStep = false;
             paused = true;
             m_audioSystem.SetSilent(true);
         }
-
-        // ---------------------------------------------------------------------
-        // Calculate performance and update title bar
-
-        auto t2 = clk::now();
-        if (t2 - t >= 1s) {
-            const media::Disc &disc = m_saturn.CDBlock.GetDisc();
-            const media::SaturnHeader &header = disc.header;
-            std::string title{};
-            if (paused) {
-                title = fmt::format("[{}] {} - paused", header.productNumber, header.gameTitle);
-            } else {
-                title = fmt::format("[{}] {} - VDP2: {} fps - VDP1: {} fps", header.productNumber, header.gameTitle,
-                                    screen.frames, screen.vdp1Frames);
-            }
-            SDL_SetWindowTitle(screen.window, title.c_str());
-            screen.frames = 0;
-            screen.vdp1Frames = 0;
-            t = t2;
-        }
-
-        // ---------------------------------------------------------------------
-        // Update display
-
-        uint32 *pixels = nullptr;
-        int pitch = 0;
-        SDL_Rect area{.x = 0, .y = 0, .w = (int)screen.width, .h = (int)screen.height};
-        if (SDL_LockTexture(texture, &area, (void **)&pixels, &pitch)) {
-            for (uint32 y = 0; y < screen.height; y++) {
-                std::copy_n(&framebuffer[y * screen.width], screen.width, &pixels[y * pitch / sizeof(uint32)]);
-            }
-            // std::copy_n(framebuffer.begin(), screen.width * screen.height, pixels);
-            SDL_UnlockTexture(texture);
-        }
-
-        // ---------------------------------------------------------------------
-        // Draw ImGui widgets
-
-        // Start the Dear ImGui frame
-        ImGui_ImplSDLRenderer3_NewFrame();
-        ImGui_ImplSDL3_NewFrame();
-        ImGui::NewFrame();
-
-        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code
-        // to learn more about Dear ImGui!).
-        if (showDemoWindow) {
-            ImGui::ShowDemoWindow(&showDemoWindow);
-        }
-
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-        {
-            static float f = 0.0f;
-            static int counter = 0;
-
-            ImGui::Begin("Hello, world!"); // Create a window called "Hello, world!" and append into it.
-
-            ImGui::Text("This is some useful text.");        // Display some text (you can use a format strings too)
-            ImGui::Checkbox("Demo Window", &showDemoWindow); // Edit bools storing our window open/close state
-
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float *)&clearColor); // Edit 3 floats representing a color
-
-            if (ImGui::Button(
-                    "Button")) // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
-
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-            ImGui::End();
-        }
-
-        if (drawDebug) {
-            DrawDebug();
-        }
-
-        // ---------------------------------------------------------------------
-        // Render window
-
-        ImGui::Render();
-
-        // Clear screen
-        SDL_SetRenderDrawColorFloat(renderer, clearColor.x, clearColor.y, clearColor.z, clearColor.w);
-        SDL_RenderClear(renderer);
-
-        // Render Saturn display covering the entire window
-        SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
-        SDL_RenderTexture(renderer, texture, &srcRect, nullptr);
-
-        // Render ImGui widgets
-        ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
-
-        SDL_RenderPresent(renderer);
+        m_guiCommandQueue.enqueue(GUICommand::Frame());
     }
-
-end_loop:; // the semicolon is not a typo!
-
-    // Everything is cleaned up automatically by ScopeGuards
 }
 
-void App::OpenDiscImageFileDialog(const char *const *filelist, int filter) {
+void App::ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, int filter) {
     if (filelist == nullptr) {
         fmt::println("Failed to open file dialog: {}", SDL_GetError());
     } else if (*filelist == nullptr) {
@@ -691,7 +738,7 @@ void App::OpenDiscImageFileDialog(const char *const *filelist, int filter) {
     } else {
         // Only one file should be selected
         const char *file = *filelist;
-        LoadDiscImage(file);
+        m_emuCommandQueue.enqueue(EmuCommand::LoadDisc(file));
     }
 }
 
