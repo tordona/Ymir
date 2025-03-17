@@ -358,6 +358,7 @@ void App::RunEmulator() {
     bool frameStep = false;
     bool debugTrace = false;
     bool drawDebug = false;
+    bool videoOutputDebugWindowVisible = false;
     auto &port1 = m_saturn.SMPC.GetPeripheralPort1();
     auto &port2 = m_saturn.SMPC.GetPeripheralPort2();
     auto *pad1 = port1.ConnectStandardPad();
@@ -469,6 +470,11 @@ void App::RunEmulator() {
         case SDL_SCANCODE_F3:
             if (pressed) {
                 m_emuCommandQueue.enqueue(EmuCommand::MemoryDump());
+            }
+            break;
+        case SDL_SCANCODE_F9:
+            if (pressed) {
+                videoOutputDebugWindowVisible = !videoOutputDebugWindowVisible;
             }
             break;
         case SDL_SCANCODE_F10:
@@ -588,31 +594,32 @@ void App::RunEmulator() {
 
         // Draw debugger windows
         if (drawDebug) {
-            // Draw display as a window
-            // TODO: make this optional; display on background if disabled
-            std::string title = fmt::format("Display - {}x{}###Display", screen.width, screen.height);
+            // Draw video output as a window
+            if (videoOutputDebugWindowVisible) {
+                std::string title = fmt::format("Video Output - {}x{}###Display", screen.width, screen.height);
 
-            const float aspectRatio = (float)screen.height / screen.width;
+                const float aspectRatio = (float)screen.height / screen.width;
 
-            ImGui::SetNextWindowSizeConstraints(
-                ImVec2(320, 224), ImVec2(FLT_MAX, FLT_MAX),
-                [](ImGuiSizeCallbackData *data) {
-                    float aspectRatio = *(float *)data->UserData;
-                    data->DesiredSize.y =
-                        (float)(int)(data->DesiredSize.x * aspectRatio) + ImGui::GetFrameHeightWithSpacing();
-                },
-                (void *)&aspectRatio);
-            if (ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_NoNavInputs)) {
-                const ImVec2 avail = ImGui::GetContentRegionAvail();
-                const float scaleX = avail.x / screen.width;
-                const float scaleY = avail.y / screen.height;
-                const float scale = std::min(scaleX, scaleY);
+                ImGui::SetNextWindowSizeConstraints(
+                    ImVec2(320, 224), ImVec2(FLT_MAX, FLT_MAX),
+                    [](ImGuiSizeCallbackData *data) {
+                        float aspectRatio = *(float *)data->UserData;
+                        data->DesiredSize.y =
+                            (float)(int)(data->DesiredSize.x * aspectRatio) + ImGui::GetFrameHeightWithSpacing();
+                    },
+                    (void *)&aspectRatio);
+                if (ImGui::Begin(title.c_str(), &videoOutputDebugWindowVisible, ImGuiWindowFlags_NoNavInputs)) {
+                    const ImVec2 avail = ImGui::GetContentRegionAvail();
+                    const float scaleX = avail.x / screen.width;
+                    const float scaleY = avail.y / screen.height;
+                    const float scale = std::min(scaleX, scaleY);
 
-                ImGui::Image((ImTextureID)texture, ImVec2(screen.width * scale, screen.height * scale), ImVec2(0, 0),
-                             ImVec2((float)screen.width / vdp::kMaxResH, (float)screen.height / vdp::kMaxResV));
+                    ImGui::Image((ImTextureID)texture, ImVec2(screen.width * scale, screen.height * scale),
+                                 ImVec2(0, 0),
+                                 ImVec2((float)screen.width / vdp::kMaxResH, (float)screen.height / vdp::kMaxResV));
+                }
+                ImGui::End();
             }
-            ImGui::End();
-            // --- End of display window ---
 
             DrawDebug();
         }
@@ -626,9 +633,8 @@ void App::RunEmulator() {
         SDL_SetRenderDrawColorFloat(renderer, clearColor.x, clearColor.y, clearColor.z, clearColor.w);
         SDL_RenderClear(renderer);
 
-        if (!drawDebug) {
+        if (!drawDebug || !videoOutputDebugWindowVisible) {
             // Render Saturn display covering the entire window
-            // TODO: make it possible to always display on the background (maybe by closing the debug display window?)
             // TODO: allow forcing aspect ratio to 4:3, 16:9 or square pixels
             // TODO: maintain desired aspect ratio
             // TODO: option to force integer scaling
