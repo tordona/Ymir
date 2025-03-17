@@ -112,33 +112,29 @@ void App::RunEmulator() {
     } screen;
 
     // ---------------------------------
-    // Setup Dear ImGui context
-
-    // We need to do this before creating the window to avoid graphics artifacts on the very first frame
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO &io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
-
     // Determine ImGui menu bar height
+
+    // Create and destryo temporary context
     {
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+
         // Build atlas
         unsigned char *tex_pixels = nullptr;
         int tex_w, tex_h;
+        ImGuiIO &io = ImGui::GetIO();
         io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_w, &tex_h);
+
+        // Draw frame
         io.DisplaySize = {100, 100}; // Set a fake display size to satisfy ImGui
         ImGui::NewFrame();
         ImGui::BeginMainMenuBar();
         screen.menuBarHeight = ImGui::GetWindowHeight();
         ImGui::EndMainMenuBar();
         ImGui::Render();
-    }
 
-    // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-    // ImGui::StyleColorsLight();
+        ImGui::DestroyContext();
+    }
 
     // ---------------------------------
     // Create window
@@ -203,8 +199,19 @@ void App::RunEmulator() {
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
 
     // ---------------------------------
-    // Setup Dear ImGui Platform/Renderer backends
+    // Setup Dear ImGui context
 
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    // ImGui::StyleColorsLight();
+
+    // Setup Dear ImGui Platform/Renderer backends
     ImGui_ImplSDL3_InitForSDLRenderer(screen.window, renderer);
     ImGui_ImplSDLRenderer3_Init(renderer);
 
