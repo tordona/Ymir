@@ -73,14 +73,33 @@ void App::RunEmulator() {
     const uint32 scale = 4;
     struct ScreenParams {
         ScreenParams()
-            : framebuffer(vdp::kMaxResH * vdp::kMaxResV) {}
+            : framebuffer(vdp::kMaxResH * vdp::kMaxResV) {
+            SetResolution(320, 224, scale);
+        }
 
         SDL_Window *window = nullptr;
 
-        uint32 width = 320;
-        uint32 height = 224;
-        float scaleX = scale;
-        float scaleY = scale;
+        uint32 width;
+        uint32 height;
+        float scaleX;
+        float scaleY;
+
+        bool autoResizeWindow = true;
+
+        void SetResolution(uint32 width, uint32 height, uint32 scale) {
+            const bool doubleResH = width >= 640;
+            const bool doubleResV = height >= 400;
+
+            this->width = width;
+            this->height = height;
+            this->scaleX = doubleResH ? scale * 0.5f : scale;
+            this->scaleY = doubleResV ? scale * 0.5f : scale;
+        }
+
+        void ResizeWindow() {
+            SDL_RestoreWindow(window);
+            SDL_SetWindowSize(window, width * scaleX, height * scaleY);
+        }
 
         std::vector<uint32> framebuffer;
         std::mutex mtxFramebuffer;
@@ -194,45 +213,40 @@ void App::RunEmulator() {
 
     // Our state
     bool showDemoWindow = false;
-    ImVec4 clearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    ImVec4 clearColor = ImVec4(0.15f, 0.18f, 0.37f, 1.00f);
 
     // ---------------------------------
     // Setup framebuffer and render callbacks
 
-    m_saturn.VDP.SetRenderCallback(
-        {&screen, [](vdp::FramebufferColor *fb, uint32 width, uint32 height, void *ctx) {
-             auto &screen = *static_cast<ScreenParams *>(ctx);
-             if (width != screen.width || height != screen.height) {
-                 const bool doubleWidth = width >= 640;
-                 const bool doubleHeight = height >= 400;
+    m_saturn.VDP.SetRenderCallback({&screen, [](vdp::FramebufferColor *fb, uint32 width, uint32 height, void *ctx) {
+                                        auto &screen = *static_cast<ScreenParams *>(ctx);
+                                        if (width != screen.width || height != screen.height) {
+                                            const uint32 prevWidth = screen.width * screen.scaleX;
+                                            const uint32 prevHeight = screen.height * screen.scaleY;
+                                            screen.SetResolution(width, height, scale);
 
-                 const float scaleX = doubleWidth ? scale * 0.5f : scale;
-                 const float scaleY = doubleHeight ? scale * 0.5f : scale;
+                                            if (screen.autoResizeWindow) {
+                                                int wx, wy;
+                                                SDL_GetWindowPosition(screen.window, &wx, &wy);
+                                                const int dx = (int)(width * screen.scaleX) - (int)prevWidth;
+                                                const int dy = (int)(height * screen.scaleY) - (int)prevHeight;
 
-                 auto normalizeW = [](int width) { return (width >= 640) ? width / 2 : width; };
-                 auto normalizeH = [](int height) { return (height >= 400) ? height / 2 : height; };
+                                                // Adjust window size dynamically
+                                                // TODO: add room for borders
+                                                SDL_SetWindowSize(screen.window, screen.width * screen.scaleX,
+                                                                  screen.height * screen.scaleY);
+                                                SDL_SetWindowPosition(screen.window, wx - dx / 2, wy - dy / 2);
+                                            }
+                                        }
+                                        ++screen.frames;
 
-                 int wx, wy;
-                 SDL_GetWindowPosition(screen.window, &wx, &wy);
-                 const int dx = (int)normalizeW(width) - (int)normalizeW(screen.width);
-                 const int dy = (int)normalizeH(height) - (int)normalizeH(screen.height);
-                 screen.width = width;
-                 screen.height = height;
-
-                 // Adjust window size dynamically
-                 // TODO: add room for borders
-                 SDL_SetWindowSize(screen.window, screen.width * scaleX, screen.height * scaleY);
-                 SDL_SetWindowPosition(screen.window, wx - dx * scaleX / 2, wy - dy * scaleY / 2);
-             }
-             ++screen.frames;
-
-             // TODO: figure out frame pacing when sync to video is enabled
-             if (screen.reduceLatency || !screen.updated) {
-                 std::unique_lock lock{screen.mtxFramebuffer};
-                 std::copy_n(fb, width * height, screen.framebuffer.data());
-                 screen.updated = true;
-             }
-         }});
+                                        // TODO: figure out frame pacing when sync to video is enabled
+                                        if (screen.reduceLatency || !screen.updated) {
+                                            std::unique_lock lock{screen.mtxFramebuffer};
+                                            std::copy_n(fb, width * height, screen.framebuffer.data());
+                                            screen.updated = true;
+                                        }
+                                    }});
 
     m_saturn.VDP.SetVDP1Callback({&screen, [](void *ctx) {
                                       auto &screen = *static_cast<ScreenParams *>(ctx);
@@ -460,6 +474,11 @@ void App::RunEmulator() {
         case SDL_SCANCODE_F10:
             if (pressed) {
                 drawDebug = !drawDebug;
+                screen.autoResizeWindow = !drawDebug;
+                if (screen.autoResizeWindow) {
+                    screen.ResizeWindow();
+                }
+                SDL_SetWindowResizable(screen.window, drawDebug);
                 fmt::println("Debug display {}", (drawDebug ? "enabled" : "disabled"));
             }
             break;
@@ -569,6 +588,29 @@ void App::RunEmulator() {
 
         // Draw debugger windows
         if (drawDebug) {
+            std::string title = fmt::format("Display - {}x{}###Display", screen.width, screen.height);
+
+            const float aspectRatio = (float)screen.height / screen.width;
+
+            ImGui::SetNextWindowSizeConstraints(
+                ImVec2(320, 224), ImVec2(FLT_MAX, FLT_MAX),
+                [](ImGuiSizeCallbackData *data) {
+                    float aspectRatio = *(float *)data->UserData;
+                    data->DesiredSize.y =
+                        (float)(int)(data->DesiredSize.x * aspectRatio) + ImGui::GetFrameHeightWithSpacing();
+                },
+                (void *)&aspectRatio);
+            if (ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_NoNavInputs)) {
+                const ImVec2 avail = ImGui::GetContentRegionAvail();
+                const float scaleX = avail.x / screen.width;
+                const float scaleY = avail.y / screen.height;
+                const float scale = std::min(scaleX, scaleY);
+
+                ImGui::Image((ImTextureID)texture, ImVec2(screen.width * scale, screen.height * scale), ImVec2(0, 0),
+                             ImVec2((float)screen.width / vdp::kMaxResH, (float)screen.height / vdp::kMaxResV));
+            }
+            ImGui::End();
+
             DrawDebug();
         }
 
@@ -581,9 +623,11 @@ void App::RunEmulator() {
         SDL_SetRenderDrawColorFloat(renderer, clearColor.x, clearColor.y, clearColor.z, clearColor.w);
         SDL_RenderClear(renderer);
 
-        // Render Saturn display covering the entire window
-        SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
-        SDL_RenderTexture(renderer, texture, &srcRect, nullptr);
+        if (!drawDebug) {
+            // Render Saturn display covering the entire window
+            SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
+            SDL_RenderTexture(renderer, texture, &srcRect, nullptr);
+        }
 
         // Render ImGui widgets
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
