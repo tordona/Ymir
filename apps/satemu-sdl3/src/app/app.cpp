@@ -371,7 +371,7 @@ void App::RunEmulator() {
         case SDL_SCANCODE_U: setClearButton(*pad1, X, pressed); break;
         case SDL_SCANCODE_I: setClearButton(*pad1, Y, pressed); break;
         case SDL_SCANCODE_O:
-            if (mod == SDL_KMOD_NONE) {
+            if ((mod & (SDL_KMOD_CTRL | SDL_KMOD_ALT | SDL_KMOD_SHIFT | SDL_KMOD_GUI)) == 0) {
                 setClearButton(*pad1, Z, pressed);
             } else if (pressed && (mod & SDL_KMOD_CTRL)) {
                 SDL_ShowFileDialogWithProperties(
