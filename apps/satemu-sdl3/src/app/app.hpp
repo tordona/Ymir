@@ -11,6 +11,8 @@
 
 #include "blockingconcurrentqueue.h"
 
+#include <imgui.h>
+
 #include <string>
 #include <thread>
 #include <variant>
@@ -24,6 +26,19 @@ public:
 private:
     satemu::Saturn m_saturn;
     CommandLineOptions m_options;
+
+    struct Fonts {
+        ImFont *sansSerifMedium = nullptr;
+        ImFont *sansSerifBold = nullptr;
+        ImFont *sansSerifMediumMedium = nullptr;
+        ImFont *sansSerifMediumBold = nullptr;
+        ImFont *sansSerifLargeBold = nullptr;
+        ImFont *monospaceMedium = nullptr;
+        ImFont *monospaceBold = nullptr;
+        ImFont *monospaceMediumMedium = nullptr;
+        ImFont *monospaceMediumBold = nullptr;
+        ImFont *display = nullptr;
+    } m_fonts;
 
     struct EmuCommand {
         enum class Type {

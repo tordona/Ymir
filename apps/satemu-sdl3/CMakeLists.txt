@@ -29,8 +29,20 @@ target_include_directories(satemu-sdl3
 target_link_libraries(satemu-sdl3 PRIVATE satemu::satemu-frontend-base SDL3::SDL3 cxxopts imgui::imgui)
 target_compile_features(satemu-sdl3 PUBLIC cxx_std_20)
 
+## Create embedded resource library
+cmrc_add_resource_library(satemu-sdl-rc
+    ALIAS satemu-sdl3::rc
+    NAMESPACE satemu_sdl3_rc
+    WHENCE res/embed
+    res/embed/fonts/SplineSans-Bold.ttf
+    res/embed/fonts/SplineSans-Medium.ttf
+    res/embed/fonts/SplineSansMono-Bold.ttf
+    res/embed/fonts/SplineSansMono-Medium.ttf
+    res/embed/fonts/ZenDots-Regular.ttf
+)
+
 ## Add dependencies
-target_link_libraries(satemu-sdl3 PRIVATE fmt)
+target_link_libraries(satemu-sdl3 PRIVATE fmt satemu-sdl3::rc)
 
 cmrk_copy_runtime_dlls(satemu-sdl3)
 

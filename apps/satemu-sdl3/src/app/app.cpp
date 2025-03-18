@@ -15,11 +15,16 @@
 #include <backends/imgui_impl_sdlrenderer3.h>
 #include <imgui.h>
 
+#include <cmrc/cmrc.hpp>
+
 #include <atomic>
 #include <mutex>
+#include <numbers>
 #include <span>
 #include <thread>
 #include <vector>
+
+CMRC_DECLARE(satemu_sdl3_rc);
 
 namespace app {
 
@@ -114,7 +119,7 @@ void App::RunEmulator() {
     // ---------------------------------
     // Determine ImGui menu bar height
 
-    // Create and destryo temporary context
+    // Build temporary context
     {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -209,6 +214,7 @@ void App::RunEmulator() {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
 
+    // Setup Dear ImGui style
     ImGuiStyle &style = ImGui::GetStyle();
     style.WindowPadding = ImVec2(6, 6);
     style.FramePadding = ImVec2(3, 3);
@@ -222,7 +228,7 @@ void App::RunEmulator() {
     style.ChildBorderSize = 1.0f;
     style.PopupBorderSize = 1.0f;
     style.FrameBorderSize = 0.0f;
-    style.WindowRounding = 1.0f;
+    style.WindowRounding = 3.0f;
     style.ChildRounding = 0.0f;
     style.FrameRounding = 1.0f;
     style.PopupRounding = 1.0f;
@@ -235,7 +241,7 @@ void App::RunEmulator() {
     style.TabCloseButtonMinWidthUnselected = 0.0f;
     style.TabRounding = 2.0f;
     style.CellPadding = ImVec2(3, 2);
-    style.TableAngledHeadersAngle = -50.0f;
+    style.TableAngledHeadersAngle = -50.0f * (2.0f * std::numbers::pi / 360.0f);
     style.TableAngledHeadersTextAlign = ImVec2(0.50f, 0.00f);
     style.WindowTitleAlign = ImVec2(0.50f, 0.50f);
     style.WindowBorderHoverPadding = 5.0f;
@@ -251,6 +257,7 @@ void App::RunEmulator() {
     style.DisplayWindowPadding = ImVec2(21, 21);
     style.DisplaySafeAreaPadding = ImVec2(3, 3);
 
+    // Setup Dear ImGui colors
     ImVec4 *colors = ImGui::GetStyle().Colors;
     colors[ImGuiCol_Text] = ImVec4(0.91f, 0.92f, 0.94f, 1.00f);
     colors[ImGuiCol_TextDisabled] = ImVec4(0.38f, 0.39f, 0.41f, 1.00f);
@@ -296,8 +303,8 @@ void App::RunEmulator() {
     colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
     colors[ImGuiCol_PlotLines] = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
     colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
-    colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
-    colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
+    colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.53f, 0.00f, 1.00f);
+    colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.67f, 0.25f, 1.00f);
     colors[ImGuiCol_TableHeaderBg] = ImVec4(0.19f, 0.19f, 0.20f, 1.00f);
     colors[ImGuiCol_TableBorderStrong] = ImVec4(0.31f, 0.31f, 0.35f, 1.00f);
     colors[ImGuiCol_TableBorderLight] = ImVec4(0.23f, 0.23f, 0.25f, 1.00f);
@@ -310,10 +317,6 @@ void App::RunEmulator() {
     colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
     colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
     colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
-
-    // Setup Dear ImGui style
-    // ImGui::StyleColorsDark();
-    // ImGui::StyleColorsLight();
 
     // Setup Dear ImGui Platform/Renderer backends
     ImGui_ImplSDL3_InitForSDLRenderer(screen.window, renderer);
@@ -341,6 +344,47 @@ void App::RunEmulator() {
     // ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr,
     // io.Fonts->GetGlyphRangesJapanese()); IM_ASSERT(font != nullptr);
     // io.Fonts->Build();
+    {
+        ImFontConfig config;
+        config.FontDataOwnedByAtlas = false;
+
+        ImVector<ImWchar> ranges;
+        ImFontGlyphRangesBuilder builder;
+        builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
+        // builder.AddRanges(io.Fonts->GetGlyphRangesChineseFull());
+        // builder.AddRanges(io.Fonts->GetGlyphRangesCyrillic());
+        // builder.AddRanges(io.Fonts->GetGlyphRangesGreek());
+        // builder.AddRanges(io.Fonts->GetGlyphRangesJapanese());
+        // builder.AddRanges(io.Fonts->GetGlyphRangesKorean());
+        // builder.AddRanges(io.Fonts->GetGlyphRangesThai());
+        // builder.AddRanges(io.Fonts->GetGlyphRangesVietnamese());
+        builder.AddChar(0x2014); // Em-dash
+        builder.AddChar(0x2190); // Left arrow
+        builder.AddChar(0x2191); // Up arrow
+        builder.AddChar(0x2192); // Right arrow
+        builder.AddChar(0x2193); // Down arrow
+        builder.BuildRanges(&ranges);
+
+        auto embedfs = cmrc::satemu_sdl3_rc::get_filesystem();
+
+        auto loadFont = [&](const char *path, float size) {
+            cmrc::file file = embedfs.open(path);
+            return io.Fonts->AddFontFromMemoryTTF((void *)file.begin(), file.size(), size, &config, ranges.Data);
+        };
+
+        m_fonts.sansSerifMedium = loadFont("fonts/SplineSans-Medium.ttf", 16);
+        m_fonts.sansSerifBold = loadFont("fonts/SplineSans-Bold.ttf", 16);
+        m_fonts.sansSerifMediumMedium = loadFont("fonts/SplineSans-Medium.ttf", 20);
+        m_fonts.sansSerifMediumBold = loadFont("fonts/SplineSans-Bold.ttf", 20);
+        m_fonts.sansSerifLargeBold = loadFont("fonts/SplineSans-Bold.ttf", 28);
+        m_fonts.monospaceMedium = loadFont("fonts/SplineSansMono-Medium.ttf", 16);
+        m_fonts.monospaceBold = loadFont("fonts/SplineSansMono-Bold.ttf", 16);
+        m_fonts.monospaceMediumMedium = loadFont("fonts/SplineSansMono-Medium.ttf", 20);
+        m_fonts.monospaceMediumBold = loadFont("fonts/SplineSansMono-Bold.ttf", 20);
+        m_fonts.display = loadFont("fonts/ZenDots-Regular.ttf", 64);
+
+        io.Fonts->Build();
+    }
 
     // Our state
     bool showDemoWindow = false;
