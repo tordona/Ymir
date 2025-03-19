@@ -10,6 +10,8 @@
 #include "debug/scu_tracer.hpp"
 #include "debug/sh2_tracer.hpp"
 
+#include "events/emu_events.hpp"
+
 #include "ui/scu_debugger.hpp"
 #include "ui/sh2_debugger.hpp"
 
@@ -34,76 +36,8 @@ private:
 
     Context m_context;
 
-    struct EmuCommand {
-        enum class Type {
-            FactoryReset,
-            HardReset,
-            SoftReset,
-            FrameStep,
-
-            SetPaused,
-
-            SetDebugTrace,
-            MemoryDump,
-
-            OpenCloseTray,
-            LoadDisc,
-            EjectDisc,
-
-            Shutdown
-        };
-
-        Type type;
-
-        std::variant<bool, std::string> value;
-
-        static EmuCommand FactoryReset() {
-            return {.type = Type::FactoryReset};
-        }
-
-        static EmuCommand HardReset() {
-            return {.type = Type::HardReset};
-        }
-
-        static EmuCommand SoftReset(bool resetLevel) {
-            return {.type = Type::SoftReset, .value = resetLevel};
-        }
-
-        static EmuCommand FrameStep() {
-            return {.type = Type::FrameStep};
-        }
-
-        static EmuCommand SetPaused(bool paused) {
-            return {.type = Type::SetPaused, .value = paused};
-        }
-
-        static EmuCommand SetDebugTrace(bool enabled) {
-            return {.type = Type::SetDebugTrace, .value = enabled};
-        }
-
-        static EmuCommand MemoryDump() {
-            return {.type = Type::MemoryDump};
-        }
-
-        static EmuCommand OpenCloseTray() {
-            return {.type = Type::OpenCloseTray};
-        }
-
-        static EmuCommand LoadDisc(std::string path) {
-            return {.type = Type::LoadDisc, .value = path};
-        }
-
-        static EmuCommand EjectDisc() {
-            return {.type = Type::EjectDisc};
-        }
-
-        static EmuCommand Shutdown() {
-            return {.type = Type::Shutdown};
-        }
-    };
-
     std::thread m_emuThread;
-    moodycamel::BlockingConcurrentQueue<EmuCommand> m_emuCommandQueue;
+    moodycamel::BlockingConcurrentQueue<EmuEvent> m_emuEventQueue;
 
     AudioSystem m_audioSystem;
 

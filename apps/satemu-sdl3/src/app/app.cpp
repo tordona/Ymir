@@ -616,12 +616,12 @@ void App::RunEmulator() {
             // TODO: find better keybindings for these
         case SDL_SCANCODE_F6:
             if (pressed) {
-                m_emuCommandQueue.enqueue(EmuCommand::OpenCloseTray());
+                m_emuEventQueue.enqueue(EmuEvent::OpenCloseTray());
             }
             break;
         case SDL_SCANCODE_F8:
             if (pressed) {
-                m_emuCommandQueue.enqueue(EmuCommand::EjectDisc());
+                m_emuEventQueue.enqueue(EmuEvent::EjectDisc());
             }
             break;
             // ---- END TODO ----
@@ -631,32 +631,32 @@ void App::RunEmulator() {
                 frameStep = true;
                 paused = false;
                 m_audioSystem.SetSilent(false);
-                m_emuCommandQueue.enqueue(EmuCommand::FrameStep());
+                m_emuEventQueue.enqueue(EmuEvent::FrameStep());
             }
             break;
         case SDL_SCANCODE_PAUSE:
             if (pressed) {
                 paused = !paused;
                 m_audioSystem.SetSilent(paused);
-                m_emuCommandQueue.enqueue(EmuCommand::SetPaused(paused));
+                m_emuEventQueue.enqueue(EmuEvent::SetPaused(paused));
             }
 
         case SDL_SCANCODE_R:
             if (pressed) {
                 if ((mod & SDL_KMOD_CTRL) && (mod & SDL_KMOD_SHIFT)) {
-                    m_emuCommandQueue.enqueue(EmuCommand::FactoryReset());
+                    m_emuEventQueue.enqueue(EmuEvent::FactoryReset());
                 } else if (mod & SDL_KMOD_CTRL) {
-                    m_emuCommandQueue.enqueue(EmuCommand::HardReset());
+                    m_emuEventQueue.enqueue(EmuEvent::HardReset());
                 }
             }
             if (mod & SDL_KMOD_SHIFT) {
-                m_emuCommandQueue.enqueue(EmuCommand::SoftReset(pressed));
+                m_emuEventQueue.enqueue(EmuEvent::SoftReset(pressed));
             }
             break;
         case SDL_SCANCODE_TAB: m_audioSystem.SetSync(!pressed); break;
         case SDL_SCANCODE_F3:
             if (pressed) {
-                m_emuCommandQueue.enqueue(EmuCommand::MemoryDump());
+                m_emuEventQueue.enqueue(EmuEvent::MemoryDump());
             }
             break;
         case SDL_SCANCODE_F9:
@@ -678,7 +678,7 @@ void App::RunEmulator() {
         case SDL_SCANCODE_F11:
             if (pressed) {
                 debugTrace = !debugTrace;
-                m_emuCommandQueue.enqueue(EmuCommand::SetDebugTrace(debugTrace));
+                m_emuEventQueue.enqueue(EmuEvent::SetDebugTrace(debugTrace));
                 fmt::println("Advanced debug tracing {}", (debugTrace ? "enabled" : "disabled"));
             }
             break;
@@ -694,8 +694,8 @@ void App::RunEmulator() {
         // space in the audio buffer due to being paused
         paused = false;
         m_audioSystem.SetSilent(false);
-        m_emuCommandQueue.enqueue(EmuCommand::SetPaused(false));
-        m_emuCommandQueue.enqueue(EmuCommand::Shutdown());
+        m_emuEventQueue.enqueue(EmuEvent::SetPaused(false));
+        m_emuEventQueue.enqueue(EmuEvent::Shutdown());
         if (m_emuThread.joinable()) {
             m_emuThread.join();
         }
@@ -914,7 +914,7 @@ end_loop:; // the semicolon is not a typo!
 void App::EmulatorThread() {
     util::SetCurrentThreadName("Emulator thread");
 
-    std::array<EmuCommand, 64> cmds{};
+    std::array<EmuEvent, 64> cmds{};
 
     bool paused = false;
     bool frameStep = false;
@@ -922,11 +922,11 @@ void App::EmulatorThread() {
 
     while (true) {
         // Process all pending commands
-        const size_t cmdCount = paused ? m_emuCommandQueue.wait_dequeue_bulk(cmds.begin(), cmds.size())
-                                       : m_emuCommandQueue.try_dequeue_bulk(cmds.begin(), cmds.size());
+        const size_t cmdCount = paused ? m_emuEventQueue.wait_dequeue_bulk(cmds.begin(), cmds.size())
+                                       : m_emuEventQueue.try_dequeue_bulk(cmds.begin(), cmds.size());
         for (size_t i = 0; i < cmdCount; i++) {
-            const EmuCommand &cmd = cmds[i];
-            using enum EmuCommand::Type;
+            const EmuEvent &cmd = cmds[i];
+            using enum EmuEvent::Type;
             switch (cmd.type) {
             case FactoryReset: m_context.saturn.FactoryReset(); break;
             case HardReset: m_context.saturn.Reset(true); break;
@@ -1059,7 +1059,7 @@ void App::ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, i
     } else {
         // Only one file should be selected
         const char *file = *filelist;
-        m_emuCommandQueue.enqueue(EmuCommand::LoadDisc(file));
+        m_emuEventQueue.enqueue(EmuEvent::LoadDisc(file));
     }
 }
 

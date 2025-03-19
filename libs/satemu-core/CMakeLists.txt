@@ -203,6 +203,7 @@ target_precompile_headers(satemu-core
         <type_traits>
         <unordered_map>
         <utility>
+        <variant>
         <vector>
 
         <fmt/format.h>
