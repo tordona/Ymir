@@ -10,6 +10,7 @@
 #include "debug/scu_tracer.hpp"
 #include "debug/sh2_tracer.hpp"
 
+#include "ui/scu_debugger.hpp"
 #include "ui/sh2_debugger.hpp"
 
 #include "blockingconcurrentqueue.h"
@@ -124,6 +125,7 @@ private:
 
     SH2Debugger m_masterSH2Debugger;
     SH2Debugger m_slaveSH2Debugger;
+    SCUDebugger m_scuDebugger;
 };
 
 } // namespace app
