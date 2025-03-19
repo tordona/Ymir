@@ -14,6 +14,9 @@ SH2Debugger::SH2Debugger(Context &context, bool master)
     , m_sh2(master ? context.saturn.masterSH2 : context.saturn.slaveSH2) {}
 
 void SH2Debugger::Display() {
+    // TODO: improve layout
+    // TODO: move to a separate file (as standalone function?)
+
     auto &regs = m_sh2.GetGPRs();
     std::string name = fmt::format("{}SH2", m_master ? "M" : "S");
     if (ImGui::Begin(name.c_str(), &Open, ImGuiWindowFlags_AlwaysAutoResize)) {
