@@ -11,17 +11,18 @@ add_executable(satemu-sdl3
     src/app/cmdline_opts.hpp
     src/app/context.hpp
 
-    src/app/debug/sh2_tracer.cpp
-    src/app/debug/sh2_tracer.hpp
     src/app/debug/scu_tracer.cpp
     src/app/debug/scu_tracer.hpp
+    src/app/debug/sh2_tracer.cpp
+    src/app/debug/sh2_tracer.hpp
 
+    src/app/ui/scu_debugger.cpp
     src/app/ui/sh2_debugger.cpp
     src/app/ui/sh2_debugger.hpp
 
     src/util/rom_loader.cpp
     src/util/rom_loader.hpp
- "src/app/ui/scu_debugger.cpp")
+)
 add_executable(satemu::satemu-sdl3 ALIAS satemu-sdl3)
 set_target_properties(satemu-sdl3 PROPERTIES
                       VERSION ${satemu_VERSION}
@@ -34,7 +35,7 @@ target_link_libraries(satemu-sdl3 PRIVATE satemu::satemu-frontend-base SDL3::SDL
 target_compile_features(satemu-sdl3 PUBLIC cxx_std_20)
 
 ## Create embedded resource library
-cmrc_add_resource_library(satemu-sdl-rc
+cmrc_add_resource_library(satemu-sdl3-rc
     ALIAS satemu-sdl3::rc
     NAMESPACE satemu_sdl3_rc
     WHENCE res/embed
@@ -79,6 +80,7 @@ endif ()
 if (MSVC)
     vs_set_filters(TARGET satemu-sdl3)
     set_target_properties(satemu-sdl3 PROPERTIES FOLDER "satemu")
+    set_target_properties(satemu-sdl3-rc PROPERTIES FOLDER "satemu")
 endif ()
 
 ## Include the install rules if requested
