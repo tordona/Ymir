@@ -538,6 +538,11 @@ void App::RunEmulator() {
     bool debugTrace = false;
     bool drawDebug = false;
     bool showVideoOutputDebugWindow = false;
+
+    bool forceIntegerScaling = true;
+    bool forceAspectRatio = false;
+    float forcedAspect = 4.0f / 3.0f;
+
     auto &port1 = m_saturn.SMPC.GetPeripheralPort1();
     auto &port2 = m_saturn.SMPC.GetPeripheralPort2();
     auto *pad1 = port1.ConnectStandardPad();
@@ -776,6 +781,16 @@ void App::RunEmulator() {
                 ImGui::End();
             }
             if (ImGui::BeginMenu("View")) {
+                ImGui::MenuItem("Force integer scaling", nullptr, &forceIntegerScaling);
+                ImGui::MenuItem("Force aspect ratio", nullptr, &forceAspectRatio);
+                if (ImGui::SmallButton("4:3")) {
+                    forcedAspect = 4.0f / 3.0f;
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("16:9")) {
+                    forcedAspect = 16.0f / 9.0f;
+                }
+                ImGui::SameLine();
                 ImGui::End();
             }
             if (ImGui::BeginMenu("Emulator")) {
@@ -850,11 +865,6 @@ void App::RunEmulator() {
 
         // Draw Saturn screen
         if (!drawDebug || !showVideoOutputDebugWindow) {
-            // TODO: make these parameters configurable
-            const bool forceIntegerScaling = true;
-            const bool forceAspectRatio = false;
-            const float forcedAspect = 4.0f / 3.0f;
-
             // Get screen size
             const float baseWidth = forceAspectRatio ? screen.height * forcedAspect : screen.width;
             const float baseHeight = screen.height;
