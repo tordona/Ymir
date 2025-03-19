@@ -2,6 +2,8 @@
 add_library(satemu-frontend-base
     include/satemu/frontend/base.hpp
 
+    src/winmain.cpp
+
     src/satemu/frontend/base.cpp
 )
 add_library(satemu::satemu-frontend-base ALIAS satemu-frontend-base)

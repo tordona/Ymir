@@ -1,7 +1,6 @@
 ## Create the executable target
 add_executable(satemu-sdl3
     src/main.cpp
-    src/winmain.cpp
 
     src/app/app.cpp
     src/app/app.hpp
@@ -50,6 +49,11 @@ cmrc_add_resource_library(satemu-sdl3-rc
 target_link_libraries(satemu-sdl3 PRIVATE fmt satemu-sdl3::rc)
 
 cmrk_copy_runtime_dlls(satemu-sdl3)
+
+## Make it a Win32 executable (without a console window) on Windows
+if (WIN32)
+    set_target_properties(satemu-sdl3 PROPERTIES WIN32_EXECUTABLE ON)
+endif ()
 
 ## Enable LTO if supported
 include(CheckIPOSupported)
