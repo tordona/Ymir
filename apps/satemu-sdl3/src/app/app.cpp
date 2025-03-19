@@ -217,7 +217,7 @@ void App::RunEmulator() {
     // Setup Dear ImGui style
     ImGuiStyle &style = ImGui::GetStyle();
     style.WindowPadding = ImVec2(6, 6);
-    style.FramePadding = ImVec2(3, 3);
+    style.FramePadding = ImVec2(4, 3);
     style.ItemSpacing = ImVec2(7, 4);
     style.ItemInnerSpacing = ImVec2(4, 4);
     style.TouchExtraPadding = ImVec2(0, 0);
@@ -1074,24 +1074,70 @@ void App::DrawDebug() {
         std::string name = fmt::format("{}SH2", master ? "M" : "S");
         if (ImGui::Begin(name.c_str())) {
             if (enabled) {
+                auto drawReg32 = [&](std::string name, uint32 value) {
+                    ImGui::AlignTextToFramePadding();
+                    ImGui::TextUnformatted(name.c_str());
+
+                    ImGui::SameLine(50.0f);
+
+                    ImGui::PushFont(m_fonts.monospaceMedium);
+                    float charWidth = ImGui::CalcTextSize("F").x;
+                    ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + charWidth * 8);
+                    const std::string lblField = fmt::format("##input_{}", name);
+                    ImGui::InputScalar(lblField.c_str(), ImGuiDataType_U32, &value, nullptr, nullptr, "%08X",
+                                       ImGuiInputTextFlags_CharsHexadecimal);
+                    ImGui::PopFont();
+                };
+
                 for (uint32 i = 0; i < 16; i++) {
-                    ImGui::Text("R%-2u  %08X", i, regs[i]);
+                    drawReg32(fmt::format("R{}", i), regs[i]);
                 }
 
-                ImGui::Text("PC   %08X", sh2.GetPC());
-                ImGui::Text("PR   %08X", sh2.GetPR());
+                drawReg32("PC", sh2.GetPC());
+                drawReg32("PR", sh2.GetPR());
 
                 auto mac = sh2.GetMAC();
-                ImGui::Text("MACH %08X", mac.H);
-                ImGui::Text("MACL %08X", mac.L);
+                drawReg32("MACH", mac.H);
+                drawReg32("MACL", mac.L);
 
                 auto sr = sh2.GetSR();
-                ImGui::Text("SR   %08X", sr.u32);
-                ImGui::Text("%c%c%c%c I=%X", bit(sr.M, 'M'), bit(sr.Q, 'Q'), bit(sr.S, 'S'), bit(sr.T, 'T'),
-                            (uint8)sr.ILevel);
+                drawReg32("SR", sr.u32);
+                bool M = sr.M;
+                bool Q = sr.Q;
+                bool S = sr.S;
+                bool T = sr.T;
 
-                ImGui::Text("GBR  %08X", sh2.GetGBR());
-                ImGui::Text("VBR  %08X", sh2.GetVBR());
+                ImGui::BeginGroup();
+                ImGui::Checkbox("##M", &M);
+                ImGui::Text("M");
+                ImGui::EndGroup();
+
+                ImGui::SameLine();
+
+                ImGui::BeginGroup();
+                ImGui::Checkbox("##Q", &Q);
+                ImGui::Text("Q");
+                ImGui::EndGroup();
+
+                ImGui::SameLine();
+
+                ImGui::BeginGroup();
+                ImGui::Checkbox("##S", &S);
+                ImGui::Text("Q");
+                ImGui::EndGroup();
+
+                ImGui::SameLine();
+
+                ImGui::BeginGroup();
+                ImGui::Checkbox("##T", &T);
+                ImGui::Text("Q");
+                ImGui::EndGroup();
+
+                // TODO: make this editable
+                ImGui::Text("I=%X", (uint8)sr.ILevel);
+
+                drawReg32("GBR", sh2.GetGBR());
+                drawReg32("VBR", sh2.GetVBR());
 
                 /*if (debugTrace) {
                     drawText(x, y + 280, "vec lv");
