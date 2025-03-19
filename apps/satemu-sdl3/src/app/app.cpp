@@ -28,6 +28,10 @@ CMRC_DECLARE(satemu_sdl3_rc);
 
 namespace app {
 
+App::App()
+    : m_masterSH2Debugger(m_context, true)
+    , m_slaveSH2Debugger(m_context, false) {}
+
 int App::Run(const CommandLineOptions &options) {
     fmt::println("satemu {}", satemu::version::string);
 
@@ -50,7 +54,7 @@ int App::Run(const CommandLineOptions &options) {
             fmt::println("IPL ROM size mismatch: expected {} bytes, got {} bytes", iplSize, rom.size());
             return EXIT_FAILURE;
         }
-        m_saturn.LoadIPL(std::span<uint8, iplSize>(rom));
+        m_context.saturn.LoadIPL(std::span<uint8, iplSize>(rom));
         fmt::println("IPL ROM loaded");
     }
 
@@ -372,16 +376,16 @@ void App::RunEmulator() {
             return io.Fonts->AddFontFromMemoryTTF((void *)file.begin(), file.size(), size, &config, ranges.Data);
         };
 
-        m_fonts.sansSerifMedium = loadFont("fonts/SplineSans-Medium.ttf", 16);
-        m_fonts.sansSerifBold = loadFont("fonts/SplineSans-Bold.ttf", 16);
-        m_fonts.sansSerifMediumMedium = loadFont("fonts/SplineSans-Medium.ttf", 20);
-        m_fonts.sansSerifMediumBold = loadFont("fonts/SplineSans-Bold.ttf", 20);
-        m_fonts.sansSerifLargeBold = loadFont("fonts/SplineSans-Bold.ttf", 28);
-        m_fonts.monospaceMedium = loadFont("fonts/SplineSansMono-Medium.ttf", 16);
-        m_fonts.monospaceBold = loadFont("fonts/SplineSansMono-Bold.ttf", 16);
-        m_fonts.monospaceMediumMedium = loadFont("fonts/SplineSansMono-Medium.ttf", 20);
-        m_fonts.monospaceMediumBold = loadFont("fonts/SplineSansMono-Bold.ttf", 20);
-        m_fonts.display = loadFont("fonts/ZenDots-Regular.ttf", 64);
+        m_context.fonts.sansSerifMedium = loadFont("fonts/SplineSans-Medium.ttf", 16);
+        m_context.fonts.sansSerifBold = loadFont("fonts/SplineSans-Bold.ttf", 16);
+        m_context.fonts.sansSerifMediumMedium = loadFont("fonts/SplineSans-Medium.ttf", 20);
+        m_context.fonts.sansSerifMediumBold = loadFont("fonts/SplineSans-Bold.ttf", 20);
+        m_context.fonts.sansSerifLargeBold = loadFont("fonts/SplineSans-Bold.ttf", 28);
+        m_context.fonts.monospaceMedium = loadFont("fonts/SplineSansMono-Medium.ttf", 16);
+        m_context.fonts.monospaceBold = loadFont("fonts/SplineSansMono-Bold.ttf", 16);
+        m_context.fonts.monospaceMediumMedium = loadFont("fonts/SplineSansMono-Medium.ttf", 20);
+        m_context.fonts.monospaceMediumBold = loadFont("fonts/SplineSansMono-Bold.ttf", 20);
+        m_context.fonts.display = loadFont("fonts/ZenDots-Regular.ttf", 64);
 
         io.Fonts->Build();
     }
@@ -393,44 +397,44 @@ void App::RunEmulator() {
     // ---------------------------------
     // Setup framebuffer and render callbacks
 
-    m_saturn.VDP.SetRenderCallback({&screen, [](vdp::FramebufferColor *fb, uint32 width, uint32 height, void *ctx) {
-                                        auto &screen = *static_cast<ScreenParams *>(ctx);
-                                        if (width != screen.width || height != screen.height) {
-                                            const uint32 prevWidth = screen.width * screen.scaleX;
-                                            const uint32 prevHeight = screen.height * screen.scaleY;
-                                            screen.SetResolution(width, height, scale);
+    m_context.saturn.VDP.SetRenderCallback(
+        {&screen, [](vdp::FramebufferColor *fb, uint32 width, uint32 height, void *ctx) {
+             auto &screen = *static_cast<ScreenParams *>(ctx);
+             if (width != screen.width || height != screen.height) {
+                 const uint32 prevWidth = screen.width * screen.scaleX;
+                 const uint32 prevHeight = screen.height * screen.scaleY;
+                 screen.SetResolution(width, height, scale);
 
-                                            // TODO: this conflicts with window resizes from the user
-                                            // - add toggle: "Auto-fit window to screen"
-                                            if (screen.autoResizeWindow) {
-                                                int wx, wy;
-                                                SDL_GetWindowPosition(screen.window, &wx, &wy);
-                                                wy -= screen.menuBarHeight;
-                                                const int dx = (int)(width * screen.scaleX) - (int)prevWidth;
-                                                const int dy = (int)(height * screen.scaleY) - (int)prevHeight;
+                 // TODO: this conflicts with window resizes from the user
+                 // - add toggle: "Auto-fit window to screen"
+                 if (screen.autoResizeWindow) {
+                     int wx, wy;
+                     SDL_GetWindowPosition(screen.window, &wx, &wy);
+                     wy -= screen.menuBarHeight;
+                     const int dx = (int)(width * screen.scaleX) - (int)prevWidth;
+                     const int dy = (int)(height * screen.scaleY) - (int)prevHeight;
 
-                                                // Adjust window size dynamically
-                                                // TODO: add room for borders
-                                                SDL_SetWindowSize(screen.window, screen.width * screen.scaleX,
-                                                                  screen.height * screen.scaleY + screen.menuBarHeight);
-                                                SDL_SetWindowPosition(screen.window, wx - dx / 2,
-                                                                      wy - dy / 2 + screen.menuBarHeight);
-                                            }
-                                        }
-                                        ++screen.frames;
+                     // Adjust window size dynamically
+                     // TODO: add room for borders
+                     SDL_SetWindowSize(screen.window, screen.width * screen.scaleX,
+                                       screen.height * screen.scaleY + screen.menuBarHeight);
+                     SDL_SetWindowPosition(screen.window, wx - dx / 2, wy - dy / 2 + screen.menuBarHeight);
+                 }
+             }
+             ++screen.frames;
 
-                                        // TODO: figure out frame pacing when sync to video is enabled
-                                        if (screen.reduceLatency || !screen.updated) {
-                                            std::unique_lock lock{screen.mtxFramebuffer};
-                                            std::copy_n(fb, width * height, screen.framebuffer.data());
-                                            screen.updated = true;
-                                        }
-                                    }});
+             // TODO: figure out frame pacing when sync to video is enabled
+             if (screen.reduceLatency || !screen.updated) {
+                 std::unique_lock lock{screen.mtxFramebuffer};
+                 std::copy_n(fb, width * height, screen.framebuffer.data());
+                 screen.updated = true;
+             }
+         }});
 
-    m_saturn.VDP.SetVDP1Callback({&screen, [](void *ctx) {
-                                      auto &screen = *static_cast<ScreenParams *>(ctx);
-                                      ++screen.vdp1Frames;
-                                  }});
+    m_context.saturn.VDP.SetVDP1Callback({&screen, [](void *ctx) {
+                                              auto &screen = *static_cast<ScreenParams *>(ctx);
+                                              ++screen.vdp1Frames;
+                                          }});
 
     // ---------------------------------
     // Initialize audio system
@@ -482,9 +486,9 @@ void App::RunEmulator() {
         SDL_Log("Unable to start audio stream: %s", SDL_GetError());
     }
 
-    m_saturn.SCSP.SetSampleCallback({&m_audioSystem, [](sint16 left, sint16 right, void *ctx) {
-                                         static_cast<AudioSystem *>(ctx)->ReceiveSample(left, right);
-                                     }});
+    m_context.saturn.SCSP.SetSampleCallback({&m_audioSystem, [](sint16 left, sint16 right, void *ctx) {
+                                                 static_cast<AudioSystem *>(ctx)->ReceiveSample(left, right);
+                                             }});
 
     // ---------------------------------
     // Main emulator loop
@@ -509,28 +513,28 @@ void App::RunEmulator() {
     // const char *cancel = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_CANCEL_STRING, NULL);
 
     // TODO: pull from CommandLineOptions or configuration
-    // m_saturn.SetVideoStandard(satemu::sys::VideoStandard::PAL);
+    // m_context.saturn.SetVideoStandard(satemu::sys::VideoStandard::PAL);
 
     // TODO: pull from CommandLineOptions or configuration
     static constexpr std::string_view extBupPath = "bup-ext.bin";
 
     std::error_code error{};
-    if (m_saturn.InsertCartridge<satemu::cart::BackupMemoryCartridge>(
+    if (m_context.saturn.InsertCartridge<satemu::cart::BackupMemoryCartridge>(
             satemu::cart::BackupMemoryCartridge::Size::_32Mbit, extBupPath, error)) {
         fmt::println("External backup memory cartridge loaded from {}", extBupPath);
     } else if (error) {
         fmt::println("Failed to load external backup memory: {}", error.message());
     }
 
-    /*if (m_saturn.InsertCartridge<satemu::cart::DRAM8MbitCartridge>()) {
+    /*if (m_context.saturn.InsertCartridge<satemu::cart::DRAM8MbitCartridge>()) {
         fmt::println("8 Mbit DRAM cartridge inserted");
     }*/
 
-    /*if (m_saturn.InsertCartridge<satemu::cart::DRAM32MbitCartridge>()) {
+    /*if (m_context.saturn.InsertCartridge<satemu::cart::DRAM32MbitCartridge>()) {
         fmt::println("32 Mbit DRAM cartridge inserted");
     }*/
 
-    m_saturn.Reset(true);
+    m_context.saturn.Reset(true);
 
     auto t = clk::now();
     bool paused = false;
@@ -543,8 +547,8 @@ void App::RunEmulator() {
     bool forceAspectRatio = false;
     float forcedAspect = 4.0f / 3.0f;
 
-    auto &port1 = m_saturn.SMPC.GetPeripheralPort1();
-    auto &port2 = m_saturn.SMPC.GetPeripheralPort2();
+    auto &port1 = m_context.saturn.SMPC.GetPeripheralPort1();
+    auto &port2 = m_context.saturn.SMPC.GetPeripheralPort2();
     auto *pad1 = port1.ConnectStandardPad();
     auto *pad2 = port2.ConnectStandardPad();
 
@@ -747,7 +751,7 @@ void App::RunEmulator() {
         // Calculate performance and update title bar
         auto t2 = clk::now();
         if (t2 - t >= 1s) {
-            const media::Disc &disc = m_saturn.CDBlock.GetDisc();
+            const media::Disc &disc = m_context.saturn.CDBlock.GetDisc();
             const media::SaturnHeader &header = disc.header;
             std::string title{};
             if (paused) {
@@ -925,9 +929,9 @@ void App::EmulatorThread() {
             const EmuCommand &cmd = cmds[i];
             using enum EmuCommand::Type;
             switch (cmd.type) {
-            case FactoryReset: m_saturn.FactoryReset(); break;
-            case HardReset: m_saturn.Reset(true); break;
-            case SoftReset: m_saturn.SMPC.SetResetButtonState(std::get<bool>(cmd.value)); break;
+            case FactoryReset: m_context.saturn.FactoryReset(); break;
+            case HardReset: m_context.saturn.Reset(true); break;
+            case SoftReset: m_context.saturn.SMPC.SetResetButtonState(std::get<bool>(cmd.value)); break;
             case FrameStep:
                 frameStep = true;
                 paused = false;
@@ -936,110 +940,110 @@ void App::EmulatorThread() {
             case SetDebugTrace:
                 debugTrace = std::get<bool>(cmd.value);
                 if (debugTrace) {
-                    m_saturn.masterSH2.UseTracer(&m_masterSH2Tracer);
-                    m_saturn.slaveSH2.UseTracer(&m_slaveSH2Tracer);
-                    m_saturn.SCU.UseTracer(&m_scuTracer);
+                    m_context.saturn.masterSH2.UseTracer(&m_masterSH2Tracer);
+                    m_context.saturn.slaveSH2.UseTracer(&m_slaveSH2Tracer);
+                    m_context.saturn.SCU.UseTracer(&m_scuTracer);
                 } else {
-                    m_saturn.masterSH2.UseTracer(nullptr);
-                    m_saturn.slaveSH2.UseTracer(nullptr);
-                    m_saturn.SCU.UseTracer(nullptr);
+                    m_context.saturn.masterSH2.UseTracer(nullptr);
+                    m_context.saturn.slaveSH2.UseTracer(nullptr);
+                    m_context.saturn.SCU.UseTracer(nullptr);
                 }
                 break;
             case MemoryDump: //
             {
                 {
                     std::ofstream out{"wram-lo.bin", std::ios::binary};
-                    m_saturn.mem.DumpWRAMLow(out);
+                    m_context.saturn.mem.DumpWRAMLow(out);
                 }
                 {
                     std::ofstream out{"wram-hi.bin", std::ios::binary};
-                    m_saturn.mem.DumpWRAMHigh(out);
+                    m_context.saturn.mem.DumpWRAMHigh(out);
                 }
                 {
                     std::ofstream out{"vdp1-vram.bin", std::ios::binary};
-                    m_saturn.VDP.DumpVDP1VRAM(out);
+                    m_context.saturn.VDP.DumpVDP1VRAM(out);
                 }
                 {
                     std::ofstream out{"vdp1-fbs.bin", std::ios::binary};
-                    m_saturn.VDP.DumpVDP1Framebuffers(out);
+                    m_context.saturn.VDP.DumpVDP1Framebuffers(out);
                 }
                 {
                     std::ofstream out{"vdp2-vram.bin", std::ios::binary};
-                    m_saturn.VDP.DumpVDP2VRAM(out);
+                    m_context.saturn.VDP.DumpVDP2VRAM(out);
                 }
                 {
                     std::ofstream out{"vdp2-cram.bin", std::ios::binary};
-                    m_saturn.VDP.DumpVDP2CRAM(out);
+                    m_context.saturn.VDP.DumpVDP2CRAM(out);
                 }
                 {
                     std::ofstream out{"scu-dsp-prog.bin", std::ios::binary};
-                    m_saturn.SCU.DumpDSPProgramRAM(out);
+                    m_context.saturn.SCU.DumpDSPProgramRAM(out);
                 }
                 {
                     std::ofstream out{"scu-dsp-data.bin", std::ios::binary};
-                    m_saturn.SCU.DumpDSPDataRAM(out);
+                    m_context.saturn.SCU.DumpDSPDataRAM(out);
                 }
                 {
                     std::ofstream out{"scu-dsp-regs.bin", std::ios::binary};
-                    m_saturn.SCU.DumpDSPRegs(out);
+                    m_context.saturn.SCU.DumpDSPRegs(out);
                 }
                 {
                     std::ofstream out{"scsp-wram.bin", std::ios::binary};
-                    m_saturn.SCSP.DumpWRAM(out);
+                    m_context.saturn.SCSP.DumpWRAM(out);
                 }
                 {
                     std::ofstream out{"scsp-dsp-mpro.bin", std::ios::binary};
-                    m_saturn.SCSP.DumpDSP_MPRO(out);
+                    m_context.saturn.SCSP.DumpDSP_MPRO(out);
                 }
                 {
                     std::ofstream out{"scsp-dsp-temp.bin", std::ios::binary};
-                    m_saturn.SCSP.DumpDSP_TEMP(out);
+                    m_context.saturn.SCSP.DumpDSP_TEMP(out);
                 }
                 {
                     std::ofstream out{"scsp-dsp-mems.bin", std::ios::binary};
-                    m_saturn.SCSP.DumpDSP_MEMS(out);
+                    m_context.saturn.SCSP.DumpDSP_MEMS(out);
                 }
                 {
                     std::ofstream out{"scsp-dsp-coef.bin", std::ios::binary};
-                    m_saturn.SCSP.DumpDSP_COEF(out);
+                    m_context.saturn.SCSP.DumpDSP_COEF(out);
                 }
                 {
                     std::ofstream out{"scsp-dsp-madrs.bin", std::ios::binary};
-                    m_saturn.SCSP.DumpDSP_MADRS(out);
+                    m_context.saturn.SCSP.DumpDSP_MADRS(out);
                 }
                 {
                     std::ofstream out{"scsp-dsp-mixs.bin", std::ios::binary};
-                    m_saturn.SCSP.DumpDSP_MIXS(out);
+                    m_context.saturn.SCSP.DumpDSP_MIXS(out);
                 }
                 {
                     std::ofstream out{"scsp-dsp-efreg.bin", std::ios::binary};
-                    m_saturn.SCSP.DumpDSP_EFREG(out);
+                    m_context.saturn.SCSP.DumpDSP_EFREG(out);
                 }
                 {
                     std::ofstream out{"scsp-dsp-exts.bin", std::ios::binary};
-                    m_saturn.SCSP.DumpDSP_EXTS(out);
+                    m_context.saturn.SCSP.DumpDSP_EXTS(out);
                 }
                 {
                     std::ofstream out{"scsp-dsp-regs.bin", std::ios::binary};
-                    m_saturn.SCSP.DumpDSPRegs(out);
+                    m_context.saturn.SCSP.DumpDSPRegs(out);
                 }
                 break;
             }
             case OpenCloseTray:
-                if (m_saturn.IsTrayOpen()) {
-                    m_saturn.CloseTray();
+                if (m_context.saturn.IsTrayOpen()) {
+                    m_context.saturn.CloseTray();
                 } else {
-                    m_saturn.OpenTray();
+                    m_context.saturn.OpenTray();
                 }
                 break;
             case LoadDisc: LoadDiscImage(std::get<std::string>(cmd.value)); break;
-            case EjectDisc: m_saturn.EjectDisc(); break;
+            case EjectDisc: m_context.saturn.EjectDisc(); break;
             case Shutdown: return;
             }
         }
 
         // Emulate one frame
-        m_saturn.RunFrame(debugTrace);
+        m_context.saturn.RunFrame(debugTrace);
         if (frameStep) {
             frameStep = false;
             paused = true;
@@ -1068,115 +1072,20 @@ bool App::LoadDiscImage(std::filesystem::path path) {
         return false;
     }
     fmt::println("Loaded disc image from {}", path.string());
-    m_saturn.LoadDisc(std::move(disc));
+    m_context.saturn.LoadDisc(std::move(disc));
     return true;
 }
 
 void App::DrawDebug() {
     using namespace satemu;
 
-    std::string str{};
-
-    auto bit = [](bool value, char bit) { return value ? bit : '.'; };
-
-    auto displaySH2 = [&](SH2Tracer &tracer, sh2::SH2 &sh2, bool master, bool enabled, int x, int y) {
-        auto &regs = sh2.GetGPRs();
-        std::string name = fmt::format("{}SH2", master ? "M" : "S");
-        if (ImGui::Begin(name.c_str())) {
-            if (enabled) {
-                auto drawReg32 = [&](std::string name, uint32 value) {
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::TextUnformatted(name.c_str());
-
-                    ImGui::SameLine(50.0f);
-
-                    ImGui::PushFont(m_fonts.monospaceMedium);
-                    float charWidth = ImGui::CalcTextSize("F").x;
-                    ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + charWidth * 8);
-                    const std::string lblField = fmt::format("##input_{}", name);
-                    ImGui::InputScalar(lblField.c_str(), ImGuiDataType_U32, &value, nullptr, nullptr, "%08X",
-                                       ImGuiInputTextFlags_CharsHexadecimal);
-                    ImGui::PopFont();
-                };
-
-                for (uint32 i = 0; i < 16; i++) {
-                    drawReg32(fmt::format("R{}", i), regs[i]);
-                }
-
-                drawReg32("PC", sh2.GetPC());
-                drawReg32("PR", sh2.GetPR());
-
-                auto mac = sh2.GetMAC();
-                drawReg32("MACH", mac.H);
-                drawReg32("MACL", mac.L);
-
-                auto sr = sh2.GetSR();
-                drawReg32("SR", sr.u32);
-                bool M = sr.M;
-                bool Q = sr.Q;
-                bool S = sr.S;
-                bool T = sr.T;
-
-                ImGui::BeginGroup();
-                ImGui::Checkbox("##M", &M);
-                ImGui::Text("M");
-                ImGui::EndGroup();
-
-                ImGui::SameLine();
-
-                ImGui::BeginGroup();
-                ImGui::Checkbox("##Q", &Q);
-                ImGui::Text("Q");
-                ImGui::EndGroup();
-
-                ImGui::SameLine();
-
-                ImGui::BeginGroup();
-                ImGui::Checkbox("##S", &S);
-                ImGui::Text("Q");
-                ImGui::EndGroup();
-
-                ImGui::SameLine();
-
-                ImGui::BeginGroup();
-                ImGui::Checkbox("##T", &T);
-                ImGui::Text("Q");
-                ImGui::EndGroup();
-
-                // TODO: make this editable
-                ImGui::Text("I=%X", (uint8)sr.ILevel);
-
-                drawReg32("GBR", sh2.GetGBR());
-                drawReg32("VBR", sh2.GetVBR());
-
-                /*if (debugTrace) {
-                    drawText(x, y + 280, "vec lv");
-                    for (size_t i = 0; i < tracer.interruptsCount; i++) {
-                        const size_t pos =
-                            (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
-                        const auto &intr = tracer.interrupts[pos];
-                        drawText(x, y + 290 + i * 10, fmt::format("{:02X}  {:02X}", intr.vecNum, intr.level));
-                    }
-                } else {
-                    ImGui::TextUnformatted("(trace disabled)");
-                }*/
-            } else {
-                ImGui::TextUnformatted("(disabled)");
-            }
-        }
-        ImGui::End();
-    };
-
-    auto displaySH2s = [&](int x, int y) {
-        displaySH2(m_masterSH2Tracer, m_saturn.masterSH2, true, true, x + 50, y);
-        displaySH2(m_slaveSH2Tracer, m_saturn.slaveSH2, false, m_saturn.slaveSH2Enabled, x + 150, y);
-    };
+    m_masterSH2Debugger.Display();
+    m_slaveSH2Debugger.Display();
 
     auto displaySCU = [&](int x, int y) {
-        auto &scu = m_saturn.SCU;
+        auto &scu = m_context.saturn.SCU;
 
         if (ImGui::Begin("SCU")) {
-
             ImGui::TextUnformatted("Interrupts");
             ImGui::Text("%08X mask", scu.GetInterruptMask().u32);
             ImGui::Text("%08X status", scu.GetInterruptStatus().u32);
@@ -1232,7 +1141,6 @@ void App::DrawDebug() {
         ImGui::End();
     };
 
-    displaySH2s(5, 5);
     displaySCU(250, 5);
 
     /*int ww{};

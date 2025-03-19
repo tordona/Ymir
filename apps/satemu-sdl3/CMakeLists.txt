@@ -9,15 +9,19 @@ add_executable(satemu-sdl3
     src/app/audio_system.hpp
     
     src/app/cmdline_opts.hpp
+    src/app/context.hpp
 
     src/app/debug/sh2_tracer.cpp
     src/app/debug/sh2_tracer.hpp
     src/app/debug/scu_tracer.cpp
     src/app/debug/scu_tracer.hpp
 
+    src/app/ui/sh2_debugger.cpp
+    src/app/ui/sh2_debugger.hpp
+
     src/util/rom_loader.cpp
     src/util/rom_loader.hpp
- )
+)
 add_executable(satemu::satemu-sdl3 ALIAS satemu-sdl3)
 set_target_properties(satemu-sdl3 PROPERTIES
                       VERSION ${satemu_VERSION}

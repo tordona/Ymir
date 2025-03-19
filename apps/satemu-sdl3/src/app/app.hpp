@@ -3,11 +3,14 @@
 #include "cmdline_opts.hpp"
 
 #include "audio_system.hpp"
+#include "context.hpp"
 
 #include <satemu/sys/saturn.hpp>
 
 #include "debug/scu_tracer.hpp"
 #include "debug/sh2_tracer.hpp"
+
+#include "ui/sh2_debugger.hpp"
 
 #include "blockingconcurrentqueue.h"
 
@@ -21,24 +24,14 @@ namespace app {
 
 class App {
 public:
+    App();
+
     int Run(const CommandLineOptions &options);
 
 private:
-    satemu::Saturn m_saturn;
     CommandLineOptions m_options;
 
-    struct Fonts {
-        ImFont *sansSerifMedium = nullptr;
-        ImFont *sansSerifBold = nullptr;
-        ImFont *sansSerifMediumMedium = nullptr;
-        ImFont *sansSerifMediumBold = nullptr;
-        ImFont *sansSerifLargeBold = nullptr;
-        ImFont *monospaceMedium = nullptr;
-        ImFont *monospaceBold = nullptr;
-        ImFont *monospaceMediumMedium = nullptr;
-        ImFont *monospaceMediumBold = nullptr;
-        ImFont *display = nullptr;
-    } m_fonts;
+    Context m_context;
 
     struct EmuCommand {
         enum class Type {
@@ -128,6 +121,9 @@ private:
     SH2Tracer m_masterSH2Tracer;
     SH2Tracer m_slaveSH2Tracer;
     SCUTracer m_scuTracer;
+
+    SH2Debugger m_masterSH2Debugger;
+    SH2Debugger m_slaveSH2Debugger;
 };
 
 } // namespace app
