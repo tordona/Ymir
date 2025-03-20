@@ -492,21 +492,21 @@ void App::RunEmulator() {
     // ---------------------------------
     // Main emulator loop
 
-    SDL_PropertiesID fileDialogProps = SDL_CreateProperties();
-    if (fileDialogProps == 0) {
+    m_fileDialogProps = SDL_CreateProperties();
+    if (m_fileDialogProps == 0) {
         SDL_Log("Failed to create file dialog properties: %s\n", SDL_GetError());
         return;
     }
-    ScopeGuard sgDestroyFileDialogProps{[&] { SDL_DestroyProperties(fileDialogProps); }};
+    ScopeGuard sgDestroyFileDialogProps{[&] { SDL_DestroyProperties(m_fileDialogProps); }};
 
     static constexpr SDL_DialogFileFilter kFileFilters[] = {
         {.name = "All supported formats", .pattern = "cue;mds;iso;ccd"}};
 
-    SDL_SetPointerProperty(fileDialogProps, SDL_PROP_FILE_DIALOG_WINDOW_POINTER, screen.window);
-    SDL_SetPointerProperty(fileDialogProps, SDL_PROP_FILE_DIALOG_FILTERS_POINTER, (void *)kFileFilters);
-    SDL_SetNumberProperty(fileDialogProps, SDL_PROP_FILE_DIALOG_NFILTERS_NUMBER, (int)std::size(kFileFilters));
-    SDL_SetBooleanProperty(fileDialogProps, SDL_PROP_FILE_DIALOG_MANY_BOOLEAN, false);
-    SDL_SetStringProperty(fileDialogProps, SDL_PROP_FILE_DIALOG_TITLE_STRING, "Load Sega Saturn disc image");
+    SDL_SetPointerProperty(m_fileDialogProps, SDL_PROP_FILE_DIALOG_WINDOW_POINTER, screen.window);
+    SDL_SetPointerProperty(m_fileDialogProps, SDL_PROP_FILE_DIALOG_FILTERS_POINTER, (void *)kFileFilters);
+    SDL_SetNumberProperty(m_fileDialogProps, SDL_PROP_FILE_DIALOG_NFILTERS_NUMBER, (int)std::size(kFileFilters));
+    SDL_SetBooleanProperty(m_fileDialogProps, SDL_PROP_FILE_DIALOG_MANY_BOOLEAN, false);
+    SDL_SetStringProperty(m_fileDialogProps, SDL_PROP_FILE_DIALOG_TITLE_STRING, "Load Sega Saturn disc image");
     // const char *default_location = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_LOCATION_STRING, NULL);
     // const char *accept = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_ACCEPT_STRING, NULL);
     // const char *cancel = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_CANCEL_STRING, NULL);
@@ -536,8 +536,7 @@ void App::RunEmulator() {
     m_context.saturn.Reset(true);
 
     auto t = clk::now();
-    bool paused = false;
-    bool frameStep = false;
+    bool paused = false; // TODO: this should be updated by the emulator thread via events
     bool debugTrace = false;
     bool drawDebug = false;
     bool showVideoOutputDebugWindow = false;
@@ -577,12 +576,7 @@ void App::RunEmulator() {
             if ((mod & (SDL_KMOD_CTRL | SDL_KMOD_ALT | SDL_KMOD_SHIFT | SDL_KMOD_GUI)) == 0) {
                 setClearButton(*pad1, Z, pressed);
             } else if (pressed && (mod & SDL_KMOD_CTRL)) {
-                SDL_ShowFileDialogWithProperties(
-                    SDL_FILEDIALOG_OPENFILE,
-                    [](void *userdata, const char *const *filelist, int filter) {
-                        static_cast<App *>(userdata)->ProcessOpenDiscImageFileDialogSelection(filelist, filter);
-                    },
-                    this, fileDialogProps);
+                OpenLoadDiscDialog();
             }
             break;
         case SDL_SCANCODE_F: setClearButton(*pad1, Start, pressed); break;
@@ -628,8 +622,7 @@ void App::RunEmulator() {
 
         case SDL_SCANCODE_EQUALS:
             if (pressed) {
-                frameStep = true;
-                paused = false;
+                paused = true;
                 m_audioSystem.SetSilent(false);
                 m_emuEventQueue.enqueue(EmuEvent::FrameStep());
             }
@@ -778,8 +771,19 @@ void App::RunEmulator() {
         if (ImGui::BeginMainMenuBar()) {
             ImGui::PopStyleVar();
             if (ImGui::BeginMenu("File")) {
+                if (ImGui::MenuItem("Load disc image", "Ctrl+O")) {
+                    OpenLoadDiscDialog();
+                }
+                if (ImGui::MenuItem("Open/close tray", "F6")) {
+                    m_emuEventQueue.enqueue(EmuEvent::OpenCloseTray());
+                }
+                if (ImGui::MenuItem("Eject disc", "F8")) {
+                    m_emuEventQueue.enqueue(EmuEvent::EjectDisc());
+                }
+                ImGui::Separator();
                 if (ImGui::MenuItem("Exit", "Alt+F4")) {
-                    // TODO: exit
+                    SDL_Event quitEvent{.type = SDL_EVENT_QUIT};
+                    SDL_PushEvent(&quitEvent);
                 }
                 ImGui::End();
             }
@@ -797,16 +801,42 @@ void App::RunEmulator() {
                 ImGui::End();
             }
             if (ImGui::BeginMenu("Emulator")) {
+                if (ImGui::MenuItem("Frame step", "=")) {
+                    paused = true;
+                    m_audioSystem.SetSilent(false);
+                    m_emuEventQueue.enqueue(EmuEvent::FrameStep());
+                }
+                if (ImGui::MenuItem("Pause/resume", "Pause")) {
+                    paused = !paused;
+                    m_audioSystem.SetSilent(paused);
+                    m_emuEventQueue.enqueue(EmuEvent::SetPaused(paused));
+                }
+                ImGui::Separator();
+                /*if (ImGui::MenuItem("Soft reset", "Shift+R")) {
+                    // TODO: send Soft Reset pulse for a short time
+                    //m_emuEventQueue.enqueue(EmuEvent::SoftReset(pressed));
+                }*/
+                if (ImGui::MenuItem("Hard reset", "Ctrl+R")) {
+                    m_emuEventQueue.enqueue(EmuEvent::HardReset());
+                }
+                if (ImGui::MenuItem("Factory reset", "Ctrl+Shift+R")) {
+                    m_emuEventQueue.enqueue(EmuEvent::FactoryReset());
+                }
                 ImGui::End();
             }
             if (ImGui::BeginMenu("Settings")) {
+                ImGui::TextUnformatted("(to be implemented)");
                 ImGui::End();
             }
             if (ImGui::BeginMenu("Debug")) {
                 ImGui::MenuItem("Enable debugger", "F10", &drawDebug);
                 ImGui::MenuItem("Enable tracing", "F11", &debugTrace);
                 ImGui::Separator();
-                ImGui::MenuItem("Video output", nullptr, &showVideoOutputDebugWindow);
+                ImGui::MenuItem("Video output", "F9", &showVideoOutputDebugWindow);
+                ImGui::Separator();
+                if (ImGui::MenuItem("Dump all memory", "F3")) {
+                    m_emuEventQueue.enqueue(EmuEvent::MemoryDump());
+                }
                 ImGui::End();
             }
             if (ImGui::BeginMenu("Help")) {
@@ -1049,6 +1079,15 @@ void App::EmulatorThread() {
             m_audioSystem.SetSilent(true);
         }
     }
+}
+
+void App::OpenLoadDiscDialog() {
+    SDL_ShowFileDialogWithProperties(
+        SDL_FILEDIALOG_OPENFILE,
+        [](void *userdata, const char *const *filelist, int filter) {
+            static_cast<App *>(userdata)->ProcessOpenDiscImageFileDialogSelection(filelist, filter);
+        },
+        this, m_fileDialogProps);
 }
 
 void App::ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, int filter) {

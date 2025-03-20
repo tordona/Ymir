@@ -17,6 +17,8 @@
 
 #include "blockingconcurrentqueue.h"
 
+#include <SDL3/SDL_events.h>
+
 #include <imgui.h>
 
 #include <string>
@@ -35,6 +37,7 @@ private:
     CommandLineOptions m_options;
 
     Context m_context;
+    SDL_PropertiesID m_fileDialogProps;
 
     std::thread m_emuThread;
     moodycamel::BlockingConcurrentQueue<EmuEvent> m_emuEventQueue;
@@ -45,6 +48,7 @@ private:
 
     void EmulatorThread();
 
+    void OpenLoadDiscDialog();
     void ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, int filter);
     bool LoadDiscImage(std::filesystem::path path);
 

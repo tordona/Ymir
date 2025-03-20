@@ -53,9 +53,9 @@ target_link_libraries(satemu-sdl3 PRIVATE fmt satemu-sdl3::rc)
 cmrk_copy_runtime_dlls(satemu-sdl3)
 
 ## Make it a Win32 executable (without a console window) on Windows
-if (WIN32)
-    set_target_properties(satemu-sdl3 PROPERTIES WIN32_EXECUTABLE ON)
-endif ()
+#if (WIN32)
+#    set_target_properties(satemu-sdl3 PROPERTIES WIN32_EXECUTABLE ON)
+#endif ()
 
 ## Enable LTO if supported
 include(CheckIPOSupported)
