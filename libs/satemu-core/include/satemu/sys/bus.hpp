@@ -57,7 +57,7 @@ public:
     void UnmapMemory(uint32 start, uint32 end);
 
     template <mem_primitive T>
-    FLATTEN FORCE_INLINE T Read(uint32 address) {
+    FLATTEN FORCE_INLINE T Read(uint32 address) const {
         address &= kAddressMask & ~(sizeof(T) - 1);
 
         const MemoryPage &entry = m_pages[address >> kPageGranularityBits];

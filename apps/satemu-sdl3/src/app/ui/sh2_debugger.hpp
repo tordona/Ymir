@@ -2,8 +2,8 @@
 
 #include <app/shared_context.hpp>
 
-#include "widgets/sh2_disassembly_view.hpp"
-#include "widgets/sh2_registers_view.hpp"
+#include "views/sh2_disassembly_view.hpp"
+#include "views/sh2_registers_view.hpp"
 
 namespace app {
 

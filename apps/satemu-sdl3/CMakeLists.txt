@@ -21,10 +21,10 @@ add_executable(satemu-sdl3
     src/app/ui/sh2_debugger.cpp
     src/app/ui/sh2_debugger.hpp
 
-    src/app/ui/widgets/sh2_disassembly_view.cpp
-    src/app/ui/widgets/sh2_disassembly_view.hpp
-    src/app/ui/widgets/sh2_registers_view.cpp
-    src/app/ui/widgets/sh2_registers_view.hpp
+    src/app/ui/views/sh2_disassembly_view.cpp
+    src/app/ui/views/sh2_disassembly_view.hpp
+    src/app/ui/views/sh2_registers_view.cpp
+    src/app/ui/views/sh2_registers_view.hpp
 
     src/util/rom_loader.cpp
     src/util/rom_loader.hpp
