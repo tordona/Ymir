@@ -42,6 +42,7 @@ add_library(satemu-core
     include/satemu/hw/sh2/sh2_bsc.hpp
     include/satemu/hw/sh2/sh2_cache.hpp
     include/satemu/hw/sh2/sh2_decode.hpp
+    include/satemu/hw/sh2/sh2_disasm.hpp
     include/satemu/hw/sh2/sh2_divu.hpp
     include/satemu/hw/sh2/sh2_dmac.hpp
     include/satemu/hw/sh2/sh2_excpt.hpp
@@ -137,6 +138,7 @@ add_library(satemu-core
     src/satemu/hw/sh2/sh2.cpp
     
     src/satemu/hw/sh2/sh2_decode.cpp
+    src/satemu/hw/sh2/sh2_disasm.cpp
 
     src/satemu/hw/vdp/slope.hpp
     src/satemu/hw/vdp/vdp.cpp

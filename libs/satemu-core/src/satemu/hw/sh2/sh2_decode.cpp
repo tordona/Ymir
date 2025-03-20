@@ -61,6 +61,8 @@ DecodeTable BuildDecodeTable() {
 
         // ---------------------------------------
 
+        // 0 format: xxxx xxxx xxxx xxxx
+
         // n format: xxxx nnnn xxxx xxxx
         auto decodeN = [&] { decodeRN8(); };
 
