@@ -301,7 +301,6 @@ public:
     // [1] delay slot instructions
     alignas(alignment) std::array<std::array<OpcodeType, 0x10000>, 2> opcodes;
     alignas(alignment) std::array<DecodedArgs, 0x10000> args;
-    // TODO: disassembly info/function pointers?
 };
 
 DecodeTable BuildDecodeTable();

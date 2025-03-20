@@ -228,11 +228,7 @@ private:
     static constexpr auto alignment = std::hardware_destructive_interference_size;
 
 public:
-    // Instruction decoding table
-    // [0] regular instructions
-    // [1] delay slot instructions
     alignas(alignment) std::array<OpcodeDisasm, 0x10000> disasm;
-    // TODO: disassembly info/function pointers?
 };
 
 DisasmTable BuildDisasmTable();
