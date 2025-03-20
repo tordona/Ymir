@@ -2,6 +2,9 @@
 
 #include <app/shared_context.hpp>
 
+#include "widgets/sh2_disassembly_view.hpp"
+#include "widgets/sh2_registers_view.hpp"
+
 namespace app {
 
 class SH2Debugger {
@@ -16,6 +19,9 @@ private:
     SharedContext &m_context;
     bool m_master;
     satemu::sh2::SH2 &m_sh2;
+
+    SH2RegistersView m_regsView;
+    SH2DisassemblyView m_disasmView;
 };
 
 } // namespace app
