@@ -1,19 +1,19 @@
 #pragma once
 
-#include <app/context.hpp>
+#include <app/shared_context.hpp>
 
 namespace app {
 
 class SH2Debugger {
 public:
-    SH2Debugger(Context &context, bool master);
+    SH2Debugger(SharedContext &context, bool master);
 
     void Display();
 
     bool Open = false;
 
 private:
-    Context &m_context;
+    SharedContext &m_context;
     bool m_master;
     satemu::sh2::SH2 &m_sh2;
 };

@@ -6,7 +6,7 @@
 
 namespace app {
 
-struct Context {
+struct SharedContext {
     satemu::Saturn saturn;
 
     struct Fonts {

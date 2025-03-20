@@ -8,7 +8,7 @@ using namespace satemu;
 
 namespace app {
 
-SH2Debugger::SH2Debugger(Context &context, bool master)
+SH2Debugger::SH2Debugger(SharedContext &context, bool master)
     : m_context(context)
     , m_master(master)
     , m_sh2(master ? context.saturn.masterSH2 : context.saturn.slaveSH2) {}

@@ -4,7 +4,7 @@
 
 namespace app {
 
-SCUDebugger::SCUDebugger(Context &context)
+SCUDebugger::SCUDebugger(SharedContext &context)
     : m_context(context)
     , m_scu(context.saturn.SCU) {}
 

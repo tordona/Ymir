@@ -1,19 +1,19 @@
 #pragma once
 
-#include <app/context.hpp>
+#include <app/shared_context.hpp>
 
 namespace app {
 
 class SCUDebugger {
 public:
-    SCUDebugger(Context &context);
+    SCUDebugger(SharedContext &context);
 
     void Display();
 
     bool Open = false;
 
 private:
-    Context &m_context;
+    SharedContext &m_context;
     satemu::scu::SCU &m_scu;
 };
 

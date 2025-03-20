@@ -8,7 +8,7 @@ add_executable(satemu-sdl3
     src/app/audio_system.hpp
     
     src/app/cmdline_opts.hpp
-    src/app/context.hpp
+    src/app/shared_context.hpp
 
     src/app/debug/scu_tracer.cpp
     src/app/debug/scu_tracer.hpp

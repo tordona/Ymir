@@ -3,7 +3,7 @@
 #include "cmdline_opts.hpp"
 
 #include "audio_system.hpp"
-#include "context.hpp"
+#include "shared_context.hpp"
 
 #include <satemu/sys/saturn.hpp>
 
@@ -36,7 +36,7 @@ public:
 private:
     CommandLineOptions m_options;
 
-    Context m_context;
+    SharedContext m_context;
     SDL_PropertiesID m_fileDialogProps;
 
     std::thread m_emuThread;
