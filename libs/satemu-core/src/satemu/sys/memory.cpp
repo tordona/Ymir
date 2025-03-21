@@ -16,6 +16,9 @@ static void GenericWrite(uint32 address, T value, void *ctx) {
     util::WriteBE<T>(static_cast<uint8 *>(ctx) + (address & mask), value);
 }
 
+template <mem_primitive T>
+static void GenericWriteNoop(uint32 /*address*/, T /*value*/, void * /*ctx*/) {}
+
 SystemMemory::SystemMemory() {
     // TODO: configurable path and mode
     std::error_code error{};
@@ -40,9 +43,9 @@ void SystemMemory::MapMemory(Bus &bus) {
                       .read8 = GenericRead<uint8, 0x7FFFF>,
                       .read16 = GenericRead<uint16, 0x7FFFF>,
                       .read32 = GenericRead<uint32, 0x7FFFF>,
-                      .write8 = GenericWrite<uint8, 0x7FFFF>,
-                      .write16 = GenericWrite<uint16, 0x7FFFF>,
-                      .write32 = GenericWrite<uint32, 0x7FFFF>,
+                      .write8 = GenericWriteNoop<uint8>,
+                      .write16 = GenericWriteNoop<uint16>,
+                      .write32 = GenericWriteNoop<uint32>,
                   });
 
     bus.MapMemory(0x018'0000, 0x01F'FFFF,
