@@ -8,6 +8,13 @@
 
 namespace satemu::sys {
 
+// Represents a memory bus interconnecting various components in the system.
+//
+// MapMemory assigns read/write functions to a range of addresses.
+// UnmapMemory clears the assignments.
+//
+// Read and Write perform reads and writes with all side-effects and restrictions imposed by the hardware.
+// Peek and Poke bypass restrictions and don't cause any side-effects. These are meant to be used by debuggers.
 class Bus {
     static constexpr dbg::Category rootLog{"Bus"};
 
@@ -51,6 +58,14 @@ public:
         FnWrite32 write32 = [](uint32 address, uint32 value, void *) {
             rootLog.debug("Unhandled 32-bit write to {:07X} = {:07X}", address, value);
         };
+
+        FnRead8 peek8 = [](uint32 address, void *) -> uint8 { return 0; };
+        FnRead16 peek16 = [](uint32 address, void *) -> uint16 { return 0; };
+        FnRead32 peek32 = [](uint32 address, void *) -> uint32 { return 0; };
+
+        FnWrite8 poke8 = [](uint32 address, uint8 value, void *) {};
+        FnWrite16 poke16 = [](uint32 address, uint16 value, void *) {};
+        FnWrite32 poke32 = [](uint32 address, uint32 value, void *) {};
     };
 
     void MapMemory(uint32 start, uint32 end, MemoryPage entry);
@@ -86,6 +101,42 @@ public:
             entry.write16(address, value, entry.ctx);
         } else if constexpr (std::is_same_v<T, uint32>) {
             entry.write32(address, value, entry.ctx);
+        } else {
+            // should never happen
+            util::unreachable();
+        }
+    }
+
+    template <mem_primitive T>
+    FLATTEN FORCE_INLINE T Peek(uint32 address) const {
+        address &= kAddressMask & ~(sizeof(T) - 1);
+
+        const MemoryPage &entry = m_pages[address >> kPageGranularityBits];
+
+        if constexpr (std::is_same_v<T, uint8>) {
+            return entry.peek8(address, entry.ctx);
+        } else if constexpr (std::is_same_v<T, uint16>) {
+            return entry.peek16(address, entry.ctx);
+        } else if constexpr (std::is_same_v<T, uint32>) {
+            return entry.peek32(address, entry.ctx);
+        } else {
+            // should never happen
+            util::unreachable();
+        }
+    }
+
+    template <mem_primitive T>
+    FLATTEN FORCE_INLINE void Poke(uint32 address, T value) {
+        address &= kAddressMask & ~(sizeof(T) - 1);
+
+        const MemoryPage &entry = m_pages[address >> kPageGranularityBits];
+
+        if constexpr (std::is_same_v<T, uint8>) {
+            entry.poke8(address, value, entry.ctx);
+        } else if constexpr (std::is_same_v<T, uint16>) {
+            entry.poke16(address, value, entry.ctx);
+        } else if constexpr (std::is_same_v<T, uint32>) {
+            entry.poke32(address, value, entry.ctx);
         } else {
             // should never happen
             util::unreachable();
