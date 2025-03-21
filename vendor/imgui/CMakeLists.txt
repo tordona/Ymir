@@ -1,5 +1,6 @@
 add_library(imgui
-	"satemu/satemu_imconfig.h"
+	satemu/imgui_memory_editor.h
+	satemu/satemu_imconfig.h
 
 	imgui/imgui.cpp
 	imgui/imgui.h
