@@ -237,55 +237,125 @@ void VDP::MapMemory(sys::Bus &bus) {
         });
 
     // VDP2 VRAM
+    auto vdp2ReadVRAM8 = [](uint32 address, void *ctx) -> uint8 {
+        return static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint8>(address);
+    };
+    auto vdp2ReadVRAM16 = [](uint32 address, void *ctx) -> uint16 {
+        return static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint16>(address);
+    };
+    auto vdp2ReadVRAM32 = [](uint32 address, void *ctx) -> uint32 {
+        uint32 value = static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint16>(address + 0) << 16u;
+        value |= static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint16>(address + 2) << 0u;
+        return value;
+    };
+
+    auto vdp2WriteVRAM8 = [](uint32 address, uint8 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP2WriteVRAM<uint8, false>(address, value);
+    };
+    auto vdp2WriteVRAM16 = [](uint32 address, uint16 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP2WriteVRAM<uint16, false>(address, value);
+    };
+    auto vdp2WriteVRAM32 = [](uint32 address, uint32 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP2WriteVRAM<uint16, false>(address + 0, value >> 16u);
+        static_cast<VDP *>(ctx)->VDP2WriteVRAM<uint16, false>(address + 2, value >> 0u);
+    };
+
+    auto vdp2PeekVRAM8 = [](uint32 address, void *ctx) -> uint8 {
+        return static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint8>(address);
+    };
+    auto vdp2PeekVRAM16 = [](uint32 address, void *ctx) -> uint16 {
+        return static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint16>(address);
+    };
+    auto vdp2PeekVRAM32 = [](uint32 address, void *ctx) -> uint32 {
+        return static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint32>(address);
+    };
+
+    auto vdp2PokeVRAM8 = [](uint32 address, uint8 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP2WriteVRAM<uint8, true>(address, value);
+    };
+    auto vdp2PokeVRAM16 = [](uint32 address, uint16 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP2WriteVRAM<uint16, true>(address, value);
+    };
+    auto vdp2PokeVRAM32 = [](uint32 address, uint32 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP2WriteVRAM<uint32, true>(address, value);
+    };
+
     bus.MapMemory(0x5E0'0000, 0x5EF'FFFF,
                   {
                       .ctx = this,
-                      .read8 = [](uint32 address, void *ctx) -> uint8 {
-                          return static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint8>(address);
-                      },
-                      .read16 = [](uint32 address, void *ctx) -> uint16 {
-                          return static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint16>(address);
-                      },
-                      .read32 = [](uint32 address, void *ctx) -> uint32 {
-                          uint32 value = static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint16>(address + 0) << 16u;
-                          value |= static_cast<VDP *>(ctx)->VDP2ReadVRAM<uint16>(address + 2) << 0u;
-                          return value;
-                      },
-                      .write8 = [](uint32 address, uint8 value,
-                                   void *ctx) { static_cast<VDP *>(ctx)->VDP2WriteVRAM<uint8>(address, value); },
-                      .write16 = [](uint32 address, uint16 value,
-                                    void *ctx) { static_cast<VDP *>(ctx)->VDP2WriteVRAM<uint16>(address, value); },
-                      .write32 =
-                          [](uint32 address, uint32 value, void *ctx) {
-                              static_cast<VDP *>(ctx)->VDP2WriteVRAM<uint16>(address + 0, value >> 16u);
-                              static_cast<VDP *>(ctx)->VDP2WriteVRAM<uint16>(address + 2, value >> 0u);
-                          },
+                      .read8 = vdp2ReadVRAM8,
+                      .read16 = vdp2ReadVRAM16,
+                      .read32 = vdp2ReadVRAM32,
+                      .write8 = vdp2WriteVRAM8,
+                      .write16 = vdp2WriteVRAM16,
+                      .write32 = vdp2WriteVRAM32,
+                      .peek8 = vdp2PeekVRAM8,
+                      .peek16 = vdp2PeekVRAM16,
+                      .peek32 = vdp2PeekVRAM32,
+                      .poke8 = vdp2PokeVRAM8,
+                      .poke16 = vdp2PokeVRAM16,
+                      .poke32 = vdp2PokeVRAM32,
                   });
 
     // VDP2 CRAM
+    auto vdp2ReadCRAM8 = [](uint32 address, void *ctx) -> uint8 {
+        return static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint8>(address);
+    };
+    auto vdp2ReadCRAM16 = [](uint32 address, void *ctx) -> uint16 {
+        return static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint16>(address);
+    };
+    auto vdp2ReadCRAM32 = [](uint32 address, void *ctx) -> uint32 {
+        uint32 value = static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint16>(address + 0) << 16u;
+        value |= static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint16>(address + 2) << 0u;
+        return value;
+    };
+
+    auto vdp2WriteCRAM8 = [](uint32 address, uint8 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP2WriteCRAM<uint8, false>(address, value);
+    };
+    auto vdp2WriteCRAM16 = [](uint32 address, uint16 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP2WriteCRAM<uint16, false>(address, value);
+    };
+    auto vdp2WriteCRAM32 = [](uint32 address, uint32 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP2WriteCRAM<uint16, false>(address + 0, value >> 16u);
+        static_cast<VDP *>(ctx)->VDP2WriteCRAM<uint16, false>(address + 2, value >> 0u);
+    };
+
+    auto vdp2PeekCRAM8 = [](uint32 address, void *ctx) -> uint8 {
+        return static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint8>(address);
+    };
+    auto vdp2PeekCRAM16 = [](uint32 address, void *ctx) -> uint16 {
+        return static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint16>(address);
+    };
+    auto vdp2PeekCRAM32 = [](uint32 address, void *ctx) -> uint32 {
+        return static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint32>(address);
+    };
+
+    auto vdp2PokeCRAM8 = [](uint32 address, uint8 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP2WriteCRAM<uint8, true>(address, value);
+    };
+    auto vdp2PokeCRAM16 = [](uint32 address, uint16 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP2WriteCRAM<uint16, true>(address, value);
+    };
+    auto vdp2PokeCRAM32 = [](uint32 address, uint32 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP2WriteCRAM<uint32, true>(address, value);
+    };
+
     bus.MapMemory(0x5F0'0000, 0x5F7'FFFF,
                   {
                       .ctx = this,
-                      .read8 = [](uint32 address, void *ctx) -> uint8 {
-                          return static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint8>(address);
-                      },
-                      .read16 = [](uint32 address, void *ctx) -> uint16 {
-                          return static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint16>(address);
-                      },
-                      .read32 = [](uint32 address, void *ctx) -> uint32 {
-                          uint32 value = static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint16>(address + 0) << 16u;
-                          value |= static_cast<VDP *>(ctx)->VDP2ReadCRAM<uint16>(address + 2) << 0u;
-                          return value;
-                      },
-                      .write8 = [](uint32 address, uint8 value,
-                                   void *ctx) { static_cast<VDP *>(ctx)->VDP2WriteCRAM<uint8>(address, value); },
-                      .write16 = [](uint32 address, uint16 value,
-                                    void *ctx) { static_cast<VDP *>(ctx)->VDP2WriteCRAM<uint16>(address, value); },
-                      .write32 =
-                          [](uint32 address, uint32 value, void *ctx) {
-                              static_cast<VDP *>(ctx)->VDP2WriteCRAM<uint16>(address + 0, value >> 16u);
-                              static_cast<VDP *>(ctx)->VDP2WriteCRAM<uint16>(address + 2, value >> 0u);
-                          },
+                      .read8 = vdp2ReadCRAM8,
+                      .read16 = vdp2ReadCRAM16,
+                      .read32 = vdp2ReadCRAM32,
+                      .write8 = vdp2WriteCRAM8,
+                      .write16 = vdp2WriteCRAM16,
+                      .write32 = vdp2WriteCRAM32,
+                      .peek8 = vdp2PeekCRAM8,
+                      .peek16 = vdp2PeekCRAM16,
+                      .peek32 = vdp2PeekCRAM32,
+                      .poke8 = vdp2PokeCRAM8,
+                      .poke16 = vdp2PokeCRAM16,
+                      .poke32 = vdp2PokeCRAM32,
                   });
 
     // VDP2 registers
@@ -441,12 +511,14 @@ FORCE_INLINE T VDP::VDP2ReadVRAM(uint32 address) {
     return util::ReadBE<T>(&m_VRAM2[address]);
 }
 
-template <mem_primitive T>
+template <mem_primitive T, bool poke>
 FORCE_INLINE void VDP::VDP2WriteVRAM(uint32 address, T value) {
     // TODO: handle VRSIZE.VRAMSZ
     address &= 0x7FFFF;
     util::WriteBE<T>(&m_VRAM2[address], value);
-    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2VRAMWrite<T>(address, value));
+    if constexpr (!poke) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2VRAMWrite<T>(address, value));
+    }
 }
 
 template <mem_primitive T>
@@ -463,22 +535,26 @@ FORCE_INLINE T VDP::VDP2ReadCRAM(uint32 address) {
     return value;
 }
 
-template <mem_primitive T>
+template <mem_primitive T, bool poke>
 FORCE_INLINE void VDP::VDP2WriteCRAM(uint32 address, T value) {
     if constexpr (std::is_same_v<T, uint32>) {
-        VDP2WriteCRAM<uint16>(address + 0, value >> 16u);
-        VDP2WriteCRAM<uint16>(address + 2, value >> 0u);
+        VDP2WriteCRAM<uint16, poke>(address + 0, value >> 16u);
+        VDP2WriteCRAM<uint16, poke>(address + 2, value >> 0u);
         return;
     }
 
     address = MapCRAMAddress(address);
     regsLog2.trace("{}-bit VDP2 CRAM write to {:05X} = {:X}", sizeof(T) * 8, address, value);
     util::WriteBE<T>(&m_CRAM[address], value);
-    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address, value));
+    if constexpr (!poke) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address, value));
+    }
     if (m_VDP2.vramControl.colorRAMMode == 0) {
         regsLog2.trace("   replicated to {:05X}", address ^ 0x800);
         util::WriteBE<T>(&m_CRAM[address ^ 0x800], value);
-        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address ^ 0x800, value));
+        if constexpr (!poke) {
+            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address ^ 0x800, value));
+        }
     }
 }
 
