@@ -115,13 +115,13 @@ private:
     template <mem_primitive T>
     T VDP1ReadVRAM(uint32 address);
 
-    template <mem_primitive T>
+    template <mem_primitive T, bool poke>
     void VDP1WriteVRAM(uint32 address, T value);
 
     template <mem_primitive T>
     T VDP1ReadFB(uint32 address);
 
-    template <mem_primitive T>
+    template <mem_primitive T, bool poke>
     void VDP1WriteFB(uint32 address, T value);
 
     uint16 VDP1ReadReg(uint32 address);
