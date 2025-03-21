@@ -91,10 +91,10 @@ void SH2RegistersView::Display() {
         ImGui::BeginGroup();
         ImGui::PushFont(m_context.fonts.monospaceMedium);
         ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 1);
-        static constexpr uint8 minILevel = 0x0;
-        static constexpr uint8 maxILevel = 0xF;
-        ImGui::InputScalar("##input_SR_ILevel", ImGuiDataType_U8, &ILevel, &minILevel, &maxILevel, "%X",
-                           ImGuiInputTextFlags_CharsHexadecimal);
+        if (ImGui::InputScalar("##input_SR_ILevel", ImGuiDataType_U8, &ILevel, nullptr, nullptr, "%X",
+                               ImGuiInputTextFlags_CharsHexadecimal)) {
+            ILevel = std::min<uint8>(ILevel, 0xFu);
+        }
         ImGui::PopFont();
         ImGui::TextUnformatted("I");
         ImGui::EndGroup();
