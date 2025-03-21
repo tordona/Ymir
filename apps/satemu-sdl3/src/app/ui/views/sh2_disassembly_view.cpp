@@ -27,8 +27,7 @@ void SH2DisassemblyView::Display() {
     for (uint32 i = 0; i < 32; i++) {
         const uint32 addr = baseAddr + i * sizeof(uint16);
 
-        // TODO: should peek instead
-        const uint16 instr = m_context.saturn.mainBus.Read<uint16>(addr);
+        const uint16 instr = m_context.saturn.mainBus.Peek<uint16>(addr);
 
         ImGui::Text("%08X %04X ", addr, instr);
         ImGui::SameLine(0, 0);
