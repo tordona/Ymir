@@ -141,6 +141,12 @@ private:
         WriteReg<T, SCSPAccessType::SCU>(address, value);
     }
 
+    template <mem_primitive T>
+    T PeekReg(uint32 address);
+
+    template <mem_primitive T>
+    void PokeReg(uint32 address, T value);
+
     // -------------------------------------------------------------------------
     // MC68EC000-facing bus
     // 8- or 16-bit reads and writes

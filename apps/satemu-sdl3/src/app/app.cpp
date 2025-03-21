@@ -29,7 +29,17 @@ namespace app {
 App::App()
     : m_masterSH2Debugger(m_context, true)
     , m_slaveSH2Debugger(m_context, false)
-    , m_scuDebugger(m_context) {}
+    , m_scuDebugger(m_context) {
+
+    m_sh2MemoryEditor.ReadFn = [](const ImU8 *mem, size_t off, void *user_data) {
+        auto &bus = *reinterpret_cast<const satemu::sys::Bus *>(mem);
+        return bus.Peek<uint8>(off);
+    };
+    m_sh2MemoryEditor.WriteFn = [](ImU8 *mem, size_t off, ImU8 d, void *user_data) {
+        auto &bus = *reinterpret_cast<satemu::sys::Bus *>(mem);
+        bus.Poke<uint8>(off, d);
+    };
+}
 
 int App::Run(const CommandLineOptions &options) {
     fmt::println("satemu {}", satemu::version::string);
@@ -1120,6 +1130,11 @@ void App::DrawDebug() {
     m_masterSH2Debugger.Display();
     m_slaveSH2Debugger.Display();
     m_scuDebugger.Display();
+
+    m_sh2MemoryEditor.Open = true;
+    ImGui::PushFont(m_context.fonts.monospaceMedium);
+    m_sh2MemoryEditor.DrawWindow("SH2 Memory", &m_context.saturn.mainBus, 0x8000000, 0x0);
+    ImGui::PopFont();
 
     /*int ww{};
     int wh{};

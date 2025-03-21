@@ -93,30 +93,65 @@ void CDBlock::Reset(bool hard) {
 void CDBlock::MapMemory(sys::Bus &bus) {
     // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
     // These 4 KiB blocks are mapped every 32 KiB.
+
+    auto readReg8 = [](uint32 address, void *ctx) -> uint8 {
+        return static_cast<CDBlock *>(ctx)->ReadReg<uint8>(address);
+    };
+    auto readReg16 = [](uint32 address, void *ctx) -> uint16 {
+        return static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address);
+    };
+    auto readReg32 = [](uint32 address, void *ctx) -> uint32 {
+        uint32 value = static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address + 0) << 16u;
+        value |= static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address + 2) << 0u;
+        return value;
+    };
+
+    auto writeReg8 = [](uint32 address, uint8 value, void *ctx) {
+        static_cast<CDBlock *>(ctx)->WriteReg<uint8>(address, value);
+    };
+    auto writeReg16 = [](uint32 address, uint16 value, void *ctx) {
+        static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address, value);
+    };
+    auto writeReg32 = [](uint32 address, uint32 value, void *ctx) {
+        static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address + 0, value >> 16u);
+        static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address + 2, value >> 0u);
+    };
+
+    auto peekReg8 = [](uint32 address, void *ctx) -> uint8 {
+        return static_cast<CDBlock *>(ctx)->PeekReg<uint8>(address);
+    };
+    auto peekReg16 = [](uint32 address, void *ctx) -> uint16 {
+        return static_cast<CDBlock *>(ctx)->PeekReg<uint16>(address);
+    };
+    auto peekReg32 = [](uint32 address, void *ctx) -> uint32 {
+        return static_cast<CDBlock *>(ctx)->PeekReg<uint32>(address);
+    };
+    auto pokeReg8 = [](uint32 address, uint8 value, void *ctx) {
+        static_cast<CDBlock *>(ctx)->PokeReg<uint8>(address, value);
+    };
+    auto pokeReg16 = [](uint32 address, uint16 value, void *ctx) {
+        static_cast<CDBlock *>(ctx)->PokeReg<uint16>(address, value);
+    };
+    auto pokeReg32 = [](uint32 address, uint32 value, void *ctx) {
+        static_cast<CDBlock *>(ctx)->PokeReg<uint32>(address, value);
+    };
+
     for (uint32 address = 0x580'0000; address <= 0x58F'FFFF; address += 0x8000) {
         bus.MapMemory(address, address + 0xFFF,
                       {
                           .ctx = this,
-                          .read8 = [](uint32 address, void *ctx) -> uint8 {
-                              return static_cast<CDBlock *>(ctx)->ReadReg<uint8>(address);
-                          },
-                          .read16 = [](uint32 address, void *ctx) -> uint16 {
-                              return static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address);
-                          },
-                          .read32 = [](uint32 address, void *ctx) -> uint32 {
-                              uint32 value = static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address + 0) << 16u;
-                              value |= static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address + 2) << 0u;
-                              return value;
-                          },
-                          .write8 = [](uint32 address, uint8 value,
-                                       void *ctx) { static_cast<CDBlock *>(ctx)->WriteReg<uint8>(address, value); },
-                          .write16 = [](uint32 address, uint16 value,
-                                        void *ctx) { static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address, value); },
-                          .write32 =
-                              [](uint32 address, uint32 value, void *ctx) {
-                                  static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address + 0, value >> 16u);
-                                  static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address + 2, value >> 0u);
-                              },
+                          .read8 = readReg8,
+                          .read16 = readReg16,
+                          .read32 = readReg32,
+                          .write8 = writeReg8,
+                          .write16 = writeReg16,
+                          .write32 = writeReg32,
+                          .peek8 = peekReg8,
+                          .peek16 = peekReg16,
+                          .peek32 = peekReg32,
+                          .poke8 = pokeReg8,
+                          .poke16 = pokeReg16,
+                          .poke32 = pokeReg32,
                       });
     }
 }
@@ -266,6 +301,66 @@ void CDBlock::WriteReg(uint32 address, T value) {
         break;
 
     default: regsLog.debug("unhandled {}-bit register write to {:02X} = {:X}", sizeof(T) * 8, address, value); break;
+    }
+}
+
+template <mem_primitive T>
+T CDBlock::PeekReg(uint32 address) {
+    if constexpr (std::is_same_v<T, uint8>) {
+        return PeekReg<uint16>(address) >> ((~address & 1u) * 8u);
+    } else if constexpr (std::is_same_v<T, uint32>) {
+        uint32 value = PeekReg<uint16>(address + 0) << 16u;
+        value |= PeekReg<uint16>(address + 2) << 0u;
+        return value;
+    } else if constexpr (std::is_same_v<T, uint16>) {
+        address &= 0x3F;
+
+        switch (address) {
+        case 0x00:
+            // TODO: need to use a transfer buffer to avoid/minimize race conditions
+            return 0;
+        case 0x02:
+            // TODO: need to use a transfer buffer to avoid/minimize race conditions
+            return 0;
+        case 0x08: return m_HIRQ;
+        case 0x0C: return m_HIRQMASK;
+        case 0x18: return m_CR[0];
+        case 0x1C: return m_CR[1];
+        case 0x20: return m_CR[2];
+        case 0x24: return m_CR[3];
+        default: return 0;
+        }
+    }
+}
+
+template <mem_primitive T>
+void CDBlock::PokeReg(uint32 address, T value) {
+    if constexpr (std::is_same_v<T, uint8>) {
+        PokeReg<uint16>(address, value >> ((~address & 1) * 8));
+    } else if constexpr (std::is_same_v<T, uint32>) {
+        PokeReg<uint16>(address + 0, value >> 16u);
+        PokeReg<uint16>(address + 2, value >> 0u);
+    } else if constexpr (std::is_same_v<T, uint16>) {
+        address &= 0x3F;
+
+        switch (address) {
+        case 0x00:
+        case 0x02:
+            // TODO: need to use a transfer buffer to avoid/minimize race conditions
+            break;
+        case 0x08:
+            m_HIRQ = value;
+            // TODO: update interrupts in a thread-safe manner
+            break;
+        case 0x0C:
+            m_HIRQMASK = value;
+            // TODO: update interrupts in a thread-safe manner
+            break;
+        case 0x18: m_CR[0] = value; break;
+        case 0x1C: m_CR[1] = value; break;
+        case 0x20: m_CR[2] = value; break;
+        case 0x24: m_CR[3] = value; break;
+        }
     }
 }
 

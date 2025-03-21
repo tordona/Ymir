@@ -78,24 +78,63 @@ void SMPC::FactoryReset() {
 }
 
 void SMPC::MapMemory(sys::Bus &bus) {
+    auto read8 = [](uint32 address, void *ctx) -> uint8 {
+        return static_cast<SMPC *>(ctx)->Read((address & 0x7F) | 1);
+    };
+    auto read16 = [](uint32 address, void *ctx) -> uint16 {
+        return static_cast<SMPC *>(ctx)->Read((address & 0x7F) | 1);
+    };
+    auto read32 = [](uint32 address, void *ctx) -> uint32 {
+        return static_cast<SMPC *>(ctx)->Read((address & 0x7F) | 1);
+    };
+    auto write8 = [](uint32 address, uint8 value, void *ctx) {
+        static_cast<SMPC *>(ctx)->Write((address & 0x7F) | 1, value);
+    };
+    auto write16 = [](uint32 address, uint16 value, void *ctx) {
+        static_cast<SMPC *>(ctx)->Write((address & 0x7F) | 1, value);
+    };
+    auto write32 = [](uint32 address, uint32 value, void *ctx) {
+        static_cast<SMPC *>(ctx)->Write((address & 0x7F) | 1, value);
+    };
+
+    auto peek8 = [](uint32 address, void *ctx) -> uint8 {
+        return static_cast<SMPC *>(ctx)->Peek((address & 0x7F) | 1);
+    };
+    auto peek16 = [](uint32 address, void *ctx) -> uint16 {
+        return static_cast<SMPC *>(ctx)->Peek((address & 0x7F) | 1);
+    };
+    auto peek32 = [](uint32 address, void *ctx) -> uint32 {
+        auto &smpc = *static_cast<SMPC *>(ctx);
+        uint32 value = smpc.Peek((address & 0x7F) | 1) << 16u;
+        value |= smpc.Peek(((address & 0x7F) | 1) + 2);
+        return value;
+    };
+    auto poke8 = [](uint32 address, uint8 value, void *ctx) {
+        static_cast<SMPC *>(ctx)->Poke((address & 0x7F) | 1, value);
+    };
+    auto poke16 = [](uint32 address, uint16 value, void *ctx) {
+        static_cast<SMPC *>(ctx)->Poke((address & 0x7F) | 1, value);
+    };
+    auto poke32 = [](uint32 address, uint32 value, void *ctx) {
+        static_cast<SMPC *>(ctx)->Poke(((address & 0x7F) | 1) + 0, value >> 16u);
+        static_cast<SMPC *>(ctx)->Poke(((address & 0x7F) | 1) + 2, value >> 0u);
+    };
+
     bus.MapMemory(0x010'0000, 0x017'FFFF,
                   {
                       .ctx = this,
-                      .read8 = [](uint32 address, void *ctx) -> uint8 {
-                          return static_cast<SMPC *>(ctx)->Read((address & 0x7F) | 1);
-                      },
-                      .read16 = [](uint32 address, void *ctx) -> uint16 {
-                          return static_cast<SMPC *>(ctx)->Read((address & 0x7F) | 1);
-                      },
-                      .read32 = [](uint32 address, void *ctx) -> uint32 {
-                          return static_cast<SMPC *>(ctx)->Read((address & 0x7F) | 1);
-                      },
-                      .write8 = [](uint32 address, uint8 value,
-                                   void *ctx) { static_cast<SMPC *>(ctx)->Write((address & 0x7F) | 1, value); },
-                      .write16 = [](uint32 address, uint16 value,
-                                    void *ctx) { static_cast<SMPC *>(ctx)->Write((address & 0x7F) | 1, value); },
-                      .write32 = [](uint32 address, uint32 value,
-                                    void *ctx) { static_cast<SMPC *>(ctx)->Write((address & 0x7F) | 1, value); },
+                      .read8 = read8,
+                      .read16 = read16,
+                      .read32 = read32,
+                      .write8 = write8,
+                      .write16 = write16,
+                      .write32 = write32,
+                      .peek8 = peek8,
+                      .peek16 = peek16,
+                      .peek32 = peek32,
+                      .poke8 = poke8,
+                      .poke16 = poke16,
+                      .poke32 = poke32,
                   });
 }
 
@@ -160,6 +199,39 @@ void SMPC::Write(uint32 address, uint8 value) {
     case 0x7D: WriteIOSEL(value); break;
     case 0x7F: WriteEXLE(value); break;
     default: regsLog.debug("unhandled SMPC write to {:02X} = {:02X}", address, value); break;
+    }
+}
+
+uint8 SMPC::Peek(uint32 address) {
+    switch (address) {
+    case 0x01 ... 0x0D: return PeekIREG(address >> 1);
+    case 0x1F: return PeekCOMREG();
+    case 0x21 ... 0x5F: return PeekOREG((address - 0x20) >> 1);
+    case 0x61: return PeekSR();
+    case 0x63: return PeekSF();
+    case 0x75: return PeekPDR1();
+    case 0x77: return PeekPDR2();
+    case 0x79: return PeekDDR1();
+    case 0x7B: return PeekDDR2();
+    case 0x7D: return PeekIOSEL();
+    case 0x7F: return PeekEXLE();
+    default: return 0;
+    }
+}
+
+void SMPC::Poke(uint32 address, uint8 value) {
+    switch (address) {
+    case 0x01 ... 0x0D: PokeIREG(address >> 1u, value); break;
+    case 0x1F: PokeCOMREG(value); break;
+    case 0x21 ... 0x5F: PokeOREG((address - 0x20) >> 1, value); break;
+    case 0x61: PokeSR(value); break;
+    case 0x63: PokeSF(value); break;
+    case 0x75: PokePDR1(value); break;
+    case 0x77: PokePDR2(value); break;
+    case 0x79: PokeDDR1(value); break;
+    case 0x7B: PokeDDR2(value); break;
+    case 0x7D: PokeIOSEL(value); break;
+    case 0x7F: PokeEXLE(value); break;
     }
 }
 
@@ -252,7 +324,7 @@ FORCE_INLINE void SMPC::WriteIOSEL(uint8 value) {
     m_pioMode2 = bit::extract<1>(value);
 }
 
-void SMPC::WriteEXLE(uint8 value) {
+FORCE_INLINE void SMPC::WriteEXLE(uint8 value) {
     m_extLatchEnable1 = bit::extract<0>(value);
     m_extLatchEnable2 = bit::extract<1>(value);
 }
@@ -279,6 +351,109 @@ FORCE_INLINE void SMPC::WritePDR2(uint8 value) {
 
 FORCE_INLINE void SMPC::WriteDDR2(uint8 value) {
     DDR2 = value;
+}
+
+FORCE_INLINE uint8 SMPC::PeekIREG(uint8 offset) const {
+    assert(offset < 7);
+    return IREG[offset];
+}
+
+FORCE_INLINE uint8 SMPC::PeekCOMREG() const {
+    return static_cast<uint8>(COMREG);
+}
+
+FORCE_INLINE uint8 SMPC::PeekOREG(uint8 offset) const {
+    return OREG[offset & 31];
+}
+
+FORCE_INLINE uint8 SMPC::PeekSR() const {
+    return SR.u8;
+}
+
+FORCE_INLINE uint8 SMPC::PeekSF() const {
+    return SF;
+}
+
+FORCE_INLINE uint8 SMPC::PeekPDR1() const {
+    return PDR1;
+}
+
+FORCE_INLINE uint8 SMPC::PeekDDR1() const {
+    return DDR1;
+}
+
+FORCE_INLINE uint8 SMPC::PeekPDR2() const {
+    return PDR1;
+}
+
+FORCE_INLINE uint8 SMPC::PeekDDR2() const {
+    return DDR1;
+}
+
+FORCE_INLINE uint8 SMPC::PeekIOSEL() const {
+    uint8 value = 0;
+    bit::deposit_into<0>(value, m_pioMode1);
+    bit::deposit_into<1>(value, m_pioMode2);
+    return value;
+}
+
+FORCE_INLINE uint8 SMPC::PeekEXLE() const {
+    uint8 value = 0;
+    bit::deposit_into<0>(value, m_extLatchEnable1);
+    bit::deposit_into<1>(value, m_extLatchEnable2);
+    return value;
+}
+
+FORCE_INLINE void SMPC::PokeIREG(uint8 offset, uint8 value) {
+    assert(offset < 7);
+    IREG[offset] = value;
+}
+
+FORCE_INLINE void SMPC::PokeCOMREG(uint8 value) {
+    COMREG = static_cast<Command>(value);
+    // TODO: trigger command execution
+}
+
+FORCE_INLINE void SMPC::PokeOREG(uint8 offset, uint8 value) {
+    OREG[offset & 31] = value;
+}
+
+FORCE_INLINE void SMPC::PokeSR(uint8 value) {
+    SR.u8 = value;
+}
+
+FORCE_INLINE void SMPC::PokeSF(uint8 value) {
+    SF = bit::extract<0>(value);
+}
+
+FORCE_INLINE void SMPC::PokePDR1(uint8 value) {
+    // TODO: send to peripheral
+    // PDR1 = m_port1.WritePDR(DDR1, value);
+    PDR1 = value;
+}
+
+FORCE_INLINE void SMPC::PokeDDR1(uint8 value) {
+    DDR1 = value;
+}
+
+FORCE_INLINE void SMPC::PokePDR2(uint8 value) {
+    // TODO: send to peripheral
+    // PDR2 = m_port2.WritePDR(DDR2, value);
+    PDR2 = value;
+}
+
+FORCE_INLINE void SMPC::PokeDDR2(uint8 value) {
+    DDR2 = value;
+}
+
+FORCE_INLINE void SMPC::PokeIOSEL(uint8 value) {
+    m_pioMode1 = bit::extract<0>(value);
+    m_pioMode2 = bit::extract<1>(value);
+}
+
+FORCE_INLINE void SMPC::PokeEXLE(uint8 value) {
+    m_extLatchEnable1 = bit::extract<0>(value);
+    m_extLatchEnable2 = bit::extract<1>(value);
 }
 
 void SMPC::ProcessCommand() {

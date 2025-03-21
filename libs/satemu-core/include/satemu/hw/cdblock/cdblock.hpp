@@ -84,6 +84,12 @@ private:
     template <mem_primitive T>
     void WriteReg(uint32 address, T value);
 
+    template <mem_primitive T>
+    T PeekReg(uint32 address);
+
+    template <mem_primitive T>
+    void PokeReg(uint32 address, T value);
+
     // -------------------------------------------------------------------------
     // Disc/drive state
 

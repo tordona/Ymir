@@ -110,6 +110,9 @@ private:
     uint8 Read(uint32 address);
     void Write(uint32 address, uint8 value);
 
+    uint8 Peek(uint32 address);
+    void Poke(uint32 address, uint8 value);
+
     // -------------------------------------------------------------------------
     // Persistent data
 
@@ -202,6 +205,32 @@ private:
     uint8 ReadPDR2() const;
     void WritePDR2(uint8 value);
     void WriteDDR2(uint8 value);
+
+    // Peek/Poke variants
+
+    uint8 PeekIREG(uint8 offset) const;
+    uint8 PeekCOMREG() const;
+    uint8 PeekOREG(uint8 offset) const;
+    uint8 PeekSR() const;
+    uint8 PeekSF() const;
+    uint8 PeekPDR1() const;
+    uint8 PeekDDR1() const;
+    uint8 PeekPDR2() const;
+    uint8 PeekDDR2() const;
+    uint8 PeekIOSEL() const;
+    uint8 PeekEXLE() const;
+
+    void PokeIREG(uint8 offset, uint8 value);
+    void PokeCOMREG(uint8 value);
+    void PokeOREG(uint8 offset, uint8 value);
+    void PokeSR(uint8 value);
+    void PokeSF(uint8 value);
+    void PokePDR1(uint8 value);
+    void PokeDDR1(uint8 value);
+    void PokePDR2(uint8 value);
+    void PokeDDR2(uint8 value);
+    void PokeIOSEL(uint8 value);
+    void PokeEXLE(uint8 value);
 
     // -------------------------------------------------------------------------
     // RTC

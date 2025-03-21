@@ -46,6 +46,12 @@ void SystemMemory::MapMemory(Bus &bus) {
                       .write8 = GenericWriteNoop<uint8>,
                       .write16 = GenericWriteNoop<uint16>,
                       .write32 = GenericWriteNoop<uint32>,
+                      .peek8 = GenericRead<uint8, 0x7FFFF>,
+                      .peek16 = GenericRead<uint16, 0x7FFFF>,
+                      .peek32 = GenericRead<uint32, 0x7FFFF>,
+                      .poke8 = GenericWriteNoop<uint8>,
+                      .poke16 = GenericWriteNoop<uint16>,
+                      .poke32 = GenericWriteNoop<uint32>,
                   });
 
     bus.MapMemory(0x018'0000, 0x01F'FFFF,
@@ -66,6 +72,7 @@ void SystemMemory::MapMemory(Bus &bus) {
                                     void *ctx) { static_cast<bup::BackupMemory *>(ctx)->WriteWord(address, value); },
                       .write32 = [](uint32 address, uint32 value,
                                     void *ctx) { static_cast<bup::BackupMemory *>(ctx)->WriteLong(address, value); },
+                      // TODO: peek/poke
                   });
 
     bus.MapMemory(0x020'0000, 0x02F'FFFF,
@@ -77,6 +84,12 @@ void SystemMemory::MapMemory(Bus &bus) {
                       .write8 = GenericWrite<uint8, 0xFFFFF>,
                       .write16 = GenericWrite<uint16, 0xFFFFF>,
                       .write32 = GenericWrite<uint32, 0xFFFFF>,
+                      .peek8 = GenericRead<uint8, 0xFFFFF>,
+                      .peek16 = GenericRead<uint16, 0xFFFFF>,
+                      .peek32 = GenericRead<uint32, 0xFFFFF>,
+                      .poke8 = GenericWrite<uint8, 0xFFFFF>,
+                      .poke16 = GenericWrite<uint16, 0xFFFFF>,
+                      .poke32 = GenericWrite<uint32, 0xFFFFF>,
                   });
 
     bus.MapMemory(0x600'0000, 0x7FF'FFFF,
@@ -88,6 +101,12 @@ void SystemMemory::MapMemory(Bus &bus) {
                       .write8 = GenericWrite<uint8, 0xFFFFF>,
                       .write16 = GenericWrite<uint16, 0xFFFFF>,
                       .write32 = GenericWrite<uint32, 0xFFFFF>,
+                      .peek8 = GenericRead<uint8, 0xFFFFF>,
+                      .peek16 = GenericRead<uint16, 0xFFFFF>,
+                      .peek32 = GenericRead<uint32, 0xFFFFF>,
+                      .poke8 = GenericWrite<uint8, 0xFFFFF>,
+                      .poke16 = GenericWrite<uint16, 0xFFFFF>,
+                      .poke32 = GenericWrite<uint32, 0xFFFFF>,
                   });
 }
 

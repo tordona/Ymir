@@ -21,6 +21,8 @@
 
 #include <imgui.h>
 
+#include <imgui_memory_editor.h>
+
 #include <string>
 #include <thread>
 #include <variant>
@@ -64,6 +66,8 @@ private:
     SH2Debugger m_masterSH2Debugger;
     SH2Debugger m_slaveSH2Debugger;
     SCUDebugger m_scuDebugger;
+
+    MemoryEditor m_sh2MemoryEditor;
 };
 
 } // namespace app
