@@ -547,10 +547,10 @@ template <mem_primitive T>
 FORCE_INLINE T SCU::ReadReg(uint32 address) {
     if constexpr (std::is_same_v<T, uint8>) {
         const uint32 value = ReadReg<uint32>(address & ~3u);
-        return value >> (((address & 3u) ^ 3u) * 8u);
+        return value >> ((~address & 3u) * 8u);
     } else if constexpr (std::is_same_v<T, uint16>) {
         const uint32 value = ReadReg<uint32>(address & ~3u);
-        return value >> ((((address >> 1u) & 1u) ^ 1u) * 16u);
+        return value >> ((~address & 2u) * 8u);
     }
 
     switch (address) {
