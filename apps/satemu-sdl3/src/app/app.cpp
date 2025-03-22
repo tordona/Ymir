@@ -1,12 +1,144 @@
+// Foreword
+// --------
 // I find frontend development to be extremely tedious and unrewarding for the most part. Whenever I start working on
 // it, my desire to code vanishes. I'd rather spend two weeks troubleshooting a stupid off-by-one bug in the emulator
-// core, decompile SH2 assembly for days, or compare execution traces against other emulators than write yet another
-// goddamn window for a single hour.
+// core, decompiling SH2 assembly and comparing gigabytes of execution traces against other emulators than write yet
+// another goddamn window for a single hour.
 //
 // This abomination here is the result of my half-assed attempt to provide a usable frontend for the emulator.
 // If you wish to rewrite it from scratch, be my guest. Use whatever tech you want, come up with whatever design you
-// wish and send a PR. Just make sure it's awesome.
+// wish, or just fix this mess and send a PR.
+//
+// Just make sure it's awesome, and follow the instructions below on how to use the emulator core.
+//
 // - StrikerX3
+//
+// ---------------------------------------------------------------------------------------------------------------------
+//
+// General usage
+// -------------
+// satemu::Saturn emulates the entire system. You can make as many instances of it as you want; they're all completely
+// independent. (Yay for not using global state!)
+//
+// Use the methods and members on that instance to control the emulator. The Saturn's components can be accessed
+// directly through the instance as well.
+//
+// The constructor automatically hard resets the emulator with Reset(true). This is cheaper than constructing the object
+// from scratch. You can also soft reset with Reset(false) or by changing the Reset button state through the SMPC.
+//
+// In order to run the emulator, set up a loop that processes application events then invokes RunFrame(false). This will
+// run the emulator for a single frame. The "false" arguments disables debug tracing, which increases performance at the
+// cost of some debugging features.
+//
+// The emulator core makes no attempt to pace execution to realtime speed - it's up to the frontend to implement some
+// pacing method. If no such method is used, it will run as fast as your CPU allows.
+//
+// This frontend implements audio sync without any effort put into trying to pace frames. Fast-forward simply disables
+// audio sync, which allows the core to run as fast as possible as the audio callback overruns the audio ring buffer.
+//
+//
+// Thread-safety
+// -------------
+// The emulator core is *not* thread-safe. Make sure to provide your own synchronization mechanisms if you plan to run
+// it in a dedicated thread.
+//
+// NOTE: The VDP renderer runs in its own thread. The video and audio callbacks are invoked from the emulator thread.
+//
+// This frontend runs the emulator core in a dedicated thread while the GUI runs on the main thread. Synchronization
+// between threads is accomplished by using a blocking concurrent queue to send events to the emulator thread, which
+// processes the events between frames.
+//
+//
+// Receiving input
+// ---------------
+// To process inputs, you'll need to attach a controller to one or both ports. You'll find the ports in the SMPC.
+//
+// Use one of the Connect* methods to attempt to attach a controller to the port. If successful, the method will return
+// a valid pointer to the specialized controller instance which you can use to send inputs to the system. A nullptr
+// indicates failure to instantiate the object or to attach the peripheral due to incompatibility with existing
+// peripherals.
+//
+// DisconnectPeripherals() will disconnect all peripherals connected to the port. Be careful: any existing pointers to
+// the previously connected peripheral(s) will become invalid. The same applies when replacing a peripheral.
+//
+// WARNING: there is currently no way to enumerate peripherals attached to a port.
+// NOTE: the emulator currently only supports attaching a single standard Saturn Pad to the ports. Due to this, there's
+// also no way to detach a specific peripheral. More types of peripherals are planned.
+//
+// This frontend attaches a standard Saturn Pad to both ports and redirects keyboard input to them with the following
+// hardcoded key mappings:
+//
+//          Port 1                       Port 2
+//     Q              E         KP7/Ins            KP9/PgUp
+//     W                           Up
+//   A   D  F/G/H   U I O        Lf  Rt  KPEnter  KP4 KP5 KP6
+//     S    /Enter  J K L          Dn             KP1 KP2 KP3
+//                            (arrow keys)
+//                            (or Home/Del/End/PgDn)
+//
+//          Layout
+//     L                R
+//     Up
+// Left  Right Start  X Y Z
+//    Down            A B C
+//
+//
+// Receiving video frames and audio samples
+// ----------------------------------------
+// In order to receive video and audio, you must configure callbacks in VDP and SCSP.
+//
+// The VDP invokes the frame completed callback once a frame finishes rendering (as soon as it enters the VBlank area).
+// The callback signature is:
+//   void FrameCompleteCallback(FramebufferColor *fb, uint32 width, uint32 height)
+// where:
+//   fb is a pointer to the rendered framebuffer
+//   width and height specify the dimensions of the framebuffer
+//
+// Additionally, you can specify a VDP1 frame completed callback in order to count VDP1 frames. This callback has the
+// following signature:
+//   void VDPFrameCompleteCallback()
+//
+// The SCSP invokes the sample callback on every individual pair of samples (left and right).
+// The callback signature is:
+//   void SCSPSampleCallback(sint16 left, sint16 right)
+// where left and right are the samples for the respective channels.
+// You'll probably want to accumulate those samples into a ring buffer before sending them to the audio system.
+//
+// You can run the emulator core without providing video and audio callbacks. It will work fine, but you won't receive
+// frames or audio samples.
+//
+// All callbacks are invoked from inside the emulator core deep within the RunFrame() call stack, so if you're running
+// it on a dedicated thread (as is done here) you need to make sure to sync/atomic/mutex updates coming from the
+// callbacks into the GUI/main thread.
+//
+//
+// Debugging
+// ---------
+// WARNING: The debugger is a work in progress and in a flow state; expect things to change dramatically.
+//
+// There are two parts to the debugger: the accessors and the tracers.
+//
+// The accessors are methods provided by the components themselves to read or modify state. Notably, there are Peek/Poke
+// variants of bus Read/Write methods that circumvent limitations such as being able to do 8-bit reads and writes to VDP
+// registers and they avoid side-effects like when trying to read or write to the CD Block's data transfer register
+// which would cause the transfer pointer to advance, thus breaking guest software.
+//
+// Tracers are integrated into the components themselves in order to capture events as the emulator executes. The
+// application must implement the provided interfaces in satemu/debug/*_tracer.hpp. (Ignore the *_tracer_ctx.hpp files;
+// they're meant for internal use only. Remember: this is a work in progress.)
+//
+// Once implemented, you must attach the tracers to the components with the UseTracer(...) method. Also, you will need
+// to run the emulator in "debug mode", which is accomplished by invoking RunFrame(true) instead of RunFrame(false).
+//
+// Running in debug mode has a small performance penalty as the alternative code path enables calls to the tracers
+// everywhere, including the hot paths. This is left as an option in order to maximize performance for the primary use
+// case where users are simply playing games and don't need any debugging features.
+//
+// Using accessors currently has no performance cost, therefore enabling debug mode is not necessary to use them.
+//
+// WARNING: since the emulator is not thread-safe, care must be taken when using accessors, especially write accessors.
+// This is subject to change in the future as I know it is a major annoyance to try to sync debugger writes with the
+// emulator thread.
 
 #include "app.hpp"
 

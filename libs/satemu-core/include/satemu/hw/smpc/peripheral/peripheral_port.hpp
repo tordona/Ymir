@@ -26,14 +26,14 @@ namespace satemu::peripheral {
 class PeripheralPort {
 public:
     PeripheralPort() {
-        DisconnectPeripheral();
+        DisconnectPeripherals();
     }
 
     StandardPad *ConnectStandardPad() {
         return ConnectPeripheral<StandardPad>();
     }
 
-    void DisconnectPeripheral() {
+    void DisconnectPeripherals() {
         ConnectPeripheral<NullPeripheral>();
     }
 
