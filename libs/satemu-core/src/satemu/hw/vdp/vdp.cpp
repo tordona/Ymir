@@ -211,7 +211,7 @@ void VDP::MapMemory(sys::Bus &bus) {
         const uint16 shift = (~address & 1) * 8u;
         const uint16 mask = ~(0xFF << shift);
         currValue = (currValue & mask) | (value << shift);
-        static_cast<VDP *>(ctx)->VDP1WriteReg<true>(address, currValue);
+        static_cast<VDP *>(ctx)->VDP1WriteReg<true>(address & ~1, currValue);
     };
     auto vdp1PokeReg16 = [](uint32 address, uint16 value, void *ctx) {
         static_cast<VDP *>(ctx)->VDP1WriteReg<true>(address, value);
@@ -344,35 +344,65 @@ void VDP::MapMemory(sys::Bus &bus) {
                   });
 
     // VDP2 registers
-    bus.MapMemory(
-        0x5F8'0000, 0x5FB'FFFF,
-        {
-            .ctx = this,
-            .read8 = [](uint32 address, void * /*ctx*/) -> uint8 {
-                address &= 0x1FF;
-                regsLog1.debug("Illegal 8-bit VDP2 register read from {:05X}", address);
-                return 0;
-            },
-            .read16 = [](uint32 address, void *ctx) -> uint16 { return static_cast<VDP *>(ctx)->VDP2ReadReg(address); },
-            .read32 = [](uint32 address, void *ctx) -> uint32 {
-                uint32 value = static_cast<VDP *>(ctx)->VDP2ReadReg(address + 0) << 16u;
-                value |= static_cast<VDP *>(ctx)->VDP2ReadReg(address + 2) << 0u;
-                return value;
-            },
-            .write8 =
-                [](uint32 address, uint8 value, void * /*ctx*/) {
-                    address &= 0x1FF;
-                    regsLog1.debug("Illegal 8-bit VDP2 register write to {:05X} = {:02X}", address, value);
-                },
-            .write16 = [](uint32 address, uint16 value,
-                          void *ctx) { static_cast<VDP *>(ctx)->VDP2WriteReg(address, value); },
-            .write32 =
-                [](uint32 address, uint32 value, void *ctx) {
-                    static_cast<VDP *>(ctx)->VDP2WriteReg(address + 0, value >> 16u);
-                    static_cast<VDP *>(ctx)->VDP2WriteReg(address + 2, value >> 0u);
-                },
-            // TODO: peek/poke
-        });
+    auto vdp2ReadReg8 = [](uint32 address, void * /*ctx*/) -> uint8 {
+        address &= 0x1FF;
+        regsLog1.debug("Illegal 8-bit VDP2 register read from {:05X}", address);
+        return 0;
+    };
+    auto vdp2ReadReg16 = [](uint32 address, void *ctx) -> uint16 {
+        return static_cast<VDP *>(ctx)->VDP2ReadReg(address);
+    };
+    auto vdp2ReadReg32 = [](uint32 address, void *ctx) -> uint32 {
+        uint32 value = static_cast<VDP *>(ctx)->VDP2ReadReg(address + 0) << 16u;
+        value |= static_cast<VDP *>(ctx)->VDP2ReadReg(address + 2) << 0u;
+        return value;
+    };
+
+    auto vdp2WriteReg8 = [](uint32 address, uint8 value, void * /*ctx*/) {
+        address &= 0x1FF;
+        regsLog1.debug("Illegal 8-bit VDP2 register write to {:05X} = {:02X}", address, value);
+    };
+    auto vdp2WriteReg16 = [](uint32 address, uint16 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP2WriteReg(address, value);
+    };
+    auto vdp2WriteReg32 = [](uint32 address, uint32 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP2WriteReg(address + 0, value >> 16u);
+        static_cast<VDP *>(ctx)->VDP2WriteReg(address + 2, value >> 0u);
+    };
+
+    auto vdp2PeekReg8 = [](uint32 address, void *ctx) -> uint8 {
+        const uint16 value = static_cast<VDP *>(ctx)->VDP2ReadReg(address);
+        return value >> ((~address & 1) * 8u);
+    };
+    auto vdp2PeekReg16 = vdp2ReadReg16;
+    auto vdp2PeekReg32 = vdp2ReadReg32;
+
+    auto vdp2PokeReg8 = [](uint32 address, uint8 value, void *ctx) {
+        uint16 currValue = static_cast<VDP *>(ctx)->VDP2ReadReg(address & ~1);
+        const uint16 shift = (~address & 1) * 8u;
+        const uint16 mask = ~(0xFF << shift);
+        currValue = (currValue & mask) | (value << shift);
+        static_cast<VDP *>(ctx)->VDP2WriteReg(address & ~1, currValue);
+    };
+    auto vdp2PokeReg16 = vdp2WriteReg16;
+    auto vdp2PokeReg32 = vdp2WriteReg32;
+
+    bus.MapMemory(0x5F8'0000, 0x5FB'FFFF,
+                  {
+                      .ctx = this,
+                      .read8 = vdp2ReadReg8,
+                      .read16 = vdp2ReadReg16,
+                      .read32 = vdp2ReadReg32,
+                      .write8 = vdp2WriteReg8,
+                      .write16 = vdp2WriteReg16,
+                      .write32 = vdp2WriteReg32,
+                      .peek8 = vdp2PeekReg8,
+                      .peek16 = vdp2PeekReg16,
+                      .peek32 = vdp2PeekReg32,
+                      .poke8 = vdp2PokeReg8,
+                      .poke16 = vdp2PokeReg16,
+                      .poke32 = vdp2PokeReg32,
+                  });
 }
 
 template <bool debug>
