@@ -931,7 +931,7 @@ union RegEXTEN {
 //      1   R    ODD           Scan Field Flag (0=even, 1=odd)
 //      0   R    PAL           TV Standard Flag (0=NTSC, 1=PAL)
 union RegTVSTAT {
-    uint16 u16;
+    uint16 u16 = 0;
     struct {
         uint16 PAL : 1;
         uint16 ODD : 1;

@@ -11,6 +11,7 @@ struct VDP2Regs {
     void Reset() {
         TVMD.u16 = 0x0;
         TVSTAT.u16 &= ~0xFFFE; // Preserve PAL flag
+        EXTEN.u16 = 0x0;
         HCNT = 0x0;
         VCNT = 0x0;
         vramControl.Reset();

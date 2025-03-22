@@ -482,7 +482,7 @@ private:
         util::Event framebufferSwapSignal{false};
 
         std::array<VDPRenderEvent, 64> pendingEvents;
-        size_t pendingEventsCount;
+        size_t pendingEventsCount = 0;
 
         bool vdp1Done;
 
