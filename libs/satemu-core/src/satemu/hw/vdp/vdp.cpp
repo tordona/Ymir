@@ -976,7 +976,7 @@ FORCE_INLINE T VDP::VDP2ReadRendererCRAM(uint32 address) {
 }
 
 FORCE_INLINE Color888 VDP::VDP2ReadRendererColor5to8(uint32 address) {
-    return m_VDPRenderContext.vdp2.CRAMCache[address / sizeof(uint16)];
+    return m_VDPRenderContext.vdp2.CRAMCache[(address / sizeof(uint16)) & 0x7FF];
 }
 
 // -----------------------------------------------------------------------------
