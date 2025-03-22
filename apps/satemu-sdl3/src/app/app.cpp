@@ -473,6 +473,7 @@ void App::RunEmulator() {
                           screen.height * screen.scaleY + screen.menuBarHeight);
     SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
     SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
+    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, true);
 
     screen.window = SDL_CreateWindowWithProperties(windowProps);
     if (screen.window == nullptr) {
@@ -815,6 +816,8 @@ void App::RunEmulator() {
             m_emuThread.join();
         }
     }};
+
+    SDL_ShowWindow(screen.window);
 
     while (true) {
         // Process SDL events
