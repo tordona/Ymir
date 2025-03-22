@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/core/types.hpp>
+
 #include <string>
 #include <variant>
 
@@ -16,6 +18,7 @@ struct EmuEvent {
 
         SetDebugTrace,
         MemoryDump,
+        DebugWrite,
 
         OpenCloseTray,
         LoadDisc,
@@ -26,7 +29,14 @@ struct EmuEvent {
 
     Type type;
 
-    std::variant<bool, std::string> value;
+    // TODO: support 16-bit and 32-bit reads/writes
+    struct DebugWriteData {
+        uint32 address;
+        uint8 value;
+        bool enableSideEffects;
+    };
+
+    std::variant<bool, std::string, DebugWriteData> value;
 
     static EmuEvent FactoryReset() {
         return {.type = Type::FactoryReset};
@@ -54,6 +64,11 @@ struct EmuEvent {
 
     static EmuEvent MemoryDump() {
         return {.type = Type::MemoryDump};
+    }
+
+    static EmuEvent DebugWrite(uint32 address, uint8 value, bool enableSideEffects) {
+        return {.type = Type::DebugWrite,
+                .value = DebugWriteData{.address = address, .value = value, .enableSideEffects = enableSideEffects}};
     }
 
     static EmuEvent OpenCloseTray() {

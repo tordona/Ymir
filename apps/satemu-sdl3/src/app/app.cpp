@@ -173,14 +173,15 @@ App::App()
     , m_slaveSH2Debugger(m_context, false)
     , m_scuDebugger(m_context) {
 
+    // TODO: support 16-bit and 32-bit reads/writes
     m_memoryViewer.Open = false;
     m_memoryViewer.ReadFn = [](const ImU8 *mem, size_t off, void *user_data) {
-        auto &bus = *reinterpret_cast<const satemu::sys::Bus *>(mem);
-        return bus.Peek<uint8>(off);
+        auto &app = *reinterpret_cast<const App *>(mem);
+        return app.m_context.saturn.mainBus.Peek<uint8>(off);
     };
     m_memoryViewer.WriteFn = [](ImU8 *mem, size_t off, ImU8 d, void *user_data) {
-        auto &bus = *reinterpret_cast<satemu::sys::Bus *>(mem);
-        bus.Poke<uint8>(off, d);
+        auto &app = *reinterpret_cast<App *>(mem);
+        app.m_emuEventQueue.enqueue(EmuEvent::DebugWrite(off, d, app.m_enableSideEffects));
     };
 }
 
@@ -933,7 +934,6 @@ void App::RunEmulator() {
                 }
                 if (ImGui::MenuItem("Pause/resume", "Pause")) {
                     paused = !paused;
-                    m_audioSystem.SetSilent(paused);
                     m_emuEventQueue.enqueue(EmuEvent::SetPaused(paused));
                 }
                 ImGui::Separator();
@@ -1091,7 +1091,10 @@ void App::EmulatorThread() {
                 frameStep = true;
                 paused = false;
                 break;
-            case SetPaused: paused = std::get<bool>(cmd.value); break;
+            case SetPaused:
+                paused = std::get<bool>(cmd.value);
+                m_audioSystem.SetSilent(paused);
+                break;
             case SetDebugTrace:
                 debugTrace = std::get<bool>(cmd.value);
                 if (debugTrace) {
@@ -1184,6 +1187,16 @@ void App::EmulatorThread() {
                 }
                 break;
             }
+            case DebugWrite: {
+                // TODO: support 16-bit and 32-bit writes
+                auto [address, value, enableSideEffects] = std::get<EmuEvent::DebugWriteData>(cmd.value);
+                if (enableSideEffects) {
+                    m_context.saturn.mainBus.Write<uint8>(address, value);
+                } else {
+                    m_context.saturn.mainBus.Poke<uint8>(address, value);
+                }
+                break;
+            }
             case OpenCloseTray:
                 if (m_context.saturn.IsTrayOpen()) {
                     m_context.saturn.CloseTray();
@@ -1198,7 +1211,9 @@ void App::EmulatorThread() {
         }
 
         // Emulate one frame
-        m_context.saturn.RunFrame(debugTrace);
+        if (!paused) {
+            m_context.saturn.RunFrame(debugTrace);
+        }
         if (frameStep) {
             frameStep = false;
             paused = true;
@@ -1247,11 +1262,16 @@ void App::DrawDebug() {
     m_slaveSH2Debugger.Display();
     m_scuDebugger.Display();
 
-    ImGui::PushFont(m_context.fonts.monospaceMedium);
     if (m_memoryViewer.Open) {
-        m_memoryViewer.DrawWindow("Memory viewer", &m_context.saturn.mainBus, 0x8000000, 0x0);
+        if (ImGui::Begin("Memory viewer", &m_memoryViewer.Open)) {
+            ImGui::Checkbox("Enable side-effects", &m_enableSideEffects);
+            ImGui::Separator();
+            ImGui::PushFont(m_context.fonts.monospaceMedium);
+            m_memoryViewer.DrawContents(this, 0x8000000, 0x0);
+            ImGui::PopFont();
+        }
+        ImGui::End();
     }
-    ImGui::PopFont();
 
     /*int ww{};
     int wh{};
