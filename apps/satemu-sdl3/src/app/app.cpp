@@ -31,11 +31,12 @@ App::App()
     , m_slaveSH2Debugger(m_context, false)
     , m_scuDebugger(m_context) {
 
-    m_sh2MemoryEditor.ReadFn = [](const ImU8 *mem, size_t off, void *user_data) {
+    m_memoryViewer.Open = false;
+    m_memoryViewer.ReadFn = [](const ImU8 *mem, size_t off, void *user_data) {
         auto &bus = *reinterpret_cast<const satemu::sys::Bus *>(mem);
         return bus.Peek<uint8>(off);
     };
-    m_sh2MemoryEditor.WriteFn = [](ImU8 *mem, size_t off, ImU8 d, void *user_data) {
+    m_memoryViewer.WriteFn = [](ImU8 *mem, size_t off, ImU8 d, void *user_data) {
         auto &bus = *reinterpret_cast<satemu::sys::Bus *>(mem);
         bus.Poke<uint8>(off, d);
     };
@@ -548,7 +549,6 @@ void App::RunEmulator() {
     auto t = clk::now();
     bool paused = false; // TODO: this should be updated by the emulator thread via events
     bool debugTrace = false;
-    bool drawDebug = false;
     bool showVideoOutputDebugWindow = false;
 
     bool forceIntegerScaling = true;
@@ -665,17 +665,6 @@ void App::RunEmulator() {
         case SDL_SCANCODE_F9:
             if (pressed) {
                 showVideoOutputDebugWindow = !showVideoOutputDebugWindow;
-            }
-            break;
-        case SDL_SCANCODE_F10:
-            if (pressed) {
-                drawDebug = !drawDebug;
-                screen.autoResizeWindow = !drawDebug;
-                if (screen.autoResizeWindow) {
-                    screen.ResizeWindow();
-                }
-                // SDL_SetWindowResizable(screen.window, drawDebug);
-                fmt::println("Debug display {}", (drawDebug ? "enabled" : "disabled"));
             }
             break;
         case SDL_SCANCODE_F11:
@@ -839,14 +828,18 @@ void App::RunEmulator() {
                 ImGui::End();
             }
             if (ImGui::BeginMenu("Debug")) {
-                ImGui::MenuItem("Enable debugger", "F10", &drawDebug);
                 ImGui::MenuItem("Enable tracing", "F11", &debugTrace);
                 ImGui::Separator();
-                ImGui::MenuItem("Video output", "F9", &showVideoOutputDebugWindow);
-                ImGui::Separator();
+                ImGui::MenuItem("Memory viewer", nullptr, &m_memoryViewer.Open);
                 if (ImGui::MenuItem("Dump all memory", "F3")) {
                     m_emuEventQueue.enqueue(EmuEvent::MemoryDump());
                 }
+                ImGui::Separator();
+                ImGui::MenuItem("Master SH2", nullptr, &m_masterSH2Debugger.Open);
+                ImGui::MenuItem("Slave SH2", nullptr, &m_slaveSH2Debugger.Open);
+                ImGui::MenuItem("SCU", nullptr, &m_scuDebugger.Open);
+                ImGui::Separator();
+                ImGui::MenuItem("Video output", "F9", &showVideoOutputDebugWindow);
                 ImGui::End();
             }
             if (ImGui::BeginMenu("Help")) {
@@ -865,37 +858,34 @@ void App::RunEmulator() {
             ImGui::ShowDemoWindow(&showDemoWindow);
         }
 
-        // Draw debugger windows
-        if (drawDebug) {
-            // Draw video output as a window
-            if (showVideoOutputDebugWindow) {
-                std::string title = fmt::format("Video Output - {}x{}###Display", screen.width, screen.height);
+        // Draw video output as a window
+        if (showVideoOutputDebugWindow) {
+            std::string title = fmt::format("Video Output - {}x{}###Display", screen.width, screen.height);
 
-                const float aspectRatio = (float)screen.height / screen.width;
+            const float aspectRatio = (float)screen.height / screen.width;
 
-                ImGui::SetNextWindowSizeConstraints(
-                    ImVec2(320, 224), ImVec2(FLT_MAX, FLT_MAX),
-                    [](ImGuiSizeCallbackData *data) {
-                        float aspectRatio = *(float *)data->UserData;
-                        data->DesiredSize.y =
-                            (float)(int)(data->DesiredSize.x * aspectRatio) + ImGui::GetFrameHeightWithSpacing();
-                    },
-                    (void *)&aspectRatio);
-                if (ImGui::Begin(title.c_str(), &showVideoOutputDebugWindow, ImGuiWindowFlags_NoNavInputs)) {
-                    const ImVec2 avail = ImGui::GetContentRegionAvail();
-                    const float scaleX = avail.x / screen.width;
-                    const float scaleY = avail.y / screen.height;
-                    const float scale = std::min(scaleX, scaleY);
+            ImGui::SetNextWindowSizeConstraints(
+                ImVec2(320, 224), ImVec2(FLT_MAX, FLT_MAX),
+                [](ImGuiSizeCallbackData *data) {
+                    float aspectRatio = *(float *)data->UserData;
+                    data->DesiredSize.y =
+                        (float)(int)(data->DesiredSize.x * aspectRatio) + ImGui::GetFrameHeightWithSpacing();
+                },
+                (void *)&aspectRatio);
+            if (ImGui::Begin(title.c_str(), &showVideoOutputDebugWindow, ImGuiWindowFlags_NoNavInputs)) {
+                const ImVec2 avail = ImGui::GetContentRegionAvail();
+                const float scaleX = avail.x / screen.width;
+                const float scaleY = avail.y / screen.height;
+                const float scale = std::min(scaleX, scaleY);
 
-                    ImGui::Image((ImTextureID)texture, ImVec2(screen.width * scale, screen.height * scale),
-                                 ImVec2(0, 0),
-                                 ImVec2((float)screen.width / vdp::kMaxResH, (float)screen.height / vdp::kMaxResV));
-                }
-                ImGui::End();
+                ImGui::Image((ImTextureID)texture, ImVec2(screen.width * scale, screen.height * scale), ImVec2(0, 0),
+                             ImVec2((float)screen.width / vdp::kMaxResH, (float)screen.height / vdp::kMaxResV));
             }
-
-            DrawDebug();
+            ImGui::End();
         }
+
+        // Draw debugger windows
+        DrawDebug();
 
         // ---------------------------------------------------------------------
         // Render window
@@ -907,7 +897,7 @@ void App::RunEmulator() {
         SDL_RenderClear(renderer);
 
         // Draw Saturn screen
-        if (!drawDebug || !showVideoOutputDebugWindow) {
+        if (!showVideoOutputDebugWindow) {
             // Get screen size
             const float baseWidth = forceAspectRatio ? screen.height * forcedAspect : screen.width;
             const float baseHeight = screen.height;
@@ -1131,9 +1121,10 @@ void App::DrawDebug() {
     m_slaveSH2Debugger.Display();
     m_scuDebugger.Display();
 
-    m_sh2MemoryEditor.Open = true;
     ImGui::PushFont(m_context.fonts.monospaceMedium);
-    m_sh2MemoryEditor.DrawWindow("SH2 Memory", &m_context.saturn.mainBus, 0x8000000, 0x0);
+    if (m_memoryViewer.Open) {
+        m_memoryViewer.DrawWindow("Memory viewer", &m_context.saturn.mainBus, 0x8000000, 0x0);
+    }
     ImGui::PopFont();
 
     /*int ww{};

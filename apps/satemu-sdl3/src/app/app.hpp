@@ -67,7 +67,7 @@ private:
     SH2Debugger m_slaveSH2Debugger;
     SCUDebugger m_scuDebugger;
 
-    MemoryEditor m_sh2MemoryEditor;
+    MemoryEditor m_memoryViewer;
 };
 
 } // namespace app

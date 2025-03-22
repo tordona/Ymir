@@ -9,6 +9,10 @@ SCUDebugger::SCUDebugger(SharedContext &context)
     , m_scu(context.saturn.SCU) {}
 
 void SCUDebugger::Display() {
+    if (!Open) {
+        return;
+    }
+
     if (ImGui::Begin("SCU")) {
         ImGui::TextUnformatted("Interrupts");
         ImGui::Text("%08X mask", m_scu.GetInterruptMask().u32);

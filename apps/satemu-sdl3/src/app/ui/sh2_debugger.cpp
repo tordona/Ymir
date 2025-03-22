@@ -14,6 +14,10 @@ SH2Debugger::SH2Debugger(SharedContext &context, bool master)
     , m_disasmView(context, m_sh2) {}
 
 void SH2Debugger::Display() {
+    if (!Open) {
+        return;
+    }
+
     std::string name = fmt::format("{}SH2", m_master ? "M" : "S");
     if (ImGui::Begin(name.c_str(), &Open, ImGuiWindowFlags_AlwaysAutoResize)) {
         m_regsView.Display();
