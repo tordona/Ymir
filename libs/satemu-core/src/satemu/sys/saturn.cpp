@@ -13,20 +13,14 @@ Saturn::Saturn()
     , SCSP(m_scheduler)
     , CDBlock(m_scheduler) {
 
-    masterSH2.SetExternalInterruptAcknowledgeCallback(SCU.CbAckExtIntr);
-    slaveSH2.SetExternalInterruptAcknowledgeCallback(SCU.CbAckExtIntr);
-
-    SCU.SetExternalInterruptCallbacks(masterSH2.CbExtIntr, slaveSH2.CbExtIntr);
-
-    VDP.SetInterruptCallbacks(SCU.CbTriggerHBlankIN, SCU.CbTriggerVBlankIN, SCU.CbTriggerVBlankOUT,
-                              SCU.CbTriggerSpriteDrawEnd, SMPC.CbTriggerOptimizedINTBACKRead);
-
-    SMPC.SetSystemManagerInterruptCallback(SCU.CbTriggerSystemManager);
-
-    SCSP.SetTriggerSoundRequestInterruptCallback(SCU.CbTriggerSoundRequest);
-
-    CDBlock.SetTriggerExternalInterrupt0Callback(SCU.CbTriggerExtIntr0);
-    CDBlock.SetCDDASectorCallback(SCSP.CbCDDASector);
+    masterSH2.MapCallbacks(SCU.CbAckExtIntr);
+    slaveSH2.MapCallbacks(SCU.CbAckExtIntr);
+    SCU.MapCallbacks(masterSH2.CbExtIntr, slaveSH2.CbExtIntr);
+    VDP.MapCallbacks(SCU.CbTriggerHBlankIN, SCU.CbTriggerVBlankIN, SCU.CbTriggerVBlankOUT, SCU.CbTriggerSpriteDrawEnd,
+                     SMPC.CbTriggerOptimizedINTBACKRead);
+    SMPC.MapCallbacks(SCU.CbTriggerSystemManager);
+    SCSP.MapCallbacks(SCU.CbTriggerSoundRequest);
+    CDBlock.MapCallbacks(SCU.CbTriggerExtIntr0, SCSP.CbCDDASector);
 
     m_system.AddClockSpeedChangeCallback(SCSP.CbClockSpeedChange);
     m_system.AddClockSpeedChangeCallback(SMPC.CbClockSpeedChange);

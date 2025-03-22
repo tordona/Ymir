@@ -36,11 +36,9 @@ public:
 
     void Reset(bool hard);
 
-    void SetTriggerExternalInterrupt0Callback(CBTriggerExternalInterrupt0 callback) {
-        m_cbTriggerExternalInterrupt0 = callback;
-    }
-    void SetCDDASectorCallback(CBCDDASector callback) {
-        m_cbCDDASector = callback;
+    void MapCallbacks(CBTriggerExternalInterrupt0 cbTriggerExtIntr0, CBCDDASector cbCDDASector) {
+        m_cbTriggerExternalInterrupt0 = cbTriggerExtIntr0;
+        m_cbCDDASector = cbCDDASector;
     }
 
     void MapMemory(sys::Bus &bus);

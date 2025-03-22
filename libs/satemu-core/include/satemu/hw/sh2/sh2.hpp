@@ -112,6 +112,10 @@ public:
 
     void Reset(bool hard, bool watchdogInitiated = false);
 
+    void MapCallbacks(CBAcknowledgeExternalInterrupt callback) {
+        m_cbAcknowledgeExternalInterrupt = callback;
+    }
+
     void MapMemory(sys::Bus &bus);
 
     // Advances the SH2 for at least the specified number of cycles.
@@ -157,9 +161,6 @@ public:
     }
 
     void SetExternalInterrupt(uint8 level, uint8 vecNum);
-    void SetExternalInterruptAcknowledgeCallback(CBAcknowledgeExternalInterrupt callback) {
-        m_cbAcknowledgeExternalInterrupt = callback;
-    }
 
     bool GetNMI() const;
     void SetNMI();

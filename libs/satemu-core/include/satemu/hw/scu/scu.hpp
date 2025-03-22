@@ -72,12 +72,12 @@ public:
 
     void Reset(bool hard);
 
-    void MapMemory(sys::Bus &bus);
-
-    void SetExternalInterruptCallbacks(CBExternalInterrupt master, CBExternalInterrupt slave) {
+    void MapCallbacks(CBExternalInterrupt master, CBExternalInterrupt slave) {
         m_cbExternalMasterInterrupt = master;
         m_cbExternalSlaveInterrupt = slave;
     }
+
+    void MapMemory(sys::Bus &bus);
 
     template <bool debug>
     void Advance(uint64 cycles);

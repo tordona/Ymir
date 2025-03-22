@@ -29,7 +29,7 @@ public:
     void Reset(bool hard);
     void FactoryReset();
 
-    void SetSystemManagerInterruptCallback(CBSystemManagerInterruptCallback callback) {
+    void MapCallbacks(CBSystemManagerInterruptCallback callback) {
         m_cbSystemManagerInterruptCallback = callback;
     }
 

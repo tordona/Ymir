@@ -53,6 +53,15 @@ public:
 
     void Reset(bool hard);
 
+    void MapCallbacks(CBTriggerInterrupt cbHBlankIN, CBTriggerInterrupt cbVBlankIN, CBTriggerInterrupt cbVBlankOUT,
+                      CBTriggerInterrupt cbSpriteDrawEnd, CBTriggerEvent cbOptimizedINTBACKRead) {
+        m_cbTriggerHBlankIN = cbHBlankIN;
+        m_cbTriggerVBlankIN = cbVBlankIN;
+        m_cbTriggerVBlankOUT = cbVBlankOUT;
+        m_cbTriggerSpriteDrawEnd = cbSpriteDrawEnd;
+        m_cbTriggerOptimizedINTBACKRead = cbOptimizedINTBACKRead;
+    }
+
     void MapMemory(sys::Bus &bus);
 
     void SetRenderCallback(CBFrameComplete cbFrameComplete) {
@@ -61,16 +70,6 @@ public:
 
     void SetVDP1Callback(CBVDP1FrameComplete cbFrameComplete) {
         m_cbVDP1FrameComplete = cbFrameComplete;
-    }
-
-    void SetInterruptCallbacks(CBTriggerInterrupt cbHBlankIN, CBTriggerInterrupt cbVBlankIN,
-                               CBTriggerInterrupt cbVBlankOUT, CBTriggerInterrupt cbSpriteDrawEnd,
-                               CBTriggerEvent cbOptimizedINTBACKRead) {
-        m_cbTriggerHBlankIN = cbHBlankIN;
-        m_cbTriggerVBlankIN = cbVBlankIN;
-        m_cbTriggerVBlankOUT = cbVBlankOUT;
-        m_cbTriggerSpriteDrawEnd = cbSpriteDrawEnd;
-        m_cbTriggerOptimizedINTBACKRead = cbOptimizedINTBACKRead;
     }
 
     // TODO: replace with scheduler events

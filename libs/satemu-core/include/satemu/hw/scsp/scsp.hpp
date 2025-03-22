@@ -69,7 +69,7 @@ public:
         m_cbOutputSample = callback;
     }
 
-    void SetTriggerSoundRequestInterruptCallback(CBTriggerSoundRequestInterrupt callback) {
+    void MapCallbacks(CBTriggerSoundRequestInterrupt callback) {
         m_cbTriggerSoundRequestInterrupt = callback;
     }
 

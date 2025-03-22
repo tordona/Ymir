@@ -24,7 +24,7 @@ struct TestSubject : debug::ISH2Tracer {
         // Setup tracer to collect interrupts into a vector
         sh2.UseTracer(this);
 
-        sh2.SetExternalInterruptAcknowledgeCallback(util::MakeClassMemberRequiredCallback<&TestSubject::IntrAck>(this));
+        sh2.MapCallbacks(util::MakeClassMemberRequiredCallback<&TestSubject::IntrAck>(this));
 
         bus.MapMemory(0x000'0000, 0x7FF'FFFF,
                       {
