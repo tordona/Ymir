@@ -21,28 +21,7 @@ void SystemMemory::Reset(bool hard) {
 
 void SystemMemory::MapMemory(Bus &bus) {
     bus.MapMemory(0x000'0000, 0x00F'FFFF, IPL, false);
-
-    bus.MapMemory(0x018'0000, 0x01F'FFFF,
-                  {
-                      .ctx = &internalBackupRAM,
-                      .read8 = [](uint32 address, void *ctx) -> uint8 {
-                          return static_cast<bup::BackupMemory *>(ctx)->ReadByte(address);
-                      },
-                      .read16 = [](uint32 address, void *ctx) -> uint16 {
-                          return static_cast<bup::BackupMemory *>(ctx)->ReadWord(address);
-                      },
-                      .read32 = [](uint32 address, void *ctx) -> uint32 {
-                          return static_cast<bup::BackupMemory *>(ctx)->ReadLong(address);
-                      },
-                      .write8 = [](uint32 address, uint8 value,
-                                   void *ctx) { static_cast<bup::BackupMemory *>(ctx)->WriteByte(address, value); },
-                      .write16 = [](uint32 address, uint16 value,
-                                    void *ctx) { static_cast<bup::BackupMemory *>(ctx)->WriteWord(address, value); },
-                      .write32 = [](uint32 address, uint32 value,
-                                    void *ctx) { static_cast<bup::BackupMemory *>(ctx)->WriteLong(address, value); },
-                      // TODO: peek/poke
-                  });
-
+    internalBackupRAM.MapMemory(bus, 0x018'0000, 0x01F'FFFF);
     bus.MapMemory(0x020'0000, 0x02F'FFFF, WRAMLow, true);
     bus.MapMemory(0x600'0000, 0x7FF'FFFF, WRAMHigh, true);
 }

@@ -2,6 +2,8 @@
 
 #include <satemu/core/types.hpp>
 
+#include <satemu/sys/bus.hpp>
+
 #include <mio/mmap.hpp>
 
 #include <filesystem>
@@ -13,6 +15,8 @@ public:
     void LoadFrom(const std::filesystem::path &path, size_t size, std::error_code &error);
 
     uint32 Size() const;
+
+    void MapMemory(sys::Bus &bus, uint32 start, uint32 end);
 
     uint8 ReadByte(uint32 address) const;
     uint16 ReadWord(uint32 address) const;
