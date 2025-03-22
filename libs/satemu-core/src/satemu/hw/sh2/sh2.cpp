@@ -1258,6 +1258,8 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     };
 
     const uint16 instr = FetchInstruction(PC);
+    m_tracer.ExecuteInstruction<debug>(PC, instr, m_delaySlot);
+
     const OpcodeType opcode = g_decodeTable.opcodes[m_delaySlot][instr];
     const DecodedArgs &args = g_decodeTable.args[instr];
 

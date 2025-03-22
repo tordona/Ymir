@@ -2,6 +2,16 @@
 
 namespace app {
 
+void SH2Tracer::ExecuteInstruction(uint32 pc, uint16 opcode, bool delaySlot) {
+    instructions[instructionsPos++] = {pc, opcode, delaySlot};
+    if (instructionsPos >= instructions.size()) {
+        instructionsPos = 0;
+    }
+    if (instructionsCount < instructions.size()) {
+        instructionsCount++;
+    }
+}
+
 void SH2Tracer::Interrupt(uint8 vecNum, uint8 level, uint32 pc) {
     interrupts[interruptsPos++] = {vecNum, level, pc};
     if (interruptsPos >= interrupts.size()) {

@@ -140,6 +140,15 @@ private:
 
     struct {
         template <bool debug>
+        FORCE_INLINE void ExecuteInstruction(uint32 pc, uint16 opcode, bool delaySlot) {
+            if constexpr (debug) {
+                if (instance) {
+                    return instance->ExecuteInstruction(pc, opcode, delaySlot);
+                }
+            }
+        }
+
+        template <bool debug>
         FORCE_INLINE void Interrupt(uint8 vecNum, uint8 level, uint32 pc) {
             if constexpr (debug) {
                 if (instance) {

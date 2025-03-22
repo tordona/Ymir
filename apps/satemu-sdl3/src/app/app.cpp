@@ -124,9 +124,9 @@
 // the emulator normally for a while, then switch to debug mode at any point to enable tracing, and switch back and
 // forth as often as you want.
 //
-// Running in debug mode has a small performance penalty as the alternative code path enables calls to the tracers in
-// the hot paths. This is left as an option in order to maximize performance for the primary use case of playing games
-// without using any debugging features.
+// Running in debug mode has a noticeable performance penalty as the alternative code path enables calls to the tracers
+// in the hot paths. This is left as an option in order to maximize performance for the primary use case of playing
+// games without using any debugging features.
 //
 // Some components always have tracing enabled if provided a valid instance, so in order avoid the performance penalty,
 // make sure to also detach tracers from all components when you don't need them by calling DetachAllTracers() on the

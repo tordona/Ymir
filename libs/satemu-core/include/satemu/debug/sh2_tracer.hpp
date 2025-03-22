@@ -14,10 +14,17 @@ namespace satemu::debug {
 struct ISH2Tracer {
     virtual ~ISH2Tracer() = default;
 
-    // Invoked when an SH2 CPU handles an interrupt.
+    // Invoked immediately before the SH2 CPU executes an instruction.
+    //
+    // `pc` is the current program counter
+    // `opcode` is the instruction opcode
+    // `delaySlot` indicates if the instruction is executing in a delay slot
+    virtual void ExecuteInstruction(uint32 pc, uint16 opcode, bool delaySlot) {}
+
+    // Invoked when the SH2 CPU handles an interrupt.
     virtual void Interrupt(uint8 vecNum, uint8 level, uint32 pc) {}
 
-    // Invoked when an SH2 CPU handles an exception.
+    // Invoked when the SH2 CPU handles an exception.
     virtual void Exception(uint8 vecNum, uint32 pc, uint32 sr) {}
 };
 

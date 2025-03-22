@@ -127,6 +127,8 @@ struct TestSubject : debug::ISH2Tracer {
     // -------------------------------------------------------------------------
     // ISH2Tracer implementation
 
+    void ExecuteInstruction(uint32 pc, uint16 opcode, bool delaySlot) override {}
+
     void Interrupt(uint8 vecNum, uint8 level, uint32 pc) override {
         interrupts.push_back({vecNum, level, pc});
     }
