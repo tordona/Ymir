@@ -273,95 +273,9 @@ void App::RunEmulator() {
     } screen;
 
     // ---------------------------------
-    // Determine ImGui menu bar height
+    // HORRIBLE HACK to determine ImGui menu bar height
+    // Doesn't scale with global scale!
 
-    // Build temporary context
-    {
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-
-        // Build atlas
-        unsigned char *tex_pixels = nullptr;
-        int tex_w, tex_h;
-        ImGuiIO &io = ImGui::GetIO();
-        io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_w, &tex_h);
-
-        // Draw frame
-        io.DisplaySize = {100, 100}; // Set a fake display size to satisfy ImGui
-        ImGui::NewFrame();
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-        ImGui::BeginMainMenuBar();
-        screen.menuBarHeight = ImGui::GetWindowHeight();
-        ImGui::EndMainMenuBar();
-        ImGui::PopStyleVar();
-        ImGui::Render();
-
-        ImGui::DestroyContext();
-    }
-
-    // ---------------------------------
-    // Create window
-
-    SDL_PropertiesID windowProps = SDL_CreateProperties();
-    if (windowProps == 0) {
-        SDL_Log("Unable to create window properties: %s", SDL_GetError());
-        return;
-    }
-    ScopeGuard sgDestroyWindowProps{[&] { SDL_DestroyProperties(windowProps); }};
-
-    // Assume the following calls succeed
-    SDL_SetStringProperty(windowProps, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Unnamed Sega Saturn emulator");
-    SDL_SetBooleanProperty(windowProps, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
-    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, screen.width * screen.scaleX);
-    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,
-                          screen.height * screen.scaleY + screen.menuBarHeight);
-    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
-    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
-
-    screen.window = SDL_CreateWindowWithProperties(windowProps);
-    if (screen.window == nullptr) {
-        SDL_Log("Unable to create window: %s", SDL_GetError());
-        return;
-    }
-    ScopeGuard sgDestroyWindow{[&] { SDL_DestroyWindow(screen.window); }};
-
-    // ---------------------------------
-    // Create renderer
-
-    SDL_PropertiesID rendererProps = SDL_CreateProperties();
-    if (rendererProps == 0) {
-        SDL_Log("Unable to create renderer properties: %s", SDL_GetError());
-        return;
-    }
-    ScopeGuard sgDestroyRendererProps{[&] { SDL_DestroyProperties(rendererProps); }};
-
-    // Assume the following calls succeed
-    SDL_SetPointerProperty(rendererProps, SDL_PROP_RENDERER_CREATE_WINDOW_POINTER, screen.window);
-    // SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, SDL_RENDERER_VSYNC_DISABLED);
-    // SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, SDL_RENDERER_VSYNC_ADAPTIVE);
-    SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, 1);
-
-    auto renderer = SDL_CreateRendererWithProperties(rendererProps);
-    if (renderer == nullptr) {
-        SDL_Log("Unable to create renderer: %s", SDL_GetError());
-        return;
-    }
-    ScopeGuard sgDestroyRenderer{[&] { SDL_DestroyRenderer(renderer); }};
-
-    // ---------------------------------
-    // Create texture to render on
-
-    auto texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, vdp::kMaxResH,
-                                     vdp::kMaxResV);
-    if (texture == nullptr) {
-        SDL_Log("Unable to create texture: %s", SDL_GetError());
-        return;
-    }
-    ScopeGuard sgDestroyTexture{[&] { SDL_DestroyTexture(texture); }};
-
-    SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
-
-    // ---------------------------------
     // Setup Dear ImGui context
 
     ImGui::CreateContext();
@@ -474,10 +388,6 @@ void App::RunEmulator() {
     colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
     colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 
-    // Setup Dear ImGui Platform/Renderer backends
-    ImGui_ImplSDL3_InitForSDLRenderer(screen.window, renderer);
-    ImGui_ImplSDLRenderer3_Init(renderer);
-
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use
     // ImGui::PushFont()/PopFont() to select them.
@@ -541,6 +451,77 @@ void App::RunEmulator() {
 
         io.Fonts->Build();
     }
+
+    // Equivalent to ImGui::GetFrameHeight() without requiring a window
+    screen.menuBarHeight = m_context.fonts.sansSerifMedium->FontSize + style.FramePadding.y * 2.0f;
+
+    // ---------------------------------
+    // Create window
+
+    SDL_PropertiesID windowProps = SDL_CreateProperties();
+    if (windowProps == 0) {
+        SDL_Log("Unable to create window properties: %s", SDL_GetError());
+        return;
+    }
+    ScopeGuard sgDestroyWindowProps{[&] { SDL_DestroyProperties(windowProps); }};
+
+    // Assume the following calls succeed
+    SDL_SetStringProperty(windowProps, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Unnamed Sega Saturn emulator");
+    SDL_SetBooleanProperty(windowProps, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
+    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, screen.width * screen.scaleX);
+    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,
+                          screen.height * screen.scaleY + screen.menuBarHeight);
+    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
+    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
+
+    screen.window = SDL_CreateWindowWithProperties(windowProps);
+    if (screen.window == nullptr) {
+        SDL_Log("Unable to create window: %s", SDL_GetError());
+        return;
+    }
+    ScopeGuard sgDestroyWindow{[&] { SDL_DestroyWindow(screen.window); }};
+
+    // ---------------------------------
+    // Create renderer
+
+    SDL_PropertiesID rendererProps = SDL_CreateProperties();
+    if (rendererProps == 0) {
+        SDL_Log("Unable to create renderer properties: %s", SDL_GetError());
+        return;
+    }
+    ScopeGuard sgDestroyRendererProps{[&] { SDL_DestroyProperties(rendererProps); }};
+
+    // Assume the following calls succeed
+    SDL_SetPointerProperty(rendererProps, SDL_PROP_RENDERER_CREATE_WINDOW_POINTER, screen.window);
+    // SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, SDL_RENDERER_VSYNC_DISABLED);
+    // SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, SDL_RENDERER_VSYNC_ADAPTIVE);
+    SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, 1);
+
+    auto renderer = SDL_CreateRendererWithProperties(rendererProps);
+    if (renderer == nullptr) {
+        SDL_Log("Unable to create renderer: %s", SDL_GetError());
+        return;
+    }
+    ScopeGuard sgDestroyRenderer{[&] { SDL_DestroyRenderer(renderer); }};
+
+    // ---------------------------------
+    // Create texture to render on
+
+    auto texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, vdp::kMaxResH,
+                                     vdp::kMaxResV);
+    if (texture == nullptr) {
+        SDL_Log("Unable to create texture: %s", SDL_GetError());
+        return;
+    }
+    ScopeGuard sgDestroyTexture{[&] { SDL_DestroyTexture(texture); }};
+
+    SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+
+    // ---------------------------------
+    // Setup Dear ImGui Platform/Renderer backends
+
+    ImGui_ImplSDL3_InitForSDLRenderer(screen.window, renderer);
+    ImGui_ImplSDLRenderer3_Init(renderer);
 
     // Our state
     bool showDemoWindow = false;
