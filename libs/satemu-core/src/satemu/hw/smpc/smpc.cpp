@@ -161,6 +161,8 @@ uint8 SMPC::Read(uint32 address) {
         case 0x1F: return ReadCOMREG();
         case 0x79: return ReadDDR1();
         case 0x7B: return ReadDDR2();
+        case 0x7D: return ReadIOSEL();
+        case 0x7F: return ReadEXLE();
         }
     }
 
