@@ -1251,8 +1251,6 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     }
 
     // TODO: emulate fetch - decode - execute - memory access - writeback pipeline
-    // TODO: figure out a way to optimize delay slots for performance
-    // - perhaps decoding instructions beforehand
 
     auto jumpToDelaySlot = [&] {
         PC = m_delaySlotTarget;
@@ -1581,7 +1579,7 @@ FORCE_INLINE void SH2::SLEEP() {
         }
         DMAOR.u32 = 0x0;
         FRT.Reset();
-        // TODO: reset WDT
+        WDT.Reset(false);
         // TODO: reset SCI
 
         // TODO: enter standby state
