@@ -137,10 +137,10 @@ private:
     template <mem_primitive T>
     void VDP2WriteVRAM(uint32 address, T value);
 
-    template <mem_primitive T>
+    template <mem_primitive T, bool peek>
     T VDP2ReadCRAM(uint32 address);
 
-    template <mem_primitive T>
+    template <mem_primitive T, bool poke>
     void VDP2WriteCRAM(uint32 address, T value);
 
     uint16 VDP2ReadReg(uint32 address);
