@@ -68,6 +68,20 @@ public:
         case 0x26: util::WriteBE<uint16>(&m_ram[(address & 0x7FFFF) | 0x80000], value); break;
         }
     }
+
+    uint8 PeekByte(uint32 address) const final {
+        return ReadByte(address);
+    }
+    uint16 PeekWord(uint32 address) const final {
+        return ReadWord(address);
+    }
+
+    void PokeByte(uint32 address, uint8 value) final {
+        WriteByte(address, value);
+    }
+    void PokeWord(uint32 address, uint16 value) final {
+        WriteWord(address, value);
+    }
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -100,6 +114,20 @@ public:
         switch (address >> 20) {
         case 0x24 ... 0x27: util::WriteBE<uint16>(&m_ram[address & 0x3FFFFF], value); break;
         }
+    }
+
+    uint8 PeekByte(uint32 address) const final {
+        return ReadByte(address);
+    }
+    uint16 PeekWord(uint32 address) const final {
+        return ReadWord(address);
+    }
+
+    void PokeByte(uint32 address, uint8 value) final {
+        WriteByte(address, value);
+    }
+    void PokeWord(uint32 address, uint16 value) final {
+        WriteWord(address, value);
     }
 };
 

@@ -25,6 +25,12 @@ public:
     virtual void WriteByte(uint32 address, uint8 value) = 0;
     virtual void WriteWord(uint32 address, uint16 value) = 0;
 
+    virtual uint8 PeekByte(uint32 address) const = 0;
+    virtual uint16 PeekWord(uint32 address) const = 0;
+
+    virtual void PokeByte(uint32 address, uint8 value) = 0;
+    virtual void PokeWord(uint32 address, uint16 value) = 0;
+
 private:
     uint8 m_id;
 };

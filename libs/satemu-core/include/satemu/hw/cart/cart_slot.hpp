@@ -33,20 +33,40 @@ public:
         return m_cart->GetID();
     }
 
+    template <bool peek>
     uint8 ReadByte(uint32 address) const {
-        return m_cart->ReadByte(address);
+        if constexpr (peek) {
+            return m_cart->PeekByte(address);
+        } else {
+            return m_cart->ReadByte(address);
+        }
     }
 
+    template <bool peek>
     uint16 ReadWord(uint32 address) const {
-        return m_cart->ReadWord(address);
+        if constexpr (peek) {
+            return m_cart->PeekWord(address);
+        } else {
+            return m_cart->ReadWord(address);
+        }
     }
 
+    template <bool poke>
     void WriteByte(uint32 address, uint8 value) {
-        m_cart->WriteByte(address, value);
+        if constexpr (poke) {
+            m_cart->PokeByte(address, value);
+        } else {
+            m_cart->WriteByte(address, value);
+        }
     }
 
+    template <bool poke>
     void WriteWord(uint32 address, uint16 value) {
-        m_cart->WriteWord(address, value);
+        if constexpr (poke) {
+            m_cart->PokeWord(address, value);
+        } else {
+            m_cart->WriteWord(address, value);
+        }
     }
 
 private:

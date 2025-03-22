@@ -38,6 +38,20 @@ public:
         m_backupRAM.WriteWord(address, value);
     }
 
+    uint8 PeekByte(uint32 address) const final {
+        return ReadByte(address);
+    }
+    uint16 PeekWord(uint32 address) const final {
+        return ReadWord(address);
+    }
+
+    void PokeByte(uint32 address, uint8 value) final {
+        WriteByte(address, value);
+    }
+    void PokeWord(uint32 address, uint16 value) final {
+        WriteWord(address, value);
+    }
+
 private:
     bup::BackupMemory m_backupRAM;
 };

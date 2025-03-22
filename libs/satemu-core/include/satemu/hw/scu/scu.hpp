@@ -88,10 +88,12 @@ public:
     template <typename T, typename... Args>
         requires std::derived_from<T, cart::BaseCartridge>
     [[nodiscard]] bool InsertCartridge(Args &&...args) {
+        // TODO: m_cartSlot.MapMemory(bus) if successfully inserted
         return m_cartSlot.Insert<T>(std::forward<Args>(args)...);
     }
 
     void EjectCartridge() {
+        // TODO: unmap cartridge memory
         m_cartSlot.Eject();
     }
 
@@ -152,10 +154,10 @@ private:
     // -------------------------------------------------------------------------
     // Memory accessors
 
-    template <mem_primitive T>
+    template <mem_primitive T, bool peek>
     T ReadCartridge(uint32 address);
 
-    template <mem_primitive T>
+    template <mem_primitive T, bool poke>
     void WriteCartridge(uint32 address, T value);
 
     // -------------------------------------------------------------------------

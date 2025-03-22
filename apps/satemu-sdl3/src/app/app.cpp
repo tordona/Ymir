@@ -1263,7 +1263,7 @@ void App::DrawDebug() {
     m_scuDebugger.Display();
 
     if (m_memoryViewer.Open) {
-        if (ImGui::Begin("Memory viewer", &m_memoryViewer.Open)) {
+        if (ImGui::Begin("Memory viewer", &m_memoryViewer.Open, ImGuiWindowFlags_NoScrollbar)) {
             ImGui::Checkbox("Enable side-effects", &m_enableSideEffects);
             ImGui::Separator();
             ImGui::PushFont(m_context.fonts.monospaceMedium);

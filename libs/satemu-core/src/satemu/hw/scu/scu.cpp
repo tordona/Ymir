@@ -51,25 +51,61 @@ void SCU::Reset(bool hard) {
 
 void SCU::MapMemory(sys::Bus &bus) {
     // A-Bus CS0 and CS1 - Cartridge
+    auto readCart8 = [](uint32 address, void *ctx) -> uint8 {
+        return static_cast<SCU *>(ctx)->ReadCartridge<uint8, false>(address);
+    };
+    auto readCart16 = [](uint32 address, void *ctx) -> uint16 {
+        return static_cast<SCU *>(ctx)->ReadCartridge<uint16, false>(address);
+    };
+    auto readCart32 = [](uint32 address, void *ctx) -> uint32 {
+        return static_cast<SCU *>(ctx)->ReadCartridge<uint32, false>(address);
+    };
+
+    auto writeCart8 = [](uint32 address, uint8 value, void *ctx) {
+        static_cast<SCU *>(ctx)->WriteCartridge<uint8, false>(address, value);
+    };
+    auto writeCart16 = [](uint32 address, uint16 value, void *ctx) {
+        static_cast<SCU *>(ctx)->WriteCartridge<uint16, false>(address, value);
+    };
+    auto writeCart32 = [](uint32 address, uint32 value, void *ctx) {
+        static_cast<SCU *>(ctx)->WriteCartridge<uint32, false>(address, value);
+    };
+
+    auto peekCart8 = [](uint32 address, void *ctx) -> uint8 {
+        return static_cast<SCU *>(ctx)->ReadCartridge<uint8, true>(address);
+    };
+    auto peekCart16 = [](uint32 address, void *ctx) -> uint16 {
+        return static_cast<SCU *>(ctx)->ReadCartridge<uint16, true>(address);
+    };
+    auto peekCart32 = [](uint32 address, void *ctx) -> uint32 {
+        return static_cast<SCU *>(ctx)->ReadCartridge<uint32, true>(address);
+    };
+
+    auto pokeCart8 = [](uint32 address, uint8 value, void *ctx) {
+        static_cast<SCU *>(ctx)->WriteCartridge<uint8, true>(address, value);
+    };
+    auto pokeCart16 = [](uint32 address, uint16 value, void *ctx) {
+        static_cast<SCU *>(ctx)->WriteCartridge<uint16, true>(address, value);
+    };
+    auto pokeCart32 = [](uint32 address, uint32 value, void *ctx) {
+        static_cast<SCU *>(ctx)->WriteCartridge<uint32, true>(address, value);
+    };
+
     bus.MapMemory(0x200'0000, 0x4FF'FFFF,
                   {
                       .ctx = this,
-                      .read8 = [](uint32 address, void *ctx) -> uint8 {
-                          return static_cast<SCU *>(ctx)->ReadCartridge<uint8>(address);
-                      },
-                      .read16 = [](uint32 address, void *ctx) -> uint16 {
-                          return static_cast<SCU *>(ctx)->ReadCartridge<uint16>(address);
-                      },
-                      .read32 = [](uint32 address, void *ctx) -> uint32 {
-                          return static_cast<SCU *>(ctx)->ReadCartridge<uint32>(address);
-                      },
-                      .write8 = [](uint32 address, uint8 value,
-                                   void *ctx) { static_cast<SCU *>(ctx)->WriteCartridge<uint8>(address, value); },
-                      .write16 = [](uint32 address, uint16 value,
-                                    void *ctx) { static_cast<SCU *>(ctx)->WriteCartridge<uint16>(address, value); },
-                      .write32 = [](uint32 address, uint32 value,
-                                    void *ctx) { static_cast<SCU *>(ctx)->WriteCartridge<uint32>(address, value); },
-                      // TODO: peek/poke
+                      .read8 = readCart8,
+                      .read16 = readCart16,
+                      .read32 = readCart32,
+                      .write8 = writeCart8,
+                      .write16 = writeCart16,
+                      .write32 = writeCart32,
+                      .peek8 = peekCart8,
+                      .peek16 = peekCart16,
+                      .peek32 = peekCart32,
+                      .poke8 = pokeCart8,
+                      .poke16 = pokeCart16,
+                      .poke32 = pokeCart32,
                   });
 
     // A-Bus CS2 - 0x580'0000..0x58F'FFFF
@@ -276,19 +312,19 @@ void SCU::OnTimer1Event(core::EventContext &eventContext, void *userContext) {
     scu.TickTimer1();
 }
 
-template <mem_primitive T>
+template <mem_primitive T, bool peek>
 T SCU::ReadCartridge(uint32 address) {
     if constexpr (std::is_same_v<T, uint32>) {
         // 32-bit reads are split into two 16-bit reads
-        uint32 value = ReadCartridge<uint16>(address + 0) << 16u;
-        value |= ReadCartridge<uint16>(address + 2) << 0u;
+        uint32 value = ReadCartridge<uint16, peek>(address + 0) << 16u;
+        value |= ReadCartridge<uint16, peek>(address + 2) << 0u;
         return value;
     } else if constexpr (std::is_same_v<T, uint16>) {
         if (address >= 0x4FF'FFFE) [[unlikely]] {
             // Return cartridge ID
             return 0xFF00 | m_cartSlot.GetID();
         } else {
-            return m_cartSlot.ReadWord(address);
+            return m_cartSlot.ReadWord<peek>(address);
         }
     } else if constexpr (std::is_same_v<T, uint8>) {
         if (address >= 0x4FF'FFFE) [[unlikely]] {
@@ -299,19 +335,19 @@ T SCU::ReadCartridge(uint32 address) {
                 return m_cartSlot.GetID();
             }
         } else {
-            return m_cartSlot.ReadByte(address);
+            return m_cartSlot.ReadByte<peek>(address);
         }
     }
 }
 
-template <mem_primitive T>
+template <mem_primitive T, bool poke>
 void SCU::WriteCartridge(uint32 address, T value) {
     if constexpr (std::is_same_v<T, uint32>) {
         // 32-bit writes are split into two 16-bit writes
-        WriteCartridge<uint16>(address + 0, value >> 16u);
-        WriteCartridge<uint16>(address + 2, value >> 0u);
+        WriteCartridge<uint16, poke>(address + 0, value >> 16u);
+        WriteCartridge<uint16, poke>(address + 2, value >> 0u);
     } else if constexpr (std::is_same_v<T, uint16>) {
-        m_cartSlot.WriteWord(address, value);
+        m_cartSlot.WriteWord<poke>(address, value);
     } else if constexpr (std::is_same_v<T, uint8>) {
         if (address == 0x210'0001) [[unlikely]] {
             // mednafen debug port
@@ -322,7 +358,7 @@ void SCU::WriteCartridge(uint32 address, T value) {
                 m_debugOutput.push_back(value);
             }
         } else {
-            m_cartSlot.WriteByte(address, value);
+            m_cartSlot.WriteByte<poke>(address, value);
         }
     }
 }
