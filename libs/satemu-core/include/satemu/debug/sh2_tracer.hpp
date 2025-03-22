@@ -8,6 +8,8 @@ namespace satemu::debug {
 //
 // Must be implemented by users of the core library and instantiated with the `Use` method of the `SH2TracerContext`
 // instance in `satemu::sh2::SH2`.
+//
+// This tracer requires the emulator to execute in debug mode.
 struct ISH2Tracer {
     virtual ~ISH2Tracer() = default;
 

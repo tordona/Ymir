@@ -104,8 +104,10 @@ public:
     // -------------------------------------------------------------------------
     // Debugger and testing
 
+    // Attaches the specified tracer to this component.
+    // Pass nullptr to disable tracing.
     void UseTracer(debug::ISH2Tracer *tracer) {
-        m_tracer.Use(tracer);
+        m_tracer.instance = tracer;
     }
 
 private:
@@ -137,17 +139,11 @@ private:
     // Debugger
 
     struct {
-        // Use the specified tracer.
-        // Set to nullptr to disable tracing.
-        void Use(debug::ISH2Tracer *tracer) {
-            m_tracer = tracer;
-        }
-
         template <bool debug>
         FORCE_INLINE void Interrupt(uint8 vecNum, uint8 level, uint32 pc) {
             if constexpr (debug) {
-                if (m_tracer) {
-                    return m_tracer->Interrupt(vecNum, level, pc);
+                if (instance) {
+                    return instance->Interrupt(vecNum, level, pc);
                 }
             }
         }
@@ -155,14 +151,13 @@ private:
         template <bool debug>
         FORCE_INLINE void Exception(uint8 vecNum, uint32 pc, uint32 sr) {
             if constexpr (debug) {
-                if (m_tracer) {
-                    return m_tracer->Exception(vecNum, pc, sr);
+                if (instance) {
+                    return instance->Exception(vecNum, pc, sr);
                 }
             }
         }
 
-    private:
-        debug::ISH2Tracer *m_tracer = nullptr;
+        debug::ISH2Tracer *instance = nullptr;
     } m_tracer;
 
     const dbg::Category<sh2DebugLevel> &m_log;

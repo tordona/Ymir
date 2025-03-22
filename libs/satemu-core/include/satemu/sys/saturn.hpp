@@ -57,13 +57,20 @@ struct Saturn : sys::ISystemOperations {
 
     // Runs the emulator until the end of the current frame.
     //
-    // `debug` enables advanced debug tracing, which may impact performance.
+    // `debug` enables advanced debug tracing, which will impact performance.
     void RunFrame(bool debug) {
         if (debug) {
             RunFrame<true>();
         } else {
             RunFrame<false>();
         }
+    }
+
+    // Detaches tracers from all components.
+    void DetachAllTracers() {
+        masterSH2.UseTracer(nullptr);
+        slaveSH2.UseTracer(nullptr);
+        SCU.UseTracer(nullptr);
     }
 
 private:

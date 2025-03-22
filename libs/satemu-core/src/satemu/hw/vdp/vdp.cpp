@@ -877,7 +877,10 @@ void VDP::VDPRenderThread() {
             auto &event = events[i];
             using EvtType = VDPRenderEvent::Type;
             switch (event.type) {
-            case EvtType::Reset: rctx.Reset(); break;
+            case EvtType::Reset:
+                rctx.Reset();
+                m_framebuffer.fill(0xFF000000);
+                break;
             case EvtType::OddField: rctx.vdp2.regs.TVSTAT.ODD = event.oddField.odd; break;
             case EvtType::VDP1EraseFramebuffer: VDP1EraseFramebuffer(); break;
             case EvtType::VDP1SwapFramebuffer:
@@ -2697,7 +2700,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     y = VDP2GetY(y);
 
     if (!regs.TVMD.DISP) {
-        std::fill_n(&m_framebuffer[y * m_HRes], m_HRes, 0);
+        std::fill_n(&m_framebuffer[y * m_HRes], m_HRes, 0xFF000000);
         return;
     }
 
@@ -2911,7 +2914,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             }
         }
 
-        fbPtr[x] = outputColor.u32;
+        fbPtr[x] = outputColor.u32 | 0xFF000000;
     }
 }
 
