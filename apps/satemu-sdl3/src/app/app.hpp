@@ -68,7 +68,7 @@ private:
     SCUDebugger m_scuDebugger;
 
     MemoryEditor m_memoryViewer;
-    bool m_enableSideEffects;
+    bool m_enableSideEffects = false;
 };
 
 } // namespace app
