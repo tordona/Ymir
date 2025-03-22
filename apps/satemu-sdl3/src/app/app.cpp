@@ -1,3 +1,13 @@
+// I find frontend development to be extremely tedious and unrewarding for the most part. Whenever I start working on
+// it, my desire to code vanishes. I'd rather spend two weeks troubleshooting a stupid off-by-one bug in the emulator
+// core, decompile SH2 assembly for days, or compare execution traces against other emulators than write yet another
+// goddamn window for a single hour.
+//
+// This abomination here is the result of my half-assed attempt to provide a usable frontend for the emulator.
+// If you wish to rewrite it from scratch, be my guest. Use whatever tech you want, come up with whatever design you
+// wish and send a PR. Just make sure it's awesome.
+// - StrikerX3
+
 #include "app.hpp"
 
 #include <satemu/satemu.hpp>
