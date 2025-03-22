@@ -13,34 +13,24 @@ Saturn::Saturn()
     , SCSP(m_scheduler)
     , CDBlock(m_scheduler) {
 
-    auto ackIntrCallback = util::MakeClassMemberRequiredCallback<&scu::SCU::AcknowledgeExternalInterrupt>(&SCU);
-    masterSH2.SetExternalInterruptAcknowledgeCallback(ackIntrCallback);
-    slaveSH2.SetExternalInterruptAcknowledgeCallback(ackIntrCallback);
+    masterSH2.SetExternalInterruptAcknowledgeCallback(SCU.CbAckExtIntr);
+    slaveSH2.SetExternalInterruptAcknowledgeCallback(SCU.CbAckExtIntr);
 
-    SCU.SetExternalInterruptCallbacks(
-        util::MakeClassMemberRequiredCallback<&sh2::SH2::SetExternalInterrupt>(&masterSH2),
-        util::MakeClassMemberRequiredCallback<&sh2::SH2::SetExternalInterrupt>(&slaveSH2));
+    SCU.SetExternalInterruptCallbacks(masterSH2.CbExtIntr, slaveSH2.CbExtIntr);
 
-    VDP.SetInterruptCallbacks(util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerHBlankIN>(&SCU),
-                              util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerVBlankIN>(&SCU),
-                              util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerVBlankOUT>(&SCU),
-                              util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerSpriteDrawEnd>(&SCU),
-                              util::MakeClassMemberRequiredCallback<&smpc::SMPC::TriggerOptimizedINTBACKRead>(&SMPC));
+    VDP.SetInterruptCallbacks(SCU.CbTriggerHBlankIN, SCU.CbTriggerVBlankIN, SCU.CbTriggerVBlankOUT,
+                              SCU.CbTriggerSpriteDrawEnd, SMPC.CbTriggerOptimizedINTBACKRead);
 
-    SMPC.SetSystemManagerInterruptCallback(
-        util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerSystemManager>(&SCU));
+    SMPC.SetSystemManagerInterruptCallback(SCU.CbTriggerSystemManager);
 
-    SCSP.SetTriggerSoundRequestInterruptCallback(
-        util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerSoundRequest>(&SCU));
+    SCSP.SetTriggerSoundRequestInterruptCallback(SCU.CbTriggerSoundRequest);
 
-    CDBlock.SetTriggerExternalInterrupt0Callback(
-        util::MakeClassMemberRequiredCallback<&scu::SCU::TriggerExternalInterrupt0>(&SCU));
-    CDBlock.SetCDDASectorCallback(util::MakeClassMemberRequiredCallback<&scsp::SCSP::ReceiveCDDA>(&SCSP));
+    CDBlock.SetTriggerExternalInterrupt0Callback(SCU.CbTriggerExtIntr0);
+    CDBlock.SetCDDASectorCallback(SCSP.CbCDDASector);
 
-    m_system.AddClockSpeedChangeCallback(util::MakeClassMemberRequiredCallback<&scsp::SCSP::UpdateClockRatios>(&SCSP));
-    m_system.AddClockSpeedChangeCallback(util::MakeClassMemberRequiredCallback<&smpc::SMPC::UpdateClockRatios>(&SMPC));
-    m_system.AddClockSpeedChangeCallback(
-        util::MakeClassMemberRequiredCallback<&cdblock::CDBlock::UpdateClockRatios>(&CDBlock));
+    m_system.AddClockSpeedChangeCallback(SCSP.CbClockSpeedChange);
+    m_system.AddClockSpeedChangeCallback(SMPC.CbClockSpeedChange);
+    m_system.AddClockSpeedChangeCallback(CDBlock.CbClockSpeedChange);
 
     mem.MapMemory(mainBus);
     masterSH2.MapMemory(mainBus);

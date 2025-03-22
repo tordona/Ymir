@@ -2,13 +2,11 @@
 
 #include "clocks.hpp"
 
-#include <satemu/util/callback.hpp>
+#include "system_callbacks.hpp"
 
 #include <vector>
 
 namespace satemu::sys {
-
-using CBClockSpeedChange = util::RequiredCallback<void(const ClockRatios &clockRatios)>;
 
 struct System {
     VideoStandard videoStandard = VideoStandard::NTSC;

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <satemu/core/types.hpp>
+#include "scsp_callbacks.hpp"
 
-#include <satemu/util/callback.hpp>
+#include <satemu/core/types.hpp>
 
 namespace satemu::scsp {
 
@@ -33,11 +33,5 @@ inline constexpr uint16 kIntrTimerB = 7;         // Timer B
 inline constexpr uint16 kIntrTimerC = 8;         // Timer C
 inline constexpr uint16 kIntrMIDIOutput = 9;     // MIDI output empty
 inline constexpr uint16 kIntrSample = 10;        // Once every sample tick
-
-// Sample output callback, invoked every sample
-using CBOutputSample = util::OptionalCallback<void(sint16 left, sint16 right)>;
-
-// SCU sound request interrupt trigger callback
-using CBTriggerSoundRequestInterrupt = util::RequiredCallback<void(bool level)>;
 
 } // namespace satemu::scsp

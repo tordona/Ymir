@@ -532,7 +532,7 @@ void App::RunEmulator() {
     // Setup framebuffer and render callbacks
 
     m_context.saturn.VDP.SetRenderCallback(
-        {&screen, [](vdp::FramebufferColor *fb, uint32 width, uint32 height, void *ctx) {
+        {&screen, [](uint32 *fb, uint32 width, uint32 height, void *ctx) {
              auto &screen = *static_cast<ScreenParams *>(ctx);
              if (width != screen.width || height != screen.height) {
                  const uint32 prevWidth = screen.width * screen.scaleX;

@@ -844,7 +844,7 @@ private:
     alignas(16) std::array<bool, kMaxResH> m_colorCalcWindow;
 
     // Current display framebuffer.
-    std::array<FramebufferColor, kMaxResH * kMaxResV> m_framebuffer;
+    std::array<uint32, kMaxResH * kMaxResV> m_framebuffer;
 
     // Erases the current VDP1 display framebuffer.
     void VDP1EraseFramebuffer();

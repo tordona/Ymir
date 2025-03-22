@@ -9,6 +9,8 @@
 #include <satemu/sys/bus.hpp>
 #include <satemu/sys/clocks.hpp>
 
+#include <satemu/sys/system_callbacks.hpp>
+
 #include <satemu/hw/hw_defs.hpp>
 
 #include <satemu/media/disc.hpp>
@@ -386,6 +388,13 @@ private:
     void CmdAuthenticateDevice();    // 0xE0
     void CmdIsDeviceAuthenticated(); // 0xE1
     void CmdGetMpegROM();            // 0xE2
+
+public:
+    // -------------------------------------------------------------------------
+    // Callbacks
+
+    const sys::CBClockSpeedChange CbClockSpeedChange =
+        util::MakeClassMemberRequiredCallback<&CDBlock::UpdateClockRatios>(this);
 };
 
 } // namespace satemu::cdblock

@@ -11,7 +11,7 @@ SCU::SCU(core::Scheduler &scheduler, sys::Bus &bus)
     , m_scheduler(scheduler)
     , m_dsp(bus) {
 
-    m_dsp.SetTriggerDSPEndCallback(util::MakeClassMemberRequiredCallback<&SCU::TriggerDSPEnd>(this));
+    m_dsp.SetTriggerDSPEndCallback(CbTriggerDSPEnd);
 
     EjectCartridge();
 

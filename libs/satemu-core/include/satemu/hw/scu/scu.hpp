@@ -9,6 +9,12 @@
 
 #include <satemu/hw/hw_defs.hpp>
 
+#include <satemu/hw/cdblock/cdblock_callbacks.hpp>
+#include <satemu/hw/scsp/scsp_callbacks.hpp>
+#include <satemu/hw/sh2/sh2_callbacks.hpp>
+#include <satemu/hw/smpc/smpc_callbacks.hpp>
+#include <satemu/hw/vdp/vdp_callbacks.hpp>
+
 #include <satemu/hw/cart/cart_slot.hpp>
 
 #include <satemu/sys/backup_ram.hpp>
@@ -282,6 +288,33 @@ private:
     // Debugger
 
     debug::SCUTracerContext m_tracer;
+
+public:
+    // -------------------------------------------------------------------------
+    // Callbacks
+
+    const cdblock::CBTriggerExternalInterrupt0 CbTriggerExtIntr0 =
+        util::MakeClassMemberRequiredCallback<&SCU::TriggerExternalInterrupt0>(this);
+
+    const sh2::CBAcknowledgeExternalInterrupt CbAckExtIntr =
+        util::MakeClassMemberRequiredCallback<&SCU::AcknowledgeExternalInterrupt>(this);
+
+    const vdp::CBTriggerInterrupt CbTriggerHBlankIN =
+        util::MakeClassMemberRequiredCallback<&SCU::TriggerHBlankIN>(this);
+    const vdp::CBTriggerInterrupt CbTriggerVBlankIN =
+        util::MakeClassMemberRequiredCallback<&SCU::TriggerVBlankIN>(this);
+    const vdp::CBTriggerInterrupt CbTriggerVBlankOUT =
+        util::MakeClassMemberRequiredCallback<&SCU::TriggerVBlankOUT>(this);
+    const vdp::CBTriggerInterrupt CbTriggerSpriteDrawEnd =
+        util::MakeClassMemberRequiredCallback<&SCU::TriggerSpriteDrawEnd>(this);
+
+    const scsp::CBTriggerSoundRequestInterrupt CbTriggerSoundRequest =
+        util::MakeClassMemberRequiredCallback<&SCU::TriggerSoundRequest>(this);
+
+    const smpc::CBSystemManagerInterruptCallback CbTriggerSystemManager =
+        util::MakeClassMemberRequiredCallback<&SCU::TriggerSystemManager>(this);
+
+    const CBTriggerDSPEnd CbTriggerDSPEnd = util::MakeClassMemberRequiredCallback<&SCU::TriggerDSPEnd>(this);
 };
 
 } // namespace satemu::scu

@@ -17,13 +17,16 @@
 #include "sh2_wdt.hpp"
 
 #include <satemu/core/types.hpp>
+
 #include <satemu/hw/hw_defs.hpp>
+
+#include <satemu/hw/scu/scu_callbacks.hpp>
+#include <satemu/hw/sh2/sh2_callbacks.hpp>
 
 #include <satemu/sys/bus.hpp>
 
 #include <satemu/debug/sh2_tracer_ctx.hpp>
 
-#include <satemu/util/callback.hpp>
 #include <satemu/util/debug_print.hpp>
 #include <satemu/util/inline.hpp>
 
@@ -102,8 +105,6 @@ using SH2Tracer = NullSH2Tracer;
 // using SH2Tracer = RealSH2Tracer;
 
 // -----------------------------------------------------------------------------
-
-using CBAcknowledgeExternalInterrupt = util::RequiredCallback<void()>;
 
 class SH2 {
 public:
@@ -570,6 +571,12 @@ private:
 
     void RTE(); // rte
     void RTS(); // rts
+
+public:
+    // -------------------------------------------------------------------------
+    // Callbacks
+
+    const scu::CBExternalInterrupt CbExtIntr = util::MakeClassMemberRequiredCallback<&SH2::SetExternalInterrupt>(this);
 };
 
 } // namespace satemu::sh2

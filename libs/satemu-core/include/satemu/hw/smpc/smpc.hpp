@@ -2,34 +2,21 @@
 
 #include "peripheral/peripheral_port.hpp"
 #include "rtc.hpp"
+#include "smpc_callbacks.hpp"
 
 #include <satemu/core/scheduler.hpp>
 #include <satemu/sys/bus.hpp>
 #include <satemu/sys/sys_ops.hpp>
 
-#include <satemu/util/callback.hpp>
+#include <satemu/hw/vdp/vdp_callbacks.hpp>
+#include <satemu/sys/system_callbacks.hpp>
+
 #include <satemu/util/debug_print.hpp>
 
 #include <array>
 #include <vector>
 
-// -----------------------------------------------------------------------------
-// Forward declarations
-
-namespace satemu {
-
-struct Saturn;
-
-} // namespace satemu
-
-// -----------------------------------------------------------------------------
-
 namespace satemu::smpc {
-
-// Invoked when INTBACK finishes processing to raise the SCU System Manager interrupt signal.
-using CBSystemManagerInterruptCallback = util::RequiredCallback<void()>;
-
-// -----------------------------------------------------------------------------
 
 class SMPC {
     static constexpr dbg::Category rootLog{"SMPC"};
@@ -262,7 +249,6 @@ private:
     size_t m_intbackReportOffset;       // Offset into full peripheral report to continue reading
     bool m_intbackInProgress;           // Whether an INTBACK peripheral report read is in progress
 
-    friend struct ::satemu::Saturn;
     void TriggerOptimizedINTBACKRead();
 
     void ReadPeripherals();
@@ -291,6 +277,16 @@ private:
     void SETTIME();
 
     void ClockChange(sys::ClockSpeed clockSpeed);
+
+public:
+    // -------------------------------------------------------------------------
+    // Callbacks
+
+    const vdp::CBTriggerEvent CbTriggerOptimizedINTBACKRead =
+        util::MakeClassMemberRequiredCallback<&SMPC::TriggerOptimizedINTBACKRead>(this);
+
+    const sys::CBClockSpeedChange CbClockSpeedChange =
+        util::MakeClassMemberRequiredCallback<&SMPC::UpdateClockRatios>(this);
 };
 
 } // namespace satemu::smpc

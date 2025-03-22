@@ -2,7 +2,7 @@
 
 #include <satemu/core/types.hpp>
 
-#include <satemu/util/callback.hpp>
+#include "cdblock_callbacks.hpp"
 
 namespace satemu::cdblock {
 
@@ -64,11 +64,5 @@ inline constexpr uint32 kDriveCyclesPlaying1x = 800000;
 inline constexpr uint32 kNumBuffers = 200;   // total number of buffers
 inline constexpr uint32 kNumFilters = 24;    // total number of filters
 inline constexpr uint32 kNumPartitions = 24; // total number of buffer partitions
-
-using CBTriggerExternalInterrupt0 = util::RequiredCallback<void()>;
-
-// Invoked when the CD Block reads a CDDA sector.
-// The callback should return how many thirds of the audio buffer are full.
-using CBCDDASector = util::RequiredCallback<uint32(std::span<uint8, 2048> data)>;
 
 } // namespace satemu::cdblock

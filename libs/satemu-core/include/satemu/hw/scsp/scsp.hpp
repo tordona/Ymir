@@ -11,6 +11,9 @@
 
 #include <satemu/hw/hw_defs.hpp>
 
+#include <satemu/hw/cdblock/cdblock_callbacks.hpp>
+#include <satemu/sys/system_callbacks.hpp>
+
 #include <satemu/hw/m68k/m68k.hpp>
 #include <satemu/hw/m68k/m68k_defs.hpp>
 
@@ -813,6 +816,15 @@ private:
     // Interrupt handling
 
     m68k::ExceptionVector AcknowledgeInterrupt(uint8 level);
+
+public:
+    // -------------------------------------------------------------------------
+    // Callbacks
+
+    const cdblock::CBCDDASector CbCDDASector = util::MakeClassMemberRequiredCallback<&SCSP::ReceiveCDDA>(this);
+
+    const sys::CBClockSpeedChange CbClockSpeedChange =
+        util::MakeClassMemberRequiredCallback<&SCSP::UpdateClockRatios>(this);
 };
 
 } // namespace satemu::scsp

@@ -3,9 +3,10 @@
 #include "vdp1_defs.hpp"
 #include "vdp2_defs.hpp"
 
+#include "vdp_callbacks.hpp"
+
 #include <satemu/core/types.hpp>
 
-#include <satemu/util/callback.hpp>
 #include <satemu/util/inline.hpp>
 #include <satemu/util/size_ops.hpp>
 
@@ -75,16 +76,5 @@ struct Coord {
 
 using CoordS32 = Coord<sint32>;
 using CoordU32 = Coord<uint32>;
-
-// TODO: move this to a "renderer defs" header
-// Framebuffer color is in little-endian XRGB8888 format
-using FramebufferColor = uint32;
-
-// TODO: move these to a "renderer defs" header
-using CBVDP1FrameComplete = util::OptionalCallback<void()>;
-using CBFrameComplete = util::OptionalCallback<void(FramebufferColor *fb, uint32 width, uint32 height)>;
-
-using CBTriggerInterrupt = util::RequiredCallback<void()>;
-using CBTriggerEvent = util::RequiredCallback<void()>;
 
 } // namespace satemu::vdp
