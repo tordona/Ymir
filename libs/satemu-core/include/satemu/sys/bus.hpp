@@ -1,7 +1,11 @@
 #pragma once
 
+#include <satemu/core/types.hpp>
+
 #include <satemu/hw/hw_defs.hpp>
 
+#include <satemu/util/bit_ops.hpp>
+#include <satemu/util/data_ops.hpp>
 #include <satemu/util/debug_print.hpp>
 #include <satemu/util/inline.hpp>
 #include <satemu/util/unreachable.hpp>
@@ -67,6 +71,44 @@ public:
         FnWrite16 poke16 = [](uint32 address, uint16 value, void *) {};
         FnWrite32 poke32 = [](uint32 address, uint32 value, void *) {};
     };
+
+    template <size_t N>
+        requires(bit::is_power_of_two(N))
+    void MapMemory(uint32 start, uint32 end, std::array<uint8, N> &array, bool writable) {
+        static constexpr uint32 kAddrMask = N - 1;
+
+        const uint32 startIndex = start >> kPageGranularityBits;
+        const uint32 endIndex = end >> kPageGranularityBits;
+        for (uint32 i = startIndex; i <= endIndex; i++) {
+            m_pages[i].ctx = array.data();
+
+            m_pages[i].read8 = m_pages[i].peek8 = [](uint32 address, void *ctx) -> uint8 {
+                return static_cast<uint8 *>(ctx)[address & kAddrMask];
+            };
+            m_pages[i].read16 = m_pages[i].peek16 = [](uint32 address, void *ctx) -> uint16 {
+                return util::ReadBE<uint16>(&static_cast<uint8 *>(ctx)[address & kAddrMask]);
+            };
+            m_pages[i].read32 = m_pages[i].peek32 = [](uint32 address, void *ctx) -> uint32 {
+                return util::ReadBE<uint32>(&static_cast<uint8 *>(ctx)[address & kAddrMask]);
+            };
+
+            if (writable) {
+                m_pages[i].write8 = m_pages[i].poke8 = [](uint32 address, uint8 value, void *ctx) {
+                    static_cast<uint8 *>(ctx)[address & kAddrMask] = value;
+                };
+                m_pages[i].write16 = m_pages[i].poke16 = [](uint32 address, uint16 value, void *ctx) {
+                    util::WriteBE<uint16>(&static_cast<uint8 *>(ctx)[address & kAddrMask], value);
+                };
+                m_pages[i].write32 = m_pages[i].poke32 = [](uint32 address, uint32 value, void *ctx) {
+                    return util::WriteBE<uint32>(&static_cast<uint8 *>(ctx)[address & kAddrMask], value);
+                };
+            } else {
+                m_pages[i].write8 = m_pages[i].poke8 = [](uint32, uint8, void *) {};
+                m_pages[i].write16 = m_pages[i].poke16 = [](uint32, uint16, void *) {};
+                m_pages[i].write32 = m_pages[i].poke32 = [](uint32, uint32, void *) {};
+            }
+        }
+    }
 
     void MapMemory(uint32 start, uint32 end, MemoryPage entry);
     void UnmapMemory(uint32 start, uint32 end);

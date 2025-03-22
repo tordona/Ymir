@@ -69,6 +69,7 @@ void SCU::MapMemory(sys::Bus &bus) {
                                     void *ctx) { static_cast<SCU *>(ctx)->WriteCartridge<uint16>(address, value); },
                       .write32 = [](uint32 address, uint32 value,
                                     void *ctx) { static_cast<SCU *>(ctx)->WriteCartridge<uint32>(address, value); },
+                      // TODO: peek/poke
                   });
 
     // A-Bus CS2 - 0x580'0000..0x58F'FFFF
@@ -98,6 +99,7 @@ void SCU::MapMemory(sys::Bus &bus) {
                                     void *ctx) { static_cast<SCU *>(ctx)->WriteRegWord(address & 0xFF, value); },
                       .write32 = [](uint32 address, uint32 value,
                                     void *ctx) { static_cast<SCU *>(ctx)->WriteRegLong(address & 0xFF, value); },
+                      // TODO: peek/poke
                   });
 
     // TODO: 0x5FF'0000..0x5FF'FFFF - Unknown registers

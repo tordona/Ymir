@@ -1,23 +1,6 @@
 #include <satemu/sys/memory.hpp>
 
-#include <satemu/hw/hw_defs.hpp>
-
-#include <satemu/util/data_ops.hpp>
-
 namespace satemu::sys {
-
-template <mem_primitive T, uint32 mask>
-static T GenericRead(uint32 address, void *ctx) {
-    return util::ReadBE<T>(static_cast<uint8 *>(ctx) + (address & mask));
-}
-
-template <mem_primitive T, uint32 mask>
-static void GenericWrite(uint32 address, T value, void *ctx) {
-    util::WriteBE<T>(static_cast<uint8 *>(ctx) + (address & mask), value);
-}
-
-template <mem_primitive T>
-static void GenericWriteNoop(uint32 /*address*/, T /*value*/, void * /*ctx*/) {}
 
 SystemMemory::SystemMemory() {
     // TODO: configurable path and mode
@@ -37,22 +20,7 @@ void SystemMemory::Reset(bool hard) {
 }
 
 void SystemMemory::MapMemory(Bus &bus) {
-    bus.MapMemory(0x000'0000, 0x00F'FFFF,
-                  {
-                      .ctx = IPL.data(),
-                      .read8 = GenericRead<uint8, 0x7FFFF>,
-                      .read16 = GenericRead<uint16, 0x7FFFF>,
-                      .read32 = GenericRead<uint32, 0x7FFFF>,
-                      .write8 = GenericWriteNoop<uint8>,
-                      .write16 = GenericWriteNoop<uint16>,
-                      .write32 = GenericWriteNoop<uint32>,
-                      .peek8 = GenericRead<uint8, 0x7FFFF>,
-                      .peek16 = GenericRead<uint16, 0x7FFFF>,
-                      .peek32 = GenericRead<uint32, 0x7FFFF>,
-                      .poke8 = GenericWriteNoop<uint8>,
-                      .poke16 = GenericWriteNoop<uint16>,
-                      .poke32 = GenericWriteNoop<uint32>,
-                  });
+    bus.MapMemory(0x000'0000, 0x00F'FFFF, IPL, false);
 
     bus.MapMemory(0x018'0000, 0x01F'FFFF,
                   {
@@ -75,39 +43,8 @@ void SystemMemory::MapMemory(Bus &bus) {
                       // TODO: peek/poke
                   });
 
-    bus.MapMemory(0x020'0000, 0x02F'FFFF,
-                  {
-                      .ctx = WRAMLow.data(),
-                      .read8 = GenericRead<uint8, 0xFFFFF>,
-                      .read16 = GenericRead<uint16, 0xFFFFF>,
-                      .read32 = GenericRead<uint32, 0xFFFFF>,
-                      .write8 = GenericWrite<uint8, 0xFFFFF>,
-                      .write16 = GenericWrite<uint16, 0xFFFFF>,
-                      .write32 = GenericWrite<uint32, 0xFFFFF>,
-                      .peek8 = GenericRead<uint8, 0xFFFFF>,
-                      .peek16 = GenericRead<uint16, 0xFFFFF>,
-                      .peek32 = GenericRead<uint32, 0xFFFFF>,
-                      .poke8 = GenericWrite<uint8, 0xFFFFF>,
-                      .poke16 = GenericWrite<uint16, 0xFFFFF>,
-                      .poke32 = GenericWrite<uint32, 0xFFFFF>,
-                  });
-
-    bus.MapMemory(0x600'0000, 0x7FF'FFFF,
-                  {
-                      .ctx = WRAMHigh.data(),
-                      .read8 = GenericRead<uint8, 0xFFFFF>,
-                      .read16 = GenericRead<uint16, 0xFFFFF>,
-                      .read32 = GenericRead<uint32, 0xFFFFF>,
-                      .write8 = GenericWrite<uint8, 0xFFFFF>,
-                      .write16 = GenericWrite<uint16, 0xFFFFF>,
-                      .write32 = GenericWrite<uint32, 0xFFFFF>,
-                      .peek8 = GenericRead<uint8, 0xFFFFF>,
-                      .peek16 = GenericRead<uint16, 0xFFFFF>,
-                      .peek32 = GenericRead<uint32, 0xFFFFF>,
-                      .poke8 = GenericWrite<uint8, 0xFFFFF>,
-                      .poke16 = GenericWrite<uint16, 0xFFFFF>,
-                      .poke32 = GenericWrite<uint32, 0xFFFFF>,
-                  });
+    bus.MapMemory(0x020'0000, 0x02F'FFFF, WRAMLow, true);
+    bus.MapMemory(0x600'0000, 0x7FF'FFFF, WRAMHigh, true);
 }
 
 void SystemMemory::LoadIPL(std::span<uint8, kIPLSize> ipl) {

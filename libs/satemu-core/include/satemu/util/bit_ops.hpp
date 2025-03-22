@@ -10,6 +10,12 @@
 
 namespace bit {
 
+// Determines if the given unsigned integral is a power of two.
+template <std::unsigned_integral T>
+FORCE_INLINE constexpr bool is_power_of_two(T x) {
+    return (x & (x - 1)) == 0;
+}
+
 // Sign-extend from a constant bit width.
 // The return type is the signed equivalent of T.
 template <unsigned B, std::integral T>
