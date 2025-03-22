@@ -2,6 +2,7 @@
 add_executable(satemu-core-tests
     src/hw/scu/scu_dsp_tests.cpp
 
+    src/hw/sh2/sh2_disasm_tests.cpp
     src/hw/sh2/sh2_divu_tests.cpp
     src/hw/sh2/sh2_intc_tests.cpp
     src/hw/sh2/sh2_macwl_tests.cpp

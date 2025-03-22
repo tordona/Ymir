@@ -10,7 +10,7 @@ namespace satemu::sh2 {
 enum class Mnemonic : uint8 {
     NOP,     // nop
     SLEEP,   // sleep
-    MOV,     // mov (all types)
+    MOV,     // mov
     MOVA,    // mova
     MOVT,    // movt
     CLRT,    // clrt
