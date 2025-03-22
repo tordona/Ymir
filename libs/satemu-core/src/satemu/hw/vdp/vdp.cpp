@@ -167,35 +167,76 @@ void VDP::MapMemory(sys::Bus &bus) {
                   });
 
     // VDP1 registers
-    bus.MapMemory(
-        0x5D0'0000, 0x5D7'FFFF,
-        {
-            .ctx = this,
-            .read8 = [](uint32 address, void * /*ctx*/) -> uint8 {
-                address &= 0x7FFFF;
-                regsLog1.debug("Illegal 8-bit VDP1 register read from {:05X}", address);
-                return 0;
-            },
-            .read16 = [](uint32 address, void *ctx) -> uint16 { return static_cast<VDP *>(ctx)->VDP1ReadReg(address); },
-            .read32 = [](uint32 address, void *ctx) -> uint32 {
-                uint32 value = static_cast<VDP *>(ctx)->VDP1ReadReg(address + 0) << 16u;
-                value |= static_cast<VDP *>(ctx)->VDP1ReadReg(address + 2) << 0u;
-                return value;
-            },
-            .write8 =
-                [](uint32 address, uint8 value, void * /*ctx*/) {
-                    address &= 0x7FFFF;
-                    regsLog1.debug("Illegal 8-bit VDP1 register write to {:05X} = {:02X}", address, value);
-                },
-            .write16 = [](uint32 address, uint16 value,
-                          void *ctx) { static_cast<VDP *>(ctx)->VDP1WriteReg(address, value); },
-            .write32 =
-                [](uint32 address, uint32 value, void *ctx) {
-                    static_cast<VDP *>(ctx)->VDP1WriteReg(address + 0, value >> 16u);
-                    static_cast<VDP *>(ctx)->VDP1WriteReg(address + 2, value >> 0u);
-                },
-            // TODO: peek/poke
-        });
+    auto vdp1ReadReg8 = [](uint32 address, void * /*ctx*/) -> uint8 {
+        address &= 0x7FFFF;
+        regsLog1.debug("Illegal 8-bit VDP1 register read from {:05X}", address);
+        return 0;
+    };
+    auto vdp1ReadReg16 = [](uint32 address, void *ctx) -> uint16 {
+        return static_cast<VDP *>(ctx)->VDP1ReadReg<false>(address);
+    };
+    auto vdp1ReadReg32 = [](uint32 address, void *ctx) -> uint32 {
+        uint32 value = static_cast<VDP *>(ctx)->VDP1ReadReg<false>(address + 0) << 16u;
+        value |= static_cast<VDP *>(ctx)->VDP1ReadReg<false>(address + 2) << 0u;
+        return value;
+    };
+
+    auto vdp1WriteReg8 = [](uint32 address, uint8 value, void * /*ctx*/) {
+        address &= 0x7FFFF;
+        regsLog1.debug("Illegal 8-bit VDP1 register write to {:05X} = {:02X}", address, value);
+    };
+    auto vdp1WriteReg16 = [](uint32 address, uint16 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP1WriteReg<false>(address, value);
+    };
+    auto vdp1WriteReg32 = [](uint32 address, uint32 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP1WriteReg<false>(address + 0, value >> 16u);
+        static_cast<VDP *>(ctx)->VDP1WriteReg<false>(address + 2, value >> 0u);
+    };
+
+    auto vdp1PeekReg8 = [](uint32 address, void *ctx) -> uint8 {
+        const uint16 value = static_cast<VDP *>(ctx)->VDP1ReadReg<true>(address);
+        return value >> ((~address & 1) * 8u);
+    };
+    auto vdp1PeekReg16 = [](uint32 address, void *ctx) -> uint16 {
+        return static_cast<VDP *>(ctx)->VDP1ReadReg<true>(address);
+    };
+    auto vdp1PeekReg32 = [](uint32 address, void *ctx) -> uint32 {
+        uint32 value = static_cast<VDP *>(ctx)->VDP1ReadReg<true>(address + 0) << 16u;
+        value |= static_cast<VDP *>(ctx)->VDP1ReadReg<true>(address + 2) << 0u;
+        return value;
+    };
+
+    auto vdp1PokeReg8 = [](uint32 address, uint8 value, void *ctx) {
+        uint16 currValue = static_cast<VDP *>(ctx)->VDP1ReadReg<true>(address & ~1);
+        const uint16 shift = (~address & 1) * 8u;
+        const uint16 mask = ~(0xFF << shift);
+        currValue = (currValue & mask) | (value << shift);
+        static_cast<VDP *>(ctx)->VDP1WriteReg<true>(address, currValue);
+    };
+    auto vdp1PokeReg16 = [](uint32 address, uint16 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP1WriteReg<true>(address, value);
+    };
+    auto vdp1PokeReg32 = [](uint32 address, uint32 value, void *ctx) {
+        static_cast<VDP *>(ctx)->VDP1WriteReg<true>(address + 0, value >> 16u);
+        static_cast<VDP *>(ctx)->VDP1WriteReg<true>(address + 2, value >> 0u);
+    };
+
+    bus.MapMemory(0x5D0'0000, 0x5D7'FFFF,
+                  {
+                      .ctx = this,
+                      .read8 = vdp1ReadReg8,
+                      .read16 = vdp1ReadReg16,
+                      .read32 = vdp1ReadReg32,
+                      .write8 = vdp1WriteReg8,
+                      .write16 = vdp1WriteReg16,
+                      .write32 = vdp1WriteReg32,
+                      .peek8 = vdp1PeekReg8,
+                      .peek16 = vdp1PeekReg16,
+                      .peek32 = vdp1PeekReg32,
+                      .poke8 = vdp1PokeReg8,
+                      .poke16 = vdp1PokeReg16,
+                      .poke32 = vdp1PokeReg32,
+                  });
 
     // VDP2 VRAM
     auto vdp2ReadVRAM8 = [](uint32 address, void *ctx) -> uint8 {
@@ -365,7 +406,8 @@ void VDP::SetVideoStandard(sys::VideoStandard videoStandard) {
 
 template <mem_primitive T>
 FORCE_INLINE T VDP::VDP1ReadVRAM(uint32 address) {
-    return util::ReadBE<T>(&m_VRAM1[address & 0x7FFFF]);
+    address &= 0x7FFFF;
+    return util::ReadBE<T>(&m_VRAM1[address]);
 }
 
 template <mem_primitive T>
@@ -377,7 +419,8 @@ FORCE_INLINE void VDP::VDP1WriteVRAM(uint32 address, T value) {
 
 template <mem_primitive T>
 FORCE_INLINE T VDP::VDP1ReadFB(uint32 address) {
-    return util::ReadBE<T>(&m_spriteFB[m_drawFB][address & 0x3FFFF]);
+    address &= 0x3FFFF;
+    return util::ReadBE<T>(&m_spriteFB[m_drawFB][address]);
 }
 
 template <mem_primitive T>
@@ -387,32 +430,38 @@ FORCE_INLINE void VDP::VDP1WriteFB(uint32 address, T value) {
     // m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1FBWrite<T>(address, value));
 }
 
+template <bool peek>
 FORCE_INLINE uint16 VDP::VDP1ReadReg(uint32 address) {
-    return m_VDP1.Read(address);
+    address &= 0x7FFFF;
+    return m_VDP1.Read<peek>(address);
 }
 
+template <bool poke>
 FORCE_INLINE void VDP::VDP1WriteReg(uint32 address, uint16 value) {
     address &= 0x7FFFF;
-
     m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1RegWrite(address, value));
-
-    m_VDP1.Write(address, value);
+    m_VDP1.Write<poke>(address, value);
 
     switch (address) {
     case 0x00:
-        regsLog1.trace("Write to TVM={:d}{:d}{:d}", m_VDP1.hdtvEnable, m_VDP1.fbRotEnable, m_VDP1.pixel8Bits);
-        regsLog1.trace("Write to VBE={:d}", m_VDP1.vblankErase);
+        if constexpr (!poke) {
+            regsLog1.trace("Write to TVM={:d}{:d}{:d}", m_VDP1.hdtvEnable, m_VDP1.fbRotEnable, m_VDP1.pixel8Bits);
+            regsLog1.trace("Write to VBE={:d}", m_VDP1.vblankErase);
+        }
         break;
-    case 0x02: {
-        regsLog1.trace("Write to DIE={:d} DIL={:d}", m_VDP1.dblInterlaceEnable, m_VDP1.dblInterlaceDrawLine);
-        regsLog1.trace("Write to FCM={:d} FCT={:d} manualswap={:d} manualerase={:d}", m_VDP1.fbSwapMode,
-                       m_VDP1.fbSwapTrigger, m_VDP1.fbManualSwap, m_VDP1.fbManualErase);
+    case 0x02:
+        if constexpr (!poke) {
+            regsLog1.trace("Write to DIE={:d} DIL={:d}", m_VDP1.dblInterlaceEnable, m_VDP1.dblInterlaceDrawLine);
+            regsLog1.trace("Write to FCM={:d} FCT={:d} manualswap={:d} manualerase={:d}", m_VDP1.fbSwapMode,
+                           m_VDP1.fbSwapTrigger, m_VDP1.fbManualSwap, m_VDP1.fbManualErase);
+        }
         break;
-    }
     case 0x04:
-        regsLog1.trace("Write to PTM={:d}", m_VDP1.plotTrigger);
-        if (m_VDP1.plotTrigger == 0b01) {
-            VDP1BeginFrame();
+        if constexpr (!poke) {
+            regsLog1.trace("Write to PTM={:d}", m_VDP1.plotTrigger);
+            if (m_VDP1.plotTrigger == 0b01) {
+                VDP1BeginFrame();
+            }
         }
         break;
     case 0x0C: // ENDR
@@ -471,14 +520,13 @@ FORCE_INLINE void VDP::VDP2WriteCRAM(uint32 address, T value) {
 }
 
 FORCE_INLINE uint16 VDP::VDP2ReadReg(uint32 address) {
+    address &= 0x1FF;
     return m_VDP2.Read(address);
 }
 
 FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, uint16 value) {
     address &= 0x1FF;
-
     m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2RegWrite(address, value));
-
     m_VDP2.Write(address, value);
 
     switch (address) {
@@ -799,7 +847,7 @@ void VDP::VDPRenderThread() {
             case EvtType::VDP1FBWriteWord:
                 util::WriteBE<uint16>(&rctx.vdp1.spriteFB[event.write.address], event.write.value);
                 break;*/
-            case EvtType::VDP1RegWrite: rctx.vdp1.regs.Write(event.write.address, event.write.value); break;
+            case EvtType::VDP1RegWrite: rctx.vdp1.regs.Write<false>(event.write.address, event.write.value); break;
 
             case EvtType::VDP2VRAMWriteByte: rctx.vdp2.VRAM[event.write.address] = event.write.value; break;
             case EvtType::VDP2VRAMWriteWord:

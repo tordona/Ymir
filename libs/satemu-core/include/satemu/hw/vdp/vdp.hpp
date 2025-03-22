@@ -123,7 +123,9 @@ private:
     template <mem_primitive T>
     void VDP1WriteFB(uint32 address, T value);
 
+    template <bool peek>
     uint16 VDP1ReadReg(uint32 address);
+    template <bool poke>
     void VDP1WriteReg(uint32 address, uint16 value);
 
     // -------------------------------------------------------------------------

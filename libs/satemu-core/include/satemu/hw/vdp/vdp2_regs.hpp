@@ -63,8 +63,6 @@ struct VDP2Regs {
     }
 
     uint16 Read(uint32 address) const {
-        address &= 0x1FF;
-
         switch (address) {
         case 0x000: return TVMD.u16;
         case 0x002: return EXTEN.u16;

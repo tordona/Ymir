@@ -43,16 +43,20 @@ struct VDP1Regs {
         UpdateTVMR();
     }
 
+    template <bool peek>
     uint16 Read(uint32 address) const {
-        address &= 0x7FFFF;
+        if constexpr (peek) {
+            switch (address) {
+            case 0x00: return ReadTVMR(); // TVMR is write-only
+            case 0x02: return ReadFBCR(); // FBCR is write-only
+            case 0x04: return ReadPTMR(); // PTMR is write-only
+            case 0x06: return ReadEWDR(); // EWDR is write-only
+            case 0x08: return ReadEWLR(); // EWLR is write-only
+            case 0x0A: return ReadEWRR(); // EWRR is write-only
+            }
+        }
 
         switch (address) {
-        case 0x00: return 0; // TVMR is write-only
-        case 0x02: return 0; // FBCR is write-only
-        case 0x04: return 0; // PTMR is write-only
-        case 0x06: return 0; // EWDR is write-only
-        case 0x08: return 0; // EWLR is write-only
-        case 0x0A: return 0; // EWRR is write-only
         case 0x0C: return 0; // ENDR is write-only
 
         case 0x10: return ReadEDSR();
@@ -64,6 +68,7 @@ struct VDP1Regs {
         }
     }
 
+    template <bool poke>
     void Write(uint32 address, uint16 value) {
         switch (address) {
         case 0x00: WriteTVMR(value); break;
@@ -73,11 +78,15 @@ struct VDP1Regs {
         case 0x08: WriteEWLR(value); break;
         case 0x0A: WriteEWRR(value); break;
         case 0x0C: break; // ENDR, handled in VDP class
+        }
 
-        case 0x10: break; // EDSR is read-only
-        case 0x12: break; // LOPR is read-only
-        case 0x14: break; // COPR is read-only
-        case 0x16: break; // MODR is read-only
+        if constexpr (poke) {
+            switch (address) {
+            case 0x10: WriteEDSR(value); break; // EDSR is read-only
+            case 0x12: WriteLOPR(value); break; // LOPR is read-only
+            case 0x14: WriteCOPR(value); break; // COPR is read-only
+            case 0x16: WriteMODR(value); break; // MODR is read-only
+            }
         }
     }
 
@@ -190,6 +199,15 @@ struct VDP1Regs {
     //     011   Rotation 8     512x512
     //     100   HDTV           512x256
 
+    FORCE_INLINE uint16 ReadTVMR() const {
+        uint16 value = 0;
+        bit::deposit_into<3>(value, vblankErase);
+        bit::deposit_into<2>(value, hdtvEnable);
+        bit::deposit_into<1>(value, fbRotEnable);
+        bit::deposit_into<0>(value, pixel8Bits);
+        return value;
+    }
+
     FORCE_INLINE void WriteTVMR(uint16 value) {
         vblankErase = bit::extract<3>(value);
         hdtvEnable = bit::extract<2>(value);
@@ -229,6 +247,16 @@ struct VDP1Regs {
     // last visible scanline immediately before VBlank (224 or 240) to issue another write to set VBE,FCM,FCT = 111,
     // and finally restore VBE = 0 after VBlank OUT to stop VDP1 from clearing the next frame buffer.
 
+    FORCE_INLINE uint16 ReadFBCR() const {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, fbSwapTrigger);
+        bit::deposit_into<1>(value, fbSwapMode);
+        bit::deposit_into<2>(value, dblInterlaceDrawLine);
+        bit::deposit_into<3>(value, dblInterlaceEnable);
+        bit::deposit_into<4>(value, evenOddCoordSelect);
+        return value;
+    }
+
     FORCE_INLINE void WriteFBCR(uint16 value) {
         fbSwapTrigger = bit::extract<0>(value);
         fbSwapMode = bit::extract<1>(value);
@@ -255,6 +283,10 @@ struct VDP1Regs {
     //                       10 (2) = Trigger on frame buffer swap
     //                       11 (3) = (prohibited)
 
+    FORCE_INLINE uint16 ReadPTMR() const {
+        return plotTrigger;
+    }
+
     FORCE_INLINE void WritePTMR(uint16 value) {
         plotTrigger = bit::extract<0, 1>(value);
     }
@@ -271,6 +303,10 @@ struct VDP1Regs {
     //   - Bits 15-8 specify the values for even X coordinates
     //   - Bits 7-0 specify the values for odd X coordinates
 
+    FORCE_INLINE uint16 ReadEWDR() const {
+        return eraseWriteValue;
+    }
+
     FORCE_INLINE void WriteEWDR(uint16 value) {
         eraseWriteValue = value;
     }
@@ -282,6 +318,13 @@ struct VDP1Regs {
     //   14-9     W  -     Upper-left Coordinate X1
     //    8-0     W  -     Upper-left Coordinate Y1
 
+    FORCE_INLINE uint16 ReadEWLR() const {
+        uint16 value = 0;
+        bit::deposit_into<0, 8>(value, eraseY1);
+        bit::deposit_into<9, 14>(value, eraseX1 >> 3);
+        return value;
+    }
+
     FORCE_INLINE void WriteEWLR(uint16 value) {
         eraseY1 = bit::extract<0, 8>(value);
         eraseX1 = bit::extract<9, 14>(value) << 3;
@@ -292,6 +335,13 @@ struct VDP1Regs {
     //   bits   r/w  code  description
     //   15-9     W  -     Lower-right Coordinate X3
     //    8-0     W  -     Lower-right Coordinate Y3
+
+    FORCE_INLINE uint16 ReadEWRR() const {
+        uint16 value = 0;
+        bit::deposit_into<0, 8>(value, eraseY3);
+        bit::deposit_into<9, 15>(value, eraseX3 >> 3);
+        return value;
+    }
 
     FORCE_INLINE void WriteEWRR(uint16 value) {
         eraseY3 = bit::extract<0, 8>(value);
@@ -323,6 +373,11 @@ struct VDP1Regs {
         return value;
     }
 
+    FORCE_INLINE void WriteEDSR(uint16 value) {
+        prevFrameEnded = bit::extract<0>(value);
+        currFrameEnded = bit::extract<1>(value);
+    }
+
     // 100012   LOPR  Last Operation Command Address
     //
     //   bits   r/w  code  description
@@ -332,6 +387,10 @@ struct VDP1Regs {
         return prevCommandAddress >> 3u;
     }
 
+    FORCE_INLINE void WriteLOPR(uint16 value) {
+        prevCommandAddress = value << 3u;
+    }
+
     // 100014   COPR  Current Operation Command Address
     //
     //   bits   r/w  code  description
@@ -339,6 +398,10 @@ struct VDP1Regs {
 
     FORCE_INLINE uint16 ReadCOPR() const {
         return currCommandAddress >> 3u;
+    }
+
+    FORCE_INLINE void WriteCOPR(uint16 value) {
+        currCommandAddress = value << 3u;
     }
 
     // 100016   MODR  Mode Status
@@ -366,6 +429,17 @@ struct VDP1Regs {
         bit::deposit_into<7>(value, evenOddCoordSelect);
         bit::deposit_into<12, 15>(value, 0b0001);
         return value;
+    }
+
+    FORCE_INLINE void WriteMODR(uint16 value) {
+        pixel8Bits = bit::extract<0>(value);
+        fbRotEnable = bit::extract<1>(value);
+        hdtvEnable = bit::extract<2>(value);
+        vblankErase = bit::extract<3>(value);
+        fbSwapMode = bit::extract<4>(value);
+        dblInterlaceDrawLine = bit::extract<5>(value);
+        dblInterlaceEnable = bit::extract<6>(value);
+        evenOddCoordSelect = bit::extract<7>(value);
     }
 };
 
