@@ -27,31 +27,46 @@ public:
         m_cbTriggerDSPEnd = callback;
     }
 
+    uint32 ReadProgram() {
+        return programRAM[PC];
+    }
+
+    template <bool poke>
     void WriteProgram(uint32 value) {
-        // Cannot write while program is executing
-        if (programExecuting) {
-            return;
+        if constexpr (!poke) {
+            // Cannot write while program is executing
+            if (programExecuting) {
+                return;
+            }
         }
 
         programRAM[PC++] = value;
     }
 
+    template <bool peek>
     uint32 ReadData() {
-        // Cannot read while program is executing
-        if (programExecuting) {
-            return 0;
+        if constexpr (!peek) {
+            // Cannot read while program is executing
+            if (programExecuting) {
+                return 0;
+            }
         }
 
         const uint8 bank = bit::extract<6, 7>(dataAddress);
         const uint8 offset = bit::extract<0, 5>(dataAddress);
-        dataAddress++;
+        if constexpr (!peek) {
+            dataAddress++;
+        }
         return dataRAM[bank][offset];
     }
 
+    template <bool poke>
     void WriteData(uint32 value) {
-        // Cannot write while program is executing
-        if (programExecuting) {
-            return;
+        if constexpr (!poke) {
+            // Cannot write while program is executing
+            if (programExecuting) {
+                return;
+            }
         }
 
         const uint8 bank = bit::extract<6, 7>(dataAddress);

@@ -81,25 +81,61 @@ void SCU::MapMemory(sys::Bus &bus) {
     // TODO: 0x5FC'0000..0x5FD'FFFF - reads 0x000E0000
 
     // SCU registers
+    auto readReg8 = [](uint32 address, void *ctx) -> uint8 {
+        return static_cast<SCU *>(ctx)->ReadReg<uint8, false>(address & 0xFF);
+    };
+    auto readReg16 = [](uint32 address, void *ctx) -> uint16 {
+        return static_cast<SCU *>(ctx)->ReadReg<uint16, false>(address & 0xFF);
+    };
+    auto readReg32 = [](uint32 address, void *ctx) -> uint32 {
+        return static_cast<SCU *>(ctx)->ReadReg<uint32, false>(address & 0xFF);
+    };
+
+    auto writeReg8 = [](uint32 address, uint8 value, void *ctx) {
+        static_cast<SCU *>(ctx)->WriteRegByte<false>(address & 0xFF, value);
+    };
+    auto writeReg16 = [](uint32 address, uint16 value, void *ctx) {
+        static_cast<SCU *>(ctx)->WriteRegWord<false>(address & 0xFF, value);
+    };
+    auto writeReg32 = [](uint32 address, uint32 value, void *ctx) {
+        static_cast<SCU *>(ctx)->WriteRegLong<false>(address & 0xFF, value);
+    };
+
+    auto peekReg8 = [](uint32 address, void *ctx) -> uint8 {
+        return static_cast<SCU *>(ctx)->ReadReg<uint8, true>(address & 0xFF);
+    };
+    auto peekReg16 = [](uint32 address, void *ctx) -> uint16 {
+        return static_cast<SCU *>(ctx)->ReadReg<uint16, true>(address & 0xFF);
+    };
+    auto peekReg32 = [](uint32 address, void *ctx) -> uint32 {
+        return static_cast<SCU *>(ctx)->ReadReg<uint32, true>(address & 0xFF);
+    };
+
+    auto pokeReg8 = [](uint32 address, uint8 value, void *ctx) {
+        static_cast<SCU *>(ctx)->WriteRegByte<true>(address & 0xFF, value);
+    };
+    auto pokeReg16 = [](uint32 address, uint16 value, void *ctx) {
+        static_cast<SCU *>(ctx)->WriteRegWord<true>(address & 0xFF, value);
+    };
+    auto pokeReg32 = [](uint32 address, uint32 value, void *ctx) {
+        static_cast<SCU *>(ctx)->WriteRegLong<true>(address & 0xFF, value);
+    };
+
     bus.MapMemory(0x5FE'0000, 0x5FE'FFFF,
                   {
                       .ctx = this,
-                      .read8 = [](uint32 address, void *ctx) -> uint8 {
-                          return static_cast<SCU *>(ctx)->ReadReg<uint8>(address & 0xFF);
-                      },
-                      .read16 = [](uint32 address, void *ctx) -> uint16 {
-                          return static_cast<SCU *>(ctx)->ReadReg<uint16>(address & 0xFF);
-                      },
-                      .read32 = [](uint32 address, void *ctx) -> uint32 {
-                          return static_cast<SCU *>(ctx)->ReadReg<uint32>(address & 0xFF);
-                      },
-                      .write8 = [](uint32 address, uint8 value,
-                                   void *ctx) { static_cast<SCU *>(ctx)->WriteRegByte(address & 0xFF, value); },
-                      .write16 = [](uint32 address, uint16 value,
-                                    void *ctx) { static_cast<SCU *>(ctx)->WriteRegWord(address & 0xFF, value); },
-                      .write32 = [](uint32 address, uint32 value,
-                                    void *ctx) { static_cast<SCU *>(ctx)->WriteRegLong(address & 0xFF, value); },
-                      // TODO: peek/poke
+                      .read8 = readReg8,
+                      .read16 = readReg16,
+                      .read32 = readReg32,
+                      .write8 = writeReg8,
+                      .write16 = writeReg16,
+                      .write32 = writeReg32,
+                      .peek8 = peekReg8,
+                      .peek16 = peekReg16,
+                      .peek32 = peekReg32,
+                      .poke8 = pokeReg8,
+                      .poke16 = pokeReg16,
+                      .poke32 = pokeReg32,
                   });
 
     // TODO: 0x5FF'0000..0x5FF'FFFF - Unknown registers
@@ -545,80 +581,99 @@ FORCE_INLINE void SCU::TickTimer1() {
     }
 }
 
-template <mem_primitive T>
+template <mem_primitive T, bool peek>
 FORCE_INLINE T SCU::ReadReg(uint32 address) {
     if constexpr (std::is_same_v<T, uint8>) {
-        const uint32 value = ReadReg<uint32>(address & ~3u);
+        const uint32 value = ReadReg<uint32, peek>(address & ~3u);
         return value >> ((~address & 3u) * 8u);
     } else if constexpr (std::is_same_v<T, uint16>) {
-        const uint32 value = ReadReg<uint32>(address & ~3u);
+        const uint32 value = ReadReg<uint32, peek>(address & ~3u);
         return value >> ((~address & 2u) * 8u);
-    }
-
-    switch (address) {
-    case 0x00: // Level 0 DMA Read Address
-    case 0x20: // Level 1 DMA Read Address
-    case 0x40: // Level 2 DMA Read Address
-        if constexpr (std::is_same_v<T, uint32>) {
+    } else {
+        switch (address) {
+        case 0x00: // Level 0 DMA Read Address
+        case 0x20: // Level 1 DMA Read Address
+        case 0x40: // Level 2 DMA Read Address
+        {
             auto &ch = m_dmaChannels[address >> 5u];
             return ch.srcAddr;
-        } else {
-            return 0;
         }
-    case 0x04: // Level 0 DMA Write Address
-    case 0x24: // Level 1 DMA Write Address
-    case 0x44: // Level 2 DMA Write Address
-        if constexpr (std::is_same_v<T, uint32>) {
+        case 0x04: // Level 0 DMA Write Address
+        case 0x24: // Level 1 DMA Write Address
+        case 0x44: // Level 2 DMA Write Address
+        {
             auto &ch = m_dmaChannels[address >> 5u];
             return ch.dstAddr;
-        } else {
-            return 0;
         }
-    case 0x08: // Level 0 DMA Transfer Number
-    case 0x28: // Level 1 DMA Transfer Number
-    case 0x48: // Level 2 DMA Transfer Number
-        if constexpr (std::is_same_v<T, uint32>) {
+        case 0x08: // Level 0 DMA Transfer Number
+        case 0x28: // Level 1 DMA Transfer Number
+        case 0x48: // Level 2 DMA Transfer Number
+        {
             auto &ch = m_dmaChannels[address >> 5u];
             return ch.xferCount;
-        } else {
-            return 0;
         }
-    case 0x0C: // Level 0 DMA Increment (write-only)
-    case 0x2C: // Level 1 DMA Increment (write-only)
-    case 0x4C: // Level 2 DMA Increment (write-only)
-        return 0;
-    case 0x10: // Level 0 DMA Enable (write-only)
-    case 0x30: // Level 1 DMA Enable (write-only)
-    case 0x50: // Level 2 DMA Enable (write-only)
-        return 0;
-    case 0x14: // Level 0 DMA Mode (write-only)
-    case 0x34: // Level 1 DMA Mode (write-only)
-    case 0x54: // Level 2 DMA Mode (write-only)
-        return 0;
+        case 0x0C: // Level 0 DMA Increment (write-only)
+        case 0x2C: // Level 1 DMA Increment (write-only)
+        case 0x4C: // Level 2 DMA Increment (write-only)
+            if constexpr (peek) {
+                auto &ch = m_dmaChannels[address >> 5u];
+                uint32 value = 0;
+                bit::deposit_into<8>(value, ch.srcAddrInc / 4u);
+                bit::deposit_into<0, 2>(value, ch.dstAddrInc == 0 ? 0 : std::countr_zero(ch.dstAddrInc));
+                return value;
+            } else {
+                return 0;
+            }
+        case 0x10: // Level 0 DMA Enable (write-only)
+        case 0x30: // Level 1 DMA Enable (write-only)
+        case 0x50: // Level 2 DMA Enable (write-only)
+            if constexpr (peek) {
+                auto &ch = m_dmaChannels[address >> 5u];
+                uint32 value = 0;
+                bit::deposit_into<8>(value, ch.enabled);
+                return value;
+            } else {
+                return 0;
+            }
+        case 0x14: // Level 0 DMA Mode (write-only)
+        case 0x34: // Level 1 DMA Mode (write-only)
+        case 0x54: // Level 2 DMA Mode (write-only)
+            if constexpr (peek) {
+                auto &ch = m_dmaChannels[address >> 5u];
+                uint32 value = 0;
+                bit::deposit_into<24>(value, ch.indirect);
+                bit::deposit_into<16>(value, ch.updateSrcAddr);
+                bit::deposit_into<8>(value, ch.updateDstAddr);
+                bit::deposit_into<0, 2>(value, static_cast<uint8>(ch.trigger));
+                return value;
+            } else {
+                return 0;
+            }
 
-    case 0x60: // DMA Force Stop (write-only)
-        return 0;
-    case 0x7C: // DMA Status
-    {
-        uint32 value = 0;
-        // bit::deposit_into<0>(value, m_dsp.dmaRun); // TODO: is this correct?
-        // bit::deposit_into<1>(value, m_dsp.dmaStandby?);
-        bit::deposit_into<4>(value, m_dmaChannels[0].active);
-        // TODO: bit 5: DMA0 standby
-        bit::deposit_into<8>(value, m_dmaChannels[1].active);
-        // TODO: bit 9: DMA1 standby
-        bit::deposit_into<12>(value, m_dmaChannels[2].active);
-        // TODO: bit 13: DMA2 standby
-        bit::deposit_into<16>(value, m_dmaChannels[0].active && (m_dmaChannels[1].active || m_dmaChannels[2].active));
-        bit::deposit_into<17>(value, m_dmaChannels[1].active && m_dmaChannels[2].active);
-        // TODO: bit 20: DMA accessing A-Bus
-        // TODO: bit 21: DMA accessing B-Bus
-        // TODO: bit 22: DMA accessing DSP-Bus
-        return value;
-    }
+        case 0x60: // DMA Force Stop (write-only)
+            return 0;
+        case 0x7C: // DMA Status
+        {
+            uint32 value = 0;
+            // bit::deposit_into<0>(value, m_dsp.dmaRun); // TODO: is this correct?
+            // bit::deposit_into<1>(value, m_dsp.dmaStandby?);
+            bit::deposit_into<4>(value, m_dmaChannels[0].active);
+            // TODO: bit 5: DMA0 standby
+            bit::deposit_into<8>(value, m_dmaChannels[1].active);
+            // TODO: bit 9: DMA1 standby
+            bit::deposit_into<12>(value, m_dmaChannels[2].active);
+            // TODO: bit 13: DMA2 standby
+            bit::deposit_into<16>(value,
+                                  m_dmaChannels[0].active && (m_dmaChannels[1].active || m_dmaChannels[2].active));
+            bit::deposit_into<17>(value, m_dmaChannels[1].active && m_dmaChannels[2].active);
+            // TODO: bit 20: DMA accessing A-Bus
+            // TODO: bit 21: DMA accessing B-Bus
+            // TODO: bit 22: DMA accessing DSP-Bus
+            return value;
+        }
 
-    case 0x80: // DSP Program Control Port
-        if constexpr (std::is_same_v<T, uint32>) {
+        case 0x80: // DSP Program Control Port
+        {
             uint32 value = 0;
             bit::deposit_into<0, 7>(value, m_dsp.PC);
             bit::deposit_into<16>(value, m_dsp.programExecuting);
@@ -629,52 +684,88 @@ FORCE_INLINE T SCU::ReadReg(uint32 address) {
             bit::deposit_into<22>(value, m_dsp.sign);
             bit::deposit_into<23>(value, m_dsp.dmaRun);
             return value;
-        } else {
+        }
+        case 0x84: // DSP Program RAM Data Port (write-only)
+            if constexpr (peek) {
+                return m_dsp.ReadProgram();
+            } else {
+                return 0;
+            }
+        case 0x88: // DSP Data RAM Address Port (write-only)
+            if constexpr (peek) {
+                return m_dsp.dataAddress;
+            } else {
+                return 0;
+            }
+        case 0x8C: // DSP Data RAM Data Port
+            return m_dsp.ReadData<peek>();
+
+        case 0x90: // Timer 0 Compare (write-only)
+            if constexpr (peek) {
+                return m_timer0Compare;
+            } else {
+                return 0;
+            }
+        case 0x94: // Timer 1 Set Data (write-only)
+            if constexpr (peek) {
+                return m_timer1Reload >> 2u;
+            } else {
+                return 0;
+            }
+        case 0x98: // Timer 1 Mode (write-only)
+            if constexpr (peek) {
+                uint32 value = 0;
+                bit::deposit_into<0>(value, m_timer1Enable);
+                bit::deposit_into<8>(value, m_timer1Mode);
+                return value;
+            } else {
+                return 0;
+            }
+
+        case 0xA0: // Interrupt Mask
+            return m_intrMask.u32;
+        case 0xA4: // Interrupt Status
+            return m_intrStatus.u32;
+        case 0xA8: // A-Bus Interrupt Acknowledge
+            return m_abusIntrAck;
+
+        case 0xB0: // A-Bus Set (part 1) (write-only)
+            if constexpr (peek) {
+                // ignored for now
+                return 0;
+            } else {
+                return 0;
+            }
+        case 0xB4: // A-Bus Set (part 2) (write-only)
+            if constexpr (peek) {
+                // ignored for now
+                return 0;
+            } else {
+                return 0;
+            }
+        case 0xB8: // A-Bus Refresh (write-only)
+            if constexpr (peek) {
+                // ignored for now
+                return 0;
+            } else {
+                return 0;
+            }
+
+        case 0xC4: // SCU SDRAM Select
+            return m_WRAMSizeSelect;
+        case 0xC8: // SCU Version
+            return 0x4;
+
+        default: //
+            if constexpr (!peek) {
+                regsLog.debug("unhandled {}-bit SCU register read from {:02X}", sizeof(T) * 8, address);
+            }
             return 0;
         }
-    case 0x84: // DSP Program RAM Data Port (write-only)
-        return 0;
-    case 0x88: // DSP Data RAM Address Port (write-only)
-        return 0;
-    case 0x8C: // DSP Data RAM Data Port
-        if constexpr (std::is_same_v<T, uint32>) {
-            return m_dsp.ReadData();
-        } else {
-            return 0;
-        }
-
-    case 0x90: // Timer 0 Compare (write-only)
-        return 0;
-    case 0x94: // Timer 1 Set Data (write-only)
-        return 0;
-    case 0x98: // Timer 1 Mode (write-only)
-        return 0;
-
-    case 0xA0: // Interrupt Mask
-        return m_intrMask.u32;
-    case 0xA4: // Interrupt Status
-        return m_intrStatus.u32;
-    case 0xA8: // A-Bus Interrupt Acknowledge
-        return m_abusIntrAck;
-
-    case 0xB0: // A-Bus Set (part 1) (write-only)
-        return 0;
-    case 0xB4: // A-Bus Set (part 2) (write-only)
-        return 0;
-    case 0xB8: // A-Bus Refresh (write-only)
-        return 0;
-
-    case 0xC4: // SCU SDRAM Select
-        return m_WRAMSizeSelect;
-    case 0xC8: // SCU Version
-        return 0x4;
-
-    default: //
-        regsLog.debug("unhandled {}-bit SCU register read from {:02X}", sizeof(T) * 8, address);
-        return 0;
     }
 }
 
+template <bool poke>
 FORCE_INLINE void SCU::WriteRegByte(uint32 address, uint8 value) {
     switch (address) {
     case 0xA0 ... 0xA1: break;                                     // Interrupt Mask (bits 16-31)
@@ -689,7 +780,9 @@ FORCE_INLINE void SCU::WriteRegByte(uint32 address, uint8 value) {
     case 0xA8 ... 0xAA: break; // A-Bus Interrupt Acknowledge (bits 8-31)
     case 0xAB:                 // A-Bus Interrupt Acknowledge (bits 0-7)
         m_abusIntrAck = bit::extract<0>(value);
-        UpdateInterruptLevel<false>();
+        if constexpr (!poke) {
+            UpdateInterruptLevel<false>();
+        }
         break;
 
     case 0xB0 ... 0xB3: // A-Bus Set (part 1)
@@ -705,14 +798,34 @@ FORCE_INLINE void SCU::WriteRegByte(uint32 address, uint8 value) {
     case 0xC8 ... 0xCB: // SCU Version (read-only)
         break;
 
-    default: regsLog.debug("unhandled 8-bit SCU register write to {:02X} = {:X}", address, value); break;
+    default:
+        if constexpr (poke) {
+            uint32 currValue = ReadReg<uint32, true>(address & ~3u);
+            const uint32 shift = (~address & 3u) * 8u;
+            const uint32 mask = ~(0xFF << shift);
+            currValue = (currValue & mask) | (value << shift);
+            WriteRegLong<true>(address & ~3u, currValue);
+        } else {
+            regsLog.debug("unhandled 8-bit SCU register write to {:02X} = {:X}", address, value);
+        }
+        break;
     }
 }
 
+template <bool poke>
 FORCE_INLINE void SCU::WriteRegWord(uint32 address, uint16 value) {
-    regsLog.debug("unhandled 16-bit SCU register write to {:02X} = {:X}", address, value);
+    if constexpr (poke) {
+        uint32 currValue = ReadReg<uint32, true>(address & ~3u);
+        const uint32 shift = (~address & 2u) * 8u;
+        const uint32 mask = ~(0xFFFF << shift);
+        currValue = (currValue & mask) | (value << shift);
+        WriteRegLong<true>(address & ~3u, currValue);
+    } else {
+        regsLog.debug("unhandled 16-bit SCU register write to {:02X} = {:X}", address, value);
+    }
 }
 
+template <bool poke>
 FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
     // TODO: handle 8-bit and 16-bit register writes if needed
 
@@ -723,25 +836,29 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
     {
         auto &ch = m_dmaChannels[address >> 5u];
         ch.srcAddr = bit::extract<0, 26>(value);
-    } break;
+        break;
+    }
     case 0x04: // Level 0 DMA Write Address
     case 0x24: // Level 1 DMA Write Address
     case 0x44: // Level 2 DMA Write Address
     {
         auto &ch = m_dmaChannels[address >> 5u];
         ch.dstAddr = bit::extract<0, 26>(value);
-    } break;
+        break;
+    }
     case 0x08: // Level 0 DMA Transfer Number
     {
         auto &ch = m_dmaChannels[address >> 5u];
         ch.xferCount = bit::extract<0, 19>(value);
-    } break;
+        break;
+    }
     case 0x28: // Level 1 DMA Transfer Number
     case 0x48: // Level 2 DMA Transfer Number
     {
         auto &ch = m_dmaChannels[address >> 5u];
         ch.xferCount = bit::extract<0, 11>(value);
-    } break;
+        break;
+    }
     case 0x0C: // Level 0 DMA Increment
     case 0x2C: // Level 1 DMA Increment
     case 0x4C: // Level 2 DMA Increment
@@ -749,7 +866,8 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
         auto &ch = m_dmaChannels[address >> 5u];
         ch.srcAddrInc = bit::extract<8>(value) * 4u;
         ch.dstAddrInc = (1u << bit::extract<0, 2>(value)) & ~1u;
-    } break;
+        break;
+    }
     case 0x10: // Level 0 DMA Enable
     case 0x30: // Level 1 DMA Enable
     case 0x50: // Level 2 DMA Enable
@@ -757,21 +875,24 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
         const uint32 index = address >> 5u;
         auto &ch = m_dmaChannels[index];
         ch.enabled = bit::extract<8>(value);
-        if (ch.enabled) {
-            dmaLog.trace("DMA{} enabled - {:08X} (+{:02X}) -> {:08X} (+{:02X})", index, ch.srcAddr, ch.srcAddrInc,
-                         ch.dstAddr, ch.dstAddrInc);
-        }
-        if (ch.enabled && ch.trigger == DMATrigger::Immediate && bit::extract<0>(value)) {
-            if (ch.active) {
-                dmaLog.trace("DMA{} triggering immediate transfer while another transfer is in progress", index);
-                // Finish previous transfer
-                RunDMA();
+        if constexpr (!poke) {
+            if (ch.enabled) {
+                dmaLog.trace("DMA{} enabled - {:08X} (+{:02X}) -> {:08X} (+{:02X})", index, ch.srcAddr, ch.srcAddrInc,
+                             ch.dstAddr, ch.dstAddrInc);
             }
-            ch.start = true;
-            RecalcDMAChannel();
-            RunDMA(); // HACK: run immediate DMA transfers immediately and instantly
+            if (ch.enabled && ch.trigger == DMATrigger::Immediate && bit::extract<0>(value)) {
+                if (ch.active) {
+                    dmaLog.trace("DMA{} triggering immediate transfer while another transfer is in progress", index);
+                    // Finish previous transfer
+                    RunDMA();
+                }
+                ch.start = true;
+                RecalcDMAChannel();
+                RunDMA(); // HACK: run immediate DMA transfers immediately and instantly
+            }
         }
-    } break;
+        break;
+    }
     case 0x14: // Level 0 DMA Mode
     case 0x34: // Level 1 DMA Mode
     case 0x54: // Level 2 DMA Mode
@@ -781,14 +902,17 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
         ch.updateSrcAddr = bit::extract<16>(value);
         ch.updateDstAddr = bit::extract<8>(value);
         ch.trigger = static_cast<DMATrigger>(bit::extract<0, 2>(value));
-    } break;
+        break;
+    }
 
     case 0x60: // DMA Force Stop
-        if (bit::extract<0>(value)) {
-            for (auto &ch : m_dmaChannels) {
-                ch.active = false;
+        if constexpr (!poke) {
+            if (bit::extract<0>(value)) {
+                for (auto &ch : m_dmaChannels) {
+                    ch.active = false;
+                }
+                m_activeDMAChannelLevel = m_dmaChannels.size();
             }
-            m_activeDMAChannelLevel = m_dmaChannels.size();
         }
         break;
     case 0x7C: // DMA Status (read-only)
@@ -809,13 +933,13 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
         }
         break;
     case 0x84: // DSP Program RAM Data Port
-        m_dsp.WriteProgram(value);
+        m_dsp.WriteProgram<poke>(value);
         break;
     case 0x88: // DSP Data RAM Address Port
         m_dsp.dataAddress = bit::extract<0, 7>(value);
         break;
     case 0x8C: // DSP Data RAM Data Port
-        m_dsp.WriteData(value);
+        m_dsp.WriteData<poke>(value);
         break;
 
     case 0x90: // Timer 0 Compare
@@ -833,11 +957,17 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
         m_intrMask.u32 = value & 0x0000BFFF;
         break;
     case 0xA4: // Interrupt Status
-        m_intrStatus.u32 &= value;
+        if constexpr (poke) {
+            m_intrStatus.u32 = value & 0xFFFFBFFF;
+        } else {
+            m_intrStatus.u32 &= value;
+        }
         break;
     case 0xA8: // A-Bus Interrupt Acknowledge
         m_abusIntrAck = bit::extract<0>(value);
-        UpdateInterruptLevel<false>();
+        if constexpr (!poke) {
+            UpdateInterruptLevel<false>();
+        }
         break;
 
     case 0xB0: // A-Bus Set (part 1)
@@ -856,7 +986,11 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
     case 0xC8: // SCU Version (read-only)
         break;
 
-    default: regsLog.debug("unhandled 32-bit SCU register write to {:02X} = {:X}", address, value); break;
+    default:
+        if constexpr (!poke) {
+            regsLog.debug("unhandled 32-bit SCU register write to {:02X} = {:X}", address, value);
+        }
+        break;
     }
 }
 

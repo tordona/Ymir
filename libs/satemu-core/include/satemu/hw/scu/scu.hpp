@@ -274,11 +274,14 @@ private:
 
     bool m_WRAMSizeSelect; // false=2x2Mbit, true=2x4Mbit
 
-    template <mem_primitive T>
+    template <mem_primitive T, bool peek>
     T ReadReg(uint32 address);
 
+    template <bool poke>
     void WriteRegByte(uint32 address, uint8 value);
+    template <bool poke>
     void WriteRegWord(uint32 address, uint16 value);
+    template <bool poke>
     void WriteRegLong(uint32 address, uint32 value);
 
     template <bool acknowledge>
