@@ -343,7 +343,7 @@ DisasmTable BuildDisasmTable() {
             }
             break;
         case 0x9: {
-            auto [rn, disp] = decodeND8(1u, 0u);
+            auto [rn, disp] = decodeND8(1u, 4u);
             makeOpW(MOV, Op::AtDispPC(disp), Op::Rn(rn));
             break;
         }
@@ -358,7 +358,7 @@ DisasmTable BuildDisasmTable() {
             case 0x4: makeOpB(MOV, Op::AtDispGBR(decodeD_U(0u, 0u)), Op::Rn(0)); break;
             case 0x5: makeOpW(MOV, Op::AtDispGBR(decodeD_U(1u, 0u)), Op::Rn(0)); break;
             case 0x6: makeOpL(MOV, Op::AtDispGBR(decodeD_U(2u, 0u)), Op::Rn(0)); break;
-            case 0x7: makeOp(MOVA, Op::AtDispPC(decodeD_U(2u, 4u)), Op::Rn(0)); break;
+            case 0x7: makeOp(MOVA, Op::AtDispPCWordAlign(decodeD_U(2u, 4u)), Op::Rn(0)); break;
             case 0x8: makeOp(TST, Op::Imm(decodeI_U(0u, 0u)), Op::Rn(0)); break;
             case 0x9: makeOp(AND, Op::Imm(decodeI_U(0u, 0u)), Op::Rn(0)); break;
             case 0xA: makeOp(XOR, Op::Imm(decodeI_U(0u, 0u)), Op::Rn(0)); break;
@@ -371,8 +371,8 @@ DisasmTable BuildDisasmTable() {
             break;
         }
         case 0xD: {
-            auto [rn, disp] = decodeND8(2u, 0u);
-            makeOpL(MOV, Op::AtDispPC(disp), Op::Rn(rn));
+            auto [rn, disp] = decodeND8(2u, 4u);
+            makeOpL(MOV, Op::AtDispPCWordAlign(disp), Op::Rn(rn));
             break;
         }
         case 0xE: {

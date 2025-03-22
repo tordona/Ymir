@@ -97,24 +97,25 @@ enum class OperandSize : uint8 {
 struct Operand {
     enum class Type : uint8 {
         None,
-        Imm,       // #imm
-        Rn,        // Rn
-        AtRn,      // @Rn
-        AtRnPlus,  // @Rn+
-        AtMinusRn, // @-Rn
-        AtDispRn,  // @(disp,Rn)
-        AtR0Rn,    // @(R0,Rn)
-        AtDispGBR, // @(disp,GBR)
-        AtR0GBR,   // @(R0,GBR)
-        AtDispPC,  // @(disp,PC)
-        DispPC,    // disp[+PC]
-        RnPC,      // Rn[+PC]
-        SR,        // SR
-        GBR,       // GBR
-        VBR,       // VBR
-        MACH,      // MACH
-        MACL,      // MACL
-        PR,        // PR
+        Imm,               // #imm
+        Rn,                // Rn
+        AtRn,              // @Rn
+        AtRnPlus,          // @Rn+
+        AtMinusRn,         // @-Rn
+        AtDispRn,          // @(disp,Rn)
+        AtR0Rn,            // @(R0,Rn)
+        AtDispGBR,         // @(disp,GBR)
+        AtR0GBR,           // @(R0,GBR)
+        AtDispPC,          // @(disp,PC)
+        AtDispPCWordAlign, // @(disp,PC) [PC & ~3]
+        DispPC,            // disp[+PC]
+        RnPC,              // Rn[+PC]
+        SR,                // SR
+        GBR,               // GBR
+        VBR,               // VBR
+        MACH,              // MACH
+        MACL,              // MACL
+        PR,                // PR
     };
     Type type;
 
@@ -170,6 +171,11 @@ struct Operand {
     // @(disp,PC)
     static Operand AtDispPC(sint32 disp) {
         return {.type = Type::AtDispPC, .immDisp = disp};
+    }
+
+    // @(disp,PC) [PC & ~3]
+    static Operand AtDispPCWordAlign(sint32 disp) {
+        return {.type = Type::AtDispPCWordAlign, .immDisp = disp};
     }
 
     // disp[+PC]

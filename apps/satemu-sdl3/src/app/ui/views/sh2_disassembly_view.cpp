@@ -144,6 +144,7 @@ void SH2DisassemblyView::Display() {
             case sh2::Operand::Type::AtDispGBR: ImGui::Text(" @(0x%X,gbr)", op.immDisp); break;
             case sh2::Operand::Type::AtR0GBR: ImGui::TextUnformatted(" @(r0,gbr)"); break;
             case sh2::Operand::Type::AtDispPC: ImGui::Text(" @(0x%X,pc)", op.immDisp + addr); break;
+            case sh2::Operand::Type::AtDispPCWordAlign: ImGui::Text(" @(0x%X,pc)", op.immDisp + (addr & ~3)); break;
             case sh2::Operand::Type::DispPC: ImGui::Text(" 0x%X", op.immDisp + addr); break;
             case sh2::Operand::Type::RnPC: ImGui::Text(" r%u[+pc]", op.reg); break;
             case sh2::Operand::Type::SR: ImGui::TextUnformatted(" sr"); break;

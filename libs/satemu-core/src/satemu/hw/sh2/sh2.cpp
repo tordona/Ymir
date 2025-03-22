@@ -1881,13 +1881,13 @@ FORCE_INLINE void SH2::MOVI(const DecodedArgs &args) {
 }
 
 FORCE_INLINE void SH2::MOVWI(const DecodedArgs &args) {
-    const uint32 address = PC + 4 + args.dispImm;
+    const uint32 address = PC + args.dispImm;
     // dbg_println("mov.w @(0x{:08X},pc), r{}", address, args.rn);
     R[args.rn] = bit::sign_extend<16>(MemReadWord(address));
 }
 
 FORCE_INLINE void SH2::MOVLI(const DecodedArgs &args) {
-    const uint32 address = ((PC + 4) & ~3u) + args.dispImm;
+    const uint32 address = (PC & ~3u) + args.dispImm;
     // dbg_println("mov.l @(0x{:08X},pc), r{}", address, args.rn);
     R[args.rn] = MemReadLong(address);
 }

@@ -272,7 +272,7 @@ DecodeTable BuildDecodeTable() {
             case 0xF: setNonDelayOpcode(OpcodeType::BFS), decodeD_S(1, 4); break;
             }
             break;
-        case 0x9: setOpcode(OpcodeType::MOVW_I), decodeND8(1u, 0u); break;
+        case 0x9: setOpcode(OpcodeType::MOVW_I), decodeND8(1u, 4u); break;
         case 0xA: setNonDelayOpcode(OpcodeType::BRA), decodeD12(1, 4); break;
         case 0xB: setNonDelayOpcode(OpcodeType::BSR), decodeD12(1, 4); break;
         case 0xC:
@@ -295,7 +295,7 @@ DecodeTable BuildDecodeTable() {
             case 0xF: setOpcode(OpcodeType::OR_M), decodeI_U(0u, 0u); break;
             }
             break;
-        case 0xD: setOpcode(OpcodeType::MOVL_I), decodeND8(2u, 0u); break;
+        case 0xD: setOpcode(OpcodeType::MOVL_I), decodeND8(2u, 4u); break;
         case 0xE: setOpcode(OpcodeType::MOV_I), decodeNI(0, 0); break;
         }
     }
