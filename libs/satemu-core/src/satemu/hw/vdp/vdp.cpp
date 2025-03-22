@@ -234,6 +234,7 @@ void VDP::MapMemory(sys::Bus &bus) {
                     static_cast<VDP *>(ctx)->VDP1WriteReg(address + 0, value >> 16u);
                     static_cast<VDP *>(ctx)->VDP1WriteReg(address + 2, value >> 0u);
                 },
+            // TODO: peek/poke
         });
 
     // VDP2 VRAM
@@ -386,6 +387,7 @@ void VDP::MapMemory(sys::Bus &bus) {
                     static_cast<VDP *>(ctx)->VDP2WriteReg(address + 0, value >> 16u);
                     static_cast<VDP *>(ctx)->VDP2WriteReg(address + 2, value >> 0u);
                 },
+            // TODO: peek/poke
         });
 }
 
