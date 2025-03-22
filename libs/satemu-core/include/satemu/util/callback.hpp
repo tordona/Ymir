@@ -16,16 +16,15 @@ namespace detail {
 
     template <bool skipNullCheck, typename TReturn, typename... TArgs>
     struct FuncClass {
-        using ReturnType = TReturn;
-        using FnType = ReturnType (*)(TArgs... args, void *context);
+        using FnType = TReturn (*)(TArgs... args, void *context);
 
-        FuncClass()
-            : m_context(nullptr)
-            , m_fn(nullptr) {}
+        FuncClass() {
+            Rebind(nullptr);
+        }
 
-        FuncClass(void *context, FnType fn)
-            : m_context(context)
-            , m_fn(fn) {}
+        FuncClass(void *context, FnType fn) {
+            Rebind(context, fn);
+        }
 
         FuncClass(const FuncClass &) = default;
         FuncClass(FuncClass &&) = default;
@@ -39,13 +38,21 @@ namespace detail {
 
         void Rebind(void *context, FnType fn) {
             m_context = context;
-            m_fn = fn;
+            if (skipNullCheck && fn == nullptr) {
+                m_fn = [](TArgs..., void *) -> TReturn {
+                    if constexpr (!std::is_void_v<TReturn>) {
+                        return TReturn{};
+                    }
+                };
+            } else {
+                m_fn = fn;
+            }
         }
 
-        FLATTEN FORCE_INLINE ReturnType operator()(TArgs... args) {
+        FLATTEN FORCE_INLINE TReturn operator()(TArgs... args) {
             if constexpr (!skipNullCheck) {
                 if (m_fn == nullptr) [[unlikely]] {
-                    if constexpr (std::is_void_v<ReturnType>) {
+                    if constexpr (std::is_void_v<TReturn>) {
                         return;
                     } else {
                         return {};
