@@ -317,10 +317,10 @@ T CDBlock::PeekReg(uint32 address) {
 
         switch (address) {
         case 0x00:
-            // TODO: need to use a transfer buffer to avoid/minimize race conditions
+            // TODO: need to use a transfer buffer to avoid advancing the transfer pointer
             return 0;
         case 0x02:
-            // TODO: need to use a transfer buffer to avoid/minimize race conditions
+            // TODO: need to use a transfer buffer to avoid advancing the transfer pointer
             return 0;
         case 0x08: return m_HIRQ;
         case 0x0C: return m_HIRQMASK;
@@ -336,7 +336,7 @@ T CDBlock::PeekReg(uint32 address) {
 template <mem_primitive T>
 void CDBlock::PokeReg(uint32 address, T value) {
     if constexpr (std::is_same_v<T, uint8>) {
-        PokeReg<uint16>(address, value >> ((~address & 1) * 8));
+        PokeReg<uint16>(address, value << ((~address & 1) * 8));
     } else if constexpr (std::is_same_v<T, uint32>) {
         PokeReg<uint16>(address + 0, value >> 16u);
         PokeReg<uint16>(address + 2, value >> 0u);
@@ -345,17 +345,13 @@ void CDBlock::PokeReg(uint32 address, T value) {
 
         switch (address) {
         case 0x00:
+            // TODO: need to use a transfer buffer to avoid advancing the transfer pointer
+            break;
         case 0x02:
-            // TODO: need to use a transfer buffer to avoid/minimize race conditions
+            // TODO: need to use a transfer buffer to avoid advancing the transfer pointer
             break;
-        case 0x08:
-            m_HIRQ = value;
-            // TODO: update interrupts in a thread-safe manner
-            break;
-        case 0x0C:
-            m_HIRQMASK = value;
-            // TODO: update interrupts in a thread-safe manner
-            break;
+        case 0x08: m_HIRQ = value; break;
+        case 0x0C: m_HIRQMASK = value; break;
         case 0x18: m_CR[0] = value; break;
         case 0x1C: m_CR[1] = value; break;
         case 0x20: m_CR[2] = value; break;
