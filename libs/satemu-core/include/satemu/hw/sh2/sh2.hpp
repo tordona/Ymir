@@ -25,7 +25,7 @@
 
 #include <satemu/sys/bus.hpp>
 
-#include <satemu/debug/sh2_tracer_ctx.hpp>
+#include <satemu/debug/sh2_tracer.hpp>
 
 #include <satemu/util/debug_print.hpp>
 #include <satemu/util/inline.hpp>
@@ -37,72 +37,6 @@
 namespace satemu::sh2 {
 
 inline constexpr dbg::Level sh2DebugLevel = dbg::debugLevel;
-
-enum class SH2BranchType { JSR, BSR, TRAPA, Exception, UserCapture };
-
-struct SH2Regs {
-    std::array<uint32, 16> R;
-    uint32 PC;
-    uint32 PR;
-    uint32 SR;
-    uint32 GBR;
-    uint32 VBR;
-    uint64 MAC;
-};
-
-class NullSH2Tracer {
-public:
-    NullSH2Tracer(bool) {}
-
-    void Reset() {}
-    void Dump() {}
-
-    void ExecTrace(SH2Regs) {}
-
-    void JSR(SH2Regs) {}
-    void BSR(SH2Regs) {}
-    void TRAPA(SH2Regs) {}
-    void Exception(SH2Regs, uint8) {}
-    void UserCapture(SH2Regs) {}
-
-    void RTE(SH2Regs) {}
-    void RTS(SH2Regs) {}
-};
-
-class RealSH2Tracer {
-public:
-    RealSH2Tracer(bool master);
-
-    void Reset();
-    void Dump();
-
-    void ExecTrace(SH2Regs regs);
-
-    void JSR(SH2Regs regs);
-    void BSR(SH2Regs regs);
-    void TRAPA(SH2Regs regs);
-    void Exception(SH2Regs regs, uint8 vec);
-    void UserCapture(SH2Regs regs);
-
-    void RTE(SH2Regs regs);
-    void RTS(SH2Regs regs);
-
-private:
-    struct Entry {
-        SH2BranchType type;
-        SH2Regs regs;
-        uint8 vec;
-    };
-
-    bool m_master;
-    std::vector<Entry> m_entries;
-    std::array<SH2Regs, 256> m_execTrace;
-    std::size_t m_execTraceHead;
-    std::size_t m_execTraceCount;
-};
-
-using SH2Tracer = NullSH2Tracer;
-// using SH2Tracer = RealSH2Tracer;
 
 // -----------------------------------------------------------------------------
 
@@ -171,7 +105,7 @@ public:
     // Debugger and testing
 
     void UseTracer(debug::ISH2Tracer *tracer) {
-        m_debugTracer.Use(tracer);
+        m_tracer.Use(tracer);
     }
 
 private:
@@ -202,8 +136,34 @@ private:
     // -------------------------------------------------------------------------
     // Debugger
 
-    SH2Tracer m_tracer;
-    debug::SH2TracerContext m_debugTracer;
+    struct {
+        // Use the specified tracer.
+        // Set to nullptr to disable tracing.
+        void Use(debug::ISH2Tracer *tracer) {
+            m_tracer = tracer;
+        }
+
+        template <bool debug>
+        FORCE_INLINE void Interrupt(uint8 vecNum, uint8 level, uint32 pc) {
+            if constexpr (debug) {
+                if (m_tracer) {
+                    return m_tracer->Interrupt(vecNum, level, pc);
+                }
+            }
+        }
+
+        template <bool debug>
+        FORCE_INLINE void Exception(uint8 vecNum, uint32 pc, uint32 sr) {
+            if constexpr (debug) {
+                if (m_tracer) {
+                    return m_tracer->Exception(vecNum, pc, sr);
+                }
+            }
+        }
+
+    private:
+        debug::ISH2Tracer *m_tracer = nullptr;
+    } m_tracer;
 
     const dbg::Category<sh2DebugLevel> &m_log;
 

@@ -33,108 +33,8 @@ static constexpr const dbg::Category<sh2DebugLevel> &Logger(bool master) {
     return master ? MSH2 : SSH2;
 }
 
-RealSH2Tracer::RealSH2Tracer(bool master)
-    : m_master(master) {
-    Reset();
-}
-
-void RealSH2Tracer::Reset() {
-    m_entries.clear();
-}
-
-void RealSH2Tracer::Dump() {
-    const auto &log = Logger(m_master);
-
-    auto buf = fmt::memory_buffer();
-    auto inserter = std::back_inserter(buf);
-
-    auto formatRegs = [&](const SH2Regs &regs) {
-        fmt::format_to(inserter, "  R0-15:");
-        for (int i = 0; i < 16; i++) {
-            fmt::format_to(inserter, " {:08X}", regs.R[i]);
-        }
-        fmt::format_to(inserter, " PC={:08X}", regs.PC);
-        fmt::format_to(inserter, " PR={:08X}", regs.PR);
-        fmt::format_to(inserter, " SR={:08X}", regs.SR);
-        fmt::format_to(inserter, " GBR={:08X}", regs.GBR);
-        fmt::format_to(inserter, " VBR={:08X}", regs.VBR);
-        fmt::format_to(inserter, " MAC={:016X}", regs.MAC);
-    };
-
-    log.debug("Stack trace:");
-    for (auto it = m_entries.rbegin(); it != m_entries.rend(); it++) {
-        formatRegs(it->regs);
-        switch (it->type) {
-        case SH2BranchType::JSR: fmt::format_to(inserter, " JSR"); break;
-        case SH2BranchType::BSR: fmt::format_to(inserter, " BSR"); break;
-        case SH2BranchType::TRAPA: fmt::format_to(inserter, " TRAPA"); break;
-        case SH2BranchType::Exception: fmt::format_to(inserter, " Exception vector {}", it->vec); break;
-        case SH2BranchType::UserCapture: fmt::format_to(inserter, " User capture"); break;
-        }
-        log.debug("{}", fmt::to_string(buf));
-        buf.clear();
-    }
-
-    log.debug("Execution backtrace:");
-    std::size_t execTracePos = m_execTraceHead + m_execTrace.size() - m_execTraceCount;
-    if (execTracePos >= m_execTrace.size()) {
-        execTracePos -= m_execTrace.size();
-    }
-    for (std::size_t i = 0; i < m_execTraceCount; i++) {
-        formatRegs(m_execTrace[execTracePos]);
-        log.debug("{}", fmt::to_string(buf));
-        buf.clear();
-        execTracePos = (execTracePos + 1) % m_execTrace.size();
-    }
-}
-
-void RealSH2Tracer::ExecTrace(SH2Regs regs) {
-    m_execTrace[m_execTraceHead] = regs;
-    m_execTraceHead = (m_execTraceHead + 1) % m_execTrace.size();
-    if (m_execTraceCount < m_execTrace.size()) {
-        m_execTraceCount++;
-    }
-}
-
-void RealSH2Tracer::JSR(SH2Regs regs) {
-    m_entries.push_back({SH2BranchType::JSR, regs});
-}
-
-void RealSH2Tracer::BSR(SH2Regs regs) {
-    m_entries.push_back({SH2BranchType::BSR, regs});
-}
-
-void RealSH2Tracer::TRAPA(SH2Regs regs) {
-    m_entries.push_back({SH2BranchType::TRAPA, regs});
-}
-
-void RealSH2Tracer::Exception(SH2Regs regs, uint8 vec) {
-    m_entries.push_back({SH2BranchType::Exception, regs});
-}
-
-void RealSH2Tracer::UserCapture(SH2Regs regs) {
-    m_entries.push_back({SH2BranchType::UserCapture, regs});
-}
-
-void RealSH2Tracer::RTE(SH2Regs regs) {
-    // auto &entry = m_entries.back();
-    // TODO: check if it was an exception?
-    if (!m_entries.empty()) {
-        m_entries.pop_back();
-    }
-}
-
-void RealSH2Tracer::RTS(SH2Regs regs) {
-    // auto &entry = m_entries.back();
-    // TODO: check if it was a BSR or JSR?
-    if (!m_entries.empty()) {
-        m_entries.pop_back();
-    }
-}
-
 SH2::SH2(sys::Bus &bus, bool master)
-    : m_tracer(master)
-    , m_log(Logger(master))
+    : m_log(Logger(master))
     , m_bus(bus) {
     BCR1.MASTER = !master;
     Reset(true);
@@ -201,8 +101,6 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
     m_cacheReplaceANDMask = 0x3Fu;
     m_cacheReplaceORMask[false] = 0u;
     m_cacheReplaceORMask[true] = 0u;
-
-    m_tracer.Reset();
 }
 
 void SH2::MapMemory(sys::Bus &bus) {
@@ -232,16 +130,13 @@ FLATTEN uint64 SH2::Advance(uint64 cycles) {
         const uint64 prevCyclesExecuted = cyclesExecuted;
         while (cyclesExecuted <= deadline) {
             // TODO: choose between interpreter (cached or uncached) and JIT recompiler
-            m_tracer.ExecTrace({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
             cyclesExecuted += InterpretNext<debug>();
 
             if constexpr (config::logSysExecDump) {
                 // Dump stack trace on SYS_EXECDMP
                 if ((PC & 0x7FFFFFF) == config::sysExecDumpAddress) {
                     m_log.debug("SYS_EXECDMP triggered");
-                    m_tracer.UserCapture({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
-                    m_tracer.Dump();
-                    m_tracer.Reset();
+                    // TODO: trace event
                 }
             }
         }
@@ -1323,8 +1218,7 @@ FORCE_INLINE void SH2::SetupDelaySlot(uint32 targetAddress) {
 
 template <bool debug>
 FORCE_INLINE void SH2::EnterException(uint8 vectorNumber) {
-    m_tracer.Exception({R, PC, PR, SR.u32, VBR, GBR, MAC.u64}, vectorNumber);
-    m_debugTracer.Exception<debug>(vectorNumber, PC, SR.u32);
+    m_tracer.Exception<debug>(vectorNumber, PC, SR.u32);
     R[15] -= 4;
     MemWriteLong(R[15], SR.u32);
     R[15] -= 4;
@@ -1339,7 +1233,7 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     if (!m_delaySlot && CheckInterrupts()) [[unlikely]] {
         // Service interrupt
         const uint8 vecNum = INTC.GetVector(INTC.pending.source);
-        m_debugTracer.Interrupt<debug>(vecNum, INTC.pending.level, PC);
+        m_tracer.Interrupt<debug>(vecNum, INTC.pending.level, PC);
         m_log.trace("Handling interrupt level {:02X}, vector number {:02X}", INTC.pending.level, vecNum);
         EnterException<debug>(vecNum);
         SR.ILevel = std::min<uint8>(INTC.pending.level, 0xF);
@@ -1363,16 +1257,6 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     auto jumpToDelaySlot = [&] {
         PC = m_delaySlotTarget;
         m_delaySlot = false;
-    };
-
-    auto dump = [&] {
-        static bool dumped = false;
-        if (!dumped) {
-            dumped = true;
-            m_tracer.UserCapture({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
-            m_tracer.Dump();
-            m_tracer.Reset();
-        }
     };
 
     const uint16 instr = FetchInstruction(PC);
@@ -1673,20 +1557,19 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::RTE: RTE(); return 4;
     case OpcodeType::RTS: RTS(); return 2;
 
-    case OpcodeType::Illegal: EnterException<debug>(xvGenIllegalInstr), dump(); return 8;
-    case OpcodeType::IllegalSlot: EnterException<debug>(xvSlotIllegalInstr), dump(); return 8;
+    case OpcodeType::Illegal: EnterException<debug>(xvGenIllegalInstr); return 8;
+    case OpcodeType::IllegalSlot: EnterException<debug>(xvSlotIllegalInstr); return 8;
     }
 }
 
 template uint64 SH2::InterpretNext<false>();
 template uint64 SH2::InterpretNext<true>();
 
-FORCE_INLINE void SH2::NOP() {
-    // dbg_println("nop");
-}
+// nop
+FORCE_INLINE void SH2::NOP() {}
 
+// sleep
 FORCE_INLINE void SH2::SLEEP() {
-    // dbg_println("sleep");
     PC -= 2;
 
     if (SBYCR.SBY) {
@@ -1708,404 +1591,401 @@ FORCE_INLINE void SH2::SLEEP() {
     }
 }
 
+// mov Rm, Rn
 FORCE_INLINE void SH2::MOV(const DecodedArgs &args) {
-    // dbg_println("mov r{}, r{}", args.rm, args.rn);
     R[args.rn] = R[args.rm];
 }
 
+// mov.b @Rm, Rn
 FORCE_INLINE void SH2::MOVBL(const DecodedArgs &args) {
-    // dbg_println("mov.b @r{}, r{}", args.rm, args.rn);
     R[args.rn] = bit::sign_extend<8>(MemReadByte(R[args.rm]));
 }
 
+// mov.w @Rm, Rn
 FORCE_INLINE void SH2::MOVWL(const DecodedArgs &args) {
-    // dbg_println("mov.w @r{}, r{}", args.rm, args.rn);
     R[args.rn] = bit::sign_extend<16>(MemReadWord(R[args.rm]));
 }
 
+// mov.l @Rm, Rn
 FORCE_INLINE void SH2::MOVLL(const DecodedArgs &args) {
-    // dbg_println("mov.l @r{}, r{}", args.rm, args.rn);
     R[args.rn] = MemReadLong(R[args.rm]);
 }
 
+// mov.b @(R0,Rm), Rn
 FORCE_INLINE void SH2::MOVBL0(const DecodedArgs &args) {
-    // dbg_println("mov.b @(r0,r{}), r{}", args.rm, args.rn);
     R[args.rn] = bit::sign_extend<8>(MemReadByte(R[args.rm] + R[0]));
 }
 
+// mov.w @(R0,Rm), Rn
 FORCE_INLINE void SH2::MOVWL0(const DecodedArgs &args) {
-    // dbg_println("mov.w @(r0,r{}), r{})", args.rm, args.rn);
     R[args.rn] = bit::sign_extend<16>(MemReadWord(R[args.rm] + R[0]));
 }
 
+// mov.l @(R0,Rm), Rn
 FORCE_INLINE void SH2::MOVLL0(const DecodedArgs &args) {
-    // dbg_println("mov.l @(r0,r{}), r{})", args.rm, args.rn);
     R[args.rn] = MemReadLong(R[args.rm] + R[0]);
 }
 
+// mov.b @(disp,Rm), R0
 FORCE_INLINE void SH2::MOVBL4(const DecodedArgs &args) {
-    // dbg_println("mov.b @(0x{:X},r{}), r0", args.dispImm, args.rm);
     R[0] = bit::sign_extend<8>(MemReadByte(R[args.rm] + args.dispImm));
 }
 
+// mov.w @(disp,Rm), R0
 FORCE_INLINE void SH2::MOVWL4(const DecodedArgs &args) {
-    // dbg_println("mov.w @(0x{:X},r{}), r0", args.dispImm, args.rm);
     R[0] = bit::sign_extend<16>(MemReadWord(R[args.rm] + args.dispImm));
 }
 
+// mov.l @(disp,Rm), Rn
 FORCE_INLINE void SH2::MOVLL4(const DecodedArgs &args) {
-    // dbg_println("mov.l @(0x{:X},r{}), r{}", args.dispImm, rm, rn);
     R[args.rn] = MemReadLong(R[args.rm] + args.dispImm);
 }
 
+// mov.b @(disp,GBR), R0
 FORCE_INLINE void SH2::MOVBLG(const DecodedArgs &args) {
-    // dbg_println("mov.b @(0x{:X},gbr), r0", disp);
     R[0] = bit::sign_extend<8>(MemReadByte(GBR + args.dispImm));
 }
 
+// mov.w @(disp,GBR), R0
 FORCE_INLINE void SH2::MOVWLG(const DecodedArgs &args) {
-    // dbg_println("mov.w @(0x{:X},gbr), r0", args.dispImm);
     R[0] = bit::sign_extend<16>(MemReadWord(GBR + args.dispImm));
 }
 
+// mov.l @(disp,GBR), R0
 FORCE_INLINE void SH2::MOVLLG(const DecodedArgs &args) {
-    // dbg_println("mov.l @(0x{:X},gbr), r0", args.dispImm);
     R[0] = MemReadLong(GBR + args.dispImm);
 }
 
+// mov.b Rm, @-Rn
 FORCE_INLINE void SH2::MOVBM(const DecodedArgs &args) {
-    // dbg_println("mov.b r{}, @-r{}", args.rm, args.rn);
     MemWriteByte(R[args.rn] - 1, R[args.rm]);
     R[args.rn] -= 1;
 }
 
+// mov.w Rm, @-Rn
 FORCE_INLINE void SH2::MOVWM(const DecodedArgs &args) {
-    // dbg_println("mov.w r{}, @-r{}", args.rm, args.rn);
     MemWriteWord(R[args.rn] - 2, R[args.rm]);
     R[args.rn] -= 2;
 }
 
+// mov.l Rm, @-Rn
 FORCE_INLINE void SH2::MOVLM(const DecodedArgs &args) {
-    // dbg_println("mov.l r{}, @-r{}", args.rm, args.rn);
     MemWriteLong(R[args.rn] - 4, R[args.rm]);
     R[args.rn] -= 4;
 }
 
+// mov.b @Rm+, Rn
 FORCE_INLINE void SH2::MOVBP(const DecodedArgs &args) {
-    // dbg_println("mov.b @r{}+, r{}", args.rm, args.rn);
     R[args.rn] = bit::sign_extend<8>(MemReadByte(R[args.rm]));
     if (args.rn != args.rm) {
         R[args.rm] += 1;
     }
 }
 
+// mov.w @Rm+, Rn
 FORCE_INLINE void SH2::MOVWP(const DecodedArgs &args) {
-    // dbg_println("mov.w @r{}+, r{}", args.rm, args.rn);
     R[args.rn] = bit::sign_extend<16>(MemReadWord(R[args.rm]));
     if (args.rn != args.rm) {
         R[args.rm] += 2;
     }
 }
 
+// mov.l @Rm+, Rn
 FORCE_INLINE void SH2::MOVLP(const DecodedArgs &args) {
-    // dbg_println("mov.l @r{}+, r{}", args.rm, args.rn);
     R[args.rn] = MemReadLong(R[args.rm]);
     if (args.rn != args.rm) {
         R[args.rm] += 4;
     }
 }
 
+// mov.b Rm, @Rn
 FORCE_INLINE void SH2::MOVBS(const DecodedArgs &args) {
-    // dbg_println("mov.b r{}, @r{}", args.rm, args.rn);
     MemWriteByte(R[args.rn], R[args.rm]);
 }
 
+// mov.w Rm, @Rn
 FORCE_INLINE void SH2::MOVWS(const DecodedArgs &args) {
-    // dbg_println("mov.w r{}, @r{}", args.rm, args.rn);
     MemWriteWord(R[args.rn], R[args.rm]);
 }
 
+// mov.l Rm, @Rn
 FORCE_INLINE void SH2::MOVLS(const DecodedArgs &args) {
-    // dbg_println("mov.l r{}, @r{}", args.rm, args.rn);
     MemWriteLong(R[args.rn], R[args.rm]);
 }
 
+// mov.b Rm, @(R0,Rn)
 FORCE_INLINE void SH2::MOVBS0(const DecodedArgs &args) {
-    // dbg_println("mov.b r{}, @(r0,r{})", args.rm, args.rn);
     MemWriteByte(R[args.rn] + R[0], R[args.rm]);
 }
 
+// mov.w Rm, @(R0,Rn)
 FORCE_INLINE void SH2::MOVWS0(const DecodedArgs &args) {
-    // dbg_println("mov.w r{}, @(r0,r{})", args.rm, args.rn);
     MemWriteWord(R[args.rn] + R[0], R[args.rm]);
 }
 
+// mov.l Rm, @(R0,Rn)
 FORCE_INLINE void SH2::MOVLS0(const DecodedArgs &args) {
-    // dbg_println("mov.l r{}, @(r0,r{})", args.rm, args.rn);
     MemWriteLong(R[args.rn] + R[0], R[args.rm]);
 }
 
+// mov.b R0, @(disp,Rn)
 FORCE_INLINE void SH2::MOVBS4(const DecodedArgs &args) {
-    // dbg_println("mov.b r0, @(0x{:X},r{})", args.dispImm, args.rn);
     MemWriteByte(R[args.rn] + args.dispImm, R[0]);
 }
 
+// mov.w R0, @(disp,Rn)
 FORCE_INLINE void SH2::MOVWS4(const DecodedArgs &args) {
-    // dbg_println("mov.w r0, @(0x{:X},r{})", args.dispImm, args.rn);
     MemWriteWord(R[args.rn] + args.dispImm, R[0]);
 }
 
+// mov.l Rm, @(disp,Rn)
 FORCE_INLINE void SH2::MOVLS4(const DecodedArgs &args) {
-    // dbg_println("mov.l r{}, @(0x{:X},r{})", args.rm, args.dispImm, args.rn);
     MemWriteLong(R[args.rn] + args.dispImm, R[args.rm]);
 }
 
+// mov.b R0, @(disp,GBR)
 FORCE_INLINE void SH2::MOVBSG(const DecodedArgs &args) {
-    // dbg_println("mov.b r0, @(0x{:X},gbr)", args.dispImm);
     MemWriteByte(GBR + args.dispImm, R[0]);
 }
 
+// mov.w R0, @(disp,GBR)
 FORCE_INLINE void SH2::MOVWSG(const DecodedArgs &args) {
-    // dbg_println("mov.w r0, @(0x{:X},gbr)", args.dispImm);
     MemWriteWord(GBR + args.dispImm, R[0]);
 }
 
+// mov.l R0, @(disp,GBR)
 FORCE_INLINE void SH2::MOVLSG(const DecodedArgs &args) {
-    // dbg_println("mov.l r0, @(0x{:X},gbr)", args.dispImm);
     MemWriteLong(GBR + args.dispImm, R[0]);
 }
 
+// mov #imm, Rn
 FORCE_INLINE void SH2::MOVI(const DecodedArgs &args) {
-    // dbg_println("mov #{}0x{:X}, r{}", (args.dispImm < 0 ? "-" : ""), abs(args.dispImm), args.rn);
     R[args.rn] = args.dispImm;
 }
 
+// mov.w @(disp,PC), Rn
 FORCE_INLINE void SH2::MOVWI(const DecodedArgs &args) {
     const uint32 address = PC + args.dispImm;
-    // dbg_println("mov.w @(0x{:08X},pc), r{}", address, args.rn);
     R[args.rn] = bit::sign_extend<16>(MemReadWord(address));
 }
 
+// mov.l @(disp,PC), Rn
 FORCE_INLINE void SH2::MOVLI(const DecodedArgs &args) {
     const uint32 address = (PC & ~3u) + args.dispImm;
-    // dbg_println("mov.l @(0x{:08X},pc), r{}", address, args.rn);
     R[args.rn] = MemReadLong(address);
 }
 
+// mova @(disp,PC), R0
 FORCE_INLINE void SH2::MOVA(const DecodedArgs &args) {
     const uint32 address = (PC & ~3) + args.dispImm;
-    // dbg_println("mova @(0x{:X},pc), r0", address);
     R[0] = address;
 }
 
+// movt Rn
 FORCE_INLINE void SH2::MOVT(const DecodedArgs &args) {
-    // dbg_println("movt r{}", args.rn);
     R[args.rn] = SR.T;
 }
 
+// clrt
 FORCE_INLINE void SH2::CLRT() {
-    // dbg_println("clrt");
     SR.T = 0;
 }
 
+// sett
 FORCE_INLINE void SH2::SETT() {
-    // dbg_println("sett");
     SR.T = 1;
 }
 
+// exts.b Rm, Rn
 FORCE_INLINE void SH2::EXTSB(const DecodedArgs &args) {
-    // dbg_println("exts.b r{}, r{}", args.rm, args.rn);
     R[args.rn] = bit::sign_extend<8>(R[args.rm]);
 }
 
+// exts.w Rm, Rn
 FORCE_INLINE void SH2::EXTSW(const DecodedArgs &args) {
-    // dbg_println("exts.w r{}, r{}", args.rm, args.rn);
     R[args.rn] = bit::sign_extend<16>(R[args.rm]);
 }
 
+// extu.b Rm, Rn
 FORCE_INLINE void SH2::EXTUB(const DecodedArgs &args) {
-    // dbg_println("extu.b r{}, r{}", args.rm, args.rn);
     R[args.rn] = R[args.rm] & 0xFF;
 }
 
+// extu.w Rm, Rn
 FORCE_INLINE void SH2::EXTUW(const DecodedArgs &args) {
-    // dbg_println("extu.w r{}, r{}", args.rm, args.rn);
     R[args.rn] = R[args.rm] & 0xFFFF;
 }
 
+// swap.b Rm, Rn
 FORCE_INLINE void SH2::SWAPB(const DecodedArgs &args) {
-    // dbg_println("swap.b r{}, r{}", args.rm, args.rn);
-
     const uint32 tmp0 = R[args.rm] & 0xFFFF0000;
     const uint32 tmp1 = (R[args.rm] & 0xFF) << 8u;
     R[args.rn] = ((R[args.rm] >> 8u) & 0xFF) | tmp1 | tmp0;
 }
 
+// swap.w Rm, Rn
 FORCE_INLINE void SH2::SWAPW(const DecodedArgs &args) {
-    // dbg_println("swap.w r{}, r{}", args.rm, args.rn);
-
     const uint32 tmp = R[args.rm] >> 16u;
     R[args.rn] = (R[args.rm] << 16u) | tmp;
 }
 
+// xtrct Rm, Rn
 FORCE_INLINE void SH2::XTRCT(const DecodedArgs &args) {
-    // dbg_println("xtrct r{}, r{}", args.rm, args.rn);
     R[args.rn] = (R[args.rn] >> 16u) | (R[args.rm] << 16u);
 }
 
+// ldc Rm, GBR
 FORCE_INLINE void SH2::LDCGBR(const DecodedArgs &args) {
-    // dbg_println("ldc r{}, gbr", args.rm);
     GBR = R[args.rm];
 }
 
+// ldc Rm, SR
 FORCE_INLINE void SH2::LDCSR(const DecodedArgs &args) {
-    // dbg_println("ldc r{}, sr", args.rm);
     SR.u32 = R[args.rm] & 0x000003F3;
 }
 
+// ldc Rm, VBR
 FORCE_INLINE void SH2::LDCVBR(const DecodedArgs &args) {
-    // dbg_println("ldc r{}, vbr", args.rm);
     VBR = R[args.rm];
 }
 
+// ldc.l @Rm+, GBR
 FORCE_INLINE void SH2::LDCMGBR(const DecodedArgs &args) {
-    // dbg_println("ldc.l @r{}+, gbr", args.rm);
     GBR = MemReadLong(R[args.rm]);
     R[args.rm] += 4;
 }
 
+// ldc.l @Rm+, SR
 FORCE_INLINE void SH2::LDCMSR(const DecodedArgs &args) {
-    // dbg_println("ldc.l @r{}+, sr", args.rm);
     SR.u32 = MemReadLong(R[args.rm]) & 0x000003F3;
     R[args.rm] += 4;
 }
 
+// ldc.l @Rm+, VBR
 FORCE_INLINE void SH2::LDCMVBR(const DecodedArgs &args) {
-    // dbg_println("ldc.l @r{}+, vbr", args.rm);
     VBR = MemReadLong(R[args.rm]);
     R[args.rm] += 4;
 }
 
+// lds Rm, MACH
 FORCE_INLINE void SH2::LDSMACH(const DecodedArgs &args) {
-    // dbg_println("lds r{}, mach", args.rm);
     MAC.H = R[args.rm];
 }
 
+// lds Rm, MACL
 FORCE_INLINE void SH2::LDSMACL(const DecodedArgs &args) {
-    // dbg_println("lds r{}, macl", args.rm);
     MAC.L = R[args.rm];
 }
 
+// lds Rm, PR
 FORCE_INLINE void SH2::LDSPR(const DecodedArgs &args) {
-    // dbg_println("lds r{}, pr", args.rm);
     PR = R[args.rm];
 }
 
+// lds.l @Rm+, MACH
 FORCE_INLINE void SH2::LDSMMACH(const DecodedArgs &args) {
-    // dbg_println("lds.l @r{}+, mach", args.rm);
     MAC.H = MemReadLong(R[args.rm]);
     R[args.rm] += 4;
 }
 
+// lds.l @Rm+, MACL
 FORCE_INLINE void SH2::LDSMMACL(const DecodedArgs &args) {
-    // dbg_println("lds.l @r{}+, macl", args.rm);
     MAC.L = MemReadLong(R[args.rm]);
     R[args.rm] += 4;
 }
 
+// lds.l @Rm+, PR
 FORCE_INLINE void SH2::LDSMPR(const DecodedArgs &args) {
-    // dbg_println("lds.l @r{}+, pr", args.rm);
     PR = MemReadLong(R[args.rm]);
     R[args.rm] += 4;
 }
 
+// stc GBR, Rn
 FORCE_INLINE void SH2::STCGBR(const DecodedArgs &args) {
-    // dbg_println("stc gbr, r{}", args.rn);
     R[args.rn] = GBR;
 }
 
+// stc SR, Rn
 FORCE_INLINE void SH2::STCSR(const DecodedArgs &args) {
-    // dbg_println("stc sr, r{}", args.rn);
     R[args.rn] = SR.u32;
 }
 
+// stc VBR, Rn
 FORCE_INLINE void SH2::STCVBR(const DecodedArgs &args) {
-    // dbg_println("stc vbr, r{}", args.rn);
     R[args.rn] = VBR;
 }
 
+// stc.l GBR, @-Rn
 FORCE_INLINE void SH2::STCMGBR(const DecodedArgs &args) {
-    // dbg_println("stc.l gbr, @-r{}", args.rn);
     R[args.rn] -= 4;
     MemWriteLong(R[args.rn], GBR);
 }
 
+// stc.l SR, @-Rn
 FORCE_INLINE void SH2::STCMSR(const DecodedArgs &args) {
-    // dbg_println("stc.l sr, @-r{}", args.rn);
     R[args.rn] -= 4;
     MemWriteLong(R[args.rn], SR.u32);
 }
 
+// stc.l VBR, @-Rn
 FORCE_INLINE void SH2::STCMVBR(const DecodedArgs &args) {
-    // dbg_println("stc.l vbr, @-r{}", args.rn);
     R[args.rn] -= 4;
     MemWriteLong(R[args.rn], VBR);
 }
 
+// sts MACH, Rn
 FORCE_INLINE void SH2::STSMACH(const DecodedArgs &args) {
-    // dbg_println("sts mach, r{}", args.rn);
     R[args.rn] = MAC.H;
 }
 
+// sts MACL, Rn
 FORCE_INLINE void SH2::STSMACL(const DecodedArgs &args) {
-    // dbg_println("sts macl, r{}", args.rn);
     R[args.rn] = MAC.L;
 }
 
+// sts PR, Rn
 FORCE_INLINE void SH2::STSPR(const DecodedArgs &args) {
-    // dbg_println("sts pr, r{}", args.rn);
     R[args.rn] = PR;
 }
 
+// sts.l MACH, @-Rn
 FORCE_INLINE void SH2::STSMMACH(const DecodedArgs &args) {
-    // dbg_println("sts.l mach, @-r{}", args.rn);
     R[args.rn] -= 4;
     MemWriteLong(R[args.rn], MAC.H);
 }
 
+// sts.l MACL, @-Rn
 FORCE_INLINE void SH2::STSMMACL(const DecodedArgs &args) {
-    // dbg_println("sts.l macl, @-r{}", args.rn);
     R[args.rn] -= 4;
     MemWriteLong(R[args.rn], MAC.L);
 }
 
+// sts.l PR, @-Rn
 FORCE_INLINE void SH2::STSMPR(const DecodedArgs &args) {
-    // dbg_println("sts.l pr, @-r{}", args.rn);
     R[args.rn] -= 4;
     MemWriteLong(R[args.rn], PR);
 }
 
+// add Rm, Rn
 FORCE_INLINE void SH2::ADD(const DecodedArgs &args) {
-    // dbg_println("add r{}, r{}", args.rm, args.rn);
     R[args.rn] += R[args.rm];
 }
 
+// add #imm, Rn
 FORCE_INLINE void SH2::ADDI(const DecodedArgs &args) {
-    // dbg_println("add #{}0x{:X}, r{}", (args.dispImm < 0 ? "-" : ""), abs(args.dispImm), args.rn);
     R[args.rn] += args.dispImm;
 }
 
+// addc Rm, Rn
 FORCE_INLINE void SH2::ADDC(const DecodedArgs &args) {
-    // dbg_println("addc r{}, r{}", args.rm, args.rn);
     const uint32 tmp1 = R[args.rn] + R[args.rm];
     const uint32 tmp0 = R[args.rn];
     R[args.rn] = tmp1 + SR.T;
     SR.T = (tmp0 > tmp1) || (tmp1 > R[args.rn]);
 }
 
+// addv Rm, Rn
 FORCE_INLINE void SH2::ADDV(const DecodedArgs &args) {
-    // dbg_println("addv r{}, r{}", args.rm, args.rn);
-
     const bool dst = static_cast<sint32>(R[args.rn]) < 0;
     const bool src = static_cast<sint32>(R[args.rm]) < 0;
 
@@ -2116,152 +1996,152 @@ FORCE_INLINE void SH2::ADDV(const DecodedArgs &args) {
     SR.T = (src == dst) & ans;
 }
 
+// and Rm, Rn
 FORCE_INLINE void SH2::AND(const DecodedArgs &args) {
-    // dbg_println("and r{}, r{}", args.rm, args.rn);
     R[args.rn] &= R[args.rm];
 }
 
+// and #imm, R0
 FORCE_INLINE void SH2::ANDI(const DecodedArgs &args) {
-    // dbg_println("and #0x{:X}, r0", args.dispImm);
     R[0] &= args.dispImm;
 }
 
+// and.b #imm, @(R0,GBR)
 FORCE_INLINE void SH2::ANDM(const DecodedArgs &args) {
-    // dbg_println("and.b #0x{:X}, @(r0,gbr)", args.dispImm);
     uint8 tmp = MemReadByte(GBR + R[0]);
     tmp &= args.dispImm;
     MemWriteByte(GBR + R[0], tmp);
 }
 
+// neg Rm, Rn
 FORCE_INLINE void SH2::NEG(const DecodedArgs &args) {
-    // dbg_println("neg r{}, r{}", args.rm, args.rn);
     R[args.rn] = -R[args.rm];
 }
 
+// negc Rm, Rn
 FORCE_INLINE void SH2::NEGC(const DecodedArgs &args) {
-    // dbg_println("negc r{}, r{}", args.rm, args.rn);
     const uint32 tmp = -R[args.rm];
     R[args.rn] = tmp - SR.T;
     SR.T = (0 < tmp) || (tmp < R[args.rn]);
 }
 
+// not Rm, Rn
 FORCE_INLINE void SH2::NOT(const DecodedArgs &args) {
-    // dbg_println("not r{}, r{}", args.rm, args.rn);
     R[args.rn] = ~R[args.rm];
 }
 
+// or Rm, Rn
 FORCE_INLINE void SH2::OR(const DecodedArgs &args) {
-    // dbg_println("or r{}, r{}", args.rm, args.rn);
     R[args.rn] |= R[args.rm];
 }
 
+// or #imm, R0
 FORCE_INLINE void SH2::ORI(const DecodedArgs &args) {
-    // dbg_println("or #0x{:X}, r0", args.dispImm);
     R[0] |= args.dispImm;
 }
 
+// or.b #imm, @(R0,GBR)
 FORCE_INLINE void SH2::ORM(const DecodedArgs &args) {
-    // dbg_println("or.b #0x{:X}, @(r0,gbr)", args.dispImm);
     uint8 tmp = MemReadByte(GBR + R[0]);
     tmp |= args.dispImm;
     MemWriteByte(GBR + R[0], tmp);
 }
 
+// rotcl Rn
 FORCE_INLINE void SH2::ROTCL(const DecodedArgs &args) {
-    // dbg_println("rotcl r{}", args.rn);
     const bool tmp = R[args.rn] >> 31u;
     R[args.rn] = (R[args.rn] << 1u) | SR.T;
     SR.T = tmp;
 }
 
+// rotcr Rn
 FORCE_INLINE void SH2::ROTCR(const DecodedArgs &args) {
-    // dbg_println("rotcr r{}", args.rn);
     const bool tmp = R[args.rn] & 1u;
     R[args.rn] = (R[args.rn] >> 1u) | (SR.T << 31u);
     SR.T = tmp;
 }
 
+// rotl Rn
 FORCE_INLINE void SH2::ROTL(const DecodedArgs &args) {
-    // dbg_println("rotl r{}", args.rn);
     SR.T = R[args.rn] >> 31u;
     R[args.rn] = (R[args.rn] << 1u) | SR.T;
 }
 
+// rotr Rn
 FORCE_INLINE void SH2::ROTR(const DecodedArgs &args) {
-    // dbg_println("rotr r{}", args.rn);
     SR.T = R[args.rn] & 1u;
     R[args.rn] = (R[args.rn] >> 1u) | (SR.T << 31u);
 }
 
+// shal Rn
 FORCE_INLINE void SH2::SHAL(const DecodedArgs &args) {
-    // dbg_println("shal r{}", args.rn);
     SR.T = R[args.rn] >> 31u;
     R[args.rn] <<= 1u;
 }
 
+// shar Rn
 FORCE_INLINE void SH2::SHAR(const DecodedArgs &args) {
-    // dbg_println("shar r{}", args.rn);
     SR.T = R[args.rn] & 1u;
     R[args.rn] = static_cast<sint32>(R[args.rn]) >> 1;
 }
 
+// shll Rn
 FORCE_INLINE void SH2::SHLL(const DecodedArgs &args) {
-    // dbg_println("shll r{}", args.rn);
     SR.T = R[args.rn] >> 31u;
     R[args.rn] <<= 1u;
 }
 
+// shll2 Rn
 FORCE_INLINE void SH2::SHLL2(const DecodedArgs &args) {
-    // dbg_println("shll2 r{}", args.rn);
     R[args.rn] <<= 2u;
 }
 
+// shll8 Rn
 FORCE_INLINE void SH2::SHLL8(const DecodedArgs &args) {
-    // dbg_println("shll8 r{}", args.rn);
     R[args.rn] <<= 8u;
 }
 
+// shll16 Rn
 FORCE_INLINE void SH2::SHLL16(const DecodedArgs &args) {
-    // dbg_println("shll16 r{}", args.rn);
     R[args.rn] <<= 16u;
 }
 
+// shlr Rn
 FORCE_INLINE void SH2::SHLR(const DecodedArgs &args) {
-    // dbg_println("shlr r{}", args.rn);
     SR.T = R[args.rn] & 1u;
     R[args.rn] >>= 1u;
 }
 
+// shlr2 Rn
 FORCE_INLINE void SH2::SHLR2(const DecodedArgs &args) {
-    // dbg_println("shlr2 r{}", args.rn);
     R[args.rn] >>= 2u;
 }
 
+// shlr8 Rn
 FORCE_INLINE void SH2::SHLR8(const DecodedArgs &args) {
-    // dbg_println("shlr8 r{}", args.rn);
     R[args.rn] >>= 8u;
 }
 
+// shlr16 Rn
 FORCE_INLINE void SH2::SHLR16(const DecodedArgs &args) {
-    // dbg_println("shlr16 r{}", args.rn);
     R[args.rn] >>= 16u;
 }
 
+// sub Rm, Rn
 FORCE_INLINE void SH2::SUB(const DecodedArgs &args) {
-    // dbg_println("sub r{}, r{}", args.rm, args.rn);
     R[args.rn] -= R[args.rm];
 }
 
+// subc Rm, Rn
 FORCE_INLINE void SH2::SUBC(const DecodedArgs &args) {
-    // dbg_println("subc r{}, r{}", args.rm, args.rn);
     const uint32 tmp1 = R[args.rn] - R[args.rm];
     const uint32 tmp0 = R[args.rn];
     R[args.rn] = tmp1 - SR.T;
     SR.T = (tmp0 < tmp1) || (tmp1 < R[args.rn]);
 }
 
+// subv Rm, Rn
 FORCE_INLINE void SH2::SUBV(const DecodedArgs &args) {
-    // dbg_println("subv r{}, r{}", args.rm, args.rn);
 
     const bool dst = static_cast<sint32>(R[args.rn]) < 0;
     const bool src = static_cast<sint32>(R[args.rm]) < 0;
@@ -2273,37 +2153,36 @@ FORCE_INLINE void SH2::SUBV(const DecodedArgs &args) {
     SR.T = (src != dst) & ans;
 }
 
+// xor Rm, Rn
 FORCE_INLINE void SH2::XOR(const DecodedArgs &args) {
-    // dbg_println("xor r{}, r{}", args.rm, args.rn);
     R[args.rn] ^= R[args.rm];
 }
 
+// xor #imm, R0
 FORCE_INLINE void SH2::XORI(const DecodedArgs &args) {
-    // dbg_println("xor #0x{:X}, r0", args.dispImm);
     R[0] ^= args.dispImm;
 }
 
+// xor.b #imm, @(R0,GBR)
 FORCE_INLINE void SH2::XORM(const DecodedArgs &args) {
-    // dbg_println("xor.b #0x{:X}, @(r0,gbr)", args.dispImm);
     uint8 tmp = MemReadByte(GBR + R[0]);
     tmp ^= args.dispImm;
     MemWriteByte(GBR + R[0], tmp);
 }
 
+// dt Rn
 FORCE_INLINE void SH2::DT(const DecodedArgs &args) {
-    // dbg_println("dt r{}", args.rn);
     R[args.rn]--;
     SR.T = R[args.rn] == 0;
 }
 
+// clrmac
 FORCE_INLINE void SH2::CLRMAC() {
-    // dbg_println("clrmac");
     MAC.u64 = 0;
 }
 
+// mac.w @Rm+, @Rn+
 FORCE_INLINE void SH2::MACW(const DecodedArgs &args) {
-    // dbg_println("mac.w @r{}+, @r{}+)", args.rm, args.rn);
-
     const sint32 op1 = static_cast<sint16>(MemReadWord(R[args.rm]));
     R[args.rm] += 2;
     const sint32 op2 = static_cast<sint16>(MemReadWord(R[args.rn]));
@@ -2324,9 +2203,8 @@ FORCE_INLINE void SH2::MACW(const DecodedArgs &args) {
     }
 }
 
+// mac.l @Rm+, @Rn+
 FORCE_INLINE void SH2::MACL(const DecodedArgs &args) {
-    // dbg_println("mac.l @r{}+, @r{}+)", args.rm, args.rn);
-
     const sint64 op1 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[args.rm])));
     R[args.rm] += 4;
     const sint64 op2 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[args.rn])));
@@ -2344,50 +2222,49 @@ FORCE_INLINE void SH2::MACL(const DecodedArgs &args) {
     MAC.u64 = result;
 }
 
+// mul.l Rm, Rn
 FORCE_INLINE void SH2::MULL(const DecodedArgs &args) {
-    // dbg_println("mul.l r{}, r{}", args.rm, args.rn);
     MAC.L = R[args.rm] * R[args.rn];
 }
 
+// muls.w Rm, Rn
 FORCE_INLINE void SH2::MULS(const DecodedArgs &args) {
-    // dbg_println("muls.w r{}, r{}", args.rm, args.rn);
     MAC.L = bit::sign_extend<16>(R[args.rm]) * bit::sign_extend<16>(R[args.rn]);
 }
 
+// mulu.w Rm, Rn
 FORCE_INLINE void SH2::MULU(const DecodedArgs &args) {
-    // dbg_println("mulu.w r{}, r{}", args.rm, args.rn);
     auto cast = [](uint32 val) { return static_cast<uint32>(static_cast<uint16>(val)); };
     MAC.L = cast(R[args.rm]) * cast(R[args.rn]);
 }
 
+// dmuls.l Rm, Rn
 FORCE_INLINE void SH2::DMULS(const DecodedArgs &args) {
-    // dbg_println("dmuls.l r{}, r{}", args.rm, args.rn);
     auto cast = [](uint32 val) { return static_cast<sint64>(static_cast<sint32>(val)); };
     MAC.u64 = cast(R[args.rm]) * cast(R[args.rn]);
 }
 
+// dmulu.l Rm, Rn
 FORCE_INLINE void SH2::DMULU(const DecodedArgs &args) {
-    // dbg_println("dmulu.l r{}, r{}", args.rm, args.rn);
     MAC.u64 = static_cast<uint64>(R[args.rm]) * static_cast<uint64>(R[args.rn]);
 }
 
+// div0s r{}, Rm, Rn
 FORCE_INLINE void SH2::DIV0S(const DecodedArgs &args) {
-    // dbg_println("div0s r{}, r{}", args.rm, args.rn);
     SR.M = static_cast<sint32>(R[args.rm]) < 0;
     SR.Q = static_cast<sint32>(R[args.rn]) < 0;
     SR.T = SR.M != SR.Q;
 }
 
+// div0u
 FORCE_INLINE void SH2::DIV0U() {
-    // dbg_println("div0u");
     SR.M = 0;
     SR.Q = 0;
     SR.T = 0;
 }
 
+// div1 Rm, Rn
 FORCE_INLINE void SH2::DIV1(const DecodedArgs &args) {
-    // dbg_println("div1 r{}, r{}", args.rm, args.rn);
-
     const bool oldQ = SR.Q;
     SR.Q = static_cast<sint32>(R[args.rn]) < 0;
     R[args.rn] = (R[args.rn] << 1u) | SR.T;
@@ -2416,48 +2293,48 @@ FORCE_INLINE void SH2::DIV1(const DecodedArgs &args) {
     SR.T = SR.Q == SR.M;
 }
 
+// cmp/eq #imm, R0
 FORCE_INLINE void SH2::CMPIM(const DecodedArgs &args) {
-    // dbg_println("cmp/eq #{}0x{:X}, r0", (args.dispImm < 0 ? "-" : ""), abs(args.dispImm));
     SR.T = static_cast<sint32>(R[0]) == args.dispImm;
 }
 
+// cmp/eq Rm, Rn
 FORCE_INLINE void SH2::CMPEQ(const DecodedArgs &args) {
-    // dbg_println("cmp/eq r{}, r{}", args.rm, args.rn);
     SR.T = R[args.rn] == R[args.rm];
 }
 
+// cmp/ge Rm, Rn
 FORCE_INLINE void SH2::CMPGE(const DecodedArgs &args) {
-    // dbg_println("cmp/ge r{}, r{}", args.rm, args.rn);
     SR.T = static_cast<sint32>(R[args.rn]) >= static_cast<sint32>(R[args.rm]);
 }
 
+// cmp/gt Rm, Rn
 FORCE_INLINE void SH2::CMPGT(const DecodedArgs &args) {
-    // dbg_println("cmp/gt r{}, r{}", args.rm, args.rn);
     SR.T = static_cast<sint32>(R[args.rn]) > static_cast<sint32>(R[args.rm]);
 }
 
+// cmp/hi Rm, Rn
 FORCE_INLINE void SH2::CMPHI(const DecodedArgs &args) {
-    // dbg_println("cmp/hi r{}, r{}", args.rm, args.rn);
     SR.T = R[args.rn] > R[args.rm];
 }
 
+// cmp/hs Rm, Rn
 FORCE_INLINE void SH2::CMPHS(const DecodedArgs &args) {
-    // dbg_println("cmp/hs r{}, r{}", args.rm, args.rn);
     SR.T = R[args.rn] >= R[args.rm];
 }
 
+// cmp/pl Rn
 FORCE_INLINE void SH2::CMPPL(const DecodedArgs &args) {
-    // dbg_println("cmp/pl r{}", args.rn);
     SR.T = static_cast<sint32>(R[args.rn]) > 0;
 }
 
+// cmp/pz Rn
 FORCE_INLINE void SH2::CMPPZ(const DecodedArgs &args) {
-    // dbg_println("cmp/pz r{}", args.rn);
     SR.T = static_cast<sint32>(R[args.rn]) >= 0;
 }
 
+// cmp/str Rm, Rn
 FORCE_INLINE void SH2::CMPSTR(const DecodedArgs &args) {
-    // dbg_println("cmp/str r{}, r{}", args.rm, args.rn);
     const uint32 tmp = R[args.rm] ^ R[args.rn];
     const uint8 hh = tmp >> 24u;
     const uint8 hl = tmp >> 16u;
@@ -2466,10 +2343,8 @@ FORCE_INLINE void SH2::CMPSTR(const DecodedArgs &args) {
     SR.T = !(hh && hl && lh && ll);
 }
 
+// tas.b @Rn
 FORCE_INLINE void SH2::TAS(const DecodedArgs &args) {
-    // dbg_println("tas.b @r{}", args.rn);
-    // dbg_println("WARNING: bus lock not implemented!");
-
     // TODO: enable bus lock on this read
     const uint8 tmp = MemReadByte(R[args.rn]);
     SR.T = tmp == 0;
@@ -2477,25 +2352,24 @@ FORCE_INLINE void SH2::TAS(const DecodedArgs &args) {
     MemWriteByte(R[args.rn], tmp | 0x80);
 }
 
+// tst Rm, Rn
 FORCE_INLINE void SH2::TST(const DecodedArgs &args) {
-    // dbg_println("tst r{}, r{}", args.rm, args.rn);
     SR.T = (R[args.rn] & R[args.rm]) == 0;
 }
 
+// tst #imm, R0
 FORCE_INLINE void SH2::TSTI(const DecodedArgs &args) {
-    // dbg_println("tst #0x{:X}, r0", args.dispImm);
     SR.T = (R[0] & args.dispImm) == 0;
 }
 
+// tst.b #imm, @(R0,GBR)
 FORCE_INLINE void SH2::TSTM(const DecodedArgs &args) {
-    // dbg_println("tst.b #0x{:X}, @(r0,gbr)", args.dispImm);
     const uint8 tmp = MemReadByte(GBR + R[0]);
     SR.T = (tmp & args.dispImm) == 0;
 }
 
+// bf <label>
 FORCE_INLINE uint64 SH2::BF(const DecodedArgs &args) {
-    // dbg_println("bf 0x{:08X}", PC + args.dispImm);
-
     if (!SR.T) {
         PC += args.dispImm;
         return 3;
@@ -2505,9 +2379,8 @@ FORCE_INLINE uint64 SH2::BF(const DecodedArgs &args) {
     }
 }
 
+// bf/s <label>
 FORCE_INLINE uint64 SH2::BFS(const DecodedArgs &args) {
-    // dbg_println("bf/s 0x{:08X}", PC + args.dispImm);
-
     if (!SR.T) {
         SetupDelaySlot(PC + args.dispImm);
     }
@@ -2515,9 +2388,8 @@ FORCE_INLINE uint64 SH2::BFS(const DecodedArgs &args) {
     return !SR.T ? 2 : 1;
 }
 
+// bt <label>
 FORCE_INLINE uint64 SH2::BT(const DecodedArgs &args) {
-    // dbg_println("bt 0x{:08X}", PC + args.dispImm);
-
     if (SR.T) {
         PC += args.dispImm;
         return 3;
@@ -2527,9 +2399,8 @@ FORCE_INLINE uint64 SH2::BT(const DecodedArgs &args) {
     }
 }
 
+// bt/s <label>
 FORCE_INLINE uint64 SH2::BTS(const DecodedArgs &args) {
-    // dbg_println("bt/s 0x{:08X}", PC + args.dispImm);
-
     if (SR.T) {
         SetupDelaySlot(PC + args.dispImm);
     }
@@ -2537,52 +2408,47 @@ FORCE_INLINE uint64 SH2::BTS(const DecodedArgs &args) {
     return SR.T ? 2 : 1;
 }
 
+// bra <label>
 FORCE_INLINE void SH2::BRA(const DecodedArgs &args) {
-    // dbg_println("bra 0x{:08X}", PC + args.dispImm);
     SetupDelaySlot(PC + args.dispImm);
     PC += 2;
 }
 
+// braf Rm
 FORCE_INLINE void SH2::BRAF(const DecodedArgs &args) {
-    // dbg_println("braf r{}", args.rm);
     SetupDelaySlot(PC + R[args.rm] + 4);
     PC += 2;
 }
 
+// bsr <label>
 FORCE_INLINE void SH2::BSR(const DecodedArgs &args) {
-    m_tracer.BSR({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
-    // dbg_println("bsr 0x{:08X}", PC + args.dispImm);
-
     PR = PC + 4;
     SetupDelaySlot(PC + args.dispImm);
     PC += 2;
 }
 
+// bsrf Rm
 FORCE_INLINE void SH2::BSRF(const DecodedArgs &args) {
-    m_tracer.BSR({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
-    // dbg_println("bsrf r{}", args.rm);
     PR = PC + 4;
     SetupDelaySlot(PC + R[args.rm] + 4);
     PC += 2;
 }
 
+// jmp @Rm
 FORCE_INLINE void SH2::JMP(const DecodedArgs &args) {
-    // dbg_println("jmp @r{}", args.rm);
     SetupDelaySlot(R[args.rm]);
     PC += 2;
 }
 
+// jsr @Rm
 FORCE_INLINE void SH2::JSR(const DecodedArgs &args) {
-    // dbg_println("jsr @r{}", args.rm);
-    m_tracer.JSR({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
     PR = PC + 4;
     SetupDelaySlot(R[args.rm]);
     PC += 2;
 }
 
+// trapa #imm
 FORCE_INLINE void SH2::TRAPA(const DecodedArgs &args) {
-    m_tracer.TRAPA({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
-    // dbg_println("trapa #0x{:X}", args.dispImm >> 2u);
     R[15] -= 4;
     MemWriteLong(R[15], SR.u32);
     R[15] -= 4;
@@ -2591,8 +2457,7 @@ FORCE_INLINE void SH2::TRAPA(const DecodedArgs &args) {
 }
 
 FORCE_INLINE void SH2::RTE() {
-    m_tracer.RTE({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
-    // dbg_println("rte");
+    // rte
     SetupDelaySlot(MemReadLong(R[15]) + 4);
     PC += 2;
     R[15] += 4;
@@ -2600,9 +2465,8 @@ FORCE_INLINE void SH2::RTE() {
     R[15] += 4;
 }
 
+// rts
 FORCE_INLINE void SH2::RTS() {
-    m_tracer.RTS({R, PC, PR, SR.u32, VBR, GBR, MAC.u64});
-    // dbg_println("rts");
     SetupDelaySlot(PR);
     PC += 2;
 }
