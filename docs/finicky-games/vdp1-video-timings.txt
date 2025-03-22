@@ -51,6 +51,8 @@ Relevant VDP1 registers:
   Manual erase is set when writing FCM=1 FCT=0 to FBCR.
   Manual swap is set when writing FCM=1 FCT=1 to FBCR.
 
+  Manual erase is handled before the next swap.
+
 Relevant video signal events:
   VBlank IN
     Happens at the start of the first scanline past the display area (aka the first bottom border line)

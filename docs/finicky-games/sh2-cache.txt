@@ -3,4 +3,4 @@ Games that rely on SH-2 cache features
 ======================================
 
 NiGHTS into Dreams...
-  Uses the cache data array (Cxxxxxxx) on the slave SH-2 as scratch memory for transfers
+  Uses the cache data array (Cxxxxxxx) on the slave SH-2 as scratch memory for transfers.

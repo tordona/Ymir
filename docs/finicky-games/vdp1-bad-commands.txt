@@ -2,6 +2,10 @@
 Games that create infinite loops in the VDP1 command table
 ==========================================================
 
+Sega Rally Championship
+  Certain menu screens (e.g. Arcade) request a framebuffer swap before the command table is set up in VRAM.
+  This results in executing a large number of "blank" commands (draw normal 0x0 sprites) and an infinite loop at some points.
+
 Sonic R
   On the first in-game frame when starting a race, it creates an infinite loop by jumping from command at 0x00060 back to 0x00000
   Does not occur on attract mode races

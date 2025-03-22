@@ -39,7 +39,7 @@ The cache uses address bits 31..29 to specify its behavior:
 
 Saturn memory map
 -----------------
-Based https://wiki.yabause.org/index.php5?title=SH-2CPU, which is based on Charles MacDonald's research.
+Based on https://wiki.yabause.org/index.php5?title=SH-2CPU, which is based on Charles MacDonald's research.
 
 Address bits 28 and 27 are disconnected, thus the usable address space is 128 MiB.
 
