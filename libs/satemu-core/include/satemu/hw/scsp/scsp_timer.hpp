@@ -29,9 +29,19 @@ struct Timer {
         return counter == 0xFF;
     }
 
+    uint8 ReadTIMx() const {
+        return reload;
+    }
+
     void WriteTIMx(uint8 value) {
         reload = value;
         doReload = true;
+    }
+
+    uint8 ReadTxCTL() const {
+        uint8 value = 0;
+        bit::deposit_into<0, 2>(value, incrementInterval);
+        return value;
     }
 
     void WriteTxCTL(uint8 value) {

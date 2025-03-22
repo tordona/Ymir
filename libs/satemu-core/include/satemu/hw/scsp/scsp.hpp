@@ -27,7 +27,7 @@
 
 namespace satemu::scsp {
 
-enum class SCSPAccessType { SCU, M68kCode, M68kData, DMA };
+enum class SCSPAccessType { SCU, M68kCode, M68kData, DMA, Debug };
 
 template <SCSPAccessType accessType>
 struct SCSPAccessTypeInfo;
@@ -50,6 +50,11 @@ struct SCSPAccessTypeInfo<SCSPAccessType::M68kData> {
 template <>
 struct SCSPAccessTypeInfo<SCSPAccessType::DMA> {
     static constexpr const char *name = "DMA";
+};
+
+template <>
+struct SCSPAccessTypeInfo<SCSPAccessType::Debug> {
+    static constexpr const char *name = "debug";
 };
 
 template <SCSPAccessType accessType>
@@ -144,12 +149,6 @@ private:
         WriteReg<T, SCSPAccessType::SCU>(address, value);
     }
 
-    template <mem_primitive T>
-    T PeekReg(uint32 address);
-
-    template <mem_primitive T>
-    void PokeReg(uint32 address, T value);
-
     // -------------------------------------------------------------------------
     // MC68EC000-facing bus
     // 8- or 16-bit reads and writes
@@ -199,11 +198,14 @@ private:
     T ReadReg(uint32 address) {
         static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP register read size");
         static constexpr bool is16 = std::is_same_v<T, uint16>;
+        static constexpr bool peek = accessType == SCSPAccessType::Debug;
 
         address &= 0xFFF;
 
-        regsLog.trace("{}-bit SCSP register read via {} bus from {:03X}", sizeof(T) * 8, accessTypeName<accessType>,
-                      address);
+        if constexpr (!peek) {
+            regsLog.trace("{}-bit SCSP register read via {} bus from {:03X}", sizeof(T) * 8, accessTypeName<accessType>,
+                          address);
+        }
 
         using namespace util;
 
@@ -294,32 +296,32 @@ private:
         // Common registers
 
         switch (address) {
-        case 0x400: return 0; // MVOL, DAC18B, MEM4MB are write-only
-        case 0x401: return 0; // Only VER is readable, and it is 0
-        case 0x402: return 0; // RBP and RBL are write-only
-        case 0x403: return 0; // RBP and RBL are write-only
+        case 0x400: return shiftByte(ReadReg400<is16, true, peek>()); // MVOL, DAC18B, MEM4MB are write-only
+        case 0x401: return ReadReg400<true, is16, peek>();            // Only VER is readable, and it is 0
+        case 0x402: return shiftByte(ReadReg402<is16, true, peek>()); // RBP and RBL are write-only
+        case 0x403: return ReadReg402<true, is16, peek>();            // RBP and RBL are write-only
 
-        case 0x404: return shiftByte(ReadMIDIIn<is16, true>());
-        case 0x405: return ReadMIDIIn<true, is16>();
+        case 0x404: return shiftByte(ReadMIDIIn<is16, true, peek>());
+        case 0x405: return ReadMIDIIn<true, is16, peek>();
         case 0x406: return 0; // MOBUF is write-only
         case 0x407: return 0; // MOBUF is write-only
 
-        case 0x408: return shiftByte(ReadSlotStatus<is16, true>());
-        case 0x409: return ReadSlotStatus<true, is16>();
+        case 0x408: return shiftByte(ReadSlotStatus<is16, true, peek>());
+        case 0x409: return ReadSlotStatus<true, is16, peek>();
 
-        case 0x412: return 0; // DMEA is write-only
-        case 0x413: return 0; // DMEA is write-only
-        case 0x414: return 0; // DMEA and DRGA are write-only
-        case 0x415: return 0; // DMEA and DRGA are write-only
-        case 0x416: return shiftByte(ReadDMAStatus<is16, true>());
-        case 0x417: return ReadDMAStatus<true, is16>();
+        case 0x412: return shiftByte(ReadReg412<is16, true, peek>()); // DMEA is write-only
+        case 0x413: return ReadReg412<true, is16, peek>();            // DMEA is write-only
+        case 0x414: return shiftByte(ReadReg414<is16, true, peek>()); // DMEA and DRGA are write-only
+        case 0x415: return ReadReg414<true, is16, peek>();            // DMEA and DRGA are write-only
+        case 0x416: return shiftByte(ReadReg416<is16, true, peek>());
+        case 0x417: return ReadReg416<true, is16, peek>();
 
-        case 0x418: return 0; // Timers are write-only
-        case 0x419: return 0; // Timers are write-only
-        case 0x41A: return 0; // Timers are write-only
-        case 0x41B: return 0; // Timers are write-only
-        case 0x41C: return 0; // Timers are write-only
-        case 0x41D: return 0; // Timers are write-only
+        case 0x418: return shiftByte(ReadTimer<is16, true, peek>(0)); // Timers are write-only
+        case 0x419: return ReadTimer<true, is16, peek>(0);            // Timers are write-only
+        case 0x41A: return shiftByte(ReadTimer<is16, true, peek>(1)); // Timers are write-only
+        case 0x41B: return ReadTimer<true, is16, peek>(1);            // Timers are write-only
+        case 0x41C: return shiftByte(ReadTimer<is16, true, peek>(2)); // Timers are write-only
+        case 0x41D: return ReadTimer<true, is16, peek>(2);            // Timers are write-only
 
         case 0x41E: return shiftByte(ReadSCIEB());
         case 0x41F: return ReadSCIEB();
@@ -343,8 +345,10 @@ private:
         case 0x42F: return 0; // MCIRE is write-only
 
         default:
-            regsLog.debug("unhandled {}-bit SCSP register read via {} bus from {:03X}", sizeof(T) * 8,
-                          accessTypeName<accessType>, address);
+            if constexpr (!peek) {
+                regsLog.debug("Unhandled {}-bit SCSP register read via {} bus from {:03X}", sizeof(T) * 8,
+                              accessTypeName<accessType>, address);
+            }
             break;
         }
 
@@ -355,11 +359,14 @@ private:
     void WriteReg(uint32 address, T value) {
         static_assert(!std::is_same_v<T, uint32>, "Invalid SCSP register write size");
         static constexpr bool is16 = std::is_same_v<T, uint16>;
+        static constexpr bool poke = accessType == SCSPAccessType::Debug;
 
         address &= 0xFFF;
 
-        regsLog.trace("{}-bit SCSP register write via {} bus to {:03X} = {:X}", sizeof(T) * 8,
-                      accessTypeName<accessType>, address, value);
+        if constexpr (!poke) {
+            regsLog.trace("{}-bit SCSP register write via {} bus to {:03X} = {:X}", sizeof(T) * 8,
+                          accessTypeName<accessType>, address, value);
+        }
 
         using namespace util;
 
@@ -475,8 +482,8 @@ private:
 
         case 0x404: // MIDI In registers are read-only
         case 0x405: // MIDI In registers are read-only
-        case 0x406: WriteMIDIOut<is16, true>(value16); break;
-        case 0x407: WriteMIDIOut<true, is16>(value16); break;
+        case 0x406: WriteMIDIOut<is16, true, poke>(value16); break;
+        case 0x407: WriteMIDIOut<true, is16, poke>(value16); break;
 
         case 0x408: WriteSlotStatus<is16, true>(value16); break;
         case 0x409: WriteSlotStatus<true, is16>(value16); break;
@@ -485,8 +492,8 @@ private:
         case 0x413: WriteReg412<true, is16>(value16); break;
         case 0x414: WriteReg414<is16, true>(value16); break;
         case 0x415: WriteReg414<true, is16>(value16); break;
-        case 0x416: WriteReg416<is16, true>(value16); break;
-        case 0x417: WriteReg416<true, is16>(value16); break;
+        case 0x416: WriteReg416<is16, true, poke>(value16); break;
+        case 0x417: WriteReg416<true, is16, poke>(value16); break;
 
         case 0x418: WriteTimer<is16, true>(0, value16); break;
         case 0x419: WriteTimer<true, is16>(0, value16); break;
@@ -495,36 +502,56 @@ private:
         case 0x41C: WriteTimer<is16, true>(2, value16); break;
         case 0x41D: WriteTimer<true, is16>(2, value16); break;
 
-        case 0x41E: WriteSCIEB<is16, true>(value16); break;
-        case 0x41F: WriteSCIEB<true, is16>(value16); break;
-        case 0x420: WriteSCIPD<is16, true>(value16); break;
-        case 0x421: WriteSCIPD<true, is16>(value16); break;
-        case 0x422: WriteSCIRE<is16, true>(value16); break;
-        case 0x423: WriteSCIRE<true, is16>(value16); break;
+        case 0x41E: WriteSCIEB<is16, true, poke>(value16); break;
+        case 0x41F: WriteSCIEB<true, is16, poke>(value16); break;
+        case 0x420: WriteSCIPD<is16, true, poke>(value16); break;
+        case 0x421: WriteSCIPD<true, is16, poke>(value16); break;
+        case 0x422: WriteSCIRE<is16, true, poke>(value16); break;
+        case 0x423: WriteSCIRE<true, is16, poke>(value16); break;
 
-        case 0x424: WriteSCILV<is16, true>(0, value16); break;
-        case 0x425: WriteSCILV<true, is16>(0, value16); break;
-        case 0x426: WriteSCILV<is16, true>(1, value16); break;
-        case 0x427: WriteSCILV<true, is16>(1, value16); break;
-        case 0x428: WriteSCILV<is16, true>(2, value16); break;
-        case 0x429: WriteSCILV<true, is16>(2, value16); break;
+        case 0x424: WriteSCILV<is16, true, poke>(0, value16); break;
+        case 0x425: WriteSCILV<true, is16, poke>(0, value16); break;
+        case 0x426: WriteSCILV<is16, true, poke>(1, value16); break;
+        case 0x427: WriteSCILV<true, is16, poke>(1, value16); break;
+        case 0x428: WriteSCILV<is16, true, poke>(2, value16); break;
+        case 0x429: WriteSCILV<true, is16, poke>(2, value16); break;
 
-        case 0x42A: WriteMCIEB<is16, true>(value16); break;
-        case 0x42B: WriteMCIEB<true, is16>(value16); break;
-        case 0x42C: WriteMCIPD<is16, true>(value16); break;
-        case 0x42D: WriteMCIPD<true, is16>(value16); break;
-        case 0x42E: WriteMCIRE<is16, true>(value16); break;
-        case 0x42F: WriteMCIRE<true, is16>(value16); break;
+        case 0x42A: WriteMCIEB<is16, true, poke>(value16); break;
+        case 0x42B: WriteMCIEB<true, is16, poke>(value16); break;
+        case 0x42C: WriteMCIPD<is16, true, poke>(value16); break;
+        case 0x42D: WriteMCIPD<true, is16, poke>(value16); break;
+        case 0x42E: WriteMCIRE<is16, true, poke>(value16); break;
+        case 0x42F: WriteMCIRE<true, is16, poke>(value16); break;
 
         default:
-            regsLog.debug("unhandled {}-bit SCSP register write via {} bus to {:03X} = {:X}", sizeof(T) * 8,
-                          accessTypeName<accessType>, address, value);
+            if constexpr (!poke) {
+                regsLog.debug("Unhandled {}-bit SCSP register write via {} bus to {:03X} = {:X}", sizeof(T) * 8,
+                              accessTypeName<accessType>, address, value);
+            }
             break;
         }
     }
 
     // --- Mixer Register ---
     // --- Sound Memory Configuration Register ---
+
+    template <bool lowerByte, bool upperByte, bool peek>
+    uint16 ReadReg400() const {
+        if constexpr (!peek) {
+            return 0;
+        }
+
+        uint16 value = 0;
+        if constexpr (lowerByte) {
+            bit::deposit_into<0, 3>(value, m_masterVolume);
+            // bit::deposit_into<4, 7>(value, 0); // VER (version) field, always zero; added here for completeness
+        }
+        if constexpr (upperByte) {
+            bit::deposit_into<8>(value, m_mem4MB);
+            bit::deposit_into<9>(value, m_dac18Bits);
+        }
+        return value;
+    }
 
     template <bool lowerByte, bool upperByte>
     void WriteReg400(uint16 value) {
@@ -539,16 +566,20 @@ private:
 
     // --- Slot Status Register ---
 
-    template <bool lowerByte, bool upperByte>
-    uint16 ReadSlotStatus() {
+    template <bool lowerByte, bool upperByte, bool peek>
+    uint16 ReadSlotStatus() const {
         uint16 value = 0;
         const Slot &slot = m_slots[m_monitorSlotCall];
         bit::deposit_into<0, 4>(value, slot.egLevel >> 5u);
         bit::deposit_into<5, 6>(value, static_cast<uint8>(slot.egState));
         bit::deposit_into<7, 10>(value, slot.currSample >> 12u);
-        regsLog.trace("Monitor slot {} read -> {:04X}  address={:05X} sample={:04X} egstate={} eglevel={:03X}",
-                      m_monitorSlotCall, value, slot.currAddress, slot.currSample, static_cast<uint8>(slot.egState),
-                      slot.egLevel);
+        if constexpr (peek) {
+            bit::deposit_into<11, 15>(value, m_monitorSlotCall);
+        } else {
+            regsLog.trace("Monitor slot {} read -> {:04X}  address={:05X} sample={:04X} egstate={} eglevel={:03X}",
+                          m_monitorSlotCall, value, slot.currAddress, slot.currSample, static_cast<uint8>(slot.egState),
+                          slot.egLevel);
+        }
         return value;
     }
 
@@ -561,21 +592,39 @@ private:
 
     // --- MIDI Register ---
 
-    template <bool lowerByte, bool upperByte>
-    uint16 ReadMIDIIn() {
-        regsLog.trace("Read from MIDI IN is unimplemented");
+    template <bool lowerByte, bool upperByte, bool peek>
+    uint16 ReadMIDIIn() const {
+        if constexpr (!peek) {
+            regsLog.trace("Read from MIDI IN is unimplemented");
+        }
         return 0;
     }
 
-    template <bool lowerByte, bool upperByte>
+    template <bool lowerByte, bool upperByte, bool poke>
     void WriteMIDIOut(uint16 value) {
-        if constexpr (lowerByte) {
+        if constexpr (lowerByte && !poke) {
             regsLog.trace("Write to MIDI OUT is unimplemented - {:02X}", value);
             // TODO: write bit::extract<0, 7>(value) to MIDI out buffer
         }
     }
 
     // --- Timer Register ---
+
+    template <bool lowerByte, bool upperByte, bool peek>
+    uint16 ReadTimer(uint32 index) const {
+        if constexpr (!peek) {
+            return 0;
+        }
+
+        uint16 value = 0;
+        if constexpr (lowerByte) {
+            bit::deposit_into<0, 7>(value, m_timers[index].ReadTIMx());
+        }
+        if constexpr (upperByte) {
+            bit::deposit_into<8, 10>(value, m_timers[index].ReadTxCTL());
+        }
+        return value;
+    }
 
     template <bool lowerByte, bool upperByte>
     void WriteTimer(uint32 index, uint16 value) {
@@ -593,28 +642,34 @@ private:
         return m_m68kEnabledInterrupts;
     }
 
-    template <bool lowerByte, bool upperByte>
+    template <bool lowerByte, bool upperByte, bool poke>
     void WriteSCIEB(uint16 value) {
         util::SplitWriteWord<lowerByte, upperByte, 0, 10>(m_m68kEnabledInterrupts, value);
-        UpdateM68KInterrupts();
+        if constexpr (!poke) {
+            UpdateM68KInterrupts();
+        }
     }
 
     uint16 ReadSCIPD() const {
         return m_m68kPendingInterrupts;
     }
 
-    template <bool lowerByte, bool upperByte>
+    template <bool lowerByte, bool upperByte, bool poke>
     void WriteSCIPD(uint16 value) {
         if constexpr (lowerByte) {
             bit::deposit_into<5>(m_m68kPendingInterrupts, bit::extract<5>(value));
-            UpdateM68KInterrupts();
+            if constexpr (!poke) {
+                UpdateM68KInterrupts();
+            }
         }
     }
 
-    template <bool lowerByte, bool upperByte>
+    template <bool lowerByte, bool upperByte, bool poke>
     void WriteSCIRE(uint16 value) {
         m_m68kPendingInterrupts &= ~value;
-        UpdateM68KInterrupts();
+        if constexpr (!poke) {
+            UpdateM68KInterrupts();
+        }
     }
 
     // ---
@@ -623,28 +678,34 @@ private:
         return m_scuEnabledInterrupts;
     }
 
-    template <bool lowerByte, bool upperByte>
+    template <bool lowerByte, bool upperByte, bool poke>
     void WriteMCIEB(uint16 value) {
         util::SplitWriteWord<lowerByte, upperByte, 0, 10>(m_scuEnabledInterrupts, value);
-        UpdateSCUInterrupts();
+        if constexpr (!poke) {
+            UpdateSCUInterrupts();
+        }
     }
 
     uint16 ReadMCIPD() const {
         return m_scuPendingInterrupts;
     }
 
-    template <bool lowerByte, bool upperByte>
+    template <bool lowerByte, bool upperByte, bool poke>
     void WriteMCIPD(uint16 value) {
         if constexpr (lowerByte) {
             bit::deposit_into<5>(m_scuPendingInterrupts, bit::extract<5>(value));
-            UpdateSCUInterrupts();
+            if constexpr (!poke) {
+                UpdateSCUInterrupts();
+            }
         }
     }
 
-    template <bool lowerByte, bool upperByte>
+    template <bool lowerByte, bool upperByte, bool poke>
     void WriteMCIRE(uint16 value) {
         m_scuPendingInterrupts &= ~value;
-        UpdateSCUInterrupts();
+        if constexpr (!poke) {
+            UpdateSCUInterrupts();
+        }
     }
 
     // ---
@@ -653,15 +714,33 @@ private:
         return m_m68kInterruptLevels[index];
     }
 
-    template <bool lowerByte, bool upperByte>
+    template <bool lowerByte, bool upperByte, bool poke>
     void WriteSCILV(uint32 index, uint16 value) {
         if constexpr (lowerByte) {
             m_m68kInterruptLevels[index] = bit::extract<0, 7>(value);
-            UpdateM68KInterrupts();
+            if constexpr (!poke) {
+                UpdateM68KInterrupts();
+            }
         }
     }
 
     // --- DMA Transfer Register ---
+
+    template <bool lowerByte, bool upperByte, bool peek>
+    uint16 ReadReg412() const {
+        if constexpr (!peek) {
+            return 0;
+        }
+
+        uint16 value = 0;
+        if constexpr (lowerByte) {
+            bit::deposit_into<1, 7>(value, bit::extract<1, 7>(m_dmaMemAddress));
+        }
+        if constexpr (upperByte) {
+            bit::deposit_into<8, 15>(value, bit::extract<8, 15>(m_dmaMemAddress));
+        }
+        return value;
+    }
 
     template <bool lowerByte, bool upperByte>
     void WriteReg412(uint16 value) {
@@ -671,6 +750,23 @@ private:
         if constexpr (upperByte) {
             bit::deposit_into<8, 15>(m_dmaMemAddress, bit::extract<8, 15>(value));
         }
+    }
+
+    template <bool lowerByte, bool upperByte, bool peek>
+    uint16 ReadReg414() const {
+        if constexpr (!peek) {
+            return 0;
+        }
+
+        uint16 value = 0;
+        if constexpr (lowerByte) {
+            bit::deposit_into<1, 7>(value, bit::extract<1, 7>(m_dmaRegAddress));
+        }
+        if constexpr (upperByte) {
+            bit::deposit_into<8, 11>(value, bit::extract<8, 11>(m_dmaRegAddress));
+            bit::deposit_into<12, 15>(value, bit::extract<16, 19>(m_dmaMemAddress));
+        }
+        return value;
     }
 
     template <bool lowerByte, bool upperByte>
@@ -684,10 +780,16 @@ private:
         }
     }
 
-    template <bool lowerByte, bool upperByte>
-    uint16 ReadDMAStatus() {
+    template <bool lowerByte, bool upperByte, bool peek>
+    uint16 ReadReg416() const {
         uint16 value = 0;
+        if constexpr (lowerByte && peek) {
+            bit::deposit_into<1, 7>(value, bit::extract<1, 7>(m_dmaXferLength));
+        }
         if constexpr (upperByte) {
+            if constexpr (peek) {
+                bit::deposit_into<8, 11>(value, bit::extract<8, 11>(m_dmaXferLength));
+            }
             bit::deposit_into<12>(value, m_dmaExec);
             bit::deposit_into<13>(value, m_dmaXferToMem);
             bit::deposit_into<14>(value, m_dmaGate);
@@ -695,7 +797,7 @@ private:
         return value;
     }
 
-    template <bool lowerByte, bool upperByte>
+    template <bool lowerByte, bool upperByte, bool poke>
     void WriteReg416(uint16 value) {
         if constexpr (lowerByte) {
             bit::deposit_into<1, 7>(m_dmaXferLength, bit::extract<1, 7>(value));
@@ -705,11 +807,27 @@ private:
             m_dmaExec |= bit::extract<12>(value);
             m_dmaXferToMem = bit::extract<13>(value);
             m_dmaGate = bit::extract<14>(value);
-            ExecuteDMA();
+            if constexpr (!poke) {
+                ExecuteDMA();
+            }
         }
     }
 
     // --- DSP Registers ---
+
+    template <bool lowerByte, bool upperByte, bool peek>
+    uint16 ReadReg402() const {
+        if constexpr (!peek) {
+            return 0;
+        }
+
+        uint16 value = 0;
+        if constexpr (lowerByte) {
+            bit::deposit_into<0, 6>(value, m_dsp.ringBufferLeadAddress);
+        }
+        util::SplitReadWord<lowerByte, upperByte, 7, 8>(value, m_dsp.ringBufferLength);
+        return value;
+    }
 
     template <bool lowerByte, bool upperByte>
     void WriteReg402(uint16 value) {

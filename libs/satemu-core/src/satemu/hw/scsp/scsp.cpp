@@ -144,23 +144,26 @@ void SCSP::MapMemory(sys::Bus &bus) {
     };
 
     auto peekReg8 = [](uint32 address, void *ctx) -> uint8 {
-        return static_cast<SCSP *>(ctx)->PeekReg<uint8>(address);
+        return static_cast<SCSP *>(ctx)->ReadReg<uint8, SCSPAccessType::Debug>(address);
     };
     auto peekReg16 = [](uint32 address, void *ctx) -> uint16 {
-        return static_cast<SCSP *>(ctx)->PeekReg<uint16>(address);
+        return static_cast<SCSP *>(ctx)->ReadReg<uint16, SCSPAccessType::Debug>(address);
     };
     auto peekReg32 = [](uint32 address, void *ctx) -> uint32 {
-        return static_cast<SCSP *>(ctx)->PeekReg<uint32>(address);
+        uint32 value = static_cast<SCSP *>(ctx)->ReadReg<uint16, SCSPAccessType::Debug>(address + 0) << 16u;
+        value |= static_cast<SCSP *>(ctx)->ReadReg<uint16, SCSPAccessType::Debug>(address + 2) << 0u;
+        return value;
     };
 
     auto pokeReg8 = [](uint32 address, uint8 value, void *ctx) {
-        static_cast<SCSP *>(ctx)->PokeReg<uint8>(address, value);
+        static_cast<SCSP *>(ctx)->WriteReg<uint8, SCSPAccessType::Debug>(address, value);
     };
     auto pokeReg16 = [](uint32 address, uint16 value, void *ctx) {
-        static_cast<SCSP *>(ctx)->PokeReg<uint16>(address, value);
+        static_cast<SCSP *>(ctx)->WriteReg<uint16, SCSPAccessType::Debug>(address, value);
     };
     auto pokeReg32 = [](uint32 address, uint32 value, void *ctx) {
-        static_cast<SCSP *>(ctx)->PokeReg<uint32>(address, value);
+        static_cast<SCSP *>(ctx)->WriteReg<uint16, SCSPAccessType::Debug>(address + 0, value >> 16u);
+        static_cast<SCSP *>(ctx)->WriteReg<uint16, SCSPAccessType::Debug>(address + 2, value >> 0u);
     };
 
     bus.MapMemory(0x5B0'0000, 0x5BF'FFFF,
@@ -253,17 +256,6 @@ void SCSP::OnSampleTickEvent(core::EventContext &eventContext, void *userContext
     auto &scsp = *static_cast<SCSP *>(userContext);
     scsp.Tick();
     eventContext.RescheduleFromNow(kCyclesPerSample);
-}
-
-template <mem_primitive T>
-T SCSP::PeekReg(uint32 address) {
-    // TODO: implement
-    return 0;
-}
-
-template <mem_primitive T>
-void SCSP::PokeReg(uint32 address, T value) {
-    // TODO: implement
 }
 
 void SCSP::HandleKYONEX() {
