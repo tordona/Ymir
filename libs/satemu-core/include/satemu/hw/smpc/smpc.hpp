@@ -94,11 +94,11 @@ private:
     // -------------------------------------------------------------------------
     // Memory accessors
 
+    template <bool peek>
     uint8 Read(uint32 address);
-    void Write(uint32 address, uint8 value);
 
-    uint8 Peek(uint32 address);
-    void Poke(uint32 address, uint8 value);
+    template <bool poke>
+    void Write(uint32 address, uint8 value);
 
     // -------------------------------------------------------------------------
     // Persistent data
@@ -175,49 +175,33 @@ private:
 
     uint8 m_busValue;
 
+    uint8 ReadIREG(uint8 offset) const; // debug only
+    uint8 ReadCOMREG() const;           // debug only
     uint8 ReadOREG(uint8 offset) const;
     uint8 ReadSR() const;
     uint8 ReadSF() const;
+    uint8 ReadPDR1() const;
+    uint8 ReadPDR2() const;
+    uint8 ReadDDR1() const; // debug only
+    uint8 ReadDDR2() const; // debug only
+    uint8 ReadIOSEL() const;
+    uint8 ReadEXLE() const;
 
     void WriteIREG(uint8 offset, uint8 value);
+    template <bool poke>
     void WriteCOMREG(uint8 value);
+    void WriteOREG(uint8 offset, uint8 value); // debug only
+    void WriteSR(uint8 value);                 // debug only
+    template <bool poke>
     void WriteSF(uint8 value);
+    template <bool poke>
+    void WritePDR1(uint8 value);
+    template <bool poke>
+    void WritePDR2(uint8 value);
+    void WriteDDR1(uint8 value);
+    void WriteDDR2(uint8 value);
     void WriteIOSEL(uint8 value);
     void WriteEXLE(uint8 value);
-
-    uint8 ReadPDR1() const;
-    void WritePDR1(uint8 value);
-    void WriteDDR1(uint8 value);
-
-    uint8 ReadPDR2() const;
-    void WritePDR2(uint8 value);
-    void WriteDDR2(uint8 value);
-
-    // Peek/Poke variants
-
-    uint8 PeekIREG(uint8 offset) const;
-    uint8 PeekCOMREG() const;
-    uint8 PeekOREG(uint8 offset) const;
-    uint8 PeekSR() const;
-    uint8 PeekSF() const;
-    uint8 PeekPDR1() const;
-    uint8 PeekDDR1() const;
-    uint8 PeekPDR2() const;
-    uint8 PeekDDR2() const;
-    uint8 PeekIOSEL() const;
-    uint8 PeekEXLE() const;
-
-    void PokeIREG(uint8 offset, uint8 value);
-    void PokeCOMREG(uint8 value);
-    void PokeOREG(uint8 offset, uint8 value);
-    void PokeSR(uint8 value);
-    void PokeSF(uint8 value);
-    void PokePDR1(uint8 value);
-    void PokeDDR1(uint8 value);
-    void PokePDR2(uint8 value);
-    void PokeDDR2(uint8 value);
-    void PokeIOSEL(uint8 value);
-    void PokeEXLE(uint8 value);
 
     // -------------------------------------------------------------------------
     // RTC
