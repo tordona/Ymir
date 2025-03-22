@@ -6,16 +6,17 @@ namespace satemu::debug {
 
 // Interface for SCU tracers.
 //
-// Must be implemented by users of the core library and instantiated with the `Use` method of the `SCUTracerContext`
-// instance in `satemu::scu::SCU`.
+// Must be implemented by users of the core library.
+//
+// Attach to an instance of `satemu::scu::SCU` with its `UseTracer(ISCUTracer *)` method.
 struct ISCUTracer {
     virtual ~ISCUTracer() = default;
 
     // Invoked when the SCU raises an interrupt.
-    virtual void RaiseInterrupt(uint8 index, uint8 level) = 0;
+    virtual void RaiseInterrupt(uint8 index, uint8 level) {}
 
     // Invoked when the SCU acknowledges an interrupt.
-    virtual void AcknowledgeInterrupt(uint8 index) = 0;
+    virtual void AcknowledgeInterrupt(uint8 index) {}
 };
 
 } // namespace satemu::debug
