@@ -114,13 +114,13 @@ private:
     template <mem_primitive T>
     T VDP1ReadVRAM(uint32 address);
 
-    template <mem_primitive T, bool poke>
+    template <mem_primitive T>
     void VDP1WriteVRAM(uint32 address, T value);
 
     template <mem_primitive T>
     T VDP1ReadFB(uint32 address);
 
-    template <mem_primitive T, bool poke>
+    template <mem_primitive T>
     void VDP1WriteFB(uint32 address, T value);
 
     uint16 VDP1ReadReg(uint32 address);
@@ -132,13 +132,13 @@ private:
     template <mem_primitive T>
     T VDP2ReadVRAM(uint32 address);
 
-    template <mem_primitive T, bool poke>
+    template <mem_primitive T>
     void VDP2WriteVRAM(uint32 address, T value);
 
     template <mem_primitive T>
     T VDP2ReadCRAM(uint32 address);
 
-    template <mem_primitive T, bool poke>
+    template <mem_primitive T>
     void VDP2WriteCRAM(uint32 address, T value);
 
     uint16 VDP2ReadReg(uint32 address);
@@ -388,6 +388,8 @@ private:
 
         template <mem_primitive T>
         static VDPRenderEvent VDP1VRAMWrite(uint32 address, T value) {
+            static_assert(!std::is_same_v<T, uint32>, "unsupported write size");
+
             if constexpr (std::is_same_v<T, uint8>) {
                 return VDP1VRAMWriteByte(address, value);
             } else if constexpr (std::is_same_v<T, uint16>) {
@@ -405,6 +407,8 @@ private:
 
         /*template <mem_primitive T>
         static VDPRenderEvent VDP1FBWrite(uint32 address, T value) {
+            static_assert(!std::is_same_v<T, uint32>, "unsupported write size");
+
             if constexpr (std::is_same_v<T, uint8>) {
                 return VDP1FBWriteByte(address, value);
             } else if constexpr (std::is_same_v<T, uint16>) {
@@ -426,6 +430,8 @@ private:
 
         template <mem_primitive T>
         static VDPRenderEvent VDP2VRAMWrite(uint32 address, T value) {
+            static_assert(!std::is_same_v<T, uint32>, "unsupported write size");
+
             if constexpr (std::is_same_v<T, uint8>) {
                 return VDP2VRAMWriteByte(address, value);
             } else if constexpr (std::is_same_v<T, uint16>) {
@@ -443,6 +449,8 @@ private:
 
         template <mem_primitive T>
         static VDPRenderEvent VDP2CRAMWrite(uint32 address, T value) {
+            static_assert(!std::is_same_v<T, uint32>, "unsupported write size");
+
             if constexpr (std::is_same_v<T, uint8>) {
                 return VDP2CRAMWriteByte(address, value);
             } else if constexpr (std::is_same_v<T, uint16>) {
