@@ -285,15 +285,13 @@ T SH2::MemRead(uint32 address) {
             return m_bus.Read<T>(address & 0x7FFFFFF);
         }
     case 0b010: // associative purge
-        if constexpr (std::is_same_v<T, uint32>) {
+        if constexpr (!peek && std::is_same_v<T, uint32>) {
             const uint32 index = bit::extract<4, 9>(address);
             const uint32 tagAddress = bit::extract<10, 28>(address);
             for (auto &tag : m_cacheEntries[index].tag) {
                 tag.valid &= tag.tagAddress != tagAddress;
             }
-            if constexpr (!peek) {
-                m_log.trace("{}-bit SH-2 associative purge read from {:08X}", sizeof(T) * 8, address);
-            }
+            m_log.trace("{}-bit SH-2 associative purge read from {:08X}", sizeof(T) * 8, address);
         }
         return (address & 1) ? static_cast<T>(0x12231223) : static_cast<T>(0x23122312);
     case 0b011: // cache address array
