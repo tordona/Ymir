@@ -126,22 +126,22 @@ struct RegICR {
 
 // Interrupt sources, sorted by default priority from lowest to highest
 enum class InterruptSource : uint8 {
-    None,          // #   Source        Priority       Vector
-    FRT_OVI,       // 1   FRT OVI       IPRB.FRTIPn    VCRD.FOVVn
-    FRT_OCI,       // 2   FRT OCI       IPRB.FRTIPn    VCRC.FOCVn
-    FRT_ICI,       // 3   FRT ICI       IPRB.FRTIPn    VCRC.FICVn
-    SCI_TEI,       // 4   SCI TEI       IPRB.SCIIPn    VCRB.STEVn
-    SCI_TXI,       // 5   SCI TXI       IPRB.SCIIPn    VCRB.STXVn
-    SCI_RXI,       // 6   SCI RXI       IPRB.SCIIPn    VCRA.SRXVn
-    SCI_ERI,       // 7   SCI ERI       IPRB.SCIIPn    VCRA.SERVn
-    BSC_REF_CMI,   // 8   BSC REF CMI   IPRA.WDTIPn    VCRWDT
-    WDT_ITI,       // 9   WDT ITI       IPRA.WDTIPn    VCRWDT
-    DMAC1_XferEnd, // 10  DMAC1 end     IPRA.DMACIPn   VCRDMA1
-    DMAC0_XferEnd, // 11  DMAC2 end     IPRA.DMACIPn   VCRDMA0
-    DIVU_OVFI,     // 12  DIVU OVFI     IPRA.DIVUIPn   VCRDIV
-    IRL,           // 13  IRL#          15-1           0x40 + (level >> 1)
-    UserBreak,     // 14  UBC break     15             0x0C
-    NMI            // 15  NMI           16             0x0B
+    None,          // #   Source        Priority       Vector                Trigger
+    FRT_OVI,       // 1   FRT OVI       IPRB.FRTIPn    VCRD.FOVVn            FRT.FTCSR.OVF && FRT.TIER.OVIE
+    FRT_OCI,       // 2   FRT OCI       IPRB.FRTIPn    VCRC.FOCVn            FRT.FTCSR.OCF[AB] && FRT.TIER.OCI[AB]E
+    FRT_ICI,       // 3   FRT ICI       IPRB.FRTIPn    VCRC.FICVn            FRT.FTCSR.ICF && FRT.TIER.ICIE
+    SCI_TEI,       // 4   SCI TEI       IPRB.SCIIPn    VCRB.STEVn            (TODO)
+    SCI_TXI,       // 5   SCI TXI       IPRB.SCIIPn    VCRB.STXVn            (TODO)
+    SCI_RXI,       // 6   SCI RXI       IPRB.SCIIPn    VCRA.SRXVn            (TODO)
+    SCI_ERI,       // 7   SCI ERI       IPRB.SCIIPn    VCRA.SERVn            (TODO)
+    BSC_REF_CMI,   // 8   BSC REF CMI   IPRA.WDTIPn    VCRWDT.BCMVn          (TODO)
+    WDT_ITI,       // 9   WDT ITI       IPRA.WDTIPn    VCRWDT.WITVn          WDT.WTCSR.OVF && !WDT.WTCSR.WT_nIT
+    DMAC1_XferEnd, // 10  DMAC1 end     IPRA.DMACIPn   VCRDMA1               DMAC1.TE && DMAC1.IE
+    DMAC0_XferEnd, // 11  DMAC0 end     IPRA.DMACIPn   VCRDMA0               DMAC0.TE && DMAC0.IE
+    DIVU_OVFI,     // 12  DIVU OVFI     IPRA.DIVUIPn   VCRDIV                DIVU.DVCR.OVF && DIVU.DVCR.OVFIE
+    IRL,           // 13  IRL#          15-1           0x40 + (level >> 1)   IRL#.level > 0
+    UserBreak,     // 14  UBC break     15             0x0C                  (TODO)
+    NMI            // 15  NMI           16             0x0B                  INTC.NMIL
 };
 
 struct InterruptController {
