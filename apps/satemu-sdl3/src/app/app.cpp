@@ -828,7 +828,6 @@ void App::RunEmulator() {
             if (pressed) {
                 debugTrace = !debugTrace;
                 m_emuEventQueue.enqueue(EmuEvent::SetDebugTrace(debugTrace));
-                fmt::println("Advanced debug tracing {}", (debugTrace ? "enabled" : "disabled"));
             }
             break;
         default: break;
@@ -986,7 +985,9 @@ void App::RunEmulator() {
                 ImGui::End();
             }
             if (ImGui::BeginMenu("Debug")) {
-                ImGui::MenuItem("Enable tracing", "F11", &debugTrace);
+                if (ImGui::MenuItem("Enable tracing", "F11", &debugTrace)) {
+                    m_emuEventQueue.enqueue(EmuEvent::SetDebugTrace(debugTrace));
+                }
                 ImGui::Separator();
                 ImGui::MenuItem("Memory viewer", nullptr, &m_memoryViewer.Open);
                 if (ImGui::MenuItem("Dump all memory", "F3")) {
@@ -1136,6 +1137,7 @@ void App::EmulatorThread() {
                 } else {
                     m_context.saturn.DetachAllTracers();
                 }
+                fmt::println("Advanced debug tracing {}", (debugTrace ? "enabled" : "disabled"));
                 break;
             case MemoryDump: //
             {
