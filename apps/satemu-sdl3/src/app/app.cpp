@@ -994,8 +994,8 @@ void App::RunEmulator() {
                     m_emuEventQueue.enqueue(EmuEvent::MemoryDump());
                 }
                 ImGui::Separator();
-                ImGui::MenuItem("Master SH2", nullptr, &m_masterSH2Debugger.Open);
-                ImGui::MenuItem("Slave SH2", nullptr, &m_slaveSH2Debugger.Open);
+                ImGui::MenuItem("Master SH2 debugger", nullptr, &m_masterSH2Debugger.Open);
+                ImGui::MenuItem("Slave SH2 debugger", nullptr, &m_slaveSH2Debugger.Open);
                 ImGui::MenuItem("SCU", nullptr, &m_scuDebugger.Open);
                 ImGui::Separator();
                 ImGui::MenuItem("Video output", "F9", &showVideoOutputDebugWindow);

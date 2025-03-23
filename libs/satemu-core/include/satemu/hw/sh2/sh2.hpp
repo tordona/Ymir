@@ -82,26 +82,62 @@ public:
     public:
         Probe(SH2 &sh2);
 
-        std::array<uint32, 16> &GPRs();
-        const std::array<uint32, 16> &GPRs() const;
+        // ---------------------------------------------------------------------
+        // Registers
 
-        uint32 &PC();
-        uint32 PC() const;
+        FORCE_INLINE uint32 &R(uint8 rn) {
+            assert(rn <= 15);
+            return m_sh2.R[rn];
+        }
+        FORCE_INLINE const uint32 &R(uint8 rn) const {
+            assert(rn <= 15);
+            return m_sh2.R[rn];
+        }
 
-        uint32 &PR();
-        uint32 PR() const;
+        FORCE_INLINE uint32 &PC() {
+            return m_sh2.PC;
+        }
+        FORCE_INLINE uint32 PC() const {
+            return m_sh2.PC;
+        }
 
-        RegMAC &MAC();
-        RegMAC MAC() const;
+        FORCE_INLINE uint32 &PR() {
+            return m_sh2.PR;
+        }
+        FORCE_INLINE uint32 PR() const {
+            return m_sh2.PR;
+        }
 
-        RegSR &SR();
-        RegSR SR() const;
+        FORCE_INLINE RegMAC &MAC() {
+            return m_sh2.MAC;
+        }
+        FORCE_INLINE RegMAC MAC() const {
+            return m_sh2.MAC;
+        }
 
-        uint32 &GBR();
-        uint32 GBR() const;
+        FORCE_INLINE RegSR &SR() {
+            return m_sh2.SR;
+        }
+        FORCE_INLINE RegSR SR() const {
+            return m_sh2.SR;
+        }
 
-        uint32 &VBR();
-        uint32 VBR() const;
+        FORCE_INLINE uint32 &GBR() {
+            return m_sh2.GBR;
+        }
+        FORCE_INLINE uint32 GBR() const {
+            return m_sh2.GBR;
+        }
+
+        FORCE_INLINE uint32 &VBR() {
+            return m_sh2.VBR;
+        }
+        FORCE_INLINE uint32 VBR() const {
+            return m_sh2.VBR;
+        }
+
+        // ---------------------------------------------------------------------
+        // Regular memory accessors (with side-effects)
 
         uint16 FetchInstruction(uint32 address) const;
 
@@ -113,6 +149,9 @@ public:
         void MemWriteWord(uint32 address, uint16 value);
         void MemWriteLong(uint32 address, uint32 value);
 
+        // ---------------------------------------------------------------------
+        // Debug memory accessors (without side-effects)
+
         uint16 PeekInstruction(uint32 address) const;
 
         uint8 MemPeekByte(uint32 address) const;
@@ -122,6 +161,119 @@ public:
         void MemPokeByte(uint32 address, uint8 value);
         void MemPokeWord(uint32 address, uint16 value);
         void MemPokeLong(uint32 address, uint32 value);
+
+        // ---------------------------------------------------------------------
+        // Interrupts
+
+        // Raise an interrupt, also setting the corresponding signals.
+        FORCE_INLINE void RaiseInterrupt(InterruptSource source) {
+            // Set the corresponding signals
+            switch (source) {
+            case InterruptSource::None: break;
+            case InterruptSource::FRT_OVI:
+                m_sh2.FRT.FTCSR.OVF = 1;
+                m_sh2.FRT.TIER.OVIE = 1;
+                break;
+            case InterruptSource::FRT_OCI:
+                m_sh2.FRT.FTCSR.OCFA = 1;
+                m_sh2.FRT.TIER.OCIAE = 1;
+                break;
+            case InterruptSource::FRT_ICI:
+                m_sh2.FRT.FTCSR.ICF = 1;
+                m_sh2.FRT.TIER.ICIE = 1;
+                break;
+            case InterruptSource::SCI_TEI: /*TODO*/ break;
+            case InterruptSource::SCI_TXI: /*TODO*/ break;
+            case InterruptSource::SCI_RXI: /*TODO*/ break;
+            case InterruptSource::SCI_ERI: /*TODO*/ break;
+            case InterruptSource::BSC_REF_CMI: /*TODO*/ break;
+            case InterruptSource::WDT_ITI:
+                m_sh2.WDT.WTCSR.OVF = 1;
+                m_sh2.WDT.WTCSR.WT_nIT = 0;
+                break;
+            case InterruptSource::DMAC1_XferEnd:
+                m_sh2.m_dmaChannels[1].xferEnded = true;
+                m_sh2.m_dmaChannels[1].irqEnable = true;
+                break;
+            case InterruptSource::DMAC0_XferEnd:
+                m_sh2.m_dmaChannels[0].xferEnded = true;
+                m_sh2.m_dmaChannels[0].irqEnable = true;
+                break;
+            case InterruptSource::DIVU_OVFI:
+                m_sh2.DIVU.DVCR.OVF = 1;
+                m_sh2.DIVU.DVCR.OVFIE = 1;
+                break;
+            case InterruptSource::IRL: /*no signals to be raised*/ break;
+            case InterruptSource::UserBreak: /*TODO*/ break;
+            case InterruptSource::NMI: m_sh2.INTC.NMI = 1; break;
+            }
+
+            m_sh2.RaiseInterrupt(source);
+        }
+
+        // Lower an interrupt, also clearing the corresponding signals.
+        FORCE_INLINE void LowerInterrupt(InterruptSource source) {
+            // Clear the corresponding signals
+            switch (source) {
+            case InterruptSource::None: break;
+            case InterruptSource::FRT_OVI: m_sh2.FRT.FTCSR.OVF = 0; break;
+            case InterruptSource::FRT_OCI: m_sh2.FRT.FTCSR.OCFA = 0; break;
+            case InterruptSource::FRT_ICI: m_sh2.FRT.FTCSR.ICF = 0; break;
+            case InterruptSource::SCI_TEI: /*TODO*/ break;
+            case InterruptSource::SCI_TXI: /*TODO*/ break;
+            case InterruptSource::SCI_RXI: /*TODO*/ break;
+            case InterruptSource::SCI_ERI: /*TODO*/ break;
+            case InterruptSource::BSC_REF_CMI: /*TODO*/ break;
+            case InterruptSource::WDT_ITI: m_sh2.WDT.WTCSR.OVF = 0; break;
+            case InterruptSource::DMAC1_XferEnd: m_sh2.m_dmaChannels[1].xferEnded = false; break;
+            case InterruptSource::DMAC0_XferEnd: m_sh2.m_dmaChannels[0].xferEnded = false; break;
+            case InterruptSource::DIVU_OVFI: m_sh2.DIVU.DVCR.OVF = 0; break;
+            case InterruptSource::IRL: /*no signals to be raised*/ break;
+            case InterruptSource::UserBreak: /*TODO*/ break;
+            case InterruptSource::NMI: m_sh2.INTC.NMI = 0; break;
+            }
+
+            m_sh2.LowerInterrupt(source);
+        }
+
+        // Determines if the given interrupt source signal is raised.
+        FORCE_INLINE bool IsInterruptRaised(InterruptSource source) const {
+            switch (source) {
+            case InterruptSource::None: return false;
+            case InterruptSource::FRT_OVI: return m_sh2.FRT.FTCSR.OVF && m_sh2.FRT.TIER.OVIE;
+            case InterruptSource::FRT_OCI:
+                return (m_sh2.FRT.FTCSR.OCFA && m_sh2.FRT.TIER.OCIAE) || (m_sh2.FRT.FTCSR.OCFB && m_sh2.FRT.TIER.OCIBE);
+            case InterruptSource::FRT_ICI: return m_sh2.FRT.FTCSR.ICF && m_sh2.FRT.TIER.ICIE;
+            case InterruptSource::SCI_TEI: return false;     // TODO
+            case InterruptSource::SCI_TXI: return false;     // TODO
+            case InterruptSource::SCI_RXI: return false;     // TODO
+            case InterruptSource::SCI_ERI: return false;     // TODO
+            case InterruptSource::BSC_REF_CMI: return false; // TODO
+            case InterruptSource::WDT_ITI: return m_sh2.WDT.WTCSR.OVF && !m_sh2.WDT.WTCSR.WT_nIT;
+            case InterruptSource::DMAC1_XferEnd:
+                return m_sh2.m_dmaChannels[1].xferEnded && m_sh2.m_dmaChannels[1].irqEnable;
+            case InterruptSource::DMAC0_XferEnd:
+                return m_sh2.m_dmaChannels[0].xferEnded && m_sh2.m_dmaChannels[0].irqEnable;
+            case InterruptSource::DIVU_OVFI: return m_sh2.DIVU.DVCR.OVF && m_sh2.DIVU.DVCR.OVFIE;
+            case InterruptSource::IRL: return m_sh2.INTC.GetLevel(InterruptSource::IRL) > 0;
+            case InterruptSource::UserBreak: return false; // TODO
+            case InterruptSource::NMI: return m_sh2.INTC.NMI;
+            }
+        }
+
+        // Check if the CPU should service an interrupt.
+        // Takes into account the current SR.ILevel.
+        FORCE_INLINE bool CheckInterrupts() const {
+            return m_sh2.CheckInterrupts();
+        }
+
+        FORCE_INLINE InterruptController &INTC() {
+            return m_sh2.INTC;
+        }
+
+        FORCE_INLINE const InterruptController &INTC() const {
+            return m_sh2.INTC;
+        }
 
     private:
         SH2 &m_sh2;
@@ -136,8 +288,6 @@ public:
     }
 
 private:
-    friend struct PrivateAccess;
-
     // -------------------------------------------------------------------------
     // CPU state
 

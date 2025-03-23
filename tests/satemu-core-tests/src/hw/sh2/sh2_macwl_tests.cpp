@@ -3,8 +3,6 @@
 
 #include <satemu/hw/sh2/sh2.hpp>
 
-#include "sh2_private_access.hpp"
-
 #include <fmt/format.h>
 
 #include <map>
@@ -32,6 +30,7 @@ using namespace satemu;
 struct TestSubject {
     mutable sys::Bus bus{};
     mutable sh2::SH2 sh2{bus, true};
+    sh2::SH2::Probe &probe{sh2.GetProbe()};
 
     TestSubject() {
         bus.MapMemory(0x000'0000, 0x7FF'FFFF,
@@ -157,9 +156,9 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 MACW/MACL operations are computed
     constexpr uint16 instrMACW = 0x421F; // mac.w @r1+, @r2+
     constexpr uint16 instrNOP = 0x0009;
 
-    sh2::PrivateAccess::R(sh2)[1] = 0x1000;
-    sh2::PrivateAccess::R(sh2)[2] = 0x1100;
-    sh2::PrivateAccess::PC(sh2) = 0x4000;
+    probe.R(1) = 0x1000;
+    probe.R(2) = 0x1100;
+    probe.PC() = 0x4000;
 
     MockMemoryRead32(0x1000, testData.rm);
     MockMemoryRead16(0x1004, testData.rm);
@@ -172,16 +171,16 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 MACW/MACL operations are computed
     MockMemoryRead16(0x4004, instrNOP);
 
     // Run MAC.L
-    sh2::PrivateAccess::MAC(sh2).u64 = testData.macIn;
-    sh2::PrivateAccess::SR(sh2).S = testData.s;
+    probe.MAC().u64 = testData.macIn;
+    probe.SR().S = testData.s;
     sh2.Step<false>();
 
     // Check results:
     // - increment both R1 and R2 by 4
-    CHECK(sh2::PrivateAccess::R(sh2)[1] == 0x1004);
-    CHECK(sh2::PrivateAccess::R(sh2)[2] == 0x1104);
+    CHECK(probe.R(1) == 0x1004);
+    CHECK(probe.R(2) == 0x1104);
     // - store result in MAC
-    CHECK(sh2::PrivateAccess::MAC(sh2).u64 == testData.macl);
+    CHECK(probe.MAC().u64 == testData.macl);
     // - memory accesses:
     //   [0] read MAC.L instruction
     //   [1] read from @R1
@@ -194,16 +193,16 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 MACW/MACL operations are computed
     ClearCaptures();
 
     // Run MAC.W
-    sh2::PrivateAccess::MAC(sh2).u64 = testData.macIn;
-    sh2::PrivateAccess::SR(sh2).S = testData.s;
+    probe.MAC().u64 = testData.macIn;
+    probe.SR().S = testData.s;
     sh2.Step<false>();
 
     // Check results:
     // - increment both R1 and R2 by 2
-    CHECK(sh2::PrivateAccess::R(sh2)[1] == 0x1006);
-    CHECK(sh2::PrivateAccess::R(sh2)[2] == 0x1106);
+    CHECK(probe.R(1) == 0x1006);
+    CHECK(probe.R(2) == 0x1106);
     // - store result in MAC
-    CHECK(sh2::PrivateAccess::MAC(sh2).u64 == testData.macw);
+    CHECK(probe.MAC().u64 == testData.macw);
     // - memory accesses:
     //   [0] read MAC.W instruction
     //   [1] read from @R1

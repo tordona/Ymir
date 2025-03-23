@@ -2,8 +2,6 @@
 
 #include <satemu/hw/sh2/sh2.hpp>
 
-#include "sh2_private_access.hpp"
-
 #include <fmt/format.h>
 
 #include <map>
@@ -19,7 +17,7 @@ namespace sh2_intr {
 struct TestSubject : debug::ISH2Tracer {
     mutable sys::Bus bus{};
     mutable sh2::SH2 sh2{bus, true};
-    const sh2::SH2::Probe &probe{sh2.GetProbe()};
+    sh2::SH2::Probe &probe{sh2.GetProbe()};
 
     TestSubject() {
         // Setup tracer to collect interrupts into a vector
@@ -228,15 +226,15 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     MockMemoryRead32(startVBR1 + intrVec * sizeof(uint32), intrPC1);
     MockMemoryRead32(startVBR2 + intrVec * sizeof(uint32), intrPC2);
 
-    sh2::PrivateAccess::PC(sh2) = startPC;    // point PC somewhere
-    sh2::PrivateAccess::R(sh2)[15] = startSP; // point stack pointer elsewhere
-    sh2::PrivateAccess::VBR(sh2) = startVBR1; // point VBR to the first table
-    sh2::PrivateAccess::SR(sh2).u32 = startSR;
-    sh2::PrivateAccess::INTC(sh2).ICR.VECMD = 1; // use external interrupt vector
-    sh2::PrivateAccess::INTC(sh2).SetVector(sh2::InterruptSource::IRL, intrVec);
-    sh2::PrivateAccess::INTC(sh2).SetLevel(sh2::InterruptSource::IRL, intrLevel);
-    sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::IRL);
-    REQUIRE(sh2::PrivateAccess::CheckInterrupts(sh2));
+    probe.PC() = startPC;    // point PC somewhere
+    probe.R(15) = startSP;   // point stack pointer elsewhere
+    probe.VBR() = startVBR1; // point VBR to the first table
+    probe.SR().u32 = startSR;
+    probe.INTC().ICR.VECMD = 1; // use external interrupt vector
+    probe.INTC().SetVector(sh2::InterruptSource::IRL, intrVec);
+    probe.INTC().SetLevel(sh2::InterruptSource::IRL, intrLevel);
+    probe.RaiseInterrupt(sh2::InterruptSource::IRL);
+    REQUIRE(probe.CheckInterrupts());
 
     // Jump to interrupt handler
     sh2.Step<true>();
@@ -253,7 +251,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // - PC at the interrupt vector
     CHECK(probe.PC() == intrPC1);
     // - PC and SR pushed to the stack
-    CHECK(probe.GPRs()[15] == startSP - 8); // should write PC and SR
+    CHECK(probe.R(15) == startSP - 8); // should write PC and SR
     // - SR.I3-0 set to the interrupt level
     CHECK(probe.SR().ILevel == intrLevel);
     // - memory accesses:
@@ -278,7 +276,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // - PC at the interrupt vector + 2
     CHECK(probe.PC() == intrPC1 + 2);
     // - no change to the stack
-    CHECK(probe.GPRs()[15] == startSP - 8);
+    CHECK(probe.R(15) == startSP - 8);
     // - no change to SR.I3-0
     CHECK(probe.SR().ILevel == intrLevel);
     // - memory accesses:
@@ -299,7 +297,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // - PC at the NOP instruction in the delay slot of the RTE
     CHECK(probe.PC() == intrPC1 + 4);
     // - PC and SR popped from the stack
-    CHECK(probe.GPRs()[15] == startSP);
+    CHECK(probe.R(15) == startSP);
     // - SR.I3-0 set to the previous value
     CHECK(probe.SR().u32 == startSR);
     // - memory accesses:
@@ -324,7 +322,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // - PC back to the starting point
     CHECK(probe.PC() == startPC);
     // - no stack operations
-    CHECK(probe.GPRs()[15] == startSP);
+    CHECK(probe.R(15) == startSP);
     // - no changes to SR
     CHECK(probe.SR().u32 == startSR);
     // - memory accesses:
@@ -336,9 +334,9 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
 
     // -----
 
-    sh2::PrivateAccess::VBR(sh2) = startVBR2; // point VBR to the second table
-    sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::IRL);
-    REQUIRE(sh2::PrivateAccess::CheckInterrupts(sh2));
+    probe.VBR() = startVBR2; // point VBR to the second table
+    probe.RaiseInterrupt(sh2::InterruptSource::IRL);
+    REQUIRE(probe.CheckInterrupts());
 
     // Jump to interrupt handler
     sh2.Step<true>();
@@ -355,7 +353,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // - PC at the interrupt vector
     CHECK(probe.PC() == intrPC2);
     // - PC and SR pushed to the stack
-    CHECK(probe.GPRs()[15] == startSP - 8); // should write PC and SR
+    CHECK(probe.R(15) == startSP - 8); // should write PC and SR
     // - SR.I3-0 set to the interrupt level
     CHECK(probe.SR().ILevel == intrLevel);
     // - memory accesses:
@@ -380,7 +378,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // - PC at the interrupt vector + 2
     CHECK(probe.PC() == intrPC2 + 2);
     // - no change to the stack
-    CHECK(probe.GPRs()[15] == startSP - 8);
+    CHECK(probe.R(15) == startSP - 8);
     // - no change to SR.I3-0
     CHECK(probe.SR().ILevel == intrLevel);
     // - memory accesses:
@@ -401,7 +399,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // - PC at the NOP instruction in the delay slot of the RTE
     CHECK(probe.PC() == intrPC2 + 4);
     // - PC and SR popped from the stack
-    CHECK(probe.GPRs()[15] == startSP);
+    CHECK(probe.R(15) == startSP);
     // - SR.I3-0 set to the previous value
     CHECK(probe.SR().u32 == startSR);
     // - memory accesses:
@@ -426,7 +424,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // - PC back to the starting point
     CHECK(probe.PC() == startPC);
     // - no stack operations
-    CHECK(probe.GPRs()[15] == startSP);
+    CHECK(probe.R(15) == startSP);
     // - no changes to SR
     CHECK(probe.SR().u32 == startSR);
     // - memory accesses:
@@ -452,10 +450,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
     constexpr uint8 irlExIntrVec = 0x60;
     constexpr uint8 irlExIntrLevel = 6;
 
-    sh2::PrivateAccess::PC(sh2) = startPC;
-    sh2::PrivateAccess::R(sh2)[15] = startSP;
-    sh2::PrivateAccess::SR(sh2).u32 = startSR;
-    sh2::PrivateAccess::VBR(sh2) = startVBR;
+    probe.PC() = startPC;
+    probe.R(15) = startSP;
+    probe.SR().u32 = startSR;
+    probe.VBR() = startVBR;
 
     // Set up different vectors and levels for every interrupt source (although this is impossible on real hardware)
     // IRLs have fixed levels and need special testing for autovector and external vector
@@ -464,7 +462,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
     static constexpr sh2::InterruptSource kSources[] = {FRT_OVI, FRT_OCI,       FRT_ICI,       SCI_TEI,
                                                         SCI_TXI, SCI_RXI,       SCI_ERI,       BSC_REF_CMI,
                                                         WDT_ITI, DMAC1_XferEnd, DMAC0_XferEnd, DIVU_OVFI};
-    auto &intc = sh2::PrivateAccess::INTC(sh2);
+    auto &intc = probe.INTC();
     for (auto source : kSources) {
         const uint8 i = static_cast<uint8>(source);
         const uint8 vecNum = 0x70 + i;
@@ -498,8 +496,8 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
     MockMemoryRead16(nmiIntrPC + 2, instrNOP);
 
     auto testIntr = [&](sh2::InterruptSource source, uint8 vecNum, uint8 level, uint32 intrHandlerAddr) {
-        sh2::PrivateAccess::RaiseInterrupt(sh2, source);
-        REQUIRE(sh2::PrivateAccess::CheckInterrupts(sh2));
+        probe.RaiseInterrupt(source);
+        REQUIRE(probe.CheckInterrupts());
 
         // Enter interrupt handler
         sh2.Step<true>();
@@ -622,14 +620,14 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
     }
 
     SECTION("IRL autovector interrupt") {
-        sh2::PrivateAccess::INTC(sh2).ICR.VECMD = 0; // use autovector
+        probe.INTC().ICR.VECMD = 0; // use autovector
         testIntr(IRL, 0x40, 1, irlIntrPC);
     }
 
     SECTION("IRL external vector interrupt") {
-        sh2::PrivateAccess::INTC(sh2).ICR.VECMD = 1; // use external interrupt vector
-        sh2::PrivateAccess::INTC(sh2).SetVector(sh2::InterruptSource::IRL, irlExIntrVec);
-        sh2::PrivateAccess::INTC(sh2).SetLevel(sh2::InterruptSource::IRL, irlExIntrLevel);
+        probe.INTC().ICR.VECMD = 1; // use external interrupt vector
+        probe.INTC().SetVector(sh2::InterruptSource::IRL, irlExIntrVec);
+        probe.INTC().SetLevel(sh2::InterruptSource::IRL, irlExIntrLevel);
         testIntr(IRL, irlExIntrVec, irlExIntrLevel, irlExIntrPC);
     }
 }
@@ -639,7 +637,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are prioritized correc
     ClearAll();
 
     SECTION("Basic priority handling - low priority before high priority") {
-        auto &intc = sh2::PrivateAccess::INTC(sh2);
+        auto &intc = probe.INTC();
 
         // Set up interrupts such that WDT ITI has higher priority than DIVU OVFI
         intc.SetVector(sh2::InterruptSource::DIVU_OVFI, 0x60);
@@ -647,17 +645,17 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are prioritized correc
         intc.SetVector(sh2::InterruptSource::WDT_ITI, 0x70);
         intc.SetLevel(sh2::InterruptSource::WDT_ITI, 7);
 
-        sh2::PrivateAccess::SR(sh2).ILevel = 0;
-        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::DIVU_OVFI);
-        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
+        probe.SR().ILevel = 0;
+        probe.RaiseInterrupt(sh2::InterruptSource::DIVU_OVFI);
+        probe.RaiseInterrupt(sh2::InterruptSource::WDT_ITI);
 
-        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2));
+        CHECK(probe.CheckInterrupts());
         CHECK(intc.pending.source == sh2::InterruptSource::WDT_ITI);
         CHECK(intc.pending.level == 7);
     }
 
     SECTION("Basic priority handling - high priority before low priority") {
-        auto &intc = sh2::PrivateAccess::INTC(sh2);
+        auto &intc = probe.INTC();
 
         // Set up interrupts such that WDT ITI has higher priority than DIVU OVFI
         intc.SetVector(sh2::InterruptSource::DIVU_OVFI, 0x60);
@@ -665,17 +663,17 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are prioritized correc
         intc.SetVector(sh2::InterruptSource::WDT_ITI, 0x70);
         intc.SetLevel(sh2::InterruptSource::WDT_ITI, 7);
 
-        sh2::PrivateAccess::SR(sh2).ILevel = 0;
-        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
-        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::DIVU_OVFI);
+        probe.SR().ILevel = 0;
+        probe.RaiseInterrupt(sh2::InterruptSource::WDT_ITI);
+        probe.RaiseInterrupt(sh2::InterruptSource::DIVU_OVFI);
 
-        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2));
+        CHECK(probe.CheckInterrupts());
         CHECK(intc.pending.source == sh2::InterruptSource::WDT_ITI);
         CHECK(intc.pending.level == 7);
     }
 
     SECTION("Basic priority handling - raise high priority before low priority, then lower high priority") {
-        auto &intc = sh2::PrivateAccess::INTC(sh2);
+        auto &intc = probe.INTC();
 
         // Set up interrupts such that WDT ITI has higher priority than DIVU OVFI
         intc.SetVector(sh2::InterruptSource::DIVU_OVFI, 0x60);
@@ -685,18 +683,18 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are prioritized correc
 
         // We need to force the actual OVFI flag to be set here
 
-        sh2::PrivateAccess::SR(sh2).ILevel = 0;
-        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
-        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::DIVU_OVFI);
-        sh2::PrivateAccess::LowerInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
+        probe.SR().ILevel = 0;
+        probe.RaiseInterrupt(sh2::InterruptSource::WDT_ITI);
+        probe.RaiseInterrupt(sh2::InterruptSource::DIVU_OVFI);
+        probe.LowerInterrupt(sh2::InterruptSource::WDT_ITI);
 
-        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2));
+        CHECK(probe.CheckInterrupts());
         CHECK(intc.pending.source == sh2::InterruptSource::DIVU_OVFI);
         CHECK(intc.pending.level == 6);
     }
 
     SECTION("Tiebreaker - low priority before high priority") {
-        auto &intc = sh2::PrivateAccess::INTC(sh2);
+        auto &intc = probe.INTC();
 
         // Set up interrupts such that WDT ITI has the same priority as DIVU OVFI.
         intc.SetVector(sh2::InterruptSource::DIVU_OVFI, 0x60);
@@ -704,18 +702,18 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are prioritized correc
         intc.SetVector(sh2::InterruptSource::WDT_ITI, 0x61);
         intc.SetLevel(sh2::InterruptSource::WDT_ITI, 6);
 
-        sh2::PrivateAccess::SR(sh2).ILevel = 0;
-        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
-        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::DIVU_OVFI);
+        probe.SR().ILevel = 0;
+        probe.RaiseInterrupt(sh2::InterruptSource::WDT_ITI);
+        probe.RaiseInterrupt(sh2::InterruptSource::DIVU_OVFI);
 
         // DIVU OVFI should be prioritized
-        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2));
+        CHECK(probe.CheckInterrupts());
         CHECK(intc.pending.source == sh2::InterruptSource::DIVU_OVFI);
         CHECK(intc.pending.level == 6);
     }
 
     SECTION("Tiebreaker - high priority before low priority") {
-        auto &intc = sh2::PrivateAccess::INTC(sh2);
+        auto &intc = probe.INTC();
 
         // Set up interrupts such that WDT ITI has the same priority as DIVU OVFI.
         intc.SetVector(sh2::InterruptSource::DIVU_OVFI, 0x60);
@@ -723,12 +721,12 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are prioritized correc
         intc.SetVector(sh2::InterruptSource::WDT_ITI, 0x61);
         intc.SetLevel(sh2::InterruptSource::WDT_ITI, 6);
 
-        sh2::PrivateAccess::SR(sh2).ILevel = 0;
-        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::DIVU_OVFI);
-        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
+        probe.SR().ILevel = 0;
+        probe.RaiseInterrupt(sh2::InterruptSource::DIVU_OVFI);
+        probe.RaiseInterrupt(sh2::InterruptSource::WDT_ITI);
 
         // DIVU OVFI should be prioritized
-        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2));
+        CHECK(probe.CheckInterrupts());
         CHECK(intc.pending.source == sh2::InterruptSource::DIVU_OVFI);
         CHECK(intc.pending.level == 6);
     }
@@ -740,62 +738,62 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are masked correctly",
     ClearAll();
 
     SECTION("Interrupt is not masked when priority is greater than SR.I3-0") {
-        auto &intc = sh2::PrivateAccess::INTC(sh2);
+        auto &intc = probe.INTC();
 
         // Set up interrupt with higher priority than SR.I3-0
-        sh2::PrivateAccess::SR(sh2).ILevel = 4;
+        probe.SR().ILevel = 4;
         intc.SetVector(sh2::InterruptSource::WDT_ITI, 0x60);
         intc.SetLevel(sh2::InterruptSource::WDT_ITI, 5);
 
-        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
+        probe.RaiseInterrupt(sh2::InterruptSource::WDT_ITI);
 
         // The interrupt is pending and about to be serviced
-        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2) == true);
+        CHECK(probe.CheckInterrupts() == true);
         CHECK(intc.pending.source == sh2::InterruptSource::WDT_ITI);
         CHECK(intc.pending.level == 5);
     }
 
     SECTION("Interrupt is masked when priority is equal to SR.I3-0") {
-        auto &intc = sh2::PrivateAccess::INTC(sh2);
+        auto &intc = probe.INTC();
 
         // Set up interrupt with same priority as SR.I3-0
-        sh2::PrivateAccess::SR(sh2).ILevel = 4;
+        probe.SR().ILevel = 4;
         intc.SetVector(sh2::InterruptSource::WDT_ITI, 0x60);
         intc.SetLevel(sh2::InterruptSource::WDT_ITI, 4);
 
-        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
+        probe.RaiseInterrupt(sh2::InterruptSource::WDT_ITI);
 
         // The interrupt is left pending, but not serviced
-        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2) == false);
+        CHECK(probe.CheckInterrupts() == false);
         CHECK(intc.pending.source == sh2::InterruptSource::WDT_ITI);
         CHECK(intc.pending.level == 4);
     }
 
     SECTION("Interrupt is masked when priority is less than SR.I3-0") {
-        auto &intc = sh2::PrivateAccess::INTC(sh2);
+        auto &intc = probe.INTC();
 
         // Set up interrupt with lower priority than SR.I3-0
-        sh2::PrivateAccess::SR(sh2).ILevel = 4;
+        probe.SR().ILevel = 4;
         intc.SetVector(sh2::InterruptSource::WDT_ITI, 0x60);
         intc.SetLevel(sh2::InterruptSource::WDT_ITI, 3);
 
-        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::WDT_ITI);
+        probe.RaiseInterrupt(sh2::InterruptSource::WDT_ITI);
 
         // The interrupt is left pending, but not serviced
-        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2) == false);
+        CHECK(probe.CheckInterrupts() == false);
         CHECK(intc.pending.source == sh2::InterruptSource::WDT_ITI);
         CHECK(intc.pending.level == 3);
     }
 
     SECTION("NMI is never masked") {
-        auto &intc = sh2::PrivateAccess::INTC(sh2);
+        auto &intc = probe.INTC();
 
-        sh2::PrivateAccess::SR(sh2).ILevel = 0xF;
+        probe.SR().ILevel = 0xF;
 
-        sh2::PrivateAccess::RaiseInterrupt(sh2, sh2::InterruptSource::NMI);
+        probe.RaiseInterrupt(sh2::InterruptSource::NMI);
 
         // NMI is always serviced even with maximum SR.ILevel
-        CHECK(sh2::PrivateAccess::CheckInterrupts(sh2) == true);
+        CHECK(probe.CheckInterrupts() == true);
         CHECK(intc.pending.source == sh2::InterruptSource::NMI);
         CHECK(intc.pending.level == 16);
     }

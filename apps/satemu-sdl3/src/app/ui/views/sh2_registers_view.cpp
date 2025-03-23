@@ -30,7 +30,6 @@ void SH2RegistersView::Display() {
     ImGui::PopFont();
 
     auto &probe = m_sh2.GetProbe();
-    auto &regs = probe.GPRs();
 
     auto drawReg32 = [&](std::string name, uint32 &value) {
         ImGui::AlignTextToFramePadding();
@@ -47,7 +46,7 @@ void SH2RegistersView::Display() {
     };
 
     for (uint32 i = 0; i < 16; i++) {
-        drawReg32(fmt::format("R{}", i), regs[i]);
+        drawReg32(fmt::format("R{}", i), probe.R(i));
     }
 
     drawReg32("PC", probe.PC());
