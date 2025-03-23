@@ -2,6 +2,9 @@
 
 #include <imgui.h>
 
+#include <initializer_list>
+#include <utility>
+
 namespace app {
 
 SH2InterruptsView::SH2InterruptsView(SharedContext &context, satemu::sh2::SH2 &sh2)
@@ -20,18 +23,32 @@ void SH2InterruptsView::Display() {
 
     ImGui::BeginGroup();
 
-    // --- INTC ----------------------------------------------------------------
+    // --- INTC and SR ---------------------------------------------------------
     {
-        ImGui::SeparatorText("INTC");
+        ImGui::SeparatorText("INTC and SR");
         ImGui::PushFont(m_context.fonts.monospaceMedium);
         ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 4);
         uint16 ICR = intc.ICR.Read();
-        if (ImGui::InputScalar("ICR", ImGuiDataType_U16, &ICR, nullptr, nullptr, "%04X")) {
+        if (ImGui::InputScalar("##ICR", ImGuiDataType_U16, &ICR, nullptr, nullptr, "%04X")) {
             intc.ICR.Write<true, true, true>(ICR);
         }
         ImGui::PopFont();
+        ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("INTC ICR");
 
         ImGui::SameLine();
+
+        ImGui::PushFont(m_context.fonts.monospaceMedium);
+        ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 1);
+        uint8 ILevel = probe.SR().ILevel;
+        if (ImGui::InputScalar("##SR_I", ImGuiDataType_U8, &ILevel, nullptr, nullptr, "%X")) {
+            probe.SR().ILevel = std::min<uint8>(ILevel, 0xF);
+        }
+        ImGui::PopFont();
+        ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("SR I3-0");
 
         ImGui::Checkbox("NMIL", &intc.ICR.NMIL);
         ImGui::SameLine();
@@ -61,16 +78,19 @@ void SH2InterruptsView::Display() {
             ImGui::TableSetupColumn("Level");
             ImGui::TableHeadersRow();
 
-            auto drawRow = [&](sh2::InterruptSource source, const char *name, bool editable) {
+            auto drawRow = [&](std::initializer_list<std::pair<sh2::InterruptSource, const char *>> sources,
+                               bool editable) {
                 ImGui::TableNextRow();
 
                 if (ImGui::TableNextColumn()) {
-                    bool state = probe.IsInterruptRaised(source);
-                    if (ImGui::Checkbox(name, &state)) {
-                        if (state) {
-                            probe.RaiseInterrupt(source);
-                        } else {
-                            probe.LowerInterrupt(source);
+                    for (auto [source, name] : sources) {
+                        bool state = probe.IsInterruptRaised(source);
+                        if (ImGui::Checkbox(name, &state)) {
+                            if (state) {
+                                probe.RaiseInterrupt(source);
+                            } else {
+                                probe.LowerInterrupt(source);
+                            }
                         }
                     }
                 }
@@ -78,12 +98,14 @@ void SH2InterruptsView::Display() {
                     if (!editable) {
                         ImGui::BeginDisabled();
                     }
-                    uint8 vector = intc.GetVector(source);
                     ImGui::PushFont(m_context.fonts.monospaceMedium);
-                    ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
-                    if (ImGui::InputScalar(fmt::format("##{}_vector", name).c_str(), ImGuiDataType_U8, &vector, nullptr,
-                                           nullptr, "%02X")) {
-                        intc.SetVector(source, vector);
+                    for (auto [source, name] : sources) {
+                        uint8 vector = intc.GetVector(source);
+                        ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
+                        if (ImGui::InputScalar(fmt::format("##{}_vector", name).c_str(), ImGuiDataType_U8, &vector,
+                                               nullptr, nullptr, "%02X")) {
+                            intc.SetVector(source, vector);
+                        }
                     }
                     ImGui::PopFont();
                     if (!editable) {
@@ -94,41 +116,72 @@ void SH2InterruptsView::Display() {
                     if (!editable) {
                         ImGui::BeginDisabled();
                     }
-                    uint8 level = intc.GetLevel(source);
+
+                    ImVec2 startPos = ImGui::GetCursorScreenPos();
                     ImGui::PushFont(m_context.fonts.monospaceMedium);
-                    ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
-                    if (ImGui::InputScalar(fmt::format("##{}_level", name).c_str(), ImGuiDataType_U8, &level, nullptr,
-                                           nullptr, "%X")) {
-                        intc.SetLevel(source, std::min<uint8>(level, 0xF));
+                    for (auto [source, name] : sources) {
+                        uint8 level = intc.GetLevel(source);
+                        ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
+                        if (ImGui::InputScalar(fmt::format("##{}_level", name).c_str(), ImGuiDataType_U8, &level,
+                                               nullptr, nullptr, "%X")) {
+                            for (auto src : sources) {
+                                intc.SetLevel(src.first, std::min<uint8>(level, 0xF));
+                            }
+                        }
                     }
                     ImGui::PopFont();
+                    ImVec2 endPos = ImGui::GetCursorScreenPos();
+
                     if (!editable) {
                         ImGui::EndDisabled();
+                    }
+
+                    if (sources.size() > 1) {
+                        ImGuiStyle &style = ImGui::GetStyle();
+                        const float xOfs = ImGui::GetContentRegionAvail().x;
+                        const float yOfs = ImGui::GetFrameHeightWithSpacing() * 0.2f;
+                        const float width = 8.0f;
+                        const float thickness = 3.0f;
+                        const float paddingX = style.FramePadding.x;
+                        const float spacingY = style.ItemSpacing.y;
+
+                        startPos.x += xOfs - width - paddingX;
+                        startPos.y += yOfs;
+
+                        endPos.x += xOfs - width - paddingX;
+                        endPos.y += -yOfs - spacingY;
+
+                        ImVec2 points[] = {startPos, ImVec2(startPos.x + width, startPos.y),
+                                           ImVec2(endPos.x + width, endPos.y), endPos};
+
+                        ImGui::GetWindowDrawList()->AddPolyline(points, std::size(points),
+                                                                ImColor(style.Colors[ImGuiCol_Separator]),
+                                                                ImDrawFlags_None, thickness);
+                        ImGui::SameLine();
+                        ImGui::Dummy(ImVec2(width + paddingX, 0));
                     }
                 }
             };
 
-            drawRow(sh2::InterruptSource::NMI, "NMI", false);
-            drawRow(sh2::InterruptSource::UserBreak, "UBC BRK", true);
-            drawRow(sh2::InterruptSource::IRL, "IRL", true);
-            drawRow(sh2::InterruptSource::DIVU_OVFI, "DIVU OVFI", true);
-            drawRow(sh2::InterruptSource::DMAC0_XferEnd, "DMAC0 TE", true);
-            drawRow(sh2::InterruptSource::DMAC1_XferEnd, "DMAC1 TE", true);
-            drawRow(sh2::InterruptSource::WDT_ITI, "WDT ITI", true);
-            drawRow(sh2::InterruptSource::BSC_REF_CMI, "BSC REF CMI", true);
-            drawRow(sh2::InterruptSource::SCI_ERI, "SCI ERI", true);
-            drawRow(sh2::InterruptSource::SCI_RXI, "SCI RXI", true);
-            drawRow(sh2::InterruptSource::SCI_TXI, "SCI TXI", true);
-            drawRow(sh2::InterruptSource::SCI_TEI, "SCI TEI", true);
-            drawRow(sh2::InterruptSource::FRT_ICI, "FRT ICI", true);
-            drawRow(sh2::InterruptSource::FRT_OCI, "FRT OCI", true);
-            drawRow(sh2::InterruptSource::FRT_OVI, "FRT OVI", true);
-
-            // TODO: display and sync linked levels:
-            // - DMAC0 + DMAC1
-            // - WDT + BSC
-            // - all SCI
-            // - all FRT
+            drawRow({std::make_pair(sh2::InterruptSource::NMI, "NMI")}, false);
+            drawRow({std::make_pair(sh2::InterruptSource::UserBreak, "UBC BRK")}, true);
+            drawRow({std::make_pair(sh2::InterruptSource::IRL, "IRL")}, true);
+            drawRow({std::make_pair(sh2::InterruptSource::DIVU_OVFI, "DIVU OVFI")}, true);
+            drawRow({std::make_pair(sh2::InterruptSource::DMAC0_XferEnd, "DMAC0 TE"),
+                     std::make_pair(sh2::InterruptSource::DMAC1_XferEnd, "DMAC1 TE")},
+                    true);
+            drawRow({std::make_pair(sh2::InterruptSource::WDT_ITI, "WDT ITI"),
+                     std::make_pair(sh2::InterruptSource::BSC_REF_CMI, "BSC REF CMI")},
+                    true);
+            drawRow({std::make_pair(sh2::InterruptSource::SCI_ERI, "SCI ERI"),
+                     std::make_pair(sh2::InterruptSource::SCI_RXI, "SCI RXI"),
+                     std::make_pair(sh2::InterruptSource::SCI_TXI, "SCI TXI"),
+                     std::make_pair(sh2::InterruptSource::SCI_TEI, "SCI TEI")},
+                    true);
+            drawRow({std::make_pair(sh2::InterruptSource::FRT_ICI, "FRT ICI"),
+                     std::make_pair(sh2::InterruptSource::FRT_OCI, "FRT OCI"),
+                     std::make_pair(sh2::InterruptSource::FRT_OVI, "FRT OVI")},
+                    true);
 
             ImGui::EndTable();
         }

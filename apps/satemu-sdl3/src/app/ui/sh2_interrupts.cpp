@@ -19,7 +19,17 @@ void SH2Interrupts::Display() {
 
     std::string name = fmt::format("{}SH2 interrupts", m_master ? "M" : "S");
     if (ImGui::Begin(name.c_str(), &Open, ImGuiWindowFlags_AlwaysAutoResize)) {
-        m_intrView.Display();
+        if (ImGui::BeginTable("intr_view_base", 1, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {
+            ImGui::TableNextRow();
+
+            if (ImGui::TableNextColumn()) {
+                m_intrView.Display();
+            }
+            /*if (ImGui::TableNextColumn()) {
+                ImGui::TextUnformatted("room for traces");
+            }*/
+            ImGui::EndTable();
+        }
     }
     ImGui::End();
 }
