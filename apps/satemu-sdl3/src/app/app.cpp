@@ -203,7 +203,9 @@ namespace app {
 App::App()
     : m_masterSH2Debugger(m_context, true)
     , m_slaveSH2Debugger(m_context, false)
-    , m_scuDebugger(m_context) {
+    , m_scuDebugger(m_context)
+    , m_masterSH2Interrupts(m_context, true)
+    , m_slaveSH2Interrupts(m_context, false) {
 
     // TODO: support 16-bit and 32-bit reads/writes
     m_memoryViewer.Open = false;
@@ -996,6 +998,8 @@ void App::RunEmulator() {
                 ImGui::Separator();
                 ImGui::MenuItem("Master SH2 debugger", nullptr, &m_masterSH2Debugger.Open);
                 ImGui::MenuItem("Slave SH2 debugger", nullptr, &m_slaveSH2Debugger.Open);
+                ImGui::MenuItem("Master SH2 interrupts", nullptr, &m_masterSH2Interrupts.Open);
+                ImGui::MenuItem("Slave SH2 interrupts", nullptr, &m_slaveSH2Interrupts.Open);
                 ImGui::MenuItem("SCU", nullptr, &m_scuDebugger.Open);
                 ImGui::Separator();
                 ImGui::MenuItem("Video output", "F9", &showVideoOutputDebugWindow);
@@ -1293,6 +1297,9 @@ void App::DrawDebug() {
     m_masterSH2Debugger.Display();
     m_slaveSH2Debugger.Display();
     m_scuDebugger.Display();
+
+    m_masterSH2Interrupts.Display();
+    m_slaveSH2Interrupts.Display();
 
     if (m_memoryViewer.Open) {
         if (ImGui::Begin("Memory viewer", &m_memoryViewer.Open, ImGuiWindowFlags_NoScrollbar)) {

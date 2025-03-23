@@ -22,9 +22,13 @@ add_executable(satemu-sdl3
     src/app/ui/scu_debugger.hpp
     src/app/ui/sh2_debugger.cpp
     src/app/ui/sh2_debugger.hpp
+    src/app/ui/sh2_interrupts.cpp
+    src/app/ui/sh2_interrupts.hpp
 
     src/app/ui/views/sh2_disassembly_view.cpp
     src/app/ui/views/sh2_disassembly_view.hpp
+    src/app/ui/views/sh2_interrupts_view.cpp
+    src/app/ui/views/sh2_interrupts_view.hpp
     src/app/ui/views/sh2_registers_view.cpp
     src/app/ui/views/sh2_registers_view.hpp
 
