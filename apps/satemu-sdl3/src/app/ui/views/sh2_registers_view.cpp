@@ -122,18 +122,6 @@ void SH2RegistersView::Display() {
         ImGui::EndDisabled();
     }
 
-    /*if (debugTrace) {
-        drawText(x, y + 280, "vec lv");
-        for (size_t i = 0; i < tracer.interruptsCount; i++) {
-            const size_t pos =
-                (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
-            const auto &intr = tracer.interrupts[pos];
-            drawText(x, y + 290 + i * 10, fmt::format("{:02X}  {:02X}", intr.vecNum, intr.level));
-        }
-    } else {
-        ImGui::TextUnformatted("(trace disabled)");
-    }*/
-
     ImGui::EndGroup();
 }
 

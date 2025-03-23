@@ -1305,18 +1305,69 @@ void App::DrawDebug() {
         ImGui::End();
     }
 
-    /*int ww{};
-    int wh{};
-    SDL_GetWindowSize(screen.window, &ww, &wh);
+    // TODO: SH2 instruction trace view
+    // TODO: SH2 exception trace view
+    // TODO: SH2 interrupt trace view
+    /*if (debugTrace) {
+        drawText(x, y + 280, "vec lv");
+        for (size_t i = 0; i < tracer.interruptsCount; i++) {
+            const size_t pos =
+                (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
+            const auto &intr = tracer.interrupts[pos];
+            drawText(x, y + 290 + i * 10, fmt::format("{:02X}  {:02X}", intr.vecNum, intr.level));
+        }
+    } else {
+        ImGui::TextUnformatted("(trace disabled)");
+    }*/
 
-    if (!debugTrace) {
-        SDL_SetRenderDrawColor(renderer, 232, 117, 23, 255);
-        drawText(5, wh - 5 - 8, "Advanced tracing disabled - some features are not available. Press F11 to enable");
-    }
+    // TODO: SCU interrupt trace view
+    /*if (debugTrace) {
+        auto &tracer = m_scuTracer;
+        for (size_t i = 0; i < tracer.interruptsCount; i++) {
+            size_t pos = (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
+            constexpr const char *kNames[] = {"VBlank IN",
+                                              "VBlank OUT",
+                                              "HBlank IN",
+                                              "Timer 0",
+                                              "Timer 1",
+                                              "DSP End",
+                                              "Sound Request",
+                                              "System Manager",
+                                              "PAD Interrupt",
+                                              "Level 2 DMA End",
+                                              "Level 1 DMA End",
+                                              "Level 0 DMA End",
+                                              "DMA-illegal",
+                                              "Sprite Draw End",
+                                              "(0E)",
+                                              "(0F)",
+                                              "External 0",
+                                              "External 1",
+                                              "External 2",
+                                              "External 3",
+                                              "External 4",
+                                              "External 5",
+                                              "External 6",
+                                              "External 7",
+                                              "External 8",
+                                              "External 9",
+                                              "External A",
+                                              "External B",
+                                              "External C",
+                                              "External D",
+                                              "External E",
+                                              "External F"};
 
-    SDL_SetRenderDrawColor(renderer, 23, 148, 232, 255);
-    std::string res = fmt::format("{}x{}", screen.width, screen.height);
-    drawText(ww - 5 - res.size() * 8, 5, res);*/
+            const auto &intr = tracer.interrupts[pos];
+            if (intr.level == 0xFF) {
+                drawText(x, y + 50 + i * 10, fmt::format("{:15s}  ack", kNames[intr.index], intr.level));
+            } else {
+                drawText(x, y + 50 + i * 10, fmt::format("{:15s}  {:02X}", kNames[intr.index], intr.level));
+            }
+        }
+    } else {
+        ImGui::TextUnformatted("(trace unavailable)");
+    }*/
 }
 
 } // namespace app
