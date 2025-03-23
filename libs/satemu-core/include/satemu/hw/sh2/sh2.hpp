@@ -132,6 +132,54 @@ public:
             return m_sh2.VBR;
         }
 
+        uint16 FetchInstruction(uint32 address) {
+            return m_sh2.FetchInstruction(address);
+        }
+
+        uint8 MemReadByte(uint32 address) {
+            return m_sh2.MemReadByte(address);
+        }
+        uint16 MemReadWord(uint32 address) {
+            return m_sh2.MemReadWord(address);
+        }
+        uint32 MemReadLong(uint32 address) {
+            return m_sh2.MemReadLong(address);
+        }
+
+        void MemWriteByte(uint32 address, uint8 value) {
+            m_sh2.MemWriteByte(address, value);
+        }
+        void MemWriteWord(uint32 address, uint16 value) {
+            m_sh2.MemWriteWord(address, value);
+        }
+        void MemWriteLong(uint32 address, uint32 value) {
+            m_sh2.MemWriteLong(address, value);
+        }
+
+        uint16 PeekInstruction(uint32 address) {
+            return m_sh2.PeekInstruction(address);
+        }
+
+        uint8 MemPeekByte(uint32 address) {
+            return m_sh2.MemPeekByte(address);
+        }
+        uint16 MemPeekWord(uint32 address) {
+            return m_sh2.MemPeekWord(address);
+        }
+        uint32 MemPeekLong(uint32 address) {
+            return m_sh2.MemPeekLong(address);
+        }
+
+        void MemPokeByte(uint32 address, uint8 value) {
+            m_sh2.MemPokeByte(address, value);
+        }
+        void MemPokeWord(uint32 address, uint16 value) {
+            m_sh2.MemPokeWord(address, value);
+        }
+        void MemPokeLong(uint32 address, uint32 value) {
+            m_sh2.MemPokeLong(address, value);
+        }
+
     private:
         SH2 &m_sh2;
     };
@@ -248,10 +296,10 @@ private:
     //    110   Data array read/write area      Cache data acessed directly (4 KiB, mirrored)
     //    111   I/O area (on-chip registers)    Cache bypassed
 
-    template <mem_primitive T, bool instrFetch>
+    template <mem_primitive T, bool instrFetch, bool peek>
     T MemRead(uint32 address);
 
-    template <mem_primitive T>
+    template <mem_primitive T, bool poke>
     void MemWrite(uint32 address, T value);
 
     uint16 FetchInstruction(uint32 address);
@@ -264,6 +312,16 @@ private:
     void MemWriteWord(uint32 address, uint16 value);
     void MemWriteLong(uint32 address, uint32 value);
 
+    uint16 PeekInstruction(uint32 address);
+
+    uint8 MemPeekByte(uint32 address);
+    uint16 MemPeekWord(uint32 address);
+    uint32 MemPeekLong(uint32 address);
+
+    void MemPokeByte(uint32 address, uint8 value);
+    void MemPokeWord(uint32 address, uint16 value);
+    void MemPokeLong(uint32 address, uint32 value);
+
     // Returns 00 00 00 01 00 02 00 03 00 04 00 05 00 06 00 07 ... repeating
     template <mem_primitive T>
     T OpenBusSeqRead(uint32 address);
@@ -271,18 +329,24 @@ private:
     // -------------------------------------------------------------------------
     // On-chip peripherals
 
-    template <mem_primitive T>
+    template <mem_primitive T, bool peek>
     T OnChipRegRead(uint32 address);
 
+    template <bool peek>
     uint8 OnChipRegReadByte(uint32 address);
+    template <bool peek>
     uint16 OnChipRegReadWord(uint32 address);
+    template <bool peek>
     uint32 OnChipRegReadLong(uint32 address);
 
-    template <mem_primitive T>
+    template <mem_primitive T, bool poke>
     void OnChipRegWrite(uint32 address, T value);
 
+    template <bool poke>
     void OnChipRegWriteByte(uint32 address, uint8 value);
+    template <bool poke>
     void OnChipRegWriteWord(uint32 address, uint16 value);
+    template <bool poke>
     void OnChipRegWriteLong(uint32 address, uint32 value);
 
     // --- SCI module ---

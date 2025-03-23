@@ -63,8 +63,13 @@ struct WatchdogTimer {
         return WTCSR.u8;
     }
 
+    template <bool poke>
     FORCE_INLINE void WriteWTCSR(uint8 value) {
-        WTCSR.OVF &= bit::extract<7>(value);
+        if constexpr (poke) {
+            WTCSR.OVF = bit::extract<7>(value);
+        } else {
+            WTCSR.OVF &= bit::extract<7>(value);
+        }
         WTCSR.WT_nIT = bit::extract<6>(value);
         WTCSR.TME = bit::extract<5>(value);
         WTCSR.CKSn = bit::extract<0, 2>(value);
@@ -112,19 +117,29 @@ struct WatchdogTimer {
         return RSTCSR.u8;
     }
 
-    /*FORCE_INLINE void WriteRSTCSR(uint8 value) {
-        RSTCSR.WOVF &= bit::extract<7>(value);
+    template <bool poke>
+    FORCE_INLINE void WriteRSTCSR(uint8 value) {
+        if constexpr (poke) {
+            RSTCSR.WOVF = bit::extract<7>(value);
+        } else {
+            RSTCSR.WOVF &= bit::extract<7>(value);
+        }
         RSTCSR.RSTE = bit::extract<6>(value);
         RSTCSR.RSTS = bit::extract<5>(value);
-    }*/
+    }
 
     FORCE_INLINE void WriteRSTE_RSTS(uint8 value) {
         RSTCSR.RSTE = bit::extract<6>(value);
         RSTCSR.RSTS = bit::extract<5>(value);
     }
 
+    template <bool poke>
     FORCE_INLINE void WriteWOVF(uint8 value) {
-        RSTCSR.WOVF &= bit::extract<7>(value);
+        if constexpr (poke) {
+            RSTCSR.WOVF = bit::extract<7>(value);
+        } else {
+            RSTCSR.WOVF &= bit::extract<7>(value);
+        }
     }
 
     // -------------------------------------------------------------------------

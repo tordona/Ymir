@@ -88,33 +88,60 @@ struct FreeRunningTimer {
         return FTCSR.u8;
     }
 
+    template <bool poke>
     FORCE_INLINE void WriteFTCSR(uint8 value) {
-        FTCSR.ICF &= bit::extract<7>(value);
-        FTCSR.OCFA &= bit::extract<3>(value);
-        FTCSR.OCFB &= bit::extract<2>(value);
-        FTCSR.OVF &= bit::extract<1>(value);
-        FTCSR.CCLRA = bit::extract<0>(value);
+        if constexpr (poke) {
+            FTCSR.ICF = bit::extract<7>(value);
+            FTCSR.OCFA = bit::extract<3>(value);
+            FTCSR.OCFB = bit::extract<2>(value);
+            FTCSR.OVF = bit::extract<1>(value);
+            FTCSR.CCLRA = bit::extract<0>(value);
+        } else {
+            FTCSR.ICF &= bit::extract<7>(value);
+            FTCSR.OCFA &= bit::extract<3>(value);
+            FTCSR.OCFB &= bit::extract<2>(value);
+            FTCSR.OVF &= bit::extract<1>(value);
+            FTCSR.CCLRA = bit::extract<0>(value);
+        }
     }
 
     // 012  R/W  8        00        FRC H     Free-running counter H
     // 013  R/W  8        00        FRC L     Free-running counter L
     uint16 FRC;
 
+    template <bool peek>
     FORCE_INLINE uint8 ReadFRCH() const {
-        TEMP = FRC;
+        if constexpr (!peek) {
+            TEMP = FRC;
+        }
         return FRC >> 8u;
     }
 
+    template <bool peek>
     FORCE_INLINE uint8 ReadFRCL() const {
-        return TEMP;
+        if constexpr (peek) {
+            return FRC;
+        } else {
+            return TEMP;
+        }
     }
 
+    template <bool poke>
     FORCE_INLINE void WriteFRCH(uint8 value) {
-        TEMP = value;
+        if constexpr (poke) {
+            bit::deposit_into<8, 15>(FRC, value);
+        } else {
+            TEMP = value;
+        }
     }
 
+    template <bool poke>
     FORCE_INLINE void WriteFRCL(uint8 value) {
-        FRC = value | (TEMP << 8u);
+        if constexpr (poke) {
+            bit::deposit_into<0, 7>(FRC, value);
+        } else {
+            FRC = value | (TEMP << 8u);
+        }
     }
 
     // 014  R/W  8        FF        OCRA/B H  Output compare register A/B H
@@ -137,12 +164,22 @@ struct FreeRunningTimer {
         return CurrOCR() >> 0u;
     }
 
+    template <bool poke>
     FORCE_INLINE void WriteOCRH(uint8 value) {
-        TEMP = value;
+        if constexpr (poke) {
+            bit::deposit_into<8, 15>(CurrOCR(), value);
+        } else {
+            TEMP = value;
+        }
     }
 
+    template <bool poke>
     FORCE_INLINE void WriteOCRL(uint8 value) {
-        CurrOCR() = value | (TEMP << 8u);
+        if constexpr (poke) {
+            bit::deposit_into<0, 7>(CurrOCR(), value);
+        } else {
+            CurrOCR() = value | (TEMP << 8u);
+        }
     }
 
     // 016  R/W  8        00        TCR       Timer control register
@@ -206,13 +243,35 @@ struct FreeRunningTimer {
     // 019  R    8        00        ICR L     Input capture register L
     uint16 ICR;
 
+    template <bool peek>
     FORCE_INLINE uint8 ReadICRH() const {
-        TEMP = ICR;
+        if constexpr (!peek) {
+            TEMP = ICR;
+        }
         return ICR >> 8u;
     }
 
+    template <bool peek>
     FORCE_INLINE uint8 ReadICRL() const {
-        return TEMP;
+        if constexpr (peek) {
+            return ICR;
+        } else {
+            return TEMP;
+        }
+    }
+
+    template <bool poke>
+    FORCE_INLINE void WriteICRH(uint8 value) {
+        if constexpr (poke) {
+            bit::deposit_into<8, 15>(ICR, value);
+        }
+    }
+
+    template <bool poke>
+    FORCE_INLINE void WriteICRL(uint8 value) {
+        if constexpr (poke) {
+            bit::deposit_into<0, 7>(ICR, value);
+        }
     }
 
     mutable uint8 TEMP; // temporary storage to handle 16-bit transfers

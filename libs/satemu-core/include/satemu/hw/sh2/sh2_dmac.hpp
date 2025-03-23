@@ -144,6 +144,7 @@ struct DMAChannel {
         return value;
     }
 
+    template <bool poke>
     FORCE_INLINE void WriteCHCR(uint32 value) {
         dstMode = static_cast<DMATransferIncrementMode>(bit::extract<14, 15>(value));
         srcMode = static_cast<DMATransferIncrementMode>(bit::extract<12, 13>(value));
@@ -156,7 +157,11 @@ struct DMAChannel {
         xferBusMode = static_cast<DMATransferBusMode>(bit::extract<4>(value));
         xferAddressMode = static_cast<DMATransferAddressMode>(bit::extract<3>(value));
         irqEnable = bit::extract<2>(value);
-        xferEnded &= bit::extract<1>(value);
+        if constexpr (poke) {
+            xferEnded = bit::extract<1>(value);
+        } else {
+            xferEnded &= bit::extract<1>(value);
+        }
         xferEnabled = bit::extract<0>(value);
     }
 

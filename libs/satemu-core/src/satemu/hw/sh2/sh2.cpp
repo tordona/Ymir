@@ -207,13 +207,15 @@ void SH2::TriggerFRTInputCapture() {
 // -----------------------------------------------------------------------------
 // Memory accessors
 
-template <mem_primitive T, bool instrFetch>
+template <mem_primitive T, bool instrFetch, bool peek>
 T SH2::MemRead(uint32 address) {
     const uint32 partition = (address >> 29u) & 0b111;
     if (address & static_cast<uint32>(sizeof(T) - 1)) {
-        m_log.trace("WARNING: misaligned {}-bit read from {:08X}", sizeof(T) * 8, address);
-        // TODO: raise CPU address error due to misaligned access
-        // - might have to store data in a class member instead of returning
+        if constexpr (!peek) {
+            m_log.trace("WARNING: misaligned {}-bit read from {:08X}", sizeof(T) * 8, address);
+            // TODO: raise CPU address error due to misaligned access
+            // - might have to store data in a class member instead of returning
+        }
         address &= ~(sizeof(T) - 1);
     }
 
@@ -236,20 +238,22 @@ T SH2::MemRead(uint32 address) {
                     }
                 }
 
-                if (way == -1) {
-                    // Cache miss
-                    uint8 lru = m_cacheLRU[index];
-                    way = kCacheLRUWaySelect[lru & m_cacheReplaceANDMask] | m_cacheReplaceORMask[instrFetch];
-                    if (way != -1) {
-                        entry.tag[way].tagAddress = tagAddress;
-                        entry.tag[way].valid = 1;
+                if constexpr (!peek) {
+                    if (way == -1) {
+                        // Cache miss
+                        uint8 lru = m_cacheLRU[index];
+                        way = kCacheLRUWaySelect[lru & m_cacheReplaceANDMask] | m_cacheReplaceORMask[instrFetch];
+                        if (way != -1) {
+                            entry.tag[way].tagAddress = tagAddress;
+                            entry.tag[way].valid = 1;
 
-                        // Fill line
-                        const uint32 baseAddress = address & ~0xF;
-                        for (uint32 offset = 0; offset < 16; offset += 4) {
-                            const uint32 addressInc = (address + 4 + offset) & 0xC;
-                            const uint32 memValue = m_bus.Read<uint32>((baseAddress + addressInc) & 0x7FFFFFF);
-                            util::WriteBE<uint32>(&entry.line[way][addressInc], memValue);
+                            // Fill line
+                            const uint32 baseAddress = address & ~0xF;
+                            for (uint32 offset = 0; offset < 16; offset += 4) {
+                                const uint32 addressInc = (address + 4 + offset) & 0xC;
+                                const uint32 memValue = m_bus.Read<uint32>((baseAddress + addressInc) & 0x7FFFFFF);
+                                util::WriteBE<uint32>(&entry.line[way][addressInc], memValue);
+                            }
                         }
                     }
                 }
@@ -259,12 +263,17 @@ T SH2::MemRead(uint32 address) {
                     // const uint32 byte = (bit::extract<0, 3>(address) & ~(sizeof(T) - 1)) ^ (4 - sizeof(T));
                     const uint32 byte = bit::extract<0, 3>(address);
                     const T value = util::ReadBE<T>(&entry.line[way][byte]);
-                    m_cacheLRU[index] &= kCacheLRUUpdateBits[way].andMask;
-                    m_cacheLRU[index] |= kCacheLRUUpdateBits[way].orMask;
-                    m_log.trace("{}-bit SH-2 cached area read from {:08X} = {:X} (hit)", sizeof(T) * 8, address, value);
+                    if constexpr (!peek) {
+                        m_cacheLRU[index] &= kCacheLRUUpdateBits[way].andMask;
+                        m_cacheLRU[index] |= kCacheLRUUpdateBits[way].orMask;
+                        m_log.trace("{}-bit SH-2 cached area read from {:08X} = {:X} (hit)", sizeof(T) * 8, address,
+                                    value);
+                    }
                     return value;
                 }
-                m_log.trace("{}-bit SH-2 cached area read from {:08X} (miss)", sizeof(T) * 8, address);
+                if constexpr (!peek) {
+                    m_log.trace("{}-bit SH-2 cached area read from {:08X} (miss)", sizeof(T) * 8, address);
+                }
             }
         }
         // fallthrough
@@ -276,20 +285,21 @@ T SH2::MemRead(uint32 address) {
             const uint32 index = bit::extract<4, 9>(address);
             const uint32 tagAddress = bit::extract<10, 28>(address);
             for (auto &tag : m_cacheEntries[index].tag) {
-                /*if (tag.tagAddress == tagAddress) {
-                    tag.valid = false;
-                }*/
                 tag.valid &= tag.tagAddress != tagAddress;
             }
-            m_log.trace("{}-bit SH-2 associative purge read from {:08X}", sizeof(T) * 8, address);
+            if constexpr (!peek) {
+                m_log.trace("{}-bit SH-2 associative purge read from {:08X}", sizeof(T) * 8, address);
+            }
         }
         return (address & 1) ? static_cast<T>(0x12231223) : static_cast<T>(0x23122312);
     case 0b011: // cache address array
         if constexpr (std::is_same_v<T, uint32>) {
             const uint32 index = bit::extract<4, 9>(address);
-            auto &lru = m_cacheLRU[index];
+            const uint8 lru = m_cacheLRU[index];
             const T value = m_cacheEntries[index].tag[CCR.Wn].u32 | (lru << 4u);
-            m_log.trace("{}-bit SH-2 cache address array read from {:08X} = {:X}", sizeof(T) * 8, address, value);
+            if constexpr (!peek) {
+                m_log.trace("{}-bit SH-2 cache address array read from {:08X} = {:X}", sizeof(T) * 8, address, value);
+            }
             return value;
         } else {
             return 0;
@@ -299,30 +309,35 @@ T SH2::MemRead(uint32 address) {
     {
         const uint32 index = bit::extract<4, 9>(address);
         const uint32 way = bit::extract<10, 11>(address);
-        // const uint32 byte = (bit::extract<0, 3>(address) & ~(sizeof(T) - 1)) ^ (4 - sizeof(T));
         const uint32 byte = bit::extract<0, 3>(address);
         const auto &line = m_cacheEntries[index].line[way];
         const T value = util::ReadBE<T>(&line[byte]);
-        m_log.trace("{}-bit SH-2 cache data array read from {:08X} = {:X}", sizeof(T) * 8, address, value);
+        if constexpr (!peek) {
+            m_log.trace("{}-bit SH-2 cache data array read from {:08X} = {:X}", sizeof(T) * 8, address, value);
+        }
         return value;
     }
     case 0b111: // I/O area
         if constexpr (instrFetch) {
-            // TODO: raise CPU address error due to attempt to fetch instruction from I/O area
-            m_log.trace("Attempted to fetch instruction from I/O area at {:08X}", address);
+            if constexpr (!peek) {
+                // TODO: raise CPU address error due to attempt to fetch instruction from I/O area
+                m_log.trace("Attempted to fetch instruction from I/O area at {:08X}", address);
+            }
             return 0;
         } else if ((address & 0xE0004000) == 0xE0004000) {
             // bits 31-29 and 14 must be set
             // bits 8-0 index the register
             // bits 28 and 12 must be both set to access the lower half of the registers
             if ((address & 0x100) || (address & 0x10001000) == 0x10001000) {
-                return OnChipRegRead<T>(address & 0x1FF);
+                return OnChipRegRead<T, peek>(address & 0x1FF);
             } else {
                 return OpenBusSeqRead<T>(address);
             }
         } else {
             // TODO: implement
-            m_log.trace("Unhandled {}-bit SH-2 I/O area read from {:08X}", sizeof(T) * 8, address);
+            if constexpr (!peek) {
+                m_log.trace("Unhandled {}-bit SH-2 I/O area read from {:08X}", sizeof(T) * 8, address);
+            }
             return 0;
         }
     }
@@ -330,12 +345,14 @@ T SH2::MemRead(uint32 address) {
     util::unreachable();
 }
 
-template <mem_primitive T>
+template <mem_primitive T, bool poke>
 void SH2::MemWrite(uint32 address, T value) {
     const uint32 partition = address >> 29u;
     if (address & static_cast<uint32>(sizeof(T) - 1)) {
-        m_log.trace("WARNING: misaligned {}-bit write to {:08X} = {:X}", sizeof(T) * 8, address, value);
-        // TODO: address error (misaligned access)
+        if constexpr (!poke) {
+            m_log.trace("WARNING: misaligned {}-bit write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+            // TODO: address error (misaligned access)
+        }
         address &= ~(sizeof(T) - 1);
     }
 
@@ -353,8 +370,10 @@ void SH2::MemWrite(uint32 address, T value) {
                     if (tag.tagAddress == tagAddress) {
                         const uint32 byte = bit::extract<0, 3>(address);
                         util::WriteBE<T>(&entry.line[i][byte], value);
-                        m_cacheLRU[index] &= kCacheLRUUpdateBits[i].andMask;
-                        m_cacheLRU[index] |= kCacheLRUUpdateBits[i].orMask;
+                        if constexpr (!poke) {
+                            m_cacheLRU[index] &= kCacheLRUUpdateBits[i].andMask;
+                            m_cacheLRU[index] |= kCacheLRUUpdateBits[i].orMask;
+                        }
                         break;
                     }
                 }
@@ -370,12 +389,11 @@ void SH2::MemWrite(uint32 address, T value) {
             const uint32 index = bit::extract<4, 9>(address);
             const uint32 tagAddress = bit::extract<10, 28>(address);
             for (auto &tag : m_cacheEntries[index].tag) {
-                /*if (tag.tagAddress == tagAddress) {
-                    tag.valid = false;
-                }*/
                 tag.valid &= tag.tagAddress != tagAddress;
             }
-            m_log.trace("{}-bit SH-2 associative purge write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+            if constexpr (!poke) {
+                m_log.trace("{}-bit SH-2 associative purge write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+            }
         }
         break;
     case 0b011: // cache address array
@@ -383,7 +401,9 @@ void SH2::MemWrite(uint32 address, T value) {
             const uint32 index = bit::extract<4, 9>(address);
             m_cacheEntries[index].tag[CCR.Wn].u32 = address & 0x1FFFFC04;
             m_cacheLRU[index] = bit::extract<4, 9>(value);
-            m_log.trace("{}-bit SH-2 cache address array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+            if constexpr (!poke) {
+                m_log.trace("{}-bit SH-2 cache address array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+            }
         }
         break;
     case 0b100:
@@ -391,11 +411,12 @@ void SH2::MemWrite(uint32 address, T value) {
     {
         const uint32 index = bit::extract<4, 9>(address);
         const uint32 way = bit::extract<10, 11>(address);
-        // const uint32 byte = (bit::extract<0, 3>(address) & ~(sizeof(T) - 1)) ^ (4 - sizeof(T));
         const uint32 byte = bit::extract<0, 3>(address);
         auto &line = m_cacheEntries[index].line[way];
         util::WriteBE<T>(&line[byte], value);
-        m_log.trace("{}-bit SH-2 cache data array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+        if constexpr (!poke) {
+            m_log.trace("{}-bit SH-2 cache data array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+        }
         break;
     }
     case 0b111: // I/O area
@@ -404,53 +425,85 @@ void SH2::MemWrite(uint32 address, T value) {
             // bits 8-0 index the register
             // bits 28 and 12 must be both set to access the lower half of the registers
             if ((address & 0x100) || (address & 0x10001000) == 0x10001000) {
-                OnChipRegWrite<T>(address & 0x1FF, value);
+                OnChipRegWrite<T, poke>(address & 0x1FF, value);
             }
         } else if ((address >> 12u) == 0xFFFF8) {
             // DRAM setup stuff
-            switch (address) {
-            case 0xFFFF8426: m_log.trace("16-bit CAS latency 1"); break;
-            case 0xFFFF8446: m_log.trace("16-bit CAS latency 2"); break;
-            case 0xFFFF8466: m_log.trace("16-bit CAS latency 3"); break;
-            case 0xFFFF8848: m_log.trace("32-bit CAS latency 1"); break;
-            case 0xFFFF8888: m_log.trace("32-bit CAS latency 2"); break;
-            case 0xFFFF88C8: m_log.trace("32-bit CAS latency 3"); break;
-            default: m_log.debug("Unhandled {}-bit SH-2 I/O area read from {:08X}", sizeof(T) * 8, address); break;
+            if constexpr (!poke) {
+                switch (address) {
+                case 0xFFFF8426: m_log.trace("16-bit CAS latency 1"); break;
+                case 0xFFFF8446: m_log.trace("16-bit CAS latency 2"); break;
+                case 0xFFFF8466: m_log.trace("16-bit CAS latency 3"); break;
+                case 0xFFFF8848: m_log.trace("32-bit CAS latency 1"); break;
+                case 0xFFFF8888: m_log.trace("32-bit CAS latency 2"); break;
+                case 0xFFFF88C8: m_log.trace("32-bit CAS latency 3"); break;
+                default: m_log.debug("Unhandled {}-bit SH-2 I/O area read from {:08X}", sizeof(T) * 8, address); break;
+                }
             }
         } else {
             // TODO: implement
-            m_log.trace("Unhandled {}-bit SH-2 I/O area write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+            if constexpr (!poke) {
+                m_log.trace("Unhandled {}-bit SH-2 I/O area write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+            }
         }
         break;
     }
 }
 
 FLATTEN FORCE_INLINE uint16 SH2::FetchInstruction(uint32 address) {
-    return MemRead<uint16, true>(address);
+    return MemRead<uint16, true, false>(address);
 }
 
 FLATTEN FORCE_INLINE uint8 SH2::MemReadByte(uint32 address) {
-    return MemRead<uint8, false>(address);
+    return MemRead<uint8, false, false>(address);
 }
 
 FLATTEN FORCE_INLINE uint16 SH2::MemReadWord(uint32 address) {
-    return MemRead<uint16, false>(address);
+    return MemRead<uint16, false, false>(address);
 }
 
 FLATTEN FORCE_INLINE uint32 SH2::MemReadLong(uint32 address) {
-    return MemRead<uint32, false>(address);
+    return MemRead<uint32, false, false>(address);
 }
 
 FLATTEN FORCE_INLINE void SH2::MemWriteByte(uint32 address, uint8 value) {
-    MemWrite<uint8>(address, value);
+    MemWrite<uint8, false>(address, value);
 }
 
 FLATTEN FORCE_INLINE void SH2::MemWriteWord(uint32 address, uint16 value) {
-    MemWrite<uint16>(address, value);
+    MemWrite<uint16, false>(address, value);
 }
 
 FLATTEN FORCE_INLINE void SH2::MemWriteLong(uint32 address, uint32 value) {
-    MemWrite<uint32>(address, value);
+    MemWrite<uint32, false>(address, value);
+}
+
+FLATTEN FORCE_INLINE uint16 SH2::PeekInstruction(uint32 address) {
+    return MemRead<uint16, true, true>(address);
+}
+
+FLATTEN FORCE_INLINE uint8 SH2::MemPeekByte(uint32 address) {
+    return MemRead<uint8, false, true>(address);
+}
+
+FLATTEN FORCE_INLINE uint16 SH2::MemPeekWord(uint32 address) {
+    return MemRead<uint16, false, true>(address);
+}
+
+FLATTEN FORCE_INLINE uint32 SH2::MemPeekLong(uint32 address) {
+    return MemRead<uint32, false, true>(address);
+}
+
+FLATTEN FORCE_INLINE void SH2::MemPokeByte(uint32 address, uint8 value) {
+    MemWrite<uint8, true>(address, value);
+}
+
+FLATTEN FORCE_INLINE void SH2::MemPokeWord(uint32 address, uint16 value) {
+    MemWrite<uint16, true>(address, value);
+}
+
+FLATTEN FORCE_INLINE void SH2::MemPokeLong(uint32 address, uint32 value) {
+    MemWrite<uint32, true>(address, value);
 }
 
 template <mem_primitive T>
@@ -468,7 +521,7 @@ T SH2::OpenBusSeqRead(uint32 address) {
 // -----------------------------------------------------------------------------
 // On-chip peripherals
 
-template <mem_primitive T>
+template <mem_primitive T, bool peek>
 T SH2::OnChipRegRead(uint32 address) {
     // Misaligned memory accesses raise an address error, therefore:
     //   (address & 3) == 2 is only valid for 16-bit accesses
@@ -480,19 +533,22 @@ T SH2::OnChipRegRead(uint32 address) {
     //     Every other access returns just r
 
     if constexpr (std::is_same_v<T, uint32>) {
-        return OnChipRegReadLong(address);
+        return OnChipRegReadLong<peek>(address);
     } else if constexpr (std::is_same_v<T, uint16>) {
-        return OnChipRegReadWord(address);
+        return OnChipRegReadWord<peek>(address);
     } else if constexpr (std::is_same_v<T, uint8>) {
-        return OnChipRegReadByte(address);
+        return OnChipRegReadByte<peek>(address);
     }
 }
 
+template <bool peek>
 FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     if (address >= 0x100) {
-        // Registers 0x100-0x1FF do not accept 8-bit accesses
-        // TODO: raise CPU address error
-        m_log.debug("Illegal 8-bit on-chip register read from {:03X}", address);
+        if constexpr (!peek) {
+            // Registers 0x100-0x1FF do not accept 8-bit accesses
+            // TODO: raise CPU address error
+            m_log.debug("Illegal 8-bit on-chip register read from {:03X}", address);
+        }
         return 0;
     }
 
@@ -500,14 +556,14 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     case 0x04: return 0; // TODO: SCI SSR
     case 0x10: return FRT.ReadTIER();
     case 0x11: return FRT.ReadFTCSR();
-    case 0x12: return FRT.ReadFRCH();
-    case 0x13: return FRT.ReadFRCL();
+    case 0x12: return FRT.ReadFRCH<peek>();
+    case 0x13: return FRT.ReadFRCL<peek>();
     case 0x14: return FRT.ReadOCRH();
     case 0x15: return FRT.ReadOCRL();
     case 0x16: return FRT.ReadTCR();
     case 0x17: return FRT.ReadTOCR();
-    case 0x18: return FRT.ReadICRH();
-    case 0x19: return FRT.ReadICRL();
+    case 0x18: return FRT.ReadICRH<peek>();
+    case 0x19: return FRT.ReadICRL<peek>();
 
     case 0x60: return (INTC.GetLevel(InterruptSource::SCI_ERI) << 4u) | INTC.GetLevel(InterruptSource::FRT_ICI);
     case 0x61: return 0;
@@ -530,36 +586,48 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     case 0x91: return SBYCR.u8;
     case 0x92 ... 0x9F: return CCR.u8;
 
-    case 0xE0: return OnChipRegReadWord(address) >> 8u;
-    case 0xE1: return OnChipRegReadWord(address & ~1) >> 0u;
+    case 0xE0: return OnChipRegReadWord<peek>(address) >> 8u;
+    case 0xE1: return OnChipRegReadWord<peek>(address & ~1) >> 0u;
     case 0xE2: return (INTC.GetLevel(InterruptSource::DIVU_OVFI) << 4u) | INTC.GetLevel(InterruptSource::DMAC0_XferEnd);
     case 0xE3: return INTC.GetLevel(InterruptSource::WDT_ITI) << 4u;
     case 0xE4: return INTC.GetVector(InterruptSource::WDT_ITI);
     case 0xE5: return INTC.GetVector(InterruptSource::BSC_REF_CMI);
 
     default: //
-        m_log.debug("Unhandled 8-bit on-chip register read from {:03X}", address);
+        if constexpr (!peek) {
+            m_log.debug("Unhandled 8-bit on-chip register read from {:03X}", address);
+        }
         return 0;
     }
 }
 
+template <bool peek>
 FORCE_INLINE uint16 SH2::OnChipRegReadWord(uint32 address) {
     if (address < 0x100) {
         if (address == 0xE0) {
             return INTC.ICR.u16;
         }
-        const uint16 value = OnChipRegReadByte(address);
-        return (value << 8u) | value;
+        if constexpr (peek) {
+            uint16 value = OnChipRegReadByte<peek>(address + 0) << 8u;
+            value |= OnChipRegReadByte<peek>(address + 1) << 0u;
+            return value;
+        } else {
+            const uint16 value = OnChipRegReadByte<peek>(address);
+            return (value << 8u) | value;
+        }
     } else {
-        return OnChipRegReadLong(address & ~2);
+        return OnChipRegReadLong<peek>(address & ~3);
     }
 }
 
+template <bool peek>
 FORCE_INLINE uint32 SH2::OnChipRegReadLong(uint32 address) {
     if (address < 0x100) {
-        // Registers 0x000-0x0FF do not accept 32-bit accesses
-        // TODO: raise CPU address error
-        m_log.debug("Illegal 32-bit on-chip register read from {:03X}", address);
+        if constexpr (!peek) {
+            // Registers 0x000-0x0FF do not accept 32-bit accesses
+            // TODO: raise CPU address error
+            m_log.debug("Illegal 32-bit on-chip register read from {:03X}", address);
+        }
         return 0;
     }
 
@@ -612,44 +680,65 @@ FORCE_INLINE uint32 SH2::OnChipRegReadLong(uint32 address) {
     case 0x1F8: return RTCOR;
 
     default: //
-        m_log.debug("Unhandled 32-bit on-chip register read from {:03X}", address);
+        if constexpr (!peek) {
+            m_log.debug("Unhandled 32-bit on-chip register read from {:03X}", address);
+        }
         return 0;
     }
 }
 
-template <mem_primitive T>
+template <mem_primitive T, bool poke>
 void SH2::OnChipRegWrite(uint32 address, T value) {
     // Misaligned memory accesses raise an address error, therefore:
     //   (address & 3) == 2 is only valid for 16-bit accesses
     //   (address & 1) == 1 is only valid for 8-bit accesses
     if constexpr (std::is_same_v<T, uint32>) {
-        OnChipRegWriteLong(address, value);
+        OnChipRegWriteLong<poke>(address, value);
     } else if constexpr (std::is_same_v<T, uint16>) {
-        OnChipRegWriteWord(address, value);
+        OnChipRegWriteWord<poke>(address, value);
     } else if constexpr (std::is_same_v<T, uint8>) {
-        OnChipRegWriteByte(address, value);
+        OnChipRegWriteByte<poke>(address, value);
     }
 }
 
+template <bool poke>
 FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     if (address >= 0x100) {
-        // Registers 0x100-0x1FF do not accept 8-bit accesses
-        // TODO: raise CPU address error
-        m_log.debug("Illegal 8-bit on-chip register write to {:03X} = {:X}", address, value);
+        if constexpr (poke) {
+            uint16 currValue = OnChipRegReadWord<true>(address & ~1);
+            const uint16 shift = (~address & 1) & 8u;
+            const uint16 mask = ~(0xFF << shift);
+            currValue = (currValue & mask) | (value << shift);
+            OnChipRegWriteWord<true>(address & ~1, currValue);
+        } else {
+            // Registers 0x100-0x1FF do not accept 8-bit accesses
+            // TODO: raise CPU address error
+            m_log.debug("Illegal 8-bit on-chip register write to {:03X} = {:X}", address, value);
+        }
         return;
+    }
+
+    if constexpr (poke) {
+        switch (address) {
+        case 0x80: WDT.WriteWTCSR<poke>(value); break;
+        case 0x81: WDT.WriteWTCNT(value); break;
+        case 0x83: WDT.WriteRSTCSR<poke>(value); break;
+
+        case 0x93 ... 0x9F: WriteCCR(value); break;
+        }
     }
 
     switch (address) {
     case 0x10: FRT.WriteTIER(value); break;
-    case 0x11: FRT.WriteFTCSR(value); break;
-    case 0x12: FRT.WriteFRCH(value); break;
-    case 0x13: FRT.WriteFRCL(value); break;
-    case 0x14: FRT.WriteOCRH(value); break;
-    case 0x15: FRT.WriteOCRL(value); break;
+    case 0x11: FRT.WriteFTCSR<poke>(value); break;
+    case 0x12: FRT.WriteFRCH<poke>(value); break;
+    case 0x13: FRT.WriteFRCL<poke>(value); break;
+    case 0x14: FRT.WriteOCRH<poke>(value); break;
+    case 0x15: FRT.WriteOCRL<poke>(value); break;
     case 0x16: FRT.WriteTCR(value); break;
     case 0x17: FRT.WriteTOCR(value); break;
-    case 0x18: /* ICRH is read-only */ break;
-    case 0x19: /* ICRL is read-only */ break;
+    case 0x18: FRT.WriteICRH<poke>(value); break; // ICRH is read-only
+    case 0x19: FRT.WriteICRL<poke>(value); break; // ICRL is read-only
 
     case 0x60: //
     {
@@ -720,11 +809,14 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     case 0xE5: INTC.SetVector(InterruptSource::BSC_REF_CMI, bit::extract<0, 6>(value)); break;
 
     default: //
-        m_log.debug("Unhandled 8-bit on-chip register write to {:03X} = {:X}", address, value);
+        if constexpr (!poke) {
+            m_log.debug("Unhandled 8-bit on-chip register write to {:03X} = {:X}", address, value);
+        }
         break;
     }
 }
 
+template <bool poke>
 FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
     switch (address) {
     case 0x60:
@@ -744,22 +836,22 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
     case 0xE3:
     case 0xE4:
     case 0xE5:
-        OnChipRegWriteByte(address & ~1, value >> 8u);
-        OnChipRegWriteByte(address | 1, value >> 0u);
+        OnChipRegWriteByte<poke>(address & ~1, value >> 8u);
+        OnChipRegWriteByte<poke>(address | 1, value >> 0u);
         break;
 
     case 0x80:
         if ((value >> 8u) == 0x5A) {
             WDT.WriteWTCNT(value);
         } else if ((value >> 8u) == 0xA5) {
-            WDT.WriteWTCSR(value);
+            WDT.WriteWTCSR<poke>(value);
         }
         break;
     case 0x82:
         if ((value >> 8u) == 0x5A) {
             WDT.WriteRSTE_RSTS(value);
         } else if ((value >> 8u) == 0xA5) {
-            WDT.WriteWOVF(value);
+            WDT.WriteWOVF<poke>(value);
         }
         break;
 
@@ -775,20 +867,28 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
     case 0x1F0:
     case 0x1F4:
     case 0x1F8: //
-        OnChipRegWriteLong(address & ~3, value);
+        OnChipRegWriteLong<poke>(address & ~3, value);
         break;
 
     default: //
-        m_log.debug("Illegal 16-bit on-chip register write to {:03X} = {:X}", address, value);
+        if constexpr (!poke) {
+            m_log.debug("Illegal 16-bit on-chip register write to {:03X} = {:X}", address, value);
+        }
         break;
     }
 }
 
+template <bool poke>
 FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     if (address < 0x100) {
-        // Registers 0x000-0x0FF do not accept 32-bit accesses
-        // TODO: raise CPU address error
-        m_log.debug("Illegal 32-bit on-chip register write to {:03X} = {:X}", address, value);
+        if constexpr (poke) {
+            OnChipRegWriteWord<true>(address + 0, value >> 16u);
+            OnChipRegWriteWord<true>(address + 2, value >> 0u);
+        } else {
+            // Registers 0x000-0x0FF do not accept 32-bit accesses
+            // TODO: raise CPU address error
+            m_log.debug("Illegal 32-bit on-chip register write to {:03X} = {:X}", address, value);
+        }
         return;
     }
 
@@ -799,11 +899,13 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     case 0x104:
     case 0x124:
         DIVU.DVDNT = value;
-        DIVU.DVDNTL = value;
-        DIVU.DVDNTH = static_cast<sint32>(value) >> 31;
-        DIVU.Calc32();
-        if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
-            RaiseInterrupt(InterruptSource::DIVU_OVFI);
+        if constexpr (!poke) {
+            DIVU.DVDNTL = value;
+            DIVU.DVDNTH = static_cast<sint32>(value) >> 31;
+            DIVU.Calc32();
+            if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
+                RaiseInterrupt(InterruptSource::DIVU_OVFI);
+            }
         }
         break;
 
@@ -819,9 +921,11 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     case 0x114:
     case 0x134:
         DIVU.DVDNTL = value;
-        DIVU.Calc64();
-        if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
-            RaiseInterrupt(InterruptSource::DIVU_OVFI);
+        if constexpr (!poke) {
+            DIVU.Calc64();
+            if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
+                RaiseInterrupt(InterruptSource::DIVU_OVFI);
+            }
         }
         break;
 
@@ -835,16 +939,20 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     case 0x184: m_dmaChannels[0].dstAddress = value; break;
     case 0x188: m_dmaChannels[0].xferCount = bit::extract<0, 23>(value); break;
     case 0x18C:
-        m_dmaChannels[0].WriteCHCR(value);
-        RunDMAC(0); // TODO: should be scheduled
+        m_dmaChannels[0].WriteCHCR<poke>(value);
+        if constexpr (!poke) {
+            RunDMAC(0); // TODO: should be scheduled
+        }
         break;
 
     case 0x190: m_dmaChannels[1].srcAddress = value; break;
     case 0x194: m_dmaChannels[1].dstAddress = value; break;
     case 0x198: m_dmaChannels[1].xferCount = bit::extract<0, 23>(value); break;
     case 0x19C:
-        m_dmaChannels[1].WriteCHCR(value);
-        RunDMAC(1); // TODO: should be scheduled
+        m_dmaChannels[1].WriteCHCR<poke>(value);
+        if constexpr (!poke) {
+            RunDMAC(1); // TODO: should be scheduled
+        }
         break;
 
     case 0x1A0: INTC.SetVector(InterruptSource::DMAC0_XferEnd, bit::extract<0, 6>(value)); break;
@@ -852,11 +960,18 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
 
     case 0x1B0:
         DMAOR.DME = bit::extract<0>(value);
-        DMAOR.NMIF &= bit::extract<1>(value);
-        DMAOR.AE &= bit::extract<2>(value);
+        if constexpr (poke) {
+            DMAOR.NMIF = bit::extract<1>(value);
+            DMAOR.AE = bit::extract<2>(value);
+        } else {
+            DMAOR.NMIF &= bit::extract<1>(value);
+            DMAOR.AE &= bit::extract<2>(value);
+        }
         DMAOR.PR = bit::extract<3>(value);
-        RunDMAC(0); // TODO: should be scheduled
-        RunDMAC(1); // TODO: should be scheduled
+        if constexpr (!poke) {
+            RunDMAC(0); // TODO: should be scheduled
+            RunDMAC(1); // TODO: should be scheduled
+        }
         break;
 
     case 0x1E0: // BCR1
@@ -896,7 +1011,9 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
         }
         break;
     default: //
-        m_log.debug("Unhandled 32-bit on-chip register write to {:03X} = {:X}", address, value);
+        if constexpr (!poke) {
+            m_log.debug("Unhandled 32-bit on-chip register write to {:03X} = {:X}", address, value);
+        }
         break;
     }
 }
@@ -1577,7 +1694,7 @@ FORCE_INLINE void SH2::SLEEP() {
 
         // Initialize DMAC, FRT, WDT and SCI
         for (auto &ch : m_dmaChannels) {
-            ch.WriteCHCR(0);
+            ch.WriteCHCR<false>(0);
         }
         DMAOR.u32 = 0x0;
         FRT.Reset();
