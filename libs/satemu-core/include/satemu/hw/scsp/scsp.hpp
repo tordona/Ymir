@@ -502,19 +502,19 @@ private:
         case 0x41C: WriteTimer<is16, true>(2, value16); break;
         case 0x41D: WriteTimer<true, is16>(2, value16); break;
 
-        case 0x41E: WriteSCIEB<is16, true, poke>(value16); break;
-        case 0x41F: WriteSCIEB<true, is16, poke>(value16); break;
-        case 0x420: WriteSCIPD<is16, true, poke>(value16); break;
-        case 0x421: WriteSCIPD<true, is16, poke>(value16); break;
-        case 0x422: WriteSCIRE<is16, true, poke>(value16); break;
-        case 0x423: WriteSCIRE<true, is16, poke>(value16); break;
+        case 0x41E: WriteSCIEB<is16, true>(value16); break;
+        case 0x41F: WriteSCIEB<true, is16>(value16); break;
+        case 0x420: WriteSCIPD<is16, true>(value16); break;
+        case 0x421: WriteSCIPD<true, is16>(value16); break;
+        case 0x422: WriteSCIRE<is16, true>(value16); break;
+        case 0x423: WriteSCIRE<true, is16>(value16); break;
 
-        case 0x424: WriteSCILV<is16, true, poke>(0, value16); break;
-        case 0x425: WriteSCILV<true, is16, poke>(0, value16); break;
-        case 0x426: WriteSCILV<is16, true, poke>(1, value16); break;
-        case 0x427: WriteSCILV<true, is16, poke>(1, value16); break;
-        case 0x428: WriteSCILV<is16, true, poke>(2, value16); break;
-        case 0x429: WriteSCILV<true, is16, poke>(2, value16); break;
+        case 0x424: WriteSCILV<is16, true>(0, value16); break;
+        case 0x425: WriteSCILV<true, is16>(0, value16); break;
+        case 0x426: WriteSCILV<is16, true>(1, value16); break;
+        case 0x427: WriteSCILV<true, is16>(1, value16); break;
+        case 0x428: WriteSCILV<is16, true>(2, value16); break;
+        case 0x429: WriteSCILV<true, is16>(2, value16); break;
 
         case 0x42A: WriteMCIEB<is16, true, poke>(value16); break;
         case 0x42B: WriteMCIEB<true, is16, poke>(value16); break;
@@ -642,34 +642,28 @@ private:
         return m_m68kEnabledInterrupts;
     }
 
-    template <bool lowerByte, bool upperByte, bool poke>
+    template <bool lowerByte, bool upperByte>
     void WriteSCIEB(uint16 value) {
         util::SplitWriteWord<lowerByte, upperByte, 0, 10>(m_m68kEnabledInterrupts, value);
-        if constexpr (!poke) {
-            UpdateM68KInterrupts();
-        }
+        UpdateM68KInterrupts();
     }
 
     uint16 ReadSCIPD() const {
         return m_m68kPendingInterrupts;
     }
 
-    template <bool lowerByte, bool upperByte, bool poke>
+    template <bool lowerByte, bool upperByte>
     void WriteSCIPD(uint16 value) {
         if constexpr (lowerByte) {
             bit::deposit_into<5>(m_m68kPendingInterrupts, bit::extract<5>(value));
-            if constexpr (!poke) {
-                UpdateM68KInterrupts();
-            }
+            UpdateM68KInterrupts();
         }
     }
 
-    template <bool lowerByte, bool upperByte, bool poke>
+    template <bool lowerByte, bool upperByte>
     void WriteSCIRE(uint16 value) {
         m_m68kPendingInterrupts &= ~value;
-        if constexpr (!poke) {
-            UpdateM68KInterrupts();
-        }
+        UpdateM68KInterrupts();
     }
 
     // ---
@@ -714,13 +708,11 @@ private:
         return m_m68kInterruptLevels[index];
     }
 
-    template <bool lowerByte, bool upperByte, bool poke>
+    template <bool lowerByte, bool upperByte>
     void WriteSCILV(uint32 index, uint16 value) {
         if constexpr (lowerByte) {
             m_m68kInterruptLevels[index] = bit::extract<0, 7>(value);
-            if constexpr (!poke) {
-                UpdateM68KInterrupts();
-            }
+            UpdateM68KInterrupts();
         }
     }
 
