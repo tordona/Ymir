@@ -26,11 +26,12 @@ void SH2InterruptsView::Display() {
     // --- INTC and SR ---------------------------------------------------------
     {
         ImGui::SeparatorText("INTC and SR");
+
         ImGui::PushFont(m_context.fonts.monospaceMedium);
         ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 4);
-        uint16 ICR = intc.ICR.Read();
+        uint16 ICR = intc.ReadICR();
         if (ImGui::InputScalar("##ICR", ImGuiDataType_U16, &ICR, nullptr, nullptr, "%04X")) {
-            intc.ICR.Write<true, true, true>(ICR);
+            intc.WriteICR<true, true, true>(ICR);
         }
         ImGui::PopFont();
         ImGui::SameLine();
@@ -54,7 +55,10 @@ void SH2InterruptsView::Display() {
         ImGui::SameLine();
         ImGui::Checkbox("NMIE", &intc.ICR.NMIE);
         ImGui::SameLine();
-        ImGui::Checkbox("VECMD", &intc.ICR.VECMD);
+        if (ImGui::Checkbox("VECMD", &intc.ICR.VECMD)) {
+            intc.UpdateIRLVector();
+            probe.RaiseInterrupt(sh2::InterruptSource::IRL);
+        }
     }
 
     // --- Interrupt signals ---------------------------------------------------
@@ -100,11 +104,18 @@ void SH2InterruptsView::Display() {
                     }
                     ImGui::PushFont(m_context.fonts.monospaceMedium);
                     for (auto [source, name] : sources) {
+                        const bool irlAutoVector = source == sh2::InterruptSource::IRL && !intc.ICR.VECMD;
                         uint8 vector = intc.GetVector(source);
+                        if (irlAutoVector) {
+                            ImGui::BeginDisabled();
+                        }
                         ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
                         if (ImGui::InputScalar(fmt::format("##{}_vector", name).c_str(), ImGuiDataType_U8, &vector,
                                                nullptr, nullptr, "%02X")) {
                             intc.SetVector(source, vector);
+                        }
+                        if (irlAutoVector) {
+                            ImGui::EndDisabled();
                         }
                     }
                     ImGui::PopFont();
@@ -120,12 +131,17 @@ void SH2InterruptsView::Display() {
                     ImVec2 startPos = ImGui::GetCursorScreenPos();
                     ImGui::PushFont(m_context.fonts.monospaceMedium);
                     for (auto [source, name] : sources) {
+                        const bool irl = source == sh2::InterruptSource::IRL;
                         uint8 level = intc.GetLevel(source);
                         ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
                         if (ImGui::InputScalar(fmt::format("##{}_level", name).c_str(), ImGuiDataType_U8, &level,
                                                nullptr, nullptr, "%X")) {
                             for (auto src : sources) {
                                 intc.SetLevel(src.first, std::min<uint8>(level, 0xF));
+                            }
+                            if (irl) {
+                                intc.UpdateIRLVector();
+                                probe.RaiseInterrupt(sh2::InterruptSource::IRL);
                             }
                         }
                     }
@@ -184,6 +200,40 @@ void SH2InterruptsView::Display() {
                     true);
 
             ImGui::EndTable();
+        }
+    }
+
+    // --- External interrupt --------------------------------------------------
+    {
+        ImGui::SeparatorText("External interrupt");
+
+        ImGui::PushFont(m_context.fonts.monospaceMedium);
+        ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
+        ImGui::InputScalar("##ext_vec", ImGuiDataType_U8, &m_extIntrVector, nullptr, nullptr, "%02X");
+        ImGui::PopFont();
+        ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Vector");
+
+        ImGui::SameLine();
+
+        ImGui::PushFont(m_context.fonts.monospaceMedium);
+        ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
+        if (ImGui::InputScalar("##ext_lv", ImGuiDataType_U8, &m_extIntrLevel, nullptr, nullptr, "%X")) {
+            m_extIntrLevel = std::min<uint8>(m_extIntrLevel, 0xF);
+        }
+        ImGui::PopFont();
+        ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Level");
+
+        ImGui::SameLine();
+
+        if (ImGui::Button("Trigger##ext_intr")) {
+            intc.externalVector = m_extIntrVector;
+            intc.SetLevel(sh2::InterruptSource::IRL, m_extIntrLevel);
+            intc.UpdateIRLVector();
+            probe.RaiseInterrupt(sh2::InterruptSource::IRL);
         }
     }
 

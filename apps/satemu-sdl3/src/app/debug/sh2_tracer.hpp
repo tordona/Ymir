@@ -26,6 +26,7 @@ struct SH2Tracer final : public satemu::debug::ISH2Tracer {
         uint8 level;
         satemu::sh2::InterruptSource source;
         uint32 pc;
+        uint32 counter;
     };
 
     struct ExceptionInfo {
@@ -37,6 +38,9 @@ struct SH2Tracer final : public satemu::debug::ISH2Tracer {
     util::RingBuffer<InstructionInfo, 16384> instructions;
     util::RingBuffer<InterruptInfo, 1024> interrupts;
     util::RingBuffer<ExceptionInfo, 1024> exceptions;
+
+private:
+    uint32 m_interruptCounter = 0;
 };
 
 } // namespace app

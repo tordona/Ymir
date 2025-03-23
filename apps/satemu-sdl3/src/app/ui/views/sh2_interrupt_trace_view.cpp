@@ -31,24 +31,38 @@ void SH2InterruptTraceView::Display() {
             ImGui::TextUnformatted("You must also enable tracing in Debug > Enable tracing (F11)");
             ImGui::EndTooltip();
         }
+        ImGui::SameLine();
+        if (ImGui::Button("Clear##trace")) {
+            m_tracer.interrupts.Clear();
+        }
 
-        if (ImGui::BeginTable("intr_trace", 5, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY)) {
-            ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, paddingWidth * 2 + hexCharWidth * 4);
-            ImGui::TableSetupColumn("PC", ImGuiTableColumnFlags_WidthFixed, paddingWidth * 2 + hexCharWidth * 8);
-            ImGui::TableSetupColumn("Vec", ImGuiTableColumnFlags_WidthFixed, paddingWidth * 2 + hexCharWidth * 2);
-            ImGui::TableSetupColumn("Lv", ImGuiTableColumnFlags_WidthFixed, paddingWidth * 2 + hexCharWidth * 2);
-            ImGui::TableSetupColumn("Source", ImGuiTableColumnFlags_WidthStretch);
+        if (ImGui::BeginTable("intr_trace", 5,
+                              ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Sortable)) {
+            ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_PreferSortDescending);
+            ImGui::TableSetupColumn("PC", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort,
+                                    paddingWidth * 2 + hexCharWidth * 8);
+            ImGui::TableSetupColumn("Vec", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort,
+                                    paddingWidth * 2 + hexCharWidth * 2);
+            ImGui::TableSetupColumn("Lv", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort,
+                                    paddingWidth * 2 + hexCharWidth * 2);
+            ImGui::TableSetupColumn("Source", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoSort);
             ImGui::TableSetupScrollFreeze(1, 1);
             ImGui::TableHeadersRow();
 
             const size_t count = m_tracer.interrupts.Count();
             for (size_t i = 0; i < count; i++) {
-                auto trace = m_tracer.interrupts.Read(i);
+                auto *sort = ImGui::TableGetSortSpecs();
+                bool reverse = false;
+                if (sort != nullptr && sort->SpecsCount == 1) {
+                    reverse = sort->Specs[0].SortDirection == ImGuiSortDirection_Descending;
+                }
+
+                auto trace = reverse ? m_tracer.interrupts.ReadReverse(i) : m_tracer.interrupts.Read(i);
 
                 ImGui::TableNextRow();
                 if (ImGui::TableNextColumn()) {
                     ImGui::PushFont(m_context.fonts.monospaceMedium);
-                    ImGui::Text("%4zu", i);
+                    ImGui::Text("%u", trace.counter);
                     ImGui::PopFont();
                 }
                 if (ImGui::TableNextColumn()) {

@@ -19,7 +19,7 @@ void SH2Interrupts::Display() {
     }
 
     std::string name = fmt::format("{}SH2 interrupts", m_master ? "M" : "S");
-    ImGui::SetNextWindowSizeConstraints(ImVec2(467, 544), ImVec2(467, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(500, 598), ImVec2(580, FLT_MAX));
     if (ImGui::Begin(name.c_str(), &Open)) {
         if (ImGui::BeginTable("intr_view_base", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {
             ImGui::TableSetupColumn("##left", ImGuiTableColumnFlags_WidthFixed);

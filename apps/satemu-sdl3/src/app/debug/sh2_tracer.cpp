@@ -17,7 +17,7 @@ void SH2Tracer::Interrupt(uint8 vecNum, uint8 level, sh2::InterruptSource source
         return;
     }
 
-    interrupts.Write({vecNum, level, source, pc});
+    interrupts.Write({vecNum, level, source, pc, m_interruptCounter++});
 }
 
 void SH2Tracer::Exception(uint8 vecNum, uint32 pc, uint32 sr) {

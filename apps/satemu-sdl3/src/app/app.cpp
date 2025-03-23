@@ -708,7 +708,7 @@ void App::RunEmulator() {
     auto t = clk::now();
     bool paused = false; // TODO: this should be updated by the emulator thread via events
     bool debugTrace = false;
-    bool showVideoOutputDebugWindow = false;
+    bool displayVideoOutputInWindow = false;
 
     bool forceIntegerScaling = true;
     bool forceAspectRatio = false;
@@ -823,7 +823,7 @@ void App::RunEmulator() {
             break;
         case SDL_SCANCODE_F9:
             if (pressed) {
-                showVideoOutputDebugWindow = !showVideoOutputDebugWindow;
+                displayVideoOutputInWindow = !displayVideoOutputInWindow;
             }
             break;
         case SDL_SCANCODE_F11:
@@ -956,7 +956,8 @@ void App::RunEmulator() {
                 if (ImGui::SmallButton("16:9")) {
                     forcedAspect = 16.0f / 9.0f;
                 }
-                ImGui::SameLine();
+                ImGui::Separator();
+                ImGui::MenuItem("Windowed video output", "F9", &displayVideoOutputInWindow);
                 ImGui::End();
             }
             if (ImGui::BeginMenu("Emulator")) {
@@ -996,13 +997,17 @@ void App::RunEmulator() {
                     m_emuEventQueue.enqueue(EmuEvent::MemoryDump());
                 }
                 ImGui::Separator();
-                ImGui::MenuItem("Master SH2 debugger", nullptr, &m_masterSH2Debugger.Open);
-                ImGui::MenuItem("Slave SH2 debugger", nullptr, &m_slaveSH2Debugger.Open);
-                ImGui::MenuItem("Master SH2 interrupts", nullptr, &m_masterSH2Interrupts.Open);
-                ImGui::MenuItem("Slave SH2 interrupts", nullptr, &m_slaveSH2Interrupts.Open);
+                if (ImGui::BeginMenu("Master SH2")) {
+                    ImGui::MenuItem("Debugger", nullptr, &m_masterSH2Debugger.Open);
+                    ImGui::MenuItem("Interrupts", nullptr, &m_masterSH2Interrupts.Open);
+                    ImGui::EndMenu();
+                }
+                if (ImGui::BeginMenu("Slave SH2")) {
+                    ImGui::MenuItem("Debugger", nullptr, &m_slaveSH2Debugger.Open);
+                    ImGui::MenuItem("Interrupts", nullptr, &m_slaveSH2Interrupts.Open);
+                    ImGui::EndMenu();
+                }
                 ImGui::MenuItem("SCU", nullptr, &m_scuDebugger.Open);
-                ImGui::Separator();
-                ImGui::MenuItem("Video output", "F9", &showVideoOutputDebugWindow);
                 ImGui::End();
             }
             if (ImGui::BeginMenu("Help")) {
@@ -1022,7 +1027,7 @@ void App::RunEmulator() {
         }
 
         // Draw video output as a window
-        if (showVideoOutputDebugWindow) {
+        if (displayVideoOutputInWindow) {
             std::string title = fmt::format("Video Output - {}x{}###Display", screen.width, screen.height);
 
             const float aspectRatio = (float)screen.height / screen.width;
@@ -1035,7 +1040,7 @@ void App::RunEmulator() {
                         (float)(int)(data->DesiredSize.x * aspectRatio) + ImGui::GetFrameHeightWithSpacing();
                 },
                 (void *)&aspectRatio);
-            if (ImGui::Begin(title.c_str(), &showVideoOutputDebugWindow, ImGuiWindowFlags_NoNavInputs)) {
+            if (ImGui::Begin(title.c_str(), &displayVideoOutputInWindow, ImGuiWindowFlags_NoNavInputs)) {
                 const ImVec2 avail = ImGui::GetContentRegionAvail();
                 const float scaleX = avail.x / screen.width;
                 const float scaleY = avail.y / screen.height;
@@ -1060,7 +1065,7 @@ void App::RunEmulator() {
         SDL_RenderClear(renderer);
 
         // Draw Saturn screen
-        if (!showVideoOutputDebugWindow) {
+        if (!displayVideoOutputInWindow) {
             // Get screen size
             const float baseWidth = forceAspectRatio ? screen.height * forcedAspect : screen.width;
             const float baseHeight = screen.height;

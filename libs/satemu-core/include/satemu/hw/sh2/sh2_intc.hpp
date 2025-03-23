@@ -75,27 +75,6 @@ struct RegICR {
         VECMD = false;
         NMIE = false;
     }
-
-    FORCE_INLINE uint16 Read() const {
-        uint16 value = 0;
-        bit::deposit_into<0>(value, VECMD);
-        bit::deposit_into<8>(value, NMIE);
-        bit::deposit_into<15>(value, NMIL);
-        return value;
-    }
-
-    template <bool lowerByte, bool upperByte, bool poke>
-    FORCE_INLINE void Write(uint16 value) {
-        if constexpr (lowerByte) {
-            VECMD = bit::extract<0>(value);
-        }
-        if constexpr (upperByte) {
-            NMIE = bit::extract<8>(value);
-            if constexpr (poke) {
-                NMIL = bit::extract<15>(value);
-            }
-        }
-    }
 };
 
 // 0E2  R/W  8,16     0000      IPRA    Interrupt priority setting register A
@@ -190,6 +169,37 @@ struct InterruptController {
     // Sets the interrupt level for the specified interrupt source.
     FORCE_INLINE void SetLevel(InterruptSource source, uint8 priority) {
         m_levels[static_cast<size_t>(source)] = priority;
+    }
+
+    FORCE_INLINE uint16 ReadICR() const {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, ICR.VECMD);
+        bit::deposit_into<8>(value, ICR.NMIE);
+        bit::deposit_into<15>(value, ICR.NMIL);
+        return value;
+    }
+
+    template <bool lowerByte, bool upperByte, bool poke>
+    FORCE_INLINE void WriteICR(uint16 value) {
+        if constexpr (lowerByte) {
+            ICR.VECMD = bit::extract<0>(value);
+            UpdateIRLVector();
+        }
+        if constexpr (upperByte) {
+            ICR.NMIE = bit::extract<8>(value);
+            if constexpr (poke) {
+                ICR.NMIL = bit::extract<15>(value);
+            }
+        }
+    }
+
+    FORCE_INLINE void UpdateIRLVector() {
+        if (ICR.VECMD) {
+            SetVector(InterruptSource::IRL, externalVector);
+        } else {
+            const uint8 level = GetLevel(InterruptSource::IRL);
+            SetVector(InterruptSource::IRL, 0x40 + (level >> 1u));
+        }
     }
 
     RegICR ICR; // 0E0  R/W  8,16     0000      ICR     Interrupt control register

@@ -26,14 +26,19 @@ public:
     }
 
     T Read(size_t offset) const {
+        size_t pos = (m_writePos - m_count + offset) % N;
+        return m_entries[pos];
+    }
+
+    T ReadReverse(size_t offset) const {
         size_t pos = (m_writePos - 1 - offset) % N;
         return m_entries[pos];
     }
 
 private:
     std::array<T, N> m_entries;
-    size_t m_writePos;
-    size_t m_count;
+    size_t m_writePos = 0;
+    size_t m_count = 0;
 };
 
 } // namespace util

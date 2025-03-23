@@ -210,7 +210,7 @@ public:
                 m_sh2.DIVU.DVCR.OVF = 1;
                 m_sh2.DIVU.DVCR.OVFIE = 1;
                 break;
-            case InterruptSource::IRL: /*no signals to be raised*/ break;
+            case InterruptSource::IRL: /*relies on level being set*/ break;
             case InterruptSource::UserBreak: /*TODO*/ break;
             case InterruptSource::NMI: m_sh2.INTC.NMI = 1; break;
             }
@@ -235,7 +235,10 @@ public:
             case InterruptSource::DMAC1_XferEnd: m_sh2.m_dmaChannels[1].xferEnded = false; break;
             case InterruptSource::DMAC0_XferEnd: m_sh2.m_dmaChannels[0].xferEnded = false; break;
             case InterruptSource::DIVU_OVFI: m_sh2.DIVU.DVCR.OVF = 0; break;
-            case InterruptSource::IRL: /*no signals to be raised*/ break;
+            case InterruptSource::IRL:
+                m_sh2.INTC.SetLevel(sh2::InterruptSource::IRL, 0x0);
+                m_sh2.INTC.UpdateIRLVector();
+                break;
             case InterruptSource::UserBreak: /*TODO*/ break;
             case InterruptSource::NMI: m_sh2.INTC.NMI = 0; break;
             }

@@ -171,12 +171,7 @@ void SH2::SetExternalInterrupt(uint8 level, uint8 vector) {
     INTC.SetLevel(source, level);
 
     if (level > 0) {
-        if (INTC.ICR.VECMD) {
-            INTC.SetVector(source, vector);
-        } else {
-            const uint8 level = INTC.GetLevel(source);
-            INTC.SetVector(source, 0x40 + (level >> 1u));
-        }
+        INTC.UpdateIRLVector();
         RaiseInterrupt(source);
     } else {
         INTC.SetVector(source, 0);
@@ -611,7 +606,7 @@ template <bool peek>
 FORCE_INLINE uint16 SH2::OnChipRegReadWord(uint32 address) {
     if (address < 0x100) {
         if (address == 0xE0) {
-            return INTC.ICR.Read();
+            return INTC.ReadICR();
         }
         if constexpr (peek) {
             uint16 value = OnChipRegReadByte<peek>(address + 0) << 8u;
@@ -778,16 +773,8 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     case 0x91: SBYCR.u8 = value & 0xDF; break;
     case 0x92: WriteCCR(value); break;
 
-    case 0xE0: INTC.ICR.Write<false, true, poke>(value << 8u); break;
-    case 0xE1:
-        INTC.ICR.Write<true, false, poke>(value);
-        if (INTC.ICR.VECMD) {
-            INTC.SetVector(InterruptSource::IRL, INTC.externalVector);
-        } else {
-            const uint8 level = INTC.GetLevel(InterruptSource::IRL);
-            INTC.SetVector(InterruptSource::IRL, 0x40 + (level >> 1u));
-        }
-        break;
+    case 0xE0: INTC.WriteICR<false, true, poke>(value << 8u); break;
+    case 0xE1: INTC.WriteICR<true, false, poke>(value); break;
     case 0xE2: //
     {
         const uint8 dmacIntrLevel = bit::extract<0, 3>(value);
@@ -859,15 +846,7 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
 
     case 0x92: WriteCCR(value); break;
 
-    case 0xE0:
-        INTC.ICR.Write<true, true, poke>(value);
-        if (INTC.ICR.VECMD) {
-            INTC.SetVector(InterruptSource::IRL, INTC.externalVector);
-        } else {
-            const uint8 level = INTC.GetLevel(InterruptSource::IRL);
-            INTC.SetVector(InterruptSource::IRL, 0x40 + (level >> 1u));
-        }
-        break;
+    case 0xE0: INTC.WriteICR<true, true, poke>(value); break;
 
     case 0x108:
     case 0x10C:
