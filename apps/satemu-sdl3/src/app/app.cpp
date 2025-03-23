@@ -209,16 +209,10 @@ App::App()
     , m_slaveSH2InterruptTracer(m_context, false)
     , m_scuDebugger(m_context) {
 
-    // TODO: support 16-bit and 32-bit reads/writes
-    m_memoryViewer.Open = false;
-    m_memoryViewer.ReadFn = [](const ImU8 *mem, size_t off, void *user_data) {
-        auto &app = *reinterpret_cast<const App *>(mem);
-        return app.m_context.saturn.mainBus.Peek<uint8>(off);
-    };
-    m_memoryViewer.WriteFn = [](ImU8 *mem, size_t off, ImU8 d, void *user_data) {
-        auto &app = *reinterpret_cast<App *>(mem);
-        app.m_emuEventQueue.enqueue(EmuEvent::DebugWrite(off, d, app.m_enableSideEffects));
-    };
+    // Preinitialize some memory viewers
+    for (int i = 0; i < 10; i++) {
+        m_memoryViewers.emplace_back(m_context);
+    }
 }
 
 int App::Run(const CommandLineOptions &options) {
@@ -781,12 +775,12 @@ void App::RunEmulator() {
             // TODO: find better keybindings for these
         case SDL_SCANCODE_F6:
             if (pressed) {
-                m_emuEventQueue.enqueue(EmuEvent::OpenCloseTray());
+                m_context.eventQueues.emulator.enqueue(EmuEvent::OpenCloseTray());
             }
             break;
         case SDL_SCANCODE_F8:
             if (pressed) {
-                m_emuEventQueue.enqueue(EmuEvent::EjectDisc());
+                m_context.eventQueues.emulator.enqueue(EmuEvent::EjectDisc());
             }
             break;
             // ---- END TODO ----
@@ -795,32 +789,32 @@ void App::RunEmulator() {
             if (pressed) {
                 paused = true;
                 m_audioSystem.SetSilent(false);
-                m_emuEventQueue.enqueue(EmuEvent::FrameStep());
+                m_context.eventQueues.emulator.enqueue(EmuEvent::FrameStep());
             }
             break;
         case SDL_SCANCODE_PAUSE:
             if (pressed) {
                 paused = !paused;
                 m_audioSystem.SetSilent(paused);
-                m_emuEventQueue.enqueue(EmuEvent::SetPaused(paused));
+                m_context.eventQueues.emulator.enqueue(EmuEvent::SetPaused(paused));
             }
 
         case SDL_SCANCODE_R:
             if (pressed) {
                 if ((mod & SDL_KMOD_CTRL) && (mod & SDL_KMOD_SHIFT)) {
-                    m_emuEventQueue.enqueue(EmuEvent::FactoryReset());
+                    m_context.eventQueues.emulator.enqueue(EmuEvent::FactoryReset());
                 } else if (mod & SDL_KMOD_CTRL) {
-                    m_emuEventQueue.enqueue(EmuEvent::HardReset());
+                    m_context.eventQueues.emulator.enqueue(EmuEvent::HardReset());
                 }
             }
             if (mod & SDL_KMOD_SHIFT) {
-                m_emuEventQueue.enqueue(EmuEvent::SoftReset(pressed));
+                m_context.eventQueues.emulator.enqueue(EmuEvent::SoftReset(pressed));
             }
             break;
         case SDL_SCANCODE_TAB: m_audioSystem.SetSync(!pressed); break;
         case SDL_SCANCODE_F3:
             if (pressed) {
-                m_emuEventQueue.enqueue(EmuEvent::MemoryDump());
+                m_context.eventQueues.emulator.enqueue(EmuEvent::MemoryDump());
             }
             break;
         case SDL_SCANCODE_F9:
@@ -831,7 +825,7 @@ void App::RunEmulator() {
         case SDL_SCANCODE_F11:
             if (pressed) {
                 debugTrace = !debugTrace;
-                m_emuEventQueue.enqueue(EmuEvent::SetDebugTrace(debugTrace));
+                m_context.eventQueues.emulator.enqueue(EmuEvent::SetDebugTrace(debugTrace));
             }
             break;
         default: break;
@@ -846,8 +840,8 @@ void App::RunEmulator() {
         // space in the audio buffer due to being paused
         paused = false;
         m_audioSystem.SetSilent(false);
-        m_emuEventQueue.enqueue(EmuEvent::SetPaused(false));
-        m_emuEventQueue.enqueue(EmuEvent::Shutdown());
+        m_context.eventQueues.emulator.enqueue(EmuEvent::SetPaused(false));
+        m_context.eventQueues.emulator.enqueue(EmuEvent::Shutdown());
         if (m_emuThread.joinable()) {
             m_emuThread.join();
         }
@@ -936,10 +930,10 @@ void App::RunEmulator() {
                     OpenLoadDiscDialog();
                 }
                 if (ImGui::MenuItem("Open/close tray", "F6")) {
-                    m_emuEventQueue.enqueue(EmuEvent::OpenCloseTray());
+                    m_context.eventQueues.emulator.enqueue(EmuEvent::OpenCloseTray());
                 }
                 if (ImGui::MenuItem("Eject disc", "F8")) {
-                    m_emuEventQueue.enqueue(EmuEvent::EjectDisc());
+                    m_context.eventQueues.emulator.enqueue(EmuEvent::EjectDisc());
                 }
                 ImGui::Separator();
                 if (ImGui::MenuItem("Exit", "Alt+F4")) {
@@ -966,22 +960,22 @@ void App::RunEmulator() {
                 if (ImGui::MenuItem("Frame step", "=")) {
                     paused = true;
                     m_audioSystem.SetSilent(false);
-                    m_emuEventQueue.enqueue(EmuEvent::FrameStep());
+                    m_context.eventQueues.emulator.enqueue(EmuEvent::FrameStep());
                 }
                 if (ImGui::MenuItem("Pause/resume", "Pause")) {
                     paused = !paused;
-                    m_emuEventQueue.enqueue(EmuEvent::SetPaused(paused));
+                    m_context.eventQueues.emulator.enqueue(EmuEvent::SetPaused(paused));
                 }
                 ImGui::Separator();
                 /*if (ImGui::MenuItem("Soft reset", "Shift+R")) {
                     // TODO: send Soft Reset pulse for a short time
-                    //m_emuEventQueue.enqueue(EmuEvent::SoftReset(pressed));
+                    //m_context.eventQueues.emulator.enqueue(EmuEvent::SoftReset(pressed));
                 }*/
                 if (ImGui::MenuItem("Hard reset", "Ctrl+R")) {
-                    m_emuEventQueue.enqueue(EmuEvent::HardReset());
+                    m_context.eventQueues.emulator.enqueue(EmuEvent::HardReset());
                 }
                 if (ImGui::MenuItem("Factory reset", "Ctrl+Shift+R")) {
-                    m_emuEventQueue.enqueue(EmuEvent::FactoryReset());
+                    m_context.eventQueues.emulator.enqueue(EmuEvent::FactoryReset());
                 }
                 ImGui::End();
             }
@@ -991,12 +985,14 @@ void App::RunEmulator() {
             }
             if (ImGui::BeginMenu("Debug")) {
                 if (ImGui::MenuItem("Enable tracing", "F11", &debugTrace)) {
-                    m_emuEventQueue.enqueue(EmuEvent::SetDebugTrace(debugTrace));
+                    m_context.eventQueues.emulator.enqueue(EmuEvent::SetDebugTrace(debugTrace));
                 }
                 ImGui::Separator();
-                ImGui::MenuItem("Memory viewer", nullptr, &m_memoryViewer.Open);
+                if (ImGui::MenuItem("Memory viewer", nullptr)) {
+                    OpenMemoryViewer();
+                }
                 if (ImGui::MenuItem("Dump all memory", "F3")) {
-                    m_emuEventQueue.enqueue(EmuEvent::MemoryDump());
+                    m_context.eventQueues.emulator.enqueue(EmuEvent::MemoryDump());
                 }
                 ImGui::Separator();
                 if (ImGui::BeginMenu("Master SH2")) {
@@ -1124,8 +1120,8 @@ void App::EmulatorThread() {
 
     while (true) {
         // Process all pending commands
-        const size_t cmdCount = paused ? m_emuEventQueue.wait_dequeue_bulk(cmds.begin(), cmds.size())
-                                       : m_emuEventQueue.try_dequeue_bulk(cmds.begin(), cmds.size());
+        const size_t cmdCount = paused ? m_context.eventQueues.emulator.wait_dequeue_bulk(cmds.begin(), cmds.size())
+                                       : m_context.eventQueues.emulator.try_dequeue_bulk(cmds.begin(), cmds.size());
         for (size_t i = 0; i < cmdCount; i++) {
             const EmuEvent &cmd = cmds[i];
             using enum EmuEvent::Type;
@@ -1284,7 +1280,7 @@ void App::ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, i
     } else {
         // Only one file should be selected
         const char *file = *filelist;
-        m_emuEventQueue.enqueue(EmuEvent::LoadDisc(file));
+        m_context.eventQueues.emulator.enqueue(EmuEvent::LoadDisc(file));
     }
 }
 
@@ -1313,31 +1309,12 @@ void App::DrawDebug() {
 
     m_scuDebugger.Display();
 
-    if (m_memoryViewer.Open) {
-        if (ImGui::Begin("Memory viewer", &m_memoryViewer.Open, ImGuiWindowFlags_NoScrollbar)) {
-            ImGui::Checkbox("Enable side-effects", &m_enableSideEffects);
-            ImGui::Separator();
-            ImGui::PushFont(m_context.fonts.monospaceMedium);
-            m_memoryViewer.DrawContents(this, 0x8000000, 0x0);
-            ImGui::PopFont();
-        }
-        ImGui::End();
+    for (auto &memView : m_memoryViewers) {
+        memView.Display();
     }
 
     // TODO: SH2 instruction trace view
     // TODO: SH2 exception trace view
-    // TODO: SH2 interrupt trace view
-    /*if (debugTrace) {
-        drawText(x, y + 280, "vec lv");
-        for (size_t i = 0; i < tracer.interruptsCount; i++) {
-            const size_t pos =
-                (tracer.interruptsPos - tracer.interruptsCount + i) % tracer.interrupts.size();
-            const auto &intr = tracer.interrupts[pos];
-            drawText(x, y + 290 + i * 10, fmt::format("{:02X}  {:02X}", intr.vecNum, intr.level));
-        }
-    } else {
-        ImGui::TextUnformatted("(trace disabled)");
-    }*/
 
     // TODO: SCU interrupt trace view
     /*if (debugTrace) {
@@ -1387,6 +1364,24 @@ void App::DrawDebug() {
     } else {
         ImGui::TextUnformatted("(trace unavailable)");
     }*/
+}
+
+void App::OpenMemoryViewer() {
+    for (auto &memView : m_memoryViewers) {
+        if (!memView.Open) {
+            memView.Open = true;
+            memView.RequestFocus();
+            return;
+        }
+    }
+
+    // If there are no more free memory viewers, request focus on the first window
+    m_memoryViewers[0].RequestFocus();
+
+    // If there are no more free memory viewers, create more!
+    /*auto &memView = m_memoryViewers.emplace_back(m_context);
+    memView.Open = true;
+    memView.RequestFocus();*/
 }
 
 } // namespace app

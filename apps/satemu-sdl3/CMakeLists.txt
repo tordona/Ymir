@@ -18,6 +18,8 @@ add_executable(satemu-sdl3
     
     src/app/events/emu_events.hpp
 
+    src/app/ui/memory_viewer.cpp
+    src/app/ui/memory_viewer.hpp
     src/app/ui/scu_debugger.cpp
     src/app/ui/scu_debugger.hpp
     src/app/ui/sh2_debugger.cpp

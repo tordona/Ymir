@@ -5,24 +5,18 @@
 #include "audio_system.hpp"
 #include "shared_context.hpp"
 
-#include "events/emu_events.hpp"
-
+#include "ui/memory_viewer.hpp"
 #include "ui/scu_debugger.hpp"
 #include "ui/sh2_debugger.hpp"
 #include "ui/sh2_interrupt_tracer.hpp"
 #include "ui/sh2_interrupts.hpp"
 
-#include "blockingconcurrentqueue.h"
-
 #include <SDL3/SDL_events.h>
 
 #include <imgui.h>
 
-#include <imgui_memory_editor.h>
-
-#include <string>
 #include <thread>
-#include <variant>
+#include <vector>
 
 namespace app {
 
@@ -39,7 +33,6 @@ private:
     SDL_PropertiesID m_fileDialogProps;
 
     std::thread m_emuThread;
-    moodycamel::BlockingConcurrentQueue<EmuEvent> m_emuEventQueue;
 
     AudioSystem m_audioSystem;
 
@@ -66,8 +59,9 @@ private:
 
     SCUDebugger m_scuDebugger;
 
-    MemoryEditor m_memoryViewer;
-    bool m_enableSideEffects = false;
+    std::vector<MemoryViewer> m_memoryViewers;
+
+    void OpenMemoryViewer();
 };
 
 } // namespace app

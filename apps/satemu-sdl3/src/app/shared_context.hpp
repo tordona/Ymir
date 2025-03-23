@@ -5,7 +5,11 @@
 #include <app/debug/scu_tracer.hpp>
 #include <app/debug/sh2_tracer.hpp>
 
+#include <app/events/emu_events.hpp>
+
 #include <imgui.h>
+
+#include <blockingconcurrentqueue.h>
 
 namespace app {
 
@@ -30,6 +34,10 @@ struct SharedContext {
         ImFont *monospaceMediumBold = nullptr;
         ImFont *display = nullptr;
     } fonts;
+
+    struct EventQueues {
+        moodycamel::BlockingConcurrentQueue<EmuEvent> emulator;
+    } eventQueues;
 };
 
 } // namespace app
