@@ -237,6 +237,20 @@ void SH2InterruptsView::Display() {
         }
     }
 
+    // --- Pending interrupt ---------------------------------------------------
+    {
+        ImGui::SeparatorText("Pending interrupt");
+
+        if (intc.pending.level == 0) {
+            ImGui::BeginDisabled();
+            ImGui::TextUnformatted("No pending interrupts");
+            ImGui::EndDisabled();
+        } else {
+            ImGui::Text("Next: %s, level 0x%X", sh2::GetInterruptSourceName(intc.pending.source).data(),
+                        intc.pending.level);
+        }
+    }
+
     ImGui::EndGroup();
 }
 

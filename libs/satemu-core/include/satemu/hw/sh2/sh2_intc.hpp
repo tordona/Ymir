@@ -5,6 +5,8 @@
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/inline.hpp>
 
+#include <string_view>
+
 namespace satemu::sh2 {
 
 // addr r/w  access   init      code    name
@@ -122,6 +124,19 @@ enum class InterruptSource : uint8 {
     UserBreak,     // 14  UBC break     15             0x0C                  (TODO)
     NMI            // 15  NMI           16             0x0B                  INTC.NMIL
 };
+
+inline std::string_view GetInterruptSourceName(InterruptSource source) {
+    constexpr std::string_view kInterruptSourceNames[] = {
+        "(none)",      "FRT OVI", "FRT OCI",  "FRT ICI",  "SCI TEI",   "SCI TXI", "SCI RXI", "SCI ERI",
+        "BSC REF CMI", "WDT ITI", "DMAC1 TE", "DMAC0 TE", "DIVU OVFI", "IRL",     "UBC BRK", "NMI"};
+
+    const auto index = static_cast<uint8>(source);
+    if (index < std::size(kInterruptSourceNames)) {
+        return kInterruptSourceNames[index];
+    } else {
+        return "(invalid)";
+    }
+}
 
 struct InterruptController {
     InterruptController() {

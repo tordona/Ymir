@@ -81,24 +81,7 @@ void SH2InterruptTraceView::Display() {
                     ImGui::PopFont();
                 }
                 if (ImGui::TableNextColumn()) {
-                    switch (trace.source) {
-                    case sh2::InterruptSource::None: ImGui::TextUnformatted("(none)"); break;
-                    case sh2::InterruptSource::FRT_OVI: ImGui::TextUnformatted("FRT OVI"); break;
-                    case sh2::InterruptSource::FRT_OCI: ImGui::TextUnformatted("FRT OCI"); break;
-                    case sh2::InterruptSource::FRT_ICI: ImGui::TextUnformatted("FRT ICI"); break;
-                    case sh2::InterruptSource::SCI_TEI: ImGui::TextUnformatted("SCI TEI"); break;
-                    case sh2::InterruptSource::SCI_TXI: ImGui::TextUnformatted("SCI TXI"); break;
-                    case sh2::InterruptSource::SCI_RXI: ImGui::TextUnformatted("SCI RXI"); break;
-                    case sh2::InterruptSource::SCI_ERI: ImGui::TextUnformatted("SCI ERI"); break;
-                    case sh2::InterruptSource::BSC_REF_CMI: ImGui::TextUnformatted("BSC REF CMI"); break;
-                    case sh2::InterruptSource::WDT_ITI: ImGui::TextUnformatted("WDT ITI"); break;
-                    case sh2::InterruptSource::DMAC1_XferEnd: ImGui::TextUnformatted("DMAC1 TE"); break;
-                    case sh2::InterruptSource::DMAC0_XferEnd: ImGui::TextUnformatted("DMAC0 TE"); break;
-                    case sh2::InterruptSource::DIVU_OVFI: ImGui::TextUnformatted("DIVU OVFI"); break;
-                    case sh2::InterruptSource::IRL: ImGui::TextUnformatted("IRL"); break;
-                    case sh2::InterruptSource::UserBreak: ImGui::TextUnformatted("UBC BRK"); break;
-                    case sh2::InterruptSource::NMI: ImGui::TextUnformatted("NMI"); break;
-                    }
+                    ImGui::TextUnformatted(sh2::GetInterruptSourceName(trace.source).data());
                 }
             }
 
