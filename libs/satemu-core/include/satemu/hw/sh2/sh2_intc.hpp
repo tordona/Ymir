@@ -2,6 +2,7 @@
 
 #include <satemu/core/types.hpp>
 
+#include <satemu/util/bit_ops.hpp>
 #include <satemu/util/inline.hpp>
 
 namespace satemu::sh2 {
@@ -55,19 +56,46 @@ namespace satemu::sh2 {
 //      8   R/W  NMIE   NMI Edge Select (0=falling, 1=rising)
 //    7-1   R    -      Reserved - must be zero
 //      0   R/W  VECMD  IRL Interrupt Vector Mode Select (0=auto, 1=external)
-//                      Auto-vector mode assigns 71 to IRL15 and IRL14, and 64 to IRL1.
+//                      Auto-vector mode assigns 71 to IRL15 and IRL14, 70 to IRL13 and IRL12,
+//                      and so on, down to 64 to IRL1. IRL0 does not exist.
 //                      External vector mode reads from external vector number input pins D7-D0.
 //
 //    The default value may be either 8000 or 0000 because NMIL is an external signal.
-union RegICR {
-    uint16 u16;
-    struct {
-        uint16 VECMD : 1;
-        uint16 _rsvd1_7 : 7;
-        uint16 NMIE : 1;
-        uint16 _rsvd9_14 : 6;
-        uint16 NMIL : 1;
-    };
+struct RegICR {
+    bool VECMD;
+    bool NMIE;
+    bool NMIL;
+
+    RegICR() {
+        NMIL = false;
+        Reset();
+    }
+
+    void Reset() {
+        VECMD = false;
+        NMIE = false;
+    }
+
+    FORCE_INLINE uint16 Read() const {
+        uint16 value = 0;
+        bit::deposit_into<0>(value, VECMD);
+        bit::deposit_into<8>(value, NMIE);
+        bit::deposit_into<15>(value, NMIL);
+        return value;
+    }
+
+    template <bool lowerByte, bool upperByte, bool poke>
+    FORCE_INLINE void Write(uint16 value) {
+        if constexpr (lowerByte) {
+            VECMD = bit::extract<0>(value);
+        }
+        if constexpr (upperByte) {
+            NMIE = bit::extract<8>(value);
+            if constexpr (poke) {
+                NMIL = bit::extract<15>(value);
+            }
+        }
+    }
 };
 
 // 0E2  R/W  8,16     0000      IPRA    Interrupt priority setting register A
@@ -122,10 +150,10 @@ struct InterruptController {
     }
 
     void Reset() {
-        ICR.u16 = 0x0000;
+        ICR.Reset();
 
-        levels.fill(0);
-        vectors.fill(0);
+        m_levels.fill(0);
+        m_vectors.fill(0);
 
         SetLevel(InterruptSource::IRL, 1);
         SetVector(InterruptSource::IRL, 0x40);
@@ -144,10 +172,27 @@ struct InterruptController {
         externalVector = 0;
     }
 
-    RegICR ICR; // 0E0  R/W  8,16     0000      ICR     Interrupt control register
+    // Gets the interrupt vector number for the specified interrupt source.
+    FORCE_INLINE uint8 GetVector(InterruptSource source) const {
+        return m_vectors[static_cast<size_t>(source)];
+    }
 
-    std::array<uint8, 16> levels;
-    std::array<uint8, 16> vectors;
+    // Sets the interrupt vector number for the specified interrupt source.
+    FORCE_INLINE void SetVector(InterruptSource source, uint8 vector) {
+        m_vectors[static_cast<size_t>(source)] = vector;
+    }
+
+    // Gets the interrupt level for the specified interrupt source.
+    FORCE_INLINE uint8 GetLevel(InterruptSource source) const {
+        return m_levels[static_cast<size_t>(source)];
+    }
+
+    // Sets the interrupt level for the specified interrupt source.
+    FORCE_INLINE void SetLevel(InterruptSource source, uint8 priority) {
+        m_levels[static_cast<size_t>(source)] = priority;
+    }
+
+    RegICR ICR; // 0E0  R/W  8,16     0000      ICR     Interrupt control register
 
     struct PendingInterruptInfo {
         InterruptSource source;
@@ -157,25 +202,9 @@ struct InterruptController {
     bool NMI;
     uint8 externalVector;
 
-    // Gets the interrupt vector number for the specified interrupt source.
-    FORCE_INLINE uint8 GetVector(InterruptSource source) const {
-        return vectors[static_cast<size_t>(source)];
-    }
-
-    // Sets the interrupt vector number for the specified interrupt source.
-    FORCE_INLINE void SetVector(InterruptSource source, uint8 vector) {
-        vectors[static_cast<size_t>(source)] = vector;
-    }
-
-    // Gets the interrupt level for the specified interrupt source.
-    FORCE_INLINE uint8 GetLevel(InterruptSource source) const {
-        return levels[static_cast<size_t>(source)];
-    }
-
-    // Sets the interrupt level for the specified interrupt source.
-    FORCE_INLINE void SetLevel(InterruptSource source, uint8 priority) {
-        levels[static_cast<size_t>(source)] = priority;
-    }
+private:
+    std::array<uint8, 16> m_levels;
+    std::array<uint8, 16> m_vectors;
 };
 
 } // namespace satemu::sh2
