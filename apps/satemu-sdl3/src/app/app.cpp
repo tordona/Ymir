@@ -210,7 +210,7 @@ App::App()
     , m_scuDebugger(m_context) {
 
     // Preinitialize some memory viewers
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 16; i++) {
         m_memoryViewers.emplace_back(m_context);
     }
 }
@@ -988,8 +988,15 @@ void App::RunEmulator() {
                     m_context.eventQueues.emulator.enqueue(EmuEvent::SetDebugTrace(debugTrace));
                 }
                 ImGui::Separator();
-                if (ImGui::MenuItem("Memory viewer", nullptr)) {
+                if (ImGui::MenuItem("Open memory viewer", nullptr)) {
                     OpenMemoryViewer();
+                }
+                if (ImGui::BeginMenu("Memory viewers")) {
+                    for (auto &memView : m_memoryViewers) {
+                        ImGui::MenuItem(fmt::format("Memory viewer #{}", memView.Index() + 1).c_str(), nullptr,
+                                        &memView.Open);
+                    }
+                    ImGui::EndMenu();
                 }
                 if (ImGui::MenuItem("Dump all memory", "F3")) {
                     m_context.eventQueues.emulator.enqueue(EmuEvent::MemoryDump());

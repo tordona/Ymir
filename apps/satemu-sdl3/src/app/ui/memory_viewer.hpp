@@ -17,6 +17,10 @@ public:
     void Display();
     void RequestFocus();
 
+    uint32 Index() const {
+        return m_index;
+    }
+
     bool Open = false;
 
 private:
