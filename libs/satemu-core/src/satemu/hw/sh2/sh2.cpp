@@ -2588,4 +2588,122 @@ FORCE_INLINE void SH2::RTS() {
     PC += 2;
 }
 
+// -----------------------------------------------------------------------------
+// Probe implementation
+
+SH2::Probe::Probe(SH2 &sh2)
+    : m_sh2(sh2) {}
+
+std::array<uint32, 16> &SH2::Probe::GPRs() {
+    return m_sh2.R;
+}
+
+const std::array<uint32, 16> &SH2::Probe::GPRs() const {
+    return m_sh2.R;
+}
+
+uint32 &SH2::Probe::PC() {
+    return m_sh2.PC;
+}
+
+uint32 SH2::Probe::PC() const {
+    return m_sh2.PC;
+}
+
+uint32 &SH2::Probe::PR() {
+    return m_sh2.PR;
+}
+
+uint32 SH2::Probe::PR() const {
+    return m_sh2.PR;
+}
+
+RegMAC &SH2::Probe::MAC() {
+    return m_sh2.MAC;
+}
+
+RegMAC SH2::Probe::MAC() const {
+    return m_sh2.MAC;
+}
+
+RegSR &SH2::Probe::SR() {
+    return m_sh2.SR;
+}
+
+RegSR SH2::Probe::SR() const {
+    return m_sh2.SR;
+}
+
+uint32 &SH2::Probe::GBR() {
+    return m_sh2.GBR;
+}
+
+uint32 SH2::Probe::GBR() const {
+    return m_sh2.GBR;
+}
+
+uint32 &SH2::Probe::VBR() {
+    return m_sh2.VBR;
+}
+
+uint32 SH2::Probe::VBR() const {
+    return m_sh2.VBR;
+}
+
+uint16 SH2::Probe::FetchInstruction(uint32 address) const {
+    return m_sh2.FetchInstruction(address);
+}
+
+uint8 SH2::Probe::MemReadByte(uint32 address) const {
+    return m_sh2.MemReadByte(address);
+}
+
+uint16 SH2::Probe::MemReadWord(uint32 address) const {
+    return m_sh2.MemReadWord(address);
+}
+
+uint32 SH2::Probe::MemReadLong(uint32 address) const {
+    return m_sh2.MemReadLong(address);
+}
+
+void SH2::Probe::MemWriteByte(uint32 address, uint8 value) {
+    m_sh2.MemWriteByte(address, value);
+}
+
+void SH2::Probe::MemWriteWord(uint32 address, uint16 value) {
+    m_sh2.MemWriteWord(address, value);
+}
+
+void SH2::Probe::MemWriteLong(uint32 address, uint32 value) {
+    m_sh2.MemWriteLong(address, value);
+}
+
+uint16 SH2::Probe::PeekInstruction(uint32 address) const {
+    return m_sh2.PeekInstruction(address);
+}
+
+uint8 SH2::Probe::MemPeekByte(uint32 address) const {
+    return m_sh2.MemPeekByte(address);
+}
+
+uint16 SH2::Probe::MemPeekWord(uint32 address) const {
+    return m_sh2.MemPeekWord(address);
+}
+
+uint32 SH2::Probe::MemPeekLong(uint32 address) const {
+    return m_sh2.MemPeekLong(address);
+}
+
+void SH2::Probe::MemPokeByte(uint32 address, uint8 value) {
+    m_sh2.MemPokeByte(address, value);
+}
+
+void SH2::Probe::MemPokeWord(uint32 address, uint16 value) {
+    m_sh2.MemPokeWord(address, value);
+}
+
+void SH2::Probe::MemPokeLong(uint32 address, uint32 value) {
+    m_sh2.MemPokeLong(address, value);
+}
+
 } // namespace satemu::sh2

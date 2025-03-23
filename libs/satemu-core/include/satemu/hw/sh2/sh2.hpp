@@ -80,105 +80,48 @@ public:
 
     class Probe {
     public:
-        Probe(SH2 &sh2)
-            : m_sh2(sh2) {}
+        Probe(SH2 &sh2);
 
-        std::array<uint32, 16> &GPRs() {
-            return m_sh2.R;
-        }
-        const std::array<uint32, 16> &GPRs() const {
-            return m_sh2.R;
-        }
+        std::array<uint32, 16> &GPRs();
+        const std::array<uint32, 16> &GPRs() const;
 
-        uint32 &PC() {
-            return m_sh2.PC;
-        }
-        uint32 PC() const {
-            return m_sh2.PC;
-        }
+        uint32 &PC();
+        uint32 PC() const;
 
-        uint32 &PR() {
-            return m_sh2.PR;
-        }
-        uint32 PR() const {
-            return m_sh2.PR;
-        }
+        uint32 &PR();
+        uint32 PR() const;
 
-        RegMAC &MAC() {
-            return m_sh2.MAC;
-        }
-        RegMAC MAC() const {
-            return m_sh2.MAC;
-        }
+        RegMAC &MAC();
+        RegMAC MAC() const;
 
-        RegSR &SR() {
-            return m_sh2.SR;
-        }
-        RegSR SR() const {
-            return m_sh2.SR;
-        }
+        RegSR &SR();
+        RegSR SR() const;
 
-        uint32 &GBR() {
-            return m_sh2.GBR;
-        }
-        uint32 GBR() const {
-            return m_sh2.GBR;
-        }
+        uint32 &GBR();
+        uint32 GBR() const;
 
-        uint32 &VBR() {
-            return m_sh2.VBR;
-        }
-        uint32 VBR() const {
-            return m_sh2.VBR;
-        }
+        uint32 &VBR();
+        uint32 VBR() const;
 
-        uint16 FetchInstruction(uint32 address) {
-            return m_sh2.FetchInstruction(address);
-        }
+        uint16 FetchInstruction(uint32 address) const;
 
-        uint8 MemReadByte(uint32 address) {
-            return m_sh2.MemReadByte(address);
-        }
-        uint16 MemReadWord(uint32 address) {
-            return m_sh2.MemReadWord(address);
-        }
-        uint32 MemReadLong(uint32 address) {
-            return m_sh2.MemReadLong(address);
-        }
+        uint8 MemReadByte(uint32 address) const;
+        uint16 MemReadWord(uint32 address) const;
+        uint32 MemReadLong(uint32 address) const;
 
-        void MemWriteByte(uint32 address, uint8 value) {
-            m_sh2.MemWriteByte(address, value);
-        }
-        void MemWriteWord(uint32 address, uint16 value) {
-            m_sh2.MemWriteWord(address, value);
-        }
-        void MemWriteLong(uint32 address, uint32 value) {
-            m_sh2.MemWriteLong(address, value);
-        }
+        void MemWriteByte(uint32 address, uint8 value);
+        void MemWriteWord(uint32 address, uint16 value);
+        void MemWriteLong(uint32 address, uint32 value);
 
-        uint16 PeekInstruction(uint32 address) {
-            return m_sh2.PeekInstruction(address);
-        }
+        uint16 PeekInstruction(uint32 address) const;
 
-        uint8 MemPeekByte(uint32 address) {
-            return m_sh2.MemPeekByte(address);
-        }
-        uint16 MemPeekWord(uint32 address) {
-            return m_sh2.MemPeekWord(address);
-        }
-        uint32 MemPeekLong(uint32 address) {
-            return m_sh2.MemPeekLong(address);
-        }
+        uint8 MemPeekByte(uint32 address) const;
+        uint16 MemPeekWord(uint32 address) const;
+        uint32 MemPeekLong(uint32 address) const;
 
-        void MemPokeByte(uint32 address, uint8 value) {
-            m_sh2.MemPokeByte(address, value);
-        }
-        void MemPokeWord(uint32 address, uint16 value) {
-            m_sh2.MemPokeWord(address, value);
-        }
-        void MemPokeLong(uint32 address, uint32 value) {
-            m_sh2.MemPokeLong(address, value);
-        }
+        void MemPokeByte(uint32 address, uint8 value);
+        void MemPokeWord(uint32 address, uint16 value);
+        void MemPokeLong(uint32 address, uint32 value);
 
     private:
         SH2 &m_sh2;
