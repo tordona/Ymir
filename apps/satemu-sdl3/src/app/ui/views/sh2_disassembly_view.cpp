@@ -23,7 +23,8 @@ void SH2DisassemblyView::Display() {
     // - cursor
 
     ImGui::PushFont(m_context.fonts.monospaceMedium);
-    const uint32 baseAddr = m_sh2.GetPC() & ~1;
+    auto &probe = m_sh2.GetProbe();
+    const uint32 baseAddr = probe.PC() & ~1;
     for (uint32 i = 0; i < 32; i++) {
         const uint32 addr = baseAddr + i * sizeof(uint16);
 

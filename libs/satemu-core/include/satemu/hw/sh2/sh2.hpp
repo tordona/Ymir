@@ -62,38 +62,6 @@ public:
     template <bool debug>
     uint64 Step();
 
-    std::array<uint32, 16> &GetGPRs() {
-        return R;
-    }
-
-    const std::array<uint32, 16> &GetGPRs() const {
-        return R;
-    }
-
-    uint32 GetPC() const {
-        return PC;
-    }
-
-    uint32 GetPR() const {
-        return PR;
-    }
-
-    RegMAC GetMAC() const {
-        return MAC;
-    }
-
-    RegSR GetSR() const {
-        return SR;
-    }
-
-    uint32 GetGBR() const {
-        return GBR;
-    }
-
-    uint32 GetVBR() const {
-        return VBR;
-    }
-
     void SetExternalInterrupt(uint8 level, uint8 vecNum);
 
     bool GetNMI() const;
@@ -102,12 +70,78 @@ public:
     void TriggerFRTInputCapture();
 
     // -------------------------------------------------------------------------
-    // Debugger and testing
+    // Debugger
 
     // Attaches the specified tracer to this component.
     // Pass nullptr to disable tracing.
     void UseTracer(debug::ISH2Tracer *tracer) {
         m_tracer.instance = tracer;
+    }
+
+    class Probe {
+    public:
+        Probe(SH2 &sh2)
+            : m_sh2(sh2) {}
+
+        std::array<uint32, 16> &GPRs() {
+            return m_sh2.R;
+        }
+        const std::array<uint32, 16> &GPRs() const {
+            return m_sh2.R;
+        }
+
+        uint32 &PC() {
+            return m_sh2.PC;
+        }
+        uint32 PC() const {
+            return m_sh2.PC;
+        }
+
+        uint32 &PR() {
+            return m_sh2.PR;
+        }
+        uint32 PR() const {
+            return m_sh2.PR;
+        }
+
+        RegMAC &MAC() {
+            return m_sh2.MAC;
+        }
+        RegMAC MAC() const {
+            return m_sh2.MAC;
+        }
+
+        RegSR &SR() {
+            return m_sh2.SR;
+        }
+        RegSR SR() const {
+            return m_sh2.SR;
+        }
+
+        uint32 &GBR() {
+            return m_sh2.GBR;
+        }
+        uint32 GBR() const {
+            return m_sh2.GBR;
+        }
+
+        uint32 &VBR() {
+            return m_sh2.VBR;
+        }
+        uint32 VBR() const {
+            return m_sh2.VBR;
+        }
+
+    private:
+        SH2 &m_sh2;
+    };
+
+    Probe &GetProbe() {
+        return m_probe;
+    }
+
+    const Probe &GetProbe() const {
+        return m_probe;
     }
 
 private:
@@ -137,6 +171,8 @@ private:
 
     // -------------------------------------------------------------------------
     // Debugger
+
+    Probe m_probe{*this};
 
     struct {
         template <bool debug>
@@ -288,9 +324,9 @@ private:
 
     DivisionUnit DIVU;
 
-    // --- UBC module (channel A) ---
+    // --- UBC module ---
 
-    // --- UBC module (channel B) ---
+    // TODO: implement (channels A and B)
 
     // --- FRT module ---
 

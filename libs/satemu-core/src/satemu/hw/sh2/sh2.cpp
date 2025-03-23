@@ -1250,7 +1250,7 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
         return 9;
     }
 
-    // TODO: emulate fetch - decode - execute - memory access - writeback pipeline
+    // TODO: emulate or approximate fetch - decode - execute - memory access - writeback pipeline
 
     auto jumpToDelaySlot = [&] {
         PC = m_delaySlotTarget;

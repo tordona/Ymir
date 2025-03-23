@@ -1,3 +1,5 @@
+// satemu SDL3 frontend
+//
 // Foreword
 // --------
 // I find frontend development to be extremely tedious and unrewarding for the most part. Whenever I start working on
@@ -26,9 +28,9 @@
 // The constructor automatically hard resets the emulator with Reset(true). This is cheaper than constructing the object
 // from scratch. You can also soft reset with Reset(false) or by changing the Reset button state through the SMPC.
 //
-// In order to run the emulator, set up a loop that processes application events then invokes RunFrame(false). This will
-// run the emulator for a single frame. The "false" arguments disables debug tracing, which increases performance at the
-// cost of some debugging features, explained later in the Debugging section.
+// In order to run the emulator, set up a loop that processes application events and invokes RunFrame(false) to run the
+// emulator for a single frame. The "false" arguments disables debug tracing, which increases performance at the cost of
+// some debugging features, explained later in the Debugging section.
 //
 // The emulator core makes no attempt to pace execution to realtime speed - it's up to the frontend to implement some
 // pacing method. If no such method is used, it will run as fast as your CPU allows.
@@ -49,9 +51,9 @@
 // peripherals.
 //
 // DisconnectPeripherals() will disconnect all peripherals connected to the port. Be careful: any existing pointers to
-// the previously connected peripheral(s) will become invalid. The same applies when replacing a peripheral.
+// previously connected peripheral(s) will become invalid. The same applies when replacing a peripheral.
 //
-// WARNING: There is currently no way to enumerate peripherals attached to a port.
+// NOTE: There is currently no way to enumerate peripherals attached to a port.
 // NOTE: The emulator currently only supports attaching a single standard Saturn Pad to the ports. Due to this, there's
 // also no way to detach a specific peripheral. More types of peripherals (including multitap) are planned.
 //
@@ -108,40 +110,51 @@
 // ---------
 // WARNING: The debugger is a work in progress and in a flow state. Expect things to change dramatically.
 //
-// There are two parts to the debugger: the accessors and the tracers.
+// You can use Bus objects to directly read or write memory. Also, the debugger framework provides two major components:
+// the probes and the tracers.
 //
-// The accessors are methods provided by the components themselves to read or modify state. Notably, there are Peek/Poke
-// variants of bus Read/Write methods that circumvent limitations such as being able to do 8-bit reads and writes to VDP
-// registers or reading from write-only registers, and they avoid side-effects like when trying to read or write to the
-// CD Block's data transfer register which would cause the transfer pointer to advance.
+// Bus instances provide Peek/Poke variants of Read/Write methods that circumvent memory access limitations, allowing
+// debuggers to read from write-only registers or do 8-bit reads and writes to VDP registers which normally disallow
+// accesses of that size. Peek and Poke also avoid side-effects when accessing certain registers such as the CD Block's
+// data transfer register which would cause the transfer pointer to advance and break emulated software.
+//
+// Probes are provided by components to inspect or modify their internal state. They are always available and have
+// virtually no performance cost on the emulator thread. Probes can perform operations that cannot normally be done
+// through simple memory reads and writes such as directly reading from or writing to SH2 cache arrays or CD Block
+// buffers. Not even Peek/Poke on the Bus can reach that far.
 //
 // Tracers are integrated into the components themselves in order to capture events as the emulator executes. The
 // application must implement the provided interfaces in satemu/debug/*_tracer.hpp, then attach tracer instances to the
-// components with the UseTracer(...) methods provided by them.
+// components with the UseTracer(...) methods provided by them which will then receive events as they occur while the
+// emulator is running.
 //
 // Some tracers require you to run the emulator in "debug mode", which is accomplished by invoking RunFrame(true)
 // instead of RunFrame(false). There's no need to reset or reinitialize the emulator core to switch modes -- you can run
 // the emulator normally for a while, then switch to debug mode at any point to enable tracing, and switch back and
-// forth as often as you want.
+// forth as often as you want. Tracers that need debug mode to work are documented as such in their header files.
 //
 // Running in debug mode has a noticeable performance penalty as the alternative code path enables calls to the tracers
-// in the hot paths. This is left as an option in order to maximize performance for the primary use case of playing
-// games without using any debugging features.
+// in hot paths. This is left as an option in order to maximize performance for the primary use case of playing games
+// without using any debugging features.
 //
 // Some components always have tracing enabled if provided a valid instance, so in order avoid the performance penalty,
 // make sure to also detach tracers from all components when you don't need them by calling DetachAllTracers() on the
-// satemu::Saturn instance. Currently, only the SH2 tracer honors the debug mode flag, which is also documented on the
-// class's comments.
+// satemu::Saturn instance. Currently, only the SH2 tracer honors the debug mode flag.
 //
-// Using accessors has no performance cost, therefore enabling debug mode is not necessary to use them.
+// Debug mode is not necessary to use probes as they have no performace impact.
 //
-// WARNING: since the emulator is not thread-safe, care must be taken when using accessors in a multithreaded context:
-// - Reads will read dirty data but are otherwise safe
-// - Certain writes (especially to registers) will cause race conditions and potentially crash the emulator
-// One solution (used by this frontend) is to enqueue debugger writes to be executed on the emulator thread when it is
-// convenient.
 // Tracers are invoked from the emulator thread -- you will need to manage thread safety if trace data is to be consumed
-// by another thread.
+// by another thread. It's also important to minimize performance impact, especially on hot tracers (memory accesses and
+// CPU instructions primarily). A good approach to optimize time spent handling the event is to copy the trace data into
+// a lock-free ring buffer to be processed further by another thread.
+//
+// WARNING: Since the emulator is not thread-safe, care must be taken when using buses, probes and tracers while the
+// emulator is running in a multithreaded context:
+// - Reads will retrieve dirty data but are otherwise safe.
+// - Certain writes (especially to nontrivial registers or internal state) will cause race conditions and potentially
+//   crash the emulator.
+//
+// This frontend enqueues debugger writes to be executed on the emulator thread when it is convenient.
 //
 //
 // Thread safety
@@ -149,15 +162,15 @@
 // The emulator core is *not* thread-safe and *will never be*. Make sure to provide your own synchronization mechanisms
 // if you plan to run it in a dedicated thread.
 //
-// As noted above, the video and audio callbacks and debug tracers are invoked from the emulator thread. Make sure to
-// provide proper synchronization between the emulator thread and the main/GUI thread when handling these events.
+// As noted above, the video and audio callbacks and debug tracers are invoked from the emulator thread. Provide proper
+// synchronization between the emulator thread and the main/GUI thread when handling these events.
 //
 // The VDP renderer runs in its own thread and is thread-safe within the core.
 //
 // This frontend runs the emulator core in a dedicated thread while the GUI runs on the main thread. Synchronization
 // between threads is accomplished by using a blocking concurrent queue to send events to the emulator thread, which
-// processes the events between frames. Debug read accessors perform dirty reads, while writes are enqueued to be
-// executed in the emulator thread.
+// processes the events between frames. The debugger performs dirty reads and enqueues writes to be executed in the
+// emulator thread. Video and audio callbacks use minimal synchronization.
 
 #include "app.hpp"
 

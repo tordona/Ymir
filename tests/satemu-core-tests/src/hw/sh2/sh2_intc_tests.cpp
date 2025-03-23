@@ -19,6 +19,7 @@ namespace sh2_intr {
 struct TestSubject : debug::ISH2Tracer {
     mutable sys::Bus bus{};
     mutable sh2::SH2 sh2{bus, true};
+    const sh2::SH2::Probe &probe{sh2.GetProbe()};
 
     TestSubject() {
         // Setup tracer to collect interrupts into a vector
@@ -250,11 +251,11 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // - external interrupt acknowledged
     CHECK(intrAcked);
     // - PC at the interrupt vector
-    CHECK(sh2.GetPC() == intrPC1);
+    CHECK(probe.PC() == intrPC1);
     // - PC and SR pushed to the stack
-    CHECK(sh2.GetGPRs()[15] == startSP - 8); // should write PC and SR
+    CHECK(probe.GPRs()[15] == startSP - 8); // should write PC and SR
     // - SR.I3-0 set to the interrupt level
-    CHECK(sh2.GetSR().ILevel == intrLevel);
+    CHECK(probe.SR().ILevel == intrLevel);
     // - memory accesses:
     //   [0] push SR to stack
     //   [1] push PC-4 to stack
@@ -275,11 +276,11 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // - no exceptions
     REQUIRE(exceptions.empty());
     // - PC at the interrupt vector + 2
-    CHECK(sh2.GetPC() == intrPC1 + 2);
+    CHECK(probe.PC() == intrPC1 + 2);
     // - no change to the stack
-    CHECK(sh2.GetGPRs()[15] == startSP - 8);
+    CHECK(probe.GPRs()[15] == startSP - 8);
     // - no change to SR.I3-0
-    CHECK(sh2.GetSR().ILevel == intrLevel);
+    CHECK(probe.SR().ILevel == intrLevel);
     // - memory accesses:
     //   [0] read NOP instruction from PC
     REQUIRE(memoryAccesses.size() == 1);
@@ -296,11 +297,11 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // - no exceptions
     REQUIRE(exceptions.empty());
     // - PC at the NOP instruction in the delay slot of the RTE
-    CHECK(sh2.GetPC() == intrPC1 + 4);
+    CHECK(probe.PC() == intrPC1 + 4);
     // - PC and SR popped from the stack
-    CHECK(sh2.GetGPRs()[15] == startSP);
+    CHECK(probe.GPRs()[15] == startSP);
     // - SR.I3-0 set to the previous value
-    CHECK(sh2.GetSR().u32 == startSR);
+    CHECK(probe.SR().u32 == startSR);
     // - memory accesses:
     //   [0] read RTE instruction from PC
     //   [1] pop PC from stack
@@ -321,11 +322,11 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // - no exceptions
     REQUIRE(exceptions.empty());
     // - PC back to the starting point
-    CHECK(sh2.GetPC() == startPC);
+    CHECK(probe.PC() == startPC);
     // - no stack operations
-    CHECK(sh2.GetGPRs()[15] == startSP);
+    CHECK(probe.GPRs()[15] == startSP);
     // - no changes to SR
-    CHECK(sh2.GetSR().u32 == startSR);
+    CHECK(probe.SR().u32 == startSR);
     // - memory accesses:
     //   [0] read NOP instruction from PC
     REQUIRE(memoryAccesses.size() == 1);
@@ -352,11 +353,11 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // - external interrupt acknowledged
     CHECK(intrAcked);
     // - PC at the interrupt vector
-    CHECK(sh2.GetPC() == intrPC2);
+    CHECK(probe.PC() == intrPC2);
     // - PC and SR pushed to the stack
-    CHECK(sh2.GetGPRs()[15] == startSP - 8); // should write PC and SR
+    CHECK(probe.GPRs()[15] == startSP - 8); // should write PC and SR
     // - SR.I3-0 set to the interrupt level
-    CHECK(sh2.GetSR().ILevel == intrLevel);
+    CHECK(probe.SR().ILevel == intrLevel);
     // - memory accesses:
     //   [0] push SR to stack
     //   [1] push PC-4 to stack
@@ -377,11 +378,11 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // - no exceptions
     REQUIRE(exceptions.empty());
     // - PC at the interrupt vector + 2
-    CHECK(sh2.GetPC() == intrPC2 + 2);
+    CHECK(probe.PC() == intrPC2 + 2);
     // - no change to the stack
-    CHECK(sh2.GetGPRs()[15] == startSP - 8);
+    CHECK(probe.GPRs()[15] == startSP - 8);
     // - no change to SR.I3-0
-    CHECK(sh2.GetSR().ILevel == intrLevel);
+    CHECK(probe.SR().ILevel == intrLevel);
     // - memory accesses:
     //   [0] read NOP instruction from PC
     REQUIRE(memoryAccesses.size() == 1);
@@ -398,11 +399,11 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // - no exceptions
     REQUIRE(exceptions.empty());
     // - PC at the NOP instruction in the delay slot of the RTE
-    CHECK(sh2.GetPC() == intrPC2 + 4);
+    CHECK(probe.PC() == intrPC2 + 4);
     // - PC and SR popped from the stack
-    CHECK(sh2.GetGPRs()[15] == startSP);
+    CHECK(probe.GPRs()[15] == startSP);
     // - SR.I3-0 set to the previous value
-    CHECK(sh2.GetSR().u32 == startSR);
+    CHECK(probe.SR().u32 == startSR);
     // - memory accesses:
     //   [0] read RTE instruction from PC
     //   [1] pop PC from stack
@@ -423,11 +424,11 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // - no exceptions
     REQUIRE(exceptions.empty());
     // - PC back to the starting point
-    CHECK(sh2.GetPC() == startPC);
+    CHECK(probe.PC() == startPC);
     // - no stack operations
-    CHECK(sh2.GetGPRs()[15] == startSP);
+    CHECK(probe.GPRs()[15] == startSP);
     // - no changes to SR
-    CHECK(sh2.GetSR().u32 == startSR);
+    CHECK(probe.SR().u32 == startSR);
     // - memory accesses:
     //   [0] read NOP instruction from PC
     REQUIRE(memoryAccesses.size() == 1);
@@ -511,12 +512,12 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
         REQUIRE(exceptions.size() == 1);
         CHECK(exceptions[0] == ExceptionInfo{vecNum, startPC, startSR});
         // - PC at the RTE instruction
-        CHECK(sh2.GetPC() == intrHandlerAddr);
+        CHECK(probe.PC() == intrHandlerAddr);
         // - SR.I3-0 set to the interrupt level (NMI sets level to 15)
         if (source == sh2::InterruptSource::NMI) {
-            CHECK(sh2.GetSR().ILevel == 15);
+            CHECK(probe.SR().ILevel == 15);
         } else {
-            CHECK(sh2.GetSR().ILevel == level);
+            CHECK(probe.SR().ILevel == level);
         }
         // - memory accesses
         //   [0] push SR to stack
@@ -545,9 +546,9 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
         // - no exceptions
         REQUIRE(exceptions.empty());
         // - PC at the NOP instruction in the delay slot of the RTE
-        CHECK(sh2.GetPC() == intrHandlerAddr + sizeof(uint16));
+        CHECK(probe.PC() == intrHandlerAddr + sizeof(uint16));
         // - SR restored to starting value by RTE
-        CHECK(sh2.GetSR().u32 == startSR);
+        CHECK(probe.SR().u32 == startSR);
         // - memory accesses
         //   [0] read instruction from PC (RTE)
         //   [1] pop PC-4 from stack
