@@ -2,13 +2,13 @@
 
 #include <app/shared_context.hpp>
 
-#include "views/sh2_interrupts_view.hpp"
+#include "views/sh2_interrupt_tracer_view.hpp"
 
 namespace app {
 
-class SH2Interrupts {
+class SH2InterruptTracer {
 public:
-    SH2Interrupts(SharedContext &context, bool master);
+    SH2InterruptTracer(SharedContext &context, bool master);
 
     void Display();
 
@@ -18,7 +18,7 @@ private:
     SharedContext &m_context;
     bool m_master;
 
-    SH2InterruptsView m_intrView;
+    SH2InterruptTracerView m_intrTracerView;
 };
 
 } // namespace app

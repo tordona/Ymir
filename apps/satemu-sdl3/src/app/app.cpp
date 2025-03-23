@@ -202,10 +202,12 @@ namespace app {
 
 App::App()
     : m_masterSH2Debugger(m_context, true)
-    , m_slaveSH2Debugger(m_context, false)
-    , m_scuDebugger(m_context)
     , m_masterSH2Interrupts(m_context, true)
-    , m_slaveSH2Interrupts(m_context, false) {
+    , m_masterSH2InterruptTracer(m_context, true)
+    , m_slaveSH2Debugger(m_context, false)
+    , m_slaveSH2Interrupts(m_context, false)
+    , m_slaveSH2InterruptTracer(m_context, false)
+    , m_scuDebugger(m_context) {
 
     // TODO: support 16-bit and 32-bit reads/writes
     m_memoryViewer.Open = false;
@@ -1000,11 +1002,13 @@ void App::RunEmulator() {
                 if (ImGui::BeginMenu("Master SH2")) {
                     ImGui::MenuItem("Debugger", nullptr, &m_masterSH2Debugger.Open);
                     ImGui::MenuItem("Interrupts", nullptr, &m_masterSH2Interrupts.Open);
+                    ImGui::MenuItem("Interrupt tracer", nullptr, &m_masterSH2InterruptTracer.Open);
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Slave SH2")) {
                     ImGui::MenuItem("Debugger", nullptr, &m_slaveSH2Debugger.Open);
                     ImGui::MenuItem("Interrupts", nullptr, &m_slaveSH2Interrupts.Open);
+                    ImGui::MenuItem("Interrupt tracer", nullptr, &m_slaveSH2InterruptTracer.Open);
                     ImGui::EndMenu();
                 }
                 ImGui::MenuItem("SCU", nullptr, &m_scuDebugger.Open);
@@ -1300,11 +1304,14 @@ void App::DrawDebug() {
     using namespace satemu;
 
     m_masterSH2Debugger.Display();
-    m_slaveSH2Debugger.Display();
-    m_scuDebugger.Display();
-
     m_masterSH2Interrupts.Display();
+    m_masterSH2InterruptTracer.Display();
+
+    m_slaveSH2Debugger.Display();
     m_slaveSH2Interrupts.Display();
+    m_slaveSH2InterruptTracer.Display();
+
+    m_scuDebugger.Display();
 
     if (m_memoryViewer.Open) {
         if (ImGui::Begin("Memory viewer", &m_memoryViewer.Open, ImGuiWindowFlags_NoScrollbar)) {

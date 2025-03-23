@@ -8,9 +8,9 @@
 
 namespace app {
 
-class SH2InterruptTraceView {
+class SH2InterruptTracerView {
 public:
-    SH2InterruptTraceView(SharedContext &context, satemu::sh2::SH2 &sh2, SH2Tracer &tracer);
+    SH2InterruptTracerView(SharedContext &context, satemu::sh2::SH2 &sh2, SH2Tracer &tracer);
 
     void Display();
 

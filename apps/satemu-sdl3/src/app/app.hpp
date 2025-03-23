@@ -9,6 +9,7 @@
 
 #include "ui/scu_debugger.hpp"
 #include "ui/sh2_debugger.hpp"
+#include "ui/sh2_interrupt_tracer.hpp"
 #include "ui/sh2_interrupts.hpp"
 
 #include "blockingconcurrentqueue.h"
@@ -56,11 +57,14 @@ private:
     void DrawDebug();
 
     SH2Debugger m_masterSH2Debugger;
-    SH2Debugger m_slaveSH2Debugger;
-    SCUDebugger m_scuDebugger;
-
     SH2Interrupts m_masterSH2Interrupts;
+    SH2InterruptTracer m_masterSH2InterruptTracer;
+
+    SH2Debugger m_slaveSH2Debugger;
     SH2Interrupts m_slaveSH2Interrupts;
+    SH2InterruptTracer m_slaveSH2InterruptTracer;
+
+    SCUDebugger m_scuDebugger;
 
     MemoryEditor m_memoryViewer;
     bool m_enableSideEffects = false;
