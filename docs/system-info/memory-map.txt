@@ -54,8 +54,8 @@ Address range            Mirror size   Description
 0x100'0000..0x17F'FFFF   -             Reads 0xFFFF; writes go to slave SH-2 FRT  (MINIT area)
 0x180'0000..0x1FF'FFFF   -             Reads 0xFFFF; writes go to master SH-2 FRT (SINIT area)
 0x200'0000..0x58F'FFFF   -             SCU A-Bus (cartridge port, CD block)
-0x200'0000..0x3FF'FFFF   -                 SCU A-Bus CS0
-0x400'0000..0x4FF'FFFF   -                 SCU A-Bus CS1
+0x200'0000..0x3FF'FFFF   -                 SCU A-Bus CS0 (cartridge port, usually ROM)
+0x400'0000..0x4FF'FFFF   -                 SCU A-Bus CS1 (cartridge port, usually RAM)
 0x500'0000..0x57F'FFFF   -                 SCU A-Bus Dummy
 0x580'0000..0x58F'FFFF   -                 SCU A-Bus CS2 (includes CD-ROM registers)
 0x590'0000..0x59F'FFFF   -             Lockup when read
