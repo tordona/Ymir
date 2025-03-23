@@ -85,6 +85,13 @@ public:
         // ---------------------------------------------------------------------
         // Registers
 
+        FORCE_INLINE std::array<uint32, 16> &R() {
+            return m_sh2.R;
+        }
+        FORCE_INLINE const std::array<uint32, 16> &R() const {
+            return m_sh2.R;
+        }
+
         FORCE_INLINE uint32 &R(uint8 rn) {
             assert(rn <= 15);
             return m_sh2.R[rn];
