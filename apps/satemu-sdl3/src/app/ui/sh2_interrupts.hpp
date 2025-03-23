@@ -2,6 +2,7 @@
 
 #include <app/shared_context.hpp>
 
+#include "views/sh2_interrupt_trace_view.hpp"
 #include "views/sh2_interrupts_view.hpp"
 
 namespace app {
@@ -20,6 +21,7 @@ private:
     satemu::sh2::SH2 &m_sh2;
 
     SH2InterruptsView m_intrView;
+    SH2InterruptTraceView m_intrTraceView;
 };
 
 } // namespace app

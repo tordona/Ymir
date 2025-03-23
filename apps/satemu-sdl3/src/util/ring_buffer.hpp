@@ -1,0 +1,39 @@
+#pragma once
+
+#include <array>
+
+namespace util {
+
+template <typename T, size_t N>
+class RingBuffer {
+public:
+    void Clear() {
+        m_count = 0;
+    }
+
+    void Write(T value) {
+        m_entries[m_writePos++] = value;
+        if (m_writePos >= m_entries.size()) {
+            m_writePos = 0;
+        }
+        if (m_count < m_entries.size()) {
+            m_count++;
+        }
+    }
+
+    size_t Count() const {
+        return m_count;
+    }
+
+    T Read(size_t offset) const {
+        size_t pos = (m_writePos - 1 - offset) % N;
+        return m_entries[pos];
+    }
+
+private:
+    std::array<T, N> m_entries;
+    size_t m_writePos;
+    size_t m_count;
+};
+
+} // namespace util

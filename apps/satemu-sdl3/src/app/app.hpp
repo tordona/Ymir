@@ -5,11 +5,6 @@
 #include "audio_system.hpp"
 #include "shared_context.hpp"
 
-#include <satemu/sys/saturn.hpp>
-
-#include "debug/scu_tracer.hpp"
-#include "debug/sh2_tracer.hpp"
-
 #include "events/emu_events.hpp"
 
 #include "ui/scu_debugger.hpp"
@@ -59,10 +54,6 @@ private:
     // Debugger
 
     void DrawDebug();
-
-    SH2Tracer m_masterSH2Tracer;
-    SH2Tracer m_slaveSH2Tracer;
-    SCUTracer m_scuTracer;
 
     SH2Debugger m_masterSH2Debugger;
     SH2Debugger m_slaveSH2Debugger;

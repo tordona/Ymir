@@ -1135,9 +1135,9 @@ void App::EmulatorThread() {
             case SetDebugTrace:
                 debugTrace = std::get<bool>(cmd.value);
                 if (debugTrace) {
-                    m_context.saturn.masterSH2.UseTracer(&m_masterSH2Tracer);
-                    m_context.saturn.slaveSH2.UseTracer(&m_slaveSH2Tracer);
-                    m_context.saturn.SCU.UseTracer(&m_scuTracer);
+                    m_context.saturn.masterSH2.UseTracer(&m_context.tracers.masterSH2);
+                    m_context.saturn.slaveSH2.UseTracer(&m_context.tracers.slaveSH2);
+                    m_context.saturn.SCU.UseTracer(&m_context.tracers.SCU);
                 } else {
                     m_context.saturn.DetachAllTracers();
                 }

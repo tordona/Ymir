@@ -2,12 +2,18 @@
 
 #include <satemu/debug/sh2_tracer.hpp>
 
+#include <util/ring_buffer.hpp>
+
 namespace app {
 
 struct SH2Tracer final : public satemu::debug::ISH2Tracer {
     void ExecuteInstruction(uint32 pc, uint16 opcode, bool delaySlot) final;
-    void Interrupt(uint8 vecNum, uint8 level, uint32 pc) final;
+    void Interrupt(uint8 vecNum, uint8 level, satemu::sh2::InterruptSource source, uint32 pc) final;
     void Exception(uint8 vecNum, uint32 pc, uint32 sr) final;
+
+    bool traceInstructions = false;
+    bool traceInterrupts = false;
+    bool traceExceptions = false;
 
     struct InstructionInfo {
         uint32 pc;
@@ -18,6 +24,7 @@ struct SH2Tracer final : public satemu::debug::ISH2Tracer {
     struct InterruptInfo {
         uint8 vecNum;
         uint8 level;
+        satemu::sh2::InterruptSource source;
         uint32 pc;
     };
 
@@ -27,17 +34,9 @@ struct SH2Tracer final : public satemu::debug::ISH2Tracer {
         uint32 sr;
     };
 
-    std::array<InstructionInfo, 16> instructions;
-    size_t instructionsPos = 0;
-    size_t instructionsCount = 0;
-
-    std::array<InterruptInfo, 16> interrupts;
-    size_t interruptsPos = 0;
-    size_t interruptsCount = 0;
-
-    std::array<ExceptionInfo, 16> exceptions;
-    size_t exceptionsPos = 0;
-    size_t exceptionsCount = 0;
+    util::RingBuffer<InstructionInfo, 16384> instructions;
+    util::RingBuffer<InterruptInfo, 1024> interrupts;
+    util::RingBuffer<ExceptionInfo, 1024> exceptions;
 };
 
 } // namespace app

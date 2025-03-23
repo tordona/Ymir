@@ -333,10 +333,10 @@ private:
         }
 
         template <bool debug>
-        FORCE_INLINE void Interrupt(uint8 vecNum, uint8 level, uint32 pc) {
+        FORCE_INLINE void Interrupt(uint8 vecNum, uint8 level, sh2::InterruptSource source, uint32 pc) {
             if constexpr (debug) {
                 if (instance) {
-                    return instance->Interrupt(vecNum, level, pc);
+                    return instance->Interrupt(vecNum, level, source, pc);
                 }
             }
         }

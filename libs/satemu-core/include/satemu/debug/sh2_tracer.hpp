@@ -2,6 +2,8 @@
 
 #include <satemu/core/types.hpp>
 
+#include <satemu/hw/sh2/sh2_intc.hpp>
+
 namespace satemu::debug {
 
 // Interface for SH2 tracers.
@@ -22,7 +24,7 @@ struct ISH2Tracer {
     virtual void ExecuteInstruction(uint32 pc, uint16 opcode, bool delaySlot) {}
 
     // Invoked when the SH2 CPU handles an interrupt.
-    virtual void Interrupt(uint8 vecNum, uint8 level, uint32 pc) {}
+    virtual void Interrupt(uint8 vecNum, uint8 level, sh2::InterruptSource source, uint32 pc) {}
 
     // Invoked when the SH2 CPU handles an exception.
     virtual void Exception(uint8 vecNum, uint32 pc, uint32 sr) {}

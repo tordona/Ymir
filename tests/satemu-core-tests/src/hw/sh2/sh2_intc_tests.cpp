@@ -128,8 +128,8 @@ struct TestSubject : debug::ISH2Tracer {
 
     void ExecuteInstruction(uint32 pc, uint16 opcode, bool delaySlot) override {}
 
-    void Interrupt(uint8 vecNum, uint8 level, uint32 pc) override {
-        interrupts.push_back({vecNum, level, pc});
+    void Interrupt(uint8 vecNum, uint8 level, sh2::InterruptSource source, uint32 pc) override {
+        interrupts.push_back({vecNum, level, source, pc});
     }
 
     void Exception(uint8 vecNum, uint32 pc, uint32 sr) override {
@@ -142,6 +142,7 @@ struct TestSubject : debug::ISH2Tracer {
     struct InterruptInfo {
         uint8 vecNum;
         uint8 level;
+        sh2::InterruptSource source;
         uint32 pc;
 
         constexpr auto operator<=>(const InterruptInfo &) const = default;
@@ -242,7 +243,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // Check results:
     // - one interrupt of the specified vector+level at the starting PC
     REQUIRE(interrupts.size() == 1);
-    CHECK(interrupts[0] == InterruptInfo{intrVec, intrLevel, startPC});
+    CHECK(interrupts[0] == InterruptInfo{intrVec, intrLevel, sh2::InterruptSource::IRL, startPC});
     // - one exception of the specified vector at the starting PC with the starting SR
     REQUIRE(exceptions.size() == 1);
     CHECK(exceptions[0] == ExceptionInfo{intrVec, startPC, startSR});
@@ -344,7 +345,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     // Check results:
     // - one interrupt of the specified vector+level at the starting PC
     REQUIRE(interrupts.size() == 1);
-    CHECK(interrupts[0] == InterruptInfo{intrVec, intrLevel, startPC});
+    CHECK(interrupts[0] == InterruptInfo{intrVec, intrLevel, sh2::InterruptSource::IRL, startPC});
     // - one exception of the specified vector at the starting PC with the starting SR
     REQUIRE(exceptions.size() == 1);
     CHECK(exceptions[0] == ExceptionInfo{intrVec, startPC, startSR});
@@ -505,7 +506,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
         // Check results:
         // - FRT OVI interrupt at starting PC
         REQUIRE(interrupts.size() == 1);
-        CHECK(interrupts[0] == InterruptInfo{vecNum, level, startPC});
+        CHECK(interrupts[0] == InterruptInfo{vecNum, level, source, startPC});
         // - exception at FRT OVI vector at starting PC with starting SR
         REQUIRE(exceptions.size() == 1);
         CHECK(exceptions[0] == ExceptionInfo{vecNum, startPC, startSR});

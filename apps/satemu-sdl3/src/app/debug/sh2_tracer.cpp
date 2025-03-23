@@ -1,35 +1,31 @@
 #include "sh2_tracer.hpp"
 
+using namespace satemu;
+
 namespace app {
 
 void SH2Tracer::ExecuteInstruction(uint32 pc, uint16 opcode, bool delaySlot) {
-    instructions[instructionsPos++] = {pc, opcode, delaySlot};
-    if (instructionsPos >= instructions.size()) {
-        instructionsPos = 0;
+    if (!traceInstructions) {
+        return;
     }
-    if (instructionsCount < instructions.size()) {
-        instructionsCount++;
-    }
+
+    instructions.Write({pc, opcode, delaySlot});
 }
 
-void SH2Tracer::Interrupt(uint8 vecNum, uint8 level, uint32 pc) {
-    interrupts[interruptsPos++] = {vecNum, level, pc};
-    if (interruptsPos >= interrupts.size()) {
-        interruptsPos = 0;
+void SH2Tracer::Interrupt(uint8 vecNum, uint8 level, sh2::InterruptSource source, uint32 pc) {
+    if (!traceInterrupts) {
+        return;
     }
-    if (interruptsCount < interrupts.size()) {
-        interruptsCount++;
-    }
+
+    interrupts.Write({vecNum, level, source, pc});
 }
 
 void SH2Tracer::Exception(uint8 vecNum, uint32 pc, uint32 sr) {
-    exceptions[exceptionsPos++] = {vecNum, pc, sr};
-    if (exceptionsPos >= exceptions.size()) {
-        exceptionsPos = 0;
+    if (!traceExceptions) {
+        return;
     }
-    if (exceptionsCount < exceptions.size()) {
-        exceptionsCount++;
-    }
+
+    exceptions.Write({vecNum, pc, sr});
 }
 
 } // namespace app
