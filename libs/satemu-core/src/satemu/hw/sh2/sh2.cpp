@@ -279,7 +279,11 @@ T SH2::MemRead(uint32 address) {
         // fallthrough
     case 0b001:
     case 0b101: // cache-through
-        return m_bus.Read<T>(address & 0x7FFFFFF);
+        if constexpr (peek) {
+            return m_bus.Peek<T>(address & 0x7FFFFFF);
+        } else {
+            return m_bus.Read<T>(address & 0x7FFFFFF);
+        }
     case 0b010: // associative purge
         if constexpr (std::is_same_v<T, uint32>) {
             const uint32 index = bit::extract<4, 9>(address);
@@ -382,7 +386,11 @@ void SH2::MemWrite(uint32 address, T value) {
         // fallthrough
     case 0b001:
     case 0b101: // cache-through
-        m_bus.Write<T>(address & 0x7FFFFFF, value);
+        if constexpr (poke) {
+            m_bus.Poke<T>(address & 0x7FFFFFF, value);
+        } else {
+            m_bus.Write<T>(address & 0x7FFFFFF, value);
+        }
         break;
     case 0b010: // associative purge
         if constexpr (std::is_same_v<T, uint32>) {
