@@ -21,6 +21,11 @@ MemoryViewer::MemoryViewer(SharedContext &context)
         ctx.sharedCtx.eventQueues.emulator.enqueue(EmuEvent::DebugWrite(off, d, ctx.enableSideEffects));
     };
     m_context->memoryEditor.UserData = m_context.get();
+    m_context->memoryEditor.BgColorFn = [](const ImU8 * /*mem*/, size_t /*off*/, void * /*user_data*/) -> ImU32 {
+        // auto &ctx = *static_cast<Context *>(user_data);
+        // TODO: use this to colorize fields/regions
+        return 0;
+    };
 }
 
 void MemoryViewer::Display() {
@@ -56,6 +61,14 @@ void MemoryViewer::Display() {
         ImGui::Separator();
         ImGui::PushFont(m_sharedCtx.fonts.monospaceMedium);
         m_context->memoryEditor.DrawContents(this, 0x8000000, 0x0);
+        if (m_context->memoryEditor.MouseHovered) {
+            // TODO: use this to display additional info on specific addresses
+            if (ImGui::BeginTooltip()) {
+                ImGui::Text("Address: %08zX", m_context->memoryEditor.MouseHoveredAddr);
+                ImGui::EndTooltip();
+            }
+        }
+
         ImGui::PopFont();
     }
     ImGui::End();
