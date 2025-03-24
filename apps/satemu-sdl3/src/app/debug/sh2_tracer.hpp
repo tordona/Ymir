@@ -56,6 +56,28 @@ struct SH2Tracer final : public satemu::debug::ISH2Tracer {
     util::RingBuffer<ExceptionInfo, 1024> exceptions;
     util::RingBuffer<DivisionInfo, 1024> divisions;
 
+    struct DivisionStatistics {
+        uint64 div32s = 0;
+        uint64 div64s = 0;
+        uint64 overflows = 0;
+        uint64 interrupts = 0;
+
+        void Clear() {
+            div32s = 0;
+            div64s = 0;
+            overflows = 0;
+            interrupts = 0;
+        }
+    } divStats;
+
+    void ResetInterruptCounter() {
+        m_interruptCounter = 0;
+    }
+
+    void ResetDivisionCounter() {
+        m_divisionCounter = 0;
+    }
+
 private:
     uint32 m_interruptCounter = 0;
     uint32 m_divisionCounter = 0;

@@ -39,6 +39,8 @@ void SH2Tracer::Begin32x32Division(sint32 dividend, sint32 divisor, bool overflo
                      .finished = false,
                      .div64 = false,
                      .counter = m_divisionCounter++});
+
+    ++divStats.div32s;
 }
 
 void SH2Tracer::Begin64x32Division(sint64 dividend, sint32 divisor, bool overflowIntrEnable) {
@@ -52,6 +54,8 @@ void SH2Tracer::Begin64x32Division(sint64 dividend, sint32 divisor, bool overflo
                      .finished = false,
                      .div64 = true,
                      .counter = m_divisionCounter++});
+
+    ++divStats.div64s;
 }
 
 void SH2Tracer::EndDivision(sint32 quotient, sint32 remainder, bool overflow) {
@@ -64,6 +68,13 @@ void SH2Tracer::EndDivision(sint32 quotient, sint32 remainder, bool overflow) {
     div.remainder = remainder;
     div.overflow = overflow;
     div.finished = true;
+
+    if (overflow) {
+        ++divStats.overflows;
+        if (div.overflowIntrEnable) {
+            ++divStats.interrupts;
+        }
+    }
 }
 
 } // namespace app

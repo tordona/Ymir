@@ -30,6 +30,7 @@ void SH2InterruptTracerView::Display() {
     ImGui::SameLine();
     if (ImGui::Button("Clear##trace")) {
         m_tracer.interrupts.Clear();
+        m_tracer.ResetInterruptCounter();
     }
 
     if (ImGui::BeginTable("intr_trace", 5,

@@ -32,7 +32,45 @@ void SH2DivisionUnitTracesView::DisplayTrace() {
     ImGui::SameLine();
     if (ImGui::Button("Clear")) {
         m_tracer.divisions.Clear();
+        m_tracer.divStats.Clear();
+        m_tracer.ResetDivisionCounter();
     }
+
+    ImGui::PushStyleVarX(ImGuiStyleVar_CellPadding, 8.0f);
+    if (ImGui::BeginTable("div_stats", 4, ImGuiTableFlags_SizingFixedFit)) {
+        ImGui::TableNextRow();
+
+        if (ImGui::TableNextColumn()) {
+            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+            ImGui::Text("%llu", m_tracer.divStats.div32s);
+            ImGui::PopFont();
+            ImGui::TextUnformatted("32x32 divisions");
+        }
+
+        if (ImGui::TableNextColumn()) {
+            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+            ImGui::Text("%llu", m_tracer.divStats.div64s);
+            ImGui::PopFont();
+            ImGui::TextUnformatted("64x32 divisions");
+        }
+
+        if (ImGui::TableNextColumn()) {
+            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+            ImGui::Text("%llu", m_tracer.divStats.overflows);
+            ImGui::PopFont();
+            ImGui::TextUnformatted("overflows");
+        }
+
+        if (ImGui::TableNextColumn()) {
+            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+            ImGui::Text("%llu", m_tracer.divStats.interrupts);
+            ImGui::PopFont();
+            ImGui::TextUnformatted("interrupts");
+        }
+
+        ImGui::EndTable();
+    }
+    ImGui::PopStyleVar();
 
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
