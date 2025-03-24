@@ -6,6 +6,24 @@
 
 namespace satemu::scu {
 
+// -----------------------------------------------------------------------------
+// Debugger
+
+FORCE_INLINE static void TraceRaiseInterrupt(debug::ISCUTracer *tracer, uint8 index, uint8 level) {
+    if (tracer) {
+        return tracer->RaiseInterrupt(index, level);
+    }
+}
+
+FORCE_INLINE static void TraceAcknowledgeInterrupt(debug::ISCUTracer *tracer, uint8 index) {
+    if (tracer) {
+        return tracer->AcknowledgeInterrupt(index);
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Implementation
+
 SCU::SCU(core::Scheduler &scheduler, sys::Bus &bus)
     : m_bus(bus)
     , m_scheduler(scheduler)
@@ -1092,18 +1110,18 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
             if (internalLevel >= externalLevel) {
                 m_intrStatus.internal &= ~(1u << internalIndex);
                 rootLog.trace("Acknowledging internal interrupt {:X}", internalIndex);
-                m_tracer.AcknowledgeInterrupt(internalIndex);
+                TraceAcknowledgeInterrupt(m_tracer, internalIndex);
             } else {
                 m_intrStatus.external &= ~(1u << externalIndex);
                 rootLog.trace("Acknowledging external interrupt {:X}", externalIndex);
-                m_tracer.AcknowledgeInterrupt(externalIndex + 16);
+                TraceAcknowledgeInterrupt(m_tracer, externalIndex + 16);
             }
             UpdateInterruptLevel<false>();
         } else {
             if (internalLevel >= externalLevel) {
                 m_cbExternalMasterInterrupt(internalLevel, internalIndex + 0x40);
                 rootLog.trace("Raising internal interrupt {:X}", internalIndex);
-                m_tracer.RaiseInterrupt(internalIndex, internalLevel);
+                TraceRaiseInterrupt(m_tracer, internalIndex, internalLevel);
 
                 // Also send VBlank IN and HBlank IN to slave SH2 if it is enabled
                 if (internalIndex == 0) {
@@ -1115,7 +1133,7 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
                 }
             } else if (m_abusIntrAck) {
                 rootLog.trace("Raising external interrupt {:X}", externalIndex);
-                m_tracer.RaiseInterrupt(externalIndex + 16, externalLevel);
+                TraceRaiseInterrupt(m_tracer, externalIndex + 16, externalLevel);
                 m_abusIntrAck = false;
                 m_cbExternalMasterInterrupt(externalLevel, externalIndex + 0x50);
                 m_cbExternalSlaveInterrupt(0, 0);

@@ -127,7 +127,7 @@ public:
     // Attaches the specified tracer to this component.
     // Pass nullptr to disable tracing.
     void UseTracer(debug::ISCUTracer *tracer) {
-        m_tracer.instance = tracer;
+        m_tracer = tracer;
     }
 
     InterruptMask GetInterruptMask() const {
@@ -294,21 +294,7 @@ private:
     // -------------------------------------------------------------------------
     // Debugger
 
-    struct {
-        FORCE_INLINE void RaiseInterrupt(uint8 index, uint8 level) {
-            if (instance) {
-                return instance->RaiseInterrupt(index, level);
-            }
-        }
-
-        FORCE_INLINE void AcknowledgeInterrupt(uint8 index) {
-            if (instance) {
-                return instance->AcknowledgeInterrupt(index);
-            }
-        }
-
-        debug::ISCUTracer *instance = nullptr;
-    } m_tracer;
+    debug::ISCUTracer *m_tracer = nullptr;
 
 public:
     // -------------------------------------------------------------------------

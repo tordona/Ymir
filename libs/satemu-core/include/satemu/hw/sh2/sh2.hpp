@@ -75,7 +75,7 @@ public:
     // Attaches the specified tracer to this component.
     // Pass nullptr to disable tracing.
     void UseTracer(debug::ISH2Tracer *tracer) {
-        m_tracer.instance = tracer;
+        m_tracer = tracer;
     }
 
     class Probe {
@@ -324,73 +324,7 @@ private:
     // Debugger
 
     Probe m_probe{*this};
-
-    struct {
-        template <bool debug>
-        FORCE_INLINE void ExecuteInstruction(uint32 pc, uint16 opcode, bool delaySlot) {
-            if constexpr (debug) {
-                if (instance) {
-                    return instance->ExecuteInstruction(pc, opcode, delaySlot);
-                }
-            }
-        }
-
-        template <bool debug>
-        FORCE_INLINE void Interrupt(uint8 vecNum, uint8 level, sh2::InterruptSource source, uint32 pc) {
-            if constexpr (debug) {
-                if (instance) {
-                    return instance->Interrupt(vecNum, level, source, pc);
-                }
-            }
-        }
-
-        template <bool debug>
-        FORCE_INLINE void Exception(uint8 vecNum, uint32 pc, uint32 sr) {
-            if constexpr (debug) {
-                if (instance) {
-                    return instance->Exception(vecNum, pc, sr);
-                }
-            }
-        }
-
-        template <bool debug>
-        FORCE_INLINE void Begin32x32Division(sint32 dividend, sint32 divisor, bool overflowIntrEnable) {
-            if constexpr (debug) {
-                if (instance) {
-                    return instance->Begin32x32Division(dividend, divisor, overflowIntrEnable);
-                }
-            }
-        }
-
-        template <bool debug>
-        FORCE_INLINE void End32x32Division(sint32 quotient, sint32 remainder, bool overflow) {
-            if constexpr (debug) {
-                if (instance) {
-                    return instance->End32x32Division(quotient, remainder, overflow);
-                }
-            }
-        }
-
-        template <bool debug>
-        FORCE_INLINE void Begin64x32Division(sint64 dividend, sint32 divisor, bool overflowIntrEnable) {
-            if constexpr (debug) {
-                if (instance) {
-                    return instance->Begin64x32Division(dividend, divisor, overflowIntrEnable);
-                }
-            }
-        }
-
-        template <bool debug>
-        FORCE_INLINE void End64x32Division(sint32 quotient, sint32 remainder, bool overflow) {
-            if constexpr (debug) {
-                if (instance) {
-                    return instance->End64x32Division(quotient, remainder, overflow);
-                }
-            }
-        }
-
-        debug::ISH2Tracer *instance = nullptr;
-    } m_tracer;
+    debug::ISH2Tracer *m_tracer = nullptr;
 
     const dbg::Category<sh2DebugLevel> &m_log;
 

@@ -4,12 +4,13 @@
 #include <satemu/util/data_ops.hpp>
 #include <satemu/util/unreachable.hpp>
 
-#include <fmt/format.h>
-
 #include <algorithm>
 #include <cassert>
 
 namespace satemu::sh2 {
+
+// -----------------------------------------------------------------------------
+// Configuration
 
 namespace config {
     // Detect and log SYS_EXECDMP invocations.
@@ -26,12 +27,89 @@ namespace config {
     inline constexpr bool enableCache = false;
 } // namespace config
 
+// -----------------------------------------------------------------------------
+// Debugger
+
+template <bool debug>
+FORCE_INLINE static void TraceExecuteInstruction(debug::ISH2Tracer *tracer, uint32 pc, uint16 opcode, bool delaySlot) {
+    if constexpr (debug) {
+        if (tracer) {
+            return tracer->ExecuteInstruction(pc, opcode, delaySlot);
+        }
+    }
+}
+
+template <bool debug>
+FORCE_INLINE static void TraceInterrupt(debug::ISH2Tracer *tracer, uint8 vecNum, uint8 level,
+                                        sh2::InterruptSource source, uint32 pc) {
+    if constexpr (debug) {
+        if (tracer) {
+            return tracer->Interrupt(vecNum, level, source, pc);
+        }
+    }
+}
+
+template <bool debug>
+FORCE_INLINE static void TraceException(debug::ISH2Tracer *tracer, uint8 vecNum, uint32 pc, uint32 sr) {
+    if constexpr (debug) {
+        if (tracer) {
+            return tracer->Exception(vecNum, pc, sr);
+        }
+    }
+}
+
+template <bool debug>
+FORCE_INLINE static void TraceBegin32x32Division(debug::ISH2Tracer *tracer, sint32 dividend, sint32 divisor,
+                                                 bool overflowIntrEnable) {
+    if constexpr (debug) {
+        if (tracer) {
+            return tracer->Begin32x32Division(dividend, divisor, overflowIntrEnable);
+        }
+    }
+}
+
+template <bool debug>
+FORCE_INLINE static void TraceEnd32x32Division(debug::ISH2Tracer *tracer, sint32 quotient, sint32 remainder,
+                                               bool overflow) {
+    if constexpr (debug) {
+        if (tracer) {
+            return tracer->End32x32Division(quotient, remainder, overflow);
+        }
+    }
+}
+
+template <bool debug>
+FORCE_INLINE static void TraceBegin64x32Division(debug::ISH2Tracer *tracer, sint64 dividend, sint32 divisor,
+                                                 bool overflowIntrEnable) {
+    if constexpr (debug) {
+        if (tracer) {
+            return tracer->Begin64x32Division(dividend, divisor, overflowIntrEnable);
+        }
+    }
+}
+
+template <bool debug>
+FORCE_INLINE static void TraceEnd64x32Division(debug::ISH2Tracer *tracer, sint32 quotient, sint32 remainder,
+                                               bool overflow) {
+    if constexpr (debug) {
+        if (tracer) {
+            return tracer->End64x32Division(quotient, remainder, overflow);
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Logging
+
 inline constexpr dbg::Category<sh2DebugLevel> MSH2{"SH2-M"};
 inline constexpr dbg::Category<sh2DebugLevel> SSH2{"SH2-S"};
 
 static constexpr const dbg::Category<sh2DebugLevel> &Logger(bool master) {
     return master ? MSH2 : SSH2;
 }
+
+// -----------------------------------------------------------------------------
+// Implementation
 
 SH2::SH2(sys::Bus &bus, bool master)
     : m_log(Logger(master))
@@ -930,9 +1008,9 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
         if constexpr (!poke) {
             DIVU.DVDNTL = value;
             DIVU.DVDNTH = static_cast<sint32>(value) >> 31;
-            m_tracer.Begin32x32Division<debug>(DIVU.DVDNTL, DIVU.DVSR, DIVU.DVCR.OVFIE);
+            TraceBegin32x32Division<debug>(m_tracer, DIVU.DVDNTL, DIVU.DVSR, DIVU.DVCR.OVFIE);
             DIVU.Calc32();
-            m_tracer.End32x32Division<debug>(DIVU.DVDNTL, DIVU.DVDNTH, DIVU.DVCR.OVF);
+            TraceEnd32x32Division<debug>(m_tracer, DIVU.DVDNTL, DIVU.DVDNTH, DIVU.DVCR.OVF);
             if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
                 RaiseInterrupt(InterruptSource::DIVU_OVFI);
             }
@@ -952,11 +1030,11 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     case 0x134:
         DIVU.DVDNTL = value;
         if constexpr (!poke) {
-            m_tracer.Begin64x32Division<debug>((static_cast<sint64>(DIVU.DVDNTH) << 32ll) |
-                                                   static_cast<sint64>(DIVU.DVDNTL),
-                                               DIVU.DVSR, DIVU.DVCR.OVFIE);
+            TraceBegin64x32Division<debug>(
+                m_tracer, (static_cast<sint64>(DIVU.DVDNTH) << 32ll) | static_cast<sint64>(DIVU.DVDNTL), DIVU.DVSR,
+                DIVU.DVCR.OVFIE);
             DIVU.Calc64();
-            m_tracer.End64x32Division<debug>(DIVU.DVDNTL, DIVU.DVDNTH, DIVU.DVCR.OVF);
+            TraceEnd64x32Division<debug>(m_tracer, DIVU.DVDNTL, DIVU.DVDNTH, DIVU.DVCR.OVF);
             if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
                 RaiseInterrupt(InterruptSource::DIVU_OVFI);
             }
@@ -1370,7 +1448,7 @@ FORCE_INLINE void SH2::SetupDelaySlot(uint32 targetAddress) {
 
 template <bool debug>
 FORCE_INLINE void SH2::EnterException(uint8 vectorNumber) {
-    m_tracer.Exception<debug>(vectorNumber, PC, SR.u32);
+    TraceException<debug>(m_tracer, vectorNumber, PC, SR.u32);
     R[15] -= 4;
     MemWriteLong<debug>(R[15], SR.u32);
     R[15] -= 4;
@@ -1385,7 +1463,7 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     if (!m_delaySlot && CheckInterrupts()) [[unlikely]] {
         // Service interrupt
         const uint8 vecNum = INTC.GetVector(INTC.pending.source);
-        m_tracer.Interrupt<debug>(vecNum, INTC.pending.level, INTC.pending.source, PC);
+        TraceInterrupt<debug>(m_tracer, vecNum, INTC.pending.level, INTC.pending.source, PC);
         m_log.trace("Handling interrupt level {:02X}, vector number {:02X}", INTC.pending.level, vecNum);
         EnterException<debug>(vecNum);
         SR.ILevel = std::min<uint8>(INTC.pending.level, 0xF);
@@ -1410,7 +1488,7 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     };
 
     const uint16 instr = FetchInstruction(PC);
-    m_tracer.ExecuteInstruction<debug>(PC, instr, m_delaySlot);
+    TraceExecuteInstruction<debug>(m_tracer, PC, instr, m_delaySlot);
 
     const OpcodeType opcode = g_decodeTable.opcodes[m_delaySlot][instr];
     const DecodedArgs &args = g_decodeTable.args[instr];
