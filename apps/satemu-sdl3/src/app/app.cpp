@@ -1041,7 +1041,7 @@ void App::RunEmulator() {
         if (displayVideoOutputInWindow) {
             std::string title = fmt::format("Video Output - {}x{}###Display", screen.width, screen.height);
 
-            const float aspectRatio = (float)screen.height / screen.width;
+            const float aspectRatio = (float)screen.height / screen.width * screen.scaleY / screen.scaleX;
 
             ImGui::SetNextWindowSizeConstraints(
                 ImVec2(320, 224), ImVec2(FLT_MAX, FLT_MAX),
@@ -1058,7 +1058,7 @@ void App::RunEmulator() {
                 const float scale = std::min(scaleX, scaleY);
 
                 ImGui::Image((ImTextureID)texture,
-                             ImVec2(screen.width * scale / screen.scaleX, screen.height * scale / screen.scaleY),
+                             ImVec2(screen.width * scale * screen.scaleX, screen.height * scale * screen.scaleY),
                              ImVec2(0, 0),
                              ImVec2((float)screen.width / vdp::kMaxResH, (float)screen.height / vdp::kMaxResV));
             }
@@ -1080,8 +1080,8 @@ void App::RunEmulator() {
         // Draw Saturn screen
         if (!displayVideoOutputInWindow) {
             // Get screen size
-            const float baseWidth = forceAspectRatio ? screen.height * forcedAspect : screen.width;
-            const float baseHeight = screen.height;
+            const float baseWidth = (forceAspectRatio ? screen.height * forcedAspect : screen.width) * screen.scaleX;
+            const float baseHeight = screen.height * screen.scaleY;
 
             // Get window size
             int ww, wh;
