@@ -306,9 +306,6 @@ void App::RunEmulator() {
     } screen;
 
     // ---------------------------------
-    // HORRIBLE HACK to determine ImGui menu bar height
-    // Doesn't scale with global scale!
-
     // Setup Dear ImGui context
 
     ImGui::CreateContext();
@@ -446,6 +443,7 @@ void App::RunEmulator() {
     {
         ImFontConfig config;
         config.FontDataOwnedByAtlas = false;
+        // TODO: config.MergeMode = true; to merge multiple fonts into one; useful for combining latin + JP + icons
 
         ImVector<ImWchar> ranges;
         ImFontGlyphRangesBuilder builder;
@@ -471,22 +469,33 @@ void App::RunEmulator() {
             return io.Fonts->AddFontFromMemoryTTF((void *)file.begin(), file.size(), size, &config, ranges.Data);
         };
 
-        m_context.fonts.sansSerifMedium = loadFont("fonts/SplineSans-Medium.ttf", 16);
-        m_context.fonts.sansSerifBold = loadFont("fonts/SplineSans-Bold.ttf", 16);
-        m_context.fonts.sansSerifMediumMedium = loadFont("fonts/SplineSans-Medium.ttf", 20);
-        m_context.fonts.sansSerifMediumBold = loadFont("fonts/SplineSans-Bold.ttf", 20);
-        m_context.fonts.sansSerifLargeBold = loadFont("fonts/SplineSans-Bold.ttf", 28);
-        m_context.fonts.monospaceMedium = loadFont("fonts/SplineSansMono-Medium.ttf", 16);
-        m_context.fonts.monospaceBold = loadFont("fonts/SplineSansMono-Bold.ttf", 16);
-        m_context.fonts.monospaceMediumMedium = loadFont("fonts/SplineSansMono-Medium.ttf", 20);
-        m_context.fonts.monospaceMediumBold = loadFont("fonts/SplineSansMono-Bold.ttf", 20);
+        m_context.fonts.sansSerif.small.regular = loadFont("fonts/SplineSans-Medium.ttf", 14);
+        m_context.fonts.sansSerif.small.bold = loadFont("fonts/SplineSans-Bold.ttf", 14);
+        m_context.fonts.sansSerif.medium.regular = loadFont("fonts/SplineSans-Medium.ttf", 16);
+        m_context.fonts.sansSerif.medium.bold = loadFont("fonts/SplineSans-Bold.ttf", 16);
+        m_context.fonts.sansSerif.large.regular = loadFont("fonts/SplineSans-Medium.ttf", 20);
+        m_context.fonts.sansSerif.large.bold = loadFont("fonts/SplineSans-Bold.ttf", 20);
+        m_context.fonts.sansSerif.xlarge.regular = loadFont("fonts/SplineSans-Medium.ttf", 28);
+        m_context.fonts.sansSerif.xlarge.bold = loadFont("fonts/SplineSans-Bold.ttf", 28);
+
+        m_context.fonts.monospace.small.regular = loadFont("fonts/SplineSansMono-Medium.ttf", 14);
+        m_context.fonts.monospace.small.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 14);
+        m_context.fonts.monospace.medium.regular = loadFont("fonts/SplineSansMono-Medium.ttf", 16);
+        m_context.fonts.monospace.medium.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 16);
+        m_context.fonts.monospace.large.regular = loadFont("fonts/SplineSansMono-Medium.ttf", 20);
+        m_context.fonts.monospace.large.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 20);
+        m_context.fonts.monospace.xlarge.regular = loadFont("fonts/SplineSansMono-Medium.ttf", 28);
+        m_context.fonts.monospace.xlarge.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 28);
+
         m_context.fonts.display = loadFont("fonts/ZenDots-Regular.ttf", 64);
 
         io.Fonts->Build();
+
+        io.FontDefault = m_context.fonts.sansSerif.medium.regular;
     }
 
     // Equivalent to ImGui::GetFrameHeight() without requiring a window
-    screen.menuBarHeight = m_context.fonts.sansSerifMedium->FontSize + style.FramePadding.y * 2.0f;
+    screen.menuBarHeight = io.FontDefault->FontSize + style.FramePadding.y * 2.0f;
 
     // ---------------------------------
     // Create window

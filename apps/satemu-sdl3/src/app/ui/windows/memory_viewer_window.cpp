@@ -39,7 +39,7 @@ void MemoryViewerWindow::Display() {
             currRegion.paramsFn(m_context.get());
         }
 
-        ImGui::PushFont(m_sharedCtx.fonts.monospaceMedium);
+        ImGui::PushFont(m_sharedCtx.fonts.monospace.medium.regular);
         if (ImGui::BeginCombo("Region", currRegion.ToString().c_str(),
                               ImGuiComboFlags_HeightLarge | ImGuiComboFlags_WidthFitPreview)) {
             for (auto &group : kRegionGroups) {
@@ -57,7 +57,7 @@ void MemoryViewerWindow::Display() {
 
         ImGui::Checkbox("Enable side-effects", &m_context->enableSideEffects);
         ImGui::Separator();
-        ImGui::PushFont(m_sharedCtx.fonts.monospaceMedium);
+        ImGui::PushFont(m_sharedCtx.fonts.monospace.medium.regular);
         m_context->memoryEditor.DrawContents(this, currRegion.size, currRegion.baseAddress);
         if (m_context->memoryEditor.MouseHovered) {
             // TODO: use this to display additional info on specific addresses

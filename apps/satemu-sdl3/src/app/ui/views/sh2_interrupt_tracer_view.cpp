@@ -14,7 +14,7 @@ void SH2InterruptTracerView::Display() {
     auto &intc = probe.INTC();
 
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
-    ImGui::PushFont(m_context.fonts.monospaceMedium);
+    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -57,22 +57,22 @@ void SH2InterruptTracerView::Display() {
 
             ImGui::TableNextRow();
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospaceMedium);
+                ImGui::PushFont(m_context.fonts.monospace.medium.regular);
                 ImGui::Text("%u", trace.counter);
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospaceMedium);
+                ImGui::PushFont(m_context.fonts.monospace.medium.regular);
                 ImGui::Text("%08X", trace.pc);
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospaceMedium);
+                ImGui::PushFont(m_context.fonts.monospace.medium.regular);
                 ImGui::Text("%02X", trace.vecNum);
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospaceMedium);
+                ImGui::PushFont(m_context.fonts.monospace.medium.regular);
                 ImGui::Text("%X", trace.level);
                 ImGui::PopFont();
             }

@@ -23,15 +23,58 @@ struct SharedContext {
     } tracers;
 
     struct Fonts {
-        ImFont *sansSerifMedium = nullptr;
-        ImFont *sansSerifBold = nullptr;
-        ImFont *sansSerifMediumMedium = nullptr;
-        ImFont *sansSerifMediumBold = nullptr;
-        ImFont *sansSerifLargeBold = nullptr;
-        ImFont *monospaceMedium = nullptr;
-        ImFont *monospaceBold = nullptr;
-        ImFont *monospaceMediumMedium = nullptr;
-        ImFont *monospaceMediumBold = nullptr;
+        struct {
+            // 14 pt
+            struct {
+                ImFont *regular = nullptr;
+                ImFont *bold = nullptr;
+            } small;
+
+            // 16 pt
+            struct {
+                ImFont *regular = nullptr;
+                ImFont *bold = nullptr;
+            } medium;
+
+            // 20 pt
+            struct {
+                ImFont *regular = nullptr;
+                ImFont *bold = nullptr;
+            } large;
+
+            // 28 pt
+            struct {
+                ImFont *regular = nullptr;
+                ImFont *bold = nullptr;
+            } xlarge;
+        } sansSerif;
+
+        struct {
+            // 14 pt
+            struct {
+                ImFont *regular = nullptr;
+                ImFont *bold = nullptr;
+            } small;
+
+            // 16 pt
+            struct {
+                ImFont *regular = nullptr;
+                ImFont *bold = nullptr;
+            } medium;
+
+            // 20 pt
+            struct {
+                ImFont *regular = nullptr;
+                ImFont *bold = nullptr;
+            } large;
+
+            // 28 pt
+            struct {
+                ImFont *regular = nullptr;
+                ImFont *bold = nullptr;
+            } xlarge;
+        } monospace;
+
         ImFont *display = nullptr;
     } fonts;
 

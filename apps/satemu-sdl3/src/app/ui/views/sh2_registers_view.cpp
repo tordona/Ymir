@@ -25,7 +25,7 @@ void SH2RegistersView::Display() {
         ImGui::BeginDisabled();
     }
 
-    ImGui::PushFont(m_context.fonts.monospaceMedium);
+    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -37,7 +37,7 @@ void SH2RegistersView::Display() {
 
         ImGui::SameLine(50.0f);
 
-        ImGui::PushFont(m_context.fonts.monospaceMedium);
+        ImGui::PushFont(m_context.fonts.monospace.medium.regular);
         ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 8);
         const std::string lblField = fmt::format("##input_{}", name);
         ImGui::InputScalar(lblField.c_str(), ImGuiDataType_U32, &value, nullptr, nullptr, "%08X",
@@ -105,7 +105,7 @@ void SH2RegistersView::Display() {
     ImGui::SameLine();
 
     ImGui::BeginGroup();
-    ImGui::PushFont(m_context.fonts.monospaceMedium);
+    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 1);
     uint8 ILevel = sr.ILevel;
     if (ImGui::InputScalar("##input_SR_ILevel", ImGuiDataType_U8, &ILevel, nullptr, nullptr, "%X",

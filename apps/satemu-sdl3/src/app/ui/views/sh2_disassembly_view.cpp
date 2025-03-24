@@ -22,7 +22,7 @@ void SH2DisassemblyView::Display() {
     // - branch arrows
     // - cursor
 
-    ImGui::PushFont(m_context.fonts.monospaceMedium);
+    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     auto &probe = m_sh2.GetProbe();
     const uint32 baseAddr = probe.PC() & ~1;
     for (uint32 i = 0; i < 32; i++) {
