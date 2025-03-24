@@ -353,6 +353,42 @@ private:
             }
         }
 
+        template <bool debug>
+        FORCE_INLINE void Begin32x32Division(sint32 dividend, sint32 divisor, bool overflowIntrEnable) {
+            if constexpr (debug) {
+                if (instance) {
+                    return instance->Begin32x32Division(dividend, divisor, overflowIntrEnable);
+                }
+            }
+        }
+
+        template <bool debug>
+        FORCE_INLINE void End32x32Division(sint32 quotient, sint32 remainder, bool overflow) {
+            if constexpr (debug) {
+                if (instance) {
+                    return instance->End32x32Division(quotient, remainder, overflow);
+                }
+            }
+        }
+
+        template <bool debug>
+        FORCE_INLINE void Begin64x32Division(sint64 dividend, sint32 divisor, bool overflowIntrEnable) {
+            if constexpr (debug) {
+                if (instance) {
+                    return instance->Begin64x32Division(dividend, divisor, overflowIntrEnable);
+                }
+            }
+        }
+
+        template <bool debug>
+        FORCE_INLINE void End64x32Division(sint32 quotient, sint32 remainder, bool overflow) {
+            if constexpr (debug) {
+                if (instance) {
+                    return instance->End64x32Division(quotient, remainder, overflow);
+                }
+            }
+        }
+
         debug::ISH2Tracer *instance = nullptr;
     } m_tracer;
 
@@ -402,7 +438,7 @@ private:
     template <mem_primitive T, bool instrFetch, bool peek>
     T MemRead(uint32 address);
 
-    template <mem_primitive T, bool poke>
+    template <mem_primitive T, bool poke, bool debug>
     void MemWrite(uint32 address, T value);
 
     uint16 FetchInstruction(uint32 address);
@@ -411,8 +447,11 @@ private:
     uint16 MemReadWord(uint32 address);
     uint32 MemReadLong(uint32 address);
 
+    template <bool debug>
     void MemWriteByte(uint32 address, uint8 value);
+    template <bool debug>
     void MemWriteWord(uint32 address, uint16 value);
+    template <bool debug>
     void MemWriteLong(uint32 address, uint32 value);
 
     uint16 PeekInstruction(uint32 address);
@@ -442,14 +481,14 @@ private:
     template <bool peek>
     uint32 OnChipRegReadLong(uint32 address);
 
-    template <mem_primitive T, bool poke>
+    template <mem_primitive T, bool poke, bool debug>
     void OnChipRegWrite(uint32 address, T value);
 
-    template <bool poke>
+    template <bool poke, bool debug>
     void OnChipRegWriteByte(uint32 address, uint8 value);
-    template <bool poke>
+    template <bool poke, bool debug>
     void OnChipRegWriteWord(uint32 address, uint16 value);
-    template <bool poke>
+    template <bool poke, bool debug>
     void OnChipRegWriteLong(uint32 address, uint32 value);
 
     // --- SCI module ---
@@ -475,6 +514,7 @@ private:
     // A transfer is active if DE = 1, DME = 1, TE = 0, NMIF = 0 and AE = 0.
     bool IsDMATransferActive(const DMAChannel &ch) const;
 
+    template <bool debug>
     void RunDMAC(uint32 channel);
 
     // --- WDT module ---
@@ -586,48 +626,50 @@ private:
     template <bool debug>
     uint64 InterpretNext();
 
+#define TPL_DEBUG template <bool debug>
+
     void NOP(); // nop
 
     void SLEEP(); // sleep
 
-    void MOV(const DecodedArgs &args);    // mov   Rm, Rn
-    void MOVBL(const DecodedArgs &args);  // mov.b @Rm, Rn
-    void MOVWL(const DecodedArgs &args);  // mov.w @Rm, Rn
-    void MOVLL(const DecodedArgs &args);  // mov.l @Rm, Rn
-    void MOVBL0(const DecodedArgs &args); // mov.b @(R0,Rm), Rn
-    void MOVWL0(const DecodedArgs &args); // mov.w @(R0,Rm), Rn
-    void MOVLL0(const DecodedArgs &args); // mov.l @(R0,Rm), Rn
-    void MOVBL4(const DecodedArgs &args); // mov.b @(disp,Rm), R0
-    void MOVWL4(const DecodedArgs &args); // mov.w @(disp,Rm), R0
-    void MOVLL4(const DecodedArgs &args); // mov.l @(disp,Rm), Rn
-    void MOVBLG(const DecodedArgs &args); // mov.b @(disp,GBR), R0
-    void MOVWLG(const DecodedArgs &args); // mov.w @(disp,GBR), R0
-    void MOVLLG(const DecodedArgs &args); // mov.l @(disp,GBR), R0
-    void MOVBM(const DecodedArgs &args);  // mov.b Rm, @-Rn
-    void MOVWM(const DecodedArgs &args);  // mov.w Rm, @-Rn
-    void MOVLM(const DecodedArgs &args);  // mov.l Rm, @-Rn
-    void MOVBP(const DecodedArgs &args);  // mov.b @Rm+, Rn
-    void MOVWP(const DecodedArgs &args);  // mov.w @Rm+, Rn
-    void MOVLP(const DecodedArgs &args);  // mov.l @Rm+, Rn
-    void MOVBS(const DecodedArgs &args);  // mov.b Rm, @Rn
-    void MOVWS(const DecodedArgs &args);  // mov.w Rm, @Rn
-    void MOVLS(const DecodedArgs &args);  // mov.l Rm, @Rn
-    void MOVBS0(const DecodedArgs &args); // mov.b Rm, @(R0,Rn)
-    void MOVWS0(const DecodedArgs &args); // mov.w Rm, @(R0,Rn)
-    void MOVLS0(const DecodedArgs &args); // mov.l Rm, @(R0,Rn)
-    void MOVBS4(const DecodedArgs &args); // mov.b R0, @(disp,Rn)
-    void MOVWS4(const DecodedArgs &args); // mov.w R0, @(disp,Rn)
-    void MOVLS4(const DecodedArgs &args); // mov.l Rm, @(disp,Rn)
-    void MOVBSG(const DecodedArgs &args); // mov.b R0, @(disp,GBR)
-    void MOVWSG(const DecodedArgs &args); // mov.w R0, @(disp,GBR)
-    void MOVLSG(const DecodedArgs &args); // mov.l R0, @(disp,GBR)
-    void MOVI(const DecodedArgs &args);   // mov   #imm, Rn
-    void MOVWI(const DecodedArgs &args);  // mov.w @(disp,PC), Rn
-    void MOVLI(const DecodedArgs &args);  // mov.l @(disp,PC), Rn
-    void MOVA(const DecodedArgs &args);   // mova  @(disp,PC), R0
-    void MOVT(const DecodedArgs &args);   // movt  Rn
-    void CLRT();                          // clrt
-    void SETT();                          // sett
+    void MOV(const DecodedArgs &args);              // mov   Rm, Rn
+    void MOVBL(const DecodedArgs &args);            // mov.b @Rm, Rn
+    void MOVWL(const DecodedArgs &args);            // mov.w @Rm, Rn
+    void MOVLL(const DecodedArgs &args);            // mov.l @Rm, Rn
+    void MOVBL0(const DecodedArgs &args);           // mov.b @(R0,Rm), Rn
+    void MOVWL0(const DecodedArgs &args);           // mov.w @(R0,Rm), Rn
+    void MOVLL0(const DecodedArgs &args);           // mov.l @(R0,Rm), Rn
+    void MOVBL4(const DecodedArgs &args);           // mov.b @(disp,Rm), R0
+    void MOVWL4(const DecodedArgs &args);           // mov.w @(disp,Rm), R0
+    void MOVLL4(const DecodedArgs &args);           // mov.l @(disp,Rm), Rn
+    void MOVBLG(const DecodedArgs &args);           // mov.b @(disp,GBR), R0
+    void MOVWLG(const DecodedArgs &args);           // mov.w @(disp,GBR), R0
+    void MOVLLG(const DecodedArgs &args);           // mov.l @(disp,GBR), R0
+    TPL_DEBUG void MOVBM(const DecodedArgs &args);  // mov.b Rm, @-Rn
+    TPL_DEBUG void MOVWM(const DecodedArgs &args);  // mov.w Rm, @-Rn
+    TPL_DEBUG void MOVLM(const DecodedArgs &args);  // mov.l Rm, @-Rn
+    void MOVBP(const DecodedArgs &args);            // mov.b @Rm+, Rn
+    void MOVWP(const DecodedArgs &args);            // mov.w @Rm+, Rn
+    void MOVLP(const DecodedArgs &args);            // mov.l @Rm+, Rn
+    TPL_DEBUG void MOVBS(const DecodedArgs &args);  // mov.b Rm, @Rn
+    TPL_DEBUG void MOVWS(const DecodedArgs &args);  // mov.w Rm, @Rn
+    TPL_DEBUG void MOVLS(const DecodedArgs &args);  // mov.l Rm, @Rn
+    TPL_DEBUG void MOVBS0(const DecodedArgs &args); // mov.b Rm, @(R0,Rn)
+    TPL_DEBUG void MOVWS0(const DecodedArgs &args); // mov.w Rm, @(R0,Rn)
+    TPL_DEBUG void MOVLS0(const DecodedArgs &args); // mov.l Rm, @(R0,Rn)
+    TPL_DEBUG void MOVBS4(const DecodedArgs &args); // mov.b R0, @(disp,Rn)
+    TPL_DEBUG void MOVWS4(const DecodedArgs &args); // mov.w R0, @(disp,Rn)
+    TPL_DEBUG void MOVLS4(const DecodedArgs &args); // mov.l Rm, @(disp,Rn)
+    TPL_DEBUG void MOVBSG(const DecodedArgs &args); // mov.b R0, @(disp,GBR)
+    TPL_DEBUG void MOVWSG(const DecodedArgs &args); // mov.w R0, @(disp,GBR)
+    TPL_DEBUG void MOVLSG(const DecodedArgs &args); // mov.l R0, @(disp,GBR)
+    void MOVI(const DecodedArgs &args);             // mov   #imm, Rn
+    void MOVWI(const DecodedArgs &args);            // mov.w @(disp,PC), Rn
+    void MOVLI(const DecodedArgs &args);            // mov.l @(disp,PC), Rn
+    void MOVA(const DecodedArgs &args);             // mova  @(disp,PC), R0
+    void MOVT(const DecodedArgs &args);             // movt  Rn
+    void CLRT();                                    // clrt
+    void SETT();                                    // sett
 
     void EXTSB(const DecodedArgs &args); // exts.b Rm, Rn
     void EXTSW(const DecodedArgs &args); // exts.w Rm, Rn
@@ -637,64 +679,64 @@ private:
     void SWAPW(const DecodedArgs &args); // swap.w Rm, Rn
     void XTRCT(const DecodedArgs &args); // xtrct  Rm, Rn
 
-    void LDCGBR(const DecodedArgs &args);   // ldc   Rm, GBR
-    void LDCSR(const DecodedArgs &args);    // ldc   Rm, SR
-    void LDCVBR(const DecodedArgs &args);   // ldc   Rm, VBR
-    void LDCMGBR(const DecodedArgs &args);  // ldc.l @Rm+, GBR
-    void LDCMSR(const DecodedArgs &args);   // ldc.l @Rm+, SR
-    void LDCMVBR(const DecodedArgs &args);  // ldc.l @Rm+, VBR
-    void LDSMACH(const DecodedArgs &args);  // lds   Rm, MACH
-    void LDSMACL(const DecodedArgs &args);  // lds   Rm, MACL
-    void LDSPR(const DecodedArgs &args);    // lds   Rm, PR
-    void LDSMMACH(const DecodedArgs &args); // lds.l @Rm+, MACH
-    void LDSMMACL(const DecodedArgs &args); // lds.l @Rm+, MACL
-    void LDSMPR(const DecodedArgs &args);   // lds.l @Rm+, PR
-    void STCGBR(const DecodedArgs &args);   // stc   GBR, Rn
-    void STCSR(const DecodedArgs &args);    // stc   SR, Rn
-    void STCVBR(const DecodedArgs &args);   // stc   VBR, Rn
-    void STCMGBR(const DecodedArgs &args);  // stc.l GBR, @-Rn
-    void STCMSR(const DecodedArgs &args);   // stc.l SR, @-Rn
-    void STCMVBR(const DecodedArgs &args);  // stc.l VBR, @-Rn
-    void STSMACH(const DecodedArgs &args);  // sts   MACH, Rn
-    void STSMACL(const DecodedArgs &args);  // sts   MACL, Rn
-    void STSPR(const DecodedArgs &args);    // sts   PR, Rn
-    void STSMMACH(const DecodedArgs &args); // sts.l MACH, @-Rn
-    void STSMMACL(const DecodedArgs &args); // sts.l MACL, @-Rn
-    void STSMPR(const DecodedArgs &args);   // sts.l PR, @-Rn
+    void LDCGBR(const DecodedArgs &args);             // ldc   Rm, GBR
+    void LDCSR(const DecodedArgs &args);              // ldc   Rm, SR
+    void LDCVBR(const DecodedArgs &args);             // ldc   Rm, VBR
+    void LDCMGBR(const DecodedArgs &args);            // ldc.l @Rm+, GBR
+    void LDCMSR(const DecodedArgs &args);             // ldc.l @Rm+, SR
+    void LDCMVBR(const DecodedArgs &args);            // ldc.l @Rm+, VBR
+    void LDSMACH(const DecodedArgs &args);            // lds   Rm, MACH
+    void LDSMACL(const DecodedArgs &args);            // lds   Rm, MACL
+    void LDSPR(const DecodedArgs &args);              // lds   Rm, PR
+    void LDSMMACH(const DecodedArgs &args);           // lds.l @Rm+, MACH
+    void LDSMMACL(const DecodedArgs &args);           // lds.l @Rm+, MACL
+    void LDSMPR(const DecodedArgs &args);             // lds.l @Rm+, PR
+    void STCGBR(const DecodedArgs &args);             // stc   GBR, Rn
+    void STCSR(const DecodedArgs &args);              // stc   SR, Rn
+    void STCVBR(const DecodedArgs &args);             // stc   VBR, Rn
+    TPL_DEBUG void STCMGBR(const DecodedArgs &args);  // stc.l GBR, @-Rn
+    TPL_DEBUG void STCMSR(const DecodedArgs &args);   // stc.l SR, @-Rn
+    TPL_DEBUG void STCMVBR(const DecodedArgs &args);  // stc.l VBR, @-Rn
+    void STSMACH(const DecodedArgs &args);            // sts   MACH, Rn
+    void STSMACL(const DecodedArgs &args);            // sts   MACL, Rn
+    void STSPR(const DecodedArgs &args);              // sts   PR, Rn
+    TPL_DEBUG void STSMMACH(const DecodedArgs &args); // sts.l MACH, @-Rn
+    TPL_DEBUG void STSMMACL(const DecodedArgs &args); // sts.l MACL, @-Rn
+    TPL_DEBUG void STSMPR(const DecodedArgs &args);   // sts.l PR, @-Rn
 
-    void ADD(const DecodedArgs &args);    // add    Rm, Rn
-    void ADDI(const DecodedArgs &args);   // add    imm, Rn
-    void ADDC(const DecodedArgs &args);   // addc   Rm, Rn
-    void ADDV(const DecodedArgs &args);   // addv   Rm, Rn
-    void AND(const DecodedArgs &args);    // and    Rm, Rn
-    void ANDI(const DecodedArgs &args);   // and    imm, R0
-    void ANDM(const DecodedArgs &args);   // and.   b imm, @(R0,GBR)
-    void NEG(const DecodedArgs &args);    // neg    Rm, Rn
-    void NEGC(const DecodedArgs &args);   // negc   Rm, Rn
-    void NOT(const DecodedArgs &args);    // not    Rm, Rn
-    void OR(const DecodedArgs &args);     // or     Rm, Rn
-    void ORI(const DecodedArgs &args);    // or     imm, Rn
-    void ORM(const DecodedArgs &args);    // or.b   imm, @(R0,GBR)
-    void ROTCL(const DecodedArgs &args);  // rotcl  Rn
-    void ROTCR(const DecodedArgs &args);  // rotcr  Rn
-    void ROTL(const DecodedArgs &args);   // rotl   Rn
-    void ROTR(const DecodedArgs &args);   // rotr   Rn
-    void SHAL(const DecodedArgs &args);   // shal   Rn
-    void SHAR(const DecodedArgs &args);   // shar   Rn
-    void SHLL(const DecodedArgs &args);   // shll   Rn
-    void SHLL2(const DecodedArgs &args);  // shll2  Rn
-    void SHLL8(const DecodedArgs &args);  // shll8  Rn
-    void SHLL16(const DecodedArgs &args); // shll16 Rn
-    void SHLR(const DecodedArgs &args);   // shlr   Rn
-    void SHLR2(const DecodedArgs &args);  // shlr2  Rn
-    void SHLR8(const DecodedArgs &args);  // shlr8  Rn
-    void SHLR16(const DecodedArgs &args); // shlr16 Rn
-    void SUB(const DecodedArgs &args);    // sub    Rm, Rn
-    void SUBC(const DecodedArgs &args);   // subc   Rm, Rn
-    void SUBV(const DecodedArgs &args);   // subv   Rm, Rn
-    void XOR(const DecodedArgs &args);    // xor    Rm, Rn
-    void XORI(const DecodedArgs &args);   // xor    imm, Rn
-    void XORM(const DecodedArgs &args);   // xor.b  imm, @(R0,GBR)
+    void ADD(const DecodedArgs &args);            // add    Rm, Rn
+    void ADDI(const DecodedArgs &args);           // add    imm, Rn
+    void ADDC(const DecodedArgs &args);           // addc   Rm, Rn
+    void ADDV(const DecodedArgs &args);           // addv   Rm, Rn
+    void AND(const DecodedArgs &args);            // and    Rm, Rn
+    void ANDI(const DecodedArgs &args);           // and    imm, R0
+    TPL_DEBUG void ANDM(const DecodedArgs &args); // and.   b imm, @(R0,GBR)
+    void NEG(const DecodedArgs &args);            // neg    Rm, Rn
+    void NEGC(const DecodedArgs &args);           // negc   Rm, Rn
+    void NOT(const DecodedArgs &args);            // not    Rm, Rn
+    void OR(const DecodedArgs &args);             // or     Rm, Rn
+    void ORI(const DecodedArgs &args);            // or     imm, Rn
+    TPL_DEBUG void ORM(const DecodedArgs &args);  // or.b   imm, @(R0,GBR)
+    void ROTCL(const DecodedArgs &args);          // rotcl  Rn
+    void ROTCR(const DecodedArgs &args);          // rotcr  Rn
+    void ROTL(const DecodedArgs &args);           // rotl   Rn
+    void ROTR(const DecodedArgs &args);           // rotr   Rn
+    void SHAL(const DecodedArgs &args);           // shal   Rn
+    void SHAR(const DecodedArgs &args);           // shar   Rn
+    void SHLL(const DecodedArgs &args);           // shll   Rn
+    void SHLL2(const DecodedArgs &args);          // shll2  Rn
+    void SHLL8(const DecodedArgs &args);          // shll8  Rn
+    void SHLL16(const DecodedArgs &args);         // shll16 Rn
+    void SHLR(const DecodedArgs &args);           // shlr   Rn
+    void SHLR2(const DecodedArgs &args);          // shlr2  Rn
+    void SHLR8(const DecodedArgs &args);          // shlr8  Rn
+    void SHLR16(const DecodedArgs &args);         // shlr16 Rn
+    void SUB(const DecodedArgs &args);            // sub    Rm, Rn
+    void SUBC(const DecodedArgs &args);           // subc   Rm, Rn
+    void SUBV(const DecodedArgs &args);           // subv   Rm, Rn
+    void XOR(const DecodedArgs &args);            // xor    Rm, Rn
+    void XORI(const DecodedArgs &args);           // xor    imm, Rn
+    TPL_DEBUG void XORM(const DecodedArgs &args); // xor.b  imm, @(R0,GBR)
 
     void DT(const DecodedArgs &args); // dt Rn
 
@@ -711,34 +753,36 @@ private:
     void DIV0U();                        // div0u
     void DIV1(const DecodedArgs &args);  // div1  Rm, Rn
 
-    void CMPIM(const DecodedArgs &args);  // cmp/eq  imm, R0
-    void CMPEQ(const DecodedArgs &args);  // cmp/eq  Rm, Rn
-    void CMPGE(const DecodedArgs &args);  // cmp/ge  Rm, Rn
-    void CMPGT(const DecodedArgs &args);  // cmp/gt  Rm, Rn
-    void CMPHI(const DecodedArgs &args);  // cmp/hi  Rm, Rn
-    void CMPHS(const DecodedArgs &args);  // cmp/hs  Rm, Rn
-    void CMPPL(const DecodedArgs &args);  // cmp/pl  Rn
-    void CMPPZ(const DecodedArgs &args);  // cmp/pz  Rn
-    void CMPSTR(const DecodedArgs &args); // cmp/str Rm, Rn
-    void TAS(const DecodedArgs &args);    // tas.b   @Rn
-    void TST(const DecodedArgs &args);    // tst     Rm, Rn
-    void TSTI(const DecodedArgs &args);   // tst     imm, R0
-    void TSTM(const DecodedArgs &args);   // tst.b   imm, @(R0,GBR)
+    void CMPIM(const DecodedArgs &args);         // cmp/eq  imm, R0
+    void CMPEQ(const DecodedArgs &args);         // cmp/eq  Rm, Rn
+    void CMPGE(const DecodedArgs &args);         // cmp/ge  Rm, Rn
+    void CMPGT(const DecodedArgs &args);         // cmp/gt  Rm, Rn
+    void CMPHI(const DecodedArgs &args);         // cmp/hi  Rm, Rn
+    void CMPHS(const DecodedArgs &args);         // cmp/hs  Rm, Rn
+    void CMPPL(const DecodedArgs &args);         // cmp/pl  Rn
+    void CMPPZ(const DecodedArgs &args);         // cmp/pz  Rn
+    void CMPSTR(const DecodedArgs &args);        // cmp/str Rm, Rn
+    TPL_DEBUG void TAS(const DecodedArgs &args); // tas.b   @Rn
+    void TST(const DecodedArgs &args);           // tst     Rm, Rn
+    void TSTI(const DecodedArgs &args);          // tst     imm, R0
+    void TSTM(const DecodedArgs &args);          // tst.b   imm, @(R0,GBR)
 
-    uint64 BF(const DecodedArgs &args);  // bf    disp
-    uint64 BFS(const DecodedArgs &args); // bf/s  disp
-    uint64 BT(const DecodedArgs &args);  // bt    disp
-    uint64 BTS(const DecodedArgs &args); // bt/s  disp
-    void BRA(const DecodedArgs &args);   // bra   disp
-    void BRAF(const DecodedArgs &args);  // braf  Rm
-    void BSR(const DecodedArgs &args);   // bsr   disp
-    void BSRF(const DecodedArgs &args);  // bsrf  Rm
-    void JMP(const DecodedArgs &args);   // jmp   @Rm
-    void JSR(const DecodedArgs &args);   // jsr   @Rm
-    void TRAPA(const DecodedArgs &args); // trapa imm
+    uint64 BF(const DecodedArgs &args);            // bf    disp
+    uint64 BFS(const DecodedArgs &args);           // bf/s  disp
+    uint64 BT(const DecodedArgs &args);            // bt    disp
+    uint64 BTS(const DecodedArgs &args);           // bt/s  disp
+    void BRA(const DecodedArgs &args);             // bra   disp
+    void BRAF(const DecodedArgs &args);            // braf  Rm
+    void BSR(const DecodedArgs &args);             // bsr   disp
+    void BSRF(const DecodedArgs &args);            // bsrf  Rm
+    void JMP(const DecodedArgs &args);             // jmp   @Rm
+    void JSR(const DecodedArgs &args);             // jsr   @Rm
+    TPL_DEBUG void TRAPA(const DecodedArgs &args); // trapa imm
 
     void RTE(); // rte
     void RTS(); // rts
+
+#undef TPL_DEBUG
 
 public:
     // -------------------------------------------------------------------------

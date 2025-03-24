@@ -347,7 +347,7 @@ T SH2::MemRead(uint32 address) {
     util::unreachable();
 }
 
-template <mem_primitive T, bool poke>
+template <mem_primitive T, bool poke, bool debug>
 void SH2::MemWrite(uint32 address, T value) {
     const uint32 partition = address >> 29u;
     if (address & static_cast<uint32>(sizeof(T) - 1)) {
@@ -453,7 +453,7 @@ void SH2::MemWrite(uint32 address, T value) {
             // bits 8-0 index the register
             // bits 28 and 12 must be both set to access the lower half of the registers
             if ((address & 0x100) || (address & 0x10001000) == 0x10001000) {
-                OnChipRegWrite<T, poke>(address & 0x1FF, value);
+                OnChipRegWrite<T, poke, debug>(address & 0x1FF, value);
             }
         } else if ((address >> 12u) == 0xFFFF8) {
             // DRAM setup stuff
@@ -494,16 +494,19 @@ FLATTEN FORCE_INLINE uint32 SH2::MemReadLong(uint32 address) {
     return MemRead<uint32, false, false>(address);
 }
 
+template <bool debug>
 FLATTEN FORCE_INLINE void SH2::MemWriteByte(uint32 address, uint8 value) {
-    MemWrite<uint8, false>(address, value);
+    MemWrite<uint8, false, debug>(address, value);
 }
 
+template <bool debug>
 FLATTEN FORCE_INLINE void SH2::MemWriteWord(uint32 address, uint16 value) {
-    MemWrite<uint16, false>(address, value);
+    MemWrite<uint16, false, debug>(address, value);
 }
 
+template <bool debug>
 FLATTEN FORCE_INLINE void SH2::MemWriteLong(uint32 address, uint32 value) {
-    MemWrite<uint32, false>(address, value);
+    MemWrite<uint32, false, debug>(address, value);
 }
 
 FLATTEN FORCE_INLINE uint16 SH2::PeekInstruction(uint32 address) {
@@ -523,15 +526,15 @@ FLATTEN FORCE_INLINE uint32 SH2::MemPeekLong(uint32 address) {
 }
 
 FLATTEN FORCE_INLINE void SH2::MemPokeByte(uint32 address, uint8 value) {
-    MemWrite<uint8, true>(address, value);
+    MemWrite<uint8, true, false>(address, value);
 }
 
 FLATTEN FORCE_INLINE void SH2::MemPokeWord(uint32 address, uint16 value) {
-    MemWrite<uint16, true>(address, value);
+    MemWrite<uint16, true, false>(address, value);
 }
 
 FLATTEN FORCE_INLINE void SH2::MemPokeLong(uint32 address, uint32 value) {
-    MemWrite<uint32, true>(address, value);
+    MemWrite<uint32, true, false>(address, value);
 }
 
 template <mem_primitive T>
@@ -572,12 +575,15 @@ T SH2::OnChipRegRead(uint32 address) {
 template <bool peek>
 FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     if (address >= 0x100) {
-        if constexpr (!peek) {
+        if constexpr (peek) {
+            const uint16 value = OnChipRegReadWord<true>(address & ~1);
+            return value >> ((~address & 1) * 8u);
+        } else {
             // Registers 0x100-0x1FF do not accept 8-bit accesses
             // TODO: raise CPU address error
             m_log.debug("Illegal 8-bit on-chip register read from {:03X}", address);
+            return 0;
         }
-        return 0;
     }
 
     switch (address) {
@@ -651,12 +657,16 @@ FORCE_INLINE uint16 SH2::OnChipRegReadWord(uint32 address) {
 template <bool peek>
 FORCE_INLINE uint32 SH2::OnChipRegReadLong(uint32 address) {
     if (address < 0x100) {
-        if constexpr (!peek) {
+        if constexpr (peek) {
+            uint32 value = OnChipRegReadWord<true>(address & ~3) << 16u;
+            value |= OnChipRegReadWord<true>((address & ~3) | 2) << 0u;
+            return value;
+        } else {
             // Registers 0x000-0x0FF do not accept 32-bit accesses
             // TODO: raise CPU address error
             m_log.debug("Illegal 32-bit on-chip register read from {:03X}", address);
+            return 0;
         }
-        return 0;
     }
 
     switch (address) {
@@ -715,21 +725,21 @@ FORCE_INLINE uint32 SH2::OnChipRegReadLong(uint32 address) {
     }
 }
 
-template <mem_primitive T, bool poke>
+template <mem_primitive T, bool poke, bool debug>
 void SH2::OnChipRegWrite(uint32 address, T value) {
     // Misaligned memory accesses raise an address error, therefore:
     //   (address & 3) == 2 is only valid for 16-bit accesses
     //   (address & 1) == 1 is only valid for 8-bit accesses
     if constexpr (std::is_same_v<T, uint32>) {
-        OnChipRegWriteLong<poke>(address, value);
+        OnChipRegWriteLong<poke, debug>(address, value);
     } else if constexpr (std::is_same_v<T, uint16>) {
-        OnChipRegWriteWord<poke>(address, value);
+        OnChipRegWriteWord<poke, debug>(address, value);
     } else if constexpr (std::is_same_v<T, uint8>) {
-        OnChipRegWriteByte<poke>(address, value);
+        OnChipRegWriteByte<poke, debug>(address, value);
     }
 }
 
-template <bool poke>
+template <bool poke, bool debug>
 FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     if (address >= 0x100) {
         if constexpr (poke) {
@@ -737,7 +747,7 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
             const uint16 shift = (~address & 1) & 8u;
             const uint16 mask = ~(0xFF << shift);
             currValue = (currValue & mask) | (value << shift);
-            OnChipRegWriteWord<true>(address & ~1, currValue);
+            OnChipRegWriteWord<true, debug>(address & ~1, currValue);
         } else {
             // Registers 0x100-0x1FF do not accept 8-bit accesses
             // TODO: raise CPU address error
@@ -834,7 +844,7 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     }
 }
 
-template <bool poke>
+template <bool poke, bool debug>
 FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
     switch (address) {
     case 0x60:
@@ -852,8 +862,8 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
     case 0xE3:
     case 0xE4:
     case 0xE5:
-        OnChipRegWriteByte<poke>(address & ~1, value >> 8u);
-        OnChipRegWriteByte<poke>(address | 1, value >> 0u);
+        OnChipRegWriteByte<poke, debug>(address & ~1, value >> 8u);
+        OnChipRegWriteByte<poke, debug>(address | 1, value >> 0u);
         break;
 
     case 0x80:
@@ -885,7 +895,7 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
     case 0x1F0:
     case 0x1F4:
     case 0x1F8: //
-        OnChipRegWriteLong<poke>(address & ~3, value);
+        OnChipRegWriteLong<poke, debug>(address & ~3, value);
         break;
 
     default: //
@@ -896,12 +906,12 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
     }
 }
 
-template <bool poke>
+template <bool poke, bool debug>
 FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     if (address < 0x100) {
         if constexpr (poke) {
-            OnChipRegWriteWord<true>(address + 0, value >> 16u);
-            OnChipRegWriteWord<true>(address + 2, value >> 0u);
+            OnChipRegWriteWord<true, debug>(address + 0, value >> 16u);
+            OnChipRegWriteWord<true, debug>(address + 2, value >> 0u);
         } else {
             // Registers 0x000-0x0FF do not accept 32-bit accesses
             // TODO: raise CPU address error
@@ -920,7 +930,9 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
         if constexpr (!poke) {
             DIVU.DVDNTL = value;
             DIVU.DVDNTH = static_cast<sint32>(value) >> 31;
+            m_tracer.Begin32x32Division<debug>(DIVU.DVDNTL, DIVU.DVSR, DIVU.DVCR.OVFIE);
             DIVU.Calc32();
+            m_tracer.End32x32Division<debug>(DIVU.DVDNTL, DIVU.DVDNTH, DIVU.DVCR.OVF);
             if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
                 RaiseInterrupt(InterruptSource::DIVU_OVFI);
             }
@@ -940,7 +952,11 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     case 0x134:
         DIVU.DVDNTL = value;
         if constexpr (!poke) {
+            m_tracer.Begin64x32Division<debug>((static_cast<sint64>(DIVU.DVDNTH) << 32ll) |
+                                                   static_cast<sint64>(DIVU.DVDNTL),
+                                               DIVU.DVSR, DIVU.DVCR.OVFIE);
             DIVU.Calc64();
+            m_tracer.End64x32Division<debug>(DIVU.DVDNTL, DIVU.DVDNTH, DIVU.DVCR.OVF);
             if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
                 RaiseInterrupt(InterruptSource::DIVU_OVFI);
             }
@@ -959,7 +975,7 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     case 0x18C:
         m_dmaChannels[0].WriteCHCR<poke>(value);
         if constexpr (!poke) {
-            RunDMAC(0); // TODO: should be scheduled
+            RunDMAC<debug>(0); // TODO: should be scheduled
         }
         break;
 
@@ -969,7 +985,7 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     case 0x19C:
         m_dmaChannels[1].WriteCHCR<poke>(value);
         if constexpr (!poke) {
-            RunDMAC(1); // TODO: should be scheduled
+            RunDMAC<debug>(1); // TODO: should be scheduled
         }
         break;
 
@@ -987,8 +1003,8 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
         }
         DMAOR.PR = bit::extract<3>(value);
         if constexpr (!poke) {
-            RunDMAC(0); // TODO: should be scheduled
-            RunDMAC(1); // TODO: should be scheduled
+            RunDMAC<debug>(0); // TODO: should be scheduled
+            RunDMAC<debug>(1); // TODO: should be scheduled
         }
         break;
 
@@ -1040,6 +1056,7 @@ FLATTEN FORCE_INLINE bool SH2::IsDMATransferActive(const DMAChannel &ch) const {
     return ch.IsEnabled() && DMAOR.DME && !DMAOR.NMIF && !DMAOR.AE;
 }
 
+template <bool debug>
 void SH2::RunDMAC(uint32 channel) {
     auto &ch = m_dmaChannels[channel];
 
@@ -1084,21 +1101,21 @@ void SH2::RunDMAC(uint32 channel) {
             const uint8 value = MemReadByte(ch.srcAddress);
             m_log.trace("DMAC{} 8-bit transfer from {:08X} to {:08X} -> {:X}", channel, ch.srcAddress, ch.dstAddress,
                         value);
-            MemWriteByte(ch.dstAddress, value);
+            MemWriteByte<debug>(ch.dstAddress, value);
             break;
         }
         case DMATransferSize::Word: {
             const uint16 value = MemReadWord(ch.srcAddress);
             m_log.trace("DMAC{} 16-bit transfer from {:08X} to {:08X} -> {:X}", channel, ch.srcAddress, ch.dstAddress,
                         value);
-            MemWriteWord(ch.dstAddress, value);
+            MemWriteWord<debug>(ch.dstAddress, value);
             break;
         }
         case DMATransferSize::Longword: {
             const uint32 value = MemReadLong(ch.srcAddress);
             m_log.trace("DMAC{} 32-bit transfer from {:08X} to {:08X} -> {:X}", channel, ch.srcAddress, ch.dstAddress,
                         value);
-            MemWriteLong(ch.dstAddress, value);
+            MemWriteLong<debug>(ch.dstAddress, value);
             break;
         }
         case DMATransferSize::QuadLongword:
@@ -1106,7 +1123,7 @@ void SH2::RunDMAC(uint32 channel) {
                 const uint32 value = MemReadLong(ch.srcAddress + i * sizeof(uint32));
                 m_log.trace("DMAC{} 16-byte transfer {:d} from {:08X} to {:08X} -> {:X}", channel, i, ch.srcAddress,
                             ch.dstAddress, value);
-                MemWriteLong(ch.dstAddress + i * sizeof(uint32), value);
+                MemWriteLong<debug>(ch.dstAddress + i * sizeof(uint32), value);
             }
             break;
         }
@@ -1355,9 +1372,9 @@ template <bool debug>
 FORCE_INLINE void SH2::EnterException(uint8 vectorNumber) {
     m_tracer.Exception<debug>(vectorNumber, PC, SR.u32);
     R[15] -= 4;
-    MemWriteLong(R[15], SR.u32);
+    MemWriteLong<debug>(R[15], SR.u32);
     R[15] -= 4;
-    MemWriteLong(R[15], PC - 4);
+    MemWriteLong<debug>(R[15], PC - 4);
     PC = MemReadLong(VBR + (static_cast<uint32>(vectorNumber) << 2u));
 }
 
@@ -1416,24 +1433,24 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::MOVB_LG: MOVBLG(args), PC += 2; return 1;
     case OpcodeType::MOVW_LG: MOVWLG(args), PC += 2; return 1;
     case OpcodeType::MOVL_LG: MOVLLG(args), PC += 2; return 1;
-    case OpcodeType::MOVB_M: MOVBM(args), PC += 2; return 1;
-    case OpcodeType::MOVW_M: MOVWM(args), PC += 2; return 1;
-    case OpcodeType::MOVL_M: MOVLM(args), PC += 2; return 1;
+    case OpcodeType::MOVB_M: MOVBM<debug>(args), PC += 2; return 1;
+    case OpcodeType::MOVW_M: MOVWM<debug>(args), PC += 2; return 1;
+    case OpcodeType::MOVL_M: MOVLM<debug>(args), PC += 2; return 1;
     case OpcodeType::MOVB_P: MOVBP(args), PC += 2; return 1;
     case OpcodeType::MOVW_P: MOVWP(args), PC += 2; return 1;
     case OpcodeType::MOVL_P: MOVLP(args), PC += 2; return 1;
-    case OpcodeType::MOVB_S: MOVBS(args), PC += 2; return 1;
-    case OpcodeType::MOVW_S: MOVWS(args), PC += 2; return 1;
-    case OpcodeType::MOVL_S: MOVLS(args), PC += 2; return 1;
-    case OpcodeType::MOVB_S0: MOVBS0(args), PC += 2; return 1;
-    case OpcodeType::MOVW_S0: MOVWS0(args), PC += 2; return 1;
-    case OpcodeType::MOVL_S0: MOVLS0(args), PC += 2; return 1;
-    case OpcodeType::MOVB_S4: MOVBS4(args), PC += 2; return 1;
-    case OpcodeType::MOVW_S4: MOVWS4(args), PC += 2; return 1;
-    case OpcodeType::MOVL_S4: MOVLS4(args), PC += 2; return 1;
-    case OpcodeType::MOVB_SG: MOVBSG(args), PC += 2; return 1;
-    case OpcodeType::MOVW_SG: MOVWSG(args), PC += 2; return 1;
-    case OpcodeType::MOVL_SG: MOVLSG(args), PC += 2; return 1;
+    case OpcodeType::MOVB_S: MOVBS<debug>(args), PC += 2; return 1;
+    case OpcodeType::MOVW_S: MOVWS<debug>(args), PC += 2; return 1;
+    case OpcodeType::MOVL_S: MOVLS<debug>(args), PC += 2; return 1;
+    case OpcodeType::MOVB_S0: MOVBS0<debug>(args), PC += 2; return 1;
+    case OpcodeType::MOVW_S0: MOVWS0<debug>(args), PC += 2; return 1;
+    case OpcodeType::MOVL_S0: MOVLS0<debug>(args), PC += 2; return 1;
+    case OpcodeType::MOVB_S4: MOVBS4<debug>(args), PC += 2; return 1;
+    case OpcodeType::MOVW_S4: MOVWS4<debug>(args), PC += 2; return 1;
+    case OpcodeType::MOVL_S4: MOVLS4<debug>(args), PC += 2; return 1;
+    case OpcodeType::MOVB_SG: MOVBSG<debug>(args), PC += 2; return 1;
+    case OpcodeType::MOVW_SG: MOVWSG<debug>(args), PC += 2; return 1;
+    case OpcodeType::MOVL_SG: MOVLSG<debug>(args), PC += 2; return 1;
     case OpcodeType::MOV_I: MOVI(args), PC += 2; return 1;
     case OpcodeType::MOVW_I: MOVWI(args), PC += 2; return 1;
     case OpcodeType::MOVL_I: MOVLI(args), PC += 2; return 1;
@@ -1465,15 +1482,15 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::STC_GBR_R: STCGBR(args), PC += 2; return 1;
     case OpcodeType::STC_SR_R: STCSR(args), PC += 2; return 1;
     case OpcodeType::STC_VBR_R: STCVBR(args), PC += 2; return 1;
-    case OpcodeType::STC_GBR_M: STCMGBR(args), PC += 2; return 2;
-    case OpcodeType::STC_SR_M: STCMSR(args), PC += 2; return 2;
-    case OpcodeType::STC_VBR_M: STCMVBR(args), PC += 2; return 2;
+    case OpcodeType::STC_GBR_M: STCMGBR<debug>(args), PC += 2; return 2;
+    case OpcodeType::STC_SR_M: STCMSR<debug>(args), PC += 2; return 2;
+    case OpcodeType::STC_VBR_M: STCMVBR<debug>(args), PC += 2; return 2;
     case OpcodeType::STS_MACH_R: STSMACH(args), PC += 2; return 1;
     case OpcodeType::STS_MACL_R: STSMACL(args), PC += 2; return 1;
     case OpcodeType::STS_PR_R: STSPR(args), PC += 2; return 1;
-    case OpcodeType::STS_MACH_M: STSMMACH(args), PC += 2; return 1;
-    case OpcodeType::STS_MACL_M: STSMMACL(args), PC += 2; return 1;
-    case OpcodeType::STS_PR_M: STSMPR(args), PC += 2; return 1;
+    case OpcodeType::STS_MACH_M: STSMMACH<debug>(args), PC += 2; return 1;
+    case OpcodeType::STS_MACL_M: STSMMACL<debug>(args), PC += 2; return 1;
+    case OpcodeType::STS_PR_M: STSMPR<debug>(args), PC += 2; return 1;
 
     case OpcodeType::ADD: ADD(args), PC += 2; return 1;
     case OpcodeType::ADD_I: ADDI(args), PC += 2; return 1;
@@ -1481,13 +1498,13 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::ADDV: ADDV(args), PC += 2; return 1;
     case OpcodeType::AND_R: AND(args), PC += 2; return 1;
     case OpcodeType::AND_I: ANDI(args), PC += 2; return 1;
-    case OpcodeType::AND_M: ANDM(args), PC += 2; return 3;
+    case OpcodeType::AND_M: ANDM<debug>(args), PC += 2; return 3;
     case OpcodeType::NEG: NEG(args), PC += 2; return 1;
     case OpcodeType::NEGC: NEGC(args), PC += 2; return 1;
     case OpcodeType::NOT: NOT(args), PC += 2; return 1;
     case OpcodeType::OR_R: OR(args), PC += 2; return 1;
     case OpcodeType::OR_I: ORI(args), PC += 2; return 1;
-    case OpcodeType::OR_M: ORM(args), PC += 2; return 3;
+    case OpcodeType::OR_M: ORM<debug>(args), PC += 2; return 3;
     case OpcodeType::ROTCL: ROTCL(args), PC += 2; return 1;
     case OpcodeType::ROTCR: ROTCR(args), PC += 2; return 1;
     case OpcodeType::ROTL: ROTL(args), PC += 2; return 1;
@@ -1507,7 +1524,7 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::SUBV: SUBV(args), PC += 2; return 1;
     case OpcodeType::XOR_R: XOR(args), PC += 2; return 1;
     case OpcodeType::XOR_I: XORI(args), PC += 2; return 1;
-    case OpcodeType::XOR_M: XORM(args), PC += 2; return 3;
+    case OpcodeType::XOR_M: XORM<debug>(args), PC += 2; return 3;
 
     case OpcodeType::DT: DT(args), PC += 2; return 1;
 
@@ -1533,7 +1550,7 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::CMP_PL: CMPPL(args), PC += 2; return 1;
     case OpcodeType::CMP_PZ: CMPPZ(args), PC += 2; return 1;
     case OpcodeType::CMP_STR: CMPSTR(args), PC += 2; return 1;
-    case OpcodeType::TAS: TAS(args), PC += 2; return 4;
+    case OpcodeType::TAS: TAS<debug>(args), PC += 2; return 4;
     case OpcodeType::TST_R: TST(args), PC += 2; return 1;
     case OpcodeType::TST_I: TSTI(args), PC += 2; return 1;
     case OpcodeType::TST_M: TSTM(args), PC += 2; return 3;
@@ -1555,24 +1572,24 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::Delay_MOVB_LG: MOVBLG(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_MOVW_LG: MOVWLG(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_MOVL_LG: MOVLLG(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_M: MOVBM(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_M: MOVWM(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_M: MOVLM(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_M: MOVBM<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_M: MOVWM<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_M: MOVLM<debug>(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_MOVB_P: MOVBP(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_MOVW_P: MOVWP(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_MOVL_P: MOVLP(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_S: MOVBS(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_S: MOVWS(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_S: MOVLS(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_S0: MOVBS0(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_S0: MOVWS0(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_S0: MOVLS0(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_S4: MOVBS4(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_S4: MOVWS4(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_S4: MOVLS4(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_SG: MOVBSG(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_SG: MOVWSG(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_SG: MOVLSG(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_S: MOVBS<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_S: MOVWS<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_S: MOVLS<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_S0: MOVBS0<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_S0: MOVWS0<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_S0: MOVLS0<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_S4: MOVBS4<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_S4: MOVWS4<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_S4: MOVLS4<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_SG: MOVBSG<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_SG: MOVWSG<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_SG: MOVLSG<debug>(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_MOV_I: MOVI(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_MOVW_I: MOVWI(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_MOVL_I: MOVLI(args), jumpToDelaySlot(); return 1;
@@ -1604,15 +1621,15 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::Delay_STC_GBR_R: STCGBR(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_STC_SR_R: STCSR(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_STC_VBR_R: STCVBR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STC_GBR_M: STCMGBR(args), jumpToDelaySlot(); return 2;
-    case OpcodeType::Delay_STC_SR_M: STCMSR(args), jumpToDelaySlot(); return 2;
-    case OpcodeType::Delay_STC_VBR_M: STCMVBR(args), jumpToDelaySlot(); return 2;
+    case OpcodeType::Delay_STC_GBR_M: STCMGBR<debug>(args), jumpToDelaySlot(); return 2;
+    case OpcodeType::Delay_STC_SR_M: STCMSR<debug>(args), jumpToDelaySlot(); return 2;
+    case OpcodeType::Delay_STC_VBR_M: STCMVBR<debug>(args), jumpToDelaySlot(); return 2;
     case OpcodeType::Delay_STS_MACH_R: STSMACH(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_STS_MACL_R: STSMACL(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_STS_PR_R: STSPR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STS_MACH_M: STSMMACH(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STS_MACL_M: STSMMACL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STS_PR_M: STSMPR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_STS_MACH_M: STSMMACH<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_STS_MACL_M: STSMMACL<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_STS_PR_M: STSMPR<debug>(args), jumpToDelaySlot(); return 1;
 
     case OpcodeType::Delay_ADD: ADD(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_ADD_I: ADDI(args), jumpToDelaySlot(); return 1;
@@ -1620,13 +1637,13 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::Delay_ADDV: ADDV(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_AND_R: AND(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_AND_I: ANDI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_AND_M: ANDM(args), jumpToDelaySlot(); return 3;
+    case OpcodeType::Delay_AND_M: ANDM<debug>(args), jumpToDelaySlot(); return 3;
     case OpcodeType::Delay_NEG: NEG(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_NEGC: NEGC(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_NOT: NOT(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_OR_R: OR(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_OR_I: ORI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_OR_M: ORM(args), jumpToDelaySlot(); return 3;
+    case OpcodeType::Delay_OR_M: ORM<debug>(args), jumpToDelaySlot(); return 3;
     case OpcodeType::Delay_ROTCL: ROTCL(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_ROTCR: ROTCR(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_ROTL: ROTL(args), jumpToDelaySlot(); return 1;
@@ -1646,7 +1663,7 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::Delay_SUBV: SUBV(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_XOR_R: XOR(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_XOR_I: XORI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_XOR_M: XORM(args), jumpToDelaySlot(); return 3;
+    case OpcodeType::Delay_XOR_M: XORM<debug>(args), jumpToDelaySlot(); return 3;
 
     case OpcodeType::Delay_DT: DT(args), jumpToDelaySlot(); return 1;
 
@@ -1672,7 +1689,7 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::Delay_CMP_PL: CMPPL(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_CMP_PZ: CMPPZ(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_CMP_STR: CMPSTR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_TAS: TAS(args), jumpToDelaySlot(); return 4;
+    case OpcodeType::Delay_TAS: TAS<debug>(args), jumpToDelaySlot(); return 4;
     case OpcodeType::Delay_TST_R: TST(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_TST_I: TSTI(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_TST_M: TSTM(args), jumpToDelaySlot(); return 3;
@@ -1687,7 +1704,7 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::BSRF: BSRF(args); return 2;
     case OpcodeType::JMP: JMP(args); return 2;
     case OpcodeType::JSR: JSR(args); return 2;
-    case OpcodeType::TRAPA: TRAPA(args); return 8;
+    case OpcodeType::TRAPA: TRAPA<debug>(args); return 8;
 
     case OpcodeType::RTE: RTE(); return 4;
     case OpcodeType::RTS: RTS(); return 2;
@@ -1792,20 +1809,23 @@ FORCE_INLINE void SH2::MOVLLG(const DecodedArgs &args) {
 }
 
 // mov.b Rm, @-Rn
+template <bool debug>
 FORCE_INLINE void SH2::MOVBM(const DecodedArgs &args) {
-    MemWriteByte(R[args.rn] - 1, R[args.rm]);
+    MemWriteByte<debug>(R[args.rn] - 1, R[args.rm]);
     R[args.rn] -= 1;
 }
 
 // mov.w Rm, @-Rn
+template <bool debug>
 FORCE_INLINE void SH2::MOVWM(const DecodedArgs &args) {
-    MemWriteWord(R[args.rn] - 2, R[args.rm]);
+    MemWriteWord<debug>(R[args.rn] - 2, R[args.rm]);
     R[args.rn] -= 2;
 }
 
 // mov.l Rm, @-Rn
+template <bool debug>
 FORCE_INLINE void SH2::MOVLM(const DecodedArgs &args) {
-    MemWriteLong(R[args.rn] - 4, R[args.rm]);
+    MemWriteLong<debug>(R[args.rn] - 4, R[args.rm]);
     R[args.rn] -= 4;
 }
 
@@ -1834,63 +1854,75 @@ FORCE_INLINE void SH2::MOVLP(const DecodedArgs &args) {
 }
 
 // mov.b Rm, @Rn
+template <bool debug>
 FORCE_INLINE void SH2::MOVBS(const DecodedArgs &args) {
-    MemWriteByte(R[args.rn], R[args.rm]);
+    MemWriteByte<debug>(R[args.rn], R[args.rm]);
 }
 
 // mov.w Rm, @Rn
+template <bool debug>
 FORCE_INLINE void SH2::MOVWS(const DecodedArgs &args) {
-    MemWriteWord(R[args.rn], R[args.rm]);
+    MemWriteWord<debug>(R[args.rn], R[args.rm]);
 }
 
 // mov.l Rm, @Rn
+template <bool debug>
 FORCE_INLINE void SH2::MOVLS(const DecodedArgs &args) {
-    MemWriteLong(R[args.rn], R[args.rm]);
+    MemWriteLong<debug>(R[args.rn], R[args.rm]);
 }
 
 // mov.b Rm, @(R0,Rn)
+template <bool debug>
 FORCE_INLINE void SH2::MOVBS0(const DecodedArgs &args) {
-    MemWriteByte(R[args.rn] + R[0], R[args.rm]);
+    MemWriteByte<debug>(R[args.rn] + R[0], R[args.rm]);
 }
 
 // mov.w Rm, @(R0,Rn)
+template <bool debug>
 FORCE_INLINE void SH2::MOVWS0(const DecodedArgs &args) {
-    MemWriteWord(R[args.rn] + R[0], R[args.rm]);
+    MemWriteWord<debug>(R[args.rn] + R[0], R[args.rm]);
 }
 
 // mov.l Rm, @(R0,Rn)
+template <bool debug>
 FORCE_INLINE void SH2::MOVLS0(const DecodedArgs &args) {
-    MemWriteLong(R[args.rn] + R[0], R[args.rm]);
+    MemWriteLong<debug>(R[args.rn] + R[0], R[args.rm]);
 }
 
 // mov.b R0, @(disp,Rn)
+template <bool debug>
 FORCE_INLINE void SH2::MOVBS4(const DecodedArgs &args) {
-    MemWriteByte(R[args.rn] + args.dispImm, R[0]);
+    MemWriteByte<debug>(R[args.rn] + args.dispImm, R[0]);
 }
 
 // mov.w R0, @(disp,Rn)
+template <bool debug>
 FORCE_INLINE void SH2::MOVWS4(const DecodedArgs &args) {
-    MemWriteWord(R[args.rn] + args.dispImm, R[0]);
+    MemWriteWord<debug>(R[args.rn] + args.dispImm, R[0]);
 }
 
 // mov.l Rm, @(disp,Rn)
+template <bool debug>
 FORCE_INLINE void SH2::MOVLS4(const DecodedArgs &args) {
-    MemWriteLong(R[args.rn] + args.dispImm, R[args.rm]);
+    MemWriteLong<debug>(R[args.rn] + args.dispImm, R[args.rm]);
 }
 
 // mov.b R0, @(disp,GBR)
+template <bool debug>
 FORCE_INLINE void SH2::MOVBSG(const DecodedArgs &args) {
-    MemWriteByte(GBR + args.dispImm, R[0]);
+    MemWriteByte<debug>(GBR + args.dispImm, R[0]);
 }
 
 // mov.w R0, @(disp,GBR)
+template <bool debug>
 FORCE_INLINE void SH2::MOVWSG(const DecodedArgs &args) {
-    MemWriteWord(GBR + args.dispImm, R[0]);
+    MemWriteWord<debug>(GBR + args.dispImm, R[0]);
 }
 
 // mov.l R0, @(disp,GBR)
+template <bool debug>
 FORCE_INLINE void SH2::MOVLSG(const DecodedArgs &args) {
-    MemWriteLong(GBR + args.dispImm, R[0]);
+    MemWriteLong<debug>(GBR + args.dispImm, R[0]);
 }
 
 // mov #imm, Rn
@@ -2051,21 +2083,24 @@ FORCE_INLINE void SH2::STCVBR(const DecodedArgs &args) {
 }
 
 // stc.l GBR, @-Rn
+template <bool debug>
 FORCE_INLINE void SH2::STCMGBR(const DecodedArgs &args) {
     R[args.rn] -= 4;
-    MemWriteLong(R[args.rn], GBR);
+    MemWriteLong<debug>(R[args.rn], GBR);
 }
 
 // stc.l SR, @-Rn
+template <bool debug>
 FORCE_INLINE void SH2::STCMSR(const DecodedArgs &args) {
     R[args.rn] -= 4;
-    MemWriteLong(R[args.rn], SR.u32);
+    MemWriteLong<debug>(R[args.rn], SR.u32);
 }
 
 // stc.l VBR, @-Rn
+template <bool debug>
 FORCE_INLINE void SH2::STCMVBR(const DecodedArgs &args) {
     R[args.rn] -= 4;
-    MemWriteLong(R[args.rn], VBR);
+    MemWriteLong<debug>(R[args.rn], VBR);
 }
 
 // sts MACH, Rn
@@ -2084,21 +2119,24 @@ FORCE_INLINE void SH2::STSPR(const DecodedArgs &args) {
 }
 
 // sts.l MACH, @-Rn
+template <bool debug>
 FORCE_INLINE void SH2::STSMMACH(const DecodedArgs &args) {
     R[args.rn] -= 4;
-    MemWriteLong(R[args.rn], MAC.H);
+    MemWriteLong<debug>(R[args.rn], MAC.H);
 }
 
 // sts.l MACL, @-Rn
+template <bool debug>
 FORCE_INLINE void SH2::STSMMACL(const DecodedArgs &args) {
     R[args.rn] -= 4;
-    MemWriteLong(R[args.rn], MAC.L);
+    MemWriteLong<debug>(R[args.rn], MAC.L);
 }
 
 // sts.l PR, @-Rn
+template <bool debug>
 FORCE_INLINE void SH2::STSMPR(const DecodedArgs &args) {
     R[args.rn] -= 4;
-    MemWriteLong(R[args.rn], PR);
+    MemWriteLong<debug>(R[args.rn], PR);
 }
 
 // add Rm, Rn
@@ -2142,10 +2180,11 @@ FORCE_INLINE void SH2::ANDI(const DecodedArgs &args) {
 }
 
 // and.b #imm, @(R0,GBR)
+template <bool debug>
 FORCE_INLINE void SH2::ANDM(const DecodedArgs &args) {
     uint8 tmp = MemReadByte(GBR + R[0]);
     tmp &= args.dispImm;
-    MemWriteByte(GBR + R[0], tmp);
+    MemWriteByte<debug>(GBR + R[0], tmp);
 }
 
 // neg Rm, Rn
@@ -2176,10 +2215,11 @@ FORCE_INLINE void SH2::ORI(const DecodedArgs &args) {
 }
 
 // or.b #imm, @(R0,GBR)
+template <bool debug>
 FORCE_INLINE void SH2::ORM(const DecodedArgs &args) {
     uint8 tmp = MemReadByte(GBR + R[0]);
     tmp |= args.dispImm;
-    MemWriteByte(GBR + R[0], tmp);
+    MemWriteByte<debug>(GBR + R[0], tmp);
 }
 
 // rotcl Rn
@@ -2299,10 +2339,11 @@ FORCE_INLINE void SH2::XORI(const DecodedArgs &args) {
 }
 
 // xor.b #imm, @(R0,GBR)
+template <bool debug>
 FORCE_INLINE void SH2::XORM(const DecodedArgs &args) {
     uint8 tmp = MemReadByte(GBR + R[0]);
     tmp ^= args.dispImm;
-    MemWriteByte(GBR + R[0], tmp);
+    MemWriteByte<debug>(GBR + R[0], tmp);
 }
 
 // dt Rn
@@ -2479,12 +2520,13 @@ FORCE_INLINE void SH2::CMPSTR(const DecodedArgs &args) {
 }
 
 // tas.b @Rn
+template <bool debug>
 FORCE_INLINE void SH2::TAS(const DecodedArgs &args) {
     // TODO: enable bus lock on this read
     const uint8 tmp = MemReadByte(R[args.rn]);
     SR.T = tmp == 0;
     // TODO: disable bus lock on this write
-    MemWriteByte(R[args.rn], tmp | 0x80);
+    MemWriteByte<debug>(R[args.rn], tmp | 0x80);
 }
 
 // tst Rm, Rn
@@ -2583,11 +2625,12 @@ FORCE_INLINE void SH2::JSR(const DecodedArgs &args) {
 }
 
 // trapa #imm
+template <bool debug>
 FORCE_INLINE void SH2::TRAPA(const DecodedArgs &args) {
     R[15] -= 4;
-    MemWriteLong(R[15], SR.u32);
+    MemWriteLong<debug>(R[15], SR.u32);
     R[15] -= 4;
-    MemWriteLong(R[15], PC - 2);
+    MemWriteLong<debug>(R[15], PC - 2);
     PC = MemReadLong(VBR + args.dispImm);
 }
 
@@ -2629,15 +2672,15 @@ uint32 SH2::Probe::MemReadLong(uint32 address) const {
 }
 
 void SH2::Probe::MemWriteByte(uint32 address, uint8 value) {
-    m_sh2.MemWriteByte(address, value);
+    m_sh2.MemWriteByte<false>(address, value);
 }
 
 void SH2::Probe::MemWriteWord(uint32 address, uint16 value) {
-    m_sh2.MemWriteWord(address, value);
+    m_sh2.MemWriteWord<false>(address, value);
 }
 
 void SH2::Probe::MemWriteLong(uint32 address, uint32 value) {
-    m_sh2.MemWriteLong(address, value);
+    m_sh2.MemWriteLong<false>(address, value);
 }
 
 uint16 SH2::Probe::PeekInstruction(uint32 address) const {

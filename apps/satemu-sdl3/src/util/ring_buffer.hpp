@@ -35,6 +35,11 @@ public:
         return m_entries[pos];
     }
 
+    T &GetLast() {
+        size_t pos = (m_writePos - 1) % N;
+        return m_entries[pos];
+    }
+
 private:
     std::array<T, N> m_entries;
     size_t m_writePos = 0;

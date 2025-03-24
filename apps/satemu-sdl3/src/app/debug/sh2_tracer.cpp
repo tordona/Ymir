@@ -28,4 +28,46 @@ void SH2Tracer::Exception(uint8 vecNum, uint32 pc, uint32 sr) {
     exceptions.Write({vecNum, pc, sr});
 }
 
+void SH2Tracer::Begin32x32Division(sint32 dividend, sint32 divisor, bool overflowIntrEnable) {
+    if (!traceDivisions) {
+        return;
+    }
+
+    divisions32.Write(
+        {.dividend = dividend, .divisor = divisor, .overflowIntrEnable = overflowIntrEnable, .finished = false});
+}
+
+void SH2Tracer::End32x32Division(sint32 quotient, sint32 remainder, bool overflow) {
+    if (!traceDivisions) {
+        return;
+    }
+
+    auto &div = divisions32.GetLast();
+    div.quotient = quotient;
+    div.remainder = remainder;
+    div.overflow = overflow;
+    div.finished = true;
+}
+
+void SH2Tracer::Begin64x32Division(sint64 dividend, sint32 divisor, bool overflowIntrEnable) {
+    if (!traceDivisions) {
+        return;
+    }
+
+    divisions64.Write(
+        {.dividend = dividend, .divisor = divisor, .overflowIntrEnable = overflowIntrEnable, .finished = false});
+}
+
+void SH2Tracer::End64x32Division(sint32 quotient, sint32 remainder, bool overflow) {
+    if (!traceDivisions) {
+        return;
+    }
+
+    auto &div = divisions64.GetLast();
+    div.quotient = quotient;
+    div.remainder = remainder;
+    div.overflow = overflow;
+    div.finished = true;
+}
+
 } // namespace app

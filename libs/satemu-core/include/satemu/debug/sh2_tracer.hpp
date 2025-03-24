@@ -16,18 +16,55 @@ namespace satemu::debug {
 struct ISH2Tracer {
     virtual ~ISH2Tracer() = default;
 
-    // Invoked immediately before the SH2 CPU executes an instruction.
+    // Invoked immediately before executing an instruction.
     //
     // `pc` is the current program counter
     // `opcode` is the instruction opcode
     // `delaySlot` indicates if the instruction is executing in a delay slot
     virtual void ExecuteInstruction(uint32 pc, uint16 opcode, bool delaySlot) {}
 
-    // Invoked when the SH2 CPU handles an interrupt.
+    // Invoked when the CPU handles an interrupt.
+    //
+    // `vecNum` is the interrupt vector number
+    // `level` is the interrupt level (priority)
+    // `source` is the interrupt source
+    // `pc` is the value of PC at the moment the interrupt was handled
     virtual void Interrupt(uint8 vecNum, uint8 level, sh2::InterruptSource source, uint32 pc) {}
 
-    // Invoked when the SH2 CPU handles an exception.
+    // Invoked when the CPU handles an exception.
+    //
+    // `vecNum` is the exception vector number
+    // `pc` is the value of PC at the moment the exception was handled
+    // `sr` is the value of SR at the moment the exception was handled
     virtual void Exception(uint8 vecNum, uint32 pc, uint32 sr) {}
+
+    // Invoked when a 32-bit by 32-bit division begins.
+    //
+    // `dividend` is the value of the dividend (DVDNTL)
+    // `divisor` is the value of the divisor (DVSR)
+    // `overflowIntrEnable` indicates if the division overflow interrupt is enabled (DVCR.OVFIE)
+    virtual void Begin32x32Division(sint32 dividend, sint32 divisor, bool overflowIntrEnable) {}
+
+    // Invoked when a 32-bit by 32-bit division ends.
+    //
+    // `quotient` is the resulting quotient (DVDNTL)
+    // `remainder` is the resulting remainder (DVDNTH)
+    // `overflow` indicates if the division resulted in an overflow
+    virtual void End32x32Division(sint32 quotient, sint32 remainder, bool overflow) {}
+
+    // Invoked when a 64-bit by 32-bit division begins.
+    //
+    // `dividend` is the value of the dividend (DVDNTH:DVDNTL)
+    // `divisor` is the value of the divisor (DVSR)
+    // `overflowIntrEnable` indicates if the division overflow interrupt is enabled (DVCR.OVFIE)
+    virtual void Begin64x32Division(sint64 dividend, sint32 divisor, bool overflowIntrEnable) {}
+
+    // Invoked when a 64-bit by 32-bit division ends.
+    //
+    // `quotient` is the resulting quotient (DVDNTL)
+    // `remainder` is the resulting remainder (DVDNTH)
+    // `overflow` indicates if the division resulted in an overflow
+    virtual void End64x32Division(sint32 quotient, sint32 remainder, bool overflow) {}
 };
 
 } // namespace satemu::debug
