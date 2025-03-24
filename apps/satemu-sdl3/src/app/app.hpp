@@ -5,6 +5,7 @@
 #include "audio_system.hpp"
 #include "shared_context.hpp"
 
+#include "ui/windows/about_window.hpp"
 #include "ui/windows/memory_viewer_window.hpp"
 #include "ui/windows/scu_debugger_window.hpp"
 #include "ui/windows/sh2_debugger_window.hpp"
@@ -46,9 +47,10 @@ private:
     bool LoadDiscImage(std::filesystem::path path);
 
     // -----------------------------------------------------------------------------------------------------------------
-    // Debugger
+    // Windows
 
-    void DrawDebug();
+    void DrawWindows();
+    void OpenMemoryViewer();
 
     ui::SH2DebuggerWindow m_masterSH2DebuggerWindow;
     ui::SH2InterruptsWindow m_masterSH2InterruptsWindow;
@@ -64,7 +66,7 @@ private:
 
     std::vector<ui::MemoryViewerWindow> m_memoryViewerWindows;
 
-    void OpenMemoryViewer();
+    ui::AboutWindow m_aboutWindow;
 };
 
 } // namespace app

@@ -209,7 +209,8 @@ App::App()
     , m_slaveSH2InterruptsWindow(m_context, false)
     , m_slaveSH2InterruptTracerWindow(m_context, false)
     , m_slaveSH2DivisionUnitWindow(m_context, false)
-    , m_scuDebuggerWindow(m_context) {
+    , m_scuDebuggerWindow(m_context)
+    , m_aboutWindow(m_context) {
 
     // Preinitialize some memory viewers
     for (int i = 0; i < 8; i++) {
@@ -1032,6 +1033,8 @@ void App::RunEmulator() {
             }
             if (ImGui::BeginMenu("Help")) {
                 ImGui::MenuItem("ImGui demo window", nullptr, &showDemoWindow);
+                ImGui::Separator();
+                ImGui::MenuItem("About", nullptr, &m_aboutWindow.Open);
                 ImGui::End();
             }
             ImGui::EndMainMenuBar();
@@ -1075,7 +1078,7 @@ void App::RunEmulator() {
         }
 
         // Draw debugger windows
-        DrawDebug();
+        DrawWindows();
 
         // ---------------------------------------------------------------------
         // Render window
@@ -1330,7 +1333,7 @@ bool App::LoadDiscImage(std::filesystem::path path) {
     return true;
 }
 
-void App::DrawDebug() {
+void App::DrawWindows() {
     using namespace satemu;
 
     m_masterSH2DebuggerWindow.Display();
@@ -1348,6 +1351,8 @@ void App::DrawDebug() {
     for (auto &memView : m_memoryViewerWindows) {
         memView.Display();
     }
+
+    m_aboutWindow.Display();
 
     // TODO: SH2 instruction trace view
     // TODO: SH2 exception trace view
