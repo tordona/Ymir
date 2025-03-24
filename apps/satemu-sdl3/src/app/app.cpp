@@ -1049,11 +1049,13 @@ void App::RunEmulator() {
                 (void *)&aspectRatio);
             if (ImGui::Begin(title.c_str(), &displayVideoOutputInWindow, ImGuiWindowFlags_NoNavInputs)) {
                 const ImVec2 avail = ImGui::GetContentRegionAvail();
-                const float scaleX = avail.x / screen.width;
-                const float scaleY = avail.y / screen.height;
+                const float scaleX = avail.x / (screen.width * screen.scaleX);
+                const float scaleY = avail.y / (screen.height * screen.scaleY);
                 const float scale = std::min(scaleX, scaleY);
 
-                ImGui::Image((ImTextureID)texture, ImVec2(screen.width * scale, screen.height * scale), ImVec2(0, 0),
+                ImGui::Image((ImTextureID)texture,
+                             ImVec2(screen.width * scale / screen.scaleX, screen.height * scale / screen.scaleY),
+                             ImVec2(0, 0),
                              ImVec2((float)screen.width / vdp::kMaxResH, (float)screen.height / vdp::kMaxResV));
             }
             ImGui::End();
@@ -1235,13 +1237,25 @@ void App::EmulatorThread() {
                 }
                 break;
             }
-            case DebugWrite: {
+            case DebugWriteMain: {
                 // TODO: support 16-bit and 32-bit writes
-                auto [address, value, enableSideEffects] = std::get<EmuEvent::DebugWriteData>(cmd.value);
+                auto [address, value, enableSideEffects] = std::get<EmuEvent::DebugWriteMainData>(cmd.value);
                 if (enableSideEffects) {
                     m_context.saturn.mainBus.Write<uint8>(address, value);
                 } else {
                     m_context.saturn.mainBus.Poke<uint8>(address, value);
+                }
+                break;
+            }
+            case DebugWriteSH2: {
+                // TODO: support 16-bit and 32-bit writes
+                auto [address, value, enableSideEffects, master] = std::get<EmuEvent::DebugWriteSH2Data>(cmd.value);
+                auto &sh2 = master ? m_context.saturn.masterSH2 : m_context.saturn.slaveSH2;
+                auto &probe = sh2.GetProbe();
+                if (enableSideEffects) {
+                    probe.MemWriteByte(address, value);
+                } else {
+                    probe.MemPokeByte(address, value);
                 }
                 break;
             }

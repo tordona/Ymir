@@ -290,14 +290,19 @@ T SH2::MemRead(uint32 address) {
         }
         return (address & 1) ? static_cast<T>(0x12231223) : static_cast<T>(0x23122312);
     case 0b011: // cache address array
-        if constexpr (std::is_same_v<T, uint32>) {
+        if constexpr (peek || std::is_same_v<T, uint32>) {
             const uint32 index = bit::extract<4, 9>(address);
             const uint8 lru = m_cacheLRU[index];
-            const T value = m_cacheEntries[index].tag[CCR.Wn].u32 | (lru << 4u);
+            const uint8 way = peek ? bit::extract<2, 3>(address) : CCR.Wn;
+            const uint32 value = m_cacheEntries[index].tag[way].u32 | (lru << 4u);
             if constexpr (!peek) {
                 m_log.trace("{}-bit SH-2 cache address array read from {:08X} = {:X}", sizeof(T) * 8, address, value);
             }
-            return value;
+            if constexpr (std::is_same_v<T, uint32>) {
+                return value;
+            } else {
+                return value >> ((~address & 3u) * 8u);
+            }
         } else {
             return 0;
         }
@@ -386,7 +391,7 @@ void SH2::MemWrite(uint32 address, T value) {
         }
         break;
     case 0b010: // associative purge
-        if constexpr (std::is_same_v<T, uint32>) {
+        if constexpr (poke || std::is_same_v<T, uint32>) {
             const uint32 index = bit::extract<4, 9>(address);
             const uint32 tagAddress = bit::extract<10, 28>(address);
             for (auto &tag : m_cacheEntries[index].tag) {
@@ -398,11 +403,33 @@ void SH2::MemWrite(uint32 address, T value) {
         }
         break;
     case 0b011: // cache address array
-        if constexpr (std::is_same_v<T, uint32>) {
+        if constexpr (poke || std::is_same_v<T, uint32>) {
             const uint32 index = bit::extract<4, 9>(address);
-            m_cacheEntries[index].tag[CCR.Wn].u32 = address & 0x1FFFFC04;
-            m_cacheLRU[index] = bit::extract<4, 9>(value);
-            if constexpr (!poke) {
+            if constexpr (poke) {
+                uint32 currValue;
+                const uint8 way = bit::extract<2, 3>(address);
+                if constexpr (std::is_same_v<T, uint8>) {
+                    currValue = m_cacheEntries[index].tag[way].u32 | (m_cacheLRU[index] << 4u);
+                    switch (address & 3) {
+                    case 0: bit::deposit_into<24, 31>(currValue, value); break;
+                    case 1: bit::deposit_into<16, 23>(currValue, value); break;
+                    case 2: bit::deposit_into<8, 15>(currValue, value); break;
+                    case 3: bit::deposit_into<0, 7>(currValue, value); break;
+                    }
+                } else if constexpr (std::is_same_v<T, uint16>) {
+                    currValue = m_cacheEntries[index].tag[way].u32 | (m_cacheLRU[index] << 4u);
+                    switch (address & 2) {
+                    case 0: bit::deposit_into<16, 31>(currValue, value); break;
+                    case 2: bit::deposit_into<0, 15>(currValue, value); break;
+                    }
+                } else {
+                    currValue = value;
+                }
+                m_cacheEntries[index].tag[way].u32 = currValue & 0x1FFFFC04;
+                m_cacheLRU[index] = bit::extract<4, 9>(currValue);
+            } else {
+                m_cacheEntries[index].tag[CCR.Wn].u32 = address & 0x1FFFFC04;
+                m_cacheLRU[index] = bit::extract<4, 9>(value);
                 m_log.trace("{}-bit SH-2 cache address array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
             }
         }

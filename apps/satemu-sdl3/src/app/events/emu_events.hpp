@@ -18,7 +18,8 @@ struct EmuEvent {
 
         SetDebugTrace,
         MemoryDump,
-        DebugWrite,
+        DebugWriteMain,
+        DebugWriteSH2,
 
         OpenCloseTray,
         LoadDisc,
@@ -30,13 +31,19 @@ struct EmuEvent {
     Type type;
 
     // TODO: support 16-bit and 32-bit reads/writes
-    struct DebugWriteData {
+    struct DebugWriteMainData {
         uint32 address;
         uint8 value;
         bool enableSideEffects;
     };
+    struct DebugWriteSH2Data {
+        uint32 address;
+        uint8 value;
+        bool enableSideEffects;
+        bool master;
+    };
 
-    std::variant<bool, std::string, DebugWriteData> value;
+    std::variant<bool, std::string, DebugWriteMainData, DebugWriteSH2Data> value;
 
     static EmuEvent FactoryReset() {
         return {.type = Type::FactoryReset};
@@ -66,9 +73,16 @@ struct EmuEvent {
         return {.type = Type::MemoryDump};
     }
 
-    static EmuEvent DebugWrite(uint32 address, uint8 value, bool enableSideEffects) {
-        return {.type = Type::DebugWrite,
-                .value = DebugWriteData{.address = address, .value = value, .enableSideEffects = enableSideEffects}};
+    static EmuEvent DebugWriteMain(uint32 address, uint8 value, bool enableSideEffects) {
+        return {.type = Type::DebugWriteMain,
+                .value =
+                    DebugWriteMainData{.address = address, .value = value, .enableSideEffects = enableSideEffects}};
+    }
+
+    static EmuEvent DebugWriteSH2(uint32 address, uint8 value, bool enableSideEffects, bool master) {
+        return {.type = Type::DebugWriteSH2,
+                .value = DebugWriteSH2Data{
+                    .address = address, .value = value, .enableSideEffects = enableSideEffects, .master = master}};
     }
 
     static EmuEvent OpenCloseTray() {

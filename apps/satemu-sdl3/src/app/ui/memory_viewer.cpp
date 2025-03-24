@@ -10,22 +10,12 @@ MemoryViewer::MemoryViewer(SharedContext &context)
 
     m_context.reset(new Context(context));
 
-    // TODO: support 16-bit and 32-bit reads/writes
+    m_context->selectedRegion = &kRegionGroups[0].regions[0];
+    m_context->memoryEditor.ReadFn = m_context->selectedRegion->readFn;
+    m_context->memoryEditor.WriteFn = m_context->selectedRegion->writeFn;
+    m_context->memoryEditor.BgColorFn = m_context->selectedRegion->bgColorFn;
     m_context->memoryEditor.Open = false;
-    m_context->memoryEditor.ReadFn = [](const ImU8 *mem, size_t off, void *user_data) {
-        auto &ctx = *static_cast<const Context *>(user_data);
-        return ctx.sharedCtx.saturn.mainBus.Peek<uint8>(off);
-    };
-    m_context->memoryEditor.WriteFn = [](ImU8 *mem, size_t off, ImU8 d, void *user_data) {
-        auto &ctx = *static_cast<Context *>(user_data);
-        ctx.sharedCtx.eventQueues.emulator.enqueue(EmuEvent::DebugWrite(off, d, ctx.enableSideEffects));
-    };
     m_context->memoryEditor.UserData = m_context.get();
-    m_context->memoryEditor.BgColorFn = [](const ImU8 * /*mem*/, size_t /*off*/, void * /*user_data*/) -> ImU32 {
-        // auto &ctx = *static_cast<Context *>(user_data);
-        // TODO: use this to colorize fields/regions
-        return 0;
-    };
 }
 
 void MemoryViewer::Display() {
@@ -43,30 +33,46 @@ void MemoryViewer::Display() {
 
     ImGui::SetNextWindowSizeConstraints(ImVec2(sizes.WindowWidth, 245), ImVec2(sizes.WindowWidth, FLT_MAX));
     if (ImGui::Begin(fmt::format("Memory viewer #{}", m_index + 1).c_str(), &Open, ImGuiWindowFlags_NoScrollbar)) {
-        static int region = 0;
-        static constexpr const char *regions[] = {"Global", "IPL ROM"};
+        const Region *nextRegion = m_context->selectedRegion;
+        auto &currRegion = *nextRegion;
+        if (currRegion.paramsFn) {
+            currRegion.paramsFn(m_context.get());
+        }
 
-        if (ImGui::BeginCombo("Region", regions[region],
+        ImGui::PushFont(m_sharedCtx.fonts.monospaceMedium);
+        if (ImGui::BeginCombo("Region", currRegion.ToString().c_str(),
                               ImGuiComboFlags_HeightLarge | ImGuiComboFlags_WidthFitPreview)) {
-            for (int i = 0; i < std::size(regions); i++) {
-                bool selected = i == region;
-                if (ImGui::Selectable(regions[i], &selected)) {
-                    region = i;
+            for (auto &group : kRegionGroups) {
+                ImGui::SeparatorText(group.name);
+                for (auto &region : group.regions) {
+                    bool selected = &region == &currRegion;
+                    if (ImGui::Selectable(region.ToString().c_str(), &selected)) {
+                        nextRegion = &region;
+                    }
                 }
             }
             ImGui::EndCombo();
         }
+        ImGui::PopFont();
 
         ImGui::Checkbox("Enable side-effects", &m_context->enableSideEffects);
         ImGui::Separator();
         ImGui::PushFont(m_sharedCtx.fonts.monospaceMedium);
-        m_context->memoryEditor.DrawContents(this, 0x8000000, 0x0);
+        m_context->memoryEditor.DrawContents(this, currRegion.size, currRegion.baseAddress);
         if (m_context->memoryEditor.MouseHovered) {
             // TODO: use this to display additional info on specific addresses
             if (ImGui::BeginTooltip()) {
-                ImGui::Text("Address: %08zX", m_context->memoryEditor.MouseHoveredAddr);
+                const uint32 address = currRegion.baseAddress + m_context->memoryEditor.MouseHoveredAddr;
+                ImGui::Text("Address: %08X", address);
                 ImGui::EndTooltip();
             }
+        }
+
+        if (nextRegion != m_context->selectedRegion) {
+            m_context->selectedRegion = nextRegion;
+            m_context->memoryEditor.ReadFn = m_context->selectedRegion->readFn;
+            m_context->memoryEditor.WriteFn = m_context->selectedRegion->writeFn;
+            m_context->memoryEditor.BgColorFn = m_context->selectedRegion->bgColorFn;
         }
 
         ImGui::PopFont();
