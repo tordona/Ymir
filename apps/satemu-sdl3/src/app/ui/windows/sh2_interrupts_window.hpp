@@ -2,13 +2,13 @@
 
 #include <app/shared_context.hpp>
 
-#include "views/sh2_interrupts_view.hpp"
+#include <app/ui/views/sh2_interrupts_view.hpp>
 
-namespace app {
+namespace app::ui {
 
-class SH2Interrupts {
+class SH2InterruptsWindow {
 public:
-    SH2Interrupts(SharedContext &context, bool master);
+    SH2InterruptsWindow(SharedContext &context, bool master);
 
     void Display();
 
@@ -21,4 +21,4 @@ private:
     SH2InterruptsView m_intrView;
 };
 
-} // namespace app
+} // namespace app::ui

@@ -4,7 +4,7 @@
 
 #include <satemu/hw/sh2/sh2.hpp>
 
-namespace app {
+namespace app::ui {
 
 class SH2RegistersView {
 public:
@@ -18,4 +18,4 @@ private:
     bool m_master;
 };
 
-} // namespace app
+} // namespace app::ui

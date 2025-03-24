@@ -1,6 +1,6 @@
 #include "sh2_interrupt_tracer_view.hpp"
 
-namespace app {
+namespace app::ui {
 
 SH2InterruptTracerView::SH2InterruptTracerView(SharedContext &context, satemu::sh2::SH2 &sh2, SH2Tracer &tracer)
     : m_context(context)
@@ -87,4 +87,4 @@ void SH2InterruptTracerView::Display() {
     ImGui::EndGroup();
 }
 
-} // namespace app
+} // namespace app::ui

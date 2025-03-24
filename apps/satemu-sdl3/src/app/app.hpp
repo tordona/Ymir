@@ -5,11 +5,12 @@
 #include "audio_system.hpp"
 #include "shared_context.hpp"
 
-#include "ui/memory_viewer.hpp"
-#include "ui/scu_debugger.hpp"
-#include "ui/sh2_debugger.hpp"
-#include "ui/sh2_interrupt_tracer.hpp"
-#include "ui/sh2_interrupts.hpp"
+#include "ui/windows/memory_viewer_window.hpp"
+#include "ui/windows/scu_debugger_window.hpp"
+#include "ui/windows/sh2_debugger_window.hpp"
+#include "ui/windows/sh2_division_unit_window.hpp"
+#include "ui/windows/sh2_interrupt_tracer_window.hpp"
+#include "ui/windows/sh2_interrupts_window.hpp"
 
 #include <SDL3/SDL_events.h>
 
@@ -49,17 +50,19 @@ private:
 
     void DrawDebug();
 
-    SH2Debugger m_masterSH2Debugger;
-    SH2Interrupts m_masterSH2Interrupts;
-    SH2InterruptTracer m_masterSH2InterruptTracer;
+    ui::SH2DebuggerWindow m_masterSH2DebuggerWindow;
+    ui::SH2InterruptsWindow m_masterSH2InterruptsWindow;
+    ui::SH2InterruptTracerWindow m_masterSH2InterruptTracerWindow;
+    ui::SH2DivisionUnitWindow m_masterSH2DivisionUnitWindow;
 
-    SH2Debugger m_slaveSH2Debugger;
-    SH2Interrupts m_slaveSH2Interrupts;
-    SH2InterruptTracer m_slaveSH2InterruptTracer;
+    ui::SH2DebuggerWindow m_slaveSH2DebuggerWindow;
+    ui::SH2InterruptsWindow m_slaveSH2InterruptsWindow;
+    ui::SH2InterruptTracerWindow m_slaveSH2InterruptTracerWindow;
+    ui::SH2DivisionUnitWindow m_slaveSH2DivisionUnitWindow;
 
-    SCUDebugger m_scuDebugger;
+    ui::SCUDebuggerWindow m_scuDebuggerWindow;
 
-    std::vector<MemoryViewer> m_memoryViewers;
+    std::vector<ui::MemoryViewerWindow> m_memoryViewerWindows;
 
     void OpenMemoryViewer();
 };

@@ -1,17 +1,17 @@
-#include "sh2_interrupts.hpp"
+#include "sh2_interrupts_window.hpp"
 
 #include <imgui.h>
 
 using namespace satemu;
 
-namespace app {
+namespace app::ui {
 
-SH2Interrupts::SH2Interrupts(SharedContext &context, bool master)
+SH2InterruptsWindow::SH2InterruptsWindow(SharedContext &context, bool master)
     : m_context(context)
     , m_master(master)
     , m_intrView(context, master ? context.saturn.masterSH2 : context.saturn.slaveSH2) {}
 
-void SH2Interrupts::Display() {
+void SH2InterruptsWindow::Display() {
     if (!Open) {
         return;
     }
@@ -23,4 +23,4 @@ void SH2Interrupts::Display() {
     ImGui::End();
 }
 
-} // namespace app
+} // namespace app::ui

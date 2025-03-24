@@ -1,14 +1,14 @@
-#include "scu_debugger.hpp"
+#include "scu_debugger_window.hpp"
 
 #include <imgui.h>
 
-namespace app {
+namespace app::ui {
 
-SCUDebugger::SCUDebugger(SharedContext &context)
+SCUDebuggerWindow::SCUDebuggerWindow(SharedContext &context)
     : m_context(context)
     , m_scu(context.saturn.SCU) {}
 
-void SCUDebugger::Display() {
+void SCUDebuggerWindow::Display() {
     if (!Open) {
         return;
     }
@@ -21,4 +21,4 @@ void SCUDebugger::Display() {
     ImGui::End();
 }
 
-} // namespace app
+} // namespace app::ui

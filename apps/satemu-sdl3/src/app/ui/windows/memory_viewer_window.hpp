@@ -11,11 +11,11 @@
 #include <memory>
 #include <span>
 
-namespace app {
+namespace app::ui {
 
-class MemoryViewer {
+class MemoryViewerWindow {
 public:
-    MemoryViewer(SharedContext &context);
+    MemoryViewerWindow(SharedContext &context);
 
     void Display();
     void RequestFocus();
@@ -504,4 +504,4 @@ private:
     };
 };
 
-} // namespace app
+} // namespace app::ui

@@ -4,7 +4,7 @@
 
 using namespace satemu;
 
-namespace app {
+namespace app::ui {
 
 SH2RegistersView::SH2RegistersView(SharedContext &context, sh2::SH2 &sh2, bool master)
     : m_context(context)
@@ -124,4 +124,4 @@ void SH2RegistersView::Display() {
     ImGui::EndGroup();
 }
 
-} // namespace app
+} // namespace app::ui

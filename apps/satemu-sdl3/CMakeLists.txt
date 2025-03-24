@@ -18,19 +18,23 @@ add_executable(satemu-sdl3
     
     src/app/events/emu_events.hpp
 
-    src/app/ui/memory_viewer.cpp
-    src/app/ui/memory_viewer.hpp
-    src/app/ui/scu_debugger.cpp
-    src/app/ui/scu_debugger.hpp
-    src/app/ui/sh2_debugger.cpp
-    src/app/ui/sh2_debugger.hpp
-    src/app/ui/sh2_interrupts.cpp
-    src/app/ui/sh2_interrupts.hpp
-    src/app/ui/sh2_interrupt_tracer.cpp
-    src/app/ui/sh2_interrupt_tracer.hpp
+    src/app/ui/windows/memory_viewer_window.cpp
+    src/app/ui/windows/memory_viewer_window.hpp
+    src/app/ui/windows/scu_debugger_window.cpp
+    src/app/ui/windows/scu_debugger_window.hpp
+    src/app/ui/windows/sh2_debugger_window.cpp
+    src/app/ui/windows/sh2_debugger_window.hpp
+    src/app/ui/windows/sh2_division_unit_window.cpp
+    src/app/ui/windows/sh2_division_unit_window.hpp
+    src/app/ui/windows/sh2_interrupts_window.cpp
+    src/app/ui/windows/sh2_interrupts_window.hpp
+    src/app/ui/windows/sh2_interrupt_tracer_window.cpp
+    src/app/ui/windows/sh2_interrupt_tracer_window.hpp
 
     src/app/ui/views/sh2_disassembly_view.cpp
     src/app/ui/views/sh2_disassembly_view.hpp
+    src/app/ui/views/sh2_division_unit_traces_view.cpp
+    src/app/ui/views/sh2_division_unit_traces_view.hpp
     src/app/ui/views/sh2_interrupts_view.cpp
     src/app/ui/views/sh2_interrupts_view.hpp
     src/app/ui/views/sh2_interrupt_tracer_view.cpp

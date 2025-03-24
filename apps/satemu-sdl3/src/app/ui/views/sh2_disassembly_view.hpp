@@ -4,7 +4,7 @@
 
 #include <satemu/hw/sh2/sh2.hpp>
 
-namespace app {
+namespace app::ui {
 
 class SH2DisassemblyView {
 public:
@@ -17,4 +17,4 @@ private:
     satemu::sh2::SH2 &m_sh2;
 };
 
-} // namespace app
+} // namespace app::ui

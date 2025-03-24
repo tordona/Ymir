@@ -1,18 +1,18 @@
-#include "sh2_interrupt_tracer.hpp"
+#include "sh2_interrupt_tracer_window.hpp"
 
 #include <imgui.h>
 
 using namespace satemu;
 
-namespace app {
+namespace app::ui {
 
-SH2InterruptTracer::SH2InterruptTracer(SharedContext &context, bool master)
+SH2InterruptTracerWindow::SH2InterruptTracerWindow(SharedContext &context, bool master)
     : m_context(context)
     , m_master(master)
     , m_intrTracerView(context, master ? context.saturn.masterSH2 : context.saturn.slaveSH2,
                        master ? context.tracers.masterSH2 : context.tracers.slaveSH2) {}
 
-void SH2InterruptTracer::Display() {
+void SH2InterruptTracerWindow::Display() {
     if (!Open) {
         return;
     }
@@ -25,4 +25,4 @@ void SH2InterruptTracer::Display() {
     ImGui::End();
 }
 
-} // namespace app
+} // namespace app::ui

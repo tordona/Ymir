@@ -2,14 +2,14 @@
 
 #include <app/shared_context.hpp>
 
-#include "views/sh2_disassembly_view.hpp"
-#include "views/sh2_registers_view.hpp"
+#include <app/ui/views/sh2_disassembly_view.hpp>
+#include <app/ui/views/sh2_registers_view.hpp>
 
-namespace app {
+namespace app::ui {
 
-class SH2Debugger {
+class SH2DebuggerWindow {
 public:
-    SH2Debugger(SharedContext &context, bool master);
+    SH2DebuggerWindow(SharedContext &context, bool master);
 
     void Display();
 
@@ -24,4 +24,4 @@ private:
     SH2DisassemblyView m_disasmView;
 };
 
-} // namespace app
+} // namespace app::ui

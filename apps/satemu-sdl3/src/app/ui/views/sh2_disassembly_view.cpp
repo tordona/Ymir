@@ -4,7 +4,7 @@
 
 #include <imgui.h>
 
-namespace app {
+namespace app::ui {
 
 SH2DisassemblyView::SH2DisassemblyView(SharedContext &context, satemu::sh2::SH2 &sh2)
     : m_context(context)
@@ -170,4 +170,4 @@ void SH2DisassemblyView::Display() {
     ImGui::EndGroup();
 }
 
-} // namespace app
+} // namespace app::ui

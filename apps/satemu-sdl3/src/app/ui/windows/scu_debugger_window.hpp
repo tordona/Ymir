@@ -2,11 +2,11 @@
 
 #include <app/shared_context.hpp>
 
-namespace app {
+namespace app::ui {
 
-class SCUDebugger {
+class SCUDebuggerWindow {
 public:
-    SCUDebugger(SharedContext &context);
+    SCUDebuggerWindow(SharedContext &context);
 
     void Display();
 
@@ -17,4 +17,4 @@ private:
     satemu::scu::SCU &m_scu;
 };
 
-} // namespace app
+} // namespace app::ui

@@ -18,7 +18,7 @@ struct SH2Tracer final : public satemu::debug::ISH2Tracer {
     bool traceInstructions = false;
     bool traceInterrupts = false;
     bool traceExceptions = false;
-    bool traceDivisions = true;
+    bool traceDivisions = false;
 
     struct InstructionInfo {
         uint32 pc;
@@ -48,6 +48,7 @@ struct SH2Tracer final : public satemu::debug::ISH2Tracer {
         bool overflow;
         bool overflowIntrEnable;
         bool finished;
+        uint32 counter;
     };
 
     struct Division64x32Info {
@@ -58,6 +59,7 @@ struct SH2Tracer final : public satemu::debug::ISH2Tracer {
         bool overflow;
         bool overflowIntrEnable;
         bool finished;
+        uint32 counter;
     };
 
     util::RingBuffer<InstructionInfo, 16384> instructions;
@@ -68,6 +70,8 @@ struct SH2Tracer final : public satemu::debug::ISH2Tracer {
 
 private:
     uint32 m_interruptCounter = 0;
+    uint32 m_division32Counter = 0;
+    uint32 m_division64Counter = 0;
 };
 
 } // namespace app

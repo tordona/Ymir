@@ -33,8 +33,11 @@ void SH2Tracer::Begin32x32Division(sint32 dividend, sint32 divisor, bool overflo
         return;
     }
 
-    divisions32.Write(
-        {.dividend = dividend, .divisor = divisor, .overflowIntrEnable = overflowIntrEnable, .finished = false});
+    divisions32.Write({.dividend = dividend,
+                       .divisor = divisor,
+                       .overflowIntrEnable = overflowIntrEnable,
+                       .finished = false,
+                       .counter = m_division32Counter++});
 }
 
 void SH2Tracer::End32x32Division(sint32 quotient, sint32 remainder, bool overflow) {
@@ -54,8 +57,11 @@ void SH2Tracer::Begin64x32Division(sint64 dividend, sint32 divisor, bool overflo
         return;
     }
 
-    divisions64.Write(
-        {.dividend = dividend, .divisor = divisor, .overflowIntrEnable = overflowIntrEnable, .finished = false});
+    divisions64.Write({.dividend = dividend,
+                       .divisor = divisor,
+                       .overflowIntrEnable = overflowIntrEnable,
+                       .finished = false,
+                       .counter = m_division64Counter++});
 }
 
 void SH2Tracer::End64x32Division(sint32 quotient, sint32 remainder, bool overflow) {

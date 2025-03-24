@@ -5,7 +5,7 @@
 #include <initializer_list>
 #include <utility>
 
-namespace app {
+namespace app::ui {
 
 SH2InterruptsView::SH2InterruptsView(SharedContext &context, satemu::sh2::SH2 &sh2)
     : m_context(context)
@@ -254,4 +254,4 @@ void SH2InterruptsView::Display() {
     ImGui::EndGroup();
 }
 
-} // namespace app
+} // namespace app::ui

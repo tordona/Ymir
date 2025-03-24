@@ -201,17 +201,19 @@ CMRC_DECLARE(satemu_sdl3_rc);
 namespace app {
 
 App::App()
-    : m_masterSH2Debugger(m_context, true)
-    , m_masterSH2Interrupts(m_context, true)
-    , m_masterSH2InterruptTracer(m_context, true)
-    , m_slaveSH2Debugger(m_context, false)
-    , m_slaveSH2Interrupts(m_context, false)
-    , m_slaveSH2InterruptTracer(m_context, false)
-    , m_scuDebugger(m_context) {
+    : m_masterSH2DebuggerWindow(m_context, true)
+    , m_masterSH2InterruptsWindow(m_context, true)
+    , m_masterSH2InterruptTracerWindow(m_context, true)
+    , m_masterSH2DivisionUnitWindow(m_context, true)
+    , m_slaveSH2DebuggerWindow(m_context, false)
+    , m_slaveSH2InterruptsWindow(m_context, false)
+    , m_slaveSH2InterruptTracerWindow(m_context, false)
+    , m_slaveSH2DivisionUnitWindow(m_context, false)
+    , m_scuDebuggerWindow(m_context) {
 
     // Preinitialize some memory viewers
-    for (int i = 0; i < 16; i++) {
-        m_memoryViewers.emplace_back(m_context);
+    for (int i = 0; i < 8; i++) {
+        m_memoryViewerWindows.emplace_back(m_context);
     }
 }
 
@@ -992,7 +994,7 @@ void App::RunEmulator() {
                     OpenMemoryViewer();
                 }
                 if (ImGui::BeginMenu("Memory viewers")) {
-                    for (auto &memView : m_memoryViewers) {
+                    for (auto &memView : m_memoryViewerWindows) {
                         ImGui::MenuItem(fmt::format("Memory viewer #{}", memView.Index() + 1).c_str(), nullptr,
                                         &memView.Open);
                     }
@@ -1003,18 +1005,20 @@ void App::RunEmulator() {
                 }
                 ImGui::Separator();
                 if (ImGui::BeginMenu("Master SH2")) {
-                    ImGui::MenuItem("Debugger", nullptr, &m_masterSH2Debugger.Open);
-                    ImGui::MenuItem("Interrupts", nullptr, &m_masterSH2Interrupts.Open);
-                    ImGui::MenuItem("Interrupt tracer", nullptr, &m_masterSH2InterruptTracer.Open);
+                    ImGui::MenuItem("Debugger", nullptr, &m_masterSH2DebuggerWindow.Open);
+                    ImGui::MenuItem("Interrupts", nullptr, &m_masterSH2InterruptsWindow.Open);
+                    ImGui::MenuItem("Interrupt tracer", nullptr, &m_masterSH2InterruptTracerWindow.Open);
+                    ImGui::MenuItem("Division unit (DIVU)", nullptr, &m_masterSH2DivisionUnitWindow.Open);
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Slave SH2")) {
-                    ImGui::MenuItem("Debugger", nullptr, &m_slaveSH2Debugger.Open);
-                    ImGui::MenuItem("Interrupts", nullptr, &m_slaveSH2Interrupts.Open);
-                    ImGui::MenuItem("Interrupt tracer", nullptr, &m_slaveSH2InterruptTracer.Open);
+                    ImGui::MenuItem("Debugger", nullptr, &m_slaveSH2DebuggerWindow.Open);
+                    ImGui::MenuItem("Interrupts", nullptr, &m_slaveSH2InterruptsWindow.Open);
+                    ImGui::MenuItem("Interrupt tracer", nullptr, &m_slaveSH2InterruptTracerWindow.Open);
+                    ImGui::MenuItem("Division unit (DIVU)", nullptr, &m_slaveSH2DivisionUnitWindow.Open);
                     ImGui::EndMenu();
                 }
-                ImGui::MenuItem("SCU", nullptr, &m_scuDebugger.Open);
+                ImGui::MenuItem("SCU", nullptr, &m_scuDebuggerWindow.Open);
                 ImGui::End();
             }
             if (ImGui::BeginMenu("Help")) {
@@ -1320,17 +1324,19 @@ bool App::LoadDiscImage(std::filesystem::path path) {
 void App::DrawDebug() {
     using namespace satemu;
 
-    m_masterSH2Debugger.Display();
-    m_masterSH2Interrupts.Display();
-    m_masterSH2InterruptTracer.Display();
+    m_masterSH2DebuggerWindow.Display();
+    m_masterSH2InterruptsWindow.Display();
+    m_masterSH2InterruptTracerWindow.Display();
+    m_masterSH2DivisionUnitWindow.Display();
 
-    m_slaveSH2Debugger.Display();
-    m_slaveSH2Interrupts.Display();
-    m_slaveSH2InterruptTracer.Display();
+    m_slaveSH2DebuggerWindow.Display();
+    m_slaveSH2InterruptsWindow.Display();
+    m_slaveSH2InterruptTracerWindow.Display();
+    m_slaveSH2DivisionUnitWindow.Display();
 
-    m_scuDebugger.Display();
+    m_scuDebuggerWindow.Display();
 
-    for (auto &memView : m_memoryViewers) {
+    for (auto &memView : m_memoryViewerWindows) {
         memView.Display();
     }
 
@@ -1388,7 +1394,7 @@ void App::DrawDebug() {
 }
 
 void App::OpenMemoryViewer() {
-    for (auto &memView : m_memoryViewers) {
+    for (auto &memView : m_memoryViewerWindows) {
         if (!memView.Open) {
             memView.Open = true;
             memView.RequestFocus();
@@ -1397,10 +1403,10 @@ void App::OpenMemoryViewer() {
     }
 
     // If there are no more free memory viewers, request focus on the first window
-    m_memoryViewers[0].RequestFocus();
+    m_memoryViewerWindows[0].RequestFocus();
 
     // If there are no more free memory viewers, create more!
-    /*auto &memView = m_memoryViewers.emplace_back(m_context);
+    /*auto &memView = m_memoryViewerWindows.emplace_back(m_context);
     memView.Open = true;
     memView.RequestFocus();*/
 }

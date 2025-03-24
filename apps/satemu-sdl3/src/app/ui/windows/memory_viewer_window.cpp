@@ -1,10 +1,10 @@
-#include "memory_viewer.hpp"
+#include "memory_viewer_window.hpp"
 
-namespace app {
+namespace app::ui {
 
-uint32 MemoryViewer::s_index = 0;
+uint32 MemoryViewerWindow::s_index = 0;
 
-MemoryViewer::MemoryViewer(SharedContext &context)
+MemoryViewerWindow::MemoryViewerWindow(SharedContext &context)
     : m_sharedCtx(context)
     , m_index(s_index++) {
 
@@ -18,7 +18,7 @@ MemoryViewer::MemoryViewer(SharedContext &context)
     m_context->memoryEditor.UserData = m_context.get();
 }
 
-void MemoryViewer::Display() {
+void MemoryViewerWindow::Display() {
     if (!Open) {
         return;
     }
@@ -80,8 +80,8 @@ void MemoryViewer::Display() {
     ImGui::End();
 }
 
-void MemoryViewer::RequestFocus() {
+void MemoryViewerWindow::RequestFocus() {
     m_requestFocus = true;
 }
 
-} // namespace app
+} // namespace app::ui

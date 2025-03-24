@@ -8,9 +8,9 @@
 
 namespace app::ui {
 
-class SH2InterruptTracerView {
+class SH2DivisionUnitTracesView {
 public:
-    SH2InterruptTracerView(SharedContext &context, satemu::sh2::SH2 &sh2, SH2Tracer &tracer);
+    SH2DivisionUnitTracesView(SharedContext &context, satemu::sh2::SH2 &sh2, SH2Tracer &tracer);
 
     void Display();
 
@@ -18,6 +18,13 @@ private:
     SharedContext &m_context;
     satemu::sh2::SH2 &m_sh2;
     SH2Tracer &m_tracer;
+
+    bool m_showHex = false;
+
+    void DisplayTraces();
+
+    void Display32x32Trace();
+    void Display64x32Trace();
 };
 
 } // namespace app::ui
