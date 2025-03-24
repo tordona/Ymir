@@ -21,10 +21,7 @@ private:
 
     bool m_showHex = false;
 
-    void DisplayTraces();
-
-    void Display32x32Trace();
-    void Display64x32Trace();
+    void DisplayTrace();
 };
 
 } // namespace app::ui

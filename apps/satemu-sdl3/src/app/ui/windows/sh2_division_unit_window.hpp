@@ -2,7 +2,7 @@
 
 #include <app/shared_context.hpp>
 
-#include <app/ui/views/sh2_division_unit_traces_view.hpp>
+#include <app/ui/views/sh2_division_unit_trace_view.hpp>
 
 namespace app::ui {
 

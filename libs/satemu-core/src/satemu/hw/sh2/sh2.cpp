@@ -69,16 +69,6 @@ FORCE_INLINE static void TraceBegin32x32Division(debug::ISH2Tracer *tracer, sint
 }
 
 template <bool debug>
-FORCE_INLINE static void TraceEnd32x32Division(debug::ISH2Tracer *tracer, sint32 quotient, sint32 remainder,
-                                               bool overflow) {
-    if constexpr (debug) {
-        if (tracer) {
-            return tracer->End32x32Division(quotient, remainder, overflow);
-        }
-    }
-}
-
-template <bool debug>
 FORCE_INLINE static void TraceBegin64x32Division(debug::ISH2Tracer *tracer, sint64 dividend, sint32 divisor,
                                                  bool overflowIntrEnable) {
     if constexpr (debug) {
@@ -89,11 +79,10 @@ FORCE_INLINE static void TraceBegin64x32Division(debug::ISH2Tracer *tracer, sint
 }
 
 template <bool debug>
-FORCE_INLINE static void TraceEnd64x32Division(debug::ISH2Tracer *tracer, sint32 quotient, sint32 remainder,
-                                               bool overflow) {
+FORCE_INLINE static void TraceEndDivision(debug::ISH2Tracer *tracer, sint32 quotient, sint32 remainder, bool overflow) {
     if constexpr (debug) {
         if (tracer) {
-            return tracer->End64x32Division(quotient, remainder, overflow);
+            return tracer->EndDivision(quotient, remainder, overflow);
         }
     }
 }
@@ -1010,7 +999,7 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
             DIVU.DVDNTH = static_cast<sint32>(value) >> 31;
             TraceBegin32x32Division<debug>(m_tracer, DIVU.DVDNTL, DIVU.DVSR, DIVU.DVCR.OVFIE);
             DIVU.Calc32();
-            TraceEnd32x32Division<debug>(m_tracer, DIVU.DVDNTL, DIVU.DVDNTH, DIVU.DVCR.OVF);
+            TraceEndDivision<debug>(m_tracer, DIVU.DVDNTL, DIVU.DVDNTH, DIVU.DVCR.OVF);
             if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
                 RaiseInterrupt(InterruptSource::DIVU_OVFI);
             }
@@ -1034,7 +1023,7 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
                 m_tracer, (static_cast<sint64>(DIVU.DVDNTH) << 32ll) | static_cast<sint64>(DIVU.DVDNTL), DIVU.DVSR,
                 DIVU.DVCR.OVFIE);
             DIVU.Calc64();
-            TraceEnd64x32Division<debug>(m_tracer, DIVU.DVDNTL, DIVU.DVDNTH, DIVU.DVCR.OVF);
+            TraceEndDivision<debug>(m_tracer, DIVU.DVDNTL, DIVU.DVDNTH, DIVU.DVCR.OVF);
             if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
                 RaiseInterrupt(InterruptSource::DIVU_OVFI);
             }

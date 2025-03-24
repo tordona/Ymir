@@ -18,7 +18,7 @@ void SH2DivisionUnitWindow::Display() {
     }
 
     std::string name = fmt::format("{}SH2 division unit (DIVU)", m_master ? "M" : "S");
-    ImGui::SetNextWindowSizeConstraints(ImVec2(1000, 300), ImVec2(1200, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(570, 300), ImVec2(1200, FLT_MAX));
     if (ImGui::Begin(name.c_str(), &Open)) {
         // TODO: registers view
         // auto &probe = m_sh2.GetProbe();

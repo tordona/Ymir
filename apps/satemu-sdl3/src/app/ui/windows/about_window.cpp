@@ -254,7 +254,7 @@ void AboutWindow::Display() {
                     };
 
                     ackWithAuthor("antime's feeble Sega Saturn page", "antime", "https://antime.kapsi.fi/sega/");
-                    ackWithAuthor("Hardware traces", "Sergiy Dvodnenko (srg320)",
+                    ackWithAuthor("Hardware signal traces", "Sergiy Dvodnenko (srg320)",
                                   "https://github.com/srg320/Saturn_hw");
                     ackWithAuthor("Original research", "Charles MacDonald",
                                   "https://web.archive.org/web/20150119062930/http://cgfm2.emuviews.com/saturn.php");

@@ -33,23 +33,12 @@ void SH2Tracer::Begin32x32Division(sint32 dividend, sint32 divisor, bool overflo
         return;
     }
 
-    divisions32.Write({.dividend = dividend,
-                       .divisor = divisor,
-                       .overflowIntrEnable = overflowIntrEnable,
-                       .finished = false,
-                       .counter = m_division32Counter++});
-}
-
-void SH2Tracer::End32x32Division(sint32 quotient, sint32 remainder, bool overflow) {
-    if (!traceDivisions) {
-        return;
-    }
-
-    auto &div = divisions32.GetLast();
-    div.quotient = quotient;
-    div.remainder = remainder;
-    div.overflow = overflow;
-    div.finished = true;
+    divisions.Write({.dividend = dividend,
+                     .divisor = divisor,
+                     .overflowIntrEnable = overflowIntrEnable,
+                     .finished = false,
+                     .div64 = false,
+                     .counter = m_divisionCounter++});
 }
 
 void SH2Tracer::Begin64x32Division(sint64 dividend, sint32 divisor, bool overflowIntrEnable) {
@@ -57,19 +46,20 @@ void SH2Tracer::Begin64x32Division(sint64 dividend, sint32 divisor, bool overflo
         return;
     }
 
-    divisions64.Write({.dividend = dividend,
-                       .divisor = divisor,
-                       .overflowIntrEnable = overflowIntrEnable,
-                       .finished = false,
-                       .counter = m_division64Counter++});
+    divisions.Write({.dividend = dividend,
+                     .divisor = divisor,
+                     .overflowIntrEnable = overflowIntrEnable,
+                     .finished = false,
+                     .div64 = true,
+                     .counter = m_divisionCounter++});
 }
 
-void SH2Tracer::End64x32Division(sint32 quotient, sint32 remainder, bool overflow) {
+void SH2Tracer::EndDivision(sint32 quotient, sint32 remainder, bool overflow) {
     if (!traceDivisions) {
         return;
     }
 
-    auto &div = divisions64.GetLast();
+    auto &div = divisions.GetLast();
     div.quotient = quotient;
     div.remainder = remainder;
     div.overflow = overflow;

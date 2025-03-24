@@ -35,8 +35,8 @@ add_executable(satemu-sdl3
 
     src/app/ui/views/sh2_disassembly_view.cpp
     src/app/ui/views/sh2_disassembly_view.hpp
-    src/app/ui/views/sh2_division_unit_traces_view.cpp
-    src/app/ui/views/sh2_division_unit_traces_view.hpp
+    src/app/ui/views/sh2_division_unit_trace_view.cpp
+    src/app/ui/views/sh2_division_unit_trace_view.hpp
     src/app/ui/views/sh2_interrupts_view.cpp
     src/app/ui/views/sh2_interrupts_view.hpp
     src/app/ui/views/sh2_interrupt_tracer_view.cpp

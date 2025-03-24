@@ -45,13 +45,6 @@ struct ISH2Tracer {
     // `overflowIntrEnable` indicates if the division overflow interrupt is enabled (DVCR.OVFIE)
     virtual void Begin32x32Division(sint32 dividend, sint32 divisor, bool overflowIntrEnable) {}
 
-    // Invoked when a 32-bit by 32-bit division ends.
-    //
-    // `quotient` is the resulting quotient (DVDNTL)
-    // `remainder` is the resulting remainder (DVDNTH)
-    // `overflow` indicates if the division resulted in an overflow
-    virtual void End32x32Division(sint32 quotient, sint32 remainder, bool overflow) {}
-
     // Invoked when a 64-bit by 32-bit division begins.
     //
     // `dividend` is the value of the dividend (DVDNTH:DVDNTL)
@@ -59,12 +52,12 @@ struct ISH2Tracer {
     // `overflowIntrEnable` indicates if the division overflow interrupt is enabled (DVCR.OVFIE)
     virtual void Begin64x32Division(sint64 dividend, sint32 divisor, bool overflowIntrEnable) {}
 
-    // Invoked when a 64-bit by 32-bit division ends.
+    // Invoked when a division ends.
     //
     // `quotient` is the resulting quotient (DVDNTL)
     // `remainder` is the resulting remainder (DVDNTH)
     // `overflow` indicates if the division resulted in an overflow
-    virtual void End64x32Division(sint32 quotient, sint32 remainder, bool overflow) {}
+    virtual void EndDivision(sint32 quotient, sint32 remainder, bool overflow) {}
 };
 
 } // namespace satemu::debug
