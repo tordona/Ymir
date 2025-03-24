@@ -75,7 +75,10 @@ struct SharedContext {
             } xlarge;
         } monospace;
 
-        ImFont *display = nullptr;
+        struct {
+            ImFont *small = nullptr;
+            ImFont *large = nullptr;
+        } display;
     } fonts;
 
     struct EventQueues {

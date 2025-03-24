@@ -488,7 +488,8 @@ void App::RunEmulator() {
         m_context.fonts.monospace.xlarge.regular = loadFont("fonts/SplineSansMono-Medium.ttf", 28);
         m_context.fonts.monospace.xlarge.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 28);
 
-        m_context.fonts.display = loadFont("fonts/ZenDots-Regular.ttf", 64);
+        m_context.fonts.display.small = loadFont("fonts/ZenDots-Regular.ttf", 24);
+        m_context.fonts.display.large = loadFont("fonts/ZenDots-Regular.ttf", 64);
 
         io.Fonts->Build();
 

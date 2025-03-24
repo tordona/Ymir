@@ -106,6 +106,7 @@ add_library(satemu-core
     include/satemu/util/bit_ops.hpp
     include/satemu/util/bitmask_enum.hpp
     include/satemu/util/callback.hpp
+    include/satemu/util/compiler_info.hpp
     include/satemu/util/data_ops.hpp
     include/satemu/util/date_time.hpp
     include/satemu/util/debug_print.hpp
@@ -245,6 +246,7 @@ endif()
 
 ## Apply performance options
 if (satemu_AVX2)
+    target_compile_definitions(satemu-core PUBLIC ${PROJECT_NAME}_AVX2=1)
     if (MSVC)
         target_compile_options(satemu-core PUBLIC "/arch:AVX2")
     else ()
