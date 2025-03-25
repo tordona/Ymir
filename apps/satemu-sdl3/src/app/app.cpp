@@ -203,12 +203,12 @@ namespace app {
 App::App()
     : m_masterSH2DebuggerWindow(m_context, true)
     , m_masterSH2InterruptsWindow(m_context, true)
-    , m_masterSH2InterruptTracerWindow(m_context, true)
+    , m_masterSH2InterruptTraceWindow(m_context, true)
     , m_masterSH2DivisionUnitWindow(m_context, true)
     , m_slaveSH2DebuggerWindow(m_context, false)
     , m_slaveSH2InterruptsWindow(m_context, false)
-    , m_slaveSH2InterruptTracerWindow(m_context, false)
-    , m_slaveSH2DivisionUnitWindow(m_context, false)
+    , m_slaveSH2InterruptTraceWindow(m_context, false)
+    , m_slaveSH2DIVUWindow(m_context, false)
     , m_scuDebuggerWindow(m_context)
     , m_aboutWindow(m_context) {
 
@@ -1018,15 +1018,15 @@ void App::RunEmulator() {
                 if (ImGui::BeginMenu("Master SH2")) {
                     ImGui::MenuItem("Debugger", nullptr, &m_masterSH2DebuggerWindow.Open);
                     ImGui::MenuItem("Interrupts", nullptr, &m_masterSH2InterruptsWindow.Open);
-                    ImGui::MenuItem("Interrupt tracer", nullptr, &m_masterSH2InterruptTracerWindow.Open);
+                    ImGui::MenuItem("Interrupt trace", nullptr, &m_masterSH2InterruptTraceWindow.Open);
                     ImGui::MenuItem("Division unit (DIVU)", nullptr, &m_masterSH2DivisionUnitWindow.Open);
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Slave SH2")) {
                     ImGui::MenuItem("Debugger", nullptr, &m_slaveSH2DebuggerWindow.Open);
                     ImGui::MenuItem("Interrupts", nullptr, &m_slaveSH2InterruptsWindow.Open);
-                    ImGui::MenuItem("Interrupt tracer", nullptr, &m_slaveSH2InterruptTracerWindow.Open);
-                    ImGui::MenuItem("Division unit (DIVU)", nullptr, &m_slaveSH2DivisionUnitWindow.Open);
+                    ImGui::MenuItem("Interrupt trace", nullptr, &m_slaveSH2InterruptTraceWindow.Open);
+                    ImGui::MenuItem("Division unit (DIVU)", nullptr, &m_slaveSH2DIVUWindow.Open);
                     ImGui::EndMenu();
                 }
                 ImGui::MenuItem("SCU", nullptr, &m_scuDebuggerWindow.Open);
@@ -1339,13 +1339,13 @@ void App::DrawWindows() {
 
     m_masterSH2DebuggerWindow.Display();
     m_masterSH2InterruptsWindow.Display();
-    m_masterSH2InterruptTracerWindow.Display();
+    m_masterSH2InterruptTraceWindow.Display();
     m_masterSH2DivisionUnitWindow.Display();
 
     m_slaveSH2DebuggerWindow.Display();
     m_slaveSH2InterruptsWindow.Display();
-    m_slaveSH2InterruptTracerWindow.Display();
-    m_slaveSH2DivisionUnitWindow.Display();
+    m_slaveSH2InterruptTraceWindow.Display();
+    m_slaveSH2DIVUWindow.Display();
 
     m_scuDebuggerWindow.Display();
 

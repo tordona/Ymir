@@ -2,22 +2,19 @@
 
 #include <app/shared_context.hpp>
 
-#include <app/debug/sh2_tracer.hpp>
-
 #include <satemu/hw/sh2/sh2.hpp>
 
 namespace app::ui {
 
-class SH2InterruptTracerView {
+class SH2DivisionUnitRegistersView {
 public:
-    SH2InterruptTracerView(SharedContext &context, satemu::sh2::SH2 &sh2, SH2Tracer &tracer);
+    SH2DivisionUnitRegistersView(SharedContext &context, satemu::sh2::SH2 &sh2);
 
     void Display();
 
 private:
     SharedContext &m_context;
     satemu::sh2::SH2 &m_sh2;
-    SH2Tracer &m_tracer;
 };
 
 } // namespace app::ui

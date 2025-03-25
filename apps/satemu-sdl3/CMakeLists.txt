@@ -26,21 +26,23 @@ add_executable(satemu-sdl3
     src/app/ui/windows/scu_debugger_window.hpp
     src/app/ui/windows/sh2_debugger_window.cpp
     src/app/ui/windows/sh2_debugger_window.hpp
-    src/app/ui/windows/sh2_division_unit_window.cpp
-    src/app/ui/windows/sh2_division_unit_window.hpp
+    src/app/ui/windows/sh2_divu_window.cpp
+    src/app/ui/windows/sh2_divu_window.hpp
     src/app/ui/windows/sh2_interrupts_window.cpp
     src/app/ui/windows/sh2_interrupts_window.hpp
-    src/app/ui/windows/sh2_interrupt_tracer_window.cpp
-    src/app/ui/windows/sh2_interrupt_tracer_window.hpp
+    src/app/ui/windows/sh2_interrupt_trace_window.cpp
+    src/app/ui/windows/sh2_interrupt_trace_window.hpp
 
     src/app/ui/views/sh2_disassembly_view.cpp
     src/app/ui/views/sh2_disassembly_view.hpp
-    src/app/ui/views/sh2_division_unit_trace_view.cpp
-    src/app/ui/views/sh2_division_unit_trace_view.hpp
+    src/app/ui/views/sh2_divu_trace_view.cpp
+    src/app/ui/views/sh2_divu_trace_view.hpp
+    src/app/ui/views/sh2_divu_registers_view.cpp
+    src/app/ui/views/sh2_divu_registers_view.hpp
     src/app/ui/views/sh2_interrupts_view.cpp
     src/app/ui/views/sh2_interrupts_view.hpp
-    src/app/ui/views/sh2_interrupt_tracer_view.cpp
-    src/app/ui/views/sh2_interrupt_tracer_view.hpp
+    src/app/ui/views/sh2_interrupt_trace_view.cpp
+    src/app/ui/views/sh2_interrupt_trace_view.hpp
     src/app/ui/views/sh2_registers_view.cpp
     src/app/ui/views/sh2_registers_view.hpp
 

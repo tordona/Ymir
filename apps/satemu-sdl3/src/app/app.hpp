@@ -9,8 +9,8 @@
 #include "ui/windows/memory_viewer_window.hpp"
 #include "ui/windows/scu_debugger_window.hpp"
 #include "ui/windows/sh2_debugger_window.hpp"
-#include "ui/windows/sh2_division_unit_window.hpp"
-#include "ui/windows/sh2_interrupt_tracer_window.hpp"
+#include "ui/windows/sh2_divu_window.hpp"
+#include "ui/windows/sh2_interrupt_trace_window.hpp"
 #include "ui/windows/sh2_interrupts_window.hpp"
 
 #include <SDL3/SDL_events.h>
@@ -54,13 +54,13 @@ private:
 
     ui::SH2DebuggerWindow m_masterSH2DebuggerWindow;
     ui::SH2InterruptsWindow m_masterSH2InterruptsWindow;
-    ui::SH2InterruptTracerWindow m_masterSH2InterruptTracerWindow;
+    ui::SH2InterruptTraceWindow m_masterSH2InterruptTraceWindow;
     ui::SH2DivisionUnitWindow m_masterSH2DivisionUnitWindow;
 
     ui::SH2DebuggerWindow m_slaveSH2DebuggerWindow;
     ui::SH2InterruptsWindow m_slaveSH2InterruptsWindow;
-    ui::SH2InterruptTracerWindow m_slaveSH2InterruptTracerWindow;
-    ui::SH2DivisionUnitWindow m_slaveSH2DivisionUnitWindow;
+    ui::SH2InterruptTraceWindow m_slaveSH2InterruptTraceWindow;
+    ui::SH2DivisionUnitWindow m_slaveSH2DIVUWindow;
 
     ui::SCUDebuggerWindow m_scuDebuggerWindow;
 

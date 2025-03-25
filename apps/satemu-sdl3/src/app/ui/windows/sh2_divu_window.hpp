@@ -2,7 +2,8 @@
 
 #include <app/shared_context.hpp>
 
-#include <app/ui/views/sh2_division_unit_trace_view.hpp>
+#include <app/ui/views/sh2_divu_registers_view.hpp>
+#include <app/ui/views/sh2_divu_trace_view.hpp>
 
 namespace app::ui {
 
@@ -18,7 +19,8 @@ private:
     SharedContext &m_context;
     bool m_master;
 
-    SH2DivisionUnitTracesView m_divisionUnitTracesView;
+    SH2DivisionUnitRegistersView m_divuRegsView;
+    SH2DivisionUnitTraceView m_divuTraceView;
 };
 
 } // namespace app::ui

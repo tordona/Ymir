@@ -8,9 +8,9 @@
 
 namespace app::ui {
 
-class SH2DivisionUnitTracesView {
+class SH2DivisionUnitTraceView {
 public:
-    SH2DivisionUnitTracesView(SharedContext &context, satemu::sh2::SH2 &sh2, SH2Tracer &tracer);
+    SH2DivisionUnitTraceView(SharedContext &context, satemu::sh2::SH2 &sh2, SH2Tracer &tracer);
 
     void Display();
 
@@ -22,6 +22,7 @@ private:
     bool m_showHex = false;
 
     void DisplayTrace();
+    void DisplayStatistics();
 };
 
 } // namespace app::ui

@@ -1,13 +1,13 @@
-#include "sh2_interrupt_tracer_view.hpp"
+#include "sh2_interrupt_trace_view.hpp"
 
 namespace app::ui {
 
-SH2InterruptTracerView::SH2InterruptTracerView(SharedContext &context, satemu::sh2::SH2 &sh2, SH2Tracer &tracer)
+SH2InterruptTraceView::SH2InterruptTraceView(SharedContext &context, satemu::sh2::SH2 &sh2, SH2Tracer &tracer)
     : m_context(context)
     , m_sh2(sh2)
     , m_tracer(tracer) {}
 
-void SH2InterruptTracerView::Display() {
+void SH2InterruptTraceView::Display() {
     using namespace satemu;
 
     auto &probe = m_sh2.GetProbe();

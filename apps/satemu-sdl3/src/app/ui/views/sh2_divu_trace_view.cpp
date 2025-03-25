@@ -1,24 +1,25 @@
-#include "sh2_division_unit_trace_view.hpp"
+#include "sh2_divu_trace_view.hpp"
 
 namespace app::ui {
 
-SH2DivisionUnitTracesView::SH2DivisionUnitTracesView(SharedContext &context, satemu::sh2::SH2 &sh2, SH2Tracer &tracer)
+SH2DivisionUnitTraceView::SH2DivisionUnitTraceView(SharedContext &context, satemu::sh2::SH2 &sh2, SH2Tracer &tracer)
     : m_context(context)
     , m_sh2(sh2)
     , m_tracer(tracer) {}
 
-void SH2DivisionUnitTracesView::Display() {
+void SH2DivisionUnitTraceView::Display() {
     using namespace satemu;
 
     ImGui::BeginGroup();
 
+    DisplayStatistics();
     DisplayTrace();
 
     ImGui::EndGroup();
 }
 
-void SH2DivisionUnitTracesView::DisplayTrace() {
-    ImGui::SeparatorText("Division trace");
+void SH2DivisionUnitTraceView::DisplayTrace() {
+    ImGui::SeparatorText("Trace");
 
     ImGui::Checkbox("Enable", &m_tracer.traceDivisions);
     ImGui::SameLine();
@@ -35,42 +36,6 @@ void SH2DivisionUnitTracesView::DisplayTrace() {
         m_tracer.divStats.Clear();
         m_tracer.ResetDivisionCounter();
     }
-
-    ImGui::PushStyleVarX(ImGuiStyleVar_CellPadding, 8.0f);
-    if (ImGui::BeginTable("div_stats", 4, ImGuiTableFlags_SizingFixedFit)) {
-        ImGui::TableNextRow();
-
-        if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
-            ImGui::Text("%llu", m_tracer.divStats.div32s);
-            ImGui::PopFont();
-            ImGui::TextUnformatted("32x32 divisions");
-        }
-
-        if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
-            ImGui::Text("%llu", m_tracer.divStats.div64s);
-            ImGui::PopFont();
-            ImGui::TextUnformatted("64x32 divisions");
-        }
-
-        if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
-            ImGui::Text("%llu", m_tracer.divStats.overflows);
-            ImGui::PopFont();
-            ImGui::TextUnformatted("overflows");
-        }
-
-        if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
-            ImGui::Text("%llu", m_tracer.divStats.interrupts);
-            ImGui::PopFont();
-            ImGui::TextUnformatted("interrupts");
-        }
-
-        ImGui::EndTable();
-    }
-    ImGui::PopStyleVar();
 
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
@@ -159,7 +124,7 @@ void SH2DivisionUnitTracesView::DisplayTrace() {
             if (ImGui::TableNextColumn()) {
                 if (trace.overflow) {
                     if (trace.overflowIntrEnable) {
-                        ImGui::TextUnformatted("yes, interrupt raised");
+                        ImGui::TextUnformatted("yes+IRQ");
                     } else {
                         ImGui::TextUnformatted("yes");
                     }
@@ -169,6 +134,46 @@ void SH2DivisionUnitTracesView::DisplayTrace() {
 
         ImGui::EndTable();
     }
+}
+
+void SH2DivisionUnitTraceView::DisplayStatistics() {
+    ImGui::SeparatorText("Statistics");
+
+    ImGui::PushStyleVarX(ImGuiStyleVar_CellPadding, 8.0f);
+    if (ImGui::BeginTable("div_stats", 4, ImGuiTableFlags_SizingFixedFit)) {
+        ImGui::TableNextRow();
+
+        if (ImGui::TableNextColumn()) {
+            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+            ImGui::Text("%llu", m_tracer.divStats.div32s);
+            ImGui::PopFont();
+            ImGui::TextUnformatted("32x32 divisions");
+        }
+
+        if (ImGui::TableNextColumn()) {
+            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+            ImGui::Text("%llu", m_tracer.divStats.div64s);
+            ImGui::PopFont();
+            ImGui::TextUnformatted("64x32 divisions");
+        }
+
+        if (ImGui::TableNextColumn()) {
+            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+            ImGui::Text("%llu", m_tracer.divStats.overflows);
+            ImGui::PopFont();
+            ImGui::TextUnformatted("overflows");
+        }
+
+        if (ImGui::TableNextColumn()) {
+            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+            ImGui::Text("%llu", m_tracer.divStats.interrupts);
+            ImGui::PopFont();
+            ImGui::TextUnformatted("interrupts");
+        }
+
+        ImGui::EndTable();
+    }
+    ImGui::PopStyleVar();
 }
 
 } // namespace app::ui
