@@ -62,6 +62,10 @@ public:
     template <bool debug>
     uint64 Step();
 
+    bool IsMaster() const {
+        return !BCR1.MASTER;
+    }
+
     void SetExternalInterrupt(uint8 level, uint8 vecNum);
 
     bool GetNMI() const;
@@ -275,6 +279,14 @@ public:
         // Takes into account the current SR.ILevel.
         FORCE_INLINE bool CheckInterrupts() const {
             return m_sh2.CheckInterrupts();
+        }
+
+        FORCE_INLINE DivisionUnit &DIVU() {
+            return m_sh2.DIVU;
+        }
+
+        FORCE_INLINE const DivisionUnit &DIVU() const {
+            return m_sh2.DIVU;
         }
 
         FORCE_INLINE InterruptController &INTC() {

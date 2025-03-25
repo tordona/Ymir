@@ -2,6 +2,7 @@
 
 #include <satemu/core/types.hpp>
 
+#include <satemu/util/bit_ops.hpp>
 #include <satemu/util/inline.hpp>
 
 #include <limits>
@@ -28,12 +29,29 @@ using RegDVDNT = uint32;
 //      1   R/W  OVFIE  OVF interrupt enable (0=disabled, 1=enabled)
 //      0   R/W  OVF    Overflow Flag (0=no overflow, 1=overflow)
 union RegDVCR {
-    uint32 u32;
-    struct {
-        uint32 OVF : 1;
-        uint32 OVFIE : 1;
-        uint32 _rsvd2_31 : 30;
-    };
+    RegDVCR() {
+        Reset();
+    }
+
+    void Reset() {
+        OVF = false;
+        OVFIE = false;
+    }
+
+    FORCE_INLINE uint32 Read() const {
+        uint32 value = 0;
+        bit::deposit_into<0>(value, OVF);
+        bit::deposit_into<1>(value, OVFIE);
+        return value;
+    }
+
+    FORCE_INLINE void Write(uint32 value) {
+        OVF = bit::extract<0>(value);
+        OVFIE = bit::extract<1>(value);
+    }
+
+    bool OVF;
+    bool OVFIE;
 };
 
 // 10C  R/W  16,32    ud        VCRDIV  Vector number register setting DIV
@@ -76,7 +94,7 @@ struct DivisionUnit {
     void Reset() {
         DVSR = 0x0;  // undefined initial value
         DVDNT = 0x0; // undefined initial value
-        DVCR.u32 = 0x00000000;
+        DVCR.Reset();
         DVDNTH = 0x0;  // undefined initial value
         DVDNTL = 0x0;  // undefined initial value
         DVDNTUH = 0x0; // undefined initial value

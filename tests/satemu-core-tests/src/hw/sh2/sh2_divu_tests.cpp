@@ -42,10 +42,10 @@ struct TestSubject {
         divu.DVDNTH = input.DVDNTH;
         divu.DVDNTUL = input.DVDNTUL;
         divu.DVDNTUH = input.DVDNTUH;
-        divu.DVCR.u32 = input.DVCR;
+        divu.DVCR.Write(input.DVCR);
 
         divu.Calc32();
-        return {divu.DVSR, divu.DVDNT, divu.DVDNTL, divu.DVDNTH, divu.DVDNTUL, divu.DVDNTUH, divu.DVCR.u32};
+        return {divu.DVSR, divu.DVDNT, divu.DVDNTL, divu.DVDNTH, divu.DVDNTUL, divu.DVDNTUH, divu.DVCR.Read()};
     }
 
     TestData::Regs Compute64(const TestData::Regs &input) const {
@@ -55,10 +55,10 @@ struct TestSubject {
         divu.DVDNTH = input.DVDNTH;
         divu.DVDNTUL = input.DVDNTUL;
         divu.DVDNTUH = input.DVDNTUH;
-        divu.DVCR.u32 = input.DVCR;
+        divu.DVCR.Write(input.DVCR);
 
         divu.Calc64();
-        return {divu.DVSR, divu.DVDNT, divu.DVDNTL, divu.DVDNTH, divu.DVDNTUL, divu.DVDNTUH, divu.DVCR.u32};
+        return {divu.DVSR, divu.DVDNT, divu.DVDNTL, divu.DVDNTH, divu.DVDNTUL, divu.DVDNTUH, divu.DVCR.Read()};
     }
 };
 

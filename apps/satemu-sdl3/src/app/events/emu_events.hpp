@@ -20,6 +20,7 @@ struct EmuEvent {
         MemoryDump,
         DebugWriteMain,
         DebugWriteSH2,
+        DebugDivide,
 
         OpenCloseTray,
         LoadDisc,
@@ -42,8 +43,12 @@ struct EmuEvent {
         bool enableSideEffects;
         bool master;
     };
+    struct DebugDivideData {
+        bool div64;
+        bool master;
+    };
 
-    std::variant<bool, std::string, DebugWriteMainData, DebugWriteSH2Data> value;
+    std::variant<bool, std::string, DebugWriteMainData, DebugWriteSH2Data, DebugDivideData> value;
 
     static EmuEvent FactoryReset() {
         return {.type = Type::FactoryReset};
@@ -83,6 +88,10 @@ struct EmuEvent {
         return {.type = Type::DebugWriteSH2,
                 .value = DebugWriteSH2Data{
                     .address = address, .value = value, .enableSideEffects = enableSideEffects, .master = master}};
+    }
+
+    static EmuEvent DebugDivide(bool div64, bool master) {
+        return {.type = Type::DebugDivide, .value = DebugDivideData{.div64 = div64, .master = master}};
     }
 
     static EmuEvent OpenCloseTray() {

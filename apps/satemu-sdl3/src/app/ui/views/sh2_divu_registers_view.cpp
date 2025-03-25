@@ -10,7 +10,7 @@ SH2DivisionUnitRegistersView::SH2DivisionUnitRegistersView(SharedContext &contex
 
 void SH2DivisionUnitRegistersView::Display() {
     auto &probe = m_sh2.GetProbe();
-    // auto &divu = probe.DIVU();
+    auto &divu = probe.DIVU();
     auto &intc = probe.INTC();
 
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
@@ -20,43 +20,44 @@ void SH2DivisionUnitRegistersView::Display() {
 
     ImGui::SeparatorText("Registers");
 
-    uint32 dummy = 0; // TODO: use real register
-
     if (ImGui::BeginTable("divu_regs", 4, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableNextRow();
 
         auto drawReg = [&](uint32 &value, const char *name) {
             ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 8);
             ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-            ImGui::InputScalar(fmt::format("##{}", name).c_str(), ImGuiDataType_U32, &value, nullptr, nullptr, "%08X",
-                               ImGuiInputTextFlags_CharsHexadecimal);
+            const bool changed = ImGui::InputScalar(fmt::format("##{}", name).c_str(), ImGuiDataType_U32, &value,
+                                                    nullptr, nullptr, "%08X", ImGuiInputTextFlags_CharsHexadecimal);
             ImGui::PopFont();
             ImGui::SameLine();
             ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted(name);
+            return changed;
         };
 
         if (ImGui::TableNextColumn()) {
-            drawReg(dummy, "DVDNTH");
-            drawReg(dummy, "DVDNTUH");
+            drawReg(divu.DVDNTH, "DVDNTH");
+            drawReg(divu.DVDNTUH, "DVDNTUH");
         }
 
         if (ImGui::TableNextColumn()) {
-            drawReg(dummy, "DVDNTL");
-            drawReg(dummy, "DVDNTUL");
+            drawReg(divu.DVDNTL, "DVDNTL");
+            drawReg(divu.DVDNTUL, "DVDNTUL");
         }
 
         if (ImGui::TableNextColumn()) {
-            drawReg(dummy, "DVDNT");
-            drawReg(dummy, "DVSR");
+            drawReg(divu.DVDNT, "DVDNT");
+            drawReg(divu.DVSR, "DVSR");
         }
 
         if (ImGui::TableNextColumn()) {
-            drawReg(dummy, "DVCR");
-            bool dummyFlag = false;
-            ImGui::Checkbox("OVF", &dummyFlag);
+            uint32 dvcr = divu.DVCR.Read();
+            if (drawReg(dvcr, "DVCR")) {
+                divu.DVCR.Write(dvcr);
+            }
+            ImGui::Checkbox("OVF", &divu.DVCR.OVF);
             ImGui::SameLine();
-            ImGui::Checkbox("OVFIE", &dummyFlag);
+            ImGui::Checkbox("OVFIE", &divu.DVCR.OVFIE);
         }
 
         ImGui::EndTable();
@@ -90,6 +91,17 @@ void SH2DivisionUnitRegistersView::Display() {
     ImGui::PopFont();
     ImGui::SameLine();
     ImGui::TextUnformatted("level (IPRA.DIVUIP3-0)");
+
+    ImGui::SameLine(0, 15.0f);
+    ImGui::TextUnformatted("Calculate:");
+    ImGui::SameLine();
+    if (ImGui::Button("32x32")) {
+        m_context.eventQueues.emulator.enqueue(EmuEvent::DebugDivide(false, m_sh2.IsMaster()));
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("64x32")) {
+        m_context.eventQueues.emulator.enqueue(EmuEvent::DebugDivide(true, m_sh2.IsMaster()));
+    }
 }
 
 } // namespace app::ui

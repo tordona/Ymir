@@ -801,14 +801,12 @@ void App::RunEmulator() {
         case SDL_SCANCODE_EQUALS:
             if (pressed) {
                 paused = true;
-                m_audioSystem.SetSilent(false);
                 m_context.eventQueues.emulator.enqueue(EmuEvent::FrameStep());
             }
             break;
         case SDL_SCANCODE_PAUSE:
             if (pressed) {
                 paused = !paused;
-                m_audioSystem.SetSilent(paused);
                 m_context.eventQueues.emulator.enqueue(EmuEvent::SetPaused(paused));
             }
 
@@ -972,7 +970,6 @@ void App::RunEmulator() {
             if (ImGui::BeginMenu("Emulator")) {
                 if (ImGui::MenuItem("Frame step", "=")) {
                     paused = true;
-                    m_audioSystem.SetSilent(false);
                     m_context.eventQueues.emulator.enqueue(EmuEvent::FrameStep());
                 }
                 if (ImGui::MenuItem("Pause/resume", "Pause")) {
@@ -1273,6 +1270,18 @@ void App::EmulatorThread() {
                     probe.MemWriteByte(address, value);
                 } else {
                     probe.MemPokeByte(address, value);
+                }
+                break;
+            }
+            case DebugDivide: {
+                auto [div64, master] = std::get<EmuEvent::DebugDivideData>(cmd.value);
+                auto &sh2 = master ? m_context.saturn.masterSH2 : m_context.saturn.slaveSH2;
+                auto &probe = sh2.GetProbe();
+                auto &divu = probe.DIVU();
+                if (div64) {
+                    divu.Calc64();
+                } else {
+                    divu.Calc32();
                 }
                 break;
             }
