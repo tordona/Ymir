@@ -64,6 +64,10 @@ void SH2Tracer::EndDivision(sint32 quotient, sint32 remainder, bool overflow) {
     }
 
     auto &div = divisions.GetLast();
+    if (div.finished) {
+        return;
+    }
+
     div.quotient = quotient;
     div.remainder = remainder;
     div.overflow = overflow;
