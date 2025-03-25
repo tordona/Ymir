@@ -280,7 +280,8 @@ void App::RunEmulator() {
         uint32 scaleY;
         uint32 fbScale = 1;
 
-        bool autoResizeWindow = false;
+        bool autoResizeWindow = true;
+        bool displayVideoOutputInWindow = false;
 
         void SetResolution(uint32 width, uint32 height) {
             const bool doubleResH = width >= 640;
@@ -635,26 +636,36 @@ void App::RunEmulator() {
         {&screen, [](uint32 *fb, uint32 width, uint32 height, void *ctx) {
              auto &screen = *static_cast<ScreenParams *>(ctx);
              if (width != screen.width || height != screen.height) {
-                 const uint32 prevWidth = screen.width * screen.scaleX;
-                 const uint32 prevHeight = screen.height * screen.scaleY;
+                 const bool currDoubleRes = screen.width >= 640 || screen.height >= 400;
+                 const bool nextDoubleRes = width >= 640 || height >= 400;
+                 const bool doubleResChanged = currDoubleRes != nextDoubleRes;
+                 const float scaleFactor = doubleResChanged ? (nextDoubleRes ? 0.5f : 2.0f) : 1.0f;
+
+                 uint32 currWidth = screen.width * screen.scaleX;
+                 uint32 currHeight = screen.height * screen.scaleY;
                  screen.SetResolution(width, height);
 
                  // Adjust window size dynamically
-                 // TODO: mantain current scale if possible
-                 // TODO: resize only if not displaying the screen on a window
-                 if (screen.autoResizeWindow) {
+                 if (screen.autoResizeWindow && !screen.displayVideoOutputInWindow) {
                      const float menuBarHeight = ImGui::GetFrameHeight();
 
-                     int wx, wy;
+                     int wx, wy, ww, wh;
                      SDL_GetWindowPosition(screen.window, &wx, &wy);
-                     wy -= menuBarHeight;
-                     const int dx = (int)(width * screen.scaleX) - (int)prevWidth;
-                     const int dy = (int)(height * screen.scaleY) - (int)prevHeight;
+                     SDL_GetWindowSize(screen.window, &ww, &wh);
+                     wh -= menuBarHeight;
+
+                     const float currScaleX = (float)ww / currWidth;
+                     const float currScaleY = (float)wh / currHeight;
+                     const float currScale = std::min(currScaleX, currScaleY) * scaleFactor;
+
+                     const uint32 finalWidth = screen.width * screen.scaleX * currScale;
+                     const uint32 finalHeight = screen.height * screen.scaleY * currScale;
+                     const int dx = (int)finalWidth - ww;
+                     const int dy = (int)finalHeight - wh;
 
                      // TODO: add room for borders
-                     SDL_SetWindowSize(screen.window, screen.width * screen.scaleX,
-                                       screen.height * screen.scaleY + menuBarHeight);
-                     SDL_SetWindowPosition(screen.window, wx - dx / 2, wy - dy / 2 + menuBarHeight);
+                     SDL_SetWindowPosition(screen.window, wx - dx / 2, wy - dy / 2);
+                     SDL_SetWindowSize(screen.window, finalWidth, finalHeight + menuBarHeight);
                  }
              }
              ++screen.frames;
@@ -775,7 +786,6 @@ void App::RunEmulator() {
     auto t = clk::now();
     bool paused = false; // TODO: this should be updated by the emulator thread via events
     bool debugTrace = false;
-    bool displayVideoOutputInWindow = false;
 
     auto &port1 = m_context.saturn.SMPC.GetPeripheralPort1();
     auto &port2 = m_context.saturn.SMPC.GetPeripheralPort2();
@@ -884,7 +894,7 @@ void App::RunEmulator() {
             break;
         case SDL_SCANCODE_F9:
             if (pressed) {
-                displayVideoOutputInWindow = !displayVideoOutputInWindow;
+                screen.displayVideoOutputInWindow = !screen.displayVideoOutputInWindow;
             }
             break;
         case SDL_SCANCODE_F11:
@@ -1020,7 +1030,7 @@ void App::RunEmulator() {
                 ImGui::Separator();
                 ImGui::MenuItem("Auto-fit window to screen", nullptr, &screen.autoResizeWindow);
                 ImGui::Separator();
-                ImGui::MenuItem("Windowed video output", "F9", &displayVideoOutputInWindow);
+                ImGui::MenuItem("Windowed video output", "F9", &screen.displayVideoOutputInWindow);
                 ImGui::End();
             }
             if (ImGui::BeginMenu("Emulator")) {
@@ -1118,7 +1128,7 @@ void App::RunEmulator() {
             }
 
             // Draw video output as a window
-            if (displayVideoOutputInWindow) {
+            if (screen.displayVideoOutputInWindow) {
                 std::string title = fmt::format("Video Output - {}x{}###Display", screen.width, screen.height);
 
                 const float aspectRatio = forceAspectRatio
@@ -1134,7 +1144,7 @@ void App::RunEmulator() {
                             (float)(int)(data->DesiredSize.x * aspectRatio) + ImGui::GetFrameHeightWithSpacing();
                     },
                     (void *)&aspectRatio);
-                if (ImGui::Begin(title.c_str(), &displayVideoOutputInWindow, ImGuiWindowFlags_NoNavInputs)) {
+                if (ImGui::Begin(title.c_str(), &screen.displayVideoOutputInWindow, ImGuiWindowFlags_NoNavInputs)) {
                     const ImVec2 avail = ImGui::GetContentRegionAvail();
                     renderDispTexture(avail.x, avail.y);
 
@@ -1160,7 +1170,7 @@ void App::RunEmulator() {
         SDL_RenderClear(renderer);
 
         // Draw Saturn screen
-        if (!displayVideoOutputInWindow) {
+        if (!screen.displayVideoOutputInWindow) {
             const float menuBarHeight = ImGui::GetFrameHeight();
 
             // Get window size
