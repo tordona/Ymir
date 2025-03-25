@@ -279,7 +279,6 @@ void App::RunEmulator() {
         uint32 height;
         float scaleX;
         float scaleY;
-        float menuBarHeight = 0.0f;
 
         bool autoResizeWindow = true;
 
@@ -497,9 +496,6 @@ void App::RunEmulator() {
         io.FontDefault = m_context.fonts.sansSerif.medium.regular;
     }
 
-    // Equivalent to ImGui::GetFrameHeight() without requiring a window
-    screen.menuBarHeight = io.FontDefault->FontSize + style.FramePadding.y * 2.0f;
-
     // ---------------------------------
     // Create window
 
@@ -510,15 +506,20 @@ void App::RunEmulator() {
     }
     ScopeGuard sgDestroyWindowProps{[&] { SDL_DestroyProperties(windowProps); }};
 
-    // Assume the following calls succeed
-    SDL_SetStringProperty(windowProps, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Unnamed Sega Saturn emulator");
-    SDL_SetBooleanProperty(windowProps, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
-    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, screen.width * screen.scaleX);
-    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,
-                          screen.height * screen.scaleY + screen.menuBarHeight);
-    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
-    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
-    SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, true);
+    {
+        // Equivalent to ImGui::GetFrameHeight() without requiring a window
+        const float menuBarHeight = io.FontDefault->FontSize + style.FramePadding.y * 2.0f;
+
+        // Assume the following calls succeed
+        SDL_SetStringProperty(windowProps, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Unnamed Sega Saturn emulator");
+        SDL_SetBooleanProperty(windowProps, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
+        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, screen.width * screen.scaleX);
+        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,
+                              screen.height * screen.scaleY + menuBarHeight);
+        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
+        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
+        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, true);
+    }
 
     screen.window = SDL_CreateWindowWithProperties(windowProps);
     if (screen.window == nullptr) {
@@ -587,17 +588,19 @@ void App::RunEmulator() {
                  // TODO: this conflicts with window resizes from the user
                  // - add toggle: "Auto-fit window to screen"
                  if (screen.autoResizeWindow) {
+                     const float menuBarHeight = ImGui::GetFrameHeight();
+
                      int wx, wy;
                      SDL_GetWindowPosition(screen.window, &wx, &wy);
-                     wy -= screen.menuBarHeight;
+                     wy -= menuBarHeight;
                      const int dx = (int)(width * screen.scaleX) - (int)prevWidth;
                      const int dy = (int)(height * screen.scaleY) - (int)prevHeight;
 
                      // Adjust window size dynamically
                      // TODO: add room for borders
                      SDL_SetWindowSize(screen.window, screen.width * screen.scaleX,
-                                       screen.height * screen.scaleY + screen.menuBarHeight);
-                     SDL_SetWindowPosition(screen.window, wx - dx / 2, wy - dy / 2 + screen.menuBarHeight);
+                                       screen.height * screen.scaleY + menuBarHeight);
+                     SDL_SetWindowPosition(screen.window, wx - dx / 2, wy - dy / 2 + menuBarHeight);
                  }
              }
              ++screen.frames;
@@ -1106,6 +1109,8 @@ void App::RunEmulator() {
 
         // Draw Saturn screen
         if (!displayVideoOutputInWindow) {
+            const float menuBarHeight = ImGui::GetFrameHeight();
+
             // Get screen size
             const float baseWidth = (forceAspectRatio ? screen.height * forcedAspect : screen.width) * screen.scaleX;
             const float baseHeight = screen.height * screen.scaleY;
@@ -1113,7 +1118,7 @@ void App::RunEmulator() {
             // Get window size
             int ww, wh;
             SDL_GetWindowSize(screen.window, &ww, &wh);
-            wh -= screen.menuBarHeight;
+            wh -= menuBarHeight;
 
             // Compute maximum scale to fit the display given the constraints above
             const float scaleX = (float)ww / baseWidth;
@@ -1134,7 +1139,7 @@ void App::RunEmulator() {
             // the screen directly to the window with nearest interpolation
             SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
             SDL_FRect dstRect{
-                .x = slackX * 0.5f, .y = slackY * 0.5f + screen.menuBarHeight, .w = scaledWidth, .h = scaledHeight};
+                .x = slackX * 0.5f, .y = slackY * 0.5f + menuBarHeight, .w = scaledWidth, .h = scaledHeight};
             SDL_RenderTexture(renderer, texture, &srcRect, &dstRect);
         }
 
