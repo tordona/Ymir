@@ -186,6 +186,7 @@
 
 #include <backends/imgui_impl_sdl3.h>
 #include <backends/imgui_impl_sdlrenderer3.h>
+
 #include <imgui.h>
 
 #include <cmrc/cmrc.hpp>
@@ -977,10 +978,10 @@ void App::RunEmulator() {
                     m_context.eventQueues.emulator.enqueue(EmuEvent::SetPaused(paused));
                 }
                 ImGui::Separator();
-                /*if (ImGui::MenuItem("Soft reset", "Shift+R")) {
-                    // TODO: send Soft Reset pulse for a short time
-                    //m_context.eventQueues.emulator.enqueue(EmuEvent::SoftReset(pressed));
-                }*/
+                // if (ImGui::MenuItem("Soft reset", "Shift+R")) {
+                //     // TODO: send Soft Reset pulse for a short time
+                //     //m_context.eventQueues.emulator.enqueue(EmuEvent::SoftReset(pressed));
+                // }
                 if (ImGui::MenuItem("Hard reset", "Ctrl+R")) {
                     m_context.eventQueues.emulator.enqueue(EmuEvent::HardReset());
                 }
@@ -1040,43 +1041,59 @@ void App::RunEmulator() {
             ImGui::PopStyleVar();
         }
 
-        ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
-
-        // Show the big ImGui demo window if enabled
-        if (showDemoWindow) {
-            ImGui::ShowDemoWindow(&showDemoWindow);
+        {
+            ImGuiViewport *viewport = ImGui::GetMainViewport();
+            ImGui::SetNextWindowPos(viewport->WorkPos);
+            ImGui::SetNextWindowSize(viewport->WorkSize);
+            ImGui::SetNextWindowViewport(viewport->ID);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+            ImGui::Begin("##dockspace_window", nullptr,
+                         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoDocking |
+                             ImGuiWindowFlags_NoBackground);
+            ImGui::PopStyleVar(3);
         }
 
-        // Draw video output as a window
-        if (displayVideoOutputInWindow) {
-            std::string title = fmt::format("Video Output - {}x{}###Display", screen.width, screen.height);
-
-            const float aspectRatio = (float)screen.height / screen.width * screen.scaleY / screen.scaleX;
-
-            ImGui::SetNextWindowSizeConstraints(
-                ImVec2(320, 224), ImVec2(FLT_MAX, FLT_MAX),
-                [](ImGuiSizeCallbackData *data) {
-                    float aspectRatio = *(float *)data->UserData;
-                    data->DesiredSize.y =
-                        (float)(int)(data->DesiredSize.x * aspectRatio) + ImGui::GetFrameHeightWithSpacing();
-                },
-                (void *)&aspectRatio);
-            if (ImGui::Begin(title.c_str(), &displayVideoOutputInWindow, ImGuiWindowFlags_NoNavInputs)) {
-                const ImVec2 avail = ImGui::GetContentRegionAvail();
-                const float scaleX = avail.x / (screen.width * screen.scaleX);
-                const float scaleY = avail.y / (screen.height * screen.scaleY);
-                const float scale = std::min(scaleX, scaleY);
-
-                ImGui::Image((ImTextureID)texture,
-                             ImVec2(screen.width * scale * screen.scaleX, screen.height * scale * screen.scaleY),
-                             ImVec2(0, 0),
-                             ImVec2((float)screen.width / vdp::kMaxResH, (float)screen.height / vdp::kMaxResV));
+        ImGui::DockSpace(ImGui::GetID("##main_dockspace"), ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
+        {
+            // Show the big ImGui demo window if enabled
+            if (showDemoWindow) {
+                ImGui::ShowDemoWindow(&showDemoWindow);
             }
-            ImGui::End();
-        }
 
-        // Draw debugger windows
-        DrawWindows();
+            // Draw video output as a window
+            if (displayVideoOutputInWindow) {
+                std::string title = fmt::format("Video Output - {}x{}###Display", screen.width, screen.height);
+
+                const float aspectRatio = (float)screen.height / screen.width * screen.scaleY / screen.scaleX;
+
+                ImGui::SetNextWindowSizeConstraints(
+                    ImVec2(320, 224), ImVec2(FLT_MAX, FLT_MAX),
+                    [](ImGuiSizeCallbackData *data) {
+                        float aspectRatio = *(float *)data->UserData;
+                        data->DesiredSize.y =
+                            (float)(int)(data->DesiredSize.x * aspectRatio) + ImGui::GetFrameHeightWithSpacing();
+                    },
+                    (void *)&aspectRatio);
+                if (ImGui::Begin(title.c_str(), &displayVideoOutputInWindow, ImGuiWindowFlags_NoNavInputs)) {
+                    const ImVec2 avail = ImGui::GetContentRegionAvail();
+                    const float scaleX = avail.x / (screen.width * screen.scaleX);
+                    const float scaleY = avail.y / (screen.height * screen.scaleY);
+                    const float scale = std::min(scaleX, scaleY);
+
+                    ImGui::Image((ImTextureID)texture,
+                                 ImVec2(screen.width * scale * screen.scaleX, screen.height * scale * screen.scaleY),
+                                 ImVec2(0, 0),
+                                 ImVec2((float)screen.width / vdp::kMaxResH, (float)screen.height / vdp::kMaxResV));
+                }
+                ImGui::End();
+            }
+
+            // Draw debugger windows
+            DrawWindows();
+        }
+        ImGui::End();
 
         // ---------------------------------------------------------------------
         // Render window
