@@ -995,14 +995,7 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     case 0x124:
         DIVU.DVDNT = value;
         if constexpr (!poke) {
-            DIVU.DVDNTL = value;
-            DIVU.DVDNTH = static_cast<sint32>(value) >> 31;
-            TraceBegin32x32Division<debug>(m_tracer, DIVU.DVDNTL, DIVU.DVSR, DIVU.DVCR.OVFIE);
-            DIVU.Calc32();
-            TraceEndDivision<debug>(m_tracer, DIVU.DVDNTL, DIVU.DVDNTH, DIVU.DVCR.OVF);
-            if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
-                RaiseInterrupt(InterruptSource::DIVU_OVFI);
-            }
+            ExecuteDiv32<debug>();
         }
         break;
 
@@ -1019,14 +1012,7 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     case 0x134:
         DIVU.DVDNTL = value;
         if constexpr (!poke) {
-            TraceBegin64x32Division<debug>(
-                m_tracer, (static_cast<sint64>(DIVU.DVDNTH) << 32ll) | static_cast<sint64>(DIVU.DVDNTL), DIVU.DVSR,
-                DIVU.DVCR.OVFIE);
-            DIVU.Calc64();
-            TraceEndDivision<debug>(m_tracer, DIVU.DVDNTL, DIVU.DVDNTH, DIVU.DVCR.OVF);
-            if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
-                RaiseInterrupt(InterruptSource::DIVU_OVFI);
-            }
+            ExecuteDiv64<debug>();
         }
         break;
 
@@ -1265,6 +1251,30 @@ FORCE_INLINE void SH2::AdvanceWDT(uint64 cycles) {
         }
     }
     WDT.WTCNT = nextCount;
+}
+
+template <bool debug>
+FORCE_INLINE void SH2::ExecuteDiv32() {
+    DIVU.DVDNTL = DIVU.DVDNT;
+    DIVU.DVDNTH = static_cast<sint32>(DIVU.DVDNT) >> 31;
+    TraceBegin32x32Division<debug>(m_tracer, DIVU.DVDNTL, DIVU.DVSR, DIVU.DVCR.OVFIE);
+    DIVU.Calc32();
+    TraceEndDivision<debug>(m_tracer, DIVU.DVDNTL, DIVU.DVDNTH, DIVU.DVCR.OVF);
+    if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
+        RaiseInterrupt(InterruptSource::DIVU_OVFI);
+    }
+}
+
+template <bool debug>
+FORCE_INLINE void SH2::ExecuteDiv64() {
+    TraceBegin64x32Division<debug>(m_tracer,
+                                   (static_cast<sint64>(DIVU.DVDNTH) << 32ll) | static_cast<sint64>(DIVU.DVDNTL),
+                                   DIVU.DVSR, DIVU.DVCR.OVFIE);
+    DIVU.Calc64();
+    TraceEndDivision<debug>(m_tracer, DIVU.DVDNTL, DIVU.DVDNTH, DIVU.DVCR.OVF);
+    if (DIVU.DVCR.OVF && DIVU.DVCR.OVFIE) {
+        RaiseInterrupt(InterruptSource::DIVU_OVFI);
+    }
 }
 
 FORCE_INLINE void SH2::AdvanceFRT(uint64 cycles) {
@@ -2776,6 +2786,14 @@ void SH2::Probe::MemPokeWord(uint32 address, uint16 value) {
 
 void SH2::Probe::MemPokeLong(uint32 address, uint32 value) {
     m_sh2.MemPokeLong(address, value);
+}
+
+void SH2::Probe::ExecuteDiv32() {
+    m_sh2.ExecuteDiv32<true>();
+}
+
+void SH2::Probe::ExecuteDiv64() {
+    m_sh2.ExecuteDiv64<true>();
 }
 
 } // namespace satemu::sh2

@@ -28,7 +28,7 @@ using RegDVDNT = uint32;
 //   31-2   R    -      Reserved - must be zero
 //      1   R/W  OVFIE  OVF interrupt enable (0=disabled, 1=enabled)
 //      0   R/W  OVF    Overflow Flag (0=no overflow, 1=overflow)
-union RegDVCR {
+struct RegDVCR {
     RegDVCR() {
         Reset();
     }

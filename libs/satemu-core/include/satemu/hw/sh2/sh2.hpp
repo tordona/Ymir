@@ -174,6 +174,31 @@ public:
         void MemPokeLong(uint32 address, uint32 value);
 
         // ---------------------------------------------------------------------
+        // On-chip peripheral registers
+
+        FORCE_INLINE DivisionUnit &DIVU() {
+            return m_sh2.DIVU;
+        }
+
+        FORCE_INLINE const DivisionUnit &DIVU() const {
+            return m_sh2.DIVU;
+        }
+
+        FORCE_INLINE InterruptController &INTC() {
+            return m_sh2.INTC;
+        }
+
+        FORCE_INLINE const InterruptController &INTC() const {
+            return m_sh2.INTC;
+        }
+
+        // ---------------------------------------------------------------------
+        // Division unit
+
+        void ExecuteDiv32();
+        void ExecuteDiv64();
+
+        // ---------------------------------------------------------------------
         // Interrupts
 
         // Raise an interrupt, also setting the corresponding signals.
@@ -279,22 +304,6 @@ public:
         // Takes into account the current SR.ILevel.
         FORCE_INLINE bool CheckInterrupts() const {
             return m_sh2.CheckInterrupts();
-        }
-
-        FORCE_INLINE DivisionUnit &DIVU() {
-            return m_sh2.DIVU;
-        }
-
-        FORCE_INLINE const DivisionUnit &DIVU() const {
-            return m_sh2.DIVU;
-        }
-
-        FORCE_INLINE InterruptController &INTC() {
-            return m_sh2.INTC;
-        }
-
-        FORCE_INLINE const InterruptController &INTC() const {
-            return m_sh2.INTC;
         }
 
     private:
@@ -476,6 +485,11 @@ private:
     // --- DIVU module ---
 
     DivisionUnit DIVU;
+
+    template <bool debug>
+    void ExecuteDiv32();
+    template <bool debug>
+    void ExecuteDiv64();
 
     // --- UBC module ---
 

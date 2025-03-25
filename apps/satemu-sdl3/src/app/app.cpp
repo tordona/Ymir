@@ -1279,9 +1279,9 @@ void App::EmulatorThread() {
                 auto &probe = sh2.GetProbe();
                 auto &divu = probe.DIVU();
                 if (div64) {
-                    divu.Calc64();
+                    probe.ExecuteDiv64();
                 } else {
-                    divu.Calc32();
+                    probe.ExecuteDiv32();
                 }
                 break;
             }
