@@ -49,6 +49,9 @@ void MemoryViewerWindow::Display() {
                     if (ImGui::Selectable(region.ToString().c_str(), &selected)) {
                         nextRegion = &region;
                     }
+                    if (selected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
                 }
             }
             ImGui::EndCombo();
