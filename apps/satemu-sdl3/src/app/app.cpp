@@ -266,30 +266,30 @@ void App::RunEmulator() {
     using namespace util;
 
     // Screen parameters
-    const uint32 scale = 4;
     struct ScreenParams {
         ScreenParams()
             : framebuffer(vdp::kMaxResH * vdp::kMaxResV) {
-            SetResolution(320, 224, scale);
+            SetResolution(320, 224);
         }
 
         SDL_Window *window = nullptr;
 
         uint32 width;
         uint32 height;
-        float scaleX;
-        float scaleY;
+        uint32 scaleX;
+        uint32 scaleY;
+        uint32 fbScale = 1;
 
-        bool autoResizeWindow = true;
+        bool autoResizeWindow = false;
 
-        void SetResolution(uint32 width, uint32 height, uint32 scale) {
+        void SetResolution(uint32 width, uint32 height) {
             const bool doubleResH = width >= 640;
             const bool doubleResV = height >= 400;
 
             this->width = width;
             this->height = height;
-            this->scaleX = doubleResH ? scale * 0.5f : scale;
-            this->scaleY = doubleResV ? scale * 0.5f : scale;
+            this->scaleX = doubleResV && !doubleResH ? 2 : 1;
+            this->scaleY = doubleResH && !doubleResV ? 2 : 1;
         }
 
         void ResizeWindow() {
@@ -305,6 +305,10 @@ void App::RunEmulator() {
         uint64 frames = 0;
         uint64 vdp1Frames = 0;
     } screen;
+
+    bool forceIntegerScaling = true;
+    bool forceAspectRatio = false;
+    float forcedAspect = 4.0f / 3.0f;
 
     // ---------------------------------
     // Setup Dear ImGui context
@@ -513,9 +517,9 @@ void App::RunEmulator() {
         // Assume the following calls succeed
         SDL_SetStringProperty(windowProps, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Unnamed Sega Saturn emulator");
         SDL_SetBooleanProperty(windowProps, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
-        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, screen.width * screen.scaleX);
+        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, screen.width * screen.scaleX * 4);
         SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,
-                              screen.height * screen.scaleY + menuBarHeight);
+                              screen.height * screen.scaleY * 4 + menuBarHeight);
         SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
         SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
         SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, true);
@@ -552,17 +556,67 @@ void App::RunEmulator() {
     ScopeGuard sgDestroyRenderer{[&] { SDL_DestroyRenderer(renderer); }};
 
     // ---------------------------------
-    // Create texture to render on
+    // Create textures to render on
 
-    auto texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, vdp::kMaxResH,
-                                     vdp::kMaxResV);
-    if (texture == nullptr) {
+    // We use two textures to render the Saturn display:
+    // - The framebuffer texture containing the Saturn framebuffer, updated on every frame
+    // - The display texture, rendered to the screen
+    // The scaling technique used here is a combination of nearest and linear interpolations to make the uninterpolated
+    // pixels look great at any scale. It consists of rendering the framebuffer texture into the display texture using
+    // nearest interpolation with an integer scale, then rendering the display texture onto the screen with linear
+    // interpolation.
+
+    // Framebuffer texture
+    auto fbTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, vdp::kMaxResH,
+                                       vdp::kMaxResV);
+    if (fbTexture == nullptr) {
         SDL_Log("Unable to create texture: %s", SDL_GetError());
         return;
     }
-    ScopeGuard sgDestroyTexture{[&] { SDL_DestroyTexture(texture); }};
+    ScopeGuard sgDestroyFbTexture{[&] { SDL_DestroyTexture(fbTexture); }};
+    SDL_SetTextureScaleMode(fbTexture, SDL_SCALEMODE_NEAREST);
 
-    SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+    // Display texture, containing the scaled framebuffer to be displayed on the screen
+    auto dispTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_TARGET,
+                                         vdp::kMaxResH * screen.fbScale, vdp::kMaxResV * screen.fbScale);
+    if (dispTexture == nullptr) {
+        SDL_Log("Unable to create texture: %s", SDL_GetError());
+        return;
+    }
+    ScopeGuard sgDestroyDispTexture{[&] { SDL_DestroyTexture(dispTexture); }};
+    SDL_SetTextureScaleMode(dispTexture, SDL_SCALEMODE_LINEAR);
+
+    auto renderDispTexture = [&](float targetWidth, float targetHeight) {
+        const float dispWidth = (forceAspectRatio ? screen.height * forcedAspect : screen.width) / screen.scaleY;
+        const float dispHeight = (float)screen.height / screen.scaleX;
+        const float dispScaleX = (float)targetWidth / dispWidth;
+        const float dispScaleY = (float)targetHeight / dispHeight;
+        const float dispScale = std::min(dispScaleX, dispScaleY);
+        const uint32 scale = std::max(1.0f, ceil(dispScale));
+
+        // Recreate render target texture if scale changed
+        if (scale != screen.fbScale) {
+            screen.fbScale = scale;
+            SDL_DestroyTexture(dispTexture);
+            dispTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_TARGET,
+                                            vdp::kMaxResH * screen.fbScale, vdp::kMaxResV * screen.fbScale);
+        }
+
+        // Remember previous render target to be restored later
+        SDL_Texture *prevRenderTarget = SDL_GetRenderTarget(renderer);
+
+        // Render scaled framebuffer into display texture
+        SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
+        SDL_FRect dstRect{.x = 0.0f,
+                          .y = 0.0f,
+                          .w = (float)screen.width * screen.fbScale,
+                          .h = (float)screen.height * screen.fbScale};
+        SDL_SetRenderTarget(renderer, dispTexture);
+        SDL_RenderTexture(renderer, fbTexture, &srcRect, &dstRect);
+
+        // Restore render target
+        SDL_SetRenderTarget(renderer, prevRenderTarget);
+    };
 
     // ---------------------------------
     // Setup Dear ImGui Platform/Renderer backends
@@ -583,10 +637,11 @@ void App::RunEmulator() {
              if (width != screen.width || height != screen.height) {
                  const uint32 prevWidth = screen.width * screen.scaleX;
                  const uint32 prevHeight = screen.height * screen.scaleY;
-                 screen.SetResolution(width, height, scale);
+                 screen.SetResolution(width, height);
 
-                 // TODO: this conflicts with window resizes from the user
-                 // - add toggle: "Auto-fit window to screen"
+                 // Adjust window size dynamically
+                 // TODO: mantain current scale if possible
+                 // TODO: resize only if not displaying the screen on a window
                  if (screen.autoResizeWindow) {
                      const float menuBarHeight = ImGui::GetFrameHeight();
 
@@ -596,7 +651,6 @@ void App::RunEmulator() {
                      const int dx = (int)(width * screen.scaleX) - (int)prevWidth;
                      const int dy = (int)(height * screen.scaleY) - (int)prevHeight;
 
-                     // Adjust window size dynamically
                      // TODO: add room for borders
                      SDL_SetWindowSize(screen.window, screen.width * screen.scaleX,
                                        screen.height * screen.scaleY + menuBarHeight);
@@ -722,10 +776,6 @@ void App::RunEmulator() {
     bool paused = false; // TODO: this should be updated by the emulator thread via events
     bool debugTrace = false;
     bool displayVideoOutputInWindow = false;
-
-    bool forceIntegerScaling = true;
-    bool forceAspectRatio = false;
-    float forcedAspect = 4.0f / 3.0f;
 
     auto &port1 = m_context.saturn.SMPC.GetPeripheralPort1();
     auto &port2 = m_context.saturn.SMPC.GetPeripheralPort2();
@@ -900,13 +950,13 @@ void App::RunEmulator() {
             uint32 *pixels = nullptr;
             int pitch = 0;
             SDL_Rect area{.x = 0, .y = 0, .w = (int)screen.width, .h = (int)screen.height};
-            if (SDL_LockTexture(texture, &area, (void **)&pixels, &pitch)) {
+            if (SDL_LockTexture(fbTexture, &area, (void **)&pixels, &pitch)) {
                 for (uint32 y = 0; y < screen.height; y++) {
                     std::copy_n(&screen.framebuffer[y * screen.width], screen.width,
                                 &pixels[y * pitch / sizeof(uint32)]);
                 }
                 // std::copy_n(framebuffer.begin(), screen.width * screen.height, pixels);
-                SDL_UnlockTexture(texture);
+                SDL_UnlockTexture(fbTexture);
             }
         }
 
@@ -967,6 +1017,8 @@ void App::RunEmulator() {
                 if (ImGui::SmallButton("16:9")) {
                     forcedAspect = 16.0f / 9.0f;
                 }
+                ImGui::Separator();
+                ImGui::MenuItem("Auto-fit window to screen", nullptr, &screen.autoResizeWindow);
                 ImGui::Separator();
                 ImGui::MenuItem("Windowed video output", "F9", &displayVideoOutputInWindow);
                 ImGui::End();
@@ -1069,8 +1121,11 @@ void App::RunEmulator() {
             if (displayVideoOutputInWindow) {
                 std::string title = fmt::format("Video Output - {}x{}###Display", screen.width, screen.height);
 
-                const float aspectRatio = (float)screen.height / screen.width * screen.scaleY / screen.scaleX;
+                const float aspectRatio = forceAspectRatio
+                                              ? screen.scaleX / forcedAspect
+                                              : (float)screen.height / screen.width * screen.scaleY / screen.scaleX;
 
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
                 ImGui::SetNextWindowSizeConstraints(
                     ImVec2(320, 224), ImVec2(FLT_MAX, FLT_MAX),
                     [](ImGuiSizeCallbackData *data) {
@@ -1081,16 +1136,13 @@ void App::RunEmulator() {
                     (void *)&aspectRatio);
                 if (ImGui::Begin(title.c_str(), &displayVideoOutputInWindow, ImGuiWindowFlags_NoNavInputs)) {
                     const ImVec2 avail = ImGui::GetContentRegionAvail();
-                    const float scaleX = avail.x / (screen.width * screen.scaleX);
-                    const float scaleY = avail.y / (screen.height * screen.scaleY);
-                    const float scale = std::min(scaleX, scaleY);
+                    renderDispTexture(avail.x, avail.y);
 
-                    ImGui::Image((ImTextureID)texture,
-                                 ImVec2(screen.width * scale * screen.scaleX, screen.height * scale * screen.scaleY),
-                                 ImVec2(0, 0),
+                    ImGui::Image((ImTextureID)dispTexture, avail, ImVec2(0, 0),
                                  ImVec2((float)screen.width / vdp::kMaxResH, (float)screen.height / vdp::kMaxResV));
                 }
                 ImGui::End();
+                ImGui::PopStyleVar();
             }
 
             // Draw debugger windows
@@ -1111,16 +1163,15 @@ void App::RunEmulator() {
         if (!displayVideoOutputInWindow) {
             const float menuBarHeight = ImGui::GetFrameHeight();
 
-            // Get screen size
-            const float baseWidth = (forceAspectRatio ? screen.height * forcedAspect : screen.width) * screen.scaleX;
-            const float baseHeight = screen.height * screen.scaleY;
-
             // Get window size
             int ww, wh;
             SDL_GetWindowSize(screen.window, &ww, &wh);
             wh -= menuBarHeight;
 
             // Compute maximum scale to fit the display given the constraints above
+            const float baseWidth =
+                forceAspectRatio ? screen.height * forcedAspect * screen.scaleY : screen.width * screen.scaleX;
+            const float baseHeight = screen.height * screen.scaleY;
             const float scaleX = (float)ww / baseWidth;
             const float scaleY = (float)wh / baseHeight;
             float scale = std::min(scaleX, scaleY);
@@ -1130,6 +1181,9 @@ void App::RunEmulator() {
             const float scaledWidth = baseWidth * scale;
             const float scaledHeight = baseHeight * scale;
 
+            // Render framebuffer to display texture
+            renderDispTexture(scaledWidth, scaledHeight);
+
             // Determine how much slack there is on each axis in order to center the image on the window
             const float slackX = ww - scaledWidth;
             const float slackY = wh - scaledHeight;
@@ -1137,10 +1191,15 @@ void App::RunEmulator() {
             // TODO: if not using integer scaling, render to a texture using nearest interpolation and scaled up to
             // ceil(current scale), then render that onto the window with linear interpolation, otherwise just render
             // the screen directly to the window with nearest interpolation
-            SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
-            SDL_FRect dstRect{
-                .x = slackX * 0.5f, .y = slackY * 0.5f + menuBarHeight, .w = scaledWidth, .h = scaledHeight};
-            SDL_RenderTexture(renderer, texture, &srcRect, &dstRect);
+            SDL_FRect srcRect{.x = 0.0f,
+                              .y = 0.0f,
+                              .w = (float)screen.width * screen.fbScale,
+                              .h = (float)screen.height * screen.fbScale};
+            SDL_FRect dstRect{.x = floor(slackX * 0.5f),
+                              .y = floor(slackY * 0.5f + menuBarHeight),
+                              .w = scaledWidth,
+                              .h = scaledHeight};
+            SDL_RenderTexture(renderer, dispTexture, &srcRect, &dstRect);
         }
 
         // Render ImGui widgets
