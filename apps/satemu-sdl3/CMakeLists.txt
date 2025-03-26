@@ -21,10 +21,11 @@ add_executable(satemu-sdl3
     src/app/ui/window_base.cpp
     src/app/ui/window_base.hpp
 
+    src/app/ui/state/debug/memory_viewer_state.hpp
+
     src/app/ui/windows/about_window.cpp
     src/app/ui/windows/about_window.hpp
 
-    src/app/ui/windows/debug/memory_viewer_region_defs.hpp
     src/app/ui/windows/debug/memory_viewer_window.cpp
     src/app/ui/windows/debug/memory_viewer_window.hpp
     src/app/ui/windows/debug/scu_debugger_window.cpp

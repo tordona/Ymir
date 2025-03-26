@@ -1,6 +1,22 @@
 #pragma once
 
-#include "memory_viewer_window.hpp"
+#include <app/shared_context.hpp>
+
+#include <imgui_memory_editor.h>
+
+namespace app::ui::mem_view {
+
+struct Region;
+
+struct MemoryViewerState {
+    MemoryViewerState(SharedContext &sharedCtx)
+        : sharedCtx(sharedCtx) {}
+
+    SharedContext &sharedCtx;
+    MemoryEditor memoryEditor;
+    bool enableSideEffects = false;
+    const Region *selectedRegion = nullptr;
+};
 
 // -------------------------------------------------------------------------
 // Region handlers
@@ -57,54 +73,78 @@
 // --- CD-ROM ------------------
 // [Disc:00000000..xxxxxxxx] CD-ROM contents
 
-namespace app::ui {
+struct Region {
+    using ReadFn = ImU8 (*)(const ImU8 *mem, size_t off, void *user_data);
+    using WriteFn = void (*)(ImU8 *mem, size_t off, ImU8 d, void *user_data);
+    using BgColorFn = ImU32 (*)(const ImU8 *mem, size_t off, void *user_data);
+    using ParamsFn = void (*)(MemoryViewerState *state);
 
-struct MemoryViewerWindow::RegionDefs {
-    static ImU8 MainBusRead(const ImU8 *mem, size_t off, void *user_data) {
-        auto &ctx = *static_cast<const Context *>(user_data);
-        off += ctx.selectedRegion->baseAddress;
-        return ctx.sharedCtx.saturn.mainBus.Peek<uint8>(off);
+    const char *name;
+    const char *addressBlockName;
+    uint32 baseAddress;
+    uint32 size;
+    ReadFn readFn;
+    WriteFn writeFn;
+    BgColorFn bgColorFn;
+    ParamsFn paramsFn;
+
+    std::string ToString() const {
+        return fmt::format("[{}:{:08X}..{:08X}] {}", addressBlockName, baseAddress, baseAddress + size - 1, name);
+    }
+};
+
+struct RegionGroup {
+    const char *name;
+    std::span<const Region> regions;
+};
+
+namespace regions {
+
+    inline ImU8 MainBusRead(const ImU8 *mem, size_t off, void *user_data) {
+        auto &state = *static_cast<const MemoryViewerState *>(user_data);
+        off += state.selectedRegion->baseAddress;
+        return state.sharedCtx.saturn.mainBus.Peek<uint8>(off);
     }
 
-    static void MainBusWrite(ImU8 *mem, size_t off, ImU8 d, void *user_data) {
-        auto &ctx = *static_cast<Context *>(user_data);
-        off += ctx.selectedRegion->baseAddress;
-        ctx.sharedCtx.eventQueues.emulator.enqueue(EmuEvent::DebugWriteMain(off, d, ctx.enableSideEffects));
+    inline void MainBusWrite(ImU8 *mem, size_t off, ImU8 d, void *user_data) {
+        auto &state = *static_cast<MemoryViewerState *>(user_data);
+        off += state.selectedRegion->baseAddress;
+        state.sharedCtx.eventQueues.emulator.enqueue(EmuEvent::DebugWriteMain(off, d, state.enableSideEffects));
     }
 
-    static ImU32 MainBusBgColor(const ImU8 * /*mem*/, size_t /*off*/, void * /*user_data*/) {
-        // auto &ctx = *static_cast<Context *>(user_data);
-        // off += ctx.selectedRegion->baseAddress;
+    inline ImU32 MainBusBgColor(const ImU8 * /*mem*/, size_t /*off*/, void * /*user_data*/) {
+        // auto &state = *static_cast<MemoryViewerState *>(user_data);
+        // off += state.selectedRegion->baseAddress;
         // TODO: use this to colorize fields/regions
         return 0;
     }
 
     template <bool master>
-    static ImU8 SH2BusRead(const ImU8 *mem, size_t off, void *user_data) {
-        auto &ctx = *static_cast<const Context *>(user_data);
-        off += ctx.selectedRegion->baseAddress;
-        auto &sh2 = master ? ctx.sharedCtx.saturn.masterSH2 : ctx.sharedCtx.saturn.slaveSH2;
+    inline ImU8 SH2BusRead(const ImU8 *mem, size_t off, void *user_data) {
+        auto &state = *static_cast<const MemoryViewerState *>(user_data);
+        off += state.selectedRegion->baseAddress;
+        auto &sh2 = master ? state.sharedCtx.saturn.masterSH2 : state.sharedCtx.saturn.slaveSH2;
         return sh2.GetProbe().MemPeekByte(off);
     }
 
     template <bool master>
-    static void SH2BusWrite(ImU8 *mem, size_t off, ImU8 d, void *user_data) {
-        auto &ctx = *static_cast<Context *>(user_data);
-        off += ctx.selectedRegion->baseAddress;
-        ctx.sharedCtx.eventQueues.emulator.enqueue(EmuEvent::DebugWriteSH2(off, d, ctx.enableSideEffects, master));
+    inline void SH2BusWrite(ImU8 *mem, size_t off, ImU8 d, void *user_data) {
+        auto &state = *static_cast<MemoryViewerState *>(user_data);
+        off += state.selectedRegion->baseAddress;
+        state.sharedCtx.eventQueues.emulator.enqueue(EmuEvent::DebugWriteSH2(off, d, state.enableSideEffects, master));
     }
 
     template <bool master>
-    static ImU32 SH2BusBgColor(const ImU8 * /*mem*/, size_t /*off*/, void * /*user_data*/) {
-        // auto &ctx = *static_cast<Context *>(user_data);
-        // off += ctx.selectedRegion->baseAddress;
-        // auto &sh2 = master ? ctx.sharedCtx.saturn.masterSH2 : ctx.sharedCtx.saturn.slaveSH2;
+    inline ImU32 SH2BusBgColor(const ImU8 * /*mem*/, size_t /*off*/, void * /*user_data*/) {
+        // auto &state = *static_cast<MemoryViewerState *>(user_data);
+        // off += state.selectedRegion->baseAddress;
+        // auto &sh2 = master ? state.sharedCtx.saturn.masterSH2 : state.sharedCtx.saturn.slaveSH2;
         // TODO: use this to colorize fields/regions
         return 0;
     }
 
     // clang-format off
-    static constexpr Region kMainRegions[] = {
+    inline constexpr Region kMainRegions[] = {
         { .name = "Main address space",  .addressBlockName = "Main", .baseAddress = 0x0000000, .size = 0x8000000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
         { .name = "Boot ROM / IPL",      .addressBlockName = "Main", .baseAddress = 0x0000000, .size =  0x100000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
         { .name = "SMPC registers",      .addressBlockName = "Main", .baseAddress = 0x0100000, .size =      0x80, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
@@ -128,7 +168,7 @@ struct MemoryViewerWindow::RegionDefs {
         { .name = "High Work RAM",       .addressBlockName = "Main", .baseAddress = 0x6000000, .size =  0x100000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
     };
 
-    static constexpr Region kMSH2Regions[] = {
+    inline constexpr Region kMSH2Regions[] = {
         { .name = "MSH2 cached address space",   .addressBlockName = "MSH2", .baseAddress = 0x00000000, .size = 0x8000000, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>, .paramsFn = nullptr },
         { .name = "MSH2 uncached address space", .addressBlockName = "MSH2", .baseAddress = 0x20000000, .size = 0x8000000, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>, .paramsFn = nullptr },
         { .name = "MSH2 cache address array",    .addressBlockName = "MSH2", .baseAddress = 0x60000000, .size =     0x400, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>, .paramsFn = nullptr },
@@ -136,7 +176,7 @@ struct MemoryViewerWindow::RegionDefs {
         { .name = "MSH2 on-chip registers",      .addressBlockName = "MSH2", .baseAddress = 0xFFFFFE00, .size =     0x200, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>, .paramsFn = nullptr },
     };
 
-    static constexpr Region kSSH2Regions[] = {
+    inline constexpr Region kSSH2Regions[] = {
         { .name = "SSH2 cached address space",   .addressBlockName = "SSH2", .baseAddress = 0x00000000, .size = 0x8000000, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>, .paramsFn = nullptr },
         { .name = "SSH2 uncached address space", .addressBlockName = "SSH2", .baseAddress = 0x20000000, .size = 0x8000000, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>, .paramsFn = nullptr },
         { .name = "SSH2 cache address array",    .addressBlockName = "SSH2", .baseAddress = 0x60000000, .size =     0x400, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>, .paramsFn = nullptr },
@@ -144,12 +184,13 @@ struct MemoryViewerWindow::RegionDefs {
         { .name = "SSH2 on-chip registers",      .addressBlockName = "SSH2", .baseAddress = 0xFFFFFE00, .size =     0x200, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>, .paramsFn = nullptr },
     };
 
-    static constexpr RegionGroup kRegionGroups[] = {
+    inline constexpr RegionGroup kRegionGroups[] = {
         { .name = "Main address space", .regions = kMainRegions },
         { .name = "Master SH-2",        .regions = kMSH2Regions },
         { .name = "Slave SH-2",         .regions = kSSH2Regions },
     };
     // clang-format on
-};
 
-} // namespace app::ui
+} // namespace regions
+
+} // namespace app::ui::mem_view

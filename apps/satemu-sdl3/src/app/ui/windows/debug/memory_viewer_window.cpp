@@ -1,6 +1,6 @@
 #include "memory_viewer_window.hpp"
 
-#include "memory_viewer_region_defs.hpp"
+#include <app/ui/state/debug/memory_viewer_state.hpp>
 
 namespace app::ui {
 
@@ -13,34 +13,34 @@ MemoryViewerWindow::MemoryViewerWindow(SharedContext &context)
     m_windowConfig.name = fmt::format("Memory viewer #{}", m_index + 1);
     m_windowConfig.flags = ImGuiWindowFlags_NoScrollbar;
 
-    m_memViewCtx.reset(new Context(context));
+    m_memViewState.reset(new mem_view::MemoryViewerState(context));
 
-    m_memViewCtx->selectedRegion = &RegionDefs::kRegionGroups[0].regions[0];
-    m_memViewCtx->memoryEditor.ReadFn = m_memViewCtx->selectedRegion->readFn;
-    m_memViewCtx->memoryEditor.WriteFn = m_memViewCtx->selectedRegion->writeFn;
-    m_memViewCtx->memoryEditor.BgColorFn = m_memViewCtx->selectedRegion->bgColorFn;
-    m_memViewCtx->memoryEditor.Open = false;
-    m_memViewCtx->memoryEditor.UserData = m_memViewCtx.get();
+    m_memViewState->selectedRegion = &mem_view::regions::kRegionGroups[0].regions[0];
+    m_memViewState->memoryEditor.ReadFn = m_memViewState->selectedRegion->readFn;
+    m_memViewState->memoryEditor.WriteFn = m_memViewState->selectedRegion->writeFn;
+    m_memViewState->memoryEditor.BgColorFn = m_memViewState->selectedRegion->bgColorFn;
+    m_memViewState->memoryEditor.Open = false;
+    m_memViewState->memoryEditor.UserData = m_memViewState.get();
 }
 
 void MemoryViewerWindow::PrepareWindow() {
     MemoryEditor::Sizes sizes{};
-    m_memViewCtx->memoryEditor.CalcSizes(sizes, 0x8000000, 0x0);
+    m_memViewState->memoryEditor.CalcSizes(sizes, 0x8000000, 0x0);
 
     ImGui::SetNextWindowSizeConstraints(ImVec2(sizes.WindowWidth, 245), ImVec2(sizes.WindowWidth, FLT_MAX));
 }
 
 void MemoryViewerWindow::DrawContents() {
-    const Region *nextRegion = m_memViewCtx->selectedRegion;
+    const mem_view::Region *nextRegion = m_memViewState->selectedRegion;
     auto &currRegion = *nextRegion;
     if (currRegion.paramsFn) {
-        currRegion.paramsFn(m_memViewCtx.get());
+        currRegion.paramsFn(m_memViewState.get());
     }
 
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     if (ImGui::BeginCombo("Region", currRegion.ToString().c_str(),
                           ImGuiComboFlags_HeightLarge | ImGuiComboFlags_WidthFitPreview)) {
-        for (auto &group : RegionDefs::kRegionGroups) {
+        for (auto &group : mem_view::regions::kRegionGroups) {
             ImGui::SeparatorText(group.name);
             for (auto &region : group.regions) {
                 bool selected = &region == &currRegion;
@@ -56,24 +56,24 @@ void MemoryViewerWindow::DrawContents() {
     }
     ImGui::PopFont();
 
-    ImGui::Checkbox("Enable side-effects", &m_memViewCtx->enableSideEffects);
+    ImGui::Checkbox("Enable side-effects", &m_memViewState->enableSideEffects);
     ImGui::Separator();
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-    m_memViewCtx->memoryEditor.DrawContents(this, currRegion.size, currRegion.baseAddress);
-    if (m_memViewCtx->memoryEditor.MouseHovered) {
+    m_memViewState->memoryEditor.DrawContents(this, currRegion.size, currRegion.baseAddress);
+    if (m_memViewState->memoryEditor.MouseHovered) {
         // TODO: use this to display additional info on specific addresses
         if (ImGui::BeginTooltip()) {
-            const uint32 address = currRegion.baseAddress + m_memViewCtx->memoryEditor.MouseHoveredAddr;
+            const uint32 address = currRegion.baseAddress + m_memViewState->memoryEditor.MouseHoveredAddr;
             ImGui::Text("Address: %08X", address);
             ImGui::EndTooltip();
         }
     }
 
-    if (nextRegion != m_memViewCtx->selectedRegion) {
-        m_memViewCtx->selectedRegion = nextRegion;
-        m_memViewCtx->memoryEditor.ReadFn = m_memViewCtx->selectedRegion->readFn;
-        m_memViewCtx->memoryEditor.WriteFn = m_memViewCtx->selectedRegion->writeFn;
-        m_memViewCtx->memoryEditor.BgColorFn = m_memViewCtx->selectedRegion->bgColorFn;
+    if (nextRegion != m_memViewState->selectedRegion) {
+        m_memViewState->selectedRegion = nextRegion;
+        m_memViewState->memoryEditor.ReadFn = m_memViewState->selectedRegion->readFn;
+        m_memViewState->memoryEditor.WriteFn = m_memViewState->selectedRegion->writeFn;
+        m_memViewState->memoryEditor.BgColorFn = m_memViewState->selectedRegion->bgColorFn;
     }
 
     ImGui::PopFont();
