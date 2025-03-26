@@ -7,6 +7,7 @@ namespace app::ui {
 SCUDebuggerWindow::SCUDebuggerWindow(SharedContext &context)
     : WindowBase(context)
     , m_scu(context.saturn.SCU) {
+
     m_windowConfig.name = "SCU";
 }
 

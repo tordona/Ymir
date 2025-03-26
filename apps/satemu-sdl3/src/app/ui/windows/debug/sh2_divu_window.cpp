@@ -5,11 +5,11 @@ using namespace satemu;
 namespace app::ui {
 
 SH2DivisionUnitWindow::SH2DivisionUnitWindow(SharedContext &context, bool master)
-    : WindowBase(context)
-    , m_divuRegsView(context, master ? context.saturn.masterSH2 : context.saturn.slaveSH2)
-    , m_divuTraceView(context, master ? context.saturn.masterSH2 : context.saturn.slaveSH2,
-                      master ? context.tracers.masterSH2 : context.tracers.slaveSH2) {
-    m_windowConfig.name = fmt::format("{}SH2 division unit (DIVU)", master ? "M" : "S");
+    : SH2WindowBase(context, master)
+    , m_divuRegsView(context, m_sh2)
+    , m_divuTraceView(context, m_sh2, m_tracer) {
+
+    m_windowConfig.name = fmt::format("{}SH2 division unit (DIVU)", master ? 'M' : 'S');
 }
 
 void SH2DivisionUnitWindow::PrepareWindow() {

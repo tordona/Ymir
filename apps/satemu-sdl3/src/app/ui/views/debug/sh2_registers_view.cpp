@@ -6,17 +6,17 @@ using namespace satemu;
 
 namespace app::ui {
 
-SH2RegistersView::SH2RegistersView(SharedContext &context, sh2::SH2 &sh2, bool master)
+SH2RegistersView::SH2RegistersView(SharedContext &context, sh2::SH2 &sh2)
     : m_context(context)
-    , m_sh2(sh2)
-    , m_master(master) {}
+    , m_sh2(sh2) {}
 
 void SH2RegistersView::Display() {
     ImGui::BeginGroup();
 
-    const bool enabled = m_master || m_context.saturn.slaveSH2Enabled;
+    const bool master = m_sh2.IsMaster();
+    const bool enabled = master || m_context.saturn.slaveSH2Enabled;
 
-    if (!m_master) {
+    if (!master) {
         ImGui::Checkbox("Enabled", &m_context.saturn.slaveSH2Enabled);
     }
 

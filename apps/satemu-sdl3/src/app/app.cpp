@@ -202,14 +202,8 @@ CMRC_DECLARE(satemu_sdl3_rc);
 namespace app {
 
 App::App()
-    : m_masterSH2DebuggerWindow(m_context, true)
-    , m_masterSH2InterruptsWindow(m_context, true)
-    , m_masterSH2InterruptTraceWindow(m_context, true)
-    , m_masterSH2DivisionUnitWindow(m_context, true)
-    , m_slaveSH2DebuggerWindow(m_context, false)
-    , m_slaveSH2InterruptsWindow(m_context, false)
-    , m_slaveSH2InterruptTraceWindow(m_context, false)
-    , m_slaveSH2DIVUWindow(m_context, false)
+    : m_masterSH2WindowSet(m_context, true)
+    , m_slaveSH2WindowSet(m_context, false)
     , m_scuDebuggerWindow(m_context)
     , m_aboutWindow(m_context) {
 
@@ -1072,20 +1066,20 @@ void App::RunEmulator() {
                     m_context.eventQueues.emulator.enqueue(EmuEvent::MemoryDump());
                 }
                 ImGui::Separator();
-                if (ImGui::BeginMenu("Master SH2")) {
-                    ImGui::MenuItem("Debugger", nullptr, &m_masterSH2DebuggerWindow.Open);
-                    ImGui::MenuItem("Interrupts", nullptr, &m_masterSH2InterruptsWindow.Open);
-                    ImGui::MenuItem("Interrupt trace", nullptr, &m_masterSH2InterruptTraceWindow.Open);
-                    ImGui::MenuItem("Division unit (DIVU)", nullptr, &m_masterSH2DivisionUnitWindow.Open);
-                    ImGui::EndMenu();
-                }
-                if (ImGui::BeginMenu("Slave SH2")) {
-                    ImGui::MenuItem("Debugger", nullptr, &m_slaveSH2DebuggerWindow.Open);
-                    ImGui::MenuItem("Interrupts", nullptr, &m_slaveSH2InterruptsWindow.Open);
-                    ImGui::MenuItem("Interrupt trace", nullptr, &m_slaveSH2InterruptTraceWindow.Open);
-                    ImGui::MenuItem("Division unit (DIVU)", nullptr, &m_slaveSH2DIVUWindow.Open);
-                    ImGui::EndMenu();
-                }
+
+                auto sh2Menu = [&](const char *name, ui::SH2WindowSet &set) {
+                    if (ImGui::BeginMenu(name)) {
+                        ImGui::MenuItem("Debugger", nullptr, &set.debugger.Open);
+                        ImGui::MenuItem("Interrupts", nullptr, &set.interrupts.Open);
+                        ImGui::MenuItem("Interrupt trace", nullptr, &set.interruptTrace.Open);
+                        ImGui::MenuItem("Cache", nullptr, &set.cache.Open);
+                        ImGui::MenuItem("Division unit (DIVU)", nullptr, &set.divisionUnit.Open);
+                        ImGui::EndMenu();
+                    }
+                };
+                sh2Menu("Master SH2", m_masterSH2WindowSet);
+                sh2Menu("Slave SH2", m_slaveSH2WindowSet);
+
                 ImGui::MenuItem("SCU", nullptr, &m_scuDebuggerWindow.Open);
                 ImGui::End();
             }
@@ -1481,17 +1475,8 @@ bool App::LoadDiscImage(std::filesystem::path path) {
 }
 
 void App::DrawWindows() {
-    using namespace satemu;
-
-    m_masterSH2DebuggerWindow.Display();
-    m_masterSH2InterruptsWindow.Display();
-    m_masterSH2InterruptTraceWindow.Display();
-    m_masterSH2DivisionUnitWindow.Display();
-
-    m_slaveSH2DebuggerWindow.Display();
-    m_slaveSH2InterruptsWindow.Display();
-    m_slaveSH2InterruptTraceWindow.Display();
-    m_slaveSH2DIVUWindow.Display();
+    m_masterSH2WindowSet.DisplayAll();
+    m_slaveSH2WindowSet.DisplayAll();
 
     m_scuDebuggerWindow.Display();
 

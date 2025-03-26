@@ -1,13 +1,13 @@
 #pragma once
 
-#include <app/ui/window_base.hpp>
+#include "sh2_window_base.hpp"
 
 #include <app/ui/views/debug/sh2_divu_registers_view.hpp>
 #include <app/ui/views/debug/sh2_divu_trace_view.hpp>
 
 namespace app::ui {
 
-class SH2DivisionUnitWindow : public WindowBase {
+class SH2DivisionUnitWindow : public SH2WindowBase {
 public:
     SH2DivisionUnitWindow(SharedContext &context, bool master);
 

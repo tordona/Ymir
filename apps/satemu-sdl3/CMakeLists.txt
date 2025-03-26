@@ -30,6 +30,8 @@ add_executable(satemu-sdl3
     src/app/ui/windows/debug/memory_viewer_window.hpp
     src/app/ui/windows/debug/scu_debugger_window.cpp
     src/app/ui/windows/debug/scu_debugger_window.hpp
+    src/app/ui/windows/debug/sh2_cache_window.cpp
+    src/app/ui/windows/debug/sh2_cache_window.hpp
     src/app/ui/windows/debug/sh2_debugger_window.cpp
     src/app/ui/windows/debug/sh2_debugger_window.hpp
     src/app/ui/windows/debug/sh2_divu_window.cpp
@@ -38,6 +40,9 @@ add_executable(satemu-sdl3
     src/app/ui/windows/debug/sh2_interrupts_window.hpp
     src/app/ui/windows/debug/sh2_interrupt_trace_window.cpp
     src/app/ui/windows/debug/sh2_interrupt_trace_window.hpp
+    src/app/ui/windows/debug/sh2_window_base.cpp
+    src/app/ui/windows/debug/sh2_window_base.hpp
+    src/app/ui/windows/debug/sh2_window_set.hpp
 
     src/app/ui/views/debug/sh2_disassembly_view.cpp
     src/app/ui/views/debug/sh2_disassembly_view.hpp

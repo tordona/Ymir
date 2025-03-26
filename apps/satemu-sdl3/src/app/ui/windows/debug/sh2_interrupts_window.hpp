@@ -1,12 +1,12 @@
 #pragma once
 
-#include <app/ui/window_base.hpp>
+#include "sh2_window_base.hpp"
 
 #include <app/ui/views/debug/sh2_interrupts_view.hpp>
 
 namespace app::ui {
 
-class SH2InterruptsWindow : public WindowBase {
+class SH2InterruptsWindow : public SH2WindowBase {
 public:
     SH2InterruptsWindow(SharedContext &context, bool master);
 
