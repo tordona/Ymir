@@ -42,56 +42,6 @@ struct CacheEntry {
     alignas(16) std::array<std::array<uint8, kCacheLineSize>, kCacheWays> line;
 
     FORCE_INLINE uint8 FindWay(uint32 address) const {
-        const uint32 tagAddress = bit::extract<10, 28>(address);
-
-        if (tag[0].tagAddress == tagAddress && tag[0].valid) {
-            return 0;
-        }
-        if (tag[1].tagAddress == tagAddress && tag[1].valid) {
-            return 1;
-        }
-        if (tag[2].tagAddress == tagAddress && tag[2].valid) {
-            return 2;
-        }
-        if (tag[3].tagAddress == tagAddress && tag[3].valid) {
-            return 3;
-        }
-        return 4;
-    }
-
-    // Some alternative implementations to test
-    /*FORCE_INLINE uint8 FindWay(uint32 address) const {
-        const uint32 tagAddress = (bit::extract<10, 28>(address) << 10) | (1 << 2);
-        uint32 found = 0x0;
-        for (uint32 i = 0; i < 4; i++) {
-            found |= (tag[i].u32 == tagAddress) << i;
-        }
-        return std::countr_zero(found);
-    }
-
-    FORCE_INLINE uint8 FindWay(uint32 address) const {
-        const uint32 tagAddress = (bit::extract<10, 28>(address) << 10) | (1 << 2);
-
-        uint8 result = 4;
-        result = (tag[0].u32 == tagAddress) ? 0 : result;
-        result = (tag[1].u32 == tagAddress) ? 1 : result;
-        result = (tag[2].u32 == tagAddress) ? 2 : result;
-        result = (tag[3].u32 == tagAddress) ? 3 : result;
-        return result;
-    }
-
-    FORCE_INLINE uint8 FindWay(uint32 address) const {
-        const uint32 tagAddress = bit::extract<10, 28>(address);
-
-        uint8 result = 4;
-        result = (tag[0].tagAddress == tagAddress) ? 0 : result;
-        result = (tag[1].tagAddress == tagAddress) ? 1 : result;
-        result = (tag[2].tagAddress == tagAddress) ? 2 : result;
-        result = (tag[3].tagAddress == tagAddress) ? 3 : result;
-        return result;
-    }
-
-    FORCE_INLINE uint8 FindWay(uint32 address) const {
         const uint32 tagAddress = (bit::extract<10, 28>(address) << 10) | (1 << 2);
 
         if (tag[0].u32 == tagAddress) {
@@ -108,26 +58,6 @@ struct CacheEntry {
         }
         return 4;
     }
-
-    FORCE_INLINE uint8 FindWay(uint32 address) const {
-        const uint32 tagAddress = bit::extract<10, 28>(address);
-        for (uint32 i = 0; i < 4; i++) {
-            if (tag[i].tagAddress == tagAddress) {
-                return i;
-            }
-        }
-        return 4;
-    }
-
-    // this one vectorizes, but seems to be the slowest option
-    FORCE_INLINE uint8 FindWay(uint32 address) const {
-        const uint32 tagAddress = bit::extract<10, 28>(address);
-        uint8 found = 0x0;
-        for (uint32 i = 0; i < 4; i++) {
-            found |= (tag[i].tagAddress == tagAddress) << i;
-        }
-        return std::countr_zero(found);
-    }*/
 };
 
 // Stores the cache LRU update bits
