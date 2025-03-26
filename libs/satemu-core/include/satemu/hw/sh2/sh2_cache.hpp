@@ -257,6 +257,15 @@ public:
         util::WriteBE<T>(&line[byte], value);
     }
 
+    FORCE_INLINE void Purge() {
+        for (uint32 index = 0; index < 64; index++) {
+            for (auto &tag : m_cacheEntries[index].tag) {
+                tag.valid = 0;
+            }
+            m_cacheLRU[index] = 0;
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Registers
 
@@ -266,17 +275,15 @@ public:
         return CCR.Read();
     }
 
+    template <bool poke>
     FORCE_INLINE void WriteCCR(uint8 value) {
         CCR.Write(value);
         m_cacheReplaceANDMask = CCR.TW ? 0x1u : 0x3Fu;
         m_cacheReplaceORMask[false] = CCR.OD ? -1 : 0;
         m_cacheReplaceORMask[true] = CCR.ID ? -1 : 0;
         if (CCR.CP) {
-            for (uint32 index = 0; index < 64; index++) {
-                for (auto &tag : m_cacheEntries[index].tag) {
-                    tag.valid = 0;
-                }
-                m_cacheLRU[index] = 0;
+            if constexpr (!poke) {
+                Purge();
             }
             CCR.CP = false;
         }

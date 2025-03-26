@@ -13,7 +13,6 @@ void SH2DivisionUnitRegistersView::Display() {
     auto &divu = probe.DIVU();
     auto &intc = probe.INTC();
 
-    const float paddingWidth = ImGui::GetStyle().FramePadding.x;
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
@@ -23,7 +22,8 @@ void SH2DivisionUnitRegistersView::Display() {
     if (ImGui::BeginTable("divu_regs", 4, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableNextRow();
 
-        auto drawReg = [&](uint32 &value, const char *name) {
+        auto drawReg = [&](uint32 &value, const char *name, const char *tooltip) {
+            ImGui::BeginGroup();
             ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 8);
             ImGui::PushFont(m_context.fonts.monospace.medium.regular);
             const bool changed = ImGui::InputScalar(fmt::format("##{}", name).c_str(), ImGuiDataType_U32, &value,
@@ -32,32 +32,36 @@ void SH2DivisionUnitRegistersView::Display() {
             ImGui::SameLine();
             ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted(name);
+            ImGui::EndGroup();
+            ImGui::SetItemTooltip("%s", tooltip);
             return changed;
         };
 
         if (ImGui::TableNextColumn()) {
-            drawReg(divu.DVDNTH, "DVDNTH");
-            drawReg(divu.DVDNTUH, "DVDNTUH");
+            drawReg(divu.DVDNTH, "DVDNTH", "Dividend high");
+            drawReg(divu.DVDNTUH, "DVDNTUH", "Dividend high (shadow copy)");
         }
 
         if (ImGui::TableNextColumn()) {
-            drawReg(divu.DVDNTL, "DVDNTL");
-            drawReg(divu.DVDNTUL, "DVDNTUL");
+            drawReg(divu.DVDNTL, "DVDNTL", "Dividend low");
+            drawReg(divu.DVDNTUL, "DVDNTUL", "Dividend low (shadow copy)");
         }
 
         if (ImGui::TableNextColumn()) {
-            drawReg(divu.DVDNT, "DVDNT");
-            drawReg(divu.DVSR, "DVSR");
+            drawReg(divu.DVDNT, "DVDNT", "32-bit dividend");
+            drawReg(divu.DVSR, "DVSR", "Divisor");
         }
 
         if (ImGui::TableNextColumn()) {
             uint32 dvcr = divu.DVCR.Read();
-            if (drawReg(dvcr, "DVCR")) {
+            if (drawReg(dvcr, "DVCR", "Division control register")) {
                 divu.DVCR.Write(dvcr);
             }
             ImGui::Checkbox("OVF", &divu.DVCR.OVF);
+            ImGui::SetItemTooltip("Overflow flag");
             ImGui::SameLine();
             ImGui::Checkbox("OVFIE", &divu.DVCR.OVFIE);
+            ImGui::SetItemTooltip("Overflow interrupt enable");
         }
 
         ImGui::EndTable();
@@ -68,6 +72,7 @@ void SH2DivisionUnitRegistersView::Display() {
 
     ImGui::SameLine();
 
+    ImGui::BeginGroup();
     uint8 vector = intc.GetVector(sh2::InterruptSource::DIVU_OVFI);
     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
@@ -77,11 +82,14 @@ void SH2DivisionUnitRegistersView::Display() {
     }
     ImGui::PopFont();
     ImGui::SameLine();
-    ImGui::TextUnformatted("vector (VCRDIV)");
+    ImGui::TextUnformatted("VCRDIV");
+    ImGui::EndGroup();
+    ImGui::SetItemTooltip("Division unit interrupt vector");
 
     ImGui::SameLine();
 
     uint8 level = intc.GetLevel(sh2::InterruptSource::DIVU_OVFI);
+    ImGui::BeginGroup();
     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 1);
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     if (ImGui::InputScalar("##ipra_divuipn", ImGuiDataType_U8, &level, nullptr, nullptr, "%X",
@@ -90,7 +98,9 @@ void SH2DivisionUnitRegistersView::Display() {
     }
     ImGui::PopFont();
     ImGui::SameLine();
-    ImGui::TextUnformatted("level (IPRA.DIVUIP3-0)");
+    ImGui::TextUnformatted("IPRA.DIVUIP3-0");
+    ImGui::EndGroup();
+    ImGui::SetItemTooltip("Division unit interrupt level");
 
     ImGui::SameLine(0, 15.0f);
     ImGui::TextUnformatted("Calculate:");

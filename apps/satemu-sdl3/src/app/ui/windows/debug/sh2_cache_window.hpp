@@ -2,7 +2,7 @@
 
 #include "sh2_window_base.hpp"
 
-#include <satemu/hw/sh2/sh2.hpp>
+#include <app/ui/views/debug/sh2_cache_register_view.hpp>
 
 namespace app::ui {
 
@@ -12,6 +12,9 @@ public:
 
 protected:
     void DrawContents();
+
+private:
+    SH2CacheRegisterView m_cacheRegView;
 };
 
 } // namespace app::ui

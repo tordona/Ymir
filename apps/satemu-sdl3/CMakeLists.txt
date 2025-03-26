@@ -23,9 +23,23 @@ add_executable(satemu-sdl3
 
     src/app/ui/state/debug/memory_viewer_state.hpp
 
+    src/app/ui/views/debug/sh2_cache_register_view.cpp
+    src/app/ui/views/debug/sh2_cache_register_view.hpp
+    src/app/ui/views/debug/sh2_disassembly_view.cpp
+    src/app/ui/views/debug/sh2_disassembly_view.hpp
+    src/app/ui/views/debug/sh2_divu_trace_view.cpp
+    src/app/ui/views/debug/sh2_divu_trace_view.hpp
+    src/app/ui/views/debug/sh2_divu_registers_view.cpp
+    src/app/ui/views/debug/sh2_divu_registers_view.hpp
+    src/app/ui/views/debug/sh2_interrupts_view.cpp
+    src/app/ui/views/debug/sh2_interrupts_view.hpp
+    src/app/ui/views/debug/sh2_interrupt_trace_view.cpp
+    src/app/ui/views/debug/sh2_interrupt_trace_view.hpp
+    src/app/ui/views/debug/sh2_registers_view.cpp
+    src/app/ui/views/debug/sh2_registers_view.hpp
+
     src/app/ui/windows/about_window.cpp
     src/app/ui/windows/about_window.hpp
-
     src/app/ui/windows/debug/memory_viewer_window.cpp
     src/app/ui/windows/debug/memory_viewer_window.hpp
     src/app/ui/windows/debug/scu_debugger_window.cpp
@@ -43,19 +57,6 @@ add_executable(satemu-sdl3
     src/app/ui/windows/debug/sh2_window_base.cpp
     src/app/ui/windows/debug/sh2_window_base.hpp
     src/app/ui/windows/debug/sh2_window_set.hpp
-
-    src/app/ui/views/debug/sh2_disassembly_view.cpp
-    src/app/ui/views/debug/sh2_disassembly_view.hpp
-    src/app/ui/views/debug/sh2_divu_trace_view.cpp
-    src/app/ui/views/debug/sh2_divu_trace_view.hpp
-    src/app/ui/views/debug/sh2_divu_registers_view.cpp
-    src/app/ui/views/debug/sh2_divu_registers_view.hpp
-    src/app/ui/views/debug/sh2_interrupts_view.cpp
-    src/app/ui/views/debug/sh2_interrupts_view.hpp
-    src/app/ui/views/debug/sh2_interrupt_trace_view.cpp
-    src/app/ui/views/debug/sh2_interrupt_trace_view.hpp
-    src/app/ui/views/debug/sh2_registers_view.cpp
-    src/app/ui/views/debug/sh2_registers_view.hpp
 
     src/util/rom_loader.cpp
     src/util/rom_loader.hpp

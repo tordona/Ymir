@@ -727,7 +727,7 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
         case 0x81: WDT.WriteWTCNT(value); break;
         case 0x83: WDT.WriteRSTCSR<poke>(value); break;
 
-        case 0x93 ... 0x9F: m_cache.WriteCCR(value); break;
+        case 0x93 ... 0x9F: m_cache.WriteCCR<poke>(value); break;
         }
     }
 
@@ -773,7 +773,7 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     case 0x72: m_dmaChannels[1].WriteDRCR(value); break;
 
     case 0x91: SBYCR.u8 = value & 0xDF; break;
-    case 0x92: m_cache.WriteCCR(value); break;
+    case 0x92: m_cache.WriteCCR<poke>(value); break;
 
     case 0xE0: INTC.WriteICR<false, true, poke>(value << 8u); break;
     case 0xE1: INTC.WriteICR<true, false, poke>(value); break;
@@ -846,7 +846,7 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
         }
         break;
 
-    case 0x92: m_cache.WriteCCR(value); break;
+    case 0x92: m_cache.WriteCCR<poke>(value); break;
 
     case 0xE0: INTC.WriteICR<true, true, poke>(value); break;
 

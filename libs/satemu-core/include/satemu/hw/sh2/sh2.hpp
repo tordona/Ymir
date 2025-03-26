@@ -192,6 +192,17 @@ public:
         }
 
         // ---------------------------------------------------------------------
+        // Cache
+
+        Cache &GetCache() {
+            return m_sh2.m_cache;
+        }
+
+        const Cache &GetCache() const {
+            return m_sh2.m_cache;
+        }
+
+        // ---------------------------------------------------------------------
         // Division unit
 
         void ExecuteDiv32();
