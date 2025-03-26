@@ -222,24 +222,6 @@ FLATTEN uint64 SH2::Step() {
 template uint64 SH2::Step<false>();
 template uint64 SH2::Step<true>();
 
-void SH2::SetExternalInterrupt(uint8 level, uint8 vector) {
-    assert(level < 16);
-
-    const InterruptSource source = InterruptSource::IRL;
-
-    INTC.externalVector = vector;
-
-    INTC.SetLevel(source, level);
-
-    if (level > 0) {
-        INTC.UpdateIRLVector();
-        RaiseInterrupt(source);
-    } else {
-        INTC.SetVector(source, 0);
-        LowerInterrupt(source);
-    }
-}
-
 bool SH2::GetNMI() const {
     return INTC.ICR.NMIL;
 }
@@ -249,15 +231,6 @@ void SH2::SetNMI() {
     INTC.ICR.NMIL = 1;
     INTC.NMI = true;
     RaiseInterrupt(InterruptSource::NMI);
-}
-
-void SH2::TriggerFRTInputCapture() {
-    // TODO: FRT.TCR.IEDGA
-    FRT.ICR = FRT.FRC;
-    FRT.FTCSR.ICF = 1;
-    if (FRT.TIER.ICIE) {
-        RaiseInterrupt(InterruptSource::FRT_ICI);
-    }
 }
 
 // -----------------------------------------------------------------------------
@@ -1221,8 +1194,35 @@ FORCE_INLINE void SH2::AdvanceFRT(uint64 cycles) {
     }
 }
 
+FORCE_INLINE void SH2::TriggerFRTInputCapture() {
+    // TODO: FRT.TCR.IEDGA
+    FRT.ICR = FRT.FRC;
+    FRT.FTCSR.ICF = 1;
+    if (FRT.TIER.ICIE) {
+        RaiseInterrupt(InterruptSource::FRT_ICI);
+    }
+}
+
 // -----------------------------------------------------------------------------
 // Interrupts
+
+FORCE_INLINE void SH2::SetExternalInterrupt(uint8 level, uint8 vector) {
+    assert(level < 16);
+
+    const InterruptSource source = InterruptSource::IRL;
+
+    INTC.externalVector = vector;
+
+    INTC.SetLevel(source, level);
+
+    if (level > 0) {
+        INTC.UpdateIRLVector();
+        RaiseInterrupt(source);
+    } else {
+        INTC.SetVector(source, 0);
+        LowerInterrupt(source);
+    }
+}
 
 template <InterruptSource source, InterruptSource... sources>
 FLATTEN FORCE_INLINE void SH2::UpdateInterruptLevels() {

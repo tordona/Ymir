@@ -52,6 +52,9 @@ public:
 
     void MapMemory(sys::Bus &bus);
 
+    // -------------------------------------------------------------------------
+    // Usage
+
     // Advances the SH2 for at least the specified number of cycles.
     // Returns the total number of cycles executed.
     template <bool debug>
@@ -66,12 +69,8 @@ public:
         return !BCR1.MASTER;
     }
 
-    void SetExternalInterrupt(uint8 level, uint8 vecNum);
-
     bool GetNMI() const;
     void SetNMI();
-
-    void TriggerFRTInputCapture();
 
     // -------------------------------------------------------------------------
     // Debugger
@@ -501,10 +500,14 @@ private:
 
     void AdvanceFRT(uint64 cycles);
 
+    void TriggerFRTInputCapture();
+
     // -------------------------------------------------------------------------
     // Interrupts
 
     InterruptController INTC;
+
+    void SetExternalInterrupt(uint8 level, uint8 vecNum);
 
     // Raises the interrupt signal of the specified source.
     FORCE_INLINE void RaiseInterrupt(InterruptSource source) {
