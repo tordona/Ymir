@@ -12,60 +12,6 @@
 
 namespace satemu::sh2 {
 
-inline constexpr std::size_t kCacheWays = 4;
-inline constexpr std::size_t kCacheEntries = 64;
-inline constexpr std::size_t kCacheLineSize = 16;
-
-FORCE_INLINE bool IsValidCacheWay(uint8 way) {
-    return way < kCacheWays;
-}
-
-struct CacheEntry {
-    // Tag layout:
-    //   28..10: tag
-    //        2: valid bit
-    // All other bits must be zero
-    // This matches the address array structure
-    union Tag {
-        uint32 u32;
-        struct {
-            uint32 : 2;
-            uint32 valid : 1;
-            uint32 : 7;
-            uint32 tagAddress : 19;
-            uint32 : 3;
-        };
-    };
-    static_assert(sizeof(Tag) == sizeof(uint32));
-
-    alignas(16) std::array<Tag, kCacheWays> tag;
-    alignas(16) std::array<std::array<uint8, kCacheLineSize>, kCacheWays> line;
-
-    FORCE_INLINE uint8 FindWay(uint32 address) const {
-        const uint32 tagAddress = (bit::extract<10, 28>(address) << 10) | (1 << 2);
-
-        if (tag[0].u32 == tagAddress) {
-            return 0;
-        }
-        if (tag[1].u32 == tagAddress) {
-            return 1;
-        }
-        if (tag[2].u32 == tagAddress) {
-            return 2;
-        }
-        if (tag[3].u32 == tagAddress) {
-            return 3;
-        }
-        return 4;
-    }
-};
-
-// Stores the cache LRU update bits
-struct CacheLRUUpdateBits {
-    uint8 andMask;
-    uint8 orMask;
-};
-
 // -----------------------------------------------------------------------------
 // Registers
 
@@ -124,6 +70,63 @@ struct RegCCR {
 };
 
 // 0E0, 0E2, 0E4 are in INTC module
+
+// -----------------------------------------------------------------------------
+// Cache implementation
+
+inline constexpr std::size_t kCacheWays = 4;
+inline constexpr std::size_t kCacheEntries = 64;
+inline constexpr std::size_t kCacheLineSize = 16;
+
+FORCE_INLINE bool IsValidCacheWay(uint8 way) {
+    return way < kCacheWays;
+}
+
+struct CacheEntry {
+    // Tag layout:
+    //   28..10: tag
+    //        2: valid bit
+    // All other bits must be zero
+    // This matches the address array structure
+    union Tag {
+        uint32 u32;
+        struct {
+            uint32 : 2;
+            uint32 valid : 1;
+            uint32 : 7;
+            uint32 tagAddress : 19;
+            uint32 : 3;
+        };
+    };
+    static_assert(sizeof(Tag) == sizeof(uint32));
+
+    alignas(16) std::array<Tag, kCacheWays> tag;
+    alignas(16) std::array<std::array<uint8, kCacheLineSize>, kCacheWays> line;
+
+    FORCE_INLINE uint8 FindWay(uint32 address) const {
+        const uint32 tagAddress = (bit::extract<10, 28>(address) << 10) | (1 << 2);
+
+        if (tag[0].u32 == tagAddress) {
+            return 0;
+        }
+        if (tag[1].u32 == tagAddress) {
+            return 1;
+        }
+        if (tag[2].u32 == tagAddress) {
+            return 2;
+        }
+        if (tag[3].u32 == tagAddress) {
+            return 3;
+        }
+        return 4;
+    }
+};
+
+// Stores the cache LRU update bits
+struct CacheLRUUpdateBits {
+    uint8 andMask;
+    uint8 orMask;
+};
 
 class Cache {
     alignas(16) static constexpr std::array<CacheLRUUpdateBits, 4> kCacheLRUUpdateBits = {{

@@ -23,7 +23,6 @@ namespace config {
     inline constexpr uint32 sysExecDumpAddress = 0x186C;
 
     // Enable cache emulation.
-    // TODO: fix bugs and optimize heavily
     inline constexpr bool enableCache = false;
 } // namespace config
 
@@ -279,7 +278,6 @@ T SH2::MemRead(uint32 address) {
     switch (partition) {
     case 0b000: // cache
         if constexpr (config::enableCache) {
-            // TODO: needs serious optimization
             if (m_cache.CCR.CE) {
                 CacheEntry &entry = m_cache.GetEntry(address);
                 uint32 way = entry.FindWay(address);
