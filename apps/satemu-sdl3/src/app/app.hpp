@@ -6,12 +6,12 @@
 #include "shared_context.hpp"
 
 #include "ui/windows/about_window.hpp"
-#include "ui/windows/memory_viewer_window.hpp"
-#include "ui/windows/scu_debugger_window.hpp"
-#include "ui/windows/sh2_debugger_window.hpp"
-#include "ui/windows/sh2_divu_window.hpp"
-#include "ui/windows/sh2_interrupt_trace_window.hpp"
-#include "ui/windows/sh2_interrupts_window.hpp"
+#include "ui/windows/debug/memory_viewer_window.hpp"
+#include "ui/windows/debug/scu_debugger_window.hpp"
+#include "ui/windows/debug/sh2_debugger_window.hpp"
+#include "ui/windows/debug/sh2_divu_window.hpp"
+#include "ui/windows/debug/sh2_interrupt_trace_window.hpp"
+#include "ui/windows/debug/sh2_interrupts_window.hpp"
 
 #include <SDL3/SDL_events.h>
 

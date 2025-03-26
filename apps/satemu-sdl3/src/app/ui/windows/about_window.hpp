@@ -1,35 +1,21 @@
 #pragma once
 
-#include <app/shared_context.hpp>
-
-#include <vector>
+#include <app/ui/window_base.hpp>
 
 namespace app::ui {
 
-struct License {
-    const char *name;
-    const char *url;
-};
-
-struct FontDesc {
-    const char *name;
-    const License &license;
-    const char *url;
-    ImFont *&font;
-};
-
-class AboutWindow {
+class AboutWindow : public WindowBase {
 public:
     AboutWindow(SharedContext &context);
 
-    void Display();
-
-    bool Open = false;
+protected:
+    void PrepareWindow() override;
+    void DrawContents() override;
 
 private:
-    SharedContext &m_context;
-
-    std::vector<FontDesc> m_fontDescs;
+    void DrawAboutTab();
+    void DrawDependenciesTab();
+    void DrawAcknowledgementsTab();
 };
 
 } // namespace app::ui

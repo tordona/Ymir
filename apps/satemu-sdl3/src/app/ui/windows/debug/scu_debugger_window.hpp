@@ -1,19 +1,17 @@
 #pragma once
 
-#include <app/shared_context.hpp>
+#include <app/ui/window_base.hpp>
 
 namespace app::ui {
 
-class SCUDebuggerWindow {
+class SCUDebuggerWindow : public WindowBase {
 public:
     SCUDebuggerWindow(SharedContext &context);
 
-    void Display();
-
-    bool Open = false;
+protected:
+    void DrawContents() override;
 
 private:
-    SharedContext &m_context;
     satemu::scu::SCU &m_scu;
 };
 
