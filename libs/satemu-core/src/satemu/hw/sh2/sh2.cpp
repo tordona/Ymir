@@ -162,12 +162,7 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
     m_delaySlotTarget = 0;
     m_delaySlot = false;
 
-    WriteCCR(0x00);
-    m_cacheEntries.fill({});
-    m_cacheLRU.fill(0);
-    m_cacheReplaceANDMask = 0x3Fu;
-    m_cacheReplaceORMask[false] = 0u;
-    m_cacheReplaceORMask[true] = 0u;
+    m_cache.Reset();
 }
 
 void SH2::MapMemory(sys::Bus &bus) {
@@ -285,30 +280,15 @@ T SH2::MemRead(uint32 address) {
     case 0b000: // cache
         if constexpr (config::enableCache) {
             // TODO: needs serious optimization
-            if (CCR.CE) {
-                const uint32 index = bit::extract<4, 9>(address);
-                const uint32 tagAddress = bit::extract<10, 28>(address);
-                auto &entry = m_cacheEntries[index];
-                sint8 way = -1;
-                // TODO: optimize way search, can be done with SIMD
-                for (uint32 i = 0; i < 4; i++) {
-                    const auto &tag = entry.tag[i];
-                    if (tag.tagAddress == tagAddress && tag.valid) {
-                        // Cache hit
-                        way = i;
-                        break;
-                    }
-                }
+            if (m_cache.CCR.CE) {
+                CacheEntry &entry = m_cache.GetEntry(address);
+                uint32 way = entry.FindWay(address);
 
                 if constexpr (!peek) {
-                    if (way == -1) {
+                    if (!IsValidCacheWay(way)) {
                         // Cache miss
-                        uint8 lru = m_cacheLRU[index];
-                        way = kCacheLRUWaySelect[lru & m_cacheReplaceANDMask] | m_cacheReplaceORMask[instrFetch];
-                        if (way != -1) {
-                            entry.tag[way].tagAddress = tagAddress;
-                            entry.tag[way].valid = 1;
-
+                        way = m_cache.SelectWay<instrFetch>(address);
+                        if (IsValidCacheWay(way)) {
                             // Fill line
                             const uint32 baseAddress = address & ~0xF;
                             for (uint32 offset = 0; offset < 16; offset += 4) {
@@ -321,13 +301,11 @@ T SH2::MemRead(uint32 address) {
                 }
 
                 // If way is valid, fetch from cache
-                if (way != -1) {
-                    // const uint32 byte = (bit::extract<0, 3>(address) & ~(sizeof(T) - 1)) ^ (4 - sizeof(T));
+                if (IsValidCacheWay(way)) {
                     const uint32 byte = bit::extract<0, 3>(address);
                     const T value = util::ReadBE<T>(&entry.line[way][byte]);
                     if constexpr (!peek) {
-                        m_cacheLRU[index] &= kCacheLRUUpdateBits[way].andMask;
-                        m_cacheLRU[index] |= kCacheLRUUpdateBits[way].orMask;
+                        m_cache.UpdateLRU(address, way);
                         m_log.trace("{}-bit SH-2 cached area read from {:08X} = {:X} (hit)", sizeof(T) * 8, address,
                                     value);
                     }
@@ -348,20 +326,13 @@ T SH2::MemRead(uint32 address) {
         }
     case 0b010: // associative purge
         if constexpr (!peek && std::is_same_v<T, uint32>) {
-            const uint32 index = bit::extract<4, 9>(address);
-            const uint32 tagAddress = bit::extract<10, 28>(address);
-            for (auto &tag : m_cacheEntries[index].tag) {
-                tag.valid &= tag.tagAddress != tagAddress;
-            }
+            m_cache.AssociativePurge(address);
             m_log.trace("{}-bit SH-2 associative purge read from {:08X}", sizeof(T) * 8, address);
         }
         return (address & 1) ? static_cast<T>(0x12231223) : static_cast<T>(0x23122312);
     case 0b011: // cache address array
         if constexpr (peek || std::is_same_v<T, uint32>) {
-            const uint32 index = bit::extract<4, 9>(address);
-            const uint8 lru = m_cacheLRU[index];
-            const uint8 way = peek ? bit::extract<2, 3>(address) : CCR.Wn;
-            const uint32 value = m_cacheEntries[index].tag[way].u32 | (lru << 4u);
+            const uint32 value = m_cache.ReadAddressArray<peek>(address);
             if constexpr (!peek) {
                 m_log.trace("{}-bit SH-2 cache address array read from {:08X} = {:X}", sizeof(T) * 8, address, value);
             }
@@ -376,11 +347,7 @@ T SH2::MemRead(uint32 address) {
     case 0b100:
     case 0b110: // cache data array
     {
-        const uint32 index = bit::extract<4, 9>(address);
-        const uint32 way = bit::extract<10, 11>(address);
-        const uint32 byte = bit::extract<0, 3>(address);
-        const auto &line = m_cacheEntries[index].line[way];
-        const T value = util::ReadBE<T>(&line[byte]);
+        const T value = m_cache.ReadDataArray<T>(address);
         if constexpr (!peek) {
             m_log.trace("{}-bit SH-2 cache data array read from {:08X} = {:X}", sizeof(T) * 8, address, value);
         }
@@ -428,22 +395,14 @@ void SH2::MemWrite(uint32 address, T value) {
     switch (partition) {
     case 0b000: // cache
         if constexpr (config::enableCache) {
-            // TODO: needs serious optimization
-            if (CCR.CE) {
-                const uint32 index = bit::extract<4, 9>(address);
-                const uint32 tagAddress = bit::extract<10, 28>(address);
-                auto &entry = m_cacheEntries[index];
-                // TODO: optimize way search, can be done with SIMD
-                for (uint32 i = 0; i < 4; i++) {
-                    const auto &tag = entry.tag[i];
-                    if (tag.tagAddress == tagAddress) {
-                        const uint32 byte = bit::extract<0, 3>(address);
-                        util::WriteBE<T>(&entry.line[i][byte], value);
-                        if constexpr (!poke) {
-                            m_cacheLRU[index] &= kCacheLRUUpdateBits[i].andMask;
-                            m_cacheLRU[index] |= kCacheLRUUpdateBits[i].orMask;
-                        }
-                        break;
+            if (m_cache.CCR.CE) {
+                auto &entry = m_cache.GetEntry(address);
+                const uint8 way = entry.FindWay(address);
+                if (IsValidCacheWay(way)) {
+                    const uint32 byte = bit::extract<0, 3>(address);
+                    util::WriteBE<T>(&entry.line[way][byte], value);
+                    if constexpr (!poke) {
+                        m_cache.UpdateLRU(address, way);
                     }
                 }
             }
@@ -459,11 +418,7 @@ void SH2::MemWrite(uint32 address, T value) {
         break;
     case 0b010: // associative purge
         if constexpr (poke || std::is_same_v<T, uint32>) {
-            const uint32 index = bit::extract<4, 9>(address);
-            const uint32 tagAddress = bit::extract<10, 28>(address);
-            for (auto &tag : m_cacheEntries[index].tag) {
-                tag.valid &= tag.tagAddress != tagAddress;
-            }
+            m_cache.AssociativePurge(address);
             if constexpr (!poke) {
                 m_log.trace("{}-bit SH-2 associative purge write to {:08X} = {:X}", sizeof(T) * 8, address, value);
             }
@@ -471,32 +426,8 @@ void SH2::MemWrite(uint32 address, T value) {
         break;
     case 0b011: // cache address array
         if constexpr (poke || std::is_same_v<T, uint32>) {
-            const uint32 index = bit::extract<4, 9>(address);
-            if constexpr (poke) {
-                uint32 currValue;
-                const uint8 way = bit::extract<2, 3>(address);
-                if constexpr (std::is_same_v<T, uint8>) {
-                    currValue = m_cacheEntries[index].tag[way].u32 | (m_cacheLRU[index] << 4u);
-                    switch (address & 3) {
-                    case 0: bit::deposit_into<24, 31>(currValue, value); break;
-                    case 1: bit::deposit_into<16, 23>(currValue, value); break;
-                    case 2: bit::deposit_into<8, 15>(currValue, value); break;
-                    case 3: bit::deposit_into<0, 7>(currValue, value); break;
-                    }
-                } else if constexpr (std::is_same_v<T, uint16>) {
-                    currValue = m_cacheEntries[index].tag[way].u32 | (m_cacheLRU[index] << 4u);
-                    switch (address & 2) {
-                    case 0: bit::deposit_into<16, 31>(currValue, value); break;
-                    case 2: bit::deposit_into<0, 15>(currValue, value); break;
-                    }
-                } else {
-                    currValue = value;
-                }
-                m_cacheEntries[index].tag[way].u32 = currValue & 0x1FFFFC04;
-                m_cacheLRU[index] = bit::extract<4, 9>(currValue);
-            } else {
-                m_cacheEntries[index].tag[CCR.Wn].u32 = address & 0x1FFFFC04;
-                m_cacheLRU[index] = bit::extract<4, 9>(value);
+            m_cache.WriteAddressArray<T, poke>(address, value);
+            if constexpr (!poke) {
                 m_log.trace("{}-bit SH-2 cache address array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
             }
         }
@@ -504,11 +435,7 @@ void SH2::MemWrite(uint32 address, T value) {
     case 0b100:
     case 0b110: // cache data array
     {
-        const uint32 index = bit::extract<4, 9>(address);
-        const uint32 way = bit::extract<10, 11>(address);
-        const uint32 byte = bit::extract<0, 3>(address);
-        auto &line = m_cacheEntries[index].line[way];
-        util::WriteBE<T>(&line[byte], value);
+        m_cache.WriteDataArray<T>(address, value);
         if constexpr (!poke) {
             m_log.trace("{}-bit SH-2 cache data array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
         }
@@ -685,7 +612,7 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     case 0x83: return WDT.ReadRSTCSR();
 
     case 0x91: return SBYCR.u8;
-    case 0x92 ... 0x9F: return CCR.u8;
+    case 0x92 ... 0x9F: return m_cache.ReadCCR();
 
     case 0xE0: return OnChipRegReadWord<peek>(address) >> 8u;
     case 0xE1: return OnChipRegReadWord<peek>(address & ~1) >> 0u;
@@ -829,7 +756,7 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
         case 0x81: WDT.WriteWTCNT(value); break;
         case 0x83: WDT.WriteRSTCSR<poke>(value); break;
 
-        case 0x93 ... 0x9F: WriteCCR(value); break;
+        case 0x93 ... 0x9F: m_cache.WriteCCR(value); break;
         }
     }
 
@@ -875,7 +802,7 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     case 0x72: m_dmaChannels[1].WriteDRCR(value); break;
 
     case 0x91: SBYCR.u8 = value & 0xDF; break;
-    case 0x92: WriteCCR(value); break;
+    case 0x92: m_cache.WriteCCR(value); break;
 
     case 0xE0: INTC.WriteICR<false, true, poke>(value << 8u); break;
     case 0xE1: INTC.WriteICR<true, false, poke>(value); break;
@@ -948,7 +875,7 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
         }
         break;
 
-    case 0x92: WriteCCR(value); break;
+    case 0x92: m_cache.WriteCCR(value); break;
 
     case 0xE0: INTC.WriteICR<true, true, poke>(value); break;
 
@@ -1204,26 +1131,6 @@ void SH2::RunDMAC(uint32 channel) {
         case 0: RaiseInterrupt(InterruptSource::DMAC0_XferEnd); break;
         case 1: RaiseInterrupt(InterruptSource::DMAC1_XferEnd); break;
         }
-    }
-}
-
-void SH2::WriteCCR(uint8 value) {
-    if (CCR.u8 == value) {
-        return;
-    }
-
-    CCR.u8 = value;
-    m_cacheReplaceANDMask = CCR.TW ? 0x1u : 0x3Fu;
-    m_cacheReplaceORMask[false] = CCR.OD ? -1 : 0;
-    m_cacheReplaceORMask[true] = CCR.ID ? -1 : 0;
-    if (CCR.CP) {
-        for (uint32 index = 0; index < 64; index++) {
-            for (auto &tag : m_cacheEntries[index].tag) {
-                tag.valid = 0;
-            }
-            m_cacheLRU[index] = 0;
-        }
-        CCR.CP = 0;
     }
 }
 
