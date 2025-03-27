@@ -17,10 +17,10 @@ struct WatchdogTimer {
     }
 
     void Reset(bool watchdogInitiated) {
-        WTCSR.u8 = 0x18;
+        WTCSR.Reset();
         WTCNT = 0x00;
         if (!watchdogInitiated) {
-            RSTCSR.u8 = 0x1F;
+            RSTCSR.Reset();
         }
 
         m_cycleCount = 0;
@@ -84,19 +84,31 @@ struct WatchdogTimer {
     //                          110 (6) = phi/4096
     //                          111 (7) = phi/8192
 
-    union RegWTCSR {
-        uint8 u8;
-        struct {
-            uint8 CKSn : 3;
-            uint8 : 2;
-            uint8 TME : 1;
-            uint8 WT_nIT : 1;
-            uint8 OVF : 1;
-        };
+    struct RegWTCSR {
+        RegWTCSR() {
+            Reset();
+        }
+
+        void Reset() {
+            CKSn = 0;
+            TME = false;
+            WT_nIT = false;
+            OVF = false;
+        }
+        uint8 CKSn;
+        bool TME;
+        bool WT_nIT;
+        bool OVF;
     } WTCSR;
 
     FORCE_INLINE uint8 ReadWTCSR() const {
-        return WTCSR.u8;
+        uint8 value = 0;
+        bit::deposit_into<7>(value, WTCSR.OVF);
+        bit::deposit_into<6>(value, WTCSR.WT_nIT);
+        bit::deposit_into<5>(value, WTCSR.TME);
+        bit::deposit_into<3, 4>(value, 0b11);
+        bit::deposit_into<0, 2>(value, WTCSR.CKSn);
+        return value;
     }
 
     template <bool poke>
@@ -139,18 +151,29 @@ struct WatchdogTimer {
     //      5   R/W  RSTS     Reset Select (0=power-on reset, 1=manual reset)
     //    4-0   R    -        Reserved - must be one
 
-    union RegRSTCSR {
-        uint8 u8;
-        struct {
-            uint8 : 5;
-            uint8 RSTS : 1;
-            uint8 RSTE : 1;
-            uint8 WOVF : 1;
-        };
+    struct RegRSTCSR {
+        RegRSTCSR() {
+            Reset();
+        }
+
+        void Reset() {
+            RSTS = false;
+            RSTE = false;
+            WOVF = false;
+        }
+
+        bool RSTS;
+        bool RSTE;
+        bool WOVF;
     } RSTCSR;
 
     FORCE_INLINE uint8 ReadRSTCSR() const {
-        return RSTCSR.u8;
+        uint8 value = 0;
+        bit::deposit_into<7>(value, RSTCSR.WOVF);
+        bit::deposit_into<6>(value, RSTCSR.RSTE);
+        bit::deposit_into<5>(value, RSTCSR.RSTS);
+        bit::deposit_into<0, 4>(value, 0b11111);
+        return value;
     }
 
     template <bool poke>

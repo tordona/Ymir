@@ -17,12 +17,12 @@ struct FreeRunningTimer {
     }
 
     void Reset() {
-        TIER.u8 = 0x01;
-        FTCSR.u8 = 0x00;
+        TIER.Reset();
+        FTCSR.Reset();
         FRC = 0x0000;
         OCRA = OCRB = 0xFFFF;
-        TCR.u8 = 0x00;
-        TOCR.u8 = 0x00;
+        TCR.Reset();
+        TOCR.Reset();
         ICR = 0x0000;
 
         TEMP = 0x00;
@@ -83,24 +83,39 @@ struct FreeRunningTimer {
     //      2   R/W  OCIBE    Output Compare Interrupt B Enable
     //      1   R/W  OVIE     Timer Overflow Interrupt Enable
     //      0   R/W  -        Reserved - must be one
-    union RegTIER {
-        uint8 u8;
-        struct {
-            uint8 : 1;
-            uint8 OVIE : 1;
-            uint8 OCIAE : 1;
-            uint8 OCIBE : 1;
-            uint8 : 3;
-            uint8 ICIE : 1;
-        };
+    struct RegTIER {
+        RegTIER() {
+            Reset();
+        }
+
+        void Reset() {
+            OVIE = false;
+            OCIAE = false;
+            OCIBE = false;
+            ICIE = false;
+        }
+
+        bool OVIE;
+        bool OCIAE;
+        bool OCIBE;
+        bool ICIE;
     } TIER;
 
     FORCE_INLINE uint8 ReadTIER() const {
-        return TIER.u8;
+        uint8 value = 0;
+        bit::deposit_into<7>(value, TIER.ICIE);
+        bit::deposit_into<3>(value, TIER.OCIAE);
+        bit::deposit_into<2>(value, TIER.OCIBE);
+        bit::deposit_into<1>(value, TIER.OVIE);
+        bit::deposit_into<0>(value, 1);
+        return value;
     }
 
     FORCE_INLINE void WriteTIER(uint8 value) {
-        TIER.u8 = (value & 0x8E) | 1;
+        TIER.ICIE = bit::extract<7>(value);
+        TIER.OCIAE = bit::extract<3>(value);
+        TIER.OCIBE = bit::extract<2>(value);
+        TIER.OVIE = bit::extract<1>(value);
     }
 
     // 011  R/W  8        00        FTCSR   Free-running timer control/status register
@@ -112,20 +127,34 @@ struct FreeRunningTimer {
     //      2   R/W  OCFB     Output Compare Flag B (clear on zero write)
     //      1   R/W  OVF      Timer Overflow Flag (clear on zero write)
     //      0   R/W  CCLRA    Counter Clear A
-    union RegFTCSR {
-        uint8 u8;
-        struct {
-            uint8 CCLRA : 1;
-            uint8 OVF : 1;
-            uint8 OCFB : 1;
-            uint8 OCFA : 1;
-            uint8 : 3;
-            uint8 ICF : 1;
-        };
+    struct RegFTCSR {
+        RegFTCSR() {
+            Reset();
+        }
+
+        void Reset() {
+            CCLRA = false;
+            OVF = false;
+            OCFB = false;
+            OCFA = false;
+            ICF = false;
+        }
+
+        bool CCLRA;
+        bool OVF;
+        bool OCFB;
+        bool OCFA;
+        bool ICF;
     } FTCSR;
 
     FORCE_INLINE uint8 ReadFTCSR() const {
-        return FTCSR.u8;
+        uint8 value = 0;
+        bit::deposit_into<7>(value, FTCSR.ICF);
+        bit::deposit_into<3>(value, FTCSR.OCFA);
+        bit::deposit_into<2>(value, FTCSR.OCFB);
+        bit::deposit_into<1>(value, FTCSR.OVF);
+        bit::deposit_into<0>(value, FTCSR.CCLRA);
+        return value;
     }
 
     template <bool poke>
@@ -232,21 +261,30 @@ struct FreeRunningTimer {
     //                          01 (1) = Internal clock / 32
     //                          10 (2) = Internal clock / 128
     //                          11 (3) = External clock (on rising edge)
-    union RegTCR {
-        uint8 u8;
-        struct {
-            uint8 CKSn : 2;
-            uint8 : 5;
-            uint8 IEDGA : 1;
-        };
+    struct RegTCR {
+        RegTCR() {
+            Reset();
+        }
+
+        void Reset() {
+            CKSn = 0;
+            IEDGA = false;
+        }
+
+        uint8 CKSn;
+        bool IEDGA;
     } TCR;
 
     FORCE_INLINE uint8 ReadTCR() const {
-        return TCR.u8;
+        uint8 value = 0;
+        bit::deposit_into<7>(value, TCR.IEDGA);
+        bit::deposit_into<0, 1>(value, TCR.CKSn);
+        return value;
     }
 
     FORCE_INLINE void WriteTCR(uint8 value) {
-        TCR.u8 = value & 0x83;
+        TCR.IEDGA = bit::extract<7>(value);
+        TCR.CKSn = bit::extract<0, 1>(value);
 
         m_clockDividerShift = kDividerShifts[TCR.CKSn];
         m_cycleCountMask = (1ull << m_clockDividerShift) - 1;
@@ -260,23 +298,34 @@ struct FreeRunningTimer {
     //    3-2   R/W  -        Reserved - must be zero
     //      1   R/W  OLVLA    Output Level A
     //      0   R/W  OLVLB    Output Level B
-    union RegTOCR {
-        uint8 u8;
-        struct {
-            uint8 OLVLA : 1;
-            uint8 OLVLB : 1;
-            uint8 : 2;
-            uint8 OCRS : 1;
-            uint8 : 3;
-        };
+    struct RegTOCR {
+        RegTOCR() {
+            Reset();
+        }
+
+        void Reset() {
+            OLVLA = false;
+            OLVLB = false;
+            OCRS = false;
+        }
+
+        bool OLVLA;
+        bool OLVLB;
+        bool OCRS;
     } TOCR;
 
     FORCE_INLINE uint8 ReadTOCR() const {
-        return TOCR.u8;
+        uint8 value = 0;
+        bit::deposit_into<4>(value, TOCR.OCRS);
+        bit::deposit_into<1>(value, TOCR.OLVLA);
+        bit::deposit_into<0>(value, TOCR.OLVLB);
+        return value;
     }
 
     FORCE_INLINE void WriteTOCR(uint8 value) {
-        TOCR.u8 = value & 0x13;
+        TOCR.OCRS = bit::extract<4>(value);
+        TOCR.OLVLA = bit::extract<1>(value);
+        TOCR.OLVLB = bit::extract<0>(value);
     }
 
     // 018  R    8        00        ICR H     Input capture register H
