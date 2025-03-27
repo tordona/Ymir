@@ -13,16 +13,21 @@ namespace satemu::sh2 {
 // Configuration
 
 namespace config {
+    // TODO: replace with the debug trace system
     // Detect and log SYS_EXECDMP invocations.
     // The address is specified by sysExecDumpAddress.
     inline constexpr bool logSysExecDump = false;
 
+    // TODO: replace with the debug trace system
     // Address of SYS_EXECDMP function.
     // 0x186C is valid in most BIOS images.
-    // 0x197C on JP (v1.003)
+    // 0x197C on JP (v1.003).
     inline constexpr uint32 sysExecDumpAddress = 0x186C;
 
+    // TODO: make this a template parameter for Advance, Step and others
     // Enable cache emulation.
+    // Most games don't need this.
+    // Costs about 8-15% performance.
     inline constexpr bool enableCache = false;
 } // namespace config
 
