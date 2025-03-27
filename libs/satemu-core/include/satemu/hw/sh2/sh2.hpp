@@ -189,6 +189,32 @@ public:
             return m_sh2.INTC;
         }
 
+        FORCE_INLINE FreeRunningTimer &FRT() {
+            return m_sh2.FRT;
+        }
+
+        FORCE_INLINE const FreeRunningTimer &FRT() const {
+            return m_sh2.FRT;
+        }
+
+        // Advance FRT with side-effects
+        FORCE_INLINE void AdvanceFRT(uint64 cycles) {
+            m_sh2.AdvanceFRT(cycles);
+        }
+
+        FORCE_INLINE WatchdogTimer &WDT() {
+            return m_sh2.WDT;
+        }
+
+        FORCE_INLINE const WatchdogTimer &WDT() const {
+            return m_sh2.WDT;
+        }
+
+        // Advance WDT with side-effects
+        FORCE_INLINE void AdvanceWDT(uint64 cycles) {
+            m_sh2.AdvanceWDT(cycles);
+        }
+
         // ---------------------------------------------------------------------
         // Cache
 
