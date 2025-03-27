@@ -1069,7 +1069,7 @@ void App::RunEmulator() {
 
                 auto sh2Menu = [&](const char *name, ui::SH2WindowSet &set) {
                     if (ImGui::BeginMenu(name)) {
-                        ImGui::MenuItem("Debugger", nullptr, &set.debugger.Open);
+                        ImGui::MenuItem("[WIP] Debugger", nullptr, &set.debugger.Open);
                         ImGui::MenuItem("Interrupts", nullptr, &set.interrupts.Open);
                         ImGui::MenuItem("Interrupt trace", nullptr, &set.interruptTrace.Open);
                         ImGui::MenuItem("Cache", nullptr, &set.cache.Open);

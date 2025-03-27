@@ -9,7 +9,7 @@ SH2DebuggerWindow::SH2DebuggerWindow(SharedContext &context, bool master)
     , m_regsView(context, m_sh2)
     , m_disasmView(context, m_sh2) {
 
-    m_windowConfig.name = fmt::format("{}SH2", master ? 'M' : 'S');
+    m_windowConfig.name = fmt::format("[WIP] {}SH2 debugger", master ? 'M' : 'S');
     m_windowConfig.flags = ImGuiWindowFlags_AlwaysAutoResize;
 }
 
