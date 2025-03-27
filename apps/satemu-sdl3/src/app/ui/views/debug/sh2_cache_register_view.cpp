@@ -62,8 +62,7 @@ void SH2CacheRegisterView::Display() {
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("W1-0");
     ImGui::EndGroup();
-    ImGui::SetItemTooltip("Way Select\n"
-                          "Applies to the cache address array area");
+    ImGui::SetItemTooltip("Way Select");
 
     ImGui::SameLine();
     if (ImGui::Button("Purge")) {

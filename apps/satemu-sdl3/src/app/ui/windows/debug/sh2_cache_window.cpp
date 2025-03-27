@@ -4,13 +4,19 @@ namespace app::ui {
 
 SH2CacheWindow::SH2CacheWindow(SharedContext &context, bool master)
     : SH2WindowBase(context, master)
-    , m_cacheRegView(context, m_sh2) {
+    , m_cacheRegView(context, m_sh2)
+    , m_cacheEntriesView(context, m_sh2) {
 
     m_windowConfig.name = fmt::format("{}SH2 cache", master ? 'M' : 'S');
 }
 
+void SH2CacheWindow::PrepareWindow() {
+    ImGui::SetNextWindowSizeConstraints(ImVec2(652, 246), ImVec2(652, FLT_MAX));
+}
+
 void SH2CacheWindow::DrawContents() {
     m_cacheRegView.Display();
+    m_cacheEntriesView.Display();
 }
 
 } // namespace app::ui

@@ -156,46 +156,62 @@ public:
 
     void Reset() {
         CCR.Reset();
-        m_cacheEntries.fill({});
-        m_cacheLRU.fill(0);
-        m_cacheReplaceANDMask = 0x3Fu;
-        m_cacheReplaceORMask[false] = 0u;
-        m_cacheReplaceORMask[true] = 0u;
+        m_entries.fill({});
+        m_lru.fill(0);
+        m_replaceANDMask = 0x3Fu;
+        m_replaceORMask[false] = 0u;
+        m_replaceORMask[true] = 0u;
     }
 
     FORCE_INLINE CacheEntry &GetEntry(uint32 address) {
         const uint32 index = bit::extract<4, 9>(address);
-        return m_cacheEntries[index];
+        return m_entries[index];
     }
 
     FORCE_INLINE const CacheEntry &GetEntry(uint32 address) const {
         const uint32 index = bit::extract<4, 9>(address);
-        return m_cacheEntries[index];
+        return m_entries[index];
+    }
+
+    template <bool instrFetch>
+    FORCE_INLINE uint8 GetWayFromLRU(uint8 lru) {
+        assert(lru <= 63);
+        return kCacheLRUWaySelect[lru & m_replaceANDMask] | m_replaceORMask[instrFetch];
     }
 
     template <bool instrFetch>
     FORCE_INLINE uint8 SelectWay(uint32 address) {
         const uint32 index = bit::extract<4, 9>(address);
-        const uint8 lru = m_cacheLRU[index];
-        const uint8 way = kCacheLRUWaySelect[lru & m_cacheReplaceANDMask] | m_cacheReplaceORMask[instrFetch];
+        const uint8 lru = m_lru[index];
+        const uint8 way = GetWayFromLRU<instrFetch>(lru);
         if (IsValidCacheWay(way)) {
             const uint32 tagAddress = bit::extract<10, 28>(address);
-            m_cacheEntries[index].tag[way].tagAddress = tagAddress;
-            m_cacheEntries[index].tag[way].valid = 1;
+            m_entries[index].tag[way].tagAddress = tagAddress;
+            m_entries[index].tag[way].valid = 1;
         }
         return way;
     }
 
+    FORCE_INLINE uint8 GetLRU(uint8 index) {
+        assert(index < kCacheEntries);
+        return m_lru[index];
+    }
+
+    FORCE_INLINE void SetLRU(uint8 index, uint8 lru) {
+        assert(index < kCacheEntries);
+        m_lru[index] = lru;
+    }
+
     FORCE_INLINE void UpdateLRU(uint32 address, uint8 way) {
         const uint32 index = bit::extract<4, 9>(address);
-        m_cacheLRU[index] &= kCacheLRUUpdateBits[way].andMask;
-        m_cacheLRU[index] |= kCacheLRUUpdateBits[way].orMask;
+        m_lru[index] &= kCacheLRUUpdateBits[way].andMask;
+        m_lru[index] |= kCacheLRUUpdateBits[way].orMask;
     }
 
     FORCE_INLINE void AssociativePurge(uint32 address) {
         const uint32 index = bit::extract<4, 9>(address);
         const uint32 tagAddress = bit::extract<10, 28>(address);
-        for (auto &tag : m_cacheEntries[index].tag) {
+        for (auto &tag : m_entries[index].tag) {
             tag.valid &= tag.tagAddress != tagAddress;
         }
     }
@@ -203,9 +219,9 @@ public:
     template <bool peek>
     FORCE_INLINE uint32 ReadAddressArray(uint32 address) const {
         const uint32 index = bit::extract<4, 9>(address);
-        const uint8 lru = m_cacheLRU[index];
+        const uint8 lru = m_lru[index];
         const uint8 way = peek ? bit::extract<2, 3>(address) : CCR.Wn;
-        return m_cacheEntries[index].tag[way].u32 | (lru << 4u);
+        return m_entries[index].tag[way].u32 | (lru << 4u);
     }
 
     template <mem_primitive T, bool poke>
@@ -215,7 +231,7 @@ public:
             uint32 currValue;
             const uint8 way = bit::extract<2, 3>(address);
             if constexpr (std::is_same_v<T, uint8>) {
-                currValue = m_cacheEntries[index].tag[way].u32 | (m_cacheLRU[index] << 4u);
+                currValue = m_entries[index].tag[way].u32 | (m_lru[index] << 4u);
                 switch (address & 3) {
                 case 0: bit::deposit_into<24, 31>(currValue, value); break;
                 case 1: bit::deposit_into<16, 23>(currValue, value); break;
@@ -223,7 +239,7 @@ public:
                 case 3: bit::deposit_into<0, 7>(currValue, value); break;
                 }
             } else if constexpr (std::is_same_v<T, uint16>) {
-                currValue = m_cacheEntries[index].tag[way].u32 | (m_cacheLRU[index] << 4u);
+                currValue = m_entries[index].tag[way].u32 | (m_lru[index] << 4u);
                 switch (address & 2) {
                 case 0: bit::deposit_into<16, 31>(currValue, value); break;
                 case 2: bit::deposit_into<0, 15>(currValue, value); break;
@@ -231,11 +247,11 @@ public:
             } else {
                 currValue = value;
             }
-            m_cacheEntries[index].tag[way].u32 = currValue & 0x1FFFFC04;
-            m_cacheLRU[index] = bit::extract<4, 9>(currValue);
+            m_entries[index].tag[way].u32 = currValue & 0x1FFFFC04;
+            m_lru[index] = bit::extract<4, 9>(currValue);
         } else {
-            m_cacheEntries[index].tag[CCR.Wn].u32 = address & 0x1FFFFC04;
-            m_cacheLRU[index] = bit::extract<4, 9>(value);
+            m_entries[index].tag[CCR.Wn].u32 = address & 0x1FFFFC04;
+            m_lru[index] = bit::extract<4, 9>(value);
         }
     }
 
@@ -244,7 +260,7 @@ public:
         const uint32 index = bit::extract<4, 9>(address);
         const uint32 way = bit::extract<10, 11>(address);
         const uint32 byte = bit::extract<0, 3>(address);
-        const auto &line = m_cacheEntries[index].line[way];
+        const auto &line = m_entries[index].line[way];
         return util::ReadBE<T>(&line[byte]);
     }
 
@@ -253,16 +269,16 @@ public:
         const uint32 index = bit::extract<4, 9>(address);
         const uint32 way = bit::extract<10, 11>(address);
         const uint32 byte = bit::extract<0, 3>(address);
-        auto &line = m_cacheEntries[index].line[way];
+        auto &line = m_entries[index].line[way];
         util::WriteBE<T>(&line[byte], value);
     }
 
     FORCE_INLINE void Purge() {
         for (uint32 index = 0; index < 64; index++) {
-            for (auto &tag : m_cacheEntries[index].tag) {
+            for (auto &tag : m_entries[index].tag) {
                 tag.valid = 0;
             }
-            m_cacheLRU[index] = 0;
+            m_lru[index] = 0;
         }
     }
 
@@ -278,9 +294,9 @@ public:
     template <bool poke>
     FORCE_INLINE void WriteCCR(uint8 value) {
         CCR.Write(value);
-        m_cacheReplaceANDMask = CCR.TW ? 0x1u : 0x3Fu;
-        m_cacheReplaceORMask[false] = CCR.OD ? -1 : 0;
-        m_cacheReplaceORMask[true] = CCR.ID ? -1 : 0;
+        m_replaceANDMask = CCR.TW ? 0x1u : 0x3Fu;
+        m_replaceORMask[false] = CCR.OD ? -1 : 0;
+        m_replaceORMask[true] = CCR.ID ? -1 : 0;
         if (CCR.CP) {
             if constexpr (!poke) {
                 Purge();
@@ -289,11 +305,24 @@ public:
         }
     }
 
+    // -------------------------------------------------------------------------
+    // Debugging
+
+    FORCE_INLINE CacheEntry &GetEntryByIndex(uint8 index) {
+        assert(index < kCacheEntries);
+        return m_entries[index];
+    }
+
+    FORCE_INLINE const CacheEntry &GetEntryByIndex(uint8 index) const {
+        assert(index < kCacheEntries);
+        return m_entries[index];
+    }
+
 private:
-    alignas(16) std::array<CacheEntry, kCacheEntries> m_cacheEntries;
-    alignas(16) std::array<uint8, kCacheEntries> m_cacheLRU;
-    uint8 m_cacheReplaceANDMask;
-    std::array<sint8, 2> m_cacheReplaceORMask; // [0]=data, [1]=code
+    alignas(16) std::array<CacheEntry, kCacheEntries> m_entries;
+    alignas(16) std::array<uint8, kCacheEntries> m_lru;
+    uint8 m_replaceANDMask;
+    std::array<sint8, 2> m_replaceORMask; // [0]=data, [1]=code
 };
 
 } // namespace satemu::sh2

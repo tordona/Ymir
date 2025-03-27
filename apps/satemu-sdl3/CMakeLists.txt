@@ -23,6 +23,8 @@ add_executable(satemu-sdl3
 
     src/app/ui/state/debug/memory_viewer_state.hpp
 
+    src/app/ui/views/debug/sh2_cache_entries_view.cpp
+    src/app/ui/views/debug/sh2_cache_entries_view.hpp
     src/app/ui/views/debug/sh2_cache_register_view.cpp
     src/app/ui/views/debug/sh2_cache_register_view.hpp
     src/app/ui/views/debug/sh2_disassembly_view.cpp
