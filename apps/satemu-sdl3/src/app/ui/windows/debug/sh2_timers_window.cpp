@@ -6,9 +6,8 @@ namespace app::ui {
 
 SH2TimersWindow::SH2TimersWindow(SharedContext &context, bool master)
     : SH2WindowBase(context, master)
-/*, m_frtView(context, m_sh2)
-, m_wdtView(context, m_sh2)*/
-{
+    , m_frtView(context, m_sh2)
+    , m_wdtView(context, m_sh2) {
 
     m_windowConfig.name = fmt::format("{}SH2 timers", master ? 'M' : 'S');
 }
@@ -18,9 +17,8 @@ void SH2TimersWindow::PrepareWindow() {
 }
 
 void SH2TimersWindow::DrawContents() {
-    // m_frtView.Display();
-    // m_wdtView.Display();
-    ImGui::TextUnformatted("(placeholder)");
+    m_frtView.Display();
+    m_wdtView.Display();
 }
 
 } // namespace app::ui
