@@ -60,12 +60,17 @@ void MemoryViewerWindow::DrawContents() {
     ImGui::Separator();
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     m_memViewState->memoryEditor.DrawContents(this, currRegion.size, currRegion.baseAddress);
+    ImGui::PopFont();
     if (m_memViewState->memoryEditor.MouseHovered) {
-        // TODO: use this to display additional info on specific addresses
+        const uint32 address = currRegion.baseAddress + m_memViewState->memoryEditor.MouseHoveredAddr;
         if (ImGui::BeginTooltip()) {
-            const uint32 address = currRegion.baseAddress + m_memViewState->memoryEditor.MouseHoveredAddr;
-            ImGui::Text("Address: %08X", address);
+            ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+            ImGui::Text("%08X", address);
+            ImGui::PopFont();
             ImGui::EndTooltip();
+        }
+        if (currRegion.hoverFn) {
+            currRegion.hoverFn(address, m_memViewState.get());
         }
     }
 
@@ -75,8 +80,6 @@ void MemoryViewerWindow::DrawContents() {
         m_memViewState->memoryEditor.WriteFn = m_memViewState->selectedRegion->writeFn;
         m_memViewState->memoryEditor.BgColorFn = m_memViewState->selectedRegion->bgColorFn;
     }
-
-    ImGui::PopFont();
 }
 
 } // namespace app::ui

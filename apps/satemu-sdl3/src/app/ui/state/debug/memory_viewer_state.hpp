@@ -78,6 +78,7 @@ struct Region {
     using WriteFn = void (*)(ImU8 *mem, size_t off, ImU8 d, void *user_data);
     using BgColorFn = ImU32 (*)(const ImU8 *mem, size_t off, void *user_data);
     using ParamsFn = void (*)(MemoryViewerState *state);
+    using HoverFn = void (*)(uint32 address, MemoryViewerState *state);
 
     const char *name;
     const char *addressBlockName;
@@ -87,6 +88,7 @@ struct Region {
     WriteFn writeFn;
     BgColorFn bgColorFn;
     ParamsFn paramsFn;
+    HoverFn hoverFn;
 
     std::string ToString() const {
         return fmt::format("[{}:{:08X}..{:08X}] {}", addressBlockName, baseAddress, baseAddress + size - 1, name);
@@ -135,7 +137,7 @@ namespace regions {
     }
 
     template <bool master>
-    inline ImU32 SH2BusBgColor(const ImU8 * /*mem*/, size_t /*off*/, void * /*user_data*/) {
+    inline ImU32 SH2BusBgColor(const ImU8 *mem, size_t off, void *user_data) {
         // auto &state = *static_cast<MemoryViewerState *>(user_data);
         // off += state.selectedRegion->baseAddress;
         // auto &sh2 = master ? state.sharedCtx.saturn.masterSH2 : state.sharedCtx.saturn.slaveSH2;
@@ -143,45 +145,71 @@ namespace regions {
         return 0;
     }
 
+    static constexpr float kCacheWayHues[] = {38.0f, 96.0f, 193.0f, 282.0f};
+
+    inline ImU32 SH2CacheAddressBgColor(const ImU8 *mem, size_t off, void *user_data) {
+        const uint32 index = (off >> 2) & 3;
+        return ImColor::HSV(kCacheWayHues[index] / 360.0f, 0.96f, 0.18f);
+    }
+
+    inline ImU32 SH2CacheDataBgColor(const ImU8 *mem, size_t off, void *user_data) {
+        const uint32 index = (off >> 10) & 3;
+        return ImColor::HSV(kCacheWayHues[index] / 360.0f, 0.96f, 0.18f);
+    }
+
+    inline void SH2CacheAddressHover(uint32 address, MemoryViewerState * /*state*/) {
+        if (ImGui::BeginTooltip()) {
+            ImGui::Text("Entry %u, way %u", (address >> 4) & 63, (address >> 2) & 3);
+            ImGui::EndTooltip();
+        }
+    }
+
+    inline void SH2CacheDataHover(uint32 address, MemoryViewerState * /*state*/) {
+        if (ImGui::BeginTooltip()) {
+            ImGui::Text("Way %u, line %u", (address >> 10) & 3, (address >> 4) & 63);
+            ImGui::EndTooltip();
+        }
+    }
+
     // clang-format off
     inline constexpr Region kMainRegions[] = {
-        { .name = "Main address space",  .addressBlockName = "Main", .baseAddress = 0x0000000, .size = 0x8000000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "Boot ROM / IPL",      .addressBlockName = "Main", .baseAddress = 0x0000000, .size =  0x100000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "SMPC registers",      .addressBlockName = "Main", .baseAddress = 0x0100000, .size =      0x80, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "Internal backup RAM", .addressBlockName = "Main", .baseAddress = 0x0180000, .size =   0x10000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "Low Work RAM",        .addressBlockName = "Main", .baseAddress = 0x0200000, .size =  0x100000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "MINIT area",          .addressBlockName = "Main", .baseAddress = 0x1000000, .size =  0x800000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "SINIT area",          .addressBlockName = "Main", .baseAddress = 0x1000000, .size =  0x800000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "SCU A-Bus",           .addressBlockName = "Main", .baseAddress = 0x2000000, .size = 0x4000000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "SCU A-Bus CS0",       .addressBlockName = "Main", .baseAddress = 0x2000000, .size = 0x2000000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "SCU A-Bus CS1",       .addressBlockName = "Main", .baseAddress = 0x4000000, .size = 0x1000000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "SCU A-Bus CS2",       .addressBlockName = "Main", .baseAddress = 0x5800000, .size =  0x100000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "SCU B-Bus",           .addressBlockName = "Main", .baseAddress = 0x5A00000, .size =  0x5C0000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "68000 Work RAM",      .addressBlockName = "Main", .baseAddress = 0x5A00000, .size =   0x80000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "SCSP registers",      .addressBlockName = "Main", .baseAddress = 0x5B00000, .size =    0x1000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "VDP1 VRAM",           .addressBlockName = "Main", .baseAddress = 0x5C00000, .size =   0x80000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "VDP1 framebuffer",    .addressBlockName = "Main", .baseAddress = 0x5C80000, .size =   0x40000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "VDP1 registers",      .addressBlockName = "Main", .baseAddress = 0x5D00000, .size =      0x20, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "VDP2 VRAM",           .addressBlockName = "Main", .baseAddress = 0x5E00000, .size =   0x80000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "VDP2 CRAM",           .addressBlockName = "Main", .baseAddress = 0x5F00000, .size =    0x1000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "VDP2 registers",      .addressBlockName = "Main", .baseAddress = 0x5FE0000, .size =     0x100, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
-        { .name = "High Work RAM",       .addressBlockName = "Main", .baseAddress = 0x6000000, .size =  0x100000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr },
+        { .name = "Main address space",  .addressBlockName = "Main", .baseAddress = 0x0000000, .size = 0x8000000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "Boot ROM / IPL",      .addressBlockName = "Main", .baseAddress = 0x0000000, .size =  0x100000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "SMPC registers",      .addressBlockName = "Main", .baseAddress = 0x0100000, .size =      0x80, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "Internal backup RAM", .addressBlockName = "Main", .baseAddress = 0x0180000, .size =   0x10000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "Low Work RAM",        .addressBlockName = "Main", .baseAddress = 0x0200000, .size =  0x100000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "MINIT area",          .addressBlockName = "Main", .baseAddress = 0x1000000, .size =  0x800000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "SINIT area",          .addressBlockName = "Main", .baseAddress = 0x1000000, .size =  0x800000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "SCU A-Bus",           .addressBlockName = "Main", .baseAddress = 0x2000000, .size = 0x4000000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "SCU A-Bus CS0",       .addressBlockName = "Main", .baseAddress = 0x2000000, .size = 0x2000000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "SCU A-Bus CS1",       .addressBlockName = "Main", .baseAddress = 0x4000000, .size = 0x1000000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "SCU A-Bus CS2",       .addressBlockName = "Main", .baseAddress = 0x5800000, .size =  0x100000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "SCU B-Bus",           .addressBlockName = "Main", .baseAddress = 0x5A00000, .size =  0x5C0000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "68000 Work RAM",      .addressBlockName = "Main", .baseAddress = 0x5A00000, .size =   0x80000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "SCSP registers",      .addressBlockName = "Main", .baseAddress = 0x5B00000, .size =    0x1000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "VDP1 VRAM",           .addressBlockName = "Main", .baseAddress = 0x5C00000, .size =   0x80000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "VDP1 framebuffer",    .addressBlockName = "Main", .baseAddress = 0x5C80000, .size =   0x40000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "VDP1 registers",      .addressBlockName = "Main", .baseAddress = 0x5D00000, .size =      0x20, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "VDP2 VRAM",           .addressBlockName = "Main", .baseAddress = 0x5E00000, .size =   0x80000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "VDP2 CRAM",           .addressBlockName = "Main", .baseAddress = 0x5F00000, .size =    0x1000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "VDP2 registers",      .addressBlockName = "Main", .baseAddress = 0x5FE0000, .size =     0x100, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
+        { .name = "High Work RAM",       .addressBlockName = "Main", .baseAddress = 0x6000000, .size =  0x100000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
     };
 
     inline constexpr Region kMSH2Regions[] = {
-        { .name = "MSH2 cached address space",   .addressBlockName = "MSH2", .baseAddress = 0x00000000, .size = 0x8000000, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>, .paramsFn = nullptr },
-        { .name = "MSH2 uncached address space", .addressBlockName = "MSH2", .baseAddress = 0x20000000, .size = 0x8000000, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>, .paramsFn = nullptr },
-        { .name = "MSH2 cache address array",    .addressBlockName = "MSH2", .baseAddress = 0x60000000, .size =     0x400, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>, .paramsFn = nullptr },
-        { .name = "MSH2 cache data array",       .addressBlockName = "MSH2", .baseAddress = 0xC0000000, .size =    0x1000, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>, .paramsFn = nullptr },
-        { .name = "MSH2 on-chip registers",      .addressBlockName = "MSH2", .baseAddress = 0xFFFFFE00, .size =     0x200, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>, .paramsFn = nullptr },
+        { .name = "MSH2 cached address space",   .addressBlockName = "MSH2", .baseAddress = 0x00000000, .size = 0x8000000, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>,    .paramsFn = nullptr, .hoverFn = nullptr              },
+        { .name = "MSH2 uncached address space", .addressBlockName = "MSH2", .baseAddress = 0x20000000, .size = 0x8000000, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>,    .paramsFn = nullptr, .hoverFn = nullptr              },
+        { .name = "MSH2 cache address array",    .addressBlockName = "MSH2", .baseAddress = 0x60000000, .size =     0x400, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2CacheAddressBgColor, .paramsFn = nullptr, .hoverFn = SH2CacheAddressHover },
+        { .name = "MSH2 cache data array",       .addressBlockName = "MSH2", .baseAddress = 0xC0000000, .size =    0x1000, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2CacheDataBgColor,    .paramsFn = nullptr, .hoverFn = SH2CacheDataHover    },
+        { .name = "MSH2 on-chip registers",      .addressBlockName = "MSH2", .baseAddress = 0xFFFFFE00, .size =     0x200, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>,    .paramsFn = nullptr, .hoverFn = nullptr              },
     };
 
     inline constexpr Region kSSH2Regions[] = {
-        { .name = "SSH2 cached address space",   .addressBlockName = "SSH2", .baseAddress = 0x00000000, .size = 0x8000000, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>, .paramsFn = nullptr },
-        { .name = "SSH2 uncached address space", .addressBlockName = "SSH2", .baseAddress = 0x20000000, .size = 0x8000000, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>, .paramsFn = nullptr },
-        { .name = "SSH2 cache address array",    .addressBlockName = "SSH2", .baseAddress = 0x60000000, .size =     0x400, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>, .paramsFn = nullptr },
-        { .name = "SSH2 cache data array",       .addressBlockName = "SSH2", .baseAddress = 0xC0000000, .size =    0x1000, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>, .paramsFn = nullptr },
-        { .name = "SSH2 on-chip registers",      .addressBlockName = "SSH2", .baseAddress = 0xFFFFFE00, .size =     0x200, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>, .paramsFn = nullptr },
+        { .name = "SSH2 cached address space",   .addressBlockName = "SSH2", .baseAddress = 0x00000000, .size = 0x8000000, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>,   .paramsFn = nullptr, .hoverFn = nullptr              },
+        { .name = "SSH2 uncached address space", .addressBlockName = "SSH2", .baseAddress = 0x20000000, .size = 0x8000000, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>,   .paramsFn = nullptr, .hoverFn = nullptr              },
+        { .name = "SSH2 cache address array",    .addressBlockName = "SSH2", .baseAddress = 0x60000000, .size =     0x400, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2CacheAddressBgColor, .paramsFn = nullptr, .hoverFn = SH2CacheAddressHover },
+        { .name = "SSH2 cache data array",       .addressBlockName = "SSH2", .baseAddress = 0xC0000000, .size =    0x1000, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2CacheDataBgColor,    .paramsFn = nullptr, .hoverFn = SH2CacheDataHover    },
+        { .name = "SSH2 on-chip registers",      .addressBlockName = "SSH2", .baseAddress = 0xFFFFFE00, .size =     0x200, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>,   .paramsFn = nullptr, .hoverFn = nullptr              },
     };
 
     inline constexpr RegionGroup kRegionGroups[] = {
