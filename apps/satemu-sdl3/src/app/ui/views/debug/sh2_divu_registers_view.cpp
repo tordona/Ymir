@@ -38,13 +38,13 @@ void SH2DivisionUnitRegistersView::Display() {
         };
 
         if (ImGui::TableNextColumn()) {
-            drawReg(divu.DVDNTH, "DVDNTH", "Dividend high");
-            drawReg(divu.DVDNTUH, "DVDNTUH", "Dividend high (shadow copy)");
+            drawReg(divu.DVDNTH, "DVDNTH", "64-bit dividend high");
+            drawReg(divu.DVDNTUH, "DVDNTUH", "64-bit dividend high (shadow copy)");
         }
 
         if (ImGui::TableNextColumn()) {
-            drawReg(divu.DVDNTL, "DVDNTL", "Dividend low");
-            drawReg(divu.DVDNTUL, "DVDNTUL", "Dividend low (shadow copy)");
+            drawReg(divu.DVDNTL, "DVDNTL", "64-bit dividend low");
+            drawReg(divu.DVDNTUL, "DVDNTUL", "64-bit dividend low (shadow copy)");
         }
 
         if (ImGui::TableNextColumn()) {

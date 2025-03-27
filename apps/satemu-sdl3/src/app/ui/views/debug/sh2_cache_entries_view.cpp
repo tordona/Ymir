@@ -21,7 +21,7 @@ void SH2CacheEntriesView::Display() {
     if (ImGui::BeginTable("lru", 6, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY)) {
         ImGui::TableSetupScrollFreeze(1, 1);
         ImGui::TableSetupColumn("#");
-        ImGui::TableSetupColumn("LRU bits\n  -> Code/Data way");
+        ImGui::TableSetupColumn("LRU bits\n   -> Code/Data way");
         ImGui::TableSetupColumn("Way 0\nValid  Tag address");
         ImGui::TableSetupColumn("Way 1\nValid  Tag address");
         ImGui::TableSetupColumn("Way 2\nValid  Tag address");
