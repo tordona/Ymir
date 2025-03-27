@@ -10,6 +10,8 @@ namespace satemu::sh2 {
 struct WatchdogTimer {
     static constexpr uint64 kDividerShifts[] = {1, 6, 7, 8, 9, 10, 12, 13};
 
+    enum class Event { None, Reset, RaiseInterrupt };
+
     WatchdogTimer() {
         Reset(false);
     }
@@ -21,9 +23,43 @@ struct WatchdogTimer {
             RSTCSR.u8 = 0x1F;
         }
 
-        cycleCount = 0;
-        clockDividerShift = kDividerShifts[WTCSR.CKSn];
-        cycleCountMask = (1ull << clockDividerShift) - 1;
+        m_cycleCount = 0;
+        m_clockDividerShift = kDividerShifts[WTCSR.CKSn];
+        m_cycleCountMask = (1ull << m_clockDividerShift) - 1;
+    }
+
+    FORCE_INLINE Event Advance(uint64 cycles) {
+        if (!WTCSR.TME) {
+            return Event::None;
+        }
+
+        m_cycleCount += cycles;
+        const uint64 steps = m_cycleCount >> m_clockDividerShift;
+        m_cycleCount -= steps << m_clockDividerShift;
+
+        Event event = Event::None;
+
+        uint64 nextCount = WTCNT + steps;
+        if (nextCount >= 0x10000) {
+            if (WTCSR.WT_nIT) {
+                // Watchdog timer mode
+                RSTCSR.WOVF = 1;
+                if (RSTCSR.RSTE) {
+                    event = Event::Reset;
+                }
+            } else {
+                // Interval timer mode
+                WTCSR.OVF = 1;
+                event = Event::RaiseInterrupt;
+            }
+        }
+        WTCNT = nextCount;
+
+        return event;
+    }
+
+    FORCE_INLINE uint64 CyclesUntilNextTick() const {
+        return (1ull << m_clockDividerShift) - (m_cycleCount & m_cycleCountMask);
     }
 
     // -------------------------------------------------------------------------
@@ -74,8 +110,8 @@ struct WatchdogTimer {
         WTCSR.TME = bit::extract<5>(value);
         WTCSR.CKSn = bit::extract<0, 2>(value);
 
-        clockDividerShift = kDividerShifts[WTCSR.CKSn];
-        cycleCountMask = (1ull << clockDividerShift) - 1;
+        m_clockDividerShift = kDividerShifts[WTCSR.CKSn];
+        m_cycleCountMask = (1ull << m_clockDividerShift) - 1;
     }
 
     // 081  R    8        00        WTCNT   Watchdog Timer Counter
@@ -145,13 +181,10 @@ struct WatchdogTimer {
     // -------------------------------------------------------------------------
     // State
 
-    uint64 cycleCount;
-    uint64 clockDividerShift; // derived from WTCSR.CKS
-    uint64 cycleCountMask;    // derived from WTCSR.CKS
-
-    uint64 CyclesUntilNextTick() const {
-        return (1ull << clockDividerShift) - (cycleCount & cycleCountMask);
-    }
+private:
+    uint64 m_cycleCount;
+    uint64 m_clockDividerShift; // derived from WTCSR.CKS
+    uint64 m_cycleCountMask;    // derived from WTCSR.CKS
 };
 
 } // namespace satemu::sh2

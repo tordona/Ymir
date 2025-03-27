@@ -10,6 +10,8 @@ namespace satemu::sh2 {
 struct FreeRunningTimer {
     static constexpr uint64 kDividerShifts[] = {3, 5, 7, 0};
 
+    enum class Event { None, OVI, OCI };
+
     FreeRunningTimer() {
         Reset();
     }
@@ -25,9 +27,47 @@ struct FreeRunningTimer {
 
         TEMP = 0x00;
 
-        cycleCount = 0;
-        clockDividerShift = kDividerShifts[TCR.CKSn];
-        cycleCountMask = (1ull << clockDividerShift) - 1;
+        m_cycleCount = 0;
+        m_clockDividerShift = kDividerShifts[TCR.CKSn];
+        m_cycleCountMask = (1ull << m_clockDividerShift) - 1;
+    }
+
+    FORCE_INLINE Event Advance(uint64 cycles) {
+        m_cycleCount += cycles;
+        const uint64 steps = m_cycleCount >> m_clockDividerShift;
+        m_cycleCount -= steps << m_clockDividerShift;
+
+        Event event = Event::None;
+
+        uint64 nextFRC = FRC + steps;
+        if (FRC < OCRA && nextFRC >= OCRA) {
+            FTCSR.OCFA = TOCR.OLVLA;
+            if (FTCSR.CCLRA) {
+                nextFRC = 0;
+            }
+            if (TIER.OCIAE) {
+                event = Event::OCI;
+            }
+        }
+        if (FRC < OCRB && nextFRC >= OCRB) {
+            FTCSR.OCFB = TOCR.OLVLB;
+            if (TIER.OCIBE) {
+                event = Event::OCI;
+            }
+        }
+        if (nextFRC >= 0x10000) {
+            FTCSR.OVF = 1;
+            if (TIER.OVIE) {
+                event = Event::OVI;
+            }
+        }
+        FRC = nextFRC;
+
+        return event;
+    }
+
+    FORCE_INLINE uint64 CyclesUntilNextTick() const {
+        return (1ull << m_clockDividerShift) - (m_cycleCount & m_cycleCountMask);
     }
 
     // -------------------------------------------------------------------------
@@ -208,8 +248,8 @@ struct FreeRunningTimer {
     FORCE_INLINE void WriteTCR(uint8 value) {
         TCR.u8 = value & 0x83;
 
-        clockDividerShift = kDividerShifts[TCR.CKSn];
-        cycleCountMask = (1ull << clockDividerShift) - 1;
+        m_clockDividerShift = kDividerShifts[TCR.CKSn];
+        m_cycleCountMask = (1ull << m_clockDividerShift) - 1;
     }
 
     // 017  R/W  8        E0        TOCR      Timer output compare control register
@@ -279,13 +319,10 @@ struct FreeRunningTimer {
     // -------------------------------------------------------------------------
     // State
 
-    uint64 cycleCount;
-    uint64 clockDividerShift; // derived from TCR.CKS
-    uint64 cycleCountMask;    // derived from TCR.CKS
-
-    uint64 CyclesUntilNextTick() const {
-        return (1ull << clockDividerShift) - (cycleCount & cycleCountMask);
-    }
+private:
+    uint64 m_cycleCount;
+    uint64 m_clockDividerShift; // derived from TCR.CKS
+    uint64 m_cycleCountMask;    // derived from TCR.CKS
 };
 
 } // namespace satemu::sh2

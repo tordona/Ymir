@@ -1188,29 +1188,11 @@ void SH2::RunDMAC(uint32 channel) {
 }
 
 FORCE_INLINE void SH2::AdvanceWDT(uint64 cycles) {
-    if (!WDT.WTCSR.TME) {
-        return;
+    switch (WDT.Advance(cycles)) {
+    case WatchdogTimer::Event::None: break;
+    case WatchdogTimer::Event::Reset: Reset(WDT.RSTCSR.RSTS, true); break;
+    case WatchdogTimer::Event::RaiseInterrupt: RaiseInterrupt(InterruptSource::WDT_ITI); break;
     }
-
-    WDT.cycleCount += cycles;
-    const uint64 steps = WDT.cycleCount >> WDT.clockDividerShift;
-    WDT.cycleCount -= steps << WDT.clockDividerShift;
-
-    uint64 nextCount = WDT.WTCNT + steps;
-    if (nextCount >= 0x10000) {
-        if (WDT.WTCSR.WT_nIT) {
-            // Watchdog timer mode
-            WDT.RSTCSR.WOVF = 1;
-            if (WDT.RSTCSR.RSTE) {
-                Reset(WDT.RSTCSR.RSTS, true);
-            }
-        } else {
-            // Interval timer mode
-            WDT.WTCSR.OVF = 1;
-            RaiseInterrupt(InterruptSource::WDT_ITI);
-        }
-    }
-    WDT.WTCNT = nextCount;
 }
 
 template <bool debug>
@@ -1238,41 +1220,10 @@ FORCE_INLINE void SH2::ExecuteDiv64() {
 }
 
 FORCE_INLINE void SH2::AdvanceFRT(uint64 cycles) {
-    FRT.cycleCount += cycles;
-    const uint64 steps = FRT.cycleCount >> FRT.clockDividerShift;
-    FRT.cycleCount -= steps << FRT.clockDividerShift;
-
-    bool oviIntr = false;
-    bool ociIntr = false;
-
-    uint64 nextFRC = FRT.FRC + steps;
-    if (FRT.FRC < FRT.OCRA && nextFRC >= FRT.OCRA) {
-        FRT.FTCSR.OCFA = FRT.TOCR.OLVLA;
-        if (FRT.FTCSR.CCLRA) {
-            nextFRC = 0;
-        }
-        if (FRT.TIER.OCIAE) {
-            ociIntr = true;
-        }
-    }
-    if (FRT.FRC < FRT.OCRB && nextFRC >= FRT.OCRB) {
-        FRT.FTCSR.OCFB = FRT.TOCR.OLVLB;
-        if (FRT.TIER.OCIBE) {
-            ociIntr = true;
-        }
-    }
-    if (nextFRC >= 0x10000) {
-        FRT.FTCSR.OVF = 1;
-        if (FRT.TIER.OVIE) {
-            oviIntr = true;
-        }
-    }
-    FRT.FRC = nextFRC;
-
-    if (oviIntr) {
-        RaiseInterrupt(InterruptSource::FRT_OVI);
-    } else if (ociIntr) {
-        RaiseInterrupt(InterruptSource::FRT_OCI);
+    switch (FRT.Advance(cycles)) {
+    case FreeRunningTimer::Event::None: break;
+    case FreeRunningTimer::Event::OCI: RaiseInterrupt(InterruptSource::FRT_OCI); break;
+    case FreeRunningTimer::Event::OVI: RaiseInterrupt(InterruptSource::FRT_OVI); break;
     }
 }
 
