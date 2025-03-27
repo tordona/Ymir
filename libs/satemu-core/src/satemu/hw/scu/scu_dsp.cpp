@@ -1,5 +1,7 @@
 #include <satemu/hw/scu/scu_dsp.hpp>
 
+#include "scu_devlog.hpp"
+
 #include <satemu/hw/scu/scu_defs.hpp>
 
 namespace satemu::scu {
@@ -121,9 +123,11 @@ void SCUDSP::RunDMA(uint64 cycles) {
     }
 
     if (dmaToD0) {
-        dspLog.trace("Running DSP DMA transfer: DSP -> {:08X} (+{:X}), {} longwords", addrD0, dmaAddrInc, dmaCount);
+        devlog::trace<grp::dsp>("Running DSP DMA transfer: DSP -> {:08X} (+{:X}), {} longwords", addrD0, dmaAddrInc,
+                                dmaCount);
     } else {
-        dspLog.trace("Running DSP DMA transfer: {:08X} -> DSP (+{:X}), {} longwords", addrD0, dmaAddrInc, dmaCount);
+        devlog::trace<grp::dsp>("Running DSP DMA transfer: {:08X} -> DSP (+{:X}), {} longwords", addrD0, dmaAddrInc,
+                                dmaCount);
     }
 
     // Run transfer
@@ -362,7 +366,7 @@ FORCE_INLINE void SCUDSP::Cmd_Special_DMA(uint32 command) {
         dmaAddrInc = (1 << (addrInc & 0x2)) & ~1;
     }
 
-    dspLog.trace("DSP DMA command: {:04X} @ {:02X}", command, PC);
+    devlog::trace<grp::dsp>("DSP DMA command: {:04X} @ {:02X}", command, PC);
 }
 
 FORCE_INLINE void SCUDSP::Cmd_Special_Jump(uint32 command) {

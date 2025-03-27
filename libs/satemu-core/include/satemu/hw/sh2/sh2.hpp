@@ -27,7 +27,7 @@
 
 #include <satemu/debug/sh2_tracer.hpp>
 
-#include <satemu/util/debug_print.hpp>
+#include <satemu/util/dev_log.hpp>
 #include <satemu/util/inline.hpp>
 
 #include <array>
@@ -35,8 +35,6 @@
 #include <vector>
 
 namespace satemu::sh2 {
-
-inline constexpr dbg::Level sh2DebugLevel = dbg::debugLevel;
 
 // -----------------------------------------------------------------------------
 
@@ -352,14 +350,6 @@ private:
     CBAcknowledgeExternalInterrupt m_cbAcknowledgeExternalInterrupt;
 
     // -------------------------------------------------------------------------
-    // Debugger
-
-    Probe m_probe{*this};
-    debug::ISH2Tracer *m_tracer = nullptr;
-
-    const dbg::Category<sh2DebugLevel> &m_log;
-
-    // -------------------------------------------------------------------------
     // Memory accessors
 
     sys::Bus &m_bus;
@@ -553,17 +543,25 @@ private:
     }
 
     // -------------------------------------------------------------------------
+    // Cache
+
+    Cache m_cache;
+
+    // -------------------------------------------------------------------------
+    // Debugger
+
+    Probe m_probe{*this};
+    debug::ISH2Tracer *m_tracer = nullptr;
+
+    const std::string_view m_logPrefix;
+
+    // -------------------------------------------------------------------------
     // Helper functions
 
     void SetupDelaySlot(uint32 targetAddress);
 
     template <bool debug>
     void EnterException(uint8 vectorNumber);
-
-    // -------------------------------------------------------------------------
-    // Cache
-
-    Cache m_cache;
 
     // -------------------------------------------------------------------------
     // Instruction interpreters

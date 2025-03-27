@@ -6,19 +6,87 @@
 
 #include <algorithm>
 #include <cassert>
+#include <string>
+#include <string_view>
 
 namespace satemu::sh2 {
+
+// -----------------------------------------------------------------------------
+// Dev log groups
+
+namespace grp {
+
+    // Hierarchy:
+    //
+    // base
+    //   exec
+    //   mem
+    //   reg
+    //   code_fetch
+    //   cache
+    //   dma
+    //     dma_xfer
+
+    struct base {
+        static constexpr bool enabled = true;
+        static constexpr devlog::Level level = devlog::level::debug;
+        static constexpr std::string Name(std::string_view prefix) {
+            return std::string(prefix);
+        }
+    };
+
+    struct exec : public base {
+        // static constexpr bool enabled = true;
+        static constexpr std::string Name(std::string_view prefix) {
+            return fmt::format("{}-Exec", prefix);
+        }
+    };
+
+    struct mem : public base {
+        // static constexpr bool enabled = true;
+        static constexpr std::string Name(std::string_view prefix) {
+            return fmt::format("{}-Mem", prefix);
+        }
+    };
+
+    struct reg : public base {
+        // static constexpr bool enabled = true;
+        static constexpr std::string Name(std::string_view prefix) {
+            return fmt::format("{}-Reg", prefix);
+        }
+    };
+
+    struct code_fetch : public base {
+        // static constexpr bool enabled = true;
+        static constexpr std::string Name(std::string_view prefix) {
+            return fmt::format("{}-CodeFetch", prefix);
+        }
+    };
+
+    struct cache : public base {
+        // static constexpr bool enabled = true;
+        static constexpr std::string Name(std::string_view prefix) {
+            return fmt::format("{}-Cache", prefix);
+        }
+    };
+
+    struct dma : public base {
+        // static constexpr bool enabled = true;
+        static constexpr std::string Name(std::string_view prefix) {
+            return fmt::format("{}-DMA", prefix);
+        }
+    };
+
+    struct dma_xfer : public dma {
+        // static constexpr bool enabled = true;
+    };
+
+} // namespace grp
 
 // -----------------------------------------------------------------------------
 // Configuration
 
 namespace config {
-    // TODO: replace with the debug trace system
-    // Detect and log SYS_EXECDMP invocations.
-    // The address is specified by sysExecDumpAddress.
-    inline constexpr bool logSysExecDump = false;
-
-    // TODO: replace with the debug trace system
     // Address of SYS_EXECDMP function.
     // 0x186C is valid in most BIOS images.
     // 0x197C on JP (v1.003).
@@ -92,20 +160,10 @@ FORCE_INLINE static void TraceEndDivision(debug::ISH2Tracer *tracer, sint32 quot
 }
 
 // -----------------------------------------------------------------------------
-// Logging
-
-inline constexpr dbg::Category<sh2DebugLevel> MSH2{"SH2-M"};
-inline constexpr dbg::Category<sh2DebugLevel> SSH2{"SH2-S"};
-
-static constexpr const dbg::Category<sh2DebugLevel> &Logger(bool master) {
-    return master ? MSH2 : SSH2;
-}
-
-// -----------------------------------------------------------------------------
 // Implementation
 
 SH2::SH2(sys::Bus &bus, bool master)
-    : m_log(Logger(master))
+    : m_logPrefix(master ? "SH2-M" : "SH2-S")
     , m_bus(bus) {
     BCR1.MASTER = !master;
     Reset(true);
@@ -198,10 +256,10 @@ FLATTEN uint64 SH2::Advance(uint64 cycles) {
             // TODO: choose between interpreter (cached or uncached) and JIT recompiler
             cyclesExecuted += InterpretNext<debug>();
 
-            if constexpr (config::logSysExecDump) {
+            if constexpr (devlog::debug_enabled<grp::exec>) {
                 // Dump stack trace on SYS_EXECDMP
                 if ((PC & 0x7FFFFFF) == config::sysExecDumpAddress) {
-                    m_log.debug("SYS_EXECDMP triggered");
+                    devlog::debug<grp::exec>(m_logPrefix, "SYS_EXECDMP triggered");
                     // TODO: trace event
                 }
             }
@@ -246,7 +304,7 @@ T SH2::MemRead(uint32 address) {
     const uint32 partition = (address >> 29u) & 0b111;
     if (address & static_cast<uint32>(sizeof(T) - 1)) {
         if constexpr (!peek) {
-            m_log.trace("WARNING: misaligned {}-bit read from {:08X}", sizeof(T) * 8, address);
+            devlog::trace<grp::mem>(m_logPrefix, "WARNING: misaligned {}-bit read from {:08X}", sizeof(T) * 8, address);
             // TODO: raise CPU address error due to misaligned access
             // - might have to store data in a class member instead of returning
         }
@@ -282,13 +340,14 @@ T SH2::MemRead(uint32 address) {
                     const T value = util::ReadBE<T>(&entry.line[way][byte]);
                     if constexpr (!peek) {
                         m_cache.UpdateLRU(address, way);
-                        m_log.trace("{}-bit SH-2 cached area read from {:08X} = {:X} (hit)", sizeof(T) * 8, address,
-                                    value);
+                        devlog::trace<grp::cache>(m_logPrefix, "{}-bit SH-2 cached area read from {:08X} = {:X} (hit)",
+                                                  sizeof(T) * 8, address, value);
                     }
                     return value;
                 }
                 if constexpr (!peek) {
-                    m_log.trace("{}-bit SH-2 cached area read from {:08X} (miss)", sizeof(T) * 8, address);
+                    devlog::trace<grp::cache>(m_logPrefix, "{}-bit SH-2 cached area read from {:08X} (miss)",
+                                              sizeof(T) * 8, address);
                 }
             }
         }
@@ -303,14 +362,16 @@ T SH2::MemRead(uint32 address) {
     case 0b010: // associative purge
         if constexpr (!peek && std::is_same_v<T, uint32>) {
             m_cache.AssociativePurge(address);
-            m_log.trace("{}-bit SH-2 associative purge read from {:08X}", sizeof(T) * 8, address);
+            devlog::trace<grp::cache>(m_logPrefix, "{}-bit SH-2 associative purge read from {:08X}", sizeof(T) * 8,
+                                      address);
         }
         return (address & 1) ? static_cast<T>(0x12231223) : static_cast<T>(0x23122312);
     case 0b011: // cache address array
         if constexpr (peek || std::is_same_v<T, uint32>) {
             const uint32 value = m_cache.ReadAddressArray<peek>(address);
             if constexpr (!peek) {
-                m_log.trace("{}-bit SH-2 cache address array read from {:08X} = {:X}", sizeof(T) * 8, address, value);
+                devlog::trace<grp::cache>(m_logPrefix, "{}-bit SH-2 cache address array read from {:08X} = {:X}",
+                                          sizeof(T) * 8, address, value);
             }
             if constexpr (std::is_same_v<T, uint32>) {
                 return value;
@@ -325,7 +386,8 @@ T SH2::MemRead(uint32 address) {
     {
         const T value = m_cache.ReadDataArray<T>(address);
         if constexpr (!peek) {
-            m_log.trace("{}-bit SH-2 cache data array read from {:08X} = {:X}", sizeof(T) * 8, address, value);
+            devlog::trace<grp::cache>(m_logPrefix, "{}-bit SH-2 cache data array read from {:08X} = {:X}",
+                                      sizeof(T) * 8, address, value);
         }
         return value;
     }
@@ -333,7 +395,8 @@ T SH2::MemRead(uint32 address) {
         if constexpr (instrFetch) {
             if constexpr (!peek) {
                 // TODO: raise CPU address error due to attempt to fetch instruction from I/O area
-                m_log.trace("Attempted to fetch instruction from I/O area at {:08X}", address);
+                devlog::trace<grp::code_fetch>(m_logPrefix, "Attempted to fetch instruction from I/O area at {:08X}",
+                                               address);
             }
             return 0;
         } else if ((address & 0xE0004000) == 0xE0004000) {
@@ -348,7 +411,8 @@ T SH2::MemRead(uint32 address) {
         } else {
             // TODO: implement
             if constexpr (!peek) {
-                m_log.trace("Unhandled {}-bit SH-2 I/O area read from {:08X}", sizeof(T) * 8, address);
+                devlog::trace<grp::mem>(m_logPrefix, "Unhandled {}-bit SH-2 I/O area read from {:08X}", sizeof(T) * 8,
+                                        address);
             }
             return 0;
         }
@@ -362,7 +426,8 @@ void SH2::MemWrite(uint32 address, T value) {
     const uint32 partition = address >> 29u;
     if (address & static_cast<uint32>(sizeof(T) - 1)) {
         if constexpr (!poke) {
-            m_log.trace("WARNING: misaligned {}-bit write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+            devlog::trace<grp::mem>(m_logPrefix, "WARNING: misaligned {}-bit write to {:08X} = {:X}", sizeof(T) * 8,
+                                    address, value);
             // TODO: address error (misaligned access)
         }
         address &= ~(sizeof(T) - 1);
@@ -396,7 +461,8 @@ void SH2::MemWrite(uint32 address, T value) {
         if constexpr (poke || std::is_same_v<T, uint32>) {
             m_cache.AssociativePurge(address);
             if constexpr (!poke) {
-                m_log.trace("{}-bit SH-2 associative purge write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+                devlog::trace<grp::cache>(m_logPrefix, "{}-bit SH-2 associative purge write to {:08X} = {:X}",
+                                          sizeof(T) * 8, address, value);
             }
         }
         break;
@@ -404,7 +470,8 @@ void SH2::MemWrite(uint32 address, T value) {
         if constexpr (poke || std::is_same_v<T, uint32>) {
             m_cache.WriteAddressArray<T, poke>(address, value);
             if constexpr (!poke) {
-                m_log.trace("{}-bit SH-2 cache address array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+                devlog::trace<grp::cache>(m_logPrefix, "{}-bit SH-2 cache address array write to {:08X} = {:X}",
+                                          sizeof(T) * 8, address, value);
             }
         }
         break;
@@ -413,7 +480,8 @@ void SH2::MemWrite(uint32 address, T value) {
     {
         m_cache.WriteDataArray<T>(address, value);
         if constexpr (!poke) {
-            m_log.trace("{}-bit SH-2 cache data array write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+            devlog::trace<grp::cache>(m_logPrefix, "{}-bit SH-2 cache data array write to {:08X} = {:X}", sizeof(T) * 8,
+                                      address, value);
         }
         break;
     }
@@ -429,19 +497,23 @@ void SH2::MemWrite(uint32 address, T value) {
             // DRAM setup stuff
             if constexpr (!poke) {
                 switch (address) {
-                case 0xFFFF8426: m_log.trace("16-bit CAS latency 1"); break;
-                case 0xFFFF8446: m_log.trace("16-bit CAS latency 2"); break;
-                case 0xFFFF8466: m_log.trace("16-bit CAS latency 3"); break;
-                case 0xFFFF8848: m_log.trace("32-bit CAS latency 1"); break;
-                case 0xFFFF8888: m_log.trace("32-bit CAS latency 2"); break;
-                case 0xFFFF88C8: m_log.trace("32-bit CAS latency 3"); break;
-                default: m_log.debug("Unhandled {}-bit SH-2 I/O area read from {:08X}", sizeof(T) * 8, address); break;
+                case 0xFFFF8426: devlog::trace<grp::reg>(m_logPrefix, "16-bit CAS latency 1"); break;
+                case 0xFFFF8446: devlog::trace<grp::reg>(m_logPrefix, "16-bit CAS latency 2"); break;
+                case 0xFFFF8466: devlog::trace<grp::reg>(m_logPrefix, "16-bit CAS latency 3"); break;
+                case 0xFFFF8848: devlog::trace<grp::reg>(m_logPrefix, "32-bit CAS latency 1"); break;
+                case 0xFFFF8888: devlog::trace<grp::reg>(m_logPrefix, "32-bit CAS latency 2"); break;
+                case 0xFFFF88C8: devlog::trace<grp::reg>(m_logPrefix, "32-bit CAS latency 3"); break;
+                default:
+                    devlog::debug<grp::reg>(m_logPrefix, "Unhandled {}-bit SH-2 I/O area write to {:08X} = {:X}",
+                                            sizeof(T) * 8, address, value);
+                    break;
                 }
             }
         } else {
             // TODO: implement
             if constexpr (!poke) {
-                m_log.trace("Unhandled {}-bit SH-2 I/O area write to {:08X} = {:X}", sizeof(T) * 8, address, value);
+                devlog::trace<grp::reg>(m_logPrefix, "Unhandled {}-bit SH-2 I/O area write to {:08X} = {:X}",
+                                        sizeof(T) * 8, address, value);
             }
         }
         break;
@@ -551,7 +623,7 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
         } else {
             // Registers 0x100-0x1FF do not accept 8-bit accesses
             // TODO: raise CPU address error
-            m_log.debug("Illegal 8-bit on-chip register read from {:03X}", address);
+            devlog::debug<grp::reg>(m_logPrefix, "Illegal 8-bit on-chip register read from {:03X}", address);
             return 0;
         }
     }
@@ -599,7 +671,7 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
 
     default: //
         if constexpr (!peek) {
-            m_log.debug("Unhandled 8-bit on-chip register read from {:03X}", address);
+            devlog::debug<grp::reg>(m_logPrefix, "Unhandled 8-bit on-chip register read from {:03X}", address);
         }
         return 0;
     }
@@ -634,7 +706,7 @@ FORCE_INLINE uint32 SH2::OnChipRegReadLong(uint32 address) {
         } else {
             // Registers 0x000-0x0FF do not accept 32-bit accesses
             // TODO: raise CPU address error
-            m_log.debug("Illegal 32-bit on-chip register read from {:03X}", address);
+            devlog::debug<grp::reg>(m_logPrefix, "Illegal 32-bit on-chip register read from {:03X}", address);
             return 0;
         }
     }
@@ -689,7 +761,7 @@ FORCE_INLINE uint32 SH2::OnChipRegReadLong(uint32 address) {
 
     default: //
         if constexpr (!peek) {
-            m_log.debug("Unhandled 32-bit on-chip register read from {:03X}", address);
+            devlog::debug<grp::reg>(m_logPrefix, "Unhandled 32-bit on-chip register read from {:03X}", address);
         }
         return 0;
     }
@@ -721,7 +793,8 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
         } else {
             // Registers 0x100-0x1FF do not accept 8-bit accesses
             // TODO: raise CPU address error
-            m_log.debug("Illegal 8-bit on-chip register write to {:03X} = {:X}", address, value);
+            devlog::debug<grp::reg>(m_logPrefix, "Illegal 8-bit on-chip register write to {:03X} = {:X}", address,
+                                    value);
         }
         return;
     }
@@ -808,7 +881,8 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
 
     default: //
         if constexpr (!poke) {
-            m_log.debug("Unhandled 8-bit on-chip register write to {:03X} = {:X}", address, value);
+            devlog::debug<grp::reg>(m_logPrefix, "Unhandled 8-bit on-chip register write to {:03X} = {:X}", address,
+                                    value);
         }
         break;
     }
@@ -870,7 +944,8 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
 
     default: //
         if constexpr (!poke) {
-            m_log.debug("Illegal 16-bit on-chip register write to {:03X} = {:X}", address, value);
+            devlog::debug<grp::reg>(m_logPrefix, "Illegal 16-bit on-chip register write to {:03X} = {:X}", address,
+                                    value);
         }
         break;
     }
@@ -885,7 +960,8 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
         } else {
             // Registers 0x000-0x0FF do not accept 32-bit accesses
             // TODO: raise CPU address error
-            m_log.debug("Illegal 32-bit on-chip register write to {:03X} = {:X}", address, value);
+            devlog::debug<grp::reg>(m_logPrefix, "Illegal 32-bit on-chip register write to {:03X} = {:X}", address,
+                                    value);
         }
         return;
     }
@@ -1002,7 +1078,8 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
         break;
     default: //
         if constexpr (!poke) {
-            m_log.debug("Unhandled 32-bit on-chip register write to {:03X} = {:X}", address, value);
+            devlog::debug<grp::reg>(m_logPrefix, "Unhandled 32-bit on-chip register write to {:03X} = {:X}", address,
+                                    value);
         }
         break;
     }
@@ -1055,30 +1132,30 @@ void SH2::RunDMAC(uint32 channel) {
         switch (ch.xferSize) {
         case DMATransferSize::Byte: {
             const uint8 value = MemReadByte(ch.srcAddress);
-            m_log.trace("DMAC{} 8-bit transfer from {:08X} to {:08X} -> {:X}", channel, ch.srcAddress, ch.dstAddress,
-                        value);
+            devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 8-bit transfer from {:08X} to {:08X} -> {:X}", channel,
+                                         ch.srcAddress, ch.dstAddress, value);
             MemWriteByte<debug>(ch.dstAddress, value);
             break;
         }
         case DMATransferSize::Word: {
             const uint16 value = MemReadWord(ch.srcAddress);
-            m_log.trace("DMAC{} 16-bit transfer from {:08X} to {:08X} -> {:X}", channel, ch.srcAddress, ch.dstAddress,
-                        value);
+            devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 16-bit transfer from {:08X} to {:08X} -> {:X}", channel,
+                                         ch.srcAddress, ch.dstAddress, value);
             MemWriteWord<debug>(ch.dstAddress, value);
             break;
         }
         case DMATransferSize::Longword: {
             const uint32 value = MemReadLong(ch.srcAddress);
-            m_log.trace("DMAC{} 32-bit transfer from {:08X} to {:08X} -> {:X}", channel, ch.srcAddress, ch.dstAddress,
-                        value);
+            devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 32-bit transfer from {:08X} to {:08X} -> {:X}", channel,
+                                         ch.srcAddress, ch.dstAddress, value);
             MemWriteLong<debug>(ch.dstAddress, value);
             break;
         }
         case DMATransferSize::QuadLongword:
             for (int i = 0; i < 4; i++) {
                 const uint32 value = MemReadLong(ch.srcAddress + i * sizeof(uint32));
-                m_log.trace("DMAC{} 16-byte transfer {:d} from {:08X} to {:08X} -> {:X}", channel, i, ch.srcAddress,
-                            ch.dstAddress, value);
+                devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 16-byte transfer {:d} from {:08X} to {:08X} -> {:X}",
+                                             channel, i, ch.srcAddress, ch.dstAddress, value);
                 MemWriteLong<debug>(ch.dstAddress + i * sizeof(uint32), value);
             }
             break;
@@ -1092,7 +1169,7 @@ void SH2::RunDMAC(uint32 channel) {
             if (ch.xferCount >= 4) {
                 ch.xferCount -= 4;
             } else {
-                m_log.trace("DMAC{} 16-byte transfer count misaligned", channel);
+                devlog::trace<grp::dma>(m_logPrefix, "DMAC{} 16-byte transfer count misaligned", channel);
                 ch.xferCount = 0;
             }
         } else {
@@ -1101,7 +1178,7 @@ void SH2::RunDMAC(uint32 channel) {
     } while (ch.xferCount > 0);
 
     ch.xferEnded = true;
-    m_log.trace("DMAC{} transfer finished", channel);
+    devlog::trace<grp::dma>(m_logPrefix, "DMAC{} transfer finished", channel);
     if (ch.irqEnable) {
         switch (channel) {
         case 0: RaiseInterrupt(InterruptSource::DMAC0_XferEnd); break;
@@ -1373,7 +1450,8 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
         // Service interrupt
         const uint8 vecNum = INTC.GetVector(INTC.pending.source);
         TraceInterrupt<debug>(m_tracer, vecNum, INTC.pending.level, INTC.pending.source, PC);
-        m_log.trace("Handling interrupt level {:02X}, vector number {:02X}", INTC.pending.level, vecNum);
+        devlog::trace<grp::exec>(m_logPrefix, "Handling interrupt level {:02X}, vector number {:02X}",
+                                 INTC.pending.level, vecNum);
         EnterException<debug>(vecNum);
         SR.ILevel = std::min<uint8>(INTC.pending.level, 0xF);
 
@@ -1712,7 +1790,7 @@ FORCE_INLINE void SH2::SLEEP() {
     PC -= 2;
 
     if (SBYCR.SBY) {
-        m_log.trace("Entering standby");
+        devlog::trace<grp::exec>(m_logPrefix, "Entering standby");
 
         // Initialize DMAC, FRT, WDT and SCI
         for (auto &ch : m_dmaChannels) {
@@ -1725,7 +1803,7 @@ FORCE_INLINE void SH2::SLEEP() {
 
         // TODO: enter standby state
     } else {
-        m_log.trace("Entering sleep");
+        devlog::trace<grp::exec>(m_logPrefix, "Entering sleep");
         // TODO: enter sleep state
     }
 }

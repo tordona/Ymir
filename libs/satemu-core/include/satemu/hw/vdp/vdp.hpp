@@ -13,7 +13,6 @@
 
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/data_ops.hpp>
-#include <satemu/util/debug_print.hpp>
 #include <satemu/util/event.hpp>
 #include <satemu/util/inline.hpp>
 
@@ -39,14 +38,6 @@ namespace satemu::vdp {
 
 // Contains both VDP1 and VDP2
 class VDP {
-    static constexpr dbg::Category rootLog1{"VDP1"};
-    static constexpr dbg::Category regsLog1{rootLog1, "Regs"};
-    static constexpr dbg::Category renderLog1{rootLog1, "Render"};
-
-    static constexpr dbg::Category rootLog2{"VDP2"};
-    static constexpr dbg::Category regsLog2{rootLog2, "Regs"};
-    static constexpr dbg::Category renderLog2{rootLog2, "Render"};
-
 public:
     VDP(core::Scheduler &scheduler);
     ~VDP();

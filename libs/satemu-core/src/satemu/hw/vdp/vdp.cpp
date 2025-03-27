@@ -4,6 +4,7 @@
 
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/constexpr_for.hpp>
+#include <satemu/util/dev_log.hpp>
 #include <satemu/util/scope_guard.hpp>
 #include <satemu/util/thread_name.hpp>
 #include <satemu/util/unreachable.hpp>
@@ -11,6 +12,53 @@
 #include <cassert>
 
 namespace satemu::vdp {
+
+namespace grp {
+
+    // -----------------------------------------------------------------------------
+    // Dev log groups
+
+    // Hierarchy:
+    //
+    // base
+    //   vdp1
+    //     vdp1_regs
+    //     vdp1_render
+    //   vdp2
+    //     vdp2_regs
+    //     vdp2_render
+
+    struct base {
+        static constexpr bool enabled = true;
+        static constexpr devlog::Level level = devlog::level::debug;
+        static constexpr std::string_view name = "VDP";
+    };
+
+    struct vdp1 : public base {
+        static constexpr std::string_view name = "VDP1";
+    };
+
+    struct vdp1_regs : public vdp1 {
+        static constexpr std::string_view name = "VDP1-Regs";
+    };
+
+    struct vdp1_render : public vdp1 {
+        static constexpr std::string_view name = "VDP1-Render";
+    };
+
+    struct vdp2 : public base {
+        static constexpr std::string_view name = "VDP2";
+    };
+
+    struct vdp2_regs : public vdp2 {
+        static constexpr std::string_view name = "VDP2-Regs";
+    };
+
+    struct vdp2_render : public vdp2 {
+        static constexpr std::string_view name = "VDP2-Render";
+    };
+
+} // namespace grp
 
 VDP::VDP(core::Scheduler &scheduler)
     : m_scheduler(scheduler)
@@ -169,7 +217,7 @@ void VDP::MapMemory(sys::Bus &bus) {
     // VDP1 registers
     auto vdp1ReadReg8 = [](uint32 address, void * /*ctx*/) -> uint8 {
         address &= 0x7FFFF;
-        regsLog1.debug("Illegal 8-bit VDP1 register read from {:05X}", address);
+        devlog::debug<grp::vdp1_regs>("Illegal 8-bit VDP1 register read from {:05X}", address);
         return 0;
     };
     auto vdp1ReadReg16 = [](uint32 address, void *ctx) -> uint16 {
@@ -183,7 +231,7 @@ void VDP::MapMemory(sys::Bus &bus) {
 
     auto vdp1WriteReg8 = [](uint32 address, uint8 value, void * /*ctx*/) {
         address &= 0x7FFFF;
-        regsLog1.debug("Illegal 8-bit VDP1 register write to {:05X} = {:02X}", address, value);
+        devlog::debug<grp::vdp1_regs>("Illegal 8-bit VDP1 register write to {:05X} = {:02X}", address, value);
     };
     auto vdp1WriteReg16 = [](uint32 address, uint16 value, void *ctx) {
         static_cast<VDP *>(ctx)->VDP1WriteReg<false>(address, value);
@@ -346,7 +394,7 @@ void VDP::MapMemory(sys::Bus &bus) {
     // VDP2 registers
     auto vdp2ReadReg8 = [](uint32 address, void * /*ctx*/) -> uint8 {
         address &= 0x1FF;
-        regsLog1.debug("Illegal 8-bit VDP2 register read from {:05X}", address);
+        devlog::debug<grp::vdp1_regs>("Illegal 8-bit VDP2 register read from {:05X}", address);
         return 0;
     };
     auto vdp2ReadReg16 = [](uint32 address, void *ctx) -> uint16 {
@@ -360,7 +408,7 @@ void VDP::MapMemory(sys::Bus &bus) {
 
     auto vdp2WriteReg8 = [](uint32 address, uint8 value, void * /*ctx*/) {
         address &= 0x1FF;
-        regsLog1.debug("Illegal 8-bit VDP2 register write to {:05X} = {:02X}", address, value);
+        devlog::debug<grp::vdp1_regs>("Illegal 8-bit VDP2 register write to {:05X} = {:02X}", address, value);
     };
     auto vdp2WriteReg16 = [](uint32 address, uint16 value, void *ctx) {
         static_cast<VDP *>(ctx)->VDP2WriteReg(address, value);
@@ -498,20 +546,23 @@ FORCE_INLINE void VDP::VDP1WriteReg(uint32 address, uint16 value) {
     switch (address) {
     case 0x00:
         if constexpr (!poke) {
-            regsLog1.trace("Write to TVM={:d}{:d}{:d}", m_VDP1.hdtvEnable, m_VDP1.fbRotEnable, m_VDP1.pixel8Bits);
-            regsLog1.trace("Write to VBE={:d}", m_VDP1.vblankErase);
+            devlog::trace<grp::vdp1_regs>("Write to TVM={:d}{:d}{:d}", m_VDP1.hdtvEnable, m_VDP1.fbRotEnable,
+                                          m_VDP1.pixel8Bits);
+            devlog::trace<grp::vdp1_regs>("Write to VBE={:d}", m_VDP1.vblankErase);
         }
         break;
     case 0x02:
         if constexpr (!poke) {
-            regsLog1.trace("Write to DIE={:d} DIL={:d}", m_VDP1.dblInterlaceEnable, m_VDP1.dblInterlaceDrawLine);
-            regsLog1.trace("Write to FCM={:d} FCT={:d} manualswap={:d} manualerase={:d}", m_VDP1.fbSwapMode,
-                           m_VDP1.fbSwapTrigger, m_VDP1.fbManualSwap, m_VDP1.fbManualErase);
+            devlog::trace<grp::vdp1_regs>("Write to DIE={:d} DIL={:d}", m_VDP1.dblInterlaceEnable,
+                                          m_VDP1.dblInterlaceDrawLine);
+            devlog::trace<grp::vdp1_regs>("Write to FCM={:d} FCT={:d} manualswap={:d} manualerase={:d}",
+                                          m_VDP1.fbSwapMode, m_VDP1.fbSwapTrigger, m_VDP1.fbManualSwap,
+                                          m_VDP1.fbManualErase);
         }
         break;
     case 0x04:
         if constexpr (!poke) {
-            regsLog1.trace("Write to PTM={:d}", m_VDP1.plotTrigger);
+            devlog::trace<grp::vdp1_regs>("Write to PTM={:d}", m_VDP1.plotTrigger);
             if (m_VDP1.plotTrigger == 0b01) {
                 VDP1BeginFrame();
             }
@@ -550,7 +601,7 @@ FORCE_INLINE T VDP::VDP2ReadCRAM(uint32 address) {
     address = MapCRAMAddress(address);
     T value = util::ReadBE<T>(&m_CRAM[address]);
     if constexpr (!peek) {
-        regsLog2.trace("{}-bit VDP2 CRAM read from {:03X} = {:X}", sizeof(T) * 8, address, value);
+        devlog::trace<grp::vdp2_regs>("{}-bit VDP2 CRAM read from {:03X} = {:X}", sizeof(T) * 8, address, value);
     }
     return value;
 }
@@ -565,13 +616,13 @@ FORCE_INLINE void VDP::VDP2WriteCRAM(uint32 address, T value) {
 
     address = MapCRAMAddress(address);
     if constexpr (!poke) {
-        regsLog2.trace("{}-bit VDP2 CRAM write to {:05X} = {:X}", sizeof(T) * 8, address, value);
+        devlog::trace<grp::vdp2_regs>("{}-bit VDP2 CRAM write to {:05X} = {:X}", sizeof(T) * 8, address, value);
     }
     util::WriteBE<T>(&m_CRAM[address], value);
     m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address, value));
     if (m_VDP2.vramControl.colorRAMMode == 0) {
         if constexpr (!poke) {
-            regsLog2.trace("   replicated to {:05X}", address ^ 0x800);
+            devlog::trace<grp::vdp2_regs>("   replicated to {:05X}", address ^ 0x800);
         }
         util::WriteBE<T>(&m_CRAM[address ^ 0x800], value);
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address ^ 0x800, value));
@@ -590,9 +641,10 @@ FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, uint16 value) {
 
     switch (address) {
     case 0x000:
-        regsLog2.trace("TVMD write: {:04X} - HRESO={:d} VRESO={:d} LSMD={:d} BDCLMD={:d} DISP={:d}{}", m_VDP2.TVMD.u16,
-                       (uint16)m_VDP2.TVMD.HRESOn, (uint16)m_VDP2.TVMD.VRESOn, (uint16)m_VDP2.TVMD.LSMDn,
-                       (uint16)m_VDP2.TVMD.BDCLMD, (uint16)m_VDP2.TVMD.DISP, (m_VDP2.TVMDDirty ? " (dirty)" : ""));
+        devlog::trace<grp::vdp2_regs>("TVMD write: {:04X} - HRESO={:d} VRESO={:d} LSMD={:d} BDCLMD={:d} DISP={:d}{}",
+                                      m_VDP2.TVMD.u16, (uint16)m_VDP2.TVMD.HRESOn, (uint16)m_VDP2.TVMD.VRESOn,
+                                      (uint16)m_VDP2.TVMD.LSMDn, (uint16)m_VDP2.TVMD.BDCLMD, (uint16)m_VDP2.TVMD.DISP,
+                                      (m_VDP2.TVMDDirty ? " (dirty)" : ""));
         break;
     case 0x020: VDP2UpdateEnabledBGs(); break;
     }
@@ -640,12 +692,12 @@ void VDP::UpdateResolution() {
         m_VRes *= 2;
     }
 
-    rootLog2.info("Screen resolution set to {}x{}", m_HRes, m_VRes);
+    devlog::info<grp::vdp2>("Screen resolution set to {}x{}", m_HRes, m_VRes);
     switch (m_VDP2.TVMD.LSMDn) {
-    case 0: rootLog2.info("Non-interlace mode"); break;
-    case 1: rootLog2.info("Invalid interlace mode"); break;
-    case 2: rootLog2.info("Single-density interlace mode"); break;
-    case 3: rootLog2.info("Double-density interlace mode"); break;
+    case 0: devlog::info<grp::vdp2>("Non-interlace mode"); break;
+    case 1: devlog::info<grp::vdp2>("Invalid interlace mode"); break;
+    case 2: devlog::info<grp::vdp2>("Single-density interlace mode"); break;
+    case 3: devlog::info<grp::vdp2>("Double-density interlace mode"); break;
     }
 
     // Timing tables
@@ -700,7 +752,7 @@ void VDP::UpdateResolution() {
         timing *= dotClockMult;
     }
 
-    rootLog2.info("Dot clock mult = {}, display {}", dotClockMult, (m_VDP2.TVMD.DISP ? "ON" : "OFF"));
+    devlog::info<grp::vdp2>("Dot clock mult = {}, display {}", dotClockMult, (m_VDP2.TVMD.DISP ? "ON" : "OFF"));
 }
 
 FORCE_INLINE void VDP::IncrementVCounter() {
@@ -726,10 +778,10 @@ FORCE_INLINE void VDP::IncrementVCounter() {
 // ----
 
 void VDP::BeginHPhaseActiveDisplay() {
-    rootLog2.trace("(VCNT = {:3d})  Entering horizontal active display phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering horizontal active display phase", m_VCounter);
     if (m_VPhase == VerticalPhase::Active) {
         if (m_VCounter == 0) {
-            rootLog2.trace("Begin VDP2 frame, VDP1 framebuffer {}", m_drawFB ^ 1);
+            devlog::trace<grp::base>("Begin VDP2 frame, VDP1 framebuffer {}", m_drawFB ^ 1);
 
             VDP2InitFrame();
         } else if (m_VCounter == 210) { // ~1ms before VBlank IN
@@ -748,16 +800,17 @@ void VDP::BeginHPhaseActiveDisplay() {
 }
 
 void VDP::BeginHPhaseRightBorder() {
-    rootLog2.trace("(VCNT = {:3d})  Entering right border phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering right border phase", m_VCounter);
 
-    rootLog2.trace("## HBlank IN {:3d}", m_VCounter);
+    devlog::trace<grp::base>("## HBlank IN {:3d}", m_VCounter);
 
     m_VDP2.TVSTAT.HBLANK = 1;
     m_cbTriggerHBlankIN();
 
     // Start erasing if we just entered VBlank IN
     if (m_VCounter == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
-        rootLog2.trace("## HBlank IN + VBlank IN  VBE={:d} manualerase={:d}", m_VDP1.vblankErase, m_VDP1.fbManualErase);
+        devlog::trace<grp::base>("## HBlank IN + VBlank IN  VBE={:d} manualerase={:d}", m_VDP1.vblankErase,
+                                 m_VDP1.fbManualErase);
 
         if (m_VDP1.vblankErase || !m_VDP1.fbSwapMode) {
             // TODO: cycle-count the erase process, starting here
@@ -771,15 +824,15 @@ void VDP::BeginHPhaseRightBorder() {
 
 void VDP::BeginHPhaseSync() {
     IncrementVCounter();
-    rootLog2.trace("(VCNT = {:3d})  Entering horizontal sync phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering horizontal sync phase", m_VCounter);
 }
 
 void VDP::BeginHPhaseVBlankOut() {
-    rootLog2.trace("(VCNT = {:3d})  Entering VBlank OUT horizontal phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering VBlank OUT horizontal phase", m_VCounter);
 
     if (m_VPhase == VerticalPhase::LastLine) {
-        rootLog2.trace("## HBlank half + VBlank OUT  FCM={:d} FCT={:d} manualswap={:d} PTM={:d}", m_VDP1.fbSwapMode,
-                       m_VDP1.fbSwapTrigger, m_VDP1.fbManualSwap, m_VDP1.plotTrigger);
+        devlog::trace<grp::base>("## HBlank half + VBlank OUT  FCM={:d} FCT={:d} manualswap={:d} PTM={:d}",
+                                 m_VDP1.fbSwapMode, m_VDP1.fbSwapTrigger, m_VDP1.fbManualSwap, m_VDP1.plotTrigger);
 
         // Swap framebuffer in manual swap requested or in 1-cycle mode
         if (!m_VDP1.fbSwapMode || m_VDP1.fbManualSwap) {
@@ -790,7 +843,7 @@ void VDP::BeginHPhaseVBlankOut() {
 }
 
 void VDP::BeginHPhaseLeftBorder() {
-    rootLog2.trace("(VCNT = {:3d})  Entering left border phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering left border phase", m_VCounter);
 
     m_VDP2.TVSTAT.HBLANK = 0;
 
@@ -798,13 +851,13 @@ void VDP::BeginHPhaseLeftBorder() {
 }
 
 void VDP::BeginHPhaseLastDot() {
-    rootLog2.trace("(VCNT = {:3d})  Entering last dot phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering last dot phase", m_VCounter);
 
     // If we just entered the bottom blanking vertical phase, switch fields
     if (m_VCounter == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
         if (m_VDP2.TVMD.LSMDn != 0) {
             m_VDP2.TVSTAT.ODD ^= 1;
-            rootLog2.trace("Switched to {} field", (m_VDP2.TVSTAT.ODD ? "odd" : "even"));
+            devlog::trace<grp::base>("Switched to {} field", (m_VDP2.TVSTAT.ODD ? "odd" : "even"));
             m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_VDP2.TVSTAT.ODD));
         } else {
             if (m_VDP2.TVSTAT.ODD != 1) {
@@ -818,13 +871,13 @@ void VDP::BeginHPhaseLastDot() {
 // ----
 
 void VDP::BeginVPhaseActiveDisplay() {
-    rootLog2.trace("(VCNT = {:3d})  Entering vertical active display phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering vertical active display phase", m_VCounter);
 }
 
 void VDP::BeginVPhaseBottomBorder() {
-    rootLog2.trace("(VCNT = {:3d})  Entering bottom border phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering bottom border phase", m_VCounter);
 
-    rootLog2.trace("## VBlank IN");
+    devlog::trace<grp::base>("## VBlank IN");
 
     m_VDP2.TVSTAT.VBLANK = 1;
     m_cbTriggerVBlankIN();
@@ -833,17 +886,17 @@ void VDP::BeginVPhaseBottomBorder() {
 }
 
 void VDP::BeginVPhaseBlankingAndSync() {
-    rootLog2.trace("(VCNT = {:3d})  Entering blanking/vertical sync phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering blanking/vertical sync phase", m_VCounter);
 
     // End frame
-    rootLog2.trace("End VDP2 frame");
+    devlog::trace<grp::base>("End VDP2 frame");
     m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2EndFrame());
     m_VDPRenderContext.renderFinishedSignal.Wait(true);
     m_cbFrameComplete(m_framebuffer.data(), m_HRes, m_VRes);
 }
 
 void VDP::BeginVPhaseTopBorder() {
-    rootLog2.trace("(VCNT = {:3d})  Entering top border phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering top border phase", m_VCounter);
 
     UpdateResolution();
 
@@ -851,9 +904,9 @@ void VDP::BeginVPhaseTopBorder() {
 }
 
 void VDP::BeginVPhaseLastLine() {
-    rootLog2.trace("(VCNT = {:3d})  Entering last line phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering last line phase", m_VCounter);
 
-    rootLog2.trace("## VBlank OUT");
+    devlog::trace<grp::base>("## VBlank OUT");
 
     m_VDP2.TVSTAT.VBLANK = 0;
     m_cbTriggerVBlankOUT();
@@ -1006,9 +1059,9 @@ FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
     const VDP1Regs &regs1 = m_VDPRenderContext.vdp1.regs;
     const VDP2Regs &regs2 = m_VDPRenderContext.vdp2.regs;
 
-    renderLog1.trace("Erasing framebuffer {} - {}x{} to {}x{} -> {:04X}  {}x{}  {}-bit", m_drawFB ^ 1, regs1.eraseX1,
-                     regs1.eraseY1, regs1.eraseX3, regs1.eraseY3, regs1.eraseWriteValue, regs1.fbSizeH, regs1.fbSizeV,
-                     (regs1.pixel8Bits ? 8 : 16));
+    devlog::trace<grp::vdp1_render>("Erasing framebuffer {} - {}x{} to {}x{} -> {:04X}  {}x{}  {}-bit", m_drawFB ^ 1,
+                                    regs1.eraseX1, regs1.eraseY1, regs1.eraseX3, regs1.eraseY3, regs1.eraseWriteValue,
+                                    regs1.fbSizeH, regs1.fbSizeV, (regs1.pixel8Bits ? 8 : 16));
 
     auto &fb = m_spriteFB[m_VDPRenderContext.displayFB];
 
@@ -1038,7 +1091,7 @@ FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
 }
 
 FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
-    renderLog1.trace("Swapping framebuffers - draw {}, display {}", m_drawFB ^ 1, m_drawFB);
+    devlog::trace<grp::vdp1_render>("Swapping framebuffers - draw {}, display {}", m_drawFB ^ 1, m_drawFB);
 
     if (m_VDP1.fbManualErase) {
         m_VDP1.fbManualErase = false;
@@ -1057,7 +1110,7 @@ FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
 }
 
 void VDP::VDP1BeginFrame() {
-    renderLog1.trace("Begin VDP1 frame on framebuffer {}", m_VDPRenderContext.displayFB ^ 1);
+    devlog::trace<grp::vdp1_render>("Begin VDP1 frame on framebuffer {}", m_VDPRenderContext.displayFB ^ 1);
 
     // TODO: setup rendering
     // TODO: figure out VDP1 timings
@@ -1073,7 +1126,7 @@ void VDP::VDP1BeginFrame() {
 }
 
 void VDP::VDP1EndFrame() {
-    renderLog1.trace("End VDP1 frame on framebuffer {}", m_VDPRenderContext.displayFB ^ 1);
+    devlog::trace<grp::vdp1_render>("End VDP1 frame on framebuffer {}", m_VDPRenderContext.displayFB ^ 1);
     m_VDP1RenderContext.rendering = false;
     m_VDPRenderContext.vdp1Done = true;
 }
@@ -1088,9 +1141,9 @@ void VDP::VDP1ProcessCommand() {
     auto &cmdAddress = m_VDP1.currCommandAddress;
 
     const VDP1Command::Control control{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress)};
-    renderLog1.trace("Processing command {:04X} @ {:05X}", control.u16, cmdAddress);
+    devlog::trace<grp::vdp1_render>("Processing command {:04X} @ {:05X}", control.u16, cmdAddress);
     if (control.end) [[unlikely]] {
-        renderLog1.trace("End of command list");
+        devlog::trace<grp::vdp1_render>("End of command list");
         VDP1EndFrame();
     } else if (!control.skip) {
         // Process command
@@ -1113,7 +1166,8 @@ void VDP::VDP1ProcessCommand() {
         case SetLocalCoordinates: VDP1Cmd_SetLocalCoordinates(cmdAddress); break;
 
         default:
-            renderLog1.debug("Unexpected command type {:X}; aborting", static_cast<uint16>(control.command));
+            devlog::debug<grp::vdp1_render>("Unexpected command type {:X}; aborting",
+                                            static_cast<uint16>(control.command));
             VDP1EndFrame();
             return;
         }
@@ -1127,11 +1181,11 @@ void VDP::VDP1ProcessCommand() {
         case Next: cmdAddress += 0x20; break;
         case Assign: {
             cmdAddress = (VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x02) << 3u) & ~0x1F;
-            renderLog1.trace("Jump to {:05X}", cmdAddress);
+            devlog::trace<grp::vdp1_render>("Jump to {:05X}", cmdAddress);
 
             // HACK: Sonic R attempts to jump back to 0 in some cases
             if (cmdAddress == 0) {
-                renderLog1.warn("Possible infinite loop detected; aborting");
+                devlog::warn<grp::vdp1_render>("Possible infinite loop detected; aborting");
                 VDP1EndFrame();
                 return;
             }
@@ -1143,7 +1197,7 @@ void VDP::VDP1ProcessCommand() {
                 m_VDP1.returnAddress = cmdAddress + 0x20;
             }
             cmdAddress = (VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x02) << 3u) & ~0x1F;
-            renderLog1.trace("Call {:05X}", cmdAddress);
+            devlog::trace<grp::vdp1_render>("Call {:05X}", cmdAddress);
             break;
         }
         case Return: {
@@ -1154,7 +1208,7 @@ void VDP::VDP1ProcessCommand() {
             } else {
                 cmdAddress += 0x20;
             }
-            renderLog1.trace("Return to {:05X}", cmdAddress);
+            devlog::trace<grp::vdp1_render>("Return to {:05X}", cmdAddress);
             break;
         }
         }
@@ -1498,9 +1552,10 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
     const CoordS32 coordC{rx, by};
     const CoordS32 coordD{lx, by};
 
-    renderLog1.trace("Draw normal sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
-                     "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
-                     lx, ty, rx, ty, rx, by, lx, by, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
+    devlog::trace<grp::vdp1_render>(
+        "Draw normal sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
+        "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
+        lx, ty, rx, ty, rx, by, lx, by, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
 
     if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
         return;
@@ -1647,10 +1702,10 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
     const CoordS32 coordC{qxc, qyc};
     const CoordS32 coordD{qxd, qyd};
 
-    renderLog1.trace("Draw scaled sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
-                     "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
-                     qxa, qya, qxb, qyb, qxc, qyc, qxd, qyd, color, gouraudTable, mode.u16, charSizeH, charSizeV,
-                     charAddr);
+    devlog::trace<grp::vdp1_render>(
+        "Draw scaled sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
+        "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
+        qxa, qya, qxb, qyb, qxc, qyc, qxd, qyd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
 
     if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
         return;
@@ -1715,9 +1770,10 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control co
     const CoordS32 coordC{xc, yc};
     const CoordS32 coordD{xd, yd};
 
-    renderLog1.trace("Draw distorted sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
-                     "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
-                     xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
+    devlog::trace<grp::vdp1_render>(
+        "Draw distorted sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
+        "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
+        xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
 
     if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
         return;
@@ -1778,8 +1834,9 @@ void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
     const CoordS32 coordC{xc, yc};
     const CoordS32 coordD{xd, yd};
 
-    renderLog1.trace("Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
-                     xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16);
+    devlog::trace<grp::vdp1_render>(
+        "Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa, ya, xb, yb,
+        xc, yc, xd, yd, color, gouraudTable, mode.u16);
 
     if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
         return;
@@ -1829,8 +1886,9 @@ void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
     const CoordS32 coordC{xc, yc};
     const CoordS32 coordD{xd, yd};
 
-    renderLog1.trace("Draw polylines: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}",
-                     xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, mode.u16);
+    devlog::trace<grp::vdp1_render>(
+        "Draw polylines: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa, ya, xb,
+        yb, xc, yc, xd, yd, color, gouraudTable >> 3u, mode.u16);
 
     if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
         return;
@@ -1871,8 +1929,8 @@ void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
     const CoordS32 coordA{xa, ya};
     const CoordS32 coordB{xb, yb};
 
-    renderLog1.trace("Draw line: {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa, ya, xb, yb,
-                     color, gouraudTable, mode.u16);
+    devlog::trace<grp::vdp1_render>("Draw line: {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa,
+                                    ya, xb, yb, color, gouraudTable, mode.u16);
 
     if (VDP1IsLineSystemClipped(coordA, coordB)) {
         return;
@@ -1896,7 +1954,7 @@ void VDP::VDP1Cmd_SetSystemClipping(uint32 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     ctx.sysClipH = bit::extract<0, 9>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x14));
     ctx.sysClipV = bit::extract<0, 8>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x16));
-    renderLog1.trace("Set system clipping: {}x{}", ctx.sysClipH, ctx.sysClipV);
+    devlog::trace<grp::vdp1_render>("Set system clipping: {}x{}", ctx.sysClipH, ctx.sysClipV);
 }
 
 void VDP::VDP1Cmd_SetUserClipping(uint32 cmdAddress) {
@@ -1905,15 +1963,15 @@ void VDP::VDP1Cmd_SetUserClipping(uint32 cmdAddress) {
     ctx.userClipY0 = bit::extract<0, 8>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0E));
     ctx.userClipX1 = bit::extract<0, 9>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x14));
     ctx.userClipY1 = bit::extract<0, 8>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x16));
-    renderLog1.trace("Set user clipping: {}x{} - {}x{}", ctx.userClipX0, ctx.userClipY0, ctx.userClipX1,
-                     ctx.userClipY1);
+    devlog::trace<grp::vdp1_render>("Set user clipping: {}x{} - {}x{}", ctx.userClipX0, ctx.userClipY0, ctx.userClipX1,
+                                    ctx.userClipY1);
 }
 
 void VDP::VDP1Cmd_SetLocalCoordinates(uint32 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     ctx.localCoordX = bit::sign_extend<16>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0C));
     ctx.localCoordY = bit::sign_extend<16>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0E));
-    renderLog1.trace("Set local coordinates: {}x{}", ctx.localCoordX, ctx.localCoordY);
+    devlog::trace<grp::vdp1_render>("Set local coordinates: {}x{}", ctx.localCoordX, ctx.localCoordY);
 }
 
 // -----------------------------------------------------------------------------
@@ -2397,7 +2455,7 @@ FORCE_INLINE void VDP::VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindo
 }
 
 void VDP::VDP2DrawLine(uint32 y) {
-    renderLog2.trace("Drawing line {}", y);
+    devlog::trace<grp::vdp2_render>("Drawing line {}", y);
 
     const VDP1Regs &regs1 = m_VDPRenderContext.vdp1.regs;
     const VDP2Regs &regs2 = m_VDPRenderContext.vdp2.regs;

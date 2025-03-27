@@ -21,7 +21,6 @@
 #include <satemu/sys/bus.hpp>
 
 #include <satemu/util/data_ops.hpp>
-#include <satemu/util/debug_print.hpp>
 
 #include <iosfwd>
 
@@ -62,11 +61,6 @@ namespace satemu::scu {
 //   - [TODO] Byte writes write garbage to the odd/even byte counterpart
 //   - Byte reads work normally
 class SCU {
-    static constexpr dbg::Category rootLog{"SCU"};
-    static constexpr dbg::Category regsLog{rootLog, "Regs"};
-    static constexpr dbg::Category dmaLog{rootLog, "DMA"};
-    static constexpr dbg::Category debugLog{rootLog, "Debug"};
-
 public:
     SCU(core::Scheduler &scheduler, sys::Bus &bus);
 

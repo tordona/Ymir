@@ -243,7 +243,7 @@ void SCSP::DumpDSPRegs(std::ostream &out) const {
 
 void SCSP::SetCPUEnabled(bool enabled) {
     if (m_m68kEnabled != enabled) {
-        rootLog.info("MC68EC00 processor {}", (enabled ? "enabled" : "disabled"));
+        devlog::info<grp::base>("MC68EC00 processor {}", (enabled ? "enabled" : "disabled"));
         if (enabled) {
             m_m68k.Reset(true); // false? does it matter?
             m_m68kSpilloverCycles = 0;
@@ -262,7 +262,7 @@ void SCSP::HandleKYONEX() {
     for (auto &slot : m_slots) {
         if (slot.TriggerKey()) {
             static constexpr const char *loopNames[] = {"->|", ">->", "<-<", ">-<"};
-            regsLog.trace(
+            devlog::trace<grp::regs>(
                 "Slot {:02d} key {} {:2d}-bit addr={:05X} loop={:04X}-{:04X} {} OCT={:02d} FNS={:03X} KRS={:X} "
                 "EG {:02d} {:02d} {:02d} {:02d} DL={:03X} EGHOLD={} LPSLNK={} mod X={:02X} Y={:02X} lv={:X}",
                 slot.index, (slot.keyOnBit ? " ON" : "OFF"), (slot.pcm8Bit ? 8 : 16), slot.startAddress,
@@ -280,7 +280,7 @@ void SCSP::HandleKYONEX() {
         }
         return std::string_view(out, 32);
     };
-    regsLog.trace("KYONEX: {}", makeList());
+    devlog::trace<grp::regs>("KYONEX: {}", makeList());
 }
 
 void SCSP::SetInterrupt(uint16 intr, bool level) {
@@ -371,11 +371,13 @@ void SCSP::ExecuteDMA() {
     while (m_dmaExec) {
         if (m_dmaXferToMem) {
             const uint16 value = ReadReg<uint16>(m_dmaRegAddress);
-            dmaLog.debug("Register {:03X} -> Memory {:06X} = {:04X}", m_dmaRegAddress, m_dmaMemAddress, value);
+            devlog::debug<grp::dma>("Register {:03X} -> Memory {:06X} = {:04X}", m_dmaRegAddress, m_dmaMemAddress,
+                                    value);
             WriteWRAM<uint16>(m_dmaMemAddress, m_dmaGate ? 0u : value);
         } else {
             const uint16 value = ReadWRAM<uint16>(m_dmaMemAddress);
-            dmaLog.debug("Memory {:06X} -> Register {:03X} = {:04X}", m_dmaMemAddress, m_dmaRegAddress, value);
+            devlog::debug<grp::dma>("Memory {:06X} -> Register {:03X} = {:04X}", m_dmaMemAddress, m_dmaRegAddress,
+                                    value);
             WriteReg<uint16>(m_dmaRegAddress, m_dmaGate ? 0u : value);
         }
         m_dmaMemAddress = (m_dmaMemAddress + sizeof(uint16)) & 0x7FFFE;

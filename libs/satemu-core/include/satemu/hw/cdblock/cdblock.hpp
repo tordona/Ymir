@@ -16,7 +16,7 @@
 #include <satemu/media/disc.hpp>
 #include <satemu/media/filesystem.hpp>
 
-#include <satemu/util/debug_print.hpp>
+#include <satemu/util/dev_log.hpp>
 
 #include <array>
 #include <deque>
@@ -24,13 +24,6 @@
 namespace satemu::cdblock {
 
 class CDBlock {
-    static constexpr dbg::Category rootLog{"CDBlock"};
-    static constexpr dbg::Category regsLog{rootLog, "Regs"};
-    static constexpr dbg::Category playInitLog{rootLog, "PlayInit"};
-    static constexpr dbg::Category playLog{rootLog, "Play"};
-    static constexpr dbg::Category xferLog{rootLog, "Transfer"};
-    static constexpr dbg::Category partLog{rootLog, "PartMgr"};
-
 public:
     CDBlock(core::Scheduler &scheduler);
 

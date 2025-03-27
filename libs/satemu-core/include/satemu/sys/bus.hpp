@@ -6,11 +6,28 @@
 
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/data_ops.hpp>
-#include <satemu/util/debug_print.hpp>
+#include <satemu/util/dev_log.hpp>
 #include <satemu/util/inline.hpp>
 #include <satemu/util/unreachable.hpp>
 
 namespace satemu::sys {
+
+namespace grp {
+
+    // -----------------------------------------------------------------------------
+    // Dev log groups
+
+    // Hierarchy:
+    //
+    // bus
+
+    struct bus {
+        static constexpr bool enabled = true;
+        static constexpr devlog::Level level = devlog::level::debug;
+        static constexpr std::string_view name = "Bus";
+    };
+
+} // namespace grp
 
 // Represents a memory bus interconnecting various components in the system.
 //
@@ -20,8 +37,6 @@ namespace satemu::sys {
 // Read and Write perform reads and writes with all side-effects and restrictions imposed by the hardware.
 // Peek and Poke bypass restrictions and don't cause any side-effects. These are meant to be used by debuggers.
 class Bus {
-    static constexpr dbg::Category rootLog{"Bus"};
-
     static constexpr uint32 kAddressBits = 27;
     static constexpr uint32 kAddressMask = (1u << kAddressBits) - 1;
     static constexpr uint32 kPageGranularityBits = 16;
@@ -41,26 +56,26 @@ public:
         void *ctx = nullptr;
 
         FnRead8 read8 = [](uint32 address, void *) -> uint8 {
-            rootLog.debug("Unhandled 8-bit read from {:07X}", address);
+            devlog::debug<grp::bus>("Unhandled 8-bit read from {:07X}", address);
             return 0;
         };
         FnRead16 read16 = [](uint32 address, void *) -> uint16 {
-            rootLog.debug("Unhandled 16-bit read from {:07X}", address);
+            devlog::debug<grp::bus>("Unhandled 16-bit read from {:07X}", address);
             return 0;
         };
         FnRead32 read32 = [](uint32 address, void *) -> uint32 {
-            rootLog.debug("Unhandled 32-bit read from {:07X}", address);
+            devlog::debug<grp::bus>("Unhandled 32-bit read from {:07X}", address);
             return 0;
         };
 
         FnWrite8 write8 = [](uint32 address, uint8 value, void *) {
-            rootLog.debug("Unhandled 8-bit write to {:07X} = {:02X}", address, value);
+            devlog::debug<grp::bus>("Unhandled 8-bit write to {:07X} = {:02X}", address, value);
         };
         FnWrite16 write16 = [](uint32 address, uint16 value, void *) {
-            rootLog.debug("Unhandled 16-bit write to {:07X} = {:04X}", address, value);
+            devlog::debug<grp::bus>("Unhandled 16-bit write to {:07X} = {:04X}", address, value);
         };
         FnWrite32 write32 = [](uint32 address, uint32 value, void *) {
-            rootLog.debug("Unhandled 32-bit write to {:07X} = {:07X}", address, value);
+            devlog::debug<grp::bus>("Unhandled 32-bit write to {:07X} = {:07X}", address, value);
         };
 
         FnRead8 peek8 = [](uint32 address, void *) -> uint8 { return 0; };

@@ -109,7 +109,7 @@ add_library(satemu-core
     include/satemu/util/compiler_info.hpp
     include/satemu/util/data_ops.hpp
     include/satemu/util/date_time.hpp
-    include/satemu/util/debug_print.hpp
+    include/satemu/util/dev_log.hpp
     include/satemu/util/event.hpp
     include/satemu/util/inline.hpp
     include/satemu/util/scope_guard.hpp
@@ -124,6 +124,7 @@ add_library(satemu-core
     src/satemu/hw/cart/cart_impl_bup.cpp
 
     src/satemu/hw/cdblock/cdblock.cpp
+    src/satemu/hw/cdblock/cdblock_devlog.hpp
     src/satemu/hw/cdblock/cdblock_partition_manager.cpp
     
     src/satemu/hw/m68k/m68k.cpp
@@ -134,6 +135,7 @@ add_library(satemu-core
     src/satemu/hw/scsp/scsp_slot.cpp
     
     src/satemu/hw/scu/scu.cpp
+    src/satemu/hw/scu/scu_devlog.hpp
     src/satemu/hw/scu/scu_dsp.cpp
 
     src/satemu/hw/smpc/rtc.cpp

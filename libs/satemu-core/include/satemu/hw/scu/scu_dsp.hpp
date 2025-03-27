@@ -6,7 +6,6 @@
 
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/callback.hpp>
-#include <satemu/util/debug_print.hpp>
 #include <satemu/util/inline.hpp>
 
 #include <array>
@@ -16,8 +15,6 @@ namespace satemu::scu {
 using CBTriggerDSPEnd = util::RequiredCallback<void()>;
 
 class SCUDSP {
-    static constexpr dbg::Category dspLog{"SCU-DSP"};
-
 public:
     SCUDSP(sys::Bus &bus);
 

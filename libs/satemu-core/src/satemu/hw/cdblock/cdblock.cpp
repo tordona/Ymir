@@ -1,9 +1,10 @@
 #include <satemu/hw/cdblock/cdblock.hpp>
 
+#include "cdblock_devlog.hpp"
+
 #include <satemu/sys/clocks.hpp>
 
 #include <satemu/util/arith_ops.hpp>
-#include <satemu/util/debug_print.hpp>
 
 #include <cassert>
 #include <utility>
@@ -178,9 +179,9 @@ void CDBlock::LoadDisc(media::Disc &&disc) {
 
     // Try building filesystem structure
     if (m_fs.Read(m_disc)) {
-        rootLog.info("Filesystem built successfully");
+        devlog::info<grp::base>("Filesystem built successfully");
     } else {
-        rootLog.warn("Failed to build filesystem");
+        devlog::warn<grp::base>("Failed to build filesystem");
     }
 }
 
@@ -199,7 +200,7 @@ void CDBlock::EjectDisc() {
         m_fs.Clear();
         SetInterrupt(kHIRQ_DCHG | kHIRQ_EFLS);
 
-        rootLog.debug("Ejected disc");
+        devlog::debug<grp::base>("Ejected disc");
     }
 }
 
@@ -212,9 +213,9 @@ void CDBlock::OpenTray() {
         m_fs.Clear();
         SetInterrupt(kHIRQ_DCHG | kHIRQ_EFLS);
 
-        rootLog.info("Tray opened");
+        devlog::info<grp::base>("Tray opened");
     } else {
-        rootLog.info("Tried to open tray when it's already opened");
+        devlog::info<grp::base>("Tried to open tray when it's already opened");
     }
 }
 
@@ -225,15 +226,15 @@ void CDBlock::CloseTray() {
             m_status.statusCode = kStatusCodeNoDisc;
             m_targetDriveCycles = kDriveCyclesNotPlaying;
 
-            rootLog.info("Tray closed - no disc");
+            devlog::info<grp::base>("Tray closed - no disc");
         } else {
             m_status.statusCode = kStatusCodePause;
             m_targetDriveCycles = kDriveCyclesNotPlaying;
 
-            rootLog.info("Tray closed - paused");
+            devlog::info<grp::base>("Tray closed - paused");
         }
     } else {
-        rootLog.info("Tried to close tray when it's already closed");
+        devlog::info<grp::base>("Tried to close tray when it's already closed");
     }
 }
 
@@ -268,7 +269,7 @@ T CDBlock::ReadReg(uint32 address) {
         m_processingCommand = false;
         m_readyForPeriodicReports = true;
         return m_CR[3];
-    default: regsLog.debug("unhandled {}-bit register read from {:02X}", sizeof(T) * 8, address); return 0;
+    default: devlog::debug<grp::regs>("unhandled {}-bit register read from {:02X}", sizeof(T) * 8, address); return 0;
     }
 }
 
@@ -276,7 +277,7 @@ template <mem_primitive T>
 void CDBlock::WriteReg(uint32 address, T value) {
     address &= 0x3F;
 
-    regsLog.trace("{}-bit register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+    devlog::trace<grp::regs>("{}-bit register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
     switch (address) {
     case 0x00: DoWriteTransfer(value); break;
     case 0x02: DoWriteTransfer(value); break;
@@ -300,7 +301,9 @@ void CDBlock::WriteReg(uint32 address, T value) {
         SetupCommand();
         break;
 
-    default: regsLog.debug("unhandled {}-bit register write to {:02X} = {:X}", sizeof(T) * 8, address, value); break;
+    default:
+        devlog::debug<grp::regs>("unhandled {}-bit register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+        break;
     }
 }
 
@@ -379,7 +382,7 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
 
     // Sanity check: both must be FADs or tracks, not a mix
     if (isStartFAD != isEndFAD) {
-        playInitLog.debug("Start/End FAD type mismatch: {:06X} {:06X}", startParam, endParam);
+        devlog::debug<grp::play_init>("Start/End FAD type mismatch: {:06X} {:06X}", startParam, endParam);
         return false; // reject
     }
 
@@ -392,7 +395,7 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
 
     // Make sure we have a disc
     if (m_disc.sessions.empty()) {
-        playInitLog.info("No disc");
+        devlog::info<grp::play_init>("No disc");
         m_status.statusCode = kStatusCodeNoDisc;
         m_targetDriveCycles = kDriveCyclesNotPlaying;
         return true;
@@ -405,7 +408,7 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
         m_playStartPos = startParam & 0x7FFFFF;
         m_playEndPos = m_playStartPos + (endParam & 0x7FFFFF) - 1;
 
-        playInitLog.debug("FAD range {:06X} to {:06X}", m_playStartPos, m_playEndPos);
+        devlog::debug<grp::play_init>("FAD range {:06X} to {:06X}", m_playStartPos, m_playEndPos);
 
         uint32 frameAddress = m_status.frameAddress;
         if (resetPos || frameAddress < m_playStartPos || frameAddress > m_playEndPos) {
@@ -430,12 +433,12 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
                 m_targetDriveCycles = kDriveCyclesPlaying1x;
             }
 
-            playInitLog.debug("Track:Index {:02d}:{:02d} ctl/ADR={:02X}", m_status.track, m_status.index,
-                              m_status.controlADR);
+            devlog::debug<grp::play_init>("Track:Index {:02d}:{:02d} ctl/ADR={:02X}", m_status.track, m_status.index,
+                                          m_status.controlADR);
 
             if (resetPos) {
                 m_status.frameAddress = m_playStartPos;
-                playInitLog.debug("Reset playback position to {:06X}", m_status.frameAddress);
+                devlog::debug<grp::play_init>("Reset playback position to {:06X}", m_status.frameAddress);
             } else {
                 m_status.frameAddress = frameAddress;
             }
@@ -462,7 +465,8 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
             endIndex = 1;
         }
 
-        playInitLog.debug("Track:Index range {:02d}:{:02d}-{:02d}:{:02d} ", startTrack, startIndex, endTrack, endIndex);
+        devlog::debug<grp::play_init>("Track:Index range {:02d}:{:02d}-{:02d}:{:02d} ", startTrack, startIndex,
+                                      endTrack, endIndex);
 
         // Clamp track numbers to what's available in the disc
         // If end < start, ProcessDriveState() will switch to the Pause state automatically
@@ -470,7 +474,7 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
         uint8 lastTrack = session.lastTrackIndex + 1;
         startTrack = std::clamp(startTrack, firstTrack, lastTrack);
         endTrack = std::clamp(endTrack, firstTrack, lastTrack);
-        playInitLog.debug("Track range after clamping {:02d}-{:02d}", startTrack, endTrack);
+        devlog::debug<grp::play_init>("Track range after clamping {:02d}-{:02d}", startTrack, endTrack);
 
         // TODO: tracks need to store index information
 
@@ -501,11 +505,11 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
                 // Force 1x speed if playing audio track
                 m_targetDriveCycles = kDriveCyclesPlaying1x;
             }
-            playInitLog.debug("Track FAD range {:06X}-{:06X}", m_playStartPos, m_playEndPos);
+            devlog::debug<grp::play_init>("Track FAD range {:06X}-{:06X}", m_playStartPos, m_playEndPos);
 
             if (resetPos) {
                 m_status.frameAddress = m_playStartPos;
-                playInitLog.debug("Reset playback position to {:06X}", m_status.frameAddress);
+                devlog::debug<grp::play_init>("Reset playback position to {:06X}", m_status.frameAddress);
             } else {
                 m_status.frameAddress = frameAddress;
             }
@@ -513,7 +517,7 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
             // The disc image is truncated or corrupted
             // Let's pretend this is a disc read error
             // TODO: what happens on a real disc read error?
-            playLog.debug("Could not find track - disc image is truncated or corrupted");
+            devlog::debug<grp::play>("Could not find track - disc image is truncated or corrupted");
             return false;
         }
     }
@@ -524,7 +528,7 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
 bool CDBlock::SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber) {
     // Bail out if there is no file system
     if (!m_fs.IsValid()) {
-        playInitLog.debug("No file system; rejecting playback request");
+        devlog::debug<grp::play_init>("No file system; rejecting playback request");
         m_targetDriveCycles = kDriveCyclesNotPlaying;
         m_status.statusCode = kStatusCodePause;
         return true;
@@ -532,7 +536,7 @@ bool CDBlock::SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber
 
     // Bail out if there is no current directory
     if (!m_fs.HasCurrentDirectory()) {
-        playInitLog.debug("No current directory set; rejecting playback request");
+        devlog::debug<grp::play_init>("No current directory set; rejecting playback request");
         m_targetDriveCycles = kDriveCyclesNotPlaying;
         m_status.statusCode = kStatusCodePause;
         return true;
@@ -541,7 +545,7 @@ bool CDBlock::SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber
     // Reject if the file ID is out of range
     const media::fs::FileInfo &fileInfo = m_fs.GetFileInfo(fileID);
     if (!fileInfo.IsValid()) {
-        playInitLog.debug("Invalid file ID; rejecting playback request");
+        devlog::debug<grp::play_init>("Invalid file ID; rejecting playback request");
         return false;
     }
 
@@ -550,11 +554,13 @@ bool CDBlock::SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber
     const auto &session = m_disc.sessions.back();
     const uint8 trackIndex = session.FindTrackIndex(fileOffset);
     if (trackIndex == 0xFF) {
-        playInitLog.debug("Track not found for frame address {:06X}; rejecting playback request", fileOffset);
+        devlog::debug<grp::play_init>("Track not found for frame address {:06X}; rejecting playback request",
+                                      fileOffset);
         return false;
     }
     if (session.tracks[trackIndex].controlADR != 0x41) {
-        playInitLog.debug("Not a data track at frame address {:06X}; rejecting playback request", fileOffset);
+        devlog::debug<grp::play_init>("Not a data track at frame address {:06X}; rejecting playback request",
+                                      fileOffset);
         return false;
     }
 
@@ -575,8 +581,8 @@ bool CDBlock::SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber
     m_status.track = trackIndex + 1;
     m_status.index = 1; // TODO: handle indexes
 
-    playInitLog.debug("Read file {}, offset {}, filter {}, frame addresses {:06X} to {:06X}", fileID, offset,
-                      filterNumber, m_playStartPos, m_playEndPos);
+    devlog::debug<grp::play_init>("Read file {}, offset {}, filter {}, frame addresses {:06X} to {:06X}", fileID,
+                                  offset, filterNumber, m_playStartPos, m_playEndPos);
     return true;
 }
 
@@ -590,7 +596,7 @@ bool CDBlock::SetupScan(uint8 direction) {
 
     m_status.statusCode = kStatusCodeScan;
 
-    rootLog.info("Scan disc {}", (m_scanDirection ? "backward" : "forward"));
+    devlog::info<grp::base>("Scan disc {}", (m_scanDirection ? "backward" : "forward"));
 
     return true;
 }
@@ -636,10 +642,10 @@ void CDBlock::ProcessDriveStatePlay() {
     const bool scan = (m_status.statusCode & 0xF) == kStatusCodeScan;
     const uint32 frameAddress = m_status.frameAddress;
     if (frameAddress <= m_playEndPos) {
-        playLog.trace("Read from frame address {:06X}", frameAddress);
+        devlog::trace<grp::play>("Read from frame address {:06X}", frameAddress);
 
         if (m_disc.sessions.empty()) [[unlikely]] {
-            playLog.debug("Disc removed");
+            devlog::debug<grp::play>("Disc removed");
 
             m_status.statusCode = kStatusCodeNoDisc; // TODO: is this correct?
             SetInterrupt(kHIRQ_DCHG);
@@ -656,7 +662,7 @@ void CDBlock::ProcessDriveStatePlay() {
                 buffer.frameAddress = frameAddress;
                 track->ReadSectorSubheader(frameAddress, buffer.subheader);
 
-                playLog.trace("Read {} bytes from frame address {:06X}", buffer.size, buffer.frameAddress);
+                devlog::trace<grp::play>("Read {} bytes from frame address {:06X}", buffer.size, buffer.frameAddress);
 
                 if (track->controlADR == 0x01) {
                     // If playing an audio track, send to SCSP
@@ -684,9 +690,9 @@ void CDBlock::ProcessDriveStatePlay() {
                         m_targetDriveCycles = kDriveCyclesPlaying1x;
                     }
 
-                    playLog.trace("Sector {:06X} sent to SCSP", frameAddress);
+                    devlog::trace<grp::play>("Sector {:06X} sent to SCSP", frameAddress);
                 } else if (m_partitionManager.GetFreeBufferCount() == 0) [[unlikely]] {
-                    playLog.debug("No free buffer available");
+                    devlog::debug<grp::play>("No free buffer available");
 
                     // TODO: what is the correct status code here?
                     // TODO: there really should be a separate state machine for handling this...
@@ -700,10 +706,11 @@ void CDBlock::ProcessDriveStatePlay() {
                         const Filter &filter = m_filters[filterNum];
                         if (filter.Test(buffer)) {
                             if (filter.trueOutput == Filter::kDisconnected) [[unlikely]] {
-                                playLog.trace("Passed filter; output disconnected - discarded");
+                                devlog::trace<grp::play>("Passed filter; output disconnected - discarded");
                             } else {
                                 assert(filter.trueOutput < m_filters.size());
-                                playLog.trace("Passed filter; sent to buffer partition {}", filter.trueOutput);
+                                devlog::trace<grp::play>("Passed filter; sent to buffer partition {}",
+                                                         filter.trueOutput);
                                 m_partitionManager.InsertHead(filter.trueOutput, buffer);
                                 m_lastCDWritePartition = filter.trueOutput;
                                 SetInterrupt(kHIRQ_CSCT);
@@ -711,11 +718,11 @@ void CDBlock::ProcessDriveStatePlay() {
                             break;
                         } else {
                             if (filter.falseOutput == Filter::kDisconnected) [[unlikely]] {
-                                playLog.trace("Filtered out; output disconnected - discarded");
+                                devlog::trace<grp::play>("Filtered out; output disconnected - discarded");
                                 break;
                             } else {
                                 assert(filter.falseOutput < m_filters.size());
-                                playLog.trace("Filtered out; sent to filter {}", filter.falseOutput);
+                                devlog::trace<grp::play>("Filtered out; sent to filter {}", filter.falseOutput);
                                 filterNum = filter.falseOutput;
                             }
                         }
@@ -752,13 +759,13 @@ void CDBlock::ProcessDriveStatePlay() {
                 // This shouldn't really happen unless we're given an invalid disc image
                 // Let's pretend this is a disc read error
                 // TODO: what happens on a real disc read error?
-                playLog.debug("Track not found");
+                devlog::debug<grp::play>("Track not found");
                 m_status.statusCode = kStatusCodeError;
             } else {
                 // The disc image is truncated or corrupted
                 // Let's pretend this is a disc read error
                 // TODO: what happens on a real disc read error?
-                playLog.debug("Could not read sector - disc image is truncated or corrupted");
+                devlog::debug<grp::play>("Could not read sector - disc image is truncated or corrupted");
                 m_status.statusCode = kStatusCodeError;
             }
         }
@@ -769,14 +776,14 @@ void CDBlock::ProcessDriveStatePlay() {
         // 0xF = infinite repeats
         if (m_playMaxRepeat == 0xF || m_status.repeatCount < m_playMaxRepeat) {
             if (m_playMaxRepeat == 0xF) {
-                playLog.debug("Playback repeat (infinite)");
+                devlog::debug<grp::play>("Playback repeat (infinite)");
             } else {
-                playLog.debug("Playback repeat: {} of {}", m_status.repeatCount + 1, m_playMaxRepeat);
+                devlog::debug<grp::play>("Playback repeat: {} of {}", m_status.repeatCount + 1, m_playMaxRepeat);
             }
             m_status.frameAddress = m_playStartPos;
             m_status.repeatCount++;
         } else {
-            playLog.debug("Playback ended");
+            devlog::debug<grp::play>("Playback ended");
             m_status.frameAddress = m_playEndPos + 1;
             m_status.statusCode = kStatusCodePause;
             m_targetDriveCycles = kDriveCyclesNotPlaying;
@@ -794,7 +801,7 @@ void CDBlock::SetInterrupt(uint16 bits) {
 }
 
 void CDBlock::UpdateInterrupts() {
-    rootLog.trace("HIRQ = {:04X}  mask = {:04X}  active = {:04X}", m_HIRQ, m_HIRQMASK, m_HIRQ & m_HIRQMASK);
+    devlog::trace<grp::base>("HIRQ = {:04X}  mask = {:04X}  active = {:04X}", m_HIRQ, m_HIRQMASK, m_HIRQ & m_HIRQMASK);
     if (m_HIRQ & m_HIRQMASK) {
         m_cbTriggerExternalInterrupt0();
     }
@@ -812,7 +819,7 @@ void CDBlock::ReportCDStatus(uint8 statusCode) {
 }
 
 void CDBlock::SetupTOCTransfer() {
-    xferLog.debug("Starting TOC transfer");
+    devlog::debug<grp::xfer>("Starting TOC transfer");
 
     m_xferType = TransferType::TOC;
     m_xferPos = 0;
@@ -822,8 +829,9 @@ void CDBlock::SetupTOCTransfer() {
 }
 
 void CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8 partitionNumber, bool del) {
-    xferLog.trace("Starting sector {} transfer - sectors {} to {} into buffer partition {}",
-                  (del ? "read then delete" : "read"), sectorPos, sectorPos + sectorCount - 1, partitionNumber);
+    devlog::trace<grp::xfer>("Starting sector {} transfer - sectors {} to {} into buffer partition {}",
+                             (del ? "read then delete" : "read"), sectorPos, sectorPos + sectorCount - 1,
+                             partitionNumber);
 
     const uint8 partitionSize = m_partitionManager.GetBufferCount(partitionNumber);
     if (sectorPos == 0xFFFF) {
@@ -846,7 +854,7 @@ void CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8
 }
 
 uint32 CDBlock::SetupFileInfoTransfer(uint32 fileID) {
-    xferLog.debug("Starting file info transfer - file ID {:X}", fileID);
+    devlog::debug<grp::xfer>("Starting file info transfer - file ID {:X}", fileID);
 
     const uint32 fileOffset = m_fs.GetFileOffset();
     const uint32 fileCount = m_fs.GetFileCount();
@@ -887,7 +895,7 @@ bool CDBlock::SetupSubcodeTransfer(uint8 type) {
     };
 
     if (type == 0) {
-        xferLog.trace("Starting subcode Q transfer");
+        devlog::trace<grp::xfer>("Starting subcode Q transfer");
 
         m_xferType = TransferType::Subcode;
         m_xferPos = 0;
@@ -919,7 +927,7 @@ bool CDBlock::SetupSubcodeTransfer(uint8 type) {
 
         return true;
     } else if (type == 1) {
-        xferLog.trace("Starting subcode R-W transfer");
+        devlog::trace<grp::xfer>("Starting subcode R-W transfer");
 
         m_xferType = TransferType::Subcode;
         m_xferPos = 0;
@@ -939,7 +947,7 @@ bool CDBlock::SetupSubcodeTransfer(uint8 type) {
         if (m_disc.sessions.back().tracks[m_status.track - 1].sectorSize < 2448) {
             m_xferSubcodeBuffer.fill(0xFF);
         } else {
-            xferLog.debug("Subcode R-W transfer is unimplemented");
+            devlog::debug<grp::xfer>("Subcode R-W transfer is unimplemented");
             m_xferSubcodeBuffer.fill(0xFF);
         }
 
@@ -959,9 +967,9 @@ void CDBlock::EndTransfer() {
         return;
     }
 
-    xferLog.trace("Ending transfer at {} of {} words", m_xferPos, m_xferLength);
+    devlog::trace<grp::xfer>("Ending transfer at {} of {} words", m_xferPos, m_xferLength);
     if (m_xferExtraCount > 0) {
-        xferLog.debug("{} unexpected transfer attempts", m_xferExtraCount);
+        devlog::debug<grp::xfer>("{} unexpected transfer attempts", m_xferExtraCount);
     }
 
     // Trigger EHST HIRQ if ending certain sector transfers
@@ -1003,22 +1011,22 @@ uint16 CDBlock::DoReadTransfer() {
             const uint16 bufferPos = (m_xferPos * sizeof(uint16)) & 2047;
             value = util::ReadBE<uint16>(&buffer->data[bufferPos]);
             if (bufferPos == 0) {
-                xferLog.trace("Starting transfer from sector at frame address {:08X} - sector {}", buffer->frameAddress,
-                              m_xferSectorPos);
+                devlog::trace<grp::xfer>("Starting transfer from sector at frame address {:08X} - sector {}",
+                                         buffer->frameAddress, m_xferSectorPos);
             }
 
             if (bufferPos >= 2046) {
                 if (m_xferType == TransferType::GetThenDeleteSector) {
                     // Delete sector once fully read
                     m_partitionManager.RemoveTail(m_xferPartition, m_xferSectorPos);
-                    xferLog.trace("Sector freed");
+                    devlog::trace<grp::xfer>("Sector freed");
                 } else {
                     m_xferSectorPos++;
-                    xferLog.trace("Going to sector {}", m_xferSectorPos);
+                    devlog::trace<grp::xfer>("Going to sector {}", m_xferSectorPos);
                 }
             }
         } else {
-            xferLog.warn("Out of bounds transfer - sector {}", m_xferSectorPos);
+            devlog::warn<grp::xfer>("Out of bounds transfer - sector {}", m_xferSectorPos);
         }
         break;
     }
@@ -1071,7 +1079,7 @@ void CDBlock::AdvanceTransfer() {
     m_xferPos++;
     m_xferCount++;
     if (m_xferPos >= m_xferLength) {
-        xferLog.trace("Transfer finished - {} of {} words transferred", m_xferCount, m_xferLength);
+        devlog::trace<grp::xfer>("Transfer finished - {} of {} words transferred", m_xferCount, m_xferLength);
         m_xferType = TransferType::None;
         m_xferPos = 0;
         m_xferLength = 0;
@@ -1109,7 +1117,7 @@ void CDBlock::SetupCommand() {
 }
 
 FORCE_INLINE void CDBlock::ProcessCommand() {
-    rootLog.trace("Processing command {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
+    devlog::trace<grp::base>("Processing command {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
 
     const uint8 cmd = m_CR[0] >> 8u;
 
@@ -1185,14 +1193,14 @@ FORCE_INLINE void CDBlock::ProcessCommand() {
         break;
         // case 0xE2: CmdGetMpegROM(); break;
 
-    default: rootLog.warn("Unimplemented command {:02X}", cmd); break;
+    default: devlog::warn<grp::base>("Unimplemented command {:02X}", cmd); break;
     }
 
-    rootLog.trace("Command response:  {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
+    devlog::trace<grp::base>("Command response:  {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
 }
 
 void CDBlock::CmdGetStatus() {
-    rootLog.trace("-> Get status");
+    devlog::trace<grp::base>("-> Get status");
 
     // Input structure:
     // 0x00     <blank>
@@ -1207,7 +1215,7 @@ void CDBlock::CmdGetStatus() {
 }
 
 void CDBlock::CmdGetHardwareInfo() {
-    rootLog.trace("-> Get hardware info");
+    devlog::trace<grp::base>("-> Get hardware info");
 
     // Input structure:
     // 0x01     <blank>
@@ -1229,7 +1237,7 @@ void CDBlock::CmdGetHardwareInfo() {
 }
 
 void CDBlock::CmdGetTOC() {
-    rootLog.trace("-> Get TOC");
+    devlog::trace<grp::base>("-> Get TOC");
 
     // Input structure:
     // 0x02     <blank>
@@ -1257,7 +1265,7 @@ void CDBlock::CmdGetTOC() {
 }
 
 void CDBlock::CmdGetSessionInfo() {
-    rootLog.trace("-> Get session info");
+    devlog::trace<grp::base>("-> Get session info");
 
     // Input structure:
     // 0x03     session data type (00 = all, others = specific session)
@@ -1297,7 +1305,7 @@ void CDBlock::CmdGetSessionInfo() {
 }
 
 void CDBlock::CmdInitializeCDSystem() {
-    rootLog.trace("-> Initialize CD system");
+    devlog::trace<grp::base>("-> Initialize CD system");
 
     // Input structure:
     // 0x04           initialization flags
@@ -1327,7 +1335,7 @@ void CDBlock::CmdInitializeCDSystem() {
     }
 
     if (softReset) {
-        rootLog.debug("Soft reset");
+        devlog::debug<grp::base>("Soft reset");
         // TODO: use Reset(false)
         // TODO: switch to Busy for a bit before NoDisc/Pause
         m_targetDriveCycles = kDriveCyclesNotPlaying;
@@ -1347,7 +1355,7 @@ void CDBlock::CmdInitializeCDSystem() {
     }
 
     m_readSpeed = readSpeed == 1 ? 1 : 2;
-    rootLog.info("Read speed set to {}x", m_readSpeed);
+    devlog::info<grp::base>("Read speed set to {}x", m_readSpeed);
 
     // Output structure: standard CD status data
     ReportCDStatus();
@@ -1356,7 +1364,7 @@ void CDBlock::CmdInitializeCDSystem() {
 }
 
 void CDBlock::CmdOpenTray() {
-    rootLog.trace("-> Open tray");
+    devlog::trace<grp::base>("-> Open tray");
 
     // Input structure:
     // 0x05     <blank>
@@ -1373,7 +1381,7 @@ void CDBlock::CmdOpenTray() {
 }
 
 void CDBlock::CmdEndDataTransfer() {
-    rootLog.trace("-> End data transfer");
+    devlog::trace<grp::base>("-> End data transfer");
 
     // Input structure:
     // 0x06     <blank>
@@ -1399,7 +1407,7 @@ void CDBlock::CmdEndDataTransfer() {
 }
 
 void CDBlock::CmdPlayDisc() {
-    rootLog.trace("-> Play disc");
+    devlog::trace<grp::base>("-> Play disc");
 
     // Input structure:
     // 0x10           start position bits 23-16
@@ -1410,7 +1418,7 @@ void CDBlock::CmdPlayDisc() {
     const uint32 startParam = (bit::extract<0, 7>(m_CR[0]) << 16u) | m_CR[1];
     const uint32 endParam = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
 
-    rootLog.debug("Play parameters: start={:06X} end={:06X} repeat={:X}", startParam, endParam, repeatParam);
+    devlog::debug<grp::base>("Play parameters: start={:06X} end={:06X} repeat={:X}", startParam, endParam, repeatParam);
 
     // Output structure: standard CD status data
     if (SetupGenericPlayback(startParam, endParam, repeatParam)) {
@@ -1423,7 +1431,7 @@ void CDBlock::CmdPlayDisc() {
 }
 
 void CDBlock::CmdSeekDisc() {
-    rootLog.trace("-> Seek disc");
+    devlog::trace<grp::base>("-> Seek disc");
 
     // Input structure:
     // 0x11           start position bits 23-16
@@ -1433,13 +1441,13 @@ void CDBlock::CmdSeekDisc() {
     const uint32 startPos = (bit::extract<0, 7>(m_CR[0]) << 16u) | m_CR[1];
     const bool isStartFAD = bit::extract<23>(startPos);
 
-    rootLog.trace("Seek position: {:06X}", startPos);
+    devlog::trace<grp::base>("Seek position: {:06X}", startPos);
     if (startPos == 0xFFFFFF) {
-        rootLog.debug("Paused");
+        devlog::debug<grp::base>("Paused");
         m_status.statusCode = kStatusCodePause;
         m_targetDriveCycles = kDriveCyclesNotPlaying;
     } else if (startPos == 0x000000) {
-        rootLog.debug("Stopped");
+        devlog::debug<grp::base>("Stopped");
         m_status.statusCode = kStatusCodeStandby;
         m_status.frameAddress = 0xFFFFFF;
         m_status.flags = 0xF;
@@ -1450,9 +1458,9 @@ void CDBlock::CmdSeekDisc() {
         m_targetDriveCycles = kDriveCyclesNotPlaying;
     } else if (isStartFAD) {
         const uint32 frameAddress = startPos & 0x7FFFFF;
-        rootLog.debug("Seeking to frame address {:06X}", frameAddress);
+        devlog::debug<grp::base>("Seeking to frame address {:06X}", frameAddress);
         if (m_disc.sessions.empty()) {
-            rootLog.debug("No disc in drive - stopped");
+            devlog::debug<grp::base>("No disc in drive - stopped");
             m_status.statusCode = kStatusCodeNoDisc;
             m_status.frameAddress = 0xFFFFFF;
             m_status.flags = 0xF;
@@ -1474,7 +1482,7 @@ void CDBlock::CmdSeekDisc() {
                 m_status.index = 1;
                 m_targetDriveCycles = kDriveCyclesNotPlaying;
             } else {
-                rootLog.debug("Frame address out of range - stopped");
+                devlog::debug<grp::base>("Frame address out of range - stopped");
                 m_status.statusCode = kStatusCodeStandby;
                 m_status.frameAddress = 0xFFFFFF;
                 m_status.flags = 0xF;
@@ -1488,9 +1496,9 @@ void CDBlock::CmdSeekDisc() {
     } else {
         const uint32 trackNum = bit::extract<8, 14>(startPos);
         const uint32 indexNum = bit::extract<0, 6>(startPos);
-        rootLog.debug("Seeking to track:index {}:{}", trackNum, indexNum);
+        devlog::debug<grp::base>("Seeking to track:index {}:{}", trackNum, indexNum);
         if (m_disc.sessions.empty()) {
-            rootLog.debug("No disc in drive - stopped");
+            devlog::debug<grp::base>("No disc in drive - stopped");
             m_status.statusCode = kStatusCodeNoDisc;
             m_status.frameAddress = 0xFFFFFF;
             m_status.flags = 0xF;
@@ -1511,7 +1519,7 @@ void CDBlock::CmdSeekDisc() {
                 m_status.index = 1;
                 m_targetDriveCycles = kDriveCyclesNotPlaying;
             } else {
-                rootLog.debug("Track:index out of range - stopped");
+                devlog::debug<grp::base>("Track:index out of range - stopped");
                 m_status.statusCode = kStatusCodeStandby;
                 m_status.frameAddress = 0xFFFFFF;
                 m_status.flags = 0xF;
@@ -1531,7 +1539,7 @@ void CDBlock::CmdSeekDisc() {
 }
 
 void CDBlock::CmdScanDisc() {
-    rootLog.trace("-> Scan disc");
+    devlog::trace<grp::base>("-> Scan disc");
 
     // Input structure:
     // 0x12     scan direction
@@ -1551,7 +1559,7 @@ void CDBlock::CmdScanDisc() {
 }
 
 void CDBlock::CmdGetSubcodeQ_RW() {
-    rootLog.trace("-> Get Subcode Q/RW");
+    devlog::trace<grp::base>("-> Get Subcode Q/RW");
 
     // Input structure:
     // 0x20     type
@@ -1587,7 +1595,7 @@ void CDBlock::CmdGetSubcodeQ_RW() {
 }
 
 void CDBlock::CmdSetCDDeviceConnection() {
-    rootLog.trace("-> Set CD device connection");
+    devlog::trace<grp::base>("-> Set CD device connection");
 
     // Input structure:
     // 0x30           <blank>
@@ -1598,7 +1606,7 @@ void CDBlock::CmdSetCDDeviceConnection() {
 
     // Output structure: standard CD status data
     if (ConnectCDDevice(filterNumber)) {
-        rootLog.debug("CD device connected to filter {}", filterNumber);
+        devlog::debug<grp::base>("CD device connected to filter {}", filterNumber);
         ReportCDStatus();
     } else {
         ReportCDStatus(kStatusReject);
@@ -1608,7 +1616,7 @@ void CDBlock::CmdSetCDDeviceConnection() {
 }
 
 void CDBlock::CmdGetCDDeviceConnection() {
-    rootLog.trace("-> Get CD device connection");
+    devlog::trace<grp::base>("-> Get CD device connection");
 
     // Input structure:
     // 0x31           <blank>
@@ -1630,7 +1638,7 @@ void CDBlock::CmdGetCDDeviceConnection() {
 }
 
 void CDBlock::CmdGetLastBufferDest() {
-    rootLog.trace("-> Get last buffer destination");
+    devlog::trace<grp::base>("-> Get last buffer destination");
 
     // Input structure:
     // 0x32     <blank>
@@ -1652,7 +1660,7 @@ void CDBlock::CmdGetLastBufferDest() {
 }
 
 void CDBlock::CmdSetFilterRange() {
-    rootLog.trace("-> Set filter range");
+    devlog::trace<grp::base>("-> Set filter range");
 
     // Input structure:
     // 0x40           start frame address bits 23-16
@@ -1668,7 +1676,7 @@ void CDBlock::CmdSetFilterRange() {
         filter.startFrameAddress = start;
         filter.frameAddressCount = count;
 
-        rootLog.debug("Filter {} FAD range: start={:06X} count={:06X}", filterNumber, start, count);
+        devlog::debug<grp::base>("Filter {} FAD range: start={:06X} count={:06X}", filterNumber, start, count);
 
         // Output structure: standard CD status data
         ReportCDStatus();
@@ -1680,7 +1688,7 @@ void CDBlock::CmdSetFilterRange() {
 }
 
 void CDBlock::CmdGetFilterRange() {
-    rootLog.trace("-> Get filter range");
+    devlog::trace<grp::base>("-> Get filter range");
 
     // Input structure:
     // 0x41           <blank>
@@ -1708,7 +1716,7 @@ void CDBlock::CmdGetFilterRange() {
 }
 
 void CDBlock::CmdSetFilterSubheaderConditions() {
-    rootLog.trace("-> Set filter subheader conditions");
+    devlog::trace<grp::base>("-> Set filter subheader conditions");
 
     // Input structure:
     // 0x42           channel
@@ -1733,9 +1741,10 @@ void CDBlock::CmdSetFilterSubheaderConditions() {
         filter.codingInfoMask = codingInfoMask;
         filter.codingInfoValue = codingInfoValue;
 
-        rootLog.debug("Filter {} subheader conditions: chanNum={:02X} fileNum={:02X} smmask={:02X} smval={:02X} "
-                      "cimask={:02X} cival={:02X}",
-                      filterNumber, chanNum, fileID, submodeMask, submodeValue, codingInfoMask, codingInfoValue);
+        devlog::debug<grp::base>(
+            "Filter {} subheader conditions: chanNum={:02X} fileNum={:02X} smmask={:02X} smval={:02X} "
+            "cimask={:02X} cival={:02X}",
+            filterNumber, chanNum, fileID, submodeMask, submodeValue, codingInfoMask, codingInfoValue);
 
         // Output structure: standard CD status data
         ReportCDStatus();
@@ -1747,7 +1756,7 @@ void CDBlock::CmdSetFilterSubheaderConditions() {
 }
 
 void CDBlock::CmdGetFilterSubheaderConditions() {
-    rootLog.trace("-> Get filter subheader conditions");
+    devlog::trace<grp::base>("-> Get filter subheader conditions");
 
     // Input structure:
     // 0x43           <blank>
@@ -1775,7 +1784,7 @@ void CDBlock::CmdGetFilterSubheaderConditions() {
 }
 
 void CDBlock::CmdSetFilterMode() {
-    rootLog.trace("-> Set filter mode");
+    devlog::trace<grp::base>("-> Set filter mode");
 
     // Input structure:
     // 0x44           mode
@@ -1790,14 +1799,14 @@ void CDBlock::CmdSetFilterMode() {
         auto &filter = m_filters[filterNumber];
         filter.mode = mode & 0x5F; // TODO: should it be masked?
 
-        rootLog.debug(
+        devlog::debug<grp::base>(
             "Filter {} mode={:02X}{}{}{}{}{}{}", filterNumber, filter.mode,
             (bit::extract<0>(filter.mode) ? " filenum" : ""), (bit::extract<1>(filter.mode) ? " channum" : ""),
             (bit::extract<2>(filter.mode) ? " submode" : ""), (bit::extract<3>(filter.mode) ? " codinginfo" : ""),
             (bit::extract<4>(filter.mode) ? " <- inverted" : ""), (bit::extract<6>(filter.mode) ? " fad" : ""));
 
         if (mode & 0x80) {
-            rootLog.debug("Filter {} conditions reset", filterNumber);
+            devlog::debug<grp::base>("Filter {} conditions reset", filterNumber);
             filter.ResetConditions();
         }
 
@@ -1811,7 +1820,7 @@ void CDBlock::CmdSetFilterMode() {
 }
 
 void CDBlock::CmdGetFilterMode() {
-    rootLog.trace("-> Get filter mode");
+    devlog::trace<grp::base>("-> Get filter mode");
 
     // Input structure:
     // 0x45           <blank>
@@ -1839,7 +1848,7 @@ void CDBlock::CmdGetFilterMode() {
 }
 
 void CDBlock::CmdSetFilterConnection() {
-    rootLog.trace("-> Set filter connection");
+    devlog::trace<grp::base>("-> Set filter connection");
 
     // Input structure:
     // 0x46           connection flags
@@ -1855,11 +1864,11 @@ void CDBlock::CmdSetFilterConnection() {
     if (filterNumber < kNumFilters) {
         auto &filter = m_filters[filterNumber];
         if (setTrueConn) {
-            rootLog.debug("Filter {} true output={:02X}", filterNumber, trueConn);
+            devlog::debug<grp::base>("Filter {} true output={:02X}", filterNumber, trueConn);
             filter.trueOutput = trueConn;
         }
         if (setFalseConn) {
-            rootLog.debug("Filter {} false output={:02X}", filterNumber, falseConn);
+            devlog::debug<grp::base>("Filter {} false output={:02X}", filterNumber, falseConn);
             DisconnectFilterInput(filterNumber);
             filter.falseOutput = falseConn;
         }
@@ -1874,7 +1883,7 @@ void CDBlock::CmdSetFilterConnection() {
 }
 
 void CDBlock::CmdGetFilterConnection() {
-    rootLog.trace("-> Get filter connection");
+    devlog::trace<grp::base>("-> Get filter connection");
 
     // Input structure:
     // 0x47           <blank>
@@ -1902,7 +1911,7 @@ void CDBlock::CmdGetFilterConnection() {
 }
 
 void CDBlock::CmdResetSelector() {
-    rootLog.trace("-> Reset selector");
+    devlog::trace<grp::base>("-> Reset selector");
 
     // Input structure:
     // 0x48              reset flags
@@ -1914,7 +1923,7 @@ void CDBlock::CmdResetSelector() {
     bool reject = false;
     if (resetFlags == 0) {
         const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
-        rootLog.trace("Clearing buffer partition {}", partitionNumber);
+        devlog::trace<grp::base>("Clearing buffer partition {}", partitionNumber);
         if (partitionNumber < kNumFilters) {
             m_partitionManager.Clear(partitionNumber);
         } else {
@@ -1929,35 +1938,35 @@ void CDBlock::CmdResetSelector() {
         const bool clearFilterFalseOutputs = bit::extract<7>(resetFlags);
 
         if (clearBufferData) {
-            rootLog.debug("Clearing all buffer partitions");
+            devlog::debug<grp::base>("Clearing all buffer partitions");
             m_partitionManager.Reset();
         }
         if (clearPartitionOutputs) {
-            rootLog.debug("Clearing all partition output connectors");
+            devlog::debug<grp::base>("Clearing all partition output connectors");
             // TODO: clear device inputs and filter inputs connected to partition outputs
         }
         if (clearFilterConditions) {
-            rootLog.debug("Clearing all filter conditions");
+            devlog::debug<grp::base>("Clearing all filter conditions");
             for (auto &filter : m_filters) {
                 filter.ResetConditions();
             }
         }
         if (clearFilterInputs) {
-            rootLog.debug("Clearing all filter input connectors");
+            devlog::debug<grp::base>("Clearing all filter input connectors");
             for (auto &filter : m_filters) {
                 filter.falseOutput = Filter::kDisconnected;
             }
             m_cdDeviceConnection = Filter::kDisconnected;
         }
         if (clearFilterTrueOutputs) {
-            rootLog.debug("Clearing all true filter output connectors");
+            devlog::debug<grp::base>("Clearing all true filter output connectors");
             for (int i = 0; auto &filter : m_filters) {
                 filter.trueOutput = i;
                 i++;
             }
         }
         if (clearFilterFalseOutputs) {
-            rootLog.debug("Clearing all false filter output connectors");
+            devlog::debug<grp::base>("Clearing all false filter output connectors");
             for (auto &filter : m_filters) {
                 filter.falseOutput = Filter::kDisconnected;
             }
@@ -1975,7 +1984,7 @@ void CDBlock::CmdResetSelector() {
 }
 
 void CDBlock::CmdGetBufferSize() {
-    rootLog.trace("-> Get buffer size");
+    devlog::trace<grp::base>("-> Get buffer size");
 
     // Input structure:
     // 0x50     <blank>
@@ -1994,13 +2003,13 @@ void CDBlock::CmdGetBufferSize() {
     m_CR[2] = kNumFilters << 8u;
     m_CR[3] = kNumBuffers;
 
-    rootLog.trace("Get buffer size: free buffers = {}", freeBuffers);
+    devlog::trace<grp::base>("Get buffer size: free buffers = {}", freeBuffers);
 
     SetInterrupt(kHIRQ_CMOK);
 }
 
 void CDBlock::CmdGetSectorNumber() {
-    rootLog.trace("-> Get sector number");
+    devlog::trace<grp::base>("-> Get sector number");
 
     // Input structure:
     // 0x51              <blank>
@@ -2020,13 +2029,13 @@ void CDBlock::CmdGetSectorNumber() {
     m_CR[2] = 0x0000;
     m_CR[3] = sectorCount;
 
-    rootLog.trace("Partition {} has {} sectors", partitionNumber, sectorCount);
+    devlog::trace<grp::base>("Partition {} has {} sectors", partitionNumber, sectorCount);
 
     SetInterrupt(kHIRQ_CMOK);
 }
 
 void CDBlock::CmdCalculateActualSize() {
-    rootLog.trace("-> Calculate actual size");
+    devlog::trace<grp::base>("-> Calculate actual size");
 
     // Input structure:
     // 0x52               <blank>
@@ -2060,8 +2069,8 @@ void CDBlock::CmdCalculateActualSize() {
             }
             m_calculatedPartitionSize =
                 m_partitionManager.CalculateSize(partitionNumber, startSector, endSector) / sizeof(uint16);
-            rootLog.trace("Actual size of partition {} from sector {} to {} = {} words", partitionNumber, startSector,
-                          endSector, m_calculatedPartitionSize);
+            devlog::trace<grp::base>("Actual size of partition {} from sector {} to {} = {} words", partitionNumber,
+                                     startSector, endSector, m_calculatedPartitionSize);
         }
     }
 
@@ -2076,7 +2085,7 @@ void CDBlock::CmdCalculateActualSize() {
 }
 
 void CDBlock::CmdGetActualSize() {
-    rootLog.trace("-> Get actual size");
+    devlog::trace<grp::base>("-> Get actual size");
 
     // Input structure:
     // 0x53     <blank>
@@ -2098,7 +2107,7 @@ void CDBlock::CmdGetActualSize() {
 }
 
 void CDBlock::CmdGetSectorInfo() {
-    rootLog.trace("-> Get sector info");
+    devlog::trace<grp::base>("-> Get sector info");
 
     // Input structure:
     // 0x54               <blank>
@@ -2136,7 +2145,7 @@ void CDBlock::CmdGetSectorInfo() {
 }
 
 void CDBlock::CmdExecuteFADSearch() {
-    rootLog.trace("-> Execute frame address search");
+    devlog::trace<grp::base>("-> Execute frame address search");
 
     // Input structure:
     // 0x55     <blank>
@@ -2149,7 +2158,7 @@ void CDBlock::CmdExecuteFADSearch() {
 
     // TODO: search for a sector with the largest FAD <= searched FAD within specified partition
     // - how does sectorPos factor in here?
-    rootLog.info("Execute frame address search command is unimplemented");
+    devlog::info<grp::base>("Execute frame address search command is unimplemented");
 
     // Output structure: standard CD status data
     ReportCDStatus();
@@ -2158,7 +2167,7 @@ void CDBlock::CmdExecuteFADSearch() {
 }
 
 void CDBlock::CmdGetFADSearchResults() {
-    rootLog.trace("-> Get frame address search results");
+    devlog::trace<grp::base>("-> Get frame address search results");
 
     // Input structure:
     // 0x56     <blank>
@@ -2167,7 +2176,7 @@ void CDBlock::CmdGetFADSearchResults() {
     // <blank>
 
     // TODO: return search FAD results
-    rootLog.info("Get frame address search results command is unimplemented");
+    devlog::info<grp::base>("Get frame address search results command is unimplemented");
 
     // Output structure:
     // status code        <blank>
@@ -2183,7 +2192,7 @@ void CDBlock::CmdGetFADSearchResults() {
 }
 
 void CDBlock::CmdSetSectorLength() {
-    rootLog.trace("-> Set sector length");
+    devlog::trace<grp::base>("-> Set sector length");
 
     // Input structure:
     // 0x60               get sector length
@@ -2206,7 +2215,7 @@ void CDBlock::CmdSetSectorLength() {
     if (putSectorLength < 4) {
         m_putSectorLength = kSectorLengths[putSectorLength];
     }
-    rootLog.debug("Sector lengths: get={} put={}", m_getSectorLength, m_putSectorLength);
+    devlog::debug<grp::base>("Sector lengths: get={} put={}", m_getSectorLength, m_putSectorLength);
 
     // Output structure: standard CD status data
     ReportCDStatus();
@@ -2215,7 +2224,7 @@ void CDBlock::CmdSetSectorLength() {
 }
 
 void CDBlock::CmdGetSectorData() {
-    rootLog.trace("-> Get sector data");
+    devlog::trace<grp::base>("-> Get sector data");
 
     // Input structure:
     // 0x61               <blank>
@@ -2247,7 +2256,7 @@ void CDBlock::CmdGetSectorData() {
 }
 
 void CDBlock::CmdDeleteSectorData() {
-    rootLog.trace("-> Delete sector data");
+    devlog::trace<grp::base>("-> Delete sector data");
 
     // Input structure:
     // 0x62               <blank>
@@ -2265,8 +2274,8 @@ void CDBlock::CmdDeleteSectorData() {
         reject = true;
     } else {
         const uint32 numFreedSectors = m_partitionManager.DeleteSectors(partitionNumber, sectorOffset, sectorNumber);
-        rootLog.trace("Freed {} sectors from partition {} at offset {}", numFreedSectors, partitionNumber,
-                      sectorOffset);
+        devlog::trace<grp::base>("Freed {} sectors from partition {} at offset {}", numFreedSectors, partitionNumber,
+                                 sectorOffset);
     }
 
     // Output structure: standard CD status data
@@ -2280,7 +2289,7 @@ void CDBlock::CmdDeleteSectorData() {
 }
 
 void CDBlock::CmdGetThenDeleteSectorData() {
-    rootLog.trace("-> Get then delete sector data");
+    devlog::trace<grp::base>("-> Get then delete sector data");
 
     // Input structure:
     // 0x63               <blank>
@@ -2312,7 +2321,7 @@ void CDBlock::CmdGetThenDeleteSectorData() {
 }
 
 void CDBlock::CmdPutSectorData() {
-    rootLog.trace("-> Put sector data");
+    devlog::trace<grp::base>("-> Put sector data");
 
     // Input structure:
     // 0x64               <blank>
@@ -2325,7 +2334,7 @@ void CDBlock::CmdPutSectorData() {
     // TODO: setup sector write transfer
     // TODO: raise kHIRQ_EHST if not enough buffer space available
     // TODO: should set status flag kStatusFlagXferRequest until ready
-    rootLog.info("Put sector data command is unimplemented");
+    devlog::info<grp::base>("Put sector data command is unimplemented");
 
     // Output structure: standard CD status data
     ReportCDStatus();
@@ -2334,7 +2343,7 @@ void CDBlock::CmdPutSectorData() {
 }
 
 void CDBlock::CmdCopySectorData() {
-    rootLog.trace("-> Copy sector data");
+    devlog::trace<grp::base>("-> Copy sector data");
 
     // Input structure:
     // 0x65                      destination filter number
@@ -2348,7 +2357,7 @@ void CDBlock::CmdCopySectorData() {
 
     // TODO: setup async sector copy transfer
     // TODO: report Reject status if not enough buffer space available
-    rootLog.info("Copy sector data command is unimplemented");
+    devlog::info<grp::base>("Copy sector data command is unimplemented");
 
     // Output structure: standard CD status data
     ReportCDStatus();
@@ -2357,7 +2366,7 @@ void CDBlock::CmdCopySectorData() {
 }
 
 void CDBlock::CmdMoveSectorData() {
-    rootLog.trace("-> Move sector data");
+    devlog::trace<grp::base>("-> Move sector data");
 
     // Input structure:
     // 0x66                      destination filter number
@@ -2370,7 +2379,7 @@ void CDBlock::CmdMoveSectorData() {
     // const uint16 sectorNumber = m_CR[3];
 
     // TODO: setup async sector move transfer
-    rootLog.info("Move sector data command is unimplemented");
+    devlog::info<grp::base>("Move sector data command is unimplemented");
 
     // Output structure: standard CD status data
     ReportCDStatus();
@@ -2379,7 +2388,7 @@ void CDBlock::CmdMoveSectorData() {
 }
 
 void CDBlock::CmdGetCopyError() {
-    rootLog.trace("-> Get copy error");
+    devlog::trace<grp::base>("-> Get copy error");
 
     // Input structure:
     // 0x67     <blank>
@@ -2387,7 +2396,7 @@ void CDBlock::CmdGetCopyError() {
     // <blank>
     // <blank>
 
-    rootLog.info("Get copy error command is unimplemented");
+    devlog::info<grp::base>("Get copy error command is unimplemented");
 
     // Output structure:
     // status code   error code
@@ -2403,7 +2412,7 @@ void CDBlock::CmdGetCopyError() {
 }
 
 void CDBlock::CmdChangeDirectory() {
-    rootLog.trace("-> Change directory");
+    devlog::trace<grp::base>("-> Change directory");
 
     // Input structure:
     // 0x70            <blank>
@@ -2419,7 +2428,7 @@ void CDBlock::CmdChangeDirectory() {
         // TODO: use filter to read the sector(s) containing the directory record
         reject = !m_fs.ChangeDirectory(fileID);
         if (!reject) {
-            rootLog.debug("Changed directory to file ID {:X} using filter {}", fileID, filterNumber);
+            devlog::debug<grp::base>("Changed directory to file ID {:X} using filter {}", fileID, filterNumber);
         }
     } else if (filterNumber == 0xFF) {
         reject = true;
@@ -2435,7 +2444,7 @@ void CDBlock::CmdChangeDirectory() {
 }
 
 void CDBlock::CmdReadDirectory() {
-    rootLog.trace("-> Read directory");
+    devlog::trace<grp::base>("-> Read directory");
 
     // Input structure:
     // 0x71            <blank>
@@ -2447,7 +2456,7 @@ void CDBlock::CmdReadDirectory() {
 
     // TODO: read directory contents starting from fileID
     // TODO: write sectors to specified filter
-    rootLog.info("Read directory command is unimplemented");
+    devlog::info<grp::base>("Read directory command is unimplemented");
 
     // Output structure: standard CD status data
     ReportCDStatus();
@@ -2456,7 +2465,7 @@ void CDBlock::CmdReadDirectory() {
 }
 
 void CDBlock::CmdGetFileSystemScope() {
-    rootLog.trace("-> Get file system scope");
+    devlog::trace<grp::base>("-> Get file system scope");
 
     // Input structure:
     // 0x72     <blank>
@@ -2478,14 +2487,14 @@ void CDBlock::CmdGetFileSystemScope() {
     m_CR[2] = (endOfDirectory << 8u) | bit::extract<16, 23>(fileOffset);
     m_CR[3] = bit::extract<0, 15>(fileOffset);
 
-    rootLog.debug("Get file system scope: {} files from offset {}, ", fileCount, fileOffset,
-                  (endOfDirectory ? "end of list" : "more files available"));
+    devlog::debug<grp::base>("Get file system scope: {} files from offset {}, ", fileCount, fileOffset,
+                             (endOfDirectory ? "end of list" : "more files available"));
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_EFLS);
 }
 
 void CDBlock::CmdGetFileInfo() {
-    rootLog.trace("-> Get file info");
+    devlog::trace<grp::base>("-> Get file info");
 
     // Input structure:
     // 0x73     <blank>
@@ -2523,7 +2532,7 @@ void CDBlock::CmdGetFileInfo() {
 }
 
 void CDBlock::CmdReadFile() {
-    rootLog.trace("-> Read file");
+    devlog::trace<grp::base>("-> Read file");
 
     // Input structure:
     // 0x74            offset bits 23-16
@@ -2545,7 +2554,7 @@ void CDBlock::CmdReadFile() {
 }
 
 void CDBlock::CmdAbortFile() {
-    rootLog.trace("-> Abort file");
+    devlog::trace<grp::base>("-> Abort file");
 
     // Input structure:
     // 0x75     <blank>
@@ -2553,7 +2562,7 @@ void CDBlock::CmdAbortFile() {
     // <blank>
     // <blank>
 
-    rootLog.debug("Aborting transfer");
+    devlog::debug<grp::base>("Aborting transfer");
 
     EndTransfer();
 
@@ -2570,7 +2579,7 @@ void CDBlock::CmdMpegGetInterrupt() {}
 void CDBlock::CmdMpegSetInterruptMask() {}
 
 void CDBlock::CmdMpegInit() {
-    rootLog.trace("-> MPEG init");
+    devlog::trace<grp::base>("-> MPEG init");
 
     // Input structure:
     // 0x93     <blank>
@@ -2579,7 +2588,7 @@ void CDBlock::CmdMpegInit() {
     // <blank>
 
     // TODO: initialize MPEG stuff
-    rootLog.info("MPEG init command is unimplemented");
+    devlog::info<grp::base>("MPEG init command is unimplemented");
 
     // Output structure:
     // status code (FF=unauthenticated)  <blank>
@@ -2621,7 +2630,7 @@ void CDBlock::CmdMpegSetVideoEffects() {}
 void CDBlock::CmdMpegSetLSI() {}
 
 void CDBlock::CmdAuthenticateDevice() {
-    rootLog.trace("-> Authenticate device");
+    devlog::trace<grp::base>("-> Authenticate device");
 
     // Input structure:
     // 0xE1    <blank>
@@ -2633,16 +2642,18 @@ void CDBlock::CmdAuthenticateDevice() {
 
     switch (authType) {
     case 0x0000:
-        rootLog.debug("Performing CD authentication");
+        devlog::debug<grp::base>("Performing CD authentication");
         m_discAuthStatus = 4; // always authenticated ;)
         SetInterrupt(kHIRQ_EFLS | kHIRQ_CSCT);
         break;
     case 0x0001:
-        rootLog.debug("Performing MPEG authentication");
+        devlog::debug<grp::base>("Performing MPEG authentication");
         m_mpegAuthStatus = 2;
         SetInterrupt(kHIRQ_MPED);
         break;
-    default: rootLog.debug("Authenticate device parameter invalid: unexpected authentication type {}", authType); break;
+    default:
+        devlog::debug<grp::base>("Authenticate device parameter invalid: unexpected authentication type {}", authType);
+        break;
     }
 
     // TODO: make busy for a brief moment
@@ -2656,7 +2667,7 @@ void CDBlock::CmdAuthenticateDevice() {
 }
 
 void CDBlock::CmdIsDeviceAuthenticated() {
-    rootLog.trace("-> Is device authenticated");
+    devlog::trace<grp::base>("-> Is device authenticated");
 
     // Input structure:
     // 0xE2    <blank>

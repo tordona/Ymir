@@ -1,6 +1,6 @@
 #include <satemu/hw/smpc/rtc.hpp>
 
-#include <satemu/util/debug_print.hpp>
+#include <satemu/util/dev_log.hpp>
 #include <satemu/util/unreachable.hpp>
 
 #include <satemu/sys/clocks.hpp>
@@ -9,7 +9,22 @@
 
 namespace satemu::smpc::rtc {
 
-static constexpr dbg::Category rootLog{"RTC"};
+namespace grp {
+
+    // -----------------------------------------------------------------------------
+    // Dev log groups
+
+    // Hierarchy:
+    //
+    // base
+
+    struct base {
+        static constexpr bool enabled = true;
+        static constexpr devlog::Level level = devlog::level::debug;
+        static constexpr std::string_view name = "RTC";
+    };
+
+} // namespace grp
 
 RTC::RTC() {
     m_offset = 0;
@@ -60,11 +75,11 @@ void RTC::SetDateTime(const util::datetime::DateTime &dateTime) {
     switch (m_mode) {
     case Mode::Host:
         m_offset = util::datetime::delta_to_host(dateTime);
-        rootLog.debug("Setting host time offset to {} seconds", m_offset);
+        devlog::debug<grp::base>("Setting host time offset to {} seconds", m_offset);
         break;
     case Mode::Emulated:
         m_timestamp = util::datetime::to_timestamp(dateTime);
-        rootLog.debug("Setting absolute timestamp to {} seconds", m_timestamp);
+        devlog::debug<grp::base>("Setting absolute timestamp to {} seconds", m_timestamp);
         break;
     }
 }

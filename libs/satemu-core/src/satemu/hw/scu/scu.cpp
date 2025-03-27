@@ -1,5 +1,7 @@
 #include <satemu/hw/scu/scu.hpp>
 
+#include "scu_devlog.hpp"
+
 #include <satemu/util/inline.hpp>
 
 #include <bit>
@@ -370,7 +372,7 @@ void SCU::WriteCartridge(uint32 address, T value) {
         if (address == 0x210'0001) [[unlikely]] {
             // mednafen debug port
             if (value == '\n') {
-                debugLog.debug("{}", m_debugOutput);
+                devlog::debug<grp::debug>("{}", m_debugOutput);
                 m_debugOutput.clear();
             } else if (value != '\r') {
                 m_debugOutput.push_back(value);
@@ -430,15 +432,16 @@ void SCU::RunDMA() {
         ch.currDstAddr &= 0x7FF'FFFF;
         setXferIncs();
 
-        dmaLog.trace("SCU DMA{}: Starting indirect transfer at {:08X} - {:06X} bytes from {:08X} (+{:02X}) to "
-                     "{:08X} (+{:02X}){}",
-                     level, ch.currIndirectSrc - 3 * sizeof(uint32), ch.currXferCount, ch.currSrcAddr,
-                     ch.currSrcAddrInc, ch.currDstAddr, ch.currDstAddrInc, (ch.endIndirect ? " (final)" : ""));
+        devlog::trace<grp::dma>(
+            "SCU DMA{}: Starting indirect transfer at {:08X} - {:06X} bytes from {:08X} (+{:02X}) to "
+            "{:08X} (+{:02X}){}",
+            level, ch.currIndirectSrc - 3 * sizeof(uint32), ch.currXferCount, ch.currSrcAddr, ch.currSrcAddrInc,
+            ch.currDstAddr, ch.currDstAddrInc, (ch.endIndirect ? " (final)" : ""));
         if (ch.currSrcAddr & 1) {
-            dmaLog.debug("SCU DMA{}: Unaligned indirect transfer read from {:08X}", level, ch.currSrcAddr);
+            devlog::debug<grp::dma>("SCU DMA{}: Unaligned indirect transfer read from {:08X}", level, ch.currSrcAddr);
         }
         if (ch.currDstAddr & 1) {
-            dmaLog.debug("SCU DMA{}: Unaligned indirect transfer write to {:08X}", level, ch.currDstAddr);
+            devlog::debug<grp::dma>("SCU DMA{}: Unaligned indirect transfer write to {:08X}", level, ch.currDstAddr);
         }
     };
 
@@ -450,61 +453,66 @@ void SCU::RunDMA() {
             uint32 value{};
             if (ch.currSrcAddr & 1) {
                 // TODO: handle unaligned transfer
-                dmaLog.trace("SCU DMA{}: Unaligned read from {:08X}", level, ch.currSrcAddr);
+                devlog::trace<grp::dma>("SCU DMA{}: Unaligned read from {:08X}", level, ch.currSrcAddr);
             }
             if (srcBus == Bus::BBus) {
                 value = m_bus.Read<uint16>(ch.currSrcAddr) << 16u;
-                dmaLog.trace("SCU DMA{}: B-Bus read from {:08X} -> {:04X}", level, ch.currSrcAddr, value >> 16u);
+                devlog::trace<grp::dma>("SCU DMA{}: B-Bus read from {:08X} -> {:04X}", level, ch.currSrcAddr,
+                                        value >> 16u);
                 ch.currSrcAddr += ch.currSrcAddrInc / 2u;
                 value |= m_bus.Read<uint16>(ch.currSrcAddr) << 0u;
-                dmaLog.trace("SCU DMA{}: B-Bus read from {:08X} -> {:04X}", level, ch.currSrcAddr, value & 0xFFFF);
+                devlog::trace<grp::dma>("SCU DMA{}: B-Bus read from {:08X} -> {:04X}", level, ch.currSrcAddr,
+                                        value & 0xFFFF);
                 ch.currSrcAddr += ch.currSrcAddrInc / 2u;
             } else {
                 value = m_bus.Read<uint16>(ch.currSrcAddr + 0) << 16u;
                 value |= m_bus.Read<uint16>(ch.currSrcAddr + 2) << 0u;
-                dmaLog.trace("SCU DMA{}: Read from {:08X} -> {:08X}", level, ch.currSrcAddr, value);
+                devlog::trace<grp::dma>("SCU DMA{}: Read from {:08X} -> {:08X}", level, ch.currSrcAddr, value);
                 ch.currSrcAddr += ch.currSrcAddrInc;
             }
 
             if (ch.currDstAddr & 1) {
                 // TODO: handle unaligned transfer
-                dmaLog.trace("SCU DMA{}: Unaligned write to {:08X}", level, ch.currDstAddr);
+                devlog::trace<grp::dma>("SCU DMA{}: Unaligned write to {:08X}", level, ch.currDstAddr);
             }
             if (dstBus == Bus::BBus) {
                 m_bus.Write<uint16>(ch.currDstAddr, value >> 16u);
-                dmaLog.trace("SCU DMA{}: B-Bus write to {:08X} -> {:04X}", level, ch.currDstAddr, value >> 16u);
+                devlog::trace<grp::dma>("SCU DMA{}: B-Bus write to {:08X} -> {:04X}", level, ch.currDstAddr,
+                                        value >> 16u);
                 ch.currDstAddr += ch.currDstAddrInc;
                 m_bus.Write<uint16>(ch.currDstAddr, value >> 0u);
-                dmaLog.trace("SCU DMA{}: B-Bus write to {:08X} -> {:04X}", level, ch.currDstAddr, value & 0xFFFF);
+                devlog::trace<grp::dma>("SCU DMA{}: B-Bus write to {:08X} -> {:04X}", level, ch.currDstAddr,
+                                        value & 0xFFFF);
                 ch.currDstAddr += ch.currDstAddrInc;
             } else {
                 m_bus.Write<uint16>(ch.currDstAddr + 0, value >> 16u);
                 m_bus.Write<uint16>(ch.currDstAddr + 2, value >> 0u);
-                dmaLog.trace("SCU DMA{}: Write to {:08X} -> {:08X}", level, ch.currDstAddr, value);
+                devlog::trace<grp::dma>("SCU DMA{}: Write to {:08X} -> {:08X}", level, ch.currDstAddr, value);
                 ch.currDstAddr += ch.currDstAddrInc;
             }
 
             ch.currSrcAddr &= 0x7FF'FFFF;
             ch.currDstAddr &= 0x7FF'FFFF;
 
-            dmaLog.trace("SCU DMA{}: Addresses incremented to {:08X}, {:08X}", level, ch.currSrcAddr, ch.currDstAddr);
+            devlog::trace<grp::dma>("SCU DMA{}: Addresses incremented to {:08X}, {:08X}", level, ch.currSrcAddr,
+                                    ch.currDstAddr);
         } else if (srcBus == dstBus) {
-            dmaLog.trace("SCU DMA{}: Invalid same-bus transfer; ignored", level);
+            devlog::trace<grp::dma>("SCU DMA{}: Invalid same-bus transfer; ignored", level);
         } else if (srcBus == Bus::None) {
-            dmaLog.trace("SCU DMA{}: Invalid source bus; transfer ignored", level);
+            devlog::trace<grp::dma>("SCU DMA{}: Invalid source bus; transfer ignored", level);
         } else if (dstBus == Bus::None) {
-            dmaLog.trace("SCU DMA{}: Invalid destination bus; transfer ignored", level);
+            devlog::trace<grp::dma>("SCU DMA{}: Invalid destination bus; transfer ignored", level);
         }
 
         if (ch.currXferCount > sizeof(uint32)) {
             ch.currXferCount -= sizeof(uint32);
-            dmaLog.trace("SCU DMA{}: Transfer remaining: {:X} bytes", level, ch.currXferCount);
+            devlog::trace<grp::dma>("SCU DMA{}: Transfer remaining: {:X} bytes", level, ch.currXferCount);
             // break; // higher-level DMA transfers interrupt lower-level ones
         } else if (ch.indirect && !ch.endIndirect) {
             readIndirect();
             // break; // higher-level DMA transfers interrupt lower-level ones
         } else {
-            dmaLog.trace("SCU DMA{}: Finished transfer", level);
+            devlog::trace<grp::dma>("SCU DMA{}: Finished transfer", level);
             ch.active = false;
             ch.currXferCount = 0;
             if (ch.updateSrcAddr) {
@@ -578,15 +586,18 @@ void SCU::RecalcDMAChannel() {
             ch.currDstAddr &= 0x7FF'FFFF;
             setXferIncs();
 
-            dmaLog.trace("SCU DMA{}: Starting indirect transfer at {:08X} - {:06X} bytes from {:08X} (+{:02X}) to "
-                         "{:08X} (+{:02X}){}",
-                         level, ch.currIndirectSrc - 3 * sizeof(uint32), ch.currXferCount, ch.currSrcAddr,
-                         ch.currSrcAddrInc, ch.currDstAddr, ch.currDstAddrInc, (ch.endIndirect ? " (final)" : ""));
+            devlog::trace<grp::dma>(
+                "SCU DMA{}: Starting indirect transfer at {:08X} - {:06X} bytes from {:08X} (+{:02X}) to "
+                "{:08X} (+{:02X}){}",
+                level, ch.currIndirectSrc - 3 * sizeof(uint32), ch.currXferCount, ch.currSrcAddr, ch.currSrcAddrInc,
+                ch.currDstAddr, ch.currDstAddrInc, (ch.endIndirect ? " (final)" : ""));
             if (ch.currSrcAddr & 1) {
-                dmaLog.debug("SCU DMA{}: Unaligned indirect transfer read from {:08X}", level, ch.currSrcAddr);
+                devlog::debug<grp::dma>("SCU DMA{}: Unaligned indirect transfer read from {:08X}", level,
+                                        ch.currSrcAddr);
             }
             if (ch.currDstAddr & 1) {
-                dmaLog.debug("SCU DMA{}: Unaligned indirect transfer write to {:08X}", level, ch.currDstAddr);
+                devlog::debug<grp::dma>("SCU DMA{}: Unaligned indirect transfer write to {:08X}", level,
+                                        ch.currDstAddr);
             }
         };
 
@@ -603,14 +614,16 @@ void SCU::RecalcDMAChannel() {
                 ch.currDstAddrInc = ch.dstAddrInc;
                 setXferIncs();
 
-                dmaLog.trace(
+                devlog::trace<grp::dma>(
                     "SCU DMA{}: Starting direct transfer of {:06X} bytes from {:08X} (+{:02X}) to {:08X} (+{:02X})",
                     level, ch.currXferCount, ch.currSrcAddr, ch.currSrcAddrInc, ch.currDstAddr, ch.currDstAddrInc);
                 if (ch.currSrcAddr & 1) {
-                    dmaLog.debug("SCU DMA{}: Unaligned direct transfer read from {:08X}", level, ch.currSrcAddr);
+                    devlog::debug<grp::dma>("SCU DMA{}: Unaligned direct transfer read from {:08X}", level,
+                                            ch.currSrcAddr);
                 }
                 if (ch.currDstAddr & 1) {
-                    dmaLog.debug("SCU DMA{}: Unaligned direct transfer write to {:08X}", level, ch.currDstAddr);
+                    devlog::debug<grp::dma>("SCU DMA{}: Unaligned direct transfer write to {:08X}", level,
+                                            ch.currDstAddr);
                 }
             }
             m_activeDMAChannelLevel = level;
@@ -812,7 +825,7 @@ FORCE_INLINE T SCU::ReadReg(uint32 address) {
 
         default: //
             if constexpr (!peek) {
-                regsLog.debug("unhandled {}-bit SCU register read from {:02X}", sizeof(T) * 8, address);
+                devlog::debug<grp::regs>("unhandled {}-bit SCU register read from {:02X}", sizeof(T) * 8, address);
             }
             return 0;
         }
@@ -860,7 +873,7 @@ FORCE_INLINE void SCU::WriteRegByte(uint32 address, uint8 value) {
             currValue = (currValue & mask) | (value << shift);
             WriteRegLong<true>(address & ~3u, currValue);
         } else {
-            regsLog.debug("unhandled 8-bit SCU register write to {:02X} = {:X}", address, value);
+            devlog::debug<grp::regs>("unhandled 8-bit SCU register write to {:02X} = {:X}", address, value);
         }
         break;
     }
@@ -875,7 +888,7 @@ FORCE_INLINE void SCU::WriteRegWord(uint32 address, uint16 value) {
         currValue = (currValue & mask) | (value << shift);
         WriteRegLong<true>(address & ~3u, currValue);
     } else {
-        regsLog.debug("unhandled 16-bit SCU register write to {:02X} = {:X}", address, value);
+        devlog::debug<grp::regs>("unhandled 16-bit SCU register write to {:02X} = {:X}", address, value);
     }
 }
 
@@ -931,12 +944,13 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
         ch.enabled = bit::extract<8>(value);
         if constexpr (!poke) {
             if (ch.enabled) {
-                dmaLog.trace("DMA{} enabled - {:08X} (+{:02X}) -> {:08X} (+{:02X})", index, ch.srcAddr, ch.srcAddrInc,
-                             ch.dstAddr, ch.dstAddrInc);
+                devlog::trace<grp::dma>("DMA{} enabled - {:08X} (+{:02X}) -> {:08X} (+{:02X})", index, ch.srcAddr,
+                                        ch.srcAddrInc, ch.dstAddr, ch.dstAddrInc);
             }
             if (ch.enabled && ch.trigger == DMATrigger::Immediate && bit::extract<0>(value)) {
                 if (ch.active) {
-                    dmaLog.trace("DMA{} triggering immediate transfer while another transfer is in progress", index);
+                    devlog::trace<grp::dma>("DMA{} triggering immediate transfer while another transfer is in progress",
+                                            index);
                     // Finish previous transfer
                     RunDMA();
                 }
@@ -1042,7 +1056,7 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
 
     default:
         if constexpr (!poke) {
-            regsLog.debug("unhandled 32-bit SCU register write to {:02X} = {:X}", address, value);
+            devlog::debug<grp::regs>("unhandled 32-bit SCU register write to {:02X} = {:X}", address, value);
         }
         break;
     }
@@ -1099,28 +1113,28 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
 
         const uint8 internalLevel = kInternalLevels[internalIndex];
         const uint8 externalLevel = kExternalLevels[externalIndex];
-        rootLog.trace("Intr states:  {:04X} {:04X}", m_intrStatus.internal, m_intrStatus.external);
-        rootLog.trace("Intr masks:   {:04X} {:04X} {}", (uint16)m_intrMask.internal, m_intrMask.ABus_ExtIntrs * 0xFFFF,
-                      m_abusIntrAck);
-        rootLog.trace("Intr bits:    {:04X} {:04X}", internalBits, externalBits);
-        rootLog.trace("Intr indices: {:X} {:X}", internalIndex, externalIndex);
-        rootLog.trace("Intr levels:  {:X} {:X}", internalLevel, externalLevel);
+        devlog::trace<grp::base>("Intr states:  {:04X} {:04X}", m_intrStatus.internal, m_intrStatus.external);
+        devlog::trace<grp::base>("Intr masks:   {:04X} {:04X} {}", (uint16)m_intrMask.internal,
+                                 m_intrMask.ABus_ExtIntrs * 0xFFFF, m_abusIntrAck);
+        devlog::trace<grp::base>("Intr bits:    {:04X} {:04X}", internalBits, externalBits);
+        devlog::trace<grp::base>("Intr indices: {:X} {:X}", internalIndex, externalIndex);
+        devlog::trace<grp::base>("Intr levels:  {:X} {:X}", internalLevel, externalLevel);
 
         if constexpr (acknowledge) {
             if (internalLevel >= externalLevel) {
                 m_intrStatus.internal &= ~(1u << internalIndex);
-                rootLog.trace("Acknowledging internal interrupt {:X}", internalIndex);
+                devlog::trace<grp::base>("Acknowledging internal interrupt {:X}", internalIndex);
                 TraceAcknowledgeInterrupt(m_tracer, internalIndex);
             } else {
                 m_intrStatus.external &= ~(1u << externalIndex);
-                rootLog.trace("Acknowledging external interrupt {:X}", externalIndex);
+                devlog::trace<grp::base>("Acknowledging external interrupt {:X}", externalIndex);
                 TraceAcknowledgeInterrupt(m_tracer, externalIndex + 16);
             }
             UpdateInterruptLevel<false>();
         } else {
             if (internalLevel >= externalLevel) {
                 m_cbExternalMasterInterrupt(internalLevel, internalIndex + 0x40);
-                rootLog.trace("Raising internal interrupt {:X}", internalIndex);
+                devlog::trace<grp::base>("Raising internal interrupt {:X}", internalIndex);
                 TraceRaiseInterrupt(m_tracer, internalIndex, internalLevel);
 
                 // Also send VBlank IN and HBlank IN to slave SH2 if it is enabled
@@ -1132,13 +1146,13 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
                     m_cbExternalSlaveInterrupt(0, 0);
                 }
             } else if (m_abusIntrAck) {
-                rootLog.trace("Raising external interrupt {:X}", externalIndex);
+                devlog::trace<grp::base>("Raising external interrupt {:X}", externalIndex);
                 TraceRaiseInterrupt(m_tracer, externalIndex + 16, externalLevel);
                 m_abusIntrAck = false;
                 m_cbExternalMasterInterrupt(externalLevel, externalIndex + 0x50);
                 m_cbExternalSlaveInterrupt(0, 0);
             } else {
-                rootLog.trace("Lowering interrupt signal");
+                devlog::trace<grp::base>("Lowering interrupt signal");
                 m_cbExternalMasterInterrupt(0, 0);
                 m_cbExternalSlaveInterrupt(0, 0);
             }

@@ -5,12 +5,35 @@
 #include <satemu/util/arith_ops.hpp>
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/date_time.hpp>
+#include <satemu/util/dev_log.hpp>
 #include <satemu/util/inline.hpp>
 
 #include <cassert>
 #include <filesystem>
 
 namespace satemu::smpc {
+
+namespace grp {
+
+    // -----------------------------------------------------------------------------
+    // Dev log groups
+
+    // Hierarchy:
+    //
+    // base
+    //   regs
+
+    struct base {
+        static constexpr bool enabled = true;
+        static constexpr devlog::Level level = devlog::level::debug;
+        static constexpr std::string_view name = "SMPC";
+    };
+
+    struct regs : public base {
+        static constexpr std::string_view name = "SMPC-Regs";
+    };
+
+} // namespace grp
 
 SMPC::SMPC(core::Scheduler &scheduler, sys::ISystemOperations &sysOps)
     : m_sysOps(sysOps)
@@ -142,6 +165,11 @@ FLATTEN void SMPC::UpdateClockRatios(const sys::ClockRatios &clockRatios) {
     m_rtc.UpdateClockRatios(clockRatios);
 }
 
+void SMPC::SetAreaCode(uint8 areaCode) {
+    devlog::debug<grp::base>("Setting area code to {:X}", areaCode);
+    m_areaCode = areaCode;
+}
+
 void SMPC::UpdateResetNMI() {
     if (!m_resetDisable && m_resetState) {
         m_sysOps.RaiseNMI();
@@ -176,7 +204,7 @@ uint8 SMPC::Read(uint32 address) {
     case 0x7F: return 0; // EXLE is write-only
     default:
         if constexpr (!peek) {
-            regsLog.debug("unhandled SMPC read from {:02X}", address);
+            devlog::debug<grp::regs>("unhandled SMPC read from {:02X}", address);
         }
         return m_busValue;
     }
@@ -202,12 +230,12 @@ void SMPC::Write(uint32 address, uint8 value) {
                 const bool continueFlag = bit::extract<7>(IREG[0]);
                 const bool breakFlag = bit::extract<6>(IREG[0]);
                 if (breakFlag) {
-                    rootLog.trace("INTBACK break request");
+                    devlog::trace<grp::base>("INTBACK break request");
                     m_intbackInProgress = false;
                     SR.NPE = 0;
                     SR.PDL = 0;
                 } else if (continueFlag) {
-                    rootLog.trace("INTBACK continue request");
+                    devlog::trace<grp::base>("INTBACK continue request");
                     // HACK: delay by a long while to fix Virtua Racing which expects the status report before VBlank
                     // OUT and the peripheral reports after VBlank OUT
                     m_scheduler.ScheduleFromNow(m_commandEvent, 300000);
@@ -227,7 +255,7 @@ void SMPC::Write(uint32 address, uint8 value) {
     case 0x7F: WriteEXLE(value); break;
     default:
         if constexpr (!poke) {
-            regsLog.debug("unhandled SMPC write to {:02X} = {:02X}", address, value);
+            devlog::debug<grp::regs>("unhandled SMPC write to {:02X} = {:02X}", address, value);
         }
         break;
     }
@@ -424,12 +452,12 @@ void SMPC::ProcessCommand() {
     case Command::INTBACK: INTBACK(); break;
     case Command::SETSMEM: SETSMEM(); break;
     case Command::SETTIME: SETTIME(); break;
-    default: rootLog.debug("unhandled SMPC command {:02X}", static_cast<uint8>(COMREG)); break;
+    default: devlog::debug<grp::base>("unhandled SMPC command {:02X}", static_cast<uint8>(COMREG)); break;
     }
 }
 
 void SMPC::MSHON() {
-    rootLog.debug("Processing MSHON");
+    devlog::debug<grp::base>("Processing MSHON");
 
     // TODO: is this supposed to do something...?
 
@@ -439,7 +467,7 @@ void SMPC::MSHON() {
 }
 
 void SMPC::SSHON() {
-    rootLog.debug("Processing SSHON");
+    devlog::debug<grp::base>("Processing SSHON");
 
     // Turn on and reset slave SH-2
     m_sysOps.EnableAndResetSlaveSH2();
@@ -450,7 +478,7 @@ void SMPC::SSHON() {
 }
 
 void SMPC::SSHOFF() {
-    rootLog.debug("Processing SSHOFF");
+    devlog::debug<grp::base>("Processing SSHOFF");
 
     // Turn off slave SH-2
     m_sysOps.DisableSlaveSH2();
@@ -461,7 +489,7 @@ void SMPC::SSHOFF() {
 }
 
 void SMPC::SNDON() {
-    rootLog.debug("Processing SNDON");
+    devlog::debug<grp::base>("Processing SNDON");
 
     m_sysOps.EnableAndResetM68K();
 
@@ -471,7 +499,7 @@ void SMPC::SNDON() {
 }
 
 void SMPC::SNDOFF() {
-    rootLog.debug("Processing SNDOFF");
+    devlog::debug<grp::base>("Processing SNDOFF");
 
     m_sysOps.DisableM68K();
 
@@ -481,7 +509,7 @@ void SMPC::SNDOFF() {
 }
 
 void SMPC::SYSRES() {
-    rootLog.debug("Processing SYSRES");
+    devlog::debug<grp::base>("Processing SYSRES");
 
     m_sysOps.SoftResetSystem();
 
@@ -491,7 +519,7 @@ void SMPC::SYSRES() {
 }
 
 void SMPC::CKCHG352() {
-    rootLog.debug("Processing CKCHG352");
+    devlog::debug<grp::base>("Processing CKCHG352");
 
     ClockChange(sys::ClockSpeed::_352);
 
@@ -500,7 +528,7 @@ void SMPC::CKCHG352() {
     OREG[31] = 0x0E;
 }
 void SMPC::CKCHG320() {
-    rootLog.debug("Processing CKCHG320");
+    devlog::debug<grp::base>("Processing CKCHG320");
 
     ClockChange(sys::ClockSpeed::_320);
 
@@ -510,7 +538,7 @@ void SMPC::CKCHG320() {
 }
 
 void SMPC::NMIREQ() {
-    rootLog.debug("Processing NMIREQ");
+    devlog::debug<grp::base>("Processing NMIREQ");
 
     m_sysOps.RaiseNMI();
 
@@ -520,7 +548,7 @@ void SMPC::NMIREQ() {
 }
 
 void SMPC::RESENAB() {
-    rootLog.debug("Processing RESENAB");
+    devlog::debug<grp::base>("Processing RESENAB");
 
     bool prevState = m_resetDisable;
     m_resetDisable = false;
@@ -534,7 +562,7 @@ void SMPC::RESENAB() {
 }
 
 void SMPC::RESDISA() {
-    rootLog.debug("Processing RESDISA");
+    devlog::debug<grp::base>("Processing RESDISA");
 
     bool prevState = m_resetDisable;
     m_resetDisable = true;
@@ -548,7 +576,7 @@ void SMPC::RESDISA() {
 }
 
 void SMPC::INTBACK() {
-    rootLog.trace("Processing INTBACK {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
+    devlog::trace<grp::base>("Processing INTBACK {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
 
     m_getPeripheralData = bit::extract<3>(IREG[1]);
 
@@ -560,7 +588,7 @@ void SMPC::INTBACK() {
         }
     } else {
         if (IREG[2] != 0xF0) {
-            rootLog.debug("Unexpected INTBACK IREG2: {:02X}", IREG[2]);
+            devlog::debug<grp::base>("Unexpected INTBACK IREG2: {:02X}", IREG[2]);
             // TODO: does SMPC reject the command in this case?
         }
 
@@ -611,11 +639,11 @@ void SMPC::ReadPeripherals() {
     for (auto b : m_intbackReport) {
         fmt::format_to(out, " {:02X}", b);
     }
-    rootLog.debug("{}", fmt::to_string(buf));*/
+    devlog::debug<grp::base>("{}", fmt::to_string(buf));*/
 }
 
 void SMPC::WriteINTBACKStatusReport() {
-    rootLog.trace("INTBACK status report");
+    devlog::trace<grp::base>("INTBACK status report");
 
     SR.bit7 = 0;                  // fixed 0
     SR.PDL = 1;                   // fixed 1 for status report
@@ -670,7 +698,7 @@ void SMPC::WriteINTBACKStatusReport() {
 
 void SMPC::WriteINTBACKPeripheralReport() {
     const bool firstReport = m_intbackReportOffset == 0;
-    rootLog.trace("INTBACK peripheral report - first? {}", firstReport);
+    devlog::trace<grp::base>("INTBACK peripheral report - first? {}", firstReport);
 
     const uint8 reportLength = std::min<uint8>(32, m_intbackReport.size() - m_intbackReportOffset);
     std::copy_n(m_intbackReport.begin() + m_intbackReportOffset, reportLength, OREG.begin());
@@ -691,7 +719,7 @@ void SMPC::WriteINTBACKPeripheralReport() {
 }
 
 void SMPC::SETSMEM() {
-    rootLog.debug("Processing SETSMEM {:02X} {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2], IREG[3]);
+    devlog::debug<grp::base>("Processing SETSMEM {:02X} {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2], IREG[3]);
 
     SMEM[0] = IREG[0];
     SMEM[1] = IREG[1];
@@ -706,7 +734,7 @@ void SMPC::SETSMEM() {
 }
 
 void SMPC::SETTIME() {
-    rootLog.debug("Processing SETTIME");
+    devlog::debug<grp::base>("Processing SETTIME");
 
     util::datetime::DateTime dt{};
     dt.year = util::from_bcd((IREG[0] << 8u) + IREG[1]);
@@ -717,8 +745,8 @@ void SMPC::SETTIME() {
     dt.minute = util::from_bcd(IREG[5]);
     dt.second = util::from_bcd(IREG[6]);
 
-    rootLog.debug("Setting time to {}/{:02d}/{:02d} {:02d}:{:02d}:{:02d}", dt.year, dt.month, dt.day, dt.hour,
-                  dt.minute, dt.second);
+    devlog::debug<grp::base>("Setting time to {}/{:02d}/{:02d} {:02d}:{:02d}:{:02d}", dt.year, dt.month, dt.day,
+                             dt.hour, dt.minute, dt.second);
 
     m_rtc.SetDateTime(dt);
     WritePersistentData();

@@ -18,7 +18,7 @@
 #include <satemu/hw/m68k/m68k_defs.hpp>
 
 #include <satemu/util/data_ops.hpp>
-#include <satemu/util/debug_print.hpp>
+#include <satemu/util/dev_log.hpp>
 #include <satemu/util/inline.hpp>
 
 #include <array>
@@ -60,11 +60,34 @@ struct SCSPAccessTypeInfo<SCSPAccessType::Debug> {
 template <SCSPAccessType accessType>
 constexpr const char *accessTypeName = SCSPAccessTypeInfo<accessType>::name;
 
-class SCSP {
-    static constexpr dbg::Category rootLog{"SCSP"};
-    static constexpr dbg::Category regsLog{rootLog, "Regs"};
-    static constexpr dbg::Category dmaLog{rootLog, "DMA"};
+namespace grp {
 
+    // -----------------------------------------------------------------------------
+    // Dev log groups
+
+    // Hierarchy:
+    //
+    // base
+    //   regs
+    //   dma
+
+    struct base {
+        static constexpr bool enabled = true;
+        static constexpr devlog::Level level = devlog::level::debug;
+        static constexpr std::string_view name = "SCSP";
+    };
+
+    struct regs : public base {
+        static constexpr std::string_view name = "SCSP-Regs";
+    };
+
+    struct dma : public base {
+        static constexpr std::string_view name = "SCSP-DMA";
+    };
+
+} // namespace grp
+
+class SCSP {
 public:
     SCSP(core::Scheduler &scheduler);
 
@@ -203,8 +226,8 @@ private:
         address &= 0xFFF;
 
         if constexpr (!peek) {
-            regsLog.trace("{}-bit SCSP register read via {} bus from {:03X}", sizeof(T) * 8, accessTypeName<accessType>,
-                          address);
+            devlog::trace<grp::regs>("{}-bit SCSP register read via {} bus from {:03X}", sizeof(T) * 8,
+                                     accessTypeName<accessType>, address);
         }
 
         using namespace util;
@@ -228,7 +251,7 @@ private:
         };
 
         if constexpr (accessType == SCSPAccessType::M68kCode) {
-            regsLog.debug("M68K attempted to fetch instruction from SCSP register area at {:03X}", address);
+            devlog::debug<grp::regs>("M68K attempted to fetch instruction from SCSP register area at {:03X}", address);
             return 0;
         }
 
@@ -346,8 +369,8 @@ private:
 
         default:
             if constexpr (!peek) {
-                regsLog.debug("Unhandled {}-bit SCSP register read via {} bus from {:03X}", sizeof(T) * 8,
-                              accessTypeName<accessType>, address);
+                devlog::debug<grp::regs>("Unhandled {}-bit SCSP register read via {} bus from {:03X}", sizeof(T) * 8,
+                                         accessTypeName<accessType>, address);
             }
             break;
         }
@@ -364,8 +387,8 @@ private:
         address &= 0xFFF;
 
         if constexpr (!poke) {
-            regsLog.trace("{}-bit SCSP register write via {} bus to {:03X} = {:X}", sizeof(T) * 8,
-                          accessTypeName<accessType>, address, value);
+            devlog::trace<grp::regs>("{}-bit SCSP register write via {} bus to {:03X} = {:X}", sizeof(T) * 8,
+                                     accessTypeName<accessType>, address, value);
         }
 
         using namespace util;
@@ -525,8 +548,8 @@ private:
 
         default:
             if constexpr (!poke) {
-                regsLog.debug("Unhandled {}-bit SCSP register write via {} bus to {:03X} = {:X}", sizeof(T) * 8,
-                              accessTypeName<accessType>, address, value);
+                devlog::debug<grp::regs>("Unhandled {}-bit SCSP register write via {} bus to {:03X} = {:X}",
+                                         sizeof(T) * 8, accessTypeName<accessType>, address, value);
             }
             break;
         }
@@ -576,9 +599,10 @@ private:
         if constexpr (peek) {
             bit::deposit_into<11, 15>(value, m_monitorSlotCall);
         } else {
-            regsLog.trace("Monitor slot {} read -> {:04X}  address={:05X} sample={:04X} egstate={} eglevel={:03X}",
-                          m_monitorSlotCall, value, slot.currAddress, slot.currSample, static_cast<uint8>(slot.egState),
-                          slot.egLevel);
+            devlog::trace<grp::regs>(
+                "Monitor slot {} read -> {:04X}  address={:05X} sample={:04X} egstate={} eglevel={:03X}",
+                m_monitorSlotCall, value, slot.currAddress, slot.currSample, static_cast<uint8>(slot.egState),
+                slot.egLevel);
         }
         return value;
     }
@@ -595,7 +619,7 @@ private:
     template <bool lowerByte, bool upperByte, bool peek>
     uint16 ReadMIDIIn() const {
         if constexpr (!peek) {
-            regsLog.trace("Read from MIDI IN is unimplemented");
+            devlog::trace<grp::regs>("Read from MIDI IN is unimplemented");
         }
         return 0;
     }
@@ -603,7 +627,7 @@ private:
     template <bool lowerByte, bool upperByte, bool poke>
     void WriteMIDIOut(uint16 value) {
         if constexpr (lowerByte && !poke) {
-            regsLog.trace("Write to MIDI OUT is unimplemented - {:02X}", value);
+            devlog::trace<grp::regs>("Write to MIDI OUT is unimplemented - {:02X}", value);
             // TODO: write bit::extract<0, 7>(value) to MIDI out buffer
         }
     }

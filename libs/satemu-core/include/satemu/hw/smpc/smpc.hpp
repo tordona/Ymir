@@ -11,17 +11,12 @@
 #include <satemu/hw/vdp/vdp_callbacks.hpp>
 #include <satemu/sys/system_callbacks.hpp>
 
-#include <satemu/util/debug_print.hpp>
-
 #include <array>
 #include <vector>
 
 namespace satemu::smpc {
 
 class SMPC {
-    static constexpr dbg::Category rootLog{"SMPC"};
-    static constexpr dbg::Category regsLog{rootLog, "Regs"};
-
 public:
     SMPC(core::Scheduler &scheduler, sys::ISystemOperations &sysOps);
     ~SMPC();
@@ -45,10 +40,7 @@ public:
         }
     }
 
-    void SetAreaCode(uint8 areaCode) {
-        rootLog.debug("Setting area code to {:X}", areaCode);
-        m_areaCode = areaCode;
-    }
+    void SetAreaCode(uint8 areaCode);
 
     peripheral::PeripheralPort &GetPeripheralPort1() {
         return m_port1;
