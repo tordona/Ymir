@@ -1074,6 +1074,7 @@ void App::RunEmulator() {
                         ImGui::MenuItem("Interrupt trace", nullptr, &set.interruptTrace.Open);
                         ImGui::MenuItem("Cache", nullptr, &set.cache.Open);
                         ImGui::MenuItem("Division unit (DIVU)", nullptr, &set.divisionUnit.Open);
+                        ImGui::MenuItem("Timers (FRT and WDT)", nullptr, &set.timers.Open);
                         ImGui::EndMenu();
                     }
                 };

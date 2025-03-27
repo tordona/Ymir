@@ -5,6 +5,7 @@
 #include "sh2_divu_window.hpp"
 #include "sh2_interrupt_trace_window.hpp"
 #include "sh2_interrupts_window.hpp"
+#include "sh2_timers_window.hpp"
 
 namespace app::ui {
 
@@ -14,13 +15,15 @@ struct SH2WindowSet {
         , interrupts(context, master)
         , interruptTrace(context, master)
         , cache(context, master)
-        , divisionUnit(context, master) {}
+        , divisionUnit(context, master)
+        , timers(context, master) {}
 
     SH2DebuggerWindow debugger;
     SH2InterruptsWindow interrupts;
     SH2InterruptTraceWindow interruptTrace;
     SH2CacheWindow cache;
     SH2DivisionUnitWindow divisionUnit;
+    SH2TimersWindow timers;
 
     void DisplayAll() {
         debugger.Display();
@@ -28,6 +31,7 @@ struct SH2WindowSet {
         interruptTrace.Display();
         cache.Display();
         divisionUnit.Display();
+        timers.Display();
     }
 };
 

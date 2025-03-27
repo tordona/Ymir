@@ -56,6 +56,8 @@ add_executable(satemu-sdl3
     src/app/ui/windows/debug/sh2_interrupts_window.hpp
     src/app/ui/windows/debug/sh2_interrupt_trace_window.cpp
     src/app/ui/windows/debug/sh2_interrupt_trace_window.hpp
+    src/app/ui/windows/debug/sh2_timers_window.cpp
+    src/app/ui/windows/debug/sh2_timers_window.hpp
     src/app/ui/windows/debug/sh2_window_base.cpp
     src/app/ui/windows/debug/sh2_window_base.hpp
     src/app/ui/windows/debug/sh2_window_set.hpp
