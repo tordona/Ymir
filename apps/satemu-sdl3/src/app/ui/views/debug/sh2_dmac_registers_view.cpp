@@ -24,9 +24,8 @@ void SH2DMAControllerRegistersView::Display() {
     ImGui::BeginGroup();
     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 8);
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-    if (ImGui::InputScalar("##dmaor", ImGuiDataType_U32, &DMAOR, nullptr, nullptr, "%08X",
-                           ImGuiInputTextFlags_CharsHexadecimal)) {
-    }
+    ImGui::InputScalar("##dmaor", ImGuiDataType_U32, &DMAOR, nullptr, nullptr, "%08X",
+                       ImGuiInputTextFlags_CharsHexadecimal);
     ImGui::PopFont();
     ImGui::SameLine();
     ImGui::AlignTextToFramePadding();
