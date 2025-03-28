@@ -38,7 +38,7 @@ void MemoryViewerWindow::DrawContents() {
     }
 
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-    if (ImGui::BeginCombo("Region", currRegion.ToString().c_str(),
+    if (ImGui::BeginCombo("##region", currRegion.ToString().c_str(),
                           ImGuiComboFlags_HeightLarge | ImGuiComboFlags_WidthFitPreview)) {
         for (auto &group : mem_view::regions::kRegionGroups) {
             ImGui::SeparatorText(group.name);
@@ -55,6 +55,9 @@ void MemoryViewerWindow::DrawContents() {
         ImGui::EndCombo();
     }
     ImGui::PopFont();
+    ImGui::SameLine();
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Region");
 
     ImGui::Checkbox("Enable side-effects", &m_memViewState->enableSideEffects);
     ImGui::Separator();
