@@ -1097,22 +1097,24 @@ void SH2::RunDMAC(uint32 channel) {
         return;
     }
 
-    do {
-        // Auto request mode will start the transfer right now.
-        // Module request mode checks if the signal from the configured source has been raised.
-        if (!ch.autoRequest) {
-            bool signal = false;
-            switch (ch.resSelect) {
-            case DMAResourceSelect::DREQ: /*TODO*/ signal = false; break;
-            case DMAResourceSelect::RXI: /*TODO*/ signal = false; break;
-            case DMAResourceSelect::TXI: /*TODO*/ signal = false; break;
-            case DMAResourceSelect::Reserved: signal = false; break;
-            }
-            if (!signal) {
-                return;
-            }
+    // Auto request mode will start the transfer right now.
+    // Module request mode checks if the signal from the configured source has been raised.
+    if (!ch.autoRequest) {
+        bool signal = false;
+        switch (ch.resSelect) {
+        case DMAResourceSelect::DREQ: /*TODO*/ signal = false; break;
+        case DMAResourceSelect::RXI: /*TODO*/ signal = false; break;
+        case DMAResourceSelect::TXI: /*TODO*/ signal = false; break;
+        case DMAResourceSelect::Reserved: signal = false; break;
         }
+        if (!signal) {
+            return;
+        }
+    }
 
+    // TODO: trace DMA transfer start, including all parameters
+
+    do {
         // TODO: prioritize channels based on DMAOR.PR
         // TODO: proper timings, cycle-stealing, etc. (suspend instructions if not cached)
         static constexpr uint32 kXferSize[] = {1, 2, 4, 16};
@@ -1135,6 +1137,7 @@ void SH2::RunDMAC(uint32 channel) {
             devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 8-bit transfer from {:08X} to {:08X} -> {:X}", channel,
                                          ch.srcAddress, ch.dstAddress, value);
             MemWriteByte<debug>(ch.dstAddress, value);
+            // TODO: trace DMA transfer data
             break;
         }
         case DMATransferSize::Word: {
@@ -1142,6 +1145,7 @@ void SH2::RunDMAC(uint32 channel) {
             devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 16-bit transfer from {:08X} to {:08X} -> {:X}", channel,
                                          ch.srcAddress, ch.dstAddress, value);
             MemWriteWord<debug>(ch.dstAddress, value);
+            // TODO: trace DMA transfer data
             break;
         }
         case DMATransferSize::Longword: {
@@ -1149,6 +1153,7 @@ void SH2::RunDMAC(uint32 channel) {
             devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 32-bit transfer from {:08X} to {:08X} -> {:X}", channel,
                                          ch.srcAddress, ch.dstAddress, value);
             MemWriteLong<debug>(ch.dstAddress, value);
+            // TODO: trace DMA transfer data
             break;
         }
         case DMATransferSize::QuadLongword:
@@ -1157,6 +1162,7 @@ void SH2::RunDMAC(uint32 channel) {
                 devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 16-byte transfer {:d} from {:08X} to {:08X} -> {:X}",
                                              channel, i, ch.srcAddress, ch.dstAddress, value);
                 MemWriteLong<debug>(ch.dstAddress + i * sizeof(uint32), value);
+                // TODO: trace DMA transfer data
             }
             break;
         }
@@ -1176,6 +1182,8 @@ void SH2::RunDMAC(uint32 channel) {
             ch.xferCount--;
         }
     } while (ch.xferCount > 0);
+
+    // TODO: trace DMA transfer finish, including IRQ enable flag
 
     ch.xferEnded = true;
     devlog::trace<grp::dma>(m_logPrefix, "DMAC{} transfer finished", channel);
