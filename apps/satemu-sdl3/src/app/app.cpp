@@ -1080,6 +1080,7 @@ void App::RunEmulator() {
                         ImGui::MenuItem("Cache", nullptr, &set.cache.Open);
                         ImGui::MenuItem("Division unit (DIVU)", nullptr, &set.divisionUnit.Open);
                         ImGui::MenuItem("Timers (FRT and WDT)", nullptr, &set.timers.Open);
+                        ImGui::MenuItem("DMA Controller (DMAC)", nullptr, &set.dmaController.Open);
                         ImGui::EndMenu();
                     }
                 };

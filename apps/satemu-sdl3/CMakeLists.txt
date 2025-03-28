@@ -68,7 +68,7 @@ add_executable(satemu-sdl3
 
     src/util/rom_loader.cpp
     src/util/rom_loader.hpp
-)
+ "src/app/ui/windows/debug/sh2_dmac_window.cpp")
 add_executable(satemu::satemu-sdl3 ALIAS satemu-sdl3)
 set_target_properties(satemu-sdl3 PROPERTIES
                       VERSION ${satemu_VERSION}

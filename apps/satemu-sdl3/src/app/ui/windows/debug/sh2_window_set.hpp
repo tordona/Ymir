@@ -3,6 +3,7 @@
 #include "sh2_cache_window.hpp"
 #include "sh2_debugger_window.hpp"
 #include "sh2_divu_window.hpp"
+#include "sh2_dmac_window.hpp"
 #include "sh2_interrupt_trace_window.hpp"
 #include "sh2_interrupts_window.hpp"
 #include "sh2_timers_window.hpp"
@@ -16,7 +17,8 @@ struct SH2WindowSet {
         , interruptTrace(context, master)
         , cache(context, master)
         , divisionUnit(context, master)
-        , timers(context, master) {}
+        , timers(context, master)
+        , dmaController(context, master) {}
 
     SH2DebuggerWindow debugger;
     SH2InterruptsWindow interrupts;
@@ -24,6 +26,7 @@ struct SH2WindowSet {
     SH2CacheWindow cache;
     SH2DivisionUnitWindow divisionUnit;
     SH2TimersWindow timers;
+    SH2DMAControllerWindow dmaController;
 
     void DisplayAll() {
         debugger.Display();
@@ -32,6 +35,7 @@ struct SH2WindowSet {
         cache.Display();
         divisionUnit.Display();
         timers.Display();
+        dmaController.Display();
     }
 };
 
