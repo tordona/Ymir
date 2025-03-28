@@ -10,7 +10,7 @@ SH2WatchdogTimerView::SH2WatchdogTimerView(SharedContext &context, satemu::sh2::
 
 void SH2WatchdogTimerView::Display() {
     auto &probe = m_sh2.GetProbe();
-    auto &cache = probe.GetCache();
+    auto &wdt = probe.WDT();
 
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;

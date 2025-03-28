@@ -1287,6 +1287,7 @@ void App::EmulatorThread() {
             case FrameStep:
                 frameStep = true;
                 paused = false;
+                m_audioSystem.SetSilent(false);
                 break;
             case SetPaused:
                 paused = std::get<bool>(cmd.value);

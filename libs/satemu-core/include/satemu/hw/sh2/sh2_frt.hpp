@@ -95,10 +95,10 @@ struct FreeRunningTimer {
             ICIE = false;
         }
 
-        bool OVIE;
-        bool OCIAE;
-        bool OCIBE;
-        bool ICIE;
+        bool OVIE;  // 7   R/W  ICIE     Input Capture Interrupt Enable
+        bool OCIAE; // 3   R/W  OCIAE    Output Compare Interrupt A Enable
+        bool OCIBE; // 2   R/W  OCIBE    Output Compare Interrupt B Enable
+        bool ICIE;  // 1   R/W  OVIE     Timer Overflow Interrupt Enable
     } TIER;
 
     FORCE_INLINE uint8 ReadTIER() const {
@@ -133,18 +133,18 @@ struct FreeRunningTimer {
         }
 
         void Reset() {
-            CCLRA = false;
-            OVF = false;
-            OCFB = false;
-            OCFA = false;
             ICF = false;
+            OCFA = false;
+            OCFB = false;
+            OVF = false;
+            CCLRA = false;
         }
 
-        bool CCLRA;
-        bool OVF;
-        bool OCFB;
-        bool OCFA;
-        bool ICF;
+        bool ICF;   // 7   R/W  ICF      Input Capture Flag (clear on zero write)
+        bool OCFA;  // 3   R/W  OCFA     Output Compare Flag A (clear on zero write)
+        bool OCFB;  // 2   R/W  OCFB     Output Compare Flag B (clear on zero write)
+        bool OVF;   // 1   R/W  OVF      Timer Overflow Flag (clear on zero write)
+        bool CCLRA; // 0   R/W  CCLRA    Counter Clear A
     } FTCSR;
 
     FORCE_INLINE uint8 ReadFTCSR() const {
@@ -267,12 +267,12 @@ struct FreeRunningTimer {
         }
 
         void Reset() {
-            CKSn = 0;
             IEDGA = false;
+            CKSn = 0;
         }
 
-        uint8 CKSn;
-        bool IEDGA;
+        bool IEDGA; //   7   R/W  IEDGA    Input Edge Select (0=falling, 1=rising)
+        uint8 CKSn; // 1-0   R/W  CKS1-0   Clock Select
     } TCR;
 
     FORCE_INLINE uint8 ReadTCR() const {
@@ -286,6 +286,12 @@ struct FreeRunningTimer {
         TCR.IEDGA = bit::extract<7>(value);
         TCR.CKSn = bit::extract<0, 1>(value);
 
+        m_clockDividerShift = kDividerShifts[TCR.CKSn];
+        m_cycleCountMask = (1ull << m_clockDividerShift) - 1;
+    }
+
+    FORCE_INLINE void WriteTCR_CKSn(uint8 value) {
+        TCR.CKSn = bit::extract<0, 1>(value);
         m_clockDividerShift = kDividerShifts[TCR.CKSn];
         m_cycleCountMask = (1ull << m_clockDividerShift) - 1;
     }
@@ -304,14 +310,14 @@ struct FreeRunningTimer {
         }
 
         void Reset() {
+            OCRS = false;
             OLVLA = false;
             OLVLB = false;
-            OCRS = false;
         }
 
-        bool OLVLA;
-        bool OLVLB;
-        bool OCRS;
+        bool OCRS;  // 4   R/W  OCRS     Output Compare Register Select (0=OCRA, 1=OCRB)
+        bool OLVLA; // 1   R/W  OLVLA    Output Level A
+        bool OLVLB; // 0   R/W  OLVLB    Output Level B
     } TOCR;
 
     FORCE_INLINE uint8 ReadTOCR() const {
