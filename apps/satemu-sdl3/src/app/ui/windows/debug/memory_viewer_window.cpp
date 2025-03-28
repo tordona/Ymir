@@ -33,9 +33,6 @@ void MemoryViewerWindow::PrepareWindow() {
 void MemoryViewerWindow::DrawContents() {
     const mem_view::Region *nextRegion = m_memViewState->selectedRegion;
     auto &currRegion = *nextRegion;
-    if (currRegion.paramsFn) {
-        currRegion.paramsFn(m_memViewState.get());
-    }
 
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     if (ImGui::BeginCombo("##region", currRegion.ToString().c_str(),
@@ -60,6 +57,9 @@ void MemoryViewerWindow::DrawContents() {
     ImGui::TextUnformatted("Region");
 
     ImGui::Checkbox("Enable side-effects", &m_memViewState->enableSideEffects);
+    if (currRegion.paramsFn) {
+        currRegion.paramsFn(m_memViewState.get());
+    }
     ImGui::Separator();
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     m_memViewState->memoryEditor.DrawContents(this, currRegion.size, currRegion.baseAddress);
