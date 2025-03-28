@@ -83,22 +83,22 @@ struct WatchdogTimer {
     //                          101 (5) = phi/1024
     //                          110 (6) = phi/4096
     //                          111 (7) = phi/8192
-
     struct RegWTCSR {
         RegWTCSR() {
             Reset();
         }
 
         void Reset() {
-            CKSn = 0;
-            TME = false;
-            WT_nIT = false;
             OVF = false;
+            WT_nIT = false;
+            TME = false;
+            CKSn = 0;
         }
-        uint8 CKSn;
-        bool TME;
-        bool WT_nIT;
-        bool OVF;
+
+        bool OVF;    //   7   R/W  OVF      Overflow Flag
+        bool WT_nIT; //   6   R/W  WT/!IT   Timer Mode Select (0=interval timer (ITI), 1=watchdog timer)
+        bool TME;    //   5   R/W  TME      Timer Enable
+        uint8 CKSn;  // 2-0   R/W  CKS2-0   Clock Select
     } WTCSR;
 
     FORCE_INLINE uint8 ReadWTCSR() const {
@@ -131,7 +131,6 @@ struct WatchdogTimer {
     //
     //   bits   r/w  code     description
     //    7-0   R/W  WTCNT    Watchdog timer counter
-
     uint8 WTCNT;
 
     FORCE_INLINE uint8 ReadWTCNT() const {
@@ -150,21 +149,20 @@ struct WatchdogTimer {
     //      6   R/W  RSTE     Reset Enable
     //      5   R/W  RSTS     Reset Select (0=power-on reset, 1=manual reset)
     //    4-0   R    -        Reserved - must be one
-
     struct RegRSTCSR {
         RegRSTCSR() {
             Reset();
         }
 
         void Reset() {
-            RSTS = false;
-            RSTE = false;
             WOVF = false;
+            RSTE = false;
+            RSTS = false;
         }
 
-        bool RSTS;
-        bool RSTE;
-        bool WOVF;
+        bool WOVF; // 7   R/W  WOVF     Watchdog Timer Overflow Flag
+        bool RSTE; // 6   R/W  RSTE     Reset Enable
+        bool RSTS; // 5   R/W  RSTS     Reset Select (0=power-on reset, 1=manual reset)
     } RSTCSR;
 
     FORCE_INLINE uint8 ReadRSTCSR() const {

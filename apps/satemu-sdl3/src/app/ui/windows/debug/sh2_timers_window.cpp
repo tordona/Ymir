@@ -10,10 +10,7 @@ SH2TimersWindow::SH2TimersWindow(SharedContext &context, bool master)
     , m_wdtView(context, m_sh2) {
 
     m_windowConfig.name = fmt::format("{}SH2 timers", master ? 'M' : 'S');
-}
-
-void SH2TimersWindow::PrepareWindow() {
-    // ImGui::SetNextWindowSizeConstraints(ImVec2(250, 300), ImVec2(600, FLT_MAX));
+    m_windowConfig.flags = ImGuiWindowFlags_AlwaysAutoResize;
 }
 
 void SH2TimersWindow::DrawContents() {
