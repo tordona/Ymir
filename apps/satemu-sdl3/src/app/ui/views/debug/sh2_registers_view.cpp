@@ -35,7 +35,7 @@ void SH2RegistersView::Display() {
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted(name.c_str());
 
-        ImGui::SameLine(50.0f);
+        ImGui::SameLine(48.0f);
 
         ImGui::PushFont(m_context.fonts.monospace.medium.regular);
         ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 8);
@@ -69,6 +69,8 @@ void SH2RegistersView::Display() {
     if (ImGui::Checkbox("##M", &M)) {
         sr.M = M;
     }
+    ImGui::NewLine();
+    ImGui::SameLine(0, (ImGui::GetFrameHeight() - ImGui::CalcTextSize("M").x) / 2);
     ImGui::TextUnformatted("M");
     ImGui::EndGroup();
 
@@ -79,6 +81,8 @@ void SH2RegistersView::Display() {
     if (ImGui::Checkbox("##Q", &Q)) {
         sr.Q = Q;
     }
+    ImGui::NewLine();
+    ImGui::SameLine(0, (ImGui::GetFrameHeight() - ImGui::CalcTextSize("Q").x) / 2);
     ImGui::TextUnformatted("Q");
     ImGui::EndGroup();
 
@@ -89,6 +93,8 @@ void SH2RegistersView::Display() {
     if (ImGui::Checkbox("##S", &S)) {
         sr.S = S;
     }
+    ImGui::NewLine();
+    ImGui::SameLine(0, (ImGui::GetFrameHeight() - ImGui::CalcTextSize("S").x) / 2);
     ImGui::TextUnformatted("S");
     ImGui::EndGroup();
 
@@ -99,6 +105,8 @@ void SH2RegistersView::Display() {
     if (ImGui::Checkbox("##T", &T)) {
         sr.T = T;
     }
+    ImGui::NewLine();
+    ImGui::SameLine(0, (ImGui::GetFrameHeight() - ImGui::CalcTextSize("T").x) / 2);
     ImGui::TextUnformatted("T");
     ImGui::EndGroup();
 
@@ -113,6 +121,8 @@ void SH2RegistersView::Display() {
         sr.ILevel = std::min<uint8>(ILevel, 0xFu);
     }
     ImGui::PopFont();
+    ImGui::NewLine();
+    ImGui::SameLine(0, ((ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 1) - ImGui::CalcTextSize("I").x) / 2);
     ImGui::TextUnformatted("I");
     ImGui::EndGroup();
     ImGui::PopStyleVar();
