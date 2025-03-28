@@ -11,6 +11,7 @@ SH2FreeRunningTimerView::SH2FreeRunningTimerView(SharedContext &context, satemu:
 void SH2FreeRunningTimerView::Display() {
     auto &probe = m_sh2.GetProbe();
     auto &frt = probe.FRT();
+    auto &intc = probe.INTC();
 
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
@@ -246,6 +247,68 @@ void SH2FreeRunningTimerView::Display() {
         ImGui::EndGroup();
         ImGui::SetItemTooltip("Temporary Register");
     }
+
+    ImGui::BeginGroup();
+    uint8 iciVector = intc.GetVector(sh2::InterruptSource::FRT_ICI);
+    ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
+    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    if (ImGui::InputScalar("##vcrc.ficvn", ImGuiDataType_U8, &iciVector, nullptr, nullptr, "%02X",
+                           ImGuiInputTextFlags_CharsHexadecimal)) {
+        intc.SetVector(sh2::InterruptSource::FRT_ICI, iciVector);
+    }
+    ImGui::PopFont();
+    ImGui::SameLine();
+    ImGui::TextUnformatted("VCRC.FICV7-0");
+    ImGui::EndGroup();
+    ImGui::SetItemTooltip("Free-running timer ICI interrupt vector");
+
+    ImGui::SameLine();
+
+    ImGui::BeginGroup();
+    uint8 ociVector = intc.GetVector(sh2::InterruptSource::FRT_OCI);
+    ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
+    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    if (ImGui::InputScalar("##vcrc.focvn", ImGuiDataType_U8, &ociVector, nullptr, nullptr, "%02X",
+                           ImGuiInputTextFlags_CharsHexadecimal)) {
+        intc.SetVector(sh2::InterruptSource::FRT_OCI, ociVector);
+    }
+    ImGui::PopFont();
+    ImGui::SameLine();
+    ImGui::TextUnformatted("VCRC.FOCV7-0");
+    ImGui::EndGroup();
+    ImGui::SetItemTooltip("Free-running timer OCI interrupt vector");
+
+    ImGui::SameLine();
+
+    ImGui::BeginGroup();
+    uint8 oviVector = intc.GetVector(sh2::InterruptSource::FRT_OVI);
+    ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
+    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    if (ImGui::InputScalar("##vcrd.fovvn", ImGuiDataType_U8, &oviVector, nullptr, nullptr, "%02X",
+                           ImGuiInputTextFlags_CharsHexadecimal)) {
+        intc.SetVector(sh2::InterruptSource::FRT_OVI, oviVector);
+    }
+    ImGui::PopFont();
+    ImGui::SameLine();
+    ImGui::TextUnformatted("VCRD.FOVV7-0");
+    ImGui::EndGroup();
+    ImGui::SetItemTooltip("Free-running timer OVI interrupt vector");
+
+    ImGui::SameLine();
+
+    uint8 level = intc.GetLevel(sh2::InterruptSource::FRT_ICI);
+    ImGui::BeginGroup();
+    ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 1);
+    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    if (ImGui::InputScalar("##iprb_frtipn", ImGuiDataType_U8, &level, nullptr, nullptr, "%X",
+                           ImGuiInputTextFlags_CharsHexadecimal)) {
+        intc.SetLevel(sh2::InterruptSource::FRT_ICI, std::min<uint8>(level, 0xF));
+    }
+    ImGui::PopFont();
+    ImGui::SameLine();
+    ImGui::TextUnformatted("IPRB.FRTIP3-0");
+    ImGui::EndGroup();
+    ImGui::SetItemTooltip("Free-running timer interrupt level");
 }
 
 } // namespace app::ui

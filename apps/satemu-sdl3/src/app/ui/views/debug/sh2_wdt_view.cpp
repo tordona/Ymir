@@ -11,6 +11,7 @@ SH2WatchdogTimerView::SH2WatchdogTimerView(SharedContext &context, satemu::sh2::
 void SH2WatchdogTimerView::Display() {
     auto &probe = m_sh2.GetProbe();
     auto &wdt = probe.WDT();
+    auto &intc = probe.INTC();
 
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
@@ -54,6 +55,7 @@ void SH2WatchdogTimerView::Display() {
                                                          "Phi/512", "Phi/1024", "Phi/4096", "Phi/8192"};
 
             ImGui::SameLine();
+            ImGui::BeginGroup();
             if (ImGui::BeginCombo("##wtcsr_cksn", kCKSValues[wdt.WTCSR.CKSn], ImGuiComboFlags_WidthFitPreview)) {
                 for (int i = 0; i < std::size(kCKSValues); i++) {
                     bool selected = i == wdt.WTCSR.CKSn;
@@ -63,7 +65,11 @@ void SH2WatchdogTimerView::Display() {
                 }
                 ImGui::EndCombo();
             }
-            ImGui::SetItemTooltip("Overflow Interrupt Enable");
+            ImGui::SameLine();
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted("CKS2-0");
+            ImGui::EndGroup();
+            ImGui::SetItemTooltip("Clock Select");
         }
 
         ImGui::TableNextRow();
@@ -114,6 +120,38 @@ void SH2WatchdogTimerView::Display() {
         ImGui::EndGroup();
         ImGui::SetItemTooltip("Watchdog Timer Counter");
     }
+
+    ImGui::SameLine();
+
+    ImGui::BeginGroup();
+    uint8 vector = intc.GetVector(sh2::InterruptSource::WDT_ITI);
+    ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
+    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    if (ImGui::InputScalar("##vcrwdt.witvn", ImGuiDataType_U8, &vector, nullptr, nullptr, "%02X",
+                           ImGuiInputTextFlags_CharsHexadecimal)) {
+        intc.SetVector(sh2::InterruptSource::WDT_ITI, vector);
+    }
+    ImGui::PopFont();
+    ImGui::SameLine();
+    ImGui::TextUnformatted("VCRWDT.WITV7-0");
+    ImGui::EndGroup();
+    ImGui::SetItemTooltip("Watchdog timer ITI interrupt vector");
+
+    ImGui::SameLine();
+
+    uint8 level = intc.GetLevel(sh2::InterruptSource::WDT_ITI);
+    ImGui::BeginGroup();
+    ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 1);
+    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    if (ImGui::InputScalar("##ipra_wdtipn", ImGuiDataType_U8, &level, nullptr, nullptr, "%X",
+                           ImGuiInputTextFlags_CharsHexadecimal)) {
+        intc.SetLevel(sh2::InterruptSource::WDT_ITI, std::min<uint8>(level, 0xF));
+    }
+    ImGui::PopFont();
+    ImGui::SameLine();
+    ImGui::TextUnformatted("IPRA.WDTIP3-0");
+    ImGui::EndGroup();
+    ImGui::SetItemTooltip("Watchdog timer interrupt level");
 }
 
 } // namespace app::ui
