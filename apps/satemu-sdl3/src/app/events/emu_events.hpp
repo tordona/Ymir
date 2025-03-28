@@ -41,6 +41,7 @@ struct EmuEvent {
         uint32 address;
         uint8 value;
         bool enableSideEffects;
+        bool bypassSH2Cache;
         bool master;
     };
     struct DebugDivideData {
@@ -84,10 +85,14 @@ struct EmuEvent {
                     DebugWriteMainData{.address = address, .value = value, .enableSideEffects = enableSideEffects}};
     }
 
-    static EmuEvent DebugWriteSH2(uint32 address, uint8 value, bool enableSideEffects, bool master) {
+    static EmuEvent DebugWriteSH2(uint32 address, uint8 value, bool enableSideEffects, bool bypassSH2Cache,
+                                  bool master) {
         return {.type = Type::DebugWriteSH2,
-                .value = DebugWriteSH2Data{
-                    .address = address, .value = value, .enableSideEffects = enableSideEffects, .master = master}};
+                .value = DebugWriteSH2Data{.address = address,
+                                           .value = value,
+                                           .enableSideEffects = enableSideEffects,
+                                           .bypassSH2Cache = bypassSH2Cache,
+                                           .master = master}};
     }
 
     static EmuEvent DebugDivide(bool div64, bool master) {

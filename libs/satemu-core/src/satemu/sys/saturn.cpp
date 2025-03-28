@@ -130,29 +130,31 @@ bool Saturn::IsTrayOpen() const {
     return CDBlock.IsTrayOpen();
 }
 
-template <bool debug>
+template <bool debug, bool enableSH2Cache>
 void Saturn::RunFrame() {
     // Use the last line phase as reference to give some leeway if we overshoot the target cycles
     while (VDP.InLastLinePhase()) {
-        Run<debug>();
+        Run<debug, enableSH2Cache>();
     }
     while (!VDP.InLastLinePhase()) {
-        Run<debug>();
+        Run<debug, enableSH2Cache>();
     }
 }
 
-template void Saturn::RunFrame<false>();
-template void Saturn::RunFrame<true>();
+template void Saturn::RunFrame<false, false>();
+template void Saturn::RunFrame<false, true>();
+template void Saturn::RunFrame<true, false>();
+template void Saturn::RunFrame<true, true>();
 
-template <bool debug>
+template <bool debug, bool enableSH2Cache>
 void Saturn::Run() {
     static constexpr uint64 kMaxStep = 64;
 
     const uint64 cycles = std::min<uint64>(m_scheduler.RemainingCount(), kMaxStep);
 
-    masterSH2.Advance<debug>(cycles);
+    masterSH2.Advance<debug, enableSH2Cache>(cycles);
     if (slaveSH2Enabled) {
-        slaveSH2.Advance<debug>(cycles);
+        slaveSH2.Advance<debug, enableSH2Cache>(cycles);
     }
     SCU.Advance<debug>(cycles);
     VDP.Advance<debug>(cycles);

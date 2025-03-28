@@ -238,7 +238,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     REQUIRE(probe.CheckInterrupts());
 
     // Jump to interrupt handler
-    sh2.Step<true>();
+    sh2.Step<true, false>();
 
     // Check results:
     // - one interrupt of the specified vector+level at the starting PC
@@ -267,7 +267,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     ClearCaptures();
 
     // Execute first instruction in the interrupt handler (should be a NOP)
-    sh2.Step<true>();
+    sh2.Step<true, false>();
 
     // Check results:
     // - no interrupts
@@ -288,7 +288,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     ClearCaptures();
 
     // This should be the RTE instruction
-    sh2.Step<true>();
+    sh2.Step<true, false>();
 
     // Check results:
     // - no interrupts
@@ -313,7 +313,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     ClearCaptures();
 
     // This should be the NOP instruction in the delay slot
-    sh2.Step<true>();
+    sh2.Step<true, false>();
 
     // Check results:
     // - no interrupts
@@ -340,7 +340,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     REQUIRE(probe.CheckInterrupts());
 
     // Jump to interrupt handler
-    sh2.Step<true>();
+    sh2.Step<true, false>();
 
     // Check results:
     // - one interrupt of the specified vector+level at the starting PC
@@ -369,7 +369,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     ClearCaptures();
 
     // Execute first instruction in the interrupt handler (should be a NOP)
-    sh2.Step<true>();
+    sh2.Step<true, false>();
 
     // Check results:
     // - no interrupts
@@ -390,7 +390,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     ClearCaptures();
 
     // This should be the RTE instruction
-    sh2.Step<true>();
+    sh2.Step<true, false>();
 
     // Check results:
     // - no interrupts
@@ -415,7 +415,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     ClearCaptures();
 
     // This should be the NOP instruction in the delay slot
-    sh2.Step<true>();
+    sh2.Step<true, false>();
 
     // Check results:
     // - no interrupts
@@ -501,7 +501,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
         REQUIRE(probe.CheckInterrupts());
 
         // Enter interrupt handler
-        sh2.Step<true>();
+        sh2.Step<true, false>();
 
         // Check results:
         // - FRT OVI interrupt at starting PC
@@ -537,7 +537,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
         ClearCaptures();
 
         // Step through RTE instruction
-        sh2.Step<true>();
+        sh2.Step<true, false>();
 
         // Check results:
         // - no interrupts

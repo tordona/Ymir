@@ -91,12 +91,6 @@ namespace config {
     // 0x186C is valid in most BIOS images.
     // 0x197C on JP (v1.003).
     inline constexpr uint32 sysExecDumpAddress = 0x186C;
-
-    // TODO: make this a template parameter for Advance, Step and others
-    // Enable cache emulation.
-    // Most games don't need this.
-    // Costs about 8-15% performance.
-    inline constexpr bool enableCache = false;
 } // namespace config
 
 // -----------------------------------------------------------------------------
@@ -196,8 +190,8 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
     GBR = 0;
     VBR = 0x00000000;
 
-    PC = MemReadLong(0x00000000);
-    R[15] = MemReadLong(0x00000004);
+    PC = MemReadLong<false>(0x00000000);
+    R[15] = MemReadLong<false>(0x00000004);
 
     // On-chip registers
     BCR1.u15 = 0x03F0;
@@ -237,7 +231,7 @@ void SH2::MapMemory(sys::Bus &bus) {
         });
 }
 
-template <bool debug>
+template <bool debug, bool enableCache>
 FLATTEN uint64 SH2::Advance(uint64 cycles) {
     uint64 cyclesExecuted = 0;
     while (cyclesExecuted < cycles) {
@@ -254,7 +248,7 @@ FLATTEN uint64 SH2::Advance(uint64 cycles) {
         const uint64 prevCyclesExecuted = cyclesExecuted;
         while (cyclesExecuted <= deadline) {
             // TODO: choose between interpreter (cached or uncached) and JIT recompiler
-            cyclesExecuted += InterpretNext<debug>();
+            cyclesExecuted += InterpretNext<debug, enableCache>();
 
             if constexpr (devlog::debug_enabled<grp::exec>) {
                 // Dump stack trace on SYS_EXECDMP
@@ -271,19 +265,23 @@ FLATTEN uint64 SH2::Advance(uint64 cycles) {
     return cyclesExecuted;
 }
 
-template uint64 SH2::Advance<false>(uint64 cycles);
-template uint64 SH2::Advance<true>(uint64 cycles);
+template uint64 SH2::Advance<false, false>(uint64 cycles);
+template uint64 SH2::Advance<false, true>(uint64 cycles);
+template uint64 SH2::Advance<true, false>(uint64 cycles);
+template uint64 SH2::Advance<true, true>(uint64 cycles);
 
-template <bool debug>
+template <bool debug, bool enableCache>
 FLATTEN uint64 SH2::Step() {
-    uint64 cyclesExecuted = InterpretNext<debug>();
+    uint64 cyclesExecuted = InterpretNext<debug, enableCache>();
     AdvanceWDT(cyclesExecuted);
     AdvanceFRT(cyclesExecuted);
     return cyclesExecuted;
 }
 
-template uint64 SH2::Step<false>();
-template uint64 SH2::Step<true>();
+template uint64 SH2::Step<false, false>();
+template uint64 SH2::Step<false, true>();
+template uint64 SH2::Step<true, false>();
+template uint64 SH2::Step<true, true>();
 
 bool SH2::GetNMI() const {
     return INTC.ICR.NMIL;
@@ -296,10 +294,14 @@ void SH2::SetNMI() {
     RaiseInterrupt(InterruptSource::NMI);
 }
 
+void SH2::PurgeCache() {
+    m_cache.Purge();
+}
+
 // -----------------------------------------------------------------------------
 // Memory accessors
 
-template <mem_primitive T, bool instrFetch, bool peek>
+template <mem_primitive T, bool instrFetch, bool peek, bool enableCache>
 T SH2::MemRead(uint32 address) {
     const uint32 partition = (address >> 29u) & 0b111;
     if (address & static_cast<uint32>(sizeof(T) - 1)) {
@@ -313,7 +315,7 @@ T SH2::MemRead(uint32 address) {
 
     switch (partition) {
     case 0b000: // cache
-        if constexpr (config::enableCache) {
+        if constexpr (enableCache) {
             if (m_cache.CCR.CE) {
                 CacheEntry &entry = m_cache.GetEntry(address);
                 uint32 way = entry.FindWay(address);
@@ -421,7 +423,7 @@ T SH2::MemRead(uint32 address) {
     util::unreachable();
 }
 
-template <mem_primitive T, bool poke, bool debug>
+template <mem_primitive T, bool poke, bool debug, bool enableCache>
 void SH2::MemWrite(uint32 address, T value) {
     const uint32 partition = address >> 29u;
     if (address & static_cast<uint32>(sizeof(T) - 1)) {
@@ -435,7 +437,7 @@ void SH2::MemWrite(uint32 address, T value) {
 
     switch (partition) {
     case 0b000: // cache
-        if constexpr (config::enableCache) {
+        if constexpr (enableCache) {
             if (m_cache.CCR.CE) {
                 auto &entry = m_cache.GetEntry(address);
                 const uint8 way = entry.FindWay(address);
@@ -491,7 +493,7 @@ void SH2::MemWrite(uint32 address, T value) {
             // bits 8-0 index the register
             // bits 28 and 12 must be both set to access the lower half of the registers
             if ((address & 0x100) || (address & 0x10001000) == 0x10001000) {
-                OnChipRegWrite<T, poke, debug>(address & 0x1FF, value);
+                OnChipRegWrite<T, poke, debug, enableCache>(address & 0x1FF, value);
             }
         } else if ((address >> 12u) == 0xFFFF8) {
             // DRAM setup stuff
@@ -520,63 +522,74 @@ void SH2::MemWrite(uint32 address, T value) {
     }
 }
 
+template <bool enableCache>
 FLATTEN FORCE_INLINE uint16 SH2::FetchInstruction(uint32 address) {
-    return MemRead<uint16, true, false>(address);
+    return MemRead<uint16, true, false, enableCache>(address);
 }
 
+template <bool enableCache>
 FLATTEN FORCE_INLINE uint8 SH2::MemReadByte(uint32 address) {
-    return MemRead<uint8, false, false>(address);
+    return MemRead<uint8, false, false, enableCache>(address);
 }
 
+template <bool enableCache>
 FLATTEN FORCE_INLINE uint16 SH2::MemReadWord(uint32 address) {
-    return MemRead<uint16, false, false>(address);
+    return MemRead<uint16, false, false, enableCache>(address);
 }
 
+template <bool enableCache>
 FLATTEN FORCE_INLINE uint32 SH2::MemReadLong(uint32 address) {
-    return MemRead<uint32, false, false>(address);
+    return MemRead<uint32, false, false, enableCache>(address);
 }
 
-template <bool debug>
+template <bool debug, bool enableCache>
 FLATTEN FORCE_INLINE void SH2::MemWriteByte(uint32 address, uint8 value) {
-    MemWrite<uint8, false, debug>(address, value);
+    MemWrite<uint8, false, debug, enableCache>(address, value);
 }
 
-template <bool debug>
+template <bool debug, bool enableCache>
 FLATTEN FORCE_INLINE void SH2::MemWriteWord(uint32 address, uint16 value) {
-    MemWrite<uint16, false, debug>(address, value);
+    MemWrite<uint16, false, debug, enableCache>(address, value);
 }
 
-template <bool debug>
+template <bool debug, bool enableCache>
 FLATTEN FORCE_INLINE void SH2::MemWriteLong(uint32 address, uint32 value) {
-    MemWrite<uint32, false, debug>(address, value);
+    MemWrite<uint32, false, debug, enableCache>(address, value);
 }
 
+template <bool enableCache>
 FLATTEN FORCE_INLINE uint16 SH2::PeekInstruction(uint32 address) {
-    return MemRead<uint16, true, true>(address);
+    return MemRead<uint16, true, true, enableCache>(address);
 }
 
+template <bool enableCache>
 FLATTEN FORCE_INLINE uint8 SH2::MemPeekByte(uint32 address) {
-    return MemRead<uint8, false, true>(address);
+    return MemRead<uint8, false, true, enableCache>(address);
 }
 
+template <bool enableCache>
 FLATTEN FORCE_INLINE uint16 SH2::MemPeekWord(uint32 address) {
-    return MemRead<uint16, false, true>(address);
+    return MemRead<uint16, false, true, enableCache>(address);
 }
 
+template <bool enableCache>
 FLATTEN FORCE_INLINE uint32 SH2::MemPeekLong(uint32 address) {
-    return MemRead<uint32, false, true>(address);
+    return MemRead<uint32, false, true, enableCache>(address);
 }
 
+template <bool enableCache>
 FLATTEN FORCE_INLINE void SH2::MemPokeByte(uint32 address, uint8 value) {
-    MemWrite<uint8, true, false>(address, value);
+    MemWrite<uint8, true, false, enableCache>(address, value);
 }
 
+template <bool enableCache>
 FLATTEN FORCE_INLINE void SH2::MemPokeWord(uint32 address, uint16 value) {
-    MemWrite<uint16, true, false>(address, value);
+    MemWrite<uint16, true, false, enableCache>(address, value);
 }
 
+template <bool enableCache>
 FLATTEN FORCE_INLINE void SH2::MemPokeLong(uint32 address, uint32 value) {
-    MemWrite<uint32, true, false>(address, value);
+    MemWrite<uint32, true, false, enableCache>(address, value);
 }
 
 template <mem_primitive T>
@@ -767,21 +780,21 @@ FORCE_INLINE uint32 SH2::OnChipRegReadLong(uint32 address) {
     }
 }
 
-template <mem_primitive T, bool poke, bool debug>
+template <mem_primitive T, bool poke, bool debug, bool enableCache>
 void SH2::OnChipRegWrite(uint32 address, T value) {
     // Misaligned memory accesses raise an address error, therefore:
     //   (address & 3) == 2 is only valid for 16-bit accesses
     //   (address & 1) == 1 is only valid for 8-bit accesses
     if constexpr (std::is_same_v<T, uint32>) {
-        OnChipRegWriteLong<poke, debug>(address, value);
+        OnChipRegWriteLong<poke, debug, enableCache>(address, value);
     } else if constexpr (std::is_same_v<T, uint16>) {
-        OnChipRegWriteWord<poke, debug>(address, value);
+        OnChipRegWriteWord<poke, debug, enableCache>(address, value);
     } else if constexpr (std::is_same_v<T, uint8>) {
-        OnChipRegWriteByte<poke, debug>(address, value);
+        OnChipRegWriteByte<poke, debug, enableCache>(address, value);
     }
 }
 
-template <bool poke, bool debug>
+template <bool poke, bool debug, bool enableCache>
 FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     if (address >= 0x100) {
         if constexpr (poke) {
@@ -789,7 +802,7 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
             const uint16 shift = (~address & 1) & 8u;
             const uint16 mask = ~(0xFF << shift);
             currValue = (currValue & mask) | (value << shift);
-            OnChipRegWriteWord<true, debug>(address & ~1, currValue);
+            OnChipRegWriteWord<true, debug, enableCache>(address & ~1, currValue);
         } else {
             // Registers 0x100-0x1FF do not accept 8-bit accesses
             // TODO: raise CPU address error
@@ -888,7 +901,7 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     }
 }
 
-template <bool poke, bool debug>
+template <bool poke, bool debug, bool enableCache>
 FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
     switch (address) {
     case 0x60:
@@ -906,8 +919,8 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
     case 0xE3:
     case 0xE4:
     case 0xE5:
-        OnChipRegWriteByte<poke, debug>(address & ~1, value >> 8u);
-        OnChipRegWriteByte<poke, debug>(address | 1, value >> 0u);
+        OnChipRegWriteByte<poke, debug, enableCache>(address & ~1, value >> 8u);
+        OnChipRegWriteByte<poke, debug, enableCache>(address | 1, value >> 0u);
         break;
 
     case 0x80:
@@ -939,7 +952,7 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
     case 0x1F0:
     case 0x1F4:
     case 0x1F8: //
-        OnChipRegWriteLong<poke, debug>(address & ~3, value);
+        OnChipRegWriteLong<poke, debug, enableCache>(address & ~3, value);
         break;
 
     default: //
@@ -951,12 +964,12 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
     }
 }
 
-template <bool poke, bool debug>
+template <bool poke, bool debug, bool enableCache>
 FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     if (address < 0x100) {
         if constexpr (poke) {
-            OnChipRegWriteWord<true, debug>(address + 0, value >> 16u);
-            OnChipRegWriteWord<true, debug>(address + 2, value >> 0u);
+            OnChipRegWriteWord<true, debug, enableCache>(address + 0, value >> 16u);
+            OnChipRegWriteWord<true, debug, enableCache>(address + 2, value >> 0u);
         } else {
             // Registers 0x000-0x0FF do not accept 32-bit accesses
             // TODO: raise CPU address error
@@ -1007,7 +1020,7 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     case 0x18C:
         m_dmaChannels[0].WriteCHCR<poke>(value);
         if constexpr (!poke) {
-            RunDMAC<debug>(0); // TODO: should be scheduled
+            RunDMAC<debug, enableCache>(0); // TODO: should be scheduled
         }
         break;
 
@@ -1017,7 +1030,7 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     case 0x19C:
         m_dmaChannels[1].WriteCHCR<poke>(value);
         if constexpr (!poke) {
-            RunDMAC<debug>(1); // TODO: should be scheduled
+            RunDMAC<debug, enableCache>(1); // TODO: should be scheduled
         }
         break;
 
@@ -1035,8 +1048,8 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
         }
         DMAOR.PR = bit::extract<3>(value);
         if constexpr (!poke) {
-            RunDMAC<debug>(0); // TODO: should be scheduled
-            RunDMAC<debug>(1); // TODO: should be scheduled
+            RunDMAC<debug, enableCache>(0); // TODO: should be scheduled
+            RunDMAC<debug, enableCache>(1); // TODO: should be scheduled
         }
         break;
 
@@ -1089,7 +1102,7 @@ FLATTEN FORCE_INLINE bool SH2::IsDMATransferActive(const DMAChannel &ch) const {
     return ch.IsEnabled() && DMAOR.DME && !DMAOR.NMIF && !DMAOR.AE;
 }
 
-template <bool debug>
+template <bool debug, bool enableCache>
 void SH2::RunDMAC(uint32 channel) {
     auto &ch = m_dmaChannels[channel];
 
@@ -1133,35 +1146,35 @@ void SH2::RunDMAC(uint32 channel) {
         // Perform one unit of transfer
         switch (ch.xferSize) {
         case DMATransferSize::Byte: {
-            const uint8 value = MemReadByte(ch.srcAddress);
+            const uint8 value = MemReadByte<enableCache>(ch.srcAddress);
             devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 8-bit transfer from {:08X} to {:08X} -> {:X}", channel,
                                          ch.srcAddress, ch.dstAddress, value);
-            MemWriteByte<debug>(ch.dstAddress, value);
+            MemWriteByte<debug, enableCache>(ch.dstAddress, value);
             // TODO: trace DMA transfer data
             break;
         }
         case DMATransferSize::Word: {
-            const uint16 value = MemReadWord(ch.srcAddress);
+            const uint16 value = MemReadWord<enableCache>(ch.srcAddress);
             devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 16-bit transfer from {:08X} to {:08X} -> {:X}", channel,
                                          ch.srcAddress, ch.dstAddress, value);
-            MemWriteWord<debug>(ch.dstAddress, value);
+            MemWriteWord<debug, enableCache>(ch.dstAddress, value);
             // TODO: trace DMA transfer data
             break;
         }
         case DMATransferSize::Longword: {
-            const uint32 value = MemReadLong(ch.srcAddress);
+            const uint32 value = MemReadLong<enableCache>(ch.srcAddress);
             devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 32-bit transfer from {:08X} to {:08X} -> {:X}", channel,
                                          ch.srcAddress, ch.dstAddress, value);
-            MemWriteLong<debug>(ch.dstAddress, value);
+            MemWriteLong<debug, enableCache>(ch.dstAddress, value);
             // TODO: trace DMA transfer data
             break;
         }
         case DMATransferSize::QuadLongword:
             for (int i = 0; i < 4; i++) {
-                const uint32 value = MemReadLong(ch.srcAddress + i * sizeof(uint32));
+                const uint32 value = MemReadLong<enableCache>(ch.srcAddress + i * sizeof(uint32));
                 devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 16-byte transfer {:d} from {:08X} to {:08X} -> {:X}",
                                              channel, i, ch.srcAddress, ch.dstAddress, value);
-                MemWriteLong<debug>(ch.dstAddress + i * sizeof(uint32), value);
+                MemWriteLong<debug, enableCache>(ch.dstAddress + i * sizeof(uint32), value);
                 // TODO: trace DMA transfer data
             }
             break;
@@ -1391,19 +1404,19 @@ FORCE_INLINE void SH2::SetupDelaySlot(uint32 targetAddress) {
     m_delaySlotTarget = targetAddress;
 }
 
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::EnterException(uint8 vectorNumber) {
     TraceException<debug>(m_tracer, vectorNumber, PC, SR.u32);
     R[15] -= 4;
-    MemWriteLong<debug>(R[15], SR.u32);
+    MemWriteLong<debug, enableCache>(R[15], SR.u32);
     R[15] -= 4;
-    MemWriteLong<debug>(R[15], PC - 4);
-    PC = MemReadLong(VBR + (static_cast<uint32>(vectorNumber) << 2u));
+    MemWriteLong<debug, enableCache>(R[15], PC - 4);
+    PC = MemReadLong<enableCache>(VBR + (static_cast<uint32>(vectorNumber) << 2u));
 }
 
 // -----------------------------------------------------------------------------
 // Instruction interpreters
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE uint64 SH2::InterpretNext() {
     if (!m_delaySlot && CheckInterrupts()) [[unlikely]] {
         // Service interrupt
@@ -1411,7 +1424,7 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
         TraceInterrupt<debug>(m_tracer, vecNum, INTC.pending.level, INTC.pending.source, PC);
         devlog::trace<grp::exec>(m_logPrefix, "Handling interrupt level {:02X}, vector number {:02X}",
                                  INTC.pending.level, vecNum);
-        EnterException<debug>(vecNum);
+        EnterException<debug, enableCache>(vecNum);
         SR.ILevel = std::min<uint8>(INTC.pending.level, 0xF);
 
         // Acknowledge interrupt
@@ -1433,7 +1446,7 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
         m_delaySlot = false;
     };
 
-    const uint16 instr = FetchInstruction(PC);
+    const uint16 instr = FetchInstruction<enableCache>(PC);
     TraceExecuteInstruction<debug>(m_tracer, PC, instr, m_delaySlot);
 
     const OpcodeType opcode = g_decodeTable.opcodes[m_delaySlot][instr];
@@ -1445,39 +1458,39 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::SLEEP: SLEEP(), PC += 2; return 3;
 
     case OpcodeType::MOV_R: MOV(args), PC += 2; return 1;
-    case OpcodeType::MOVB_L: MOVBL(args), PC += 2; return 1;
-    case OpcodeType::MOVW_L: MOVWL(args), PC += 2; return 1;
-    case OpcodeType::MOVL_L: MOVLL(args), PC += 2; return 1;
-    case OpcodeType::MOVB_L0: MOVBL0(args), PC += 2; return 1;
-    case OpcodeType::MOVW_L0: MOVWL0(args), PC += 2; return 1;
-    case OpcodeType::MOVL_L0: MOVLL0(args), PC += 2; return 1;
-    case OpcodeType::MOVB_L4: MOVBL4(args), PC += 2; return 1;
-    case OpcodeType::MOVW_L4: MOVWL4(args), PC += 2; return 1;
-    case OpcodeType::MOVL_L4: MOVLL4(args), PC += 2; return 1;
-    case OpcodeType::MOVB_LG: MOVBLG(args), PC += 2; return 1;
-    case OpcodeType::MOVW_LG: MOVWLG(args), PC += 2; return 1;
-    case OpcodeType::MOVL_LG: MOVLLG(args), PC += 2; return 1;
-    case OpcodeType::MOVB_M: MOVBM<debug>(args), PC += 2; return 1;
-    case OpcodeType::MOVW_M: MOVWM<debug>(args), PC += 2; return 1;
-    case OpcodeType::MOVL_M: MOVLM<debug>(args), PC += 2; return 1;
-    case OpcodeType::MOVB_P: MOVBP(args), PC += 2; return 1;
-    case OpcodeType::MOVW_P: MOVWP(args), PC += 2; return 1;
-    case OpcodeType::MOVL_P: MOVLP(args), PC += 2; return 1;
-    case OpcodeType::MOVB_S: MOVBS<debug>(args), PC += 2; return 1;
-    case OpcodeType::MOVW_S: MOVWS<debug>(args), PC += 2; return 1;
-    case OpcodeType::MOVL_S: MOVLS<debug>(args), PC += 2; return 1;
-    case OpcodeType::MOVB_S0: MOVBS0<debug>(args), PC += 2; return 1;
-    case OpcodeType::MOVW_S0: MOVWS0<debug>(args), PC += 2; return 1;
-    case OpcodeType::MOVL_S0: MOVLS0<debug>(args), PC += 2; return 1;
-    case OpcodeType::MOVB_S4: MOVBS4<debug>(args), PC += 2; return 1;
-    case OpcodeType::MOVW_S4: MOVWS4<debug>(args), PC += 2; return 1;
-    case OpcodeType::MOVL_S4: MOVLS4<debug>(args), PC += 2; return 1;
-    case OpcodeType::MOVB_SG: MOVBSG<debug>(args), PC += 2; return 1;
-    case OpcodeType::MOVW_SG: MOVWSG<debug>(args), PC += 2; return 1;
-    case OpcodeType::MOVL_SG: MOVLSG<debug>(args), PC += 2; return 1;
+    case OpcodeType::MOVB_L: MOVBL<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVW_L: MOVWL<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVL_L: MOVLL<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVB_L0: MOVBL0<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVW_L0: MOVWL0<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVL_L0: MOVLL0<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVB_L4: MOVBL4<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVW_L4: MOVWL4<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVL_L4: MOVLL4<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVB_LG: MOVBLG<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVW_LG: MOVWLG<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVL_LG: MOVLLG<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVB_M: MOVBM<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVW_M: MOVWM<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVL_M: MOVLM<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVB_P: MOVBP<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVW_P: MOVWP<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVL_P: MOVLP<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVB_S: MOVBS<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVW_S: MOVWS<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVL_S: MOVLS<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVB_S0: MOVBS0<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVW_S0: MOVWS0<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVL_S0: MOVLS0<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVB_S4: MOVBS4<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVW_S4: MOVWS4<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVL_S4: MOVLS4<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVB_SG: MOVBSG<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVW_SG: MOVWSG<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVL_SG: MOVLSG<debug, enableCache>(args), PC += 2; return 1;
     case OpcodeType::MOV_I: MOVI(args), PC += 2; return 1;
-    case OpcodeType::MOVW_I: MOVWI(args), PC += 2; return 1;
-    case OpcodeType::MOVL_I: MOVLI(args), PC += 2; return 1;
+    case OpcodeType::MOVW_I: MOVWI<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::MOVL_I: MOVLI<debug, enableCache>(args), PC += 2; return 1;
     case OpcodeType::MOVA: MOVA(args), PC += 2; return 1;
     case OpcodeType::MOVT: MOVT(args), PC += 2; return 1;
     case OpcodeType::CLRT: CLRT(), PC += 2; return 1;
@@ -1494,27 +1507,27 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::LDC_GBR_R: LDCGBR(args), PC += 2; return 1;
     case OpcodeType::LDC_SR_R: LDCSR(args), PC += 2; return 1;
     case OpcodeType::LDC_VBR_R: LDCVBR(args), PC += 2; return 1;
-    case OpcodeType::LDC_GBR_M: LDCMGBR(args), PC += 2; return 3;
-    case OpcodeType::LDC_SR_M: LDCMSR(args), PC += 2; return 3;
-    case OpcodeType::LDC_VBR_M: LDCMVBR(args), PC += 2; return 3;
+    case OpcodeType::LDC_GBR_M: LDCMGBR<debug, enableCache>(args), PC += 2; return 3;
+    case OpcodeType::LDC_SR_M: LDCMSR<debug, enableCache>(args), PC += 2; return 3;
+    case OpcodeType::LDC_VBR_M: LDCMVBR<debug, enableCache>(args), PC += 2; return 3;
     case OpcodeType::LDS_MACH_R: LDSMACH(args), PC += 2; return 1;
     case OpcodeType::LDS_MACL_R: LDSMACL(args), PC += 2; return 1;
     case OpcodeType::LDS_PR_R: LDSPR(args), PC += 2; return 1;
-    case OpcodeType::LDS_MACH_M: LDSMMACH(args), PC += 2; return 1;
-    case OpcodeType::LDS_MACL_M: LDSMMACL(args), PC += 2; return 1;
-    case OpcodeType::LDS_PR_M: LDSMPR(args), PC += 2; return 1;
+    case OpcodeType::LDS_MACH_M: LDSMMACH<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::LDS_MACL_M: LDSMMACL<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::LDS_PR_M: LDSMPR<debug, enableCache>(args), PC += 2; return 1;
     case OpcodeType::STC_GBR_R: STCGBR(args), PC += 2; return 1;
     case OpcodeType::STC_SR_R: STCSR(args), PC += 2; return 1;
     case OpcodeType::STC_VBR_R: STCVBR(args), PC += 2; return 1;
-    case OpcodeType::STC_GBR_M: STCMGBR<debug>(args), PC += 2; return 2;
-    case OpcodeType::STC_SR_M: STCMSR<debug>(args), PC += 2; return 2;
-    case OpcodeType::STC_VBR_M: STCMVBR<debug>(args), PC += 2; return 2;
+    case OpcodeType::STC_GBR_M: STCMGBR<debug, enableCache>(args), PC += 2; return 2;
+    case OpcodeType::STC_SR_M: STCMSR<debug, enableCache>(args), PC += 2; return 2;
+    case OpcodeType::STC_VBR_M: STCMVBR<debug, enableCache>(args), PC += 2; return 2;
     case OpcodeType::STS_MACH_R: STSMACH(args), PC += 2; return 1;
     case OpcodeType::STS_MACL_R: STSMACL(args), PC += 2; return 1;
     case OpcodeType::STS_PR_R: STSPR(args), PC += 2; return 1;
-    case OpcodeType::STS_MACH_M: STSMMACH<debug>(args), PC += 2; return 1;
-    case OpcodeType::STS_MACL_M: STSMMACL<debug>(args), PC += 2; return 1;
-    case OpcodeType::STS_PR_M: STSMPR<debug>(args), PC += 2; return 1;
+    case OpcodeType::STS_MACH_M: STSMMACH<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::STS_MACL_M: STSMMACL<debug, enableCache>(args), PC += 2; return 1;
+    case OpcodeType::STS_PR_M: STSMPR<debug, enableCache>(args), PC += 2; return 1;
 
     case OpcodeType::ADD: ADD(args), PC += 2; return 1;
     case OpcodeType::ADD_I: ADDI(args), PC += 2; return 1;
@@ -1522,13 +1535,13 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::ADDV: ADDV(args), PC += 2; return 1;
     case OpcodeType::AND_R: AND(args), PC += 2; return 1;
     case OpcodeType::AND_I: ANDI(args), PC += 2; return 1;
-    case OpcodeType::AND_M: ANDM<debug>(args), PC += 2; return 3;
+    case OpcodeType::AND_M: ANDM<debug, enableCache>(args), PC += 2; return 3;
     case OpcodeType::NEG: NEG(args), PC += 2; return 1;
     case OpcodeType::NEGC: NEGC(args), PC += 2; return 1;
     case OpcodeType::NOT: NOT(args), PC += 2; return 1;
     case OpcodeType::OR_R: OR(args), PC += 2; return 1;
     case OpcodeType::OR_I: ORI(args), PC += 2; return 1;
-    case OpcodeType::OR_M: ORM<debug>(args), PC += 2; return 3;
+    case OpcodeType::OR_M: ORM<debug, enableCache>(args), PC += 2; return 3;
     case OpcodeType::ROTCL: ROTCL(args), PC += 2; return 1;
     case OpcodeType::ROTCR: ROTCR(args), PC += 2; return 1;
     case OpcodeType::ROTL: ROTL(args), PC += 2; return 1;
@@ -1548,13 +1561,13 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::SUBV: SUBV(args), PC += 2; return 1;
     case OpcodeType::XOR_R: XOR(args), PC += 2; return 1;
     case OpcodeType::XOR_I: XORI(args), PC += 2; return 1;
-    case OpcodeType::XOR_M: XORM<debug>(args), PC += 2; return 3;
+    case OpcodeType::XOR_M: XORM<debug, enableCache>(args), PC += 2; return 3;
 
     case OpcodeType::DT: DT(args), PC += 2; return 1;
 
     case OpcodeType::CLRMAC: CLRMAC(), PC += 2; return 1;
-    case OpcodeType::MACW: MACW(args), PC += 2; return 2;
-    case OpcodeType::MACL: MACL(args), PC += 2; return 2;
+    case OpcodeType::MACW: MACW<debug, enableCache>(args), PC += 2; return 2;
+    case OpcodeType::MACL: MACL<debug, enableCache>(args), PC += 2; return 2;
     case OpcodeType::MUL: MULL(args), PC += 2; return 2;
     case OpcodeType::MULS: MULS(args), PC += 2; return 1;
     case OpcodeType::MULU: MULU(args), PC += 2; return 1;
@@ -1574,49 +1587,49 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::CMP_PL: CMPPL(args), PC += 2; return 1;
     case OpcodeType::CMP_PZ: CMPPZ(args), PC += 2; return 1;
     case OpcodeType::CMP_STR: CMPSTR(args), PC += 2; return 1;
-    case OpcodeType::TAS: TAS<debug>(args), PC += 2; return 4;
+    case OpcodeType::TAS: TAS<debug, enableCache>(args), PC += 2; return 4;
     case OpcodeType::TST_R: TST(args), PC += 2; return 1;
     case OpcodeType::TST_I: TSTI(args), PC += 2; return 1;
-    case OpcodeType::TST_M: TSTM(args), PC += 2; return 3;
+    case OpcodeType::TST_M: TSTM<debug, enableCache>(args), PC += 2; return 3;
 
     case OpcodeType::Delay_NOP: NOP(), jumpToDelaySlot(); return 1;
 
     case OpcodeType::Delay_SLEEP: SLEEP(), jumpToDelaySlot(); return 3;
 
     case OpcodeType::Delay_MOV_R: MOV(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_L: MOVBL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_L: MOVWL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_L: MOVLL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_L0: MOVBL0(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_L0: MOVWL0(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_L0: MOVLL0(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_L4: MOVBL4(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_L4: MOVWL4(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_L4: MOVLL4(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_LG: MOVBLG(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_LG: MOVWLG(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_LG: MOVLLG(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_M: MOVBM<debug>(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_M: MOVWM<debug>(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_M: MOVLM<debug>(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_P: MOVBP(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_P: MOVWP(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_P: MOVLP(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_S: MOVBS<debug>(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_S: MOVWS<debug>(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_S: MOVLS<debug>(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_S0: MOVBS0<debug>(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_S0: MOVWS0<debug>(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_S0: MOVLS0<debug>(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_S4: MOVBS4<debug>(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_S4: MOVWS4<debug>(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_S4: MOVLS4<debug>(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVB_SG: MOVBSG<debug>(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_SG: MOVWSG<debug>(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_SG: MOVLSG<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_L: MOVBL<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_L: MOVWL<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_L: MOVLL<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_L0: MOVBL0<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_L0: MOVWL0<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_L0: MOVLL0<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_L4: MOVBL4<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_L4: MOVWL4<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_L4: MOVLL4<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_LG: MOVBLG<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_LG: MOVWLG<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_LG: MOVLLG<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_M: MOVBM<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_M: MOVWM<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_M: MOVLM<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_P: MOVBP<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_P: MOVWP<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_P: MOVLP<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_S: MOVBS<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_S: MOVWS<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_S: MOVLS<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_S0: MOVBS0<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_S0: MOVWS0<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_S0: MOVLS0<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_S4: MOVBS4<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_S4: MOVWS4<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_S4: MOVLS4<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVB_SG: MOVBSG<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_SG: MOVWSG<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_SG: MOVLSG<debug, enableCache>(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_MOV_I: MOVI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVW_I: MOVWI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MOVL_I: MOVLI(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVW_I: MOVWI<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_MOVL_I: MOVLI<debug, enableCache>(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_MOVA: MOVA(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_MOVT: MOVT(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_CLRT: CLRT(), jumpToDelaySlot(); return 1;
@@ -1633,27 +1646,27 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::Delay_LDC_GBR_R: LDCGBR(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_LDC_SR_R: LDCSR(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_LDC_VBR_R: LDCVBR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_LDC_GBR_M: LDCMGBR(args), jumpToDelaySlot(); return 3;
-    case OpcodeType::Delay_LDC_SR_M: LDCMSR(args), jumpToDelaySlot(); return 3;
-    case OpcodeType::Delay_LDC_VBR_M: LDCMVBR(args), jumpToDelaySlot(); return 3;
+    case OpcodeType::Delay_LDC_GBR_M: LDCMGBR<debug, enableCache>(args), jumpToDelaySlot(); return 3;
+    case OpcodeType::Delay_LDC_SR_M: LDCMSR<debug, enableCache>(args), jumpToDelaySlot(); return 3;
+    case OpcodeType::Delay_LDC_VBR_M: LDCMVBR<debug, enableCache>(args), jumpToDelaySlot(); return 3;
     case OpcodeType::Delay_LDS_MACH_R: LDSMACH(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_LDS_MACL_R: LDSMACL(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_LDS_PR_R: LDSPR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_LDS_MACH_M: LDSMMACH(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_LDS_MACL_M: LDSMMACL(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_LDS_PR_M: LDSMPR(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_LDS_MACH_M: LDSMMACH<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_LDS_MACL_M: LDSMMACL<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_LDS_PR_M: LDSMPR<debug, enableCache>(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_STC_GBR_R: STCGBR(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_STC_SR_R: STCSR(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_STC_VBR_R: STCVBR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STC_GBR_M: STCMGBR<debug>(args), jumpToDelaySlot(); return 2;
-    case OpcodeType::Delay_STC_SR_M: STCMSR<debug>(args), jumpToDelaySlot(); return 2;
-    case OpcodeType::Delay_STC_VBR_M: STCMVBR<debug>(args), jumpToDelaySlot(); return 2;
+    case OpcodeType::Delay_STC_GBR_M: STCMGBR<debug, enableCache>(args), jumpToDelaySlot(); return 2;
+    case OpcodeType::Delay_STC_SR_M: STCMSR<debug, enableCache>(args), jumpToDelaySlot(); return 2;
+    case OpcodeType::Delay_STC_VBR_M: STCMVBR<debug, enableCache>(args), jumpToDelaySlot(); return 2;
     case OpcodeType::Delay_STS_MACH_R: STSMACH(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_STS_MACL_R: STSMACL(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_STS_PR_R: STSPR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STS_MACH_M: STSMMACH<debug>(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STS_MACL_M: STSMMACL<debug>(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_STS_PR_M: STSMPR<debug>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_STS_MACH_M: STSMMACH<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_STS_MACL_M: STSMMACL<debug, enableCache>(args), jumpToDelaySlot(); return 1;
+    case OpcodeType::Delay_STS_PR_M: STSMPR<debug, enableCache>(args), jumpToDelaySlot(); return 1;
 
     case OpcodeType::Delay_ADD: ADD(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_ADD_I: ADDI(args), jumpToDelaySlot(); return 1;
@@ -1661,13 +1674,13 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::Delay_ADDV: ADDV(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_AND_R: AND(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_AND_I: ANDI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_AND_M: ANDM<debug>(args), jumpToDelaySlot(); return 3;
+    case OpcodeType::Delay_AND_M: ANDM<debug, enableCache>(args), jumpToDelaySlot(); return 3;
     case OpcodeType::Delay_NEG: NEG(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_NEGC: NEGC(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_NOT: NOT(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_OR_R: OR(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_OR_I: ORI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_OR_M: ORM<debug>(args), jumpToDelaySlot(); return 3;
+    case OpcodeType::Delay_OR_M: ORM<debug, enableCache>(args), jumpToDelaySlot(); return 3;
     case OpcodeType::Delay_ROTCL: ROTCL(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_ROTCR: ROTCR(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_ROTL: ROTL(args), jumpToDelaySlot(); return 1;
@@ -1687,13 +1700,13 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::Delay_SUBV: SUBV(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_XOR_R: XOR(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_XOR_I: XORI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_XOR_M: XORM<debug>(args), jumpToDelaySlot(); return 3;
+    case OpcodeType::Delay_XOR_M: XORM<debug, enableCache>(args), jumpToDelaySlot(); return 3;
 
     case OpcodeType::Delay_DT: DT(args), jumpToDelaySlot(); return 1;
 
     case OpcodeType::Delay_CLRMAC: CLRMAC(), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_MACW: MACW(args), jumpToDelaySlot(); return 2;
-    case OpcodeType::Delay_MACL: MACL(args), jumpToDelaySlot(); return 2;
+    case OpcodeType::Delay_MACW: MACW<debug, enableCache>(args), jumpToDelaySlot(); return 2;
+    case OpcodeType::Delay_MACL: MACL<debug, enableCache>(args), jumpToDelaySlot(); return 2;
     case OpcodeType::Delay_MUL: MULL(args), jumpToDelaySlot(); return 2;
     case OpcodeType::Delay_MULS: MULS(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_MULU: MULU(args), jumpToDelaySlot(); return 1;
@@ -1713,10 +1726,10 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::Delay_CMP_PL: CMPPL(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_CMP_PZ: CMPPZ(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_CMP_STR: CMPSTR(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_TAS: TAS<debug>(args), jumpToDelaySlot(); return 4;
+    case OpcodeType::Delay_TAS: TAS<debug, enableCache>(args), jumpToDelaySlot(); return 4;
     case OpcodeType::Delay_TST_R: TST(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_TST_I: TSTI(args), jumpToDelaySlot(); return 1;
-    case OpcodeType::Delay_TST_M: TSTM(args), jumpToDelaySlot(); return 3;
+    case OpcodeType::Delay_TST_M: TSTM<debug, enableCache>(args), jumpToDelaySlot(); return 3;
 
     case OpcodeType::BF: return BF(args);
     case OpcodeType::BFS: return BFS(args);
@@ -1728,18 +1741,20 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::BSRF: BSRF(args); return 2;
     case OpcodeType::JMP: JMP(args); return 2;
     case OpcodeType::JSR: JSR(args); return 2;
-    case OpcodeType::TRAPA: TRAPA<debug>(args); return 8;
+    case OpcodeType::TRAPA: TRAPA<debug, enableCache>(args); return 8;
 
-    case OpcodeType::RTE: RTE(); return 4;
+    case OpcodeType::RTE: RTE<debug, enableCache>(); return 4;
     case OpcodeType::RTS: RTS(); return 2;
 
-    case OpcodeType::Illegal: EnterException<debug>(xvGenIllegalInstr); return 8;
-    case OpcodeType::IllegalSlot: EnterException<debug>(xvSlotIllegalInstr); return 8;
+    case OpcodeType::Illegal: EnterException<debug, enableCache>(xvGenIllegalInstr); return 8;
+    case OpcodeType::IllegalSlot: EnterException<debug, enableCache>(xvSlotIllegalInstr); return 8;
     }
 }
 
-template uint64 SH2::InterpretNext<false>();
-template uint64 SH2::InterpretNext<true>();
+template uint64 SH2::InterpretNext<false, false>();
+template uint64 SH2::InterpretNext<false, true>();
+template uint64 SH2::InterpretNext<true, false>();
+template uint64 SH2::InterpretNext<true, true>();
 
 // nop
 FORCE_INLINE void SH2::NOP() {}
@@ -1773,180 +1788,195 @@ FORCE_INLINE void SH2::MOV(const DecodedArgs &args) {
 }
 
 // mov.b @Rm, Rn
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVBL(const DecodedArgs &args) {
-    R[args.rn] = bit::sign_extend<8>(MemReadByte(R[args.rm]));
+    R[args.rn] = bit::sign_extend<8>(MemReadByte<enableCache>(R[args.rm]));
 }
 
 // mov.w @Rm, Rn
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVWL(const DecodedArgs &args) {
-    R[args.rn] = bit::sign_extend<16>(MemReadWord(R[args.rm]));
+    R[args.rn] = bit::sign_extend<16>(MemReadWord<enableCache>(R[args.rm]));
 }
 
 // mov.l @Rm, Rn
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVLL(const DecodedArgs &args) {
-    R[args.rn] = MemReadLong(R[args.rm]);
+    R[args.rn] = MemReadLong<enableCache>(R[args.rm]);
 }
 
 // mov.b @(R0,Rm), Rn
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVBL0(const DecodedArgs &args) {
-    R[args.rn] = bit::sign_extend<8>(MemReadByte(R[args.rm] + R[0]));
+    R[args.rn] = bit::sign_extend<8>(MemReadByte<enableCache>(R[args.rm] + R[0]));
 }
 
 // mov.w @(R0,Rm), Rn
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVWL0(const DecodedArgs &args) {
-    R[args.rn] = bit::sign_extend<16>(MemReadWord(R[args.rm] + R[0]));
+    R[args.rn] = bit::sign_extend<16>(MemReadWord<enableCache>(R[args.rm] + R[0]));
 }
 
 // mov.l @(R0,Rm), Rn
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVLL0(const DecodedArgs &args) {
-    R[args.rn] = MemReadLong(R[args.rm] + R[0]);
+    R[args.rn] = MemReadLong<enableCache>(R[args.rm] + R[0]);
 }
 
 // mov.b @(disp,Rm), R0
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVBL4(const DecodedArgs &args) {
-    R[0] = bit::sign_extend<8>(MemReadByte(R[args.rm] + args.dispImm));
+    R[0] = bit::sign_extend<8>(MemReadByte<enableCache>(R[args.rm] + args.dispImm));
 }
 
 // mov.w @(disp,Rm), R0
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVWL4(const DecodedArgs &args) {
-    R[0] = bit::sign_extend<16>(MemReadWord(R[args.rm] + args.dispImm));
+    R[0] = bit::sign_extend<16>(MemReadWord<enableCache>(R[args.rm] + args.dispImm));
 }
 
 // mov.l @(disp,Rm), Rn
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVLL4(const DecodedArgs &args) {
-    R[args.rn] = MemReadLong(R[args.rm] + args.dispImm);
+    R[args.rn] = MemReadLong<enableCache>(R[args.rm] + args.dispImm);
 }
 
 // mov.b @(disp,GBR), R0
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVBLG(const DecodedArgs &args) {
-    R[0] = bit::sign_extend<8>(MemReadByte(GBR + args.dispImm));
+    R[0] = bit::sign_extend<8>(MemReadByte<enableCache>(GBR + args.dispImm));
 }
 
 // mov.w @(disp,GBR), R0
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVWLG(const DecodedArgs &args) {
-    R[0] = bit::sign_extend<16>(MemReadWord(GBR + args.dispImm));
+    R[0] = bit::sign_extend<16>(MemReadWord<enableCache>(GBR + args.dispImm));
 }
 
 // mov.l @(disp,GBR), R0
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVLLG(const DecodedArgs &args) {
-    R[0] = MemReadLong(GBR + args.dispImm);
+    R[0] = MemReadLong<enableCache>(GBR + args.dispImm);
 }
 
 // mov.b Rm, @-Rn
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVBM(const DecodedArgs &args) {
-    MemWriteByte<debug>(R[args.rn] - 1, R[args.rm]);
+    MemWriteByte<debug, enableCache>(R[args.rn] - 1, R[args.rm]);
     R[args.rn] -= 1;
 }
 
 // mov.w Rm, @-Rn
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVWM(const DecodedArgs &args) {
-    MemWriteWord<debug>(R[args.rn] - 2, R[args.rm]);
+    MemWriteWord<debug, enableCache>(R[args.rn] - 2, R[args.rm]);
     R[args.rn] -= 2;
 }
 
 // mov.l Rm, @-Rn
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVLM(const DecodedArgs &args) {
-    MemWriteLong<debug>(R[args.rn] - 4, R[args.rm]);
+    MemWriteLong<debug, enableCache>(R[args.rn] - 4, R[args.rm]);
     R[args.rn] -= 4;
 }
 
 // mov.b @Rm+, Rn
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVBP(const DecodedArgs &args) {
-    R[args.rn] = bit::sign_extend<8>(MemReadByte(R[args.rm]));
+    R[args.rn] = bit::sign_extend<8>(MemReadByte<enableCache>(R[args.rm]));
     if (args.rn != args.rm) {
         R[args.rm] += 1;
     }
 }
 
 // mov.w @Rm+, Rn
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVWP(const DecodedArgs &args) {
-    R[args.rn] = bit::sign_extend<16>(MemReadWord(R[args.rm]));
+    R[args.rn] = bit::sign_extend<16>(MemReadWord<enableCache>(R[args.rm]));
     if (args.rn != args.rm) {
         R[args.rm] += 2;
     }
 }
 
 // mov.l @Rm+, Rn
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVLP(const DecodedArgs &args) {
-    R[args.rn] = MemReadLong(R[args.rm]);
+    R[args.rn] = MemReadLong<enableCache>(R[args.rm]);
     if (args.rn != args.rm) {
         R[args.rm] += 4;
     }
 }
 
 // mov.b Rm, @Rn
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVBS(const DecodedArgs &args) {
-    MemWriteByte<debug>(R[args.rn], R[args.rm]);
+    MemWriteByte<debug, enableCache>(R[args.rn], R[args.rm]);
 }
 
 // mov.w Rm, @Rn
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVWS(const DecodedArgs &args) {
-    MemWriteWord<debug>(R[args.rn], R[args.rm]);
+    MemWriteWord<debug, enableCache>(R[args.rn], R[args.rm]);
 }
 
 // mov.l Rm, @Rn
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVLS(const DecodedArgs &args) {
-    MemWriteLong<debug>(R[args.rn], R[args.rm]);
+    MemWriteLong<debug, enableCache>(R[args.rn], R[args.rm]);
 }
 
 // mov.b Rm, @(R0,Rn)
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVBS0(const DecodedArgs &args) {
-    MemWriteByte<debug>(R[args.rn] + R[0], R[args.rm]);
+    MemWriteByte<debug, enableCache>(R[args.rn] + R[0], R[args.rm]);
 }
 
 // mov.w Rm, @(R0,Rn)
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVWS0(const DecodedArgs &args) {
-    MemWriteWord<debug>(R[args.rn] + R[0], R[args.rm]);
+    MemWriteWord<debug, enableCache>(R[args.rn] + R[0], R[args.rm]);
 }
 
 // mov.l Rm, @(R0,Rn)
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVLS0(const DecodedArgs &args) {
-    MemWriteLong<debug>(R[args.rn] + R[0], R[args.rm]);
+    MemWriteLong<debug, enableCache>(R[args.rn] + R[0], R[args.rm]);
 }
 
 // mov.b R0, @(disp,Rn)
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVBS4(const DecodedArgs &args) {
-    MemWriteByte<debug>(R[args.rn] + args.dispImm, R[0]);
+    MemWriteByte<debug, enableCache>(R[args.rn] + args.dispImm, R[0]);
 }
 
 // mov.w R0, @(disp,Rn)
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVWS4(const DecodedArgs &args) {
-    MemWriteWord<debug>(R[args.rn] + args.dispImm, R[0]);
+    MemWriteWord<debug, enableCache>(R[args.rn] + args.dispImm, R[0]);
 }
 
 // mov.l Rm, @(disp,Rn)
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVLS4(const DecodedArgs &args) {
-    MemWriteLong<debug>(R[args.rn] + args.dispImm, R[args.rm]);
+    MemWriteLong<debug, enableCache>(R[args.rn] + args.dispImm, R[args.rm]);
 }
 
 // mov.b R0, @(disp,GBR)
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVBSG(const DecodedArgs &args) {
-    MemWriteByte<debug>(GBR + args.dispImm, R[0]);
+    MemWriteByte<debug, enableCache>(GBR + args.dispImm, R[0]);
 }
 
 // mov.w R0, @(disp,GBR)
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVWSG(const DecodedArgs &args) {
-    MemWriteWord<debug>(GBR + args.dispImm, R[0]);
+    MemWriteWord<debug, enableCache>(GBR + args.dispImm, R[0]);
 }
 
 // mov.l R0, @(disp,GBR)
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVLSG(const DecodedArgs &args) {
-    MemWriteLong<debug>(GBR + args.dispImm, R[0]);
+    MemWriteLong<debug, enableCache>(GBR + args.dispImm, R[0]);
 }
 
 // mov #imm, Rn
@@ -1955,15 +1985,17 @@ FORCE_INLINE void SH2::MOVI(const DecodedArgs &args) {
 }
 
 // mov.w @(disp,PC), Rn
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVWI(const DecodedArgs &args) {
     const uint32 address = PC + args.dispImm;
-    R[args.rn] = bit::sign_extend<16>(MemReadWord(address));
+    R[args.rn] = bit::sign_extend<16>(MemReadWord<enableCache>(address));
 }
 
 // mov.l @(disp,PC), Rn
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MOVLI(const DecodedArgs &args) {
     const uint32 address = (PC & ~3u) + args.dispImm;
-    R[args.rn] = MemReadLong(address);
+    R[args.rn] = MemReadLong<enableCache>(address);
 }
 
 // mova @(disp,PC), R0
@@ -2041,20 +2073,23 @@ FORCE_INLINE void SH2::LDCVBR(const DecodedArgs &args) {
 }
 
 // ldc.l @Rm+, GBR
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::LDCMGBR(const DecodedArgs &args) {
-    GBR = MemReadLong(R[args.rm]);
+    GBR = MemReadLong<enableCache>(R[args.rm]);
     R[args.rm] += 4;
 }
 
 // ldc.l @Rm+, SR
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::LDCMSR(const DecodedArgs &args) {
-    SR.u32 = MemReadLong(R[args.rm]) & 0x000003F3;
+    SR.u32 = MemReadLong<enableCache>(R[args.rm]) & 0x000003F3;
     R[args.rm] += 4;
 }
 
 // ldc.l @Rm+, VBR
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::LDCMVBR(const DecodedArgs &args) {
-    VBR = MemReadLong(R[args.rm]);
+    VBR = MemReadLong<enableCache>(R[args.rm]);
     R[args.rm] += 4;
 }
 
@@ -2074,20 +2109,23 @@ FORCE_INLINE void SH2::LDSPR(const DecodedArgs &args) {
 }
 
 // lds.l @Rm+, MACH
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::LDSMMACH(const DecodedArgs &args) {
-    MAC.H = MemReadLong(R[args.rm]);
+    MAC.H = MemReadLong<enableCache>(R[args.rm]);
     R[args.rm] += 4;
 }
 
 // lds.l @Rm+, MACL
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::LDSMMACL(const DecodedArgs &args) {
-    MAC.L = MemReadLong(R[args.rm]);
+    MAC.L = MemReadLong<enableCache>(R[args.rm]);
     R[args.rm] += 4;
 }
 
 // lds.l @Rm+, PR
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::LDSMPR(const DecodedArgs &args) {
-    PR = MemReadLong(R[args.rm]);
+    PR = MemReadLong<enableCache>(R[args.rm]);
     R[args.rm] += 4;
 }
 
@@ -2107,24 +2145,24 @@ FORCE_INLINE void SH2::STCVBR(const DecodedArgs &args) {
 }
 
 // stc.l GBR, @-Rn
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::STCMGBR(const DecodedArgs &args) {
     R[args.rn] -= 4;
-    MemWriteLong<debug>(R[args.rn], GBR);
+    MemWriteLong<debug, enableCache>(R[args.rn], GBR);
 }
 
 // stc.l SR, @-Rn
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::STCMSR(const DecodedArgs &args) {
     R[args.rn] -= 4;
-    MemWriteLong<debug>(R[args.rn], SR.u32);
+    MemWriteLong<debug, enableCache>(R[args.rn], SR.u32);
 }
 
 // stc.l VBR, @-Rn
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::STCMVBR(const DecodedArgs &args) {
     R[args.rn] -= 4;
-    MemWriteLong<debug>(R[args.rn], VBR);
+    MemWriteLong<debug, enableCache>(R[args.rn], VBR);
 }
 
 // sts MACH, Rn
@@ -2143,24 +2181,24 @@ FORCE_INLINE void SH2::STSPR(const DecodedArgs &args) {
 }
 
 // sts.l MACH, @-Rn
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::STSMMACH(const DecodedArgs &args) {
     R[args.rn] -= 4;
-    MemWriteLong<debug>(R[args.rn], MAC.H);
+    MemWriteLong<debug, enableCache>(R[args.rn], MAC.H);
 }
 
 // sts.l MACL, @-Rn
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::STSMMACL(const DecodedArgs &args) {
     R[args.rn] -= 4;
-    MemWriteLong<debug>(R[args.rn], MAC.L);
+    MemWriteLong<debug, enableCache>(R[args.rn], MAC.L);
 }
 
 // sts.l PR, @-Rn
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::STSMPR(const DecodedArgs &args) {
     R[args.rn] -= 4;
-    MemWriteLong<debug>(R[args.rn], PR);
+    MemWriteLong<debug, enableCache>(R[args.rn], PR);
 }
 
 // add Rm, Rn
@@ -2204,11 +2242,11 @@ FORCE_INLINE void SH2::ANDI(const DecodedArgs &args) {
 }
 
 // and.b #imm, @(R0,GBR)
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::ANDM(const DecodedArgs &args) {
-    uint8 tmp = MemReadByte(GBR + R[0]);
+    uint8 tmp = MemReadByte<enableCache>(GBR + R[0]);
     tmp &= args.dispImm;
-    MemWriteByte<debug>(GBR + R[0], tmp);
+    MemWriteByte<debug, enableCache>(GBR + R[0], tmp);
 }
 
 // neg Rm, Rn
@@ -2239,11 +2277,11 @@ FORCE_INLINE void SH2::ORI(const DecodedArgs &args) {
 }
 
 // or.b #imm, @(R0,GBR)
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::ORM(const DecodedArgs &args) {
-    uint8 tmp = MemReadByte(GBR + R[0]);
+    uint8 tmp = MemReadByte<enableCache>(GBR + R[0]);
     tmp |= args.dispImm;
-    MemWriteByte<debug>(GBR + R[0], tmp);
+    MemWriteByte<debug, enableCache>(GBR + R[0], tmp);
 }
 
 // rotcl Rn
@@ -2363,11 +2401,11 @@ FORCE_INLINE void SH2::XORI(const DecodedArgs &args) {
 }
 
 // xor.b #imm, @(R0,GBR)
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::XORM(const DecodedArgs &args) {
-    uint8 tmp = MemReadByte(GBR + R[0]);
+    uint8 tmp = MemReadByte<enableCache>(GBR + R[0]);
     tmp ^= args.dispImm;
-    MemWriteByte<debug>(GBR + R[0], tmp);
+    MemWriteByte<debug, enableCache>(GBR + R[0], tmp);
 }
 
 // dt Rn
@@ -2382,10 +2420,11 @@ FORCE_INLINE void SH2::CLRMAC() {
 }
 
 // mac.w @Rm+, @Rn+
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MACW(const DecodedArgs &args) {
-    const sint32 op1 = static_cast<sint16>(MemReadWord(R[args.rm]));
+    const sint32 op1 = static_cast<sint16>(MemReadWord<enableCache>(R[args.rm]));
     R[args.rm] += 2;
-    const sint32 op2 = static_cast<sint16>(MemReadWord(R[args.rn]));
+    const sint32 op2 = static_cast<sint16>(MemReadWord<enableCache>(R[args.rn]));
     R[args.rn] += 2;
 
     const sint32 mul = op1 * op2;
@@ -2404,10 +2443,11 @@ FORCE_INLINE void SH2::MACW(const DecodedArgs &args) {
 }
 
 // mac.l @Rm+, @Rn+
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::MACL(const DecodedArgs &args) {
-    const sint64 op1 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[args.rm])));
+    const sint64 op1 = static_cast<sint64>(static_cast<sint32>(MemReadLong<enableCache>(R[args.rm])));
     R[args.rm] += 4;
-    const sint64 op2 = static_cast<sint64>(static_cast<sint32>(MemReadLong(R[args.rn])));
+    const sint64 op2 = static_cast<sint64>(static_cast<sint32>(MemReadLong<enableCache>(R[args.rn])));
     R[args.rn] += 4;
 
     const sint64 mul = op1 * op2;
@@ -2544,13 +2584,13 @@ FORCE_INLINE void SH2::CMPSTR(const DecodedArgs &args) {
 }
 
 // tas.b @Rn
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::TAS(const DecodedArgs &args) {
     // TODO: enable bus lock on this read
-    const uint8 tmp = MemReadByte(R[args.rn]);
+    const uint8 tmp = MemReadByte<enableCache>(R[args.rn]);
     SR.T = tmp == 0;
     // TODO: disable bus lock on this write
-    MemWriteByte<debug>(R[args.rn], tmp | 0x80);
+    MemWriteByte<debug, enableCache>(R[args.rn], tmp | 0x80);
 }
 
 // tst Rm, Rn
@@ -2564,8 +2604,9 @@ FORCE_INLINE void SH2::TSTI(const DecodedArgs &args) {
 }
 
 // tst.b #imm, @(R0,GBR)
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::TSTM(const DecodedArgs &args) {
-    const uint8 tmp = MemReadByte(GBR + R[0]);
+    const uint8 tmp = MemReadByte<enableCache>(GBR + R[0]);
     SR.T = (tmp & args.dispImm) == 0;
 }
 
@@ -2649,21 +2690,22 @@ FORCE_INLINE void SH2::JSR(const DecodedArgs &args) {
 }
 
 // trapa #imm
-template <bool debug>
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::TRAPA(const DecodedArgs &args) {
     R[15] -= 4;
-    MemWriteLong<debug>(R[15], SR.u32);
+    MemWriteLong<debug, enableCache>(R[15], SR.u32);
     R[15] -= 4;
-    MemWriteLong<debug>(R[15], PC - 2);
-    PC = MemReadLong(VBR + args.dispImm);
+    MemWriteLong<debug, enableCache>(R[15], PC - 2);
+    PC = MemReadLong<enableCache>(VBR + args.dispImm);
 }
 
+template <bool debug, bool enableCache>
 FORCE_INLINE void SH2::RTE() {
     // rte
-    SetupDelaySlot(MemReadLong(R[15]) + 4);
+    SetupDelaySlot(MemReadLong<enableCache>(R[15]) + 4);
     PC += 2;
     R[15] += 4;
-    SR.u32 = MemReadLong(R[15]) & 0x000003F3;
+    SR.u32 = MemReadLong<enableCache>(R[15]) & 0x000003F3;
     R[15] += 4;
 }
 
@@ -2679,62 +2721,117 @@ FORCE_INLINE void SH2::RTS() {
 SH2::Probe::Probe(SH2 &sh2)
     : m_sh2(sh2) {}
 
-uint16 SH2::Probe::FetchInstruction(uint32 address) const {
-    return m_sh2.FetchInstruction(address);
+uint16 SH2::Probe::FetchInstruction(bool enableCache, uint32 address) const {
+    if (enableCache) {
+        return m_sh2.FetchInstruction<true>(address);
+    } else {
+        return m_sh2.FetchInstruction<false>(address);
+    }
 }
 
-uint8 SH2::Probe::MemReadByte(uint32 address) const {
-    return m_sh2.MemReadByte(address);
+uint8 SH2::Probe::MemReadByte(bool enableCache, uint32 address) const {
+    if (enableCache) {
+        return m_sh2.MemReadByte<true>(address);
+    } else {
+        return m_sh2.MemReadByte<false>(address);
+    }
 }
 
-uint16 SH2::Probe::MemReadWord(uint32 address) const {
-    return m_sh2.MemReadWord(address);
+uint16 SH2::Probe::MemReadWord(bool enableCache, uint32 address) const {
+    if (enableCache) {
+        return m_sh2.MemReadWord<true>(address);
+    } else {
+        return m_sh2.MemReadWord<false>(address);
+    }
 }
 
-uint32 SH2::Probe::MemReadLong(uint32 address) const {
-    return m_sh2.MemReadLong(address);
+uint32 SH2::Probe::MemReadLong(bool enableCache, uint32 address) const {
+    if (enableCache) {
+        return m_sh2.MemReadLong<true>(address);
+    } else {
+        return m_sh2.MemReadLong<false>(address);
+    }
 }
 
-void SH2::Probe::MemWriteByte(uint32 address, uint8 value) {
-    m_sh2.MemWriteByte<false>(address, value);
+void SH2::Probe::MemWriteByte(bool enableCache, uint32 address, uint8 value) {
+    if (enableCache) {
+        m_sh2.MemWriteByte<false, true>(address, value);
+    } else {
+        m_sh2.MemWriteByte<false, false>(address, value);
+    }
 }
 
-void SH2::Probe::MemWriteWord(uint32 address, uint16 value) {
-    m_sh2.MemWriteWord<false>(address, value);
+void SH2::Probe::MemWriteWord(bool enableCache, uint32 address, uint16 value) {
+    if (enableCache) {
+        m_sh2.MemWriteWord<false, true>(address, value);
+    } else {
+        m_sh2.MemWriteWord<false, false>(address, value);
+    }
 }
 
-void SH2::Probe::MemWriteLong(uint32 address, uint32 value) {
-    m_sh2.MemWriteLong<false>(address, value);
+void SH2::Probe::MemWriteLong(bool enableCache, uint32 address, uint32 value) {
+    if (enableCache) {
+        m_sh2.MemWriteLong<false, true>(address, value);
+    } else {
+        m_sh2.MemWriteLong<false, false>(address, value);
+    }
 }
 
-uint16 SH2::Probe::PeekInstruction(uint32 address) const {
-    return m_sh2.PeekInstruction(address);
+uint16 SH2::Probe::PeekInstruction(bool enableCache, uint32 address) const {
+    if (enableCache) {
+        return m_sh2.PeekInstruction<true>(address);
+    } else {
+        return m_sh2.PeekInstruction<false>(address);
+    }
 }
 
-uint8 SH2::Probe::MemPeekByte(uint32 address) const {
-    return m_sh2.MemPeekByte(address);
+uint8 SH2::Probe::MemPeekByte(bool enableCache, uint32 address) const {
+    if (enableCache) {
+        return m_sh2.MemPeekByte<true>(address);
+    } else {
+        return m_sh2.MemPeekByte<false>(address);
+    }
 }
 
-uint16 SH2::Probe::MemPeekWord(uint32 address) const {
-    return m_sh2.MemPeekWord(address);
+uint16 SH2::Probe::MemPeekWord(bool enableCache, uint32 address) const {
+    if (enableCache) {
+        return m_sh2.MemPeekWord<true>(address);
+    } else {
+        return m_sh2.MemPeekWord<false>(address);
+    }
 }
 
-uint32 SH2::Probe::MemPeekLong(uint32 address) const {
-    return m_sh2.MemPeekLong(address);
+uint32 SH2::Probe::MemPeekLong(bool enableCache, uint32 address) const {
+    if (enableCache) {
+        return m_sh2.MemPeekLong<true>(address);
+    } else {
+        return m_sh2.MemPeekLong<false>(address);
+    }
 }
 
-void SH2::Probe::MemPokeByte(uint32 address, uint8 value) {
-    m_sh2.MemPokeByte(address, value);
+void SH2::Probe::MemPokeByte(bool enableCache, uint32 address, uint8 value) {
+    if (enableCache) {
+        m_sh2.MemPokeByte<true>(address, value);
+    } else {
+        m_sh2.MemPokeByte<false>(address, value);
+    }
 }
 
-void SH2::Probe::MemPokeWord(uint32 address, uint16 value) {
-    m_sh2.MemPokeWord(address, value);
+void SH2::Probe::MemPokeWord(bool enableCache, uint32 address, uint16 value) {
+    if (enableCache) {
+        m_sh2.MemPokeWord<true>(address, value);
+    } else {
+        m_sh2.MemPokeWord<false>(address, value);
+    }
 }
 
-void SH2::Probe::MemPokeLong(uint32 address, uint32 value) {
-    m_sh2.MemPokeLong(address, value);
+void SH2::Probe::MemPokeLong(bool enableCache, uint32 address, uint32 value) {
+    if (enableCache) {
+        m_sh2.MemPokeLong<true>(address, value);
+    } else {
+        m_sh2.MemPokeLong<false>(address, value);
+    }
 }
-
 void SH2::Probe::ExecuteDiv32() {
     m_sh2.ExecuteDiv32<true>();
 }

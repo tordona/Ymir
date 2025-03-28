@@ -58,11 +58,20 @@ struct Saturn : sys::ISystemOperations {
     // Runs the emulator until the end of the current frame.
     //
     // `debug` enables advanced debug tracing, which will impact performance.
-    void RunFrame(bool debug) {
+    // `enableSH2Cache` enables SH2 cache emulation, which will impact performance.
+    void RunFrame(bool debug, bool enableSH2Cache) {
         if (debug) {
-            RunFrame<true>();
+            if (enableSH2Cache) {
+                RunFrame<true, true>();
+            } else {
+                RunFrame<true, false>();
+            }
         } else {
-            RunFrame<false>();
+            if (enableSH2Cache) {
+                RunFrame<false, true>();
+            } else {
+                RunFrame<false, false>();
+            }
         }
     }
 
@@ -75,11 +84,11 @@ struct Saturn : sys::ISystemOperations {
 
 private:
     // Runs the emulator until the end of the current frame
-    template <bool debug>
+    template <bool debug, bool enableSH2Cache>
     void RunFrame();
 
     // Runs the emulator until the next scheduled event
-    template <bool debug>
+    template <bool debug, bool enableSH2Cache>
     void Run();
 
     // -------------------------------------------------------------------------

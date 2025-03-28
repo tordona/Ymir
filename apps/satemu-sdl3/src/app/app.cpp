@@ -1045,6 +1045,12 @@ void App::RunEmulator() {
             }
             if (ImGui::BeginMenu("Settings")) {
                 ImGui::TextUnformatted("(to be implemented)");
+                if (ImGui::MenuItem("SH2 cache emulation", nullptr, &m_context.enableSH2Cache)) {
+                    if (m_context.enableSH2Cache) {
+                        m_context.saturn.masterSH2.PurgeCache();
+                        m_context.saturn.slaveSH2.PurgeCache();
+                    }
+                }
                 ImGui::End();
             }
             if (ImGui::BeginMenu("Debug")) {
@@ -1396,13 +1402,14 @@ void App::EmulatorThread() {
             }
             case DebugWriteSH2: {
                 // TODO: support 16-bit and 32-bit writes
-                auto [address, value, enableSideEffects, master] = std::get<EmuEvent::DebugWriteSH2Data>(cmd.value);
+                auto [address, value, enableSideEffects, bypassSH2Cache, master] =
+                    std::get<EmuEvent::DebugWriteSH2Data>(cmd.value);
                 auto &sh2 = master ? m_context.saturn.masterSH2 : m_context.saturn.slaveSH2;
                 auto &probe = sh2.GetProbe();
                 if (enableSideEffects) {
-                    probe.MemWriteByte(address, value);
+                    probe.MemWriteByte(m_context.enableSH2Cache && !bypassSH2Cache, address, value);
                 } else {
-                    probe.MemPokeByte(address, value);
+                    probe.MemPokeByte(m_context.enableSH2Cache && !bypassSH2Cache, address, value);
                 }
                 break;
             }
@@ -1433,7 +1440,7 @@ void App::EmulatorThread() {
 
         // Emulate one frame
         if (!paused) {
-            m_context.saturn.RunFrame(debugTrace);
+            m_context.saturn.RunFrame(debugTrace, m_context.enableSH2Cache);
         }
         if (frameStep) {
             frameStep = false;

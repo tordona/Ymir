@@ -15,6 +15,7 @@ struct MemoryViewerState {
     SharedContext &sharedCtx;
     MemoryEditor memoryEditor;
     bool enableSideEffects = false;
+    bool bypassSH2Cache = false;
     const Region *selectedRegion = nullptr;
 };
 
@@ -126,14 +127,15 @@ namespace regions {
         auto &state = *static_cast<const MemoryViewerState *>(user_data);
         off += state.selectedRegion->baseAddress;
         auto &sh2 = master ? state.sharedCtx.saturn.masterSH2 : state.sharedCtx.saturn.slaveSH2;
-        return sh2.GetProbe().MemPeekByte(off);
+        return sh2.GetProbe().MemPeekByte(state.sharedCtx.enableSH2Cache && !state.bypassSH2Cache, off);
     }
 
     template <bool master>
     inline void SH2BusWrite(ImU8 *mem, size_t off, ImU8 d, void *user_data) {
         auto &state = *static_cast<MemoryViewerState *>(user_data);
         off += state.selectedRegion->baseAddress;
-        state.sharedCtx.eventQueues.emulator.enqueue(EmuEvent::DebugWriteSH2(off, d, state.enableSideEffects, master));
+        state.sharedCtx.eventQueues.emulator.enqueue(
+            EmuEvent::DebugWriteSH2(off, d, state.enableSideEffects, state.bypassSH2Cache, master));
     }
 
     template <bool master>
@@ -171,6 +173,17 @@ namespace regions {
         }
     }
 
+    inline void SH2CachedAreaParams(MemoryViewerState *state) {
+        ImGui::SameLine();
+        if (!state->sharedCtx.enableSH2Cache) {
+            ImGui::BeginDisabled();
+        }
+        ImGui::Checkbox("Bypass SH2 cache", &state->bypassSH2Cache);
+        if (!state->sharedCtx.enableSH2Cache) {
+            ImGui::EndDisabled();
+        }
+    }
+
     // clang-format off
     inline constexpr Region kMainRegions[] = {
         { .name = "Main address space",  .addressBlockName = "Main", .baseAddress = 0x0000000, .size = 0x8000000, .readFn = MainBusRead, .writeFn = MainBusWrite, .bgColorFn = MainBusBgColor, .paramsFn = nullptr, .hoverFn = nullptr },
@@ -197,19 +210,19 @@ namespace regions {
     };
 
     inline constexpr Region kMSH2Regions[] = {
-        { .name = "MSH2 cached address space",   .addressBlockName = "MSH2", .baseAddress = 0x00000000, .size = 0x8000000, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>,    .paramsFn = nullptr, .hoverFn = nullptr              },
-        { .name = "MSH2 uncached address space", .addressBlockName = "MSH2", .baseAddress = 0x20000000, .size = 0x8000000, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>,    .paramsFn = nullptr, .hoverFn = nullptr              },
-        { .name = "MSH2 cache address array",    .addressBlockName = "MSH2", .baseAddress = 0x60000000, .size =     0x400, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2CacheAddressBgColor, .paramsFn = nullptr, .hoverFn = SH2CacheAddressHover },
-        { .name = "MSH2 cache data array",       .addressBlockName = "MSH2", .baseAddress = 0xC0000000, .size =    0x1000, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2CacheDataBgColor,    .paramsFn = nullptr, .hoverFn = SH2CacheDataHover    },
-        { .name = "MSH2 on-chip registers",      .addressBlockName = "MSH2", .baseAddress = 0xFFFFFE00, .size =     0x200, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>,    .paramsFn = nullptr, .hoverFn = nullptr              },
+        { .name = "MSH2 cached address space",   .addressBlockName = "MSH2", .baseAddress = 0x00000000, .size = 0x8000000, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>,    .paramsFn = SH2CachedAreaParams, .hoverFn = nullptr              },
+        { .name = "MSH2 uncached address space", .addressBlockName = "MSH2", .baseAddress = 0x20000000, .size = 0x8000000, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>,    .paramsFn = nullptr,             .hoverFn = nullptr              },
+        { .name = "MSH2 cache address array",    .addressBlockName = "MSH2", .baseAddress = 0x60000000, .size =     0x400, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2CacheAddressBgColor, .paramsFn = nullptr,             .hoverFn = SH2CacheAddressHover },
+        { .name = "MSH2 cache data array",       .addressBlockName = "MSH2", .baseAddress = 0xC0000000, .size =    0x1000, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2CacheDataBgColor,    .paramsFn = nullptr,             .hoverFn = SH2CacheDataHover    },
+        { .name = "MSH2 on-chip registers",      .addressBlockName = "MSH2", .baseAddress = 0xFFFFFE00, .size =     0x200, .readFn = SH2BusRead<true>, .writeFn = SH2BusWrite<true>, .bgColorFn = SH2BusBgColor<true>,    .paramsFn = nullptr,             .hoverFn = nullptr              },
     };
 
     inline constexpr Region kSSH2Regions[] = {
-        { .name = "SSH2 cached address space",   .addressBlockName = "SSH2", .baseAddress = 0x00000000, .size = 0x8000000, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>,   .paramsFn = nullptr, .hoverFn = nullptr              },
-        { .name = "SSH2 uncached address space", .addressBlockName = "SSH2", .baseAddress = 0x20000000, .size = 0x8000000, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>,   .paramsFn = nullptr, .hoverFn = nullptr              },
-        { .name = "SSH2 cache address array",    .addressBlockName = "SSH2", .baseAddress = 0x60000000, .size =     0x400, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2CacheAddressBgColor, .paramsFn = nullptr, .hoverFn = SH2CacheAddressHover },
-        { .name = "SSH2 cache data array",       .addressBlockName = "SSH2", .baseAddress = 0xC0000000, .size =    0x1000, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2CacheDataBgColor,    .paramsFn = nullptr, .hoverFn = SH2CacheDataHover    },
-        { .name = "SSH2 on-chip registers",      .addressBlockName = "SSH2", .baseAddress = 0xFFFFFE00, .size =     0x200, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>,   .paramsFn = nullptr, .hoverFn = nullptr              },
+        { .name = "SSH2 cached address space",   .addressBlockName = "SSH2", .baseAddress = 0x00000000, .size = 0x8000000, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>,   .paramsFn = SH2CachedAreaParams, .hoverFn = nullptr              },
+        { .name = "SSH2 uncached address space", .addressBlockName = "SSH2", .baseAddress = 0x20000000, .size = 0x8000000, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>,   .paramsFn = nullptr,             .hoverFn = nullptr              },
+        { .name = "SSH2 cache address array",    .addressBlockName = "SSH2", .baseAddress = 0x60000000, .size =     0x400, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2CacheAddressBgColor, .paramsFn = nullptr,             .hoverFn = SH2CacheAddressHover },
+        { .name = "SSH2 cache data array",       .addressBlockName = "SSH2", .baseAddress = 0xC0000000, .size =    0x1000, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2CacheDataBgColor,    .paramsFn = nullptr,             .hoverFn = SH2CacheDataHover    },
+        { .name = "SSH2 on-chip registers",      .addressBlockName = "SSH2", .baseAddress = 0xFFFFFE00, .size =     0x200, .readFn = SH2BusRead<false>, .writeFn = SH2BusWrite<false>, .bgColorFn = SH2BusBgColor<false>,   .paramsFn = nullptr,             .hoverFn = nullptr              },
     };
 
     inline constexpr RegionGroup kRegionGroups[] = {

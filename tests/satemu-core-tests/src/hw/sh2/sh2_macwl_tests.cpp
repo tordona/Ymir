@@ -173,7 +173,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 MACW/MACL operations are computed
     // Run MAC.L
     probe.MAC().u64 = testData.macIn;
     probe.SR().S = testData.s;
-    sh2.Step<false>();
+    sh2.Step<false, false>();
 
     // Check results:
     // - increment both R1 and R2 by 4
@@ -195,7 +195,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 MACW/MACL operations are computed
     // Run MAC.W
     probe.MAC().u64 = testData.macIn;
     probe.SR().S = testData.s;
-    sh2.Step<false>();
+    sh2.Step<false, false>();
 
     // Check results:
     // - increment both R1 and R2 by 2
