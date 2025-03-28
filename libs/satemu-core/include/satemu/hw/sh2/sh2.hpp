@@ -226,6 +226,30 @@ public:
             m_sh2.AdvanceWDT(cycles);
         }
 
+        FORCE_INLINE DMAChannel &DMAC0() {
+            return m_sh2.m_dmaChannels[0];
+        }
+
+        FORCE_INLINE const DMAChannel &DMAC0() const {
+            return m_sh2.m_dmaChannels[0];
+        }
+
+        FORCE_INLINE DMAChannel &DMAC1() {
+            return m_sh2.m_dmaChannels[1];
+        }
+
+        FORCE_INLINE const DMAChannel &DMAC1() const {
+            return m_sh2.m_dmaChannels[1];
+        }
+
+        FORCE_INLINE RegDMAOR &DMAOR() {
+            return m_sh2.DMAOR;
+        }
+
+        FORCE_INLINE const RegDMAOR &DMAOR() const {
+            return m_sh2.DMAOR;
+        }
+
         // ---------------------------------------------------------------------
         // Cache
 

@@ -65,7 +65,9 @@ struct DMAChannel {
     //   bits   r/w  code   description
     //  31-24   R    -      Reserved - must be zero
     //   23-0   R/W  -      Transfer count
-    uint32 xferCount;
+    struct {
+        uint32 xferCount : 24;
+    };
 
     // 18C  R/W  32       00000000  CHCR0   DMA channel control register 0
     // 19C  R/W  32       00000000  CHCR1   DMA channel control register 1
@@ -211,14 +213,44 @@ struct DMAChannel {
 //                          0 = clear flag if it was set to 1
 //                          1 = no effect
 //      0   R/W  DME    DMA master enable (0=disable all channels, 1=enable all channels)
-union RegDMAOR {
-    uint32 u32;
-    struct {
-        uint32 DME : 1;
-        uint32 NMIF : 1;
-        uint32 AE : 1;
-        uint32 PR : 1;
-    };
+struct RegDMAOR {
+    RegDMAOR() {
+        Reset();
+    }
+
+    void Reset() {
+        PR = false;
+        AE = false;
+        NMIF = false;
+        DME = false;
+    }
+
+    FORCE_INLINE uint32 Read() const {
+        uint32 value = 0;
+        bit::deposit_into<3>(value, PR);
+        bit::deposit_into<2>(value, AE);
+        bit::deposit_into<1>(value, NMIF);
+        bit::deposit_into<0>(value, DME);
+        return value;
+    }
+
+    template <bool poke>
+    FORCE_INLINE void Write(uint32 value) {
+        PR = bit::extract<3>(value);
+        if constexpr (poke) {
+            AE = bit::extract<2>(value);
+            NMIF = bit::extract<1>(value);
+        } else {
+            AE &= bit::extract<2>(value);
+            NMIF &= bit::extract<1>(value);
+        }
+        DME = bit::extract<0>(value);
+    }
+
+    bool PR;   // 3   R/W  PR     Priority mode
+    bool AE;   // 2   R/W  AE     Address error flag
+    bool NMIF; // 1   R/W  NMIF   NMI flag
+    bool DME;  // 0   R/W  DME    DMA master enable (0=disable all channels, 1=enable all channels)
 };
 
 } // namespace satemu::sh2

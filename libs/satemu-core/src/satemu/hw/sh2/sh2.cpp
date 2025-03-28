@@ -203,7 +203,7 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
     RTCNT = 0x0000;
     RTCOR = 0x0000;
 
-    DMAOR.u32 = 0x00000000;
+    DMAOR.Reset();
     for (auto &ch : m_dmaChannels) {
         ch.Reset();
     }
@@ -763,7 +763,7 @@ FORCE_INLINE uint32 SH2::OnChipRegReadLong(uint32 address) {
     case 0x1A0: return INTC.GetVector(InterruptSource::DMAC0_XferEnd);
     case 0x1A8: return INTC.GetVector(InterruptSource::DMAC1_XferEnd);
 
-    case 0x1B0: return DMAOR.u32;
+    case 0x1B0: return DMAOR.Read();
 
     case 0x1E0: return BCR1.u16;
     case 0x1E4: return BCR2.u16;
@@ -1039,15 +1039,7 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     case 0x1A8: INTC.SetVector(InterruptSource::DMAC1_XferEnd, bit::extract<0, 6>(value)); break;
 
     case 0x1B0:
-        DMAOR.DME = bit::extract<0>(value);
-        if constexpr (poke) {
-            DMAOR.NMIF = bit::extract<1>(value);
-            DMAOR.AE = bit::extract<2>(value);
-        } else {
-            DMAOR.NMIF &= bit::extract<1>(value);
-            DMAOR.AE &= bit::extract<2>(value);
-        }
-        DMAOR.PR = bit::extract<3>(value);
+        DMAOR.Write<poke>(value);
         if constexpr (!poke) {
             RunDMAC<debug, enableCache>(0); // TODO: should be scheduled
             RunDMAC<debug, enableCache>(1); // TODO: should be scheduled
@@ -1771,7 +1763,7 @@ FORCE_INLINE void SH2::SLEEP() {
         for (auto &ch : m_dmaChannels) {
             ch.WriteCHCR<false>(0);
         }
-        DMAOR.u32 = 0x0;
+        DMAOR.Reset();
         FRT.Reset();
         WDT.Reset(false);
         // TODO: reset SCI
