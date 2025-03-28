@@ -127,7 +127,8 @@ namespace regions {
         auto &state = *static_cast<const MemoryViewerState *>(user_data);
         off += state.selectedRegion->baseAddress;
         auto &sh2 = master ? state.sharedCtx.saturn.masterSH2 : state.sharedCtx.saturn.slaveSH2;
-        return sh2.GetProbe().MemPeekByte(state.sharedCtx.enableSH2Cache && !state.bypassSH2Cache, off);
+        return sh2.GetProbe().MemPeekByte(state.sharedCtx.saturn.IsSH2CacheEmulationEnabled() && !state.bypassSH2Cache,
+                                          off);
     }
 
     template <bool master>
@@ -174,12 +175,13 @@ namespace regions {
     }
 
     inline void SH2CachedAreaParams(MemoryViewerState *state) {
+        const bool emulateSH2Cache = state->sharedCtx.saturn.IsSH2CacheEmulationEnabled();
         ImGui::SameLine();
-        if (!state->sharedCtx.enableSH2Cache) {
+        if (!emulateSH2Cache) {
             ImGui::BeginDisabled();
         }
         ImGui::Checkbox("Bypass SH2 cache", &state->bypassSH2Cache);
-        if (!state->sharedCtx.enableSH2Cache) {
+        if (!emulateSH2Cache) {
             ImGui::EndDisabled();
         }
     }

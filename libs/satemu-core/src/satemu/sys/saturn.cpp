@@ -35,6 +35,10 @@ Saturn::Saturn()
     SCSP.MapMemory(mainBus);
     CDBlock.MapMemory(mainBus);
 
+    m_enableDebugTracing = false;
+    m_emulateSH2Cache = false;
+    UpdateRunFrameFn();
+
     Reset(true);
 }
 
@@ -130,6 +134,23 @@ bool Saturn::IsTrayOpen() const {
     return CDBlock.IsTrayOpen();
 }
 
+void Saturn::EnableDebugTracing(bool enable) {
+    if (m_enableDebugTracing && !enable) {
+        DetachAllTracers();
+    }
+    m_enableDebugTracing = enable;
+    UpdateRunFrameFn();
+}
+
+void Saturn::EnableSH2CacheEmulation(bool enable) {
+    if (!m_emulateSH2Cache && enable) {
+        masterSH2.PurgeCache();
+        slaveSH2.PurgeCache();
+    }
+    m_emulateSH2Cache = enable;
+    UpdateRunFrameFn();
+}
+
 template <bool debug, bool enableSH2Cache>
 void Saturn::RunFrame() {
     // Use the last line phase as reference to give some leeway if we overshoot the target cycles
@@ -140,11 +161,6 @@ void Saturn::RunFrame() {
         Run<debug, enableSH2Cache>();
     }
 }
-
-template void Saturn::RunFrame<false, false>();
-template void Saturn::RunFrame<false, true>();
-template void Saturn::RunFrame<true, false>();
-template void Saturn::RunFrame<true, true>();
 
 template <bool debug, bool enableSH2Cache>
 void Saturn::Run() {
@@ -170,6 +186,12 @@ void Saturn::Run() {
     }*/
 
     m_scheduler.Advance(cycles);
+}
+
+void Saturn::UpdateRunFrameFn() {
+    m_runFrameFn = m_enableDebugTracing
+                       ? (m_emulateSH2Cache ? &Saturn::RunFrame<true, true> : &Saturn::RunFrame<true, false>)
+                       : (m_emulateSH2Cache ? &Saturn::RunFrame<false, true> : &Saturn::RunFrame<false, false>);
 }
 
 bool Saturn::GetNMI() const {

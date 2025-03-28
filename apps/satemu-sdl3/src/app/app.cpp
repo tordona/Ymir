@@ -764,7 +764,6 @@ void App::RunEmulator() {
 
     auto t = clk::now();
     bool paused = false; // TODO: this should be updated by the emulator thread via events
-    bool debugTrace = false;
 
     auto &port1 = m_context.saturn.SMPC.GetPeripheralPort1();
     auto &port2 = m_context.saturn.SMPC.GetPeripheralPort2();
@@ -878,8 +877,8 @@ void App::RunEmulator() {
             break;
         case SDL_SCANCODE_F11:
             if (pressed) {
-                debugTrace = !debugTrace;
-                m_context.eventQueues.emulator.enqueue(EmuEvent::SetDebugTrace(debugTrace));
+                m_context.eventQueues.emulator.enqueue(
+                    EmuEvent::SetDebugTrace(!m_context.saturn.IsDebugTracingEnabled()));
             }
             break;
         default: break;
@@ -1045,15 +1044,15 @@ void App::RunEmulator() {
             }
             if (ImGui::BeginMenu("Settings")) {
                 ImGui::TextUnformatted("(to be implemented)");
-                if (ImGui::MenuItem("SH2 cache emulation", nullptr, &m_context.enableSH2Cache)) {
-                    if (m_context.enableSH2Cache) {
-                        m_context.saturn.masterSH2.PurgeCache();
-                        m_context.saturn.slaveSH2.PurgeCache();
-                    }
+                ImGui::Separator();
+                bool emulateSH2Cache = m_context.saturn.IsSH2CacheEmulationEnabled();
+                if (ImGui::MenuItem("SH2 cache emulation", nullptr, &emulateSH2Cache)) {
+                    m_context.eventQueues.emulator.enqueue(EmuEvent::SetEmulateSH2Cache(emulateSH2Cache));
                 }
                 ImGui::End();
             }
             if (ImGui::BeginMenu("Debug")) {
+                bool debugTrace = m_context.saturn.IsDebugTracingEnabled();
                 if (ImGui::MenuItem("Enable tracing", "F11", &debugTrace)) {
                     m_context.eventQueues.emulator.enqueue(EmuEvent::SetDebugTrace(debugTrace));
                 }
@@ -1277,7 +1276,6 @@ void App::EmulatorThread() {
 
     bool paused = false;
     bool frameStep = false;
-    bool debugTrace = false;
 
     while (true) {
         // Process all pending commands
@@ -1299,17 +1297,25 @@ void App::EmulatorThread() {
                 paused = std::get<bool>(cmd.value);
                 m_audioSystem.SetSilent(paused);
                 break;
-            case SetDebugTrace:
-                debugTrace = std::get<bool>(cmd.value);
-                if (debugTrace) {
+            case SetDebugTrace: //
+            {
+                const bool enable = std::get<bool>(cmd.value);
+                m_context.saturn.EnableDebugTracing(enable);
+                if (enable) {
                     m_context.saturn.masterSH2.UseTracer(&m_context.tracers.masterSH2);
                     m_context.saturn.slaveSH2.UseTracer(&m_context.tracers.slaveSH2);
                     m_context.saturn.SCU.UseTracer(&m_context.tracers.SCU);
-                } else {
-                    m_context.saturn.DetachAllTracers();
                 }
-                fmt::println("Advanced debug tracing {}", (debugTrace ? "enabled" : "disabled"));
+                fmt::println("Advanced debug tracing {}", (enable ? "enabled" : "disabled"));
                 break;
+            }
+            case SetEmulateSH2Cache: //
+            {
+                const bool enable = std::get<bool>(cmd.value);
+                m_context.saturn.EnableSH2CacheEmulation(enable);
+                fmt::println("SH2 cache emulation {}", (enable ? "enabled" : "disabled"));
+                break;
+            }
             case MemoryDump: //
             {
                 {
@@ -1406,10 +1412,11 @@ void App::EmulatorThread() {
                     std::get<EmuEvent::DebugWriteSH2Data>(cmd.value);
                 auto &sh2 = master ? m_context.saturn.masterSH2 : m_context.saturn.slaveSH2;
                 auto &probe = sh2.GetProbe();
+                const bool emulateSH2Cache = m_context.saturn.IsSH2CacheEmulationEnabled();
                 if (enableSideEffects) {
-                    probe.MemWriteByte(m_context.enableSH2Cache && !bypassSH2Cache, address, value);
+                    probe.MemWriteByte(emulateSH2Cache && !bypassSH2Cache, address, value);
                 } else {
-                    probe.MemPokeByte(m_context.enableSH2Cache && !bypassSH2Cache, address, value);
+                    probe.MemPokeByte(emulateSH2Cache && !bypassSH2Cache, address, value);
                 }
                 break;
             }
@@ -1440,7 +1447,7 @@ void App::EmulatorThread() {
 
         // Emulate one frame
         if (!paused) {
-            m_context.saturn.RunFrame(debugTrace, m_context.enableSH2Cache);
+            m_context.saturn.RunFrame();
         }
         if (frameStep) {
             frameStep = false;

@@ -15,7 +15,6 @@ namespace app {
 
 struct SharedContext {
     satemu::Saturn saturn;
-    bool enableSH2Cache = false;
 
     struct Tracers {
         SH2Tracer masterSH2;

@@ -17,6 +17,7 @@ struct EmuEvent {
         SetPaused,
 
         SetDebugTrace,
+        SetEmulateSH2Cache,
         MemoryDump,
         DebugWriteMain,
         DebugWriteSH2,
@@ -73,6 +74,10 @@ struct EmuEvent {
 
     static EmuEvent SetDebugTrace(bool enabled) {
         return {.type = Type::SetDebugTrace, .value = enabled};
+    }
+
+    static EmuEvent SetEmulateSH2Cache(bool enabled) {
+        return {.type = Type::SetEmulateSH2Cache, .value = enabled};
     }
 
     static EmuEvent MemoryDump() {

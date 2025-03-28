@@ -25,8 +25,8 @@ namespace satemu {
 struct Saturn : sys::ISystemOperations {
     Saturn();
 
-    void Reset(bool hard);
-    void FactoryReset(); // Erases SMPC settings and does a hard reset
+    void Reset(bool hard); // Does a soft or hard reset of the system
+    void FactoryReset();   // Erases SMPC settings and does a hard reset
 
     sys::VideoStandard GetVideoStandard() const;
     void SetVideoStandard(sys::VideoStandard videoStandard);
@@ -34,17 +34,19 @@ struct Saturn : sys::ISystemOperations {
     sys::ClockSpeed GetClockSpeed() const;
     void SetClockSpeed(sys::ClockSpeed clockSpeed);
 
-    // -------------------------------------------------------------------------
-    // Convenience methods
-
+    // Loads the specified IPL ROM image.
     void LoadIPL(std::span<uint8, sys::kIPLSize> ipl);
 
+    // Inserts a cartridge into the cartridge slot.
+    // `T` specifies the cartridge type - a concrete implementation of cart::BaseCartridge.
+    // `args` are passed to the constructor of `T`.
     template <typename T, typename... Args>
         requires std::derived_from<T, cart::BaseCartridge>
     [[nodiscard]] bool InsertCartridge(Args &&...args) {
         return SCU.InsertCartridge<T>(std::forward<Args>(args)...);
     }
 
+    // Ejects the cartridge from the cartridge slot.
     void EjectCartridge() {
         SCU.EjectCartridge();
     }
@@ -55,24 +57,33 @@ struct Saturn : sys::ISystemOperations {
     void CloseTray();
     bool IsTrayOpen() const;
 
-    // Runs the emulator until the end of the current frame.
+    // Enables or disables debug tracing on hot paths, which is required for certain debugging features to work, such as
+    // breakpoints, watchpoints, and instruction and memory traces.
     //
-    // `debug` enables advanced debug tracing, which will impact performance.
-    // `enableSH2Cache` enables SH2 cache emulation, which will impact performance.
-    void RunFrame(bool debug, bool enableSH2Cache) {
-        if (debug) {
-            if (enableSH2Cache) {
-                RunFrame<true, true>();
-            } else {
-                RunFrame<true, false>();
-            }
-        } else {
-            if (enableSH2Cache) {
-                RunFrame<false, true>();
-            } else {
-                RunFrame<false, false>();
-            }
-        }
+    // Enabling this option incurs a noticeable performance penalty. It is disabled by default to ensure optimal
+    // performance when those features are not needed.
+    //
+    // Disabling debug tracing also detaches all tracers from all components.
+    void EnableDebugTracing(bool enable);
+
+    bool IsDebugTracingEnabled() const {
+        return m_enableDebugTracing;
+    }
+
+    // Enables or disables SH2 cache emulation.
+    //
+    // Most games work fine without this. Enable it to improve accuracy and compatibility with specific games.
+    //
+    // Enabling this option incurs a small performance penalty and purges all SH2 caches.
+    void EnableSH2CacheEmulation(bool enable);
+
+    bool IsSH2CacheEmulationEnabled() const {
+        return m_emulateSH2Cache;
+    }
+
+    // Runs the emulator until the end of the current frame.
+    void RunFrame() {
+        (this->*m_runFrameFn)();
     }
 
     // Detaches tracers from all components.
@@ -101,6 +112,13 @@ private:
     // Global components and state
 
     sys::System m_system;
+    bool m_enableDebugTracing = false;
+    bool m_emulateSH2Cache = false;
+
+    using RunFrameFn = void (Saturn::*)();
+    RunFrameFn m_runFrameFn;
+
+    void UpdateRunFrameFn();
 
 public:
     // -------------------------------------------------------------------------
