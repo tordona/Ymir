@@ -127,8 +127,7 @@ namespace regions {
         auto &state = *static_cast<const MemoryViewerState *>(user_data);
         off += state.selectedRegion->baseAddress;
         auto &sh2 = master ? state.sharedCtx.saturn.masterSH2 : state.sharedCtx.saturn.slaveSH2;
-        return sh2.GetProbe().MemPeekByte(state.sharedCtx.saturn.IsSH2CacheEmulationEnabled() && !state.bypassSH2Cache,
-                                          off);
+        return sh2.GetProbe().MemPeekByte(off, state.bypassSH2Cache);
     }
 
     template <bool master>

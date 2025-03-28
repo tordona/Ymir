@@ -100,6 +100,7 @@ add_library(satemu-core
     include/satemu/sys/saturn.hpp
     include/satemu/sys/system.hpp
     include/satemu/sys/system_callbacks.hpp
+    include/satemu/sys/system_features.hpp
     include/satemu/sys/sys_ops.hpp
     
     include/satemu/util/arith_ops.hpp

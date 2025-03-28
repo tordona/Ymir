@@ -24,6 +24,7 @@
 #include <satemu/hw/sh2/sh2_callbacks.hpp>
 
 #include <satemu/sys/bus.hpp>
+#include <satemu/sys/system_features.hpp>
 
 #include <satemu/debug/sh2_tracer.hpp>
 
@@ -40,7 +41,7 @@ namespace satemu::sh2 {
 
 class SH2 {
 public:
-    SH2(sys::Bus &bus, bool master);
+    SH2(sys::Bus &bus, bool master, const sys::SystemFeatures &systemFeatures);
 
     void Reset(bool hard, bool watchdogInitiated = false);
 
@@ -151,28 +152,34 @@ public:
         // ---------------------------------------------------------------------
         // Regular memory accessors (with side-effects)
 
-        uint16 FetchInstruction(bool enableCache, uint32 address) const;
+        uint16 FetchInstruction(uint32 address, bool bypassCache) const;
 
-        uint8 MemReadByte(bool enableCache, uint32 address) const;
-        uint16 MemReadWord(bool enableCache, uint32 address) const;
-        uint32 MemReadLong(bool enableCache, uint32 address) const;
+        uint8 MemReadByte(uint32 address, bool bypassCache) const;
+        uint16 MemReadWord(uint32 address, bool bypassCache) const;
+        uint32 MemReadLong(uint32 address, bool bypassCache) const;
 
-        void MemWriteByte(bool enableCache, uint32 address, uint8 value);
-        void MemWriteWord(bool enableCache, uint32 address, uint16 value);
-        void MemWriteLong(bool enableCache, uint32 address, uint32 value);
+        void MemWriteByte(uint32 address, uint8 value, bool bypassCache);
+        void MemWriteWord(uint32 address, uint16 value, bool bypassCache);
+        void MemWriteLong(uint32 address, uint32 value, bool bypassCache);
 
         // ---------------------------------------------------------------------
         // Debug memory accessors (without side-effects)
 
-        uint16 PeekInstruction(bool enableCache, uint32 address) const;
+        uint16 PeekInstruction(uint32 address, bool bypassCache) const;
 
-        uint8 MemPeekByte(bool enableCache, uint32 address) const;
-        uint16 MemPeekWord(bool enableCache, uint32 address) const;
-        uint32 MemPeekLong(bool enableCache, uint32 address) const;
+        uint8 MemPeekByte(uint32 address, bool bypassCache) const;
+        uint16 MemPeekWord(uint32 address, bool bypassCache) const;
+        uint32 MemPeekLong(uint32 address, bool bypassCache) const;
 
-        void MemPokeByte(bool enableCache, uint32 address, uint8 value);
-        void MemPokeWord(bool enableCache, uint32 address, uint16 value);
-        void MemPokeLong(bool enableCache, uint32 address, uint32 value);
+        void MemPokeByte(uint32 address, uint8 value, bool bypassCache);
+        void MemPokeWord(uint32 address, uint16 value, bool bypassCache);
+        void MemPokeLong(uint32 address, uint32 value, bool bypassCache);
+
+        // ---------------------------------------------------------------------
+        // Execution state
+
+        bool IsInDelaySlot() const;
+        uint32 DelaySlotTarget() const;
 
         // ---------------------------------------------------------------------
         // On-chip peripheral registers
@@ -383,6 +390,7 @@ private:
     // Memory accessors
 
     sys::Bus &m_bus;
+    const sys::SystemFeatures &m_systemFeatures;
 
     // According to the SH7604/SH7095 manuals, the address space is divided into these areas:
     //
@@ -580,7 +588,7 @@ private:
 
     // Checks if the CPU should service an interrupt.
     FORCE_INLINE bool CheckInterrupts() const {
-        return INTC.pending.level > SR.ILevel;
+        return !m_delaySlot && INTC.pending.level > SR.ILevel;
     }
 
     // -------------------------------------------------------------------------

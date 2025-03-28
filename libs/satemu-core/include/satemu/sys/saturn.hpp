@@ -4,6 +4,7 @@
 
 #include "memory.hpp"
 #include "system.hpp"
+#include "system_features.hpp"
 
 #include <satemu/hw/cart/cart.hpp>
 #include <satemu/hw/cart/cart_slot.hpp>
@@ -67,7 +68,7 @@ struct Saturn : sys::ISystemOperations {
     void EnableDebugTracing(bool enable);
 
     bool IsDebugTracingEnabled() const {
-        return m_enableDebugTracing;
+        return m_systemFeatures.enableDebugTracing;
     }
 
     // Enables or disables SH2 cache emulation.
@@ -78,7 +79,7 @@ struct Saturn : sys::ISystemOperations {
     void EnableSH2CacheEmulation(bool enable);
 
     bool IsSH2CacheEmulationEnabled() const {
-        return m_emulateSH2Cache;
+        return m_systemFeatures.emulateSH2Cache;
     }
 
     // Runs the emulator until the end of the current frame.
@@ -112,8 +113,7 @@ private:
     // Global components and state
 
     sys::System m_system;
-    bool m_enableDebugTracing = false;
-    bool m_emulateSH2Cache = false;
+    sys::SystemFeatures m_systemFeatures;
 
     using RunFrameFn = void (Saturn::*)();
     RunFrameFn m_runFrameFn;

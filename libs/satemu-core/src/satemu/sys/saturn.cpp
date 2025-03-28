@@ -5,8 +5,8 @@
 namespace satemu {
 
 Saturn::Saturn()
-    : masterSH2(mainBus, true)
-    , slaveSH2(mainBus, false)
+    : masterSH2(mainBus, true, m_systemFeatures)
+    , slaveSH2(mainBus, false, m_systemFeatures)
     , SCU(m_scheduler, mainBus)
     , VDP(m_scheduler)
     , SMPC(m_scheduler, *this)
@@ -35,8 +35,8 @@ Saturn::Saturn()
     SCSP.MapMemory(mainBus);
     CDBlock.MapMemory(mainBus);
 
-    m_enableDebugTracing = false;
-    m_emulateSH2Cache = false;
+    m_systemFeatures.enableDebugTracing = false;
+    m_systemFeatures.emulateSH2Cache = false;
     UpdateRunFrameFn();
 
     Reset(true);
@@ -135,19 +135,19 @@ bool Saturn::IsTrayOpen() const {
 }
 
 void Saturn::EnableDebugTracing(bool enable) {
-    if (m_enableDebugTracing && !enable) {
+    if (m_systemFeatures.enableDebugTracing && !enable) {
         DetachAllTracers();
     }
-    m_enableDebugTracing = enable;
+    m_systemFeatures.enableDebugTracing = enable;
     UpdateRunFrameFn();
 }
 
 void Saturn::EnableSH2CacheEmulation(bool enable) {
-    if (!m_emulateSH2Cache && enable) {
+    if (!m_systemFeatures.emulateSH2Cache && enable) {
         masterSH2.PurgeCache();
         slaveSH2.PurgeCache();
     }
-    m_emulateSH2Cache = enable;
+    m_systemFeatures.emulateSH2Cache = enable;
     UpdateRunFrameFn();
 }
 
@@ -189,9 +189,10 @@ void Saturn::Run() {
 }
 
 void Saturn::UpdateRunFrameFn() {
-    m_runFrameFn = m_enableDebugTracing
-                       ? (m_emulateSH2Cache ? &Saturn::RunFrame<true, true> : &Saturn::RunFrame<true, false>)
-                       : (m_emulateSH2Cache ? &Saturn::RunFrame<false, true> : &Saturn::RunFrame<false, false>);
+    m_runFrameFn =
+        m_systemFeatures.enableDebugTracing
+            ? (m_systemFeatures.emulateSH2Cache ? &Saturn::RunFrame<true, true> : &Saturn::RunFrame<true, false>)
+            : (m_systemFeatures.emulateSH2Cache ? &Saturn::RunFrame<false, true> : &Saturn::RunFrame<false, false>);
 }
 
 bool Saturn::GetNMI() const {

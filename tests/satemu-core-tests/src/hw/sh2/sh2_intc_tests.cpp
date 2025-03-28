@@ -15,8 +15,9 @@ using namespace satemu;
 namespace sh2_intr {
 
 struct TestSubject : debug::ISH2Tracer {
+    sys::SystemFeatures systemFeatures{};
     mutable sys::Bus bus{};
-    mutable sh2::SH2 sh2{bus, true};
+    mutable sh2::SH2 sh2{bus, true, systemFeatures};
     sh2::SH2::Probe &probe{sh2.GetProbe()};
 
     TestSubject() {
@@ -196,6 +197,7 @@ std::ostream &operator<<(std::ostream &os, TestSubject::MemoryAccessInfo const &
 
 inline constexpr uint16 instrNOP = 0x0009;
 inline constexpr uint16 instrRTE = 0x002B;
+inline constexpr uint16 instrRTS = 0x000B;
 
 // Test full interrupt flow:
 // - Entry and exit (with RTE instruction)
@@ -798,6 +800,48 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are masked correctly",
         CHECK(intc.pending.source == sh2::InterruptSource::NMI);
         CHECK(intc.pending.level == 16);
     }
+}
+
+// Test that the CPU cannot handle interrupts in delay slots.
+TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are not serviced in delay slots", "[sh2][intc][delay-slot]") {
+    ClearAll();
+
+    auto &intc = probe.INTC();
+
+    constexpr uint32 startPC = 0x1000;
+    constexpr uint32 startSP = 0x2000;
+
+    // Setup simple program that returns to itself
+    MockMemoryRead16(startPC + 0, instrRTS);
+    MockMemoryRead16(startPC + 2, instrNOP);
+    probe.PC() = startPC; // point PC to start of program
+    probe.PR() = startPC; // point PR to start of program
+
+    // Step once; should be in delay slot
+    sh2.Step<false, false>();
+
+    REQUIRE(probe.IsInDelaySlot() == true);
+
+    // Raise an interrupt
+    probe.SR().ILevel = 0x0;
+    intc.SetVector(sh2::InterruptSource::WDT_ITI, 0x60);
+    intc.SetLevel(sh2::InterruptSource::WDT_ITI, 5);
+    probe.RaiseInterrupt(sh2::InterruptSource::WDT_ITI);
+
+    // Interrupt should not be serviced now, even though it is pending
+    CHECK(probe.CheckInterrupts() == false);
+    CHECK(intc.pending.source == sh2::InterruptSource::WDT_ITI);
+    CHECK(intc.pending.level == 5);
+
+    // Step once more; should be back to start of program
+    sh2.Step<false, false>();
+
+    REQUIRE(probe.IsInDelaySlot() == false);
+
+    // Interrupt should be serviceable now
+    CHECK(probe.CheckInterrupts() == true);
+    CHECK(intc.pending.source == sh2::InterruptSource::WDT_ITI);
+    CHECK(intc.pending.level == 5);
 }
 
 } // namespace sh2_intr

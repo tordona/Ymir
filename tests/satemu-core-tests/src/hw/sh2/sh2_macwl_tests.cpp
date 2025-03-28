@@ -28,8 +28,9 @@ constexpr auto testdata = {
 using namespace satemu;
 
 struct TestSubject {
+    sys::SystemFeatures systemFeatures{};
     mutable sys::Bus bus{};
-    mutable sh2::SH2 sh2{bus, true};
+    mutable sh2::SH2 sh2{bus, true, systemFeatures};
     sh2::SH2::Probe &probe{sh2.GetProbe()};
 
     TestSubject() {

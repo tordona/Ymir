@@ -1306,7 +1306,7 @@ void App::EmulatorThread() {
                     m_context.saturn.slaveSH2.UseTracer(&m_context.tracers.slaveSH2);
                     m_context.saturn.SCU.UseTracer(&m_context.tracers.SCU);
                 }
-                fmt::println("Advanced debug tracing {}", (enable ? "enabled" : "disabled"));
+                fmt::println("Debug tracing {}", (enable ? "enabled" : "disabled"));
                 break;
             }
             case SetEmulateSH2Cache: //
@@ -1412,11 +1412,10 @@ void App::EmulatorThread() {
                     std::get<EmuEvent::DebugWriteSH2Data>(cmd.value);
                 auto &sh2 = master ? m_context.saturn.masterSH2 : m_context.saturn.slaveSH2;
                 auto &probe = sh2.GetProbe();
-                const bool emulateSH2Cache = m_context.saturn.IsSH2CacheEmulationEnabled();
                 if (enableSideEffects) {
-                    probe.MemWriteByte(emulateSH2Cache && !bypassSH2Cache, address, value);
+                    probe.MemWriteByte(address, value, bypassSH2Cache);
                 } else {
-                    probe.MemPokeByte(emulateSH2Cache && !bypassSH2Cache, address, value);
+                    probe.MemPokeByte(address, value, bypassSH2Cache);
                 }
                 break;
             }
