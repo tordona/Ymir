@@ -33,6 +33,8 @@ add_executable(satemu-sdl3
     src/app/ui/views/debug/sh2_divu_trace_view.hpp
     src/app/ui/views/debug/sh2_divu_registers_view.cpp
     src/app/ui/views/debug/sh2_divu_registers_view.hpp
+    src/app/ui/views/debug/sh2_dmac_channel_view.cpp
+    src/app/ui/views/debug/sh2_dmac_channel_view.hpp
     src/app/ui/views/debug/sh2_dmac_registers_view.cpp
     src/app/ui/views/debug/sh2_dmac_registers_view.hpp
     src/app/ui/views/debug/sh2_frt_view.cpp

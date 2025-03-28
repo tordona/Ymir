@@ -160,6 +160,7 @@ SH2::SH2(sys::Bus &bus, bool master, const sys::SystemFeatures &systemFeatures)
     : m_logPrefix(master ? "SH2-M" : "SH2-S")
     , m_bus(bus)
     , m_systemFeatures(systemFeatures) {
+
     BCR1.MASTER = !master;
     Reset(true);
 }
