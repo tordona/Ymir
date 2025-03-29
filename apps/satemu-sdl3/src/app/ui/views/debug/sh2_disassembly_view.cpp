@@ -80,6 +80,44 @@ void SH2DisassemblyView::Display() {
 
         auto filterAscii = [](char c) { return c < 0x20 ? '.' : c; };
 
+        auto drawHighlight = [&] {
+            ImVec4 color{};
+            bool filled = true;
+            /*if (address == m_cursor.address) {
+                color = m_colors.disasm.cursorBgColor;
+                if (!childWindowFocused) {
+                    filled = false;
+                }
+            } else*/
+            if (address == pc) {
+                color = m_colors.disasm.pcBgColor;
+            } else if (address == pr) {
+                color = m_colors.disasm.prBgColor;
+            } /*else if (probe.IsBreakpointSet(address)) {
+                color = m_colors.disasm.bkptBgColor;
+            } else if (probe.IsWatchpointSet(address)) {
+                color = m_colors.disasm.wtptBgColor;
+            }*/
+            if (color.w == 0.0f) {
+                return;
+            }
+            const ImVec2 pos = ImGui::GetCursorScreenPos();
+            const ImVec2 size{ImGui::GetContentRegionAvail().x,
+                              ImGui::CalcTextSize("X").y + ImGui::GetStyle().FramePadding.y};
+            const ImVec2 end{pos.x + size.x, pos.y + size.y};
+            if (filled) {
+                drawList->AddRectFilled(pos, end, ImGui::ColorConvertFloat4ToU32(color));
+            } else {
+                ImVec4 fillColor = color;
+                fillColor.w *= 0.4f;
+                auto borderPos = ImVec2(pos.x + 0.5f, pos.y + 0.5f);
+                auto borderEnd = ImVec2(end.x - 0.5f, end.y - 0.5f);
+                drawList->AddRectFilled(pos, end, ImGui::ColorConvertFloat4ToU32(fillColor));
+                drawList->AddRect(borderPos, borderEnd, ImGui::ColorConvertFloat4ToU32(color), 0.0f, ImDrawFlags_None,
+                                  2.0f);
+            }
+        };
+
         auto drawIcons = [&] {
             auto pos = ImGui::GetCursorScreenPos();
             pos.x -= 1.5f;
@@ -509,6 +547,7 @@ void SH2DisassemblyView::Display() {
         // -------------------------------------------------------------------------------------------------------------
 
         ImGui::BeginGroup();
+        drawHighlight();
         drawIcons();
         drawAddress();
         drawOpcode();

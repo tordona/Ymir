@@ -49,6 +49,7 @@ private:
 
             ImVec4 cursorBgColor{C(34, 61, 2)};
             ImVec4 pcBgColor{C(3, 61, 71)};
+            ImVec4 prBgColor{C(6, 40, 84)};
             ImVec4 bkptBgColor{C(84, 15, 3)};
             ImVec4 wtptBgColor{C(62, 3, 84)};
 
