@@ -20,6 +20,7 @@ namespace grp {
     //
     // base
     //   exec
+    //     exec_dump
     //   mem
     //   reg
     //   code_fetch
@@ -40,6 +41,10 @@ namespace grp {
         static constexpr std::string Name(std::string_view prefix) {
             return fmt::format("{}-Exec", prefix);
         }
+    };
+
+    struct exec_dump : public exec {
+        static constexpr bool enabled = false;
     };
 
     struct mem : public base {
@@ -282,10 +287,10 @@ FLATTEN uint64 SH2::Advance(uint64 cycles) {
             // TODO: choose between interpreter (cached or uncached) and JIT recompiler
             cyclesExecuted += InterpretNext<debug, enableCache>();
 
-            if constexpr (devlog::debug_enabled<grp::exec>) {
+            if constexpr (devlog::debug_enabled<grp::exec_dump>) {
                 // Dump stack trace on SYS_EXECDMP
                 if ((PC & 0x7FFFFFF) == config::sysExecDumpAddress) {
-                    devlog::debug<grp::exec>(m_logPrefix, "SYS_EXECDMP triggered");
+                    devlog::debug<grp::exec_dump>(m_logPrefix, "SYS_EXECDMP triggered");
                     // TODO: trace event
                 }
             }
