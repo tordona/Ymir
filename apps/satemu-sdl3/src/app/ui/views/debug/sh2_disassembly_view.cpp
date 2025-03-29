@@ -13,6 +13,12 @@ SH2DisassemblyView::SH2DisassemblyView(SharedContext &context, satemu::sh2::SH2 
 void SH2DisassemblyView::Display() {
     using namespace satemu;
 
+    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    const ImVec2 disasmCharSize = ImGui::CalcTextSize("x");
+    ImGui::PopFont();
+
+    ImDrawList *windowDrawList = ImGui::GetWindowDrawList();
+
     ImGui::BeginGroup();
 
     // TODO: compute height
@@ -27,7 +33,9 @@ void SH2DisassemblyView::Display() {
     const uint32 baseAddress = probe.PC() & ~1;
     for (uint32 i = 0; i < 32; i++) {
         const uint32 address = baseAddress + i * sizeof(uint16);
+        const uint16 prevOpcode = m_context.saturn.mainBus.Peek<uint16>(address - 2);
         const uint16 opcode = m_context.saturn.mainBus.Peek<uint16>(address);
+        const sh2::OpcodeDisasm &prevDisasm = sh2::Disassemble(prevOpcode);
         const sh2::OpcodeDisasm &disasm = sh2::Disassemble(opcode);
 
         auto memRead = [&](uint32 address) -> uint32 {
@@ -88,187 +96,215 @@ void SH2DisassemblyView::Display() {
             }
         };
 
-        auto drawMnemonic = [&]() {
-            std::string_view mnemonic = "(?)";
-            std::string_view mnemonicCond = "";
-            bool condPass = false;
-            std::string_view mnemonicSuffix = "";
-            std::string_view sizeSuffix = "";
-            bool legal = true;
+        auto drawDelaySlotPrefix = [&] {
+            const float xofs = disasmCharSize.x * 2;
+            ImGui::SameLine(0, xofs);
+            ImVec2 startPos = ImGui::GetCursorScreenPos();
+            startPos.x -= xofs;
+
+            const ImVec2 points[] = {
+                ImVec2(startPos.x + disasmCharSize.x * 0.4f, startPos.y),
+                ImVec2(startPos.x + disasmCharSize.x * 0.4f, startPos.y + disasmCharSize.y * 0.6f),
+                ImVec2(startPos.x + disasmCharSize.x * 1.4f, startPos.y + disasmCharSize.y * 0.6f),
+            };
+            windowDrawList->AddPolyline(points, std::size(points),
+                                        ImGui::ColorConvertFloat4ToU32(m_colors.disasm.delaySlot), ImDrawFlags_None,
+                                        2.0f);
+            ImGui::Dummy(ImVec2(0, 0));
+        };
+
+        auto drawMnemonic = [&](std::string_view mnemonic) {
+            ImGui::SameLine(0, 0);
+            ImGui::TextColored(m_colors.disasm.mnemonic, "%s", mnemonic.data());
+        };
+
+        auto drawIllegalMnemonic = [&] {
+            ImGui::SameLine(0, 0);
+            ImGui::TextColored(m_colors.disasm.illegalMnemonic, "(illegal)");
+        };
+
+        auto drawUnknownMnemonic = [&] {
+            ImGui::SameLine(0, 0);
+            ImGui::TextColored(m_colors.disasm.illegalMnemonic, "(?)");
+        };
+
+        auto drawCond = [&](std::string_view cond, bool pass) {
+            ImGui::SameLine(0, 0);
+            const auto condColor = pass ? m_colors.disasm.condPass : m_colors.disasm.condFail;
+            ImGui::TextColored(condColor, "%s", cond.data());
+        };
+
+        auto drawSeparator = [&](std::string_view sep) {
+            ImGui::SameLine(0, 0);
+            ImGui::TextColored(m_colors.disasm.separator, "%s", sep.data());
+        };
+
+        auto drawSize = [&](std::string_view size) {
+            ImGui::SameLine(0, 0);
+            ImGui::TextColored(m_colors.disasm.separator, ".");
+            ImGui::SameLine(0, 0);
+            ImGui::TextColored(m_colors.disasm.sizeSuffix, "%s", size.data());
+        };
+
+        auto drawFullMnemonic = [&] {
+            ImGui::SameLine(0, m_style.disasmSpacing);
+            const float startX = ImGui::GetCursorPosX();
+            ImGui::Dummy(ImVec2(0, 0));
+
+            if (prevDisasm.hasDelaySlot) {
+                if (!disasm.validInDelaySlot) {
+                    drawIllegalMnemonic();
+                    return;
+                }
+                drawDelaySlotPrefix();
+            }
 
             switch (disasm.mnemonic) {
-            case sh2::Mnemonic::NOP: mnemonic = "nop"; break;
-            case sh2::Mnemonic::SLEEP: mnemonic = "sleep"; break;
-            case sh2::Mnemonic::MOV: mnemonic = "mov"; break;
-            case sh2::Mnemonic::MOVA: mnemonic = "mova"; break;
-            case sh2::Mnemonic::MOVT: mnemonic = "movt"; break;
-            case sh2::Mnemonic::CLRT: mnemonic = "clrt"; break;
-            case sh2::Mnemonic::SETT: mnemonic = "sett"; break;
-            case sh2::Mnemonic::EXTU: mnemonic = "extu"; break;
-            case sh2::Mnemonic::EXTS: mnemonic = "exts"; break;
-            case sh2::Mnemonic::SWAP: mnemonic = "swap"; break;
-            case sh2::Mnemonic::XTRCT: mnemonic = "xtrct"; break;
-            case sh2::Mnemonic::LDC: mnemonic = "ldc"; break;
-            case sh2::Mnemonic::LDS: mnemonic = "lds"; break;
-            case sh2::Mnemonic::STC: mnemonic = "stc"; break;
-            case sh2::Mnemonic::STS: mnemonic = "sts"; break;
-            case sh2::Mnemonic::ADD: mnemonic = "add"; break;
-            case sh2::Mnemonic::ADDC: mnemonic = "addc"; break;
-            case sh2::Mnemonic::ADDV: mnemonic = "addv"; break;
-            case sh2::Mnemonic::AND: mnemonic = "and"; break;
-            case sh2::Mnemonic::NEG: mnemonic = "neg"; break;
-            case sh2::Mnemonic::NEGC: mnemonic = "negc"; break;
-            case sh2::Mnemonic::NOT: mnemonic = "not"; break;
-            case sh2::Mnemonic::OR: mnemonic = "or"; break;
-            case sh2::Mnemonic::ROTCL: mnemonic = "rotcl"; break;
-            case sh2::Mnemonic::ROTCR: mnemonic = "rotcr"; break;
-            case sh2::Mnemonic::ROTL: mnemonic = "rotl"; break;
-            case sh2::Mnemonic::ROTR: mnemonic = "rotr"; break;
-            case sh2::Mnemonic::SHAL: mnemonic = "shal"; break;
-            case sh2::Mnemonic::SHAR: mnemonic = "shar"; break;
-            case sh2::Mnemonic::SHLL: mnemonic = "shll"; break;
-            case sh2::Mnemonic::SHLL2: mnemonic = "shll2"; break;
-            case sh2::Mnemonic::SHLL8: mnemonic = "shll8"; break;
-            case sh2::Mnemonic::SHLL16: mnemonic = "shll16"; break;
-            case sh2::Mnemonic::SHLR: mnemonic = "shlr"; break;
-            case sh2::Mnemonic::SHLR2: mnemonic = "shlr2"; break;
-            case sh2::Mnemonic::SHLR8: mnemonic = "shlr8"; break;
-            case sh2::Mnemonic::SHLR16: mnemonic = "shlr16"; break;
-            case sh2::Mnemonic::SUB: mnemonic = "sub"; break;
-            case sh2::Mnemonic::SUBC: mnemonic = "subc"; break;
-            case sh2::Mnemonic::SUBV: mnemonic = "subv"; break;
-            case sh2::Mnemonic::XOR: mnemonic = "xor"; break;
-            case sh2::Mnemonic::DT: mnemonic = "dt"; break;
-            case sh2::Mnemonic::CLRMAC: mnemonic = "clrmac"; break;
-            case sh2::Mnemonic::MAC: mnemonic = "mac"; break;
-            case sh2::Mnemonic::MUL: mnemonic = "mul"; break;
-            case sh2::Mnemonic::MULS: mnemonic = "muls"; break;
-            case sh2::Mnemonic::MULU: mnemonic = "mulu"; break;
-            case sh2::Mnemonic::DMULS: mnemonic = "dmuls"; break;
-            case sh2::Mnemonic::DMULU: mnemonic = "dmulu"; break;
-            case sh2::Mnemonic::DIV0S: mnemonic = "div0s"; break;
-            case sh2::Mnemonic::DIV0U: mnemonic = "div0u"; break;
-            case sh2::Mnemonic::DIV1: mnemonic = "div1"; break;
+            case sh2::Mnemonic::NOP: drawMnemonic("nop"); break;
+            case sh2::Mnemonic::SLEEP: drawMnemonic("sleep"); break;
+            case sh2::Mnemonic::MOV: drawMnemonic("mov"); break;
+            case sh2::Mnemonic::MOVA: drawMnemonic("mova"); break;
+            case sh2::Mnemonic::MOVT: drawMnemonic("movt"); break;
+            case sh2::Mnemonic::CLRT: drawMnemonic("clrt"); break;
+            case sh2::Mnemonic::SETT: drawMnemonic("sett"); break;
+            case sh2::Mnemonic::EXTU: drawMnemonic("extu"); break;
+            case sh2::Mnemonic::EXTS: drawMnemonic("exts"); break;
+            case sh2::Mnemonic::SWAP: drawMnemonic("swap"); break;
+            case sh2::Mnemonic::XTRCT: drawMnemonic("xtrct"); break;
+            case sh2::Mnemonic::LDC: drawMnemonic("ldc"); break;
+            case sh2::Mnemonic::LDS: drawMnemonic("lds"); break;
+            case sh2::Mnemonic::STC: drawMnemonic("stc"); break;
+            case sh2::Mnemonic::STS: drawMnemonic("sts"); break;
+            case sh2::Mnemonic::ADD: drawMnemonic("add"); break;
+            case sh2::Mnemonic::ADDC: drawMnemonic("addc"); break;
+            case sh2::Mnemonic::ADDV: drawMnemonic("addv"); break;
+            case sh2::Mnemonic::AND: drawMnemonic("and"); break;
+            case sh2::Mnemonic::NEG: drawMnemonic("neg"); break;
+            case sh2::Mnemonic::NEGC: drawMnemonic("negc"); break;
+            case sh2::Mnemonic::NOT: drawMnemonic("not"); break;
+            case sh2::Mnemonic::OR: drawMnemonic("or"); break;
+            case sh2::Mnemonic::ROTCL: drawMnemonic("rotcl"); break;
+            case sh2::Mnemonic::ROTCR: drawMnemonic("rotcr"); break;
+            case sh2::Mnemonic::ROTL: drawMnemonic("rotl"); break;
+            case sh2::Mnemonic::ROTR: drawMnemonic("rotr"); break;
+            case sh2::Mnemonic::SHAL: drawMnemonic("shal"); break;
+            case sh2::Mnemonic::SHAR: drawMnemonic("shar"); break;
+            case sh2::Mnemonic::SHLL: drawMnemonic("shll"); break;
+            case sh2::Mnemonic::SHLL2: drawMnemonic("shll2"); break;
+            case sh2::Mnemonic::SHLL8: drawMnemonic("shll8"); break;
+            case sh2::Mnemonic::SHLL16: drawMnemonic("shll16"); break;
+            case sh2::Mnemonic::SHLR: drawMnemonic("shlr"); break;
+            case sh2::Mnemonic::SHLR2: drawMnemonic("shlr2"); break;
+            case sh2::Mnemonic::SHLR8: drawMnemonic("shlr8"); break;
+            case sh2::Mnemonic::SHLR16: drawMnemonic("shlr16"); break;
+            case sh2::Mnemonic::SUB: drawMnemonic("sub"); break;
+            case sh2::Mnemonic::SUBC: drawMnemonic("subc"); break;
+            case sh2::Mnemonic::SUBV: drawMnemonic("subv"); break;
+            case sh2::Mnemonic::XOR: drawMnemonic("xor"); break;
+            case sh2::Mnemonic::DT: drawMnemonic("dt"); break;
+            case sh2::Mnemonic::CLRMAC: drawMnemonic("clrmac"); break;
+            case sh2::Mnemonic::MAC: drawMnemonic("mac"); break;
+            case sh2::Mnemonic::MUL: drawMnemonic("mul"); break;
+            case sh2::Mnemonic::MULS: drawMnemonic("muls"); break;
+            case sh2::Mnemonic::MULU: drawMnemonic("mulu"); break;
+            case sh2::Mnemonic::DMULS: drawMnemonic("dmuls"); break;
+            case sh2::Mnemonic::DMULU: drawMnemonic("dmulu"); break;
+            case sh2::Mnemonic::DIV0S: drawMnemonic("div0s"); break;
+            case sh2::Mnemonic::DIV0U: drawMnemonic("div0u"); break;
+            case sh2::Mnemonic::DIV1: drawMnemonic("div1"); break;
             case sh2::Mnemonic::CMP_EQ:
-                mnemonic = "cmp/";
-                mnemonicCond = "eq";
-                condPass = getOp1() == getOp2();
+                drawMnemonic("cmp");
+                drawSeparator("/");
+                drawCond("eq", getOp1() == getOp2());
                 break;
             case sh2::Mnemonic::CMP_GE:
-                mnemonic = "cmp/";
-                mnemonicCond = "ge";
-                condPass = static_cast<sint32>(getOp1()) >= static_cast<sint32>(getOp2());
+                drawMnemonic("cmp");
+                drawSeparator("/");
+                drawCond("ge", static_cast<sint32>(getOp1()) >= static_cast<sint32>(getOp2()));
                 break;
             case sh2::Mnemonic::CMP_GT:
-                mnemonic = "cmp/";
-                mnemonicCond = "gt";
-                condPass = static_cast<sint32>(getOp1()) > static_cast<sint32>(getOp2());
+                drawMnemonic("cmp");
+                drawSeparator("/");
+                drawCond("gt", static_cast<sint32>(getOp1()) > static_cast<sint32>(getOp2()));
                 break;
             case sh2::Mnemonic::CMP_HI:
-                mnemonic = "cmp/";
-                mnemonicCond = "hi";
-                condPass = getOp1() > getOp2();
+                drawMnemonic("cmp");
+                drawSeparator("/");
+                drawCond("hi", getOp1() > getOp2());
                 break;
             case sh2::Mnemonic::CMP_HS:
-                mnemonic = "cmp/";
-                mnemonicCond = "hs";
-                condPass = getOp1() >= getOp2();
+                drawMnemonic("cmp");
+                drawSeparator("/");
+                drawCond("hs", getOp1() >= getOp2());
                 break;
             case sh2::Mnemonic::CMP_PL:
-                mnemonic = "cmp/";
-                mnemonicCond = "pl";
-                condPass = static_cast<sint32>(getOp1()) > 0;
+                drawMnemonic("cmp");
+                drawSeparator("/");
+                drawCond("pl", static_cast<sint32>(getOp1()) > 0);
                 break;
             case sh2::Mnemonic::CMP_PZ:
-                mnemonic = "cmp/";
-                mnemonicCond = "pz";
-                condPass = static_cast<sint32>(getOp1()) >= 0;
+                drawMnemonic("cmp");
+                drawSeparator("/");
+                drawCond("pz", static_cast<sint32>(getOp1()) >= 0);
                 break;
             case sh2::Mnemonic::CMP_STR: //
             {
-                mnemonic = "cmp/";
-                mnemonicCond = "str";
                 const uint32 tmp = getOp1() ^ getOp2();
                 const uint8 hh = tmp >> 24u;
                 const uint8 hl = tmp >> 16u;
                 const uint8 lh = tmp >> 8u;
                 const uint8 ll = tmp >> 0u;
-                condPass = !(hh && hl && lh && ll);
+                drawMnemonic("cmp");
+                drawSeparator("/");
+                drawCond("str", !(hh && hl && lh && ll));
                 break;
             }
-            case sh2::Mnemonic::TAS: mnemonic = "tas"; break;
-            case sh2::Mnemonic::TST: mnemonic = "tst"; break;
+            case sh2::Mnemonic::TAS: drawMnemonic("tas"); break;
+            case sh2::Mnemonic::TST: drawMnemonic("tst"); break;
             case sh2::Mnemonic::BF:
-                mnemonic = "b";
-                mnemonicCond = "f";
-                condPass = !probe.SR().T;
+                drawMnemonic("b");
+                drawCond("f", !probe.SR().T);
                 break;
             case sh2::Mnemonic::BFS:
-                mnemonic = "b";
-                mnemonicCond = "f";
-                mnemonicSuffix = "/s";
-                condPass = !probe.SR().T;
+                drawMnemonic("b");
+                drawCond("f", !probe.SR().T);
+                drawSeparator("/");
+                drawMnemonic("s");
                 break;
             case sh2::Mnemonic::BT:
-                mnemonic = "b";
-                mnemonicCond = "t";
-                condPass = probe.SR().T;
+                drawMnemonic("b");
+                drawCond("t", probe.SR().T);
                 break;
             case sh2::Mnemonic::BTS:
-                mnemonic = mnemonic = "b";
-                mnemonicCond = "t";
-                mnemonicSuffix = "/s";
-                condPass = probe.SR().T;
+                drawMnemonic("b");
+                drawCond("t", probe.SR().T);
+                drawSeparator("/");
+                drawMnemonic("s");
                 break;
-            case sh2::Mnemonic::BRA: mnemonic = "bra"; break;
-            case sh2::Mnemonic::BRAF: mnemonic = "braf"; break;
-            case sh2::Mnemonic::BSR: mnemonic = "bsr"; break;
-            case sh2::Mnemonic::BSRF: mnemonic = "bsrf"; break;
-            case sh2::Mnemonic::JMP: mnemonic = "jmp"; break;
-            case sh2::Mnemonic::JSR: mnemonic = "jsr"; break;
-            case sh2::Mnemonic::TRAPA: mnemonic = "trapa"; break;
-            case sh2::Mnemonic::RTE: mnemonic = "rte"; break;
-            case sh2::Mnemonic::RTS: mnemonic = "rts"; break;
-            case sh2::Mnemonic::Illegal:
-                mnemonic = "(illegal)";
-                legal = false;
-                break;
+            case sh2::Mnemonic::BRA: drawMnemonic("bra"); break;
+            case sh2::Mnemonic::BRAF: drawMnemonic("braf"); break;
+            case sh2::Mnemonic::BSR: drawMnemonic("bsr"); break;
+            case sh2::Mnemonic::BSRF: drawMnemonic("bsrf"); break;
+            case sh2::Mnemonic::JMP: drawMnemonic("jmp"); break;
+            case sh2::Mnemonic::JSR: drawMnemonic("jsr"); break;
+            case sh2::Mnemonic::TRAPA: drawMnemonic("trapa"); break;
+            case sh2::Mnemonic::RTE: drawMnemonic("rte"); break;
+            case sh2::Mnemonic::RTS: drawMnemonic("rts"); break;
+            case sh2::Mnemonic::Illegal: drawIllegalMnemonic(); break;
             default: break;
             }
 
             switch (disasm.opSize) {
-            case sh2::OperandSize::Byte: sizeSuffix = "b"; break;
-            case sh2::OperandSize::Word: sizeSuffix = "w"; break;
-            case sh2::OperandSize::Long: sizeSuffix = "l"; break;
+            case sh2::OperandSize::Byte: drawSize("b"); break;
+            case sh2::OperandSize::Word: drawSize("w"); break;
+            case sh2::OperandSize::Long: drawSize("l"); break;
             default: break;
             }
 
-            const auto color = legal ? m_colors.disasm.mnemonic : m_colors.disasm.illegalMnemonic;
-            ImGui::TextColored(color, "%s", mnemonic.data());
-            if (!mnemonicCond.empty()) {
-                ImGui::SameLine(0, 0);
-                const auto condColor = condPass ? m_colors.disasm.condPass : m_colors.disasm.condFail;
-                ImGui::TextColored(condColor, "%s", mnemonicCond.data());
-            }
-            if (!mnemonicSuffix.empty()) {
-                ImGui::SameLine(0, 0);
-                ImGui::TextColored(color, "%s", mnemonicSuffix.data());
-            }
-            if (!sizeSuffix.empty()) {
-                ImGui::SameLine(0, 0);
-                ImGui::TextColored(m_colors.disasm.separator, ".");
-                ImGui::SameLine(0, 0);
-                ImGui::TextColored(m_colors.disasm.sizeSuffix, "%s", sizeSuffix.data());
-            }
-
-            if (disasm.op1.type != sh2::Operand::Type::None) {
-                int padding = 9 - mnemonic.length() - mnemonicCond.length() - mnemonicSuffix.length();
-                if (!sizeSuffix.empty()) {
-                    padding -= 1 + sizeSuffix.length();
-                }
-                ImGui::SameLine(0, ImGui::CalcTextSize("x").x * padding);
-                ImGui::Dummy(ImVec2(0, 0));
-            }
+            ImGui::SameLine(0, 0);
+            const float endX = ImGui::GetCursorPosX();
+            ImGui::SameLine(0, disasmCharSize.x * 10 - endX + startX);
+            ImGui::Dummy(ImVec2(0, 0));
         };
 
         auto drawImm = [&](sint32 imm) {
@@ -338,7 +374,7 @@ void SH2DisassemblyView::Display() {
             ImGui::TextColored(m_colors.disasm.addrDec, "-");
         };
 
-        auto drawComma = [&] {
+        auto drawComma = [&]() {
             ImGui::SameLine(0, 0);
             ImGui::TextColored(m_colors.disasm.separator, ", ");
         };
@@ -374,7 +410,7 @@ void SH2DisassemblyView::Display() {
                 break;
             case sh2::Operand::Type::AtR0Rn:
                 drawRWSymbol("@(", write);
-                drawRegRead(0);
+                drawRnRead(0);
                 drawComma();
                 drawRnRead(op.reg);
                 drawRWSymbol(")", write);
@@ -417,16 +453,24 @@ void SH2DisassemblyView::Display() {
 
         // -------------------------------------------------------------------------------------------------------------
 
+        ImGui::BeginGroup();
         drawAddress();
         drawOpcode();
-        drawMnemonic();
-
+        drawFullMnemonic();
         drawOp(disasm.op1, false);
         if (disasm.op1.type != sh2::Operand::Type::None && disasm.op2.type != sh2::Operand::Type::None) {
             ImGui::SameLine(0, 0);
             ImGui::TextColored(m_colors.disasm.separator, ", ");
         }
         drawOp(disasm.op2, true);
+        ImGui::EndGroup();
+        // TODO: show detailed annotations
+        /*if (ImGui::IsItemHovered()) {
+            if (ImGui::BeginTooltip()) {
+
+                ImGui::EndTooltip();
+            }
+        }*/
     }
     ImGui::PopFont();
 

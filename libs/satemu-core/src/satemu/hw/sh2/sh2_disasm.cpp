@@ -122,6 +122,7 @@ static DisasmTable BuildDisasmTable() {
             disasm.op2 = op2;
         };
 
+        auto hasDelaySlot = [&] { disasm.hasDelaySlot = true; };
         auto invalidInDelaySlot = [&] { disasm.validInDelaySlot = false; };
 
         // ---------------------------------------
@@ -135,21 +136,21 @@ static DisasmTable BuildDisasmTable() {
             switch (instr) {
             case 0x0008: make0(CLRT); break;
             case 0x0009: make0(NOP); break;
-            case 0x000B: make0(RTS), invalidInDelaySlot(); break;
+            case 0x000B: make0(RTS), hasDelaySlot(), invalidInDelaySlot(); break;
             case 0x0018: make0(SETT); break;
             case 0x0019: make0(DIV0U); break;
             case 0x001B: make0(SLEEP); break;
             case 0x0028: make0(CLRMAC); break;
-            case 0x002B: make0(RTE), invalidInDelaySlot(); break;
+            case 0x002B: make0(RTE), hasDelaySlot(), invalidInDelaySlot(); break;
             default:
                 switch (instr & 0xFF) {
                 case 0x02: makeOp(STC, Op::SR(), Op::Rn(decodeN())); break;
-                case 0x03: makeOp(BSRF, Op::RnPC(decodeM())), invalidInDelaySlot(); break;
+                case 0x03: makeOp(BSRF, Op::RnPC(decodeM())), hasDelaySlot(), invalidInDelaySlot(); break;
                 case 0x0A: makeOp(STS, Op::MACH(), Op::Rn(decodeN())); break;
                 case 0x12: makeOp(STC, Op::GBR(), Op::Rn(decodeN())); break;
                 case 0x1A: makeOp(STS, Op::MACL(), Op::Rn(decodeN())); break;
                 case 0x22: makeOp(STC, Op::VBR(), Op::Rn(decodeN())); break;
-                case 0x23: makeOp(BRAF, Op::RnPC(decodeM())), invalidInDelaySlot(); break;
+                case 0x23: makeOp(BRAF, Op::RnPC(decodeM())), hasDelaySlot(), invalidInDelaySlot(); break;
                 case 0x29: makeOp(MOVT, Op::Rn(decodeN())); break;
                 case 0x2A: makeOp(STS, Op::PR(), Op::Rn(decodeN())); break;
                 default: {
@@ -238,7 +239,7 @@ static DisasmTable BuildDisasmTable() {
                 case 0x08: makeOp(SHLL2, Op::Rn(decodeN())); break;
                 case 0x09: makeOp(SHLR2, Op::Rn(decodeN())); break;
                 case 0x0A: makeOp(LDS, Op::Rn(decodeM()), Op::MACH()); break;
-                case 0x0B: makeOp(JSR, Op::AtRn(decodeM())), invalidInDelaySlot(); break;
+                case 0x0B: makeOp(JSR, Op::AtRn(decodeM())), hasDelaySlot(), invalidInDelaySlot(); break;
 
                 case 0x0E: makeOp(LDC, Op::Rn(decodeM()), Op::SR()); break;
 
@@ -268,7 +269,7 @@ static DisasmTable BuildDisasmTable() {
                 case 0x28: makeOp(SHLL16, Op::Rn(decodeN())); break;
                 case 0x29: makeOp(SHLR16, Op::Rn(decodeN())); break;
                 case 0x2A: makeOp(LDS, Op::Rn(decodeM()), Op::PR()); break;
-                case 0x2B: makeOp(JMP, Op::AtRn(decodeM())), invalidInDelaySlot(); break;
+                case 0x2B: makeOp(JMP, Op::AtRn(decodeM())), hasDelaySlot(), invalidInDelaySlot(); break;
 
                 case 0x2E: makeOp(LDC, Op::Rn(decodeM()), Op::VBR()); break;
                 }
@@ -335,9 +336,9 @@ static DisasmTable BuildDisasmTable() {
 
             case 0xB: makeOp(BF, Op::DispPC(decodeD_S(1, 4))), invalidInDelaySlot(); break;
 
-            case 0xD: makeOp(BTS, Op::DispPC(decodeD_S(1, 4))), invalidInDelaySlot(); break;
+            case 0xD: makeOp(BTS, Op::DispPC(decodeD_S(1, 4))), hasDelaySlot(), invalidInDelaySlot(); break;
 
-            case 0xF: makeOp(BFS, Op::DispPC(decodeD_S(1, 4))), invalidInDelaySlot(); break;
+            case 0xF: makeOp(BFS, Op::DispPC(decodeD_S(1, 4))), hasDelaySlot(), invalidInDelaySlot(); break;
             }
             break;
         case 0x9: {
@@ -345,14 +346,14 @@ static DisasmTable BuildDisasmTable() {
             makeOpW(MOV, Op::AtDispPC(disp), Op::Rn(rn));
             break;
         }
-        case 0xA: makeOp(BRA, Op::DispPC(decodeD12(1, 4))); break;
-        case 0xB: makeOp(BSR, Op::DispPC(decodeD12(1, 4))); break;
+        case 0xA: makeOp(BRA, Op::DispPC(decodeD12(1, 4))), hasDelaySlot(); break;
+        case 0xB: makeOp(BSR, Op::DispPC(decodeD12(1, 4))), hasDelaySlot(); break;
         case 0xC: {
             switch ((instr >> 8u) & 0xF) {
             case 0x0: makeOpB(MOV, Op::Rn(0), Op::AtDispGBR(decodeD_U(0u, 0u))); break;
             case 0x1: makeOpW(MOV, Op::Rn(0), Op::AtDispGBR(decodeD_U(1u, 0u))); break;
             case 0x2: makeOpL(MOV, Op::Rn(0), Op::AtDispGBR(decodeD_U(2u, 0u))); break;
-            case 0x3: makeOp(TRAPA, Op::Imm(decodeI_U(2u, 0u))), invalidInDelaySlot(); break;
+            case 0x3: makeOp(TRAPA, Op::Imm(decodeI_U(2u, 0u))), hasDelaySlot(), invalidInDelaySlot(); break;
             case 0x4: makeOpB(MOV, Op::AtDispGBR(decodeD_U(0u, 0u)), Op::Rn(0)); break;
             case 0x5: makeOpW(MOV, Op::AtDispGBR(decodeD_U(1u, 0u)), Op::Rn(0)); break;
             case 0x6: makeOpL(MOV, Op::AtDispGBR(decodeD_U(2u, 0u)), Op::Rn(0)); break;

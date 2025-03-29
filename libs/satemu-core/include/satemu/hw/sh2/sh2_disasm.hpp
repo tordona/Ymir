@@ -221,6 +221,7 @@ struct Operand {
 };
 
 struct OpcodeDisasm {
+    bool hasDelaySlot = false;
     bool validInDelaySlot = true;
     Mnemonic mnemonic = Mnemonic::Illegal;
     OperandSize opSize = OperandSize::None;

@@ -25,7 +25,7 @@ private:
             ImVec4 bytes{C(237, 236, 216)};   // ........ 4132 ..
             ImVec4 ascii = bytes;             // ........ .... A2
 
-            ImVec4 delaySlot{C(128, 145, 194)};       // _ (delay slot prefix)
+            ImVec4 delaySlot{C(96, 112, 156)};        // _ (delay slot prefix)
             ImVec4 mnemonic{C(173, 216, 247)};        // mov nop rts ...
             ImVec4 illegalMnemonic{C(247, 191, 173)}; // (illegal)
             ImVec4 sizeSuffix{C(128, 145, 194)};      // b w l
