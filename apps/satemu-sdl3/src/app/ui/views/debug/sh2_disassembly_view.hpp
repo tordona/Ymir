@@ -20,6 +20,7 @@ private:
 
     struct Colors {
 #define C(r, g, b) (r / 255.0f), (g / 255.0f), (b / 255.0f), 1.0f
+#define CA(r, g, b, a) (r / 255.0f), (g / 255.0f), (b / 255.0f), a
         struct Disassembly {
             ImVec4 address{C(217, 216, 237)}; // 06005432 .... ..
             ImVec4 bytes{C(237, 236, 216)};   // ........ 4132 ..
@@ -52,7 +53,7 @@ private:
             ImVec4 prBgColor{C(6, 40, 84)};
             ImVec4 bkptBgColor{C(84, 15, 3)};
             ImVec4 wtptBgColor{C(62, 3, 84)};
-
+            ImVec4 altLineBgColor{CA(38, 42, 46, 0.5f)};
         } disasm;
 
         struct Annotation {
@@ -75,6 +76,9 @@ private:
     struct Settings {
         bool displayOpcodeBytes = true;
         bool displayOpcodeAscii = false;
+
+        bool altLineColors = false;
+        bool altLineAddresses = false;
     } m_settings;
 };
 

@@ -25,7 +25,6 @@ void SH2DisassemblyView::Display() {
     if (ImGui::BeginChild("##disasm", availArea, ImGuiChildFlags_None,
                           ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
         const uint32 lines = availArea.y / lineHeight + 1;
-        // TODO: alternate color lines
         // TODO: branch arrows
         // TODO: cursor
 
@@ -98,6 +97,9 @@ void SH2DisassemblyView::Display() {
                 } else if (probe.IsWatchpointSet(address)) {
                     color = m_colors.disasm.wtptBgColor;
                 }*/
+                else if (m_settings.altLineColors && m_settings.altLineAddresses ? (address & 2) : (i & 1)) {
+                    color = m_colors.disasm.altLineBgColor;
+                }
                 if (color.w == 0.0f) {
                     return;
                 }
