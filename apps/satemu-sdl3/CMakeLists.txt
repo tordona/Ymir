@@ -56,6 +56,8 @@ add_executable(satemu-sdl3
     src/app/ui/windows/debug/scu_debugger_window.hpp
     src/app/ui/windows/debug/sh2_dmac_window.cpp
     src/app/ui/windows/debug/sh2_dmac_window.hpp
+    src/app/ui/windows/debug/sh2_dmac_trace_window.cpp
+    src/app/ui/windows/debug/sh2_dmac_trace_window.hpp
     src/app/ui/windows/debug/sh2_cache_window.cpp
     src/app/ui/windows/debug/sh2_cache_window.hpp
     src/app/ui/windows/debug/sh2_debugger_window.cpp

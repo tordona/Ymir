@@ -4,8 +4,6 @@
 
 #include <util/ring_buffer.hpp>
 
-#include <vector>
-
 namespace app {
 
 struct SH2Tracer final : satemu::debug::ISH2Tracer {
