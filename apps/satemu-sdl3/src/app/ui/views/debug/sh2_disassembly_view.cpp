@@ -553,27 +553,30 @@ void SH2DisassemblyView::Display() {
             // -------------------------------------------------------------------------------------------------------------
 
             ImGui::BeginGroup();
-            drawHighlight();
-            drawIcons();
-            drawAddress();
-            ImGui::SameLine(0.0f, m_style.disasmSpacing);
-            drawOpcodeBytes();
-            ImGui::SameLine(0.0f, m_style.disasmSpacing);
-            drawOpcodeAscii();
-            ImGui::SameLine(0.0f, m_style.disasmSpacing);
-            drawFullMnemonic();
-            ImGui::SameLine(0, 0);
-            drawOp1();
-            if (disasm.op1.type != sh2::Operand::Type::None && disasm.op2.type != sh2::Operand::Type::None) {
+            {
+                drawHighlight();
+                drawIcons();
+                drawAddress();
+                ImGui::SameLine(0.0f, m_style.disasmSpacing);
+                drawOpcodeBytes();
+                ImGui::SameLine(0.0f, m_style.disasmSpacing);
+                drawOpcodeAscii();
+                ImGui::SameLine(0.0f, m_style.disasmSpacing);
+                drawFullMnemonic();
                 ImGui::SameLine(0, 0);
-                ImGui::TextColored(m_colors.disasm.separator, ", ");
+                drawOp1();
+                if (disasm.op1.type != sh2::Operand::Type::None && disasm.op2.type != sh2::Operand::Type::None) {
+                    ImGui::SameLine(0, 0);
+                    ImGui::TextColored(m_colors.disasm.separator, ", ");
+                }
+                ImGui::SameLine(0, 0);
+                drawOp2();
+                // TODO: show short annotations
+                ImGui::SameLine(0, 0);
+                ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x, 0));
             }
-            ImGui::SameLine(0, 0);
-            drawOp2();
-            ImGui::SameLine(0, 0);
-            ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x, 0));
             ImGui::EndGroup();
-            // TODO: show short annotations
+
             if (ImGui::IsItemHovered()) {
                 if (ImGui::BeginTooltip()) {
                     auto notImm = [](sh2::Operand::Type opType) {

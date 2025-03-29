@@ -2,6 +2,8 @@
 
 #include <app/ui/window_base.hpp>
 
+#include <app/ui/views/debug/scu_interrupts_view.hpp>
+
 namespace app::ui {
 
 class SCUDebuggerWindow : public WindowBase {
@@ -12,7 +14,7 @@ protected:
     void DrawContents() override;
 
 private:
-    satemu::scu::SCU &m_scu;
+    SCUInterruptsView m_intrView;
 };
 
 } // namespace app::ui

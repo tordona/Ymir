@@ -23,6 +23,8 @@ add_executable(satemu-sdl3
 
     src/app/ui/state/debug/memory_viewer_state.hpp
 
+    src/app/ui/views/debug/scu_interrupts_view.cpp
+    src/app/ui/views/debug/scu_interrupts_view.hpp
     src/app/ui/views/debug/sh2_cache_entries_view.cpp
     src/app/ui/views/debug/sh2_cache_entries_view.hpp
     src/app/ui/views/debug/sh2_cache_register_view.cpp
@@ -78,7 +80,7 @@ add_executable(satemu-sdl3
 
     src/util/rom_loader.cpp
     src/util/rom_loader.hpp
-)
+ "src/app/ui/views/debug/scu_interrupts_view.cpp")
 add_executable(satemu::satemu-sdl3 ALIAS satemu-sdl3)
 set_target_properties(satemu-sdl3 PROPERTIES
                       VERSION ${satemu_VERSION}
