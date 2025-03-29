@@ -129,11 +129,19 @@ public:
         Probe(SCU &scu)
             : m_scu(scu) {}
 
-        InterruptMask GetInterruptMask() const {
+        InterruptMask &GetInterruptMask() {
             return m_scu.m_intrMask;
         }
 
-        InterruptStatus GetInterruptStatus() const {
+        const InterruptMask &GetInterruptMask() const {
+            return m_scu.m_intrMask;
+        }
+
+        InterruptStatus &GetInterruptStatus() {
+            return m_scu.m_intrStatus;
+        }
+
+        const InterruptStatus &GetInterruptStatus() const {
             return m_scu.m_intrStatus;
         }
 

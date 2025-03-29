@@ -357,7 +357,7 @@ void App::RunEmulator() {
     style.TabCloseButtonMinWidthUnselected = 0.0f;
     style.TabRounding = 2.0f;
     style.CellPadding = ImVec2(3, 2);
-    style.TableAngledHeadersAngle = -50.0f * (2.0f * std::numbers::pi / 360.0f);
+    style.TableAngledHeadersAngle = 50.0f * (2.0f * std::numbers::pi / 360.0f);
     style.TableAngledHeadersTextAlign = ImVec2(0.50f, 0.00f);
     style.WindowTitleAlign = ImVec2(0.50f, 0.50f);
     style.WindowBorderHoverPadding = 5.0f;

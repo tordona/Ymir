@@ -15,6 +15,9 @@ public:
 private:
     SharedContext &m_context;
     satemu::scu::SCU &m_scu;
+
+    void DisplayInternalInterrupts();
+    void DisplayExternalInterrupts();
 };
 
 } // namespace app::ui
