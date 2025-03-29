@@ -41,6 +41,17 @@ private:
             ImVec4 separator{C(186, 191, 194)}; // , (operators) . (size)
             ImVec4 addrInc{C(147, 194, 155)};   // + (@Rn+)
             ImVec4 addrDec{C(194, 159, 147)};   // - (@-Rn)
+
+            ImVec4 pcIconColor{C(15, 189, 219)};
+            ImVec4 prIconColor{C(17, 113, 237)};
+            ImVec4 bkptIconColor{C(250, 52, 17)};
+            ImVec4 wtptIconColor{C(193, 37, 250)};
+
+            ImVec4 cursorBgColor{C(34, 61, 2)};
+            ImVec4 pcBgColor{C(3, 61, 71)};
+            ImVec4 bkptBgColor{C(84, 15, 3)};
+            ImVec4 wtptBgColor{C(62, 3, 84)};
+
         } disasm;
 
         struct Annotation {

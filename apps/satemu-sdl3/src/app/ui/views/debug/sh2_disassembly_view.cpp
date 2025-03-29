@@ -15,9 +15,10 @@ void SH2DisassemblyView::Display() {
 
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     const ImVec2 disasmCharSize = ImGui::CalcTextSize("x");
+    const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
     ImGui::PopFont();
 
-    ImDrawList *windowDrawList = ImGui::GetWindowDrawList();
+    ImDrawList *drawList = ImGui::GetWindowDrawList();
 
     ImGui::BeginGroup();
 
@@ -30,7 +31,9 @@ void SH2DisassemblyView::Display() {
 
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     auto &probe = m_sh2.GetProbe();
-    const uint32 baseAddress = probe.PC() & ~1;
+    const uint32 pc = probe.PC() & ~1;
+    const uint32 pr = probe.PR() & ~1;
+    const uint32 baseAddress = pc;
     for (uint32 i = 0; i < 32; i++) {
         const uint32 address = baseAddress + i * sizeof(uint16);
         const uint16 prevOpcode = m_context.saturn.mainBus.Peek<uint16>(address - 2);
@@ -77,6 +80,59 @@ void SH2DisassemblyView::Display() {
 
         auto filterAscii = [](char c) { return c < 0x20 ? '.' : c; };
 
+        auto drawIcons = [&] {
+            auto pos = ImGui::GetCursorScreenPos();
+            pos.x -= 1.5f;
+            pos.y -= 1.5f;
+            const ImVec2 baseCenter{pos.x + lineHeight * 0.5f, pos.y + lineHeight * 0.5f};
+            if (address == pc) {
+                const ImVec2 center{baseCenter.x + lineHeight * 3.0f, baseCenter.y};
+                const ImVec2 points[] = {
+                    {center.x - lineHeight * 0.25f, center.y - lineHeight * 0.25f},
+                    {center.x + lineHeight * 0.25f, center.y},
+                    {center.x - lineHeight * 0.25f, center.y + lineHeight * 0.25f},
+                    {center.x - lineHeight * 0.15f, center.y},
+                };
+                drawList->AddConcavePolyFilled(points, std::size(points),
+                                               ImGui::ColorConvertFloat4ToU32(m_colors.disasm.pcIconColor));
+            }
+            if (address == pr) {
+                const ImVec2 center{baseCenter.x + lineHeight * 2.0f, baseCenter.y};
+                const ImVec2 points[] = {
+                    {center.x - lineHeight * 0.25f, center.y - lineHeight * 0.25f},
+                    {center.x + lineHeight * 0.25f, center.y},
+                    {center.x - lineHeight * 0.25f, center.y + lineHeight * 0.25f},
+                    {center.x - lineHeight * 0.15f, center.y},
+                };
+                drawList->AddConcavePolyFilled(points, std::size(points),
+                                               ImGui::ColorConvertFloat4ToU32(m_colors.disasm.prIconColor));
+            }
+            /*if (probe.IsBreakpointSet(address)) {
+                const ImVec2 center{pos.x + lineHeight * 1.5f, pos.y + lineHeight * 0.5f};
+                const ImU32 color = ImGui::ColorConvertFloat4ToU32(m_colors.disasm.bkptIconColor);
+                if (m_context.saturn.IsDebugTracingEnabled()) {
+                    drawList->AddCircleFilled(center, lineHeight * 0.25f, color);
+                } else {
+                    drawList->AddCircle(center, lineHeight * 0.25f, color, 0, 2.0f);
+                }
+            }*/
+            /*if (probe.IsWatchpointSet(address)) {
+                const ImVec2 center{pos.x + lineHeight * 0.5f, pos.y + lineHeight * 0.5f};
+                const ImVec2 p1{center.x, center.y - lineHeight * 0.25f};
+                const ImVec2 p2{center.x - lineHeight * 0.25f, center.y};
+                const ImVec2 p3{center.x, center.y + lineHeight * 0.25f};
+                const ImVec2 p4{center.x + lineHeight * 0.25f, center.y};
+                const ImU32 color = ImGui::ColorConvertFloat4ToU32(m_colors.disasm.wtptIconColor);
+                if (m_context.saturn.IsDebugTracingEnabled()) {
+                    drawList->AddQuadFilled(p1, p2, p3, p4, color);
+                } else {
+                    drawList->AddQuad(p1, p2, p3, p4, color, 2.0f);
+                }
+            }*/
+            ImGui::Dummy(ImVec2(lineHeight * 4, 0.0f));
+            ImGui::SameLine(0.0f, 0.0f);
+        };
+
         auto drawAddress = [&] {
             ImGui::TextColored(m_colors.disasm.address, "%08X", address);
             ImGui::SameLine(0.0f, m_style.disasmSpacing);
@@ -107,9 +163,8 @@ void SH2DisassemblyView::Display() {
                 ImVec2(startPos.x + disasmCharSize.x * 0.4f, startPos.y + disasmCharSize.y * 0.6f),
                 ImVec2(startPos.x + disasmCharSize.x * 1.4f, startPos.y + disasmCharSize.y * 0.6f),
             };
-            windowDrawList->AddPolyline(points, std::size(points),
-                                        ImGui::ColorConvertFloat4ToU32(m_colors.disasm.delaySlot), ImDrawFlags_None,
-                                        2.0f);
+            drawList->AddPolyline(points, std::size(points), ImGui::ColorConvertFloat4ToU32(m_colors.disasm.delaySlot),
+                                  ImDrawFlags_None, 2.0f);
             ImGui::Dummy(ImVec2(0, 0));
         };
 
@@ -454,6 +509,7 @@ void SH2DisassemblyView::Display() {
         // -------------------------------------------------------------------------------------------------------------
 
         ImGui::BeginGroup();
+        drawIcons();
         drawAddress();
         drawOpcode();
         drawFullMnemonic();
