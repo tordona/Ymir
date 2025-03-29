@@ -124,16 +124,33 @@ public:
         m_tracer = tracer;
     }
 
-    InterruptMask GetInterruptMask() const {
-        return m_intrMask;
+    class Probe {
+    public:
+        Probe(SCU &scu)
+            : m_scu(scu) {}
+
+        InterruptMask GetInterruptMask() const {
+            return m_scu.m_intrMask;
+        }
+
+        InterruptStatus GetInterruptStatus() const {
+            return m_scu.m_intrStatus;
+        }
+
+        bool GetABusInterruptAcknowledge() const {
+            return m_scu.m_abusIntrAck;
+        }
+
+    private:
+        SCU &m_scu;
+    };
+
+    Probe &GetProbe() {
+        return m_probe;
     }
 
-    InterruptStatus GetInterruptStatus() const {
-        return m_intrStatus;
-    }
-
-    bool GetABusInterruptAcknowledge() const {
-        return m_abusIntrAck;
+    const Probe &GetProbe() const {
+        return m_probe;
     }
 
 private:
@@ -289,6 +306,7 @@ private:
     // Debugger
 
     debug::ISCUTracer *m_tracer = nullptr;
+    Probe m_probe{*this};
 
 public:
     // -------------------------------------------------------------------------
