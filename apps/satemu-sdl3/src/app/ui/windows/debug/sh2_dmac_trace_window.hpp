@@ -2,7 +2,7 @@
 
 #include "sh2_window_base.hpp"
 
-// #include <app/ui/views/debug/sh2_dmac_trace_view.hpp>
+#include <app/ui/views/debug/sh2_dmac_trace_view.hpp>
 
 namespace app::ui {
 
@@ -15,8 +15,8 @@ protected:
     void DrawContents() override;
 
 private:
-    // SH2DMAControllerTraceView m_dmac0TraceView;
-    // SH2DMAControllerTraceView m_dmac1TraceView;
+    SH2DMAControllerChannelTraceView m_dmac0TraceView;
+    SH2DMAControllerChannelTraceView m_dmac1TraceView;
 };
 
 } // namespace app::ui
