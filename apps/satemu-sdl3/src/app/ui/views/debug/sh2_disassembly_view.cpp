@@ -173,22 +173,19 @@ void SH2DisassemblyView::Display() {
                 ImGui::SameLine(0.0f, 0.0f);
             };
 
-            auto drawAddress = [&] {
-                ImGui::TextColored(m_colors.disasm.address, "%08X", address);
-                ImGui::SameLine(0.0f, m_style.disasmSpacing);
-            };
+            auto drawAddress = [&] { ImGui::TextColored(m_colors.disasm.address, "%08X", address); };
 
-            auto drawOpcode = [&] {
+            auto drawOpcodeBytes = [&] {
                 if (m_settings.displayOpcodeBytes) {
                     ImGui::TextColored(m_colors.disasm.bytes, "%04X", opcode);
-                    ImGui::SameLine(0.0f, m_style.disasmSpacing);
                 }
+            };
+            auto drawOpcodeAscii = [&] {
                 if (m_settings.displayOpcodeAscii) {
                     char ascii[2] = {0};
                     ascii[0] = filterAscii((opcode >> 8) & 0xFF);
                     ascii[1] = filterAscii((opcode >> 0) & 0xFF);
                     ImGui::TextColored(m_colors.disasm.ascii, "%c%c", ascii[0], ascii[1]);
-                    ImGui::SameLine(0.0f, m_style.disasmSpacing);
                 }
             };
 
@@ -243,7 +240,6 @@ void SH2DisassemblyView::Display() {
             };
 
             auto drawFullMnemonic = [&] {
-                ImGui::SameLine(0, m_style.disasmSpacing);
                 const float startX = ImGui::GetCursorPosX();
                 ImGui::Dummy(ImVec2(0, 0));
 
@@ -404,22 +400,18 @@ void SH2DisassemblyView::Display() {
             };
 
             auto drawImm = [&](sint32 imm) {
-                ImGui::SameLine(0, 0);
                 ImGui::TextColored(m_colors.disasm.immediate, "#0x%X", static_cast<uint32>(imm));
             };
 
             auto drawRegRead = [&](std::string_view regName) {
-                ImGui::SameLine(0, 0);
                 ImGui::TextColored(m_colors.disasm.regRead, "%s", regName.data());
             };
 
             auto drawRegWrite = [&](std::string_view regName) {
-                ImGui::SameLine(0, 0);
                 ImGui::TextColored(m_colors.disasm.regWrite, "%s", regName.data());
             };
 
             auto drawRegReadWrite = [&](std::string_view regName) {
-                ImGui::SameLine(0, 0);
                 ImGui::TextColored(m_colors.disasm.regReadWrite, "%s", regName.data());
             };
 
@@ -431,20 +423,9 @@ void SH2DisassemblyView::Display() {
                 }
             };
 
-            auto drawRnRead = [&](uint8 rn) {
-                ImGui::SameLine(0, 0);
-                ImGui::TextColored(m_colors.disasm.regRead, "r%u", rn);
-            };
-
-            auto drawRnWrite = [&](uint8 rn) {
-                ImGui::SameLine(0, 0);
-                ImGui::TextColored(m_colors.disasm.regWrite, "r%u", rn);
-            };
-
-            auto drawRnReadWrite = [&](uint8 rn) {
-                ImGui::SameLine(0, 0);
-                ImGui::TextColored(m_colors.disasm.regReadWrite, "r%u", rn);
-            };
+            auto drawRnRead = [&](uint8 rn) { ImGui::TextColored(m_colors.disasm.regRead, "r%u", rn); };
+            auto drawRnWrite = [&](uint8 rn) { ImGui::TextColored(m_colors.disasm.regWrite, "r%u", rn); };
+            auto drawRnReadWrite = [&](uint8 rn) { ImGui::TextColored(m_colors.disasm.regReadWrite, "r%u", rn); };
 
             auto drawRn = [&](uint8 rn, bool write) {
                 if (write) {
@@ -456,28 +437,16 @@ void SH2DisassemblyView::Display() {
 
             auto drawRWSymbol = [&](std::string_view symbol, bool write) {
                 const auto color = write ? m_colors.disasm.regWrite : m_colors.disasm.regRead;
-                ImGui::SameLine(0, 0);
                 ImGui::TextColored(color, "%s", symbol.data());
             };
 
-            auto drawPlus = [&] {
-                ImGui::SameLine(0, 0);
-                ImGui::TextColored(m_colors.disasm.addrInc, "+");
-            };
-
-            auto drawMinus = [&] {
-                ImGui::SameLine(0, 0);
-                ImGui::TextColored(m_colors.disasm.addrDec, "-");
-            };
-
-            auto drawComma = [&]() {
-                ImGui::SameLine(0, 0);
-                ImGui::TextColored(m_colors.disasm.separator, ", ");
-            };
+            auto drawPlus = [&] { ImGui::TextColored(m_colors.disasm.addrInc, "+"); };
+            auto drawMinus = [&] { ImGui::TextColored(m_colors.disasm.addrDec, "-"); };
+            auto drawComma = [&] { ImGui::TextColored(m_colors.disasm.separator, ", "); };
 
             auto drawOp = [&](const sh2::Operand &op, bool write) {
                 if (op.type == sh2::Operand::Type::None) {
-                    return;
+                    return false;
                 }
 
                 switch (op.type) {
@@ -485,54 +454,79 @@ void SH2DisassemblyView::Display() {
                 case sh2::Operand::Type::Rn: drawRn(op.reg, write); break;
                 case sh2::Operand::Type::AtRn:
                     drawRWSymbol("@", write);
+                    ImGui::SameLine(0, 0);
                     drawRnRead(op.reg);
                     break;
                 case sh2::Operand::Type::AtRnPlus:
                     drawRWSymbol("@", write);
+                    ImGui::SameLine(0, 0);
                     drawRnReadWrite(op.reg);
+                    ImGui::SameLine(0, 0);
                     drawPlus();
                     break;
                 case sh2::Operand::Type::AtMinusRn:
                     drawRWSymbol("@", write);
+                    ImGui::SameLine(0, 0);
                     drawMinus();
+                    ImGui::SameLine(0, 0);
                     drawRnReadWrite(op.reg);
                     break;
                 case sh2::Operand::Type::AtDispRn:
                     drawRWSymbol("@(", write);
+                    ImGui::SameLine(0, 0);
                     drawImm(op.immDisp);
+                    ImGui::SameLine(0, 0);
                     drawComma();
+                    ImGui::SameLine(0, 0);
                     drawRnRead(op.reg);
+                    ImGui::SameLine(0, 0);
                     drawRWSymbol(")", write);
                     break;
                 case sh2::Operand::Type::AtR0Rn:
                     drawRWSymbol("@(", write);
+                    ImGui::SameLine(0, 0);
                     drawRnRead(0);
+                    ImGui::SameLine(0, 0);
                     drawComma();
+                    ImGui::SameLine(0, 0);
                     drawRnRead(op.reg);
+                    ImGui::SameLine(0, 0);
                     drawRWSymbol(")", write);
                     break;
                 case sh2::Operand::Type::AtDispGBR:
                     drawRWSymbol("@(", write);
+                    ImGui::SameLine(0, 0);
                     drawImm(op.immDisp);
+                    ImGui::SameLine(0, 0);
                     drawComma();
+                    ImGui::SameLine(0, 0);
                     drawRegRead("gbr");
+                    ImGui::SameLine(0, 0);
                     drawRWSymbol(")", write);
                     break;
                 case sh2::Operand::Type::AtR0GBR:
                     drawRWSymbol("@(", write);
+                    ImGui::SameLine(0, 0);
                     drawRnRead(0);
+                    ImGui::SameLine(0, 0);
                     drawComma();
+                    ImGui::SameLine(0, 0);
                     drawRegRead("gbr");
+                    ImGui::SameLine(0, 0);
                     drawRWSymbol(")", write);
                     break;
                 case sh2::Operand::Type::AtDispPC:
                     drawRWSymbol("@(", write);
+                    ImGui::SameLine(0, 0);
                     drawImm(address + op.immDisp);
+                    ImGui::SameLine(0, 0);
                     drawRWSymbol(")", write);
                     break;
                 case sh2::Operand::Type::AtDispPCWordAlign:
                     drawRWSymbol("@(", write);
+                    ImGui::SameLine(0, 0);
                     drawImm((address & ~3) + op.immDisp);
+                    ImGui::SameLine(0, 0);
                     drawRWSymbol(")", write);
                     break;
                 case sh2::Operand::Type::DispPC: drawImm(address + op.immDisp); break;
@@ -543,9 +537,14 @@ void SH2DisassemblyView::Display() {
                 case sh2::Operand::Type::MACH: drawReg("mach", write); break;
                 case sh2::Operand::Type::MACL: drawReg("macl", write); break;
                 case sh2::Operand::Type::PR: drawReg("pr", write); break;
-                default: break;
+                default: return false;
                 }
+
+                return true;
             };
+
+            auto drawOp1 = [&] { return drawOp(disasm.op1, false); };
+            auto drawOp2 = [&] { return drawOp(disasm.op2, true); };
 
             // -------------------------------------------------------------------------------------------------------------
 
@@ -553,24 +552,45 @@ void SH2DisassemblyView::Display() {
             drawHighlight();
             drawIcons();
             drawAddress();
-            drawOpcode();
+            ImGui::SameLine(0.0f, m_style.disasmSpacing);
+            drawOpcodeBytes();
+            ImGui::SameLine(0.0f, m_style.disasmSpacing);
+            drawOpcodeAscii();
+            ImGui::SameLine(0.0f, m_style.disasmSpacing);
             drawFullMnemonic();
-            drawOp(disasm.op1, false);
+            ImGui::SameLine(0, 0);
+            drawOp1();
             if (disasm.op1.type != sh2::Operand::Type::None && disasm.op2.type != sh2::Operand::Type::None) {
                 ImGui::SameLine(0, 0);
                 ImGui::TextColored(m_colors.disasm.separator, ", ");
             }
-            drawOp(disasm.op2, true);
+            ImGui::SameLine(0, 0);
+            drawOp2();
             ImGui::SameLine(0, 0);
             ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x, 0));
             ImGui::EndGroup();
             // TODO: show short annotations
-            /*if (ImGui::IsItemHovered()) {
+            if (ImGui::IsItemHovered()) {
                 if (ImGui::BeginTooltip()) {
+                    auto notImm = [](sh2::Operand::Type opType) {
+                        return opType != sh2::Operand::Type::Imm && opType != sh2::Operand::Type::DispPC;
+                    };
+                    if (notImm(disasm.op1.type) && drawOp1()) {
+                        ImGui::SameLine(0, 0);
+                        ImGui::TextColored(m_colors.disasm.separator, " = ");
+                        ImGui::SameLine(0, 0);
+                        drawImm(getOp1());
+                    }
+                    if (notImm(disasm.op2.type) && drawOp2()) {
+                        ImGui::SameLine(0, 0);
+                        ImGui::TextColored(m_colors.disasm.separator, " = ");
+                        ImGui::SameLine(0, 0);
+                        drawImm(getOp2());
+                    }
                     // TODO: show detailed annotations
                     ImGui::EndTooltip();
                 }
-            }*/
+            }
         }
         ImGui::PopFont();
     }
