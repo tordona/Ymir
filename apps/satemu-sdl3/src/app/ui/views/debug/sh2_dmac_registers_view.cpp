@@ -17,8 +17,6 @@ void SH2DMAControllerRegistersView::Display() {
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
-    ImGui::SeparatorText("Registers");
-
     uint32 DMAOR = dmaor.Read();
 
     ImGui::BeginGroup();

@@ -7,8 +7,6 @@ SCUDebugOutputView::SCUDebugOutputView(SharedContext &context)
     , m_tracer(context.tracers.SCU) {}
 
 void SCUDebugOutputView::Display() {
-    ImGui::SeparatorText("Debug output");
-
     // TODO: should check if tracer is attached instead
     if (!m_context.saturn.IsDebugTracingEnabled()) {
         ImGui::TextUnformatted("Tracing is disabled -- no debug output will be captured.");

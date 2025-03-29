@@ -3,6 +3,7 @@
 #include "sh2_window_base.hpp"
 
 #include <app/ui/views/debug/sh2_divu_registers_view.hpp>
+#include <app/ui/views/debug/sh2_divu_statistics_view.hpp>
 #include <app/ui/views/debug/sh2_divu_trace_view.hpp>
 
 namespace app::ui {
@@ -17,6 +18,7 @@ protected:
 
 private:
     SH2DivisionUnitRegistersView m_divuRegsView;
+    SH2DivisionUnitStatisticsView m_divuStatsView;
     SH2DivisionUnitTraceView m_divuTraceView;
 };
 

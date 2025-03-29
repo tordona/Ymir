@@ -17,8 +17,6 @@ void SH2DivisionUnitRegistersView::Display() {
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
-    ImGui::SeparatorText("Registers");
-
     if (ImGui::BeginTable("divu_regs", 4, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableNextRow();
 

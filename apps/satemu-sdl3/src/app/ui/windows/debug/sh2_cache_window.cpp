@@ -15,7 +15,10 @@ void SH2CacheWindow::PrepareWindow() {
 }
 
 void SH2CacheWindow::DrawContents() {
+    ImGui::SeparatorText("Cache Control Register");
     m_cacheRegView.Display();
+
+    ImGui::SeparatorText("Entries");
     m_cacheEntriesView.Display();
 }
 

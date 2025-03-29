@@ -14,7 +14,10 @@ SH2TimersWindow::SH2TimersWindow(SharedContext &context, bool master)
 }
 
 void SH2TimersWindow::DrawContents() {
+    ImGui::SeparatorText("Free-running timer");
     m_frtView.Display();
+
+    ImGui::SeparatorText("Watchdog timer");
     m_wdtView.Display();
 }
 

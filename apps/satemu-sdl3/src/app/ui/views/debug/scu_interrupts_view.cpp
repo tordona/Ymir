@@ -11,8 +11,6 @@ void SCUInterruptsView::Display() {
     auto &intrStatus = probe.GetInterruptStatus();
     auto &intrMask = probe.GetInterruptMask();
 
-    ImGui::SeparatorText("Interrupts");
-
     if (ImGui::BeginTable("main", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {
         ImGui::TableSetupColumn("##left", ImGuiTableColumnFlags_WidthFixed, 265);
         ImGui::TableSetupColumn("##right", ImGuiTableColumnFlags_WidthStretch);

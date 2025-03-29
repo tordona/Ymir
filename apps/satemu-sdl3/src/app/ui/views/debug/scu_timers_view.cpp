@@ -13,8 +13,6 @@ void SCUTimersView::Display() {
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
-    ImGui::SeparatorText("Timers");
-
     bool t1mode = probe.GetTimer1Mode();
 
     if (ImGui::BeginTable("timer", 3, ImGuiTableFlags_SizingFixedFit)) {

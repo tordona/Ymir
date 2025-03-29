@@ -17,8 +17,6 @@ void SH2FreeRunningTimerView::Display() {
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
-    ImGui::SeparatorText("Free-running timer");
-
     if (ImGui::BeginTable("regs", 2, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {

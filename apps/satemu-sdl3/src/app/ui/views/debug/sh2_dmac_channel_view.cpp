@@ -15,8 +15,6 @@ void SH2DMAControllerChannelView::Display() {
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
-    ImGui::SeparatorText(fmt::format("Channel {}", m_index).c_str());
-
     auto calcSpacing = [&](const char *label) {
         const float len0 = ImGui::CalcTextSize(fmt::format("{}0", label).c_str()).x;
         const float len1 = ImGui::CalcTextSize(fmt::format("{}1", label).c_str()).x;

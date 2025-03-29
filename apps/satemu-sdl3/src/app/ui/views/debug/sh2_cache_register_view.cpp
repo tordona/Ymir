@@ -16,8 +16,6 @@ void SH2CacheRegisterView::Display() {
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
-    ImGui::SeparatorText("Cache Control Register");
-
     uint8 CCR = cache.ReadCCR();
 
     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);

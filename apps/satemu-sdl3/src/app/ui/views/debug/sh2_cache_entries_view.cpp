@@ -16,8 +16,6 @@ void SH2CacheEntriesView::Display() {
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
-    ImGui::SeparatorText("Entries");
-
     if (ImGui::BeginTable("lru", 6, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY)) {
         ImGui::TableSetupScrollFreeze(1, 1);
         ImGui::TableSetupColumn("#");

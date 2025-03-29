@@ -17,8 +17,6 @@ void SH2WatchdogTimerView::Display() {
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
-    ImGui::SeparatorText("Watchdog timer");
-
     if (ImGui::BeginTable("regs", 2, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {

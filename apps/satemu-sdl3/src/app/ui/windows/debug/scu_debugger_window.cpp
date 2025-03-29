@@ -15,7 +15,7 @@ SCUDebuggerWindow::SCUDebuggerWindow(SharedContext &context)
 }
 
 void SCUDebuggerWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(200, 676), ImVec2(FLT_MAX, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(780, 676), ImVec2(FLT_MAX, FLT_MAX));
 }
 
 void SCUDebuggerWindow::DrawContents() {
@@ -25,12 +25,29 @@ void SCUDebuggerWindow::DrawContents() {
         ImGui::TableNextRow();
 
         if (ImGui::TableNextColumn()) {
+            ImGui::SeparatorText("Registers");
             m_regsView.Display();
+
+            ImGui::SeparatorText("Interrupts");
             m_intrView.Display();
+
+            ImGui::SeparatorText("Timers");
             m_timersView.Display();
         }
         if (ImGui::TableNextColumn()) {
-            m_debugOutputView.Display();
+            if (ImGui::BeginTabBar("##right_tabs")) {
+                if (ImGui::BeginTabItem("DMA")) {
+                    // TODO
+                    ImGui::TextUnformatted("(placeholder text)");
+                    ImGui::EndTabItem();
+                }
+                if (ImGui::BeginTabItem("Debug output")) {
+                    m_debugOutputView.Display();
+                    ImGui::EndTabItem();
+                }
+
+                ImGui::EndTabBar();
+            }
         }
 
         ImGui::EndTable();

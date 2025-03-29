@@ -15,8 +15,13 @@ SH2DMAControllerWindow::SH2DMAControllerWindow(SharedContext &context, bool mast
 }
 
 void SH2DMAControllerWindow::DrawContents() {
+    ImGui::SeparatorText("Registers");
     m_dmacRegsView.Display();
+
+    ImGui::SeparatorText("Channel 0");
     m_dmacChannel0View.Display();
+
+    ImGui::SeparatorText("Channel 1");
     m_dmacChannel1View.Display();
 }
 

@@ -11,8 +11,6 @@ void SCURegistersView::Display() {
 
     ImGui::BeginGroup();
 
-    ImGui::SeparatorText("Registers");
-
     bool wramSizeSelect = probe.GetWRAMSizeSelect();
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("WRAM size:");
