@@ -137,6 +137,20 @@ enum class OpcodeType : uint16 {
     TST_R,      // nm   0010 nnnn mmmm 1000   tst      Rm, Rn
     TST_I,      // i    1100 1000 iiii iiii   tst      #imm, R0
     TST_M,      // i    1100 1100 iiii iiii   tst.b    #imm, @(R0,GBR)
+    BF,         // d    1000 1011 dddd dddd   bf       <label>
+    BFS,        // d    1000 1111 dddd dddd   bf/s     <label>
+    BT,         // d    1000 1001 dddd dddd   bt       <label>
+    BTS,        // d    1000 1101 dddd dddd   bt/s     <label>
+    BRA,        // d12  1010 dddd dddd dddd   bra      <label>
+    BRAF,       // m    0000 mmmm 0010 0011   braf     Rm
+    BSR,        // d12  1011 dddd dddd dddd   bsr      <label>
+    BSRF,       // m    0000 mmmm 0000 0011   bsrf     Rm
+    JMP,        // m    0100 mmmm 0010 1011   jmp      @Rm
+    JSR,        // m    0100 mmmm 0000 1011   jsr      @Rm
+    TRAPA,      // i    1100 0011 iiii iiii   trapa    #imm
+    RTE,        // 0    0000 0000 0010 1011   rte
+    RTS,        // 0    0000 0000 0000 1011   rts
+    Illegal,    // general illegal instruction
 
     Delay_NOP,        // 0    0000 0000 0000 1001   nop
     Delay_SLEEP,      // 0    0000 0000 0001 1011   sleep
@@ -267,22 +281,7 @@ enum class OpcodeType : uint16 {
     Delay_TST_R,      // nm   0010 nnnn mmmm 1000   tst      Rm, Rn
     Delay_TST_I,      // i    1100 1000 iiii iiii   tst      #imm, R0
     Delay_TST_M,      // i    1100 1100 iiii iiii   tst.b    #imm, @(R0,GBR)
-
-    BF,          // d    1000 1011 dddd dddd   bf     <label>
-    BFS,         // d    1000 1111 dddd dddd   bf/s   <label>
-    BT,          // d    1000 1001 dddd dddd   bt     <label>
-    BTS,         // d    1000 1101 dddd dddd   bt/s   <label>
-    BRA,         // d12  1010 dddd dddd dddd   bra    <label>
-    BRAF,        // m    0000 mmmm 0010 0011   braf   Rm
-    BSR,         // d12  1011 dddd dddd dddd   bsr    <label>
-    BSRF,        // m    0000 mmmm 0000 0011   bsrf   Rm
-    JMP,         // m    0100 mmmm 0010 1011   jmp    @Rm
-    JSR,         // m    0100 mmmm 0000 1011   jsr    @Rm
-    TRAPA,       // i    1100 0011 iiii iiii   trapa  #imm
-    RTE,         // 0    0000 0000 0010 1011   rte
-    RTS,         // 0    0000 0000 0000 1011   rts
-    Illegal,     // general illegal instruction
-    IllegalSlot, // illegal slot instruction
+    IllegalSlot,      // illegal slot instruction
 };
 
 struct DecodedArgs {

@@ -1624,6 +1624,23 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::TST_I: TSTI(args), PC += 2; return 1;
     case OpcodeType::TST_M: TSTM<debug, enableCache>(args), PC += 2; return 3;
 
+    case OpcodeType::BF: return BF(args);
+    case OpcodeType::BFS: return BFS(args);
+    case OpcodeType::BT: return BT(args);
+    case OpcodeType::BTS: return BTS(args);
+    case OpcodeType::BRA: BRA(args); return 2;
+    case OpcodeType::BRAF: BRAF(args); return 2;
+    case OpcodeType::BSR: BSR(args); return 2;
+    case OpcodeType::BSRF: BSRF(args); return 2;
+    case OpcodeType::JMP: JMP(args); return 2;
+    case OpcodeType::JSR: JSR(args); return 2;
+    case OpcodeType::TRAPA: TRAPA<debug, enableCache>(args); return 8;
+
+    case OpcodeType::RTE: RTE<debug, enableCache>(); return 4;
+    case OpcodeType::RTS: RTS(); return 2;
+
+    case OpcodeType::Illegal: EnterException<debug, enableCache>(xvGenIllegalInstr); return 8;
+
     case OpcodeType::Delay_NOP: NOP(), jumpToDelaySlot(); return 1;
 
     case OpcodeType::Delay_SLEEP: SLEEP(), jumpToDelaySlot(); return 3;
@@ -1763,22 +1780,6 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     case OpcodeType::Delay_TST_I: TSTI(args), jumpToDelaySlot(); return 1;
     case OpcodeType::Delay_TST_M: TSTM<debug, enableCache>(args), jumpToDelaySlot(); return 3;
 
-    case OpcodeType::BF: return BF(args);
-    case OpcodeType::BFS: return BFS(args);
-    case OpcodeType::BT: return BT(args);
-    case OpcodeType::BTS: return BTS(args);
-    case OpcodeType::BRA: BRA(args); return 2;
-    case OpcodeType::BRAF: BRAF(args); return 2;
-    case OpcodeType::BSR: BSR(args); return 2;
-    case OpcodeType::BSRF: BSRF(args); return 2;
-    case OpcodeType::JMP: JMP(args); return 2;
-    case OpcodeType::JSR: JSR(args); return 2;
-    case OpcodeType::TRAPA: TRAPA<debug, enableCache>(args); return 8;
-
-    case OpcodeType::RTE: RTE<debug, enableCache>(); return 4;
-    case OpcodeType::RTS: RTS(); return 2;
-
-    case OpcodeType::Illegal: EnterException<debug, enableCache>(xvGenIllegalInstr); return 8;
     case OpcodeType::IllegalSlot: EnterException<debug, enableCache>(xvSlotIllegalInstr); return 8;
     }
 }
