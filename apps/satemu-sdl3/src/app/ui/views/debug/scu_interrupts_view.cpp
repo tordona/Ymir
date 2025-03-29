@@ -30,6 +30,18 @@ void SCUInterruptsView::Display() {
 }
 
 void SCUInterruptsView::DisplayInternalInterrupts() {
+    auto &probe = m_scu.GetProbe();
+    auto &intrStatus = probe.GetInterruptStatus();
+    auto &intrMask = probe.GetInterruptMask();
+
+    bool flag = intrMask.ABus_ExtIntrs;
+    if (ImGui::Checkbox("A-Bus external interrupt mask", &flag)) {
+        intrMask.ABus_ExtIntrs = flag;
+    }
+    ImGui::Checkbox("A-Bus interrupt acknowledge", &probe.GetABusInterruptAcknowledge());
+
+    ImGui::Separator();
+
     ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
     ImGui::TextUnformatted("Internal");
     ImGui::PopFont();
@@ -42,10 +54,6 @@ void SCUInterruptsView::DisplayInternalInterrupts() {
         ImGui::TableSetupColumn("Vec");
         ImGui::TableSetupColumn("Lv");
         ImGui::TableHeadersRow();
-
-        auto &probe = m_scu.GetProbe();
-        auto &intrStatus = probe.GetInterruptStatus();
-        auto &intrMask = probe.GetInterruptMask();
 
         auto drawRow = [&](uint32 bit, std::string_view source, std::string_view name, uint8 vector, uint8 level) {
             const uint32 bitVal = 1u << bit;

@@ -145,7 +145,11 @@ public:
             return m_scu.m_intrStatus;
         }
 
-        bool GetABusInterruptAcknowledge() const {
+        bool &GetABusInterruptAcknowledge() {
+            return m_scu.m_abusIntrAck;
+        }
+
+        const bool &GetABusInterruptAcknowledge() const {
             return m_scu.m_abusIntrAck;
         }
 
