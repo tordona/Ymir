@@ -82,10 +82,62 @@ void SH2Tracer::EndDivision(sint32 quotient, sint32 remainder, bool overflow) {
 }
 
 void SH2Tracer::DMAXferBegin(uint32 channel, uint32 srcAddress, uint32 dstAddress, uint32 count, uint32 unitSize,
-                             sint32 srcInc, sint32 dstInc) {}
+                             sint32 srcInc, sint32 dstInc) {
+    if (!traceDMA) {
+        return;
+    }
 
-void SH2Tracer::DMAXferData(uint32 channel, uint32 srcAddress, uint32 dstAddress, uint32 data, uint32 unitSize) {}
+    dmaTransfers[channel].Write({
+        .srcAddress = srcAddress,
+        .dstAddress = dstAddress,
+        .count = count,
+        .unitSize = unitSize,
+        .srcInc = srcInc,
+        .dstInc = dstInc,
+        .finished = false,
+        .counter = m_dmaCounter[channel]++,
+    });
 
-void SH2Tracer::DMAXferEnd(uint32 channel, bool irqRaised) {}
+    ++dmaStats[channel].numTransfers;
+}
+
+void SH2Tracer::DMAXferData(uint32 channel, uint32 srcAddress, uint32 dstAddress, uint32 data, uint32 unitSize) {
+    if (!traceDMA) {
+        return;
+    }
+
+    auto &xfer = dmaTransfers[channel].GetLast();
+    if (xfer.finished) {
+        return;
+    }
+
+    // TODO: store transfer units in a shared/limited buffer or write directly to disk
+
+    // auto &unit = xfer.units.emplace_back();
+    // unit.srcAddress = srcAddress;
+    // unit.dstAddress = dstAddress;
+    // unit.data = data;
+    // unit.unitSize = unitSize;
+
+    dmaStats[channel].bytesTransferred += std::min(unitSize, 4u); // 16-byte transfers send four 4-byte units
+}
+
+void SH2Tracer::DMAXferEnd(uint32 channel, bool irqRaised) {
+    if (!traceDMA) {
+        return;
+    }
+
+    auto &xfer = dmaTransfers[channel].GetLast();
+    if (xfer.finished) {
+        return;
+    }
+
+    xfer.finished = true;
+    xfer.irqRaised = irqRaised;
+
+    if (irqRaised) {
+        ++dmaStats[channel].interrupts;
+    }
+}
 
 } // namespace app

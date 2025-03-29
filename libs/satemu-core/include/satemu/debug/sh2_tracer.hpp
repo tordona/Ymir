@@ -73,13 +73,13 @@ struct ISH2Tracer {
                               sint32 srcInc, sint32 dstInc) {}
 
     // Invoked when a DMA channel transfers one unit of data.
-    // For 16-byte transfers, this function is invoked once per 32-bit transfer with a `unitSize` of 16.
+    // For 16-byte transfers, this function is invoked once per 32-bit transfer with a `unitSize` of 4.
     //
     // `channel` is the DMAC channel number, either 0 or 1.
     // `srcAddress` is the source address of the transfer.
     // `dstAddress` is the destination address of the transfer.
     // `data` is the data transferred.
-    // `unitSize` is the size of a single unit of transfer: 1, 2, 4 or 16.
+    // `unitSize` is the size of a single unit of transfer: 1, 2 or 4.
     virtual void DMAXferData(uint32 channel, uint32 srcAddress, uint32 dstAddress, uint32 data, uint32 unitSize) {}
 
     // Invoked when a DMA transfer finishes.

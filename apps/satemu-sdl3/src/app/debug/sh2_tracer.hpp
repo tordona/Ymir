@@ -4,6 +4,8 @@
 
 #include <util/ring_buffer.hpp>
 
+#include <vector>
+
 namespace app {
 
 struct SH2Tracer final : satemu::debug::ISH2Tracer {
@@ -13,6 +15,10 @@ struct SH2Tracer final : satemu::debug::ISH2Tracer {
 
     void ResetDivisionCounter() {
         m_divisionCounter = 0;
+    }
+
+    void ResetDMACounter(uint32 channel) {
+        m_dmaCounter[channel] = 0;
     }
 
     bool traceInstructions = false;
@@ -53,10 +59,32 @@ struct SH2Tracer final : satemu::debug::ISH2Tracer {
         uint32 counter;
     };
 
+    struct DMAInfo {
+        uint32 srcAddress;
+        uint32 dstAddress;
+        uint32 count;
+        uint32 unitSize;
+        sint32 srcInc;
+        sint32 dstInc;
+        bool finished;
+        bool irqRaised;
+        uint32 counter;
+
+        /*struct XferUnit {
+            uint32 srcAddress;
+            uint32 dstAddress;
+            uint32 data;
+            uint32 unitSize;
+        };
+
+        std::vector<XferUnit> units;*/
+    };
+
     util::RingBuffer<InstructionInfo, 16384> instructions;
     util::RingBuffer<InterruptInfo, 1024> interrupts;
     util::RingBuffer<ExceptionInfo, 1024> exceptions;
     util::RingBuffer<DivisionInfo, 1024> divisions;
+    std::array<util::RingBuffer<DMAInfo, 1024>, 2> dmaTransfers;
 
     struct DivisionStatistics {
         uint64 div32s = 0;
@@ -72,9 +100,24 @@ struct SH2Tracer final : satemu::debug::ISH2Tracer {
         }
     } divStats;
 
+    struct DMAStatistics {
+        uint64 numTransfers = 0;
+        uint64 bytesTransferred = 0;
+        uint64 interrupts = 0;
+
+        void Clear() {
+            numTransfers = 0;
+            bytesTransferred = 0;
+            interrupts = 0;
+        }
+    };
+
+    std::array<DMAStatistics, 2> dmaStats;
+
 private:
     uint32 m_interruptCounter = 0;
     uint32 m_divisionCounter = 0;
+    std::array<uint32, 2> m_dmaCounter = {0, 0};
 
     // -------------------------------------------------------------------------
     // ISH2Tracer implementation

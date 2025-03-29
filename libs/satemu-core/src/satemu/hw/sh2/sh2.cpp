@@ -1202,7 +1202,7 @@ void SH2::RunDMAC(uint32 channel) {
                 devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 16-byte transfer {:d} from {:08X} to {:08X} -> {:X}",
                                              channel, i, ch.srcAddress, ch.dstAddress, value);
                 MemWriteLong<debug, enableCache>(ch.dstAddress + i * sizeof(uint32), value);
-                TraceDMAXferData<debug>(m_tracer, channel, ch.srcAddress, ch.dstAddress, value, xferSize);
+                TraceDMAXferData<debug>(m_tracer, channel, ch.srcAddress, ch.dstAddress, value, 4);
             }
             break;
         }
