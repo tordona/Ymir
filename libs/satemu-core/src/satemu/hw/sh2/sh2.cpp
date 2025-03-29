@@ -153,6 +153,36 @@ FORCE_INLINE static void TraceEndDivision(debug::ISH2Tracer *tracer, sint32 quot
     }
 }
 
+template <bool debug>
+FORCE_INLINE static void TraceDMAXferBegin(debug::ISH2Tracer *tracer, uint32 channel, uint32 srcAddress,
+                                           uint32 dstAddress, uint32 count, uint32 unitSize, sint32 srcInc,
+                                           sint32 dstInc) {
+    if constexpr (debug) {
+        if (tracer) {
+            return tracer->DMAXferBegin(channel, srcAddress, dstAddress, count, unitSize, srcInc, dstInc);
+        }
+    }
+}
+
+template <bool debug>
+FORCE_INLINE static void TraceDMAXferData(debug::ISH2Tracer *tracer, uint32 channel, uint32 srcAddress,
+                                          uint32 dstAddress, uint32 data, uint32 unitSize) {
+    if constexpr (debug) {
+        if (tracer) {
+            return tracer->DMAXferData(channel, srcAddress, dstAddress, data, unitSize);
+        }
+    }
+}
+
+template <bool debug>
+FORCE_INLINE static void TraceDMAXferEnd(debug::ISH2Tracer *tracer, uint32 channel, bool irqRaised) {
+    if constexpr (debug) {
+        if (tracer) {
+            return tracer->DMAXferEnd(channel, irqRaised);
+        }
+    }
+}
+
 // -----------------------------------------------------------------------------
 // Implementation
 
@@ -1100,6 +1130,9 @@ template <bool debug, bool enableCache>
 void SH2::RunDMAC(uint32 channel) {
     auto &ch = m_dmaChannels[channel];
 
+    // TODO: prioritize channels based on DMAOR.PR
+    // TODO: proper timings, cycle-stealing, etc. (suspend instructions if not cached)
+
     if (!IsDMATransferActive(ch)) {
         return;
     }
@@ -1119,24 +1152,24 @@ void SH2::RunDMAC(uint32 channel) {
         }
     }
 
-    // TODO: trace DMA transfer start, including all parameters
+    static constexpr uint32 kXferSize[] = {1, 2, 4, 16};
+    const uint32 xferSize = kXferSize[static_cast<uint32>(ch.xferSize)];
+    auto getAddressInc = [&](DMATransferIncrementMode mode) -> sint32 {
+        using enum DMATransferIncrementMode;
+        switch (mode) {
+        case Fixed: return 0;
+        case Increment: return +xferSize;
+        case Decrement: return -xferSize;
+        case Reserved: return 0;
+        }
+    };
+
+    const sint32 srcInc = getAddressInc(ch.srcMode);
+    const sint32 dstInc = getAddressInc(ch.dstMode);
+
+    TraceDMAXferBegin<debug>(m_tracer, channel, ch.srcAddress, ch.dstAddress, ch.xferCount, xferSize, srcInc, dstInc);
 
     do {
-        // TODO: prioritize channels based on DMAOR.PR
-        // TODO: proper timings, cycle-stealing, etc. (suspend instructions if not cached)
-        static constexpr uint32 kXferSize[] = {1, 2, 4, 16};
-        const uint32 xferSize = kXferSize[static_cast<uint32>(ch.xferSize)];
-
-        auto incAddress = [&](uint32 address, DMATransferIncrementMode mode) -> uint32 {
-            using enum DMATransferIncrementMode;
-            switch (mode) {
-            case Fixed: return address;
-            case Increment: return address + xferSize;
-            case Decrement: return address - xferSize;
-            case Reserved: return address;
-            }
-        };
-
         // Perform one unit of transfer
         switch (ch.xferSize) {
         case DMATransferSize::Byte: {
@@ -1144,7 +1177,7 @@ void SH2::RunDMAC(uint32 channel) {
             devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 8-bit transfer from {:08X} to {:08X} -> {:X}", channel,
                                          ch.srcAddress, ch.dstAddress, value);
             MemWriteByte<debug, enableCache>(ch.dstAddress, value);
-            // TODO: trace DMA transfer data
+            TraceDMAXferData<debug>(m_tracer, channel, ch.srcAddress, ch.dstAddress, value, xferSize);
             break;
         }
         case DMATransferSize::Word: {
@@ -1152,7 +1185,7 @@ void SH2::RunDMAC(uint32 channel) {
             devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 16-bit transfer from {:08X} to {:08X} -> {:X}", channel,
                                          ch.srcAddress, ch.dstAddress, value);
             MemWriteWord<debug, enableCache>(ch.dstAddress, value);
-            // TODO: trace DMA transfer data
+            TraceDMAXferData<debug>(m_tracer, channel, ch.srcAddress, ch.dstAddress, value, xferSize);
             break;
         }
         case DMATransferSize::Longword: {
@@ -1160,7 +1193,7 @@ void SH2::RunDMAC(uint32 channel) {
             devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 32-bit transfer from {:08X} to {:08X} -> {:X}", channel,
                                          ch.srcAddress, ch.dstAddress, value);
             MemWriteLong<debug, enableCache>(ch.dstAddress, value);
-            // TODO: trace DMA transfer data
+            TraceDMAXferData<debug>(m_tracer, channel, ch.srcAddress, ch.dstAddress, value, xferSize);
             break;
         }
         case DMATransferSize::QuadLongword:
@@ -1169,14 +1202,14 @@ void SH2::RunDMAC(uint32 channel) {
                 devlog::trace<grp::dma_xfer>(m_logPrefix, "DMAC{} 16-byte transfer {:d} from {:08X} to {:08X} -> {:X}",
                                              channel, i, ch.srcAddress, ch.dstAddress, value);
                 MemWriteLong<debug, enableCache>(ch.dstAddress + i * sizeof(uint32), value);
-                // TODO: trace DMA transfer data
+                TraceDMAXferData<debug>(m_tracer, channel, ch.srcAddress, ch.dstAddress, value, xferSize);
             }
             break;
         }
 
         // Update address and remaining count
-        ch.srcAddress = incAddress(ch.srcAddress, ch.srcMode);
-        ch.dstAddress = incAddress(ch.dstAddress, ch.dstMode);
+        ch.srcAddress += srcInc;
+        ch.dstAddress += dstInc;
 
         if (ch.xferSize == DMATransferSize::QuadLongword) {
             if (ch.xferCount >= 4) {
@@ -1190,7 +1223,7 @@ void SH2::RunDMAC(uint32 channel) {
         }
     } while (ch.xferCount > 0);
 
-    // TODO: trace DMA transfer finish, including IRQ enable flag
+    TraceDMAXferEnd<debug>(m_tracer, channel, ch.irqEnable);
 
     ch.xferEnded = true;
     devlog::trace<grp::dma>(m_logPrefix, "DMAC{} transfer finished", channel);

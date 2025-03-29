@@ -6,18 +6,20 @@
 
 namespace app {
 
-struct SH2Tracer final : public satemu::debug::ISH2Tracer {
-    void ExecuteInstruction(uint32 pc, uint16 opcode, bool delaySlot) final;
-    void Interrupt(uint8 vecNum, uint8 level, satemu::sh2::InterruptSource source, uint32 pc) final;
-    void Exception(uint8 vecNum, uint32 pc, uint32 sr) final;
-    void Begin32x32Division(sint32 dividend, sint32 divisor, bool overflowIntrEnable) final;
-    void Begin64x32Division(sint64 dividend, sint32 divisor, bool overflowIntrEnable) final;
-    void EndDivision(sint32 quotient, sint32 remainder, bool overflow) final;
+struct SH2Tracer final : satemu::debug::ISH2Tracer {
+    void ResetInterruptCounter() {
+        m_interruptCounter = 0;
+    }
+
+    void ResetDivisionCounter() {
+        m_divisionCounter = 0;
+    }
 
     bool traceInstructions = false;
     bool traceInterrupts = false;
     bool traceExceptions = false;
     bool traceDivisions = false;
+    bool traceDMA = false;
 
     struct InstructionInfo {
         uint32 pc;
@@ -70,17 +72,25 @@ struct SH2Tracer final : public satemu::debug::ISH2Tracer {
         }
     } divStats;
 
-    void ResetInterruptCounter() {
-        m_interruptCounter = 0;
-    }
-
-    void ResetDivisionCounter() {
-        m_divisionCounter = 0;
-    }
-
 private:
     uint32 m_interruptCounter = 0;
     uint32 m_divisionCounter = 0;
+
+    // -------------------------------------------------------------------------
+    // ISH2Tracer implementation
+
+    void ExecuteInstruction(uint32 pc, uint16 opcode, bool delaySlot) final;
+    void Interrupt(uint8 vecNum, uint8 level, satemu::sh2::InterruptSource source, uint32 pc) final;
+    void Exception(uint8 vecNum, uint32 pc, uint32 sr) final;
+
+    void Begin32x32Division(sint32 dividend, sint32 divisor, bool overflowIntrEnable) final;
+    void Begin64x32Division(sint64 dividend, sint32 divisor, bool overflowIntrEnable) final;
+    void EndDivision(sint32 quotient, sint32 remainder, bool overflow) final;
+
+    void DMAXferBegin(uint32 channel, uint32 srcAddress, uint32 dstAddress, uint32 count, uint32 unitSize,
+                      sint32 srcInc, sint32 dstInc) final;
+    void DMAXferData(uint32 channel, uint32 srcAddress, uint32 dstAddress, uint32 data, uint32 unitSize) final;
+    void DMAXferEnd(uint32 channel, bool irqRaised) final;
 };
 
 } // namespace app

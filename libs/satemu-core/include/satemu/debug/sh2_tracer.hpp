@@ -58,6 +58,35 @@ struct ISH2Tracer {
     // `remainder` is the resulting remainder (DVDNTH)
     // `overflow` indicates if the division resulted in an overflow
     virtual void EndDivision(sint32 quotient, sint32 remainder, bool overflow) {}
+
+    // Invoked when a DMA transfer begins.
+    //
+    // `channel` is the DMAC channel number, either 0 or 1.
+    // `srcAddress` is the starting source address of the transfer.
+    // `dstAddress` is the starting destination address of the transfer.
+    // `count` is the number of transfer units to be performed. For 16-byte transfers, this number decrements once per
+    // 32-bit transfer.
+    // `unitSize` is the size of a single unit of transfer: 1, 2, 4 or 16.
+    // `srcInc` indicates the source address increment per unit of transfer.
+    // `dstInc` indicates the destination address increment per unit of transfer.
+    virtual void DMAXferBegin(uint32 channel, uint32 srcAddress, uint32 dstAddress, uint32 count, uint32 unitSize,
+                              sint32 srcInc, sint32 dstInc) {}
+
+    // Invoked when a DMA channel transfers one unit of data.
+    // For 16-byte transfers, this function is invoked once per 32-bit transfer with a `unitSize` of 16.
+    //
+    // `channel` is the DMAC channel number, either 0 or 1.
+    // `srcAddress` is the source address of the transfer.
+    // `dstAddress` is the destination address of the transfer.
+    // `data` is the data transferred.
+    // `unitSize` is the size of a single unit of transfer: 1, 2, 4 or 16.
+    virtual void DMAXferData(uint32 channel, uint32 srcAddress, uint32 dstAddress, uint32 data, uint32 unitSize) {}
+
+    // Invoked when a DMA transfer finishes.
+    //
+    // `channel` is the DMAC channel number, either 0 or 1.
+    // `irqRaised` indicates if the channel's transfer end interrupt signal was raised.
+    virtual void DMAXferEnd(uint32 channel, bool irqRaised) {}
 };
 
 } // namespace satemu::debug

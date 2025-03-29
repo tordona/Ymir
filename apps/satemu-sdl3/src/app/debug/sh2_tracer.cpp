@@ -81,4 +81,11 @@ void SH2Tracer::EndDivision(sint32 quotient, sint32 remainder, bool overflow) {
     }
 }
 
+void SH2Tracer::DMAXferBegin(uint32 channel, uint32 srcAddress, uint32 dstAddress, uint32 count, uint32 unitSize,
+                             sint32 srcInc, sint32 dstInc) {}
+
+void SH2Tracer::DMAXferData(uint32 channel, uint32 srcAddress, uint32 dstAddress, uint32 data, uint32 unitSize) {}
+
+void SH2Tracer::DMAXferEnd(uint32 channel, bool irqRaised) {}
+
 } // namespace app
