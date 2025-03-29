@@ -175,7 +175,7 @@ public:
             m_scu.WriteTimer1Reload(value);
         }
 
-        bool IsTimer1Enable() const {
+        bool IsTimer1Enabled() const {
             return m_scu.m_timer1Enable;
         }
         void SetTimer1Enabled(bool enabled) {
