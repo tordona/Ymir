@@ -20,20 +20,21 @@ void SH2DisassemblyView::Display() {
 
     ImDrawList *drawList = ImGui::GetWindowDrawList();
 
-    if (ImGui::BeginChild("##disasm")) {
-        // TODO: compute height
-        // TODO: improve design
-        // - alternate color lines
-        // - breakpoint, watchpoint, PC symbols
-        // - branch arrows
-        // - cursor
+    auto availArea = ImGui::GetContentRegionAvail();
+
+    if (ImGui::BeginChild("##disasm", availArea, ImGuiChildFlags_None,
+                          ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+        const uint32 lines = availArea.y / lineHeight + 1;
+        // TODO: alternate color lines
+        // TODO: branch arrows
+        // TODO: cursor
 
         ImGui::PushFont(m_context.fonts.monospace.medium.regular);
         auto &probe = m_sh2.GetProbe();
         const uint32 pc = probe.PC() & ~1;
         const uint32 pr = probe.PR() & ~1;
-        const uint32 baseAddress = pc;
-        for (uint32 i = 0; i < 32; i++) {
+        const uint32 baseAddress = (pc - lines - 1) & ~1;
+        for (uint32 i = 0; i < lines; i++) {
             const uint32 address = baseAddress + i * sizeof(uint16);
             const uint16 prevOpcode = m_context.saturn.mainBus.Peek<uint16>(address - 2);
             const uint16 opcode = m_context.saturn.mainBus.Peek<uint16>(address);

@@ -16,18 +16,17 @@ void SH2RegistersView::Display() {
     const bool master = m_sh2.IsMaster();
     const bool enabled = master || m_context.saturn.slaveSH2Enabled;
 
-    if (!master) {
-        ImGui::Checkbox("Enabled", &m_context.saturn.slaveSH2Enabled);
-    }
-
     if (!enabled) {
         ImGui::BeginDisabled();
     }
 
+    // Check if we can fit all registers in a single column
+    const bool tallLayout = ImGui::GetContentRegionAvail().y >= ImGui::GetFrameHeightWithSpacing() * 25;
+
+    // Compute several layout sizes
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
-
     const float flagsSpacing = 4.0f;
     const float itemSpacing = ImGui::GetStyle().ItemSpacing.x;
     const float framePadding = ImGui::GetStyle().FramePadding.x;
@@ -54,117 +53,140 @@ void SH2RegistersView::Display() {
         ImGui::PopFont();
     };
 
-    if (ImGui::BeginTable("regs", 2, ImGuiTableFlags_SizingFixedFit)) {
-        for (uint32 i = 0; i < 16 / 2; i++) {
+    auto drawSRFlags = [&] {
+        ImGui::PushStyleVarX(ImGuiStyleVar_ItemSpacing, flagsSpacing);
+
+        ImGui::BeginGroup();
+        bool M = sr.M;
+        if (ImGui::Checkbox("##M", &M)) {
+            sr.M = M;
+        }
+        ImGui::NewLine();
+        ImGui::SameLine(0, (ImGui::GetFrameHeight() - ImGui::CalcTextSize("M").x) / 2);
+        ImGui::TextUnformatted("M");
+        ImGui::EndGroup();
+
+        ImGui::SameLine();
+
+        ImGui::BeginGroup();
+        bool Q = sr.Q;
+        if (ImGui::Checkbox("##Q", &Q)) {
+            sr.Q = Q;
+        }
+        ImGui::NewLine();
+        ImGui::SameLine(0, (ImGui::GetFrameHeight() - ImGui::CalcTextSize("Q").x) / 2);
+        ImGui::TextUnformatted("Q");
+        ImGui::EndGroup();
+
+        ImGui::SameLine();
+
+        ImGui::BeginGroup();
+        bool S = sr.S;
+        if (ImGui::Checkbox("##S", &S)) {
+            sr.S = S;
+        }
+        ImGui::NewLine();
+        ImGui::SameLine(0, (ImGui::GetFrameHeight() - ImGui::CalcTextSize("S").x) / 2);
+        ImGui::TextUnformatted("S");
+        ImGui::EndGroup();
+
+        ImGui::SameLine();
+
+        ImGui::BeginGroup();
+        bool T = sr.T;
+        if (ImGui::Checkbox("##T", &T)) {
+            sr.T = T;
+        }
+        ImGui::NewLine();
+        ImGui::SameLine(0, (ImGui::GetFrameHeight() - ImGui::CalcTextSize("T").x) / 2);
+        ImGui::TextUnformatted("T");
+        ImGui::EndGroup();
+
+        ImGui::SameLine();
+
+        ImGui::BeginGroup();
+        ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+        ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 1);
+        uint8 ILevel = sr.ILevel;
+        if (ImGui::InputScalar("##input_SR_ILevel", ImGuiDataType_U8, &ILevel, nullptr, nullptr, "%X",
+                               ImGuiInputTextFlags_CharsHexadecimal)) {
+            sr.ILevel = std::min<uint8>(ILevel, 0xFu);
+        }
+        ImGui::PopFont();
+        ImGui::NewLine();
+        ImGui::SameLine(0,
+                        ((ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 1) - ImGui::CalcTextSize("I").x) / 2);
+        ImGui::TextUnformatted("I");
+        ImGui::EndGroup();
+
+        ImGui::PopStyleVar();
+    };
+
+    if (tallLayout) {
+        for (uint32 i = 0; i < 16; i++) {
+            drawReg32(fmt::format("R{}", i), probe.R(i));
+        }
+
+        drawReg32("PC", probe.PC());
+        drawReg32("PR", probe.PR());
+
+        sh2::RegMAC &mac = probe.MAC();
+        drawReg32("MACH", mac.H);
+        drawReg32("MACL", mac.L);
+
+        drawReg32("GBR", probe.GBR());
+        drawReg32("VBR", probe.VBR());
+
+        drawReg32("SR", sr.u32);
+        drawSRFlags();
+    } else {
+        if (ImGui::BeginTable("regs", 2, ImGuiTableFlags_SizingFixedFit)) {
+            for (uint32 i = 0; i < 16 / 2; i++) {
+                ImGui::TableNextRow();
+                if (ImGui::TableNextColumn()) {
+                    drawReg32(fmt::format("R{}", i + 0), probe.R(i + 0));
+                }
+                if (ImGui::TableNextColumn()) {
+                    drawReg32(fmt::format("R{}", i + 8), probe.R(i + 8));
+                }
+            }
+
             ImGui::TableNextRow();
             if (ImGui::TableNextColumn()) {
-                drawReg32(fmt::format("R{}", i + 0), probe.R(i + 0));
+                drawReg32("PC", probe.PC());
             }
             if (ImGui::TableNextColumn()) {
-                drawReg32(fmt::format("R{}", i + 8), probe.R(i + 8));
+                drawReg32("PR", probe.PR());
             }
-        }
 
-        ImGui::TableNextRow();
-        if (ImGui::TableNextColumn()) {
-            drawReg32("PC", probe.PC());
-        }
-        if (ImGui::TableNextColumn()) {
-            drawReg32("PR", probe.PR());
-        }
-
-        ImGui::TableNextRow();
-        sh2::RegMAC &mac = probe.MAC();
-        if (ImGui::TableNextColumn()) {
-            drawReg32("MACH", mac.H);
-        }
-        if (ImGui::TableNextColumn()) {
-            drawReg32("MACL", mac.L);
-        }
-
-        ImGui::TableNextRow();
-        if (ImGui::TableNextColumn()) {
-            drawReg32("GBR", probe.GBR());
-        }
-        if (ImGui::TableNextColumn()) {
-            drawReg32("VBR", probe.VBR());
-        }
-
-        ImGui::TableNextRow();
-        if (ImGui::TableNextColumn()) {
-            drawReg32("SR", sr.u32);
-        }
-        if (ImGui::TableNextColumn()) {
-            ImGui::PushStyleVarX(ImGuiStyleVar_ItemSpacing, flagsSpacing);
-
-            ImGui::BeginGroup();
-            bool M = sr.M;
-            if (ImGui::Checkbox("##M", &M)) {
-                sr.M = M;
+            ImGui::TableNextRow();
+            sh2::RegMAC &mac = probe.MAC();
+            if (ImGui::TableNextColumn()) {
+                drawReg32("MACH", mac.H);
             }
-            ImGui::NewLine();
-            ImGui::SameLine(0, (ImGui::GetFrameHeight() - ImGui::CalcTextSize("M").x) / 2);
-            ImGui::TextUnformatted("M");
-            ImGui::EndGroup();
-
-            ImGui::SameLine();
-
-            ImGui::BeginGroup();
-            bool Q = sr.Q;
-            if (ImGui::Checkbox("##Q", &Q)) {
-                sr.Q = Q;
+            if (ImGui::TableNextColumn()) {
+                drawReg32("MACL", mac.L);
             }
-            ImGui::NewLine();
-            ImGui::SameLine(0, (ImGui::GetFrameHeight() - ImGui::CalcTextSize("Q").x) / 2);
-            ImGui::TextUnformatted("Q");
-            ImGui::EndGroup();
 
-            ImGui::SameLine();
-
-            ImGui::BeginGroup();
-            bool S = sr.S;
-            if (ImGui::Checkbox("##S", &S)) {
-                sr.S = S;
+            ImGui::TableNextRow();
+            if (ImGui::TableNextColumn()) {
+                drawReg32("GBR", probe.GBR());
             }
-            ImGui::NewLine();
-            ImGui::SameLine(0, (ImGui::GetFrameHeight() - ImGui::CalcTextSize("S").x) / 2);
-            ImGui::TextUnformatted("S");
-            ImGui::EndGroup();
-
-            ImGui::SameLine();
-
-            ImGui::BeginGroup();
-            bool T = sr.T;
-            if (ImGui::Checkbox("##T", &T)) {
-                sr.T = T;
+            if (ImGui::TableNextColumn()) {
+                drawReg32("VBR", probe.VBR());
             }
-            ImGui::NewLine();
-            ImGui::SameLine(0, (ImGui::GetFrameHeight() - ImGui::CalcTextSize("T").x) / 2);
-            ImGui::TextUnformatted("T");
-            ImGui::EndGroup();
 
-            ImGui::SameLine();
-
-            ImGui::BeginGroup();
-            ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-            ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 1);
-            uint8 ILevel = sr.ILevel;
-            if (ImGui::InputScalar("##input_SR_ILevel", ImGuiDataType_U8, &ILevel, nullptr, nullptr, "%X",
-                                   ImGuiInputTextFlags_CharsHexadecimal)) {
-                sr.ILevel = std::min<uint8>(ILevel, 0xFu);
+            ImGui::TableNextRow();
+            if (ImGui::TableNextColumn()) {
+                drawReg32("SR", sr.u32);
             }
-            ImGui::PopFont();
-            ImGui::NewLine();
-            ImGui::SameLine(
-                0, ((ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 1) - ImGui::CalcTextSize("I").x) / 2);
-            ImGui::TextUnformatted("I");
-            ImGui::EndGroup();
-            ImGui::PopStyleVar();
+            if (ImGui::TableNextColumn()) {
+                drawSRFlags();
+            }
+
+            ImGui::EndTable();
         }
-
-        ImGui::EndTable();
     }
-
     if (!enabled) {
         ImGui::EndDisabled();
     }
@@ -173,15 +195,21 @@ void SH2RegistersView::Display() {
 }
 
 float SH2RegistersView::GetViewWidth() {
+    const bool tallLayout = ImGui::GetContentRegionAvail().y - ImGui::GetStyle().CellPadding.y * 2 >=
+                            ImGui::GetFrameHeightWithSpacing() * 25;
+
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
-
     const float flagsSpacing = 4.0f;
     const float framePadding = ImGui::GetStyle().FramePadding.x;
     const float frameHeight = ImGui::GetFrameHeight();
     const float flagsWidth = (frameHeight + flagsSpacing) * 4 + framePadding * 2 + hexCharWidth * 1;
-    return (flagsWidth + ImGui::GetStyle().CellPadding.x) * 2;
+    if (tallLayout) {
+        return flagsWidth;
+    } else {
+        return (flagsWidth + ImGui::GetStyle().CellPadding.x) * 2;
+    }
 }
 
 } // namespace app::ui

@@ -24,6 +24,15 @@ void SH2DebuggerWindow::DrawContents() {
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
+            // TODO: move this block to a toolbar view
+            {
+                const bool master = m_sh2.IsMaster();
+                const bool enabled = master || m_context.saturn.slaveSH2Enabled;
+
+                if (!master) {
+                    ImGui::Checkbox("Enabled", &m_context.saturn.slaveSH2Enabled);
+                }
+            }
             // ImGui::SeparatorText("Disassembly");
             m_disasmView.Display();
         }
