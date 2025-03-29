@@ -17,6 +17,9 @@ struct ISCUTracer {
 
     // Invoked when the SCU acknowledges an interrupt.
     virtual void AcknowledgeInterrupt(uint8 index) {}
+
+    // Invoked when a byte is writted to mednafen's debug port.
+    virtual void DebugPortWrite(uint8 ch) {}
 };
 
 } // namespace satemu::debug

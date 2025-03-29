@@ -80,7 +80,7 @@ add_executable(satemu-sdl3
 
     src/util/rom_loader.cpp
     src/util/rom_loader.hpp
- "src/app/ui/views/debug/scu_interrupts_view.cpp")
+ "src/app/ui/views/debug/scu_interrupts_view.cpp" "src/app/ui/views/debug/scu_debug_output_view.cpp")
 add_executable(satemu::satemu-sdl3 ALIAS satemu-sdl3)
 set_target_properties(satemu-sdl3 PROPERTIES
                       VERSION ${satemu_VERSION}
