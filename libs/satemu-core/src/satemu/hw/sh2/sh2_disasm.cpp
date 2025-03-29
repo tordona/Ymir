@@ -144,26 +144,26 @@ static DisasmTable BuildDisasmTable() {
             case 0x002B: make0(RTE), hasDelaySlot(), invalidInDelaySlot(); break;
             default:
                 switch (instr & 0xFF) {
-                case 0x02: makeOp(STC, Op::SR(), Op::Rn(decodeN())); break;
+                case 0x02: makeOp(STC, Op::SR_R(), Op::Rn_W(decodeN())); break;
                 case 0x03: makeOp(BSRF, Op::RnPC(decodeM())), hasDelaySlot(), invalidInDelaySlot(); break;
-                case 0x0A: makeOp(STS, Op::MACH(), Op::Rn(decodeN())); break;
-                case 0x12: makeOp(STC, Op::GBR(), Op::Rn(decodeN())); break;
-                case 0x1A: makeOp(STS, Op::MACL(), Op::Rn(decodeN())); break;
-                case 0x22: makeOp(STC, Op::VBR(), Op::Rn(decodeN())); break;
+                case 0x0A: makeOp(STS, Op::MACH_R(), Op::Rn_W(decodeN())); break;
+                case 0x12: makeOp(STC, Op::GBR_R(), Op::Rn_W(decodeN())); break;
+                case 0x1A: makeOp(STS, Op::MACL_R(), Op::Rn_W(decodeN())); break;
+                case 0x22: makeOp(STC, Op::VBR_R(), Op::Rn_W(decodeN())); break;
                 case 0x23: makeOp(BRAF, Op::RnPC(decodeM())), hasDelaySlot(), invalidInDelaySlot(); break;
-                case 0x29: makeOp(MOVT, Op::Rn(decodeN())); break;
-                case 0x2A: makeOp(STS, Op::PR(), Op::Rn(decodeN())); break;
+                case 0x29: makeOp(MOVT, Op::Rn_W(decodeN())); break;
+                case 0x2A: makeOp(STS, Op::PR_R(), Op::Rn_W(decodeN())); break;
                 default: {
                     auto [rn, rm] = decodeNM();
                     switch (instr & 0xF) {
-                    case 0x4: makeOpB(MOV, Op::Rn(rm), Op::AtR0Rn(rn)); break;
-                    case 0x5: makeOpW(MOV, Op::Rn(rm), Op::AtR0Rn(rn)); break;
-                    case 0x6: makeOpL(MOV, Op::Rn(rm), Op::AtR0Rn(rn)); break;
-                    case 0x7: makeOpL(MUL, Op::Rn(rm), Op::Rn(rn)); break;
-                    case 0xC: makeOpB(MOV, Op::AtR0Rn(rm), Op::Rn(rn)); break;
-                    case 0xD: makeOpW(MOV, Op::AtR0Rn(rm), Op::Rn(rn)); break;
-                    case 0xE: makeOpL(MOV, Op::AtR0Rn(rm), Op::Rn(rn)); break;
-                    case 0xF: makeOpL(MAC, Op::AtRnPlus(rm), Op::AtRnPlus(rn)); break;
+                    case 0x4: makeOpB(MOV, Op::Rn_R(rm), Op::AtR0Rn_W(rn)); break;
+                    case 0x5: makeOpW(MOV, Op::Rn_R(rm), Op::AtR0Rn_W(rn)); break;
+                    case 0x6: makeOpL(MOV, Op::Rn_R(rm), Op::AtR0Rn_W(rn)); break;
+                    case 0x7: makeOpL(MUL, Op::Rn_R(rm), Op::Rn_R(rn)); break;
+                    case 0xC: makeOpB(MOV, Op::AtR0Rn_R(rm), Op::Rn_W(rn)); break;
+                    case 0xD: makeOpW(MOV, Op::AtR0Rn_R(rm), Op::Rn_W(rn)); break;
+                    case 0xE: makeOpL(MOV, Op::AtR0Rn_R(rm), Op::Rn_W(rn)); break;
+                    case 0xF: makeOpL(MAC, Op::AtRnPlus_R(rm), Op::AtRnPlus_R(rn)); break;
                     }
                     break;
                 }
@@ -173,29 +173,29 @@ static DisasmTable BuildDisasmTable() {
             break;
         case 0x1: {
             auto [rn, rm, disp] = decodeNMD(2u);
-            makeOpL(MOV, Op::Rn(rm), Op::AtDispRn(rn, disp));
+            makeOpL(MOV, Op::Rn_R(rm), Op::AtDispRn_W(rn, disp));
             break;
         }
         case 0x2: {
             auto [rn, rm] = decodeNM();
 
             switch (instr & 0xF) {
-            case 0x0: makeOpB(MOV, Op::Rn(rm), Op::AtRn(rn)); break;
-            case 0x1: makeOpW(MOV, Op::Rn(rm), Op::AtRn(rn)); break;
-            case 0x2: makeOpL(MOV, Op::Rn(rm), Op::AtRn(rn)); break;
+            case 0x0: makeOpB(MOV, Op::Rn_R(rm), Op::AtRn_W(rn)); break;
+            case 0x1: makeOpW(MOV, Op::Rn_R(rm), Op::AtRn_W(rn)); break;
+            case 0x2: makeOpL(MOV, Op::Rn_R(rm), Op::AtRn_W(rn)); break;
 
-            case 0x4: makeOpB(MOV, Op::Rn(rm), Op::AtMinusRn(rn)); break;
-            case 0x5: makeOpW(MOV, Op::Rn(rm), Op::AtMinusRn(rn)); break;
-            case 0x6: makeOpL(MOV, Op::Rn(rm), Op::AtMinusRn(rn)); break;
-            case 0x7: makeOp(DIV0S, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0x8: makeOp(TST, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0x9: makeOp(AND, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0xA: makeOp(XOR, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0xB: makeOp(OR, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0xC: makeOp(CMP_STR, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0xD: makeOp(XTRCT, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0xE: makeOpW(MULU, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0xF: makeOpW(MULS, Op::Rn(rm), Op::Rn(rn)); break;
+            case 0x4: makeOpB(MOV, Op::Rn_R(rm), Op::AtMinusRn_W(rn)); break;
+            case 0x5: makeOpW(MOV, Op::Rn_R(rm), Op::AtMinusRn_W(rn)); break;
+            case 0x6: makeOpL(MOV, Op::Rn_R(rm), Op::AtMinusRn_W(rn)); break;
+            case 0x7: makeOp(DIV0S, Op::Rn_R(rm), Op::Rn_R(rn)); break;
+            case 0x8: makeOp(TST, Op::Rn_R(rm), Op::Rn_R(rn)); break;
+            case 0x9: makeOp(AND, Op::Rn_R(rm), Op::Rn_RW(rn)); break;
+            case 0xA: makeOp(XOR, Op::Rn_R(rm), Op::Rn_RW(rn)); break;
+            case 0xB: makeOp(OR, Op::Rn_R(rm), Op::Rn_RW(rn)); break;
+            case 0xC: makeOp(CMP_STR, Op::Rn_R(rm), Op::Rn_R(rn)); break;
+            case 0xD: makeOp(XTRCT, Op::Rn_R(rm), Op::Rn_W(rn)); break;
+            case 0xE: makeOpW(MULU, Op::Rn_R(rm), Op::Rn_R(rn)); break;
+            case 0xF: makeOpW(MULS, Op::Rn_R(rm), Op::Rn_R(rn)); break;
             }
             break;
         }
@@ -203,135 +203,135 @@ static DisasmTable BuildDisasmTable() {
             auto [rn, rm] = decodeNM();
 
             switch (instr & 0xF) {
-            case 0x0: makeOp(CMP_EQ, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0x2: makeOp(CMP_HS, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0x3: makeOp(CMP_GE, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0x4: makeOp(DIV1, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0x5: makeOpL(DMULU, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0x6: makeOp(CMP_HI, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0x7: makeOp(CMP_GT, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0x8: makeOp(SUB, Op::Rn(rm), Op::Rn(rn)); break;
+            case 0x0: makeOp(CMP_EQ, Op::Rn_R(rm), Op::Rn_R(rn)); break;
+            case 0x2: makeOp(CMP_HS, Op::Rn_R(rm), Op::Rn_R(rn)); break;
+            case 0x3: makeOp(CMP_GE, Op::Rn_R(rm), Op::Rn_R(rn)); break;
+            case 0x4: makeOp(DIV1, Op::Rn_R(rm), Op::Rn_RW(rn)); break;
+            case 0x5: makeOpL(DMULU, Op::Rn_R(rm), Op::Rn_R(rn)); break;
+            case 0x6: makeOp(CMP_HI, Op::Rn_R(rm), Op::Rn_R(rn)); break;
+            case 0x7: makeOp(CMP_GT, Op::Rn_R(rm), Op::Rn_R(rn)); break;
+            case 0x8: makeOp(SUB, Op::Rn_R(rm), Op::Rn_RW(rn)); break;
 
-            case 0xA: makeOp(SUBC, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0xB: makeOp(SUBV, Op::Rn(rm), Op::Rn(rn)); break;
+            case 0xA: makeOp(SUBC, Op::Rn_R(rm), Op::Rn_RW(rn)); break;
+            case 0xB: makeOp(SUBV, Op::Rn_R(rm), Op::Rn_RW(rn)); break;
 
-            case 0xC: makeOp(ADD, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0xD: makeOpL(DMULS, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0xE: makeOp(ADDC, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0xF: makeOp(ADDV, Op::Rn(rm), Op::Rn(rn)); break;
+            case 0xC: makeOp(ADD, Op::Rn_R(rm), Op::Rn_RW(rn)); break;
+            case 0xD: makeOpL(DMULS, Op::Rn_R(rm), Op::Rn_R(rn)); break;
+            case 0xE: makeOp(ADDC, Op::Rn_R(rm), Op::Rn_RW(rn)); break;
+            case 0xF: makeOp(ADDV, Op::Rn_R(rm), Op::Rn_RW(rn)); break;
             }
             break;
         }
         case 0x4:
             if ((instr & 0xF) == 0xF) {
                 auto [rn, rm] = decodeNM();
-                makeOpW(MAC, Op::AtRnPlus(rm), Op::AtRnPlus(rn));
+                makeOpW(MAC, Op::AtRnPlus_R(rm), Op::AtRnPlus_R(rn));
             } else {
                 switch (instr & 0xFF) {
-                case 0x00: makeOp(SHLL, Op::Rn(decodeN())); break;
-                case 0x01: makeOp(SHLR, Op::Rn(decodeN())); break;
-                case 0x02: makeOpL(STS, Op::MACH(), Op::AtMinusRn(decodeN())); break;
-                case 0x03: makeOpL(STC, Op::SR(), Op::AtMinusRn(decodeN())); break;
-                case 0x04: makeOp(ROTL, Op::Rn(decodeN())); break;
-                case 0x05: makeOp(ROTR, Op::Rn(decodeN())); break;
-                case 0x06: makeOpL(LDS, Op::AtRnPlus(decodeM()), Op::MACH()); break;
-                case 0x07: makeOpL(LDC, Op::AtRnPlus(decodeM()), Op::SR()); break;
-                case 0x08: makeOp(SHLL2, Op::Rn(decodeN())); break;
-                case 0x09: makeOp(SHLR2, Op::Rn(decodeN())); break;
-                case 0x0A: makeOp(LDS, Op::Rn(decodeM()), Op::MACH()); break;
-                case 0x0B: makeOp(JSR, Op::AtRn(decodeM())), hasDelaySlot(), invalidInDelaySlot(); break;
+                case 0x00: makeOp(SHLL, Op::Rn_RW(decodeN())); break;
+                case 0x01: makeOp(SHLR, Op::Rn_RW(decodeN())); break;
+                case 0x02: makeOpL(STS, Op::MACH_R(), Op::AtMinusRn_W(decodeN())); break;
+                case 0x03: makeOpL(STC, Op::SR_R(), Op::AtMinusRn_W(decodeN())); break;
+                case 0x04: makeOp(ROTL, Op::Rn_RW(decodeN())); break;
+                case 0x05: makeOp(ROTR, Op::Rn_RW(decodeN())); break;
+                case 0x06: makeOpL(LDS, Op::AtRnPlus_R(decodeM()), Op::MACH_W()); break;
+                case 0x07: makeOpL(LDC, Op::AtRnPlus_R(decodeM()), Op::SR_W()); break;
+                case 0x08: makeOp(SHLL2, Op::Rn_RW(decodeN())); break;
+                case 0x09: makeOp(SHLR2, Op::Rn_RW(decodeN())); break;
+                case 0x0A: makeOp(LDS, Op::Rn_R(decodeM()), Op::MACH_W()); break;
+                case 0x0B: makeOp(JSR, Op::AtRn_R(decodeM())), hasDelaySlot(), invalidInDelaySlot(); break;
 
-                case 0x0E: makeOp(LDC, Op::Rn(decodeM()), Op::SR()); break;
+                case 0x0E: makeOp(LDC, Op::Rn_R(decodeM()), Op::SR_W()); break;
 
-                case 0x10: makeOp(DT, Op::Rn(decodeN())); break;
-                case 0x11: makeOp(CMP_PZ, Op::Rn(decodeN())); break;
-                case 0x12: makeOpL(STS, Op::MACL(), Op::AtMinusRn(decodeN())); break;
-                case 0x13: makeOpL(STC, Op::GBR(), Op::AtMinusRn(decodeN())); break;
+                case 0x10: makeOp(DT, Op::Rn_RW(decodeN())); break;
+                case 0x11: makeOp(CMP_PZ, Op::Rn_R(decodeN())); break;
+                case 0x12: makeOpL(STS, Op::MACL_R(), Op::AtMinusRn_W(decodeN())); break;
+                case 0x13: makeOpL(STC, Op::GBR_R(), Op::AtMinusRn_W(decodeN())); break;
 
-                case 0x15: makeOp(CMP_PL, Op::Rn(decodeN())); break;
-                case 0x16: makeOpL(LDS, Op::AtRnPlus(decodeM()), Op::MACL()); break;
-                case 0x17: makeOpL(LDC, Op::AtRnPlus(decodeM()), Op::GBR()); break;
-                case 0x18: makeOp(SHLL8, Op::Rn(decodeN())); break;
-                case 0x19: makeOp(SHLR8, Op::Rn(decodeN())); break;
-                case 0x1A: makeOp(LDS, Op::Rn(decodeM()), Op::MACL()); break;
-                case 0x1B: makeOpB(TAS, Op::AtRn(decodeN())); break;
+                case 0x15: makeOp(CMP_PL, Op::Rn_R(decodeN())); break;
+                case 0x16: makeOpL(LDS, Op::AtRnPlus_R(decodeM()), Op::MACL_W()); break;
+                case 0x17: makeOpL(LDC, Op::AtRnPlus_R(decodeM()), Op::GBR_W()); break;
+                case 0x18: makeOp(SHLL8, Op::Rn_RW(decodeN())); break;
+                case 0x19: makeOp(SHLR8, Op::Rn_RW(decodeN())); break;
+                case 0x1A: makeOp(LDS, Op::Rn_R(decodeM()), Op::MACL_W()); break;
+                case 0x1B: makeOpB(TAS, Op::AtRn_RW(decodeN())); break;
 
-                case 0x1E: makeOp(LDC, Op::Rn(decodeM()), Op::GBR()); break;
+                case 0x1E: makeOp(LDC, Op::Rn_R(decodeM()), Op::GBR_W()); break;
 
-                case 0x20: makeOp(SHAL, Op::Rn(decodeN())); break;
-                case 0x21: makeOp(SHAR, Op::Rn(decodeN())); break;
-                case 0x22: makeOpL(STS, Op::PR(), Op::AtMinusRn(decodeN())); break;
-                case 0x23: makeOpL(STC, Op::VBR(), Op::AtMinusRn(decodeN())); break;
-                case 0x24: makeOp(ROTCL, Op::Rn(decodeN())); break;
-                case 0x25: makeOp(ROTCR, Op::Rn(decodeN())); break;
-                case 0x26: makeOpL(LDS, Op::AtRnPlus(decodeM()), Op::PR()); break;
-                case 0x27: makeOpL(LDC, Op::AtRnPlus(decodeM()), Op::VBR()); break;
-                case 0x28: makeOp(SHLL16, Op::Rn(decodeN())); break;
-                case 0x29: makeOp(SHLR16, Op::Rn(decodeN())); break;
-                case 0x2A: makeOp(LDS, Op::Rn(decodeM()), Op::PR()); break;
-                case 0x2B: makeOp(JMP, Op::AtRn(decodeM())), hasDelaySlot(), invalidInDelaySlot(); break;
+                case 0x20: makeOp(SHAL, Op::Rn_RW(decodeN())); break;
+                case 0x21: makeOp(SHAR, Op::Rn_RW(decodeN())); break;
+                case 0x22: makeOpL(STS, Op::PR_R(), Op::AtMinusRn_W(decodeN())); break;
+                case 0x23: makeOpL(STC, Op::VBR_R(), Op::AtMinusRn_W(decodeN())); break;
+                case 0x24: makeOp(ROTCL, Op::Rn_RW(decodeN())); break;
+                case 0x25: makeOp(ROTCR, Op::Rn_RW(decodeN())); break;
+                case 0x26: makeOpL(LDS, Op::AtRnPlus_R(decodeM()), Op::PR_W()); break;
+                case 0x27: makeOpL(LDC, Op::AtRnPlus_R(decodeM()), Op::VBR_W()); break;
+                case 0x28: makeOp(SHLL16, Op::Rn_RW(decodeN())); break;
+                case 0x29: makeOp(SHLR16, Op::Rn_RW(decodeN())); break;
+                case 0x2A: makeOp(LDS, Op::Rn_R(decodeM()), Op::PR_W()); break;
+                case 0x2B: makeOp(JMP, Op::AtRn_R(decodeM())), hasDelaySlot(), invalidInDelaySlot(); break;
 
-                case 0x2E: makeOp(LDC, Op::Rn(decodeM()), Op::VBR()); break;
+                case 0x2E: makeOp(LDC, Op::Rn_R(decodeM()), Op::VBR_W()); break;
                 }
             }
             break;
         case 0x5: {
             auto [rn, rm, disp] = decodeNMD(2u);
-            makeOpL(MOV, Op::AtDispRn(rm, disp), Op::Rn(rn));
+            makeOpL(MOV, Op::AtDispRn_R(rm, disp), Op::Rn_W(rn));
             break;
         }
         case 0x6: {
             auto [rn, rm] = decodeNM();
             switch (instr & 0xF) {
-            case 0x0: makeOpB(MOV, Op::AtRn(rm), Op::Rn(rn)); break;
-            case 0x1: makeOpW(MOV, Op::AtRn(rm), Op::Rn(rn)); break;
-            case 0x2: makeOpL(MOV, Op::AtRn(rm), Op::Rn(rn)); break;
-            case 0x3: makeOp(MOV, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0x4: makeOpB(MOV, Op::AtRnPlus(rm), Op::Rn(rn)); break;
-            case 0x5: makeOpW(MOV, Op::AtRnPlus(rm), Op::Rn(rn)); break;
-            case 0x6: makeOpL(MOV, Op::AtRnPlus(rm), Op::Rn(rn)); break;
-            case 0x7: makeOp(NOT, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0x8: makeOpB(SWAP, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0x9: makeOpW(SWAP, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0xA: makeOp(NEGC, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0xB: makeOp(NEG, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0xC: makeOpB(EXTU, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0xD: makeOpW(EXTU, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0xE: makeOpB(EXTS, Op::Rn(rm), Op::Rn(rn)); break;
-            case 0xF: makeOpW(EXTS, Op::Rn(rm), Op::Rn(rn)); break;
+            case 0x0: makeOpB(MOV, Op::AtRn_R(rm), Op::Rn_W(rn)); break;
+            case 0x1: makeOpW(MOV, Op::AtRn_R(rm), Op::Rn_W(rn)); break;
+            case 0x2: makeOpL(MOV, Op::AtRn_R(rm), Op::Rn_W(rn)); break;
+            case 0x3: makeOp(MOV, Op::Rn_R(rm), Op::Rn_W(rn)); break;
+            case 0x4: makeOpB(MOV, Op::AtRnPlus_R(rm), Op::Rn_W(rn)); break;
+            case 0x5: makeOpW(MOV, Op::AtRnPlus_R(rm), Op::Rn_W(rn)); break;
+            case 0x6: makeOpL(MOV, Op::AtRnPlus_R(rm), Op::Rn_W(rn)); break;
+            case 0x7: makeOp(NOT, Op::Rn_R(rm), Op::Rn_W(rn)); break;
+            case 0x8: makeOpB(SWAP, Op::Rn_R(rm), Op::Rn_W(rn)); break;
+            case 0x9: makeOpW(SWAP, Op::Rn_R(rm), Op::Rn_W(rn)); break;
+            case 0xA: makeOp(NEGC, Op::Rn_R(rm), Op::Rn_W(rn)); break;
+            case 0xB: makeOp(NEG, Op::Rn_R(rm), Op::Rn_W(rn)); break;
+            case 0xC: makeOpB(EXTU, Op::Rn_R(rm), Op::Rn_W(rn)); break;
+            case 0xD: makeOpW(EXTU, Op::Rn_R(rm), Op::Rn_W(rn)); break;
+            case 0xE: makeOpB(EXTS, Op::Rn_R(rm), Op::Rn_W(rn)); break;
+            case 0xF: makeOpW(EXTS, Op::Rn_R(rm), Op::Rn_W(rn)); break;
             }
             break;
         }
         case 0x7: {
             auto [rn, imm] = decodeNI(0, 0);
-            makeOp(ADD, Op::Imm(imm), Op::Rn(rn));
+            makeOp(ADD, Op::Imm(imm), Op::Rn_RW(rn));
             break;
         }
         case 0x8:
             switch ((instr >> 8u) & 0xF) {
             case 0x0: {
                 auto [rn, disp] = decodeND4(0u);
-                makeOpB(MOV, Op::Rn(0), Op::AtDispRn(rn, disp));
+                makeOpB(MOV, Op::Rn_R(0), Op::AtDispRn_W(rn, disp));
                 break;
             }
             case 0x1: {
                 auto [rn, disp] = decodeND4(1u);
-                makeOpW(MOV, Op::Rn(0), Op::AtDispRn(rn, disp));
+                makeOpW(MOV, Op::Rn_R(0), Op::AtDispRn_W(rn, disp));
                 break;
             }
 
             case 0x4: {
                 auto [rm, disp] = decodeMD(0u);
-                makeOpB(MOV, Op::AtDispRn(rm, disp), Op::Rn(0));
+                makeOpB(MOV, Op::AtDispRn_R(rm, disp), Op::Rn_W(0));
                 break;
             }
             case 0x5: {
                 auto [rm, disp] = decodeMD(1u);
-                makeOpW(MOV, Op::AtDispRn(rm, disp), Op::Rn(0));
+                makeOpW(MOV, Op::AtDispRn_R(rm, disp), Op::Rn_W(0));
                 break;
             }
 
-            case 0x8: makeOp(CMP_EQ, Op::Imm(decodeI_S(0, 0)), Op::Rn(0)); break;
+            case 0x8: makeOp(CMP_EQ, Op::Imm(decodeI_S(0, 0)), Op::Rn_R(0)); break;
             case 0x9: makeOp(BT, Op::DispPC(decodeD_S(1, 4))), invalidInDelaySlot(); break;
 
             case 0xB: makeOp(BF, Op::DispPC(decodeD_S(1, 4))), invalidInDelaySlot(); break;
@@ -343,40 +343,40 @@ static DisasmTable BuildDisasmTable() {
             break;
         case 0x9: {
             auto [rn, disp] = decodeND8(1u, 4u);
-            makeOpW(MOV, Op::AtDispPC(disp), Op::Rn(rn));
+            makeOpW(MOV, Op::AtDispPC(disp), Op::Rn_W(rn));
             break;
         }
         case 0xA: makeOp(BRA, Op::DispPC(decodeD12(1, 4))), hasDelaySlot(); break;
         case 0xB: makeOp(BSR, Op::DispPC(decodeD12(1, 4))), hasDelaySlot(); break;
         case 0xC: {
             switch ((instr >> 8u) & 0xF) {
-            case 0x0: makeOpB(MOV, Op::Rn(0), Op::AtDispGBR(decodeD_U(0u, 0u))); break;
-            case 0x1: makeOpW(MOV, Op::Rn(0), Op::AtDispGBR(decodeD_U(1u, 0u))); break;
-            case 0x2: makeOpL(MOV, Op::Rn(0), Op::AtDispGBR(decodeD_U(2u, 0u))); break;
+            case 0x0: makeOpB(MOV, Op::Rn_R(0), Op::AtDispGBR_W(decodeD_U(0u, 0u))); break;
+            case 0x1: makeOpW(MOV, Op::Rn_R(0), Op::AtDispGBR_W(decodeD_U(1u, 0u))); break;
+            case 0x2: makeOpL(MOV, Op::Rn_R(0), Op::AtDispGBR_W(decodeD_U(2u, 0u))); break;
             case 0x3: makeOp(TRAPA, Op::Imm(decodeI_U(2u, 0u))), hasDelaySlot(), invalidInDelaySlot(); break;
-            case 0x4: makeOpB(MOV, Op::AtDispGBR(decodeD_U(0u, 0u)), Op::Rn(0)); break;
-            case 0x5: makeOpW(MOV, Op::AtDispGBR(decodeD_U(1u, 0u)), Op::Rn(0)); break;
-            case 0x6: makeOpL(MOV, Op::AtDispGBR(decodeD_U(2u, 0u)), Op::Rn(0)); break;
-            case 0x7: makeOp(MOVA, Op::AtDispPCWordAlign(decodeD_U(2u, 4u)), Op::Rn(0)); break;
-            case 0x8: makeOp(TST, Op::Imm(decodeI_U(0u, 0u)), Op::Rn(0)); break;
-            case 0x9: makeOp(AND, Op::Imm(decodeI_U(0u, 0u)), Op::Rn(0)); break;
-            case 0xA: makeOp(XOR, Op::Imm(decodeI_U(0u, 0u)), Op::Rn(0)); break;
-            case 0xB: makeOp(OR, Op::Imm(decodeI_U(0u, 0u)), Op::Rn(0)); break;
-            case 0xC: makeOpB(TST, Op::Imm(decodeI_U(0u, 0u)), Op::AtR0GBR()); break;
-            case 0xD: makeOpB(AND, Op::Imm(decodeI_U(0u, 0u)), Op::AtR0GBR()); break;
-            case 0xE: makeOpB(XOR, Op::Imm(decodeI_U(0u, 0u)), Op::AtR0GBR()); break;
-            case 0xF: makeOpB(OR, Op::Imm(decodeI_U(0u, 0u)), Op::AtR0GBR()); break;
+            case 0x4: makeOpB(MOV, Op::AtDispGBR_R(decodeD_U(0u, 0u)), Op::Rn_W(0)); break;
+            case 0x5: makeOpW(MOV, Op::AtDispGBR_R(decodeD_U(1u, 0u)), Op::Rn_W(0)); break;
+            case 0x6: makeOpL(MOV, Op::AtDispGBR_R(decodeD_U(2u, 0u)), Op::Rn_W(0)); break;
+            case 0x7: makeOp(MOVA, Op::AtDispPCWordAlign(decodeD_U(2u, 4u)), Op::Rn_W(0)); break;
+            case 0x8: makeOp(TST, Op::Imm(decodeI_U(0u, 0u)), Op::Rn_R(0)); break;
+            case 0x9: makeOp(AND, Op::Imm(decodeI_U(0u, 0u)), Op::Rn_RW(0)); break;
+            case 0xA: makeOp(XOR, Op::Imm(decodeI_U(0u, 0u)), Op::Rn_RW(0)); break;
+            case 0xB: makeOp(OR, Op::Imm(decodeI_U(0u, 0u)), Op::Rn_RW(0)); break;
+            case 0xC: makeOpB(TST, Op::Imm(decodeI_U(0u, 0u)), Op::AtR0GBR_R()); break;
+            case 0xD: makeOpB(AND, Op::Imm(decodeI_U(0u, 0u)), Op::AtR0GBR_RW()); break;
+            case 0xE: makeOpB(XOR, Op::Imm(decodeI_U(0u, 0u)), Op::AtR0GBR_RW()); break;
+            case 0xF: makeOpB(OR, Op::Imm(decodeI_U(0u, 0u)), Op::AtR0GBR_RW()); break;
             }
             break;
         }
         case 0xD: {
             auto [rn, disp] = decodeND8(2u, 4u);
-            makeOpL(MOV, Op::AtDispPCWordAlign(disp), Op::Rn(rn));
+            makeOpL(MOV, Op::AtDispPCWordAlign(disp), Op::Rn_W(rn));
             break;
         }
         case 0xE: {
             auto [rn, imm] = decodeNI(0, 0);
-            makeOp(MOV, Op::Imm(imm), Op::Rn(rn));
+            makeOp(MOV, Op::Imm(imm), Op::Rn_W(rn));
             break;
         }
         }

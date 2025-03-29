@@ -118,6 +118,7 @@ struct Operand {
         PR,                // PR
     };
     Type type;
+    bool read, write;
     uint8 reg;
     sint32 immDisp;
 
@@ -127,96 +128,148 @@ struct Operand {
 
     // #imm
     static Operand Imm(sint32 imm) {
-        return {.type = Type::Imm, .immDisp = imm};
+        return {.type = Type::Imm, .read = false, .write = false, .immDisp = imm};
     }
 
     // Rn
-    static Operand Rn(uint8 rn) {
-        return {.type = Type::Rn, .reg = rn};
+    static Operand Rn_R(uint8 rn) {
+        return {.type = Type::Rn, .read = true, .write = false, .reg = rn};
+    }
+    static Operand Rn_W(uint8 rn) {
+        return {.type = Type::Rn, .read = false, .write = true, .reg = rn};
+    }
+    static Operand Rn_RW(uint8 rn) {
+        return {.type = Type::Rn, .read = true, .write = true, .reg = rn};
     }
 
     // @Rn
-    static Operand AtRn(uint8 rn) {
-        return {.type = Type::AtRn, .reg = rn};
+    static Operand AtRn_R(uint8 rn) {
+        return {.type = Type::AtRn, .read = true, .write = false, .reg = rn};
+    }
+    static Operand AtRn_W(uint8 rn) {
+        return {.type = Type::AtRn, .read = false, .write = true, .reg = rn};
+    }
+    static Operand AtRn_RW(uint8 rn) {
+        return {.type = Type::AtRn, .read = true, .write = true, .reg = rn};
     }
 
     // @Rn+
-    static Operand AtRnPlus(uint8 rn) {
-        return {.type = Type::AtRnPlus, .reg = rn};
+    static Operand AtRnPlus_R(uint8 rn) {
+        return {.type = Type::AtRnPlus, .read = true, .write = false, .reg = rn};
+    }
+    static Operand AtRnPlus_W(uint8 rn) {
+        return {.type = Type::AtRnPlus, .read = false, .write = true, .reg = rn};
     }
 
     // @-Rn
-    static Operand AtMinusRn(uint8 rn) {
-        return {.type = Type::AtMinusRn, .reg = rn};
+    static Operand AtMinusRn_R(uint8 rn) {
+        return {.type = Type::AtMinusRn, .read = true, .write = false, .reg = rn};
+    }
+    static Operand AtMinusRn_W(uint8 rn) {
+        return {.type = Type::AtMinusRn, .read = false, .write = true, .reg = rn};
     }
 
     // @(disp,Rn)
-    static Operand AtDispRn(uint8 rn, sint32 disp) {
-        return {.type = Type::AtDispRn, .reg = rn, .immDisp = disp};
+    static Operand AtDispRn_R(uint8 rn, sint32 disp) {
+        return {.type = Type::AtDispRn, .read = true, .write = false, .reg = rn, .immDisp = disp};
+    }
+    static Operand AtDispRn_W(uint8 rn, sint32 disp) {
+        return {.type = Type::AtDispRn, .read = false, .write = true, .reg = rn, .immDisp = disp};
     }
 
     // @(R0,Rn)
-    static Operand AtR0Rn(uint8 rn) {
-        return {.type = Type::AtR0Rn, .reg = rn};
+    static Operand AtR0Rn_R(uint8 rn) {
+        return {.type = Type::AtR0Rn, .read = true, .write = false, .reg = rn};
+    }
+    static Operand AtR0Rn_W(uint8 rn) {
+        return {.type = Type::AtR0Rn, .read = false, .write = true, .reg = rn};
     }
 
     // @(disp,GBR)
-    static Operand AtDispGBR(sint32 disp) {
-        return {.type = Type::AtDispGBR, .immDisp = disp};
+    static Operand AtDispGBR_R(sint32 disp) {
+        return {.type = Type::AtDispGBR, .read = true, .write = false, .immDisp = disp};
+    }
+    static Operand AtDispGBR_W(sint32 disp) {
+        return {.type = Type::AtDispGBR, .read = false, .write = true, .immDisp = disp};
     }
 
     // @(R0,GBR)
-    static Operand AtR0GBR() {
-        return {.type = Type::AtR0GBR};
+    static Operand AtR0GBR_R() {
+        return {.type = Type::AtR0GBR, .read = true, .write = false};
+    }
+    static Operand AtR0GBR_W() {
+        return {.type = Type::AtR0GBR, .read = false, .write = true};
+    }
+    static Operand AtR0GBR_RW() {
+        return {.type = Type::AtR0GBR, .read = true, .write = true};
     }
 
     // @(disp,PC)
     static Operand AtDispPC(sint32 disp) {
-        return {.type = Type::AtDispPC, .immDisp = disp};
+        return {.type = Type::AtDispPC, .read = true, .write = false, .immDisp = disp};
     }
 
     // @(disp,PC) [PC & ~3]
     static Operand AtDispPCWordAlign(sint32 disp) {
-        return {.type = Type::AtDispPCWordAlign, .immDisp = disp};
+        return {.type = Type::AtDispPCWordAlign, .read = true, .write = false, .immDisp = disp};
     }
 
     // disp[+PC]
     static Operand DispPC(sint32 disp) {
-        return {.type = Type::DispPC, .immDisp = disp};
+        return {.type = Type::DispPC, .read = true, .write = false, .immDisp = disp};
     }
 
     // Rn[+PC]
     static Operand RnPC(uint8 rn) {
-        return {.type = Type::RnPC, .reg = rn};
+        return {.type = Type::RnPC, .read = true, .write = false, .reg = rn};
     }
 
     // SR
-    static Operand SR() {
-        return {.type = Type::SR};
+    static Operand SR_R() {
+        return {.type = Type::SR, .read = true, .write = false};
+    }
+    static Operand SR_W() {
+        return {.type = Type::SR, .read = false, .write = true};
     }
 
     // GBR
-    static Operand GBR() {
-        return {.type = Type::GBR};
+    static Operand GBR_R() {
+        return {.type = Type::GBR, .read = true, .write = false};
+    }
+    static Operand GBR_W() {
+        return {.type = Type::GBR, .read = false, .write = true};
     }
 
     // VBR
-    static Operand VBR() {
-        return {.type = Type::VBR};
+    static Operand VBR_R() {
+        return {.type = Type::VBR, .read = true, .write = false};
+    }
+    static Operand VBR_W() {
+        return {.type = Type::VBR, .read = false, .write = true};
     }
 
     // MACH
-    static Operand MACH() {
-        return {.type = Type::MACH};
+    static Operand MACH_R() {
+        return {.type = Type::MACH, .read = true, .write = false};
     }
+    static Operand MACH_W() {
+        return {.type = Type::MACH, .read = false, .write = true};
+    }
+
     // MACL
-    static Operand MACL() {
-        return {.type = Type::MACL};
+    static Operand MACL_R() {
+        return {.type = Type::MACL, .read = true, .write = false};
+    }
+    static Operand MACL_W() {
+        return {.type = Type::MACL, .read = false, .write = true};
     }
 
     // PR
-    static Operand PR() {
-        return {.type = Type::PR};
+    static Operand PR_R() {
+        return {.type = Type::PR, .read = true, .write = false};
+    }
+    static Operand PR_W() {
+        return {.type = Type::PR, .read = false, .write = true};
     }
 };
 

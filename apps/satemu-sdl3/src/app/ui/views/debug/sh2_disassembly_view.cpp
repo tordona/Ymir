@@ -415,8 +415,10 @@ void SH2DisassemblyView::Display() {
                 ImGui::TextColored(m_colors.disasm.regReadWrite, "%s", regName.data());
             };
 
-            auto drawReg = [&](std::string_view regName, bool write) {
-                if (write) {
+            auto drawReg = [&](std::string_view regName, bool read, bool write) {
+                if (read && write) {
+                    drawRegReadWrite(regName);
+                } else if (write) {
                     drawRegWrite(regName);
                 } else {
                     drawRegRead(regName);
@@ -427,8 +429,10 @@ void SH2DisassemblyView::Display() {
             auto drawRnWrite = [&](uint8 rn) { ImGui::TextColored(m_colors.disasm.regWrite, "r%u", rn); };
             auto drawRnReadWrite = [&](uint8 rn) { ImGui::TextColored(m_colors.disasm.regReadWrite, "r%u", rn); };
 
-            auto drawRn = [&](uint8 rn, bool write) {
-                if (write) {
+            auto drawRn = [&](uint8 rn, bool read, bool write) {
+                if (read && write) {
+                    drawRnReadWrite(rn);
+                } else if (write) {
                     drawRnWrite(rn);
                 } else {
                     drawRnRead(rn);
@@ -444,35 +448,35 @@ void SH2DisassemblyView::Display() {
             auto drawMinus = [&] { ImGui::TextColored(m_colors.disasm.addrDec, "-"); };
             auto drawComma = [&] { ImGui::TextColored(m_colors.disasm.separator, ", "); };
 
-            auto drawOp = [&](const sh2::Operand &op, bool write) {
+            auto drawOp = [&](const sh2::Operand &op) {
                 if (op.type == sh2::Operand::Type::None) {
                     return false;
                 }
 
                 switch (op.type) {
                 case sh2::Operand::Type::Imm: drawImm(op.immDisp); break;
-                case sh2::Operand::Type::Rn: drawRn(op.reg, write); break;
+                case sh2::Operand::Type::Rn: drawRn(op.reg, op.read, op.write); break;
                 case sh2::Operand::Type::AtRn:
-                    drawRWSymbol("@", write);
+                    drawRWSymbol("@", op.write);
                     ImGui::SameLine(0, 0);
                     drawRnRead(op.reg);
                     break;
                 case sh2::Operand::Type::AtRnPlus:
-                    drawRWSymbol("@", write);
+                    drawRWSymbol("@", op.write);
                     ImGui::SameLine(0, 0);
                     drawRnReadWrite(op.reg);
                     ImGui::SameLine(0, 0);
                     drawPlus();
                     break;
                 case sh2::Operand::Type::AtMinusRn:
-                    drawRWSymbol("@", write);
+                    drawRWSymbol("@", op.write);
                     ImGui::SameLine(0, 0);
                     drawMinus();
                     ImGui::SameLine(0, 0);
                     drawRnReadWrite(op.reg);
                     break;
                 case sh2::Operand::Type::AtDispRn:
-                    drawRWSymbol("@(", write);
+                    drawRWSymbol("@(", op.write);
                     ImGui::SameLine(0, 0);
                     drawImm(op.immDisp);
                     ImGui::SameLine(0, 0);
@@ -480,10 +484,10 @@ void SH2DisassemblyView::Display() {
                     ImGui::SameLine(0, 0);
                     drawRnRead(op.reg);
                     ImGui::SameLine(0, 0);
-                    drawRWSymbol(")", write);
+                    drawRWSymbol(")", op.write);
                     break;
                 case sh2::Operand::Type::AtR0Rn:
-                    drawRWSymbol("@(", write);
+                    drawRWSymbol("@(", op.write);
                     ImGui::SameLine(0, 0);
                     drawRnRead(0);
                     ImGui::SameLine(0, 0);
@@ -491,10 +495,10 @@ void SH2DisassemblyView::Display() {
                     ImGui::SameLine(0, 0);
                     drawRnRead(op.reg);
                     ImGui::SameLine(0, 0);
-                    drawRWSymbol(")", write);
+                    drawRWSymbol(")", op.write);
                     break;
                 case sh2::Operand::Type::AtDispGBR:
-                    drawRWSymbol("@(", write);
+                    drawRWSymbol("@(", op.write);
                     ImGui::SameLine(0, 0);
                     drawImm(op.immDisp);
                     ImGui::SameLine(0, 0);
@@ -502,10 +506,10 @@ void SH2DisassemblyView::Display() {
                     ImGui::SameLine(0, 0);
                     drawRegRead("gbr");
                     ImGui::SameLine(0, 0);
-                    drawRWSymbol(")", write);
+                    drawRWSymbol(")", op.write);
                     break;
                 case sh2::Operand::Type::AtR0GBR:
-                    drawRWSymbol("@(", write);
+                    drawRWSymbol("@(", op.write);
                     ImGui::SameLine(0, 0);
                     drawRnRead(0);
                     ImGui::SameLine(0, 0);
@@ -513,38 +517,38 @@ void SH2DisassemblyView::Display() {
                     ImGui::SameLine(0, 0);
                     drawRegRead("gbr");
                     ImGui::SameLine(0, 0);
-                    drawRWSymbol(")", write);
+                    drawRWSymbol(")", op.write);
                     break;
                 case sh2::Operand::Type::AtDispPC:
-                    drawRWSymbol("@(", write);
+                    drawRWSymbol("@(", false);
                     ImGui::SameLine(0, 0);
                     drawImm(address + op.immDisp);
                     ImGui::SameLine(0, 0);
-                    drawRWSymbol(")", write);
+                    drawRWSymbol(")", false);
                     break;
                 case sh2::Operand::Type::AtDispPCWordAlign:
-                    drawRWSymbol("@(", write);
+                    drawRWSymbol("@(", false);
                     ImGui::SameLine(0, 0);
                     drawImm((address & ~3) + op.immDisp);
                     ImGui::SameLine(0, 0);
-                    drawRWSymbol(")", write);
+                    drawRWSymbol(")", false);
                     break;
                 case sh2::Operand::Type::DispPC: drawImm(address + op.immDisp); break;
                 case sh2::Operand::Type::RnPC: drawRnRead(op.reg); break;
-                case sh2::Operand::Type::SR: drawReg("sr", write); break;
-                case sh2::Operand::Type::GBR: drawReg("gbr", write); break;
-                case sh2::Operand::Type::VBR: drawReg("vbr", write); break;
-                case sh2::Operand::Type::MACH: drawReg("mach", write); break;
-                case sh2::Operand::Type::MACL: drawReg("macl", write); break;
-                case sh2::Operand::Type::PR: drawReg("pr", write); break;
+                case sh2::Operand::Type::SR: drawReg("sr", op.read, op.write); break;
+                case sh2::Operand::Type::GBR: drawReg("gbr", op.read, op.write); break;
+                case sh2::Operand::Type::VBR: drawReg("vbr", op.read, op.write); break;
+                case sh2::Operand::Type::MACH: drawReg("mach", op.read, op.write); break;
+                case sh2::Operand::Type::MACL: drawReg("macl", op.read, op.write); break;
+                case sh2::Operand::Type::PR: drawReg("pr", op.read, op.write); break;
                 default: return false;
                 }
 
                 return true;
             };
 
-            auto drawOp1 = [&] { return drawOp(disasm.op1, false); };
-            auto drawOp2 = [&] { return drawOp(disasm.op2, true); };
+            auto drawOp1 = [&] { return drawOp(disasm.op1); };
+            auto drawOp2 = [&] { return drawOp(disasm.op2); };
 
             // -------------------------------------------------------------------------------------------------------------
 
