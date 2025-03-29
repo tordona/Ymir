@@ -6,15 +6,16 @@ namespace app::ui {
 
 SCUDebuggerWindow::SCUDebuggerWindow(SharedContext &context)
     : WindowBase(context)
+    , m_regsView(context)
     , m_intrView(context)
-    , m_debugOutputView(context)
-    , m_timersView(context) {
+    , m_timersView(context)
+    , m_debugOutputView(context) {
 
     m_windowConfig.name = "SCU";
 }
 
 void SCUDebuggerWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(200, 200), ImVec2(FLT_MAX, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(200, 676), ImVec2(FLT_MAX, FLT_MAX));
 }
 
 void SCUDebuggerWindow::DrawContents() {
@@ -24,6 +25,7 @@ void SCUDebuggerWindow::DrawContents() {
         ImGui::TableNextRow();
 
         if (ImGui::TableNextColumn()) {
+            m_regsView.Display();
             m_intrView.Display();
             m_timersView.Display();
         }

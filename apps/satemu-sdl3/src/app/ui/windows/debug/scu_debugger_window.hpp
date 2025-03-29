@@ -4,6 +4,7 @@
 
 #include <app/ui/views/debug/scu_debug_output_view.hpp>
 #include <app/ui/views/debug/scu_interrupts_view.hpp>
+#include <app/ui/views/debug/scu_registers_view.hpp>
 #include <app/ui/views/debug/scu_timers_view.hpp>
 
 namespace app::ui {
@@ -17,9 +18,10 @@ protected:
     void DrawContents() override;
 
 private:
+    SCURegistersView m_regsView;
     SCUInterruptsView m_intrView;
-    SCUDebugOutputView m_debugOutputView;
     SCUTimersView m_timersView;
+    SCUDebugOutputView m_debugOutputView;
 };
 
 } // namespace app::ui

@@ -1058,7 +1058,7 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
         break;
 
     case 0xC4: // SCU SDRAM Select
-        m_WRAMSizeSelect = value;
+        WriteWRAMSizeSelect(value);
         break;
     case 0xC8: // SCU Version (read-only)
         break;

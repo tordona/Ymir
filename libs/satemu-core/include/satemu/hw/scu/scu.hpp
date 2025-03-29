@@ -130,6 +130,13 @@ public:
         Probe(SCU &scu)
             : m_scu(scu) {}
 
+        bool GetWRAMSizeSelect() const {
+            return m_scu.m_WRAMSizeSelect;
+        }
+        void SetWRAMSizeSelect(bool value) const {
+            m_scu.WriteWRAMSizeSelect(value);
+        }
+
         InterruptMask &GetInterruptMask() {
             return m_scu.m_intrMask;
         }
@@ -352,6 +359,11 @@ private:
     // SCU registers
 
     bool m_WRAMSizeSelect; // false=2x2Mbit, true=2x4Mbit
+
+    void WriteWRAMSizeSelect(bool value) {
+        // TODO: adjust memory address masks
+        m_WRAMSizeSelect = value;
+    }
 
     template <mem_primitive T, bool peek>
     T ReadReg(uint32 address);
