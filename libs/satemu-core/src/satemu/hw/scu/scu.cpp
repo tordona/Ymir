@@ -778,13 +778,13 @@ FORCE_INLINE T SCU::ReadReg(uint32 address) {
 
         case 0x90: // Timer 0 Compare (write-only)
             if constexpr (peek) {
-                return m_timer0Compare;
+                return ReadTimer0Compare();
             } else {
                 return 0;
             }
         case 0x94: // Timer 1 Set Data (write-only)
             if constexpr (peek) {
-                return m_timer1Reload >> 2u;
+                return ReadTimer1Reload();
             } else {
                 return 0;
             }
@@ -1020,10 +1020,10 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
         break;
 
     case 0x90: // Timer 0 Compare
-        m_timer0Compare = bit::extract<0, 9>(value);
+        WriteTimer0Compare(value);
         break;
     case 0x94: // Timer 1 Set Data
-        m_timer1Reload = bit::extract<0, 8>(value) << 2u;
+        WriteTimer1Reload(value);
         break;
     case 0x98: // Timer 1 Mode
         m_timer1Enable = bit::extract<0>(value);

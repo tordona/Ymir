@@ -7,7 +7,8 @@ namespace app::ui {
 SCUDebuggerWindow::SCUDebuggerWindow(SharedContext &context)
     : WindowBase(context)
     , m_intrView(context)
-    , m_debugOutput(context) {
+    , m_debugOutputView(context)
+    , m_timersView(context) {
 
     m_windowConfig.name = "SCU";
 }
@@ -24,9 +25,10 @@ void SCUDebuggerWindow::DrawContents() {
 
         if (ImGui::TableNextColumn()) {
             m_intrView.Display();
+            m_timersView.Display();
         }
         if (ImGui::TableNextColumn()) {
-            m_debugOutput.Display();
+            m_debugOutputView.Display();
         }
 
         ImGui::EndTable();

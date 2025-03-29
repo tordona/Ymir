@@ -21,6 +21,7 @@
 #include <satemu/sys/bus.hpp>
 
 #include <satemu/util/data_ops.hpp>
+#include <satemu/util/inline.hpp>
 
 #include <iosfwd>
 
@@ -151,6 +152,41 @@ public:
 
         const bool &GetABusInterruptAcknowledge() const {
             return m_scu.m_abusIntrAck;
+        }
+
+        uint16 GetTimer0Counter() const {
+            return m_scu.m_timer0Counter;
+        }
+        void SetTimer0Counter(uint16 counter) {
+            m_scu.m_timer0Counter = counter;
+        }
+
+        uint16 GetTimer0Compare() const {
+            return m_scu.ReadTimer0Compare();
+        }
+        void SetTimer0Compare(uint16 value) const {
+            m_scu.WriteTimer0Compare(value);
+        }
+
+        uint16 GetTimer1Reload() const {
+            return m_scu.ReadTimer1Reload();
+        }
+        void SetTimer1Reload(uint16 value) {
+            m_scu.WriteTimer1Reload(value);
+        }
+
+        bool IsTimer1Enable() const {
+            return m_scu.m_timer1Enable;
+        }
+        void SetTimer1Enabled(bool enabled) {
+            m_scu.m_timer1Enable = enabled;
+        }
+
+        bool GetTimer1Mode() const {
+            return m_scu.m_timer1Mode;
+        }
+        void SetTimer1Mode(bool mode) {
+            m_scu.m_timer1Mode = mode;
         }
 
     private:
@@ -293,6 +329,22 @@ private:
     uint16 m_timer1Reload; // 2 fractional bits
     bool m_timer1Enable;
     bool m_timer1Mode;
+
+    FORCE_INLINE uint16 ReadTimer0Compare() const {
+        return m_timer0Compare;
+    }
+
+    FORCE_INLINE void WriteTimer0Compare(uint16 value) {
+        m_timer0Compare = bit::extract<0, 9>(value);
+    }
+
+    FORCE_INLINE uint16 ReadTimer1Reload() const {
+        return m_timer1Reload >> 2u;
+    }
+
+    FORCE_INLINE void WriteTimer1Reload(uint16 value) {
+        m_timer1Reload = bit::extract<0, 8>(value) << 2u;
+    }
 
     void TickTimer1();
 
