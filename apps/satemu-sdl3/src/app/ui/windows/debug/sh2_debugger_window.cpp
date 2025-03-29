@@ -10,13 +10,30 @@ SH2DebuggerWindow::SH2DebuggerWindow(SharedContext &context, bool master)
     , m_disasmView(context, m_sh2) {
 
     m_windowConfig.name = fmt::format("[WIP] {}SH2 debugger", master ? 'M' : 'S');
-    m_windowConfig.flags = ImGuiWindowFlags_AlwaysAutoResize;
+    // m_windowConfig.flags = ImGuiWindowFlags_AlwaysAutoResize;
+}
+
+void SH2DebuggerWindow::PrepareWindow() {
+    ImGui::SetNextWindowSizeConstraints(ImVec2(740, 370), ImVec2(FLT_MAX, FLT_MAX));
 }
 
 void SH2DebuggerWindow::DrawContents() {
-    m_regsView.Display();
-    ImGui::SameLine();
-    m_disasmView.Display();
+    if (ImGui::BeginTable("disasm_main", 2, ImGuiTableFlags_BordersInnerV)) {
+        ImGui::TableSetupColumn("##left", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("##right", ImGuiTableColumnFlags_WidthFixed, m_regsView.GetViewWidth());
+
+        ImGui::TableNextRow();
+        if (ImGui::TableNextColumn()) {
+            // ImGui::SeparatorText("Disassembly");
+            m_disasmView.Display();
+        }
+        if (ImGui::TableNextColumn()) {
+            // ImGui::SeparatorText("Registers");
+            m_regsView.Display();
+        }
+
+        ImGui::EndTable();
+    }
 }
 
 } // namespace app::ui

@@ -12,6 +12,8 @@ public:
 
     void Display();
 
+    float GetViewWidth();
+
 private:
     SharedContext &m_context;
     satemu::sh2::SH2 &m_sh2;

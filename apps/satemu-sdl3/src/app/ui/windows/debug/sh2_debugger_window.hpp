@@ -12,6 +12,7 @@ public:
     SH2DebuggerWindow(SharedContext &context, bool master);
 
 protected:
+    void PrepareWindow() override;
     void DrawContents() override;
 
 private:
