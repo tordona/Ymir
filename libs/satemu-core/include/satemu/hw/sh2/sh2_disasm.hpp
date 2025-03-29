@@ -118,6 +118,8 @@ struct Operand {
         PR,                // PR
     };
     Type type;
+    uint8 reg;
+    sint32 immDisp;
 
     static Operand None() {
         return {.type = Type::None};
@@ -216,9 +218,6 @@ struct Operand {
     static Operand PR() {
         return {.type = Type::PR};
     }
-
-    uint8 reg;
-    sint32 immDisp;
 };
 
 struct OpcodeDisasm {
@@ -237,8 +236,6 @@ public:
     alignas(alignment) std::array<OpcodeDisasm, 0x10000> disasm;
 };
 
-DisasmTable BuildDisasmTable();
-
-extern DisasmTable g_disasmTable;
+const OpcodeDisasm &Disassemble(uint16 opcode);
 
 } // namespace satemu::sh2

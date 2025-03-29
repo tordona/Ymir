@@ -2,11 +2,9 @@
 
 #include <satemu/util/bit_ops.hpp>
 
-#include <cassert>
-
 namespace satemu::sh2 {
 
-DisasmTable BuildDisasmTable() {
+static DisasmTable BuildDisasmTable() {
     DisasmTable table{};
 
     for (uint32 instr = 0; instr < 0x10000; instr++) {
@@ -387,5 +385,9 @@ DisasmTable BuildDisasmTable() {
 }
 
 DisasmTable g_disasmTable = BuildDisasmTable();
+
+const OpcodeDisasm &Disassemble(uint16 opcode) {
+    return g_disasmTable.disasm[opcode];
+}
 
 } // namespace satemu::sh2
