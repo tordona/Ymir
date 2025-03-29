@@ -25,6 +25,8 @@ add_executable(satemu-sdl3
 
     src/app/ui/views/debug/scu_debug_output_view.cpp
     src/app/ui/views/debug/scu_debug_output_view.hpp
+    src/app/ui/views/debug/scu_dma_view.cpp
+    src/app/ui/views/debug/scu_dma_view.hpp
     src/app/ui/views/debug/scu_interrupts_view.cpp
     src/app/ui/views/debug/scu_interrupts_view.hpp
     src/app/ui/views/debug/scu_registers_view.cpp

@@ -9,6 +9,7 @@ SCUDebuggerWindow::SCUDebuggerWindow(SharedContext &context)
     , m_regsView(context)
     , m_intrView(context)
     , m_timersView(context)
+    , m_dmaView(context)
     , m_debugOutputView(context) {
 
     m_windowConfig.name = "SCU";
@@ -37,8 +38,7 @@ void SCUDebuggerWindow::DrawContents() {
         if (ImGui::TableNextColumn()) {
             if (ImGui::BeginTabBar("##right_tabs")) {
                 if (ImGui::BeginTabItem("DMA")) {
-                    // TODO
-                    ImGui::TextUnformatted("(placeholder text)");
+                    m_dmaView.Display();
                     ImGui::EndTabItem();
                 }
                 if (ImGui::BeginTabItem("Debug output")) {
