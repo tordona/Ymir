@@ -6,9 +6,9 @@
 
 namespace app::ui {
 
-class SCUDSPDMAView {
+class SCUDSPDMARegistersView {
 public:
-    SCUDSPDMAView(SharedContext &context);
+    SCUDSPDMARegistersView(SharedContext &context);
 
     void Display();
 

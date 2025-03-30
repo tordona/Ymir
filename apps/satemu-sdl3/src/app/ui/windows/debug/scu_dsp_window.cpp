@@ -5,7 +5,7 @@ namespace app::ui {
 SCUDSPWindow::SCUDSPWindow(SharedContext &context)
     : WindowBase(context)
     , m_regsView(context)
-    , m_dmaView(context) {
+    , m_dmaRegsView(context) {
 
     m_windowConfig.name = "SCU DSP";
 }
@@ -34,7 +34,7 @@ void SCUDSPWindow::DrawContents() {
         }
         if (ImGui::TableNextColumn()) {
             ImGui::SeparatorText("DMA");
-            m_dmaView.Display();
+            m_dmaRegsView.Display();
         }
 
         ImGui::EndTable();

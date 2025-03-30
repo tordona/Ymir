@@ -1,12 +1,12 @@
-#include "scu_dsp_dma_view.hpp"
+#include "scu_dsp_dma_registers_view.hpp"
 
 namespace app::ui {
 
-SCUDSPDMAView::SCUDSPDMAView(SharedContext &context)
+SCUDSPDMARegistersView::SCUDSPDMARegistersView(SharedContext &context)
     : m_context(context)
     , m_dsp(context.saturn.SCU.GetDSP()) {}
 
-void SCUDSPDMAView::Display() {
+void SCUDSPDMARegistersView::Display() {
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();

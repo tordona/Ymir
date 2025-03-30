@@ -2,7 +2,7 @@
 
 #include <app/ui/window_base.hpp>
 
-#include <app/ui/views/debug/scu_dsp_dma_view.hpp>
+#include <app/ui/views/debug/scu_dsp_dma_registers_view.hpp>
 #include <app/ui/views/debug/scu_dsp_registers_view.hpp>
 
 namespace app::ui {
@@ -17,7 +17,7 @@ protected:
 
 private:
     SCUDSPRegistersView m_regsView;
-    SCUDSPDMAView m_dmaView;
+    SCUDSPDMARegistersView m_dmaRegsView;
 };
 
 } // namespace app::ui
