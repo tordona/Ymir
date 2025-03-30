@@ -120,7 +120,7 @@ public:
     bool dmaToD0;        // DMA transfer direction: false=D0 to DSP, true=DSP to D0
     bool dmaHold;        // DMA transfer hold address
     uint8 dmaCount;      // DMA transfer length
-    uint8 dmaSrc;        // DMA source register (CT0-3 or program RAM)
+    uint8 dmaSrc;        // DMA source register (CT0-3)
     uint8 dmaDst;        // DMA destination register (CT0-3 or program RAM)
     uint32 dmaReadAddr;  // DMA read address (RA0, 25 bits, starting from 2)
     uint32 dmaWriteAddr; // DMA write address (WA0, 25 bits, starting from 2)
