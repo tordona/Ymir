@@ -127,99 +127,6 @@ public:
     void DumpDSPDataRAM(std::ostream &out);
     void DumpDSPRegs(std::ostream &out);
 
-    // -------------------------------------------------------------------------
-    // Debugger
-
-    // Attaches the specified tracer to this component.
-    // Pass nullptr to disable tracing.
-    void UseTracer(debug::ISCUTracer *tracer) {
-        m_tracer = tracer;
-        m_dsp.UseTracer(m_tracer);
-    }
-
-    class Probe {
-    public:
-        Probe(SCU &scu)
-            : m_scu(scu) {}
-
-        bool GetWRAMSizeSelect() const {
-            return m_scu.m_WRAMSizeSelect;
-        }
-        void SetWRAMSizeSelect(bool value) const {
-            m_scu.WriteWRAMSizeSelect(value);
-        }
-
-        InterruptMask &GetInterruptMask() {
-            return m_scu.m_intrMask;
-        }
-
-        const InterruptMask &GetInterruptMask() const {
-            return m_scu.m_intrMask;
-        }
-
-        InterruptStatus &GetInterruptStatus() {
-            return m_scu.m_intrStatus;
-        }
-
-        const InterruptStatus &GetInterruptStatus() const {
-            return m_scu.m_intrStatus;
-        }
-
-        bool &GetABusInterruptAcknowledge() {
-            return m_scu.m_abusIntrAck;
-        }
-
-        const bool &GetABusInterruptAcknowledge() const {
-            return m_scu.m_abusIntrAck;
-        }
-
-        uint16 GetTimer0Counter() const {
-            return m_scu.ReadTimer0Counter();
-        }
-        void SetTimer0Counter(uint16 value) {
-            m_scu.WriteTimer0Counter(value);
-        }
-
-        uint16 GetTimer0Compare() const {
-            return m_scu.ReadTimer0Compare();
-        }
-        void SetTimer0Compare(uint16 value) const {
-            m_scu.WriteTimer0Compare(value);
-        }
-
-        uint16 GetTimer1Reload() const {
-            return m_scu.ReadTimer1Reload();
-        }
-        void SetTimer1Reload(uint16 value) {
-            m_scu.WriteTimer1Reload(value);
-        }
-
-        bool IsTimer1Enabled() const {
-            return m_scu.m_timer1Enable;
-        }
-        void SetTimer1Enabled(bool enabled) {
-            m_scu.m_timer1Enable = enabled;
-        }
-
-        bool GetTimer1Mode() const {
-            return m_scu.m_timer1Mode;
-        }
-        void SetTimer1Mode(bool mode) {
-            m_scu.m_timer1Mode = mode;
-        }
-
-    private:
-        SCU &m_scu;
-    };
-
-    Probe &GetProbe() {
-        return m_probe;
-    }
-
-    const Probe &GetProbe() const {
-        return m_probe;
-    }
-
 private:
     sys::Bus &m_bus;
 
@@ -402,7 +309,6 @@ private:
     // Debugger
 
     debug::ISCUTracer *m_tracer = nullptr;
-    Probe m_probe{*this};
 
 public:
     // -------------------------------------------------------------------------
@@ -430,6 +336,114 @@ public:
         util::MakeClassMemberRequiredCallback<&SCU::TriggerSystemManager>(this);
 
     const CBTriggerDSPEnd CbTriggerDSPEnd = util::MakeClassMemberRequiredCallback<&SCU::TriggerDSPEnd>(this);
+
+    // -------------------------------------------------------------------------
+    // Debugger
+
+    // Attaches the specified tracer to this component.
+    // Pass nullptr to disable tracing.
+    void UseTracer(debug::ISCUTracer *tracer) {
+        m_tracer = tracer;
+        m_dsp.UseTracer(m_tracer);
+    }
+
+    class Probe {
+    public:
+        Probe(SCU &scu);
+
+        // ---------------------------------------------------------------------
+        // Registers
+
+        bool GetWRAMSizeSelect() const;
+        void SetWRAMSizeSelect(bool value) const;
+
+        // ---------------------------------------------------------------------
+        // Interrupts
+
+        InterruptMask &GetInterruptMask();
+        InterruptStatus &GetInterruptStatus();
+        bool &GetABusInterruptAcknowledge();
+
+        const InterruptMask &GetInterruptMask() const;
+        const InterruptStatus &GetInterruptStatus() const;
+        const bool &GetABusInterruptAcknowledge() const;
+
+        // ---------------------------------------------------------------------
+        // Timers
+
+        uint16 GetTimer0Counter() const;
+        void SetTimer0Counter(uint16 value);
+
+        uint16 GetTimer0Compare() const;
+        void SetTimer0Compare(uint16 value) const;
+
+        uint16 GetTimer1Reload() const;
+        void SetTimer1Reload(uint16 value);
+
+        bool IsTimer1Enabled() const;
+        void SetTimer1Enabled(bool enabled);
+
+        bool GetTimer1Mode() const;
+        void SetTimer1Mode(bool mode);
+
+        // ---------------------------------------------------------------------
+        // DMA registers
+
+        uint32 GetDMASourceAddress(uint8 channel) const;
+        void SetDMASourceAddress(uint8 channel, uint32 value);
+
+        uint32 GetDMADestinationAddress(uint8 channel) const;
+        void SetDMADestinationAddress(uint8 channel, uint32 value);
+
+        uint32 GetDMATransferCount(uint8 channel) const;
+        void SetDMATransferCount(uint8 channel, uint32 value);
+
+        uint32 GetDMASourceAddressIncrement(uint8 channel) const;
+        void SetDMASourceAddressIncrement(uint8 channel, uint32 value);
+
+        uint32 GetDMADestinationAddressIncrement(uint8 channel) const;
+        void SetDMADestinationAddressIncrement(uint8 channel, uint32 value);
+
+        bool IsDMAUpdateSourceAddress(uint8 channel) const;
+        void SetDMAUpdateSourceAddress(uint8 channel, bool value) const;
+
+        bool IsDMAUpdateDestinationAddress(uint8 channel) const;
+        void SetDMAUpdateDestinationAddress(uint8 channel, bool value) const;
+
+        bool IsDMAEnabled(uint8 channel) const;
+        void SetDMAEnabled(uint8 channel, bool value) const;
+
+        bool IsDMAIndirect(uint8 channel) const;
+        void SetDMAIndirect(uint8 channel, bool value) const;
+
+        DMATrigger GetDMATrigger(uint8 channel) const;
+        void SetDMATrigger(uint8 channel, DMATrigger trigger);
+
+        // ---------------------------------------------------------------------
+        // DMA state
+
+        bool IsDMATransferActive(uint8 channel) const;
+        uint32 GetCurrentDMASourceAddress(uint8 channel) const;
+        uint32 GetCurrentDMADestinationAddress(uint8 channel) const;
+        uint32 GetCurrentDMATransferCount(uint8 channel) const;
+        uint32 GetCurrentDMASourceAddressIncrement(uint8 channel) const;
+        uint32 GetCurrentDMADestinationAddressIncrement(uint8 channel) const;
+        uint32 GetCurrentDMAIndirectSourceAddress(uint8 channel) const;
+
+    private:
+        SCU &m_scu;
+    };
+
+    Probe &GetProbe() {
+        return m_probe;
+    }
+
+    const Probe &GetProbe() const {
+        return m_probe;
+    }
+
+private:
+    Probe m_probe{*this};
 };
 
 } // namespace satemu::scu

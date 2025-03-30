@@ -670,24 +670,18 @@ FORCE_INLINE T SCU::ReadReg(uint32 address) {
         case 0x00: // Level 0 DMA Read Address
         case 0x20: // Level 1 DMA Read Address
         case 0x40: // Level 2 DMA Read Address
-        {
-            auto &ch = m_dmaChannels[address >> 5u];
-            return ch.srcAddr;
-        }
+            return m_dmaChannels[address >> 5u].srcAddr;
+
         case 0x04: // Level 0 DMA Write Address
         case 0x24: // Level 1 DMA Write Address
         case 0x44: // Level 2 DMA Write Address
-        {
-            auto &ch = m_dmaChannels[address >> 5u];
-            return ch.dstAddr;
-        }
+            return m_dmaChannels[address >> 5u].dstAddr;
+
         case 0x08: // Level 0 DMA Transfer Number
         case 0x28: // Level 1 DMA Transfer Number
         case 0x48: // Level 2 DMA Transfer Number
-        {
-            auto &ch = m_dmaChannels[address >> 5u];
-            return ch.xferCount;
-        }
+            return m_dmaChannels[address >> 5u].xferCount;
+
         case 0x0C: // Level 0 DMA Increment (write-only)
         case 0x2C: // Level 1 DMA Increment (write-only)
         case 0x4C: // Level 2 DMA Increment (write-only)
@@ -909,32 +903,24 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
     case 0x00: // Level 0 DMA Read Address
     case 0x20: // Level 1 DMA Read Address
     case 0x40: // Level 2 DMA Read Address
-    {
-        auto &ch = m_dmaChannels[address >> 5u];
-        ch.srcAddr = bit::extract<0, 26>(value);
+        m_dmaChannels[address >> 5u].srcAddr = bit::extract<0, 26>(value);
         break;
-    }
+
     case 0x04: // Level 0 DMA Write Address
     case 0x24: // Level 1 DMA Write Address
     case 0x44: // Level 2 DMA Write Address
-    {
-        auto &ch = m_dmaChannels[address >> 5u];
-        ch.dstAddr = bit::extract<0, 26>(value);
+        m_dmaChannels[address >> 5u].dstAddr = bit::extract<0, 26>(value);
         break;
-    }
+
     case 0x08: // Level 0 DMA Transfer Number
-    {
-        auto &ch = m_dmaChannels[address >> 5u];
-        ch.xferCount = bit::extract<0, 19>(value);
+        m_dmaChannels[0].xferCount = bit::extract<0, 19>(value);
         break;
-    }
+
     case 0x28: // Level 1 DMA Transfer Number
     case 0x48: // Level 2 DMA Transfer Number
-    {
-        auto &ch = m_dmaChannels[address >> 5u];
-        ch.xferCount = bit::extract<0, 11>(value);
+        m_dmaChannels[address >> 5u].xferCount = bit::extract<0, 11>(value);
         break;
-    }
+
     case 0x0C: // Level 0 DMA Increment
     case 0x2C: // Level 1 DMA Increment
     case 0x4C: // Level 2 DMA Increment
@@ -1169,6 +1155,298 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
     } else {
         m_cbExternalMasterInterrupt(0, 0);
         m_cbExternalSlaveInterrupt(0, 0);
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Probe implementation
+
+SCU::Probe::Probe(SCU &scu)
+    : m_scu(scu) {}
+
+// Registers
+
+bool SCU::Probe::GetWRAMSizeSelect() const {
+    return m_scu.m_WRAMSizeSelect;
+}
+
+void SCU::Probe::SetWRAMSizeSelect(bool value) const {
+    m_scu.WriteWRAMSizeSelect(value);
+}
+
+// Interrupts
+
+InterruptMask &SCU::Probe::GetInterruptMask() {
+    return m_scu.m_intrMask;
+}
+
+InterruptStatus &SCU::Probe::GetInterruptStatus() {
+    return m_scu.m_intrStatus;
+}
+
+bool &SCU::Probe::GetABusInterruptAcknowledge() {
+    return m_scu.m_abusIntrAck;
+}
+
+const InterruptMask &SCU::Probe::GetInterruptMask() const {
+    return m_scu.m_intrMask;
+}
+
+const InterruptStatus &SCU::Probe::GetInterruptStatus() const {
+    return m_scu.m_intrStatus;
+}
+
+const bool &SCU::Probe::GetABusInterruptAcknowledge() const {
+    return m_scu.m_abusIntrAck;
+}
+
+// Timers
+
+uint16 SCU::Probe::GetTimer0Counter() const {
+    return m_scu.ReadTimer0Counter();
+}
+
+void SCU::Probe::SetTimer0Counter(uint16 value) {
+    m_scu.WriteTimer0Counter(value);
+}
+
+uint16 SCU::Probe::GetTimer0Compare() const {
+    return m_scu.ReadTimer0Compare();
+}
+
+void SCU::Probe::SetTimer0Compare(uint16 value) const {
+    m_scu.WriteTimer0Compare(value);
+}
+
+uint16 SCU::Probe::GetTimer1Reload() const {
+    return m_scu.ReadTimer1Reload();
+}
+
+void SCU::Probe::SetTimer1Reload(uint16 value) {
+    m_scu.WriteTimer1Reload(value);
+}
+
+bool SCU::Probe::IsTimer1Enabled() const {
+    return m_scu.m_timer1Enable;
+}
+
+void SCU::Probe::SetTimer1Enabled(bool enabled) {
+    m_scu.m_timer1Enable = enabled;
+}
+
+bool SCU::Probe::GetTimer1Mode() const {
+    return m_scu.m_timer1Mode;
+}
+
+void SCU::Probe::SetTimer1Mode(bool mode) {
+    m_scu.m_timer1Mode = mode;
+}
+
+// DMA registers
+
+// TODO: deduplicate code
+// - xferCount is a problem, since it depends on the channel
+//   - WriteRegLong is optimal; DO NOT CHANGE IT!
+
+uint32 SCU::Probe::GetDMASourceAddress(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].srcAddr;
+    } else {
+        return 0;
+    }
+}
+
+void SCU::Probe::SetDMASourceAddress(uint8 channel, uint32 value) {
+    if (channel < 3) {
+        m_scu.m_dmaChannels[channel].srcAddr = bit::extract<0, 26>(value);
+    }
+}
+
+uint32 SCU::Probe::GetDMADestinationAddress(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].dstAddr;
+    } else {
+        return 0;
+    }
+}
+
+void SCU::Probe::SetDMADestinationAddress(uint8 channel, uint32 value) {
+    if (channel < 3) {
+        m_scu.m_dmaChannels[channel].dstAddr = bit::extract<0, 26>(value);
+    }
+}
+
+uint32 SCU::Probe::GetDMATransferCount(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].xferCount;
+    } else {
+        return 0;
+    }
+}
+
+void SCU::Probe::SetDMATransferCount(uint8 channel, uint32 value) {
+    if (channel == 0) {
+        m_scu.m_dmaChannels[channel].xferCount = bit::extract<0, 19>(value);
+    } else if (channel < 3) {
+        m_scu.m_dmaChannels[channel].xferCount = bit::extract<0, 11>(value);
+    }
+}
+
+uint32 SCU::Probe::GetDMASourceAddressIncrement(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].srcAddrInc;
+    } else {
+        return 0;
+    }
+}
+
+void SCU::Probe::SetDMASourceAddressIncrement(uint8 channel, uint32 value) {
+    if (channel < 3) {
+        // Restrict increment to 0 or 4 bytes
+        m_scu.m_dmaChannels[channel].srcAddrInc = value & 4;
+    }
+}
+
+uint32 SCU::Probe::GetDMADestinationAddressIncrement(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].dstAddrInc;
+    } else {
+        return 0;
+    }
+}
+
+void SCU::Probe::SetDMADestinationAddressIncrement(uint8 channel, uint32 value) {
+    if (channel < 3) {
+        // Restrict increment to 0, 2, 4, 8, 16, 32, 64 or 128 bytes
+        m_scu.m_dmaChannels[channel].dstAddrInc = bit::next_power_of_two(value) & 0x7E;
+    }
+}
+
+bool SCU::Probe::IsDMAUpdateSourceAddress(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].updateSrcAddr;
+    } else {
+        return false;
+    }
+}
+
+void SCU::Probe::SetDMAUpdateSourceAddress(uint8 channel, bool value) const {
+    if (channel < 3) {
+        m_scu.m_dmaChannels[channel].updateSrcAddr = value;
+    }
+}
+
+bool SCU::Probe::IsDMAUpdateDestinationAddress(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].updateDstAddr;
+    } else {
+        return false;
+    }
+}
+
+void SCU::Probe::SetDMAUpdateDestinationAddress(uint8 channel, bool value) const {
+    if (channel < 3) {
+        m_scu.m_dmaChannels[channel].updateDstAddr = value;
+    }
+}
+
+bool SCU::Probe::IsDMAEnabled(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].enabled;
+    } else {
+        return false;
+    }
+}
+
+void SCU::Probe::SetDMAEnabled(uint8 channel, bool value) const {
+    if (channel < 3) {
+        m_scu.m_dmaChannels[channel].enabled = value;
+    }
+}
+
+bool SCU::Probe::IsDMAIndirect(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].indirect;
+    } else {
+        return false;
+    }
+}
+
+void SCU::Probe::SetDMAIndirect(uint8 channel, bool value) const {
+    if (channel < 3) {
+        m_scu.m_dmaChannels[channel].indirect = value;
+    }
+}
+
+SCU::DMATrigger SCU::Probe::GetDMATrigger(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].trigger;
+    } else {
+        return DMATrigger::VBlankIN;
+    }
+}
+
+void SCU::Probe::SetDMATrigger(uint8 channel, DMATrigger trigger) {
+    if (channel < 3) {
+        m_scu.m_dmaChannels[channel].trigger = static_cast<DMATrigger>(bit::extract<0, 2>(static_cast<uint8>(trigger)));
+    }
+}
+
+// DMA state
+
+bool SCU::Probe::IsDMATransferActive(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].active;
+    } else {
+        return false;
+    }
+}
+
+uint32 SCU::Probe::GetCurrentDMASourceAddress(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].currSrcAddr;
+    } else {
+        return 0;
+    }
+}
+
+uint32 SCU::Probe::GetCurrentDMADestinationAddress(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].currDstAddr;
+    } else {
+        return 0;
+    }
+}
+
+uint32 SCU::Probe::GetCurrentDMATransferCount(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].currXferCount;
+    } else {
+        return 0;
+    }
+}
+
+uint32 SCU::Probe::GetCurrentDMASourceAddressIncrement(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].currSrcAddrInc;
+    } else {
+        return 0;
+    }
+}
+
+uint32 SCU::Probe::GetCurrentDMADestinationAddressIncrement(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].currDstAddrInc;
+    } else {
+        return 0;
+    }
+}
+
+uint32 SCU::Probe::GetCurrentDMAIndirectSourceAddress(uint8 channel) const {
+    if (channel < 3) {
+        return m_scu.m_dmaChannels[channel].currIndirectSrc;
+    } else {
+        return 0;
     }
 }
 

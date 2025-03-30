@@ -16,6 +16,26 @@ FORCE_INLINE constexpr bool is_power_of_two(T x) {
     return (x & (x - 1)) == 0;
 }
 
+// Returns the next power of two not less than x.
+template <std::unsigned_integral T>
+FORCE_INLINE constexpr T next_power_of_two(T x) {
+    x--;
+    x |= x >> 1u;
+    x |= x >> 2u;
+    x |= x >> 4u;
+    if constexpr (sizeof(T) > 1) {
+        x |= x >> 8u;
+    }
+    if constexpr (sizeof(T) > 2) {
+        x |= x >> 16u;
+    }
+    if constexpr (sizeof(T) > 4) {
+        x |= x >> 32ull;
+    }
+    x++;
+    return x;
+}
+
 // Sign-extend from a constant bit width.
 // The return type is the signed equivalent of T.
 template <unsigned B, std::integral T>
