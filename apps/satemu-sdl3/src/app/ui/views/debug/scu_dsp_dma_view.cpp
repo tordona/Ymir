@@ -11,25 +11,28 @@ void SCUDSPDMAView::Display() {
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
-    auto fmtRAMOp = [&](uint8 value) {
+    auto fmtRAMOp = [&](uint8 value, bool allowProgramRAM) {
         switch (value) {
         case 0: return "Data RAM 0";
         case 1: return "Data RAM 1";
         case 2: return "Data RAM 2";
         case 3: return "Data RAM 3";
-        case 4: return "Program RAM";
-        default: return "Unknown";
+        case 4: return allowProgramRAM ? "Program RAM" : "Invalid (4)";
+        case 5: return "Invalid (5)";
+        case 6: return "Invalid (6)";
+        case 7: return "Invalid (7)";
+        default: return "Invalid";
         }
     };
 
-    ImGui::AlignTextToFramePadding();
     if (m_dsp.dmaToD0) {
         ImGui::BeginGroup();
+        ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("From");
         ImGui::SameLine();
-        if (ImGui::BeginCombo("##src", fmtRAMOp(m_dsp.dmaSrc), ImGuiComboFlags_WidthFitPreview)) {
+        if (ImGui::BeginCombo("##src", fmtRAMOp(m_dsp.dmaSrc, false), ImGuiComboFlags_WidthFitPreview)) {
             for (uint32 i = 0; i < 4; i++) {
-                if (ImGui::Selectable(fmtRAMOp(i), m_dsp.dmaSrc == i)) {
+                if (ImGui::Selectable(fmtRAMOp(i, false), m_dsp.dmaSrc == i)) {
                     m_dsp.dmaSrc = i;
                 }
             }
@@ -52,6 +55,7 @@ void SCUDSPDMAView::Display() {
         ImGui::EndGroup();
     } else {
         ImGui::BeginGroup();
+        ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("From");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 7);
@@ -68,9 +72,9 @@ void SCUDSPDMAView::Display() {
         ImGui::BeginGroup();
         ImGui::TextUnformatted("to");
         ImGui::SameLine();
-        if (ImGui::BeginCombo("##dst", fmtRAMOp(m_dsp.dmaDst), ImGuiComboFlags_WidthFitPreview)) {
+        if (ImGui::BeginCombo("##dst", fmtRAMOp(m_dsp.dmaDst, true), ImGuiComboFlags_WidthFitPreview)) {
             for (uint32 i = 0; i < 5; i++) {
-                if (ImGui::Selectable(fmtRAMOp(i), m_dsp.dmaDst == i)) {
+                if (ImGui::Selectable(fmtRAMOp(i, true), m_dsp.dmaDst == i)) {
                     m_dsp.dmaDst = i;
                 }
             }
@@ -81,11 +85,51 @@ void SCUDSPDMAView::Display() {
     ImGui::SameLine();
     if (ImGui::Button("Swap")) {
         m_dsp.dmaToD0 = !m_dsp.dmaToD0;
+        if (!m_dsp.dmaToD0) {
+            m_dsp.dmaAddrInc = std::min(m_dsp.dmaAddrInc, 4u);
+        }
     }
-    // uint8 dmaCount;      // DMA transfer length
-    // uint32 dmaAddrInc;   // DMA address increment
-    // bool dmaHold;        // DMA transfer hold address
-    // bool dmaRun;         // DMA transfer in progress (T0)
+
+    ImGui::BeginGroup();
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Count:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
+    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    ImGui::InputScalar("##count", ImGuiDataType_U8, &m_dsp.dmaCount, nullptr, nullptr, "%02X",
+                       ImGuiInputTextFlags_CharsHexadecimal);
+    ImGui::PopFont();
+    ImGui::SameLine();
+    ImGui::TextUnformatted("longwords");
+    ImGui::EndGroup();
+
+    ImGui::BeginGroup();
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Increment address by");
+    ImGui::SameLine();
+    if (ImGui::BeginCombo("##addr_inc", fmt::format("{}", m_dsp.dmaAddrInc).c_str(), ImGuiComboFlags_WidthFitPreview)) {
+        if (m_dsp.dmaToD0) {
+            for (uint32 i = 0; i < 8; i++) {
+                const uint32 inc = (1u << i) >> 1u;
+                if (ImGui::Selectable(fmt::format("{}", inc).c_str(), m_dsp.dmaAddrInc == inc)) {
+                    m_dsp.dmaAddrInc = inc;
+                }
+            }
+        } else {
+            for (uint32 i = 0; i < 2; i++) {
+                const uint32 inc = (1u << (i * 2u)) & ~1u;
+                if (ImGui::Selectable(fmt::format("{}", inc).c_str(), m_dsp.dmaAddrInc == inc)) {
+                    m_dsp.dmaAddrInc = inc;
+                }
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::EndGroup();
+    ImGui::SameLine();
+    ImGui::Checkbox("Hold address", &m_dsp.dmaHold);
+
+    ImGui::Checkbox("Transfer running (T0)", &m_dsp.dmaRun);
 }
 
 } // namespace app::ui

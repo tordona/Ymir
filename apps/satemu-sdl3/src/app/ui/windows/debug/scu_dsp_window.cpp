@@ -16,7 +16,7 @@ void SCUDSPWindow::PrepareWindow() {
 
 void SCUDSPWindow::DrawContents() {
     if (ImGui::BeginTable("scu_dsp", 3, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {
-        ImGui::TableSetupColumn("Registers", ImGuiTableColumnFlags_WidthFixed, 250);
+        ImGui::TableSetupColumn("Registers", ImGuiTableColumnFlags_WidthFixed, 170);
         ImGui::TableSetupColumn("Disassembly", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableSetupColumn("DMA", ImGuiTableColumnFlags_WidthFixed, 350);
 
