@@ -39,6 +39,10 @@ private:
     void AcknowledgeInterrupt(uint8 index) final;
 
     void DebugPortWrite(uint8 ch) final;
+
+    void BeginDSPDMA(bool toD0, uint32 addrD0, uint8 addrDSP, uint8 count, uint8 addrInc, bool hold, uint8 pc) final;
+    void DSPDMATransfer(uint32 addrD0, uint8 offsetDSP, uint32 value) final;
+    void EndDSPDMA() final;
 };
 
 } // namespace app

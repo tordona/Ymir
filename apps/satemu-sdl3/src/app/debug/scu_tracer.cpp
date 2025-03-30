@@ -23,4 +23,16 @@ void SCUTracer::DebugPortWrite(uint8 ch) {
     }
 }
 
+void SCUTracer::BeginDSPDMA(bool toD0, uint32 addrD0, uint8 addrDSP, uint8 count, uint8 addrInc, bool hold, uint8 pc) {
+    // TODO
+}
+
+void SCUTracer::DSPDMATransfer(uint32 addrD0, uint8 offsetDSP, uint32 value) {
+    // TODO
+}
+
+void SCUTracer::EndDSPDMA() {
+    // TODO
+}
+
 } // namespace app
