@@ -26,8 +26,10 @@ void SCUDSPWindow::DrawContents() {
             m_regsView.Display();
         }
         if (ImGui::TableNextColumn()) {
+            // TODO
             ImGui::TextUnformatted("(placeholder for controls)");
             ImGui::SeparatorText("Disassembly");
+            // TODO
             ImGui::TextUnformatted("(placeholder for disassembly)");
         }
         if (ImGui::TableNextColumn()) {
