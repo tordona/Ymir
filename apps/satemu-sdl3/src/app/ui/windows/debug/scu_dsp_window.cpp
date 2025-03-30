@@ -6,6 +6,7 @@ SCUDSPWindow::SCUDSPWindow(SharedContext &context)
     : WindowBase(context)
     , m_regsView(context)
     , m_disasmView(context)
+    , m_dataRAMView(context)
     , m_dmaRegsView(context)
     , m_dmaTraceView(context) {
 
@@ -20,7 +21,7 @@ void SCUDSPWindow::DrawContents() {
     if (ImGui::BeginTable("scu_dsp", 3, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {
         ImGui::TableSetupColumn("Registers", ImGuiTableColumnFlags_WidthFixed, 170);
         ImGui::TableSetupColumn("Disassembly", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("DMA", ImGuiTableColumnFlags_WidthFixed, 300);
+        ImGui::TableSetupColumn("DMA", ImGuiTableColumnFlags_WidthFixed, 310);
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
@@ -34,12 +35,23 @@ void SCUDSPWindow::DrawContents() {
             m_disasmView.Display();
         }
         if (ImGui::TableNextColumn()) {
-            // TODO: tabbed pane to switch between Data RAM and DMA views
-            ImGui::SeparatorText("DMA");
-            m_dmaRegsView.Display();
+            if (ImGui::BeginTabBar("right_pane")) {
+                if (ImGui::BeginTabItem("Data RAM")) {
+                    m_dataRAMView.Display();
 
-            ImGui::SeparatorText("Trace");
-            m_dmaTraceView.Display();
+                    ImGui::EndTabItem();
+                }
+                if (ImGui::BeginTabItem("DMA")) {
+                    ImGui::SeparatorText("Registers");
+                    m_dmaRegsView.Display();
+                    ImGui::SeparatorText("Trace");
+                    m_dmaTraceView.Display();
+
+                    ImGui::EndTabItem();
+                }
+
+                ImGui::EndTabBar();
+            }
         }
 
         ImGui::EndTable();
