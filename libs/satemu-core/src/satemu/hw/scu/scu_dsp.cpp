@@ -134,8 +134,9 @@ void SCUDSP::RunDMA(uint64 cycles) {
     // TODO: should iterate through transfers based on cycle count
     const uint32 ctIndex = toD0 ? dmaSrc : dmaDst;
     const bool useDataRAM = ctIndex <= 3; // else: use program RAM
-    for (uint32 i = 0; i < dmaCount; i++) {
-        uint32 &ramValue = useDataRAM ? dataRAM[ctIndex][CT[ctIndex]] : programRAM[i & 0xFF];
+    do {
+        dmaCount--;
+        uint32 &ramValue = useDataRAM ? dataRAM[ctIndex][CT[ctIndex]] : programRAM[PC++];
         if (toD0) {
             // Data RAM -> D0
             const uint32 value = ramValue;
@@ -177,6 +178,10 @@ void SCUDSP::RunDMA(uint64 cycles) {
             CT[ctIndex]++;
             CT[ctIndex] &= 0x3F;
         }
+    } while (dmaCount != 0);
+
+    if (!useDataRAM) {
+        PC = loopTop;
     }
 
     // Update RA0/WA0 if not holding address
