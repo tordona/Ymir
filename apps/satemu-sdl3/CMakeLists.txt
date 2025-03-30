@@ -29,6 +29,8 @@ add_executable(satemu-sdl3
     src/app/ui/views/debug/scu_dma_registers_view.hpp
     src/app/ui/views/debug/scu_dma_state_view.cpp
     src/app/ui/views/debug/scu_dma_state_view.hpp
+    src/app/ui/views/debug/scu_dma_trace_view.cpp
+    src/app/ui/views/debug/scu_dma_trace_view.hpp
     src/app/ui/views/debug/scu_dsp_data_ram_view.cpp
     src/app/ui/views/debug/scu_dsp_data_ram_view.hpp
     src/app/ui/views/debug/scu_dsp_disassembly_view.cpp

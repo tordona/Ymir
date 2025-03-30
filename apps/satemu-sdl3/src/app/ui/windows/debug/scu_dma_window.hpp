@@ -4,6 +4,7 @@
 
 #include <app/ui/views/debug/scu_dma_registers_view.hpp>
 #include <app/ui/views/debug/scu_dma_state_view.hpp>
+#include <app/ui/views/debug/scu_dma_trace_view.hpp>
 
 #include <array>
 
@@ -20,6 +21,7 @@ protected:
 private:
     SCUDMARegistersView m_dmaRegsView;
     SCUDMAStateView m_dmaStateView;
+    SCUDMATraceView m_dmaTraceView;
 };
 
 } // namespace app::ui

@@ -7,17 +7,9 @@
 namespace app {
 
 struct SH2Tracer final : satemu::debug::ISH2Tracer {
-    void ResetInterruptCounter() {
-        m_interruptCounter = 0;
-    }
-
-    void ResetDivisionCounter() {
-        m_divisionCounter = 0;
-    }
-
-    void ResetDMACounter(uint32 channel) {
-        m_dmaCounter[channel] = 0;
-    }
+    void ResetInterruptCounter();
+    void ResetDivisionCounter();
+    void ResetDMACounter(uint32 channel);
 
     bool traceInstructions = false;
     bool traceInterrupts = false;

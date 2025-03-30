@@ -5,13 +5,14 @@ namespace app::ui {
 SCUDMAWindow::SCUDMAWindow(SharedContext &context)
     : WindowBase(context)
     , m_dmaRegsView(context)
-    , m_dmaStateView(context) {
+    , m_dmaStateView(context)
+    , m_dmaTraceView(context) {
 
     m_windowConfig.name = "SCU DMA";
 }
 
 void SCUDMAWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(500, 760), ImVec2(FLT_MAX, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(660, 760), ImVec2(FLT_MAX, FLT_MAX));
 }
 
 void SCUDMAWindow::DrawContents() {
@@ -31,7 +32,7 @@ void SCUDMAWindow::DrawContents() {
         }
         if (ImGui::TableNextColumn()) {
             ImGui::SeparatorText("Trace");
-            ImGui::TextUnformatted("(placeholder for DMA trace)");
+            m_dmaTraceView.Display();
         }
 
         ImGui::EndTable();

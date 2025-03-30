@@ -29,6 +29,14 @@ FORCE_INLINE static void TraceDebugPortWrite(debug::ISCUTracer *tracer, uint8 ch
     }
 }
 
+FORCE_INLINE static void TraceDMA(debug::ISCUTracer *tracer, uint8 channel, uint32 srcAddr, uint32 dstAddr,
+                                  uint32 xferCount, uint32 srcAddrInc, uint32 dstAddrInc, bool indirect,
+                                  uint32 indirectAddr) {
+    if (tracer) {
+        return tracer->DMA(channel, srcAddr, dstAddr, xferCount, srcAddrInc, dstAddrInc, indirect, indirectAddr);
+    }
+}
+
 // -----------------------------------------------------------------------------
 // Implementation
 
@@ -392,6 +400,61 @@ void SCU::WriteCartridge(uint32 address, T value) {
     }
 }
 
+void SCU::SetupDMATransferIncrements(DMAChannel &ch) {
+    // Source address increment:
+    // - either 0 or 4 bytes when in CS2 area
+    // - always 4 bytes elsewhere
+    const bool srcCS2 = util::AddressInRange<0x580'0000, 0x58F'FFFF>(ch.currSrcAddr);
+    const bool srcWRAM = ch.currSrcAddr >= 0x600'0000;
+    if (srcCS2 || srcWRAM) {
+        ch.currSrcAddrInc = ch.srcAddrInc;
+    } else {
+        ch.currSrcAddrInc = 4u;
+    }
+
+    // Destination address increment:
+    // - 0, 2, 4, 8, 16, 32, 64 or 128 bytes when in B-Bus
+    // - 0 or 4 bytes when in CS2
+    // - always 4 bytes elsewhere
+    const bool dstBBus = util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currDstAddr);
+    const bool dstCS2 = util::AddressInRange<0x580'0000, 0x58F'FFFF>(ch.currDstAddr);
+    const bool dstWRAM = ch.currDstAddr >= 0x600'0000;
+    if (dstBBus || dstWRAM) {
+        ch.currDstAddrInc = ch.dstAddrInc;
+    } else if (dstCS2) {
+        ch.currDstAddrInc = ch.dstAddrInc ? 4u : 0u;
+    } else {
+        ch.currDstAddrInc = 4u;
+    }
+}
+
+void SCU::DMAReadIndirectTransfer(uint8 level) {
+    auto &ch = m_dmaChannels[level];
+    ch.currXferCount = m_bus.Read<uint32>(ch.currIndirectSrc + 0);
+    ch.currDstAddr = m_bus.Read<uint32>(ch.currIndirectSrc + 4);
+    ch.currSrcAddr = m_bus.Read<uint32>(ch.currIndirectSrc + 8);
+    ch.currIndirectSrc += 3 * sizeof(uint32);
+    ch.endIndirect = bit::extract<31>(ch.currSrcAddr);
+    ch.currSrcAddr &= 0x7FF'FFFF;
+    ch.currDstAddr &= 0x7FF'FFFF;
+    SetupDMATransferIncrements(ch);
+
+    devlog::trace<grp::dma>(
+        "SCU DMA{}: Starting indirect transfer at {:08X} - {:06X} bytes from {:08X} (+{:02X}) to {:08X} (+{:02X}){}",
+        level, ch.currIndirectSrc - 3 * sizeof(uint32), ch.currXferCount, ch.currSrcAddr, ch.currSrcAddrInc,
+        ch.currDstAddr, ch.currDstAddrInc, (ch.endIndirect ? " (final)" : ""));
+
+    if (ch.currSrcAddr & 1) {
+        devlog::debug<grp::dma>("SCU DMA{}: Unaligned indirect transfer read from {:08X}", level, ch.currSrcAddr);
+    }
+    if (ch.currDstAddr & 1) {
+        devlog::debug<grp::dma>("SCU DMA{}: Unaligned indirect transfer write to {:08X}", level, ch.currDstAddr);
+    }
+
+    TraceDMA(m_tracer, level, ch.currSrcAddr, ch.currDstAddr, ch.currXferCount, ch.currSrcAddrInc, ch.currDstAddrInc,
+             true, ch.currIndirectSrc);
+}
+
 void SCU::RunDMA() {
     const uint8 level = m_activeDMAChannelLevel;
     if (level >= m_dmaChannels.size()) {
@@ -400,59 +463,6 @@ void SCU::RunDMA() {
 
     // TODO: proper cycle counting
     auto &ch = m_dmaChannels[level];
-
-    // TODO: deduplicate code
-    // - these lambdas are duplicated on RecalcDMAChannel() below
-    auto setXferIncs = [&] {
-        // source address increment:
-        // - either 0 or 4 bytes when in CS2 area
-        // - always 4 bytes elsewhere
-        const bool srcCS2 = util::AddressInRange<0x580'0000, 0x58F'FFFF>(ch.currSrcAddr);
-        const bool srcWRAM = ch.currSrcAddr >= 0x600'0000;
-        if (srcCS2 || srcWRAM) {
-            ch.currSrcAddrInc = ch.srcAddrInc;
-        } else {
-            ch.currSrcAddrInc = 4u;
-        }
-
-        // destination address increment:
-        // - 0, 2, 4, 8, 16, 32, 64 or 128 bytes when in B-Bus
-        // - 0 or 4 bytes when in CS2
-        // - always 4 bytes elsewhere
-        const bool dstBBus = util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currDstAddr);
-        const bool dstCS2 = util::AddressInRange<0x580'0000, 0x58F'FFFF>(ch.currDstAddr);
-        const bool dstWRAM = ch.currDstAddr >= 0x600'0000;
-        if (dstBBus || dstWRAM) {
-            ch.currDstAddrInc = ch.dstAddrInc;
-        } else if (dstCS2) {
-            ch.currDstAddrInc = ch.dstAddrInc ? 4u : 0u;
-        } else {
-            ch.currDstAddrInc = 4u;
-        }
-    };
-
-    auto readIndirect = [&] {
-        ch.currXferCount = m_bus.Read<uint32>(ch.currIndirectSrc + 0);
-        ch.currDstAddr = m_bus.Read<uint32>(ch.currIndirectSrc + 4);
-        ch.currSrcAddr = m_bus.Read<uint32>(ch.currIndirectSrc + 8);
-        ch.currIndirectSrc += 3 * sizeof(uint32);
-        ch.endIndirect = bit::extract<31>(ch.currSrcAddr);
-        ch.currSrcAddr &= 0x7FF'FFFF;
-        ch.currDstAddr &= 0x7FF'FFFF;
-        setXferIncs();
-
-        devlog::trace<grp::dma>(
-            "SCU DMA{}: Starting indirect transfer at {:08X} - {:06X} bytes from {:08X} (+{:02X}) to "
-            "{:08X} (+{:02X}){}",
-            level, ch.currIndirectSrc - 3 * sizeof(uint32), ch.currXferCount, ch.currSrcAddr, ch.currSrcAddrInc,
-            ch.currDstAddr, ch.currDstAddrInc, (ch.endIndirect ? " (final)" : ""));
-        if (ch.currSrcAddr & 1) {
-            devlog::debug<grp::dma>("SCU DMA{}: Unaligned indirect transfer read from {:08X}", level, ch.currSrcAddr);
-        }
-        if (ch.currDstAddr & 1) {
-            devlog::debug<grp::dma>("SCU DMA{}: Unaligned indirect transfer write to {:08X}", level, ch.currDstAddr);
-        }
-    };
 
     while (ch.active) {
         const Bus srcBus = GetBus(ch.currSrcAddr);
@@ -518,7 +528,7 @@ void SCU::RunDMA() {
             devlog::trace<grp::dma>("SCU DMA{}: Transfer remaining: {:X} bytes", level, ch.currXferCount);
             // break; // higher-level DMA transfers interrupt lower-level ones
         } else if (ch.indirect && !ch.endIndirect) {
-            readIndirect();
+            DMAReadIndirectTransfer(level);
             // break; // higher-level DMA transfers interrupt lower-level ones
         } else {
             devlog::trace<grp::dma>("SCU DMA{}: Finished transfer", level);
@@ -557,71 +567,18 @@ void SCU::RecalcDMAChannel() {
             }
         };
 
-        auto setXferIncs = [&] {
-            // source address increment:
-            // - either 0 or 4 bytes when in CS2 area
-            // - always 4 bytes elsewhere
-            const bool srcCS2 = util::AddressInRange<0x580'0000, 0x58F'FFFF>(ch.currSrcAddr);
-            const bool srcWRAM = ch.currSrcAddr >= 0x600'0000;
-            if (srcCS2 || srcWRAM) {
-                ch.currSrcAddrInc = ch.srcAddrInc;
-            } else {
-                ch.currSrcAddrInc = 4u;
-            }
-
-            // destination address increment:
-            // - 0, 2, 4, 8, 16, 32, 64 or 128 bytes when in B-Bus
-            // - 0 or 4 bytes when in CS2
-            // - always 4 bytes elsewhere
-            const bool dstBBus = util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currDstAddr);
-            const bool dstCS2 = util::AddressInRange<0x580'0000, 0x58F'FFFF>(ch.currDstAddr);
-            const bool dstWRAM = ch.currDstAddr >= 0x600'0000;
-            if (dstBBus || dstWRAM) {
-                ch.currDstAddrInc = ch.dstAddrInc;
-            } else if (dstCS2) {
-                ch.currDstAddrInc = ch.dstAddrInc ? 4u : 0u;
-            } else {
-                ch.currDstAddrInc = 4u;
-            }
-        };
-
-        auto readIndirect = [&] {
-            ch.currXferCount = m_bus.Read<uint32>(ch.currIndirectSrc + 0);
-            ch.currDstAddr = m_bus.Read<uint32>(ch.currIndirectSrc + 4);
-            ch.currSrcAddr = m_bus.Read<uint32>(ch.currIndirectSrc + 8);
-            ch.currIndirectSrc += 3 * sizeof(uint32);
-            ch.endIndirect = bit::extract<31>(ch.currSrcAddr);
-            ch.currSrcAddr &= 0x7FF'FFFF;
-            ch.currDstAddr &= 0x7FF'FFFF;
-            setXferIncs();
-
-            devlog::trace<grp::dma>(
-                "SCU DMA{}: Starting indirect transfer at {:08X} - {:06X} bytes from {:08X} (+{:02X}) to "
-                "{:08X} (+{:02X}){}",
-                level, ch.currIndirectSrc - 3 * sizeof(uint32), ch.currXferCount, ch.currSrcAddr, ch.currSrcAddrInc,
-                ch.currDstAddr, ch.currDstAddrInc, (ch.endIndirect ? " (final)" : ""));
-            if (ch.currSrcAddr & 1) {
-                devlog::debug<grp::dma>("SCU DMA{}: Unaligned indirect transfer read from {:08X}", level,
-                                        ch.currSrcAddr);
-            }
-            if (ch.currDstAddr & 1) {
-                devlog::debug<grp::dma>("SCU DMA{}: Unaligned indirect transfer write to {:08X}", level,
-                                        ch.currDstAddr);
-            }
-        };
-
         if (ch.start && !ch.active) {
             ch.start = false;
             ch.active = true;
             if (ch.indirect) {
                 ch.currIndirectSrc = ch.dstAddr;
-                readIndirect();
+                DMAReadIndirectTransfer(level);
             } else {
                 ch.currSrcAddr = ch.srcAddr & 0x7FF'FFFF;
                 ch.currDstAddr = ch.dstAddr & 0x7FF'FFFF;
                 ch.currXferCount = adjustZeroSizeXferCount(ch.xferCount);
                 ch.currDstAddrInc = ch.dstAddrInc;
-                setXferIncs();
+                SetupDMATransferIncrements(ch);
 
                 devlog::trace<grp::dma>(
                     "SCU DMA{}: Starting direct transfer of {:06X} bytes from {:08X} (+{:02X}) to {:08X} (+{:02X})",
@@ -634,6 +591,8 @@ void SCU::RecalcDMAChannel() {
                     devlog::debug<grp::dma>("SCU DMA{}: Unaligned direct transfer write to {:08X}", level,
                                             ch.currDstAddr);
                 }
+                TraceDMA(m_tracer, level, ch.currSrcAddr, ch.currDstAddr, ch.currXferCount, ch.currSrcAddrInc,
+                         ch.currDstAddrInc, false, 0);
             }
             m_activeDMAChannelLevel = level;
             break;

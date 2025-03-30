@@ -14,25 +14,31 @@ struct SCUTracer final : satemu::debug::ISCUTracer {
         return m_debugMessageBuffer;
     }
 
-    void ClearDebugMessages() {
-        debugMessages.Clear();
-        m_debugMessageBuffer.clear();
-    }
+    void ClearDebugMessages();
+    void ClearInterrupts();
+    void ClearDMATransfers();
+    void ClearDSPDMATransfers();
 
-    void ClearInterrupts() {
-        interrupts.Clear();
-        m_interruptCounter = 0;
-    }
-
-    void ClearDSPDMATransfers() {
-        dspDmaTransfers.Clear();
-        m_dspDmaCounter = 0;
-    }
+    bool traceInterrupts = false;
+    bool traceDMA = false;
+    bool traceDSPDMA = false;
 
     struct InterruptInfo {
         uint32 counter;
         uint8 index;
         uint8 level; // 0xFF == acknowledge
+    };
+
+    struct DMAInfo {
+        uint32 counter;
+        uint32 srcAddr;
+        uint32 dstAddr;
+        uint32 xferCount;
+        uint32 srcAddrInc;
+        uint32 dstAddrInc;
+        uint32 indirectAddr;
+        bool indirect;
+        uint8 channel;
     };
 
     struct DSPDMAInfo {
@@ -46,14 +52,13 @@ struct SCUTracer final : satemu::debug::ISCUTracer {
     };
 
     util::RingBuffer<InterruptInfo, 1024> interrupts;
+    util::RingBuffer<DMAInfo, 1024> dmaTransfers;
     util::RingBuffer<DSPDMAInfo, 1024> dspDmaTransfers;
     util::RingBuffer<std::string, 1024> debugMessages;
 
-    bool traceInterrupts = false;
-    bool traceDSPDMA = false;
-
 private:
     uint32 m_interruptCounter = 0;
+    uint32 m_dmaCounter = 0;
     uint32 m_dspDmaCounter = 0;
     std::string m_debugMessageBuffer;
 
@@ -64,6 +69,9 @@ private:
     void AcknowledgeInterrupt(uint8 index) final;
 
     void DebugPortWrite(uint8 ch) final;
+
+    void DMA(uint8 channel, uint32 srcAddr, uint32 dstAddr, uint32 xferCount, uint32 srcAddrInc, uint32 dstAddrInc,
+             bool indirect, uint32 indirectAddr) final;
 
     void DSPDMA(bool toD0, uint32 addrD0, uint8 addrDSP, uint8 count, uint8 addrInc, bool hold) final;
 };

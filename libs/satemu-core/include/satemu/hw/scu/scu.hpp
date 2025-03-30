@@ -167,6 +167,9 @@ private:
     std::array<DMAChannel, 3> m_dmaChannels;
     uint8 m_activeDMAChannelLevel;
 
+    void SetupDMATransferIncrements(DMAChannel &ch);
+    void DMAReadIndirectTransfer(uint8 level);
+
     void RunDMA();
 
     void RecalcDMAChannel();

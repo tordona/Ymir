@@ -4,6 +4,18 @@ using namespace satemu;
 
 namespace app {
 
+void SH2Tracer::ResetInterruptCounter() {
+    m_interruptCounter = 0;
+}
+
+void SH2Tracer::ResetDivisionCounter() {
+    m_divisionCounter = 0;
+}
+
+void SH2Tracer::ResetDMACounter(uint32 channel) {
+    m_dmaCounter[channel] = 0;
+}
+
 void SH2Tracer::ExecuteInstruction(uint32 pc, uint16 opcode, bool delaySlot) {
     if (!traceInstructions) {
         return;
