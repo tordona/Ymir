@@ -6,15 +6,16 @@
 
 namespace app::ui {
 
-class SCUDMAView {
+class SCUDMARegistersView {
 public:
-    SCUDMAView(SharedContext &context);
+    SCUDMARegistersView(SharedContext &context, uint8 channel);
 
     void Display();
 
 private:
     SharedContext &m_context;
     satemu::scu::SCU &m_scu;
+    const uint8 m_channel;
 };
 
 } // namespace app::ui

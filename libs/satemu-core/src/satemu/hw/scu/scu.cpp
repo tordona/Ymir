@@ -1286,9 +1286,9 @@ uint32 SCU::Probe::GetDMATransferCount(uint8 channel) const {
 
 void SCU::Probe::SetDMATransferCount(uint8 channel, uint32 value) {
     if (channel == 0) {
-        m_scu.m_dmaChannels[channel].xferCount = bit::extract<0, 19>(value);
+        m_scu.m_dmaChannels[channel].xferCount = std::min(value, 0xFFFFFu);
     } else if (channel < 3) {
-        m_scu.m_dmaChannels[channel].xferCount = bit::extract<0, 11>(value);
+        m_scu.m_dmaChannels[channel].xferCount = std::min(value, 0xFFFu);
     }
 }
 

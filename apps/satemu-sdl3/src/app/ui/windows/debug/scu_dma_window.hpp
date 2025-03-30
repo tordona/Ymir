@@ -2,7 +2,9 @@
 
 #include <app/ui/window_base.hpp>
 
-#include <app/ui/views/debug/scu_dma_view.hpp>
+#include <app/ui/views/debug/scu_dma_registers_view.hpp>
+
+#include <array>
 
 namespace app::ui {
 
@@ -15,7 +17,7 @@ protected:
     void DrawContents() override;
 
 private:
-    SCUDMAView m_dmaView;
+    std::array<SCUDMARegistersView, 3> m_dmaRegsViews;
 };
 
 } // namespace app::ui

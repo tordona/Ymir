@@ -4,7 +4,7 @@ namespace app::ui {
 
 SCUDMAWindow::SCUDMAWindow(SharedContext &context)
     : WindowBase(context)
-    , m_dmaView(context) {
+    , m_dmaRegsViews({{context, 0}, {context, 1}, {context, 2}}) {
 
     m_windowConfig.name = "SCU DMA";
 }
@@ -14,7 +14,28 @@ void SCUDMAWindow::PrepareWindow() {
 }
 
 void SCUDMAWindow::DrawContents() {
-    m_dmaView.Display();
+    if (ImGui::BeginTable("scu_dma", 2, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerV)) {
+        ImGui::TableSetupColumn("##left", ImGuiTableColumnFlags_WidthFixed, 230);
+        ImGui::TableSetupColumn("##right", ImGuiTableColumnFlags_WidthStretch);
+
+        ImGui::TableNextRow();
+        if (ImGui::TableNextColumn()) {
+            for (uint32 i = 0; i < 3; i++) {
+                ImGui::SeparatorText(fmt::format("Channel {}", i).c_str());
+
+                m_dmaRegsViews[i].Display();
+
+                ImGui::Separator();
+                ImGui::TextUnformatted("(placeholder for DMA state)");
+            }
+        }
+        if (ImGui::TableNextColumn()) {
+            ImGui::SeparatorText("Trace");
+            ImGui::TextUnformatted("(placeholder for DMA trace)");
+        }
+
+        ImGui::EndTable();
+    }
 }
 
 } // namespace app::ui
