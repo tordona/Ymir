@@ -1,10 +1,26 @@
 #include <satemu/hw/scu/scu_dsp.hpp>
 
-#include "scu_devlog.hpp"
-
 #include <satemu/hw/scu/scu_defs.hpp>
 
+#include "scu_devlog.hpp"
+
 namespace satemu::scu {
+
+// -----------------------------------------------------------------------------
+// Debugger
+
+template <bool debug>
+FORCE_INLINE static void TraceDSPDMA(debug::ISCUTracer *tracer, bool toD0, uint32 addrD0, uint8 addrDSP, uint8 count,
+                                     uint8 addrInc, bool hold) {
+    if constexpr (debug) {
+        if (tracer) {
+            return tracer->DSPDMA(toD0, addrD0, addrDSP, count, addrInc, hold);
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Implementation
 
 SCUDSP::SCUDSP(sys::Bus &bus)
     : m_bus(bus) {
@@ -141,6 +157,9 @@ void SCUDSP::RunDMA(uint64 cycles) {
     const bool useDataRAM = ctIndex <= 3;
     const bool useProgramRAM = !toD0 && ctIndex == 4;
     uint8 programRAMIndex = 0; // TODO: check if this is correct
+
+    TraceDSPDMA<debug>(m_tracer, dmaToD0, addrD0, ctIndex, dmaCount, dmaAddrInc, dmaHold);
+
     do {
         dmaCount--;
         if (toD0) {

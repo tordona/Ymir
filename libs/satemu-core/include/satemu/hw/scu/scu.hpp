@@ -134,6 +134,7 @@ public:
     // Pass nullptr to disable tracing.
     void UseTracer(debug::ISCUTracer *tracer) {
         m_tracer = tracer;
+        m_dsp.UseTracer(m_tracer);
     }
 
     class Probe {

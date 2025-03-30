@@ -19,17 +19,42 @@ struct SCUTracer final : satemu::debug::ISCUTracer {
         m_debugMessageBuffer.clear();
     }
 
+    void ClearInterrupts() {
+        interrupts.Clear();
+        m_interruptCounter = 0;
+    }
+
+    void ClearDSPDMATransfers() {
+        dspDmaTransfers.Clear();
+        m_dspDmaCounter = 0;
+    }
+
     struct InterruptInfo {
+        uint32 counter;
         uint8 index;
         uint8 level; // 0xFF == acknowledge
     };
 
+    struct DSPDMAInfo {
+        uint32 counter;
+        uint32 addrD0;
+        uint8 addrDSP;
+        uint8 count;
+        uint8 addrInc;
+        bool toD0;
+        bool hold;
+    };
+
     util::RingBuffer<InterruptInfo, 1024> interrupts;
+    util::RingBuffer<DSPDMAInfo, 1024> dspDmaTransfers;
     util::RingBuffer<std::string, 1024> debugMessages;
 
-private:
-    void PushInterrupt(InterruptInfo info);
+    bool traceInterrupts = false;
+    bool traceDSPDMA = false;
 
+private:
+    uint32 m_interruptCounter = 0;
+    uint32 m_dspDmaCounter = 0;
     std::string m_debugMessageBuffer;
 
     // -------------------------------------------------------------------------
@@ -40,9 +65,7 @@ private:
 
     void DebugPortWrite(uint8 ch) final;
 
-    void BeginDSPDMA(bool toD0, uint32 addrD0, uint8 addrDSP, uint8 count, uint8 addrInc, bool hold, uint8 pc) final;
-    void DSPDMATransfer(uint32 addrD0, uint8 offsetDSP, uint32 value) final;
-    void EndDSPDMA() final;
+    void DSPDMA(bool toD0, uint32 addrD0, uint8 addrDSP, uint8 count, uint8 addrInc, bool hold) final;
 };
 
 } // namespace app

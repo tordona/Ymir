@@ -14,7 +14,7 @@ void SCUDSPDMATraceView::Display() {
 
     ImGui::BeginGroup();
 
-    /*ImGui::Checkbox("Enable", &m_tracer.traceDSPDMA);
+    ImGui::Checkbox("Enable", &m_tracer.traceDSPDMA);
     ImGui::SameLine();
     ImGui::TextDisabled("(?)");
     if (ImGui::BeginItemTooltip()) {
@@ -23,12 +23,10 @@ void SCUDSPDMATraceView::Display() {
     }
     ImGui::SameLine();
     if (ImGui::Button("Clear")) {
-        m_tracer.dspDmaTransfers.Clear();
-        m_tracer.dspDmaStats.Clear();
-        m_tracer.ResetDSPDMACounter();
-    }*/
+        m_tracer.ClearDSPDMATransfers();
+    }
 
-    if (ImGui::BeginTable("dsp_dma_trace", 5,
+    if (ImGui::BeginTable("dsp_dma_trace", 4,
                           ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Sortable)) {
         ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_PreferSortDescending);
         ImGui::TableSetupColumn("Source", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort,
@@ -37,12 +35,10 @@ void SCUDSPDMATraceView::Display() {
                                 paddingWidth * 2 + hexCharWidth * 10);
         ImGui::TableSetupColumn("Len", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort,
                                 paddingWidth * 2 + hexCharWidth * 3);
-        ImGui::TableSetupColumn("PC", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort,
-                                paddingWidth * 2 + hexCharWidth * 2);
         ImGui::TableSetupScrollFreeze(1, 1);
         ImGui::TableHeadersRow();
 
-        const size_t count = 4; // m_tracer.dspDmaTransfers.Count();
+        const size_t count = m_tracer.dspDmaTransfers.Count();
         for (size_t i = 0; i < count; i++) {
             auto *sort = ImGui::TableGetSortSpecs();
             bool reverse = false;
@@ -50,72 +46,66 @@ void SCUDSPDMATraceView::Display() {
                 reverse = sort->Specs[0].SortDirection == ImGuiSortDirection_Descending;
             }
 
-            // auto trace = reverse ? m_tracer.dspDmaTransfers.ReadReverse(i) : m_tracer.dspDmaTransfers.Read(i);
+            auto trace = reverse ? m_tracer.dspDmaTransfers.ReadReverse(i) : m_tracer.dspDmaTransfers.Read(i);
 
             ImGui::TableNextRow();
             if (ImGui::TableNextColumn()) {
                 ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-                // ImGui::Text("%u", trace.counter);
-                ImGui::Text("%zu", i);
+                ImGui::Text("%u", trace.counter);
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
-                if (i & 1 /*trace.toD0*/) {
+                if (trace.toD0) {
                     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-                    // ImGui::Text("%07X", trace.srcAddress);
-                    ImGui::Text("%07X", 0x1234567);
+                    ImGui::Text("%07X", trace.addrD0);
                     ImGui::PopFont();
                     ImGui::SameLine();
                     ImGui::PushFont(m_context.fonts.monospace.small.regular);
-                    ImGui::TextDisabled("+4");
-                    /*if (trace.srcInc > 0) {
-                        ImGui::TextDisabled("+%d", trace.srcInc);
-                    } else if (trace.srcInc < 0) {
-                        ImGui::TextDisabled("-%d", -trace.srcInc);
-                    }*/
+                    if (trace.addrInc > 0) {
+                        if (trace.hold) {
+                            ImGui::TextDisabled("(+%d)", trace.addrInc);
+                        } else {
+                            ImGui::TextDisabled("+%d", trace.addrInc);
+                        }
+                    } else if (trace.addrInc < 0) {
+                        if (trace.hold) {
+                            ImGui::TextDisabled("(-%d)", -trace.addrInc);
+                        } else {
+                            ImGui::TextDisabled("-%d", -trace.addrInc);
+                        }
+                    }
                     ImGui::PopFont();
                 } else {
-                    ImGui::TextUnformatted("Data RAM 1");
-                    /*switch (trace.src) {
-                    case 0 ... 3: ImGui::Text("Data RAM %u", trace.src); break;
-                    default: ImGui::Text("Invalid (%u)", trace.src); break;
-                    }*/
+                    switch (trace.addrDSP) {
+                    case 0 ... 3: ImGui::Text("Data RAM %u", trace.addrDSP); break;
+                    default: ImGui::Text("Invalid (%u)", trace.addrDSP); break;
+                    }
                 }
             }
             if (ImGui::TableNextColumn()) {
-                if (i & 1 /*trace.toD0*/) {
-                    ImGui::TextUnformatted("Program RAM");
-                    /*switch (trace.dst) {
-                    case 0 ... 3: ImGui::Text("Data RAM %u", trace.dst); break;
+                if (trace.toD0) {
+                    switch (trace.addrDSP) {
+                    case 0 ... 3: ImGui::Text("Data RAM %u", trace.addrDSP); break;
                     case 4: ImGui::TextUnformatted("Program RAM"); break;
-                    default: ImGui::Text("Invalid (%u)", trace.dst); break;
-                    }*/
+                    default: ImGui::Text("Invalid (%u)", trace.addrDSP); break;
+                    }
                 } else {
                     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-                    // ImGui::Text("%07X", trace.dstAddress);
-                    ImGui::Text("%07X", 0x7654321);
+                    ImGui::Text("%07X", trace.addrD0);
                     ImGui::PopFont();
                     ImGui::SameLine();
                     ImGui::PushFont(m_context.fonts.monospace.small.regular);
-                    ImGui::TextDisabled("+4");
-                    /*if (trace.dstInc > 0) {
-                        ImGui::TextDisabled("+%d", trace.dstInc);
-                    } else if (trace.dstInc < 0) {
-                        ImGui::TextDisabled("-%d", -trace.dstInc);
-                    }*/
+                    if (trace.addrInc > 0) {
+                        ImGui::TextDisabled("+%d", trace.addrInc);
+                    } else if (trace.addrInc < 0) {
+                        ImGui::TextDisabled("-%d", -trace.addrInc);
+                    }
                     ImGui::PopFont();
                 }
             }
             if (ImGui::TableNextColumn()) {
                 ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-                // ImGui::Text("%X", trace.count == 0 ? 0x100 : trace.count);
-                ImGui::TextUnformatted("100");
-                ImGui::PopFont();
-            }
-            if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-                // ImGui::Text("%X", trace.count);
-                ImGui::Text("%02zX", i);
+                ImGui::Text("%X", trace.count == 0 ? 0x100 : trace.count);
                 ImGui::PopFont();
             }
         }

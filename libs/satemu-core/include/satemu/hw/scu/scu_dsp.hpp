@@ -4,6 +4,8 @@
 
 #include <satemu/sys/bus.hpp>
 
+#include <satemu/debug/scu_tracer_base.hpp>
+
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/callback.hpp>
 #include <satemu/util/inline.hpp>
@@ -23,6 +25,18 @@ public:
     void SetTriggerDSPEndCallback(CBTriggerDSPEnd callback) {
         m_cbTriggerDSPEnd = callback;
     }
+
+    // -------------------------------------------------------------------------
+    // Execution
+
+    template <bool debug>
+    void Run(uint64 cycles);
+
+    template <bool debug>
+    void RunDMA(uint64 cycles);
+
+    // -------------------------------------------------------------------------
+    // Memory accessors
 
     uint32 ReadProgram() {
         return programRAM[PC];
@@ -72,62 +86,8 @@ public:
         dataRAM[bank][offset] = value;
     }
 
-    template <bool debug>
-    void Run(uint64 cycles);
-
-    template <bool debug>
-    void RunDMA(uint64 cycles);
-
-    std::array<uint32, 256> programRAM;
-    std::array<std::array<uint32, 64>, 4> dataRAM;
-
-    bool programExecuting;
-    bool programPaused;
-    bool programEnded;
-    bool programStep;
-
-    uint8 PC; // program address
-    uint8 dataAddress;
-
-    uint32 nextPC;    // jump target
-    uint8 jmpCounter; // when it reaches zero, perform the jump
-
-    bool sign;
-    bool zero;
-    bool carry;
-    bool overflow;
-
-    // DSP data address (6 bits)
-    std::array<uint8, 4> CT;
-    std::array<bool, 4> incCT; // whether CT must be incremented after this iteration
-
-    union Reg48 {
-        uint64 u64 : 48;
-        sint64 s64 : 48;
-        struct {
-            uint32 L;
-            uint16 H;
-        };
-    };
-
-    Reg48 ALU; // ALU operation output
-    Reg48 AC;  // ALU operation input 1
-    Reg48 P;   // ALU operation input 2 / Multiplication output
-    sint32 RX; // Multiplication input 1
-    sint32 RY; // Multiplication input 2
-
-    uint8 loopTop;    // TOP
-    uint16 loopCount; // LOP (12 bits)
-
-    bool dmaRun;         // DMA transfer in progress (T0)
-    bool dmaToD0;        // DMA transfer direction: false=D0 to DSP, true=DSP to D0
-    bool dmaHold;        // DMA transfer hold address
-    uint8 dmaCount;      // DMA transfer length
-    uint8 dmaSrc;        // DMA source register (CT0-3)
-    uint8 dmaDst;        // DMA destination register (CT0-3 or program RAM)
-    uint32 dmaReadAddr;  // DMA read address (RA0, 25 bits, starting from 2)
-    uint32 dmaWriteAddr; // DMA write address (WA0, 25 bits, starting from 2)
-    uint32 dmaAddrInc;   // DMA address increment
+    // -------------------------------------------------------------------------
+    // ALU operations
 
     FORCE_INLINE void ALU_AND() {
         ALU.L = AC.L & P.L;
@@ -218,6 +178,9 @@ public:
         sign = static_cast<sint32>(ALU.L) < 0;
     }
 
+    // -------------------------------------------------------------------------
+    // Bus operations
+
     // X-Bus, Y-Bus and D1-Bus reads from [s]
     template <bool debug>
     FORCE_INLINE uint32 ReadSource(uint8 index) {
@@ -296,6 +259,9 @@ public:
         }
     }
 
+    // -------------------------------------------------------------------------
+    // Auxiliary operations
+
     // Checks if the current DSP flags pass the given condition
     FORCE_INLINE bool CondCheck(uint8 cond) const {
         // 000001: NZ  (Z=0)
@@ -330,10 +296,75 @@ public:
         jmpCounter = 2;
     }
 
+    // -------------------------------------------------------------------------
+    // Debugger
+
+    // Attaches the specified tracer to this component.
+    // Pass nullptr to disable tracing.
+    void UseTracer(debug::ISCUTracer *tracer) {
+        m_tracer = tracer;
+    }
+
+    // -------------------------------------------------------------------------
+    // State
+
+    std::array<uint32, 256> programRAM;
+    std::array<std::array<uint32, 64>, 4> dataRAM;
+
+    bool programExecuting;
+    bool programPaused;
+    bool programEnded;
+    bool programStep;
+
+    uint8 PC; // program address
+    uint8 dataAddress;
+
+    uint32 nextPC;    // jump target
+    uint8 jmpCounter; // when it reaches zero, perform the jump
+
+    bool sign;
+    bool zero;
+    bool carry;
+    bool overflow;
+
+    // DSP data address (6 bits)
+    std::array<uint8, 4> CT;
+    std::array<bool, 4> incCT; // whether CT must be incremented after this iteration
+
+    union Reg48 {
+        uint64 u64 : 48;
+        sint64 s64 : 48;
+        struct {
+            uint32 L;
+            uint16 H;
+        };
+    };
+
+    Reg48 ALU; // ALU operation output
+    Reg48 AC;  // ALU operation input 1
+    Reg48 P;   // ALU operation input 2 / Multiplication output
+    sint32 RX; // Multiplication input 1
+    sint32 RY; // Multiplication input 2
+
+    uint8 loopTop;    // TOP
+    uint16 loopCount; // LOP (12 bits)
+
+    bool dmaRun;         // DMA transfer in progress (T0)
+    bool dmaToD0;        // DMA transfer direction: false=D0 to DSP, true=DSP to D0
+    bool dmaHold;        // DMA transfer hold address
+    uint8 dmaCount;      // DMA transfer length
+    uint8 dmaSrc;        // DMA source register (CT0-3)
+    uint8 dmaDst;        // DMA destination register (CT0-3 or program RAM)
+    uint32 dmaReadAddr;  // DMA read address (RA0, 25 bits, starting from 2)
+    uint32 dmaWriteAddr; // DMA write address (WA0, 25 bits, starting from 2)
+    uint32 dmaAddrInc;   // DMA address increment
+
 private:
     sys::Bus &m_bus;
 
     CBTriggerDSPEnd m_cbTriggerDSPEnd;
+
+    debug::ISCUTracer *m_tracer = nullptr;
 
     // Command interpreters
 
