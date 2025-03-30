@@ -1605,7 +1605,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaWriteAddr == 0x5A02000); // no hold = update address
         REQUIRE(memoryAccesses.size() == 2);  // 32-bit access broken down into two 16-bit accesses
         CHECK(memoryAccesses[0] == MemoryAccessInfo{0x5A02000, 0, true, sizeof(uint16)});
-        CHECK(memoryAccesses[1] == MemoryAccessInfo{0x5A02002, 1, true, sizeof(uint16)});
+        CHECK(memoryAccesses[1] == MemoryAccessInfo{0x5A02000, 1, true, sizeof(uint16)});
     }
 
     SECTION("DMA MC0,D0,#1 (WRAM High)") {

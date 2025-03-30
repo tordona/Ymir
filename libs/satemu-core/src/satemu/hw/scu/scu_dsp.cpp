@@ -133,61 +133,63 @@ void SCUDSP::RunDMA(uint64 cycles) {
     // Run transfer
     // TODO: should iterate through transfers based on cycle count
     const uint32 ctIndex = toD0 ? dmaSrc : dmaDst;
-    const bool useDataRAM = ctIndex <= 3; // else: use program RAM
+    const bool useDataRAM = ctIndex <= 3;
+    const bool useProgramRAM = !toD0 && ctIndex == 4;
+    uint8 programRAMIndex = 0; // TODO: check if this is correct
     do {
         dmaCount--;
-        uint32 &ramValue = useDataRAM ? dataRAM[ctIndex][CT[ctIndex]] : programRAM[PC++];
         if (toD0) {
             // Data RAM -> D0
-            const uint32 value = ramValue;
+            const uint32 value = useDataRAM ? dataRAM[ctIndex][CT[ctIndex]] : ~0u;
             if (bus == Bus::ABus) {
                 // A-Bus -> one 32-bit write
                 m_bus.Write<uint32>(addrD0, value);
                 addrD0 += dmaAddrInc;
             } else if (bus == Bus::BBus) {
                 // B-Bus -> two 16-bit writes
-                m_bus.Write<uint16>(addrD0 + 0, value >> 16u);
-                m_bus.Write<uint16>(addrD0 + 2, value >> 0u);
-                addrD0 += dmaAddrInc * 2;
+                m_bus.Write<uint16>(addrD0, value >> 16u);
+                addrD0 += dmaAddrInc;
+                m_bus.Write<uint16>(addrD0, value >> 0u);
+                addrD0 += dmaAddrInc;
             } else if (bus == Bus::WRAM) {
                 // WRAM -> one 32-bit write
-                m_bus.Write<uint32>(addrD0, value);
+                m_bus.Write<uint32>(addrD0 & ~3, value);
                 addrD0 += dmaAddrInc;
             }
         } else {
             // D0 -> Data/Program RAM
-            uint32 value = 0;
+            uint32 value;
             if (bus == Bus::ABus) {
                 // A-Bus -> one 32-bit read
                 value = m_bus.Read<uint32>(addrD0);
                 addrD0 += dmaAddrInc;
             } else if (bus == Bus::BBus) {
                 // B-Bus -> two 16-bit reads
-                value = m_bus.Read<uint16>(addrD0 + 0) << 16u;
-                value |= m_bus.Read<uint16>(addrD0 + 2) << 0u;
+                value = m_bus.Read<uint16>(addrD0 | 0) << 16u;
+                value |= m_bus.Read<uint16>(addrD0 | 2) << 0u;
                 addrD0 += 4;
             } else if (bus == Bus::WRAM) {
                 // WRAM -> one 32-bit read
                 value = m_bus.Read<uint32>(addrD0);
                 addrD0 += dmaAddrInc;
             }
-            ramValue = value;
+            if (useDataRAM) {
+                dataRAM[ctIndex][CT[ctIndex]] = value;
+            } else if (useProgramRAM) {
+                programRAM[programRAMIndex++] = value;
+            }
         }
-        addrD0 &= 0x7FF'FFFC;
+        addrD0 &= 0x7FF'FFFF;
         if (useDataRAM) {
             CT[ctIndex]++;
             CT[ctIndex] &= 0x3F;
         }
     } while (dmaCount != 0);
 
-    if (!useDataRAM) {
-        PC = loopTop;
-    }
-
     // Update RA0/WA0 if not holding address
     if (!dmaHold) {
         if (toD0) {
-            dmaWriteAddr = addrD0;
+            dmaWriteAddr = (addrD0 + 2) & ~3;
         } else {
             dmaReadAddr = addrD0;
         }
@@ -356,14 +358,10 @@ FORCE_INLINE void SCUDSP::Cmd_Special_DMA(uint32 command) {
         // DMA [RAM],D0,[s]
         // DMAH [RAM],D0,SImm
         // DMAH [RAM],D0,[s]
-        dmaSrc = bit::extract<8, 9>(command);
-        dmaAddrInc = (1 << addrInc) & ~1;
-    } else if (bit::extract<10, 14>(command) == 0b00000) {
-        // DMA D0,[RAM],SImm
-        // Cannot write to program RAM, but can increment by up to 64 units
-        dmaDst = bit::extract<8, 9>(command);
-        dmaAddrInc = (1 << (addrInc & 0x2)) & ~1;
+        dmaSrc = bit::extract<8, 10>(command);
+        dmaAddrInc = (1u << addrInc) & ~1u;
     } else {
+        // DMA D0,[RAM],SImm
         // DMA D0,[RAM],[s]
         // DMAH D0,[RAM],SImm
         // DMAH D0,[RAM],[s]
