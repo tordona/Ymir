@@ -42,6 +42,8 @@ private:
         struct Disassembly {
             bool altLineColors = false;
             bool drawNOPs = true;
+
+            float instrSeparation = 25.0f;
         } disasm;
     } m_style;
 };

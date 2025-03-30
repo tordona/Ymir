@@ -20,14 +20,16 @@ void SCUDSPDisassemblyView::Display() {
 
     ImGui::BeginGroup();
 
-    auto tableFlags = ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY;
+    auto tableFlags = ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
     if (m_style.disasm.altLineColors) {
         tableFlags |= ImGuiTableFlags_RowBg;
     }
     if (ImGui::BeginTable("dsp_disasm", 3, tableFlags)) {
         ImGui::TableSetupColumn("PC", ImGuiTableColumnFlags_WidthFixed, paddingWidth * 2 + hexCharWidth * 2);
         ImGui::TableSetupColumn("Opcode", ImGuiTableColumnFlags_WidthFixed, paddingWidth * 2 + hexCharWidth * 8);
-        ImGui::TableSetupColumn("Instructions", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Instructions", ImGuiTableColumnFlags_WidthFixed,
+                                paddingWidth * 2 + hexCharWidth * (3 + 10 + 10 + 10 + 10 + 14) +
+                                    m_style.disasm.instrSeparation * 5);
         ImGui::TableSetupScrollFreeze(1, 1);
         ImGui::TableHeadersRow();
 
@@ -112,7 +114,7 @@ void SCUDSPDisassemblyView::Display() {
                     float offset = 0.0f;
                     // Advance cursor by numChars plus one for separation
                     auto align = [&](uint32 numChars) {
-                        offset += hexCharWidth * (numChars + 1);
+                        offset += hexCharWidth * numChars + m_style.disasm.instrSeparation;
                         ImGui::SameLine(offset);
                     };
                     if (disasm.operation.aluOp == scu::SCUDSPInstruction::ALUOp::NOP) {

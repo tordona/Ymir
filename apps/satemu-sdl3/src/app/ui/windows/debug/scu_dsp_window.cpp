@@ -14,7 +14,7 @@ SCUDSPWindow::SCUDSPWindow(SharedContext &context)
 }
 
 void SCUDSPWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(1140, 368), ImVec2(1140, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(800, 368), ImVec2(FLT_MAX, FLT_MAX));
 }
 
 void SCUDSPWindow::DrawContents() {
@@ -27,10 +27,11 @@ void SCUDSPWindow::DrawContents() {
         if (ImGui::TableNextColumn()) {
             ImGui::SeparatorText("Registers");
             m_regsView.Display();
+
+            // ImGui::SeparatorText("Controls");
+            // ImGui::TextUnformatted("(placeholder for controls)");
         }
         if (ImGui::TableNextColumn()) {
-            /*// TODO
-            ImGui::TextUnformatted("(placeholder for controls)");*/
             ImGui::SeparatorText("Disassembly");
             m_disasmView.Display();
         }
