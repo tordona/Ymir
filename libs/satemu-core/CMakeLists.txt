@@ -6,8 +6,8 @@ add_library(satemu-core
     include/satemu/core/scheduler.hpp
     include/satemu/core/types.hpp
 
-    include/satemu/debug/scu_tracer.hpp
-    include/satemu/debug/sh2_tracer.hpp
+    include/satemu/debug/scu_tracer_base.hpp
+    include/satemu/debug/sh2_tracer_base.hpp
 
     include/satemu/hw/hw_defs.hpp
 

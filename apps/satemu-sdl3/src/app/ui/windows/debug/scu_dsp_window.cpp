@@ -5,6 +5,7 @@ namespace app::ui {
 SCUDSPWindow::SCUDSPWindow(SharedContext &context)
     : WindowBase(context)
     , m_regsView(context)
+    , m_disasmView(context)
     , m_dmaRegsView(context)
     , m_dmaTraceView(context) {
 
@@ -30,8 +31,7 @@ void SCUDSPWindow::DrawContents() {
             // TODO
             ImGui::TextUnformatted("(placeholder for controls)");
             ImGui::SeparatorText("Disassembly");
-            // TODO
-            ImGui::TextUnformatted("(placeholder for disassembly)");
+            m_disasmView.Display();
         }
         if (ImGui::TableNextColumn()) {
             ImGui::SeparatorText("DMA");
