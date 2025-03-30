@@ -8,9 +8,9 @@
 
 namespace app::ui {
 
-class SCUDebuggerWindow : public WindowBase {
+class SCURegistersWindow : public WindowBase {
 public:
-    SCUDebuggerWindow(SharedContext &context);
+    SCURegistersWindow(SharedContext &context);
 
 protected:
     void DrawContents() override;

@@ -1,24 +1,24 @@
 #pragma once
 
-#include "scu_debugger_window.hpp"
 #include "scu_dma_window.hpp"
 #include "scu_dsp_window.hpp"
+#include "scu_registers_window.hpp"
 
 namespace app::ui {
 
 struct SCUWindowSet {
     SCUWindowSet(SharedContext &context)
-        : debugger(context)
+        : regs(context)
         , dma(context)
         , dsp(context) {}
 
     void DisplayAll() {
-        debugger.Display();
+        regs.Display();
         dma.Display();
         dsp.Display();
     }
 
-    SCUDebuggerWindow debugger;
+    SCURegistersWindow regs;
     SCUDMAWindow dma;
     SCUDSPWindow dsp;
 };

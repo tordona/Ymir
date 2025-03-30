@@ -174,10 +174,10 @@ public:
         }
 
         uint16 GetTimer0Counter() const {
-            return m_scu.m_timer0Counter;
+            return m_scu.ReadTimer0Counter();
         }
-        void SetTimer0Counter(uint16 counter) {
-            m_scu.m_timer0Counter = counter;
+        void SetTimer0Counter(uint16 value) {
+            m_scu.WriteTimer0Counter(value);
         }
 
         uint16 GetTimer0Compare() const {
@@ -348,6 +348,14 @@ private:
     uint16 m_timer1Reload; // 2 fractional bits
     bool m_timer1Enable;
     bool m_timer1Mode;
+
+    FORCE_INLINE uint16 ReadTimer0Counter() const {
+        return m_timer0Counter;
+    }
+
+    FORCE_INLINE void WriteTimer0Counter(uint16 value) {
+        m_timer0Counter = bit::extract<0, 9>(value);
+    }
 
     FORCE_INLINE uint16 ReadTimer0Compare() const {
         return m_timer0Compare;

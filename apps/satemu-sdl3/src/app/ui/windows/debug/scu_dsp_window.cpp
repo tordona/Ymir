@@ -28,12 +28,13 @@ void SCUDSPWindow::DrawContents() {
             m_regsView.Display();
         }
         if (ImGui::TableNextColumn()) {
-            // TODO
-            ImGui::TextUnformatted("(placeholder for controls)");
+            /*// TODO
+            ImGui::TextUnformatted("(placeholder for controls)");*/
             ImGui::SeparatorText("Disassembly");
             m_disasmView.Display();
         }
         if (ImGui::TableNextColumn()) {
+            // TODO: tabbed pane to switch between Data RAM and DMA views
             ImGui::SeparatorText("DMA");
             m_dmaRegsView.Display();
 

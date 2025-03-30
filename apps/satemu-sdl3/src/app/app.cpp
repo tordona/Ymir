@@ -108,9 +108,9 @@
 //
 // Debugging
 // ---------
-// WARNING: The debugger is a work in progress and in a flow state. Expect things to change dramatically.
+// WARNING: The regs is a work in progress and in a flow state. Expect things to change dramatically.
 //
-// You can use Bus objects to directly read or write memory. Also, the debugger framework provides two major components:
+// You can use Bus objects to directly read or write memory. Also, the regs framework provides two major components:
 // the probes and the tracers.
 //
 // Bus instances provide Peek/Poke variants of Read/Write methods that circumvent memory access limitations, allowing
@@ -154,7 +154,7 @@
 // - Certain writes (especially to nontrivial registers or internal state) will cause race conditions and potentially
 //   crash the emulator.
 //
-// This frontend enqueues debugger writes to be executed on the emulator thread when it is convenient.
+// This frontend enqueues regs writes to be executed on the emulator thread when it is convenient.
 //
 //
 // Thread safety
@@ -169,7 +169,7 @@
 //
 // This frontend runs the emulator core in a dedicated thread while the GUI runs on the main thread. Synchronization
 // between threads is accomplished by using a blocking concurrent queue to send events to the emulator thread, which
-// processes the events between frames. The debugger performs dirty reads and enqueues writes to be executed in the
+// processes the events between frames. The regs performs dirty reads and enqueues writes to be executed in the
 // emulator thread. Video and audio callbacks use minimal synchronization.
 
 #include "app.hpp"
@@ -1090,7 +1090,7 @@ void App::RunEmulator() {
                 sh2Menu("Slave SH2", m_slaveSH2WindowSet);
 
                 if (ImGui::BeginMenu("SCU")) {
-                    ImGui::MenuItem("Debugger", nullptr, &m_scuWindowSet.debugger.Open);
+                    ImGui::MenuItem("Registers", nullptr, &m_scuWindowSet.regs.Open);
                     ImGui::MenuItem("DMA", nullptr, &m_scuWindowSet.dma.Open);
                     ImGui::MenuItem("DSP", nullptr, &m_scuWindowSet.dsp.Open);
                     ImGui::EndMenu();
@@ -1158,7 +1158,7 @@ void App::RunEmulator() {
                 ImGui::PopStyleVar();
             }
 
-            // Draw debugger windows
+            // Draw regs windows
             DrawWindows();
         }
         ImGui::End();

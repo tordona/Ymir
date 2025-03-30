@@ -33,10 +33,12 @@ void SCUTimersView::Display() {
         if (ImGui::TableNextColumn()) {
             uint16 counter = probe.GetTimer0Counter();
             ImGui::BeginGroup();
-            ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 4);
+            ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 3);
             ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-            ImGui::InputScalar("##t0cnt", ImGuiDataType_U16, &counter, nullptr, nullptr, "%04X",
-                               ImGuiInputTextFlags_CharsHexadecimal);
+            if (ImGui::InputScalar("##t0cnt", ImGuiDataType_U16, &counter, nullptr, nullptr, "%03X",
+                                   ImGuiInputTextFlags_CharsHexadecimal)) {
+                probe.SetTimer0Counter(counter);
+            }
             ImGui::PopFont();
             ImGui::SameLine();
             ImGui::AlignTextToFramePadding();
@@ -59,9 +61,9 @@ void SCUTimersView::Display() {
         if (ImGui::TableNextColumn()) {
             uint16 compare = probe.GetTimer0Compare();
             ImGui::BeginGroup();
-            ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 4);
+            ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 3);
             ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-            ImGui::InputScalar("##t0cmp", ImGuiDataType_U16, &compare, nullptr, nullptr, "%04X",
+            ImGui::InputScalar("##t0cmp", ImGuiDataType_U16, &compare, nullptr, nullptr, "%03X",
                                ImGuiInputTextFlags_CharsHexadecimal);
             ImGui::PopFont();
             ImGui::SameLine();
@@ -72,9 +74,9 @@ void SCUTimersView::Display() {
         if (ImGui::TableNextColumn()) {
             uint16 reload = probe.GetTimer1Reload();
             ImGui::BeginGroup();
-            ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 4);
+            ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 3);
             ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-            ImGui::InputScalar("##t1rld", ImGuiDataType_U16, &reload, nullptr, nullptr, "%04X",
+            ImGui::InputScalar("##t1rld", ImGuiDataType_U16, &reload, nullptr, nullptr, "%03X",
                                ImGuiInputTextFlags_CharsHexadecimal);
             ImGui::PopFont();
             ImGui::SameLine();

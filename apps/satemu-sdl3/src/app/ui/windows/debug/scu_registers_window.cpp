@@ -1,20 +1,20 @@
-#include "scu_debugger_window.hpp"
+#include "scu_registers_window.hpp"
 
 #include <imgui.h>
 
 namespace app::ui {
 
-SCUDebuggerWindow::SCUDebuggerWindow(SharedContext &context)
+SCURegistersWindow::SCURegistersWindow(SharedContext &context)
     : WindowBase(context)
     , m_regsView(context)
     , m_intrView(context)
     , m_timersView(context) {
 
-    m_windowConfig.name = "SCU";
+    m_windowConfig.name = "SCU registers";
     m_windowConfig.flags = ImGuiWindowFlags_AlwaysAutoResize;
 }
 
-void SCUDebuggerWindow::DrawContents() {
+void SCURegistersWindow::DrawContents() {
     ImGui::SeparatorText("Registers");
     m_regsView.Display();
 
