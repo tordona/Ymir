@@ -5,7 +5,8 @@ namespace app::ui {
 SCUDSPWindow::SCUDSPWindow(SharedContext &context)
     : WindowBase(context)
     , m_regsView(context)
-    , m_dmaRegsView(context) {
+    , m_dmaRegsView(context)
+    , m_dmaTraceView(context) {
 
     m_windowConfig.name = "SCU DSP";
 }
@@ -18,7 +19,7 @@ void SCUDSPWindow::DrawContents() {
     if (ImGui::BeginTable("scu_dsp", 3, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {
         ImGui::TableSetupColumn("Registers", ImGuiTableColumnFlags_WidthFixed, 170);
         ImGui::TableSetupColumn("Disassembly", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("DMA", ImGuiTableColumnFlags_WidthFixed, 350);
+        ImGui::TableSetupColumn("DMA", ImGuiTableColumnFlags_WidthFixed, 300);
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
@@ -35,6 +36,9 @@ void SCUDSPWindow::DrawContents() {
         if (ImGui::TableNextColumn()) {
             ImGui::SeparatorText("DMA");
             m_dmaRegsView.Display();
+
+            ImGui::SeparatorText("Trace");
+            m_dmaTraceView.Display();
         }
 
         ImGui::EndTable();

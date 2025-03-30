@@ -199,8 +199,8 @@ void SCUDSPRegistersView::Display() {
         }
         if (ImGui::TableNextColumn()) {
             ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-            ImGui::SetNextItemWidth(framePadding * 2 + hexCharWidth * 8);
-            if (ImGui::InputScalar("##reg_ra0", ImGuiDataType_S32, &m_dsp.dmaReadAddr, nullptr, nullptr, "%08X",
+            ImGui::SetNextItemWidth(framePadding * 2 + hexCharWidth * 7);
+            if (ImGui::InputScalar("##reg_ra0", ImGuiDataType_S32, &m_dsp.dmaReadAddr, nullptr, nullptr, "%07X",
                                    ImGuiInputTextFlags_CharsHexadecimal)) {
                 m_dsp.dmaReadAddr &= 0x7FF'FFFC;
             }
@@ -214,8 +214,8 @@ void SCUDSPRegistersView::Display() {
         }
         if (ImGui::TableNextColumn()) {
             ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-            ImGui::SetNextItemWidth(framePadding * 2 + hexCharWidth * 8);
-            if (ImGui::InputScalar("##reg_wa0", ImGuiDataType_S32, &m_dsp.dmaWriteAddr, nullptr, nullptr, "%08X",
+            ImGui::SetNextItemWidth(framePadding * 2 + hexCharWidth * 7);
+            if (ImGui::InputScalar("##reg_wa0", ImGuiDataType_S32, &m_dsp.dmaWriteAddr, nullptr, nullptr, "%07X",
                                    ImGuiInputTextFlags_CharsHexadecimal)) {
                 m_dsp.dmaWriteAddr &= 0x7FF'FFFC;
             }
