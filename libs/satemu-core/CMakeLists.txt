@@ -37,6 +37,7 @@ add_library(satemu-core
     include/satemu/hw/scu/scu.hpp
     include/satemu/hw/scu/scu_callbacks.hpp
     include/satemu/hw/scu/scu_defs.hpp
+    include/satemu/hw/scu/scu_dma.hpp
     include/satemu/hw/scu/scu_dsp.hpp
     include/satemu/hw/scu/scu_dsp_disasm.hpp
 

@@ -4,7 +4,7 @@ namespace app::ui {
 
 SCUDMAWindow::SCUDMAWindow(SharedContext &context)
     : WindowBase(context)
-    , m_dmaRegsViews({{context, 0}, {context, 1}, {context, 2}}) {
+    , m_dmaRegsView(context) {
 
     m_windowConfig.name = "SCU DMA";
 }
@@ -23,7 +23,7 @@ void SCUDMAWindow::DrawContents() {
             for (uint32 i = 0; i < 3; i++) {
                 ImGui::SeparatorText(fmt::format("Channel {}", i).c_str());
 
-                m_dmaRegsViews[i].Display();
+                m_dmaRegsView.Display(i);
 
                 ImGui::Separator();
                 ImGui::TextUnformatted("(placeholder for DMA state)");

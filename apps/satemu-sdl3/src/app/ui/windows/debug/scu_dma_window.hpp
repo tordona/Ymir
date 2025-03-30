@@ -17,7 +17,7 @@ protected:
     void DrawContents() override;
 
 private:
-    std::array<SCUDMARegistersView, 3> m_dmaRegsViews;
+    SCUDMARegistersView m_dmaRegsView;
 };
 
 } // namespace app::ui

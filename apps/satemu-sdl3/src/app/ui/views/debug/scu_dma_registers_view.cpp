@@ -1,13 +1,18 @@
 #include "scu_dma_registers_view.hpp"
 
+using namespace satemu;
+
 namespace app::ui {
 
-SCUDMARegistersView::SCUDMARegistersView(SharedContext &context, uint8 channel)
+SCUDMARegistersView::SCUDMARegistersView(SharedContext &context)
     : m_context(context)
-    , m_scu(context.saturn.SCU)
-    , m_channel(channel) {}
+    , m_scu(context.saturn.SCU) {}
 
-void SCUDMARegistersView::Display() {
+void SCUDMARegistersView::Display(uint8 channel) {
+    if (channel >= 3) {
+        return;
+    }
+
     const float frameHeight = ImGui::GetFrameHeight();
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
@@ -18,17 +23,20 @@ void SCUDMARegistersView::Display() {
 
     ImGui::BeginGroup();
 
-    bool enabled = probe.IsDMAEnabled(m_channel);
-    if (ImGui::Checkbox(fmt::format("Enabled##{}", m_channel).c_str(), &enabled)) {
-        probe.SetDMAEnabled(m_channel, enabled);
+    bool enabled = probe.IsDMAEnabled(channel);
+    if (ImGui::Checkbox(fmt::format("Enabled##{}", channel).c_str(), &enabled)) {
+        probe.SetDMAEnabled(channel, enabled);
     }
     ImGui::SameLine();
-    bool indirect = probe.IsDMAIndirect(m_channel);
-    if (ImGui::Checkbox(fmt::format("Indirect transfer##{}", m_channel).c_str(), &indirect)) {
-        probe.SetDMAIndirect(m_channel, indirect);
+    if (!enabled) {
+        ImGui::BeginDisabled();
+    }
+    bool indirect = probe.IsDMAIndirect(channel);
+    if (ImGui::Checkbox(fmt::format("Indirect transfer##{}", channel).c_str(), &indirect)) {
+        probe.SetDMAIndirect(channel, indirect);
     }
 
-    if (ImGui::BeginTable(fmt::format("addrs_{}", m_channel).c_str(), 4, ImGuiTableFlags_SizingFixedFit)) {
+    if (ImGui::BeginTable(fmt::format("addrs_{}", channel).c_str(), 4, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn("Address", ImGuiTableColumnFlags_WidthFixed, paddingWidth * 2 + hexCharWidth * 7);
         ImGui::TableSetupColumn("Update", ImGuiTableColumnFlags_WidthFixed, frameHeight);
         ImGui::TableSetupColumn("Increment", ImGuiTableColumnFlags_WidthFixed, paddingWidth * 2 + hexCharWidth * 2);
@@ -37,28 +45,28 @@ void SCUDMARegistersView::Display() {
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
-            uint32 srcAddr = probe.GetDMASourceAddress(m_channel);
+            uint32 srcAddr = probe.GetDMASourceAddress(channel);
             ImGui::PushFont(m_context.fonts.monospace.medium.regular);
             ImGui::SetNextItemWidth(paddingWidth * 2 + hexCharWidth * 7);
-            if (ImGui::InputScalar(fmt::format("##srcAddr_{}", m_channel).c_str(), ImGuiDataType_U32, &srcAddr, nullptr,
+            if (ImGui::InputScalar(fmt::format("##srcAddr_{}", channel).c_str(), ImGuiDataType_U32, &srcAddr, nullptr,
                                    nullptr, "%07X", ImGuiInputTextFlags_CharsHexadecimal)) {
-                probe.SetDMASourceAddress(m_channel, srcAddr);
+                probe.SetDMASourceAddress(channel, srcAddr);
             }
             ImGui::PopFont();
         }
         if (ImGui::TableNextColumn()) {
-            bool srcAddrInc = probe.IsDMAUpdateSourceAddress(m_channel);
-            if (ImGui::Checkbox(fmt::format("##srcAddrInc_{}", m_channel).c_str(), &srcAddrInc)) {
-                probe.SetDMAUpdateSourceAddress(m_channel, srcAddrInc);
+            bool srcAddrInc = probe.IsDMAUpdateSourceAddress(channel);
+            if (ImGui::Checkbox(fmt::format("##srcAddrInc_{}", channel).c_str(), &srcAddrInc)) {
+                probe.SetDMAUpdateSourceAddress(channel, srcAddrInc);
             }
         }
         if (ImGui::TableNextColumn()) {
-            uint32 srcAddrIncAmount = probe.GetDMASourceAddressIncrement(m_channel);
+            uint32 srcAddrIncAmount = probe.GetDMASourceAddressIncrement(channel);
             ImGui::PushFont(m_context.fonts.monospace.medium.regular);
             ImGui::SetNextItemWidth(paddingWidth * 2 + hexCharWidth * 2);
-            if (ImGui::InputScalar(fmt::format("##srcAddrIncAmount_{}", m_channel).c_str(), ImGuiDataType_U32,
+            if (ImGui::InputScalar(fmt::format("##srcAddrIncAmount_{}", channel).c_str(), ImGuiDataType_U32,
                                    &srcAddrIncAmount, nullptr, nullptr, "%u", ImGuiInputTextFlags_CharsHexadecimal)) {
-                probe.SetDMASourceAddressIncrement(m_channel, srcAddrIncAmount);
+                probe.SetDMASourceAddressIncrement(channel, srcAddrIncAmount);
             }
             ImGui::PopFont();
         }
@@ -69,28 +77,28 @@ void SCUDMARegistersView::Display() {
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
-            uint32 dstAddr = probe.GetDMADestinationAddress(m_channel);
+            uint32 dstAddr = probe.GetDMADestinationAddress(channel);
             ImGui::PushFont(m_context.fonts.monospace.medium.regular);
             ImGui::SetNextItemWidth(paddingWidth * 2 + hexCharWidth * 7);
-            if (ImGui::InputScalar(fmt::format("##dstAddr_{}", m_channel).c_str(), ImGuiDataType_U32, &dstAddr, nullptr,
+            if (ImGui::InputScalar(fmt::format("##dstAddr_{}", channel).c_str(), ImGuiDataType_U32, &dstAddr, nullptr,
                                    nullptr, "%07X", ImGuiInputTextFlags_CharsHexadecimal)) {
-                probe.SetDMADestinationAddress(m_channel, dstAddr);
+                probe.SetDMADestinationAddress(channel, dstAddr);
             }
             ImGui::PopFont();
         }
         if (ImGui::TableNextColumn()) {
-            bool dstAddrInc = probe.IsDMAUpdateDestinationAddress(m_channel);
-            if (ImGui::Checkbox(fmt::format("##dstAddrInc_{}", m_channel).c_str(), &dstAddrInc)) {
-                probe.SetDMAUpdateDestinationAddress(m_channel, dstAddrInc);
+            bool dstAddrInc = probe.IsDMAUpdateDestinationAddress(channel);
+            if (ImGui::Checkbox(fmt::format("##dstAddrInc_{}", channel).c_str(), &dstAddrInc)) {
+                probe.SetDMAUpdateDestinationAddress(channel, dstAddrInc);
             }
         }
         if (ImGui::TableNextColumn()) {
-            uint32 dstAddrIncAmount = probe.GetDMADestinationAddressIncrement(m_channel);
+            uint32 dstAddrIncAmount = probe.GetDMADestinationAddressIncrement(channel);
             ImGui::PushFont(m_context.fonts.monospace.medium.regular);
             ImGui::SetNextItemWidth(paddingWidth * 2 + hexCharWidth * 2);
-            if (ImGui::InputScalar(fmt::format("##dstAddrIncAmount_{}", m_channel).c_str(), ImGuiDataType_U32,
+            if (ImGui::InputScalar(fmt::format("##dstAddrIncAmount_{}", channel).c_str(), ImGuiDataType_U32,
                                    &dstAddrIncAmount, nullptr, nullptr, "%u", ImGuiInputTextFlags_CharsHexadecimal)) {
-                probe.SetDMADestinationAddressIncrement(m_channel, dstAddrIncAmount);
+                probe.SetDMADestinationAddressIncrement(channel, dstAddrIncAmount);
             }
             ImGui::PopFont();
         }
@@ -101,12 +109,12 @@ void SCUDMARegistersView::Display() {
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
-            uint32 xferLen = probe.GetDMATransferCount(m_channel);
+            uint32 xferLen = probe.GetDMATransferCount(channel);
             ImGui::PushFont(m_context.fonts.monospace.medium.regular);
             ImGui::SetNextItemWidth(paddingWidth * 2 + hexCharWidth * 7); // only 4 for channels 1 and 2
-            if (ImGui::InputScalar(fmt::format("##xferLen_{}", m_channel).c_str(), ImGuiDataType_U32, &xferLen, nullptr,
+            if (ImGui::InputScalar(fmt::format("##xferLen_{}", channel).c_str(), ImGuiDataType_U32, &xferLen, nullptr,
                                    nullptr, "%u", ImGuiInputTextFlags_CharsHexadecimal)) {
-                probe.SetDMATransferCount(m_channel, xferLen);
+                probe.SetDMATransferCount(channel, xferLen);
             }
             ImGui::PopFont();
         }
@@ -124,11 +132,24 @@ void SCUDMARegistersView::Display() {
         ImGui::EndTable();
     }
 
-    /*
-    DMATrigger GetDMATrigger(uint8 channel) const;
-    void SetDMATrigger(uint8 channel, DMATrigger trigger);
+    scu::DMATrigger trigger = probe.GetDMATrigger(channel);
+    static constexpr const char *kTriggerNames[] = {
+        "VDP2 VBlank IN", "VDP2 VBlank OUT",    "VDP2 HBlank IN",       "SCU Timer 0",
+        "SCU Timer 1",    "SCSP Sound Request", "VDP1 Sprite Draw End", "Immediate",
+    };
+    if (ImGui::BeginCombo(fmt::format("Trigger##{}", channel).c_str(), kTriggerNames[static_cast<uint32>(trigger)])) {
+        for (uint32 i = 0; i < 8; i++) {
+            if (ImGui::Selectable(kTriggerNames[i], i == static_cast<uint32>(trigger))) {
+                probe.SetDMATrigger(channel, static_cast<scu::DMATrigger>(i));
+            }
+        }
+        ImGui::EndCombo();
+    }
+    if (!enabled) {
+        ImGui::EndDisabled();
+    }
 
-    // ---------------------------------------------------------------------
+    /*
     // DMA state
 
     bool IsDMATransferActive(uint8 channel) const;

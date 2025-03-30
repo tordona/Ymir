@@ -698,9 +698,8 @@ FORCE_INLINE T SCU::ReadReg(uint32 address) {
         case 0x30: // Level 1 DMA Enable (write-only)
         case 0x50: // Level 2 DMA Enable (write-only)
             if constexpr (peek) {
-                auto &ch = m_dmaChannels[address >> 5u];
                 uint32 value = 0;
-                bit::deposit_into<8>(value, ch.enabled);
+                bit::deposit_into<8>(value, m_dmaChannels[address >> 5u].enabled);
                 return value;
             } else {
                 return 0;
@@ -1378,7 +1377,7 @@ void SCU::Probe::SetDMAIndirect(uint8 channel, bool value) const {
     }
 }
 
-SCU::DMATrigger SCU::Probe::GetDMATrigger(uint8 channel) const {
+DMATrigger SCU::Probe::GetDMATrigger(uint8 channel) const {
     if (channel < 3) {
         return m_scu.m_dmaChannels[channel].trigger;
     } else {
