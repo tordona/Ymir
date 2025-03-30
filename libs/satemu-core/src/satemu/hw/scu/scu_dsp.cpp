@@ -58,10 +58,11 @@ void SCUDSP::Reset(bool hard) {
     dmaAddrInc = 0;
 }
 
+template <bool debug>
 void SCUDSP::Run(uint64 cycles) {
     // TODO: proper cycle counting
 
-    RunDMA(cycles);
+    RunDMA<debug>(cycles);
 
     for (uint64 cy = 0; cy < cycles; cy++) {
         // Bail out if not executing
@@ -78,9 +79,9 @@ void SCUDSP::Run(uint64 cycles) {
         const uint32 command = programRAM[PC++];
         const uint32 cmdCategory = bit::extract<30, 31>(command);
         switch (cmdCategory) {
-        case 0b00: Cmd_Operation(command); break;
-        case 0b10: Cmd_LoadImm(command); break;
-        case 0b11: Cmd_Special(command); break;
+        case 0b00: Cmd_Operation<debug>(command); break;
+        case 0b10: Cmd_LoadImm<debug>(command); break;
+        case 0b11: Cmd_Special<debug>(command); break;
         }
 
         // Update PC
@@ -106,6 +107,10 @@ void SCUDSP::Run(uint64 cycles) {
     }
 }
 
+template void SCUDSP::Run<false>(uint64 cycles);
+template void SCUDSP::Run<true>(uint64 cycles);
+
+template <bool debug>
 void SCUDSP::RunDMA(uint64 cycles) {
     // TODO: proper cycle counting
 
@@ -198,6 +203,7 @@ void SCUDSP::RunDMA(uint64 cycles) {
     dmaRun = false;
 }
 
+template <bool debug>
 FORCE_INLINE void SCUDSP::Cmd_Operation(uint32 command) {
     // ALU
     switch (bit::extract<26, 29>(command)) {
@@ -233,7 +239,7 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(uint32 command) {
         P.s64 = static_cast<sint64>(RX) * static_cast<sint64>(RY);
     }
     if (bit::extract<23, 25>(command) >= 0b011) {
-        const sint32 value = ReadSource(bit::extract<20, 22>(command));
+        const sint32 value = ReadSource<debug>(bit::extract<20, 22>(command));
         if (bit::extract<23, 24>(command) == 0b11) {
             // MOV [s],P
             P.s64 = static_cast<sint64>(value);
@@ -265,7 +271,7 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(uint32 command) {
         AC.s64 = ALU.s64;
     }
     if (bit::extract<17, 19>(command) >= 0b11) {
-        const sint32 value = ReadSource(bit::extract<14, 16>(command));
+        const sint32 value = ReadSource<debug>(bit::extract<14, 16>(command));
         if (bit::extract<17, 18>(command) == 0b11) {
             // MOV [s],A
             AC.s64 = static_cast<sint64>(value);
@@ -282,20 +288,21 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(uint32 command) {
     {
         const sint32 imm = bit::extract_signed<0, 7>(command);
         const uint8 dst = bit::extract<8, 11>(command);
-        WriteD1Bus(dst, imm);
+        WriteD1Bus<debug>(dst, imm);
         break;
     }
     case 0b11: // MOV [s], [d]
     {
         const uint8 src = bit::extract<0, 3>(command);
         const uint8 dst = bit::extract<8, 11>(command);
-        const uint32 value = ReadSource(src);
-        WriteD1Bus(dst, value);
+        const uint32 value = ReadSource<debug>(src);
+        WriteD1Bus<debug>(dst, value);
         break;
     }
     }
 }
 
+template <bool debug>
 FORCE_INLINE void SCUDSP::Cmd_LoadImm(uint32 command) {
     const uint32 dst = bit::extract<26, 29>(command);
     sint32 imm;
@@ -314,23 +321,25 @@ FORCE_INLINE void SCUDSP::Cmd_LoadImm(uint32 command) {
         imm = bit::extract_signed<0, 24>(command);
     }
 
-    WriteImm(dst, imm);
+    WriteImm<debug>(dst, imm);
 }
 
+template <bool debug>
 FORCE_INLINE void SCUDSP::Cmd_Special(uint32 command) {
     const uint32 cmdSubcategory = bit::extract<28, 29>(command);
     switch (cmdSubcategory) {
-    case 0b00: Cmd_Special_DMA(command); break;
+    case 0b00: Cmd_Special_DMA<debug>(command); break;
     case 0b01: Cmd_Special_Jump(command); break;
     case 0b10: Cmd_Special_LoopBottom(command); break;
     case 0b11: Cmd_Special_End(command); break;
     }
 }
 
+template <bool debug>
 FORCE_INLINE void SCUDSP::Cmd_Special_DMA(uint32 command) {
     // Finish previous DMA transfer
     if (dmaRun) {
-        RunDMA(1); // TODO: cycles?
+        RunDMA<debug>(1); // TODO: cycles?
     }
 
     dmaRun = true;

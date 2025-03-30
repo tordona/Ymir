@@ -207,7 +207,7 @@ template <bool debug>
 void SCU::Advance(uint64 cycles) {
     // RunDMA(cycles);
 
-    m_dsp.Run(cycles);
+    m_dsp.Run<debug>(cycles);
 }
 
 template void SCU::Advance<false>(uint64 cycles);

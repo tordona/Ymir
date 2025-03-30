@@ -1186,7 +1186,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP instructions execute correctl
             dsp.programStep = false;
 
             // Run for the specified number of cycles
-            dsp.Run(test.numSteps);
+            dsp.Run<false>(test.numSteps);
 
             // Compare DSP state against expected state
             CHECK(dsp.programRAM == test.finalState.programRAM);
@@ -1230,7 +1230,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
 
         // Run step 1 - LPS
         // LOP > 0 => set TOP = PC and LOP = LOP-1
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.loopTop == 0);
@@ -1240,7 +1240,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
         CHECK(dsp.P.u64 == 1);
 
         // Run step 2 - ADD  MOV ALU,A
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 0);
         CHECK(dsp.loopTop == 0);
@@ -1251,7 +1251,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
 
         // Run step 3 - LPS
         // LOP > 0 => set TOP = PC and LOP = LOP-1
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.loopTop == 0);
@@ -1261,7 +1261,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
         CHECK(dsp.P.u64 == 1);
 
         // Run step 4 - ADD  MOV ALU,A
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 0);
         CHECK(dsp.loopTop == 0);
@@ -1272,7 +1272,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
 
         // Run step 5 - LPS
         // LOP = 0 => skip instruction and set LOP = LOP-1
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.loopTop == 0);
@@ -1282,7 +1282,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
         CHECK(dsp.P.u64 == 1);
 
         // Run step 6 - ADD  MOV ALU,A
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 2);
         CHECK(dsp.loopTop == 0);
@@ -1310,7 +1310,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
         dsp.programStep = false;
 
         // Run step 1 - ADD  MOV ALU,A
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 2);
         CHECK(dsp.loopTop == 1);
@@ -1321,7 +1321,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
 
         // Run step 2 - BTM
         // LOP > 0 => setup delayed jump and set LOP = LOP-1
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 3);
         CHECK(dsp.loopTop == 1);
@@ -1332,7 +1332,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
 
         // Run step 3 - SL   MOV ALU,A
         // Jump back to TOP
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.loopTop == 1);
@@ -1342,7 +1342,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
         CHECK(dsp.P.u64 == 1);
 
         // Run step 4 - ADD  MOV ALU,A
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 2);
         CHECK(dsp.loopTop == 1);
@@ -1353,7 +1353,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
 
         // Run step 5 - BTM
         // LOP > 0 => setup delayed jump and set LOP = LOP-1
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 3);
         CHECK(dsp.loopTop == 1);
@@ -1364,7 +1364,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
 
         // Run step 6 - SL   MOV ALU,A
         // Jump back to TOP
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.loopTop == 1);
@@ -1374,7 +1374,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
         CHECK(dsp.P.u64 == 1);
 
         // Run step 7 - ADD  MOV ALU,A
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 2);
         CHECK(dsp.loopTop == 1);
@@ -1385,7 +1385,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
 
         // Run step 8 - BTM
         // LOP = 0 => skip instruction and set LOP = LOP-1
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 3);
         CHECK(dsp.loopTop == 1);
@@ -1395,7 +1395,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
         CHECK(dsp.P.u64 == 1);
 
         // Run step 9 - SL   MOV ALU,A
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 4);
         CHECK(dsp.loopTop == 1);
@@ -1419,7 +1419,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP end instructions execute corr
         dsp.programPaused = false;
         dsp.programStep = false;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.programExecuting == false);
@@ -1437,7 +1437,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP end instructions execute corr
         dsp.programPaused = false;
         dsp.programStep = false;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.programExecuting == false);
@@ -1476,7 +1476,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x1001000;
         dsp.dmaWriteAddr = 0x1002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -1491,7 +1491,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 0);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -1528,7 +1528,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x2001000;
         dsp.dmaWriteAddr = 0x2002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -1543,7 +1543,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 0);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -1581,7 +1581,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x5A01000;
         dsp.dmaWriteAddr = 0x5A02000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -1596,7 +1596,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 0);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -1635,7 +1635,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -1650,7 +1650,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 0);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -1688,7 +1688,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -1703,7 +1703,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 0);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -1741,7 +1741,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -1756,7 +1756,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 0);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -1794,7 +1794,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -1809,7 +1809,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 0);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -1847,7 +1847,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -1862,7 +1862,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 4);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -1903,7 +1903,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -1918,7 +1918,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 4);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -1959,7 +1959,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -1974,7 +1974,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 4);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -2014,7 +2014,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -2029,7 +2029,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 4);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -2074,7 +2074,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -2089,7 +2089,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 4);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -2141,7 +2141,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -2156,7 +2156,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 4);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -2205,7 +2205,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 1);
@@ -2220,7 +2220,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 4);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -2260,7 +2260,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -2275,7 +2275,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 4);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -2320,7 +2320,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -2335,7 +2335,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 4);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -2387,7 +2387,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -2402,7 +2402,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 4);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -2458,7 +2458,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -2473,7 +2473,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 4);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == true);
@@ -2520,7 +2520,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x1001000;
         dsp.dmaWriteAddr = 0x1002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -2535,7 +2535,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 0);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == false);
@@ -2575,7 +2575,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x2001000;
         dsp.dmaWriteAddr = 0x2002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -2590,7 +2590,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 0);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == false);
@@ -2632,7 +2632,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x5A01000;
         dsp.dmaWriteAddr = 0x5A02000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -2647,7 +2647,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 0);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == false);
@@ -2689,7 +2689,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -2704,7 +2704,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 0);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == false);
@@ -2745,7 +2745,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -2760,7 +2760,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 0);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == false);
@@ -2801,7 +2801,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -2816,7 +2816,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 0);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == false);
@@ -2857,7 +2857,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -2872,7 +2872,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 0);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == false);
@@ -2916,7 +2916,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -2931,7 +2931,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 4);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == false);
@@ -2981,7 +2981,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -2996,7 +2996,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 4);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == false);
@@ -3043,7 +3043,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -3058,7 +3058,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 4);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == false);
@@ -3099,7 +3099,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -3114,7 +3114,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 4);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == false);
@@ -3156,7 +3156,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dmaReadAddr = 0x6001000;
         dsp.dmaWriteAddr = 0x6002000;
 
-        dsp.Run(1);
+        dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
         CHECK(dsp.CT[0] == 0);
@@ -3171,7 +3171,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaAddrInc == 4);
 
         // TODO: should cycle count properly
-        dsp.RunDMA(dsp.dmaCount);
+        dsp.RunDMA<false>(dsp.dmaCount);
 
         CHECK(dsp.dmaRun == false);
         CHECK(dsp.dmaToD0 == false);

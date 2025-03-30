@@ -72,7 +72,10 @@ public:
         dataRAM[bank][offset] = value;
     }
 
+    template <bool debug>
     void Run(uint64 cycles);
+
+    template <bool debug>
     void RunDMA(uint64 cycles);
 
     std::array<uint32, 256> programRAM;
@@ -216,6 +219,7 @@ public:
     }
 
     // X-Bus, Y-Bus and D1-Bus reads from [s]
+    template <bool debug>
     FORCE_INLINE uint32 ReadSource(uint8 index) {
         switch (index) {
         case 0b0000 ... 0b0111: {
@@ -224,7 +228,7 @@ public:
 
             // Finish previous DMA transfer
             if (dmaRun) {
-                RunDMA(1); // TODO: cycles?
+                RunDMA<debug>(1); // TODO: cycles?
             }
 
             incCT[ctIndex] |= inc;
@@ -238,10 +242,11 @@ public:
     }
 
     // D1-Bus writes to [d]
+    template <bool debug>
     FORCE_INLINE void WriteD1Bus(uint8 index, uint32 value) {
         // Finish previous DMA transfer
         if (dmaRun) {
-            RunDMA(1); // TODO: cycles?
+            RunDMA<debug>(1); // TODO: cycles?
         }
 
         switch (index) {
@@ -265,10 +270,11 @@ public:
     }
 
     // Immediate writes to [d]
+    template <bool debug>
     FORCE_INLINE void WriteImm(uint8 index, uint32 value) {
         // Finish previous DMA transfer
         if (dmaRun) {
-            RunDMA(1); // TODO: cycles?
+            RunDMA<debug>(1); // TODO: cycles?
         }
 
         switch (index) {
@@ -331,13 +337,15 @@ private:
 
     // Command interpreters
 
-    void Cmd_Operation(uint32 command);
-    void Cmd_LoadImm(uint32 command);
-    void Cmd_Special(uint32 command);
-    void Cmd_Special_DMA(uint32 command);
+#define TPL_DEBUG template <bool debug>
+    TPL_DEBUG void Cmd_Operation(uint32 command);
+    TPL_DEBUG void Cmd_LoadImm(uint32 command);
+    TPL_DEBUG void Cmd_Special(uint32 command);
+    TPL_DEBUG void Cmd_Special_DMA(uint32 command);
     void Cmd_Special_Jump(uint32 command);
     void Cmd_Special_LoopBottom(uint32 command);
     void Cmd_Special_End(uint32 command);
+#undef TPL_DEBUG
 };
 
 } // namespace satemu::scu
