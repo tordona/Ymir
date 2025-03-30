@@ -2,19 +2,19 @@
 
 #include <app/shared_context.hpp>
 
-#include <app/debug/scu_tracer.hpp>
+#include <satemu/hw/scu/scu_dsp.hpp>
 
 namespace app::ui {
 
-class SCUDebugOutputView {
+class SCUDSPView {
 public:
-    SCUDebugOutputView(SharedContext &context);
+    SCUDSPView(SharedContext &context);
 
     void Display();
 
 private:
     SharedContext &m_context;
-    SCUTracer &m_tracer;
+    /*satemu::scu::SCUDSP &m_scudsp;*/
 };
 
 } // namespace app::ui

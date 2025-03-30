@@ -1,12 +1,12 @@
-#include "scu_debug_output_view.hpp"
+#include "debug_output_view.hpp"
 
 namespace app::ui {
 
-SCUDebugOutputView::SCUDebugOutputView(SharedContext &context)
+DebugOutputView::DebugOutputView(SharedContext &context)
     : m_context(context)
     , m_tracer(context.tracers.SCU) {}
 
-void SCUDebugOutputView::Display() {
+void DebugOutputView::Display() {
     // TODO: should check if tracer is attached instead
     if (!m_context.saturn.IsDebugTracingEnabled()) {
         ImGui::TextUnformatted("Tracing is disabled -- no debug output will be captured.");

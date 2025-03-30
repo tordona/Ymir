@@ -6,8 +6,9 @@
 #include "shared_context.hpp"
 
 #include "ui/windows/about_window.hpp"
+#include "ui/windows/debug/debug_output_window.hpp"
 #include "ui/windows/debug/memory_viewer_window.hpp"
-#include "ui/windows/debug/scu_debugger_window.hpp"
+#include "ui/windows/debug/scu_window_set.hpp"
 #include "ui/windows/debug/sh2_window_set.hpp"
 
 #include <SDL3/SDL_events.h>
@@ -52,7 +53,9 @@ private:
     ui::SH2WindowSet m_masterSH2WindowSet;
     ui::SH2WindowSet m_slaveSH2WindowSet;
 
-    ui::SCUDebuggerWindow m_scuDebuggerWindow;
+    ui::SCUWindowSet m_scuWindowSet;
+
+    ui::DebugOutputWindow m_debugOutputWindow;
 
     std::vector<ui::MemoryViewerWindow> m_memoryViewerWindows;
 

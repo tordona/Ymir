@@ -204,7 +204,8 @@ namespace app {
 App::App()
     : m_masterSH2WindowSet(m_context, true)
     , m_slaveSH2WindowSet(m_context, false)
-    , m_scuDebuggerWindow(m_context)
+    , m_scuWindowSet(m_context)
+    , m_debugOutputWindow(m_context)
     , m_aboutWindow(m_context) {
 
     // Preinitialize some memory viewers
@@ -1088,7 +1089,13 @@ void App::RunEmulator() {
                 sh2Menu("Master SH2", m_masterSH2WindowSet);
                 sh2Menu("Slave SH2", m_slaveSH2WindowSet);
 
-                ImGui::MenuItem("SCU", nullptr, &m_scuDebuggerWindow.Open);
+                if (ImGui::BeginMenu("SCU")) {
+                    ImGui::MenuItem("Debugger", nullptr, &m_scuWindowSet.debugger.Open);
+                    ImGui::MenuItem("DMA", nullptr, &m_scuWindowSet.dma.Open);
+                    ImGui::MenuItem("DSP", nullptr, &m_scuWindowSet.dsp.Open);
+                    ImGui::EndMenu();
+                }
+                ImGui::MenuItem("Debug output", nullptr, &m_debugOutputWindow.Open);
                 ImGui::End();
             }
             if (ImGui::BeginMenu("Help")) {
@@ -1495,7 +1502,9 @@ void App::DrawWindows() {
     m_masterSH2WindowSet.DisplayAll();
     m_slaveSH2WindowSet.DisplayAll();
 
-    m_scuDebuggerWindow.Display();
+    m_scuWindowSet.DisplayAll();
+
+    m_debugOutputWindow.Display();
 
     for (auto &memView : m_memoryViewerWindows) {
         memView.Display();
