@@ -39,7 +39,7 @@ void SCUDMARegistersView::Display(uint8 channel) {
     if (ImGui::BeginTable(fmt::format("addrs_{}", channel).c_str(), 4, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn("Address", ImGuiTableColumnFlags_WidthFixed, paddingWidth * 2 + hexCharWidth * 7);
         ImGui::TableSetupColumn("Update", ImGuiTableColumnFlags_WidthFixed, frameHeight);
-        ImGui::TableSetupColumn("Increment", ImGuiTableColumnFlags_WidthFixed, paddingWidth * 2 + hexCharWidth * 2);
+        ImGui::TableSetupColumn("Increment", ImGuiTableColumnFlags_WidthFixed, paddingWidth * 2 + hexCharWidth * 3);
         ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableHeadersRow();
 
@@ -63,7 +63,7 @@ void SCUDMARegistersView::Display(uint8 channel) {
         if (ImGui::TableNextColumn()) {
             uint32 srcAddrIncAmount = probe.GetDMASourceAddressIncrement(channel);
             ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-            ImGui::SetNextItemWidth(paddingWidth * 2 + hexCharWidth * 2);
+            ImGui::SetNextItemWidth(paddingWidth * 2 + hexCharWidth * 3);
             if (ImGui::InputScalar(fmt::format("##srcAddrIncAmount_{}", channel).c_str(), ImGuiDataType_U32,
                                    &srcAddrIncAmount, nullptr, nullptr, "%u", ImGuiInputTextFlags_CharsHexadecimal)) {
                 probe.SetDMASourceAddressIncrement(channel, srcAddrIncAmount);
@@ -95,7 +95,7 @@ void SCUDMARegistersView::Display(uint8 channel) {
         if (ImGui::TableNextColumn()) {
             uint32 dstAddrIncAmount = probe.GetDMADestinationAddressIncrement(channel);
             ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-            ImGui::SetNextItemWidth(paddingWidth * 2 + hexCharWidth * 2);
+            ImGui::SetNextItemWidth(paddingWidth * 2 + hexCharWidth * 3);
             if (ImGui::InputScalar(fmt::format("##dstAddrIncAmount_{}", channel).c_str(), ImGuiDataType_U32,
                                    &dstAddrIncAmount, nullptr, nullptr, "%u", ImGuiInputTextFlags_CharsHexadecimal)) {
                 probe.SetDMADestinationAddressIncrement(channel, dstAddrIncAmount);
@@ -148,18 +148,6 @@ void SCUDMARegistersView::Display(uint8 channel) {
     if (!enabled) {
         ImGui::EndDisabled();
     }
-
-    /*
-    // DMA state
-
-    bool IsDMATransferActive(uint8 channel) const;
-    uint32 GetCurrentDMASourceAddress(uint8 channel) const;
-    uint32 GetCurrentDMADestinationAddress(uint8 channel) const;
-    uint32 GetCurrentDMATransferCount(uint8 channel) const;
-    uint32 GetCurrentDMASourceAddressIncrement(uint8 channel) const;
-    uint32 GetCurrentDMADestinationAddressIncrement(uint8 channel) const;
-    uint32 GetCurrentDMAIndirectSourceAddress(uint8 channel) const;
-    */
 
     ImGui::EndGroup();
 }

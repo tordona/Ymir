@@ -4,13 +4,14 @@ namespace app::ui {
 
 SCUDMAWindow::SCUDMAWindow(SharedContext &context)
     : WindowBase(context)
-    , m_dmaRegsView(context) {
+    , m_dmaRegsView(context)
+    , m_dmaStateView(context) {
 
     m_windowConfig.name = "SCU DMA";
 }
 
 void SCUDMAWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(200, 150), ImVec2(FLT_MAX, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(500, 760), ImVec2(FLT_MAX, FLT_MAX));
 }
 
 void SCUDMAWindow::DrawContents() {
@@ -24,9 +25,8 @@ void SCUDMAWindow::DrawContents() {
                 ImGui::SeparatorText(fmt::format("Channel {}", i).c_str());
 
                 m_dmaRegsView.Display(i);
-
                 ImGui::Separator();
-                ImGui::TextUnformatted("(placeholder for DMA state)");
+                m_dmaStateView.Display(i);
             }
         }
         if (ImGui::TableNextColumn()) {
