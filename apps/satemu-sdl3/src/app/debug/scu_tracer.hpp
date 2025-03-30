@@ -1,6 +1,6 @@
 #pragma once
 
-#include <satemu/debug/scu_tracer.hpp>
+#include <satemu/debug/scu_tracer_base.hpp>
 
 #include <util/ring_buffer.hpp>
 

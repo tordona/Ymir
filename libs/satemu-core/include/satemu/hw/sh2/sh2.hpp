@@ -26,7 +26,7 @@
 #include <satemu/sys/bus.hpp>
 #include <satemu/sys/system_features.hpp>
 
-#include <satemu/debug/sh2_tracer.hpp>
+#include <satemu/debug/sh2_tracer_base.hpp>
 
 #include <satemu/util/dev_log.hpp>
 #include <satemu/util/inline.hpp>

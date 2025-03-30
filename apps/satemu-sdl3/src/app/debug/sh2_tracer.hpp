@@ -1,6 +1,6 @@
 #pragma once
 
-#include <satemu/debug/sh2_tracer.hpp>
+#include <satemu/debug/sh2_tracer_base.hpp>
 
 #include <util/ring_buffer.hpp>
 

@@ -5,7 +5,7 @@
 
 #include <satemu/core/scheduler.hpp>
 
-#include <satemu/debug/scu_tracer.hpp>
+#include <satemu/debug/scu_tracer_base.hpp>
 
 #include <satemu/hw/hw_defs.hpp>
 
