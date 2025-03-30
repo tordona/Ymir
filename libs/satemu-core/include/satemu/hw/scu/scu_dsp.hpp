@@ -185,7 +185,8 @@ public:
     template <bool debug>
     FORCE_INLINE uint32 ReadSource(uint8 index) {
         switch (index) {
-        case 0b0000 ... 0b0111: {
+        case 0b0000 ... 0b0111: // M0-3, MC0-3
+        {
             const uint8 ctIndex = bit::extract<0, 1>(index);
             const bool inc = bit::extract<2>(index);
 
@@ -200,7 +201,7 @@ public:
         }
         case 0b1001: return ALU.L;
         case 0b1010: return ALU.u64 >> 16ull;
-        default: return ~0;
+        default: return ~0u;
         }
     }
 
@@ -213,7 +214,8 @@ public:
         }
 
         switch (index) {
-        case 0b0000 ... 0b0011: {
+        case 0b0000 ... 0b0011: // MC0-3
+        {
             const uint32 addr = CT[index];
             dataRAM[index][addr] = value;
             incCT[index] = true;
@@ -225,7 +227,7 @@ public:
         case 0b0111: dmaWriteAddr = (value << 2u) & 0x7FF'FFFC; break;
         case 0b1010: loopCount = value & 0xFFF; break;
         case 0b1011: loopTop = value; break;
-        case 0b1100 ... 0b1111:
+        case 0b1100 ... 0b1111: // M0-3
             CT[index & 3] = value & 0x3F;
             incCT[index & 3] = false;
             break;
@@ -375,7 +377,7 @@ private:
     TPL_DEBUG void Cmd_Special(uint32 command);
     TPL_DEBUG void Cmd_Special_DMA(uint32 command);
     void Cmd_Special_Jump(uint32 command);
-    void Cmd_Special_LoopBottom(uint32 command);
+    void Cmd_Special_Loop(uint32 command);
     void Cmd_Special_End(uint32 command);
 #undef TPL_DEBUG
 };

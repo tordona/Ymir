@@ -13,7 +13,7 @@ SCUDSPWindow::SCUDSPWindow(SharedContext &context)
 }
 
 void SCUDSPWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(750, 368), ImVec2(FLT_MAX, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(1140, 368), ImVec2(1140, FLT_MAX));
 }
 
 void SCUDSPWindow::DrawContents() {

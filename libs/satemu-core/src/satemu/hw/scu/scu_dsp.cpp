@@ -349,7 +349,7 @@ FORCE_INLINE void SCUDSP::Cmd_Special(uint32 command) {
     switch (cmdSubcategory) {
     case 0b00: Cmd_Special_DMA<debug>(command); break;
     case 0b01: Cmd_Special_Jump(command); break;
-    case 0b10: Cmd_Special_LoopBottom(command); break;
+    case 0b10: Cmd_Special_Loop(command); break;
     case 0b11: Cmd_Special_End(command); break;
     }
 }
@@ -412,7 +412,7 @@ FORCE_INLINE void SCUDSP::Cmd_Special_Jump(uint32 command) {
     DelayedJump(target);
 }
 
-FORCE_INLINE void SCUDSP::Cmd_Special_LoopBottom(uint32 command) {
+FORCE_INLINE void SCUDSP::Cmd_Special_Loop(uint32 command) {
     if (loopCount != 0) {
         if (bit::extract<27>(command)) {
             // LPS
