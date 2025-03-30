@@ -94,7 +94,7 @@ public:
     bool carry;
     bool overflow;
 
-    // DSP data address
+    // DSP data address (6 bits)
     std::array<uint8, 4> CT;
     std::array<bool, 4> incCT; // whether CT must be incremented after this iteration
 
@@ -114,7 +114,7 @@ public:
     sint32 RY; // Multiplication input 2
 
     uint8 loopTop;    // TOP
-    uint16 loopCount; // LOP
+    uint16 loopCount; // LOP (12 bits)
 
     bool dmaRun;         // DMA transfer in progress (T0)
     bool dmaToD0;        // DMA transfer direction: false=D0 to DSP, true=DSP to D0
@@ -122,8 +122,8 @@ public:
     uint8 dmaCount;      // DMA transfer length
     uint8 dmaSrc;        // DMA source register (CT0-3 or program RAM)
     uint8 dmaDst;        // DMA destination register (CT0-3 or program RAM)
-    uint32 dmaReadAddr;  // DMA read address (RA0)
-    uint32 dmaWriteAddr; // DMA write address (WA0)
+    uint32 dmaReadAddr;  // DMA read address (RA0, 25 bits, starting from 2)
+    uint32 dmaWriteAddr; // DMA write address (WA0, 25 bits, starting from 2)
     uint32 dmaAddrInc;   // DMA address increment
 
     FORCE_INLINE void ALU_AND() {

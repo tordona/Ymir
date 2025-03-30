@@ -2,7 +2,7 @@
 
 #include <app/ui/window_base.hpp>
 
-#include <app/ui/views/debug/scu_dsp_view.hpp>
+#include <app/ui/views/debug/scu_dsp_registers_view.hpp>
 
 namespace app::ui {
 
@@ -15,7 +15,7 @@ protected:
     void DrawContents() override;
 
 private:
-    SCUDSPView m_dspView;
+    SCUDSPRegistersView m_regsView;
 };
 
 } // namespace app::ui

@@ -6,15 +6,15 @@
 
 namespace app::ui {
 
-class SCUDSPView {
+class SCUDSPRegistersView {
 public:
-    SCUDSPView(SharedContext &context);
+    SCUDSPRegistersView(SharedContext &context);
 
     void Display();
 
 private:
     SharedContext &m_context;
-    satemu::scu::SCUDSP &m_scudsp;
+    satemu::scu::SCUDSP &m_dsp;
 };
 
 } // namespace app::ui

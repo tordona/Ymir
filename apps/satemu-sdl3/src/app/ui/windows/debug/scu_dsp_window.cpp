@@ -4,7 +4,7 @@ namespace app::ui {
 
 SCUDSPWindow::SCUDSPWindow(SharedContext &context)
     : WindowBase(context)
-    , m_dspView(context) {
+    , m_regsView(context) {
 
     m_windowConfig.name = "SCU DSP";
 }
@@ -14,7 +14,8 @@ void SCUDSPWindow::PrepareWindow() {
 }
 
 void SCUDSPWindow::DrawContents() {
-    m_dspView.Display();
+    ImGui::SeparatorText("Registers");
+    m_regsView.Display();
 }
 
 } // namespace app::ui
