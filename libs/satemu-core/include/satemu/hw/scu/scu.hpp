@@ -93,6 +93,17 @@ public:
     }
 
     // -------------------------------------------------------------------------
+    // DSP
+
+    SCUDSP &GetDSP() {
+        return m_dsp;
+    }
+
+    const SCUDSP &GetDSP() const {
+        return m_dsp;
+    }
+
+    // -------------------------------------------------------------------------
     // External interrupt triggers
 
     void TriggerVBlankIN();
@@ -117,7 +128,7 @@ public:
     void DumpDSPRegs(std::ostream &out);
 
     // -------------------------------------------------------------------------
-    // Debugger, state
+    // Debugger
 
     // Attaches the specified tracer to this component.
     // Pass nullptr to disable tracing.

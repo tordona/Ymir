@@ -14,7 +14,7 @@ public:
 
 private:
     SharedContext &m_context;
-    /*satemu::scu::SCUDSP &m_scudsp;*/
+    satemu::scu::SCUDSP &m_scudsp;
 };
 
 } // namespace app::ui
