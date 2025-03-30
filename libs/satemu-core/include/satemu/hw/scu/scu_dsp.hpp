@@ -241,7 +241,8 @@ public:
         }
 
         switch (index) {
-        case 0b0000 ... 0b0011: {
+        case 0b0000 ... 0b0011: // MC0-3
+        {
             const uint32 addr = CT[index];
             dataRAM[index][addr] = value;
             incCT[index] = true;
