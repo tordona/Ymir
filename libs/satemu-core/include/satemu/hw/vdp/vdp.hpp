@@ -83,7 +83,11 @@ private:
     alignas(16) std::array<uint8, kVDP2VRAMSize> m_VRAM2; // 4x 128 KiB banks: A0, A1, B0, B1
     alignas(16) std::array<uint8, kVDP2CRAMSize> m_CRAM;
     alignas(16) std::array<std::array<uint8, kVDP1FramebufferRAMSize>, 2> m_spriteFB;
-    std::size_t m_drawFB; // index of current sprite draw buffer; opposite buffer is CPU-accessible
+    uint8 m_displayFB; // index of current sprite display buffer, CPU-accessible; opposite buffer is drawn into
+
+    // Cached CRAM colors converted from RGB555 to RGB888.
+    // Only valid when color RAM mode is one of the RGB555 modes.
+    alignas(16) std::array<Color888, kVDP2CRAMSize / sizeof(uint16)> m_CRAMCache;
 
     CBTriggerInterrupt m_cbTriggerHBlankIN;
     CBTriggerInterrupt m_cbTriggerVBlankIN;
@@ -133,6 +137,9 @@ private:
 
     template <mem_primitive T, bool poke>
     void VDP2WriteCRAM(uint32 address, T value);
+
+    template <mem_primitive T>
+    void VDP2UpdateCRAMCache(uint32 address);
 
     uint16 VDP2ReadReg(uint32 address);
     void VDP2WriteReg(uint32 address, uint16 value);
@@ -502,7 +509,7 @@ private:
             // Only valid when color RAM mode is one of the RGB555 modes.
             alignas(16) std::array<Color888, kVDP2CRAMSize / sizeof(uint16)> CRAMCache;
         } vdp2;
-        size_t displayFB;
+        uint8 displayFB;
 
         void Reset() {
             vdp1.regs.Reset();
@@ -524,7 +531,7 @@ private:
             vdp2.VRAM.fill(0);
             vdp2.CRAM.fill(0);
             vdp2.CRAMCache.fill({.u32 = 0});
-            displayFB = 1;
+            displayFB = 0;
 
             vdp1Done = false;
         }
@@ -846,6 +853,12 @@ private:
     // Current display framebuffer.
     std::array<uint32, kMaxResH * kMaxResV> m_framebuffer;
 
+    // Retrieves the current set of VDP1 registers.
+    VDP1Regs &VDP1GetRegs();
+
+    // Retrieves the current index of the VDP1 display framebuffer.
+    uint8 VDP1GetDisplayFBIndex() const;
+
     // Erases the current VDP1 display framebuffer.
     void VDP1EraseFramebuffer();
 
@@ -888,6 +901,15 @@ private:
 
     // -------------------------------------------------------------------------
     // VDP2
+
+    // Retrieves the current set of VDP2 registers.
+    VDP2Regs &VDP2GetRegs();
+
+    // Retrieves the current set of VDP2 registers.
+    const VDP2Regs &VDP2GetRegs() const;
+
+    // Retrieves the current VDP2 VRAM array.
+    std::array<uint8, kVDP2VRAMSize> &VDP2GetVRAM();
 
     // Initializes renderer state for a new frame.
     void VDP2InitFrame();

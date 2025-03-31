@@ -13,6 +13,22 @@
 
 namespace satemu::vdp {
 
+namespace config {
+
+    // Runs the VDP1/2 renderer in a dedicated thread.
+    inline constexpr bool threadedRendering = true;
+
+    // Moves VDP1 rendering to the renderer thread, if that is enabled.
+    // TODO: Doom graphics breaks or the game freezes with this
+    inline constexpr bool threadedVDP1Rendering = true;
+
+    // Effective configuration
+    namespace effective {
+        inline constexpr bool threadedRendering = config::threadedRendering;
+        inline constexpr bool threadedVDP1Rendering = threadedRendering && config::threadedVDP1Rendering;
+    } // namespace effective
+} // namespace config
+
 namespace grp {
 
     // -----------------------------------------------------------------------------
@@ -61,18 +77,23 @@ namespace grp {
 } // namespace grp
 
 VDP::VDP(core::Scheduler &scheduler)
-    : m_scheduler(scheduler)
-    , m_VDPRenderThread([&] { VDPRenderThread(); }) {
+    : m_scheduler(scheduler) {
 
     m_phaseUpdateEvent = scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent);
 
     Reset(true);
+
+    if constexpr (config::effective::threadedRendering) {
+        m_VDPRenderThread = std::thread{[&] { VDPRenderThread(); }};
+    }
 }
 
 VDP::~VDP() {
-    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::Shutdown());
-    if (m_VDPRenderThread.joinable()) {
-        m_VDPRenderThread.join();
+    if constexpr (config::effective::threadedRendering) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::Shutdown());
+        if (m_VDPRenderThread.joinable()) {
+            m_VDPRenderThread.join();
+        }
     }
 }
 
@@ -92,16 +113,19 @@ void VDP::Reset(bool hard) {
 
         m_VRAM2.fill(0);
         m_CRAM.fill(0);
+        m_CRAMCache.fill({});
         for (auto &fb : m_spriteFB) {
             fb.fill(0);
         }
-        m_drawFB = 0;
+        m_displayFB = 0;
     }
 
     m_VDP1.Reset();
     m_VDP2.Reset();
 
-    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::Reset());
+    if constexpr (config::effective::threadedRendering) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::Reset());
+    }
 
     m_HPhase = HorizontalPhase::Active;
     m_VPhase = VerticalPhase::Active;
@@ -455,19 +479,20 @@ void VDP::MapMemory(sys::Bus &bus) {
 
 template <bool debug>
 void VDP::Advance(uint64 cycles) {
-    // TODO: proper cycle counting
-    // HACK: slow down VDP1 commands to avoid FMV freezes on Virtua Racing
+    if constexpr (!config::effective::threadedVDP1Rendering) {
+        // HACK: slow down VDP1 commands to avoid FMV freezes on Virtua Racing
+        // TODO: use this counter in the threaded renderer
+        // TODO: proper cycle counting
+        static constexpr uint64 kCyclesPerCommand = 12;
 
-    // TODO: use this in the threaded renderer
-    /*static constexpr uint64 kCyclesPerCommand = 12;
+        m_VDP1RenderContext.cycleCount += cycles;
+        const uint64 steps = m_VDP1RenderContext.cycleCount / kCyclesPerCommand;
+        m_VDP1RenderContext.cycleCount %= kCyclesPerCommand;
 
-    m_VDP1RenderContext.cycleCount += cycles;
-    const uint64 steps = m_VDP1RenderContext.cycleCount / kCyclesPerCommand;
-    m_VDP1RenderContext.cycleCount %= kCyclesPerCommand;
-
-    for (uint64 i = 0; i < steps; i++) {
-        VDP1ProcessCommand();
-    }*/
+        for (uint64 i = 0; i < steps; i++) {
+            VDP1ProcessCommand();
+        }
+    }
 }
 
 template void VDP::Advance<false>(uint64 cycles);
@@ -486,8 +511,8 @@ void VDP::DumpVDP2CRAM(std::ostream &out) const {
 }
 
 void VDP::DumpVDP1Framebuffers(std::ostream &out) const {
-    out.write((const char *)m_spriteFB[m_drawFB].data(), m_spriteFB[m_drawFB].size());
-    out.write((const char *)m_spriteFB[m_drawFB ^ 1].data(), m_spriteFB[m_drawFB ^ 1].size());
+    out.write((const char *)m_spriteFB[m_displayFB ^ 1].data(), m_spriteFB[m_displayFB ^ 1].size());
+    out.write((const char *)m_spriteFB[m_displayFB].data(), m_spriteFB[m_displayFB].size());
 }
 
 void VDP::OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext) {
@@ -515,20 +540,24 @@ template <mem_primitive T>
 FORCE_INLINE void VDP::VDP1WriteVRAM(uint32 address, T value) {
     address &= 0x7FFFF;
     util::WriteBE<T>(&m_VRAM1[address], value);
-    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1VRAMWrite<T>(address, value));
+    if constexpr (config::effective::threadedVDP1Rendering) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1VRAMWrite<T>(address, value));
+    }
 }
 
 template <mem_primitive T>
 FORCE_INLINE T VDP::VDP1ReadFB(uint32 address) {
     address &= 0x3FFFF;
-    return util::ReadBE<T>(&m_spriteFB[m_drawFB][address]);
+    return util::ReadBE<T>(&m_spriteFB[m_displayFB ^ 1][address]);
 }
 
 template <mem_primitive T>
 FORCE_INLINE void VDP::VDP1WriteFB(uint32 address, T value) {
     address &= 0x3FFFF;
-    util::WriteBE<T>(&m_spriteFB[m_drawFB][address], value);
-    // m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1FBWrite<T>(address, value));
+    util::WriteBE<T>(&m_spriteFB[m_displayFB ^ 1][address], value);
+    // if constexpr (config::effective::threadedVDP1Rendering) {
+    //     m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1FBWrite<T>(address, value));
+    // }
 }
 
 template <bool peek>
@@ -540,7 +569,9 @@ FORCE_INLINE uint16 VDP::VDP1ReadReg(uint32 address) {
 template <bool poke>
 FORCE_INLINE void VDP::VDP1WriteReg(uint32 address, uint16 value) {
     address &= 0x7FFFF;
-    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1RegWrite(address, value));
+    if constexpr (config::effective::threadedVDP1Rendering) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1RegWrite(address, value));
+    }
     m_VDP1.Write<poke>(address, value);
 
     switch (address) {
@@ -587,7 +618,9 @@ FORCE_INLINE void VDP::VDP2WriteVRAM(uint32 address, T value) {
     // TODO: handle VRSIZE.VRAMSZ
     address &= 0x7FFFF;
     util::WriteBE<T>(&m_VRAM2[address], value);
-    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2VRAMWrite<T>(address, value));
+    if constexpr (config::effective::threadedRendering) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2VRAMWrite<T>(address, value));
+    }
 }
 
 template <mem_primitive T, bool peek>
@@ -619,13 +652,30 @@ FORCE_INLINE void VDP::VDP2WriteCRAM(uint32 address, T value) {
         devlog::trace<grp::vdp2_regs>("{}-bit VDP2 CRAM write to {:05X} = {:X}", sizeof(T) * 8, address, value);
     }
     util::WriteBE<T>(&m_CRAM[address], value);
-    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address, value));
+    VDP2UpdateCRAMCache<T>(address);
+    if constexpr (config::effective::threadedRendering) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address, value));
+    }
     if (m_VDP2.vramControl.colorRAMMode == 0) {
         if constexpr (!poke) {
             devlog::trace<grp::vdp2_regs>("   replicated to {:05X}", address ^ 0x800);
         }
         util::WriteBE<T>(&m_CRAM[address ^ 0x800], value);
-        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address ^ 0x800, value));
+        VDP2UpdateCRAMCache<T>(address);
+        if constexpr (config::effective::threadedRendering) {
+            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address ^ 0x800, value));
+        }
+    }
+}
+
+template <mem_primitive T>
+FORCE_INLINE void VDP::VDP2UpdateCRAMCache(uint32 address) {
+    address &= ~1;
+    const Color555 color5{.u16 = util::ReadBE<uint16>(&m_CRAM[address])};
+    m_CRAMCache[address / sizeof(uint16)] = ConvertRGB555to888(color5);
+    if constexpr (std::is_same_v<T, uint32>) {
+        const Color555 color5{.u16 = util::ReadBE<uint16>(&m_CRAM[address + 2])};
+        m_CRAMCache[(address + 2) / sizeof(uint16)] = ConvertRGB555to888(color5);
     }
 }
 
@@ -636,7 +686,9 @@ FORCE_INLINE uint16 VDP::VDP2ReadReg(uint32 address) {
 
 FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, uint16 value) {
     address &= 0x1FF;
-    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2RegWrite(address, value));
+    if constexpr (config::effective::threadedRendering) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2RegWrite(address, value));
+    }
     m_VDP2.Write(address, value);
 
     switch (address) {
@@ -781,21 +833,25 @@ void VDP::BeginHPhaseActiveDisplay() {
     devlog::trace<grp::base>("(VCNT = {:3d})  Entering horizontal active display phase", m_VCounter);
     if (m_VPhase == VerticalPhase::Active) {
         if (m_VCounter == 0) {
-            devlog::trace<grp::base>("Begin VDP2 frame, VDP1 framebuffer {}", m_drawFB ^ 1);
+            devlog::trace<grp::base>("Begin VDP2 frame, VDP1 framebuffer {}", m_displayFB);
 
             VDP2InitFrame();
         } else if (m_VCounter == 210) { // ~1ms before VBlank IN
             m_cbTriggerOptimizedINTBACKRead();
         }
-        if (m_VDPRenderContext.vdp1Done) {
-            m_VDP1.currFrameEnded = true;
-            m_cbTriggerSpriteDrawEnd();
-            m_cbVDP1FrameComplete();
-            m_VDPRenderContext.vdp1Done = false;
-        }
 
-        // VDP2DrawLine(m_VCounter);
-        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2DrawLine(m_VCounter));
+        if constexpr (config::effective::threadedRendering) {
+            if (m_VDPRenderContext.vdp1Done) {
+                m_VDP1.currFrameEnded = true;
+                m_cbTriggerSpriteDrawEnd();
+                m_cbVDP1FrameComplete();
+                m_VDPRenderContext.vdp1Done = false;
+            }
+
+            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2DrawLine(m_VCounter));
+        } else {
+            VDP2DrawLine(m_VCounter);
+        }
     }
 }
 
@@ -814,8 +870,11 @@ void VDP::BeginHPhaseRightBorder() {
 
         if (m_VDP1.vblankErase || !m_VDP1.fbSwapMode) {
             // TODO: cycle-count the erase process, starting here
-            // VDP1EraseFramebuffer();
-            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1EraseFramebuffer());
+            if constexpr (config::effective::threadedVDP1Rendering) {
+                m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1EraseFramebuffer());
+            } else {
+                VDP1EraseFramebuffer();
+            }
         }
     }
 
@@ -858,11 +917,15 @@ void VDP::BeginHPhaseLastDot() {
         if (m_VDP2.TVMD.LSMDn != 0) {
             m_VDP2.TVSTAT.ODD ^= 1;
             devlog::trace<grp::base>("Switched to {} field", (m_VDP2.TVSTAT.ODD ? "odd" : "even"));
-            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_VDP2.TVSTAT.ODD));
+            if constexpr (config::effective::threadedRendering) {
+                m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_VDP2.TVSTAT.ODD));
+            }
         } else {
             if (m_VDP2.TVSTAT.ODD != 1) {
                 m_VDP2.TVSTAT.ODD = 1;
-                m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_VDP2.TVSTAT.ODD));
+                if constexpr (config::effective::threadedRendering) {
+                    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_VDP2.TVSTAT.ODD));
+                }
             }
         }
     }
@@ -890,8 +953,10 @@ void VDP::BeginVPhaseBlankingAndSync() {
 
     // End frame
     devlog::trace<grp::base>("End VDP2 frame");
-    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2EndFrame());
-    m_VDPRenderContext.renderFinishedSignal.Wait(true);
+    if constexpr (config::effective::threadedRendering) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2EndFrame());
+        m_VDPRenderContext.renderFinishedSignal.Wait(true);
+    }
     m_cbFrameComplete(m_framebuffer.data(), m_HRes, m_VRes);
 }
 
@@ -941,14 +1006,18 @@ void VDP::VDPRenderThread() {
                 rctx.framebufferSwapSignal.Set();
                 break;
             case EvtType::VDP1BeginFrame:
-                m_VDPRenderContext.vdp1Done = false;
-                for (int i = 0; i < 100000 && m_VDP1RenderContext.rendering; i++) {
-                    VDP1ProcessCommand();
+                if constexpr (config::effective::threadedVDP1Rendering) {
+                    m_VDPRenderContext.vdp1Done = false;
+                    for (int i = 0; i < 100000 && m_VDP1RenderContext.rendering; i++) {
+                        VDP1ProcessCommand();
+                    }
+                    break;
                 }
-                break;
             /*case EvtType::VDP1ProcessCommands:
-                for (uint64 i = 0; i < event.processCommands.steps; i++) {
-                    VDP1ProcessCommand();
+                if constexpr (config::effective::threadedVDP1Rendering) {
+                    for (uint64 i = 0; i < event.processCommands.steps; i++) {
+                        VDP1ProcessCommand();
+                    }
                 }
                 break;*/
             case EvtType::VDP2DrawLine: VDP2DrawLine(event.drawLine.vcnt); break;
@@ -1026,44 +1095,76 @@ void VDP::VDPRenderThread() {
 
 template <mem_primitive T>
 FORCE_INLINE T VDP::VDP1ReadRendererVRAM(uint32 address) {
-    return util::ReadBE<T>(&m_VDPRenderContext.vdp1.VRAM[address & 0x7FFFF]);
+    if constexpr (config::effective::threadedVDP1Rendering) {
+        return util::ReadBE<T>(&m_VDPRenderContext.vdp1.VRAM[address & 0x7FFFF]);
+    } else {
+        return VDP1ReadVRAM<T>(address);
+    }
 }
 
 template <mem_primitive T>
 FORCE_INLINE T VDP::VDP2ReadRendererVRAM(uint32 address) {
-    // TODO: handle VRSIZE.VRAMSZ
-    address &= 0x7FFFF;
-    return util::ReadBE<T>(&m_VDPRenderContext.vdp2.VRAM[address]);
+    if constexpr (config::effective::threadedRendering) {
+        // TODO: handle VRSIZE.VRAMSZ
+        address &= 0x7FFFF;
+        return util::ReadBE<T>(&m_VDPRenderContext.vdp2.VRAM[address]);
+    } else {
+        return VDP2ReadVRAM<T>(address);
+    }
 }
 
 template <mem_primitive T>
 FORCE_INLINE T VDP::VDP2ReadRendererCRAM(uint32 address) {
-    if constexpr (std::is_same_v<T, uint32>) {
-        uint32 value = VDP2ReadRendererCRAM<uint16>(address + 0) << 16u;
-        value |= VDP2ReadRendererCRAM<uint16>(address + 2) << 0u;
-        return value;
-    }
+    if constexpr (config::effective::threadedRendering) {
+        if constexpr (std::is_same_v<T, uint32>) {
+            uint32 value = VDP2ReadRendererCRAM<uint16>(address + 0) << 16u;
+            value |= VDP2ReadRendererCRAM<uint16>(address + 2) << 0u;
+            return value;
+        }
 
-    address = MapRendererCRAMAddress(address);
-    return util::ReadBE<T>(&m_VDPRenderContext.vdp2.CRAM[address]);
+        address = MapRendererCRAMAddress(address);
+        return util::ReadBE<T>(&m_VDPRenderContext.vdp2.CRAM[address]);
+    } else {
+        return VDP2ReadCRAM<T, false>(address);
+    }
 }
 
 FORCE_INLINE Color888 VDP::VDP2ReadRendererColor5to8(uint32 address) {
-    return m_VDPRenderContext.vdp2.CRAMCache[(address / sizeof(uint16)) & 0x7FF];
+    if constexpr (config::effective::threadedRendering) {
+        return m_VDPRenderContext.vdp2.CRAMCache[(address / sizeof(uint16)) & 0x7FF];
+    } else {
+        return m_CRAMCache[(address / sizeof(uint16)) & 0x7FF];
+    }
 }
 
 // -----------------------------------------------------------------------------
 // VDP1
 
-FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
-    const VDP1Regs &regs1 = m_VDPRenderContext.vdp1.regs;
-    const VDP2Regs &regs2 = m_VDPRenderContext.vdp2.regs;
+FORCE_INLINE VDP1Regs &VDP::VDP1GetRegs() {
+    if constexpr (config::effective::threadedRendering) {
+        return m_VDPRenderContext.vdp1.regs;
+    } else {
+        return m_VDP1;
+    }
+}
 
-    devlog::trace<grp::vdp1_render>("Erasing framebuffer {} - {}x{} to {}x{} -> {:04X}  {}x{}  {}-bit", m_drawFB ^ 1,
+FORCE_INLINE uint8 VDP::VDP1GetDisplayFBIndex() const {
+    if constexpr (config::effective::threadedRendering) {
+        return m_VDPRenderContext.displayFB;
+    } else {
+        return m_displayFB;
+    }
+}
+
+FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
+    const VDP1Regs &regs1 = VDP1GetRegs();
+    const VDP2Regs &regs2 = VDP2GetRegs();
+
+    devlog::trace<grp::vdp1_render>("Erasing framebuffer {} - {}x{} to {}x{} -> {:04X}  {}x{}  {}-bit", m_displayFB,
                                     regs1.eraseX1, regs1.eraseY1, regs1.eraseX3, regs1.eraseY3, regs1.eraseWriteValue,
                                     regs1.fbSizeH, regs1.fbSizeV, (regs1.pixel8Bits ? 8 : 16));
 
-    auto &fb = m_spriteFB[m_VDPRenderContext.displayFB];
+    auto &fb = m_spriteFB[VDP1GetDisplayFBIndex()];
 
     // Horizontal scale is doubled in hi-res modes or when targeting rotation background
     const uint32 scaleH = (regs2.TVMD.HRESOn & 0b010) || regs1.fbRotEnable ? 1 : 0;
@@ -1091,18 +1192,23 @@ FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
 }
 
 FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
-    devlog::trace<grp::vdp1_render>("Swapping framebuffers - draw {}, display {}", m_drawFB ^ 1, m_drawFB);
+    devlog::trace<grp::vdp1_render>("Swapping framebuffers - draw {}, display {}", m_displayFB, m_displayFB ^ 1);
 
     if (m_VDP1.fbManualErase) {
         m_VDP1.fbManualErase = false;
-        // VDP1EraseFramebuffer();
-        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1EraseFramebuffer());
+        if constexpr (config::effective::threadedRendering) {
+            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1EraseFramebuffer());
+        } else {
+            VDP1EraseFramebuffer();
+        }
     }
 
-    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1SwapFramebuffer());
-    m_VDPRenderContext.framebufferSwapSignal.Wait(true);
+    if constexpr (config::effective::threadedRendering) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1SwapFramebuffer());
+        m_VDPRenderContext.framebufferSwapSignal.Wait(true);
+    }
 
-    m_drawFB ^= 1;
+    m_displayFB ^= 1;
 
     if (bit::extract<1>(m_VDP1.plotTrigger)) {
         VDP1BeginFrame();
@@ -1110,7 +1216,7 @@ FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
 }
 
 void VDP::VDP1BeginFrame() {
-    devlog::trace<grp::vdp1_render>("Begin VDP1 frame on framebuffer {}", m_VDPRenderContext.displayFB ^ 1);
+    devlog::trace<grp::vdp1_render>("Begin VDP1 frame on framebuffer {}", VDP1GetDisplayFBIndex() ^ 1);
 
     // TODO: setup rendering
     // TODO: figure out VDP1 timings
@@ -1122,13 +1228,22 @@ void VDP::VDP1BeginFrame() {
     m_VDP1.currFrameEnded = false;
 
     m_VDP1RenderContext.rendering = true;
-    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1BeginFrame());
+    if constexpr (config::effective::threadedVDP1Rendering) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1BeginFrame());
+    }
 }
 
 void VDP::VDP1EndFrame() {
-    devlog::trace<grp::vdp1_render>("End VDP1 frame on framebuffer {}", m_VDPRenderContext.displayFB ^ 1);
+    devlog::trace<grp::vdp1_render>("End VDP1 frame on framebuffer {}", VDP1GetDisplayFBIndex() ^ 1);
     m_VDP1RenderContext.rendering = false;
-    m_VDPRenderContext.vdp1Done = true;
+
+    if constexpr (config::effective::threadedVDP1Rendering) {
+        m_VDPRenderContext.vdp1Done = true;
+    } else {
+        m_VDP1.currFrameEnded = true;
+        m_cbTriggerSpriteDrawEnd();
+        m_cbVDP1FrameComplete();
+    }
 }
 
 void VDP::VDP1ProcessCommand() {
@@ -1282,8 +1397,8 @@ bool VDP::VDP1IsQuadSystemClipped(CoordS32 coord1, CoordS32 coord2, CoordS32 coo
 
 FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams,
                                      const VDP1GouraudParams &gouraudParams) {
-    const VDP1Regs &regs1 = m_VDPRenderContext.vdp1.regs;
-    const VDP2Regs &regs2 = m_VDPRenderContext.vdp2.regs;
+    const VDP1Regs &regs1 = VDP1GetRegs();
+    const VDP2Regs &regs2 = VDP2GetRegs();
 
     auto [x, y] = coord;
 
@@ -1315,7 +1430,7 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
     // TODO: pixelParams.mode.preClippingDisable
 
     const uint32 fbOffset = y * regs1.fbSizeH + x;
-    auto &drawFB = m_spriteFB[m_VDPRenderContext.displayFB ^ 1];
+    auto &drawFB = m_spriteFB[VDP1GetDisplayFBIndex() ^ 1];
     if (regs1.pixel8Bits) {
         // TODO: what happens if pixelParams.mode.colorCalcBits/gouraudEnable != 0?
         if (pixelParams.mode.msbOn) {
@@ -1424,7 +1539,7 @@ FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1
 
 void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1TexturedLineParams &lineParams,
                                VDP1GouraudParams &gouraudParams) {
-    const VDP1Regs &regs = m_VDPRenderContext.vdp1.regs;
+    const VDP1Regs &regs = VDP1GetRegs();
 
     const uint32 charSizeH = lineParams.charSizeH;
     const uint32 charSizeV = lineParams.charSizeV;
@@ -1977,6 +2092,30 @@ void VDP::VDP1Cmd_SetLocalCoordinates(uint32 cmdAddress) {
 // -----------------------------------------------------------------------------
 // VDP2
 
+FORCE_INLINE VDP2Regs &VDP::VDP2GetRegs() {
+    if constexpr (config::effective::threadedRendering) {
+        return m_VDPRenderContext.vdp2.regs;
+    } else {
+        return m_VDP2;
+    }
+}
+
+FORCE_INLINE const VDP2Regs &VDP::VDP2GetRegs() const {
+    if constexpr (config::effective::threadedRendering) {
+        return m_VDPRenderContext.vdp2.regs;
+    } else {
+        return m_VDP2;
+    }
+}
+
+FORCE_INLINE std::array<uint8, kVDP2VRAMSize> &VDP::VDP2GetVRAM() {
+    if constexpr (config::effective::threadedRendering) {
+        return m_VDPRenderContext.vdp2.VRAM;
+    } else {
+        return m_VRAM2;
+    }
+}
+
 void VDP::VDP2InitFrame() {
     if (m_VDP2.bgEnabled[5]) {
         VDP2InitRotationBG<0>();
@@ -2079,7 +2218,7 @@ FORCE_INLINE void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgPa
 }
 
 FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
-    VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    VDP2Regs &regs = VDP2GetRegs();
 
     const uint32 baseAddress = regs.commonRotParams.baseAddress & 0xFFF7C; // mask bit 6 (shifted left by 1)
     const bool readAll = y == 0;
@@ -2095,7 +2234,7 @@ FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
         // Tables are located at the base address 0x80 bytes apart
         RotationParamTable t{};
         const uint32 address = baseAddress + i * 0x80;
-        t.ReadFrom(&m_VDPRenderContext.vdp2.VRAM[address & 0x7FFFF]);
+        t.ReadFrom(&VDP2GetVRAM()[address & 0x7FFFF]);
 
         // Calculate parameters
 
@@ -2220,7 +2359,7 @@ FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
 }
 
 FORCE_INLINE void VDP::VDP2CalcWindows(uint32 y) {
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
     y = VDP2GetY(y);
 
@@ -2326,7 +2465,7 @@ FORCE_INLINE void VDP::VDP2CalcWindowAnd(uint32 y, const WindowSet<hasSpriteWind
         }
 
         // For normal screen modes, X coordinates don't use bit 0
-        if (m_VDPRenderContext.vdp2.regs.TVMD.HRESOn < 2) {
+        if (VDP2GetRegs().TVMD.HRESOn < 2) {
             startX >>= 1;
             endX >>= 1;
         }
@@ -2423,7 +2562,7 @@ FORCE_INLINE void VDP::VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindo
         }
 
         // For normal screen modes, X coordinates don't use bit 0
-        if (m_VDPRenderContext.vdp2.regs.TVMD.HRESOn < 2) {
+        if (VDP2GetRegs().TVMD.HRESOn < 2) {
             startX >>= 1;
             endX >>= 1;
         }
@@ -2457,8 +2596,8 @@ FORCE_INLINE void VDP::VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindo
 void VDP::VDP2DrawLine(uint32 y) {
     devlog::trace<grp::vdp2_render>("Drawing line {}", y);
 
-    const VDP1Regs &regs1 = m_VDPRenderContext.vdp1.regs;
-    const VDP2Regs &regs2 = m_VDPRenderContext.vdp2.regs;
+    const VDP1Regs &regs1 = VDP1GetRegs();
+    const VDP2Regs &regs2 = VDP2GetRegs();
 
     using FnDrawLayer = void (VDP::*)(uint32 y);
 
@@ -2513,7 +2652,7 @@ void VDP::VDP2DrawLine(uint32 y) {
 }
 
 FORCE_INLINE void VDP::VDP2DrawLineColorAndBackScreens(uint32 y) {
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
     const LineBackScreenParams &lineParams = regs.lineScreenParams;
     const LineBackScreenParams &backParams = regs.backScreenParams;
@@ -2537,8 +2676,8 @@ FORCE_INLINE void VDP::VDP2DrawLineColorAndBackScreens(uint32 y) {
 
 template <uint32 colorMode, bool rotate>
 NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
-    const VDP1Regs &regs1 = m_VDPRenderContext.vdp1.regs;
-    const VDP2Regs &regs2 = m_VDPRenderContext.vdp2.regs;
+    const VDP1Regs &regs1 = VDP1GetRegs();
+    const VDP2Regs &regs2 = VDP2GetRegs();
 
     // VDP1 scaling:
     // 2x horz: VDP1 TVM=000 and VDP2 HRESO=01x
@@ -2553,7 +2692,7 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
     for (uint32 x = 0; x < maxX; x++) {
         const uint32 xx = x << xShift;
 
-        const auto &spriteFB = m_spriteFB[m_VDPRenderContext.displayFB];
+        const auto &spriteFB = m_spriteFB[VDP1GetDisplayFBIndex()];
         const uint32 spriteFBOffset = [&] {
             if constexpr (rotate) {
                 const auto &rotParamState = m_rotParamStates[0];
@@ -2649,7 +2788,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
         return arr;
     }();
 
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
     if (!regs.bgEnabled[bgIndex]) {
         return;
@@ -2728,7 +2867,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
         return arr;
     }();
 
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
     if (!regs.bgEnabled[bgIndex + 4]) {
         return;
@@ -2753,7 +2892,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
 }
 
 FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
     y = VDP2GetY(y);
 
@@ -2979,7 +3118,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
 template <VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
                                            NormBGLayerState &bgState, const std::array<bool, kMaxResH> &windowState) {
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
     uint32 fracScrollX = bgState.fracScrollX;
     const uint32 fracScrollY = bgState.fracScrollY;
@@ -3052,7 +3191,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
 template <ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
                                            NormBGLayerState &bgState, const std::array<bool, kMaxResH> &windowState) {
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
     uint32 fracScrollX = bgState.fracScrollX;
     const uint32 fracScrollY = bgState.fracScrollY;
@@ -3214,7 +3353,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
 template <bool selRotParam, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
                                              const std::array<bool, kMaxResH> &windowState) {
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
     const bool doubleResH = regs.TVMD.HRESOn & 0b010;
     const uint32 xShift = doubleResH ? 1 : 0;
@@ -3266,7 +3405,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
 }
 
 FORCE_INLINE VDP::RotParamSelector VDP::VDP2SelectRotationParameter(uint32 x, uint32 y) {
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
     const CommonRotationParams &commonRotParams = regs.commonRotParams;
 
@@ -3281,7 +3420,7 @@ FORCE_INLINE VDP::RotParamSelector VDP::VDP2SelectRotationParameter(uint32 x, ui
 }
 
 FORCE_INLINE bool VDP::VDP2CanFetchCoefficient(const RotationParams &params, uint32 coeffAddress) const {
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
     // Coefficients can always be fetched from CRAM
     if (regs.vramControl.colorRAMCoeffTableEnable) {
@@ -3338,7 +3477,7 @@ FORCE_INLINE bool VDP::VDP2CanFetchCoefficient(const RotationParams &params, uin
 }
 
 FORCE_INLINE Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams &params, uint32 coeffAddress) {
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
     Coefficient coeff{};
 
@@ -3631,7 +3770,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
                                                      uint32 cellIndex) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
 
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
     Pixel pixel{};
 
@@ -3827,7 +3966,7 @@ FORCE_INLINE Color888 VDP::VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorInd
 }
 
 FLATTEN FORCE_INLINE SpriteData VDP::VDP2FetchSpriteData(uint32 fbOffset) {
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
     const uint8 type = regs.spriteParams.type;
     if (type < 8) {
@@ -3840,9 +3979,9 @@ FLATTEN FORCE_INLINE SpriteData VDP::VDP2FetchSpriteData(uint32 fbOffset) {
 FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type) {
     assert(type < 8);
 
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
-    const uint16 rawData = util::ReadBE<uint16>(&m_spriteFB[m_VDPRenderContext.displayFB][fbOffset & 0x3FFFE]);
+    const uint16 rawData = util::ReadBE<uint16>(&m_spriteFB[VDP1GetDisplayFBIndex()][fbOffset & 0x3FFFE]);
 
     SpriteData data{};
     switch (regs.spriteParams.type) {
@@ -3915,9 +4054,9 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
 FORCE_INLINE SpriteData VDP::VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type) {
     assert(type >= 8);
 
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
-    const uint8 rawData = m_spriteFB[m_VDPRenderContext.displayFB][fbOffset & 0x3FFFF];
+    const uint8 rawData = m_spriteFB[VDP1GetDisplayFBIndex()][fbOffset & 0x3FFFF];
 
     SpriteData data{};
     switch (regs.spriteParams.type) {
@@ -3983,7 +4122,7 @@ FORCE_INLINE bool VDP::VDP2IsNormalShadow(uint16 colorData) {
 }
 
 FORCE_INLINE uint32 VDP::VDP2GetY(uint32 y) const {
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
     if (regs.TVMD.LSMDn == 3) {
         return (y << 1) | regs.TVSTAT.ODD;
