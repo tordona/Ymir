@@ -1091,9 +1091,10 @@ void App::RunEmulator() {
 
                 if (ImGui::BeginMenu("SCU")) {
                     ImGui::MenuItem("Registers", nullptr, &m_scuWindowSet.regs.Open);
+                    ImGui::MenuItem("DSP", nullptr, &m_scuWindowSet.dsp.Open);
                     ImGui::MenuItem("DMA", nullptr, &m_scuWindowSet.dma.Open);
                     ImGui::MenuItem("DMA trace", nullptr, &m_scuWindowSet.dmaTrace.Open);
-                    ImGui::MenuItem("DSP", nullptr, &m_scuWindowSet.dsp.Open);
+                    ImGui::MenuItem("Interrupt trace", nullptr, &m_scuWindowSet.intrTrace.Open);
                     ImGui::EndMenu();
                 }
                 ImGui::MenuItem("Debug output", nullptr, &m_debugOutputWindow.Open);

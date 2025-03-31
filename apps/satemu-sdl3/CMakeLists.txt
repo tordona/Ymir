@@ -90,6 +90,8 @@ add_executable(satemu-sdl3
     src/app/ui/windows/debug/scu_dma_trace_window.hpp
     src/app/ui/windows/debug/scu_dsp_window.cpp
     src/app/ui/windows/debug/scu_dsp_window.hpp
+    src/app/ui/windows/debug/scu_interrupt_trace_window.cpp
+    src/app/ui/windows/debug/scu_interrupt_trace_window.hpp
     src/app/ui/windows/debug/scu_registers_window.cpp
     src/app/ui/windows/debug/scu_registers_window.hpp
     src/app/ui/windows/debug/scu_window_set.hpp
