@@ -2433,7 +2433,9 @@ FORCE_INLINE void VDP::VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindo
         } else {
             if (startX < windowState.size()) {
                 endX = std::min<sint16>(endX, windowState.size() - 1);
-                std::fill(windowState.begin() + startX, windowState.begin() + endX + 1, true);
+                if (startX <= endX) {
+                    std::fill(windowState.begin() + startX, windowState.begin() + endX + 1, true);
+                }
             }
         }
     }

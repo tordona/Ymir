@@ -14,3 +14,8 @@ Panzer Dragoon Saga
   The orange swirling background when entering the player name uses a line window table.
   The bottom half of the table has invalid entries:
     0000 to FFFF -> empty window (all outside)
+
+Snatcher
+  Sets up window parameters such that the starting point is greater than the ending point.
+  Specifically:
+    01FF to 0001 -> empty window (all outside)
