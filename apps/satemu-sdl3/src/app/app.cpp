@@ -767,6 +767,10 @@ void App::RunEmulator() {
     auto t = clk::now();
     bool paused = false; // TODO: this should be updated by the emulator thread via events
 
+    bool softResetPending = false;
+    auto softResetTime = clk::now();
+    auto softResetDuration = 1ms;
+
     auto &port1 = m_context.saturn.SMPC.GetPeripheralPort1();
     auto &port2 = m_context.saturn.SMPC.GetPeripheralPort2();
     auto *pad1 = port1.ConnectStandardPad();
@@ -969,6 +973,13 @@ void App::RunEmulator() {
             t = t2;
         }
 
+        // Update soft reset signal if pending.
+        // NOTE: This conflicts with the Shift+R keybinding, but the end result is still the same - the system resets.
+        if (softResetPending && t2 > softResetTime) {
+            softResetPending = false;
+            m_context.eventQueues.emulator.enqueue(EmuEvent::SoftReset(false));
+        }
+
         bool fitWindowToScreenNow = false;
         const bool prevForceAspectRatio = forceAspectRatio;
         const double prevForcedAspect = forcedAspect;
@@ -1032,10 +1043,12 @@ void App::RunEmulator() {
                     m_context.eventQueues.emulator.enqueue(EmuEvent::SetPaused(paused));
                 }
                 ImGui::Separator();
-                // if (ImGui::MenuItem("Soft reset", "Shift+R")) {
-                //     // TODO: send Soft Reset pulse for a short time
-                //     //m_context.eventQueues.emulator.enqueue(EmuEvent::SoftReset(pressed));
-                // }
+                if (ImGui::MenuItem("Soft reset", "Shift+R")) {
+                    // Send Soft Reset pulse for a short time
+                    m_context.eventQueues.emulator.enqueue(EmuEvent::SoftReset(true));
+                    softResetPending = true;
+                    softResetTime = clk::now() + softResetDuration;
+                }
                 if (ImGui::MenuItem("Hard reset", "Ctrl+R")) {
                     m_context.eventQueues.emulator.enqueue(EmuEvent::HardReset());
                 }
