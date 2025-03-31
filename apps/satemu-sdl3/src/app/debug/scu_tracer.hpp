@@ -26,7 +26,8 @@ struct SCUTracer final : satemu::debug::ISCUTracer {
     struct InterruptInfo {
         uint32 counter;
         uint8 index;
-        uint8 level; // 0xFF == acknowledge
+        uint8 level;
+        bool acknowledged;
     };
 
     struct DMAInfo {

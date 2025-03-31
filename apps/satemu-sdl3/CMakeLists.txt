@@ -43,6 +43,8 @@ add_executable(satemu-sdl3
     src/app/ui/views/debug/scu_dsp_registers_view.hpp
     src/app/ui/views/debug/scu_interrupts_view.cpp
     src/app/ui/views/debug/scu_interrupts_view.hpp
+    src/app/ui/views/debug/scu_interrupt_trace_view.cpp
+    src/app/ui/views/debug/scu_interrupt_trace_view.hpp
     src/app/ui/views/debug/scu_registers_view.cpp
     src/app/ui/views/debug/scu_registers_view.hpp
     src/app/ui/views/debug/scu_timers_view.cpp

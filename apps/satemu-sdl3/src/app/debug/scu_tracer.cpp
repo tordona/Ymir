@@ -27,7 +27,7 @@ void SCUTracer::RaiseInterrupt(uint8 index, uint8 level) {
         return;
     }
 
-    interrupts.Write({m_interruptCounter++, index, level});
+    interrupts.Write({m_interruptCounter++, index, level, false});
 }
 
 void SCUTracer::AcknowledgeInterrupt(uint8 index) {
@@ -35,7 +35,10 @@ void SCUTracer::AcknowledgeInterrupt(uint8 index) {
         return;
     }
 
-    interrupts.Write({m_interruptCounter++, index, 0xFF});
+    auto &intr = interrupts.GetLast();
+    if (intr.index == index) {
+        intr.acknowledged = true;
+    }
 }
 
 void SCUTracer::DebugPortWrite(uint8 ch) {
