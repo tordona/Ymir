@@ -6,11 +6,8 @@ using namespace satemu;
 
 namespace app::ui {
 
-SH2DMAControllerChannelTraceView::SH2DMAControllerChannelTraceView(SharedContext &context,
-                                                                   satemu::sh2::DMAChannel &channel, int index,
-                                                                   SH2Tracer &tracer)
+SH2DMAControllerChannelTraceView::SH2DMAControllerChannelTraceView(SharedContext &context, int index, SH2Tracer &tracer)
     : m_context(context)
-    , m_channel(channel)
     , m_index(index)
     , m_tracer(tracer) {}
 

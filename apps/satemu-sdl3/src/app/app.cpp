@@ -671,7 +671,7 @@ void App::RunEmulator() {
     static constexpr int kChannels = 2;
     static constexpr uint32 kBufferSize = 512; // TODO: make this configurable
 
-    if (!m_audioSystem.Init(kSampleRate, kSampleFormat, kChannels, 512)) {
+    if (!m_audioSystem.Init(kSampleRate, kSampleFormat, kChannels, kBufferSize)) {
         SDL_Log("Unable to create audio stream: %s", SDL_GetError());
         return;
     }
@@ -1432,7 +1432,6 @@ void App::EmulatorThread() {
                 auto [div64, master] = std::get<EmuEvent::DebugDivideData>(cmd.value);
                 auto &sh2 = master ? m_context.saturn.masterSH2 : m_context.saturn.slaveSH2;
                 auto &probe = sh2.GetProbe();
-                auto &divu = probe.DIVU();
                 if (div64) {
                     probe.ExecuteDiv64();
                 } else {

@@ -11,6 +11,7 @@ namespace app::ui {
 class WindowBase {
 public:
     WindowBase(SharedContext &context);
+    virtual ~WindowBase() = default;
 
     void Display();
 
@@ -27,7 +28,6 @@ protected:
     };
 
     WindowConfig m_windowConfig;
-
 
     // Invoked before ImGui::Begin(...).
     // Can be used to set up window constraints, update name and flags dynamically, etc.

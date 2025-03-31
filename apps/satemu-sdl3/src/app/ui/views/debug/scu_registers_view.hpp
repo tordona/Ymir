@@ -13,7 +13,6 @@ public:
     void Display();
 
 private:
-    SharedContext &m_context;
     satemu::scu::SCU &m_scu;
 };
 

@@ -65,17 +65,6 @@ void SH2InterruptsView::Display() {
     {
         ImGui::SeparatorText("Interrupt signals");
 
-        auto drawSignal = [&](sh2::InterruptSource source, const char *name) {
-            bool state = probe.IsInterruptRaised(source);
-            if (ImGui::Checkbox(name, &state)) {
-                if (state) {
-                    probe.RaiseInterrupt(source);
-                } else {
-                    probe.LowerInterrupt(source);
-                }
-            }
-        };
-
         if (ImGui::BeginTable("intr_signals", 3, ImGuiTableFlags_SizingFixedFit)) {
             ImGui::TableSetupColumn("Signal");
             ImGui::TableSetupColumn("Vector");

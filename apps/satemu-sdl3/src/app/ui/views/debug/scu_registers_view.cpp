@@ -3,8 +3,7 @@
 namespace app::ui {
 
 SCURegistersView::SCURegistersView(SharedContext &context)
-    : m_context(context)
-    , m_scu(context.saturn.SCU) {}
+    : m_scu(context.saturn.SCU) {}
 
 void SCURegistersView::Display() {
     auto &probe = m_scu.GetProbe();

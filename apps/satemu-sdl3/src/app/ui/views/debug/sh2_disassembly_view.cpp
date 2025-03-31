@@ -383,7 +383,7 @@ void SH2DisassemblyView::Display() {
                 case sh2::Mnemonic::RTE: drawMnemonic("rte"); break;
                 case sh2::Mnemonic::RTS: drawMnemonic("rts"); break;
                 case sh2::Mnemonic::Illegal: drawIllegalMnemonic(); break;
-                default: break;
+                default: drawUnknownMnemonic(); break;
                 }
 
                 switch (disasm.opSize) {

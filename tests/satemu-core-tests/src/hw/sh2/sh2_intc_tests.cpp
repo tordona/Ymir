@@ -809,7 +809,6 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are not serviced in de
     auto &intc = probe.INTC();
 
     constexpr uint32 startPC = 0x1000;
-    constexpr uint32 startSP = 0x2000;
 
     // Setup simple program that returns to itself
     MockMemoryRead16(startPC + 0, instrRTS);

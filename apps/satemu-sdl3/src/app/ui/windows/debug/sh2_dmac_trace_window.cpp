@@ -4,8 +4,8 @@ namespace app::ui {
 
 SH2DMAControllerTraceWindow::SH2DMAControllerTraceWindow(SharedContext &context, bool master)
     : SH2WindowBase(context, master)
-    , m_dmac0TraceView(context, m_sh2.GetProbe().DMAC0(), 0, m_tracer)
-    , m_dmac1TraceView(context, m_sh2.GetProbe().DMAC1(), 1, m_tracer) {
+    , m_dmac0TraceView(context, 0, m_tracer)
+    , m_dmac1TraceView(context, 1, m_tracer) {
 
     m_windowConfig.name = fmt::format("{}SH2 DMA controller trace", master ? 'M' : 'S');
 }

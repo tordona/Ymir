@@ -7,10 +7,6 @@ SCUInterruptsView::SCUInterruptsView(SharedContext &context)
     , m_scu(context.saturn.SCU) {}
 
 void SCUInterruptsView::Display() {
-    auto &probe = m_scu.GetProbe();
-    auto &intrStatus = probe.GetInterruptStatus();
-    auto &intrMask = probe.GetInterruptMask();
-
     if (ImGui::BeginTable("main", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {
         ImGui::TableSetupColumn("##left", ImGuiTableColumnFlags_WidthFixed, 265);
         ImGui::TableSetupColumn("##right", ImGuiTableColumnFlags_WidthStretch);
@@ -108,10 +104,6 @@ void SCUInterruptsView::DisplayInternalInterrupts() {
 }
 
 void SCUInterruptsView::DisplayExternalInterrupts() {
-    auto &probe = m_scu.GetProbe();
-    auto &intrStatus = probe.GetInterruptStatus();
-    auto &intrMask = probe.GetInterruptMask();
-
     ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
     ImGui::TextUnformatted("External (A-Bus)");
     ImGui::PopFont();
@@ -125,7 +117,6 @@ void SCUInterruptsView::DisplayExternalInterrupts() {
 
         auto &probe = m_scu.GetProbe();
         auto &intrStatus = probe.GetInterruptStatus();
-        auto &intrMask = probe.GetInterruptMask();
 
         for (uint32 i = 0; i < 16; i++) {
             const uint32 bit = i + 16;

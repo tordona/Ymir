@@ -36,15 +36,15 @@ struct FontDesc {
 };
 
 // clang-format off
-//static constexpr License licenseApache2_0{.name = "Apache-2.0",   .url = "https://opensource.org/licenses/Apache-2.0"};
-static constexpr License licenseBSD2     {.name = "BSD-2-Clause", .url = "https://opensource.org/licenses/BSD-2-Clause"};
-//static constexpr License licenseBSD3     {.name = "BSD-3-Clause", .url = "https://opensource.org/licenses/BSD-3-Clause"};
-static constexpr License licenseBSL      {.name = "BSL-1.0", .     url = "https://opensource.org/license/bsl-1-0"};
-//static constexpr License licenseISC      {.name = "ISC",          .url = "https://opensource.org/licenses/ISC"};
-static constexpr License licenseMIT      {.name = "MIT",          .url = "https://opensource.org/licenses/MIT"};
-//static constexpr License licenseUnlicense{.name = "Unlicense",    .url = "https://opensource.org/licenses/unlicense"};
-static constexpr License licenseZlib     {.name = "Zlib",         .url = "https://opensource.org/licenses/Zlib"};
-static constexpr License licenseOFL      {.name = "OFL-1.1",      .url = "https://opensource.org/licenses/OFL-1.1"};
+//inline constexpr License licenseApache2_0{.name = "Apache-2.0",   .url = "https://opensource.org/licenses/Apache-2.0"};
+inline constexpr License licenseBSD2     {.name = "BSD-2-Clause", .url = "https://opensource.org/licenses/BSD-2-Clause"};
+//inline constexpr License licenseBSD3     {.name = "BSD-3-Clause", .url = "https://opensource.org/licenses/BSD-3-Clause"};
+//inline constexpr License licenseBSL      {.name = "BSL-1.0", .     url = "https://opensource.org/license/bsl-1-0"};
+//inline constexpr License licenseISC      {.name = "ISC",          .url = "https://opensource.org/licenses/ISC"};
+inline constexpr License licenseMIT      {.name = "MIT",          .url = "https://opensource.org/licenses/MIT"};
+//inline constexpr License licenseUnlicense{.name = "Unlicense",    .url = "https://opensource.org/licenses/unlicense"};
+inline constexpr License licenseZlib     {.name = "Zlib",         .url = "https://opensource.org/licenses/Zlib"};
+inline constexpr License licenseOFL      {.name = "OFL-1.1",      .url = "https://opensource.org/licenses/OFL-1.1"};
 
 static const struct {
     const char *name;

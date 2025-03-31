@@ -11,6 +11,7 @@ namespace app::ui {
 class SH2WindowBase : public WindowBase {
 public:
     SH2WindowBase(SharedContext &context, bool master);
+    virtual ~SH2WindowBase() = default;
 
 protected:
     satemu::sh2::SH2 &m_sh2;

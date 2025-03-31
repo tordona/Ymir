@@ -13,12 +13,6 @@ void SCUDMAStateView::Display(uint8 channel) {
         return;
     }
 
-    const float frameHeight = ImGui::GetFrameHeight();
-    const float paddingWidth = ImGui::GetStyle().FramePadding.x;
-    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-    const float hexCharWidth = ImGui::CalcTextSize("F").x;
-    ImGui::PopFont();
-
     auto &probe = m_scu.GetProbe();
 
     ImGui::BeginGroup();

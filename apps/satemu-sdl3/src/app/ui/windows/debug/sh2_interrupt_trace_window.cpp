@@ -6,7 +6,7 @@ namespace app::ui {
 
 SH2InterruptTraceWindow::SH2InterruptTraceWindow(SharedContext &context, bool master)
     : SH2WindowBase(context, master)
-    , m_intrTraceView(context, m_sh2, m_tracer) {
+    , m_intrTraceView(context, m_tracer) {
 
     m_windowConfig.name = fmt::format("{}SH2 interrupt trace", master ? 'M' : 'S');
 }

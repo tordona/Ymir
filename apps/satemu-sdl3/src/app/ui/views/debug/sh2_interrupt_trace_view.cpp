@@ -2,16 +2,12 @@
 
 namespace app::ui {
 
-SH2InterruptTraceView::SH2InterruptTraceView(SharedContext &context, satemu::sh2::SH2 &sh2, SH2Tracer &tracer)
+SH2InterruptTraceView::SH2InterruptTraceView(SharedContext &context, SH2Tracer &tracer)
     : m_context(context)
-    , m_sh2(sh2)
     , m_tracer(tracer) {}
 
 void SH2InterruptTraceView::Display() {
     using namespace satemu;
-
-    auto &probe = m_sh2.GetProbe();
-    auto &intc = probe.INTC();
 
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
