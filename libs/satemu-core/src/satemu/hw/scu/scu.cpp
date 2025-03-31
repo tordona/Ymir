@@ -465,16 +465,16 @@ void SCU::RunDMA() {
     auto &ch = m_dmaChannels[level];
 
     while (ch.active) {
-        const Bus srcBus = GetBus(ch.currSrcAddr);
-        const Bus dstBus = GetBus(ch.currDstAddr);
+        const BusID srcBus = GetBusID(ch.currSrcAddr);
+        const BusID dstBus = GetBusID(ch.currDstAddr);
 
-        if (srcBus != dstBus && srcBus != Bus::None && dstBus != Bus::None) {
+        if (srcBus != dstBus && srcBus != BusID::None && dstBus != BusID::None) {
             uint32 value{};
             if (ch.currSrcAddr & 1) {
                 // TODO: handle unaligned transfer
                 devlog::trace<grp::dma>("SCU DMA{}: Unaligned read from {:08X}", level, ch.currSrcAddr);
             }
-            if (srcBus == Bus::BBus) {
+            if (srcBus == BusID::BBus) {
                 value = m_bus.Read<uint16>(ch.currSrcAddr) << 16u;
                 devlog::trace<grp::dma>("SCU DMA{}: B-Bus read from {:08X} -> {:04X}", level, ch.currSrcAddr,
                                         value >> 16u);
@@ -494,7 +494,7 @@ void SCU::RunDMA() {
                 // TODO: handle unaligned transfer
                 devlog::trace<grp::dma>("SCU DMA{}: Unaligned write to {:08X}", level, ch.currDstAddr);
             }
-            if (dstBus == Bus::BBus) {
+            if (dstBus == BusID::BBus) {
                 m_bus.Write<uint16>(ch.currDstAddr, value >> 16u);
                 devlog::trace<grp::dma>("SCU DMA{}: B-Bus write to {:08X} -> {:04X}", level, ch.currDstAddr,
                                         value >> 16u);
@@ -517,9 +517,9 @@ void SCU::RunDMA() {
                                     ch.currDstAddr);
         } else if (srcBus == dstBus) {
             devlog::trace<grp::dma>("SCU DMA{}: Invalid same-bus transfer; ignored", level);
-        } else if (srcBus == Bus::None) {
+        } else if (srcBus == BusID::None) {
             devlog::trace<grp::dma>("SCU DMA{}: Invalid source bus; transfer ignored", level);
-        } else if (dstBus == Bus::None) {
+        } else if (dstBus == BusID::None) {
             devlog::trace<grp::dma>("SCU DMA{}: Invalid destination bus; transfer ignored", level);
         }
 

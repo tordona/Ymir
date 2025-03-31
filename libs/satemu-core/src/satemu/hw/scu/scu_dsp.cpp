@@ -137,8 +137,8 @@ void SCUDSP::RunDMA(uint64 cycles) {
 
     const bool toD0 = dmaToD0;
     uint32 addrD0 = toD0 ? dmaWriteAddr : dmaReadAddr;
-    const Bus bus = GetBus(addrD0);
-    if (bus == Bus::None) {
+    const BusID bus = GetBusID(addrD0);
+    if (bus == BusID::None) {
         dmaRun = false;
         return;
     }
@@ -165,17 +165,17 @@ void SCUDSP::RunDMA(uint64 cycles) {
         if (toD0) {
             // Data RAM -> D0
             const uint32 value = useDataRAM ? dataRAM[ctIndex][CT[ctIndex]] : ~0u;
-            if (bus == Bus::ABus) {
+            if (bus == BusID::ABus) {
                 // A-Bus -> one 32-bit write
                 m_bus.Write<uint32>(addrD0, value);
                 addrD0 += dmaAddrInc;
-            } else if (bus == Bus::BBus) {
+            } else if (bus == BusID::BBus) {
                 // B-Bus -> two 16-bit writes
                 m_bus.Write<uint16>(addrD0, value >> 16u);
                 addrD0 += dmaAddrInc;
                 m_bus.Write<uint16>(addrD0, value >> 0u);
                 addrD0 += dmaAddrInc;
-            } else if (bus == Bus::WRAM) {
+            } else if (bus == BusID::WRAM) {
                 // WRAM -> one 32-bit write
                 m_bus.Write<uint32>(addrD0 & ~3, value);
                 addrD0 += dmaAddrInc;
@@ -183,16 +183,16 @@ void SCUDSP::RunDMA(uint64 cycles) {
         } else {
             // D0 -> Data/Program RAM
             uint32 value;
-            if (bus == Bus::ABus) {
+            if (bus == BusID::ABus) {
                 // A-Bus -> one 32-bit read
                 value = m_bus.Read<uint32>(addrD0);
                 addrD0 += dmaAddrInc;
-            } else if (bus == Bus::BBus) {
+            } else if (bus == BusID::BBus) {
                 // B-Bus -> two 16-bit reads
                 value = m_bus.Read<uint16>(addrD0 | 0) << 16u;
                 value |= m_bus.Read<uint16>(addrD0 | 2) << 0u;
                 addrD0 += 4;
-            } else if (bus == Bus::WRAM) {
+            } else if (bus == BusID::WRAM) {
                 // WRAM -> one 32-bit read
                 value = m_bus.Read<uint32>(addrD0);
                 addrD0 += dmaAddrInc;

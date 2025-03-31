@@ -113,23 +113,23 @@ union InterruptMask {
 };
 static_assert(sizeof(InterruptMask) == sizeof(uint32));
 
-enum class Bus {
+enum class BusID {
     ABus,
     BBus,
     WRAM,
     None,
 };
 
-inline Bus GetBus(uint32 address) {
+inline BusID GetBusID(uint32 address) {
     address &= 0x7FF'FFFF;
     /**/ if (util::AddressInRange<0x200'0000, 0x58F'FFFF>(address)) {
-        return Bus::ABus;
+        return BusID::ABus;
     } else if (util::AddressInRange<0x5A0'0000, 0x5FB'FFFF>(address)) {
-        return Bus::BBus;
+        return BusID::BBus;
     } else if (address >= 0x600'0000) {
-        return Bus::WRAM;
+        return BusID::WRAM;
     } else {
-        return Bus::None;
+        return BusID::None;
     }
 }
 
