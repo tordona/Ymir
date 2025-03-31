@@ -5,8 +5,6 @@
 #include <app/ui/views/debug/scu_dma_registers_view.hpp>
 #include <app/ui/views/debug/scu_dma_state_view.hpp>
 
-#include <array>
-
 namespace app::ui {
 
 class SCUDMAWindow : public WindowBase {
