@@ -1,8 +1,27 @@
 #include <satemu/sys/saturn.hpp>
 
+#include <satemu/util/dev_log.hpp>
+
 #include <bit>
 
 namespace satemu {
+
+namespace grp {
+
+    // -----------------------------------------------------------------------------
+    // Dev log groups
+
+    // Hierarchy:
+    //
+    // bus
+
+    struct bus {
+        static constexpr bool enabled = true;
+        static constexpr devlog::Level level = devlog::level::debug;
+        static constexpr std::string_view name = "Bus";
+    };
+
+} // namespace grp
 
 Saturn::Saturn()
     : masterSH2(mainBus, true, m_systemFeatures)
@@ -12,6 +31,30 @@ Saturn::Saturn()
     , SMPC(m_scheduler, *this)
     , SCSP(m_scheduler)
     , CDBlock(m_scheduler) {
+
+    mainBus.MapNormal(
+        0x000'0000, 0x7FF'FFFF, nullptr,
+        [](uint32 address, void *) -> uint8 {
+            devlog::debug<grp::bus>("Unhandled 8-bit main bus read from {:07X}", address);
+            return 0;
+        },
+        [](uint32 address, void *) -> uint16 {
+            devlog::debug<grp::bus>("Unhandled 16-bit main bus read from {:07X}", address);
+            return 0;
+        },
+        [](uint32 address, void *) -> uint32 {
+            devlog::debug<grp::bus>("Unhandled 32-bit main bus read from {:07X}", address);
+            return 0;
+        },
+        [](uint32 address, uint8 value, void *) {
+            devlog::debug<grp::bus>("Unhandled 8-bit main bus write to {:07X} = {:02X}", address, value);
+        },
+        [](uint32 address, uint16 value, void *) {
+            devlog::debug<grp::bus>("Unhandled 16-bit main bus write to {:07X} = {:04X}", address, value);
+        },
+        [](uint32 address, uint32 value, void *) {
+            devlog::debug<grp::bus>("Unhandled 32-bit main bus write to {:07X} = {:07X}", address, value);
+        });
 
     masterSH2.MapCallbacks(SCU.CbAckExtIntr);
     slaveSH2.MapCallbacks(SCU.CbAckExtIntr);

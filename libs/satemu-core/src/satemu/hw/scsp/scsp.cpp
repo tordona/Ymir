@@ -80,108 +80,61 @@ void SCSP::Reset(bool hard) {
 }
 
 void SCSP::MapMemory(sys::Bus &bus) {
+    static constexpr auto cast = [](void *ctx) -> SCSP & { return *static_cast<SCSP *>(ctx); };
+
     // WRAM
-    auto readWRAM8 = [](uint32 address, void *ctx) -> uint8 {
-        return static_cast<SCSP *>(ctx)->ReadWRAM<uint8>(address);
-    };
-    auto readWRAM16 = [](uint32 address, void *ctx) -> uint16 {
-        return static_cast<SCSP *>(ctx)->ReadWRAM<uint16>(address);
-    };
-    auto readWRAM32 = [](uint32 address, void *ctx) -> uint32 {
-        uint32 value = static_cast<SCSP *>(ctx)->ReadWRAM<uint16>(address + 0) << 16u;
-        value |= static_cast<SCSP *>(ctx)->ReadWRAM<uint16>(address + 2) << 0u;
-        return value;
-    };
-    auto writeWRAM8 = [](uint32 address, uint8 value, void *ctx) {
-        static_cast<SCSP *>(ctx)->WriteWRAM<uint8>(address, value);
-    };
-    auto writeWRAM16 = [](uint32 address, uint16 value, void *ctx) {
-        static_cast<SCSP *>(ctx)->WriteWRAM<uint16>(address, value);
-    };
-    auto writeWRAM32 = [](uint32 address, uint32 value, void *ctx) {
-        static_cast<SCSP *>(ctx)->WriteWRAM<uint16>(address + 0, value >> 16u);
-        static_cast<SCSP *>(ctx)->WriteWRAM<uint16>(address + 2, value >> 0u);
-    };
-    bus.MapMemory(0x5A0'0000, 0x5AF'FFFF,
-                  {
-                      .ctx = this,
-                      .read8 = readWRAM8,
-                      .read16 = readWRAM16,
-                      .read32 = readWRAM32,
-                      .write8 = writeWRAM8,
-                      .write16 = writeWRAM16,
-                      .write32 = writeWRAM32,
-                      .peek8 = readWRAM8,
-                      .peek16 = readWRAM16,
-                      .peek32 = readWRAM32,
-                      .poke8 = writeWRAM8,
-                      .poke16 = writeWRAM16,
-                      .poke32 = writeWRAM32,
-                  });
+    bus.MapBoth(
+        0x5A0'0000, 0x5AF'FFFF, this,
+        [](uint32 address, void *ctx) -> uint8 { return cast(ctx).ReadWRAM<uint8>(address); },
+        [](uint32 address, void *ctx) -> uint16 { return cast(ctx).ReadWRAM<uint16>(address); },
+        [](uint32 address, void *ctx) -> uint32 {
+            uint32 value = cast(ctx).ReadWRAM<uint16>(address + 0) << 16u;
+            value |= cast(ctx).ReadWRAM<uint16>(address + 2) << 0u;
+            return value;
+        },
+        [](uint32 address, uint8 value, void *ctx) { cast(ctx).WriteWRAM<uint8>(address, value); },
+        [](uint32 address, uint16 value, void *ctx) { cast(ctx).WriteWRAM<uint16>(address, value); },
+        [](uint32 address, uint32 value, void *ctx) {
+            cast(ctx).WriteWRAM<uint16>(address + 0, value >> 16u);
+            cast(ctx).WriteWRAM<uint16>(address + 2, value >> 0u);
+        });
 
     // Registers
-    auto readReg8 = [](uint32 address, void *ctx) -> uint8 {
-        return static_cast<SCSP *>(ctx)->ReadReg<uint8>(address);
-    };
-    auto readReg16 = [](uint32 address, void *ctx) -> uint16 {
-        return static_cast<SCSP *>(ctx)->ReadReg<uint16>(address);
-    };
-    auto readReg32 = [](uint32 address, void *ctx) -> uint32 {
-        uint32 value = static_cast<SCSP *>(ctx)->ReadReg<uint16>(address + 0) << 16u;
-        value |= static_cast<SCSP *>(ctx)->ReadReg<uint16>(address + 2) << 0u;
-        return value;
-    };
+    bus.MapNormal(
+        0x5B0'0000, 0x5BF'FFFF, this,
+        [](uint32 address, void *ctx) -> uint8 { return cast(ctx).ReadReg<uint8>(address); },
+        [](uint32 address, void *ctx) -> uint16 { return cast(ctx).ReadReg<uint16>(address); },
+        [](uint32 address, void *ctx) -> uint32 {
+            uint32 value = cast(ctx).ReadReg<uint16>(address + 0) << 16u;
+            value |= cast(ctx).ReadReg<uint16>(address + 2) << 0u;
+            return value;
+        },
+        [](uint32 address, uint8 value, void *ctx) { cast(ctx).WriteReg<uint8>(address, value); },
+        [](uint32 address, uint16 value, void *ctx) { cast(ctx).WriteReg<uint16>(address, value); },
+        [](uint32 address, uint32 value, void *ctx) {
+            cast(ctx).WriteReg<uint16>(address + 0, value >> 16u);
+            cast(ctx).WriteReg<uint16>(address + 2, value >> 0u);
+        });
 
-    auto writeReg8 = [](uint32 address, uint8 value, void *ctx) {
-        static_cast<SCSP *>(ctx)->WriteReg<uint8>(address, value);
-    };
-    auto writeReg16 = [](uint32 address, uint16 value, void *ctx) {
-        static_cast<SCSP *>(ctx)->WriteReg<uint16>(address, value);
-    };
-    auto writeReg32 = [](uint32 address, uint32 value, void *ctx) {
-        static_cast<SCSP *>(ctx)->WriteReg<uint16>(address + 0, value >> 16u);
-        static_cast<SCSP *>(ctx)->WriteReg<uint16>(address + 2, value >> 0u);
-    };
-
-    auto peekReg8 = [](uint32 address, void *ctx) -> uint8 {
-        return static_cast<SCSP *>(ctx)->ReadReg<uint8, SCSPAccessType::Debug>(address);
-    };
-    auto peekReg16 = [](uint32 address, void *ctx) -> uint16 {
-        return static_cast<SCSP *>(ctx)->ReadReg<uint16, SCSPAccessType::Debug>(address);
-    };
-    auto peekReg32 = [](uint32 address, void *ctx) -> uint32 {
-        uint32 value = static_cast<SCSP *>(ctx)->ReadReg<uint16, SCSPAccessType::Debug>(address + 0) << 16u;
-        value |= static_cast<SCSP *>(ctx)->ReadReg<uint16, SCSPAccessType::Debug>(address + 2) << 0u;
-        return value;
-    };
-
-    auto pokeReg8 = [](uint32 address, uint8 value, void *ctx) {
-        static_cast<SCSP *>(ctx)->WriteReg<uint8, SCSPAccessType::Debug>(address, value);
-    };
-    auto pokeReg16 = [](uint32 address, uint16 value, void *ctx) {
-        static_cast<SCSP *>(ctx)->WriteReg<uint16, SCSPAccessType::Debug>(address, value);
-    };
-    auto pokeReg32 = [](uint32 address, uint32 value, void *ctx) {
-        static_cast<SCSP *>(ctx)->WriteReg<uint16, SCSPAccessType::Debug>(address + 0, value >> 16u);
-        static_cast<SCSP *>(ctx)->WriteReg<uint16, SCSPAccessType::Debug>(address + 2, value >> 0u);
-    };
-
-    bus.MapMemory(0x5B0'0000, 0x5BF'FFFF,
-                  {
-                      .ctx = this,
-                      .read8 = readReg8,
-                      .read16 = readReg16,
-                      .read32 = readReg32,
-                      .write8 = writeReg8,
-                      .write16 = writeReg16,
-                      .write32 = writeReg32,
-                      .peek8 = peekReg8,
-                      .peek16 = peekReg16,
-                      .peek32 = peekReg32,
-                      .poke8 = pokeReg8,
-                      .poke16 = pokeReg16,
-                      .poke32 = pokeReg32,
-                  });
+    bus.MapSideEffectFree(
+        0x5B0'0000, 0x5BF'FFFF, this,
+        [](uint32 address, void *ctx) -> uint8 { return cast(ctx).ReadReg<uint8, SCSPAccessType::Debug>(address); },
+        [](uint32 address, void *ctx) -> uint16 { return cast(ctx).ReadReg<uint16, SCSPAccessType::Debug>(address); },
+        [](uint32 address, void *ctx) -> uint32 {
+            uint32 value = cast(ctx).ReadReg<uint16, SCSPAccessType::Debug>(address + 0) << 16u;
+            value |= cast(ctx).ReadReg<uint16, SCSPAccessType::Debug>(address + 2) << 0u;
+            return value;
+        },
+        [](uint32 address, uint8 value, void *ctx) {
+            cast(ctx).WriteReg<uint8, SCSPAccessType::Debug>(address, value);
+        },
+        [](uint32 address, uint16 value, void *ctx) {
+            cast(ctx).WriteReg<uint16, SCSPAccessType::Debug>(address, value);
+        },
+        [](uint32 address, uint32 value, void *ctx) {
+            cast(ctx).WriteReg<uint16, SCSPAccessType::Debug>(address + 0, value >> 16u);
+            cast(ctx).WriteReg<uint16, SCSPAccessType::Debug>(address + 2, value >> 0u);
+        });
 }
 
 void SCSP::UpdateClockRatios(const sys::ClockRatios &clockRatios) {

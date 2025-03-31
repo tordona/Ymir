@@ -114,10 +114,12 @@ add_library(satemu-core
     include/satemu/util/date_time.hpp
     include/satemu/util/dev_log.hpp
     include/satemu/util/event.hpp
+    include/satemu/util/function_info.hpp
     include/satemu/util/inline.hpp
     include/satemu/util/scope_guard.hpp
     include/satemu/util/size_ops.hpp
     include/satemu/util/thread_name.hpp
+    include/satemu/util/type_traits_ex.hpp
     include/satemu/util/unreachable.hpp
 
 
@@ -165,7 +167,7 @@ add_library(satemu-core
     src/satemu/media/loader/loader_mdf_mds.cpp
 
     src/satemu/sys/backup_ram.cpp
-    src/satemu/sys/bus.cpp
+    
     src/satemu/sys/memory.cpp
     src/satemu/sys/saturn.cpp
 

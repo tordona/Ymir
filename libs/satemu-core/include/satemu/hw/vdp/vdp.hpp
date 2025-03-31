@@ -285,6 +285,9 @@ private:
     uint64 GetPhaseCycles() const;
 
     // Updates the display resolution and timings based on TVMODE if it is dirty
+    //
+    // `verbose` enables dev logging
+    template <bool verbose>
     void UpdateResolution();
 
     void IncrementVCounter();

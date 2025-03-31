@@ -101,64 +101,32 @@ void SMPC::FactoryReset() {
 }
 
 void SMPC::MapMemory(sys::Bus &bus) {
-    auto read8 = [](uint32 address, void *ctx) -> uint8 {
-        return static_cast<SMPC *>(ctx)->Read<false>((address & 0x7F) | 1);
-    };
-    auto read16 = [](uint32 address, void *ctx) -> uint16 {
-        return static_cast<SMPC *>(ctx)->Read<false>((address & 0x7F) | 1);
-    };
-    auto read32 = [](uint32 address, void *ctx) -> uint32 {
-        return static_cast<SMPC *>(ctx)->Read<false>((address & 0x7F) | 1);
-    };
-    auto write8 = [](uint32 address, uint8 value, void *ctx) {
-        static_cast<SMPC *>(ctx)->Write<false>((address & 0x7F) | 1, value);
-    };
-    auto write16 = [](uint32 address, uint16 value, void *ctx) {
-        static_cast<SMPC *>(ctx)->Write<false>((address & 0x7F) | 1, value);
-    };
-    auto write32 = [](uint32 address, uint32 value, void *ctx) {
-        static_cast<SMPC *>(ctx)->Write<false>((address & 0x7F) | 1, value);
-    };
+    static constexpr auto cast = [](void *ctx) -> SMPC & { return *static_cast<SMPC *>(ctx); };
 
-    auto peek8 = [](uint32 address, void *ctx) -> uint8 {
-        return static_cast<SMPC *>(ctx)->Read<true>((address & 0x7F) | 1);
-    };
-    auto peek16 = [](uint32 address, void *ctx) -> uint16 {
-        return static_cast<SMPC *>(ctx)->Read<true>((address & 0x7F) | 1);
-    };
-    auto peek32 = [](uint32 address, void *ctx) -> uint32 {
-        auto &smpc = *static_cast<SMPC *>(ctx);
-        uint32 value = smpc.Read<true>((address & 0x7F) | 1) << 16u;
-        value |= smpc.Read<true>(((address & 0x7F) | 1) + 2);
-        return value;
-    };
-    auto poke8 = [](uint32 address, uint8 value, void *ctx) {
-        static_cast<SMPC *>(ctx)->Write<true>((address & 0x7F) | 1, value);
-    };
-    auto poke16 = [](uint32 address, uint16 value, void *ctx) {
-        static_cast<SMPC *>(ctx)->Write<true>((address & 0x7F) | 1, value);
-    };
-    auto poke32 = [](uint32 address, uint32 value, void *ctx) {
-        static_cast<SMPC *>(ctx)->Write<true>(((address & 0x7F) | 1) + 0, value >> 16u);
-        static_cast<SMPC *>(ctx)->Write<true>(((address & 0x7F) | 1) + 2, value >> 0u);
-    };
+    bus.MapNormal(
+        0x010'0000, 0x017'FFFF, this,
+        [](uint32 address, void *ctx) -> uint8 { return cast(ctx).Read<false>((address & 0x7F) | 1); },
+        [](uint32 address, void *ctx) -> uint16 { return cast(ctx).Read<false>((address & 0x7F) | 1); },
+        [](uint32 address, void *ctx) -> uint32 { return cast(ctx).Read<false>((address & 0x7F) | 1); },
+        [](uint32 address, uint8 value, void *ctx) { cast(ctx).Write<false>((address & 0x7F) | 1, value); },
+        [](uint32 address, uint16 value, void *ctx) { cast(ctx).Write<false>((address & 0x7F) | 1, value); },
+        [](uint32 address, uint32 value, void *ctx) { cast(ctx).Write<false>((address & 0x7F) | 1, value); });
 
-    bus.MapMemory(0x010'0000, 0x017'FFFF,
-                  {
-                      .ctx = this,
-                      .read8 = read8,
-                      .read16 = read16,
-                      .read32 = read32,
-                      .write8 = write8,
-                      .write16 = write16,
-                      .write32 = write32,
-                      .peek8 = peek8,
-                      .peek16 = peek16,
-                      .peek32 = peek32,
-                      .poke8 = poke8,
-                      .poke16 = poke16,
-                      .poke32 = poke32,
-                  });
+    bus.MapSideEffectFree(
+        0x010'0000, 0x017'FFFF, this,
+        [](uint32 address, void *ctx) -> uint8 { return cast(ctx).Read<true>((address & 0x7F) | 1); },
+        [](uint32 address, void *ctx) -> uint16 { return cast(ctx).Read<true>((address & 0x7F) | 1); },
+        [](uint32 address, void *ctx) -> uint32 {
+            uint32 value = cast(ctx).Read<true>((address & 0x7F) | 1) << 16u;
+            value |= cast(ctx).Read<true>(((address & 0x7F) | 1) + 2);
+            return value;
+        },
+        [](uint32 address, uint8 value, void *ctx) { cast(ctx).Write<true>((address & 0x7F) | 1, value); },
+        [](uint32 address, uint16 value, void *ctx) { cast(ctx).Write<true>((address & 0x7F) | 1, value); },
+        [](uint32 address, uint32 value, void *ctx) {
+            cast(ctx).Write<true>(((address & 0x7F) | 1) + 0, value >> 16u);
+            cast(ctx).Write<true>(((address & 0x7F) | 1) + 2, value >> 0u);
+        });
 }
 
 FLATTEN void SMPC::UpdateClockRatios(const sys::ClockRatios &clockRatios) {

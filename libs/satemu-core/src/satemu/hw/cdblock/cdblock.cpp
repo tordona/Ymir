@@ -95,65 +95,33 @@ void CDBlock::MapMemory(sys::Bus &bus) {
     // CD Block registers are mirrored every 64 bytes in a 4 KiB block.
     // These 4 KiB blocks are mapped every 32 KiB.
 
-    auto readReg8 = [](uint32 address, void *ctx) -> uint8 {
-        return static_cast<CDBlock *>(ctx)->ReadReg<uint8>(address);
-    };
-    auto readReg16 = [](uint32 address, void *ctx) -> uint16 {
-        return static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address);
-    };
-    auto readReg32 = [](uint32 address, void *ctx) -> uint32 {
-        uint32 value = static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address + 0) << 16u;
-        value |= static_cast<CDBlock *>(ctx)->ReadReg<uint16>(address + 2) << 0u;
-        return value;
-    };
-
-    auto writeReg8 = [](uint32 address, uint8 value, void *ctx) {
-        static_cast<CDBlock *>(ctx)->WriteReg<uint8>(address, value);
-    };
-    auto writeReg16 = [](uint32 address, uint16 value, void *ctx) {
-        static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address, value);
-    };
-    auto writeReg32 = [](uint32 address, uint32 value, void *ctx) {
-        static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address + 0, value >> 16u);
-        static_cast<CDBlock *>(ctx)->WriteReg<uint16>(address + 2, value >> 0u);
-    };
-
-    auto peekReg8 = [](uint32 address, void *ctx) -> uint8 {
-        return static_cast<CDBlock *>(ctx)->PeekReg<uint8>(address);
-    };
-    auto peekReg16 = [](uint32 address, void *ctx) -> uint16 {
-        return static_cast<CDBlock *>(ctx)->PeekReg<uint16>(address);
-    };
-    auto peekReg32 = [](uint32 address, void *ctx) -> uint32 {
-        return static_cast<CDBlock *>(ctx)->PeekReg<uint32>(address);
-    };
-    auto pokeReg8 = [](uint32 address, uint8 value, void *ctx) {
-        static_cast<CDBlock *>(ctx)->PokeReg<uint8>(address, value);
-    };
-    auto pokeReg16 = [](uint32 address, uint16 value, void *ctx) {
-        static_cast<CDBlock *>(ctx)->PokeReg<uint16>(address, value);
-    };
-    auto pokeReg32 = [](uint32 address, uint32 value, void *ctx) {
-        static_cast<CDBlock *>(ctx)->PokeReg<uint32>(address, value);
-    };
+    static constexpr auto cast = [](void *ctx) -> CDBlock & { return *static_cast<CDBlock *>(ctx); };
 
     for (uint32 address = 0x580'0000; address <= 0x58F'FFFF; address += 0x8000) {
-        bus.MapMemory(address, address + 0xFFF,
-                      {
-                          .ctx = this,
-                          .read8 = readReg8,
-                          .read16 = readReg16,
-                          .read32 = readReg32,
-                          .write8 = writeReg8,
-                          .write16 = writeReg16,
-                          .write32 = writeReg32,
-                          .peek8 = peekReg8,
-                          .peek16 = peekReg16,
-                          .peek32 = peekReg32,
-                          .poke8 = pokeReg8,
-                          .poke16 = pokeReg16,
-                          .poke32 = pokeReg32,
-                      });
+        bus.MapNormal(
+            address, address + 0xFFF, this,
+            [](uint32 address, void *ctx) -> uint8 { return cast(ctx).ReadReg<uint8>(address); },
+            [](uint32 address, void *ctx) -> uint16 { return cast(ctx).ReadReg<uint16>(address); },
+            [](uint32 address, void *ctx) -> uint32 {
+                uint32 value = cast(ctx).ReadReg<uint16>(address + 0) << 16u;
+                value |= cast(ctx).ReadReg<uint16>(address + 2) << 0u;
+                return value;
+            },
+            [](uint32 address, uint8 value, void *ctx) { cast(ctx).WriteReg<uint8>(address, value); },
+            [](uint32 address, uint16 value, void *ctx) { cast(ctx).WriteReg<uint16>(address, value); },
+            [](uint32 address, uint32 value, void *ctx) {
+                cast(ctx).WriteReg<uint16>(address + 0, value >> 16u);
+                cast(ctx).WriteReg<uint16>(address + 2, value >> 0u);
+            });
+
+        bus.MapSideEffectFree(
+            address, address + 0xFFF, this,
+            [](uint32 address, void *ctx) -> uint8 { return cast(ctx).PeekReg<uint8>(address); },
+            [](uint32 address, void *ctx) -> uint16 { return cast(ctx).PeekReg<uint16>(address); },
+            [](uint32 address, void *ctx) -> uint32 { return cast(ctx).PeekReg<uint32>(address); },
+            [](uint32 address, uint8 value, void *ctx) { cast(ctx).PokeReg<uint8>(address, value); },
+            [](uint32 address, uint16 value, void *ctx) { cast(ctx).PokeReg<uint16>(address, value); },
+            [](uint32 address, uint32 value, void *ctx) { cast(ctx).PokeReg<uint32>(address, value); });
     }
 }
 

@@ -26,25 +26,14 @@ struct TestSubject : debug::ISH2Tracer {
 
         sh2.MapCallbacks(util::MakeClassMemberRequiredCallback<&TestSubject::IntrAck>(this));
 
-        bus.MapMemory(0x000'0000, 0x7FF'FFFF,
-                      {
-                          .ctx = this,
-                          .read8 = [](uint32 address, void *ctx) -> uint8 {
-                              return static_cast<TestSubject *>(ctx)->Read8(address);
-                          },
-                          .read16 = [](uint32 address, void *ctx) -> uint16 {
-                              return static_cast<TestSubject *>(ctx)->Read16(address);
-                          },
-                          .read32 = [](uint32 address, void *ctx) -> uint32 {
-                              return static_cast<TestSubject *>(ctx)->Read32(address);
-                          },
-                          .write8 = [](uint32 address, uint8 value,
-                                       void *ctx) { static_cast<TestSubject *>(ctx)->Write8(address, value); },
-                          .write16 = [](uint32 address, uint16 value,
-                                        void *ctx) { static_cast<TestSubject *>(ctx)->Write16(address, value); },
-                          .write32 = [](uint32 address, uint32 value,
-                                        void *ctx) { static_cast<TestSubject *>(ctx)->Write32(address, value); },
-                      });
+        bus.MapBoth(
+            0x000'0000, 0x7FF'FFFF, this,
+            [](uint32 address, void *ctx) -> uint8 { return static_cast<TestSubject *>(ctx)->Read8(address); },
+            [](uint32 address, void *ctx) -> uint16 { return static_cast<TestSubject *>(ctx)->Read16(address); },
+            [](uint32 address, void *ctx) -> uint32 { return static_cast<TestSubject *>(ctx)->Read32(address); },
+            [](uint32 address, uint8 value, void *ctx) { static_cast<TestSubject *>(ctx)->Write8(address, value); },
+            [](uint32 address, uint16 value, void *ctx) { static_cast<TestSubject *>(ctx)->Write16(address, value); },
+            [](uint32 address, uint32 value, void *ctx) { static_cast<TestSubject *>(ctx)->Write32(address, value); });
     }
 
     void ClearAll() const {

@@ -31,40 +31,14 @@ uint32 BackupMemory::Size() const {
 }
 
 void BackupMemory::MapMemory(sys::Bus &bus, uint32 start, uint32 end) {
-    auto read8 = [](uint32 address, void *ctx) -> uint8 { return static_cast<BackupMemory *>(ctx)->ReadByte(address); };
-    auto read16 = [](uint32 address, void *ctx) -> uint16 {
-        return static_cast<BackupMemory *>(ctx)->ReadWord(address);
-    };
-    auto read32 = [](uint32 address, void *ctx) -> uint32 {
-        return static_cast<BackupMemory *>(ctx)->ReadLong(address);
-    };
-
-    auto write8 = [](uint32 address, uint8 value, void *ctx) {
-        static_cast<BackupMemory *>(ctx)->WriteByte(address, value);
-    };
-    auto write16 = [](uint32 address, uint16 value, void *ctx) {
-        static_cast<BackupMemory *>(ctx)->WriteWord(address, value);
-    };
-    auto write32 = [](uint32 address, uint32 value, void *ctx) {
-        static_cast<BackupMemory *>(ctx)->WriteLong(address, value);
-    };
-
-    bus.MapMemory(start, end,
-                  {
-                      .ctx = this,
-                      .read8 = read8,
-                      .read16 = read16,
-                      .read32 = read32,
-                      .write8 = write8,
-                      .write16 = write16,
-                      .write32 = write32,
-                      .peek8 = read8,
-                      .peek16 = read16,
-                      .peek32 = read32,
-                      .poke8 = write8,
-                      .poke16 = write16,
-                      .poke32 = write32,
-                  });
+    bus.MapBoth(
+        start, end, this,
+        [](uint32 address, void *ctx) -> uint8 { return static_cast<BackupMemory *>(ctx)->ReadByte(address); },
+        [](uint32 address, void *ctx) -> uint16 { return static_cast<BackupMemory *>(ctx)->ReadWord(address); },
+        [](uint32 address, void *ctx) -> uint32 { return static_cast<BackupMemory *>(ctx)->ReadLong(address); },
+        [](uint32 address, uint8 value, void *ctx) { static_cast<BackupMemory *>(ctx)->WriteByte(address, value); },
+        [](uint32 address, uint16 value, void *ctx) { static_cast<BackupMemory *>(ctx)->WriteWord(address, value); },
+        [](uint32 address, uint32 value, void *ctx) { static_cast<BackupMemory *>(ctx)->WriteLong(address, value); });
 }
 
 uint8 BackupMemory::ReadByte(uint32 address) const {

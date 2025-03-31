@@ -84,63 +84,26 @@ void SCU::Reset(bool hard) {
 }
 
 void SCU::MapMemory(sys::Bus &bus) {
+    static constexpr auto cast = [](void *ctx) -> SCU & { return *static_cast<SCU *>(ctx); };
+
     // A-Bus CS0 and CS1 - Cartridge
-    auto readCart8 = [](uint32 address, void *ctx) -> uint8 {
-        return static_cast<SCU *>(ctx)->ReadCartridge<uint8, false>(address);
-    };
-    auto readCart16 = [](uint32 address, void *ctx) -> uint16 {
-        return static_cast<SCU *>(ctx)->ReadCartridge<uint16, false>(address);
-    };
-    auto readCart32 = [](uint32 address, void *ctx) -> uint32 {
-        return static_cast<SCU *>(ctx)->ReadCartridge<uint32, false>(address);
-    };
+    bus.MapNormal(
+        0x200'0000, 0x4FF'FFFF, this,
+        [](uint32 address, void *ctx) -> uint8 { return cast(ctx).ReadCartridge<uint8, false>(address); },
+        [](uint32 address, void *ctx) -> uint16 { return cast(ctx).ReadCartridge<uint16, false>(address); },
+        [](uint32 address, void *ctx) -> uint32 { return cast(ctx).ReadCartridge<uint32, false>(address); },
+        [](uint32 address, uint8 value, void *ctx) { cast(ctx).WriteCartridge<uint8, false>(address, value); },
+        [](uint32 address, uint16 value, void *ctx) { cast(ctx).WriteCartridge<uint16, false>(address, value); },
+        [](uint32 address, uint32 value, void *ctx) { cast(ctx).WriteCartridge<uint32, false>(address, value); });
 
-    auto writeCart8 = [](uint32 address, uint8 value, void *ctx) {
-        static_cast<SCU *>(ctx)->WriteCartridge<uint8, false>(address, value);
-    };
-    auto writeCart16 = [](uint32 address, uint16 value, void *ctx) {
-        static_cast<SCU *>(ctx)->WriteCartridge<uint16, false>(address, value);
-    };
-    auto writeCart32 = [](uint32 address, uint32 value, void *ctx) {
-        static_cast<SCU *>(ctx)->WriteCartridge<uint32, false>(address, value);
-    };
-
-    auto peekCart8 = [](uint32 address, void *ctx) -> uint8 {
-        return static_cast<SCU *>(ctx)->ReadCartridge<uint8, true>(address);
-    };
-    auto peekCart16 = [](uint32 address, void *ctx) -> uint16 {
-        return static_cast<SCU *>(ctx)->ReadCartridge<uint16, true>(address);
-    };
-    auto peekCart32 = [](uint32 address, void *ctx) -> uint32 {
-        return static_cast<SCU *>(ctx)->ReadCartridge<uint32, true>(address);
-    };
-
-    auto pokeCart8 = [](uint32 address, uint8 value, void *ctx) {
-        static_cast<SCU *>(ctx)->WriteCartridge<uint8, true>(address, value);
-    };
-    auto pokeCart16 = [](uint32 address, uint16 value, void *ctx) {
-        static_cast<SCU *>(ctx)->WriteCartridge<uint16, true>(address, value);
-    };
-    auto pokeCart32 = [](uint32 address, uint32 value, void *ctx) {
-        static_cast<SCU *>(ctx)->WriteCartridge<uint32, true>(address, value);
-    };
-
-    bus.MapMemory(0x200'0000, 0x4FF'FFFF,
-                  {
-                      .ctx = this,
-                      .read8 = readCart8,
-                      .read16 = readCart16,
-                      .read32 = readCart32,
-                      .write8 = writeCart8,
-                      .write16 = writeCart16,
-                      .write32 = writeCart32,
-                      .peek8 = peekCart8,
-                      .peek16 = peekCart16,
-                      .peek32 = peekCart32,
-                      .poke8 = pokeCart8,
-                      .poke16 = pokeCart16,
-                      .poke32 = pokeCart32,
-                  });
+    bus.MapSideEffectFree(
+        0x200'0000, 0x4FF'FFFF, this,
+        [](uint32 address, void *ctx) -> uint8 { return cast(ctx).ReadCartridge<uint8, true>(address); },
+        [](uint32 address, void *ctx) -> uint16 { return cast(ctx).ReadCartridge<uint16, true>(address); },
+        [](uint32 address, void *ctx) -> uint32 { return cast(ctx).ReadCartridge<uint32, true>(address); },
+        [](uint32 address, uint8 value, void *ctx) { cast(ctx).WriteCartridge<uint8, true>(address, value); },
+        [](uint32 address, uint16 value, void *ctx) { cast(ctx).WriteCartridge<uint16, true>(address, value); },
+        [](uint32 address, uint32 value, void *ctx) { cast(ctx).WriteCartridge<uint32, true>(address, value); });
 
     // A-Bus CS2 - 0x580'0000..0x58F'FFFF
     // CD block maps itself here
@@ -151,62 +114,25 @@ void SCU::MapMemory(sys::Bus &bus) {
     // TODO: 0x5FC'0000..0x5FD'FFFF - reads 0x000E0000
 
     // SCU registers
-    auto readReg8 = [](uint32 address, void *ctx) -> uint8 {
-        return static_cast<SCU *>(ctx)->ReadReg<uint8, false>(address & 0xFF);
-    };
-    auto readReg16 = [](uint32 address, void *ctx) -> uint16 {
-        return static_cast<SCU *>(ctx)->ReadReg<uint16, false>(address & 0xFF);
-    };
-    auto readReg32 = [](uint32 address, void *ctx) -> uint32 {
-        return static_cast<SCU *>(ctx)->ReadReg<uint32, false>(address & 0xFF);
-    };
+    bus.MapNormal(
+        0x5FE'0000, 0x5FE'FFFF, this,
+        [](uint32 address, void *ctx) -> uint8 { return cast(ctx).ReadReg<uint8, false>(address & 0xFF); },
+        [](uint32 address, void *ctx) -> uint16 { return cast(ctx).ReadReg<uint16, false>(address & 0xFF); },
+        [](uint32 address, void *ctx) -> uint32 { return cast(ctx).ReadReg<uint32, false>(address & 0xFF); },
 
-    auto writeReg8 = [](uint32 address, uint8 value, void *ctx) {
-        static_cast<SCU *>(ctx)->WriteRegByte<false>(address & 0xFF, value);
-    };
-    auto writeReg16 = [](uint32 address, uint16 value, void *ctx) {
-        static_cast<SCU *>(ctx)->WriteRegWord<false>(address & 0xFF, value);
-    };
-    auto writeReg32 = [](uint32 address, uint32 value, void *ctx) {
-        static_cast<SCU *>(ctx)->WriteRegLong<false>(address & 0xFF, value);
-    };
+        [](uint32 address, uint8 value, void *ctx) { cast(ctx).WriteRegByte<false>(address & 0xFF, value); },
+        [](uint32 address, uint16 value, void *ctx) { cast(ctx).WriteRegWord<false>(address & 0xFF, value); },
+        [](uint32 address, uint32 value, void *ctx) { cast(ctx).WriteRegLong<false>(address & 0xFF, value); });
 
-    auto peekReg8 = [](uint32 address, void *ctx) -> uint8 {
-        return static_cast<SCU *>(ctx)->ReadReg<uint8, true>(address & 0xFF);
-    };
-    auto peekReg16 = [](uint32 address, void *ctx) -> uint16 {
-        return static_cast<SCU *>(ctx)->ReadReg<uint16, true>(address & 0xFF);
-    };
-    auto peekReg32 = [](uint32 address, void *ctx) -> uint32 {
-        return static_cast<SCU *>(ctx)->ReadReg<uint32, true>(address & 0xFF);
-    };
+    bus.MapSideEffectFree(
+        0x5FE'0000, 0x5FE'FFFF, this,
+        [](uint32 address, void *ctx) -> uint8 { return cast(ctx).ReadReg<uint8, true>(address & 0xFF); },
+        [](uint32 address, void *ctx) -> uint16 { return cast(ctx).ReadReg<uint16, true>(address & 0xFF); },
+        [](uint32 address, void *ctx) -> uint32 { return cast(ctx).ReadReg<uint32, true>(address & 0xFF); },
 
-    auto pokeReg8 = [](uint32 address, uint8 value, void *ctx) {
-        static_cast<SCU *>(ctx)->WriteRegByte<true>(address & 0xFF, value);
-    };
-    auto pokeReg16 = [](uint32 address, uint16 value, void *ctx) {
-        static_cast<SCU *>(ctx)->WriteRegWord<true>(address & 0xFF, value);
-    };
-    auto pokeReg32 = [](uint32 address, uint32 value, void *ctx) {
-        static_cast<SCU *>(ctx)->WriteRegLong<true>(address & 0xFF, value);
-    };
-
-    bus.MapMemory(0x5FE'0000, 0x5FE'FFFF,
-                  {
-                      .ctx = this,
-                      .read8 = readReg8,
-                      .read16 = readReg16,
-                      .read32 = readReg32,
-                      .write8 = writeReg8,
-                      .write16 = writeReg16,
-                      .write32 = writeReg32,
-                      .peek8 = peekReg8,
-                      .peek16 = peekReg16,
-                      .peek32 = peekReg32,
-                      .poke8 = pokeReg8,
-                      .poke16 = pokeReg16,
-                      .poke32 = pokeReg32,
-                  });
+        [](uint32 address, uint8 value, void *ctx) { cast(ctx).WriteRegByte<true>(address & 0xFF, value); },
+        [](uint32 address, uint16 value, void *ctx) { cast(ctx).WriteRegWord<true>(address & 0xFF, value); },
+        [](uint32 address, uint32 value, void *ctx) { cast(ctx).WriteRegLong<true>(address & 0xFF, value); });
 
     // TODO: 0x5FF'0000..0x5FF'FFFF - Unknown registers
 }

@@ -260,12 +260,8 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
 
 void SH2::MapMemory(sys::Bus &bus) {
     const uint32 addressOffset = !BCR1.MASTER * 0x80'0000;
-    bus.MapMemory(
-        0x100'0000 + addressOffset, 0x17F'FFFF + addressOffset,
-        {
-            .ctx = this,
-            .write16 = [](uint32 address, uint16, void *ctx) { static_cast<SH2 *>(ctx)->TriggerFRTInputCapture(); },
-        });
+    bus.MapNormal(0x100'0000 + addressOffset, 0x17F'FFFF + addressOffset, this,
+                  [](uint32 address, uint16, void *ctx) { static_cast<SH2 *>(ctx)->TriggerFRTInputCapture(); });
 }
 
 template <bool debug, bool enableCache>
