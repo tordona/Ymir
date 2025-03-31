@@ -137,7 +137,8 @@ void SCUDMARegistersView::Display(uint8 channel) {
         "VDP2 VBlank IN", "VDP2 VBlank OUT",    "VDP2 HBlank IN",       "SCU Timer 0",
         "SCU Timer 1",    "SCSP Sound Request", "VDP1 Sprite Draw End", "Immediate",
     };
-    if (ImGui::BeginCombo(fmt::format("Trigger##{}", channel).c_str(), kTriggerNames[static_cast<uint32>(trigger)])) {
+    if (ImGui::BeginCombo(fmt::format("Trigger##{}", channel).c_str(), kTriggerNames[static_cast<uint32>(trigger)],
+                          ImGuiComboFlags_WidthFitPreview)) {
         for (uint32 i = 0; i < 8; i++) {
             if (ImGui::Selectable(kTriggerNames[i], i == static_cast<uint32>(trigger))) {
                 probe.SetDMATrigger(channel, static_cast<scu::DMATrigger>(i));

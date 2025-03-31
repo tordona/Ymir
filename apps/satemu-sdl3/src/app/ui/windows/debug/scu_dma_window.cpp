@@ -5,38 +5,30 @@ namespace app::ui {
 SCUDMAWindow::SCUDMAWindow(SharedContext &context)
     : WindowBase(context)
     , m_dmaRegsView(context)
-    , m_dmaStateView(context)
-    , m_dmaTraceView(context) {
+    , m_dmaStateView(context) {
 
     m_windowConfig.name = "SCU DMA";
-}
-
-void SCUDMAWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(660, 760), ImVec2(FLT_MAX, FLT_MAX));
+    m_windowConfig.flags = ImGuiWindowFlags_AlwaysAutoResize;
 }
 
 void SCUDMAWindow::DrawContents() {
-    if (ImGui::BeginTable("scu_dma", 2, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerV)) {
-        ImGui::TableSetupColumn("##left", ImGuiTableColumnFlags_WidthFixed, 230);
-        ImGui::TableSetupColumn("##right", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::BeginGroup();
 
+    if (ImGui::BeginTable("scu_dma", 3, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {
         ImGui::TableNextRow();
-        if (ImGui::TableNextColumn()) {
-            for (uint32 i = 0; i < 3; i++) {
+        for (uint32 i = 0; i < 3; i++) {
+            if (ImGui::TableNextColumn()) {
                 ImGui::SeparatorText(fmt::format("Channel {}", i).c_str());
-
                 m_dmaRegsView.Display(i);
                 ImGui::Separator();
                 m_dmaStateView.Display(i);
             }
         }
-        if (ImGui::TableNextColumn()) {
-            ImGui::SeparatorText("Trace");
-            m_dmaTraceView.Display();
-        }
 
         ImGui::EndTable();
     }
+
+    ImGui::EndGroup();
 }
 
 } // namespace app::ui
