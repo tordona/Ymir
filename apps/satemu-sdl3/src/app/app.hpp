@@ -6,6 +6,8 @@
 #include "shared_context.hpp"
 
 #include "ui/windows/about_window.hpp"
+#include "ui/windows/system_status_window.hpp"
+
 #include "ui/windows/debug/debug_output_window.hpp"
 #include "ui/windows/debug/memory_viewer_window.hpp"
 #include "ui/windows/debug/scu_window_set.hpp"
@@ -49,6 +51,8 @@ private:
 
     void DrawWindows();
     void OpenMemoryViewer();
+
+    ui::SystemStatusWindow m_systemStatusWindow;
 
     ui::SH2WindowSet m_masterSH2WindowSet;
     ui::SH2WindowSet m_slaveSH2WindowSet;
