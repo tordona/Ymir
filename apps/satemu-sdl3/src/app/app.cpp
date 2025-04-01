@@ -1321,7 +1321,10 @@ void App::EmulatorThread() {
                 }
                 break;
             case LoadDisc: LoadDiscImage(std::get<std::string>(cmd.value)); break;
-            case EjectDisc: m_context.saturn.EjectDisc(); break;
+            case EjectDisc:
+                m_context.saturn.EjectDisc();
+                m_context.state.loadedDiscImagePath.clear();
+                break;
 
             case RunFunction: std::get<std::function<void(SharedContext &)>>(cmd.value)(m_context); break;
 
@@ -1371,6 +1374,7 @@ bool App::LoadDiscImage(std::filesystem::path path) {
     }
     devlog::info<grp::base>("Loaded disc image from {}", path.string());
     m_context.saturn.LoadDisc(std::move(disc));
+    m_context.state.loadedDiscImagePath = path;
     return true;
 }
 

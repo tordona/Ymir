@@ -11,10 +11,16 @@
 
 #include <blockingconcurrentqueue.h>
 
+#include <filesystem>
+
 namespace app {
 
 struct SharedContext {
     satemu::Saturn saturn;
+
+    struct State {
+        std::filesystem::path loadedDiscImagePath;
+    } state;
 
     struct Tracers {
         SH2Tracer masterSH2;

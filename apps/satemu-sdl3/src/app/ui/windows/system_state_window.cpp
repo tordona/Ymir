@@ -240,11 +240,12 @@ void SystemStateWindow::DrawCDDrive() {
         m_context.EnqueueEvent(events::emu::EjectDisc());
     }
 
-    // TODO: get path from shared context
     ImGui::PushTextWrapPos(ImGui::GetWindowContentRegionMax().x);
-    ImGui::TextUnformatted("Image from "
-                           "D:\\mocked_path\\extremely_long_path\\file_name_that_is_really_long_to_purposefully_break_"
-                           "the_window_layout (J).cue");
+    if (m_context.state.loadedDiscImagePath.empty()) {
+        ImGui::TextUnformatted("No image loaded");
+    } else {
+        ImGui::Text("Image from %s", m_context.state.loadedDiscImagePath.string().c_str());
+    }
     ImGui::PopTextWrapPos();
     // TODO: get status from CDBlock probe
     ImGui::TextUnformatted("Playing track 2 (CDDA)");
