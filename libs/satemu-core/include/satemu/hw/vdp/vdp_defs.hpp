@@ -77,4 +77,9 @@ struct Coord {
 using CoordS32 = Coord<sint32>;
 using CoordU32 = Coord<uint32>;
 
+struct Dimensions {
+    uint32 width;
+    uint32 height;
+};
+
 } // namespace satemu::vdp

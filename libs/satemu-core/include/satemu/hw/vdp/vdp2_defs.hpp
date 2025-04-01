@@ -859,6 +859,8 @@ struct VRAMControl {
     bool colorRAMCoeffTableEnable;
 };
 
+enum class InterlaceMode : uint16 { None, Invalid, SingleDensity, DoubleDensity };
+
 // 180000   TVMD    TV Screen Mode
 //
 //   bits   r/w  code          description
@@ -891,12 +893,13 @@ union RegTVMD {
         uint16 HRESOn : 3;
         uint16 _rsvd3 : 1;
         uint16 VRESOn : 2;
-        uint16 LSMDn : 2;
+        InterlaceMode LSMDn : 2;
         uint16 BDCLMD : 1;
         uint16 _rsvd9_14 : 6;
         uint16 DISP : 1;
     };
 };
+static_assert(sizeof(RegTVMD) == sizeof(uint16));
 
 // 180002   EXTEN   External Signal Enable
 //

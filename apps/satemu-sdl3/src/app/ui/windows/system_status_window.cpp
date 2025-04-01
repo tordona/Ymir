@@ -158,8 +158,11 @@ void SystemStatusWindow::DrawClocks() {
             ImGui::TextUnformatted("Pixel clock");
         }
         if (ImGui::TableNextColumn()) {
-            // TODO: check for double resolution
-            ImGui::Text("%.5lf MHz", masterClock * 0.25);
+            // Account for double-resolution
+            auto &probe = m_context.saturn.VDP.GetProbe();
+            auto resolution = probe.GetResolution();
+            const double factor = resolution.width >= 640 ? 0.5 : 0.25;
+            ImGui::Text("%.5lf MHz", masterClock * factor);
         }
 
         ImGui::TableNextRow();
@@ -198,10 +201,16 @@ void SystemStatusWindow::DrawRealTimeClock() {
 }
 
 void SystemStatusWindow::DrawScreen() {
-    // TODO: get resolution and interlace mode from VDP
+    auto &probe = m_context.saturn.VDP.GetProbe();
+    auto [width, height] = probe.GetResolution();
+    auto interlaceMode = probe.GetInterlaceMode();
+
+    static constexpr const char *kInterlaceNames[]{"progressive", "(invalid)", "single-density interlace",
+                                                   "double-density interlace"};
+
     ImGui::TextUnformatted("Resolution:");
     ImGui::SameLine();
-    ImGui::TextUnformatted("352x224 progressive");
+    ImGui::Text("%ux%u %s", width, height, kInterlaceNames[static_cast<uint8>(interlaceMode)]);
 }
 
 void SystemStatusWindow::DrawCDDrive() {

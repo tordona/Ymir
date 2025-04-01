@@ -594,7 +594,7 @@ void VDP::UpdateResolution() {
     // TODO: exclusive monitor: even hRes entries are valid for 31 KHz monitors, odd are for Hi-Vision
     m_HRes = hRes[m_VDP2.TVMD.HRESOn];
     m_VRes = vRes[m_VDP2.TVMD.VRESOn & (m_VDP2.TVSTAT.PAL ? 3 : 1)];
-    if (m_VDP2.TVMD.LSMDn == 3) {
+    if (m_VDP2.TVMD.LSMDn == InterlaceMode::DoubleDensity) {
         // Double-density interlace doubles the vertical resolution
         m_VRes *= 2;
     }
@@ -654,10 +654,10 @@ void VDP::UpdateResolution() {
     if constexpr (verbose) {
         devlog::info<grp::vdp2>("Screen resolution set to {}x{}", m_HRes, m_VRes);
         switch (m_VDP2.TVMD.LSMDn) {
-        case 0: devlog::info<grp::vdp2>("Non-interlace mode"); break;
-        case 1: devlog::info<grp::vdp2>("Invalid interlace mode"); break;
-        case 2: devlog::info<grp::vdp2>("Single-density interlace mode"); break;
-        case 3: devlog::info<grp::vdp2>("Double-density interlace mode"); break;
+        case InterlaceMode::None: devlog::info<grp::vdp2>("Non-interlace mode"); break;
+        case InterlaceMode::Invalid: devlog::info<grp::vdp2>("Invalid interlace mode"); break;
+        case InterlaceMode::SingleDensity: devlog::info<grp::vdp2>("Single-density interlace mode"); break;
+        case InterlaceMode::DoubleDensity: devlog::info<grp::vdp2>("Double-density interlace mode"); break;
         }
         devlog::info<grp::vdp2>("Dot clock mult = {}, display {}", dotClockMult, (m_VDP2.TVMD.DISP ? "ON" : "OFF"));
     }
@@ -770,7 +770,7 @@ void VDP::BeginHPhaseLastDot() {
 
     // If we just entered the bottom blanking vertical phase, switch fields
     if (m_VCounter == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
-        if (m_VDP2.TVMD.LSMDn != 0) {
+        if (m_VDP2.TVMD.LSMDn != InterlaceMode::None) {
             m_VDP2.TVSTAT.ODD ^= 1;
             devlog::trace<grp::base>("Switched to {} field", (m_VDP2.TVSTAT.ODD ? "odd" : "even"));
             if constexpr (config::effective::threadedRendering) {
@@ -1025,7 +1025,7 @@ FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
     // Horizontal scale is doubled in hi-res modes or when targeting rotation background
     const uint32 scaleH = (regs2.TVMD.HRESOn & 0b010) || regs1.fbRotEnable ? 1 : 0;
     // Vertical scale is doubled in double-interlace mode
-    const uint32 scaleV = regs2.TVMD.LSMDn == 3 ? 1 : 0;
+    const uint32 scaleV = regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity ? 1 : 0;
 
     // Constrain erase area to certain limits based on current resolution
     const uint32 maxH = (regs2.TVMD.HRESOn & 1) ? 428 : 400;
@@ -1262,7 +1262,7 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
         return;
     }
 
-    if (regs1.dblInterlaceEnable && regs2.TVMD.LSMDn == 3) {
+    if (regs1.dblInterlaceEnable && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity) {
         if ((y & 1) == regs1.dblInterlaceDrawLine) {
             return;
         }
@@ -1997,7 +1997,7 @@ FORCE_INLINE void VDP::VDP2InitNormalBG() {
     NormBGLayerState &bgState = m_normBGLayerStates[index];
     bgState.fracScrollX = bgParams.scrollAmountH;
     bgState.fracScrollY = bgParams.scrollAmountV;
-    if (m_VDP2.TVMD.LSMDn == 3 && m_VDP2.TVSTAT.ODD) {
+    if (m_VDP2.TVMD.LSMDn == InterlaceMode::DoubleDensity && m_VDP2.TVSTAT.ODD) {
         bgState.fracScrollY += bgParams.scrollIncV;
     }
 
@@ -2981,7 +2981,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
     uint32 fracScrollX = bgState.fracScrollX;
     const uint32 fracScrollY = bgState.fracScrollY;
     bgState.fracScrollY += bgParams.scrollIncV;
-    if (regs.TVMD.LSMDn == 3) {
+    if (regs.TVMD.LSMDn == InterlaceMode::DoubleDensity) {
         bgState.fracScrollY += bgParams.scrollIncV;
     }
 
@@ -3054,7 +3054,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
     uint32 fracScrollX = bgState.fracScrollX;
     const uint32 fracScrollY = bgState.fracScrollY;
     bgState.fracScrollY += bgParams.scrollIncV;
-    if (regs.TVMD.LSMDn == 3) {
+    if (regs.TVMD.LSMDn == InterlaceMode::DoubleDensity) {
         bgState.fracScrollY += bgParams.scrollIncV;
     }
 
@@ -3982,11 +3982,25 @@ FORCE_INLINE bool VDP::VDP2IsNormalShadow(uint16 colorData) {
 FORCE_INLINE uint32 VDP::VDP2GetY(uint32 y) const {
     const VDP2Regs &regs = VDP2GetRegs();
 
-    if (regs.TVMD.LSMDn == 3) {
+    if (regs.TVMD.LSMDn == InterlaceMode::DoubleDensity) {
         return (y << 1) | regs.TVSTAT.ODD;
     } else {
         return y;
     }
+}
+
+// -----------------------------------------------------------------------------
+// Probe implementation
+
+VDP::Probe::Probe(VDP &vdp)
+    : m_vdp(vdp) {}
+
+Dimensions VDP::Probe::GetResolution() const {
+    return {m_vdp.m_HRes, m_vdp.m_VRes};
+}
+
+InterlaceMode VDP::Probe::GetInterlaceMode() const {
+    return m_vdp.m_VDP2.TVMD.LSMDn;
 }
 
 } // namespace satemu::vdp

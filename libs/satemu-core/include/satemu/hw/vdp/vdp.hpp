@@ -1190,6 +1190,32 @@ private:
     //
     // y is the Y coordinate to translate
     uint32 VDP2GetY(uint32 y) const;
+
+public:
+    // -------------------------------------------------------------------------
+    // Debugger
+
+    class Probe {
+    public:
+        Probe(VDP &vdp);
+
+        Dimensions GetResolution() const;
+        InterlaceMode GetInterlaceMode() const;
+
+    private:
+        VDP &m_vdp;
+    };
+
+    Probe &GetProbe() {
+        return m_probe;
+    }
+
+    const Probe &GetProbe() const {
+        return m_probe;
+    }
+
+private:
+    Probe m_probe{*this};
 };
 
 } // namespace satemu::vdp
