@@ -71,7 +71,7 @@ public:
     void DumpVDP2VRAM(std::ostream &out) const;
     void DumpVDP2CRAM(std::ostream &out) const;
 
-    // Dumps draw then display
+    // Dumps draw framebuffer followed by display framebuffer
     void DumpVDP1Framebuffers(std::ostream &out) const;
 
     bool InLastLinePhase() const {

@@ -139,7 +139,7 @@
 //
 // Some components always have tracing enabled if provided a valid instance, so in order avoid the performance penalty,
 // make sure to also detach tracers from all components when you don't need them by calling DetachAllTracers() on the
-// satemu::Saturn instance. Currently, only the SH2 tracer honors the debug mode flag.
+// satemu::Saturn instance. Currently, only the SH2 and SCU DSP tracers honor the debug mode flag.
 //
 // Debug mode is not necessary to use probes as they have no performace impact.
 //
@@ -282,6 +282,7 @@ void App::RunEmulator() {
         uint32 scaleY;
         uint32 fbScale = 1;
 
+        // Hacky garbage to help automatically resize window on resolution changes
         bool resolutionChanged = false;
         uint32 prevWidth;
         uint32 prevHeight;
@@ -1269,10 +1270,6 @@ void App::RunEmulator() {
         }
 
         screen.resolutionChanged = false;
-        /*screen.prevWidth = screen.width;
-        screen.prevHeight = screen.height;
-        screen.prevScaleX = screen.scaleX;
-        screen.prevScaleY = screen.scaleY;*/
 
         // Render ImGui widgets
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
