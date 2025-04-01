@@ -311,6 +311,7 @@ void AboutWindow::DrawAcknowledgementsTab() {
 
         ackWithAuthor("libyaul", "mrkotfw and contributors", "https://github.com/yaul-org/libyaul");
         ackWithAuthor("libyaul-examples", "mrkotfw and contributors", "https://github.com/yaul-org/libyaul-examples");
+        ackWithAuthor("saturn-tests", "StrikerX3", "https://github.com/StrikerX3/saturn-tests");
 
         // -----------------------------------------------------------------------------
 
