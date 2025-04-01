@@ -732,7 +732,9 @@ void App::RunEmulator() {
     ScopeGuard sgDestroyFileDialogProps{[&] { SDL_DestroyProperties(m_fileDialogProps); }};
 
     static constexpr SDL_DialogFileFilter kFileFilters[] = {
-        {.name = "All supported formats", .pattern = "cue;mds;iso;ccd"}};
+        {.name = "All supported formats (*.cue, *.mds, *.iso, *.ccd)", .pattern = "cue;mds;iso;ccd"},
+        {.name = "All files (*.*)", .pattern = "*"},
+    };
 
     SDL_SetPointerProperty(m_fileDialogProps, SDL_PROP_FILE_DIALOG_WINDOW_POINTER, screen.window);
     SDL_SetPointerProperty(m_fileDialogProps, SDL_PROP_FILE_DIALOG_FILTERS_POINTER, (void *)kFileFilters);
