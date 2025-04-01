@@ -147,7 +147,7 @@ void SystemStateWindow::DrawScreen() {
 }
 
 void SystemStateWindow::DrawRealTimeClock() {
-    // TODO: current date-time (editable)
+    // TODO: get current date-time from SMPC
     ImGui::TextUnformatted("Current date/time:");
     ImGui::SameLine();
     ImGui::TextUnformatted("01/02/2003 12:34:56 AM");
@@ -201,6 +201,14 @@ void SystemStateWindow::DrawClocks() {
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
+            ImGui::TextUnformatted("MC68EC000");
+        }
+        if (ImGui::TableNextColumn()) {
+            ImGui::Text("%.5lf MHz", masterClock * clockRatios.SCSPNum / clockRatios.SCSPDen * 0.5);
+        }
+
+        ImGui::TableNextRow();
+        if (ImGui::TableNextColumn()) {
             ImGui::TextUnformatted("CD Block SH-1");
         }
         if (ImGui::TableNextColumn()) {
@@ -232,16 +240,19 @@ void SystemStateWindow::DrawCDDrive() {
         m_context.EnqueueEvent(events::emu::EjectDisc());
     }
 
+    // TODO: get path from shared context
     ImGui::PushTextWrapPos(ImGui::GetWindowContentRegionMax().x);
     ImGui::TextUnformatted("Image from "
                            "D:\\mocked_path\\extremely_long_path\\file_name_that_is_really_long_to_purposefully_break_"
                            "the_window_layout (J).cue");
     ImGui::PopTextWrapPos();
+    // TODO: get status from CDBlock probe
     ImGui::TextUnformatted("Playing track 2 (CDDA)");
 
     ImGui::SameLine();
 
     ImGui::BeginGroup();
+    // TODO: get MSF from CDBlock probe
     ImGui::TextDisabled("0");
     ImGui::SameLine(0, 0);
     ImGui::Text("2:31.67");
@@ -254,6 +265,7 @@ void SystemStateWindow::DrawCDDrive() {
 
     ImGui::BeginGroup();
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    // TODO: get FAD from CDBlock probe
     ImGui::TextDisabled("00");
     ImGui::SameLine(0, 0);
     ImGui::TextUnformatted("1F63");
