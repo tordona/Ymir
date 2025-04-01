@@ -115,7 +115,7 @@ void SystemStatusWindow::DrawParameters() {
                     if (ImGui::Selectable(fmtRegion(i).c_str())) {
                         m_context.EnqueueEvent(events::emu::SetAreaCode(i));
                         // TODO: optional?
-                        // m_context.eventQueues.emulator.enqueue(EmuEvent::HardReset());
+                        m_context.EnqueueEvent(events::emu::HardReset());
                     }
                 }
 
