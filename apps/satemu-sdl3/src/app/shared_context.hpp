@@ -5,7 +5,7 @@
 #include <app/debug/scu_tracer.hpp>
 #include <app/debug/sh2_tracer.hpp>
 
-#include <app/events/emu_events.hpp>
+#include <app/events/emu_event.hpp>
 
 #include <imgui.h>
 
@@ -84,6 +84,13 @@ struct SharedContext {
     struct EventQueues {
         moodycamel::BlockingConcurrentQueue<EmuEvent> emulator;
     } eventQueues;
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Convenience methods
+
+    void EnqueueEvent(EmuEvent &&emuEvent) {
+        eventQueues.emulator.enqueue(std::move(emuEvent));
+    }
 };
 
 } // namespace app

@@ -1,5 +1,7 @@
 #include "sh2_divu_registers_view.hpp"
 
+#include <app/events/emu_debug_event_factory.hpp>
+
 using namespace satemu;
 
 namespace app::ui {
@@ -100,15 +102,17 @@ void SH2DivisionUnitRegistersView::Display() {
     ImGui::EndGroup();
     ImGui::SetItemTooltip("Division unit interrupt level");
 
+    const bool master = m_sh2.IsMaster();
+
     ImGui::SameLine(0, 15.0f);
     ImGui::TextUnformatted("Calculate:");
     ImGui::SameLine();
     if (ImGui::Button("32x32")) {
-        m_context.eventQueues.emulator.enqueue(EmuEvent::DebugDivide(false, m_sh2.IsMaster()));
+        m_context.EnqueueEvent(events::emu::debug::ExecuteSH2Division(master, false));
     }
     ImGui::SameLine();
     if (ImGui::Button("64x32")) {
-        m_context.eventQueues.emulator.enqueue(EmuEvent::DebugDivide(true, m_sh2.IsMaster()));
+        m_context.EnqueueEvent(events::emu::debug::ExecuteSH2Division(master, true));
     }
 }
 

@@ -179,6 +179,8 @@
 #include <satemu/util/scope_guard.hpp>
 #include <satemu/util/thread_name.hpp>
 
+#include <app/events/emu_event_factory.hpp>
+
 #include <util/rom_loader.hpp>
 
 #include <SDL3/SDL.h>
@@ -767,10 +769,6 @@ void App::RunEmulator() {
     auto t = clk::now();
     bool paused = false; // TODO: this should be updated by the emulator thread via events
 
-    bool softResetPending = false;
-    auto softResetTime = clk::now();
-    auto softResetDuration = 1ms;
-
     auto &port1 = m_context.saturn.SMPC.GetPeripheralPort1();
     auto &port2 = m_context.saturn.SMPC.GetPeripheralPort2();
     auto *pad1 = port1.ConnectStandardPad();
@@ -836,12 +834,12 @@ void App::RunEmulator() {
             // TODO: find better keybindings for these
         case SDL_SCANCODE_F6:
             if (pressed) {
-                m_context.eventQueues.emulator.enqueue(EmuEvent::OpenCloseTray());
+                m_context.EnqueueEvent(events::emu::OpenCloseTray());
             }
             break;
         case SDL_SCANCODE_F8:
             if (pressed) {
-                m_context.eventQueues.emulator.enqueue(EmuEvent::EjectDisc());
+                m_context.EnqueueEvent(events::emu::EjectDisc());
             }
             break;
             // ---- END TODO ----
@@ -849,31 +847,32 @@ void App::RunEmulator() {
         case SDL_SCANCODE_EQUALS:
             if (pressed) {
                 paused = true;
-                m_context.eventQueues.emulator.enqueue(EmuEvent::FrameStep());
+                m_context.EnqueueEvent(events::emu::FrameStep());
             }
             break;
         case SDL_SCANCODE_PAUSE:
             if (pressed) {
                 paused = !paused;
-                m_context.eventQueues.emulator.enqueue(EmuEvent::SetPaused(paused));
+                m_context.EnqueueEvent(events::emu::SetPaused(paused));
             }
 
         case SDL_SCANCODE_R:
             if (pressed) {
                 if ((mod & SDL_KMOD_CTRL) && (mod & SDL_KMOD_SHIFT)) {
-                    m_context.eventQueues.emulator.enqueue(EmuEvent::FactoryReset());
+                    // TODO: Let's not make it that easy to accidentally wipe system settings
+                    // m_context.EnqueueEvent(events::emu::FactoryReset());
                 } else if (mod & SDL_KMOD_CTRL) {
-                    m_context.eventQueues.emulator.enqueue(EmuEvent::HardReset());
+                    m_context.EnqueueEvent(events::emu::HardReset());
                 }
             }
             if (mod & SDL_KMOD_SHIFT) {
-                m_context.eventQueues.emulator.enqueue(EmuEvent::SoftReset(pressed));
+                m_context.EnqueueEvent(events::emu::SetResetButton(pressed));
             }
             break;
         case SDL_SCANCODE_TAB: m_audioSystem.SetSync(!pressed); break;
         case SDL_SCANCODE_F3:
             if (pressed) {
-                m_context.eventQueues.emulator.enqueue(EmuEvent::MemoryDump());
+                m_context.EnqueueEvent(events::emu::DumpMemory());
             }
             break;
         case SDL_SCANCODE_F9:
@@ -883,8 +882,7 @@ void App::RunEmulator() {
             break;
         case SDL_SCANCODE_F11:
             if (pressed) {
-                m_context.eventQueues.emulator.enqueue(
-                    EmuEvent::SetDebugTrace(!m_context.saturn.IsDebugTracingEnabled()));
+                m_context.EnqueueEvent(events::emu::SetDebugTrace(!m_context.saturn.IsDebugTracingEnabled()));
             }
             break;
         default: break;
@@ -899,8 +897,8 @@ void App::RunEmulator() {
         // space in the audio buffer due to being paused
         paused = false;
         m_audioSystem.SetSilent(false);
-        m_context.eventQueues.emulator.enqueue(EmuEvent::SetPaused(false));
-        m_context.eventQueues.emulator.enqueue(EmuEvent::Shutdown());
+        m_context.EnqueueEvent(events::emu::SetPaused(false));
+        m_context.EnqueueEvent(events::emu::Shutdown());
         if (m_emuThread.joinable()) {
             m_emuThread.join();
         }
@@ -973,13 +971,6 @@ void App::RunEmulator() {
             t = t2;
         }
 
-        // Update soft reset signal if pending.
-        // NOTE: This conflicts with the Shift+R keybinding, but the end result is still the same - the system resets.
-        if (softResetPending && t2 > softResetTime) {
-            softResetPending = false;
-            m_context.eventQueues.emulator.enqueue(EmuEvent::SoftReset(false));
-        }
-
         bool fitWindowToScreenNow = false;
         const bool prevForceAspectRatio = forceAspectRatio;
         const double prevForcedAspect = forcedAspect;
@@ -1000,10 +991,10 @@ void App::RunEmulator() {
                     OpenLoadDiscDialog();
                 }
                 if (ImGui::MenuItem("Open/close tray", "F6")) {
-                    m_context.eventQueues.emulator.enqueue(EmuEvent::OpenCloseTray());
+                    m_context.EnqueueEvent(events::emu::OpenCloseTray());
                 }
                 if (ImGui::MenuItem("Eject disc", "F8")) {
-                    m_context.eventQueues.emulator.enqueue(EmuEvent::EjectDisc());
+                    m_context.EnqueueEvent(events::emu::EjectDisc());
                 }
                 ImGui::Separator();
                 if (ImGui::MenuItem("Exit", "Alt+F4")) {
@@ -1036,25 +1027,23 @@ void App::RunEmulator() {
             if (ImGui::BeginMenu("Emulator")) {
                 if (ImGui::MenuItem("Frame step", "=")) {
                     paused = true;
-                    m_context.eventQueues.emulator.enqueue(EmuEvent::FrameStep());
+                    m_context.EnqueueEvent(events::emu::FrameStep());
                 }
                 if (ImGui::MenuItem("Pause/resume", "Pause")) {
                     paused = !paused;
-                    m_context.eventQueues.emulator.enqueue(EmuEvent::SetPaused(paused));
+                    m_context.EnqueueEvent(events::emu::SetPaused(paused));
                 }
                 ImGui::Separator();
                 if (ImGui::MenuItem("Soft reset", "Shift+R")) {
-                    // Send Soft Reset pulse for a short time
-                    m_context.eventQueues.emulator.enqueue(EmuEvent::SoftReset(true));
-                    softResetPending = true;
-                    softResetTime = clk::now() + softResetDuration;
+                    m_context.EnqueueEvent(events::emu::SoftReset());
                 }
                 if (ImGui::MenuItem("Hard reset", "Ctrl+R")) {
-                    m_context.eventQueues.emulator.enqueue(EmuEvent::HardReset());
+                    m_context.EnqueueEvent(events::emu::HardReset());
                 }
-                if (ImGui::MenuItem("Factory reset", "Ctrl+Shift+R")) {
-                    m_context.eventQueues.emulator.enqueue(EmuEvent::FactoryReset());
-                }
+                // TODO: Let's not make it that easy to accidentally wipe system settings
+                /*if (ImGui::MenuItem("Factory reset", "Ctrl+Shift+R")) {
+                    m_context.EnqueueEvent(events::emu::FactoryReset());
+                }*/
                 ImGui::Separator();
                 ImGui::MenuItem("System status", nullptr, &m_systemStatusWindow.Open);
                 ImGui::End();
@@ -1064,14 +1053,14 @@ void App::RunEmulator() {
                 ImGui::Separator();
                 bool emulateSH2Cache = m_context.saturn.IsSH2CacheEmulationEnabled();
                 if (ImGui::MenuItem("SH2 cache emulation", nullptr, &emulateSH2Cache)) {
-                    m_context.eventQueues.emulator.enqueue(EmuEvent::SetEmulateSH2Cache(emulateSH2Cache));
+                    m_context.EnqueueEvent(events::emu::SetEmulateSH2Cache(emulateSH2Cache));
                 }
                 ImGui::End();
             }
             if (ImGui::BeginMenu("Debug")) {
                 bool debugTrace = m_context.saturn.IsDebugTracingEnabled();
                 if (ImGui::MenuItem("Enable tracing", "F11", &debugTrace)) {
-                    m_context.eventQueues.emulator.enqueue(EmuEvent::SetDebugTrace(debugTrace));
+                    m_context.EnqueueEvent(events::emu::SetDebugTrace(debugTrace));
                 }
                 ImGui::Separator();
                 if (ImGui::MenuItem("Open memory viewer", nullptr)) {
@@ -1085,7 +1074,7 @@ void App::RunEmulator() {
                     ImGui::EndMenu();
                 }
                 if (ImGui::MenuItem("Dump all memory", "F3")) {
-                    m_context.eventQueues.emulator.enqueue(EmuEvent::MemoryDump());
+                    m_context.EnqueueEvent(events::emu::DumpMemory());
                 }
                 ImGui::Separator();
 
@@ -1314,7 +1303,9 @@ void App::EmulatorThread() {
             switch (cmd.type) {
             case FactoryReset: m_context.saturn.FactoryReset(); break;
             case HardReset: m_context.saturn.Reset(true); break;
-            case SoftReset: m_context.saturn.SMPC.SetResetButtonState(std::get<bool>(cmd.value)); break;
+            case SoftReset: m_context.saturn.Reset(false); break;
+            case SetResetButton: m_context.saturn.SMPC.SetResetButtonState(std::get<bool>(cmd.value)); break;
+
             case FrameStep:
                 frameStep = true;
                 paused = false;
@@ -1324,139 +1315,7 @@ void App::EmulatorThread() {
                 paused = std::get<bool>(cmd.value);
                 m_audioSystem.SetSilent(paused);
                 break;
-            case SetDebugTrace: //
-            {
-                const bool enable = std::get<bool>(cmd.value);
-                m_context.saturn.EnableDebugTracing(enable);
-                if (enable) {
-                    m_context.saturn.masterSH2.UseTracer(&m_context.tracers.masterSH2);
-                    m_context.saturn.slaveSH2.UseTracer(&m_context.tracers.slaveSH2);
-                    m_context.saturn.SCU.UseTracer(&m_context.tracers.SCU);
-                }
-                fmt::println("Debug tracing {}", (enable ? "enabled" : "disabled"));
-                break;
-            }
-            case SetEmulateSH2Cache: //
-            {
-                const bool enable = std::get<bool>(cmd.value);
-                m_context.saturn.EnableSH2CacheEmulation(enable);
-                fmt::println("SH2 cache emulation {}", (enable ? "enabled" : "disabled"));
-                break;
-            }
-            case MemoryDump: //
-            {
-                {
-                    std::ofstream out{"wram-lo.bin", std::ios::binary};
-                    m_context.saturn.mem.DumpWRAMLow(out);
-                }
-                {
-                    std::ofstream out{"wram-hi.bin", std::ios::binary};
-                    m_context.saturn.mem.DumpWRAMHigh(out);
-                }
-                {
-                    std::ofstream out{"vdp1-vram.bin", std::ios::binary};
-                    m_context.saturn.VDP.DumpVDP1VRAM(out);
-                }
-                {
-                    std::ofstream out{"vdp1-fbs.bin", std::ios::binary};
-                    m_context.saturn.VDP.DumpVDP1Framebuffers(out);
-                }
-                {
-                    std::ofstream out{"vdp2-vram.bin", std::ios::binary};
-                    m_context.saturn.VDP.DumpVDP2VRAM(out);
-                }
-                {
-                    std::ofstream out{"vdp2-cram.bin", std::ios::binary};
-                    m_context.saturn.VDP.DumpVDP2CRAM(out);
-                }
-                {
-                    std::ofstream out{"scu-dsp-prog.bin", std::ios::binary};
-                    m_context.saturn.SCU.DumpDSPProgramRAM(out);
-                }
-                {
-                    std::ofstream out{"scu-dsp-data.bin", std::ios::binary};
-                    m_context.saturn.SCU.DumpDSPDataRAM(out);
-                }
-                {
-                    std::ofstream out{"scu-dsp-regs.bin", std::ios::binary};
-                    m_context.saturn.SCU.DumpDSPRegs(out);
-                }
-                {
-                    std::ofstream out{"scsp-wram.bin", std::ios::binary};
-                    m_context.saturn.SCSP.DumpWRAM(out);
-                }
-                {
-                    std::ofstream out{"scsp-dsp-mpro.bin", std::ios::binary};
-                    m_context.saturn.SCSP.DumpDSP_MPRO(out);
-                }
-                {
-                    std::ofstream out{"scsp-dsp-temp.bin", std::ios::binary};
-                    m_context.saturn.SCSP.DumpDSP_TEMP(out);
-                }
-                {
-                    std::ofstream out{"scsp-dsp-mems.bin", std::ios::binary};
-                    m_context.saturn.SCSP.DumpDSP_MEMS(out);
-                }
-                {
-                    std::ofstream out{"scsp-dsp-coef.bin", std::ios::binary};
-                    m_context.saturn.SCSP.DumpDSP_COEF(out);
-                }
-                {
-                    std::ofstream out{"scsp-dsp-madrs.bin", std::ios::binary};
-                    m_context.saturn.SCSP.DumpDSP_MADRS(out);
-                }
-                {
-                    std::ofstream out{"scsp-dsp-mixs.bin", std::ios::binary};
-                    m_context.saturn.SCSP.DumpDSP_MIXS(out);
-                }
-                {
-                    std::ofstream out{"scsp-dsp-efreg.bin", std::ios::binary};
-                    m_context.saturn.SCSP.DumpDSP_EFREG(out);
-                }
-                {
-                    std::ofstream out{"scsp-dsp-exts.bin", std::ios::binary};
-                    m_context.saturn.SCSP.DumpDSP_EXTS(out);
-                }
-                {
-                    std::ofstream out{"scsp-dsp-regs.bin", std::ios::binary};
-                    m_context.saturn.SCSP.DumpDSPRegs(out);
-                }
-                break;
-            }
-            case DebugWriteMain: {
-                // TODO: support 16-bit and 32-bit writes
-                auto [address, value, enableSideEffects] = std::get<EmuEvent::DebugWriteMainData>(cmd.value);
-                if (enableSideEffects) {
-                    m_context.saturn.mainBus.Write<uint8>(address, value);
-                } else {
-                    m_context.saturn.mainBus.Poke<uint8>(address, value);
-                }
-                break;
-            }
-            case DebugWriteSH2: {
-                // TODO: support 16-bit and 32-bit writes
-                auto [address, value, enableSideEffects, bypassSH2Cache, master] =
-                    std::get<EmuEvent::DebugWriteSH2Data>(cmd.value);
-                auto &sh2 = master ? m_context.saturn.masterSH2 : m_context.saturn.slaveSH2;
-                auto &probe = sh2.GetProbe();
-                if (enableSideEffects) {
-                    probe.MemWriteByte(address, value, bypassSH2Cache);
-                } else {
-                    probe.MemPokeByte(address, value, bypassSH2Cache);
-                }
-                break;
-            }
-            case DebugDivide: {
-                auto [div64, master] = std::get<EmuEvent::DebugDivideData>(cmd.value);
-                auto &sh2 = master ? m_context.saturn.masterSH2 : m_context.saturn.slaveSH2;
-                auto &probe = sh2.GetProbe();
-                if (div64) {
-                    probe.ExecuteDiv64();
-                } else {
-                    probe.ExecuteDiv32();
-                }
-                break;
-            }
+
             case OpenCloseTray:
                 if (m_context.saturn.IsTrayOpen()) {
                     m_context.saturn.CloseTray();
@@ -1466,6 +1325,9 @@ void App::EmulatorThread() {
                 break;
             case LoadDisc: LoadDiscImage(std::get<std::string>(cmd.value)); break;
             case EjectDisc: m_context.saturn.EjectDisc(); break;
+
+            case RunFunction: std::get<std::function<void(SharedContext &)>>(cmd.value)(m_context); break;
+
             case Shutdown: return;
             }
         }
@@ -1499,7 +1361,7 @@ void App::ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, i
     } else {
         // Only one file should be selected
         const char *file = *filelist;
-        m_context.eventQueues.emulator.enqueue(EmuEvent::LoadDisc(file));
+        m_context.EnqueueEvent(events::emu::LoadDisc(file));
     }
 }
 

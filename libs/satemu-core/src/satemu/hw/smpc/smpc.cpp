@@ -133,7 +133,12 @@ FLATTEN void SMPC::UpdateClockRatios(const sys::ClockRatios &clockRatios) {
     m_rtc.UpdateClockRatios(clockRatios);
 }
 
+uint8 SMPC::GetAreaCode() const {
+    return m_areaCode;
+}
+
 void SMPC::SetAreaCode(uint8 areaCode) {
+    areaCode &= 0xF;
     devlog::debug<grp::base>("Setting area code to {:X}", areaCode);
     m_areaCode = areaCode;
 }

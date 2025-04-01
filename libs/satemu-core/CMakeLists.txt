@@ -203,6 +203,7 @@ target_precompile_headers(satemu-core
         <deque>
         <filesystem>
         <fstream>
+        <functional>
         <initializer_list>
         <iosfwd>
         <iostream>

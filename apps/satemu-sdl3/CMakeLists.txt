@@ -16,7 +16,11 @@ add_executable(satemu-sdl3
     src/app/debug/sh2_tracer.cpp
     src/app/debug/sh2_tracer.hpp
     
-    src/app/events/emu_events.hpp
+    src/app/events/emu_debug_event_factory.cpp
+    src/app/events/emu_debug_event_factory.hpp
+    src/app/events/emu_event.hpp
+    src/app/events/emu_event_factory.cpp
+    src/app/events/emu_event_factory.hpp
 
     src/app/ui/window_base.cpp
     src/app/ui/window_base.hpp

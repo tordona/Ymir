@@ -2,6 +2,8 @@
 
 #include <app/shared_context.hpp>
 
+#include <app/events/emu_debug_event_factory.hpp>
+
 #include <imgui_memory_editor.h>
 
 namespace app::ui::mem_view {
@@ -112,7 +114,7 @@ namespace regions {
     inline void MainBusWrite(ImU8 *mem, size_t off, ImU8 d, void *user_data) {
         auto &state = *static_cast<MemoryViewerState *>(user_data);
         off += state.selectedRegion->baseAddress;
-        state.sharedCtx.eventQueues.emulator.enqueue(EmuEvent::DebugWriteMain(off, d, state.enableSideEffects));
+        state.sharedCtx.EnqueueEvent(events::emu::debug::WriteMainMemory(off, d, state.enableSideEffects));
     }
 
     inline ImU32 MainBusBgColor(const ImU8 * /*mem*/, size_t /*off*/, void * /*user_data*/) {
@@ -134,8 +136,8 @@ namespace regions {
     inline void SH2BusWrite(ImU8 *mem, size_t off, ImU8 d, void *user_data) {
         auto &state = *static_cast<MemoryViewerState *>(user_data);
         off += state.selectedRegion->baseAddress;
-        state.sharedCtx.eventQueues.emulator.enqueue(
-            EmuEvent::DebugWriteSH2(off, d, state.enableSideEffects, state.bypassSH2Cache, master));
+        state.sharedCtx.EnqueueEvent(
+            events::emu::debug::WriteSH2Memory(off, d, state.enableSideEffects, master, state.bypassSH2Cache));
     }
 
     template <bool master>

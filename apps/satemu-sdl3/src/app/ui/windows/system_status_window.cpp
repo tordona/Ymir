@@ -1,5 +1,7 @@
 #include "system_status_window.hpp"
 
+#include <app/events/emu_event_factory.hpp>
+
 using namespace satemu;
 
 namespace app::ui {
@@ -55,11 +57,11 @@ void SystemStatusWindow::DrawParameters() {
         }
         if (ImGui::TableNextColumn()) {
             if (ImGui::RadioButton("320 pixels", clockSpeed == sys::ClockSpeed::_320)) {
-                // TODO: m_context.eventQueues.emulator.enqueue(EmuEvent::SetClockSpeed(sys::ClockSpeed::_320));
+                m_context.EnqueueEvent(events::emu::SetClockSpeed(sys::ClockSpeed::_320));
             }
             ImGui::SameLine();
             if (ImGui::RadioButton("352 pixels", clockSpeed == sys::ClockSpeed::_352)) {
-                // TODO: m_context.eventQueues.emulator.enqueue(EmuEvent::SetClockSpeed(sys::ClockSpeed::_352));
+                m_context.EnqueueEvent(events::emu::SetClockSpeed(sys::ClockSpeed::_352));
             }
         }
 
@@ -70,11 +72,11 @@ void SystemStatusWindow::DrawParameters() {
         }
         if (ImGui::TableNextColumn()) {
             if (ImGui::RadioButton("NTSC", videoStandard == sys::VideoStandard::NTSC)) {
-                // TODO: m_context.eventQueues.emulator.enqueue(EmuEvent::SetVideoStandard(sys::VideoStandard::NTSC));
+                m_context.EnqueueEvent(events::emu::SetVideoStandard(sys::VideoStandard::NTSC));
             }
             ImGui::SameLine();
             if (ImGui::RadioButton("PAL", videoStandard == sys::VideoStandard::PAL)) {
-                // TODO: m_context.eventQueues.emulator.enqueue(EmuEvent::SetVideoStandard(sys::VideoStandard::PAL));
+                m_context.EnqueueEvent(events::emu::SetVideoStandard(sys::VideoStandard::PAL));
             }
         }
 
@@ -84,25 +86,38 @@ void SystemStatusWindow::DrawParameters() {
             ImGui::TextUnformatted("Region");
         }
         if (ImGui::TableNextColumn()) {
-            // TODO: uint8 areaCode = m_context.saturn.SMPC.GetAreaCode();
-            // TODO: comboxbox with options
-            if (ImGui::BeginCombo("##region", "North America")) {
-                //   0x1: (J) Japan
-                //   0x2: (T) Asia NTSC
-                //   0x4: (U) North America
-                //   0x5: (B) Central/South America NTSC
-                //   0x6: (K) Korea
-                //   0xA: (A) Asia PAL
-                //   0xC: (E) Europe PAL
-                //   0xD: (L) Central/South America PAL
-                ImGui::Selectable("Japan");
-                ImGui::Selectable("Asia NTSC");
-                ImGui::Selectable("North America");
-                ImGui::Selectable("Central/South America NTSC");
-                ImGui::Selectable("Korea");
-                ImGui::Selectable("Asia PAL");
-                ImGui::Selectable("Europe PAL");
-                ImGui::Selectable("Central/South America PAL");
+            static constexpr struct {
+                uint8 charCode;
+                const char *name;
+            } kRegions[] = {
+                {/*0x0*/ '?', "Invalid"},       {/*0x1*/ 'J', "Japan"},
+                {/*0x2*/ 'T', "Asia NTSC"},     {/*0x3*/ '?', "Invalid"},
+                {/*0x4*/ 'U', "North America"}, {/*0x5*/ 'B', "Central/South America NTSC"},
+                {/*0x6*/ 'K', "Korea"},         {/*0x7*/ '?', "Invalid"},
+                {/*0x8*/ '?', "Invalid"},       {/*0x9*/ '?', "Invalid"},
+                {/*0xA*/ 'A', "Asia PAL"},      {/*0xB*/ '?', "Invalid"},
+                {/*0xC*/ 'E', "Europe PAL"},    {/*0xD*/ 'L', "Central/South America PAL"},
+                {/*0xE*/ '?', "Invalid"},       {/*0xF*/ '?', "Invalid"},
+            };
+
+            auto fmtRegion = [](uint8 index) {
+                index &= 0xF;
+                return fmt::format("({:c}) {}", kRegions[index].charCode, kRegions[index].name);
+            };
+
+            uint8 areaCode = m_context.saturn.SMPC.GetAreaCode();
+            if (ImGui::BeginCombo("##region", fmtRegion(areaCode).c_str(),
+                                  ImGuiComboFlags_WidthFitPreview | ImGuiComboFlags_HeightLargest)) {
+                for (uint8 i = 0; i <= 0xF; i++) {
+                    if (kRegions[i].charCode == '?') {
+                        continue;
+                    }
+                    if (ImGui::Selectable(fmtRegion(i).c_str())) {
+                        m_context.EnqueueEvent(events::emu::SetAreaCode(i));
+                        // TODO: optional?
+                        // m_context.eventQueues.emulator.enqueue(EmuEvent::HardReset());
+                    }
+                }
 
                 ImGui::EndCombo();
             }
@@ -180,24 +195,23 @@ void SystemStatusWindow::DrawRealTimeClock() {
 }
 
 void SystemStatusWindow::DrawScreen() {
-    // TODO: resolution
-    // TODO: interlace mode
+    // TODO: get resolution and interlace mode from VDP
     ImGui::TextUnformatted("Resolution:");
     ImGui::SameLine();
     ImGui::TextUnformatted("352x224 progressive");
 }
 
 void SystemStatusWindow::DrawCDDrive() {
-    if (ImGui::Button("Open tray")) {
-        // TODO
+    if (ImGui::Button(m_context.saturn.CDBlock.IsTrayOpen() ? "Close tray" : "Open tray")) {
+        m_context.EnqueueEvent(events::emu::OpenCloseTray());
     }
     ImGui::SameLine();
-    if (ImGui::Button("Load disc")) {
-        // TODO
+    if (ImGui::Button("Load disc...")) {
+        // TODO: GUI events
     }
     ImGui::SameLine();
     if (ImGui::Button("Eject disc")) {
-        // TODO
+        m_context.EnqueueEvent(events::emu::EjectDisc());
     }
 
     ImGui::PushTextWrapPos(ImGui::GetWindowContentRegionMax().x);
@@ -273,16 +287,17 @@ void SystemStatusWindow::DrawPeripherals() {
 
 void SystemStatusWindow::DrawActions() {
     if (ImGui::Button("Hard reset")) {
-        // TODO
+        m_context.EnqueueEvent(events::emu::HardReset());
     }
     ImGui::SameLine();
     if (ImGui::Button("Soft reset")) {
-        // TODO
+        m_context.EnqueueEvent(events::emu::SoftReset());
     }
-    ImGui::SameLine();
+    // TODO: Let's not make it that easy to accidentally wipe system settings
+    /*ImGui::SameLine();
     if (ImGui::Button("Factory reset")) {
-        // TODO
-    }
+        m_context.EnqueueEvent(events::emu::FactoryReset());
+    }*/
 }
 
 } // namespace app::ui
