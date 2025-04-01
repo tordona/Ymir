@@ -1,4 +1,4 @@
-#include "system_status_window.hpp"
+#include "system_state_window.hpp"
 
 #include <app/events/emu_event_factory.hpp>
 
@@ -8,18 +8,18 @@ namespace app::ui {
 
 inline constexpr float kWindowWidth = 350.0f;
 
-SystemStatusWindow::SystemStatusWindow(SharedContext &context)
+SystemStateWindow::SystemStateWindow(SharedContext &context)
     : WindowBase(context) {
 
-    m_windowConfig.name = "System status";
+    m_windowConfig.name = "System state";
     m_windowConfig.flags = ImGuiWindowFlags_AlwaysAutoResize;
 }
 
-void SystemStatusWindow::PrepareWindow() {
+void SystemStateWindow::PrepareWindow() {
     ImGui::SetNextWindowSizeConstraints(ImVec2(kWindowWidth, 0), ImVec2(kWindowWidth, FLT_MAX));
 }
 
-void SystemStatusWindow::DrawContents() {
+void SystemStateWindow::DrawContents() {
     ImGui::BeginGroup();
 
     ImGui::SeparatorText("Parameters");
@@ -45,7 +45,7 @@ void SystemStatusWindow::DrawContents() {
     ImGui::EndGroup();
 }
 
-void SystemStatusWindow::DrawParameters() {
+void SystemStateWindow::DrawParameters() {
     sys::ClockSpeed clockSpeed = m_context.saturn.GetClockSpeed();
     sys::VideoStandard videoStandard = m_context.saturn.GetVideoStandard();
 
@@ -84,6 +84,12 @@ void SystemStatusWindow::DrawParameters() {
         if (ImGui::TableNextColumn()) {
             ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted("Region");
+            ImGui::SameLine();
+            ImGui::TextDisabled("(?)");
+            if (ImGui::BeginItemTooltip()) {
+                ImGui::TextUnformatted("Changing this option will cause a hard reset");
+                ImGui::EndTooltip();
+            }
         }
         if (ImGui::TableNextColumn()) {
             static constexpr struct {
@@ -112,7 +118,7 @@ void SystemStatusWindow::DrawParameters() {
                     if (kRegions[i].charCode == '?') {
                         continue;
                     }
-                    if (ImGui::Selectable(fmtRegion(i).c_str())) {
+                    if (ImGui::Selectable(fmtRegion(i).c_str(), i == areaCode) && i != areaCode) {
                         m_context.EnqueueEvent(events::emu::SetAreaCode(i));
                         // TODO: optional?
                         m_context.EnqueueEvent(events::emu::HardReset());
@@ -127,7 +133,7 @@ void SystemStatusWindow::DrawParameters() {
     }
 }
 
-void SystemStatusWindow::DrawScreen() {
+void SystemStateWindow::DrawScreen() {
     auto &probe = m_context.saturn.VDP.GetProbe();
     auto [width, height] = probe.GetResolution();
     auto interlaceMode = probe.GetInterlaceMode();
@@ -140,14 +146,14 @@ void SystemStatusWindow::DrawScreen() {
     ImGui::Text("%ux%u %s", width, height, kInterlaceNames[static_cast<uint8>(interlaceMode)]);
 }
 
-void SystemStatusWindow::DrawRealTimeClock() {
+void SystemStateWindow::DrawRealTimeClock() {
     // TODO: current date-time (editable)
     ImGui::TextUnformatted("Current date/time:");
     ImGui::SameLine();
     ImGui::TextUnformatted("01/02/2003 12:34:56 AM");
 }
 
-void SystemStatusWindow::DrawClocks() {
+void SystemStateWindow::DrawClocks() {
     if (ImGui::BeginTable("sys_clocks", 2, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn("Components");
         ImGui::TableSetupColumn("Clock");
@@ -213,7 +219,7 @@ void SystemStatusWindow::DrawClocks() {
     }
 }
 
-void SystemStatusWindow::DrawCDDrive() {
+void SystemStateWindow::DrawCDDrive() {
     if (ImGui::Button(m_context.saturn.CDBlock.IsTrayOpen() ? "Close tray" : "Open tray")) {
         m_context.EnqueueEvent(events::emu::OpenCloseTray());
     }
@@ -231,15 +237,30 @@ void SystemStatusWindow::DrawCDDrive() {
                            "D:\\mocked_path\\extremely_long_path\\file_name_that_is_really_long_to_purposefully_break_"
                            "the_window_layout (J).cue");
     ImGui::PopTextWrapPos();
-    ImGui::TextUnformatted("Playing track 2 - CDDA - 2:31.67");
-    ImGui::TextUnformatted("Frame address ");
+    ImGui::TextUnformatted("Playing track 2 - CDDA");
+
+    ImGui::BeginGroup();
+    ImGui::TextDisabled("0");
     ImGui::SameLine(0, 0);
+    ImGui::Text("2:31.67");
+    ImGui::EndGroup();
+    ImGui::SetItemTooltip("MM:SS.FF\nMinutes, seconds and frames\n(75 frames per second)");
+    ImGui::SameLine(0, 0);
+    ImGui::TextUnformatted(" :: ");
+
+    ImGui::SameLine(0, 0);
+
+    ImGui::BeginGroup();
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-    ImGui::TextUnformatted("A1F63");
+    ImGui::TextDisabled("00");
+    ImGui::SameLine(0, 0);
+    ImGui::TextUnformatted("1F63");
     ImGui::PopFont();
+    ImGui::EndGroup();
+    ImGui::SetItemTooltip("Frame address (FAD)");
 }
 
-void SystemStatusWindow::DrawCartridge() {
+void SystemStateWindow::DrawCartridge() {
     if (ImGui::Button("Insert...")) {
         // TODO: open cartridge selector
     }
@@ -257,7 +278,7 @@ void SystemStatusWindow::DrawCartridge() {
     // e.g., for DRAM cartridges, show a button to open the memory viewer on its comtents
 }
 
-void SystemStatusWindow::DrawPeripherals() {
+void SystemStateWindow::DrawPeripherals() {
     // TODO: fill in dynamically
     if (ImGui::BeginTable("sys_peripherals", 3, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableNextRow();
@@ -270,7 +291,7 @@ void SystemStatusWindow::DrawPeripherals() {
             ImGui::TextUnformatted("Standard Saturn pad");
         }
         if (ImGui::TableNextColumn()) {
-            if (ImGui::Button("Keybindings...##port_1")) {
+            if (ImGui::Button("Configure...##port_1")) {
                 // TODO
             }
         }
@@ -285,7 +306,7 @@ void SystemStatusWindow::DrawPeripherals() {
             ImGui::TextUnformatted("Standard Saturn pad");
         }
         if (ImGui::TableNextColumn()) {
-            if (ImGui::Button("Keybindings...##port_2")) {
+            if (ImGui::Button("Configure...##port_2")) {
                 // TODO
             }
         }
@@ -297,7 +318,7 @@ void SystemStatusWindow::DrawPeripherals() {
     // TODO: button to open peripheral keybindings
 }
 
-void SystemStatusWindow::DrawActions() {
+void SystemStateWindow::DrawActions() {
     if (ImGui::Button("Hard reset")) {
         m_context.EnqueueEvent(events::emu::HardReset());
     }

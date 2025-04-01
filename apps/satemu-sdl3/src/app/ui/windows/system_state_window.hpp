@@ -4,9 +4,9 @@
 
 namespace app::ui {
 
-class SystemStatusWindow : public WindowBase {
+class SystemStateWindow : public WindowBase {
 public:
-    SystemStatusWindow(SharedContext &context);
+    SystemStateWindow(SharedContext &context);
 
 protected:
     void PrepareWindow() override;

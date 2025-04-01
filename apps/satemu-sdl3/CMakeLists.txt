@@ -84,8 +84,8 @@ add_executable(satemu-sdl3
 
     src/app/ui/windows/about_window.cpp
     src/app/ui/windows/about_window.hpp
-    src/app/ui/windows/system_status_window.cpp
-    src/app/ui/windows/system_status_window.hpp
+    src/app/ui/windows/system_state_window.cpp
+    src/app/ui/windows/system_state_window.hpp
 
     src/app/ui/windows/debug/debug_output_window.cpp
     src/app/ui/windows/debug/debug_output_window.hpp
