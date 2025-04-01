@@ -237,7 +237,9 @@ void SystemStateWindow::DrawCDDrive() {
                            "D:\\mocked_path\\extremely_long_path\\file_name_that_is_really_long_to_purposefully_break_"
                            "the_window_layout (J).cue");
     ImGui::PopTextWrapPos();
-    ImGui::TextUnformatted("Playing track 2 - CDDA");
+    ImGui::TextUnformatted("Playing track 2 (CDDA)");
+
+    ImGui::SameLine();
 
     ImGui::BeginGroup();
     ImGui::TextDisabled("0");
