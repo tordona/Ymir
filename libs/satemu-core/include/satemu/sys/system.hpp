@@ -12,10 +12,14 @@ struct System {
     VideoStandard videoStandard = VideoStandard::NTSC;
     ClockSpeed clockSpeed = ClockSpeed::_320;
 
-    void UpdateClockRatios() {
+    const ClockRatios &GetClockRatios() const {
         const bool clock352 = clockSpeed == ClockSpeed::_352;
         const bool pal = videoStandard == VideoStandard::PAL;
-        const ClockRatios &clockRatios = kClockRatios[clock352 | (pal << 1)];
+        return kClockRatios[clock352 | (pal << 1)];
+    }
+
+    void UpdateClockRatios() {
+        const ClockRatios &clockRatios = GetClockRatios();
         for (auto &cb : m_clockSpeedChangeCallbacks) {
             cb(clockRatios);
         }

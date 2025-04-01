@@ -55,6 +55,10 @@ enum class ClockSpeed { _320, _352 };
 //    4,000,000.00   32256:229320        64:455
 
 struct ClockRatios {
+    uint64 masterClock;
+    uint64 masterClockNum;
+    uint64 masterClockDen;
+
     uint64 SCSPNum;
     uint64 SCSPDen;
 
@@ -71,6 +75,10 @@ struct ClockRatios {
 inline constexpr std::array<ClockRatios, 4> kClockRatios = {
     // [0] NTSC, 320 mode
     ClockRatios{
+        .masterClock = 39375000ull,
+        .masterClockNum = 8 * 15,
+        .masterClockDen = 11 * 16,
+
         .SCSPNum = 39424,
         .SCSPDen = 46875,
         .CDBlockNum = 704,
@@ -83,6 +91,10 @@ inline constexpr std::array<ClockRatios, 4> kClockRatios = {
 
     // [1] NTSC, 352 mode
     ClockRatios{
+        .masterClock = 39375000ull,
+        .masterClockNum = 8,
+        .masterClockDen = 11,
+
         .SCSPNum = 2464,
         .SCSPDen = 3125,
         .CDBlockNum = 44,
@@ -95,6 +107,10 @@ inline constexpr std::array<ClockRatios, 4> kClockRatios = {
 
     // [2] PAL, 320 mode
     ClockRatios{
+        .masterClock = 28437500ull,
+        .masterClockNum = 15,
+        .masterClockDen = 16,
+
         .SCSPNum = 172032,
         .SCSPDen = 203125,
         .CDBlockNum = 1024,
@@ -107,6 +123,10 @@ inline constexpr std::array<ClockRatios, 4> kClockRatios = {
 
     // [3] PAL, 352 mode
     ClockRatios{
+        .masterClock = 28437500ull,
+        .masterClockNum = 1,
+        .masterClockDen = 1,
+
         .SCSPNum = 32256,
         .SCSPDen = 40625,
         .CDBlockNum = 64,

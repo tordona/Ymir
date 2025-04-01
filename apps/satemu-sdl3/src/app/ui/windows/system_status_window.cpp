@@ -133,14 +133,16 @@ void SystemStatusWindow::DrawClocks() {
         ImGui::TableSetupColumn("Clock");
         ImGui::TableHeadersRow();
 
-        // TODO: calculate clocks from ratios
+        const sys::ClockRatios &clockRatios = m_context.saturn.GetClockRatios();
 
+        const double masterClock =
+            (double)clockRatios.masterClock * clockRatios.masterClockNum / clockRatios.masterClockDen / 1000000.0;
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
             ImGui::TextUnformatted("SH-2, SCU and VDPs");
         }
         if (ImGui::TableNextColumn()) {
-            ImGui::TextUnformatted("28.63636 MHz");
+            ImGui::Text("%.5lf MHz", masterClock);
         }
 
         ImGui::TableNextRow();
@@ -148,7 +150,7 @@ void SystemStatusWindow::DrawClocks() {
             ImGui::TextUnformatted("SCU DSP");
         }
         if (ImGui::TableNextColumn()) {
-            ImGui::TextUnformatted("14.31818 MHz");
+            ImGui::Text("%.5lf MHz", masterClock * 0.5);
         }
 
         ImGui::TableNextRow();
@@ -156,7 +158,8 @@ void SystemStatusWindow::DrawClocks() {
             ImGui::TextUnformatted("Pixel clock");
         }
         if (ImGui::TableNextColumn()) {
-            ImGui::TextUnformatted("7.15909 MHz");
+            // TODO: check for double resolution
+            ImGui::Text("%.5lf MHz", masterClock * 0.25);
         }
 
         ImGui::TableNextRow();
@@ -164,7 +167,7 @@ void SystemStatusWindow::DrawClocks() {
             ImGui::TextUnformatted("SCSP");
         }
         if (ImGui::TableNextColumn()) {
-            ImGui::TextUnformatted("22.57920 MHz");
+            ImGui::Text("%.5lf MHz", masterClock * clockRatios.SCSPNum / clockRatios.SCSPDen);
         }
 
         ImGui::TableNextRow();
@@ -172,7 +175,7 @@ void SystemStatusWindow::DrawClocks() {
             ImGui::TextUnformatted("CD Block SH-1");
         }
         if (ImGui::TableNextColumn()) {
-            ImGui::TextUnformatted("20.00000 MHz");
+            ImGui::Text("%.5lf MHz", masterClock * clockRatios.CDBlockNum / clockRatios.CDBlockDen);
         }
 
         ImGui::TableNextRow();
@@ -180,7 +183,7 @@ void SystemStatusWindow::DrawClocks() {
             ImGui::TextUnformatted("SMPC MCU");
         }
         if (ImGui::TableNextColumn()) {
-            ImGui::TextUnformatted("4.00000 MHz");
+            ImGui::Text("%.5lf MHz", masterClock * clockRatios.SMPCNum / clockRatios.SMPCDen);
         }
 
         ImGui::EndTable();

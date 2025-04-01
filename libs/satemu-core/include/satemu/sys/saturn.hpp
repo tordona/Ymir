@@ -35,6 +35,8 @@ struct Saturn : sys::ISystemOperations {
     sys::ClockSpeed GetClockSpeed() const;
     void SetClockSpeed(sys::ClockSpeed clockSpeed);
 
+    const sys::ClockRatios &GetClockRatios() const;
+
     // Loads the specified IPL ROM image.
     void LoadIPL(std::span<uint8, sys::kIPLSize> ipl);
 

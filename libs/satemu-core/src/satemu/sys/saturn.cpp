@@ -128,6 +128,10 @@ void Saturn::SetClockSpeed(sys::ClockSpeed clockSpeed) {
     m_system.UpdateClockRatios();
 }
 
+const sys::ClockRatios &Saturn::GetClockRatios() const {
+    return m_system.GetClockRatios();
+}
+
 void Saturn::LoadIPL(std::span<uint8, sys::kIPLSize> ipl) {
     mem.LoadIPL(ipl);
 }
