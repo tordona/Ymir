@@ -218,7 +218,7 @@ App::App()
 }
 
 int App::Run(const CommandLineOptions &options) {
-    fmt::println("satemu {}", satemu::version::string);
+    devlog::info<grp::base>("satemu {}", satemu::version::string);
 
     m_options = options;
 
@@ -226,7 +226,7 @@ int App::Run(const CommandLineOptions &options) {
     // Initialize SDL subsystems
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS)) {
-        SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
+        devlog::error<grp::base>("Unable to initialize SDL: {}", SDL_GetError());
         return EXIT_FAILURE;
     }
     util::ScopeGuard sgQuit{[&] { SDL_Quit(); }};
@@ -236,11 +236,11 @@ int App::Run(const CommandLineOptions &options) {
         constexpr auto iplSize = satemu::sys::kIPLSize;
         auto rom = util::LoadFile(options.biosPath);
         if (rom.size() != iplSize) {
-            fmt::println("IPL ROM size mismatch: expected {} bytes, got {} bytes", iplSize, rom.size());
+            devlog::error<grp::base>("IPL ROM size mismatch: expected {} bytes, got {} bytes", iplSize, rom.size());
             return EXIT_FAILURE;
         }
         m_context.saturn.LoadIPL(std::span<uint8, iplSize>(rom));
-        fmt::println("IPL ROM loaded");
+        devlog::info<grp::base>("IPL ROM loaded");
     }
 
     // Load disc image if provided
@@ -521,7 +521,7 @@ void App::RunEmulator() {
 
     SDL_PropertiesID windowProps = SDL_CreateProperties();
     if (windowProps == 0) {
-        SDL_Log("Unable to create window properties: %s", SDL_GetError());
+        devlog::error<grp::base>("Unable to create window properties: {}", SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyWindowProps{[&] { SDL_DestroyProperties(windowProps); }};
@@ -543,7 +543,7 @@ void App::RunEmulator() {
 
     screen.window = SDL_CreateWindowWithProperties(windowProps);
     if (screen.window == nullptr) {
-        SDL_Log("Unable to create window: %s", SDL_GetError());
+        devlog::error<grp::base>("Unable to create window: {}", SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyWindow{[&] { SDL_DestroyWindow(screen.window); }};
@@ -553,7 +553,7 @@ void App::RunEmulator() {
 
     SDL_PropertiesID rendererProps = SDL_CreateProperties();
     if (rendererProps == 0) {
-        SDL_Log("Unable to create renderer properties: %s", SDL_GetError());
+        devlog::error<grp::base>("Unable to create renderer properties: {}", SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyRendererProps{[&] { SDL_DestroyProperties(rendererProps); }};
@@ -566,7 +566,7 @@ void App::RunEmulator() {
 
     auto renderer = SDL_CreateRendererWithProperties(rendererProps);
     if (renderer == nullptr) {
-        SDL_Log("Unable to create renderer: %s", SDL_GetError());
+        devlog::error<grp::base>("Unable to create renderer: {}", SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyRenderer{[&] { SDL_DestroyRenderer(renderer); }};
@@ -586,7 +586,7 @@ void App::RunEmulator() {
     auto fbTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, vdp::kMaxResH,
                                        vdp::kMaxResV);
     if (fbTexture == nullptr) {
-        SDL_Log("Unable to create texture: %s", SDL_GetError());
+        devlog::error<grp::base>("Unable to create texture: {}", SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyFbTexture{[&] { SDL_DestroyTexture(fbTexture); }};
@@ -596,7 +596,7 @@ void App::RunEmulator() {
     auto dispTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_TARGET,
                                          vdp::kMaxResH * screen.fbScale, vdp::kMaxResV * screen.fbScale);
     if (dispTexture == nullptr) {
-        SDL_Log("Unable to create texture: %s", SDL_GetError());
+        devlog::error<grp::base>("Unable to create texture: {}", SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyDispTexture{[&] { SDL_DestroyTexture(dispTexture); }};
@@ -676,7 +676,7 @@ void App::RunEmulator() {
     static constexpr uint32 kBufferSize = 512; // TODO: make this configurable
 
     if (!m_audioSystem.Init(kSampleRate, kSampleFormat, kChannels, kBufferSize)) {
-        SDL_Log("Unable to create audio stream: %s", SDL_GetError());
+        devlog::error<grp::base>("Unable to create audio stream: {}", SDL_GetError());
         return;
     }
     ScopeGuard sgDeinitAudio{[&] { m_audioSystem.Deinit(); }};
@@ -689,7 +689,7 @@ void App::RunEmulator() {
         SDL_AudioFormat audioFormat;
         int channels;
         if (!m_audioSystem.GetAudioStreamFormat(&sampleRate, &audioFormat, &channels)) {
-            SDL_Log("Unable to get audio stream format: %s", SDL_GetError());
+            devlog::error<grp::base>("Unable to get audio stream format: {}", SDL_GetError());
             return;
         }
         auto formatName = [&] {
@@ -706,15 +706,15 @@ void App::RunEmulator() {
             }
         };
 
-        fmt::println("Audio stream opened: {} Hz, {} channel{}, {} format", sampleRate, channels,
-                     (channels == 1 ? "" : "s"), formatName());
+        devlog::info<grp::base>("Audio stream opened: {} Hz, {} channel{}, {} format", sampleRate, channels,
+                                (channels == 1 ? "" : "s"), formatName());
         if (sampleRate != kSampleRate || channels != kChannels || audioFormat != kSampleFormat) {
             // Hopefully this never happens
-            fmt::println("Audio format mismatch");
+            devlog::error<grp::base>("Audio format mismatch");
             return;
         }
     } else {
-        SDL_Log("Unable to start audio stream: %s", SDL_GetError());
+        devlog::error<grp::base>("Unable to start audio stream: {}", SDL_GetError());
     }
 
     m_context.saturn.SCSP.SetSampleCallback({&m_audioSystem, [](sint16 left, sint16 right, void *ctx) {
@@ -726,7 +726,7 @@ void App::RunEmulator() {
 
     m_fileDialogProps = SDL_CreateProperties();
     if (m_fileDialogProps == 0) {
-        SDL_Log("Failed to create file dialog properties: %s\n", SDL_GetError());
+        devlog::error<grp::base>("Failed to create file dialog properties: {}\n", SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyFileDialogProps{[&] { SDL_DestroyProperties(m_fileDialogProps); }};
@@ -752,17 +752,17 @@ void App::RunEmulator() {
     std::error_code error{};
     if (m_context.saturn.InsertCartridge<satemu::cart::BackupMemoryCartridge>(
             satemu::cart::BackupMemoryCartridge::Size::_32Mbit, extBupPath, error)) {
-        fmt::println("External backup memory cartridge loaded from {}", extBupPath);
+        devlog::info<grp::base>("External backup memory cartridge loaded from {}", extBupPath);
     } else if (error) {
-        fmt::println("Failed to load external backup memory: {}", error.message());
+        devlog::warn<grp::base>("Failed to load external backup memory: {}", error.message());
     }
 
     /*if (m_context.saturn.InsertCartridge<satemu::cart::DRAM8MbitCartridge>()) {
-        fmt::println("8 Mbit DRAM cartridge inserted");
+        devlog::info<grp::base>("8 Mbit DRAM cartridge inserted");
     }*/
 
     /*if (m_context.saturn.InsertCartridge<satemu::cart::DRAM32MbitCartridge>()) {
-        fmt::println("32 Mbit DRAM cartridge inserted");
+        devlog::info<grp::base>("32 Mbit DRAM cartridge inserted");
     }*/
 
     m_context.saturn.Reset(true);
@@ -1352,9 +1352,9 @@ void App::OpenLoadDiscDialog() {
 
 void App::ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, int filter) {
     if (filelist == nullptr) {
-        fmt::println("Failed to open file dialog: {}", SDL_GetError());
+        devlog::error<grp::base>("Failed to open file dialog: {}", SDL_GetError());
     } else if (*filelist == nullptr) {
-        fmt::println("File dialog cancelled");
+        devlog::info<grp::base>("File dialog cancelled");
     } else {
         // Only one file should be selected
         const char *file = *filelist;
@@ -1363,13 +1363,13 @@ void App::ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, i
 }
 
 bool App::LoadDiscImage(std::filesystem::path path) {
-    fmt::println("Loading disc image from {}", path.string());
+    devlog::info<grp::base>("Loading disc image from {}", path.string());
     satemu::media::Disc disc{};
     if (!satemu::media::LoadDisc(path, disc)) {
-        fmt::println("Failed to load disc image from {}", path.string());
+        devlog::error<grp::base>("Failed to load disc image from {}", path.string());
         return false;
     }
-    fmt::println("Loaded disc image from {}", path.string());
+    devlog::info<grp::base>("Loaded disc image from {}", path.string());
     m_context.saturn.LoadDisc(std::move(disc));
     return true;
 }

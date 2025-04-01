@@ -13,6 +13,8 @@
 #include "ui/windows/debug/scu_window_set.hpp"
 #include "ui/windows/debug/sh2_window_set.hpp"
 
+#include <satemu/util/dev_log.hpp>
+
 #include <SDL3/SDL_events.h>
 
 #include <imgui.h>
@@ -21,6 +23,23 @@
 #include <vector>
 
 namespace app {
+
+namespace grp {
+
+    // -----------------------------------------------------------------------------
+    // Dev log groups
+
+    // Hierarchy:
+    //
+    // base
+
+    struct base {
+        static constexpr bool enabled = true;
+        static constexpr devlog::Level level = devlog::level::debug;
+        static constexpr std::string_view name = "App";
+    };
+
+} // namespace grp
 
 class App {
 public:
