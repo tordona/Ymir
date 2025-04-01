@@ -228,6 +228,10 @@ void SystemStateWindow::DrawClocks() {
 }
 
 void SystemStateWindow::DrawCDDrive() {
+    auto &probe = m_context.saturn.CDBlock.GetProbe();
+
+    const uint8 status = probe.GetCurrentStatusCode();
+
     if (ImGui::Button(m_context.saturn.CDBlock.IsTrayOpen() ? "Close tray" : "Open tray")) {
         m_context.EnqueueEvent(events::emu::OpenCloseTray());
     }
@@ -247,32 +251,123 @@ void SystemStateWindow::DrawCDDrive() {
         ImGui::Text("Image from %s", m_context.state.loadedDiscImagePath.string().c_str());
     }
     ImGui::PopTextWrapPos();
-    // TODO: get status from CDBlock probe
-    ImGui::TextUnformatted("Playing track 2 (CDDA)");
+    switch (status) {
+    case cdblock::kStatusCodeBusy: ImGui::TextUnformatted("Busy"); break;
+    case cdblock::kStatusCodePause: ImGui::TextUnformatted("Paused"); break;
+    case cdblock::kStatusCodeStandby: ImGui::TextUnformatted("Standby"); break;
+    case cdblock::kStatusCodePlay:
+        ImGui::Text("Playing track %u, index %u (%s)", probe.GetCurrentTrack(), probe.GetCurrentIndex(),
+                    (probe.GetCurrentControlADRBits() == 0x01 ? "CDDA" : "Data"));
+        break;
+    case cdblock::kStatusCodeSeek: ImGui::TextUnformatted("Seeking"); break;
+    case cdblock::kStatusCodeScan:
+        ImGui::Text("Scanning track %u, index %u (%s)", probe.GetCurrentTrack(), probe.GetCurrentIndex(),
+                    (probe.GetCurrentControlADRBits() == 0x01 ? "CDDA" : "Data"));
+        break;
+    case cdblock::kStatusCodeOpen: ImGui::TextUnformatted("Tray open"); break;
+    case cdblock::kStatusCodeNoDisc: ImGui::TextUnformatted("No disc"); break;
+    case cdblock::kStatusCodeRetry: ImGui::TextUnformatted("Retrying"); break;
+    case cdblock::kStatusCodeError: ImGui::TextUnformatted("Error"); break;
+    case cdblock::kStatusCodeFatal: ImGui::TextUnformatted("Fatal error"); break;
+    }
 
-    ImGui::SameLine();
+    ImGui::Text("Read speed: %ux", probe.GetReadSpeed());
 
-    ImGui::BeginGroup();
-    // TODO: get MSF from CDBlock probe
-    ImGui::TextDisabled("0");
-    ImGui::SameLine(0, 0);
-    ImGui::Text("2:31.67");
-    ImGui::EndGroup();
-    ImGui::SetItemTooltip("MM:SS.FF\nMinutes, seconds and frames\n(75 frames per second)");
+    const uint32 fad = probe.GetCurrentFrameAddress();
+    const uint8 repeat = probe.GetCurrentRepeatCount();
+    const uint8 maxRepeat = probe.GetMaxRepeatCount();
+    const cdblock::MSF msf = cdblock::FADToMSF(fad);
+
+    if (status == cdblock::kStatusCodePlay || status == cdblock::kStatusCodeScan) {
+        ImGui::BeginGroup();
+        ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+        if (msf.m == 0) {
+            ImGui::TextDisabled("00");
+        } else {
+            if (msf.m < 10) {
+                ImGui::TextDisabled("0");
+                ImGui::SameLine(0, 0);
+            }
+            ImGui::Text("%u", msf.m);
+        }
+        ImGui::SameLine(0, 0);
+        ImGui::TextUnformatted(":");
+        ImGui::SameLine(0, 0);
+        if (msf.m == 0 && msf.s == 0) {
+            ImGui::TextDisabled("00");
+        } else {
+            if (msf.m == 0 && msf.s < 10) {
+                ImGui::TextDisabled("0");
+                ImGui::SameLine(0, 0);
+                ImGui::Text("%u", msf.s);
+            } else {
+                ImGui::Text("%02u", msf.s);
+            }
+        }
+        ImGui::SameLine(0, 0);
+        ImGui::TextUnformatted(".");
+        ImGui::SameLine(0, 0);
+        if (msf.m == 0 && msf.s == 0 && msf.f == 0) {
+            ImGui::TextDisabled("00");
+        } else {
+            if (msf.m == 0 && msf.s == 0 && msf.f < 10) {
+                ImGui::TextDisabled("0");
+                ImGui::SameLine(0, 0);
+                ImGui::Text("%u", msf.f);
+            } else {
+                ImGui::Text("%02u", msf.f);
+            }
+        }
+        ImGui::PopFont();
+        ImGui::EndGroup();
+        ImGui::SetItemTooltip("MM:SS.FF\nMinutes, seconds and frames\n(75 frames per second)");
+
+        ImGui::SameLine(0, 0);
+        ImGui::TextUnformatted(" :: ");
+        ImGui::SameLine(0, 0);
+
+        ImGui::BeginGroup();
+        ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+        const uint32 numZeros = std::countl_zero(fad) / 4 - 2; // FAD is 24 bits
+        ImGui::TextDisabled("%0*u", numZeros, 0);
+        ImGui::SameLine(0, 0);
+        ImGui::Text("%X", fad);
+        ImGui::PopFont();
+        ImGui::EndGroup();
+        ImGui::SetItemTooltip("Frame address (FAD)");
+    } else {
+        ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+        ImGui::TextDisabled("--");
+        ImGui::SameLine(0, 0);
+        ImGui::TextUnformatted(":");
+        ImGui::SameLine(0, 0);
+        ImGui::TextDisabled("--");
+        ImGui::SameLine(0, 0);
+        ImGui::TextUnformatted(".");
+        ImGui::SameLine(0, 0);
+        ImGui::TextDisabled("--");
+        ImGui::PopFont();
+
+        ImGui::SameLine(0, 0);
+        ImGui::TextUnformatted(" :: ");
+        ImGui::SameLine(0, 0);
+
+        ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+        ImGui::TextDisabled("------");
+        ImGui::PopFont();
+    }
+
     ImGui::SameLine(0, 0);
     ImGui::TextUnformatted(" :: ");
-
     ImGui::SameLine(0, 0);
 
-    ImGui::BeginGroup();
-    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-    // TODO: get FAD from CDBlock probe
-    ImGui::TextDisabled("00");
-    ImGui::SameLine(0, 0);
-    ImGui::TextUnformatted("1F63");
-    ImGui::PopFont();
-    ImGui::EndGroup();
-    ImGui::SetItemTooltip("Frame address (FAD)");
+    if (maxRepeat == 0xF) {
+        ImGui::TextUnformatted("Repeat forever");
+    } else if (maxRepeat > 0) {
+        ImGui::Text("Repeat %u of %u", repeat, maxRepeat);
+    } else {
+        ImGui::TextUnformatted("No repeat");
+    }
 }
 
 void SystemStateWindow::DrawCartridge() {

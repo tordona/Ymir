@@ -386,6 +386,38 @@ public:
 
     const sys::CBClockSpeedChange CbClockSpeedChange =
         util::MakeClassMemberRequiredCallback<&CDBlock::UpdateClockRatios>(this);
+
+    // -------------------------------------------------------------------------
+    // Debugger
+
+    class Probe {
+    public:
+        Probe(CDBlock &cdblock);
+
+        uint8 GetCurrentStatusCode() const;
+        uint32 GetCurrentFrameAddress() const;
+        uint8 GetCurrentRepeatCount() const;
+        uint8 GetMaxRepeatCount() const;
+        uint8 GetCurrentControlADRBits() const;
+        uint8 GetCurrentTrack() const;
+        uint8 GetCurrentIndex() const;
+
+        uint8 GetReadSpeed() const;
+
+    private:
+        CDBlock &m_cdblock;
+    };
+
+    Probe &GetProbe() {
+        return m_probe;
+    }
+
+    const Probe &GetProbe() const {
+        return m_probe;
+    }
+
+private:
+    Probe m_probe{*this};
 };
 
 } // namespace satemu::cdblock

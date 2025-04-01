@@ -850,18 +850,6 @@ bool CDBlock::SetupSubcodeTransfer(uint8 type) {
         return false;
     }
 
-    struct MSF {
-        uint8 m, s, f;
-    };
-
-    auto toMSF = [](uint32 fad) {
-        MSF msf{};
-        msf.m = fad / 75 / 60;
-        msf.s = fad / 75 % 60;
-        msf.f = fad % 75;
-        return msf;
-    };
-
     if (type == 0) {
         devlog::trace<grp::xfer>("Starting subcode Q transfer");
 
@@ -874,8 +862,8 @@ bool CDBlock::SetupSubcodeTransfer(uint8 type) {
         const uint32 relativeFAD =
             m_status.frameAddress - m_disc.sessions.back().tracks[m_status.track - 1].startFrameAddress;
 
-        auto [m, s, f] = toMSF(m_status.frameAddress);
-        auto [relM, relS, relF] = toMSF(relativeFAD);
+        auto [m, s, f] = FADToMSF(m_status.frameAddress);
+        auto [relM, relS, relF] = FADToMSF(relativeFAD);
 
         m_xferSubcodeBuffer[0] = m_status.controlADR;
         m_xferSubcodeBuffer[1] = util::to_bcd(m_status.track);
@@ -2659,5 +2647,43 @@ void CDBlock::CmdIsDeviceAuthenticated() {
 }
 
 void CDBlock::CmdGetMpegROM() {}
+
+// -----------------------------------------------------------------------------
+// Probe implementation
+
+CDBlock::Probe::Probe(CDBlock &cdblock)
+    : m_cdblock(cdblock) {}
+
+uint8 CDBlock::Probe::GetCurrentStatusCode() const {
+    return m_cdblock.m_status.statusCode & 0xF;
+}
+
+uint32 CDBlock::Probe::GetCurrentFrameAddress() const {
+    return m_cdblock.m_status.frameAddress;
+}
+
+uint8 CDBlock::Probe::GetCurrentRepeatCount() const {
+    return m_cdblock.m_status.repeatCount & 0xF;
+}
+
+uint8 CDBlock::Probe::GetMaxRepeatCount() const {
+    return m_cdblock.m_playMaxRepeat;
+}
+
+uint8 CDBlock::Probe::GetCurrentControlADRBits() const {
+    return m_cdblock.m_status.controlADR;
+}
+
+uint8 CDBlock::Probe::GetCurrentTrack() const {
+    return m_cdblock.m_status.track;
+}
+
+uint8 CDBlock::Probe::GetCurrentIndex() const {
+    return m_cdblock.m_status.index;
+}
+
+uint8 CDBlock::Probe::GetReadSpeed() const {
+    return m_cdblock.m_readSpeed;
+}
 
 } // namespace satemu::cdblock
