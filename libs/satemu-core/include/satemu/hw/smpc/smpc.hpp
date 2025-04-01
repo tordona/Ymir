@@ -264,6 +264,30 @@ public:
 
     const sys::CBClockSpeedChange CbClockSpeedChange =
         util::MakeClassMemberRequiredCallback<&SMPC::UpdateClockRatios>(this);
+
+    // -------------------------------------------------------------------------
+    // Debugger
+
+    class Probe {
+    public:
+        Probe(SMPC &smpc);
+
+        util::datetime::DateTime GetRTCDateTime() const;
+
+    private:
+        SMPC &m_smpc;
+    };
+
+    Probe &GetProbe() {
+        return m_probe;
+    }
+
+    const Probe &GetProbe() const {
+        return m_probe;
+    }
+
+private:
+    Probe m_probe{*this};
 };
 
 } // namespace satemu::smpc

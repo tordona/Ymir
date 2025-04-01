@@ -737,4 +737,14 @@ void SMPC::ClockChange(sys::ClockSpeed clockSpeed) {
     m_sysOps.SetClockSpeed(clockSpeed);
 }
 
+// -----------------------------------------------------------------------------
+// Probe implementation
+
+SMPC::Probe::Probe(SMPC &smpc)
+    : m_smpc(smpc) {}
+
+util::datetime::DateTime SMPC::Probe::GetRTCDateTime() const {
+    return m_smpc.m_rtc.GetDateTime();
+}
+
 } // namespace satemu::smpc

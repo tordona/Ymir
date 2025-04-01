@@ -148,10 +148,13 @@ void SystemStateWindow::DrawScreen() {
 }
 
 void SystemStateWindow::DrawRealTimeClock() {
-    // TODO: get current date-time from SMPC
-    ImGui::TextUnformatted("Current date/time:");
-    ImGui::SameLine();
-    ImGui::TextUnformatted("01/02/2003 12:34:56 AM");
+    const auto dt = m_context.saturn.SMPC.GetProbe().GetRTCDateTime();
+
+    static constexpr const char *kWeekdays[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+
+    ImGui::Text("Current date/time: %s %04u/%02u/%02u %02u:%02u:%02u", kWeekdays[dt.weekday], dt.year, dt.month, dt.day,
+                dt.hour, dt.minute, dt.second);
+    // TODO: make it adjustable, sync to host
 }
 
 void SystemStateWindow::DrawClocks() {
