@@ -47,6 +47,9 @@
 
 namespace devlog {
 
+// Globally enable or disable dev logging.
+inline constexpr bool globalEnable = satemu_ENABLE_DEVLOG;
+
 // -----------------------------------------------------------------------------
 // Log levels
 
@@ -96,7 +99,7 @@ namespace detail {
     };
 
     template <Level level, detail::Group TGroup>
-    inline constexpr bool enabled = TGroup::enabled && level >= TGroup::level;
+    inline constexpr bool enabled = globalEnable && TGroup::enabled && level >= TGroup::level;
 
     template <Level level, StaticNameGroup TGroup, typename... TArgs>
     constexpr void log(fmt::format_string<TArgs...> fmt, TArgs &&...args) {

@@ -233,6 +233,9 @@ target_precompile_headers(satemu-core
 ## Define version macros
 target_add_version_defines(satemu-core)
 
+## Define additional macros
+target_compile_definitions(satemu-core PUBLIC "satemu_ENABLE_DEVLOG=$<BOOL:${satemu_ENABLE_DEVLOG}>")
+
 ## Generate the export header and attach it to the target
 include(GenerateExportHeader)
 generate_export_header(satemu-core EXPORT_FILE_NAME include/satemu/export.h)

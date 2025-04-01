@@ -15,6 +15,8 @@ string(COMPARE EQUAL "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}" is_top_
 option(satemu_INCLUDE_PACKAGING "Include packaging rules for satemu" "${is_top_level}")
 option(satemu_ENABLE_TESTS "Enable tests for satemu" "${is_top_level}")
 option(satemu_ENABLE_IPO "Enable IPO / LTO for satemu" ON)
+option(satemu_ENABLE_DEVLOG "Enable development logs" ON)
+message(STATUS "satemu: Devlog ${satemu_ENABLE_DEVLOG}")
 
 ## Performance options
 option(satemu_AVX2 "Enable AVX2 instruction set for satemu" OFF)
