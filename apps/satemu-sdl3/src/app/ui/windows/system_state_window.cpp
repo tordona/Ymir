@@ -1,6 +1,7 @@
 #include "system_state_window.hpp"
 
 #include <app/events/emu_event_factory.hpp>
+#include <app/events/gui_event_factory.hpp>
 
 using namespace satemu;
 
@@ -237,7 +238,7 @@ void SystemStateWindow::DrawCDDrive() {
     }
     ImGui::SameLine();
     if (ImGui::Button("Load disc...")) {
-        // TODO: GUI events
+        m_context.EnqueueEvent(events::gui::LoadDisc());
     }
     ImGui::SameLine();
     if (ImGui::Button("Eject disc")) {
@@ -336,6 +337,7 @@ void SystemStateWindow::DrawCDDrive() {
         ImGui::EndGroup();
         ImGui::SetItemTooltip("Frame address (FAD)");
     } else {
+        ImGui::BeginGroup();
         ImGui::PushFont(m_context.fonts.monospace.medium.regular);
         ImGui::TextDisabled("--");
         ImGui::SameLine(0, 0);
@@ -347,14 +349,19 @@ void SystemStateWindow::DrawCDDrive() {
         ImGui::SameLine(0, 0);
         ImGui::TextDisabled("--");
         ImGui::PopFont();
+        ImGui::EndGroup();
+        ImGui::SetItemTooltip("MM:SS.FF\nMinutes, seconds and frames\n(75 frames per second)");
 
         ImGui::SameLine(0, 0);
         ImGui::TextUnformatted(" :: ");
         ImGui::SameLine(0, 0);
 
+        ImGui::BeginGroup();
         ImGui::PushFont(m_context.fonts.monospace.medium.regular);
         ImGui::TextDisabled("------");
         ImGui::PopFont();
+        ImGui::EndGroup();
+        ImGui::SetItemTooltip("Frame address (FAD)");
     }
 
     ImGui::SameLine(0, 0);

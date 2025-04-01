@@ -21,6 +21,8 @@ add_executable(satemu-sdl3
     src/app/events/emu_event.hpp
     src/app/events/emu_event_factory.cpp
     src/app/events/emu_event_factory.hpp
+    src/app/events/gui_event.hpp
+    src/app/events/gui_event_factory.hpp
 
     src/app/ui/window_base.cpp
     src/app/ui/window_base.hpp

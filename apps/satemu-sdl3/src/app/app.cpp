@@ -907,6 +907,8 @@ void App::RunEmulator() {
 
     SDL_ShowWindow(screen.window);
 
+    std::array<GUIEvent, 64> evts{};
+
     while (true) {
         // Process SDL events
         SDL_Event evt{};
@@ -932,6 +934,16 @@ void App::RunEmulator() {
                 if (evt.window.windowID == SDL_GetWindowID(screen.window)) {
                     goto end_loop;
                 }
+            }
+        }
+
+        // Process GUI events
+        const size_t evtCount = m_context.eventQueues.gui.try_dequeue_bulk(evts.begin(), evts.size());
+        for (size_t i = 0; i < evtCount; i++) {
+            const GUIEvent &evt = evts[i];
+            using EvtType = GUIEvent::Type;
+            switch (evt.type) {
+            case EvtType::LoadDisc: OpenLoadDiscDialog(); break;
             }
         }
 
@@ -1285,23 +1297,23 @@ end_loop:; // the semicolon is not a typo!
 void App::EmulatorThread() {
     util::SetCurrentThreadName("Emulator thread");
 
-    std::array<EmuEvent, 64> cmds{};
+    std::array<EmuEvent, 64> evts{};
 
     bool paused = false;
     bool frameStep = false;
 
     while (true) {
-        // Process all pending commands
-        const size_t cmdCount = paused ? m_context.eventQueues.emulator.wait_dequeue_bulk(cmds.begin(), cmds.size())
-                                       : m_context.eventQueues.emulator.try_dequeue_bulk(cmds.begin(), cmds.size());
-        for (size_t i = 0; i < cmdCount; i++) {
-            const EmuEvent &cmd = cmds[i];
+        // Process all pending events
+        const size_t evtCount = paused ? m_context.eventQueues.emulator.wait_dequeue_bulk(evts.begin(), evts.size())
+                                       : m_context.eventQueues.emulator.try_dequeue_bulk(evts.begin(), evts.size());
+        for (size_t i = 0; i < evtCount; i++) {
+            const EmuEvent &evt = evts[i];
             using enum EmuEvent::Type;
-            switch (cmd.type) {
+            switch (evt.type) {
             case FactoryReset: m_context.saturn.FactoryReset(); break;
             case HardReset: m_context.saturn.Reset(true); break;
             case SoftReset: m_context.saturn.Reset(false); break;
-            case SetResetButton: m_context.saturn.SMPC.SetResetButtonState(std::get<bool>(cmd.value)); break;
+            case SetResetButton: m_context.saturn.SMPC.SetResetButtonState(std::get<bool>(evt.value)); break;
 
             case FrameStep:
                 frameStep = true;
@@ -1309,7 +1321,7 @@ void App::EmulatorThread() {
                 m_audioSystem.SetSilent(false);
                 break;
             case SetPaused:
-                paused = std::get<bool>(cmd.value);
+                paused = std::get<bool>(evt.value);
                 m_audioSystem.SetSilent(paused);
                 break;
 
@@ -1320,13 +1332,13 @@ void App::EmulatorThread() {
                     m_context.saturn.OpenTray();
                 }
                 break;
-            case LoadDisc: LoadDiscImage(std::get<std::string>(cmd.value)); break;
+            case LoadDisc: LoadDiscImage(std::get<std::string>(evt.value)); break;
             case EjectDisc:
                 m_context.saturn.EjectDisc();
                 m_context.state.loadedDiscImagePath.clear();
                 break;
 
-            case RunFunction: std::get<std::function<void(SharedContext &)>>(cmd.value)(m_context); break;
+            case RunFunction: std::get<std::function<void(SharedContext &)>>(evt.value)(m_context); break;
 
             case Shutdown: return;
             }
