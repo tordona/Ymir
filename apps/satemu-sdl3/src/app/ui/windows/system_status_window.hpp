@@ -14,9 +14,9 @@ protected:
 
 private:
     void DrawParameters();
-    void DrawClocks();
-    void DrawRealTimeClock();
     void DrawScreen();
+    void DrawRealTimeClock();
+    void DrawClocks();
     void DrawCDDrive();
     void DrawCartridge();
     void DrawPeripherals();

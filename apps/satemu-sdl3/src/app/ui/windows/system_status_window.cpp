@@ -127,6 +127,26 @@ void SystemStatusWindow::DrawParameters() {
     }
 }
 
+void SystemStatusWindow::DrawScreen() {
+    auto &probe = m_context.saturn.VDP.GetProbe();
+    auto [width, height] = probe.GetResolution();
+    auto interlaceMode = probe.GetInterlaceMode();
+
+    static constexpr const char *kInterlaceNames[]{"progressive", "(invalid)", "single-density interlace",
+                                                   "double-density interlace"};
+
+    ImGui::TextUnformatted("Resolution:");
+    ImGui::SameLine();
+    ImGui::Text("%ux%u %s", width, height, kInterlaceNames[static_cast<uint8>(interlaceMode)]);
+}
+
+void SystemStatusWindow::DrawRealTimeClock() {
+    // TODO: current date-time (editable)
+    ImGui::TextUnformatted("Current date/time:");
+    ImGui::SameLine();
+    ImGui::TextUnformatted("01/02/2003 12:34:56 AM");
+}
+
 void SystemStatusWindow::DrawClocks() {
     if (ImGui::BeginTable("sys_clocks", 2, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn("Components");
@@ -191,26 +211,6 @@ void SystemStatusWindow::DrawClocks() {
 
         ImGui::EndTable();
     }
-}
-
-void SystemStatusWindow::DrawRealTimeClock() {
-    // TODO: current date-time (editable)
-    ImGui::TextUnformatted("Current date/time:");
-    ImGui::SameLine();
-    ImGui::TextUnformatted("01/02/2003 12:34:56 AM");
-}
-
-void SystemStatusWindow::DrawScreen() {
-    auto &probe = m_context.saturn.VDP.GetProbe();
-    auto [width, height] = probe.GetResolution();
-    auto interlaceMode = probe.GetInterlaceMode();
-
-    static constexpr const char *kInterlaceNames[]{"progressive", "(invalid)", "single-density interlace",
-                                                   "double-density interlace"};
-
-    ImGui::TextUnformatted("Resolution:");
-    ImGui::SameLine();
-    ImGui::Text("%ux%u %s", width, height, kInterlaceNames[static_cast<uint8>(interlaceMode)]);
 }
 
 void SystemStatusWindow::DrawCDDrive() {
