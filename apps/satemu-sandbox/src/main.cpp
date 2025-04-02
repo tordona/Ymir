@@ -2,6 +2,8 @@
 
 #include "../../../libs/satemu-core/src/satemu/hw/vdp/slope.hpp"
 
+#include <satemu/util/size_ops.hpp>
+
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
 #include <fmt/format.h>
@@ -705,8 +707,191 @@ void runSandbox() {
     SDL_DestroyRenderer(renderer);
 }
 
+void runBUPSandbox() {
+    // Valid backup memory parameters:
+    // Device      Size     Block size
+    // Internal    32 KiB   64 b
+    // External    512 KiB  512 b
+    // External    1 MiB    512 b
+    // External    2 MiB    512 b
+    // External    4 MiB    1 KiB
+
+    std::vector<uint8> data{};
+
+    {
+        std::ifstream in{"bup-ext.bin", std::ios::binary};
+
+        in.seekg(0, std::ios::end);
+        const size_t sz = in.tellg();
+
+        // Sanity check file size against known valid options
+        if (!bit::is_power_of_two(sz) || (sz < 32_KiB && sz > 4_MiB)) {
+            fmt::println("Invalid file size");
+            return;
+        }
+
+        in.seekg(0, std::ios::beg);
+        data.resize(sz);
+        in.read((char *)data.data(), sz);
+    }
+
+    const uint32 bupSize = data.size();
+
+    fmt::println("File loaded: {} bytes", bupSize);
+
+    static constexpr const char *kHeader = "BackUpRam Format";
+
+    // Deduce block size from the length of the header block, which is filled with "BackUpRam Format".
+    // Also doubles as a header check.
+    uint32 blockLen = 0;
+    size_t pos = 0;
+    while (pos < bupSize) {
+        if (strncmp(kHeader, (char *)&data[pos], 0x10) != 0) {
+            break;
+        }
+        blockLen += 0x10;
+        pos += 0x10;
+    }
+    if (blockLen == 0 || !bit::is_power_of_two(blockLen)) {
+        fmt::println("Not a valid backup format");
+        return;
+    }
+
+    // Sanity check file size vs. block size
+    static constexpr struct {
+        uint32 size;
+        uint32 blockLen;
+    } kBupParams[]{
+        {32_KiB, 64},   // Internal Backup RAM
+        {512_KiB, 512}, // 4 Mbit External Backup RAM
+        {1_MiB, 512},   // 8 Mbit External Backup RAM
+        {2_MiB, 512},   // 16 Mbit External Backup RAM
+        {4_MiB, 1_KiB}, // 32 Mbit External Backup RAM
+    };
+    bool valid = false;
+    for (const auto &param : kBupParams) {
+        if (bupSize == param.size && blockLen == param.blockLen) {
+            valid = true;
+            break;
+        }
+    }
+    if (!valid) {
+        fmt::println("Invalid block size");
+        return;
+    }
+
+    const uint32 numBlocks = bupSize / blockLen;
+    fmt::println("Block size: {} bytes", blockLen);
+
+    // Block 0 is the header
+    // Block 1 seems to be empty
+    // Blocks 2..N contain save data
+    //         0x00: bit 7 indicates if the block is the start of a save data
+    //   0x01..0x03: seem to be empty
+    //   If this is the start of a block:
+    //     0x04..0x0E: filename
+    //           0x0F: language
+    //     0x10..0x19: comment
+    //     0x1A..0x1D: date (big-endian uint32, minutes since 01/01/1980?)
+    //     0x1E..0x21: data size (big-endian uint32)
+    //     Starting from 0x22: big-endian uint16s with the offsets of the blocks that comprise the entire save data.
+    //     The list ends with a 0000 and the save data follows immediately after.
+    //   Otherwise, block sequence/save data continues from 0x04 onwards.
+
+    uint32 usedBlocks = 2; // blocks 0 and 1
+
+    enum class Language : uint8 {
+        Japanese = 0x00,
+        English = 0x01,
+        French = 0x02,
+        German = 0x03,
+        Spanish = 0x04,
+        Italian = 0x05,
+    };
+
+    static constexpr const char *kLanguages[] = {"JP", "EN", "FR", "DE", "SP", "IT"};
+
+    struct BackupData {
+        char filename[12];
+        char comment[11];
+        Language language;
+        uint32 date; // minutes since 1/1/1980
+        uint32 size;
+        std::vector<uint16> blocks;
+    };
+
+    for (uint32 offset = blockLen * 2; offset < bupSize; offset += blockLen) {
+        if (data[offset] & 0x80) {
+            // fmt::println("Save data beginning at block {} (offset 0x{:X})", offset / blockLen, offset);
+
+            BackupData bupData{};
+            std::copy_n(&data[offset + 0x04], 11, bupData.filename);
+            bupData.filename[11] = 0;
+            for (auto &ch : bupData.filename) {
+                if (ch < 0) {
+                    ch = '?';
+                }
+            }
+
+            bupData.language = static_cast<Language>(data[offset + 0x0F]);
+
+            std::copy_n(&data[offset + 0x10], 10, bupData.comment);
+            bupData.comment[10] = 0;
+            for (auto &ch : bupData.comment) {
+                if (ch < 0) {
+                    ch = '?';
+                }
+            }
+
+            bupData.date = (data[offset + 0x1A] << 24u) | (data[offset + 0x1B] << 16u) | (data[offset + 0x1C] << 8u) |
+                           data[offset + 0x1D];
+            bupData.size = (data[offset + 0x1E] << 24u) | (data[offset + 0x1F] << 16u) | (data[offset + 0x20] << 8u) |
+                           data[offset + 0x21];
+
+            bupData.blocks.push_back(offset / blockLen);
+            uint32 listOffset = 0x22;
+            do {
+                uint16 nextBlock = (data[offset + listOffset] << 8u) | data[offset + listOffset + 1];
+                if (nextBlock == 0) {
+                    // End of list
+                    break;
+                }
+                bupData.blocks.push_back(nextBlock);
+                // fmt::println("  Continues into block {} (offset 0x{:X})", nextBlock, nextBlock * blockLen);
+                listOffset += 2;
+                if ((listOffset & (blockLen - 1)) == 0) {
+                    // Skip to offset 0x04 if we reach the start of the next block
+                    listOffset += 4;
+                }
+            } while (true);
+
+            if (data[offset + 0x00] != 0x80) {
+                fmt::println("  offset 0: {:02X}", data[offset + 0x00]);
+            }
+            if (data[offset + 0x01] != 0x00) {
+                fmt::println("  offset 1: {:02X}", data[offset + 0x01]);
+            }
+            if (data[offset + 0x02] != 0x00) {
+                fmt::println("  offset 2: {:02X}", data[offset + 0x02]);
+            }
+            if (data[offset + 0x03] != 0x00) {
+                fmt::println("  offset 3: {:02X}", data[offset + 0x03]);
+            }
+
+            fmt::println("{:11s} | {:10s} | {} | {:3d} | {:6d} bytes | {:02d} {:02d}:{:02d}", bupData.filename,
+                         bupData.comment, kLanguages[static_cast<uint8>(bupData.language)], bupData.blocks.size(),
+                         bupData.size, bupData.date / 60 / 24, (bupData.date / 60) % 24, bupData.date % 60);
+
+            usedBlocks += bupData.blocks.size();
+        }
+    }
+
+    fmt::println("{} of {} blocks used ({} free)", usedBlocks, numBlocks, numBlocks - usedBlocks);
+}
+
 int main(int argc, char **argv) {
-    runSandbox();
+    // runSandbox();
+    runBUPSandbox();
 
     return EXIT_SUCCESS;
 }
