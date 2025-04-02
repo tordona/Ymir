@@ -725,7 +725,32 @@ void runBUPSandbox() {
         fmt::println("Failed to read backup memory file: {}", error.message());
         return;
     }
-    // mem.Delete("GBASICSS_01");
+    mem.Delete("GBASICSS_01");
+
+    satemu::bup::BackupFile file{};
+    file.header.filename = "ANDROMEDA_3";
+    file.header.comment = "ANDROMEDA_";
+    file.header.date = 0;
+    file.header.language = satemu::bup::Language::Japanese;
+    for (uint32 i = 0; i < 256; i++) {
+        file.data.push_back(i);
+    }
+    file.data.push_back('t');
+    file.data.push_back('e');
+    file.data.push_back('s');
+    file.data.push_back('t');
+    /*file.data.push_back('0');
+    file.data.push_back('1');
+    file.data.push_back('2');
+    file.data.push_back('3');*/
+
+    auto result = mem.Import(file, true);
+    switch (result) {
+    case satemu::bup::BackupFileImportResult::Imported: fmt::println("File imported successfully"); break;
+    case satemu::bup::BackupFileImportResult::Overwritten: fmt::println("File overwritten successfully"); break;
+    case satemu::bup::BackupFileImportResult::FileExists: fmt::println("File not imported: file already exists"); break;
+    case satemu::bup::BackupFileImportResult::NoSpace: fmt::println("File not imported: not enough space"); break;
+    }
 
     const uint32 usedBlocks = mem.GetUsedBlocks();
     const uint32 totalBlocks = mem.GetTotalBlocks();
@@ -734,21 +759,23 @@ void runBUPSandbox() {
 
     static constexpr const char *kLanguages[] = {"JP", "EN", "FR", "DE", "SP", "IT"};
 
-    for (satemu::bup::BackupFileInfo &file : mem.List()) {
+    for (const auto &file : mem.List()) {
         auto trimToNull = [](std::string &str) {
             auto zeroPos = str.find_first_of('\0');
             if (zeroPos != std::string::npos) {
                 str.resize(zeroPos, '\0');
             }
         };
-        auto filename = file.header.filename;
-        auto comment = file.header.comment;
+
+        std::string filename = file.header.filename;
+        std::string comment = file.header.comment;
         trimToNull(filename);
         trimToNull(comment);
         std::transform(filename.begin(), filename.end(), filename.begin(), [](char c) { return c < 0 ? '?' : c; });
         std::transform(comment.begin(), comment.end(), comment.begin(), [](char c) { return c < 0 ? '?' : c; });
+
         fmt::println("{:11s} | {:10s} | {} | {:3d} | {:6d} bytes | {:02d} {:02d}:{:02d}", filename, comment,
-                     kLanguages[static_cast<uint8>(file.header.language)], file.blocks, file.header.size,
+                     kLanguages[static_cast<uint8>(file.header.language)], file.numBlocks, file.size,
                      file.header.date / 60 / 24, (file.header.date / 60) % 24, file.header.date % 60);
 
         auto optFileData = mem.Export(file.header.filename);

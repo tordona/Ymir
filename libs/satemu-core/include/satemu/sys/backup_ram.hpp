@@ -8,6 +8,7 @@
 
 #include <filesystem>
 #include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -35,12 +36,12 @@ struct BackupFileHeader {
     std::string comment;  // max 10 chars
     Language language;
     uint32 date; // minutes since 1/1/1980
-    uint32 size; // in bytes (including block list)
 };
 
 struct BackupFileInfo {
     BackupFileHeader header;
-    uint32 blocks;
+    uint32 size; // in bytes (including block list)
+    uint32 numBlocks;
 };
 
 struct BackupFile {
@@ -85,19 +86,19 @@ public:
     uint32 GetTotalBlocks() const;
 
     // Computes the number of blocks used by backup files.
-    uint32 GetUsedBlocks() const;
+    uint32 GetUsedBlocks();
 
     // Formats the backup memory.
     void Format();
 
     // Retrieves a list of backup files stored in this backup memory.
-    std::vector<BackupFileInfo> List() const;
+    std::vector<BackupFileInfo> List();
 
     // Attempts to export the backup file with the specified name.
     //
     // Returns a BackupFile with the file's contents if it exists.
     // Returns std::nullopt if no such file exists.
-    std::optional<BackupFile> Export(std::string_view filename) const;
+    std::optional<BackupFile> Export(std::string_view filename);
 
     // Attempts to import the specified backup file, optionally overwriting an existing file with the same name as the
     // one being imported.
@@ -107,7 +108,7 @@ public:
     // Returns BackupFileImportResult::FileExists if the overwrite flag is clear and the file already exists.
     // Returns BackupFileImportResult::NoSpace if there is not enough space to import the file. The contents of the
     // backup memory are not modified if this happens.
-    BackupFileImportResult Import(const BackupFile &data, bool overwrite) const;
+    BackupFileImportResult Import(const BackupFile &file, bool overwrite);
 
     // Attempts to delete a backup file with the specified name.
     //
@@ -125,16 +126,32 @@ private:
     size_t m_addressMask = 0;
     uint32 m_blockSize = 0;
 
-    // Finds the block index of the file with the given filename.
-    // Returns 0 if the file cannot be found.
-    uint32 FindFile(std::string_view filename) const;
+    bool m_dirty = false;
+
+    struct BackupFileParams {
+        BackupFileInfo info;
+        std::vector<uint16> blocks;
+    };
+
+    std::vector<BackupFileParams> m_fileParams;
+
+    std::vector<uint64> m_blockBitmap;
+
+    // Rebuilds the file list from the contents of the backup memory.
+    //
+    // `force` forces the rebuild even if the dirty flag is clear.
+    void RebuildFileList(bool force = false);
+
+    // Finds the file with the given filename.
+    // Returns nullptr if the file cannot be found.
+    BackupFileParams *FindFile(std::string_view filename);
 
     // Reads in the backup file header from the given block.
-    void ReadHeader(uint32 blockIndex, BackupFileHeader &header) const;
+    void ReadHeader(uint16 blockIndex, BackupFileHeader &header) const;
 
     // Reads the block list from the given block.
     // The list contains `blockIndex` as the first entry.
-    std::vector<uint16> ReadBlockList(uint32 blockIndex) const;
+    std::vector<uint16> ReadBlockList(uint16 blockIndex) const;
 };
 
 } // namespace satemu::bup
