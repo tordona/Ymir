@@ -6,7 +6,8 @@
 
 namespace satemu::cart {
 
-static constexpr size_t kSizes[] = {512_KiB, 1_MiB, 2_MiB, 4_MiB};
+static constexpr bup::BackupMemorySize kSizes[] = {bup::BackupMemorySize::_4Mbit, bup::BackupMemorySize::_8Mbit,
+                                                   bup::BackupMemorySize::_16Mbit, bup::BackupMemorySize::_32Mbit};
 static constexpr uint8 kIDs[] = {0x21, 0x22, 0x23, 0x24};
 
 static constexpr uint8 GetIndex(BackupMemoryCartridge::Size size) {

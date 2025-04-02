@@ -18,7 +18,7 @@ inline constexpr std::size_t kIPLSize = 512_KiB;
 inline constexpr std::size_t kWRAMLowSize = 1_MiB;
 inline constexpr std::size_t kWRAMHighSize = 1_MiB;
 
-inline constexpr std::size_t kInternalBackupRAMSize = 32_KiB;
+inline constexpr bup::BackupMemorySize kInternalBackupRAMSize = bup::BackupMemorySize::_256Kbit;
 
 struct SystemMemory {
     SystemMemory();

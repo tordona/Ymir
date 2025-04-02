@@ -212,6 +212,7 @@ target_precompile_headers(satemu-core
         <mutex>
         <new>
         <numeric>
+        <optional>
         <queue>
         <set>
         <span>
