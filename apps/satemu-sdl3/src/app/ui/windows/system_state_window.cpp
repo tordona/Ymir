@@ -34,6 +34,9 @@ void SystemStateWindow::DrawContents() {
     ImGui::SeparatorText("CD drive");
     DrawCDDrive();
 
+    ImGui::SeparatorText("Backup memory");
+    DrawBackupMemory();
+
     ImGui::SeparatorText("Cartridge");
     DrawCartridge();
 
@@ -380,6 +383,15 @@ void SystemStateWindow::DrawCDDrive() {
     }
 }
 
+void SystemStateWindow::DrawBackupMemory() {
+    // TODO: show internal backup memory details
+    // TODO: show external backup memory details (if cartridge is attached)
+
+    if (ImGui::Button("Open backup memory manager")) {
+        // TODO: open backup memory manager
+    }
+}
+
 void SystemStateWindow::DrawCartridge() {
     if (ImGui::Button("Insert...")) {
         // TODO: open cartridge selector
@@ -392,9 +404,6 @@ void SystemStateWindow::DrawCartridge() {
     // TODO: display dynamically according to loaded cartridge type
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("32 Mbit Backup RAM");
-    if (ImGui::Button("Open backup manager")) {
-        // TODO: open cartridge window (e.g. Action Replay codes, backup memory manager)
-    }
     // e.g., for DRAM cartridges, show a button to open the memory viewer on its comtents
 }
 

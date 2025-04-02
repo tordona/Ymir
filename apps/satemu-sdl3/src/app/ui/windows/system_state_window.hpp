@@ -18,6 +18,7 @@ private:
     void DrawRealTimeClock();
     void DrawClocks();
     void DrawCDDrive();
+    void DrawBackupMemory();
     void DrawCartridge();
     void DrawPeripherals();
     void DrawActions();

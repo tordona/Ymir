@@ -35,11 +35,12 @@ struct BackupFileHeader {
     std::string comment;  // max 10 chars
     Language language;
     uint32 date; // minutes since 1/1/1980
+    uint32 size; // in bytes (including block list)
 };
 
 struct BackupFileInfo {
     BackupFileHeader header;
-    uint32 size;
+    uint32 blocks;
 };
 
 struct BackupFile {
@@ -71,8 +72,8 @@ public:
     // `error` will contain any error that occurs while loading or manipulating the file.
     void LoadFrom(const std::filesystem::path &path, BackupMemorySize size, std::error_code &error);
 
-    // Checks if the backup memory contents are valid (checks for presence of the header with the expected block size).
-    bool IsValid() const;
+    // Checks if the backup memory header is valid.
+    bool IsHeaderValid() const;
 
     // Retrieves the total size in bytes of the backup memory.
     uint32 Size() const;
@@ -90,13 +91,13 @@ public:
     void Format();
 
     // Retrieves a list of backup files stored in this backup memory.
-    std::vector<BackupFileInfo> GetBackupFiles() const;
+    std::vector<BackupFileInfo> List() const;
 
     // Attempts to export the backup file with the specified name.
     //
     // Returns a BackupFile with the file's contents if it exists.
     // Returns std::nullopt if no such file exists.
-    std::optional<BackupFile> ExportBackup(std::string_view filename) const;
+    std::optional<BackupFile> Export(std::string_view filename) const;
 
     // Attempts to import the specified backup file, optionally overwriting an existing file with the same name as the
     // one being imported.
@@ -106,13 +107,13 @@ public:
     // Returns BackupFileImportResult::FileExists if the overwrite flag is clear and the file already exists.
     // Returns BackupFileImportResult::NoSpace if there is not enough space to import the file. The contents of the
     // backup memory are not modified if this happens.
-    BackupFileImportResult ImportBackup(const BackupFile &data, bool overwrite) const;
+    BackupFileImportResult Import(const BackupFile &data, bool overwrite) const;
 
     // Attempts to delete a backup file with the specified name.
     //
     // Returns true if the file was deleted.
     // Returns false if there was no file with the specified name.
-    bool DeleteBackup(std::string_view filename);
+    bool Delete(std::string_view filename);
 
 private:
     // TODO: support three types
@@ -123,6 +124,17 @@ private:
 
     size_t m_addressMask = 0;
     uint32 m_blockSize = 0;
+
+    // Finds the block index of the file with the given filename.
+    // Returns 0 if the file cannot be found.
+    uint32 FindFile(std::string_view filename) const;
+
+    // Reads in the backup file header from the given block.
+    void ReadHeader(uint32 blockIndex, BackupFileHeader &header) const;
+
+    // Reads the block list from the given block.
+    // The list contains `blockIndex` as the first entry.
+    std::vector<uint16> ReadBlockList(uint32 blockIndex) const;
 };
 
 } // namespace satemu::bup
