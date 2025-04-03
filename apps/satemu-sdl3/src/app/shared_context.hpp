@@ -13,11 +13,25 @@
 #include <blockingconcurrentqueue.h>
 
 #include <filesystem>
+#include <mutex.>
 
 namespace app {
 
 struct SharedContext {
     satemu::Saturn saturn;
+
+    // Certain GUI interactions requires synchronization with the emulator thread, specifically when dealing with
+    // dynamic objects:
+    // - Cartridges
+    // - Discs
+    // - Peripherals
+    // These locks must be held by the emulator thread whenever the object instances are to be replaced.
+    // The GUI must hold these locks when accessing these objects to ensure the emulator thread doesn't destroy them.
+    struct Locks {
+        std::mutex cart;
+        std::mutex disc;
+        std::mutex peripherals;
+    } locks;
 
     struct State {
         std::filesystem::path loadedDiscImagePath;

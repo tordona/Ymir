@@ -398,13 +398,31 @@ void SystemStateWindow::DrawCartridge() {
     }
     ImGui::SameLine();
     if (ImGui::Button("Eject")) {
-        // TODO
+        m_context.EnqueueEvent(events::emu::EjectCartridge());
     }
     ImGui::SameLine();
-    // TODO: display dynamically according to loaded cartridge type
+
+    std::unique_lock lock{m_context.locks.cart};
+    auto &cart = m_context.saturn.GetCartridge();
+
     ImGui::AlignTextToFramePadding();
-    ImGui::TextUnformatted("32 Mbit Backup RAM");
-    // e.g., for DRAM cartridges, show a button to open the memory viewer on its comtents
+    switch (cart.GetType()) {
+    case cart::CartType::None: ImGui::TextUnformatted("No cartridge inserted"); break;
+    case cart::CartType::BackupMemory: //
+    {
+        auto &bupCart = *static_cast<cart::BackupMemoryCartridge *>(&cart);
+        ImGui::Text("%u Mbit Backup RAM", bupCart.GetBackupMemory().Size() * 8u / 1024u / 1024u);
+        break;
+    }
+    case cart::CartType::DRAM8Mbit: ImGui::TextUnformatted("8 Mbit DRAM"); break;
+    case cart::CartType::DRAM32Mbit: ImGui::TextUnformatted("32 Mbit DRAM"); break;
+    }
+
+    ImGui::TextUnformatted("Cartridge ID: ");
+    ImGui::SameLine(0, 0);
+    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    ImGui::Text("%02X", cart.GetID());
+    ImGui::PopFont();
 }
 
 void SystemStateWindow::DrawPeripherals() {

@@ -1336,11 +1336,23 @@ void App::EmulatorThread() {
                     m_context.saturn.OpenTray();
                 }
                 break;
-            case LoadDisc: LoadDiscImage(std::get<std::string>(evt.value)); break;
-            case EjectDisc:
+            case LoadDisc:
+                // LoadDiscImage locks the disc mutex
+                LoadDiscImage(std::get<std::string>(evt.value));
+                break;
+            case EjectDisc: //
+            {
+                std::unique_lock lock{m_context.locks.disc};
                 m_context.saturn.EjectDisc();
                 m_context.state.loadedDiscImagePath.clear();
                 break;
+            }
+            case EjectCartridge: //
+            {
+                std::unique_lock lock{m_context.locks.cart};
+                m_context.saturn.EjectCartridge();
+                break;
+            }
 
             case RunFunction: std::get<std::function<void(SharedContext &)>>(evt.value)(m_context); break;
 
@@ -1389,6 +1401,8 @@ bool App::LoadDiscImage(std::filesystem::path path) {
         return false;
     }
     devlog::info<grp::base>("Loaded disc image from {}", path.string());
+
+    std::unique_lock lock{m_context.locks.disc};
     m_context.saturn.LoadDisc(std::move(disc));
     m_context.state.loadedDiscImagePath = path;
     return true;
@@ -1409,9 +1423,6 @@ void App::DrawWindows() {
     }
 
     m_aboutWindow.Display();
-
-    // TODO: SH2 instruction trace view
-    // TODO: SH2 exception trace view
 }
 
 void App::OpenMemoryViewer() {

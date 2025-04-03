@@ -42,6 +42,10 @@ inline EmuEvent EjectDisc() {
     return {.type = EmuEvent::Type::EjectDisc};
 }
 
+inline EmuEvent EjectCartridge() {
+    return {.type = EmuEvent::Type::EjectCartridge};
+}
+
 inline EmuEvent RunFunction(std::function<void(SharedContext &)> &&fn) {
     return {.type = EmuEvent::Type::RunFunction, .value = std::move(fn)};
 }
