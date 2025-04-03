@@ -218,7 +218,7 @@ public:
     }
 
 private:
-    struct MemoryPage {
+    struct alignas(64) MemoryPage {
         void *ctx = nullptr;
 
         FnRead8 read8 = [](uint32, void *) -> uint8 { return 0; };

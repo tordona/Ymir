@@ -466,6 +466,7 @@ void SystemStateWindow::DrawCartridge() {
 
 void SystemStateWindow::DrawPeripherals() {
     // TODO: fill in dynamically
+    // TODO: allow inserting/removing peripherals
     if (ImGui::BeginTable("sys_peripherals", 3, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
@@ -499,9 +500,6 @@ void SystemStateWindow::DrawPeripherals() {
 
         ImGui::EndTable();
     }
-    // TODO: show connected peripherals on both ports
-    // TODO: allow inserting/removing peripherals
-    // TODO: button to open peripheral keybindings
 }
 
 void SystemStateWindow::DrawActions() {
