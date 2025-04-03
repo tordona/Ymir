@@ -728,19 +728,6 @@ struct ColorOffset {
     bool nonZero;
 };
 
-// Lookup table for color offset effects.
-// Indexing: [colorOffset][channelValue]
-inline const auto kColorOffsetLUT = [] {
-    std::array<std::array<uint8, 256>, 512> arr{};
-    for (uint32 i = 0; i < 512; i++) {
-        const sint32 ofs = bit::sign_extend<9>(i);
-        for (uint32 c = 0; c < 256; c++) {
-            arr[i][c] = std::clamp<sint32>(c + ofs, 0, 255);
-        }
-    }
-    return arr;
-}();
-
 enum class ColorGradScreen : uint8 { Sprite, RBG0, NBG0_RBG1, Invalid3, NBG1_EXBG, NBG2, NBG3, Invalid7 };
 
 struct ColorCalcParams {

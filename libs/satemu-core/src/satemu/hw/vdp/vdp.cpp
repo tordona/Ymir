@@ -2749,6 +2749,19 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
     }
 }
 
+// Lookup table for color offset effects.
+// Indexing: [colorOffset][channelValue]
+static const auto kColorOffsetLUT = [] {
+    std::array<std::array<uint8, 256>, 512> arr{};
+    for (uint32 i = 0; i < 512; i++) {
+        const sint32 ofs = bit::sign_extend<9>(i);
+        for (uint32 c = 0; c < 256; c++) {
+            arr[i][c] = std::clamp<sint32>(c + ofs, 0, 255);
+        }
+    }
+    return arr;
+}();
+
 FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     const VDP2Regs &regs = VDP2GetRegs();
 
