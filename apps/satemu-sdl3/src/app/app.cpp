@@ -1049,7 +1049,7 @@ void App::RunEmulator() {
                     SDL_Event quitEvent{.type = SDL_EVENT_QUIT};
                     SDL_PushEvent(&quitEvent);
                 }
-                ImGui::End();
+                ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("View")) {
                 ImGui::MenuItem("Force integer scaling", nullptr, &forceIntegerScaling);
@@ -1070,7 +1070,51 @@ void App::RunEmulator() {
                 if (ImGui::MenuItem("Windowed video output", "F9", &screen.displayVideoOutputInWindow)) {
                     fitWindowToScreenNow = true;
                 }
-                ImGui::End();
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("System")) {
+                ImGui::MenuItem("System state", nullptr, &m_systemStateWindow.Open);
+                ImGui::Separator();
+                if (ImGui::BeginMenu("Cartridge port")) {
+                    {
+                        std::unique_lock lock{m_context.locks.cart};
+                        auto &cart = m_context.saturn.GetCartridge();
+                        ImGui::TextDisabled("Current: ");
+                        ImGui::SameLine(0, 0);
+                        switch (cart.GetType()) {
+                        case cart::CartType::None: ImGui::TextDisabled("None"); break;
+                        case cart::CartType::BackupMemory: //
+                        {
+                            auto &bupCart = *cart::As<cart::CartType::BackupMemory>(&cart);
+                            ImGui::TextDisabled("%u Mbit Backup RAM",
+                                                bupCart.GetBackupMemory().Size() * 8u / 1024u / 1024u);
+                            break;
+                        }
+                        case cart::CartType::DRAM8Mbit: ImGui::TextDisabled("8 Mbit DRAM"); break;
+                        case cart::CartType::DRAM32Mbit: ImGui::TextDisabled("32 Mbit DRAM"); break;
+                        }
+                    }
+
+                    ImGui::Separator();
+
+                    if (ImGui::MenuItem("Insert backup RAM...")) {
+                        OpenBackupMemoryCartFileDialog();
+                    }
+                    if (ImGui::MenuItem("Insert 8 Mbit DRAM")) {
+                        m_context.EnqueueEvent(events::emu::Insert8MbitDRAMCartridge());
+                    }
+                    if (ImGui::MenuItem("Insert 32 Mbit DRAM")) {
+                        m_context.EnqueueEvent(events::emu::Insert32MbitDRAMCartridge());
+                    }
+
+                    ImGui::Separator();
+
+                    if (ImGui::MenuItem("Eject")) {
+                        m_context.EnqueueEvent(events::emu::EjectCartridge());
+                    }
+                    ImGui::EndMenu();
+                }
+                ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Emulator")) {
                 if (ImGui::MenuItem("Frame step", "=")) {
@@ -1092,9 +1136,7 @@ void App::RunEmulator() {
                 /*if (ImGui::MenuItem("Factory reset", "Ctrl+Shift+R")) {
                     m_context.EnqueueEvent(events::emu::FactoryReset());
                 }*/
-                ImGui::Separator();
-                ImGui::MenuItem("System state", nullptr, &m_systemStateWindow.Open);
-                ImGui::End();
+                ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Settings")) {
                 ImGui::TextUnformatted("(to be implemented)");
@@ -1103,7 +1145,7 @@ void App::RunEmulator() {
                 if (ImGui::MenuItem("SH2 cache emulation", nullptr, &emulateSH2Cache)) {
                     m_context.EnqueueEvent(events::emu::SetEmulateSH2Cache(emulateSH2Cache));
                 }
-                ImGui::End();
+                ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Debug")) {
                 bool debugTrace = m_context.saturn.IsDebugTracingEnabled();
@@ -1151,13 +1193,13 @@ void App::RunEmulator() {
                     ImGui::EndMenu();
                 }
                 ImGui::MenuItem("Debug output", nullptr, &m_debugOutputWindow.Open);
-                ImGui::End();
+                ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Help")) {
                 ImGui::MenuItem("ImGui demo window", nullptr, &showDemoWindow);
                 ImGui::Separator();
                 ImGui::MenuItem("About", nullptr, &m_aboutWindow.Open);
-                ImGui::End();
+                ImGui::EndMenu();
             }
             ImGui::EndMainMenuBar();
         } else {
