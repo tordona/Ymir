@@ -16,7 +16,7 @@ BackupMemoryManagerWindow::BackupMemoryManagerWindow(SharedContext &context)
 }
 
 void BackupMemoryManagerWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(1050, 340), ImVec2(1050, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(1025, 340), ImVec2(1025, FLT_MAX));
 }
 
 void BackupMemoryManagerWindow::DrawContents() {
@@ -28,7 +28,9 @@ void BackupMemoryManagerWindow::DrawContents() {
 
     // TODO: buttons to easily copy/move between System and Cartridge memory
 
-    if (ImGui::BeginTable("bup_mgr", 2, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerV)) {
+    if (ImGui::BeginTable("bup_mgr", 2,
+                          ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_BordersInnerV |
+                              ImGuiTableFlags_ScrollY)) {
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
             ImGui::SeparatorText("System memory");
