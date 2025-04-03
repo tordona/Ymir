@@ -36,7 +36,43 @@ void BackupMemory::MapMemory(sys::Bus &bus, uint32 start, uint32 end) {
         [](uint32 address, uint32 value, void *ctx) { static_cast<BackupMemory *>(ctx)->WriteLong(address, value); });
 }
 
-void BackupMemory::LoadFrom(const std::filesystem::path &path, BackupMemorySize size, std::error_code &error) {
+BackupMemoryImageLoadResult BackupMemory::LoadFrom(const std::filesystem::path &path, std::error_code &error) {
+    error.clear();
+
+    // Attempt to memory-map the file
+    m_backupRAM = mio::make_mmap_sink(path.string(), error);
+    if (error) {
+        return BackupMemoryImageLoadResult::FilesystemError;
+    }
+
+    // Determine if image size matches any valid backup memory size
+    bool valid = false;
+    BackupMemorySize size{};
+    for (uint32 i = 0; i < std::size(kSizes); i++) {
+        if (kSizes[i] == m_backupRAM.size()) {
+            valid = true;
+            size = static_cast<BackupMemorySize>(i);
+            break;
+        }
+    }
+    if (!valid) {
+        // Fail without specifying error code
+        m_backupRAM.unmap();
+        return BackupMemoryImageLoadResult::InvalidSize;
+    }
+
+    // Update parameters
+    m_headerValid = CheckHeader();
+    m_addressMask = m_backupRAM.size() - 1;
+    m_blockSize = kBlockSizes[static_cast<size_t>(size)];
+    m_blockBitmap.resize(GetTotalBlocks() / 64);
+
+    RebuildFileList(true);
+
+    return BackupMemoryImageLoadResult::Success;
+}
+
+void BackupMemory::CreateFrom(const std::filesystem::path &path, BackupMemorySize size, std::error_code &error) {
     error.clear();
 
     bool format = false;

@@ -4,6 +4,8 @@
 
 #include "emu_event.hpp"
 
+#include <filesystem>
+
 namespace app::events::emu {
 
 inline EmuEvent FactoryReset() {
@@ -64,5 +66,9 @@ EmuEvent SetAreaCode(uint8 areaCode);
 EmuEvent SetDebugTrace(bool enable);
 EmuEvent SetEmulateSH2Cache(bool enable);
 EmuEvent DumpMemory();
+
+EmuEvent InsertBackupMemoryCartridge(std::filesystem::path path);
+EmuEvent Insert8MbitDRAMCartridge();
+EmuEvent Insert32MbitDRAMCartridge();
 
 } // namespace app::events::emu

@@ -722,28 +722,55 @@ void App::RunEmulator() {
                                              }});
 
     // ---------------------------------
-    // Main emulator loop
+    // File dialogs
 
-    m_fileDialogProps = SDL_CreateProperties();
-    if (m_fileDialogProps == 0) {
+    m_loadDiscFileDialogProps = SDL_CreateProperties();
+    if (m_loadDiscFileDialogProps == 0) {
         devlog::error<grp::base>("Failed to create file dialog properties: {}\n", SDL_GetError());
         return;
     }
-    ScopeGuard sgDestroyFileDialogProps{[&] { SDL_DestroyProperties(m_fileDialogProps); }};
+    ScopeGuard sgDestroyLoadDiscFileDialogProps{[&] { SDL_DestroyProperties(m_loadDiscFileDialogProps); }};
 
-    static constexpr SDL_DialogFileFilter kFileFilters[] = {
+    static constexpr SDL_DialogFileFilter kCartFileFilters[] = {
         {.name = "All supported formats (*.cue, *.mds, *.iso, *.ccd)", .pattern = "cue;mds;iso;ccd"},
         {.name = "All files (*.*)", .pattern = "*"},
     };
 
-    SDL_SetPointerProperty(m_fileDialogProps, SDL_PROP_FILE_DIALOG_WINDOW_POINTER, screen.window);
-    SDL_SetPointerProperty(m_fileDialogProps, SDL_PROP_FILE_DIALOG_FILTERS_POINTER, (void *)kFileFilters);
-    SDL_SetNumberProperty(m_fileDialogProps, SDL_PROP_FILE_DIALOG_NFILTERS_NUMBER, (int)std::size(kFileFilters));
-    SDL_SetBooleanProperty(m_fileDialogProps, SDL_PROP_FILE_DIALOG_MANY_BOOLEAN, false);
-    SDL_SetStringProperty(m_fileDialogProps, SDL_PROP_FILE_DIALOG_TITLE_STRING, "Load Sega Saturn disc image");
+    SDL_SetPointerProperty(m_loadDiscFileDialogProps, SDL_PROP_FILE_DIALOG_WINDOW_POINTER, screen.window);
+    SDL_SetPointerProperty(m_loadDiscFileDialogProps, SDL_PROP_FILE_DIALOG_FILTERS_POINTER, (void *)kCartFileFilters);
+    SDL_SetNumberProperty(m_loadDiscFileDialogProps, SDL_PROP_FILE_DIALOG_NFILTERS_NUMBER,
+                          (int)std::size(kCartFileFilters));
+    SDL_SetBooleanProperty(m_loadDiscFileDialogProps, SDL_PROP_FILE_DIALOG_MANY_BOOLEAN, false);
+    SDL_SetStringProperty(m_loadDiscFileDialogProps, SDL_PROP_FILE_DIALOG_TITLE_STRING, "Load Sega Saturn disc image");
     // const char *default_location = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_LOCATION_STRING, NULL);
     // const char *accept = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_ACCEPT_STRING, NULL);
     // const char *cancel = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_CANCEL_STRING, NULL);
+
+    m_loadBupCartFileDialogProps = SDL_CreateProperties();
+    if (m_loadBupCartFileDialogProps == 0) {
+        devlog::error<grp::base>("Failed to create file dialog properties: {}\n", SDL_GetError());
+        return;
+    }
+    ScopeGuard sgDestroyLoadBupCartFileDialogProps{[&] { SDL_DestroyProperties(m_loadBupCartFileDialogProps); }};
+
+    static constexpr SDL_DialogFileFilter kBupFileFilters[] = {
+        {.name = "Backup memory images (*.bin)", .pattern = "bin"},
+        {.name = "All files (*.*)", .pattern = "*"},
+    };
+
+    SDL_SetPointerProperty(m_loadBupCartFileDialogProps, SDL_PROP_FILE_DIALOG_WINDOW_POINTER, screen.window);
+    SDL_SetPointerProperty(m_loadBupCartFileDialogProps, SDL_PROP_FILE_DIALOG_FILTERS_POINTER, (void *)kBupFileFilters);
+    SDL_SetNumberProperty(m_loadBupCartFileDialogProps, SDL_PROP_FILE_DIALOG_NFILTERS_NUMBER,
+                          (int)std::size(kBupFileFilters));
+    SDL_SetBooleanProperty(m_loadBupCartFileDialogProps, SDL_PROP_FILE_DIALOG_MANY_BOOLEAN, false);
+    SDL_SetStringProperty(m_loadBupCartFileDialogProps, SDL_PROP_FILE_DIALOG_TITLE_STRING,
+                          "Load Sega Saturn backup memory image");
+    // const char *default_location = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_LOCATION_STRING, NULL);
+    // const char *accept = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_ACCEPT_STRING, NULL);
+    // const char *cancel = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_CANCEL_STRING, NULL);
+
+    // ---------------------------------
+    // Emulator configuration
 
     // TODO: pull from CommandLineOptions or configuration
     // m_context.saturn.SetVideoStandard(satemu::sys::VideoStandard::PAL);
@@ -753,7 +780,7 @@ void App::RunEmulator() {
 
     std::error_code error{};
     bup::BackupMemory bupMem{};
-    bupMem.LoadFrom(extBupPath, bup::BackupMemorySize::_32Mbit, error);
+    bupMem.CreateFrom(extBupPath, bup::BackupMemorySize::_32Mbit, error);
     if (error) {
         devlog::warn<grp::base>("Failed to load external backup memory: {}", error.message());
     } else {
@@ -768,6 +795,9 @@ void App::RunEmulator() {
     /*if (m_context.saturn.InsertCartridge<satemu::cart::DRAM32MbitCartridge>()) {
         devlog::info<grp::base>("32 Mbit DRAM cartridge inserted");
     }*/
+
+    // ---------------------------------
+    // Main emulator loop
 
     m_context.saturn.Reset(true);
 
@@ -948,6 +978,7 @@ void App::RunEmulator() {
             using EvtType = GUIEvent::Type;
             switch (evt.type) {
             case EvtType::LoadDisc: OpenLoadDiscDialog(); break;
+            case EvtType::OpenBackupMemoryCartFileDialog: OpenBackupMemoryCartFileDialog(); break;
             }
         }
 
@@ -1378,7 +1409,7 @@ void App::OpenLoadDiscDialog() {
         [](void *userdata, const char *const *filelist, int filter) {
             static_cast<App *>(userdata)->ProcessOpenDiscImageFileDialogSelection(filelist, filter);
         },
-        this, m_fileDialogProps);
+        this, m_loadDiscFileDialogProps);
 }
 
 void App::ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, int filter) {
@@ -1406,6 +1437,27 @@ bool App::LoadDiscImage(std::filesystem::path path) {
     m_context.saturn.LoadDisc(std::move(disc));
     m_context.state.loadedDiscImagePath = path;
     return true;
+}
+
+void App::OpenBackupMemoryCartFileDialog() {
+    SDL_ShowFileDialogWithProperties(
+        SDL_FILEDIALOG_OPENFILE,
+        [](void *userdata, const char *const *filelist, int filter) {
+            static_cast<App *>(userdata)->ProcessOpenBackupMemoryCartFileDialogSelection(filelist, filter);
+        },
+        this, m_loadBupCartFileDialogProps);
+}
+
+void App::ProcessOpenBackupMemoryCartFileDialogSelection(const char *const *filelist, int filter) {
+    if (filelist == nullptr) {
+        devlog::error<grp::base>("Failed to open file dialog: {}", SDL_GetError());
+    } else if (*filelist == nullptr) {
+        devlog::info<grp::base>("File dialog cancelled");
+    } else {
+        // Only one file should be selected
+        const char *file = *filelist;
+        m_context.EnqueueEvent(events::emu::InsertBackupMemoryCartridge(file));
+    }
 }
 
 void App::DrawWindows() {

@@ -720,7 +720,7 @@ void runBUPSandbox() {
 
     satemu::bup::BackupMemory mem{};
     std::error_code error{};
-    mem.LoadFrom("bup-int.bin", satemu::bup::BackupMemorySize::_256Kbit, error);
+    mem.CreateFrom("bup-int.bin", satemu::bup::BackupMemorySize::_256Kbit, error);
     if (error) {
         fmt::println("Failed to read backup memory file: {}", error.message());
         return;

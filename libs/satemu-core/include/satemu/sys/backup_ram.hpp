@@ -13,9 +13,25 @@
 
 namespace satemu::bup {
 
+enum class BackupMemoryImageLoadResult { Success, FilesystemError, InvalidSize };
+
 class BackupMemory final : public IBackupMemory {
 public:
     void MapMemory(sys::Bus &bus, uint32 start, uint32 end);
+
+    // Loads a backup memory file at the specified path.
+    // The file size determines the backup memory size.
+    // The image is not modified in any way.
+    //
+    // `path` is the path to the backup memory file to create.
+    // `error` will contain any error that occurs while loading or manipulating the file.
+    //
+    // Returns BackupMemoryImageLoadResult::Success if the image was loaded successfully.
+    // Returns BackupMemoryImageLoadResult::FilesystemError if there was a filesystem error while loading the image.
+    // `error` will contain the error.
+    // Returns BackupMemoryImageLoadResult::InvalidSize if the image size doesn't match any of the valid sizes.
+    // `error` is not modified in this case.
+    BackupMemoryImageLoadResult LoadFrom(const std::filesystem::path &path, std::error_code &error);
 
     // Creates or replaces a backup memory file at the specified path with the given size.
     // If the file does not exist, it is created with the given size.
@@ -25,7 +41,7 @@ public:
     // `path` is the path to the backup memory file to create.
     // `size` is the total backup memory size.
     // `error` will contain any error that occurs while loading or manipulating the file.
-    void LoadFrom(const std::filesystem::path &path, BackupMemorySize size, std::error_code &error);
+    void CreateFrom(const std::filesystem::path &path, BackupMemorySize size, std::error_code &error);
 
     uint8 ReadByte(uint32 address) const final;
     uint16 ReadWord(uint32 address) const final;

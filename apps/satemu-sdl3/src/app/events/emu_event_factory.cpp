@@ -4,9 +4,10 @@
 
 #include <satemu/util/dev_log.hpp>
 
-#include <filesystem>
 #include <fstream>
 #include <iostream>
+
+using namespace satemu;
 
 namespace app::events::emu {
 
@@ -27,11 +28,11 @@ namespace grp {
 
 } // namespace grp
 
-EmuEvent SetClockSpeed(satemu::sys::ClockSpeed clockSpeed) {
+EmuEvent SetClockSpeed(sys::ClockSpeed clockSpeed) {
     return RunFunction([=](SharedContext &ctx) { ctx.saturn.SetClockSpeed(clockSpeed); });
 }
 
-EmuEvent SetVideoStandard(satemu::sys::VideoStandard videoStandard) {
+EmuEvent SetVideoStandard(sys::VideoStandard videoStandard) {
     return RunFunction([=](SharedContext &ctx) { ctx.saturn.SetVideoStandard(videoStandard); });
 }
 
@@ -138,6 +139,39 @@ EmuEvent DumpMemory() {
             ctx.saturn.SCSP.DumpDSPRegs(out);
         }
     });
+}
+
+EmuEvent InsertBackupMemoryCartridge(std::filesystem::path path) {
+    return RunFunction([=](SharedContext &ctx) {
+        std::error_code error{};
+        bup::BackupMemory bupMem{};
+        const auto result = bupMem.LoadFrom(path, error);
+        switch (result) {
+        case bup::BackupMemoryImageLoadResult::Success:
+            ctx.saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
+            devlog::info<grp::base>("External backup memory cartridge loaded from {}", path.string());
+            break;
+        case bup::BackupMemoryImageLoadResult::FilesystemError:
+            if (error) {
+                devlog::warn<grp::base>("Failed to load external backup memory: {}", error.message());
+            } else {
+                devlog::warn<grp::base>("Failed to load external backup memory: Unspecified file system error");
+            }
+            break;
+        case bup::BackupMemoryImageLoadResult::InvalidSize:
+            devlog::warn<grp::base>("Failed to load external backup memory: Invalid image size");
+            break;
+        default: devlog::warn<grp::base>("Failed to load external backup memory: Unexpected error"); break;
+        }
+    });
+}
+
+EmuEvent Insert8MbitDRAMCartridge() {
+    return RunFunction([](SharedContext &ctx) { ctx.saturn.InsertCartridge<cart::DRAM8MbitCartridge>(); });
+}
+
+EmuEvent Insert32MbitDRAMCartridge() {
+    return RunFunction([](SharedContext &ctx) { ctx.saturn.InsertCartridge<cart::DRAM32MbitCartridge>(); });
 }
 
 } // namespace app::events::emu

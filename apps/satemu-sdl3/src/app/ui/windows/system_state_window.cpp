@@ -439,16 +439,13 @@ void SystemStateWindow::DrawCartridge() {
     ImGui::Button("Insert...");
     if (ImGui::BeginPopupContextItem(nullptr, ImGuiPopupFlags_MouseButtonLeft)) {
         if (ImGui::MenuItem("Backup RAM")) {
-            // TODO: open popup to select backup image
-            // m_context.EnqueueEvent(events::gui::OpenBackupMemoryCartFileDialog());
+            m_context.EnqueueEvent(events::gui::OpenBackupMemoryCartFileDialog());
         }
         if (ImGui::MenuItem("8 Mbit DRAM")) {
-            // TODO: insert cartridge
-            // m_context.EnqueueEvent(events::emu::Insert8MbitDRAMCartridge());
+            m_context.EnqueueEvent(events::emu::Insert8MbitDRAMCartridge());
         }
         if (ImGui::MenuItem("32 Mbit DRAM")) {
-            // TODO: insert cartridge
-            // m_context.EnqueueEvent(events::emu::Insert32MbitDRAMCartridge());
+            m_context.EnqueueEvent(events::emu::Insert32MbitDRAMCartridge());
         }
         ImGui::EndPopup();
     }

@@ -51,7 +51,8 @@ private:
     CommandLineOptions m_options;
 
     SharedContext m_context;
-    SDL_PropertiesID m_fileDialogProps;
+    SDL_PropertiesID m_loadDiscFileDialogProps;
+    SDL_PropertiesID m_loadBupCartFileDialogProps;
 
     std::thread m_emuThread;
 
@@ -65,6 +66,8 @@ private:
     void ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, int filter);
     bool LoadDiscImage(std::filesystem::path path);
 
+    void OpenBackupMemoryCartFileDialog();
+    void ProcessOpenBackupMemoryCartFileDialogSelection(const char *const *filelist, int filter);
     // -----------------------------------------------------------------------------------------------------------------
     // Windows
 

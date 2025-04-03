@@ -5,7 +5,7 @@ namespace satemu::sys {
 SystemMemory::SystemMemory() {
     // TODO: configurable path and mode
     std::error_code error{};
-    m_internalBackupRAM.LoadFrom("bup-int.bin", kInternalBackupRAMSize, error);
+    m_internalBackupRAM.CreateFrom("bup-int.bin", kInternalBackupRAMSize, error);
     // TODO: handle error
 
     IPL.fill(0);
