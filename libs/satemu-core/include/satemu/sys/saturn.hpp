@@ -41,17 +41,20 @@ struct Saturn : sys::ISystemOperations {
     void LoadIPL(std::span<uint8, sys::kIPLSize> ipl);
 
     // Inserts a cartridge into the cartridge slot.
-    // `T` specifies the cartridge type - a concrete implementation of cart::BaseCartridge.
-    // `args` are passed to the constructor of `T`.
     template <typename T, typename... Args>
         requires std::derived_from<T, cart::BaseCartridge>
-    [[nodiscard]] bool InsertCartridge(Args &&...args) {
-        return SCU.InsertCartridge<T>(std::forward<Args>(args)...);
+    void InsertCartridge(Args &&...args) {
+        SCU.InsertCartridge<T>(std::forward<Args>(args)...);
     }
 
     // Ejects the cartridge from the cartridge slot.
     void EjectCartridge() {
         SCU.EjectCartridge();
+    }
+
+    // Returns a reference to the inserted cartridge.
+    [[nodiscard]] cart::BaseCartridge &GetCartridge() {
+        return SCU.GetCartridge();
     }
 
     void LoadDisc(media::Disc &&disc);

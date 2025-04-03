@@ -5,22 +5,18 @@
 #include <satemu/sys/backup_ram.hpp>
 
 #include <filesystem>
+#include <memory>
 
 namespace satemu::cart {
 
 class BackupMemoryCartridge final : public BaseCartridge {
 public:
-    enum class Size { _4Mbit, _8Mbit, _16Mbit, _32Mbit };
-
-    // TODO: specify copy-on-write mode
-    BackupMemoryCartridge(Size size, const std::filesystem::path &path, std::error_code &error);
-
-    // TODO: constructor for in-memory backup memory
-    // - needs support from bup::BackupMemory
-
-    bool IsInitialized() const final {
-        return m_backupRAM.Size() > 0;
-    }
+    // Creates a backup memory cartridge from the specified backup memory.
+    // The size of the cartridge is determined by the size of the given backup memory.
+    // Backup memory cartridges come in four sizes: 512 KiB, 1 MiB, 2 MiB or 4 MiB.
+    // If the backup memory is smaller than 512 KiB, it will be mirrored across the 512 KiB range.
+    // If it is larger than 4 MiB, only the lower 4 MiB will be used.
+    BackupMemoryCartridge(bup::BackupMemory &&backupRAM);
 
     uint8 ReadByte(uint32 address) const final {
         return m_backupRAM.ReadByte(address);
@@ -50,6 +46,10 @@ public:
     }
     void PokeWord(uint32 address, uint16 value) final {
         WriteWord(address, value);
+    }
+
+    bup::IBackupMemory &GetBackupMemory() {
+        return m_backupRAM;
     }
 
 private:

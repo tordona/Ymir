@@ -6,17 +6,20 @@
 
 namespace satemu::cart {
 
-static constexpr bup::BackupMemorySize kSizes[] = {bup::BackupMemorySize::_4Mbit, bup::BackupMemorySize::_8Mbit,
-                                                   bup::BackupMemorySize::_16Mbit, bup::BackupMemorySize::_32Mbit};
-static constexpr uint8 kIDs[] = {0x21, 0x22, 0x23, 0x24};
-
-static constexpr uint8 GetIndex(BackupMemoryCartridge::Size size) {
-    return std::min<uint8>(static_cast<uint8>(size), std::size(kSizes));
+static constexpr uint8 GetCartID(uint32 bupSize) {
+    if (bupSize <= 512_KiB) {
+        return 0x21; // 4 Mbit Backup RAM
+    } else if (bupSize <= 1_MiB) {
+        return 0x22; // 8 Mbit Backup RAM
+    } else if (bupSize <= 2_MiB) {
+        return 0x23; // 16 Mbit Backup RAM
+    } else {
+        return 0x24; // 32 Mbit Backup RAM
+    }
 }
 
-BackupMemoryCartridge::BackupMemoryCartridge(Size size, const std::filesystem::path &path, std::error_code &error)
-    : BaseCartridge(kIDs[GetIndex(size)]) {
-    m_backupRAM.LoadFrom(path, kSizes[GetIndex(size)], error);
-}
+BackupMemoryCartridge::BackupMemoryCartridge(bup::BackupMemory &&backupRAM)
+    : BaseCartridge(GetCartID(backupRAM.Size()), CartType::BackupMemory)
+    , m_backupRAM(std::move(backupRAM)) {}
 
 } // namespace satemu::cart

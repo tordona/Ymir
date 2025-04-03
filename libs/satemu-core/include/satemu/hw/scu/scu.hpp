@@ -83,14 +83,19 @@ public:
 
     template <typename T, typename... Args>
         requires std::derived_from<T, cart::BaseCartridge>
-    [[nodiscard]] bool InsertCartridge(Args &&...args) {
-        // TODO: m_cartSlot.MapMemory(bus) if successfully inserted
-        return m_cartSlot.Insert<T>(std::forward<Args>(args)...);
+    void InsertCartridge(Args &&...args) {
+        m_cartSlot.InsertCartridge<T>(std::forward<Args>(args)...);
+        // TODO: m_cartSlot.MapMemory(bus)
     }
 
     void EjectCartridge() {
         // TODO: unmap cartridge memory
-        m_cartSlot.Eject();
+        m_cartSlot.EjectCartridge();
+    }
+
+    // Returns a reference to the inserted cartridge.
+    [[nodiscard]] cart::BaseCartridge &GetCartridge() {
+        return m_cartSlot.GetCartridge();
     }
 
     // -------------------------------------------------------------------------

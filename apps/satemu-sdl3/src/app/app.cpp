@@ -752,11 +752,13 @@ void App::RunEmulator() {
     static constexpr std::string_view extBupPath = "bup-ext.bin";
 
     std::error_code error{};
-    if (m_context.saturn.InsertCartridge<satemu::cart::BackupMemoryCartridge>(
-            satemu::cart::BackupMemoryCartridge::Size::_32Mbit, extBupPath, error)) {
-        devlog::info<grp::base>("External backup memory cartridge loaded from {}", extBupPath);
-    } else if (error) {
+    bup::BackupMemory bupMem{};
+    bupMem.LoadFrom(extBupPath, bup::BackupMemorySize::_32Mbit, error);
+    if (error) {
         devlog::warn<grp::base>("Failed to load external backup memory: {}", error.message());
+    } else {
+        m_context.saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
+        devlog::info<grp::base>("External backup memory cartridge loaded from {}", extBupPath);
     }
 
     /*if (m_context.saturn.InsertCartridge<satemu::cart::DRAM8MbitCartridge>()) {

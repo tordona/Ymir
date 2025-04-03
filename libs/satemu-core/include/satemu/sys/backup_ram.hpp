@@ -2,66 +2,20 @@
 
 #include <satemu/core/types.hpp>
 
+#include <satemu/sys/backup_ram_defs.hpp>
 #include <satemu/sys/bus.hpp>
 
 #include <mio/mmap.hpp>
 
 #include <filesystem>
 #include <optional>
-#include <span>
-#include <string>
 #include <vector>
 
 namespace satemu::bup {
 
-enum class BackupMemorySize {
-    _256Kbit, // Internal Backup RAM
-    _4Mbit,   // 4 Mbit External Backup RAM
-    _8Mbit,   // 8 Mbit External Backup RAM
-    _16Mbit,  // 16 Mbit External Backup RAM
-    _32Mbit,  // 32 Mbit External Backup RAM
-};
-
-enum class Language : uint8 {
-    Japanese = 0x00,
-    English = 0x01,
-    French = 0x02,
-    German = 0x03,
-    Spanish = 0x04,
-    Italian = 0x05,
-};
-
-struct BackupFileHeader {
-    std::string filename; // max 11 chars
-    std::string comment;  // max 10 chars
-    Language language;
-    uint32 date; // minutes since 1/1/1980
-};
-
-struct BackupFileInfo {
-    BackupFileHeader header;
-    uint32 size; // in bytes (including block list)
-    uint32 numBlocks;
-};
-
-struct BackupFile {
-    BackupFileHeader header;
-    std::vector<uint8> data;
-};
-
-enum class BackupFileImportResult { Imported, Overwritten, FileExists, NoSpace };
-
-class BackupMemory {
+class BackupMemory final : public IBackupMemory {
 public:
     void MapMemory(sys::Bus &bus, uint32 start, uint32 end);
-
-    uint8 ReadByte(uint32 address) const;
-    uint16 ReadWord(uint32 address) const;
-    uint32 ReadLong(uint32 address) const;
-
-    void WriteByte(uint32 address, uint8 value);
-    void WriteWord(uint32 address, uint16 value);
-    void WriteLong(uint32 address, uint32 value);
 
     // Creates or replaces a backup memory file at the specified path with the given size.
     // If the file does not exist, it is created with the given size.
@@ -73,32 +27,40 @@ public:
     // `error` will contain any error that occurs while loading or manipulating the file.
     void LoadFrom(const std::filesystem::path &path, BackupMemorySize size, std::error_code &error);
 
+    uint8 ReadByte(uint32 address) const final;
+    uint16 ReadWord(uint32 address) const final;
+    uint32 ReadLong(uint32 address) const final;
+
+    void WriteByte(uint32 address, uint8 value) final;
+    void WriteWord(uint32 address, uint16 value) final;
+    void WriteLong(uint32 address, uint32 value) final;
+
     // Checks if the backup memory header is valid.
-    bool IsHeaderValid() const;
+    bool IsHeaderValid() const final;
 
     // Retrieves the total size in bytes of the backup memory.
-    uint32 Size() const;
+    uint32 Size() const final;
 
     // Retrieves the block size.
-    uint32 GetBlockSize() const;
+    uint32 GetBlockSize() const final;
 
     // Retrieves the total number of blocks.
-    uint32 GetTotalBlocks() const;
+    uint32 GetTotalBlocks() const final;
 
     // Computes the number of blocks used by backup files.
-    uint32 GetUsedBlocks();
+    uint32 GetUsedBlocks() final;
 
     // Formats the backup memory.
-    void Format();
+    void Format() final;
 
     // Retrieves a list of backup files stored in this backup memory.
-    std::vector<BackupFileInfo> List();
+    std::vector<BackupFileInfo> List() final;
 
     // Attempts to export the backup file with the specified name.
     //
     // Returns a BackupFile with the file's contents if it exists.
     // Returns std::nullopt if no such file exists.
-    std::optional<BackupFile> Export(std::string_view filename);
+    std::optional<BackupFile> Export(std::string_view filename) final;
 
     // Attempts to import the specified backup file, optionally overwriting an existing file with the same name as the
     // one being imported.
@@ -108,13 +70,13 @@ public:
     // Returns BackupFileImportResult::FileExists if the overwrite flag is clear and the file already exists.
     // Returns BackupFileImportResult::NoSpace if there is not enough space to import the file. The contents of the
     // backup memory are not modified if this happens.
-    BackupFileImportResult Import(const BackupFile &file, bool overwrite);
+    BackupFileImportResult Import(const BackupFile &file, bool overwrite) final;
 
     // Attempts to delete a backup file with the specified name.
     //
     // Returns true if the file was deleted.
     // Returns false if there was no file with the specified name.
-    bool Delete(std::string_view filename);
+    bool Delete(std::string_view filename) final;
 
 private:
     // TODO: support three types

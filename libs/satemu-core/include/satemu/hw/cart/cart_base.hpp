@@ -4,19 +4,24 @@
 
 namespace satemu::cart {
 
+enum class CartType { None, BackupMemory, DRAM8Mbit, DRAM32Mbit };
+
 class BaseCartridge {
 public:
-    BaseCartridge(uint8 id)
-        : m_id(id) {}
+    BaseCartridge(uint8 id, CartType type)
+        : m_id(id)
+        , m_type(type) {}
 
     virtual ~BaseCartridge() = default;
-
-    virtual bool IsInitialized() const = 0;
 
     virtual void Reset(bool hard) {}
 
     uint8 GetID() const {
         return m_id;
+    }
+
+    CartType GetType() const {
+        return m_type;
     }
 
     virtual uint8 ReadByte(uint32 address) const = 0;
@@ -33,6 +38,7 @@ public:
 
 private:
     uint8 m_id;
+    CartType m_type;
 };
 
 } // namespace satemu::cart

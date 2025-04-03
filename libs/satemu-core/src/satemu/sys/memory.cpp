@@ -5,7 +5,7 @@ namespace satemu::sys {
 SystemMemory::SystemMemory() {
     // TODO: configurable path and mode
     std::error_code error{};
-    internalBackupRAM.LoadFrom("bup-int.bin", kInternalBackupRAMSize, error);
+    m_internalBackupRAM.LoadFrom("bup-int.bin", kInternalBackupRAMSize, error);
     // TODO: handle error
 
     IPL.fill(0);
@@ -21,7 +21,7 @@ void SystemMemory::Reset(bool hard) {
 
 void SystemMemory::MapMemory(Bus &bus) {
     bus.MapArray(0x000'0000, 0x00F'FFFF, IPL, false);
-    internalBackupRAM.MapMemory(bus, 0x018'0000, 0x01F'FFFF);
+    m_internalBackupRAM.MapMemory(bus, 0x018'0000, 0x01F'FFFF);
     bus.MapArray(0x020'0000, 0x02F'FFFF, WRAMLow, true);
     bus.MapArray(0x600'0000, 0x7FF'FFFF, WRAMHigh, true);
 }

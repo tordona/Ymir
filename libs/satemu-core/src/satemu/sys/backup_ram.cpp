@@ -36,50 +36,6 @@ void BackupMemory::MapMemory(sys::Bus &bus, uint32 start, uint32 end) {
         [](uint32 address, uint32 value, void *ctx) { static_cast<BackupMemory *>(ctx)->WriteLong(address, value); });
 }
 
-uint8 BackupMemory::ReadByte(uint32 address) const {
-    if ((address & 1) && m_addressMask != 0) {
-        return m_backupRAM[(address >> 1) & m_addressMask];
-    } else {
-        return 0xFFu;
-    }
-}
-
-uint16 BackupMemory::ReadWord(uint32 address) const {
-    if (m_addressMask != 0) {
-        return 0xFF00u | m_backupRAM[(address >> 1) & m_addressMask];
-    } else {
-        return 0xFFFFu;
-    }
-}
-
-uint32 BackupMemory::ReadLong(uint32 address) const {
-    uint32 value = ReadWord(address + 0) << 16u;
-    value |= ReadWord(address + 2) << 0u;
-    return value;
-}
-
-void BackupMemory::WriteByte(uint32 address, uint8 value) {
-    if ((address & 1) && m_addressMask != 0) {
-        m_backupRAM[(address >> 1) & m_addressMask] = value;
-        m_dirty = true;
-    }
-}
-
-void BackupMemory::WriteWord(uint32 address, uint16 value) {
-    if (m_addressMask != 0) {
-        m_backupRAM[(address >> 1) & m_addressMask] = value;
-        m_dirty = true;
-    }
-}
-
-void BackupMemory::WriteLong(uint32 address, uint32 value) {
-    if (m_addressMask != 0) {
-        m_backupRAM[((address + 0) >> 1) & m_addressMask] = value >> 16u;
-        m_backupRAM[((address + 2) >> 1) & m_addressMask] = value >> 0u;
-        m_dirty = true;
-    }
-}
-
 void BackupMemory::LoadFrom(const std::filesystem::path &path, BackupMemorySize size, std::error_code &error) {
     error.clear();
 
@@ -126,6 +82,50 @@ void BackupMemory::LoadFrom(const std::filesystem::path &path, BackupMemorySize 
     m_blockBitmap.resize(GetTotalBlocks() / 64);
 
     RebuildFileList(true);
+}
+
+uint8 BackupMemory::ReadByte(uint32 address) const {
+    if ((address & 1) && m_addressMask != 0) {
+        return m_backupRAM[(address >> 1) & m_addressMask];
+    } else {
+        return 0xFFu;
+    }
+}
+
+uint16 BackupMemory::ReadWord(uint32 address) const {
+    if (m_addressMask != 0) {
+        return 0xFF00u | m_backupRAM[(address >> 1) & m_addressMask];
+    } else {
+        return 0xFFFFu;
+    }
+}
+
+uint32 BackupMemory::ReadLong(uint32 address) const {
+    uint32 value = ReadWord(address + 0) << 16u;
+    value |= ReadWord(address + 2) << 0u;
+    return value;
+}
+
+void BackupMemory::WriteByte(uint32 address, uint8 value) {
+    if ((address & 1) && m_addressMask != 0) {
+        m_backupRAM[(address >> 1) & m_addressMask] = value;
+        m_dirty = true;
+    }
+}
+
+void BackupMemory::WriteWord(uint32 address, uint16 value) {
+    if (m_addressMask != 0) {
+        m_backupRAM[(address >> 1) & m_addressMask] = value;
+        m_dirty = true;
+    }
+}
+
+void BackupMemory::WriteLong(uint32 address, uint32 value) {
+    if (m_addressMask != 0) {
+        m_backupRAM[((address + 0) >> 1) & m_addressMask] = value >> 16u;
+        m_backupRAM[((address + 2) >> 1) & m_addressMask] = value >> 0u;
+        m_dirty = true;
+    }
 }
 
 bool BackupMemory::IsHeaderValid() const {

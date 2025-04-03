@@ -7,11 +7,7 @@ namespace satemu::cart {
 class NoCartridge final : public BaseCartridge {
 public:
     NoCartridge()
-        : BaseCartridge(0xFFu) {}
-
-    bool IsInitialized() const final {
-        return false;
-    }
+        : BaseCartridge(0xFFu, CartType::None) {}
 
     uint8 ReadByte(uint32 address) const final {
         return 0xFFu;

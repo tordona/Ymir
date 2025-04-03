@@ -16,21 +16,29 @@ public:
         m_cart->Reset(hard);
     }
 
+    // Inserts the cartridge into this slot.
     template <typename T, typename... Args>
         requires std::derived_from<T, cart::BaseCartridge>
-    [[nodiscard]] bool Insert(Args &&...args) {
-        auto cart = std::make_unique<T>(std::forward<Args>(args)...);
-        if (!cart->IsInitialized()) [[unlikely]] {
-            return false;
-        }
-        m_cart.reset(cart.release());
-        return true;
+    void InsertCartridge(Args &&...args) {
+        m_cart = std::make_unique<T>(std::forward<Args>(args)...);
     }
 
-    void Eject();
+    // Removes the cartridge from this slot.
+    void EjectCartridge();
 
-    uint8 GetID() const {
+    // Returns a reference to the inserted cartridge.
+    [[nodiscard]] BaseCartridge &GetCartridge() {
+        return *m_cart;
+    }
+
+    // Retrieves the inserted cartridge's ID.
+    [[nodiscard]] uint8 GetID() const {
         return m_cart->GetID();
+    }
+
+    // Retrieves the inserted cartridge's type.
+    [[nodiscard]] CartType GetCartridgeType() const {
+        return m_cart->GetType();
     }
 
     template <bool peek>

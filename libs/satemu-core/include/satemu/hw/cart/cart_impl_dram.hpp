@@ -10,18 +10,14 @@
 namespace satemu::cart {
 
 // Base class for DRAM cartridges.
-template <uint8 id, size_t size>
+template <uint8 id, size_t size, CartType type>
 class BaseDRAMCartridge : public BaseCartridge {
     static_assert(size != 0 && (size & (size - 1)) == 0, "size must be a power of two");
 
 public:
     BaseDRAMCartridge()
-        : BaseCartridge(id) {
+        : BaseCartridge(id, type) {
         Reset(true);
-    }
-
-    bool IsInitialized() const final {
-        return true;
     }
 
     void Reset(bool hard) final {
@@ -37,7 +33,7 @@ protected:
 // 8 Mbit (1 MiB) DRAM cartridge.
 // Lower 512 KiB mapped to 0x240'0000..0x24F'FFFF, mirrored twice
 // Upper 512 KiB mapped to 0x260'0000..0x26F'FFFF, mirrored twice
-class DRAM8MbitCartridge final : public BaseDRAMCartridge<0x5A, 1_MiB> {
+class DRAM8MbitCartridge final : public BaseDRAMCartridge<0x5A, 1_MiB, CartType::DRAM8Mbit> {
 public:
     uint8 ReadByte(uint32 address) const final {
         switch (address >> 20) {
@@ -88,7 +84,7 @@ public:
 
 // 32 Mbit (4 MiB) DRAM cartridge.
 // Mapped to 0x240'0000..0x27F'FFFF
-class DRAM32MbitCartridge final : public BaseDRAMCartridge<0x5C, 4_MiB> {
+class DRAM32MbitCartridge final : public BaseDRAMCartridge<0x5C, 4_MiB, CartType::DRAM32Mbit> {
 public:
     uint8 ReadByte(uint32 address) const final {
         switch (address >> 20) {

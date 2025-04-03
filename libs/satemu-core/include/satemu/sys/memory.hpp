@@ -32,12 +32,17 @@ struct SystemMemory {
     void DumpWRAMLow(std::ostream &out) const;
     void DumpWRAMHigh(std::ostream &out) const;
 
+    bup::IBackupMemory &GetInternalBackupRAM() {
+        return m_internalBackupRAM;
+    }
+
     alignas(16) std::array<uint8, kIPLSize> IPL; // aka BIOS ROM
 
     alignas(16) std::array<uint8, kWRAMLowSize> WRAMLow;
     alignas(16) std::array<uint8, kWRAMHighSize> WRAMHigh;
 
-    bup::BackupMemory internalBackupRAM;
+private:
+    bup::BackupMemory m_internalBackupRAM;
 };
 
 } // namespace satemu::sys
