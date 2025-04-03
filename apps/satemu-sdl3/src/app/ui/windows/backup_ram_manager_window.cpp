@@ -1,11 +1,16 @@
 #include "backup_ram_manager_window.hpp"
 
+#include <satemu/hw/cart/cart.hpp>
+
 #include <imgui.h>
+
+using namespace satemu;
 
 namespace app::ui {
 
 BackupMemoryManagerWindow::BackupMemoryManagerWindow(SharedContext &context)
-    : WindowBase(context) {
+    : WindowBase(context)
+    , m_bupView(context) {
 
     m_windowConfig.name = "Backup memory manager";
 }
@@ -13,38 +18,33 @@ BackupMemoryManagerWindow::BackupMemoryManagerWindow(SharedContext &context)
 void BackupMemoryManagerWindow::DrawContents() {
     if (ImGui::Button("Open image...")) {
         // TODO: open image in a new window
-        // - but only if it's not the system or cartridge memory or one of the extra windows
+        // - but only if it's not the system or cartridge memory image or already opened in one of the extra windows
         // - disable if there are too many open windows
     }
 
     // TODO: support drag and drop
     // TODO: support multi-selection
-    // TODO: build view for backup memory contents
     // TODO: buttons to easily copy/move between System and Cartridge memory
 
     if (ImGui::BeginTable("bup_mgr", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
-            ImGui::TextUnformatted("(System backup memory placeholder)");
-
-            ImGui::Button("Import##sys");
-            ImGui::SameLine();
-            ImGui::Button("Export##sys");
-            ImGui::SameLine();
-            ImGui::Button("Delete##sys");
-            ImGui::SameLine();
-            ImGui::Button("Format##sys");
+            ImGui::SeparatorText("System memory");
+            ImGui::PushID("sys_bup");
+            m_bupView.Display(&m_context.saturn.mem.GetInternalBackupRAM());
+            ImGui::PopID();
         }
         if (ImGui::TableNextColumn()) {
-            ImGui::TextUnformatted("(Cartridge backup memory placeholder)");
+            ImGui::SeparatorText("Cartridge memory");
 
-            ImGui::Button("Import##cart");
-            ImGui::SameLine();
-            ImGui::Button("Export##cart");
-            ImGui::SameLine();
-            ImGui::Button("Delete##cart");
-            ImGui::SameLine();
-            ImGui::Button("Format##cart");
+            ImGui::PushID("cart_bup");
+            std::unique_lock lock{m_context.locks.cart};
+            if (auto *bupCart = cart::As<cart::CartType::BackupMemory>(m_context.saturn.GetCartridge())) {
+                m_bupView.Display(&bupCart->GetBackupMemory());
+            } else {
+                m_bupView.Display(nullptr);
+            }
+            ImGui::PopID();
         }
 
         ImGui::EndTable();

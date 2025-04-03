@@ -29,6 +29,9 @@ add_executable(satemu-sdl3
 
     src/app/ui/state/debug/memory_viewer_state.hpp
 
+    src/app/ui/views/backup_memory_view.cpp
+    src/app/ui/views/backup_memory_view.hpp
+
     src/app/ui/views/debug/debug_output_view.cpp
     src/app/ui/views/debug/debug_output_view.hpp
     src/app/ui/views/debug/scu_dma_registers_view.cpp
@@ -91,6 +94,8 @@ add_executable(satemu-sdl3
 
     src/app/ui/windows/about_window.cpp
     src/app/ui/windows/about_window.hpp
+    src/app/ui/windows/backup_ram_manager_window.cpp
+    src/app/ui/windows/backup_ram_manager_window.hpp
     src/app/ui/windows/system_state_window.cpp
     src/app/ui/windows/system_state_window.hpp
 
@@ -131,7 +136,7 @@ add_executable(satemu-sdl3
 
     src/util/rom_loader.cpp
     src/util/rom_loader.hpp
- "src/app/ui/windows/backup_ram_manager_window.cpp")
+)
 add_executable(satemu::satemu-sdl3 ALIAS satemu-sdl3)
 set_target_properties(satemu-sdl3 PROPERTIES
                       VERSION ${satemu_VERSION}

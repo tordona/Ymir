@@ -2,6 +2,8 @@
 
 #include <app/ui/window_base.hpp>
 
+#include <app/ui/views/backup_memory_view.hpp>
+
 namespace app::ui {
 
 class BackupMemoryManagerWindow : public WindowBase {
@@ -15,6 +17,8 @@ private:
     // TODO: system backup memory view
     // TODO: cartridge backup memory view
     // TODO: additional windows for backup memory views from files
+
+    BackupMemoryView m_bupView;
 };
 
 } // namespace app::ui
