@@ -3,6 +3,9 @@
 #include <app/events/emu_event_factory.hpp>
 #include <app/events/gui_event_factory.hpp>
 
+#include <app/ui/widgets/cartridge_widgets.hpp>
+#include <app/ui/widgets/system_widgets.hpp>
+
 using namespace satemu;
 
 namespace app::ui {
@@ -75,13 +78,7 @@ void SystemStateWindow::DrawParameters() {
             ImGui::TextUnformatted("Video standard");
         }
         if (ImGui::TableNextColumn()) {
-            if (ImGui::RadioButton("NTSC", videoStandard == sys::VideoStandard::NTSC)) {
-                m_context.EnqueueEvent(events::emu::SetVideoStandard(sys::VideoStandard::NTSC));
-            }
-            ImGui::SameLine();
-            if (ImGui::RadioButton("PAL", videoStandard == sys::VideoStandard::PAL)) {
-                m_context.EnqueueEvent(events::emu::SetVideoStandard(sys::VideoStandard::PAL));
-            }
+            ui::widgets::VideoStandardSelector(m_context);
         }
 
         ImGui::TableNextRow();
@@ -96,41 +93,7 @@ void SystemStateWindow::DrawParameters() {
             }
         }
         if (ImGui::TableNextColumn()) {
-            static constexpr struct {
-                uint8 charCode;
-                const char *name;
-            } kRegions[] = {
-                {/*0x0*/ '?', "Invalid"},       {/*0x1*/ 'J', "Japan"},
-                {/*0x2*/ 'T', "Asia NTSC"},     {/*0x3*/ '?', "Invalid"},
-                {/*0x4*/ 'U', "North America"}, {/*0x5*/ 'B', "Central/South America NTSC"},
-                {/*0x6*/ 'K', "Korea"},         {/*0x7*/ '?', "Invalid"},
-                {/*0x8*/ '?', "Invalid"},       {/*0x9*/ '?', "Invalid"},
-                {/*0xA*/ 'A', "Asia PAL"},      {/*0xB*/ '?', "Invalid"},
-                {/*0xC*/ 'E', "Europe PAL"},    {/*0xD*/ 'L', "Central/South America PAL"},
-                {/*0xE*/ '?', "Invalid"},       {/*0xF*/ '?', "Invalid"},
-            };
-
-            auto fmtRegion = [](uint8 index) {
-                index &= 0xF;
-                return fmt::format("({:c}) {}", kRegions[index].charCode, kRegions[index].name);
-            };
-
-            uint8 areaCode = m_context.saturn.SMPC.GetAreaCode();
-            if (ImGui::BeginCombo("##region", fmtRegion(areaCode).c_str(),
-                                  ImGuiComboFlags_WidthFitPreview | ImGuiComboFlags_HeightLargest)) {
-                for (uint8 i = 0; i <= 0xF; i++) {
-                    if (kRegions[i].charCode == '?') {
-                        continue;
-                    }
-                    if (ImGui::Selectable(fmtRegion(i).c_str(), i == areaCode) && i != areaCode) {
-                        m_context.EnqueueEvent(events::emu::SetAreaCode(i));
-                        // TODO: optional?
-                        m_context.EnqueueEvent(events::emu::HardReset());
-                    }
-                }
-
-                ImGui::EndCombo();
-            }
+            ui::widgets::RegionSelector(m_context);
         }
 
         ImGui::EndTable();
@@ -455,23 +418,17 @@ void SystemStateWindow::DrawCartridge() {
     }
     ImGui::SameLine();
 
-    std::unique_lock lock{m_context.locks.cart};
-    auto &cart = m_context.saturn.GetCartridge();
+    uint8 cartID;
+    {
+        std::unique_lock lock{m_context.locks.cart};
+        auto &cart = m_context.saturn.GetCartridge();
+        cartID = cart.GetID();
+    }
 
     ImGui::AlignTextToFramePadding();
-    ImGui::Text("[ID %02X] ", cart.GetID());
+    ImGui::Text("[ID %02X] ", cartID);
     ImGui::SameLine(0, 0);
-    switch (cart.GetType()) {
-    case cart::CartType::None: ImGui::TextUnformatted("No cartridge inserted"); break;
-    case cart::CartType::BackupMemory: //
-    {
-        auto &bupCart = *cart::As<cart::CartType::BackupMemory>(&cart);
-        ImGui::Text("%u Mbit Backup RAM", bupCart.GetBackupMemory().Size() * 8u / 1024u / 1024u);
-        break;
-    }
-    case cart::CartType::DRAM8Mbit: ImGui::TextUnformatted("8 Mbit DRAM"); break;
-    case cart::CartType::DRAM32Mbit: ImGui::TextUnformatted("32 Mbit DRAM"); break;
-    }
+    widgets::CartridgeInfo(m_context);
 }
 
 void SystemStateWindow::DrawPeripherals() {

@@ -84,6 +84,11 @@ add_executable(satemu-sdl3
     src/app/ui/views/debug/sh2_wdt_view.cpp
     src/app/ui/views/debug/sh2_wdt_view.hpp
 
+    src/app/ui/widgets/cartridge_widgets.hpp
+    src/app/ui/widgets/cartridge_widgets.cpp
+    src/app/ui/widgets/system_widgets.cpp
+    src/app/ui/widgets/system_widgets.hpp
+
     src/app/ui/windows/about_window.cpp
     src/app/ui/windows/about_window.hpp
     src/app/ui/windows/system_state_window.cpp
