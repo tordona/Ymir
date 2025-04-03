@@ -15,6 +15,10 @@ BackupMemoryManagerWindow::BackupMemoryManagerWindow(SharedContext &context)
     m_windowConfig.name = "Backup memory manager";
 }
 
+void BackupMemoryManagerWindow::PrepareWindow() {
+    ImGui::SetNextWindowSizeConstraints(ImVec2(1050, 340), ImVec2(1050, FLT_MAX));
+}
+
 void BackupMemoryManagerWindow::DrawContents() {
     if (ImGui::Button("Open image...")) {
         // TODO: open image in a new window
@@ -22,11 +26,9 @@ void BackupMemoryManagerWindow::DrawContents() {
         // - disable if there are too many open windows
     }
 
-    // TODO: support drag and drop
-    // TODO: support multi-selection
     // TODO: buttons to easily copy/move between System and Cartridge memory
 
-    if (ImGui::BeginTable("bup_mgr", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {
+    if (ImGui::BeginTable("bup_mgr", 2, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerV)) {
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
             ImGui::SeparatorText("System memory");

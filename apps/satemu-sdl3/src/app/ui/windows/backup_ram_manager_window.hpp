@@ -11,6 +11,7 @@ public:
     BackupMemoryManagerWindow(SharedContext &context);
 
 protected:
+    void PrepareWindow() final;
     void DrawContents() final;
 
 private:
