@@ -394,7 +394,7 @@ void SystemStateWindow::DrawBackupMemory() {
     }
 
     if (ImGui::Button("Open backup memory manager")) {
-        // TODO: open backup memory manager
+        m_context.EnqueueEvent(events::gui::OpenBackupMemoryManager());
     }
 }
 

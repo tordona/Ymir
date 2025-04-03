@@ -12,4 +12,8 @@ inline GUIEvent OpenBackupMemoryCartFileDialog() {
     return {.type = GUIEvent::Type::OpenBackupMemoryCartFileDialog};
 }
 
+inline GUIEvent OpenBackupMemoryManager() {
+    return {.type = GUIEvent::Type::OpenBackupMemoryManager};
+}
+
 } // namespace app::events::gui

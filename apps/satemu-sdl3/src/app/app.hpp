@@ -6,6 +6,7 @@
 #include "shared_context.hpp"
 
 #include "ui/windows/about_window.hpp"
+#include "ui/windows/backup_ram_manager_window.hpp"
 #include "ui/windows/system_state_window.hpp"
 
 #include "ui/windows/debug/debug_output_window.hpp"
@@ -75,6 +76,7 @@ private:
     void OpenMemoryViewer();
 
     ui::SystemStateWindow m_systemStateWindow;
+    ui::BackupMemoryManagerWindow m_bupMgrWindow;
 
     ui::SH2WindowSet m_masterSH2WindowSet;
     ui::SH2WindowSet m_slaveSH2WindowSet;

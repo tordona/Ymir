@@ -208,6 +208,7 @@ namespace app {
 
 App::App()
     : m_systemStateWindow(m_context)
+    , m_bupMgrWindow(m_context)
     , m_masterSH2WindowSet(m_context, true)
     , m_slaveSH2WindowSet(m_context, false)
     , m_scuWindowSet(m_context)
@@ -982,6 +983,7 @@ void App::RunEmulator() {
             switch (evt.type) {
             case EvtType::LoadDisc: OpenLoadDiscDialog(); break;
             case EvtType::OpenBackupMemoryCartFileDialog: OpenBackupMemoryCartFileDialog(); break;
+            case EvtType::OpenBackupMemoryManager: m_bupMgrWindow.Open = true; break;
             }
         }
 
@@ -1038,6 +1040,8 @@ void App::RunEmulator() {
         if (ImGui::BeginMainMenuBar()) {
             ImGui::PopStyleVar();
             if (ImGui::BeginMenu("File")) {
+                ImGui::MenuItem("Backup memory manager", nullptr, &m_bupMgrWindow.Open);
+                ImGui::Separator();
                 if (ImGui::MenuItem("Exit", "Alt+F4")) {
                     SDL_Event quitEvent{.type = SDL_EVENT_QUIT};
                     SDL_PushEvent(&quitEvent);
@@ -1526,6 +1530,7 @@ void App::ProcessOpenBackupMemoryCartFileDialogSelection(const char *const *file
 
 void App::DrawWindows() {
     m_systemStateWindow.Display();
+    m_bupMgrWindow.Display();
 
     m_masterSH2WindowSet.DisplayAll();
     m_slaveSH2WindowSet.DisplayAll();
