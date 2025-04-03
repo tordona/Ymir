@@ -384,8 +384,51 @@ void SystemStateWindow::DrawCDDrive() {
 }
 
 void SystemStateWindow::DrawBackupMemory() {
-    // TODO: show internal backup memory details
-    // TODO: show external backup memory details (if cartridge is attached)
+    if (ImGui::BeginTable("bup_info", 3, ImGuiTableFlags_SizingFixedFit)) {
+        ImGui::TableSetupColumn("Device");
+        ImGui::TableSetupColumn("Capacity");
+        ImGui::TableSetupColumn("Blocks used");
+        ImGui::TableHeadersRow();
+
+        auto drawBup = [&](const char *name, bup::IBackupMemory *bup) {
+            ImGui::TableNextRow();
+            if (ImGui::TableNextColumn()) {
+                ImGui::TextUnformatted(name);
+            }
+            if (bup) {
+                if (ImGui::TableNextColumn()) {
+                    ImGui::Text("%u KiB", bup->Size() / 1024u);
+                }
+                if (ImGui::TableNextColumn()) {
+                    if (bup->IsHeaderValid()) {
+                        ImGui::Text("%u of %u", bup->GetUsedBlocks(), bup->GetTotalBlocks());
+                    } else {
+                        ImGui::TextUnformatted("Invalid");
+                    }
+                }
+            } else {
+                if (ImGui::TableNextColumn()) {
+                    ImGui::TextUnformatted("-");
+                }
+                if (ImGui::TableNextColumn()) {
+                    ImGui::TextUnformatted("-");
+                }
+            }
+        };
+
+        drawBup("Internal", &m_context.saturn.mem.GetInternalBackupRAM());
+        {
+            std::unique_lock lock{m_context.locks.cart};
+            auto *bupCart = cart::As<cart::CartType::BackupMemory>(&m_context.saturn.GetCartridge());
+            if (bupCart != nullptr) {
+                drawBup("External", &bupCart->GetBackupMemory());
+            } else {
+                drawBup("External", nullptr);
+            }
+        }
+
+        ImGui::EndTable();
+    }
 
     if (ImGui::Button("Open backup memory manager")) {
         // TODO: open backup memory manager
@@ -406,23 +449,19 @@ void SystemStateWindow::DrawCartridge() {
     auto &cart = m_context.saturn.GetCartridge();
 
     ImGui::AlignTextToFramePadding();
+    ImGui::Text("[ID %02X] ", cart.GetID());
+    ImGui::SameLine(0, 0);
     switch (cart.GetType()) {
     case cart::CartType::None: ImGui::TextUnformatted("No cartridge inserted"); break;
     case cart::CartType::BackupMemory: //
     {
-        auto &bupCart = *static_cast<cart::BackupMemoryCartridge *>(&cart);
+        auto &bupCart = *cart::As<cart::CartType::BackupMemory>(&cart);
         ImGui::Text("%u Mbit Backup RAM", bupCart.GetBackupMemory().Size() * 8u / 1024u / 1024u);
         break;
     }
     case cart::CartType::DRAM8Mbit: ImGui::TextUnformatted("8 Mbit DRAM"); break;
     case cart::CartType::DRAM32Mbit: ImGui::TextUnformatted("32 Mbit DRAM"); break;
     }
-
-    ImGui::TextUnformatted("Cartridge ID: ");
-    ImGui::SameLine(0, 0);
-    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-    ImGui::Text("%02X", cart.GetID());
-    ImGui::PopFont();
 }
 
 void SystemStateWindow::DrawPeripherals() {

@@ -95,14 +95,17 @@ private:
         std::vector<uint16> blocks;
     };
 
+    bool m_headerValid;
     std::vector<BackupFileParams> m_fileParams;
-
     std::vector<uint64> m_blockBitmap;
 
     // Rebuilds the file list from the contents of the backup memory.
     //
     // `force` forces the rebuild even if the dirty flag is clear.
     void RebuildFileList(bool force = false);
+
+    // Checks if the header is valid.
+    bool CheckHeader() const;
 
     // Finds the file with the given filename.
     // Returns nullptr if the file cannot be found.

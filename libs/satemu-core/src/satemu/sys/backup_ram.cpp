@@ -67,7 +67,8 @@ void BackupMemory::LoadFrom(const std::filesystem::path &path, BackupMemorySize 
     }
 
     // Check if it has a valid header
-    if (!IsHeaderValid()) {
+    m_headerValid = CheckHeader();
+    if (!m_headerValid) {
         format = true;
     }
 
@@ -129,26 +130,7 @@ void BackupMemory::WriteLong(uint32 address, uint32 value) {
 }
 
 bool BackupMemory::IsHeaderValid() const {
-    if (Size() == 0) {
-        return false;
-    }
-
-    // Check that the first block contains the header
-    for (uint32 i = 0; i < m_blockSize; i++) {
-        if (m_backupRAM[i] != kHeader[i & 0xF]) {
-            return false;
-        }
-    }
-
-    // Check that the second block is entirely empty
-    for (uint32 i = m_blockSize; i < m_blockSize * 2; i++) {
-        if (m_backupRAM[i] != 0x00) {
-            return false;
-        }
-    }
-
-    // Backup header is valid
-    return true;
+    return m_headerValid;
 }
 
 uint32 BackupMemory::Size() const {
@@ -457,6 +439,8 @@ void BackupMemory::RebuildFileList(bool force) {
 
     m_dirty = false;
 
+    m_headerValid = CheckHeader();
+
     const uint32 totalBlocks = GetTotalBlocks();
 
     // Mark blocks 0 and 1 as used
@@ -482,6 +466,25 @@ void BackupMemory::RebuildFileList(bool force) {
             m_blockBitmap[block / 64] |= (1ull << (block & 63ull));
         }
     }
+}
+
+bool BackupMemory::CheckHeader() const {
+    // Check that the first block contains the header
+    for (uint32 i = 0; i < m_blockSize; i++) {
+        if (m_backupRAM[i] != kHeader[i & 0xF]) {
+            return false;
+        }
+    }
+
+    // Check that the second block is entirely empty
+    for (uint32 i = m_blockSize; i < m_blockSize * 2; i++) {
+        if (m_backupRAM[i] != 0x00) {
+            return false;
+        }
+    }
+
+    // Backup header is valid
+    return true;
 }
 
 BackupMemory::BackupFileParams *BackupMemory::FindFile(std::string_view filename) {
