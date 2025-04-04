@@ -15,12 +15,10 @@ protected:
     void DrawContents() final;
 
 private:
-    // TODO: system backup memory view
-    // TODO: cartridge backup memory view
-    // TODO: additional windows for backup memory views from files
-
     BackupMemoryView m_sysBupView;
     BackupMemoryView m_cartBupView;
+
+    // TODO: additional windows for backup memory views from files
 };
 
 } // namespace app::ui

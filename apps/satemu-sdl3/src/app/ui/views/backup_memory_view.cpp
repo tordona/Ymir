@@ -77,7 +77,6 @@ void BackupMemoryView::Display(bup::IBackupMemory *bup) {
 
     if (ImGui::BeginChild("##bup_files_table", avail)) {
         // TODO: support drag and drop
-        // TODO: support multi-selection
         if (ImGui::BeginTable("bup_files_list", 6, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY)) {
             ImGui::TableSetupColumn("File name", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 12.5f);
             ImGui::TableSetupColumn("Comment", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 11.5f);
@@ -110,6 +109,15 @@ void BackupMemoryView::Display(bup::IBackupMemory *bup) {
 
     if (ImGui::Button("Import")) {
         // TODO: open file dialog to import one or more backup files
+        // - check for existing files
+        // - if there are matching files in the backup memory, show a modal asking if the user wants to replace them
+        //   - show table with:
+        //     - filename
+        //     - comments
+        //     - language
+        //     - current size, blocks, date/time, ( ) keep original
+        //     - imported size, blocks, ( ) replace with imported
+        // - if importing fails because of running out of space, show which files could not be imported
     }
     ImGui::SameLine();
     if (m_selected.empty()) {
@@ -117,6 +125,11 @@ void BackupMemoryView::Display(bup::IBackupMemory *bup) {
     }
     if (ImGui::Button("Export")) {
         // TODO: open file dialog to export selected backup files
+        // - if only one file was selected, allow user to specify filename
+        //   - suggest default name = <filename>_<YYMMDD>_<HHmm>.bup
+        // - if multiple files were selected, allow user to select a folder
+        //   - files will be saved with the default names
+        //   - TODO (folder manager): default to the exported saves folder
     }
     ImGui::SameLine();
     if (ImGui::Button("Delete")) {
@@ -136,7 +149,10 @@ void BackupMemoryView::Display(bup::IBackupMemory *bup) {
     const float saveImageWidth = ImGui::CalcTextSize("Save image...").x + ImGui::GetStyle().FramePadding.x * 2;
     ImGui::SameLine(avail.x - loadImageWidth - sameLineSpacing - saveImageWidth);
     if (ImGui::Button("Load image...")) {
-        // TODO: open file dialog to select a backup memory image file to load; must match current size
+        // TODO: open file dialog to select a backup memory image file to load
+        // - for system memory, file must be 32 KiB
+        // - for cartridge memory, file must be 512 KiB, 1 MiB, 2 MiB or 4 MiB
+        //   - cartridge must be "reinserted" with the new backup memory
     }
     ImGui::SameLine();
     if (ImGui::Button("Save image...")) {
