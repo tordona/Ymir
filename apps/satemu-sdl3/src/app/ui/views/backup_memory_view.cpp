@@ -8,15 +8,22 @@ BackupMemoryView::BackupMemoryView(SharedContext &context, std::string_view name
     : m_context(context)
     , m_name(name) {}
 
-void BackupMemoryView::Display(bup::IBackupMemory *bup) {
-    const bool hasBup = bup != nullptr;
+void BackupMemoryView::SetBackupMemory(satemu::bup::IBackupMemory *bup) {
+    if (m_bup != bup) {
+        m_bup = bup;
+        m_selected.clear();
+    }
+}
+
+void BackupMemoryView::Display() {
+    const bool hasBup = m_bup != nullptr;
 
     std::vector<bup::BackupFileInfo> files{};
 
     if (hasBup) {
-        ImGui::Text("%u KiB capacity, %u of %u blocks used", bup->Size() / 1024u, bup->GetUsedBlocks(),
-                    bup->GetTotalBlocks());
-        files = bup->List();
+        ImGui::Text("%u KiB capacity, %u of %u blocks used", m_bup->Size() / 1024u, m_bup->GetUsedBlocks(),
+                    m_bup->GetTotalBlocks());
+        files = m_bup->List();
     } else {
         ImGui::BeginDisabled();
         ImGui::TextUnformatted("Unavailable");

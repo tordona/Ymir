@@ -18,13 +18,16 @@ public:
 
     // NOTE: for external backup memory, the lock must be held by the caller
     // Pass nullptr to display an empty/disabled/unavailable backup memory list
-    void Display(satemu::bup::IBackupMemory *bup);
+    void SetBackupMemory(satemu::bup::IBackupMemory *bup);
+
+    void Display();
 
 private:
     SharedContext &m_context;
     std::string m_name;
 
     std::set<uint32> m_selected;
+    satemu::bup::IBackupMemory *m_bup;
 
     void ApplyRequests(ImGuiMultiSelectIO *msio, std::vector<satemu::bup::BackupFileInfo> &files);
 };

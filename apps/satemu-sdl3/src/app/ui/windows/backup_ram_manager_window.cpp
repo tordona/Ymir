@@ -13,6 +13,8 @@ BackupMemoryManagerWindow::BackupMemoryManagerWindow(SharedContext &context)
     , m_sysBupView(context, "System memory")
     , m_cartBupView(context, "Cartridge memory") {
 
+    m_sysBupView.SetBackupMemory(&m_context.saturn.mem.GetInternalBackupRAM());
+
     m_windowConfig.name = "Backup memory manager";
 }
 
@@ -36,7 +38,7 @@ void BackupMemoryManagerWindow::DrawContents() {
         if (ImGui::TableNextColumn()) {
             ImGui::SeparatorText("System memory");
             ImGui::PushID("sys_bup");
-            m_sysBupView.Display(&m_context.saturn.mem.GetInternalBackupRAM());
+            m_sysBupView.Display();
             ImGui::PopID();
         }
         if (ImGui::TableNextColumn()) {
@@ -45,10 +47,11 @@ void BackupMemoryManagerWindow::DrawContents() {
             ImGui::PushID("cart_bup");
             std::unique_lock lock{m_context.locks.cart};
             if (auto *bupCart = cart::As<cart::CartType::BackupMemory>(m_context.saturn.GetCartridge())) {
-                m_cartBupView.Display(&bupCart->GetBackupMemory());
+                m_cartBupView.SetBackupMemory(&bupCart->GetBackupMemory());
             } else {
-                m_cartBupView.Display(nullptr);
+                m_cartBupView.SetBackupMemory(nullptr);
             }
+            m_cartBupView.Display();
             ImGui::PopID();
         }
 
