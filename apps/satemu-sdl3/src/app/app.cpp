@@ -1040,8 +1040,23 @@ void App::RunEmulator() {
         if (ImGui::BeginMainMenuBar()) {
             ImGui::PopStyleVar();
             if (ImGui::BeginMenu("File")) {
-                ImGui::MenuItem("Backup memory manager", nullptr, &m_bupMgrWindow.Open);
+                // CD drive
+                if (ImGui::MenuItem("Load disc image", "Ctrl+O")) {
+                    OpenLoadDiscDialog();
+                }
+                if (ImGui::MenuItem("Open/close tray", "F6")) {
+                    m_context.EnqueueEvent(events::emu::OpenCloseTray());
+                }
+                if (ImGui::MenuItem("Eject disc", "F8")) {
+                    m_context.EnqueueEvent(events::emu::EjectDisc());
+                }
+
                 ImGui::Separator();
+
+                ImGui::MenuItem("Backup memory manager", nullptr, &m_bupMgrWindow.Open);
+
+                ImGui::Separator();
+
                 if (ImGui::MenuItem("Exit", "Alt+F4")) {
                     SDL_Event quitEvent{.type = SDL_EVENT_QUIT};
                     SDL_PushEvent(&quitEvent);
@@ -1058,12 +1073,16 @@ void App::RunEmulator() {
                 if (ImGui::SmallButton("16:9")) {
                     forcedAspect = 16.0 / 9.0;
                 }
+
                 ImGui::Separator();
+
                 ImGui::MenuItem("Auto-fit window to screen", nullptr, &screen.autoResizeWindow);
                 if (ImGui::MenuItem("Fit window to screen", nullptr, nullptr, !screen.displayVideoOutputInWindow)) {
                     fitWindowToScreenNow = true;
                 }
+
                 ImGui::Separator();
+
                 if (ImGui::MenuItem("Windowed video output", "F9", &screen.displayVideoOutputInWindow)) {
                     fitWindowToScreenNow = true;
                 }
@@ -1091,21 +1110,6 @@ void App::RunEmulator() {
                     }
                     ImGui::SameLine();
                     ui::widgets::RegionSelector(m_context);
-                }
-
-                ImGui::Separator();
-
-                // CD drive
-                {
-                    if (ImGui::MenuItem("Load disc image", "Ctrl+O")) {
-                        OpenLoadDiscDialog();
-                    }
-                    if (ImGui::MenuItem("Open/close tray", "F6")) {
-                        m_context.EnqueueEvent(events::emu::OpenCloseTray());
-                    }
-                    if (ImGui::MenuItem("Eject disc", "F8")) {
-                        m_context.EnqueueEvent(events::emu::EjectDisc());
-                    }
                 }
 
                 ImGui::Separator();
