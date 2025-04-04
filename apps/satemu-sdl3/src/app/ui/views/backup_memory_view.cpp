@@ -1,5 +1,7 @@
 #include "backup_memory_view.hpp"
 
+#include <cassert>
+
 using namespace satemu;
 
 namespace app::ui {
@@ -242,7 +244,12 @@ void BackupMemoryView::DisplayConfirmDeleteModal(std::span<bup::BackupFileInfo> 
         ImGui::PopStyleVar();*/
 
         if (ImGui::Button("OK", ImVec2(80, 0))) {
-            // TODO: delete selected files
+            assert(m_bup != nullptr);
+            for (uint32 item : m_selected) {
+                auto &file = files[item];
+                m_bup->Delete(file.header.filename);
+            }
+            m_selected.clear();
             ImGui::CloseCurrentPopup();
         }
         ImGui::SetItemDefaultFocus();
@@ -262,7 +269,9 @@ void BackupMemoryView::DisplayConfirmFormatModal() {
         ImGui::Text("Are you sure you want to format %s?", m_name.c_str());
 
         if (ImGui::Button("Yes", ImVec2(80, 0))) {
-            // TODO: format backup memory
+            assert(m_bup != nullptr);
+            m_bup->Format();
+            m_selected.clear();
             ImGui::CloseCurrentPopup();
         }
         ImGui::SetItemDefaultFocus();
