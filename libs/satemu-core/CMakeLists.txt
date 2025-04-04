@@ -107,6 +107,7 @@ add_library(satemu-core
     include/satemu/sys/sys_ops.hpp
     
     include/satemu/util/arith_ops.hpp
+    include/satemu/util/backup_datetime.hpp
     include/satemu/util/bit_ops.hpp
     include/satemu/util/bitmask_enum.hpp
     include/satemu/util/callback.hpp
@@ -171,6 +172,7 @@ add_library(satemu-core
     src/satemu/sys/memory.cpp
     src/satemu/sys/saturn.cpp
 
+    src/satemu/util/backup_datetime.cpp
     src/satemu/util/constexpr_for.hpp
     src/satemu/util/date_time.cpp
 )

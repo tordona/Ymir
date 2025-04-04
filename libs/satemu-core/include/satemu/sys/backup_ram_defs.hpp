@@ -30,7 +30,7 @@ struct BackupFileHeader {
     std::string filename; // max 11 chars
     std::string comment;  // max 10 chars
     Language language;
-    uint32 date; // minutes since 1/1/1980
+    uint32 date; // minutes since 01/01/1980
 };
 
 struct BackupFileInfo {

@@ -730,7 +730,7 @@ void App::RunEmulator() {
 
     m_loadDiscFileDialogProps = SDL_CreateProperties();
     if (m_loadDiscFileDialogProps == 0) {
-        devlog::error<grp::base>("Failed to create file dialog properties: {}\n", SDL_GetError());
+        devlog::error<grp::base>("Failed to create load disc file dialog properties: {}\n", SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyLoadDiscFileDialogProps{[&] { SDL_DestroyProperties(m_loadDiscFileDialogProps); }};
@@ -752,7 +752,8 @@ void App::RunEmulator() {
 
     m_loadBupCartFileDialogProps = SDL_CreateProperties();
     if (m_loadBupCartFileDialogProps == 0) {
-        devlog::error<grp::base>("Failed to create file dialog properties: {}\n", SDL_GetError());
+        devlog::error<grp::base>("Failed to create load backup memory cartridge file dialog properties: {}\n",
+                                 SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyLoadBupCartFileDialogProps{[&] { SDL_DestroyProperties(m_loadBupCartFileDialogProps); }};

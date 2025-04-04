@@ -19,16 +19,10 @@ BackupMemoryManagerWindow::BackupMemoryManagerWindow(SharedContext &context)
 }
 
 void BackupMemoryManagerWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(1025, 340), ImVec2(1025, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(1100, 340), ImVec2(1100, FLT_MAX));
 }
 
 void BackupMemoryManagerWindow::DrawContents() {
-    /*if (ImGui::Button("Open image...")) {
-        // TODO: open image in a new window
-        // - but only if it's not the system or cartridge memory image or already opened in one of the extra windows
-        // - disable if there are too many open windows
-    }*/
-
     // TODO: buttons to easily copy/move between System and Cartridge memory
 
     if (ImGui::BeginTable("bup_mgr", 2,

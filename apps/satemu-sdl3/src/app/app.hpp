@@ -69,6 +69,7 @@ private:
 
     void OpenBackupMemoryCartFileDialog();
     void ProcessOpenBackupMemoryCartFileDialogSelection(const char *const *filelist, int filter);
+
     // -----------------------------------------------------------------------------------------------------------------
     // Windows
 

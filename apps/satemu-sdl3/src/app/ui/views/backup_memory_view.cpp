@@ -1,5 +1,7 @@
 #include "backup_memory_view.hpp"
 
+#include <satemu/util/backup_datetime.hpp>
+
 #include <cassert>
 
 using namespace satemu;
@@ -37,7 +39,8 @@ void BackupMemoryView::Display() {
 
     // Make room for buttons below the table
     auto avail = ImGui::GetContentRegionAvail();
-    avail.y -= ImGui::GetFrameHeightWithSpacing();
+    avail.y -= ImGui::GetTextLineHeightWithSpacing(); // selection stats
+    avail.y -= ImGui::GetFrameHeightWithSpacing();    // actions
 
     if (ImGui::BeginChild("##bup_files_table", avail)) {
         // TODO: support drag and drop
@@ -63,6 +66,23 @@ void BackupMemoryView::Display() {
         }
     }
     ImGui::EndChild();
+
+    // Show selection statistics
+    {
+        uint32 selCount = m_selected.size();
+        uint32 selBlocks = 0;
+        uint32 selSize = 0;
+        for (uint32 item : m_selected) {
+            auto &file = files[item];
+            selBlocks += file.numBlocks;
+            selSize += file.size;
+        }
+
+        auto plural = [](uint32 count) { return count == 1 ? "" : "s"; };
+
+        ImGui::Text("%u file%s selected - %u block%s, %u byte%s", selCount, plural(selCount), selBlocks,
+                    plural(selBlocks), selSize, plural(selSize));
+    }
 
     if (ImGui::Button("Import")) {
         // TODO: open file dialog to import one or more backup files
@@ -206,12 +226,8 @@ void BackupMemoryView::DrawFileTableRow(const bup::BackupFileInfo &file, uint32 
         ImGui::Text("%u", file.numBlocks);
     }
     if (ImGui::TableNextColumn()) {
-        const uint32 min = file.header.date % 60;
-        const uint32 hour = file.header.date / 60 % 24;
-        const uint32 daysSince1980 = file.header.date / 60 / 24;
-        // TODO: compute day/month/year with days since 1/1/1980
-        // ImGui::Text("%u %02u:%02u", daysSince1980, hour % 24, min);
-        ImGui::Text("01/01/1980 %02u:%02u", hour % 24, min);
+        util::BackupDateTime bupDate{file.header.date};
+        ImGui::Text("%04u/%02u/%02u %02u:%02u", bupDate.year, bupDate.month, bupDate.day, bupDate.hour, bupDate.minute);
     }
 }
 
@@ -220,7 +236,7 @@ void BackupMemoryView::DisplayConfirmDeleteModal(std::span<bup::BackupFileInfo> 
         ImGui::Text("The following files will be deleted from %s:", m_name.c_str());
 
         const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
-        if (ImGui::BeginChild("##files_to_delete", ImVec2(510, lineHeight * 10))) {
+        if (ImGui::BeginChild("##files_to_delete", ImVec2(550, lineHeight * 10))) {
             if (ImGui::BeginTable("bup_files_list", 6, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY)) {
                 DrawFileTableHeader();
 
