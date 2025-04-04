@@ -54,6 +54,7 @@ private:
     SharedContext m_context;
     SDL_PropertiesID m_loadDiscFileDialogProps;
     SDL_PropertiesID m_loadBupCartFileDialogProps;
+    SDL_PropertiesID m_genericFileDialogProps;
 
     std::thread m_emuThread;
 
@@ -69,6 +70,9 @@ private:
 
     void OpenBackupMemoryCartFileDialog();
     void ProcessOpenBackupMemoryCartFileDialogSelection(const char *const *filelist, int filter);
+
+    void OpenGenericSaveFileDialog(const SaveFileParams &params) const;
+    void OpenGenericSelectDirectoryDialog(const SelectDirectoryParams &params) const;
 
     // -----------------------------------------------------------------------------------------------------------------
     // Windows

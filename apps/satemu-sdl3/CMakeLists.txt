@@ -134,8 +134,10 @@ add_executable(satemu-sdl3
     src/app/ui/windows/debug/sh2_window_base.hpp
     src/app/ui/windows/debug/sh2_window_set.hpp
 
+    src/util/ring_buffer.hpp
     src/util/rom_loader.cpp
     src/util/rom_loader.hpp
+    src/util/sdl_file_dialog.hpp
 )
 add_executable(satemu::satemu-sdl3 ALIAS satemu-sdl3)
 set_target_properties(satemu-sdl3 PROPERTIES

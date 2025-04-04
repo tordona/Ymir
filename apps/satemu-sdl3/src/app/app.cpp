@@ -774,6 +774,15 @@ void App::RunEmulator() {
     // const char *accept = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_ACCEPT_STRING, NULL);
     // const char *cancel = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_CANCEL_STRING, NULL);
 
+    m_genericFileDialogProps = SDL_CreateProperties();
+    if (m_genericFileDialogProps == 0) {
+        devlog::error<grp::base>("Failed to create generic file dialog properties: {}\n", SDL_GetError());
+        return;
+    }
+    ScopeGuard sgDestroyGenericFileDialogProps{[&] { SDL_DestroyProperties(m_genericFileDialogProps); }};
+
+    SDL_SetPointerProperty(m_genericFileDialogProps, SDL_PROP_FILE_DIALOG_WINDOW_POINTER, screen.window);
+
     // ---------------------------------
     // Emulator configuration
 
@@ -984,6 +993,12 @@ void App::RunEmulator() {
             switch (evt.type) {
             case EvtType::LoadDisc: OpenLoadDiscDialog(); break;
             case EvtType::OpenBackupMemoryCartFileDialog: OpenBackupMemoryCartFileDialog(); break;
+
+            case EvtType::SaveFile: OpenGenericSaveFileDialog(std::get<SaveFileParams>(evt.value)); break;
+            case EvtType::SelectDirectory:
+                OpenGenericSelectDirectoryDialog(std::get<SelectDirectoryParams>(evt.value));
+                break;
+
             case EvtType::OpenBackupMemoryManager: m_bupMgrWindow.Open = true; break;
             }
         }
@@ -1531,6 +1546,34 @@ void App::ProcessOpenBackupMemoryCartFileDialogSelection(const char *const *file
         const char *file = *filelist;
         m_context.EnqueueEvent(events::emu::InsertBackupMemoryCartridge(file));
     }
+}
+
+static const char *StrNullIfEmpty(const std::string &str) {
+    return str.empty() ? nullptr : str.c_str();
+}
+
+void App::OpenGenericSaveFileDialog(const SaveFileParams &params) const {
+    SDL_PropertiesID props = m_genericFileDialogProps;
+
+    SDL_SetStringProperty(props, SDL_PROP_FILE_DIALOG_TITLE_STRING, StrNullIfEmpty(params.dialogTitle));
+    SDL_SetPointerProperty(props, SDL_PROP_FILE_DIALOG_FILTERS_POINTER, (void *)params.filters.data());
+    SDL_SetNumberProperty(props, SDL_PROP_FILE_DIALOG_NFILTERS_NUMBER, (int)params.filters.size());
+    SDL_SetBooleanProperty(props, SDL_PROP_FILE_DIALOG_MANY_BOOLEAN, false);
+    SDL_SetStringProperty(props, SDL_PROP_FILE_DIALOG_LOCATION_STRING, StrNullIfEmpty(params.defaultPath.string()));
+
+    SDL_ShowFileDialogWithProperties(SDL_FILEDIALOG_SAVEFILE, params.callback, params.userdata, props);
+}
+
+void App::OpenGenericSelectDirectoryDialog(const SelectDirectoryParams &params) const {
+    SDL_PropertiesID props = m_genericFileDialogProps;
+
+    SDL_SetStringProperty(props, SDL_PROP_FILE_DIALOG_TITLE_STRING, StrNullIfEmpty(params.dialogTitle));
+    SDL_SetPointerProperty(props, SDL_PROP_FILE_DIALOG_FILTERS_POINTER, (void *)nullptr);
+    SDL_SetNumberProperty(props, SDL_PROP_FILE_DIALOG_NFILTERS_NUMBER, (int)0);
+    SDL_SetBooleanProperty(props, SDL_PROP_FILE_DIALOG_MANY_BOOLEAN, false);
+    SDL_SetStringProperty(props, SDL_PROP_FILE_DIALOG_LOCATION_STRING, StrNullIfEmpty(params.defaultPath.string()));
+
+    SDL_ShowFileDialogWithProperties(SDL_FILEDIALOG_OPENFOLDER, params.callback, params.userdata, props);
 }
 
 void App::DrawWindows() {

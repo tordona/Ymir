@@ -1,5 +1,9 @@
 #include "backup_memory_view.hpp"
 
+#include <app/events/gui_event_factory.hpp>
+
+#include <util/sdl_file_dialog.hpp>
+
 #include <satemu/util/backup_datetime.hpp>
 
 #include <cassert>
@@ -7,6 +11,9 @@
 using namespace satemu;
 
 namespace app::ui {
+
+static constexpr const char *kConfirmDeletionTitle = "Confirm deletion";
+static constexpr const char *kConfirmFormatTitle = "Confirm format";
 
 BackupMemoryView::BackupMemoryView(SharedContext &context, std::string_view name)
     : m_context(context)
@@ -103,23 +110,58 @@ void BackupMemoryView::Display() {
         ImGui::BeginDisabled();
     }
     if (ImGui::Button("Export")) {
-        // TODO: open file dialog to export selected backup files
-        // - if only one file was selected, allow user to specify filename
-        //   - suggest default name = <filename>_<YYMMDD>_<HHmm>.bup
-        // - if multiple files were selected, allow user to select a folder
-        //   - files will be saved with the default names
-        //   - TODO (folder manager): default to the exported saves folder
+        assert(m_bup != nullptr);
+
+        // Export files from backup memory into a list
+        m_exportFiles.clear();
+        for (uint32 item : m_selected) {
+            auto &fileInfo = files[item];
+            auto optFile = m_bup->Export(fileInfo.header.filename);
+            if (optFile) {
+                m_exportFiles.push_back(*optFile);
+            }
+        }
+
+        // Open file dialog to export selected backup files
+        if (m_exportFiles.size() == 1) {
+            // Single file -> allow user to pick location and file name
+
+            auto &filename = m_exportFiles[0].header.filename;
+            util::BackupDateTime bupDate{m_exportFiles[0].header.date};
+
+            // TODO (folder manager): default to the exported saves folder
+            SaveFileParams params{};
+            params.dialogTitle = fmt::format("Export {} from {}", filename, m_name);
+            params.defaultPath = fmt::format("{}_{:04d}{:02d}{:02d}_{:02d}{:02d}.bup", filename, bupDate.year,
+                                             bupDate.month, bupDate.day, bupDate.hour, bupDate.minute);
+            params.filters.push_back({"Backup file", "bup"});
+            params.filters.push_back({"All files", "*"});
+            params.userdata = this;
+            params.callback = util::WrapSingleSelectionCallback<&BackupMemoryView::ProcessSingleFileExport>;
+
+            m_context.EnqueueEvent(events::gui::SaveFile(std::move(params)));
+        } else if (!m_exportFiles.empty()) {
+            // Multiple files -> allow user to pick location only
+
+            // TODO (folder manager): default to the exported saves folder
+            SelectDirectoryParams params{};
+            params.dialogTitle = fmt::format("Export {} files from {}", m_exportFiles.size(), m_name);
+            params.userdata = this;
+            params.callback = util::WrapSingleSelectionCallback<&BackupMemoryView::ProcessMultiFileExport>;
+
+            m_context.EnqueueEvent(events::gui::SelectDirectory(std::move(params)));
+        }
     }
     ImGui::SameLine();
     if (ImGui::Button("Delete")) {
-        ImGui::OpenPopup("Confirm deletion");
+        ImGui::OpenPopup(kConfirmDeletionTitle);
     }
     if (m_selected.empty()) {
         ImGui::EndDisabled();
     }
     ImGui::SameLine();
     if (ImGui::Button("Format")) {
-        ImGui::OpenPopup("Confirm format");
+        ImGui::OpenPopup(kConfirmFormatTitle);
     }
 
     // Align to the right
@@ -148,6 +190,14 @@ void BackupMemoryView::Display() {
 
     DisplayConfirmDeleteModal(files);
     DisplayConfirmFormatModal();
+}
+
+void BackupMemoryView::ProcessSingleFileExport(void *userdata, const char *file, int filter) {
+    // TODO: export to file
+}
+
+void BackupMemoryView::ProcessMultiFileExport(void *userdata, const char *dir, int filter) {
+    // TODO: export all to directory
 }
 
 void BackupMemoryView::ApplyRequests(ImGuiMultiSelectIO *msio, std::vector<satemu::bup::BackupFileInfo> &files) {
@@ -232,7 +282,7 @@ void BackupMemoryView::DrawFileTableRow(const bup::BackupFileInfo &file, uint32 
 }
 
 void BackupMemoryView::DisplayConfirmDeleteModal(std::span<bup::BackupFileInfo> files) {
-    if (ImGui::BeginPopupModal("Confirm deletion", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal(kConfirmDeletionTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("The following files will be deleted from %s:", m_name.c_str());
 
         const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
@@ -279,7 +329,7 @@ void BackupMemoryView::DisplayConfirmDeleteModal(std::span<bup::BackupFileInfo> 
 }
 
 void BackupMemoryView::DisplayConfirmFormatModal() {
-    if (ImGui::BeginPopupModal("Confirm format", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal(kConfirmFormatTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("%s will be formatted. All files will be erased.", m_name.c_str());
         ImGui::TextUnformatted("This operation cannot be undone!\n");
         ImGui::Text("Are you sure you want to format %s?", m_name.c_str());

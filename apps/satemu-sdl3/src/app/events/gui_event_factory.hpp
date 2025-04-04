@@ -16,4 +16,12 @@ inline GUIEvent OpenBackupMemoryManager() {
     return {.type = GUIEvent::Type::OpenBackupMemoryManager};
 }
 
+inline GUIEvent SaveFile(SaveFileParams &&params) {
+    return {.type = GUIEvent::Type::SaveFile, .value = std::move(params)};
+}
+
+inline GUIEvent SelectDirectory(SelectDirectoryParams &&params) {
+    return {.type = GUIEvent::Type::SelectDirectory, .value = std::move(params)};
+}
+
 } // namespace app::events::gui
