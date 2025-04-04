@@ -10,8 +10,8 @@ namespace app::ui {
 
 BackupMemoryManagerWindow::BackupMemoryManagerWindow(SharedContext &context)
     : WindowBase(context)
-    , m_sysBupView(context)
-    , m_cartBupView(context) {
+    , m_sysBupView(context, "System memory")
+    , m_cartBupView(context, "Cartridge memory") {
 
     m_windowConfig.name = "Backup memory manager";
 }
@@ -21,11 +21,11 @@ void BackupMemoryManagerWindow::PrepareWindow() {
 }
 
 void BackupMemoryManagerWindow::DrawContents() {
-    if (ImGui::Button("Open image...")) {
+    /*if (ImGui::Button("Open image...")) {
         // TODO: open image in a new window
         // - but only if it's not the system or cartridge memory image or already opened in one of the extra windows
         // - disable if there are too many open windows
-    }
+    }*/
 
     // TODO: buttons to easily copy/move between System and Cartridge memory
 

@@ -7,12 +7,14 @@
 #include <imgui.h>
 
 #include <set>
+#include <string>
+#include <string_view>
 
 namespace app::ui {
 
 class BackupMemoryView {
 public:
-    BackupMemoryView(SharedContext &context);
+    BackupMemoryView(SharedContext &context, std::string_view name);
 
     // NOTE: for external backup memory, the lock must be held by the caller
     // Pass nullptr to display an empty/disabled/unavailable backup memory list
@@ -20,6 +22,7 @@ public:
 
 private:
     SharedContext &m_context;
+    std::string m_name;
 
     std::set<uint32> m_selected;
 
