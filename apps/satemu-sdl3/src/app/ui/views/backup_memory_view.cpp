@@ -157,6 +157,10 @@ void BackupMemoryView::Display(bup::IBackupMemory *bup) {
     ImGui::SameLine();
     if (ImGui::Button("Save image...")) {
         // TODO: open file dialog to select location to save backup memory image file; ask for overwrite confirmation
+        // - default names:
+        //   - system memory: bup-int.bin
+        //   - cartridge memory: bup-ext-<size>.bin
+        //     <size> is 4M, 8M, 16M or 32M based on backup memory size (in Mbits)
     }
 
     if (!hasBup) {
