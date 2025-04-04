@@ -30,6 +30,12 @@ private:
     satemu::bup::IBackupMemory *m_bup;
 
     void ApplyRequests(ImGuiMultiSelectIO *msio, std::vector<satemu::bup::BackupFileInfo> &files);
+
+    void DrawFileTableHeader();
+    void DrawFileTableRow(const satemu::bup::BackupFileInfo &file, uint32 index = 0, bool selectable = false);
+
+    void DisplayConfirmDeleteModal(std::span<satemu::bup::BackupFileInfo> files);
+    void DisplayConfirmFormatModal();
 };
 
 } // namespace app::ui
