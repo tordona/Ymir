@@ -1012,10 +1012,10 @@ void App::RunEmulator() {
             const media::SaturnHeader &header = disc.header;
             std::string title{};
             if (paused) {
-                title =
-                    fmt::format("[{}] {} - paused | GUI: {} fps", header.productNumber, header.gameTitle, io.Framerate);
+                title = fmt::format("[{}] {} - paused | GUI: {:.0f} fps", header.productNumber, header.gameTitle,
+                                    io.Framerate);
             } else {
-                title = fmt::format("[{}] {} | VDP2: {} fps | VDP1: {} fps | GUI: {} fps", header.productNumber,
+                title = fmt::format("[{}] {} | VDP2: {} fps | VDP1: {} fps | GUI: {:.0f} fps", header.productNumber,
                                     header.gameTitle, screen.frames, screen.vdp1Frames, io.Framerate);
             }
             SDL_SetWindowTitle(screen.window, title.c_str());
