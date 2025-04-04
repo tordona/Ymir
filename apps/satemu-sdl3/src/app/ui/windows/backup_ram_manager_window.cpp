@@ -10,7 +10,8 @@ namespace app::ui {
 
 BackupMemoryManagerWindow::BackupMemoryManagerWindow(SharedContext &context)
     : WindowBase(context)
-    , m_bupView(context) {
+    , m_sysBupView(context)
+    , m_cartBupView(context) {
 
     m_windowConfig.name = "Backup memory manager";
 }
@@ -35,7 +36,7 @@ void BackupMemoryManagerWindow::DrawContents() {
         if (ImGui::TableNextColumn()) {
             ImGui::SeparatorText("System memory");
             ImGui::PushID("sys_bup");
-            m_bupView.Display(&m_context.saturn.mem.GetInternalBackupRAM());
+            m_sysBupView.Display(&m_context.saturn.mem.GetInternalBackupRAM());
             ImGui::PopID();
         }
         if (ImGui::TableNextColumn()) {
@@ -44,9 +45,9 @@ void BackupMemoryManagerWindow::DrawContents() {
             ImGui::PushID("cart_bup");
             std::unique_lock lock{m_context.locks.cart};
             if (auto *bupCart = cart::As<cart::CartType::BackupMemory>(m_context.saturn.GetCartridge())) {
-                m_bupView.Display(&bupCart->GetBackupMemory());
+                m_cartBupView.Display(&bupCart->GetBackupMemory());
             } else {
-                m_bupView.Display(nullptr);
+                m_cartBupView.Display(nullptr);
             }
             ImGui::PopID();
         }

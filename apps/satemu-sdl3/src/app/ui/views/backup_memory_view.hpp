@@ -4,6 +4,10 @@
 
 #include <satemu/sys/backup_ram_defs.hpp>
 
+#include <imgui.h>
+
+#include <set>
+
 namespace app::ui {
 
 class BackupMemoryView {
@@ -16,6 +20,10 @@ public:
 
 private:
     SharedContext &m_context;
+
+    std::set<uint32> m_selected;
+
+    void ApplyRequests(ImGuiMultiSelectIO *msio, std::vector<satemu::bup::BackupFileInfo> &files);
 };
 
 } // namespace app::ui

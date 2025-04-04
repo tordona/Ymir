@@ -19,7 +19,8 @@ private:
     // TODO: cartridge backup memory view
     // TODO: additional windows for backup memory views from files
 
-    BackupMemoryView m_bupView;
+    BackupMemoryView m_sysBupView;
+    BackupMemoryView m_cartBupView;
 };
 
 } // namespace app::ui

@@ -38,16 +38,23 @@ void BackupMemoryView::Display(bup::IBackupMemory *bup) {
             ImGui::TableHeadersRow();
 
             if (bup != nullptr) {
-                for (auto &file : bup->List()) {
+                auto files = bup->List();
+
+                ImGuiMultiSelectIO *msio =
+                    ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_ClearOnEscape |
+                                            ImGuiMultiSelectFlags_ClearOnClickVoid | ImGuiMultiSelectFlags_BoxSelect1d);
+                ApplyRequests(msio, files);
+
+                for (uint32 i = 0; i < files.size(); i++) {
+                    auto &file = files[i];
+
                     ImGui::TableNextRow();
                     if (ImGui::TableNextColumn()) {
                         ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-                        bool selected = false; // TODO: check if selected
-                        if (ImGui::Selectable(file.header.filename.c_str(), &selected,
-                                              ImGuiSelectableFlags_AllowOverlap |
-                                                  ImGuiSelectableFlags_SpanAllColumns)) {
-                            // TODO: select/deselect
-                        }
+                        bool selected = m_selected.contains(i);
+                        ImGui::SetNextItemSelectionUserData(i);
+                        ImGui::Selectable(file.header.filename.c_str(), selected,
+                                          ImGuiSelectableFlags_AllowOverlap | ImGuiSelectableFlags_SpanAllColumns);
                         ImGui::PopFont();
                     }
                     if (ImGui::TableNextColumn()) {
@@ -76,10 +83,13 @@ void BackupMemoryView::Display(bup::IBackupMemory *bup) {
                         const uint32 hour = file.header.date / 60 % 24;
                         const uint32 day = file.header.date / 60 / 24;
                         // TODO: compute day/month/year with days since 1/1/1980
-                        //ImGui::Text("%u %02u:%02u", day, hour % 24, min);
+                        // ImGui::Text("%u %02u:%02u", day, hour % 24, min);
                         ImGui::Text("01/01/1980 %02u:%02u", hour % 24, min);
                     }
                 }
+
+                msio = ImGui::EndMultiSelect();
+                ApplyRequests(msio, files);
             }
 
             ImGui::EndTable();
@@ -87,17 +97,48 @@ void BackupMemoryView::Display(bup::IBackupMemory *bup) {
     }
     ImGui::EndChild();
 
-    // TODO: fit these buttons below the table
     ImGui::Button("Import");
     ImGui::SameLine();
+    if (m_selected.empty()) {
+        ImGui::BeginDisabled();
+    }
     ImGui::Button("Export");
     ImGui::SameLine();
     ImGui::Button("Delete");
+    if (m_selected.empty()) {
+        ImGui::EndDisabled();
+    }
     ImGui::SameLine();
     ImGui::Button("Format");
 
     if (bup == nullptr) {
         ImGui::EndDisabled();
+    }
+}
+
+void BackupMemoryView::ApplyRequests(ImGuiMultiSelectIO *msio, std::vector<satemu::bup::BackupFileInfo> &files) {
+    for (ImGuiSelectionRequest &req : msio->Requests) {
+        switch (req.Type) {
+        case ImGuiSelectionRequestType_None: break;
+        case ImGuiSelectionRequestType_SetAll:
+            if (req.Selected) {
+                for (uint32 i = 0; i < files.size(); i++) {
+                    m_selected.insert(i);
+                }
+            } else {
+                m_selected.clear();
+            }
+            break;
+        case ImGuiSelectionRequestType_SetRange:
+            for (uint32 i = req.RangeFirstItem; i <= req.RangeLastItem; i++) {
+                if (req.Selected) {
+                    m_selected.insert(i);
+                } else {
+                    m_selected.erase(i);
+                }
+            }
+            break;
+        }
     }
 }
 
