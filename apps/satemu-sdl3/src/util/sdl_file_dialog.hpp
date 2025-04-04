@@ -27,7 +27,7 @@ namespace grp {
 } // namespace grp
 
 // SDL3 file dialog callback function wrapping a function with the following signature:
-//   void (*)(void *userdata, const char *selection, int filter)
+//   void (*)(void *userdata, std::filesystem::path path, int filter)
 // The wrapper function expects only one file or directory to be selected. Useful for save file or open directory
 // dialogs.
 //
@@ -36,7 +36,7 @@ namespace grp {
 // assertion is raised in this case.
 // If the user cancels or the file dialog fails to open, a dev log message is printed.
 template <auto callback>
-    requires std::invocable<decltype(callback), void *, const char *, int>
+    requires std::invocable<decltype(callback), void *, std::filesystem::path, int>
 void WrapSingleSelectionCallback(void *userdata, const char *const *filelist, int filter) {
     if (filelist == nullptr) {
         devlog::error<grp::base>("Failed to open generic file dialog: {}", SDL_GetError());

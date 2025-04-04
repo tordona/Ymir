@@ -159,4 +159,20 @@ FORCE_INLINE constexpr T scatter(T value) {
     return value & m0; // Clear out extraneous bits
 }
 
+namespace detail {
+
+    template <class T, std::size_t... N>
+    constexpr T byte_swap_impl(T i, std::index_sequence<N...>) {
+        return ((((i >> (N * CHAR_BIT)) & (T)(unsigned char)(-1)) << ((sizeof(T) - 1 - N) * CHAR_BIT)) | ...);
+    };
+
+} // namespace detail
+
+// Byte swaps the given value
+template <std::unsigned_integral T>
+constexpr decltype(auto) byte_swap(T i) {
+    using U = typename std::make_unsigned_t<T>;
+    return detail::byte_swap_impl<U>(i, std::make_index_sequence<sizeof(T)>{});
+}
+
 } // namespace bit

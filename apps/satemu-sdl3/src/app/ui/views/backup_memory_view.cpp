@@ -5,8 +5,10 @@
 #include <util/sdl_file_dialog.hpp>
 
 #include <satemu/util/backup_datetime.hpp>
+#include <satemu/util/bit_ops.hpp>
 
 #include <cassert>
+#include <string_view>
 
 using namespace satemu;
 
@@ -14,6 +16,7 @@ namespace app::ui {
 
 static constexpr const char *kConfirmDeletionTitle = "Confirm deletion";
 static constexpr const char *kConfirmFormatTitle = "Confirm format";
+static constexpr const char *kExportSuccessfulTitle = "Export successful";
 
 BackupMemoryView::BackupMemoryView(SharedContext &context, std::string_view name)
     : m_context(context)
@@ -188,16 +191,89 @@ void BackupMemoryView::Display() {
         ImGui::EndDisabled();
     }
 
+    if (m_openExportSuccessfulPopup) {
+        ImGui::OpenPopup(kExportSuccessfulTitle);
+        m_openExportSuccessfulPopup = false;
+    }
+
     DisplayConfirmDeleteModal(files);
     DisplayConfirmFormatModal();
+    DisplayExportSuccessfulModal();
 }
 
-void BackupMemoryView::ProcessSingleFileExport(void *userdata, const char *file, int filter) {
-    // TODO: export to file
+void BackupMemoryView::ProcessSingleFileExport(void *userdata, std::filesystem::path file, int filter) {
+    static_cast<BackupMemoryView *>(userdata)->ExportSingleFile(file);
 }
 
-void BackupMemoryView::ProcessMultiFileExport(void *userdata, const char *dir, int filter) {
-    // TODO: export all to directory
+void BackupMemoryView::ProcessMultiFileExport(void *userdata, std::filesystem::path dir, int filter) {
+    static_cast<BackupMemoryView *>(userdata)->ExportMultiFile(dir);
+}
+
+void BackupMemoryView::ExportSingleFile(std::filesystem::path file) {
+    assert(m_exportFiles.size() == 1);
+
+    std::filesystem::create_directories(file.parent_path());
+
+    ExportFile(file, m_exportFiles[0]);
+    OpenExportSuccessfulPopup(m_exportFiles.size());
+    m_exportFiles.clear();
+}
+
+void BackupMemoryView::ExportMultiFile(std::filesystem::path dir) {
+    std::filesystem::create_directories(dir);
+
+    for (auto &file : m_exportFiles) {
+        util::BackupDateTime bupDate{file.header.date};
+
+        // TODO (folder manager): default to the exported saves folder
+        SaveFileParams params{};
+        std::string filename = fmt::format("{}_{:04d}{:02d}{:02d}_{:02d}{:02d}.bup", file.header.filename, bupDate.year,
+                                           bupDate.month, bupDate.day, bupDate.hour, bupDate.minute);
+        ExportFile(dir / filename, file);
+    }
+    OpenExportSuccessfulPopup(m_exportFiles.size());
+    m_exportFiles.clear();
+}
+
+void BackupMemoryView::ExportFile(std::filesystem::path path, const satemu::bup::BackupFile &bupFile) {
+    // 00..03  char[4]   magic: "YmBP"
+    // 04..0E  char[11]  filename
+    //     0F  uint8     language
+    // 10..19  char[10]  comment
+    // 1A..1D  uint32be  date/time (minutes since 01/01/1980)
+    // 1E..21  uint32be  data size (in bytes)
+    // 22....  uint8...  data
+
+    std::ofstream out{path, std::ios::binary};
+    std::array<char, 11> buf{};
+
+    // magic
+    static constexpr std::string_view kMagic = "YmBP";
+    out.write(kMagic.data(), kMagic.size());
+
+    // filename
+    buf.fill(0);
+    std::copy(bupFile.header.filename.begin(), bupFile.header.filename.end(), buf.begin());
+    out.write(&buf[0], 11);
+
+    // language
+    out.put(static_cast<char>(bupFile.header.language));
+
+    // comment
+    buf.fill(0);
+    std::copy(bupFile.header.comment.begin(), bupFile.header.comment.end(), buf.begin());
+    out.write(&buf[0], 10);
+
+    // date/time
+    const uint32 date = bit::byte_swap(bupFile.header.date);
+    out.write((const char *)&date, sizeof(date));
+
+    // data size
+    const uint32 size = bit::byte_swap(static_cast<uint32>(bupFile.data.size()));
+    out.write((const char *)&size, sizeof(size));
+
+    // data
+    out.write((const char *)bupFile.data.data(), bupFile.data.size());
 }
 
 void BackupMemoryView::ApplyRequests(ImGuiMultiSelectIO *msio, std::vector<satemu::bup::BackupFileInfo> &files) {
@@ -281,6 +357,11 @@ void BackupMemoryView::DrawFileTableRow(const bup::BackupFileInfo &file, uint32 
     }
 }
 
+void BackupMemoryView::OpenExportSuccessfulPopup(uint32 exportCount) {
+    m_exportCount = exportCount;
+    m_openExportSuccessfulPopup = true;
+}
+
 void BackupMemoryView::DisplayConfirmDeleteModal(std::span<bup::BackupFileInfo> files) {
     if (ImGui::BeginPopupModal(kConfirmDeletionTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("The following files will be deleted from %s:", m_name.c_str());
@@ -343,6 +424,19 @@ void BackupMemoryView::DisplayConfirmFormatModal() {
         ImGui::SetItemDefaultFocus();
         ImGui::SameLine();
         if (ImGui::Button("No", ImVec2(80, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
+}
+
+void BackupMemoryView::DisplayExportSuccessfulModal() {
+    if (ImGui::BeginPopupModal(kExportSuccessfulTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("%u file%s exported successfully.", m_exportCount, (m_exportCount == 1 ? "" : "s"));
+
+        if (ImGui::Button("OK", ImVec2(80, 0))) {
+            m_exportCount = 0;
             ImGui::CloseCurrentPopup();
         }
 
