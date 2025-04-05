@@ -2,6 +2,8 @@
 
 #include <satemu/hw/cart/cart.hpp>
 
+#include <app/events/emu_event_factory.hpp>
+
 #include <imgui.h>
 
 using namespace satemu;
@@ -19,21 +21,70 @@ BackupMemoryManagerWindow::BackupMemoryManagerWindow(SharedContext &context)
 }
 
 void BackupMemoryManagerWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(1100, 340), ImVec2(1100, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(1135, 340), ImVec2(1135, FLT_MAX));
 }
 
 void BackupMemoryManagerWindow::DrawContents() {
     // TODO: buttons to easily copy/move between System and Cartridge memory
 
-    if (ImGui::BeginTable("bup_mgr", 2,
-                          ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_BordersInnerV |
+    if (ImGui::BeginTable("bup_mgr", 3,
+                          ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerV |
                               ImGuiTableFlags_ScrollY)) {
+        ImGui::TableSetupColumn("##sys_bup", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("##btns", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("##cart_bup", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
             ImGui::SeparatorText("System memory");
             ImGui::PushID("sys_bup");
             m_sysBupView.Display();
             ImGui::PopID();
+        }
+        if (ImGui::TableNextColumn()) {
+            const auto avail = ImGui::GetContentRegionAvail();
+            const float textHeight = ImGui::GetTextLineHeightWithSpacing();
+            const float buttonHeight = ImGui::GetFrameHeightWithSpacing();
+            const float totalHeight = textHeight + buttonHeight * 4;
+
+            // Center vertically
+            ImGui::Dummy(ImVec2(0, (avail.y - totalHeight) * 0.5f));
+            ImGui::TextUnformatted("Copy");
+            if (ImGui::Button("<<", ImVec2(35, 0))) {
+                std::unique_lock lock{m_context.locks.cart};
+                auto files = m_cartBupView.ExportAll();
+                m_sysBupView.ImportAll(files);
+            }
+
+            if (!m_cartBupView.HasSelection()) {
+                ImGui::BeginDisabled();
+            }
+            if (ImGui::Button("<", ImVec2(35, 0))) {
+                std::unique_lock lock{m_context.locks.cart};
+                auto files = m_cartBupView.ExportSelected();
+                m_sysBupView.ImportAll(files);
+            }
+            if (!m_cartBupView.HasSelection()) {
+                ImGui::EndDisabled();
+            }
+
+            if (!m_sysBupView.HasSelection()) {
+                ImGui::BeginDisabled();
+            }
+            if (ImGui::Button(">", ImVec2(35, 0))) {
+                std::unique_lock lock{m_context.locks.cart};
+                auto files = m_sysBupView.ExportSelected();
+                m_cartBupView.ImportAll(files);
+            }
+            if (!m_sysBupView.HasSelection()) {
+                ImGui::EndDisabled();
+            }
+
+            if (ImGui::Button(">>", ImVec2(35, 0))) {
+                std::unique_lock lock{m_context.locks.cart};
+                auto files = m_sysBupView.ExportAll();
+                m_cartBupView.ImportAll(files);
+            }
         }
         if (ImGui::TableNextColumn()) {
             ImGui::SeparatorText("Cartridge memory");

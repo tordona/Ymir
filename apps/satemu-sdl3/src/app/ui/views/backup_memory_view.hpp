@@ -24,6 +24,12 @@ public:
 
     void Display();
 
+    bool HasSelection() const;
+
+    std::vector<satemu::bup::BackupFile> ExportAll() const;
+    std::vector<satemu::bup::BackupFile> ExportSelected() const;
+    void ImportAll(std::span<const satemu::bup::BackupFile> files);
+
 private:
     SharedContext &m_context;
     std::string m_name;

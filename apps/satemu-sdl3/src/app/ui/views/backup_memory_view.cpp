@@ -106,10 +106,16 @@ void BackupMemoryView::Display() {
             selSize += file.size;
         }
 
-        auto plural = [](uint32 count) { return count == 1 ? "" : "s"; };
+        auto plural = [](uint32 count, const char *singular, const char *plural) {
+            return count == 1 ? singular : plural;
+        };
 
-        ImGui::Text("%u file%s selected - %u block%s, %u byte%s", selCount, plural(selCount), selBlocks,
-                    plural(selBlocks), selSize, plural(selSize));
+        if (selCount == 0) {
+            ImGui::TextUnformatted("No files selected");
+        } else {
+            ImGui::Text("%u %s selected - %u %s, %u %s", selCount, plural(selCount, "file", "files"), selBlocks,
+                        plural(selBlocks, "block", "blocks"), selSize, plural(selSize, "byte", "bytes"));
+        }
     }
 
     if (ImGui::Button("Import")) {
@@ -242,6 +248,55 @@ void BackupMemoryView::Display() {
     DisplayImageImportSuccessfulModal();
     DisplayImageExportSuccessfulModal();
     DisplayErrorModal();
+}
+
+bool BackupMemoryView::HasSelection() const {
+    return !m_selected.empty();
+}
+
+std::vector<bup::BackupFile> BackupMemoryView::ExportAll() const {
+    if (m_bup != nullptr) {
+        return m_bup->ExportAll();
+    } else {
+        return {};
+    }
+}
+
+std::vector<bup::BackupFile> BackupMemoryView::ExportSelected() const {
+    if (m_bup != nullptr) {
+        std::vector<bup::BackupFile> files{};
+        auto bupFiles = m_bup->List();
+        for (auto item : m_selected) {
+            if (item >= bupFiles.size()) {
+                continue;
+            }
+            if (auto file = m_bup->Export(bupFiles[item].header.filename)) {
+                files.push_back(*file);
+            }
+        }
+        return files;
+    } else {
+        return {};
+    }
+}
+
+void BackupMemoryView::ImportAll(std::span<const bup::BackupFile> files) {
+    m_importBad.clear();
+    m_importFailed.clear();
+    m_importOverwrite.clear();
+    for (auto &file : files) {
+        switch (m_bup->Import(file, true)) {
+        case bup::BackupFileImportResult::Imported: break;
+        case bup::BackupFileImportResult::Overwritten: break;
+        case bup::BackupFileImportResult::NoSpace:
+            m_importFailed.push_back({file.header, "Not enough space in memory"});
+            break;
+        default: m_importFailed.push_back({file.header, "Unspecified error"}); break;
+        }
+    }
+    if (!m_importFailed.empty()) {
+        OpenFileImportResultModal();
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -588,11 +643,13 @@ void BackupMemoryView::DisplayFileImportResultModal() {
         const float monoCharWidth = ImGui::CalcTextSize("F").x;
         ImGui::PopFont();
 
-        ImGui::Text("%zu file%s imported successfully.", m_importSuccess.size(),
-                    (m_importSuccess.size() == 1 ? "" : "s"));
+        if (!m_importSuccess.empty()) {
+            ImGui::Text("%zu file%s imported successfully.", m_importSuccess.size(),
+                        (m_importSuccess.size() == 1 ? "" : "s"));
+        }
 
         if (!m_importFailed.empty()) {
-            ImGui::Text("The following file%s failed to import:", (m_importFailed.size() == 1 ? "" : "s"));
+            ImGui::Text("The following file%s could not be imported:", (m_importFailed.size() == 1 ? "" : "s"));
 
             auto avail = ImGui::GetContentRegionAvail();
             const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
@@ -625,7 +682,7 @@ void BackupMemoryView::DisplayFileImportResultModal() {
         }
 
         if (!m_importBad.empty()) {
-            ImGui::Text("The following file%s could not be imported:", (m_importBad.size() == 1 ? "" : "s"));
+            ImGui::Text("The following file%s could not be loaded:", (m_importBad.size() == 1 ? "" : "s"));
 
             auto avail = ImGui::GetContentRegionAvail();
             const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
