@@ -49,6 +49,14 @@ inline EmuEvent EjectCartridge() {
     return {.type = EmuEvent::Type::EjectCartridge};
 }
 
+inline EmuEvent ReplaceInternalBackupMemory(satemu::bup::BackupMemory &&bupMem) {
+    return {.type = EmuEvent::Type::ReplaceInternalBackupMemory, .value = std::move(bupMem)};
+}
+
+inline EmuEvent ReplaceExternalBackupMemory(satemu::bup::BackupMemory &&bupMem) {
+    return {.type = EmuEvent::Type::ReplaceExternalBackupMemory, .value = std::move(bupMem)};
+}
+
 inline EmuEvent RunFunction(std::function<void(SharedContext &)> &&fn) {
     return {.type = EmuEvent::Type::RunFunction, .value = std::move(fn)};
 }

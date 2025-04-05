@@ -1445,7 +1445,7 @@ void App::EmulatorThread() {
         const size_t evtCount = paused ? m_context.eventQueues.emulator.wait_dequeue_bulk(evts.begin(), evts.size())
                                        : m_context.eventQueues.emulator.try_dequeue_bulk(evts.begin(), evts.size());
         for (size_t i = 0; i < evtCount; i++) {
-            const EmuEvent &evt = evts[i];
+            EmuEvent &evt = evts[i];
             using enum EmuEvent::Type;
             switch (evt.type) {
             case FactoryReset: m_context.saturn.FactoryReset(); break;
@@ -1487,6 +1487,14 @@ void App::EmulatorThread() {
                 m_context.saturn.EjectCartridge();
                 break;
             }
+
+            case ReplaceInternalBackupMemory:
+                m_context.saturn.mem.SetInternalBackupRAM(std::move(std::get<satemu::bup::BackupMemory>(evt.value)));
+                break;
+            case ReplaceExternalBackupMemory:
+                m_context.saturn.InsertCartridge<satemu::cart::BackupMemoryCartridge>(
+                    std::move(std::get<satemu::bup::BackupMemory>(evt.value)));
+                break;
 
             case RunFunction: std::get<std::function<void(SharedContext &)>>(evt.value)(m_context); break;
 

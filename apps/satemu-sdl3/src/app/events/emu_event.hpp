@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/sys/backup_ram.hpp>
+
 #include <functional>
 #include <string>
 #include <variant>
@@ -24,6 +26,9 @@ struct EmuEvent {
 
         EjectCartridge,
 
+        ReplaceInternalBackupMemory,
+        ReplaceExternalBackupMemory,
+
         RunFunction,
 
         Shutdown
@@ -31,7 +36,7 @@ struct EmuEvent {
 
     Type type;
 
-    std::variant<bool, std::string, std::function<void(SharedContext &)>> value;
+    std::variant<bool, std::string, satemu::bup::BackupMemory, std::function<void(SharedContext &)>> value;
 };
 
 } // namespace app

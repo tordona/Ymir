@@ -46,6 +46,7 @@ private:
     void OpenFileImportOverwriteModal();
     void OpenFileImportResultModal();
     void OpenFilesExportSuccessfulModal(uint32 exportCount);
+    void OpenImageImportSuccessfulModal();
     void OpenImageExportSuccessfulModal();
     void OpenErrorModal(std::string errorMessage);
 
@@ -54,6 +55,7 @@ private:
     void DisplayFileImportOverwriteModal(std::span<satemu::bup::BackupFileInfo> files);
     void DisplayFileImportResultModal();
     void DisplayFilesExportSuccessfulModal();
+    void DisplayImageImportSuccessfulModal();
     void DisplayImageExportSuccessfulModal();
     void DisplayErrorModal();
 
@@ -63,6 +65,7 @@ private:
     bool m_openFilesExportSuccessfulModal = false;
     uint32 m_filesExportCount;
 
+    bool m_openImageImportSuccessfulModal = false;
     bool m_openImageExportSuccessfulModal = false;
 
     bool m_openErrorModal = false;

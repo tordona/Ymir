@@ -36,6 +36,10 @@ struct SystemMemory {
         return m_internalBackupRAM;
     }
 
+    void SetInternalBackupRAM(bup::BackupMemory &&bupMem) {
+        std::swap(m_internalBackupRAM, bupMem);
+    }
+
     alignas(16) std::array<uint8, kIPLSize> IPL; // aka BIOS ROM
 
     alignas(16) std::array<uint8, kWRAMLowSize> WRAMLow;

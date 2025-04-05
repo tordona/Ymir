@@ -343,6 +343,10 @@ void BackupMemoryView::OpenFilesExportSuccessfulModal(uint32 exportCount) {
     m_filesExportCount = exportCount;
 }
 
+void BackupMemoryView::OpenImageImportSuccessfulModal() {
+    m_openImageImportSuccessfulModal = true;
+}
+
 void BackupMemoryView::OpenImageExportSuccessfulModal() {
     m_openImageExportSuccessfulModal = true;
 }
@@ -382,16 +386,10 @@ void BackupMemoryView::DisplayConfirmDeleteModal(std::span<bup::BackupFileInfo> 
 
         if (ImGui::Button("OK", ImVec2(80, 0))) {
             assert(m_bup != nullptr);
-            if (m_external) {
-                m_context.locks.cart.lock();
-            }
             // TODO: should do this in the emulator thread
             for (uint32 item : m_selected) {
                 auto &file = files[item];
                 m_bup->Delete(file.header.filename);
-            }
-            if (m_external) {
-                m_context.locks.cart.unlock();
             }
             m_selected.clear();
             ImGui::CloseCurrentPopup();
@@ -414,14 +412,8 @@ void BackupMemoryView::DisplayConfirmFormatModal() {
 
         if (ImGui::Button("Yes", ImVec2(80, 0))) {
             assert(m_bup != nullptr);
-            if (m_external) {
-                m_context.locks.cart.lock();
-            }
             // TODO: should do this in the emulator thread
             m_bup->Format();
-            if (m_external) {
-                m_context.locks.cart.unlock();
-            }
             m_selected.clear();
             ImGui::CloseCurrentPopup();
         }
@@ -558,10 +550,6 @@ void BackupMemoryView::DisplayFileImportOverwriteModal(std::span<bup::BackupFile
         }
 
         if (execute) {
-            if (m_external) {
-                m_context.locks.cart.lock();
-            }
-
             for (auto &ovFile : m_importOverwrite) {
                 // Skip files not selected to be overwritten
                 if (!ovFile.overwrite) {
@@ -580,10 +568,6 @@ void BackupMemoryView::DisplayFileImportOverwriteModal(std::span<bup::BackupFile
                 }
             }
             m_importOverwrite.clear();
-
-            if (m_external) {
-                m_context.locks.cart.unlock();
-            }
 
             ImGui::CloseCurrentPopup();
             OpenFileImportResultModal();
@@ -707,6 +691,25 @@ void BackupMemoryView::DisplayFilesExportSuccessfulModal() {
     }
 }
 
+void BackupMemoryView::DisplayImageImportSuccessfulModal() {
+    static constexpr const char *kTitle = "Image import successful";
+
+    if (m_openImageImportSuccessfulModal) {
+        ImGui::OpenPopup(kTitle);
+        m_openImageImportSuccessfulModal = false;
+    }
+
+    if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("%s image imported successfully.", m_name.c_str());
+
+        if (ImGui::Button("OK", ImVec2(80, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
+}
+
 void BackupMemoryView::DisplayImageExportSuccessfulModal() {
     static constexpr const char *kTitle = "Image export successful";
 
@@ -770,10 +773,6 @@ void BackupMemoryView::ImportFiles(std::span<std::filesystem::path> files) {
     for (auto &file : files) {
         switch (ImportFile(file, bupFile, error)) {
         case ImportFileResult::Success:
-            if (m_external) {
-                m_context.locks.cart.lock();
-            }
-
             // TODO: should do this in the emulator thread
             // Attempt to import file without overwriting
             switch (m_bup->Import(bupFile, false)) {
@@ -783,10 +782,6 @@ void BackupMemoryView::ImportFiles(std::span<std::filesystem::path> files) {
                 break;
             case bup::BackupFileImportResult::FileExists: m_importOverwrite.push_back({bupFile}); break;
             default: m_importFailed.push_back({bupFile.header, "Unspecified error"}); break;
-            }
-
-            if (m_external) {
-                m_context.locks.cart.unlock();
             }
             break;
         case ImportFileResult::FilesystemError: m_importBad.push_back({file, error.message()}); break;
@@ -1018,10 +1013,12 @@ void BackupMemoryView::ImportImage(std::filesystem::path file) {
 
     // Replace backup memory instances
     if (m_external) {
-        // TODO: enqueue emulator event to reinsert cartridge with new backup memory
+        m_context.EnqueueEvent(events::emu::ReplaceExternalBackupMemory(std::move(bupMem)));
     } else {
-        // TODO: enqueue emulator event to replace internal backup RAM
+        m_context.EnqueueEvent(events::emu::ReplaceInternalBackupMemory(std::move(bupMem)));
     }
+
+    OpenImageImportSuccessfulModal();
 }
 
 void BackupMemoryView::CancelImageImport() {
