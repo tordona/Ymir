@@ -10,8 +10,8 @@ namespace app::ui {
 
 BackupMemoryManagerWindow::BackupMemoryManagerWindow(SharedContext &context)
     : WindowBase(context)
-    , m_sysBupView(context, "System memory")
-    , m_cartBupView(context, "Cartridge memory") {
+    , m_sysBupView(context, "System memory", false)
+    , m_cartBupView(context, "Cartridge memory", true) {
 
     m_sysBupView.SetBackupMemory(&m_context.saturn.mem.GetInternalBackupRAM());
 

@@ -26,8 +26,10 @@ namespace grp {
 
 } // namespace grp
 
-// SDL3 file dialog callback function wrapping a function with the following signature:
-//   void (*)(void *userdata, std::filesystem::path path, int filter)
+// SDL3 file dialog callback function wrapping functions with the following signatures:
+//   void (*acceptCallback)(void *userdata, std::filesystem::path path, int filter)
+//   void (*cancelCallback)(void *userdata, int filter)
+//   void (*errorCallback)(void *userdata, const char *errorMessage, int filter)
 // The wrapper function expects only one file or directory to be selected. Useful for save file or open directory
 // dialogs.
 //
@@ -35,18 +37,23 @@ namespace grp {
 // If multiple files are selected, the callback is invoked with the first file in the selection. In debug builds, an
 // assertion is raised in this case.
 // If the user cancels or the file dialog fails to open, a dev log message is printed.
-template <auto callback>
-    requires std::invocable<decltype(callback), void *, std::filesystem::path, int>
+template <auto acceptCallback, auto cancelCallback, auto errorCallback>
+    requires(std::invocable<decltype(acceptCallback), void *, std::filesystem::path, int> &&
+             std::invocable<decltype(cancelCallback), void *, int> &&
+             std::invocable<decltype(errorCallback), void *, const char *, int>)
 void WrapSingleSelectionCallback(void *userdata, const char *const *filelist, int filter) {
     if (filelist == nullptr) {
-        devlog::error<grp::base>("Failed to open generic file dialog: {}", SDL_GetError());
+        const char *errorMessage = SDL_GetError();
+        devlog::error<grp::base>("Failed to open generic file dialog: {}", errorMessage);
+        errorCallback(userdata, errorMessage, filter);
     } else if (*filelist == nullptr) {
         devlog::info<grp::base>("Generic file dialog cancelled");
+        cancelCallback(userdata, filter);
     } else {
         // Only one file or directory should be selected
         assert(filelist[1] == nullptr);
         const char *file = *filelist;
-        callback(userdata, file, filter);
+        acceptCallback(userdata, file, filter);
     }
 }
 

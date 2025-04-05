@@ -51,47 +51,20 @@ public:
     void WriteWord(uint32 address, uint16 value) final;
     void WriteLong(uint32 address, uint32 value) final;
 
-    // Checks if the backup memory header is valid.
+    std::vector<uint8> ReadAll() const final;
+
     bool IsHeaderValid() const final;
 
-    // Retrieves the total size in bytes of the backup memory.
     uint32 Size() const final;
-
-    // Retrieves the block size.
     uint32 GetBlockSize() const final;
-
-    // Retrieves the total number of blocks.
     uint32 GetTotalBlocks() const final;
-
-    // Computes the number of blocks used by backup files.
     uint32 GetUsedBlocks() final;
 
-    // Formats the backup memory.
     void Format() final;
 
-    // Retrieves a list of backup files stored in this backup memory.
     std::vector<BackupFileInfo> List() final;
-
-    // Attempts to export the backup file with the specified name.
-    //
-    // Returns a BackupFile with the file's contents if it exists.
-    // Returns std::nullopt if no such file exists.
     std::optional<BackupFile> Export(std::string_view filename) final;
-
-    // Attempts to import the specified backup file, optionally overwriting an existing file with the same name as the
-    // one being imported.
-    //
-    // Returns BackupFileImportResult::Imported if the file was newly imported.
-    // Returns BackupFileImportResult::Overwritten if the overwrite flag is set and an existing file was overwritten.
-    // Returns BackupFileImportResult::FileExists if the overwrite flag is clear and the file already exists.
-    // Returns BackupFileImportResult::NoSpace if there is not enough space to import the file. The contents of the
-    // backup memory are not modified if this happens.
     BackupFileImportResult Import(const BackupFile &file, bool overwrite) final;
-
-    // Attempts to delete a backup file with the specified name.
-    //
-    // Returns true if the file was deleted.
-    // Returns false if there was no file with the specified name.
     bool Delete(std::string_view filename) final;
 
 private:

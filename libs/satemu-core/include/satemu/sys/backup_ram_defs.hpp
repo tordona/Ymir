@@ -59,6 +59,9 @@ public:
     virtual void WriteWord(uint32 address, uint16 value) = 0;
     virtual void WriteLong(uint32 address, uint32 value) = 0;
 
+    // Reads the entire backup memory into a vector.
+    virtual std::vector<uint8> ReadAll() const = 0;
+
     // Checks if the backup memory header is valid.
     virtual bool IsHeaderValid() const = 0;
 

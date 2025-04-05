@@ -165,6 +165,10 @@ void BackupMemory::WriteLong(uint32 address, uint32 value) {
     }
 }
 
+std::vector<uint8> BackupMemory::ReadAll() const {
+    return {m_backupRAM.begin(), m_backupRAM.end()};
+}
+
 bool BackupMemory::IsHeaderValid() const {
     return m_headerValid;
 }

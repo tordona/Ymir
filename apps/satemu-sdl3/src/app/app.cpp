@@ -333,8 +333,16 @@ void App::RunEmulator() {
     // ---------------------------------
     // Setup Dear ImGui context
 
+    std::filesystem::path pwd = std::filesystem::current_path();
+    std::filesystem::path imguiIniLocation = pwd / "imgui.ini";
+
+    devlog::debug<grp::base>("Current working directory: {}", pwd.string());
+
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
+    // TODO: load and decompress from state blob
+    ImGui::LoadIniSettingsFromDisk(imguiIniLocation.string().c_str());
+    io.IniFilename = nullptr;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
@@ -1410,6 +1418,13 @@ void App::RunEmulator() {
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
 
         SDL_RenderPresent(renderer);
+
+        // Process ImGui INI file write requests
+        // TODO: compress and include in state blob
+        if (io.WantSaveIniSettings) {
+            ImGui::SaveIniSettingsToDisk(imguiIniLocation.string().c_str());
+            io.WantSaveIniSettings = false;
+        }
     }
 
 end_loop:; // the semicolon is not a typo!
