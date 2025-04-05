@@ -103,7 +103,7 @@ Action InputContext::MapAction(Action action, InputEvent &&event) {
         prev = m_actions.at(event);
         m_actionsReverse.erase(prev);
     } else {
-        prev = Action::None;
+        prev = kNoAction;
     }
     m_actions[event] = action;
     m_actionsReverse[action] = event;
@@ -111,7 +111,7 @@ Action InputContext::MapAction(Action action, InputEvent &&event) {
 }
 
 Action InputContext::GetMappedAction(InputEvent &&event) const {
-    return m_actions.contains(event) ? m_actions.at(event) : Action::None;
+    return m_actions.contains(event) ? m_actions.at(event) : kNoAction;
 }
 
 void InputContext::ProcessEvent(InputEvent &&event) {

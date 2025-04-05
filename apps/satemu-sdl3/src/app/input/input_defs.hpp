@@ -1,17 +1,21 @@
 #pragma once
 
+#include <satemu/core/types.hpp>
+
 #include <satemu/util/bitmask_enum.hpp>
 
 namespace app::input {
 
-enum class Action {
-    None,
+// Action identifier. Apps can use any mapping scheme they wish for actions.
+// 4 billion different actions should be more than enough for any kind of app.
+//
+// Action 0 is reserved to represent "no action" or "unmapped binding".
+using Action = uint32;
 
-    // Emulator actions
+// The "no action" or "unmapped binding" action identifier.
+inline constexpr Action kNoAction = 0;
 
-    // Standard Saturn Pad buttons
-};
-
+// Keyboard key modifiers.
 enum class KeyModifier {
     None = 0,
 
@@ -332,25 +336,59 @@ struct KeyCombo {
     bool operator==(const KeyCombo &) const = default;
 };
 
+enum MouseButton {
+    Left,
+    Right,
+    Middle,
+    Extra1,
+    Extra2,
+};
+
+struct MouseCombo {
+    KeyModifier modifiers;
+    MouseButton button;
+
+    MouseCombo() = default;
+    MouseCombo(const MouseCombo &) = default;
+    MouseCombo(MouseCombo &&) = default;
+
+    MouseCombo(MouseButton button)
+        : modifiers(KeyModifier::None)
+        , button(button) {}
+
+    MouseCombo(KeyModifier modifiers, MouseButton button)
+        : modifiers(modifiers)
+        , button(button) {}
+
+    MouseCombo &operator=(const MouseCombo &) = default;
+    MouseCombo &operator=(MouseCombo &&) = default;
+
+    bool operator==(const MouseCombo &) const = default;
+};
+
 struct InputEvent {
     enum class Type {
         None,
         KeyboardKey,
         KeyCombo,
+        MouseButton,
+        MouseCombo,
         GamepadButton,
         JoystickButton,
     };
     Type type = Type::None;
 
-    union {
+    union Event {
         KeyboardKey keyboardKey;
         KeyCombo keyCombo;
+        MouseButton mouseButton;
+        MouseCombo mouseCombo;
         struct {
             int index;
             GamepadButton button;
         } gamepad;
         int joystickButton;
-    };
+    } event;
 
     bool pressed;
 
@@ -360,28 +398,56 @@ struct InputEvent {
 
     explicit InputEvent(KeyboardKey key, bool pressed)
         : type(Type::KeyboardKey)
-        , keyboardKey(key)
+        , event({.keyboardKey = key})
         , pressed(pressed) {}
 
     explicit InputEvent(KeyCombo keyCombo, bool pressed)
         : type(Type::KeyCombo)
-        , keyCombo(keyCombo)
+        , event({.keyCombo = keyCombo})
+        , pressed(pressed) {}
+
+    explicit InputEvent(MouseButton mouseButton, bool pressed)
+        : type(Type::MouseButton)
+        , event({.mouseButton = mouseButton})
+        , pressed(pressed) {}
+
+    explicit InputEvent(MouseCombo mouseCombo, bool pressed)
+        : type(Type::MouseCombo)
+        , event({.mouseCombo = mouseCombo})
         , pressed(pressed) {}
 
     explicit InputEvent(int index, GamepadButton button, bool pressed)
         : type(Type::GamepadButton)
-        , gamepad{.index = index, .button = button}
+        , event({.gamepad{.index = index, .button = button}})
         , pressed(pressed) {}
 
     explicit InputEvent(int joystickButton, bool pressed)
         : type(Type::JoystickButton)
-        , joystickButton(joystickButton)
+        , event({.joystickButton = joystickButton})
         , pressed(pressed) {}
 
     struct Hash {
         std::size_t operator()(const InputEvent &e) const {
-            return static_cast<std::size_t>(e.joystickButton) | (static_cast<std::size_t>(e.type) << 32ull) |
-                   (static_cast<size_t>(e.pressed) << 63ull);
+            std::size_t base = 0;
+            switch (e.type) {
+            case Type::None: base = 0; break;
+            case Type::KeyboardKey: base = static_cast<std::size_t>(e.event.keyboardKey); break;
+            case Type::KeyCombo:
+                base = static_cast<std::size_t>(e.event.keyCombo.key) |
+                       (static_cast<std ::size_t>(e.event.keyCombo.modifiers) << 24ull);
+                break;
+            case Type::MouseButton: base = static_cast<std::size_t>(e.event.mouseButton); break;
+            case Type::MouseCombo:
+                base = static_cast<std::size_t>(e.event.mouseCombo.button) |
+                       (static_cast<std ::size_t>(e.event.mouseCombo.modifiers) << 24ull);
+                break;
+            case Type::GamepadButton:
+                base = static_cast<std::size_t>(e.event.gamepad.button) |
+                       (static_cast<std ::size_t>(e.event.gamepad.index) << 24ull);
+                break;
+            case Type::JoystickButton: base = static_cast<std::size_t>(e.event.joystickButton); break;
+            }
+            return base | (static_cast<std::size_t>(e.type) << 32ull) | (static_cast<size_t>(e.pressed) << 63ull);
         }
     };
 
@@ -394,10 +460,13 @@ struct InputEvent {
         }
         switch (type) {
         case Type::None: return true;
-        case Type::KeyboardKey: return keyboardKey == rhs.keyboardKey;
-        case Type::KeyCombo: return keyCombo == rhs.keyCombo;
-        case Type::GamepadButton: return gamepad.index == rhs.gamepad.index && gamepad.button == rhs.gamepad.button;
-        case Type::JoystickButton: return joystickButton == rhs.joystickButton;
+        case Type::KeyboardKey: return event.keyboardKey == rhs.event.keyboardKey;
+        case Type::KeyCombo: return event.keyCombo == rhs.event.keyCombo;
+        case Type::MouseButton: return event.mouseButton == rhs.event.mouseButton;
+        case Type::MouseCombo: return event.mouseCombo == rhs.event.mouseCombo;
+        case Type::GamepadButton:
+            return event.gamepad.index == rhs.event.gamepad.index && event.gamepad.button == rhs.event.gamepad.button;
+        case Type::JoystickButton: return event.joystickButton == rhs.event.joystickButton;
         default: return false;
         }
     }
