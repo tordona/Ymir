@@ -825,35 +825,54 @@ void App::RunEmulator() {
     // ---------------------------------
     // Input action handlers
 
+    bool paused = false; // TODO: this should be updated by the emulator thread via events
+
     auto &port1 = m_context.saturn.SMPC.GetPeripheralPort1();
     auto &port2 = m_context.saturn.SMPC.GetPeripheralPort2();
     auto *pad1 = port1.ConnectStandardPad();
     auto *pad2 = port2.ConnectStandardPad();
 
-    auto registerButton = [&](input::ActionID action, peripheral::StandardPad::Button button) {
-        m_inputHandler.Register(action, [&, button = button](const input::InputActionEvent &evt) {
-            auto *pad = evt.action.context == 2 ? pad2 : pad1;
-            if (evt.input.activated) {
-                pad->PressButton(button);
-            } else {
-                pad->ReleaseButton(button);
-            }
-        });
-    };
+    m_inputHandler.Register(actions::general::OpenLoadDiscDialog,
+                            [&](const input::InputActionEvent &evt) { OpenLoadDiscDialog(); });
+    m_inputHandler.Register(actions::general::EjectDisc, [&](const input::InputActionEvent &evt) {
+        m_context.EnqueueEvent(events::emu::EjectDisc());
+    });
+    m_inputHandler.Register(actions::general::OpenCloseTray, [&](const input::InputActionEvent &evt) {
+        m_context.EnqueueEvent(events::emu::OpenCloseTray());
+    });
 
-    registerButton(actions::emu::StandardPadA, peripheral::StandardPad::Button::A);
-    registerButton(actions::emu::StandardPadB, peripheral::StandardPad::Button::B);
-    registerButton(actions::emu::StandardPadC, peripheral::StandardPad::Button::C);
-    registerButton(actions::emu::StandardPadX, peripheral::StandardPad::Button::X);
-    registerButton(actions::emu::StandardPadY, peripheral::StandardPad::Button::Y);
-    registerButton(actions::emu::StandardPadZ, peripheral::StandardPad::Button::Z);
-    registerButton(actions::emu::StandardPadUp, peripheral::StandardPad::Button::Up);
-    registerButton(actions::emu::StandardPadDown, peripheral::StandardPad::Button::Down);
-    registerButton(actions::emu::StandardPadLeft, peripheral::StandardPad::Button::Left);
-    registerButton(actions::emu::StandardPadRight, peripheral::StandardPad::Button::Right);
-    registerButton(actions::emu::StandardPadStart, peripheral::StandardPad::Button::Start);
-    registerButton(actions::emu::StandardPadL, peripheral::StandardPad::Button::L);
-    registerButton(actions::emu::StandardPadR, peripheral::StandardPad::Button::R);
+    m_inputHandler.Register(actions::general::ToggleWindowedVideoOutput, [&](const input::InputActionEvent &evt) {
+        screen.displayVideoOutputInWindow = !screen.displayVideoOutputInWindow;
+    });
+
+    {
+        using Button = peripheral::StandardPad::Button;
+
+        auto registerButton = [&](input::ActionID action, Button button) {
+            m_inputHandler.Register(action, [&, button = button](const input::InputActionEvent &evt) {
+                auto *pad = evt.action.context == 2 ? pad2 : pad1;
+                if (evt.input.activated) {
+                    pad->PressButton(button);
+                } else {
+                    pad->ReleaseButton(button);
+                }
+            });
+        };
+
+        registerButton(actions::emu::StandardPadA, Button::A);
+        registerButton(actions::emu::StandardPadB, Button::B);
+        registerButton(actions::emu::StandardPadC, Button::C);
+        registerButton(actions::emu::StandardPadX, Button::X);
+        registerButton(actions::emu::StandardPadY, Button::Y);
+        registerButton(actions::emu::StandardPadZ, Button::Z);
+        registerButton(actions::emu::StandardPadUp, Button::Up);
+        registerButton(actions::emu::StandardPadDown, Button::Down);
+        registerButton(actions::emu::StandardPadLeft, Button::Left);
+        registerButton(actions::emu::StandardPadRight, Button::Right);
+        registerButton(actions::emu::StandardPadStart, Button::Start);
+        registerButton(actions::emu::StandardPadL, Button::L);
+        registerButton(actions::emu::StandardPadR, Button::R);
+    }
 
     m_inputHandler.Register(actions::emu::HardReset, [&](const input::InputActionEvent &evt) {
         m_context.EnqueueEvent(events::emu::HardReset());
@@ -862,8 +881,26 @@ void App::RunEmulator() {
         m_context.EnqueueEvent(events::emu::SoftReset());
     });
 
+    m_inputHandler.Register(actions::emu::FrameStep, [&](const input::InputActionEvent &evt) {
+        paused = true;
+        m_context.EnqueueEvent(events::emu::FrameStep());
+    });
+    m_inputHandler.Register(actions::emu::PauseResume, [&](const input::InputActionEvent &evt) {
+        paused = !paused;
+        m_context.EnqueueEvent(events::emu::SetPaused(paused));
+    });
+    m_inputHandler.Register(actions::emu::FastForward,
+                            [&](const input::InputActionEvent &evt) { m_audioSystem.SetSync(!evt.input.activated); });
+
     m_inputHandler.Register(actions::emu::ResetButton, [&](const input::InputActionEvent &evt) {
         m_context.EnqueueEvent(events::emu::SetResetButton(evt.input.activated));
+    });
+
+    m_inputHandler.Register(actions::emu::ToggleDebugTrace, [&](const input::InputActionEvent &evt) {
+        m_context.EnqueueEvent(events::emu::SetDebugTrace(!m_context.saturn.IsDebugTracingEnabled()));
+    });
+    m_inputHandler.Register(actions::emu::DumpMemory, [&](const input::InputActionEvent &evt) {
+        m_context.EnqueueEvent(events::emu::DumpMemory());
     });
 
     // ---------------------------------
@@ -874,8 +911,19 @@ void App::RunEmulator() {
         using Mod = input::KeyModifier;
         using Key = input::KeyboardKey;
         using KeyCombo = input::KeyCombo;
+
+        inputCtx.MapAction(actions::general::OpenLoadDiscDialog, KeyCombo{Mod::Control, Key::O});
+        inputCtx.MapAction(actions::general::EjectDisc, KeyCombo{Mod::Control, Key::W});
+        inputCtx.MapAction(actions::general::OpenCloseTray, KeyCombo{Mod::Control, Key::T});
+
+        inputCtx.MapAction(actions::general::ToggleWindowedVideoOutput, KeyCombo{Mod::None, Key::F9});
+
         inputCtx.MapAction(actions::emu::HardReset, KeyCombo{Mod::Control, Key::R});
         inputCtx.MapAction(actions::emu::SoftReset, KeyCombo{Mod::Control | Mod::Shift, Key::R});
+
+        inputCtx.MapAction(actions::emu::FrameStep, KeyCombo{Mod::None, Key::RightBracket});
+        inputCtx.MapAction(actions::emu::PauseResume, KeyCombo{Mod::Control, Key::P});
+        inputCtx.MapToggleableAction(actions::emu::FastForward, Key::Tab);
 
         inputCtx.MapToggleableAction(actions::emu::ResetButton, KeyCombo{Mod::Shift, Key::R});
 
@@ -919,6 +967,9 @@ void App::RunEmulator() {
         inputCtx.MapToggleableAction(actions::emu::StandardPadRight, /*port*/ 2, Key::PageDown);
         inputCtx.MapToggleableAction(actions::emu::StandardPadL, /*port*/ 2, Key::Insert);
         inputCtx.MapToggleableAction(actions::emu::StandardPadR, /*port*/ 2, Key::PageUp);
+
+        inputCtx.MapAction(actions::emu::ToggleDebugTrace, KeyCombo{Mod::None, Key::F11});
+        inputCtx.MapAction(actions::emu::DumpMemory, KeyCombo{Mod::Control, Key::F11});
     }
 
     // ---------------------------------
@@ -927,70 +978,6 @@ void App::RunEmulator() {
     m_context.saturn.Reset(true);
 
     auto t = clk::now();
-    bool paused = false; // TODO: this should be updated by the emulator thread via events
-
-    auto setClearButton = [](peripheral::StandardPad &pad, peripheral::StandardPad::Button button, bool pressed) {
-        if (pressed) {
-            pad.PressButton(button);
-        } else {
-            pad.ReleaseButton(button);
-        }
-    };
-
-    auto updateButton = [&](SDL_Scancode scancode, SDL_Keymod mod, bool pressed) {
-        using enum peripheral::StandardPad::Button;
-        switch (scancode) {
-        case SDL_SCANCODE_O:
-            if (pressed && (mod & SDL_KMOD_CTRL)) {
-                OpenLoadDiscDialog();
-            }
-            break;
-
-            // ---- BEGIN TODO ----
-            // TODO: find better keybindings for these
-        case SDL_SCANCODE_F6:
-            if (pressed) {
-                m_context.EnqueueEvent(events::emu::OpenCloseTray());
-            }
-            break;
-        case SDL_SCANCODE_F8:
-            if (pressed) {
-                m_context.EnqueueEvent(events::emu::EjectDisc());
-            }
-            break;
-            // ---- END TODO ----
-
-        case SDL_SCANCODE_EQUALS:
-            if (pressed) {
-                paused = true;
-                m_context.EnqueueEvent(events::emu::FrameStep());
-            }
-            break;
-        case SDL_SCANCODE_PAUSE:
-            if (pressed) {
-                paused = !paused;
-                m_context.EnqueueEvent(events::emu::SetPaused(paused));
-            }
-
-        case SDL_SCANCODE_TAB: m_audioSystem.SetSync(!pressed); break;
-        case SDL_SCANCODE_F3:
-            if (pressed) {
-                m_context.EnqueueEvent(events::emu::DumpMemory());
-            }
-            break;
-        case SDL_SCANCODE_F9:
-            if (pressed) {
-                screen.displayVideoOutputInWindow = !screen.displayVideoOutputInWindow;
-            }
-            break;
-        case SDL_SCANCODE_F11:
-            if (pressed) {
-                m_context.EnqueueEvent(events::emu::SetDebugTrace(!m_context.saturn.IsDebugTracingEnabled()));
-            }
-            break;
-        default: break;
-        }
-    };
 
     // Start emulator thread
     m_emuThread = std::thread([&] { EmulatorThread(); });
@@ -1033,7 +1020,6 @@ void App::RunEmulator() {
                     // TODO: consider supporting multiple keyboards (evt.key.which)
                     inputCtx.ProcessKeyboardEvent(input::SDL3ScancodeToKeyboardKey(evt.key.scancode),
                                                   input::SDL3ToKeyModifier(evt.key.mod), evt.key.down);
-                    updateButton(evt.key.scancode, evt.key.mod, evt.key.down);
                 }
                 break;
 
@@ -1207,10 +1193,10 @@ void App::RunEmulator() {
                 if (ImGui::MenuItem("Load disc image", "Ctrl+O")) {
                     OpenLoadDiscDialog();
                 }
-                if (ImGui::MenuItem("Open/close tray", "F6")) {
+                if (ImGui::MenuItem("Open/close tray", "Ctrl+T")) {
                     m_context.EnqueueEvent(events::emu::OpenCloseTray());
                 }
-                if (ImGui::MenuItem("Eject disc", "F8")) {
+                if (ImGui::MenuItem("Eject disc", "Ctrl+W")) {
                     m_context.EnqueueEvent(events::emu::EjectDisc());
                 }
 
@@ -1310,11 +1296,11 @@ void App::RunEmulator() {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Emulator")) {
-                if (ImGui::MenuItem("Frame step", "=")) {
+                if (ImGui::MenuItem("Frame step", "]")) {
                     paused = true;
                     m_context.EnqueueEvent(events::emu::FrameStep());
                 }
-                if (ImGui::MenuItem("Pause/resume", "Pause")) {
+                if (ImGui::MenuItem("Pause/resume", "Ctrl+P")) {
                     paused = !paused;
                     m_context.EnqueueEvent(events::emu::SetPaused(paused));
                 }
@@ -1356,7 +1342,7 @@ void App::RunEmulator() {
                     }
                     ImGui::EndMenu();
                 }
-                if (ImGui::MenuItem("Dump all memory", "F3")) {
+                if (ImGui::MenuItem("Dump all memory", "Ctrl+F11")) {
                     m_context.EnqueueEvent(events::emu::DumpMemory());
                 }
                 ImGui::Separator();

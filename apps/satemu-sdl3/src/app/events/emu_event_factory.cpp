@@ -138,6 +138,7 @@ EmuEvent DumpMemory() {
             std::ofstream out{"scsp-dsp-regs.bin", std::ios::binary};
             ctx.saturn.SCSP.DumpDSPRegs(out);
         }
+        devlog::info<grp::base>("Dump complete");
     });
 }
 
