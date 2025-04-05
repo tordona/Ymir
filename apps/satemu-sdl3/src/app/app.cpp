@@ -29,16 +29,16 @@
 // from scratch. You can also soft reset with Reset(false) or by changing the Reset button state through the SMPC.
 //
 // In order to run the emulator, set up a loop that processes application events and invokes RunFrame(false) to run the
-// emulator for a single frame. The "false" arguments disables debug tracing, which increases performance at the cost of
+// emulator for a single frame. The "false" argument disables debug tracing, which increases performance at the cost of
 // some debugging features, explained later in the Debugging section.
 //
 // The emulator core makes no attempt to pace execution to realtime speed - it's up to the frontend to implement some
-// pacing method. If no such method is used, it will run as fast as your CPU allows.
+// rate control method. If no such method is used, it will run as fast as your CPU allows.
 //
 // This frontend implements a simple audio sync that locks up the emulator thread while the audio ring buffer is full.
 // Fast-forward simply disables audio sync, which allows the core to run as fast as possible as the audio callback
 // overruns the audio buffer. The buffer size requested from the audio device is slightly smaller than 1/60 of the
-// sample rate which results in video stuttering but no frame skipping.
+// sample rate which results in minor video jitter but no frame skipping.
 //
 //
 // Receiving input
@@ -54,8 +54,8 @@
 // previously connected peripheral(s) will become invalid. The same applies when replacing a peripheral.
 //
 // NOTE: There is currently no way to enumerate peripherals attached to a port.
-// NOTE: The emulator currently only supports attaching a single standard Saturn Pad to the ports. Due to this, there's
-// also no way to detach a specific peripheral. More types of peripherals (including multitap) are planned.
+// NOTE: The emulator currently only supports attaching a single standard Saturn Pad to the ports. More types of
+// peripherals (including multitap) are planned.
 //
 // This frontend attaches a standard Saturn Pad to both ports and redirects keyboard input to them with the following
 // hardcoded key mappings:
@@ -108,9 +108,9 @@
 //
 // Debugging
 // ---------
-// WARNING: The regs is a work in progress and in a flow state. Expect things to change dramatically.
+// WARNING: The debugger is a work in progress and in a flow state. Expect things to change dramatically.
 //
-// You can use Bus objects to directly read or write memory. Also, the regs framework provides two major components:
+// You can use Bus objects to directly read or write memory. Also, the debugger framework provides two major components:
 // the probes and the tracers.
 //
 // Bus instances provide Peek/Poke variants of Read/Write methods that circumvent memory access limitations, allowing
@@ -154,7 +154,7 @@
 // - Certain writes (especially to nontrivial registers or internal state) will cause race conditions and potentially
 //   crash the emulator.
 //
-// This frontend enqueues regs writes to be executed on the emulator thread when it is convenient.
+// This frontend enqueues debugger writes to be executed on the emulator thread when it is convenient.
 //
 //
 // Thread safety
@@ -169,7 +169,7 @@
 //
 // This frontend runs the emulator core in a dedicated thread while the GUI runs on the main thread. Synchronization
 // between threads is accomplished by using a blocking concurrent queue to send events to the emulator thread, which
-// processes the events between frames. The regs performs dirty reads and enqueues writes to be executed in the
+// processes the events between frames. The debugger performs dirty reads and enqueues writes to be executed in the
 // emulator thread. Video and audio callbacks use minimal synchronization.
 
 #include "app.hpp"
