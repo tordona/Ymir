@@ -5,6 +5,8 @@
 #include "audio_system.hpp"
 #include "shared_context.hpp"
 
+#include "input/input_handler.hpp"
+
 #include "ui/windows/about_window.hpp"
 #include "ui/windows/backup_ram_manager_window.hpp"
 #include "ui/windows/system_state_window.hpp"
@@ -62,6 +64,8 @@ private:
     std::thread m_emuThread;
 
     AudioSystem m_audioSystem;
+
+    input::InputHandler m_inputHandler;
 
     void RunEmulator();
 

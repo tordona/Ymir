@@ -11,48 +11,50 @@ namespace app::input {
 
 class InputContext {
 public:
+    InputContext();
+
     // Maps a keyboard key to an action and returns the previously mapped action.
-    Action MapAction(Action action, KeyboardKey key, bool pressed = true);
+    ActionID MapAction(ActionID action, KeyboardKey key, bool pressed = true);
     // Maps a key combo to an action and returns the previously mapped action.
-    Action MapAction(Action action, KeyCombo keyCombo, bool pressed = true);
+    ActionID MapAction(ActionID action, KeyCombo keyCombo, bool pressed = true);
     // Maps a gamepad button to an action and returns the previously mapped action.
-    Action MapAction(Action action, int index, GamepadButton button, bool pressed = true);
+    ActionID MapAction(ActionID action, uint32 id, GamepadButton button, bool pressed = true);
     // Maps a joystick button to an action and returns the previously mapped action.
-    Action MapAction(Action action, int joystickButton, bool pressed = true);
+    ActionID MapAction(ActionID action, int joystickButton, bool pressed = true);
 
     // Maps a keyboard key press and release to an action and returns the previously mapped action.
-    std::pair<Action, Action> MapPressAndReleaseAction(Action action, KeyboardKey key);
+    std::pair<ActionID, ActionID> MapPressAndReleaseAction(ActionID action, KeyboardKey key);
     // Maps a key combo press and release to an action and returns the previously mapped action.
-    std::pair<Action, Action> MapPressAndReleaseAction(Action action, KeyCombo keyCombo);
+    std::pair<ActionID, ActionID> MapPressAndReleaseAction(ActionID action, KeyCombo keyCombo);
     // Maps a gamepad button press and release to an action and returns the previously mapped action.
-    std::pair<Action, Action> MapPressAndReleaseAction(Action action, int index, GamepadButton button);
+    std::pair<ActionID, ActionID> MapPressAndReleaseAction(ActionID action, uint32 id, GamepadButton button);
     // Maps a joystick button press and release to an action and returns the previously mapped action.
-    std::pair<Action, Action> MapPressAndReleaseAction(Action action, int joystickButton);
+    std::pair<ActionID, ActionID> MapPressAndReleaseAction(ActionID action, int joystickButton);
 
     // Gets the action mapped to the keyboard key.
-    Action GetMappedAction(KeyboardKey key, bool pressed = true) const;
+    ActionID GetMappedAction(KeyboardKey key, bool pressed = true) const;
     // Gets the action mapped to the key combo.
-    Action GetMappedAction(KeyCombo keyCombo, bool pressed = true) const;
+    ActionID GetMappedAction(KeyCombo keyCombo, bool pressed = true) const;
     // Gets the action mapped to the gamepad button.
-    Action GetMappedAction(int index, GamepadButton button, bool pressed = true) const;
+    ActionID GetMappedAction(uint32 id, GamepadButton button, bool pressed = true) const;
     // Gets the action mapped to the joystick button.
-    Action GetMappedAction(int joystickButton, bool pressed = true) const;
-    const std::unordered_map<InputEvent, Action, typename InputEvent::Hash> &GetMappedActions() const;
+    ActionID GetMappedAction(int joystickButton, bool pressed = true) const;
+    const std::unordered_map<InputEvent, ActionID, typename InputEvent::Hash> &GetMappedActions() const;
 
     // Gets the input event mapped to the action.
-    InputEvent GetMappedInput(Action action) const;
+    InputEvent GetMappedInput(ActionID action) const;
     // Gets all action to input event mappings.
-    const std::unordered_map<Action, InputEvent> &GetMappedInputs() const;
+    const std::unordered_map<ActionID, InputEvent> &GetMappedInputs() const;
 
     // Unmaps the input event from the action and returns the previously mapped input event.
-    InputEvent UnmapAction(Action action);
+    InputEvent UnmapAction(ActionID action);
     // Clears all action mappings.
     void UnmapAllActions();
 
     // Processes a keyboard event.
     void ProcessKeyboardEvent(KeyboardKey key, KeyModifier modifiers, bool pressed);
     // Processes a gamepad event.
-    void ProcessGamepadEvent(int index, GamepadButton button, bool pressed);
+    void ProcessGamepadEvent(uint32 id, GamepadButton button, bool pressed);
     // Processes a joystick event.
     void ProcessJoystickEvent(int button, bool pressed);
 
@@ -61,13 +63,14 @@ public:
     bool TryPollNextEvent(InputActionEvent &event);
 
 private:
-    std::unordered_map<InputEvent, Action, typename InputEvent::Hash> m_actions;
-    std::unordered_map<Action, InputEvent> m_actionsReverse;
+    std::unordered_map<InputEvent, ActionID, typename InputEvent::Hash> m_actions;
+    std::unordered_map<ActionID, InputEvent> m_actionsReverse;
 
     moodycamel::ConcurrentQueue<InputActionEvent> m_actionQueue;
+    moodycamel::ProducerToken m_actionQueueToken;
 
-    Action MapAction(Action action, InputEvent &&event);
-    Action GetMappedAction(InputEvent &&event) const;
+    ActionID MapAction(ActionID action, InputEvent &&event);
+    ActionID GetMappedAction(InputEvent &&event) const;
 
     void ProcessEvent(InputEvent &&event);
 };

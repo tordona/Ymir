@@ -480,15 +480,6 @@ KeyModifier SDL3ToKeyModifier(SDL_Keymod modifier) {
     if (modifier & SDL_KMOD_GUI) {
         out |= KeyModifier::Super;
     }
-    if (modifier & SDL_KMOD_NUM) {
-        out |= KeyModifier::NumLock;
-    }
-    if (modifier & SDL_KMOD_CAPS) {
-        out |= KeyModifier::CapsLock;
-    }
-    if (modifier & SDL_KMOD_SCROLL) {
-        out |= KeyModifier::ScrollLock;
-    }
     return out;
 }
 
@@ -506,15 +497,6 @@ SDL_Keymod KeyModifierToSDL3(KeyModifier modifier) {
     }
     if (bmMod.AnyOf(KeyModifier::Super)) {
         out |= SDL_KMOD_GUI;
-    }
-    if (bmMod.AnyOf(KeyModifier::NumLock)) {
-        out |= SDL_KMOD_NUM;
-    }
-    if (bmMod.AnyOf(KeyModifier::CapsLock)) {
-        out |= SDL_KMOD_CAPS;
-    }
-    if (bmMod.AnyOf(KeyModifier::ScrollLock)) {
-        out |= SDL_KMOD_SCROLL;
     }
     return out;
 }

@@ -29,6 +29,8 @@ add_executable(satemu-sdl3
     src/app/input/input_context.cpp
     src/app/input/input_context.hpp
     src/app/input/input_defs.hpp
+    src/app/input/input_handler.cpp
+    src/app/input/input_handler.hpp
 
     src/app/ui/window_base.cpp
     src/app/ui/window_base.hpp

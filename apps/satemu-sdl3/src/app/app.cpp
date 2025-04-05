@@ -174,12 +174,16 @@
 
 #include "app.hpp"
 
+#include "actions.hpp"
+
 #include <satemu/satemu.hpp>
 
 #include <satemu/util/scope_guard.hpp>
 #include <satemu/util/thread_name.hpp>
 
 #include <app/events/emu_event_factory.hpp>
+
+#include <app/input/input_backend_sdl3.hpp>
 
 #include <app/ui/widgets/cartridge_widgets.hpp>
 #include <app/ui/widgets/system_widgets.hpp>
@@ -819,6 +823,34 @@ void App::RunEmulator() {
     }*/
 
     // ---------------------------------
+    // Input action handlers
+
+    m_inputHandler.Register(actions::emu::HardReset, [&](const input::InputActionEvent &evt) {
+        m_context.EnqueueEvent(events::emu::HardReset());
+    });
+    m_inputHandler.Register(actions::emu::SoftReset, [&](const input::InputActionEvent &evt) {
+        m_context.EnqueueEvent(events::emu::SoftReset());
+    });
+
+    m_inputHandler.Register(actions::emu::ResetButton, [&](const input::InputActionEvent &evt) {
+        m_context.EnqueueEvent(events::emu::SetResetButton(evt.input.activated));
+    });
+
+    // ---------------------------------
+    // Input action mappings
+
+    auto &inputCtx = m_inputHandler.GetInputContext();
+    {
+        using Mod = input::KeyModifier;
+        using Key = input::KeyboardKey;
+        using KeyCombo = input::KeyCombo;
+        inputCtx.MapAction(actions::emu::HardReset, KeyCombo{Mod::Control, Key::R});
+        inputCtx.MapAction(actions::emu::SoftReset, KeyCombo{Mod::Control | Mod::Shift, Key::R});
+
+        inputCtx.MapPressAndReleaseAction(actions::emu::ResetButton, KeyCombo{Mod::Shift, Key::R});
+    }
+
+    // ---------------------------------
     // Main emulator loop
 
     m_context.saturn.Reset(true);
@@ -913,19 +945,6 @@ void App::RunEmulator() {
                 m_context.EnqueueEvent(events::emu::SetPaused(paused));
             }
 
-        case SDL_SCANCODE_R:
-            if (pressed) {
-                if ((mod & SDL_KMOD_CTRL) && (mod & SDL_KMOD_SHIFT)) {
-                    // TODO: Let's not make it that easy to accidentally wipe system settings
-                    // m_context.EnqueueEvent(events::emu::FactoryReset());
-                } else if (mod & SDL_KMOD_CTRL) {
-                    m_context.EnqueueEvent(events::emu::HardReset());
-                }
-            }
-            if (mod & SDL_KMOD_SHIFT) {
-                m_context.EnqueueEvent(events::emu::SetResetButton(pressed));
-            }
-            break;
         case SDL_SCANCODE_TAB: m_audioSystem.SetSync(!pressed); break;
         case SDL_SCANCODE_F3:
             if (pressed) {
@@ -975,16 +994,106 @@ void App::RunEmulator() {
             }
 
             switch (evt.type) {
-            case SDL_EVENT_KEY_DOWN:
-                if (!io.WantCaptureKeyboard) {
-                    updateButton(evt.key.scancode, evt.key.mod, true);
-                }
+            case SDL_EVENT_KEYBOARD_ADDED:
+            case SDL_EVENT_KEYBOARD_REMOVED:
+                // TODO: handle these
+                // evt.kdevice.type;
+                // evt.kdevice.which;
                 break;
+            case SDL_EVENT_KEY_DOWN:
             case SDL_EVENT_KEY_UP:
                 if (!io.WantCaptureKeyboard) {
-                    updateButton(evt.key.scancode, evt.key.mod, false);
+                    // TODO: consider supporting multiple keyboards (evt.key.which)
+                    inputCtx.ProcessKeyboardEvent(input::SDL3ScancodeToKeyboardKey(evt.key.scancode),
+                                                  input::SDL3ToKeyModifier(evt.key.mod), evt.key.down);
+                    updateButton(evt.key.scancode, evt.key.mod, evt.key.down);
                 }
                 break;
+
+            case SDL_EVENT_MOUSE_ADDED:
+            case SDL_EVENT_MOUSE_REMOVED:
+                // TODO: handle these
+                // evt.mdevice.type;
+                // evt.mdevice.which;
+                break;
+            case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            case SDL_EVENT_MOUSE_BUTTON_UP:
+                if (!io.WantCaptureMouse) {
+                    // TODO: handle these
+                    // TODO: consider supporting multiple mice (evt.button.which)
+                    // inputCtx.ProcessMouseButtonEvent(evt.button.button, evt.button.clicks, evt.button.x,
+                    // evt.button.y, evt.button.down);
+                }
+                break;
+            case SDL_EVENT_MOUSE_MOTION:
+                if (!io.WantCaptureMouse) {
+                    // TODO: handle these
+                    // TODO: consider supporting multiple mice (evt.motion.which)
+                    // inputCtx.ProcessMouseMotionEvent(evt.motion.xrel, evt.motion.yrel);
+                }
+                break;
+            case SDL_EVENT_MOUSE_WHEEL:
+                if (!io.WantCaptureMouse) {
+                    // TODO: handle these
+                    // TODO: consider supporting multiple mice (evt.wheel.which)
+                    // const float flippedFactor = evt.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1.0f : 1.0f;
+                    // inputCtx.ProcessMouseMotionEvent(evt.wheel.x * flippedFactor, evt.wheel.y * flippedFactor);
+                }
+                break;
+
+            case SDL_EVENT_GAMEPAD_ADDED:
+            case SDL_EVENT_GAMEPAD_REMOVED:
+            case SDL_EVENT_GAMEPAD_REMAPPED:
+            case SDL_EVENT_GAMEPAD_UPDATE_COMPLETE:
+            case SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED:
+                // TODO: handle these
+                // evt.gdevice.type;
+                // evt.gdevice.which;
+                break;
+            case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+                // TODO: handle these
+                // evt.gaxis.which;
+                // evt.gaxis.axis;
+                // evt.gaxis.value;
+                break;
+            case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+            case SDL_EVENT_GAMEPAD_BUTTON_UP:
+                inputCtx.ProcessGamepadEvent(evt.gbutton.which,
+                                             input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button),
+                                             evt.gbutton.down);
+                break;
+
+            case SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN:
+            case SDL_EVENT_GAMEPAD_TOUCHPAD_MOTION:
+            case SDL_EVENT_GAMEPAD_TOUCHPAD_UP:
+                // TODO: handle these
+                // evt.gtouchpad.type;
+                // evt.gtouchpad.which;
+                // evt.gtouchpad.touchpad;
+                // evt.gtouchpad.finger;
+                // evt.gtouchpad.x;
+                // evt.gtouchpad.y;
+                // evt.gtouchpad.pressure;
+                break;
+            case SDL_EVENT_GAMEPAD_SENSOR_UPDATE:
+                // TODO: handle these
+                // evt.gsensor.which;
+                // evt.gsensor.sensor;
+                // evt.gsensor.data;
+                break;
+
+            case SDL_EVENT_JOYSTICK_ADDED:
+            case SDL_EVENT_JOYSTICK_REMOVED:
+                // TODO: handle types
+                // evt.jdevice.type;
+                // evt.jdevice.which;
+                break;
+            case SDL_EVENT_JOYSTICK_BUTTON_DOWN:
+            case SDL_EVENT_JOYSTICK_BUTTON_UP:
+                // TODO: evt.jbutton.which
+                inputCtx.ProcessJoystickEvent(evt.jbutton.button, evt.jbutton.down);
+                break;
+
             case SDL_EVENT_QUIT: goto end_loop; break;
             case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
                 if (evt.window.windowID == SDL_GetWindowID(screen.window)) {
@@ -992,6 +1101,9 @@ void App::RunEmulator() {
                 }
             }
         }
+
+        // Process input events
+        m_inputHandler.ProcessInputEvents();
 
         // Process GUI events
         const size_t evtCount = m_context.eventQueues.gui.try_dequeue_bulk(evts.begin(), evts.size());
