@@ -1,13 +1,17 @@
 #include "backup_memory_view.hpp"
 
+#include <app/events/emu_event_factory.hpp>
 #include <app/events/gui_event_factory.hpp>
 
 #include <util/sdl_file_dialog.hpp>
 
 #include <satemu/util/backup_datetime.hpp>
 #include <satemu/util/bit_ops.hpp>
+#include <satemu/util/size_ops.hpp>
 
 #include <cassert>
+#include <fstream>
+#include <iostream>
 #include <string_view>
 
 using namespace satemu;
@@ -16,9 +20,6 @@ namespace app::ui {
 
 static constexpr const char *kConfirmDeletionTitle = "Confirm deletion";
 static constexpr const char *kConfirmFormatTitle = "Confirm format";
-static constexpr const char *kFilesExportSuccessfulTitle = "Files export successful";
-static constexpr const char *kImageExportSuccessfulTitle = "Image export successful";
-static constexpr const char *kErrorModalTitle = "Error";
 
 BackupMemoryView::BackupMemoryView(SharedContext &context, std::string_view name, bool external)
     : m_context(context)
@@ -98,18 +99,18 @@ void BackupMemoryView::Display() {
     }
 
     if (ImGui::Button("Import")) {
-        // TODO: open file dialog to import one or more backup files
-        // - validate input files
-        //   - show list of invalid files and ignore them
-        // - check for existing files
-        // - if there are matching files in the backup memory, show a modal asking if the user wants to replace them
-        //   - show table with:
-        //     - filename
-        //     - comments
-        //     - language
-        //     - current size, blocks, date/time, ( ) keep original
-        //     - imported size, blocks, ( ) replace with imported
-        // - if importing fails because of running out of space, show which files could not be imported
+        // Open file dialog to select backup files to load
+        // TODO (folder manager): default to the exported saves folder
+        FileDialogParams params{};
+        params.dialogTitle = fmt::format("Import backup files to {}", m_name);
+        params.filters.push_back({"Backup files", "bup"});
+        params.filters.push_back({"All files", "*"});
+        params.userdata = this;
+        params.callback = util::WrapMultiSelectionCallback<&BackupMemoryView::ProcessFileImport,
+                                                           &BackupMemoryView::ProcessCancelFileImport,
+                                                           &BackupMemoryView::ProcessFileImportError>;
+
+        m_context.EnqueueEvent(events::gui::OpenManyFiles(std::move(params)));
     }
     ImGui::SameLine();
     if (m_selected.empty()) {
@@ -136,7 +137,7 @@ void BackupMemoryView::Display() {
             util::BackupDateTime bupDate{m_filesToExport[0].header.date};
 
             // TODO (folder manager): default to the exported saves folder
-            SaveFileParams params{};
+            FileDialogParams params{};
             params.dialogTitle = fmt::format("Export {} from {}", filename, m_name);
             params.defaultPath = fmt::format("{}_{:04d}{:02d}{:02d}_{:02d}{:02d}.bup", filename, bupDate.year,
                                              bupDate.month, bupDate.day, bupDate.hour, bupDate.minute);
@@ -152,14 +153,14 @@ void BackupMemoryView::Display() {
             // Multiple files -> allow user to pick location only
 
             // TODO (folder manager): default to the exported saves folder
-            SelectDirectoryParams params{};
+            FolderDialogParams params{};
             params.dialogTitle = fmt::format("Export {} files from {}", m_filesToExport.size(), m_name);
             params.userdata = this;
             params.callback = util::WrapSingleSelectionCallback<&BackupMemoryView::ProcessMultiFileExport,
                                                                 &BackupMemoryView::ProcessCancelFileExport,
                                                                 &BackupMemoryView::ProcessFileExportError>;
 
-            m_context.EnqueueEvent(events::gui::SelectDirectory(std::move(params)));
+            m_context.EnqueueEvent(events::gui::SelectFolder(std::move(params)));
         }
     }
     ImGui::SameLine();
@@ -180,17 +181,28 @@ void BackupMemoryView::Display() {
     const float saveImageWidth = ImGui::CalcTextSize("Save image...").x + ImGui::GetStyle().FramePadding.x * 2;
     ImGui::SameLine(avail.x - loadImageWidth - sameLineSpacing - saveImageWidth);
     if (ImGui::Button("Load image...")) {
-        // TODO: open file dialog to select a backup memory image file to load
-        // - for system memory, file must be 32 KiB
-        // - for cartridge memory, file must be 512 KiB, 1 MiB, 2 MiB or 4 MiB
-        //   - cartridge must be "reinserted" with the new backup memory
+        // Open file dialog to select backup memory image to load
+        // TODO (folder manager): default to the exported saves folder
+        FileDialogParams params{};
+        params.dialogTitle = fmt::format("Load {} image", m_name);
+        params.defaultPath =
+            m_external ? fmt::format("bup-ext-{}M.bin", m_bup->Size() * 8 / 1024 / 1024) : "bup-int.bin";
+        params.filters.push_back({"Backup memory image file", "bin"});
+        params.filters.push_back({"All files", "*"});
+        params.userdata = this;
+        params.callback = util::WrapSingleSelectionCallback<&BackupMemoryView::ProcessImageImport,
+                                                            &BackupMemoryView::ProcessCancelImageImport,
+                                                            &BackupMemoryView::ProcessImageImportError>;
+
+        m_context.EnqueueEvent(events::gui::OpenFile(std::move(params)));
     }
     ImGui::SameLine();
     if (ImGui::Button("Save image...")) {
         m_imageToSave = m_bup->ReadAll();
 
+        // Open file dialog to select backup memory image to save
         // TODO (folder manager): default to the exported saves folder
-        SaveFileParams params{};
+        FileDialogParams params{};
         params.dialogTitle = fmt::format("Save {} image", m_name);
         params.defaultPath =
             m_external ? fmt::format("bup-ext-{}M.bin", m_bup->Size() * 8 / 1024 / 1024) : "bup-int.bin";
@@ -212,7 +224,11 @@ void BackupMemoryView::Display() {
     DisplayConfirmFormatModal();
     DisplayFilesExportSuccessfulModal();
     DisplayImageExportSuccessfulModal();
+    DisplayErrorModal();
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// File table drawing
 
 void BackupMemoryView::ApplyRequests(ImGuiMultiSelectIO *msio, std::vector<satemu::bup::BackupFileInfo> &files) {
     for (ImGuiSelectionRequest &req : msio->Requests) {
@@ -294,6 +310,9 @@ void BackupMemoryView::DrawFileTableRow(const bup::BackupFileInfo &file, uint32 
         ImGui::Text("%04u/%02u/%02u %02u:%02u", bupDate.year, bupDate.month, bupDate.day, bupDate.hour, bupDate.minute);
     }
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Popups and modals
 
 void BackupMemoryView::OpenFilesExportSuccessfulModal(uint32 exportCount) {
     m_openFilesExportSuccessfulPopup = true;
@@ -379,12 +398,14 @@ void BackupMemoryView::DisplayConfirmFormatModal() {
 }
 
 void BackupMemoryView::DisplayFilesExportSuccessfulModal() {
+    static constexpr const char *kTitle = "Files export successful";
+
     if (m_openFilesExportSuccessfulPopup) {
-        ImGui::OpenPopup(kFilesExportSuccessfulTitle);
+        ImGui::OpenPopup(kTitle);
         m_openFilesExportSuccessfulPopup = false;
     }
 
-    if (ImGui::BeginPopupModal(kFilesExportSuccessfulTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("%u file%s exported successfully.", m_filesExportCount, (m_filesExportCount == 1 ? "" : "s"));
 
         if (ImGui::Button("OK", ImVec2(80, 0))) {
@@ -397,12 +418,14 @@ void BackupMemoryView::DisplayFilesExportSuccessfulModal() {
 }
 
 void BackupMemoryView::DisplayImageExportSuccessfulModal() {
+    static constexpr const char *kTitle = "Image export successful";
+
     if (m_openImageExportSuccessfulPopup) {
-        ImGui::OpenPopup(kImageExportSuccessfulTitle);
+        ImGui::OpenPopup(kTitle);
         m_openImageExportSuccessfulPopup = false;
     }
 
-    if (ImGui::BeginPopupModal(kImageExportSuccessfulTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("%s image exported successfully.", m_name.c_str());
 
         if (ImGui::Button("OK", ImVec2(80, 0))) {
@@ -415,8 +438,17 @@ void BackupMemoryView::DisplayImageExportSuccessfulModal() {
 }
 
 void BackupMemoryView::DisplayErrorModal() {
-    if (ImGui::BeginPopupModal(kErrorModalTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    static constexpr const char *kTitle = "Error";
+
+    if (m_openErrorModal) {
+        ImGui::OpenPopup(kTitle);
+        m_openErrorModal = false;
+    }
+
+    if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::PushTextWrapPos(450.0f);
         ImGui::Text("%s", m_errorModalMessage.c_str());
+        ImGui::PopTextWrapPos();
 
         if (ImGui::Button("OK", ImVec2(80, 0))) {
             m_filesExportCount = 0;
@@ -426,6 +458,51 @@ void BackupMemoryView::DisplayErrorModal() {
         ImGui::EndPopup();
     }
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// File import action
+
+void BackupMemoryView::ProcessFileImport(void *userdata, std::span<std::filesystem::path> files, int filter) {
+    static_cast<BackupMemoryView *>(userdata)->ImportFiles(files);
+}
+
+void BackupMemoryView::ProcessCancelFileImport(void *userdata, int filter) {
+    static_cast<BackupMemoryView *>(userdata)->CancelFileImport();
+}
+
+void BackupMemoryView::ProcessFileImportError(void *userdata, const char *errorMessage, int filter) {
+    static_cast<BackupMemoryView *>(userdata)->FileImportError(errorMessage);
+}
+
+void BackupMemoryView::ImportFiles(std::span<std::filesystem::path> files) {
+    // TODO: implement
+    // - validate input files
+    //   - show list of invalid files and ignore them
+    // - check for existing files
+    // - if there are matching files in the backup memory, show a modal asking if the user wants to replace them
+    //   - show table with:
+    //     - filename
+    //     - comments
+    //     - language
+    //     - current size, blocks, date/time, ( ) keep original
+    //     - imported size, blocks, ( ) replace with imported
+    // - if importing fails because of running out of space, show which files could not be imported
+}
+
+void BackupMemoryView::CancelFileImport() {
+    // nothing to do
+}
+
+void BackupMemoryView::FileImportError(const char *errorMessage) {
+    OpenErrorModal(fmt::format("File import failed: {}", errorMessage));
+}
+
+satemu::bup::BackupFile BackupMemoryView::ImportFile(std::filesystem::path path) {
+    return satemu::bup::BackupFile();
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// File export action
 
 void BackupMemoryView::ProcessSingleFileExport(void *userdata, std::filesystem::path file, int filter) {
     static_cast<BackupMemoryView *>(userdata)->ExportSingleFile(file);
@@ -458,9 +535,6 @@ void BackupMemoryView::ExportMultiFile(std::filesystem::path dir) {
 
     for (auto &file : m_filesToExport) {
         util::BackupDateTime bupDate{file.header.date};
-
-        // TODO (folder manager): default to the exported saves folder
-        SaveFileParams params{};
         std::string filename = fmt::format("{}_{:04d}{:02d}{:02d}_{:02d}{:02d}.bup", file.header.filename, bupDate.year,
                                            bupDate.month, bupDate.day, bupDate.hour, bupDate.minute);
         ExportFile(dir / filename, file);
@@ -518,6 +592,64 @@ void BackupMemoryView::ExportFile(std::filesystem::path path, const satemu::bup:
     // data
     out.write((const char *)bupFile.data.data(), bupFile.data.size());
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Load image action
+
+void BackupMemoryView::ProcessImageImport(void *userdata, std::filesystem::path file, int filter) {
+    static_cast<BackupMemoryView *>(userdata)->ImportImage(file);
+}
+
+void BackupMemoryView::ProcessCancelImageImport(void *userdata, int filter) {
+    static_cast<BackupMemoryView *>(userdata)->CancelImageImport();
+}
+
+void BackupMemoryView::ProcessImageImportError(void *userdata, const char *errorMessage, int filter) {
+    static_cast<BackupMemoryView *>(userdata)->ImageImportError(errorMessage);
+}
+
+void BackupMemoryView::ImportImage(std::filesystem::path file) {
+    // Try to load image
+    bup::BackupMemory bupMem{};
+    std::error_code error{};
+    auto result = bupMem.LoadFrom(file, error);
+    switch (result) {
+    case bup::BackupMemoryImageLoadResult::Success: break;
+    case bup::BackupMemoryImageLoadResult::FilesystemError:
+        OpenErrorModal(fmt::format("Could not import {} as {}: {}", file.string(), m_name, error.message()));
+        return;
+    case bup::BackupMemoryImageLoadResult::InvalidSize:
+        OpenErrorModal(fmt::format("Could not import {} as {}: invalid image size", file.string(), m_name));
+        return;
+    }
+
+    // Check file size - must match expected size for the device
+    // - for system memory, file must be 32 KiB
+    // - for cartridge memory, file must be 512 KiB, 1 MiB, 2 MiB or 4 MiB
+    auto size = bupMem.Size();
+    if ((!m_external && size != 32_KiB) || (m_external && (size < 512_KiB || size > 4_MiB))) {
+        OpenErrorModal(fmt::format("Could not import {} as {}: invalid image size", file.string(), m_name));
+        return;
+    }
+
+    // Replace backup memory instances
+    if (m_external) {
+        // TODO: reinsert cartridge with new backup memory
+    } else {
+        // TODO: replace internal backup RAM
+    }
+}
+
+void BackupMemoryView::CancelImageImport() {
+    // nothing to do
+}
+
+void BackupMemoryView::ImageImportError(const char *errorMessage) {
+    OpenErrorModal(fmt::format("{} image import failed: {}", m_name, errorMessage));
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Save image action
 
 void BackupMemoryView::ProcessImageExport(void *userdata, std::filesystem::path file, int filter) {
     static_cast<BackupMemoryView *>(userdata)->ExportImage(file);

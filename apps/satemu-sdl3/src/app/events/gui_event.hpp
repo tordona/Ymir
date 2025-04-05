@@ -17,8 +17,8 @@ struct FileDialogFilter {
     const char *filters;
 };
 
-// Parameters for a save file dialog.
-struct SaveFileParams {
+// Parameters for open/save files dialogs.
+struct FileDialogParams {
     std::string dialogTitle;
     std::filesystem::path defaultPath;
     std::vector<FileDialogFilter> filters;
@@ -26,8 +26,8 @@ struct SaveFileParams {
     void (*callback)(void *userdata, const char *const *filelist, int filter);
 };
 
-// Parameters for a select directory dialog.
-struct SelectDirectoryParams {
+// Parameters for select folder dialogs.
+struct FolderDialogParams {
     std::string dialogTitle;
     std::filesystem::path defaultPath;
     void *userdata;
@@ -39,16 +39,16 @@ struct GUIEvent {
         LoadDisc,
         OpenBackupMemoryCartFileDialog,
 
-        // Generic/customizable save file dialog; uses SaveFileParams
-        SaveFile,
-        // Generic/customizable select directory dialog; uses SelectDirectoryParams
-        SelectDirectory,
+        OpenFile,      // Invoke generic open single file dialog; uses FileDialogParams
+        OpenManyFiles, // Invoke generic open multiple files dialog; uses FileDialogParams
+        SaveFile,      // Invoke generic save file dialog; uses FileDialogParams
+        SelectFolder,  // Invoke generic select folder dialog; uses FolderDialogParams
 
         OpenBackupMemoryManager,
     };
 
     Type type;
-    std::variant<std::monostate, SaveFileParams, SelectDirectoryParams> value;
+    std::variant<std::monostate, FileDialogParams, FolderDialogParams> value;
 };
 
 } // namespace app

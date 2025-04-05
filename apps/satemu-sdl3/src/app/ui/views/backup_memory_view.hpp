@@ -62,9 +62,20 @@ private:
     std::string m_errorModalMessage;
 
     // -----------------------------------------------------------------------------------------------------------------
-    // File export action
+    // File import action
 
-    std::vector<satemu::bup::BackupFile> m_filesToExport;
+    static void ProcessFileImport(void *userdata, std::span<std::filesystem::path> files, int filter);
+    static void ProcessCancelFileImport(void *userdata, int filter);
+    static void ProcessFileImportError(void *userdata, const char *errorMessage, int filter);
+
+    void ImportFiles(std::span<std::filesystem::path> files);
+    void CancelFileImport();
+    void FileImportError(const char *errorMessage);
+
+    satemu::bup::BackupFile ImportFile(std::filesystem::path path);
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // File export action
 
     static void ProcessSingleFileExport(void *userdata, std::filesystem::path file, int filter);
     static void ProcessMultiFileExport(void *userdata, std::filesystem::path dir, int filter);
@@ -78,10 +89,21 @@ private:
 
     void ExportFile(std::filesystem::path path, const satemu::bup::BackupFile &bupFile);
 
-    // -----------------------------------------------------------------------------------------------------------------
-    // Save Image action
+    std::vector<satemu::bup::BackupFile> m_filesToExport;
 
-    std::vector<uint8> m_imageToSave;
+    // -----------------------------------------------------------------------------------------------------------------
+    // Load image action
+
+    static void ProcessImageImport(void *userdata, std::filesystem::path file, int filter);
+    static void ProcessCancelImageImport(void *userdata, int filter);
+    static void ProcessImageImportError(void *userdata, const char *errorMessage, int filter);
+
+    void ImportImage(std::filesystem::path file);
+    void CancelImageImport();
+    void ImageImportError(const char *errorMessage);
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Save image action
 
     static void ProcessImageExport(void *userdata, std::filesystem::path file, int filter);
     static void ProcessCancelImageExport(void *userdata, int filter);
@@ -90,6 +112,8 @@ private:
     void ExportImage(std::filesystem::path file);
     void CancelImageExport();
     void ImageExportError(const char *errorMessage);
+
+    std::vector<uint8> m_imageToSave;
 };
 
 } // namespace app::ui

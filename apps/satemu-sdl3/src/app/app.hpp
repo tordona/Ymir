@@ -16,10 +16,13 @@
 
 #include <satemu/util/dev_log.hpp>
 
-#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_dialog.h>
+#include <SDL3/SDL_properties.h>
 
 #include <imgui.h>
 
+#include <filesystem>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -71,8 +74,14 @@ private:
     void OpenBackupMemoryCartFileDialog();
     void ProcessOpenBackupMemoryCartFileDialogSelection(const char *const *filelist, int filter);
 
-    void OpenGenericSaveFileDialog(const SaveFileParams &params) const;
-    void OpenGenericSelectDirectoryDialog(const SelectDirectoryParams &params) const;
+    void InvokeOpenFileDialog(const FileDialogParams &params) const;
+    void InvokeOpenManyFilesDialog(const FileDialogParams &params) const;
+    void InvokeSaveFileDialog(const FileDialogParams &params) const;
+    void InvokeSelectFolderDialog(const FolderDialogParams &params) const;
+
+    void InvokeGenericFileDialog(SDL_FileDialogType type, const char *title, void *filters, int numFilters,
+                                 bool allowMany, const char *location, void *userdata,
+                                 SDL_DialogFileCallback callback) const;
 
     // -----------------------------------------------------------------------------------------------------------------
     // Windows

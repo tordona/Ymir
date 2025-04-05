@@ -1,5 +1,6 @@
 #pragma once
 
+#include <satemu/sys/backup_ram.hpp>
 #include <satemu/sys/clocks.hpp>
 
 #include "emu_event.hpp"

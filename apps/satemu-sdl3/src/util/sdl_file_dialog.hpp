@@ -2,10 +2,14 @@
 
 #include <satemu/util/dev_log.hpp>
 
-#include <SDL3/SDL_dialog.h>
+#include <SDL3/SDL_error.h>
 
 #include <cassert>
 #include <concepts>
+#include <filesystem>
+#include <span>
+#include <string_view>
+#include <vector>
 
 namespace util {
 
@@ -33,10 +37,12 @@ namespace grp {
 // The wrapper function expects only one file or directory to be selected. Useful for save file or open directory
 // dialogs.
 //
-// If a file is selected, the wrapped callback is invoked.
+// If a file is selected, the accept callback is invoked.
 // If multiple files are selected, the callback is invoked with the first file in the selection. In debug builds, an
 // assertion is raised in this case.
-// If the user cancels or the file dialog fails to open, a dev log message is printed.
+// If the user cancels or the file dialog fails to open, a dev log message is printed and the cancel callback is
+// invoked.
+// If an error occurred, a dev log message is printed and the error callback is invoked with the error message.
 template <auto acceptCallback, auto cancelCallback, auto errorCallback>
     requires(std::invocable<decltype(acceptCallback), void *, std::filesystem::path, int> &&
              std::invocable<decltype(cancelCallback), void *, int> &&
@@ -44,16 +50,48 @@ template <auto acceptCallback, auto cancelCallback, auto errorCallback>
 void WrapSingleSelectionCallback(void *userdata, const char *const *filelist, int filter) {
     if (filelist == nullptr) {
         const char *errorMessage = SDL_GetError();
-        devlog::error<grp::base>("Failed to open generic file dialog: {}", errorMessage);
+        devlog::error<grp::base>("Failed to open file dialog: {}", errorMessage);
         errorCallback(userdata, errorMessage, filter);
     } else if (*filelist == nullptr) {
-        devlog::info<grp::base>("Generic file dialog cancelled");
+        devlog::info<grp::base>("File dialog cancelled");
         cancelCallback(userdata, filter);
     } else {
         // Only one file or directory should be selected
         assert(filelist[1] == nullptr);
         const char *file = *filelist;
         acceptCallback(userdata, file, filter);
+    }
+}
+
+// SDL3 file dialog callback function wrapping functions with the following signatures:
+//   void (*acceptCallback)(void *userdata, std::span<std::filesystem::path> files, int filter)
+//   void (*cancelCallback)(void *userdata, int filter)
+//   void (*errorCallback)(void *userdata, const char *errorMessage, int filter)
+// Useful for open file dialogs with multiple selection.
+//
+// If at least one file is selected, the accept callback is invoked with all selected files.
+// If the user cancels or the file dialog fails to open, a dev log message is printed and the cancel callback is
+// invoked.
+// If an error occurred, a dev log message is printed and the error callback is invoked with the error message.
+template <auto acceptCallback, auto cancelCallback, auto errorCallback>
+    requires(std::invocable<decltype(acceptCallback), void *, std::span<std::filesystem::path>, int> &&
+             std::invocable<decltype(cancelCallback), void *, int> &&
+             std::invocable<decltype(errorCallback), void *, const char *, int>)
+void WrapMultiSelectionCallback(void *userdata, const char *const *filelist, int filter) {
+    if (filelist == nullptr) {
+        const char *errorMessage = SDL_GetError();
+        devlog::error<grp::base>("Failed to open file dialog: {}", errorMessage);
+        errorCallback(userdata, errorMessage, filter);
+    } else if (*filelist == nullptr) {
+        devlog::info<grp::base>("File dialog cancelled");
+        cancelCallback(userdata, filter);
+    } else {
+        std::vector<std::filesystem::path> files{};
+        while (filelist != nullptr) {
+            files.push_back(*filelist);
+            filelist++;
+        }
+        acceptCallback(userdata, files, filter);
     }
 }
 

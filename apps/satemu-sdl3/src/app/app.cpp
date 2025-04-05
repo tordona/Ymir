@@ -1002,10 +1002,10 @@ void App::RunEmulator() {
             case EvtType::LoadDisc: OpenLoadDiscDialog(); break;
             case EvtType::OpenBackupMemoryCartFileDialog: OpenBackupMemoryCartFileDialog(); break;
 
-            case EvtType::SaveFile: OpenGenericSaveFileDialog(std::get<SaveFileParams>(evt.value)); break;
-            case EvtType::SelectDirectory:
-                OpenGenericSelectDirectoryDialog(std::get<SelectDirectoryParams>(evt.value));
-                break;
+            case EvtType::OpenFile: InvokeOpenFileDialog(std::get<FileDialogParams>(evt.value)); break;
+            case EvtType::OpenManyFiles: InvokeOpenManyFilesDialog(std::get<FileDialogParams>(evt.value)); break;
+            case EvtType::SaveFile: InvokeSaveFileDialog(std::get<FileDialogParams>(evt.value)); break;
+            case EvtType::SelectFolder: InvokeSelectFolderDialog(std::get<FolderDialogParams>(evt.value)); break;
 
             case EvtType::OpenBackupMemoryManager: m_bupMgrWindow.Open = true; break;
             }
@@ -1567,28 +1567,41 @@ static const char *StrNullIfEmpty(const std::string &str) {
     return str.empty() ? nullptr : str.c_str();
 }
 
-void App::OpenGenericSaveFileDialog(const SaveFileParams &params) const {
-    SDL_PropertiesID props = m_genericFileDialogProps;
-
-    SDL_SetStringProperty(props, SDL_PROP_FILE_DIALOG_TITLE_STRING, StrNullIfEmpty(params.dialogTitle));
-    SDL_SetPointerProperty(props, SDL_PROP_FILE_DIALOG_FILTERS_POINTER, (void *)params.filters.data());
-    SDL_SetNumberProperty(props, SDL_PROP_FILE_DIALOG_NFILTERS_NUMBER, (int)params.filters.size());
-    SDL_SetBooleanProperty(props, SDL_PROP_FILE_DIALOG_MANY_BOOLEAN, false);
-    SDL_SetStringProperty(props, SDL_PROP_FILE_DIALOG_LOCATION_STRING, StrNullIfEmpty(params.defaultPath.string()));
-
-    SDL_ShowFileDialogWithProperties(SDL_FILEDIALOG_SAVEFILE, params.callback, params.userdata, props);
+void App::InvokeOpenFileDialog(const FileDialogParams &params) const {
+    InvokeGenericFileDialog(SDL_FILEDIALOG_OPENFILE, StrNullIfEmpty(params.dialogTitle), (void *)params.filters.data(),
+                            params.filters.size(), false, StrNullIfEmpty(params.defaultPath.string()), params.userdata,
+                            params.callback);
 }
 
-void App::OpenGenericSelectDirectoryDialog(const SelectDirectoryParams &params) const {
+void App::InvokeOpenManyFilesDialog(const FileDialogParams &params) const {
+    InvokeGenericFileDialog(SDL_FILEDIALOG_OPENFILE, StrNullIfEmpty(params.dialogTitle), (void *)params.filters.data(),
+                            params.filters.size(), true, StrNullIfEmpty(params.defaultPath.string()), params.userdata,
+                            params.callback);
+}
+
+void App::InvokeSaveFileDialog(const FileDialogParams &params) const {
+    InvokeGenericFileDialog(SDL_FILEDIALOG_SAVEFILE, StrNullIfEmpty(params.dialogTitle), (void *)params.filters.data(),
+                            params.filters.size(), false, StrNullIfEmpty(params.defaultPath.string()), params.userdata,
+                            params.callback);
+}
+
+void App::InvokeSelectFolderDialog(const FolderDialogParams &params) const {
+    InvokeGenericFileDialog(SDL_FILEDIALOG_OPENFOLDER, StrNullIfEmpty(params.dialogTitle), nullptr, 0, false,
+                            StrNullIfEmpty(params.defaultPath.string()), params.userdata, params.callback);
+}
+
+void App::InvokeGenericFileDialog(SDL_FileDialogType type, const char *title, void *filters, int numFilters,
+                                  bool allowMany, const char *location, void *userdata,
+                                  SDL_DialogFileCallback callback) const {
     SDL_PropertiesID props = m_genericFileDialogProps;
 
-    SDL_SetStringProperty(props, SDL_PROP_FILE_DIALOG_TITLE_STRING, StrNullIfEmpty(params.dialogTitle));
-    SDL_SetPointerProperty(props, SDL_PROP_FILE_DIALOG_FILTERS_POINTER, (void *)nullptr);
-    SDL_SetNumberProperty(props, SDL_PROP_FILE_DIALOG_NFILTERS_NUMBER, (int)0);
-    SDL_SetBooleanProperty(props, SDL_PROP_FILE_DIALOG_MANY_BOOLEAN, false);
-    SDL_SetStringProperty(props, SDL_PROP_FILE_DIALOG_LOCATION_STRING, StrNullIfEmpty(params.defaultPath.string()));
+    SDL_SetStringProperty(props, SDL_PROP_FILE_DIALOG_TITLE_STRING, title);
+    SDL_SetPointerProperty(props, SDL_PROP_FILE_DIALOG_FILTERS_POINTER, filters);
+    SDL_SetNumberProperty(props, SDL_PROP_FILE_DIALOG_NFILTERS_NUMBER, numFilters);
+    SDL_SetBooleanProperty(props, SDL_PROP_FILE_DIALOG_MANY_BOOLEAN, allowMany);
+    SDL_SetStringProperty(props, SDL_PROP_FILE_DIALOG_LOCATION_STRING, location);
 
-    SDL_ShowFileDialogWithProperties(SDL_FILEDIALOG_OPENFOLDER, params.callback, params.userdata, props);
+    SDL_ShowFileDialogWithProperties(type, callback, userdata, props);
 }
 
 void App::DrawWindows() {
