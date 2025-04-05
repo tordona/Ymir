@@ -825,6 +825,36 @@ void App::RunEmulator() {
     // ---------------------------------
     // Input action handlers
 
+    auto &port1 = m_context.saturn.SMPC.GetPeripheralPort1();
+    auto &port2 = m_context.saturn.SMPC.GetPeripheralPort2();
+    auto *pad1 = port1.ConnectStandardPad();
+    auto *pad2 = port2.ConnectStandardPad();
+
+    auto registerButton = [&](input::ActionID action, peripheral::StandardPad::Button button) {
+        m_inputHandler.Register(action, [&, button = button](const input::InputActionEvent &evt) {
+            auto *pad = evt.action.context == 2 ? pad2 : pad1;
+            if (evt.input.activated) {
+                pad->PressButton(button);
+            } else {
+                pad->ReleaseButton(button);
+            }
+        });
+    };
+
+    registerButton(actions::emu::StandardPadA, peripheral::StandardPad::Button::A);
+    registerButton(actions::emu::StandardPadB, peripheral::StandardPad::Button::B);
+    registerButton(actions::emu::StandardPadC, peripheral::StandardPad::Button::C);
+    registerButton(actions::emu::StandardPadX, peripheral::StandardPad::Button::X);
+    registerButton(actions::emu::StandardPadY, peripheral::StandardPad::Button::Y);
+    registerButton(actions::emu::StandardPadZ, peripheral::StandardPad::Button::Z);
+    registerButton(actions::emu::StandardPadUp, peripheral::StandardPad::Button::Up);
+    registerButton(actions::emu::StandardPadDown, peripheral::StandardPad::Button::Down);
+    registerButton(actions::emu::StandardPadLeft, peripheral::StandardPad::Button::Left);
+    registerButton(actions::emu::StandardPadRight, peripheral::StandardPad::Button::Right);
+    registerButton(actions::emu::StandardPadStart, peripheral::StandardPad::Button::Start);
+    registerButton(actions::emu::StandardPadL, peripheral::StandardPad::Button::L);
+    registerButton(actions::emu::StandardPadR, peripheral::StandardPad::Button::R);
+
     m_inputHandler.Register(actions::emu::HardReset, [&](const input::InputActionEvent &evt) {
         m_context.EnqueueEvent(events::emu::HardReset());
     });
@@ -849,22 +879,46 @@ void App::RunEmulator() {
 
         inputCtx.MapToggleableAction(actions::emu::ResetButton, KeyCombo{Mod::Shift, Key::R});
 
-        // inputCtx.MapToggleableAction(actions::emu::StandardPadA, /*port*/ 1, Key::J);
-        // inputCtx.MapToggleableAction(actions::emu::StandardPadB, /*port*/ 1, Key::K);
-        // inputCtx.MapToggleableAction(actions::emu::StandardPadC, /*port*/ 1, Key::L);
-        // inputCtx.MapToggleableAction(actions::emu::StandardPadX, /*port*/ 1, Key::U);
-        // inputCtx.MapToggleableAction(actions::emu::StandardPadY, /*port*/ 1, Key::I);
-        // inputCtx.MapToggleableAction(actions::emu::StandardPadZ, /*port*/ 1, Key::O);
-        // inputCtx.MapToggleableAction(actions::emu::StandardPadUp, /*port*/ 1, Key::W);
-        // inputCtx.MapToggleableAction(actions::emu::StandardPadDown, /*port*/ 1, Key::S);
-        // inputCtx.MapToggleableAction(actions::emu::StandardPadLeft, /*port*/ 1, Key::A);
-        // inputCtx.MapToggleableAction(actions::emu::StandardPadRight, /*port*/ 1, Key::D);
-        // inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 1, Key::G);
-        // inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 1, Key::F);
-        // inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 1, Key::H);
-        // inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 1, Key::Return);
-        // inputCtx.MapToggleableAction(actions::emu::StandardPadL, /*port*/ 1, Key::Q);
-        // inputCtx.MapToggleableAction(actions::emu::StandardPadR, /*port*/ 1, Key::E);
+        // Port 1 controller inputs
+        inputCtx.MapToggleableAction(actions::emu::StandardPadA, /*port*/ 1, Key::J);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadB, /*port*/ 1, Key::K);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadC, /*port*/ 1, Key::L);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadX, /*port*/ 1, Key::U);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadY, /*port*/ 1, Key::I);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadZ, /*port*/ 1, Key::O);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadUp, /*port*/ 1, Key::W);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadDown, /*port*/ 1, Key::S);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadLeft, /*port*/ 1, Key::A);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadRight, /*port*/ 1, Key::D);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 1, Key::G);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 1, Key::F);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 1, Key::H);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 1, Key::Return);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadL, /*port*/ 1, Key::Q);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadR, /*port*/ 1, Key::E);
+
+        // Port 2 controller inputs
+        inputCtx.MapToggleableAction(actions::emu::StandardPadA, /*port*/ 2, Key::KeyPad1);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadB, /*port*/ 2, Key::KeyPad2);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadC, /*port*/ 2, Key::KeyPad3);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadX, /*port*/ 2, Key::KeyPad4);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadY, /*port*/ 2, Key::KeyPad5);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadZ, /*port*/ 2, Key::KeyPad6);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadUp, /*port*/ 2, Key::Up);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadDown, /*port*/ 2, Key::Down);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadLeft, /*port*/ 2, Key::Left);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadRight, /*port*/ 2, Key::Right);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 2, Key::KeyPadEnter);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadL, /*port*/ 2, Key::KeyPad7);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadR, /*port*/ 2, Key::KeyPad9);
+
+        // Alternative port 2 controller inputs
+        inputCtx.MapToggleableAction(actions::emu::StandardPadUp, /*port*/ 2, Key::Home);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadDown, /*port*/ 2, Key::End);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadLeft, /*port*/ 2, Key::Delete);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadRight, /*port*/ 2, Key::PageDown);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadL, /*port*/ 2, Key::Insert);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadR, /*port*/ 2, Key::PageUp);
     }
 
     // ---------------------------------
@@ -874,11 +928,6 @@ void App::RunEmulator() {
 
     auto t = clk::now();
     bool paused = false; // TODO: this should be updated by the emulator thread via events
-
-    auto &port1 = m_context.saturn.SMPC.GetPeripheralPort1();
-    auto &port2 = m_context.saturn.SMPC.GetPeripheralPort2();
-    auto *pad1 = port1.ConnectStandardPad();
-    auto *pad2 = port2.ConnectStandardPad();
 
     auto setClearButton = [](peripheral::StandardPad &pad, peripheral::StandardPad::Button button, bool pressed) {
         if (pressed) {
@@ -891,49 +940,10 @@ void App::RunEmulator() {
     auto updateButton = [&](SDL_Scancode scancode, SDL_Keymod mod, bool pressed) {
         using enum peripheral::StandardPad::Button;
         switch (scancode) {
-        case SDL_SCANCODE_W: setClearButton(*pad1, Up, pressed); break;
-        case SDL_SCANCODE_A: setClearButton(*pad1, Left, pressed); break;
-        case SDL_SCANCODE_S: setClearButton(*pad1, Down, pressed); break;
-        case SDL_SCANCODE_D: setClearButton(*pad1, Right, pressed); break;
-        case SDL_SCANCODE_Q: setClearButton(*pad1, L, pressed); break;
-        case SDL_SCANCODE_E: setClearButton(*pad1, R, pressed); break;
-        case SDL_SCANCODE_J: setClearButton(*pad1, A, pressed); break;
-        case SDL_SCANCODE_K: setClearButton(*pad1, B, pressed); break;
-        case SDL_SCANCODE_L: setClearButton(*pad1, C, pressed); break;
-        case SDL_SCANCODE_U: setClearButton(*pad1, X, pressed); break;
-        case SDL_SCANCODE_I: setClearButton(*pad1, Y, pressed); break;
         case SDL_SCANCODE_O:
-            if ((mod & (SDL_KMOD_CTRL | SDL_KMOD_ALT | SDL_KMOD_SHIFT | SDL_KMOD_GUI)) == 0) {
-                setClearButton(*pad1, Z, pressed);
-            } else if (pressed && (mod & SDL_KMOD_CTRL)) {
+            if (pressed && (mod & SDL_KMOD_CTRL)) {
                 OpenLoadDiscDialog();
             }
-            break;
-        case SDL_SCANCODE_F: setClearButton(*pad1, Start, pressed); break;
-        case SDL_SCANCODE_G: setClearButton(*pad1, Start, pressed); break;
-        case SDL_SCANCODE_H: setClearButton(*pad1, Start, pressed); break;
-        case SDL_SCANCODE_RETURN: setClearButton(*pad1, Start, pressed); break;
-
-        case SDL_SCANCODE_UP: setClearButton(*pad2, Up, pressed); break;
-        case SDL_SCANCODE_LEFT: setClearButton(*pad2, Left, pressed); break;
-        case SDL_SCANCODE_DOWN: setClearButton(*pad2, Down, pressed); break;
-        case SDL_SCANCODE_RIGHT: setClearButton(*pad2, Right, pressed); break;
-        case SDL_SCANCODE_KP_7: setClearButton(*pad2, L, pressed); break;
-        case SDL_SCANCODE_KP_9: setClearButton(*pad2, R, pressed); break;
-        case SDL_SCANCODE_KP_1: setClearButton(*pad2, A, pressed); break;
-        case SDL_SCANCODE_KP_2: setClearButton(*pad2, B, pressed); break;
-        case SDL_SCANCODE_KP_3: setClearButton(*pad2, C, pressed); break;
-        case SDL_SCANCODE_KP_4: setClearButton(*pad2, X, pressed); break;
-        case SDL_SCANCODE_KP_5: setClearButton(*pad2, Y, pressed); break;
-        case SDL_SCANCODE_KP_6: setClearButton(*pad2, Z, pressed); break;
-        case SDL_SCANCODE_KP_ENTER: setClearButton(*pad2, Start, pressed); break;
-        case SDL_SCANCODE_HOME: setClearButton(*pad2, Up, pressed); break;
-        case SDL_SCANCODE_DELETE: setClearButton(*pad2, Left, pressed); break;
-        case SDL_SCANCODE_END: setClearButton(*pad2, Down, pressed); break;
-        case SDL_SCANCODE_PAGEDOWN: setClearButton(*pad2, Right, pressed); break;
-        case SDL_SCANCODE_INSERT: setClearButton(*pad2, L, pressed); break;
-        case SDL_SCANCODE_PAGEUP:
-            setClearButton(*pad2, R, pressed);
             break;
 
             // ---- BEGIN TODO ----

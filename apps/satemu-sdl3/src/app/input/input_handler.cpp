@@ -12,10 +12,10 @@ void InputHandler::Unregister(ActionID action) {
 
 void InputHandler::ProcessInputEvents() {
     // Process all pending input events
-    InputActionEvent inputEvent;
-    while (m_inputContext.TryPollNextEvent(inputEvent)) {
-        if (auto handler = m_actionHandlers.find(inputEvent.action.action); handler != m_actionHandlers.end()) {
-            handler->second(inputEvent);
+    InputActionEvent inputActionEvent;
+    while (m_inputContext.TryPollNextEvent(inputActionEvent)) {
+        if (auto handler = m_actionHandlers.find(inputActionEvent.action.id); handler != m_actionHandlers.end()) {
+            handler->second(inputActionEvent);
         }
     }
 }

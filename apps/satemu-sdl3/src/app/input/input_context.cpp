@@ -7,60 +7,32 @@ inline constexpr BoundAction kNoBoundAction{kNoAction, 0};
 InputContext::InputContext()
     : m_actionQueueToken(m_actionQueue) {}
 
-BoundAction InputContext::MapAction(ActionID action, KeyboardKey key, bool pressed) {
-    return MapAction({action, 0}, InputEvent{key, pressed});
+BoundAction InputContext::MapAction(ActionID action, InputEvent event, bool pressed) {
+    return MapAction({action, 0}, BoundInputEvent{event, pressed});
 }
 
-BoundAction InputContext::MapAction(ActionID action, KeyCombo keyCombo, bool pressed) {
-    return MapAction({action, 0}, InputEvent{keyCombo, pressed});
+BoundAction InputContext::MapAction(ActionID action, ActionContext context, InputEvent event, bool pressed) {
+    return MapAction({action, context}, BoundInputEvent{event, pressed});
 }
 
-BoundAction InputContext::MapAction(ActionID action, uint32 id, GamepadButton button, bool pressed) {
-    return MapAction({action, 0}, InputEvent{id, button, pressed});
+std::pair<BoundAction, BoundAction> InputContext::MapToggleableAction(ActionID action, InputEvent event) {
+    return {MapAction(action, event, true), MapAction(action, event, false)};
 }
 
-BoundAction InputContext::MapAction(ActionID action, int joystickButton, bool pressed) {
-    return MapAction({action, 0}, InputEvent{joystickButton, pressed});
+std::pair<BoundAction, BoundAction> InputContext::MapToggleableAction(ActionID action, ActionContext context,
+                                                                      InputEvent event) {
+    return {MapAction(action, context, event, true), MapAction(action, context, event, false)};
 }
 
-std::pair<BoundAction, BoundAction> InputContext::MapToggleableAction(ActionID action, KeyboardKey key) {
-    return {MapAction(action, key, true), MapAction(action, key, false)};
+BoundAction InputContext::GetMappedAction(InputEvent event, bool pressed) const {
+    return GetMappedAction(BoundInputEvent{event, pressed});
 }
 
-std::pair<BoundAction, BoundAction> InputContext::MapToggleableAction(ActionID action, KeyCombo keyCombo) {
-    return {MapAction(action, keyCombo, true), MapAction(action, keyCombo, false)};
-}
-
-std::pair<BoundAction, BoundAction> InputContext::MapToggleableAction(ActionID action, uint32 id,
-                                                                      GamepadButton button) {
-    return {MapAction(action, id, button, true), MapAction(action, id, button, false)};
-}
-
-std::pair<BoundAction, BoundAction> InputContext::MapToggleableAction(ActionID action, int joystickButton) {
-    return {MapAction(action, joystickButton, true), MapAction(action, joystickButton, false)};
-}
-
-BoundAction InputContext::GetMappedAction(KeyboardKey key, bool pressed) const {
-    return GetMappedAction(InputEvent{key, pressed});
-}
-
-BoundAction InputContext::GetMappedAction(KeyCombo keyCombo, bool pressed) const {
-    return GetMappedAction(InputEvent{keyCombo, pressed});
-}
-
-BoundAction InputContext::GetMappedAction(uint32 id, GamepadButton button, bool pressed) const {
-    return GetMappedAction(InputEvent{id, button, pressed});
-}
-
-BoundAction InputContext::GetMappedAction(int joystickButton, bool pressed) const {
-    return GetMappedAction(InputEvent{joystickButton, pressed});
-}
-
-const std::unordered_map<InputEvent, BoundAction> &InputContext::GetMappedActions() const {
+const std::unordered_map<BoundInputEvent, BoundAction> &InputContext::GetMappedActions() const {
     return m_actions;
 }
 
-std::unordered_set<InputEvent> InputContext::GetMappedInputs(ActionID action, ActionContext context) const {
+std::unordered_set<BoundInputEvent> InputContext::GetMappedInputs(ActionID action, ActionContext context) const {
     const BoundAction boundAction{action, context};
     if (m_actionsReverse.contains(boundAction)) {
         return m_actionsReverse.at(boundAction);
@@ -68,14 +40,14 @@ std::unordered_set<InputEvent> InputContext::GetMappedInputs(ActionID action, Ac
     return {};
 }
 
-const std::unordered_map<BoundAction, std::unordered_set<InputEvent>> &InputContext::GetAllMappedInputs() const {
+const std::unordered_map<BoundAction, std::unordered_set<BoundInputEvent>> &InputContext::GetAllMappedInputs() const {
     return m_actionsReverse;
 }
 
-std::unordered_set<InputEvent> InputContext::UnmapAction(ActionID action, ActionContext context) {
+std::unordered_set<BoundInputEvent> InputContext::UnmapAction(ActionID action, ActionContext context) {
     const BoundAction boundAction{action, context};
     if (m_actionsReverse.contains(boundAction)) {
-        std::unordered_set<InputEvent> evts = m_actionsReverse[boundAction];
+        std::unordered_set<BoundInputEvent> evts = m_actionsReverse[boundAction];
         for (auto &evt : evts) {
             m_actions.erase(evt);
         }
@@ -91,23 +63,23 @@ void InputContext::UnmapAllActions() {
 }
 
 void InputContext::ProcessKeyboardEvent(KeyboardKey key, KeyModifier modifiers, bool pressed) {
-    ProcessEvent(InputEvent{key, pressed});
-    ProcessEvent(InputEvent{KeyCombo{modifiers, key}, pressed});
+    ProcessEvent(BoundInputEvent{{key}, pressed});
+    ProcessEvent(BoundInputEvent{{KeyCombo{modifiers, key}}, pressed});
 }
 
 void InputContext::ProcessGamepadEvent(uint32 id, GamepadButton button, bool pressed) {
-    ProcessEvent(InputEvent{id, button, pressed});
+    ProcessEvent(BoundInputEvent{{id, button}, pressed});
 }
 
 void InputContext::ProcessJoystickEvent(int button, bool pressed) {
-    ProcessEvent(InputEvent{button, pressed});
+    ProcessEvent(BoundInputEvent{{button}, pressed});
 }
 
 bool InputContext::TryPollNextEvent(InputActionEvent &event) {
     return m_actionQueue.try_dequeue_from_producer(m_actionQueueToken, event);
 }
 
-BoundAction InputContext::MapAction(BoundAction action, InputEvent &&event) {
+BoundAction InputContext::MapAction(BoundAction action, BoundInputEvent &&event) {
     BoundAction prev;
     if (m_actions.contains(event)) {
         prev = m_actions.at(event);
@@ -123,11 +95,11 @@ BoundAction InputContext::MapAction(BoundAction action, InputEvent &&event) {
     return prev;
 }
 
-BoundAction InputContext::GetMappedAction(InputEvent &&event) const {
+BoundAction InputContext::GetMappedAction(BoundInputEvent &&event) const {
     return m_actions.contains(event) ? m_actions.at(event) : kNoBoundAction;
 }
 
-void InputContext::ProcessEvent(InputEvent &&event) {
+void InputContext::ProcessEvent(BoundInputEvent &&event) {
     if (m_actions.contains(event)) {
         auto action = m_actions.at(event);
         m_actionQueue.enqueue(m_actionQueueToken, InputActionEvent{.input = event, .action = action});

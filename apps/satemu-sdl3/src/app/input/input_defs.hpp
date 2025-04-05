@@ -382,7 +382,7 @@ struct InputEvent {
     };
     Type type = Type::None;
 
-    union Event {
+    union {
         KeyboardKey keyboardKey;
         KeyCombo keyCombo;
         MouseButton mouseButton;
@@ -392,75 +392,75 @@ struct InputEvent {
             GamepadButton button;
         } gamepad;
         int joystickButton;
-    } event;
-
-    // Corresponds to button pressed/released state
-    bool activated;
+    };
 
     InputEvent()
-        : type(Type::None)
-        , activated(false) {}
+        : type(Type::None) {}
 
-    explicit InputEvent(KeyboardKey key, bool activated)
+    InputEvent(KeyboardKey key)
         : type(Type::KeyboardKey)
-        , event({.keyboardKey = key})
-        , activated(activated) {}
+        , keyboardKey(key) {}
 
-    explicit InputEvent(KeyCombo keyCombo, bool activated)
+    InputEvent(KeyCombo keyCombo)
         : type(Type::KeyCombo)
-        , event({.keyCombo = keyCombo})
-        , activated(activated) {}
+        , keyCombo(keyCombo) {}
 
-    explicit InputEvent(MouseButton mouseButton, bool activated)
+    InputEvent(MouseButton mouseButton)
         : type(Type::MouseButton)
-        , event({.mouseButton = mouseButton})
-        , activated(activated) {}
+        , mouseButton(mouseButton) {}
 
-    explicit InputEvent(MouseCombo mouseCombo, bool activated)
+    InputEvent(MouseCombo mouseCombo)
         : type(Type::MouseCombo)
-        , event({.mouseCombo = mouseCombo})
-        , activated(activated) {}
+        , mouseCombo(mouseCombo) {}
 
-    explicit InputEvent(uint32 id, GamepadButton button, bool activated)
+    InputEvent(uint32 id, GamepadButton button)
         : type(Type::GamepadButton)
-        , event({.gamepad{.id = id, .button = button}})
-        , activated(activated) {}
+        , gamepad{.id = id, .button = button} {}
 
-    explicit InputEvent(int joystickButton, bool activated)
+    InputEvent(int joystickButton)
         : type(Type::JoystickButton)
-        , event({.joystickButton = joystickButton})
-        , activated(activated) {}
+        , joystickButton(joystickButton) {}
 
-    bool operator==(const InputEvent &rhs) const {
+    constexpr bool operator==(const InputEvent &rhs) const {
         if (type != rhs.type) {
-            return false;
-        }
-        if (activated != rhs.activated) {
             return false;
         }
         switch (type) {
         case Type::None: return true;
-        case Type::KeyboardKey: return event.keyboardKey == rhs.event.keyboardKey;
-        case Type::KeyCombo: return event.keyCombo == rhs.event.keyCombo;
-        case Type::MouseButton: return event.mouseButton == rhs.event.mouseButton;
-        case Type::MouseCombo: return event.mouseCombo == rhs.event.mouseCombo;
-        case Type::GamepadButton:
-            return event.gamepad.id == rhs.event.gamepad.id && event.gamepad.button == rhs.event.gamepad.button;
-        case Type::JoystickButton: return event.joystickButton == rhs.event.joystickButton;
+        case Type::KeyboardKey: return keyboardKey == rhs.keyboardKey;
+        case Type::KeyCombo: return keyCombo == rhs.keyCombo;
+        case Type::MouseButton: return mouseButton == rhs.mouseButton;
+        case Type::MouseCombo: return mouseCombo == rhs.mouseCombo;
+        case Type::GamepadButton: return gamepad.id == rhs.gamepad.id && gamepad.button == rhs.gamepad.button;
+        case Type::JoystickButton: return joystickButton == rhs.joystickButton;
         default: return false;
         }
     }
 };
 
+struct BoundInputEvent {
+    InputEvent event;
+    bool activated; // Corresponds to button pressed/released state
+
+    BoundInputEvent()
+        : activated(false) {}
+
+    BoundInputEvent(InputEvent event, bool activated)
+        : event(event)
+        , activated(activated) {}
+
+    constexpr bool operator==(const BoundInputEvent &rhs) const = default;
+};
+
 struct BoundAction {
-    ActionID action;
+    ActionID id;
     ActionContext context;
 
     bool operator==(const BoundAction &) const = default;
 };
 
 struct InputActionEvent {
-    InputEvent input;
+    BoundInputEvent input;
     BoundAction action;
 };
 
@@ -476,30 +476,34 @@ struct std::hash<app::input::InputEvent> {
         std::size_t base = 0;
         switch (e.type) {
         case Type::None: base = 0; break;
-        case Type::KeyboardKey: base = static_cast<std::size_t>(e.event.keyboardKey); break;
+        case Type::KeyboardKey: base = static_cast<std::size_t>(e.keyboardKey); break;
         case Type::KeyCombo:
-            base = static_cast<std::size_t>(e.event.keyCombo.key) |
-                   (static_cast<std::size_t>(e.event.keyCombo.modifiers) << 24ull);
+            base = static_cast<std::size_t>(e.keyCombo.key) | (static_cast<std::size_t>(e.keyCombo.modifiers) << 24ull);
             break;
-        case Type::MouseButton: base = static_cast<std::size_t>(e.event.mouseButton); break;
+        case Type::MouseButton: base = static_cast<std::size_t>(e.mouseButton); break;
         case Type::MouseCombo:
-            base = static_cast<std::size_t>(e.event.mouseCombo.button) |
-                   (static_cast<std::size_t>(e.event.mouseCombo.modifiers) << 24ull);
+            base = static_cast<std::size_t>(e.mouseCombo.button) |
+                   (static_cast<std::size_t>(e.mouseCombo.modifiers) << 24ull);
             break;
         case Type::GamepadButton:
-            base = static_cast<std::size_t>(e.event.gamepad.button) |
-                   (static_cast<std::size_t>(e.event.gamepad.id) << 24ull);
+            base = static_cast<std::size_t>(e.gamepad.button) | (static_cast<std::size_t>(e.gamepad.id) << 24ull);
             break;
-        case Type::JoystickButton: base = static_cast<std::size_t>(e.event.joystickButton); break;
+        case Type::JoystickButton: base = static_cast<std::size_t>(e.joystickButton); break;
         }
-        return base | (static_cast<std::size_t>(e.type) << 32ull) | (static_cast<std::size_t>(e.activated) << 63ull);
+        return base | (static_cast<std::size_t>(e.type) << 32ull);
+    }
+};
+
+template <>
+struct std::hash<app::input::BoundInputEvent> {
+    std::size_t operator()(const app::input::BoundInputEvent &e) const noexcept {
+        return std::hash<app::input::InputEvent>{}(e.event) | (static_cast<std::size_t>(e.activated) << 63ull);
     }
 };
 
 template <>
 struct std::hash<app::input::BoundAction> {
     std::size_t operator()(const app::input::BoundAction &e) const noexcept {
-        return (std::hash<app::input::ActionID>{}(e.action) << 1ull) ^
-               std::hash<app::input::ActionContext>{}(e.context);
+        return (std::hash<app::input::ActionID>{}(e.id) << 1ull) ^ std::hash<app::input::ActionContext>{}(e.context);
     }
 };
