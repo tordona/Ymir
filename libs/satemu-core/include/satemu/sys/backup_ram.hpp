@@ -63,6 +63,7 @@ public:
     void Format() final;
 
     std::vector<BackupFileInfo> List() final;
+    std::optional<BackupFileInfo> GetInfo(std::string_view filename) final;
     std::optional<BackupFile> Export(std::string_view filename) final;
     BackupFileImportResult Import(const BackupFile &file, bool overwrite) final;
     bool Delete(std::string_view filename) final;

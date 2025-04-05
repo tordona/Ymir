@@ -43,20 +43,27 @@ private:
     // -----------------------------------------------------------------------------------------------------------------
     // Popups and modals
 
+    void OpenFileImportOverwriteModal();
+    void OpenFileImportResultModal();
     void OpenFilesExportSuccessfulModal(uint32 exportCount);
     void OpenImageExportSuccessfulModal();
     void OpenErrorModal(std::string errorMessage);
 
     void DisplayConfirmDeleteModal(std::span<satemu::bup::BackupFileInfo> files);
     void DisplayConfirmFormatModal();
+    void DisplayFileImportOverwriteModal(std::span<satemu::bup::BackupFileInfo> files);
+    void DisplayFileImportResultModal();
     void DisplayFilesExportSuccessfulModal();
     void DisplayImageExportSuccessfulModal();
     void DisplayErrorModal();
 
-    bool m_openFilesExportSuccessfulPopup = false;
+    bool m_openFileImportOverwriteModal = false;
+    bool m_openFileImportResultModal = false;
+
+    bool m_openFilesExportSuccessfulModal = false;
     uint32 m_filesExportCount;
 
-    bool m_openImageExportSuccessfulPopup = false;
+    bool m_openImageExportSuccessfulModal = false;
 
     bool m_openErrorModal = false;
     std::string m_errorModalMessage;
@@ -72,7 +79,29 @@ private:
     void CancelFileImport();
     void FileImportError(const char *errorMessage);
 
-    satemu::bup::BackupFile ImportFile(std::filesystem::path path);
+    enum class ImportFileResult { Success, FilesystemError, FileTruncated, BadMagic };
+
+    ImportFileResult ImportFile(std::filesystem::path path, satemu::bup::BackupFile &out, std::error_code &error);
+
+    struct BadImport {
+        std::filesystem::path file;
+        std::string errorMessage;
+    };
+
+    struct FailedImport {
+        satemu::bup::BackupFileHeader file;
+        std::string errorMessage;
+    };
+
+    struct OverwriteImport {
+        satemu::bup::BackupFile file;
+        bool overwrite = false;
+    };
+
+    std::vector<BadImport> m_importBad;
+    std::vector<FailedImport> m_importFailed;
+    std::vector<OverwriteImport> m_importOverwrite;
+    std::vector<satemu::bup::BackupFileHeader> m_importSuccess;
 
     // -----------------------------------------------------------------------------------------------------------------
     // File export action

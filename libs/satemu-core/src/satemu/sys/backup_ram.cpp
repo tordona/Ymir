@@ -217,8 +217,14 @@ void BackupMemory::Format() {
     // Fill the rest with zeros
     std::fill(m_backupRAM.begin() + m_blockSize, m_backupRAM.end(), 0);
 
-    m_dirty = false;
+    // Reset bitmap
+    std::fill(m_blockBitmap.begin(), m_blockBitmap.end(), 0);
+    m_blockBitmap[0] |= (1ull << 0ull) | (1ull << 1ull);
+
+    // Clear cached file parameters
     m_fileParams.clear();
+
+    m_dirty = false;
 }
 
 std::vector<BackupFileInfo> BackupMemory::List() {
@@ -229,6 +235,17 @@ std::vector<BackupFileInfo> BackupMemory::List() {
         files.push_back(params.info);
     }
     return files;
+}
+
+std::optional<BackupFileInfo> BackupMemory::GetInfo(std::string_view filename) {
+    RebuildFileList();
+
+    for (auto &params : m_fileParams) {
+        if (params.info.header.filename == filename) {
+            return params.info;
+        }
+    }
+    return std::nullopt;
 }
 
 std::optional<BackupFile> BackupMemory::Export(std::string_view filename) {

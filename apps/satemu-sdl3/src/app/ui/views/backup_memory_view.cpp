@@ -1,3 +1,16 @@
+// This absolutely disgusting hacky mess somehow manages to work.
+//
+// It seems like the current design of the application makes it extremely hard to do anything more complex that just
+// displaying state or doing very simple interactions. Multi-step operations take a *ton* of effort to build and
+// requires storing a bunch of state in a hacky manner, on top of having to be thread-aware -- most of this code runs on
+// the main thread, but file dialog operations run on an unspecified SDL thread (which could be the main thread or not).
+// Anything that needs access to the cartridge also needs to lock the cartridges mutex (which is done by the window, but
+// not by the SDL thread, so you'll find locks in both places).
+//
+// I *really* hate frontend development... *sigh*
+//
+// - StrikerX3
+
 #include "backup_memory_view.hpp"
 
 #include <app/events/emu_event_factory.hpp>
@@ -12,6 +25,7 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <string_view>
 
 using namespace satemu;
@@ -222,6 +236,8 @@ void BackupMemoryView::Display() {
 
     DisplayConfirmDeleteModal(files);
     DisplayConfirmFormatModal();
+    DisplayFileImportOverwriteModal(files);
+    DisplayFileImportResultModal();
     DisplayFilesExportSuccessfulModal();
     DisplayImageExportSuccessfulModal();
     DisplayErrorModal();
@@ -314,13 +330,21 @@ void BackupMemoryView::DrawFileTableRow(const bup::BackupFileInfo &file, uint32 
 // ---------------------------------------------------------------------------------------------------------------------
 // Popups and modals
 
+void BackupMemoryView::OpenFileImportOverwriteModal() {
+    m_openFileImportOverwriteModal = true;
+}
+
+void BackupMemoryView::OpenFileImportResultModal() {
+    m_openFileImportResultModal = true;
+}
+
 void BackupMemoryView::OpenFilesExportSuccessfulModal(uint32 exportCount) {
-    m_openFilesExportSuccessfulPopup = true;
+    m_openFilesExportSuccessfulModal = true;
     m_filesExportCount = exportCount;
 }
 
 void BackupMemoryView::OpenImageExportSuccessfulModal() {
-    m_openImageExportSuccessfulPopup = true;
+    m_openImageExportSuccessfulModal = true;
 }
 
 void BackupMemoryView::OpenErrorModal(std::string errorMessage) {
@@ -358,9 +382,16 @@ void BackupMemoryView::DisplayConfirmDeleteModal(std::span<bup::BackupFileInfo> 
 
         if (ImGui::Button("OK", ImVec2(80, 0))) {
             assert(m_bup != nullptr);
+            if (m_external) {
+                m_context.locks.cart.lock();
+            }
+            // TODO: should do this in the emulator thread
             for (uint32 item : m_selected) {
                 auto &file = files[item];
                 m_bup->Delete(file.header.filename);
+            }
+            if (m_external) {
+                m_context.locks.cart.unlock();
             }
             m_selected.clear();
             ImGui::CloseCurrentPopup();
@@ -383,7 +414,14 @@ void BackupMemoryView::DisplayConfirmFormatModal() {
 
         if (ImGui::Button("Yes", ImVec2(80, 0))) {
             assert(m_bup != nullptr);
+            if (m_external) {
+                m_context.locks.cart.lock();
+            }
+            // TODO: should do this in the emulator thread
             m_bup->Format();
+            if (m_external) {
+                m_context.locks.cart.unlock();
+            }
             m_selected.clear();
             ImGui::CloseCurrentPopup();
         }
@@ -397,12 +435,264 @@ void BackupMemoryView::DisplayConfirmFormatModal() {
     }
 }
 
+void BackupMemoryView::DisplayFileImportOverwriteModal(std::span<bup::BackupFileInfo> files) {
+    static constexpr const char *kTitle = "Resolve imported file conflicts";
+
+    if (m_openFileImportOverwriteModal) {
+        ImGui::OpenPopup(kTitle);
+        m_openFileImportOverwriteModal = false;
+    }
+
+    if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("The following files already exist in %s:", m_name.c_str());
+
+        ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+        const float monoCharWidth = ImGui::CalcTextSize("F").x;
+        ImGui::PopFont();
+
+        auto avail = ImGui::GetContentRegionAvail();
+        const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
+        if (ImGui::BeginChild("##bup_files_table", ImVec2(550, lineHeight * 20))) {
+            if (ImGui::BeginTable("bup_files_overwrite_list", 6,
+                                  ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY)) {
+                ImGui::TableSetupColumn("File name", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 12.5f);
+                ImGui::TableSetupColumn("Original\nSize", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 7);
+                ImGui::TableSetupColumn("Original\nDate/time", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 14);
+                ImGui::TableSetupColumn("Imported\nSize", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 7);
+                ImGui::TableSetupColumn("Imported\nDate/time", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 14);
+                ImGui::TableSetupColumn("Overwrite", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupScrollFreeze(0, 1);
+                ImGui::TableHeadersRow();
+
+                auto findOgInfo = [&](std::string_view filename) -> std::optional<bup::BackupFileInfo> {
+                    for (auto &file : files) {
+                        if (file.header.filename == filename) {
+                            return file;
+                        }
+                    }
+                    return std::nullopt;
+                };
+
+                int index = 0;
+                for (auto &ovFile : m_importOverwrite) {
+                    auto ogInfo = findOgInfo(ovFile.file.header.filename);
+
+                    if (!ogInfo.has_value()) {
+                        // Might've been erased by the emulated system in the meantime; "overwrite" and move on
+                        ovFile.overwrite = true;
+                        continue;
+                    }
+
+                    ImGui::TableNextRow();
+                    // filename
+                    if (ImGui::TableNextColumn()) {
+                        ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+                        ImGui::Text("%s", ovFile.file.header.filename.c_str());
+                        ImGui::PopFont();
+                    }
+
+                    if (ovFile.overwrite) {
+                        ImGui::BeginDisabled();
+                    }
+                    // original size
+                    if (ImGui::TableNextColumn()) {
+                        ImGui::Text("%u", ogInfo->size);
+                    }
+                    // original date/time
+                    if (ImGui::TableNextColumn()) {
+                        util::BackupDateTime bupDate{ogInfo->header.date};
+                        ImGui::Text("%04u/%02u/%02u %02u:%02u", bupDate.year, bupDate.month, bupDate.day, bupDate.hour,
+                                    bupDate.minute);
+                    }
+                    if (ovFile.overwrite) {
+                        ImGui::EndDisabled();
+                    }
+
+                    if (!ovFile.overwrite) {
+                        ImGui::BeginDisabled();
+                    }
+                    // imported size
+                    if (ImGui::TableNextColumn()) {
+                        ImGui::Text("%u", (uint32)ovFile.file.data.size());
+                    }
+                    // imported date/time
+                    if (ImGui::TableNextColumn()) {
+                        util::BackupDateTime bupDate{ovFile.file.header.date};
+                        ImGui::Text("%04u/%02u/%02u %02u:%02u", bupDate.year, bupDate.month, bupDate.day, bupDate.hour,
+                                    bupDate.minute);
+                    }
+                    if (!ovFile.overwrite) {
+                        ImGui::EndDisabled();
+                    }
+
+                    // overwrite checkbox
+                    if (ImGui::TableNextColumn()) {
+                        ImGui::Checkbox(fmt::format("##overwrite_{}_{}", ovFile.file.header.filename, index++).c_str(),
+                                        &ovFile.overwrite);
+                    }
+                }
+
+                ImGui::EndTable();
+            }
+        }
+        ImGui::EndChild();
+
+        bool execute = false;
+
+        if (ImGui::Button("Import", ImVec2(100, 0))) {
+            execute = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Overwrite all", ImVec2(100, 0))) {
+            for (auto &ovFile : m_importOverwrite) {
+                ovFile.overwrite = true;
+                break;
+            }
+            execute = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Ignore all", ImVec2(100, 0))) {
+            execute = false;
+            ImGui::CloseCurrentPopup();
+            OpenFileImportResultModal();
+        }
+
+        if (execute) {
+            if (m_external) {
+                m_context.locks.cart.lock();
+            }
+
+            for (auto &ovFile : m_importOverwrite) {
+                // Skip files not selected to be overwritten
+                if (!ovFile.overwrite) {
+                    continue;
+                }
+
+                // TODO: should do this in the emulator thread
+                // Attempt to overwrite files
+                switch (m_bup->Import(ovFile.file, true)) {
+                case bup::BackupFileImportResult::Imported: // fallthrough
+                case bup::BackupFileImportResult::Overwritten: m_importSuccess.push_back(ovFile.file.header); break;
+                case bup::BackupFileImportResult::NoSpace:
+                    m_importFailed.push_back({ovFile.file.header, "Not enough space in memory"});
+                    break;
+                default: m_importFailed.push_back({ovFile.file.header, "Unspecified error"}); break;
+                }
+            }
+            m_importOverwrite.clear();
+
+            if (m_external) {
+                m_context.locks.cart.unlock();
+            }
+
+            ImGui::CloseCurrentPopup();
+            OpenFileImportResultModal();
+        }
+
+        ImGui::EndPopup();
+    }
+}
+
+void BackupMemoryView::DisplayFileImportResultModal() {
+    static constexpr const char *kTitle = "Backup file import summary";
+
+    if (m_openFileImportResultModal) {
+        ImGui::OpenPopup(kTitle);
+        m_openFileImportResultModal = false;
+    }
+
+    if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+        const float monoCharWidth = ImGui::CalcTextSize("F").x;
+        ImGui::PopFont();
+
+        ImGui::Text("%zu file%s imported successfully.", m_importSuccess.size(),
+                    (m_importSuccess.size() == 1 ? "" : "s"));
+
+        if (!m_importFailed.empty()) {
+            ImGui::Text("The following file%s failed to import:", (m_importFailed.size() == 1 ? "" : "s"));
+
+            auto avail = ImGui::GetContentRegionAvail();
+            const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
+            if (ImGui::BeginChild("##bup_failed_table", ImVec2(550, lineHeight * 10))) {
+                if (ImGui::BeginTable("bup_files_failed_list", 2,
+                                      ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY)) {
+                    ImGui::TableSetupColumn("File name", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 12.5f);
+                    ImGui::TableSetupColumn("Reason", ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableSetupScrollFreeze(0, 1);
+                    ImGui::TableHeadersRow();
+
+                    for (auto &file : m_importFailed) {
+                        ImGui::TableNextRow();
+                        // filename
+                        if (ImGui::TableNextColumn()) {
+                            ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+                            ImGui::Text("%s", file.file.filename.c_str());
+                            ImGui::PopFont();
+                        }
+                        // reason
+                        if (ImGui::TableNextColumn()) {
+                            ImGui::Text("%s", file.errorMessage.c_str());
+                        }
+                    }
+
+                    ImGui::EndTable();
+                }
+            }
+            ImGui::EndChild();
+        }
+
+        if (!m_importBad.empty()) {
+            ImGui::Text("The following file%s could not be imported:", (m_importBad.size() == 1 ? "" : "s"));
+
+            auto avail = ImGui::GetContentRegionAvail();
+            const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
+            if (ImGui::BeginChild("##bup_bad_table", ImVec2(550, lineHeight * 10))) {
+                if (ImGui::BeginTable("bup_files_bad_list", 2,
+                                      ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY)) {
+                    ImGui::TableSetupColumn("Path");
+                    ImGui::TableSetupColumn("Reason");
+                    ImGui::TableSetupScrollFreeze(0, 1);
+                    ImGui::TableHeadersRow();
+
+                    for (auto &file : m_importBad) {
+                        ImGui::TableNextRow();
+                        // path
+                        if (ImGui::TableNextColumn()) {
+                            ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+                            ImGui::Text("%s", file.file.string().c_str());
+                            ImGui::PopFont();
+                        }
+                        // reason
+                        if (ImGui::TableNextColumn()) {
+                            ImGui::Text("%s", file.errorMessage.c_str());
+                        }
+                    }
+
+                    ImGui::EndTable();
+                }
+            }
+            ImGui::EndChild();
+        }
+
+        if (ImGui::Button("OK", ImVec2(80, 0))) {
+            m_importBad.clear();
+            m_importFailed.clear();
+            m_importOverwrite.clear();
+            m_importSuccess.clear();
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
+}
+
 void BackupMemoryView::DisplayFilesExportSuccessfulModal() {
     static constexpr const char *kTitle = "Files export successful";
 
-    if (m_openFilesExportSuccessfulPopup) {
+    if (m_openFilesExportSuccessfulModal) {
         ImGui::OpenPopup(kTitle);
-        m_openFilesExportSuccessfulPopup = false;
+        m_openFilesExportSuccessfulModal = false;
     }
 
     if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -420,9 +710,9 @@ void BackupMemoryView::DisplayFilesExportSuccessfulModal() {
 void BackupMemoryView::DisplayImageExportSuccessfulModal() {
     static constexpr const char *kTitle = "Image export successful";
 
-    if (m_openImageExportSuccessfulPopup) {
+    if (m_openImageExportSuccessfulModal) {
         ImGui::OpenPopup(kTitle);
-        m_openImageExportSuccessfulPopup = false;
+        m_openImageExportSuccessfulModal = false;
     }
 
     if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -475,18 +765,44 @@ void BackupMemoryView::ProcessFileImportError(void *userdata, const char *errorM
 }
 
 void BackupMemoryView::ImportFiles(std::span<std::filesystem::path> files) {
-    // TODO: implement
-    // - validate input files
-    //   - show list of invalid files and ignore them
-    // - check for existing files
-    // - if there are matching files in the backup memory, show a modal asking if the user wants to replace them
-    //   - show table with:
-    //     - filename
-    //     - comments
-    //     - language
-    //     - current size, blocks, date/time, ( ) keep original
-    //     - imported size, blocks, ( ) replace with imported
-    // - if importing fails because of running out of space, show which files could not be imported
+    bup::BackupFile bupFile{};
+    std::error_code error{};
+    for (auto &file : files) {
+        switch (ImportFile(file, bupFile, error)) {
+        case ImportFileResult::Success:
+            if (m_external) {
+                m_context.locks.cart.lock();
+            }
+
+            // TODO: should do this in the emulator thread
+            // Attempt to import file without overwriting
+            switch (m_bup->Import(bupFile, false)) {
+            case bup::BackupFileImportResult::Imported: m_importSuccess.push_back(bupFile.header); break;
+            case bup::BackupFileImportResult::NoSpace:
+                m_importFailed.push_back({bupFile.header, "Not enough space in memory"});
+                break;
+            case bup::BackupFileImportResult::FileExists: m_importOverwrite.push_back({bupFile}); break;
+            default: m_importFailed.push_back({bupFile.header, "Unspecified error"}); break;
+            }
+
+            if (m_external) {
+                m_context.locks.cart.unlock();
+            }
+            break;
+        case ImportFileResult::FilesystemError: m_importBad.push_back({file, error.message()}); break;
+        case ImportFileResult::FileTruncated: m_importBad.push_back({file, "Backup file truncated"}); break;
+        case ImportFileResult::BadMagic: m_importBad.push_back({file, "Not a valid backup file"}); break;
+        default: m_importBad.push_back({file, "Unspecified error"}); break;
+        }
+    }
+
+    if (m_importOverwrite.empty()) {
+        // Show final import result
+        OpenFileImportResultModal();
+    } else {
+        // Show list of files that would be overwritten
+        OpenFileImportOverwriteModal();
+    }
 }
 
 void BackupMemoryView::CancelFileImport() {
@@ -497,8 +813,76 @@ void BackupMemoryView::FileImportError(const char *errorMessage) {
     OpenErrorModal(fmt::format("File import failed: {}", errorMessage));
 }
 
-satemu::bup::BackupFile BackupMemoryView::ImportFile(std::filesystem::path path) {
-    return satemu::bup::BackupFile();
+BackupMemoryView::ImportFileResult BackupMemoryView::ImportFile(std::filesystem::path path, bup::BackupFile &out,
+                                                                std::error_code &error) {
+    // 00..03  char[4]   magic: "YmBP"
+    // 04..0E  char[11]  filename
+    //     0F  uint8     language
+    // 10..19  char[10]  comment
+    // 1A..1D  uint32le  date/time (minutes since 01/01/1980)
+    // 1E..21  uint32le  data size (in bytes)
+    // 22....  uint8...  data
+
+    error.clear();
+
+#define CHECK_INPUT_ERROR                                 \
+    do {                                                  \
+        if (!in) {                                        \
+            error.assign(errno, std::generic_category()); \
+            return ImportFileResult::FilesystemError;     \
+        }                                                 \
+    } while (0)
+
+    std::ifstream in{path, std::ios::binary};
+    std::array<char, 11> buf{};
+
+    CHECK_INPUT_ERROR;
+
+    const size_t fileSize = std::filesystem::file_size(path);
+    if (fileSize < 0x22) {
+        return ImportFileResult::FileTruncated;
+    }
+
+    // magic
+    static constexpr std::string_view kMagic = "YmBP";
+    in.read(buf.data(), 4);
+    CHECK_INPUT_ERROR;
+    if (std::string_view(buf.data(), 4) != kMagic) {
+        return ImportFileResult::BadMagic;
+    }
+
+    // filename
+    in.read(buf.data(), 11);
+    CHECK_INPUT_ERROR;
+    out.header.filename.assign(buf.begin(), buf.end());
+
+    // language
+    out.header.language = static_cast<bup::Language>(in.get());
+    CHECK_INPUT_ERROR;
+
+    // comment
+    in.read(buf.data(), 10);
+    CHECK_INPUT_ERROR;
+    out.header.comment.assign(buf.begin(), buf.end());
+
+    // date/time
+    in.read((char *)&out.header.date, sizeof(out.header.date));
+    CHECK_INPUT_ERROR;
+
+    // data size
+    uint32 size{};
+    in.read((char *)&size, sizeof(size));
+    CHECK_INPUT_ERROR;
+    if ((size_t)size + 0x22 > fileSize) {
+        return ImportFileResult::FileTruncated;
+    }
+
+    // data
+    out.data.resize(size);
+    in.read((char *)out.data.data(), out.data.size());
+    CHECK_INPUT_ERROR;
+
+    return ImportFileResult::Success;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -634,9 +1018,9 @@ void BackupMemoryView::ImportImage(std::filesystem::path file) {
 
     // Replace backup memory instances
     if (m_external) {
-        // TODO: reinsert cartridge with new backup memory
+        // TODO: enqueue emulator event to reinsert cartridge with new backup memory
     } else {
-        // TODO: replace internal backup RAM
+        // TODO: enqueue emulator event to replace internal backup RAM
     }
 }
 
