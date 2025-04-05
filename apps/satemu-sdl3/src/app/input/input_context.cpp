@@ -21,19 +21,19 @@ ActionID InputContext::MapAction(ActionID action, int joystickButton, bool press
     return MapAction(action, InputEvent{joystickButton, pressed});
 }
 
-std::pair<ActionID, ActionID> InputContext::MapPressAndReleaseAction(ActionID action, KeyboardKey key) {
+std::pair<ActionID, ActionID> InputContext::MapToggleableAction(ActionID action, KeyboardKey key) {
     return {MapAction(action, key, true), MapAction(action, key, false)};
 }
 
-std::pair<ActionID, ActionID> InputContext::MapPressAndReleaseAction(ActionID action, KeyCombo keyCombo) {
+std::pair<ActionID, ActionID> InputContext::MapToggleableAction(ActionID action, KeyCombo keyCombo) {
     return {MapAction(action, keyCombo, true), MapAction(action, keyCombo, false)};
 }
 
-std::pair<ActionID, ActionID> InputContext::MapPressAndReleaseAction(ActionID action, uint32 id, GamepadButton button) {
+std::pair<ActionID, ActionID> InputContext::MapToggleableAction(ActionID action, uint32 id, GamepadButton button) {
     return {MapAction(action, id, button, true), MapAction(action, id, button, false)};
 }
 
-std::pair<ActionID, ActionID> InputContext::MapPressAndReleaseAction(ActionID action, int joystickButton) {
+std::pair<ActionID, ActionID> InputContext::MapToggleableAction(ActionID action, int joystickButton) {
     return {MapAction(action, joystickButton, true), MapAction(action, joystickButton, false)};
 }
 
@@ -57,23 +57,25 @@ const std::unordered_map<InputEvent, ActionID> &InputContext::GetMappedActions()
     return m_actions;
 }
 
-InputEvent InputContext::GetMappedInput(ActionID action) const {
+std::unordered_set<InputEvent> InputContext::GetMappedInputs(ActionID action) const {
     if (m_actionsReverse.contains(action)) {
         return m_actionsReverse.at(action);
     }
     return {};
 }
 
-const std::unordered_map<ActionID, InputEvent> &InputContext::GetMappedInputs() const {
+const std::unordered_map<ActionID, std::unordered_set<InputEvent>> &InputContext::GetAllMappedInputs() const {
     return m_actionsReverse;
 }
 
-InputEvent InputContext::UnmapAction(ActionID action) {
+std::unordered_set<InputEvent> InputContext::UnmapAction(ActionID action) {
     if (m_actionsReverse.contains(action)) {
-        auto &evt = m_actionsReverse[action];
-        m_actions.erase(evt);
+        std::unordered_set<InputEvent> evts = m_actionsReverse[action];
+        for (auto &evt : evts) {
+            m_actions.erase(evt);
+        }
         m_actionsReverse.erase(action);
-        return evt;
+        return evts;
     }
     return {};
 }
@@ -104,12 +106,15 @@ ActionID InputContext::MapAction(ActionID action, InputEvent &&event) {
     ActionID prev;
     if (m_actions.contains(event)) {
         prev = m_actions.at(event);
-        m_actionsReverse.erase(prev);
+        m_actionsReverse[prev].erase(event);
+        if (m_actionsReverse[prev].empty()) {
+            m_actionsReverse.erase(prev);
+        }
     } else {
         prev = kNoAction;
     }
     m_actions[event] = action;
-    m_actionsReverse[action] = event;
+    m_actionsReverse[action].insert(event);
     return prev;
 }
 

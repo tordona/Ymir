@@ -5,6 +5,7 @@
 #include <concurrentqueue.h>
 
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 namespace app::input {
@@ -23,13 +24,13 @@ public:
     ActionID MapAction(ActionID action, int joystickButton, bool pressed = true);
 
     // Maps a keyboard key press and release to an action and returns the previously mapped action.
-    std::pair<ActionID, ActionID> MapPressAndReleaseAction(ActionID action, KeyboardKey key);
+    std::pair<ActionID, ActionID> MapToggleableAction(ActionID action, KeyboardKey key);
     // Maps a key combo press and release to an action and returns the previously mapped action.
-    std::pair<ActionID, ActionID> MapPressAndReleaseAction(ActionID action, KeyCombo keyCombo);
+    std::pair<ActionID, ActionID> MapToggleableAction(ActionID action, KeyCombo keyCombo);
     // Maps a gamepad button press and release to an action and returns the previously mapped action.
-    std::pair<ActionID, ActionID> MapPressAndReleaseAction(ActionID action, uint32 id, GamepadButton button);
+    std::pair<ActionID, ActionID> MapToggleableAction(ActionID action, uint32 id, GamepadButton button);
     // Maps a joystick button press and release to an action and returns the previously mapped action.
-    std::pair<ActionID, ActionID> MapPressAndReleaseAction(ActionID action, int joystickButton);
+    std::pair<ActionID, ActionID> MapToggleableAction(ActionID action, int joystickButton);
 
     // Gets the action mapped to the keyboard key.
     ActionID GetMappedAction(KeyboardKey key, bool pressed = true) const;
@@ -41,13 +42,13 @@ public:
     ActionID GetMappedAction(int joystickButton, bool pressed = true) const;
     const std::unordered_map<InputEvent, ActionID> &GetMappedActions() const;
 
-    // Gets the input event mapped to the action.
-    InputEvent GetMappedInput(ActionID action) const;
+    // Gets the input events mapped to the action.
+    std::unordered_set<InputEvent> GetMappedInputs(ActionID action) const;
     // Gets all action to input event mappings.
-    const std::unordered_map<ActionID, InputEvent> &GetMappedInputs() const;
+    const std::unordered_map<ActionID, std::unordered_set<InputEvent>> &GetAllMappedInputs() const;
 
-    // Unmaps the input event from the action and returns the previously mapped input event.
-    InputEvent UnmapAction(ActionID action);
+    // Unmaps the input events from the action and returns the previously mapped input events.
+    std::unordered_set<InputEvent> UnmapAction(ActionID action);
     // Clears all action mappings.
     void UnmapAllActions();
 
@@ -64,7 +65,7 @@ public:
 
 private:
     std::unordered_map<InputEvent, ActionID> m_actions;
-    std::unordered_map<ActionID, InputEvent> m_actionsReverse;
+    std::unordered_map<ActionID, std::unordered_set<InputEvent>> m_actionsReverse;
 
     moodycamel::ConcurrentQueue<InputActionEvent> m_actionQueue;
     moodycamel::ProducerToken m_actionQueueToken;

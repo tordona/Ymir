@@ -847,7 +847,24 @@ void App::RunEmulator() {
         inputCtx.MapAction(actions::emu::HardReset, KeyCombo{Mod::Control, Key::R});
         inputCtx.MapAction(actions::emu::SoftReset, KeyCombo{Mod::Control | Mod::Shift, Key::R});
 
-        inputCtx.MapPressAndReleaseAction(actions::emu::ResetButton, KeyCombo{Mod::Shift, Key::R});
+        inputCtx.MapToggleableAction(actions::emu::ResetButton, KeyCombo{Mod::Shift, Key::R});
+
+        // inputCtx.MapToggleableAction(actions::emu::StandardPadA, /*port*/ 1, Key::J);
+        // inputCtx.MapToggleableAction(actions::emu::StandardPadB, /*port*/ 1, Key::K);
+        // inputCtx.MapToggleableAction(actions::emu::StandardPadC, /*port*/ 1, Key::L);
+        // inputCtx.MapToggleableAction(actions::emu::StandardPadX, /*port*/ 1, Key::U);
+        // inputCtx.MapToggleableAction(actions::emu::StandardPadY, /*port*/ 1, Key::I);
+        // inputCtx.MapToggleableAction(actions::emu::StandardPadZ, /*port*/ 1, Key::O);
+        // inputCtx.MapToggleableAction(actions::emu::StandardPadUp, /*port*/ 1, Key::W);
+        // inputCtx.MapToggleableAction(actions::emu::StandardPadDown, /*port*/ 1, Key::S);
+        // inputCtx.MapToggleableAction(actions::emu::StandardPadLeft, /*port*/ 1, Key::A);
+        // inputCtx.MapToggleableAction(actions::emu::StandardPadRight, /*port*/ 1, Key::D);
+        // inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 1, Key::G);
+        // inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 1, Key::F);
+        // inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 1, Key::H);
+        // inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 1, Key::Return);
+        // inputCtx.MapToggleableAction(actions::emu::StandardPadL, /*port*/ 1, Key::Q);
+        // inputCtx.MapToggleableAction(actions::emu::StandardPadR, /*port*/ 1, Key::E);
     }
 
     // ---------------------------------

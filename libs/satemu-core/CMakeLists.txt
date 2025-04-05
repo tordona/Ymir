@@ -223,6 +223,7 @@ target_precompile_headers(satemu-core
         <thread>
         <type_traits>
         <unordered_map>
+        <unordered_set>
         <utility>
         <variant>
         <vector>
