@@ -80,4 +80,7 @@ EmuEvent InsertBackupMemoryCartridge(std::filesystem::path path);
 EmuEvent Insert8MbitDRAMCartridge();
 EmuEvent Insert32MbitDRAMCartridge();
 
+EmuEvent DeleteBackupFile(std::string filename, bool external);
+EmuEvent FormatBackupMemory(bool external);
+
 } // namespace app::events::emu

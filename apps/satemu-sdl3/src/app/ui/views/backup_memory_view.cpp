@@ -239,6 +239,7 @@ void BackupMemoryView::Display() {
     DisplayFileImportOverwriteModal(files);
     DisplayFileImportResultModal();
     DisplayFilesExportSuccessfulModal();
+    DisplayImageImportSuccessfulModal();
     DisplayImageExportSuccessfulModal();
     DisplayErrorModal();
 }
@@ -385,11 +386,9 @@ void BackupMemoryView::DisplayConfirmDeleteModal(std::span<bup::BackupFileInfo> 
         ImGui::PopStyleVar();*/
 
         if (ImGui::Button("OK", ImVec2(80, 0))) {
-            assert(m_bup != nullptr);
-            // TODO: should do this in the emulator thread
             for (uint32 item : m_selected) {
                 auto &file = files[item];
-                m_bup->Delete(file.header.filename);
+                m_context.EnqueueEvent(events::emu::DeleteBackupFile(file.header.filename, m_external));
             }
             m_selected.clear();
             ImGui::CloseCurrentPopup();
@@ -411,9 +410,7 @@ void BackupMemoryView::DisplayConfirmFormatModal() {
         ImGui::Text("Are you sure you want to format %s?", m_name.c_str());
 
         if (ImGui::Button("Yes", ImVec2(80, 0))) {
-            assert(m_bup != nullptr);
-            // TODO: should do this in the emulator thread
-            m_bup->Format();
+            m_context.EnqueueEvent(events::emu::FormatBackupMemory(m_external));
             m_selected.clear();
             ImGui::CloseCurrentPopup();
         }

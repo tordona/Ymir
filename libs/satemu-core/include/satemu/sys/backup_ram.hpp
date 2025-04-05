@@ -43,6 +43,8 @@ public:
     // `error` will contain any error that occurs while loading or manipulating the file.
     void CreateFrom(const std::filesystem::path &path, BackupMemorySize size, std::error_code &error);
 
+    bool CopyFrom(const IBackupMemory &backupRAM) final;
+
     uint8 ReadByte(uint32 address) const final;
     uint16 ReadWord(uint32 address) const final;
     uint32 ReadLong(uint32 address) const final;
@@ -62,9 +64,10 @@ public:
 
     void Format() final;
 
-    std::vector<BackupFileInfo> List() final;
-    std::optional<BackupFileInfo> GetInfo(std::string_view filename) final;
-    std::optional<BackupFile> Export(std::string_view filename) final;
+    std::vector<BackupFileInfo> List() const final;
+    std::optional<BackupFileInfo> GetInfo(std::string_view filename) const final;
+    std::optional<BackupFile> Export(std::string_view filename) const final;
+    std::vector<BackupFile> ExportAll() const final;
     BackupFileImportResult Import(const BackupFile &file, bool overwrite) final;
     bool Delete(std::string_view filename) final;
 
@@ -93,6 +96,7 @@ private:
     //
     // `force` forces the rebuild even if the dirty flag is clear.
     void RebuildFileList(bool force = false);
+    void RebuildFileList(bool force = false) const;
 
     // Checks if the header is valid.
     bool CheckHeader() const;
@@ -100,6 +104,7 @@ private:
     // Finds the file with the given filename.
     // Returns nullptr if the file cannot be found.
     BackupFileParams *FindFile(std::string_view filename);
+    const BackupFileParams *FindFile(std::string_view filename) const;
 
     // Reads in the backup file header from the given block.
     void ReadHeader(uint16 blockIndex, BackupFileHeader &header) const;
@@ -107,6 +112,9 @@ private:
     // Reads the block list from the given block.
     // The list contains `blockIndex` as the first entry.
     std::vector<uint16> ReadBlockList(uint16 blockIndex) const;
+
+    // Builds a backup file.
+    BackupFile BuildFile(const BackupFileParams &params) const;
 };
 
 } // namespace satemu::bup

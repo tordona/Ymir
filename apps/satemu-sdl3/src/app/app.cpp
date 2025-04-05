@@ -1489,11 +1489,13 @@ void App::EmulatorThread() {
             }
 
             case ReplaceInternalBackupMemory:
-                m_context.saturn.mem.SetInternalBackupRAM(std::move(std::get<satemu::bup::BackupMemory>(evt.value)));
+                m_context.saturn.mem.GetInternalBackupRAM().CopyFrom(std::get<satemu::bup::BackupMemory>(evt.value));
                 break;
             case ReplaceExternalBackupMemory:
-                m_context.saturn.InsertCartridge<satemu::cart::BackupMemoryCartridge>(
-                    std::move(std::get<satemu::bup::BackupMemory>(evt.value)));
+                if (auto *cart =
+                        satemu::cart::As<satemu::cart::CartType::BackupMemory>(m_context.saturn.GetCartridge())) {
+                    cart->CopyBackupMemoryFrom(std::get<satemu::bup::BackupMemory>(evt.value));
+                }
                 break;
 
             case RunFunction: std::get<std::function<void(SharedContext &)>>(evt.value)(m_context); break;

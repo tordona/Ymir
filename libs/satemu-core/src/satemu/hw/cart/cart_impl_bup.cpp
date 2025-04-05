@@ -22,4 +22,9 @@ BackupMemoryCartridge::BackupMemoryCartridge(bup::BackupMemory &&backupRAM)
     : BaseCartridge(GetCartID(backupRAM.Size()), CartType::BackupMemory)
     , m_backupRAM(std::move(backupRAM)) {}
 
+void BackupMemoryCartridge::CopyBackupMemoryFrom(const bup::IBackupMemory &backupRAM) {
+    ChangeID(GetCartID(backupRAM.Size()));
+    m_backupRAM.CopyFrom(backupRAM);
+}
+
 } // namespace satemu::cart

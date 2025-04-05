@@ -72,6 +72,23 @@ BackupMemoryImageLoadResult BackupMemory::LoadFrom(const std::filesystem::path &
     return BackupMemoryImageLoadResult::Success;
 }
 
+bool BackupMemory::CopyFrom(const IBackupMemory &backupRAM) {
+    // Preemptively fail to import from larger backup memories, even if their contents would fit here
+    if (backupRAM.Size() > Size()) {
+        return false;
+    }
+
+    // Clear this backup memory
+    Format();
+
+    // Copy everything from the other backup memory
+    for (auto &file : backupRAM.ExportAll()) {
+        Import(file, true);
+    }
+
+    return true;
+}
+
 void BackupMemory::CreateFrom(const std::filesystem::path &path, BackupMemorySize size, std::error_code &error) {
     error.clear();
 
@@ -227,7 +244,7 @@ void BackupMemory::Format() {
     m_dirty = false;
 }
 
-std::vector<BackupFileInfo> BackupMemory::List() {
+std::vector<BackupFileInfo> BackupMemory::List() const {
     RebuildFileList();
 
     std::vector<BackupFileInfo> files{};
@@ -237,7 +254,7 @@ std::vector<BackupFileInfo> BackupMemory::List() {
     return files;
 }
 
-std::optional<BackupFileInfo> BackupMemory::GetInfo(std::string_view filename) {
+std::optional<BackupFileInfo> BackupMemory::GetInfo(std::string_view filename) const {
     RebuildFileList();
 
     for (auto &params : m_fileParams) {
@@ -248,7 +265,7 @@ std::optional<BackupFileInfo> BackupMemory::GetInfo(std::string_view filename) {
     return std::nullopt;
 }
 
-std::optional<BackupFile> BackupMemory::Export(std::string_view filename) {
+std::optional<BackupFile> BackupMemory::Export(std::string_view filename) const {
     RebuildFileList();
 
     const BackupFileParams *params = FindFile(filename);
@@ -256,42 +273,17 @@ std::optional<BackupFile> BackupMemory::Export(std::string_view filename) {
         return std::nullopt;
     }
 
-    const BackupFileInfo &info = params->info;
+    return BuildFile(*params);
+}
 
-    BackupFile file{};
-    file.header = info.header;
+std::vector<BackupFile> BackupMemory::ExportAll() const {
+    RebuildFileList();
 
-    const auto &blockList = params->blocks;
-    const uint32 blockListSize = blockList.size() * 2;
-    uint32 blockListIndex = 0;
-
-    uint32 blockListRemaining = blockListSize;
-    uint32 remaining = info.size;
-
-    while (remaining > 0) {
-        const uint32 blockOffset = blockList[blockListIndex] * m_blockSize;
-        uint32 innerOffset = blockListIndex == 0 ? 0x22 : 0x04;
-        uint32 availBytes = m_blockSize - innerOffset;
-        blockListIndex++;
-
-        // Skip block list
-        if (blockListRemaining >= availBytes) {
-            blockListRemaining -= availBytes;
-            continue;
-        } else if (blockListRemaining > 0) {
-            availBytes -= blockListRemaining;
-            innerOffset += blockListRemaining;
-            blockListRemaining = 0;
-        }
-
-        // Read data
-        availBytes = std::min(availBytes, remaining);
-        remaining -= availBytes;
-        file.data.insert(file.data.end(), &m_backupRAM[blockOffset + innerOffset],
-                         &m_backupRAM[blockOffset + innerOffset + availBytes]);
+    std::vector<BackupFile> files{};
+    for (auto &params : m_fileParams) {
+        files.push_back(BuildFile(params));
     }
-
-    return file;
+    return files;
 }
 
 BackupFileImportResult BackupMemory::Import(const BackupFile &file, bool overwrite) {
@@ -525,6 +517,10 @@ void BackupMemory::RebuildFileList(bool force) {
     }
 }
 
+void BackupMemory::RebuildFileList(bool force) const {
+    const_cast<BackupMemory *>(this)->RebuildFileList(force);
+}
+
 bool BackupMemory::CheckHeader() const {
     // Check that the first block contains the header
     for (uint32 i = 0; i < m_blockSize; i++) {
@@ -552,6 +548,10 @@ BackupMemory::BackupFileParams *BackupMemory::FindFile(std::string_view filename
     }
 
     return nullptr;
+}
+
+const BackupMemory::BackupFileParams *BackupMemory::FindFile(std::string_view filename) const {
+    return const_cast<BackupMemory *>(this)->FindFile(filename);
 }
 
 void BackupMemory::ReadHeader(uint16 blockIndex, BackupFileHeader &header) const {
@@ -593,6 +593,45 @@ std::vector<uint16> BackupMemory::ReadBlockList(uint16 blockIndex) const {
     } while (offset < m_backupRAM.size());
 
     return blockList;
+}
+
+BackupFile BackupMemory::BuildFile(const BackupFileParams &params) const {
+    const BackupFileInfo &info = params.info;
+
+    BackupFile file{};
+    file.header = info.header;
+
+    const auto &blockList = params.blocks;
+    const uint32 blockListSize = blockList.size() * 2;
+    uint32 blockListIndex = 0;
+
+    uint32 blockListRemaining = blockListSize;
+    uint32 remaining = info.size;
+
+    while (remaining > 0) {
+        const uint32 blockOffset = blockList[blockListIndex] * m_blockSize;
+        uint32 innerOffset = blockListIndex == 0 ? 0x22 : 0x04;
+        uint32 availBytes = m_blockSize - innerOffset;
+        blockListIndex++;
+
+        // Skip block list
+        if (blockListRemaining >= availBytes) {
+            blockListRemaining -= availBytes;
+            continue;
+        } else if (blockListRemaining > 0) {
+            availBytes -= blockListRemaining;
+            innerOffset += blockListRemaining;
+            blockListRemaining = 0;
+        }
+
+        // Read data
+        availBytes = std::min(availBytes, remaining);
+        remaining -= availBytes;
+        file.data.insert(file.data.end(), &m_backupRAM[blockOffset + innerOffset],
+                         &m_backupRAM[blockOffset + innerOffset + availBytes]);
+    }
+
+    return file;
 }
 
 } // namespace satemu::bup

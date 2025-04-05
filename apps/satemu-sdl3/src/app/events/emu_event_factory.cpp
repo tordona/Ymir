@@ -174,4 +174,28 @@ EmuEvent Insert32MbitDRAMCartridge() {
     return RunFunction([](SharedContext &ctx) { ctx.saturn.InsertCartridge<cart::DRAM32MbitCartridge>(); });
 }
 
+EmuEvent DeleteBackupFile(std::string filename, bool external) {
+    if (external) {
+        return RunFunction([=](SharedContext &ctx) {
+            if (auto *cart = cart::As<cart::CartType::BackupMemory>(ctx.saturn.GetCartridge())) {
+                cart->GetBackupMemory().Delete(filename);
+            }
+        });
+    } else {
+        return RunFunction([=](SharedContext &ctx) { ctx.saturn.mem.GetInternalBackupRAM().Delete(filename); });
+    }
+}
+
+EmuEvent FormatBackupMemory(bool external) {
+    if (external) {
+        return RunFunction([](SharedContext &ctx) {
+            if (auto *cart = cart::As<cart::CartType::BackupMemory>(ctx.saturn.GetCartridge())) {
+                cart->GetBackupMemory().Format();
+            }
+        });
+    } else {
+        return RunFunction([](SharedContext &ctx) { ctx.saturn.mem.GetInternalBackupRAM().Format(); });
+    }
+}
+
 } // namespace app::events::emu

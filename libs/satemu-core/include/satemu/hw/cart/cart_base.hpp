@@ -36,6 +36,11 @@ public:
     virtual void PokeByte(uint32 address, uint8 value) = 0;
     virtual void PokeWord(uint32 address, uint16 value) = 0;
 
+protected:
+    void ChangeID(uint8 id) {
+        m_id = id;
+    }
+
 private:
     uint8 m_id;
     CartType m_type;

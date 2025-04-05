@@ -52,6 +52,8 @@ public:
         return m_backupRAM;
     }
 
+    void CopyBackupMemoryFrom(const bup::IBackupMemory &backupRAM);
+
 private:
     bup::BackupMemory m_backupRAM;
 };

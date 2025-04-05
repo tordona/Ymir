@@ -59,6 +59,13 @@ public:
     virtual void WriteWord(uint32 address, uint16 value) = 0;
     virtual void WriteLong(uint32 address, uint32 value) = 0;
 
+    // Replaces the contents of this backup memory with the contents of the given backup memory.
+    //
+    // Returns true if the entire contents of `backupRAM` were copied to this backup memory
+    // Returns false if `backupRAM` is larger than this backup memory.
+    // Note that copying from a smaller backup memory is supported.
+    virtual bool CopyFrom(const IBackupMemory &backupRAM) = 0;
+
     // Reads the entire backup memory into a vector.
     virtual std::vector<uint8> ReadAll() const = 0;
 
@@ -81,19 +88,22 @@ public:
     virtual void Format() = 0;
 
     // Retrieves a list of backup files stored in this backup memory.
-    virtual std::vector<BackupFileInfo> List() = 0;
+    virtual std::vector<BackupFileInfo> List() const = 0;
 
     // Attempts to get information about a backup file.
     //
     // Returns a BackupFileInfo with the file information if it exists.
     // Returns std::nullopt if no such file exists.
-    virtual std::optional<BackupFileInfo> GetInfo(std::string_view filename) = 0;
+    virtual std::optional<BackupFileInfo> GetInfo(std::string_view filename) const = 0;
 
     // Attempts to export the backup file with the specified name.
     //
     // Returns a BackupFile with the file's contents if it exists.
     // Returns std::nullopt if no such file exists.
-    virtual std::optional<BackupFile> Export(std::string_view filename) = 0;
+    virtual std::optional<BackupFile> Export(std::string_view filename) const = 0;
+
+    // Exports all backup files.
+    virtual std::vector<BackupFile> ExportAll() const = 0;
 
     // Attempts to import the specified backup file, optionally overwriting an existing file with the same name as the
     // one being imported.
