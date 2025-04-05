@@ -13,7 +13,7 @@ void CartridgeInfo(SharedContext &ctx) {
     case cart::CartType::None: ImGui::TextUnformatted("None"); break;
     case cart::CartType::BackupMemory: //
     {
-        auto &bupCart = *cart::As<cart::CartType::BackupMemory>(&cart);
+        auto &bupCart = *cart.As<cart::CartType::BackupMemory>();
         ImGui::Text("%u Mbit Backup RAM", bupCart.GetBackupMemory().Size() * 8u / 1024u / 1024u);
         break;
     }

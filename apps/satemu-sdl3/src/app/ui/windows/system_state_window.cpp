@@ -382,8 +382,7 @@ void SystemStateWindow::DrawBackupMemory() {
         drawBup("Internal", &m_context.saturn.mem.GetInternalBackupRAM());
         {
             std::unique_lock lock{m_context.locks.cart};
-            auto *bupCart = cart::As<cart::CartType::BackupMemory>(&m_context.saturn.GetCartridge());
-            if (bupCart != nullptr) {
+            if (auto *bupCart = m_context.saturn.GetCartridge().As<cart::CartType::BackupMemory>()) {
                 drawBup("External", &bupCart->GetBackupMemory());
             } else {
                 drawBup("External", nullptr);

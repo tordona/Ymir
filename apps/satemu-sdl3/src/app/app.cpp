@@ -1492,8 +1492,7 @@ void App::EmulatorThread() {
                 m_context.saturn.mem.GetInternalBackupRAM().CopyFrom(std::get<satemu::bup::BackupMemory>(evt.value));
                 break;
             case ReplaceExternalBackupMemory:
-                if (auto *cart =
-                        satemu::cart::As<satemu::cart::CartType::BackupMemory>(m_context.saturn.GetCartridge())) {
+                if (auto *cart = m_context.saturn.GetCartridge().As<satemu::cart::CartType::BackupMemory>()) {
                     cart->CopyBackupMemoryFrom(std::get<satemu::bup::BackupMemory>(evt.value));
                 }
                 break;

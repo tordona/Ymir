@@ -40,7 +40,7 @@ void BackupMemoryManagerWindow::DrawContents() {
 
             ImGui::PushID("cart_bup");
             std::unique_lock lock{m_context.locks.cart};
-            if (auto *bupCart = cart::As<cart::CartType::BackupMemory>(m_context.saturn.GetCartridge())) {
+            if (auto *bupCart = m_context.saturn.GetCartridge().As<cart::CartType::BackupMemory>()) {
                 m_cartBupView.SetBackupMemory(&bupCart->GetBackupMemory());
             } else {
                 m_cartBupView.SetBackupMemory(nullptr);

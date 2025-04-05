@@ -177,7 +177,7 @@ EmuEvent Insert32MbitDRAMCartridge() {
 EmuEvent DeleteBackupFile(std::string filename, bool external) {
     if (external) {
         return RunFunction([=](SharedContext &ctx) {
-            if (auto *cart = cart::As<cart::CartType::BackupMemory>(ctx.saturn.GetCartridge())) {
+            if (auto *cart = ctx.saturn.GetCartridge().As<cart::CartType::BackupMemory>()) {
                 cart->GetBackupMemory().Delete(filename);
             }
         });
@@ -189,7 +189,7 @@ EmuEvent DeleteBackupFile(std::string filename, bool external) {
 EmuEvent FormatBackupMemory(bool external) {
     if (external) {
         return RunFunction([](SharedContext &ctx) {
-            if (auto *cart = cart::As<cart::CartType::BackupMemory>(ctx.saturn.GetCartridge())) {
+            if (auto *cart = ctx.saturn.GetCartridge().As<cart::CartType::BackupMemory>()) {
                 cart->GetBackupMemory().Format();
             }
         });

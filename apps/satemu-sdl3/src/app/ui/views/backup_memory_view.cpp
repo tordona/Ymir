@@ -553,7 +553,8 @@ void BackupMemoryView::DisplayFileImportOverwriteModal(std::span<bup::BackupFile
                     continue;
                 }
 
-                // TODO: should do this in the emulator thread
+                // TODO: should do this in the emulator thread; but needs two-way communication
+                // - std::future/std::promise?
                 // Attempt to overwrite files
                 switch (m_bup->Import(ovFile.file, true)) {
                 case bup::BackupFileImportResult::Imported: // fallthrough
@@ -770,7 +771,8 @@ void BackupMemoryView::ImportFiles(std::span<std::filesystem::path> files) {
     for (auto &file : files) {
         switch (ImportFile(file, bupFile, error)) {
         case ImportFileResult::Success:
-            // TODO: should do this in the emulator thread
+            // TODO: should do this in the emulator thread; but needs two-way communication
+            // - std::future/std::promise?
             // Attempt to import file without overwriting
             switch (m_bup->Import(bupFile, false)) {
             case bup::BackupFileImportResult::Imported: m_importSuccess.push_back(bupFile.header); break;
