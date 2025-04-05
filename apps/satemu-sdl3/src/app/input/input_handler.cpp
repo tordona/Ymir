@@ -14,7 +14,7 @@ void InputHandler::ProcessInputEvents() {
     // Process all pending input events
     InputActionEvent inputEvent;
     while (m_inputContext.TryPollNextEvent(inputEvent)) {
-        if (auto handler = m_actionHandlers.find(inputEvent.action); handler != m_actionHandlers.end()) {
+        if (auto handler = m_actionHandlers.find(inputEvent.action.action); handler != m_actionHandlers.end()) {
             handler->second(inputEvent);
         }
     }

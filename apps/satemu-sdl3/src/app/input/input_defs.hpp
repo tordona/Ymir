@@ -15,6 +15,13 @@ using ActionID = uint32;
 // The "no action" or "unmapped binding" action identifier.
 inline constexpr ActionID kNoAction = 0;
 
+// Action context. Enables the same action to be handled in multiple different contexts (such as handling inputs
+// for multiple players).
+//
+// The context is large enough to accomodate a pointer; feel free to cast it to void* should you need to refer to
+// more complex or structured data.
+using ActionContext = uintptr_t;
+
 // Keyboard key modifiers.
 enum class KeyModifier {
     None = 0,
@@ -445,12 +452,21 @@ struct InputEvent {
     }
 };
 
+struct BoundAction {
+    ActionID action;
+    ActionContext context;
+
+    bool operator==(const BoundAction &) const = default;
+};
+
 struct InputActionEvent {
     InputEvent input;
-    ActionID action;
+    BoundAction action;
 };
 
 } // namespace app::input
+
+ENABLE_BITMASK_OPERATORS(app::input::KeyModifier);
 
 template <>
 struct std::hash<app::input::InputEvent> {
@@ -480,4 +496,10 @@ struct std::hash<app::input::InputEvent> {
     }
 };
 
-ENABLE_BITMASK_OPERATORS(app::input::KeyModifier);
+template <>
+struct std::hash<app::input::BoundAction> {
+    std::size_t operator()(const app::input::BoundAction &e) const noexcept {
+        return (std::hash<app::input::ActionID>{}(e.action) << 1ull) ^
+               std::hash<app::input::ActionContext>{}(e.context);
+    }
+};
