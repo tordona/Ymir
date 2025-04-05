@@ -53,7 +53,7 @@ ActionID InputContext::GetMappedAction(int joystickButton, bool pressed) const {
     return GetMappedAction(InputEvent{joystickButton, pressed});
 }
 
-const std::unordered_map<InputEvent, ActionID, typename InputEvent::Hash> &InputContext::GetMappedActions() const {
+const std::unordered_map<InputEvent, ActionID> &InputContext::GetMappedActions() const {
     return m_actions;
 }
 

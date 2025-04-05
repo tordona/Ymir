@@ -39,7 +39,7 @@ public:
     ActionID GetMappedAction(uint32 id, GamepadButton button, bool pressed = true) const;
     // Gets the action mapped to the joystick button.
     ActionID GetMappedAction(int joystickButton, bool pressed = true) const;
-    const std::unordered_map<InputEvent, ActionID, typename InputEvent::Hash> &GetMappedActions() const;
+    const std::unordered_map<InputEvent, ActionID> &GetMappedActions() const;
 
     // Gets the input event mapped to the action.
     InputEvent GetMappedInput(ActionID action) const;
@@ -63,7 +63,7 @@ public:
     bool TryPollNextEvent(InputActionEvent &event);
 
 private:
-    std::unordered_map<InputEvent, ActionID, typename InputEvent::Hash> m_actions;
+    std::unordered_map<InputEvent, ActionID> m_actions;
     std::unordered_map<ActionID, InputEvent> m_actionsReverse;
 
     moodycamel::ConcurrentQueue<InputActionEvent> m_actionQueue;

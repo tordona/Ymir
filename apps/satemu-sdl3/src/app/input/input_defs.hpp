@@ -424,32 +424,6 @@ struct InputEvent {
         , event({.joystickButton = joystickButton})
         , activated(activated) {}
 
-    struct Hash {
-        std::size_t operator()(const InputEvent &e) const {
-            std::size_t base = 0;
-            switch (e.type) {
-            case Type::None: base = 0; break;
-            case Type::KeyboardKey: base = static_cast<std::size_t>(e.event.keyboardKey); break;
-            case Type::KeyCombo:
-                base = static_cast<std::size_t>(e.event.keyCombo.key) |
-                       (static_cast<std::size_t>(e.event.keyCombo.modifiers) << 24ull);
-                break;
-            case Type::MouseButton: base = static_cast<std::size_t>(e.event.mouseButton); break;
-            case Type::MouseCombo:
-                base = static_cast<std::size_t>(e.event.mouseCombo.button) |
-                       (static_cast<std::size_t>(e.event.mouseCombo.modifiers) << 24ull);
-                break;
-            case Type::GamepadButton:
-                base = static_cast<std::size_t>(e.event.gamepad.button) |
-                       (static_cast<std::size_t>(e.event.gamepad.id) << 24ull);
-                break;
-            case Type::JoystickButton: base = static_cast<std::size_t>(e.event.joystickButton); break;
-            }
-            return base | (static_cast<std::size_t>(e.type) << 32ull) |
-                   (static_cast<std::size_t>(e.activated) << 63ull);
-        }
-    };
-
     bool operator==(const InputEvent &rhs) const {
         if (type != rhs.type) {
             return false;
@@ -477,5 +451,33 @@ struct InputActionEvent {
 };
 
 } // namespace app::input
+
+template <>
+struct std::hash<app::input::InputEvent> {
+    std::size_t operator()(const app::input::InputEvent &e) const noexcept {
+        using Type = app::input::InputEvent::Type;
+
+        std::size_t base = 0;
+        switch (e.type) {
+        case Type::None: base = 0; break;
+        case Type::KeyboardKey: base = static_cast<std::size_t>(e.event.keyboardKey); break;
+        case Type::KeyCombo:
+            base = static_cast<std::size_t>(e.event.keyCombo.key) |
+                   (static_cast<std::size_t>(e.event.keyCombo.modifiers) << 24ull);
+            break;
+        case Type::MouseButton: base = static_cast<std::size_t>(e.event.mouseButton); break;
+        case Type::MouseCombo:
+            base = static_cast<std::size_t>(e.event.mouseCombo.button) |
+                   (static_cast<std::size_t>(e.event.mouseCombo.modifiers) << 24ull);
+            break;
+        case Type::GamepadButton:
+            base = static_cast<std::size_t>(e.event.gamepad.button) |
+                   (static_cast<std::size_t>(e.event.gamepad.id) << 24ull);
+            break;
+        case Type::JoystickButton: base = static_cast<std::size_t>(e.event.joystickButton); break;
+        }
+        return base | (static_cast<std::size_t>(e.type) << 32ull) | (static_cast<std::size_t>(e.activated) << 63ull);
+    }
+};
 
 ENABLE_BITMASK_OPERATORS(app::input::KeyModifier);
