@@ -217,22 +217,16 @@ EmuEvent UpdateRTCParameters() {
     });
 }
 
-EmuEvent SetThreadedVDPRendering(bool threaded) {
-    return RunFunction([=](SharedContext &ctx) {
-        // TODO: implement
-        devlog::debug<grp::base>("Threaded VDP rendering option is unimplemented");
-    });
+EmuEvent EnableThreadedVDP1Rendering(bool enable) {
+    return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.video.threadedVDP1 = enable; });
 }
 
-EmuEvent UseRendererThreadForVDP1(bool use) {
-    return RunFunction([=](SharedContext &ctx) {
-        // TODO: implement
-        devlog::debug<grp::base>("VDP1 rendering on thread option is unimplemented");
-    });
+EmuEvent EnableThreadedVDP2Rendering(bool enable) {
+    return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.video.threadedVDP2 = enable; });
 }
 
-EmuEvent SetThreadedSCSP(bool threaded) {
-    return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.audio.threadedSCSP = threaded; });
+EmuEvent EnableThreadedSCSP(bool enable) {
+    return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.audio.threadedSCSP = enable; });
 }
 
 } // namespace app::events::emu

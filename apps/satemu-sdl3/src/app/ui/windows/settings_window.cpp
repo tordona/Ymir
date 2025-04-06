@@ -16,7 +16,7 @@ static void ExplanationTooltip(const char *explanation) {
     ImGui::SameLine();
     ImGui::TextDisabled("(?)");
     if (ImGui::BeginItemTooltip()) {
-        ImGui::PushTextWrapPos(350.0f);
+        ImGui::PushTextWrapPos(450.0f);
         ImGui::TextUnformatted(explanation);
         ImGui::PopTextWrapPos();
         ImGui::EndTooltip();
@@ -326,6 +326,7 @@ void SettingsWindow::DrawInputTab() {
 
 void SettingsWindow::DrawVideoTab() {
     auto &settings = m_context.settings.video;
+    auto &config = m_context.saturn.configuration.video;
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -370,33 +371,29 @@ void SettingsWindow::DrawVideoTab() {
     ImGui::SeparatorText("Performance");
     ImGui::PopFont();
 
-    if (MakeDirty(ImGui::Checkbox("Run the software renderer on a thread", &settings.threadedRendering))) {
-        m_context.EnqueueEvent(events::emu::SetThreadedVDPRendering(settings.threadedRendering));
-    }
-    ExplanationTooltip("Greatly improves performance at the cost of accuracy.\n"
-                       "A few select games may break when this option is enabled.");
+    // TODO: renderer backend options
 
-    if (!settings.threadedRendering) {
-        ImGui::BeginDisabled();
+    bool threadedVDP1 = config.threadedVDP1;
+    if (MakeDirty(ImGui::Checkbox("Threaded VDP1 renderer", &threadedVDP1))) {
+        m_context.EnqueueEvent(events::emu::EnableThreadedVDP1Rendering(threadedVDP1));
     }
-    ImGui::Indent();
-    {
-        if (MakeDirty(ImGui::Checkbox("Use renderer thread to render VDP1", &settings.threadedVDP1))) {
-            m_context.EnqueueEvent(events::emu::UseRendererThreadForVDP1(settings.threadedVDP1));
-        }
-        ExplanationTooltip("Moves VDP1 rendering to the renderer thread.\n"
-                           "Slightly improves performance at the cost of accuracy.\n"
-                           "A few select games may break when this option is enabled.\n"
-                           "When disabled, VDP1 rendering is done on the emulator thread.");
+    ExplanationTooltip("Runs the software VDP1 renderer in a dedicated thread.\n"
+                       "Slightly improves performance at the cost of accuracy.\n"
+                       "A few select games may break when this option is enabled.\n"
+                       "When disabled, VDP1 rendering is done on the emulator thread.");
+
+    bool threadedVDP2 = config.threadedVDP2;
+    if (MakeDirty(ImGui::Checkbox("Threaded VDP2 renderer", &threadedVDP2))) {
+        m_context.EnqueueEvent(events::emu::EnableThreadedVDP2Rendering(threadedVDP2));
     }
-    ImGui::Unindent();
-    if (!settings.threadedRendering) {
-        ImGui::EndDisabled();
-    }
+    ExplanationTooltip("Runs the software VDP2 renderer in a dedicated thread.\n"
+                       "Greatly improves performance at the cost of accuracy.\n"
+                       "A few select games may break when this option is enabled.\n"
+                       "When disabled, VDP2 rendering is done on the emulator thread.");
 }
 
 void SettingsWindow::DrawAudioTab() {
-    auto &settings = m_context.saturn.configuration.audio;
+    auto &config = m_context.saturn.configuration.audio;
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -405,8 +402,8 @@ void SettingsWindow::DrawAudioTab() {
     auto interpOption = [&](const char *name, InterpMode mode) {
         const std::string label = fmt::format("{}##sample_interp", name);
         ImGui::SameLine();
-        if (MakeDirty(ImGui::RadioButton(label.c_str(), settings.interpolation == mode))) {
-            settings.interpolation = mode;
+        if (MakeDirty(ImGui::RadioButton(label.c_str(), config.interpolation == mode))) {
+            config.interpolation = mode;
         }
     };
 
@@ -427,9 +424,9 @@ void SettingsWindow::DrawAudioTab() {
     ImGui::SeparatorText("Performance");
     ImGui::PopFont();
 
-    bool threadedSCSP = settings.threadedSCSP;
+    bool threadedSCSP = config.threadedSCSP;
     if (MakeDirty(ImGui::Checkbox("Run the SCSP and sound CPU on a thread", &threadedSCSP))) {
-        m_context.EnqueueEvent(events::emu::SetThreadedSCSP(threadedSCSP));
+        m_context.EnqueueEvent(events::emu::EnableThreadedSCSP(threadedSCSP));
     }
     ExplanationTooltip("Improves performance at the cost of accuracy.\n"
                        "A few select games may break when this option is enabled.");

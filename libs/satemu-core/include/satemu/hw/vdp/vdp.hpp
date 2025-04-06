@@ -5,6 +5,7 @@
 #include "vdp1_regs.hpp"
 #include "vdp2_regs.hpp"
 
+#include <satemu/core/configuration.hpp>
 #include <satemu/core/scheduler.hpp>
 #include <satemu/sys/bus.hpp>
 #include <satemu/sys/system.hpp>
@@ -39,7 +40,7 @@ namespace satemu::vdp {
 // Contains both VDP1 and VDP2
 class VDP {
 public:
-    VDP(core::Scheduler &scheduler);
+    VDP(core::Scheduler &scheduler, core::Configuration::Video &config);
     ~VDP();
 
     void Reset(bool hard);
@@ -102,6 +103,12 @@ private:
 
     friend struct satemu::Saturn;
     void SetVideoStandard(sys::VideoStandard videoStandard);
+
+    // -------------------------------------------------------------------------
+    // Configuration
+
+    void EnableThreadedVDP2Rendering(bool enable);
+    void EnableThreadedVDP1Rendering(bool enable);
 
     // -------------------------------------------------------------------------
     // VDP1 memory/register access

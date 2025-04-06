@@ -167,9 +167,6 @@ void Settings::ResetToDefaults() {
     video.forcedAspect = 4.0 / 3.0;
     video.autoResizeWindow = false;
     video.displayVideoOutputInWindow = false;
-
-    video.threadedRendering = true;
-    video.threadedVDP1 = true;
 }
 
 SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
@@ -233,8 +230,8 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         Parse(tblVideo, "AutoResizeWindow", video.autoResizeWindow);
         Parse(tblVideo, "DisplayVideoOutputInWindow", video.displayVideoOutputInWindow);
 
-        Parse(tblVideo, "ThreadedRendering", video.threadedRendering);
-        Parse(tblVideo, "ThreadedVDP1", video.threadedVDP1);
+        Parse(tblVideo, "ThreadedVDP1", m_emuConfig.video.threadedVDP1);
+        Parse(tblVideo, "ThreadedVDP2", m_emuConfig.video.threadedVDP2);
     }
 
     if (auto tblAudio = data["Audio"]) {
@@ -286,8 +283,8 @@ SettingsSaveResult Settings::Save() {
             {"ForcedAspect", video.forcedAspect},
             {"AutoResizeWindow", video.autoResizeWindow},
             {"DisplayVideoOutputInWindow", video.displayVideoOutputInWindow},
-            {"ThreadedRendering", video.threadedRendering},
-            {"ThreadedVDP1", video.threadedVDP1},
+            {"ThreadedVDP1", m_emuConfig.video.threadedVDP1.Get()},
+            {"ThreadedVDP2", m_emuConfig.video.threadedVDP2.Get()},
         }}},
 
         {"Audio", toml::table{{

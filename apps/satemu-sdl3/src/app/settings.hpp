@@ -144,9 +144,6 @@ public:
         double forcedAspect;
         bool autoResizeWindow;
         bool displayVideoOutputInWindow;
-
-        bool threadedRendering;
-        bool threadedVDP1;
     } video;
 
 private:

@@ -293,8 +293,6 @@ void App::ApplySettingsToEmulator() {
     m_context.EnqueueEvent(events::emu::UpdateRTCMode());
     m_context.EnqueueEvent(events::emu::UpdateRTCResetStrategy());
     m_context.EnqueueEvent(events::emu::UpdateRTCParameters());
-    m_context.EnqueueEvent(events::emu::SetThreadedVDPRendering(m_context.settings.video.threadedRendering));
-    m_context.EnqueueEvent(events::emu::UseRendererThreadForVDP1(m_context.settings.video.threadedVDP1));
 }
 
 void App::RunEmulator() {

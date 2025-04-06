@@ -92,9 +92,9 @@ EmuEvent UpdateRTCMode();
 EmuEvent UpdateRTCResetStrategy();
 EmuEvent UpdateRTCParameters();
 
-EmuEvent SetThreadedVDPRendering(bool threaded);
-EmuEvent UseRendererThreadForVDP1(bool use);
+EmuEvent EnableThreadedVDP1Rendering(bool enable);
+EmuEvent EnableThreadedVDP2Rendering(bool enable);
 
-EmuEvent SetThreadedSCSP(bool threaded);
+EmuEvent EnableThreadedSCSP(bool enable);
 
 } // namespace app::events::emu

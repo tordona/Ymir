@@ -34,7 +34,7 @@ Saturn::Saturn()
     : masterSH2(mainBus, true, m_systemFeatures)
     , slaveSH2(mainBus, false, m_systemFeatures)
     , SCU(m_scheduler, mainBus)
-    , VDP(m_scheduler)
+    , VDP(m_scheduler, configuration.video)
     , SMPC(m_scheduler, *this)
     , SCSP(m_scheduler, configuration.audio)
     , CDBlock(m_scheduler) {

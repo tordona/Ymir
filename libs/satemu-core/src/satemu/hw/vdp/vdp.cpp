@@ -76,8 +76,11 @@ namespace grp {
 
 } // namespace grp
 
-VDP::VDP(core::Scheduler &scheduler)
+VDP::VDP(core::Scheduler &scheduler, core::Configuration::Video &config)
     : m_scheduler(scheduler) {
+
+    config.threadedVDP2.Observe([&](const bool &value) { EnableThreadedVDP2Rendering(value); });
+    config.threadedVDP1.Observe([&](const bool &value) { EnableThreadedVDP1Rendering(value); });
 
     m_phaseUpdateEvent = scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent);
 
@@ -382,6 +385,16 @@ void VDP::SetVideoStandard(sys::VideoStandard videoStandard) {
         m_VDP2.TVSTAT.PAL = pal;
         m_VDP2.TVMDDirty = true;
     }
+}
+
+void VDP::EnableThreadedVDP2Rendering(bool enable) {
+    // TODO: implement
+    devlog::debug<grp::base>("{} threaded VDP2 rendering is unimplemented", (enable ? "Enabling" : "Disabling"));
+}
+
+void VDP::EnableThreadedVDP1Rendering(bool enable) {
+    // TODO: implement
+    devlog::debug<grp::base>("{} threaded VDP1 rendering is unimplemented", (enable ? "Enabling" : "Disabling"));
 }
 
 template <mem_primitive T>

@@ -43,6 +43,18 @@ struct Configuration {
             std::vector<Region>{Region::NorthAmerica, Region::Japan};
     } system;
 
+    struct Video {
+        // TODO: renderer backend options
+
+        // Runs the VDP1 renderer in a dedicated thread.
+        // TODO: Doom graphics breaks or the game freezes with this
+        // TODO: move VDP1 rendering to a dedicated thread of its own
+        util::Observable<bool> threadedVDP1 = true;
+
+        // Runs the VDP2 renderer in a dedicated thread.
+        util::Observable<bool> threadedVDP2 = true;
+    } video;
+
     struct Audio {
         // Sample interpolation method.
         // The Sega Saturn uses linear interpolation.
