@@ -2939,22 +2939,22 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
                     btmColor.b = (lineColor.b + btmColor.b) / 2;
                 } else {
                     const uint8 ratio = regs.lineScreenParams.colorCalcRatio;
-                    btmColor.r = lineColor.r + (btmColor.r - lineColor.r) * ratio / 32;
-                    btmColor.g = lineColor.g + (btmColor.g - lineColor.g) * ratio / 32;
-                    btmColor.b = lineColor.b + (btmColor.b - lineColor.b) * ratio / 32;
+                    btmColor.r = lineColor.r + ((int)btmColor.r - (int)lineColor.r) * ratio / 32;
+                    btmColor.g = lineColor.g + ((int)btmColor.g - (int)lineColor.g) * ratio / 32;
+                    btmColor.b = lineColor.b + ((int)btmColor.b - (int)lineColor.b) * ratio / 32;
                 }
             }
 
             // Blend top and blended bottom layers
             if (colorCalcParams.useAdditiveBlend) {
-                outputColor.r = std::min(topColor.r + btmColor.r, 255);
-                outputColor.g = std::min(topColor.g + btmColor.g, 255);
-                outputColor.b = std::min(topColor.b + btmColor.b, 255);
+                outputColor.r = std::min<uint32>(topColor.r + btmColor.r, 255u);
+                outputColor.g = std::min<uint32>(topColor.g + btmColor.g, 255u);
+                outputColor.b = std::min<uint32>(topColor.b + btmColor.b, 255u);
             } else {
                 const uint8 ratio = getColorCalcRatio(colorCalcParams.useSecondScreenRatio ? layers[1] : layers[0]);
-                outputColor.r = topColor.r + (btmColor.r - topColor.r) * ratio / 32;
-                outputColor.g = topColor.g + (btmColor.g - topColor.g) * ratio / 32;
-                outputColor.b = topColor.b + (btmColor.b - topColor.b) * ratio / 32;
+                outputColor.r = topColor.r + ((int)btmColor.r - (int)topColor.r) * ratio / 32;
+                outputColor.g = topColor.g + ((int)btmColor.g - (int)topColor.g) * ratio / 32;
+                outputColor.b = topColor.b + ((int)btmColor.b - (int)topColor.b) * ratio / 32;
             }
         } else {
             outputColor = getLayerColor(layers[0]);
