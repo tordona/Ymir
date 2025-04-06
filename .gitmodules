@@ -20,3 +20,6 @@
 	path = vendor/imgui/imgui
 	url = git@github.com:ocornut/imgui.git
 	branch = docking
+[submodule "vendor/tomlplusplus"]
+	path = vendor/tomlplusplus
+	url = git@github.com:marzer/tomlplusplus.git

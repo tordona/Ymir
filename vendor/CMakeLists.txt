@@ -61,6 +61,10 @@ add_subdirectory(concurrentqueue)
 message(VERBOSE "==> dear ImGui")
 add_subdirectory(imgui)
 
+# toml++ - https://github.com/marzer/tomlplusplus
+message(VERBOSE "==> toml++")
+add_subdirectory(tomlplusplus)
+
 # --------------------------------------------------------------------------------------------------
 # Test dependencies
 

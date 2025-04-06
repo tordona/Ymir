@@ -1,5 +1,7 @@
 #include "settings.hpp"
 
+#include <toml++/toml.hpp>
+
 namespace app {
 
 void Settings::ResetToDefaults() {
@@ -28,6 +30,8 @@ void Settings::ResetToDefaults() {
 bool Settings::Load(const std::filesystem::path &path, std::error_code &error) {
     error.clear();
 
+    // TODO: implement
+
     this->path = path;
     return false;
 }
@@ -38,6 +42,8 @@ bool Settings::Save(std::error_code &error) {
         error.assign(ENOENT, std::generic_category());
         return false;
     }
+
+    // TODO: implement
 
     return false;
 }

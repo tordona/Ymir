@@ -6,6 +6,7 @@
 #include <SDL3/SDL.h>
 #include <cxxopts.hpp>
 #include <fmt/format.h>
+#include <toml++/toml.hpp>
 
 #define _STR_IMPL(x) #x
 #define _STR(x) _STR_IMPL(x)
@@ -15,6 +16,7 @@
 #define MIO_VERSION "1.1.0" // Not exported
 #define SDL_VERSION_STR _STR(SDL_MAJOR_VERSION) "." _STR(SDL_MINOR_VERSION) "." _STR(SDL_MICRO_VERSION)
 #define MC_CONCQUEUE_VERSION "1.0.4" // Not exported
+#define TOMLPP_VERSION _STR(TOML_LIB_MAJOR) "." _STR(TOML_LIB_MINOR) "." _STR(TOML_LIB_PATCH)
 
 static const std::string fmtVersion = std::to_string(FMT_VERSION / 10000) + "." +
                                       std::to_string(FMT_VERSION / 100 % 100) + "." + std::to_string(FMT_VERSION % 100);
@@ -63,6 +65,7 @@ static const struct {
     {.name = "mio",                            .version = MIO_VERSION,                 .license = licenseMIT,       .repoURL = "https://github.com/StrikerX3/mio",                  .licenseURL = "https://github.com/StrikerX3/mio/blob/master/LICENSE"},
     {.name = "moodycamel::ConcurrentQueue<T>", .version = MC_CONCQUEUE_VERSION,        .license = licenseBSD2,      .repoURL = "https://github.com/cameron314/concurrentqueue",     .licenseURL = "https://github.com/cameron314/concurrentqueue/blob/master/LICENSE.md"},
     {.name = "SDL3",                           .version = SDL_VERSION_STR,             .license = licenseZlib,      .repoURL = "https://github.com/libsdl-org/SDL",                 .licenseURL = "https://github.com/libsdl-org/SDL/blob/main/LICENSE.txt"},
+    {.name = "toml++",                         .version = TOMLPP_VERSION,              .license = licenseMIT,       .repoURL = "https://github.com/marzer/tomlplusplus/",           .licenseURL = "https://github.com/marzer/tomlplusplus/blob/master/LICENSE",                 .homeURL = "https://marzer.github.io/tomlplusplus/"},
 };
 
 
