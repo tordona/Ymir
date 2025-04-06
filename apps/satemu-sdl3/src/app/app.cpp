@@ -245,11 +245,6 @@ int App::Run(const CommandLineOptions &options) {
         }
     }};
 
-    m_context.EnqueueEvent(events::emu::SetEmulateSH2Cache(m_context.settings.system.emulateSH2Cache));
-    m_context.EnqueueEvent(events::emu::UpdateRTCMode());
-    m_context.EnqueueEvent(events::emu::UpdateRTCResetStrategy());
-    m_context.EnqueueEvent(events::emu::UpdateRTCParameters());
-
     // Boost process priority
     util::BoostCurrentProcessPriority(m_context.settings.general.boostProcessPriority);
 
@@ -286,6 +281,20 @@ int App::Run(const CommandLineOptions &options) {
     RunEmulator();
 
     return EXIT_SUCCESS;
+}
+
+void App::ApplySettingsToEmulator() {
+    // TODO: automate this somehow (perhaps define a configuration object in the emulator core?)
+    // TODO: override from CommandLineOptions
+    m_context.EnqueueEvent(events::emu::SetEmulateSH2Cache(m_context.settings.system.emulateSH2Cache));
+    m_context.EnqueueEvent(events::emu::SetVideoStandard(m_context.settings.system.videoStandard));
+    m_context.EnqueueEvent(events::emu::UpdateRTCMode());
+    m_context.EnqueueEvent(events::emu::UpdateRTCResetStrategy());
+    m_context.EnqueueEvent(events::emu::UpdateRTCParameters());
+    m_context.EnqueueEvent(events::emu::SetThreadedVDPRendering(m_context.settings.video.threadedRendering));
+    m_context.EnqueueEvent(events::emu::UseRendererThreadForVDP1(m_context.settings.video.threadedVDP1));
+    m_context.EnqueueEvent(events::emu::UpdateSCSPInterpolation());
+    m_context.EnqueueEvent(events::emu::SetThreadedSCSP(m_context.settings.audio.threadedSCSP));
 }
 
 void App::RunEmulator() {
@@ -819,8 +828,7 @@ void App::RunEmulator() {
     // ---------------------------------
     // Emulator configuration
 
-    // TODO: pull from CommandLineOptions or configuration
-    // m_context.saturn.SetVideoStandard(satemu::sys::VideoStandard::PAL);
+    ApplySettingsToEmulator();
 
     // TODO: pull from CommandLineOptions or configuration
     static constexpr std::string_view extBupPath = "bup-ext.bin";

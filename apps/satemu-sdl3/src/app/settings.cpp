@@ -150,10 +150,10 @@ void Settings::ResetToDefaults() {
 
     // TODO: input
 
-    video.forceIntegerScaling = true;
-    video.forceAspectRatio = false;
+    video.forceIntegerScaling = false;
+    video.forceAspectRatio = true;
     video.forcedAspect = 4.0 / 3.0;
-    video.autoResizeWindow = true;
+    video.autoResizeWindow = false;
     video.displayVideoOutputInWindow = false;
 
     video.threadedRendering = true;
@@ -270,6 +270,11 @@ SettingsSaveResult Settings::Save() {
         }}},*/
 
         {"Video", toml::table{{
+            {"ForceIntegerScaling", video.forceIntegerScaling},
+            {"ForceAspectRatio", video.forceAspectRatio},
+            {"ForcedAspect", video.forcedAspect},
+            {"AutoResizeWindow", video.autoResizeWindow},
+            {"DisplayVideoOutputInWindow", video.displayVideoOutputInWindow},
             {"ThreadedRendering", video.threadedRendering},
             {"ThreadedVDP1", video.threadedVDP1},
         }}},
