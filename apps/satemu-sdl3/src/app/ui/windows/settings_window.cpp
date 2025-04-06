@@ -11,7 +11,9 @@ static void ExplanationTooltip(const char *explanation) {
     ImGui::SameLine();
     ImGui::TextDisabled("(?)");
     if (ImGui::BeginItemTooltip()) {
+        ImGui::PushTextWrapPos(350.0f);
         ImGui::TextUnformatted(explanation);
+        ImGui::PopTextWrapPos();
         ImGui::EndTooltip();
     }
 }
@@ -137,8 +139,6 @@ void SettingsWindow::DrawSystemTab() {
 
     auto &rtc = m_context.saturn.SMPC.GetRTC();
 
-    // TODO: when RTC is in virtual mode, request emulator to update date/time so that it is updated in real time
-
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Current date/time:");
     ImGui::SameLine();
@@ -171,6 +171,10 @@ void SettingsWindow::DrawSystemTab() {
             m_context.settings.MakeDirty();
         }
     } else if (settings.rtc.mode == RTCMode::Virtual) {
+        // TODO: request emulator to update date/time so that it is updated in real time
+        ExplanationTooltip(
+            "This may occasionally stop updating because the virtual RTC is only updated when the game reads from it.");
+
         if (ImGui::Button("Set to host time##curr_time")) {
             rtc.SetDateTime(util::datetime::host());
         }
@@ -188,7 +192,8 @@ void SettingsWindow::DrawSystemTab() {
             settings.rtc.virtResetBehavior = VirtualRTCResetBehavior::PreserveCurrentTime;
             m_context.EnqueueEvent(events::emu::UpdateRTCResetStrategy());
         }
-        ExplanationTooltip("The virtual RTC will continue counting from the time point prior to the reset.");
+        ExplanationTooltip("The virtual RTC will continue counting from the time point prior to the reset.\n"
+                           "The date/time persists between executions of the emulator.");
         if (MakeDirty(ImGui::RadioButton("Sync to host time##virt_rtc_reset",
                                          settings.rtc.virtResetBehavior == VirtualRTCResetBehavior::SyncToHost))) {
             settings.rtc.virtResetBehavior = VirtualRTCResetBehavior::SyncToHost;

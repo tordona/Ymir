@@ -28,7 +28,7 @@ inline constexpr int kConfigVersion = 1;
 // -------------------------------------------------------------------------------------------------
 // Enum parsers
 
-static void ParseEnum(toml::node_view<toml::node> &node, const char *name, RTCMode value) {
+static void ParseEnum(toml::node_view<toml::node> &node, const char *name, RTCMode &value) {
     if (auto opt = node[name].value<std::string>()) {
         if (*opt == "Host"s) {
             value = RTCMode::Host;
@@ -40,7 +40,7 @@ static void ParseEnum(toml::node_view<toml::node> &node, const char *name, RTCMo
     }
 }
 
-static void ParseEnum(toml::node_view<toml::node> &node, const char *name, VirtualRTCResetBehavior value) {
+static void ParseEnum(toml::node_view<toml::node> &node, const char *name, VirtualRTCResetBehavior &value) {
     if (auto opt = node[name].value<std::string>()) {
         if (*opt == "PreserveCurrentTime"s) {
             value = VirtualRTCResetBehavior::PreserveCurrentTime;
@@ -54,7 +54,7 @@ static void ParseEnum(toml::node_view<toml::node> &node, const char *name, Virtu
     }
 }
 
-static void ParseEnum(toml::node_view<toml::node> &node, const char *name, AudioInterpolationMode value) {
+static void ParseEnum(toml::node_view<toml::node> &node, const char *name, AudioInterpolationMode &value) {
     if (auto opt = node[name].value<std::string>()) {
         if (*opt == "Nearest"s) {
             value = AudioInterpolationMode::Nearest;
