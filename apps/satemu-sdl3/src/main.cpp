@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
     auto result = options.parse(argc, argv);
 
     try {
-        if (showHelp || !result.contains("bios")) {
+        if (showHelp) {
             fmt::println("{}", options.help());
             return 0;
         }

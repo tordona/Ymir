@@ -1,10 +1,117 @@
 #include "settings.hpp"
 
-#include <toml++/toml.hpp>
+#include <satemu/util/dev_log.hpp>
+
+using namespace std::literals;
 
 namespace app {
 
+namespace grp {
+
+    // -----------------------------------------------------------------------------
+    // Dev log groups
+
+    // Hierarchy:
+    //
+    // base
+
+    struct base {
+        static constexpr bool enabled = true;
+        static constexpr devlog::Level level = devlog::level::debug;
+        static constexpr std::string_view name = "Settings";
+    };
+
+} // namespace grp
+
 inline constexpr int kConfigVersion = 1;
+
+// -------------------------------------------------------------------------------------------------
+// Enum parsers
+
+static void ParseEnum(toml::node_view<toml::node> &node, const char *name, RTCMode value) {
+    if (auto opt = node[name].value<std::string>()) {
+        if (*opt == "Host"s) {
+            value = RTCMode::Host;
+        } else if (*opt == "Emulated"s) {
+            value = RTCMode::Emulated;
+        } else {
+            value = RTCMode::Host;
+        }
+    }
+}
+
+static void ParseEnum(toml::node_view<toml::node> &node, const char *name, EmulatedRTCResetBehavior value) {
+    if (auto opt = node[name].value<std::string>()) {
+        if (*opt == "PreserveCurrentTime"s) {
+            value = EmulatedRTCResetBehavior::PreserveCurrentTime;
+        } else if (*opt == "SyncToHost"s) {
+            value = EmulatedRTCResetBehavior::SyncToHost;
+        } else if (*opt == "SyncToFixedStartingTime"s) {
+            value = EmulatedRTCResetBehavior::SyncToFixedStartingTime;
+        } else {
+            value = EmulatedRTCResetBehavior::PreserveCurrentTime;
+        }
+    }
+}
+
+static void ParseEnum(toml::node_view<toml::node> &node, const char *name, AudioInterpolationMode value) {
+    if (auto opt = node[name].value<std::string>()) {
+        if (*opt == "Nearest"s) {
+            value = AudioInterpolationMode::Nearest;
+        } else if (*opt == "Linear"s) {
+            value = AudioInterpolationMode::Linear;
+        } else {
+            value = AudioInterpolationMode::Nearest;
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+// Enum-to-string converters
+
+static const char *EnumName(const RTCMode value) {
+    switch (value) {
+    case RTCMode::Host: return "Host";
+    case RTCMode::Emulated: return "Emulated";
+    default: return "Host";
+    }
+}
+
+static const char *EnumName(const EmulatedRTCResetBehavior value) {
+    switch (value) {
+    case EmulatedRTCResetBehavior::PreserveCurrentTime: return "PreserveCurrentTime";
+    case EmulatedRTCResetBehavior::SyncToHost: return "SyncToHost";
+    case EmulatedRTCResetBehavior::SyncToFixedStartingTime: return "SyncToFixedStartingTime";
+    default: return "PreserveCurrentTime";
+    }
+}
+
+static const char *EnumName(const AudioInterpolationMode value) {
+    switch (value) {
+    case AudioInterpolationMode::Nearest: return "Nearest";
+    case AudioInterpolationMode::Linear: return "Linear";
+    default: return "Nearest";
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+// Parsers
+
+template <typename T>
+void ParseSimple(toml::node_view<toml::node> &node, const char *name, T &value) {
+    if (auto opt = node[name].value<T>()) {
+        value = *opt;
+    }
+}
+
+void ParsePath(toml::node_view<toml::node> &node, const char *name, std::filesystem::path &value) {
+    if (auto opt = node[name].value<std::filesystem::path::string_type>()) {
+        value = *opt;
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+// Implementation
 
 void Settings::ResetToDefaults() {
     general.preloadDiscImagesToRAM = false;
@@ -30,20 +137,74 @@ void Settings::ResetToDefaults() {
     video.threadedVDP1 = true;
 }
 
-bool Settings::Load(const std::filesystem::path &path, std::error_code &error) {
-    error.clear();
+SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
+    // Read TOML table from the file
+    auto parseResult = toml::parse_file(path.string());
+    if (parseResult.failed()) {
+        return SettingsLoadResult::TOMLParseError(parseResult.error());
+    }
+    auto &data = parseResult.table();
 
-    // TODO: implement
+    // Update values
+    ResetToDefaults();
+
+    int configVersion = 0;
+    if (auto opt = data["ConfigVersion"].value<int>()) {
+        configVersion = *opt;
+    }
+
+    SettingsLoadResult result{};
+    switch (configVersion) {
+    case 1: result = LoadV1(data); break;
+    default: return SettingsLoadResult::UnsupportedConfigVersion(configVersion);
+    }
 
     this->path = path;
-    return false;
+    return result;
 }
 
-bool Settings::Save(std::error_code &error) {
-    error.clear();
+SettingsLoadResult Settings::LoadV1(toml::table &data) {
+    if (auto tblGeneral = data["General"]) {
+        ParseSimple(tblGeneral, "PreloadDiscImagesToRAM", general.preloadDiscImagesToRAM);
+        ParseSimple(tblGeneral, "BoostEmuThreadPriority", general.boostEmuThreadPriority);
+        ParseSimple(tblGeneral, "BoostProcessPriority", general.boostProcessPriority);
+    }
+
+    if (auto tblSystem = data["System"]) {
+        ParseSimple(tblSystem, "BiosPath", system.biosPath);
+        ParseSimple(tblSystem, "EmulateSH2Cache", system.emulateSH2Cache);
+
+        auto &rtc = system.rtc;
+
+        if (auto tblRTC = tblSystem["RTC"]) {
+            ParseEnum(tblRTC, "Mode", rtc.mode);
+            ParseSimple(tblRTC, "HostTimeOffset", rtc.hostTimeOffset);
+            ParseSimple(tblRTC, "EmuTimeScale", rtc.emuTimeScale);
+            ParseSimple(tblRTC, "EmuBaseTime", rtc.emuBaseTime);
+            ParseEnum(tblRTC, "EmuResetBehavior", rtc.emuResetBehavior);
+        }
+    }
+
+    /*if (auto tblInput = data["Input"]) {
+        // TODO
+    }*/
+
+    if (auto tblAudio = data["Audio"]) {
+        ParseEnum(tblAudio, "InterpolationMode", audio.interpolationMode);
+        ParseSimple(tblAudio, "ThreadedSCSP", audio.threadedSCSP);
+    }
+
+    if (auto tblVideo = data["Video"]) {
+        ParseSimple(tblVideo, "ThreadedRendering", video.threadedRendering);
+        ParseSimple(tblVideo, "ThreadedVDP1", video.threadedVDP1);
+    }
+
+    return SettingsLoadResult::Success();
+}
+
+SettingsSaveResult Settings::Save() {
     if (path.empty()) {
-        error.assign(ENOENT, std::generic_category());
-        return false;
+        path = "satemu.toml";
     }
 
     const auto &rtc = system.rtc;
@@ -61,14 +222,13 @@ bool Settings::Save(std::error_code &error) {
         {"System", toml::table{{
             {"BiosPath", system.biosPath},
             {"EmulateSH2Cache", system.emulateSH2Cache},
-            {"BoostProcessPriority", general.boostProcessPriority},
         
             {"RTC", toml::table{{
-                {"Mode", rtc.mode},
+                {"Mode", EnumName(rtc.mode)},
                 {"HostTimeOffset", rtc.hostTimeOffset},
                 {"EmuTimeScale", rtc.emuTimeScale},
                 {"EmuBaseTime", rtc.emuBaseTime},
-                {"EmuResetBehavior", rtc.emuResetBehavior},
+                {"EmuResetBehavior", EnumName(rtc.emuResetBehavior)},
             }}},
         }}},
 
@@ -77,7 +237,7 @@ bool Settings::Save(std::error_code &error) {
         }}},*/
 
         {"Audio", toml::table{{
-            {"InterpolationMode", audio.interpolationMode},
+            {"InterpolationMode", EnumName(audio.interpolationMode)},
             {"ThreadedSCSP", audio.threadedSCSP},
         }}},
 
@@ -90,16 +250,20 @@ bool Settings::Save(std::error_code &error) {
 
     std::ofstream out{path, std::ios::binary | std::ios::trunc};
     out << tbl;
+    if (!out) {
+        std::error_code error{errno, std::generic_category()};
+        return SettingsSaveResult::FilesystemError(error);
+    }
 
-    return true;
+    return SettingsSaveResult::Success();
 }
 
 void Settings::CheckDirty() {
     using namespace std::chrono_literals;
 
     if (m_dirty && (std::chrono::steady_clock::now() - m_dirtyTimestamp) > 250ms) {
-        std::error_code error{};
-        if (!Save(error)) {
+        if (auto result = Save(); !result) {
+            devlog::warn<grp::base>("Failed to save settings: {}", result.string());
         }
         m_dirty = false;
     }

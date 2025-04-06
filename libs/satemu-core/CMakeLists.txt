@@ -241,6 +241,7 @@ target_add_version_defines(satemu-core)
 
 ## Define additional macros
 target_compile_definitions(satemu-core PUBLIC "satemu_ENABLE_DEVLOG=$<BOOL:${satemu_ENABLE_DEVLOG}>")
+target_compile_definitions(satemu-core PUBLIC "TOML_EXCEPTIONS=0")
 
 ## Generate the export header and attach it to the target
 include(GenerateExportHeader)

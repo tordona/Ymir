@@ -231,14 +231,17 @@ int App::Run(const CommandLineOptions &options) {
 
     m_options = options;
     {
-        std::error_code error{};
-        if (!m_context.settings.Load("satemu.toml", error)) {
-            devlog::warn<grp::base>("Failed to load settings: {}", error.message());
+        // TODO (folder manager): read from user profile or current path depending on installation mode
+        auto result = m_context.settings.Load("satemu.toml");
+        if (!result) {
+            devlog::warn<grp::base>("Failed to load settings: {}", result.string());
         }
     }
     util::ScopeGuard sgSaveSettings{[&] {
-        std::error_code error{};
-        m_context.settings.Save(error);
+        auto result = m_context.settings.Save();
+        if (!result) {
+            devlog::warn<grp::base>("Failed to save settings: {}", result.string());
+        }
     }};
 
     // Boost process priority

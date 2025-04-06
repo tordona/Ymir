@@ -2,15 +2,87 @@
 
 #include <satemu/core/types.hpp>
 
+#include <fmt/format.h>
+#include <toml++/toml.hpp>
+
 #include <chrono>
 #include <filesystem>
+#include <sstream>
+#include <variant>
 
 namespace app {
 
 enum class RTCMode { Host, Emulated };
-enum class EmulatedRTCResetBehavior { SyncToHost, SyncToFixedStartingTime, PreserveCurrentTime };
+enum class EmulatedRTCResetBehavior { PreserveCurrentTime, SyncToHost, SyncToFixedStartingTime };
 
 enum class AudioInterpolationMode { Nearest, Linear };
+
+struct SettingsLoadResult {
+    enum class Type { Success, TOMLParseError, UnsupportedConfigVersion };
+
+    static SettingsLoadResult Success() {
+        return {.type = Type::Success};
+    }
+
+    static SettingsLoadResult TOMLParseError(toml::parse_error error) {
+        return {.type = Type::TOMLParseError, .value = error};
+    }
+
+    static SettingsLoadResult UnsupportedConfigVersion(int version) {
+        return {.type = Type::UnsupportedConfigVersion, .value = version};
+    }
+
+    operator bool() {
+        return type == Type::Success;
+    }
+
+    std::string string() const {
+        switch (type) {
+        case Type::Success: return "Success";
+        case Type::TOMLParseError: //
+        {
+            auto &error = std::get<toml::parse_error>(value);
+            std::ostringstream ss{};
+            ss << error.source();
+            return fmt::format("TOML parse error: {} (at {})", error.description(), ss.str());
+        }
+        case Type::UnsupportedConfigVersion:
+            return fmt::format("Unsupported configuration version: {}", std::get<int>(value));
+        default: return "Unspecified error";
+        }
+    }
+
+    Type type;
+    std::variant<std::monostate, toml::parse_error, int> value;
+};
+
+struct SettingsSaveResult {
+    enum class Type { Success, FilesystemError };
+
+    static SettingsSaveResult Success() {
+        return {.type = Type::Success};
+    }
+
+    static SettingsSaveResult FilesystemError(std::error_code error) {
+        return {.type = Type::FilesystemError, .value = error};
+    }
+
+    operator bool() {
+        return type == Type::Success;
+    }
+
+    std::string string() const {
+        switch (type) {
+        case Type::Success: return "Success";
+        case Type::FilesystemError:
+            return fmt::format("Filesystem error: {}", std::get<std::error_code>(value).message());
+        default: return "Unspecified error";
+        }
+    }
+
+    Type type;
+    std::variant<std::monostate, std::error_code> value;
+};
 
 struct Settings {
     Settings() noexcept {
@@ -18,8 +90,14 @@ struct Settings {
     }
 
     void ResetToDefaults();
-    bool Load(const std::filesystem::path &path, std::error_code &error);
-    bool Save(std::error_code &error);
+
+    SettingsLoadResult Load(const std::filesystem::path &path);
+
+private:
+    SettingsLoadResult LoadV1(toml::table &data);
+
+public:
+    SettingsSaveResult Save();
 
     // Auto-saves if the settings have been dirty for a while
     void CheckDirty();
