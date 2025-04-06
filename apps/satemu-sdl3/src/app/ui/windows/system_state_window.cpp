@@ -54,7 +54,6 @@ void SystemStateWindow::DrawContents() {
 
 void SystemStateWindow::DrawParameters() {
     sys::ClockSpeed clockSpeed = m_context.saturn.GetClockSpeed();
-    sys::VideoStandard videoStandard = m_context.saturn.GetVideoStandard();
 
     if (ImGui::BeginTable("sys_params", 2, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableNextRow();

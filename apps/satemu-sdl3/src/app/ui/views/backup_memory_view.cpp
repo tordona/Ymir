@@ -61,10 +61,6 @@ void BackupMemoryView::Display() {
         ImGui::TextUnformatted("Unavailable");
     }
 
-    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-    const float monoCharWidth = ImGui::CalcTextSize("F").x;
-    ImGui::PopFont();
-
     // Make room for buttons below the table
     auto avail = ImGui::GetContentRegionAvail();
     avail.y -= ImGui::GetTextLineHeightWithSpacing(); // selection stats
@@ -494,7 +490,6 @@ void BackupMemoryView::DisplayFileImportOverwriteModal(std::span<bup::BackupFile
         const float monoCharWidth = ImGui::CalcTextSize("F").x;
         ImGui::PopFont();
 
-        auto avail = ImGui::GetContentRegionAvail();
         const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
         if (ImGui::BeginChild("##bup_files_table", ImVec2(550, lineHeight * 20))) {
             if (ImGui::BeginTable("bup_files_overwrite_list", 6,
@@ -651,7 +646,6 @@ void BackupMemoryView::DisplayFileImportResultModal() {
         if (!m_importFailed.empty()) {
             ImGui::Text("The following file%s could not be imported:", (m_importFailed.size() == 1 ? "" : "s"));
 
-            auto avail = ImGui::GetContentRegionAvail();
             const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
             if (ImGui::BeginChild("##bup_failed_table", ImVec2(550, lineHeight * 10))) {
                 if (ImGui::BeginTable("bup_files_failed_list", 2,
@@ -684,7 +678,6 @@ void BackupMemoryView::DisplayFileImportResultModal() {
         if (!m_importBad.empty()) {
             ImGui::Text("The following file%s could not be loaded:", (m_importBad.size() == 1 ? "" : "s"));
 
-            auto avail = ImGui::GetContentRegionAvail();
             const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
             if (ImGui::BeginChild("##bup_bad_table", ImVec2(550, lineHeight * 10))) {
                 if (ImGui::BeginTable("bup_files_bad_list", 2,
