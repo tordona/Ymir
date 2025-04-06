@@ -279,19 +279,19 @@ void SettingsWindow::DrawAudioTab() {
 
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Interpolation:");
-    ExplanationTooltip("- Nearest neighbor: Cheapest option that sounds harsh and retro.\n"
-                       "- Linear: Softens sounds. Hardware accurate.");
+    ExplanationTooltip("- Nearest neighbor: Cheapest option with grittier sounds.\n"
+                       "- Linear: Hardware accurate option with softer sounds. (default)");
     ImGui::SameLine();
     if (MakeDirty(ImGui::RadioButton("Nearest neighbor##sound_interp",
                                      settings.interpolationMode == AudioInterpolationMode::Nearest))) {
         settings.interpolationMode = AudioInterpolationMode::Nearest;
-        // TODO: configure RTC
+        m_context.EnqueueEvent(events::emu::UpdateSCSPInterpolation());
     }
     ImGui::SameLine();
     if (MakeDirty(
             ImGui::RadioButton("Linear##sound_interp", settings.interpolationMode == AudioInterpolationMode::Linear))) {
         settings.interpolationMode = AudioInterpolationMode::Linear;
-        // TODO: configure RTC
+        m_context.EnqueueEvent(events::emu::UpdateSCSPInterpolation());
     }
 
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);

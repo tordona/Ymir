@@ -87,6 +87,8 @@ namespace grp {
 
 } // namespace grp
 
+enum class Interpolation { NearestNeighbor, Linear };
+
 class SCSP {
 public:
     SCSP(core::Scheduler &scheduler);
@@ -121,6 +123,8 @@ public:
     void DumpDSPRegs(std::ostream &out) const;
 
     void SetCPUEnabled(bool enabled);
+
+    Interpolation interpolation = Interpolation::Linear;
 
 private:
     alignas(16) std::array<uint8, m68k::kM68KWRAMSize> m_WRAM;

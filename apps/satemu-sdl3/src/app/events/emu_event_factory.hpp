@@ -87,8 +87,11 @@ EmuEvent DeleteBackupFile(std::string filename, bool external);
 EmuEvent FormatBackupMemory(bool external);
 
 EmuEvent SetEmulateSH2Cache(bool enable);
+
 EmuEvent UpdateRTCMode();
 EmuEvent UpdateRTCResetStrategy();
 EmuEvent UpdateRTCParameters();
+
+EmuEvent UpdateSCSPInterpolation();
 
 } // namespace app::events::emu

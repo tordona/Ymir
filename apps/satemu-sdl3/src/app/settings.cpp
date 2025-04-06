@@ -1,5 +1,6 @@
 #include "settings.hpp"
 
+#include <satemu/util/date_time.hpp>
 #include <satemu/util/dev_log.hpp>
 
 using namespace std::literals;
@@ -124,7 +125,8 @@ void Settings::ResetToDefaults() {
 
     system.rtc.mode = RTCMode::Host;
     system.rtc.hostTimeOffset = 0;
-    system.rtc.virtBaseTime = 757382400; // 01/01/1994 00:00:00
+    system.rtc.virtBaseTime = util::datetime::to_timestamp(
+        util::datetime::DateTime{.year = 1994, .month = 1, .day = 1, .hour = 0, .minute = 0, .second = 0});
     system.rtc.virtResetBehavior = VirtualRTCResetBehavior::PreserveCurrentTime;
 
     // TODO: input
@@ -132,7 +134,7 @@ void Settings::ResetToDefaults() {
     video.threadedRendering = true;
     video.threadedVDP1 = true;
 
-    audio.interpolationMode = AudioInterpolationMode::Nearest;
+    audio.interpolationMode = AudioInterpolationMode::Linear;
     audio.threadedSCSP = true;
 }
 

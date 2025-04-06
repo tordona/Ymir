@@ -561,14 +561,12 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
         return;
     }
 
-    // TODO: make this configurable
-    static constexpr bool interpolate = false;
-    if constexpr (interpolate) {
-        // Interpolate linearly between samples
+    switch (interpolation) {
+    case Interpolation::NearestNeighbor: slot.output = slot.sample1; break;
+    case Interpolation::Linear:
         slot.output =
             slot.sample1 + (slot.sample2 - slot.sample1) * static_cast<sint64>(slot.currPhase & 0x3FFFF) / 0x40000;
-    } else {
-        slot.output = slot.sample1;
+        break;
     }
 
     // TODO: what does the ALFO calculation deliver here?

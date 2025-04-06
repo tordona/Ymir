@@ -254,4 +254,15 @@ EmuEvent UpdateRTCParameters() {
     });
 }
 
+EmuEvent UpdateSCSPInterpolation() {
+    return RunFunction([=](SharedContext &ctx) {
+        switch (ctx.settings.audio.interpolationMode) {
+        case AudioInterpolationMode::Nearest:
+            ctx.saturn.SCSP.interpolation = scsp::Interpolation::NearestNeighbor;
+            break;
+        case AudioInterpolationMode::Linear: ctx.saturn.SCSP.interpolation = scsp::Interpolation::Linear; break;
+        }
+    });
+}
+
 } // namespace app::events::emu
