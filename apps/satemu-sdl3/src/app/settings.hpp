@@ -149,11 +149,6 @@ public:
         bool threadedVDP1;
     } video;
 
-    struct Audio {
-        satemu::scsp::Interpolation interpolationMode;
-        bool threadedSCSP;
-    } audio;
-
 private:
     satemu::core::Configuration &m_emuConfig;
 

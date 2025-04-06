@@ -5,6 +5,7 @@
 #include "scsp_slot.hpp"
 #include "scsp_timer.hpp"
 
+#include <satemu/core/configuration.hpp>
 #include <satemu/core/scheduler.hpp>
 #include <satemu/sys/bus.hpp>
 #include <satemu/sys/clocks.hpp>
@@ -89,7 +90,7 @@ namespace grp {
 
 class SCSP {
 public:
-    SCSP(core::Scheduler &scheduler);
+    SCSP(core::Scheduler &scheduler, core::Configuration::Audio &config);
 
     void Reset(bool hard);
 
@@ -122,8 +123,6 @@ public:
 
     void SetCPUEnabled(bool enabled);
 
-    Interpolation interpolation = Interpolation::Linear;
-
 private:
     alignas(16) std::array<uint8, m68k::kM68KWRAMSize> m_WRAM;
 
@@ -145,6 +144,11 @@ private:
 
     CBOutputSample m_cbOutputSample;
     CBTriggerSoundRequestInterrupt m_cbTriggerSoundRequestInterrupt;
+
+    // -------------------------------------------------------------------------
+    // Threading
+    
+    void EnableThreading(bool enable);
 
     // -------------------------------------------------------------------------
     // Memory accessors (SCU-facing bus)
@@ -938,6 +942,8 @@ private:
     void SlotProcessStep5(Slot &slot); // Level calculation part 1
     void SlotProcessStep6(Slot &slot); // Level calculation part 2
     void SlotProcessStep7(Slot &slot); // Sound stack write
+
+    core::SampleInterpolationMode m_interpMode = core::SampleInterpolationMode::Linear;
 
     uint64 m_m68kCycles;    // MC68EC000 cycle counter
     uint64 m_sampleCycles;  // Sample cycle counter

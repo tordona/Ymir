@@ -396,9 +396,19 @@ void SettingsWindow::DrawVideoTab() {
 }
 
 void SettingsWindow::DrawAudioTab() {
-    auto &settings = m_context.settings.audio;
+    auto &settings = m_context.saturn.configuration.audio;
 
     // -----------------------------------------------------------------------------------------------------------------
+
+    using InterpMode = core::SampleInterpolationMode;
+
+    auto interpOption = [&](const char *name, InterpMode mode) {
+        const std::string label = fmt::format("{}##sample_interp", name);
+        ImGui::SameLine();
+        if (MakeDirty(ImGui::RadioButton(label.c_str(), settings.interpolation == mode))) {
+            settings.interpolation = mode;
+        }
+    };
 
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
     ImGui::SeparatorText("Quality");
@@ -408,18 +418,8 @@ void SettingsWindow::DrawAudioTab() {
     ImGui::TextUnformatted("Interpolation:");
     ExplanationTooltip("- Nearest neighbor: Cheapest option with grittier sounds.\n"
                        "- Linear: Hardware accurate option with softer sounds. (default)");
-    ImGui::SameLine();
-    if (MakeDirty(ImGui::RadioButton("Nearest neighbor##sound_interp",
-                                     settings.interpolationMode == scsp::Interpolation::NearestNeighbor))) {
-        settings.interpolationMode = scsp::Interpolation::NearestNeighbor;
-        m_context.EnqueueEvent(events::emu::UpdateSCSPInterpolation());
-    }
-    ImGui::SameLine();
-    if (MakeDirty(
-            ImGui::RadioButton("Linear##sound_interp", settings.interpolationMode == scsp::Interpolation::Linear))) {
-        settings.interpolationMode = scsp::Interpolation::Linear;
-        m_context.EnqueueEvent(events::emu::UpdateSCSPInterpolation());
-    }
+    interpOption("Nearest neighbor", InterpMode::NearestNeighbor);
+    interpOption("Linear", InterpMode::Linear);
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -427,8 +427,9 @@ void SettingsWindow::DrawAudioTab() {
     ImGui::SeparatorText("Performance");
     ImGui::PopFont();
 
-    if (MakeDirty(ImGui::Checkbox("Run the SCSP and sound CPU on a thread", &settings.threadedSCSP))) {
-        m_context.EnqueueEvent(events::emu::SetThreadedSCSP(settings.threadedSCSP));
+    bool threadedSCSP = settings.threadedSCSP;
+    if (MakeDirty(ImGui::Checkbox("Run the SCSP and sound CPU on a thread", &threadedSCSP))) {
+        m_context.EnqueueEvent(events::emu::SetThreadedSCSP(threadedSCSP));
     }
     ExplanationTooltip("Improves performance at the cost of accuracy.\n"
                        "A few select games may break when this option is enabled.");

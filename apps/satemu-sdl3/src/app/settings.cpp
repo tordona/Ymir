@@ -2,6 +2,7 @@
 
 #include <satemu/util/date_time.hpp>
 #include <satemu/util/dev_log.hpp>
+#include <satemu/util/inline.hpp>
 
 using namespace std::literals;
 using namespace satemu;
@@ -30,7 +31,7 @@ inline constexpr int kConfigVersion = 1;
 // -------------------------------------------------------------------------------------------------
 // Enum parsers
 
-static void ParseEnum(toml::node_view<toml::node> &node, const char *name, sys::VideoStandard &value) {
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, sys::VideoStandard &value) {
     value = sys::VideoStandard::NTSC;
     if (auto opt = node[name].value<std::string>()) {
         if (*opt == "NTSC"s) {
@@ -41,7 +42,7 @@ static void ParseEnum(toml::node_view<toml::node> &node, const char *name, sys::
     }
 }
 
-static void ParseEnum(toml::node_view<toml::node> &node, const char *name, smpc::rtc::Mode &value) {
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, smpc::rtc::Mode &value) {
     value = smpc::rtc::Mode::Host;
     if (auto opt = node[name].value<std::string>()) {
         if (*opt == "Host"s) {
@@ -52,7 +53,8 @@ static void ParseEnum(toml::node_view<toml::node> &node, const char *name, smpc:
     }
 }
 
-static void ParseEnum(toml::node_view<toml::node> &node, const char *name, smpc::rtc::HardResetStrategy &value) {
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name,
+                               smpc::rtc::HardResetStrategy &value) {
     value = smpc::rtc::HardResetStrategy::Preserve;
     if (auto opt = node[name].value<std::string>()) {
         if (*opt == "PreserveCurrentTime"s) {
@@ -65,13 +67,14 @@ static void ParseEnum(toml::node_view<toml::node> &node, const char *name, smpc:
     }
 }
 
-static void ParseEnum(toml::node_view<toml::node> &node, const char *name, scsp::Interpolation &value) {
-    value = scsp::Interpolation::NearestNeighbor;
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name,
+                               core::SampleInterpolationMode &value) {
+    value = core::SampleInterpolationMode::NearestNeighbor;
     if (auto opt = node[name].value<std::string>()) {
         if (*opt == "Nearest"s) {
-            value = scsp::Interpolation::NearestNeighbor;
+            value = core::SampleInterpolationMode::NearestNeighbor;
         } else if (*opt == "Linear"s) {
-            value = scsp::Interpolation::Linear;
+            value = core::SampleInterpolationMode::Linear;
         }
     }
 }
@@ -79,7 +82,7 @@ static void ParseEnum(toml::node_view<toml::node> &node, const char *name, scsp:
 // -------------------------------------------------------------------------------------------------
 // Enum-to-string converters
 
-static const char *EnumName(const sys::VideoStandard value) {
+FORCE_INLINE static const char *EnumName(const sys::VideoStandard value) {
     switch (value) {
     default:
     case sys::VideoStandard::NTSC: return "NTSC";
@@ -87,7 +90,7 @@ static const char *EnumName(const sys::VideoStandard value) {
     }
 }
 
-static const char *EnumName(const smpc::rtc::Mode value) {
+FORCE_INLINE static const char *EnumName(const smpc::rtc::Mode value) {
     switch (value) {
     default:
     case smpc::rtc::Mode::Host: return "Host";
@@ -95,7 +98,7 @@ static const char *EnumName(const smpc::rtc::Mode value) {
     }
 }
 
-static const char *EnumName(const smpc::rtc::HardResetStrategy value) {
+FORCE_INLINE static const char *EnumName(const smpc::rtc::HardResetStrategy value) {
     switch (value) {
     default:
     case smpc::rtc::HardResetStrategy::Preserve: return "Preserve";
@@ -104,11 +107,11 @@ static const char *EnumName(const smpc::rtc::HardResetStrategy value) {
     }
 }
 
-static const char *EnumName(const scsp::Interpolation value) {
+FORCE_INLINE static const char *EnumName(const core::SampleInterpolationMode value) {
     switch (value) {
     default:
-    case scsp::Interpolation::NearestNeighbor: return "Nearest";
-    case scsp::Interpolation::Linear: return "Linear";
+    case core::SampleInterpolationMode::NearestNeighbor: return "Nearest";
+    case core::SampleInterpolationMode::Linear: return "Linear";
     }
 }
 
@@ -116,16 +119,23 @@ static const char *EnumName(const scsp::Interpolation value) {
 // Parsers
 
 template <typename T>
-void ParseSimple(toml::node_view<toml::node> &node, const char *name, T &value) {
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, T &value) {
     if (auto opt = node[name].value<T>()) {
         value = *opt;
     }
 }
 
-void ParsePath(toml::node_view<toml::node> &node, const char *name, std::filesystem::path &value) {
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, std::filesystem::path &value) {
     if (auto opt = node[name].value<std::filesystem::path::string_type>()) {
         value = *opt;
     }
+}
+
+template <typename T>
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, util::Observable<T> &value) {
+    T wrappedValue = value.Get();
+    Parse(node, name, wrappedValue);
+    value = wrappedValue;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -160,9 +170,6 @@ void Settings::ResetToDefaults() {
 
     video.threadedRendering = true;
     video.threadedVDP1 = true;
-
-    audio.interpolationMode = scsp::Interpolation::Linear;
-    audio.threadedSCSP = true;
 }
 
 SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
@@ -193,24 +200,24 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
 
 SettingsLoadResult Settings::LoadV1(toml::table &data) {
     if (auto tblGeneral = data["General"]) {
-        ParseSimple(tblGeneral, "PreloadDiscImagesToRAM", general.preloadDiscImagesToRAM);
-        ParseSimple(tblGeneral, "BoostEmuThreadPriority", general.boostEmuThreadPriority);
-        ParseSimple(tblGeneral, "BoostProcessPriority", general.boostProcessPriority);
+        Parse(tblGeneral, "PreloadDiscImagesToRAM", general.preloadDiscImagesToRAM);
+        Parse(tblGeneral, "BoostEmuThreadPriority", general.boostEmuThreadPriority);
+        Parse(tblGeneral, "BoostProcessPriority", general.boostProcessPriority);
     }
 
     if (auto tblSystem = data["System"]) {
-        ParseSimple(tblSystem, "BiosPath", system.biosPath);
-        ParseEnum(tblSystem, "VideoStandard", system.videoStandard);
-        ParseSimple(tblSystem, "AutoDetectRegion", m_emuConfig.system.autodetectRegion);
-        ParseSimple(tblSystem, "EmulateSH2Cache", system.emulateSH2Cache);
+        Parse(tblSystem, "BiosPath", system.biosPath);
+        Parse(tblSystem, "VideoStandard", system.videoStandard);
+        Parse(tblSystem, "AutoDetectRegion", m_emuConfig.system.autodetectRegion);
+        Parse(tblSystem, "EmulateSH2Cache", system.emulateSH2Cache);
 
         auto &rtc = system.rtc;
 
         if (auto tblRTC = tblSystem["RTC"]) {
-            ParseEnum(tblRTC, "Mode", rtc.mode);
-            ParseSimple(tblRTC, "HostTimeOffset", rtc.hostTimeOffset);
-            ParseSimple(tblRTC, "VirtualBaseTime", rtc.virtBaseTime);
-            ParseEnum(tblRTC, "VirtualHardResetStrategy", rtc.virtHardResetStrategy);
+            Parse(tblRTC, "Mode", rtc.mode);
+            Parse(tblRTC, "HostTimeOffset", rtc.hostTimeOffset);
+            Parse(tblRTC, "VirtualBaseTime", rtc.virtBaseTime);
+            Parse(tblRTC, "VirtualHardResetStrategy", rtc.virtHardResetStrategy);
         }
     }
 
@@ -219,20 +226,20 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
     }*/
 
     if (auto tblVideo = data["Video"]) {
-        ParseSimple(tblVideo, "ForceIntegerScaling", video.forceIntegerScaling);
-        ParseSimple(tblVideo, "ForceAspectRatio", video.forceAspectRatio);
-        ParseSimple(tblVideo, "ForcedAspect", video.forcedAspect);
+        Parse(tblVideo, "ForceIntegerScaling", video.forceIntegerScaling);
+        Parse(tblVideo, "ForceAspectRatio", video.forceAspectRatio);
+        Parse(tblVideo, "ForcedAspect", video.forcedAspect);
 
-        ParseSimple(tblVideo, "AutoResizeWindow", video.autoResizeWindow);
-        ParseSimple(tblVideo, "DisplayVideoOutputInWindow", video.displayVideoOutputInWindow);
+        Parse(tblVideo, "AutoResizeWindow", video.autoResizeWindow);
+        Parse(tblVideo, "DisplayVideoOutputInWindow", video.displayVideoOutputInWindow);
 
-        ParseSimple(tblVideo, "ThreadedRendering", video.threadedRendering);
-        ParseSimple(tblVideo, "ThreadedVDP1", video.threadedVDP1);
+        Parse(tblVideo, "ThreadedRendering", video.threadedRendering);
+        Parse(tblVideo, "ThreadedVDP1", video.threadedVDP1);
     }
 
     if (auto tblAudio = data["Audio"]) {
-        ParseEnum(tblAudio, "InterpolationMode", audio.interpolationMode);
-        ParseSimple(tblAudio, "ThreadedSCSP", audio.threadedSCSP);
+        Parse(tblAudio, "InterpolationMode", m_emuConfig.audio.interpolation);
+        Parse(tblAudio, "ThreadedSCSP", m_emuConfig.audio.threadedSCSP);
     }
 
     return SettingsLoadResult::Success();
@@ -284,8 +291,8 @@ SettingsSaveResult Settings::Save() {
         }}},
 
         {"Audio", toml::table{{
-            {"InterpolationMode", EnumName(audio.interpolationMode)},
-            {"ThreadedSCSP", audio.threadedSCSP},
+            {"InterpolationMode", EnumName(m_emuConfig.audio.interpolation)},
+            {"ThreadedSCSP", m_emuConfig.audio.threadedSCSP.Get()},
         }}},
     }};
     // clang-format on

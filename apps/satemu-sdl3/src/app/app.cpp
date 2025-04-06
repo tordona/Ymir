@@ -295,8 +295,6 @@ void App::ApplySettingsToEmulator() {
     m_context.EnqueueEvent(events::emu::UpdateRTCParameters());
     m_context.EnqueueEvent(events::emu::SetThreadedVDPRendering(m_context.settings.video.threadedRendering));
     m_context.EnqueueEvent(events::emu::UseRendererThreadForVDP1(m_context.settings.video.threadedVDP1));
-    m_context.EnqueueEvent(events::emu::UpdateSCSPInterpolation());
-    m_context.EnqueueEvent(events::emu::SetThreadedSCSP(m_context.settings.audio.threadedSCSP));
 }
 
 void App::RunEmulator() {

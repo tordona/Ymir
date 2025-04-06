@@ -231,16 +231,8 @@ EmuEvent UseRendererThreadForVDP1(bool use) {
     });
 }
 
-EmuEvent UpdateSCSPInterpolation() {
-    return RunFunction(
-        [=](SharedContext &ctx) { ctx.saturn.SCSP.interpolation = ctx.settings.audio.interpolationMode; });
-}
-
 EmuEvent SetThreadedSCSP(bool threaded) {
-    return RunFunction([=](SharedContext &ctx) {
-        // TODO: implement
-        devlog::debug<grp::base>("Threaded SCSP option is unimplemented");
-    });
+    return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.audio.threadedSCSP = threaded; });
 }
 
 } // namespace app::events::emu

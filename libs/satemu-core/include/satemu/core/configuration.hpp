@@ -19,14 +19,19 @@ enum class Region {
     CentralSouthAmericaPAL = 0xD,
 };
 
+enum class SampleInterpolationMode { NearestNeighbor, Linear };
+
 // Emulator core configuration.
 //
-// Simple (primitive) types can be safely modified from any thread, unless otherwise noted.
-// Complex types (such as containers and observables) cannot be safely modified from any thread.
+// Thread-safety
+// -------------
+// Unless otherwise noted:
+// - Simple (primitive) types can be safely modified from any thread.
+// - Complex types (such as containers and observables) cannot be safely modified from any thread.
 //
 // If you plan to run the emulator core in a dedicated thread, make sure to modify non-thread-safe values exclusively on
-// that thread. You may add observer functions to observable values, but be aware that the functions will also run on
-// the emulator thread.
+// that thread. You may add observers to observable values (both functions and value references), but be aware that
+// functions will also run on the emulator thread.
 struct Configuration {
     struct System {
         // Automatically change SMPC area code based on compatible regions from loaded discs.
@@ -37,6 +42,17 @@ struct Configuration {
         util::Observable<std::vector<Region>> preferredRegionOrder =
             std::vector<Region>{Region::NorthAmerica, Region::Japan};
     } system;
+
+    struct Audio {
+        // Sample interpolation method.
+        // The Sega Saturn uses linear interpolation.
+        //
+        // This value is thread-safe.
+        util::Observable<SampleInterpolationMode> interpolation = SampleInterpolationMode::Linear;
+
+        // Runs the SCSP and MC68EC000 CPU in a dedicated thread.
+        util::Observable<bool> threadedSCSP = false;
+    } audio;
 };
 
 } // namespace satemu::core

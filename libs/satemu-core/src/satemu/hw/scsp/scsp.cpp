@@ -9,10 +9,14 @@ using namespace satemu::m68k;
 
 namespace satemu::scsp {
 
-SCSP::SCSP(core::Scheduler &scheduler)
+SCSP::SCSP(core::Scheduler &scheduler, core::Configuration::Audio &config)
     : m_m68k(*this)
     , m_scheduler(scheduler)
     , m_dsp(m_WRAM.data()) {
+
+    // Replicate interpolation mode to avoid an extra dereference in the hot path
+    config.interpolation.Observe(m_interpMode);
+    config.threadedSCSP.Observe([&](const bool &value) { EnableThreading(value); });
 
     m_sampleTickEvent = m_scheduler.RegisterEvent(core::events::SCSPSample, this, OnSampleTickEvent);
 
@@ -209,6 +213,15 @@ void SCSP::OnSampleTickEvent(core::EventContext &eventContext, void *userContext
     auto &scsp = *static_cast<SCSP *>(userContext);
     scsp.Tick();
     eventContext.RescheduleFromNow(kCyclesPerSample);
+}
+
+void SCSP::EnableThreading(bool enable) {
+    if (enable) {
+        // TODO: implement
+        devlog::debug<grp::base>("Threaded SCSP is unimplemented");
+    } else {
+        devlog::debug<grp::base>("Running SCSP on emulator thread");
+    }
 }
 
 void SCSP::HandleKYONEX() {
@@ -561,9 +574,9 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
         return;
     }
 
-    switch (interpolation) {
-    case Interpolation::NearestNeighbor: slot.output = slot.sample1; break;
-    case Interpolation::Linear:
+    switch (m_interpMode) {
+    case core::SampleInterpolationMode::NearestNeighbor: slot.output = slot.sample1; break;
+    case core::SampleInterpolationMode::Linear:
         slot.output =
             slot.sample1 + (slot.sample2 - slot.sample1) * static_cast<sint64>(slot.currPhase & 0x3FFFF) / 0x40000;
         break;

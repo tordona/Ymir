@@ -43,6 +43,7 @@ SMPC::SMPC(core::Scheduler &scheduler, sys::ISystemOperations &sysOps)
     m_STE = false;
 
     m_resetState = false;
+    m_areaCode = 0x1;
 
     ReadPersistentData();
 
