@@ -61,6 +61,10 @@ inline EmuEvent RunFunction(std::function<void(SharedContext &)> &&fn) {
     return {.type = EmuEvent::Type::RunFunction, .value = std::move(fn)};
 }
 
+inline EmuEvent SetThreadPriority(bool boost) {
+    return {.type = EmuEvent::Type::SetThreadPriority, .value = boost};
+}
+
 inline EmuEvent Shutdown() {
     return {.type = EmuEvent::Type::Shutdown};
 }

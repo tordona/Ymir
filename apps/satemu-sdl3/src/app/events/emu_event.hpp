@@ -31,12 +31,15 @@ struct EmuEvent {
 
         RunFunction,
 
+        SetThreadPriority,
+
         Shutdown
     };
 
     Type type;
 
-    std::variant<bool, std::string, satemu::bup::BackupMemory, std::function<void(SharedContext &)>> value;
+    std::variant<std::monostate, bool, std::string, satemu::bup::BackupMemory, std::function<void(SharedContext &)>>
+        value;
 };
 
 } // namespace app

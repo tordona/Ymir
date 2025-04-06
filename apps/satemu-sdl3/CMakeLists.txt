@@ -9,6 +9,7 @@ add_executable(satemu-sdl3
     src/app/audio_system.hpp
     src/app/cmdline_opts.hpp
     src/app/settings.hpp
+    src/app/settings.cpp
     src/app/shared_context.hpp
 
     src/app/debug/scu_tracer.cpp
@@ -104,6 +105,8 @@ add_executable(satemu-sdl3
     src/app/ui/windows/about_window.hpp
     src/app/ui/windows/backup_ram_manager_window.cpp
     src/app/ui/windows/backup_ram_manager_window.hpp
+    src/app/ui/windows/settings_window.cpp
+    src/app/ui/windows/settings_window.hpp
     src/app/ui/windows/system_state_window.cpp
     src/app/ui/windows/system_state_window.hpp
 
@@ -146,7 +149,7 @@ add_executable(satemu-sdl3
     src/util/rom_loader.cpp
     src/util/rom_loader.hpp
     src/util/sdl_file_dialog.hpp
- "src/app/settings.cpp")
+)
 add_executable(satemu::satemu-sdl3 ALIAS satemu-sdl3)
 set_target_properties(satemu-sdl3 PROPERTIES
                       VERSION ${satemu_VERSION}

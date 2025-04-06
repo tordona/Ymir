@@ -9,6 +9,7 @@
 
 #include "ui/windows/about_window.hpp"
 #include "ui/windows/backup_ram_manager_window.hpp"
+#include "ui/windows/settings_window.hpp"
 #include "ui/windows/system_state_window.hpp"
 
 #include "ui/windows/debug/debug_output_window.hpp"
@@ -105,6 +106,7 @@ private:
 
     std::vector<ui::MemoryViewerWindow> m_memoryViewerWindows;
 
+    ui::SettingsWindow m_settingsWindow;
     ui::AboutWindow m_aboutWindow;
 };
 

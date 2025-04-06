@@ -32,24 +32,24 @@ static void ParseEnum(toml::node_view<toml::node> &node, const char *name, RTCMo
     if (auto opt = node[name].value<std::string>()) {
         if (*opt == "Host"s) {
             value = RTCMode::Host;
-        } else if (*opt == "Emulated"s) {
-            value = RTCMode::Emulated;
+        } else if (*opt == "Virtual"s) {
+            value = RTCMode::Virtual;
         } else {
             value = RTCMode::Host;
         }
     }
 }
 
-static void ParseEnum(toml::node_view<toml::node> &node, const char *name, EmulatedRTCResetBehavior value) {
+static void ParseEnum(toml::node_view<toml::node> &node, const char *name, VirtualRTCResetBehavior value) {
     if (auto opt = node[name].value<std::string>()) {
         if (*opt == "PreserveCurrentTime"s) {
-            value = EmulatedRTCResetBehavior::PreserveCurrentTime;
+            value = VirtualRTCResetBehavior::PreserveCurrentTime;
         } else if (*opt == "SyncToHost"s) {
-            value = EmulatedRTCResetBehavior::SyncToHost;
+            value = VirtualRTCResetBehavior::SyncToHost;
         } else if (*opt == "SyncToFixedStartingTime"s) {
-            value = EmulatedRTCResetBehavior::SyncToFixedStartingTime;
+            value = VirtualRTCResetBehavior::SyncToFixedStartingTime;
         } else {
-            value = EmulatedRTCResetBehavior::PreserveCurrentTime;
+            value = VirtualRTCResetBehavior::PreserveCurrentTime;
         }
     }
 }
@@ -72,16 +72,16 @@ static void ParseEnum(toml::node_view<toml::node> &node, const char *name, Audio
 static const char *EnumName(const RTCMode value) {
     switch (value) {
     case RTCMode::Host: return "Host";
-    case RTCMode::Emulated: return "Emulated";
+    case RTCMode::Virtual: return "Virtual";
     default: return "Host";
     }
 }
 
-static const char *EnumName(const EmulatedRTCResetBehavior value) {
+static const char *EnumName(const VirtualRTCResetBehavior value) {
     switch (value) {
-    case EmulatedRTCResetBehavior::PreserveCurrentTime: return "PreserveCurrentTime";
-    case EmulatedRTCResetBehavior::SyncToHost: return "SyncToHost";
-    case EmulatedRTCResetBehavior::SyncToFixedStartingTime: return "SyncToFixedStartingTime";
+    case VirtualRTCResetBehavior::PreserveCurrentTime: return "PreserveCurrentTime";
+    case VirtualRTCResetBehavior::SyncToHost: return "SyncToHost";
+    case VirtualRTCResetBehavior::SyncToFixedStartingTime: return "SyncToFixedStartingTime";
     default: return "PreserveCurrentTime";
     }
 }
@@ -126,15 +126,15 @@ void Settings::ResetToDefaults() {
     system.rtc.hostTimeOffset = 0;
     system.rtc.emuTimeScale = 1.0f;
     system.rtc.emuBaseTime = 757382400; // 01/01/1994 00:00:00
-    system.rtc.emuResetBehavior = EmulatedRTCResetBehavior::PreserveCurrentTime;
+    system.rtc.emuResetBehavior = VirtualRTCResetBehavior::PreserveCurrentTime;
 
     // TODO: input
 
-    audio.interpolationMode = AudioInterpolationMode::Nearest;
-    audio.threadedSCSP = true;
-
     video.threadedRendering = true;
     video.threadedVDP1 = true;
+
+    audio.interpolationMode = AudioInterpolationMode::Nearest;
+    audio.threadedSCSP = true;
 }
 
 SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
@@ -189,14 +189,14 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         // TODO
     }*/
 
-    if (auto tblAudio = data["Audio"]) {
-        ParseEnum(tblAudio, "InterpolationMode", audio.interpolationMode);
-        ParseSimple(tblAudio, "ThreadedSCSP", audio.threadedSCSP);
-    }
-
     if (auto tblVideo = data["Video"]) {
         ParseSimple(tblVideo, "ThreadedRendering", video.threadedRendering);
         ParseSimple(tblVideo, "ThreadedVDP1", video.threadedVDP1);
+    }
+
+    if (auto tblAudio = data["Audio"]) {
+        ParseEnum(tblAudio, "InterpolationMode", audio.interpolationMode);
+        ParseSimple(tblAudio, "ThreadedSCSP", audio.threadedSCSP);
     }
 
     return SettingsLoadResult::Success();
@@ -236,14 +236,14 @@ SettingsSaveResult Settings::Save() {
             // TODO
         }}},*/
 
-        {"Audio", toml::table{{
-            {"InterpolationMode", EnumName(audio.interpolationMode)},
-            {"ThreadedSCSP", audio.threadedSCSP},
-        }}},
-
         {"Video", toml::table{{
             {"ThreadedRendering", video.threadedRendering},
             {"ThreadedVDP1", video.threadedVDP1},
+        }}},
+
+        {"Audio", toml::table{{
+            {"InterpolationMode", EnumName(audio.interpolationMode)},
+            {"ThreadedSCSP", audio.threadedSCSP},
         }}},
     }};
     // clang-format on

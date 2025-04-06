@@ -45,10 +45,12 @@ struct GUIEvent {
         SelectFolder,  // Invoke generic select folder dialog; uses FolderDialogParams
 
         OpenBackupMemoryManager,
+
+        SetProcessPriority,
     };
 
     Type type;
-    std::variant<std::monostate, FileDialogParams, FolderDialogParams> value;
+    std::variant<std::monostate, FileDialogParams, FolderDialogParams, bool> value;
 };
 
 } // namespace app

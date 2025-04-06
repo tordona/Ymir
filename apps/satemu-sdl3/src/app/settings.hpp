@@ -12,8 +12,8 @@
 
 namespace app {
 
-enum class RTCMode { Host, Emulated };
-enum class EmulatedRTCResetBehavior { PreserveCurrentTime, SyncToHost, SyncToFixedStartingTime };
+enum class RTCMode { Host, Virtual };
+enum class VirtualRTCResetBehavior { PreserveCurrentTime, SyncToHost, SyncToFixedStartingTime };
 
 enum class AudioInterpolationMode { Nearest, Linear };
 
@@ -126,7 +126,7 @@ public:
 
             float emuTimeScale;
             sint64 emuBaseTime;
-            EmulatedRTCResetBehavior emuResetBehavior;
+            VirtualRTCResetBehavior emuResetBehavior;
         } rtc;
     } system;
 
@@ -134,15 +134,15 @@ public:
         // TODO: remappable key bindings (support multiple binds per button)
     } input;
 
-    struct Audio {
-        AudioInterpolationMode interpolationMode;
-        bool threadedSCSP;
-    } audio;
-
     struct Video {
         bool threadedRendering;
         bool threadedVDP1;
     } video;
+
+    struct Audio {
+        AudioInterpolationMode interpolationMode;
+        bool threadedSCSP;
+    } audio;
 
 private:
     bool m_dirty = false;

@@ -12,8 +12,9 @@ namespace general {
     inline constexpr input::ActionID OpenLoadDiscDialog = 0x10000;
     inline constexpr input::ActionID EjectDisc = 0x10001;
     inline constexpr input::ActionID OpenCloseTray = 0x10002;
-    
+
     inline constexpr input::ActionID ToggleWindowedVideoOutput = 0x11000;
+    inline constexpr input::ActionID OpenSettings = 0x11001;
 
 } // namespace general
 

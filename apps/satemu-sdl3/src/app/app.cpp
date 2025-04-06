@@ -218,6 +218,7 @@ App::App()
     , m_slaveSH2WindowSet(m_context, false)
     , m_scuWindowSet(m_context)
     , m_debugOutputWindow(m_context)
+    , m_settingsWindow(m_context)
     , m_aboutWindow(m_context) {
 
     // Preinitialize some memory viewers
@@ -243,6 +244,8 @@ int App::Run(const CommandLineOptions &options) {
             devlog::warn<grp::base>("Failed to save settings: {}", result.string());
         }
     }};
+
+    m_context.EnqueueEvent(events::emu::SetEmulateSH2Cache(m_context.settings.system.emulateSH2Cache));
 
     // Boost process priority
     util::BoostCurrentProcessPriority(m_context.settings.general.boostProcessPriority);
@@ -466,13 +469,14 @@ void App::RunEmulator() {
     colors[ImGuiCol_TableBorderLight] = ImVec4(0.23f, 0.23f, 0.25f, 1.00f);
     colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     colors[ImGuiCol_TableRowBgAlt] = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
-    colors[ImGuiCol_TextLink] = ImVec4(0.26f, 0.46f, 0.98f, 1.00f);
+    colors[ImGuiCol_TextLink] = ImVec4(0.37f, 0.54f, 1.00f, 1.00f);
     colors[ImGuiCol_TextSelectedBg] = ImVec4(0.43f, 0.59f, 0.98f, 0.43f);
     colors[ImGuiCol_DragDropTarget] = ImVec4(0.97f, 0.60f, 0.19f, 0.90f);
     colors[ImGuiCol_NavCursor] = ImVec4(0.26f, 0.46f, 0.98f, 1.00f);
     colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
     colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
     colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use
@@ -863,6 +867,8 @@ void App::RunEmulator() {
     m_inputHandler.Register(actions::general::ToggleWindowedVideoOutput, [&](const input::InputActionEvent &evt) {
         screen.displayVideoOutputInWindow = !screen.displayVideoOutputInWindow;
     });
+    m_inputHandler.Register(actions::general::OpenSettings,
+                            [&](const input::InputActionEvent &evt) { m_settingsWindow.Open = true; });
 
     {
         using Button = peripheral::StandardPad::Button;
@@ -936,12 +942,14 @@ void App::RunEmulator() {
         inputCtx.MapAction(actions::general::OpenCloseTray, KeyCombo{Mod::Control, Key::T});
 
         inputCtx.MapAction(actions::general::ToggleWindowedVideoOutput, KeyCombo{Mod::None, Key::F9});
+        inputCtx.MapAction(actions::general::OpenSettings, KeyCombo{Mod::None, Key::F10});
 
         inputCtx.MapAction(actions::emu::HardReset, KeyCombo{Mod::Control, Key::R});
         inputCtx.MapAction(actions::emu::SoftReset, KeyCombo{Mod::Control | Mod::Shift, Key::R});
 
         inputCtx.MapAction(actions::emu::FrameStep, KeyCombo{Mod::None, Key::RightBracket});
         inputCtx.MapAction(actions::emu::PauseResume, KeyCombo{Mod::Control, Key::P});
+        inputCtx.MapAction(actions::emu::PauseResume, KeyCombo{Mod::None, Key::Pause});
         inputCtx.MapToggleableAction(actions::emu::FastForward, Key::Tab);
 
         inputCtx.MapToggleableAction(actions::emu::ResetButton, KeyCombo{Mod::Shift, Key::R});
@@ -1152,6 +1160,8 @@ void App::RunEmulator() {
             case EvtType::SelectFolder: InvokeSelectFolderDialog(std::get<FolderDialogParams>(evt.value)); break;
 
             case EvtType::OpenBackupMemoryManager: m_bupMgrWindow.Open = true; break;
+
+            case EvtType::SetProcessPriority: util::BoostCurrentProcessPriority(std::get<bool>(evt.value)); break;
             }
         }
 
@@ -1203,6 +1213,8 @@ void App::RunEmulator() {
         ImGui_ImplSDLRenderer3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
+
+        // TODO: get keybindings for menu shortcuts
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
         if (ImGui::BeginMainMenuBar()) {
@@ -1337,11 +1349,22 @@ void App::RunEmulator() {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Settings")) {
-                ImGui::TextDisabled("(to be implemented)");
+                ImGui::MenuItem("Settings", "F10", &m_settingsWindow.Open);
                 ImGui::Separator();
-                bool emulateSH2Cache = m_context.saturn.IsSH2CacheEmulationEnabled();
-                if (ImGui::MenuItem("SH2 cache emulation", nullptr, &emulateSH2Cache)) {
-                    m_context.EnqueueEvent(events::emu::SetEmulateSH2Cache(emulateSH2Cache));
+                if (ImGui::MenuItem("General")) {
+                    m_settingsWindow.OpenTab(ui::SettingsTab::General);
+                }
+                if (ImGui::MenuItem("System")) {
+                    m_settingsWindow.OpenTab(ui::SettingsTab::System);
+                }
+                if (ImGui::MenuItem("Input")) {
+                    m_settingsWindow.OpenTab(ui::SettingsTab::Input);
+                }
+                if (ImGui::MenuItem("Video")) {
+                    m_settingsWindow.OpenTab(ui::SettingsTab::Video);
+                }
+                if (ImGui::MenuItem("Audio")) {
+                    m_settingsWindow.OpenTab(ui::SettingsTab::Audio);
                 }
                 ImGui::EndMenu();
             }
@@ -1646,6 +1669,8 @@ void App::EmulatorThread() {
 
             case RunFunction: std::get<std::function<void(SharedContext &)>>(evt.value)(m_context); break;
 
+            case SetThreadPriority: util::BoostCurrentThreadPriority(std::get<bool>(evt.value)); break;
+
             case Shutdown: return;
             }
         }
@@ -1775,6 +1800,7 @@ void App::DrawWindows() {
         memView.Display();
     }
 
+    m_settingsWindow.Display();
     m_aboutWindow.Display();
 }
 

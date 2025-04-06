@@ -32,4 +32,8 @@ inline GUIEvent SelectFolder(FolderDialogParams &&params) {
     return {.type = GUIEvent::Type::SelectFolder, .value = std::move(params)};
 }
 
+inline GUIEvent SetProcessPriority(bool boost) {
+    return {.type = GUIEvent::Type::SetProcessPriority, .value = boost};
+}
+
 } // namespace app::events::gui
