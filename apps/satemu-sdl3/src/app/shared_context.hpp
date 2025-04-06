@@ -2,6 +2,8 @@
 
 #include <satemu/satemu.hpp>
 
+#include <app/settings.hpp>
+
 #include <app/debug/scu_tracer.hpp>
 #include <app/debug/sh2_tracer.hpp>
 
@@ -13,12 +15,14 @@
 #include <blockingconcurrentqueue.h>
 
 #include <filesystem>
-#include <mutex.>
+#include <mutex>
 
 namespace app {
 
 struct SharedContext {
     satemu::Saturn saturn;
+
+    Settings settings;
 
     // Certain GUI interactions requires synchronization with the emulator thread, specifically when dealing with
     // dynamic objects:

@@ -178,6 +178,7 @@
 
 #include <satemu/satemu.hpp>
 
+#include <satemu/util/process.hpp>
 #include <satemu/util/scope_guard.hpp>
 #include <satemu/util/thread_name.hpp>
 
@@ -229,6 +230,19 @@ int App::Run(const CommandLineOptions &options) {
     devlog::info<grp::base>("satemu {}", satemu::version::string);
 
     m_options = options;
+    {
+        std::error_code error{};
+        if (!m_context.settings.Load("satemu.toml", error)) {
+            devlog::warn<grp::base>("Failed to load settings: {}", error.message());
+        }
+    }
+    util::ScopeGuard sgSaveSettings{[&] {
+        std::error_code error{};
+        m_context.settings.Save(error);
+    }};
+
+    // Boost process priority
+    util::BoostCurrentProcessPriority(m_context.settings.general.boostProcessPriority);
 
     // ---------------------------------
     // Initialize SDL subsystems
@@ -240,15 +254,17 @@ int App::Run(const CommandLineOptions &options) {
     util::ScopeGuard sgQuit{[&] { SDL_Quit(); }};
 
     // Load IPL ROM
-    {
+    auto biosPath = options.biosPath.empty() ? m_context.settings.system.biosPath : options.biosPath;
+    if (!biosPath.empty()) {
+        devlog::info<grp::base>("Loading IPL ROM from {}...", biosPath.string());
         constexpr auto iplSize = satemu::sys::kIPLSize;
-        auto rom = util::LoadFile(options.biosPath);
-        if (rom.size() != iplSize) {
+        auto rom = util::LoadFile(biosPath);
+        if (rom.size() == iplSize) {
+            m_context.saturn.LoadIPL(std::span<uint8, iplSize>(rom));
+            devlog::info<grp::base>("IPL ROM loaded successfully");
+        } else {
             devlog::error<grp::base>("IPL ROM size mismatch: expected {} bytes, got {} bytes", iplSize, rom.size());
-            return EXIT_FAILURE;
         }
-        m_context.saturn.LoadIPL(std::span<uint8, iplSize>(rom));
-        devlog::info<grp::base>("IPL ROM loaded");
     }
 
     // Load disc image if provided
@@ -1550,6 +1566,8 @@ void App::RunEmulator() {
             ImGui::SaveIniSettingsToDisk(imguiIniLocation.string().c_str());
             io.WantSaveIniSettings = false;
         }
+
+        m_context.settings.CheckDirty();
     }
 
 end_loop:; // the semicolon is not a typo!
@@ -1559,6 +1577,7 @@ end_loop:; // the semicolon is not a typo!
 
 void App::EmulatorThread() {
     util::SetCurrentThreadName("Emulator thread");
+    util::BoostCurrentThreadPriority(m_context.settings.general.boostEmuThreadPriority);
 
     std::array<EmuEvent, 64> evts{};
 

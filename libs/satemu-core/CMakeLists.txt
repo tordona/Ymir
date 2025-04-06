@@ -118,6 +118,7 @@ add_library(satemu-core
     include/satemu/util/event.hpp
     include/satemu/util/function_info.hpp
     include/satemu/util/inline.hpp
+    include/satemu/util/process.hpp
     include/satemu/util/scope_guard.hpp
     include/satemu/util/size_ops.hpp
     include/satemu/util/thread_name.hpp
@@ -175,6 +176,7 @@ add_library(satemu-core
     src/satemu/util/backup_datetime.cpp
     src/satemu/util/constexpr_for.hpp
     src/satemu/util/date_time.cpp
+    src/satemu/util/process.cpp
 )
 add_library(satemu::satemu-core ALIAS satemu-core)
 set_target_properties(satemu-core PROPERTIES
