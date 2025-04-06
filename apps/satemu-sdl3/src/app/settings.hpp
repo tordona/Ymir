@@ -124,9 +124,8 @@ public:
 
             sint64 hostTimeOffset;
 
-            float emuTimeScale;
-            sint64 emuBaseTime;
-            VirtualRTCResetBehavior emuResetBehavior;
+            sint64 virtBaseTime;
+            VirtualRTCResetBehavior virtResetBehavior;
         } rtc;
     } system;
 

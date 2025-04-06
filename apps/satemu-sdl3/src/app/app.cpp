@@ -246,6 +246,8 @@ int App::Run(const CommandLineOptions &options) {
     }};
 
     m_context.EnqueueEvent(events::emu::SetEmulateSH2Cache(m_context.settings.system.emulateSH2Cache));
+    m_context.EnqueueEvent(events::emu::UpdateRTCMode());
+    m_context.EnqueueEvent(events::emu::UpdateRTCResetStrategy());
 
     // Boost process priority
     util::BoostCurrentProcessPriority(m_context.settings.general.boostProcessPriority);
@@ -476,7 +478,6 @@ void App::RunEmulator() {
     colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
     colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
     colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
-
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use

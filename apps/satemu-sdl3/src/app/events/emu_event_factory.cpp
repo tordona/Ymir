@@ -52,13 +52,6 @@ EmuEvent SetDebugTrace(bool enable) {
     });
 }
 
-EmuEvent SetEmulateSH2Cache(bool enable) {
-    return RunFunction([=](SharedContext &ctx) {
-        ctx.saturn.EnableSH2CacheEmulation(enable);
-        devlog::info<grp::base>("SH2 cache emulation {}", (enable ? "enabled" : "disabled"));
-    });
-}
-
 EmuEvent DumpMemory() {
     return RunFunction([](SharedContext &ctx) {
         devlog::info<grp::base>("Dumping all memory to {}...", std::filesystem::current_path().string());
@@ -197,6 +190,61 @@ EmuEvent FormatBackupMemory(bool external) {
     } else {
         return RunFunction([](SharedContext &ctx) { ctx.saturn.mem.GetInternalBackupRAM().Format(); });
     }
+}
+
+EmuEvent SetEmulateSH2Cache(bool enable) {
+    return RunFunction([=](SharedContext &ctx) {
+        ctx.saturn.EnableSH2CacheEmulation(enable);
+        devlog::info<grp::base>("SH2 cache emulation {}", (enable ? "enabled" : "disabled"));
+    });
+}
+
+EmuEvent UpdateRTCMode() {
+    return RunFunction([=](SharedContext &ctx) {
+        using SMPCRTCMode = smpc::rtc::RTC::Mode;
+        SMPCRTCMode mode;
+
+        switch (ctx.settings.system.rtc.mode) {
+        default:
+        case RTCMode::Host:
+            mode = SMPCRTCMode::Host;
+            devlog::info<grp::base>("Using host RTC mode");
+            break;
+        case RTCMode::Virtual:
+            mode = SMPCRTCMode::Virtual;
+            devlog::info<grp::base>("Using virtual RTC mode");
+            break;
+        }
+
+        ctx.saturn.SMPC.GetRTC().SetMode(mode);
+    });
+}
+
+EmuEvent UpdateRTCResetStrategy() {
+    return RunFunction([=](SharedContext &ctx) {
+        using SMPCRTCResetStrategy = smpc::rtc::RTC::HardResetStrategy;
+        SMPCRTCResetStrategy strategy;
+
+        switch (ctx.settings.system.rtc.virtResetBehavior) {
+        default:
+        case VirtualRTCResetBehavior::PreserveCurrentTime:
+            strategy = SMPCRTCResetStrategy::Preserve;
+            devlog::info<grp::base>("Virtual RTC reset mode: preserve current time");
+            break;
+        case VirtualRTCResetBehavior::SyncToHost:
+            strategy = SMPCRTCResetStrategy::SyncToHost;
+            devlog::info<grp::base>("Virtual RTC reset mode: sync to host RTC");
+            break;
+        case VirtualRTCResetBehavior::SyncToFixedStartingTime:
+            strategy = SMPCRTCResetStrategy::ResetToFixedTime;
+            devlog::info<grp::base>("Virtual RTC reset mode: reset to fixed time point");
+            break;
+        }
+
+        auto &rtc = ctx.saturn.SMPC.GetRTC();
+        rtc.SetHardResetStrategy(strategy);
+        rtc.SetResetTimestamp(ctx.settings.system.rtc.virtBaseTime);
+    });
 }
 
 } // namespace app::events::emu

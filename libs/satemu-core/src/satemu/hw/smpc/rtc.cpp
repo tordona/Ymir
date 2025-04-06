@@ -29,11 +29,7 @@ namespace grp {
 RTC::RTC() {
     m_offset = 0;
 
-    // TODO(SMPC): RTC configuration should be saved to the configuration file
     m_mode = Mode::Host;
-    // m_mode = Mode::Emulated;
-    // m_hardResetStrategy = HardResetStrategy::SyncToHost;
-    // m_hardResetStrategy = HardResetStrategy::ResetToFixedTime;
     m_hardResetStrategy = HardResetStrategy::Preserve;
 
     m_timestamp = 0;
@@ -66,7 +62,7 @@ void RTC::UpdateSysClock(uint64 sysClock) {
 util::datetime::DateTime RTC::GetDateTime() const {
     switch (m_mode) {
     case Mode::Host: return util::datetime::host(m_offset);
-    case Mode::Emulated: return util::datetime::from_timestamp(m_timestamp);
+    case Mode::Virtual: return util::datetime::from_timestamp(m_timestamp);
     }
     util::unreachable();
 }
@@ -77,7 +73,7 @@ void RTC::SetDateTime(const util::datetime::DateTime &dateTime) {
         m_offset = util::datetime::delta_to_host(dateTime);
         devlog::debug<grp::base>("Setting host time offset to {} seconds", m_offset);
         break;
-    case Mode::Emulated:
+    case Mode::Virtual:
         m_timestamp = util::datetime::to_timestamp(dateTime);
         devlog::debug<grp::base>("Setting absolute timestamp to {} seconds", m_timestamp);
         break;

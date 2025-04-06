@@ -3,6 +3,8 @@
 #include <app/events/emu_event_factory.hpp>
 #include <app/events/gui_event_factory.hpp>
 
+#include <app/ui/widgets/datetime_widgets.hpp>
+
 namespace app::ui {
 
 static void ExplanationTooltip(const char *explanation) {
@@ -125,52 +127,91 @@ void SettingsWindow::DrawSystemTab() {
     ImGui::SameLine();
     if (MakeDirty(ImGui::RadioButton("Host##rtc", settings.rtc.mode == RTCMode::Host))) {
         settings.rtc.mode = RTCMode::Host;
-        // TODO: configure RTC
+        m_context.EnqueueEvent(events::emu::UpdateRTCMode());
     }
     ImGui::SameLine();
     if (MakeDirty(ImGui::RadioButton("Virtual##rtc", settings.rtc.mode == RTCMode::Virtual))) {
         settings.rtc.mode = RTCMode::Virtual;
-        // TODO: configure RTC
+        m_context.EnqueueEvent(events::emu::UpdateRTCMode());
+    }
+
+    auto &rtc = m_context.saturn.SMPC.GetRTC();
+
+    // TODO: when RTC is in virtual mode, request emulator to update date/time so that it is updated in real time
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Current date/time:");
+    ImGui::SameLine();
+    auto dateTime = rtc.GetDateTime();
+    if (widgets::DateTimeSelector("rtc_curr", dateTime)) {
+        rtc.SetDateTime(dateTime);
+        if (settings.rtc.mode == RTCMode::Host) {
+            settings.rtc.hostTimeOffset = rtc.GetHostTimeOffset();
+            m_context.settings.MakeDirty();
+        }
     }
 
     if (settings.rtc.mode == RTCMode::Host) {
-        // TODO: settings.rtc.hostTimeOffset;
-    } else if (settings.rtc.mode == RTCMode::Virtual) {
-        if (MakeDirty(ImGui::SliderFloat("Time scale", &settings.rtc.emuTimeScale, -10.0f, 10.0f, "%.2fx",
-                                         ImGuiSliderFlags_AlwaysClamp))) {
-            // TODO: send event to configure time scale
+        bool hostTimeOffsetChanged = false;
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Host time offset:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(150.0f);
+        hostTimeOffsetChanged |=
+            ImGui::DragScalar("##rtc_host_offset", ImGuiDataType_S64, &settings.rtc.hostTimeOffset);
+        ImGui::SameLine();
+        ImGui::TextUnformatted("seconds");
+        ImGui::SameLine();
+        if (ImGui::Button("Reset")) {
+            settings.rtc.hostTimeOffset = 0;
+            hostTimeOffsetChanged = true;
         }
-        ExplanationTooltip("Affects the virtual RTC's speed relative to the master clock.\n\n"
-                           "Note that the virtual RTC will still follow emulation speed:\n"
-                           "- If the emulator is paused, the virtual RTC clock is also paused\n"
-                           "- If the emulator is fast-forwarding, the virtual RTC clock will also run faster");
+        if (hostTimeOffsetChanged) {
+            rtc.SetHostTimeOffset(settings.rtc.hostTimeOffset);
+            m_context.settings.MakeDirty();
+        }
+    } else if (settings.rtc.mode == RTCMode::Virtual) {
+        if (ImGui::Button("Set to host time##curr_time")) {
+            rtc.SetDateTime(util::datetime::host());
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Set to starting point##curr_time")) {
+            rtc.SetDateTime(util::datetime::from_timestamp(settings.rtc.virtBaseTime));
+        }
 
+        ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Reset behavior:");
         ExplanationTooltip("Specifies the virtual RTC behavior on system reset.");
         if (MakeDirty(
-                ImGui::RadioButton("Preserve current time##emu_rtc_reset",
-                                   settings.rtc.emuResetBehavior == VirtualRTCResetBehavior::PreserveCurrentTime))) {
-            settings.rtc.emuResetBehavior = VirtualRTCResetBehavior::PreserveCurrentTime;
-            // TODO: configure RTC
+                ImGui::RadioButton("Preserve current time##virt_rtc_reset",
+                                   settings.rtc.virtResetBehavior == VirtualRTCResetBehavior::PreserveCurrentTime))) {
+            settings.rtc.virtResetBehavior = VirtualRTCResetBehavior::PreserveCurrentTime;
+            m_context.EnqueueEvent(events::emu::UpdateRTCResetStrategy());
         }
         ExplanationTooltip("The virtual RTC will continue counting from the time point prior to the reset.");
-        if (MakeDirty(ImGui::RadioButton("Sync to host time##emu_rtc_reset",
-                                         settings.rtc.emuResetBehavior == VirtualRTCResetBehavior::SyncToHost))) {
-            settings.rtc.emuResetBehavior = VirtualRTCResetBehavior::SyncToHost;
-            // TODO: configure RTC
+        if (MakeDirty(ImGui::RadioButton("Sync to host time##virt_rtc_reset",
+                                         settings.rtc.virtResetBehavior == VirtualRTCResetBehavior::SyncToHost))) {
+            settings.rtc.virtResetBehavior = VirtualRTCResetBehavior::SyncToHost;
+            m_context.EnqueueEvent(events::emu::UpdateRTCResetStrategy());
         }
         ExplanationTooltip("The virtual RTC will reset to the current host RTC time.");
-        if (MakeDirty(ImGui::RadioButton("Sync to starting point##emu_rtc_reset",
-                                         settings.rtc.emuResetBehavior ==
+        if (MakeDirty(ImGui::RadioButton("Sync to starting point##virt_rtc_reset",
+                                         settings.rtc.virtResetBehavior ==
                                              VirtualRTCResetBehavior::SyncToFixedStartingTime))) {
-            settings.rtc.emuResetBehavior = VirtualRTCResetBehavior::SyncToFixedStartingTime;
-            // TODO: configure RTC
+            settings.rtc.virtResetBehavior = VirtualRTCResetBehavior::SyncToFixedStartingTime;
+            m_context.EnqueueEvent(events::emu::UpdateRTCResetStrategy());
         }
         ExplanationTooltip("The virtual RTC will reset to the specified starting point.");
 
         ImGui::Indent();
         {
-            // TODO: settings.rtc.emuBaseTime;
+            auto dateTime = util::datetime::from_timestamp(settings.rtc.virtBaseTime);
+            if (MakeDirty(widgets::DateTimeSelector("virt_base_time", dateTime))) {
+                settings.rtc.virtBaseTime = util::datetime::to_timestamp(dateTime);
+            }
+            if (MakeDirty(ImGui::Button("Set to host time##virt_base_time"))) {
+                settings.rtc.virtBaseTime = util::datetime::to_timestamp(util::datetime::host());
+            }
         }
         ImGui::Unindent();
     }

@@ -98,6 +98,8 @@ add_executable(satemu-sdl3
 
     src/app/ui/widgets/cartridge_widgets.hpp
     src/app/ui/widgets/cartridge_widgets.cpp
+    src/app/ui/widgets/datetime_widgets.cpp
+    src/app/ui/widgets/datetime_widgets.hpp
     src/app/ui/widgets/system_widgets.cpp
     src/app/ui/widgets/system_widgets.hpp
 

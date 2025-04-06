@@ -46,9 +46,22 @@ public:
     peripheral::PeripheralPort &GetPeripheralPort1() {
         return m_port1;
     }
+    const peripheral::PeripheralPort &GetPeripheralPort1() const {
+        return m_port1;
+    }
 
     peripheral::PeripheralPort &GetPeripheralPort2() {
         return m_port2;
+    }
+    const peripheral::PeripheralPort &GetPeripheralPort2() const {
+        return m_port2;
+    }
+
+    rtc::RTC &GetRTC() {
+        return m_rtc;
+    }
+    const rtc::RTC &GetRTC() const {
+        return m_rtc;
     }
 
 private:

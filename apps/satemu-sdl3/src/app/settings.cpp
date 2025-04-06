@@ -124,9 +124,8 @@ void Settings::ResetToDefaults() {
 
     system.rtc.mode = RTCMode::Host;
     system.rtc.hostTimeOffset = 0;
-    system.rtc.emuTimeScale = 1.0f;
-    system.rtc.emuBaseTime = 757382400; // 01/01/1994 00:00:00
-    system.rtc.emuResetBehavior = VirtualRTCResetBehavior::PreserveCurrentTime;
+    system.rtc.virtBaseTime = 757382400; // 01/01/1994 00:00:00
+    system.rtc.virtResetBehavior = VirtualRTCResetBehavior::PreserveCurrentTime;
 
     // TODO: input
 
@@ -179,9 +178,8 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         if (auto tblRTC = tblSystem["RTC"]) {
             ParseEnum(tblRTC, "Mode", rtc.mode);
             ParseSimple(tblRTC, "HostTimeOffset", rtc.hostTimeOffset);
-            ParseSimple(tblRTC, "EmuTimeScale", rtc.emuTimeScale);
-            ParseSimple(tblRTC, "EmuBaseTime", rtc.emuBaseTime);
-            ParseEnum(tblRTC, "EmuResetBehavior", rtc.emuResetBehavior);
+            ParseSimple(tblRTC, "VirtualBaseTime", rtc.virtBaseTime);
+            ParseEnum(tblRTC, "VirtualResetBehavior", rtc.virtResetBehavior);
         }
     }
 
@@ -226,9 +224,8 @@ SettingsSaveResult Settings::Save() {
             {"RTC", toml::table{{
                 {"Mode", EnumName(rtc.mode)},
                 {"HostTimeOffset", rtc.hostTimeOffset},
-                {"EmuTimeScale", rtc.emuTimeScale},
-                {"EmuBaseTime", rtc.emuBaseTime},
-                {"EmuResetBehavior", EnumName(rtc.emuResetBehavior)},
+                {"VirtualBaseTime", rtc.virtBaseTime},
+                {"VirtualResetBehavior", EnumName(rtc.virtResetBehavior)},
             }}},
         }}},
 

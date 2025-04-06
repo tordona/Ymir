@@ -77,7 +77,6 @@ EmuEvent SetVideoStandard(satemu::sys::VideoStandard videoStandard);
 EmuEvent SetAreaCode(uint8 areaCode);
 
 EmuEvent SetDebugTrace(bool enable);
-EmuEvent SetEmulateSH2Cache(bool enable);
 EmuEvent DumpMemory();
 
 EmuEvent InsertBackupMemoryCartridge(std::filesystem::path path);
@@ -86,5 +85,9 @@ EmuEvent Insert32MbitDRAMCartridge();
 
 EmuEvent DeleteBackupFile(std::string filename, bool external);
 EmuEvent FormatBackupMemory(bool external);
+
+EmuEvent SetEmulateSH2Cache(bool enable);
+EmuEvent UpdateRTCMode();
+EmuEvent UpdateRTCResetStrategy();
 
 } // namespace app::events::emu
