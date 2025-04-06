@@ -36,4 +36,8 @@ inline GUIEvent SetProcessPriority(bool boost) {
     return {.type = GUIEvent::Type::SetProcessPriority, .value = boost};
 }
 
+inline GUIEvent FitWindowToScreen() {
+    return {.type = GUIEvent::Type::FitWindowToScreen};
+}
+
 } // namespace app::events::gui

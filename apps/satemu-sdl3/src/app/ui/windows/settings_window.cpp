@@ -240,6 +240,41 @@ void SettingsWindow::DrawVideoTab() {
     auto &settings = m_context.settings.video;
 
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::SeparatorText("Display");
+    ImGui::PopFont();
+
+    MakeDirty(ImGui::Checkbox("Force integer scaling", &settings.forceIntegerScaling));
+    MakeDirty(ImGui::Checkbox("Force aspect ratio", &settings.forceAspectRatio));
+    ExplanationTooltip("If disabled, forces square pixels.");
+    ImGui::SameLine();
+    if (MakeDirty(ImGui::Button("4:3"))) {
+        settings.forcedAspect = 4.0 / 3.0;
+    }
+    ImGui::SameLine();
+    if (MakeDirty(ImGui::Button("16:9"))) {
+        settings.forcedAspect = 16.0 / 9.0;
+    }
+    // TODO: aspect ratio selector? slider?
+
+    MakeDirty(ImGui::Checkbox("Auto-fit window to screen", &settings.autoResizeWindow));
+    ExplanationTooltip("If forced aspect ratio is disabled, adjusts and recenters the window whenever the display "
+                       "resolution changes.");
+    ImGui::SameLine();
+    if (settings.displayVideoOutputInWindow) {
+        ImGui::BeginDisabled();
+    }
+    if (MakeDirty(ImGui::Button("Fit now"))) {
+        m_context.EnqueueEvent(events::gui::FitWindowToScreen());
+    }
+    if (settings.displayVideoOutputInWindow) {
+        ImGui::EndDisabled();
+    }
+
+    if (MakeDirty(ImGui::Checkbox("Windowed video output", &settings.displayVideoOutputInWindow))) {
+        m_context.EnqueueEvent(events::gui::FitWindowToScreen());
+    }
+
+    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
     ImGui::SeparatorText("Performance");
     ImGui::PopFont();
 

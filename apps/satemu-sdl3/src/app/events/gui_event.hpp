@@ -47,6 +47,8 @@ struct GUIEvent {
         OpenBackupMemoryManager,
 
         SetProcessPriority,
+
+        FitWindowToScreen,
     };
 
     Type type;

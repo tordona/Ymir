@@ -134,6 +134,13 @@ public:
     } input;
 
     struct Video {
+        bool forceIntegerScaling;
+        bool forceAspectRatio;
+        double forcedAspect;
+
+        bool autoResizeWindow;
+        bool displayVideoOutputInWindow;
+
         bool threadedRendering;
         bool threadedVDP1;
     } video;

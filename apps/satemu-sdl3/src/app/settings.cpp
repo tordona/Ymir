@@ -131,6 +131,13 @@ void Settings::ResetToDefaults() {
 
     // TODO: input
 
+    video.forceIntegerScaling = true;
+    video.forceAspectRatio = false;
+    video.forcedAspect = 4.0 / 3.0;
+
+    video.autoResizeWindow = true;
+    video.displayVideoOutputInWindow = false;
+
     video.threadedRendering = true;
     video.threadedVDP1 = true;
 
@@ -190,6 +197,13 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
     }*/
 
     if (auto tblVideo = data["Video"]) {
+        ParseSimple(tblVideo, "ForceIntegerScaling", video.forceIntegerScaling);
+        ParseSimple(tblVideo, "ForceAspectRatio", video.forceAspectRatio);
+        ParseSimple(tblVideo, "ForcedAspect", video.forcedAspect);
+
+        ParseSimple(tblVideo, "AutoResizeWindow", video.autoResizeWindow);
+        ParseSimple(tblVideo, "DisplayVideoOutputInWindow", video.displayVideoOutputInWindow);
+
         ParseSimple(tblVideo, "ThreadedRendering", video.threadedRendering);
         ParseSimple(tblVideo, "ThreadedVDP1", video.threadedVDP1);
     }

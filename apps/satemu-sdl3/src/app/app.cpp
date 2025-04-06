@@ -322,9 +322,6 @@ void App::RunEmulator() {
         uint32 prevScaleX;
         uint32 prevScaleY;
 
-        bool autoResizeWindow = true;
-        bool displayVideoOutputInWindow = false;
-
         void SetResolution(uint32 width, uint32 height) {
             const bool doubleResH = width >= 640;
             const bool doubleResV = height >= 400;
@@ -354,10 +351,6 @@ void App::RunEmulator() {
         uint64 frames = 0;
         uint64 vdp1Frames = 0;
     } screen;
-
-    bool forceIntegerScaling = true;
-    bool forceAspectRatio = false;
-    double forcedAspect = 4.0 / 3.0;
 
     // ---------------------------------
     // Setup Dear ImGui context
@@ -644,6 +637,9 @@ void App::RunEmulator() {
     SDL_SetTextureScaleMode(dispTexture, SDL_SCALEMODE_LINEAR);
 
     auto renderDispTexture = [&](double targetWidth, double targetHeight) {
+        auto &videoSettings = m_context.settings.video;
+        const bool forceAspectRatio = videoSettings.forceAspectRatio;
+        const double forcedAspect = videoSettings.forcedAspect;
         const double dispWidth = (forceAspectRatio ? screen.height * forcedAspect : screen.width) / screen.scaleY;
         const double dispHeight = (double)screen.height / screen.scaleX;
         const double dispScaleX = (double)targetWidth / dispWidth;
@@ -867,7 +863,7 @@ void App::RunEmulator() {
     });
 
     m_inputHandler.Register(actions::general::ToggleWindowedVideoOutput, [&](const input::InputActionEvent &evt) {
-        screen.displayVideoOutputInWindow = !screen.displayVideoOutputInWindow;
+        m_context.settings.video.displayVideoOutputInWindow ^= true;
     });
     m_inputHandler.Register(actions::general::OpenSettings,
                             [&](const input::InputActionEvent &evt) { m_settingsWindow.Open = true; });
@@ -1028,6 +1024,8 @@ void App::RunEmulator() {
     std::array<GUIEvent, 64> evts{};
 
     while (true) {
+        bool fitWindowToScreenNow = false;
+
         // Process SDL events
         SDL_Event evt{};
         while (SDL_PollEvent(&evt)) {
@@ -1164,6 +1162,8 @@ void App::RunEmulator() {
             case EvtType::OpenBackupMemoryManager: m_bupMgrWindow.Open = true; break;
 
             case EvtType::SetProcessPriority: util::BoostCurrentProcessPriority(std::get<bool>(evt.value)); break;
+
+            case EvtType::FitWindowToScreen: fitWindowToScreenNow = true; break;
             }
         }
 
@@ -1204,9 +1204,8 @@ void App::RunEmulator() {
             t = t2;
         }
 
-        bool fitWindowToScreenNow = false;
-        const bool prevForceAspectRatio = forceAspectRatio;
-        const double prevForcedAspect = forcedAspect;
+        const bool prevForceAspectRatio = m_context.settings.video.forceAspectRatio;
+        const double prevForcedAspect = m_context.settings.video.forcedAspect;
 
         // ---------------------------------------------------------------------
         // Draw ImGui widgets
@@ -1246,26 +1245,28 @@ void App::RunEmulator() {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("View")) {
-                ImGui::MenuItem("Force integer scaling", nullptr, &forceIntegerScaling);
-                ImGui::MenuItem("Force aspect ratio", nullptr, &forceAspectRatio);
+                auto &videoSettings = m_context.settings.video;
+                ImGui::MenuItem("Force integer scaling", nullptr, &videoSettings.forceIntegerScaling);
+                ImGui::MenuItem("Force aspect ratio", nullptr, &videoSettings.forceAspectRatio);
                 if (ImGui::SmallButton("4:3")) {
-                    forcedAspect = 4.0 / 3.0;
+                    videoSettings.forcedAspect = 4.0 / 3.0;
                 }
                 ImGui::SameLine();
                 if (ImGui::SmallButton("16:9")) {
-                    forcedAspect = 16.0 / 9.0;
+                    videoSettings.forcedAspect = 16.0 / 9.0;
                 }
 
                 ImGui::Separator();
 
-                ImGui::MenuItem("Auto-fit window to screen", nullptr, &screen.autoResizeWindow);
-                if (ImGui::MenuItem("Fit window to screen", nullptr, nullptr, !screen.displayVideoOutputInWindow)) {
+                ImGui::MenuItem("Auto-fit window to screen", nullptr, &videoSettings.autoResizeWindow);
+                if (ImGui::MenuItem("Fit window to screen", nullptr, nullptr,
+                                    !videoSettings.displayVideoOutputInWindow)) {
                     fitWindowToScreenNow = true;
                 }
 
                 ImGui::Separator();
 
-                if (ImGui::MenuItem("Windowed video output", "F9", &screen.displayVideoOutputInWindow)) {
+                if (ImGui::MenuItem("Windowed video output", "F9", &videoSettings.displayVideoOutputInWindow)) {
                     fitWindowToScreenNow = true;
                 }
                 ImGui::EndMenu();
@@ -1450,12 +1451,16 @@ void App::RunEmulator() {
                 ImGui::ShowDemoWindow(&showDemoWindow);
             }
 
+            auto &videoSettings = m_context.settings.video;
+
             // Draw video output as a window
-            if (screen.displayVideoOutputInWindow) {
+            if (videoSettings.displayVideoOutputInWindow) {
                 std::string title = fmt::format("Video Output - {}x{}###Display", screen.width, screen.height);
 
-                const double aspectRatio = forceAspectRatio
-                                               ? screen.scaleX / forcedAspect
+                auto &videoSettings = m_context.settings.video;
+
+                const double aspectRatio = videoSettings.forceAspectRatio
+                                               ? screen.scaleX / videoSettings.forcedAspect
                                                : (double)screen.height / screen.width * screen.scaleY / screen.scaleX;
 
                 ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
@@ -1467,7 +1472,8 @@ void App::RunEmulator() {
                             (float)(int)(data->DesiredSize.x * aspectRatio) + ImGui::GetFrameHeightWithSpacing();
                     },
                     (void *)&aspectRatio);
-                if (ImGui::Begin(title.c_str(), &screen.displayVideoOutputInWindow, ImGuiWindowFlags_NoNavInputs)) {
+                if (ImGui::Begin(title.c_str(), &videoSettings.displayVideoOutputInWindow,
+                                 ImGuiWindowFlags_NoNavInputs)) {
                     const ImVec2 avail = ImGui::GetContentRegionAvail();
                     renderDispTexture(avail.x, avail.y);
 
@@ -1493,11 +1499,15 @@ void App::RunEmulator() {
         SDL_RenderClear(renderer);
 
         // Draw Saturn screen
-        if (!screen.displayVideoOutputInWindow) {
+        if (!m_context.settings.video.displayVideoOutputInWindow) {
+            const auto &videoSettings = m_context.settings.video;
+            const bool forceAspectRatio = videoSettings.forceAspectRatio;
+            const double forcedAspect = videoSettings.forcedAspect;
             const bool aspectRatioChanged = forceAspectRatio && forcedAspect != prevForcedAspect;
             const bool forceAspectRatioChanged = prevForceAspectRatio != forceAspectRatio;
             const bool screenSizeChanged = aspectRatioChanged || forceAspectRatioChanged || screen.resolutionChanged;
-            const bool fitWindowToScreen = (screen.autoResizeWindow && screenSizeChanged) || fitWindowToScreenNow;
+            const bool fitWindowToScreen =
+                (videoSettings.autoResizeWindow && screenSizeChanged) || fitWindowToScreenNow;
 
             const float menuBarHeight = ImGui::GetFrameHeight();
 
@@ -1545,7 +1555,7 @@ void App::RunEmulator() {
                 }
             }
             scale *= scaleFactor;
-            if (forceIntegerScaling) {
+            if (videoSettings.forceIntegerScaling) {
                 scale = floor(scale);
             }
             const int scaledWidth = baseWidth * scale;
