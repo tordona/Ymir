@@ -4,7 +4,7 @@
 
 namespace app::ui::widgets {
 
-void VideoStandardSelector(SharedContext &ctx);
-void RegionSelector(SharedContext &ctx);
+bool VideoStandardSelector(SharedContext &ctx);
+bool RegionSelector(SharedContext &ctx);
 
 } // namespace app::ui::widgets

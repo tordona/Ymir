@@ -8,18 +8,22 @@ using namespace satemu;
 
 namespace app::ui::widgets {
 
-void VideoStandardSelector(SharedContext &ctx) {
+bool VideoStandardSelector(SharedContext &ctx) {
+    bool changed = false;
     sys::VideoStandard videoStandard = ctx.saturn.GetVideoStandard();
     if (ImGui::RadioButton("NTSC", videoStandard == sys::VideoStandard::NTSC)) {
         ctx.EnqueueEvent(events::emu::SetVideoStandard(sys::VideoStandard::NTSC));
+        changed = true;
     }
     ImGui::SameLine();
     if (ImGui::RadioButton("PAL", videoStandard == sys::VideoStandard::PAL)) {
         ctx.EnqueueEvent(events::emu::SetVideoStandard(sys::VideoStandard::PAL));
+        changed = true;
     }
+    return changed;
 }
 
-void RegionSelector(SharedContext &ctx) {
+bool RegionSelector(SharedContext &ctx) {
     static constexpr struct {
         uint8 charCode;
         const char *name;
@@ -39,6 +43,7 @@ void RegionSelector(SharedContext &ctx) {
         return fmt::format("({:c}) {}", kRegions[index].charCode, kRegions[index].name);
     };
 
+    bool changed = false;
     uint8 areaCode = ctx.saturn.SMPC.GetAreaCode();
     if (ImGui::BeginCombo("##region", fmtRegion(areaCode).c_str(),
                           ImGuiComboFlags_WidthFitPreview | ImGuiComboFlags_HeightLargest)) {
@@ -50,11 +55,13 @@ void RegionSelector(SharedContext &ctx) {
                 ctx.EnqueueEvent(events::emu::SetAreaCode(i));
                 // TODO: optional?
                 ctx.EnqueueEvent(events::emu::HardReset());
+                changed = true;
             }
         }
 
         ImGui::EndCombo();
     }
+    return changed;
 }
 
 } // namespace app::ui::widgets

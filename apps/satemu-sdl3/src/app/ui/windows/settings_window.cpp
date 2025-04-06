@@ -4,6 +4,9 @@
 #include <app/events/gui_event_factory.hpp>
 
 #include <app/ui/widgets/datetime_widgets.hpp>
+#include <app/ui/widgets/system_widgets.hpp>
+
+#include <misc/cpp/imgui_stdlib.h>
 
 namespace app::ui {
 
@@ -103,7 +106,65 @@ void SettingsWindow::DrawSystemTab() {
     ImGui::SeparatorText("General");
     ImGui::PopFont();
 
-    // TODO: settings.biosPath
+    const float paddingWidth = ImGui::GetStyle().FramePadding.x;
+    const float itemSpacingWidth = ImGui::GetStyle().ItemSpacing.x;
+    const float fileSelectorButtonWidth = ImGui::CalcTextSize("...").x + paddingWidth * 2;
+    const float reloadButtonWidth = ImGui::CalcTextSize("Reload").x + paddingWidth * 2;
+
+    if (ImGui::BeginTable("sys_general", 2, ImGuiTableFlags_SizingFixedFit)) {
+        ImGui::TableSetupColumn("##label", ImGuiTableColumnFlags_WidthFixed, 0);
+        ImGui::TableSetupColumn("##value", ImGuiTableColumnFlags_WidthStretch);
+
+        ImGui::TableNextRow();
+        if (ImGui::TableNextColumn()) {
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted("BIOS ROM path");
+        }
+        if (ImGui::TableNextColumn()) {
+            ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + reloadButtonWidth + itemSpacingWidth * 2));
+            MakeDirty(ImGui::InputText("##bios_path", &settings.biosPath));
+            ImGui::SameLine();
+            if (ImGui::Button("...##bios_path")) {
+                // TODO: open file selector
+                // TODO: settings.biosPath
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Reload")) {
+                // TODO: send event to reload IPL ROM from settings
+                // m_context.EnqueueEvent(events::emu::LoadIPL(settings.biosPath));
+                m_context.settings.MakeDirty();
+            }
+        }
+
+        ImGui::TableNextRow();
+        if (ImGui::TableNextColumn()) {
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted("Video standard");
+        }
+        if (ImGui::TableNextColumn()) {
+            // TODO: store in settings
+            ui::widgets::VideoStandardSelector(m_context);
+        }
+
+        ImGui::TableNextRow();
+        if (ImGui::TableNextColumn()) {
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted("Region");
+            ImGui::SameLine();
+            ImGui::TextDisabled("(?)");
+            if (ImGui::BeginItemTooltip()) {
+                ImGui::TextUnformatted("Changing this option will cause a hard reset");
+                ImGui::EndTooltip();
+            }
+        }
+        if (ImGui::TableNextColumn()) {
+            // TODO: store in settings
+            ui::widgets::RegionSelector(m_context);
+        }
+        // TODO: auto-detect from game discs + preferred order list
+
+        ImGui::EndTable();
+    }
 
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
     ImGui::SeparatorText("Accuracy");
@@ -279,8 +340,7 @@ void SettingsWindow::DrawVideoTab() {
     ImGui::PopFont();
 
     if (MakeDirty(ImGui::Checkbox("Run the software renderer on a thread", &settings.threadedRendering))) {
-        // TODO: send event
-        // m_context.EnqueueEvent(events::emu::SetThreadedRendering(settings.threadedRendering));
+        m_context.EnqueueEvent(events::emu::SetThreadedVDPRendering(settings.threadedRendering));
     }
     ExplanationTooltip("Greatly improves performance at the cost of accuracy.\n"
                        "A few select games may break when this option is enabled.");
@@ -290,9 +350,8 @@ void SettingsWindow::DrawVideoTab() {
     }
     ImGui::Indent();
     {
-        if (MakeDirty(ImGui::Checkbox("Render VDP1 on the renderer thread", &settings.threadedVDP1))) {
-            // TODO: send event
-            // m_context.EnqueueEvent(events::emu::SetThreadedVDP1Rendering(settings.threadedVDP1));
+        if (MakeDirty(ImGui::Checkbox("Use renderer thread to render VDP1", &settings.threadedVDP1))) {
+            m_context.EnqueueEvent(events::emu::UseRendererThreadForVDP1(settings.threadedVDP1));
         }
         ExplanationTooltip("Moves VDP1 rendering to the renderer thread.\n"
                            "Slightly improves performance at the cost of accuracy.\n"
@@ -334,8 +393,7 @@ void SettingsWindow::DrawAudioTab() {
     ImGui::PopFont();
 
     if (MakeDirty(ImGui::Checkbox("Run the SCSP and sound CPU on a thread", &settings.threadedSCSP))) {
-        // TODO: send event
-        // m_context.EnqueueEvent(events::emu::SetThreadedSCSP(settings.threadedSCSP));
+        m_context.EnqueueEvent(events::emu::SetThreadedSCSP(settings.threadedSCSP));
     }
     ExplanationTooltip("Improves performance at the cost of accuracy.\n"
                        "A few select games may break when this option is enabled.");

@@ -254,6 +254,20 @@ EmuEvent UpdateRTCParameters() {
     });
 }
 
+EmuEvent SetThreadedVDPRendering(bool threaded) {
+    return RunFunction([=](SharedContext &ctx) {
+        // TODO: implement
+        devlog::debug<grp::base>("Threaded VDP rendering option is unimplemented");
+    });
+}
+
+EmuEvent UseRendererThreadForVDP1(bool use) {
+    return RunFunction([=](SharedContext &ctx) {
+        // TODO: implement
+        devlog::debug<grp::base>("VDP1 rendering on thread option is unimplemented");
+    });
+}
+
 EmuEvent UpdateSCSPInterpolation() {
     return RunFunction([=](SharedContext &ctx) {
         switch (ctx.settings.audio.interpolationMode) {
@@ -262,6 +276,13 @@ EmuEvent UpdateSCSPInterpolation() {
             break;
         case AudioInterpolationMode::Linear: ctx.saturn.SCSP.interpolation = scsp::Interpolation::Linear; break;
         }
+    });
+}
+
+EmuEvent SetThreadedSCSP(bool threaded) {
+    return RunFunction([=](SharedContext &ctx) {
+        // TODO: implement
+        devlog::debug<grp::base>("Threaded SCSP option is unimplemented");
     });
 }
 
