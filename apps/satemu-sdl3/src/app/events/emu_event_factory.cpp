@@ -243,6 +243,13 @@ EmuEvent UpdateRTCResetStrategy() {
 
         auto &rtc = ctx.saturn.SMPC.GetRTC();
         rtc.SetHardResetStrategy(strategy);
+    });
+}
+
+EmuEvent UpdateRTCParameters() {
+    return RunFunction([=](SharedContext &ctx) {
+        auto &rtc = ctx.saturn.SMPC.GetRTC();
+        rtc.SetHostTimeOffset(ctx.settings.system.rtc.hostTimeOffset);
         rtc.SetResetTimestamp(ctx.settings.system.rtc.virtBaseTime);
     });
 }

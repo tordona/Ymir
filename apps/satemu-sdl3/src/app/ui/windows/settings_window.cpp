@@ -211,11 +211,17 @@ void SettingsWindow::DrawSystemTab() {
         ImGui::Indent();
         {
             auto dateTime = util::datetime::from_timestamp(settings.rtc.virtBaseTime);
+            bool baseTimeChanged = false;
             if (MakeDirty(widgets::DateTimeSelector("virt_base_time", dateTime))) {
                 settings.rtc.virtBaseTime = util::datetime::to_timestamp(dateTime);
+                baseTimeChanged = true;
             }
             if (MakeDirty(ImGui::Button("Set to host time##virt_base_time"))) {
                 settings.rtc.virtBaseTime = util::datetime::to_timestamp(util::datetime::host());
+                baseTimeChanged = true;
+            }
+            if (baseTimeChanged) {
+                m_context.EnqueueEvent(events::emu::UpdateRTCParameters());
             }
         }
         ImGui::Unindent();

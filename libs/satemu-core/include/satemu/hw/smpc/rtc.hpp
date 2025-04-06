@@ -54,15 +54,20 @@ public:
     Mode GetMode() const {
         return m_mode;
     }
-
     void SetMode(Mode mode) {
         m_mode = mode;
+    }
+
+    sint64 GetHostTimeOffset() const {
+        return m_offset;
+    }
+    void SetHostTimeOffset(sint64 offset) {
+        m_offset = offset;
     }
 
     HardResetStrategy GetHardResetStrategy() const {
         return m_hardResetStrategy;
     }
-
     void SetHardResetStrategy(HardResetStrategy strategy) {
         m_hardResetStrategy = strategy;
     }
@@ -70,17 +75,8 @@ public:
     sint64 GetResetTimestamp() const {
         return m_resetTimestamp;
     }
-
     void SetResetTimestamp(sint64 timestamp) {
         m_resetTimestamp = timestamp;
-    }
-
-    sint64 GetHostTimeOffset() const {
-        return m_offset;
-    }
-
-    void SetHostTimeOffset(sint64 offset) {
-        m_offset = offset;
     }
 
     void UpdateSysClock(uint64 sysClock);

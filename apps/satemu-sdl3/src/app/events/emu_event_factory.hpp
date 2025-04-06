@@ -89,5 +89,6 @@ EmuEvent FormatBackupMemory(bool external);
 EmuEvent SetEmulateSH2Cache(bool enable);
 EmuEvent UpdateRTCMode();
 EmuEvent UpdateRTCResetStrategy();
+EmuEvent UpdateRTCParameters();
 
 } // namespace app::events::emu
