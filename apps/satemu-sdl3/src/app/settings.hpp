@@ -47,7 +47,7 @@ struct Settings {
             sint64 hostTimeOffset;
 
             float emuTimeScale;
-            uint64 emuBaseTime;
+            sint64 emuBaseTime;
             EmulatedRTCResetBehavior emuResetBehavior;
         } rtc;
     } system;
@@ -62,7 +62,8 @@ struct Settings {
     } audio;
 
     struct Video {
-        bool threadedVDPRendering;
+        bool threadedRendering;
+        bool threadedVDP1;
     } video;
 
 private:

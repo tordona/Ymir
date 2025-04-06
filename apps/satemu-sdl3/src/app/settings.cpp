@@ -4,6 +4,8 @@
 
 namespace app {
 
+inline constexpr int kConfigVersion = 1;
+
 void Settings::ResetToDefaults() {
     general.preloadDiscImagesToRAM = false;
     general.boostEmuThreadPriority = true;
@@ -24,7 +26,8 @@ void Settings::ResetToDefaults() {
     audio.interpolationMode = AudioInterpolationMode::Nearest;
     audio.threadedSCSP = true;
 
-    video.threadedVDPRendering = true;
+    video.threadedRendering = true;
+    video.threadedVDP1 = true;
 }
 
 bool Settings::Load(const std::filesystem::path &path, std::error_code &error) {
@@ -43,9 +46,52 @@ bool Settings::Save(std::error_code &error) {
         return false;
     }
 
-    // TODO: implement
+    const auto &rtc = system.rtc;
 
-    return false;
+    // clang-format off
+    auto tbl = toml::table{{
+        {"ConfigVersion", kConfigVersion},
+
+        {"General", toml::table{{
+            {"PreloadDiscImagesToRAM", general.preloadDiscImagesToRAM},
+            {"BoostEmuThreadPriority", general.boostEmuThreadPriority},
+            {"BoostProcessPriority", general.boostProcessPriority},
+        }}},
+
+        {"System", toml::table{{
+            {"BiosPath", system.biosPath},
+            {"EmulateSH2Cache", system.emulateSH2Cache},
+            {"BoostProcessPriority", general.boostProcessPriority},
+        
+            {"RTC", toml::table{{
+                {"Mode", rtc.mode},
+                {"HostTimeOffset", rtc.hostTimeOffset},
+                {"EmuTimeScale", rtc.emuTimeScale},
+                {"EmuBaseTime", rtc.emuBaseTime},
+                {"EmuResetBehavior", rtc.emuResetBehavior},
+            }}},
+        }}},
+
+        /*{"Input", toml::table{{
+            // TODO
+        }}},*/
+
+        {"Audio", toml::table{{
+            {"InterpolationMode", audio.interpolationMode},
+            {"ThreadedSCSP", audio.threadedSCSP},
+        }}},
+
+        {"Video", toml::table{{
+            {"ThreadedRendering", video.threadedRendering},
+            {"ThreadedVDP1", video.threadedVDP1},
+        }}},
+    }};
+    // clang-format on
+
+    std::ofstream out{path, std::ios::binary | std::ios::trunc};
+    out << tbl;
+
+    return true;
 }
 
 void Settings::CheckDirty() {
