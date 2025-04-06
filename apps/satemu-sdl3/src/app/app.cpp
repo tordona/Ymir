@@ -245,6 +245,8 @@ int App::Run(const CommandLineOptions &options) {
         }
     }};
 
+    ApplySettingsToEmulator();
+
     // Boost process priority
     util::BoostCurrentProcessPriority(m_context.settings.general.boostProcessPriority);
 
@@ -288,6 +290,7 @@ void App::ApplySettingsToEmulator() {
     // TODO: override from CommandLineOptions
     m_context.EnqueueEvent(events::emu::SetEmulateSH2Cache(m_context.settings.system.emulateSH2Cache));
     m_context.EnqueueEvent(events::emu::SetVideoStandard(m_context.settings.system.videoStandard));
+    m_context.saturn.autodetectRegion = m_context.settings.system.autodetectRegion;
     m_context.EnqueueEvent(events::emu::UpdateRTCMode());
     m_context.EnqueueEvent(events::emu::UpdateRTCResetStrategy());
     m_context.EnqueueEvent(events::emu::UpdateRTCParameters());
@@ -827,8 +830,6 @@ void App::RunEmulator() {
 
     // ---------------------------------
     // Emulator configuration
-
-    ApplySettingsToEmulator();
 
     // TODO: pull from CommandLineOptions or configuration
     static constexpr std::string_view extBupPath = "bup-ext.bin";

@@ -143,7 +143,7 @@ public:
     // -------------------------------------------------------------------------
     // Settings
 
-    bool autodetectRegion = false; // Automatically change SMPC area code based on compatible regions from loaded discs
+    bool autodetectRegion = true; // Automatically change SMPC area code based on compatible regions from loaded discs
 
 private:
     // -------------------------------------------------------------------------
