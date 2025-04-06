@@ -87,8 +87,6 @@ namespace grp {
 
 } // namespace grp
 
-enum class Interpolation { NearestNeighbor, Linear };
-
 class SCSP {
 public:
     SCSP(core::Scheduler &scheduler);

@@ -93,7 +93,7 @@ void SMPC::FactoryReset() {
     SMEM.fill(0x00);
     m_STE = false;
 
-    if (m_rtc.GetMode() == rtc::RTC::Mode::Virtual) {
+    if (m_rtc.GetMode() == rtc::Mode::Virtual) {
         util::datetime::DateTime defaultDateTime{
             .year = 1994, .month = 1, .day = 1, .hour = 0, .minute = 0, .second = 0};
         m_rtc.SetDateTime(defaultDateTime);
@@ -627,7 +627,7 @@ void SMPC::WriteINTBACKStatusReport() {
 
     OREG[0] = (m_STE << 7) | (m_resetDisable << 6);
 
-    if (m_rtc.GetMode() == rtc::RTC::Mode::Virtual) {
+    if (m_rtc.GetMode() == rtc::Mode::Virtual) {
         m_rtc.UpdateSysClock(m_scheduler.CurrentCount());
     }
     const auto dt = m_rtc.GetDateTime();

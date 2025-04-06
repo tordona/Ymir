@@ -2,6 +2,11 @@
 
 #include <satemu/core/types.hpp>
 
+#include <satemu/sys/clocks.hpp>
+
+#include <satemu/hw/scsp/scsp_defs.hpp>
+#include <satemu/hw/smpc/rtc_defs.hpp>
+
 #include <fmt/format.h>
 #include <toml++/toml.hpp>
 
@@ -11,11 +16,6 @@
 #include <variant>
 
 namespace app {
-
-enum class RTCMode { Host, Virtual };
-enum class VirtualRTCResetBehavior { PreserveCurrentTime, SyncToHost, SyncToFixedStartingTime };
-
-enum class AudioInterpolationMode { Nearest, Linear };
 
 struct SettingsLoadResult {
     enum class Type { Success, TOMLParseError, UnsupportedConfigVersion };
@@ -117,15 +117,17 @@ public:
     struct System {
         std::string biosPath;
 
+        satemu::sys::VideoStandard videoStandard;
+
         bool emulateSH2Cache;
 
         struct RTC {
-            RTCMode mode;
+            satemu::smpc::rtc::Mode mode;
 
             sint64 hostTimeOffset;
 
             sint64 virtBaseTime;
-            VirtualRTCResetBehavior virtResetBehavior;
+            satemu::smpc::rtc::HardResetStrategy virtHardResetStrategy;
         } rtc;
     } system;
 
@@ -137,7 +139,6 @@ public:
         bool forceIntegerScaling;
         bool forceAspectRatio;
         double forcedAspect;
-
         bool autoResizeWindow;
         bool displayVideoOutputInWindow;
 
@@ -146,7 +147,7 @@ public:
     } video;
 
     struct Audio {
-        AudioInterpolationMode interpolationMode;
+        satemu::scsp::Interpolation interpolationMode;
         bool threadedSCSP;
     } audio;
 

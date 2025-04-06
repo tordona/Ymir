@@ -200,49 +200,12 @@ EmuEvent SetEmulateSH2Cache(bool enable) {
 }
 
 EmuEvent UpdateRTCMode() {
-    return RunFunction([=](SharedContext &ctx) {
-        using SMPCRTCMode = smpc::rtc::RTC::Mode;
-        SMPCRTCMode mode;
-
-        switch (ctx.settings.system.rtc.mode) {
-        default:
-        case RTCMode::Host:
-            mode = SMPCRTCMode::Host;
-            devlog::info<grp::base>("Using host RTC mode");
-            break;
-        case RTCMode::Virtual:
-            mode = SMPCRTCMode::Virtual;
-            devlog::info<grp::base>("Using virtual RTC mode");
-            break;
-        }
-
-        ctx.saturn.SMPC.GetRTC().SetMode(mode);
-    });
+    return RunFunction([=](SharedContext &ctx) { ctx.saturn.SMPC.GetRTC().SetMode(ctx.settings.system.rtc.mode); });
 }
 
 EmuEvent UpdateRTCResetStrategy() {
     return RunFunction([=](SharedContext &ctx) {
-        using SMPCRTCResetStrategy = smpc::rtc::RTC::HardResetStrategy;
-        SMPCRTCResetStrategy strategy;
-
-        switch (ctx.settings.system.rtc.virtResetBehavior) {
-        default:
-        case VirtualRTCResetBehavior::PreserveCurrentTime:
-            strategy = SMPCRTCResetStrategy::Preserve;
-            devlog::info<grp::base>("Virtual RTC reset mode: preserve current time");
-            break;
-        case VirtualRTCResetBehavior::SyncToHost:
-            strategy = SMPCRTCResetStrategy::SyncToHost;
-            devlog::info<grp::base>("Virtual RTC reset mode: sync to host RTC");
-            break;
-        case VirtualRTCResetBehavior::SyncToFixedStartingTime:
-            strategy = SMPCRTCResetStrategy::ResetToFixedTime;
-            devlog::info<grp::base>("Virtual RTC reset mode: reset to fixed time point");
-            break;
-        }
-
-        auto &rtc = ctx.saturn.SMPC.GetRTC();
-        rtc.SetHardResetStrategy(strategy);
+        ctx.saturn.SMPC.GetRTC().SetHardResetStrategy(ctx.settings.system.rtc.virtHardResetStrategy);
     });
 }
 
@@ -269,14 +232,8 @@ EmuEvent UseRendererThreadForVDP1(bool use) {
 }
 
 EmuEvent UpdateSCSPInterpolation() {
-    return RunFunction([=](SharedContext &ctx) {
-        switch (ctx.settings.audio.interpolationMode) {
-        case AudioInterpolationMode::Nearest:
-            ctx.saturn.SCSP.interpolation = scsp::Interpolation::NearestNeighbor;
-            break;
-        case AudioInterpolationMode::Linear: ctx.saturn.SCSP.interpolation = scsp::Interpolation::Linear; break;
-        }
-    });
+    return RunFunction(
+        [=](SharedContext &ctx) { ctx.saturn.SCSP.interpolation = ctx.settings.audio.interpolationMode; });
 }
 
 EmuEvent SetThreadedSCSP(bool threaded) {

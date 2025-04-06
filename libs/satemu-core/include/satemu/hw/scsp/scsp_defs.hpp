@@ -34,4 +34,7 @@ inline constexpr uint16 kIntrTimerC = 8;         // Timer C
 inline constexpr uint16 kIntrMIDIOutput = 9;     // MIDI output empty
 inline constexpr uint16 kIntrSample = 10;        // Once every sample tick
 
+// Audio interpolation modes
+enum class Interpolation { NearestNeighbor, Linear };
+
 } // namespace satemu::scsp

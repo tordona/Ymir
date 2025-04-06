@@ -4,6 +4,7 @@
 #include <satemu/util/dev_log.hpp>
 
 using namespace std::literals;
+using namespace satemu;
 
 namespace app {
 
@@ -29,40 +30,48 @@ inline constexpr int kConfigVersion = 1;
 // -------------------------------------------------------------------------------------------------
 // Enum parsers
 
-static void ParseEnum(toml::node_view<toml::node> &node, const char *name, RTCMode &value) {
+static void ParseEnum(toml::node_view<toml::node> &node, const char *name, sys::VideoStandard &value) {
+    value = sys::VideoStandard::NTSC;
+    if (auto opt = node[name].value<std::string>()) {
+        if (*opt == "NTSC"s) {
+            value = sys::VideoStandard::NTSC;
+        } else if (*opt == "PAL"s) {
+            value = sys::VideoStandard::PAL;
+        }
+    }
+}
+
+static void ParseEnum(toml::node_view<toml::node> &node, const char *name, smpc::rtc::Mode &value) {
+    value = smpc::rtc::Mode::Host;
     if (auto opt = node[name].value<std::string>()) {
         if (*opt == "Host"s) {
-            value = RTCMode::Host;
+            value = smpc::rtc::Mode::Host;
         } else if (*opt == "Virtual"s) {
-            value = RTCMode::Virtual;
-        } else {
-            value = RTCMode::Host;
+            value = smpc::rtc::Mode::Virtual;
         }
     }
 }
 
-static void ParseEnum(toml::node_view<toml::node> &node, const char *name, VirtualRTCResetBehavior &value) {
+static void ParseEnum(toml::node_view<toml::node> &node, const char *name, smpc::rtc::HardResetStrategy &value) {
+    value = smpc::rtc::HardResetStrategy::Preserve;
     if (auto opt = node[name].value<std::string>()) {
         if (*opt == "PreserveCurrentTime"s) {
-            value = VirtualRTCResetBehavior::PreserveCurrentTime;
+            value = smpc::rtc::HardResetStrategy::Preserve;
         } else if (*opt == "SyncToHost"s) {
-            value = VirtualRTCResetBehavior::SyncToHost;
+            value = smpc::rtc::HardResetStrategy::SyncToHost;
         } else if (*opt == "SyncToFixedStartingTime"s) {
-            value = VirtualRTCResetBehavior::SyncToFixedStartingTime;
-        } else {
-            value = VirtualRTCResetBehavior::PreserveCurrentTime;
+            value = smpc::rtc::HardResetStrategy::ResetToFixedTime;
         }
     }
 }
 
-static void ParseEnum(toml::node_view<toml::node> &node, const char *name, AudioInterpolationMode &value) {
+static void ParseEnum(toml::node_view<toml::node> &node, const char *name, scsp::Interpolation &value) {
+    value = scsp::Interpolation::NearestNeighbor;
     if (auto opt = node[name].value<std::string>()) {
         if (*opt == "Nearest"s) {
-            value = AudioInterpolationMode::Nearest;
+            value = scsp::Interpolation::NearestNeighbor;
         } else if (*opt == "Linear"s) {
-            value = AudioInterpolationMode::Linear;
-        } else {
-            value = AudioInterpolationMode::Nearest;
+            value = scsp::Interpolation::Linear;
         }
     }
 }
@@ -70,28 +79,36 @@ static void ParseEnum(toml::node_view<toml::node> &node, const char *name, Audio
 // -------------------------------------------------------------------------------------------------
 // Enum-to-string converters
 
-static const char *EnumName(const RTCMode value) {
+static const char *EnumName(const sys::VideoStandard value) {
     switch (value) {
-    case RTCMode::Host: return "Host";
-    case RTCMode::Virtual: return "Virtual";
-    default: return "Host";
+    default:
+    case sys::VideoStandard::NTSC: return "NTSC";
+    case sys::VideoStandard::PAL: return "PAL";
     }
 }
 
-static const char *EnumName(const VirtualRTCResetBehavior value) {
+static const char *EnumName(const smpc::rtc::Mode value) {
     switch (value) {
-    case VirtualRTCResetBehavior::PreserveCurrentTime: return "PreserveCurrentTime";
-    case VirtualRTCResetBehavior::SyncToHost: return "SyncToHost";
-    case VirtualRTCResetBehavior::SyncToFixedStartingTime: return "SyncToFixedStartingTime";
-    default: return "PreserveCurrentTime";
+    default:
+    case smpc::rtc::Mode::Host: return "Host";
+    case smpc::rtc::Mode::Virtual: return "Virtual";
     }
 }
 
-static const char *EnumName(const AudioInterpolationMode value) {
+static const char *EnumName(const smpc::rtc::HardResetStrategy value) {
     switch (value) {
-    case AudioInterpolationMode::Nearest: return "Nearest";
-    case AudioInterpolationMode::Linear: return "Linear";
-    default: return "Nearest";
+    default:
+    case smpc::rtc::HardResetStrategy::Preserve: return "Preserve";
+    case smpc::rtc::HardResetStrategy::SyncToHost: return "SyncToHost";
+    case smpc::rtc::HardResetStrategy::ResetToFixedTime: return "ResetToFixedTime";
+    }
+}
+
+static const char *EnumName(const scsp::Interpolation value) {
+    switch (value) {
+    default:
+    case scsp::Interpolation::NearestNeighbor: return "Nearest";
+    case scsp::Interpolation::Linear: return "Linear";
     }
 }
 
@@ -121,27 +138,28 @@ void Settings::ResetToDefaults() {
 
     system.biosPath = "";
 
+    system.videoStandard = sys::VideoStandard::NTSC;
+
     system.emulateSH2Cache = false;
 
-    system.rtc.mode = RTCMode::Host;
+    system.rtc.mode = smpc::rtc::Mode::Host;
     system.rtc.hostTimeOffset = 0;
     system.rtc.virtBaseTime = util::datetime::to_timestamp(
         util::datetime::DateTime{.year = 1994, .month = 1, .day = 1, .hour = 0, .minute = 0, .second = 0});
-    system.rtc.virtResetBehavior = VirtualRTCResetBehavior::PreserveCurrentTime;
+    system.rtc.virtHardResetStrategy = smpc::rtc::HardResetStrategy::Preserve;
 
     // TODO: input
 
     video.forceIntegerScaling = true;
     video.forceAspectRatio = false;
     video.forcedAspect = 4.0 / 3.0;
-
     video.autoResizeWindow = true;
     video.displayVideoOutputInWindow = false;
 
     video.threadedRendering = true;
     video.threadedVDP1 = true;
 
-    audio.interpolationMode = AudioInterpolationMode::Linear;
+    audio.interpolationMode = scsp::Interpolation::Linear;
     audio.threadedSCSP = true;
 }
 
@@ -180,6 +198,7 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
 
     if (auto tblSystem = data["System"]) {
         ParseSimple(tblSystem, "BiosPath", system.biosPath);
+        ParseEnum(tblSystem, "VideoStandard", system.videoStandard);
         ParseSimple(tblSystem, "EmulateSH2Cache", system.emulateSH2Cache);
 
         auto &rtc = system.rtc;
@@ -188,7 +207,7 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
             ParseEnum(tblRTC, "Mode", rtc.mode);
             ParseSimple(tblRTC, "HostTimeOffset", rtc.hostTimeOffset);
             ParseSimple(tblRTC, "VirtualBaseTime", rtc.virtBaseTime);
-            ParseEnum(tblRTC, "VirtualResetBehavior", rtc.virtResetBehavior);
+            ParseEnum(tblRTC, "VirtualHardResetStrategy", rtc.virtHardResetStrategy);
         }
     }
 
@@ -235,13 +254,14 @@ SettingsSaveResult Settings::Save() {
 
         {"System", toml::table{{
             {"BiosPath", system.biosPath},
+            {"VideoStandard", EnumName(system.videoStandard)},
             {"EmulateSH2Cache", system.emulateSH2Cache},
         
             {"RTC", toml::table{{
                 {"Mode", EnumName(rtc.mode)},
                 {"HostTimeOffset", rtc.hostTimeOffset},
                 {"VirtualBaseTime", rtc.virtBaseTime},
-                {"VirtualResetBehavior", EnumName(rtc.virtResetBehavior)},
+                {"VirtualHardResetStrategy", EnumName(rtc.virtHardResetStrategy)},
             }}},
         }}},
 
