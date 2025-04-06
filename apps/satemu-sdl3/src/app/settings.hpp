@@ -119,6 +119,8 @@ public:
 
         satemu::sys::VideoStandard videoStandard;
 
+        bool autodetectRegion;
+
         bool emulateSH2Cache;
 
         struct RTC {

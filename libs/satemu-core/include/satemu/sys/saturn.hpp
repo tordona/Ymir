@@ -140,6 +140,11 @@ public:
     scsp::SCSP SCSP;          // SCSP and its DSP, and MC68EC000 CPU
     cdblock::CDBlock CDBlock; // CD block and media
 
+    // -------------------------------------------------------------------------
+    // Settings
+
+    bool autodetectRegion = false; // Automatically change SMPC area code based on compatible regions from loaded discs
+
 private:
     // -------------------------------------------------------------------------
     // System operations (SMPC) - sys::ISystemOperations implementation

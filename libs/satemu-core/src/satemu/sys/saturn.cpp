@@ -138,8 +138,7 @@ void Saturn::LoadIPL(std::span<uint8, sys::kIPLSize> ipl) {
 
 void Saturn::LoadDisc(media::Disc &&disc) {
     // Configure area code based on compatible area codes from the disc
-    // TODO: make area code autoconfiguration optional
-    if (disc.header.compatAreaCode != media::AreaCode::None) {
+    if (autodetectRegion && disc.header.compatAreaCode != media::AreaCode::None) {
         // The area code enum is a bitmap where each bit corresponds to an SMPC area code
         const auto areaCodeVal = static_cast<uint16>(disc.header.compatAreaCode);
 

@@ -82,6 +82,8 @@ void SettingsWindow::DrawContents() {
 void SettingsWindow::DrawGeneralTab() {
     auto &settings = m_context.settings.general;
 
+    // -----------------------------------------------------------------------------------------------------------------
+
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
     ImGui::SeparatorText("Performance");
     ImGui::PopFont();
@@ -103,6 +105,8 @@ void SettingsWindow::DrawGeneralTab() {
 
 void SettingsWindow::DrawSystemTab() {
     auto &settings = m_context.settings.system;
+
+    // -----------------------------------------------------------------------------------------------------------------
 
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
     ImGui::SeparatorText("General");
@@ -169,6 +173,18 @@ void SettingsWindow::DrawSystemTab() {
         ImGui::EndTable();
     }
 
+    // -----------------------------------------------------------------------------------------------------------------
+
+    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::SeparatorText("Behavior");
+    ImGui::PopFont();
+
+    if (MakeDirty(ImGui::Checkbox("Autodetect region from loaded discs", &settings.autodetectRegion))) {
+        m_context.saturn.autodetectRegion = settings.autodetectRegion;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
     ImGui::SeparatorText("Accuracy");
     ImGui::PopFont();
@@ -180,6 +196,8 @@ void SettingsWindow::DrawSystemTab() {
                        "A few games require this to work properly.\n"
                        "Reduces emulation performance by about 10%.\n\n"
                        "Upon enabling this option, both SH-2 CPUs' caches will be flushed.");
+
+    // -----------------------------------------------------------------------------------------------------------------
 
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
     ImGui::SeparatorText("Real-Time Clock");
@@ -303,6 +321,8 @@ void SettingsWindow::DrawInputTab() {
 void SettingsWindow::DrawVideoTab() {
     auto &settings = m_context.settings.video;
 
+    // -----------------------------------------------------------------------------------------------------------------
+
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
     ImGui::SeparatorText("Display");
     ImGui::PopFont();
@@ -338,6 +358,8 @@ void SettingsWindow::DrawVideoTab() {
         m_context.EnqueueEvent(events::gui::FitWindowToScreen());
     }
 
+    // -----------------------------------------------------------------------------------------------------------------
+
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
     ImGui::SeparatorText("Performance");
     ImGui::PopFont();
@@ -370,6 +392,8 @@ void SettingsWindow::DrawVideoTab() {
 void SettingsWindow::DrawAudioTab() {
     auto &settings = m_context.settings.audio;
 
+    // -----------------------------------------------------------------------------------------------------------------
+
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
     ImGui::SeparatorText("Quality");
     ImGui::PopFont();
@@ -390,6 +414,8 @@ void SettingsWindow::DrawAudioTab() {
         settings.interpolationMode = scsp::Interpolation::Linear;
         m_context.EnqueueEvent(events::emu::UpdateSCSPInterpolation());
     }
+
+    // -----------------------------------------------------------------------------------------------------------------
 
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
     ImGui::SeparatorText("Performance");
