@@ -179,9 +179,15 @@ void SettingsWindow::DrawSystemTab() {
     ImGui::SeparatorText("Behavior");
     ImGui::PopFont();
 
-    if (MakeDirty(ImGui::Checkbox("Autodetect region from loaded discs", &settings.autodetectRegion))) {
-        m_context.saturn.autodetectRegion = settings.autodetectRegion;
-    }
+    MakeDirty(ImGui::Checkbox("Autodetect region from loaded discs",
+                              &m_context.saturn.configuration.system.autodetectRegion));
+    ExplanationTooltip(
+        "Whenever a game disc is loaded, the emulator will automatically switch the system region to match one of the "
+        "game's supported regions. The list below allows you to choose the preferred region order. If none of the "
+        "preferred regions is supported by the game, the emulator will pick the first region listed on the disc.");
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Preferred region order:");
 
     // -----------------------------------------------------------------------------------------------------------------
 

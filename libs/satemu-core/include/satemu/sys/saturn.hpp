@@ -1,5 +1,6 @@
 #pragma once
 
+#include <satemu/core/configuration.hpp>
 #include <satemu/core/scheduler.hpp>
 
 #include "memory.hpp"
@@ -98,6 +99,10 @@ struct Saturn : sys::ISystemOperations {
         slaveSH2.UseTracer(nullptr);
         SCU.UseTracer(nullptr);
     }
+    // -------------------------------------------------------------------------
+    // Configuration
+
+    core::Configuration configuration;
 
 private:
     // Runs the emulator until the end of the current frame
@@ -108,6 +113,11 @@ private:
     template <bool debug, bool enableSH2Cache>
     void Run();
 
+    using RunFrameFn = void (Saturn::*)();
+    RunFrameFn m_runFrameFn;
+
+    void UpdateRunFrameFn();
+
     // -------------------------------------------------------------------------
     // Cycle counting
     // NOTE: Scheduler must be initialized before other components as they use it to register events
@@ -115,15 +125,16 @@ private:
     core::Scheduler m_scheduler;
 
     // -------------------------------------------------------------------------
+    // Internal configuration
+
+    std::vector<media::AreaCode> m_preferredRegionOrder;
+    void UpdatePreferredRegionOrder(std::span<const core::Region> regions);
+
+    // -------------------------------------------------------------------------
     // Global components and state
 
     sys::System m_system;
     sys::SystemFeatures m_systemFeatures;
-
-    using RunFrameFn = void (Saturn::*)();
-    RunFrameFn m_runFrameFn;
-
-    void UpdateRunFrameFn();
 
 public:
     // -------------------------------------------------------------------------
@@ -139,11 +150,6 @@ public:
     smpc::SMPC SMPC;          // SMPC and input devices
     scsp::SCSP SCSP;          // SCSP and its DSP, and MC68EC000 CPU
     cdblock::CDBlock CDBlock; // CD block and media
-
-    // -------------------------------------------------------------------------
-    // Settings
-
-    bool autodetectRegion = true; // Automatically change SMPC area code based on compatible regions from loaded discs
 
 private:
     // -------------------------------------------------------------------------

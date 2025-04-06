@@ -22,7 +22,7 @@ namespace app {
 struct SharedContext {
     satemu::Saturn saturn;
 
-    Settings settings;
+    Settings settings{saturn.configuration};
 
     // Certain GUI interactions requires synchronization with the emulator thread, specifically when dealing with
     // dynamic objects:

@@ -1,11 +1,13 @@
 #pragma once
 
-#include <satemu/core/types.hpp>
+#include <satemu/core/configuration.hpp>
 
 #include <satemu/sys/clocks.hpp>
 
 #include <satemu/hw/scsp/scsp_defs.hpp>
 #include <satemu/hw/smpc/rtc_defs.hpp>
+
+#include <satemu/core/types.hpp>
 
 #include <fmt/format.h>
 #include <toml++/toml.hpp>
@@ -85,7 +87,8 @@ struct SettingsSaveResult {
 };
 
 struct Settings {
-    Settings() noexcept {
+    Settings(satemu::core::Configuration &emuConfig) noexcept
+        : m_emuConfig(emuConfig) {
         ResetToDefaults();
     }
 
@@ -118,8 +121,6 @@ public:
         std::string biosPath;
 
         satemu::sys::VideoStandard videoStandard;
-
-        bool autodetectRegion;
 
         bool emulateSH2Cache;
 
@@ -154,6 +155,8 @@ public:
     } audio;
 
 private:
+    satemu::core::Configuration &m_emuConfig;
+
     bool m_dirty = false;
     std::chrono::steady_clock::time_point m_dirtyTimestamp;
 };

@@ -3,6 +3,7 @@ add_library(satemu-core
     include/satemu/satemu.hpp
     include/satemu/version.hpp
 
+    include/satemu/core/configuration.hpp
     include/satemu/core/scheduler.hpp
     include/satemu/core/types.hpp
 
@@ -79,6 +80,7 @@ add_library(satemu-core
     include/satemu/media/filesystem.hpp
     include/satemu/media/frame_address.hpp
     include/satemu/media/iso9660.hpp
+    include/satemu/media/media_defs.hpp
     include/satemu/media/saturn_header.hpp
     include/satemu/media/subheader.hpp
     

@@ -140,7 +140,7 @@ void Settings::ResetToDefaults() {
 
     system.videoStandard = sys::VideoStandard::NTSC;
 
-    system.autodetectRegion = true;
+    m_emuConfig.system.autodetectRegion = true;
 
     system.emulateSH2Cache = false;
 
@@ -201,7 +201,7 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
     if (auto tblSystem = data["System"]) {
         ParseSimple(tblSystem, "BiosPath", system.biosPath);
         ParseEnum(tblSystem, "VideoStandard", system.videoStandard);
-        ParseSimple(tblSystem, "AutoDetectRegion", system.autodetectRegion);
+        ParseSimple(tblSystem, "AutoDetectRegion", m_emuConfig.system.autodetectRegion);
         ParseSimple(tblSystem, "EmulateSH2Cache", system.emulateSH2Cache);
 
         auto &rtc = system.rtc;
@@ -258,7 +258,7 @@ SettingsSaveResult Settings::Save() {
         {"System", toml::table{{
             {"BiosPath", system.biosPath},
             {"VideoStandard", EnumName(system.videoStandard)},
-            {"AutoDetectRegion", system.autodetectRegion},
+            {"AutoDetectRegion", m_emuConfig.system.autodetectRegion},
             {"EmulateSH2Cache", system.emulateSH2Cache},
         
             {"RTC", toml::table{{

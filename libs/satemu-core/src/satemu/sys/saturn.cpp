@@ -13,7 +13,14 @@ namespace grp {
 
     // Hierarchy:
     //
+    // system
     // bus
+
+    struct system {
+        static constexpr bool enabled = true;
+        static constexpr devlog::Level level = devlog::level::debug;
+        static constexpr std::string_view name = "System";
+    };
 
     struct bus {
         static constexpr bool enabled = true;
@@ -82,6 +89,9 @@ Saturn::Saturn()
     m_systemFeatures.emulateSH2Cache = false;
     UpdateRunFrameFn();
 
+    configuration.system.preferredRegionOrder.Observe(
+        [&](const std::vector<core::Region> &regions) { UpdatePreferredRegionOrder(regions); });
+
     Reset(true);
 }
 
@@ -138,15 +148,13 @@ void Saturn::LoadIPL(std::span<uint8, sys::kIPLSize> ipl) {
 
 void Saturn::LoadDisc(media::Disc &&disc) {
     // Configure area code based on compatible area codes from the disc
-    if (autodetectRegion && disc.header.compatAreaCode != media::AreaCode::None) {
+    if (configuration.system.autodetectRegion && disc.header.compatAreaCode != media::AreaCode::None) {
         // The area code enum is a bitmap where each bit corresponds to an SMPC area code
         const auto areaCodeVal = static_cast<uint16>(disc.header.compatAreaCode);
 
         // Pick from the preferred list if possible
         bool hasSelectedAreaCode = false;
-        // TODO: make preferred order configurable
-        static media::AreaCode kPreferredOrder[] = {media::AreaCode::NorthAmerica, media::AreaCode::Japan};
-        for (auto areaCode : kPreferredOrder) {
+        for (auto areaCode : m_preferredRegionOrder) {
             if (BitmaskEnum(disc.header.compatAreaCode).AnyOf(areaCode)) {
                 SMPC.SetAreaCode(std::countr_zero(static_cast<uint16>(areaCode)));
                 hasSelectedAreaCode = true;
@@ -239,6 +247,30 @@ void Saturn::UpdateRunFrameFn() {
         m_systemFeatures.enableDebugTracing
             ? (m_systemFeatures.emulateSH2Cache ? &Saturn::RunFrame<true, true> : &Saturn::RunFrame<true, false>)
             : (m_systemFeatures.emulateSH2Cache ? &Saturn::RunFrame<false, true> : &Saturn::RunFrame<false, false>);
+}
+
+void Saturn::UpdatePreferredRegionOrder(std::span<const core::Region> regions) {
+    m_preferredRegionOrder.clear();
+    media::AreaCode usedAreaCodes = media::AreaCode::None;
+    auto addAreaCode = [&](media::AreaCode areaCode) {
+        if (BitmaskEnum(usedAreaCodes).NoneOf(areaCode)) {
+            usedAreaCodes |= areaCode;
+            m_preferredRegionOrder.push_back(areaCode);
+        }
+    };
+
+    for (const core::Region region : regions) {
+        switch (region) {
+        case core::Region::Japan: addAreaCode(media::AreaCode::Japan); break;
+        case core::Region::AsiaNTSC: addAreaCode(media::AreaCode::AsiaNTSC); break;
+        case core::Region::NorthAmerica: addAreaCode(media::AreaCode::NorthAmerica); break;
+        case core::Region::CentralSouthAmericaNTSC: addAreaCode(media::AreaCode::CentralSouthAmericaNTSC); break;
+        case core::Region::Korea: addAreaCode(media::AreaCode::Korea); break;
+        case core::Region::AsiaPAL: addAreaCode(media::AreaCode::AsiaPAL); break;
+        case core::Region::EuropePAL: addAreaCode(media::AreaCode::EuropePAL); break;
+        case core::Region::CentralSouthAmericaPAL: addAreaCode(media::AreaCode::CentralSouthAmericaPAL); break;
+        }
+    }
 }
 
 bool Saturn::GetNMI() const {
