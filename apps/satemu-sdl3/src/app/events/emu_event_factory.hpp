@@ -73,7 +73,7 @@ inline EmuEvent Shutdown() {
 // Specialized event factories
 
 EmuEvent SetClockSpeed(satemu::sys::ClockSpeed clockSpeed);
-EmuEvent SetVideoStandard(satemu::sys::VideoStandard videoStandard);
+EmuEvent SetVideoStandard(satemu::config::sys::VideoStandard videoStandard);
 EmuEvent SetAreaCode(uint8 areaCode);
 
 EmuEvent SetDebugTrace(bool enable);

@@ -13,6 +13,8 @@ namespace sys {
         EuropePAL = 0xC,
         CentralSouthAmericaPAL = 0xD,
     };
+
+    enum class VideoStandard { NTSC, PAL };
 } // namespace sys
 
 namespace rtc {

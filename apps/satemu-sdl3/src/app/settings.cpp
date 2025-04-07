@@ -31,13 +31,13 @@ inline constexpr int kConfigVersion = 1;
 // -------------------------------------------------------------------------------------------------
 // Enum parsers
 
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, sys::VideoStandard &value) {
-    value = sys::VideoStandard::NTSC;
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, config::sys::VideoStandard &value) {
+    value = config::sys::VideoStandard::NTSC;
     if (auto opt = node[name].value<std::string>()) {
         if (*opt == "NTSC"s) {
-            value = sys::VideoStandard::NTSC;
+            value = config::sys::VideoStandard::NTSC;
         } else if (*opt == "PAL"s) {
-            value = sys::VideoStandard::PAL;
+            value = config::sys::VideoStandard::PAL;
         }
     }
 }
@@ -82,11 +82,11 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
 // -------------------------------------------------------------------------------------------------
 // Enum-to-string converters
 
-FORCE_INLINE static const char *EnumName(const sys::VideoStandard value) {
+FORCE_INLINE static const char *EnumName(const config::sys::VideoStandard value) {
     switch (value) {
     default:
-    case sys::VideoStandard::NTSC: return "NTSC";
-    case sys::VideoStandard::PAL: return "PAL";
+    case config::sys::VideoStandard::NTSC: return "NTSC";
+    case config::sys::VideoStandard::PAL: return "PAL";
     }
 }
 
@@ -148,12 +148,6 @@ void Settings::ResetToDefaults() {
 
     system.biosPath = "";
 
-    system.videoStandard = sys::VideoStandard::NTSC;
-
-    m_emuConfig.system.autodetectRegion = true;
-
-    system.emulateSH2Cache = false;
-
     // TODO: input
 
     video.forceIntegerScaling = false;
@@ -198,9 +192,9 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
 
     if (auto tblSystem = data["System"]) {
         Parse(tblSystem, "BiosPath", system.biosPath);
-        Parse(tblSystem, "VideoStandard", system.videoStandard);
+        Parse(tblSystem, "VideoStandard", m_emuConfig.system.videoStandard);
         Parse(tblSystem, "AutoDetectRegion", m_emuConfig.system.autodetectRegion);
-        Parse(tblSystem, "EmulateSH2Cache", system.emulateSH2Cache);
+        Parse(tblSystem, "EmulateSH2Cache", m_emuConfig.system.emulateSH2Cache);
 
         auto &rtc = m_emuConfig.rtc;
 
@@ -254,9 +248,9 @@ SettingsSaveResult Settings::Save() {
 
         {"System", toml::table{{
             {"BiosPath", system.biosPath},
-            {"VideoStandard", EnumName(system.videoStandard)},
+            {"VideoStandard", EnumName(m_emuConfig.system.videoStandard)},
             {"AutoDetectRegion", m_emuConfig.system.autodetectRegion},
-            {"EmulateSH2Cache", system.emulateSH2Cache},
+            {"EmulateSH2Cache", m_emuConfig.system.emulateSH2Cache.Get()},
         
             {"RTC", toml::table{{
                 {"Mode", EnumName(rtc.mode)},

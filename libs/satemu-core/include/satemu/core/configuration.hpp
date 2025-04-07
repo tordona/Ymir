@@ -2,6 +2,8 @@
 
 #include "configuration_defs.hpp"
 
+#include <satemu/sys/clocks.hpp>
+
 #include <satemu/util/date_time.hpp>
 #include <satemu/util/observable.hpp>
 
@@ -20,7 +22,7 @@ namespace satemu::core {
 // - Complex types (such as containers and observables) cannot be safely modified from any thread.
 //
 // If you plan to run the emulator core in a dedicated thread, make sure to modify non-thread-safe values exclusively on
-// that thread. You may add observers to observable values (both functions and value references), but be aware that
+// that thread. You may add observers to observable values (both functions and value references), but be aware that the
 // functions will also run on the emulator thread.
 struct Configuration {
     struct System {
@@ -31,6 +33,16 @@ struct Configuration {
         // If none of these regions is supported by the disc, the first region listed on the disc is used.
         util::Observable<std::vector<config::sys::Region>> preferredRegionOrder =
             std::vector<config::sys::Region>{config::sys::Region::NorthAmerica, config::sys::Region::Japan};
+
+        // Specifies the video standard for the system, which affects video timings and clock rates.
+        util::Observable<config::sys::VideoStandard> videoStandard = config::sys::VideoStandard::NTSC;
+
+        // Enables SH-2 cache emulation.
+        //
+        // Most games work fine without this. Enable it to improve accuracy and compatibility with specific games.
+        //
+        // Enabling this option incurs a small performance penalty and purges all SH-2 caches.
+        util::Observable<bool> emulateSH2Cache = false;
     } system;
 
     struct RTC {

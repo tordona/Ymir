@@ -17,6 +17,7 @@ SystemSettingsView::SystemSettingsView(SharedContext &context)
 
 void SystemSettingsView::Display() {
     auto &settings = m_context.settings.system;
+    auto &sysConfig = m_context.saturn.configuration.system;
     auto &rtcConfig = m_context.saturn.configuration.rtc;
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -61,9 +62,7 @@ void SystemSettingsView::Display() {
             ImGui::TextUnformatted("Video standard");
         }
         if (ImGui::TableNextColumn()) {
-            if (MakeDirty(ui::widgets::VideoStandardSelector(m_context))) {
-                settings.videoStandard = m_context.saturn.GetVideoStandard();
-            }
+            MakeDirty(ui::widgets::VideoStandardSelector(m_context));
         }
 
         ImGui::TableNextRow();
@@ -108,8 +107,9 @@ void SystemSettingsView::Display() {
     ImGui::SeparatorText("Accuracy");
     ImGui::PopFont();
 
-    if (MakeDirty(ImGui::Checkbox("Emulate SH-2 cache", &settings.emulateSH2Cache))) {
-        m_context.EnqueueEvent(events::emu::SetEmulateSH2Cache(settings.emulateSH2Cache));
+    bool emulateSH2Cache = sysConfig.emulateSH2Cache;
+    if (MakeDirty(ImGui::Checkbox("Emulate SH-2 cache", &emulateSH2Cache))) {
+        m_context.EnqueueEvent(events::emu::SetEmulateSH2Cache(emulateSH2Cache));
     }
     widgets::ExplanationTooltip("Enables emulation of the SH-2 cache.\n"
                                 "A few games require this to work properly.\n"

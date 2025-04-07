@@ -118,10 +118,6 @@ public:
 
     struct System {
         std::string biosPath;
-
-        satemu::sys::VideoStandard videoStandard;
-
-        bool emulateSH2Cache;
     } system;
 
     struct Input {

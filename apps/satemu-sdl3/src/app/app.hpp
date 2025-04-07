@@ -68,8 +68,6 @@ private:
 
     input::InputHandler m_inputHandler;
 
-    void ApplySettingsToEmulator();
-
     void RunEmulator();
 
     void EmulatorThread();

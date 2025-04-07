@@ -9,12 +9,12 @@
 namespace satemu::sys {
 
 struct System {
-    VideoStandard videoStandard = VideoStandard::NTSC;
+    config::sys::VideoStandard videoStandard = config::sys::VideoStandard::NTSC;
     ClockSpeed clockSpeed = ClockSpeed::_320;
 
     const ClockRatios &GetClockRatios() const {
         const bool clock352 = clockSpeed == ClockSpeed::_352;
-        const bool pal = videoStandard == VideoStandard::PAL;
+        const bool pal = videoStandard == config::sys::VideoStandard::PAL;
         return kClockRatios[clock352 | (pal << 1)];
     }
 

@@ -30,8 +30,13 @@ struct Saturn : sys::ISystemOperations {
     void Reset(bool hard); // Does a soft or hard reset of the system
     void FactoryReset();   // Erases SMPC settings and does a hard reset
 
-    sys::VideoStandard GetVideoStandard() const;
-    void SetVideoStandard(sys::VideoStandard videoStandard);
+    config::sys::VideoStandard GetVideoStandard() const {
+        return configuration.system.videoStandard;
+    }
+
+    void SetVideoStandard(config::sys::VideoStandard videoStandard) {
+        configuration.system.videoStandard = videoStandard;
+    }
 
     sys::ClockSpeed GetClockSpeed() const;
     void SetClockSpeed(sys::ClockSpeed clockSpeed);
@@ -82,10 +87,12 @@ struct Saturn : sys::ISystemOperations {
     // Most games work fine without this. Enable it to improve accuracy and compatibility with specific games.
     //
     // Enabling this option incurs a small performance penalty and purges all SH2 caches.
-    void EnableSH2CacheEmulation(bool enable);
+    void EnableSH2CacheEmulation(bool enable) {
+        configuration.system.emulateSH2Cache = enable;
+    }
 
     bool IsSH2CacheEmulationEnabled() const {
-        return m_systemFeatures.emulateSH2Cache;
+        return configuration.system.emulateSH2Cache;
     }
 
     // Runs the emulator until the end of the current frame.
@@ -129,6 +136,9 @@ private:
 
     std::vector<media::AreaCode> m_preferredRegionOrder;
     void UpdatePreferredRegionOrder(std::span<const config::sys::Region> regions);
+
+    void UpdateSH2CacheEmulation(bool enabled);
+    void UpdateVideoStandard(config::sys::VideoStandard videoStandard);
 
     // -------------------------------------------------------------------------
     // Global components and state

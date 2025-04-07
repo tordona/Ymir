@@ -34,7 +34,7 @@ Saturn::Saturn()
     : masterSH2(mainBus, true, m_systemFeatures)
     , slaveSH2(mainBus, false, m_systemFeatures)
     , SCU(m_scheduler, mainBus)
-    , VDP(m_scheduler, configuration.video)
+    , VDP(m_scheduler, configuration)
     , SMPC(m_scheduler, *this, configuration.rtc)
     , SCSP(m_scheduler, configuration.audio)
     , CDBlock(m_scheduler) {
@@ -91,6 +91,9 @@ Saturn::Saturn()
 
     configuration.system.preferredRegionOrder.Observe(
         [&](const std::vector<config::sys::Region> &regions) { UpdatePreferredRegionOrder(regions); });
+    configuration.system.emulateSH2Cache.Observe([&](bool enabled) { UpdateSH2CacheEmulation(enabled); });
+    configuration.system.videoStandard.Observe(
+        [&](config::sys::VideoStandard videoStandard) { UpdateVideoStandard(videoStandard); });
 
     Reset(true);
 }
@@ -117,16 +120,6 @@ void Saturn::Reset(bool hard) {
 void Saturn::FactoryReset() {
     SMPC.FactoryReset();
     Reset(true);
-}
-
-sys::VideoStandard Saturn::GetVideoStandard() const {
-    return m_system.videoStandard;
-}
-
-void Saturn::SetVideoStandard(sys::VideoStandard videoStandard) {
-    m_system.videoStandard = videoStandard;
-    VDP.SetVideoStandard(videoStandard);
-    m_system.UpdateClockRatios();
 }
 
 sys::ClockSpeed Saturn::GetClockSpeed() const {
@@ -193,15 +186,6 @@ void Saturn::EnableDebugTracing(bool enable) {
         DetachAllTracers();
     }
     m_systemFeatures.enableDebugTracing = enable;
-    UpdateRunFrameFn();
-}
-
-void Saturn::EnableSH2CacheEmulation(bool enable) {
-    if (!m_systemFeatures.emulateSH2Cache && enable) {
-        masterSH2.PurgeCache();
-        slaveSH2.PurgeCache();
-    }
-    m_systemFeatures.emulateSH2Cache = enable;
     UpdateRunFrameFn();
 }
 
@@ -272,6 +256,20 @@ void Saturn::UpdatePreferredRegionOrder(std::span<const config::sys::Region> reg
         case Region::CentralSouthAmericaPAL: addAreaCode(media::AreaCode::CentralSouthAmericaPAL); break;
         }
     }
+}
+
+void Saturn::UpdateSH2CacheEmulation(bool enabled) {
+    if (!m_systemFeatures.emulateSH2Cache && enabled) {
+        masterSH2.PurgeCache();
+        slaveSH2.PurgeCache();
+    }
+    m_systemFeatures.emulateSH2Cache = enabled;
+    UpdateRunFrameFn();
+}
+
+void Saturn::UpdateVideoStandard(config::sys::VideoStandard videoStandard) {
+    m_system.videoStandard = videoStandard;
+    m_system.UpdateClockRatios();
 }
 
 bool Saturn::GetNMI() const {

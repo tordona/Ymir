@@ -1,12 +1,13 @@
 #pragma once
 
+#include <satemu/core/configuration_defs.hpp>
+
 #include <satemu/core/types.hpp>
 
 #include <array>
 
 namespace satemu::sys {
 
-enum class VideoStandard { NTSC, PAL };
 enum class ClockSpeed { _320, _352 };
 
 // Clock speeds:

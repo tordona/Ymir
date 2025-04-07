@@ -10,14 +10,14 @@ namespace app::ui::widgets {
 
 bool VideoStandardSelector(SharedContext &ctx) {
     bool changed = false;
-    sys::VideoStandard videoStandard = ctx.saturn.GetVideoStandard();
-    if (ImGui::RadioButton("NTSC", videoStandard == sys::VideoStandard::NTSC)) {
-        ctx.EnqueueEvent(events::emu::SetVideoStandard(sys::VideoStandard::NTSC));
+    config::sys::VideoStandard videoStandard = ctx.saturn.GetVideoStandard();
+    if (ImGui::RadioButton("NTSC", videoStandard == config::sys::VideoStandard::NTSC)) {
+        ctx.EnqueueEvent(events::emu::SetVideoStandard(config::sys::VideoStandard::NTSC));
         changed = true;
     }
     ImGui::SameLine();
-    if (ImGui::RadioButton("PAL", videoStandard == sys::VideoStandard::PAL)) {
-        ctx.EnqueueEvent(events::emu::SetVideoStandard(sys::VideoStandard::PAL));
+    if (ImGui::RadioButton("PAL", videoStandard == config::sys::VideoStandard::PAL)) {
+        ctx.EnqueueEvent(events::emu::SetVideoStandard(config::sys::VideoStandard::PAL));
         changed = true;
     }
     return changed;

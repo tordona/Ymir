@@ -24,23 +24,12 @@
 #include <span>
 #include <thread>
 
-// -----------------------------------------------------------------------------
-// Forward declarations
-
-namespace satemu {
-
-struct Saturn;
-
-} // namespace satemu
-
-// -----------------------------------------------------------------------------
-
 namespace satemu::vdp {
 
 // Contains both VDP1 and VDP2
 class VDP {
 public:
-    VDP(core::Scheduler &scheduler, core::Configuration::Video &config);
+    VDP(core::Scheduler &scheduler, core::Configuration &config);
     ~VDP();
 
     void Reset(bool hard);
@@ -101,8 +90,8 @@ private:
 
     static void OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext);
 
-    friend struct satemu::Saturn;
-    void SetVideoStandard(sys::VideoStandard videoStandard);
+    using VideoStandard = ::satemu::config::sys::VideoStandard;
+    void SetVideoStandard(VideoStandard videoStandard);
 
     // -------------------------------------------------------------------------
     // Configuration

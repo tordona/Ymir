@@ -76,11 +76,13 @@ namespace grp {
 
 } // namespace grp
 
-VDP::VDP(core::Scheduler &scheduler, core::Configuration::Video &config)
+VDP::VDP(core::Scheduler &scheduler, core::Configuration &config)
     : m_scheduler(scheduler) {
 
-    config.threadedVDP1.Observe([&](bool value) { EnableThreadedVDP1Rendering(value); });
-    config.threadedVDP2.Observe([&](bool value) { EnableThreadedVDP2Rendering(value); });
+    config.system.videoStandard.Observe([&](VideoStandard videoStandard) { SetVideoStandard(videoStandard); });
+
+    config.video.threadedVDP1.Observe([&](bool value) { EnableThreadedVDP1Rendering(value); });
+    config.video.threadedVDP2.Observe([&](bool value) { EnableThreadedVDP2Rendering(value); });
 
     m_phaseUpdateEvent = scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent);
 
@@ -379,8 +381,8 @@ void VDP::OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext
     eventContext.RescheduleFromPrevious(cycles);
 }
 
-void VDP::SetVideoStandard(sys::VideoStandard videoStandard) {
-    const bool pal = videoStandard == sys::VideoStandard::PAL;
+void VDP::SetVideoStandard(VideoStandard videoStandard) {
+    const bool pal = videoStandard == VideoStandard::PAL;
     if (m_VDP2.TVSTAT.PAL != pal) {
         m_VDP2.TVSTAT.PAL = pal;
         m_VDP2.TVMDDirty = true;

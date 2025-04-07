@@ -32,7 +32,7 @@ EmuEvent SetClockSpeed(sys::ClockSpeed clockSpeed) {
     return RunFunction([=](SharedContext &ctx) { ctx.saturn.SetClockSpeed(clockSpeed); });
 }
 
-EmuEvent SetVideoStandard(sys::VideoStandard videoStandard) {
+EmuEvent SetVideoStandard(config::sys::VideoStandard videoStandard) {
     return RunFunction([=](SharedContext &ctx) { ctx.saturn.SetVideoStandard(videoStandard); });
 }
 

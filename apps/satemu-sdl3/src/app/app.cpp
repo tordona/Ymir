@@ -245,7 +245,7 @@ int App::Run(const CommandLineOptions &options) {
         }
     }};
 
-    ApplySettingsToEmulator();
+    // TODO: allow overriding configuration from CommandLineOptions without modifying the underlying values
 
     // Boost process priority
     util::BoostCurrentProcessPriority(m_context.settings.general.boostProcessPriority);
@@ -283,13 +283,6 @@ int App::Run(const CommandLineOptions &options) {
     RunEmulator();
 
     return EXIT_SUCCESS;
-}
-
-void App::ApplySettingsToEmulator() {
-    // TODO: automate this somehow (perhaps define a configuration object in the emulator core?)
-    // TODO: override from CommandLineOptions
-    m_context.EnqueueEvent(events::emu::SetEmulateSH2Cache(m_context.settings.system.emulateSH2Cache));
-    m_context.EnqueueEvent(events::emu::SetVideoStandard(m_context.settings.system.videoStandard));
 }
 
 void App::RunEmulator() {
