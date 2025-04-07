@@ -2,12 +2,6 @@
 
 #include <satemu/core/configuration.hpp>
 
-#include <satemu/sys/clocks.hpp>
-
-#include <satemu/hw/scsp/scsp_defs.hpp>
-
-#include <satemu/core/types.hpp>
-
 #include <fmt/format.h>
 #include <toml++/toml.hpp>
 
