@@ -220,6 +220,9 @@ else()
     message(STATUS "IPO / LTO not supported: ${IPO_ERROR}")
 endif()
 
+## Define additional macros
+target_compile_definitions(satemu-sdl3 PUBLIC "satemu_ENABLE_IMGUI_DEMO=$<BOOL:${satemu_ENABLE_IMGUI_DEMO}>")
+
 ## Apply performance options
 if (satemu_AVX2)
     if (MSVC)

@@ -674,8 +674,6 @@ void App::RunEmulator() {
     ImGui_ImplSDL3_InitForSDLRenderer(screen.window, renderer);
     ImGui_ImplSDLRenderer3_Init(renderer);
 
-    // Our state
-    bool showDemoWindow = false;
     ImVec4 clearColor = ImVec4(0.15f, 0.18f, 0.37f, 1.00f);
 
     // ---------------------------------
@@ -1016,6 +1014,10 @@ void App::RunEmulator() {
     SDL_ShowWindow(screen.window);
 
     std::array<GUIEvent, 64> evts{};
+
+#if satemu_ENABLE_IMGUI_DEMO
+    bool showImGuiDemoWindow = false;
+#endif
 
     while (true) {
         bool fitWindowToScreenNow = false;
@@ -1414,8 +1416,10 @@ void App::RunEmulator() {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Help")) {
-                ImGui::MenuItem("ImGui demo window", nullptr, &showDemoWindow);
+#if satemu_ENABLE_IMGUI_DEMO
+                ImGui::MenuItem("ImGui demo window", nullptr, &showImGuiDemoWindow);
                 ImGui::Separator();
+#endif
                 ImGui::MenuItem("About", nullptr, &m_aboutWindow.Open);
                 ImGui::EndMenu();
             }
@@ -1440,10 +1444,12 @@ void App::RunEmulator() {
 
         ImGui::DockSpace(ImGui::GetID("##main_dockspace"), ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
         {
+#if satemu_ENABLE_IMGUI_DEMO
             // Show the big ImGui demo window if enabled
-            if (showDemoWindow) {
-                ImGui::ShowDemoWindow(&showDemoWindow);
+            if (showImGuiDemoWindow) {
+                ImGui::ShowDemoWindow(&showImGuiDemoWindow);
             }
+#endif
 
             auto &videoSettings = m_context.settings.video;
 
