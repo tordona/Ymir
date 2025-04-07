@@ -840,10 +840,9 @@ void App::RunEmulator() {
 
     bool paused = false; // TODO: this should be updated by the emulator thread via events
 
-    auto &port1 = m_context.saturn.SMPC.GetPeripheralPort1();
-    auto &port2 = m_context.saturn.SMPC.GetPeripheralPort2();
-    auto *pad1 = port1.ConnectStandardPad();
-    auto *pad2 = port2.ConnectStandardPad();
+    // TODO: should come from settings
+    m_context.saturn.SMPC.GetPeripheralPort1().ConnectStandardPad();
+    m_context.saturn.SMPC.GetPeripheralPort2().ConnectStandardPad();
 
     m_inputHandler.Register(actions::general::OpenLoadDiscDialog,
                             [&](const input::InputActionEvent &evt) { OpenLoadDiscDialog(); });
@@ -864,12 +863,14 @@ void App::RunEmulator() {
         using Button = peripheral::StandardPad::Button;
 
         auto registerButton = [&](input::ActionID action, Button button) {
-            m_inputHandler.Register(action, [&, button = button](const input::InputActionEvent &evt) {
-                auto *pad = evt.action.context == 2 ? pad2 : pad1;
-                if (evt.input.activated) {
-                    pad->PressButton(button);
-                } else {
-                    pad->ReleaseButton(button);
+            m_inputHandler.Register(action, [=](const input::InputActionEvent &evt) {
+                auto &port = *reinterpret_cast<peripheral::PeripheralPort *>(evt.action.context);
+                if (auto *pad = port.GetPeripheral().As<peripheral::PeripheralType::StandardPad>()) {
+                    if (evt.input.activated) {
+                        pad->PressButton(button);
+                    } else {
+                        pad->ReleaseButton(button);
+                    }
                 }
             });
         };
@@ -945,45 +946,47 @@ void App::RunEmulator() {
         inputCtx.MapToggleableAction(actions::emu::ResetButton, KeyCombo{Mod::Shift, Key::R});
 
         // Port 1 controller inputs
-        inputCtx.MapToggleableAction(actions::emu::StandardPadA, /*port*/ 1, Key::J);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadB, /*port*/ 1, Key::K);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadC, /*port*/ 1, Key::L);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadX, /*port*/ 1, Key::U);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadY, /*port*/ 1, Key::I);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadZ, /*port*/ 1, Key::O);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadUp, /*port*/ 1, Key::W);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadDown, /*port*/ 1, Key::S);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadLeft, /*port*/ 1, Key::A);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadRight, /*port*/ 1, Key::D);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 1, Key::G);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 1, Key::F);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 1, Key::H);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 1, Key::Return);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadL, /*port*/ 1, Key::Q);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadR, /*port*/ 1, Key::E);
+        auto ctx1 = (input::ActionContext)&m_context.saturn.SMPC.GetPeripheralPort1();
+        inputCtx.MapToggleableAction(actions::emu::StandardPadA, ctx1, Key::J);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadB, ctx1, Key::K);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadC, ctx1, Key::L);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadX, ctx1, Key::U);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadY, ctx1, Key::I);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadZ, ctx1, Key::O);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadUp, ctx1, Key::W);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadDown, ctx1, Key::S);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadLeft, ctx1, Key::A);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadRight, ctx1, Key::D);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, ctx1, Key::G);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, ctx1, Key::F);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, ctx1, Key::H);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, ctx1, Key::Return);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadL, ctx1, Key::Q);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadR, ctx1, Key::E);
 
         // Port 2 controller inputs
-        inputCtx.MapToggleableAction(actions::emu::StandardPadA, /*port*/ 2, Key::KeyPad1);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadB, /*port*/ 2, Key::KeyPad2);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadC, /*port*/ 2, Key::KeyPad3);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadX, /*port*/ 2, Key::KeyPad4);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadY, /*port*/ 2, Key::KeyPad5);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadZ, /*port*/ 2, Key::KeyPad6);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadUp, /*port*/ 2, Key::Up);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadDown, /*port*/ 2, Key::Down);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadLeft, /*port*/ 2, Key::Left);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadRight, /*port*/ 2, Key::Right);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, /*port*/ 2, Key::KeyPadEnter);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadL, /*port*/ 2, Key::KeyPad7);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadR, /*port*/ 2, Key::KeyPad9);
+        auto ctx2 = (input::ActionContext)&m_context.saturn.SMPC.GetPeripheralPort2();
+        inputCtx.MapToggleableAction(actions::emu::StandardPadA, ctx2, Key::KeyPad1);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadB, ctx2, Key::KeyPad2);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadC, ctx2, Key::KeyPad3);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadX, ctx2, Key::KeyPad4);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadY, ctx2, Key::KeyPad5);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadZ, ctx2, Key::KeyPad6);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadUp, ctx2, Key::Up);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadDown, ctx2, Key::Down);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadLeft, ctx2, Key::Left);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadRight, ctx2, Key::Right);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, ctx2, Key::KeyPadEnter);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadL, ctx2, Key::KeyPad7);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadR, ctx2, Key::KeyPad9);
 
         // Alternative port 2 controller inputs
-        inputCtx.MapToggleableAction(actions::emu::StandardPadUp, /*port*/ 2, Key::Home);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadDown, /*port*/ 2, Key::End);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadLeft, /*port*/ 2, Key::Delete);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadRight, /*port*/ 2, Key::PageDown);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadL, /*port*/ 2, Key::Insert);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadR, /*port*/ 2, Key::PageUp);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadUp, ctx2, Key::Home);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadDown, ctx2, Key::End);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadLeft, ctx2, Key::Delete);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadRight, ctx2, Key::PageDown);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadL, ctx2, Key::Insert);
+        inputCtx.MapToggleableAction(actions::emu::StandardPadR, ctx2, Key::PageUp);
 
         inputCtx.MapAction(actions::emu::ToggleDebugTrace, KeyCombo{Mod::None, Key::F11});
         inputCtx.MapAction(actions::emu::DumpMemory, KeyCombo{Mod::Control, Key::F11});
