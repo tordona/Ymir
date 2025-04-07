@@ -16,7 +16,7 @@ SCSP::SCSP(core::Scheduler &scheduler, core::Configuration::Audio &config)
 
     // Replicate interpolation mode to avoid an extra dereference in the hot path
     config.interpolation.Observe(m_interpMode);
-    config.threadedSCSP.Observe([&](const bool &value) { EnableThreading(value); });
+    config.threadedSCSP.Observe([&](bool value) { EnableThreading(value); });
 
     m_sampleTickEvent = m_scheduler.RegisterEvent(core::events::SCSPSample, this, OnSampleTickEvent);
 

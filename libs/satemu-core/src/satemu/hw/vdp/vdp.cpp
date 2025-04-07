@@ -79,8 +79,8 @@ namespace grp {
 VDP::VDP(core::Scheduler &scheduler, core::Configuration::Video &config)
     : m_scheduler(scheduler) {
 
-    config.threadedVDP2.Observe([&](const bool &value) { EnableThreadedVDP2Rendering(value); });
-    config.threadedVDP1.Observe([&](const bool &value) { EnableThreadedVDP1Rendering(value); });
+    config.threadedVDP1.Observe([&](bool value) { EnableThreadedVDP1Rendering(value); });
+    config.threadedVDP2.Observe([&](bool value) { EnableThreadedVDP2Rendering(value); });
 
     m_phaseUpdateEvent = scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent);
 
@@ -387,14 +387,14 @@ void VDP::SetVideoStandard(sys::VideoStandard videoStandard) {
     }
 }
 
-void VDP::EnableThreadedVDP2Rendering(bool enable) {
-    // TODO: implement
-    devlog::debug<grp::base>("{} threaded VDP2 rendering is unimplemented", (enable ? "Enabling" : "Disabling"));
-}
-
 void VDP::EnableThreadedVDP1Rendering(bool enable) {
     // TODO: implement
-    devlog::debug<grp::base>("{} threaded VDP1 rendering is unimplemented", (enable ? "Enabling" : "Disabling"));
+    devlog::debug<grp::vdp1_render>("{} threaded VDP1 rendering is unimplemented", (enable ? "Enabling" : "Disabling"));
+}
+
+void VDP::EnableThreadedVDP2Rendering(bool enable) {
+    // TODO: implement
+    devlog::debug<grp::vdp2_render>("{} threaded VDP2 rendering is unimplemented", (enable ? "Enabling" : "Disabling"));
 }
 
 template <mem_primitive T>
