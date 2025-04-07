@@ -199,24 +199,6 @@ EmuEvent SetEmulateSH2Cache(bool enable) {
     });
 }
 
-EmuEvent UpdateRTCMode() {
-    return RunFunction([=](SharedContext &ctx) { ctx.saturn.SMPC.GetRTC().SetMode(ctx.settings.system.rtc.mode); });
-}
-
-EmuEvent UpdateRTCResetStrategy() {
-    return RunFunction([=](SharedContext &ctx) {
-        ctx.saturn.SMPC.GetRTC().SetHardResetStrategy(ctx.settings.system.rtc.virtHardResetStrategy);
-    });
-}
-
-EmuEvent UpdateRTCParameters() {
-    return RunFunction([=](SharedContext &ctx) {
-        auto &rtc = ctx.saturn.SMPC.GetRTC();
-        rtc.SetHostTimeOffset(ctx.settings.system.rtc.hostTimeOffset);
-        rtc.SetResetTimestamp(ctx.settings.system.rtc.virtBaseTime);
-    });
-}
-
 EmuEvent EnableThreadedVDP1Rendering(bool enable) {
     return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.video.threadedVDP1 = enable; });
 }

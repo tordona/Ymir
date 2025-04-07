@@ -290,9 +290,6 @@ void App::ApplySettingsToEmulator() {
     // TODO: override from CommandLineOptions
     m_context.EnqueueEvent(events::emu::SetEmulateSH2Cache(m_context.settings.system.emulateSH2Cache));
     m_context.EnqueueEvent(events::emu::SetVideoStandard(m_context.settings.system.videoStandard));
-    m_context.EnqueueEvent(events::emu::UpdateRTCMode());
-    m_context.EnqueueEvent(events::emu::UpdateRTCResetStrategy());
-    m_context.EnqueueEvent(events::emu::UpdateRTCParameters());
 }
 
 void App::RunEmulator() {

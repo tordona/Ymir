@@ -88,10 +88,6 @@ EmuEvent FormatBackupMemory(bool external);
 
 EmuEvent SetEmulateSH2Cache(bool enable);
 
-EmuEvent UpdateRTCMode();
-EmuEvent UpdateRTCResetStrategy();
-EmuEvent UpdateRTCParameters();
-
 EmuEvent EnableThreadedVDP1Rendering(bool enable);
 EmuEvent EnableThreadedVDP2Rendering(bool enable);
 

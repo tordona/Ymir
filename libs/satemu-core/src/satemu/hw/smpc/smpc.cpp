@@ -35,9 +35,10 @@ namespace grp {
 
 } // namespace grp
 
-SMPC::SMPC(core::Scheduler &scheduler, sys::ISystemOperations &sysOps)
+SMPC::SMPC(core::Scheduler &scheduler, sys::ISystemOperations &sysOps, core::Configuration::RTC &rtcConfig)
     : m_sysOps(sysOps)
-    , m_scheduler(scheduler) {
+    , m_scheduler(scheduler)
+    , m_rtc(rtcConfig) {
 
     SMEM.fill(0);
     m_STE = false;
@@ -94,7 +95,7 @@ void SMPC::FactoryReset() {
     SMEM.fill(0x00);
     m_STE = false;
 
-    if (m_rtc.GetMode() == rtc::Mode::Virtual) {
+    if (m_rtc.IsVirtualMode()) {
         util::datetime::DateTime defaultDateTime{
             .year = 1994, .month = 1, .day = 1, .hour = 0, .minute = 0, .second = 0};
         m_rtc.SetDateTime(defaultDateTime);
@@ -628,7 +629,7 @@ void SMPC::WriteINTBACKStatusReport() {
 
     OREG[0] = (m_STE << 7) | (m_resetDisable << 6);
 
-    if (m_rtc.GetMode() == rtc::Mode::Virtual) {
+    if (m_rtc.IsVirtualMode()) {
         m_rtc.UpdateSysClock(m_scheduler.CurrentCount());
     }
     const auto dt = m_rtc.GetDateTime();

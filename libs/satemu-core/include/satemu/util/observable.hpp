@@ -58,8 +58,10 @@ public:
     }
 
     // Adds a simple observer to this observable that copies the value to the given reference.
+    // Also copies the current value to the given reference.
     void Observe(T &valueRef) {
         m_valObservers.emplace_back(&valueRef);
+        valueRef = m_value;
     }
 
     // Notifies all observers of the current value.

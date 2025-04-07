@@ -575,8 +575,8 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
     }
 
     switch (m_interpMode) {
-    case core::SampleInterpolationMode::NearestNeighbor: slot.output = slot.sample1; break;
-    case core::SampleInterpolationMode::Linear:
+    case config::audio::SampleInterpolationMode::NearestNeighbor: slot.output = slot.sample1; break;
+    case config::audio::SampleInterpolationMode::Linear:
         slot.output =
             slot.sample1 + (slot.sample2 - slot.sample1) * static_cast<sint64>(slot.currPhase & 0x3FFFF) / 0x40000;
         break;

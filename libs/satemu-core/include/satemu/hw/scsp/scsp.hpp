@@ -147,7 +147,7 @@ private:
 
     // -------------------------------------------------------------------------
     // Threading
-    
+
     void EnableThreading(bool enable);
 
     // -------------------------------------------------------------------------
@@ -943,7 +943,7 @@ private:
     void SlotProcessStep6(Slot &slot); // Level calculation part 2
     void SlotProcessStep7(Slot &slot); // Sound stack write
 
-    core::SampleInterpolationMode m_interpMode = core::SampleInterpolationMode::Linear;
+    config::audio::SampleInterpolationMode m_interpMode = config::audio::SampleInterpolationMode::Linear;
 
     uint64 m_m68kCycles;    // MC68EC000 cycle counter
     uint64 m_sampleCycles;  // Sample cycle counter

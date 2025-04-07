@@ -35,7 +35,7 @@ Saturn::Saturn()
     , slaveSH2(mainBus, false, m_systemFeatures)
     , SCU(m_scheduler, mainBus)
     , VDP(m_scheduler, configuration.video)
-    , SMPC(m_scheduler, *this)
+    , SMPC(m_scheduler, *this, configuration.rtc)
     , SCSP(m_scheduler, configuration.audio)
     , CDBlock(m_scheduler) {
 
@@ -90,7 +90,7 @@ Saturn::Saturn()
     UpdateRunFrameFn();
 
     configuration.system.preferredRegionOrder.Observe(
-        [&](const std::vector<core::Region> &regions) { UpdatePreferredRegionOrder(regions); });
+        [&](const std::vector<config::sys::Region> &regions) { UpdatePreferredRegionOrder(regions); });
 
     Reset(true);
 }
@@ -249,7 +249,7 @@ void Saturn::UpdateRunFrameFn() {
             : (m_systemFeatures.emulateSH2Cache ? &Saturn::RunFrame<false, true> : &Saturn::RunFrame<false, false>);
 }
 
-void Saturn::UpdatePreferredRegionOrder(std::span<const core::Region> regions) {
+void Saturn::UpdatePreferredRegionOrder(std::span<const config::sys::Region> regions) {
     m_preferredRegionOrder.clear();
     media::AreaCode usedAreaCodes = media::AreaCode::None;
     auto addAreaCode = [&](media::AreaCode areaCode) {
@@ -259,16 +259,17 @@ void Saturn::UpdatePreferredRegionOrder(std::span<const core::Region> regions) {
         }
     };
 
-    for (const core::Region region : regions) {
+    using Region = config::sys::Region;
+    for (const Region region : regions) {
         switch (region) {
-        case core::Region::Japan: addAreaCode(media::AreaCode::Japan); break;
-        case core::Region::AsiaNTSC: addAreaCode(media::AreaCode::AsiaNTSC); break;
-        case core::Region::NorthAmerica: addAreaCode(media::AreaCode::NorthAmerica); break;
-        case core::Region::CentralSouthAmericaNTSC: addAreaCode(media::AreaCode::CentralSouthAmericaNTSC); break;
-        case core::Region::Korea: addAreaCode(media::AreaCode::Korea); break;
-        case core::Region::AsiaPAL: addAreaCode(media::AreaCode::AsiaPAL); break;
-        case core::Region::EuropePAL: addAreaCode(media::AreaCode::EuropePAL); break;
-        case core::Region::CentralSouthAmericaPAL: addAreaCode(media::AreaCode::CentralSouthAmericaPAL); break;
+        case Region::Japan: addAreaCode(media::AreaCode::Japan); break;
+        case Region::AsiaNTSC: addAreaCode(media::AreaCode::AsiaNTSC); break;
+        case Region::NorthAmerica: addAreaCode(media::AreaCode::NorthAmerica); break;
+        case Region::CentralSouthAmericaNTSC: addAreaCode(media::AreaCode::CentralSouthAmericaNTSC); break;
+        case Region::Korea: addAreaCode(media::AreaCode::Korea); break;
+        case Region::AsiaPAL: addAreaCode(media::AreaCode::AsiaPAL); break;
+        case Region::EuropePAL: addAreaCode(media::AreaCode::EuropePAL); break;
+        case Region::CentralSouthAmericaPAL: addAreaCode(media::AreaCode::CentralSouthAmericaPAL); break;
         }
     }
 }

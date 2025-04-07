@@ -105,6 +105,7 @@ void SettingsWindow::DrawGeneralTab() {
 
 void SettingsWindow::DrawSystemTab() {
     auto &settings = m_context.settings.system;
+    auto &rtcConfig = m_context.saturn.configuration.rtc;
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -215,14 +216,12 @@ void SettingsWindow::DrawSystemTab() {
                        "- Virtual: Runs a virtual RTC synced to emulation speed.\n\n"
                        "For deterministic behavior, use a virtual RTC synced to a fixed time point on reset.");
     ImGui::SameLine();
-    if (MakeDirty(ImGui::RadioButton("Host##rtc", settings.rtc.mode == smpc::rtc::Mode::Host))) {
-        settings.rtc.mode = smpc::rtc::Mode::Host;
-        m_context.EnqueueEvent(events::emu::UpdateRTCMode());
+    if (MakeDirty(ImGui::RadioButton("Host##rtc", rtcConfig.mode == config::rtc::Mode::Host))) {
+        rtcConfig.mode = config::rtc::Mode::Host;
     }
     ImGui::SameLine();
-    if (MakeDirty(ImGui::RadioButton("Virtual##rtc", settings.rtc.mode == smpc::rtc::Mode::Virtual))) {
-        settings.rtc.mode = smpc::rtc::Mode::Virtual;
-        m_context.EnqueueEvent(events::emu::UpdateRTCMode());
+    if (MakeDirty(ImGui::RadioButton("Virtual##rtc", rtcConfig.mode == config::rtc::Mode::Virtual))) {
+        rtcConfig.mode = config::rtc::Mode::Virtual;
     }
 
     auto &rtc = m_context.saturn.SMPC.GetRTC();
@@ -233,32 +232,21 @@ void SettingsWindow::DrawSystemTab() {
     auto dateTime = rtc.GetDateTime();
     if (widgets::DateTimeSelector("rtc_curr", dateTime)) {
         rtc.SetDateTime(dateTime);
-        if (settings.rtc.mode == smpc::rtc::Mode::Host) {
-            settings.rtc.hostTimeOffset = rtc.GetHostTimeOffset();
-            m_context.settings.MakeDirty();
-        }
     }
 
-    if (settings.rtc.mode == smpc::rtc::Mode::Host) {
-        bool hostTimeOffsetChanged = false;
+    if (rtcConfig.mode == config::rtc::Mode::Host) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Host time offset:");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(150.0f);
-        hostTimeOffsetChanged |=
-            ImGui::DragScalar("##rtc_host_offset", ImGuiDataType_S64, &settings.rtc.hostTimeOffset);
+        ImGui::DragScalar("##rtc_host_offset", ImGuiDataType_S64, &rtc.HostTimeOffset());
         ImGui::SameLine();
         ImGui::TextUnformatted("seconds");
         ImGui::SameLine();
         if (ImGui::Button("Reset")) {
-            settings.rtc.hostTimeOffset = 0;
-            hostTimeOffsetChanged = true;
+            rtc.HostTimeOffset() = 0;
         }
-        if (hostTimeOffsetChanged) {
-            rtc.SetHostTimeOffset(settings.rtc.hostTimeOffset);
-            m_context.settings.MakeDirty();
-        }
-    } else if (settings.rtc.mode == smpc::rtc::Mode::Virtual) {
+    } else if (rtcConfig.mode == config::rtc::Mode::Virtual) {
         // TODO: request emulator to update date/time so that it is updated in real time
         ExplanationTooltip(
             "This may occasionally stop updating because the virtual RTC is only updated when the game reads from it.");
@@ -268,16 +256,15 @@ void SettingsWindow::DrawSystemTab() {
         }
         ImGui::SameLine();
         if (ImGui::Button("Set to starting point##curr_time")) {
-            rtc.SetDateTime(util::datetime::from_timestamp(settings.rtc.virtBaseTime));
+            rtc.SetDateTime(util::datetime::from_timestamp(rtcConfig.virtHardResetTimestamp));
         }
 
-        using HardResetStrategy = smpc::rtc::HardResetStrategy;
+        using HardResetStrategy = config::rtc::HardResetStrategy;
 
         auto hardResetOption = [&](const char *name, HardResetStrategy strategy, const char *explanation) {
             if (MakeDirty(ImGui::RadioButton(fmt::format("{}##virt_rtc_reset", name).c_str(),
-                                             settings.rtc.virtHardResetStrategy == strategy))) {
-                settings.rtc.virtHardResetStrategy = strategy;
-                m_context.EnqueueEvent(events::emu::UpdateRTCResetStrategy());
+                                             rtcConfig.virtHardResetStrategy == strategy))) {
+                rtcConfig.virtHardResetStrategy = strategy;
             }
             ExplanationTooltip(explanation);
         };
@@ -298,18 +285,12 @@ void SettingsWindow::DrawSystemTab() {
 
         ImGui::Indent();
         {
-            auto dateTime = util::datetime::from_timestamp(settings.rtc.virtBaseTime);
-            bool baseTimeChanged = false;
+            auto dateTime = util::datetime::from_timestamp(rtcConfig.virtHardResetTimestamp);
             if (MakeDirty(widgets::DateTimeSelector("virt_base_time", dateTime))) {
-                settings.rtc.virtBaseTime = util::datetime::to_timestamp(dateTime);
-                baseTimeChanged = true;
+                rtcConfig.virtHardResetTimestamp = util::datetime::to_timestamp(dateTime);
             }
             if (MakeDirty(ImGui::Button("Set to host time##virt_base_time"))) {
-                settings.rtc.virtBaseTime = util::datetime::to_timestamp(util::datetime::host());
-                baseTimeChanged = true;
-            }
-            if (baseTimeChanged) {
-                m_context.EnqueueEvent(events::emu::UpdateRTCParameters());
+                rtcConfig.virtHardResetTimestamp = util::datetime::to_timestamp(util::datetime::host());
             }
         }
         ImGui::Unindent();
@@ -397,7 +378,7 @@ void SettingsWindow::DrawAudioTab() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    using InterpMode = core::SampleInterpolationMode;
+    using InterpMode = config::audio::SampleInterpolationMode;
 
     auto interpOption = [&](const char *name, InterpMode mode) {
         const std::string label = fmt::format("{}##sample_interp", name);

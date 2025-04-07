@@ -1,5 +1,8 @@
 #pragma once
 
+#include "configuration_defs.hpp"
+
+#include <satemu/util/date_time.hpp>
 #include <satemu/util/observable.hpp>
 
 #include <satemu/core/types.hpp>
@@ -7,19 +10,6 @@
 #include <vector>
 
 namespace satemu::core {
-
-enum class Region {
-    Japan = 0x1,
-    AsiaNTSC = 0x2,
-    NorthAmerica = 0x4,
-    CentralSouthAmericaNTSC = 0x5,
-    Korea = 0x6,
-    AsiaPAL = 0xA,
-    EuropePAL = 0xC,
-    CentralSouthAmericaPAL = 0xD,
-};
-
-enum class SampleInterpolationMode { NearestNeighbor, Linear };
 
 // Emulator core configuration.
 //
@@ -39,9 +29,23 @@ struct Configuration {
 
         // Preferred region order when autodetecting area codes.
         // If none of these regions is supported by the disc, the first region listed on the disc is used.
-        util::Observable<std::vector<Region>> preferredRegionOrder =
-            std::vector<Region>{Region::NorthAmerica, Region::Japan};
+        util::Observable<std::vector<config::sys::Region>> preferredRegionOrder =
+            std::vector<config::sys::Region>{config::sys::Region::NorthAmerica, config::sys::Region::Japan};
     } system;
+
+    struct RTC {
+        // The RTC emulation mode.
+        //
+        // This value is thread-safe.
+        util::Observable<config::rtc::Mode> mode = config::rtc::Mode::Host;
+
+        // The virtual RTC hard reset strategy.
+        config::rtc::HardResetStrategy virtHardResetStrategy = config::rtc::HardResetStrategy::Preserve;
+
+        // The virtual RTC hard reset timestamp.
+        sint64 virtHardResetTimestamp = util::datetime::to_timestamp(
+            util::datetime::DateTime{.year = 1994, .month = 1, .day = 1, .hour = 0, .minute = 0, .second = 0});
+    } rtc;
 
     struct Video {
         // TODO: renderer backend options
@@ -60,7 +64,8 @@ struct Configuration {
         // The Sega Saturn uses linear interpolation.
         //
         // This value is thread-safe.
-        util::Observable<SampleInterpolationMode> interpolation = SampleInterpolationMode::Linear;
+        util::Observable<config::audio::SampleInterpolationMode> interpolation =
+            config::audio::SampleInterpolationMode::Linear;
 
         // Runs the SCSP and MC68EC000 CPU in a dedicated thread.
         util::Observable<bool> threadedSCSP = false;

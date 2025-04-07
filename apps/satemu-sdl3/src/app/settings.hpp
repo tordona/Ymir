@@ -5,7 +5,6 @@
 #include <satemu/sys/clocks.hpp>
 
 #include <satemu/hw/scsp/scsp_defs.hpp>
-#include <satemu/hw/smpc/rtc_defs.hpp>
 
 #include <satemu/core/types.hpp>
 
@@ -123,15 +122,6 @@ public:
         satemu::sys::VideoStandard videoStandard;
 
         bool emulateSH2Cache;
-
-        struct RTC {
-            satemu::smpc::rtc::Mode mode;
-
-            sint64 hostTimeOffset;
-
-            sint64 virtBaseTime;
-            satemu::smpc::rtc::HardResetStrategy virtHardResetStrategy;
-        } rtc;
     } system;
 
     struct Input {

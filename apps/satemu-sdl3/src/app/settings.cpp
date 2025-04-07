@@ -42,39 +42,39 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
     }
 }
 
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, smpc::rtc::Mode &value) {
-    value = smpc::rtc::Mode::Host;
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, config::rtc::Mode &value) {
+    value = config::rtc::Mode::Host;
     if (auto opt = node[name].value<std::string>()) {
         if (*opt == "Host"s) {
-            value = smpc::rtc::Mode::Host;
+            value = config::rtc::Mode::Host;
         } else if (*opt == "Virtual"s) {
-            value = smpc::rtc::Mode::Virtual;
+            value = config::rtc::Mode::Virtual;
         }
     }
 }
 
 FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name,
-                               smpc::rtc::HardResetStrategy &value) {
-    value = smpc::rtc::HardResetStrategy::Preserve;
+                               config::rtc::HardResetStrategy &value) {
+    value = config::rtc::HardResetStrategy::Preserve;
     if (auto opt = node[name].value<std::string>()) {
         if (*opt == "PreserveCurrentTime"s) {
-            value = smpc::rtc::HardResetStrategy::Preserve;
+            value = config::rtc::HardResetStrategy::Preserve;
         } else if (*opt == "SyncToHost"s) {
-            value = smpc::rtc::HardResetStrategy::SyncToHost;
+            value = config::rtc::HardResetStrategy::SyncToHost;
         } else if (*opt == "SyncToFixedStartingTime"s) {
-            value = smpc::rtc::HardResetStrategy::ResetToFixedTime;
+            value = config::rtc::HardResetStrategy::ResetToFixedTime;
         }
     }
 }
 
 FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name,
-                               core::SampleInterpolationMode &value) {
-    value = core::SampleInterpolationMode::NearestNeighbor;
+                               config::audio::SampleInterpolationMode &value) {
+    value = config::audio::SampleInterpolationMode::NearestNeighbor;
     if (auto opt = node[name].value<std::string>()) {
         if (*opt == "Nearest"s) {
-            value = core::SampleInterpolationMode::NearestNeighbor;
+            value = config::audio::SampleInterpolationMode::NearestNeighbor;
         } else if (*opt == "Linear"s) {
-            value = core::SampleInterpolationMode::Linear;
+            value = config::audio::SampleInterpolationMode::Linear;
         }
     }
 }
@@ -90,28 +90,28 @@ FORCE_INLINE static const char *EnumName(const sys::VideoStandard value) {
     }
 }
 
-FORCE_INLINE static const char *EnumName(const smpc::rtc::Mode value) {
+FORCE_INLINE static const char *EnumName(const config::rtc::Mode value) {
     switch (value) {
     default:
-    case smpc::rtc::Mode::Host: return "Host";
-    case smpc::rtc::Mode::Virtual: return "Virtual";
+    case config::rtc::Mode::Host: return "Host";
+    case config::rtc::Mode::Virtual: return "Virtual";
     }
 }
 
-FORCE_INLINE static const char *EnumName(const smpc::rtc::HardResetStrategy value) {
+FORCE_INLINE static const char *EnumName(const config::rtc::HardResetStrategy value) {
     switch (value) {
     default:
-    case smpc::rtc::HardResetStrategy::Preserve: return "Preserve";
-    case smpc::rtc::HardResetStrategy::SyncToHost: return "SyncToHost";
-    case smpc::rtc::HardResetStrategy::ResetToFixedTime: return "ResetToFixedTime";
+    case config::rtc::HardResetStrategy::Preserve: return "Preserve";
+    case config::rtc::HardResetStrategy::SyncToHost: return "SyncToHost";
+    case config::rtc::HardResetStrategy::ResetToFixedTime: return "ResetToFixedTime";
     }
 }
 
-FORCE_INLINE static const char *EnumName(const core::SampleInterpolationMode value) {
+FORCE_INLINE static const char *EnumName(const config::audio::SampleInterpolationMode value) {
     switch (value) {
     default:
-    case core::SampleInterpolationMode::NearestNeighbor: return "Nearest";
-    case core::SampleInterpolationMode::Linear: return "Linear";
+    case config::audio::SampleInterpolationMode::NearestNeighbor: return "Nearest";
+    case config::audio::SampleInterpolationMode::Linear: return "Linear";
     }
 }
 
@@ -153,12 +153,6 @@ void Settings::ResetToDefaults() {
     m_emuConfig.system.autodetectRegion = true;
 
     system.emulateSH2Cache = false;
-
-    system.rtc.mode = smpc::rtc::Mode::Host;
-    system.rtc.hostTimeOffset = 0;
-    system.rtc.virtBaseTime = util::datetime::to_timestamp(
-        util::datetime::DateTime{.year = 1994, .month = 1, .day = 1, .hour = 0, .minute = 0, .second = 0});
-    system.rtc.virtHardResetStrategy = smpc::rtc::HardResetStrategy::Preserve;
 
     // TODO: input
 
@@ -208,13 +202,12 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         Parse(tblSystem, "AutoDetectRegion", m_emuConfig.system.autodetectRegion);
         Parse(tblSystem, "EmulateSH2Cache", system.emulateSH2Cache);
 
-        auto &rtc = system.rtc;
+        auto &rtc = m_emuConfig.rtc;
 
         if (auto tblRTC = tblSystem["RTC"]) {
             Parse(tblRTC, "Mode", rtc.mode);
-            Parse(tblRTC, "HostTimeOffset", rtc.hostTimeOffset);
-            Parse(tblRTC, "VirtualBaseTime", rtc.virtBaseTime);
             Parse(tblRTC, "VirtualHardResetStrategy", rtc.virtHardResetStrategy);
+            Parse(tblRTC, "VirtualHardResetTimestamp", rtc.virtHardResetTimestamp);
         }
     }
 
@@ -247,7 +240,7 @@ SettingsSaveResult Settings::Save() {
         path = "satemu.toml";
     }
 
-    const auto &rtc = system.rtc;
+    const auto &rtc = m_emuConfig.rtc;
 
     // clang-format off
     auto tbl = toml::table{{
@@ -267,9 +260,8 @@ SettingsSaveResult Settings::Save() {
         
             {"RTC", toml::table{{
                 {"Mode", EnumName(rtc.mode)},
-                {"HostTimeOffset", rtc.hostTimeOffset},
-                {"VirtualBaseTime", rtc.virtBaseTime},
                 {"VirtualHardResetStrategy", EnumName(rtc.virtHardResetStrategy)},
+                {"VirtualHardResetTimestamp", rtc.virtHardResetTimestamp},
             }}},
         }}},
 

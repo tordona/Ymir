@@ -18,7 +18,7 @@ namespace satemu::smpc {
 
 class SMPC {
 public:
-    SMPC(core::Scheduler &scheduler, sys::ISystemOperations &sysOps);
+    SMPC(core::Scheduler &scheduler, sys::ISystemOperations &sysOps, core::Configuration::RTC &rtcConfig);
     ~SMPC();
 
     void Reset(bool hard);

@@ -128,7 +128,7 @@ private:
     // Internal configuration
 
     std::vector<media::AreaCode> m_preferredRegionOrder;
-    void UpdatePreferredRegionOrder(std::span<const core::Region> regions);
+    void UpdatePreferredRegionOrder(std::span<const config::sys::Region> regions);
 
     // -------------------------------------------------------------------------
     // Global components and state

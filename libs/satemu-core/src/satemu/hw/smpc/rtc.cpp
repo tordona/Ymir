@@ -26,24 +26,23 @@ namespace grp {
 
 } // namespace grp
 
-RTC::RTC() {
-    m_offset = 0;
+RTC::RTC(core::Configuration::RTC &config)
+    : m_config(config) {
 
-    m_mode = Mode::Host;
-    m_hardResetStrategy = HardResetStrategy::Preserve;
+    config.mode.Observe(m_mode);
 
     m_timestamp = 0;
-    m_resetTimestamp = 0;
 
     Reset(true);
 }
 
 void RTC::Reset(bool hard) {
     if (hard) {
-        switch (m_hardResetStrategy) {
-        case HardResetStrategy::SyncToHost: m_timestamp = util::datetime::to_timestamp(util::datetime::host()); break;
-        case HardResetStrategy::ResetToFixedTime: m_timestamp = m_resetTimestamp; break;
-        case HardResetStrategy::Preserve: break;
+        using enum config::rtc::HardResetStrategy;
+        switch (m_config.virtHardResetStrategy) {
+        case SyncToHost: m_timestamp = util::datetime::to_timestamp(util::datetime::host()); break;
+        case ResetToFixedTime: m_timestamp = m_config.virtHardResetTimestamp; break;
+        case Preserve: break;
         }
     }
 
@@ -61,19 +60,19 @@ void RTC::UpdateSysClock(uint64 sysClock) {
 
 util::datetime::DateTime RTC::GetDateTime() const {
     switch (m_mode) {
-    case Mode::Host: return util::datetime::host(m_offset);
-    case Mode::Virtual: return util::datetime::from_timestamp(m_timestamp);
+    case config::rtc::Mode::Host: return util::datetime::host(m_offset);
+    case config::rtc::Mode::Virtual: return util::datetime::from_timestamp(m_timestamp);
     }
     util::unreachable();
 }
 
 void RTC::SetDateTime(const util::datetime::DateTime &dateTime) {
     switch (m_mode) {
-    case Mode::Host:
+    case config::rtc::Mode::Host:
         m_offset = util::datetime::delta_to_host(dateTime);
         devlog::debug<grp::base>("Setting host time offset to {} seconds", m_offset);
         break;
-    case Mode::Virtual:
+    case config::rtc::Mode::Virtual:
         m_timestamp = util::datetime::to_timestamp(dateTime);
         devlog::debug<grp::base>("Setting absolute timestamp to {} seconds", m_timestamp);
         break;

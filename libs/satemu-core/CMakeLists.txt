@@ -4,6 +4,7 @@ add_library(satemu-core
     include/satemu/version.hpp
 
     include/satemu/core/configuration.hpp
+    include/satemu/core/configuration_defs.hpp
     include/satemu/core/scheduler.hpp
     include/satemu/core/types.hpp
 
