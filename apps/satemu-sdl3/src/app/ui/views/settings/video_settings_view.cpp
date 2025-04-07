@@ -1,0 +1,82 @@
+#include "video_settings_view.hpp"
+
+#include <app/events/emu_event_factory.hpp>
+#include <app/events/gui_event_factory.hpp>
+
+#include <app/ui/widgets/common_widgets.hpp>
+
+namespace app::ui {
+
+VideoSettingsView::VideoSettingsView(SharedContext &context)
+    : SettingsViewBase(context) {}
+
+void VideoSettingsView::Display() {
+    auto &settings = m_context.settings.video;
+    auto &config = m_context.saturn.configuration.video;
+
+    // -----------------------------------------------------------------------------------------------------------------
+
+    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::SeparatorText("Display");
+    ImGui::PopFont();
+
+    MakeDirty(ImGui::Checkbox("Force integer scaling", &settings.forceIntegerScaling));
+    MakeDirty(ImGui::Checkbox("Force aspect ratio", &settings.forceAspectRatio));
+    widgets::ExplanationTooltip("If disabled, forces square pixels.");
+    ImGui::SameLine();
+    if (MakeDirty(ImGui::Button("4:3"))) {
+        settings.forcedAspect = 4.0 / 3.0;
+    }
+    ImGui::SameLine();
+    if (MakeDirty(ImGui::Button("16:9"))) {
+        settings.forcedAspect = 16.0 / 9.0;
+    }
+    // TODO: aspect ratio selector? slider?
+
+    MakeDirty(ImGui::Checkbox("Auto-fit window to screen", &settings.autoResizeWindow));
+    widgets::ExplanationTooltip(
+        "If forced aspect ratio is disabled, adjusts and recenters the window whenever the display "
+        "resolution changes.");
+    ImGui::SameLine();
+    if (settings.displayVideoOutputInWindow) {
+        ImGui::BeginDisabled();
+    }
+    if (MakeDirty(ImGui::Button("Fit now"))) {
+        m_context.EnqueueEvent(events::gui::FitWindowToScreen());
+    }
+    if (settings.displayVideoOutputInWindow) {
+        ImGui::EndDisabled();
+    }
+
+    if (MakeDirty(ImGui::Checkbox("Windowed video output", &settings.displayVideoOutputInWindow))) {
+        m_context.EnqueueEvent(events::gui::FitWindowToScreen());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+
+    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::SeparatorText("Performance");
+    ImGui::PopFont();
+
+    // TODO: renderer backend options
+
+    bool threadedVDP1 = config.threadedVDP1;
+    if (MakeDirty(ImGui::Checkbox("Threaded VDP1 renderer", &threadedVDP1))) {
+        m_context.EnqueueEvent(events::emu::EnableThreadedVDP1Rendering(threadedVDP1));
+    }
+    widgets::ExplanationTooltip("Runs the software VDP1 renderer in a dedicated thread.\n"
+                                "Slightly improves performance at the cost of accuracy.\n"
+                                "A few select games may break when this option is enabled.\n"
+                                "When disabled, VDP1 rendering is done on the emulator thread.");
+
+    bool threadedVDP2 = config.threadedVDP2;
+    if (MakeDirty(ImGui::Checkbox("Threaded VDP2 renderer", &threadedVDP2))) {
+        m_context.EnqueueEvent(events::emu::EnableThreadedVDP2Rendering(threadedVDP2));
+    }
+    widgets::ExplanationTooltip("Runs the software VDP2 renderer in a dedicated thread.\n"
+                                "Greatly improves performance at the cost of accuracy.\n"
+                                "A few select games may break when this option is enabled.\n"
+                                "When disabled, VDP2 rendering is done on the emulator thread.");
+}
+
+} // namespace app::ui

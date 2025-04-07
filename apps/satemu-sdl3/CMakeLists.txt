@@ -96,8 +96,23 @@ add_executable(satemu-sdl3
     src/app/ui/views/debug/sh2_wdt_view.cpp
     src/app/ui/views/debug/sh2_wdt_view.hpp
 
+    src/app/ui/views/settings/audio_settings_view.cpp
+    src/app/ui/views/settings/audio_settings_view.hpp
+    src/app/ui/views/settings/general_settings_view.cpp
+    src/app/ui/views/settings/general_settings_view.hpp
+    src/app/ui/views/settings/input_settings_view.cpp
+    src/app/ui/views/settings/input_settings_view.hpp
+    src/app/ui/views/settings/settings_view_base.cpp
+    src/app/ui/views/settings/settings_view_base.hpp
+    src/app/ui/views/settings/system_settings_view.cpp
+    src/app/ui/views/settings/system_settings_view.hpp
+    src/app/ui/views/settings/video_settings_view.cpp
+    src/app/ui/views/settings/video_settings_view.hpp
+
     src/app/ui/widgets/cartridge_widgets.hpp
     src/app/ui/widgets/cartridge_widgets.cpp
+    src/app/ui/widgets/common_widgets.cpp
+    src/app/ui/widgets/common_widgets.hpp
     src/app/ui/widgets/datetime_widgets.cpp
     src/app/ui/widgets/datetime_widgets.hpp
     src/app/ui/widgets/system_widgets.cpp
