@@ -65,6 +65,10 @@ struct Configuration {
         // Runs the SCSP and MC68EC000 CPU in a dedicated thread.
         util::Observable<bool> threadedSCSP = false;
     } audio;
+
+    // Notifies all observers registered with all observables.
+    // This is useful if you wish to apply the default values instead of replacing them with a configuration system.
+    void NotifyObservers();
 };
 
 } // namespace satemu::core

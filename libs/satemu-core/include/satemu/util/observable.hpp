@@ -34,12 +34,7 @@ public:
 
     Observable &operator=(T value) {
         m_value = value;
-        for (auto &observer : m_fnObservers) {
-            observer(value);
-        }
-        for (auto *observer : m_valObservers) {
-            *observer = value;
-        }
+        Notify();
         return *this;
     }
 
@@ -58,17 +53,23 @@ public:
     }
 
     // Adds an observer to this observable.
-    // The function is immediately invoked with the current value.
     void Observe(std::function<Observer> &&observer) {
         auto &fn = m_fnObservers.emplace_back(std::move(observer));
-        fn(m_value);
     }
 
     // Adds a simple observer to this observable that copies the value to the given reference.
-    // The referenced value is also immediately set to the current value.
     void Observe(T &valueRef) {
         m_valObservers.emplace_back(&valueRef);
-        valueRef = m_value;
+    }
+
+    // Notifies all observers of the current value.
+    void Notify() {
+        for (auto &observer : m_fnObservers) {
+            observer(m_value);
+        }
+        for (auto *observer : m_valObservers) {
+            *observer = m_value;
+        }
     }
 
     // Gets the current value.

@@ -130,6 +130,8 @@ add_library(satemu-core
 
     src/satemu/satemu.cpp
 
+    src/satemu/core/configuration.cpp
+
     src/satemu/hw/cart/cart_slot.cpp
     src/satemu/hw/cart/cart_impl_bup.cpp
 
