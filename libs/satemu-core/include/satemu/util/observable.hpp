@@ -54,7 +54,7 @@ public:
 
     // Adds an observer to this observable.
     void Observe(std::function<Observer> &&observer) {
-        auto &fn = m_fnObservers.emplace_back(std::move(observer));
+        m_fnObservers.emplace_back(std::move(observer));
     }
 
     // Adds a simple observer to this observable that copies the value to the given reference.

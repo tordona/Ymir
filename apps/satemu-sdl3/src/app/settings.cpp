@@ -125,11 +125,11 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
     }
 }
 
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, std::filesystem::path &value) {
+/*FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, std::filesystem::path &value) {
     if (auto opt = node[name].value<std::filesystem::path::string_type>()) {
         value = *opt;
     }
-}
+}*/
 
 template <typename T>
 FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, util::Observable<T> &value) {
