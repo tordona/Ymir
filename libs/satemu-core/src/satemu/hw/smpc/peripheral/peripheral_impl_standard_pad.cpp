@@ -5,7 +5,7 @@
 namespace satemu::peripheral {
 
 StandardPad::StandardPad()
-    : BasePeripheral(0x0, 2)
+    : BasePeripheral(PeripheralType::StandardPad, 0x0, 2)
     , m_buttons(Button::All | Button::_bit2) {}
 
 void StandardPad::PressButton(Button button) {

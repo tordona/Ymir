@@ -37,6 +37,13 @@ public:
         ConnectPeripheral<NullPeripheral>();
     }
 
+    BasePeripheral &GetPeripheral() {
+        return *m_peripheral;
+    }
+    const BasePeripheral &GetPeripheral() const {
+        return *m_peripheral;
+    }
+
 private:
     // TODO: implement multi-tap as an array of peripherals
     std::unique_ptr<BasePeripheral> m_peripheral;
@@ -69,7 +76,7 @@ private:
             // [1] 0x02 -> 7-4 = 0=standard pad; 3-0 = 2 data bytes
             // [2..N]   -> peripheral-specific report
             out[0] = 0xF1;
-            out[1] = (m_peripheral->GetType() << 4u) | m_peripheral->GetReportLength();
+            out[1] = (m_peripheral->GetTypeCode() << 4u) | m_peripheral->GetReportLength();
             m_peripheral->Read(out.subspan(2));
         } else {
             // [0] 0xF0 -> 7-4 = F=no multitap/device directly connected; 3-0 = 0 devices

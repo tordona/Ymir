@@ -7,7 +7,7 @@ namespace satemu::peripheral {
 class NullPeripheral final : public BasePeripheral {
 public:
     NullPeripheral()
-        : BasePeripheral(0x0, 0) {}
+        : BasePeripheral(PeripheralType::None, 0x0, 0) {}
 
     void Read(std::span<uint8> out) final {}
 
