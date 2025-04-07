@@ -24,20 +24,17 @@ void InputSettingsView::Display() {
             ImGui::TableNextRow();
             if (ImGui::TableNextColumn()) {
                 ImGui::AlignTextToFramePadding();
-                ImGui::TextUnformatted("Slot 1:");
+                // TODO: multitap -- ImGui::TextUnformatted("Slot 1:");
+                ImGui::TextUnformatted("Peripheral:");
             }
             if (ImGui::TableNextColumn()) {
-                // TODO: support more peripheral types
-                static constexpr const char *kPeriphNames[] = {"None", "Standard Saturn Pad"};
-
-                // TODO: support 6 slots for multitap
                 for (uint32 i = 0; i < 1; i++) {
-
                     ImGui::SetNextItemWidth(-(configureTextWidth + paddingWidth * 2 + spacingWidth));
                     if (ImGui::BeginCombo(fmt::format("##periph_{}_{}", portIndex, i).c_str(),
-                                          kPeriphNames[static_cast<size_t>(periph.GetType())])) {
-                        for (uint32 j = 0; j < std::size(kPeriphNames); j++) {
-                            if (ImGui::Selectable(kPeriphNames[j], static_cast<uint32>(periph.GetType()) == j)) {
+                                          periph.GetName().data())) {
+                        for (auto type : peripheral::kTypes) {
+                            if (ImGui::Selectable(peripheral::GetPeripheralName(type).data(),
+                                                  periph.GetType() == type)) {
                                 // TODO: replace with specified peripheral type
                             }
                         }

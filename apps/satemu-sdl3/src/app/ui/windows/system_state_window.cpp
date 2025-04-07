@@ -430,9 +430,10 @@ void SystemStateWindow::DrawCartridge() {
 }
 
 void SystemStateWindow::DrawPeripherals() {
-    // TODO: fill in dynamically
-    // TODO: allow inserting/removing peripherals
     if (ImGui::BeginTable("sys_peripherals", 3, ImGuiTableFlags_SizingFixedFit)) {
+        auto &port1 = m_context.saturn.SMPC.GetPeripheralPort1();
+        auto type1 = port1.GetPeripheral().GetType();
+
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
             ImGui::AlignTextToFramePadding();
@@ -440,13 +441,16 @@ void SystemStateWindow::DrawPeripherals() {
         }
         if (ImGui::TableNextColumn()) {
             ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted("Standard Saturn pad");
+            ImGui::Text("%s", peripheral::GetPeripheralName(type1).data());
         }
         if (ImGui::TableNextColumn()) {
             if (ImGui::Button("Configure...##port_1")) {
-                // TODO
+                // TODO: send GUI event to invoke peripheral configuration
             }
         }
+
+        auto &port2 = m_context.saturn.SMPC.GetPeripheralPort2();
+        auto type2 = port2.GetPeripheral().GetType();
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
@@ -455,11 +459,11 @@ void SystemStateWindow::DrawPeripherals() {
         }
         if (ImGui::TableNextColumn()) {
             ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted("Standard Saturn pad");
+            ImGui::Text("%s", peripheral::GetPeripheralName(type2).data());
         }
         if (ImGui::TableNextColumn()) {
             if (ImGui::Button("Configure...##port_2")) {
-                // TODO
+                // TODO: send GUI event to invoke peripheral configuration
             }
         }
 
