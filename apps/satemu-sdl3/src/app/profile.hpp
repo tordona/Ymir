@@ -9,13 +9,14 @@ enum class StandardPath {
     BIOSImages,      // BIOS images            <profile>/bios/
     BackupMemory,    // Backup memory images   <profile>/backup/
     ExportedBackups, // Exported backup files  <profile>/backup/exported/
+    PersistentState, // Persistent app state   <profile>/state/
     SaveStates,      // Save states            <profile>/savestates/
 };
 
-class FolderManager {
+class Profile {
 public:
     // Creates the folder manager pointing to the current working directory.
-    FolderManager();
+    Profile();
 
     // Uses the OS's standard user profile path.
     void UseUserProfilePath();

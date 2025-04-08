@@ -233,14 +233,19 @@ int App::Run(const CommandLineOptions &options) {
     // TODO: use user profile first, then portable path
     // - check before use
     // - if neither are available, ask user where to create files
-    m_context.folders.UsePortableProfilePath();
-    if (!m_context.folders.CheckFolders()) {
+    m_context.profile.UsePortableProfilePath();
+    if (!m_context.profile.CheckFolders()) {
         std::error_code error{};
-        if (!m_context.folders.CreateFolders(error)) {
-            devlog::error<grp::base>("Could not create app folders: {}", error.message());
+        if (!m_context.profile.CreateFolders(error)) {
+            devlog::error<grp::base>("Could not create profile folders: {}", error.message());
             return -1;
         }
     }
+
+    devlog::debug<grp::base>("Profile directory: {}", m_context.profile.GetProfilePath().string());
+
+    // TODO: setup path for persistent SMPC state, internal backup memory and cartridges
+    // m_context.profile.GetPath(StandardPath::PersistentState);
 
     m_context.settings.input.port1.type.Observe([&](satemu::peripheral::PeripheralType type) {
         m_context.EnqueueEvent(events::emu::InsertPort1Peripheral(type));
@@ -251,7 +256,7 @@ int App::Run(const CommandLineOptions &options) {
 
     m_options = options;
     {
-        auto result = m_context.settings.Load(m_context.folders.GetPath(StandardPath::Root) / "satemu.toml");
+        auto result = m_context.settings.Load(m_context.profile.GetPath(StandardPath::Root) / "satemu.toml");
         if (!result) {
             devlog::warn<grp::base>("Failed to load settings: {}", result.string());
         }
@@ -265,7 +270,6 @@ int App::Run(const CommandLineOptions &options) {
 
     // TODO: allow overriding configuration from CommandLineOptions without modifying the underlying values
 
-    // Boost process priority
     util::BoostCurrentProcessPriority(m_context.settings.general.boostProcessPriority);
 
     // ---------------------------------
@@ -370,10 +374,7 @@ void App::RunEmulator() {
     // ---------------------------------
     // Setup Dear ImGui context
 
-    std::filesystem::path pwd = std::filesystem::current_path();
-    std::filesystem::path imguiIniLocation = pwd / "imgui.ini";
-
-    devlog::debug<grp::base>("Current working directory: {}", pwd.string());
+    std::filesystem::path imguiIniLocation = m_context.profile.GetPath(StandardPath::PersistentState) / "imgui.ini";
 
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();

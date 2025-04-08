@@ -8,8 +8,8 @@ add_executable(satemu-sdl3
     src/app/audio_system.cpp
     src/app/audio_system.hpp
     src/app/cmdline_opts.hpp
-    src/app/folder_manager.cpp
-    src/app/folder_manager.hpp
+    src/app/profile.cpp
+    src/app/profile.hpp
     src/app/settings.hpp
     src/app/settings.cpp
     src/app/shared_context.hpp

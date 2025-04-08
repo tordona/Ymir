@@ -1,4 +1,4 @@
-#include "folder_manager.hpp"
+#include "profile.hpp"
 
 #include <SDL3/SDL_filesystem.h>
 
@@ -12,34 +12,35 @@ const fs::path kPathSuffixes[] = {
     "bios",                          // BIOSImages
     "backup",                        // BackupMemory
     fs::path("backup") / "exported", // ExportedBackups
+    "state",                         // PersistentState
     "savestates",                    // SaveStates
 };
 
-FolderManager::FolderManager() {
+Profile::Profile() {
     UsePortableProfilePath();
 }
 
-void FolderManager::UseUserProfilePath() {
+void Profile::UseUserProfilePath() {
     char *path = SDL_GetPrefPath(satemu_ORGANIZATION_NAME, satemu_APP_NAME);
     m_profilePath = path;
     SDL_free(path);
 }
 
-void FolderManager::UsePortableProfilePath() {
+void Profile::UsePortableProfilePath() {
     char *path = SDL_GetCurrentDirectory();
     m_profilePath = path;
     SDL_free(path);
 }
 
-void FolderManager::UseProfilePath(fs::path path) {
+void Profile::UseProfilePath(fs::path path) {
     m_profilePath = path;
 }
 
-fs::path FolderManager::GetProfilePath() const {
+fs::path Profile::GetProfilePath() const {
     return m_profilePath;
 }
 
-bool FolderManager::CheckFolders() const {
+bool Profile::CheckFolders() const {
     for (auto &suffix : kPathSuffixes) {
         if (!fs::is_directory(m_profilePath / suffix)) {
             return false;
@@ -48,11 +49,10 @@ bool FolderManager::CheckFolders() const {
     return true;
 }
 
-bool FolderManager::CreateFolders(std::error_code &error) {
+bool Profile::CreateFolders(std::error_code &error) {
     error.clear();
 
     for (auto &suffix : kPathSuffixes) {
-        fmt::println("{}", (m_profilePath / suffix).string());
         fs::create_directories(m_profilePath / suffix, error);
         if (error) {
             return false;
@@ -61,7 +61,7 @@ bool FolderManager::CreateFolders(std::error_code &error) {
     return true;
 }
 
-fs::path FolderManager::GetPath(StandardPath path) const {
+fs::path Profile::GetPath(StandardPath path) const {
     const auto index = static_cast<size_t>(path);
     if (index < std::size(kPathSuffixes)) {
         return m_profilePath / kPathSuffixes[index] / "";
