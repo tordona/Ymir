@@ -116,9 +116,9 @@ void BackupMemoryView::Display() {
 
     if (ImGui::Button("Import")) {
         // Open file dialog to select backup files to load
-        // TODO (folder manager): default to the exported saves folder
         FileDialogParams params{};
         params.dialogTitle = fmt::format("Import backup files to {}", m_name);
+        params.defaultPath = m_context.folders.GetPath(StandardPath::ExportedBackups);
         params.filters.push_back({"Backup files", "bup"});
         params.filters.push_back({"All files", "*"});
         params.userdata = this;
@@ -152,10 +152,10 @@ void BackupMemoryView::Display() {
             auto &filename = m_filesToExport[0].header.filename;
             util::BackupDateTime bupDate{m_filesToExport[0].header.date};
 
-            // TODO (folder manager): default to the exported saves folder
             FileDialogParams params{};
             params.dialogTitle = fmt::format("Export {} from {}", filename, m_name);
-            params.defaultPath = fmt::format("{}_{:04d}{:02d}{:02d}_{:02d}{:02d}.bup", filename, bupDate.year,
+            params.defaultPath = m_context.folders.GetPath(StandardPath::ExportedBackups) /
+                                 fmt::format("{}_{:04d}{:02d}{:02d}_{:02d}{:02d}.bup", filename, bupDate.year,
                                              bupDate.month, bupDate.day, bupDate.hour, bupDate.minute);
             params.filters.push_back({"Backup file", "bup"});
             params.filters.push_back({"All files", "*"});
@@ -168,9 +168,9 @@ void BackupMemoryView::Display() {
         } else if (!m_filesToExport.empty()) {
             // Multiple files -> allow user to pick location only
 
-            // TODO (folder manager): default to the exported saves folder
             FolderDialogParams params{};
             params.dialogTitle = fmt::format("Export {} files from {}", m_filesToExport.size(), m_name);
+            params.defaultPath = m_context.folders.GetPath(StandardPath::ExportedBackups);
             params.userdata = this;
             params.callback = util::WrapSingleSelectionCallback<&BackupMemoryView::ProcessMultiFileExport,
                                                                 &BackupMemoryView::ProcessCancelFileExport,
@@ -195,14 +195,13 @@ void BackupMemoryView::Display() {
     const float loadImageWidth = ImGui::CalcTextSize("Load image...").x + ImGui::GetStyle().FramePadding.x * 2;
     const float sameLineSpacing = ImGui::GetStyle().ItemSpacing.x;
     const float saveImageWidth = ImGui::CalcTextSize("Save image...").x + ImGui::GetStyle().FramePadding.x * 2;
+    auto bupMemFilename = m_external ? fmt::format("bup-ext-{}M.bin", m_bup->Size() * 8 / 1024 / 1024) : "bup-int.bin";
     ImGui::SameLine(avail.x - loadImageWidth - sameLineSpacing - saveImageWidth);
     if (ImGui::Button("Load image...")) {
         // Open file dialog to select backup memory image to load
-        // TODO (folder manager): default to the exported saves folder
         FileDialogParams params{};
         params.dialogTitle = fmt::format("Load {} image", m_name);
-        params.defaultPath =
-            m_external ? fmt::format("bup-ext-{}M.bin", m_bup->Size() * 8 / 1024 / 1024) : "bup-int.bin";
+        params.defaultPath = m_context.folders.GetPath(StandardPath::BackupMemory) / bupMemFilename;
         params.filters.push_back({"Backup memory image file", "bin"});
         params.filters.push_back({"All files", "*"});
         params.userdata = this;
@@ -217,11 +216,9 @@ void BackupMemoryView::Display() {
         m_imageToSave = m_bup->ReadAll();
 
         // Open file dialog to select backup memory image to save
-        // TODO (folder manager): default to the exported saves folder
         FileDialogParams params{};
         params.dialogTitle = fmt::format("Save {} image", m_name);
-        params.defaultPath =
-            m_external ? fmt::format("bup-ext-{}M.bin", m_bup->Size() * 8 / 1024 / 1024) : "bup-int.bin";
+        params.defaultPath = m_context.folders.GetPath(StandardPath::BackupMemory) / bupMemFilename;
         params.filters.push_back({"Backup memory image file", "bin"});
         params.filters.push_back({"All files", "*"});
         params.userdata = this;
@@ -633,6 +630,7 @@ void BackupMemoryView::DisplayFileImportResultModal() {
         m_openFileImportResultModal = false;
     }
 
+    ImGui::SetNextWindowSizeConstraints(ImVec2(250, 0), ImVec2(FLT_MAX, FLT_MAX));
     if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::PushFont(m_context.fonts.monospace.medium.regular);
         const float monoCharWidth = ImGui::CalcTextSize("F").x;
@@ -641,6 +639,8 @@ void BackupMemoryView::DisplayFileImportResultModal() {
         if (!m_importSuccess.empty()) {
             ImGui::Text("%zu file%s imported successfully.", m_importSuccess.size(),
                         (m_importSuccess.size() == 1 ? "" : "s"));
+        } else {
+            ImGui::TextUnformatted("No files were imported.");
         }
 
         if (!m_importFailed.empty()) {

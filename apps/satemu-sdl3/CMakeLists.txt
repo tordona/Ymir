@@ -8,6 +8,8 @@ add_executable(satemu-sdl3
     src/app/audio_system.cpp
     src/app/audio_system.hpp
     src/app/cmdline_opts.hpp
+    src/app/folder_manager.cpp
+    src/app/folder_manager.hpp
     src/app/settings.hpp
     src/app/settings.cpp
     src/app/shared_context.hpp
@@ -223,7 +225,9 @@ else()
 endif()
 
 ## Define additional macros
-target_compile_definitions(satemu-sdl3 PUBLIC "satemu_ENABLE_IMGUI_DEMO=$<BOOL:${satemu_ENABLE_IMGUI_DEMO}>")
+target_compile_definitions(satemu-sdl3 PUBLIC satemu_ENABLE_IMGUI_DEMO=$<BOOL:${satemu_ENABLE_IMGUI_DEMO}>)
+target_compile_definitions(satemu-sdl3 PUBLIC satemu_ORGANIZATION_NAME="StrikerX3")
+target_compile_definitions(satemu-sdl3 PUBLIC satemu_APP_NAME="${PROJECT_NAME}")
 
 ## Apply performance options
 if (satemu_AVX2)

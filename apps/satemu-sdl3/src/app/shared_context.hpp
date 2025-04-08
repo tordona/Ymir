@@ -2,6 +2,7 @@
 
 #include <satemu/satemu.hpp>
 
+#include <app/folder_manager.hpp>
 #include <app/settings.hpp>
 
 #include <app/debug/scu_tracer.hpp>
@@ -22,6 +23,7 @@ namespace app {
 struct SharedContext {
     satemu::Saturn saturn;
 
+    FolderManager folders;
     Settings settings{saturn.configuration};
 
     // Certain GUI interactions requires synchronization with the emulator thread, specifically when dealing with

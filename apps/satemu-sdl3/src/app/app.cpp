@@ -228,7 +228,19 @@ App::App()
 }
 
 int App::Run(const CommandLineOptions &options) {
-    devlog::info<grp::base>("satemu {}", satemu::version::string);
+    devlog::info<grp::base>("{} {}", satemu_APP_NAME, satemu::version::string);
+
+    // TODO: use user profile first, then portable path
+    // - check before use
+    // - if neither are available, ask user where to create files
+    m_context.folders.UsePortableProfilePath();
+    if (!m_context.folders.CheckFolders()) {
+        std::error_code error{};
+        if (!m_context.folders.CreateFolders(error)) {
+            devlog::error<grp::base>("Could not create app folders: {}", error.message());
+            return -1;
+        }
+    }
 
     m_context.settings.input.port1.type.Observe([&](satemu::peripheral::PeripheralType type) {
         m_context.EnqueueEvent(events::emu::InsertPort1Peripheral(type));
@@ -239,8 +251,7 @@ int App::Run(const CommandLineOptions &options) {
 
     m_options = options;
     {
-        // TODO (folder manager): read from user profile or current path depending on installation mode
-        auto result = m_context.settings.Load("satemu.toml");
+        auto result = m_context.settings.Load(m_context.folders.GetPath(StandardPath::Root) / "satemu.toml");
         if (!result) {
             devlog::warn<grp::base>("Failed to load settings: {}", result.string());
         }
