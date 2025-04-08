@@ -1,5 +1,7 @@
 #pragma once
 
+#include <app/ui/defs/settings_defs.hpp>
+
 #include <filesystem>
 #include <string>
 #include <variant>
@@ -45,6 +47,7 @@ struct GUIEvent {
         SelectFolder,  // Invoke generic select folder dialog; uses FolderDialogParams
 
         OpenBackupMemoryManager,
+        OpenSettings, // Opens a specific Settings tab; uses ui::SettingsTab
 
         SetProcessPriority,
 
@@ -52,7 +55,7 @@ struct GUIEvent {
     };
 
     Type type;
-    std::variant<std::monostate, FileDialogParams, FolderDialogParams, bool> value;
+    std::variant<std::monostate, bool, FileDialogParams, FolderDialogParams, ui::SettingsTab> value;
 };
 
 } // namespace app

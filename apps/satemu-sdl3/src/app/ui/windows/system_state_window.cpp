@@ -346,6 +346,10 @@ void SystemStateWindow::DrawCDDrive() {
 }
 
 void SystemStateWindow::DrawBackupMemory() {
+    if (ImGui::Button("Open backup memory manager")) {
+        m_context.EnqueueEvent(events::gui::OpenBackupMemoryManager());
+    }
+
     if (ImGui::BeginTable("bup_info", 3, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn("Device");
         ImGui::TableSetupColumn("Capacity");
@@ -390,10 +394,6 @@ void SystemStateWindow::DrawBackupMemory() {
 
         ImGui::EndTable();
     }
-
-    if (ImGui::Button("Open backup memory manager")) {
-        m_context.EnqueueEvent(events::gui::OpenBackupMemoryManager());
-    }
 }
 
 void SystemStateWindow::DrawCartridge() {
@@ -430,42 +430,46 @@ void SystemStateWindow::DrawCartridge() {
 }
 
 void SystemStateWindow::DrawPeripherals() {
-    if (ImGui::BeginTable("sys_peripherals", 3, ImGuiTableFlags_SizingFixedFit)) {
+    if (ImGui::Button("Configure##peripherals")) {
+        m_context.EnqueueEvent(events::gui::OpenSettings(SettingsTab::Input));
+    }
+
+    if (ImGui::BeginTable("sys_peripherals", 2, ImGuiTableFlags_SizingFixedFit)) {
         auto &port1 = m_context.saturn.SMPC.GetPeripheralPort1();
         auto type1 = port1.GetPeripheral().GetType();
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
-            ImGui::AlignTextToFramePadding();
+            // ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted("Port 1:");
         }
         if (ImGui::TableNextColumn()) {
-            ImGui::AlignTextToFramePadding();
+            // ImGui::AlignTextToFramePadding();
             ImGui::Text("%s", peripheral::GetPeripheralName(type1).data());
         }
-        if (ImGui::TableNextColumn()) {
+        /*if (ImGui::TableNextColumn()) {
             if (ImGui::Button("Configure...##port_1")) {
                 // TODO: send GUI event to invoke peripheral configuration
             }
-        }
+        }*/
 
         auto &port2 = m_context.saturn.SMPC.GetPeripheralPort2();
         auto type2 = port2.GetPeripheral().GetType();
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
-            ImGui::AlignTextToFramePadding();
+            // ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted("Port 2:");
         }
         if (ImGui::TableNextColumn()) {
-            ImGui::AlignTextToFramePadding();
+            // ImGui::AlignTextToFramePadding();
             ImGui::Text("%s", peripheral::GetPeripheralName(type2).data());
         }
-        if (ImGui::TableNextColumn()) {
+        /*if (ImGui::TableNextColumn()) {
             if (ImGui::Button("Configure...##port_2")) {
                 // TODO: send GUI event to invoke peripheral configuration
             }
-        }
+        }*/
 
         ImGui::EndTable();
     }

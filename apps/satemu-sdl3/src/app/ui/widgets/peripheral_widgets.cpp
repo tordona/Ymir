@@ -1,0 +1,71 @@
+#include "peripheral_widgets.hpp"
+
+#include <app/events/emu_event_factory.hpp>
+
+using namespace satemu;
+
+namespace app::ui::widgets {
+
+bool PeripheralSelector(SharedContext &ctx, int portIndex) {
+    std::unique_lock lock{ctx.locks.peripherals};
+
+    const bool isPort1 = portIndex == 1;
+    auto &port = isPort1 ? ctx.saturn.SMPC.GetPeripheralPort1() : ctx.saturn.SMPC.GetPeripheralPort2();
+    auto &periph = port.GetPeripheral();
+    const bool isNone = periph.GetType() == peripheral::PeripheralType::None;
+
+    bool changed = false;
+
+    if (ImGui::BeginTable(fmt::format("periph_table_{}", portIndex).c_str(), 3, ImGuiTableFlags_SizingFixedFit)) {
+        ImGui::TableSetupColumn("##label", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("##input", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("##config", ImGuiTableColumnFlags_WidthFixed);
+
+        for (uint32 i = 0; i < 1; i++) {
+            ImGui::TableNextRow();
+            if (ImGui::TableNextColumn()) {
+                ImGui::AlignTextToFramePadding();
+                // TODO: multitap -- ImGui::TextUnformatted("Slot 1:");
+                ImGui::TextUnformatted("Peripheral:");
+            }
+            if (ImGui::TableNextColumn()) {
+                ImGui::SetNextItemWidth(-1);
+                if (ImGui::BeginCombo(fmt::format("##periph_{}_{}", portIndex, i).c_str(), periph.GetName().data())) {
+                    for (auto type : peripheral::kTypes) {
+                        if (ImGui::Selectable(peripheral::GetPeripheralName(type).data(), periph.GetType() == type)) {
+                            ctx.EnqueueEvent(isPort1 ? events::emu::InsertPort1Peripheral(type)
+                                                     : events::emu::InsertPort2Peripheral(type));
+                            changed = true;
+                        }
+                    }
+                    ImGui::EndCombo();
+                }
+            }
+            if (ImGui::TableNextColumn()) {
+                if (isNone) {
+                    ImGui::BeginDisabled();
+                }
+                if (ImGui::Button(fmt::format("Configure##{}_{}", portIndex, i).c_str())) {
+                    // TODO: open keybindings for this peripheral
+                }
+                if (isNone) {
+                    ImGui::EndDisabled();
+                }
+            }
+        }
+
+        ImGui::EndTable();
+    }
+
+    return changed;
+}
+
+bool Port1PeripheralSelector(SharedContext &ctx) {
+    return PeripheralSelector(ctx, 1);
+}
+
+bool Port2PeripheralSelector(SharedContext &ctx) {
+    return PeripheralSelector(ctx, 2);
+}
+
+} // namespace app::ui::widgets

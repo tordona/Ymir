@@ -1,5 +1,7 @@
 #pragma once
 
+#include <app/ui/defs/settings_defs.hpp>
+
 #include <app/ui/window_base.hpp>
 
 #include <app/ui/views/settings/audio_settings_view.hpp>
@@ -9,8 +11,6 @@
 #include <app/ui/views/settings/video_settings_view.hpp>
 
 namespace app::ui {
-
-enum class SettingsTab { None, General, System, Input, Video, Audio };
 
 class SettingsWindow : public WindowBase {
 public:

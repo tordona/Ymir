@@ -16,6 +16,10 @@ inline GUIEvent OpenBackupMemoryManager() {
     return {.type = GUIEvent::Type::OpenBackupMemoryManager};
 }
 
+inline GUIEvent OpenSettings(ui::SettingsTab tab) {
+    return {.type = GUIEvent::Type::OpenSettings, .value = tab};
+}
+
 inline GUIEvent OpenFile(FileDialogParams &&params) {
     return {.type = GUIEvent::Type::OpenFile, .value = std::move(params)};
 }

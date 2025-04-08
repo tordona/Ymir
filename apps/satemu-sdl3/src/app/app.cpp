@@ -1163,6 +1163,7 @@ void App::RunEmulator() {
             case EvtType::SelectFolder: InvokeSelectFolderDialog(std::get<FolderDialogParams>(evt.value)); break;
 
             case EvtType::OpenBackupMemoryManager: m_bupMgrWindow.Open = true; break;
+            case EvtType::OpenSettings: m_settingsWindow.OpenTab(std::get<ui::SettingsTab>(evt.value)); break;
 
             case EvtType::SetProcessPriority: util::BoostCurrentProcessPriority(std::get<bool>(evt.value)); break;
 
