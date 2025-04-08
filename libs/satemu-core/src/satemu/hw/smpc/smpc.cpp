@@ -1,7 +1,5 @@
 #include <satemu/hw/smpc/smpc.hpp>
 
-#include <satemu/sys/saturn.hpp>
-
 #include <satemu/util/arith_ops.hpp>
 #include <satemu/util/bit_ops.hpp>
 #include <satemu/util/date_time.hpp>

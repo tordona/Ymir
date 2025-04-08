@@ -1744,10 +1744,10 @@ bool App::LoadDiscImage(std::filesystem::path path) {
     devlog::info<grp::base>("Loading disc image from {}", path.string());
     satemu::media::Disc disc{};
     if (!satemu::media::LoadDisc(path, disc)) {
-        devlog::error<grp::base>("Failed to load disc image from {}", path.string());
+        devlog::error<grp::base>("Failed to load disc image");
         return false;
     }
-    devlog::info<grp::base>("Loaded disc image from {}", path.string());
+    devlog::info<grp::base>("Disc image loaded succesfully");
 
     std::unique_lock lock{m_context.locks.disc};
     m_context.saturn.LoadDisc(std::move(disc));
