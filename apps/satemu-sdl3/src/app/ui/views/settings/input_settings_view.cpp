@@ -1,5 +1,7 @@
 #include "input_settings_view.hpp"
 
+#include <app/events/emu_event_factory.hpp>
+
 using namespace satemu;
 
 namespace app::ui {
@@ -13,9 +15,12 @@ void InputSettingsView::Display() {
     const float configureTextWidth = ImGui::CalcTextSize("Configure").x;
 
     auto periphSelector = [&](int portIndex) {
-        auto &port =
-            portIndex == 1 ? m_context.saturn.SMPC.GetPeripheralPort1() : m_context.saturn.SMPC.GetPeripheralPort2();
+        std::unique_lock lock{m_context.locks.peripherals};
+
+        const bool isPort1 = portIndex == 1;
+        auto &port = isPort1 ? m_context.saturn.SMPC.GetPeripheralPort1() : m_context.saturn.SMPC.GetPeripheralPort2();
         auto &periph = port.GetPeripheral();
+        const bool isNone = periph.GetType() == peripheral::PeripheralType::None;
 
         if (ImGui::BeginTable(fmt::format("periph_table_{}", portIndex).c_str(), 2, ImGuiTableFlags_SizingFixedFit)) {
             ImGui::TableSetupColumn("##label", ImGuiTableColumnFlags_WidthFixed);
@@ -33,16 +38,23 @@ void InputSettingsView::Display() {
                     if (ImGui::BeginCombo(fmt::format("##periph_{}_{}", portIndex, i).c_str(),
                                           periph.GetName().data())) {
                         for (auto type : peripheral::kTypes) {
-                            if (ImGui::Selectable(peripheral::GetPeripheralName(type).data(),
-                                                  periph.GetType() == type)) {
-                                // TODO: replace with specified peripheral type
+                            if (MakeDirty(ImGui::Selectable(peripheral::GetPeripheralName(type).data(),
+                                                            periph.GetType() == type))) {
+                                m_context.EnqueueEvent(isPort1 ? events::emu::InsertPort1Peripheral(type)
+                                                               : events::emu::InsertPort2Peripheral(type));
                             }
                         }
                         ImGui::EndCombo();
                     }
                     ImGui::SameLine();
+                    if (isNone) {
+                        ImGui::BeginDisabled();
+                    }
                     if (ImGui::Button(fmt::format("Configure##{}_{}", portIndex, i).c_str())) {
                         // TODO: open keybindings for this peripheral
+                    }
+                    if (isNone) {
+                        ImGui::EndDisabled();
                     }
                 }
             }
@@ -60,7 +72,6 @@ void InputSettingsView::Display() {
             ImGui::SeparatorText("Port 1");
             ImGui::PopFont();
 
-            std::unique_lock lock{m_context.locks.peripherals};
             periphSelector(1);
         }
         if (ImGui::TableNextColumn()) {
@@ -68,17 +79,10 @@ void InputSettingsView::Display() {
             ImGui::SeparatorText("Port 2");
             ImGui::PopFont();
 
-            std::unique_lock lock{m_context.locks.peripherals};
             periphSelector(2);
         }
         ImGui::EndTable();
     }
-
-    /*auto &settings = m_context.settings.input;
-
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
-    ImGui::SeparatorText("Bindings");
-    ImGui::PopFont();*/
 }
 
 } // namespace app::ui
