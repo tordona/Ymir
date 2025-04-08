@@ -962,7 +962,7 @@ void App::RunEmulator() {
         inputCtx.MapToggleableAction(actions::emu::ResetButton, KeyCombo{Mod::Shift, Key::R});
 
         // Port 1 controller inputs
-        auto ctx1 = (input::ActionContext)&m_context.saturn.SMPC.GetPeripheralPort1();
+        auto ctx1 = &m_context.saturn.SMPC.GetPeripheralPort1();
         inputCtx.MapToggleableAction(actions::emu::StandardPadA, ctx1, Key::J);
         inputCtx.MapToggleableAction(actions::emu::StandardPadB, ctx1, Key::K);
         inputCtx.MapToggleableAction(actions::emu::StandardPadC, ctx1, Key::L);
@@ -981,7 +981,7 @@ void App::RunEmulator() {
         inputCtx.MapToggleableAction(actions::emu::StandardPadR, ctx1, Key::E);
 
         // Port 2 controller inputs
-        auto ctx2 = (input::ActionContext)&m_context.saturn.SMPC.GetPeripheralPort2();
+        auto ctx2 = &m_context.saturn.SMPC.GetPeripheralPort2();
         inputCtx.MapToggleableAction(actions::emu::StandardPadA, ctx2, Key::KeyPad1);
         inputCtx.MapToggleableAction(actions::emu::StandardPadB, ctx2, Key::KeyPad2);
         inputCtx.MapToggleableAction(actions::emu::StandardPadC, ctx2, Key::KeyPad3);

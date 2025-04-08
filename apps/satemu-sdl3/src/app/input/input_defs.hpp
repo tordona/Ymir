@@ -21,9 +21,9 @@ inline constexpr ActionID kNoAction = 0;
 // Action context. Enables the same action to be handled in multiple different contexts (such as handling inputs
 // for multiple players).
 //
-// The context is large enough to accomodate a pointer; feel free to cast it to void* should you need to refer to
-// more complex or structured data.
-using ActionContext = uintptr_t;
+// Alias for `void *`. Feel free to cast it to any type that fits into the size of a pointer (such as any primitive
+// integer type) if that is easier to handle.
+using ActionContext = void *;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Input elements
