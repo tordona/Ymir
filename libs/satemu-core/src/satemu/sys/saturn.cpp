@@ -141,27 +141,7 @@ void Saturn::LoadIPL(std::span<uint8, sys::kIPLSize> ipl) {
 
 void Saturn::LoadDisc(media::Disc &&disc) {
     // Configure area code based on compatible area codes from the disc
-    if (configuration.system.autodetectRegion && disc.header.compatAreaCode != media::AreaCode::None) {
-        // The area code enum is a bitmap where each bit corresponds to an SMPC area code
-        const auto areaCodeVal = static_cast<uint16>(disc.header.compatAreaCode);
-
-        // Pick from the preferred list if possible
-        bool hasSelectedAreaCode = false;
-        for (auto areaCode : m_preferredRegionOrder) {
-            if (BitmaskEnum(disc.header.compatAreaCode).AnyOf(areaCode)) {
-                SMPC.SetAreaCode(std::countr_zero(static_cast<uint16>(areaCode)));
-                hasSelectedAreaCode = true;
-                break;
-            }
-        }
-
-        // If none of the compatible area codes are in the preferred list, pick the first one available
-        if (!hasSelectedAreaCode) {
-            const uint8 selectedAreaCode = std::countr_zero<uint16>(areaCodeVal & -areaCodeVal);
-            SMPC.SetAreaCode(selectedAreaCode);
-        }
-    }
-
+    AutodetectRegion(disc.header.compatAreaCode);
     CDBlock.LoadDisc(std::move(disc));
 }
 
@@ -179,6 +159,35 @@ void Saturn::CloseTray() {
 
 bool Saturn::IsTrayOpen() const {
     return CDBlock.IsTrayOpen();
+}
+
+void Saturn::AutodetectRegion(media::AreaCode areaCodes) {
+    if (!configuration.system.autodetectRegion) {
+        return;
+    }
+    if (areaCodes == media::AreaCode::None) {
+        return;
+    }
+
+    const uint8 currAreaCode = SMPC.GetAreaCode();
+
+    // The area code enum is a bitmap where each bit corresponds to an SMPC area code
+    const auto areaCodeVal = static_cast<uint16>(areaCodes);
+
+    // Pick from the preferred list if possible or use the first one found
+    uint8 selectedAreaCode = std::countr_zero<uint16>(areaCodeVal & -areaCodeVal);
+    for (auto areaCode : m_preferredRegionOrder) {
+        if (BitmaskEnum(areaCodes).AnyOf(areaCode)) {
+            selectedAreaCode = std::countr_zero(static_cast<uint16>(areaCode));
+            break;
+        }
+    }
+
+    // Apply configuration and hard reset system if changed
+    SMPC.SetAreaCode(selectedAreaCode);
+    if (selectedAreaCode != currAreaCode) {
+        Reset(true);
+    }
 }
 
 void Saturn::EnableDebugTracing(bool enable) {
