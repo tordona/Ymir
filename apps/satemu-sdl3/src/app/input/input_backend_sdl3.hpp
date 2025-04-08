@@ -6,6 +6,8 @@
 #include <SDL3/SDL_keycode.h>
 #include <SDL3/SDL_scancode.h>
 
+#include <utility>
+
 namespace app::input {
 
 KeyboardKey SDL3ScancodeToKeyboardKey(SDL_Scancode key);
@@ -17,7 +19,12 @@ SDL_Keymod KeyModifierToSDL3(KeyModifier modifier);
 GamepadButton SDL3ToGamepadButton(SDL_GamepadButton button);
 SDL_GamepadButton GamepadButtonToSDL3(GamepadButton button);
 
-GamepadAxis SDL3ToGamepadAxis(SDL_GamepadAxis axis);
-SDL_GamepadAxis GamepadAxisToSDL3(GamepadAxis axis);
+GamepadAxis1D SDL3ToGamepadAxis1D(SDL_GamepadAxis axis);
+SDL_GamepadAxis GamepadAxis1DToSDL3(GamepadAxis1D axis);
+
+GamepadAxis2D SDL3ToGamepadAxis2D(SDL_GamepadAxis axisH, SDL_GamepadAxis axisV);
+std::pair<SDL_GamepadAxis, SDL_GamepadAxis> GamepadAxis2DToSDL3(GamepadAxis2D axis);
+
+SDL_GamepadAxis SDL3GetOrthogonal2DAxis(SDL_GamepadAxis axis);
 
 } // namespace app::input

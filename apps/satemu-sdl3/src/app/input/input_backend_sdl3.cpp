@@ -565,26 +565,54 @@ SDL_GamepadButton GamepadButtonToSDL3(GamepadButton button) {
     }
 }
 
-GamepadAxis SDL3ToGamepadAxis(SDL_GamepadAxis axis) {
+GamepadAxis1D SDL3ToGamepadAxis1D(SDL_GamepadAxis axis) {
     switch (axis) {
-    case SDL_GAMEPAD_AXIS_LEFTX: return GamepadAxis::LeftX;
-    case SDL_GAMEPAD_AXIS_LEFTY: return GamepadAxis::LeftY;
-    case SDL_GAMEPAD_AXIS_RIGHTX: return GamepadAxis::RightX;
-    case SDL_GAMEPAD_AXIS_RIGHTY: return GamepadAxis::RightY;
-    case SDL_GAMEPAD_AXIS_LEFT_TRIGGER: return GamepadAxis::LeftTrigger;
-    case SDL_GAMEPAD_AXIS_RIGHT_TRIGGER: return GamepadAxis::RightTrigger;
-    default: return GamepadAxis::None;
+    case SDL_GAMEPAD_AXIS_LEFTX: return GamepadAxis1D::LeftStickX;
+    case SDL_GAMEPAD_AXIS_LEFTY: return GamepadAxis1D::LeftStickY;
+    case SDL_GAMEPAD_AXIS_RIGHTX: return GamepadAxis1D::RightStickX;
+    case SDL_GAMEPAD_AXIS_RIGHTY: return GamepadAxis1D::RightStickY;
+    case SDL_GAMEPAD_AXIS_LEFT_TRIGGER: return GamepadAxis1D::LeftTrigger;
+    case SDL_GAMEPAD_AXIS_RIGHT_TRIGGER: return GamepadAxis1D::RightTrigger;
+    default: return GamepadAxis1D::None;
     }
 }
 
-SDL_GamepadAxis GamepadAxisToSDL3(GamepadAxis axis) {
+SDL_GamepadAxis GamepadAxis1DToSDL3(GamepadAxis1D axis) {
     switch (axis) {
-    case GamepadAxis::LeftX: return SDL_GAMEPAD_AXIS_LEFTX;
-    case GamepadAxis::LeftY: return SDL_GAMEPAD_AXIS_LEFTY;
-    case GamepadAxis::RightX: return SDL_GAMEPAD_AXIS_RIGHTX;
-    case GamepadAxis::RightY: return SDL_GAMEPAD_AXIS_RIGHTY;
-    case GamepadAxis::LeftTrigger: return SDL_GAMEPAD_AXIS_LEFT_TRIGGER;
-    case GamepadAxis::RightTrigger: return SDL_GAMEPAD_AXIS_RIGHT_TRIGGER;
+    case GamepadAxis1D::LeftStickX: return SDL_GAMEPAD_AXIS_LEFTX;
+    case GamepadAxis1D::LeftStickY: return SDL_GAMEPAD_AXIS_LEFTY;
+    case GamepadAxis1D::RightStickX: return SDL_GAMEPAD_AXIS_RIGHTX;
+    case GamepadAxis1D::RightStickY: return SDL_GAMEPAD_AXIS_RIGHTY;
+    case GamepadAxis1D::LeftTrigger: return SDL_GAMEPAD_AXIS_LEFT_TRIGGER;
+    case GamepadAxis1D::RightTrigger: return SDL_GAMEPAD_AXIS_RIGHT_TRIGGER;
+    default: return SDL_GAMEPAD_AXIS_INVALID;
+    }
+}
+
+GamepadAxis2D SDL3ToGamepadAxis2D(SDL_GamepadAxis axisH, SDL_GamepadAxis axisV) {
+    if (axisH == SDL_GAMEPAD_AXIS_LEFTX && axisV == SDL_GAMEPAD_AXIS_LEFTY) {
+        return GamepadAxis2D::LeftStick;
+    } else if (axisH == SDL_GAMEPAD_AXIS_RIGHTX && axisV == SDL_GAMEPAD_AXIS_RIGHTY) {
+        return GamepadAxis2D::RightStick;
+    } else {
+        return GamepadAxis2D::None;
+    }
+}
+
+std::pair<SDL_GamepadAxis, SDL_GamepadAxis> GamepadAxis2DToSDL3(GamepadAxis2D axis) {
+    switch (axis) {
+    case GamepadAxis2D::LeftStick: return {SDL_GAMEPAD_AXIS_LEFTX, SDL_GAMEPAD_AXIS_LEFTY};
+    case GamepadAxis2D::RightStick: return {SDL_GAMEPAD_AXIS_RIGHTX, SDL_GAMEPAD_AXIS_RIGHTY};
+    default: return {SDL_GAMEPAD_AXIS_INVALID, SDL_GAMEPAD_AXIS_INVALID};
+    }
+}
+
+SDL_GamepadAxis SDL3GetOrthogonal2DAxis(SDL_GamepadAxis axis) {
+    switch (axis) {
+    case SDL_GAMEPAD_AXIS_LEFTX: return SDL_GAMEPAD_AXIS_LEFTY;
+    case SDL_GAMEPAD_AXIS_LEFTY: return SDL_GAMEPAD_AXIS_LEFTX;
+    case SDL_GAMEPAD_AXIS_RIGHTX: return SDL_GAMEPAD_AXIS_RIGHTY;
+    case SDL_GAMEPAD_AXIS_RIGHTY: return SDL_GAMEPAD_AXIS_RIGHTX;
     default: return SDL_GAMEPAD_AXIS_INVALID;
     }
 }
