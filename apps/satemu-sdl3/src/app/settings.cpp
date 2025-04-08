@@ -67,6 +67,17 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
     }
 }
 
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, peripheral::PeripheralType &value) {
+    value = peripheral::PeripheralType::None;
+    if (auto opt = node[name].value<std::string>()) {
+        if (*opt == "None"s) {
+            value = peripheral::PeripheralType::None;
+        } else if (*opt == "StandardPad"s) {
+            value = peripheral::PeripheralType::StandardPad;
+        }
+    }
+}
+
 FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name,
                                config::audio::SampleInterpolationMode &value) {
     value = config::audio::SampleInterpolationMode::NearestNeighbor;
@@ -104,6 +115,14 @@ FORCE_INLINE static const char *EnumName(const config::rtc::HardResetStrategy va
     case config::rtc::HardResetStrategy::Preserve: return "Preserve";
     case config::rtc::HardResetStrategy::SyncToHost: return "SyncToHost";
     case config::rtc::HardResetStrategy::ResetToFixedTime: return "ResetToFixedTime";
+    }
+}
+
+FORCE_INLINE static const char *EnumName(const peripheral::PeripheralType value) {
+    switch (value) {
+    default:
+    case peripheral::PeripheralType::None: return "None";
+    case peripheral::PeripheralType::StandardPad: return "StandardPad";
     }
 }
 
@@ -148,7 +167,8 @@ void Settings::ResetToDefaults() {
 
     system.biosPath = "";
 
-    // TODO: input
+    input.port1.type = peripheral::PeripheralType::StandardPad;
+    input.port2.type = peripheral::PeripheralType::None;
 
     video.forceIntegerScaling = false;
     video.forceAspectRatio = true;
@@ -205,9 +225,15 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         }
     }
 
-    /*if (auto tblInput = data["Input"]) {
-        // TODO
-    }*/
+    if (auto tblInput = data["Input"]) {
+        auto parsePort = [&](const char *name, Input::Port &portSettings) {
+            if (auto tblPort = tblInput[name]) {
+                Parse(tblPort, "PeripheralType", portSettings.type);
+            }
+        };
+        parsePort("Port1", input.port1);
+        parsePort("Port2", input.port2);
+    }
 
     if (auto tblVideo = data["Video"]) {
         Parse(tblVideo, "ForceIntegerScaling", video.forceIntegerScaling);
@@ -259,9 +285,14 @@ SettingsSaveResult Settings::Save() {
             }}},
         }}},
 
-        /*{"Input", toml::table{{
-            // TODO
-        }}},*/
+        {"Input", toml::table{{
+            {"Port1", toml::table{{
+                {"PeripheralType", EnumName(input.port1.type)},
+            }}},
+            {"Port2", toml::table{{
+                {"PeripheralType", EnumName(input.port2.type)},
+            }}},
+        }}},
 
         {"Video", toml::table{{
             {"ForceIntegerScaling", video.forceIntegerScaling},

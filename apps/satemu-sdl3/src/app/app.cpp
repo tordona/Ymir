@@ -230,6 +230,13 @@ App::App()
 int App::Run(const CommandLineOptions &options) {
     devlog::info<grp::base>("satemu {}", satemu::version::string);
 
+    m_context.settings.input.port1.type.Observe([&](satemu::peripheral::PeripheralType type) {
+        m_context.EnqueueEvent(events::emu::InsertPort1Peripheral(type));
+    });
+    m_context.settings.input.port2.type.Observe([&](satemu::peripheral::PeripheralType type) {
+        m_context.EnqueueEvent(events::emu::InsertPort2Peripheral(type));
+    });
+
     m_options = options;
     {
         // TODO (folder manager): read from user profile or current path depending on installation mode
@@ -840,10 +847,6 @@ void App::RunEmulator() {
 
     bool paused = false; // TODO: this should be updated by the emulator thread via events
 
-    // TODO: should come from settings
-    m_context.saturn.SMPC.GetPeripheralPort1().ConnectStandardPad();
-    m_context.saturn.SMPC.GetPeripheralPort2().ConnectStandardPad();
-
     m_inputHandler.Register(actions::general::OpenLoadDiscDialog,
                             [&](const input::InputActionEvent &evt) { OpenLoadDiscDialog(); });
     m_inputHandler.Register(actions::general::EjectDisc, [&](const input::InputActionEvent &evt) {
@@ -863,8 +866,9 @@ void App::RunEmulator() {
         using Button = peripheral::StandardPad::Button;
 
         auto registerButton = [&](input::ActionID action, Button button) {
-            m_inputHandler.Register(action, [=](const input::InputActionEvent &evt) {
+            m_inputHandler.Register(action, [=, this](const input::InputActionEvent &evt) {
                 auto &port = *reinterpret_cast<peripheral::PeripheralPort *>(evt.action.context);
+                std::unique_lock lock{m_context.locks.peripherals};
                 if (auto *pad = port.GetPeripheral().As<peripheral::PeripheralType::StandardPad>()) {
                     if (evt.input.activated) {
                         pad->PressButton(button);

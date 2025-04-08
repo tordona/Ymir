@@ -2,6 +2,10 @@
 
 #include <satemu/core/configuration.hpp>
 
+#include <satemu/hw/smpc/peripheral/peripheral_defs.hpp>
+
+#include <satemu/util/observable.hpp>
+
 #include <fmt/format.h>
 #include <toml++/toml.hpp>
 
@@ -115,7 +119,13 @@ public:
     } system;
 
     struct Input {
-        // TODO: remappable key bindings (support multiple binds per button)
+        struct Port {
+            util::Observable<satemu::peripheral::PeripheralType> type;
+
+            // TODO: key bindings for each type
+        };
+        Port port1;
+        Port port2;
     } input;
 
     struct Video {

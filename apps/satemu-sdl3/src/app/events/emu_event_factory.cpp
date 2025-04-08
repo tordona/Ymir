@@ -135,6 +135,27 @@ EmuEvent DumpMemory() {
     });
 }
 
+static void InsertPeripheral(peripheral::PeripheralType type, peripheral::PeripheralPort &port) {
+    switch (type) {
+    case satemu::peripheral::PeripheralType::None: port.DisconnectPeripherals(); break;
+    case satemu::peripheral::PeripheralType::StandardPad: port.ConnectStandardPad(); break;
+    }
+}
+
+EmuEvent InsertPort1Peripheral(peripheral::PeripheralType type) {
+    return RunFunction([=](SharedContext &ctx) {
+        std::unique_lock lock{ctx.locks.peripherals};
+        InsertPeripheral(type, ctx.saturn.SMPC.GetPeripheralPort1());
+    });
+}
+
+EmuEvent InsertPort2Peripheral(peripheral::PeripheralType type) {
+    return RunFunction([=](SharedContext &ctx) {
+        std::unique_lock lock{ctx.locks.peripherals};
+        InsertPeripheral(type, ctx.saturn.SMPC.GetPeripheralPort2());
+    });
+}
+
 EmuEvent InsertBackupMemoryCartridge(std::filesystem::path path) {
     return RunFunction([=](SharedContext &ctx) {
         std::error_code error{};

@@ -65,6 +65,7 @@ add_library(satemu-core
     include/satemu/hw/smpc/smpc_callbacks.hpp
     
     include/satemu/hw/smpc/peripheral/peripheral_base.hpp
+    include/satemu/hw/smpc/peripheral/peripheral_defs.hpp
     include/satemu/hw/smpc/peripheral/peripheral_impl_null.hpp
     include/satemu/hw/smpc/peripheral/peripheral_impl_standard_pad.hpp
     include/satemu/hw/smpc/peripheral/peripheral_port.hpp

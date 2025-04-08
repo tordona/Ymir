@@ -3,6 +3,8 @@
 #include <satemu/sys/backup_ram.hpp>
 #include <satemu/sys/clocks.hpp>
 
+#include <satemu/hw/smpc/peripheral/peripheral_defs.hpp>
+
 #include "emu_event.hpp"
 
 #include <filesystem>
@@ -78,6 +80,9 @@ EmuEvent SetAreaCode(uint8 areaCode);
 
 EmuEvent SetDebugTrace(bool enable);
 EmuEvent DumpMemory();
+
+EmuEvent InsertPort1Peripheral(satemu::peripheral::PeripheralType type);
+EmuEvent InsertPort2Peripheral(satemu::peripheral::PeripheralType type);
 
 EmuEvent InsertBackupMemoryCartridge(std::filesystem::path path);
 EmuEvent Insert8MbitDRAMCartridge();
