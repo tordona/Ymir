@@ -125,6 +125,28 @@ public:
         std::string biosPath;
     } system;
 
+    struct Hotkeys {
+        InputEventArray loadDisc;
+        InputEventArray ejectDisc;
+        InputEventArray openCloseTray;
+
+        InputEventArray toggleWindowedVideoOutput;
+
+        InputEventArray openSettings;
+
+        InputEventArray hardReset;
+        InputEventArray softReset;
+
+        InputEventArray frameStep;
+        InputEventArray pauseResume;
+        InputEventArray fastForward;
+
+        InputEventArray resetButton;
+
+        InputEventArray toggleDebugTrace;
+        InputEventArray dumpMemory;
+    } hotkeys;
+
     struct Input {
         struct Port {
             util::Observable<satemu::peripheral::PeripheralType> type;
