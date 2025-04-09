@@ -310,12 +310,12 @@ std::string_view ToHumanString(GamepadButton btn) {
     case GamepadButton::RightPaddle1: return "P1";
     case GamepadButton::RightPaddle2: return "P2";
     case GamepadButton::TouchPad: return "Touchpad";
-    case GamepadButton::Misc1: return "Misc Gamepad Button 1";
-    case GamepadButton::Misc2: return "Misc Gamepad Button 2";
-    case GamepadButton::Misc3: return "Misc Gamepad Button 3";
-    case GamepadButton::Misc4: return "Misc Gamepad Button 4";
-    case GamepadButton::Misc5: return "Misc Gamepad Button 5";
-    case GamepadButton::Misc6: return "Misc Gamepad Button 6";
+    case GamepadButton::Misc1: return "Misc 1";
+    case GamepadButton::Misc2: return "Misc 2";
+    case GamepadButton::Misc3: return "Misc 3";
+    case GamepadButton::Misc4: return "Misc 4";
+    case GamepadButton::Misc5: return "Misc 5";
+    case GamepadButton::Misc6: return "Misc 6";
     default: return "Unknown";
     }
 }

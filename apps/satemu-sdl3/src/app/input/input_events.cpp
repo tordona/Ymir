@@ -9,7 +9,7 @@ namespace app::input {
 std::string ToHumanString(const InputEvent &bind) {
     switch (bind.type) {
     default: // fallthrough
-    case InputEvent::Type::None: return "None";
+    case InputEvent::Type::None: return "";
     case InputEvent::Type::KeyCombo: return ToHumanString(bind.keyCombo);
     case InputEvent::Type::MouseCombo: return ToHumanString(bind.mouseCombo);
     case InputEvent::Type::GamepadButton:

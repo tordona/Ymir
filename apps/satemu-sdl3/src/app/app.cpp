@@ -1374,6 +1374,9 @@ void App::RunEmulator() {
                 if (ImGui::MenuItem("General")) {
                     m_settingsWindow.OpenTab(ui::SettingsTab::General);
                 }
+                if (ImGui::MenuItem("Hotkeys")) {
+                    m_settingsWindow.OpenTab(ui::SettingsTab::Hotkeys);
+                }
                 if (ImGui::MenuItem("System")) {
                     m_settingsWindow.OpenTab(ui::SettingsTab::System);
                 }

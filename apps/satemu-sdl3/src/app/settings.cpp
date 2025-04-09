@@ -225,6 +225,7 @@ void Settings::ResetToDefaults() {
 
         hotkeys.frameStep[0] = KeyCombo{Mod::None, Key::RightBracket};
         hotkeys.pauseResume[0] = KeyCombo{Mod::None, Key::Pause};
+        hotkeys.pauseResume[1] = KeyCombo{Mod::Control, Key::P};
         hotkeys.fastForward[0] = KeyCombo{Mod::None, Key::Tab};
 
         hotkeys.resetButton[0] = KeyCombo{Mod::Shift, Key::R};

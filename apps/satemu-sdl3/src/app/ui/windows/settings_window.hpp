@@ -6,6 +6,7 @@
 
 #include <app/ui/views/settings/audio_settings_view.hpp>
 #include <app/ui/views/settings/general_settings_view.hpp>
+#include <app/ui/views/settings/hotkeys_settings_view.hpp>
 #include <app/ui/views/settings/input_settings_view.hpp>
 #include <app/ui/views/settings/system_settings_view.hpp>
 #include <app/ui/views/settings/video_settings_view.hpp>
@@ -26,6 +27,7 @@ private:
     SettingsTab m_selectedTab = SettingsTab::None;
 
     GeneralSettingsView m_generalSettingsView;
+    HotkeysSettingsView m_hotkeysSettingsView;
     SystemSettingsView m_systemSettingsView;
     InputSettingsView m_inputSettingsView;
     VideoSettingsView m_videoSettingsView;

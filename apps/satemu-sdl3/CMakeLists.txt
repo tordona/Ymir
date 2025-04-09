@@ -173,7 +173,7 @@ add_executable(satemu-sdl3
     src/util/rom_loader.cpp
     src/util/rom_loader.hpp
     src/util/sdl_file_dialog.hpp
-)
+ "src/app/ui/views/settings/hotkeys_settings_view.cpp")
 add_executable(satemu::satemu-sdl3 ALIAS satemu-sdl3)
 set_target_properties(satemu-sdl3 PROPERTIES
                       VERSION ${satemu_VERSION}
