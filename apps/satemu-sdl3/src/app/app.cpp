@@ -358,11 +358,6 @@ void App::RunEmulator() {
             this->resolutionChanged = true;
         }
 
-        void ResizeWindow() {
-            SDL_RestoreWindow(window);
-            SDL_SetWindowSize(window, width * scaleX, height * scaleY);
-        }
-
         std::vector<uint32> framebuffer;
         std::mutex mtxFramebuffer;
         bool updated = false;
@@ -578,15 +573,31 @@ void App::RunEmulator() {
     ScopeGuard sgDestroyWindowProps{[&] { SDL_DestroyProperties(windowProps); }};
 
     {
+        // Compute initial window size
+        // TODO: should load from persistent state or assume a reasonable default
+
         // Equivalent to ImGui::GetFrameHeight() without requiring a window
         const float menuBarHeight = io.FontDefault->FontSize + style.FramePadding.y * 2.0f;
+
+        const auto &videoSettings = m_context.settings.video;
+        const bool forceAspectRatio = videoSettings.forceAspectRatio;
+        const double forcedAspect = videoSettings.forcedAspect;
+
+        const double baseWidth =
+            forceAspectRatio ? ceil(screen.height * forcedAspect * screen.scaleY) : screen.width * screen.scaleX;
+        const double baseHeight = screen.height * screen.scaleY;
+        double scale = 4.0; // TODO: find reasonable default scale based on screen resolution
+        if (videoSettings.forceIntegerScaling) {
+            scale = floor(scale);
+        }
+        const int scaledWidth = baseWidth * scale;
+        const int scaledHeight = baseHeight * scale;
 
         // Assume the following calls succeed
         SDL_SetStringProperty(windowProps, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Unnamed Sega Saturn emulator");
         SDL_SetBooleanProperty(windowProps, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
-        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, screen.width * screen.scaleX * 4);
-        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,
-                              screen.height * screen.scaleY * 4 + menuBarHeight);
+        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, scaledWidth);
+        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, scaledHeight + menuBarHeight);
         SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
         SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
         SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, true);
@@ -1582,7 +1593,9 @@ void App::RunEmulator() {
                 int dx = scaledWidth - ww;
                 int dy = scaledHeight - wh;
                 SDL_SetWindowSize(screen.window, scaledWidth, scaledHeight + menuBarHeight);
-                SDL_SetWindowPosition(screen.window, wx - dx / 2, wy - dy / 2);
+                int nwx = std::max(0, wx - dx / 2);
+                int nwy = std::max(0, wy - dy / 2);
+                SDL_SetWindowPosition(screen.window, nwx, nwy);
             }
 
             // Render framebuffer to display texture
