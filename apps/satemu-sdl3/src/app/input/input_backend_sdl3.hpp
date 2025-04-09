@@ -1,6 +1,6 @@
 #pragma once
 
-#include "input_defs.hpp"
+#include "input_primitives.hpp"
 
 #include <SDL3/SDL_gamepad.h>
 #include <SDL3/SDL_keycode.h>

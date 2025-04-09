@@ -5,7 +5,7 @@
 #include "audio_system.hpp"
 #include "shared_context.hpp"
 
-#include "input/input_handler.hpp"
+#include "input/input_context.hpp"
 
 #include "ui/windows/about_window.hpp"
 #include "ui/windows/backup_ram_manager_window.hpp"
@@ -66,7 +66,7 @@ private:
 
     AudioSystem m_audioSystem;
 
-    input::InputHandler m_inputHandler;
+    input::InputContext m_inputContext;
 
     void RunEmulator();
 

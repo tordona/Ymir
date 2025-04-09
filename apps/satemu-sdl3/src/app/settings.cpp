@@ -134,6 +134,14 @@ FORCE_INLINE static const char *EnumName(const config::audio::SampleInterpolatio
     }
 }
 
+FORCE_INLINE static toml::array ArrayNames(const InputEventArray &value) {
+    toml::array out{};
+    for (size_t i = 0; i < kNumBindsPerInput; i++) {
+        out.push_back(input::ToString(value[i]));
+    }
+    return out;
+}
+
 // -------------------------------------------------------------------------------------------------
 // Parsers
 
@@ -155,6 +163,18 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
     T wrappedValue = value.Get();
     Parse(node, name, wrappedValue);
     value = wrappedValue;
+}
+
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, InputEventArray &value) {
+    if (toml::array *arr = node[name].as_array()) {
+        value.fill({});
+        const size_t count = std::min(arr->size(), kNumBindsPerInput);
+        for (size_t i = 0; i < count; i++) {
+            if (auto opt = arr->at(i).value<std::string_view>()) {
+                input::TryParse((*opt), value[i]);
+            }
+        }
+    }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -229,6 +249,22 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         auto parsePort = [&](const char *name, Input::Port &portSettings) {
             if (auto tblPort = tblInput[name]) {
                 Parse(tblPort, "PeripheralType", portSettings.type);
+
+                if (auto tblStandardPadBinds = tblPort["StandardPadBinds"]) {
+                    Parse(tblStandardPadBinds, "A", portSettings.standardPadBinds.a);
+                    Parse(tblStandardPadBinds, "B", portSettings.standardPadBinds.b);
+                    Parse(tblStandardPadBinds, "C", portSettings.standardPadBinds.c);
+                    Parse(tblStandardPadBinds, "X", portSettings.standardPadBinds.x);
+                    Parse(tblStandardPadBinds, "Y", portSettings.standardPadBinds.y);
+                    Parse(tblStandardPadBinds, "Z", portSettings.standardPadBinds.z);
+                    Parse(tblStandardPadBinds, "L", portSettings.standardPadBinds.l);
+                    Parse(tblStandardPadBinds, "R", portSettings.standardPadBinds.r);
+                    Parse(tblStandardPadBinds, "Start", portSettings.standardPadBinds.start);
+                    Parse(tblStandardPadBinds, "Up", portSettings.standardPadBinds.up);
+                    Parse(tblStandardPadBinds, "Down", portSettings.standardPadBinds.down);
+                    Parse(tblStandardPadBinds, "Left", portSettings.standardPadBinds.left);
+                    Parse(tblStandardPadBinds, "Right", portSettings.standardPadBinds.right);
+                }
             }
         };
         parsePort("Port1", input.port1);
@@ -288,9 +324,39 @@ SettingsSaveResult Settings::Save() {
         {"Input", toml::table{{
             {"Port1", toml::table{{
                 {"PeripheralType", EnumName(input.port1.type)},
+                {"StandardPadBinds", toml::table{{
+                    {"A", ArrayNames(input.port1.standardPadBinds.a)},
+                    {"B", ArrayNames(input.port1.standardPadBinds.b)},
+                    {"C", ArrayNames(input.port1.standardPadBinds.c)},
+                    {"X", ArrayNames(input.port1.standardPadBinds.x)},
+                    {"Y", ArrayNames(input.port1.standardPadBinds.y)},
+                    {"Z", ArrayNames(input.port1.standardPadBinds.z)},
+                    {"L", ArrayNames(input.port1.standardPadBinds.l)},
+                    {"R", ArrayNames(input.port1.standardPadBinds.r)},
+                    {"Start", ArrayNames(input.port1.standardPadBinds.start)},
+                    {"Up", ArrayNames(input.port1.standardPadBinds.up)},
+                    {"Down", ArrayNames(input.port1.standardPadBinds.down)},
+                    {"Left", ArrayNames(input.port1.standardPadBinds.left)},
+                    {"Right", ArrayNames(input.port1.standardPadBinds.right)},
+                }}},
             }}},
             {"Port2", toml::table{{
                 {"PeripheralType", EnumName(input.port2.type)},
+                {"StandardPadBinds", toml::table{{
+                    {"A", ArrayNames(input.port2.standardPadBinds.a)},
+                    {"B", ArrayNames(input.port2.standardPadBinds.b)},
+                    {"C", ArrayNames(input.port2.standardPadBinds.c)},
+                    {"X", ArrayNames(input.port2.standardPadBinds.x)},
+                    {"Y", ArrayNames(input.port2.standardPadBinds.y)},
+                    {"Z", ArrayNames(input.port2.standardPadBinds.z)},
+                    {"L", ArrayNames(input.port2.standardPadBinds.l)},
+                    {"R", ArrayNames(input.port2.standardPadBinds.r)},
+                    {"Start", ArrayNames(input.port2.standardPadBinds.start)},
+                    {"Up", ArrayNames(input.port2.standardPadBinds.up)},
+                    {"Down", ArrayNames(input.port2.standardPadBinds.down)},
+                    {"Left", ArrayNames(input.port2.standardPadBinds.left)},
+                    {"Right", ArrayNames(input.port2.standardPadBinds.right)},
+                }}},
             }}},
         }}},
 

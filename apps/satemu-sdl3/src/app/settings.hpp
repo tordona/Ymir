@@ -4,11 +4,14 @@
 
 #include <satemu/hw/smpc/peripheral/peripheral_defs.hpp>
 
+#include <app/input/input_events.hpp>
+
 #include <satemu/util/observable.hpp>
 
 #include <fmt/format.h>
 #include <toml++/toml.hpp>
 
+#include <array>
 #include <chrono>
 #include <filesystem>
 #include <sstream>
@@ -83,6 +86,10 @@ struct SettingsSaveResult {
     std::variant<std::monostate, std::error_code> value;
 };
 
+// Number of simultaneous input bindings allowed per input event
+inline constexpr size_t kNumBindsPerInput = 4;
+using InputEventArray = std::array<input::InputEvent, kNumBindsPerInput>;
+
 struct Settings {
     Settings(satemu::core::Configuration &emuConfig) noexcept
         : m_emuConfig(emuConfig) {
@@ -122,7 +129,21 @@ public:
         struct Port {
             util::Observable<satemu::peripheral::PeripheralType> type;
 
-            // TODO: key bindings for each type
+            struct StandardPadBinds {
+                InputEventArray a;
+                InputEventArray b;
+                InputEventArray c;
+                InputEventArray x;
+                InputEventArray y;
+                InputEventArray z;
+                InputEventArray l;
+                InputEventArray r;
+                InputEventArray start;
+                InputEventArray up;
+                InputEventArray down;
+                InputEventArray left;
+                InputEventArray right;
+            } standardPadBinds;
         };
         Port port1;
         Port port2;

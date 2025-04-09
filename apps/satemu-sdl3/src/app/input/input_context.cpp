@@ -2,108 +2,168 @@
 
 namespace app::input {
 
-inline constexpr BoundAction kNoBoundAction{kNoAction, 0};
+// ---------------------------------------------------------------------------------------------------------------------
+// Input primitive processing
 
-InputContext::InputContext()
-    : m_actionQueueToken(m_actionQueue) {}
-
-BoundAction InputContext::MapAction(ActionID action, InputEvent event, bool pressed) {
-    return MapAction({action, 0}, BoundInputEvent{event, pressed});
-}
-
-BoundAction InputContext::MapAction(ActionID action, ActionContext context, InputEvent event, bool pressed) {
-    return MapAction({action, context}, BoundInputEvent{event, pressed});
-}
-
-std::pair<BoundAction, BoundAction> InputContext::MapToggleableAction(ActionID action, InputEvent event) {
-    return {MapAction(action, event, true), MapAction(action, event, false)};
-}
-
-std::pair<BoundAction, BoundAction> InputContext::MapToggleableAction(ActionID action, ActionContext context,
-                                                                      InputEvent event) {
-    return {MapAction(action, context, event, true), MapAction(action, context, event, false)};
-}
-
-BoundAction InputContext::GetMappedAction(InputEvent event, bool pressed) const {
-    return GetMappedAction(BoundInputEvent{event, pressed});
-}
-
-const std::unordered_map<BoundInputEvent, BoundAction> &InputContext::GetMappedActions() const {
-    return m_actions;
-}
-
-std::unordered_set<BoundInputEvent> InputContext::GetMappedInputs(ActionID action, ActionContext context) const {
-    const BoundAction boundAction{action, context};
-    if (m_actionsReverse.contains(boundAction)) {
-        return m_actionsReverse.at(boundAction);
+void InputContext::ProcessPrimitive(KeyboardKey key, KeyModifier modifiers, bool pressed) {
+    const InputEvent evt{{modifiers, key}};
+    if (pressed) {
+        ProcessSingleShotEvent(evt);
     }
-    return {};
+    ProcessBinaryEvent(evt, pressed);
 }
 
-const std::unordered_map<BoundAction, std::unordered_set<BoundInputEvent>> &InputContext::GetAllMappedInputs() const {
-    return m_actionsReverse;
+void InputContext::ProcessPrimitive(MouseButton button, KeyModifier modifiers, bool pressed) {
+    const InputEvent evt{{modifiers, button}};
+    if (pressed) {
+        ProcessSingleShotEvent(evt);
+    }
+    ProcessBinaryEvent(evt, pressed);
 }
 
-std::unordered_set<BoundInputEvent> InputContext::UnmapAction(ActionID action, ActionContext context) {
-    const BoundAction boundAction{action, context};
-    if (m_actionsReverse.contains(boundAction)) {
-        std::unordered_set<BoundInputEvent> evts = m_actionsReverse[boundAction];
-        for (auto &evt : evts) {
-            m_actions.erase(evt);
+void InputContext::ProcessPrimitive(uint32 id, GamepadButton button, bool pressed) {
+    const InputEvent evt{id, button};
+    ProcessBinaryEvent(evt, pressed);
+}
+
+void InputContext::ProcessSingleShotEvent(const InputEvent &event) {
+    if (auto action = m_singleShotActions.find(event); action != m_singleShotActions.end()) {
+        if (auto handler = m_singleShotActionHandlers.find(action->second.action.id);
+            handler != m_singleShotActionHandlers.end()) {
+            handler->second(action->second.context);
         }
-        m_actionsReverse.erase(boundAction);
-        return evts;
     }
-    return {};
+}
+
+void InputContext::ProcessBinaryEvent(const InputEvent &event, bool actuated) {
+    if (auto action = m_binaryActions.find(event); action != m_binaryActions.end()) {
+        if (auto handler = m_binaryActionHandlers.find(action->second.action.id);
+            handler != m_binaryActionHandlers.end()) {
+            handler->second(action->second.context, actuated);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Event-action mapping
+
+void InputContext::MapAction(InputEvent event, SingleShotAction action, void *context) {
+    if (m_singleShotActions.contains(event)) {
+        const auto &prev = m_singleShotActions.at(event);
+        m_singleShotActionsReverse[prev.action].erase({event, context});
+        if (m_singleShotActionsReverse[prev.action].empty()) {
+            m_singleShotActionsReverse.erase(prev.action);
+        }
+    }
+    m_singleShotActions[event] = {action, context};
+    m_singleShotActionsReverse[action].insert({event, context});
+}
+
+void InputContext::MapAction(InputEvent event, BinaryAction action, void *context) {
+    if (m_binaryActions.contains(event)) {
+        const auto &prev = m_binaryActions.at(event);
+        m_binaryActionsReverse[prev.action].erase({event, context});
+        if (m_binaryActionsReverse[prev.action].empty()) {
+            m_binaryActionsReverse.erase(prev.action);
+        }
+    }
+    m_binaryActions[event] = {action, context};
+    m_binaryActionsReverse[action].insert({event, context});
+}
+
+std::optional<MappedSingleShotAction> InputContext::GetMappedSingleShotAction(InputEvent event) const {
+    if (m_singleShotActions.contains(event)) {
+        return m_singleShotActions.at(event);
+    } else {
+        return std::nullopt;
+    }
+}
+
+std::optional<MappedBinaryAction> InputContext::GetMappedBinaryAction(InputEvent event) const {
+    if (m_binaryActions.contains(event)) {
+        return m_binaryActions.at(event);
+    } else {
+        return std::nullopt;
+    }
+}
+
+const std::unordered_map<InputEvent, MappedSingleShotAction> &InputContext::GetMappedSingleShotActions() const {
+    return m_singleShotActions;
+}
+
+const std::unordered_map<InputEvent, MappedBinaryAction> &InputContext::GetMappedBinaryActions() const {
+    return m_binaryActions;
+}
+
+std::unordered_set<MappedInputEvent> InputContext::GetMappedInputs(SingleShotAction action) const {
+    if (m_singleShotActionsReverse.contains(action)) {
+        return m_singleShotActionsReverse.at(action);
+    } else {
+        return {};
+    }
+}
+
+std::unordered_set<MappedInputEvent> InputContext::GetMappedInputs(BinaryAction action) const {
+    if (m_binaryActionsReverse.contains(action)) {
+        return m_binaryActionsReverse.at(action);
+    } else {
+        return {};
+    }
+}
+
+const std::unordered_map<SingleShotAction, std::unordered_set<MappedInputEvent>> &
+InputContext::GetAllMappedSingleShotInputs() const {
+    return m_singleShotActionsReverse;
+}
+
+const std::unordered_map<BinaryAction, std::unordered_set<MappedInputEvent>> &
+InputContext::GetAllMappedBinaryInputs() const {
+    return m_binaryActionsReverse;
+}
+
+void InputContext::UnmapAction(SingleShotAction action) {
+    if (m_singleShotActionsReverse.contains(action)) {
+        for (auto &evt : m_singleShotActionsReverse.at(action)) {
+            m_singleShotActions.erase(evt.event);
+        }
+        m_singleShotActionsReverse.erase(action);
+    }
+}
+
+void InputContext::UnmapAction(BinaryAction action) {
+    if (m_binaryActionsReverse.contains(action)) {
+        for (auto &evt : m_binaryActionsReverse.at(action)) {
+            m_binaryActions.erase(evt.event);
+        }
+        m_binaryActionsReverse.erase(action);
+    }
 }
 
 void InputContext::UnmapAllActions() {
-    m_actions.clear();
-    m_actionsReverse.clear();
+    m_singleShotActions.clear();
+    m_singleShotActionsReverse.clear();
+
+    m_binaryActions.clear();
+    m_binaryActionsReverse.clear();
 }
 
-void InputContext::ProcessKeyboardEvent(KeyboardKey key, KeyModifier modifiers, bool pressed) {
-    ProcessEvent(BoundInputEvent{{key}, pressed});
-    ProcessEvent(BoundInputEvent{{KeyCombo{modifiers, key}}, pressed});
+// ---------------------------------------------------------------------------------------------------------------------
+// Action handler mapping
+
+void InputContext::SetActionHandler(SingleShotAction action, SingleShotActionHandler handler) {
+    m_singleShotActionHandlers[action.id] = handler;
 }
 
-void InputContext::ProcessGamepadEvent(uint32 id, GamepadButton button, bool pressed) {
-    ProcessEvent(BoundInputEvent{{id, button}, pressed});
+void InputContext::SetActionHandler(BinaryAction action, BinaryActionHandler handler) {
+    m_binaryActionHandlers[action.id] = handler;
 }
 
-void InputContext::ProcessJoystickEvent(int button, bool pressed) {
-    ProcessEvent(BoundInputEvent{{button}, pressed});
+void InputContext::ClearActionHandler(SingleShotAction action) {
+    m_singleShotActionHandlers.erase(action.id);
 }
 
-bool InputContext::TryPollNextEvent(InputActionEvent &event) {
-    return m_actionQueue.try_dequeue_from_producer(m_actionQueueToken, event);
-}
-
-BoundAction InputContext::MapAction(BoundAction action, BoundInputEvent &&event) {
-    BoundAction prev;
-    if (m_actions.contains(event)) {
-        prev = m_actions.at(event);
-        m_actionsReverse[prev].erase(event);
-        if (m_actionsReverse[prev].empty()) {
-            m_actionsReverse.erase(prev);
-        }
-    } else {
-        prev = kNoBoundAction;
-    }
-    m_actions[event] = action;
-    m_actionsReverse[action].insert(event);
-    return prev;
-}
-
-BoundAction InputContext::GetMappedAction(BoundInputEvent &&event) const {
-    return m_actions.contains(event) ? m_actions.at(event) : kNoBoundAction;
-}
-
-void InputContext::ProcessEvent(BoundInputEvent &&event) {
-    if (m_actions.contains(event)) {
-        auto action = m_actions.at(event);
-        m_actionQueue.enqueue(m_actionQueueToken, InputActionEvent{.input = event, .action = action});
-    }
+void InputContext::ClearActionHandler(BinaryAction action) {
+    m_binaryActionHandlers.erase(action.id);
 }
 
 } // namespace app::input

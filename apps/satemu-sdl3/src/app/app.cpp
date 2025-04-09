@@ -859,30 +859,25 @@ void App::RunEmulator() {
 
     bool paused = false; // TODO: this should be updated by the emulator thread via events
 
-    m_inputHandler.Register(actions::general::OpenLoadDiscDialog,
-                            [&](const input::InputActionEvent &evt) { OpenLoadDiscDialog(); });
-    m_inputHandler.Register(actions::general::EjectDisc, [&](const input::InputActionEvent &evt) {
-        m_context.EnqueueEvent(events::emu::EjectDisc());
-    });
-    m_inputHandler.Register(actions::general::OpenCloseTray, [&](const input::InputActionEvent &evt) {
-        m_context.EnqueueEvent(events::emu::OpenCloseTray());
-    });
+    m_inputContext.SetActionHandler(actions::general::OpenLoadDiscDialog, [&](void *) { OpenLoadDiscDialog(); });
+    m_inputContext.SetActionHandler(actions::general::EjectDisc,
+                                    [&](void *) { m_context.EnqueueEvent(events::emu::EjectDisc()); });
+    m_inputContext.SetActionHandler(actions::general::OpenCloseTray,
+                                    [&](void *) { m_context.EnqueueEvent(events::emu::OpenCloseTray()); });
 
-    m_inputHandler.Register(actions::general::ToggleWindowedVideoOutput, [&](const input::InputActionEvent &evt) {
-        m_context.settings.video.displayVideoOutputInWindow ^= true;
-    });
-    m_inputHandler.Register(actions::general::OpenSettings,
-                            [&](const input::InputActionEvent &evt) { m_settingsWindow.Open = true; });
+    m_inputContext.SetActionHandler(actions::general::ToggleWindowedVideoOutput,
+                                    [&](void *) { m_context.settings.video.displayVideoOutputInWindow ^= true; });
+    m_inputContext.SetActionHandler(actions::general::OpenSettings, [&](void *) { m_settingsWindow.Open = true; });
 
     {
         using Button = peripheral::StandardPad::Button;
 
-        auto registerButton = [&](input::ActionID action, Button button) {
-            m_inputHandler.Register(action, [=, this](const input::InputActionEvent &evt) {
-                auto &port = *reinterpret_cast<peripheral::PeripheralPort *>(evt.action.context);
+        auto registerButton = [&](input::BinaryAction action, Button button) {
+            m_inputContext.SetActionHandler(action, [=, this](void *context, bool actuated) {
+                auto &port = *reinterpret_cast<peripheral::PeripheralPort *>(context);
                 std::unique_lock lock{m_context.locks.peripherals};
                 if (auto *pad = port.GetPeripheral().As<peripheral::PeripheralType::StandardPad>()) {
-                    if (evt.input.activated) {
+                    if (actuated) {
                         pad->PressButton(button);
                     } else {
                         pad->ReleaseButton(button);
@@ -906,106 +901,102 @@ void App::RunEmulator() {
         registerButton(actions::emu::StandardPadR, Button::R);
     }
 
-    m_inputHandler.Register(actions::emu::HardReset, [&](const input::InputActionEvent &evt) {
-        m_context.EnqueueEvent(events::emu::HardReset());
-    });
-    m_inputHandler.Register(actions::emu::SoftReset, [&](const input::InputActionEvent &evt) {
-        m_context.EnqueueEvent(events::emu::SoftReset());
-    });
+    m_inputContext.SetActionHandler(actions::emu::HardReset,
+                                    [&](void *) { m_context.EnqueueEvent(events::emu::HardReset()); });
+    m_inputContext.SetActionHandler(actions::emu::SoftReset,
+                                    [&](void *) { m_context.EnqueueEvent(events::emu::SoftReset()); });
 
-    m_inputHandler.Register(actions::emu::FrameStep, [&](const input::InputActionEvent &evt) {
+    m_inputContext.SetActionHandler(actions::emu::FrameStep, [&](void *) {
         paused = true;
         m_context.EnqueueEvent(events::emu::FrameStep());
     });
-    m_inputHandler.Register(actions::emu::PauseResume, [&](const input::InputActionEvent &evt) {
+    m_inputContext.SetActionHandler(actions::emu::PauseResume, [&](void *) {
         paused = !paused;
         m_context.EnqueueEvent(events::emu::SetPaused(paused));
     });
-    m_inputHandler.Register(actions::emu::FastForward,
-                            [&](const input::InputActionEvent &evt) { m_audioSystem.SetSync(!evt.input.activated); });
+    m_inputContext.SetActionHandler(actions::emu::FastForward,
+                                    [&](void *, bool actuated) { m_audioSystem.SetSync(!actuated); });
 
-    m_inputHandler.Register(actions::emu::ResetButton, [&](const input::InputActionEvent &evt) {
-        m_context.EnqueueEvent(events::emu::SetResetButton(evt.input.activated));
+    m_inputContext.SetActionHandler(actions::emu::ResetButton, [&](void *, bool actuated) {
+        m_context.EnqueueEvent(events::emu::SetResetButton(actuated));
     });
 
-    m_inputHandler.Register(actions::emu::ToggleDebugTrace, [&](const input::InputActionEvent &evt) {
+    m_inputContext.SetActionHandler(actions::emu::ToggleDebugTrace, [&](void *) {
         m_context.EnqueueEvent(events::emu::SetDebugTrace(!m_context.saturn.IsDebugTracingEnabled()));
     });
-    m_inputHandler.Register(actions::emu::DumpMemory, [&](const input::InputActionEvent &evt) {
-        m_context.EnqueueEvent(events::emu::DumpMemory());
-    });
+    m_inputContext.SetActionHandler(actions::emu::DumpMemory,
+                                    [&](void *) { m_context.EnqueueEvent(events::emu::DumpMemory()); });
 
     // ---------------------------------
     // Input action mappings
 
-    auto &inputCtx = m_inputHandler.GetInputContext();
     {
         using Mod = input::KeyModifier;
         using Key = input::KeyboardKey;
         using KeyCombo = input::KeyCombo;
 
-        inputCtx.MapAction(actions::general::OpenLoadDiscDialog, KeyCombo{Mod::Control, Key::O});
-        inputCtx.MapAction(actions::general::EjectDisc, KeyCombo{Mod::Control, Key::W});
-        inputCtx.MapAction(actions::general::OpenCloseTray, KeyCombo{Mod::Control, Key::T});
+        m_inputContext.MapAction(KeyCombo{Mod::Control, Key::O}, actions::general::OpenLoadDiscDialog);
+        m_inputContext.MapAction(KeyCombo{Mod::Control, Key::W}, actions::general::EjectDisc);
+        m_inputContext.MapAction(KeyCombo{Mod::Control, Key::T}, actions::general::OpenCloseTray);
 
-        inputCtx.MapAction(actions::general::ToggleWindowedVideoOutput, KeyCombo{Mod::None, Key::F9});
-        inputCtx.MapAction(actions::general::OpenSettings, KeyCombo{Mod::None, Key::F10});
+        m_inputContext.MapAction(KeyCombo{Mod::None, Key::F9}, actions::general::ToggleWindowedVideoOutput);
+        m_inputContext.MapAction(KeyCombo{Mod::None, Key::F10}, actions::general::OpenSettings);
 
-        inputCtx.MapAction(actions::emu::HardReset, KeyCombo{Mod::Control, Key::R});
-        inputCtx.MapAction(actions::emu::SoftReset, KeyCombo{Mod::Control | Mod::Shift, Key::R});
+        m_inputContext.MapAction(KeyCombo{Mod::Control, Key::R}, actions::emu::HardReset);
+        m_inputContext.MapAction(KeyCombo{Mod::Control | Mod::Shift, Key::R}, actions::emu::SoftReset);
 
-        inputCtx.MapAction(actions::emu::FrameStep, KeyCombo{Mod::None, Key::RightBracket});
-        inputCtx.MapAction(actions::emu::PauseResume, KeyCombo{Mod::Control, Key::P});
-        inputCtx.MapAction(actions::emu::PauseResume, KeyCombo{Mod::None, Key::Pause});
-        inputCtx.MapToggleableAction(actions::emu::FastForward, Key::Tab);
+        m_inputContext.MapAction(KeyCombo{Mod::None, Key::RightBracket}, actions::emu::FrameStep);
+        m_inputContext.MapAction(KeyCombo{Mod::Control, Key::P}, actions::emu::PauseResume);
+        m_inputContext.MapAction(KeyCombo{Mod::None, Key::Pause}, actions::emu::PauseResume);
+        m_inputContext.MapAction(KeyCombo{Mod::None, Key::Tab}, actions::emu::FastForward);
 
-        inputCtx.MapToggleableAction(actions::emu::ResetButton, KeyCombo{Mod::Shift, Key::R});
+        m_inputContext.MapAction(KeyCombo{Mod::Shift, Key::R}, actions::emu::ResetButton);
 
         // Port 1 controller inputs
         auto ctx1 = &m_context.saturn.SMPC.GetPeripheralPort1();
-        inputCtx.MapToggleableAction(actions::emu::StandardPadA, ctx1, Key::J);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadB, ctx1, Key::K);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadC, ctx1, Key::L);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadX, ctx1, Key::U);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadY, ctx1, Key::I);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadZ, ctx1, Key::O);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadUp, ctx1, Key::W);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadDown, ctx1, Key::S);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadLeft, ctx1, Key::A);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadRight, ctx1, Key::D);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, ctx1, Key::G);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, ctx1, Key::F);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, ctx1, Key::H);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, ctx1, Key::Return);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadL, ctx1, Key::Q);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadR, ctx1, Key::E);
+        m_inputContext.MapAction({Key::J}, actions::emu::StandardPadA, ctx1);
+        m_inputContext.MapAction({Key::K}, actions::emu::StandardPadB, ctx1);
+        m_inputContext.MapAction({Key::L}, actions::emu::StandardPadC, ctx1);
+        m_inputContext.MapAction({Key::U}, actions::emu::StandardPadX, ctx1);
+        m_inputContext.MapAction({Key::I}, actions::emu::StandardPadY, ctx1);
+        m_inputContext.MapAction({Key::O}, actions::emu::StandardPadZ, ctx1);
+        m_inputContext.MapAction({Key::W}, actions::emu::StandardPadUp, ctx1);
+        m_inputContext.MapAction({Key::S}, actions::emu::StandardPadDown, ctx1);
+        m_inputContext.MapAction({Key::A}, actions::emu::StandardPadLeft, ctx1);
+        m_inputContext.MapAction({Key::D}, actions::emu::StandardPadRight, ctx1);
+        m_inputContext.MapAction({Key::G}, actions::emu::StandardPadStart, ctx1);
+        m_inputContext.MapAction({Key::F}, actions::emu::StandardPadStart, ctx1);
+        m_inputContext.MapAction({Key::H}, actions::emu::StandardPadStart, ctx1);
+        m_inputContext.MapAction({Key::Return}, actions::emu::StandardPadStart, ctx1);
+        m_inputContext.MapAction({Key::Q}, actions::emu::StandardPadL, ctx1);
+        m_inputContext.MapAction({Key::E}, actions::emu::StandardPadR, ctx1);
 
         // Port 2 controller inputs
         auto ctx2 = &m_context.saturn.SMPC.GetPeripheralPort2();
-        inputCtx.MapToggleableAction(actions::emu::StandardPadA, ctx2, Key::KeyPad1);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadB, ctx2, Key::KeyPad2);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadC, ctx2, Key::KeyPad3);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadX, ctx2, Key::KeyPad4);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadY, ctx2, Key::KeyPad5);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadZ, ctx2, Key::KeyPad6);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadUp, ctx2, Key::Up);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadDown, ctx2, Key::Down);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadLeft, ctx2, Key::Left);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadRight, ctx2, Key::Right);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadStart, ctx2, Key::KeyPadEnter);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadL, ctx2, Key::KeyPad7);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadR, ctx2, Key::KeyPad9);
+        m_inputContext.MapAction({Key::KeyPad1}, actions::emu::StandardPadA, ctx2);
+        m_inputContext.MapAction({Key::KeyPad2}, actions::emu::StandardPadB, ctx2);
+        m_inputContext.MapAction({Key::KeyPad3}, actions::emu::StandardPadC, ctx2);
+        m_inputContext.MapAction({Key::KeyPad4}, actions::emu::StandardPadX, ctx2);
+        m_inputContext.MapAction({Key::KeyPad5}, actions::emu::StandardPadY, ctx2);
+        m_inputContext.MapAction({Key::KeyPad6}, actions::emu::StandardPadZ, ctx2);
+        m_inputContext.MapAction({Key::Up}, actions::emu::StandardPadUp, ctx2);
+        m_inputContext.MapAction({Key::Down}, actions::emu::StandardPadDown, ctx2);
+        m_inputContext.MapAction({Key::Left}, actions::emu::StandardPadLeft, ctx2);
+        m_inputContext.MapAction({Key::Right}, actions::emu::StandardPadRight, ctx2);
+        m_inputContext.MapAction({Key::KeyPadEnter}, actions::emu::StandardPadStart, ctx2);
+        m_inputContext.MapAction({Key::KeyPad7}, actions::emu::StandardPadL, ctx2);
+        m_inputContext.MapAction({Key::KeyPad9}, actions::emu::StandardPadR, ctx2);
 
         // Alternative port 2 controller inputs
-        inputCtx.MapToggleableAction(actions::emu::StandardPadUp, ctx2, Key::Home);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadDown, ctx2, Key::End);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadLeft, ctx2, Key::Delete);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadRight, ctx2, Key::PageDown);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadL, ctx2, Key::Insert);
-        inputCtx.MapToggleableAction(actions::emu::StandardPadR, ctx2, Key::PageUp);
+        m_inputContext.MapAction({Key::Home}, actions::emu::StandardPadUp, ctx2);
+        m_inputContext.MapAction({Key::End}, actions::emu::StandardPadDown, ctx2);
+        m_inputContext.MapAction({Key::Delete}, actions::emu::StandardPadLeft, ctx2);
+        m_inputContext.MapAction({Key::PageDown}, actions::emu::StandardPadRight, ctx2);
+        m_inputContext.MapAction({Key::Insert}, actions::emu::StandardPadL, ctx2);
+        m_inputContext.MapAction({Key::PageUp}, actions::emu::StandardPadR, ctx2);
 
-        inputCtx.MapAction(actions::emu::ToggleDebugTrace, KeyCombo{Mod::None, Key::F11});
-        inputCtx.MapAction(actions::emu::DumpMemory, KeyCombo{Mod::Control, Key::F11});
+        m_inputContext.MapAction(KeyCombo{Mod::None, Key::F11}, actions::emu::ToggleDebugTrace);
+        m_inputContext.MapAction(KeyCombo{Mod::Control, Key::F11}, actions::emu::DumpMemory);
     }
 
     // ---------------------------------
@@ -1060,8 +1051,8 @@ void App::RunEmulator() {
             case SDL_EVENT_KEY_UP:
                 if (!io.WantCaptureKeyboard) {
                     // TODO: consider supporting multiple keyboards (evt.key.which)
-                    inputCtx.ProcessKeyboardEvent(input::SDL3ScancodeToKeyboardKey(evt.key.scancode),
-                                                  input::SDL3ToKeyModifier(evt.key.mod), evt.key.down);
+                    m_inputContext.ProcessPrimitive(input::SDL3ScancodeToKeyboardKey(evt.key.scancode),
+                                                    input::SDL3ToKeyModifier(evt.key.mod), evt.key.down);
                 }
                 break;
 
@@ -1113,9 +1104,9 @@ void App::RunEmulator() {
                 break;
             case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
             case SDL_EVENT_GAMEPAD_BUTTON_UP:
-                inputCtx.ProcessGamepadEvent(evt.gbutton.which,
-                                             input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button),
-                                             evt.gbutton.down);
+                m_inputContext.ProcessPrimitive(evt.gbutton.which,
+                                                input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button),
+                                                evt.gbutton.down);
                 break;
 
             case SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN:
@@ -1143,11 +1134,6 @@ void App::RunEmulator() {
                 // evt.jdevice.type;
                 // evt.jdevice.which;
                 break;
-            case SDL_EVENT_JOYSTICK_BUTTON_DOWN:
-            case SDL_EVENT_JOYSTICK_BUTTON_UP:
-                // TODO: evt.jbutton.which
-                inputCtx.ProcessJoystickEvent(evt.jbutton.button, evt.jbutton.down);
-                break;
 
             case SDL_EVENT_QUIT: goto end_loop; break;
             case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
@@ -1156,9 +1142,6 @@ void App::RunEmulator() {
                 }
             }
         }
-
-        // Process input events
-        m_inputHandler.ProcessInputEvents();
 
         // Process GUI events
         const size_t evtCount = m_context.eventQueues.gui.try_dequeue_bulk(evts.begin(), evts.size());
