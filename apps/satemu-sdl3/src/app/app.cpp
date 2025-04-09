@@ -185,6 +185,7 @@
 #include <app/events/emu_event_factory.hpp>
 
 #include <app/input/input_backend_sdl3.hpp>
+#include <app/input/input_utils.hpp>
 
 #include <app/ui/widgets/cartridge_widgets.hpp>
 #include <app/ui/widgets/system_widgets.hpp>
@@ -1214,20 +1215,21 @@ void App::RunEmulator() {
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
-        // TODO: get keybindings for menu shortcuts
-
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
         if (ImGui::BeginMainMenuBar()) {
             ImGui::PopStyleVar();
             if (ImGui::BeginMenu("File")) {
                 // CD drive
-                if (ImGui::MenuItem("Load disc image", "Ctrl+O")) {
+                if (ImGui::MenuItem("Load disc image",
+                                    input::ToShortcut(m_inputContext, actions::general::OpenLoadDiscDialog).c_str())) {
                     OpenLoadDiscDialog();
                 }
-                if (ImGui::MenuItem("Open/close tray", "Ctrl+T")) {
+                if (ImGui::MenuItem("Open/close tray",
+                                    input::ToShortcut(m_inputContext, actions::general::OpenCloseTray).c_str())) {
                     m_context.EnqueueEvent(events::emu::OpenCloseTray());
                 }
-                if (ImGui::MenuItem("Eject disc", "Ctrl+W")) {
+                if (ImGui::MenuItem("Eject disc",
+                                    input::ToShortcut(m_inputContext, actions::general::EjectDisc).c_str())) {
                     m_context.EnqueueEvent(events::emu::EjectDisc());
                 }
 
@@ -1265,7 +1267,10 @@ void App::RunEmulator() {
 
                 ImGui::Separator();
 
-                if (ImGui::MenuItem("Windowed video output", "F9", &videoSettings.displayVideoOutputInWindow)) {
+                if (ImGui::MenuItem(
+                        "Windowed video output",
+                        input::ToShortcut(m_inputContext, actions::general::ToggleWindowedVideoOutput).c_str(),
+                        &videoSettings.displayVideoOutputInWindow)) {
                     fitWindowToScreenNow = true;
                 }
                 ImGui::EndMenu();
@@ -1329,19 +1334,20 @@ void App::RunEmulator() {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Emulator")) {
-                if (ImGui::MenuItem("Frame step", "]")) {
+                if (ImGui::MenuItem("Frame step", input::ToShortcut(m_inputContext, actions::emu::FrameStep).c_str())) {
                     paused = true;
                     m_context.EnqueueEvent(events::emu::FrameStep());
                 }
-                if (ImGui::MenuItem("Pause/resume", "Ctrl+P")) {
+                if (ImGui::MenuItem("Pause/resume",
+                                    input::ToShortcut(m_inputContext, actions::emu::PauseResume).c_str())) {
                     paused = !paused;
                     m_context.EnqueueEvent(events::emu::SetPaused(paused));
                 }
                 ImGui::Separator();
-                if (ImGui::MenuItem("Soft reset", "Shift+R")) {
+                if (ImGui::MenuItem("Soft reset", input::ToShortcut(m_inputContext, actions::emu::SoftReset).c_str())) {
                     m_context.EnqueueEvent(events::emu::SoftReset());
                 }
-                if (ImGui::MenuItem("Hard reset", "Ctrl+R")) {
+                if (ImGui::MenuItem("Hard reset", input::ToShortcut(m_inputContext, actions::emu::HardReset).c_str())) {
                     m_context.EnqueueEvent(events::emu::HardReset());
                 }
                 // TODO: Let's not make it that easy to accidentally wipe system settings
@@ -1351,7 +1357,8 @@ void App::RunEmulator() {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Settings")) {
-                ImGui::MenuItem("Settings", "F10", &m_settingsWindow.Open);
+                ImGui::MenuItem("Settings", input::ToShortcut(m_inputContext, actions::general::OpenSettings).c_str(),
+                                &m_settingsWindow.Open);
                 ImGui::Separator();
                 if (ImGui::MenuItem("General")) {
                     m_settingsWindow.OpenTab(ui::SettingsTab::General);
@@ -1372,7 +1379,9 @@ void App::RunEmulator() {
             }
             if (ImGui::BeginMenu("Debug")) {
                 bool debugTrace = m_context.saturn.IsDebugTracingEnabled();
-                if (ImGui::MenuItem("Enable tracing", "F11", &debugTrace)) {
+                if (ImGui::MenuItem("Enable tracing",
+                                    input::ToShortcut(m_inputContext, actions::emu::ToggleDebugTrace).c_str(),
+                                    &debugTrace)) {
                     m_context.EnqueueEvent(events::emu::SetDebugTrace(debugTrace));
                 }
                 ImGui::Separator();
@@ -1386,7 +1395,8 @@ void App::RunEmulator() {
                     }
                     ImGui::EndMenu();
                 }
-                if (ImGui::MenuItem("Dump all memory", "Ctrl+F11")) {
+                if (ImGui::MenuItem("Dump all memory",
+                                    input::ToShortcut(m_inputContext, actions::emu::DumpMemory).c_str())) {
                     m_context.EnqueueEvent(events::emu::DumpMemory());
                 }
                 ImGui::Separator();

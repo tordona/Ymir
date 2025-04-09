@@ -4,7 +4,363 @@
 
 #include <unordered_map>
 
+#if defined(WIN32)
+    #define SUPER_NAME "Windows"
+#elif defined(__APPLE__)
+    #define SUPER_NAME "Command"
+#else
+    #define SUPER_NAME "Super"
+#endif
+
 namespace app::input {
+
+std::string ToHumanString(KeyModifier mod) {
+    return ToString(mod);
+}
+
+std::string_view ToHumanString(KeyboardKey key) {
+    switch (key) {
+    case KeyboardKey::A: return "A";
+    case KeyboardKey::B: return "B";
+    case KeyboardKey::C: return "C";
+    case KeyboardKey::D: return "D";
+    case KeyboardKey::E: return "E";
+    case KeyboardKey::F: return "F";
+    case KeyboardKey::G: return "G";
+    case KeyboardKey::H: return "H";
+    case KeyboardKey::I: return "I";
+    case KeyboardKey::J: return "J";
+    case KeyboardKey::K: return "K";
+    case KeyboardKey::L: return "L";
+    case KeyboardKey::M: return "M";
+    case KeyboardKey::N: return "N";
+    case KeyboardKey::O: return "O";
+    case KeyboardKey::P: return "P";
+    case KeyboardKey::Q: return "Q";
+    case KeyboardKey::R: return "R";
+    case KeyboardKey::S: return "S";
+    case KeyboardKey::T: return "T";
+    case KeyboardKey::U: return "U";
+    case KeyboardKey::V: return "V";
+    case KeyboardKey::W: return "W";
+    case KeyboardKey::X: return "X";
+    case KeyboardKey::Y: return "Y";
+    case KeyboardKey::Z: return "Z";
+
+    case KeyboardKey::Alpha1: return "1";
+    case KeyboardKey::Alpha2: return "2";
+    case KeyboardKey::Alpha3: return "3";
+    case KeyboardKey::Alpha4: return "4";
+    case KeyboardKey::Alpha5: return "5";
+    case KeyboardKey::Alpha6: return "6";
+    case KeyboardKey::Alpha7: return "7";
+    case KeyboardKey::Alpha8: return "8";
+    case KeyboardKey::Alpha9: return "9";
+    case KeyboardKey::Alpha0: return "0";
+
+    case KeyboardKey::Return: return "Return";
+    case KeyboardKey::Escape: return "Escape";
+    case KeyboardKey::Backspace: return "Backspace";
+    case KeyboardKey::Tab: return "Tab";
+    case KeyboardKey::Spacebar: return "Spacebar";
+    case KeyboardKey::MinusUnderscore: return "-";
+    case KeyboardKey::EqualsPlus: return "=";
+    case KeyboardKey::LeftBracket: return "[";
+    case KeyboardKey::RightBracket: return "]";
+    case KeyboardKey::Backslash: return "\\";
+    case KeyboardKey::PoundTilde: return "#";
+    case KeyboardKey::Semicolon: return ";";
+    case KeyboardKey::Apostrophe: return "'";
+    case KeyboardKey::GraveAccent: return "`";
+    case KeyboardKey::Comma: return ",";
+    case KeyboardKey::Period: return ".";
+    case KeyboardKey::Slash: return "/";
+    case KeyboardKey::CapsLock: return "Caps Lock";
+
+    case KeyboardKey::F1: return "F1";
+    case KeyboardKey::F2: return "F2";
+    case KeyboardKey::F3: return "F3";
+    case KeyboardKey::F4: return "F4";
+    case KeyboardKey::F5: return "F5";
+    case KeyboardKey::F6: return "F6";
+    case KeyboardKey::F7: return "F7";
+    case KeyboardKey::F8: return "F8";
+    case KeyboardKey::F9: return "F9";
+    case KeyboardKey::F10: return "F10";
+    case KeyboardKey::F11: return "F11";
+    case KeyboardKey::F12: return "F12";
+
+    case KeyboardKey::PrintScreen: return "Print Screen";
+    case KeyboardKey::ScrollLock: return "Scroll Lock";
+    case KeyboardKey::Pause: return "Pause";
+
+    case KeyboardKey::Insert: return "Insert";
+    case KeyboardKey::Home: return "Home";
+    case KeyboardKey::PageUp: return "Page Up";
+    case KeyboardKey::Delete: return "Delete";
+    case KeyboardKey::End: return "End";
+    case KeyboardKey::PageDown: return "Page Down";
+
+    case KeyboardKey::Right: return "Right";
+    case KeyboardKey::Left: return "Left";
+    case KeyboardKey::Down: return "Down";
+    case KeyboardKey::Up: return "Up";
+
+    case KeyboardKey::NumLock: return "Num Lock";
+    case KeyboardKey::KeyPadDivide: return "Keypad /";
+    case KeyboardKey::KeyPadMultiply: return "Keypad *";
+    case KeyboardKey::KeyPadSubtract: return "Keypad -";
+    case KeyboardKey::KeyPadAdd: return "Keypad +";
+    case KeyboardKey::KeyPadEnter: return "Keypad Enter";
+    case KeyboardKey::KeyPad1: return "Keypad 1";
+    case KeyboardKey::KeyPad2: return "Keypad 2";
+    case KeyboardKey::KeyPad3: return "Keypad 3";
+    case KeyboardKey::KeyPad4: return "Keypad 4";
+    case KeyboardKey::KeyPad5: return "Keypad 5";
+    case KeyboardKey::KeyPad6: return "Keypad 6";
+    case KeyboardKey::KeyPad7: return "Keypad 7";
+    case KeyboardKey::KeyPad8: return "Keypad 8";
+    case KeyboardKey::KeyPad9: return "Keypad 9";
+    case KeyboardKey::KeyPad0: return "Keypad 0";
+    case KeyboardKey::KeyPadPeriod: return "Keypad Period";
+
+    case KeyboardKey::NonUSBackslash: return "\\";
+
+    case KeyboardKey::Application: return "App";
+    case KeyboardKey::Power: return "Power";
+
+    case KeyboardKey::KeyPadEquals: return "Keypad =";
+
+    case KeyboardKey::F13: return "F13";
+    case KeyboardKey::F14: return "F14";
+    case KeyboardKey::F15: return "F15";
+    case KeyboardKey::F16: return "F16";
+    case KeyboardKey::F17: return "F17";
+    case KeyboardKey::F18: return "F18";
+    case KeyboardKey::F19: return "F19";
+    case KeyboardKey::F20: return "F20";
+    case KeyboardKey::F21: return "F21";
+    case KeyboardKey::F22: return "F22";
+    case KeyboardKey::F23: return "F23";
+    case KeyboardKey::F24: return "F24";
+
+    case KeyboardKey::Execute: return "Execute";
+    case KeyboardKey::Help: return "Help";
+    case KeyboardKey::Menu: return "Menu";
+    case KeyboardKey::Select: return "Select";
+    case KeyboardKey::Stop: return "Stop";
+    case KeyboardKey::Again: return "Again";
+    case KeyboardKey::Undo: return "Undo";
+    case KeyboardKey::Cut: return "Cut";
+    case KeyboardKey::Copy: return "Copy";
+    case KeyboardKey::Paste: return "Paste";
+    case KeyboardKey::Find: return "Find";
+    case KeyboardKey::Mute: return "Mute";
+    case KeyboardKey::VolumeUp: return "Volume Up";
+    case KeyboardKey::VolumeDown: return "Volume Down";
+
+    case KeyboardKey::LockingCapsLock: return "Locking Caps Lock";
+    case KeyboardKey::LockingNumLock: return "Locking Num Lock";
+    case KeyboardKey::LockingScrollLock: return "Locking Scroll Lock";
+
+    case KeyboardKey::KeyPadComma: return "Keypad ,";
+    case KeyboardKey::KeyPadEqualSign: return "Keypad =";
+
+    case KeyboardKey::Intl1: return "Intl. 1";
+    case KeyboardKey::Intl2: return "Intl. 2";
+    case KeyboardKey::Intl3: return "Intl. 3";
+    case KeyboardKey::Intl4: return "Intl. 4";
+    case KeyboardKey::Intl5: return "Intl. 5";
+    case KeyboardKey::Intl6: return "Intl. 6";
+    case KeyboardKey::Intl7: return "Intl. 7";
+    case KeyboardKey::Intl8: return "Intl. 8";
+    case KeyboardKey::Intl9: return "Intl. 9";
+
+    case KeyboardKey::LANG1: return "Lang. 1";
+    case KeyboardKey::LANG2: return "Lang. 2";
+    case KeyboardKey::LANG3: return "Lang. 3";
+    case KeyboardKey::LANG4: return "Lang. 4";
+    case KeyboardKey::LANG5: return "Lang. 5";
+    case KeyboardKey::LANG6: return "Lang. 6";
+    case KeyboardKey::LANG7: return "Lang. 7";
+    case KeyboardKey::LANG8: return "Lang. 8";
+    case KeyboardKey::LANG9: return "Lang. 9";
+
+    case KeyboardKey::AltErase: return "Alt Erase";
+    case KeyboardKey::SysReq: return "SysReq";
+    case KeyboardKey::Cancel: return "Cancel";
+    case KeyboardKey::Clear: return "Clear";
+    case KeyboardKey::Prior: return "Prior";
+    case KeyboardKey::Return2: return "Return";
+    case KeyboardKey::Separator: return "Separator";
+    case KeyboardKey::Out: return "Out";
+    case KeyboardKey::Oper: return "Oper";
+    case KeyboardKey::ClearAgain: return "Clear/Again";
+    case KeyboardKey::CrSelProps: return "CrSelProps";
+    case KeyboardKey::ExSel: return "ExSel";
+
+    case KeyboardKey::KeyPad00: return "Keypad 00";
+    case KeyboardKey::KeyPad000: return "Keypad 000";
+    case KeyboardKey::ThousandsSeparator: return "Thousands Separator";
+    case KeyboardKey::DecimalSeparator: return "Decimal Separator";
+    case KeyboardKey::CurrencyUnit: return "Currency Unit";
+    case KeyboardKey::CurrencySubUnit: return "Currency Sub-unit";
+    case KeyboardKey::KeyPadLeftParenthesis: return "Keypad (";
+    case KeyboardKey::KeyPadRightParenthesis: return "Keypad )";
+    case KeyboardKey::KeyPadLeftBrace: return "Keypad {";
+    case KeyboardKey::KeyPadRightBrace: return "Keypad }";
+    case KeyboardKey::KeyPadTab: return "Keypad Tab";
+    case KeyboardKey::KeyPadBackspace: return "Keypad Backspace";
+    case KeyboardKey::KeyPadA: return "Keypad A";
+    case KeyboardKey::KeyPadB: return "Keypad B";
+    case KeyboardKey::KeyPadC: return "Keypad C";
+    case KeyboardKey::KeyPadD: return "Keypad D";
+    case KeyboardKey::KeyPadE: return "Keypad E";
+    case KeyboardKey::KeyPadF: return "Keypad F";
+    case KeyboardKey::KeyPadXOR: return "Keypad XOR";
+    case KeyboardKey::KeyPadPower: return "Keypad ^";
+    case KeyboardKey::KeyPadPercent: return "Keypad %";
+    case KeyboardKey::KeyPadLess: return "Keypad <";
+    case KeyboardKey::KeyPadGreater: return "Keypad >";
+    case KeyboardKey::KeyPadAmpersand: return "Keypad &";
+    case KeyboardKey::KeyPadDoubleAmpersand: return "Keypad &&";
+    case KeyboardKey::KeyPadVerticalBar: return "Keypad |";
+    case KeyboardKey::KeyPadDoubleVerticalBar: return "Keypad ||";
+    case KeyboardKey::KeyPadColon: return "Keypad :";
+    case KeyboardKey::KeyPadHash: return "Keypad #";
+    case KeyboardKey::KeyPadSpace: return "Keypad Space";
+    case KeyboardKey::KeyPadAt: return "Keypad @";
+    case KeyboardKey::KeyPadExclamation: return "Keypad !";
+    case KeyboardKey::KeyPadMemoryStore: return "Keypad MS";
+    case KeyboardKey::KeyPadMemoryRecall: return "Keypad MR";
+    case KeyboardKey::KeyPadMemoryClear: return "Keypad MA";
+    case KeyboardKey::KeyPadMemoryAdd: return "Keypad M+";
+    case KeyboardKey::KeyPadMemorySubtract: return "Keypad M-";
+    case KeyboardKey::KeyPadMemoryMultiply: return "Keypad M*";
+    case KeyboardKey::KeyPadMemoryDivide: return "Keypad M/";
+    case KeyboardKey::KeyPadPlusMinus: return "Keypad +/-";
+    case KeyboardKey::KeyPadClear: return "Keypad Clear";
+    case KeyboardKey::KeyPadClearEntry: return "Keypad Clear Entry";
+    case KeyboardKey::KeyPadBinary: return "Keypad Binary";
+    case KeyboardKey::KeyPadOctal: return "Keypad Octal";
+    case KeyboardKey::KeyPadDecimal: return "Keypad Decimal";
+    case KeyboardKey::KeyPadHexadecimal: return "Keypad Hexadecimal";
+
+    case KeyboardKey::LeftControl: return "Left Ctrl";
+    case KeyboardKey::LeftShift: return "Left Shift";
+    case KeyboardKey::LeftAlt: return "Left Alt";
+    case KeyboardKey::LeftGui: return "Left " SUPER_NAME;
+    case KeyboardKey::RightControl: return "Right Ctrl";
+    case KeyboardKey::RightShift: return "Right Shift";
+    case KeyboardKey::RightAlt: return "Right Alt";
+    case KeyboardKey::RightGui: return "Right " SUPER_NAME;
+    default: return "Unknown";
+    }
+}
+
+std::string_view ToHumanString(MouseButton btn) {
+    switch (btn) {
+    case MouseButton::Left: return "Left Mouse Button";
+    case MouseButton::Right: return "Right Mouse Button";
+    case MouseButton::Middle: return "Middle Mouse Button";
+    case MouseButton::Extra1: return "Mouse Button 4";
+    case MouseButton::Extra2: return "Mouse Button 5";
+
+    default: return "Unknown";
+    }
+}
+
+std::string_view ToHumanString(MouseAxis1D axis) {
+    switch (axis) {
+    case MouseAxis1D::Vertical: return "Vertical Mouse";
+    case MouseAxis1D::Horizontal: return "Horizontal Mouse";
+    case MouseAxis1D::WheelVertical: return "Vertical Mouse Wheel";
+    case MouseAxis1D::WheelHorizontal: return "Horizontal Mouse Wheel";
+    default: return "Unknown";
+    }
+}
+
+std::string_view ToHumanString(MouseAxis2D axis) {
+    switch (axis) {
+    case MouseAxis2D::Mouse: return "Mouse";
+    case MouseAxis2D::Wheel: return "Mouse Wheel";
+    default: return "Unknown";
+    }
+}
+
+std::string_view ToHumanString(GamepadButton btn) {
+    switch (btn) {
+    case GamepadButton::A: return "A";
+    case GamepadButton::B: return "B";
+    case GamepadButton::X: return "X";
+    case GamepadButton::Y: return "Y";
+    case GamepadButton::LeftBumper: return "LB";
+    case GamepadButton::RightBumper: return "RB";
+    case GamepadButton::Back: return "Back";
+    case GamepadButton::Start: return "Start";
+    case GamepadButton::Guide: return "Guide";
+    case GamepadButton::LeftThumb: return "LS";
+    case GamepadButton::RightThumb: return "RS";
+    case GamepadButton::DpadUp: return "Up";
+    case GamepadButton::DpadDown: return "Down";
+    case GamepadButton::DpadLeft: return "Left";
+    case GamepadButton::DpadRight: return "Right";
+    case GamepadButton::LeftPaddle1: return "P3";
+    case GamepadButton::LeftPaddle2: return "P4";
+    case GamepadButton::RightPaddle1: return "P1";
+    case GamepadButton::RightPaddle2: return "P2";
+    case GamepadButton::TouchPad: return "Touchpad";
+    case GamepadButton::Misc1: return "Misc Gamepad Button 1";
+    case GamepadButton::Misc2: return "Misc Gamepad Button 2";
+    case GamepadButton::Misc3: return "Misc Gamepad Button 3";
+    case GamepadButton::Misc4: return "Misc Gamepad Button 4";
+    case GamepadButton::Misc5: return "Misc Gamepad Button 5";
+    case GamepadButton::Misc6: return "Misc Gamepad Button 6";
+    default: return "Unknown";
+    }
+}
+
+std::string_view ToHumanString(GamepadAxis1D axis) {
+    switch (axis) {
+    case GamepadAxis1D::LeftStickX: return "LS Horizontal";
+    case GamepadAxis1D::LeftStickY: return "LS Vertical";
+    case GamepadAxis1D::RightStickX: return "RS Horizontal";
+    case GamepadAxis1D::RightStickY: return "RS Vertical";
+    case GamepadAxis1D::LeftTrigger: return "LT";
+    case GamepadAxis1D::RightTrigger: return "RT";
+    default: return "Unknown";
+    }
+}
+
+std::string_view ToHumanString(GamepadAxis2D axis) {
+    switch (axis) {
+    case GamepadAxis2D::LeftStick: return "LS";
+    case GamepadAxis2D::RightStick: return "RS";
+    default: return "Unknown";
+    }
+}
+
+std::string ToHumanString(const KeyCombo &combo) {
+    auto keyStr = ::app::input::ToHumanString(combo.key);
+    if (combo.modifiers != KeyModifier::None) {
+        auto modStr = ::app::input::ToHumanString(combo.modifiers);
+        return fmt::format("{}+{}", modStr, keyStr);
+    } else {
+        return std::string(keyStr);
+    }
+}
+
+std::string ToHumanString(const MouseCombo &combo) {
+    auto buttonStr = ::app::input::ToHumanString(combo.button);
+    if (combo.modifiers != KeyModifier::None) {
+        auto modStr = ::app::input::ToHumanString(combo.modifiers);
+        return fmt::format("{}+{}", modStr, buttonStr);
+    } else {
+        return std::string(buttonStr);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 std::string ToString(KeyModifier mod) {
     fmt::memory_buffer buf{};
@@ -20,7 +376,7 @@ std::string ToString(KeyModifier mod) {
     auto bmMod = BitmaskEnum(mod);
     if (bmMod.AnyOf(KeyModifier::Control)) {
         appendPlus();
-        fmt::format_to(inserter, "Control");
+        fmt::format_to(inserter, "Ctrl");
     }
     if (bmMod.AnyOf(KeyModifier::Alt)) {
         appendPlus();
@@ -32,7 +388,7 @@ std::string ToString(KeyModifier mod) {
     }
     if (bmMod.AnyOf(KeyModifier::Super)) {
         appendPlus();
-        fmt::format_to(inserter, "Super");
+        fmt::format_to(inserter, SUPER_NAME);
     }
     return fmt::to_string(buf);
 }
@@ -382,10 +738,8 @@ std::string ToString(const MouseCombo &combo) {
 // ---------------------------------------------------------------------------------------------------------------------
 
 static const std::unordered_map<std::string_view, KeyModifier> kKeyModifiers{
-    {"Control", KeyModifier::Control},
-    {"Alt", KeyModifier::Alt},
-    {"Shift", KeyModifier::Shift},
-    {"Super", KeyModifier::Super},
+    {"Control", KeyModifier::Control}, {"Alt", KeyModifier::Alt},       {"Shift", KeyModifier::Shift},
+    {"Super", KeyModifier::Super},     {"Windows", KeyModifier::Super}, {"Command", KeyModifier::Super},
 };
 
 static const std::unordered_map<std::string_view, KeyboardKey> kKeyboardKeys{

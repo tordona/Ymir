@@ -386,6 +386,20 @@ struct MouseCombo {
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Human-readable string converters (for shortcuts, menus, etc.)
+
+std::string ToHumanString(KeyModifier mod);
+std::string_view ToHumanString(KeyboardKey key);
+std::string_view ToHumanString(MouseButton btn);
+std::string_view ToHumanString(MouseAxis1D axis);
+std::string_view ToHumanString(MouseAxis2D axis);
+std::string_view ToHumanString(GamepadButton btn);
+std::string_view ToHumanString(GamepadAxis1D axis);
+std::string_view ToHumanString(GamepadAxis2D axis);
+std::string ToHumanString(const KeyCombo &combo);
+std::string ToHumanString(const MouseCombo &combo);
+
+// ---------------------------------------------------------------------------------------------------------------------
 // String converters
 
 std::string ToString(KeyModifier mod);

@@ -57,6 +57,11 @@ struct InputEvent {
 // TODO: axis events
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Human-readable string converters
+
+std::string ToHumanString(const InputEvent &bind);
+
+// ---------------------------------------------------------------------------------------------------------------------
 // String converters
 
 std::string ToString(const InputEvent &bind);
