@@ -138,9 +138,9 @@ FORCE_INLINE static const char *ToTOML(const config::audio::SampleInterpolationM
     }
 }
 
-FORCE_INLINE static std::string ToTOML(const input::InputEvent &value) {
+/*FORCE_INLINE static std::string ToTOML(const input::InputEvent &value) {
     return input::ToString(value);
-}
+}*/
 
 // Creates a TOML array with valid entries (skips Nones).
 FORCE_INLINE static toml::array ToTOML(const InputEventArray &value) {
@@ -176,11 +176,11 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
     value = wrappedValue;
 }
 
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, input::InputEvent &value) {
+/*FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, input::InputEvent &value) {
     if (auto opt = node[name].value<std::string_view>()) {
         input::TryParse((*opt), value);
     }
-}
+}*/
 
 // Parses an array of input events.
 // Reads until the InputEventArray is full or runs out of entries, skipping all invalid and "None" entries.
@@ -533,10 +533,6 @@ void Settings::MakeDirty() {
 
 void Settings::RebindInputs(input::InputContext &ctx, Saturn &saturn) {
     ctx.UnmapAllActions();
-
-    using Mod = input::KeyModifier;
-    using Key = input::KeyboardKey;
-    using KeyCombo = input::KeyCombo;
 
     // Sanitization -- erase ESC bindings if they were manually added in the configuration file
     auto unbindEscape = [](input::InputEvent &event) {

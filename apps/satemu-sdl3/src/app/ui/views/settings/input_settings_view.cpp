@@ -10,10 +10,6 @@ InputSettingsView::InputSettingsView(SharedContext &context)
     : SettingsViewBase(context) {}
 
 void InputSettingsView::Display() {
-    const float spacingWidth = ImGui::GetStyle().ItemSpacing.x;
-    const float paddingWidth = ImGui::GetStyle().FramePadding.x;
-    const float configureTextWidth = ImGui::CalcTextSize("Configure").x;
-
     if (ImGui::BeginTable("periph_ports", 2,
                           ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_BordersInnerV |
                               ImGuiTableFlags_ScrollY)) {
