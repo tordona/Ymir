@@ -10,8 +10,8 @@ add_executable(satemu-sdl3
     src/app/cmdline_opts.hpp
     src/app/profile.cpp
     src/app/profile.hpp
-    src/app/settings.hpp
     src/app/settings.cpp
+    src/app/settings.hpp
     src/app/shared_context.hpp
 
     src/app/debug/scu_tracer.cpp
@@ -64,10 +64,10 @@ add_executable(satemu-sdl3
     src/app/ui/views/debug/scu_dsp_dma_trace_view.hpp
     src/app/ui/views/debug/scu_dsp_registers_view.cpp
     src/app/ui/views/debug/scu_dsp_registers_view.hpp
-    src/app/ui/views/debug/scu_interrupts_view.cpp
-    src/app/ui/views/debug/scu_interrupts_view.hpp
     src/app/ui/views/debug/scu_interrupt_trace_view.cpp
     src/app/ui/views/debug/scu_interrupt_trace_view.hpp
+    src/app/ui/views/debug/scu_interrupts_view.cpp
+    src/app/ui/views/debug/scu_interrupts_view.hpp
     src/app/ui/views/debug/scu_registers_view.cpp
     src/app/ui/views/debug/scu_registers_view.hpp
     src/app/ui/views/debug/scu_timers_view.cpp
@@ -105,6 +105,8 @@ add_executable(satemu-sdl3
     src/app/ui/views/settings/audio_settings_view.hpp
     src/app/ui/views/settings/general_settings_view.cpp
     src/app/ui/views/settings/general_settings_view.hpp
+    src/app/ui/views/settings/hotkeys_settings_view.cpp
+    src/app/ui/views/settings/hotkeys_settings_view.hpp
     src/app/ui/views/settings/input_settings_view.cpp
     src/app/ui/views/settings/input_settings_view.hpp
     src/app/ui/views/settings/settings_view_base.cpp
@@ -114,8 +116,8 @@ add_executable(satemu-sdl3
     src/app/ui/views/settings/video_settings_view.cpp
     src/app/ui/views/settings/video_settings_view.hpp
 
-    src/app/ui/widgets/cartridge_widgets.hpp
     src/app/ui/widgets/cartridge_widgets.cpp
+    src/app/ui/widgets/cartridge_widgets.hpp
     src/app/ui/widgets/common_widgets.cpp
     src/app/ui/widgets/common_widgets.hpp
     src/app/ui/widgets/datetime_widgets.cpp
@@ -138,10 +140,10 @@ add_executable(satemu-sdl3
     src/app/ui/windows/debug/debug_output_window.hpp
     src/app/ui/windows/debug/memory_viewer_window.cpp
     src/app/ui/windows/debug/memory_viewer_window.hpp
-    src/app/ui/windows/debug/scu_dma_window.cpp
-    src/app/ui/windows/debug/scu_dma_window.hpp
     src/app/ui/windows/debug/scu_dma_trace_window.cpp
     src/app/ui/windows/debug/scu_dma_trace_window.hpp
+    src/app/ui/windows/debug/scu_dma_window.cpp
+    src/app/ui/windows/debug/scu_dma_window.hpp
     src/app/ui/windows/debug/scu_dsp_window.cpp
     src/app/ui/windows/debug/scu_dsp_window.hpp
     src/app/ui/windows/debug/scu_interrupt_trace_window.cpp
@@ -173,7 +175,7 @@ add_executable(satemu-sdl3
     src/util/rom_loader.cpp
     src/util/rom_loader.hpp
     src/util/sdl_file_dialog.hpp
- "src/app/ui/views/settings/hotkeys_settings_view.cpp")
+)
 add_executable(satemu::satemu-sdl3 ALIAS satemu-sdl3)
 set_target_properties(satemu-sdl3 PROPERTIES
                       VERSION ${satemu_VERSION}
