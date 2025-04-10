@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.29)
+cmake_minimum_required(VERSION 3.22)
 project(satemu VERSION 0.1.0)
 
 include(cmake/AddVersionDefines.cmake)
