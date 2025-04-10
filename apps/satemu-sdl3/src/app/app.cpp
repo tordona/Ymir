@@ -371,6 +371,7 @@ void App::RunEmulator() {
     // Setup Dear ImGui context
 
     std::filesystem::path imguiIniLocation = m_context.profile.GetPath(StandardPath::PersistentState) / "imgui.ini";
+    ScopeGuard sgSaveImguiIni{[&] { ImGui::SaveIniSettingsToDisk(imguiIniLocation.string().c_str()); }};
 
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
