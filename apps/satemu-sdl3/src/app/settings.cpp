@@ -339,18 +339,18 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         }
     }
 
-    if (auto tblHotkeys = data["hotkeys"]) {
+    if (auto tblHotkeys = data["Hotkeys"]) {
+        Parse(tblHotkeys, "OpenSettings", hotkeys.openSettings);
+        Parse(tblHotkeys, "ToggleWindowedVideoOutput", hotkeys.toggleWindowedVideoOutput);
         Parse(tblHotkeys, "LoadDisc", hotkeys.loadDisc);
         Parse(tblHotkeys, "EjectDisc", hotkeys.ejectDisc);
         Parse(tblHotkeys, "OpenCloseTray", hotkeys.openCloseTray);
-        Parse(tblHotkeys, "ToggleWindowedVideoOutput", hotkeys.toggleWindowedVideoOutput);
-        Parse(tblHotkeys, "OpenSettings", hotkeys.openSettings);
         Parse(tblHotkeys, "HardReset", hotkeys.hardReset);
         Parse(tblHotkeys, "SoftReset", hotkeys.softReset);
-        Parse(tblHotkeys, "FrameStep", hotkeys.frameStep);
-        Parse(tblHotkeys, "PauseResume", hotkeys.pauseResume);
-        Parse(tblHotkeys, "FastForward", hotkeys.fastForward);
         Parse(tblHotkeys, "ResetButton", hotkeys.resetButton);
+        Parse(tblHotkeys, "PauseResume", hotkeys.pauseResume);
+        Parse(tblHotkeys, "FrameStep", hotkeys.frameStep);
+        Parse(tblHotkeys, "FastForward", hotkeys.fastForward);
         Parse(tblHotkeys, "ToggleDebugTrace", hotkeys.toggleDebugTrace);
         Parse(tblHotkeys, "DumpMemory", hotkeys.dumpMemory);
     }
@@ -434,17 +434,17 @@ SettingsSaveResult Settings::Save() {
         }}},
 
         {"Hotkeys", toml::table{{
+            {"OpenSettings", ToTOML(hotkeys.openSettings)},
+            {"ToggleWindowedVideoOutput", ToTOML(hotkeys.toggleWindowedVideoOutput)},
             {"LoadDisc", ToTOML(hotkeys.loadDisc)},
             {"EjectDisc", ToTOML(hotkeys.ejectDisc)},
             {"OpenCloseTray", ToTOML(hotkeys.openCloseTray)},
-            {"ToggleWindowedVideoOutput", ToTOML(hotkeys.toggleWindowedVideoOutput)},
-            {"OpenSettings", ToTOML(hotkeys.openSettings)},
             {"HardReset", ToTOML(hotkeys.hardReset)},
             {"SoftReset", ToTOML(hotkeys.softReset)},
-            {"FrameStep", ToTOML(hotkeys.frameStep)},
-            {"PauseResume", ToTOML(hotkeys.pauseResume)},
-            {"FastForward", ToTOML(hotkeys.fastForward)},
             {"ResetButton", ToTOML(hotkeys.resetButton)},
+            {"PauseResume", ToTOML(hotkeys.pauseResume)},
+            {"FrameStep", ToTOML(hotkeys.frameStep)},
+            {"FastForward", ToTOML(hotkeys.fastForward)},
             {"ToggleDebugTrace", ToTOML(hotkeys.toggleDebugTrace)},
             {"DumpMemory", ToTOML(hotkeys.dumpMemory)},
         }}},
