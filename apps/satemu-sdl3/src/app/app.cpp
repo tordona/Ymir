@@ -978,8 +978,11 @@ void App::RunEmulator() {
         SDL_Event evt{};
         while (SDL_PollEvent(&evt)) {
             ImGui_ImplSDL3_ProcessEvent(&evt);
-            if (!io.WantCaptureKeyboard) {
-                // TODO: clear out all key presses
+            if (io.WantCaptureKeyboard) {
+                // TODO: clear keyboard state
+            }
+            if (io.WantCaptureMouse) {
+                // TODO: clear mouse state
             }
 
             switch (evt.type) {
@@ -995,6 +998,9 @@ void App::RunEmulator() {
                     // TODO: consider supporting multiple keyboards (evt.key.which)
                     m_inputContext.ProcessPrimitive(input::SDL3ScancodeToKeyboardKey(evt.key.scancode),
                                                     input::SDL3ToKeyModifier(evt.key.mod), evt.key.down);
+                } else if (m_context.inputCapturer.IsCapturing()) {
+                    m_context.inputCapturer.ProcessPrimitive(input::SDL3ScancodeToKeyboardKey(evt.key.scancode),
+                                                             input::SDL3ToKeyModifier(evt.key.mod), evt.key.down);
                 }
                 break;
 
@@ -1009,15 +1015,18 @@ void App::RunEmulator() {
                 if (!io.WantCaptureMouse) {
                     // TODO: handle these
                     // TODO: consider supporting multiple mice (evt.button.which)
-                    // inputCtx.ProcessMouseButtonEvent(evt.button.button, evt.button.clicks, evt.button.x,
+                    // m_inputContext.ProcessMouseButtonEvent(evt.button.button, evt.button.clicks, evt.button.x,
                     // evt.button.y, evt.button.down);
-                }
+                } /*else if (m_context.inputCapturer.IsCapturing()) {
+                    m_context.inputCapturer.ProcessPrimitive(input::SDL3ToMouseButton(evt.button.button),
+                                                             evt.button.down);
+                }*/
                 break;
             case SDL_EVENT_MOUSE_MOTION:
                 if (!io.WantCaptureMouse) {
                     // TODO: handle these
                     // TODO: consider supporting multiple mice (evt.motion.which)
-                    // inputCtx.ProcessMouseMotionEvent(evt.motion.xrel, evt.motion.yrel);
+                    // m_inputContext.ProcessMouseMotionEvent(evt.motion.xrel, evt.motion.yrel);
                 }
                 break;
             case SDL_EVENT_MOUSE_WHEEL:
@@ -1025,7 +1034,7 @@ void App::RunEmulator() {
                     // TODO: handle these
                     // TODO: consider supporting multiple mice (evt.wheel.which)
                     // const float flippedFactor = evt.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1.0f : 1.0f;
-                    // inputCtx.ProcessMouseMotionEvent(evt.wheel.x * flippedFactor, evt.wheel.y * flippedFactor);
+                    // m_inputContext.ProcessMouseMotionEvent(evt.wheel.x * flippedFactor, evt.wheel.y * flippedFactor);
                 }
                 break;
 
@@ -1046,9 +1055,14 @@ void App::RunEmulator() {
                 break;
             case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
             case SDL_EVENT_GAMEPAD_BUTTON_UP:
-                m_inputContext.ProcessPrimitive(evt.gbutton.which,
-                                                input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button),
-                                                evt.gbutton.down);
+                if (m_context.inputCapturer.IsCapturing()) {
+                    m_context.inputCapturer.ProcessPrimitive(input::SDL3ScancodeToKeyboardKey(evt.key.scancode),
+                                                             input::SDL3ToKeyModifier(evt.key.mod), evt.key.down);
+                } else {
+                    m_inputContext.ProcessPrimitive(evt.gbutton.which,
+                                                    input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button),
+                                                    evt.gbutton.down);
+                }
                 break;
 
             case SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN:
@@ -1068,13 +1082,6 @@ void App::RunEmulator() {
                 // evt.gsensor.which;
                 // evt.gsensor.sensor;
                 // evt.gsensor.data;
-                break;
-
-            case SDL_EVENT_JOYSTICK_ADDED:
-            case SDL_EVENT_JOYSTICK_REMOVED:
-                // TODO: handle types
-                // evt.jdevice.type;
-                // evt.jdevice.which;
                 break;
 
             case SDL_EVENT_QUIT: goto end_loop; break;

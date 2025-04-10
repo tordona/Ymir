@@ -8,6 +8,7 @@ HotkeysSettingsView::HotkeysSettingsView(SharedContext &context)
     : SettingsViewBase(context) {}
 
 void HotkeysSettingsView::Display() {
+    ImGui::TextUnformatted("Left-click a button to assign a hotkey. Right-click to clear.");
     if (ImGui::BeginTable("hotkeys", 2 + kNumBindsPerInput,
                           ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY)) {
         ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 80.0f);
@@ -32,24 +33,24 @@ void HotkeysSettingsView::Display() {
                     const std::string bind = input::ToHumanString(inputs[i]);
                     const std::string label = fmt::format("{}##bind_{}_{}_{}", bind, type, cmdName, i);
                     const float availWidth = ImGui::GetContentRegionAvail().x;
-                    if (ImGui::Button(label.c_str(), ImVec2(availWidth, 0))) {
-                        // TODO: engage input binding system -> open popup
-                        // - every keyboard key except modifier keys (ctrl, alt, shift and windows/command) are
-                        // considered "terminal" keys, and so are all mouse and gamepad buttons
-                        // - when any terminal key is pressed (SDL_EVENT_*_DOWN), save it along with all pressed
-                        // modifier keys
-                        //   - modifier keys apply to keyboard keys or mouse buttons, not to gamepad buttons
-                        // - when a non-terminal (modifier) key is released (SDL_EVENT_*_UP), assign it and all pressed
-                        // modifiers
-                        // - ESC cancels the binding system (the key cannot/should not be mapped)
 
-                        // TODO: rebind inputs
-                        // TODO: consider only rebinding this action
-                        // m_context.EnqueueEvent(events::gui::RebindInputs());
+                    // Left-click engages binding mode
+                    if (ImGui::Button(label.c_str(), ImVec2(availWidth, 0))) {
+                        ImGui::OpenPopup("input_capture");
+                        m_context.inputCapturer.Capture([=, this, &inputs](const input::InputEvent &event) {
+                            inputs[i] = event;
+                            MakeDirty();
+                            // TODO: rebind only the modified action
+                            m_context.EnqueueEvent(events::gui::RebindInputs());
+                        });
                     }
-                    if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
-                        // TODO: erase binding
-                        fmt::println("#### {} {} {}", type, cmdName, i);
+
+                    // Right-click erases a binding
+                    if (MakeDirty(ImGui::IsItemClicked(ImGuiMouseButton_Right))) {
+                        m_context.inputCapturer.CancelCapture();
+                        inputs[i] = {};
+                        // TODO: rebind only the modified action
+                        m_context.EnqueueEvent(events::gui::RebindInputs());
                     }
                 }
             }
@@ -76,6 +77,12 @@ void HotkeysSettingsView::Display() {
         drawRow("Debugger", "Dump all memory", hotkeys.dumpMemory);
 
         ImGui::EndTable();
+    }
+
+    if (ImGui::BeginPopup("input_capture")) {
+        ImGui::TextUnformatted("Press any key, mouse button or gamepad button to map it.");
+        ImGui::TextUnformatted("Press Escape or click outside of this popup to cancel.");
+        ImGui::EndPopup();
     }
 }
 

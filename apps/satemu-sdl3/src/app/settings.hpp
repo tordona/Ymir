@@ -125,6 +125,9 @@ public:
     // Clears and rebinds all configured inputs to the context
     void RebindInputs(input::InputContext &ctx, satemu::Saturn &saturn);
 
+    // Synchronizes input settings with those from the given context
+    void SyncInputSettings(input::InputContext &ctx, satemu::Saturn &saturn);
+
     // ---------------------------------------------------------------------------------------------
 
     std::filesystem::path path;

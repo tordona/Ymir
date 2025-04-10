@@ -344,7 +344,11 @@ std::string ToHumanString(const KeyCombo &combo) {
     auto keyStr = ::app::input::ToHumanString(combo.key);
     if (combo.modifiers != KeyModifier::None) {
         auto modStr = ::app::input::ToHumanString(combo.modifiers);
-        return fmt::format("{}+{}", modStr, keyStr);
+        if (combo.key != KeyboardKey::None) {
+            return fmt::format("{}+{}", modStr, keyStr);
+        } else {
+            return modStr;
+        }
     } else {
         return std::string(keyStr);
     }
@@ -629,7 +633,7 @@ std::string_view ToString(KeyboardKey key) {
     case KeyboardKey::RightShift: return "RightShift";
     case KeyboardKey::RightAlt: return "RightAlt";
     case KeyboardKey::RightGui: return "RightGui";
-    default: return "Unknown";
+    default: return "None";
     }
 }
 
@@ -743,6 +747,8 @@ static const std::unordered_map<std::string_view, KeyModifier> kKeyModifiers{
 };
 
 static const std::unordered_map<std::string_view, KeyboardKey> kKeyboardKeys{
+    {"None", KeyboardKey::None},
+
     {"A", KeyboardKey::A},
     {"B", KeyboardKey::B},
     {"C", KeyboardKey::C},

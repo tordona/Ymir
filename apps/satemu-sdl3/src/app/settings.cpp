@@ -599,6 +599,76 @@ void Settings::RebindInputs(input::InputContext &ctx, Saturn &saturn) {
 
     mapArray(actions::emu::ToggleDebugTrace, hotkeys.toggleDebugTrace);
     mapArray(actions::emu::DumpMemory, hotkeys.dumpMemory);
+
+    SyncInputSettings(ctx, saturn);
+}
+
+void Settings::SyncInputSettings(input::InputContext &ctx, satemu::Saturn &saturn) {
+    auto syncArray = [&](auto action, InputEventArray &arr) {
+        arr.fill({});
+        for (int i = 0; auto &input : ctx.GetMappedInputs(action)) {
+            arr[i++] = input.event;
+            if (i == 4) {
+                break;
+            }
+        }
+    };
+    auto syncArrayCtx = [&](auto action, void *actionCtx, InputEventArray &arr) {
+        arr.fill({});
+        for (int i = 0; auto &input : ctx.GetMappedInputs(action)) {
+            if (input.context == actionCtx) {
+                arr[i++] = input.event;
+                if (i == 4) {
+                    break;
+                }
+            }
+        }
+    };
+
+    syncArray(actions::general::LoadDisc, hotkeys.loadDisc);
+    syncArray(actions::general::EjectDisc, hotkeys.ejectDisc);
+    syncArray(actions::general::OpenCloseTray, hotkeys.openCloseTray);
+    syncArray(actions::general::ToggleWindowedVideoOutput, hotkeys.toggleWindowedVideoOutput);
+    syncArray(actions::general::OpenSettings, hotkeys.openSettings);
+    syncArray(actions::emu::HardReset, hotkeys.hardReset);
+    syncArray(actions::emu::SoftReset, hotkeys.softReset);
+    syncArray(actions::emu::FrameStep, hotkeys.frameStep);
+    syncArray(actions::emu::PauseResume, hotkeys.pauseResume);
+    syncArray(actions::emu::FastForward, hotkeys.fastForward);
+    syncArray(actions::emu::ResetButton, hotkeys.resetButton);
+
+    auto ctx1 = &saturn.SMPC.GetPeripheralPort1();
+    syncArrayCtx(actions::emu::StandardPadA, ctx1, input.port1.standardPadBinds.a);
+    syncArrayCtx(actions::emu::StandardPadB, ctx1, input.port1.standardPadBinds.b);
+    syncArrayCtx(actions::emu::StandardPadC, ctx1, input.port1.standardPadBinds.c);
+    syncArrayCtx(actions::emu::StandardPadX, ctx1, input.port1.standardPadBinds.x);
+    syncArrayCtx(actions::emu::StandardPadY, ctx1, input.port1.standardPadBinds.y);
+    syncArrayCtx(actions::emu::StandardPadZ, ctx1, input.port1.standardPadBinds.z);
+    syncArrayCtx(actions::emu::StandardPadL, ctx1, input.port1.standardPadBinds.l);
+    syncArrayCtx(actions::emu::StandardPadR, ctx1, input.port1.standardPadBinds.r);
+    syncArrayCtx(actions::emu::StandardPadStart, ctx1, input.port1.standardPadBinds.start);
+    syncArrayCtx(actions::emu::StandardPadUp, ctx1, input.port1.standardPadBinds.up);
+    syncArrayCtx(actions::emu::StandardPadDown, ctx1, input.port1.standardPadBinds.down);
+    syncArrayCtx(actions::emu::StandardPadLeft, ctx1, input.port1.standardPadBinds.left);
+    syncArrayCtx(actions::emu::StandardPadRight, ctx1, input.port1.standardPadBinds.right);
+
+    auto ctx2 = &saturn.SMPC.GetPeripheralPort2();
+    syncArrayCtx(actions::emu::StandardPadA, ctx2, input.port2.standardPadBinds.a);
+    syncArrayCtx(actions::emu::StandardPadB, ctx2, input.port2.standardPadBinds.b);
+    syncArrayCtx(actions::emu::StandardPadC, ctx2, input.port2.standardPadBinds.c);
+    syncArrayCtx(actions::emu::StandardPadX, ctx2, input.port2.standardPadBinds.x);
+    syncArrayCtx(actions::emu::StandardPadY, ctx2, input.port2.standardPadBinds.y);
+    syncArrayCtx(actions::emu::StandardPadZ, ctx2, input.port2.standardPadBinds.z);
+    syncArrayCtx(actions::emu::StandardPadL, ctx2, input.port2.standardPadBinds.l);
+    syncArrayCtx(actions::emu::StandardPadR, ctx2, input.port2.standardPadBinds.r);
+    syncArrayCtx(actions::emu::StandardPadStart, ctx2, input.port2.standardPadBinds.start);
+    syncArrayCtx(actions::emu::StandardPadUp, ctx2, input.port2.standardPadBinds.up);
+    syncArrayCtx(actions::emu::StandardPadDown, ctx2, input.port2.standardPadBinds.down);
+    syncArrayCtx(actions::emu::StandardPadLeft, ctx2, input.port2.standardPadBinds.left);
+    syncArrayCtx(actions::emu::StandardPadRight, ctx2, input.port2.standardPadBinds.right);
+
+    syncArray(actions::emu::ToggleDebugTrace, hotkeys.toggleDebugTrace);
+    syncArray(actions::emu::DumpMemory, hotkeys.dumpMemory);
 }
 
 } // namespace app

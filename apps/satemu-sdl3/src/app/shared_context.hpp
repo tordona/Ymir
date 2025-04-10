@@ -5,6 +5,8 @@
 #include <app/profile.hpp>
 #include <app/settings.hpp>
 
+#include <app/input/input_capturer.hpp>
+
 #include <app/debug/scu_tracer.hpp>
 #include <app/debug/sh2_tracer.hpp>
 
@@ -25,6 +27,7 @@ struct SharedContext {
 
     Profile profile;
     Settings settings{saturn.configuration};
+    input::InputCapturer inputCapturer;
 
     // Certain GUI interactions requires synchronization with the emulator thread, specifically when dealing with
     // dynamic objects:
