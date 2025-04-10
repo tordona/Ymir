@@ -742,8 +742,9 @@ std::string ToString(const MouseCombo &combo) {
 // ---------------------------------------------------------------------------------------------------------------------
 
 static const std::unordered_map<std::string_view, KeyModifier> kKeyModifiers{
-    {"Control", KeyModifier::Control}, {"Alt", KeyModifier::Alt},       {"Shift", KeyModifier::Shift},
-    {"Super", KeyModifier::Super},     {"Windows", KeyModifier::Super}, {"Command", KeyModifier::Super},
+    {"Control", KeyModifier::Control}, {"Ctrl", KeyModifier::Control}, {"Alt", KeyModifier::Alt},
+    {"Shift", KeyModifier::Shift},     {"Super", KeyModifier::Super},  {"Windows", KeyModifier::Super},
+    {"Command", KeyModifier::Super},
 };
 
 static const std::unordered_map<std::string_view, KeyboardKey> kKeyboardKeys{
