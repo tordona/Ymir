@@ -3,7 +3,6 @@
 #include <satemu/core/types.hpp>
 
 #include <array>
-#include <new>
 
 namespace satemu::sh2 {
 
@@ -284,7 +283,7 @@ struct OpcodeDisasm {
 
 struct DisasmTable {
 private:
-    static constexpr auto alignment = std::hardware_destructive_interference_size;
+    static constexpr auto alignment = 64;
 
 public:
     alignas(alignment) std::array<OpcodeDisasm, 0x10000> disasm;

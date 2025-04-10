@@ -1158,6 +1158,7 @@ void SH2::RunDMAC(uint32 channel) {
     auto getAddressInc = [&](DMATransferIncrementMode mode) -> sint32 {
         using enum DMATransferIncrementMode;
         switch (mode) {
+        default: // fallthrough
         case Fixed: return 0;
         case Increment: return +xferSize;
         case Decrement: return -xferSize;
@@ -1778,6 +1779,8 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
 
     case OpcodeType::IllegalSlot: EnterException<debug, enableCache>(xvSlotIllegalInstr); return 8;
     }
+
+    util::unreachable();
 }
 
 template uint64 SH2::InterpretNext<false, false>();

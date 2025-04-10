@@ -82,19 +82,19 @@ namespace detail {
 
     template <typename T>
     concept Group = requires() {
-        std::same_as<std::decay_t<decltype(T::enabled)>, bool>;
-        std::same_as<std::decay_t<decltype(T::level)>, Level>;
+        requires std::same_as<std::decay_t<decltype(T::enabled)>, bool>;
+        requires std::same_as<std::decay_t<decltype(T::level)>, Level>;
     };
 
     template <typename T>
     concept StaticNameGroup = requires() {
-        Group<T>;
-        std::same_as<std::decay_t<decltype(T::name)>, std::string_view>;
+        requires Group<T>;
+        requires std::same_as<std::decay_t<decltype(T::name)>, std::string_view>;
     };
 
     template <typename T>
     concept DynamicNameGroup = requires() {
-        Group<T>;
+        requires Group<T>;
         { T::Name(std::declval<std::string_view>()) } -> std::same_as<std::string>;
     };
 

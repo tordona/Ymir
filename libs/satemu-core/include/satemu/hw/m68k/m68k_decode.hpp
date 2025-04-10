@@ -5,7 +5,6 @@
 #include <satemu/util/bit_ops.hpp>
 
 #include <array>
-#include <new>
 
 namespace satemu::m68k {
 
@@ -295,7 +294,7 @@ enum class OpcodeType : uint8 {
 };
 
 struct DecodeTable {
-    alignas(std::hardware_destructive_interference_size) std::array<OpcodeType, 0x10000> opcodeTypes;
+    alignas(64) std::array<OpcodeType, 0x10000> opcodeTypes;
     // TODO: disassembly info/function pointers?
 };
 

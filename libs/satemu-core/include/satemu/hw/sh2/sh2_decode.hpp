@@ -3,7 +3,6 @@
 #include <satemu/core/types.hpp>
 
 #include <array>
-#include <new>
 
 namespace satemu::sh2 {
 
@@ -292,7 +291,7 @@ struct DecodedArgs {
 
 struct DecodeTable {
 private:
-    static constexpr auto alignment = std::hardware_destructive_interference_size;
+    static constexpr auto alignment = 64;
 
 public:
     // Instruction decoding table
