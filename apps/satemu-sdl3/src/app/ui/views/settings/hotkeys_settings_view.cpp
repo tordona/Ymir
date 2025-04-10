@@ -47,7 +47,10 @@ void HotkeysSettingsView::Display() {
                         // TODO: consider only rebinding this action
                         // m_context.EnqueueEvent(events::gui::RebindInputs());
                     }
-                    // TODO: handle right-click -> erase binding
+                    if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+                        // TODO: erase binding
+                        fmt::println("#### {} {} {}", type, cmdName, i);
+                    }
                 }
             }
         };

@@ -58,6 +58,7 @@ Address range            Mirror size   Description
 0x400'0000..0x4FF'FFFF   -                 SCU A-Bus CS1 (cartridge port, usually RAM)
 0x500'0000..0x57F'FFFF   -                 SCU A-Bus Dummy
 0x580'0000..0x58F'FFFF   -                 SCU A-Bus CS2 (includes CD-ROM registers)
+0x589'0000..0x589'003F   0x40              CD Block registers (repeats for 4 KiB every 32 KiB)
 0x590'0000..0x59F'FFFF   -             Lockup when read
 0x5A0'0000..0x5FB'FFFF   -             SCU B-Bus (SCSP, VDP1, VDP2)
 0x5A0'0000..0x5AF'FFFF   0x40000/0x80000   68000 Work RAM

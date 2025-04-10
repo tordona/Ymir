@@ -1223,6 +1223,24 @@ void App::RunEmulator() {
 
                 ImGui::Separator();
 
+                // Resets
+                {
+                    if (ImGui::MenuItem("Soft reset",
+                                        input::ToShortcut(m_inputContext, actions::emu::SoftReset).c_str())) {
+                        m_context.EnqueueEvent(events::emu::SoftReset());
+                    }
+                    if (ImGui::MenuItem("Hard reset",
+                                        input::ToShortcut(m_inputContext, actions::emu::HardReset).c_str())) {
+                        m_context.EnqueueEvent(events::emu::HardReset());
+                    }
+                    // TODO: Let's not make it that easy to accidentally wipe system settings
+                    /*if (ImGui::MenuItem("Factory reset", "Ctrl+Shift+R")) {
+                        m_context.EnqueueEvent(events::emu::FactoryReset());
+                    }*/
+                }
+
+                ImGui::Separator();
+
                 // Video standard and region
                 {
                     ImGui::AlignTextToFramePadding();
@@ -1276,7 +1294,7 @@ void App::RunEmulator() {
 
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu("Emulator")) {
+            if (ImGui::BeginMenu("Emulation")) {
                 if (ImGui::MenuItem("Frame step", input::ToShortcut(m_inputContext, actions::emu::FrameStep).c_str())) {
                     paused = true;
                     m_context.EnqueueEvent(events::emu::FrameStep());
@@ -1286,17 +1304,6 @@ void App::RunEmulator() {
                     paused = !paused;
                     m_context.EnqueueEvent(events::emu::SetPaused(paused));
                 }
-                ImGui::Separator();
-                if (ImGui::MenuItem("Soft reset", input::ToShortcut(m_inputContext, actions::emu::SoftReset).c_str())) {
-                    m_context.EnqueueEvent(events::emu::SoftReset());
-                }
-                if (ImGui::MenuItem("Hard reset", input::ToShortcut(m_inputContext, actions::emu::HardReset).c_str())) {
-                    m_context.EnqueueEvent(events::emu::HardReset());
-                }
-                // TODO: Let's not make it that easy to accidentally wipe system settings
-                /*if (ImGui::MenuItem("Factory reset", "Ctrl+Shift+R")) {
-                    m_context.EnqueueEvent(events::emu::FactoryReset());
-                }*/
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Settings")) {
