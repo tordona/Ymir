@@ -365,6 +365,7 @@ public:
             case InterruptSource::IRL: return m_sh2.INTC.GetLevel(InterruptSource::IRL) > 0;
             case InterruptSource::UserBreak: return false; // TODO
             case InterruptSource::NMI: return m_sh2.INTC.NMI;
+            default: return false;
             }
         }
 
