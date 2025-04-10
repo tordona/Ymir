@@ -72,6 +72,8 @@ private:
 
     void EmulatorThread();
 
+    void RebindInputs();
+
     void OpenLoadDiscDialog();
     void ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, int filter);
     bool LoadDiscImage(std::filesystem::path path);

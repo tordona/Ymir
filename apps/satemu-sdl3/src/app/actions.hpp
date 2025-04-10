@@ -9,7 +9,7 @@ namespace general {
     // -----------------------------------------------------------------------------------------------------------------
     // General actions
 
-    inline constexpr input::SingleShotAction OpenLoadDiscDialog{0x10000};
+    inline constexpr input::SingleShotAction LoadDisc{0x10000};
     inline constexpr input::SingleShotAction EjectDisc{0x10001};
     inline constexpr input::SingleShotAction OpenCloseTray{0x10002};
 

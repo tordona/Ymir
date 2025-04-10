@@ -52,6 +52,8 @@ struct GUIEvent {
         SetProcessPriority,
 
         FitWindowToScreen,
+
+        RebindInputs,
     };
 
     Type type;

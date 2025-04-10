@@ -32,7 +32,7 @@ std::string ToString(const InputEvent &bind) {
 bool TryParse(std::string_view str, InputEvent &event) {
     // Check for None
     if (str == "None") {
-        event = InputEvent();
+        event = {};
         return true;
     }
 

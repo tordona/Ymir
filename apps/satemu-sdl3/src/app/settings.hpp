@@ -4,6 +4,7 @@
 
 #include <satemu/hw/smpc/peripheral/peripheral_defs.hpp>
 
+#include <app/input/input_context.hpp>
 #include <app/input/input_events.hpp>
 
 #include <satemu/util/observable.hpp>
@@ -16,6 +17,17 @@
 #include <filesystem>
 #include <sstream>
 #include <variant>
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Forward declarations
+
+namespace satemu {
+
+struct Saturn;
+
+} // namespace satemu
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 namespace app {
 
@@ -109,6 +121,9 @@ public:
     // Auto-saves if the settings have been dirty for a while
     void CheckDirty();
     void MakeDirty();
+
+    // Clears and rebinds all configured inputs to the context
+    void RebindInputs(input::InputContext &ctx, satemu::Saturn &saturn);
 
     // ---------------------------------------------------------------------------------------------
 

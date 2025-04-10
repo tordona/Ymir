@@ -44,4 +44,8 @@ inline GUIEvent FitWindowToScreen() {
     return {.type = GUIEvent::Type::FitWindowToScreen};
 }
 
+inline GUIEvent RebindInputs() {
+    return {.type = GUIEvent::Type::RebindInputs};
+}
+
 } // namespace app::events::gui

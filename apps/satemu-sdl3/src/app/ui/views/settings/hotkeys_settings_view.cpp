@@ -1,5 +1,7 @@
 #include "hotkeys_settings_view.hpp"
 
+#include <app/events/gui_event_factory.hpp>
+
 namespace app::ui {
 
 HotkeysSettingsView::HotkeysSettingsView(SharedContext &context)
@@ -31,8 +33,13 @@ void HotkeysSettingsView::Display() {
                     const std::string label = fmt::format("{}##bind_{}_{}_{}", bind, type, cmdName, i);
                     const float availWidth = ImGui::GetContentRegionAvail().x;
                     if (ImGui::Button(label.c_str(), ImVec2(availWidth, 0))) {
-                        // TODO: engage input binding system
+                        // TODO: engage input binding system -> open popup
+
+                        // TODO: rebind inputs
+                        // TODO: consider only rebinding this action
+                        // m_context.EnqueueEvent(events::gui::RebindInputs());
                     }
+                    // TODO: handle right-click -> erase binding
                 }
             }
         };
@@ -46,12 +53,13 @@ void HotkeysSettingsView::Display() {
         drawRow("CD drive", "Eject disc", hotkeys.ejectDisc);
         drawRow("CD drive", "Open/close tray", hotkeys.openCloseTray);
 
-        drawRow("Emulator", "Hard reset", hotkeys.hardReset);
-        drawRow("Emulator", "Soft reset", hotkeys.softReset);
-        drawRow("Emulator", "Reset button", hotkeys.resetButton);
-        drawRow("Emulator", "Pause/resume", hotkeys.pauseResume);
-        drawRow("Emulator", "Frame step", hotkeys.frameStep);
-        drawRow("Emulator", "Fast forward", hotkeys.fastForward);
+        drawRow("System", "Hard reset", hotkeys.hardReset);
+        drawRow("System", "Soft reset", hotkeys.softReset);
+        drawRow("System", "Reset button", hotkeys.resetButton);
+
+        drawRow("Emulation", "Pause/resume", hotkeys.pauseResume);
+        drawRow("Emulation", "Frame step", hotkeys.frameStep);
+        drawRow("Emulation", "Fast forward", hotkeys.fastForward);
 
         drawRow("Debugger", "Toggle tracing", hotkeys.toggleDebugTrace);
         drawRow("Debugger", "Dump all memory", hotkeys.dumpMemory);

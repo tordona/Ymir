@@ -871,7 +871,7 @@ void App::RunEmulator() {
 
     bool paused = false; // TODO: this should be updated by the emulator thread via events
 
-    m_inputContext.SetActionHandler(actions::general::OpenLoadDiscDialog, [&](void *) { OpenLoadDiscDialog(); });
+    m_inputContext.SetActionHandler(actions::general::LoadDisc, [&](void *) { OpenLoadDiscDialog(); });
     m_inputContext.SetActionHandler(actions::general::EjectDisc,
                                     [&](void *) { m_context.EnqueueEvent(events::emu::EjectDisc()); });
     m_inputContext.SetActionHandler(actions::general::OpenCloseTray,
@@ -939,77 +939,7 @@ void App::RunEmulator() {
     m_inputContext.SetActionHandler(actions::emu::DumpMemory,
                                     [&](void *) { m_context.EnqueueEvent(events::emu::DumpMemory()); });
 
-    // ---------------------------------
-    // Input action mappings
-
-    {
-        using Mod = input::KeyModifier;
-        using Key = input::KeyboardKey;
-        using KeyCombo = input::KeyCombo;
-
-        m_inputContext.MapAction(KeyCombo{Mod::Control, Key::O}, actions::general::OpenLoadDiscDialog);
-        m_inputContext.MapAction(KeyCombo{Mod::Control, Key::W}, actions::general::EjectDisc);
-        m_inputContext.MapAction(KeyCombo{Mod::Control, Key::T}, actions::general::OpenCloseTray);
-
-        m_inputContext.MapAction(KeyCombo{Mod::None, Key::F9}, actions::general::ToggleWindowedVideoOutput);
-        m_inputContext.MapAction(KeyCombo{Mod::None, Key::F10}, actions::general::OpenSettings);
-
-        m_inputContext.MapAction(KeyCombo{Mod::Control, Key::R}, actions::emu::HardReset);
-        m_inputContext.MapAction(KeyCombo{Mod::Control | Mod::Shift, Key::R}, actions::emu::SoftReset);
-
-        m_inputContext.MapAction(KeyCombo{Mod::None, Key::RightBracket}, actions::emu::FrameStep);
-        m_inputContext.MapAction(KeyCombo{Mod::Control, Key::P}, actions::emu::PauseResume);
-        m_inputContext.MapAction(KeyCombo{Mod::None, Key::Pause}, actions::emu::PauseResume);
-        m_inputContext.MapAction(KeyCombo{Mod::None, Key::Tab}, actions::emu::FastForward);
-
-        m_inputContext.MapAction(KeyCombo{Mod::Shift, Key::R}, actions::emu::ResetButton);
-
-        // Port 1 controller inputs
-        auto ctx1 = &m_context.saturn.SMPC.GetPeripheralPort1();
-        m_inputContext.MapAction({Key::J}, actions::emu::StandardPadA, ctx1);
-        m_inputContext.MapAction({Key::K}, actions::emu::StandardPadB, ctx1);
-        m_inputContext.MapAction({Key::L}, actions::emu::StandardPadC, ctx1);
-        m_inputContext.MapAction({Key::U}, actions::emu::StandardPadX, ctx1);
-        m_inputContext.MapAction({Key::I}, actions::emu::StandardPadY, ctx1);
-        m_inputContext.MapAction({Key::O}, actions::emu::StandardPadZ, ctx1);
-        m_inputContext.MapAction({Key::W}, actions::emu::StandardPadUp, ctx1);
-        m_inputContext.MapAction({Key::S}, actions::emu::StandardPadDown, ctx1);
-        m_inputContext.MapAction({Key::A}, actions::emu::StandardPadLeft, ctx1);
-        m_inputContext.MapAction({Key::D}, actions::emu::StandardPadRight, ctx1);
-        m_inputContext.MapAction({Key::G}, actions::emu::StandardPadStart, ctx1);
-        m_inputContext.MapAction({Key::F}, actions::emu::StandardPadStart, ctx1);
-        m_inputContext.MapAction({Key::H}, actions::emu::StandardPadStart, ctx1);
-        m_inputContext.MapAction({Key::Return}, actions::emu::StandardPadStart, ctx1);
-        m_inputContext.MapAction({Key::Q}, actions::emu::StandardPadL, ctx1);
-        m_inputContext.MapAction({Key::E}, actions::emu::StandardPadR, ctx1);
-
-        // Port 2 controller inputs
-        auto ctx2 = &m_context.saturn.SMPC.GetPeripheralPort2();
-        m_inputContext.MapAction({Key::KeyPad1}, actions::emu::StandardPadA, ctx2);
-        m_inputContext.MapAction({Key::KeyPad2}, actions::emu::StandardPadB, ctx2);
-        m_inputContext.MapAction({Key::KeyPad3}, actions::emu::StandardPadC, ctx2);
-        m_inputContext.MapAction({Key::KeyPad4}, actions::emu::StandardPadX, ctx2);
-        m_inputContext.MapAction({Key::KeyPad5}, actions::emu::StandardPadY, ctx2);
-        m_inputContext.MapAction({Key::KeyPad6}, actions::emu::StandardPadZ, ctx2);
-        m_inputContext.MapAction({Key::Up}, actions::emu::StandardPadUp, ctx2);
-        m_inputContext.MapAction({Key::Down}, actions::emu::StandardPadDown, ctx2);
-        m_inputContext.MapAction({Key::Left}, actions::emu::StandardPadLeft, ctx2);
-        m_inputContext.MapAction({Key::Right}, actions::emu::StandardPadRight, ctx2);
-        m_inputContext.MapAction({Key::KeyPadEnter}, actions::emu::StandardPadStart, ctx2);
-        m_inputContext.MapAction({Key::KeyPad7}, actions::emu::StandardPadL, ctx2);
-        m_inputContext.MapAction({Key::KeyPad9}, actions::emu::StandardPadR, ctx2);
-
-        // Alternative port 2 controller inputs
-        m_inputContext.MapAction({Key::Home}, actions::emu::StandardPadUp, ctx2);
-        m_inputContext.MapAction({Key::End}, actions::emu::StandardPadDown, ctx2);
-        m_inputContext.MapAction({Key::Delete}, actions::emu::StandardPadLeft, ctx2);
-        m_inputContext.MapAction({Key::PageDown}, actions::emu::StandardPadRight, ctx2);
-        m_inputContext.MapAction({Key::Insert}, actions::emu::StandardPadL, ctx2);
-        m_inputContext.MapAction({Key::PageUp}, actions::emu::StandardPadR, ctx2);
-
-        m_inputContext.MapAction(KeyCombo{Mod::None, Key::F11}, actions::emu::ToggleDebugTrace);
-        m_inputContext.MapAction(KeyCombo{Mod::Control, Key::F11}, actions::emu::DumpMemory);
-    }
+    RebindInputs();
 
     // ---------------------------------
     // Main emulator loop
@@ -1175,6 +1105,8 @@ void App::RunEmulator() {
             case EvtType::SetProcessPriority: util::BoostCurrentProcessPriority(std::get<bool>(evt.value)); break;
 
             case EvtType::FitWindowToScreen: fitWindowToScreenNow = true; break;
+
+            case EvtType::RebindInputs: RebindInputs(); break;
             }
         }
 
@@ -1232,7 +1164,7 @@ void App::RunEmulator() {
             if (ImGui::BeginMenu("File")) {
                 // CD drive
                 if (ImGui::MenuItem("Load disc image",
-                                    input::ToShortcut(m_inputContext, actions::general::OpenLoadDiscDialog).c_str())) {
+                                    input::ToShortcut(m_inputContext, actions::general::LoadDisc).c_str())) {
                     OpenLoadDiscDialog();
                 }
                 if (ImGui::MenuItem("Open/close tray",
@@ -1726,6 +1658,10 @@ void App::EmulatorThread() {
             m_audioSystem.SetSilent(true);
         }
     }
+}
+
+void App::RebindInputs() {
+    m_context.settings.RebindInputs(m_inputContext, m_context.saturn);
 }
 
 void App::OpenLoadDiscDialog() {

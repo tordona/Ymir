@@ -1,5 +1,9 @@
 #include "settings.hpp"
 
+#include <app/actions.hpp>
+
+#include <satemu/sys/saturn.hpp>
+
 #include <satemu/util/date_time.hpp>
 #include <satemu/util/dev_log.hpp>
 #include <satemu/util/inline.hpp>
@@ -525,6 +529,71 @@ void Settings::CheckDirty() {
 void Settings::MakeDirty() {
     m_dirty = true;
     m_dirtyTimestamp = std::chrono::steady_clock::now();
+}
+
+void Settings::RebindInputs(input::InputContext &ctx, Saturn &saturn) {
+    ctx.UnmapAllActions();
+
+    using Mod = input::KeyModifier;
+    using Key = input::KeyboardKey;
+    using KeyCombo = input::KeyCombo;
+
+    auto mapArray = [&](auto action, InputEventArray &arr) {
+        for (auto &input : arr) {
+            ctx.MapAction(input, action);
+        }
+    };
+
+    auto mapArrayCtx = [&](auto action, void *actionCtx, InputEventArray &arr) {
+        for (auto &input : arr) {
+            ctx.MapAction(input, action, actionCtx);
+        }
+    };
+
+    mapArray(actions::general::LoadDisc, hotkeys.loadDisc);
+    mapArray(actions::general::EjectDisc, hotkeys.ejectDisc);
+    mapArray(actions::general::OpenCloseTray, hotkeys.openCloseTray);
+    mapArray(actions::general::ToggleWindowedVideoOutput, hotkeys.toggleWindowedVideoOutput);
+    mapArray(actions::general::OpenSettings, hotkeys.openSettings);
+    mapArray(actions::emu::HardReset, hotkeys.hardReset);
+    mapArray(actions::emu::SoftReset, hotkeys.softReset);
+    mapArray(actions::emu::FrameStep, hotkeys.frameStep);
+    mapArray(actions::emu::PauseResume, hotkeys.pauseResume);
+    mapArray(actions::emu::FastForward, hotkeys.fastForward);
+    mapArray(actions::emu::ResetButton, hotkeys.resetButton);
+
+    auto ctx1 = &saturn.SMPC.GetPeripheralPort1();
+    mapArrayCtx(actions::emu::StandardPadA, ctx1, input.port1.standardPadBinds.a);
+    mapArrayCtx(actions::emu::StandardPadB, ctx1, input.port1.standardPadBinds.b);
+    mapArrayCtx(actions::emu::StandardPadC, ctx1, input.port1.standardPadBinds.c);
+    mapArrayCtx(actions::emu::StandardPadX, ctx1, input.port1.standardPadBinds.x);
+    mapArrayCtx(actions::emu::StandardPadY, ctx1, input.port1.standardPadBinds.y);
+    mapArrayCtx(actions::emu::StandardPadZ, ctx1, input.port1.standardPadBinds.z);
+    mapArrayCtx(actions::emu::StandardPadL, ctx1, input.port1.standardPadBinds.l);
+    mapArrayCtx(actions::emu::StandardPadR, ctx1, input.port1.standardPadBinds.r);
+    mapArrayCtx(actions::emu::StandardPadStart, ctx1, input.port1.standardPadBinds.start);
+    mapArrayCtx(actions::emu::StandardPadUp, ctx1, input.port1.standardPadBinds.up);
+    mapArrayCtx(actions::emu::StandardPadDown, ctx1, input.port1.standardPadBinds.down);
+    mapArrayCtx(actions::emu::StandardPadLeft, ctx1, input.port1.standardPadBinds.left);
+    mapArrayCtx(actions::emu::StandardPadRight, ctx1, input.port1.standardPadBinds.right);
+
+    auto ctx2 = &saturn.SMPC.GetPeripheralPort2();
+    mapArrayCtx(actions::emu::StandardPadA, ctx2, input.port2.standardPadBinds.a);
+    mapArrayCtx(actions::emu::StandardPadB, ctx2, input.port2.standardPadBinds.b);
+    mapArrayCtx(actions::emu::StandardPadC, ctx2, input.port2.standardPadBinds.c);
+    mapArrayCtx(actions::emu::StandardPadX, ctx2, input.port2.standardPadBinds.x);
+    mapArrayCtx(actions::emu::StandardPadY, ctx2, input.port2.standardPadBinds.y);
+    mapArrayCtx(actions::emu::StandardPadZ, ctx2, input.port2.standardPadBinds.z);
+    mapArrayCtx(actions::emu::StandardPadL, ctx2, input.port2.standardPadBinds.l);
+    mapArrayCtx(actions::emu::StandardPadR, ctx2, input.port2.standardPadBinds.r);
+    mapArrayCtx(actions::emu::StandardPadStart, ctx2, input.port2.standardPadBinds.start);
+    mapArrayCtx(actions::emu::StandardPadUp, ctx2, input.port2.standardPadBinds.up);
+    mapArrayCtx(actions::emu::StandardPadDown, ctx2, input.port2.standardPadBinds.down);
+    mapArrayCtx(actions::emu::StandardPadLeft, ctx2, input.port2.standardPadBinds.left);
+    mapArrayCtx(actions::emu::StandardPadRight, ctx2, input.port2.standardPadBinds.right);
+
+    mapArray(actions::emu::ToggleDebugTrace, hotkeys.toggleDebugTrace);
+    mapArray(actions::emu::DumpMemory, hotkeys.dumpMemory);
 }
 
 } // namespace app

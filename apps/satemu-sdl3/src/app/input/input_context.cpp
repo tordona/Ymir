@@ -48,6 +48,10 @@ void InputContext::ProcessBinaryEvent(const InputEvent &event, bool actuated) {
 // Event-action mapping
 
 void InputContext::MapAction(InputEvent event, SingleShotAction action, void *context) {
+    if (event.type == InputEvent::Type::None) {
+        return;
+    }
+
     if (m_singleShotActions.contains(event)) {
         const auto &prev = m_singleShotActions.at(event);
         m_singleShotActionsReverse[prev.action].erase({event, context});
@@ -60,6 +64,10 @@ void InputContext::MapAction(InputEvent event, SingleShotAction action, void *co
 }
 
 void InputContext::MapAction(InputEvent event, BinaryAction action, void *context) {
+    if (event.type == InputEvent::Type::None) {
+        return;
+    }
+
     if (m_binaryActions.contains(event)) {
         const auto &prev = m_binaryActions.at(event);
         m_binaryActionsReverse[prev.action].erase({event, context});
