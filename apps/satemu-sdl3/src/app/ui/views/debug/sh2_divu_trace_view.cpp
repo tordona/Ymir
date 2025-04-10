@@ -1,5 +1,7 @@
 #include "sh2_divu_trace_view.hpp"
 
+#include <cinttypes>
+
 namespace app::ui {
 
 SH2DivisionUnitTraceView::SH2DivisionUnitTraceView(SharedContext &context, SH2Tracer &tracer)
@@ -71,13 +73,13 @@ void SH2DivisionUnitTraceView::Display() {
                 if (m_showHex) {
                     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
                     if (trace.div64) {
-                        ImGui::Text("%016llX", trace.dividend);
+                        ImGui::Text("%016" PRIX64, trace.dividend);
                     } else {
                         ImGui::Text("%08X", (sint32)trace.dividend);
                     }
                     ImGui::PopFont();
                 } else {
-                    ImGui::Text("%lld", trace.dividend);
+                    ImGui::Text("%" PRId64, trace.dividend);
                 }
             }
             if (ImGui::TableNextColumn()) {
