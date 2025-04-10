@@ -34,6 +34,14 @@ void HotkeysSettingsView::Display() {
                     const float availWidth = ImGui::GetContentRegionAvail().x;
                     if (ImGui::Button(label.c_str(), ImVec2(availWidth, 0))) {
                         // TODO: engage input binding system -> open popup
+                        // - every keyboard key except modifier keys (ctrl, alt, shift and windows/command) are
+                        // considered "terminal" keys, and so are all mouse and gamepad buttons
+                        // - when any terminal key is pressed (SDL_EVENT_*_DOWN), save it along with all pressed
+                        // modifier keys
+                        //   - modifier keys apply to keyboard keys or mouse buttons, not to gamepad buttons
+                        // - when a non-terminal (modifier) key is released (SDL_EVENT_*_UP), assign it and all pressed
+                        // modifiers
+                        // - ESC cancels the binding system (the key cannot/should not be mapped)
 
                         // TODO: rebind inputs
                         // TODO: consider only rebinding this action
