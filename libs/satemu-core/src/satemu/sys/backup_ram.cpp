@@ -125,15 +125,15 @@ void BackupMemory::CreateFrom(const std::filesystem::path &path, BackupMemorySiz
         format = true;
     }
 
-    // Format if requested
-    if (format) {
-        Format();
-    }
-
     // Update parameters
     m_addressMask = m_backupRAM.size() - 1;
     m_blockSize = kBlockSizes[static_cast<size_t>(size)];
     m_blockBitmap.resize(GetTotalBlocks() / 64);
+
+    // Format if requested
+    if (format) {
+        Format();
+    }
 
     RebuildFileList(true);
 }
