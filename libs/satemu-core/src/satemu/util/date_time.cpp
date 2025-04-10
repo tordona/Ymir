@@ -1,62 +1,54 @@
 #include <satemu/util/date_time.hpp>
 
-#include <chrono>
+#include <ctime>
 
 namespace util::datetime {
 
-template <typename T>
-static DateTime MakeDateTime(T tp) {
-    const std::chrono::year_month_day ymd{std::chrono::floor<std::chrono::days>(tp)};
-    const std::chrono::weekday wd{std::chrono::floor<std::chrono::days>(tp)};
-    const std::chrono::hh_mm_ss hms{tp.time_since_epoch()};
-
-    DateTime dt{};
-    dt.year = static_cast<int>(ymd.year());
-    dt.month = static_cast<unsigned int>(ymd.month());
-    dt.day = static_cast<unsigned int>(ymd.day());
-    dt.weekday = wd.c_encoding();
-    dt.hour = hms.hours().count() % 24;
-    dt.minute = hms.minutes().count();
-    dt.second = hms.seconds().count();
-    return dt;
-}
-
 DateTime host(sint64 offsetSeconds) {
-    const std::chrono::seconds offset{offsetSeconds};
-    return MakeDateTime(std::chrono::current_zone()->to_local(std::chrono::system_clock::now() + offset));
+    return from_timestamp(time(nullptr) + offsetSeconds);
 }
 
 sint64 delta_to_host(const DateTime &dateTime) {
-    std::tm t{};
-    t.tm_year = dateTime.year - 1900;
-    t.tm_mon = dateTime.month - 1;
-    t.tm_mday = dateTime.day;
-    t.tm_wday = dateTime.weekday;
-    t.tm_hour = dateTime.hour;
-    t.tm_min = dateTime.minute;
-    t.tm_sec = dateTime.second;
-    const auto givenTime = std::chrono::system_clock::from_time_t(std::mktime(&t));
-    const auto delta = givenTime - std::chrono::system_clock::now();
-    return std::chrono::duration_cast<std::chrono::seconds>(delta).count();
+    std::tm tm{};
+    tm.tm_year = dateTime.year - 1900;
+    tm.tm_mon = dateTime.month - 1;
+    tm.tm_mday = dateTime.day;
+    tm.tm_wday = dateTime.weekday;
+    tm.tm_hour = dateTime.hour;
+    tm.tm_min = dateTime.minute;
+    tm.tm_sec = dateTime.second;
+    return mktime(&tm) - time(nullptr);
 }
 
 DateTime from_timestamp(sint64 secondsSinceEpoch) {
-    const auto time = std::chrono::system_clock::from_time_t(secondsSinceEpoch);
-    return MakeDateTime(time);
+    tm tm{};
+#ifdef _MSC_VER
+    localtime_s(&tm, &secondsSinceEpoch);
+#else
+    tm = *localtime(&secondsSinceEpoch);
+#endif
+
+    DateTime dt{};
+    dt.year = tm.tm_year + 1900;
+    dt.month = tm.tm_mon + 1;
+    dt.day = tm.tm_mday;
+    dt.weekday = tm.tm_wday;
+    dt.hour = tm.tm_hour;
+    dt.minute = tm.tm_min;
+    dt.second = tm.tm_sec;
+    return dt;
 }
 
 sint64 to_timestamp(const DateTime &dateTime) {
-    std::tm t{};
-    t.tm_year = dateTime.year - 1900;
-    t.tm_mon = dateTime.month - 1;
-    t.tm_mday = dateTime.day;
-    t.tm_wday = dateTime.weekday;
-    t.tm_hour = dateTime.hour;
-    t.tm_min = dateTime.minute;
-    t.tm_sec = dateTime.second;
-    const auto givenTime =
-        std::chrono::current_zone()->to_local(std::chrono::system_clock::from_time_t(std::mktime(&t)));
-    return std::chrono::duration_cast<std::chrono::seconds>(givenTime.time_since_epoch()).count();
+    tm tm{};
+    tm.tm_year = dateTime.year - 1900;
+    tm.tm_mon = dateTime.month - 1;
+    tm.tm_mday = dateTime.day;
+    tm.tm_wday = dateTime.weekday;
+    tm.tm_hour = dateTime.hour;
+    tm.tm_min = dateTime.minute;
+    tm.tm_sec = dateTime.second;
+    return mktime(&tm);
 }
 
 } // namespace util::datetime
