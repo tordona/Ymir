@@ -555,17 +555,19 @@ void Settings::RebindInputs(input::InputContext &ctx, Saturn &saturn) {
         }
     };
 
+    mapArray(actions::general::OpenSettings, hotkeys.openSettings);
+    mapArray(actions::general::ToggleWindowedVideoOutput, hotkeys.toggleWindowedVideoOutput);
     mapArray(actions::general::LoadDisc, hotkeys.loadDisc);
     mapArray(actions::general::EjectDisc, hotkeys.ejectDisc);
     mapArray(actions::general::OpenCloseTray, hotkeys.openCloseTray);
-    mapArray(actions::general::ToggleWindowedVideoOutput, hotkeys.toggleWindowedVideoOutput);
-    mapArray(actions::general::OpenSettings, hotkeys.openSettings);
     mapArray(actions::emu::HardReset, hotkeys.hardReset);
     mapArray(actions::emu::SoftReset, hotkeys.softReset);
-    mapArray(actions::emu::FrameStep, hotkeys.frameStep);
-    mapArray(actions::emu::PauseResume, hotkeys.pauseResume);
-    mapArray(actions::emu::FastForward, hotkeys.fastForward);
     mapArray(actions::emu::ResetButton, hotkeys.resetButton);
+    mapArray(actions::emu::PauseResume, hotkeys.pauseResume);
+    mapArray(actions::emu::FrameStep, hotkeys.frameStep);
+    mapArray(actions::emu::FastForward, hotkeys.fastForward);
+    mapArray(actions::emu::ToggleDebugTrace, hotkeys.toggleDebugTrace);
+    mapArray(actions::emu::DumpMemory, hotkeys.dumpMemory);
 
     auto ctx1 = &saturn.SMPC.GetPeripheralPort1();
     mapArrayCtx(actions::emu::StandardPadA, ctx1, input.port1.standardPadBinds.a);
@@ -597,9 +599,6 @@ void Settings::RebindInputs(input::InputContext &ctx, Saturn &saturn) {
     mapArrayCtx(actions::emu::StandardPadLeft, ctx2, input.port2.standardPadBinds.left);
     mapArrayCtx(actions::emu::StandardPadRight, ctx2, input.port2.standardPadBinds.right);
 
-    mapArray(actions::emu::ToggleDebugTrace, hotkeys.toggleDebugTrace);
-    mapArray(actions::emu::DumpMemory, hotkeys.dumpMemory);
-
     SyncInputSettings(ctx, saturn);
 }
 
@@ -625,17 +624,19 @@ void Settings::SyncInputSettings(input::InputContext &ctx, satemu::Saturn &satur
         }
     };
 
+    syncArray(actions::general::OpenSettings, hotkeys.openSettings);
+    syncArray(actions::general::ToggleWindowedVideoOutput, hotkeys.toggleWindowedVideoOutput);
     syncArray(actions::general::LoadDisc, hotkeys.loadDisc);
     syncArray(actions::general::EjectDisc, hotkeys.ejectDisc);
     syncArray(actions::general::OpenCloseTray, hotkeys.openCloseTray);
-    syncArray(actions::general::ToggleWindowedVideoOutput, hotkeys.toggleWindowedVideoOutput);
-    syncArray(actions::general::OpenSettings, hotkeys.openSettings);
     syncArray(actions::emu::HardReset, hotkeys.hardReset);
     syncArray(actions::emu::SoftReset, hotkeys.softReset);
-    syncArray(actions::emu::FrameStep, hotkeys.frameStep);
-    syncArray(actions::emu::PauseResume, hotkeys.pauseResume);
-    syncArray(actions::emu::FastForward, hotkeys.fastForward);
     syncArray(actions::emu::ResetButton, hotkeys.resetButton);
+    syncArray(actions::emu::PauseResume, hotkeys.pauseResume);
+    syncArray(actions::emu::FrameStep, hotkeys.frameStep);
+    syncArray(actions::emu::FastForward, hotkeys.fastForward);
+    syncArray(actions::emu::ToggleDebugTrace, hotkeys.toggleDebugTrace);
+    syncArray(actions::emu::DumpMemory, hotkeys.dumpMemory);
 
     auto ctx1 = &saturn.SMPC.GetPeripheralPort1();
     syncArrayCtx(actions::emu::StandardPadA, ctx1, input.port1.standardPadBinds.a);
@@ -666,9 +667,6 @@ void Settings::SyncInputSettings(input::InputContext &ctx, satemu::Saturn &satur
     syncArrayCtx(actions::emu::StandardPadDown, ctx2, input.port2.standardPadBinds.down);
     syncArrayCtx(actions::emu::StandardPadLeft, ctx2, input.port2.standardPadBinds.left);
     syncArrayCtx(actions::emu::StandardPadRight, ctx2, input.port2.standardPadBinds.right);
-
-    syncArray(actions::emu::ToggleDebugTrace, hotkeys.toggleDebugTrace);
-    syncArray(actions::emu::DumpMemory, hotkeys.dumpMemory);
 }
 
 } // namespace app

@@ -144,22 +144,20 @@ public:
     } system;
 
     struct Hotkeys {
+        InputEventArray openSettings;
+        InputEventArray toggleWindowedVideoOutput;
+
         InputEventArray loadDisc;
         InputEventArray ejectDisc;
         InputEventArray openCloseTray;
 
-        InputEventArray toggleWindowedVideoOutput;
-
-        InputEventArray openSettings;
-
         InputEventArray hardReset;
         InputEventArray softReset;
-
-        InputEventArray frameStep;
-        InputEventArray pauseResume;
-        InputEventArray fastForward;
-
         InputEventArray resetButton;
+
+        InputEventArray pauseResume;
+        InputEventArray frameStep;
+        InputEventArray fastForward;
 
         InputEventArray toggleDebugTrace;
         InputEventArray dumpMemory;

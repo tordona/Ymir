@@ -4,13 +4,9 @@
 
 #include <fmt/format.h>
 
-#include <type_traits>
-
 namespace app::input {
 
-template <typename T>
-    requires(std::is_same_v<T, SingleShotAction> || std::is_same_v<T, BinaryAction>)
-inline std::string ToShortcut(InputContext &ctx, T action) {
+inline std::string ToShortcut(InputContext &ctx, ActionID action) {
     fmt::memory_buffer buf{};
     auto inserter = std::back_inserter(buf);
     bool first = true;

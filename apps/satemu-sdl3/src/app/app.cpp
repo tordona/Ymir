@@ -871,20 +871,37 @@ void App::RunEmulator() {
 
     bool paused = false; // TODO: this should be updated by the emulator thread via events
 
-    m_inputContext.SetActionHandler(actions::general::LoadDisc, [&](void *) { OpenLoadDiscDialog(); });
-    m_inputContext.SetActionHandler(actions::general::EjectDisc,
-                                    [&](void *) { m_context.EnqueueEvent(events::emu::EjectDisc()); });
-    m_inputContext.SetActionHandler(actions::general::OpenCloseTray,
-                                    [&](void *) { m_context.EnqueueEvent(events::emu::OpenCloseTray()); });
+    m_inputContext.SetActionHandler(actions::general::LoadDisc, [&](void *, bool actuated) {
+        if (actuated) {
+            OpenLoadDiscDialog();
+        }
+    });
+    m_inputContext.SetActionHandler(actions::general::EjectDisc, [&](void *, bool actuated) {
+        if (actuated) {
+            m_context.EnqueueEvent(events::emu::EjectDisc());
+        }
+    });
+    m_inputContext.SetActionHandler(actions::general::OpenCloseTray, [&](void *, bool actuated) {
+        if (actuated) {
+            m_context.EnqueueEvent(events::emu::OpenCloseTray());
+        }
+    });
 
-    m_inputContext.SetActionHandler(actions::general::ToggleWindowedVideoOutput,
-                                    [&](void *) { m_context.settings.video.displayVideoOutputInWindow ^= true; });
-    m_inputContext.SetActionHandler(actions::general::OpenSettings, [&](void *) { m_settingsWindow.Open = true; });
+    m_inputContext.SetActionHandler(actions::general::ToggleWindowedVideoOutput, [&](void *, bool actuated) {
+        if (actuated) {
+            m_context.settings.video.displayVideoOutputInWindow ^= true;
+        }
+    });
+    m_inputContext.SetActionHandler(actions::general::OpenSettings, [&](void *, bool actuated) {
+        if (actuated) {
+            m_settingsWindow.Open = true;
+        }
+    });
 
     {
         using Button = peripheral::StandardPad::Button;
 
-        auto registerButton = [&](input::BinaryAction action, Button button) {
+        auto registerButton = [&](input::ActionID action, Button button) {
             m_inputContext.SetActionHandler(action, [=, this](void *context, bool actuated) {
                 auto &port = *reinterpret_cast<peripheral::PeripheralPort *>(context);
                 std::unique_lock lock{m_context.locks.peripherals};
@@ -913,18 +930,28 @@ void App::RunEmulator() {
         registerButton(actions::emu::StandardPadR, Button::R);
     }
 
-    m_inputContext.SetActionHandler(actions::emu::HardReset,
-                                    [&](void *) { m_context.EnqueueEvent(events::emu::HardReset()); });
-    m_inputContext.SetActionHandler(actions::emu::SoftReset,
-                                    [&](void *) { m_context.EnqueueEvent(events::emu::SoftReset()); });
-
-    m_inputContext.SetActionHandler(actions::emu::FrameStep, [&](void *) {
-        paused = true;
-        m_context.EnqueueEvent(events::emu::FrameStep());
+    m_inputContext.SetActionHandler(actions::emu::HardReset, [&](void *, bool actuated) {
+        if (actuated) {
+            m_context.EnqueueEvent(events::emu::HardReset());
+        }
     });
-    m_inputContext.SetActionHandler(actions::emu::PauseResume, [&](void *) {
-        paused = !paused;
-        m_context.EnqueueEvent(events::emu::SetPaused(paused));
+    m_inputContext.SetActionHandler(actions::emu::SoftReset, [&](void *, bool actuated) {
+        if (actuated) {
+            m_context.EnqueueEvent(events::emu::SoftReset());
+        }
+    });
+
+    m_inputContext.SetActionHandler(actions::emu::FrameStep, [&](void *, bool actuated) {
+        if (actuated) {
+            paused = true;
+            m_context.EnqueueEvent(events::emu::FrameStep());
+        }
+    });
+    m_inputContext.SetActionHandler(actions::emu::PauseResume, [&](void *, bool actuated) {
+        if (actuated) {
+            paused = !paused;
+            m_context.EnqueueEvent(events::emu::SetPaused(paused));
+        }
     });
     m_inputContext.SetActionHandler(actions::emu::FastForward,
                                     [&](void *, bool actuated) { m_audioSystem.SetSync(!actuated); });
@@ -933,11 +960,16 @@ void App::RunEmulator() {
         m_context.EnqueueEvent(events::emu::SetResetButton(actuated));
     });
 
-    m_inputContext.SetActionHandler(actions::emu::ToggleDebugTrace, [&](void *) {
-        m_context.EnqueueEvent(events::emu::SetDebugTrace(!m_context.saturn.IsDebugTracingEnabled()));
+    m_inputContext.SetActionHandler(actions::emu::ToggleDebugTrace, [&](void *, bool actuated) {
+        if (actuated) {
+            m_context.EnqueueEvent(events::emu::SetDebugTrace(!m_context.saturn.IsDebugTracingEnabled()));
+        }
     });
-    m_inputContext.SetActionHandler(actions::emu::DumpMemory,
-                                    [&](void *) { m_context.EnqueueEvent(events::emu::DumpMemory()); });
+    m_inputContext.SetActionHandler(actions::emu::DumpMemory, [&](void *, bool actuated) {
+        if (actuated) {
+            m_context.EnqueueEvent(events::emu::DumpMemory());
+        }
+    });
 
     RebindInputs();
 

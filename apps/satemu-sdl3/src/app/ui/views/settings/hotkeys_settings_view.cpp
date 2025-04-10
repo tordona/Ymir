@@ -42,6 +42,7 @@ void HotkeysSettingsView::Display() {
                             MakeDirty();
                             // TODO: rebind only the modified action
                             m_context.EnqueueEvent(events::gui::RebindInputs());
+                            m_captured = true;
                         });
                     }
 
@@ -76,13 +77,19 @@ void HotkeysSettingsView::Display() {
         drawRow("Debugger", "Toggle tracing", hotkeys.toggleDebugTrace);
         drawRow("Debugger", "Dump all memory", hotkeys.dumpMemory);
 
-        ImGui::EndTable();
-    }
+        if (ImGui::BeginPopup("input_capture")) {
+            if (m_captured) {
+                m_captured = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::TextUnformatted("Press any key, mouse button or gamepad button to map it.");
+            ImGui::TextUnformatted("Press Escape or click outside of this popup to cancel.");
+            ImGui::EndPopup();
+        } else {
+            m_context.inputCapturer.CancelCapture();
+        }
 
-    if (ImGui::BeginPopup("input_capture")) {
-        ImGui::TextUnformatted("Press any key, mouse button or gamepad button to map it.");
-        ImGui::TextUnformatted("Press Escape or click outside of this popup to cancel.");
-        ImGui::EndPopup();
+        ImGui::EndTable();
     }
 }
 

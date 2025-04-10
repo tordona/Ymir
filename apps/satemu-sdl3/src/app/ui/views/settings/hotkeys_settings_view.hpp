@@ -9,6 +9,9 @@ public:
     HotkeysSettingsView(SharedContext &context);
 
     void Display();
+
+private:
+    bool m_captured = false;
 };
 
 } // namespace app::ui
