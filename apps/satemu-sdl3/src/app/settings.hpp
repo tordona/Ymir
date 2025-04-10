@@ -137,7 +137,7 @@ public:
     } general;
 
     struct System {
-        std::string biosPath;
+        std::filesystem::path biosPath;
     } system;
 
     struct Hotkeys {

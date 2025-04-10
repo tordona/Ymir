@@ -42,7 +42,10 @@ void SystemSettingsView::Display() {
         }
         if (ImGui::TableNextColumn()) {
             ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + reloadButtonWidth + itemSpacingWidth * 2));
-            MakeDirty(ImGui::InputText("##bios_path", &settings.biosPath));
+            std::string biosPath = settings.biosPath.string();
+            if (MakeDirty(ImGui::InputText("##bios_path", &biosPath))) {
+                settings.biosPath = biosPath;
+            }
             ImGui::SameLine();
             if (ImGui::Button("...##bios_path")) {
                 // TODO: open file selector

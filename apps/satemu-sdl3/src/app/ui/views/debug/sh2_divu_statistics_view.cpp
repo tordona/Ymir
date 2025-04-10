@@ -1,5 +1,7 @@
 #include "sh2_divu_statistics_view.hpp"
 
+#include <cinttypes>
+
 namespace app::ui {
 
 SH2DivisionUnitStatisticsView::SH2DivisionUnitStatisticsView(SharedContext &context, SH2Tracer &tracer)
@@ -17,28 +19,28 @@ void SH2DivisionUnitStatisticsView::Display() {
 
         if (ImGui::TableNextColumn()) {
             ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
-            ImGui::Text("%llu", m_tracer.divStats.div32s);
+            ImGui::Text("%" PRIu64, m_tracer.divStats.div32s);
             ImGui::PopFont();
             ImGui::TextUnformatted("32x32 divisions");
         }
 
         if (ImGui::TableNextColumn()) {
             ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
-            ImGui::Text("%llu", m_tracer.divStats.div64s);
+            ImGui::Text("%" PRIu64, m_tracer.divStats.div64s);
             ImGui::PopFont();
             ImGui::TextUnformatted("64x32 divisions");
         }
 
         if (ImGui::TableNextColumn()) {
             ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
-            ImGui::Text("%llu", m_tracer.divStats.overflows);
+            ImGui::Text("%" PRIu64, m_tracer.divStats.overflows);
             ImGui::PopFont();
             ImGui::TextUnformatted("overflows");
         }
 
         if (ImGui::TableNextColumn()) {
             ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
-            ImGui::Text("%llu", m_tracer.divStats.interrupts);
+            ImGui::Text("%" PRIu64, m_tracer.divStats.interrupts);
             ImGui::PopFont();
             ImGui::TextUnformatted("interrupts");
         }

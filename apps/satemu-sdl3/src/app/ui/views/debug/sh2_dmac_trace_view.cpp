@@ -2,6 +2,8 @@
 
 #include <satemu/util/size_ops.hpp>
 
+#include <cinttypes>
+
 using namespace satemu;
 
 namespace app::ui {
@@ -27,7 +29,7 @@ void SH2DMAControllerChannelTraceView::DisplayStatistics() {
 
         if (ImGui::TableNextColumn()) {
             ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
-            ImGui::Text("%llu", stats.numTransfers);
+            ImGui::Text("%" PRIu64, stats.numTransfers);
             ImGui::PopFont();
             ImGui::TextUnformatted("transfers");
         }
@@ -43,7 +45,7 @@ void SH2DMAControllerChannelTraceView::DisplayStatistics() {
             } else if (stats.bytesTransferred >= 1_KiB) {
                 ImGui::Text("%0.2lf KiB", util::ToKiB(stats.bytesTransferred));
             } else {
-                ImGui::Text("%llu bytes", stats.bytesTransferred);
+                ImGui::Text("%" PRIu64 " bytes", stats.bytesTransferred);
             }
             ImGui::PopFont();
             ImGui::TextUnformatted("transferred");
@@ -51,7 +53,7 @@ void SH2DMAControllerChannelTraceView::DisplayStatistics() {
 
         if (ImGui::TableNextColumn()) {
             ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
-            ImGui::Text("%llu", stats.interrupts);
+            ImGui::Text("%" PRIu64, stats.interrupts);
             ImGui::PopFont();
             ImGui::TextUnformatted("interrupts");
         }

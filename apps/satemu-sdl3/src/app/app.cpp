@@ -1552,8 +1552,8 @@ void App::RunEmulator() {
                               .y = 0.0f,
                               .w = (float)(screen.width * screen.fbScale),
                               .h = (float)(screen.height * screen.fbScale)};
-            SDL_FRect dstRect{.x = floor(slackX * 0.5f),
-                              .y = floor(slackY * 0.5f + menuBarHeight),
+            SDL_FRect dstRect{.x = floorf(slackX * 0.5f),
+                              .y = floorf(slackY * 0.5f + menuBarHeight),
                               .w = (float)scaledWidth,
                               .h = (float)scaledHeight};
             SDL_RenderTexture(renderer, dispTexture, &srcRect, &dstRect);

@@ -101,14 +101,14 @@ add_library(satemu-core
 
     include/satemu/sys/backup_ram.hpp
     include/satemu/sys/backup_ram_defs.hpp
+    include/satemu/sys/bus.hpp
     include/satemu/sys/clocks.hpp
     include/satemu/sys/memory.hpp
-    include/satemu/sys/bus.hpp
     include/satemu/sys/saturn.hpp
+    include/satemu/sys/sys_ops.hpp
     include/satemu/sys/system.hpp
     include/satemu/sys/system_callbacks.hpp
     include/satemu/sys/system_features.hpp
-    include/satemu/sys/sys_ops.hpp
     
     include/satemu/util/arith_ops.hpp
     include/satemu/util/backup_datetime.hpp
@@ -134,8 +134,8 @@ add_library(satemu-core
 
     src/satemu/core/configuration.cpp
 
-    src/satemu/hw/cart/cart_slot.cpp
     src/satemu/hw/cart/cart_impl_bup.cpp
+    src/satemu/hw/cart/cart_slot.cpp
 
     src/satemu/hw/cdblock/cdblock.cpp
     src/satemu/hw/cdblock/cdblock_devlog.hpp
@@ -205,6 +205,7 @@ target_precompile_headers(satemu-core
         <atomic>
         <bit>
         <cassert>
+        <cinttypes>
         <cmath>
         <concepts>
         <condition_variable>

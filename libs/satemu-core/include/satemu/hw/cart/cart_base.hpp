@@ -33,7 +33,7 @@ namespace detail {
     };
 
     template <CartType type>
-    using CartType_t = CartTypeMeta<type>::type;
+    using CartType_t = typename CartTypeMeta<type>::type;
 
 } // namespace detail
 

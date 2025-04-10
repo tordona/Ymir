@@ -3303,6 +3303,7 @@ FORCE_INLINE VDP::RotParamSelector VDP::VDP2SelectRotationParameter(uint32 x, ui
         return regs.rotParams[0].coeffTableEnable && m_rotParamStates[0].transparent[x] ? RotParamB : RotParamA;
     case Window: return m_rotParamsWindow[x] ? RotParamB : RotParamA;
     }
+    util::unreachable();
 }
 
 FORCE_INLINE bool VDP::VDP2CanFetchCoefficient(const RotationParams &params, uint32 coeffAddress) const {
@@ -3700,6 +3701,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
         case PerDot: return bgParams.colorCalcEnable && ch.specColorCalc && specFuncCode.colorMatches[colorData];
         case ColorDataMSB: return bgParams.colorCalcEnable && ch.specColorCalc && bit::extract<2>(colorData);
         }
+        util::unreachable();
     };
 
     // Fetch color and determine transparency.
@@ -3784,6 +3786,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, Coor
         case PerDot: return bgParams.colorCalcEnable && bgParams.supplBitmapSpecialColorCalc;
         case ColorDataMSB: return bgParams.colorCalcEnable && colorDataMSB;
         }
+        util::unreachable();
     };
 
     if constexpr (colorFormat == ColorFormat::Palette16) {

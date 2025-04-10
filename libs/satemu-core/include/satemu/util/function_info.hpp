@@ -299,7 +299,7 @@ namespace detail {
 // - static bool is_member_function_pointer: indicates if the function is a member function pointer
 // - static bool is_variadic: indicates if the function is variadic (...)
 template <typename TFunc>
-using FunctionInfo = detail::FunctionIdentifier<std::remove_cvref_t<std::decay_t<TFunc>>>::type;
+using FunctionInfo = typename detail::FunctionIdentifier<std::remove_cvref_t<std::decay_t<TFunc>>>::type;
 
 // Determines if function T2 can be assigned to a variable of type T1.
 // Both functions must have the same signature and either be both member function pointers or both not.

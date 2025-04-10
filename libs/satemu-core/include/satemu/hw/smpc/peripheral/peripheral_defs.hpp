@@ -35,7 +35,7 @@ namespace detail {
     };
 
     template <PeripheralType type>
-    using PeripheralType_t = PeripheralTypeMeta<type>::type;
+    using PeripheralType_t = typename PeripheralTypeMeta<type>::type;
 
 } // namespace detail
 
