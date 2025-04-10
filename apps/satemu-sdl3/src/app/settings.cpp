@@ -538,14 +538,23 @@ void Settings::RebindInputs(input::InputContext &ctx, Saturn &saturn) {
     using Key = input::KeyboardKey;
     using KeyCombo = input::KeyCombo;
 
+    // Sanitization -- erase ESC bindings if they were manually added in the configuration file
+    auto unbindEscape = [](input::InputEvent &event) {
+        if (event.type == input::InputEvent::Type::KeyCombo && event.keyCombo.key == input::KeyboardKey::Escape) {
+            event = {};
+        }
+    };
+
     auto mapArray = [&](auto action, InputEventArray &arr) {
         for (auto &input : arr) {
+            unbindEscape(input);
             ctx.MapAction(input, action);
         }
     };
 
     auto mapArrayCtx = [&](auto action, void *actionCtx, InputEventArray &arr) {
         for (auto &input : arr) {
+            unbindEscape(input);
             ctx.MapAction(input, action, actionCtx);
         }
     };
