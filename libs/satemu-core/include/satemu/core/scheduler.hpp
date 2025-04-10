@@ -95,8 +95,7 @@ public:
         EventID id = m_nextEventIndex;
         m_eventPtrs[userID] = id;
         Event &event = m_events[id];
-        event.id = id;
-        event.userID = userID;
+        m_userIDs[id] = userID;
         event.userContext = userContext;
         event.callback = callback;
         event.countNumerator = 1;
@@ -175,8 +174,6 @@ private:
     static constexpr size_t kNumEvents = 6;
 
     struct Event {
-        EventID id;
-        UserID userID;
         uint64 target;
         uint64 countNumerator;
         uint64 countDenominator;
@@ -241,6 +238,7 @@ private:
     uint64 m_currCount;
     uint64 m_nextCount;
     std::array<Event, kNumEvents> m_events;
+    std::array<UserID, kNumEvents> m_userIDs;
     size_t m_nextEventIndex;
     std::array<EventID, std::numeric_limits<UserID>::max() + 1> m_eventPtrs;
 };
