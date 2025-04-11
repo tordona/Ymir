@@ -107,6 +107,16 @@ private:
 
     ui::SettingsWindow m_settingsWindow;
     ui::AboutWindow m_aboutWindow;
+
+    // Error modal dialog
+
+    void DrawErrorModal();
+
+    void OpenSimpleErrorModal(std::string message);
+    void OpenErrorModal(std::function<void()> fnContents);
+
+    bool m_openErrorModal = false; // Open error modal on the next frame
+    std::function<void()> m_errorModalContents;
 };
 
 } // namespace app

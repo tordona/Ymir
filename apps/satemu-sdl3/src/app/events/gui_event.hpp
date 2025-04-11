@@ -55,10 +55,13 @@ struct GUIEvent {
 
         RebindInputs,
         RebindAction,
+
+        ShowErrorMessage,
     };
 
     Type type;
-    std::variant<std::monostate, bool, uint32, FileDialogParams, FolderDialogParams, ui::SettingsTab> value;
+    std::variant<std::monostate, bool, uint32, std::string, FileDialogParams, FolderDialogParams, ui::SettingsTab>
+        value;
 };
 
 } // namespace app

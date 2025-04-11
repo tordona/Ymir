@@ -190,7 +190,7 @@
 #include <app/ui/widgets/cartridge_widgets.hpp>
 #include <app/ui/widgets/system_widgets.hpp>
 
-#include <util/rom_loader.hpp>
+#include <util/ipl_rom_loader.hpp>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
@@ -283,17 +283,13 @@ int App::Run(const CommandLineOptions &options) {
     util::ScopeGuard sgQuit{[&] { SDL_Quit(); }};
 
     // Load IPL ROM
-    auto biosPath = options.biosPath.empty() ? m_context.settings.system.biosPath : options.biosPath;
-    if (!biosPath.empty()) {
-        devlog::info<grp::base>("Loading IPL ROM from {}...", biosPath.string());
-        constexpr auto iplSize = satemu::sys::kIPLSize;
-        auto rom = util::LoadFile(biosPath);
-        if (rom.size() == iplSize) {
-            m_context.saturn.LoadIPL(std::span<uint8, iplSize>(rom));
-            devlog::info<grp::base>("IPL ROM loaded successfully");
-        } else {
-            devlog::error<grp::base>("IPL ROM size mismatch: expected {} bytes, got {} bytes", iplSize, rom.size());
-        }
+    auto &biosPath = options.biosPath.empty() ? m_context.settings.system.biosPath : options.biosPath;
+    devlog::info<grp::base>("Loading IPL ROM from {}...", biosPath.string());
+    auto biosLoadResult = util::LoadIPLROM(biosPath, m_context.saturn);
+    if (biosLoadResult.succeeded) {
+        devlog::info<grp::base>("IPL ROM loaded successfully");
+    } else {
+        devlog::error<grp::base>("Failed to load IPL ROM: {}", biosLoadResult.errorMessage);
     }
 
     // Load disc image if provided
@@ -1165,6 +1161,8 @@ void App::RunEmulator() {
 
             case EvtType::RebindInputs: RebindInputs(); break;
             case EvtType::RebindAction: RebindAction(std::get<input::ActionID>(evt.value)); break;
+
+            case EvtType::ShowErrorMessage: OpenSimpleErrorModal(std::get<std::string>(evt.value)); break;
             }
         }
 
@@ -1508,8 +1506,9 @@ void App::RunEmulator() {
                 ImGui::PopStyleVar();
             }
 
-            // Draw regs windows
+            // Draw windows and modals
             DrawWindows();
+            DrawErrorModal();
         }
         ImGui::End();
 
@@ -1866,6 +1865,40 @@ void App::OpenMemoryViewer() {
     /*auto &memView = m_memoryViewerWindows.emplace_back(m_context);
     memView.Open = true;
     memView.RequestFocus();*/
+}
+
+static constexpr const char *kErrorModalTitle = "Error##generic_modal";
+
+void App::DrawErrorModal() {
+    if (m_openErrorModal) {
+        m_openErrorModal = false;
+        ImGui::OpenPopup(kErrorModalTitle);
+    }
+
+    if (ImGui::BeginPopupModal(kErrorModalTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::PushTextWrapPos(450.0f);
+        if (m_errorModalContents) {
+            m_errorModalContents();
+        }
+
+        ImGui::PopTextWrapPos();
+
+        if (ImGui::Button("OK", ImVec2(80, 0))) {
+            ImGui::CloseCurrentPopup();
+            m_errorModalContents = {};
+        }
+
+        ImGui::EndPopup();
+    }
+}
+
+void App::OpenSimpleErrorModal(std::string message) {
+    OpenErrorModal([=] { ImGui::Text("%s", message.c_str()); });
+}
+
+void App::OpenErrorModal(std::function<void()> fnContents) {
+    m_openErrorModal = true;
+    m_errorModalContents = fnContents;
 }
 
 } // namespace app

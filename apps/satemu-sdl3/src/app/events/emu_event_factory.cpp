@@ -1,8 +1,11 @@
 #include "emu_event_factory.hpp"
 
+#include "gui_event_factory.hpp"
+
 #include <app/shared_context.hpp>
 
 #include <satemu/util/dev_log.hpp>
+#include <util/ipl_rom_loader.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -132,6 +135,35 @@ EmuEvent DumpMemory() {
             ctx.saturn.SCSP.DumpDSPRegs(out);
         }
         devlog::info<grp::base>("Dump complete");
+    });
+}
+
+EmuEvent LoadIPL(std::filesystem::path path) {
+    return RunFunction([=](SharedContext &ctx) {
+        auto result = util::LoadIPLROM(path, ctx.saturn);
+        if (result.succeeded) {
+            if (ctx.settings.system.biosPath != path) {
+                ctx.settings.system.biosPath = path;
+                ctx.settings.MakeDirty();
+                ctx.saturn.Reset(true);
+            }
+        } else {
+            ctx.EnqueueEvent(events::gui::ShowError(
+                fmt::format("Failed to load IPL ROM from \"{}\": {}", path.string(), result.errorMessage)));
+        }
+    });
+}
+
+EmuEvent ReloadIPL() {
+    return RunFunction([=](SharedContext &ctx) {
+        auto result = util::LoadIPLROM(ctx.settings.system.biosPath, ctx.saturn);
+        if (result.succeeded) {
+            ctx.saturn.Reset(true);
+        } else {
+            ctx.EnqueueEvent(
+                events::gui::ShowError(fmt::format("Failed to reload IPL ROM from \"{}\": {}",
+                                                   ctx.settings.system.biosPath.string(), result.errorMessage)));
+        }
     });
 }
 

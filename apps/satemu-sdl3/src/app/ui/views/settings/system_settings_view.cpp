@@ -1,12 +1,17 @@
 #include "system_settings_view.hpp"
 
 #include <app/events/emu_event_factory.hpp>
+#include <app/events/gui_event_factory.hpp>
 
 #include <app/ui/widgets/common_widgets.hpp>
 #include <app/ui/widgets/datetime_widgets.hpp>
 #include <app/ui/widgets/system_widgets.hpp>
 
+#include <util/sdl_file_dialog.hpp>
+
 #include <misc/cpp/imgui_stdlib.h>
+
+#include <fmt/format.h>
 
 using namespace satemu;
 
@@ -39,6 +44,7 @@ void SystemSettingsView::Display() {
         if (ImGui::TableNextColumn()) {
             ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted("BIOS ROM path");
+            widgets::ExplanationTooltip("Changing this option will cause a hard reset");
         }
         if (ImGui::TableNextColumn()) {
             ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + reloadButtonWidth + itemSpacingWidth * 2));
@@ -48,13 +54,18 @@ void SystemSettingsView::Display() {
             }
             ImGui::SameLine();
             if (ImGui::Button("...##bios_path")) {
-                // TODO: open file selector
-                // TODO: settings.biosPath
+                m_context.EnqueueEvent(events::gui::OpenFile({
+                    .dialogTitle = "Load IPL ROM",
+                    .filters = {{"ROM files (*.bin, *.rom)", "bin;rom"}, {"All files (*.*)", "*"}},
+                    .userdata = this,
+                    .callback = util::WrapSingleSelectionCallback<&SystemSettingsView::ProcessLoadIPLROM,
+                                                                  &util::NoopCancelFileDialogCallback,
+                                                                  &SystemSettingsView::ProcessLoadIPLROMError>,
+                }));
             }
             ImGui::SameLine();
             if (ImGui::Button("Reload")) {
-                // TODO: send event to reload IPL ROM from settings
-                // m_context.EnqueueEvent(events::emu::LoadIPL(settings.biosPath));
+                m_context.EnqueueEvent(events::emu::ReloadIPL());
                 m_context.settings.MakeDirty();
             }
         }
@@ -72,12 +83,7 @@ void SystemSettingsView::Display() {
         if (ImGui::TableNextColumn()) {
             ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted("Region");
-            ImGui::SameLine();
-            ImGui::TextDisabled("(?)");
-            if (ImGui::BeginItemTooltip()) {
-                ImGui::TextUnformatted("Changing this option will cause a hard reset");
-                ImGui::EndTooltip();
-            }
+            widgets::ExplanationTooltip("Changing this option will cause a hard reset");
         }
         if (ImGui::TableNextColumn()) {
             // TODO: store in settings
@@ -210,6 +216,22 @@ void SystemSettingsView::Display() {
         }
         ImGui::Unindent();
     }
+}
+
+void SystemSettingsView::ProcessLoadIPLROM(void *userdata, std::filesystem::path file, int filter) {
+    static_cast<SystemSettingsView *>(userdata)->LoadIPLROM(file);
+}
+
+void SystemSettingsView::ProcessLoadIPLROMError(void *userdata, const char *message, int filter) {
+    static_cast<SystemSettingsView *>(userdata)->ShowIPLROMLoadError(message);
+}
+
+void SystemSettingsView::LoadIPLROM(std::filesystem::path file) {
+    m_context.EnqueueEvent(events::emu::LoadIPL(file));
+}
+
+void SystemSettingsView::ShowIPLROMLoadError(const char *message) {
+    m_context.EnqueueEvent(events::gui::ShowError(fmt::format("Could not load IPL ROM: {}", message)));
 }
 
 } // namespace app::ui

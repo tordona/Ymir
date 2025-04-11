@@ -2,6 +2,8 @@
 
 #include "gui_event.hpp"
 
+#include <app/input/input_action.hpp>
+
 namespace app::events::gui {
 
 inline GUIEvent LoadDisc() {
@@ -50,6 +52,10 @@ inline GUIEvent RebindInputs() {
 
 inline GUIEvent RebindAction(input::ActionID action) {
     return {.type = GUIEvent::Type::RebindAction, .value = action};
+}
+
+inline GUIEvent ShowError(std::string message) {
+    return {.type = GUIEvent::Type::ShowErrorMessage, .value = message};
 }
 
 } // namespace app::events::gui

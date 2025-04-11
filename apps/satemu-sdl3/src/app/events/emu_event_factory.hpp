@@ -81,6 +81,9 @@ EmuEvent SetAreaCode(uint8 areaCode);
 EmuEvent SetDebugTrace(bool enable);
 EmuEvent DumpMemory();
 
+EmuEvent LoadIPL(std::filesystem::path path);
+EmuEvent ReloadIPL();
+
 EmuEvent InsertPort1Peripheral(satemu::peripheral::PeripheralType type);
 EmuEvent InsertPort2Peripheral(satemu::peripheral::PeripheralType type);
 

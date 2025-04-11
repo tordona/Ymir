@@ -30,6 +30,8 @@ namespace grp {
 
 } // namespace grp
 
+inline void NoopCancelFileDialogCallback(void *, int) {}
+
 // SDL3 file dialog callback function wrapping functions with the following signatures:
 //   void (*acceptCallback)(void *userdata, std::filesystem::path path, int filter)
 //   void (*cancelCallback)(void *userdata, int filter)
