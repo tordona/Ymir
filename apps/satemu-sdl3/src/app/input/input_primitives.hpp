@@ -354,12 +354,18 @@ struct KeyCombo {
 
     KeyCombo(KeyModifier modifiers, KeyboardKey key)
         : modifiers(modifiers)
-        , key(key) {}
+        , key(key) {
+
+        FixModifiers();
+    }
 
     KeyCombo &operator=(const KeyCombo &) = default;
     KeyCombo &operator=(KeyCombo &&) = default;
 
     bool operator==(const KeyCombo &) const = default;
+
+private:
+    void FixModifiers();
 };
 
 // Combination of a mouse button and key modifiers.
@@ -430,3 +436,29 @@ bool TryParse(std::string_view str, MouseCombo &combo);
 } // namespace app::input
 
 ENABLE_BITMASK_OPERATORS(app::input::KeyModifier);
+
+inline void app::input::KeyCombo::FixModifiers() {
+    switch (key) {
+    case KeyboardKey::LeftControl:
+    case KeyboardKey::RightControl:
+        modifiers |= KeyModifier::Control;
+        key = KeyboardKey::None;
+        break;
+    case KeyboardKey::LeftAlt:
+    case KeyboardKey::RightAlt:
+        modifiers |= KeyModifier::Alt;
+        key = KeyboardKey::None;
+        break;
+    case KeyboardKey::LeftShift:
+    case KeyboardKey::RightShift:
+        modifiers |= KeyModifier::Shift;
+        key = KeyboardKey::None;
+        break;
+    case KeyboardKey::LeftGui:
+    case KeyboardKey::RightGui:
+        modifiers |= KeyModifier::Super;
+        key = KeyboardKey::None;
+        break;
+    default: break;
+    }
+}
