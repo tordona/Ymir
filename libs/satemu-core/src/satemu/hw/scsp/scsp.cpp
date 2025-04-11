@@ -264,7 +264,7 @@ void SCSP::UpdateM68KInterrupts() {
 
     // Check all active interrupts in parallel and select maximum level among them.
     //
-    // The naïve approach is to iterate over all 8 interrupts, skip unselected interrupts, and update the level if the
+    // The naive approach is to iterate over all 8 interrupts, skip unselected interrupts, and update the level if the
     // configured interrupt level is greater than the one found so far. This takes 8 iterations, each one doing several
     // operations (including comparisons and bit manipulation).
     //
