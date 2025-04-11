@@ -5,7 +5,8 @@ using namespace satemu;
 namespace app::ui {
 
 PeripheralBindsWindow::PeripheralBindsWindow(SharedContext &context)
-    : WindowBase(context) {}
+    : WindowBase(context)
+    , m_standardPadView(context) {}
 
 void PeripheralBindsWindow::Open(uint32 portIndex, uint32 slotIndex) {
     m_portIndex = std::min(portIndex, 1u);
@@ -31,11 +32,9 @@ void PeripheralBindsWindow::DrawContents() {
     switch (periph.GetType()) {
     case peripheral::PeripheralType::None: break;
     case peripheral::PeripheralType::StandardPad:
-        DrawBindsTable(*periph.As<peripheral::PeripheralType::StandardPad>());
+        m_standardPadView.Display(*periph.As<peripheral::PeripheralType::StandardPad>());
         break;
     }
 }
-
-void PeripheralBindsWindow::DrawBindsTable(satemu::peripheral::StandardPad &periph) {}
 
 } // namespace app::ui

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <satemu/hw/smpc/peripheral/peripheral_impl_standard_pad.hpp>
-
 #include <app/ui/window_base.hpp>
+
+#include <app/ui/views/settings/standard_pad_binds_view.hpp>
 
 namespace app::ui {
 
@@ -20,7 +20,7 @@ private:
     uint32 m_portIndex;
     uint32 m_slotIndex;
 
-    void DrawBindsTable(satemu::peripheral::StandardPad &periph);
+    StandardPadBindsView m_standardPadView;
 };
 
 } // namespace app::ui
