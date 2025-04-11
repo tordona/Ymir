@@ -8,6 +8,12 @@ HotkeysSettingsView::HotkeysSettingsView(SharedContext &context)
     : SettingsViewBase(context) {}
 
 void HotkeysSettingsView::Display() {
+    if (ImGui::Button("Restore defaults")) {
+        m_context.settings.ResetHotkeys();
+        m_context.settings.RebindInputs();
+        MakeDirty();
+    }
+
     ImGui::TextUnformatted("Left-click a button to assign a hotkey. Right-click to clear.");
     if (ImGui::BeginTable("hotkeys", 2 + kNumBindsPerInput,
                           ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY)) {

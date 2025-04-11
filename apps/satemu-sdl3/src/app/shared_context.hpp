@@ -6,6 +6,7 @@
 #include <app/settings.hpp>
 
 #include <app/input/input_capturer.hpp>
+#include <app/input/input_context.hpp>
 
 #include <app/debug/scu_tracer.hpp>
 #include <app/debug/sh2_tracer.hpp>
@@ -25,9 +26,11 @@ namespace app {
 struct SharedContext {
     satemu::Saturn saturn;
 
-    Profile profile;
-    Settings settings{saturn};
+    input::InputContext inputContext;
     input::InputCapturer inputCapturer;
+
+    Profile profile;
+    Settings settings{saturn, inputContext};
 
     // Certain GUI interactions requires synchronization with the emulator thread, specifically when dealing with
     // dynamic objects:

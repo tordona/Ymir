@@ -870,30 +870,32 @@ void App::RunEmulator() {
     // ---------------------------------
     // Input action handlers
 
+    auto &inputContext = m_context.inputContext;
+
     bool paused = false; // TODO: this should be updated by the emulator thread via events
 
-    m_inputContext.SetActionHandler(actions::cd_drive::LoadDisc, [&](void *, bool actuated) {
+    inputContext.SetActionHandler(actions::cd_drive::LoadDisc, [&](void *, bool actuated) {
         if (actuated) {
             OpenLoadDiscDialog();
         }
     });
-    m_inputContext.SetActionHandler(actions::cd_drive::EjectDisc, [&](void *, bool actuated) {
+    inputContext.SetActionHandler(actions::cd_drive::EjectDisc, [&](void *, bool actuated) {
         if (actuated) {
             m_context.EnqueueEvent(events::emu::EjectDisc());
         }
     });
-    m_inputContext.SetActionHandler(actions::cd_drive::OpenCloseTray, [&](void *, bool actuated) {
+    inputContext.SetActionHandler(actions::cd_drive::OpenCloseTray, [&](void *, bool actuated) {
         if (actuated) {
             m_context.EnqueueEvent(events::emu::OpenCloseTray());
         }
     });
 
-    m_inputContext.SetActionHandler(actions::general::ToggleWindowedVideoOutput, [&](void *, bool actuated) {
+    inputContext.SetActionHandler(actions::general::ToggleWindowedVideoOutput, [&](void *, bool actuated) {
         if (actuated) {
             m_context.settings.video.displayVideoOutputInWindow ^= true;
         }
     });
-    m_inputContext.SetActionHandler(actions::general::OpenSettings, [&](void *, bool actuated) {
+    inputContext.SetActionHandler(actions::general::OpenSettings, [&](void *, bool actuated) {
         if (actuated) {
             m_settingsWindow.Open = true;
         }
@@ -903,7 +905,7 @@ void App::RunEmulator() {
         using Button = peripheral::StandardPad::Button;
 
         auto registerButton = [&](input::ActionID action, Button button) {
-            m_inputContext.SetActionHandler(action, [=, this](void *context, bool actuated) {
+            inputContext.SetActionHandler(action, [=, this](void *context, bool actuated) {
                 auto &port = *reinterpret_cast<peripheral::PeripheralPort *>(context);
                 std::unique_lock lock{m_context.locks.peripherals};
                 if (auto *pad = port.GetPeripheral().As<peripheral::PeripheralType::StandardPad>()) {
@@ -931,41 +933,41 @@ void App::RunEmulator() {
         registerButton(actions::std_saturn_pad::R, Button::R);
     }
 
-    m_inputContext.SetActionHandler(actions::sys::HardReset, [&](void *, bool actuated) {
+    inputContext.SetActionHandler(actions::sys::HardReset, [&](void *, bool actuated) {
         if (actuated) {
             m_context.EnqueueEvent(events::emu::HardReset());
         }
     });
-    m_inputContext.SetActionHandler(actions::sys::SoftReset, [&](void *, bool actuated) {
+    inputContext.SetActionHandler(actions::sys::SoftReset, [&](void *, bool actuated) {
         if (actuated) {
             m_context.EnqueueEvent(events::emu::SoftReset());
         }
     });
-    m_inputContext.SetActionHandler(actions::sys::ResetButton, [&](void *, bool actuated) {
+    inputContext.SetActionHandler(actions::sys::ResetButton, [&](void *, bool actuated) {
         m_context.EnqueueEvent(events::emu::SetResetButton(actuated));
     });
 
-    m_inputContext.SetActionHandler(actions::emu::FrameStep, [&](void *, bool actuated) {
+    inputContext.SetActionHandler(actions::emu::FrameStep, [&](void *, bool actuated) {
         if (actuated) {
             paused = true;
             m_context.EnqueueEvent(events::emu::FrameStep());
         }
     });
-    m_inputContext.SetActionHandler(actions::emu::PauseResume, [&](void *, bool actuated) {
+    inputContext.SetActionHandler(actions::emu::PauseResume, [&](void *, bool actuated) {
         if (actuated) {
             paused = !paused;
             m_context.EnqueueEvent(events::emu::SetPaused(paused));
         }
     });
-    m_inputContext.SetActionHandler(actions::emu::FastForward,
-                                    [&](void *, bool actuated) { m_audioSystem.SetSync(!actuated); });
+    inputContext.SetActionHandler(actions::emu::FastForward,
+                                  [&](void *, bool actuated) { m_audioSystem.SetSync(!actuated); });
 
-    m_inputContext.SetActionHandler(actions::dbg::ToggleDebugTrace, [&](void *, bool actuated) {
+    inputContext.SetActionHandler(actions::dbg::ToggleDebugTrace, [&](void *, bool actuated) {
         if (actuated) {
             m_context.EnqueueEvent(events::emu::SetDebugTrace(!m_context.saturn.IsDebugTracingEnabled()));
         }
     });
-    m_inputContext.SetActionHandler(actions::dbg::DumpMemory, [&](void *, bool actuated) {
+    inputContext.SetActionHandler(actions::dbg::DumpMemory, [&](void *, bool actuated) {
         if (actuated) {
             m_context.EnqueueEvent(events::emu::DumpMemory());
         }
@@ -1028,8 +1030,8 @@ void App::RunEmulator() {
             case SDL_EVENT_KEY_UP:
                 if (!io.WantCaptureKeyboard) {
                     // TODO: consider supporting multiple keyboards (evt.key.which)
-                    m_inputContext.ProcessPrimitive(input::SDL3ScancodeToKeyboardKey(evt.key.scancode),
-                                                    input::SDL3ToKeyModifier(evt.key.mod), evt.key.down);
+                    inputContext.ProcessPrimitive(input::SDL3ScancodeToKeyboardKey(evt.key.scancode),
+                                                  input::SDL3ToKeyModifier(evt.key.mod), evt.key.down);
                 } else if (m_context.inputCapturer.IsCapturing()) {
                     m_context.inputCapturer.ProcessPrimitive(input::SDL3ScancodeToKeyboardKey(evt.key.scancode),
                                                              input::SDL3ToKeyModifier(evt.key.mod), evt.key.down);
@@ -1047,7 +1049,7 @@ void App::RunEmulator() {
                 if (!io.WantCaptureMouse) {
                     // TODO: handle these
                     // TODO: consider supporting multiple mice (evt.button.which)
-                    // m_inputContext.ProcessMouseButtonEvent(evt.button.button, evt.button.clicks, evt.button.x,
+                    // inputContext.ProcessMouseButtonEvent(evt.button.button, evt.button.clicks, evt.button.x,
                     // evt.button.y, evt.button.down);
                 } /*else if (m_context.inputCapturer.IsCapturing()) {
                     m_context.inputCapturer.ProcessPrimitive(input::SDL3ToMouseButton(evt.button.button),
@@ -1058,7 +1060,7 @@ void App::RunEmulator() {
                 if (!io.WantCaptureMouse) {
                     // TODO: handle these
                     // TODO: consider supporting multiple mice (evt.motion.which)
-                    // m_inputContext.ProcessMouseMotionEvent(evt.motion.xrel, evt.motion.yrel);
+                    // inputContext.ProcessMouseMotionEvent(evt.motion.xrel, evt.motion.yrel);
                 }
                 break;
             case SDL_EVENT_MOUSE_WHEEL:
@@ -1066,7 +1068,7 @@ void App::RunEmulator() {
                     // TODO: handle these
                     // TODO: consider supporting multiple mice (evt.wheel.which)
                     // const float flippedFactor = evt.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1.0f : 1.0f;
-                    // m_inputContext.ProcessMouseMotionEvent(evt.wheel.x * flippedFactor, evt.wheel.y * flippedFactor);
+                    // inputContext.ProcessMouseMotionEvent(evt.wheel.x * flippedFactor, evt.wheel.y * flippedFactor);
                 }
                 break;
 
@@ -1091,9 +1093,9 @@ void App::RunEmulator() {
                     m_context.inputCapturer.ProcessPrimitive(input::SDL3ScancodeToKeyboardKey(evt.key.scancode),
                                                              input::SDL3ToKeyModifier(evt.key.mod), evt.key.down);
                 } else {
-                    m_inputContext.ProcessPrimitive(evt.gbutton.which,
-                                                    input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button),
-                                                    evt.gbutton.down);
+                    inputContext.ProcessPrimitive(evt.gbutton.which,
+                                                  input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button),
+                                                  evt.gbutton.down);
                 }
                 break;
 
@@ -1204,15 +1206,15 @@ void App::RunEmulator() {
             if (ImGui::BeginMenu("File")) {
                 // CD drive
                 if (ImGui::MenuItem("Load disc image",
-                                    input::ToShortcut(m_inputContext, actions::cd_drive::LoadDisc).c_str())) {
+                                    input::ToShortcut(inputContext, actions::cd_drive::LoadDisc).c_str())) {
                     OpenLoadDiscDialog();
                 }
                 if (ImGui::MenuItem("Open/close tray",
-                                    input::ToShortcut(m_inputContext, actions::cd_drive::OpenCloseTray).c_str())) {
+                                    input::ToShortcut(inputContext, actions::cd_drive::OpenCloseTray).c_str())) {
                     m_context.EnqueueEvent(events::emu::OpenCloseTray());
                 }
                 if (ImGui::MenuItem("Eject disc",
-                                    input::ToShortcut(m_inputContext, actions::cd_drive::EjectDisc).c_str())) {
+                                    input::ToShortcut(inputContext, actions::cd_drive::EjectDisc).c_str())) {
                     m_context.EnqueueEvent(events::emu::EjectDisc());
                 }
 
@@ -1252,7 +1254,7 @@ void App::RunEmulator() {
 
                 if (ImGui::MenuItem(
                         "Windowed video output",
-                        input::ToShortcut(m_inputContext, actions::general::ToggleWindowedVideoOutput).c_str(),
+                        input::ToShortcut(inputContext, actions::general::ToggleWindowedVideoOutput).c_str(),
                         &videoSettings.displayVideoOutputInWindow)) {
                     fitWindowToScreenNow = true;
                 }
@@ -1266,11 +1268,11 @@ void App::RunEmulator() {
                 // Resets
                 {
                     if (ImGui::MenuItem("Soft reset",
-                                        input::ToShortcut(m_inputContext, actions::sys::SoftReset).c_str())) {
+                                        input::ToShortcut(inputContext, actions::sys::SoftReset).c_str())) {
                         m_context.EnqueueEvent(events::emu::SoftReset());
                     }
                     if (ImGui::MenuItem("Hard reset",
-                                        input::ToShortcut(m_inputContext, actions::sys::HardReset).c_str())) {
+                                        input::ToShortcut(inputContext, actions::sys::HardReset).c_str())) {
                         m_context.EnqueueEvent(events::emu::HardReset());
                     }
                     // TODO: Let's not make it that easy to accidentally wipe system settings
@@ -1335,19 +1337,19 @@ void App::RunEmulator() {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Emulation")) {
-                if (ImGui::MenuItem("Frame step", input::ToShortcut(m_inputContext, actions::emu::FrameStep).c_str())) {
+                if (ImGui::MenuItem("Frame step", input::ToShortcut(inputContext, actions::emu::FrameStep).c_str())) {
                     paused = true;
                     m_context.EnqueueEvent(events::emu::FrameStep());
                 }
                 if (ImGui::MenuItem("Pause/resume",
-                                    input::ToShortcut(m_inputContext, actions::emu::PauseResume).c_str())) {
+                                    input::ToShortcut(inputContext, actions::emu::PauseResume).c_str())) {
                     paused = !paused;
                     m_context.EnqueueEvent(events::emu::SetPaused(paused));
                 }
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Settings")) {
-                ImGui::MenuItem("Settings", input::ToShortcut(m_inputContext, actions::general::OpenSettings).c_str(),
+                ImGui::MenuItem("Settings", input::ToShortcut(inputContext, actions::general::OpenSettings).c_str(),
                                 &m_settingsWindow.Open);
                 ImGui::Separator();
                 if (ImGui::MenuItem("General")) {
@@ -1373,7 +1375,7 @@ void App::RunEmulator() {
             if (ImGui::BeginMenu("Debug")) {
                 bool debugTrace = m_context.saturn.IsDebugTracingEnabled();
                 if (ImGui::MenuItem("Enable tracing",
-                                    input::ToShortcut(m_inputContext, actions::dbg::ToggleDebugTrace).c_str(),
+                                    input::ToShortcut(inputContext, actions::dbg::ToggleDebugTrace).c_str(),
                                     &debugTrace)) {
                     m_context.EnqueueEvent(events::emu::SetDebugTrace(debugTrace));
                 }
@@ -1389,7 +1391,7 @@ void App::RunEmulator() {
                     ImGui::EndMenu();
                 }
                 if (ImGui::MenuItem("Dump all memory",
-                                    input::ToShortcut(m_inputContext, actions::dbg::DumpMemory).c_str())) {
+                                    input::ToShortcut(inputContext, actions::dbg::DumpMemory).c_str())) {
                     m_context.EnqueueEvent(events::emu::DumpMemory());
                 }
                 ImGui::Separator();
@@ -1708,11 +1710,11 @@ void App::EmulatorThread() {
 }
 
 void App::RebindInputs() {
-    m_context.settings.RebindInputs(m_inputContext);
+    m_context.settings.RebindInputs();
 }
 
 void App::RebindAction(input::ActionID action) {
-    m_context.settings.RebindAction(m_inputContext, action);
+    m_context.settings.RebindAction(action);
 }
 
 void App::OpenLoadDiscDialog() {

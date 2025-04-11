@@ -203,8 +203,9 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
 // -------------------------------------------------------------------------------------------------
 // Implementation
 
-Settings::Settings(Saturn &saturn) noexcept
-    : m_emuConfig(saturn.configuration) {
+Settings::Settings(Saturn &saturn, input::InputContext &inputContext) noexcept
+    : m_emuConfig(saturn.configuration)
+    , m_inputContext(inputContext) {
 
     auto mapActionInput = [&](InputBind &bind, void *context = nullptr) {
         m_actionInputs[bind.action].insert({&bind, context});
@@ -266,29 +267,9 @@ void Settings::ResetToDefaults() {
 
     {
         using PeriphType = peripheral::PeripheralType;
-        using Mod = input::KeyModifier;
         using Key = input::KeyboardKey;
-        using KeyCombo = input::KeyCombo;
 
-        hotkeys.loadDisc.events = {KeyCombo{Mod::Control, Key::O}};
-        hotkeys.ejectDisc.events = {KeyCombo{Mod::Control, Key::W}};
-        hotkeys.openCloseTray.events = {KeyCombo{Mod::Control, Key::T}};
-
-        hotkeys.toggleWindowedVideoOutput.events = {KeyCombo{Mod::None, Key::F9}};
-
-        hotkeys.openSettings.events = {KeyCombo{Mod::None, Key::F10}};
-
-        hotkeys.hardReset.events = {KeyCombo{Mod::Control, Key::R}};
-        hotkeys.softReset.events = {KeyCombo{Mod::Control | Mod::Shift, Key::R}};
-
-        hotkeys.frameStep.events = {KeyCombo{Mod::None, Key::RightBracket}};
-        hotkeys.pauseResume.events = {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::Control, Key::P}};
-        hotkeys.fastForward.events = {KeyCombo{Mod::None, Key::Tab}};
-
-        hotkeys.resetButton.events = {KeyCombo{Mod::Shift, Key::R}};
-
-        hotkeys.toggleDebugTrace.events = {KeyCombo{Mod::None, Key::F11}};
-        hotkeys.dumpMemory.events = {KeyCombo{Mod::Control, Key::F11}};
+        ResetHotkeys();
 
         input.port1.type = PeriphType::StandardPad;
         input.port2.type = PeriphType::None;
@@ -573,8 +554,8 @@ void Settings::MakeDirty() {
     m_dirtyTimestamp = std::chrono::steady_clock::now();
 }
 
-void Settings::RebindInputs(input::InputContext &ctx) {
-    ctx.UnmapAllActions();
+void Settings::RebindInputs() {
+    m_inputContext.UnmapAllActions();
 
     for (auto &[action, mappings] : m_actionInputs) {
         for (auto &[bind, context] : mappings) {
@@ -584,33 +565,33 @@ void Settings::RebindInputs(input::InputContext &ctx) {
                     event.keyCombo.key == input::KeyboardKey::Escape) {
                     continue;
                 }
-                ctx.MapAction(event, action, context);
+                m_inputContext.MapAction(event, action, context);
             }
         }
     }
 
-    SyncInputSettings(ctx);
+    SyncInputSettings();
 }
 
-void Settings::RebindAction(input::InputContext &ctx, input::ActionID action) {
-    ctx.UnmapAction(action);
+void Settings::RebindAction(input::ActionID action) {
+    m_inputContext.UnmapAction(action);
 
     if (auto it = m_actionInputs.find(action); it != m_actionInputs.end()) {
         for (auto &[bind, context] : it->second) {
             for (auto &event : bind->events) {
-                ctx.MapAction(event, action, context);
+                m_inputContext.MapAction(event, action, context);
             }
         }
     }
 
-    SyncInputSettings(ctx);
+    SyncInputSettings();
 }
 
-void Settings::SyncInputSettings(input::InputContext &ctx) {
+void Settings::SyncInputSettings() {
     for (auto &[action, mappings] : m_actionInputs) {
         for (auto &[bind, context] : mappings) {
             bind->events.fill({});
-            for (int i = 0; auto &input : ctx.GetMappedInputs(bind->action)) {
+            for (int i = 0; auto &input : m_inputContext.GetMappedInputs(bind->action)) {
                 if (input.context == context) {
                     bind->events[i++] = input.event;
                     if (i == kNumBindsPerInput) {
@@ -620,6 +601,32 @@ void Settings::SyncInputSettings(input::InputContext &ctx) {
             }
         }
     }
+}
+
+void Settings::ResetHotkeys() {
+    using Mod = input::KeyModifier;
+    using Key = input::KeyboardKey;
+    using KeyCombo = input::KeyCombo;
+
+    hotkeys.loadDisc.events = {KeyCombo{Mod::Control, Key::O}};
+    hotkeys.ejectDisc.events = {KeyCombo{Mod::Control, Key::W}};
+    hotkeys.openCloseTray.events = {KeyCombo{Mod::Control, Key::T}};
+
+    hotkeys.toggleWindowedVideoOutput.events = {KeyCombo{Mod::None, Key::F9}};
+
+    hotkeys.openSettings.events = {KeyCombo{Mod::None, Key::F10}};
+
+    hotkeys.hardReset.events = {KeyCombo{Mod::Control, Key::R}};
+    hotkeys.softReset.events = {KeyCombo{Mod::Control | Mod::Shift, Key::R}};
+
+    hotkeys.frameStep.events = {KeyCombo{Mod::None, Key::RightBracket}};
+    hotkeys.pauseResume.events = {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::Control, Key::P}};
+    hotkeys.fastForward.events = {KeyCombo{Mod::None, Key::Tab}};
+
+    hotkeys.resetButton.events = {KeyCombo{Mod::Shift, Key::R}};
+
+    hotkeys.toggleDebugTrace.events = {KeyCombo{Mod::None, Key::F11}};
+    hotkeys.dumpMemory.events = {KeyCombo{Mod::Control, Key::F11}};
 }
 
 } // namespace app

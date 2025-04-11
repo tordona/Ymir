@@ -122,7 +122,7 @@ struct InputBindWithContext {
 };
 
 struct Settings {
-    Settings(satemu::Saturn &saturn) noexcept;
+    Settings(satemu::Saturn &saturn, input::InputContext &inputContext) noexcept;
 
     void ResetToDefaults();
 
@@ -138,14 +138,17 @@ public:
     void CheckDirty();
     void MakeDirty();
 
-    // Clears and rebinds all configured inputs to the context
-    void RebindInputs(input::InputContext &ctx);
+    // Clears and rebinds all configured inputs
+    void RebindInputs();
 
-    // Clears and rebinds the inputs of the specified action to the context
-    void RebindAction(input::InputContext &ctx, input::ActionID action);
+    // Clears and rebinds the inputs of the specified action
+    void RebindAction(input::ActionID action);
 
-    // Synchronizes input settings with those from the given context
-    void SyncInputSettings(input::InputContext &ctx);
+    // Synchronizes input settings with those from the input context
+    void SyncInputSettings();
+
+    // Restores all default hotkeys
+    void ResetHotkeys();
 
     // ---------------------------------------------------------------------------------------------
 
@@ -216,6 +219,7 @@ public:
 
 private:
     satemu::core::Configuration &m_emuConfig;
+    input::InputContext &m_inputContext;
 
     bool m_dirty = false;
     std::chrono::steady_clock::time_point m_dirtyTimestamp;
