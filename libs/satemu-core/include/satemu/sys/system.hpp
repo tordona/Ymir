@@ -15,7 +15,7 @@ struct System {
     const ClockRatios &GetClockRatios() const {
         const bool clock352 = clockSpeed == ClockSpeed::_352;
         const bool pal = videoStandard == config::sys::VideoStandard::PAL;
-        return kClockRatios[clock352 | (pal << 1)];
+        return kClockRatios[(pal << 1) | (clock352 << 0)];
     }
 
     void UpdateClockRatios() {
