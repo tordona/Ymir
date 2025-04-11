@@ -73,6 +73,7 @@ private:
     void EmulatorThread();
 
     void RebindInputs();
+    void RebindAction(input::ActionID action);
 
     void OpenLoadDiscDialog();
     void ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, int filter);

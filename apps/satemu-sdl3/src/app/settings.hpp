@@ -19,6 +19,8 @@
 #include <chrono>
 #include <filesystem>
 #include <sstream>
+#include <unordered_map>
+#include <unordered_set>
 #include <variant>
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -103,6 +105,7 @@ struct SettingsSaveResult {
 
 // Number of simultaneous input bindings allowed per input event
 inline constexpr size_t kNumBindsPerInput = 4;
+
 struct InputBind {
     InputBind(input::ActionID action)
         : action(action) {}
@@ -111,11 +114,15 @@ struct InputBind {
     std::array<input::InputEvent, kNumBindsPerInput> events;
 };
 
+struct InputBindWithContext {
+    InputBind *bind;
+    void *context;
+
+    constexpr bool operator==(const InputBindWithContext &) const = default;
+};
+
 struct Settings {
-    Settings(satemu::core::Configuration &emuConfig) noexcept
-        : m_emuConfig(emuConfig) {
-        ResetToDefaults();
-    }
+    Settings(satemu::Saturn &saturn) noexcept;
 
     void ResetToDefaults();
 
@@ -132,10 +139,13 @@ public:
     void MakeDirty();
 
     // Clears and rebinds all configured inputs to the context
-    void RebindInputs(input::InputContext &ctx, satemu::Saturn &saturn);
+    void RebindInputs(input::InputContext &ctx);
+
+    // Clears and rebinds the inputs of the specified action to the context
+    void RebindAction(input::InputContext &ctx, input::ActionID action);
 
     // Synchronizes input settings with those from the given context
-    void SyncInputSettings(input::InputContext &ctx, satemu::Saturn &saturn);
+    void SyncInputSettings(input::InputContext &ctx);
 
     // ---------------------------------------------------------------------------------------------
 
@@ -209,6 +219,18 @@ private:
 
     bool m_dirty = false;
     std::chrono::steady_clock::time_point m_dirtyTimestamp;
+
+    std::unordered_map<input::ActionID, std::unordered_set<InputBindWithContext>> m_actionInputs;
 };
 
 } // namespace app
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Hashing
+
+template <>
+struct std::hash<app::InputBindWithContext> {
+    std::size_t operator()(const app::InputBindWithContext &e) const noexcept {
+        return std::hash<void *>{}(e.bind) ^ std::hash<void *>{}(e.context);
+    }
+};

@@ -54,10 +54,11 @@ struct GUIEvent {
         FitWindowToScreen,
 
         RebindInputs,
+        RebindAction,
     };
 
     Type type;
-    std::variant<std::monostate, bool, FileDialogParams, FolderDialogParams, ui::SettingsTab> value;
+    std::variant<std::monostate, bool, uint32, FileDialogParams, FolderDialogParams, ui::SettingsTab> value;
 };
 
 } // namespace app

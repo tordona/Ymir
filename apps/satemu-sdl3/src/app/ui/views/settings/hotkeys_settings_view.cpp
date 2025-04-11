@@ -40,8 +40,7 @@ void HotkeysSettingsView::Display() {
                         m_context.inputCapturer.Capture([=, this, &bind](const input::InputEvent &event) {
                             bind.events[i] = event;
                             MakeDirty();
-                            // TODO: rebind only the modified action
-                            m_context.EnqueueEvent(events::gui::RebindInputs());
+                            m_context.EnqueueEvent(events::gui::RebindAction(bind.action));
                             m_captured = true;
                         });
                     }
@@ -50,8 +49,7 @@ void HotkeysSettingsView::Display() {
                     if (MakeDirty(ImGui::IsItemClicked(ImGuiMouseButton_Right))) {
                         m_context.inputCapturer.CancelCapture();
                         bind.events[i] = {};
-                        // TODO: rebind only the modified action
-                        m_context.EnqueueEvent(events::gui::RebindInputs());
+                        m_context.EnqueueEvent(events::gui::RebindAction(bind.action));
                     }
                 }
             }

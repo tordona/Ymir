@@ -1146,6 +1146,7 @@ void App::RunEmulator() {
             case EvtType::FitWindowToScreen: fitWindowToScreenNow = true; break;
 
             case EvtType::RebindInputs: RebindInputs(); break;
+            case EvtType::RebindAction: RebindAction(std::get<input::ActionID>(evt.value)); break;
             }
         }
 
@@ -1707,7 +1708,11 @@ void App::EmulatorThread() {
 }
 
 void App::RebindInputs() {
-    m_context.settings.RebindInputs(m_inputContext, m_context.saturn);
+    m_context.settings.RebindInputs(m_inputContext);
+}
+
+void App::RebindAction(input::ActionID action) {
+    m_context.settings.RebindAction(m_inputContext, action);
 }
 
 void App::OpenLoadDiscDialog() {

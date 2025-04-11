@@ -203,6 +203,60 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
 // -------------------------------------------------------------------------------------------------
 // Implementation
 
+Settings::Settings(Saturn &saturn) noexcept
+    : m_emuConfig(saturn.configuration) {
+
+    auto mapActionInput = [&](InputBind &bind, void *context = nullptr) {
+        m_actionInputs[bind.action].insert({&bind, context});
+    };
+
+    mapActionInput(hotkeys.openSettings);
+    mapActionInput(hotkeys.toggleWindowedVideoOutput);
+    mapActionInput(hotkeys.loadDisc);
+    mapActionInput(hotkeys.ejectDisc);
+    mapActionInput(hotkeys.openCloseTray);
+    mapActionInput(hotkeys.hardReset);
+    mapActionInput(hotkeys.softReset);
+    mapActionInput(hotkeys.resetButton);
+    mapActionInput(hotkeys.pauseResume);
+    mapActionInput(hotkeys.frameStep);
+    mapActionInput(hotkeys.fastForward);
+    mapActionInput(hotkeys.toggleDebugTrace);
+    mapActionInput(hotkeys.dumpMemory);
+
+    auto ctx1 = &saturn.SMPC.GetPeripheralPort1();
+    mapActionInput(input.port1.standardPadBinds.a, ctx1);
+    mapActionInput(input.port1.standardPadBinds.b, ctx1);
+    mapActionInput(input.port1.standardPadBinds.c, ctx1);
+    mapActionInput(input.port1.standardPadBinds.x, ctx1);
+    mapActionInput(input.port1.standardPadBinds.y, ctx1);
+    mapActionInput(input.port1.standardPadBinds.z, ctx1);
+    mapActionInput(input.port1.standardPadBinds.l, ctx1);
+    mapActionInput(input.port1.standardPadBinds.r, ctx1);
+    mapActionInput(input.port1.standardPadBinds.start, ctx1);
+    mapActionInput(input.port1.standardPadBinds.up, ctx1);
+    mapActionInput(input.port1.standardPadBinds.down, ctx1);
+    mapActionInput(input.port1.standardPadBinds.left, ctx1);
+    mapActionInput(input.port1.standardPadBinds.right, ctx1);
+
+    auto ctx2 = &saturn.SMPC.GetPeripheralPort2();
+    mapActionInput(input.port2.standardPadBinds.a, ctx2);
+    mapActionInput(input.port2.standardPadBinds.b, ctx2);
+    mapActionInput(input.port2.standardPadBinds.c, ctx2);
+    mapActionInput(input.port2.standardPadBinds.x, ctx2);
+    mapActionInput(input.port2.standardPadBinds.y, ctx2);
+    mapActionInput(input.port2.standardPadBinds.z, ctx2);
+    mapActionInput(input.port2.standardPadBinds.l, ctx2);
+    mapActionInput(input.port2.standardPadBinds.r, ctx2);
+    mapActionInput(input.port2.standardPadBinds.start, ctx2);
+    mapActionInput(input.port2.standardPadBinds.up, ctx2);
+    mapActionInput(input.port2.standardPadBinds.down, ctx2);
+    mapActionInput(input.port2.standardPadBinds.left, ctx2);
+    mapActionInput(input.port2.standardPadBinds.right, ctx2);
+
+    ResetToDefaults();
+}
+
 void Settings::ResetToDefaults() {
     general.preloadDiscImagesToRAM = false;
     general.boostEmuThreadPriority = true;
@@ -519,142 +573,53 @@ void Settings::MakeDirty() {
     m_dirtyTimestamp = std::chrono::steady_clock::now();
 }
 
-void Settings::RebindInputs(input::InputContext &ctx, Saturn &saturn) {
+void Settings::RebindInputs(input::InputContext &ctx) {
     ctx.UnmapAllActions();
 
-    // Sanitization -- erase ESC bindings if they were manually added in the configuration file
-    auto unbindEscape = [](input::InputEvent &event) {
-        if (event.type == input::InputEvent::Type::KeyCombo && event.keyCombo.key == input::KeyboardKey::Escape) {
-            event = {};
-        }
-    };
-
-    auto bind = [&](InputBind &bind) {
-        for (auto &input : bind.events) {
-            unbindEscape(input);
-            ctx.MapAction(input, bind.action);
-        }
-    };
-
-    auto bindCtx = [&](InputBind &bind, void *actionCtx) {
-        for (auto &input : bind.events) {
-            unbindEscape(input);
-            ctx.MapAction(input, bind.action, actionCtx);
-        }
-    };
-
-    bind(hotkeys.openSettings);
-    bind(hotkeys.toggleWindowedVideoOutput);
-    bind(hotkeys.loadDisc);
-    bind(hotkeys.ejectDisc);
-    bind(hotkeys.openCloseTray);
-    bind(hotkeys.hardReset);
-    bind(hotkeys.softReset);
-    bind(hotkeys.resetButton);
-    bind(hotkeys.pauseResume);
-    bind(hotkeys.frameStep);
-    bind(hotkeys.fastForward);
-    bind(hotkeys.toggleDebugTrace);
-    bind(hotkeys.dumpMemory);
-
-    auto ctx1 = &saturn.SMPC.GetPeripheralPort1();
-    bindCtx(input.port1.standardPadBinds.a, ctx1);
-    bindCtx(input.port1.standardPadBinds.b, ctx1);
-    bindCtx(input.port1.standardPadBinds.c, ctx1);
-    bindCtx(input.port1.standardPadBinds.x, ctx1);
-    bindCtx(input.port1.standardPadBinds.y, ctx1);
-    bindCtx(input.port1.standardPadBinds.z, ctx1);
-    bindCtx(input.port1.standardPadBinds.l, ctx1);
-    bindCtx(input.port1.standardPadBinds.r, ctx1);
-    bindCtx(input.port1.standardPadBinds.start, ctx1);
-    bindCtx(input.port1.standardPadBinds.up, ctx1);
-    bindCtx(input.port1.standardPadBinds.down, ctx1);
-    bindCtx(input.port1.standardPadBinds.left, ctx1);
-    bindCtx(input.port1.standardPadBinds.right, ctx1);
-
-    auto ctx2 = &saturn.SMPC.GetPeripheralPort2();
-    bindCtx(input.port2.standardPadBinds.a, ctx2);
-    bindCtx(input.port2.standardPadBinds.b, ctx2);
-    bindCtx(input.port2.standardPadBinds.c, ctx2);
-    bindCtx(input.port2.standardPadBinds.x, ctx2);
-    bindCtx(input.port2.standardPadBinds.y, ctx2);
-    bindCtx(input.port2.standardPadBinds.z, ctx2);
-    bindCtx(input.port2.standardPadBinds.l, ctx2);
-    bindCtx(input.port2.standardPadBinds.r, ctx2);
-    bindCtx(input.port2.standardPadBinds.start, ctx2);
-    bindCtx(input.port2.standardPadBinds.up, ctx2);
-    bindCtx(input.port2.standardPadBinds.down, ctx2);
-    bindCtx(input.port2.standardPadBinds.left, ctx2);
-    bindCtx(input.port2.standardPadBinds.right, ctx2);
-
-    SyncInputSettings(ctx, saturn);
-}
-
-void Settings::SyncInputSettings(input::InputContext &ctx, satemu::Saturn &saturn) {
-    auto sync = [&](InputBind &bind) {
-        bind.events.fill({});
-        for (int i = 0; auto &input : ctx.GetMappedInputs(bind.action)) {
-            bind.events[i++] = input.event;
-            if (i == 4) {
-                break;
+    for (auto &[action, mappings] : m_actionInputs) {
+        for (auto &[bind, context] : mappings) {
+            for (auto &event : bind->events) {
+                // Sanitization -- skip ESC bindings if they were manually added in the configuration file
+                if (event.type == input::InputEvent::Type::KeyCombo &&
+                    event.keyCombo.key == input::KeyboardKey::Escape) {
+                    continue;
+                }
+                ctx.MapAction(event, action, context);
             }
         }
-    };
-    auto syncCtx = [&](InputBind &bind, void *actionCtx) {
-        bind.events.fill({});
-        for (int i = 0; auto &input : ctx.GetMappedInputs(bind.action)) {
-            if (input.context == actionCtx) {
-                bind.events[i++] = input.event;
-                if (i == 4) {
-                    break;
+    }
+
+    SyncInputSettings(ctx);
+}
+
+void Settings::RebindAction(input::InputContext &ctx, input::ActionID action) {
+    ctx.UnmapAction(action);
+
+    if (auto it = m_actionInputs.find(action); it != m_actionInputs.end()) {
+        for (auto &[bind, context] : it->second) {
+            for (auto &event : bind->events) {
+                ctx.MapAction(event, action, context);
+            }
+        }
+    }
+
+    SyncInputSettings(ctx);
+}
+
+void Settings::SyncInputSettings(input::InputContext &ctx) {
+    for (auto &[action, mappings] : m_actionInputs) {
+        for (auto &[bind, context] : mappings) {
+            bind->events.fill({});
+            for (int i = 0; auto &input : ctx.GetMappedInputs(bind->action)) {
+                if (input.context == context) {
+                    bind->events[i++] = input.event;
+                    if (i == kNumBindsPerInput) {
+                        break;
+                    }
                 }
             }
         }
-    };
-
-    sync(hotkeys.openSettings);
-    sync(hotkeys.toggleWindowedVideoOutput);
-    sync(hotkeys.loadDisc);
-    sync(hotkeys.ejectDisc);
-    sync(hotkeys.openCloseTray);
-    sync(hotkeys.hardReset);
-    sync(hotkeys.softReset);
-    sync(hotkeys.resetButton);
-    sync(hotkeys.pauseResume);
-    sync(hotkeys.frameStep);
-    sync(hotkeys.fastForward);
-    sync(hotkeys.toggleDebugTrace);
-    sync(hotkeys.dumpMemory);
-
-    auto ctx1 = &saturn.SMPC.GetPeripheralPort1();
-    syncCtx(input.port1.standardPadBinds.a, ctx1);
-    syncCtx(input.port1.standardPadBinds.b, ctx1);
-    syncCtx(input.port1.standardPadBinds.c, ctx1);
-    syncCtx(input.port1.standardPadBinds.x, ctx1);
-    syncCtx(input.port1.standardPadBinds.y, ctx1);
-    syncCtx(input.port1.standardPadBinds.z, ctx1);
-    syncCtx(input.port1.standardPadBinds.l, ctx1);
-    syncCtx(input.port1.standardPadBinds.r, ctx1);
-    syncCtx(input.port1.standardPadBinds.start, ctx1);
-    syncCtx(input.port1.standardPadBinds.up, ctx1);
-    syncCtx(input.port1.standardPadBinds.down, ctx1);
-    syncCtx(input.port1.standardPadBinds.left, ctx1);
-    syncCtx(input.port1.standardPadBinds.right, ctx1);
-
-    auto ctx2 = &saturn.SMPC.GetPeripheralPort2();
-    syncCtx(input.port2.standardPadBinds.a, ctx2);
-    syncCtx(input.port2.standardPadBinds.b, ctx2);
-    syncCtx(input.port2.standardPadBinds.c, ctx2);
-    syncCtx(input.port2.standardPadBinds.x, ctx2);
-    syncCtx(input.port2.standardPadBinds.y, ctx2);
-    syncCtx(input.port2.standardPadBinds.z, ctx2);
-    syncCtx(input.port2.standardPadBinds.l, ctx2);
-    syncCtx(input.port2.standardPadBinds.r, ctx2);
-    syncCtx(input.port2.standardPadBinds.start, ctx2);
-    syncCtx(input.port2.standardPadBinds.up, ctx2);
-    syncCtx(input.port2.standardPadBinds.down, ctx2);
-    syncCtx(input.port2.standardPadBinds.left, ctx2);
-    syncCtx(input.port2.standardPadBinds.right, ctx2);
+    }
 }
 
 } // namespace app

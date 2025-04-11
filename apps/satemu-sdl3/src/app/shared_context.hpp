@@ -26,7 +26,7 @@ struct SharedContext {
     satemu::Saturn saturn;
 
     Profile profile;
-    Settings settings{saturn.configuration};
+    Settings settings{saturn};
     input::InputCapturer inputCapturer;
 
     // Certain GUI interactions requires synchronization with the emulator thread, specifically when dealing with

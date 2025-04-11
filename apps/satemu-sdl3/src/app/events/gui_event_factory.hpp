@@ -48,4 +48,8 @@ inline GUIEvent RebindInputs() {
     return {.type = GUIEvent::Type::RebindInputs};
 }
 
+inline GUIEvent RebindAction(input::ActionID action) {
+    return {.type = GUIEvent::Type::RebindAction, .value = action};
+}
+
 } // namespace app::events::gui
