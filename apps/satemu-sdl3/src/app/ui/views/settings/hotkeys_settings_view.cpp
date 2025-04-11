@@ -86,8 +86,8 @@ void HotkeysSettingsView::Display() {
                 m_captured = false;
                 ImGui::CloseCurrentPopup();
             }
-            ImGui::TextUnformatted("Press any key, mouse button or gamepad button to map it.");
-            ImGui::TextUnformatted("Press Escape or click outside of this popup to cancel.");
+            ImGui::TextUnformatted("Press any key, mouse button or gamepad button to map it.\n\n"
+                                   "Press Escape or click outside of this popup to cancel.");
             ImGui::EndPopup();
         } else {
             m_context.inputCapturer.CancelCapture();
