@@ -1435,7 +1435,7 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
             const uint32 u = line.U();
 
             const bool useHighSpeedShrink = mode.highSpeedShrink && line.uinc > Slope::kFracOne;
-            const uint32 adjustedU = useHighSpeedShrink ? ((u & ~1) | regs.evenOddCoordSelect) : u;
+            const uint32 adjustedU = useHighSpeedShrink ? ((u & ~1) | (uint32)regs.evenOddCoordSelect) : u;
 
             const uint32 charIndex = adjustedU + v * charSizeH;
 

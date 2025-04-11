@@ -285,7 +285,11 @@ struct DisasmTable {
 private:
     static constexpr auto alignment = 64;
 
+    DisasmTable();
+
 public:
+    static DisasmTable s_instance;
+
     alignas(alignment) std::array<OpcodeDisasm, 0x10000> disasm;
 };
 

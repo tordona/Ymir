@@ -722,7 +722,8 @@ FORCE_INLINE T SCU::ReadReg(uint32 address) {
 template <bool poke>
 FORCE_INLINE void SCU::WriteRegByte(uint32 address, uint8 value) {
     switch (address) {
-    case 0xA0 ... 0xA1: break;                                     // Interrupt Mask (bits 16-31)
+    case 0xA0: break;                                              // Interrupt Mask (bits 24-31)
+    case 0xA1: break;                                              // Interrupt Mask (bits 16-23)
     case 0xA2: m_intrMask.u32 = (value << 8u) & 0x0000BF00; break; // Interrupt Mask (bits 8-15)
     case 0xA3: m_intrMask.u32 = (value << 0u) & 0x000000FF; break; // Interrupt Mask (bits 0-7)
 
@@ -731,25 +732,39 @@ FORCE_INLINE void SCU::WriteRegByte(uint32 address, uint8 value) {
     case 0xA6: m_intrStatus.u32 &= (value << 8u) | 0xFFFF00FF; break;  // Interrupt Status (bits 8-15)
     case 0xA7: m_intrStatus.u32 &= (value << 0u) | 0xFFFFFF00; break;  // Interrupt Status (bits 0-7)
 
-    case 0xA8 ... 0xAA: break; // A-Bus Interrupt Acknowledge (bits 8-31)
-    case 0xAB:                 // A-Bus Interrupt Acknowledge (bits 0-7)
+    case 0xA8: break; // A-Bus Interrupt Acknowledge (bits 24-31)
+    case 0xA9: break; // A-Bus Interrupt Acknowledge (bits 16-23)
+    case 0xAA: break; // A-Bus Interrupt Acknowledge (bits 8-15)
+    case 0xAB:        // A-Bus Interrupt Acknowledge (bits 0-7)
         m_abusIntrAck = bit::test<0>(value);
         if constexpr (!poke) {
             UpdateInterruptLevel<false>();
         }
         break;
 
-    case 0xB0 ... 0xB3: // A-Bus Set (part 1)
+    case 0xB0: // A-Bus Set (part 1, bits 24-31)
+    case 0xB1: // A-Bus Set (part 1, bits 16-23)
+    case 0xB2: // A-Bus Set (part 1, bits 8-15)
+    case 0xB3: // A-Bus Set (part 1, bits 0-7)
         // ignored for now
         break;
-    case 0xB4 ... 0xB7: // A-Bus Set (part 2)
+    case 0xB4: // A-Bus Set (part 2, bits 24-31)
+    case 0xB5: // A-Bus Set (part 2, bits 16-23)
+    case 0xB6: // A-Bus Set (part 2, bits 8-15)
+    case 0xB7: // A-Bus Set (part 2, bits 0-7)
         // ignored for now
         break;
-    case 0xB8 ... 0xBB: // A-Bus Refresh
+    case 0xB8: // A-Bus Refresh (bits 24-31)
+    case 0xB9: // A-Bus Refresh (bits 16-23)
+    case 0xBA: // A-Bus Refresh (bits 8-15)
+    case 0xBB: // A-Bus Refresh (bits 0-7)
         // ignored for now
         break;
 
-    case 0xC8 ... 0xCB: // SCU Version (read-only)
+    case 0xC8: // SCU Version (read-only, bits 24-31)
+    case 0xC9: // SCU Version (read-only, bits 16-23)
+    case 0xCA: // SCU Version (read-only, bits 8-15)
+    case 0xCB: // SCU Version (read-only, bits 0-7)
         break;
 
     default:

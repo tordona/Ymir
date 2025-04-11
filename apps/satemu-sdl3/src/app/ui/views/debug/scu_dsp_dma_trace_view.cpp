@@ -77,7 +77,10 @@ void SCUDSPDMATraceView::Display() {
                     ImGui::PopFont();
                 } else {
                     switch (trace.addrDSP) {
-                    case 0 ... 3: ImGui::Text("Data RAM %u", trace.addrDSP); break;
+                    case 0: ImGui::TextUnformatted("Data RAM 0"); break;
+                    case 1: ImGui::TextUnformatted("Data RAM 1"); break;
+                    case 2: ImGui::TextUnformatted("Data RAM 2"); break;
+                    case 3: ImGui::TextUnformatted("Data RAM 3"); break;
                     default: ImGui::Text("Invalid (%u)", trace.addrDSP); break;
                     }
                 }
@@ -85,7 +88,10 @@ void SCUDSPDMATraceView::Display() {
             if (ImGui::TableNextColumn()) {
                 if (trace.toD0) {
                     switch (trace.addrDSP) {
-                    case 0 ... 3: ImGui::Text("Data RAM %u", trace.addrDSP); break;
+                    case 0: ImGui::TextUnformatted("Data RAM 0"); break;
+                    case 1: ImGui::TextUnformatted("Data RAM 1"); break;
+                    case 2: ImGui::TextUnformatted("Data RAM 2"); break;
+                    case 3: ImGui::TextUnformatted("Data RAM 3"); break;
                     case 4: ImGui::TextUnformatted("Program RAM"); break;
                     default: ImGui::Text("Invalid (%u)", trace.addrDSP); break;
                     }

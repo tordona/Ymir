@@ -706,7 +706,20 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     case 0x83: return WDT.ReadRSTCSR();
 
     case 0x91: return SBYCR.u8;
-    case 0x92 ... 0x9F: return m_cache.ReadCCR();
+    case 0x92: return m_cache.ReadCCR();
+    case 0x93: return m_cache.ReadCCR();
+    case 0x94: return m_cache.ReadCCR();
+    case 0x95: return m_cache.ReadCCR();
+    case 0x96: return m_cache.ReadCCR();
+    case 0x97: return m_cache.ReadCCR();
+    case 0x98: return m_cache.ReadCCR();
+    case 0x99: return m_cache.ReadCCR();
+    case 0x9A: return m_cache.ReadCCR();
+    case 0x9B: return m_cache.ReadCCR();
+    case 0x9C: return m_cache.ReadCCR();
+    case 0x9D: return m_cache.ReadCCR();
+    case 0x9E: return m_cache.ReadCCR();
+    case 0x9F: return m_cache.ReadCCR();
 
     case 0xE0: return OnChipRegReadWord<peek>(address) >> 8u;
     case 0xE1: return OnChipRegReadWord<peek>(address & ~1) >> 0u;
@@ -851,7 +864,19 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
         case 0x81: WDT.WriteWTCNT(value); break;
         case 0x83: WDT.WriteRSTCSR<poke>(value); break;
 
-        case 0x93 ... 0x9F: m_cache.WriteCCR<poke>(value); break;
+        case 0x93: m_cache.WriteCCR<poke>(value); break;
+        case 0x94: m_cache.WriteCCR<poke>(value); break;
+        case 0x95: m_cache.WriteCCR<poke>(value); break;
+        case 0x96: m_cache.WriteCCR<poke>(value); break;
+        case 0x97: m_cache.WriteCCR<poke>(value); break;
+        case 0x98: m_cache.WriteCCR<poke>(value); break;
+        case 0x99: m_cache.WriteCCR<poke>(value); break;
+        case 0x9A: m_cache.WriteCCR<poke>(value); break;
+        case 0x9B: m_cache.WriteCCR<poke>(value); break;
+        case 0x9C: m_cache.WriteCCR<poke>(value); break;
+        case 0x9D: m_cache.WriteCCR<poke>(value); break;
+        case 0x9E: m_cache.WriteCCR<poke>(value); break;
+        case 0x9F: m_cache.WriteCCR<poke>(value); break;
         }
     }
 
@@ -1478,8 +1503,8 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
     const uint16 instr = FetchInstruction<enableCache>(PC);
     TraceExecuteInstruction<debug>(m_tracer, PC, instr, m_delaySlot);
 
-    const OpcodeType opcode = g_decodeTable.opcodes[m_delaySlot][instr];
-    const DecodedArgs &args = g_decodeTable.args[instr];
+    const OpcodeType opcode = DecodeTable::s_instance.opcodes[m_delaySlot][instr];
+    const DecodedArgs &args = DecodeTable::s_instance.args[instr];
 
     switch (opcode) {
     case OpcodeType::NOP: NOP(), PC += 2; return 1;

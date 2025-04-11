@@ -87,28 +87,30 @@ public:
 class DRAM32MbitCartridge final : public BaseDRAMCartridge<0x5C, 4_MiB, CartType::DRAM32Mbit> {
 public:
     uint8 ReadByte(uint32 address) const final {
-        switch (address >> 20) {
-        case 0x24 ... 0x27: return m_ram[address & 0x3FFFFF];
-        default: return 0xFFu;
+        if (util::AddressInRange<0x240'0000, 0x27F'FFFF>(address)) {
+            return m_ram[address & 0x3FFFFF];
+        } else {
+            return 0xFFu;
         }
     }
 
     uint16 ReadWord(uint32 address) const final {
-        switch (address >> 20) {
-        case 0x24 ... 0x27: return util::ReadBE<uint16>(&m_ram[address & 0x3FFFFF]);
-        default: return 0xFFFFu;
+        if (util::AddressInRange<0x240'0000, 0x27F'FFFF>(address)) {
+            return util::ReadBE<uint16>(&m_ram[address & 0x3FFFFF]);
+        } else {
+            return 0xFFFFu;
         }
     }
 
     void WriteByte(uint32 address, uint8 value) final {
-        switch (address >> 20) {
-        case 0x24 ... 0x27: m_ram[address & 0x3FFFFF] = value; break;
+        if (util::AddressInRange<0x240'0000, 0x27F'FFFF>(address)) {
+            m_ram[address & 0x3FFFFF] = value;
         }
     }
 
     void WriteWord(uint32 address, uint16 value) final {
-        switch (address >> 20) {
-        case 0x24 ... 0x27: util::WriteBE<uint16>(&m_ram[address & 0x3FFFFF], value); break;
+        if (util::AddressInRange<0x240'0000, 0x27F'FFFF>(address)) {
+            util::WriteBE<uint16>(&m_ram[address & 0x3FFFFF], value);
         }
     }
 

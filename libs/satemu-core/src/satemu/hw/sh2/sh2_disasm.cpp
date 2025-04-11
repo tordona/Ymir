@@ -4,11 +4,9 @@
 
 namespace satemu::sh2 {
 
-static DisasmTable BuildDisasmTable() {
-    DisasmTable table{};
-
+DisasmTable::DisasmTable() {
     for (uint32 instr = 0; instr < 0x10000; instr++) {
-        OpcodeDisasm &disasm = table.disasm[instr];
+        OpcodeDisasm &disasm = this->disasm[instr];
 
         // ---------------------------------------
 
@@ -381,14 +379,12 @@ static DisasmTable BuildDisasmTable() {
         }
         }
     }
-
-    return table;
 }
 
-DisasmTable g_disasmTable = BuildDisasmTable();
+DisasmTable DisasmTable::s_instance{};
 
 const OpcodeDisasm &Disassemble(uint16 opcode) {
-    return g_disasmTable.disasm[opcode];
+    return DisasmTable::s_instance.disasm[opcode];
 }
 
 } // namespace satemu::sh2

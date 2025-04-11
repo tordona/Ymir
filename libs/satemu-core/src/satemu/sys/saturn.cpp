@@ -199,7 +199,7 @@ void Saturn::EnableDebugTracing(bool enable) {
 }
 
 template <bool debug, bool enableSH2Cache>
-void Saturn::RunFrame() {
+void Saturn::RunFrameImpl() {
     // Use the last line phase as reference to give some leeway if we overshoot the target cycles
     while (VDP.InLastLinePhase()) {
         Run<debug, enableSH2Cache>();
@@ -236,10 +236,11 @@ void Saturn::Run() {
 }
 
 void Saturn::UpdateRunFrameFn() {
-    m_runFrameFn =
-        m_systemFeatures.enableDebugTracing
-            ? (m_systemFeatures.emulateSH2Cache ? &Saturn::RunFrame<true, true> : &Saturn::RunFrame<true, false>)
-            : (m_systemFeatures.emulateSH2Cache ? &Saturn::RunFrame<false, true> : &Saturn::RunFrame<false, false>);
+    m_runFrameFn = m_systemFeatures.enableDebugTracing
+                       ? (m_systemFeatures.emulateSH2Cache ? &Saturn::RunFrameImpl<true, true>
+                                                           : &Saturn::RunFrameImpl<true, false>)
+                       : (m_systemFeatures.emulateSH2Cache ? &Saturn::RunFrameImpl<false, true>
+                                                           : &Saturn::RunFrameImpl<false, false>);
 }
 
 void Saturn::UpdatePreferredRegionOrder(std::span<const config::sys::Region> regions) {

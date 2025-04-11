@@ -185,7 +185,14 @@ public:
     template <bool debug>
     FORCE_INLINE uint32 ReadSource(uint8 index) {
         switch (index) {
-        case 0b0000 ... 0b0111: // M0-3, MC0-3
+        case 0b0000: // M0
+        case 0b0001: // M1
+        case 0b0010: // M2
+        case 0b0011: // M3
+        case 0b0100: // MC0
+        case 0b0101: // MC1
+        case 0b0110: // MC2
+        case 0b0111: // MC3
         {
             const uint8 ctIndex = bit::extract<0, 1>(index);
             const bool inc = bit::test<2>(index);
@@ -214,7 +221,10 @@ public:
         }
 
         switch (index) {
-        case 0b0000 ... 0b0011: // MC0-3
+        case 0b0000: // MC0
+        case 0b0001: // MC1
+        case 0b0010: // MC2
+        case 0b0011: // MC3
         {
             const uint32 addr = CT[index];
             dataRAM[index][addr] = value;
@@ -227,7 +237,10 @@ public:
         case 0b0111: dmaWriteAddr = (value << 2u) & 0x7FF'FFFC; break;
         case 0b1010: loopCount = value & 0xFFF; break;
         case 0b1011: loopTop = value; break;
-        case 0b1100 ... 0b1111: // M0-3
+        case 0b1100: // M0
+        case 0b1101: // M1
+        case 0b1110: // M2
+        case 0b1111: // M3
             CT[index & 3] = value & 0x3F;
             incCT[index & 3] = false;
             break;
@@ -243,7 +256,10 @@ public:
         }
 
         switch (index) {
-        case 0b0000 ... 0b0011: // MC0-3
+        case 0b0000: // MC0
+        case 0b0001: // MC1
+        case 0b0010: // MC2
+        case 0b0011: // MC3
         {
             const uint32 addr = CT[index];
             dataRAM[index][addr] = value;

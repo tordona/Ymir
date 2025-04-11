@@ -116,7 +116,7 @@ struct Saturn : sys::ISystemOperations {
 private:
     // Runs the emulator until the end of the current frame
     template <bool debug, bool enableSH2Cache>
-    void RunFrame();
+    void RunFrameImpl();
 
     // Runs the emulator until the next scheduled event
     template <bool debug, bool enableSH2Cache>

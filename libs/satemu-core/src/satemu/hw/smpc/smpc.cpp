@@ -158,7 +158,13 @@ template <bool peek>
 uint8 SMPC::Read(uint32 address) {
     if constexpr (peek) {
         switch (address) {
-        case 0x01 ... 0x0D: return ReadIREG(address >> 1);
+        case 0x01: return ReadIREG(0);
+        case 0x03: return ReadIREG(1);
+        case 0x05: return ReadIREG(2);
+        case 0x07: return ReadIREG(3);
+        case 0x09: return ReadIREG(4);
+        case 0x0B: return ReadIREG(5);
+        case 0x0D: return ReadIREG(6);
         case 0x1F: return ReadCOMREG();
         case 0x79: return ReadDDR1();
         case 0x7B: return ReadDDR2();
@@ -168,7 +174,38 @@ uint8 SMPC::Read(uint32 address) {
     }
 
     switch (address) {
-    case 0x21 ... 0x5F: return ReadOREG((address - 0x20) >> 1);
+    case 0x21: return ReadOREG(0);
+    case 0x23: return ReadOREG(1);
+    case 0x25: return ReadOREG(2);
+    case 0x27: return ReadOREG(3);
+    case 0x29: return ReadOREG(4);
+    case 0x2B: return ReadOREG(5);
+    case 0x2D: return ReadOREG(6);
+    case 0x2F: return ReadOREG(7);
+    case 0x31: return ReadOREG(8);
+    case 0x33: return ReadOREG(9);
+    case 0x35: return ReadOREG(10);
+    case 0x37: return ReadOREG(11);
+    case 0x39: return ReadOREG(12);
+    case 0x3B: return ReadOREG(13);
+    case 0x3D: return ReadOREG(14);
+    case 0x3F: return ReadOREG(15);
+    case 0x41: return ReadOREG(16);
+    case 0x43: return ReadOREG(17);
+    case 0x45: return ReadOREG(18);
+    case 0x47: return ReadOREG(19);
+    case 0x49: return ReadOREG(20);
+    case 0x4B: return ReadOREG(21);
+    case 0x4D: return ReadOREG(22);
+    case 0x4F: return ReadOREG(23);
+    case 0x51: return ReadOREG(24);
+    case 0x53: return ReadOREG(25);
+    case 0x55: return ReadOREG(26);
+    case 0x57: return ReadOREG(27);
+    case 0x59: return ReadOREG(28);
+    case 0x5B: return ReadOREG(29);
+    case 0x5D: return ReadOREG(30);
+    case 0x5F: return ReadOREG(31);
     case 0x61: return ReadSR();
     case 0x63: return ReadSF();
     case 0x75: return ReadPDR1();
@@ -187,7 +224,38 @@ template <bool poke>
 void SMPC::Write(uint32 address, uint8 value) {
     if constexpr (poke) {
         switch (address) {
-        case 0x21 ... 0x5F: WriteOREG((address - 0x20) >> 1, value); break;
+        case 0x21: WriteOREG(0, value); break;
+        case 0x23: WriteOREG(1, value); break;
+        case 0x25: WriteOREG(2, value); break;
+        case 0x27: WriteOREG(3, value); break;
+        case 0x29: WriteOREG(4, value); break;
+        case 0x2B: WriteOREG(5, value); break;
+        case 0x2D: WriteOREG(6, value); break;
+        case 0x2F: WriteOREG(7, value); break;
+        case 0x31: WriteOREG(8, value); break;
+        case 0x33: WriteOREG(9, value); break;
+        case 0x35: WriteOREG(10, value); break;
+        case 0x37: WriteOREG(11, value); break;
+        case 0x39: WriteOREG(12, value); break;
+        case 0x3B: WriteOREG(13, value); break;
+        case 0x3D: WriteOREG(14, value); break;
+        case 0x3F: WriteOREG(15, value); break;
+        case 0x41: WriteOREG(16, value); break;
+        case 0x43: WriteOREG(17, value); break;
+        case 0x45: WriteOREG(18, value); break;
+        case 0x47: WriteOREG(19, value); break;
+        case 0x49: WriteOREG(20, value); break;
+        case 0x4B: WriteOREG(21, value); break;
+        case 0x4D: WriteOREG(22, value); break;
+        case 0x4F: WriteOREG(23, value); break;
+        case 0x51: WriteOREG(24, value); break;
+        case 0x53: WriteOREG(25, value); break;
+        case 0x55: WriteOREG(26, value); break;
+        case 0x57: WriteOREG(27, value); break;
+        case 0x59: WriteOREG(28, value); break;
+        case 0x5B: WriteOREG(29, value); break;
+        case 0x5D: WriteOREG(30, value); break;
+        case 0x5F: WriteOREG(31, value); break;
         case 0x61: WriteSR(value); break;
         }
     } else {
@@ -196,7 +264,7 @@ void SMPC::Write(uint32 address, uint8 value) {
 
     switch (address) {
     case 0x01:
-        WriteIREG(0x00, value);
+        WriteIREG(0, value);
         if constexpr (!poke) {
             if (m_intbackInProgress) {
                 // Handle INTBACK continue/break requests
@@ -217,7 +285,12 @@ void SMPC::Write(uint32 address, uint8 value) {
             }
         }
         break;
-    case 0x03 ... 0x0D: WriteIREG(address >> 1u, value); break;
+    case 0x03: WriteIREG(1, value); break;
+    case 0x05: WriteIREG(2, value); break;
+    case 0x07: WriteIREG(3, value); break;
+    case 0x09: WriteIREG(4, value); break;
+    case 0x0B: WriteIREG(5, value); break;
+    case 0x0D: WriteIREG(6, value); break;
     case 0x1F: WriteCOMREG<poke>(value); break;
     case 0x63: WriteSF<poke>(value); break;
     case 0x75: WritePDR1<poke>(value); break;

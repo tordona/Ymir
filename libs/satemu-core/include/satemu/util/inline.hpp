@@ -9,7 +9,7 @@
     #define NO_INLINE [[gnu::noinline]]
     #define FLATTEN [[gnu::flatten]]
 #elif defined(_MSC_VER)
-    #define FORCE_INLINE [[msvc::forceinline]]
+    #define FORCE_INLINE [[msvc::forceinline]] inline
     #define NO_INLINE [[msvc::noinline]]
     #define FLATTEN [[msvc::flatten]]
 #else

@@ -293,16 +293,16 @@ struct DecodeTable {
 private:
     static constexpr auto alignment = 64;
 
+    DecodeTable();
+
 public:
+    static DecodeTable s_instance;
+
     // Instruction decoding table
     // [0] regular instructions
     // [1] delay slot instructions
     alignas(alignment) std::array<std::array<OpcodeType, 0x10000>, 2> opcodes;
     alignas(alignment) std::array<DecodedArgs, 0x10000> args;
 };
-
-DecodeTable BuildDecodeTable();
-
-extern DecodeTable g_decodeTable;
 
 } // namespace satemu::sh2

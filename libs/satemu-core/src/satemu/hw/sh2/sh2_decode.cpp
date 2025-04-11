@@ -4,16 +4,14 @@
 
 namespace satemu::sh2 {
 
-DecodeTable BuildDecodeTable() {
-    DecodeTable table{};
-
-    table.opcodes[0].fill(OpcodeType::Illegal);
-    table.opcodes[1].fill(OpcodeType::Illegal);
+DecodeTable::DecodeTable() {
+    opcodes[0].fill(OpcodeType::Illegal);
+    opcodes[1].fill(OpcodeType::Illegal);
 
     for (uint32 instr = 0; instr < 0x10000; instr++) {
-        auto &regularOpcode = table.opcodes[0][instr];
-        auto &delayOpcode = table.opcodes[1][instr];
-        auto &args = table.args[instr];
+        auto &regularOpcode = opcodes[0][instr];
+        auto &delayOpcode = opcodes[1][instr];
+        auto &args = DecodeTable::args[instr];
 
         auto setOpcode = [&](OpcodeType type) {
             static constexpr uint16 delayOffset = static_cast<uint16>(OpcodeType::Delay_NOP);
@@ -299,10 +297,8 @@ DecodeTable BuildDecodeTable() {
         case 0xE: setOpcode(OpcodeType::MOV_I), decodeNI(0, 0); break;
         }
     }
-
-    return table;
 }
 
-DecodeTable g_decodeTable = BuildDecodeTable();
+DecodeTable DecodeTable::s_instance{};
 
 } // namespace satemu::sh2
