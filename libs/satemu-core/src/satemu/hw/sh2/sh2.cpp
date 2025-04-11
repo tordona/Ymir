@@ -39,7 +39,7 @@ namespace grp {
     struct exec : public base {
         // static constexpr bool enabled = true;
         static constexpr std::string Name(std::string_view prefix) {
-            return fmt::format("{}-Exec", prefix);
+            return fmt::format("{}-Exec", std::string(prefix));
         }
     };
 
@@ -50,35 +50,35 @@ namespace grp {
     struct mem : public base {
         // static constexpr bool enabled = true;
         static constexpr std::string Name(std::string_view prefix) {
-            return fmt::format("{}-Mem", prefix);
+            return fmt::format("{}-Mem", std::string(prefix));
         }
     };
 
     struct reg : public base {
         // static constexpr bool enabled = true;
         static constexpr std::string Name(std::string_view prefix) {
-            return fmt::format("{}-Reg", prefix);
+            return fmt::format("{}-Reg", std::string(prefix));
         }
     };
 
     struct code_fetch : public base {
         // static constexpr bool enabled = true;
         static constexpr std::string Name(std::string_view prefix) {
-            return fmt::format("{}-CodeFetch", prefix);
+            return fmt::format("{}-CodeFetch", std::string(prefix));
         }
     };
 
     struct cache : public base {
         // static constexpr bool enabled = true;
         static constexpr std::string Name(std::string_view prefix) {
-            return fmt::format("{}-Cache", prefix);
+            return fmt::format("{}-Cache", std::string(prefix));
         }
     };
 
     struct dma : public base {
         // static constexpr bool enabled = true;
         static constexpr std::string Name(std::string_view prefix) {
-            return fmt::format("{}-DMA", prefix);
+            return fmt::format("{}-DMA", std::string(prefix));
         }
     };
 
