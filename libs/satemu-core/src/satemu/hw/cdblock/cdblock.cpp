@@ -344,9 +344,9 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
         return false;
     }
 
-    const bool isStartFAD = bit::extract<23>(startParam);
-    const bool isEndFAD = bit::extract<23>(endParam);
-    const bool resetPos = bit::extract<15>(repeatParam);
+    const bool isStartFAD = bit::test<23>(startParam);
+    const bool isEndFAD = bit::test<23>(endParam);
+    const bool resetPos = bit::test<15>(repeatParam);
 
     // Sanity check: both must be FADs or tracks, not a mix
     if (isStartFAD != isEndFAD) {
@@ -1268,12 +1268,12 @@ void CDBlock::CmdInitializeCDSystem() {
     // standby time
     // <blank>
     // ECC            retry count
-    const bool softReset = bit::extract<0>(m_CR[0]);
-    // const bool decodeSubcodeRW = bit::extract<1>(m_CR[0]);
-    // const bool ignoreMode2Subheader = bit::extract<2>(m_CR[0]);
-    // const bool retryForm2Read = bit::extract<3>(m_CR[0]);
+    const bool softReset = bit::test<0>(m_CR[0]);
+    // const bool decodeSubcodeRW = bit::test<1>(m_CR[0]);
+    // const bool ignoreMode2Subheader = bit::test<2>(m_CR[0]);
+    // const bool retryForm2Read = bit::test<3>(m_CR[0]);
     const uint8 readSpeed = bit::extract<4, 5>(m_CR[0]); // 0=max (2x), 1=1x, 2=2x, 3=invalid
-    // const bool keepSettings = bit::extract<7>(m_CR[0]);
+    // const bool keepSettings = bit::test<7>(m_CR[0]);
     // const uint16 standbyTime = m_CR[1];
     // const uint8 ecc = bit::extract<8, 15>(m_CR[3]);
     // const uint8 retryCount = bit::extract<0, 7>(m_CR[3]);
@@ -1395,7 +1395,7 @@ void CDBlock::CmdSeekDisc() {
     // <blank>
     // <blank>
     const uint32 startPos = (bit::extract<0, 7>(m_CR[0]) << 16u) | m_CR[1];
-    const bool isStartFAD = bit::extract<23>(startPos);
+    const bool isStartFAD = bit::test<23>(startPos);
 
     devlog::trace<grp::base>("Seek position: {:06X}", startPos);
     if (startPos == 0xFFFFFF) {
@@ -1757,9 +1757,9 @@ void CDBlock::CmdSetFilterMode() {
 
         devlog::debug<grp::base>(
             "Filter {} mode={:02X}{}{}{}{}{}{}", filterNumber, filter.mode,
-            (bit::extract<0>(filter.mode) ? " filenum" : ""), (bit::extract<1>(filter.mode) ? " channum" : ""),
-            (bit::extract<2>(filter.mode) ? " submode" : ""), (bit::extract<3>(filter.mode) ? " codinginfo" : ""),
-            (bit::extract<4>(filter.mode) ? " <- inverted" : ""), (bit::extract<6>(filter.mode) ? " fad" : ""));
+            (bit::test<0>(filter.mode) ? " filenum" : ""), (bit::test<1>(filter.mode) ? " channum" : ""),
+            (bit::test<2>(filter.mode) ? " submode" : ""), (bit::test<3>(filter.mode) ? " codinginfo" : ""),
+            (bit::test<4>(filter.mode) ? " <- inverted" : ""), (bit::test<6>(filter.mode) ? " fad" : ""));
 
         if (mode & 0x80) {
             devlog::debug<grp::base>("Filter {} conditions reset", filterNumber);
@@ -1811,8 +1811,8 @@ void CDBlock::CmdSetFilterConnection() {
     // true conn      false conn
     // filter number  <blank>
     // <blank>
-    const bool setTrueConn = bit::extract<0>(m_CR[0]);
-    const bool setFalseConn = bit::extract<1>(m_CR[0]);
+    const bool setTrueConn = bit::test<0>(m_CR[0]);
+    const bool setFalseConn = bit::test<1>(m_CR[0]);
     const uint8 trueConn = bit::extract<8, 15>(m_CR[1]);
     const uint8 falseConn = bit::extract<0, 7>(m_CR[1]);
     const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
@@ -1886,12 +1886,12 @@ void CDBlock::CmdResetSelector() {
             reject = true;
         }
     } else {
-        const bool clearBufferData = bit::extract<2>(resetFlags);
-        const bool clearPartitionOutputs = bit::extract<3>(resetFlags);
-        const bool clearFilterConditions = bit::extract<4>(resetFlags);
-        const bool clearFilterInputs = bit::extract<5>(resetFlags);
-        const bool clearFilterTrueOutputs = bit::extract<6>(resetFlags);
-        const bool clearFilterFalseOutputs = bit::extract<7>(resetFlags);
+        const bool clearBufferData = bit::test<2>(resetFlags);
+        const bool clearPartitionOutputs = bit::test<3>(resetFlags);
+        const bool clearFilterConditions = bit::test<4>(resetFlags);
+        const bool clearFilterInputs = bit::test<5>(resetFlags);
+        const bool clearFilterTrueOutputs = bit::test<6>(resetFlags);
+        const bool clearFilterFalseOutputs = bit::test<7>(resetFlags);
 
         if (clearBufferData) {
             devlog::debug<grp::base>("Clearing all buffer partitions");

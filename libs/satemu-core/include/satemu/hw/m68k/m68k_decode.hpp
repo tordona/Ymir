@@ -12,10 +12,10 @@ namespace satemu::m68k {
 inline constexpr auto kCondTable = [] {
     std::array<bool, 16 * 16> arr{};
     for (uint32 nzvc = 0; nzvc < 16; nzvc++) {
-        const bool n = bit::extract<3>(nzvc);
-        const bool z = bit::extract<2>(nzvc);
-        const bool v = bit::extract<1>(nzvc);
-        const bool c = bit::extract<0>(nzvc);
+        const bool n = bit::test<3>(nzvc);
+        const bool z = bit::test<2>(nzvc);
+        const bool v = bit::test<1>(nzvc);
+        const bool c = bit::test<0>(nzvc);
 
         arr[(0u << 4u) | nzvc] = true;          // T
         arr[(1u << 4u) | nzvc] = false;         // F

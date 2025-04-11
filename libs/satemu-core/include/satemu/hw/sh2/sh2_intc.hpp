@@ -197,13 +197,13 @@ struct InterruptController {
     template <bool lowerByte, bool upperByte, bool poke>
     FORCE_INLINE void WriteICR(uint16 value) {
         if constexpr (lowerByte) {
-            ICR.VECMD = bit::extract<0>(value);
+            ICR.VECMD = bit::test<0>(value);
             UpdateIRLVector();
         }
         if constexpr (upperByte) {
-            ICR.NMIE = bit::extract<8>(value);
+            ICR.NMIE = bit::test<8>(value);
             if constexpr (poke) {
-                ICR.NMIL = bit::extract<15>(value);
+                ICR.NMIL = bit::test<15>(value);
             }
         }
     }

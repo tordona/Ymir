@@ -41,7 +41,7 @@ public:
         : m_frameAddress(dirRecord.extentPos)
         , m_size(dirRecord.dataSize)
         , m_parent(parent)
-        , m_isDirectory(bit::extract<1>(dirRecord.flags))
+        , m_isDirectory(bit::test<1>(dirRecord.flags))
         , m_fileInfo(dirRecord, fileID) {}
 
     uint32 FrameAddress() const {
@@ -82,7 +82,7 @@ public:
     Directory(const iso9660::DirectoryRecord &dirRecord, uint16 parent)
         : m_frameAddress(dirRecord.extentPos)
         , m_parent(parent) {
-        assert(bit::extract<1>(dirRecord.flags));
+        assert(bit::test<1>(dirRecord.flags));
     }
 
     uint32 FrameAddress() const {

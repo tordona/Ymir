@@ -1081,7 +1081,7 @@ FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
 
     m_displayFB ^= 1;
 
-    if (bit::extract<1>(m_VDP1.plotTrigger)) {
+    if (bit::test<1>(m_VDP1.plotTrigger)) {
         VDP1BeginFrame();
     }
 }
@@ -2591,7 +2591,7 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
 
         if (params.mixedFormat) {
             const uint16 spriteDataValue = util::ReadBE<uint16>(&spriteFB[(spriteFBOffset * sizeof(uint16)) & 0x3FFFE]);
-            if (bit::extract<15>(spriteDataValue)) {
+            if (bit::test<15>(spriteDataValue)) {
                 // RGB data
                 pixel.color = ConvertRGB555to888(Color555{spriteDataValue});
                 pixel.transparent = false;
@@ -3222,8 +3222,8 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
             }
             ch.specColorCalc = bgParams.supplScrollSpecialColorCalc;
             ch.specPriority = bgParams.supplScrollSpecialPriority;
-            ch.flipH = !extChar && bit::extract<10>(charData);
-            ch.flipV = !extChar && bit::extract<11>(charData);
+            ch.flipH = !extChar && bit::test<10>(charData);
+            ch.flipV = !extChar && bit::test<11>(charData);
 
             const uint32 dotX = bit::extract<0, 2>(scrollX);
             const uint32 dotY = bit::extract<0, 2>(scrollY);
@@ -3390,7 +3390,7 @@ FORCE_INLINE Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams 
                                                                       : VDP2ReadRendererVRAM<uint16>(address);
         coeff.value = bit::extract_signed<0, 14>(data);
         coeff.lineColorData = 0;
-        coeff.transparent = bit::extract<15>(data);
+        coeff.transparent = bit::test<15>(data);
 
         if (params.coeffDataMode == CoefficientDataMode::ViewpointX) {
             coeff.value <<= 14;
@@ -3404,7 +3404,7 @@ FORCE_INLINE Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams 
                                                                       : VDP2ReadRendererVRAM<uint32>(address);
         coeff.value = bit::extract_signed<0, 23>(data);
         coeff.lineColorData = bit::extract<24, 30>(data);
-        coeff.transparent = bit::extract<31>(data);
+        coeff.transparent = bit::test<31>(data);
 
         if (params.coeffDataMode == CoefficientDataMode::ViewpointX) {
             coeff.value <<= 8;
@@ -3545,6 +3545,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, st
 
     static constexpr bool twoWordChar = charMode == CharacterMode::TwoWord;
     static constexpr bool extChar = charMode == CharacterMode::OneWordExtended;
+    static constexpr uint32 fourCellCharValue = fourCellChar ? 1 : 0;
 
     auto [scrollX, scrollY] = scrollCoord;
 
@@ -3559,13 +3560,13 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, st
     const uint32 page = pageX + pageY * 2u;
 
     // Determine character pattern from the scroll coordinates
-    const uint32 charPatX = bit::extract<3, 8>(scrollX) >> fourCellChar;
-    const uint32 charPatY = bit::extract<3, 8>(scrollY) >> fourCellChar;
-    const uint32 charIndex = charPatX + charPatY * (64u >> fourCellChar);
+    const uint32 charPatX = bit::extract<3, 8>(scrollX) >> fourCellCharValue;
+    const uint32 charPatY = bit::extract<3, 8>(scrollY) >> fourCellCharValue;
+    const uint32 charIndex = charPatX + charPatY * (64u >> fourCellCharValue);
 
     // Determine cell index from the scroll coordinates
-    const uint32 cellX = bit::extract<3>(scrollX) & fourCellChar;
-    const uint32 cellY = bit::extract<3>(scrollY) & fourCellChar;
+    const uint32 cellX = bit::extract<3>(scrollX) & fourCellCharValue;
+    const uint32 cellY = bit::extract<3>(scrollY) & fourCellCharValue;
     const uint32 cellIndex = cellX + cellY * 2u;
 
     // Determine dot coordinates
@@ -3593,10 +3594,10 @@ FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(uint32 pageBaseAddres
     Character ch{};
     ch.charNum = bit::extract<0, 14>(charData);
     ch.palNum = bit::extract<16, 22>(charData);
-    ch.specColorCalc = bit::extract<28>(charData);
-    ch.specPriority = bit::extract<29>(charData);
-    ch.flipH = bit::extract<30>(charData);
-    ch.flipV = bit::extract<31>(charData);
+    ch.specColorCalc = bit::test<28>(charData);
+    ch.specPriority = bit::test<29>(charData);
+    ch.flipH = bit::test<30>(charData);
+    ch.flipV = bit::test<31>(charData);
     return ch;
 }
 
@@ -3647,8 +3648,8 @@ FORCE_INLINE VDP::Character VDP::VDP2FetchOneWordCharacter(const BGParams &bgPar
     }
     ch.specColorCalc = bgParams.supplScrollSpecialColorCalc;
     ch.specPriority = bgParams.supplScrollSpecialPriority;
-    ch.flipH = !extChar && bit::extract<10>(charData);
-    ch.flipV = !extChar && bit::extract<11>(charData);
+    ch.flipH = !extChar && bit::test<10>(charData);
+    ch.flipV = !extChar && bit::test<11>(charData);
     return ch;
 }
 
@@ -3699,7 +3700,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
         case PerScreen: return bgParams.colorCalcEnable;
         case PerCharacter: return bgParams.colorCalcEnable && ch.specColorCalc;
         case PerDot: return bgParams.colorCalcEnable && ch.specColorCalc && specFuncCode.colorMatches[colorData];
-        case ColorDataMSB: return bgParams.colorCalcEnable && ch.specColorCalc && bit::extract<2>(colorData);
+        case ColorDataMSB: return bgParams.colorCalcEnable && ch.specColorCalc && bit::test<2>(colorData);
         }
         util::unreachable();
     };
@@ -3749,7 +3750,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
     pixel.priority = bgParams.priorityNumber;
     if (bgParams.priorityMode == PriorityMode::PerCharacter) {
         pixel.priority &= ~1;
-        pixel.priority |= ch.specPriority;
+        pixel.priority |= (uint8)ch.specPriority;
     } else if (bgParams.priorityMode == PriorityMode::PerDot) {
         if constexpr (IsPaletteColorFormat(colorFormat)) {
             pixel.priority &= ~1;
@@ -3795,21 +3796,21 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, Coor
         const uint32 colorIndex = palNum | dotData;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
         pixel.transparent = bgParams.enableTransparency && dotData == 0;
-        pixel.specialColorCalc = getSpecialColorCalcFlag(bit::extract<3>(dotData));
+        pixel.specialColorCalc = getSpecialColorCalcFlag(bit::test<3>(dotData));
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset;
         const uint8 dotData = VDP2ReadRendererVRAM<uint8>(dotAddress);
         const uint32 colorIndex = palNum | dotData;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
         pixel.transparent = bgParams.enableTransparency && dotData == 0;
-        pixel.specialColorCalc = getSpecialColorCalcFlag(bit::extract<3>(dotData));
+        pixel.specialColorCalc = getSpecialColorCalcFlag(bit::test<3>(dotData));
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
         const uint16 dotData = VDP2ReadRendererVRAM<uint16>(dotAddress);
         const uint32 colorIndex = dotData & 0x7FF;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
         pixel.transparent = bgParams.enableTransparency && (dotData & 0x7FF) == 0;
-        pixel.specialColorCalc = getSpecialColorCalcFlag(bit::extract<3>(dotData));
+        pixel.specialColorCalc = getSpecialColorCalcFlag(bit::test<3>(dotData));
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
         const uint16 dotData = VDP2ReadRendererVRAM<uint16>(dotAddress);
@@ -3828,7 +3829,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, Coor
     pixel.priority = bgParams.priorityNumber;
     if (bgParams.priorityMode == PriorityMode::PerCharacter || bgParams.priorityMode == PriorityMode::PerDot) {
         pixel.priority &= ~1;
-        pixel.priority |= bgParams.supplBitmapSpecialPriority;
+        pixel.priority |= (uint8)bgParams.supplBitmapSpecialPriority;
     }
 
     return pixel;
@@ -3876,64 +3877,64 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
     switch (regs.spriteParams.type) {
     case 0x0:
         data.colorData = bit::extract<0, 10>(rawData);
-        data.colorDataMSB = bit::extract<10>(rawData);
+        data.colorDataMSB = bit::test<10>(rawData);
         data.colorCalcRatio = bit::extract<11, 13>(rawData);
         data.priority = bit::extract<14, 15>(rawData);
         data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
         break;
     case 0x1:
         data.colorData = bit::extract<0, 10>(rawData);
-        data.colorDataMSB = bit::extract<10>(rawData);
+        data.colorDataMSB = bit::test<10>(rawData);
         data.colorCalcRatio = bit::extract<11, 12>(rawData);
         data.priority = bit::extract<13, 15>(rawData);
         data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
         break;
     case 0x2:
         data.colorData = bit::extract<0, 10>(rawData);
-        data.colorDataMSB = bit::extract<10>(rawData);
+        data.colorDataMSB = bit::test<10>(rawData);
         data.colorCalcRatio = bit::extract<11, 13>(rawData);
         data.priority = bit::extract<14>(rawData);
-        data.shadowOrWindow = bit::extract<15>(rawData);
+        data.shadowOrWindow = bit::test<15>(rawData);
         data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
         break;
     case 0x3:
         data.colorData = bit::extract<0, 10>(rawData);
-        data.colorDataMSB = bit::extract<10>(rawData);
+        data.colorDataMSB = bit::test<10>(rawData);
         data.colorCalcRatio = bit::extract<11, 12>(rawData);
         data.priority = bit::extract<13, 14>(rawData);
-        data.shadowOrWindow = bit::extract<15>(rawData);
+        data.shadowOrWindow = bit::test<15>(rawData);
         data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
         break;
     case 0x4:
         data.colorData = bit::extract<0, 9>(rawData);
-        data.colorDataMSB = bit::extract<9>(rawData);
+        data.colorDataMSB = bit::test<9>(rawData);
         data.colorCalcRatio = bit::extract<10, 12>(rawData);
         data.priority = bit::extract<13, 14>(rawData);
-        data.shadowOrWindow = bit::extract<15>(rawData);
+        data.shadowOrWindow = bit::test<15>(rawData);
         data.normalShadow = VDP2IsNormalShadow<9>(data.colorData);
         break;
     case 0x5:
         data.colorData = bit::extract<0, 10>(rawData);
-        data.colorDataMSB = bit::extract<10>(rawData);
+        data.colorDataMSB = bit::test<10>(rawData);
         data.colorCalcRatio = bit::extract<11>(rawData);
         data.priority = bit::extract<12, 14>(rawData);
-        data.shadowOrWindow = bit::extract<15>(rawData);
+        data.shadowOrWindow = bit::test<15>(rawData);
         data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
         break;
     case 0x6:
         data.colorData = bit::extract<0, 9>(rawData);
-        data.colorDataMSB = bit::extract<9>(rawData);
+        data.colorDataMSB = bit::test<9>(rawData);
         data.colorCalcRatio = bit::extract<10, 11>(rawData);
         data.priority = bit::extract<12, 14>(rawData);
-        data.shadowOrWindow = bit::extract<15>(rawData);
+        data.shadowOrWindow = bit::test<15>(rawData);
         data.normalShadow = VDP2IsNormalShadow<9>(data.colorData);
         break;
     case 0x7:
         data.colorData = bit::extract<0, 8>(rawData);
-        data.colorDataMSB = bit::extract<8>(rawData);
+        data.colorDataMSB = bit::test<8>(rawData);
         data.colorCalcRatio = bit::extract<9, 11>(rawData);
         data.priority = bit::extract<12, 14>(rawData);
-        data.shadowOrWindow = bit::extract<15>(rawData);
+        data.shadowOrWindow = bit::test<15>(rawData);
         data.normalShadow = VDP2IsNormalShadow<8>(data.colorData);
         break;
     }
@@ -3951,51 +3952,51 @@ FORCE_INLINE SpriteData VDP::VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type
     switch (regs.spriteParams.type) {
     case 0x8:
         data.colorData = bit::extract<0, 6>(rawData);
-        data.colorDataMSB = bit::extract<6>(rawData);
+        data.colorDataMSB = bit::test<6>(rawData);
         data.priority = bit::extract<7>(rawData);
         data.normalShadow = VDP2IsNormalShadow<6>(data.colorData);
         break;
     case 0x9:
         data.colorData = bit::extract<0, 5>(rawData);
-        data.colorDataMSB = bit::extract<5>(rawData);
+        data.colorDataMSB = bit::test<5>(rawData);
         data.colorCalcRatio = bit::extract<6>(rawData);
         data.priority = bit::extract<7>(rawData);
         data.normalShadow = VDP2IsNormalShadow<5>(data.colorData);
         break;
     case 0xA:
         data.colorData = bit::extract<0, 5>(rawData);
-        data.colorDataMSB = bit::extract<5>(rawData);
+        data.colorDataMSB = bit::test<5>(rawData);
         data.priority = bit::extract<6, 7>(rawData);
         data.normalShadow = VDP2IsNormalShadow<5>(data.colorData);
         break;
     case 0xB:
         data.colorData = bit::extract<0, 5>(rawData);
-        data.colorDataMSB = bit::extract<5>(rawData);
+        data.colorDataMSB = bit::test<5>(rawData);
         data.colorCalcRatio = bit::extract<6, 7>(rawData);
         data.normalShadow = VDP2IsNormalShadow<5>(data.colorData);
         break;
     case 0xC:
         data.colorData = bit::extract<0, 7>(rawData);
-        data.colorDataMSB = bit::extract<7>(rawData);
+        data.colorDataMSB = bit::test<7>(rawData);
         data.priority = bit::extract<7>(rawData);
         data.normalShadow = VDP2IsNormalShadow<7>(data.colorData);
         break;
     case 0xD:
         data.colorData = bit::extract<0, 7>(rawData);
-        data.colorDataMSB = bit::extract<7>(rawData);
+        data.colorDataMSB = bit::test<7>(rawData);
         data.colorCalcRatio = bit::extract<6>(rawData);
         data.priority = bit::extract<7>(rawData);
         data.normalShadow = VDP2IsNormalShadow<7>(data.colorData);
         break;
     case 0xE:
         data.colorData = bit::extract<0, 7>(rawData);
-        data.colorDataMSB = bit::extract<7>(rawData);
+        data.colorDataMSB = bit::test<7>(rawData);
         data.priority = bit::extract<6, 7>(rawData);
         data.normalShadow = VDP2IsNormalShadow<7>(data.colorData);
         break;
     case 0xF:
         data.colorData = bit::extract<0, 7>(rawData);
-        data.colorDataMSB = bit::extract<7>(rawData);
+        data.colorDataMSB = bit::test<7>(rawData);
         data.colorCalcRatio = bit::extract<6, 7>(rawData);
         data.normalShadow = VDP2IsNormalShadow<7>(data.colorData);
         break;

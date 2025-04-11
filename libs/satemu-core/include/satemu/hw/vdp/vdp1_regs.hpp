@@ -209,10 +209,10 @@ struct VDP1Regs {
     }
 
     FORCE_INLINE void WriteTVMR(uint16 value) {
-        vblankErase = bit::extract<3>(value);
-        hdtvEnable = bit::extract<2>(value);
-        fbRotEnable = bit::extract<1>(value);
-        pixel8Bits = bit::extract<0>(value);
+        vblankErase = bit::test<3>(value);
+        hdtvEnable = bit::test<2>(value);
+        fbRotEnable = bit::test<1>(value);
+        pixel8Bits = bit::test<0>(value);
         UpdateTVMR();
     }
 
@@ -258,11 +258,11 @@ struct VDP1Regs {
     }
 
     FORCE_INLINE void WriteFBCR(uint16 value) {
-        fbSwapTrigger = bit::extract<0>(value);
-        fbSwapMode = bit::extract<1>(value);
-        dblInterlaceDrawLine = bit::extract<2>(value);
-        dblInterlaceEnable = bit::extract<3>(value);
-        evenOddCoordSelect = bit::extract<4>(value);
+        fbSwapTrigger = bit::test<0>(value);
+        fbSwapMode = bit::test<1>(value);
+        dblInterlaceDrawLine = bit::test<2>(value);
+        dblInterlaceEnable = bit::test<3>(value);
+        evenOddCoordSelect = bit::test<4>(value);
 
         if (fbSwapMode) {
             if (fbSwapTrigger) {
@@ -374,8 +374,8 @@ struct VDP1Regs {
     }
 
     FORCE_INLINE void WriteEDSR(uint16 value) {
-        prevFrameEnded = bit::extract<0>(value);
-        currFrameEnded = bit::extract<1>(value);
+        prevFrameEnded = bit::test<0>(value);
+        currFrameEnded = bit::test<1>(value);
     }
 
     // 100012   LOPR  Last Operation Command Address
@@ -432,14 +432,14 @@ struct VDP1Regs {
     }
 
     FORCE_INLINE void WriteMODR(uint16 value) {
-        pixel8Bits = bit::extract<0>(value);
-        fbRotEnable = bit::extract<1>(value);
-        hdtvEnable = bit::extract<2>(value);
-        vblankErase = bit::extract<3>(value);
-        fbSwapMode = bit::extract<4>(value);
-        dblInterlaceDrawLine = bit::extract<5>(value);
-        dblInterlaceEnable = bit::extract<6>(value);
-        evenOddCoordSelect = bit::extract<7>(value);
+        pixel8Bits = bit::test<0>(value);
+        fbRotEnable = bit::test<1>(value);
+        hdtvEnable = bit::test<2>(value);
+        vblankErase = bit::test<3>(value);
+        fbSwapMode = bit::test<4>(value);
+        dblInterlaceDrawLine = bit::test<5>(value);
+        dblInterlaceEnable = bit::test<6>(value);
+        evenOddCoordSelect = bit::test<7>(value);
     }
 };
 

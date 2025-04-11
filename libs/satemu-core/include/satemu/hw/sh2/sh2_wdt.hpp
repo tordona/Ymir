@@ -114,12 +114,12 @@ struct WatchdogTimer {
     template <bool poke>
     FORCE_INLINE void WriteWTCSR(uint8 value) {
         if constexpr (poke) {
-            WTCSR.OVF = bit::extract<7>(value);
+            WTCSR.OVF = bit::test<7>(value);
         } else {
-            WTCSR.OVF &= bit::extract<7>(value);
+            WTCSR.OVF &= bit::test<7>(value);
         }
-        WTCSR.WT_nIT = bit::extract<6>(value);
-        WTCSR.TME = bit::extract<5>(value);
+        WTCSR.WT_nIT = bit::test<6>(value);
+        WTCSR.TME = bit::test<5>(value);
         WTCSR.CKSn = bit::extract<0, 2>(value);
 
         m_clockDividerShift = kDividerShifts[WTCSR.CKSn];
@@ -177,25 +177,25 @@ struct WatchdogTimer {
     template <bool poke>
     FORCE_INLINE void WriteRSTCSR(uint8 value) {
         if constexpr (poke) {
-            RSTCSR.WOVF = bit::extract<7>(value);
+            RSTCSR.WOVF = bit::test<7>(value);
         } else {
-            RSTCSR.WOVF &= bit::extract<7>(value);
+            RSTCSR.WOVF &= bit::test<7>(value);
         }
-        RSTCSR.RSTE = bit::extract<6>(value);
-        RSTCSR.RSTS = bit::extract<5>(value);
+        RSTCSR.RSTE = bit::test<6>(value);
+        RSTCSR.RSTS = bit::test<5>(value);
     }
 
     FORCE_INLINE void WriteRSTE_RSTS(uint8 value) {
-        RSTCSR.RSTE = bit::extract<6>(value);
-        RSTCSR.RSTS = bit::extract<5>(value);
+        RSTCSR.RSTE = bit::test<6>(value);
+        RSTCSR.RSTS = bit::test<5>(value);
     }
 
     template <bool poke>
     FORCE_INLINE void WriteWOVF(uint8 value) {
         if constexpr (poke) {
-            RSTCSR.WOVF = bit::extract<7>(value);
+            RSTCSR.WOVF = bit::test<7>(value);
         } else {
-            RSTCSR.WOVF &= bit::extract<7>(value);
+            RSTCSR.WOVF &= bit::test<7>(value);
         }
     }
 

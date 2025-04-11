@@ -420,10 +420,10 @@ struct VDP2Regs {
         vramControl.rotDataBankSelA1 = bit::extract<2, 3>(value);
         vramControl.rotDataBankSelB0 = bit::extract<4, 5>(value);
         vramControl.rotDataBankSelB1 = bit::extract<6, 7>(value);
-        vramControl.partitionVRAMA = bit::extract<8>(value);
-        vramControl.partitionVRAMB = bit::extract<9>(value);
+        vramControl.partitionVRAMA = bit::test<8>(value);
+        vramControl.partitionVRAMB = bit::test<9>(value);
         vramControl.colorRAMMode = bit::extract<12, 13>(value);
-        vramControl.colorRAMCoeffTableEnable = bit::extract<15>(value);
+        vramControl.colorRAMCoeffTableEnable = bit::test<15>(value);
     }
 
     /**/          // 180010   CYCA0L  VRAM Cycle Pattern A0 Lower
@@ -470,18 +470,18 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteBGON(uint16 value) {
-        bgEnabled[0] = bit::extract<0>(value);
-        bgEnabled[1] = bit::extract<1>(value);
-        bgEnabled[2] = bit::extract<2>(value);
-        bgEnabled[3] = bit::extract<3>(value);
-        bgEnabled[4] = bit::extract<4>(value);
-        bgEnabled[5] = bit::extract<5>(value);
+        bgEnabled[0] = bit::test<0>(value);
+        bgEnabled[1] = bit::test<1>(value);
+        bgEnabled[2] = bit::test<2>(value);
+        bgEnabled[3] = bit::test<3>(value);
+        bgEnabled[4] = bit::test<4>(value);
+        bgEnabled[5] = bit::test<5>(value);
 
-        bgParams[1].enableTransparency = !bit::extract<8>(value);
-        bgParams[2].enableTransparency = !bit::extract<9>(value);
-        bgParams[3].enableTransparency = !bit::extract<10>(value);
-        bgParams[4].enableTransparency = !bit::extract<11>(value);
-        bgParams[0].enableTransparency = !bit::extract<12>(value);
+        bgParams[1].enableTransparency = !bit::test<8>(value);
+        bgParams[2].enableTransparency = !bit::test<9>(value);
+        bgParams[3].enableTransparency = !bit::test<10>(value);
+        bgParams[4].enableTransparency = !bit::test<11>(value);
+        bgParams[0].enableTransparency = !bit::test<12>(value);
     }
 
     // 180022   MZCTL   Mosaic Control
@@ -509,11 +509,11 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteMZCTL(uint16 value) {
-        bgParams[1].mosaicEnable = bit::extract<0>(value);
-        bgParams[2].mosaicEnable = bit::extract<1>(value);
-        bgParams[3].mosaicEnable = bit::extract<2>(value);
-        bgParams[4].mosaicEnable = bit::extract<3>(value);
-        bgParams[0].mosaicEnable = bit::extract<4>(value);
+        bgParams[1].mosaicEnable = bit::test<0>(value);
+        bgParams[2].mosaicEnable = bit::test<1>(value);
+        bgParams[3].mosaicEnable = bit::test<2>(value);
+        bgParams[4].mosaicEnable = bit::test<3>(value);
+        bgParams[0].mosaicEnable = bit::test<4>(value);
         mosaicH = bit::extract<8, 11>(value) + 1;
         mosaicV = bit::extract<12, 15>(value) + 1;
     }
@@ -585,23 +585,23 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteSFCODE(uint16 value) {
-        specialFunctionCodes[0].colorMatches[0] = bit::extract<0>(value);
-        specialFunctionCodes[0].colorMatches[1] = bit::extract<1>(value);
-        specialFunctionCodes[0].colorMatches[2] = bit::extract<2>(value);
-        specialFunctionCodes[0].colorMatches[3] = bit::extract<3>(value);
-        specialFunctionCodes[0].colorMatches[4] = bit::extract<4>(value);
-        specialFunctionCodes[0].colorMatches[5] = bit::extract<5>(value);
-        specialFunctionCodes[0].colorMatches[6] = bit::extract<6>(value);
-        specialFunctionCodes[0].colorMatches[7] = bit::extract<7>(value);
+        specialFunctionCodes[0].colorMatches[0] = bit::test<0>(value);
+        specialFunctionCodes[0].colorMatches[1] = bit::test<1>(value);
+        specialFunctionCodes[0].colorMatches[2] = bit::test<2>(value);
+        specialFunctionCodes[0].colorMatches[3] = bit::test<3>(value);
+        specialFunctionCodes[0].colorMatches[4] = bit::test<4>(value);
+        specialFunctionCodes[0].colorMatches[5] = bit::test<5>(value);
+        specialFunctionCodes[0].colorMatches[6] = bit::test<6>(value);
+        specialFunctionCodes[0].colorMatches[7] = bit::test<7>(value);
 
-        specialFunctionCodes[1].colorMatches[0] = bit::extract<8>(value);
-        specialFunctionCodes[1].colorMatches[1] = bit::extract<9>(value);
-        specialFunctionCodes[1].colorMatches[2] = bit::extract<10>(value);
-        specialFunctionCodes[1].colorMatches[3] = bit::extract<11>(value);
-        specialFunctionCodes[1].colorMatches[4] = bit::extract<12>(value);
-        specialFunctionCodes[1].colorMatches[5] = bit::extract<13>(value);
-        specialFunctionCodes[1].colorMatches[6] = bit::extract<14>(value);
-        specialFunctionCodes[1].colorMatches[7] = bit::extract<15>(value);
+        specialFunctionCodes[1].colorMatches[0] = bit::test<8>(value);
+        specialFunctionCodes[1].colorMatches[1] = bit::test<9>(value);
+        specialFunctionCodes[1].colorMatches[2] = bit::test<10>(value);
+        specialFunctionCodes[1].colorMatches[3] = bit::test<11>(value);
+        specialFunctionCodes[1].colorMatches[4] = bit::test<12>(value);
+        specialFunctionCodes[1].colorMatches[5] = bit::test<13>(value);
+        specialFunctionCodes[1].colorMatches[6] = bit::test<14>(value);
+        specialFunctionCodes[1].colorMatches[7] = bit::test<15>(value);
     }
 
     // 180028   CHCTLA  Character Control Register A
@@ -656,13 +656,13 @@ struct VDP2Regs {
 
     FORCE_INLINE void WriteCHCTLA(uint16 value) {
         bgParams[1].cellSizeShift = bit::extract<0>(value);
-        bgParams[1].bitmap = bit::extract<1>(value);
+        bgParams[1].bitmap = bit::test<1>(value);
         bgParams[1].bmsz = bit::extract<2, 3>(value);
         bgParams[1].colorFormat = static_cast<ColorFormat>(bit::extract<4, 6>(value));
         bgParams[1].UpdateCHCTL();
 
         bgParams[2].cellSizeShift = bit::extract<8>(value);
-        bgParams[2].bitmap = bit::extract<9>(value);
+        bgParams[2].bitmap = bit::test<9>(value);
         bgParams[2].bmsz = bit::extract<10, 11>(value);
         bgParams[2].colorFormat = static_cast<ColorFormat>(bit::extract<12, 13>(value));
         bgParams[2].UpdateCHCTL();
@@ -719,7 +719,7 @@ struct VDP2Regs {
         bgParams[4].UpdateCHCTL();
 
         bgParams[0].cellSizeShift = bit::extract<8>(value);
-        bgParams[0].bitmap = bit::extract<9>(value);
+        bgParams[0].bitmap = bit::test<9>(value);
         bgParams[0].bmsz = bit::extract<10>(value);
         bgParams[0].colorFormat = static_cast<ColorFormat>(bit::extract<12, 14>(value));
         bgParams[0].UpdateCHCTL();
@@ -753,12 +753,12 @@ struct VDP2Regs {
 
     FORCE_INLINE void WriteBMPNA(uint16 value) {
         bgParams[1].supplBitmapPalNum = bit::extract<0, 2>(value) << 8u;
-        bgParams[1].supplBitmapSpecialColorCalc = bit::extract<4>(value);
-        bgParams[1].supplBitmapSpecialPriority = bit::extract<5>(value);
+        bgParams[1].supplBitmapSpecialColorCalc = bit::test<4>(value);
+        bgParams[1].supplBitmapSpecialPriority = bit::test<5>(value);
 
         bgParams[2].supplBitmapPalNum = bit::extract<8, 10>(value) << 8u;
-        bgParams[2].supplBitmapSpecialColorCalc = bit::extract<12>(value);
-        bgParams[2].supplBitmapSpecialPriority = bit::extract<13>(value);
+        bgParams[2].supplBitmapSpecialColorCalc = bit::test<12>(value);
+        bgParams[2].supplBitmapSpecialPriority = bit::test<13>(value);
     }
 
     // 18002E   BMPNB   RBG0 Bitmap Palette Number
@@ -780,8 +780,8 @@ struct VDP2Regs {
 
     FORCE_INLINE void WriteBMPNB(uint16 value) {
         bgParams[0].supplBitmapPalNum = bit::extract<0, 2>(value) << 8u;
-        bgParams[0].supplBitmapSpecialColorCalc = bit::extract<4>(value);
-        bgParams[0].supplBitmapSpecialPriority = bit::extract<5>(value);
+        bgParams[0].supplBitmapSpecialColorCalc = bit::test<4>(value);
+        bgParams[0].supplBitmapSpecialPriority = bit::test<5>(value);
     }
 
     // 180030   PNCN0   NBG0/RBG1 Pattern Name Control
@@ -815,10 +815,10 @@ struct VDP2Regs {
     FORCE_INLINE void WritePNCN(uint32 bgIndex, uint16 value) {
         bgParams[bgIndex].supplScrollCharNum = bit::extract<0, 4>(value);
         bgParams[bgIndex].supplScrollPalNum = bit::extract<5, 7>(value) << 4u;
-        bgParams[bgIndex].supplScrollSpecialColorCalc = bit::extract<8>(value);
-        bgParams[bgIndex].supplScrollSpecialPriority = bit::extract<9>(value);
-        bgParams[bgIndex].extChar = bit::extract<14>(value);
-        bgParams[bgIndex].twoWordChar = !bit::extract<15>(value);
+        bgParams[bgIndex].supplScrollSpecialColorCalc = bit::test<8>(value);
+        bgParams[bgIndex].supplScrollSpecialPriority = bit::test<9>(value);
+        bgParams[bgIndex].extChar = bit::test<14>(value);
+        bgParams[bgIndex].twoWordChar = !bit::test<15>(value);
         bgParams[bgIndex].UpdatePageBaseAddresses();
     }
 
@@ -836,10 +836,10 @@ struct VDP2Regs {
     FORCE_INLINE void WritePNCR(uint16 value) {
         bgParams[0].supplScrollCharNum = bit::extract<0, 4>(value);
         bgParams[0].supplScrollPalNum = bit::extract<5, 7>(value) << 4u;
-        bgParams[0].supplScrollSpecialColorCalc = bit::extract<8>(value);
-        bgParams[0].supplScrollSpecialPriority = bit::extract<9>(value);
-        bgParams[0].extChar = bit::extract<14>(value);
-        bgParams[0].twoWordChar = !bit::extract<15>(value);
+        bgParams[0].supplScrollSpecialColorCalc = bit::test<8>(value);
+        bgParams[0].supplScrollSpecialPriority = bit::test<9>(value);
+        bgParams[0].extChar = bit::test<14>(value);
+        bgParams[0].twoWordChar = !bit::test<15>(value);
     }
 
     // 18003A   PLSZ    Plane Size
@@ -1212,16 +1212,16 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteSCRCTL(uint16 value) {
-        bgParams[1].verticalCellScrollEnable = bit::extract<0>(value);
-        bgParams[1].lineScrollXEnable = bit::extract<1>(value);
-        bgParams[1].lineScrollYEnable = bit::extract<2>(value);
-        bgParams[1].lineZoomEnable = bit::extract<3>(value);
+        bgParams[1].verticalCellScrollEnable = bit::test<0>(value);
+        bgParams[1].lineScrollXEnable = bit::test<1>(value);
+        bgParams[1].lineScrollYEnable = bit::test<2>(value);
+        bgParams[1].lineZoomEnable = bit::test<3>(value);
         bgParams[1].lineScrollInterval = bit::extract<4, 5>(value);
 
-        bgParams[2].verticalCellScrollEnable = bit::extract<8>(value);
-        bgParams[2].lineScrollXEnable = bit::extract<9>(value);
-        bgParams[2].lineScrollYEnable = bit::extract<10>(value);
-        bgParams[2].lineZoomEnable = bit::extract<11>(value);
+        bgParams[2].verticalCellScrollEnable = bit::test<8>(value);
+        bgParams[2].lineScrollXEnable = bit::test<9>(value);
+        bgParams[2].lineScrollYEnable = bit::test<10>(value);
+        bgParams[2].lineZoomEnable = bit::test<11>(value);
         bgParams[2].lineScrollInterval = bit::extract<12, 13>(value);
     }
 
@@ -1304,7 +1304,7 @@ struct VDP2Regs {
 
     FORCE_INLINE void WriteLCTAU(uint16 value) {
         bit::deposit_into<17, 19>(lineScreenParams.baseAddress, bit::extract<0, 2>(value));
-        lineScreenParams.perLine = bit::extract<15>(value);
+        lineScreenParams.perLine = bit::test<15>(value);
     }
 
     FORCE_INLINE uint16 ReadLCTAL() const {
@@ -1336,7 +1336,7 @@ struct VDP2Regs {
 
     FORCE_INLINE void WriteBKTAU(uint16 value) {
         bit::deposit_into<17, 19>(backScreenParams.baseAddress, bit::extract<0, 2>(value));
-        backScreenParams.perLine = bit::extract<15>(value);
+        backScreenParams.perLine = bit::test<15>(value);
     }
 
     FORCE_INLINE uint16 ReadBKTAL() const {
@@ -1390,13 +1390,13 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteRPRCTL(uint16 value) {
-        rotParams[0].readXst = bit::extract<0>(value);
-        rotParams[0].readYst = bit::extract<1>(value);
-        rotParams[0].readKAst = bit::extract<2>(value);
+        rotParams[0].readXst = bit::test<0>(value);
+        rotParams[0].readYst = bit::test<1>(value);
+        rotParams[0].readKAst = bit::test<2>(value);
 
-        rotParams[1].readXst = bit::extract<8>(value);
-        rotParams[1].readYst = bit::extract<9>(value);
-        rotParams[1].readKAst = bit::extract<10>(value);
+        rotParams[1].readXst = bit::test<8>(value);
+        rotParams[1].readYst = bit::test<9>(value);
+        rotParams[1].readKAst = bit::test<10>(value);
     }
 
     // 1800B4   KTCTL   Coefficient Table Control
@@ -1440,15 +1440,15 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteKTCTL(uint16 value) {
-        rotParams[0].coeffTableEnable = bit::extract<0>(value);
+        rotParams[0].coeffTableEnable = bit::test<0>(value);
         rotParams[0].coeffDataSize = bit::extract<1>(value);
         rotParams[0].coeffDataMode = static_cast<CoefficientDataMode>(bit::extract<2, 3>(value));
-        rotParams[0].coeffUseLineColorData = bit::extract<4>(value);
+        rotParams[0].coeffUseLineColorData = bit::test<4>(value);
 
-        rotParams[1].coeffTableEnable = bit::extract<8>(value);
+        rotParams[1].coeffTableEnable = bit::test<8>(value);
         rotParams[1].coeffDataSize = bit::extract<9>(value);
         rotParams[1].coeffDataMode = static_cast<CoefficientDataMode>(bit::extract<10, 11>(value));
-        rotParams[1].coeffUseLineColorData = bit::extract<12>(value);
+        rotParams[1].coeffUseLineColorData = bit::test<12>(value);
     }
 
     // 1800B6   KTAOF   Coefficient Table Address Offset
@@ -1619,20 +1619,20 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteWCTLA(uint16 value) {
-        bgParams[1].windowSet.inverted[0] = bit::extract<0>(value);
-        bgParams[1].windowSet.enabled[0] = bit::extract<1>(value);
-        bgParams[1].windowSet.inverted[1] = bit::extract<2>(value);
-        bgParams[1].windowSet.enabled[1] = bit::extract<3>(value);
-        bgParams[1].windowSet.inverted[2] = bit::extract<4>(value);
-        bgParams[1].windowSet.enabled[2] = bit::extract<5>(value);
+        bgParams[1].windowSet.inverted[0] = bit::test<0>(value);
+        bgParams[1].windowSet.enabled[0] = bit::test<1>(value);
+        bgParams[1].windowSet.inverted[1] = bit::test<2>(value);
+        bgParams[1].windowSet.enabled[1] = bit::test<3>(value);
+        bgParams[1].windowSet.inverted[2] = bit::test<4>(value);
+        bgParams[1].windowSet.enabled[2] = bit::test<5>(value);
         bgParams[1].windowSet.logic = static_cast<WindowLogic>(bit::extract<7>(value));
 
-        bgParams[2].windowSet.inverted[0] = bit::extract<8>(value);
-        bgParams[2].windowSet.enabled[0] = bit::extract<9>(value);
-        bgParams[2].windowSet.inverted[1] = bit::extract<10>(value);
-        bgParams[2].windowSet.enabled[1] = bit::extract<11>(value);
-        bgParams[2].windowSet.inverted[2] = bit::extract<12>(value);
-        bgParams[2].windowSet.enabled[2] = bit::extract<13>(value);
+        bgParams[2].windowSet.inverted[0] = bit::test<8>(value);
+        bgParams[2].windowSet.enabled[0] = bit::test<9>(value);
+        bgParams[2].windowSet.inverted[1] = bit::test<10>(value);
+        bgParams[2].windowSet.enabled[1] = bit::test<11>(value);
+        bgParams[2].windowSet.inverted[2] = bit::test<12>(value);
+        bgParams[2].windowSet.enabled[2] = bit::test<13>(value);
         bgParams[2].windowSet.logic = static_cast<WindowLogic>(bit::extract<15>(value));
     }
 
@@ -1677,20 +1677,20 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteWCTLB(uint16 value) {
-        bgParams[3].windowSet.inverted[0] = bit::extract<0>(value);
-        bgParams[3].windowSet.enabled[0] = bit::extract<1>(value);
-        bgParams[3].windowSet.inverted[1] = bit::extract<2>(value);
-        bgParams[3].windowSet.enabled[1] = bit::extract<3>(value);
-        bgParams[3].windowSet.inverted[2] = bit::extract<4>(value);
-        bgParams[3].windowSet.enabled[2] = bit::extract<5>(value);
+        bgParams[3].windowSet.inverted[0] = bit::test<0>(value);
+        bgParams[3].windowSet.enabled[0] = bit::test<1>(value);
+        bgParams[3].windowSet.inverted[1] = bit::test<2>(value);
+        bgParams[3].windowSet.enabled[1] = bit::test<3>(value);
+        bgParams[3].windowSet.inverted[2] = bit::test<4>(value);
+        bgParams[3].windowSet.enabled[2] = bit::test<5>(value);
         bgParams[3].windowSet.logic = static_cast<WindowLogic>(bit::extract<7>(value));
 
-        bgParams[4].windowSet.inverted[0] = bit::extract<8>(value);
-        bgParams[4].windowSet.enabled[0] = bit::extract<9>(value);
-        bgParams[4].windowSet.inverted[1] = bit::extract<10>(value);
-        bgParams[4].windowSet.enabled[1] = bit::extract<11>(value);
-        bgParams[4].windowSet.inverted[2] = bit::extract<12>(value);
-        bgParams[4].windowSet.enabled[2] = bit::extract<13>(value);
+        bgParams[4].windowSet.inverted[0] = bit::test<8>(value);
+        bgParams[4].windowSet.enabled[0] = bit::test<9>(value);
+        bgParams[4].windowSet.inverted[1] = bit::test<10>(value);
+        bgParams[4].windowSet.enabled[1] = bit::test<11>(value);
+        bgParams[4].windowSet.inverted[2] = bit::test<12>(value);
+        bgParams[4].windowSet.enabled[2] = bit::test<13>(value);
         bgParams[4].windowSet.logic = static_cast<WindowLogic>(bit::extract<15>(value));
     }
 
@@ -1735,20 +1735,20 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteWCTLC(uint16 value) {
-        bgParams[0].windowSet.inverted[0] = bit::extract<0>(value);
-        bgParams[0].windowSet.enabled[0] = bit::extract<1>(value);
-        bgParams[0].windowSet.inverted[1] = bit::extract<2>(value);
-        bgParams[0].windowSet.enabled[1] = bit::extract<3>(value);
-        bgParams[0].windowSet.inverted[2] = bit::extract<4>(value);
-        bgParams[0].windowSet.enabled[2] = bit::extract<5>(value);
+        bgParams[0].windowSet.inverted[0] = bit::test<0>(value);
+        bgParams[0].windowSet.enabled[0] = bit::test<1>(value);
+        bgParams[0].windowSet.inverted[1] = bit::test<2>(value);
+        bgParams[0].windowSet.enabled[1] = bit::test<3>(value);
+        bgParams[0].windowSet.inverted[2] = bit::test<4>(value);
+        bgParams[0].windowSet.enabled[2] = bit::test<5>(value);
         bgParams[0].windowSet.logic = static_cast<WindowLogic>(bit::extract<7>(value));
 
-        spriteParams.windowSet.inverted[0] = bit::extract<8>(value);
-        spriteParams.windowSet.enabled[0] = bit::extract<9>(value);
-        spriteParams.windowSet.inverted[1] = bit::extract<10>(value);
-        spriteParams.windowSet.enabled[1] = bit::extract<11>(value);
-        spriteParams.windowSet.inverted[2] = bit::extract<12>(value);
-        spriteParams.windowSet.enabled[2] = bit::extract<13>(value);
+        spriteParams.windowSet.inverted[0] = bit::test<8>(value);
+        spriteParams.windowSet.enabled[0] = bit::test<9>(value);
+        spriteParams.windowSet.inverted[1] = bit::test<10>(value);
+        spriteParams.windowSet.enabled[1] = bit::test<11>(value);
+        spriteParams.windowSet.inverted[2] = bit::test<12>(value);
+        spriteParams.windowSet.enabled[2] = bit::test<13>(value);
         spriteParams.windowSet.logic = static_cast<WindowLogic>(bit::extract<15>(value));
     }
 
@@ -1789,18 +1789,18 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteWCTLD(uint16 value) {
-        commonRotParams.windowSet.inverted[0] = bit::extract<0>(value);
-        commonRotParams.windowSet.enabled[0] = bit::extract<1>(value);
-        commonRotParams.windowSet.inverted[1] = bit::extract<2>(value);
-        commonRotParams.windowSet.enabled[1] = bit::extract<3>(value);
+        commonRotParams.windowSet.inverted[0] = bit::test<0>(value);
+        commonRotParams.windowSet.enabled[0] = bit::test<1>(value);
+        commonRotParams.windowSet.inverted[1] = bit::test<2>(value);
+        commonRotParams.windowSet.enabled[1] = bit::test<3>(value);
         commonRotParams.windowSet.logic = static_cast<WindowLogic>(bit::extract<7>(value));
 
-        colorCalcParams.windowSet.inverted[0] = bit::extract<8>(value);
-        colorCalcParams.windowSet.enabled[0] = bit::extract<9>(value);
-        colorCalcParams.windowSet.inverted[1] = bit::extract<10>(value);
-        colorCalcParams.windowSet.enabled[1] = bit::extract<11>(value);
-        colorCalcParams.windowSet.inverted[2] = bit::extract<12>(value);
-        colorCalcParams.windowSet.enabled[2] = bit::extract<13>(value);
+        colorCalcParams.windowSet.inverted[0] = bit::test<8>(value);
+        colorCalcParams.windowSet.enabled[0] = bit::test<9>(value);
+        colorCalcParams.windowSet.inverted[1] = bit::test<10>(value);
+        colorCalcParams.windowSet.enabled[1] = bit::test<11>(value);
+        colorCalcParams.windowSet.inverted[2] = bit::test<12>(value);
+        colorCalcParams.windowSet.enabled[2] = bit::test<13>(value);
         colorCalcParams.windowSet.logic = static_cast<WindowLogic>(bit::extract<15>(value));
     }
 
@@ -1828,7 +1828,7 @@ struct VDP2Regs {
 
     FORCE_INLINE void WriteLWTAnU(uint8 index, uint16 value) {
         bit::deposit_into<17, 19>(windowParams[index].lineWindowTableAddress, bit::extract<0, 2>(value));
-        windowParams[index].lineWindowTableEnable = bit::extract<15>(value);
+        windowParams[index].lineWindowTableEnable = bit::test<15>(value);
     }
 
     FORCE_INLINE uint16 ReadLWTAnL(uint8 index) const {
@@ -1869,8 +1869,8 @@ struct VDP2Regs {
 
     FORCE_INLINE void WriteSPCTL(uint16 value) {
         spriteParams.type = bit::extract<0, 3>(value);
-        spriteParams.spriteWindowEnable = bit::extract<4>(value);
-        spriteParams.mixedFormat = bit::extract<5>(value);
+        spriteParams.spriteWindowEnable = bit::test<4>(value);
+        spriteParams.mixedFormat = bit::test<5>(value);
         spriteParams.colorCalcValue = bit::extract<8, 10>(value);
         spriteParams.colorCalcCond = static_cast<SpriteColorCalculationCondition>(bit::extract<12, 13>(value));
     }
@@ -1901,13 +1901,13 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteSDCTL(uint16 value) {
-        bgParams[1].shadowEnable = bit::extract<0>(value);
-        bgParams[2].shadowEnable = bit::extract<1>(value);
-        bgParams[3].shadowEnable = bit::extract<2>(value);
-        bgParams[4].shadowEnable = bit::extract<3>(value);
-        bgParams[0].shadowEnable = bit::extract<4>(value);
-        backScreenParams.shadowEnable = bit::extract<5>(value);
-        transparentShadowEnable = bit::extract<8>(value);
+        bgParams[1].shadowEnable = bit::test<0>(value);
+        bgParams[2].shadowEnable = bit::test<1>(value);
+        bgParams[3].shadowEnable = bit::test<2>(value);
+        bgParams[4].shadowEnable = bit::test<3>(value);
+        bgParams[0].shadowEnable = bit::test<4>(value);
+        backScreenParams.shadowEnable = bit::test<5>(value);
+        transparentShadowEnable = bit::test<8>(value);
     }
 
     // 1800E4   CRAOFA  NBG0-NBG3 Color RAM Address Offset
@@ -1981,12 +1981,12 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteLNCLEN(uint16 value) {
-        bgParams[1].lineColorScreenEnable = bit::extract<0>(value);
-        bgParams[2].lineColorScreenEnable = bit::extract<1>(value);
-        bgParams[3].lineColorScreenEnable = bit::extract<2>(value);
-        bgParams[4].lineColorScreenEnable = bit::extract<3>(value);
-        bgParams[0].lineColorScreenEnable = bit::extract<4>(value);
-        spriteParams.lineColorScreenEnable = bit::extract<5>(value);
+        bgParams[1].lineColorScreenEnable = bit::test<0>(value);
+        bgParams[2].lineColorScreenEnable = bit::test<1>(value);
+        bgParams[3].lineColorScreenEnable = bit::test<2>(value);
+        bgParams[4].lineColorScreenEnable = bit::test<3>(value);
+        bgParams[0].lineColorScreenEnable = bit::test<4>(value);
+        spriteParams.lineColorScreenEnable = bit::test<5>(value);
     }
 
     // 1800EA   SFPRMD  Special Priority Mode
@@ -2070,19 +2070,19 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCCCTL(uint16 value) {
-        bgParams[1].colorCalcEnable = bit::extract<0>(value);
-        bgParams[2].colorCalcEnable = bit::extract<1>(value);
-        bgParams[3].colorCalcEnable = bit::extract<2>(value);
-        bgParams[4].colorCalcEnable = bit::extract<3>(value);
-        bgParams[0].colorCalcEnable = bit::extract<4>(value);
-        lineScreenParams.colorCalcEnable = bit::extract<5>(value);
-        spriteParams.colorCalcEnable = bit::extract<6>(value);
+        bgParams[1].colorCalcEnable = bit::test<0>(value);
+        bgParams[2].colorCalcEnable = bit::test<1>(value);
+        bgParams[3].colorCalcEnable = bit::test<2>(value);
+        bgParams[4].colorCalcEnable = bit::test<3>(value);
+        bgParams[0].colorCalcEnable = bit::test<4>(value);
+        lineScreenParams.colorCalcEnable = bit::test<5>(value);
+        spriteParams.colorCalcEnable = bit::test<6>(value);
 
-        colorCalcParams.useAdditiveBlend = bit::extract<8>(value);
-        colorCalcParams.useSecondScreenRatio = bit::extract<9>(value);
-        colorCalcParams.extendedColorCalcEnable = bit::extract<10>(value);
+        colorCalcParams.useAdditiveBlend = bit::test<8>(value);
+        colorCalcParams.useSecondScreenRatio = bit::test<9>(value);
+        colorCalcParams.extendedColorCalcEnable = bit::test<10>(value);
         colorCalcParams.colorGradScreen = static_cast<ColorGradScreen>(bit::extract<12, 14>(value));
-        colorCalcParams.colorGradEnable = bit::extract<15>(value);
+        colorCalcParams.colorGradEnable = bit::test<15>(value);
     }
 
     // 1800EE   SFCCMD  Special Color Calculation Mode
@@ -2360,13 +2360,13 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCLOFEN(uint16 value) {
-        colorOffsetEnable[2] = bit::extract<0>(value);
-        colorOffsetEnable[3] = bit::extract<1>(value);
-        colorOffsetEnable[4] = bit::extract<2>(value);
-        colorOffsetEnable[5] = bit::extract<3>(value);
-        colorOffsetEnable[1] = bit::extract<4>(value);
-        colorOffsetEnable[6] = bit::extract<5>(value);
-        colorOffsetEnable[0] = bit::extract<6>(value);
+        colorOffsetEnable[2] = bit::test<0>(value);
+        colorOffsetEnable[3] = bit::test<1>(value);
+        colorOffsetEnable[4] = bit::test<2>(value);
+        colorOffsetEnable[5] = bit::test<3>(value);
+        colorOffsetEnable[1] = bit::test<4>(value);
+        colorOffsetEnable[6] = bit::test<5>(value);
+        colorOffsetEnable[0] = bit::test<6>(value);
     }
 
     // 180112   CLOFSL  Color Offset Select
@@ -2398,13 +2398,13 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCLOFSL(uint16 value) {
-        colorOffsetSelect[2] = bit::extract<0>(value);
-        colorOffsetSelect[3] = bit::extract<1>(value);
-        colorOffsetSelect[4] = bit::extract<2>(value);
-        colorOffsetSelect[5] = bit::extract<3>(value);
-        colorOffsetSelect[1] = bit::extract<4>(value);
-        colorOffsetSelect[6] = bit::extract<5>(value);
-        colorOffsetSelect[0] = bit::extract<6>(value);
+        colorOffsetSelect[2] = bit::test<0>(value);
+        colorOffsetSelect[3] = bit::test<1>(value);
+        colorOffsetSelect[4] = bit::test<2>(value);
+        colorOffsetSelect[5] = bit::test<3>(value);
+        colorOffsetSelect[1] = bit::test<4>(value);
+        colorOffsetSelect[6] = bit::test<5>(value);
+        colorOffsetSelect[0] = bit::test<6>(value);
     }
 
     // 180114   COAR    Color Offset A - Red

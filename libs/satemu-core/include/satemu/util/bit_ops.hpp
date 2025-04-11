@@ -48,6 +48,12 @@ template <unsigned B, std::integral T>
     return s.x;
 }
 
+// Tests if a bit is set.
+template <std::size_t pos, std::integral T>
+[[nodiscard]] FORCE_INLINE constexpr bool test(T value) {
+    static_assert(pos < sizeof(T) * 8, "pos out of range");
+    return (value >> pos) & 1;
+}
 // Extracts a range of bits from the value.
 // start and end are both inclusive.
 template <std::size_t start, std::size_t end = start, std::integral T>

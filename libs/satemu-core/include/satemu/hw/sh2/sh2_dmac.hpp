@@ -151,20 +151,20 @@ struct DMAChannel {
         dstMode = static_cast<DMATransferIncrementMode>(bit::extract<14, 15>(value));
         srcMode = static_cast<DMATransferIncrementMode>(bit::extract<12, 13>(value));
         xferSize = static_cast<DMATransferSize>(bit::extract<10, 11>(value));
-        autoRequest = bit::extract<9>(value);
-        ackXferMode = bit::extract<8>(value);
-        ackLevel = bit::extract<7>(value);
+        autoRequest = bit::test<9>(value);
+        ackXferMode = bit::test<8>(value);
+        ackLevel = bit::test<7>(value);
         dreqSelect = static_cast<SignalDetectionMode>(bit::extract<6>(value));
-        dreqLevel = bit::extract<5>(value);
+        dreqLevel = bit::test<5>(value);
         xferBusMode = static_cast<DMATransferBusMode>(bit::extract<4>(value));
         xferAddressMode = static_cast<DMATransferAddressMode>(bit::extract<3>(value));
-        irqEnable = bit::extract<2>(value);
+        irqEnable = bit::test<2>(value);
         if constexpr (poke) {
-            xferEnded = bit::extract<1>(value);
+            xferEnded = bit::test<1>(value);
         } else {
-            xferEnded &= bit::extract<1>(value);
+            xferEnded &= bit::test<1>(value);
         }
-        xferEnabled = bit::extract<0>(value);
+        xferEnabled = bit::test<0>(value);
     }
 
     // 1A0  R/W  32       ud        VCRDMA0 DMA vector number register 0
@@ -236,15 +236,15 @@ struct RegDMAOR {
 
     template <bool poke>
     FORCE_INLINE void Write(uint32 value) {
-        PR = bit::extract<3>(value);
+        PR = bit::test<3>(value);
         if constexpr (poke) {
-            AE = bit::extract<2>(value);
-            NMIF = bit::extract<1>(value);
+            AE = bit::test<2>(value);
+            NMIF = bit::test<1>(value);
         } else {
-            AE &= bit::extract<2>(value);
-            NMIF &= bit::extract<1>(value);
+            AE &= bit::test<2>(value);
+            NMIF &= bit::test<1>(value);
         }
-        DME = bit::extract<0>(value);
+        DME = bit::test<0>(value);
     }
 
     bool PR;   // 3   R/W  PR     Priority mode

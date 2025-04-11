@@ -222,7 +222,7 @@ template <bool lowerByte, bool upperByte>
 void Slot::WriteReg00(uint16 value) {
     if constexpr (lowerByte) {
         bit::deposit_into<16, 19>(startAddress, bit::extract<0, 3>(value));
-        pcm8Bit = bit::extract<4>(value);
+        pcm8Bit = bit::test<4>(value);
         loopControl = static_cast<LoopControl>(bit::extract<5, 6>(value));
     }
 
@@ -233,7 +233,7 @@ void Slot::WriteReg00(uint16 value) {
     if constexpr (upperByte) {
         static constexpr uint16 kSampleXORTable[] = {0x0000, 0x7FFF, 0x8000, 0xFFFF};
         sampleXOR = kSampleXORTable[bit::extract<9, 10>(value)];
-        keyOnBit = bit::extract<11>(value);
+        keyOnBit = bit::test<11>(value);
         // NOTE: bit 12 is KYONEX, handled in SCSP::WriteReg
     }
 }
@@ -291,7 +291,7 @@ template <bool lowerByte, bool upperByte>
 void Slot::WriteReg08(uint16 value) {
     if constexpr (lowerByte) {
         attackRate = bit::extract<0, 4>(value);
-        egHold = bit::extract<5>(value);
+        egHold = bit::test<5>(value);
     }
 
     util::SplitWriteWord<lowerByte, upperByte, 6, 10>(decay1Rate, value);
@@ -327,7 +327,7 @@ void Slot::WriteReg0A(uint16 value) {
 
     if constexpr (upperByte) {
         keyRateScaling = bit::extract<10, 13>(value);
-        loopStartLink = bit::extract<14>(value);
+        loopStartLink = bit::test<14>(value);
     }
 }
 
@@ -352,8 +352,8 @@ void Slot::WriteReg0C(uint16 value) {
     }
 
     if constexpr (upperByte) {
-        soundDirect = bit::extract<8>(value);
-        stackWriteInhibit = bit::extract<9>(value);
+        soundDirect = bit::test<8>(value);
+        stackWriteInhibit = bit::test<9>(value);
     }
 }
 
@@ -434,7 +434,7 @@ void Slot::WriteReg12(uint16 value) {
     if constexpr (upperByte) {
         pitchLFOWaveform = static_cast<Waveform>(bit::extract<8, 9>(value));
         lfofRaw = bit::extract<10, 14>(value);
-        lfoReset = bit::extract<15>(value);
+        lfoReset = bit::test<15>(value);
     }
 }
 

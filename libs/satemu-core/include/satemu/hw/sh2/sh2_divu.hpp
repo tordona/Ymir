@@ -46,8 +46,8 @@ struct RegDVCR {
     }
 
     FORCE_INLINE void Write(uint32 value) {
-        OVF = bit::extract<0>(value);
-        OVFIE = bit::extract<1>(value);
+        OVF = bit::test<0>(value);
+        OVFIE = bit::test<1>(value);
     }
 
     bool OVF;

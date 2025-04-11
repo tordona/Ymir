@@ -112,10 +112,10 @@ struct FreeRunningTimer {
     }
 
     FORCE_INLINE void WriteTIER(uint8 value) {
-        TIER.ICIE = bit::extract<7>(value);
-        TIER.OCIAE = bit::extract<3>(value);
-        TIER.OCIBE = bit::extract<2>(value);
-        TIER.OVIE = bit::extract<1>(value);
+        TIER.ICIE = bit::test<7>(value);
+        TIER.OCIAE = bit::test<3>(value);
+        TIER.OCIBE = bit::test<2>(value);
+        TIER.OVIE = bit::test<1>(value);
     }
 
     // 011  R/W  8        00        FTCSR   Free-running timer control/status register
@@ -160,17 +160,17 @@ struct FreeRunningTimer {
     template <bool poke>
     FORCE_INLINE void WriteFTCSR(uint8 value) {
         if constexpr (poke) {
-            FTCSR.ICF = bit::extract<7>(value);
-            FTCSR.OCFA = bit::extract<3>(value);
-            FTCSR.OCFB = bit::extract<2>(value);
-            FTCSR.OVF = bit::extract<1>(value);
-            FTCSR.CCLRA = bit::extract<0>(value);
+            FTCSR.ICF = bit::test<7>(value);
+            FTCSR.OCFA = bit::test<3>(value);
+            FTCSR.OCFB = bit::test<2>(value);
+            FTCSR.OVF = bit::test<1>(value);
+            FTCSR.CCLRA = bit::test<0>(value);
         } else {
-            FTCSR.ICF &= bit::extract<7>(value);
-            FTCSR.OCFA &= bit::extract<3>(value);
-            FTCSR.OCFB &= bit::extract<2>(value);
-            FTCSR.OVF &= bit::extract<1>(value);
-            FTCSR.CCLRA = bit::extract<0>(value);
+            FTCSR.ICF &= bit::test<7>(value);
+            FTCSR.OCFA &= bit::test<3>(value);
+            FTCSR.OCFB &= bit::test<2>(value);
+            FTCSR.OVF &= bit::test<1>(value);
+            FTCSR.CCLRA = bit::test<0>(value);
         }
     }
 
@@ -283,7 +283,7 @@ struct FreeRunningTimer {
     }
 
     FORCE_INLINE void WriteTCR(uint8 value) {
-        TCR.IEDGA = bit::extract<7>(value);
+        TCR.IEDGA = bit::test<7>(value);
         TCR.CKSn = bit::extract<0, 1>(value);
 
         m_clockDividerShift = kDividerShifts[TCR.CKSn];
@@ -329,9 +329,9 @@ struct FreeRunningTimer {
     }
 
     FORCE_INLINE void WriteTOCR(uint8 value) {
-        TOCR.OCRS = bit::extract<4>(value);
-        TOCR.OLVLA = bit::extract<1>(value);
-        TOCR.OLVLB = bit::extract<0>(value);
+        TOCR.OCRS = bit::test<4>(value);
+        TOCR.OLVLA = bit::test<1>(value);
+        TOCR.OLVLB = bit::test<0>(value);
     }
 
     // 018  R    8        00        ICR H     Input capture register H

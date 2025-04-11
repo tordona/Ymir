@@ -421,7 +421,7 @@ private:
             const uint32 slotIndex = address >> 5;
             auto &slot = m_slots[slotIndex];
             slot.WriteReg<T>(address & 0x1F, value);
-            if ((address & 0x1E) == 0x00 && bit::extract<12>(value16)) {
+            if ((address & 0x1E) == 0x00 && bit::test<12>(value16)) {
                 HandleKYONEX();
             }
             return;
@@ -588,8 +588,8 @@ private:
             m_masterVolume = bit::extract<0, 3>(value);
         }
         if constexpr (upperByte) {
-            m_mem4MB = bit::extract<8>(value);
-            m_dac18Bits = bit::extract<9>(value);
+            m_mem4MB = bit::test<8>(value);
+            m_dac18Bits = bit::test<9>(value);
         }
     }
 
@@ -826,9 +826,9 @@ private:
         }
         if constexpr (upperByte) {
             bit::deposit_into<8, 11>(m_dmaXferLength, bit::extract<8, 11>(value));
-            m_dmaExec |= bit::extract<12>(value);
-            m_dmaXferToMem = bit::extract<13>(value);
-            m_dmaGate = bit::extract<14>(value);
+            m_dmaExec |= bit::test<12>(value);
+            m_dmaXferToMem = bit::test<13>(value);
+            m_dmaGate = bit::test<14>(value);
             if constexpr (!poke) {
                 ExecuteDMA();
             }

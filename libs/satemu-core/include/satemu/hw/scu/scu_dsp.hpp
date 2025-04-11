@@ -117,8 +117,8 @@ public:
         ALU.L = result;
         zero = ALU.L == 0;
         sign = static_cast<sint32>(result) < 0;
-        carry = bit::extract<32>(result);
-        overflow = bit::extract<31>((~(op1 ^ op2)) & (op1 ^ result));
+        carry = bit::test<32>(result);
+        overflow = bit::test<31>((~(op1 ^ op2)) & (op1 ^ result));
     }
 
     FORCE_INLINE void ALU_SUB() {
@@ -128,8 +128,8 @@ public:
         ALU.L = result;
         zero = ALU.L == 0;
         sign = static_cast<sint32>(result) < 0;
-        carry = bit::extract<32>(result);
-        overflow = bit::extract<31>((op1 ^ op2) & (op1 ^ result));
+        carry = bit::test<32>(result);
+        overflow = bit::test<31>((op1 ^ op2) & (op1 ^ result));
     }
 
     FORCE_INLINE void ALU_AD2() {
@@ -138,41 +138,41 @@ public:
         const uint64 result = op1 + op2;
         zero = (result << 16ull) == 0;
         sign = static_cast<sint64>(result << 16ull) < 0;
-        carry = bit::extract<48>(result);
-        overflow = bit::extract<47>((~(op1 ^ op2)) & (op1 ^ result));
+        carry = bit::test<48>(result);
+        overflow = bit::test<47>((~(op1 ^ op2)) & (op1 ^ result));
         ALU.s64 = result;
     }
 
     FORCE_INLINE void ALU_SR() {
-        carry = bit::extract<0>(AC.L);
+        carry = bit::test<0>(AC.L);
         ALU.L = static_cast<sint32>(AC.L) >> 1;
         zero = ALU.L == 0;
         sign = false;
     }
 
     FORCE_INLINE void ALU_RR() {
-        carry = bit::extract<0>(AC.L);
+        carry = bit::test<0>(AC.L);
         ALU.L = std::rotr(AC.L, 1);
         zero = ALU.L == 0;
         sign = static_cast<sint32>(ALU.L) < 0;
     }
 
     FORCE_INLINE void ALU_SL() {
-        carry = bit::extract<31>(AC.L);
+        carry = bit::test<31>(AC.L);
         ALU.L = AC.L << 1u;
         zero = ALU.L == 0;
         sign = static_cast<sint32>(ALU.L) < 0;
     }
 
     FORCE_INLINE void ALU_RL() {
-        carry = bit::extract<31>(AC.L);
+        carry = bit::test<31>(AC.L);
         ALU.L = std::rotl(AC.L, 1);
         zero = ALU.L == 0;
         sign = static_cast<sint32>(ALU.L) < 0;
     }
 
     FORCE_INLINE void ALU_RL8() {
-        carry = bit::extract<24>(AC.L);
+        carry = bit::test<24>(AC.L);
         ALU.L = std::rotl(AC.L, 8);
         zero = ALU.L == 0;
         sign = static_cast<sint32>(ALU.L) < 0;
@@ -188,7 +188,7 @@ public:
         case 0b0000 ... 0b0111: // M0-3, MC0-3
         {
             const uint8 ctIndex = bit::extract<0, 1>(index);
-            const bool inc = bit::extract<2>(index);
+            const bool inc = bit::test<2>(index);
 
             // Finish previous DMA transfer
             if (dmaRun) {

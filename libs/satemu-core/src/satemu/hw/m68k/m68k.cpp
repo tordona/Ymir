@@ -197,9 +197,9 @@ FORCE_INLINE T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
         const uint16 briefExtWord = PrefetchNext();
 
         const sint8 disp = static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
-        const bool s = bit::extract<11>(briefExtWord);
+        const bool s = bit::test<11>(briefExtWord);
         const uint8 extXn = bit::extract<12, 14>(briefExtWord);
-        const bool m = bit::extract<15>(briefExtWord);
+        const bool m = bit::test<15>(briefExtWord);
 
         sint32 index = m ? regs.A[extXn] : regs.D[extXn];
         if (!s) {
@@ -219,9 +219,9 @@ FORCE_INLINE T MC68EC000::ReadEffectiveAddress(uint8 M, uint8 Xn) {
             const uint16 extWord = PrefetchNext();
 
             const sint8 disp = bit::extract_signed<0, 7>(extWord);
-            const bool wl = bit::extract<11>(extWord);
+            const bool wl = bit::test<11>(extWord);
             const uint8 extXn = bit::extract<12, 14>(extWord);
-            const bool da = bit::extract<15>(extWord);
+            const bool da = bit::test<15>(extWord);
 
             sint32 index = da ? regs.A[extXn] : regs.D[extXn];
             if (!wl) {
@@ -278,9 +278,9 @@ FORCE_INLINE void MC68EC000::WriteEffectiveAddress(uint8 M, uint8 Xn, T value) {
         const uint16 briefExtWord = PrefetchNext();
 
         const sint8 disp = static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
-        const bool s = bit::extract<11>(briefExtWord);
+        const bool s = bit::test<11>(briefExtWord);
         const uint8 extXn = bit::extract<12, 14>(briefExtWord);
-        const bool m = bit::extract<15>(briefExtWord);
+        const bool m = bit::test<15>(briefExtWord);
 
         sint32 index = m ? regs.A[extXn] : regs.D[extXn];
         if (!s) {
@@ -372,9 +372,9 @@ FORCE_INLINE void MC68EC000::ModifyEffectiveAddress(uint8 M, uint8 Xn, FnModify 
         const uint16 briefExtWord = PrefetchNext();
 
         const sint8 disp = static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
-        const bool s = bit::extract<11>(briefExtWord);
+        const bool s = bit::test<11>(briefExtWord);
         const uint8 extXn = bit::extract<12, 14>(briefExtWord);
-        const bool m = bit::extract<15>(briefExtWord);
+        const bool m = bit::test<15>(briefExtWord);
 
         sint32 index = m ? regs.A[extXn] : regs.D[extXn];
         if (!s) {
@@ -460,9 +460,9 @@ FORCE_INLINE T MC68EC000::MoveEffectiveAddress(uint8 srcM, uint8 srcXn, uint8 ds
         const uint16 briefExtWord = PrefetchNext();
 
         const sint8 disp = static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
-        const bool s = bit::extract<11>(briefExtWord);
+        const bool s = bit::test<11>(briefExtWord);
         const uint8 extXn = bit::extract<12, 14>(briefExtWord);
-        const bool m = bit::extract<15>(briefExtWord);
+        const bool m = bit::test<15>(briefExtWord);
 
         sint32 index = m ? regs.A[extXn] : regs.D[extXn];
         if (!s) {
@@ -526,9 +526,9 @@ FORCE_INLINE uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
         const uint16 briefExtWord = prefetchLast();
 
         const sint8 disp = static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
-        const bool s = bit::extract<11>(briefExtWord);
+        const bool s = bit::test<11>(briefExtWord);
         const uint8 extXn = bit::extract<12, 14>(briefExtWord);
-        const bool m = bit::extract<15>(briefExtWord);
+        const bool m = bit::test<15>(briefExtWord);
 
         uint32 index = m ? regs.A[extXn] : regs.D[extXn];
         if (!s) {
@@ -547,9 +547,9 @@ FORCE_INLINE uint32 MC68EC000::CalcEffectiveAddress(uint8 M, uint8 Xn) {
             const uint16 briefExtWord = prefetchLast();
 
             const uint32 address = PC - pcOffset + static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
-            const bool s = bit::extract<11>(briefExtWord);
+            const bool s = bit::test<11>(briefExtWord);
             const uint8 extXn = bit::extract<12, 14>(briefExtWord);
-            const bool m = bit::extract<15>(briefExtWord);
+            const bool m = bit::test<15>(briefExtWord);
 
             sint32 index = m ? regs.A[extXn] : regs.D[extXn];
             if (!s) {
@@ -1338,8 +1338,8 @@ FORCE_INLINE void MC68EC000::Instr_NBCD(uint16 instr) {
         // Thanks to raddad772 and the ares emulator for the implementation
 
         uint16 result = 0 - op1 - SR.X;
-        const bool adjustLo = bit::extract<4>(op1 ^ result);
-        const bool adjustHi = bit::extract<8>(result);
+        const bool adjustLo = bit::test<4>(op1 ^ result);
+        const bool adjustHi = bit::test<8>(result);
 
         bool c = false;
         bool v = false;
@@ -1347,14 +1347,14 @@ FORCE_INLINE void MC68EC000::Instr_NBCD(uint16 instr) {
         if (adjustLo) {
             uint16 previous = result;
             result -= 0x06;
-            c = bit::extract<7>(~previous & result);
-            v |= bit::extract<7>(previous & ~result);
+            c = bit::test<7>(~previous & result);
+            v |= bit::test<7>(previous & ~result);
         }
         if (adjustHi) {
             uint16 previous = result;
             result -= 0x60;
             c = true;
-            v |= bit::extract<7>(previous & ~result);
+            v |= bit::test<7>(previous & ~result);
         }
 
         SR.Z &= (result & 0xFF) == 0;

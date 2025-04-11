@@ -43,22 +43,22 @@ struct Filter {
     bool Test(const Buffer &buffer) const {
         bool subheaderPass = true;
         // Filter by file number
-        if (bit::extract<0>(mode)) {
+        if (bit::test<0>(mode)) {
             subheaderPass &= buffer.subheader.fileNum == fileNum;
         }
         // Filter by channel number
-        if (bit::extract<1>(mode)) {
+        if (bit::test<1>(mode)) {
             subheaderPass &= buffer.subheader.chanNum == chanNum;
         }
         // Filter by submode
-        if (bit::extract<2>(mode)) {
+        if (bit::test<2>(mode)) {
             subheaderPass &= (buffer.subheader.submode & submodeMask) == submodeValue;
         }
         // Filter by coding information
-        if (bit::extract<3>(mode)) {
+        if (bit::test<3>(mode)) {
             subheaderPass &= (buffer.subheader.codingInfo & codingInfoMask) == codingInfoValue;
         }
-        if (bit::extract<4>(mode)) {
+        if (bit::test<4>(mode)) {
             // Invert subheader conditions
             subheaderPass = !subheaderPass;
         }
@@ -67,7 +67,7 @@ struct Filter {
         }
 
         // Filter by frame address
-        if (bit::extract<6>(mode)) {
+        if (bit::test<6>(mode)) {
             if (buffer.frameAddress < startFrameAddress ||
                 buffer.frameAddress >= startFrameAddress + frameAddressCount) {
                 return false;

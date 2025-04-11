@@ -53,11 +53,11 @@ struct RegCCR {
     }
 
     FORCE_INLINE void Write(uint8 value) {
-        CE = bit::extract<0>(value);
-        ID = bit::extract<1>(value);
-        OD = bit::extract<2>(value);
-        TW = bit::extract<3>(value);
-        CP = bit::extract<4>(value);
+        CE = bit::test<0>(value);
+        ID = bit::test<1>(value);
+        OD = bit::test<2>(value);
+        TW = bit::test<3>(value);
+        CP = bit::test<4>(value);
         Wn = bit::extract<6, 7>(value);
     }
 

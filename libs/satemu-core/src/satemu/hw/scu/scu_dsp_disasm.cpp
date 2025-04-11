@@ -92,7 +92,7 @@ static SCUDSPInstruction DisasembleOperation(uint32 opcode) {
         default: instr.operation.xbusPOp = NOP; break;
         }
     }
-    instr.operation.xbusXOp = bit::extract<25>(opcode);
+    instr.operation.xbusXOp = bit::test<25>(opcode);
     instr.operation.xbusSrc = TranslateOpSource(bit::extract<20, 22>(opcode));
 
     // Y-Bus
@@ -105,7 +105,7 @@ static SCUDSPInstruction DisasembleOperation(uint32 opcode) {
         default: instr.operation.ybusAOp = NOP; break;
         }
     }
-    instr.operation.ybusYOp = bit::extract<19>(opcode);
+    instr.operation.ybusYOp = bit::test<19>(opcode);
     instr.operation.ybusSrc = TranslateOpSource(bit::extract<14, 16>(opcode));
 
     // D1-Bus
@@ -130,7 +130,7 @@ static SCUDSPInstruction DisasembleOperation(uint32 opcode) {
 
 static SCUDSPInstruction DisasembleLoadImm(uint32 opcode) {
     SCUDSPInstruction instr{.type = SCUDSPInstruction::Type::MVI, .mvi = {}};
-    if (bit::extract<25>(opcode)) {
+    if (bit::test<25>(opcode)) {
         instr.mvi.cond = TranslateCondition(bit::extract<19, 24>(opcode));
         instr.mvi.imm = bit::extract_signed<0, 18>(opcode);
     } else {
@@ -160,9 +160,9 @@ static SCUDSPInstruction DisasembleLoadImm(uint32 opcode) {
 
 static SCUDSPInstruction DisassembleDMA(uint32 opcode) {
     SCUDSPInstruction instr{.type = SCUDSPInstruction::Type::DMA, .dma = {}};
-    instr.dma.toD0 = bit::extract<12>(opcode);
-    instr.dma.hold = bit::extract<14>(opcode);
-    instr.dma.countType = bit::extract<13>(opcode);
+    instr.dma.toD0 = bit::test<12>(opcode);
+    instr.dma.hold = bit::test<14>(opcode);
+    instr.dma.countType = bit::test<13>(opcode);
     if (instr.dma.countType) {
         instr.dma.count.imm = bit::extract<0, 7>(opcode);
     } else {
@@ -191,7 +191,7 @@ static SCUDSPInstruction DisassembleJump(uint32 opcode) {
 }
 
 static SCUDSPInstruction DisassembleLoop(uint32 opcode) {
-    if (bit::extract<27>(opcode)) {
+    if (bit::test<27>(opcode)) {
         return {.type = SCUDSPInstruction::Type::LPS};
     } else {
         return {.type = SCUDSPInstruction::Type::BTM};
@@ -199,7 +199,7 @@ static SCUDSPInstruction DisassembleLoop(uint32 opcode) {
 }
 
 static SCUDSPInstruction DisassembleEnd(uint32 opcode) {
-    if (bit::extract<27>(opcode)) {
+    if (bit::test<27>(opcode)) {
         return {.type = SCUDSPInstruction::Type::ENDI};
     } else {
         return {.type = SCUDSPInstruction::Type::END};

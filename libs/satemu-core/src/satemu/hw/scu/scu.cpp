@@ -360,7 +360,7 @@ void SCU::DMAReadIndirectTransfer(uint8 level) {
     ch.currDstAddr = m_bus.Read<uint32>(ch.currIndirectSrc + 4);
     ch.currSrcAddr = m_bus.Read<uint32>(ch.currIndirectSrc + 8);
     ch.currIndirectSrc += 3 * sizeof(uint32);
-    ch.endIndirect = bit::extract<31>(ch.currSrcAddr);
+    ch.endIndirect = bit::test<31>(ch.currSrcAddr);
     ch.currSrcAddr &= 0x7FF'FFFF;
     ch.currDstAddr &= 0x7FF'FFFF;
     SetupDMATransferIncrements(ch);
@@ -733,7 +733,7 @@ FORCE_INLINE void SCU::WriteRegByte(uint32 address, uint8 value) {
 
     case 0xA8 ... 0xAA: break; // A-Bus Interrupt Acknowledge (bits 8-31)
     case 0xAB:                 // A-Bus Interrupt Acknowledge (bits 0-7)
-        m_abusIntrAck = bit::extract<0>(value);
+        m_abusIntrAck = bit::test<0>(value);
         if constexpr (!poke) {
             UpdateInterruptLevel<false>();
         }
@@ -820,13 +820,13 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
     {
         const uint32 index = address >> 5u;
         auto &ch = m_dmaChannels[index];
-        ch.enabled = bit::extract<8>(value);
+        ch.enabled = bit::test<8>(value);
         if constexpr (!poke) {
             if (ch.enabled) {
                 devlog::trace<grp::dma>("DMA{} enabled - {:08X} (+{:02X}) -> {:08X} (+{:02X})", index, ch.srcAddr,
                                         ch.srcAddrInc, ch.dstAddr, ch.dstAddrInc);
             }
-            if (ch.enabled && ch.trigger == DMATrigger::Immediate && bit::extract<0>(value)) {
+            if (ch.enabled && ch.trigger == DMATrigger::Immediate && bit::test<0>(value)) {
                 if (ch.active) {
                     devlog::trace<grp::dma>("DMA{} triggering immediate transfer while another transfer is in progress",
                                             index);
@@ -845,16 +845,16 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
     case 0x54: // Level 2 DMA Mode
     {
         auto &ch = m_dmaChannels[address >> 5u];
-        ch.indirect = bit::extract<24>(value);
-        ch.updateSrcAddr = bit::extract<16>(value);
-        ch.updateDstAddr = bit::extract<8>(value);
+        ch.indirect = bit::test<24>(value);
+        ch.updateSrcAddr = bit::test<16>(value);
+        ch.updateDstAddr = bit::test<8>(value);
         ch.trigger = static_cast<DMATrigger>(bit::extract<0, 2>(value));
         break;
     }
 
     case 0x60: // DMA Force Stop
         if constexpr (!poke) {
-            if (bit::extract<0>(value)) {
+            if (bit::test<0>(value)) {
                 for (auto &ch : m_dmaChannels) {
                     ch.active = false;
                 }
@@ -866,16 +866,16 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
         break;
 
     case 0x80: // DSP Program Control Port
-        if (bit::extract<15>(value)) {
+        if (bit::test<15>(value)) {
             m_dsp.PC = bit::extract<0, 7>(value);
         }
-        if (bit::extract<25>(value)) {
+        if (bit::test<25>(value)) {
             m_dsp.programPaused = true;
-        } else if (bit::extract<26>(value)) {
+        } else if (bit::test<26>(value)) {
             m_dsp.programPaused = false;
         } else if (!m_dsp.programExecuting) {
-            m_dsp.programExecuting = bit::extract<16>(value);
-            m_dsp.programStep = bit::extract<17>(value);
+            m_dsp.programExecuting = bit::test<16>(value);
+            m_dsp.programStep = bit::test<17>(value);
             m_dsp.programEnded = false;
         }
         break;
@@ -896,8 +896,8 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
         WriteTimer1Reload(value);
         break;
     case 0x98: // Timer 1 Mode
-        m_timer1Enable = bit::extract<0>(value);
-        m_timer1Mode = bit::extract<8>(value);
+        m_timer1Enable = bit::test<0>(value);
+        m_timer1Mode = bit::test<8>(value);
         break;
 
     case 0xA0: // Interrupt Mask
@@ -911,7 +911,7 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
         }
         break;
     case 0xA8: // A-Bus Interrupt Acknowledge
-        m_abusIntrAck = bit::extract<0>(value);
+        m_abusIntrAck = bit::test<0>(value);
         if constexpr (!poke) {
             UpdateInterruptLevel<false>();
         }

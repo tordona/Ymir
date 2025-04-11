@@ -263,7 +263,7 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(uint32 command) {
             // MOV [s],P
             P.s64 = static_cast<sint64>(value);
         }
-        if (bit::extract<25>(command)) {
+        if (bit::test<25>(command)) {
             // MOV [s],X
             RX = value;
         }
@@ -295,7 +295,7 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(uint32 command) {
             // MOV [s],A
             AC.s64 = static_cast<sint64>(value);
         }
-        if (bit::extract<19>(command)) {
+        if (bit::test<19>(command)) {
             // MOV [s],Y
             RY = value;
         }
@@ -325,7 +325,7 @@ template <bool debug>
 FORCE_INLINE void SCUDSP::Cmd_LoadImm(uint32 command) {
     const uint32 dst = bit::extract<26, 29>(command);
     sint32 imm;
-    if (bit::extract<25>(command)) {
+    if (bit::test<25>(command)) {
         // Conditional transfer
         // MVI SImm,[d],<cond>
         imm = bit::extract_signed<0, 18>(command);
@@ -362,13 +362,13 @@ FORCE_INLINE void SCUDSP::Cmd_Special_DMA(uint32 command) {
     }
 
     dmaRun = true;
-    dmaToD0 = bit::extract<12>(command);
-    dmaHold = bit::extract<14>(command);
+    dmaToD0 = bit::test<12>(command);
+    dmaHold = bit::test<14>(command);
 
     // Get DMA transfer length
-    if (bit::extract<13>(command)) {
+    if (bit::test<13>(command)) {
         const uint8 ctIndex = bit::extract<0, 1>(command);
-        const bool inc = bit::extract<2>(command);
+        const bool inc = bit::test<2>(command);
         const uint32 ctAddr = CT[ctIndex];
         dmaCount = dataRAM[ctIndex][ctAddr];
         if (inc) {
@@ -414,7 +414,7 @@ FORCE_INLINE void SCUDSP::Cmd_Special_Jump(uint32 command) {
 
 FORCE_INLINE void SCUDSP::Cmd_Special_Loop(uint32 command) {
     if (loopCount != 0) {
-        if (bit::extract<27>(command)) {
+        if (bit::test<27>(command)) {
             // LPS
             DelayedJump(PC - 1);
         } else {
@@ -429,7 +429,7 @@ FORCE_INLINE void SCUDSP::Cmd_Special_Loop(uint32 command) {
 FORCE_INLINE void SCUDSP::Cmd_Special_End(uint32 command) {
     // END
     // ENDI
-    const bool setEndIntr = bit::extract<27>(command);
+    const bool setEndIntr = bit::test<27>(command);
     programExecuting = false;
     programEnded = true;
     if (setEndIntr) {

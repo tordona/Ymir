@@ -200,8 +200,8 @@ void SMPC::Write(uint32 address, uint8 value) {
         if constexpr (!poke) {
             if (m_intbackInProgress) {
                 // Handle INTBACK continue/break requests
-                const bool continueFlag = bit::extract<7>(IREG[0]);
-                const bool breakFlag = bit::extract<6>(IREG[0]);
+                const bool continueFlag = bit::test<7>(IREG[0]);
+                const bool breakFlag = bit::test<6>(IREG[0]);
                 if (breakFlag) {
                     devlog::trace<grp::base>("INTBACK break request");
                     m_intbackInProgress = false;
@@ -367,7 +367,7 @@ FORCE_INLINE void SMPC::WriteSR(uint8 value) {
 template <bool poke>
 FORCE_INLINE void SMPC::WriteSF(uint8 value) {
     if constexpr (poke) {
-        SF = bit::extract<0>(value);
+        SF = bit::test<0>(value);
     } else {
         SF = true;
     }
@@ -400,13 +400,13 @@ FORCE_INLINE void SMPC::WriteDDR2(uint8 value) {
 }
 
 FORCE_INLINE void SMPC::WriteIOSEL(uint8 value) {
-    m_pioMode1 = bit::extract<0>(value);
-    m_pioMode2 = bit::extract<1>(value);
+    m_pioMode1 = bit::test<0>(value);
+    m_pioMode2 = bit::test<1>(value);
 }
 
 FORCE_INLINE void SMPC::WriteEXLE(uint8 value) {
-    m_extLatchEnable1 = bit::extract<0>(value);
-    m_extLatchEnable2 = bit::extract<1>(value);
+    m_extLatchEnable1 = bit::test<0>(value);
+    m_extLatchEnable2 = bit::test<1>(value);
 }
 
 void SMPC::ProcessCommand() {
@@ -551,7 +551,7 @@ void SMPC::RESDISA() {
 void SMPC::INTBACK() {
     devlog::trace<grp::base>("Processing INTBACK {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
 
-    m_getPeripheralData = bit::extract<3>(IREG[1]);
+    m_getPeripheralData = bit::test<3>(IREG[1]);
 
     if (m_intbackInProgress) {
         if (m_getPeripheralData) {
@@ -567,7 +567,7 @@ void SMPC::INTBACK() {
 
         m_intbackInProgress = true;
 
-        m_optimize = bit::extract<1>(IREG[1]);
+        m_optimize = bit::test<1>(IREG[1]);
         m_port1mode = bit::extract<4, 5>(IREG[1]);
         m_port2mode = bit::extract<6, 7>(IREG[1]);
 

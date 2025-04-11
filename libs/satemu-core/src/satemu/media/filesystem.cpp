@@ -203,7 +203,7 @@ bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor
                 return false;
             }
             // Fail if it's not a directory
-            if (!bit::extract<1>(dirRecord.flags)) {
+            if (!bit::test<1>(dirRecord.flags)) {
                 return false;
             }
 
