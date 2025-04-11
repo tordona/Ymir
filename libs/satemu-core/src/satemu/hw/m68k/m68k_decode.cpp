@@ -68,27 +68,27 @@ static constexpr auto kValidAlterableAddrModes = [] {
 
 // Valid data alterable addressing modes
 static constexpr auto kValidDataAlterableAddrModes = [] {
-    std::array<bool, 0b111'111 + 1> arr = kValidDataAddrModes;
+    std::array<bool, 0b111'111 + 1> arr{};
     for (int i = 0; i < arr.size(); i++) {
-        arr[i] &= kValidAlterableAddrModes[i];
+        arr[i] = kValidDataAddrModes[i] && kValidAlterableAddrModes[i];
     }
     return arr;
 }();
 
 // Valid memory alterable addressing modes
 static constexpr auto kValidMemoryAlterableAddrModes = [] {
-    std::array<bool, 0b111'111 + 1> arr = kValidMemoryAddrModes;
+    std::array<bool, 0b111'111 + 1> arr{};
     for (int i = 0; i < arr.size(); i++) {
-        arr[i] &= kValidAlterableAddrModes[i];
+        arr[i] = kValidMemoryAddrModes[i] && kValidAlterableAddrModes[i];
     }
     return arr;
 }();
 
 // Valid control alterable addressing modes
 static constexpr auto kValidControlAlterableAddrModes = [] {
-    std::array<bool, 0b111'111 + 1> arr = kValidControlAddrModes;
+    std::array<bool, 0b111'111 + 1> arr{};
     for (int i = 0; i < arr.size(); i++) {
-        arr[i] &= kValidAlterableAddrModes[i];
+        arr[i] = kValidControlAddrModes[i] && kValidAlterableAddrModes[i];
     }
     return arr;
 }();
