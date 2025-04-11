@@ -4,6 +4,7 @@
 
 #include <array>
 #include <bit>
+#include <climits>
 #include <concepts>
 #include <cstddef>
 #include <type_traits>

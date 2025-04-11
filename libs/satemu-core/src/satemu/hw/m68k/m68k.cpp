@@ -6,6 +6,7 @@
 #include <satemu/util/unreachable.hpp>
 
 #include <cassert>
+#include <cstdlib>
 
 namespace satemu::m68k {
 

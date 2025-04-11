@@ -206,11 +206,13 @@ target_precompile_headers(satemu-core
         <bit>
         <cassert>
         <cinttypes>
+        <climits>
         <cmath>
         <concepts>
         <condition_variable>
         <cstddef>
         <cstdint>
+        <cstdlib>
         <deque>
         <filesystem>
         <fstream>
