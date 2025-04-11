@@ -220,6 +220,7 @@ App::App()
     , m_scuWindowSet(m_context)
     , m_debugOutputWindow(m_context)
     , m_settingsWindow(m_context)
+    , m_periphBindsWindow(m_context)
     , m_aboutWindow(m_context) {
 
     // Preinitialize some memory viewers
@@ -1146,6 +1147,9 @@ void App::RunEmulator() {
             switch (evt.type) {
             case EvtType::LoadDisc: OpenLoadDiscDialog(); break;
             case EvtType::OpenBackupMemoryCartFileDialog: OpenBackupMemoryCartFileDialog(); break;
+            case EvtType::OpenPeripheralBindsEditor:
+                OpenPeripheralBindsEditor(std::get<PeripheralBindsParams>(evt.value));
+                break;
 
             case EvtType::OpenFile: InvokeOpenFileDialog(std::get<FileDialogParams>(evt.value)); break;
             case EvtType::OpenManyFiles: InvokeOpenManyFilesDialog(std::get<FileDialogParams>(evt.value)); break;
@@ -1830,6 +1834,11 @@ void App::InvokeGenericFileDialog(SDL_FileDialogType type, const char *title, vo
     SDL_ShowFileDialogWithProperties(type, callback, userdata, props);
 }
 
+void App::OpenPeripheralBindsEditor(const PeripheralBindsParams &params) {
+    m_periphBindsWindow.Open(params.portIndex, params.slotIndex);
+    m_periphBindsWindow.RequestFocus();
+}
+
 void App::DrawWindows() {
     m_systemStateWindow.Display();
     m_bupMgrWindow.Display();
@@ -1846,6 +1855,7 @@ void App::DrawWindows() {
     }
 
     m_settingsWindow.Display();
+    m_periphBindsWindow.Display();
     m_aboutWindow.Display();
 }
 

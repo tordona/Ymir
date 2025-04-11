@@ -1,12 +1,13 @@
 #include "peripheral_widgets.hpp"
 
 #include <app/events/emu_event_factory.hpp>
+#include <app/events/gui_event_factory.hpp>
 
 using namespace satemu;
 
 namespace app::ui::widgets {
 
-bool PeripheralSelector(SharedContext &ctx, int portIndex) {
+bool PeripheralSelector(SharedContext &ctx, uint32 portIndex) {
     std::unique_lock lock{ctx.locks.peripherals};
 
     const bool isPort1 = portIndex == 1;
@@ -21,16 +22,17 @@ bool PeripheralSelector(SharedContext &ctx, int portIndex) {
         ImGui::TableSetupColumn("##input", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableSetupColumn("##config", ImGuiTableColumnFlags_WidthFixed);
 
-        for (uint32 i = 0; i < 1; i++) {
+        for (uint32 slotIndex = 0; slotIndex < 1; slotIndex++) {
             ImGui::TableNextRow();
             if (ImGui::TableNextColumn()) {
                 ImGui::AlignTextToFramePadding();
-                // TODO: multitap -- ImGui::TextUnformatted("Slot 1:");
+                // TODO: multitap -- ImGui::Text("Slot %u:", slotIndex);
                 ImGui::TextUnformatted("Peripheral:");
             }
             if (ImGui::TableNextColumn()) {
                 ImGui::SetNextItemWidth(-1);
-                if (ImGui::BeginCombo(fmt::format("##periph_{}_{}", portIndex, i).c_str(), periph.GetName().data())) {
+                if (ImGui::BeginCombo(fmt::format("##periph_{}_{}", portIndex, slotIndex).c_str(),
+                                      periph.GetName().data())) {
                     for (auto type : peripheral::kTypes) {
                         if (ImGui::Selectable(peripheral::GetPeripheralName(type).data(), periph.GetType() == type)) {
                             ctx.EnqueueEvent(isPort1 ? events::emu::InsertPort1Peripheral(type)
@@ -45,8 +47,8 @@ bool PeripheralSelector(SharedContext &ctx, int portIndex) {
                 if (isNone) {
                     ImGui::BeginDisabled();
                 }
-                if (ImGui::Button(fmt::format("Configure##{}_{}", portIndex, i).c_str())) {
-                    // TODO: open keybindings for this peripheral
+                if (ImGui::Button(fmt::format("Configure##{}_{}", portIndex, slotIndex).c_str())) {
+                    ctx.EnqueueEvent(events::gui::OpenPeripheralBindsEditor(portIndex - 1, slotIndex));
                 }
                 if (isNone) {
                     ImGui::EndDisabled();

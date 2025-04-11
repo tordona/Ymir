@@ -7,6 +7,7 @@
 
 #include "ui/windows/about_window.hpp"
 #include "ui/windows/backup_ram_manager_window.hpp"
+#include "ui/windows/peripheral_binds_window.hpp"
 #include "ui/windows/settings_window.hpp"
 #include "ui/windows/system_state_window.hpp"
 
@@ -87,6 +88,8 @@ private:
                                  bool allowMany, const char *location, void *userdata,
                                  SDL_DialogFileCallback callback) const;
 
+    void OpenPeripheralBindsEditor(const PeripheralBindsParams &params);
+
     // -----------------------------------------------------------------------------------------------------------------
     // Windows
 
@@ -106,6 +109,7 @@ private:
     std::vector<ui::MemoryViewerWindow> m_memoryViewerWindows;
 
     ui::SettingsWindow m_settingsWindow;
+    ui::PeripheralBindsWindow m_periphBindsWindow;
     ui::AboutWindow m_aboutWindow;
 
     // Error modal dialog

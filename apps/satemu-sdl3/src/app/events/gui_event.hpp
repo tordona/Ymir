@@ -36,10 +36,17 @@ struct FolderDialogParams {
     void (*callback)(void *userdata, const char *const *filelist, int filter);
 };
 
+// Parameters for opening peripheral binds configuration windows.
+struct PeripheralBindsParams {
+    uint32 portIndex;
+    uint32 slotIndex;
+};
+
 struct GUIEvent {
     enum class Type {
         LoadDisc,
         OpenBackupMemoryCartFileDialog,
+        OpenPeripheralBindsEditor,
 
         OpenFile,      // Invoke generic open single file dialog; uses FileDialogParams
         OpenManyFiles, // Invoke generic open multiple files dialog; uses FileDialogParams
@@ -60,7 +67,8 @@ struct GUIEvent {
     };
 
     Type type;
-    std::variant<std::monostate, bool, uint32, std::string, FileDialogParams, FolderDialogParams, ui::SettingsTab>
+    std::variant<std::monostate, bool, uint32, std::string, PeripheralBindsParams, FileDialogParams, FolderDialogParams,
+                 ui::SettingsTab>
         value;
 };
 

@@ -18,6 +18,11 @@ inline GUIEvent OpenBackupMemoryManager() {
     return {.type = GUIEvent::Type::OpenBackupMemoryManager};
 }
 
+inline GUIEvent OpenPeripheralBindsEditor(uint32 portIndex, uint32 slotIndex) {
+    return {.type = GUIEvent::Type::OpenPeripheralBindsEditor,
+            .value = PeripheralBindsParams{.portIndex = portIndex, .slotIndex = slotIndex}};
+}
+
 inline GUIEvent OpenSettings(ui::SettingsTab tab) {
     return {.type = GUIEvent::Type::OpenSettings, .value = tab};
 }

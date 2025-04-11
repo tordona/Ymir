@@ -30,6 +30,17 @@ public:
         }
     }
 
+    // If this peripheral object has the specified PeripheralType, casts it to the corresponding concrete type.
+    // Returns nullptr otherwise.
+    template <PeripheralType type>
+    FORCE_INLINE const typename detail::PeripheralType_t<type> *As() const {
+        if (m_type == type) {
+            return static_cast<detail::PeripheralType_t<type> *>(this);
+        } else {
+            return nullptr;
+        }
+    }
+
     std::string_view GetName() const {
         return GetPeripheralName(m_type);
     }
