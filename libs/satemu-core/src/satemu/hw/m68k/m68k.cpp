@@ -983,7 +983,7 @@ uint64 MC68EC000::Execute() {
         // this should absolutely never happen
         fmt::println("M68K: unexpected instruction type {} for opcode {:04X} at {:08X} -- this is a bug!",
                      static_cast<uint32>(type), instr, PC - 2);
-        break;
+        return 0;
 #else
         util::unreachable();
 #endif
