@@ -872,17 +872,17 @@ void App::RunEmulator() {
 
     bool paused = false; // TODO: this should be updated by the emulator thread via events
 
-    m_inputContext.SetActionHandler(actions::general::LoadDisc, [&](void *, bool actuated) {
+    m_inputContext.SetActionHandler(actions::cd_drive::LoadDisc, [&](void *, bool actuated) {
         if (actuated) {
             OpenLoadDiscDialog();
         }
     });
-    m_inputContext.SetActionHandler(actions::general::EjectDisc, [&](void *, bool actuated) {
+    m_inputContext.SetActionHandler(actions::cd_drive::EjectDisc, [&](void *, bool actuated) {
         if (actuated) {
             m_context.EnqueueEvent(events::emu::EjectDisc());
         }
     });
-    m_inputContext.SetActionHandler(actions::general::OpenCloseTray, [&](void *, bool actuated) {
+    m_inputContext.SetActionHandler(actions::cd_drive::OpenCloseTray, [&](void *, bool actuated) {
         if (actuated) {
             m_context.EnqueueEvent(events::emu::OpenCloseTray());
         }
@@ -916,30 +916,33 @@ void App::RunEmulator() {
             });
         };
 
-        registerButton(actions::emu::StandardPadA, Button::A);
-        registerButton(actions::emu::StandardPadB, Button::B);
-        registerButton(actions::emu::StandardPadC, Button::C);
-        registerButton(actions::emu::StandardPadX, Button::X);
-        registerButton(actions::emu::StandardPadY, Button::Y);
-        registerButton(actions::emu::StandardPadZ, Button::Z);
-        registerButton(actions::emu::StandardPadUp, Button::Up);
-        registerButton(actions::emu::StandardPadDown, Button::Down);
-        registerButton(actions::emu::StandardPadLeft, Button::Left);
-        registerButton(actions::emu::StandardPadRight, Button::Right);
-        registerButton(actions::emu::StandardPadStart, Button::Start);
-        registerButton(actions::emu::StandardPadL, Button::L);
-        registerButton(actions::emu::StandardPadR, Button::R);
+        registerButton(actions::std_saturn_pad::A, Button::A);
+        registerButton(actions::std_saturn_pad::B, Button::B);
+        registerButton(actions::std_saturn_pad::C, Button::C);
+        registerButton(actions::std_saturn_pad::X, Button::X);
+        registerButton(actions::std_saturn_pad::Y, Button::Y);
+        registerButton(actions::std_saturn_pad::Z, Button::Z);
+        registerButton(actions::std_saturn_pad::Up, Button::Up);
+        registerButton(actions::std_saturn_pad::Down, Button::Down);
+        registerButton(actions::std_saturn_pad::Left, Button::Left);
+        registerButton(actions::std_saturn_pad::Right, Button::Right);
+        registerButton(actions::std_saturn_pad::Start, Button::Start);
+        registerButton(actions::std_saturn_pad::L, Button::L);
+        registerButton(actions::std_saturn_pad::R, Button::R);
     }
 
-    m_inputContext.SetActionHandler(actions::emu::HardReset, [&](void *, bool actuated) {
+    m_inputContext.SetActionHandler(actions::sys::HardReset, [&](void *, bool actuated) {
         if (actuated) {
             m_context.EnqueueEvent(events::emu::HardReset());
         }
     });
-    m_inputContext.SetActionHandler(actions::emu::SoftReset, [&](void *, bool actuated) {
+    m_inputContext.SetActionHandler(actions::sys::SoftReset, [&](void *, bool actuated) {
         if (actuated) {
             m_context.EnqueueEvent(events::emu::SoftReset());
         }
+    });
+    m_inputContext.SetActionHandler(actions::sys::ResetButton, [&](void *, bool actuated) {
+        m_context.EnqueueEvent(events::emu::SetResetButton(actuated));
     });
 
     m_inputContext.SetActionHandler(actions::emu::FrameStep, [&](void *, bool actuated) {
@@ -957,16 +960,12 @@ void App::RunEmulator() {
     m_inputContext.SetActionHandler(actions::emu::FastForward,
                                     [&](void *, bool actuated) { m_audioSystem.SetSync(!actuated); });
 
-    m_inputContext.SetActionHandler(actions::emu::ResetButton, [&](void *, bool actuated) {
-        m_context.EnqueueEvent(events::emu::SetResetButton(actuated));
-    });
-
-    m_inputContext.SetActionHandler(actions::emu::ToggleDebugTrace, [&](void *, bool actuated) {
+    m_inputContext.SetActionHandler(actions::dbg::ToggleDebugTrace, [&](void *, bool actuated) {
         if (actuated) {
             m_context.EnqueueEvent(events::emu::SetDebugTrace(!m_context.saturn.IsDebugTracingEnabled()));
         }
     });
-    m_inputContext.SetActionHandler(actions::emu::DumpMemory, [&](void *, bool actuated) {
+    m_inputContext.SetActionHandler(actions::dbg::DumpMemory, [&](void *, bool actuated) {
         if (actuated) {
             m_context.EnqueueEvent(events::emu::DumpMemory());
         }
@@ -1204,15 +1203,15 @@ void App::RunEmulator() {
             if (ImGui::BeginMenu("File")) {
                 // CD drive
                 if (ImGui::MenuItem("Load disc image",
-                                    input::ToShortcut(m_inputContext, actions::general::LoadDisc).c_str())) {
+                                    input::ToShortcut(m_inputContext, actions::cd_drive::LoadDisc).c_str())) {
                     OpenLoadDiscDialog();
                 }
                 if (ImGui::MenuItem("Open/close tray",
-                                    input::ToShortcut(m_inputContext, actions::general::OpenCloseTray).c_str())) {
+                                    input::ToShortcut(m_inputContext, actions::cd_drive::OpenCloseTray).c_str())) {
                     m_context.EnqueueEvent(events::emu::OpenCloseTray());
                 }
                 if (ImGui::MenuItem("Eject disc",
-                                    input::ToShortcut(m_inputContext, actions::general::EjectDisc).c_str())) {
+                                    input::ToShortcut(m_inputContext, actions::cd_drive::EjectDisc).c_str())) {
                     m_context.EnqueueEvent(events::emu::EjectDisc());
                 }
 
@@ -1266,11 +1265,11 @@ void App::RunEmulator() {
                 // Resets
                 {
                     if (ImGui::MenuItem("Soft reset",
-                                        input::ToShortcut(m_inputContext, actions::emu::SoftReset).c_str())) {
+                                        input::ToShortcut(m_inputContext, actions::sys::SoftReset).c_str())) {
                         m_context.EnqueueEvent(events::emu::SoftReset());
                     }
                     if (ImGui::MenuItem("Hard reset",
-                                        input::ToShortcut(m_inputContext, actions::emu::HardReset).c_str())) {
+                                        input::ToShortcut(m_inputContext, actions::sys::HardReset).c_str())) {
                         m_context.EnqueueEvent(events::emu::HardReset());
                     }
                     // TODO: Let's not make it that easy to accidentally wipe system settings
@@ -1373,7 +1372,7 @@ void App::RunEmulator() {
             if (ImGui::BeginMenu("Debug")) {
                 bool debugTrace = m_context.saturn.IsDebugTracingEnabled();
                 if (ImGui::MenuItem("Enable tracing",
-                                    input::ToShortcut(m_inputContext, actions::emu::ToggleDebugTrace).c_str(),
+                                    input::ToShortcut(m_inputContext, actions::dbg::ToggleDebugTrace).c_str(),
                                     &debugTrace)) {
                     m_context.EnqueueEvent(events::emu::SetDebugTrace(debugTrace));
                 }
@@ -1389,7 +1388,7 @@ void App::RunEmulator() {
                     ImGui::EndMenu();
                 }
                 if (ImGui::MenuItem("Dump all memory",
-                                    input::ToShortcut(m_inputContext, actions::emu::DumpMemory).c_str())) {
+                                    input::ToShortcut(m_inputContext, actions::dbg::DumpMemory).c_str())) {
                     m_context.EnqueueEvent(events::emu::DumpMemory());
                 }
                 ImGui::Separator();

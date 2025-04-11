@@ -4,8 +4,11 @@
 
 #include <satemu/hw/smpc/peripheral/peripheral_defs.hpp>
 
+#include <app/input/input_action.hpp>
 #include <app/input/input_context.hpp>
 #include <app/input/input_events.hpp>
+
+#include <app/actions.hpp>
 
 #include <satemu/util/observable.hpp>
 
@@ -100,7 +103,13 @@ struct SettingsSaveResult {
 
 // Number of simultaneous input bindings allowed per input event
 inline constexpr size_t kNumBindsPerInput = 4;
-using InputEventArray = std::array<input::InputEvent, kNumBindsPerInput>;
+struct InputBind {
+    InputBind(input::ActionID action)
+        : action(action) {}
+
+    const input::ActionID action;
+    std::array<input::InputEvent, kNumBindsPerInput> events;
+};
 
 struct Settings {
     Settings(satemu::core::Configuration &emuConfig) noexcept
@@ -144,23 +153,23 @@ public:
     } system;
 
     struct Hotkeys {
-        InputEventArray openSettings;
-        InputEventArray toggleWindowedVideoOutput;
+        InputBind openSettings{actions::general::OpenSettings};
+        InputBind toggleWindowedVideoOutput{actions::general::ToggleWindowedVideoOutput};
 
-        InputEventArray loadDisc;
-        InputEventArray ejectDisc;
-        InputEventArray openCloseTray;
+        InputBind loadDisc{actions::cd_drive::LoadDisc};
+        InputBind ejectDisc{actions::cd_drive::EjectDisc};
+        InputBind openCloseTray{actions::cd_drive::OpenCloseTray};
 
-        InputEventArray hardReset;
-        InputEventArray softReset;
-        InputEventArray resetButton;
+        InputBind hardReset{actions::sys::HardReset};
+        InputBind softReset{actions::sys::SoftReset};
+        InputBind resetButton{actions::sys::ResetButton};
 
-        InputEventArray pauseResume;
-        InputEventArray frameStep;
-        InputEventArray fastForward;
+        InputBind pauseResume{actions::emu::PauseResume};
+        InputBind frameStep{actions::emu::FrameStep};
+        InputBind fastForward{actions::emu::FastForward};
 
-        InputEventArray toggleDebugTrace;
-        InputEventArray dumpMemory;
+        InputBind toggleDebugTrace{actions::dbg::ToggleDebugTrace};
+        InputBind dumpMemory{actions::dbg::DumpMemory};
     } hotkeys;
 
     struct Input {
@@ -168,19 +177,19 @@ public:
             util::Observable<satemu::peripheral::PeripheralType> type;
 
             struct StandardPadBinds {
-                InputEventArray a;
-                InputEventArray b;
-                InputEventArray c;
-                InputEventArray x;
-                InputEventArray y;
-                InputEventArray z;
-                InputEventArray l;
-                InputEventArray r;
-                InputEventArray start;
-                InputEventArray up;
-                InputEventArray down;
-                InputEventArray left;
-                InputEventArray right;
+                InputBind a{actions::std_saturn_pad::A};
+                InputBind b{actions::std_saturn_pad::B};
+                InputBind c{actions::std_saturn_pad::C};
+                InputBind x{actions::std_saturn_pad::X};
+                InputBind y{actions::std_saturn_pad::Y};
+                InputBind z{actions::std_saturn_pad::Z};
+                InputBind l{actions::std_saturn_pad::L};
+                InputBind r{actions::std_saturn_pad::R};
+                InputBind start{actions::std_saturn_pad::Start};
+                InputBind up{actions::std_saturn_pad::Up};
+                InputBind down{actions::std_saturn_pad::Down};
+                InputBind left{actions::std_saturn_pad::Left};
+                InputBind right{actions::std_saturn_pad::Right};
             } standardPadBinds;
         };
         Port port1;

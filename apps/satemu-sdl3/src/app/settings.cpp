@@ -143,11 +143,11 @@ FORCE_INLINE static const char *ToTOML(const config::audio::SampleInterpolationM
 }*/
 
 // Creates a TOML array with valid entries (skips Nones).
-FORCE_INLINE static toml::array ToTOML(const InputEventArray &value) {
+FORCE_INLINE static toml::array ToTOML(const InputBind &value) {
     toml::array out{};
-    for (size_t i = 0; i < kNumBindsPerInput; i++) {
-        if (value[i].type != input::InputEvent::Type::None) {
-            out.push_back(input::ToString(value[i]));
+    for (auto &event : value.events) {
+        if (event.type != input::InputEvent::Type::None) {
+            out.push_back(input::ToString(event));
         }
     }
     return out;
@@ -182,17 +182,17 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
     }
 }*/
 
-// Parses an array of input events.
 // Reads until the InputEventArray is full or runs out of entries, skipping all invalid and "None" entries.
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, InputEventArray &value) {
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, InputBind &value) {
     if (toml::array *arr = node[name].as_array()) {
-        value.fill({});
+        value.events.fill({});
         const size_t count = arr->size();
         size_t outIndex = 0;
         for (size_t i = 0; i < count && outIndex < kNumBindsPerInput; i++) {
             if (auto opt = arr->at(i).value<std::string_view>()) {
-                input::TryParse((*opt), value[i]);
-                if (value[i].type != input::InputEvent::Type::None) {
+                auto &event = value.events[i];
+                input::TryParse((*opt), event);
+                if (event.type != input::InputEvent::Type::None) {
                     ++outIndex;
                 }
             }
@@ -216,70 +216,58 @@ void Settings::ResetToDefaults() {
         using Key = input::KeyboardKey;
         using KeyCombo = input::KeyCombo;
 
-        hotkeys.loadDisc[0] = KeyCombo{Mod::Control, Key::O};
-        hotkeys.ejectDisc[0] = KeyCombo{Mod::Control, Key::W};
-        hotkeys.openCloseTray[0] = KeyCombo{Mod::Control, Key::T};
+        hotkeys.loadDisc.events = {KeyCombo{Mod::Control, Key::O}};
+        hotkeys.ejectDisc.events = {KeyCombo{Mod::Control, Key::W}};
+        hotkeys.openCloseTray.events = {KeyCombo{Mod::Control, Key::T}};
 
-        hotkeys.toggleWindowedVideoOutput[0] = KeyCombo{Mod::None, Key::F9};
+        hotkeys.toggleWindowedVideoOutput.events = {KeyCombo{Mod::None, Key::F9}};
 
-        hotkeys.openSettings[0] = KeyCombo{Mod::None, Key::F10};
+        hotkeys.openSettings.events = {KeyCombo{Mod::None, Key::F10}};
 
-        hotkeys.hardReset[0] = KeyCombo{Mod::Control, Key::R};
-        hotkeys.softReset[0] = KeyCombo{Mod::Control | Mod::Shift, Key::R};
+        hotkeys.hardReset.events = {KeyCombo{Mod::Control, Key::R}};
+        hotkeys.softReset.events = {KeyCombo{Mod::Control | Mod::Shift, Key::R}};
 
-        hotkeys.frameStep[0] = KeyCombo{Mod::None, Key::RightBracket};
-        hotkeys.pauseResume[0] = KeyCombo{Mod::None, Key::Pause};
-        hotkeys.pauseResume[1] = KeyCombo{Mod::Control, Key::P};
-        hotkeys.fastForward[0] = KeyCombo{Mod::None, Key::Tab};
+        hotkeys.frameStep.events = {KeyCombo{Mod::None, Key::RightBracket}};
+        hotkeys.pauseResume.events = {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::Control, Key::P}};
+        hotkeys.fastForward.events = {KeyCombo{Mod::None, Key::Tab}};
 
-        hotkeys.resetButton[0] = KeyCombo{Mod::Shift, Key::R};
+        hotkeys.resetButton.events = {KeyCombo{Mod::Shift, Key::R}};
 
-        hotkeys.toggleDebugTrace[0] = KeyCombo{Mod::None, Key::F11};
-        hotkeys.dumpMemory[0] = KeyCombo{Mod::Control, Key::F11};
+        hotkeys.toggleDebugTrace.events = {KeyCombo{Mod::None, Key::F11}};
+        hotkeys.dumpMemory.events = {KeyCombo{Mod::Control, Key::F11}};
 
         input.port1.type = PeriphType::StandardPad;
         input.port2.type = PeriphType::None;
 
         // Port 1 Standard Pad controller inputs
-        input.port1.standardPadBinds.a[0] = {Key::J};
-        input.port1.standardPadBinds.b[0] = {Key::K};
-        input.port1.standardPadBinds.c[0] = {Key::L};
-        input.port1.standardPadBinds.x[0] = {Key::U};
-        input.port1.standardPadBinds.y[0] = {Key::I};
-        input.port1.standardPadBinds.z[0] = {Key::O};
-        input.port1.standardPadBinds.l[0] = {Key::Q};
-        input.port1.standardPadBinds.r[0] = {Key::E};
-        input.port1.standardPadBinds.start[0] = {Key::G};
-        input.port1.standardPadBinds.start[1] = {Key::F};
-        input.port1.standardPadBinds.start[2] = {Key::H};
-        input.port1.standardPadBinds.start[3] = {Key::Return};
-        input.port1.standardPadBinds.up[0] = {Key::W};
-        input.port1.standardPadBinds.down[0] = {Key::S};
-        input.port1.standardPadBinds.left[0] = {Key::A};
-        input.port1.standardPadBinds.right[0] = {Key::D};
+        input.port1.standardPadBinds.a.events = {{{Key::J}}};
+        input.port1.standardPadBinds.b.events = {{{Key::K}}};
+        input.port1.standardPadBinds.c.events = {{{Key::L}}};
+        input.port1.standardPadBinds.x.events = {{{Key::U}}};
+        input.port1.standardPadBinds.y.events = {{{Key::I}}};
+        input.port1.standardPadBinds.z.events = {{{Key::O}}};
+        input.port1.standardPadBinds.l.events = {{{Key::Q}}};
+        input.port1.standardPadBinds.r.events = {{{Key::E}}};
+        input.port1.standardPadBinds.start.events = {{{Key::G}, {Key::F}, {Key::H}, {Key::Return}}};
+        input.port1.standardPadBinds.up.events = {{{Key::W}}};
+        input.port1.standardPadBinds.down.events = {{{Key::S}}};
+        input.port1.standardPadBinds.left.events = {{{Key::A}}};
+        input.port1.standardPadBinds.right.events = {{{Key::D}}};
 
         // Port 2 Standard Pad controller inputs
-        input.port2.standardPadBinds.a[0] = {Key::KeyPad1};
-        input.port2.standardPadBinds.b[0] = {Key::KeyPad2};
-        input.port2.standardPadBinds.c[0] = {Key::KeyPad3};
-        input.port2.standardPadBinds.x[0] = {Key::KeyPad4};
-        input.port2.standardPadBinds.y[0] = {Key::KeyPad5};
-        input.port2.standardPadBinds.z[0] = {Key::KeyPad6};
-        input.port2.standardPadBinds.l[0] = {Key::KeyPad7};
-        input.port2.standardPadBinds.r[0] = {Key::KeyPad9};
-        input.port2.standardPadBinds.start[0] = {Key::KeyPadEnter};
-        input.port2.standardPadBinds.up[0] = {Key::Up};
-        input.port2.standardPadBinds.down[0] = {Key::Down};
-        input.port2.standardPadBinds.left[0] = {Key::Left};
-        input.port2.standardPadBinds.right[0] = {Key::Right};
-
-        // Alternative port 2 Standard Pad controller inputs
-        input.port2.standardPadBinds.l[1] = {Key::Insert};
-        input.port2.standardPadBinds.r[1] = {Key::PageUp};
-        input.port2.standardPadBinds.up[1] = {Key::Home};
-        input.port2.standardPadBinds.down[1] = {Key::End};
-        input.port2.standardPadBinds.left[1] = {Key::Delete};
-        input.port2.standardPadBinds.right[1] = {Key::PageDown};
+        input.port2.standardPadBinds.a.events = {{{Key::KeyPad1}}};
+        input.port2.standardPadBinds.b.events = {{{Key::KeyPad2}}};
+        input.port2.standardPadBinds.c.events = {{{Key::KeyPad3}}};
+        input.port2.standardPadBinds.x.events = {{{Key::KeyPad4}}};
+        input.port2.standardPadBinds.y.events = {{{Key::KeyPad5}}};
+        input.port2.standardPadBinds.z.events = {{{Key::KeyPad6}}};
+        input.port2.standardPadBinds.l.events = {{{Key::KeyPad7}, {Key::Insert}}};
+        input.port2.standardPadBinds.r.events = {{{Key::KeyPad9}, {Key::PageUp}}};
+        input.port2.standardPadBinds.start.events = {{{Key::KeyPadEnter}}};
+        input.port2.standardPadBinds.up.events = {{{Key::Up}, {Key::Home}}};
+        input.port2.standardPadBinds.down.events = {{{Key::Down}, {Key::End}}};
+        input.port2.standardPadBinds.left.events = {{{Key::Left}, {Key::Delete}}};
+        input.port2.standardPadBinds.right.events = {{{Key::Right}, {Key::PageDown}}};
     }
 
     video.forceIntegerScaling = false;
@@ -541,82 +529,82 @@ void Settings::RebindInputs(input::InputContext &ctx, Saturn &saturn) {
         }
     };
 
-    auto mapArray = [&](auto action, InputEventArray &arr) {
-        for (auto &input : arr) {
+    auto bind = [&](InputBind &bind) {
+        for (auto &input : bind.events) {
             unbindEscape(input);
-            ctx.MapAction(input, action);
+            ctx.MapAction(input, bind.action);
         }
     };
 
-    auto mapArrayCtx = [&](auto action, void *actionCtx, InputEventArray &arr) {
-        for (auto &input : arr) {
+    auto bindCtx = [&](InputBind &bind, void *actionCtx) {
+        for (auto &input : bind.events) {
             unbindEscape(input);
-            ctx.MapAction(input, action, actionCtx);
+            ctx.MapAction(input, bind.action, actionCtx);
         }
     };
 
-    mapArray(actions::general::OpenSettings, hotkeys.openSettings);
-    mapArray(actions::general::ToggleWindowedVideoOutput, hotkeys.toggleWindowedVideoOutput);
-    mapArray(actions::general::LoadDisc, hotkeys.loadDisc);
-    mapArray(actions::general::EjectDisc, hotkeys.ejectDisc);
-    mapArray(actions::general::OpenCloseTray, hotkeys.openCloseTray);
-    mapArray(actions::emu::HardReset, hotkeys.hardReset);
-    mapArray(actions::emu::SoftReset, hotkeys.softReset);
-    mapArray(actions::emu::ResetButton, hotkeys.resetButton);
-    mapArray(actions::emu::PauseResume, hotkeys.pauseResume);
-    mapArray(actions::emu::FrameStep, hotkeys.frameStep);
-    mapArray(actions::emu::FastForward, hotkeys.fastForward);
-    mapArray(actions::emu::ToggleDebugTrace, hotkeys.toggleDebugTrace);
-    mapArray(actions::emu::DumpMemory, hotkeys.dumpMemory);
+    bind(hotkeys.openSettings);
+    bind(hotkeys.toggleWindowedVideoOutput);
+    bind(hotkeys.loadDisc);
+    bind(hotkeys.ejectDisc);
+    bind(hotkeys.openCloseTray);
+    bind(hotkeys.hardReset);
+    bind(hotkeys.softReset);
+    bind(hotkeys.resetButton);
+    bind(hotkeys.pauseResume);
+    bind(hotkeys.frameStep);
+    bind(hotkeys.fastForward);
+    bind(hotkeys.toggleDebugTrace);
+    bind(hotkeys.dumpMemory);
 
     auto ctx1 = &saturn.SMPC.GetPeripheralPort1();
-    mapArrayCtx(actions::emu::StandardPadA, ctx1, input.port1.standardPadBinds.a);
-    mapArrayCtx(actions::emu::StandardPadB, ctx1, input.port1.standardPadBinds.b);
-    mapArrayCtx(actions::emu::StandardPadC, ctx1, input.port1.standardPadBinds.c);
-    mapArrayCtx(actions::emu::StandardPadX, ctx1, input.port1.standardPadBinds.x);
-    mapArrayCtx(actions::emu::StandardPadY, ctx1, input.port1.standardPadBinds.y);
-    mapArrayCtx(actions::emu::StandardPadZ, ctx1, input.port1.standardPadBinds.z);
-    mapArrayCtx(actions::emu::StandardPadL, ctx1, input.port1.standardPadBinds.l);
-    mapArrayCtx(actions::emu::StandardPadR, ctx1, input.port1.standardPadBinds.r);
-    mapArrayCtx(actions::emu::StandardPadStart, ctx1, input.port1.standardPadBinds.start);
-    mapArrayCtx(actions::emu::StandardPadUp, ctx1, input.port1.standardPadBinds.up);
-    mapArrayCtx(actions::emu::StandardPadDown, ctx1, input.port1.standardPadBinds.down);
-    mapArrayCtx(actions::emu::StandardPadLeft, ctx1, input.port1.standardPadBinds.left);
-    mapArrayCtx(actions::emu::StandardPadRight, ctx1, input.port1.standardPadBinds.right);
+    bindCtx(input.port1.standardPadBinds.a, ctx1);
+    bindCtx(input.port1.standardPadBinds.b, ctx1);
+    bindCtx(input.port1.standardPadBinds.c, ctx1);
+    bindCtx(input.port1.standardPadBinds.x, ctx1);
+    bindCtx(input.port1.standardPadBinds.y, ctx1);
+    bindCtx(input.port1.standardPadBinds.z, ctx1);
+    bindCtx(input.port1.standardPadBinds.l, ctx1);
+    bindCtx(input.port1.standardPadBinds.r, ctx1);
+    bindCtx(input.port1.standardPadBinds.start, ctx1);
+    bindCtx(input.port1.standardPadBinds.up, ctx1);
+    bindCtx(input.port1.standardPadBinds.down, ctx1);
+    bindCtx(input.port1.standardPadBinds.left, ctx1);
+    bindCtx(input.port1.standardPadBinds.right, ctx1);
 
     auto ctx2 = &saturn.SMPC.GetPeripheralPort2();
-    mapArrayCtx(actions::emu::StandardPadA, ctx2, input.port2.standardPadBinds.a);
-    mapArrayCtx(actions::emu::StandardPadB, ctx2, input.port2.standardPadBinds.b);
-    mapArrayCtx(actions::emu::StandardPadC, ctx2, input.port2.standardPadBinds.c);
-    mapArrayCtx(actions::emu::StandardPadX, ctx2, input.port2.standardPadBinds.x);
-    mapArrayCtx(actions::emu::StandardPadY, ctx2, input.port2.standardPadBinds.y);
-    mapArrayCtx(actions::emu::StandardPadZ, ctx2, input.port2.standardPadBinds.z);
-    mapArrayCtx(actions::emu::StandardPadL, ctx2, input.port2.standardPadBinds.l);
-    mapArrayCtx(actions::emu::StandardPadR, ctx2, input.port2.standardPadBinds.r);
-    mapArrayCtx(actions::emu::StandardPadStart, ctx2, input.port2.standardPadBinds.start);
-    mapArrayCtx(actions::emu::StandardPadUp, ctx2, input.port2.standardPadBinds.up);
-    mapArrayCtx(actions::emu::StandardPadDown, ctx2, input.port2.standardPadBinds.down);
-    mapArrayCtx(actions::emu::StandardPadLeft, ctx2, input.port2.standardPadBinds.left);
-    mapArrayCtx(actions::emu::StandardPadRight, ctx2, input.port2.standardPadBinds.right);
+    bindCtx(input.port2.standardPadBinds.a, ctx2);
+    bindCtx(input.port2.standardPadBinds.b, ctx2);
+    bindCtx(input.port2.standardPadBinds.c, ctx2);
+    bindCtx(input.port2.standardPadBinds.x, ctx2);
+    bindCtx(input.port2.standardPadBinds.y, ctx2);
+    bindCtx(input.port2.standardPadBinds.z, ctx2);
+    bindCtx(input.port2.standardPadBinds.l, ctx2);
+    bindCtx(input.port2.standardPadBinds.r, ctx2);
+    bindCtx(input.port2.standardPadBinds.start, ctx2);
+    bindCtx(input.port2.standardPadBinds.up, ctx2);
+    bindCtx(input.port2.standardPadBinds.down, ctx2);
+    bindCtx(input.port2.standardPadBinds.left, ctx2);
+    bindCtx(input.port2.standardPadBinds.right, ctx2);
 
     SyncInputSettings(ctx, saturn);
 }
 
 void Settings::SyncInputSettings(input::InputContext &ctx, satemu::Saturn &saturn) {
-    auto syncArray = [&](auto action, InputEventArray &arr) {
-        arr.fill({});
-        for (int i = 0; auto &input : ctx.GetMappedInputs(action)) {
-            arr[i++] = input.event;
+    auto sync = [&](InputBind &bind) {
+        bind.events.fill({});
+        for (int i = 0; auto &input : ctx.GetMappedInputs(bind.action)) {
+            bind.events[i++] = input.event;
             if (i == 4) {
                 break;
             }
         }
     };
-    auto syncArrayCtx = [&](auto action, void *actionCtx, InputEventArray &arr) {
-        arr.fill({});
-        for (int i = 0; auto &input : ctx.GetMappedInputs(action)) {
+    auto syncCtx = [&](InputBind &bind, void *actionCtx) {
+        bind.events.fill({});
+        for (int i = 0; auto &input : ctx.GetMappedInputs(bind.action)) {
             if (input.context == actionCtx) {
-                arr[i++] = input.event;
+                bind.events[i++] = input.event;
                 if (i == 4) {
                     break;
                 }
@@ -624,49 +612,49 @@ void Settings::SyncInputSettings(input::InputContext &ctx, satemu::Saturn &satur
         }
     };
 
-    syncArray(actions::general::OpenSettings, hotkeys.openSettings);
-    syncArray(actions::general::ToggleWindowedVideoOutput, hotkeys.toggleWindowedVideoOutput);
-    syncArray(actions::general::LoadDisc, hotkeys.loadDisc);
-    syncArray(actions::general::EjectDisc, hotkeys.ejectDisc);
-    syncArray(actions::general::OpenCloseTray, hotkeys.openCloseTray);
-    syncArray(actions::emu::HardReset, hotkeys.hardReset);
-    syncArray(actions::emu::SoftReset, hotkeys.softReset);
-    syncArray(actions::emu::ResetButton, hotkeys.resetButton);
-    syncArray(actions::emu::PauseResume, hotkeys.pauseResume);
-    syncArray(actions::emu::FrameStep, hotkeys.frameStep);
-    syncArray(actions::emu::FastForward, hotkeys.fastForward);
-    syncArray(actions::emu::ToggleDebugTrace, hotkeys.toggleDebugTrace);
-    syncArray(actions::emu::DumpMemory, hotkeys.dumpMemory);
+    sync(hotkeys.openSettings);
+    sync(hotkeys.toggleWindowedVideoOutput);
+    sync(hotkeys.loadDisc);
+    sync(hotkeys.ejectDisc);
+    sync(hotkeys.openCloseTray);
+    sync(hotkeys.hardReset);
+    sync(hotkeys.softReset);
+    sync(hotkeys.resetButton);
+    sync(hotkeys.pauseResume);
+    sync(hotkeys.frameStep);
+    sync(hotkeys.fastForward);
+    sync(hotkeys.toggleDebugTrace);
+    sync(hotkeys.dumpMemory);
 
     auto ctx1 = &saturn.SMPC.GetPeripheralPort1();
-    syncArrayCtx(actions::emu::StandardPadA, ctx1, input.port1.standardPadBinds.a);
-    syncArrayCtx(actions::emu::StandardPadB, ctx1, input.port1.standardPadBinds.b);
-    syncArrayCtx(actions::emu::StandardPadC, ctx1, input.port1.standardPadBinds.c);
-    syncArrayCtx(actions::emu::StandardPadX, ctx1, input.port1.standardPadBinds.x);
-    syncArrayCtx(actions::emu::StandardPadY, ctx1, input.port1.standardPadBinds.y);
-    syncArrayCtx(actions::emu::StandardPadZ, ctx1, input.port1.standardPadBinds.z);
-    syncArrayCtx(actions::emu::StandardPadL, ctx1, input.port1.standardPadBinds.l);
-    syncArrayCtx(actions::emu::StandardPadR, ctx1, input.port1.standardPadBinds.r);
-    syncArrayCtx(actions::emu::StandardPadStart, ctx1, input.port1.standardPadBinds.start);
-    syncArrayCtx(actions::emu::StandardPadUp, ctx1, input.port1.standardPadBinds.up);
-    syncArrayCtx(actions::emu::StandardPadDown, ctx1, input.port1.standardPadBinds.down);
-    syncArrayCtx(actions::emu::StandardPadLeft, ctx1, input.port1.standardPadBinds.left);
-    syncArrayCtx(actions::emu::StandardPadRight, ctx1, input.port1.standardPadBinds.right);
+    syncCtx(input.port1.standardPadBinds.a, ctx1);
+    syncCtx(input.port1.standardPadBinds.b, ctx1);
+    syncCtx(input.port1.standardPadBinds.c, ctx1);
+    syncCtx(input.port1.standardPadBinds.x, ctx1);
+    syncCtx(input.port1.standardPadBinds.y, ctx1);
+    syncCtx(input.port1.standardPadBinds.z, ctx1);
+    syncCtx(input.port1.standardPadBinds.l, ctx1);
+    syncCtx(input.port1.standardPadBinds.r, ctx1);
+    syncCtx(input.port1.standardPadBinds.start, ctx1);
+    syncCtx(input.port1.standardPadBinds.up, ctx1);
+    syncCtx(input.port1.standardPadBinds.down, ctx1);
+    syncCtx(input.port1.standardPadBinds.left, ctx1);
+    syncCtx(input.port1.standardPadBinds.right, ctx1);
 
     auto ctx2 = &saturn.SMPC.GetPeripheralPort2();
-    syncArrayCtx(actions::emu::StandardPadA, ctx2, input.port2.standardPadBinds.a);
-    syncArrayCtx(actions::emu::StandardPadB, ctx2, input.port2.standardPadBinds.b);
-    syncArrayCtx(actions::emu::StandardPadC, ctx2, input.port2.standardPadBinds.c);
-    syncArrayCtx(actions::emu::StandardPadX, ctx2, input.port2.standardPadBinds.x);
-    syncArrayCtx(actions::emu::StandardPadY, ctx2, input.port2.standardPadBinds.y);
-    syncArrayCtx(actions::emu::StandardPadZ, ctx2, input.port2.standardPadBinds.z);
-    syncArrayCtx(actions::emu::StandardPadL, ctx2, input.port2.standardPadBinds.l);
-    syncArrayCtx(actions::emu::StandardPadR, ctx2, input.port2.standardPadBinds.r);
-    syncArrayCtx(actions::emu::StandardPadStart, ctx2, input.port2.standardPadBinds.start);
-    syncArrayCtx(actions::emu::StandardPadUp, ctx2, input.port2.standardPadBinds.up);
-    syncArrayCtx(actions::emu::StandardPadDown, ctx2, input.port2.standardPadBinds.down);
-    syncArrayCtx(actions::emu::StandardPadLeft, ctx2, input.port2.standardPadBinds.left);
-    syncArrayCtx(actions::emu::StandardPadRight, ctx2, input.port2.standardPadBinds.right);
+    syncCtx(input.port2.standardPadBinds.a, ctx2);
+    syncCtx(input.port2.standardPadBinds.b, ctx2);
+    syncCtx(input.port2.standardPadBinds.c, ctx2);
+    syncCtx(input.port2.standardPadBinds.x, ctx2);
+    syncCtx(input.port2.standardPadBinds.y, ctx2);
+    syncCtx(input.port2.standardPadBinds.z, ctx2);
+    syncCtx(input.port2.standardPadBinds.l, ctx2);
+    syncCtx(input.port2.standardPadBinds.r, ctx2);
+    syncCtx(input.port2.standardPadBinds.start, ctx2);
+    syncCtx(input.port2.standardPadBinds.up, ctx2);
+    syncCtx(input.port2.standardPadBinds.down, ctx2);
+    syncCtx(input.port2.standardPadBinds.left, ctx2);
+    syncCtx(input.port2.standardPadBinds.right, ctx2);
 }
 
 } // namespace app

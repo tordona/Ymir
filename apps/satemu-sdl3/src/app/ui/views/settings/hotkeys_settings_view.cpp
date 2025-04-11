@@ -18,7 +18,7 @@ void HotkeysSettingsView::Display() {
         }
         ImGui::TableHeadersRow();
 
-        auto drawRow = [&](const char *type, const char *cmdName, InputEventArray &inputs) {
+        auto drawRow = [&](const char *type, const char *cmdName, InputBind &bind) {
             ImGui::TableNextRow();
             if (ImGui::TableNextColumn()) {
                 ImGui::AlignTextToFramePadding();
@@ -30,15 +30,15 @@ void HotkeysSettingsView::Display() {
             }
             for (uint32 i = 0; i < kNumBindsPerInput; i++) {
                 if (ImGui::TableNextColumn()) {
-                    const std::string bind = input::ToHumanString(inputs[i]);
-                    const std::string label = fmt::format("{}##bind_{}_{}_{}", bind, type, cmdName, i);
+                    const std::string bindStr = input::ToHumanString(bind.events[i]);
+                    const std::string label = fmt::format("{}##bind_{}_{}_{}", bindStr, type, cmdName, i);
                     const float availWidth = ImGui::GetContentRegionAvail().x;
 
                     // Left-click engages binding mode
                     if (ImGui::Button(label.c_str(), ImVec2(availWidth, 0))) {
                         ImGui::OpenPopup("input_capture");
-                        m_context.inputCapturer.Capture([=, this, &inputs](const input::InputEvent &event) {
-                            inputs[i] = event;
+                        m_context.inputCapturer.Capture([=, this, &bind](const input::InputEvent &event) {
+                            bind.events[i] = event;
                             MakeDirty();
                             // TODO: rebind only the modified action
                             m_context.EnqueueEvent(events::gui::RebindInputs());
@@ -49,7 +49,7 @@ void HotkeysSettingsView::Display() {
                     // Right-click erases a binding
                     if (MakeDirty(ImGui::IsItemClicked(ImGuiMouseButton_Right))) {
                         m_context.inputCapturer.CancelCapture();
-                        inputs[i] = {};
+                        bind.events[i] = {};
                         // TODO: rebind only the modified action
                         m_context.EnqueueEvent(events::gui::RebindInputs());
                     }
