@@ -874,33 +874,89 @@ void App::RunEmulator() {
 
     bool paused = false; // TODO: this should be updated by the emulator thread via events
 
-    inputContext.SetActionHandler(actions::cd_drive::LoadDisc, [&](void *, bool actuated) {
-        if (actuated) {
-            OpenLoadDiscDialog();
-        }
-    });
-    inputContext.SetActionHandler(actions::cd_drive::EjectDisc, [&](void *, bool actuated) {
-        if (actuated) {
-            m_context.EnqueueEvent(events::emu::EjectDisc());
-        }
-    });
-    inputContext.SetActionHandler(actions::cd_drive::OpenCloseTray, [&](void *, bool actuated) {
-        if (actuated) {
-            m_context.EnqueueEvent(events::emu::OpenCloseTray());
-        }
-    });
+    // General
+    {
+        inputContext.SetActionHandler(actions::general::OpenSettings, [&](void *, bool actuated) {
+            if (actuated) {
+                m_settingsWindow.Open = true;
+            }
+        });
+        inputContext.SetActionHandler(actions::general::ToggleWindowedVideoOutput, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.settings.video.displayVideoOutputInWindow ^= true;
+            }
+        });
+    }
 
-    inputContext.SetActionHandler(actions::general::ToggleWindowedVideoOutput, [&](void *, bool actuated) {
-        if (actuated) {
-            m_context.settings.video.displayVideoOutputInWindow ^= true;
-        }
-    });
-    inputContext.SetActionHandler(actions::general::OpenSettings, [&](void *, bool actuated) {
-        if (actuated) {
-            m_settingsWindow.Open = true;
-        }
-    });
+    // CD drive
+    {
+        inputContext.SetActionHandler(actions::cd_drive::LoadDisc, [&](void *, bool actuated) {
+            if (actuated) {
+                OpenLoadDiscDialog();
+            }
+        });
+        inputContext.SetActionHandler(actions::cd_drive::EjectDisc, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.EnqueueEvent(events::emu::EjectDisc());
+            }
+        });
+        inputContext.SetActionHandler(actions::cd_drive::OpenCloseTray, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.EnqueueEvent(events::emu::OpenCloseTray());
+            }
+        });
+    }
 
+    // System
+    {
+        inputContext.SetActionHandler(actions::sys::HardReset, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.EnqueueEvent(events::emu::HardReset());
+            }
+        });
+        inputContext.SetActionHandler(actions::sys::SoftReset, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.EnqueueEvent(events::emu::SoftReset());
+            }
+        });
+        inputContext.SetActionHandler(actions::sys::ResetButton, [&](void *, bool actuated) {
+            m_context.EnqueueEvent(events::emu::SetResetButton(actuated));
+        });
+    }
+
+    // Emulation
+    {
+        inputContext.SetActionHandler(actions::emu::PauseResume, [&](void *, bool actuated) {
+            if (actuated) {
+                paused = !paused;
+                m_context.EnqueueEvent(events::emu::SetPaused(paused));
+            }
+        });
+        inputContext.SetActionHandler(actions::emu::FrameStep, [&](void *, bool actuated) {
+            if (actuated) {
+                paused = true;
+                m_context.EnqueueEvent(events::emu::FrameStep());
+            }
+        });
+        inputContext.SetActionHandler(actions::emu::FastForward,
+                                      [&](void *, bool actuated) { m_audioSystem.SetSync(!actuated); });
+    }
+
+    // Debugger
+    {
+        inputContext.SetActionHandler(actions::dbg::ToggleDebugTrace, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.EnqueueEvent(events::emu::SetDebugTrace(!m_context.saturn.IsDebugTracingEnabled()));
+            }
+        });
+        inputContext.SetActionHandler(actions::dbg::DumpMemory, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.EnqueueEvent(events::emu::DumpMemory());
+            }
+        });
+    }
+
+    // Standard Saturn Pad
     {
         using Button = peripheral::StandardPad::Button;
 
@@ -932,46 +988,6 @@ void App::RunEmulator() {
         registerButton(actions::std_saturn_pad::L, Button::L);
         registerButton(actions::std_saturn_pad::R, Button::R);
     }
-
-    inputContext.SetActionHandler(actions::sys::HardReset, [&](void *, bool actuated) {
-        if (actuated) {
-            m_context.EnqueueEvent(events::emu::HardReset());
-        }
-    });
-    inputContext.SetActionHandler(actions::sys::SoftReset, [&](void *, bool actuated) {
-        if (actuated) {
-            m_context.EnqueueEvent(events::emu::SoftReset());
-        }
-    });
-    inputContext.SetActionHandler(actions::sys::ResetButton, [&](void *, bool actuated) {
-        m_context.EnqueueEvent(events::emu::SetResetButton(actuated));
-    });
-
-    inputContext.SetActionHandler(actions::emu::FrameStep, [&](void *, bool actuated) {
-        if (actuated) {
-            paused = true;
-            m_context.EnqueueEvent(events::emu::FrameStep());
-        }
-    });
-    inputContext.SetActionHandler(actions::emu::PauseResume, [&](void *, bool actuated) {
-        if (actuated) {
-            paused = !paused;
-            m_context.EnqueueEvent(events::emu::SetPaused(paused));
-        }
-    });
-    inputContext.SetActionHandler(actions::emu::FastForward,
-                                  [&](void *, bool actuated) { m_audioSystem.SetSync(!actuated); });
-
-    inputContext.SetActionHandler(actions::dbg::ToggleDebugTrace, [&](void *, bool actuated) {
-        if (actuated) {
-            m_context.EnqueueEvent(events::emu::SetDebugTrace(!m_context.saturn.IsDebugTracingEnabled()));
-        }
-    });
-    inputContext.SetActionHandler(actions::dbg::DumpMemory, [&](void *, bool actuated) {
-        if (actuated) {
-            m_context.EnqueueEvent(events::emu::DumpMemory());
-        }
-    });
 
     RebindInputs();
 
