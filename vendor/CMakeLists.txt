@@ -14,27 +14,28 @@
 
 ## Helper function to silence messages from noisy subprojects
 function(add_subdirectory_quiet DIR)
-    function(message)
-    endfunction()
+    set(PREV_CMAKE_MESSAGE_LOG_LEVEL ${CMAKE_MESSAGE_LOG_LEVEL})
+    set(CMAKE_MESSAGE_LOG_LEVEL ERROR)
     add_subdirectory(${DIR} EXCLUDE_FROM_ALL)
+    set(CMAKE_MESSAGE_LOG_LEVEL ${PREV_CMAKE_MESSAGE_LOG_LEVEL})
 endfunction()
 
 message(STATUS "Adding vendored libraries")
 
 # {fmt} - https://github.com/fmtlib/fmt
-message(VERBOSE "==> {fmt}")
+message(STATUS "==> {fmt}")
 add_subdirectory(fmt EXCLUDE_FROM_ALL)
 
-# mio - https://github.com/mandreyel/mio
+# mio - https://github.com/vimpunk/mio
 # Notes:
 # - Using StrikerX3's fork instead
-#   - This fork implements the features in this PR: https://github.com/mandreyel/mio/pull/78
+#   - This fork implements the features in this PR: https://github.com/vimpunk/mio/pull/78
 #   - It also stops the library from including CTest unconditionally, which is not done in that PR
-message(VERBOSE "==> mio")
+message(STATUS "==> mio")
 add_subdirectory(mio EXCLUDE_FROM_ALL)
 
 # SDL - https://github.com/libsdl-org/SDL
-message(VERBOSE "==> SDL")
+message(STATUS "==> SDL")
 set(SDL_DISABLE_UNINSTALL ON)
 set(SDL_TEST_LIBRARY OFF)
 set(SDL_TESTS OFF)
@@ -46,23 +47,23 @@ else()
     set(SDL_SHARED OFF)
     set(SDL_STATIC ON)
 endif()
-add_subdirectory_quiet(SDL)
+add_subdirectory_quiet(SDL EXCLUDE_FROM_ALL)
 
 # cxxopts - https://github.com/jarro2783/cxxopts
-message(VERBOSE "==> cxxopts")
+message(STATUS "==> cxxopts")
 add_subdirectory(cxxopts EXCLUDE_FROM_ALL)
 
 # concurrentqueue - https://github.com/cameron314/concurrentqueue
-message(VERBOSE "==> concurrentqueue")
+message(STATUS "==> concurrentqueue")
 add_subdirectory(concurrentqueue EXCLUDE_FROM_ALL)
 
 # dear ImGui - https://github.com/ocornut/imgui
 # docking branch
-message(VERBOSE "==> dear ImGui")
+message(STATUS "==> dear ImGui")
 add_subdirectory(imgui EXCLUDE_FROM_ALL)
 
 # toml++ - https://github.com/marzer/tomlplusplus
-message(VERBOSE "==> toml++")
+message(STATUS "==> toml++")
 add_subdirectory(tomlplusplus EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------------------------------------------------------
