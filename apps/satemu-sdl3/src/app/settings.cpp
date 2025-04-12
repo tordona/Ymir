@@ -531,7 +531,7 @@ void Settings::RebindInputs() {
     for (auto &[action, mappings] : m_actionInputs) {
         for (auto &[bind, context] : mappings) {
             for (auto &event : bind->events) {
-                // Sanitization -- skip ESC bindings if they were manually added in the configuration file
+                // Sanitization -- skip ESC binds if they were manually added in the configuration file
                 if (event.type == input::InputEvent::Type::KeyCombo &&
                     event.keyCombo.key == input::KeyboardKey::Escape) {
                     continue;

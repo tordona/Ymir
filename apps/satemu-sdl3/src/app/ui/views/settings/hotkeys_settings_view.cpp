@@ -40,7 +40,7 @@ void HotkeysSettingsView::Display() {
                     const std::string label = fmt::format("{}##bind_{}_{}_{}", bindStr, type, cmdName, i);
                     const float availWidth = ImGui::GetContentRegionAvail().x;
 
-                    // Left-click engages binding mode
+                    // Left-click engages bind mode
                     if (ImGui::Button(label.c_str(), ImVec2(availWidth, 0))) {
                         ImGui::OpenPopup("input_capture");
                         m_context.inputCapturer.Capture([=, this, &bind](const input::InputEvent &event) {
@@ -51,7 +51,7 @@ void HotkeysSettingsView::Display() {
                         });
                     }
 
-                    // Right-click erases a binding
+                    // Right-click erases a bind
                     if (MakeDirty(ImGui::IsItemClicked(ImGuiMouseButton_Right))) {
                         m_context.inputCapturer.CancelCapture();
                         bind.events[i] = {};

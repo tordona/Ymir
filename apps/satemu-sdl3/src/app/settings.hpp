@@ -103,7 +103,7 @@ struct SettingsSaveResult {
     std::variant<std::monostate, std::error_code> value;
 };
 
-// Number of simultaneous input bindings allowed per input event
+// Number of simultaneous input binds allowed per input event
 inline constexpr size_t kNumBindsPerInput = 4;
 
 struct InputBind {
@@ -219,7 +219,7 @@ public:
 
     // ---------------------------------------------------------------------------------------------
 
-    // Restores all default input bindings for the specified standard pad
+    // Restores all default input binds for the specified standard pad
     void ResetBinds(Input::Port::StandardPadBinds &binds);
 
 private:

@@ -9,7 +9,6 @@ StandardPadBindsView::StandardPadBindsView(SharedContext &context)
 
 void StandardPadBindsView::Display(Settings::Input::Port::StandardPadBinds &binds) {
     if (ImGui::Button("Restore defaults")) {
-        // TODO: reset bindings for this device only
         m_context.settings.ResetBinds(binds);
         MakeDirty();
     }
@@ -35,7 +34,7 @@ void StandardPadBindsView::Display(Settings::Input::Port::StandardPadBinds &bind
                     const std::string label = fmt::format("{}##bind_{}_{}", bindStr, btnName, i);
                     const float availWidth = ImGui::GetContentRegionAvail().x;
 
-                    // Left-click engages binding mode
+                    // Left-click engages bind mode
                     if (ImGui::Button(label.c_str(), ImVec2(availWidth, 0))) {
                         ImGui::OpenPopup("input_capture");
                         m_context.inputCapturer.Capture([=, this, &bind](const input::InputEvent &event) {
@@ -46,7 +45,7 @@ void StandardPadBindsView::Display(Settings::Input::Port::StandardPadBinds &bind
                         });
                     }
 
-                    // Right-click erases a binding
+                    // Right-click erases a bind
                     if (MakeDirty(ImGui::IsItemClicked(ImGuiMouseButton_Right))) {
                         m_context.inputCapturer.CancelCapture();
                         bind.events[i] = {};

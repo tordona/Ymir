@@ -15,11 +15,11 @@ void PeripheralBindsWindow::Open(uint32 portIndex, uint32 slotIndex) {
 }
 
 void PeripheralBindsWindow::PrepareWindow() {
-    m_windowConfig.name = fmt::format("Port {} input bindings###periph_binds_window", m_portIndex + 1);
+    m_windowConfig.name = fmt::format("Port {} input binds###periph_binds_window", m_portIndex + 1);
 
     // TODO: include slot index in title when multi-tap is supported
     // m_windowConfig.name =
-    //     fmt::format("Port {} slot {} input bindings###periph_binds_window", m_portIndex + 1, m_slotIndex + 1);
+    //     fmt::format("Port {} slot {} input binds###periph_binds_window", m_portIndex + 1, m_slotIndex + 1);
 
     ImGui::SetNextWindowSizeConstraints(ImVec2(500, 300), ImVec2(FLT_MAX, FLT_MAX));
 }
