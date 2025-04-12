@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/state/state_sh2.hpp>
+
 #include <satemu/core/types.hpp>
 
 #include <satemu/util/bit_ops.hpp>
@@ -35,7 +37,7 @@ struct WatchdogTimer {
 
         m_cycleCount += cycles;
         const uint64 steps = m_cycleCount >> m_clockDividerShift;
-        m_cycleCount -= steps << m_clockDividerShift;
+        m_cycleCount &= m_cycleCountMask;
 
         Event event = Event::None;
 
@@ -200,9 +202,26 @@ struct WatchdogTimer {
     }
 
     // -------------------------------------------------------------------------
-    // State
+    // Save states
+
+    void SaveState(state::SH2State::WDT &state) const {
+        state.WTCSR = ReadWTCSR();
+        state.WTCNT = ReadWTCNT();
+        state.RSTCSR = ReadRSTCSR();
+        state.cycleCount = m_cycleCount;
+    }
+
+    void LoadState(state::SH2State::WDT &state) {
+        WriteWTCSR<true>(state.WTCSR);
+        WriteWTCNT(state.WTCNT);
+        WriteRSTCSR<true>(state.RSTCSR);
+        m_cycleCount = state.cycleCount;
+    }
 
 private:
+    // -------------------------------------------------------------------------
+    // State
+
     uint64 m_cycleCount;
     uint64 m_clockDividerShift; // derived from WTCSR.CKS
     uint64 m_cycleCountMask;    // derived from WTCSR.CKS

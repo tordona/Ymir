@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/state/state_sh2.hpp>
+
 #include <satemu/core/types.hpp>
 
 #include <satemu/hw/hw_defs.hpp>
@@ -303,6 +305,31 @@ public:
             }
             CCR.CP = false;
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SH2State::Cache &state) const {
+        state.CCR = ReadCCR();
+        for (size_t i = 0; i < 64; i++) {
+            for (size_t j = 0; j < 4; j++) {
+                state.entries[i].tags[j] = m_entries[i].tag[j].u32;
+            }
+            state.entries[i].lines = m_entries[i].line;
+        }
+        state.lru = m_lru;
+    }
+
+    void LoadState(state::SH2State::Cache &state) {
+        WriteCCR<true>(state.CCR);
+        for (size_t i = 0; i < 64; i++) {
+            for (size_t j = 0; j < 4; j++) {
+                m_entries[i].tag[j].u32 = state.entries[i].tags[j];
+            }
+            m_entries[i].line = state.entries[i].lines;
+        }
+        m_lru = state.lru;
     }
 
     // -------------------------------------------------------------------------

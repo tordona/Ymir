@@ -1,6 +1,7 @@
 #pragma once
 
 #include "state_scheduler.hpp"
+#include "state_sh2.hpp"
 #include "state_system.hpp"
 
 namespace satemu::state {
@@ -13,7 +14,8 @@ inline namespace v1 {
 
         SchedulerState scheduler;
         SystemState system;
-        struct SH2State {}; // one for each CPU
+        SH2State msh2;
+        SH2State ssh2;
         struct SCUState {};
         struct VDPState {};
         struct SMPCState {};

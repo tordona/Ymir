@@ -35,7 +35,7 @@ struct FreeRunningTimer {
     FORCE_INLINE Event Advance(uint64 cycles) {
         m_cycleCount += cycles;
         const uint64 steps = m_cycleCount >> m_clockDividerShift;
-        m_cycleCount -= steps << m_clockDividerShift;
+        m_cycleCount &= m_cycleCountMask;
 
         Event event = Event::None;
 
@@ -372,9 +372,38 @@ struct FreeRunningTimer {
     mutable uint8 TEMP; // temporary storage to handle 16-bit transfers
 
     // -------------------------------------------------------------------------
-    // State
+    // Save states
+
+    void SaveState(state::SH2State::FRT &state) const {
+        state.TIER = ReadTIER();
+        state.FTCSR = ReadFTCSR();
+        state.FRC = FRC;
+        state.OCRA = OCRA;
+        state.OCRB = OCRB;
+        state.TCR = ReadTCR();
+        state.TOCR = ReadTOCR();
+        state.ICR = ICR;
+        state.TEMP = TEMP;
+        state.cycleCount = m_cycleCount;
+    }
+
+    void LoadState(state::SH2State::FRT &state) {
+        WriteTIER(state.TIER);
+        WriteFTCSR<true>(state.FTCSR);
+        FRC = state.FRC;
+        OCRA = state.OCRA;
+        OCRB = state.OCRB;
+        WriteTCR(state.TCR);
+        WriteTOCR(state.TOCR);
+        ICR = state.ICR;
+        TEMP = state.TEMP;
+        m_cycleCount = state.cycleCount;
+    }
 
 private:
+    // -------------------------------------------------------------------------
+    // State
+
     uint64 m_cycleCount;
     uint64 m_clockDividerShift; // derived from TCR.CKS
     uint64 m_cycleCountMask;    // derived from TCR.CKS

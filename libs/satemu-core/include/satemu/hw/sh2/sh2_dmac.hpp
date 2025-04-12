@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/state/state_sh2.hpp>
+
 #include <satemu/core/types.hpp>
 
 #include <satemu/util/bit_ops.hpp>
@@ -192,6 +194,25 @@ struct DMAChannel {
 
     FORCE_INLINE void WriteDRCR(uint8 value) {
         resSelect = static_cast<DMAResourceSelect>(bit::extract<0, 1>(value));
+    }
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SH2State::DMAC::Channel &state) const {
+        state.SAR = srcAddress;
+        state.DAR = dstAddress;
+        state.TCR = xferCount;
+        state.CHCR = ReadCHCR();
+        state.DRCR = ReadDRCR();
+    }
+
+    void LoadState(state::SH2State::DMAC::Channel &state) {
+        srcAddress = state.SAR;
+        dstAddress = state.DAR;
+        xferCount = state.TCR;
+        WriteCHCR<true>(state.CHCR);
+        WriteDRCR(state.DRCR);
     }
 };
 

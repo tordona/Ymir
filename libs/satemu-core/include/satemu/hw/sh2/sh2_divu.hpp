@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/state/state_sh2.hpp>
+
 #include <satemu/core/types.hpp>
 
 #include <satemu/util/bit_ops.hpp>
@@ -229,6 +231,29 @@ struct DivisionUnit {
 
         DVDNTUH = DVDNTH;
         DVDNTUL = DVDNTL;
+    }
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SH2State::DIVU &state) const {
+        state.DVSR = DVSR;
+        state.DVDNT = DVDNT;
+        state.DVCR = DVCR.Read();
+        state.DVDNTH = DVDNTH;
+        state.DVDNTL = DVDNTL;
+        state.DVDNTUH = DVDNTUH;
+        state.DVDNTUL = DVDNTUL;
+    }
+
+    void LoadState(state::SH2State::DIVU &state) {
+        DVSR = state.DVSR;
+        DVDNT = state.DVDNT;
+        DVCR.Write(state.DVCR);
+        DVDNTH = state.DVDNTH;
+        DVDNTL = state.DVDNTL;
+        DVDNTUH = state.DVDNTUH;
+        DVDNTUL = state.DVDNTUL;
     }
 };
 

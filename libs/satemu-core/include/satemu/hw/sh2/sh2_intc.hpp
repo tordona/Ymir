@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/state/state_sh2.hpp>
+
 #include <satemu/core/types.hpp>
 
 #include <satemu/util/bit_ops.hpp>
@@ -8,6 +10,22 @@
 #include <string_view>
 
 namespace satemu::sh2 {
+
+// 0E2  R/W  8,16     0000      IPRA    Interrupt priority setting register A
+//
+//   bits   r/w  code       description
+//   15-12  R/W  DIVUIP3-0  Division Unit (DIVU) Interrupt Priority Level
+//   11-8   R/W  DMACIP3-0  DMA Controller (DMAC) Interrupt Priority Level
+//    7-4   R/W  WDTIP3-0   Watchdog Timer (WDT) Interrupt Priority Level
+//    3-0   R    -          Reserved - must be zero
+//
+//   Interrupt priority levels range from 0 to 15.
+//
+//   The DMAC priority level is assigned to both channels.
+//   If both channels raise an interrupt, channel 0 is prioritized.
+//
+//   WDTIP3-0 includes both the watchdog timer and bus state controller (BSC).
+//   WDT interrupt has priority over BSC.
 
 // addr r/w  access   init      code    name
 // 060  R/W  8,16     0000      IPRB    Interrupt priority setting register B
@@ -50,6 +68,14 @@ namespace satemu::sh2 {
 //   14-8   R/W  FOVV6-0  Free-Running Timer (FRT) Overflow Interrupt Vector Number
 //    7-0   R    -        Reserved - must be zero
 
+// 0E4  R/W  8,16     0000      VCRWDT  Vector number setting register WDT
+//
+//   bits   r/w  code     description
+//     15   R    -        Reserved - must be zero
+//   14-8   R/W  WITV6-0  Watchdog Timer (WDT) Interval Interrupt Vector Number
+//      7   R    -        Reserved - must be zero
+//    6-0   R/W  BCMV6-0  Bus State Controller (BSC) Compare Match Interrupt Vector Number
+
 // 0E0  R/W  8,16     0000      ICR     Interrupt control register
 //
 //   bits   r/w  code   description
@@ -78,30 +104,6 @@ struct RegICR {
         NMIE = false;
     }
 };
-
-// 0E2  R/W  8,16     0000      IPRA    Interrupt priority setting register A
-//
-//   bits   r/w  code       description
-//   15-12  R/W  DIVUIP3-0  Division Unit (DIVU) Interrupt Priority Level
-//   11-8   R/W  DMACIP3-0  DMA Controller (DMAC) Interrupt Priority Level
-//    7-4   R/W  WDTIP3-0   Watchdog Timer (WDT) Interrupt Priority Level
-//    3-0   R    -          Reserved - must be zero
-//
-//   Interrupt priority levels range from 0 to 15.
-//
-//   The DMAC priority level is assigned to both channels.
-//   If both channels raise an interrupt, channel 0 is prioritized.
-//
-//   WDTIP3-0 includes both the watchdog timer and bus state controller (BSC).
-//   WDT interrupt has priority over BSC.
-
-// 0E4  R/W  8,16     0000      VCRWDT  Vector number setting register WDT
-//
-//   bits   r/w  code     description
-//     15   R    -        Reserved - must be zero
-//   14-8   R/W  WITV6-0  Watchdog Timer (WDT) Interval Interrupt Vector Number
-//      7   R    -        Reserved - must be zero
-//    6-0   R/W  BCMV6-0  Bus State Controller (BSC) Compare Match Interrupt Vector Number
 
 // -----------------------------------------------------------------------------
 
@@ -226,6 +228,29 @@ struct InterruptController {
 
     bool NMI;
     uint8 externalVector;
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SH2State::INTC &state) const {
+        state.ICR = ReadICR();
+        state.levels = m_levels;
+        state.vectors = m_vectors;
+        state.pendingSource = static_cast<uint8>(pending.source);
+        state.pendingLevel = pending.level;
+        state.NMI = NMI;
+        state.extVec = externalVector;
+    }
+
+    void LoadState(state::SH2State::INTC &state) {
+        WriteICR<true, true, true>(state.ICR);
+        m_levels = state.levels;
+        m_vectors = state.vectors;
+        pending.source = static_cast<InterruptSource>(state.pendingSource);
+        pending.level = state.pendingLevel;
+        NMI = state.NMI;
+        externalVector = state.extVec;
+    }
 
 private:
     std::array<uint8, 16> m_levels;

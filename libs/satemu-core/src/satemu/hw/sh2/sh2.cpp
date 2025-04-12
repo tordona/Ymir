@@ -332,6 +332,75 @@ void SH2::PurgeCache() {
 }
 
 // -----------------------------------------------------------------------------
+// Save states
+
+void SH2::SaveState(state::SH2State &state) const {
+    state.R = R;
+    state.PC = PC;
+    state.PR = PR;
+    state.MACL = MAC.L;
+    state.MACH = MAC.H;
+    state.SR = SR.u32;
+    state.GBR = GBR;
+    state.VBR = VBR;
+    state.delaySlotTarget = m_delaySlotTarget;
+    state.delaySlot = m_delaySlot;
+
+    state.bsc.BCR1 = BCR1.u16;
+    state.bsc.BCR2 = BCR2.u16;
+    state.bsc.WCR = WCR.u16;
+    state.bsc.MCR = MCR.u16;
+    state.bsc.RTCSR = RTCSR.u16;
+    state.bsc.RTCNT = RTCNT;
+    state.bsc.RTCOR = RTCOR;
+
+    state.dmac.DMAOR = DMAOR.Read();
+    m_dmaChannels[0].SaveState(state.dmac.channels[0]);
+    m_dmaChannels[1].SaveState(state.dmac.channels[1]);
+    WDT.SaveState(state.wdt);
+    DIVU.SaveState(state.divu);
+    FRT.SaveState(state.frt);
+    INTC.SaveState(state.intc);
+    m_cache.SaveState(state.cache);
+    state.SBYCR = SBYCR.u8;
+}
+
+bool SH2::ValidateState(state::SH2State &state) const {
+    return true;
+}
+
+void SH2::LoadState(state::SH2State &state) {
+    R = state.R;
+    PC = state.PC;
+    PR = state.PR;
+    MAC.L = state.MACL;
+    MAC.H = state.MACH;
+    SR.u32 = state.SR;
+    GBR = state.GBR;
+    VBR = state.VBR;
+    m_delaySlotTarget = state.delaySlotTarget;
+    m_delaySlot = state.delaySlot;
+
+    BCR1.u15 = state.bsc.BCR1; // Do not change the MASTER bit
+    BCR2.u16 = state.bsc.BCR2;
+    WCR.u16 = state.bsc.WCR;
+    MCR.u16 = state.bsc.MCR;
+    RTCSR.u16 = state.bsc.RTCSR;
+    RTCNT = state.bsc.RTCNT;
+    RTCOR = state.bsc.RTCOR;
+
+    DMAOR.Write<true>(state.dmac.DMAOR);
+    m_dmaChannels[0].LoadState(state.dmac.channels[0]);
+    m_dmaChannels[1].LoadState(state.dmac.channels[1]);
+    WDT.LoadState(state.wdt);
+    DIVU.LoadState(state.divu);
+    FRT.LoadState(state.frt);
+    INTC.LoadState(state.intc);
+    m_cache.SaveState(state.cache);
+    state.SBYCR = SBYCR.u8;
+}
+
+// -----------------------------------------------------------------------------
 // Memory accessors
 
 template <mem_primitive T, bool instrFetch, bool peek, bool enableCache>
@@ -1350,24 +1419,8 @@ FLATTEN FORCE_INLINE void SH2::UpdateInterruptLevels() {
 }
 
 void SH2::RecalcInterrupts() {
-    // Check interrupts from these sources (in order of priority, when priority numbers are the same):
-    //   name             priority       vecnum
-    //   NMI              16             0x0B
-    //   User break       15             0x0C
-    //   IRLs 15-1        15-1           0x40 + (level >> 1)
-    //   DIVU OVFI        IPRA.DIVUIPn   VCRDIV
-    //   DMAC0 xfer end   IPRA.DMACIPn   VCRDMA0
-    //   DMAC1 xfer end   IPRA.DMACIPn   VCRDMA1
-    //   WDT ITI          IPRA.WDTIPn    VCRWDT
-    //   BSC REF CMI      IPRA.WDTIPn    VCRWDT
-    //   SCI ERI          IPRB.SCIIPn    VCRA.SERVn
-    //   SCI RXI          IPRB.SCIIPn    VCRA.SRXVn
-    //   SCI TXI          IPRB.SCIIPn    VCRB.STXVn
-    //   SCI TEI          IPRB.SCIIPn    VCRB.STEVn
-    //   FRT ICI          IPRB.FRTIPn    VCRC.FICVn
-    //   FRT OCI          IPRB.FRTIPn    VCRC.FOCVn
-    //   FRT OVI          IPRB.FRTIPn    VCRD.FOVVn
-    // Use the vector number of the exception with highest priority
+    // Check interrupts and use the vector number of the exception with highest priority
+    // See documentation for InterruptSource for related registers and default/tie-breaker priority order
 
     INTC.pending.level = 0;
     INTC.pending.source = InterruptSource::None;

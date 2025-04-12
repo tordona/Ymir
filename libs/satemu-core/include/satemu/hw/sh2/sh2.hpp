@@ -16,8 +16,6 @@
 #include "sh2_ubc.hpp"
 #include "sh2_wdt.hpp"
 
-#include <satemu/core/types.hpp>
-
 #include <satemu/hw/hw_defs.hpp>
 
 #include <satemu/hw/scu/scu_callbacks.hpp>
@@ -26,7 +24,11 @@
 #include <satemu/sys/bus.hpp>
 #include <satemu/sys/system_features.hpp>
 
+#include <satemu/state/state_sh2.hpp>
+
 #include <satemu/debug/sh2_tracer_base.hpp>
+
+#include <satemu/core/types.hpp>
 
 #include <satemu/util/dev_log.hpp>
 #include <satemu/util/inline.hpp>
@@ -73,6 +75,13 @@ public:
     // Purges the contents of the cache.
     // Should be done before enabling cache emulation to ensure previous cache contents are cleared.
     void PurgeCache();
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SH2State &state) const;
+    bool ValidateState(state::SH2State &state) const;
+    void LoadState(state::SH2State &state);
 
     // -------------------------------------------------------------------------
     // Debugger

@@ -203,6 +203,8 @@ void Saturn::SaveState(state::State &state) const {
     m_system.SaveState(state.system);
     mem.SaveState(state.system);
     state.system.slaveSH2Enabled = slaveSH2Enabled;
+    masterSH2.SaveState(state.msh2);
+    slaveSH2.SaveState(state.ssh2);
 }
 
 bool Saturn::LoadState(state::State &state) {
@@ -212,10 +214,22 @@ bool Saturn::LoadState(state::State &state) {
     if (!m_system.ValidateState(state.system)) {
         return false;
     }
+    if (!mem.ValidateState(state.system)) {
+        return false;
+    }
+    if (!masterSH2.ValidateState(state.msh2)) {
+        return false;
+    }
+    if (!slaveSH2.ValidateState(state.ssh2)) {
+        return false;
+    }
 
     m_scheduler.LoadState(state.scheduler);
     m_system.LoadState(state.system);
     mem.LoadState(state.system);
+    slaveSH2Enabled = state.system.slaveSH2Enabled;
+    masterSH2.LoadState(state.msh2);
+    slaveSH2.LoadState(state.ssh2);
 
     return true;
 }

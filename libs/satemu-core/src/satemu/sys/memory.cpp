@@ -43,6 +43,10 @@ void SystemMemory::SaveState(state::SystemState &state) const {
     state.WRAMHigh = WRAMHigh;
 }
 
+bool SystemMemory::ValidateState(state::SystemState &state) const {
+    return true;
+}
+
 void SystemMemory::LoadState(state::SystemState &state) {
     WRAMLow = state.WRAMLow;
     WRAMHigh = state.WRAMHigh;
