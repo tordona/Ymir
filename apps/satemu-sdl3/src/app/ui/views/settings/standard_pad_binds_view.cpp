@@ -8,11 +8,11 @@ StandardPadBindsView::StandardPadBindsView(SharedContext &context)
     : SettingsViewBase(context) {}
 
 void StandardPadBindsView::Display(Settings::Input::Port::StandardPadBinds &binds) {
-    /*if (ImGui::Button("Restore defaults")) {
+    if (ImGui::Button("Restore defaults")) {
         // TODO: reset bindings for this device only
-        m_context.settings.RebindInputs();
+        m_context.settings.ResetBinds(binds);
         MakeDirty();
-    }*/
+    }
 
     ImGui::TextUnformatted("Left-click a button to assign a hotkey. Right-click to clear.");
     if (ImGui::BeginTable("hotkeys", 1 + kNumBindsPerInput,

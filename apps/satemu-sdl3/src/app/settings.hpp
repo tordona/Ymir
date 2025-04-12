@@ -217,6 +217,11 @@ public:
         bool displayVideoOutputInWindow;
     } video;
 
+    // ---------------------------------------------------------------------------------------------
+
+    // Restores all default input bindings for the specified standard pad
+    void ResetBinds(Input::Port::StandardPadBinds &binds);
+
 private:
     satemu::core::Configuration &m_emuConfig;
     input::InputContext &m_inputContext;

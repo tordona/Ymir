@@ -267,42 +267,13 @@ void Settings::ResetToDefaults() {
 
     {
         using PeriphType = peripheral::PeripheralType;
-        using Key = input::KeyboardKey;
-
-        ResetHotkeys();
-
         input.port1.type = PeriphType::StandardPad;
         input.port2.type = PeriphType::None;
 
-        // Port 1 Standard Pad controller inputs
-        input.port1.standardPadBinds.a.events = {{{Key::J}}};
-        input.port1.standardPadBinds.b.events = {{{Key::K}}};
-        input.port1.standardPadBinds.c.events = {{{Key::L}}};
-        input.port1.standardPadBinds.x.events = {{{Key::U}}};
-        input.port1.standardPadBinds.y.events = {{{Key::I}}};
-        input.port1.standardPadBinds.z.events = {{{Key::O}}};
-        input.port1.standardPadBinds.l.events = {{{Key::Q}}};
-        input.port1.standardPadBinds.r.events = {{{Key::E}}};
-        input.port1.standardPadBinds.start.events = {{{Key::G}, {Key::F}, {Key::H}, {Key::Return}}};
-        input.port1.standardPadBinds.up.events = {{{Key::W}}};
-        input.port1.standardPadBinds.down.events = {{{Key::S}}};
-        input.port1.standardPadBinds.left.events = {{{Key::A}}};
-        input.port1.standardPadBinds.right.events = {{{Key::D}}};
+        ResetHotkeys();
 
-        // Port 2 Standard Pad controller inputs
-        input.port2.standardPadBinds.a.events = {{{Key::KeyPad1}}};
-        input.port2.standardPadBinds.b.events = {{{Key::KeyPad2}}};
-        input.port2.standardPadBinds.c.events = {{{Key::KeyPad3}}};
-        input.port2.standardPadBinds.x.events = {{{Key::KeyPad4}}};
-        input.port2.standardPadBinds.y.events = {{{Key::KeyPad5}}};
-        input.port2.standardPadBinds.z.events = {{{Key::KeyPad6}}};
-        input.port2.standardPadBinds.l.events = {{{Key::KeyPad7}, {Key::Insert}}};
-        input.port2.standardPadBinds.r.events = {{{Key::KeyPad9}, {Key::PageUp}}};
-        input.port2.standardPadBinds.start.events = {{{Key::KeyPadEnter}}};
-        input.port2.standardPadBinds.up.events = {{{Key::Up}, {Key::Home}}};
-        input.port2.standardPadBinds.down.events = {{{Key::Down}, {Key::End}}};
-        input.port2.standardPadBinds.left.events = {{{Key::Left}, {Key::Delete}}};
-        input.port2.standardPadBinds.right.events = {{{Key::Right}, {Key::PageDown}}};
+        ResetBinds(input.port1.standardPadBinds);
+        ResetBinds(input.port2.standardPadBinds);
     }
 
     video.forceIntegerScaling = false;
@@ -627,6 +598,43 @@ void Settings::ResetHotkeys() {
 
     hotkeys.toggleDebugTrace.events = {KeyCombo{Mod::None, Key::F11}};
     hotkeys.dumpMemory.events = {KeyCombo{Mod::Control, Key::F11}};
+}
+
+void Settings::ResetBinds(Input::Port::StandardPadBinds &binds) {
+    using Key = input::KeyboardKey;
+
+    if (&binds == &input.port1.standardPadBinds) {
+        // Default port 1 Standard Pad controller inputs
+        input.port1.standardPadBinds.a.events = {{{Key::J}}};
+        input.port1.standardPadBinds.b.events = {{{Key::K}}};
+        input.port1.standardPadBinds.c.events = {{{Key::L}}};
+        input.port1.standardPadBinds.x.events = {{{Key::U}}};
+        input.port1.standardPadBinds.y.events = {{{Key::I}}};
+        input.port1.standardPadBinds.z.events = {{{Key::O}}};
+        input.port1.standardPadBinds.l.events = {{{Key::Q}}};
+        input.port1.standardPadBinds.r.events = {{{Key::E}}};
+        input.port1.standardPadBinds.start.events = {{{Key::G}, {Key::F}, {Key::H}, {Key::Return}}};
+        input.port1.standardPadBinds.up.events = {{{Key::W}}};
+        input.port1.standardPadBinds.down.events = {{{Key::S}}};
+        input.port1.standardPadBinds.left.events = {{{Key::A}}};
+        input.port1.standardPadBinds.right.events = {{{Key::D}}};
+    } else if (&binds == &input.port2.standardPadBinds) {
+        // Default port 2 Standard Pad controller inputs
+        input.port2.standardPadBinds.a.events = {{{Key::KeyPad1}}};
+        input.port2.standardPadBinds.b.events = {{{Key::KeyPad2}}};
+        input.port2.standardPadBinds.c.events = {{{Key::KeyPad3}}};
+        input.port2.standardPadBinds.x.events = {{{Key::KeyPad4}}};
+        input.port2.standardPadBinds.y.events = {{{Key::KeyPad5}}};
+        input.port2.standardPadBinds.z.events = {{{Key::KeyPad6}}};
+        input.port2.standardPadBinds.l.events = {{{Key::KeyPad7}, {Key::Insert}}};
+        input.port2.standardPadBinds.r.events = {{{Key::KeyPad9}, {Key::PageUp}}};
+        input.port2.standardPadBinds.start.events = {{{Key::KeyPadEnter}}};
+        input.port2.standardPadBinds.up.events = {{{Key::Up}, {Key::Home}}};
+        input.port2.standardPadBinds.down.events = {{{Key::Down}, {Key::End}}};
+        input.port2.standardPadBinds.left.events = {{{Key::Left}, {Key::Delete}}};
+        input.port2.standardPadBinds.right.events = {{{Key::Right}, {Key::PageDown}}};
+    }
+    RebindInputs();
 }
 
 } // namespace app
