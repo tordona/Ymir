@@ -29,11 +29,11 @@ void PeripheralBindsWindow::DrawContents() {
         m_portIndex == 0 ? m_context.saturn.SMPC.GetPeripheralPort1() : m_context.saturn.SMPC.GetPeripheralPort2();
     auto &periph = port.GetPeripheral(/* TODO: m_slotIndex */);
 
+    auto &settings = m_portIndex == 0 ? m_context.settings.input.port1 : m_context.settings.input.port2;
+
     switch (periph.GetType()) {
     case peripheral::PeripheralType::None: break;
-    case peripheral::PeripheralType::StandardPad:
-        m_standardPadView.Display(*periph.As<peripheral::PeripheralType::StandardPad>());
-        break;
+    case peripheral::PeripheralType::StandardPad: m_standardPadView.Display(settings.standardPadBinds); break;
     }
 }
 

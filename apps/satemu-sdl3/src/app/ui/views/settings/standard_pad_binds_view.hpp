@@ -1,7 +1,5 @@
 #pragma once
 
-#include <satemu/hw/smpc/peripheral/peripheral_impl_standard_pad.hpp>
-
 #include "settings_view_base.hpp"
 
 namespace app::ui {
@@ -10,7 +8,10 @@ class StandardPadBindsView : public SettingsViewBase {
 public:
     StandardPadBindsView(SharedContext &context);
 
-    void Display(satemu::peripheral::StandardPad &pad);
+    void Display(Settings::Input::Port::StandardPadBinds &binds);
+
+private:
+    bool m_captured = false;
 };
 
 } // namespace app::ui
