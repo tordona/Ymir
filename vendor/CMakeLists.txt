@@ -16,14 +16,14 @@
 function(add_subdirectory_quiet DIR)
     function(message)
     endfunction()
-    add_subdirectory(${DIR})
+    add_subdirectory(${DIR} EXCLUDE_FROM_ALL)
 endfunction()
 
 message(STATUS "Adding vendored libraries")
 
 # {fmt} - https://github.com/fmtlib/fmt
 message(VERBOSE "==> {fmt}")
-add_subdirectory(fmt)
+add_subdirectory(fmt EXCLUDE_FROM_ALL)
 
 # mio - https://github.com/mandreyel/mio
 # Notes:
@@ -31,7 +31,7 @@ add_subdirectory(fmt)
 #   - This fork implements the features in this PR: https://github.com/mandreyel/mio/pull/78
 #   - It also stops the library from including CTest unconditionally, which is not done in that PR
 message(VERBOSE "==> mio")
-add_subdirectory(mio)
+add_subdirectory(mio EXCLUDE_FROM_ALL)
 
 # SDL - https://github.com/libsdl-org/SDL
 message(VERBOSE "==> SDL")
@@ -50,20 +50,20 @@ add_subdirectory_quiet(SDL)
 
 # cxxopts - https://github.com/jarro2783/cxxopts
 message(VERBOSE "==> cxxopts")
-add_subdirectory(cxxopts)
+add_subdirectory(cxxopts EXCLUDE_FROM_ALL)
 
 # concurrentqueue - https://github.com/cameron314/concurrentqueue
 message(VERBOSE "==> concurrentqueue")
-add_subdirectory(concurrentqueue)
+add_subdirectory(concurrentqueue EXCLUDE_FROM_ALL)
 
 # dear ImGui - https://github.com/ocornut/imgui
 # docking branch
 message(VERBOSE "==> dear ImGui")
-add_subdirectory(imgui)
+add_subdirectory(imgui EXCLUDE_FROM_ALL)
 
 # toml++ - https://github.com/marzer/tomlplusplus
 message(VERBOSE "==> toml++")
-add_subdirectory(tomlplusplus)
+add_subdirectory(tomlplusplus EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------------------------------------------------------
 # Test dependencies
@@ -71,7 +71,7 @@ add_subdirectory(tomlplusplus)
 if(satemu_ENABLE_TESTS)
     # Catch2 - https://github.com/catchorg/Catch2
     message(VERBOSE "==> Catch2")
-    add_subdirectory(Catch2)
+    add_subdirectory(Catch2 EXCLUDE_FROM_ALL)
 endif()
 
 # --------------------------------------------------------------------------------------------------
@@ -89,3 +89,5 @@ if(MSVC)
     set_target_properties(Catch2WithMain PROPERTIES FOLDER Vendored)
     set_target_properties(imgui PROPERTIES FOLDER Vendored)
 endif()
+
+message(STATUS "Done adding vendored libraries")
