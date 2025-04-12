@@ -10,6 +10,8 @@
 #include <satemu/sys/bus.hpp>
 #include <satemu/sys/clocks.hpp>
 
+#include <satemu/state/state_scsp.hpp>
+
 #include <satemu/hw/hw_defs.hpp>
 
 #include <satemu/hw/cdblock/cdblock_callbacks.hpp>
@@ -122,6 +124,13 @@ public:
     void DumpDSPRegs(std::ostream &out) const;
 
     void SetCPUEnabled(bool enabled);
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SCSPState &state) const;
+    bool ValidateState(const state::SCSPState &state) const;
+    void LoadState(const state::SCSPState &state);
 
 private:
     alignas(16) std::array<uint8, m68k::kM68KWRAMSize> m_WRAM;

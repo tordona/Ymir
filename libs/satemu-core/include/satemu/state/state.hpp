@@ -1,10 +1,13 @@
 #pragma once
 
+#include "state_cdblock.hpp"
 #include "state_scheduler.hpp"
+#include "state_scsp.hpp"
 #include "state_scu.hpp"
 #include "state_sh2.hpp"
 #include "state_smpc.hpp"
 #include "state_system.hpp"
+#include "state_vdp.hpp"
 
 namespace satemu::state {
 
@@ -20,11 +23,9 @@ inline namespace v1 {
         SH2State ssh2;
         SCUState scu;
         SMPCState smpc;
-        struct VDPState {};
-        struct SCSPState {
-            struct M68KState {};
-        };
-        struct CDBlockState {};
+        VDPState vdp;
+        SCSPState scsp;
+        CDBlockState cdblock;
     };
 
 } // namespace v1

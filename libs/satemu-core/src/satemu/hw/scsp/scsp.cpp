@@ -209,6 +209,19 @@ void SCSP::SetCPUEnabled(bool enabled) {
     }
 }
 
+void SCSP::SaveState(state::SCSPState &state) const {
+    // TODO
+}
+
+bool SCSP::ValidateState(const state::SCSPState &state) const {
+    // TODO
+    return true;
+}
+
+void SCSP::LoadState(const state::SCSPState &state) {
+    // TODO
+}
+
 void SCSP::OnSampleTickEvent(core::EventContext &eventContext, void *userContext) {
     auto &scsp = *static_cast<SCSP *>(userContext);
     scsp.Tick();

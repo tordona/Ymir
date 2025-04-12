@@ -207,6 +207,9 @@ void Saturn::SaveState(state::State &state) const {
     slaveSH2.SaveState(state.ssh2);
     SCU.SaveState(state.scu);
     SMPC.SaveState(state.smpc);
+    VDP.SaveState(state.vdp);
+    SCSP.SaveState(state.scsp);
+    CDBlock.SaveState(state.cdblock);
 }
 
 bool Saturn::LoadState(const state::State &state) {
@@ -231,6 +234,15 @@ bool Saturn::LoadState(const state::State &state) {
     if (!SMPC.ValidateState(state.smpc)) {
         return false;
     }
+    if (!VDP.ValidateState(state.vdp)) {
+        return false;
+    }
+    if (!SCSP.ValidateState(state.scsp)) {
+        return false;
+    }
+    if (!CDBlock.ValidateState(state.cdblock)) {
+        return false;
+    }
 
     m_scheduler.LoadState(state.scheduler);
     m_system.LoadState(state.system);
@@ -240,6 +252,9 @@ bool Saturn::LoadState(const state::State &state) {
     slaveSH2.LoadState(state.ssh2);
     SCU.LoadState(state.scu);
     SMPC.LoadState(state.smpc);
+    VDP.LoadState(state.vdp);
+    SCSP.LoadState(state.scsp);
+    CDBlock.LoadState(state.cdblock);
 
     return true;
 }

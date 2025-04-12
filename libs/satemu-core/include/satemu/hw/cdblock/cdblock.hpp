@@ -11,6 +11,8 @@
 
 #include <satemu/sys/system_callbacks.hpp>
 
+#include <satemu/state/state_cdblock.hpp>
+
 #include <satemu/hw/hw_defs.hpp>
 
 #include <satemu/media/disc.hpp>
@@ -47,6 +49,13 @@ public:
     const media::Disc &GetDisc() const {
         return m_disc;
     }
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::CDBlockState &state) const;
+    bool ValidateState(const state::CDBlockState &state) const;
+    void LoadState(const state::CDBlockState &state);
 
 private:
     CBTriggerExternalInterrupt0 m_cbTriggerExternalInterrupt0;

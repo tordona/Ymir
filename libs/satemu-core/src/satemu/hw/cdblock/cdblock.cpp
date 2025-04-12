@@ -210,6 +210,19 @@ bool CDBlock::IsTrayOpen() const {
     return (m_status.statusCode & 0xF) == kStatusCodeOpen;
 }
 
+void CDBlock::SaveState(state::CDBlockState &state) const {
+    // TODO
+}
+
+bool CDBlock::ValidateState(const state::CDBlockState &state) const {
+    // TODO
+    return true;
+}
+
+void CDBlock::LoadState(const state::CDBlockState &state) {
+    // TODO
+}
+
 void CDBlock::OnDriveStateUpdateEvent(core::EventContext &eventContext, void *userContext) {
     auto &cdb = *static_cast<CDBlock *>(userContext);
     cdb.ProcessDriveState();

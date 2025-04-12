@@ -10,6 +10,8 @@
 #include <satemu/sys/bus.hpp>
 #include <satemu/sys/system.hpp>
 
+#include <satemu/state/state_vdp.hpp>
+
 #include <satemu/hw/hw_defs.hpp>
 
 #include <satemu/util/bit_ops.hpp>
@@ -67,6 +69,13 @@ public:
     bool InLastLinePhase() const {
         return m_VPhase == VerticalPhase::LastLine;
     }
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::VDPState &state) const;
+    bool ValidateState(const state::VDPState &state) const;
+    void LoadState(const state::VDPState &state);
 
 private:
     alignas(16) std::array<uint8, kVDP1VRAMSize> m_VRAM1;

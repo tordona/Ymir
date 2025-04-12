@@ -101,11 +101,15 @@ add_library(satemu-core
     include/satemu/media/binary_reader/binary_reader_subview.hpp
 
     include/satemu/state/state.hpp
+    include/satemu/state/state_cdblock.hpp
+    include/satemu/state/state_m68k.hpp
     include/satemu/state/state_scheduler.hpp
+    include/satemu/state/state_scsp.hpp
     include/satemu/state/state_scu.hpp
     include/satemu/state/state_sh2.hpp
     include/satemu/state/state_smpc.hpp
     include/satemu/state/state_system.hpp
+    include/satemu/state/state_vdp.hpp
 
     include/satemu/sys/backup_ram.hpp
     include/satemu/sys/backup_ram_defs.hpp

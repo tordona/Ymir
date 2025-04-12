@@ -374,6 +374,19 @@ void VDP::DumpVDP1Framebuffers(std::ostream &out) const {
     out.write((const char *)m_spriteFB[m_displayFB].data(), m_spriteFB[m_displayFB].size());
 }
 
+void VDP::SaveState(state::VDPState &state) const {
+    // TODO
+}
+
+bool VDP::ValidateState(const state::VDPState &state) const {
+    // TODO
+    return true;
+}
+
+void VDP::LoadState(const state::VDPState &state) {
+    // TODO
+}
+
 void VDP::OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext) {
     auto &vdp = *static_cast<VDP *>(userContext);
     vdp.UpdatePhase();
