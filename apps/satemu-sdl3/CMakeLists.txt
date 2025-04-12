@@ -223,18 +223,9 @@ if (WIN32 AND NOT satemu_ENABLE_DEVLOG)
     set_target_properties(satemu-sdl3 PROPERTIES WIN32_EXECUTABLE ON)
 endif ()
 
-## Enable LTO if supported
-include(CheckIPOSupported)
-check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
-
-if(IPO_SUPPORTED)
-    message(STATUS "IPO / LTO supported")
-    if(satemu_ENABLE_IPO)
-        message(STATUS "Enabling IPO / LTO for satemu-sdl3")
-        set_property(TARGET satemu-sdl3 PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-    endif()
-else()
-    message(STATUS "IPO / LTO not supported: ${IPO_ERROR}")
+if (IPO_SUPPORTED AND satemu_ENABLE_IPO)
+    message(STATUS "Enabling IPO / LTO for satemu-sdl3")
+    set_property(TARGET satemu-sdl3 PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 ## Define additional macros

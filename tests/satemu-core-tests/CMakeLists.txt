@@ -23,14 +23,9 @@ cmrk_copy_runtime_dlls(satemu-core-tests)
 include(CheckIPOSupported)
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
 
-if(IPO_SUPPORTED)
-    message(STATUS "IPO / LTO supported")
-    if(satemu_ENABLE_IPO)
-        message(STATUS "Enabling IPO / LTO for satemu-core-tests")
-        set_property(TARGET satemu-core-tests PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-    endif()
-else()
-    message(STATUS "IPO / LTO not supported: ${IPO_ERROR}")
+if (IPO_SUPPORTED AND satemu_ENABLE_IPO)
+    message(STATUS "Enabling IPO / LTO for satemu-core-tests")
+    set_property(TARGET satemu-core-tests PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 ## Apply performance options

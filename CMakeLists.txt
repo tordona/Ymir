@@ -46,6 +46,16 @@ if (MSVC)
     set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 endif ()
 
+## Enable LTO if supported
+include(CheckIPOSupported)
+check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
+
+if (IPO_SUPPORTED)
+    message(STATUS "IPO / LTO supported")
+else ()
+    message(STATUS "IPO / LTO not supported: ${IPO_ERROR}")
+endif ()
+
 ## Include third-party libraries
 add_subdirectory(vendor)
 
