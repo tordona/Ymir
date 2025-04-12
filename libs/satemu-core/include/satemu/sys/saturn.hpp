@@ -119,19 +119,8 @@ struct Saturn : sys::ISystemOperations {
     // -------------------------------------------------------------------------
     // Save states
 
-    void SaveState(state::State &state) const {
-        m_scheduler.SaveState(state.scheduler);
-    }
-
-    bool LoadState(state::SchedulerState &state) {
-        if (!m_scheduler.ValidateState(state)) {
-            return false;
-        }
-
-        m_scheduler.LoadState(state);
-
-        return true;
-    }
+    void SaveState(state::State &state) const;
+    bool LoadState(state::State &state);
 
 private:
     // Runs the emulator until the end of the current frame

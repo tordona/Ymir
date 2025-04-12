@@ -1,18 +1,19 @@
 #pragma once
 
 #include "state_scheduler.hpp"
+#include "state_system.hpp"
 
 namespace satemu::state {
 
 inline namespace v1 {
 
     struct State {
-        // IPL ROM hash
-        // Disc header hash
+        // TODO: IPL ROM hash
+        // TODO: Disc header hash
 
         SchedulerState scheduler;
-        struct SystemState {}; // video standard, clock speed, SH2 slave enable, system memory
-        struct SH2State {};    // one for each CPU
+        SystemState system;
+        struct SH2State {}; // one for each CPU
         struct SCUState {};
         struct VDPState {};
         struct SMPCState {};

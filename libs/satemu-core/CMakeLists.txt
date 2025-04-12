@@ -102,12 +102,14 @@ add_library(satemu-core
 
     include/satemu/state/state.hpp
     include/satemu/state/state_scheduler.hpp
+    include/satemu/state/state_system.hpp
 
     include/satemu/sys/backup_ram.hpp
     include/satemu/sys/backup_ram_defs.hpp
     include/satemu/sys/bus.hpp
     include/satemu/sys/clocks.hpp
     include/satemu/sys/memory.hpp
+    include/satemu/sys/memory_defs.hpp
     include/satemu/sys/saturn.hpp
     include/satemu/sys/sys_ops.hpp
     include/satemu/sys/system.hpp

@@ -198,6 +198,28 @@ void Saturn::EnableDebugTracing(bool enable) {
     UpdateRunFrameFn();
 }
 
+void Saturn::SaveState(state::State &state) const {
+    m_scheduler.SaveState(state.scheduler);
+    m_system.SaveState(state.system);
+    mem.SaveState(state.system);
+    state.system.slaveSH2Enabled = slaveSH2Enabled;
+}
+
+bool Saturn::LoadState(state::State &state) {
+    if (!m_scheduler.ValidateState(state.scheduler)) {
+        return false;
+    }
+    if (!m_system.ValidateState(state.system)) {
+        return false;
+    }
+
+    m_scheduler.LoadState(state.scheduler);
+    m_system.LoadState(state.system);
+    mem.LoadState(state.system);
+
+    return true;
+}
+
 template <bool debug, bool enableSH2Cache>
 void Saturn::RunFrameImpl() {
     // Use the last line phase as reference to give some leeway if we overshoot the target cycles

@@ -1,24 +1,19 @@
 #pragma once
 
-#include <satemu/core/types.hpp>
+#include "memory_defs.hpp"
 
 #include <satemu/sys/backup_ram.hpp>
 #include <satemu/sys/bus.hpp>
 
-#include <satemu/util/size_ops.hpp>
+#include <satemu/state/state_system.hpp>
+
+#include <satemu/core/types.hpp>
 
 #include <array>
 #include <iosfwd>
 #include <span>
 
 namespace satemu::sys {
-
-inline constexpr std::size_t kIPLSize = 512_KiB;
-
-inline constexpr std::size_t kWRAMLowSize = 1_MiB;
-inline constexpr std::size_t kWRAMHighSize = 1_MiB;
-
-inline constexpr bup::BackupMemorySize kInternalBackupRAMSize = bup::BackupMemorySize::_256Kbit;
 
 struct SystemMemory {
     SystemMemory();
@@ -39,6 +34,15 @@ struct SystemMemory {
     void SetInternalBackupRAM(bup::BackupMemory &&bupMem) {
         std::swap(m_internalBackupRAM, bupMem);
     }
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SystemState &state) const;
+    void LoadState(state::SystemState &state);
+
+    // -------------------------------------------------------------------------
+    // Memory
 
     alignas(16) std::array<uint8, kIPLSize> IPL; // aka BIOS ROM
 

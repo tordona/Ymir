@@ -4,6 +4,8 @@
 
 #include "system_callbacks.hpp"
 
+#include <satemu/state/state_system.hpp>
+
 #include <vector>
 
 namespace satemu::sys {
@@ -27,6 +29,31 @@ struct System {
 
     void AddClockSpeedChangeCallback(CBClockSpeedChange callback) {
         m_clockSpeedChangeCallbacks.push_back(callback);
+    }
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SystemState &state) const {
+        state.videoStandard = videoStandard;
+        state.clockSpeed = clockSpeed;
+    }
+
+    bool ValidateState(state::SystemState &state) const {
+        if (videoStandard != config::sys::VideoStandard::NTSC && videoStandard != config::sys::VideoStandard::PAL) {
+            return false;
+        }
+        if (clockSpeed != ClockSpeed::_320 && clockSpeed != ClockSpeed::_352) {
+            return false;
+        }
+        return true;
+    }
+
+    void LoadState(state::SystemState &state) {
+        videoStandard = state.videoStandard;
+        clockSpeed = state.clockSpeed;
+
+        UpdateClockRatios();
     }
 
 private:

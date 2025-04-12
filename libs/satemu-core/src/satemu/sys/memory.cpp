@@ -38,4 +38,14 @@ void SystemMemory::DumpWRAMHigh(std::ostream &out) const {
     out.write((const char *)WRAMHigh.data(), WRAMHigh.size());
 }
 
+void SystemMemory::SaveState(state::SystemState &state) const {
+    state.WRAMLow = WRAMLow;
+    state.WRAMHigh = WRAMHigh;
+}
+
+void SystemMemory::LoadState(state::SystemState &state) {
+    WRAMLow = state.WRAMLow;
+    WRAMHigh = state.WRAMHigh;
+}
+
 } // namespace satemu::sys
