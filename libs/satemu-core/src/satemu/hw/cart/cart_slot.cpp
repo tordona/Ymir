@@ -7,10 +7,10 @@ namespace satemu::cart {
 static NoCartridge no_instance{};
 
 CartridgeSlot::CartridgeSlot() {
-    EjectCartridge();
+    RemoveCartridge();
 }
 
-void CartridgeSlot::EjectCartridge() {
+void CartridgeSlot::RemoveCartridge() {
     m_cart = std::make_unique<NoCartridge>();
 }
 

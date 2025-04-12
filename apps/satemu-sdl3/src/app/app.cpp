@@ -1340,8 +1340,8 @@ void App::RunEmulator() {
                         m_context.EnqueueEvent(events::emu::Insert32MbitDRAMCartridge());
                     }
 
-                    if (ImGui::MenuItem("Eject cartridge")) {
-                        m_context.EnqueueEvent(events::emu::EjectCartridge());
+                    if (ImGui::MenuItem("Remove cartridge")) {
+                        m_context.EnqueueEvent(events::emu::RemoveCartridge());
                     }
                 }
 
@@ -1692,10 +1692,10 @@ void App::EmulatorThread() {
                 m_context.state.loadedDiscImagePath.clear();
                 break;
             }
-            case EjectCartridge: //
+            case RemoveCartridge: //
             {
                 std::unique_lock lock{m_context.locks.cart};
-                m_context.saturn.EjectCartridge();
+                m_context.saturn.RemoveCartridge();
                 break;
             }
 

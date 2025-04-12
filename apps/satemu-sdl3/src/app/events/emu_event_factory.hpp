@@ -47,8 +47,8 @@ inline EmuEvent EjectDisc() {
     return {.type = EmuEvent::Type::EjectDisc};
 }
 
-inline EmuEvent EjectCartridge() {
-    return {.type = EmuEvent::Type::EjectCartridge};
+inline EmuEvent RemoveCartridge() {
+    return {.type = EmuEvent::Type::RemoveCartridge};
 }
 
 inline EmuEvent ReplaceInternalBackupMemory(satemu::bup::BackupMemory &&bupMem) {

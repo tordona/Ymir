@@ -53,9 +53,9 @@ struct Saturn : sys::ISystemOperations {
         SCU.InsertCartridge<T>(std::forward<Args>(args)...);
     }
 
-    // Ejects the cartridge from the cartridge slot.
-    void EjectCartridge() {
-        SCU.EjectCartridge();
+    // Removes the cartridge from the cartridge slot.
+    void RemoveCartridge() {
+        SCU.RemoveCartridge();
     }
 
     // Returns a reference to the inserted cartridge.

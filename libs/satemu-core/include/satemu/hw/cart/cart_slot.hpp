@@ -24,7 +24,7 @@ public:
     }
 
     // Removes the cartridge from this slot.
-    void EjectCartridge();
+    void RemoveCartridge();
 
     // Returns a reference to the inserted cartridge.
     [[nodiscard]] BaseCartridge &GetCartridge() {

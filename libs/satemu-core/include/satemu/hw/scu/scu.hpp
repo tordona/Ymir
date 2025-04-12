@@ -88,9 +88,9 @@ public:
         // TODO: m_cartSlot.MapMemory(bus)
     }
 
-    void EjectCartridge() {
+    void RemoveCartridge() {
         // TODO: unmap cartridge memory
-        m_cartSlot.EjectCartridge();
+        m_cartSlot.RemoveCartridge();
     }
 
     // Returns a reference to the inserted cartridge.

@@ -47,7 +47,7 @@ SCU::SCU(core::Scheduler &scheduler, sys::Bus &bus)
 
     m_dsp.SetTriggerDSPEndCallback(CbTriggerDSPEnd);
 
-    EjectCartridge();
+    RemoveCartridge();
 
     m_timer1Event = m_scheduler.RegisterEvent(core::events::SCUTimer1, this, OnTimer1Event);
 

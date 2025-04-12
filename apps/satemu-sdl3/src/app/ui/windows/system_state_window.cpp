@@ -411,8 +411,8 @@ void SystemStateWindow::DrawCartridge() {
         ImGui::EndPopup();
     }
     ImGui::SameLine();
-    if (ImGui::Button("Eject")) {
-        m_context.EnqueueEvent(events::emu::EjectCartridge());
+    if (ImGui::Button("Remove")) {
+        m_context.EnqueueEvent(events::emu::RemoveCartridge());
     }
     ImGui::SameLine();
 

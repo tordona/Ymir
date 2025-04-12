@@ -24,7 +24,7 @@ struct EmuEvent {
         LoadDisc,
         EjectDisc,
 
-        EjectCartridge,
+        RemoveCartridge,
 
         ReplaceInternalBackupMemory,
         ReplaceExternalBackupMemory,

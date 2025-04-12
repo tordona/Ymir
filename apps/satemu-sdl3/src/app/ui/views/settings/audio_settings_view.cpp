@@ -44,10 +44,11 @@ void AudioSettingsView::Display() {
     ImGui::PopFont();
 
     bool threadedSCSP = config.threadedSCSP;
-    if (MakeDirty(ImGui::Checkbox("Run the SCSP and sound CPU on a thread", &threadedSCSP))) {
+    if (MakeDirty(ImGui::Checkbox("Threaded SCSP and sound CPU", &threadedSCSP))) {
         m_context.EnqueueEvent(events::emu::EnableThreadedSCSP(threadedSCSP));
     }
-    widgets::ExplanationTooltip("Improves performance at the cost of accuracy.\n"
+    widgets::ExplanationTooltip("Runs the SCSP and MC68EC000 in a dedicated thread.\n"
+                                "Improves performance at the cost of accuracy.\n"
                                 "A few select games may break when this option is enabled.");
 }
 

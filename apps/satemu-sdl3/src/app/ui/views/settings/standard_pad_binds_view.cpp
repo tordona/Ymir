@@ -16,7 +16,7 @@ void StandardPadBindsView::Display(Settings::Input::Port::StandardPadBinds &bind
     ImGui::TextUnformatted("Left-click a button to assign a hotkey. Right-click to clear.");
     if (ImGui::BeginTable("hotkeys", 1 + kNumBindsPerInput,
                           ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY)) {
-        ImGui::TableSetupColumn("Button", ImGuiTableColumnFlags_WidthFixed, 200.0f);
+        ImGui::TableSetupColumn("Button", ImGuiTableColumnFlags_WidthFixed, 70.0f);
         for (size_t i = 0; i < kNumBindsPerInput; i++) {
             ImGui::TableSetupColumn(fmt::format("Hotkey {}", i + 1).c_str(), ImGuiTableColumnFlags_WidthStretch, 1.0f);
         }
