@@ -3,6 +3,8 @@
 #include <satemu/core/configuration.hpp>
 #include <satemu/core/scheduler.hpp>
 
+#include <satemu/state/state.hpp>
+
 #include "memory.hpp"
 #include "system.hpp"
 #include "system_features.hpp"
@@ -108,10 +110,28 @@ struct Saturn : sys::ISystemOperations {
         slaveSH2.UseTracer(nullptr);
         SCU.UseTracer(nullptr);
     }
+
     // -------------------------------------------------------------------------
     // Configuration
 
     core::Configuration configuration;
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::State &state) const {
+        m_scheduler.SaveState(state.scheduler);
+    }
+
+    bool LoadState(state::SchedulerState &state) {
+        if (!m_scheduler.ValidateState(state)) {
+            return false;
+        }
+
+        m_scheduler.LoadState(state);
+
+        return true;
+    }
 
 private:
     // Runs the emulator until the end of the current frame

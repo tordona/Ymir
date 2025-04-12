@@ -1,6 +1,8 @@
 #pragma once
 
-#include <satemu/core/types.hpp>
+#include "scheduler_defs.hpp"
+
+#include <satemu/state/state_scheduler.hpp>
 
 #include <satemu/util/inline.hpp>
 
@@ -9,33 +11,6 @@
 #include <limits>
 
 namespace satemu::core {
-
-using IDtype = uint8;
-using EventID = IDtype;
-using UserID = IDtype;
-
-// User IDs for all events in the emulator
-namespace events {
-
-    // VDP phase update
-    inline constexpr UserID VDPPhase = 0x10;
-
-    // SCSP sample
-    inline constexpr UserID SCSPSample = 0x20;
-
-    // CD block drive state update
-    inline constexpr UserID CDBlockDriveState = 0x30;
-
-    // CD block command processing
-    inline constexpr UserID CDBlockCommand = 0x31;
-
-    // SCU timer 1 interrupt
-    inline constexpr UserID SCUTimer1 = 0x40;
-
-    // SMPC command processing
-    inline constexpr UserID SMPCCommand = 0x50;
-
-} // namespace events
 
 class Scheduler;
 
@@ -89,7 +64,7 @@ public:
     }
 
     // Registers an event. The returned ID must be used to refer to the event.
-    EventID RegisterEvent(UserID userID, void *userContext, EventCallback callback) {
+    EventID RegisterEvent(UserEventID userID, void *userContext, EventCallback callback) {
         assert(m_eventPtrs[userID] == kInvalidEvent);                    // ensure user IDs are unique
         assert(m_nextEventIndex <= std::numeric_limits<EventID>::max()); // IDtype value space exhausted
         EventID id = m_nextEventIndex;
@@ -142,7 +117,7 @@ public:
 
     // Schedules the specified event to happen $interval cycles from the current count
     void ScheduleFromNow(EventID id, uint64 interval) {
-        assert(id < kNumEvents);
+        assert(id < kNumScheduledEvents);
         Event &event = m_events[id];
         const uint64 scaledCount = m_currCount * event.countNumerator / event.countDenominator;
         ScheduleEvent(id, scaledCount + interval);
@@ -150,13 +125,13 @@ public:
 
     // Schedules the specified event to happen at the specified cycle count
     void ScheduleAt(EventID id, uint64 target) {
-        assert(id < kNumEvents);
+        assert(id < kNumScheduledEvents);
         ScheduleEvent(id, target);
     }
 
     // Removes the specified event from the schedule
     void Cancel(EventID id) {
-        assert(id < kNumEvents);
+        assert(id < kNumScheduledEvents);
         Event &event = m_events[id];
         event.target = kNoDeadline;
     }
@@ -169,9 +144,43 @@ public:
         }
     }
 
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SchedulerState &state) const {
+        state.currCount = m_currCount;
+        for (size_t i = 0; i < kNumScheduledEvents; i++) {
+            state.events[i].id = m_userIDs[i];
+            state.events[i].target = m_events[i].target;
+            state.events[i].countNumerator = m_events[i].countNumerator;
+            state.events[i].countDenominator = m_events[i].countDenominator;
+        }
+    }
+
+    bool ValidateState(state::SchedulerState &state) const {
+        for (size_t i = 0; i < kNumScheduledEvents; i++) {
+            const size_t eventIndex = m_eventPtrs[state.events[i].id];
+            if (eventIndex == kInvalidEvent) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void LoadState(state::SchedulerState &state) {
+        m_currCount = state.currCount;
+        for (size_t i = 0; i < kNumScheduledEvents; i++) {
+            const size_t eventIndex = m_eventPtrs[state.events[i].id];
+            assert(eventIndex != kInvalidEvent);
+            m_events[eventIndex].target = state.events[i].target;
+            m_events[eventIndex].countNumerator = state.events[i].countNumerator;
+            m_events[eventIndex].countDenominator = state.events[i].countDenominator;
+        }
+        RecalcSchedule();
+    }
+
 private:
     static constexpr uint64 kNoDeadline = ~static_cast<uint64>(0);
-    static constexpr size_t kNumEvents = 6;
 
     struct Event {
         uint64 target;
@@ -196,7 +205,7 @@ private:
     // Executes all scheduled events up to the current count
     FORCE_INLINE void Execute() {
         const uint64 currCount = m_currCount;
-        for (size_t index = 0; index < kNumEvents; ++index) {
+        for (size_t index = 0; index < kNumScheduledEvents; ++index) {
             Event &event = m_events[index];
             if (event.target == kNoDeadline) {
                 continue;
@@ -237,10 +246,10 @@ private:
 
     uint64 m_currCount;
     uint64 m_nextCount;
-    std::array<Event, kNumEvents> m_events;
-    std::array<UserID, kNumEvents> m_userIDs;
+    std::array<Event, kNumScheduledEvents> m_events;
+    std::array<UserEventID, kNumScheduledEvents> m_userIDs;
     size_t m_nextEventIndex;
-    std::array<EventID, std::numeric_limits<UserID>::max() + 1> m_eventPtrs;
+    std::array<EventID, std::numeric_limits<UserEventID>::max() + 1> m_eventPtrs;
 };
 
 } // namespace satemu::core

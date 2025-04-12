@@ -6,6 +6,7 @@ add_library(satemu-core
     include/satemu/core/configuration.hpp
     include/satemu/core/configuration_defs.hpp
     include/satemu/core/scheduler.hpp
+    include/satemu/core/scheduler_defs.hpp
     include/satemu/core/types.hpp
 
     include/satemu/debug/scu_tracer_base.hpp
@@ -98,6 +99,9 @@ add_library(satemu-core
     include/satemu/media/binary_reader/binary_reader_mem.hpp
     include/satemu/media/binary_reader/binary_reader_mmap.hpp
     include/satemu/media/binary_reader/binary_reader_subview.hpp
+
+    include/satemu/state/state.hpp
+    include/satemu/state/state_scheduler.hpp
 
     include/satemu/sys/backup_ram.hpp
     include/satemu/sys/backup_ram_defs.hpp
@@ -259,9 +263,9 @@ target_compile_definitions(satemu-core PUBLIC "$<$<NOT:$<BOOL:${BUILD_SHARED_LIB
 target_include_directories(satemu-core PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>")
 
 if (IPO_SUPPORTED AND satemu_ENABLE_IPO)
-        message(STATUS "Enabling IPO / LTO for satemu-core")
-        set_property(TARGET satemu-core PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-    endif()
+    message(STATUS "Enabling IPO / LTO for satemu-core")
+    set_property(TARGET satemu-core PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
 
 ## Apply performance options
 if (satemu_AVX2)
