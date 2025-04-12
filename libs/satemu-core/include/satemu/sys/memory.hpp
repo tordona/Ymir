@@ -39,8 +39,8 @@ struct SystemMemory {
     // Save states
 
     void SaveState(state::SystemState &state) const;
-    bool ValidateState(state::SystemState &state) const;
-    void LoadState(state::SystemState &state);
+    bool ValidateState(const state::SystemState &state) const;
+    void LoadState(const state::SystemState &state);
 
     // -------------------------------------------------------------------------
     // Memory

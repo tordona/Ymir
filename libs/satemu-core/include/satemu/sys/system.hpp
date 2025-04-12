@@ -39,7 +39,7 @@ struct System {
         state.clockSpeed = clockSpeed;
     }
 
-    bool ValidateState(state::SystemState &state) const {
+    bool ValidateState(const state::SystemState &state) const {
         if (videoStandard != config::sys::VideoStandard::NTSC && videoStandard != config::sys::VideoStandard::PAL) {
             return false;
         }
@@ -49,7 +49,7 @@ struct System {
         return true;
     }
 
-    void LoadState(state::SystemState &state) {
+    void LoadState(const state::SystemState &state) {
         videoStandard = state.videoStandard;
         clockSpeed = state.clockSpeed;
 

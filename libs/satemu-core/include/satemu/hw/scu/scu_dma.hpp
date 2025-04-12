@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/state/state_scu.hpp>
+
 #include <satemu/core/types.hpp>
 
 namespace satemu::scu {
@@ -63,6 +65,82 @@ struct DMAChannel {
 
     uint32 currIndirectSrc; // Indirect data transfer source address
     bool endIndirect;       // Whether the end flag was sent on the current indirect transfer
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SCUDMAState &state) const {
+        state.srcAddr = srcAddr;
+        state.dstAddr = dstAddr;
+        state.xferCount = xferCount;
+        state.srcAddrInc = srcAddrInc;
+        state.dstAddrInc = dstAddrInc;
+        state.updateSrcAddr = updateSrcAddr;
+        state.updateDstAddr = updateDstAddr;
+        state.enabled = enabled;
+        state.active = active;
+        state.indirect = indirect;
+        state.trigger = static_cast<uint8>(trigger);
+        state.start = start;
+        state.currSrcAddr = currSrcAddr;
+        state.currDstAddr = currDstAddr;
+        state.currXferCount = currXferCount;
+        state.currSrcAddrInc = currSrcAddrInc;
+        state.currDstAddrInc = currDstAddrInc;
+        state.currIndirectSrc = currIndirectSrc;
+        state.endIndirect = endIndirect;
+    }
+
+    bool ValidateState(const state::SCUDMAState &state) const {
+        if (state.xferCount > 1048576) {
+            // TODO: should limit to 4096 for channels 1 and 2
+            return false;
+        }
+        if (state.srcAddrInc != 0 && state.srcAddrInc != 4) {
+            return false;
+        }
+        if (state.dstAddrInc != 0 && (!bit::is_power_of_two(state.dstAddrInc) || state.dstAddrInc == 1)) {
+            return false;
+        }
+        if (state.trigger >= 8) {
+            return false;
+        }
+
+        if (state.currXferCount > 1048576) {
+            // TODO: should limit to 4096 for channels 1 and 2
+            return false;
+        }
+        if (state.currSrcAddrInc != 0 && state.currSrcAddrInc != 4) {
+            return false;
+        }
+        if (state.currDstAddrInc != 0 && (!bit::is_power_of_two(state.currDstAddrInc) || state.currDstAddrInc == 1)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    void LoadState(const state::SCUDMAState &state) {
+        srcAddr = state.srcAddr;
+        dstAddr = state.dstAddr;
+        xferCount = state.xferCount;
+        srcAddrInc = state.srcAddrInc;
+        dstAddrInc = state.dstAddrInc;
+        updateSrcAddr = state.updateSrcAddr;
+        updateDstAddr = state.updateDstAddr;
+        enabled = state.enabled;
+        active = state.active;
+        indirect = state.indirect;
+        trigger = static_cast<DMATrigger>(state.trigger);
+        start = state.start;
+        currSrcAddr = state.currSrcAddr;
+        currDstAddr = state.currDstAddr;
+        currXferCount = state.currXferCount;
+        currSrcAddrInc = state.currSrcAddrInc;
+        currDstAddrInc = state.currDstAddrInc;
+        currIndirectSrc = state.currIndirectSrc;
+        endIndirect = state.endIndirect;
+    }
 };
 
 } // namespace satemu::scu

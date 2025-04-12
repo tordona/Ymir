@@ -120,7 +120,7 @@ struct Saturn : sys::ISystemOperations {
     // Save states
 
     void SaveState(state::State &state) const;
-    bool LoadState(state::State &state);
+    bool LoadState(const state::State &state);
 
 private:
     // Runs the emulator until the end of the current frame

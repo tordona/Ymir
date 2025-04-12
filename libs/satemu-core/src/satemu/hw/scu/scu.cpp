@@ -1,8 +1,11 @@
 #include <satemu/hw/scu/scu.hpp>
 
+#include <satemu/hw/cart/cart_impl_dram.hpp>
+
 #include "scu_devlog.hpp"
 
 #include <satemu/util/inline.hpp>
+#include <satemu/util/size_ops.hpp>
 
 #include <bit>
 
@@ -226,15 +229,15 @@ void SCU::AcknowledgeExternalInterrupt() {
     UpdateInterruptLevel<true>();
 }
 
-void SCU::DumpDSPProgramRAM(std::ostream &out) {
+void SCU::DumpDSPProgramRAM(std::ostream &out) const {
     out.write((const char *)m_dsp.programRAM.data(), sizeof(m_dsp.programRAM));
 }
 
-void SCU::DumpDSPDataRAM(std::ostream &out) {
+void SCU::DumpDSPDataRAM(std::ostream &out) const {
     out.write((const char *)m_dsp.dataRAM.data(), sizeof(m_dsp.dataRAM));
 }
 
-void SCU::DumpDSPRegs(std::ostream &out) {
+void SCU::DumpDSPRegs(std::ostream &out) const {
     auto write = [&](const auto &reg) { out.write((const char *)&reg, sizeof(reg)); };
     write(m_dsp.programExecuting);
     write(m_dsp.programPaused);
@@ -265,6 +268,112 @@ void SCU::DumpDSPRegs(std::ostream &out) {
     write(m_dsp.dmaReadAddr);
     write(m_dsp.dmaWriteAddr);
     write(m_dsp.dmaAddrInc);
+}
+
+void SCU::SaveState(state::SCUState &state) const {
+    for (size_t i = 0; i < 3; i++) {
+        m_dmaChannels[i].SaveState(state.dma[i]);
+    }
+    m_dsp.SaveState(state.dsp);
+
+    switch (m_cartSlot.GetCartridgeType()) {
+    case cart::CartType::None: state.cartType = state::SCUState::CartType::None; break;
+    case cart::CartType::BackupMemory: state.cartType = state::SCUState::CartType::BackupMemory; break;
+    case cart::CartType::DRAM8Mbit: //
+    {
+        const cart::DRAM8MbitCartridge *dramCart = m_cartSlot.GetCartridge().As<cart::CartType::DRAM8Mbit>();
+        assert(dramCart != nullptr);
+        state.cartType = state::SCUState::CartType::DRAM8Mbit;
+        state.dramCartData.resize(1_MiB);
+        dramCart->DumpRAM(std::span<uint8, 1_MiB>(state.dramCartData.begin(), 1_MiB));
+        break;
+    }
+    case cart::CartType::DRAM32Mbit: //
+    {
+        const cart::DRAM32MbitCartridge *dramCart = m_cartSlot.GetCartridge().As<cart::CartType::DRAM32Mbit>();
+        assert(dramCart != nullptr);
+        state.cartType = state::SCUState::CartType::DRAM32Mbit;
+        state.dramCartData.resize(4_MiB);
+        dramCart->DumpRAM(std::span<uint8, 4_MiB>(state.dramCartData.begin(), 4_MiB));
+        break;
+    }
+    }
+
+    state.intrMask = m_intrMask.u32;
+    state.intrStatus = m_intrStatus.u32;
+    state.abusIntrAck = m_abusIntrAck;
+
+    state.timer0Compare = m_timer0Compare;
+    state.timer0Counter = m_timer0Counter;
+    state.timer1Reload = m_timer1Reload;
+    state.timer1Enable = m_timer1Enable;
+    state.timer1Mode = m_timer1Mode;
+
+    state.wramSizeSelect = m_WRAMSizeSelect;
+}
+
+bool SCU::ValidateState(const state::SCUState &state) const {
+    for (size_t i = 0; i < 3; i++) {
+        if (!m_dmaChannels[i].ValidateState(state.dma[i])) {
+            return false;
+        }
+    }
+    if (!m_dsp.ValidateState(state.dsp)) {
+        return false;
+    }
+
+    switch (state.cartType) {
+    case state::SCUState::CartType::DRAM8Mbit:
+        if (state.dramCartData.size() != 1_MiB) {
+            return false;
+        }
+        break;
+    case state::SCUState::CartType::DRAM32Mbit:
+        if (state.dramCartData.size() != 4_MiB) {
+            return false;
+        }
+        break;
+    default: break;
+    }
+
+    return true;
+}
+
+void SCU::LoadState(const state::SCUState &state) {
+    for (size_t i = 0; i < 3; i++) {
+        m_dmaChannels[i].LoadState(state.dma[i]);
+    }
+    m_dsp.LoadState(state.dsp);
+
+    switch (state.cartType) {
+    case state::SCUState::CartType::DRAM8Mbit: //
+    {
+        auto *dramCart = m_cartSlot.InsertCartridge<cart::DRAM8MbitCartridge>();
+        dramCart->CopyRAM(std::span<const uint8, 1_MiB>(state.dramCartData.begin(), 1_MiB));
+        break;
+    }
+    case state::SCUState::CartType::DRAM32Mbit: //
+    {
+        auto *dramCart = m_cartSlot.InsertCartridge<cart::DRAM32MbitCartridge>();
+        dramCart->CopyRAM(std::span<const uint8, 4_MiB>(state.dramCartData.begin(), 4_MiB));
+        break;
+    }
+    default: break;
+    }
+
+    m_intrMask.u32 = state.intrMask & 0x0000BFFF;
+    m_intrStatus.u32 = state.intrStatus & 0xFFFFBFFF;
+    m_abusIntrAck = state.abusIntrAck;
+
+    m_timer0Compare = state.timer0Compare;
+    m_timer0Counter = state.timer0Counter;
+    m_timer1Reload = state.timer1Reload;
+    m_timer1Enable = state.timer1Enable;
+    m_timer1Mode = state.timer1Mode;
+
+    m_WRAMSizeSelect = state.wramSizeSelect;
+
+    RecalcDMAChannel();
 }
 
 void SCU::OnTimer1Event(core::EventContext &eventContext, void *userContext) {

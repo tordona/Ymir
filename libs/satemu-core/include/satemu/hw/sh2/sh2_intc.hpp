@@ -242,7 +242,7 @@ struct InterruptController {
         state.extVec = externalVector;
     }
 
-    void LoadState(state::SH2State::INTC &state) {
+    void LoadState(const state::SH2State::INTC &state) {
         WriteICR<true, true, true>(state.ICR);
         m_levels = state.levels;
         m_vectors = state.vectors;

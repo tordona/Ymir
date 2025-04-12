@@ -157,7 +157,7 @@ public:
         }
     }
 
-    bool ValidateState(state::SchedulerState &state) const {
+    bool ValidateState(const state::SchedulerState &state) const {
         for (size_t i = 0; i < kNumScheduledEvents; i++) {
             const size_t eventIndex = m_eventPtrs[state.events[i].id];
             if (eventIndex == kInvalidEvent) {
@@ -167,7 +167,7 @@ public:
         return true;
     }
 
-    void LoadState(state::SchedulerState &state) {
+    void LoadState(const state::SchedulerState &state) {
         m_currCount = state.currCount;
         for (size_t i = 0; i < kNumScheduledEvents; i++) {
             const size_t eventIndex = m_eventPtrs[state.events[i].id];

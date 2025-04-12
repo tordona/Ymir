@@ -222,6 +222,81 @@ void SCUDSP::RunDMA(uint64 cycles) {
     dmaRun = false;
 }
 
+void SCUDSP::SaveState(state::SCUDSPState &state) const {
+    state.programRAM = programRAM;
+    state.dataRAM = dataRAM;
+    state.programExecuting = programExecuting;
+    state.programPaused = programPaused;
+    state.programEnded = programEnded;
+    state.programStep = programStep;
+    state.PC = PC;
+    state.dataAddress = dataAddress;
+    state.nextPC = nextPC;
+    state.jmpCounter = jmpCounter;
+    state.sign = sign;
+    state.zero = zero;
+    state.carry = carry;
+    state.overflow = overflow;
+    state.CT = CT;
+    state.ALU = ALU.s64;
+    state.AC = AC.s64;
+    state.P = P.s64;
+    state.RX = RX;
+    state.RY = RY;
+    state.LOP = loopCount;
+    state.TOP = loopTop;
+    state.dmaRun = dmaRun;
+    state.dmaToD0 = dmaToD0;
+    state.dmaHold = dmaHold;
+    state.dmaCount = dmaCount;
+    state.dmaSrc = dmaSrc;
+    state.dmaDst = dmaDst;
+    state.dmaReadAddr = dmaReadAddr;
+    state.dmaWriteAddr = dmaWriteAddr;
+    state.dmaAddrInc = dmaAddrInc;
+}
+
+bool SCUDSP::ValidateState(const state::SCUDSPState &state) const {
+    if (state.dmaAddrInc != 0 && (!bit::is_power_of_two(state.dmaAddrInc) || state.dmaAddrInc == 1)) {
+        return false;
+    }
+    return true;
+}
+
+void SCUDSP::LoadState(const state::SCUDSPState &state) {
+    programRAM = state.programRAM;
+    dataRAM = state.dataRAM;
+    programExecuting = state.programExecuting;
+    programPaused = state.programPaused;
+    programEnded = state.programEnded;
+    programStep = state.programStep;
+    PC = state.PC;
+    dataAddress = state.dataAddress;
+    nextPC = state.nextPC;
+    jmpCounter = state.jmpCounter;
+    sign = state.sign;
+    zero = state.zero;
+    carry = state.carry;
+    overflow = state.overflow;
+    CT = state.CT;
+    ALU.s64 = state.ALU;
+    AC.s64 = state.AC;
+    P.s64 = state.P;
+    RX = state.RX;
+    RY = state.RY;
+    loopCount = state.LOP & 0xFFF;
+    loopTop = state.TOP;
+    dmaRun = state.dmaRun;
+    dmaToD0 = state.dmaToD0;
+    dmaHold = state.dmaHold;
+    dmaCount = state.dmaCount;
+    dmaSrc = state.dmaSrc & 3;
+    dmaDst = state.dmaDst & 7;
+    dmaReadAddr = state.dmaReadAddr & 0x7FFFFFC;
+    dmaWriteAddr = state.dmaWriteAddr & 0x7FFFFFC;
+    dmaAddrInc = state.dmaAddrInc;
+}
+
 template <bool debug>
 FORCE_INLINE void SCUDSP::Cmd_Operation(uint32 command) {
     // ALU
@@ -394,7 +469,7 @@ FORCE_INLINE void SCUDSP::Cmd_Special_DMA(uint32 command) {
         // DMAH D0,[RAM],SImm
         // DMAH D0,[RAM],[s]
         dmaDst = bit::extract<8, 10>(command);
-        dmaAddrInc = (1 << (addrInc & 0x2)) & ~1;
+        dmaAddrInc = (1u << (addrInc & 0x2u)) & ~1u;
     }
 
     devlog::trace<grp::dsp>("DSP DMA command: {:04X} @ {:02X}", command, PC);

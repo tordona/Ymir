@@ -80,8 +80,8 @@ public:
     // Save states
 
     void SaveState(state::SH2State &state) const;
-    bool ValidateState(state::SH2State &state) const;
-    void LoadState(state::SH2State &state);
+    bool ValidateState(const state::SH2State &state) const;
+    void LoadState(const state::SH2State &state);
 
     // -------------------------------------------------------------------------
     // Debugger

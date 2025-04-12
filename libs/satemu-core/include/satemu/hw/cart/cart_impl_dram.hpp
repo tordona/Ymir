@@ -5,7 +5,9 @@
 #include <satemu/util/data_ops.hpp>
 #include <satemu/util/size_ops.hpp>
 
+#include <algorithm>
 #include <array>
+#include <span>
 
 namespace satemu::cart {
 
@@ -22,6 +24,14 @@ public:
 
     void Reset(bool hard) final {
         m_ram.fill(0);
+    }
+
+    void CopyRAM(std::span<const uint8, size> out) {
+        std::copy(out.begin(), out.end(), m_ram.begin());
+    }
+
+    void DumpRAM(std::span<uint8, size> out) const {
+        std::copy(m_ram.begin(), m_ram.end(), out.begin());
     }
 
 protected:

@@ -19,8 +19,9 @@ public:
     // Inserts the cartridge into this slot.
     template <typename T, typename... Args>
         requires std::derived_from<T, cart::BaseCartridge>
-    void InsertCartridge(Args &&...args) {
+    T *InsertCartridge(Args &&...args) {
         m_cart = std::make_unique<T>(std::forward<Args>(args)...);
+        return static_cast<T *>(m_cart.get());
     }
 
     // Removes the cartridge from this slot.
@@ -28,6 +29,11 @@ public:
 
     // Returns a reference to the inserted cartridge.
     [[nodiscard]] BaseCartridge &GetCartridge() {
+        return *m_cart;
+    }
+
+    // Returns a reference to the inserted cartridge.
+    [[nodiscard]] const BaseCartridge &GetCartridge() const {
         return *m_cart;
     }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "state_scheduler.hpp"
+#include "state_scu.hpp"
 #include "state_sh2.hpp"
 #include "state_system.hpp"
 
@@ -16,11 +17,12 @@ inline namespace v1 {
         SystemState system;
         SH2State msh2;
         SH2State ssh2;
-        struct SCUState {};
+        SCUState scu;
         struct VDPState {};
         struct SMPCState {};
-        struct SCSPState {};
-        struct M68KState {};
+        struct SCSPState {
+            struct M68KState {};
+        };
         struct CDBlockState {};
     };
 

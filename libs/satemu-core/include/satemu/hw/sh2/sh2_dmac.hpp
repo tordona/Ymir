@@ -207,7 +207,7 @@ struct DMAChannel {
         state.DRCR = ReadDRCR();
     }
 
-    void LoadState(state::SH2State::DMAC::Channel &state) {
+    void LoadState(const state::SH2State::DMAC::Channel &state) {
         srcAddress = state.SAR;
         dstAddress = state.DAR;
         xferCount = state.TCR;

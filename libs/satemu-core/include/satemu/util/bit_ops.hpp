@@ -14,7 +14,7 @@ namespace bit {
 // Determines if the given unsigned integral is a power of two.
 template <std::unsigned_integral T>
 FORCE_INLINE constexpr bool is_power_of_two(T x) {
-    return (x & (x - 1)) == 0;
+    return x != 0 && (x & (x - 1)) == 0;
 }
 
 // Returns the next power of two not less than x.

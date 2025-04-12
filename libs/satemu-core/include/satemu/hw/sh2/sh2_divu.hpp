@@ -246,7 +246,7 @@ struct DivisionUnit {
         state.DVDNTUL = DVDNTUL;
     }
 
-    void LoadState(state::SH2State::DIVU &state) {
+    void LoadState(const state::SH2State::DIVU &state) {
         DVSR = state.DVSR;
         DVDNT = state.DVDNT;
         DVCR.Write(state.DVCR);

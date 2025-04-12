@@ -387,7 +387,7 @@ struct FreeRunningTimer {
         state.cycleCount = m_cycleCount;
     }
 
-    void LoadState(state::SH2State::FRT &state) {
+    void LoadState(const state::SH2State::FRT &state) {
         WriteTIER(state.TIER);
         WriteFTCSR<true>(state.FTCSR);
         FRC = state.FRC;

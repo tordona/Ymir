@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/state/state_scu.hpp>
+
 #include <satemu/core/types.hpp>
 
 #include <satemu/sys/bus.hpp>
@@ -314,6 +316,13 @@ public:
         nextPC = target & 0xFF;
         jmpCounter = 2;
     }
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SCUDSPState &state) const;
+    bool ValidateState(const state::SCUDSPState &state) const;
+    void LoadState(const state::SCUDSPState &state);
 
     // -------------------------------------------------------------------------
     // Debugger

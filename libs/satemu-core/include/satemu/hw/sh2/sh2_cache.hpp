@@ -321,7 +321,7 @@ public:
         state.lru = m_lru;
     }
 
-    void LoadState(state::SH2State::Cache &state) {
+    void LoadState(const state::SH2State::Cache &state) {
         WriteCCR<true>(state.CCR);
         for (size_t i = 0; i < 64; i++) {
             for (size_t j = 0; j < 4; j++) {

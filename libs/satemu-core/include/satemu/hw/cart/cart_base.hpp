@@ -66,6 +66,13 @@ public:
         }
     }
 
+    // If this cartridge object has the specified CartType, casts it to the corresponding concrete type.
+    // Returns nullptr otherwise.
+    template <CartType type>
+    FORCE_INLINE const typename detail::CartType_t<type> *As() const {
+        return const_cast<BaseCartridge *>(this)->As<type>();
+    }
+
     virtual uint8 ReadByte(uint32 address) const = 0;
     virtual uint16 ReadWord(uint32 address) const = 0;
 

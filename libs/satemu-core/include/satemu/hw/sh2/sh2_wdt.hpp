@@ -211,7 +211,7 @@ struct WatchdogTimer {
         state.cycleCount = m_cycleCount;
     }
 
-    void LoadState(state::SH2State::WDT &state) {
+    void LoadState(const state::SH2State::WDT &state) {
         WriteWTCSR<true>(state.WTCSR);
         WriteWTCNT(state.WTCNT);
         WriteRSTCSR<true>(state.RSTCSR);

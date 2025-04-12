@@ -6,6 +6,8 @@
 
 #include <satemu/core/scheduler.hpp>
 
+#include <satemu/state/state_scu.hpp>
+
 #include <satemu/debug/scu_tracer_base.hpp>
 
 #include <satemu/hw/hw_defs.hpp>
@@ -129,9 +131,16 @@ public:
     // -------------------------------------------------------------------------
     // RAM/register dumps
 
-    void DumpDSPProgramRAM(std::ostream &out);
-    void DumpDSPDataRAM(std::ostream &out);
-    void DumpDSPRegs(std::ostream &out);
+    void DumpDSPProgramRAM(std::ostream &out) const;
+    void DumpDSPDataRAM(std::ostream &out) const;
+    void DumpDSPRegs(std::ostream &out) const;
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SCUState &state) const;
+    bool ValidateState(const state::SCUState &state) const;
+    void LoadState(const state::SCUState &state);
 
 private:
     sys::Bus &m_bus;

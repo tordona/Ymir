@@ -365,11 +365,11 @@ void SH2::SaveState(state::SH2State &state) const {
     state.SBYCR = SBYCR.u8;
 }
 
-bool SH2::ValidateState(state::SH2State &state) const {
+bool SH2::ValidateState(const state::SH2State &state) const {
     return true;
 }
 
-void SH2::LoadState(state::SH2State &state) {
+void SH2::LoadState(const state::SH2State &state) {
     R = state.R;
     PC = state.PC;
     PR = state.PR;
@@ -396,8 +396,8 @@ void SH2::LoadState(state::SH2State &state) {
     DIVU.LoadState(state.divu);
     FRT.LoadState(state.frt);
     INTC.LoadState(state.intc);
-    m_cache.SaveState(state.cache);
-    state.SBYCR = SBYCR.u8;
+    m_cache.LoadState(state.cache);
+    SBYCR.u8 = state.SBYCR;
 }
 
 // -----------------------------------------------------------------------------
