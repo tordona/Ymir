@@ -64,150 +64,150 @@ struct VDP2Regs {
 
     uint16 Read(uint32 address) const {
         switch (address) {
-        case 0x000: return TVMD.u16;
-        case 0x002: return EXTEN.u16;
-        case 0x004: return TVSTAT.u16;
-        case 0x006: return VRSIZE.u16;
-        case 0x008: return HCNT;
-        case 0x00A: return VCNT;
+        case 0x000: return ReadTVMD();
+        case 0x002: return ReadEXTEN();
+        case 0x004: return ReadTVSTAT();
+        case 0x006: return ReadVRSIZE();
+        case 0x008: return ReadHCNT();
+        case 0x00A: return ReadVCNT();
         case 0x00C: return 0; // unknown/hidden register
         case 0x00E: return ReadRAMCTL();
-        case 0x010: return CYCA0.L.u16;   // write-only?
-        case 0x012: return CYCA0.U.u16;   // write-only?
-        case 0x014: return CYCA1.L.u16;   // write-only?
-        case 0x016: return CYCA1.U.u16;   // write-only?
-        case 0x018: return CYCB0.L.u16;   // write-only?
-        case 0x01A: return CYCB0.U.u16;   // write-only?
-        case 0x01E: return CYCB1.L.u16;   // write-only?
-        case 0x01C: return CYCB1.U.u16;   // write-only?
-        case 0x020: return ReadBGON();    // write-only?
-        case 0x022: return ReadMZCTL();   // write-only?
-        case 0x024: return ReadSFSEL();   // write-only?
-        case 0x026: return ReadSFCODE();  // write-only?
-        case 0x028: return ReadCHCTLA();  // write-only?
-        case 0x02A: return ReadCHCTLB();  // write-only?
-        case 0x02C: return ReadBMPNA();   // write-only?
-        case 0x02E: return ReadBMPNB();   // write-only?
-        case 0x030: return ReadPNCN(1);   // write-only?
-        case 0x032: return ReadPNCN(2);   // write-only?
-        case 0x034: return ReadPNCN(3);   // write-only?
-        case 0x036: return ReadPNCN(4);   // write-only?
-        case 0x038: return ReadPNCR();    // write-only?
-        case 0x03A: return ReadPLSZ();    // write-only?
-        case 0x03C: return ReadMPOFN();   // write-only?
-        case 0x03E: return ReadMPOFR();   // write-only?
-        case 0x040: return ReadMPN(1, 0); // write-only?
-        case 0x042: return ReadMPN(1, 1); // write-only?
-        case 0x044: return ReadMPN(2, 0); // write-only?
-        case 0x046: return ReadMPN(2, 1); // write-only?
-        case 0x048: return ReadMPN(3, 0); // write-only?
-        case 0x04A: return ReadMPN(3, 1); // write-only?
-        case 0x04C: return ReadMPN(4, 0); // write-only?
-        case 0x04E: return ReadMPN(4, 1); // write-only?
-        case 0x050: return ReadMPR(0, 0); // write-only?
-        case 0x052: return ReadMPR(0, 1); // write-only?
-        case 0x054: return ReadMPR(0, 2); // write-only?
-        case 0x056: return ReadMPR(0, 3); // write-only?
-        case 0x058: return ReadMPR(0, 4); // write-only?
-        case 0x05A: return ReadMPR(0, 5); // write-only?
-        case 0x05C: return ReadMPR(0, 6); // write-only?
-        case 0x05E: return ReadMPR(0, 7); // write-only?
-        case 0x060: return ReadMPR(1, 0); // write-only?
-        case 0x062: return ReadMPR(1, 1); // write-only?
-        case 0x064: return ReadMPR(1, 2); // write-only?
-        case 0x066: return ReadMPR(1, 3); // write-only?
-        case 0x068: return ReadMPR(1, 4); // write-only?
-        case 0x06A: return ReadMPR(1, 5); // write-only?
-        case 0x06C: return ReadMPR(1, 6); // write-only?
-        case 0x06E: return ReadMPR(1, 7); // write-only?
-        case 0x070: return ReadSCXIN(1);  // write-only?
-        case 0x072: return ReadSCXDN(1);  // write-only?
-        case 0x074: return ReadSCYIN(1);  // write-only?
-        case 0x076: return ReadSCYDN(1);  // write-only?
-        case 0x078: return ReadZMXIN(1);  // write-only?
-        case 0x07A: return ReadZMXDN(1);  // write-only?
-        case 0x07C: return ReadZMYIN(1);  // write-only?
-        case 0x07E: return ReadZMYDN(1);  // write-only?
-        case 0x080: return ReadSCXIN(2);  // write-only?
-        case 0x082: return ReadSCXDN(2);  // write-only?
-        case 0x084: return ReadSCYIN(2);  // write-only?
-        case 0x086: return ReadSCYDN(2);  // write-only?
-        case 0x088: return ReadZMXIN(2);  // write-only?
-        case 0x08A: return ReadZMXDN(2);  // write-only?
-        case 0x08C: return ReadZMYIN(2);  // write-only?
-        case 0x08E: return ReadZMYDN(2);  // write-only?
-        case 0x090: return ReadSCXIN(3);  // write-only?
-        case 0x092: return ReadSCYIN(3);  // write-only?
-        case 0x094: return ReadSCXIN(4);  // write-only?
-        case 0x096: return ReadSCYIN(4);  // write-only?
-        case 0x098: return ZMCTL.u16;     // write-only?
-        case 0x09A: return ReadSCRCTL();  // write-only?
-        case 0x09C: return ReadVCSTAU();  // write-only?
-        case 0x09E: return ReadVCSTAL();  // write-only?
-        case 0x0A0: return ReadLSTAnU(1); // write-only?
-        case 0x0A2: return ReadLSTAnL(1); // write-only?
-        case 0x0A4: return ReadLSTAnU(2); // write-only?
-        case 0x0A6: return ReadLSTAnL(2); // write-only?
-        case 0x0A8: return ReadLCTAU();   // write-only?
-        case 0x0AA: return ReadLCTAL();   // write-only?
-        case 0x0AC: return ReadBKTAU();   // write-only?
-        case 0x0AE: return ReadBKTAL();   // write-only?
-        case 0x0B0: return ReadRPMD();    // write-only?
-        case 0x0B2: return ReadRPRCTL();  // write-only?
-        case 0x0B4: return ReadKTCTL();   // write-only?
-        case 0x0B6: return ReadKTAOF();   // write-only?
-        case 0x0B8: return ReadOVPNRn(0); // write-only?
-        case 0x0BA: return ReadOVPNRn(1); // write-only?
-        case 0x0BC: return ReadRPTAU();   // write-only?
-        case 0x0BE: return ReadRPTAL();   // write-only?
-        case 0x0C0: return ReadWPSXn(0);  // write-only?
-        case 0x0C2: return ReadWPSYn(0);  // write-only?
-        case 0x0C4: return ReadWPEXn(0);  // write-only?
-        case 0x0C6: return ReadWPEYn(0);  // write-only?
-        case 0x0C8: return ReadWPSXn(1);  // write-only?
-        case 0x0CA: return ReadWPSYn(1);  // write-only?
-        case 0x0CC: return ReadWPEXn(1);  // write-only?
-        case 0x0CE: return ReadWPEYn(1);  // write-only?
-        case 0x0D0: return ReadWCTLA();   // write-only?
-        case 0x0D2: return ReadWCTLB();   // write-only?
-        case 0x0D4: return ReadWCTLC();   // write-only?
-        case 0x0D6: return ReadWCTLD();   // write-only?
-        case 0x0D8: return ReadLWTAnU(0); // write-only?
-        case 0x0DA: return ReadLWTAnL(0); // write-only?
-        case 0x0DC: return ReadLWTAnU(1); // write-only?
-        case 0x0DE: return ReadLWTAnL(1); // write-only?
-        case 0x0E0: return ReadSPCTL();   // write-only?
-        case 0x0E2: return ReadSDCTL();   // write-only?
-        case 0x0E4: return ReadCRAOFA();  // write-only?
-        case 0x0E6: return ReadCRAOFB();  // write-only?
-        case 0x0E8: return ReadLNCLEN();  // write-only?
-        case 0x0EA: return ReadSFPRMD();  // write-only?
-        case 0x0EC: return ReadCCCTL();   // write-only?
-        case 0x0EE: return ReadSFCCMD();  // write-only?
-        case 0x0F0: return ReadPRISn(0);  // write-only?
-        case 0x0F2: return ReadPRISn(1);  // write-only?
-        case 0x0F4: return ReadPRISn(2);  // write-only?
-        case 0x0F6: return ReadPRISn(3);  // write-only?
-        case 0x0F8: return ReadPRINA();   // write-only?
-        case 0x0FA: return ReadPRINB();   // write-only?
-        case 0x0FC: return ReadPRIR();    // write-only?
-        case 0x0FE: return 0;             // supposedly reserved
-        case 0x100: return ReadCCRSn(0);  // write-only?
-        case 0x102: return ReadCCRSn(1);  // write-only?
-        case 0x104: return ReadCCRSn(2);  // write-only?
-        case 0x106: return ReadCCRSn(3);  // write-only?
-        case 0x108: return ReadCCRNA();   // write-only?
-        case 0x10A: return ReadCCRNB();   // write-only?
-        case 0x10C: return ReadCCRR();    // write-only?
-        case 0x10E: return ReadCCRLB();   // write-only?
-        case 0x110: return ReadCLOFEN();  // write-only?
-        case 0x112: return ReadCLOFSL();  // write-only?
-        case 0x114: return ReadCOxR(0);   // write-only?
-        case 0x116: return ReadCOxG(0);   // write-only?
-        case 0x118: return ReadCOxB(0);   // write-only?
-        case 0x11A: return ReadCOxR(1);   // write-only?
-        case 0x11C: return ReadCOxG(1);   // write-only?
-        case 0x11E: return ReadCOxB(1);   // write-only?
+        case 0x010: return ReadCYCA0L(); // write-only?
+        case 0x012: return ReadCYCA0U(); // write-only?
+        case 0x014: return ReadCYCA1L(); // write-only?
+        case 0x016: return ReadCYCA1U(); // write-only?
+        case 0x018: return ReadCYCB0L(); // write-only?
+        case 0x01A: return ReadCYCB0U(); // write-only?
+        case 0x01E: return ReadCYCB1L(); // write-only?
+        case 0x01C: return ReadCYCB1U(); // write-only?
+        case 0x020: return ReadBGON();   // write-only?
+        case 0x022: return ReadMZCTL();  // write-only?
+        case 0x024: return ReadSFSEL();  // write-only?
+        case 0x026: return ReadSFCODE(); // write-only?
+        case 0x028: return ReadCHCTLA(); // write-only?
+        case 0x02A: return ReadCHCTLB(); // write-only?
+        case 0x02C: return ReadBMPNA();  // write-only?
+        case 0x02E: return ReadBMPNB();  // write-only?
+        case 0x030: return ReadPNCNA();  // write-only?
+        case 0x032: return ReadPNCNB();  // write-only?
+        case 0x034: return ReadPNCNC();  // write-only?
+        case 0x036: return ReadPNCND();  // write-only?
+        case 0x038: return ReadPNCR();   // write-only?
+        case 0x03A: return ReadPLSZ();   // write-only?
+        case 0x03C: return ReadMPOFN();  // write-only?
+        case 0x03E: return ReadMPOFR();  // write-only?
+        case 0x040: return ReadMPABN0(); // write-only?
+        case 0x042: return ReadMPCDN0(); // write-only?
+        case 0x044: return ReadMPABN1(); // write-only?
+        case 0x046: return ReadMPCDN1(); // write-only?
+        case 0x048: return ReadMPABN2(); // write-only?
+        case 0x04A: return ReadMPCDN2(); // write-only?
+        case 0x04C: return ReadMPABN3(); // write-only?
+        case 0x04E: return ReadMPCDN3(); // write-only?
+        case 0x050: return ReadMPABRA(); // write-only?
+        case 0x052: return ReadMPCDRA(); // write-only?
+        case 0x054: return ReadMPEFRA(); // write-only?
+        case 0x056: return ReadMPGHRA(); // write-only?
+        case 0x058: return ReadMPIJRA(); // write-only?
+        case 0x05A: return ReadMPKLRA(); // write-only?
+        case 0x05C: return ReadMPMNRA(); // write-only?
+        case 0x05E: return ReadMPOPRA(); // write-only?
+        case 0x060: return ReadMPABRB(); // write-only?
+        case 0x062: return ReadMPCDRB(); // write-only?
+        case 0x064: return ReadMPEFRB(); // write-only?
+        case 0x066: return ReadMPGHRB(); // write-only?
+        case 0x068: return ReadMPIJRB(); // write-only?
+        case 0x06A: return ReadMPKLRB(); // write-only?
+        case 0x06C: return ReadMPMNRB(); // write-only?
+        case 0x06E: return ReadMPOPRB(); // write-only?
+        case 0x070: return ReadSCXIN0(); // write-only?
+        case 0x072: return ReadSCXDN0(); // write-only?
+        case 0x074: return ReadSCYIN0(); // write-only?
+        case 0x076: return ReadSCYDN0(); // write-only?
+        case 0x078: return ReadZMXIN0(); // write-only?
+        case 0x07A: return ReadZMXDN0(); // write-only?
+        case 0x07C: return ReadZMYIN0(); // write-only?
+        case 0x07E: return ReadZMYDN0(); // write-only?
+        case 0x080: return ReadSCXIN1(); // write-only?
+        case 0x082: return ReadSCXDN1(); // write-only?
+        case 0x084: return ReadSCYIN1(); // write-only?
+        case 0x086: return ReadSCYDN1(); // write-only?
+        case 0x088: return ReadZMXIN1(); // write-only?
+        case 0x08A: return ReadZMXDN1(); // write-only?
+        case 0x08C: return ReadZMYIN1(); // write-only?
+        case 0x08E: return ReadZMYDN1(); // write-only?
+        case 0x090: return ReadSCXN2();  // write-only?
+        case 0x092: return ReadSCYN2();  // write-only?
+        case 0x094: return ReadSCXN3();  // write-only?
+        case 0x096: return ReadSCYN3();  // write-only?
+        case 0x098: return ReadZMCTL();  // write-only?
+        case 0x09A: return ReadSCRCTL(); // write-only?
+        case 0x09C: return ReadVCSTAU(); // write-only?
+        case 0x09E: return ReadVCSTAL(); // write-only?
+        case 0x0A0: return ReadLSTA0U(); // write-only?
+        case 0x0A2: return ReadLSTA0L(); // write-only?
+        case 0x0A4: return ReadLSTA1U(); // write-only?
+        case 0x0A6: return ReadLSTA1L(); // write-only?
+        case 0x0A8: return ReadLCTAU();  // write-only?
+        case 0x0AA: return ReadLCTAL();  // write-only?
+        case 0x0AC: return ReadBKTAU();  // write-only?
+        case 0x0AE: return ReadBKTAL();  // write-only?
+        case 0x0B0: return ReadRPMD();   // write-only?
+        case 0x0B2: return ReadRPRCTL(); // write-only?
+        case 0x0B4: return ReadKTCTL();  // write-only?
+        case 0x0B6: return ReadKTAOF();  // write-only?
+        case 0x0B8: return ReadOVPNRA(); // write-only?
+        case 0x0BA: return ReadOVPNRB(); // write-only?
+        case 0x0BC: return ReadRPTAU();  // write-only?
+        case 0x0BE: return ReadRPTAL();  // write-only?
+        case 0x0C0: return ReadWPSX0();  // write-only?
+        case 0x0C2: return ReadWPSY0();  // write-only?
+        case 0x0C4: return ReadWPEX0();  // write-only?
+        case 0x0C6: return ReadWPEY0();  // write-only?
+        case 0x0C8: return ReadWPSX1();  // write-only?
+        case 0x0CA: return ReadWPSY1();  // write-only?
+        case 0x0CC: return ReadWPEX1();  // write-only?
+        case 0x0CE: return ReadWPEY1();  // write-only?
+        case 0x0D0: return ReadWCTLA();  // write-only?
+        case 0x0D2: return ReadWCTLB();  // write-only?
+        case 0x0D4: return ReadWCTLC();  // write-only?
+        case 0x0D6: return ReadWCTLD();  // write-only?
+        case 0x0D8: return ReadLWTA0U(); // write-only?
+        case 0x0DA: return ReadLWTA0L(); // write-only?
+        case 0x0DC: return ReadLWTA1U(); // write-only?
+        case 0x0DE: return ReadLWTA1L(); // write-only?
+        case 0x0E0: return ReadSPCTL();  // write-only?
+        case 0x0E2: return ReadSDCTL();  // write-only?
+        case 0x0E4: return ReadCRAOFA(); // write-only?
+        case 0x0E6: return ReadCRAOFB(); // write-only?
+        case 0x0E8: return ReadLNCLEN(); // write-only?
+        case 0x0EA: return ReadSFPRMD(); // write-only?
+        case 0x0EC: return ReadCCCTL();  // write-only?
+        case 0x0EE: return ReadSFCCMD(); // write-only?
+        case 0x0F0: return ReadPRISA();  // write-only?
+        case 0x0F2: return ReadPRISB();  // write-only?
+        case 0x0F4: return ReadPRISC();  // write-only?
+        case 0x0F6: return ReadPRISD();  // write-only?
+        case 0x0F8: return ReadPRINA();  // write-only?
+        case 0x0FA: return ReadPRINB();  // write-only?
+        case 0x0FC: return ReadPRIR();   // write-only?
+        case 0x0FE: return 0;            // supposedly reserved
+        case 0x100: return ReadCCRSA();  // write-only?
+        case 0x102: return ReadCCRSB();  // write-only?
+        case 0x104: return ReadCCRSC();  // write-only?
+        case 0x106: return ReadCCRSD();  // write-only?
+        case 0x108: return ReadCCRNA();  // write-only?
+        case 0x10A: return ReadCCRNB();  // write-only?
+        case 0x10C: return ReadCCRR();   // write-only?
+        case 0x10E: return ReadCCRLB();  // write-only?
+        case 0x110: return ReadCLOFEN(); // write-only?
+        case 0x112: return ReadCLOFSL(); // write-only?
+        case 0x114: return ReadCOAR();   // write-only?
+        case 0x116: return ReadCOAG();   // write-only?
+        case 0x118: return ReadCOAB();   // write-only?
+        case 0x11A: return ReadCOBR();   // write-only?
+        case 0x11C: return ReadCOBG();   // write-only?
+        case 0x11E: return ReadCOBB();   // write-only?
         default: return 0;
         }
     }
@@ -216,27 +216,22 @@ struct VDP2Regs {
         address &= 0x1FF;
 
         switch (address) {
-        case 0x000: {
-            const uint16 oldTVMD = TVMD.u16;
-            TVMD.u16 = value & 0x81F7;
-            TVMDDirty |= TVMD.u16 != oldTVMD;
-            break;
-        }
-        case 0x002: EXTEN.u16 = value & 0x0303; break;
+        case 0x000: WriteTVMD(value); break;
+        case 0x002: WriteEXTEN(value); break;
         case 0x004: /* TVSTAT is read-only */ break;
-        case 0x006: VRSIZE.u16 = value & 0x8000; break;
+        case 0x006: WriteVRSIZE(value); break;
         case 0x008: /* HCNT is read-only */ break;
         case 0x00A: /* VCNT is read-only */ break;
         case 0x00C: /* unknown/hidden register */ break;
         case 0x00E: WriteRAMCTL(value); break;
-        case 0x010: CYCA0.L.u16 = value; break;
-        case 0x012: CYCA0.U.u16 = value; break;
-        case 0x014: CYCA1.L.u16 = value; break;
-        case 0x016: CYCA1.U.u16 = value; break;
-        case 0x018: CYCB0.L.u16 = value; break;
-        case 0x01A: CYCB0.U.u16 = value; break;
-        case 0x01E: CYCB1.U.u16 = value; break;
-        case 0x01C: CYCB1.L.u16 = value; break;
+        case 0x010: WriteCYCA0L(value); break;
+        case 0x012: WriteCYCA0U(value); break;
+        case 0x014: WriteCYCA1L(value); break;
+        case 0x016: WriteCYCA1U(value); break;
+        case 0x018: WriteCYCB0L(value); break;
+        case 0x01A: WriteCYCB0U(value); break;
+        case 0x01E: WriteCYCB1U(value); break;
+        case 0x01C: WriteCYCB1L(value); break;
         case 0x020: WriteBGON(value); break;
         case 0x022: WriteMZCTL(value); break;
         case 0x024: WriteSFSEL(value); break;
@@ -245,66 +240,66 @@ struct VDP2Regs {
         case 0x02A: WriteCHCTLB(value); break;
         case 0x02C: WriteBMPNA(value); break;
         case 0x02E: WriteBMPNB(value); break;
-        case 0x030: WritePNCN(1, value); break;
-        case 0x032: WritePNCN(2, value); break;
-        case 0x034: WritePNCN(3, value); break;
-        case 0x036: WritePNCN(4, value); break;
+        case 0x030: WritePNCNA(value); break;
+        case 0x032: WritePNCNB(value); break;
+        case 0x034: WritePNCNC(value); break;
+        case 0x036: WritePNCND(value); break;
         case 0x038: WritePNCR(value); break;
         case 0x03A: WritePLSZ(value); break;
         case 0x03C: WriteMPOFN(value); break;
         case 0x03E: WriteMPOFR(value); break;
-        case 0x040: WriteMPN(1, 0, value); break;
-        case 0x042: WriteMPN(1, 1, value); break;
-        case 0x044: WriteMPN(2, 0, value); break;
-        case 0x046: WriteMPN(2, 1, value); break;
-        case 0x048: WriteMPN(3, 0, value); break;
-        case 0x04A: WriteMPN(3, 1, value); break;
-        case 0x04C: WriteMPN(4, 0, value); break;
-        case 0x04E: WriteMPN(4, 1, value); break;
-        case 0x050: WriteMPR(0, 0, value); break;
-        case 0x052: WriteMPR(0, 1, value); break;
-        case 0x054: WriteMPR(0, 2, value); break;
-        case 0x056: WriteMPR(0, 3, value); break;
-        case 0x058: WriteMPR(0, 4, value); break;
-        case 0x05A: WriteMPR(0, 5, value); break;
-        case 0x05C: WriteMPR(0, 6, value); break;
-        case 0x05E: WriteMPR(0, 7, value); break;
-        case 0x060: WriteMPR(1, 0, value); break;
-        case 0x062: WriteMPR(1, 1, value); break;
-        case 0x064: WriteMPR(1, 2, value); break;
-        case 0x066: WriteMPR(1, 3, value); break;
-        case 0x068: WriteMPR(1, 4, value); break;
-        case 0x06A: WriteMPR(1, 5, value); break;
-        case 0x06C: WriteMPR(1, 6, value); break;
-        case 0x06E: WriteMPR(1, 7, value); break;
-        case 0x070: WriteSCXIN(1, value); break;
-        case 0x072: WriteSCXDN(1, value); break;
-        case 0x074: WriteSCYIN(1, value); break;
-        case 0x076: WriteSCYDN(1, value); break;
-        case 0x078: WriteZMXIN(1, value); break;
-        case 0x07A: WriteZMXDN(1, value); break;
-        case 0x07C: WriteZMYIN(1, value); break;
-        case 0x07E: WriteZMYDN(1, value); break;
-        case 0x080: WriteSCXIN(2, value); break;
-        case 0x082: WriteSCXDN(2, value); break;
-        case 0x084: WriteSCYIN(2, value); break;
-        case 0x086: WriteSCYDN(2, value); break;
-        case 0x088: WriteZMXIN(2, value); break;
-        case 0x08A: WriteZMXDN(2, value); break;
-        case 0x08C: WriteZMYIN(2, value); break;
-        case 0x08E: WriteZMYDN(2, value); break;
-        case 0x090: WriteSCXIN(3, value); break;
-        case 0x092: WriteSCYIN(3, value); break;
-        case 0x094: WriteSCXIN(4, value); break;
-        case 0x096: WriteSCYIN(4, value); break;
-        case 0x098: ZMCTL.u16 = value & 0x0303; break;
+        case 0x040: WriteMPABN0(value); break;
+        case 0x042: WriteMPCDN0(value); break;
+        case 0x044: WriteMPABN1(value); break;
+        case 0x046: WriteMPCDN1(value); break;
+        case 0x048: WriteMPABN2(value); break;
+        case 0x04A: WriteMPCDN2(value); break;
+        case 0x04C: WriteMPABN3(value); break;
+        case 0x04E: WriteMPCDN3(value); break;
+        case 0x050: WriteMPABRA(value); break;
+        case 0x052: WriteMPCDRA(value); break;
+        case 0x054: WriteMPEFRA(value); break;
+        case 0x056: WriteMPGHRA(value); break;
+        case 0x058: WriteMPIJRA(value); break;
+        case 0x05A: WriteMPKLRA(value); break;
+        case 0x05C: WriteMPMNRA(value); break;
+        case 0x05E: WriteMPOPRA(value); break;
+        case 0x060: WriteMPABRB(value); break;
+        case 0x062: WriteMPCDRB(value); break;
+        case 0x064: WriteMPEFRB(value); break;
+        case 0x066: WriteMPGHRB(value); break;
+        case 0x068: WriteMPIJRB(value); break;
+        case 0x06A: WriteMPKLRB(value); break;
+        case 0x06C: WriteMPMNRB(value); break;
+        case 0x06E: WriteMPOPRB(value); break;
+        case 0x070: WriteSCXIN0(value); break;
+        case 0x072: WriteSCXDN0(value); break;
+        case 0x074: WriteSCYIN0(value); break;
+        case 0x076: WriteSCYDN0(value); break;
+        case 0x078: WriteZMXIN0(value); break;
+        case 0x07A: WriteZMXDN0(value); break;
+        case 0x07C: WriteZMYIN0(value); break;
+        case 0x07E: WriteZMYDN0(value); break;
+        case 0x080: WriteSCXIN1(value); break;
+        case 0x082: WriteSCXDN1(value); break;
+        case 0x084: WriteSCYIN1(value); break;
+        case 0x086: WriteSCYDN1(value); break;
+        case 0x088: WriteZMXIN1(value); break;
+        case 0x08A: WriteZMXDN1(value); break;
+        case 0x08C: WriteZMYIN1(value); break;
+        case 0x08E: WriteZMYDN1(value); break;
+        case 0x090: WriteSCXN2(value); break;
+        case 0x092: WriteSCYN2(value); break;
+        case 0x094: WriteSCXN3(value); break;
+        case 0x096: WriteSCYN3(value); break;
+        case 0x098: WriteZMCTL(value); break;
         case 0x09A: WriteSCRCTL(value); break;
         case 0x09C: WriteVCSTAU(value); break;
         case 0x09E: WriteVCSTAL(value); break;
-        case 0x0A0: WriteLSTAnU(1, value); break;
-        case 0x0A2: WriteLSTAnL(1, value); break;
-        case 0x0A4: WriteLSTAnU(2, value); break;
-        case 0x0A6: WriteLSTAnL(2, value); break;
+        case 0x0A0: WriteLSTA0U(value); break;
+        case 0x0A2: WriteLSTA0L(value); break;
+        case 0x0A4: WriteLSTA1U(value); break;
+        case 0x0A6: WriteLSTA1L(value); break;
         case 0x0A8: WriteLCTAU(value); break;
         case 0x0AA: WriteLCTAL(value); break;
         case 0x0AC: WriteBKTAU(value); break;
@@ -313,26 +308,26 @@ struct VDP2Regs {
         case 0x0B2: WriteRPRCTL(value); break;
         case 0x0B4: WriteKTCTL(value); break;
         case 0x0B6: WriteKTAOF(value); break;
-        case 0x0B8: WriteOVPNRn(0, value); break;
-        case 0x0BA: WriteOVPNRn(1, value); break;
+        case 0x0B8: WriteOVPNRA(value); break;
+        case 0x0BA: WriteOVPNRB(value); break;
         case 0x0BC: WriteRPTAU(value); break;
         case 0x0BE: WriteRPTAL(value); break;
-        case 0x0C0: WriteWPSXn(0, value); break;
-        case 0x0C2: WriteWPSYn(0, value); break;
-        case 0x0C4: WriteWPEXn(0, value); break;
-        case 0x0C6: WriteWPEYn(0, value); break;
-        case 0x0C8: WriteWPSXn(1, value); break;
-        case 0x0CA: WriteWPSYn(1, value); break;
-        case 0x0CC: WriteWPEXn(1, value); break;
-        case 0x0CE: WriteWPEYn(1, value); break;
+        case 0x0C0: WriteWPSX0(value); break;
+        case 0x0C2: WriteWPSY0(value); break;
+        case 0x0C4: WriteWPEX0(value); break;
+        case 0x0C6: WriteWPEY0(value); break;
+        case 0x0C8: WriteWPSX1(value); break;
+        case 0x0CA: WriteWPSY1(value); break;
+        case 0x0CC: WriteWPEX1(value); break;
+        case 0x0CE: WriteWPEY1(value); break;
         case 0x0D0: WriteWCTLA(value); break;
         case 0x0D2: WriteWCTLB(value); break;
         case 0x0D4: WriteWCTLC(value); break;
         case 0x0D6: WriteWCTLD(value); break;
-        case 0x0D8: WriteLWTAnU(0, value); break;
-        case 0x0DA: WriteLWTAnL(0, value); break;
-        case 0x0DC: WriteLWTAnU(1, value); break;
-        case 0x0DE: WriteLWTAnL(1, value); break;
+        case 0x0D8: WriteLWTA0U(value); break;
+        case 0x0DA: WriteLWTA0L(value); break;
+        case 0x0DC: WriteLWTA1U(value); break;
+        case 0x0DE: WriteLWTA1L(value); break;
         case 0x0E0: WriteSPCTL(value); break;
         case 0x0E2: WriteSDCTL(value); break;
         case 0x0E4: WriteCRAOFA(value); break;
@@ -341,40 +336,102 @@ struct VDP2Regs {
         case 0x0EA: WriteSFPRMD(value); break;
         case 0x0EC: WriteCCCTL(value); break;
         case 0x0EE: WriteSFCCMD(value); break;
-        case 0x0F0: WritePRISn(0, value); break;
-        case 0x0F2: WritePRISn(1, value); break;
-        case 0x0F4: WritePRISn(2, value); break;
-        case 0x0F6: WritePRISn(3, value); break;
+        case 0x0F0: WritePRISA(value); break;
+        case 0x0F2: WritePRISB(value); break;
+        case 0x0F4: WritePRISC(value); break;
+        case 0x0F6: WritePRISD(value); break;
         case 0x0F8: WritePRINA(value); break;
         case 0x0FA: WritePRINB(value); break;
         case 0x0FC: WritePRIR(value); break;
         case 0x0FE: break; // supposedly reserved
-        case 0x100: WriteCCRSn(0, value); break;
-        case 0x102: WriteCCRSn(1, value); break;
-        case 0x104: WriteCCRSn(2, value); break;
-        case 0x106: WriteCCRSn(3, value); break;
+        case 0x100: WriteCCRSA(value); break;
+        case 0x102: WriteCCRSB(value); break;
+        case 0x104: WriteCCRSC(value); break;
+        case 0x106: WriteCCRSD(value); break;
         case 0x108: WriteCCRNA(value); break;
         case 0x10A: WriteCCRNB(value); break;
         case 0x10C: WriteCCRR(value); break;
         case 0x10E: WriteCCRLB(value); break;
         case 0x110: WriteCLOFEN(value); break;
         case 0x112: WriteCLOFSL(value); break;
-        case 0x114: WriteCOxR(0, value); break;
-        case 0x116: WriteCOxG(0, value); break;
-        case 0x118: WriteCOxB(0, value); break;
-        case 0x11A: WriteCOxR(1, value); break;
-        case 0x11C: WriteCOxG(1, value); break;
-        case 0x11E: WriteCOxB(1, value); break;
+        case 0x114: WriteCOAR(value); break;
+        case 0x116: WriteCOAG(value); break;
+        case 0x118: WriteCOAB(value); break;
+        case 0x11A: WriteCOBR(value); break;
+        case 0x11C: WriteCOBG(value); break;
+        case 0x11E: WriteCOBB(value); break;
         }
     }
 
-    RegTVMD TVMD;     // 180000   TVMD    TV Screen Mode
-    RegEXTEN EXTEN;   // 180002   EXTEN   External Signal Enable
-    RegTVSTAT TVSTAT; // 180004   TVSTAT  Screen Status (read-only)
-    RegVRSIZE VRSIZE; // 180006   VRSIZE  VRAM Size
-    uint16 HCNT;      // 180008   HCNT    H Counter (read-only)
-    uint16 VCNT;      // 18000A   VCNT    V Counter (read-only)
-                      // 18000C   -       Reserved (but not really)
+    // 180000   TVMD    TV Screen Mode
+    RegTVMD TVMD;
+
+    FORCE_INLINE uint16 ReadTVMD() const {
+        return TVMD.u16;
+    }
+
+    FORCE_INLINE void WriteTVMD(uint16 value) {
+        const uint16 oldTVMD = TVMD.u16;
+        TVMD.u16 = value & 0x81F7;
+        TVMDDirty |= TVMD.u16 != oldTVMD;
+    }
+
+    // 180002   EXTEN   External Signal Enable
+    RegEXTEN EXTEN;
+
+    FORCE_INLINE uint16 ReadEXTEN() const {
+        return EXTEN.u16;
+    }
+
+    FORCE_INLINE void WriteEXTEN(uint16 value) {
+        EXTEN.u16 = value & 0x0303;
+    }
+
+    // 180004   TVSTAT  Screen Status (read-only)
+    RegTVSTAT TVSTAT;
+
+    FORCE_INLINE uint16 ReadTVSTAT() const {
+        return TVSTAT.u16;
+    }
+
+    FORCE_INLINE void WriteTVSTAT(uint16 value) {
+        TVSTAT.u16 = value & 0x030F;
+    }
+
+    // 180006   VRSIZE  VRAM Size
+    RegVRSIZE VRSIZE;
+
+    FORCE_INLINE uint16 ReadVRSIZE() const {
+        return VRSIZE.u16;
+    }
+
+    FORCE_INLINE void WriteVRSIZE(uint16 value) {
+        VRSIZE.u16 = value & 0x8000;
+    }
+
+    // 180008   HCNT    H Counter (read-only)
+    uint16 HCNT;
+
+    FORCE_INLINE uint16 ReadHCNT() const {
+        return HCNT;
+    }
+
+    FORCE_INLINE void WriteHCNT(uint16 value) {
+        HCNT = value & 0x3FF;
+    }
+
+    // 18000A   VCNT    V Counter (read-only)
+    uint16 VCNT;
+
+    FORCE_INLINE uint16 ReadVCNT() const {
+        return VCNT;
+    }
+
+    FORCE_INLINE void WriteVCNT(uint16 value) {
+        VCNT = value & 0x1FF;
+    }
+
+    // 18000C   -       Reserved (but not really)
 
     // 18000E   RAMCTL  RAM Control
     //
@@ -426,14 +483,85 @@ struct VDP2Regs {
         vramControl.colorRAMCoeffTableEnable = bit::test<15>(value);
     }
 
-    /**/          // 180010   CYCA0L  VRAM Cycle Pattern A0 Lower
-    RegCYC CYCA0; // 180012   CYCA0U  VRAM Cycle Pattern A0 Upper
-                  // 180014   CYCA1L  VRAM Cycle Pattern A1 Lower
-    RegCYC CYCA1; // 180016   CYCA1U  VRAM Cycle Pattern A1 Upper
-                  // 180018   CYCB0L  VRAM Cycle Pattern B0 Lower
-    RegCYC CYCB0; // 18001A   CYCB0U  VRAM Cycle Pattern B0 Upper
-                  // 18001C   CYCB1L  VRAM Cycle Pattern B1 Lower
-    RegCYC CYCB1; // 18001E   CYCB1U  VRAM Cycle Pattern B1 Upper
+    // 180010   CYCA0L  VRAM Cycle Pattern A0 Lower
+    // 180012   CYCA0U  VRAM Cycle Pattern A0 Upper
+    RegCYC CYCA0;
+
+    FORCE_INLINE uint16 ReadCYCA0L() const {
+        return CYCA0.L.u16;
+    }
+
+    FORCE_INLINE uint16 ReadCYCA0U() const {
+        return CYCA0.U.u16;
+    }
+
+    FORCE_INLINE void WriteCYCA0L(uint16 value) {
+        CYCA0.L.u16 = value;
+    }
+
+    FORCE_INLINE void WriteCYCA0U(uint16 value) {
+        CYCA0.U.u16 = value;
+    }
+
+    // 180014   CYCA1L  VRAM Cycle Pattern A1 Lower
+    // 180016   CYCA1U  VRAM Cycle Pattern A1 Upper
+    RegCYC CYCA1;
+
+    FORCE_INLINE uint16 ReadCYCA1L() const {
+        return CYCA1.L.u16;
+    }
+
+    FORCE_INLINE uint16 ReadCYCA1U() const {
+        return CYCA1.U.u16;
+    }
+
+    FORCE_INLINE void WriteCYCA1L(uint16 value) {
+        CYCA1.L.u16 = value;
+    }
+
+    FORCE_INLINE void WriteCYCA1U(uint16 value) {
+        CYCA1.U.u16 = value;
+    }
+
+    // 180018   CYCB0L  VRAM Cycle Pattern B0 Lower
+    // 18001A   CYCB0U  VRAM Cycle Pattern B0 Upper
+    RegCYC CYCB0;
+
+    FORCE_INLINE uint16 ReadCYCB0L() const {
+        return CYCB0.L.u16;
+    }
+
+    FORCE_INLINE uint16 ReadCYCB0U() const {
+        return CYCB0.U.u16;
+    }
+
+    FORCE_INLINE void WriteCYCB0L(uint16 value) {
+        CYCB0.L.u16 = value;
+    }
+
+    FORCE_INLINE void WriteCYCB0U(uint16 value) {
+        CYCB0.U.u16 = value;
+    }
+
+    // 18001C   CYCB1L  VRAM Cycle Pattern B1 Lower
+    // 18001E   CYCB1U  VRAM Cycle Pattern B1 Upper
+    RegCYC CYCB1;
+
+    FORCE_INLINE uint16 ReadCYCB1L() const {
+        return CYCB1.L.u16;
+    }
+
+    FORCE_INLINE uint16 ReadCYCB1U() const {
+        return CYCB1.U.u16;
+    }
+
+    FORCE_INLINE void WriteCYCB1L(uint16 value) {
+        CYCB1.L.u16 = value;
+    }
+
+    FORCE_INLINE void WriteCYCB1U(uint16 value) {
+        CYCB1.U.u16 = value;
+    }
 
     // 180020   BGON    Screen Display Enable
     //
@@ -811,6 +939,18 @@ struct VDP2Regs {
         bit::deposit_into<15>(value, !bgParams[bgIndex].twoWordChar);
         return value;
     }
+    FORCE_INLINE uint16 ReadPNCNA() const {
+        return ReadPNCN(1);
+    }
+    FORCE_INLINE uint16 ReadPNCNB() const {
+        return ReadPNCN(2);
+    }
+    FORCE_INLINE uint16 ReadPNCNC() const {
+        return ReadPNCN(3);
+    }
+    FORCE_INLINE uint16 ReadPNCND() const {
+        return ReadPNCN(4);
+    }
 
     FORCE_INLINE void WritePNCN(uint32 bgIndex, uint16 value) {
         bgParams[bgIndex].supplScrollCharNum = bit::extract<0, 4>(value);
@@ -820,6 +960,18 @@ struct VDP2Regs {
         bgParams[bgIndex].extChar = bit::test<14>(value);
         bgParams[bgIndex].twoWordChar = !bit::test<15>(value);
         bgParams[bgIndex].UpdatePageBaseAddresses();
+    }
+    FORCE_INLINE void WritePNCNA(uint16 value) {
+        WritePNCN(1, value);
+    }
+    FORCE_INLINE void WritePNCNB(uint16 value) {
+        WritePNCN(2, value);
+    }
+    FORCE_INLINE void WritePNCNC(uint16 value) {
+        WritePNCN(3, value);
+    }
+    FORCE_INLINE void WritePNCND(uint16 value) {
+        WritePNCN(4, value);
     }
 
     FORCE_INLINE uint16 ReadPNCR() const {
@@ -996,12 +1148,60 @@ struct VDP2Regs {
         bit::deposit_into<8, 13>(value, bit::extract<0, 5>(bg.mapIndices[planeIndex * 2 + 1]));
         return value;
     }
+    FORCE_INLINE uint16 ReadMPABN0() const {
+        return ReadMPN(1, 0);
+    }
+    FORCE_INLINE uint16 ReadMPCDN0() const {
+        return ReadMPN(1, 1);
+    }
+    FORCE_INLINE uint16 ReadMPABN1() const {
+        return ReadMPN(2, 0);
+    }
+    FORCE_INLINE uint16 ReadMPCDN1() const {
+        return ReadMPN(2, 1);
+    }
+    FORCE_INLINE uint16 ReadMPABN2() const {
+        return ReadMPN(3, 0);
+    }
+    FORCE_INLINE uint16 ReadMPCDN2() const {
+        return ReadMPN(3, 1);
+    }
+    FORCE_INLINE uint16 ReadMPABN3() const {
+        return ReadMPN(4, 0);
+    }
+    FORCE_INLINE uint16 ReadMPCDN3() const {
+        return ReadMPN(4, 1);
+    }
 
     FORCE_INLINE void WriteMPN(uint32 bgIndex, uint32 planeIndex, uint16 value) {
         auto &bg = bgParams[bgIndex];
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 0], bit::extract<0, 5>(value));
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 1], bit::extract<8, 13>(value));
         bg.UpdatePageBaseAddresses();
+    }
+    FORCE_INLINE void WriteMPABN0(uint16 value) {
+        WriteMPN(1, 0, value);
+    }
+    FORCE_INLINE void WriteMPCDN0(uint16 value) {
+        WriteMPN(1, 1, value);
+    }
+    FORCE_INLINE void WriteMPABN1(uint16 value) {
+        WriteMPN(2, 0, value);
+    }
+    FORCE_INLINE void WriteMPCDN1(uint16 value) {
+        WriteMPN(2, 1, value);
+    }
+    FORCE_INLINE void WriteMPABN2(uint16 value) {
+        WriteMPN(3, 0, value);
+    }
+    FORCE_INLINE void WriteMPCDN2(uint16 value) {
+        WriteMPN(3, 1, value);
+    }
+    FORCE_INLINE void WriteMPABN3(uint16 value) {
+        WriteMPN(4, 0, value);
+    }
+    FORCE_INLINE void WriteMPCDN3(uint16 value) {
+        WriteMPN(4, 1, value);
     }
 
     // 180050   MPABRA  Rotation Parameter A Scroll Surface Map for Screen Planes A,B
@@ -1048,11 +1248,107 @@ struct VDP2Regs {
         bit::deposit_into<8, 13>(value, bit::extract<0, 5>(bg.mapIndices[planeIndex * 2 + 1]));
         return value;
     }
+    FORCE_INLINE uint16 ReadMPABRA() const {
+        return ReadMPR(0, 0);
+    }
+    FORCE_INLINE uint16 ReadMPCDRA() const {
+        return ReadMPR(0, 1);
+    }
+    FORCE_INLINE uint16 ReadMPEFRA() const {
+        return ReadMPR(0, 2);
+    }
+    FORCE_INLINE uint16 ReadMPGHRA() const {
+        return ReadMPR(0, 3);
+    }
+    FORCE_INLINE uint16 ReadMPIJRA() const {
+        return ReadMPR(0, 4);
+    }
+    FORCE_INLINE uint16 ReadMPKLRA() const {
+        return ReadMPR(0, 5);
+    }
+    FORCE_INLINE uint16 ReadMPMNRA() const {
+        return ReadMPR(0, 6);
+    }
+    FORCE_INLINE uint16 ReadMPOPRA() const {
+        return ReadMPR(0, 7);
+    }
+    FORCE_INLINE uint16 ReadMPABRB() const {
+        return ReadMPR(0, 0);
+    }
+    FORCE_INLINE uint16 ReadMPCDRB() const {
+        return ReadMPR(0, 1);
+    }
+    FORCE_INLINE uint16 ReadMPEFRB() const {
+        return ReadMPR(0, 2);
+    }
+    FORCE_INLINE uint16 ReadMPGHRB() const {
+        return ReadMPR(0, 3);
+    }
+    FORCE_INLINE uint16 ReadMPIJRB() const {
+        return ReadMPR(0, 4);
+    }
+    FORCE_INLINE uint16 ReadMPKLRB() const {
+        return ReadMPR(0, 5);
+    }
+    FORCE_INLINE uint16 ReadMPMNRB() const {
+        return ReadMPR(0, 6);
+    }
+    FORCE_INLINE uint16 ReadMPOPRB() const {
+        return ReadMPR(0, 7);
+    }
 
     FORCE_INLINE void WriteMPR(uint32 paramIndex, uint32 planeIndex, uint16 value) {
         auto &bg = rotParams[paramIndex];
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 0], bit::extract<0, 5>(value));
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 1], bit::extract<8, 13>(value));
+    }
+    FORCE_INLINE void WriteMPABRA(uint16 value) {
+        WriteMPR(0, 0, value);
+    }
+    FORCE_INLINE void WriteMPCDRA(uint16 value) {
+        WriteMPR(0, 1, value);
+    }
+    FORCE_INLINE void WriteMPEFRA(uint16 value) {
+        WriteMPR(0, 2, value);
+    }
+    FORCE_INLINE void WriteMPGHRA(uint16 value) {
+        WriteMPR(0, 3, value);
+    }
+    FORCE_INLINE void WriteMPIJRA(uint16 value) {
+        WriteMPR(0, 4, value);
+    }
+    FORCE_INLINE void WriteMPKLRA(uint16 value) {
+        WriteMPR(0, 5, value);
+    }
+    FORCE_INLINE void WriteMPMNRA(uint16 value) {
+        WriteMPR(0, 6, value);
+    }
+    FORCE_INLINE void WriteMPOPRA(uint16 value) {
+        WriteMPR(0, 7, value);
+    }
+    FORCE_INLINE void WriteMPABRB(uint16 value) {
+        WriteMPR(1, 0, value);
+    }
+    FORCE_INLINE void WriteMPCDRB(uint16 value) {
+        WriteMPR(1, 1, value);
+    }
+    FORCE_INLINE void WriteMPEFRB(uint16 value) {
+        WriteMPR(1, 2, value);
+    }
+    FORCE_INLINE void WriteMPGHRB(uint16 value) {
+        WriteMPR(1, 3, value);
+    }
+    FORCE_INLINE void WriteMPIJRB(uint16 value) {
+        WriteMPR(1, 4, value);
+    }
+    FORCE_INLINE void WriteMPKLRB(uint16 value) {
+        WriteMPR(1, 5, value);
+    }
+    FORCE_INLINE void WriteMPMNRB(uint16 value) {
+        WriteMPR(1, 6, value);
+    }
+    FORCE_INLINE void WriteMPOPRB(uint16 value) {
+        WriteMPR(1, 7, value);
     }
 
     // 180070   SCXIN0  NBG0 Horizontal Screen Scroll Value (integer part)
@@ -1087,33 +1383,105 @@ struct VDP2Regs {
     FORCE_INLINE uint16 ReadSCXIN(uint32 bgIndex) const {
         return bit::extract<8, 18>(bgParams[bgIndex].scrollAmountH);
     }
+    FORCE_INLINE uint16 ReadSCXIN0() const {
+        return ReadSCXIN(1);
+    }
+    FORCE_INLINE uint16 ReadSCXIN1() const {
+        return ReadSCXIN(2);
+    }
+    FORCE_INLINE uint16 ReadSCXN2() const {
+        return ReadSCXIN(3);
+    }
+    FORCE_INLINE uint16 ReadSCXN3() const {
+        return ReadSCXIN(4);
+    }
 
     FORCE_INLINE void WriteSCXIN(uint32 bgIndex, uint16 value) {
         bit::deposit_into<8, 18>(bgParams[bgIndex].scrollAmountH, bit::extract<0, 10>(value));
+    }
+    FORCE_INLINE void WriteSCXIN0(uint16 value) {
+        WriteSCXIN(1, value);
+    }
+    FORCE_INLINE void WriteSCXIN1(uint16 value) {
+        WriteSCXIN(2, value);
+    }
+    FORCE_INLINE void WriteSCXN2(uint16 value) {
+        WriteSCXIN(3, value);
+    }
+    FORCE_INLINE void WriteSCXN3(uint16 value) {
+        WriteSCXIN(4, value);
     }
 
     FORCE_INLINE uint16 ReadSCXDN(uint32 bgIndex) const {
         return bit::extract<0, 7>(bgParams[bgIndex].scrollAmountH);
     }
+    FORCE_INLINE uint16 ReadSCXDN0() const {
+        return ReadSCXDN(1);
+    }
+    FORCE_INLINE uint16 ReadSCXDN1() const {
+        return ReadSCXDN(2);
+    }
 
     FORCE_INLINE void WriteSCXDN(uint32 bgIndex, uint16 value) {
         bit::deposit_into<0, 7>(bgParams[bgIndex].scrollAmountH, bit::extract<8, 15>(value));
+    }
+    FORCE_INLINE void WriteSCXDN0(uint16 value) {
+        WriteSCXDN(1, value);
+    }
+    FORCE_INLINE void WriteSCXDN1(uint16 value) {
+        WriteSCXDN(2, value);
     }
 
     FORCE_INLINE uint16 ReadSCYIN(uint32 bgIndex) const {
         return bit::extract<8, 18>(bgParams[bgIndex].scrollAmountV);
     }
+    FORCE_INLINE uint16 ReadSCYIN0() const {
+        return ReadSCYIN(1);
+    }
+    FORCE_INLINE uint16 ReadSCYIN1() const {
+        return ReadSCYIN(2);
+    }
+    FORCE_INLINE uint16 ReadSCYN2() const {
+        return ReadSCYIN(3);
+    }
+    FORCE_INLINE uint16 ReadSCYN3() const {
+        return ReadSCYIN(4);
+    }
 
     FORCE_INLINE void WriteSCYIN(uint32 bgIndex, uint16 value) {
         bit::deposit_into<8, 18>(bgParams[bgIndex].scrollAmountV, bit::extract<0, 10>(value));
+    }
+    FORCE_INLINE void WriteSCYIN0(uint16 value) {
+        WriteSCYIN(1, value);
+    }
+    FORCE_INLINE void WriteSCYIN1(uint16 value) {
+        WriteSCYIN(2, value);
+    }
+    FORCE_INLINE void WriteSCYN2(uint16 value) {
+        WriteSCYIN(3, value);
+    }
+    FORCE_INLINE void WriteSCYN3(uint16 value) {
+        WriteSCYIN(4, value);
     }
 
     FORCE_INLINE uint16 ReadSCYDN(uint32 bgIndex) const {
         return bit::extract<0, 7>(bgParams[bgIndex].scrollAmountV);
     }
+    FORCE_INLINE uint16 ReadSCYDN0() const {
+        return ReadSCYDN(1);
+    }
+    FORCE_INLINE uint16 ReadSCYDN1() const {
+        return ReadSCYDN(2);
+    }
 
     FORCE_INLINE void WriteSCYDN(uint32 bgIndex, uint16 value) {
         bit::deposit_into<0, 7>(bgParams[bgIndex].scrollAmountV, bit::extract<8, 15>(value));
+    }
+    FORCE_INLINE void WriteSCYDN0(uint16 value) {
+        WriteSCYDN(1, value);
+    }
+    FORCE_INLINE void WriteSCYDN1(uint16 value) {
+        WriteSCYDN(2, value);
     }
 
     // 180078   ZMXIN0  NBG0 Horizontal Coordinate Increment (integer part)
@@ -1138,36 +1506,93 @@ struct VDP2Regs {
     FORCE_INLINE uint16 ReadZMXIN(uint32 bgIndex) const {
         return bit::extract<8, 10>(bgParams[bgIndex].scrollIncH);
     }
+    FORCE_INLINE uint16 ReadZMXIN0() const {
+        return ReadZMXIN(1);
+    }
+    FORCE_INLINE uint16 ReadZMXIN1() const {
+        return ReadZMXIN(2);
+    }
 
     FORCE_INLINE void WriteZMXIN(uint32 bgIndex, uint16 value) {
         bit::deposit_into<8, 10>(bgParams[bgIndex].scrollIncH, bit::extract<0, 2>(value));
+    }
+    FORCE_INLINE void WriteZMXIN0(uint16 value) {
+        WriteZMXIN(1, value);
+    }
+    FORCE_INLINE void WriteZMXIN1(uint16 value) {
+        WriteZMXIN(2, value);
     }
 
     FORCE_INLINE uint16 ReadZMXDN(uint32 bgIndex) const {
         return bit::extract<0, 7>(bgParams[bgIndex].scrollIncH);
     }
+    FORCE_INLINE uint16 ReadZMXDN0() const {
+        return ReadZMXDN(1);
+    }
+    FORCE_INLINE uint16 ReadZMXDN1() const {
+        return ReadZMXDN(2);
+    }
 
     FORCE_INLINE void WriteZMXDN(uint32 bgIndex, uint16 value) {
         bit::deposit_into<0, 7>(bgParams[bgIndex].scrollIncH, bit::extract<8, 15>(value));
+    }
+    FORCE_INLINE void WriteZMXDN0(uint16 value) {
+        WriteZMXDN(1, value);
+    }
+    FORCE_INLINE void WriteZMXDN1(uint16 value) {
+        WriteZMXDN(2, value);
     }
 
     FORCE_INLINE uint16 ReadZMYIN(uint32 bgIndex) const {
         return bit::extract<8, 10>(bgParams[bgIndex].scrollIncV);
     }
+    FORCE_INLINE uint16 ReadZMYIN0() const {
+        return ReadZMYIN(1);
+    }
+    FORCE_INLINE uint16 ReadZMYIN1() const {
+        return ReadZMYIN(2);
+    }
 
     FORCE_INLINE void WriteZMYIN(uint32 bgIndex, uint16 value) {
         bit::deposit_into<8, 10>(bgParams[bgIndex].scrollIncV, bit::extract<0, 2>(value));
+    }
+    FORCE_INLINE void WriteZMYIN0(uint16 value) {
+        WriteZMYIN(1, value);
+    }
+    FORCE_INLINE void WriteZMYIN1(uint16 value) {
+        WriteZMYIN(2, value);
     }
 
     FORCE_INLINE uint16 ReadZMYDN(uint32 bgIndex) const {
         return bit::extract<0, 7>(bgParams[bgIndex].scrollIncV);
     }
+    FORCE_INLINE uint16 ReadZMYDN0() const {
+        return ReadZMYDN(1);
+    }
+    FORCE_INLINE uint16 ReadZMYDN1() const {
+        return ReadZMYDN(2);
+    }
 
     FORCE_INLINE void WriteZMYDN(uint32 bgIndex, uint16 value) {
         bit::deposit_into<0, 7>(bgParams[bgIndex].scrollIncV, bit::extract<8, 15>(value));
     }
+    FORCE_INLINE void WriteZMYDN0(uint16 value) {
+        WriteZMYDN(1, value);
+    }
+    FORCE_INLINE void WriteZMYDN1(uint16 value) {
+        WriteZMYDN(2, value);
+    }
 
-    RegZMCTL ZMCTL; // 180098   ZMCTL   Reduction Enable
+    // 180098   ZMCTL   Reduction Enable
+    RegZMCTL ZMCTL;
+
+    FORCE_INLINE uint16 ReadZMCTL() const {
+        return ZMCTL.u16;
+    }
+
+    FORCE_INLINE void WriteZMCTL(uint16 value) {
+        ZMCTL.u16 = value & 0x0303;
+    }
 
     // 18009A   SCRCTL  Line and Vertical Cell Scroll Control
     //
@@ -1270,17 +1695,41 @@ struct VDP2Regs {
     FORCE_INLINE uint16 ReadLSTAnU(uint8 bgIndex) const {
         return bit::extract<17, 19>(bgParams[bgIndex].lineScrollTableAddress);
     }
+    FORCE_INLINE uint16 ReadLSTA0U() const {
+        return ReadLSTAnU(1);
+    }
+    FORCE_INLINE uint16 ReadLSTA1U() const {
+        return ReadLSTAnU(2);
+    }
 
     FORCE_INLINE void WriteLSTAnU(uint8 bgIndex, uint16 value) {
         bit::deposit_into<17, 19>(bgParams[bgIndex].lineScrollTableAddress, bit::extract<0, 2>(value));
+    }
+    FORCE_INLINE void WriteLSTA0U(uint16 value) {
+        WriteLSTAnU(1, value);
+    }
+    FORCE_INLINE void WriteLSTA1U(uint16 value) {
+        WriteLSTAnU(2, value);
     }
 
     FORCE_INLINE uint16 ReadLSTAnL(uint8 bgIndex) const {
         return bit::extract<2, 16>(bgParams[bgIndex].lineScrollTableAddress) << 1u;
     }
+    FORCE_INLINE uint16 ReadLSTA0L() const {
+        return ReadLSTAnL(1);
+    }
+    FORCE_INLINE uint16 ReadLSTA1L() const {
+        return ReadLSTAnL(2);
+    }
 
     FORCE_INLINE void WriteLSTAnL(uint8 bgIndex, uint16 value) {
         bit::deposit_into<2, 16>(bgParams[bgIndex].lineScrollTableAddress, bit::extract<1, 15>(value));
+    }
+    FORCE_INLINE void WriteLSTA0L(uint16 value) {
+        WriteLSTAnL(1, value);
+    }
+    FORCE_INLINE void WriteLSTA1L(uint16 value) {
+        WriteLSTAnL(2, value);
     }
 
     // 1800A8   LCTAU   Line Color Screen Table Address (upper)
@@ -1486,9 +1935,21 @@ struct VDP2Regs {
     FORCE_INLINE uint16 ReadOVPNRn(uint8 index) const {
         return rotParams[index].screenOverPatternName;
     }
+    FORCE_INLINE uint16 ReadOVPNRA() const {
+        return ReadOVPNRn(0);
+    }
+    FORCE_INLINE uint16 ReadOVPNRB() const {
+        return ReadOVPNRn(1);
+    }
 
     FORCE_INLINE void WriteOVPNRn(uint8 index, uint16 value) {
         rotParams[index].screenOverPatternName = value;
+    }
+    FORCE_INLINE void WriteOVPNRA(uint16 value) {
+        WriteOVPNRn(0, value);
+    }
+    FORCE_INLINE void WriteOVPNRB(uint16 value) {
+        WriteOVPNRn(1, value);
     }
 
     // 1800BC   RPTAU   Rotation Parameters Table Address (upper)
@@ -1549,33 +2010,81 @@ struct VDP2Regs {
     FORCE_INLINE uint16 ReadWPSXn(uint8 index) const {
         return windowParams[index].startX;
     }
+    FORCE_INLINE uint16 ReadWPSX0() const {
+        return ReadWPSXn(0);
+    }
+    FORCE_INLINE uint16 ReadWPSX1() const {
+        return ReadWPSXn(1);
+    }
 
     FORCE_INLINE void WriteWPSXn(uint8 index, uint16 value) {
         windowParams[index].startX = bit::extract<0, 9>(value);
+    }
+    FORCE_INLINE void WriteWPSX0(uint16 value) {
+        WriteWPSXn(0, value);
+    }
+    FORCE_INLINE void WriteWPSX1(uint16 value) {
+        WriteWPSXn(1, value);
     }
 
     FORCE_INLINE uint16 ReadWPEXn(uint8 index) const {
         return windowParams[index].endX;
     }
+    FORCE_INLINE uint16 ReadWPEX0() const {
+        return ReadWPEXn(0);
+    }
+    FORCE_INLINE uint16 ReadWPEX1() const {
+        return ReadWPEXn(1);
+    }
 
     FORCE_INLINE void WriteWPEXn(uint8 index, uint16 value) {
         windowParams[index].endX = bit::extract<0, 9>(value);
+    }
+    FORCE_INLINE void WriteWPEX0(uint16 value) {
+        WriteWPEXn(0, value);
+    }
+    FORCE_INLINE void WriteWPEX1(uint16 value) {
+        WriteWPEXn(1, value);
     }
 
     FORCE_INLINE uint16 ReadWPSYn(uint8 index) const {
         return windowParams[index].startY;
     }
+    FORCE_INLINE uint16 ReadWPSY0() const {
+        return ReadWPSYn(0);
+    }
+    FORCE_INLINE uint16 ReadWPSY1() const {
+        return ReadWPSYn(1);
+    }
 
     FORCE_INLINE void WriteWPSYn(uint8 index, uint16 value) {
         windowParams[index].startY = bit::extract<0, 8>(value);
+    }
+    FORCE_INLINE void WriteWPSY0(uint16 value) {
+        WriteWPSYn(0, value);
+    }
+    FORCE_INLINE void WriteWPSY1(uint16 value) {
+        WriteWPSYn(1, value);
     }
 
     FORCE_INLINE uint16 ReadWPEYn(uint8 index) const {
         return windowParams[index].endY;
     }
+    FORCE_INLINE uint16 ReadWPEY0() const {
+        return ReadWPEYn(0);
+    }
+    FORCE_INLINE uint16 ReadWPEY1() const {
+        return ReadWPEYn(1);
+    }
 
     FORCE_INLINE void WriteWPEYn(uint8 index, uint16 value) {
         windowParams[index].endY = bit::extract<0, 8>(value);
+    }
+    FORCE_INLINE void WriteWPEY0(uint16 value) {
+        WriteWPEYn(0, value);
+    }
+    FORCE_INLINE void WriteWPEY1(uint16 value) {
+        WriteWPEYn(1, value);
     }
 
     // 1800D0   WCTLA   NBG0 and NBG1 Window Control
@@ -1825,10 +2334,22 @@ struct VDP2Regs {
         bit::deposit_into<15>(value, windowParams[index].lineWindowTableEnable);
         return value;
     }
+    FORCE_INLINE uint16 ReadLWTA0U() const {
+        return ReadLWTAnU(0);
+    }
+    FORCE_INLINE uint16 ReadLWTA1U() const {
+        return ReadLWTAnU(1);
+    }
 
     FORCE_INLINE void WriteLWTAnU(uint8 index, uint16 value) {
         bit::deposit_into<17, 19>(windowParams[index].lineWindowTableAddress, bit::extract<0, 2>(value));
         windowParams[index].lineWindowTableEnable = bit::test<15>(value);
+    }
+    FORCE_INLINE void WriteLWTA0U(uint16 value) {
+        WriteLWTAnU(0, value);
+    }
+    FORCE_INLINE void WriteLWTA1U(uint16 value) {
+        WriteLWTAnU(1, value);
     }
 
     FORCE_INLINE uint16 ReadLWTAnL(uint8 index) const {
@@ -1836,9 +2357,21 @@ struct VDP2Regs {
         bit::deposit_into<1, 15>(value, bit::extract<2, 16>(windowParams[index].lineWindowTableAddress));
         return value;
     }
+    FORCE_INLINE uint16 ReadLWTA0L() const {
+        return ReadLWTAnL(0);
+    }
+    FORCE_INLINE uint16 ReadLWTA1L() const {
+        return ReadLWTAnL(1);
+    }
 
     FORCE_INLINE void WriteLWTAnL(uint8 index, uint16 value) {
         bit::deposit_into<2, 16>(windowParams[index].lineWindowTableAddress, bit::extract<1, 15>(value));
+    }
+    FORCE_INLINE void WriteLWTA0L(uint16 value) {
+        WriteLWTAnL(0, value);
+    }
+    FORCE_INLINE void WriteLWTA1L(uint16 value) {
+        WriteLWTAnL(1, value);
     }
 
     // 1800E0   SPCTL   Sprite Control
@@ -2151,10 +2684,34 @@ struct VDP2Regs {
         bit::deposit_into<8, 10>(value, spriteParams.priorities[offset * 2 + 1]);
         return value;
     }
+    FORCE_INLINE uint16 ReadPRISA() const {
+        return ReadPRISn(0);
+    }
+    FORCE_INLINE uint16 ReadPRISB() const {
+        return ReadPRISn(1);
+    }
+    FORCE_INLINE uint16 ReadPRISC() const {
+        return ReadPRISn(2);
+    }
+    FORCE_INLINE uint16 ReadPRISD() const {
+        return ReadPRISn(3);
+    }
 
     FORCE_INLINE void WritePRISn(uint32 offset, uint16 value) {
         spriteParams.priorities[offset * 2 + 0] = bit::extract<0, 2>(value);
         spriteParams.priorities[offset * 2 + 1] = bit::extract<8, 10>(value);
+    }
+    FORCE_INLINE void WritePRISA(uint16 value) {
+        WritePRISn(0, value);
+    }
+    FORCE_INLINE void WritePRISB(uint16 value) {
+        WritePRISn(1, value);
+    }
+    FORCE_INLINE void WritePRISC(uint16 value) {
+        WritePRISn(2, value);
+    }
+    FORCE_INLINE void WritePRISD(uint16 value) {
+        WritePRISn(3, value);
     }
 
     // 1800F8   PRINA   NBG0 and NBG1 Priority Number
@@ -2253,10 +2810,34 @@ struct VDP2Regs {
         bit::deposit_into<8, 12>(value, spriteParams.colorCalcRatios[offset * 2 + 1] - 1);
         return value;
     }
+    FORCE_INLINE uint16 ReadCCRSA() const {
+        return ReadCCRSn(0);
+    }
+    FORCE_INLINE uint16 ReadCCRSB() const {
+        return ReadCCRSn(1);
+    }
+    FORCE_INLINE uint16 ReadCCRSC() const {
+        return ReadCCRSn(2);
+    }
+    FORCE_INLINE uint16 ReadCCRSD() const {
+        return ReadCCRSn(3);
+    }
 
     FORCE_INLINE void WriteCCRSn(uint32 offset, uint16 value) {
         spriteParams.colorCalcRatios[offset * 2 + 0] = bit::extract<0, 4>(value) + 1;
         spriteParams.colorCalcRatios[offset * 2 + 1] = bit::extract<8, 12>(value) + 1;
+    }
+    FORCE_INLINE void WriteCCRSA(uint16 value) {
+        WriteCCRSn(0, value);
+    }
+    FORCE_INLINE void WriteCCRSB(uint16 value) {
+        WriteCCRSn(1, value);
+    }
+    FORCE_INLINE void WriteCCRSC(uint16 value) {
+        WriteCCRSn(2, value);
+    }
+    FORCE_INLINE void WriteCCRSD(uint16 value) {
+        WriteCCRSn(3, value);
     }
 
     // 180108   CCRNA   NBG0 and NBG1 Color Calculation Ratio
@@ -2429,6 +3010,24 @@ struct VDP2Regs {
     FORCE_INLINE uint16 ReadCOxB(uint8 select) const {
         return colorOffset[select].b;
     }
+    FORCE_INLINE uint16 ReadCOAR() const {
+        return ReadCOxR(0);
+    }
+    FORCE_INLINE uint16 ReadCOAG() const {
+        return ReadCOxG(0);
+    }
+    FORCE_INLINE uint16 ReadCOAB() const {
+        return ReadCOxB(0);
+    }
+    FORCE_INLINE uint16 ReadCOBR() const {
+        return ReadCOxR(1);
+    }
+    FORCE_INLINE uint16 ReadCOBG() const {
+        return ReadCOxG(1);
+    }
+    FORCE_INLINE uint16 ReadCOBB() const {
+        return ReadCOxB(1);
+    }
 
     FORCE_INLINE void WriteCOxR(uint8 select, uint16 value) {
         colorOffset[select].r = bit::extract<0, 8>(value);
@@ -2444,6 +3043,24 @@ struct VDP2Regs {
         colorOffset[select].b = bit::extract<0, 8>(value);
         colorOffset[select].nonZero =
             colorOffset[select].r != 0 || colorOffset[select].g != 0 || colorOffset[select].b != 0;
+    }
+    FORCE_INLINE void WriteCOAR(uint16 value) {
+        WriteCOxR(0, value);
+    }
+    FORCE_INLINE void WriteCOAG(uint16 value) {
+        WriteCOxG(0, value);
+    }
+    FORCE_INLINE void WriteCOAB(uint16 value) {
+        WriteCOxB(0, value);
+    }
+    FORCE_INLINE void WriteCOBR(uint16 value) {
+        WriteCOxR(1, value);
+    }
+    FORCE_INLINE void WriteCOBG(uint16 value) {
+        WriteCOxG(1, value);
+    }
+    FORCE_INLINE void WriteCOBB(uint16 value) {
+        WriteCOxB(1, value);
     }
 
     // -------------------------------------------------------------------------

@@ -339,6 +339,8 @@ private:
             VDP2CRAMWriteWord,
             VDP2RegWrite,
 
+            PostStateLoadSync,
+
             Shutdown,
         };
 
@@ -478,6 +480,10 @@ private:
             return {Type::VDP2RegWrite, {.write = {.address = address, .value = value}}};
         }
 
+        static VDPRenderEvent PostStateLoadSync() {
+            return {Type::PostStateLoadSync};
+        }
+
         static VDPRenderEvent Shutdown() {
             return {Type::Shutdown};
         }
@@ -496,6 +502,7 @@ private:
         moodycamel::ConsumerToken cTok{eventQueue};
         util::Event renderFinishedSignal{false};
         util::Event framebufferSwapSignal{false};
+        util::Event postLoadSyncSignal{false};
 
         std::array<VDPRenderEvent, 64> pendingEvents;
         size_t pendingEventsCount = 0;

@@ -375,16 +375,401 @@ void VDP::DumpVDP1Framebuffers(std::ostream &out) const {
 }
 
 void VDP::SaveState(state::VDPState &state) const {
-    // TODO
+    state.VRAM1 = m_VRAM1;
+    state.VRAM2 = m_VRAM2;
+    state.CRAM = m_CRAM;
+    state.spriteFB = m_spriteFB;
+    state.displayFB = m_displayFB;
+
+    state.regs1.TVMR = m_VDP1.ReadTVMR();
+    state.regs1.FBCR = m_VDP1.ReadFBCR();
+    state.regs1.PTMR = m_VDP1.ReadPTMR();
+    state.regs1.EWDR = m_VDP1.ReadEWDR();
+    state.regs1.EWLR = m_VDP1.ReadEWLR();
+    state.regs1.EWRR = m_VDP1.ReadEWRR();
+    state.regs1.EDSR = m_VDP1.ReadEDSR();
+    state.regs1.LOPR = m_VDP1.ReadLOPR();
+    state.regs1.COPR = m_VDP1.ReadCOPR();
+    state.regs1.MODR = m_VDP1.ReadMODR();
+
+    state.regs2.TVMD = m_VDP2.ReadTVMD();
+    state.regs2.EXTEN = m_VDP2.ReadEXTEN();
+    state.regs2.TVSTAT = m_VDP2.ReadTVSTAT();
+    state.regs2.VRSIZE = m_VDP2.ReadVRSIZE();
+    state.regs2.HCNT = m_VDP2.ReadHCNT();
+    state.regs2.VCNT = m_VDP2.ReadVCNT();
+    state.regs2.RAMCTL = m_VDP2.ReadRAMCTL();
+    state.regs2.CYCA0L = m_VDP2.ReadCYCA0L();
+    state.regs2.CYCA0U = m_VDP2.ReadCYCA0U();
+    state.regs2.CYCA1L = m_VDP2.ReadCYCA1L();
+    state.regs2.CYCA1U = m_VDP2.ReadCYCA1U();
+    state.regs2.CYCB0L = m_VDP2.ReadCYCB0L();
+    state.regs2.CYCB0U = m_VDP2.ReadCYCB0U();
+    state.regs2.CYCB1L = m_VDP2.ReadCYCB1L();
+    state.regs2.CYCB1U = m_VDP2.ReadCYCB1U();
+    state.regs2.BGON = m_VDP2.ReadBGON();
+    state.regs2.MZCTL = m_VDP2.ReadMZCTL();
+    state.regs2.SFSEL = m_VDP2.ReadSFSEL();
+    state.regs2.SFCODE = m_VDP2.ReadSFCODE();
+    state.regs2.CHCTLA = m_VDP2.ReadCHCTLA();
+    state.regs2.CHCTLB = m_VDP2.ReadCHCTLB();
+    state.regs2.BMPNA = m_VDP2.ReadBMPNA();
+    state.regs2.BMPNB = m_VDP2.ReadBMPNB();
+    state.regs2.PNCNA = m_VDP2.ReadPNCNA();
+    state.regs2.PNCNB = m_VDP2.ReadPNCNB();
+    state.regs2.PNCNC = m_VDP2.ReadPNCNC();
+    state.regs2.PNCND = m_VDP2.ReadPNCND();
+    state.regs2.PNCR = m_VDP2.ReadPNCR();
+    state.regs2.PLSZ = m_VDP2.ReadPLSZ();
+    state.regs2.MPOFN = m_VDP2.ReadMPOFN();
+    state.regs2.MPOFR = m_VDP2.ReadMPOFR();
+    state.regs2.MPABN0 = m_VDP2.ReadMPABN0();
+    state.regs2.MPCDN0 = m_VDP2.ReadMPCDN0();
+    state.regs2.MPABN1 = m_VDP2.ReadMPABN1();
+    state.regs2.MPCDN1 = m_VDP2.ReadMPCDN1();
+    state.regs2.MPABN2 = m_VDP2.ReadMPABN2();
+    state.regs2.MPCDN2 = m_VDP2.ReadMPCDN2();
+    state.regs2.MPABN3 = m_VDP2.ReadMPABN3();
+    state.regs2.MPCDN3 = m_VDP2.ReadMPCDN3();
+    state.regs2.MPABRA = m_VDP2.ReadMPABRA();
+    state.regs2.MPCDRA = m_VDP2.ReadMPCDRA();
+    state.regs2.MPEFRA = m_VDP2.ReadMPEFRA();
+    state.regs2.MPGHRA = m_VDP2.ReadMPGHRA();
+    state.regs2.MPIJRA = m_VDP2.ReadMPIJRA();
+    state.regs2.MPKLRA = m_VDP2.ReadMPKLRA();
+    state.regs2.MPMNRA = m_VDP2.ReadMPMNRA();
+    state.regs2.MPOPRA = m_VDP2.ReadMPOPRA();
+    state.regs2.MPABRB = m_VDP2.ReadMPABRB();
+    state.regs2.MPCDRB = m_VDP2.ReadMPCDRB();
+    state.regs2.MPEFRB = m_VDP2.ReadMPEFRB();
+    state.regs2.MPGHRB = m_VDP2.ReadMPGHRB();
+    state.regs2.MPIJRB = m_VDP2.ReadMPIJRB();
+    state.regs2.MPKLRB = m_VDP2.ReadMPKLRB();
+    state.regs2.MPMNRB = m_VDP2.ReadMPMNRB();
+    state.regs2.MPOPRB = m_VDP2.ReadMPOPRB();
+    state.regs2.SCXIN0 = m_VDP2.ReadSCXIN0();
+    state.regs2.SCXDN0 = m_VDP2.ReadSCXDN0();
+    state.regs2.SCYIN0 = m_VDP2.ReadSCYIN0();
+    state.regs2.SCYDN0 = m_VDP2.ReadSCYDN0();
+    state.regs2.ZMXIN0 = m_VDP2.ReadZMXIN0();
+    state.regs2.ZMXDN0 = m_VDP2.ReadZMXDN0();
+    state.regs2.ZMYIN0 = m_VDP2.ReadZMYIN0();
+    state.regs2.ZMYDN0 = m_VDP2.ReadZMYDN0();
+    state.regs2.SCXIN1 = m_VDP2.ReadSCXIN1();
+    state.regs2.SCXDN1 = m_VDP2.ReadSCXDN1();
+    state.regs2.SCYIN1 = m_VDP2.ReadSCYIN1();
+    state.regs2.SCYDN1 = m_VDP2.ReadSCYDN1();
+    state.regs2.ZMXIN1 = m_VDP2.ReadZMXIN1();
+    state.regs2.ZMXDN1 = m_VDP2.ReadZMXDN1();
+    state.regs2.ZMYIN1 = m_VDP2.ReadZMYIN1();
+    state.regs2.ZMYDN1 = m_VDP2.ReadZMYDN1();
+    state.regs2.SCXIN2 = m_VDP2.ReadSCXN2();
+    state.regs2.SCYIN2 = m_VDP2.ReadSCYN2();
+    state.regs2.SCXIN3 = m_VDP2.ReadSCXN3();
+    state.regs2.SCYIN3 = m_VDP2.ReadSCYN3();
+    state.regs2.ZMCTL = m_VDP2.ReadZMCTL();
+    state.regs2.SCRCTL = m_VDP2.ReadSCRCTL();
+    state.regs2.VCSTAU = m_VDP2.ReadVCSTAU();
+    state.regs2.VCSTAL = m_VDP2.ReadVCSTAL();
+    state.regs2.LSTA0U = m_VDP2.ReadLSTA0U();
+    state.regs2.LSTA0L = m_VDP2.ReadLSTA0L();
+    state.regs2.LSTA1U = m_VDP2.ReadLSTA1U();
+    state.regs2.LSTA1L = m_VDP2.ReadLSTA1L();
+    state.regs2.LCTAU = m_VDP2.ReadLCTAU();
+    state.regs2.LCTAL = m_VDP2.ReadLCTAL();
+    state.regs2.BKTAU = m_VDP2.ReadBKTAU();
+    state.regs2.BKTAL = m_VDP2.ReadBKTAL();
+    state.regs2.RPMD = m_VDP2.ReadRPMD();
+    state.regs2.RPRCTL = m_VDP2.ReadRPRCTL();
+    state.regs2.KTCTL = m_VDP2.ReadKTCTL();
+    state.regs2.KTAOF = m_VDP2.ReadKTAOF();
+    state.regs2.OVPNRA = m_VDP2.ReadOVPNRA();
+    state.regs2.OVPNRB = m_VDP2.ReadOVPNRB();
+    state.regs2.RPTAU = m_VDP2.ReadRPTAU();
+    state.regs2.RPTAL = m_VDP2.ReadRPTAL();
+    state.regs2.WPSX0 = m_VDP2.ReadWPSX0();
+    state.regs2.WPSY0 = m_VDP2.ReadWPSY0();
+    state.regs2.WPEX0 = m_VDP2.ReadWPEX0();
+    state.regs2.WPEY0 = m_VDP2.ReadWPEY0();
+    state.regs2.WPSX1 = m_VDP2.ReadWPSX1();
+    state.regs2.WPSY1 = m_VDP2.ReadWPSY1();
+    state.regs2.WPEX1 = m_VDP2.ReadWPEX1();
+    state.regs2.WPEY1 = m_VDP2.ReadWPEY1();
+    state.regs2.WCTLA = m_VDP2.ReadWCTLA();
+    state.regs2.WCTLB = m_VDP2.ReadWCTLB();
+    state.regs2.WCTLC = m_VDP2.ReadWCTLC();
+    state.regs2.WCTLD = m_VDP2.ReadWCTLD();
+    state.regs2.LWTA0U = m_VDP2.ReadLWTA0U();
+    state.regs2.LWTA0L = m_VDP2.ReadLWTA0L();
+    state.regs2.LWTA1U = m_VDP2.ReadLWTA1U();
+    state.regs2.LWTA1L = m_VDP2.ReadLWTA1L();
+    state.regs2.SPCTL = m_VDP2.ReadSPCTL();
+    state.regs2.SDCTL = m_VDP2.ReadSDCTL();
+    state.regs2.CRAOFA = m_VDP2.ReadCRAOFA();
+    state.regs2.CRAOFB = m_VDP2.ReadCRAOFB();
+    state.regs2.LNCLEN = m_VDP2.ReadLNCLEN();
+    state.regs2.SFPRMD = m_VDP2.ReadSFPRMD();
+    state.regs2.CCCTL = m_VDP2.ReadCCCTL();
+    state.regs2.SFCCMD = m_VDP2.ReadSFCCMD();
+    state.regs2.PRISA = m_VDP2.ReadPRISA();
+    state.regs2.PRISB = m_VDP2.ReadPRISB();
+    state.regs2.PRISC = m_VDP2.ReadPRISC();
+    state.regs2.PRISD = m_VDP2.ReadPRISD();
+    state.regs2.PRINA = m_VDP2.ReadPRINA();
+    state.regs2.PRINB = m_VDP2.ReadPRINB();
+    state.regs2.PRIR = m_VDP2.ReadPRIR();
+    state.regs2.CCRSA = m_VDP2.ReadCCRSA();
+    state.regs2.CCRSB = m_VDP2.ReadCCRSB();
+    state.regs2.CCRSC = m_VDP2.ReadCCRSC();
+    state.regs2.CCRSD = m_VDP2.ReadCCRSD();
+    state.regs2.CCRNA = m_VDP2.ReadCCRNA();
+    state.regs2.CCRNB = m_VDP2.ReadCCRNB();
+    state.regs2.CCRR = m_VDP2.ReadCCRR();
+    state.regs2.CCRLB = m_VDP2.ReadCCRLB();
+    state.regs2.CLOFEN = m_VDP2.ReadCLOFEN();
+    state.regs2.CLOFSL = m_VDP2.ReadCLOFSL();
+    state.regs2.COAR = m_VDP2.ReadCOAR();
+    state.regs2.COAG = m_VDP2.ReadCOAG();
+    state.regs2.COAB = m_VDP2.ReadCOAB();
+    state.regs2.COBR = m_VDP2.ReadCOBR();
+    state.regs2.COBG = m_VDP2.ReadCOBG();
+    state.regs2.COBB = m_VDP2.ReadCOBB();
+
+    switch (m_HPhase) {
+    default:
+    case HorizontalPhase::Active: state.HPhase = state::VDPState::HorizontalPhase::Active; break;
+    case HorizontalPhase::RightBorder: state.HPhase = state::VDPState::HorizontalPhase::RightBorder; break;
+    case HorizontalPhase::Sync: state.HPhase = state::VDPState::HorizontalPhase::Sync; break;
+    case HorizontalPhase::VBlankOut: state.HPhase = state::VDPState::HorizontalPhase::VBlankOut; break;
+    case HorizontalPhase::LeftBorder: state.HPhase = state::VDPState::HorizontalPhase::LeftBorder; break;
+    case HorizontalPhase::LastDot: state.HPhase = state::VDPState::HorizontalPhase::LastDot; break;
+    }
+
+    switch (m_VPhase) {
+    default:
+    case VerticalPhase::Active: state.VPhase = state::VDPState::VerticalPhase::Active; break;
+    case VerticalPhase::BottomBorder: state.VPhase = state::VDPState::VerticalPhase::BottomBorder; break;
+    case VerticalPhase::BlankingAndSync: state.VPhase = state::VDPState::VerticalPhase::BlankingAndSync; break;
+    case VerticalPhase::TopBorder: state.VPhase = state::VDPState::VerticalPhase::TopBorder; break;
+    case VerticalPhase::LastLine: state.VPhase = state::VDPState::VerticalPhase::LastLine; break;
+    }
+
+    state.VCounter = m_VCounter;
 }
 
 bool VDP::ValidateState(const state::VDPState &state) const {
-    // TODO
+    switch (state.HPhase) {
+    case state::VDPState::HorizontalPhase::Active: break;
+    case state::VDPState::HorizontalPhase::RightBorder: break;
+    case state::VDPState::HorizontalPhase::Sync: break;
+    case state::VDPState::HorizontalPhase::VBlankOut: break;
+    case state::VDPState::HorizontalPhase::LeftBorder: break;
+    case state::VDPState::HorizontalPhase::LastDot: break;
+    default: return false;
+    }
+
+    switch (state.VPhase) {
+    case state::VDPState::VerticalPhase::Active: break;
+    case state::VDPState::VerticalPhase::BottomBorder: break;
+    case state::VDPState::VerticalPhase::BlankingAndSync: break;
+    case state::VDPState::VerticalPhase::TopBorder: break;
+    case state::VDPState::VerticalPhase::LastLine: break;
+    default: return false;
+    }
+
     return true;
 }
 
 void VDP::LoadState(const state::VDPState &state) {
-    // TODO
+    m_VRAM1 = state.VRAM1;
+    m_VRAM2 = state.VRAM2;
+    m_CRAM = state.CRAM;
+    m_spriteFB = state.spriteFB;
+    m_displayFB = state.displayFB;
+
+    m_VDP1.WriteTVMR(state.regs1.TVMR);
+    m_VDP1.WriteFBCR(state.regs1.FBCR);
+    m_VDP1.WritePTMR(state.regs1.PTMR);
+    m_VDP1.WriteEWDR(state.regs1.EWDR);
+    m_VDP1.WriteEWLR(state.regs1.EWLR);
+    m_VDP1.WriteEWRR(state.regs1.EWRR);
+    m_VDP1.WriteEDSR(state.regs1.EDSR);
+    m_VDP1.WriteLOPR(state.regs1.LOPR);
+    m_VDP1.WriteCOPR(state.regs1.COPR);
+    m_VDP1.WriteMODR(state.regs1.MODR);
+
+    m_VDP2.WriteTVMD(state.regs2.TVMD);
+    m_VDP2.WriteEXTEN(state.regs2.EXTEN);
+    m_VDP2.WriteTVSTAT(state.regs2.TVSTAT);
+    m_VDP2.WriteVRSIZE(state.regs2.VRSIZE);
+    m_VDP2.WriteHCNT(state.regs2.HCNT);
+    m_VDP2.WriteVCNT(state.regs2.VCNT);
+    m_VDP2.WriteRAMCTL(state.regs2.RAMCTL);
+    m_VDP2.WriteCYCA0L(state.regs2.CYCA0L);
+    m_VDP2.WriteCYCA0U(state.regs2.CYCA0U);
+    m_VDP2.WriteCYCA1L(state.regs2.CYCA1L);
+    m_VDP2.WriteCYCA1U(state.regs2.CYCA1U);
+    m_VDP2.WriteCYCB0L(state.regs2.CYCB0L);
+    m_VDP2.WriteCYCB0U(state.regs2.CYCB0U);
+    m_VDP2.WriteCYCB1L(state.regs2.CYCB1L);
+    m_VDP2.WriteCYCB1U(state.regs2.CYCB1U);
+    m_VDP2.WriteBGON(state.regs2.BGON);
+    m_VDP2.WriteMZCTL(state.regs2.MZCTL);
+    m_VDP2.WriteSFSEL(state.regs2.SFSEL);
+    m_VDP2.WriteSFCODE(state.regs2.SFCODE);
+    m_VDP2.WriteCHCTLA(state.regs2.CHCTLA);
+    m_VDP2.WriteCHCTLB(state.regs2.CHCTLB);
+    m_VDP2.WriteBMPNA(state.regs2.BMPNA);
+    m_VDP2.WriteBMPNB(state.regs2.BMPNB);
+    m_VDP2.WritePNCNA(state.regs2.PNCNA);
+    m_VDP2.WritePNCNB(state.regs2.PNCNB);
+    m_VDP2.WritePNCNC(state.regs2.PNCNC);
+    m_VDP2.WritePNCND(state.regs2.PNCND);
+    m_VDP2.WritePNCR(state.regs2.PNCR);
+    m_VDP2.WritePLSZ(state.regs2.PLSZ);
+    m_VDP2.WriteMPOFN(state.regs2.MPOFN);
+    m_VDP2.WriteMPOFR(state.regs2.MPOFR);
+    m_VDP2.WriteMPABN0(state.regs2.MPABN0);
+    m_VDP2.WriteMPCDN0(state.regs2.MPCDN0);
+    m_VDP2.WriteMPABN1(state.regs2.MPABN1);
+    m_VDP2.WriteMPCDN1(state.regs2.MPCDN1);
+    m_VDP2.WriteMPABN2(state.regs2.MPABN2);
+    m_VDP2.WriteMPCDN2(state.regs2.MPCDN2);
+    m_VDP2.WriteMPABN3(state.regs2.MPABN3);
+    m_VDP2.WriteMPCDN3(state.regs2.MPCDN3);
+    m_VDP2.WriteMPABRA(state.regs2.MPABRA);
+    m_VDP2.WriteMPCDRA(state.regs2.MPCDRA);
+    m_VDP2.WriteMPEFRA(state.regs2.MPEFRA);
+    m_VDP2.WriteMPGHRA(state.regs2.MPGHRA);
+    m_VDP2.WriteMPIJRA(state.regs2.MPIJRA);
+    m_VDP2.WriteMPKLRA(state.regs2.MPKLRA);
+    m_VDP2.WriteMPMNRA(state.regs2.MPMNRA);
+    m_VDP2.WriteMPOPRA(state.regs2.MPOPRA);
+    m_VDP2.WriteMPABRB(state.regs2.MPABRB);
+    m_VDP2.WriteMPCDRB(state.regs2.MPCDRB);
+    m_VDP2.WriteMPEFRB(state.regs2.MPEFRB);
+    m_VDP2.WriteMPGHRB(state.regs2.MPGHRB);
+    m_VDP2.WriteMPIJRB(state.regs2.MPIJRB);
+    m_VDP2.WriteMPKLRB(state.regs2.MPKLRB);
+    m_VDP2.WriteMPMNRB(state.regs2.MPMNRB);
+    m_VDP2.WriteMPOPRB(state.regs2.MPOPRB);
+    m_VDP2.WriteSCXIN0(state.regs2.SCXIN0);
+    m_VDP2.WriteSCXDN0(state.regs2.SCXDN0);
+    m_VDP2.WriteSCYIN0(state.regs2.SCYIN0);
+    m_VDP2.WriteSCYDN0(state.regs2.SCYDN0);
+    m_VDP2.WriteZMXIN0(state.regs2.ZMXIN0);
+    m_VDP2.WriteZMXDN0(state.regs2.ZMXDN0);
+    m_VDP2.WriteZMYIN0(state.regs2.ZMYIN0);
+    m_VDP2.WriteZMYDN0(state.regs2.ZMYDN0);
+    m_VDP2.WriteSCXIN1(state.regs2.SCXIN1);
+    m_VDP2.WriteSCXDN1(state.regs2.SCXDN1);
+    m_VDP2.WriteSCYIN1(state.regs2.SCYIN1);
+    m_VDP2.WriteSCYDN1(state.regs2.SCYDN1);
+    m_VDP2.WriteZMXIN1(state.regs2.ZMXIN1);
+    m_VDP2.WriteZMXDN1(state.regs2.ZMXDN1);
+    m_VDP2.WriteZMYIN1(state.regs2.ZMYIN1);
+    m_VDP2.WriteZMYDN1(state.regs2.ZMYDN1);
+    m_VDP2.WriteSCXN2(state.regs2.SCXIN2);
+    m_VDP2.WriteSCYN2(state.regs2.SCYIN2);
+    m_VDP2.WriteSCXN3(state.regs2.SCXIN3);
+    m_VDP2.WriteSCYN3(state.regs2.SCYIN3);
+    m_VDP2.WriteZMCTL(state.regs2.ZMCTL);
+    m_VDP2.WriteSCRCTL(state.regs2.SCRCTL);
+    m_VDP2.WriteVCSTAU(state.regs2.VCSTAU);
+    m_VDP2.WriteVCSTAL(state.regs2.VCSTAL);
+    m_VDP2.WriteLSTA0U(state.regs2.LSTA0U);
+    m_VDP2.WriteLSTA0L(state.regs2.LSTA0L);
+    m_VDP2.WriteLSTA1U(state.regs2.LSTA1U);
+    m_VDP2.WriteLSTA1L(state.regs2.LSTA1L);
+    m_VDP2.WriteLCTAU(state.regs2.LCTAU);
+    m_VDP2.WriteLCTAL(state.regs2.LCTAL);
+    m_VDP2.WriteBKTAU(state.regs2.BKTAU);
+    m_VDP2.WriteBKTAL(state.regs2.BKTAL);
+    m_VDP2.WriteRPMD(state.regs2.RPMD);
+    m_VDP2.WriteRPRCTL(state.regs2.RPRCTL);
+    m_VDP2.WriteKTCTL(state.regs2.KTCTL);
+    m_VDP2.WriteKTAOF(state.regs2.KTAOF);
+    m_VDP2.WriteOVPNRA(state.regs2.OVPNRA);
+    m_VDP2.WriteOVPNRB(state.regs2.OVPNRB);
+    m_VDP2.WriteRPTAU(state.regs2.RPTAU);
+    m_VDP2.WriteRPTAL(state.regs2.RPTAL);
+    m_VDP2.WriteWPSX0(state.regs2.WPSX0);
+    m_VDP2.WriteWPSY0(state.regs2.WPSY0);
+    m_VDP2.WriteWPEX0(state.regs2.WPEX0);
+    m_VDP2.WriteWPEY0(state.regs2.WPEY0);
+    m_VDP2.WriteWPSX1(state.regs2.WPSX1);
+    m_VDP2.WriteWPSY1(state.regs2.WPSY1);
+    m_VDP2.WriteWPEX1(state.regs2.WPEX1);
+    m_VDP2.WriteWPEY1(state.regs2.WPEY1);
+    m_VDP2.WriteWCTLA(state.regs2.WCTLA);
+    m_VDP2.WriteWCTLB(state.regs2.WCTLB);
+    m_VDP2.WriteWCTLC(state.regs2.WCTLC);
+    m_VDP2.WriteWCTLD(state.regs2.WCTLD);
+    m_VDP2.WriteLWTA0U(state.regs2.LWTA0U);
+    m_VDP2.WriteLWTA0L(state.regs2.LWTA0L);
+    m_VDP2.WriteLWTA1U(state.regs2.LWTA1U);
+    m_VDP2.WriteLWTA1L(state.regs2.LWTA1L);
+    m_VDP2.WriteSPCTL(state.regs2.SPCTL);
+    m_VDP2.WriteSDCTL(state.regs2.SDCTL);
+    m_VDP2.WriteCRAOFA(state.regs2.CRAOFA);
+    m_VDP2.WriteCRAOFB(state.regs2.CRAOFB);
+    m_VDP2.WriteLNCLEN(state.regs2.LNCLEN);
+    m_VDP2.WriteSFPRMD(state.regs2.SFPRMD);
+    m_VDP2.WriteCCCTL(state.regs2.CCCTL);
+    m_VDP2.WriteSFCCMD(state.regs2.SFCCMD);
+    m_VDP2.WritePRISA(state.regs2.PRISA);
+    m_VDP2.WritePRISB(state.regs2.PRISB);
+    m_VDP2.WritePRISC(state.regs2.PRISC);
+    m_VDP2.WritePRISD(state.regs2.PRISD);
+    m_VDP2.WritePRINA(state.regs2.PRINA);
+    m_VDP2.WritePRINB(state.regs2.PRINB);
+    m_VDP2.WritePRIR(state.regs2.PRIR);
+    m_VDP2.WriteCCRSA(state.regs2.CCRSA);
+    m_VDP2.WriteCCRSB(state.regs2.CCRSB);
+    m_VDP2.WriteCCRSC(state.regs2.CCRSC);
+    m_VDP2.WriteCCRSD(state.regs2.CCRSD);
+    m_VDP2.WriteCCRNA(state.regs2.CCRNA);
+    m_VDP2.WriteCCRNB(state.regs2.CCRNB);
+    m_VDP2.WriteCCRR(state.regs2.CCRR);
+    m_VDP2.WriteCCRLB(state.regs2.CCRLB);
+    m_VDP2.WriteCLOFEN(state.regs2.CLOFEN);
+    m_VDP2.WriteCLOFSL(state.regs2.CLOFSL);
+    m_VDP2.WriteCOAR(state.regs2.COAR);
+    m_VDP2.WriteCOAG(state.regs2.COAG);
+    m_VDP2.WriteCOAB(state.regs2.COAB);
+    m_VDP2.WriteCOBR(state.regs2.COBR);
+    m_VDP2.WriteCOBG(state.regs2.COBG);
+    m_VDP2.WriteCOBB(state.regs2.COBB);
+
+    switch (state.HPhase) {
+    default:
+    case state::VDPState::HorizontalPhase::Active: m_HPhase = HorizontalPhase::Active; break;
+    case state::VDPState::HorizontalPhase::RightBorder: m_HPhase = HorizontalPhase::RightBorder; break;
+    case state::VDPState::HorizontalPhase::Sync: m_HPhase = HorizontalPhase::Sync; break;
+    case state::VDPState::HorizontalPhase::VBlankOut: m_HPhase = HorizontalPhase::VBlankOut; break;
+    case state::VDPState::HorizontalPhase::LeftBorder: m_HPhase = HorizontalPhase::LeftBorder; break;
+    case state::VDPState::HorizontalPhase::LastDot: m_HPhase = HorizontalPhase::LastDot; break;
+    }
+
+    switch (state.VPhase) {
+    default:
+    case state::VDPState::VerticalPhase::Active: m_VPhase = VerticalPhase::Active; break;
+    case state::VDPState::VerticalPhase::BottomBorder: m_VPhase = VerticalPhase::BottomBorder; break;
+    case state::VDPState::VerticalPhase::BlankingAndSync: m_VPhase = VerticalPhase::BlankingAndSync; break;
+    case state::VDPState::VerticalPhase::TopBorder: m_VPhase = VerticalPhase::TopBorder; break;
+    case state::VDPState::VerticalPhase::LastLine: m_VPhase = VerticalPhase::LastLine; break;
+    }
+
+    m_VCounter = state.VCounter;
+
+    for (uint32 address = 0; address < kVDP2CRAMSize; address += 2) {
+        VDP2UpdateCRAMCache<uint16>(address);
+    }
+
+    if constexpr (config::effective::threadedRendering) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::PostStateLoadSync());
+        m_VDPRenderContext.postLoadSyncSignal.Wait(true);
+    }
 }
 
 void VDP::OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext) {
@@ -968,6 +1353,21 @@ void VDP::VDPRenderThread() {
                     }
                 } else {
                     rctx.vdp2.regs.Write(event.write.address, event.write.value);
+                }
+                break;
+
+            case EvtType::PostStateLoadSync:
+                rctx.vdp1.regs = m_VDP1;
+                rctx.vdp1.VRAM = m_VRAM1;
+                rctx.vdp2.regs = m_VDP2;
+                rctx.vdp2.VRAM = m_VRAM2;
+                rctx.vdp2.CRAM = m_CRAM;
+                rctx.displayFB = m_displayFB;
+                rctx.postLoadSyncSignal.Set();
+                for (uint32 addr = 0; addr < rctx.vdp2.CRAM.size(); addr += sizeof(uint16)) {
+                    const uint16 colorValue = VDP2ReadRendererCRAM<uint16>(addr);
+                    const Color555 color5{.u16 = colorValue};
+                    rctx.vdp2.CRAMCache[addr / sizeof(uint16)] = ConvertRGB555to888(color5);
                 }
                 break;
 
