@@ -8,6 +8,8 @@
 #include <satemu/sys/bus.hpp>
 #include <satemu/sys/sys_ops.hpp>
 
+#include <satemu/state/state_smpc.hpp>
+
 #include <satemu/hw/vdp/vdp_callbacks.hpp>
 #include <satemu/sys/system_callbacks.hpp>
 
@@ -63,6 +65,13 @@ public:
     const rtc::RTC &GetRTC() const {
         return m_rtc;
     }
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SMPCState &state) const;
+    bool ValidateState(const state::SMPCState &state) const;
+    void LoadState(const state::SMPCState &state);
 
 private:
     std::array<uint8, 7> IREG;

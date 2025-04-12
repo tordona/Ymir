@@ -3,6 +3,7 @@
 #include "state_scheduler.hpp"
 #include "state_scu.hpp"
 #include "state_sh2.hpp"
+#include "state_smpc.hpp"
 #include "state_system.hpp"
 
 namespace satemu::state {
@@ -18,8 +19,8 @@ inline namespace v1 {
         SH2State msh2;
         SH2State ssh2;
         SCUState scu;
+        SMPCState smpc;
         struct VDPState {};
-        struct SMPCState {};
         struct SCSPState {
             struct M68KState {};
         };

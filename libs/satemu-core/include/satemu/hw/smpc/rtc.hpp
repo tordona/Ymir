@@ -3,6 +3,8 @@
 #include <satemu/core/configuration.hpp>
 #include <satemu/sys/clocks.hpp>
 
+#include <satemu/state/state_smpc.hpp>
+
 #include <satemu/util/date_time.hpp>
 
 #include <satemu/core/types.hpp>
@@ -43,6 +45,13 @@ public:
     // TODO: replace std iostream with custom I/O class with managed endianness
     void ReadPersistentData(std::ifstream &in);
     void WritePersistentData(std::ofstream &out) const;
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SMPCState &state) const;
+    bool ValidateState(const state::SMPCState &state) const;
+    void LoadState(const state::SMPCState &state);
 
 private:
     friend class satemu::smpc::SMPC;

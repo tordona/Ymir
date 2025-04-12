@@ -143,6 +143,60 @@ void SMPC::SetAreaCode(uint8 areaCode) {
     m_areaCode = areaCode;
 }
 
+void SMPC::SaveState(state::SMPCState &state) const {
+    state.IREG = IREG;
+    state.OREG = OREG;
+    state.COMREG = ReadCOMREG();
+    state.SR = ReadSR();
+    state.SF = ReadSF();
+    state.PDR1 = ReadPDR1();
+    state.PDR2 = ReadPDR2();
+    state.DDR1 = ReadDDR1();
+    state.DDR2 = ReadDDR2();
+    state.IOSEL = ReadIOSEL();
+    state.EXLE = ReadEXLE();
+
+    state.intback.getPeripheralData = m_getPeripheralData;
+    state.intback.optimize = m_optimize;
+    state.intback.port1mode = m_port1mode;
+    state.intback.port2mode = m_port2mode;
+    state.intback.report = m_intbackReport;
+    state.intback.reportOffset = m_intbackReportOffset;
+    state.intback.inProgress = m_intbackInProgress;
+
+    state.busValue = m_busValue;
+    state.resetDisable = m_resetDisable;
+
+    m_rtc.SaveState(state);
+}
+
+bool SMPC::ValidateState(const state::SMPCState &state) const {
+    if (!m_rtc.ValidateState(state)) {
+        return false;
+    }
+
+    return true;
+}
+
+void SMPC::LoadState(const state::SMPCState &state) {
+    IREG = state.IREG;
+    OREG = state.OREG;
+    WriteCOMREG<true>(state.COMREG);
+    WriteSR(state.SR);
+    WriteSF<true>(state.SF);
+    WritePDR1<true>(state.PDR1);
+    WritePDR2<true>(state.PDR2);
+    WriteDDR1(state.DDR1);
+    WriteDDR2(state.DDR2);
+    WriteIOSEL(state.IOSEL);
+    WriteEXLE(state.EXLE);
+
+    m_busValue = state.busValue;
+    m_resetDisable = state.resetDisable;
+
+    m_rtc.LoadState(state);
+}
+
 void SMPC::UpdateResetNMI() {
     if (!m_resetDisable && m_resetState) {
         m_sysOps.RaiseNMI();

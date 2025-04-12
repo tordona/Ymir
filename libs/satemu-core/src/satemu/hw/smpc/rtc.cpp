@@ -101,4 +101,18 @@ void RTC::UpdateClockRatios(const sys::ClockRatios &clockRatios) {
     m_sysClockRateDen = clockRatios.RTCDen;
 }
 
+void RTC::SaveState(state::SMPCState &state) const {
+    state.rtcTimestamp = m_timestamp;
+    state.rtcSysClockCount = m_sysClockCount;
+}
+
+bool RTC::ValidateState(const state::SMPCState &state) const {
+    return true;
+}
+
+void RTC::LoadState(const state::SMPCState &state) {
+    m_timestamp = state.rtcTimestamp;
+    m_sysClockCount = state.rtcSysClockCount;
+}
+
 } // namespace satemu::smpc::rtc
