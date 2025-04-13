@@ -20,6 +20,8 @@
 
 #include <satemu/util/dev_log.hpp>
 
+#include <satemu/core/hash.hpp>
+
 #include <array>
 #include <deque>
 
@@ -49,6 +51,7 @@ public:
     const media::Disc &GetDisc() const {
         return m_disc;
     }
+    Hash128 GetDiscHash() const;
 
     // -------------------------------------------------------------------------
     // Save states

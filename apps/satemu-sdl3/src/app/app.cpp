@@ -1935,7 +1935,26 @@ void App::RebindAction(input::ActionID action) {
     m_context.settings.RebindAction(action);
 }
 
-void App::PersistSaveState(size_t slot) {
+void App::LoadSaveStates() {
+    auto basePath = m_context.profile.GetPath(StandardPath::SaveStates);
+    auto gameStatesPath = basePath / satemu::ToString(m_context.saturn.GetDiscHash());
+
+    for (uint32 slot = 0; slot < m_context.saveStates.size(); slot++) {
+        std::unique_lock lock{m_context.locks.saveStates[slot]};
+        auto statePath = gameStatesPath / fmt::format("{}.savestate", slot);
+        std::ifstream in{statePath, std::ios::binary};
+        if (in) {
+            m_context.saveStates[slot] = std::make_unique<satemu::state::State>();
+            auto &state = *m_context.saveStates[slot];
+            cereal::BinaryInputArchive archive{in};
+            archive(state);
+        } else {
+            m_context.saveStates[slot].reset();
+        }
+    }
+}
+
+void App::PersistSaveState(uint32 slot) {
     if (slot >= m_context.saveStates.size()) {
         return;
     }
@@ -1945,7 +1964,7 @@ void App::PersistSaveState(size_t slot) {
         auto &state = *m_context.saveStates[slot];
 
         auto basePath = m_context.profile.GetPath(StandardPath::SaveStates);
-        auto gameStatesPath = basePath / satemu::state::ToString(state.cdblock.discHash);
+        auto gameStatesPath = basePath / satemu::ToString(state.cdblock.discHash);
         auto statePath = gameStatesPath / fmt::format("{}.savestate", slot);
         std::filesystem::create_directories(gameStatesPath);
 
@@ -1985,9 +2004,12 @@ bool App::LoadDiscImage(std::filesystem::path path) {
     }
     devlog::info<grp::base>("Disc image loaded succesfully");
 
-    std::unique_lock lock{m_context.locks.disc};
-    m_context.saturn.LoadDisc(std::move(disc));
-    m_context.state.loadedDiscImagePath = path;
+    {
+        std::unique_lock lock{m_context.locks.disc};
+        m_context.saturn.LoadDisc(std::move(disc));
+        m_context.state.loadedDiscImagePath = path;
+    }
+    LoadSaveStates();
     return true;
 }
 

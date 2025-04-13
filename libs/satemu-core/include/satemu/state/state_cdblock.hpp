@@ -2,8 +2,7 @@
 
 #include <satemu/hw/cdblock/cdblock_defs.hpp>
 
-#include <satemu/state/state_hash.hpp>
-
+#include <satemu/core/hash.hpp>
 #include <satemu/core/types.hpp>
 
 #include <array>

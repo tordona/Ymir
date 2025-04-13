@@ -139,6 +139,14 @@ void Saturn::LoadIPL(std::span<uint8, sys::kIPLSize> ipl) {
     mem.LoadIPL(ipl);
 }
 
+Hash128 Saturn::GetIPLHash() const {
+    return mem.GetIPLHash();
+}
+
+Hash128 Saturn::GetDiscHash() const {
+    return CDBlock.GetDiscHash();
+}
+
 void Saturn::LoadDisc(media::Disc &&disc) {
     // Configure area code based on compatible area codes from the disc
     AutodetectRegion(disc.header.compatAreaCode);

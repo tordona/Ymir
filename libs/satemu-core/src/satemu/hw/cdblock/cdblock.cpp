@@ -210,10 +210,12 @@ bool CDBlock::IsTrayOpen() const {
     return (m_status.statusCode & 0xF) == kStatusCodeOpen;
 }
 
+Hash128 CDBlock::GetDiscHash() const {
+    return m_fs.GetHash();
+}
+
 void CDBlock::SaveState(state::CDBlockState &state) const {
-    XXH128_canonical_t canonicalHash{};
-    XXH128_canonicalFromHash(&canonicalHash, m_fs.GetHash());
-    std::copy_n(canonicalHash.digest, 16, state.discHash.begin());
+    state.discHash = m_fs.GetHash();
 
     state.CR = m_CR;
     state.HIRQ = m_HIRQ;
@@ -328,9 +330,7 @@ void CDBlock::SaveState(state::CDBlockState &state) const {
 }
 
 bool CDBlock::ValidateState(const state::CDBlockState &state) const {
-    XXH128_canonical_t canonicalHash{};
-    XXH128_canonicalFromHash(&canonicalHash, m_fs.GetHash());
-    if (!std::equal(&canonicalHash.digest[0], &canonicalHash.digest[16], state.discHash.data())) {
+    if (state.discHash != m_fs.GetHash()) {
         return false;
     }
     if (!m_partitionManager.ValidateState(state)) {

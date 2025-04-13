@@ -5,6 +5,7 @@ add_library(satemu-core
 
     include/satemu/core/configuration.hpp
     include/satemu/core/configuration_defs.hpp
+    include/satemu/core/hash.hpp
     include/satemu/core/scheduler.hpp
     include/satemu/core/scheduler_defs.hpp
     include/satemu/core/types.hpp
@@ -102,7 +103,6 @@ add_library(satemu-core
 
     include/satemu/state/state.hpp
     include/satemu/state/state_cdblock.hpp
-    include/satemu/state/state_hash.hpp
     include/satemu/state/state_m68k.hpp
     include/satemu/state/state_scheduler.hpp
     include/satemu/state/state_scsp.hpp
@@ -200,7 +200,7 @@ add_library(satemu-core
     src/satemu/util/constexpr_for.hpp
     src/satemu/util/date_time.cpp
     src/satemu/util/process.cpp
-)
+ "src/satemu/core/hash.cpp")
 add_library(satemu::satemu-core ALIAS satemu-core)
 set_target_properties(satemu-core PROPERTIES
                       VERSION ${satemu_core_VERSION}

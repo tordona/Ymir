@@ -72,7 +72,8 @@ private:
     void RebindInputs();
     void RebindAction(input::ActionID action);
 
-    void PersistSaveState(size_t slot);
+    void LoadSaveStates();
+    void PersistSaveState(uint32 slot);
 
     void OpenLoadDiscDialog();
     void ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, int filter);

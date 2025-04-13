@@ -2,6 +2,8 @@
 
 #include <satemu/util/scope_guard.hpp>
 
+#include <xxh3.h>
+
 #include <cassert>
 
 using namespace satemu::media::iso9660;
@@ -12,8 +14,6 @@ void Filesystem::Clear() {
     m_directories.clear();
     m_currDirectory = ~0;
     m_currFileOffset = 0;
-    m_hash.low64 = 0;
-    m_hash.high64 = 0;
 }
 
 bool Filesystem::Read(const Disc &disc) {
@@ -84,7 +84,10 @@ bool Filesystem::Read(const Disc &disc) {
             } else {
                 m_currDirectory = 0;
                 m_currFileOffset = 0;
-                m_hash = XXH3_128bits_digest(xxh3State);
+                XXH128_hash_t hash = XXH3_128bits_digest(xxh3State);
+                XXH128_canonical_t canonicalHash{};
+                XXH128_canonicalFromHash(&canonicalHash, hash);
+                std::copy_n(canonicalHash.digest, m_hash.size(), m_hash.begin());
                 return true;
             }
         }

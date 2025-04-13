@@ -5,34 +5,31 @@
 #include <cereal/types/array.hpp>
 #include <cereal/types/vector.hpp>
 
+#include <satemu/core/hash.hpp>
+
 #include <fmt/format.h>
 
 #include <string>
+
+CEREAL_CLASS_VERSION(satemu::state::v1::State, 1);
 
 namespace satemu::state {
 
 inline namespace v1 {
 
-    std::string ToString(const Hash128 &hash) {
-        fmt::memory_buffer buf{};
-        auto inserter = std::back_inserter(buf);
-        for (uint8 b : hash) {
-            fmt::format_to(inserter, "{:02X}", b);
-        }
-        return fmt::to_string(buf);
-    }
-
     template <class Archive>
-    void serialize(Archive &ar, State &s) {
-        ar(s.scheduler);
-        ar(s.system);
-        ar(s.msh2);
-        ar(s.ssh2);
-        ar(s.scu);
-        ar(s.smpc);
-        ar(s.vdp);
-        ar(s.scsp);
-        ar(s.cdblock);
+    void serialize(Archive &ar, State &s, const uint32 version) {
+        if (version == 1) {
+            ar(s.scheduler);
+            ar(s.system);
+            ar(s.msh2);
+            ar(s.ssh2);
+            ar(s.scu);
+            ar(s.smpc);
+            ar(s.vdp);
+            ar(s.scsp);
+            ar(s.cdblock);
+        }
     }
 
     template <class Archive>

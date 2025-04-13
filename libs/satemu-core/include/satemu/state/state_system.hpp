@@ -4,7 +4,7 @@
 #include <satemu/sys/clocks.hpp>
 #include <satemu/sys/memory_defs.hpp>
 
-#include <satemu/state/state_hash.hpp>
+#include <satemu/core/hash.hpp>
 
 namespace satemu::state {
 

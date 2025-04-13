@@ -1,6 +1,7 @@
 #pragma once
 
 #include <satemu/core/configuration.hpp>
+#include <satemu/core/hash.hpp>
 #include <satemu/core/scheduler.hpp>
 
 #include <satemu/state/state.hpp>
@@ -47,6 +48,9 @@ struct Saturn : sys::ISystemOperations {
 
     // Loads the specified IPL ROM image.
     void LoadIPL(std::span<uint8, sys::kIPLSize> ipl);
+
+    Hash128 GetIPLHash() const;
+    Hash128 GetDiscHash() const;
 
     // Inserts a cartridge into the cartridge slot.
     template <typename T, typename... Args>

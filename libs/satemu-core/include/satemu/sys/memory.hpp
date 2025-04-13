@@ -7,9 +7,8 @@
 
 #include <satemu/state/state_system.hpp>
 
+#include <satemu/core/hash.hpp>
 #include <satemu/core/types.hpp>
-
-#include <xxh3.h>
 
 #include <array>
 #include <iosfwd>
@@ -25,6 +24,7 @@ struct SystemMemory {
     void MapMemory(Bus &bus);
 
     void LoadIPL(std::span<uint8, kIPLSize> ipl);
+    Hash128 GetIPLHash() const;
 
     void DumpWRAMLow(std::ostream &out) const;
     void DumpWRAMHigh(std::ostream &out) const;
@@ -55,7 +55,7 @@ struct SystemMemory {
 private:
     bup::BackupMemory m_internalBackupRAM;
 
-    XXH128_hash_t m_iplHash{0, 0};
+    Hash128 m_iplHash{};
 };
 
 } // namespace satemu::sys
