@@ -66,6 +66,10 @@ add_subdirectory(imgui EXCLUDE_FROM_ALL)
 message(STATUS "==> toml++")
 add_subdirectory(tomlplusplus EXCLUDE_FROM_ALL)
 
+# xxHash - https://github.com/Cyan4973/xxHash
+message(STATUS "==> xxHash")
+add_subdirectory(xxHash EXCLUDE_FROM_ALL)
+
 # --------------------------------------------------------------------------------------------------
 # Test dependencies
 
@@ -89,6 +93,7 @@ if(MSVC)
     set_target_properties(Catch2 PROPERTIES FOLDER Vendored)
     set_target_properties(Catch2WithMain PROPERTIES FOLDER Vendored)
     set_target_properties(imgui PROPERTIES FOLDER Vendored)
+    set_target_properties(xxHash PROPERTIES FOLDER Vendored)
 endif()
 
 message(STATUS "Done adding vendored libraries")

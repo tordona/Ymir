@@ -23,3 +23,6 @@
 [submodule "vendor/tomlplusplus"]
 	path = vendor/tomlplusplus
 	url = git@github.com:marzer/tomlplusplus.git
+[submodule "vendor/xxHash/xxHash"]
+	path = vendor/xxHash/xxHash
+	url = https://github.com/Cyan4973/xxHash
