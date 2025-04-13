@@ -18,8 +18,8 @@
 
 #include <satemu/hw/hw_defs.hpp>
 
-#include <satemu/hw/scu/scu_callbacks.hpp>
-#include <satemu/hw/sh2/sh2_callbacks.hpp>
+#include <satemu/hw/scu/scu_internal_callbacks.hpp>
+#include <satemu/hw/sh2/sh2_internal_callbacks.hpp>
 
 #include <satemu/sys/bus.hpp>
 #include <satemu/sys/system_features.hpp>

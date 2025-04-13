@@ -13,10 +13,4 @@ using CBVDP1FrameComplete = util::OptionalCallback<void()>;
 // Framebuffer data is in little-endian XRGB8888 format.
 using CBFrameComplete = util::OptionalCallback<void(uint32 *fb, uint32 width, uint32 height)>;
 
-// Invoked when various interrupt signals are raised.
-using CBTriggerInterrupt = util::RequiredCallback<void()>;
-
-// Invoked when specific events occur while processing.
-using CBTriggerEvent = util::RequiredCallback<void()>;
-
 } // namespace satemu::vdp

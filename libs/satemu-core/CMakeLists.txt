@@ -23,9 +23,9 @@ add_library(satemu-core
 
     include/satemu/hw/cdblock/cdblock.hpp
     include/satemu/hw/cdblock/cdblock_buffer.hpp
-    include/satemu/hw/cdblock/cdblock_callbacks.hpp
     include/satemu/hw/cdblock/cdblock_defs.hpp
     include/satemu/hw/cdblock/cdblock_filter.hpp
+    include/satemu/hw/cdblock/cdblock_internal_callbacks.hpp
 
     include/satemu/hw/m68k/m68k.hpp
     include/satemu/hw/m68k/m68k_decode.hpp
@@ -35,20 +35,20 @@ add_library(satemu-core
     include/satemu/hw/scsp/scsp_callbacks.hpp
     include/satemu/hw/scsp/scsp_defs.hpp
     include/satemu/hw/scsp/scsp_dsp.hpp
+    include/satemu/hw/scsp/scsp_internal_callbacks.hpp
     include/satemu/hw/scsp/scsp_slot.hpp
     include/satemu/hw/scsp/scsp_timer.hpp
 
     include/satemu/hw/scu/scu.hpp
-    include/satemu/hw/scu/scu_callbacks.hpp
     include/satemu/hw/scu/scu_defs.hpp
     include/satemu/hw/scu/scu_dma.hpp
     include/satemu/hw/scu/scu_dsp.hpp
     include/satemu/hw/scu/scu_dsp_disasm.hpp
+    include/satemu/hw/scu/scu_internal_callbacks.hpp
 
     include/satemu/hw/sh2/sh2.hpp
     include/satemu/hw/sh2/sh2_bsc.hpp
     include/satemu/hw/sh2/sh2_cache.hpp
-    include/satemu/hw/sh2/sh2_callbacks.hpp
     include/satemu/hw/sh2/sh2_decode.hpp
     include/satemu/hw/sh2/sh2_disasm.hpp
     include/satemu/hw/sh2/sh2_divu.hpp
@@ -56,6 +56,7 @@ add_library(satemu-core
     include/satemu/hw/sh2/sh2_excpt.hpp
     include/satemu/hw/sh2/sh2_frt.hpp
     include/satemu/hw/sh2/sh2_intc.hpp
+    include/satemu/hw/sh2/sh2_internal_callbacks.hpp
     include/satemu/hw/sh2/sh2_power.hpp
     include/satemu/hw/sh2/sh2_regs.hpp
     include/satemu/hw/sh2/sh2_sci.hpp
@@ -64,7 +65,7 @@ add_library(satemu-core
 
     include/satemu/hw/smpc/rtc.hpp
     include/satemu/hw/smpc/smpc.hpp
-    include/satemu/hw/smpc/smpc_callbacks.hpp
+    include/satemu/hw/smpc/smpc_internal_callbacks.hpp
     
     include/satemu/hw/smpc/peripheral/peripheral_base.hpp
     include/satemu/hw/smpc/peripheral/peripheral_defs.hpp
@@ -75,6 +76,7 @@ add_library(satemu-core
     include/satemu/hw/vdp/vdp.hpp
     include/satemu/hw/vdp/vdp_callbacks.hpp
     include/satemu/hw/vdp/vdp_defs.hpp
+    include/satemu/hw/vdp/vdp_internal_callbacks.hpp
     include/satemu/hw/vdp/vdp1_defs.hpp
     include/satemu/hw/vdp/vdp1_regs.hpp
     include/satemu/hw/vdp/vdp2_defs.hpp
@@ -124,8 +126,8 @@ add_library(satemu-core
     include/satemu/sys/saturn.hpp
     include/satemu/sys/sys_ops.hpp
     include/satemu/sys/system.hpp
-    include/satemu/sys/system_callbacks.hpp
     include/satemu/sys/system_features.hpp
+    include/satemu/sys/system_internal_callbacks.hpp
     
     include/satemu/util/arith_ops.hpp
     include/satemu/util/backup_datetime.hpp

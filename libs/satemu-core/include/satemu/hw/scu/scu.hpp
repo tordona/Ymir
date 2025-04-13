@@ -12,11 +12,12 @@
 
 #include <satemu/hw/hw_defs.hpp>
 
-#include <satemu/hw/cdblock/cdblock_callbacks.hpp>
-#include <satemu/hw/scsp/scsp_callbacks.hpp>
-#include <satemu/hw/sh2/sh2_callbacks.hpp>
-#include <satemu/hw/smpc/smpc_callbacks.hpp>
-#include <satemu/hw/vdp/vdp_callbacks.hpp>
+#include <satemu/hw/cdblock/cdblock_internal_callbacks.hpp>
+#include <satemu/hw/scsp/scsp_internal_callbacks.hpp>
+#include <satemu/hw/scu/scu_internal_callbacks.hpp>
+#include <satemu/hw/sh2/sh2_internal_callbacks.hpp>
+#include <satemu/hw/smpc/smpc_internal_callbacks.hpp>
+#include <satemu/hw/vdp/vdp_internal_callbacks.hpp>
 
 #include <satemu/hw/cart/cart_slot.hpp>
 

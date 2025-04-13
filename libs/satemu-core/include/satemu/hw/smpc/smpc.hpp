@@ -2,7 +2,7 @@
 
 #include "peripheral/peripheral_port.hpp"
 #include "rtc.hpp"
-#include "smpc_callbacks.hpp"
+#include "smpc_internal_callbacks.hpp"
 
 #include <satemu/core/scheduler.hpp>
 #include <satemu/sys/bus.hpp>
@@ -10,8 +10,8 @@
 
 #include <satemu/state/state_smpc.hpp>
 
-#include <satemu/hw/vdp/vdp_callbacks.hpp>
-#include <satemu/sys/system_callbacks.hpp>
+#include <satemu/hw/vdp/vdp_internal_callbacks.hpp>
+#include <satemu/sys/system_internal_callbacks.hpp>
 
 #include <array>
 #include <vector>

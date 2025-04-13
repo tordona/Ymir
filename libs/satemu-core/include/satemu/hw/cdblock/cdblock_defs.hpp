@@ -2,8 +2,6 @@
 
 #include <satemu/core/types.hpp>
 
-#include "cdblock_callbacks.hpp"
-
 namespace satemu::cdblock {
 
 // HIRQ flags

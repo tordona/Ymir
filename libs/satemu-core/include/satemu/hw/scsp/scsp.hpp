@@ -5,6 +5,9 @@
 #include "scsp_slot.hpp"
 #include "scsp_timer.hpp"
 
+#include "scsp_callbacks.hpp"
+#include "scsp_internal_callbacks.hpp"
+
 #include <satemu/core/configuration.hpp>
 #include <satemu/core/scheduler.hpp>
 #include <satemu/sys/bus.hpp>
@@ -14,8 +17,8 @@
 
 #include <satemu/hw/hw_defs.hpp>
 
-#include <satemu/hw/cdblock/cdblock_callbacks.hpp>
-#include <satemu/sys/system_callbacks.hpp>
+#include <satemu/hw/cdblock/cdblock_internal_callbacks.hpp>
+#include <satemu/sys/system_internal_callbacks.hpp>
 
 #include <satemu/hw/m68k/m68k.hpp>
 #include <satemu/hw/m68k/m68k_defs.hpp>

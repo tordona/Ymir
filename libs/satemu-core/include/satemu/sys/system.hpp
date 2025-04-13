@@ -2,7 +2,7 @@
 
 #include "clocks.hpp"
 
-#include "system_callbacks.hpp"
+#include "system_internal_callbacks.hpp"
 
 #include <satemu/state/state_system.hpp>
 

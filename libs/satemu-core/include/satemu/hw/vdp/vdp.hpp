@@ -5,6 +5,9 @@
 #include "vdp1_regs.hpp"
 #include "vdp2_regs.hpp"
 
+#include "vdp_callbacks.hpp"
+#include "vdp_internal_callbacks.hpp"
+
 #include <satemu/core/configuration.hpp>
 #include <satemu/core/scheduler.hpp>
 #include <satemu/sys/bus.hpp>

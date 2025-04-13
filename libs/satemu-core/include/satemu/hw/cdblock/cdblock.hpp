@@ -9,7 +9,8 @@
 #include <satemu/sys/bus.hpp>
 #include <satemu/sys/clocks.hpp>
 
-#include <satemu/sys/system_callbacks.hpp>
+#include <satemu/hw/cdblock/cdblock_internal_callbacks.hpp>
+#include <satemu/sys/system_internal_callbacks.hpp>
 
 #include <satemu/state/state_cdblock.hpp>
 

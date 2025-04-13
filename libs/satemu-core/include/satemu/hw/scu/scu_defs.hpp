@@ -1,7 +1,5 @@
 #pragma once
 
-#include "scu_callbacks.hpp"
-
 #include <satemu/core/types.hpp>
 
 #include <satemu/util/data_ops.hpp>

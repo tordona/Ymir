@@ -1,7 +1,5 @@
 #pragma once
 
-#include "scsp_callbacks.hpp"
-
 #include <satemu/core/types.hpp>
 
 namespace satemu::scsp {
