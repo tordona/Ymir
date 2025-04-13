@@ -212,6 +212,7 @@
 #include <imgui.h>
 
 #include <cereal/archives/binary.hpp>
+#include <cereal/archives/portable_binary.hpp>
 
 #include <cmrc/cmrc.hpp>
 
@@ -1968,7 +1969,7 @@ void App::LoadSaveStates() {
         if (in) {
             m_context.saveStates[slot] = std::make_unique<satemu::state::State>();
             auto &state = *m_context.saveStates[slot];
-            cereal::BinaryInputArchive archive{in};
+            cereal::PortableBinaryInputArchive archive{in};
             archive(state);
         } else {
             m_context.saveStates[slot].reset();
@@ -1993,7 +1994,7 @@ void App::PersistSaveState(uint32 slot) {
         // Write save state
         auto statePath = gameStatesPath / fmt::format("{}.savestate", slot);
         std::ofstream out{statePath, std::ios::binary};
-        cereal::BinaryOutputArchive archive{out};
+        cereal::PortableBinaryOutputArchive archive{out};
         archive(state);
 
         // Write metadata
