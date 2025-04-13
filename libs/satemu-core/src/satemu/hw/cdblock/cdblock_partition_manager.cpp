@@ -102,4 +102,49 @@ uint32 CDBlock::PartitionManager::CalculateSize(uint8 partitionIndex, uint32 sta
     return size;
 }
 
+void CDBlock::PartitionManager::SaveState(state::CDBlockState &state) const {
+    size_t bufferIndex = 0;
+    for (size_t i = 0; i < m_partitions.size(); i++) {
+        for (const auto &buffer : m_partitions[i]) {
+            state.buffers[bufferIndex].data = buffer.data;
+            state.buffers[bufferIndex].size = buffer.size;
+            state.buffers[bufferIndex].frameAddress = buffer.frameAddress;
+            state.buffers[bufferIndex].fileNum = buffer.subheader.fileNum;
+            state.buffers[bufferIndex].chanNum = buffer.subheader.chanNum;
+            state.buffers[bufferIndex].submode = buffer.subheader.submode;
+            state.buffers[bufferIndex].codingInfo = buffer.subheader.codingInfo;
+            state.buffers[bufferIndex].partitionIndex = i;
+            bufferIndex++;
+        }
+    }
+}
+
+bool CDBlock::PartitionManager::ValidateState(const state::CDBlockState &state) const {
+    for (const auto &buffer : state.buffers) {
+        if (buffer.partitionIndex >= kNumPartitions && buffer.partitionIndex != 0xFF) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void CDBlock::PartitionManager::LoadState(const state::CDBlockState &state) {
+    for (auto &partition : m_partitions) {
+        partition.clear();
+    }
+
+    for (const auto &buffer : state.buffers) {
+        if (buffer.partitionIndex < kNumPartitions) {
+            auto &partBuffer = m_partitions[buffer.partitionIndex].emplace_back();
+            partBuffer.data = buffer.data;
+            partBuffer.size = buffer.size;
+            partBuffer.frameAddress = buffer.frameAddress;
+            partBuffer.subheader.fileNum = buffer.fileNum;
+            partBuffer.subheader.chanNum = buffer.chanNum;
+            partBuffer.subheader.submode = buffer.submode;
+            partBuffer.subheader.codingInfo = buffer.codingInfo;
+        }
+    }
+}
+
 } // namespace satemu::cdblock

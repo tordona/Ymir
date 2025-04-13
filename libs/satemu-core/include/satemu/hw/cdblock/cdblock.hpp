@@ -270,6 +270,13 @@ private:
 
         uint32 CalculateSize(uint8 partitionIndex, uint32 start, uint32 end) const;
 
+        // -------------------------------------------------------------------------
+        // Save states
+
+        void SaveState(state::CDBlockState &state) const;
+        bool ValidateState(const state::CDBlockState &state) const;
+        void LoadState(const state::CDBlockState &state);
+
     private:
         std::array<std::deque<Buffer>, kNumPartitions> m_partitions;
 

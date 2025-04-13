@@ -211,16 +211,224 @@ bool CDBlock::IsTrayOpen() const {
 }
 
 void CDBlock::SaveState(state::CDBlockState &state) const {
-    // TODO
+    state.CR = m_CR;
+    state.HIRQ = m_HIRQ;
+    state.HIRQMASK = m_HIRQMASK;
+
+    state.status.statusCode = m_status.statusCode;
+    state.status.frameAddress = m_status.frameAddress;
+    state.status.flags = m_status.flags;
+    state.status.repeatCount = m_status.repeatCount;
+    state.status.controlADR = m_status.controlADR;
+    state.status.track = m_status.track;
+    state.status.index = m_status.index;
+
+    state.readyForPeriodicReports = m_readyForPeriodicReports;
+
+    state.currDriveCycles = m_currDriveCycles;
+    state.targetDriveCycles = m_targetDriveCycles;
+
+    state.playStartParam = m_playStartParam;
+    state.playEndParam = m_playEndParam;
+    state.playRepeatParam = m_playRepeatParam;
+    state.scanDirection = m_scanDirection;
+    state.scanCounter = m_scanCounter;
+
+    state.playStartPos = m_playStartPos;
+    state.playEndPos = m_playEndPos;
+    state.playMaxRepeat = m_playMaxRepeat;
+    state.playFile = m_playFile;
+    state.bufferFullPause = m_bufferFullPause;
+
+    state.readSpeed = m_readSpeed;
+
+    state.discAuthStatus = m_discAuthStatus;
+
+    state.mpegAuthStatus = m_mpegAuthStatus;
+
+    switch (m_xferType) {
+    case TransferType::None: state.xferType = state::CDBlockState::TransferType::None; break;
+    case TransferType::TOC: state.xferType = state::CDBlockState::TransferType::TOC; break;
+    case TransferType::GetSector: state.xferType = state::CDBlockState::TransferType::GetSector; break;
+    case TransferType::GetThenDeleteSector:
+        state.xferType = state::CDBlockState::TransferType::GetThenDeleteSector;
+        break;
+    case TransferType::FileInfo: state.xferType = state::CDBlockState::TransferType::FileInfo; break;
+    case TransferType::Subcode: state.xferType = state::CDBlockState::TransferType::Subcode; break;
+    }
+
+    state.xferPos = m_xferPos;
+    state.xferLength = m_xferLength;
+    state.xferCount = m_xferCount;
+
+    state.xferSectorPos = m_xferSectorPos;
+    state.xferSectorEnd = m_xferSectorEnd;
+    state.xferPartition = m_xferPartition;
+
+    state.xferCurrFileID = m_xferCurrFileID;
+
+    state.xferSubcodeBuffer = m_xferSubcodeBuffer;
+    state.xferSubcodeFrameAddress = m_xferSubcodeFrameAddress;
+    state.xferSubcodeGroup = m_xferSubcodeGroup;
+
+    state.xferExtraCount = m_xferExtraCount;
+
+    for (auto &buffer : state.buffers) {
+        buffer.data.fill(0);
+        buffer.size = 0;
+        buffer.frameAddress = 0;
+        buffer.fileNum = 0;
+        buffer.chanNum = 0;
+        buffer.submode = 0;
+        buffer.codingInfo = 0;
+        buffer.partitionIndex = 0xFF;
+    }
+    state.scratchBuffer.data = m_scratchBuffer.data;
+    state.scratchBuffer.size = m_scratchBuffer.size;
+    state.scratchBuffer.frameAddress = m_scratchBuffer.frameAddress;
+    state.scratchBuffer.fileNum = m_scratchBuffer.subheader.fileNum;
+    state.scratchBuffer.chanNum = m_scratchBuffer.subheader.chanNum;
+    state.scratchBuffer.submode = m_scratchBuffer.subheader.submode;
+    state.scratchBuffer.codingInfo = m_scratchBuffer.subheader.codingInfo;
+
+    m_partitionManager.SaveState(state);
+
+    for (size_t i = 0; i < kNumFilters; i++) {
+        state.filters[i].startFrameAddress = m_filters[i].startFrameAddress;
+        state.filters[i].frameAddressCount = m_filters[i].frameAddressCount;
+
+        state.filters[i].mode = m_filters[i].mode;
+
+        state.filters[i].fileNum = m_filters[i].fileNum;
+        state.filters[i].chanNum = m_filters[i].chanNum;
+
+        state.filters[i].submodeMask = m_filters[i].submodeMask;
+        state.filters[i].submodeValue = m_filters[i].submodeValue;
+
+        state.filters[i].codingInfoMask = m_filters[i].codingInfoMask;
+        state.filters[i].codingInfoValue = m_filters[i].codingInfoValue;
+
+        state.filters[i].trueOutput = m_filters[i].trueOutput;
+        state.filters[i].falseOutput = m_filters[i].falseOutput;
+    }
+
+    state.cdDeviceConnection = m_cdDeviceConnection;
+    state.lastCDWritePartition = m_lastCDWritePartition;
+
+    state.calculatedPartitionSize = m_calculatedPartitionSize;
+
+    state.getSectorLength = m_getSectorLength;
+    state.putSectorLength = m_putSectorLength;
+
+    state.processingCommand = m_processingCommand;
 }
 
 bool CDBlock::ValidateState(const state::CDBlockState &state) const {
-    // TODO
+    if (!m_partitionManager.ValidateState(state)) {
+        return false;
+    }
     return true;
 }
 
 void CDBlock::LoadState(const state::CDBlockState &state) {
-    // TODO
+    m_CR = state.CR;
+    m_HIRQ = state.HIRQ;
+    m_HIRQMASK = state.HIRQMASK;
+
+    m_status.statusCode = state.status.statusCode;
+    m_status.frameAddress = state.status.frameAddress;
+    m_status.flags = state.status.flags;
+    m_status.repeatCount = state.status.repeatCount;
+    m_status.controlADR = state.status.controlADR;
+    m_status.track = state.status.track;
+    m_status.index = state.status.index;
+
+    m_readyForPeriodicReports = state.readyForPeriodicReports;
+
+    m_currDriveCycles = state.currDriveCycles;
+    m_targetDriveCycles = state.targetDriveCycles;
+
+    m_playStartParam = state.playStartParam;
+    m_playEndParam = state.playEndParam;
+    m_playRepeatParam = state.playRepeatParam;
+    m_scanDirection = state.scanDirection;
+    m_scanCounter = state.scanCounter;
+
+    m_playStartPos = state.playStartPos;
+    m_playEndPos = state.playEndPos;
+    m_playMaxRepeat = state.playMaxRepeat;
+    m_playFile = state.playFile;
+    m_bufferFullPause = state.bufferFullPause;
+
+    m_readSpeed = state.readSpeed;
+
+    m_discAuthStatus = state.discAuthStatus;
+
+    m_mpegAuthStatus = state.mpegAuthStatus;
+
+    switch (state.xferType) {
+    case state::CDBlockState::TransferType::None: m_xferType = TransferType::None; break;
+    case state::CDBlockState::TransferType::TOC: m_xferType = TransferType::TOC; break;
+    case state::CDBlockState::TransferType::GetSector: m_xferType = TransferType::GetSector; break;
+    case state::CDBlockState::TransferType::GetThenDeleteSector: m_xferType = TransferType::GetThenDeleteSector; break;
+    case state::CDBlockState::TransferType::FileInfo: m_xferType = TransferType::FileInfo; break;
+    case state::CDBlockState::TransferType::Subcode: m_xferType = TransferType::Subcode; break;
+    }
+
+    m_xferPos = state.xferPos;
+    m_xferLength = state.xferLength;
+    m_xferCount = state.xferCount;
+
+    m_xferSectorPos = state.xferSectorPos;
+    m_xferSectorEnd = state.xferSectorEnd;
+    m_xferPartition = state.xferPartition;
+
+    m_xferCurrFileID = state.xferCurrFileID;
+
+    m_xferSubcodeBuffer = state.xferSubcodeBuffer;
+    m_xferSubcodeFrameAddress = state.xferSubcodeFrameAddress;
+    m_xferSubcodeGroup = state.xferSubcodeGroup;
+
+    m_xferExtraCount = state.xferExtraCount;
+
+    m_scratchBuffer.data = state.scratchBuffer.data;
+    m_scratchBuffer.size = state.scratchBuffer.size;
+    m_scratchBuffer.frameAddress = state.scratchBuffer.frameAddress;
+    m_scratchBuffer.subheader.fileNum = state.scratchBuffer.fileNum;
+    m_scratchBuffer.subheader.chanNum = state.scratchBuffer.chanNum;
+    m_scratchBuffer.subheader.submode = state.scratchBuffer.submode;
+    m_scratchBuffer.subheader.codingInfo = state.scratchBuffer.codingInfo;
+
+    m_partitionManager.LoadState(state);
+
+    for (size_t i = 0; i < kNumFilters; i++) {
+        m_filters[i].startFrameAddress = state.filters[i].startFrameAddress;
+        m_filters[i].frameAddressCount = state.filters[i].frameAddressCount;
+
+        m_filters[i].mode = state.filters[i].mode;
+
+        m_filters[i].fileNum = state.filters[i].fileNum;
+        m_filters[i].chanNum = state.filters[i].chanNum;
+
+        m_filters[i].submodeMask = state.filters[i].submodeMask;
+        m_filters[i].submodeValue = state.filters[i].submodeValue;
+
+        m_filters[i].codingInfoMask = state.filters[i].codingInfoMask;
+        m_filters[i].codingInfoValue = state.filters[i].codingInfoValue;
+
+        m_filters[i].trueOutput = state.filters[i].trueOutput;
+        m_filters[i].falseOutput = state.filters[i].falseOutput;
+    }
+
+    m_cdDeviceConnection = state.cdDeviceConnection;
+    m_lastCDWritePartition = state.lastCDWritePartition;
+
+    m_calculatedPartitionSize = state.calculatedPartitionSize;
+
+    m_getSectorLength = state.getSectorLength;
+    m_putSectorLength = state.putSectorLength;
+
+    m_processingCommand = state.processingCommand;
 }
 
 void CDBlock::OnDriveStateUpdateEvent(core::EventContext &eventContext, void *userContext) {
