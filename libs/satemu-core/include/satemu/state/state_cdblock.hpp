@@ -49,7 +49,6 @@ inline namespace v1 {
         uint8 readSpeed;
 
         uint8 discAuthStatus;
-
         uint8 mpegAuthStatus;
 
         enum class TransferType { None, TOC, GetSector, GetThenDeleteSector, FileInfo, Subcode };

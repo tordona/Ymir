@@ -63,4 +63,8 @@ inline GUIEvent ShowError(std::string message) {
     return {.type = GUIEvent::Type::ShowErrorMessage, .value = message};
 }
 
+inline GUIEvent StateSaved(uint32 slot) {
+    return {.type = GUIEvent::Type::StateSaved, .value = slot};
+}
+
 } // namespace app::events::gui

@@ -64,6 +64,10 @@ struct GUIEvent {
         RebindAction,
 
         ShowErrorMessage,
+
+        // Emulator notifications
+
+        StateSaved, // A save state slot was just saved
     };
 
     Type type;

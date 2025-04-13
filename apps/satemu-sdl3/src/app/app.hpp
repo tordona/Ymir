@@ -72,6 +72,8 @@ private:
     void RebindInputs();
     void RebindAction(input::ActionID action);
 
+    void PersistSaveState(size_t slot);
+
     void OpenLoadDiscDialog();
     void ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, int filter);
     bool LoadDiscImage(std::filesystem::path path);
@@ -88,13 +90,12 @@ private:
                                  bool allowMany, const char *location, void *userdata,
                                  SDL_DialogFileCallback callback) const;
 
-    void OpenPeripheralBindsEditor(const PeripheralBindsParams &params);
-
     // -----------------------------------------------------------------------------------------------------------------
     // Windows
 
     void DrawWindows();
     void OpenMemoryViewer();
+    void OpenPeripheralBindsEditor(const PeripheralBindsParams &params);
 
     ui::SystemStateWindow m_systemStateWindow;
     ui::BackupMemoryManagerWindow m_bupMgrWindow;

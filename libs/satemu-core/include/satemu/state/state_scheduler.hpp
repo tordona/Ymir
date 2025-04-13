@@ -9,7 +9,7 @@ namespace satemu::state {
 inline namespace v1 {
 
     struct SchedulerState {
-        struct Event {
+        struct EventState {
             uint64 target;
             uint64 countNumerator;
             uint64 countDenominator;
@@ -17,7 +17,7 @@ inline namespace v1 {
         };
 
         uint64 currCount;
-        std::array<Event, core::kNumScheduledEvents> events;
+        std::array<EventState, core::kNumScheduledEvents> events;
     };
 
 } // namespace v1

@@ -264,7 +264,7 @@ EmuEvent EnableThreadedSCSP(bool enable) {
     return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.audio.threadedSCSP = enable; });
 }
 
-EmuEvent LoadState(size_t slot) {
+EmuEvent LoadState(uint32 slot) {
     return RunFunction([=](SharedContext &ctx) {
         if (slot < ctx.saveStates.size() && ctx.saveStates[slot]) {
             if (!ctx.saturn.LoadState(*ctx.saveStates[slot])) {
@@ -274,13 +274,17 @@ EmuEvent LoadState(size_t slot) {
     });
 }
 
-EmuEvent SaveState(size_t slot) {
+EmuEvent SaveState(uint32 slot) {
     return RunFunction([=](SharedContext &ctx) {
         if (slot < ctx.saveStates.size()) {
-            if (!ctx.saveStates[slot]) {
-                ctx.saveStates[slot] = std::make_unique<state::State>();
+            {
+                std::unique_lock lock{ctx.locks.saveStates[slot]};
+                if (!ctx.saveStates[slot]) {
+                    ctx.saveStates[slot] = std::make_unique<state::State>();
+                }
+                ctx.saturn.SaveState(*ctx.saveStates[slot]);
             }
-            ctx.saturn.SaveState(*ctx.saveStates[slot]);
+            ctx.EnqueueEvent(events::gui::StateSaved(slot));
         }
     });
 }

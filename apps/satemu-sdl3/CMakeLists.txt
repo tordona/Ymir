@@ -177,6 +177,8 @@ add_executable(satemu-sdl3
     src/app/ui/windows/debug/sh2_window_base.hpp
     src/app/ui/windows/debug/sh2_window_set.hpp
 
+    src/serdes/state_v1_cereal.hpp
+
     src/util/file_loader.cpp
     src/util/file_loader.hpp
     src/util/ipl_rom_loader.cpp
@@ -198,6 +200,7 @@ target_link_libraries(satemu-sdl3 PRIVATE
     cxxopts
     imgui::imgui
     tomlplusplus::tomlplusplus
+    cereal::cereal
 )
 target_compile_features(satemu-sdl3 PUBLIC cxx_std_20)
 

@@ -190,6 +190,8 @@
 #include <app/ui/widgets/cartridge_widgets.hpp>
 #include <app/ui/widgets/system_widgets.hpp>
 
+#include <serdes/state_v1_cereal.hpp>
+
 #include <util/ipl_rom_loader.hpp>
 
 #include <SDL3/SDL.h>
@@ -199,6 +201,8 @@
 #include <backends/imgui_impl_sdlrenderer3.h>
 
 #include <imgui.h>
+
+#include <cereal/archives/binary.hpp>
 
 #include <cmrc/cmrc.hpp>
 
@@ -1360,6 +1364,8 @@ void App::RunEmulator() {
             case EvtType::RebindAction: RebindAction(std::get<input::ActionID>(evt.value)); break;
 
             case EvtType::ShowErrorMessage: OpenSimpleErrorModal(std::get<std::string>(evt.value)); break;
+
+            case EvtType::StateSaved: PersistSaveState(std::get<uint32>(evt.value)); break;
             }
         }
 
@@ -1929,6 +1935,26 @@ void App::RebindAction(input::ActionID action) {
     m_context.settings.RebindAction(action);
 }
 
+void App::PersistSaveState(size_t slot) {
+    if (slot >= m_context.saveStates.size()) {
+        return;
+    }
+
+    std::unique_lock lock{m_context.locks.saveStates[slot]};
+    if (m_context.saveStates[slot]) {
+        auto &state = *m_context.saveStates[slot];
+
+        auto basePath = m_context.profile.GetPath(StandardPath::SaveStates);
+        auto gameStatesPath = basePath / satemu::state::ToString(state.cdblock.discHash);
+        auto statePath = gameStatesPath / fmt::format("{}.savestate", slot);
+        std::filesystem::create_directories(gameStatesPath);
+
+        std::ofstream out{statePath, std::ios::binary};
+        cereal::BinaryOutputArchive archive{out};
+        archive(state);
+    }
+}
+
 void App::OpenLoadDiscDialog() {
     SDL_ShowFileDialogWithProperties(
         SDL_FILEDIALOG_OPENFILE,
@@ -2027,11 +2053,6 @@ void App::InvokeGenericFileDialog(SDL_FileDialogType type, const char *title, vo
     SDL_ShowFileDialogWithProperties(type, callback, userdata, props);
 }
 
-void App::OpenPeripheralBindsEditor(const PeripheralBindsParams &params) {
-    m_periphBindsWindow.Open(params.portIndex, params.slotIndex);
-    m_periphBindsWindow.RequestFocus();
-}
-
 void App::DrawWindows() {
     m_systemStateWindow.Display();
     m_bupMgrWindow.Display();
@@ -2070,15 +2091,20 @@ void App::OpenMemoryViewer() {
     memView.RequestFocus();*/
 }
 
-static constexpr const char *kErrorModalTitle = "Error##generic_modal";
+void App::OpenPeripheralBindsEditor(const PeripheralBindsParams &params) {
+    m_periphBindsWindow.Open(params.portIndex, params.slotIndex);
+    m_periphBindsWindow.RequestFocus();
+}
 
 void App::DrawErrorModal() {
+    static constexpr const char *kTitle = "Error##generic_modal";
+
     if (m_openErrorModal) {
         m_openErrorModal = false;
-        ImGui::OpenPopup(kErrorModalTitle);
+        ImGui::OpenPopup(kTitle);
     }
 
-    if (ImGui::BeginPopupModal(kErrorModalTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::PushTextWrapPos(450.0f);
         if (m_errorModalContents) {
             m_errorModalContents();
