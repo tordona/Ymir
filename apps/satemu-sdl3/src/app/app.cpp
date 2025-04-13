@@ -1963,12 +1963,19 @@ void App::PersistSaveState(uint32 slot) {
     if (m_context.saveStates[slot]) {
         auto &state = *m_context.saveStates[slot];
 
+        // Create directory for this game's save states
         auto basePath = m_context.profile.GetPath(StandardPath::SaveStates);
         auto gameStatesPath = basePath / satemu::ToString(state.cdblock.discHash);
-        auto statePath = gameStatesPath / fmt::format("{}.savestate", slot);
         std::filesystem::create_directories(gameStatesPath);
-        auto gameMetaPath = gameStatesPath / "meta.txt";
 
+        // Write save state
+        auto statePath = gameStatesPath / fmt::format("{}.savestate", slot);
+        std::ofstream out{statePath, std::ios::binary};
+        cereal::BinaryOutputArchive archive{out};
+        archive(state);
+
+        // Write metadata
+        auto gameMetaPath = gameStatesPath / "meta.txt";
         if (!std::filesystem::is_regular_file(gameMetaPath)) {
             std::ofstream out{gameMetaPath};
             if (out) {
@@ -2010,10 +2017,6 @@ void App::PersistSaveState(uint32 slot) {
                 fmt::format_to(iter, "\n");
             }
         }
-
-        std::ofstream out{statePath, std::ios::binary};
-        cereal::BinaryOutputArchive archive{out};
-        archive(state);
     }
 }
 
