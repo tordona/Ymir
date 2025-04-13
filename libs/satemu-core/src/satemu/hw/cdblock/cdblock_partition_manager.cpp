@@ -132,6 +132,7 @@ void CDBlock::PartitionManager::LoadState(const state::CDBlockState &state) {
     for (auto &partition : m_partitions) {
         partition.clear();
     }
+    m_freeBuffers = kNumBuffers;
 
     for (const auto &buffer : state.buffers) {
         if (buffer.partitionIndex < kNumPartitions) {
@@ -143,6 +144,7 @@ void CDBlock::PartitionManager::LoadState(const state::CDBlockState &state) {
             partBuffer.subheader.chanNum = buffer.chanNum;
             partBuffer.subheader.submode = buffer.submode;
             partBuffer.subheader.codingInfo = buffer.codingInfo;
+            --m_freeBuffers;
         }
     }
 }
