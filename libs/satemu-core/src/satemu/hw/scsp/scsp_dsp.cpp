@@ -246,6 +246,86 @@ void DSP::DumpRegs(std::ostream &out) const {
     write(m_readWriteAddr);
 }
 
+void DSP::SaveState(state::SCSPDSP &state) const {
+    for (size_t i = 0; i < program.size(); i++) {
+        state.MPRO[i] = program[i].u64;
+    }
+    state.TEMP = tempMem;
+    state.MEMS = soundMem;
+    state.COEF = coeffs;
+    state.MADRS = addrs;
+    state.MIXS = mixStack;
+    state.EFREG = effectOut;
+    state.EXTS = audioInOut;
+
+    state.RBP = ringBufferLeadAddress;
+    state.RBL = ringBufferLength;
+
+    state.INPUTS = INPUTS;
+
+    state.SFT_REG = SFT_REG;
+    state.FRC_REG = FRC_REG;
+    state.Y_REG = Y_REG;
+    state.ADRS_REG = ADRS_REG;
+
+    state.MDEC_CT = MDEC_CT;
+
+    state.readPending = m_readPending;
+    state.readNOFL = m_readNOFL;
+    state.readValue = m_readValue;
+
+    state.writePending = m_writePending;
+    state.writeValue = m_writeValue;
+
+    state.readWriteAddr = m_readWriteAddr;
+}
+
+bool DSP::ValidateState(const state::SCSPDSP &state) const {
+    return true;
+}
+
+void DSP::LoadState(const state::SCSPDSP &state) {
+    m_programLength = 0;
+    for (size_t i = 0; i < program.size(); i++) {
+        program[i].u64 = state.MPRO[i];
+        if (program[i].u64 != 0) {
+            m_programLength = i;
+        }
+    }
+    if (m_programLength > 0 && m_programLength < program.size() && program[m_programLength - 1].MWT) {
+        ++m_programLength;
+    }
+
+    tempMem = state.TEMP;
+    soundMem = state.MEMS;
+    coeffs = state.COEF;
+    addrs = state.MADRS;
+    mixStack = state.MIXS;
+    effectOut = state.EFREG;
+    audioInOut = state.EXTS;
+
+    ringBufferLeadAddress = state.RBP;
+    ringBufferLength = state.RBL;
+
+    INPUTS = state.INPUTS;
+
+    SFT_REG = state.SFT_REG;
+    FRC_REG = state.FRC_REG;
+    Y_REG = state.Y_REG;
+    ADRS_REG = state.ADRS_REG;
+
+    MDEC_CT = state.MDEC_CT;
+
+    m_readPending = state.readPending;
+    m_readNOFL = state.readNOFL;
+    m_readValue = state.readValue;
+
+    m_writePending = state.writePending;
+    m_writeValue = state.writeValue;
+
+    m_readWriteAddr = state.readWriteAddr;
+}
+
 uint16 DSP::ReadWRAM() const {
     const uint32 address = m_readWriteAddr * sizeof(uint16);
     if (address < 0x80000) {

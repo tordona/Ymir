@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/state/state_scsp_dsp.hpp>
+
 #include <satemu/core/types.hpp>
 
 #include <array>
@@ -71,6 +73,13 @@ public:
 
     uint8 ringBufferLeadAddress; // (W) RBP - DSP Ring Buffer Lead Address
     uint8 ringBufferLength;      // (W) RBL - DSP Ring Buffer Length
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SCSPDSP &state) const;
+    bool ValidateState(const state::SCSPDSP &state) const;
+    void LoadState(const state::SCSPDSP &state);
 
 private:
     // -------------------------------------------------------------------------

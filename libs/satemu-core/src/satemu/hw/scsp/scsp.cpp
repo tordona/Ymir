@@ -210,16 +210,132 @@ void SCSP::SetCPUEnabled(bool enabled) {
 }
 
 void SCSP::SaveState(state::SCSPState &state) const {
-    // TODO
+    state.WRAM = m_WRAM;
+    state.cddaBuffer = m_cddaBuffer;
+    state.cddaReadPos = m_cddaReadPos;
+    state.cddaWritePos = m_cddaWritePos;
+    state.cddaReady = m_cddaReady;
+
+    m_m68k.SaveState(state.m68k);
+    state.m68kSpilloverCycles = m_m68kSpilloverCycles;
+    state.m68kEnabled = m_m68kEnabled;
+
+    for (size_t i = 0; i < 32; i++) {
+        m_slots[i].SaveState(state.slots[i]);
+    }
+
+    state.MVOL = m_masterVolume;
+    state.DAC18B = m_dac18Bits;
+    state.MEM4MB = m_mem4MB;
+    state.MSLC = m_monitorSlotCall;
+
+    for (size_t i = 0; i < 3; i++) {
+        m_timers[i].SaveState(state.timers[i]);
+    }
+
+    state.MCIEB = m_scuEnabledInterrupts;
+    state.MCIPD = m_scuPendingInterrupts;
+    state.SCIEB = m_m68kEnabledInterrupts;
+    state.SCIPD = m_m68kPendingInterrupts;
+
+    state.DEXE = m_dmaExec;
+    state.DDIR = m_dmaXferToMem;
+    state.DGATE = m_dmaGate;
+    state.DMEA = m_dmaMemAddress;
+    state.DRGA = m_dmaRegAddress;
+    state.DTLG = m_dmaXferLength;
+
+    state.SOUS = m_soundStack;
+    state.soundStackIndex = m_soundStackIndex;
+
+    m_dsp.SaveState(state.dsp);
+
+    state.m68kCycles = m_m68kCycles;
+    state.sampleCycles = m_sampleCycles;
+    state.sampleCounter = m_sampleCounter;
+
+    state.egCycle = m_egCycle;
+    state.egStep = m_egStep;
+
+    state.lfsr = m_lfsr;
 }
 
 bool SCSP::ValidateState(const state::SCSPState &state) const {
-    // TODO
+    if (state.cddaReadPos >= m_cddaBuffer.size()) {
+        return false;
+    }
+    if (state.cddaWritePos >= m_cddaBuffer.size()) {
+        return false;
+    }
+    if (state.soundStackIndex >= m_soundStack.size()) {
+        return false;
+    }
+    for (size_t i = 0; i < 32; i++) {
+        if (!m_slots[i].ValidateState(state.slots[i])) {
+            return false;
+        }
+    }
+    for (size_t i = 0; i < 3; i++) {
+        if (!m_timers[i].ValidateState(state.timers[i])) {
+            return false;
+        }
+    }
+    if (!m_dsp.ValidateState(state.dsp)) {
+        return false;
+    }
+
     return true;
 }
 
 void SCSP::LoadState(const state::SCSPState &state) {
-    // TODO
+    m_WRAM = state.WRAM;
+    m_cddaBuffer = state.cddaBuffer;
+    m_cddaReadPos = state.cddaReadPos % m_cddaBuffer.size();
+    m_cddaWritePos = state.cddaWritePos % m_cddaBuffer.size();
+    m_cddaReady = state.cddaReady;
+
+    m_m68k.LoadState(state.m68k);
+    m_m68kSpilloverCycles = state.m68kSpilloverCycles;
+    m_m68kEnabled = state.m68kEnabled;
+
+    for (size_t i = 0; i < 32; i++) {
+        m_slots[i].LoadState(state.slots[i]);
+    }
+
+    m_masterVolume = state.MVOL & 0xF;
+    m_dac18Bits = state.DAC18B;
+    m_mem4MB = state.MEM4MB;
+    m_monitorSlotCall = state.MSLC & 0x1F;
+
+    for (size_t i = 0; i < 3; i++) {
+        m_timers[i].LoadState(state.timers[i]);
+    }
+
+    m_scuEnabledInterrupts = state.MCIEB & 0x7FF;
+    m_scuPendingInterrupts = state.MCIPD & 0x7FF;
+    m_m68kEnabledInterrupts = state.SCIEB & 0x7FF;
+    m_m68kPendingInterrupts = state.SCIPD & 0x7FF;
+
+    m_dmaExec = state.DEXE;
+    m_dmaXferToMem = state.DDIR;
+    m_dmaGate = state.DGATE;
+    m_dmaMemAddress = state.DMEA & 0xFFFFE;
+    m_dmaRegAddress = state.DRGA & 0xFFE;
+    m_dmaXferLength = state.DTLG & 0xFFE;
+
+    m_soundStack = state.SOUS;
+    m_soundStackIndex = state.soundStackIndex % m_soundStack.size();
+
+    m_dsp.LoadState(state.dsp);
+
+    m_m68kCycles = state.m68kCycles;
+    m_sampleCycles = state.sampleCycles;
+    m_sampleCounter = state.sampleCounter;
+
+    m_egCycle = state.egCycle;
+    m_egStep = state.egStep;
+
+    m_lfsr = state.lfsr;
 }
 
 void SCSP::OnSampleTickEvent(core::EventContext &eventContext, void *userContext) {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/state/state_scsp_slot.hpp>
+
 #include <satemu/util/inline.hpp>
 
 #include <satemu/core/types.hpp>
@@ -91,6 +93,13 @@ struct Slot {
 
     template <bool lowerByte, bool upperByte>
     void WriteReg16(uint16 value);
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SCSPSlotState &state) const;
+    bool ValidateState(const state::SCSPSlotState &state) const;
+    void LoadState(const state::SCSPSlotState &state);
 
     // -------------------------------------------------------------------------
     // Parameters
@@ -217,7 +226,7 @@ struct Slot {
 
     // --- LFO Register ---
 
-    enum class Waveform { Saw, Square, Triangle, Noise };
+    enum class Waveform : uint8 { Saw, Square, Triangle, Noise };
 
     static constexpr std::array<uint32, 32> s_lfoStepTbl = {1020, 892, 764, 636, 508, 444, 380, 316, 252, 220, 188,
                                                             156,  124, 108, 92,  76,  60,  52,  44,  36,  28,  24,
@@ -232,6 +241,7 @@ struct Slot {
     Waveform pitchLFOWaveform; // (R/W) PLFOWS - signed from 0x80 to 0x7F (zero at 0x00, starting point of saw/triangle)
 
     // --- Mixer Register ---
+
     uint8 inputMixingLevel; // (R/W) IMXL - 0 (no mix) to 7 (maximum) - into MIXS DSP stack
     uint8 inputSelect;      // (R/W) ISEL - 0 to 15 - indexes a MIXS DSP stack
     uint8 directSendLevel;  // (R/W) DISDL - 0 (no send) to 7 (maximum)

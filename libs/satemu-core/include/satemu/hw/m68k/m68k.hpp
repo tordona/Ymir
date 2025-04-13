@@ -3,6 +3,8 @@
 #include "m68k_decode.hpp"
 #include "m68k_defs.hpp"
 
+#include <satemu/state/state_m68k.hpp>
+
 #include <satemu/core/types.hpp>
 #include <satemu/hw/hw_defs.hpp>
 
@@ -33,6 +35,13 @@ public:
     uint64 Step();
 
     void SetExternalInterruptLevel(uint8 level);
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::M68KState &state) const;
+    bool ValidateState(const state::M68KState &state) const;
+    void LoadState(const state::M68KState &state);
 
 private:
     // -------------------------------------------------------------------------

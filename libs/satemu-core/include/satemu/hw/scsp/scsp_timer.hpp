@@ -1,5 +1,7 @@
 #pragma once
 
+#include <satemu/state/state_scsp_timer.hpp>
+
 #include <satemu/core/types.hpp>
 
 #include <satemu/util/bit_ops.hpp>
@@ -47,6 +49,30 @@ struct Timer {
     void WriteTxCTL(uint8 value) {
         incrementInterval = bit::extract<0, 2>(value);
         incrementMask = (1ull << incrementInterval) - 1;
+    }
+
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::SCSPTimer &state) const {
+        state.incrementInterval = incrementInterval;
+        state.reload = reload;
+
+        state.doReload = doReload;
+        state.counter = counter;
+    }
+
+    bool ValidateState(const state::SCSPTimer &state) const {
+        return true;
+    }
+
+    void LoadState(const state::SCSPTimer &state) {
+        incrementInterval = state.incrementInterval & 0x7;
+        incrementMask = (1ull << incrementInterval) - 1;
+        reload = state.reload;
+
+        doReload = state.doReload;
+        counter = state.counter;
     }
 
     // -------------------------------------------------------------------------

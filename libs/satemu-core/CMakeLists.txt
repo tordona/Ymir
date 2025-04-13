@@ -105,6 +105,9 @@ add_library(satemu-core
     include/satemu/state/state_m68k.hpp
     include/satemu/state/state_scheduler.hpp
     include/satemu/state/state_scsp.hpp
+    include/satemu/state/state_scsp_dsp.hpp
+    include/satemu/state/state_scsp_slot.hpp
+    include/satemu/state/state_scsp_timer.hpp
     include/satemu/state/state_scu.hpp
     include/satemu/state/state_sh2.hpp
     include/satemu/state/state_smpc.hpp
