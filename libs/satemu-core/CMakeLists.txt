@@ -217,6 +217,7 @@ target_link_libraries(satemu-core PUBLIC
     mio
     concurrentqueue
     xxHash::xxHash
+    cereal::cereal
 )
 
 # Build precompiled header

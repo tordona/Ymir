@@ -11,7 +11,8 @@
 
 #define _STR_IMPL(x) #x
 #define _STR(x) _STR_IMPL(x)
-#define CMRC_VERSION "2.0.0" // Not exported
+#define CEREAL_VERSION "1.3.2" // Not exported
+#define CMRC_VERSION "2.0.0"   // Not exported
 #define CXXOPTS_VERSION _STR(CXXOPTS__VERSION_MAJOR) "." _STR(CXXOPTS__VERSION_MINOR) "." _STR(CXXOPTS__VERSION_PATCH)
 #define IMGUI_VERSION_FULL IMGUI_VERSION " (" _STR(IMGUI_VERSION_NUM) ")"
 #define MIO_VERSION "1.1.0" // Not exported
@@ -42,7 +43,7 @@ struct FontDesc {
 // clang-format off
 //inline constexpr License licenseApache2_0{.name = "Apache-2.0",   .url = "https://opensource.org/licenses/Apache-2.0"};
 inline constexpr License licenseBSD2     {.name = "BSD-2-Clause", .url = "https://opensource.org/licenses/BSD-2-Clause"};
-//inline constexpr License licenseBSD3     {.name = "BSD-3-Clause", .url = "https://opensource.org/licenses/BSD-3-Clause"};
+inline constexpr License licenseBSD3     {.name = "BSD-3-Clause", .url = "https://opensource.org/licenses/BSD-3-Clause"};
 //inline constexpr License licenseBSL      {.name = "BSL-1.0", .     url = "https://opensource.org/license/bsl-1-0"};
 //inline constexpr License licenseISC      {.name = "ISC",          .url = "https://opensource.org/licenses/ISC"};
 inline constexpr License licenseMIT      {.name = "MIT",          .url = "https://opensource.org/licenses/MIT"};
@@ -59,6 +60,7 @@ static const struct {
     const bool repoPrivate = false;
     const char *homeURL = nullptr;
 } depsCode[] = {
+    {.name = "cereal",                        .version = CEREAL_VERSION,             .license = licenseBSD3,  .repoURL = "https://github.com/USCiLab/cereal",              .licenseURL = "https://github.com/USCiLab/cereal/blob/master/LICENSE",                  .homeURL = "https://uscilab.github.io/cereal/index.html"},
     {.name = "CMakeRC",                       .version = CMRC_VERSION,               .license = licenseMIT,   .repoURL = "https://github.com/vector-of-bool/cmrc",         .licenseURL = "https://github.com/vector-of-bool/cmrc/blob/master/LICENSE.txt"},
     {.name = "cxxopts",                       .version = CXXOPTS_VERSION,            .license = licenseMIT,   .repoURL = "https://github.com/jarro2783/cxxopts",           .licenseURL = "https://github.com/jarro2783/cxxopts/blob/master/LICENSE"},
     {.name = "Dear ImGui",                    .version = IMGUI_VERSION_FULL,         .license = licenseMIT,   .repoURL = "https://github.com/ocornut/imgui",               .licenseURL = "https://github.com/ocornut/imgui/blob/master/LICENSE.txt"},

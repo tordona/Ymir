@@ -70,6 +70,13 @@ add_subdirectory(tomlplusplus EXCLUDE_FROM_ALL)
 message(STATUS "==> xxHash")
 add_subdirectory(xxHash EXCLUDE_FROM_ALL)
 
+# cereal - https://github.com/USCiLab/cereal
+message(STATUS "==> cereal")
+set(BUILD_DOC OFF)
+set(BUILD_SANDBOX OFF)
+set(JUST_INSTALL_CEREAL ON)
+add_subdirectory(cereal)
+
 # --------------------------------------------------------------------------------------------------
 # Test dependencies
 
