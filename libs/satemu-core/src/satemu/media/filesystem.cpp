@@ -14,6 +14,7 @@ void Filesystem::Clear() {
     m_directories.clear();
     m_currDirectory = ~0;
     m_currFileOffset = 0;
+    m_hash.fill(0);
 }
 
 bool Filesystem::Read(const Disc &disc) {
