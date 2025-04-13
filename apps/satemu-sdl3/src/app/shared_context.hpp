@@ -30,8 +30,11 @@ struct SharedContext {
     input::InputContext inputContext;
     input::InputCapturer inputCapturer;
 
+    std::array<satemu::peripheral::StandardPadButton, 2> standardPadButtons{
+        satemu::peripheral::StandardPadButton::Default, satemu::peripheral::StandardPadButton::Default};
+
     Profile profile;
-    Settings settings{saturn, inputContext};
+    Settings settings{*this};
 
     std::array<std::unique_ptr<satemu::state::State>, 10> saveStates;
     size_t currSaveStateSlot = 0;

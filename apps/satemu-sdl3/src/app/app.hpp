@@ -72,6 +72,9 @@ private:
     void RebindInputs();
     void RebindAction(input::ActionID action);
 
+    template <int port>
+    void ReadPeripheral(satemu::peripheral::PeripheralReport &report);
+
     void LoadSaveStates();
     void PersistSaveState(uint32 slot);
 

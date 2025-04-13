@@ -23,18 +23,9 @@
 #include <unordered_set>
 #include <variant>
 
-// ---------------------------------------------------------------------------------------------------------------------
-// Forward declarations
-
-namespace satemu {
-
-struct Saturn;
-
-} // namespace satemu
-
-// ---------------------------------------------------------------------------------------------------------------------
-
 namespace app {
+
+struct SharedContext;
 
 struct SettingsLoadResult {
     enum class Type { Success, TOMLParseError, UnsupportedConfigVersion };
@@ -122,7 +113,7 @@ struct InputBindWithContext {
 };
 
 struct Settings {
-    Settings(satemu::Saturn &saturn, input::InputContext &inputContext) noexcept;
+    Settings(SharedContext &sharedCtx) noexcept;
 
     void ResetToDefaults();
 

@@ -2,6 +2,8 @@
 
 #include <app/actions.hpp>
 
+#include <app/shared_context.hpp>
+
 #include <satemu/sys/saturn.hpp>
 
 #include <satemu/util/date_time.hpp>
@@ -203,9 +205,9 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
 // -------------------------------------------------------------------------------------------------
 // Implementation
 
-Settings::Settings(Saturn &saturn, input::InputContext &inputContext) noexcept
-    : m_emuConfig(saturn.configuration)
-    , m_inputContext(inputContext) {
+Settings::Settings(SharedContext &sharedCtx) noexcept
+    : m_emuConfig(sharedCtx.saturn.configuration)
+    , m_inputContext(sharedCtx.inputContext) {
 
     auto mapActionInput = [&](InputBind &bind, void *context = nullptr) {
         m_actionInputs[bind.action].insert({&bind, context});
@@ -261,7 +263,7 @@ Settings::Settings(Saturn &saturn, input::InputContext &inputContext) noexcept
     mapActionInput(hotkeys.saveStates.save9);
     mapActionInput(hotkeys.saveStates.save10);
 
-    auto ctx1 = &saturn.SMPC.GetPeripheralPort1();
+    auto ctx1 = &sharedCtx.standardPadButtons[0];
     mapActionInput(input.port1.standardPadBinds.a, ctx1);
     mapActionInput(input.port1.standardPadBinds.b, ctx1);
     mapActionInput(input.port1.standardPadBinds.c, ctx1);
@@ -276,7 +278,7 @@ Settings::Settings(Saturn &saturn, input::InputContext &inputContext) noexcept
     mapActionInput(input.port1.standardPadBinds.left, ctx1);
     mapActionInput(input.port1.standardPadBinds.right, ctx1);
 
-    auto ctx2 = &saturn.SMPC.GetPeripheralPort2();
+    auto ctx2 = &sharedCtx.standardPadButtons[1];
     mapActionInput(input.port2.standardPadBinds.a, ctx2);
     mapActionInput(input.port2.standardPadBinds.b, ctx2);
     mapActionInput(input.port2.standardPadBinds.c, ctx2);

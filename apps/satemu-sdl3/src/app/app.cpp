@@ -43,22 +43,30 @@
 //
 // Receiving input
 // ---------------
-// To process inputs, you'll need to attach a controller to one or both ports. You'll find the ports in the SMPC.
+// To process inputs, you'll need to attach a controller to one or both ports and configure callbacks. You'll find the
+// ports in the SMPC.
 //
 // Use one of the Connect* methods to attempt to attach a controller to the port. If successful, the method will return
-// a valid pointer to the specialized controller instance which you can use to send inputs to the system. A nullptr
-// indicates failure to instantiate the object or to attach the peripheral due to incompatibility with existing
-// peripherals.
+// a valid pointer to the specialized controller instance which you can use to further configure the peripheral. nullptr
+// indicates failure to instantiate the object or to attach the peripheral due to incompatibility with other connected
+// peripherals (e.g. you cannot use the Virtua Gun with a multi-tap adapter).
+//
+// NOTE: The emulator currently only supports attaching a single standard Saturn Pad to the ports. More types of
+// peripherals (including multi-tap) are planned.
 //
 // DisconnectPeripherals() will disconnect all peripherals connected to the port. Be careful: any existing pointers to
 // previously connected peripheral(s) will become invalid. The same applies when replacing a peripheral.
 //
-// NOTE: There is currently no way to enumerate peripherals attached to a port.
-// NOTE: The emulator currently only supports attaching a single standard Saturn Pad to the ports. More types of
-// peripherals (including multitap) are planned.
+// Whenever input is queried, either through INTBACK or by direct access to PDR/DDR registers, the peripheral will
+// invoke a callback function with the following signature:
+//   void PeripheralReportCallback(satemu::peripheral::PeripheralReport &report, void *userContext)
+// The type of the peripheral is specified in the type field of the PeripheralReport, which is an enum of the type
+// satemu::peripheral::PeripheralType. The callback function must fill in the appropriate report depending on the type.
+// The report is preinitialized with the default values for the controller: all buttons released, all axes at zero, etc.
+// This callback is invoked from the emulator thread.
 //
 // This frontend attaches a standard Saturn Pad to both ports and redirects keyboard input to them with the following
-// hardcoded key mappings:
+// default key mappings:
 //
 //          Port 1                        Port 2
 //     Q              E         KP7/Ins            KP9/PgUp
@@ -81,7 +89,7 @@
 //
 // The VDP invokes the frame completed callback once a frame finishes rendering (as soon as it enters the VBlank area).
 // The callback signature is:
-//   void FrameCompleteCallback(uint32 *fb, uint32 width, uint32 height)
+//   void FrameCompleteCallback(uint32 *fb, uint32 width, uint32 height, void *userContext)
 // where:
 //   fb is a pointer to the rendered framebuffer in little-endian XBGR8888 format (..BBGGRR)
 //   width and height specify the dimensions of the framebuffer
@@ -90,11 +98,11 @@
 //
 // Additionally, you can specify a VDP1 frame completed callback in order to count VDP1 frames. This callback has the
 // following signature:
-//   void VDP1FrameCompleteCallback()
+//   void VDP1FrameCompleteCallback(void *userContext)
 //
 // The SCSP invokes the sample callback on every sample (signed 16-bit PCM, stereo, 44100 Hz).
 // The callback signature is:
-//   void SCSPSampleCallback(sint16 left, sint16 right)
+//   void SCSPSampleCallback(sint16 left, sint16 right, void *userContext)
 // where left and right are the samples for the respective channels.
 // You'll probably want to accumulate those samples into a ring buffer before sending them to the audio system.
 //
@@ -110,8 +118,8 @@
 // ---------
 // WARNING: The debugger is a work in progress and in a flow state. Expect things to change dramatically.
 //
-// You can use Bus objects to directly read or write memory. Also, the debugger framework provides two major components:
-// the probes and the tracers.
+// The debugger framework provides two major components: the probes and the tracers. You can also use Bus objects to
+// directly read or write memory.
 //
 // Bus instances provide Peek/Poke variants of Read/Write methods that circumvent memory access limitations, allowing
 // debuggers to read from write-only registers or do 8-bit reads and writes to VDP registers which normally disallow
@@ -128,14 +136,15 @@
 // components with the UseTracer(...) methods provided by them which will then receive events as they occur while the
 // emulator is running.
 //
-// Some tracers require you to run the emulator in "debug mode", which is accomplished by invoking RunFrame(true)
-// instead of RunFrame(false). There's no need to reset or reinitialize the emulator core to switch modes -- you can run
-// the emulator normally for a while, then switch to debug mode at any point to enable tracing, and switch back and
-// forth as often as you want. Tracers that need debug mode to work are documented as such in their header files.
+// Some tracers require you to run the emulator in "debug mode", which is accomplished with EnableDebugTracing(true)
+// on the Saturn instance, then attaching the traceers. There's no need to reset or reinitialize the emulator core to
+// switch modes -- you can run the emulator normally for a while, then switch to debug mode at any point to enable
+// tracing, and switch back and forth as often as you want. Tracers that need debug mode to work are documented as such
+// in their header files.
 //
 // Running in debug mode has a noticeable performance penalty as the alternative code path enables calls to the tracers
 // in hot paths. This is left as an option in order to maximize performance for the primary use case of playing games
-// without using any debugging features.
+// without using any debugging features. For this reason, EnableDebugTracing(false) will also detach all tracers.
 //
 // Some components always have tracing enabled if provided a valid instance, so in order avoid the performance penalty,
 // make sure to also detach tracers from all components when you don't need them by calling DetachAllTracers() on the
@@ -162,8 +171,8 @@
 // The emulator core is *not* thread-safe and *will never be*. Make sure to provide your own synchronization mechanisms
 // if you plan to run it in a dedicated thread.
 //
-// As noted above, the video and audio callbacks and debug tracers are invoked from the emulator thread. Provide proper
-// synchronization between the emulator thread and the main/GUI thread when handling these events.
+// As noted above, the input, video and audio callbacks as well as debug tracers are invoked from the emulator thread.
+// Provide proper synchronization between the emulator thread and the main/GUI thread when handling these events.
 //
 // The VDP renderer runs in its own thread and is thread-safe within the core.
 //
@@ -871,6 +880,11 @@ void App::RunEmulator() {
     // ---------------------------------
     // Input action handlers
 
+    m_context.saturn.SMPC.GetPeripheralPort1().SetPeripheralReportCallback(
+        util::MakeClassMemberOptionalCallback<&App::ReadPeripheral<1>>(this));
+    m_context.saturn.SMPC.GetPeripheralPort2().SetPeripheralReportCallback(
+        util::MakeClassMemberOptionalCallback<&App::ReadPeripheral<2>>(this));
+
     auto &inputContext = m_context.inputContext;
 
     bool paused = false; // TODO: this should be updated by the emulator thread via events
@@ -1152,35 +1166,32 @@ void App::RunEmulator() {
 
     // Standard Saturn Pad
     {
-        using Button = peripheral::StandardPad::Button;
+        using Button = peripheral::StandardPadButton;
 
-        auto registerButton = [&](input::ActionID action, Button button) {
+        auto registerStandardPadButton = [&](input::ActionID action, Button button) {
             inputContext.SetActionHandler(action, [=, this](void *context, bool actuated) {
-                auto &port = *reinterpret_cast<peripheral::PeripheralPort *>(context);
-                std::unique_lock lock{m_context.locks.peripherals};
-                if (auto *pad = port.GetPeripheral().As<peripheral::PeripheralType::StandardPad>()) {
-                    if (actuated) {
-                        pad->PressButton(button);
-                    } else {
-                        pad->ReleaseButton(button);
-                    }
+                auto &buttons = *reinterpret_cast<peripheral::StandardPadButton *>(context);
+                if (actuated) {
+                    buttons &= ~button;
+                } else {
+                    buttons |= button;
                 }
             });
         };
 
-        registerButton(actions::std_saturn_pad::A, Button::A);
-        registerButton(actions::std_saturn_pad::B, Button::B);
-        registerButton(actions::std_saturn_pad::C, Button::C);
-        registerButton(actions::std_saturn_pad::X, Button::X);
-        registerButton(actions::std_saturn_pad::Y, Button::Y);
-        registerButton(actions::std_saturn_pad::Z, Button::Z);
-        registerButton(actions::std_saturn_pad::Up, Button::Up);
-        registerButton(actions::std_saturn_pad::Down, Button::Down);
-        registerButton(actions::std_saturn_pad::Left, Button::Left);
-        registerButton(actions::std_saturn_pad::Right, Button::Right);
-        registerButton(actions::std_saturn_pad::Start, Button::Start);
-        registerButton(actions::std_saturn_pad::L, Button::L);
-        registerButton(actions::std_saturn_pad::R, Button::R);
+        registerStandardPadButton(actions::std_saturn_pad::A, Button::A);
+        registerStandardPadButton(actions::std_saturn_pad::B, Button::B);
+        registerStandardPadButton(actions::std_saturn_pad::C, Button::C);
+        registerStandardPadButton(actions::std_saturn_pad::X, Button::X);
+        registerStandardPadButton(actions::std_saturn_pad::Y, Button::Y);
+        registerStandardPadButton(actions::std_saturn_pad::Z, Button::Z);
+        registerStandardPadButton(actions::std_saturn_pad::Up, Button::Up);
+        registerStandardPadButton(actions::std_saturn_pad::Down, Button::Down);
+        registerStandardPadButton(actions::std_saturn_pad::Left, Button::Left);
+        registerStandardPadButton(actions::std_saturn_pad::Right, Button::Right);
+        registerStandardPadButton(actions::std_saturn_pad::Start, Button::Start);
+        registerStandardPadButton(actions::std_saturn_pad::L, Button::L);
+        registerStandardPadButton(actions::std_saturn_pad::R, Button::R);
     }
 
     RebindInputs();
@@ -1933,6 +1944,17 @@ void App::RebindInputs() {
 
 void App::RebindAction(input::ActionID action) {
     m_context.settings.RebindAction(action);
+}
+
+template <int port>
+void App::ReadPeripheral(satemu::peripheral::PeripheralReport &report) {
+    // TODO: this is the appropriate location to capture inputs for a movie recording
+    switch (report.type) {
+    case satemu::peripheral::PeripheralType::StandardPad:
+        report.report.standardPad.buttons = m_context.standardPadButtons[port - 1];
+        break;
+    default: break;
+    }
 }
 
 void App::LoadSaveStates() {

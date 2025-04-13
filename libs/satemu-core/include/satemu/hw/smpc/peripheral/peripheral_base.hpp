@@ -1,5 +1,6 @@
 #pragma once
 
+#include "peripheral_callbacks.hpp"
 #include "peripheral_defs.hpp"
 
 #include <satemu/core/types.hpp>
@@ -12,10 +13,11 @@ namespace satemu::peripheral {
 
 class BasePeripheral {
 public:
-    BasePeripheral(PeripheralType type, uint8 typeCode, uint8 reportLength)
+    BasePeripheral(PeripheralType type, uint8 typeCode, uint8 reportLength, CBPeripheralReport callback)
         : m_type(type)
         , m_typeCode(typeCode)
-        , m_reportLength(reportLength) {}
+        , m_reportLength(reportLength)
+        , m_cbPeripheralReport(callback) {}
 
     virtual ~BasePeripheral() = default;
 
@@ -69,6 +71,11 @@ private:
     const PeripheralType m_type;
     uint8 m_typeCode;
     uint8 m_reportLength;
+
+protected:
+    friend class PeripheralPort;
+
+    CBPeripheralReport m_cbPeripheralReport;
 };
 
 } // namespace satemu::peripheral

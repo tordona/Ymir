@@ -29,8 +29,13 @@ public:
         DisconnectPeripherals();
     }
 
+    void SetPeripheralReportCallback(CBPeripheralReport callback) {
+        m_cbPeripheralReport = callback;
+        m_peripheral->m_cbPeripheralReport = callback;
+    }
+
     StandardPad *ConnectStandardPad() {
-        return ConnectPeripheral<StandardPad>();
+        return ConnectPeripheral<StandardPad>(m_cbPeripheralReport);
     }
 
     void DisconnectPeripherals() {
@@ -47,6 +52,8 @@ public:
 private:
     // TODO: implement multi-tap as an array of peripherals
     std::unique_ptr<BasePeripheral> m_peripheral;
+
+    CBPeripheralReport m_cbPeripheralReport;
 
     template <typename T, typename... Args>
         requires std::derived_from<T, BasePeripheral>
