@@ -81,6 +81,42 @@ void HotkeysSettingsView::Display() {
         drawRow("Debugger", "Toggle tracing", hotkeys.toggleDebugTrace);
         drawRow("Debugger", "Dump all memory", hotkeys.dumpMemory);
 
+        drawRow("Save states", "Quick load state", hotkeys.saveStates.quickLoad);
+        drawRow("Save states", "Quick save state", hotkeys.saveStates.quickSave);
+
+        drawRow("Save states", "Select state 1", hotkeys.saveStates.select1);
+        drawRow("Save states", "Select state 2", hotkeys.saveStates.select2);
+        drawRow("Save states", "Select state 3", hotkeys.saveStates.select3);
+        drawRow("Save states", "Select state 4", hotkeys.saveStates.select4);
+        drawRow("Save states", "Select state 5", hotkeys.saveStates.select5);
+        drawRow("Save states", "Select state 6", hotkeys.saveStates.select6);
+        drawRow("Save states", "Select state 7", hotkeys.saveStates.select7);
+        drawRow("Save states", "Select state 8", hotkeys.saveStates.select8);
+        drawRow("Save states", "Select state 9", hotkeys.saveStates.select9);
+        drawRow("Save states", "Select state 10", hotkeys.saveStates.select10);
+
+        drawRow("Save states", "Load state 1", hotkeys.saveStates.load1);
+        drawRow("Save states", "Load state 2", hotkeys.saveStates.load2);
+        drawRow("Save states", "Load state 3", hotkeys.saveStates.load3);
+        drawRow("Save states", "Load state 4", hotkeys.saveStates.load4);
+        drawRow("Save states", "Load state 5", hotkeys.saveStates.load5);
+        drawRow("Save states", "Load state 6", hotkeys.saveStates.load6);
+        drawRow("Save states", "Load state 7", hotkeys.saveStates.load7);
+        drawRow("Save states", "Load state 8", hotkeys.saveStates.load8);
+        drawRow("Save states", "Load state 9", hotkeys.saveStates.load9);
+        drawRow("Save states", "Load state 10", hotkeys.saveStates.load10);
+
+        drawRow("Save states", "Save state 1", hotkeys.saveStates.save1);
+        drawRow("Save states", "Save state 2", hotkeys.saveStates.save2);
+        drawRow("Save states", "Save state 3", hotkeys.saveStates.save3);
+        drawRow("Save states", "Save state 4", hotkeys.saveStates.save4);
+        drawRow("Save states", "Save state 5", hotkeys.saveStates.save5);
+        drawRow("Save states", "Save state 6", hotkeys.saveStates.save6);
+        drawRow("Save states", "Save state 7", hotkeys.saveStates.save7);
+        drawRow("Save states", "Save state 8", hotkeys.saveStates.save8);
+        drawRow("Save states", "Save state 9", hotkeys.saveStates.save9);
+        drawRow("Save states", "Save state 10", hotkeys.saveStates.save10);
+
         if (ImGui::BeginPopup("input_capture")) {
             if (m_captured) {
                 m_captured = false;
