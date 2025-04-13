@@ -266,8 +266,8 @@ EmuEvent EnableThreadedSCSP(bool enable) {
 
 EmuEvent LoadState(size_t slot) {
     return RunFunction([=](SharedContext &ctx) {
-        if (slot < ctx.saveStates.size()) {
-            if (!ctx.saturn.LoadState(ctx.saveStates[slot])) {
+        if (slot < ctx.saveStates.size() && ctx.saveStates[slot]) {
+            if (!ctx.saturn.LoadState(*ctx.saveStates[slot])) {
                 // TODO: notify failure to load save state
             }
         }
@@ -277,7 +277,10 @@ EmuEvent LoadState(size_t slot) {
 EmuEvent SaveState(size_t slot) {
     return RunFunction([=](SharedContext &ctx) {
         if (slot < ctx.saveStates.size()) {
-            ctx.saturn.SaveState(ctx.saveStates[slot]);
+            if (!ctx.saveStates[slot]) {
+                ctx.saveStates[slot] = std::make_unique<state::State>();
+            }
+            ctx.saturn.SaveState(*ctx.saveStates[slot]);
         }
     });
 }

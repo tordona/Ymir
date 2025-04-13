@@ -19,6 +19,7 @@
 #include <blockingconcurrentqueue.h>
 
 #include <filesystem>
+#include <memory>
 #include <mutex>
 
 namespace app {
@@ -32,7 +33,7 @@ struct SharedContext {
     Profile profile;
     Settings settings{saturn, inputContext};
 
-    std::array<satemu::state::State, 10> saveStates;
+    std::array<std::unique_ptr<satemu::state::State>, 10> saveStates;
     size_t currSaveStateSlot = 0;
 
     // Certain GUI interactions requires synchronization with the emulator thread, specifically when dealing with
