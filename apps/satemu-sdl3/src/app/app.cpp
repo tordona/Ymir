@@ -1967,6 +1967,49 @@ void App::PersistSaveState(uint32 slot) {
         auto gameStatesPath = basePath / satemu::ToString(state.cdblock.discHash);
         auto statePath = gameStatesPath / fmt::format("{}.savestate", slot);
         std::filesystem::create_directories(gameStatesPath);
+        auto gameMetaPath = gameStatesPath / "meta.txt";
+
+        if (!std::filesystem::is_regular_file(gameMetaPath)) {
+            std::ofstream out{gameMetaPath};
+            if (out) {
+                std::unique_lock lock{m_context.locks.disc};
+                const auto &disc = m_context.saturn.CDBlock.GetDisc();
+
+                auto iter = std::ostream_iterator<char>(out);
+                fmt::format_to(iter, "Title: {}\n", disc.header.gameTitle);
+                fmt::format_to(iter, "Product Number: {}\n", disc.header.productNumber);
+                fmt::format_to(iter, "Version: {}\n", disc.header.version);
+                fmt::format_to(iter, "Release date: {}\n", disc.header.releaseDate);
+                fmt::format_to(iter, "Disc: {}\n", disc.header.deviceInfo);
+                fmt::format_to(iter, "Compatible area codes: ");
+                auto bmAreaCodes = BitmaskEnum(disc.header.compatAreaCode);
+                if (bmAreaCodes.AnyOf(satemu::media::AreaCode::Japan)) {
+                    fmt::format_to(iter, "J");
+                }
+                if (bmAreaCodes.AnyOf(satemu::media::AreaCode::AsiaNTSC)) {
+                    fmt::format_to(iter, "T");
+                }
+                if (bmAreaCodes.AnyOf(satemu::media::AreaCode::NorthAmerica)) {
+                    fmt::format_to(iter, "U");
+                }
+                if (bmAreaCodes.AnyOf(satemu::media::AreaCode::CentralSouthAmericaNTSC)) {
+                    fmt::format_to(iter, "B");
+                }
+                if (bmAreaCodes.AnyOf(satemu::media::AreaCode::AsiaPAL)) {
+                    fmt::format_to(iter, "A");
+                }
+                if (bmAreaCodes.AnyOf(satemu::media::AreaCode::EuropePAL)) {
+                    fmt::format_to(iter, "E");
+                }
+                if (bmAreaCodes.AnyOf(satemu::media::AreaCode::Korea)) {
+                    fmt::format_to(iter, "K");
+                }
+                if (bmAreaCodes.AnyOf(satemu::media::AreaCode::CentralSouthAmericaPAL)) {
+                    fmt::format_to(iter, "L");
+                }
+                fmt::format_to(iter, "\n");
+            }
+        }
 
         std::ofstream out{statePath, std::ios::binary};
         cereal::BinaryOutputArchive archive{out};
