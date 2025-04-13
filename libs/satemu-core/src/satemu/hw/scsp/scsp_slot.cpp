@@ -665,7 +665,7 @@ void Slot::LoadState(const state::SCSPSlotState &state) {
     soundDirect = state.SDIR;
 
     octave = state.OCT & 0xF;
-    freqNumSwitch = state.FNS & 0x3FF;
+    freqNumSwitch = state.FNS & 0x7FF;
 
     auto castWaveform = [](state::SCSPSlotState::Waveform waveform) {
         switch (waveform) {

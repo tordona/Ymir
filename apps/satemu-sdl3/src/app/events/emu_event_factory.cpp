@@ -264,4 +264,22 @@ EmuEvent EnableThreadedSCSP(bool enable) {
     return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.audio.threadedSCSP = enable; });
 }
 
+EmuEvent LoadState(size_t slot) {
+    return RunFunction([=](SharedContext &ctx) {
+        if (slot < ctx.saveStates.size()) {
+            if (!ctx.saturn.LoadState(ctx.saveStates[slot])) {
+                // TODO: notify failure to load save state
+            }
+        }
+    });
+}
+
+EmuEvent SaveState(size_t slot) {
+    return RunFunction([=](SharedContext &ctx) {
+        if (slot < ctx.saveStates.size()) {
+            ctx.saturn.SaveState(ctx.saveStates[slot]);
+        }
+    });
+}
+
 } // namespace app::events::emu

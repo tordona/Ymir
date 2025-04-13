@@ -101,4 +101,7 @@ EmuEvent EnableThreadedVDP2Rendering(bool enable);
 
 EmuEvent EnableThreadedSCSP(bool enable);
 
+EmuEvent LoadState(size_t slot);
+EmuEvent SaveState(size_t slot);
+
 } // namespace app::events::emu

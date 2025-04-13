@@ -32,6 +32,9 @@ struct SharedContext {
     Profile profile;
     Settings settings{saturn, inputContext};
 
+    std::array<satemu::state::State, 10> saveStates;
+    size_t currSaveStateSlot = 0;
+
     // Certain GUI interactions requires synchronization with the emulator thread, specifically when dealing with
     // dynamic objects:
     // - Cartridges

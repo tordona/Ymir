@@ -904,6 +904,199 @@ void App::RunEmulator() {
         });
     }
 
+    // Save states
+    {
+        inputContext.SetActionHandler(actions::save_states::QuickLoadState, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::QuickSaveState, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+            }
+        });
+
+        // Select state
+
+        inputContext.SetActionHandler(actions::save_states::SelectState1, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 0;
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SelectState2, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 1;
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SelectState3, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 2;
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SelectState4, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 3;
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SelectState5, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 4;
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SelectState6, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 5;
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SelectState7, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 6;
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SelectState8, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 7;
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SelectState9, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 8;
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SelectState10, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 9;
+            }
+        });
+
+        // Load state
+
+        inputContext.SetActionHandler(actions::save_states::LoadState1, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 0;
+                m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::LoadState2, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 1;
+                m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::LoadState3, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 2;
+                m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::LoadState4, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 3;
+                m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::LoadState5, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 4;
+                m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::LoadState6, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 5;
+                m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::LoadState7, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 6;
+                m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::LoadState8, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 7;
+                m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::LoadState9, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 8;
+                m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::LoadState10, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 9;
+                m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+            }
+        });
+
+        // Save state
+
+        inputContext.SetActionHandler(actions::save_states::SaveState1, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 0;
+                m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SaveState2, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 1;
+                m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SaveState3, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 2;
+                m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SaveState4, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 3;
+                m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SaveState5, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 4;
+                m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SaveState6, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 5;
+                m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SaveState7, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 6;
+                m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SaveState8, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 7;
+                m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SaveState9, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 8;
+                m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+            }
+        });
+        inputContext.SetActionHandler(actions::save_states::SaveState10, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.currSaveStateSlot = 9;
+                m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+            }
+        });
+    }
+
     // System
     {
         inputContext.SetActionHandler(actions::sys::HardReset, [&](void *, bool actuated) {

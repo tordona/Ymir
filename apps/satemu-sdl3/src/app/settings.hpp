@@ -183,6 +183,44 @@ public:
 
         InputBind toggleDebugTrace{actions::dbg::ToggleDebugTrace};
         InputBind dumpMemory{actions::dbg::DumpMemory};
+
+        struct SaveStates {
+            InputBind quickLoad{actions::save_states::QuickLoadState};
+            InputBind quickSave{actions::save_states::QuickSaveState};
+
+            InputBind select1{actions::save_states::SelectState1};
+            InputBind select2{actions::save_states::SelectState2};
+            InputBind select3{actions::save_states::SelectState3};
+            InputBind select4{actions::save_states::SelectState4};
+            InputBind select5{actions::save_states::SelectState5};
+            InputBind select6{actions::save_states::SelectState6};
+            InputBind select7{actions::save_states::SelectState7};
+            InputBind select8{actions::save_states::SelectState8};
+            InputBind select9{actions::save_states::SelectState9};
+            InputBind select10{actions::save_states::SelectState10};
+
+            InputBind load1{actions::save_states::LoadState1};
+            InputBind load2{actions::save_states::LoadState2};
+            InputBind load3{actions::save_states::LoadState3};
+            InputBind load4{actions::save_states::LoadState4};
+            InputBind load5{actions::save_states::LoadState5};
+            InputBind load6{actions::save_states::LoadState6};
+            InputBind load7{actions::save_states::LoadState7};
+            InputBind load8{actions::save_states::LoadState8};
+            InputBind load9{actions::save_states::LoadState9};
+            InputBind load10{actions::save_states::LoadState10};
+
+            InputBind save1{actions::save_states::SaveState1};
+            InputBind save2{actions::save_states::SaveState2};
+            InputBind save3{actions::save_states::SaveState3};
+            InputBind save4{actions::save_states::SaveState4};
+            InputBind save5{actions::save_states::SaveState5};
+            InputBind save6{actions::save_states::SaveState6};
+            InputBind save7{actions::save_states::SaveState7};
+            InputBind save8{actions::save_states::SaveState8};
+            InputBind save9{actions::save_states::SaveState9};
+            InputBind save10{actions::save_states::SaveState10};
+        } saveStates;
     } hotkeys;
 
     struct Input {
