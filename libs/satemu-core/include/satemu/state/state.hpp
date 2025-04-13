@@ -14,9 +14,6 @@ namespace satemu::state {
 inline namespace v1 {
 
     struct State {
-        // TODO: IPL ROM hash
-        // TODO: Disc header hash
-
         SchedulerState scheduler;
         SystemState system;
         SH2State msh2;

@@ -211,6 +211,10 @@ bool CDBlock::IsTrayOpen() const {
 }
 
 void CDBlock::SaveState(state::CDBlockState &state) const {
+    XXH128_canonical_t canonicalHash{};
+    XXH128_canonicalFromHash(&canonicalHash, m_fs.GetHash());
+    std::copy_n(canonicalHash.digest, 16, state.discHash.begin());
+
     state.CR = m_CR;
     state.HIRQ = m_HIRQ;
     state.HIRQMASK = m_HIRQMASK;
@@ -324,6 +328,11 @@ void CDBlock::SaveState(state::CDBlockState &state) const {
 }
 
 bool CDBlock::ValidateState(const state::CDBlockState &state) const {
+    XXH128_canonical_t canonicalHash{};
+    XXH128_canonicalFromHash(&canonicalHash, m_fs.GetHash());
+    if (!std::equal(&canonicalHash.digest[0], &canonicalHash.digest[16], state.discHash.data())) {
+        return false;
+    }
     if (!m_partitionManager.ValidateState(state)) {
         return false;
     }

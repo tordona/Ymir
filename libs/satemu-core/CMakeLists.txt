@@ -102,6 +102,7 @@ add_library(satemu-core
 
     include/satemu/state/state.hpp
     include/satemu/state/state_cdblock.hpp
+    include/satemu/state/state_hash.hpp
     include/satemu/state/state_m68k.hpp
     include/satemu/state/state_scheduler.hpp
     include/satemu/state/state_scsp.hpp
@@ -211,7 +212,12 @@ target_include_directories(satemu-core
 target_compile_features(satemu-core PUBLIC cxx_std_20)
 
 ## Add dependencies
-target_link_libraries(satemu-core PUBLIC fmt mio concurrentqueue)
+target_link_libraries(satemu-core PUBLIC
+    fmt
+    mio
+    concurrentqueue
+    xxHash::xxHash
+)
 
 # Build precompiled header
 target_precompile_headers(satemu-core

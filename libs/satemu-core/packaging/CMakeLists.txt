@@ -1,4 +1,4 @@
-install(TARGETS satemu-core EXPORT satemu_Targets
+install(TARGETS satemu-core xxHash EXPORT satemu_Targets
         RUNTIME COMPONENT satemu_Runtime
         LIBRARY COMPONENT satemu_Runtime
         NAMELINK_COMPONENT satemu_Development

@@ -28,6 +28,7 @@ void SystemMemory::MapMemory(Bus &bus) {
 
 void SystemMemory::LoadIPL(std::span<uint8, kIPLSize> ipl) {
     std::copy(ipl.begin(), ipl.end(), IPL.begin());
+    m_iplHash = XXH128(IPL.data(), IPL.size(), 0x94B487AF51733FBEull);
 }
 
 void SystemMemory::DumpWRAMLow(std::ostream &out) const {
@@ -39,11 +40,19 @@ void SystemMemory::DumpWRAMHigh(std::ostream &out) const {
 }
 
 void SystemMemory::SaveState(state::SystemState &state) const {
+    XXH128_canonical_t canonicalHash{};
+    XXH128_canonicalFromHash(&canonicalHash, m_iplHash);
+    std::copy_n(canonicalHash.digest, 16, state.iplRomHash.begin());
     state.WRAMLow = WRAMLow;
     state.WRAMHigh = WRAMHigh;
 }
 
 bool SystemMemory::ValidateState(const state::SystemState &state) const {
+    XXH128_canonical_t canonicalHash{};
+    XXH128_canonicalFromHash(&canonicalHash, m_iplHash);
+    if (!std::equal(&canonicalHash.digest[0], &canonicalHash.digest[16], state.iplRomHash.data())) {
+        return false;
+    }
     return true;
 }
 

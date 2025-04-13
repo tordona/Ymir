@@ -9,6 +9,8 @@
 
 #include <satemu/core/types.hpp>
 
+#include <xxh3.h>
+
 #include <array>
 #include <iosfwd>
 #include <span>
@@ -52,6 +54,8 @@ struct SystemMemory {
 
 private:
     bup::BackupMemory m_internalBackupRAM;
+
+    XXH128_hash_t m_iplHash{0, 0};
 };
 
 } // namespace satemu::sys

@@ -2,6 +2,8 @@
 
 #include <satemu/hw/cdblock/cdblock_defs.hpp>
 
+#include <satemu/state/state_hash.hpp>
+
 #include <satemu/core/types.hpp>
 
 #include <array>
@@ -11,6 +13,8 @@ namespace satemu::state {
 inline namespace v1 {
 
     struct CDBlockState {
+        Hash128 discHash;
+
         std::array<uint16, 4> CR;
         uint16 HIRQ;
         uint16 HIRQMASK;

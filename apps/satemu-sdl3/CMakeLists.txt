@@ -198,7 +198,6 @@ target_link_libraries(satemu-sdl3 PRIVATE
     cxxopts
     imgui::imgui
     tomlplusplus::tomlplusplus
-    xxHash::xxHash
 )
 target_compile_features(satemu-sdl3 PUBLIC cxx_std_20)
 

@@ -1,10 +1,13 @@
 #pragma once
 
 #include <satemu/core/types.hpp>
+
 #include <satemu/util/bit_ops.hpp>
 
 #include "disc.hpp"
 #include "iso9660.hpp"
+
+#include <xxh3.h>
 
 #include <cassert>
 #include <vector>
@@ -130,6 +133,11 @@ public:
         return !m_directories.empty();
     }
 
+    // Returns the disc hash, which comprises the first 16 data sectors and those containing the volume descriptors.
+    XXH128_hash_t GetHash() const {
+        return m_hash;
+    }
+
     // Determines if the file system has a valid current directory.
     bool HasCurrentDirectory() const {
         return m_currDirectory < m_directories.size();
@@ -155,6 +163,8 @@ private:
 
     uint32 m_currDirectory;
     uint32 m_currFileOffset;
+
+    XXH128_hash_t m_hash = {0, 0};
 
     bool ReadPathTableRecords(const Track &track, const media::iso9660::VolumeDescriptor &volDesc);
 };

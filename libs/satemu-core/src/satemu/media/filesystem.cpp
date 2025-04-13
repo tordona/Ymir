@@ -12,6 +12,8 @@ void Filesystem::Clear() {
     m_directories.clear();
     m_currDirectory = ~0;
     m_currFileOffset = 0;
+    m_hash.low64 = 0;
+    m_hash.high64 = 0;
 }
 
 bool Filesystem::Read(const Disc &disc) {
@@ -46,13 +48,27 @@ bool Filesystem::Read(const Disc &disc) {
     // Buffer for sector data
     std::array<uint8, 2048> buf{};
 
-    // Found the track; compute the offset and read the volume descriptor
+    // Found the track; begin hashing the first 16 sectors
+    XXH3_state_t *xxh3State = XXH3_createState();
+    assert(xxh3State != NULL && "Out of memory!");
+    util::ScopeGuard sgFreeXXH3State{[&] { XXH3_freeState(xxh3State); }};
+    XXH3_128bits_reset(xxh3State);
+    for (uint32 sectorIndex = 150; sectorIndex < 166; sectorIndex++) {
+        // Fail if we can't read the sector
+        if (!track.ReadSectorUserData(sectorIndex, buf)) {
+            return false;
+        }
+        XXH3_128bits_update(xxh3State, buf.data(), buf.size());
+    }
+
+    // Read volume descriptors; hash these sectors as well
     const uint32 volumeDescAddress = absVolumeDescAddress;
     for (uint32 sectorIndex = volumeDescAddress;; sectorIndex++) {
         // Fail if we can't read the sector
         if (!track.ReadSectorUserData(sectorIndex, buf)) {
             return false;
         }
+        XXH3_128bits_update(xxh3State, buf.data(), buf.size());
 
         // Try reading volume descriptor; fail if invalid
         VolumeDescriptorHeader volDescHeader{};
@@ -68,6 +84,7 @@ bool Filesystem::Read(const Disc &disc) {
             } else {
                 m_currDirectory = 0;
                 m_currFileOffset = 0;
+                m_hash = XXH3_128bits_digest(xxh3State);
                 return true;
             }
         }
