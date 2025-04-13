@@ -5,12 +5,6 @@
 #include <cereal/types/array.hpp>
 #include <cereal/types/vector.hpp>
 
-#include <satemu/core/hash.hpp>
-
-#include <fmt/format.h>
-
-#include <string>
-
 CEREAL_CLASS_VERSION(satemu::state::v1::State, 1);
 
 namespace satemu::state {
