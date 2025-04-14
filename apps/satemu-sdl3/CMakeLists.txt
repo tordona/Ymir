@@ -10,6 +10,7 @@ add_executable(satemu-sdl3
     src/app/cmdline_opts.hpp
     src/app/profile.cpp
     src/app/profile.hpp
+    src/app/rewind_buffer.cpp
     src/app/rewind_buffer.hpp
     src/app/settings.cpp
     src/app/settings.hpp
