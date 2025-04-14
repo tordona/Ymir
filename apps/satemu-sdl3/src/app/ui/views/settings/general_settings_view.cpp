@@ -48,14 +48,14 @@ void GeneralSettingsView::Display() {
 
     // TODO: rewind buffer size
 
-    if (MakeDirty(ImGui::SliderInt("Compression speed", &settings.rewindCompressionSpeed, 0, 16, "%d",
+    if (MakeDirty(ImGui::SliderInt("Compression level", &settings.rewindCompressionLevel, 0, 16, "%d",
                                    ImGuiSliderFlags_AlwaysClamp))) {
-        m_context.rewindBuffer.LZ4Accel = 1 << settings.rewindCompressionSpeed;
+        m_context.rewindBuffer.LZ4Accel = 1 << (16 - settings.rewindCompressionLevel);
     }
     widgets::ExplanationTooltip(
         "Adjust compression ratio vs. speed.\n"
-        "Lower values improve compression ratio, allowing more frames to fit in the buffer.\n"
-        "Higher values increase compression speed, reducing performance impact during emulation.\n");
+        "Higher values improve compression ratio, allowing more frames to fit in the buffer.\n"
+        "Lower values increase compression speed, reducing performance impact during emulation.\n");
 }
 
 } // namespace app::ui

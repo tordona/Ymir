@@ -302,7 +302,7 @@ void Settings::ResetToDefaults() {
     general.boostEmuThreadPriority = true;
     general.boostProcessPriority = true;
     general.enableRewindBuffer = false;
-    general.rewindCompressionSpeed = 6;
+    general.rewindCompressionLevel = 6;
 
     system.biosPath = "";
 
@@ -356,7 +356,7 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         Parse(tblGeneral, "BoostEmuThreadPriority", general.boostEmuThreadPriority);
         Parse(tblGeneral, "BoostProcessPriority", general.boostProcessPriority);
         Parse(tblGeneral, "EnableRewindBuffer", general.enableRewindBuffer);
-        Parse(tblGeneral, "RewindCompressionSpeed", general.rewindCompressionSpeed);
+        Parse(tblGeneral, "RewindCompressionLevel", general.rewindCompressionLevel);
     }
 
     if (auto tblSystem = data["System"]) {
@@ -493,7 +493,7 @@ SettingsSaveResult Settings::Save() {
             {"BoostEmuThreadPriority", general.boostEmuThreadPriority},
             {"BoostProcessPriority", general.boostProcessPriority},
             {"EnableRewindBuffer", general.enableRewindBuffer},
-            {"RewindCompressionSpeed", general.rewindCompressionSpeed},
+            {"RewindCompressionLevel", general.rewindCompressionLevel},
         }}},
 
         {"System", toml::table{{

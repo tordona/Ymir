@@ -31,7 +31,7 @@ void RewindBuffer::Stop() {
     }
 }
 
-/*FLATTEN*/ void RewindBuffer::ProcThread() {
+FLATTEN void RewindBuffer::ProcThread() {
     util::SetCurrentThreadName("Rewind buffer processor");
 
     while (m_running) {
