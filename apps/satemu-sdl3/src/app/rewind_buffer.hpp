@@ -25,8 +25,8 @@ public:
         if (m_procThread.joinable()) {
             m_procThread.join();
         }
-        if (m_scratch != nullptr) {
-            delete[] m_scratch;
+        if (m_deltaBuffer != nullptr) {
+            delete[] m_deltaBuffer;
         }
     }
 
@@ -50,6 +50,8 @@ public:
         return m_running;
     }
 
+    // Tells the rewind buffer processor thread that the next state is ready to be processed.
+    // Should be invoked by the emulator thread after saving a state to NextState.
     void ProcessState() {
         m_stateProcessedEvent.Wait(true);
         m_nextStateEvent.Set();
@@ -78,7 +80,9 @@ private:
             // Compute delta between both buffers
             CalcDelta();
 
-            // TODO: RLE compress the delta
+            // RLE compress the delta
+            CompressDelta();
+
             // TODO: write to rewind buffer
         }
     }
@@ -91,8 +95,9 @@ private:
 
     std::array<std::vector<uint8>, 2> m_buffers; // Buffers for serialized states (current and next)
     bool m_bufferFlip = false;                   // Which buffer is which
-    uint8 *m_scratch = nullptr;                  // Scratch buffer for XOR delta and RLE compression
-    size_t m_scratchSize = 0;                    // Scratch buffer size
+    uint8 *m_deltaBuffer = nullptr;              // XOR delta buffer
+    size_t m_deltaBufferSize = 0;                // Delta buffer size
+    std::vector<uint8> m_rleBuffer;
 
     // Gets and clears the next buffer and flips the buffer pointer.
     std::vector<uint8> &GetBuffer() {
@@ -110,16 +115,16 @@ private:
         }
 
         // Reallocate scratch buffer if needed
-        if (m_scratchSize < maxSize) [[unlikely]] {
-            if (m_scratch != nullptr) {
-                delete[] m_scratch;
+        if (m_deltaBufferSize < maxSize) [[unlikely]] {
+            if (m_deltaBuffer != nullptr) {
+                delete[] m_deltaBuffer;
             }
-            m_scratch = new uint8[maxSize];
-            m_scratchSize = maxSize;
+            m_deltaBuffer = new uint8[maxSize];
+            m_deltaBufferSize = maxSize;
         }
 
         // Use pointers to allow for vectorization
-        uint8 *out = &m_scratch[0];
+        uint8 *out = &m_deltaBuffer[0];
         uint8 *b0 = m_buffers[0].empty() ? nullptr : &m_buffers[0][0];
         uint8 *b1 = m_buffers[1].empty() ? nullptr : &m_buffers[1][0];
 
@@ -137,6 +142,110 @@ private:
                 std::copy(&b1[minSize], &b1[maxSize], &out[minSize]);
             }
         }
+    }
+
+    void CompressDelta() {
+        // Encoding scheme:
+        //   0x00..0x5E: write 0x01..0x5F zeros
+        //         0x5F: write [following uint24le + 0x60] zeros
+        //   0x60..0x7E: copy the next 0x01..0x1F bytes verbatim
+        //         0x7F: copy the next [following uint16le + 0x20] bytes verbatim
+        //   0x80..0xFD: repeat next byte 0x01..0x7E times
+        //         0xFE: repeat next byte [following uint24le + 0x7F] times
+        //         0xFF: end of stream
+        if (m_deltaBufferSize == 0) {
+            return;
+        }
+
+        m_rleBuffer.clear();
+
+        size_t pos = 1;
+
+        auto writeZeros = [&](uint32 count) {
+            assert(count > 0);
+            assert(count <= 0xFFFFFF + 0x60);
+            if (count <= 0x5F) {
+                m_rleBuffer.push_back(count - 1);
+            } else {
+                m_rleBuffer.push_back(0x5F);
+                m_rleBuffer.push_back((count - 0x60) >> 0u);
+                m_rleBuffer.push_back((count - 0x60) >> 8u);
+                m_rleBuffer.push_back((count - 0x60) >> 16u);
+            }
+        };
+
+        auto writeRepeat = [&](uint32 count, uint8 byte) {
+            if (byte == 0) {
+                writeZeros(count);
+                return;
+            }
+
+            assert(count > 0);
+            assert(count <= 0xFFFFFF + 0x7F);
+            if (count <= 0x7E) {
+                m_rleBuffer.push_back(count - 1 + 0x80);
+                m_rleBuffer.push_back(byte);
+            } else {
+                m_rleBuffer.push_back(0xFE);
+                m_rleBuffer.push_back(byte);
+                m_rleBuffer.push_back((count - 0x7F) >> 0u);
+                m_rleBuffer.push_back((count - 0x7F) >> 8u);
+                m_rleBuffer.push_back((count - 0x7F) >> 16u);
+            }
+        };
+
+        auto writeCopy = [&](uint32 count) {
+            assert(count > 0);
+            assert(count <= 0xFFFF + 0x20);
+            if (count <= 0x1F) {
+                m_rleBuffer.push_back(count - 1 + 0x60);
+                m_rleBuffer.insert(m_rleBuffer.end(), &m_deltaBuffer[pos - 1 - count], &m_deltaBuffer[pos - 1]);
+            } else {
+                m_rleBuffer.push_back(0x7F);
+                m_rleBuffer.push_back((count - 0x20) >> 0u);
+                m_rleBuffer.push_back((count - 0x20) >> 8u);
+                m_rleBuffer.insert(m_rleBuffer.end(), &m_deltaBuffer[pos - 1 - count], &m_deltaBuffer[pos - 1]);
+            }
+        };
+
+        uint32 repeatCount = 1;
+        uint32 copyCount = 1;
+        uint8 lastByte = m_deltaBuffer[0];
+        while (pos < m_deltaBufferSize) {
+            const uint8 currByte = m_deltaBuffer[pos];
+
+            if (currByte == lastByte) {
+                if (copyCount > 1) {
+                    writeCopy(copyCount - 1);
+                    copyCount = 0;
+                }
+                ++repeatCount;
+                if ((lastByte == 0 && repeatCount == 0xFFFFFF + 0x60) ||
+                    (lastByte != 0 && repeatCount == 0xFFFFFF + 0x7F)) {
+                    writeRepeat(repeatCount, lastByte);
+                    repeatCount = 1;
+                }
+            } else {
+                if (repeatCount > 1) {
+                    writeRepeat(repeatCount, lastByte);
+                    repeatCount = 1;
+                }
+                ++copyCount;
+                if (copyCount == 0xFFFF + 0x20) {
+                    writeCopy(copyCount);
+                }
+            }
+
+            lastByte = currByte;
+            ++pos;
+        }
+
+        if (copyCount > 1) {
+            writeCopy(copyCount - 1);
+        }
+        writeRepeat(repeatCount, lastByte);
+
+        m_rleBuffer.push_back(0xFF);
     }
 };
 
