@@ -73,14 +73,13 @@ private:
             std::vector<uint8> &buffer = GetBuffer();
             cereal::BinaryVectorOutputArchive archive{buffer};
             archive(NextState);
+            m_stateProcessedEvent.Set();
 
             // Compute delta between both buffers
             CalcDelta();
 
             // TODO: RLE compress the delta
             // TODO: write to rewind buffer
-
-            m_stateProcessedEvent.Set();
         }
     }
 
