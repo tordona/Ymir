@@ -6,6 +6,10 @@
 
 namespace app {
 
+RewindBuffer::RewindBuffer() {
+    m_rewindBuffer.resize(128_MiB);
+}
+
 RewindBuffer::~RewindBuffer() {
     Stop();
     if (m_procThread.joinable()) {
@@ -46,13 +50,13 @@ FLATTEN void RewindBuffer::ProcThread() {
         archive(NextState);
         m_stateProcessedEvent.Set();
 
-        // Compute delta between both buffers
-        CalcDelta();
-        CompressDelta();
-        // TODO: write delta
-
-        // fmt::println("{} / {} bytes", m_lz4Buffer.size(), m_deltaBuffer.size());
+        // Process frame from next buffer
+        ProcessFrame();
     }
+
+    // TODO: pop frames (run backwards)
+    // TODO: implement keyframes to allow fast jumps to arbitrary points in the timeline
+    // TODO: reset/clear buffer
 }
 
 std::vector<char> &RewindBuffer::GetBuffer() {
@@ -62,14 +66,14 @@ std::vector<char> &RewindBuffer::GetBuffer() {
     return buffer;
 }
 
-void RewindBuffer::CalcDelta() {
+void RewindBuffer::ProcessFrame() {
     const size_t maxSize = std::max(m_buffers[0].size(), m_buffers[1].size());
     const size_t minSize = std::min(m_buffers[0].size(), m_buffers[1].size());
     if (maxSize == 0) [[unlikely]] {
         return;
     }
 
-    // Reallocate scratch buffer if needed
+    // Resize delta buffer if needed
     if (m_deltaBuffer.size() < maxSize) [[unlikely]] {
         m_deltaBuffer.resize(maxSize);
     }
@@ -79,7 +83,7 @@ void RewindBuffer::CalcDelta() {
     char *b0 = m_buffers[0].empty() ? nullptr : &m_buffers[0][0];
     char *b1 = m_buffers[1].empty() ? nullptr : &m_buffers[1][0];
 
-    // Compute delta
+    // Compute XOR delta efficently
     size_t i = 0;
     for (; i + sizeof(uint64) < minSize; i += sizeof(uint64)) {
         util::WriteNE<uint64>(&out[i], util::ReadNE<uint64>(&b0[i]) ^ util::ReadNE<uint64>(&b1[i]));
@@ -97,22 +101,25 @@ void RewindBuffer::CalcDelta() {
             std::copy(&b1[minSize], &b1[maxSize], &out[minSize]);
         }
     }
-}
-
-void RewindBuffer::CompressDelta() {
-    if (m_deltaBuffer.empty()) {
-        return;
-    }
 
     const size_t srcSize = m_deltaBuffer.size();
     const size_t dstSize = LZ4_compressBound(srcSize);
-    m_lz4Buffer.resize(dstSize);
 
+    if (m_rewindBufferWritePos + dstSize >= m_rewindBuffer.size()) {
+        // Buffer full
+        // TODO: merge old frames to make room for this
+        // fmt::println("Rewind buffer full after {} frames", m_frames.size());
+        return;
+    }
+
+    // Compress delta directly into rewind buffer if it fits
     const char *const src = m_deltaBuffer.data();
-    char *const dst = m_lz4Buffer.data();
-
+    char *const dst = &m_rewindBuffer[m_rewindBufferWritePos];
     const int size = LZ4_compress_fast(src, dst, srcSize, dstSize, LZ4Accel);
-    m_lz4Buffer.resize(size);
+    m_frames.push_back(Frame{.offset = m_rewindBufferWritePos, .length = (uint32)size, .keyframe = minSize == 0});
+    m_rewindBufferWritePos += size;
+
+    // fmt::println("{} / {} / {} bytes", size, srcSize, m_rewindBufferWritePos);
 }
 
 } // namespace app

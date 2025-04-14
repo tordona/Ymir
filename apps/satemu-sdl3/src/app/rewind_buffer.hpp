@@ -20,6 +20,7 @@ namespace app {
 
 class RewindBuffer {
 public:
+    RewindBuffer();
     ~RewindBuffer();
 
     void Start();
@@ -51,15 +52,24 @@ private:
     std::array<std::vector<char>, 2> m_buffers; // Buffers for serialized states (current and next)
     bool m_bufferFlip = false;                  // Which buffer is which
     std::vector<char> m_deltaBuffer;            // XOR delta buffer
-    std::vector<char> m_lz4Buffer;              // LZ4-compressed delta buffer
+
+    struct Frame {
+        size_t offset;     // Position into rewind buffer
+        uint32 length;     // Compressed frame bytes
+        uint32 origLength; // Decompressed frame bytes
+        bool keyframe;     // If true, frame is not a XOR delta from the previous frame
+    };
+
+    std::vector<char> m_rewindBuffer;  // Rewind buffer contents
+    std::vector<Frame> m_frames;       // Frames in the rewind buffer
+    size_t m_rewindBufferWritePos = 0; // Write cursor position
 
     void ProcThread();
 
     // Gets and clears the next buffer and flips the buffer pointer.
     std::vector<char> &GetBuffer();
 
-    void CalcDelta();
-    void CompressDelta();
+    void ProcessFrame();
 };
 
 } // namespace app
