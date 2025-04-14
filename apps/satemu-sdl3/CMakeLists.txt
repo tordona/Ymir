@@ -10,6 +10,7 @@ add_executable(satemu-sdl3
     src/app/cmdline_opts.hpp
     src/app/profile.cpp
     src/app/profile.hpp
+    src/app/rewind_buffer.hpp
     src/app/settings.cpp
     src/app/settings.hpp
     src/app/shared_context.hpp
@@ -177,6 +178,7 @@ add_executable(satemu-sdl3
     src/app/ui/windows/debug/sh2_window_base.hpp
     src/app/ui/windows/debug/sh2_window_set.hpp
 
+    src/serdes/cereal_archive_vector.hpp
     src/serdes/state_v1_cereal.hpp
 
     src/util/file_loader.cpp

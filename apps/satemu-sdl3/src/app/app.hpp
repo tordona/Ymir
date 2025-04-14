@@ -69,6 +69,9 @@ private:
 
     void EmulatorThread();
 
+    template <bool rewind>
+    bool EmulatorThreadProc();
+
     void RebindInputs();
     void RebindAction(input::ActionID action);
 
@@ -77,6 +80,7 @@ private:
 
     void LoadSaveStates();
     void PersistSaveState(uint32 slot);
+    void EnableRewind(bool enable);
 
     void OpenLoadDiscDialog();
     void ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, int filter);

@@ -3,6 +3,7 @@
 #include <satemu/satemu.hpp>
 
 #include <app/profile.hpp>
+#include <app/rewind_buffer.hpp>
 #include <app/settings.hpp>
 
 #include <app/input/input_capturer.hpp>
@@ -38,6 +39,8 @@ struct SharedContext {
 
     std::array<std::unique_ptr<satemu::state::State>, 10> saveStates;
     size_t currSaveStateSlot = 0;
+
+    RewindBuffer rewindBuffer;
 
     // Certain GUI interactions requires synchronization with the emulator thread, specifically when dealing with
     // dynamic objects:

@@ -284,6 +284,8 @@ int App::Run(const CommandLineOptions &options) {
         }
     }};
 
+    EnableRewind(true);
+
     // TODO: allow overriding configuration from CommandLineOptions without modifying the underlying values
 
     util::BoostCurrentProcessPriority(m_context.settings.general.boostProcessPriority);
@@ -320,7 +322,8 @@ int App::Run(const CommandLineOptions &options) {
 }
 
 void App::RunEmulator() {
-    util::SetCurrentThreadName("Main thread");
+    // TODO: setting the main thread name on Linux replaces the process name displayed on tools like `top`
+    // util::SetCurrentThreadName("Main thread");
 
     using clk = std::chrono::steady_clock;
     using namespace std::chrono_literals;
@@ -1857,6 +1860,14 @@ void App::EmulatorThread() {
     util::SetCurrentThreadName("Emulator thread");
     util::BoostCurrentThreadPriority(m_context.settings.general.boostEmuThreadPriority);
 
+    bool keepRunning;
+    do {
+        keepRunning = m_context.rewindBuffer.IsRunning() ? EmulatorThreadProc<true>() : EmulatorThreadProc<false>();
+    } while (keepRunning);
+}
+
+template <bool runRewind>
+bool App::EmulatorThreadProc() {
     std::array<EmuEvent, 64> evts{};
 
     bool paused = false;
@@ -1923,13 +1934,20 @@ void App::EmulatorThread() {
 
             case SetThreadPriority: util::BoostCurrentThreadPriority(std::get<bool>(evt.value)); break;
 
-            case Shutdown: return;
+            case RestartEmulatorThread: return true;
+
+            case Shutdown: return false;
             }
         }
 
         // Emulate one frame
         if (!paused) {
             m_context.saturn.RunFrame();
+            auto &rewind = m_context.rewindBuffer;
+            if constexpr (runRewind) {
+                m_context.saturn.SaveState(m_context.rewindBuffer.NextState);
+                m_context.rewindBuffer.ProcessState();
+            }
         }
         if (frameStep) {
             frameStep = false;
@@ -2040,6 +2058,18 @@ void App::PersistSaveState(uint32 slot) {
                 fmt::format_to(iter, "\n");
             }
         }
+    }
+}
+
+void App::EnableRewind(bool enable) {
+    bool wasEnabled = m_context.rewindBuffer.IsRunning();
+    if (enable != wasEnabled) {
+        if (enable) {
+            m_context.rewindBuffer.Start();
+        } else {
+            m_context.rewindBuffer.Stop();
+        }
+        m_context.EnqueueEvent(events::emu::RestartEmulatorThread());
     }
 }
 

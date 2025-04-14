@@ -67,6 +67,10 @@ inline EmuEvent SetThreadPriority(bool boost) {
     return {.type = EmuEvent::Type::SetThreadPriority, .value = boost};
 }
 
+inline EmuEvent RestartEmulatorThread() {
+    return {.type = EmuEvent::Type::RestartEmulatorThread};
+}
+
 inline EmuEvent Shutdown() {
     return {.type = EmuEvent::Type::Shutdown};
 }

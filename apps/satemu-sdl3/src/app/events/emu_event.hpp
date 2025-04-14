@@ -33,7 +33,9 @@ struct EmuEvent {
 
         SetThreadPriority,
 
-        Shutdown
+        RestartEmulatorThread,
+
+        Shutdown,
     };
 
     Type type;
