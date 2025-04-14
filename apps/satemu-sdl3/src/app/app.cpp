@@ -1179,7 +1179,7 @@ void App::RunEmulator() {
         using Button = peripheral::StandardPadButton;
 
         auto registerStandardPadButton = [&](input::ActionID action, Button button) {
-            inputContext.SetActionHandler(action, [=, this](void *context, bool actuated) {
+            inputContext.SetActionHandler(action, [=](void *context, bool actuated) {
                 auto &buttons = *reinterpret_cast<peripheral::StandardPadButton *>(context);
                 if (actuated) {
                     buttons &= ~button;
@@ -1957,7 +1957,6 @@ bool App::EmulatorThreadProc() {
         // Emulate one frame
         if (!paused) {
             m_context.saturn.RunFrame();
-            auto &rewind = m_context.rewindBuffer;
             if constexpr (runRewind) {
                 m_context.saturn.SaveState(m_context.rewindBuffer.NextState);
                 m_context.rewindBuffer.ProcessState();
