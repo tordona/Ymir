@@ -1586,8 +1586,10 @@ void App::RunEmulator() {
                     paused = !paused;
                     m_context.EnqueueEvent(events::emu::SetPaused(paused));
                 }
+                bool enableRewindBuffer = m_context.settings.general.enableRewindBuffer;
                 if (ImGui::MenuItem("Rewind buffer",
-                                    input::ToShortcut(inputContext, actions::emu::ToggleRewindBuffer).c_str())) {
+                                    input::ToShortcut(inputContext, actions::emu::ToggleRewindBuffer).c_str(),
+                                    &enableRewindBuffer)) {
                     ToggleRewindBuffer();
                 }
                 ImGui::EndMenu();
