@@ -284,7 +284,7 @@ int App::Run(const CommandLineOptions &options) {
         }
     }};
 
-    EnableRewind(true);
+    EnableRewindBuffer(m_context.settings.general.enableRewindBuffer);
 
     // TODO: allow overriding configuration from CommandLineOptions without modifying the underlying values
 
@@ -1138,20 +1138,26 @@ void App::RunEmulator() {
 
     // Emulation
     {
-        inputContext.SetActionHandler(actions::emu::PauseResume, [&](void *, bool actuated) {
-            if (actuated) {
-                paused = !paused;
-                m_context.EnqueueEvent(events::emu::SetPaused(paused));
-            }
-        });
+        inputContext.SetActionHandler(actions::emu::FastForward,
+                                      [&](void *, bool actuated) { m_audioSystem.SetSync(!actuated); });
         inputContext.SetActionHandler(actions::emu::FrameStep, [&](void *, bool actuated) {
             if (actuated) {
                 paused = true;
                 m_context.EnqueueEvent(events::emu::FrameStep());
             }
         });
-        inputContext.SetActionHandler(actions::emu::FastForward,
-                                      [&](void *, bool actuated) { m_audioSystem.SetSync(!actuated); });
+        inputContext.SetActionHandler(actions::emu::PauseResume, [&](void *, bool actuated) {
+            if (actuated) {
+                paused = !paused;
+                m_context.EnqueueEvent(events::emu::SetPaused(paused));
+            }
+        });
+
+        inputContext.SetActionHandler(actions::emu::ToggleRewindBuffer, [&](void *, bool actuated) {
+            if (actuated) {
+                ToggleRewindBuffer();
+            }
+        });
     }
 
     // Debugger
@@ -1380,6 +1386,8 @@ void App::RunEmulator() {
 
             case EvtType::ShowErrorMessage: OpenSimpleErrorModal(std::get<std::string>(evt.value)); break;
 
+            case EvtType::EnableRewindBuffer: EnableRewindBuffer(std::get<bool>(evt.value)); break;
+
             case EvtType::StateSaved: PersistSaveState(std::get<uint32>(evt.value)); break;
             }
         }
@@ -1577,6 +1585,10 @@ void App::RunEmulator() {
                                     input::ToShortcut(inputContext, actions::emu::PauseResume).c_str())) {
                     paused = !paused;
                     m_context.EnqueueEvent(events::emu::SetPaused(paused));
+                }
+                if (ImGui::MenuItem("Rewind buffer",
+                                    input::ToShortcut(inputContext, actions::emu::ToggleRewindBuffer).c_str())) {
+                    ToggleRewindBuffer();
                 }
                 ImGui::EndMenu();
             }
@@ -2061,7 +2073,7 @@ void App::PersistSaveState(uint32 slot) {
     }
 }
 
-void App::EnableRewind(bool enable) {
+void App::EnableRewindBuffer(bool enable) {
     bool wasEnabled = m_context.rewindBuffer.IsRunning();
     if (enable != wasEnabled) {
         if (enable) {
@@ -2069,8 +2081,14 @@ void App::EnableRewind(bool enable) {
         } else {
             m_context.rewindBuffer.Stop();
         }
+        devlog::debug<grp::base>("Rewind buffer {}", (enable ? "enabled" : "disabled"));
         m_context.EnqueueEvent(events::emu::RestartEmulatorThread());
     }
+}
+
+void App::ToggleRewindBuffer() {
+    m_context.settings.general.enableRewindBuffer ^= true;
+    EnableRewindBuffer(m_context.settings.general.enableRewindBuffer);
 }
 
 void App::OpenLoadDiscDialog() {

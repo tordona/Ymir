@@ -33,6 +33,20 @@ void GeneralSettingsView::Display() {
     widgets::ExplanationTooltip(
         "Preloads the entire disc image to memory.\n"
         "May help reduce stuttering if you're loading images from a slow disk or from the network.");
+
+    // -----------------------------------------------------------------------------------------------------------------
+
+    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::SeparatorText("Rewind buffer");
+    ImGui::PopFont();
+
+    if (MakeDirty(ImGui::Checkbox("Enable rewind buffer", &settings.enableRewindBuffer))) {
+        m_context.EnqueueEvent(events::gui::EnableRewindBuffer(settings.enableRewindBuffer));
+    }
+    widgets::ExplanationTooltip("Allows you to step back in time.\n"
+                                "Increases memory usage and slightly reduces performance.");
+
+    // TODO: rewind buffer size
 }
 
 } // namespace app::ui

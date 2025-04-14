@@ -80,7 +80,8 @@ private:
 
     void LoadSaveStates();
     void PersistSaveState(uint32 slot);
-    void EnableRewind(bool enable);
+    void EnableRewindBuffer(bool enable);
+    void ToggleRewindBuffer();
 
     void OpenLoadDiscDialog();
     void ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, int filter);

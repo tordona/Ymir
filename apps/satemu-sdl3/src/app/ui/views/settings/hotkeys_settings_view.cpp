@@ -77,6 +77,7 @@ void HotkeysSettingsView::Display() {
         drawRow("Emulation", "Pause/resume", hotkeys.pauseResume);
         drawRow("Emulation", "Frame step", hotkeys.frameStep);
         drawRow("Emulation", "Fast forward", hotkeys.fastForward);
+        drawRow("Emulation", "Toggle rewind buffer", hotkeys.toggleRewindBuffer);
 
         drawRow("Debugger", "Toggle tracing", hotkeys.toggleDebugTrace);
         drawRow("Debugger", "Dump all memory", hotkeys.dumpMemory);

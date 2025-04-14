@@ -67,4 +67,8 @@ inline GUIEvent StateSaved(uint32 slot) {
     return {.type = GUIEvent::Type::StateSaved, .value = slot};
 }
 
+inline GUIEvent EnableRewindBuffer(bool enable) {
+    return {.type = GUIEvent::Type::EnableRewindBuffer, .value = enable};
+}
+
 } // namespace app::events::gui

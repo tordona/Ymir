@@ -221,9 +221,10 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapActionInput(hotkeys.hardReset);
     mapActionInput(hotkeys.softReset);
     mapActionInput(hotkeys.resetButton);
-    mapActionInput(hotkeys.pauseResume);
-    mapActionInput(hotkeys.frameStep);
     mapActionInput(hotkeys.fastForward);
+    mapActionInput(hotkeys.frameStep);
+    mapActionInput(hotkeys.pauseResume);
+    mapActionInput(hotkeys.toggleRewindBuffer);
     mapActionInput(hotkeys.toggleDebugTrace);
     mapActionInput(hotkeys.dumpMemory);
 
@@ -300,6 +301,7 @@ void Settings::ResetToDefaults() {
     general.preloadDiscImagesToRAM = false;
     general.boostEmuThreadPriority = true;
     general.boostProcessPriority = true;
+    general.enableRewindBuffer = false;
 
     system.biosPath = "";
 
@@ -352,6 +354,7 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         Parse(tblGeneral, "PreloadDiscImagesToRAM", general.preloadDiscImagesToRAM);
         Parse(tblGeneral, "BoostEmuThreadPriority", general.boostEmuThreadPriority);
         Parse(tblGeneral, "BoostProcessPriority", general.boostProcessPriority);
+        Parse(tblGeneral, "EnableRewindBuffer", general.enableRewindBuffer);
     }
 
     if (auto tblSystem = data["System"]) {
@@ -380,9 +383,10 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         Parse(tblHotkeys, "HardReset", hotkeys.hardReset);
         Parse(tblHotkeys, "SoftReset", hotkeys.softReset);
         Parse(tblHotkeys, "ResetButton", hotkeys.resetButton);
-        Parse(tblHotkeys, "PauseResume", hotkeys.pauseResume);
-        Parse(tblHotkeys, "FrameStep", hotkeys.frameStep);
         Parse(tblHotkeys, "FastForward", hotkeys.fastForward);
+        Parse(tblHotkeys, "FrameStep", hotkeys.frameStep);
+        Parse(tblHotkeys, "PauseResume", hotkeys.pauseResume);
+        Parse(tblHotkeys, "ToggleRewindBuffer", hotkeys.toggleRewindBuffer);
         Parse(tblHotkeys, "ToggleDebugTrace", hotkeys.toggleDebugTrace);
         Parse(tblHotkeys, "DumpMemory", hotkeys.dumpMemory);
 
@@ -486,6 +490,7 @@ SettingsSaveResult Settings::Save() {
             {"PreloadDiscImagesToRAM", general.preloadDiscImagesToRAM},
             {"BoostEmuThreadPriority", general.boostEmuThreadPriority},
             {"BoostProcessPriority", general.boostProcessPriority},
+            {"EnableRewindBuffer", general.enableRewindBuffer},
         }}},
 
         {"System", toml::table{{
@@ -512,9 +517,10 @@ SettingsSaveResult Settings::Save() {
             {"HardReset", ToTOML(hotkeys.hardReset)},
             {"SoftReset", ToTOML(hotkeys.softReset)},
             {"ResetButton", ToTOML(hotkeys.resetButton)},
-            {"PauseResume", ToTOML(hotkeys.pauseResume)},
-            {"FrameStep", ToTOML(hotkeys.frameStep)},
             {"FastForward", ToTOML(hotkeys.fastForward)},
+            {"FrameStep", ToTOML(hotkeys.frameStep)},
+            {"PauseResume", ToTOML(hotkeys.pauseResume)},
+            {"ToggleRewindBuffer", ToTOML(hotkeys.toggleRewindBuffer)},
             {"ToggleDebugTrace", ToTOML(hotkeys.toggleDebugTrace)},
             {"DumpMemory", ToTOML(hotkeys.dumpMemory)},
 
@@ -704,9 +710,10 @@ void Settings::ResetHotkeys() {
     hotkeys.hardReset.events = {KeyCombo{Mod::Control, Key::R}};
     hotkeys.softReset.events = {KeyCombo{Mod::Control | Mod::Shift, Key::R}};
 
-    hotkeys.frameStep.events = {KeyCombo{Mod::None, Key::RightBracket}};
-    hotkeys.pauseResume.events = {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::Control, Key::P}};
     hotkeys.fastForward.events = {KeyCombo{Mod::None, Key::Tab}};
+    hotkeys.pauseResume.events = {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::Control, Key::P}};
+    hotkeys.frameStep.events = {KeyCombo{Mod::None, Key::RightBracket}};
+    hotkeys.toggleRewindBuffer.events = {KeyCombo{Mod::None, Key::F8}};
 
     hotkeys.resetButton.events = {KeyCombo{Mod::Shift, Key::R}};
 

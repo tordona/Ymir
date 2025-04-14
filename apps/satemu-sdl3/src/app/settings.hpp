@@ -150,6 +150,9 @@ public:
 
         bool boostEmuThreadPriority;
         bool boostProcessPriority;
+
+        bool enableRewindBuffer;
+        // TODO: rewind buffer size
     } general;
 
     struct System {
@@ -168,9 +171,10 @@ public:
         InputBind softReset{actions::sys::SoftReset};
         InputBind resetButton{actions::sys::ResetButton};
 
-        InputBind pauseResume{actions::emu::PauseResume};
-        InputBind frameStep{actions::emu::FrameStep};
         InputBind fastForward{actions::emu::FastForward};
+        InputBind frameStep{actions::emu::FrameStep};
+        InputBind pauseResume{actions::emu::PauseResume};
+        InputBind toggleRewindBuffer{actions::emu::ToggleRewindBuffer};
 
         InputBind toggleDebugTrace{actions::dbg::ToggleDebugTrace};
         InputBind dumpMemory{actions::dbg::DumpMemory};

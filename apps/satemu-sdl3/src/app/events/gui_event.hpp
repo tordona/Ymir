@@ -65,6 +65,8 @@ struct GUIEvent {
 
         ShowErrorMessage,
 
+        EnableRewindBuffer,
+
         // Emulator notifications
 
         StateSaved, // A save state slot was just saved
