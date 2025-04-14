@@ -5,7 +5,9 @@
 #include "bit_ops.hpp"
 #include "inline.hpp"
 
+#include <bit>
 #include <concepts>
+#include <cstring>
 #include <span>
 
 namespace util {
@@ -19,33 +21,37 @@ FORCE_INLINE constexpr bool AddressInRange(uint32 address) {
 template <typename T>
 FORCE_INLINE T ReadBE(const uint8 *data) {
     T value = 0;
-    for (uint32 i = 0; i < sizeof(T); i++) {
-        value |= data[i] << ((sizeof(T) - 1u - i) * 8u);
+    std::memcpy(&value, data, sizeof(T));
+    if constexpr (std::endian::native == std::endian::little) {
+        value = bit::byte_swap(value);
     }
     return value;
 }
 
 template <typename T>
 FORCE_INLINE void WriteBE(uint8 *data, T value) {
-    for (uint32 i = 0; i < sizeof(T); i++) {
-        data[i] = value >> ((sizeof(T) - 1u - i) * 8u);
+    if constexpr (std::endian::native == std::endian::little) {
+        value = bit::byte_swap(value);
     }
+    std::memcpy(data, &value, sizeof(T));
 }
 
 template <typename T>
 FORCE_INLINE T ReadLE(const uint8 *data) {
     T value = 0;
-    for (uint32 i = 0; i < sizeof(T); i++) {
-        value |= data[i] << (i * 8u);
+    std::memcpy(&value, data, sizeof(T));
+    if constexpr (std::endian::native == std::endian::big) {
+        value = bit::byte_swap(value);
     }
     return value;
 }
 
 template <typename T>
 FORCE_INLINE void WriteLE(uint8 *data, T value) {
-    for (uint32 i = 0; i < sizeof(T); i++) {
-        data[i] = value >> (i * 8u);
+    if constexpr (std::endian::native == std::endian::big) {
+        value = bit::byte_swap(value);
     }
+    std::memcpy(data, &value, sizeof(T));
 }
 
 template <std::integral T>
