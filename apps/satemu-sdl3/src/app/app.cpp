@@ -2090,6 +2090,7 @@ void App::EnableRewindBuffer(bool enable) {
 
 void App::ToggleRewindBuffer() {
     m_context.settings.general.enableRewindBuffer ^= true;
+    m_context.settings.MakeDirty();
     EnableRewindBuffer(m_context.settings.general.enableRewindBuffer);
 }
 
