@@ -145,7 +145,8 @@ private:
     }
 
     void CompressDelta() {
-        // TODO: replace with a *fast* compression algorithm
+        // TODO: replace with a *fast* compression algorithm or try optimizing this
+        // https://github.com/lz4/lz4
 
         // Encoding scheme:
         //   0x00..0x5E: write 0x01..0x5F zeros
