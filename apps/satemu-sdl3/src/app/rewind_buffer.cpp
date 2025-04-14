@@ -50,6 +50,8 @@ void RewindBuffer::Stop() {
         CalcDelta();
         CompressDelta();
         // TODO: write delta
+
+        // fmt::println("{} / {} bytes", m_lz4Buffer.size(), m_deltaBuffer.size());
     }
 }
 
@@ -109,8 +111,7 @@ void RewindBuffer::CompressDelta() {
     const char *const src = m_deltaBuffer.data();
     char *const dst = m_lz4Buffer.data();
 
-    // TODO: make the acceleration factor configurable
-    const int size = LZ4_compress_fast(src, dst, srcSize, dstSize, 64);
+    const int size = LZ4_compress_fast(src, dst, srcSize, dstSize, LZ4Accel);
     m_lz4Buffer.resize(size);
 }
 

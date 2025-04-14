@@ -39,6 +39,8 @@ public:
     // Next state to be processed. Should be filled in by the emulator before invoking ProcessState()
     satemu::state::State NextState;
 
+    int LZ4Accel = 64; // LZ4 acceleration factor (1 to 65537)
+
 private:
     bool m_running = false;
 

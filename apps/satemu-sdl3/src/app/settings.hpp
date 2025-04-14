@@ -153,6 +153,7 @@ public:
 
         bool enableRewindBuffer;
         // TODO: rewind buffer size
+        int rewindCompressionSpeed;
     } general;
 
     struct System {
