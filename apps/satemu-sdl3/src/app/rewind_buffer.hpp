@@ -32,6 +32,9 @@ public:
 
     void Start() {
         if (!m_running) {
+            if (m_procThread.joinable()) {
+                m_procThread.join();
+            }
             m_procThread = std::thread([&] { ProcThread(); });
         }
     }
