@@ -145,13 +145,15 @@ private:
     }
 
     void CompressDelta() {
+        // TODO: replace with a *fast* compression algorithm
+
         // Encoding scheme:
         //   0x00..0x5E: write 0x01..0x5F zeros
         //         0x5F: write [following uint24le + 0x60] zeros
         //   0x60..0x7E: copy the next 0x01..0x1F bytes verbatim
         //         0x7F: copy the next [following uint16le + 0x20] bytes verbatim
-        //   0x80..0xFD: repeat next byte 0x01..0x7E times
-        //         0xFE: repeat next byte [following uint24le + 0x7F] times
+        //   0x80..0xFD: repeat next byte 0x02..0x7F times
+        //         0xFE: repeat next byte [following uint24le + 0x80] times
         //         0xFF: end of stream
         if (m_deltaBufferSize == 0) {
             return;
@@ -180,17 +182,17 @@ private:
                 return;
             }
 
-            assert(count > 0);
-            assert(count <= 0xFFFFFF + 0x7F);
+            assert(count > 1);
+            assert(count <= 0xFFFFFF + 0x80);
             if (count <= 0x7E) {
-                m_rleBuffer.push_back(count - 1 + 0x80);
+                m_rleBuffer.push_back(count - 2 + 0x80);
                 m_rleBuffer.push_back(byte);
             } else {
                 m_rleBuffer.push_back(0xFE);
                 m_rleBuffer.push_back(byte);
-                m_rleBuffer.push_back((count - 0x7F) >> 0u);
-                m_rleBuffer.push_back((count - 0x7F) >> 8u);
-                m_rleBuffer.push_back((count - 0x7F) >> 16u);
+                m_rleBuffer.push_back((count - 0x80) >> 0u);
+                m_rleBuffer.push_back((count - 0x80) >> 8u);
+                m_rleBuffer.push_back((count - 0x80) >> 16u);
             }
         };
 
@@ -215,24 +217,31 @@ private:
             const uint8 currByte = m_deltaBuffer[pos];
 
             if (currByte == lastByte) {
-                if (copyCount > 1) {
+                ++repeatCount;
+                if (repeatCount > 2 && copyCount > 1) {
                     writeCopy(copyCount - 1);
                     copyCount = 0;
+                } else if (repeatCount == 2) {
+                    ++copyCount;
+                    if (copyCount == 0xFFFF + 0x20) {
+                        writeCopy(copyCount);
+                        copyCount = 0;
+                    }
                 }
-                ++repeatCount;
                 if ((lastByte == 0 && repeatCount == 0xFFFFFF + 0x60) ||
-                    (lastByte != 0 && repeatCount == 0xFFFFFF + 0x7F)) {
+                    (lastByte != 0 && repeatCount == 0xFFFFFF + 0x80)) {
                     writeRepeat(repeatCount, lastByte);
                     repeatCount = 1;
                 }
             } else {
-                if (repeatCount > 1) {
+                if (repeatCount > 2) {
                     writeRepeat(repeatCount, lastByte);
-                    repeatCount = 1;
                 }
+                repeatCount = 1;
                 ++copyCount;
                 if (copyCount == 0xFFFF + 0x20) {
                     writeCopy(copyCount);
+                    copyCount = 0;
                 }
             }
 
@@ -243,7 +252,12 @@ private:
         if (copyCount > 1) {
             writeCopy(copyCount - 1);
         }
-        writeRepeat(repeatCount, lastByte);
+        if (repeatCount > 1) {
+            writeRepeat(repeatCount, lastByte);
+        } else if (repeatCount == 1 && copyCount == 1) {
+            m_rleBuffer.push_back(0x60);
+            m_rleBuffer.push_back(lastByte);
+        }
 
         m_rleBuffer.push_back(0xFF);
     }
