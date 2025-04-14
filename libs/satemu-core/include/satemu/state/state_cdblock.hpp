@@ -14,7 +14,7 @@ inline namespace v1 {
     struct CDBlockState {
         Hash128 discHash;
 
-        std::array<uint16, 4> CR;
+        alignas(16) std::array<uint16, 4> CR;
         uint16 HIRQ;
         uint16 HIRQMASK;
 
@@ -62,14 +62,14 @@ inline namespace v1 {
 
         uint32 xferCurrFileID;
 
-        std::array<uint8, 24> xferSubcodeBuffer;
+        alignas(16) std::array<uint8, 24> xferSubcodeBuffer;
         uint32 xferSubcodeFrameAddress;
         uint32 xferSubcodeGroup;
 
         uint32 xferExtraCount;
 
         struct BufferState {
-            std::array<uint8, 2352> data;
+            alignas(16) std::array<uint8, 2352> data;
             uint16 size;
             uint32 frameAddress;
             uint8 fileNum;
@@ -79,7 +79,7 @@ inline namespace v1 {
 
             uint8 partitionIndex;
         };
-        std::array<BufferState, cdblock::kNumBuffers> buffers;
+        alignas(16) std::array<BufferState, cdblock::kNumBuffers> buffers;
         BufferState scratchBuffer;
 
         struct FilterState {
@@ -100,7 +100,7 @@ inline namespace v1 {
             uint8 trueOutput;
             uint8 falseOutput;
         };
-        std::array<FilterState, cdblock::kNumFilters> filters;
+        alignas(16) std::array<FilterState, cdblock::kNumFilters> filters;
 
         uint8 cdDeviceConnection;
         uint8 lastCDWritePartition;

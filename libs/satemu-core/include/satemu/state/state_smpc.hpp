@@ -9,8 +9,8 @@ namespace satemu::state {
 inline namespace v1 {
 
     struct SMPCState {
-        std::array<uint8, 7> IREG;
-        std::array<uint8, 32> OREG;
+        alignas(16) std::array<uint8, 7> IREG;
+        alignas(16) std::array<uint8, 32> OREG;
         uint8 COMREG;
         uint8 SR;
         bool SF;

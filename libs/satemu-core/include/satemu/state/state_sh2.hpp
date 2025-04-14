@@ -9,7 +9,7 @@ namespace satemu::state {
 inline namespace v1 {
 
     struct SH2State {
-        std::array<uint32, 16> R;
+        alignas(16) std::array<uint32, 16> R;
 
         uint32 PC;
         uint32 PR;
@@ -81,8 +81,8 @@ inline namespace v1 {
         struct INTC {
             uint16 ICR;
 
-            std::array<uint8, 16> levels;
-            std::array<uint8, 16> vectors;
+            alignas(16) std::array<uint8, 16> levels;
+            alignas(16) std::array<uint8, 16> vectors;
 
             uint8 pendingSource;
             uint8 pendingLevel;
@@ -93,13 +93,13 @@ inline namespace v1 {
 
         struct Cache {
             struct Entry {
-                std::array<uint32, 4> tags;
-                std::array<std::array<uint8, 16>, 4> lines;
+                alignas(16) std::array<uint32, 4> tags;
+                alignas(16) std::array<std::array<uint8, 16>, 4> lines;
             };
 
             uint8 CCR;
-            std::array<Entry, 64> entries;
-            std::array<uint8, 64> lru;
+            alignas(16) std::array<Entry, 64> entries;
+            alignas(16) std::array<uint8, 64> lru;
         } cache;
 
         uint8 SBYCR;

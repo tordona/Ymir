@@ -9,14 +9,14 @@ namespace satemu::state {
 inline namespace v1 {
 
     struct SCSPDSP {
-        std::array<uint64, 128> MPRO;
-        std::array<uint32, 128> TEMP;
-        std::array<uint32, 32> MEMS;
-        std::array<uint16, 64> COEF;
-        std::array<uint16, 32> MADRS;
-        std::array<sint32, 16> MIXS;
-        std::array<sint16, 16> EFREG;
-        std::array<sint16, 2> EXTS;
+        alignas(16) std::array<uint64, 128> MPRO;
+        alignas(16) std::array<uint32, 128> TEMP;
+        alignas(16) std::array<uint32, 32> MEMS;
+        alignas(16) std::array<uint16, 64> COEF;
+        alignas(16) std::array<uint16, 32> MADRS;
+        alignas(16) std::array<sint32, 16> MIXS;
+        alignas(16) std::array<sint16, 16> EFREG;
+        alignas(16) std::array<sint16, 2> EXTS;
 
         uint8 RBP;
         uint8 RBL;

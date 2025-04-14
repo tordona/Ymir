@@ -9,7 +9,7 @@ namespace satemu::state {
 inline namespace v1 {
 
     struct M68KState {
-        std::array<uint32, 8 + 8> DA;
+        alignas(16) std::array<uint32, 8 + 8> DA;
         uint32 SP_swap;
         uint32 PC;
         uint16 SR;

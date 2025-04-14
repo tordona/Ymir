@@ -17,7 +17,7 @@ inline namespace v1 {
         };
 
         uint64 currCount;
-        std::array<EventState, core::kNumScheduledEvents> events;
+        alignas(16) std::array<EventState, core::kNumScheduledEvents> events;
     };
 
 } // namespace v1

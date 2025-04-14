@@ -13,10 +13,10 @@ namespace satemu::state {
 inline namespace v1 {
 
     struct VDPState {
-        std::array<uint8, vdp::kVDP1VRAMSize> VRAM1;
-        std::array<uint8, vdp::kVDP2VRAMSize> VRAM2;
-        std::array<uint8, vdp::kVDP2CRAMSize> CRAM;
-        std::array<std::array<uint8, vdp::kVDP1FramebufferRAMSize>, 2> spriteFB;
+        alignas(16) std::array<uint8, vdp::kVDP1VRAMSize> VRAM1;
+        alignas(16) std::array<uint8, vdp::kVDP2VRAMSize> VRAM2;
+        alignas(16) std::array<uint8, vdp::kVDP2CRAMSize> CRAM;
+        alignas(16) std::array<std::array<uint8, vdp::kVDP1FramebufferRAMSize>, 2> spriteFB;
         uint8 displayFB;
 
         struct VDP1RegsState {

@@ -34,8 +34,8 @@ inline namespace v1 {
     };
 
     struct SCUDSPState {
-        std::array<uint32, 256> programRAM;
-        std::array<std::array<uint32, 64>, 4> dataRAM;
+        alignas(16) std::array<uint32, 256> programRAM;
+        alignas(16) std::array<std::array<uint32, 64>, 4> dataRAM;
 
         bool programExecuting;
         bool programPaused;

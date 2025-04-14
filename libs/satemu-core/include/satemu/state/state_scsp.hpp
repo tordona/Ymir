@@ -16,9 +16,9 @@ namespace satemu::state {
 inline namespace v1 {
 
     struct SCSPState {
-        std::array<uint8, m68k::kM68KWRAMSize> WRAM;
+        alignas(16) std::array<uint8, m68k::kM68KWRAMSize> WRAM;
 
-        std::array<uint8, 2048 * 75> cddaBuffer;
+        alignas(16) std::array<uint8, 2048 * 75> cddaBuffer;
         uint32 cddaReadPos;
         uint32 cddaWritePos;
         bool cddaReady;
@@ -27,7 +27,7 @@ inline namespace v1 {
         uint64 m68kSpilloverCycles;
         bool m68kEnabled;
 
-        std::array<SCSPSlotState, 32> slots;
+        alignas(16) std::array<SCSPSlotState, 32> slots;
 
         uint32 MVOL;
         bool DAC18B;
@@ -48,7 +48,7 @@ inline namespace v1 {
         uint16 DRGA;
         uint16 DTLG;
 
-        std::array<uint16, 64> SOUS;
+        alignas(16) std::array<uint16, 64> SOUS;
         uint32 soundStackIndex;
 
         SCSPDSP dsp;

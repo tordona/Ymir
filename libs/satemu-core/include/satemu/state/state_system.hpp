@@ -15,10 +15,10 @@ inline namespace v1 {
         sys::ClockSpeed clockSpeed;
         bool slaveSH2Enabled;
 
-        Hash128 iplRomHash;
+        alignas(16) Hash128 iplRomHash;
 
-        std::array<uint8, sys::kWRAMLowSize> WRAMLow;
-        std::array<uint8, sys::kWRAMHighSize> WRAMHigh;
+        alignas(16) std::array<uint8, sys::kWRAMLowSize> WRAMLow;
+        alignas(16) std::array<uint8, sys::kWRAMHighSize> WRAMHigh;
     };
 
 } // namespace v1
