@@ -70,12 +70,16 @@ add_subdirectory(tomlplusplus EXCLUDE_FROM_ALL)
 message(STATUS "==> xxHash")
 add_subdirectory(xxHash EXCLUDE_FROM_ALL)
 
+# lz4 - https://github.com/lz4/lz4
+message(STATUS "==> lz4")
+add_subdirectory(lz4 EXCLUDE_FROM_ALL)
+
 # cereal - https://github.com/USCiLab/cereal
 message(STATUS "==> cereal")
 set(BUILD_DOC OFF)
 set(BUILD_SANDBOX OFF)
 set(JUST_INSTALL_CEREAL ON)
-add_subdirectory(cereal)
+add_subdirectory(cereal EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------------------------------------------------------
 # Test dependencies
@@ -101,6 +105,7 @@ if(MSVC)
     set_target_properties(Catch2WithMain PROPERTIES FOLDER Vendored)
     set_target_properties(imgui PROPERTIES FOLDER Vendored)
     set_target_properties(xxHash PROPERTIES FOLDER Vendored)
+    set_target_properties(lz4 PROPERTIES FOLDER Vendored)
 endif()
 
 message(STATUS "Done adding vendored libraries")

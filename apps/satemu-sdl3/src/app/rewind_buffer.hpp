@@ -36,7 +36,7 @@ public:
         m_nextStateEvent.Set();
     }
 
-    // Next state to be processed. Should be filled in by emulator before invoking ProcessState()
+    // Next state to be processed. Should be filled in by the emulator before invoking ProcessState()
     satemu::state::State NextState;
 
 private:
@@ -46,16 +46,15 @@ private:
     util::Event m_nextStateEvent{false};     // Raised by emulator to ask rewind buffer to process next state
     util::Event m_stateProcessedEvent{true}; // Raised by rewind buffer to tell emulator it's done processing
 
-    std::array<std::vector<uint8>, 2> m_buffers; // Buffers for serialized states (current and next)
-    bool m_bufferFlip = false;                   // Which buffer is which
-    uint8 *m_deltaBuffer = nullptr;              // XOR delta buffer
-    size_t m_deltaBufferSize = 0;                // Delta buffer size
-    std::vector<uint8> m_rleBuffer;
+    std::array<std::vector<char>, 2> m_buffers; // Buffers for serialized states (current and next)
+    bool m_bufferFlip = false;                  // Which buffer is which
+    std::vector<char> m_deltaBuffer;            // XOR delta buffer
+    std::vector<char> m_lz4Buffer;              // LZ4-compressed delta buffer
 
     void ProcThread();
 
     // Gets and clears the next buffer and flips the buffer pointer.
-    std::vector<uint8> &GetBuffer();
+    std::vector<char> &GetBuffer();
 
     void CalcDelta();
     void CompressDelta();

@@ -204,6 +204,7 @@ target_link_libraries(satemu-sdl3 PRIVATE
     imgui::imgui
     tomlplusplus::tomlplusplus
     cereal::cereal
+    lz4::lz4
 )
 target_compile_features(satemu-sdl3 PUBLIC cxx_std_20)
 

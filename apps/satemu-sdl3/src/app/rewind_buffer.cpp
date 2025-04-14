@@ -1,14 +1,15 @@
 #include "rewind_buffer.hpp"
 
+#include <satemu/util/data_ops.hpp>
+
+#include <lz4.h>
+
 namespace app {
 
 RewindBuffer::~RewindBuffer() {
     Stop();
     if (m_procThread.joinable()) {
         m_procThread.join();
-    }
-    if (m_deltaBuffer != nullptr) {
-        delete[] m_deltaBuffer;
     }
 }
 
@@ -30,7 +31,7 @@ void RewindBuffer::Stop() {
     }
 }
 
-FLATTEN void RewindBuffer::ProcThread() {
+/*FLATTEN*/ void RewindBuffer::ProcThread() {
     util::SetCurrentThreadName("Rewind buffer processor");
 
     while (m_running) {
@@ -40,23 +41,19 @@ FLATTEN void RewindBuffer::ProcThread() {
         }
 
         // Serialize state to next buffer
-        std::vector<uint8> &buffer = GetBuffer();
+        std::vector<char> &buffer = GetBuffer();
         cereal::BinaryVectorOutputArchive archive{buffer};
         archive(NextState);
         m_stateProcessedEvent.Set();
 
         // Compute delta between both buffers
         CalcDelta();
-
-        // RLE compress the delta
         CompressDelta();
-
-        // TODO: write to rewind buffer
+        // TODO: write delta
     }
 }
 
-// Gets and clears the next buffer and flips the buffer pointer.
-std::vector<uint8> &RewindBuffer::GetBuffer() {
+std::vector<char> &RewindBuffer::GetBuffer() {
     auto &buffer = m_buffers[m_bufferFlip];
     m_bufferFlip ^= true;
     buffer.clear();
@@ -71,21 +68,21 @@ void RewindBuffer::CalcDelta() {
     }
 
     // Reallocate scratch buffer if needed
-    if (m_deltaBufferSize < maxSize) [[unlikely]] {
-        if (m_deltaBuffer != nullptr) {
-            delete[] m_deltaBuffer;
-        }
-        m_deltaBuffer = new uint8[maxSize];
-        m_deltaBufferSize = maxSize;
+    if (m_deltaBuffer.size() < maxSize) [[unlikely]] {
+        m_deltaBuffer.resize(maxSize);
     }
 
     // Use pointers to allow for vectorization
-    uint8 *out = &m_deltaBuffer[0];
-    uint8 *b0 = m_buffers[0].empty() ? nullptr : &m_buffers[0][0];
-    uint8 *b1 = m_buffers[1].empty() ? nullptr : &m_buffers[1][0];
+    char *out = &m_deltaBuffer[0];
+    char *b0 = m_buffers[0].empty() ? nullptr : &m_buffers[0][0];
+    char *b1 = m_buffers[1].empty() ? nullptr : &m_buffers[1][0];
 
     // Compute delta
-    for (size_t i = 0; i < minSize; i++) {
+    size_t i = 0;
+    for (; i + sizeof(uint64) < minSize; i += sizeof(uint64)) {
+        util::WriteNE<uint64>(&out[i], util::ReadNE<uint64>(&b0[i]) ^ util::ReadNE<uint64>(&b1[i]));
+    }
+    for (; i < minSize; i++) {
         out[i] = b0[i] ^ b1[i];
     }
 
@@ -101,165 +98,20 @@ void RewindBuffer::CalcDelta() {
 }
 
 void RewindBuffer::CompressDelta() {
-    // TODO: replace with a *fast* compression algorithm or try optimizing this
-    // https://github.com/lz4/lz4
-
-    // Encoding scheme:
-    //   0x00..0x5E: write 0x01..0x5F zeros
-    //         0x5F: write [following uint24le + 0x60] zeros
-    //   0x60..0x7E: copy the next 0x01..0x1F bytes verbatim
-    //         0x7F: copy the next [following uint16le + 0x20] bytes verbatim
-    //   0x80..0xFD: repeat next byte 0x02..0x7F times
-    //         0xFE: repeat next byte [following uint24le + 0x80] times
-    //         0xFF: end of stream
-    if (m_deltaBufferSize == 0) {
+    if (m_deltaBuffer.empty()) {
         return;
     }
 
-    m_rleBuffer.clear();
+    const size_t srcSize = m_deltaBuffer.size();
+    const size_t dstSize = LZ4_compressBound(srcSize);
+    m_lz4Buffer.resize(dstSize);
 
-    size_t pos = 1;
+    const char *const src = m_deltaBuffer.data();
+    char *const dst = m_lz4Buffer.data();
 
-    uint32 repeatCount = 1;
-    uint32 copyCount = 1;
-    uint8 lastByte = m_deltaBuffer[0];
-    while (pos < m_deltaBufferSize) {
-        const uint8 currByte = m_deltaBuffer[pos];
-
-        if (currByte == lastByte) {
-            ++repeatCount;
-            if (repeatCount > 2 && copyCount > 1) {
-                --copyCount;
-                if (copyCount <= 0x1F) {
-                    m_rleBuffer.push_back(copyCount - 1 + 0x60);
-                    m_rleBuffer.insert(m_rleBuffer.end(), &m_deltaBuffer[pos - 1 - copyCount], &m_deltaBuffer[pos - 1]);
-                } else {
-                    m_rleBuffer.push_back(0x7F);
-                    m_rleBuffer.push_back((copyCount - 0x20) >> 0u);
-                    m_rleBuffer.push_back((copyCount - 0x20) >> 8u);
-                    m_rleBuffer.insert(m_rleBuffer.end(), &m_deltaBuffer[pos - 1 - copyCount], &m_deltaBuffer[pos - 1]);
-                }
-                copyCount = 0;
-            } else if (repeatCount == 2) {
-                ++copyCount;
-                if (copyCount == 0xFFFF + 0x20) {
-                    if (copyCount <= 0x1F) {
-                        m_rleBuffer.push_back(copyCount - 1 + 0x60);
-                        m_rleBuffer.insert(m_rleBuffer.end(), &m_deltaBuffer[pos - 1 - copyCount],
-                                           &m_deltaBuffer[pos - 1]);
-                    } else {
-                        m_rleBuffer.push_back(0x7F);
-                        m_rleBuffer.push_back((copyCount - 0x20) >> 0u);
-                        m_rleBuffer.push_back((copyCount - 0x20) >> 8u);
-                        m_rleBuffer.insert(m_rleBuffer.end(), &m_deltaBuffer[pos - 1 - copyCount],
-                                           &m_deltaBuffer[pos - 1]);
-                    }
-                    copyCount = 0;
-                }
-            }
-            if ((lastByte == 0 && repeatCount == 0xFFFFFF + 0x60) ||
-                (lastByte != 0 && repeatCount == 0xFFFFFF + 0x80)) {
-                if (lastByte == 0) {
-                    if (repeatCount <= 0x5F) {
-                        m_rleBuffer.push_back(repeatCount - 1);
-                    } else {
-                        m_rleBuffer.push_back(0x5F);
-                        m_rleBuffer.push_back((repeatCount - 0x60) >> 0u);
-                        m_rleBuffer.push_back((repeatCount - 0x60) >> 8u);
-                        m_rleBuffer.push_back((repeatCount - 0x60) >> 16u);
-                    }
-                } else if (repeatCount <= 0x7E) {
-                    m_rleBuffer.push_back(repeatCount - 2 + 0x80);
-                    m_rleBuffer.push_back(lastByte);
-                } else {
-                    m_rleBuffer.push_back(0xFE);
-                    m_rleBuffer.push_back(lastByte);
-                    m_rleBuffer.push_back((repeatCount - 0x80) >> 0u);
-                    m_rleBuffer.push_back((repeatCount - 0x80) >> 8u);
-                    m_rleBuffer.push_back((repeatCount - 0x80) >> 16u);
-                }
-
-                repeatCount = 1;
-            }
-        } else {
-            if (repeatCount > 2) {
-                if (lastByte == 0) {
-                    if (repeatCount <= 0x5F) {
-                        m_rleBuffer.push_back(repeatCount - 1);
-                    } else {
-                        m_rleBuffer.push_back(0x5F);
-                        m_rleBuffer.push_back((repeatCount - 0x60) >> 0u);
-                        m_rleBuffer.push_back((repeatCount - 0x60) >> 8u);
-                        m_rleBuffer.push_back((repeatCount - 0x60) >> 16u);
-                    }
-                } else if (repeatCount <= 0x7E) {
-                    m_rleBuffer.push_back(repeatCount - 2 + 0x80);
-                    m_rleBuffer.push_back(lastByte);
-                } else {
-                    m_rleBuffer.push_back(0xFE);
-                    m_rleBuffer.push_back(lastByte);
-                    m_rleBuffer.push_back((repeatCount - 0x80) >> 0u);
-                    m_rleBuffer.push_back((repeatCount - 0x80) >> 8u);
-                    m_rleBuffer.push_back((repeatCount - 0x80) >> 16u);
-                }
-            }
-            repeatCount = 1;
-            ++copyCount;
-            if (copyCount == 0xFFFF + 0x20) {
-                if (copyCount <= 0x1F) {
-                    m_rleBuffer.push_back(copyCount - 1 + 0x60);
-                    m_rleBuffer.insert(m_rleBuffer.end(), &m_deltaBuffer[pos - 1 - copyCount], &m_deltaBuffer[pos - 1]);
-                } else {
-                    m_rleBuffer.push_back(0x7F);
-                    m_rleBuffer.push_back((copyCount - 0x20) >> 0u);
-                    m_rleBuffer.push_back((copyCount - 0x20) >> 8u);
-                    m_rleBuffer.insert(m_rleBuffer.end(), &m_deltaBuffer[pos - 1 - copyCount], &m_deltaBuffer[pos - 1]);
-                }
-                copyCount = 0;
-            }
-        }
-
-        lastByte = currByte;
-        ++pos;
-    }
-
-    if (copyCount > 1) {
-        if (copyCount <= 0x1F) {
-            m_rleBuffer.push_back(copyCount - 1 + 0x60);
-            m_rleBuffer.insert(m_rleBuffer.end(), &m_deltaBuffer[pos - 1 - copyCount], &m_deltaBuffer[pos - 1]);
-        } else {
-            m_rleBuffer.push_back(0x7F);
-            m_rleBuffer.push_back((copyCount - 0x20) >> 0u);
-            m_rleBuffer.push_back((copyCount - 0x20) >> 8u);
-            m_rleBuffer.insert(m_rleBuffer.end(), &m_deltaBuffer[pos - 1 - copyCount], &m_deltaBuffer[pos - 1]);
-        }
-    }
-    if (repeatCount > 1) {
-        if (lastByte == 0) {
-            if (repeatCount <= 0x5F) {
-                m_rleBuffer.push_back(repeatCount - 1);
-            } else {
-                m_rleBuffer.push_back(0x5F);
-                m_rleBuffer.push_back((repeatCount - 0x60) >> 0u);
-                m_rleBuffer.push_back((repeatCount - 0x60) >> 8u);
-                m_rleBuffer.push_back((repeatCount - 0x60) >> 16u);
-            }
-        } else if (repeatCount <= 0x7E) {
-            m_rleBuffer.push_back(repeatCount - 2 + 0x80);
-            m_rleBuffer.push_back(lastByte);
-        } else {
-            m_rleBuffer.push_back(0xFE);
-            m_rleBuffer.push_back(lastByte);
-            m_rleBuffer.push_back((repeatCount - 0x80) >> 0u);
-            m_rleBuffer.push_back((repeatCount - 0x80) >> 8u);
-            m_rleBuffer.push_back((repeatCount - 0x80) >> 16u);
-        }
-    } else if (repeatCount == 1 && copyCount == 1) {
-        m_rleBuffer.push_back(0x60);
-        m_rleBuffer.push_back(lastByte);
-    }
-
-    m_rleBuffer.push_back(0xFF);
+    // TODO: make the acceleration factor configurable
+    const int size = LZ4_compress_fast(src, dst, srcSize, dstSize, 64);
+    m_lz4Buffer.resize(size);
 }
 
 } // namespace app

@@ -18,8 +18,9 @@ FORCE_INLINE constexpr bool AddressInRange(uint32 address) {
     return address >= start && address <= end;
 }
 
-template <typename T>
-FORCE_INLINE T ReadBE(const uint8 *data) {
+// Reads a big-endian integer
+template <std::integral T>
+FORCE_INLINE T ReadBE(const void *data) {
     T value = 0;
     std::memcpy(&value, data, sizeof(T));
     if constexpr (std::endian::native == std::endian::little) {
@@ -28,16 +29,18 @@ FORCE_INLINE T ReadBE(const uint8 *data) {
     return value;
 }
 
-template <typename T>
-FORCE_INLINE void WriteBE(uint8 *data, T value) {
+// Writes a big-endian integer
+template <std::integral T>
+FORCE_INLINE void WriteBE(void *data, T value) {
     if constexpr (std::endian::native == std::endian::little) {
         value = bit::byte_swap(value);
     }
     std::memcpy(data, &value, sizeof(T));
 }
 
-template <typename T>
-FORCE_INLINE T ReadLE(const uint8 *data) {
+// Reads a little-endian integer
+template <std::integral T>
+FORCE_INLINE T ReadLE(const void *data) {
     T value = 0;
     std::memcpy(&value, data, sizeof(T));
     if constexpr (std::endian::native == std::endian::big) {
@@ -46,11 +49,26 @@ FORCE_INLINE T ReadLE(const uint8 *data) {
     return value;
 }
 
-template <typename T>
-FORCE_INLINE void WriteLE(uint8 *data, T value) {
+// Writes a little-endian integer
+template <std::integral T>
+FORCE_INLINE void WriteLE(void *data, T value) {
     if constexpr (std::endian::native == std::endian::big) {
         value = bit::byte_swap(value);
     }
+    std::memcpy(data, &value, sizeof(T));
+}
+
+// Reads a native-endian integer
+template <std::integral T>
+FORCE_INLINE T ReadNE(const void *data) {
+    T value = 0;
+    std::memcpy(&value, data, sizeof(T));
+    return value;
+}
+
+// Writes a native-endian integer
+template <std::integral T>
+FORCE_INLINE void WriteNE(void *data, T value) {
     std::memcpy(data, &value, sizeof(T));
 }
 

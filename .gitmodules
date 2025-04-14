@@ -29,3 +29,6 @@
 [submodule "vendor/cereal"]
 	path = vendor/cereal
 	url = git@github.com:USCiLab/cereal.git
+[submodule "vendor/lz4/lz4"]
+	path = vendor/lz4/lz4
+	url = git@github.com:lz4/lz4.git
