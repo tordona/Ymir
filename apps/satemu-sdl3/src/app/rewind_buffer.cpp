@@ -127,6 +127,7 @@ void RewindBuffer::ProcessFrame() {
         const char *const src = srcBuffer.data();
         char *const dst = frame.data.data();
         segment.length = LZ4_compress_fast(src, dst, srcSize, dstSize, LZ4Accel);
+        segment.origLength = srcSize;
         frame.data.resize(segment.length);
     } else {
         // This frame is in progress; compute delta
@@ -176,6 +177,7 @@ void RewindBuffer::ProcessFrame() {
         const char *const src = m_deltaBuffer.data();
         char *const dst = frame.data.data() + baseDataSize;
         segment.length = LZ4_compress_fast(src, dst, srcSize, dstSize, LZ4Accel);
+        segment.origLength = srcSize;
         frame.data.resize(baseDataSize + segment.length);
 
         if (frame.segments.size() == 60) {

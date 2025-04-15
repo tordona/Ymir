@@ -51,8 +51,9 @@ private:
     std::vector<char> m_deltaBuffer;            // XOR delta buffer
 
     struct Segment {
-        size_t offset;
-        size_t length;
+        size_t offset;     // Offset into data array
+        size_t length;     // Compressed length
+        size_t origLength; // Decompressed length
     };
 
     struct Frame {
