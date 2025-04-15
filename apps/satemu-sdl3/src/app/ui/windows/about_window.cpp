@@ -341,6 +341,9 @@ void AboutWindow::DrawAcknowledgementsTab() {
         ackWithAuthor("Mesen2", "Sour and contributors", "https://github.com/SourMesen/Mesen2");
         ImGui::SameLine();
         ImGui::TextLinkOpenURL("(site)##mesen", "https://www.mesen.ca/");
+        ackWithAuthor("openMSX", "openMSX developers", "https://github.com/openMSX/openMSX");
+        ImGui::SameLine();
+        ImGui::TextLinkOpenURL("(site)##openmsx", "https://openmsx.org/");
 
         // -----------------------------------------------------------------------------
 
