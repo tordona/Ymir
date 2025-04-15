@@ -7,6 +7,7 @@
 #include <satemu/core/types.hpp>
 
 #include <array>
+#include <map>
 #include <thread>
 #include <vector>
 
@@ -16,6 +17,8 @@ class RewindBuffer {
 public:
     RewindBuffer();
     ~RewindBuffer();
+
+    void Reset();
 
     void Start();
     void Stop();
@@ -47,21 +50,27 @@ private:
     bool m_bufferFlip = false;                  // Which buffer is which
     std::vector<char> m_deltaBuffer;            // XOR delta buffer
 
-    struct Frame {
-        size_t offset;     // Position into rewind buffer
-        uint32 length;     // Compressed frame bytes
-        uint32 origLength; // Decompressed frame bytes
-        bool keyframe;     // If true, frame is not a XOR delta from the previous frame
+    struct Segment {
+        size_t offset;
+        size_t length;
     };
 
-    std::vector<char> m_rewindBuffer;  // Rewind buffer contents
-    std::vector<Frame> m_frames;       // Frames in the rewind buffer
-    size_t m_rewindBufferWritePos = 0; // Write cursor position
+    struct Frame {
+        std::vector<char> data;        // Compressed serialized states
+        std::vector<Segment> segments; // Frame segments
+        uint64 seqNum;                 // Frame sequence number
+    };
+
+    std::map<uint64, Frame> m_frames; // Frames in the rewind buffer
+    uint64 m_nextFrameSeq;            // Next frame sequence number
 
     void ProcThread();
 
     // Gets and clears the next buffer and flips the buffer pointer.
     std::vector<char> &GetBuffer();
+
+    // Gets the current frame to work on.
+    Frame &GetFrame();
 
     void ProcessFrame();
 };

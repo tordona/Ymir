@@ -52,10 +52,9 @@ void GeneralSettingsView::Display() {
                                    ImGuiSliderFlags_AlwaysClamp))) {
         m_context.rewindBuffer.LZ4Accel = 1 << (16 - settings.rewindCompressionLevel);
     }
-    widgets::ExplanationTooltip(
-        "Adjust compression ratio vs. speed.\n"
-        "Higher values improve compression ratio, allowing more frames to fit in the buffer.\n"
-        "Lower values increase compression speed, reducing performance impact during emulation.\n");
+    widgets::ExplanationTooltip("Adjust compression ratio vs. speed.\n"
+                                "Higher values improve compression ratio, reducing memory usage.\n"
+                                "Lower values increase compression speed and improve emulation performance.\n");
 }
 
 } // namespace app::ui
