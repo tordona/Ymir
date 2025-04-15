@@ -3,14 +3,8 @@
 #include <satemu/state/state.hpp>
 
 #include <satemu/util/event.hpp>
-#include <satemu/util/thread_name.hpp>
 
 #include <satemu/core/types.hpp>
-
-#include <cereal/cereal.hpp>
-
-#include <serdes/cereal_archive_vector.hpp>
-#include <serdes/state_v1_cereal.hpp>
 
 #include <array>
 #include <thread>
