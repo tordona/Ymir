@@ -101,7 +101,9 @@ RewindBuffer::Frame &RewindBuffer::GetFrame() {
     // Otherwise, make a new frame
     Frame &newFrame = m_frames[m_nextFrameSeq++];
 
-    // TODO: Delete or merge old frames
+    // Keep only the latest 30 frames for now
+    // TODO: somehow preserve older frames, either by merging deltas or by selectively deleting them
+    m_frames.erase(m_nextFrameSeq - 30);
 
     return newFrame;
 }
