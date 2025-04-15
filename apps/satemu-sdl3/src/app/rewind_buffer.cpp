@@ -89,7 +89,7 @@ void RewindBuffer::ProcessFrame() {
     char *b0 = m_buffers[0].empty() ? nullptr : &m_buffers[0][0];
     char *b1 = m_buffers[1].empty() ? nullptr : &m_buffers[1][0];
 
-    // Compute XOR delta efficently
+    // Compute XOR delta
     size_t i = 0;
     for (; i + sizeof(uint64) < minSize; i += sizeof(uint64)) {
         util::WriteNE<uint64>(&out[i], util::ReadNE<uint64>(&b0[i]) ^ util::ReadNE<uint64>(&b1[i]));
