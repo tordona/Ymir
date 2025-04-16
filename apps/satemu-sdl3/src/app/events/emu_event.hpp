@@ -19,6 +19,7 @@ struct EmuEvent {
 
         FrameStep,
         SetPaused,
+        ReverseFrameStep,
 
         OpenCloseTray,
         LoadDisc,
@@ -32,8 +33,6 @@ struct EmuEvent {
         RunFunction,
 
         SetThreadPriority,
-
-        RestartEmulatorThread,
 
         Shutdown,
     };

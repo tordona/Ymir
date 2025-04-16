@@ -41,6 +41,7 @@ struct SharedContext {
     size_t currSaveStateSlot = 0;
 
     RewindBuffer rewindBuffer;
+    bool rewinding = false;
 
     // Certain GUI interactions requires synchronization with the emulator thread, specifically when dealing with
     // dynamic objects:

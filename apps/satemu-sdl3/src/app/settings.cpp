@@ -224,6 +224,8 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapActionInput(hotkeys.fastForward);
     mapActionInput(hotkeys.frameStep);
     mapActionInput(hotkeys.pauseResume);
+    mapActionInput(hotkeys.reverseFrameStep);
+    mapActionInput(hotkeys.reverse);
     mapActionInput(hotkeys.toggleRewindBuffer);
     mapActionInput(hotkeys.toggleDebugTrace);
     mapActionInput(hotkeys.dumpMemory);
@@ -388,6 +390,8 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         Parse(tblHotkeys, "FastForward", hotkeys.fastForward);
         Parse(tblHotkeys, "FrameStep", hotkeys.frameStep);
         Parse(tblHotkeys, "PauseResume", hotkeys.pauseResume);
+        Parse(tblHotkeys, "ReverseFrameStep", hotkeys.reverseFrameStep);
+        Parse(tblHotkeys, "Reverse", hotkeys.reverse);
         Parse(tblHotkeys, "ToggleRewindBuffer", hotkeys.toggleRewindBuffer);
         Parse(tblHotkeys, "ToggleDebugTrace", hotkeys.toggleDebugTrace);
         Parse(tblHotkeys, "DumpMemory", hotkeys.dumpMemory);
@@ -523,6 +527,8 @@ SettingsSaveResult Settings::Save() {
             {"FastForward", ToTOML(hotkeys.fastForward)},
             {"FrameStep", ToTOML(hotkeys.frameStep)},
             {"PauseResume", ToTOML(hotkeys.pauseResume)},
+            {"ReverseFrameStep", ToTOML(hotkeys.reverseFrameStep)},
+            {"Reverse", ToTOML(hotkeys.reverse)},
             {"ToggleRewindBuffer", ToTOML(hotkeys.toggleRewindBuffer)},
             {"ToggleDebugTrace", ToTOML(hotkeys.toggleDebugTrace)},
             {"DumpMemory", ToTOML(hotkeys.dumpMemory)},
@@ -717,6 +723,8 @@ void Settings::ResetHotkeys() {
     hotkeys.pauseResume.events = {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::Control, Key::P}};
     hotkeys.frameStep.events = {KeyCombo{Mod::None, Key::RightBracket}};
     hotkeys.toggleRewindBuffer.events = {KeyCombo{Mod::None, Key::F8}};
+    hotkeys.reverseFrameStep.events = {KeyCombo{Mod::None, Key::LeftBracket}};
+    hotkeys.reverse.events = {KeyCombo{Mod::None, Key::Backspace}};
 
     hotkeys.resetButton.events = {KeyCombo{Mod::Shift, Key::R}};
 

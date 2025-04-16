@@ -175,6 +175,8 @@ public:
         InputBind fastForward{actions::emu::FastForward};
         InputBind frameStep{actions::emu::FrameStep};
         InputBind pauseResume{actions::emu::PauseResume};
+        InputBind reverseFrameStep{actions::emu::ReverseFrameStep};
+        InputBind reverse{actions::emu::Reverse};
         InputBind toggleRewindBuffer{actions::emu::ToggleRewindBuffer};
 
         InputBind toggleDebugTrace{actions::dbg::ToggleDebugTrace};

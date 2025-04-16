@@ -69,9 +69,6 @@ private:
 
     void EmulatorThread();
 
-    template <bool rewind>
-    bool EmulatorThreadProc();
-
     void RebindInputs();
     void RebindAction(input::ActionID action);
 

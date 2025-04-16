@@ -1152,6 +1152,14 @@ void App::RunEmulator() {
                 m_context.EnqueueEvent(events::emu::SetPaused(paused));
             }
         });
+        inputContext.SetActionHandler(actions::emu::ReverseFrameStep, [&](void *, bool actuated) {
+            if (actuated) {
+                paused = true;
+                m_context.EnqueueEvent(events::emu::ReverseFrameStep());
+            }
+        });
+        inputContext.SetActionHandler(actions::emu::Reverse,
+                                      [&](void *, bool actuated) { m_context.rewinding = actuated; });
 
         inputContext.SetActionHandler(actions::emu::ToggleRewindBuffer, [&](void *, bool actuated) {
             if (actuated) {
@@ -1586,6 +1594,11 @@ void App::RunEmulator() {
                     paused = !paused;
                     m_context.EnqueueEvent(events::emu::SetPaused(paused));
                 }
+                if (ImGui::MenuItem("Reverse frame step",
+                                    input::ToShortcut(inputContext, actions::emu::ReverseFrameStep).c_str())) {
+                    paused = true;
+                    m_context.EnqueueEvent(events::emu::ReverseFrameStep());
+                }
                 bool enableRewindBuffer = m_context.settings.general.enableRewindBuffer;
                 if (ImGui::MenuItem("Rewind buffer",
                                     input::ToShortcut(inputContext, actions::emu::ToggleRewindBuffer).c_str(),
@@ -1874,14 +1887,6 @@ void App::EmulatorThread() {
     util::SetCurrentThreadName("Emulator thread");
     util::BoostCurrentThreadPriority(m_context.settings.general.boostEmuThreadPriority);
 
-    bool keepRunning;
-    do {
-        keepRunning = m_context.rewindBuffer.IsRunning() ? EmulatorThreadProc<true>() : EmulatorThreadProc<false>();
-    } while (keepRunning);
-}
-
-template <bool runRewind>
-bool App::EmulatorThreadProc() {
     std::array<EmuEvent, 64> evts{};
 
     bool paused = false;
@@ -1908,6 +1913,12 @@ bool App::EmulatorThreadProc() {
             case SetPaused:
                 paused = std::get<bool>(evt.value);
                 m_audioSystem.SetSilent(paused);
+                break;
+            case ReverseFrameStep:
+                frameStep = true;
+                paused = false;
+                m_context.rewinding = true;
+                m_audioSystem.SetSilent(false);
                 break;
 
             case OpenCloseTray:
@@ -1948,16 +1959,27 @@ bool App::EmulatorThreadProc() {
 
             case SetThreadPriority: util::BoostCurrentThreadPriority(std::get<bool>(evt.value)); break;
 
-            case RestartEmulatorThread: return true;
-
-            case Shutdown: return false;
+            case Shutdown: return;
             }
         }
 
         // Emulate one frame
         if (!paused) {
-            m_context.saturn.RunFrame();
-            if constexpr (runRewind) {
+            const bool rewindEnabled = m_context.rewindBuffer.IsRunning();
+            bool doRunFrame = true;
+            if (rewindEnabled && m_context.rewinding) {
+                if (m_context.rewindBuffer.PopState()) {
+                    m_context.saturn.LoadState(m_context.rewindBuffer.NextState);
+                } else {
+                    doRunFrame = false;
+                }
+            }
+
+            if (doRunFrame) [[likely]] {
+                m_context.saturn.RunFrame();
+            }
+
+            if (rewindEnabled && !m_context.rewinding) {
                 m_context.saturn.SaveState(m_context.rewindBuffer.NextState);
                 m_context.rewindBuffer.ProcessState();
             }
@@ -1965,6 +1987,7 @@ bool App::EmulatorThreadProc() {
         if (frameStep) {
             frameStep = false;
             paused = true;
+            m_context.rewinding = false;
             m_audioSystem.SetSilent(true);
         }
     }
@@ -2083,7 +2106,6 @@ void App::EnableRewindBuffer(bool enable) {
             m_context.rewindBuffer.Stop();
         }
         devlog::debug<grp::base>("Rewind buffer {}", (enable ? "enabled" : "disabled"));
-        m_context.EnqueueEvent(events::emu::RestartEmulatorThread());
     }
 }
 

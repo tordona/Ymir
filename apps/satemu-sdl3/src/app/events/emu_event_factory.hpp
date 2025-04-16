@@ -35,6 +35,10 @@ inline EmuEvent SetPaused(bool paused) {
     return {.type = EmuEvent::Type::SetPaused, .value = paused};
 }
 
+inline EmuEvent ReverseFrameStep() {
+    return {.type = EmuEvent::Type::ReverseFrameStep};
+}
+
 inline EmuEvent OpenCloseTray() {
     return {.type = EmuEvent::Type::OpenCloseTray};
 }
@@ -65,10 +69,6 @@ inline EmuEvent RunFunction(std::function<void(SharedContext &)> &&fn) {
 
 inline EmuEvent SetThreadPriority(bool boost) {
     return {.type = EmuEvent::Type::SetThreadPriority, .value = boost};
-}
-
-inline EmuEvent RestartEmulatorThread() {
-    return {.type = EmuEvent::Type::RestartEmulatorThread};
 }
 
 inline EmuEvent Shutdown() {

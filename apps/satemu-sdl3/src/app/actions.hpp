@@ -73,10 +73,11 @@ namespace emu {
     // TODO: inline constexpr input::ActionID SlowForward{0xE02001};
     inline constexpr input::ActionID FrameStep{0xE02002};
     inline constexpr input::ActionID PauseResume{0xE02003};
-    // TODO: inline constexpr input::ActionID ReverseFrameStep{0xE02004};
+    inline constexpr input::ActionID ReverseFrameStep{0xE02004};
     // TODO: inline constexpr input::ActionID SlowReverse{0xE02005};
-    // TODO: inline constexpr input::ActionID Reverse{0xE02006};
+    inline constexpr input::ActionID Reverse{0xE02006};
     // TODO: inline constexpr input::ActionID FastReverse{0xE02007};
+
     inline constexpr input::ActionID ToggleRewindBuffer{0xE02100};
 
 } // namespace emu
