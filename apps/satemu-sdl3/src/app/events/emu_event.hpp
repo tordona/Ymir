@@ -17,8 +17,8 @@ struct EmuEvent {
         SoftReset,
         SetResetButton,
 
-        FrameStep,
         SetPaused,
+        ForwardFrameStep,
         ReverseFrameStep,
 
         OpenCloseTray,

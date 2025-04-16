@@ -1138,27 +1138,27 @@ void App::RunEmulator() {
 
     // Emulation
     {
-        inputContext.SetActionHandler(actions::emu::FastForward,
+        inputContext.SetActionHandler(actions::emu::TurboSpeed,
                                       [&](void *, bool actuated) { m_audioSystem.SetSync(!actuated); });
-        inputContext.SetActionHandler(actions::emu::FrameStep, [&](void *, bool actuated) {
-            if (actuated) {
-                paused = true;
-                m_context.EnqueueEvent(events::emu::FrameStep());
-            }
-        });
         inputContext.SetActionHandler(actions::emu::PauseResume, [&](void *, bool actuated) {
             if (actuated) {
                 paused = !paused;
                 m_context.EnqueueEvent(events::emu::SetPaused(paused));
             }
         });
-        inputContext.SetActionHandler(actions::emu::ReverseFrameStep, [&](void *, bool actuated) {
+        inputContext.SetActionHandler(actions::emu::ForwardFrameStep, [&](void *, bool actuated) {
             if (actuated) {
+                paused = true;
+                m_context.EnqueueEvent(events::emu::ForwardFrameStep());
+            }
+        });
+        inputContext.SetActionHandler(actions::emu::ReverseFrameStep, [&](void *, bool actuated) {
+            if (actuated && m_context.rewindBuffer.IsRunning()) {
                 paused = true;
                 m_context.EnqueueEvent(events::emu::ReverseFrameStep());
             }
         });
-        inputContext.SetActionHandler(actions::emu::Reverse,
+        inputContext.SetActionHandler(actions::emu::Rewind,
                                       [&](void *, bool actuated) { m_context.rewinding = actuated; });
 
         inputContext.SetActionHandler(actions::emu::ToggleRewindBuffer, [&](void *, bool actuated) {
@@ -1585,24 +1585,29 @@ void App::RunEmulator() {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Emulation")) {
-                if (ImGui::MenuItem("Frame step", input::ToShortcut(inputContext, actions::emu::FrameStep).c_str())) {
-                    paused = true;
-                    m_context.EnqueueEvent(events::emu::FrameStep());
-                }
+                bool rewindEnabled = m_context.settings.general.enableRewindBuffer;
+
                 if (ImGui::MenuItem("Pause/resume",
                                     input::ToShortcut(inputContext, actions::emu::PauseResume).c_str())) {
                     paused = !paused;
                     m_context.EnqueueEvent(events::emu::SetPaused(paused));
                 }
-                if (ImGui::MenuItem("Reverse frame step",
-                                    input::ToShortcut(inputContext, actions::emu::ReverseFrameStep).c_str())) {
+                if (ImGui::MenuItem("Forward frame step",
+                                    input::ToShortcut(inputContext, actions::emu::ForwardFrameStep).c_str())) {
                     paused = true;
-                    m_context.EnqueueEvent(events::emu::ReverseFrameStep());
+                    m_context.EnqueueEvent(events::emu::ForwardFrameStep());
                 }
-                bool enableRewindBuffer = m_context.settings.general.enableRewindBuffer;
+                if (ImGui::MenuItem("Reverse frame step",
+                                    input::ToShortcut(inputContext, actions::emu::ReverseFrameStep).c_str(), nullptr,
+                                    rewindEnabled)) {
+                    if (rewindEnabled) {
+                        paused = true;
+                        m_context.EnqueueEvent(events::emu::ReverseFrameStep());
+                    }
+                }
                 if (ImGui::MenuItem("Rewind buffer",
                                     input::ToShortcut(inputContext, actions::emu::ToggleRewindBuffer).c_str(),
-                                    &enableRewindBuffer)) {
+                                    &rewindEnabled)) {
                     ToggleRewindBuffer();
                 }
                 ImGui::EndMenu();
@@ -1905,14 +1910,14 @@ void App::EmulatorThread() {
             case SoftReset: m_context.saturn.Reset(false); break;
             case SetResetButton: m_context.saturn.SMPC.SetResetButtonState(std::get<bool>(evt.value)); break;
 
-            case FrameStep:
-                frameStep = true;
-                paused = false;
-                m_audioSystem.SetSilent(false);
-                break;
             case SetPaused:
                 paused = std::get<bool>(evt.value);
                 m_audioSystem.SetSilent(paused);
+                break;
+            case ForwardFrameStep:
+                frameStep = true;
+                paused = false;
+                m_audioSystem.SetSilent(false);
                 break;
             case ReverseFrameStep:
                 frameStep = true;

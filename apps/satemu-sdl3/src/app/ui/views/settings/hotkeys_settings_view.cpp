@@ -74,10 +74,12 @@ void HotkeysSettingsView::Display() {
         drawRow("System", "Soft reset", hotkeys.softReset);
         drawRow("System", "Reset button", hotkeys.resetButton);
 
+        drawRow("Emulation", "Turbo speed", hotkeys.turboSpeed);
         drawRow("Emulation", "Pause/resume", hotkeys.pauseResume);
-        drawRow("Emulation", "Frame step", hotkeys.frameStep);
-        drawRow("Emulation", "Fast forward", hotkeys.fastForward);
+        drawRow("Emulation", "Forward frame step", hotkeys.fwdFrameStep);
+        drawRow("Emulation", "Reverse frame step", hotkeys.revFrameStep);
         drawRow("Emulation", "Toggle rewind buffer", hotkeys.toggleRewindBuffer);
+        drawRow("Emulation", "Rewind", hotkeys.rewind);
 
         drawRow("Debugger", "Toggle tracing", hotkeys.toggleDebugTrace);
         drawRow("Debugger", "Dump all memory", hotkeys.dumpMemory);

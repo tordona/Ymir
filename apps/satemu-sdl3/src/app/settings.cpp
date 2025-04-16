@@ -221,11 +221,11 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapActionInput(hotkeys.hardReset);
     mapActionInput(hotkeys.softReset);
     mapActionInput(hotkeys.resetButton);
-    mapActionInput(hotkeys.fastForward);
-    mapActionInput(hotkeys.frameStep);
+    mapActionInput(hotkeys.turboSpeed);
     mapActionInput(hotkeys.pauseResume);
-    mapActionInput(hotkeys.reverseFrameStep);
-    mapActionInput(hotkeys.reverse);
+    mapActionInput(hotkeys.fwdFrameStep);
+    mapActionInput(hotkeys.revFrameStep);
+    mapActionInput(hotkeys.rewind);
     mapActionInput(hotkeys.toggleRewindBuffer);
     mapActionInput(hotkeys.toggleDebugTrace);
     mapActionInput(hotkeys.dumpMemory);
@@ -387,11 +387,11 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         Parse(tblHotkeys, "HardReset", hotkeys.hardReset);
         Parse(tblHotkeys, "SoftReset", hotkeys.softReset);
         Parse(tblHotkeys, "ResetButton", hotkeys.resetButton);
-        Parse(tblHotkeys, "FastForward", hotkeys.fastForward);
-        Parse(tblHotkeys, "FrameStep", hotkeys.frameStep);
+        Parse(tblHotkeys, "TurboSpeed", hotkeys.turboSpeed);
         Parse(tblHotkeys, "PauseResume", hotkeys.pauseResume);
-        Parse(tblHotkeys, "ReverseFrameStep", hotkeys.reverseFrameStep);
-        Parse(tblHotkeys, "Reverse", hotkeys.reverse);
+        Parse(tblHotkeys, "ForwardFrameStep", hotkeys.fwdFrameStep);
+        Parse(tblHotkeys, "ReverseFrameStep", hotkeys.revFrameStep);
+        Parse(tblHotkeys, "Rewind", hotkeys.rewind);
         Parse(tblHotkeys, "ToggleRewindBuffer", hotkeys.toggleRewindBuffer);
         Parse(tblHotkeys, "ToggleDebugTrace", hotkeys.toggleDebugTrace);
         Parse(tblHotkeys, "DumpMemory", hotkeys.dumpMemory);
@@ -524,11 +524,11 @@ SettingsSaveResult Settings::Save() {
             {"HardReset", ToTOML(hotkeys.hardReset)},
             {"SoftReset", ToTOML(hotkeys.softReset)},
             {"ResetButton", ToTOML(hotkeys.resetButton)},
-            {"FastForward", ToTOML(hotkeys.fastForward)},
-            {"FrameStep", ToTOML(hotkeys.frameStep)},
+            {"TurboSpeed", ToTOML(hotkeys.turboSpeed)},
             {"PauseResume", ToTOML(hotkeys.pauseResume)},
-            {"ReverseFrameStep", ToTOML(hotkeys.reverseFrameStep)},
-            {"Reverse", ToTOML(hotkeys.reverse)},
+            {"ForwardFrameStep", ToTOML(hotkeys.fwdFrameStep)},
+            {"ReverseFrameStep", ToTOML(hotkeys.revFrameStep)},
+            {"Rewind", ToTOML(hotkeys.rewind)},
             {"ToggleRewindBuffer", ToTOML(hotkeys.toggleRewindBuffer)},
             {"ToggleDebugTrace", ToTOML(hotkeys.toggleDebugTrace)},
             {"DumpMemory", ToTOML(hotkeys.dumpMemory)},
@@ -719,12 +719,12 @@ void Settings::ResetHotkeys() {
     hotkeys.hardReset.events = {KeyCombo{Mod::Control, Key::R}};
     hotkeys.softReset.events = {KeyCombo{Mod::Control | Mod::Shift, Key::R}};
 
-    hotkeys.fastForward.events = {KeyCombo{Mod::None, Key::Tab}};
+    hotkeys.turboSpeed.events = {KeyCombo{Mod::None, Key::Tab}};
     hotkeys.pauseResume.events = {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::Control, Key::P}};
-    hotkeys.frameStep.events = {KeyCombo{Mod::None, Key::RightBracket}};
     hotkeys.toggleRewindBuffer.events = {KeyCombo{Mod::None, Key::F8}};
-    hotkeys.reverseFrameStep.events = {KeyCombo{Mod::None, Key::LeftBracket}};
-    hotkeys.reverse.events = {KeyCombo{Mod::None, Key::Backspace}};
+    hotkeys.fwdFrameStep.events = {KeyCombo{Mod::None, Key::RightBracket}};
+    hotkeys.revFrameStep.events = {KeyCombo{Mod::None, Key::LeftBracket}};
+    hotkeys.rewind.events = {KeyCombo{Mod::None, Key::Backspace}};
 
     hotkeys.resetButton.events = {KeyCombo{Mod::Shift, Key::R}};
 

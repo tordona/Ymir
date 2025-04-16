@@ -172,11 +172,11 @@ public:
         InputBind softReset{actions::sys::SoftReset};
         InputBind resetButton{actions::sys::ResetButton};
 
-        InputBind fastForward{actions::emu::FastForward};
-        InputBind frameStep{actions::emu::FrameStep};
+        InputBind turboSpeed{actions::emu::TurboSpeed};
         InputBind pauseResume{actions::emu::PauseResume};
-        InputBind reverseFrameStep{actions::emu::ReverseFrameStep};
-        InputBind reverse{actions::emu::Reverse};
+        InputBind fwdFrameStep{actions::emu::ForwardFrameStep};
+        InputBind revFrameStep{actions::emu::ReverseFrameStep};
+        InputBind rewind{actions::emu::Rewind};
         InputBind toggleRewindBuffer{actions::emu::ToggleRewindBuffer};
 
         InputBind toggleDebugTrace{actions::dbg::ToggleDebugTrace};

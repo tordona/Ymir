@@ -27,12 +27,12 @@ inline EmuEvent SetResetButton(bool resetLevel) {
     return {.type = EmuEvent::Type::SetResetButton, .value = resetLevel};
 }
 
-inline EmuEvent FrameStep() {
-    return {.type = EmuEvent::Type::FrameStep};
-}
-
 inline EmuEvent SetPaused(bool paused) {
     return {.type = EmuEvent::Type::SetPaused, .value = paused};
+}
+
+inline EmuEvent ForwardFrameStep() {
+    return {.type = EmuEvent::Type::ForwardFrameStep};
 }
 
 inline EmuEvent ReverseFrameStep() {

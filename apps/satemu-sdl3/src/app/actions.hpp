@@ -69,14 +69,12 @@ namespace sys {
 
 namespace emu {
 
-    inline constexpr input::ActionID FastForward{0xE02000};
-    // TODO: inline constexpr input::ActionID SlowForward{0xE02001};
-    inline constexpr input::ActionID FrameStep{0xE02002};
-    inline constexpr input::ActionID PauseResume{0xE02003};
+    inline constexpr input::ActionID TurboSpeed{0xE02000};
+    // TODO: inline constexpr input::ActionID SlowMotion{0xE02001};
+    inline constexpr input::ActionID PauseResume{0xE02002};
+    inline constexpr input::ActionID ForwardFrameStep{0xE02003};
     inline constexpr input::ActionID ReverseFrameStep{0xE02004};
-    // TODO: inline constexpr input::ActionID SlowReverse{0xE02005};
-    inline constexpr input::ActionID Reverse{0xE02006};
-    // TODO: inline constexpr input::ActionID FastReverse{0xE02007};
+    inline constexpr input::ActionID Rewind{0xE02005};
 
     inline constexpr input::ActionID ToggleRewindBuffer{0xE02100};
 
