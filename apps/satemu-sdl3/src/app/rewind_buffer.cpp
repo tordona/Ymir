@@ -118,9 +118,8 @@ FLATTEN void RewindBuffer::ProcThread() {
         ProcessFrame();
     }
 
-    // TODO: pop frames (run backwards)
+    // TODO: rewrite ring buffer to reduce number of allocations
     // TODO: implement keyframes to allow fast jumps to arbitrary points in the timeline
-    // TODO: reset/clear buffer
 }
 
 std::vector<char> &RewindBuffer::GetBuffer() {
