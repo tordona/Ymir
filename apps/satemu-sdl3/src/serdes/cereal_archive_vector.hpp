@@ -34,13 +34,14 @@ public:
     ~BinaryVectorInputArchive() CEREAL_NOEXCEPT = default;
 
     void loadBinary(void *const data, std::streamsize size) {
-        auto const readSize = std::min(size, itsVector.size() - pos);
+        auto const readSize = std::min<size_t>(size, itsVector.size() - pos);
 
         if (readSize != size)
             throw Exception("Failed to read " + std::to_string(size) + " bytes from input stream! Read " +
                             std::to_string(readSize));
 
         std::copy_n(itsVector.begin() + pos, readSize, (T *const)data);
+        pos += readSize;
     }
 
 private:
