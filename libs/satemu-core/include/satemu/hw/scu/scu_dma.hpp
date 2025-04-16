@@ -39,6 +39,8 @@ struct DMAChannel {
         currSrcAddr = 0;
         currDstAddr = 0;
         currXferCount = 0;
+        currSrcAddrInc = 0;
+        currDstAddrInc = 0;
 
         currIndirectSrc = 0;
         endIndirect = false;
