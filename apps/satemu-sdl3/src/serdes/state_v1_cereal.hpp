@@ -47,7 +47,7 @@ inline namespace v1 {
     template <class Archive>
     void serialize(Archive &ar, SH2State &s) {
         ar(s.R, s.PC, s.PR, s.MACL, s.MACH, s.SR, s.GBR, s.VBR);
-        ar(s.delaySlot, s.delaySlot);
+        ar(s.delaySlot, s.delaySlotTarget);
         ar(s.bsc, s.dmac, s.wdt, s.divu, s.frt, s.intc, s.cache, s.SBYCR);
     }
 
