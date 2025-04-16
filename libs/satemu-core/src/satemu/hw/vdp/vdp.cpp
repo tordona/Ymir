@@ -391,6 +391,8 @@ void VDP::SaveState(state::VDPState &state) const {
     state.regs1.LOPR = m_VDP1.ReadLOPR();
     state.regs1.COPR = m_VDP1.ReadCOPR();
     state.regs1.MODR = m_VDP1.ReadMODR();
+    state.regs1.manualSwap = m_VDP1.fbManualSwap;
+    state.regs1.manualErase = m_VDP1.fbManualErase;
 
     state.regs2.TVMD = m_VDP2.ReadTVMD();
     state.regs2.EXTEN = m_VDP2.ReadEXTEN();
@@ -557,6 +559,8 @@ void VDP::SaveState(state::VDPState &state) const {
     state.VCounter = m_VCounter;
 
     state.vdp1Done = m_VDPRenderContext.vdp1Done;
+
+    // TODO: persist renderer state
 }
 
 bool VDP::ValidateState(const state::VDPState &state) const {
@@ -599,6 +603,8 @@ void VDP::LoadState(const state::VDPState &state) {
     m_VDP1.WriteLOPR(state.regs1.LOPR);
     m_VDP1.WriteCOPR(state.regs1.COPR);
     m_VDP1.WriteMODR(state.regs1.MODR);
+    m_VDP1.fbManualSwap = state.regs1.manualSwap;
+    m_VDP1.fbManualErase = state.regs1.manualErase;
 
     m_VDP2.WriteTVMD(state.regs2.TVMD);
     m_VDP2.WriteEXTEN(state.regs2.EXTEN);
@@ -767,6 +773,7 @@ void VDP::LoadState(const state::VDPState &state) {
     for (uint32 address = 0; address < kVDP2CRAMSize; address += 2) {
         VDP2UpdateCRAMCache<uint16>(address);
     }
+    VDP2UpdateEnabledBGs();
 
     if constexpr (config::effective::threadedRendering) {
         m_VDPRenderContext.vdp1Done = state.vdp1Done;

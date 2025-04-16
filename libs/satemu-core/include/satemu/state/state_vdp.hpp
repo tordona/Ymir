@@ -30,6 +30,8 @@ inline namespace v1 {
             uint16 LOPR;
             uint16 COPR;
             uint16 MODR;
+            bool manualSwap;
+            bool manualErase;
         } regs1;
 
         struct VDP2RegsState {

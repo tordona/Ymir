@@ -157,6 +157,7 @@ inline namespace v1 {
         ar(s.EWDR, s.EWLR, s.EWRR, s.EDSR);
         ar(s.LOPR, s.COPR);
         ar(s.MODR);
+        ar(s.manualSwap, s.manualErase);
     }
 
     template <class Archive>
