@@ -148,6 +148,7 @@ inline namespace v1 {
         ar(s.VRAM1, s.VRAM2, s.CRAM, s.spriteFB, s.displayFB);
         ar(s.regs1, s.regs2);
         ar(s.HPhase, s.VPhase, s.VCounter);
+        ar(s.vdp1Done);
     }
 
     template <class Archive>

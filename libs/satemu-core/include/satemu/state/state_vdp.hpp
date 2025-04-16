@@ -185,7 +185,8 @@ inline namespace v1 {
 
         uint16 VCounter;
 
-        // TODO: renderer state?
+        // TODO: additional renderer state?
+        bool vdp1Done;
     };
 
 } // namespace v1

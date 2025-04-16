@@ -1273,28 +1273,28 @@ struct VDP2Regs {
         return ReadMPR(0, 7);
     }
     FORCE_INLINE uint16 ReadMPABRB() const {
-        return ReadMPR(0, 0);
+        return ReadMPR(1, 0);
     }
     FORCE_INLINE uint16 ReadMPCDRB() const {
-        return ReadMPR(0, 1);
+        return ReadMPR(1, 1);
     }
     FORCE_INLINE uint16 ReadMPEFRB() const {
-        return ReadMPR(0, 2);
+        return ReadMPR(1, 2);
     }
     FORCE_INLINE uint16 ReadMPGHRB() const {
-        return ReadMPR(0, 3);
+        return ReadMPR(1, 3);
     }
     FORCE_INLINE uint16 ReadMPIJRB() const {
-        return ReadMPR(0, 4);
+        return ReadMPR(1, 4);
     }
     FORCE_INLINE uint16 ReadMPKLRB() const {
-        return ReadMPR(0, 5);
+        return ReadMPR(1, 5);
     }
     FORCE_INLINE uint16 ReadMPMNRB() const {
-        return ReadMPR(0, 6);
+        return ReadMPR(1, 6);
     }
     FORCE_INLINE uint16 ReadMPOPRB() const {
-        return ReadMPR(0, 7);
+        return ReadMPR(1, 7);
     }
 
     FORCE_INLINE void WriteMPR(uint32 paramIndex, uint32 planeIndex, uint16 value) {

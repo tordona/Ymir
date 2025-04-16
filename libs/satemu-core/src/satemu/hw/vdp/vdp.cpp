@@ -555,6 +555,8 @@ void VDP::SaveState(state::VDPState &state) const {
     }
 
     state.VCounter = m_VCounter;
+
+    state.vdp1Done = m_VDPRenderContext.vdp1Done;
 }
 
 bool VDP::ValidateState(const state::VDPState &state) const {
@@ -767,6 +769,7 @@ void VDP::LoadState(const state::VDPState &state) {
     }
 
     if constexpr (config::effective::threadedRendering) {
+        m_VDPRenderContext.vdp1Done = state.vdp1Done;
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::PostStateLoadSync());
         m_VDPRenderContext.postLoadSyncSignal.Wait(true);
     }
