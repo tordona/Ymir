@@ -45,7 +45,7 @@ void SH2DisassemblyView::Display() {
                 case sh2::OperandSize::Byte: return probe.MemPeekByte(address, false);
                 case sh2::OperandSize::Word: return probe.MemPeekWord(address, false);
                 case sh2::OperandSize::Long: return probe.MemPeekLong(address, false);
-                default: assert(false); return 0;
+                default: return 0;
                 }
             };
 
@@ -70,7 +70,7 @@ void SH2DisassemblyView::Display() {
                 case sh2::Operand::Type::MACH: return probe.MAC().H;
                 case sh2::Operand::Type::MACL: return probe.MAC().L;
                 case sh2::Operand::Type::PR: return probe.PR();
-                default: assert(false); return 0;
+                default: return 0;
                 }
             };
 
