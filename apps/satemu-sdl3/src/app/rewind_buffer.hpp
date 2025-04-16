@@ -34,6 +34,9 @@ public:
         m_nextStateEvent.Set();
     }
 
+    // Restores the previous state if available and stores it in NextState.
+    bool PopState();
+
     // Next state to be processed. Should be filled in by the emulator before invoking ProcessState()
     satemu::state::State NextState;
 
@@ -45,6 +48,8 @@ private:
     std::thread m_procThread;
     util::Event m_nextStateEvent{false};     // Raised by emulator to ask rewind buffer to process next state
     util::Event m_stateProcessedEvent{true}; // Raised by rewind buffer to tell emulator it's done processing
+
+    std::mutex m_lock;
 
     std::array<std::vector<char>, 2> m_buffers; // Buffers for serialized states (current and next)
     bool m_bufferFlip = false;                  // Which buffer is which
@@ -59,7 +64,6 @@ private:
     struct Frame {
         std::vector<char> data;        // Compressed serialized states
         std::vector<Segment> segments; // Frame segments
-        uint64 seqNum;                 // Frame sequence number
     };
 
     std::map<uint64, Frame> m_frames; // Frames in the rewind buffer
@@ -70,8 +74,12 @@ private:
     // Gets and clears the next buffer and flips the buffer pointer.
     std::vector<char> &GetBuffer();
 
-    // Gets the current frame to work on.
-    Frame &GetFrame();
+    // Gets the next frame to append a segment to.
+    Frame &GetNextFrame();
+
+    // Gets the last frame pushed.
+    // Returns nullptr if no frames exist.
+    Frame *GetLastFrame();
 
     void ProcessFrame();
 };
