@@ -148,7 +148,7 @@ inline namespace v1 {
         ar(s.VRAM1, s.VRAM2, s.CRAM, s.spriteFB, s.displayFB);
         ar(s.regs1, s.regs2);
         ar(s.HPhase, s.VPhase, s.VCounter);
-        ar(s.vdp1Done);
+        ar(s.renderer);
     }
 
     template <class Archive>
@@ -202,6 +202,45 @@ inline namespace v1 {
         ar(s.CLOFEN, s.CLOFSL);
         ar(s.COAR, s.COAG, s.COAB);
         ar(s.COBR, s.COBG, s.COBB);
+    }
+
+    template <class Archive>
+    void serialize(Archive &ar, VDPState::VDPRendererState &s) {
+        ar(s.vdp1State);
+        ar(s.normBGLayerStates);
+        ar(s.rotParamStates);
+        ar(s.lineBackLayerState);
+        ar(s.displayFB);
+        ar(s.vdp1Done);
+    }
+
+    template <class Archive>
+    void serialize(Archive &ar, VDPState::VDPRendererState::VDP1RenderState &s) {
+        ar(s.sysClipH, s.sysClipV);
+        ar(s.userClipX0, s.userClipY0, s.userClipX1, s.userClipY1);
+        ar(s.localCoordX, s.localCoordY);
+        ar(s.rendering);
+        ar(s.cycleCount);
+    }
+
+    template <class Archive>
+    void serialize(Archive &ar, VDPState::VDPRendererState::NormBGLayerState &s) {
+        ar(s.fracScrollX, s.fracScrollY, s.scrollIncH);
+        ar(s.lineScrollTableAddress);
+        ar(s.mosaicCounterY);
+    }
+
+    template <class Archive>
+    void serialize(Archive &ar, VDPState::VDPRendererState::RotationParamState &s) {
+        ar(s.pageBaseAddresses);
+        ar(s.scrX, s.scrY);
+        ar(s.KA);
+    }
+
+    template <class Archive>
+    void serialize(Archive &ar, VDPState::VDPRendererState::LineBackLayerState &s) {
+        ar(s.lineColor);
+        ar(s.backColor);
     }
 
     template <class Archive>

@@ -342,7 +342,8 @@ private:
             VDP2CRAMWriteWord,
             VDP2RegWrite,
 
-            PostStateLoadSync,
+            PreSaveStateSync,
+            PostLoadStateSync,
 
             Shutdown,
         };
@@ -483,8 +484,12 @@ private:
             return {Type::VDP2RegWrite, {.write = {.address = address, .value = value}}};
         }
 
-        static VDPRenderEvent PostStateLoadSync() {
-            return {Type::PostStateLoadSync};
+        static VDPRenderEvent PreSaveStateSync() {
+            return {Type::PreSaveStateSync};
+        }
+
+        static VDPRenderEvent PostLoadStateSync() {
+            return {Type::PostLoadStateSync};
         }
 
         static VDPRenderEvent Shutdown() {
@@ -492,7 +497,7 @@ private:
         }
     };
 
-    struct VDPRenderContext {
+    mutable struct VDPRenderContext {
         struct QueueTraits : moodycamel::ConcurrentQueueDefaultTraits {
             static const size_t BLOCK_SIZE = 64;
             static const size_t EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD = 64;
@@ -505,6 +510,7 @@ private:
         moodycamel::ConsumerToken cTok{eventQueue};
         util::Event renderFinishedSignal{false};
         util::Event framebufferSwapSignal{false};
+        util::Event preSaveSyncSignal{false};
         util::Event postLoadSyncSignal{false};
 
         std::array<VDPRenderEvent, 64> pendingEvents;
@@ -516,8 +522,8 @@ private:
             VDP1Regs regs;
             alignas(16) std::array<uint8, kVDP1VRAMSize> VRAM;
             // alignas(16) std::array<std::array<uint8, kVDP1FramebufferRAMSize>, 2> spriteFB;
-            // std::size_t drawFB;
         } vdp1;
+
         struct VDP2 {
             VDP2Regs regs;
             alignas(16) std::array<uint8, kVDP2VRAMSize> VRAM;
@@ -527,6 +533,7 @@ private:
             // Only valid when color RAM mode is one of the RGB555 modes.
             alignas(16) std::array<Color888, kVDP2CRAMSize / sizeof(uint16)> CRAMCache;
         } vdp2;
+
         uint8 displayFB;
 
         void Reset() {
@@ -544,7 +551,6 @@ private:
             }
             // vdp1.spriteFB[0].fill(0);
             // vdp1.spriteFB[1].fill(0);
-            // vdp1.drawFB = 0;
             vdp2.regs.Reset();
             vdp2.VRAM.fill(0);
             vdp2.CRAM.fill(0);

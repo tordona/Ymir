@@ -187,8 +187,51 @@ inline namespace v1 {
 
         uint16 VCounter;
 
-        // TODO: additional renderer state?
-        bool vdp1Done;
+        struct VDPRendererState {
+            struct VDP1RenderState {
+                uint16 sysClipH;
+                uint16 sysClipV;
+
+                uint16 userClipX0;
+                uint16 userClipY0;
+                uint16 userClipX1;
+                uint16 userClipY1;
+
+                sint32 localCoordX;
+                sint32 localCoordY;
+
+                bool rendering;
+
+                uint64 cycleCount;
+            };
+
+            struct NormBGLayerState {
+                uint32 fracScrollX;
+                uint32 fracScrollY;
+                uint32 scrollIncH;
+                uint32 lineScrollTableAddress;
+                uint8 mosaicCounterY;
+            };
+
+            struct RotationParamState {
+                std::array<uint32, 16> pageBaseAddresses;
+                sint32 scrX, scrY;
+                uint32 KA;
+            };
+
+            struct LineBackLayerState {
+                uint32 lineColor;
+                uint32 backColor;
+            };
+
+            VDP1RenderState vdp1State;
+            std::array<NormBGLayerState, 4> normBGLayerStates;
+            std::array<RotationParamState, 2> rotParamStates;
+            LineBackLayerState lineBackLayerState;
+
+            uint8 displayFB;
+            bool vdp1Done;
+        } renderer;
     };
 
 } // namespace v1
