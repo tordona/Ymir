@@ -802,60 +802,14 @@ void App::RunEmulator() {
     // ---------------------------------
     // File dialogs
 
-    m_loadDiscFileDialogProps = SDL_CreateProperties();
-    if (m_loadDiscFileDialogProps == 0) {
-        devlog::error<grp::base>("Failed to create load disc file dialog properties: {}\n", SDL_GetError());
+    m_fileDialogProps = SDL_CreateProperties();
+    if (m_fileDialogProps == 0) {
+        devlog::error<grp::base>("Failed to create file dialog properties: {}\n", SDL_GetError());
         return;
     }
-    ScopeGuard sgDestroyLoadDiscFileDialogProps{[&] { SDL_DestroyProperties(m_loadDiscFileDialogProps); }};
+    ScopeGuard sgDestroyGenericFileDialogProps{[&] { SDL_DestroyProperties(m_fileDialogProps); }};
 
-    static constexpr SDL_DialogFileFilter kCartFileFilters[] = {
-        {.name = "All supported formats (*.cue, *.mds, *.iso, *.ccd)", .pattern = "cue;mds;iso;ccd"},
-        {.name = "All files (*.*)", .pattern = "*"},
-    };
-
-    SDL_SetPointerProperty(m_loadDiscFileDialogProps, SDL_PROP_FILE_DIALOG_WINDOW_POINTER, screen.window);
-    SDL_SetPointerProperty(m_loadDiscFileDialogProps, SDL_PROP_FILE_DIALOG_FILTERS_POINTER, (void *)kCartFileFilters);
-    SDL_SetNumberProperty(m_loadDiscFileDialogProps, SDL_PROP_FILE_DIALOG_NFILTERS_NUMBER,
-                          (int)std::size(kCartFileFilters));
-    SDL_SetBooleanProperty(m_loadDiscFileDialogProps, SDL_PROP_FILE_DIALOG_MANY_BOOLEAN, false);
-    SDL_SetStringProperty(m_loadDiscFileDialogProps, SDL_PROP_FILE_DIALOG_TITLE_STRING, "Load Sega Saturn disc image");
-    // const char *default_location = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_LOCATION_STRING, NULL);
-    // const char *accept = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_ACCEPT_STRING, NULL);
-    // const char *cancel = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_CANCEL_STRING, NULL);
-
-    m_loadBupCartFileDialogProps = SDL_CreateProperties();
-    if (m_loadBupCartFileDialogProps == 0) {
-        devlog::error<grp::base>("Failed to create load backup memory cartridge file dialog properties: {}\n",
-                                 SDL_GetError());
-        return;
-    }
-    ScopeGuard sgDestroyLoadBupCartFileDialogProps{[&] { SDL_DestroyProperties(m_loadBupCartFileDialogProps); }};
-
-    static constexpr SDL_DialogFileFilter kBupFileFilters[] = {
-        {.name = "Backup memory images (*.bin)", .pattern = "bin"},
-        {.name = "All files (*.*)", .pattern = "*"},
-    };
-
-    SDL_SetPointerProperty(m_loadBupCartFileDialogProps, SDL_PROP_FILE_DIALOG_WINDOW_POINTER, screen.window);
-    SDL_SetPointerProperty(m_loadBupCartFileDialogProps, SDL_PROP_FILE_DIALOG_FILTERS_POINTER, (void *)kBupFileFilters);
-    SDL_SetNumberProperty(m_loadBupCartFileDialogProps, SDL_PROP_FILE_DIALOG_NFILTERS_NUMBER,
-                          (int)std::size(kBupFileFilters));
-    SDL_SetBooleanProperty(m_loadBupCartFileDialogProps, SDL_PROP_FILE_DIALOG_MANY_BOOLEAN, false);
-    SDL_SetStringProperty(m_loadBupCartFileDialogProps, SDL_PROP_FILE_DIALOG_TITLE_STRING,
-                          "Load Sega Saturn backup memory image");
-    // const char *default_location = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_LOCATION_STRING, NULL);
-    // const char *accept = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_ACCEPT_STRING, NULL);
-    // const char *cancel = SDL_GetStringProperty(props, SDL_PROP_FILE_DIALOG_CANCEL_STRING, NULL);
-
-    m_genericFileDialogProps = SDL_CreateProperties();
-    if (m_genericFileDialogProps == 0) {
-        devlog::error<grp::base>("Failed to create generic file dialog properties: {}\n", SDL_GetError());
-        return;
-    }
-    ScopeGuard sgDestroyGenericFileDialogProps{[&] { SDL_DestroyProperties(m_genericFileDialogProps); }};
-
-    SDL_SetPointerProperty(m_genericFileDialogProps, SDL_PROP_FILE_DIALOG_WINDOW_POINTER, screen.window);
+    SDL_SetPointerProperty(m_fileDialogProps, SDL_PROP_FILE_DIALOG_WINDOW_POINTER, screen.window);
 
     // ---------------------------------
     // Emulator configuration
@@ -2121,12 +2075,18 @@ void App::ToggleRewindBuffer() {
 }
 
 void App::OpenLoadDiscDialog() {
-    SDL_ShowFileDialogWithProperties(
-        SDL_FILEDIALOG_OPENFILE,
-        [](void *userdata, const char *const *filelist, int filter) {
-            static_cast<App *>(userdata)->ProcessOpenDiscImageFileDialogSelection(filelist, filter);
-        },
-        this, m_loadDiscFileDialogProps);
+    static constexpr SDL_DialogFileFilter kCartFileFilters[] = {
+        {.name = "All supported formats (*.cue, *.mds, *.iso, *.ccd)", .pattern = "cue;mds;iso;ccd"},
+        {.name = "All files (*.*)", .pattern = "*"},
+    };
+
+    std::filesystem::path defaultPath = m_context.state.loadedDiscImagePath;
+
+    InvokeFileDialog(SDL_FILEDIALOG_OPENFILE, "Load Sega Saturn disc image", (void *)kCartFileFilters,
+                     std::size(kCartFileFilters), false, defaultPath.string().c_str(), this,
+                     [](void *userdata, const char *const *filelist, int filter) {
+                         static_cast<App *>(userdata)->ProcessOpenDiscImageFileDialogSelection(filelist, filter);
+                     });
 }
 
 void App::ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, int filter) {
@@ -2160,12 +2120,19 @@ bool App::LoadDiscImage(std::filesystem::path path) {
 }
 
 void App::OpenBackupMemoryCartFileDialog() {
-    SDL_ShowFileDialogWithProperties(
-        SDL_FILEDIALOG_OPENFILE,
-        [](void *userdata, const char *const *filelist, int filter) {
-            static_cast<App *>(userdata)->ProcessOpenBackupMemoryCartFileDialogSelection(filelist, filter);
-        },
-        this, m_loadBupCartFileDialogProps);
+    static constexpr SDL_DialogFileFilter kBupFileFilters[] = {
+        {.name = "Backup memory images (*.bin)", .pattern = "bin"},
+        {.name = "All files (*.*)", .pattern = "*"},
+    };
+
+    // TODO: get path to currently loaded backup memory
+    std::filesystem::path defaultPath = "";
+
+    InvokeFileDialog(SDL_FILEDIALOG_OPENFILE, "Load Sega Saturn backup memory image", (void *)kBupFileFilters,
+                     std::size(kBupFileFilters), false, defaultPath.string().c_str(), this,
+                     [](void *userdata, const char *const *filelist, int filter) {
+                         static_cast<App *>(userdata)->ProcessOpenBackupMemoryCartFileDialogSelection(filelist, filter);
+                     });
 }
 
 void App::ProcessOpenBackupMemoryCartFileDialogSelection(const char *const *filelist, int filter) {
@@ -2185,32 +2152,31 @@ static const char *StrNullIfEmpty(const std::string &str) {
 }
 
 void App::InvokeOpenFileDialog(const FileDialogParams &params) const {
-    InvokeGenericFileDialog(SDL_FILEDIALOG_OPENFILE, StrNullIfEmpty(params.dialogTitle), (void *)params.filters.data(),
-                            params.filters.size(), false, StrNullIfEmpty(params.defaultPath.string()), params.userdata,
-                            params.callback);
+    InvokeFileDialog(SDL_FILEDIALOG_OPENFILE, StrNullIfEmpty(params.dialogTitle), (void *)params.filters.data(),
+                     params.filters.size(), false, StrNullIfEmpty(params.defaultPath.string()), params.userdata,
+                     params.callback);
 }
 
 void App::InvokeOpenManyFilesDialog(const FileDialogParams &params) const {
-    InvokeGenericFileDialog(SDL_FILEDIALOG_OPENFILE, StrNullIfEmpty(params.dialogTitle), (void *)params.filters.data(),
-                            params.filters.size(), true, StrNullIfEmpty(params.defaultPath.string()), params.userdata,
-                            params.callback);
+    InvokeFileDialog(SDL_FILEDIALOG_OPENFILE, StrNullIfEmpty(params.dialogTitle), (void *)params.filters.data(),
+                     params.filters.size(), true, StrNullIfEmpty(params.defaultPath.string()), params.userdata,
+                     params.callback);
 }
 
 void App::InvokeSaveFileDialog(const FileDialogParams &params) const {
-    InvokeGenericFileDialog(SDL_FILEDIALOG_SAVEFILE, StrNullIfEmpty(params.dialogTitle), (void *)params.filters.data(),
-                            params.filters.size(), false, StrNullIfEmpty(params.defaultPath.string()), params.userdata,
-                            params.callback);
+    InvokeFileDialog(SDL_FILEDIALOG_SAVEFILE, StrNullIfEmpty(params.dialogTitle), (void *)params.filters.data(),
+                     params.filters.size(), false, StrNullIfEmpty(params.defaultPath.string()), params.userdata,
+                     params.callback);
 }
 
 void App::InvokeSelectFolderDialog(const FolderDialogParams &params) const {
-    InvokeGenericFileDialog(SDL_FILEDIALOG_OPENFOLDER, StrNullIfEmpty(params.dialogTitle), nullptr, 0, false,
-                            StrNullIfEmpty(params.defaultPath.string()), params.userdata, params.callback);
+    InvokeFileDialog(SDL_FILEDIALOG_OPENFOLDER, StrNullIfEmpty(params.dialogTitle), nullptr, 0, false,
+                     StrNullIfEmpty(params.defaultPath.string()), params.userdata, params.callback);
 }
 
-void App::InvokeGenericFileDialog(SDL_FileDialogType type, const char *title, void *filters, int numFilters,
-                                  bool allowMany, const char *location, void *userdata,
-                                  SDL_DialogFileCallback callback) const {
-    SDL_PropertiesID props = m_genericFileDialogProps;
+void App::InvokeFileDialog(SDL_FileDialogType type, const char *title, void *filters, int numFilters, bool allowMany,
+                           const char *location, void *userdata, SDL_DialogFileCallback callback) const {
+    SDL_PropertiesID props = m_fileDialogProps;
 
     SDL_SetStringProperty(props, SDL_PROP_FILE_DIALOG_TITLE_STRING, title);
     SDL_SetPointerProperty(props, SDL_PROP_FILE_DIALOG_FILTERS_POINTER, filters);

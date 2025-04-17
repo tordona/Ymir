@@ -57,9 +57,7 @@ private:
     CommandLineOptions m_options;
 
     SharedContext m_context;
-    SDL_PropertiesID m_loadDiscFileDialogProps;
-    SDL_PropertiesID m_loadBupCartFileDialogProps;
-    SDL_PropertiesID m_genericFileDialogProps;
+    SDL_PropertiesID m_fileDialogProps;
 
     std::thread m_emuThread;
 
@@ -92,9 +90,8 @@ private:
     void InvokeSaveFileDialog(const FileDialogParams &params) const;
     void InvokeSelectFolderDialog(const FolderDialogParams &params) const;
 
-    void InvokeGenericFileDialog(SDL_FileDialogType type, const char *title, void *filters, int numFilters,
-                                 bool allowMany, const char *location, void *userdata,
-                                 SDL_DialogFileCallback callback) const;
+    void InvokeFileDialog(SDL_FileDialogType type, const char *title, void *filters, int numFilters, bool allowMany,
+                          const char *location, void *userdata, SDL_DialogFileCallback callback) const;
 
     // -----------------------------------------------------------------------------------------------------------------
     // Windows
