@@ -595,6 +595,9 @@ private:
     } m_VDPRenderContext;
 
     std::thread m_VDPRenderThread;
+    bool m_threadedVDP2RendererEnabled = false;
+    bool m_threadedVDP1RendererEnabled = false;
+    bool m_runVDP1InRendererThread = false;
 
     void VDPRenderThread();
 
