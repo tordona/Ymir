@@ -1413,7 +1413,7 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE uint16 ReadSCXDN(uint32 bgIndex) const {
-        return bit::extract<0, 7>(bgParams[bgIndex].scrollAmountH);
+        return bit::extract<0, 7>(bgParams[bgIndex].scrollAmountH) << 8u;
     }
     FORCE_INLINE uint16 ReadSCXDN0() const {
         return ReadSCXDN(1);
@@ -1465,7 +1465,7 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE uint16 ReadSCYDN(uint32 bgIndex) const {
-        return bit::extract<0, 7>(bgParams[bgIndex].scrollAmountV);
+        return bit::extract<0, 7>(bgParams[bgIndex].scrollAmountV) << 8u;
     }
     FORCE_INLINE uint16 ReadSCYDN0() const {
         return ReadSCYDN(1);
@@ -1524,7 +1524,7 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE uint16 ReadZMXDN(uint32 bgIndex) const {
-        return bit::extract<0, 7>(bgParams[bgIndex].scrollIncH);
+        return bit::extract<0, 7>(bgParams[bgIndex].scrollIncH) << 8u;
     }
     FORCE_INLINE uint16 ReadZMXDN0() const {
         return ReadZMXDN(1);
@@ -1564,7 +1564,7 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE uint16 ReadZMYDN(uint32 bgIndex) const {
-        return bit::extract<0, 7>(bgParams[bgIndex].scrollIncV);
+        return bit::extract<0, 7>(bgParams[bgIndex].scrollIncV) << 8u;
     }
     FORCE_INLINE uint16 ReadZMYDN0() const {
         return ReadZMYDN(1);
