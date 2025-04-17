@@ -100,8 +100,7 @@ EmuEvent FormatBackupMemory(bool external);
 
 EmuEvent SetEmulateSH2Cache(bool enable);
 
-EmuEvent EnableThreadedVDP1Rendering(bool enable);
-EmuEvent EnableThreadedVDP2Rendering(bool enable);
+EmuEvent EnableThreadedVDPRendering(bool enable);
 
 EmuEvent EnableThreadedSCSP(bool enable);
 

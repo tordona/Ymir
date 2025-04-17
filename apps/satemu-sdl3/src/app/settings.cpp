@@ -469,8 +469,7 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         Parse(tblVideo, "AutoResizeWindow", video.autoResizeWindow);
         Parse(tblVideo, "DisplayVideoOutputInWindow", video.displayVideoOutputInWindow);
 
-        Parse(tblVideo, "ThreadedVDP1", m_emuConfig.video.threadedVDP1);
-        Parse(tblVideo, "ThreadedVDP2", m_emuConfig.video.threadedVDP2);
+        Parse(tblVideo, "ThreadedVDP", m_emuConfig.video.threadedVDP);
     }
 
     if (auto tblAudio = data["Audio"]) {
@@ -617,8 +616,7 @@ SettingsSaveResult Settings::Save() {
             {"ForcedAspect", video.forcedAspect},
             {"AutoResizeWindow", video.autoResizeWindow},
             {"DisplayVideoOutputInWindow", video.displayVideoOutputInWindow},
-            {"ThreadedVDP1", m_emuConfig.video.threadedVDP1.Get()},
-            {"ThreadedVDP2", m_emuConfig.video.threadedVDP2.Get()},
+            {"ThreadedVDP", m_emuConfig.video.threadedVDP.Get()},
         }}},
 
         {"Audio", toml::table{{

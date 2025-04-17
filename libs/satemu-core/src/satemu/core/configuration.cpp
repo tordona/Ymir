@@ -5,8 +5,7 @@ namespace satemu::core {
 void Configuration::NotifyObservers() {
     system.preferredRegionOrder.Notify();
 
-    video.threadedVDP1.Notify();
-    video.threadedVDP2.Notify();
+    video.threadedVDP.Notify();
 
     audio.interpolation.Notify();
     audio.threadedSCSP.Notify();

@@ -60,23 +60,14 @@ void VideoSettingsView::Display() {
 
     // TODO: renderer backend options
 
-    bool threadedVDP1 = config.threadedVDP1;
-    if (MakeDirty(ImGui::Checkbox("Threaded VDP1 renderer", &threadedVDP1))) {
-        m_context.EnqueueEvent(events::emu::EnableThreadedVDP1Rendering(threadedVDP1));
+    bool threadedVDP = config.threadedVDP;
+    if (MakeDirty(ImGui::Checkbox("Threaded VDP1/VDP2 renderer", &threadedVDP))) {
+        m_context.EnqueueEvent(events::emu::EnableThreadedVDPRendering(threadedVDP));
     }
-    widgets::ExplanationTooltip("Runs the software VDP1 renderer in a dedicated thread.\n"
-                                "Slightly improves performance at the cost of accuracy.\n"
-                                "A few select games may break when this option is enabled.\n"
-                                "When disabled, VDP1 rendering is done on the emulator thread.");
-
-    bool threadedVDP2 = config.threadedVDP2;
-    if (MakeDirty(ImGui::Checkbox("Threaded VDP2 renderer", &threadedVDP2))) {
-        m_context.EnqueueEvent(events::emu::EnableThreadedVDP2Rendering(threadedVDP2));
-    }
-    widgets::ExplanationTooltip("Runs the software VDP2 renderer in a dedicated thread.\n"
+    widgets::ExplanationTooltip("Runs the software VDP1/VDP2 renderer in a dedicated thread.\n"
                                 "Greatly improves performance at the cost of accuracy.\n"
                                 "A few select games may break when this option is enabled.\n"
-                                "When disabled, VDP2 rendering is done on the emulator thread.");
+                                "When disabled, rendering is done on the emulator thread.");
 }
 
 } // namespace app::ui

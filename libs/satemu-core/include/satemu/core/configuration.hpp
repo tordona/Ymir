@@ -62,13 +62,8 @@ struct Configuration {
     struct Video {
         // TODO: renderer backend options
 
-        // Runs the VDP1 renderer in a dedicated thread.
-        // TODO: Doom graphics breaks or the game freezes with this
-        // TODO: move VDP1 rendering to a dedicated thread of its own
-        util::Observable<bool> threadedVDP1 = true;
-
-        // Runs the VDP2 renderer in a dedicated thread.
-        util::Observable<bool> threadedVDP2 = true;
+        // Runs the VDP renderer in a dedicated thread.
+        util::Observable<bool> threadedVDP = true;
     } video;
 
     struct Audio {

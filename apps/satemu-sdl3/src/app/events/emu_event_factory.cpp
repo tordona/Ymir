@@ -252,12 +252,8 @@ EmuEvent SetEmulateSH2Cache(bool enable) {
     });
 }
 
-EmuEvent EnableThreadedVDP1Rendering(bool enable) {
-    return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.video.threadedVDP1 = enable; });
-}
-
-EmuEvent EnableThreadedVDP2Rendering(bool enable) {
-    return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.video.threadedVDP2 = enable; });
+EmuEvent EnableThreadedVDPRendering(bool enable) {
+    return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.video.threadedVDP = enable; });
 }
 
 EmuEvent EnableThreadedSCSP(bool enable) {
