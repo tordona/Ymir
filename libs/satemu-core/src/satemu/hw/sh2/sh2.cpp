@@ -455,7 +455,7 @@ T SH2::MemRead(uint32 address) {
                 }
             }
         }
-        // fallthrough
+        [[fallthrough]];
     case 0b001:
     case 0b101: // cache-through
         if constexpr (peek) {
@@ -552,7 +552,7 @@ void SH2::MemWrite(uint32 address, T value) {
                 }
             }
         }
-        // fallthrough
+        [[fallthrough]];
     case 0b001:
     case 0b101: // cache-through
         if constexpr (poke) {
@@ -1252,7 +1252,7 @@ void SH2::RunDMAC(uint32 channel) {
     auto getAddressInc = [&](DMATransferIncrementMode mode) -> sint32 {
         using enum DMATransferIncrementMode;
         switch (mode) {
-        default: // fallthrough
+        default: [[fallthrough]];
         case Fixed: return 0;
         case Increment: return +xferSize;
         case Decrement: return -xferSize;

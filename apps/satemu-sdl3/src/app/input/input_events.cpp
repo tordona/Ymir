@@ -8,7 +8,7 @@ namespace app::input {
 
 std::string ToHumanString(const InputEvent &bind) {
     switch (bind.type) {
-    default: // fallthrough
+    default: [[fallthrough]];
     case InputEvent::Type::None: return "";
     case InputEvent::Type::KeyCombo: return ToHumanString(bind.keyCombo);
     case InputEvent::Type::MouseCombo: return ToHumanString(bind.mouseCombo);
@@ -19,7 +19,7 @@ std::string ToHumanString(const InputEvent &bind) {
 
 std::string ToString(const InputEvent &bind) {
     switch (bind.type) {
-    default: // fallthrough
+    default: [[fallthrough]];
     case InputEvent::Type::None: return "None";
     case InputEvent::Type::KeyCombo: return ToString(bind.keyCombo);
     case InputEvent::Type::MouseCombo: return ToString(bind.mouseCombo);

@@ -790,8 +790,8 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
         if ((slot.egLevel >> 5u) >= slot.decayLevel) {
             slot.egState = Slot::EGState::Decay2;
         }
-        // fallthrough
-    case Slot::EGState::Decay2:  // fallthrough
+        [[fallthrough]];
+    case Slot::EGState::Decay2: [[fallthrough]];
     case Slot::EGState::Release: //
         slot.egLevel = std::min<uint16>(slot.egLevel + inc, 0x3FF);
         if (slot.egLevel == 0x3FF) {

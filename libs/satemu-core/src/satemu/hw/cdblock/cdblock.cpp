@@ -813,7 +813,7 @@ void CDBlock::ProcessDriveState() {
             m_status.frameAddress = m_playStartPos;
         }
         break;
-    case kStatusCodePlay: // fallthrough
+    case kStatusCodePlay: [[fallthrough]];
     case kStatusCodeScan: ProcessDriveStatePlay(); break;
     case kStatusCodePause:
         // Resume playback if paused due to running out of buffers

@@ -604,7 +604,7 @@ void BackupMemoryView::DisplayFileImportOverwriteModal(std::span<bup::BackupFile
                 // - std::future/std::promise?
                 // Attempt to overwrite files
                 switch (m_bup->Import(ovFile.file, true)) {
-                case bup::BackupFileImportResult::Imported: // fallthrough
+                case bup::BackupFileImportResult::Imported: [[fallthrough]];
                 case bup::BackupFileImportResult::Overwritten: m_importSuccess.push_back(ovFile.file.header); break;
                 case bup::BackupFileImportResult::NoSpace:
                     m_importFailed.push_back({ovFile.file.header, "Not enough space in memory"});

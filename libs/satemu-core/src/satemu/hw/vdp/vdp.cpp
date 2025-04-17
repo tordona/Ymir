@@ -1618,15 +1618,15 @@ void VDP::VDP1ProcessCommand() {
         switch (control.command) {
         case DrawNormalSprite: VDP1Cmd_DrawNormalSprite(cmdAddress, control); break;
         case DrawScaledSprite: VDP1Cmd_DrawScaledSprite(cmdAddress, control); break;
-        case DrawDistortedSprite: // fallthrough
+        case DrawDistortedSprite: [[fallthrough]];
         case DrawDistortedSpriteAlt: VDP1Cmd_DrawDistortedSprite(cmdAddress, control); break;
 
         case DrawPolygon: VDP1Cmd_DrawPolygon(cmdAddress); break;
-        case DrawPolylines: // fallthrough
+        case DrawPolylines: [[fallthrough]];
         case DrawPolylinesAlt: VDP1Cmd_DrawPolylines(cmdAddress); break;
         case DrawLine: VDP1Cmd_DrawLine(cmdAddress); break;
 
-        case UserClipping: // fallthrough
+        case UserClipping: [[fallthrough]];
         case UserClippingAlt: VDP1Cmd_SetUserClipping(cmdAddress); break;
         case SystemClipping: VDP1Cmd_SetSystemClipping(cmdAddress); break;
         case SetLocalCoordinates: VDP1Cmd_SetLocalCoordinates(cmdAddress); break;

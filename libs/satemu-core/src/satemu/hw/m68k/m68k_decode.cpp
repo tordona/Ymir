@@ -212,8 +212,8 @@ DecodeTable BuildDecodeTable() {
             }
             break;
         }
-        case 0x1: // fallthrough
-        case 0x2: // fallthrough
+        case 0x1: [[fallthrough]];
+        case 0x2: [[fallthrough]];
         case 0x3:
             if (bit::extract<6, 8>(instr) == 0b001) {
                 const uint16 size = bit::extract<12, 13>(instr);
