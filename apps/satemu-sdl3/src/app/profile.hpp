@@ -6,7 +6,7 @@ namespace app {
 
 enum class StandardPath {
     Root,            // Root of the profile    <profile>/
-    BIOSImages,      // BIOS images            <profile>/bios/
+    IPLROMImages,    // BIOS images            <profile>/roms/ipl
     BackupMemory,    // Backup memory images   <profile>/backup/
     ExportedBackups, // Exported backup files  <profile>/backup/exported/
     PersistentState, // Persistent app state   <profile>/state/

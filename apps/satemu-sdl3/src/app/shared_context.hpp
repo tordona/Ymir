@@ -2,6 +2,7 @@
 
 #include <satemu/satemu.hpp>
 
+#include <app/ipl_rom_manager.hpp>
 #include <app/profile.hpp>
 #include <app/rewind_buffer.hpp>
 #include <app/settings.hpp>
@@ -36,6 +37,7 @@ struct SharedContext {
 
     Profile profile;
     Settings settings{*this};
+    IPLROMManager iplRomManager;
 
     std::array<std::unique_ptr<satemu::state::State>, 10> saveStates;
     size_t currSaveStateSlot = 0;

@@ -8,6 +8,8 @@ add_executable(satemu-sdl3
     src/app/audio_system.cpp
     src/app/audio_system.hpp
     src/app/cmdline_opts.hpp
+    src/app/ipl_rom_manager.cpp
+    src/app/ipl_rom_manager.hpp
     src/app/profile.cpp
     src/app/profile.hpp
     src/app/rewind_buffer.cpp

@@ -9,7 +9,7 @@ namespace app {
 // Must match the order listed in the StandardPath enum.
 const fs::path kPathSuffixes[] = {
     "",                              // Root
-    "bios",                          // BIOSImages
+    fs::path("roms") / "ipl",        // IPLROMImages
     "backup",                        // BackupMemory
     fs::path("backup") / "exported", // ExportedBackups
     "state",                         // PersistentState

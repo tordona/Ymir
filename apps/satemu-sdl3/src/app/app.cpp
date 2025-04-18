@@ -260,6 +260,8 @@ int App::Run(const CommandLineOptions &options) {
 
     devlog::debug<grp::base>("Profile directory: {}", m_context.profile.GetProfilePath().string());
 
+    m_context.iplRomManager.Scan(m_context.profile.GetPath(StandardPath::IPLROMImages));
+
     // TODO: setup path for persistent SMPC state, internal backup memory and cartridges
     // m_context.profile.GetPath(StandardPath::PersistentState);
 
