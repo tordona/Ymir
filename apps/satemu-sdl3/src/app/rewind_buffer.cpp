@@ -73,7 +73,7 @@ bool RewindBuffer::PopState() {
     const size_t size = lastDelta.size();
     std::vector<char> &buffer = m_buffers[m_bufferFlip];
     buffer.resize(maxSize);
-    int result = LZ4_decompress_safe(&lastDelta[0], &buffer[0], size, maxSize);
+    [[maybe_unused]] int result = LZ4_decompress_safe(&lastDelta[0], &buffer[0], size, maxSize);
     assert(result == maxSize);
 
     // Use pointers to allow for vectorization
