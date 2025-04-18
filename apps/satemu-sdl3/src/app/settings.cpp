@@ -334,18 +334,26 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
 
     mapActionInput(hotkeys.openSettings);
     mapActionInput(hotkeys.toggleWindowedVideoOutput);
+
+    mapActionInput(hotkeys.toggleMute);
+    mapActionInput(hotkeys.increaseVolume);
+    mapActionInput(hotkeys.decreaseVolume);
+
     mapActionInput(hotkeys.loadDisc);
     mapActionInput(hotkeys.ejectDisc);
     mapActionInput(hotkeys.openCloseTray);
+
     mapActionInput(hotkeys.hardReset);
     mapActionInput(hotkeys.softReset);
     mapActionInput(hotkeys.resetButton);
+
     mapActionInput(hotkeys.turboSpeed);
     mapActionInput(hotkeys.pauseResume);
     mapActionInput(hotkeys.fwdFrameStep);
     mapActionInput(hotkeys.revFrameStep);
     mapActionInput(hotkeys.rewind);
     mapActionInput(hotkeys.toggleRewindBuffer);
+
     mapActionInput(hotkeys.toggleDebugTrace);
     mapActionInput(hotkeys.dumpMemory);
 
@@ -518,18 +526,26 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
     if (auto tblHotkeys = data["Hotkeys"]) {
         Parse(tblHotkeys, "OpenSettings", hotkeys.openSettings);
         Parse(tblHotkeys, "ToggleWindowedVideoOutput", hotkeys.toggleWindowedVideoOutput);
+
+        Parse(tblHotkeys, "ToggleMute", hotkeys.toggleMute);
+        Parse(tblHotkeys, "IncreaseVolume", hotkeys.increaseVolume);
+        Parse(tblHotkeys, "DecreaseVolume", hotkeys.decreaseVolume);
+
         Parse(tblHotkeys, "LoadDisc", hotkeys.loadDisc);
         Parse(tblHotkeys, "EjectDisc", hotkeys.ejectDisc);
         Parse(tblHotkeys, "OpenCloseTray", hotkeys.openCloseTray);
+
         Parse(tblHotkeys, "HardReset", hotkeys.hardReset);
         Parse(tblHotkeys, "SoftReset", hotkeys.softReset);
         Parse(tblHotkeys, "ResetButton", hotkeys.resetButton);
+
         Parse(tblHotkeys, "TurboSpeed", hotkeys.turboSpeed);
         Parse(tblHotkeys, "PauseResume", hotkeys.pauseResume);
         Parse(tblHotkeys, "ForwardFrameStep", hotkeys.fwdFrameStep);
         Parse(tblHotkeys, "ReverseFrameStep", hotkeys.revFrameStep);
         Parse(tblHotkeys, "Rewind", hotkeys.rewind);
         Parse(tblHotkeys, "ToggleRewindBuffer", hotkeys.toggleRewindBuffer);
+
         Parse(tblHotkeys, "ToggleDebugTrace", hotkeys.toggleDebugTrace);
         Parse(tblHotkeys, "DumpMemory", hotkeys.dumpMemory);
 
@@ -673,18 +689,26 @@ SettingsSaveResult Settings::Save() {
         {"Hotkeys", toml::table{{
             {"OpenSettings", ToTOML(hotkeys.openSettings)},
             {"ToggleWindowedVideoOutput", ToTOML(hotkeys.toggleWindowedVideoOutput)},
+            
+            {"ToggleMute", ToTOML(hotkeys.toggleMute)},
+            {"IncreaseVolume", ToTOML(hotkeys.increaseVolume)},
+            {"DecreaseVolume", ToTOML(hotkeys.decreaseVolume)},
+
             {"LoadDisc", ToTOML(hotkeys.loadDisc)},
             {"EjectDisc", ToTOML(hotkeys.ejectDisc)},
             {"OpenCloseTray", ToTOML(hotkeys.openCloseTray)},
+
             {"HardReset", ToTOML(hotkeys.hardReset)},
             {"SoftReset", ToTOML(hotkeys.softReset)},
             {"ResetButton", ToTOML(hotkeys.resetButton)},
+
             {"TurboSpeed", ToTOML(hotkeys.turboSpeed)},
             {"PauseResume", ToTOML(hotkeys.pauseResume)},
             {"ForwardFrameStep", ToTOML(hotkeys.fwdFrameStep)},
             {"ReverseFrameStep", ToTOML(hotkeys.revFrameStep)},
             {"Rewind", ToTOML(hotkeys.rewind)},
             {"ToggleRewindBuffer", ToTOML(hotkeys.toggleRewindBuffer)},
+
             {"ToggleDebugTrace", ToTOML(hotkeys.toggleDebugTrace)},
             {"DumpMemory", ToTOML(hotkeys.dumpMemory)},
 
@@ -874,25 +898,27 @@ void Settings::ResetHotkeys() {
     using Key = input::KeyboardKey;
     using KeyCombo = input::KeyCombo;
 
+    hotkeys.openSettings.events = {KeyCombo{Mod::None, Key::F10}};
+    hotkeys.toggleWindowedVideoOutput.events = {KeyCombo{Mod::None, Key::F9}};
+
+    hotkeys.toggleMute.events = {KeyCombo{Mod::Control, Key::M}};
+    hotkeys.increaseVolume.events = {KeyCombo{Mod::Control, Key::EqualsPlus}};
+    hotkeys.decreaseVolume.events = {KeyCombo{Mod::Control, Key::MinusUnderscore}};
+
     hotkeys.loadDisc.events = {KeyCombo{Mod::Control, Key::O}};
     hotkeys.ejectDisc.events = {KeyCombo{Mod::Control, Key::W}};
     hotkeys.openCloseTray.events = {KeyCombo{Mod::Control, Key::T}};
 
-    hotkeys.toggleWindowedVideoOutput.events = {KeyCombo{Mod::None, Key::F9}};
-
-    hotkeys.openSettings.events = {KeyCombo{Mod::None, Key::F10}};
-
     hotkeys.hardReset.events = {KeyCombo{Mod::Control, Key::R}};
     hotkeys.softReset.events = {KeyCombo{Mod::Control | Mod::Shift, Key::R}};
+    hotkeys.resetButton.events = {KeyCombo{Mod::Shift, Key::R}};
 
     hotkeys.turboSpeed.events = {KeyCombo{Mod::None, Key::Tab}};
     hotkeys.pauseResume.events = {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::Control, Key::P}};
-    hotkeys.toggleRewindBuffer.events = {KeyCombo{Mod::None, Key::F8}};
     hotkeys.fwdFrameStep.events = {KeyCombo{Mod::None, Key::RightBracket}};
     hotkeys.revFrameStep.events = {KeyCombo{Mod::None, Key::LeftBracket}};
     hotkeys.rewind.events = {KeyCombo{Mod::None, Key::Backspace}};
-
-    hotkeys.resetButton.events = {KeyCombo{Mod::Shift, Key::R}};
+    hotkeys.toggleRewindBuffer.events = {KeyCombo{Mod::None, Key::F8}};
 
     hotkeys.toggleDebugTrace.events = {KeyCombo{Mod::None, Key::F11}};
     hotkeys.dumpMemory.events = {KeyCombo{Mod::Control, Key::F11}};

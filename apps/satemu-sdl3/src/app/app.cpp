@@ -885,6 +885,25 @@ void App::RunEmulator() {
         });
     }
 
+    // Audio
+    {
+        inputContext.SetActionHandler(actions::audio::ToggleMute, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.settings.audio.mute = !m_context.settings.audio.mute;
+            }
+        });
+        inputContext.SetActionHandler(actions::audio::IncreaseVolume, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.settings.audio.volume = std::min(m_context.settings.audio.volume + 0.1f, 1.0f);
+            }
+        });
+        inputContext.SetActionHandler(actions::audio::DecreaseVolume, [&](void *, bool actuated) {
+            if (actuated) {
+                m_context.settings.audio.volume = std::max(m_context.settings.audio.volume - 0.1f, 0.0f);
+            }
+        });
+    }
+
     // CD drive
     {
         inputContext.SetActionHandler(actions::cd_drive::LoadDisc, [&](void *, bool actuated) {

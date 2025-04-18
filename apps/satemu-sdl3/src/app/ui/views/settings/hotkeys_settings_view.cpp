@@ -66,6 +66,10 @@ void HotkeysSettingsView::Display() {
         drawRow("General", "Open settings", hotkeys.openSettings);
         drawRow("General", "Toggle windowed video output", hotkeys.toggleWindowedVideoOutput);
 
+        drawRow("Audio", "Toggle mute", hotkeys.toggleMute);
+        drawRow("Audio", "Increase volume by 10%", hotkeys.increaseVolume);
+        drawRow("Audio", "Decrease volume by 10%", hotkeys.decreaseVolume);
+
         drawRow("CD drive", "Load disc", hotkeys.loadDisc);
         drawRow("CD drive", "Eject disc", hotkeys.ejectDisc);
         drawRow("CD drive", "Open/close tray", hotkeys.openCloseTray);

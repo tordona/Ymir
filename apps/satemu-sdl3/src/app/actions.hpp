@@ -11,6 +11,14 @@ namespace general {
 
 } // namespace general
 
+namespace audio {
+
+    inline constexpr input::ActionID ToggleMute{0x001100};
+    inline constexpr input::ActionID IncreaseVolume{0x001101};
+    inline constexpr input::ActionID DecreaseVolume{0x001102};
+
+} // namespace audio
+
 namespace cd_drive {
 
     inline constexpr input::ActionID LoadDisc{0x002000};

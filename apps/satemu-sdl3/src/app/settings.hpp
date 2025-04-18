@@ -173,6 +173,10 @@ public:
         InputBind openSettings{actions::general::OpenSettings};
         InputBind toggleWindowedVideoOutput{actions::general::ToggleWindowedVideoOutput};
 
+        InputBind toggleMute{actions::audio::ToggleMute};
+        InputBind increaseVolume{actions::audio::IncreaseVolume};
+        InputBind decreaseVolume{actions::audio::DecreaseVolume};
+
         InputBind loadDisc{actions::cd_drive::LoadDisc};
         InputBind ejectDisc{actions::cd_drive::EjectDisc};
         InputBind openCloseTray{actions::cd_drive::OpenCloseTray};
