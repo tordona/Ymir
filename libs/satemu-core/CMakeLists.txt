@@ -10,6 +10,8 @@ add_library(satemu-core
     include/satemu/core/scheduler_defs.hpp
     include/satemu/core/types.hpp
 
+    include/satemu/db/ipl_db.hpp
+
     include/satemu/debug/scu_tracer_base.hpp
     include/satemu/debug/sh2_tracer_base.hpp
 
@@ -154,6 +156,9 @@ add_library(satemu-core
     src/satemu/satemu.cpp
 
     src/satemu/core/configuration.cpp
+    src/satemu/core/hash.cpp
+
+    src/satemu/db/ipl_db.cpp
 
     src/satemu/hw/cart/cart_impl_bup.cpp
     src/satemu/hw/cart/cart_slot.cpp
@@ -204,7 +209,7 @@ add_library(satemu-core
     src/satemu/util/constexpr_for.hpp
     src/satemu/util/date_time.cpp
     src/satemu/util/process.cpp
- "src/satemu/core/hash.cpp")
+)
 add_library(satemu::satemu-core ALIAS satemu-core)
 set_target_properties(satemu-core PROPERTIES
                       VERSION ${satemu_core_VERSION}
