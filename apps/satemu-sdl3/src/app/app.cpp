@@ -344,7 +344,8 @@ int App::Run(const CommandLineOptions &options) {
     m_context.saturn.SMPC.LoadPersistentDataFrom(m_context.profile.GetPath(ProfilePath::PersistentState) / "smpc.bin",
                                                  error);
     if (error) {
-        devlog::warn<grp::base>("Failed to load SMPC settings: {}", error.message());
+        devlog::warn<grp::base>("Failed to load SMPC settings from {}: {}",
+                                m_context.saturn.SMPC.GetPersistentDataPath().string(), error.message());
     } else {
         devlog::info<grp::base>("Loaded SMPC settings from {}", m_context.saturn.SMPC.GetPersistentDataPath().string());
     }

@@ -133,12 +133,14 @@ FLATTEN void SMPC::UpdateClockRatios(const sys::ClockRatios &clockRatios) {
 
 void SMPC::LoadPersistentDataFrom(std::filesystem::path path, std::error_code &error) {
     m_persistentDataPath = path;
+    errno = 0;
     ReadPersistentData();
     error.assign(errno, std::generic_category());
 }
 
 void SMPC::SavePersistentDataTo(std::filesystem::path path, std::error_code &error) {
     m_persistentDataPath = path;
+    errno = 0;
     WritePersistentData();
     error.assign(errno, std::generic_category());
 }
