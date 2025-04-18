@@ -448,6 +448,9 @@ void Settings::ResetToDefaults() {
     video.autoResizeWindow = false;
     video.displayVideoOutputInWindow = false;
 
+    audio.volume = 0.8;
+    audio.mute = false;
+
     cartridge.type = Settings::Cartridge::Type::None;
     cartridge.backupRAM.imagePath = "";
     cartridge.dram.capacity = Settings::Cartridge::DRAM::Capacity::_32Mbit;
@@ -607,6 +610,8 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
     }
 
     if (auto tblAudio = data["Audio"]) {
+        Parse(tblAudio, "Volume", audio.volume);
+        Parse(tblAudio, "Mute", audio.mute);
         Parse(tblAudio, "InterpolationMode", m_emuConfig.audio.interpolation);
         Parse(tblAudio, "ThreadedSCSP", m_emuConfig.audio.threadedSCSP);
     }
@@ -771,6 +776,8 @@ SettingsSaveResult Settings::Save() {
         }}},
 
         {"Audio", toml::table{{
+            {"Volume", audio.volume.Get()},
+            {"Mute", audio.mute.Get()},
             {"InterpolationMode", ToTOML(m_emuConfig.audio.interpolation)},
             {"ThreadedSCSP", m_emuConfig.audio.threadedSCSP.Get()},
         }}},

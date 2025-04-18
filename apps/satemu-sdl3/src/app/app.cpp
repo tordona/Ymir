@@ -802,8 +802,13 @@ void App::RunEmulator() {
     }
     ScopeGuard sgDeinitAudio{[&] { m_audioSystem.Deinit(); }};
 
-    // Set gain to a reasonable level
-    m_audioSystem.SetGain(0.8f);
+    // Connect gain and mute to settings
+    m_context.settings.audio.volume.Observe([&](float volume) { m_audioSystem.SetGain(volume); });
+    m_context.settings.audio.mute.Observe([&](bool mute) { m_audioSystem.SetMute(mute); });
+
+    // Apply settings
+    m_audioSystem.SetGain(m_context.settings.audio.volume);
+    m_audioSystem.SetMute(m_context.settings.audio.mute);
 
     if (m_audioSystem.Start()) {
         int sampleRate;

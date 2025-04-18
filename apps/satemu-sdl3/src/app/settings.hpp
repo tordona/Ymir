@@ -262,6 +262,11 @@ public:
         bool displayVideoOutputInWindow;
     } video;
 
+    struct Audio {
+        util::Observable<float> volume;
+        util::Observable<bool> mute;
+    } audio;
+
     struct Cartridge {
         enum Type { None, BackupRAM, DRAM };
         Type type;

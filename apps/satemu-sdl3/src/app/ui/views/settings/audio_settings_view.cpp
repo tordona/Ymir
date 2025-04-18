@@ -12,7 +12,26 @@ AudioSettingsView::AudioSettingsView(SharedContext &context)
     : SettingsViewBase(context) {}
 
 void AudioSettingsView::Display() {
+    auto &settings = m_context.settings.audio;
     auto &config = m_context.saturn.configuration.audio;
+
+    // -----------------------------------------------------------------------------------------------------------------
+
+    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::SeparatorText("General");
+    ImGui::PopFont();
+
+    static constexpr float kMinVolume = 0.0f;
+    static constexpr float kMaxVolume = 100.0f;
+    float volumePct = settings.volume * 100.0f;
+    if (MakeDirty(ImGui::SliderScalar("Volume", ImGuiDataType_Float, &volumePct, &kMinVolume, &kMaxVolume, "%.1lf%%",
+                                      ImGuiSliderFlags_AlwaysClamp))) {
+        settings.volume = volumePct * 0.01f;
+    }
+    bool mute = settings.mute;
+    if (MakeDirty(ImGui::Checkbox("Mute", &mute))) {
+        settings.mute = mute;
+    }
 
     // -----------------------------------------------------------------------------------------------------------------
 
