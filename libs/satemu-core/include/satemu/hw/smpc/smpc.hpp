@@ -14,6 +14,7 @@
 #include <satemu/sys/system_internal_callbacks.hpp>
 
 #include <array>
+#include <filesystem>
 #include <vector>
 
 namespace satemu::smpc {
@@ -33,6 +34,12 @@ public:
     void MapMemory(sys::Bus &bus);
 
     void UpdateClockRatios(const sys::ClockRatios &clockRatios);
+
+    void LoadPersistentDataFrom(std::filesystem::path path);
+    void SavePersistentDataTo(std::filesystem::path path);
+    std::filesystem::path GetPersistentDataPath() const {
+        return m_persistentDataPath;
+    }
 
     void SetResetButtonState(bool pressed) {
         bool prevState = m_resetState;
@@ -103,6 +110,8 @@ private:
     sys::ISystemOperations &m_sysOps;
     core::Scheduler &m_scheduler;
     core::EventID m_commandEvent;
+
+    std::filesystem::path m_persistentDataPath;
 
     static void OnCommandEvent(core::EventContext &eventContext, void *userContext);
 

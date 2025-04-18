@@ -297,8 +297,13 @@ int App::Run(const CommandLineOptions &options) {
         LoadDiscImage(options.gameDiscPath);
     }
 
+    // Load IPL ROM
+    // Should be done after loading disc image so that the auto-detected region is used to select the appropriate ROM
     ScanIPLROMs();
     LoadIPLROM(true);
+
+    // Load SMPC persistent data and set up the path
+    m_context.saturn.SMPC.LoadPersistentDataFrom(m_context.profile.GetPath(ProfilePath::PersistentState) / "smpc.bin");
 
     RunEmulator();
 

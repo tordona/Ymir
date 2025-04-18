@@ -44,7 +44,7 @@ SMPC::SMPC(core::Scheduler &scheduler, sys::ISystemOperations &sysOps, core::Con
     m_resetState = false;
     m_areaCode = 0x1;
 
-    ReadPersistentData();
+    m_persistentDataPath = "smpc.bin";
 
     m_commandEvent = m_scheduler.RegisterEvent(core::events::SMPCCommand, this, OnCommandEvent);
 
@@ -131,6 +131,16 @@ void SMPC::MapMemory(sys::Bus &bus) {
 
 FLATTEN void SMPC::UpdateClockRatios(const sys::ClockRatios &clockRatios) {
     m_rtc.UpdateClockRatios(clockRatios);
+}
+
+void SMPC::LoadPersistentDataFrom(std::filesystem::path path) {
+    m_persistentDataPath = path;
+    ReadPersistentData();
+}
+
+void SMPC::SavePersistentDataTo(std::filesystem::path path) {
+    m_persistentDataPath = path;
+    WritePersistentData();
 }
 
 uint8 SMPC::GetAreaCode() const {
@@ -362,11 +372,8 @@ void SMPC::Write(uint32 address, uint8 value) {
 }
 
 void SMPC::ReadPersistentData() {
-    // TODO(SMPC): configurable path
-    std::filesystem::path smpcPersistentDataPath = "smpc.bin";
-
     // TODO: replace std iostream with custom I/O class with managed endianness
-    std::ifstream in{smpcPersistentDataPath, std::ios::binary};
+    std::ifstream in{m_persistentDataPath, std::ios::binary};
     if (!in) {
         return;
     }
@@ -392,11 +399,8 @@ void SMPC::ReadPersistentData() {
 }
 
 void SMPC::WritePersistentData() {
-    // TODO(SMPC): configurable path
-    std::filesystem::path smpcPersistentDataPath = "smpc.bin";
-
     // TODO: replace std iostream with custom I/O class with managed endianness
-    std::ofstream out{smpcPersistentDataPath, std::ios::binary};
+    std::ofstream out{m_persistentDataPath, std::ios::binary};
     if (!out) {
         return;
     }
