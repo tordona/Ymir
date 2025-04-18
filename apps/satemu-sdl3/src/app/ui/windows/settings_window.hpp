@@ -9,6 +9,7 @@
 #include <app/ui/views/settings/general_settings_view.hpp>
 #include <app/ui/views/settings/hotkeys_settings_view.hpp>
 #include <app/ui/views/settings/input_settings_view.hpp>
+#include <app/ui/views/settings/ipl_settings_view.hpp>
 #include <app/ui/views/settings/system_settings_view.hpp>
 #include <app/ui/views/settings/video_settings_view.hpp>
 
@@ -30,6 +31,7 @@ private:
     GeneralSettingsView m_generalSettingsView;
     HotkeysSettingsView m_hotkeysSettingsView;
     SystemSettingsView m_systemSettingsView;
+    IPLSettingsView m_iplSettingsView;
     InputSettingsView m_inputSettingsView;
     VideoSettingsView m_videoSettingsView;
     AudioSettingsView m_audioSettingsView;

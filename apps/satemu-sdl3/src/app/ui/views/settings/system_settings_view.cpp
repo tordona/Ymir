@@ -1,16 +1,12 @@
 #include "system_settings_view.hpp"
 
 #include <app/events/emu_event_factory.hpp>
-#include <app/events/gui_event_factory.hpp>
 
 #include <app/ui/widgets/common_widgets.hpp>
 #include <app/ui/widgets/datetime_widgets.hpp>
 #include <app/ui/widgets/system_widgets.hpp>
 
 #include <util/regions.hpp>
-#include <util/sdl_file_dialog.hpp>
-
-#include <misc/cpp/imgui_stdlib.h>
 
 #include <fmt/format.h>
 
@@ -27,152 +23,6 @@ void SystemSettingsView::Display() {
     auto &settings = m_context.settings.system;
     auto &sysConfig = m_context.saturn.configuration.system;
     auto &rtcConfig = m_context.saturn.configuration.rtc;
-
-    // -----------------------------------------------------------------------------------------------------------------
-
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
-    ImGui::SeparatorText("IPL ROM");
-    ImGui::PopFont();
-
-    ImGui::TextUnformatted("NOTE: Changing any of these options will cause a hard reset");
-
-    if (m_context.iplRomPath.empty()) {
-        ImGui::TextUnformatted("No IPL ROM loaded");
-    } else {
-        ImGui::Text("Currently using IPL ROM at %s", m_context.iplRomPath.string().c_str());
-    }
-
-    ImGui::Separator();
-
-    const float paddingWidth = ImGui::GetStyle().FramePadding.x;
-    const float itemSpacingWidth = ImGui::GetStyle().ItemSpacing.x;
-    const float fileSelectorButtonWidth = ImGui::CalcTextSize("...").x + paddingWidth * 2;
-    const float reloadButtonWidth = ImGui::CalcTextSize("Reload").x + paddingWidth * 2;
-    const float useButtonWidth = ImGui::CalcTextSize("Use").x + paddingWidth * 2;
-
-    std::filesystem::path iplRomsPath = m_context.profile.GetPath(StandardPath::IPLROMImages);
-    if (ImGui::Button("Rescan##ipl_roms")) {
-        m_context.iplRomManager.Scan(iplRomsPath);
-    }
-    ImGui::SameLine();
-    ImGui::TextUnformatted("ROMs in profile directory:");
-    ImGui::Text("%s", iplRomsPath.string().c_str());
-    int index = 0;
-    if (ImGui::BeginTable("sys_ipl_roms", 6, ImGuiTableFlags_ScrollY, ImVec2(0, 250))) {
-        ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("Version", ImGuiTableColumnFlags_WidthFixed, 50);
-        ImGui::TableSetupColumn("Date", ImGuiTableColumnFlags_WidthFixed, 75);
-        ImGui::TableSetupColumn("Variant", ImGuiTableColumnFlags_WidthFixed, 60);
-        ImGui::TableSetupColumn("Region", ImGuiTableColumnFlags_WidthFixed, 80);
-        ImGui::TableSetupColumn("##use", ImGuiTableColumnFlags_WidthFixed, useButtonWidth);
-        ImGui::TableSetupScrollFreeze(0, 1);
-        ImGui::TableHeadersRow();
-
-        for (auto &[path, info] : m_context.iplRomManager.GetROMs()) {
-            ImGui::TableNextRow();
-
-            if (ImGui::TableNextColumn()) {
-                std::filesystem::path relativePath = std::filesystem::relative(path, iplRomsPath);
-                ImGui::AlignTextToFramePadding();
-                ImGui::Text("%s", relativePath.string().c_str());
-            }
-            if (ImGui::TableNextColumn()) {
-                ImGui::AlignTextToFramePadding();
-                if (info.info != nullptr) {
-                    ImGui::Text("%s", info.info->version);
-                } else {
-                    ImGui::TextUnformatted("-");
-                }
-            }
-            if (ImGui::TableNextColumn()) {
-                ImGui::AlignTextToFramePadding();
-                if (info.info != nullptr) {
-                    ImGui::Text("%04u/%02u/%02u", info.info->year, info.info->month, info.info->day);
-                } else {
-                    ImGui::TextUnformatted("-");
-                }
-            }
-            if (ImGui::TableNextColumn()) {
-                ImGui::AlignTextToFramePadding();
-                if (info.info != nullptr) {
-                    switch (info.info->variant) {
-                    case db::SystemVariant::None: ImGui::TextUnformatted("None"); break;
-                    case db::SystemVariant::Saturn: ImGui::TextUnformatted("Saturn"); break;
-                    case db::SystemVariant::HiSaturn: ImGui::TextUnformatted("HiSaturn"); break;
-                    case db::SystemVariant::VSaturn: ImGui::TextUnformatted("V-Saturn"); break;
-                    case db::SystemVariant::DevKit: ImGui::TextUnformatted("Dev kit"); break;
-                    default: ImGui::TextUnformatted("Unknown"); break;
-                    }
-                } else {
-                    ImGui::TextUnformatted("Unknown");
-                }
-            }
-            if (ImGui::TableNextColumn()) {
-                ImGui::AlignTextToFramePadding();
-                if (info.info != nullptr) {
-                    switch (info.info->region) {
-                    case db::SystemRegion::None: ImGui::TextUnformatted("None"); break;
-                    case db::SystemRegion::US_EU: ImGui::TextUnformatted("US/EU"); break;
-                    case db::SystemRegion::JP: ImGui::TextUnformatted("Japan"); break;
-                    case db::SystemRegion::KR: ImGui::TextUnformatted("South Korea"); break;
-                    case db::SystemRegion::RegionFree: ImGui::TextUnformatted("Region-free"); break;
-                    default: ImGui::TextUnformatted("Unknown"); break;
-                    }
-                } else {
-                    ImGui::TextUnformatted("Unknown");
-                }
-            }
-            if (ImGui::TableNextColumn()) {
-                if (ImGui::Button(fmt::format("Use##{}", index).c_str())) {
-                    settings.ipl.overrideImage = true;
-                    settings.ipl.path = path;
-                    m_context.EnqueueEvent(events::gui::ReloadIPLROM());
-                    m_context.settings.MakeDirty();
-                }
-            }
-            ++index;
-        }
-
-        ImGui::EndTable();
-    }
-
-    ImGui::Separator();
-
-    if (MakeDirty(ImGui::Checkbox("Override IPL ROM", &settings.ipl.overrideImage))) {
-        m_context.EnqueueEvent(events::gui::ReloadIPLROM());
-        m_context.settings.MakeDirty();
-    }
-
-    if (!settings.ipl.overrideImage) {
-        ImGui::BeginDisabled();
-    }
-    ImGui::AlignTextToFramePadding();
-    ImGui::TextUnformatted("IPL ROM path");
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + reloadButtonWidth + itemSpacingWidth * 2));
-    std::string iplPath = settings.ipl.path.string();
-    if (MakeDirty(ImGui::InputText("##ipl_path", &iplPath))) {
-        settings.ipl.path = iplPath;
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("...##ipl_path")) {
-        m_context.EnqueueEvent(events::gui::OpenFile({
-            .dialogTitle = "Load IPL ROM",
-            .filters = {{"ROM files (*.bin, *.rom)", "bin;rom"}, {"All files (*.*)", "*"}},
-            .userdata = this,
-            .callback = util::WrapSingleSelectionCallback<&SystemSettingsView::ProcessLoadIPLROM,
-                                                          &util::NoopCancelFileDialogCallback,
-                                                          &SystemSettingsView::ProcessLoadIPLROMError>,
-        }));
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Reload")) {
-        m_context.EnqueueEvent(events::gui::ReloadIPLROM());
-        m_context.settings.MakeDirty();
-    }
-    if (!settings.ipl.overrideImage) {
-        ImGui::EndDisabled();
-    }
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -366,22 +216,6 @@ void SystemSettingsView::Display() {
         }
         ImGui::Unindent();
     }
-}
-
-void SystemSettingsView::ProcessLoadIPLROM(void *userdata, std::filesystem::path file, int filter) {
-    static_cast<SystemSettingsView *>(userdata)->LoadIPLROM(file);
-}
-
-void SystemSettingsView::ProcessLoadIPLROMError(void *userdata, const char *message, int filter) {
-    static_cast<SystemSettingsView *>(userdata)->ShowIPLROMLoadError(message);
-}
-
-void SystemSettingsView::LoadIPLROM(std::filesystem::path file) {
-    m_context.EnqueueEvent(events::gui::TryLoadIPLROM(file));
-}
-
-void SystemSettingsView::ShowIPLROMLoadError(const char *message) {
-    m_context.EnqueueEvent(events::gui::ShowError(fmt::format("Could not load IPL ROM: {}", message)));
 }
 
 } // namespace app::ui

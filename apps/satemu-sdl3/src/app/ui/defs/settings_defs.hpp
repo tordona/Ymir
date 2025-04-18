@@ -2,6 +2,6 @@
 
 namespace app::ui {
 
-enum class SettingsTab { None, General, Hotkeys, System, Input, Video, Audio, Cartridge };
+enum class SettingsTab { None, General, Hotkeys, System, IPL, Input, Video, Audio, Cartridge };
 
 } // namespace app::ui

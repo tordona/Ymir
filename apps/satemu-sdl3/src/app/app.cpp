@@ -1573,6 +1573,9 @@ void App::RunEmulator() {
                 if (ImGui::MenuItem("System")) {
                     m_settingsWindow.OpenTab(ui::SettingsTab::System);
                 }
+                if (ImGui::MenuItem("IPL")) {
+                    m_settingsWindow.OpenTab(ui::SettingsTab::IPL);
+                }
                 if (ImGui::MenuItem("Input")) {
                     m_settingsWindow.OpenTab(ui::SettingsTab::Input);
                 }

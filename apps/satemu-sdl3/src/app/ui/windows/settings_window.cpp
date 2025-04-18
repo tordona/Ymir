@@ -9,6 +9,7 @@ SettingsWindow::SettingsWindow(SharedContext &context)
     , m_generalSettingsView(context)
     , m_hotkeysSettingsView(context)
     , m_systemSettingsView(context)
+    , m_iplSettingsView(context)
     , m_inputSettingsView(context)
     , m_videoSettingsView(context)
     , m_audioSettingsView(context)
@@ -50,6 +51,10 @@ void SettingsWindow::DrawContents() {
         }
         if (ImGui::BeginTabItem("System", nullptr, tabFlag(SettingsTab::System))) {
             m_systemSettingsView.Display();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("IPL", nullptr, tabFlag(SettingsTab::IPL))) {
+            m_iplSettingsView.Display();
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Input", nullptr, tabFlag(SettingsTab::Input))) {
