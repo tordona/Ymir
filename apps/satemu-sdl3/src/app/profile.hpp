@@ -4,7 +4,7 @@
 
 namespace app {
 
-enum class StandardPath {
+enum class ProfilePath {
     Root,            // Root of the profile    <profile>/
     IPLROMImages,    // IPL ROM images         <profile>/roms/ipl/
     BackupMemory,    // Backup memory images   <profile>/backup/
@@ -35,7 +35,7 @@ public:
     bool CreateFolders(std::error_code &error);
 
     // Gets the specified path relative to the profile path.
-    std::filesystem::path GetPath(StandardPath path) const;
+    std::filesystem::path GetPath(ProfilePath path) const;
 
 private:
     std::filesystem::path m_profilePath;

@@ -50,7 +50,7 @@ void IPLSettingsView::Display() {
     const float reloadButtonWidth = ImGui::CalcTextSize("Reload").x + paddingWidth * 2;
     const float useButtonWidth = ImGui::CalcTextSize("Use").x + paddingWidth * 2;
 
-    std::filesystem::path iplRomsPath = m_context.profile.GetPath(StandardPath::IPLROMImages);
+    std::filesystem::path iplRomsPath = m_context.profile.GetPath(ProfilePath::IPLROMImages);
 
     ImGui::PushTextWrapPos(ImGui::GetContentRegionAvail().x);
     ImGui::Text("IPL ROMs in %s", iplRomsPath.string().c_str());

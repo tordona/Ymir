@@ -6,7 +6,7 @@ namespace fs = std::filesystem;
 
 namespace app {
 
-// Must match the order listed in the StandardPath enum.
+// Must match the order listed in the ProfilePath enum.
 const fs::path kPathSuffixes[] = {
     "",                              // Root
     fs::path("roms") / "ipl",        // IPLROMImages
@@ -57,7 +57,7 @@ bool Profile::CreateFolders(std::error_code &error) {
     return true;
 }
 
-fs::path Profile::GetPath(StandardPath path) const {
+fs::path Profile::GetPath(ProfilePath path) const {
     const auto index = static_cast<size_t>(path);
     if (index < std::size(kPathSuffixes)) {
         return m_profilePath / kPathSuffixes[index] / "";

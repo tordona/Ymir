@@ -203,6 +203,7 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
+#include <SDL3/SDL_misc.h>
 
 #include <backends/imgui_impl_sdl3.h>
 #include <backends/imgui_impl_sdlrenderer3.h>
@@ -256,10 +257,10 @@ int App::Run(const CommandLineOptions &options) {
         }
     }
 
-    devlog::debug<grp::base>("Profile directory: {}", m_context.profile.GetPath(StandardPath::Root).string());
+    devlog::debug<grp::base>("Profile directory: {}", m_context.profile.GetPath(ProfilePath::Root).string());
 
     // TODO: setup path for persistent SMPC state, internal backup memory and cartridges
-    // m_context.profile.GetPath(StandardPath::PersistentState);
+    // m_context.profile.GetPath(ProfilePath::PersistentState);
 
     m_context.settings.input.port1.type.Observe([&](satemu::peripheral::PeripheralType type) {
         m_context.EnqueueEvent(events::emu::InsertPort1Peripheral(type));
@@ -270,7 +271,7 @@ int App::Run(const CommandLineOptions &options) {
 
     m_options = options;
     {
-        auto result = m_context.settings.Load(m_context.profile.GetPath(StandardPath::Root) / "satemu.toml");
+        auto result = m_context.settings.Load(m_context.profile.GetPath(ProfilePath::Root) / "satemu.toml");
         if (!result) {
             devlog::warn<grp::base>("Failed to load settings: {}", result.string());
         }
@@ -375,7 +376,7 @@ void App::RunEmulator() {
     // ---------------------------------
     // Setup Dear ImGui context
 
-    std::filesystem::path imguiIniLocation = m_context.profile.GetPath(StandardPath::PersistentState) / "imgui.ini";
+    std::filesystem::path imguiIniLocation = m_context.profile.GetPath(ProfilePath::PersistentState) / "imgui.ini";
     ScopeGuard sgSaveImguiIni{[&] { ImGui::SaveIniSettingsToDisk(imguiIniLocation.string().c_str()); }};
 
     ImGui::CreateContext();
@@ -1416,6 +1417,13 @@ void App::RunEmulator() {
 
                 ImGui::Separator();
 
+                if (ImGui::MenuItem("Open profile directory")) {
+                    SDL_OpenURL(
+                        fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::Root).string()).c_str());
+                }
+
+                ImGui::Separator();
+
                 ImGui::MenuItem("Backup memory manager", nullptr, &m_bupMgrWindow.Open);
 
                 ImGui::Separator();
@@ -1972,7 +1980,7 @@ void App::ReadPeripheral(satemu::peripheral::PeripheralReport &report) {
 }
 
 void App::ScanIPLROMs() {
-    auto iplRomsPath = m_context.profile.GetPath(StandardPath::IPLROMImages);
+    auto iplRomsPath = m_context.profile.GetPath(ProfilePath::IPLROMImages);
     devlog::info<grp::base>("Scanning for IPL ROMs in {}...", iplRomsPath.string());
     m_context.iplRomManager.Scan(iplRomsPath);
 
@@ -2079,7 +2087,7 @@ std::filesystem::path App::GetIPLROMPath(bool startup) {
 }
 
 void App::LoadSaveStates() {
-    auto basePath = m_context.profile.GetPath(StandardPath::SaveStates);
+    auto basePath = m_context.profile.GetPath(ProfilePath::SaveStates);
     auto gameStatesPath = basePath / satemu::ToString(m_context.saturn.GetDiscHash());
 
     for (uint32 slot = 0; slot < m_context.saveStates.size(); slot++) {
@@ -2107,7 +2115,7 @@ void App::PersistSaveState(uint32 slot) {
         auto &state = *m_context.saveStates[slot];
 
         // Create directory for this game's save states
-        auto basePath = m_context.profile.GetPath(StandardPath::SaveStates);
+        auto basePath = m_context.profile.GetPath(ProfilePath::SaveStates);
         auto gameStatesPath = basePath / satemu::ToString(state.cdblock.discHash);
         std::filesystem::create_directories(gameStatesPath);
 
