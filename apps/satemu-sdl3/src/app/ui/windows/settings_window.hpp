@@ -5,6 +5,7 @@
 #include <app/ui/window_base.hpp>
 
 #include <app/ui/views/settings/audio_settings_view.hpp>
+#include <app/ui/views/settings/cartridge_settings_view.hpp>
 #include <app/ui/views/settings/general_settings_view.hpp>
 #include <app/ui/views/settings/hotkeys_settings_view.hpp>
 #include <app/ui/views/settings/input_settings_view.hpp>
@@ -32,6 +33,7 @@ private:
     InputSettingsView m_inputSettingsView;
     VideoSettingsView m_videoSettingsView;
     AudioSettingsView m_audioSettingsView;
+    CartridgeSettingsView m_cartSettingsView;
 };
 
 } // namespace app::ui

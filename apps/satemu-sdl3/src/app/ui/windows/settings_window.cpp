@@ -11,7 +11,8 @@ SettingsWindow::SettingsWindow(SharedContext &context)
     , m_systemSettingsView(context)
     , m_inputSettingsView(context)
     , m_videoSettingsView(context)
-    , m_audioSettingsView(context) {
+    , m_audioSettingsView(context)
+    , m_cartSettingsView(context) {
 
     m_windowConfig.name = "Settings";
 }
@@ -61,6 +62,10 @@ void SettingsWindow::DrawContents() {
         }
         if (ImGui::BeginTabItem("Audio", nullptr, tabFlag(SettingsTab::Audio))) {
             m_audioSettingsView.Display();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Cartridge", nullptr, tabFlag(SettingsTab::Cartridge))) {
+            m_cartSettingsView.Display();
             ImGui::EndTabItem();
         }
 

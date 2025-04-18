@@ -1604,6 +1604,9 @@ void App::RunEmulator() {
                 if (ImGui::MenuItem("Audio")) {
                     m_settingsWindow.OpenTab(ui::SettingsTab::Audio);
                 }
+                if (ImGui::MenuItem("Cartridge")) {
+                    m_settingsWindow.OpenTab(ui::SettingsTab::Cartridge);
+                }
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Debug")) {
