@@ -1,6 +1,18 @@
 #include <satemu/core/hash.hpp>
 
+#include <xxh3.h>
+
 namespace satemu {
+
+XXH128Hash CalcHash128(const void *input, size_t len, uint64_t seed) {
+    XXH128_hash_t hash = XXH128(input, len, seed);
+    XXH128_canonical_t canonicalHash{};
+    XXH128_canonicalFromHash(&canonicalHash, hash);
+
+    XXH128Hash out{};
+    std::copy_n(canonicalHash.digest, out.size(), out.begin());
+    return out;
+}
 
 std::string ToString(const XXH128Hash &hash) {
     fmt::memory_buffer buf{};

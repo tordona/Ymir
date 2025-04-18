@@ -1,7 +1,5 @@
 #include <satemu/sys/memory.hpp>
 
-#include <xxh3.h>
-
 namespace satemu::sys {
 
 SystemMemory::SystemMemory() {
@@ -30,10 +28,7 @@ void SystemMemory::MapMemory(Bus &bus) {
 
 void SystemMemory::LoadIPL(std::span<uint8, kIPLSize> ipl) {
     std::copy(ipl.begin(), ipl.end(), IPL.begin());
-    XXH128_hash_t hash = XXH128(IPL.data(), IPL.size(), 0x94B487AF51733FBEull);
-    XXH128_canonical_t canonicalHash{};
-    XXH128_canonicalFromHash(&canonicalHash, hash);
-    std::copy_n(canonicalHash.digest, m_iplHash.size(), m_iplHash.begin());
+    m_iplHash = CalcHash128(IPL.data(), IPL.size(), kIPLHashSeed);
 }
 
 XXH128Hash SystemMemory::GetIPLHash() const {
