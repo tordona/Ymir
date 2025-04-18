@@ -140,33 +140,42 @@ void CartridgeSettingsView::ProcessLoadBackupImageError(void *userdata, const ch
 void CartridgeSettingsView::LoadBackupImage(std::filesystem::path file) {
     auto &settings = m_context.settings.cartridge.backupRAM;
 
-    std::error_code error{};
-    bup::BackupMemory bupMem{};
-    const auto result = bupMem.LoadFrom(file, error);
-    switch (result) {
-    case bup::BackupMemoryImageLoadResult::Success:
+    if (std::filesystem::is_regular_file(file)) {
+        // The user selected an existing image. Make sure it's a proper backup image.
+        std::error_code error{};
+        bup::BackupMemory bupMem{};
+        const auto result = bupMem.LoadFrom(file, error);
+        switch (result) {
+        case bup::BackupMemoryImageLoadResult::Success:
+            settings.imagePath = file;
+            m_cartSettingsDirty = false;
+            m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
+            MakeDirty();
+            break;
+        case bup::BackupMemoryImageLoadResult::FilesystemError:
+            if (error) {
+                m_context.EnqueueEvent(
+                    events::gui::ShowError(fmt::format("Could not load backup memory image: {}", error.message())));
+            } else {
+                m_context.EnqueueEvent(events::gui::ShowError(
+                    fmt::format("Could not load backup memory image: Unspecified file system error")));
+            }
+            break;
+        case bup::BackupMemoryImageLoadResult::InvalidSize:
+            m_context.EnqueueEvent(
+                events::gui::ShowError(fmt::format("Could not load backup memory image: Invalid image size")));
+            break;
+        default:
+            m_context.EnqueueEvent(
+                events::gui::ShowError(fmt::format("Could not load backup memory image: Unexpected error")));
+            break;
+        }
+    } else {
+        // The user wants to create a new image file
         settings.imagePath = file;
         m_cartSettingsDirty = false;
         m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
         MakeDirty();
-        break;
-    case bup::BackupMemoryImageLoadResult::FilesystemError:
-        if (error) {
-            m_context.EnqueueEvent(
-                events::gui::ShowError(fmt::format("Could not load backup memory image: {}", error.message())));
-        } else {
-            m_context.EnqueueEvent(events::gui::ShowError(
-                fmt::format("Could not load backup memory image: Unspecified file system error")));
-        }
-        break;
-    case bup::BackupMemoryImageLoadResult::InvalidSize:
-        m_context.EnqueueEvent(
-            events::gui::ShowError(fmt::format("Could not load backup memory image: Invalid image size")));
-        break;
-    default:
-        m_context.EnqueueEvent(
-            events::gui::ShowError(fmt::format("Could not load backup memory image: Unexpected error")));
-        break;
     }
 }
 

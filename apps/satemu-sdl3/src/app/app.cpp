@@ -114,6 +114,43 @@
 // the GUI/main thread.
 //
 //
+// Persistent state
+// ----------------
+// The internal backup memory, external backup RAM cartridge and SMPC persist data to disk.
+//
+// Invoke Saturn::LoadInternalBackupMemoryImage(std::filesystem::path path, std::error_code &error) to configure the
+// path to the internal backup memory image. By default, the emulator core will *not* load any images, so the internal
+// backup memory will not work. Make sure to check the error code in `error` to ensure the image was properly loaded.
+// If the file contains a proper internal backup memory image, it is loaded as is, otherwise the file is resized or
+// truncated to 32 KiB and formatted to a blank backup memory.
+//
+// For external backup RAM cartridges, you will need to use satemu::bup::BackupMemory to try to load the image:
+//    std::error_code error{};
+//    bup::BackupMemory bupMem{};
+//    switch (bupMem.LoadFrom(path, error)) {
+//    case bup::BackupMemoryImageLoadResult::Success:
+//        // The image is valid
+//        break;
+//    case bup::BackupMemoryImageLoadResult::FilesystemError:
+//        // A file system error occurred; check `error` for details
+//        break;
+//    case bup::BackupMemoryImageLoadResult::InvalidSize:
+//        // The file does not have a valid backup memory image size
+//        break;
+//    }
+// If the backup image loaded successfully, you can insert the cartridge:
+//    Saturn &saturn = ...;
+//    saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
+//
+// SMPC is initialized with factory defaults. Upon startup, the system will require the user to set up the language and
+// system clock. It will not automatically persist any settings upon exit. In order to persist them, use either one of:
+//    SMPC::LoadPersistentDataFrom(std::filesystem::path)
+//    SMPC::SavePersistentDataTo(std::filesystem::path)
+// As the names imply, LoadPersistentDataFrom will attempt to read persistent data from the given path and Save will
+// attempt to write the current settings to the file. Both functions will additionally set the persistent data path to
+// the specified path, so that any further changes are automatically saved to that file.
+// It is sufficient to call one of these functions only once to configure the persistent path for SMPC settings.
+//
 // Debugging
 // ---------
 // WARNING: The debugger is a work in progress and in a flow state. Expect things to change dramatically.
@@ -303,7 +340,14 @@ int App::Run(const CommandLineOptions &options) {
     LoadIPLROM(true);
 
     // Load SMPC persistent data and set up the path
-    m_context.saturn.SMPC.LoadPersistentDataFrom(m_context.profile.GetPath(ProfilePath::PersistentState) / "smpc.bin");
+    std::error_code error{};
+    m_context.saturn.SMPC.LoadPersistentDataFrom(m_context.profile.GetPath(ProfilePath::PersistentState) / "smpc.bin",
+                                                 error);
+    if (error) {
+        devlog::warn<grp::base>("Failed to load SMPC settings: {}", error.message());
+    } else {
+        devlog::info<grp::base>("Loaded SMPC settings from {}", m_context.saturn.SMPC.GetPersistentDataPath().string());
+    }
 
     RunEmulator();
 

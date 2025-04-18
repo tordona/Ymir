@@ -35,8 +35,8 @@ public:
 
     void UpdateClockRatios(const sys::ClockRatios &clockRatios);
 
-    void LoadPersistentDataFrom(std::filesystem::path path);
-    void SavePersistentDataTo(std::filesystem::path path);
+    void LoadPersistentDataFrom(std::filesystem::path path, std::error_code &error);
+    void SavePersistentDataTo(std::filesystem::path path, std::error_code &error);
     std::filesystem::path GetPersistentDataPath() const {
         return m_persistentDataPath;
     }

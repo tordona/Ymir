@@ -12,6 +12,8 @@
 
 #include <misc/cpp/imgui_stdlib.h>
 
+#include <satemu/util/size_ops.hpp>
+
 #include <fmt/format.h>
 
 #include <set>
@@ -283,33 +285,47 @@ void SystemSettingsView::ProcessLoadBackupImageError(void *userdata, const char 
 void SystemSettingsView::LoadBackupImage(std::filesystem::path file) {
     auto &settings = m_context.settings.system;
 
-    std::error_code error{};
-    bup::BackupMemory bupMem{};
-    const auto result = bupMem.LoadFrom(file, error);
-    switch (result) {
-    case bup::BackupMemoryImageLoadResult::Success:
+    if (std::filesystem::is_regular_file(file)) {
+        // The user selected an existing image. Make sure it's a proper internal backup image.
+        std::error_code error{};
+        bup::BackupMemory bupMem{};
+        const auto result = bupMem.LoadFrom(file, error);
+        switch (result) {
+        case bup::BackupMemoryImageLoadResult::Success:
+            if (bupMem.Size() == 32_KiB) {
+                settings.internalBackupRAMImagePath = file;
+                m_bupSettingsDirty = false;
+                m_context.EnqueueEvent(events::emu::LoadInternalBackupMemory());
+                MakeDirty();
+            } else {
+                m_context.EnqueueEvent(
+                    events::gui::ShowError(fmt::format("Could not load backup memory image: Invalid image size")));
+            }
+            break;
+        case bup::BackupMemoryImageLoadResult::FilesystemError:
+            if (error) {
+                m_context.EnqueueEvent(
+                    events::gui::ShowError(fmt::format("Could not load backup memory image: {}", error.message())));
+            } else {
+                m_context.EnqueueEvent(events::gui::ShowError(
+                    fmt::format("Could not load backup memory image: Unspecified file system error")));
+            }
+            break;
+        case bup::BackupMemoryImageLoadResult::InvalidSize:
+            m_context.EnqueueEvent(
+                events::gui::ShowError(fmt::format("Could not load backup memory image: Invalid image size")));
+            break;
+        default:
+            m_context.EnqueueEvent(
+                events::gui::ShowError(fmt::format("Could not load backup memory image: Unexpected error")));
+            break;
+        }
+    } else {
+        // The user wants to create a new image file
         settings.internalBackupRAMImagePath = file;
         m_bupSettingsDirty = false;
         m_context.EnqueueEvent(events::emu::LoadInternalBackupMemory());
         MakeDirty();
-        break;
-    case bup::BackupMemoryImageLoadResult::FilesystemError:
-        if (error) {
-            m_context.EnqueueEvent(
-                events::gui::ShowError(fmt::format("Could not load backup memory image: {}", error.message())));
-        } else {
-            m_context.EnqueueEvent(events::gui::ShowError(
-                fmt::format("Could not load backup memory image: Unspecified file system error")));
-        }
-        break;
-    case bup::BackupMemoryImageLoadResult::InvalidSize:
-        m_context.EnqueueEvent(
-            events::gui::ShowError(fmt::format("Could not load backup memory image: Invalid image size")));
-        break;
-    default:
-        m_context.EnqueueEvent(
-            events::gui::ShowError(fmt::format("Could not load backup memory image: Unexpected error")));
-        break;
     }
 }
 
