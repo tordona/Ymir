@@ -497,9 +497,9 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
 
         auto &ipl = system.ipl;
         if (auto tblIPL = tblSystem["IPL"]) {
-            Parse(tblIPL, "Override", system.ipl.overrideImage);
-            Parse(tblIPL, "Path", system.ipl.path);
-            Parse(tblIPL, "Variant", system.ipl.variant);
+            Parse(tblIPL, "Override", ipl.overrideImage);
+            Parse(tblIPL, "Path", ipl.path);
+            Parse(tblIPL, "Variant", ipl.variant);
         }
 
         auto &rtc = m_emuConfig.rtc;
