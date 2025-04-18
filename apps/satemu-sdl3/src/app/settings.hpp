@@ -21,13 +21,12 @@
 #include <chrono>
 #include <filesystem>
 #include <sstream>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <variant>
 
 namespace app {
-
-struct SharedContext;
 
 struct SettingsLoadResult {
     enum class Type { Success, TOMLParseError, UnsupportedConfigVersion };
@@ -113,6 +112,8 @@ struct InputBindWithContext {
 
     constexpr bool operator==(const InputBindWithContext &) const = default;
 };
+
+struct SharedContext;
 
 struct Settings {
     Settings(SharedContext &sharedCtx) noexcept;
@@ -256,6 +257,20 @@ public:
         bool autoResizeWindow;
         bool displayVideoOutputInWindow;
     } video;
+
+    struct Cartridge {
+        enum Type { None, BackupRAM, DRAM };
+        Type type;
+
+        struct BackupRAM {
+            std::filesystem::path imagePath;
+        } backupRAM;
+
+        struct DRAM {
+            enum Capacity { _32Mbit, _8Mbit };
+            Capacity capacity;
+        } dram;
+    } cartridge;
 
     // ---------------------------------------------------------------------------------------------
 

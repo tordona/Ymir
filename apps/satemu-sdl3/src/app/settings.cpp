@@ -50,7 +50,7 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, db::SystemVari
     }
 }
 
-FORCE_INLINE static void Parse(toml::node &node, config::sys::Region &value) {
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, config::sys::Region &value) {
     value = config::sys::Region::Japan;
     if (auto opt = node.value<std::string>()) {
         if (*opt == "Japan"s) {
@@ -119,13 +119,37 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, peripheral::Pe
     }
 }
 
-FORCE_INLINE static void Parse(toml::node &node, config::audio::SampleInterpolationMode &value) {
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, config::audio::SampleInterpolationMode &value) {
     value = config::audio::SampleInterpolationMode::NearestNeighbor;
     if (auto opt = node.value<std::string>()) {
         if (*opt == "Nearest"s) {
             value = config::audio::SampleInterpolationMode::NearestNeighbor;
         } else if (*opt == "Linear"s) {
             value = config::audio::SampleInterpolationMode::Linear;
+        }
+    }
+}
+
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, Settings::Cartridge::Type &value) {
+    value = Settings::Cartridge::Type::None;
+    if (auto opt = node.value<std::string>()) {
+        if (*opt == "None"s) {
+            value = Settings::Cartridge::Type::None;
+        } else if (*opt == "BackupRAM"s) {
+            value = Settings::Cartridge::Type::BackupRAM;
+        } else if (*opt == "DRAM"s) {
+            value = Settings::Cartridge::Type::DRAM;
+        }
+    }
+}
+
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, Settings::Cartridge::DRAM::Capacity &value) {
+    value = Settings::Cartridge::DRAM::Capacity::_32Mbit;
+    if (auto opt = node.value<std::string>()) {
+        if (*opt == "32Mbit"s) {
+            value = Settings::Cartridge::DRAM::Capacity::_32Mbit;
+        } else if (*opt == "8Mbit"s) {
+            value = Settings::Cartridge::DRAM::Capacity::_8Mbit;
         }
     }
 }
@@ -198,31 +222,28 @@ FORCE_INLINE static const char *ToTOML(const config::audio::SampleInterpolationM
     }
 }
 
-// Creates a TOML array with valid entries (skips Nones).
-FORCE_INLINE static toml::array ToTOML(const InputBind &value) {
-    toml::array out{};
-    for (auto &event : value.events) {
-        if (event.type != input::InputEvent::Type::None) {
-            out.push_back(input::ToString(event));
-        }
+FORCE_INLINE static const char *ToTOML(const Settings::Cartridge::Type value) {
+    switch (value) {
+    default: [[fallthrough]];
+    case Settings::Cartridge::Type::None: return "None";
+    case Settings::Cartridge::Type::BackupRAM: return "BackupRAM";
+    case Settings::Cartridge::Type::DRAM: return "DRAM";
     }
-    return out;
 }
 
-template <typename T>
-FORCE_INLINE static toml::array ToTOML(const std::vector<T> &value) {
-    toml::array out{};
-    for (auto &item : value) {
-        out.push_back(ToTOML(item));
+FORCE_INLINE static const char *ToTOML(const Settings::Cartridge::DRAM::Capacity value) {
+    switch (value) {
+    default: [[fallthrough]];
+    case Settings::Cartridge::DRAM::Capacity::_32Mbit: return "32Mbit";
+    case Settings::Cartridge::DRAM::Capacity::_8Mbit: return "8Mbit";
     }
-    return out;
 }
 
 // -------------------------------------------------------------------------------------------------
 // Parsers
 
 template <typename T>
-FORCE_INLINE static void Parse(toml::node_view<toml::node> node, T &value) {
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, T &value) {
     if (auto opt = node.value<T>()) {
         value = *opt;
     }
@@ -230,7 +251,8 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> node, T &value) {
 
 template <typename T>
 FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, T &value) {
-    Parse(node[name], value);
+    toml::node_view view{node[name]};
+    Parse(view, value);
 }
 
 FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, std::filesystem::path &value) {
@@ -244,7 +266,8 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
     if (toml::array *arr = node[name].as_array()) {
         value.clear();
         for (toml::node &node : *arr) {
-            Parse(node, value.emplace_back());
+            toml::node_view view{node};
+            Parse(view, value.emplace_back());
         }
     }
 }
@@ -272,6 +295,29 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
             }
         }
     }
+}
+
+// -------------------------------------------------------------------------------------------------
+// Value-to-string converters
+
+// Creates a TOML array with valid entries (skips Nones).
+FORCE_INLINE static toml::array ToTOML(const InputBind &value) {
+    toml::array out{};
+    for (auto &event : value.events) {
+        if (event.type != input::InputEvent::Type::None) {
+            out.push_back(input::ToString(event));
+        }
+    }
+    return out;
+}
+
+template <typename T>
+FORCE_INLINE static toml::array ToTOML(const std::vector<T> &value) {
+    toml::array out{};
+    for (auto &item : value) {
+        out.push_back(ToTOML(item));
+    }
+    return out;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -398,6 +444,10 @@ void Settings::ResetToDefaults() {
     video.forcedAspect = 4.0 / 3.0;
     video.autoResizeWindow = false;
     video.displayVideoOutputInWindow = false;
+
+    cartridge.type = Settings::Cartridge::Type::None;
+    cartridge.backupRAM.imagePath = "";
+    cartridge.dram.capacity = Settings::Cartridge::DRAM::Capacity::_32Mbit;
 }
 
 SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
@@ -554,6 +604,16 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         Parse(tblAudio, "ThreadedSCSP", m_emuConfig.audio.threadedSCSP);
     }
 
+    if (auto tblCart = data["Cartridge"]) {
+        Parse(tblCart, "Type", cartridge.type);
+        if (auto tblBackupRAM = tblCart["BackupRAM"]) {
+            Parse(tblBackupRAM, "ImagePath", cartridge.backupRAM.imagePath);
+        }
+        if (auto tblDRAM = tblCart["DRAM"]) {
+            Parse(tblDRAM, "Capacity", cartridge.dram.capacity);
+        }
+    }
+
     return SettingsLoadResult::Success();
 }
 
@@ -702,6 +762,16 @@ SettingsSaveResult Settings::Save() {
         {"Audio", toml::table{{
             {"InterpolationMode", ToTOML(m_emuConfig.audio.interpolation)},
             {"ThreadedSCSP", m_emuConfig.audio.threadedSCSP.Get()},
+        }}},
+
+        {"Cartridge", toml::table{{
+            {"Type", ToTOML(cartridge.type)},
+            {"BackupRAM", toml::table{{
+                {"ImagePath", cartridge.backupRAM.imagePath.string()},
+            }}},
+            {"DRAM", toml::table{{
+                {"Capacity", ToTOML(cartridge.dram.capacity)},
+            }}},
         }}},
     }};
     // clang-format on

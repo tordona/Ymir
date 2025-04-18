@@ -282,6 +282,8 @@ int App::Run(const CommandLineOptions &options) {
         }
     }};
 
+    m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
+
     EnableRewindBuffer(m_context.settings.general.enableRewindBuffer);
 
     // TODO: allow overriding configuration from CommandLineOptions without modifying the underlying values
@@ -799,30 +801,6 @@ void App::RunEmulator() {
     ScopeGuard sgDestroyGenericFileDialogProps{[&] { SDL_DestroyProperties(m_fileDialogProps); }};
 
     SDL_SetPointerProperty(m_fileDialogProps, SDL_PROP_FILE_DIALOG_WINDOW_POINTER, screen.window);
-
-    // ---------------------------------
-    // Emulator configuration
-
-    // TODO: pull from CommandLineOptions or configuration
-    static constexpr std::string_view extBupPath = "bup-ext.bin";
-
-    std::error_code error{};
-    bup::BackupMemory bupMem{};
-    bupMem.CreateFrom(extBupPath, bup::BackupMemorySize::_32Mbit, error);
-    if (error) {
-        devlog::warn<grp::base>("Failed to load external backup memory: {}", error.message());
-    } else {
-        m_context.saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
-        devlog::info<grp::base>("External backup memory cartridge loaded from {}", extBupPath);
-    }
-
-    /*if (m_context.saturn.InsertCartridge<satemu::cart::DRAM8MbitCartridge>()) {
-        devlog::info<grp::base>("8 Mbit DRAM cartridge inserted");
-    }*/
-
-    /*if (m_context.saturn.InsertCartridge<satemu::cart::DRAM32MbitCartridge>()) {
-        devlog::info<grp::base>("32 Mbit DRAM cartridge inserted");
-    }*/
 
     // ---------------------------------
     // Input action handlers

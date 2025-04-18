@@ -47,8 +47,8 @@ void SystemSettingsView::Display() {
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
     const float itemSpacingWidth = ImGui::GetStyle().ItemSpacing.x;
     const float fileSelectorButtonWidth = ImGui::CalcTextSize("...").x + paddingWidth * 2;
-    const float useButtonWidth = ImGui::CalcTextSize("Use").x + paddingWidth * 2;
     const float reloadButtonWidth = ImGui::CalcTextSize("Reload").x + paddingWidth * 2;
+    const float useButtonWidth = ImGui::CalcTextSize("Use").x + paddingWidth * 2;
 
     std::filesystem::path iplRomsPath = m_context.profile.GetPath(StandardPath::IPLROMImages);
     if (ImGui::Button("Rescan##ipl_roms")) {
@@ -155,7 +155,7 @@ void SystemSettingsView::Display() {
         settings.iplPath = iplPath;
     }
     ImGui::SameLine();
-    if (ImGui::Button("...##bios_path")) {
+    if (ImGui::Button("...##ipl_path")) {
         m_context.EnqueueEvent(events::gui::OpenFile({
             .dialogTitle = "Load IPL ROM",
             .filters = {{"ROM files (*.bin, *.rom)", "bin;rom"}, {"All files (*.*)", "*"}},
