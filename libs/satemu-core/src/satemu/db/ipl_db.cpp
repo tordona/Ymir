@@ -32,7 +32,7 @@ static const std::unordered_map<Hash128, IPLROMInfo> kIPLInfos = {
 };
 // clang-format on
 
-const IPLROMInfo *GetInfo(Hash128 hash) {
+const IPLROMInfo *GetIPLROMInfo(Hash128 hash) {
     if (kIPLInfos.contains(hash)) {
         return &kIPLInfos.at(hash);
     } else {

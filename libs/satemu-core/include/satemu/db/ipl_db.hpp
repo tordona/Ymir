@@ -17,6 +17,6 @@ struct IPLROMInfo {
 
 // Retrieves information about an IPL ROM image given its XXH128 hash.
 // Returns nullptr if there is no information for the given hash.
-const IPLROMInfo *GetInfo(Hash128 hash);
+const IPLROMInfo *GetIPLROMInfo(Hash128 hash);
 
 } // namespace satemu::db
