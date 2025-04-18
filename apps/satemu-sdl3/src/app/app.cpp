@@ -201,8 +201,6 @@
 
 #include <serdes/state_v1_cereal.hpp>
 
-#include <util/ipl_rom_loader.hpp>
-
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
 
@@ -1341,6 +1339,33 @@ void App::RunEmulator() {
 
             case EvtType::EnableRewindBuffer: EnableRewindBuffer(std::get<bool>(evt.value)); break;
 
+            case EvtType::TryLoadIPLROM: //
+            {
+                auto path = std::get<std::filesystem::path>(evt.value);
+                auto result = util::LoadIPLROM(path, m_context.saturn);
+                if (result.succeeded) {
+                    if (m_context.settings.system.iplPath != path) {
+                        m_context.settings.system.iplPath = path;
+                        m_context.settings.MakeDirty();
+                        m_context.EnqueueEvent(events::emu::HardReset());
+                    }
+                } else {
+                    OpenSimpleErrorModal(
+                        fmt::format("Failed to load IPL ROM from \"{}\": {}", path.string(), result.errorMessage));
+                }
+                break;
+            }
+            case EvtType::ReloadIPLROM: {
+                util::IPLROMLoadResult result = LoadIPLROM(false);
+                if (result.succeeded) {
+                    m_context.EnqueueEvent(events::emu::HardReset());
+                } else {
+                    OpenSimpleErrorModal(fmt::format("Failed to reload IPL ROM from \"{}\": {}",
+                                                     m_context.iplRomPath.string(), result.errorMessage));
+                }
+                break;
+            }
+
             case EvtType::StateSaved: PersistSaveState(std::get<uint32>(evt.value)); break;
             }
         }
@@ -1981,21 +2006,22 @@ void App::ScanIPLROMs() {
     }
 }
 
-void App::LoadIPLROM(bool startup) {
+util::IPLROMLoadResult App::LoadIPLROM(bool startup) {
     std::filesystem::path iplPath = GetIPLROMPath(startup);
     if (iplPath.empty()) {
         devlog::warn<grp::base>("No IPL ROM found");
-        return;
+        return util::IPLROMLoadResult::Fail("No IPL ROM found");
     }
 
     devlog::info<grp::base>("Loading IPL ROM from {}...", iplPath.string());
-    auto iplLoadResult = util::LoadIPLROM(iplPath, m_context.saturn);
-    if (iplLoadResult.succeeded) {
+    util::IPLROMLoadResult result = util::LoadIPLROM(iplPath, m_context.saturn);
+    if (result.succeeded) {
         m_context.iplRomPath = iplPath;
         devlog::info<grp::base>("IPL ROM loaded successfully");
     } else {
-        devlog::error<grp::base>("Failed to load IPL ROM: {}", iplLoadResult.errorMessage);
+        devlog::error<grp::base>("Failed to load IPL ROM: {}", result.errorMessage);
     }
+    return result;
 }
 
 std::filesystem::path App::GetIPLROMPath(bool startup) {

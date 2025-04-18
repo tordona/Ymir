@@ -67,14 +67,17 @@ struct GUIEvent {
 
         EnableRewindBuffer,
 
+        TryLoadIPLROM,
+        ReloadIPLROM,
+
         // Emulator notifications
 
         StateSaved, // A save state slot was just saved
     };
 
     Type type;
-    std::variant<std::monostate, bool, uint32, std::string, PeripheralBindsParams, FileDialogParams, FolderDialogParams,
-                 ui::SettingsTab>
+    std::variant<std::monostate, bool, uint32, std::string, std::filesystem::path, PeripheralBindsParams,
+                 FileDialogParams, FolderDialogParams, ui::SettingsTab>
         value;
 };
 

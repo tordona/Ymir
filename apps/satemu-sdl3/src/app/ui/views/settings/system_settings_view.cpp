@@ -31,51 +31,28 @@ void SystemSettingsView::Display() {
     ImGui::SeparatorText("IPL ROM");
     ImGui::PopFont();
 
+    ImGui::TextUnformatted("NOTE: Changing any of these options will cause a hard reset");
+
+    if (m_context.iplRomPath.empty()) {
+        ImGui::TextUnformatted("No IPL ROM loaded");
+    } else {
+        ImGui::Text("Currently using IPL ROM at %s", m_context.iplRomPath.string().c_str());
+    }
+
+    ImGui::Separator();
+
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
     const float itemSpacingWidth = ImGui::GetStyle().ItemSpacing.x;
     const float fileSelectorButtonWidth = ImGui::CalcTextSize("...").x + paddingWidth * 2;
     const float useButtonWidth = ImGui::CalcTextSize("Use").x + paddingWidth * 2;
     const float reloadButtonWidth = ImGui::CalcTextSize("Reload").x + paddingWidth * 2;
 
-    // TODO: rework IPL reload events to go through the auto-detect system
-    // TODO: add Rescan button to re-read IPL ROMs from profile directory
-
-    MakeDirty(ImGui::Checkbox("Override IPL ROM", &settings.iplOverride));
-
-    if (!settings.iplOverride) {
-        ImGui::BeginDisabled();
-    }
-    ImGui::AlignTextToFramePadding();
-    ImGui::TextUnformatted("IPL ROM path");
-    widgets::ExplanationTooltip("Changing this option will cause a hard reset");
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + reloadButtonWidth + itemSpacingWidth * 2));
-    std::string iplPath = settings.iplPath.string();
-    if (MakeDirty(ImGui::InputText("##ipl_path", &iplPath))) {
-        settings.iplPath = iplPath;
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("...##bios_path")) {
-        m_context.EnqueueEvent(events::gui::OpenFile({
-            .dialogTitle = "Load IPL ROM",
-            .filters = {{"ROM files (*.bin, *.rom)", "bin;rom"}, {"All files (*.*)", "*"}},
-            .userdata = this,
-            .callback = util::WrapSingleSelectionCallback<&SystemSettingsView::ProcessLoadIPLROM,
-                                                          &util::NoopCancelFileDialogCallback,
-                                                          &SystemSettingsView::ProcessLoadIPLROMError>,
-        }));
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Reload")) {
-        m_context.EnqueueEvent(events::emu::ReloadIPL());
-        m_context.settings.MakeDirty();
-    }
-    if (!settings.iplOverride) {
-        ImGui::EndDisabled();
-    }
-
-    ImGui::TextUnformatted("ROMs in profile directory:");
     std::filesystem::path iplRomsPath = m_context.profile.GetPath(StandardPath::IPLROMImages);
+    if (ImGui::Button("Rescan##ipl_roms")) {
+        m_context.iplRomManager.Scan(iplRomsPath);
+    }
+    ImGui::SameLine();
+    ImGui::TextUnformatted("ROMs in profile directory:");
     ImGui::Text("%s", iplRomsPath.string().c_str());
     int index = 0;
     if (ImGui::BeginTable("sys_ipl_roms", 6, ImGuiTableFlags_ScrollY, ImVec2(0, 250))) {
@@ -146,7 +123,7 @@ void SystemSettingsView::Display() {
                 if (ImGui::Button(fmt::format("Use##{}", index).c_str())) {
                     settings.iplOverride = true;
                     settings.iplPath = path;
-                    m_context.EnqueueEvent(events::emu::ReloadIPL());
+                    m_context.EnqueueEvent(events::gui::ReloadIPLROM());
                     m_context.settings.MakeDirty();
                 }
             }
@@ -154,6 +131,44 @@ void SystemSettingsView::Display() {
         }
 
         ImGui::EndTable();
+    }
+
+    ImGui::Separator();
+
+    if (MakeDirty(ImGui::Checkbox("Override IPL ROM", &settings.iplOverride))) {
+        m_context.EnqueueEvent(events::gui::ReloadIPLROM());
+        m_context.settings.MakeDirty();
+    }
+
+    if (!settings.iplOverride) {
+        ImGui::BeginDisabled();
+    }
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("IPL ROM path");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + reloadButtonWidth + itemSpacingWidth * 2));
+    std::string iplPath = settings.iplPath.string();
+    if (MakeDirty(ImGui::InputText("##ipl_path", &iplPath))) {
+        settings.iplPath = iplPath;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("...##bios_path")) {
+        m_context.EnqueueEvent(events::gui::OpenFile({
+            .dialogTitle = "Load IPL ROM",
+            .filters = {{"ROM files (*.bin, *.rom)", "bin;rom"}, {"All files (*.*)", "*"}},
+            .userdata = this,
+            .callback = util::WrapSingleSelectionCallback<&SystemSettingsView::ProcessLoadIPLROM,
+                                                          &util::NoopCancelFileDialogCallback,
+                                                          &SystemSettingsView::ProcessLoadIPLROMError>,
+        }));
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Reload")) {
+        m_context.EnqueueEvent(events::gui::ReloadIPLROM());
+        m_context.settings.MakeDirty();
+    }
+    if (!settings.iplOverride) {
+        ImGui::EndDisabled();
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -316,7 +331,7 @@ void SystemSettingsView::ProcessLoadIPLROMError(void *userdata, const char *mess
 }
 
 void SystemSettingsView::LoadIPLROM(std::filesystem::path file) {
-    m_context.EnqueueEvent(events::emu::LoadIPL(file));
+    m_context.EnqueueEvent(events::gui::TryLoadIPLROM(file));
 }
 
 void SystemSettingsView::ShowIPLROMLoadError(const char *message) {

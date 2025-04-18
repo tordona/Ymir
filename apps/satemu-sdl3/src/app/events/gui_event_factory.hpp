@@ -71,4 +71,12 @@ inline GUIEvent EnableRewindBuffer(bool enable) {
     return {.type = GUIEvent::Type::EnableRewindBuffer, .value = enable};
 }
 
+inline GUIEvent TryLoadIPLROM(std::filesystem::path path) {
+    return {.type = GUIEvent::Type::TryLoadIPLROM, .value = path};
+}
+
+inline GUIEvent ReloadIPLROM() {
+    return {.type = GUIEvent::Type::ReloadIPLROM};
+}
+
 } // namespace app::events::gui

@@ -138,35 +138,6 @@ EmuEvent DumpMemory() {
     });
 }
 
-EmuEvent LoadIPL(std::filesystem::path path) {
-    return RunFunction([=](SharedContext &ctx) {
-        auto result = util::LoadIPLROM(path, ctx.saturn);
-        if (result.succeeded) {
-            if (ctx.settings.system.iplPath != path) {
-                ctx.settings.system.iplPath = path;
-                ctx.settings.MakeDirty();
-                ctx.saturn.Reset(true);
-            }
-        } else {
-            ctx.EnqueueEvent(events::gui::ShowError(
-                fmt::format("Failed to load IPL ROM from \"{}\": {}", path.string(), result.errorMessage)));
-        }
-    });
-}
-
-EmuEvent ReloadIPL() {
-    return RunFunction([=](SharedContext &ctx) {
-        auto result = util::LoadIPLROM(ctx.settings.system.iplPath, ctx.saturn);
-        if (result.succeeded) {
-            ctx.saturn.Reset(true);
-        } else {
-            ctx.EnqueueEvent(
-                events::gui::ShowError(fmt::format("Failed to reload IPL ROM from \"{}\": {}",
-                                                   ctx.settings.system.iplPath.string(), result.errorMessage)));
-        }
-    });
-}
-
 static void InsertPeripheral(peripheral::PeripheralType type, peripheral::PeripheralPort &port) {
     switch (type) {
     case satemu::peripheral::PeripheralType::None: port.DisconnectPeripherals(); break;

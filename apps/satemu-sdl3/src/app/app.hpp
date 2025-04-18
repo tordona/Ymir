@@ -16,6 +16,8 @@
 #include "ui/windows/debug/scu_window_set.hpp"
 #include "ui/windows/debug/sh2_window_set.hpp"
 
+#include <util/ipl_rom_loader.hpp>
+
 #include <satemu/util/dev_log.hpp>
 
 #include <SDL3/SDL_dialog.h>
@@ -74,7 +76,7 @@ private:
     void ReadPeripheral(satemu::peripheral::PeripheralReport &report);
 
     void ScanIPLROMs();
-    void LoadIPLROM(bool startup);
+    util::IPLROMLoadResult LoadIPLROM(bool startup);
     std::filesystem::path GetIPLROMPath(bool startup);
 
     void LoadSaveStates();
