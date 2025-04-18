@@ -501,6 +501,28 @@ SDL_Keymod KeyModifierToSDL3(KeyModifier modifier) {
     return out;
 }
 
+MouseButton SDL3ToMouseButton(Uint8 button) {
+    switch (button) {
+    case SDL_BUTTON_LEFT: return MouseButton::Left;
+    case SDL_BUTTON_RIGHT: return MouseButton::Right;
+    case SDL_BUTTON_MIDDLE: return MouseButton::Middle;
+    case SDL_BUTTON_X1: return MouseButton::Extra1;
+    case SDL_BUTTON_X2: return MouseButton::Extra2;
+    default: return MouseButton::None;
+    }
+}
+
+Uint8 MouseButtonToSDL3(MouseButton button) {
+    switch (button) {
+    case MouseButton::Left: return SDL_BUTTON_LEFT;
+    case MouseButton::Right: return SDL_BUTTON_RIGHT;
+    case MouseButton::Middle: return SDL_BUTTON_MIDDLE;
+    case MouseButton::Extra1: return SDL_BUTTON_X1;
+    case MouseButton::Extra2: return SDL_BUTTON_X2;
+    default: return 0;
+    }
+}
+
 GamepadButton SDL3ToGamepadButton(SDL_GamepadButton button) {
     switch (button) {
     case SDL_GAMEPAD_BUTTON_SOUTH: return GamepadButton::A;

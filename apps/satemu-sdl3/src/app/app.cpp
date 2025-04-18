@@ -1282,14 +1282,16 @@ void App::RunEmulator() {
                 break;
             case SDL_EVENT_MOUSE_BUTTON_DOWN:
             case SDL_EVENT_MOUSE_BUTTON_UP:
-                if (!io.WantCaptureMouse) {
-                    // TODO: handle these
+                /*if (!io.WantCaptureMouse) {
                     // TODO: consider supporting multiple mice (evt.button.which)
-                    // inputContext.ProcessMouseButtonEvent(evt.button.button, evt.button.clicks, evt.button.x,
-                    // evt.button.y, evt.button.down);
-                } /*else if (m_context.inputCapturer.IsCapturing()) {
+                    // TODO: evt.button.clicks?
+                    // TODO: evt.button.x, evt.button.y?
+                    // TODO: key modifiers
+                    inputContext.ProcessPrimitive(input::SDL3ToMouseButton(evt.button.button), input::KeyModifier::None,
+                                                  evt.button.down);
+                } else if (m_context.inputCapturer.IsCapturing()) {
                     m_context.inputCapturer.ProcessPrimitive(input::SDL3ToMouseButton(evt.button.button),
-                                                             evt.button.down);
+                                                             input::KeyModifier::None, evt.button.down);
                 }*/
                 break;
             case SDL_EVENT_MOUSE_MOTION:

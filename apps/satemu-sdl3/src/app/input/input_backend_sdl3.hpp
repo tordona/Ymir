@@ -4,8 +4,10 @@
 
 #include <SDL3/SDL_gamepad.h>
 #include <SDL3/SDL_keycode.h>
+#include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_scancode.h>
 
+#include <satemu/core/types.hpp>
 #include <utility>
 
 namespace app::input {
@@ -15,6 +17,9 @@ SDL_Scancode KeyboardKeyToSDL3Scancode(KeyboardKey key);
 
 KeyModifier SDL3ToKeyModifier(SDL_Keymod modifier);
 SDL_Keymod KeyModifierToSDL3(KeyModifier modifier);
+
+MouseButton SDL3ToMouseButton(Uint8 button);
+Uint8 MouseButtonToSDL3(MouseButton button);
 
 GamepadButton SDL3ToGamepadButton(SDL_GamepadButton button);
 SDL_GamepadButton GamepadButtonToSDL3(GamepadButton button);

@@ -266,6 +266,8 @@ enum class KeyboardKey {
 
 // Mouse buttons.
 enum MouseButton {
+    None,
+
     Left,
     Right,
     Middle,
