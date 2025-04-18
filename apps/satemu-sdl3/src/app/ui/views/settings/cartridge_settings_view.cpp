@@ -146,7 +146,8 @@ void CartridgeSettingsView::LoadBackupImage(std::filesystem::path file) {
     switch (result) {
     case bup::BackupMemoryImageLoadResult::Success:
         settings.imagePath = file;
-        m_cartSettingsDirty = true;
+        m_cartSettingsDirty = false;
+        m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
         MakeDirty();
         break;
     case bup::BackupMemoryImageLoadResult::FilesystemError:

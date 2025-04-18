@@ -11,6 +11,7 @@
 #include <app/input/input_events.hpp>
 
 #include <app/actions.hpp>
+#include <app/profile.hpp>
 
 #include <satemu/util/observable.hpp>
 
@@ -160,6 +161,7 @@ public:
     } general;
 
     struct System {
+        std::filesystem::path internalBackupRAMImagePath;
         struct IPL {
             bool overrideImage;
             std::filesystem::path path;
@@ -282,6 +284,7 @@ public:
 private:
     satemu::core::Configuration &m_emuConfig;
     input::InputContext &m_inputContext;
+    Profile &m_profile;
 
     bool m_dirty = false;
     std::chrono::steady_clock::time_point m_dirtyTimestamp;

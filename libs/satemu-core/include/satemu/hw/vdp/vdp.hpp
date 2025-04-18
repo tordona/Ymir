@@ -108,7 +108,7 @@ private:
     // -------------------------------------------------------------------------
     // Configuration
 
-    void EnableThreadedVDPRendering(bool enable);
+    void EnableThreadedVDP(bool enable);
 
     // -------------------------------------------------------------------------
     // VDP1 memory/register access

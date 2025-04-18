@@ -26,6 +26,8 @@ struct SystemMemory {
     void LoadIPL(std::span<uint8, kIPLSize> ipl);
     XXH128Hash GetIPLHash() const;
 
+    void LoadInternalBackupMemoryImage(std::filesystem::path path, std::error_code &error);
+
     void DumpWRAMLow(std::ostream &out) const;
     void DumpWRAMHigh(std::ostream &out) const;
 

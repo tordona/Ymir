@@ -62,7 +62,7 @@ void VideoSettingsView::Display() {
 
     bool threadedVDP = config.threadedVDP;
     if (MakeDirty(ImGui::Checkbox("Threaded VDP1/VDP2 renderer", &threadedVDP))) {
-        m_context.EnqueueEvent(events::emu::EnableThreadedVDPRendering(threadedVDP));
+        m_context.EnqueueEvent(events::emu::EnableThreadedVDP(threadedVDP));
     }
     widgets::ExplanationTooltip("Runs the software VDP1/VDP2 renderer in a dedicated thread.\n"
                                 "Greatly improves performance at the cost of accuracy.\n"

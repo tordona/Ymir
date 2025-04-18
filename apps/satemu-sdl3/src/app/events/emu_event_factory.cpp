@@ -251,6 +251,22 @@ EmuEvent FormatBackupMemory(bool external) {
     }
 }
 
+EmuEvent LoadInternalBackupMemory() {
+    return RunFunction([](SharedContext &ctx) {
+        std::filesystem::path path = ctx.settings.system.internalBackupRAMImagePath;
+        if (path.empty()) {
+            path = ctx.profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
+        }
+        std::error_code error{};
+        if (ctx.saturn.LoadInternalBackupMemoryImage(path, error); error) {
+            devlog::warn<grp::base>("Failed to load internal backup memory from {}: {}", path.string(),
+                                    error.message());
+        } else {
+            devlog::warn<grp::base>("Internal backup memory image loaded from {}", path.string());
+        }
+    });
+}
+
 EmuEvent SetEmulateSH2Cache(bool enable) {
     return RunFunction([=](SharedContext &ctx) {
         ctx.saturn.EnableSH2CacheEmulation(enable);
@@ -258,7 +274,7 @@ EmuEvent SetEmulateSH2Cache(bool enable) {
     });
 }
 
-EmuEvent EnableThreadedVDPRendering(bool enable) {
+EmuEvent EnableThreadedVDP(bool enable) {
     return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.video.threadedVDP = enable; });
 }
 

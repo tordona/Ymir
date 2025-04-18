@@ -3,11 +3,6 @@
 namespace satemu::sys {
 
 SystemMemory::SystemMemory() {
-    // TODO: configurable path and mode
-    std::error_code error{};
-    m_internalBackupRAM.CreateFrom("bup-int.bin", kInternalBackupRAMSize, error);
-    // TODO: handle error
-
     IPL.fill(0);
     Reset(true);
 }
@@ -33,6 +28,10 @@ void SystemMemory::LoadIPL(std::span<uint8, kIPLSize> ipl) {
 
 XXH128Hash SystemMemory::GetIPLHash() const {
     return m_iplHash;
+}
+
+void SystemMemory::LoadInternalBackupMemoryImage(std::filesystem::path path, std::error_code &error) {
+    m_internalBackupRAM.CreateFrom(path, kInternalBackupRAMSize, error);
 }
 
 void SystemMemory::DumpWRAMLow(std::ostream &out) const {

@@ -1,12 +1,16 @@
 #include "system_settings_view.hpp"
 
 #include <app/events/emu_event_factory.hpp>
+#include <app/events/gui_event_factory.hpp>
 
 #include <app/ui/widgets/common_widgets.hpp>
 #include <app/ui/widgets/datetime_widgets.hpp>
 #include <app/ui/widgets/system_widgets.hpp>
 
 #include <util/regions.hpp>
+#include <util/sdl_file_dialog.hpp>
+
+#include <misc/cpp/imgui_stdlib.h>
 
 #include <fmt/format.h>
 
@@ -23,6 +27,10 @@ void SystemSettingsView::Display() {
     auto &settings = m_context.settings.system;
     auto &sysConfig = m_context.saturn.configuration.system;
     auto &rtcConfig = m_context.saturn.configuration.rtc;
+
+    const float paddingWidth = ImGui::GetStyle().FramePadding.x;
+    const float itemSpacingWidth = ImGui::GetStyle().ItemSpacing.x;
+    const float fileSelectorButtonWidth = ImGui::CalcTextSize("...").x + paddingWidth * 2;
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -216,6 +224,97 @@ void SystemSettingsView::Display() {
         }
         ImGui::Unindent();
     }
+
+    // -----------------------------------------------------------------------------------------------------------------
+
+    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::SeparatorText("Internal backup memory");
+    ImGui::PopFont();
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Image path");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + itemSpacingWidth * 2));
+    std::string imagePath = settings.internalBackupRAMImagePath.string();
+    if (MakeDirty(ImGui::InputText("##bup_image_path", &imagePath))) {
+        settings.internalBackupRAMImagePath = imagePath;
+        m_bupSettingsDirty = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("...##bup_image_path")) {
+        m_context.EnqueueEvent(events::gui::OpenFile({
+            .dialogTitle = "Load backup memory image",
+            .defaultPath = settings.internalBackupRAMImagePath.empty()
+                               ? m_context.profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin"
+                               : settings.internalBackupRAMImagePath,
+            .filters = {{"Backup memory image files (*.bin)", "bin"}, {"All files (*.*)", "*"}},
+            .userdata = this,
+            .callback = util::WrapSingleSelectionCallback<&SystemSettingsView::ProcessLoadBackupImage,
+                                                          &util::NoopCancelFileDialogCallback,
+                                                          &SystemSettingsView::ProcessLoadBackupImageError>,
+        }));
+    }
+
+    const bool dirty = m_bupSettingsDirty;
+    if (!dirty) {
+        ImGui::BeginDisabled();
+    }
+    if (ImGui::Button("Load")) {
+        m_context.EnqueueEvent(events::emu::LoadInternalBackupMemory());
+        m_bupSettingsDirty = false;
+    }
+    if (!dirty) {
+        ImGui::EndDisabled();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Open backup memory manager")) {
+        m_context.EnqueueEvent(events::gui::OpenBackupMemoryManager());
+    }
+}
+
+void SystemSettingsView::ProcessLoadBackupImage(void *userdata, std::filesystem::path file, int filter) {
+    static_cast<SystemSettingsView *>(userdata)->LoadBackupImage(file);
+}
+
+void SystemSettingsView::ProcessLoadBackupImageError(void *userdata, const char *message, int filter) {
+    static_cast<SystemSettingsView *>(userdata)->ShowLoadBackupImageError(message);
+}
+
+void SystemSettingsView::LoadBackupImage(std::filesystem::path file) {
+    auto &settings = m_context.settings.system;
+
+    std::error_code error{};
+    bup::BackupMemory bupMem{};
+    const auto result = bupMem.LoadFrom(file, error);
+    switch (result) {
+    case bup::BackupMemoryImageLoadResult::Success:
+        settings.internalBackupRAMImagePath = file;
+        m_bupSettingsDirty = false;
+        m_context.EnqueueEvent(events::emu::LoadInternalBackupMemory());
+        MakeDirty();
+        break;
+    case bup::BackupMemoryImageLoadResult::FilesystemError:
+        if (error) {
+            m_context.EnqueueEvent(
+                events::gui::ShowError(fmt::format("Could not load backup memory image: {}", error.message())));
+        } else {
+            m_context.EnqueueEvent(events::gui::ShowError(
+                fmt::format("Could not load backup memory image: Unspecified file system error")));
+        }
+        break;
+    case bup::BackupMemoryImageLoadResult::InvalidSize:
+        m_context.EnqueueEvent(
+            events::gui::ShowError(fmt::format("Could not load backup memory image: Invalid image size")));
+        break;
+    default:
+        m_context.EnqueueEvent(
+            events::gui::ShowError(fmt::format("Could not load backup memory image: Unexpected error")));
+        break;
+    }
+}
+
+void SystemSettingsView::ShowLoadBackupImageError(const char *message) {
+    m_context.EnqueueEvent(events::gui::ShowError(fmt::format("Could not load backup memory image: {}", message)));
 }
 
 } // namespace app::ui

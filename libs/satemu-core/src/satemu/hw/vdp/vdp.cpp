@@ -65,7 +65,7 @@ VDP::VDP(core::Scheduler &scheduler, core::Configuration &config)
 
     config.system.videoStandard.Observe([&](VideoStandard videoStandard) { SetVideoStandard(videoStandard); });
 
-    config.video.threadedVDP.Observe([&](bool value) { EnableThreadedVDPRendering(value); });
+    config.video.threadedVDP.Observe([&](bool value) { EnableThreadedVDP(value); });
 
     m_phaseUpdateEvent = scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent);
 
@@ -840,7 +840,7 @@ void VDP::SetVideoStandard(VideoStandard videoStandard) {
     }
 }
 
-void VDP::EnableThreadedVDPRendering(bool enable) {
+void VDP::EnableThreadedVDP(bool enable) {
     if (m_threadedVDPRendering == enable) {
         return;
     }

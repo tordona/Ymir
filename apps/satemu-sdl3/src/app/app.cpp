@@ -283,6 +283,7 @@ int App::Run(const CommandLineOptions &options) {
         }
     }};
 
+    m_context.EnqueueEvent(events::emu::LoadInternalBackupMemory());
     m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
 
     EnableRewindBuffer(m_context.settings.general.enableRewindBuffer);

@@ -96,10 +96,11 @@ EmuEvent InsertCartridgeFromSettings();
 EmuEvent DeleteBackupFile(std::string filename, bool external);
 EmuEvent FormatBackupMemory(bool external);
 
+EmuEvent LoadInternalBackupMemory();
+
 EmuEvent SetEmulateSH2Cache(bool enable);
 
-EmuEvent EnableThreadedVDPRendering(bool enable);
-
+EmuEvent EnableThreadedVDP(bool enable);
 EmuEvent EnableThreadedSCSP(bool enable);
 
 EmuEvent LoadState(uint32 slot);

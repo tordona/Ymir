@@ -139,6 +139,10 @@ void Saturn::LoadIPL(std::span<uint8, sys::kIPLSize> ipl) {
     mem.LoadIPL(ipl);
 }
 
+void Saturn::LoadInternalBackupMemoryImage(std::filesystem::path path, std::error_code &error) {
+    mem.LoadInternalBackupMemoryImage(path, error);
+}
+
 XXH128Hash Saturn::GetIPLHash() const {
     return mem.GetIPLHash();
 }

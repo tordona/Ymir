@@ -49,6 +49,10 @@ struct Saturn : sys::ISystemOperations {
     // Loads the specified IPL ROM image.
     void LoadIPL(std::span<uint8, sys::kIPLSize> ipl);
 
+    // Loads the specified internal backup memory image.
+    // `error` will contain the filesystem error if the image failed to load.
+    void LoadInternalBackupMemoryImage(std::filesystem::path path, std::error_code &error);
+
     XXH128Hash GetIPLHash() const;
     XXH128Hash GetDiscHash() const;
 

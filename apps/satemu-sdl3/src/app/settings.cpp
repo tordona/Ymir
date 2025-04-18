@@ -325,7 +325,8 @@ FORCE_INLINE static toml::array ToTOML(const std::vector<T> &value) {
 
 Settings::Settings(SharedContext &sharedCtx) noexcept
     : m_emuConfig(sharedCtx.saturn.configuration)
-    , m_inputContext(sharedCtx.inputContext) {
+    , m_inputContext(sharedCtx.inputContext)
+    , m_profile(sharedCtx.profile) {
 
     auto mapActionInput = [&](InputBind &bind, void *context = nullptr) {
         m_actionInputs[bind.action].insert({&bind, context});
@@ -424,6 +425,8 @@ void Settings::ResetToDefaults() {
     general.enableRewindBuffer = false;
     general.rewindCompressionLevel = 6;
 
+    system.internalBackupRAMImagePath = m_profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
+
     system.ipl.overrideImage = false;
     system.ipl.path = "";
     system.ipl.variant = db::SystemVariant::Saturn;
@@ -490,6 +493,7 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         Parse(tblSystem, "AutoDetectRegion", m_emuConfig.system.autodetectRegion);
         Parse(tblSystem, "PreferredRegionOrder", m_emuConfig.system.preferredRegionOrder);
         Parse(tblSystem, "EmulateSH2Cache", m_emuConfig.system.emulateSH2Cache);
+        Parse(tblSystem, "InternalBackupRAMImagePath", system.internalBackupRAMImagePath);
 
         auto &ipl = system.ipl;
         if (auto tblIPL = tblSystem["IPL"]) {
@@ -644,6 +648,7 @@ SettingsSaveResult Settings::Save() {
             {"AutoDetectRegion", m_emuConfig.system.autodetectRegion},
             {"PreferredRegionOrder", ToTOML(m_emuConfig.system.preferredRegionOrder.Get())},
             {"EmulateSH2Cache", m_emuConfig.system.emulateSH2Cache.Get()},
+            {"InternalBackupRAMImagePath", system.internalBackupRAMImagePath.string()},
         
             {"IPL", toml::table{{
                 {"Override", system.ipl.overrideImage},
