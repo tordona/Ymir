@@ -4,6 +4,8 @@
 
 #include <satemu/hw/smpc/peripheral/peripheral_defs.hpp>
 
+#include <satemu/db/ipl_db.hpp>
+
 #include <app/input/input_action.hpp>
 #include <app/input/input_context.hpp>
 #include <app/input/input_events.hpp>
@@ -157,7 +159,9 @@ public:
     } general;
 
     struct System {
+        bool iplOverride;
         std::filesystem::path iplPath;
+        satemu::db::SystemVariant variant;
     } system;
 
     struct Hotkeys {

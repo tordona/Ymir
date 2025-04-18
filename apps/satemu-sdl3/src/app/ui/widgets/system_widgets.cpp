@@ -47,10 +47,7 @@ bool RegionSelector(SharedContext &ctx) {
     uint8 areaCode = ctx.saturn.SMPC.GetAreaCode();
     if (ImGui::BeginCombo("##region", fmtRegion(areaCode).c_str(),
                           ImGuiComboFlags_WidthFitPreview | ImGuiComboFlags_HeightLargest)) {
-        for (uint8 i = 0; i <= 0xF; i++) {
-            if (kRegions[i].charCode == '?') {
-                continue;
-            }
+        for (uint8 i : {0x1, 0x2, 0x4, 0xC}) {
             if (ImGui::Selectable(fmtRegion(i).c_str(), i == areaCode) && i != areaCode) {
                 ctx.EnqueueEvent(events::emu::SetAreaCode(i));
                 // TODO: optional?

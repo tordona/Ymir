@@ -37,6 +37,19 @@ inline constexpr int kConfigVersion = 1;
 // -------------------------------------------------------------------------------------------------
 // Enum parsers
 
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, db::SystemVariant &value) {
+    value = db::SystemVariant::Saturn;
+    if (auto opt = node[name].value<std::string>()) {
+        if (*opt == "Saturn"s) {
+            value = db::SystemVariant::Saturn;
+        } else if (*opt == "HiSaturn"s) {
+            value = db::SystemVariant::HiSaturn;
+        } else if (*opt == "VSaturn"s) {
+            value = db::SystemVariant::VSaturn;
+        }
+    }
+}
+
 FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, config::sys::VideoStandard &value) {
     value = config::sys::VideoStandard::NTSC;
     if (auto opt = node[name].value<std::string>()) {
@@ -99,9 +112,18 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
 // -------------------------------------------------------------------------------------------------
 // Enum-to-string converters
 
+FORCE_INLINE static const char *ToTOML(const db::SystemVariant value) {
+    switch (value) {
+    default: [[fallthrough]];
+    case db::SystemVariant::Saturn: return "Saturn";
+    case db::SystemVariant::HiSaturn: return "HiSaturn";
+    case db::SystemVariant::VSaturn: return "VSaturn";
+    }
+}
+
 FORCE_INLINE static const char *ToTOML(const config::sys::VideoStandard value) {
     switch (value) {
-    default:
+    default: [[fallthrough]];
     case config::sys::VideoStandard::NTSC: return "NTSC";
     case config::sys::VideoStandard::PAL: return "PAL";
     }
@@ -109,7 +131,7 @@ FORCE_INLINE static const char *ToTOML(const config::sys::VideoStandard value) {
 
 FORCE_INLINE static const char *ToTOML(const config::rtc::Mode value) {
     switch (value) {
-    default:
+    default: [[fallthrough]];
     case config::rtc::Mode::Host: return "Host";
     case config::rtc::Mode::Virtual: return "Virtual";
     }
@@ -117,7 +139,7 @@ FORCE_INLINE static const char *ToTOML(const config::rtc::Mode value) {
 
 FORCE_INLINE static const char *ToTOML(const config::rtc::HardResetStrategy value) {
     switch (value) {
-    default:
+    default: [[fallthrough]];
     case config::rtc::HardResetStrategy::Preserve: return "Preserve";
     case config::rtc::HardResetStrategy::SyncToHost: return "SyncToHost";
     case config::rtc::HardResetStrategy::ResetToFixedTime: return "ResetToFixedTime";
@@ -126,7 +148,7 @@ FORCE_INLINE static const char *ToTOML(const config::rtc::HardResetStrategy valu
 
 FORCE_INLINE static const char *ToTOML(const peripheral::PeripheralType value) {
     switch (value) {
-    default:
+    default: [[fallthrough]];
     case peripheral::PeripheralType::None: return "None";
     case peripheral::PeripheralType::StandardPad: return "StandardPad";
     }
@@ -134,7 +156,7 @@ FORCE_INLINE static const char *ToTOML(const peripheral::PeripheralType value) {
 
 FORCE_INLINE static const char *ToTOML(const config::audio::SampleInterpolationMode value) {
     switch (value) {
-    default:
+    default: [[fallthrough]];
     case config::audio::SampleInterpolationMode::NearestNeighbor: return "Nearest";
     case config::audio::SampleInterpolationMode::Linear: return "Linear";
     }
@@ -306,7 +328,9 @@ void Settings::ResetToDefaults() {
     general.enableRewindBuffer = false;
     general.rewindCompressionLevel = 6;
 
+    system.iplOverride = false;
     system.iplPath = "";
+    system.variant = db::SystemVariant::Saturn;
 
     {
         using PeriphType = peripheral::PeripheralType;
@@ -362,7 +386,9 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
     }
 
     if (auto tblSystem = data["System"]) {
+        Parse(tblSystem, "IPLOverride", system.iplOverride);
         Parse(tblSystem, "IPLPath", system.iplPath);
+        Parse(tblSystem, "Variant", system.variant);
         Parse(tblSystem, "VideoStandard", m_emuConfig.system.videoStandard);
         Parse(tblSystem, "AutoDetectRegion", m_emuConfig.system.autodetectRegion);
         Parse(tblSystem, "EmulateSH2Cache", m_emuConfig.system.emulateSH2Cache);
@@ -500,7 +526,9 @@ SettingsSaveResult Settings::Save() {
         }}},
 
         {"System", toml::table{{
-            {"BiosPath", system.iplPath.string()},
+            {"IPLOverride", system.iplOverride},
+            {"IPLPath", system.iplPath.string()},
+            {"Variant", ToTOML(system.variant)},
             {"VideoStandard", ToTOML(m_emuConfig.system.videoStandard)},
             {"AutoDetectRegion", m_emuConfig.system.autodetectRegion},
             {"EmulateSH2Cache", m_emuConfig.system.emulateSH2Cache.Get()},

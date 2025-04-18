@@ -296,7 +296,7 @@ int App::Run(const CommandLineOptions &options) {
     }
 
     ScanIPLROMs();
-    LoadIPLROM();
+    LoadIPLROM(true);
 
     RunEmulator();
 
@@ -1967,7 +1967,7 @@ void App::ScanIPLROMs() {
     devlog::info<grp::base>("Scanning for IPL ROMs in {}...", iplRomsPath.string());
     m_context.iplRomManager.Scan(iplRomsPath);
 
-    if constexpr (devlog::debug_enabled<grp::base>) {
+    if constexpr (devlog::info_enabled<grp::base>) {
         int numKnown = 0;
         int numUnknown = 0;
         for (auto &[path, info] : m_context.iplRomManager.GetROMs()) {
@@ -1976,21 +1976,96 @@ void App::ScanIPLROMs() {
             } else {
                 ++numUnknown;
             }
-            devlog::debug<grp::base>("  [{} / {}] {}", satemu::ToString(info.hash), info.versionString, path.string());
         }
         devlog::info<grp::base>("Found {} images - {} known, {} unknown", numKnown + numUnknown, numKnown, numUnknown);
     }
 }
 
-void App::LoadIPLROM() {
-    auto &iplPath = m_options.iplPath.empty() ? m_context.settings.system.iplPath : m_options.iplPath;
+void App::LoadIPLROM(bool startup) {
+    std::filesystem::path iplPath = GetIPLROMPath(startup);
+    if (iplPath.empty()) {
+        devlog::warn<grp::base>("No IPL ROM found");
+        return;
+    }
+
     devlog::info<grp::base>("Loading IPL ROM from {}...", iplPath.string());
     auto iplLoadResult = util::LoadIPLROM(iplPath, m_context.saturn);
     if (iplLoadResult.succeeded) {
+        m_context.iplRomPath = iplPath;
         devlog::info<grp::base>("IPL ROM loaded successfully");
     } else {
         devlog::error<grp::base>("Failed to load IPL ROM: {}", iplLoadResult.errorMessage);
     }
+}
+
+std::filesystem::path App::GetIPLROMPath(bool startup) {
+    // Load from command-line if starting up
+    if (startup && !m_options.iplPath.empty()) {
+        devlog::info<grp::base>("Using IPL ROM provided through command-line");
+        return m_options.iplPath;
+    }
+
+    // Load from settings if override is enabled
+    if (m_context.settings.system.iplOverride && !m_context.settings.system.iplPath.empty()) {
+        devlog::info<grp::base>("Using IPL ROM overridden by settings");
+        return m_context.settings.system.iplPath;
+    }
+
+    // Auto-select ROM from IPL ROM manager based on preferred system variant and area code
+
+    // TODO: make this configurable
+    satemu::db::SystemVariant preferredVariant = satemu::db::SystemVariant::Saturn;
+
+    // SMPC area codes:
+    //   0x1  J  Domestic NTSC Japan
+    //   0x2  T  Asia NTSC Asia Region (Taiwan, Philippines, South Korea)
+    //   0x4  U  North America NTSC North America (US, Canada), Latin America (Brazil only)
+    //   0xC  E  PAL Europe, Southeast Asia (China, Middle East), Latin America
+    // Replaced SMPC area codes:
+    //   0x5  B -> U
+    //   0x6  K -> T
+    //   0xA  A -> E
+    //   0xD  L -> E
+    // For all others, use region-free ROMs if available.
+
+    satemu::db::SystemRegion preferredRegion;
+    switch (m_context.saturn.SMPC.GetAreaCode()) {
+    case 0x1: [[fallthrough]];
+    case 0x2: [[fallthrough]];
+    case 0x6: preferredRegion = satemu::db::SystemRegion::JP; break;
+
+    case 0x4: [[fallthrough]];
+    case 0x5: [[fallthrough]];
+    case 0xA: [[fallthrough]];
+    case 0xC: [[fallthrough]];
+    case 0xD: preferredRegion = satemu::db::SystemRegion::US_EU; break;
+
+    default: preferredRegion = satemu::db::SystemRegion::RegionFree; break;
+    }
+
+    // Try to find exact match
+    // Keep a region-free fallback in case there isn't a perfect match
+    std::filesystem::path regionFreeMatch = "";
+    for (auto &[path, info] : m_context.iplRomManager.GetROMs()) {
+        if (info.info == nullptr) {
+            continue;
+        }
+        if (info.info->variant == preferredVariant) {
+            if (info.info->region == preferredRegion) {
+                devlog::info<grp::base>("Using auto-detected IPL ROM");
+                return path;
+            } else if (info.info->region == satemu::db::SystemRegion::RegionFree && regionFreeMatch.empty()) {
+                regionFreeMatch = path;
+            }
+        }
+    }
+
+    // Return region-free fallback
+    // May be empty if no region-free ROMs were found
+    if (!regionFreeMatch.empty()) {
+        devlog::info<grp::base>("Using auto-detected region-free IPL ROM");
+    }
+    return regionFreeMatch;
 }
 
 void App::LoadSaveStates() {

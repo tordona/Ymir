@@ -37,7 +37,9 @@ struct SharedContext {
 
     Profile profile;
     Settings settings{*this};
+
     IPLROMManager iplRomManager;
+    std::filesystem::path iplRomPath;
 
     std::array<std::unique_ptr<satemu::state::State>, 10> saveStates;
     size_t currSaveStateSlot = 0;

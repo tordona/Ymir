@@ -74,7 +74,8 @@ private:
     void ReadPeripheral(satemu::peripheral::PeripheralReport &report);
 
     void ScanIPLROMs();
-    void LoadIPLROM();
+    void LoadIPLROM(bool startup);
+    std::filesystem::path GetIPLROMPath(bool startup);
 
     void LoadSaveStates();
     void PersistSaveState(uint32 slot);
