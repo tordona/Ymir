@@ -28,47 +28,143 @@ void SystemSettingsView::Display() {
     // -----------------------------------------------------------------------------------------------------------------
 
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
-    ImGui::SeparatorText("General");
+    ImGui::SeparatorText("IPL ROM");
     ImGui::PopFont();
 
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
     const float itemSpacingWidth = ImGui::GetStyle().ItemSpacing.x;
     const float fileSelectorButtonWidth = ImGui::CalcTextSize("...").x + paddingWidth * 2;
+    const float useButtonWidth = ImGui::CalcTextSize("Use").x + paddingWidth * 2;
     const float reloadButtonWidth = ImGui::CalcTextSize("Reload").x + paddingWidth * 2;
 
-    if (ImGui::BeginTable("sys_general", 2, ImGuiTableFlags_SizingFixedFit)) {
+    // TODO: rework IPL reload events to go through the auto-detect system
+    // TODO: add Rescan button to re-read IPL ROMs from profile directory
+
+    MakeDirty(ImGui::Checkbox("Override IPL ROM", &settings.iplOverride));
+
+    if (!settings.iplOverride) {
+        ImGui::BeginDisabled();
+    }
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("IPL ROM path");
+    widgets::ExplanationTooltip("Changing this option will cause a hard reset");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + reloadButtonWidth + itemSpacingWidth * 2));
+    std::string iplPath = settings.iplPath.string();
+    if (MakeDirty(ImGui::InputText("##ipl_path", &iplPath))) {
+        settings.iplPath = iplPath;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("...##bios_path")) {
+        m_context.EnqueueEvent(events::gui::OpenFile({
+            .dialogTitle = "Load IPL ROM",
+            .filters = {{"ROM files (*.bin, *.rom)", "bin;rom"}, {"All files (*.*)", "*"}},
+            .userdata = this,
+            .callback = util::WrapSingleSelectionCallback<&SystemSettingsView::ProcessLoadIPLROM,
+                                                          &util::NoopCancelFileDialogCallback,
+                                                          &SystemSettingsView::ProcessLoadIPLROMError>,
+        }));
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Reload")) {
+        m_context.EnqueueEvent(events::emu::ReloadIPL());
+        m_context.settings.MakeDirty();
+    }
+    if (!settings.iplOverride) {
+        ImGui::EndDisabled();
+    }
+
+    ImGui::TextUnformatted("ROMs in profile directory:");
+    std::filesystem::path iplRomsPath = m_context.profile.GetPath(StandardPath::IPLROMImages);
+    ImGui::Text("%s", iplRomsPath.string().c_str());
+    int index = 0;
+    if (ImGui::BeginTable("sys_ipl_roms", 6, ImGuiTableFlags_ScrollY, ImVec2(0, 250))) {
+        ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Version", ImGuiTableColumnFlags_WidthFixed, 50);
+        ImGui::TableSetupColumn("Date", ImGuiTableColumnFlags_WidthFixed, 75);
+        ImGui::TableSetupColumn("Variant", ImGuiTableColumnFlags_WidthFixed, 60);
+        ImGui::TableSetupColumn("Region", ImGuiTableColumnFlags_WidthFixed, 80);
+        ImGui::TableSetupColumn("##use", ImGuiTableColumnFlags_WidthFixed, useButtonWidth);
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableHeadersRow();
+
+        for (auto &[path, info] : m_context.iplRomManager.GetROMs()) {
+            ImGui::TableNextRow();
+
+            if (ImGui::TableNextColumn()) {
+                std::filesystem::path relativePath = std::filesystem::relative(path, iplRomsPath);
+                ImGui::AlignTextToFramePadding();
+                ImGui::Text("%s", relativePath.string().c_str());
+            }
+            if (ImGui::TableNextColumn()) {
+                ImGui::AlignTextToFramePadding();
+                if (info.info != nullptr) {
+                    ImGui::Text("%s", info.info->version);
+                } else {
+                    ImGui::TextUnformatted("-");
+                }
+            }
+            if (ImGui::TableNextColumn()) {
+                ImGui::AlignTextToFramePadding();
+                if (info.info != nullptr) {
+                    ImGui::Text("%04u/%02u/%02u", info.info->year, info.info->month, info.info->day);
+                } else {
+                    ImGui::TextUnformatted("-");
+                }
+            }
+            if (ImGui::TableNextColumn()) {
+                ImGui::AlignTextToFramePadding();
+                if (info.info != nullptr) {
+                    switch (info.info->variant) {
+                    case db::SystemVariant::None: ImGui::TextUnformatted("None"); break;
+                    case db::SystemVariant::Saturn: ImGui::TextUnformatted("Saturn"); break;
+                    case db::SystemVariant::HiSaturn: ImGui::TextUnformatted("HiSaturn"); break;
+                    case db::SystemVariant::VSaturn: ImGui::TextUnformatted("V-Saturn"); break;
+                    case db::SystemVariant::DevKit: ImGui::TextUnformatted("Dev kit"); break;
+                    default: ImGui::TextUnformatted("Unknown"); break;
+                    }
+                } else {
+                    ImGui::TextUnformatted("Unknown");
+                }
+            }
+            if (ImGui::TableNextColumn()) {
+                ImGui::AlignTextToFramePadding();
+                if (info.info != nullptr) {
+                    switch (info.info->region) {
+                    case db::SystemRegion::None: ImGui::TextUnformatted("None"); break;
+                    case db::SystemRegion::US_EU: ImGui::TextUnformatted("US/EU"); break;
+                    case db::SystemRegion::JP: ImGui::TextUnformatted("Japan"); break;
+                    case db::SystemRegion::KR: ImGui::TextUnformatted("South Korea"); break;
+                    case db::SystemRegion::RegionFree: ImGui::TextUnformatted("Region-free"); break;
+                    default: ImGui::TextUnformatted("Unknown"); break;
+                    }
+                } else {
+                    ImGui::TextUnformatted("Unknown");
+                }
+            }
+            if (ImGui::TableNextColumn()) {
+                if (ImGui::Button(fmt::format("Use##{}", index).c_str())) {
+                    settings.iplOverride = true;
+                    settings.iplPath = path;
+                    m_context.EnqueueEvent(events::emu::ReloadIPL());
+                    m_context.settings.MakeDirty();
+                }
+            }
+            ++index;
+        }
+
+        ImGui::EndTable();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+
+    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::SeparatorText("Region");
+    ImGui::PopFont();
+
+    if (ImGui::BeginTable("sys_region", 2, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn("##label", ImGuiTableColumnFlags_WidthFixed, 0);
         ImGui::TableSetupColumn("##value", ImGuiTableColumnFlags_WidthStretch);
-
-        ImGui::TableNextRow();
-        if (ImGui::TableNextColumn()) {
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted("IPL ROM path");
-            widgets::ExplanationTooltip("Changing this option will cause a hard reset");
-        }
-        if (ImGui::TableNextColumn()) {
-            ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + reloadButtonWidth + itemSpacingWidth * 2));
-            std::string iplPath = settings.iplPath.string();
-            if (MakeDirty(ImGui::InputText("##ipl_path", &iplPath))) {
-                settings.iplPath = iplPath;
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("...##bios_path")) {
-                m_context.EnqueueEvent(events::gui::OpenFile({
-                    .dialogTitle = "Load IPL ROM",
-                    .filters = {{"ROM files (*.bin, *.rom)", "bin;rom"}, {"All files (*.*)", "*"}},
-                    .userdata = this,
-                    .callback = util::WrapSingleSelectionCallback<&SystemSettingsView::ProcessLoadIPLROM,
-                                                                  &util::NoopCancelFileDialogCallback,
-                                                                  &SystemSettingsView::ProcessLoadIPLROMError>,
-                }));
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Reload")) {
-                m_context.EnqueueEvent(events::emu::ReloadIPL());
-                m_context.settings.MakeDirty();
-            }
-        }
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
@@ -86,19 +182,11 @@ void SystemSettingsView::Display() {
             widgets::ExplanationTooltip("Changing this option will cause a hard reset");
         }
         if (ImGui::TableNextColumn()) {
-            // TODO: store in settings
             ui::widgets::RegionSelector(m_context);
         }
-        // TODO: auto-detect from game discs + preferred order list
 
         ImGui::EndTable();
     }
-
-    // -----------------------------------------------------------------------------------------------------------------
-
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
-    ImGui::SeparatorText("Behavior");
-    ImGui::PopFont();
 
     MakeDirty(ImGui::Checkbox("Autodetect region from loaded discs",
                               &m_context.saturn.configuration.system.autodetectRegion));
@@ -109,6 +197,7 @@ void SystemSettingsView::Display() {
 
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Preferred region order:");
+    // TODO: preferred region order table
 
     // -----------------------------------------------------------------------------------------------------------------
 
