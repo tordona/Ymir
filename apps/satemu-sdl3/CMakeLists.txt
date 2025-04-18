@@ -111,6 +111,8 @@ add_executable(satemu-sdl3
     src/app/ui/views/settings/audio_settings_view.hpp
     src/app/ui/views/settings/cartridge_settings_view.cpp
     src/app/ui/views/settings/cartridge_settings_view.hpp
+    src/app/ui/views/settings/cdblock_settings_view.cpp
+    src/app/ui/views/settings/cdblock_settings_view.hpp
     src/app/ui/views/settings/general_settings_view.cpp
     src/app/ui/views/settings/general_settings_view.hpp
     src/app/ui/views/settings/hotkeys_settings_view.cpp

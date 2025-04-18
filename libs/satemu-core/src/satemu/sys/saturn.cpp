@@ -37,7 +37,7 @@ Saturn::Saturn()
     , VDP(m_scheduler, configuration)
     , SMPC(m_scheduler, *this, configuration.rtc)
     , SCSP(m_scheduler, configuration.audio)
-    , CDBlock(m_scheduler) {
+    , CDBlock(m_scheduler, configuration.cdblock) {
 
     mainBus.MapNormal(
         0x000'0000, 0x7FF'FFFF, nullptr,

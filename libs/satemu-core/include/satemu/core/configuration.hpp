@@ -78,6 +78,15 @@ struct Configuration {
         util::Observable<bool> threadedSCSP = false;
     } audio;
 
+    struct CDBlock {
+        // Read speed factor for high-speed mode.
+        // Accepted values range from 2 to 200.
+        // The default is 2, matching the real Saturn CD drive's speed.
+        //
+        // This value is thread-safe.
+        util::Observable<uint8> readSpeedFactor = 2;
+    } cdblock;
+
     // Notifies all observers registered with all observables.
     // This is useful if you wish to apply the default values instead of replacing them with a configuration system.
     void NotifyObservers();

@@ -642,6 +642,10 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         }
     }
 
+    if (auto tblCDBlock = data["CDBlock"]) {
+        Parse(tblCDBlock, "ReadSpeed", m_emuConfig.cdblock.readSpeedFactor);
+    }
+
     return SettingsLoadResult::Success();
 }
 
@@ -814,6 +818,10 @@ SettingsSaveResult Settings::Save() {
             {"DRAM", toml::table{{
                 {"Capacity", ToTOML(cartridge.dram.capacity)},
             }}},
+        }}},
+
+        {"CDBlock", toml::table{{
+            {"ReadSpeed", m_emuConfig.cdblock.readSpeedFactor.Get()},
         }}},
     }};
     // clang-format on

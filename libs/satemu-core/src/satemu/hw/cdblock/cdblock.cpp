@@ -11,11 +11,20 @@
 
 namespace satemu::cdblock {
 
-CDBlock::CDBlock(core::Scheduler &scheduler)
+CDBlock::CDBlock(core::Scheduler &scheduler, core::Configuration::CDBlock &config)
     : m_scheduler(scheduler) {
 
     m_driveStateUpdateEvent = m_scheduler.RegisterEvent(core::events::CDBlockDriveState, this, OnDriveStateUpdateEvent);
     m_commandExecEvent = m_scheduler.RegisterEvent(core::events::CDBlockCommand, this, OnCommandExecEvent);
+
+    config.readSpeedFactor.Observe([&](uint8 factor) {
+        m_readSpeedFactor = std::clamp<uint8>(factor, 2u, 200u);
+        if (m_readSpeed > 1) {
+            m_readSpeed = m_readSpeedFactor;
+            devlog::info<grp::base>("Read speed set to {}x", m_readSpeed);
+        }
+    });
+    m_readSpeedFactor = 2;
 
     Reset(true);
 }
@@ -1540,7 +1549,7 @@ void CDBlock::CmdInitializeCDSystem() {
         m_mpegAuthStatus = 0;
     }
 
-    m_readSpeed = readSpeed == 1 ? 1 : 2;
+    m_readSpeed = readSpeed == 1 ? 1 : m_readSpeedFactor;
     devlog::info<grp::base>("Read speed set to {}x", m_readSpeed);
 
     // Output structure: standard CD status data

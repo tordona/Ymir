@@ -5,7 +5,9 @@
 #include "cdblock_buffer.hpp"
 #include "cdblock_filter.hpp"
 
+#include <satemu/core/configuration.hpp>
 #include <satemu/core/scheduler.hpp>
+
 #include <satemu/sys/bus.hpp>
 #include <satemu/sys/clocks.hpp>
 
@@ -30,7 +32,7 @@ namespace satemu::cdblock {
 
 class CDBlock {
 public:
-    CDBlock(core::Scheduler &scheduler);
+    CDBlock(core::Scheduler &scheduler, core::Configuration::CDBlock &config);
 
     void Reset(bool hard);
 
@@ -132,6 +134,7 @@ private:
     bool m_bufferFullPause; // paused because of running out of buffers?
 
     uint8 m_readSpeed;
+    uint8 m_readSpeedFactor;
 
     // CD authentication status:
     //   0: no CD/not authenticated

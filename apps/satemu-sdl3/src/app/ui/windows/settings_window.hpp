@@ -6,6 +6,7 @@
 
 #include <app/ui/views/settings/audio_settings_view.hpp>
 #include <app/ui/views/settings/cartridge_settings_view.hpp>
+#include <app/ui/views/settings/cdblock_settings_view.hpp>
 #include <app/ui/views/settings/general_settings_view.hpp>
 #include <app/ui/views/settings/hotkeys_settings_view.hpp>
 #include <app/ui/views/settings/input_settings_view.hpp>
@@ -36,6 +37,7 @@ private:
     VideoSettingsView m_videoSettingsView;
     AudioSettingsView m_audioSettingsView;
     CartridgeSettingsView m_cartSettingsView;
+    CDBlockSettingsView m_cdblockSettingsView;
 };
 
 } // namespace app::ui

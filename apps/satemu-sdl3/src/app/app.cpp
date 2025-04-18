@@ -1673,6 +1673,9 @@ void App::RunEmulator() {
                 if (ImGui::MenuItem("Cartridge")) {
                     m_settingsWindow.OpenTab(ui::SettingsTab::Cartridge);
                 }
+                if (ImGui::MenuItem("CD Block")) {
+                    m_settingsWindow.OpenTab(ui::SettingsTab::CDBlock);
+                }
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Debug")) {
