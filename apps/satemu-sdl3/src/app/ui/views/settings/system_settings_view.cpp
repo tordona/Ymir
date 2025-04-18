@@ -43,14 +43,14 @@ void SystemSettingsView::Display() {
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
             ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted("BIOS ROM path");
+            ImGui::TextUnformatted("IPL ROM path");
             widgets::ExplanationTooltip("Changing this option will cause a hard reset");
         }
         if (ImGui::TableNextColumn()) {
             ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + reloadButtonWidth + itemSpacingWidth * 2));
-            std::string biosPath = settings.biosPath.string();
-            if (MakeDirty(ImGui::InputText("##bios_path", &biosPath))) {
-                settings.biosPath = biosPath;
+            std::string iplPath = settings.iplPath.string();
+            if (MakeDirty(ImGui::InputText("##ipl_path", &iplPath))) {
+                settings.iplPath = iplPath;
             }
             ImGui::SameLine();
             if (ImGui::Button("...##bios_path")) {

@@ -5,7 +5,7 @@
 namespace app {
 
 struct CommandLineOptions {
-    std::filesystem::path biosPath;
+    std::filesystem::path iplPath;
     std::filesystem::path gameDiscPath;
 };
 

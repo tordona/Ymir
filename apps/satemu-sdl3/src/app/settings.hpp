@@ -157,7 +157,7 @@ public:
     } general;
 
     struct System {
-        std::filesystem::path biosPath;
+        std::filesystem::path iplPath;
     } system;
 
     struct Hotkeys {

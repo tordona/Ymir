@@ -73,6 +73,9 @@ private:
     template <int port>
     void ReadPeripheral(satemu::peripheral::PeripheralReport &report);
 
+    void ScanIPLROMs();
+    void LoadIPLROM();
+
     void LoadSaveStates();
     void PersistSaveState(uint32 slot);
     void EnableRewindBuffer(bool enable);

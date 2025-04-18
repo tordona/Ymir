@@ -4,15 +4,16 @@
 
 namespace satemu::db {
 
-enum class SystemVariant { None, SaturnJP, SaturnUS_EU, HiSaturn, GameNaviHiSaturn, SamsungSaturn, VSaturn, DevKit };
+enum class SystemVariant { None, Saturn, HiSaturn, VSaturn, DevKit };
+enum class SystemRegion { None, US_EU, JP, KR, RegionFree };
 
 struct IPLROMInfo {
-    const char *commonFilename;
     const char *version;
     uint16_t year;
     uint8_t month;
     uint8_t day;
-    SystemVariant sysVariant;
+    SystemVariant variant;
+    SystemRegion region;
 };
 
 // Retrieves information about an IPL ROM image given its XXH128 hash.

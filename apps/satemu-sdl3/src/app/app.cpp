@@ -260,8 +260,6 @@ int App::Run(const CommandLineOptions &options) {
 
     devlog::debug<grp::base>("Profile directory: {}", m_context.profile.GetPath(StandardPath::Root).string());
 
-    m_context.iplRomManager.Scan(m_context.profile.GetPath(StandardPath::IPLROMImages));
-
     // TODO: setup path for persistent SMPC state, internal backup memory and cartridges
     // m_context.profile.GetPath(StandardPath::PersistentState);
 
@@ -292,35 +290,17 @@ int App::Run(const CommandLineOptions &options) {
 
     util::BoostCurrentProcessPriority(m_context.settings.general.boostProcessPriority);
 
-    // ---------------------------------
-    // Initialize SDL subsystems
-
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS)) {
-        devlog::error<grp::base>("Unable to initialize SDL: {}", SDL_GetError());
-        return EXIT_FAILURE;
-    }
-    util::ScopeGuard sgQuit{[&] { SDL_Quit(); }};
-
-    // Load IPL ROM
-    auto &biosPath = options.biosPath.empty() ? m_context.settings.system.biosPath : options.biosPath;
-    devlog::info<grp::base>("Loading IPL ROM from {}...", biosPath.string());
-    auto biosLoadResult = util::LoadIPLROM(biosPath, m_context.saturn);
-    if (biosLoadResult.succeeded) {
-        devlog::info<grp::base>("IPL ROM loaded successfully");
-    } else {
-        devlog::error<grp::base>("Failed to load IPL ROM: {}", biosLoadResult.errorMessage);
-    }
-
     // Load disc image if provided
     if (!options.gameDiscPath.empty()) {
-        if (!LoadDiscImage(options.gameDiscPath)) {
-            return EXIT_FAILURE;
-        }
+        LoadDiscImage(options.gameDiscPath);
     }
+
+    ScanIPLROMs();
+    LoadIPLROM();
 
     RunEmulator();
 
-    return EXIT_SUCCESS;
+    return 0;
 }
 
 void App::RunEmulator() {
@@ -382,6 +362,15 @@ void App::RunEmulator() {
         uint64 frames = 0;
         uint64 vdp1Frames = 0;
     } screen;
+
+    // ---------------------------------
+    // Initialize SDL subsystems
+
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS)) {
+        devlog::error<grp::base>("Unable to initialize SDL: {}", SDL_GetError());
+        return;
+    }
+    util::ScopeGuard sgQuit{[&] { SDL_Quit(); }};
 
     // ---------------------------------
     // Setup Dear ImGui context
@@ -1970,6 +1959,37 @@ void App::ReadPeripheral(satemu::peripheral::PeripheralReport &report) {
         report.report.standardPad.buttons = m_context.standardPadButtons[port - 1];
         break;
     default: break;
+    }
+}
+
+void App::ScanIPLROMs() {
+    auto iplRomsPath = m_context.profile.GetPath(StandardPath::IPLROMImages);
+    devlog::info<grp::base>("Scanning for IPL ROMs in {}...", iplRomsPath.string());
+    m_context.iplRomManager.Scan(iplRomsPath);
+
+    if constexpr (devlog::debug_enabled<grp::base>) {
+        int numKnown = 0;
+        int numUnknown = 0;
+        for (auto &[path, info] : m_context.iplRomManager.GetROMs()) {
+            if (info.info != nullptr) {
+                ++numKnown;
+            } else {
+                ++numUnknown;
+            }
+            devlog::debug<grp::base>("  [{} / {}] {}", satemu::ToString(info.hash), info.versionString, path.string());
+        }
+        devlog::info<grp::base>("Found {} images - {} known, {} unknown", numKnown + numUnknown, numKnown, numUnknown);
+    }
+}
+
+void App::LoadIPLROM() {
+    auto &iplPath = m_options.iplPath.empty() ? m_context.settings.system.iplPath : m_options.iplPath;
+    devlog::info<grp::base>("Loading IPL ROM from {}...", iplPath.string());
+    auto iplLoadResult = util::LoadIPLROM(iplPath, m_context.saturn);
+    if (iplLoadResult.succeeded) {
+        devlog::info<grp::base>("IPL ROM loaded successfully");
+    } else {
+        devlog::error<grp::base>("Failed to load IPL ROM: {}", iplLoadResult.errorMessage);
     }
 }
 

@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
     cxxopts::Options options("satemu", "satemu - Unnamed Sega Saturn emulator");
     options.add_options()("f,file", "Path to Saturn disc image (.ccd, .cue, .iso, .mds)",
                           cxxopts::value(progOpts.gameDiscPath));
-    options.add_options()("b,bios", "Path to Saturn BIOS ROM", cxxopts::value(progOpts.biosPath));
+    options.add_options()("i,ipl", "Path to Saturn IPL ROM", cxxopts::value(progOpts.iplPath));
     options.add_options()("h,help", "Display help text", cxxopts::value(showHelp)->default_value("false"));
     options.parse_positional({"file"});
     auto result = options.parse(argc, argv);

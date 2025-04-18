@@ -2,25 +2,32 @@
 
 #include <satemu/db/ipl_db.hpp>
 
+#include <satemu/core/types.hpp>
+
 #include <filesystem>
-#include <map>
+#include <unordered_map>
 
 namespace app {
+
+struct IPLROMEntry {
+    std::filesystem::path path;
+    const satemu::db::IPLROMInfo *info;
+    satemu::XXH128Hash hash;
+    std::string versionString;
+};
 
 class IPLROMManager {
 public:
     // Scans the given path recursively for IPL ROM files.
-    // If `append` is true, the files are added to the existing list, otherwise the list is replaced with IPL ROM files
-    // found in this path.
-    void Scan(std::filesystem::path path, bool append = true);
+    void Scan(std::filesystem::path path);
 
     // Retrieves all scanned IPL ROMs.
-    const std::map<std::filesystem::path, const satemu::db::IPLROMInfo *> &Get() const {
-        return m_infos;
+    const std::unordered_map<std::filesystem::path, IPLROMEntry> &GetROMs() const {
+        return m_entries;
     }
 
 private:
-    std::map<std::filesystem::path, const satemu::db::IPLROMInfo *> m_infos;
+    std::unordered_map<std::filesystem::path, IPLROMEntry> m_entries;
 };
 
 } // namespace app

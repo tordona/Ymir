@@ -142,8 +142,8 @@ EmuEvent LoadIPL(std::filesystem::path path) {
     return RunFunction([=](SharedContext &ctx) {
         auto result = util::LoadIPLROM(path, ctx.saturn);
         if (result.succeeded) {
-            if (ctx.settings.system.biosPath != path) {
-                ctx.settings.system.biosPath = path;
+            if (ctx.settings.system.iplPath != path) {
+                ctx.settings.system.iplPath = path;
                 ctx.settings.MakeDirty();
                 ctx.saturn.Reset(true);
             }
@@ -156,13 +156,13 @@ EmuEvent LoadIPL(std::filesystem::path path) {
 
 EmuEvent ReloadIPL() {
     return RunFunction([=](SharedContext &ctx) {
-        auto result = util::LoadIPLROM(ctx.settings.system.biosPath, ctx.saturn);
+        auto result = util::LoadIPLROM(ctx.settings.system.iplPath, ctx.saturn);
         if (result.succeeded) {
             ctx.saturn.Reset(true);
         } else {
             ctx.EnqueueEvent(
                 events::gui::ShowError(fmt::format("Failed to reload IPL ROM from \"{}\": {}",
-                                                   ctx.settings.system.biosPath.string(), result.errorMessage)));
+                                                   ctx.settings.system.iplPath.string(), result.errorMessage)));
         }
     });
 }

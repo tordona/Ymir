@@ -306,7 +306,7 @@ void Settings::ResetToDefaults() {
     general.enableRewindBuffer = false;
     general.rewindCompressionLevel = 6;
 
-    system.biosPath = "";
+    system.iplPath = "";
 
     {
         using PeriphType = peripheral::PeripheralType;
@@ -362,7 +362,7 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
     }
 
     if (auto tblSystem = data["System"]) {
-        Parse(tblSystem, "BiosPath", system.biosPath);
+        Parse(tblSystem, "IPLPath", system.iplPath);
         Parse(tblSystem, "VideoStandard", m_emuConfig.system.videoStandard);
         Parse(tblSystem, "AutoDetectRegion", m_emuConfig.system.autodetectRegion);
         Parse(tblSystem, "EmulateSH2Cache", m_emuConfig.system.emulateSH2Cache);
@@ -500,7 +500,7 @@ SettingsSaveResult Settings::Save() {
         }}},
 
         {"System", toml::table{{
-            {"BiosPath", system.biosPath.string()},
+            {"BiosPath", system.iplPath.string()},
             {"VideoStandard", ToTOML(m_emuConfig.system.videoStandard)},
             {"AutoDetectRegion", m_emuConfig.system.autodetectRegion},
             {"EmulateSH2Cache", m_emuConfig.system.emulateSH2Cache.Get()},

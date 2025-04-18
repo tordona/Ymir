@@ -10,13 +10,11 @@ using namespace satemu;
 
 namespace app {
 
-void IPLROMManager::Scan(fs::path path, bool append) {
+void IPLROMManager::Scan(fs::path path) {
     std::vector<char> buf{};
     buf.resize(sys::kIPLSize);
 
-    if (!append) {
-        m_infos.clear();
-    }
+    m_entries.clear();
 
     for (const fs::directory_entry &dirEntry : fs::recursive_directory_iterator(path)) {
         if (!dirEntry.is_regular_file()) {
@@ -36,12 +34,20 @@ void IPLROMManager::Scan(fs::path path, bool append) {
             }
         }
 
+        // Build entry
+        IPLROMEntry entry{};
+        entry.path = canonicalPath;
+
         // Get database entry
         XXH128Hash hash = CalcHash128(buf.data(), buf.size(), sys::kIPLHashSeed);
-        const db::IPLROMInfo *info = db::GetIPLROMInfo(hash);
+        entry.info = db::GetIPLROMInfo(hash);
+        entry.hash = hash;
 
-        // Add it to the map (including unknown entries, in case the user has a modified image)
-        m_infos[canonicalPath] = info;
+        // Get version string
+        entry.versionString.assign(buf.begin() + 0x800, buf.begin() + 0x810);
+
+        // Add it to the list (including unknown entries, in case the image is modified)
+        m_entries.insert({canonicalPath, entry});
     }
 }
 

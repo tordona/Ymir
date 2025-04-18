@@ -42,7 +42,7 @@ public:
         }
     }
 
-    uint8 GetAreaCode() const;
+    [[nodiscard]] uint8 GetAreaCode() const;
     void SetAreaCode(uint8 areaCode);
 
     peripheral::PeripheralPort &GetPeripheralPort1() {
