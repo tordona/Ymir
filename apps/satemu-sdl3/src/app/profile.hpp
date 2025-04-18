@@ -6,7 +6,7 @@ namespace app {
 
 enum class StandardPath {
     Root,            // Root of the profile    <profile>/
-    IPLROMImages,    // BIOS images            <profile>/roms/ipl
+    IPLROMImages,    // IPL ROM images         <profile>/roms/ipl/
     BackupMemory,    // Backup memory images   <profile>/backup/
     ExportedBackups, // Exported backup files  <profile>/backup/exported/
     PersistentState, // Persistent app state   <profile>/state/
@@ -26,9 +26,6 @@ public:
 
     // Uses the specified profile path.
     void UseProfilePath(std::filesystem::path path);
-
-    // Gets the profile path currently in use.
-    std::filesystem::path GetProfilePath() const;
 
     // Checks if the standard folders are present in the current profile path.
     bool CheckFolders() const;

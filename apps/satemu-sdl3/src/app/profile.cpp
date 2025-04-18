@@ -36,10 +36,6 @@ void Profile::UseProfilePath(fs::path path) {
     m_profilePath = path;
 }
 
-fs::path Profile::GetProfilePath() const {
-    return m_profilePath;
-}
-
 bool Profile::CheckFolders() const {
     for (auto &suffix : kPathSuffixes) {
         if (!fs::is_directory(m_profilePath / suffix)) {
