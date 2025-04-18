@@ -1322,8 +1322,8 @@ void App::RunEmulator() {
                 auto path = std::get<std::filesystem::path>(evt.value);
                 auto result = util::LoadIPLROM(path, m_context.saturn);
                 if (result.succeeded) {
-                    if (m_context.settings.system.iplPath != path) {
-                        m_context.settings.system.iplPath = path;
+                    if (m_context.settings.system.ipl.path != path) {
+                        m_context.settings.system.ipl.path = path;
                         m_context.settings.MakeDirty();
                         m_context.EnqueueEvent(events::emu::HardReset());
                     }
@@ -2013,9 +2013,9 @@ std::filesystem::path App::GetIPLROMPath(bool startup) {
     }
 
     // Load from settings if override is enabled
-    if (m_context.settings.system.iplOverride && !m_context.settings.system.iplPath.empty()) {
+    if (m_context.settings.system.ipl.overrideImage && !m_context.settings.system.ipl.path.empty()) {
         devlog::info<grp::base>("Using IPL ROM overridden by settings");
-        return m_context.settings.system.iplPath;
+        return m_context.settings.system.ipl.path;
     }
 
     // Auto-select ROM from IPL ROM manager based on preferred system variant and area code

@@ -124,8 +124,8 @@ void SystemSettingsView::Display() {
             }
             if (ImGui::TableNextColumn()) {
                 if (ImGui::Button(fmt::format("Use##{}", index).c_str())) {
-                    settings.iplOverride = true;
-                    settings.iplPath = path;
+                    settings.ipl.overrideImage = true;
+                    settings.ipl.path = path;
                     m_context.EnqueueEvent(events::gui::ReloadIPLROM());
                     m_context.settings.MakeDirty();
                 }
@@ -138,21 +138,21 @@ void SystemSettingsView::Display() {
 
     ImGui::Separator();
 
-    if (MakeDirty(ImGui::Checkbox("Override IPL ROM", &settings.iplOverride))) {
+    if (MakeDirty(ImGui::Checkbox("Override IPL ROM", &settings.ipl.overrideImage))) {
         m_context.EnqueueEvent(events::gui::ReloadIPLROM());
         m_context.settings.MakeDirty();
     }
 
-    if (!settings.iplOverride) {
+    if (!settings.ipl.overrideImage) {
         ImGui::BeginDisabled();
     }
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("IPL ROM path");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + reloadButtonWidth + itemSpacingWidth * 2));
-    std::string iplPath = settings.iplPath.string();
+    std::string iplPath = settings.ipl.path.string();
     if (MakeDirty(ImGui::InputText("##ipl_path", &iplPath))) {
-        settings.iplPath = iplPath;
+        settings.ipl.path = iplPath;
     }
     ImGui::SameLine();
     if (ImGui::Button("...##ipl_path")) {
@@ -170,7 +170,7 @@ void SystemSettingsView::Display() {
         m_context.EnqueueEvent(events::gui::ReloadIPLROM());
         m_context.settings.MakeDirty();
     }
-    if (!settings.iplOverride) {
+    if (!settings.ipl.overrideImage) {
         ImGui::EndDisabled();
     }
 

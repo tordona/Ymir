@@ -160,9 +160,11 @@ public:
     } general;
 
     struct System {
-        bool iplOverride;
-        std::filesystem::path iplPath;
-        satemu::db::SystemVariant variant;
+        struct IPL {
+            bool overrideImage;
+            std::filesystem::path path;
+            satemu::db::SystemVariant variant;
+        } ipl;
     } system;
 
     struct Hotkeys {

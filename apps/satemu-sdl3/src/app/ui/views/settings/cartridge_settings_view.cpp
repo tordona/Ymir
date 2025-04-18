@@ -94,7 +94,9 @@ void CartridgeSettingsView::DrawBackupRAMSettings() {
     if (ImGui::Button("...##bup_image_path")) {
         m_context.EnqueueEvent(events::gui::OpenFile({
             .dialogTitle = "Load backup memory image",
-            .defaultPath = settings.imagePath,
+            .defaultPath = settings.imagePath.empty()
+                               ? m_context.profile.GetPath(StandardPath::PersistentState) / "bup-ext.bin"
+                               : settings.imagePath,
             .filters = {{"Backup memory image files (*.bin)", "bin"}, {"All files (*.*)", "*"}},
             .userdata = this,
             .callback = util::WrapSingleSelectionCallback<&CartridgeSettingsView::ProcessLoadBackupImage,

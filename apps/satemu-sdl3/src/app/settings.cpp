@@ -424,9 +424,9 @@ void Settings::ResetToDefaults() {
     general.enableRewindBuffer = false;
     general.rewindCompressionLevel = 6;
 
-    system.iplOverride = false;
-    system.iplPath = "";
-    system.variant = db::SystemVariant::Saturn;
+    system.ipl.overrideImage = false;
+    system.ipl.path = "";
+    system.ipl.variant = db::SystemVariant::Saturn;
 
     {
         using PeriphType = peripheral::PeripheralType;
@@ -486,16 +486,19 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
     }
 
     if (auto tblSystem = data["System"]) {
-        Parse(tblSystem, "IPLOverride", system.iplOverride);
-        Parse(tblSystem, "IPLPath", system.iplPath);
-        Parse(tblSystem, "Variant", system.variant);
         Parse(tblSystem, "VideoStandard", m_emuConfig.system.videoStandard);
         Parse(tblSystem, "AutoDetectRegion", m_emuConfig.system.autodetectRegion);
         Parse(tblSystem, "PreferredRegionOrder", m_emuConfig.system.preferredRegionOrder);
         Parse(tblSystem, "EmulateSH2Cache", m_emuConfig.system.emulateSH2Cache);
 
-        auto &rtc = m_emuConfig.rtc;
+        auto &ipl = system.ipl;
+        if (auto tblIPL = tblSystem["IPL"]) {
+            Parse(tblIPL, "Override", system.ipl.overrideImage);
+            Parse(tblIPL, "Path", system.ipl.path);
+            Parse(tblIPL, "Variant", system.ipl.variant);
+        }
 
+        auto &rtc = m_emuConfig.rtc;
         if (auto tblRTC = tblSystem["RTC"]) {
             Parse(tblRTC, "Mode", rtc.mode);
             if (auto tblVirtual = tblRTC["Virtual"]) {
@@ -637,14 +640,17 @@ SettingsSaveResult Settings::Save() {
         }}},
 
         {"System", toml::table{{
-            {"IPLOverride", system.iplOverride},
-            {"IPLPath", system.iplPath.string()},
-            {"Variant", ToTOML(system.variant)},
             {"VideoStandard", ToTOML(m_emuConfig.system.videoStandard)},
             {"AutoDetectRegion", m_emuConfig.system.autodetectRegion},
             {"PreferredRegionOrder", ToTOML(m_emuConfig.system.preferredRegionOrder.Get())},
             {"EmulateSH2Cache", m_emuConfig.system.emulateSH2Cache.Get()},
         
+            {"IPL", toml::table{{
+                {"Override", system.ipl.overrideImage},
+                {"Path", system.ipl.path.string()},
+                {"Variant", ToTOML(system.ipl.variant)},
+            }}},
+
             {"RTC", toml::table{{
                 {"Mode", ToTOML(rtc.mode)},
                 {"Virtual", toml::table{{
