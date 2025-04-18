@@ -2043,10 +2043,10 @@ std::filesystem::path App::GetIPLROMPath(bool startup) {
     satemu::db::SystemVariant preferredVariant = satemu::db::SystemVariant::Saturn;
 
     // SMPC area codes:
-    //   0x1  J  Domestic NTSC Japan
-    //   0x2  T  Asia NTSC Asia Region (Taiwan, Philippines, South Korea)
-    //   0x4  U  North America NTSC North America (US, Canada), Latin America (Brazil only)
-    //   0xC  E  PAL Europe, Southeast Asia (China, Middle East), Latin America
+    //   0x1  J  Domestic NTSC        Japan
+    //   0x2  T  Asia NTSC            Asia Region (Taiwan, Philippines, South Korea)
+    //   0x4  U  North America NTSC   North America (US, Canada), Latin America (Brazil only)
+    //   0xC  E  PAL                  Europe, Southeast Asia (China, Middle East), Latin America
     // Replaced SMPC area codes:
     //   0x5  B -> U
     //   0x6  K -> T

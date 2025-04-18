@@ -4,14 +4,15 @@ namespace satemu::config {
 
 namespace sys {
     enum class Region {
-        Japan = 0x1,
-        AsiaNTSC = 0x2,
-        NorthAmerica = 0x4,
-        CentralSouthAmericaNTSC = 0x5,
-        Korea = 0x6,
-        AsiaPAL = 0xA,
-        EuropePAL = 0xC,
-        CentralSouthAmericaPAL = 0xD,
+        Japan = 0x1,        // (J) Domestic NTSC - Japan
+        AsiaNTSC = 0x2,     // (T) Asia NTSC - Asia Region (Taiwan, Philippines, South Korea)
+        NorthAmerica = 0x4, // (U) North America NTSC - North America (US, Canada), Latin America (Brazil only)
+        EuropePAL = 0xC,    // (E) PAL - Europe, Southeast Asia (China, Middle East), Latin America
+
+        CentralSouthAmericaNTSC = 0x5, // (B) (obsolete -> U) Central/South America NTSC
+        Korea = 0x6,                   // (K) (obsolete -> T) South Korea
+        AsiaPAL = 0xA,                 // (A) (obsolete -> E) Asia PAL
+        CentralSouthAmericaPAL = 0xD,  // (L) (obsolete -> E) Central/South America PAL
     };
 
     enum class VideoStandard { NTSC, PAL };

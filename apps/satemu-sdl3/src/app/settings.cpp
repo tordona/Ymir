@@ -37,9 +37,9 @@ inline constexpr int kConfigVersion = 1;
 // -------------------------------------------------------------------------------------------------
 // Enum parsers
 
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, db::SystemVariant &value) {
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, db::SystemVariant &value) {
     value = db::SystemVariant::Saturn;
-    if (auto opt = node[name].value<std::string>()) {
+    if (auto opt = node.value<std::string>()) {
         if (*opt == "Saturn"s) {
             value = db::SystemVariant::Saturn;
         } else if (*opt == "HiSaturn"s) {
@@ -50,9 +50,32 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
     }
 }
 
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, config::sys::VideoStandard &value) {
+FORCE_INLINE static void Parse(toml::node &node, config::sys::Region &value) {
+    value = config::sys::Region::Japan;
+    if (auto opt = node.value<std::string>()) {
+        if (*opt == "Japan"s) {
+            value = config::sys::Region::Japan;
+        } else if (*opt == "AsiaNTSC"s) {
+            value = config::sys::Region::AsiaNTSC;
+        } else if (*opt == "NorthAmerica"s) {
+            value = config::sys::Region::NorthAmerica;
+        } else if (*opt == "EuropePAL"s) {
+            value = config::sys::Region::EuropePAL;
+        } else if (*opt == "CentralSouthAmericaNTSC"s) {
+            value = config::sys::Region::NorthAmerica;
+        } else if (*opt == "Korea"s) {
+            value = config::sys::Region::AsiaNTSC;
+        } else if (*opt == "AsiaPAL"s) {
+            value = config::sys::Region::EuropePAL;
+        } else if (*opt == "CentralSouthAmericaPAL"s) {
+            value = config::sys::Region::EuropePAL;
+        }
+    }
+}
+
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, config::sys::VideoStandard &value) {
     value = config::sys::VideoStandard::NTSC;
-    if (auto opt = node[name].value<std::string>()) {
+    if (auto opt = node.value<std::string>()) {
         if (*opt == "NTSC"s) {
             value = config::sys::VideoStandard::NTSC;
         } else if (*opt == "PAL"s) {
@@ -61,9 +84,9 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
     }
 }
 
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, config::rtc::Mode &value) {
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, config::rtc::Mode &value) {
     value = config::rtc::Mode::Host;
-    if (auto opt = node[name].value<std::string>()) {
+    if (auto opt = node.value<std::string>()) {
         if (*opt == "Host"s) {
             value = config::rtc::Mode::Host;
         } else if (*opt == "Virtual"s) {
@@ -72,10 +95,9 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
     }
 }
 
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name,
-                               config::rtc::HardResetStrategy &value) {
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, config::rtc::HardResetStrategy &value) {
     value = config::rtc::HardResetStrategy::Preserve;
-    if (auto opt = node[name].value<std::string>()) {
+    if (auto opt = node.value<std::string>()) {
         if (*opt == "PreserveCurrentTime"s) {
             value = config::rtc::HardResetStrategy::Preserve;
         } else if (*opt == "SyncToHost"s) {
@@ -86,9 +108,9 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
     }
 }
 
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, peripheral::PeripheralType &value) {
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, peripheral::PeripheralType &value) {
     value = peripheral::PeripheralType::None;
-    if (auto opt = node[name].value<std::string>()) {
+    if (auto opt = node.value<std::string>()) {
         if (*opt == "None"s) {
             value = peripheral::PeripheralType::None;
         } else if (*opt == "StandardPad"s) {
@@ -97,10 +119,9 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
     }
 }
 
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name,
-                               config::audio::SampleInterpolationMode &value) {
+FORCE_INLINE static void Parse(toml::node &node, config::audio::SampleInterpolationMode &value) {
     value = config::audio::SampleInterpolationMode::NearestNeighbor;
-    if (auto opt = node[name].value<std::string>()) {
+    if (auto opt = node.value<std::string>()) {
         if (*opt == "Nearest"s) {
             value = config::audio::SampleInterpolationMode::NearestNeighbor;
         } else if (*opt == "Linear"s) {
@@ -118,6 +139,21 @@ FORCE_INLINE static const char *ToTOML(const db::SystemVariant value) {
     case db::SystemVariant::Saturn: return "Saturn";
     case db::SystemVariant::HiSaturn: return "HiSaturn";
     case db::SystemVariant::VSaturn: return "VSaturn";
+    }
+}
+
+FORCE_INLINE static const char *ToTOML(const config::sys::Region value) {
+    switch (value) {
+    default: [[fallthrough]];
+    case config::sys::Region::Japan: return "Japan";
+    case config::sys::Region::AsiaNTSC: return "AsiaNTSC";
+    case config::sys::Region::NorthAmerica: return "NorthAmerica";
+    case config::sys::Region::EuropePAL: return "EuropePAL";
+
+    case config::sys::Region::CentralSouthAmericaNTSC: return "NorthAmerica";
+    case config::sys::Region::Korea: return "AsiaNTSC";
+    case config::sys::Region::AsiaPAL: return "EuropePAL";
+    case config::sys::Region::CentralSouthAmericaPAL: return "EuropePAL";
     }
 }
 
@@ -162,10 +198,6 @@ FORCE_INLINE static const char *ToTOML(const config::audio::SampleInterpolationM
     }
 }
 
-/*FORCE_INLINE static std::string ToTOML(const input::InputEvent &value) {
-    return input::ToString(value);
-}*/
-
 // Creates a TOML array with valid entries (skips Nones).
 FORCE_INLINE static toml::array ToTOML(const InputBind &value) {
     toml::array out{};
@@ -177,14 +209,28 @@ FORCE_INLINE static toml::array ToTOML(const InputBind &value) {
     return out;
 }
 
+template <typename T>
+FORCE_INLINE static toml::array ToTOML(const std::vector<T> &value) {
+    toml::array out{};
+    for (auto &item : value) {
+        out.push_back(ToTOML(item));
+    }
+    return out;
+}
+
 // -------------------------------------------------------------------------------------------------
 // Parsers
 
 template <typename T>
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, T &value) {
-    if (auto opt = node[name].value<T>()) {
+FORCE_INLINE static void Parse(toml::node_view<toml::node> node, T &value) {
+    if (auto opt = node.value<T>()) {
         value = *opt;
     }
+}
+
+template <typename T>
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, T &value) {
+    Parse(node[name], value);
 }
 
 FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, std::filesystem::path &value) {
@@ -194,17 +240,21 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
 }
 
 template <typename T>
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, std::vector<T> &value) {
+    if (toml::array *arr = node[name].as_array()) {
+        value.clear();
+        for (toml::node &node : *arr) {
+            Parse(node, value.emplace_back());
+        }
+    }
+}
+
+template <typename T>
 FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, util::Observable<T> &value) {
     T wrappedValue = value.Get();
     Parse(node, name, wrappedValue);
     value = wrappedValue;
 }
-
-/*FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, input::InputEvent &value) {
-    if (auto opt = node[name].value<std::string_view>()) {
-        input::TryParse((*opt), value);
-    }
-}*/
 
 // Reads until the InputEventArray is full or runs out of entries, skipping all invalid and "None" entries.
 FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, InputBind &value) {
@@ -391,6 +441,7 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         Parse(tblSystem, "Variant", system.variant);
         Parse(tblSystem, "VideoStandard", m_emuConfig.system.videoStandard);
         Parse(tblSystem, "AutoDetectRegion", m_emuConfig.system.autodetectRegion);
+        Parse(tblSystem, "PreferredRegionOrder", m_emuConfig.system.preferredRegionOrder);
         Parse(tblSystem, "EmulateSH2Cache", m_emuConfig.system.emulateSH2Cache);
 
         auto &rtc = m_emuConfig.rtc;
@@ -531,6 +582,7 @@ SettingsSaveResult Settings::Save() {
             {"Variant", ToTOML(system.variant)},
             {"VideoStandard", ToTOML(m_emuConfig.system.videoStandard)},
             {"AutoDetectRegion", m_emuConfig.system.autodetectRegion},
+            {"PreferredRegionOrder", ToTOML(m_emuConfig.system.preferredRegionOrder.Get())},
             {"EmulateSH2Cache", m_emuConfig.system.emulateSH2Cache.Get()},
         
             {"RTC", toml::table{{

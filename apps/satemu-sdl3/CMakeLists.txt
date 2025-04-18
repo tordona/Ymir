@@ -188,6 +188,8 @@ add_executable(satemu-sdl3
     src/util/file_loader.hpp
     src/util/ipl_rom_loader.cpp
     src/util/ipl_rom_loader.hpp
+    src/util/regions.cpp
+    src/util/regions.hpp
     src/util/ring_buffer.hpp
     src/util/sdl_file_dialog.hpp
 )

@@ -7,11 +7,14 @@
 #include <app/ui/widgets/datetime_widgets.hpp>
 #include <app/ui/widgets/system_widgets.hpp>
 
+#include <util/regions.hpp>
 #include <util/sdl_file_dialog.hpp>
 
 #include <misc/cpp/imgui_stdlib.h>
 
 #include <fmt/format.h>
+
+#include <set>
 
 using namespace satemu;
 
@@ -212,7 +215,50 @@ void SystemSettingsView::Display() {
 
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Preferred region order:");
-    // TODO: preferred region order table
+
+    std::vector<config::sys::Region> prefRgnOrder{};
+    {
+        // Set of all valid regions
+        std::set<config::sys::Region> validRegions{config::sys::Region::Japan, config::sys::Region::NorthAmerica,
+                                                   config::sys::Region::AsiaNTSC, config::sys::Region::EuropePAL};
+
+        // Build list of regions from setting using only valid options
+        for (auto &region : sysConfig.preferredRegionOrder.Get()) {
+            if (validRegions.erase(region)) {
+                prefRgnOrder.push_back(region);
+            }
+        }
+
+        // Add any missing regions to the end of the list
+        prefRgnOrder.insert(prefRgnOrder.end(), validRegions.begin(), validRegions.end());
+    }
+
+    if (ImGui::BeginListBox("##pref_rgn_order", ImVec2(150, ImGui::GetFrameHeight() * 4))) {
+        ImGui::PushItemFlag(ImGuiItemFlags_AllowDuplicateId, true);
+        bool changed = false;
+        for (int n = 0; n < prefRgnOrder.size(); n++) {
+            config::sys::Region item = prefRgnOrder[n];
+            ImGui::Selectable(util::RegionToString(item).c_str());
+
+            if (ImGui::IsItemActive() && !ImGui::IsItemHovered()) {
+                int n_next = n + (ImGui::GetMouseDragDelta(0).y < 0.f ? -1 : 1);
+                if (n_next >= 0 && n_next < prefRgnOrder.size()) {
+                    prefRgnOrder[n] = prefRgnOrder[n_next];
+                    prefRgnOrder[n_next] = item;
+                    ImGui::ResetMouseDragDelta();
+                    changed = true;
+                }
+            }
+        }
+        ImGui::PopItemFlag();
+
+        if (changed) {
+            sysConfig.preferredRegionOrder = prefRgnOrder;
+            MakeDirty();
+        }
+
+        ImGui::EndListBox();
+    }
 
     // -----------------------------------------------------------------------------------------------------------------
 
