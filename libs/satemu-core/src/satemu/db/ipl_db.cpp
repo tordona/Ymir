@@ -3,8 +3,8 @@
 #include <unordered_map>
 
 template <>
-struct std::hash<satemu::Hash128> {
-    size_t operator()(const satemu::Hash128 &e) const noexcept {
+struct std::hash<satemu::XXH128Hash> {
+    size_t operator()(const satemu::XXH128Hash &e) const noexcept {
         uint64_t low = 0;
         uint64_t high = 0;
         for (size_t i = 0; i < 16; i++) {
@@ -18,7 +18,7 @@ struct std::hash<satemu::Hash128> {
 namespace satemu::db {
 
 // clang-format off
-static const std::unordered_map<Hash128, IPLROMInfo> kIPLInfos = {
+static const std::unordered_map<XXH128Hash, IPLROMInfo> kIPLInfos = {
     {{0x91,0xb0,0xb0,0x21,0xf3,0x35,0x74,0x3d,0x15,0x70,0x13,0x60,0xd5,0x90,0x2e,0xee}, {"sega_100.bin",  "1.00",  1994,  9, 21, SystemVariant::SaturnJP}},
     {{0x4f,0x38,0x04,0xed,0x5a,0xb3,0x2b,0xfc,0xef,0xbb,0x7c,0x7a,0xd7,0xa4,0x92,0xc7}, {"sega_101.bin",  "1.01",  1994, 12, 28, SystemVariant::SaturnJP}},
     {{0x0d,0xaa,0x89,0x5f,0x0e,0x05,0x19,0xe9,0xcd,0xc7,0xf0,0xb6,0x03,0xe4,0xdd,0x37}, {"sega_100a.bin", "1.00a", 1994, 11, 15, SystemVariant::SaturnUS_EU}},
@@ -32,7 +32,7 @@ static const std::unordered_map<Hash128, IPLROMInfo> kIPLInfos = {
 };
 // clang-format on
 
-const IPLROMInfo *GetIPLROMInfo(Hash128 hash) {
+const IPLROMInfo *GetIPLROMInfo(XXH128Hash hash) {
     if (kIPLInfos.contains(hash)) {
         return &kIPLInfos.at(hash);
     } else {

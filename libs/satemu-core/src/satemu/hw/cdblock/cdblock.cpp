@@ -210,7 +210,7 @@ bool CDBlock::IsTrayOpen() const {
     return (m_status.statusCode & 0xF) == kStatusCodeOpen;
 }
 
-Hash128 CDBlock::GetDiscHash() const {
+XXH128Hash CDBlock::GetDiscHash() const {
     return m_fs.GetHash();
 }
 

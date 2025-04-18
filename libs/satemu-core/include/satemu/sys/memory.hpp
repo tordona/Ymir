@@ -24,7 +24,7 @@ struct SystemMemory {
     void MapMemory(Bus &bus);
 
     void LoadIPL(std::span<uint8, kIPLSize> ipl);
-    Hash128 GetIPLHash() const;
+    XXH128Hash GetIPLHash() const;
 
     void DumpWRAMLow(std::ostream &out) const;
     void DumpWRAMHigh(std::ostream &out) const;
@@ -55,7 +55,7 @@ struct SystemMemory {
 private:
     bup::BackupMemory m_internalBackupRAM;
 
-    Hash128 m_iplHash{};
+    XXH128Hash m_iplHash{};
 };
 
 } // namespace satemu::sys

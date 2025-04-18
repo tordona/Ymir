@@ -12,7 +12,7 @@ namespace satemu::state {
 inline namespace v1 {
 
     struct CDBlockState {
-        Hash128 discHash;
+        XXH128Hash discHash;
 
         alignas(16) std::array<uint16, 4> CR;
         uint16 HIRQ;

@@ -52,7 +52,7 @@ public:
     const media::Disc &GetDisc() const {
         return m_disc;
     }
-    Hash128 GetDiscHash() const;
+    XXH128Hash GetDiscHash() const;
 
     // -------------------------------------------------------------------------
     // Save states

@@ -139,11 +139,11 @@ void Saturn::LoadIPL(std::span<uint8, sys::kIPLSize> ipl) {
     mem.LoadIPL(ipl);
 }
 
-Hash128 Saturn::GetIPLHash() const {
+XXH128Hash Saturn::GetIPLHash() const {
     return mem.GetIPLHash();
 }
 
-Hash128 Saturn::GetDiscHash() const {
+XXH128Hash Saturn::GetDiscHash() const {
     return CDBlock.GetDiscHash();
 }
 

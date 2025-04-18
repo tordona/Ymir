@@ -5,8 +5,8 @@
 
 namespace satemu {
 
-using Hash128 = std::array<uint8_t, 16>;
+using XXH128Hash = std::array<uint8_t, 16>;
 
-std::string ToString(const Hash128 &hash);
+std::string ToString(const XXH128Hash &hash);
 
 } // namespace satemu

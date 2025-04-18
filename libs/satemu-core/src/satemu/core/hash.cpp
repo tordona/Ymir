@@ -2,7 +2,7 @@
 
 namespace satemu {
 
-std::string ToString(const Hash128 &hash) {
+std::string ToString(const XXH128Hash &hash) {
     fmt::memory_buffer buf{};
     auto inserter = std::back_inserter(buf);
     for (uint8_t b : hash) {

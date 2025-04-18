@@ -36,7 +36,7 @@ void SystemMemory::LoadIPL(std::span<uint8, kIPLSize> ipl) {
     std::copy_n(canonicalHash.digest, m_iplHash.size(), m_iplHash.begin());
 }
 
-Hash128 SystemMemory::GetIPLHash() const {
+XXH128Hash SystemMemory::GetIPLHash() const {
     return m_iplHash;
 }
 

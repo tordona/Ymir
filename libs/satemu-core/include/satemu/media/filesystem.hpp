@@ -133,7 +133,7 @@ public:
     }
 
     // Returns the disc hash, which comprises the first 16 data sectors and those containing the volume descriptors.
-    Hash128 GetHash() const {
+    XXH128Hash GetHash() const {
         return m_hash;
     }
 
@@ -163,7 +163,7 @@ private:
     uint32 m_currDirectory;
     uint32 m_currFileOffset;
 
-    Hash128 m_hash{};
+    XXH128Hash m_hash{};
 
     bool ReadPathTableRecords(const Track &track, const media::iso9660::VolumeDescriptor &volDesc);
 };
