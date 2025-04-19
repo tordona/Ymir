@@ -124,7 +124,7 @@ jobs:
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
     - name: Install SDL3 Dependencies
-      run: >
+      run: |
         sudo apt-get update
         sudo apt-get install build-essential git make pkg-config \
           cmake ninja-build gnome-desktop-testing \
