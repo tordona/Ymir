@@ -125,6 +125,9 @@ jobs:
     #if: github.ref_type == 'tag'  # TODO: reenable this to restrict to tags only
     needs: [build]
 
+    permissions:
+      contents: write
+
     steps:
     - name: Download artifacts
       id: download-artifacts-step
