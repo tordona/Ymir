@@ -10,14 +10,15 @@ int main(int argc, char **argv) {
 
     app::CommandLineOptions progOpts{};
     cxxopts::Options options("satemu", "satemu - Unnamed Sega Saturn emulator");
-    options.add_options()("f,file", "Path to Saturn disc image (.ccd, .cue, .iso, .mds)",
+    options.add_options()("d,disc", "Path to Saturn disc image (.ccd, .cue, .iso, .mds)",
                           cxxopts::value(progOpts.gameDiscPath));
     options.add_options()("i,ipl", "Path to Saturn IPL ROM", cxxopts::value(progOpts.iplPath));
+    options.add_options()("p,profile", "Path to profile directory", cxxopts::value(progOpts.profilePath));
     options.add_options()("h,help", "Display help text", cxxopts::value(showHelp)->default_value("false"));
-    options.parse_positional({"file"});
-    auto result = options.parse(argc, argv);
+    options.parse_positional({"disc"});
 
     try {
+        auto result = options.parse(argc, argv);
         if (showHelp) {
             fmt::println("{}", options.help());
             return 0;

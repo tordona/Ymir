@@ -282,10 +282,17 @@ App::App()
 int App::Run(const CommandLineOptions &options) {
     devlog::info<grp::base>("{} {}", satemu_APP_NAME, satemu::version::string);
 
+    m_options = options;
+
     // TODO: use user profile first, then portable path
     // - check before use
     // - if neither are available, ask user where to create files
-    m_context.profile.UsePortableProfilePath();
+    // - allow overriding from command-line
+    if (!options.profilePath.empty()) {
+        m_context.profile.UseProfilePath(options.profilePath);
+    } else {
+        m_context.profile.UsePortableProfilePath();
+    }
     if (!m_context.profile.CheckFolders()) {
         std::error_code error{};
         if (!m_context.profile.CreateFolders(error)) {
@@ -306,7 +313,6 @@ int App::Run(const CommandLineOptions &options) {
         m_context.EnqueueEvent(events::emu::InsertPort2Peripheral(type));
     });
 
-    m_options = options;
     {
         auto result = m_context.settings.Load(m_context.profile.GetPath(ProfilePath::Root) / "satemu.toml");
         if (!result) {

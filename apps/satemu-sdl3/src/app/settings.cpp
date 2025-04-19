@@ -465,29 +465,32 @@ void Settings::ResetToDefaults() {
 }
 
 SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
-    // Read TOML table from the file
-    auto parseResult = toml::parse_file(path.string());
-    if (parseResult.failed()) {
-        return SettingsLoadResult::TOMLParseError(parseResult.error());
+    if (std::filesystem::is_regular_file(path)) {
+        auto parseResult = toml::parse_file(path.string());
+        if (parseResult.failed()) {
+            return SettingsLoadResult::TOMLParseError(parseResult.error());
+        }
+        auto &data = parseResult.table();
+
+        ResetToDefaults();
+
+        int configVersion = 0;
+        if (auto opt = data["ConfigVersion"].value<int>()) {
+            configVersion = *opt;
+        }
+
+        SettingsLoadResult result{};
+        switch (configVersion) {
+        case 1: result = LoadV1(data); break;
+        default: return SettingsLoadResult::UnsupportedConfigVersion(configVersion);
+        }
+
+        this->path = path;
+        return result;
+    } else {
+        ResetToDefaults();
+        return SettingsLoadResult::Success();
     }
-    auto &data = parseResult.table();
-
-    // Update values
-    ResetToDefaults();
-
-    int configVersion = 0;
-    if (auto opt = data["ConfigVersion"].value<int>()) {
-        configVersion = *opt;
-    }
-
-    SettingsLoadResult result{};
-    switch (configVersion) {
-    case 1: result = LoadV1(data); break;
-    default: return SettingsLoadResult::UnsupportedConfigVersion(configVersion);
-    }
-
-    this->path = path;
-    return result;
 }
 
 SettingsLoadResult Settings::LoadV1(toml::table &data) {
