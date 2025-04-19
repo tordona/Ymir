@@ -2,12 +2,11 @@ name: Create release
 
 on:
   push:
-    branches: [ "main" ]  # TODO: remove when the workflow is stable
     tags: [ "v*" ]
 
 jobs:
   build-windows:
-    name: windows-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}-${{ matrix.devlog.name }}
+    name: windows-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}
     runs-on: windows-latest
 
     strategy:
@@ -18,13 +17,6 @@ jobs:
         # Notes about compilers:
         # - MSVC (cl) produces much slower code and takes a long time to complete the LTO step
         c_compiler: [clang]  # [clang, cl]
-        devlog:
-          - name: "devlog"
-            value: "ON"
-            suffix: "-devlog"
-          - name: "nodevlog"
-            value: "OFF"
-            suffix: ""
         x86_simd_ext:
           - name: "SSE2"
             value: "OFF"
@@ -60,7 +52,7 @@ jobs:
         -DBUILD_SHARED_LIBS=OFF
         -Dsatemu_AVX2=${{ matrix.x86_simd_ext.value }}
         -Dsatemu_ENABLE_IPO=ON
-        -Dsatemu_ENABLE_DEVLOG=${{ matrix.devlog.value }}
+        -Dsatemu_ENABLE_DEVLOG=OFF
         -Dsatemu_ENABLE_IMGUI_DEMO=OFF
         -Dsatemu_ENABLE_SANDBOX=OFF
         -S ${{ github.workspace }}
@@ -76,16 +68,16 @@ jobs:
 
     - name: Package artifacts
       run: |
-        powershell Compress-Archive -Path "build/apps/satemu-sdl3/satemu-sdl3.exe" -DestinationPath "satemu-windows-${{ matrix.x86_simd_ext.name }}${{ matrix.devlog.suffix }}.zip"
+        powershell Compress-Archive -Path "build/apps/satemu-sdl3/satemu-sdl3.exe" -DestinationPath "satemu-windows-${{ matrix.x86_simd_ext.name }}.zip"
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: satemu-windows-${{ matrix.x86_simd_ext.name }}${{ matrix.devlog.suffix }}
-        path: satemu-windows-${{ matrix.x86_simd_ext.name }}${{ matrix.devlog.suffix }}.zip
+        name: satemu-windows-${{ matrix.x86_simd_ext.name }}
+        path: satemu-windows-${{ matrix.x86_simd_ext.name }}.zip
 
   build-linux:
-    name: linux-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}-${{ matrix.devlog.name }}
+    name: linux-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}
     runs-on: ubuntu-latest
 
     strategy:
@@ -96,13 +88,6 @@ jobs:
         # Notes about compilers:
         # - GCC (gcc) gets stuck building sh2.cpp (didn't finish after 12+ hours)
         c_compiler: [clang]  # [clang, gcc]
-        devlog:
-          - name: "devlog"
-            value: "ON"
-            suffix: "-devlog"
-          - name: "nodevlog"
-            value: "OFF"
-            suffix: ""
         x86_simd_ext:
           - name: "SSE2"
             value: "OFF"
@@ -146,7 +131,7 @@ jobs:
         -DBUILD_SHARED_LIBS=OFF
         -Dsatemu_AVX2=${{ matrix.x86_simd_ext.value }}
         -Dsatemu_ENABLE_IPO=ON
-        -Dsatemu_ENABLE_DEVLOG=${{ matrix.devlog.value }}
+        -Dsatemu_ENABLE_DEVLOG=OFF
         -Dsatemu_ENABLE_IMGUI_DEMO=OFF
         -Dsatemu_ENABLE_SANDBOX=OFF
         -S ${{ github.workspace }}
@@ -162,17 +147,17 @@ jobs:
 
     - name: Package artifacts
       run: |
-        tar cJvfh satemu-linux-${{ matrix.x86_simd_ext.name }}${{ matrix.devlog.suffix }}.tar.xz build/apps/satemu-sdl3/satemu-sdl3
+        tar cJvfh satemu-linux-${{ matrix.x86_simd_ext.name }}.tar.xz -C build/apps/satemu-sdl3 satemu-sdl3
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: satemu-linux-${{ matrix.x86_simd_ext.name }}${{ matrix.devlog.suffix }}
-        path: satemu-linux-${{ matrix.x86_simd_ext.name }}${{ matrix.devlog.suffix }}.tar.xz
+        name: satemu-linux-${{ matrix.x86_simd_ext.name }}
+        path: satemu-linux-${{ matrix.x86_simd_ext.name }}.tar.xz
 
   release:
     runs-on: ubuntu-latest
-    #if: github.ref_type == 'tag'  # TODO: reenable to lock this to tags
+    if: github.ref_type == 'tag'
     needs: [build-windows, build-linux]
 
     permissions:
