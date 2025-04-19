@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: ${{ matrix.os }}-${{ matrix.c_compiler }}-${{ matrix.avx2.name }}-${{ matrix.devlog.name }}
+    name: ${{ matrix.os }}-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}-${{ matrix.devlog.name }}
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -17,44 +17,26 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         build_type: [Release]
-        c_compiler: [clang, cl]   # TODO: add gcc once the sh2.cpp compilation time is fixed
+        c_compiler: [clang]  # NOTE: GCC gets stuck building sh2.cpp
         devlog:
           - name: "devlog"
             value: "ON"
           - name: "nodevlog"
             value: "OFF"
-        avx2:
+        x86_simd_ext:
           - name: "SSE2"
             value: "OFF"
           - name: "AVX2"
             value: "ON"
         include:
-          ## very slow!
-          #- os: windows-latest
-          #  c_compiler: cl
-          #  cpp_compiler: cl
-          #  exe_suffix: ".exe"
           - os: windows-latest
             c_compiler: clang
             cpp_compiler: clang
             exe_suffix: ".exe"
-          ## stuck building sh2.cpp
-          #- os: ubuntu-latest
-          #  c_compiler: gcc
-          #  cpp_compiler: g++
-          #  exe_suffix: ""
           - os: ubuntu-latest
             c_compiler: clang
             cpp_compiler: clang++
             exe_suffix: ""
-        exclude:
-          ## very slow!
-          - os: windows-latest
-            c_compiler: cl
-          #- os: windows-latest
-          #  c_compiler: gcc
-          - os: ubuntu-latest
-            c_compiler: cl
 
     steps:
     - uses: actions/checkout@v4
@@ -94,7 +76,7 @@ jobs:
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DBUILD_SHARED_LIBS=OFF
-        -Dsatemu_AVX2=${{ matrix.avx2.value }}
+        -Dsatemu_AVX2=${{ matrix.x86_simd_ext.value }}
         -Dsatemu_ENABLE_IPO=ON
         -Dsatemu_ENABLE_DEVLOG=${{ matrix.devlog.value }}
         -Dsatemu_ENABLE_IMGUI_DEMO=OFF
@@ -113,4 +95,12 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: satemu-sdl3-${{ matrix.avx2.name }}-${{ matrix.devlog.name }}
-        path: apps/satemu-sdl3/satemu-sdl3${{ matrix.exe_suffix }}
+        path: build/apps/satemu-sdl3/satemu-sdl3${{ matrix.exe_suffix }}
+
+  release:
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
