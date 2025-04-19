@@ -7,6 +7,7 @@ on:
 
 jobs:
   build:
+    name: ${{ matrix.os }}-${{ matrix.c_compiler }}-${{ matrix.avx2.name }}-${{ matrix.devlog.name }}
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -19,9 +20,9 @@ jobs:
         c_compiler: [clang, cl]   # TODO: add gcc once the sh2.cpp compilation time is fixed
         devlog:
           - name: "devlog"
-            option: "ON"
+            value: "ON"
           - name: "nodevlog"
-            option: "OFF"
+            value: "OFF"
         avx2:
           - name: "SSE2"
             value: "OFF"
@@ -47,6 +48,9 @@ jobs:
             cpp_compiler: clang++
             exe_suffix: ""
         exclude:
+          ## very slow!
+          - os: windows-latest
+            c_compiler: cl
           #- os: windows-latest
           #  c_compiler: gcc
           - os: ubuntu-latest
@@ -90,9 +94,9 @@ jobs:
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DBUILD_SHARED_LIBS=OFF
-        -Dsatemu_AVX2=${{ matrix.avx2.option }}
+        -Dsatemu_AVX2=${{ matrix.avx2.value }}
         -Dsatemu_ENABLE_IPO=ON
-        -Dsatemu_ENABLE_DEVLOG=${{ matrix.devlog.option }}
+        -Dsatemu_ENABLE_DEVLOG=${{ matrix.devlog.value }}
         -Dsatemu_ENABLE_IMGUI_DEMO=OFF
         -Dsatemu_ENABLE_SANDBOX=OFF
         -S ${{ github.workspace }}
