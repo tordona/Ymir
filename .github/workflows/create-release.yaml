@@ -12,13 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Write test.txt
-        run: echo "hello" > test.txt
+        run: echo "hello" > satemu-sdl3-a
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: test.txt
-          path: test.txt
+          name: satemu-sdl3-a
+          path: satemu-sdl3-a
     
 
   build-real:
