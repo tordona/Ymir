@@ -1074,6 +1074,8 @@ void CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8
     m_xferLength = m_getSectorLength / sizeof(uint16) * (m_xferSectorEnd - m_xferSectorPos + 1);
     m_xferCount = 0;
     m_xferExtraCount = 0;
+
+    ReadSector();
 }
 
 uint32 CDBlock::SetupFileInfoTransfer(uint32 fileID) {
@@ -1206,7 +1208,7 @@ void CDBlock::EndTransfer() {
 void CDBlock::ReadSector() {
     const Buffer *buffer = m_partitionManager.GetTail(m_xferPartition, m_xferSectorPos);
     if (buffer != nullptr) {
-        devlog::trace<grp::xfer>("Starting transfer from sector at frame address {:08X} - sector {}",
+        devlog::debug<grp::xfer>("Starting transfer from sector at frame address {:08X} - sector {}",
                                  buffer->frameAddress, m_xferSectorPos);
 
         for (size_t i = 0; i < m_getSectorLength; i += sizeof(uint16)) {
@@ -1224,27 +1226,27 @@ uint16 CDBlock::DoReadTransfer() {
     case TransferType::TOC: value = m_xferBuffer[m_xferBufferPos++]; break;
 
     case TransferType::GetSector: [[fallthrough]];
-    case TransferType::GetThenDeleteSector: //
-    {
-        if (m_xferBufferPos == 0) {
-            ReadSector();
-        }
-
+    case TransferType::GetThenDeleteSector:
         value = m_xferBuffer[m_xferBufferPos++];
+        {
 
-        if (m_xferBufferPos >= m_getSectorLength / sizeof(uint16)) {
-            if (m_xferType == TransferType::GetThenDeleteSector) {
-                // Delete sector once fully read
-                m_partitionManager.RemoveTail(m_xferPartition, m_xferSectorPos);
-                devlog::trace<grp::xfer>("Sector freed {} {} {}", m_xferBufferPos, m_xferPos, m_xferLength);
-            } else {
-                m_xferSectorPos++;
-                devlog::trace<grp::xfer>("Going to sector {}", m_xferSectorPos);
+            if (m_xferBufferPos >= m_getSectorLength / sizeof(uint16)) {
+                if (m_xferType == TransferType::GetThenDeleteSector) {
+                    // Delete sector once fully read
+                    m_partitionManager.RemoveTail(m_xferPartition, m_xferSectorPos);
+                    devlog::trace<grp::xfer>("Sector freed");
+                } else {
+                    m_xferSectorPos++;
+                    devlog::trace<grp::xfer>("Going to sector {}", m_xferSectorPos);
+                }
+                m_xferBufferPos = 0;
+                if (m_xferPos + 1 < m_xferLength) {
+                    ReadSector();
+                }
             }
-            m_xferBufferPos = 0;
+            break;
         }
         break;
-    }
 
     case TransferType::FileInfo: //
     {
