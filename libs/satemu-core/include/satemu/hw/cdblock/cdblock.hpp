@@ -180,10 +180,11 @@ private:
     enum class TransferType { None, TOC, GetSector, GetThenDeleteSector, FileInfo, Subcode };
 
     // General transfer parameters
-    TransferType m_xferType; // Type of transfer in progress
-    uint32 m_xferPos;        // Current transfer position in words
-    uint32 m_xferLength;     // Total number of words to be transferred
-    uint32 m_xferCount;      // Number of words transferred in the last transfer
+    TransferType m_xferType;                   // Type of transfer in progress
+    uint32 m_xferPos;                          // Current transfer position in words
+    uint32 m_xferLength;                       // Total number of words to be transferred
+    uint32 m_xferCount;                        // Number of words transferred in the last transfer
+    std::array<uint16, 2352 / 2> m_xferBuffer; // Transfer buffer
 
     // Parameters for sector transfers
     uint32 m_xferSectorPos; // Current transfer sector position

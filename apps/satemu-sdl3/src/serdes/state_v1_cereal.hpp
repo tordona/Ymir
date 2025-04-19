@@ -319,7 +319,7 @@ inline namespace v1 {
         ar(s.playStartPos, s.playEndPos, s.playMaxRepeat, s.playFile, s.bufferFullPause);
         ar(s.readSpeed);
         ar(s.discAuthStatus, s.mpegAuthStatus);
-        ar(s.xferType, s.xferPos, s.xferLength, s.xferCount);
+        ar(s.xferType, s.xferPos, s.xferLength, s.xferCount, s.xferBuffer);
         ar(s.xferSectorPos, s.xferSectorEnd, s.xferPartition);
         ar(s.xferCurrFileID);
         ar(s.xferSubcodeBuffer, s.xferSubcodeFrameAddress, s.xferSubcodeGroup);

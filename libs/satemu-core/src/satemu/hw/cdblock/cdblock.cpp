@@ -275,6 +275,7 @@ void CDBlock::SaveState(state::CDBlockState &state) const {
     state.xferPos = m_xferPos;
     state.xferLength = m_xferLength;
     state.xferCount = m_xferCount;
+    state.xferBuffer = m_xferBuffer;
 
     state.xferSectorPos = m_xferSectorPos;
     state.xferSectorEnd = m_xferSectorEnd;
@@ -396,6 +397,7 @@ void CDBlock::LoadState(const state::CDBlockState &state) {
     m_xferPos = state.xferPos;
     m_xferLength = state.xferLength;
     m_xferCount = state.xferCount;
+    m_xferBuffer = state.xferBuffer;
 
     m_xferSectorPos = state.xferSectorPos;
     m_xferSectorEnd = state.xferSectorEnd;
@@ -1033,6 +1035,16 @@ void CDBlock::SetupTOCTransfer() {
     m_xferLength = sizeof(media::Session::toc) / sizeof(uint16);
     m_xferCount = 0;
     m_xferExtraCount = 0;
+
+    if (m_disc.sessions.empty()) {
+        std::fill_n(m_xferBuffer.begin(), m_xferLength, 0xFFFF);
+    } else {
+        auto &toc = m_disc.sessions.back().toc;
+        for (size_t i = 0; i < toc.size(); i++) {
+            m_xferBuffer[i * 2 + 0] = toc[i] >> 16u;
+            m_xferBuffer[i * 2 + 1] = toc[i] >> 0u;
+        }
+    }
 }
 
 void CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8 partitionNumber, bool del) {
@@ -1186,15 +1198,7 @@ void CDBlock::EndTransfer() {
 uint16 CDBlock::DoReadTransfer() {
     uint16 value = 0;
     switch (m_xferType) {
-    case TransferType::TOC:
-        if (m_disc.sessions.empty()) {
-            value = 0xFFFF;
-        } else {
-            const bool evenWord = (m_xferPos & 1) == 0;
-            const std::size_t tocIndex = m_xferPos * sizeof(uint16) / sizeof(uint32);
-            value = m_disc.sessions.back().toc[tocIndex] >> (evenWord * 16u);
-        }
-        break;
+    case TransferType::TOC: value = m_xferBuffer[m_xferPos]; break;
 
     case TransferType::GetSector:
     case TransferType::GetThenDeleteSector: //
