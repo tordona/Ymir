@@ -1,9 +1,9 @@
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-if (NOT DEFINED satemu_INSTALL_CMAKEDIR)
-   set(satemu_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/satemu"
-       CACHE STRING "Path to satemu CMake files")
+if (NOT DEFINED Ymir_INSTALL_CMAKEDIR)
+   set(Ymir_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/Ymir"
+       CACHE STRING "Path to Ymir CMake files")
 endif ()
 
 if (BUILD_SHARED_LIBS)
@@ -12,21 +12,21 @@ else ()
     set(type static)
 endif ()
 
-install(EXPORT satemu_Targets
-        DESTINATION "${satemu_INSTALL_CMAKEDIR}"
-        NAMESPACE satemu::
-        FILE satemu-${type}-targets.cmake
-        COMPONENT satemu_Development)
+install(EXPORT Ymir_Targets
+        DESTINATION "${Ymir_INSTALL_CMAKEDIR}"
+        NAMESPACE Ymir::
+        FILE Ymir-${type}-targets.cmake
+        COMPONENT Ymir_Development)
 
 write_basic_package_version_file(
-    satemuConfigVersion.cmake
+    YmirConfigVersion.cmake
     COMPATIBILITY SameMajorVersion)
 
 install(FILES
-        "${CMAKE_CURRENT_SOURCE_DIR}/satemuConfig.cmake"
-        "${CMAKE_CURRENT_BINARY_DIR}/satemuConfigVersion.cmake"
-        DESTINATION "${satemu_INSTALL_CMAKEDIR}"
-        COMPONENT satemu_Development)
+        "${CMAKE_CURRENT_SOURCE_DIR}/YmirConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/YmirConfigVersion.cmake"
+        DESTINATION "${Ymir_INSTALL_CMAKEDIR}"
+        COMPONENT Ymir_Development)
 
 # TODO: add additional CPack variables here
 include(CPack)

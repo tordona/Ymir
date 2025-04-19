@@ -25,7 +25,7 @@ target_include_directories(xxHash
 target_compile_features(xxHash PUBLIC cxx_std_20)
 
 ## Apply performance options
-if (satemu_AVX2)
+if (Ymir_AVX2)
     if (MSVC)
         target_compile_options(xxHash PUBLIC "/arch:AVX2")
     else ()

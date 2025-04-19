@@ -1,6 +1,6 @@
 add_library(imgui
-	satemu/imgui_memory_editor.h
-	satemu/satemu_imconfig.h
+	ymir/imgui_memory_editor.h
+	ymir/ymir_imconfig.h
 
 	imgui/imgui.cpp
 	imgui/imgui.h
@@ -24,7 +24,7 @@ add_library(imgui
 	imgui/misc/cpp/imgui_stdlib.cpp
 	imgui/misc/cpp/imgui_stdlib.h
 )
-if (satemu_ENABLE_IMGUI_DEMO)
+if (Ymir_ENABLE_IMGUI_DEMO)
 	target_sources(imgui PRIVATE
 		imgui/imgui_demo.cpp
 	)
@@ -41,10 +41,10 @@ add_library(imgui::imgui ALIAS imgui)
 target_include_directories(imgui
     PUBLIC
 		"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/imgui>"
-		"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/satemu>"
+		"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ymir>"
     PRIVATE
 		"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/imgui>"
 )
 target_compile_features(imgui PUBLIC cxx_std_20)
-target_compile_definitions(imgui PUBLIC IMGUI_USER_CONFIG="satemu_imconfig.h")
+target_compile_definitions(imgui PUBLIC IMGUI_USER_CONFIG="ymir_imconfig.h")
 target_link_libraries(imgui PRIVATE SDL3::SDL3)

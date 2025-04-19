@@ -1,0 +1,827 @@
+#include <ymir/hw/scsp/scsp_slot.hpp>
+
+#include <ymir/util/data_ops.hpp>
+
+#include <algorithm>
+
+namespace ymir::scsp {
+
+Slot::Slot() {
+    Reset();
+}
+
+void Slot::Reset() {
+    startAddress = 0;
+    loopStartAddress = 0;
+    loopEndAddress = 0;
+    pcm8Bit = false;
+    keyOnBit = false;
+    loopControl = LoopControl::Off;
+    sampleXOR = 0x0000;
+    soundSource = SoundSource::SoundRAM;
+
+    attackRate = 0;
+    decay1Rate = 0;
+    decay2Rate = 0;
+    releaseRate = 0;
+
+    decayLevel = 0;
+
+    keyRateScaling = 0;
+
+    egHold = false;
+
+    loopStartLink = false;
+
+    modLevel = 0;
+    modXSelect = 0;
+    modYSelect = 0;
+    stackWriteInhibit = false;
+
+    totalLevel = 0;
+    soundDirect = false;
+
+    octave = 0;
+    freqNumSwitch = 0x400u;
+
+    lfoReset = false;
+    lfofRaw = 0;
+    lfoStepInterval = s_lfoStepTbl[0];
+    ampLFOSens = 0;
+    ampLFOWaveform = Waveform::Saw;
+    pitchLFOWaveform = Waveform::Saw;
+
+    inputMixingLevel = 0;
+    inputSelect = 0;
+    directSendLevel = 0;
+    directPan = 0;
+    effectSendLevel = 0;
+    effectPan = 0;
+
+    active = false;
+
+    egState = EGState::Release;
+
+    egLevel = 0x3FF;
+
+    sampleCount = 0;
+    currAddress = 0;
+    currSample = 0;
+    currPhase = 0;
+    reverse = false;
+    crossedLoopStart = false;
+
+    lfoCycles = 0;
+    lfoStep = 0;
+
+    sample1 = 0;
+    sample2 = 0;
+
+    output = 0;
+}
+
+bool Slot::TriggerKey() {
+    // Key ON only triggers when EG is in Release state
+    // Key OFF only triggers when EG is in any other state
+    const bool trigger = (egState == EGState::Release) == keyOnBit;
+    if (trigger) {
+        if (keyOnBit) {
+            active = true;
+
+            egState = EGState::Attack;
+
+            if (keyRateScaling == 0xF) {
+                egLevel = 0x280;
+            } else {
+                const sint8 oct = static_cast<sint8>(octave ^ 8) - 8;
+                const uint8 krs = std::clamp<uint8>(keyRateScaling + oct, 0x0, 0xF);
+                egLevel = (attackRate + krs >= 0x20) ? 0x000 : 0x280;
+            }
+
+            sampleCount = 0;
+            currAddress = 0;
+            currSample = 0;
+            currPhase = 0;
+            reverse = false;
+            crossedLoopStart = false;
+
+            sample1 = 0;
+            sample2 = 0;
+
+            output = 0;
+        } else {
+            egState = EGState::Release;
+        }
+    }
+    return trigger;
+}
+
+template <typename T>
+T Slot::ReadReg(uint32 address) {
+    static constexpr bool is16 = std::is_same_v<T, uint16>;
+    auto shiftByte = [](uint16 value) {
+        if constexpr (is16) {
+            return value;
+        } else {
+            return value >> 8u;
+        }
+    };
+
+    switch (address) {
+    case 0x00: return shiftByte(ReadReg00<is16, true>());
+    case 0x01: return ReadReg00<true, is16>();
+    case 0x02: return shiftByte(ReadReg02());
+    case 0x03: return ReadReg02();
+    case 0x04: return shiftByte(ReadReg04());
+    case 0x05: return ReadReg04();
+    case 0x06: return shiftByte(ReadReg06());
+    case 0x07: return ReadReg06();
+    case 0x08: return shiftByte(ReadReg08<is16, true>());
+    case 0x09: return ReadReg08<true, is16>();
+    case 0x0A: return shiftByte(ReadReg0A<is16, true>());
+    case 0x0B: return ReadReg0A<true, is16>();
+    case 0x0C: return shiftByte(ReadReg0C<is16, true>());
+    case 0x0D: return ReadReg0C<true, is16>();
+    case 0x0E: return shiftByte(ReadReg0E<is16, true>());
+    case 0x0F: return ReadReg0E<true, is16>();
+    case 0x10: return shiftByte(ReadReg10<is16, true>());
+    case 0x11: return ReadReg10<true, is16>();
+    case 0x12: return shiftByte(ReadReg12<is16, true>());
+    case 0x13: return ReadReg12<true, is16>();
+    case 0x14: return shiftByte(ReadReg14<is16, true>());
+    case 0x15: return ReadReg14<true, is16>();
+    case 0x16: return shiftByte(ReadReg16<is16, true>());
+    case 0x17: return ReadReg16<true, is16>();
+    default: return 0;
+    }
+}
+
+template uint8 Slot::ReadReg<uint8>(uint32 address);
+template uint16 Slot::ReadReg<uint16>(uint32 address);
+
+template <typename T>
+void Slot::WriteReg(uint32 address, T value) {
+    static constexpr bool is16 = std::is_same_v<T, uint16>;
+    uint16 value16 = value;
+    if constexpr (!is16) {
+        if ((address & 1) == 0) {
+            value16 <<= 8u;
+        }
+    }
+
+    switch (address) {
+    case 0x00: WriteReg00<is16, true>(value16); break;
+    case 0x01: WriteReg00<true, is16>(value16); break;
+    case 0x02: WriteReg02<is16, true>(value16); break;
+    case 0x03: WriteReg02<true, is16>(value16); break;
+    case 0x04: WriteReg04<is16, true>(value16); break;
+    case 0x05: WriteReg04<true, is16>(value16); break;
+    case 0x06: WriteReg06<is16, true>(value16); break;
+    case 0x07: WriteReg06<true, is16>(value16); break;
+    case 0x08: WriteReg08<is16, true>(value16); break;
+    case 0x09: WriteReg08<true, is16>(value16); break;
+    case 0x0A: WriteReg0A<is16, true>(value16); break;
+    case 0x0B: WriteReg0A<true, is16>(value16); break;
+    case 0x0C: WriteReg0C<is16, true>(value16); break;
+    case 0x0D: WriteReg0C<true, is16>(value16); break;
+    case 0x0E: WriteReg0E<is16, true>(value16); break;
+    case 0x0F: WriteReg0E<true, is16>(value16); break;
+    case 0x10: WriteReg10<is16, true>(value16); break;
+    case 0x11: WriteReg10<true, is16>(value16); break;
+    case 0x12: WriteReg12<is16, true>(value16); break;
+    case 0x13: WriteReg12<true, is16>(value16); break;
+    case 0x14: WriteReg14<is16, true>(value16); break;
+    case 0x15: WriteReg14<true, is16>(value16); break;
+    case 0x16: WriteReg16<is16, true>(value16); break;
+    case 0x17: WriteReg16<true, is16>(value16); break;
+    }
+}
+
+template void Slot::WriteReg<uint8>(uint32 address, uint8 value);
+template void Slot::WriteReg<uint16>(uint32 address, uint16 value);
+
+template <bool lowerByte, bool upperByte>
+uint16 Slot::ReadReg00() const {
+    uint16 value = 0;
+    if constexpr (lowerByte) {
+        bit::deposit_into<0, 3>(value, bit::extract<16, 19>(startAddress));
+        bit::deposit_into<4>(value, pcm8Bit);
+        bit::deposit_into<5, 6>(value, static_cast<uint16>(loopControl));
+    }
+
+    util::SplitReadWord<lowerByte, upperByte, 7, 8>(value, static_cast<uint16>(soundSource));
+
+    if constexpr (upperByte) {
+        bit::deposit_into<9, 10>(value, bit::extract<14, 15>(sampleXOR));
+        bit::deposit_into<11>(value, keyOnBit);
+    }
+    return value;
+}
+
+template <bool lowerByte, bool upperByte>
+void Slot::WriteReg00(uint16 value) {
+    if constexpr (lowerByte) {
+        bit::deposit_into<16, 19>(startAddress, bit::extract<0, 3>(value));
+        pcm8Bit = bit::test<4>(value);
+        loopControl = static_cast<LoopControl>(bit::extract<5, 6>(value));
+    }
+
+    auto soundSourceValue = static_cast<uint16>(soundSource);
+    util::SplitWriteWord<lowerByte, upperByte, 7, 8>(soundSourceValue, value);
+    soundSource = static_cast<SoundSource>(soundSourceValue);
+
+    if constexpr (upperByte) {
+        static constexpr uint16 kSampleXORTable[] = {0x0000, 0x7FFF, 0x8000, 0xFFFF};
+        sampleXOR = kSampleXORTable[bit::extract<9, 10>(value)];
+        keyOnBit = bit::test<11>(value);
+        // NOTE: bit 12 is KYONEX, handled in SCSP::WriteReg
+    }
+}
+
+uint16 Slot::ReadReg02() const {
+    return bit::extract<0, 15>(startAddress);
+}
+
+template <bool lowerByte, bool upperByte>
+void Slot::WriteReg02(uint16 value) {
+    static constexpr uint32 lb = lowerByte ? 0 : 8;
+    static constexpr uint32 ub = upperByte ? 15 : 7;
+    bit::deposit_into<lb, ub>(startAddress, bit::extract<lb, ub>(value));
+}
+
+uint16 Slot::ReadReg04() const {
+    return loopStartAddress;
+}
+
+template <bool lowerByte, bool upperByte>
+void Slot::WriteReg04(uint16 value) {
+    static constexpr uint32 lb = lowerByte ? 0 : 8;
+    static constexpr uint32 ub = upperByte ? 15 : 7;
+    bit::deposit_into<lb, ub>(loopStartAddress, bit::extract<lb, ub>(value));
+}
+
+uint16 Slot::ReadReg06() const {
+    return loopEndAddress;
+}
+
+template <bool lowerByte, bool upperByte>
+void Slot::WriteReg06(uint16 value) {
+    static constexpr uint32 lb = lowerByte ? 0 : 8;
+    static constexpr uint32 ub = upperByte ? 15 : 7;
+    bit::deposit_into<lb, ub>(loopEndAddress, bit::extract<lb, ub>(value));
+}
+
+template <bool lowerByte, bool upperByte>
+uint16 Slot::ReadReg08() const {
+    uint16 value = 0;
+    if constexpr (lowerByte) {
+        bit::deposit_into<0, 4>(value, attackRate);
+        bit::deposit_into<5>(value, egHold);
+    }
+
+    util::SplitReadWord<lowerByte, upperByte, 6, 10>(value, decay1Rate);
+
+    if constexpr (upperByte) {
+        bit::deposit_into<11, 15>(value, decay2Rate);
+    }
+    return value;
+}
+
+template <bool lowerByte, bool upperByte>
+void Slot::WriteReg08(uint16 value) {
+    if constexpr (lowerByte) {
+        attackRate = bit::extract<0, 4>(value);
+        egHold = bit::test<5>(value);
+    }
+
+    util::SplitWriteWord<lowerByte, upperByte, 6, 10>(decay1Rate, value);
+
+    if constexpr (upperByte) {
+        decay2Rate = bit::extract<11, 15>(value);
+    }
+}
+
+template <bool lowerByte, bool upperByte>
+uint16 Slot::ReadReg0A() const {
+    uint16 value = 0;
+    if constexpr (lowerByte) {
+        bit::deposit_into<0, 4>(value, releaseRate);
+    }
+
+    util::SplitReadWord<lowerByte, upperByte, 5, 9>(value, decayLevel);
+
+    if constexpr (upperByte) {
+        bit::deposit_into<10, 13>(value, keyRateScaling);
+        bit::deposit_into<14>(value, loopStartLink);
+    }
+    return value;
+}
+
+template <bool lowerByte, bool upperByte>
+void Slot::WriteReg0A(uint16 value) {
+    if constexpr (lowerByte) {
+        releaseRate = bit::extract<0, 4>(value);
+    }
+
+    util::SplitWriteWord<lowerByte, upperByte, 5, 9>(decayLevel, value);
+
+    if constexpr (upperByte) {
+        keyRateScaling = bit::extract<10, 13>(value);
+        loopStartLink = bit::test<14>(value);
+    }
+}
+
+template <bool lowerByte, bool upperByte>
+uint16 Slot::ReadReg0C() const {
+    uint16 value = 0;
+    if constexpr (lowerByte) {
+        bit::deposit_into<0, 7>(value, totalLevel);
+    }
+
+    if constexpr (upperByte) {
+        bit::deposit_into<8>(value, soundDirect);
+        bit::deposit_into<9>(value, stackWriteInhibit);
+    }
+    return 0;
+}
+
+template <bool lowerByte, bool upperByte>
+void Slot::WriteReg0C(uint16 value) {
+    if constexpr (lowerByte) {
+        totalLevel = bit::extract<0, 7>(value);
+    }
+
+    if constexpr (upperByte) {
+        soundDirect = bit::test<8>(value);
+        stackWriteInhibit = bit::test<9>(value);
+    }
+}
+
+template <bool lowerByte, bool upperByte>
+uint16 Slot::ReadReg0E() const {
+    uint16 value = 0;
+    if constexpr (lowerByte) {
+        bit::deposit_into<0, 5>(value, modYSelect);
+    }
+
+    util::SplitReadWord<lowerByte, upperByte, 6, 11>(value, modXSelect);
+
+    if constexpr (upperByte) {
+        bit::deposit_into<12, 15>(value, modLevel);
+    }
+    return value;
+}
+
+template <bool lowerByte, bool upperByte>
+void Slot::WriteReg0E(uint16 value) {
+    if constexpr (lowerByte) {
+        modYSelect = bit::extract<0, 5>(value);
+    }
+
+    util::SplitWriteWord<lowerByte, upperByte, 6, 11>(modXSelect, value);
+
+    if constexpr (upperByte) {
+        modLevel = bit::extract<12, 15>(value);
+    }
+}
+
+template <bool lowerByte, bool upperByte>
+uint16 Slot::ReadReg10() const {
+    uint16 value = 0;
+
+    util::SplitReadWord<lowerByte, upperByte, 0, 9>(value, freqNumSwitch);
+
+    if constexpr (upperByte) {
+        bit::deposit_into<11, 14>(value, octave);
+    }
+    return value;
+}
+
+template <bool lowerByte, bool upperByte>
+void Slot::WriteReg10(uint16 value) {
+    util::SplitWriteWord<lowerByte, upperByte, 0, 9>(freqNumSwitch, value);
+
+    if constexpr (upperByte) {
+        octave = bit::extract<11, 14>(value);
+    }
+}
+
+template <bool lowerByte, bool upperByte>
+uint16 Slot::ReadReg12() const {
+    uint16 value = 0;
+    if constexpr (lowerByte) {
+        bit::deposit_into<0, 2>(value, ampLFOSens);
+        bit::deposit_into<3, 4>(value, static_cast<uint16>(ampLFOWaveform));
+        bit::deposit_into<5, 7>(value, pitchLFOSens);
+    }
+
+    if constexpr (upperByte) {
+        bit::deposit_into<8, 9>(value, static_cast<uint16>(pitchLFOWaveform));
+        bit::deposit_into<10, 14>(value, lfofRaw);
+        bit::deposit_into<15>(value, lfoReset);
+    }
+    return value;
+}
+
+template <bool lowerByte, bool upperByte>
+void Slot::WriteReg12(uint16 value) {
+    if constexpr (lowerByte) {
+        ampLFOSens = bit::extract<0, 2>(value);
+        ampLFOWaveform = static_cast<Waveform>(bit::extract<3, 4>(value));
+        pitchLFOSens = bit::extract<5, 7>(value);
+    }
+
+    if constexpr (upperByte) {
+        pitchLFOWaveform = static_cast<Waveform>(bit::extract<8, 9>(value));
+        lfofRaw = bit::extract<10, 14>(value);
+        lfoStepInterval = s_lfoStepTbl[lfofRaw];
+        lfoReset = bit::test<15>(value);
+    }
+}
+
+template <bool lowerByte, bool upperByte>
+uint16 Slot::ReadReg14() const {
+    uint16 value = 0;
+    if constexpr (lowerByte) {
+        bit::deposit_into<0, 2>(value, inputMixingLevel);
+        bit::deposit_into<3, 6>(value, inputSelect);
+    }
+    return value;
+}
+
+template <bool lowerByte, bool upperByte>
+void Slot::WriteReg14(uint16 value) {
+    if constexpr (lowerByte) {
+        inputMixingLevel = bit::extract<0, 2>(value);
+        inputSelect = bit::extract<3, 6>(value);
+    }
+}
+
+template <bool lowerByte, bool upperByte>
+uint16 Slot::ReadReg16() const {
+    uint16 value = 0;
+    if constexpr (lowerByte) {
+        bit::deposit_into<0, 4>(value, effectPan);
+        bit::deposit_into<5, 7>(value, effectSendLevel);
+    }
+    if constexpr (upperByte) {
+        bit::deposit_into<8, 12>(value, directPan);
+        bit::deposit_into<13, 15>(value, directSendLevel);
+    }
+    return value;
+}
+
+template <bool lowerByte, bool upperByte>
+void Slot::WriteReg16(uint16 value) {
+    if constexpr (lowerByte) {
+        effectPan = bit::extract<0, 4>(value);
+        effectSendLevel = bit::extract<5, 7>(value);
+    }
+    if constexpr (upperByte) {
+        directPan = bit::extract<8, 12>(value);
+        directSendLevel = bit::extract<13, 15>(value);
+    }
+}
+
+void Slot::SaveState(state::SCSPSlotState &state) const {
+    state.SA = startAddress;
+    state.LSA = loopStartAddress;
+    state.LEA = loopEndAddress;
+    state.PCM8B = pcm8Bit;
+    state.KYONB = keyOnBit;
+
+    switch (loopControl) {
+    default: [[fallthrough]];
+    case LoopControl::Off: state.LPCTL = state::SCSPSlotState::LoopControl::Off; break;
+    case LoopControl::Normal: state.LPCTL = state::SCSPSlotState::LoopControl::Normal; break;
+    case LoopControl::Reverse: state.LPCTL = state::SCSPSlotState::LoopControl::Reverse; break;
+    case LoopControl::Alternate: state.LPCTL = state::SCSPSlotState::LoopControl::Alternate; break;
+    }
+
+    switch (soundSource) {
+    default: [[fallthrough]];
+    case SoundSource::SoundRAM: state.SSCTL = state::SCSPSlotState::SoundSource::SoundRAM; break;
+    case SoundSource::Noise: state.SSCTL = state::SCSPSlotState::SoundSource::Noise; break;
+    case SoundSource::Silence: state.SSCTL = state::SCSPSlotState::SoundSource::Silence; break;
+    case SoundSource::Unknown: state.SSCTL = state::SCSPSlotState::SoundSource::Unknown; break;
+    }
+
+    state.AR = attackRate;
+    state.D1R = decay1Rate;
+    state.D2R = decay2Rate;
+    state.RR = releaseRate;
+    state.DL = decayLevel;
+
+    state.KRS = keyRateScaling;
+    state.EGHOLD = egHold;
+    state.LPSLNK = loopStartLink;
+
+    state.MDL = modLevel;
+    state.MDXSL = modXSelect;
+    state.MDYSL = modYSelect;
+    state.STWINH = stackWriteInhibit;
+
+    state.TL = totalLevel;
+    state.SDIR = soundDirect;
+
+    state.OCT = octave;
+    state.FNS = freqNumSwitch;
+
+    auto castWaveform = [](Waveform waveform) {
+        switch (waveform) {
+        default: [[fallthrough]];
+        case Waveform::Saw: return state::SCSPSlotState::Waveform::Saw;
+        case Waveform::Square: return state::SCSPSlotState::Waveform::Square;
+        case Waveform::Triangle: return state::SCSPSlotState::Waveform::Triangle;
+        case Waveform::Noise: return state::SCSPSlotState::Waveform::Noise;
+        }
+    };
+
+    state.LFORE = lfoReset;
+    state.LFOF = lfofRaw;
+    state.ALFOS = ampLFOSens;
+    state.PLFOS = pitchLFOSens;
+    state.ALFOWS = castWaveform(ampLFOWaveform);
+    state.PLFOWS = castWaveform(pitchLFOWaveform);
+
+    state.IMXL = inputMixingLevel;
+    state.ISEL = inputSelect;
+    state.DISDL = directSendLevel;
+    state.DIPAN = directPan;
+
+    state.EFSDL = effectSendLevel;
+    state.EFPAN = effectPan;
+
+    state.active = active;
+
+    switch (egState) {
+    default: [[fallthrough]];
+    case EGState::Attack: state.egState = state::SCSPSlotState::EGState::Attack; break;
+    case EGState::Decay1: state.egState = state::SCSPSlotState::EGState::Decay1; break;
+    case EGState::Decay2: state.egState = state::SCSPSlotState::EGState::Decay2; break;
+    case EGState::Release: state.egState = state::SCSPSlotState::EGState::Release; break;
+    }
+
+    state.egLevel = egLevel;
+
+    state.sampleCount = sampleCount;
+    state.currAddress = currAddress;
+    state.currSample = currSample;
+    state.currPhase = currPhase;
+    state.reverse = reverse;
+    state.crossedLoopStart = crossedLoopStart;
+
+    state.lfoCycles = lfoCycles;
+    state.lfoStep = lfoStep;
+
+    state.sample1 = sample1;
+    state.sample2 = sample2;
+    state.output = output;
+}
+
+bool Slot::ValidateState(const state::SCSPSlotState &state) const {
+    switch (state.LPCTL) {
+    case state::SCSPSlotState::LoopControl::Off: break;
+    case state::SCSPSlotState::LoopControl::Normal: break;
+    case state::SCSPSlotState::LoopControl::Reverse: break;
+    case state::SCSPSlotState::LoopControl::Alternate: break;
+    default: return false;
+    }
+
+    switch (state.SSCTL) {
+    case state::SCSPSlotState::SoundSource::SoundRAM: break;
+    case state::SCSPSlotState::SoundSource::Noise: break;
+    case state::SCSPSlotState::SoundSource::Silence: break;
+    case state::SCSPSlotState::SoundSource::Unknown: break;
+    default: return false;
+    }
+
+    auto checkWaveform = [](state::SCSPSlotState::Waveform waveform) {
+        switch (waveform) {
+        case state::SCSPSlotState::Waveform::Saw: return true;
+        case state::SCSPSlotState::Waveform::Square: return true;
+        case state::SCSPSlotState::Waveform::Triangle: return true;
+        case state::SCSPSlotState::Waveform::Noise: return true;
+        default: return false;
+        }
+    };
+    if (!checkWaveform(state.ALFOWS)) {
+        return false;
+    }
+    if (!checkWaveform(state.PLFOWS)) {
+        return false;
+    }
+
+    switch (state.egState) {
+    case state::SCSPSlotState::EGState::Attack: break;
+    case state::SCSPSlotState::EGState::Decay1: break;
+    case state::SCSPSlotState::EGState::Decay2: break;
+    case state::SCSPSlotState::EGState::Release: break;
+    default: return false;
+    }
+
+    return true;
+}
+
+void Slot::LoadState(const state::SCSPSlotState &state) {
+    startAddress = state.SA & 0xFFFFF;
+    loopStartAddress = state.LSA & 0xFFFF;
+    loopEndAddress = state.LEA & 0xFFFF;
+    pcm8Bit = state.PCM8B;
+    keyOnBit = state.KYONB;
+
+    switch (state.LPCTL) {
+    default: [[fallthrough]];
+    case state::SCSPSlotState::LoopControl::Off: loopControl = LoopControl::Off; break;
+    case state::SCSPSlotState::LoopControl::Normal: loopControl = LoopControl::Normal; break;
+    case state::SCSPSlotState::LoopControl::Reverse: loopControl = LoopControl::Reverse; break;
+    case state::SCSPSlotState::LoopControl::Alternate: loopControl = LoopControl::Alternate; break;
+    }
+
+    switch (state.SSCTL) {
+    default: [[fallthrough]];
+    case state::SCSPSlotState::SoundSource::SoundRAM: soundSource = SoundSource::SoundRAM; break;
+    case state::SCSPSlotState::SoundSource::Noise: soundSource = SoundSource::Noise; break;
+    case state::SCSPSlotState::SoundSource::Silence: soundSource = SoundSource::Silence; break;
+    case state::SCSPSlotState::SoundSource::Unknown: soundSource = SoundSource::Unknown; break;
+    }
+
+    attackRate = state.AR & 0x1F;
+    decay1Rate = state.D1R & 0x1F;
+    decay2Rate = state.D2R & 0x1F;
+    releaseRate = state.RR & 0x1F;
+    decayLevel = state.DL & 0x1F;
+
+    keyRateScaling = state.KRS & 0xF;
+    egHold = state.EGHOLD;
+    loopStartLink = state.LPSLNK;
+
+    modLevel = state.MDL & 0xF;
+    modXSelect = state.MDXSL & 0x3F;
+    modYSelect = state.MDYSL & 0x3F;
+    stackWriteInhibit = state.STWINH;
+
+    totalLevel = state.TL;
+    soundDirect = state.SDIR;
+
+    octave = state.OCT & 0xF;
+    freqNumSwitch = state.FNS & 0x7FF;
+
+    auto castWaveform = [](state::SCSPSlotState::Waveform waveform) {
+        switch (waveform) {
+        default: [[fallthrough]];
+        case state::SCSPSlotState::Waveform::Saw: return Waveform::Saw;
+        case state::SCSPSlotState::Waveform::Square: return Waveform::Square;
+        case state::SCSPSlotState::Waveform::Triangle: return Waveform::Triangle;
+        case state::SCSPSlotState::Waveform::Noise: return Waveform::Noise;
+        }
+    };
+
+    lfoReset = state.LFORE;
+    lfofRaw = state.LFOF & 0x1F;
+    lfoStepInterval = s_lfoStepTbl[lfofRaw];
+    ampLFOSens = state.ALFOS & 0x7;
+    pitchLFOSens = state.PLFOS & 0x7;
+    ampLFOWaveform = castWaveform(state.ALFOWS);
+    pitchLFOWaveform = castWaveform(state.PLFOWS);
+
+    inputMixingLevel = state.IMXL & 0x7;
+    inputSelect = state.ISEL & 0xF;
+    directSendLevel = state.DISDL & 0x7;
+    directPan = state.DIPAN & 0x1F;
+
+    effectSendLevel = state.EFSDL & 0x7;
+    effectPan = state.EFPAN & 0x1F;
+
+    active = state.active;
+
+    switch (state.egState) {
+    default: [[fallthrough]];
+    case state::SCSPSlotState::EGState::Attack: egState = EGState::Attack; break;
+    case state::SCSPSlotState::EGState::Decay1: egState = EGState::Decay1; break;
+    case state::SCSPSlotState::EGState::Decay2: egState = EGState::Decay2; break;
+    case state::SCSPSlotState::EGState::Release: egState = EGState::Release; break;
+    }
+
+    egLevel = state.egLevel & 0x3FF;
+
+    sampleCount = state.sampleCount;
+    currAddress = state.currAddress;
+    currSample = state.currSample;
+    currPhase = state.currPhase;
+    reverse = state.reverse;
+    crossedLoopStart = state.crossedLoopStart;
+
+    lfoCycles = state.lfoCycles;
+    lfoStep = state.lfoStep;
+
+    sample1 = state.sample1;
+    sample2 = state.sample2;
+    output = state.output;
+}
+
+uint32 Slot::CalcEffectiveRate(uint8 rate) const {
+    uint32 effectiveRate = rate << 1;
+    if (keyRateScaling == 0xF) {
+        return std::min<uint32>(effectiveRate, 0x3F);
+    }
+    const sint32 krsRate = keyRateScaling + static_cast<sint32>(octave ^ 8) - 8;
+    if (krsRate >= 0) {
+        effectiveRate += (krsRate << 1) + ((freqNumSwitch >> 9) & 1);
+    }
+    return std::min<uint32>(effectiveRate, 0x3F);
+}
+
+uint8 Slot::GetCurrentEGRate() const {
+    switch (egState) {
+    case EGState::Attack: return attackRate;
+    case EGState::Decay1: return decay1Rate;
+    case EGState::Decay2: return decay2Rate;
+    case EGState::Release: return releaseRate;
+    default: return releaseRate; // should not happen
+    }
+}
+
+uint16 Slot::GetEGLevel() const {
+    if (egState == EGState::Attack && egHold) {
+        return 0x000;
+    } else {
+        return egLevel;
+    }
+}
+
+void Slot::IncrementLFO() {
+    lfoCycles++;
+    if (lfoCycles >= lfoStepInterval) {
+        lfoCycles = 0;
+        lfoStep++;
+    }
+}
+
+void Slot::IncrementPhase(sint32 pitchLFO) {
+    // NOTE: freqNumSwitch already has 0x400u added to it
+    const uint32 phaseInc = freqNumSwitch << (octave ^ 8u);
+    currPhase = (currPhase & 0x3FFFF) + phaseInc + pitchLFO;
+}
+
+void Slot::IncrementSampleCounter() {
+    if (reverse) {
+        currSample -= currPhase >> 18u;
+    } else {
+        currSample += currPhase >> 18u;
+        if (!crossedLoopStart && currSample >= loopStartAddress) {
+            crossedLoopStart = true;
+            if (loopStartLink && egState == EGState::Attack) {
+                egState = EGState::Decay1;
+            }
+        }
+    }
+
+    switch (loopControl) {
+    case LoopControl::Off:
+        if (currSample >= loopEndAddress) {
+            active = false;
+            keyOnBit = false;
+        }
+        break;
+    case LoopControl::Normal:
+        while (currSample >= loopEndAddress) {
+            currSample -= loopEndAddress - loopStartAddress;
+        }
+        break;
+    case LoopControl::Reverse:
+        if (reverse) {
+            while (currSample <= loopStartAddress) {
+                currSample += loopEndAddress - loopStartAddress;
+            }
+        } else {
+            if (currSample >= loopStartAddress) {
+                reverse = true;
+                currSample = loopEndAddress - currSample + loopStartAddress;
+            }
+        }
+        break;
+    case LoopControl::Alternate:
+        if (reverse) {
+            if (currSample <= loopStartAddress) {
+                // Reflect over the start end address
+                currSample += (loopStartAddress - currSample) * 2;
+                reverse = false;
+            }
+        } else {
+            if (currSample >= loopEndAddress) {
+                // Reflect over the loop end address
+                currSample -= (currSample - loopEndAddress) * 2;
+                reverse = true;
+            }
+        }
+        break;
+    }
+}
+
+void Slot::IncrementAddress(sint32 modulation) {
+    const uint32 addressInc = (currSample + modulation) << (pcm8Bit ? 0 : 1);
+    currAddress = startAddress + addressInc;
+}
+
+} // namespace ymir::scsp

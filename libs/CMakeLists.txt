@@ -1,1 +1,1 @@
-add_subdirectory(satemu-core)
+add_subdirectory(ymir-core)

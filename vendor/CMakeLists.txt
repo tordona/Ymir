@@ -40,13 +40,13 @@ set(SDL_DISABLE_UNINSTALL ON)
 set(SDL_TEST_LIBRARY OFF)
 set(SDL_TESTS OFF)
 set(SDL_EXAMPLES OFF)
-if(BUILD_SHARED_LIBS)
+if (BUILD_SHARED_LIBS)
     set(SDL_SHARED ON)
     set(SDL_STATIC OFF)
-else()
+else ()
     set(SDL_SHARED OFF)
     set(SDL_STATIC ON)
-endif()
+endif ()
 add_subdirectory_quiet(SDL EXCLUDE_FROM_ALL)
 
 # cxxopts - https://github.com/jarro2783/cxxopts
@@ -84,28 +84,28 @@ add_subdirectory(cereal EXCLUDE_FROM_ALL)
 # --------------------------------------------------------------------------------------------------
 # Test dependencies
 
-if(satemu_ENABLE_TESTS)
+if (Ymir_ENABLE_TESTS)
     # Catch2 - https://github.com/catchorg/Catch2
     message(VERBOSE "==> Catch2")
     add_subdirectory(Catch2 EXCLUDE_FROM_ALL)
-endif()
+endif ()
 
 # --------------------------------------------------------------------------------------------------
 
 # Place vendored library projects under a Vendored folder in Visual Studio solutions
-if(MSVC)
+if (MSVC)
     set_target_properties(fmt PROPERTIES FOLDER Vendored)
-    if(BUILD_SHARED_LIBS)
+    if (BUILD_SHARED_LIBS)
         set_target_properties(SDL3-shared PROPERTIES FOLDER Vendored)
-    else()
+    else ()
         set_target_properties(SDL3-static PROPERTIES FOLDER Vendored)
-    endif()
+    endif ()
     set_target_properties(SDL_uclibc PROPERTIES FOLDER Vendored)
     set_target_properties(Catch2 PROPERTIES FOLDER Vendored)
     set_target_properties(Catch2WithMain PROPERTIES FOLDER Vendored)
     set_target_properties(imgui PROPERTIES FOLDER Vendored)
     set_target_properties(xxHash PROPERTIES FOLDER Vendored)
     set_target_properties(lz4 PROPERTIES FOLDER Vendored)
-endif()
+endif ()
 
 message(STATUS "Done adding vendored libraries")

@@ -13,7 +13,7 @@ target_include_directories(lz4
 target_compile_features(lz4 PUBLIC cxx_std_20)
 
 ## Apply performance options
-if (satemu_AVX2)
+if (Ymir_AVX2)
     if (MSVC)
         target_compile_options(lz4 PUBLIC "/arch:AVX2")
     else ()

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(satemu VERSION 0.1.0)
+project(Ymir VERSION 0.1.0)
 
 include(cmake/AddVersionDefines.cmake)
 include(cmake/CMakeRC.cmake)
@@ -12,20 +12,20 @@ include(cmake/CopyRuntimeDLLs.cmake)
 ## Determine if this is a top-level build or included as a subproject
 string(COMPARE EQUAL "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}" is_top_level)
 
-option(satemu_INCLUDE_PACKAGING "Include packaging rules for satemu" "${is_top_level}")
-option(satemu_ENABLE_TESTS "Enable tests for satemu" "${is_top_level}")
-option(satemu_ENABLE_SANDBOX "Compile the sandbox app" "${is_top_level}")
-option(satemu_ENABLE_IPO "Enable IPO / LTO for satemu" ON)
-option(satemu_ENABLE_DEVLOG "Enable development logs" ON)
-option(satemu_ENABLE_IMGUI_DEMO "Enable ImGui demo window" ON)
-message(STATUS "satemu: Devlog ${satemu_ENABLE_DEVLOG}")
+option(Ymir_INCLUDE_PACKAGING "Include packaging rules for Ymir" "${is_top_level}")
+option(Ymir_ENABLE_TESTS "Enable tests for Ymir" "${is_top_level}")
+option(Ymir_ENABLE_SANDBOX "Compile the sandbox app" "${is_top_level}")
+option(Ymir_ENABLE_IPO "Enable IPO / LTO for Ymir" ON)
+option(Ymir_ENABLE_DEVLOG "Enable development logs" ON)
+option(Ymir_ENABLE_IMGUI_DEMO "Enable ImGui demo window" ON)
+message(STATUS "Ymir: Devlog ${Ymir_ENABLE_DEVLOG}")
 
 ## Performance options
-option(satemu_AVX2 "Enable AVX2 instruction set for satemu" OFF)
-if (satemu_AVX2)
-    message(STATUS "satemu: Using AVX2 instruction set")
+option(Ymir_AVX2 "Enable AVX2 instruction set for Ymir" OFF)
+if (Ymir_AVX2)
+    message(STATUS "Ymir: Using AVX2 instruction set")
 else ()
-    message(STATUS "satemu: Using SSE2 instruction set")
+    message(STATUS "Ymir: Using SSE2 instruction set")
 endif ()
 
 ## C++ language configuration boilerplate
@@ -35,9 +35,9 @@ if (NOT DEFINED CMAKE_CXX_VISIBILITY_PRESET AND
   set(CMAKE_VISIBILITY_INLINES_HIDDEN YES)
 endif ()
 
-## Let satemu_SHARED_LIBS override BUILD_SHARED_LIBS
-if (DEFINED satemu_SHARED_LIBS)
-    set(BUILD_SHARED_LIBS "${satemu_SHARED_LIBS}")
+## Let Ymir_SHARED_LIBS override BUILD_SHARED_LIBS
+if (DEFINED Ymir_SHARED_LIBS)
+    set(BUILD_SHARED_LIBS "${Ymir_SHARED_LIBS}")
 endif ()
 
 ## Configure Visual Studio solution
@@ -65,16 +65,16 @@ add_subdirectory(libs)
 add_subdirectory(apps)
 
 ## Include the install rules if the user wanted them (included by default when top-level)
-if (satemu_INCLUDE_PACKAGING)
+if (Ymir_INCLUDE_PACKAGING)
     add_subdirectory(packaging)
 endif ()
 
 ## Include the unit tests if the user wanted them (included by default when top-level)
-if (satemu_ENABLE_TESTS)
+if (Ymir_ENABLE_TESTS)
     add_subdirectory(tests)
 endif ()
 
 ## Configure Visual Studio solution
 if (MSVC)
-    set_property(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}" PROPERTY VS_STARTUP_PROJECT satemu-sdl3)
+    set_property(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}" PROPERTY VS_STARTUP_PROJECT Ymir-sdl3)
 endif ()
