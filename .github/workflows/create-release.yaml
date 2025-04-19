@@ -1,8 +1,8 @@
-name: Build binaries
+name: Create release
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" ]  # TODO: remove when the workflow is stable
     tags: [ "v*" ]
 
 jobs:
@@ -24,8 +24,10 @@ jobs:
         devlog:
           - name: "devlog"
             value: "ON"
+            suffix: "-devlog"
           - name: "nodevlog"
             value: "OFF"
+            suffix: ""
         x86_simd_ext:
           - name: "SSE2"
             value: "OFF"
@@ -99,12 +101,12 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: satemu-sdl3-${{ matrix.os_name }}-${{ matrix.x86_simd_ext.name }}-${{ matrix.devlog.name }}
+        name: satemu-sdl3-${{ matrix.os_name }}-${{ matrix.x86_simd_ext.name }}${{ matrix.devlog.suffix }}
         path: build/apps/satemu-sdl3/satemu-sdl3${{ matrix.exe_suffix }}
 
   release:
     runs-on: ubuntu-latest
-    if: github.ref_type == 'tag'
+    #if: github.ref_type == 'tag'  # TODO: reenable this to restrict to tags only
     needs: [build]
 
     steps:
