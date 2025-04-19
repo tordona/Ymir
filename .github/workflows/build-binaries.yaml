@@ -17,7 +17,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         build_type: [Release]
-        c_compiler: [clang]  # NOTE: GCC gets stuck building sh2.cpp
+        # Notes about compilers:
+        # - GCC (gcc) gets stuck building sh2.cpp (didn't finish after 12+ hours)
+        # - MSVC (cl) produces much slower code and takes a long time to complete the LTO step
+        c_compiler: [clang]  # [clang, gcc, cl]
         devlog:
           - name: "devlog"
             value: "ON"
@@ -30,10 +33,12 @@ jobs:
             value: "ON"
         include:
           - os: windows-latest
+            os_name: windows
             c_compiler: clang
             cpp_compiler: clang
             exe_suffix: ".exe"
           - os: ubuntu-latest
+            os_name: linux
             c_compiler: clang
             cpp_compiler: clang++
             exe_suffix: ""
@@ -94,13 +99,19 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: satemu-sdl3-${{ matrix.avx2.name }}-${{ matrix.devlog.name }}
+        name: satemu-sdl3-${{ matrix.os_name }}-${{ matrix.x86_simd_ext.name }}-${{ matrix.devlog.name }}
         path: build/apps/satemu-sdl3/satemu-sdl3${{ matrix.exe_suffix }}
 
   release:
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag'
+    needs: [build]
 
     steps:
     - name: Download artifacts
+      id: download-artifacts-step
       uses: actions/download-artifact@v2
+
+    - name: Check artifacts
+      run: |
+        ls ${{ steps.download-artifacts-step.outputs.download-path }}
