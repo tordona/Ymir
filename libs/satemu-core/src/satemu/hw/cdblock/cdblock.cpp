@@ -282,8 +282,6 @@ void CDBlock::SaveState(state::CDBlockState &state) const {
     state.xferSectorEnd = m_xferSectorEnd;
     state.xferPartition = m_xferPartition;
 
-    state.xferCurrFileID = m_xferCurrFileID;
-
     state.xferSubcodeBuffer = m_xferSubcodeBuffer;
     state.xferSubcodeFrameAddress = m_xferSubcodeFrameAddress;
     state.xferSubcodeGroup = m_xferSubcodeGroup;
@@ -404,8 +402,6 @@ void CDBlock::LoadState(const state::CDBlockState &state) {
     m_xferSectorPos = state.xferSectorPos;
     m_xferSectorEnd = state.xferSectorEnd;
     m_xferPartition = state.xferPartition;
-
-    m_xferCurrFileID = state.xferCurrFileID;
 
     m_xferSubcodeBuffer = state.xferSubcodeBuffer;
     m_xferSubcodeFrameAddress = state.xferSubcodeFrameAddress;
@@ -1094,12 +1090,23 @@ uint32 CDBlock::SetupFileInfoTransfer(uint32 fileID) {
     }
 
     m_xferType = TransferType::FileInfo;
-    m_xferCurrFileID = readAll ? 0 : fileID;
     m_xferPos = 0;
     m_xferBufferPos = 0;
     m_xferLength = numFileInfos * 12 / sizeof(uint16);
     m_xferCount = 0;
     m_xferExtraCount = 0;
+
+    const uint32 baseFileID = readAll ? 0 : fileID;
+    for (uint32 i = 0; i < numFileInfos; i++) {
+        const media::fs::FileInfo &fileInfo = m_fs.GetFileInfoWithOffset(baseFileID + i);
+        m_xferBuffer[i * 6 + 0] = fileInfo.frameAddress >> 16u;
+        m_xferBuffer[i * 6 + 1] = fileInfo.frameAddress >> 0u;
+        m_xferBuffer[i * 6 + 2] = fileInfo.fileSize >> 16u;
+        m_xferBuffer[i * 6 + 3] = fileInfo.fileSize >> 0u;
+        m_xferBuffer[i * 6 + 4] = (fileInfo.unitSize << 8u) | fileInfo.interleaveGapSize;
+        m_xferBuffer[i * 6 + 5] = (fileInfo.fileNumber << 8u) | fileInfo.attributes;
+    }
+
     return numFileInfos;
 }
 
@@ -1248,23 +1255,7 @@ uint16 CDBlock::DoReadTransfer() {
         }
         break;
 
-    case TransferType::FileInfo: //
-    {
-        const media::fs::FileInfo &fileInfo = m_fs.GetFileInfoWithOffset(m_xferCurrFileID);
-        // TODO: improve/simplify this
-        switch (m_xferPos % 6) {
-        case 0: value = fileInfo.frameAddress >> 16u; break;
-        case 1: value = fileInfo.frameAddress >> 0u; break;
-        case 2: value = fileInfo.fileSize >> 16u; break;
-        case 3: value = fileInfo.fileSize >> 0u; break;
-        case 4: value = (fileInfo.unitSize << 8u) | fileInfo.interleaveGapSize; break;
-        case 5:
-            value = (fileInfo.fileNumber << 8u) | fileInfo.attributes;
-            m_xferCurrFileID++;
-            break;
-        }
-        break;
-    }
+    case TransferType::FileInfo: value = m_xferBuffer[m_xferBufferPos++]; break;
 
     case TransferType::Subcode: //
     {

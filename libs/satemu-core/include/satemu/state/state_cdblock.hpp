@@ -62,8 +62,6 @@ inline namespace v1 {
         uint32 xferSectorEnd;
         uint8 xferPartition;
 
-        uint32 xferCurrFileID;
-
         alignas(16) std::array<uint8, 24> xferSubcodeBuffer;
         uint32 xferSubcodeFrameAddress;
         uint32 xferSubcodeGroup;

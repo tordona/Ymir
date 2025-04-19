@@ -321,7 +321,6 @@ inline namespace v1 {
         ar(s.discAuthStatus, s.mpegAuthStatus);
         ar(s.xferType, s.xferPos, s.xferLength, s.xferCount, s.xferBuffer, s.xferBufferPos);
         ar(s.xferSectorPos, s.xferSectorEnd, s.xferPartition);
-        ar(s.xferCurrFileID);
         ar(s.xferSubcodeBuffer, s.xferSubcodeFrameAddress, s.xferSubcodeGroup);
         ar(s.xferExtraCount);
         ar(s.buffers, s.scratchBuffer);

@@ -193,9 +193,6 @@ private:
     uint8 m_xferPartition;  // From which partition to read
     // uint8 m_xferFilter;      // To which filter to write
 
-    // Parameters for file info transfers
-    uint32 m_xferCurrFileID; // Current file ID to read
-
     // Buffer for subcode transfers
     std::array<uint8, 24> m_xferSubcodeBuffer; // Buffer for subcode transfer data
     uint32 m_xferSubcodeFrameAddress;          // Last subcode R-W frame address
