@@ -45,4 +45,7 @@ if (MSVC)
     set_target_properties(satemu-core-tests PROPERTIES FOLDER "satemu-tests")
 endif ()
 
+## Register Catch2 test with CTest
+catch_discover_tests(satemu-core-tests)
+
 ## No packaging for this project it's meant for unit tests
