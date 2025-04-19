@@ -6,25 +6,9 @@ on:
     tags: [ "v*" ]
 
 jobs:
-  ### TODO: remove this after ensuring the release step works
   build:
-    name: test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Write test.txt
-        run: echo "hello" > satemu-sdl3-a
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: satemu-sdl3-a
-          path: satemu-sdl3-a
-    
-
-  build-real:
     name: ${{ matrix.os_name }}-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}-${{ matrix.devlog.name }}
     runs-on: ${{ matrix.os }}
-    if: false
 
     strategy:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
@@ -122,7 +106,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    #if: github.ref_type == 'tag'  # TODO: reenable this to restrict to tags only
+    if: github.ref_type == 'tag'
     needs: [build]
 
     permissions:
