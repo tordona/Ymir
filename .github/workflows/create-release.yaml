@@ -6,9 +6,25 @@ on:
     tags: [ "v*" ]
 
 jobs:
+  ### TODO: remove this after ensuring the release step works
   build:
-    name: ${{ matrix.os }}-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}-${{ matrix.devlog.name }}
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write test.txt
+        run: echo "hello" > test.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test.txt
+          path: test.txt
+    
+
+  build-real:
+    name: ${{ matrix.os_name }}-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}-${{ matrix.devlog.name }}
     runs-on: ${{ matrix.os }}
+    if: false
 
     strategy:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
@@ -112,8 +128,14 @@ jobs:
     steps:
     - name: Download artifacts
       id: download-artifacts-step
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
+      with:
+        path: satemu-sdl3
+        pattern: satemu-sdl3-*
+        merge-multiple: true
 
-    - name: Check artifacts
-      run: |
-        ls ${{ steps.download-artifacts-step.outputs.download-path }}
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      with:
+        draft: true
+        files: satemu-sdl3/*
