@@ -125,6 +125,7 @@ jobs:
 
     - name: Install SDL3 Dependencies
       run: >
+        sudo apt-get update
         sudo apt-get install build-essential git make pkg-config \
           cmake ninja-build gnome-desktop-testing \
           libasound2-dev libpulse-dev libaudio-dev \
@@ -161,9 +162,9 @@ jobs:
 
     - name: Package artifacts
       run: |
-        tar cJvf satemu-linux-${{ matrix.x86_simd_ext.name }}${{ matrix.devlog.suffix }}.tar.xz build/apps/satemu-sdl3/satemu-sdl3
+        tar cJvfh satemu-linux-${{ matrix.x86_simd_ext.name }}${{ matrix.devlog.suffix }}.tar.xz build/apps/satemu-sdl3/satemu-sdl3
 
-    - name: Upload artifacts (Windows)
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: satemu-linux-${{ matrix.x86_simd_ext.name }}${{ matrix.devlog.suffix }}
@@ -184,7 +185,7 @@ jobs:
       with:
         path: satemu
         pattern: satemu-*
-        merge-multiple: false
+        merge-multiple: true
 
     - name: Release
       uses: softprops/action-gh-release@v2
