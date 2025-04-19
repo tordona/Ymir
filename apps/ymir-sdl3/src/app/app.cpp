@@ -326,6 +326,8 @@ int App::Run(const CommandLineOptions &options) {
         }
     }};
 
+    m_context.saturn.UsePreferredRegion();
+
     m_context.EnqueueEvent(events::emu::LoadInternalBackupMemory());
     m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
 

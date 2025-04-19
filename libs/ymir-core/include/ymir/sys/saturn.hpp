@@ -79,6 +79,7 @@ struct Saturn : sys::ISystemOperations {
     void CloseTray();
     bool IsTrayOpen() const;
 
+    void UsePreferredRegion();
     void AutodetectRegion(media::AreaCode areaCodes);
 
     // Enables or disables debug tracing on hot paths, which is required for certain debugging features to work, such as

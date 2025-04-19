@@ -173,6 +173,22 @@ bool Saturn::IsTrayOpen() const {
     return CDBlock.IsTrayOpen();
 }
 
+void Saturn::UsePreferredRegion() {
+    if (m_preferredRegionOrder.empty()) {
+        return;
+    }
+
+    // Pick the first available preferred region
+    const uint8 areaCode = std::countr_zero(static_cast<uint16>(m_preferredRegionOrder.front()));
+
+    // Apply configuration and hard reset system if changed
+    const uint8 currAreaCode = SMPC.GetAreaCode();
+    SMPC.SetAreaCode(areaCode);
+    if (areaCode != currAreaCode) {
+        Reset(true);
+    }
+}
+
 void Saturn::AutodetectRegion(media::AreaCode areaCodes) {
     if (!configuration.system.autodetectRegion) {
         return;
