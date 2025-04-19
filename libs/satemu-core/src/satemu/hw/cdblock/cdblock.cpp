@@ -77,8 +77,9 @@ void CDBlock::Reset(bool hard) {
     m_xferPos = 0;
     m_xferLength = 0;
     m_xferCount = 0xFFFFFF;
+    m_xferBuffer.fill(0xFFFF);
+    m_xferBufferPos = 0;
 
-    m_xferSubcodeBuffer.fill(0);
     m_xferSubcodeFrameAddress = 0;
     m_xferSubcodeGroup = 0;
 
@@ -282,7 +283,6 @@ void CDBlock::SaveState(state::CDBlockState &state) const {
     state.xferSectorEnd = m_xferSectorEnd;
     state.xferPartition = m_xferPartition;
 
-    state.xferSubcodeBuffer = m_xferSubcodeBuffer;
     state.xferSubcodeFrameAddress = m_xferSubcodeFrameAddress;
     state.xferSubcodeGroup = m_xferSubcodeGroup;
 
@@ -403,7 +403,6 @@ void CDBlock::LoadState(const state::CDBlockState &state) {
     m_xferSectorEnd = state.xferSectorEnd;
     m_xferPartition = state.xferPartition;
 
-    m_xferSubcodeBuffer = state.xferSubcodeBuffer;
     m_xferSubcodeFrameAddress = state.xferSubcodeFrameAddress;
     m_xferSubcodeGroup = state.xferSubcodeGroup;
 
@@ -476,7 +475,7 @@ T CDBlock::ReadReg(uint32 address) {
         m_processingCommand = false;
         m_readyForPeriodicReports = true;
         return m_CR[3];
-    default: devlog::debug<grp::regs>("unhandled {}-bit register read from {:02X}", sizeof(T) * 8, address); return 0;
+    default: devlog::debug<grp::regs>("Unhandled {}-bit register read from {:02X}", sizeof(T) * 8, address); return 0;
     }
 }
 
@@ -509,7 +508,7 @@ void CDBlock::WriteReg(uint32 address, T value) {
         break;
 
     default:
-        devlog::debug<grp::regs>("unhandled {}-bit register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
+        devlog::debug<grp::regs>("Unhandled {}-bit register write to {:02X} = {:X}", sizeof(T) * 8, address, value);
         break;
     }
 }
@@ -1047,7 +1046,7 @@ void CDBlock::SetupTOCTransfer() {
 }
 
 void CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8 partitionNumber, bool del) {
-    devlog::debug<grp::xfer>("Starting sector {} transfer - sectors {} to {} into buffer partition {}",
+    devlog::trace<grp::xfer>("Starting sector {} transfer - sectors {} to {} into buffer partition {}",
                              (del ? "read then delete" : "read"), sectorPos, sectorPos + sectorCount - 1,
                              partitionNumber);
 
@@ -1131,16 +1130,16 @@ bool CDBlock::SetupSubcodeTransfer(uint8 type) {
         auto [m, s, f] = FADToMSF(m_status.frameAddress);
         auto [relM, relS, relF] = FADToMSF(relativeFAD);
 
-        m_xferSubcodeBuffer[0] = m_status.controlADR;
-        m_xferSubcodeBuffer[1] = util::to_bcd(m_status.track);
-        m_xferSubcodeBuffer[2] = util::to_bcd(m_status.index);
-        m_xferSubcodeBuffer[3] = util::to_bcd(relM);
-        m_xferSubcodeBuffer[4] = util::to_bcd(relS);
-        m_xferSubcodeBuffer[5] = util::to_bcd(relF);
-        m_xferSubcodeBuffer[6] = 0;
-        m_xferSubcodeBuffer[7] = util::to_bcd(m);
-        m_xferSubcodeBuffer[8] = util::to_bcd(s);
-        m_xferSubcodeBuffer[9] = util::to_bcd(f);
+        m_xferBuffer[0] = m_status.controlADR;
+        m_xferBuffer[1] = util::to_bcd(m_status.track);
+        m_xferBuffer[2] = util::to_bcd(m_status.index);
+        m_xferBuffer[3] = util::to_bcd(relM);
+        m_xferBuffer[4] = util::to_bcd(relS);
+        m_xferBuffer[5] = util::to_bcd(relF);
+        m_xferBuffer[6] = 0;
+        m_xferBuffer[7] = util::to_bcd(m);
+        m_xferBuffer[8] = util::to_bcd(s);
+        m_xferBuffer[9] = util::to_bcd(f);
 
         m_CR[0] = m_status.statusCode << 8u;
         m_CR[1] = 5;
@@ -1168,10 +1167,10 @@ bool CDBlock::SetupSubcodeTransfer(uint8 type) {
         // TODO: read subcode R-W from current sector (24 bytes starting at 2352 + 24*group), & 0x3F all bytes
         // - only works with discs that have 2448 byte sectors
         if (m_disc.sessions.back().tracks[m_status.track - 1].sectorSize < 2448) {
-            m_xferSubcodeBuffer.fill(0xFF);
+            m_xferBuffer.fill(0xFF);
         } else {
             devlog::debug<grp::xfer>("Subcode R-W transfer is unimplemented");
-            m_xferSubcodeBuffer.fill(0xFF);
+            m_xferBuffer.fill(0xFF);
         }
 
         m_CR[0] = m_status.statusCode << 8u;
@@ -1215,7 +1214,7 @@ void CDBlock::EndTransfer() {
 void CDBlock::ReadSector() {
     const Buffer *buffer = m_partitionManager.GetTail(m_xferPartition, m_xferSectorPos);
     if (buffer != nullptr) {
-        devlog::debug<grp::xfer>("Starting transfer from sector at frame address {:08X} - sector {}",
+        devlog::trace<grp::xfer>("Starting transfer from sector at frame address {:08X} - sector {}",
                                  buffer->frameAddress, m_xferSectorPos);
 
         for (size_t i = 0; i < m_getSectorLength; i += sizeof(uint16)) {
@@ -1227,43 +1226,30 @@ void CDBlock::ReadSector() {
 }
 
 uint16 CDBlock::DoReadTransfer() {
-    uint16 value = 0;
+    const uint16 value = m_xferBuffer[m_xferBufferPos++];
 
     switch (m_xferType) {
-    case TransferType::TOC: value = m_xferBuffer[m_xferBufferPos++]; break;
-
     case TransferType::GetSector: [[fallthrough]];
     case TransferType::GetThenDeleteSector:
-        value = m_xferBuffer[m_xferBufferPos++];
-        {
-
-            if (m_xferBufferPos >= m_getSectorLength / sizeof(uint16)) {
-                if (m_xferType == TransferType::GetThenDeleteSector) {
-                    // Delete sector once fully read
-                    m_partitionManager.RemoveTail(m_xferPartition, m_xferSectorPos);
-                    devlog::trace<grp::xfer>("Sector freed");
-                } else {
-                    m_xferSectorPos++;
-                    devlog::trace<grp::xfer>("Going to sector {}", m_xferSectorPos);
-                }
-                m_xferBufferPos = 0;
-                if (m_xferPos + 1 < m_xferLength) {
-                    ReadSector();
-                }
+        if (m_xferBufferPos >= m_getSectorLength / sizeof(uint16)) {
+            if (m_xferType == TransferType::GetThenDeleteSector) {
+                // Delete sector once fully read
+                m_partitionManager.RemoveTail(m_xferPartition, m_xferSectorPos);
+                devlog::trace<grp::xfer>("Sector freed");
+            } else {
+                m_xferSectorPos++;
+                devlog::trace<grp::xfer>("Going to sector {}", m_xferSectorPos);
             }
-            break;
+            m_xferBufferPos = 0;
+            if (m_xferPos + 1 < m_xferLength) {
+                ReadSector();
+            }
         }
         break;
 
-    case TransferType::FileInfo: value = m_xferBuffer[m_xferBufferPos++]; break;
-
-    case TransferType::Subcode: //
-    {
-        if (m_xferPos < 24) {
-            value = util::ReadBE<uint16>(&m_xferSubcodeBuffer[m_xferPos * 2]);
-        }
-        break;
-    }
+    case TransferType::TOC: break;
+    case TransferType::FileInfo: break;
+    case TransferType::Subcode: break;
 
     default: m_xferExtraCount++; return 0; // write-only or no active transfer, or unimplemented read transfer
     }
