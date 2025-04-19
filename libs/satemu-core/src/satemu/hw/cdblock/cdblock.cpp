@@ -516,21 +516,17 @@ void CDBlock::WriteReg(uint32 address, T value) {
 template <mem_primitive T>
 T CDBlock::PeekReg(uint32 address) {
     if constexpr (std::is_same_v<T, uint8>) {
-        return PeekReg<uint16>(address) >> ((~address & 1u) * 8u);
+        return PeekReg<uint16>(address & ~1) >> ((~address & 1u) * 8u);
     } else if constexpr (std::is_same_v<T, uint32>) {
-        uint32 value = PeekReg<uint16>(address + 0) << 16u;
-        value |= PeekReg<uint16>(address + 2) << 0u;
+        uint32 value = PeekReg<uint16>((address & ~1) | 0) << 16u;
+        value |= PeekReg<uint16>((address & ~1) | 2) << 0u;
         return value;
     } else if constexpr (std::is_same_v<T, uint16>) {
         address &= 0x3F;
 
         switch (address) {
-        case 0x00:
-            // TODO: need to use a transfer buffer to avoid advancing the transfer pointer
-            return 0;
-        case 0x02:
-            // TODO: need to use a transfer buffer to avoid advancing the transfer pointer
-            return 0;
+        case 0x00: return m_xferBuffer[m_xferBufferPos];
+        case 0x02: return m_xferBuffer[m_xferBufferPos];
         case 0x08: return m_HIRQ;
         case 0x0C: return m_HIRQMASK;
         case 0x18: return m_CR[0];
@@ -545,20 +541,16 @@ T CDBlock::PeekReg(uint32 address) {
 template <mem_primitive T>
 void CDBlock::PokeReg(uint32 address, T value) {
     if constexpr (std::is_same_v<T, uint8>) {
-        PokeReg<uint16>(address, value << ((~address & 1) * 8));
+        PokeReg<uint16>(address & ~1, value << ((~address & 1) * 8));
     } else if constexpr (std::is_same_v<T, uint32>) {
-        PokeReg<uint16>(address + 0, value >> 16u);
-        PokeReg<uint16>(address + 2, value >> 0u);
+        PokeReg<uint16>((address & ~1) | 0, value >> 16u);
+        PokeReg<uint16>((address & ~1) | 2, value >> 0u);
     } else if constexpr (std::is_same_v<T, uint16>) {
         address &= 0x3F;
 
         switch (address) {
-        case 0x00:
-            // TODO: need to use a transfer buffer to avoid advancing the transfer pointer
-            break;
-        case 0x02:
-            // TODO: need to use a transfer buffer to avoid advancing the transfer pointer
-            break;
+        case 0x00: m_xferBuffer[m_xferBufferPos] = value; break;
+        case 0x02: m_xferBuffer[m_xferBufferPos] = value; break;
         case 0x08: m_HIRQ = value; break;
         case 0x0C: m_HIRQMASK = value; break;
         case 0x18: m_CR[0] = value; break;
