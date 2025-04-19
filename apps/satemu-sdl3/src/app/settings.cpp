@@ -489,6 +489,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         return result;
     } else {
         ResetToDefaults();
+        this->path = path;
         return SettingsLoadResult::Success();
     }
 }
