@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-windows:
-    name: windows-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}
+    name: windows-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}
     runs-on: windows-latest
 
     strategy:
@@ -17,11 +17,16 @@ jobs:
         # Notes about compilers:
         # - MSVC (cl) produces much slower code and takes a long time to complete the LTO step
         c_compiler: [clang]  # [clang, cl]
+        subsystem:
+          - name: Console
+            enable_devlog_option: "ON"
+          - name: Win32
+            enable_devlog_option: "OFF"
         x86_simd_ext:
           - name: "SSE2"
-            value: "OFF"
+            enable_avx2_option: "OFF"
           - name: "AVX2"
-            value: "ON"
+            enable_avx2_option: "ON"
         include:
           - c_compiler: clang
             cpp_compiler: clang
@@ -50,9 +55,9 @@ jobs:
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DBUILD_SHARED_LIBS=OFF
-        -Dsatemu_AVX2=${{ matrix.x86_simd_ext.value }}
+        -Dsatemu_AVX2=${{ matrix.x86_simd_ext.enable_avx2_option }}
         -Dsatemu_ENABLE_IPO=ON
-        -Dsatemu_ENABLE_DEVLOG=OFF
+        -Dsatemu_ENABLE_DEVLOG=${{ matrix.subsystem.enable_devlog_option }}
         -Dsatemu_ENABLE_IMGUI_DEMO=OFF
         -Dsatemu_ENABLE_SANDBOX=OFF
         -S ${{ github.workspace }}
@@ -90,9 +95,9 @@ jobs:
         c_compiler: [clang]  # [clang, gcc]
         x86_simd_ext:
           - name: "SSE2"
-            value: "OFF"
+            enable_avx2_option: "OFF"
           - name: "AVX2"
-            value: "ON"
+            enable_avx2_option: "ON"
         include:
           - c_compiler: clang
             cpp_compiler: clang++
@@ -129,7 +134,7 @@ jobs:
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DBUILD_SHARED_LIBS=OFF
-        -Dsatemu_AVX2=${{ matrix.x86_simd_ext.value }}
+        -Dsatemu_AVX2=${{ matrix.x86_simd_ext.enable_avx2_option }}
         -Dsatemu_ENABLE_IPO=ON
         -Dsatemu_ENABLE_DEVLOG=OFF
         -Dsatemu_ENABLE_IMGUI_DEMO=OFF
