@@ -56,6 +56,7 @@ inline namespace v1 {
         uint32 xferLength;
         uint32 xferCount;
         std::array<uint16, 2352 / sizeof(uint16)> xferBuffer;
+        uint32 xferBufferPos;
 
         uint32 xferSectorPos;
         uint32 xferSectorEnd;

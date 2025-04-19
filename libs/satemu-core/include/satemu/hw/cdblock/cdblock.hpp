@@ -185,6 +185,7 @@ private:
     uint32 m_xferLength;                       // Total number of words to be transferred
     uint32 m_xferCount;                        // Number of words transferred in the last transfer
     std::array<uint16, 2352 / 2> m_xferBuffer; // Transfer buffer
+    uint32 m_xferBufferPos;                    // Transfer buffer position
 
     // Parameters for sector transfers
     uint32 m_xferSectorPos; // Current transfer sector position
@@ -208,6 +209,8 @@ private:
     uint32 SetupFileInfoTransfer(uint32 fileID);
     bool SetupSubcodeTransfer(uint8 type);
     void EndTransfer();
+
+    void ReadSector();
 
     uint16 DoReadTransfer();
     void DoWriteTransfer(uint16 value);
