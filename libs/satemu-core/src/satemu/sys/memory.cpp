@@ -1,9 +1,11 @@
 #include <satemu/sys/memory.hpp>
 
+#include "null_ipl.hpp"
+
 namespace satemu::sys {
 
 SystemMemory::SystemMemory() {
-    IPL.fill(0);
+    IPL = nullipl::kNullIPL;
     Reset(true);
 }
 

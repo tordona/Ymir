@@ -203,6 +203,7 @@ add_library(satemu-core
 
     src/satemu/sys/backup_ram.cpp
     src/satemu/sys/memory.cpp
+    src/satemu/sys/null_ipl.hpp
     src/satemu/sys/saturn.cpp
 
     src/satemu/util/backup_datetime.cpp
