@@ -3,8 +3,7 @@ name: Build binaries
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    tags: [ "v*" ]
 
 jobs:
   build:
@@ -18,21 +17,35 @@ jobs:
         os: [ubuntu-latest, windows-latest]
         build_type: [Release]
         c_compiler: [clang, cl]   # TODO: add gcc once the sh2.cpp compilation time is fixed
-        devlog: ["ON", "OFF"]
-        avx2: ["ON", "OFF"]
+        devlog:
+          - name: "devlog"
+            option: "ON"
+          - name: "nodevlog"
+            option: "OFF"
+        avx2:
+          - name: "SSE2"
+            value: "OFF"
+          - name: "AVX2"
+            value: "ON"
         include:
-          - os: windows-latest
-            c_compiler: cl
-            cpp_compiler: cl
+          ## very slow!
+          #- os: windows-latest
+          #  c_compiler: cl
+          #  cpp_compiler: cl
+          #  exe_suffix: ".exe"
           - os: windows-latest
             c_compiler: clang
             cpp_compiler: clang
+            exe_suffix: ".exe"
+          ## stuck building sh2.cpp
           #- os: ubuntu-latest
           #  c_compiler: gcc
           #  cpp_compiler: g++
+          #  exe_suffix: ""
           - os: ubuntu-latest
             c_compiler: clang
             cpp_compiler: clang++
+            exe_suffix: ""
         exclude:
           #- os: windows-latest
           #  c_compiler: gcc
@@ -77,10 +90,11 @@ jobs:
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DBUILD_SHARED_LIBS=OFF
-        -Dsatemu_AVX2=${{ matrix.avx2 }}
+        -Dsatemu_AVX2=${{ matrix.avx2.option }}
         -Dsatemu_ENABLE_IPO=ON
-        -Dsatemu_ENABLE_DEVLOG=${{ matrix.devlog }}
+        -Dsatemu_ENABLE_DEVLOG=${{ matrix.devlog.option }}
         -Dsatemu_ENABLE_IMGUI_DEMO=OFF
+        -Dsatemu_ENABLE_SANDBOX=OFF
         -S ${{ github.workspace }}
         -G Ninja
 
@@ -90,3 +104,9 @@ jobs:
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
       run: ctest --build-config ${{ matrix.build_type }}
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: satemu-sdl3-${{ matrix.avx2.name }}-${{ matrix.devlog.name }}
+        path: apps/satemu-sdl3/satemu-sdl3${{ matrix.exe_suffix }}
