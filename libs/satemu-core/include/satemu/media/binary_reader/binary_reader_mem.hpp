@@ -19,12 +19,14 @@ public:
     MemoryBinaryReader(std::span<uint8> data) {
         m_data.resize(data.size());
         std::copy(data.begin(), data.end(), m_data.begin());
+        m_data.shrink_to_fit();
     }
 
     // Initializes an in-memory buffer using the vector as the buffer.
     // The given vector is moved into this object.
     MemoryBinaryReader(std::vector<uint8> &&data) {
         m_data.swap(data);
+        m_data.shrink_to_fit();
     }
 
     // Initializes an in-memory buffer with the entire contents of the specified file, if it exists and can be read.
@@ -49,6 +51,7 @@ public:
         // Now load in into our buffer
         m_data.resize(size);
         in.read(reinterpret_cast<char *>(m_data.data()), size);
+        m_data.shrink_to_fit();
     }
 
     MemoryBinaryReader(const MemoryBinaryReader &) = default;

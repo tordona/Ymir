@@ -2299,7 +2299,7 @@ void App::ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, i
 bool App::LoadDiscImage(std::filesystem::path path) {
     devlog::info<grp::base>("Loading disc image from {}", path.string());
     satemu::media::Disc disc{};
-    if (!satemu::media::LoadDisc(path, disc)) {
+    if (!satemu::media::LoadDisc(path, disc, m_context.settings.general.preloadDiscImagesToRAM)) {
         devlog::error<grp::base>("Failed to load disc image");
         return false;
     }
@@ -2310,6 +2310,7 @@ bool App::LoadDiscImage(std::filesystem::path path) {
         m_context.saturn.LoadDisc(std::move(disc));
         m_context.state.loadedDiscImagePath = path;
     }
+
     LoadSaveStates();
     return true;
 }

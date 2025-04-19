@@ -12,6 +12,7 @@ namespace satemu::media::loader::mdfmds {
 // Attempts to load an MDS file and its associated MDF file from mdsPath into the specified Disc object.
 // Returns true if loading the files succeeded.
 // If this function returns false, the Disc object is invalidated.
-bool Load(std::filesystem::path mdsPath, Disc &disc);
+// preloadToRAM specifies if the entire disc image should be preloaded into memory.
+bool Load(std::filesystem::path mdsPath, Disc &disc, bool preloadToRAM);
 
 } // namespace satemu::media::loader::mdfmds

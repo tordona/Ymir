@@ -17,6 +17,7 @@ namespace satemu::media::loader::iso {
 // Attempts to load an ISO file from isoPath into the specified Disc object.
 // Returns true if loading the file succeeded.
 // If this function returns false, the Disc object is invalidated.
-bool Load(std::filesystem::path isoPath, Disc &disc);
+// preloadToRAM specifies if the entire disc image should be preloaded into memory.
+bool Load(std::filesystem::path isoPath, Disc &disc, bool preloadToRAM);
 
 } // namespace satemu::media::loader::iso

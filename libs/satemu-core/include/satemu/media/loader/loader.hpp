@@ -19,6 +19,7 @@ namespace satemu::media {
 //   ISO         (if provided a .iso file)
 // Returns true if loading the file (and any auxiliary files) succeeded.
 // If this function returns false, the Disc object is invalidated.
-bool LoadDisc(std::filesystem::path path, Disc &disc);
+// preloadToRAM specifies if the entire disc image should be preloaded into memory.
+bool LoadDisc(std::filesystem::path path, Disc &disc, bool preloadToRAM);
 
 } // namespace satemu::media

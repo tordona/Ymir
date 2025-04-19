@@ -2,18 +2,18 @@
 
 namespace satemu::media {
 
-bool LoadDisc(std::filesystem::path path, Disc &disc) {
-    if (loader::bincue::Load(path, disc)) {
+bool LoadDisc(std::filesystem::path path, Disc &disc, bool preloadToRAM) {
+    if (loader::bincue::Load(path, disc, preloadToRAM)) {
         return true;
     }
-    if (loader::mdfmds::Load(path, disc)) {
+    if (loader::mdfmds::Load(path, disc, preloadToRAM)) {
         return true;
     }
-    if (loader::ccd::Load(path, disc)) {
+    if (loader::ccd::Load(path, disc, preloadToRAM)) {
         return true;
     }
     // NOTE: ISO must be the last to be tested since its detection is more lenient
-    if (loader::iso::Load(path, disc)) {
+    if (loader::iso::Load(path, disc, preloadToRAM)) {
         return true;
     }
     return false;

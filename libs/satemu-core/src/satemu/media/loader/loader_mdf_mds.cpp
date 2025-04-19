@@ -92,7 +92,7 @@ struct MDSFooter {
 #pragma pack(pop)
 static_assert(sizeof(MDSFooter) == 0x10);
 
-bool Load(std::filesystem::path mdsPath, Disc &disc) {
+bool Load(std::filesystem::path mdsPath, Disc &disc, bool preloadToRAM) {
     std::ifstream in{mdsPath, std::ios::binary};
 
     util::ScopeGuard sgInvalidateDisc{[&] { disc.Invalidate(); }};
@@ -272,10 +272,11 @@ bool Load(std::filesystem::path mdsPath, Disc &disc) {
 
                 if (!files.contains(mdfPath)) {
                     std::error_code err{};
-                    // TODO: dynamically choose implementation from configuration
-                    // files.insert({mdfPath, std::make_shared<MemoryBinaryReader>(mdfPath, err)});
-                    // files.insert({mdfPath, std::make_shared<FileBinaryReader>(mdfPath, err)});
-                    files.insert({mdfPath, std::make_shared<MemoryMappedBinaryReader>(mdfPath, err)});
+                    if (preloadToRAM) {
+                        files.insert({mdfPath, std::make_shared<MemoryBinaryReader>(mdfPath, err)});
+                    } else {
+                        files.insert({mdfPath, std::make_shared<MemoryMappedBinaryReader>(mdfPath, err)});
+                    }
                     if (err) {
                         // fmt::println("MDF/MDS: Failed to load MDF file {} - {}", mdfPath.string(), err.message());
                         return false;

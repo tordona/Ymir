@@ -29,7 +29,7 @@ const std::set<std::string> kValidCueNOKeywords = {"COPY", "PRE_EMPHASIS"};
 
 namespace fs = std::filesystem;
 
-bool Load(std::filesystem::path cuePath, Disc &disc) {
+bool Load(std::filesystem::path cuePath, Disc &disc, bool preloadToRAM) {
     std::ifstream in{cuePath, std::ios::binary};
 
     util::ScopeGuard sgInvalidateDisc{[&] { disc.Invalidate(); }};
@@ -156,10 +156,11 @@ bool Load(std::filesystem::path cuePath, Disc &disc) {
 
             // Reset pointer and load new file
             std::error_code err{};
-            // TODO: dynamically choose implementation from configuration
-            // binaryReader = std::make_shared<MemoryBinaryReader>(binPath, err);
-            // binaryReader = std::make_shared<FileBinaryReader>(binPath, err);
-            binaryReader = std::make_shared<MemoryMappedBinaryReader>(binPath, err);
+            if (preloadToRAM) {
+                binaryReader = std::make_shared<MemoryBinaryReader>(binPath, err);
+            } else {
+                binaryReader = std::make_shared<MemoryMappedBinaryReader>(binPath, err);
+            }
             if (err) {
                 // fmt::println("BIN/CUE: Failed to load file - {} (line {})", err.message(), lineNum);
                 return false;

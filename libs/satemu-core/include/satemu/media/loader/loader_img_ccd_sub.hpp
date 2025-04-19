@@ -49,6 +49,7 @@ namespace satemu::media::loader::ccd {
 // Attempts to load a CUE file (along with any referenced BIN files) from cuePath into the specified Disc object.
 // Returns true if loading all files succeeded.
 // If this function returns false, the Disc object is invalidated.
-bool Load(std::filesystem::path ccdPath, Disc &disc);
+// preloadToRAM specifies if the entire disc image should be preloaded into memory.
+bool Load(std::filesystem::path ccdPath, Disc &disc, bool preloadToRAM);
 
 } // namespace satemu::media::loader::ccd

@@ -10,7 +10,7 @@
 
 namespace satemu::media::loader::iso {
 
-bool Load(std::filesystem::path isoPath, Disc &disc) {
+bool Load(std::filesystem::path isoPath, Disc &disc, bool preloadToRAM) {
     std::ifstream in{isoPath, std::ios::binary};
 
     util::ScopeGuard sgInvalidateDisc{[&] { disc.Invalidate(); }};
@@ -68,10 +68,11 @@ bool Load(std::filesystem::path isoPath, Disc &disc) {
     track.endFrameAddress = session.endFrameAddress;
 
     std::error_code err{};
-    // TODO: dynamically choose implementation from configuration
-    // track.binaryReader = std::make_unique<MemoryBinaryReader>(isoPath, err);
-    // track.binaryReader = std::make_unique<FileBinaryReader>(isoPath, err);
-    track.binaryReader = std::make_unique<MemoryMappedBinaryReader>(isoPath, err);
+    if (preloadToRAM) {
+        track.binaryReader = std::make_unique<MemoryBinaryReader>(isoPath, err);
+    } else {
+        track.binaryReader = std::make_unique<MemoryMappedBinaryReader>(isoPath, err);
+    }
     if (err) {
         // fmt::println("ISO: Could not create file reader: {}", err.message());
         return false;
