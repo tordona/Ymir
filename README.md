@@ -3,10 +3,15 @@ A work-in-progress Sega Saturn emulator.
 
 [![Release](https://github.com/StrikerX3/Ymir/actions/workflows/release.yaml/badge.svg)](https://github.com/StrikerX3/Ymir/actions/workflows/release.yaml)
 
-![CD player](https://github.com/StrikerX3/Ymir/blob/main/docs/images/cd-player.png) ![Sonic R](https://github.com/StrikerX3/Ymir/blob/main/docs/images/sonic-r.png)  
-![Virtua Fighter 2](https://github.com/StrikerX3/Ymir/blob/main/docs/images/virtua-fighter-2.png) ![Radiant Silvergun](https://github.com/StrikerX3/Ymir/blob/main/docs/images/radiant-silvergun.png)  
-![Panzer Dragoon Saga](https://github.com/StrikerX3/Ymir/blob/main/docs/images/panzer-dragoon-saga.png) ![NiGHTS into Dreams...](https://github.com/StrikerX3/Ymir/blob/main/docs/images/nights-into-dreams.png)  
-![Debugger](https://github.com/StrikerX3/Ymir/blob/main/docs/images/debugger.png)
+<div class="grid" markdown>
+  <img width="49%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/cd-player.png"/>
+  <img width="49%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/sonic-r.png"/>
+  <img width="49%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/virtua-fighter-2.png"/>
+  <img width="49%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/radiant-silvergun.png"/>
+  <img width="49%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/panzer-dragoon-saga.png"/>
+  <img width="49%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/nights-into-dreams.png"/>
+  <img width="100%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/debugger.png"/>
+</div>
 
 ## Usage
 
