@@ -2152,9 +2152,13 @@ std::filesystem::path App::GetIPLROMPath(bool startup) {
     // Try to find exact match
     // Keep a region-free fallback in case there isn't a perfect match
     std::filesystem::path regionFreeMatch = "";
+    std::filesystem::path firstMatch = "";
     for (auto &[path, info] : m_context.iplRomManager.GetROMs()) {
         if (info.info == nullptr) {
             continue;
+        }
+        if (firstMatch.empty()) {
+            firstMatch = path;
         }
         if (info.info->variant == preferredVariant) {
             if (info.info->region == preferredRegion) {
@@ -2170,8 +2174,11 @@ std::filesystem::path App::GetIPLROMPath(bool startup) {
     // May be empty if no region-free ROMs were found
     if (!regionFreeMatch.empty()) {
         devlog::info<grp::base>("Using auto-detected region-free IPL ROM");
+        return regionFreeMatch;
     }
-    return regionFreeMatch;
+
+    // Return whatever is available
+    return firstMatch;
 }
 
 void App::LoadSaveStates() {
