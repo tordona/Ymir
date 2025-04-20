@@ -1,4 +1,4 @@
-install(TARGETS Ymir-sdl3 EXPORT Ymir_Targets
+install(TARGETS ymir-sdl3 EXPORT Ymir_Targets
         RUNTIME COMPONENT Ymir_Runtime
         LIBRARY COMPONENT Ymir_Runtime
         NAMELINK_COMPONENT Ymir_Development

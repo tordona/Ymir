@@ -76,5 +76,5 @@ endif ()
 
 ## Configure Visual Studio solution
 if (MSVC)
-    set_property(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}" PROPERTY VS_STARTUP_PROJECT Ymir-sdl3)
+    set_property(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}" PROPERTY VS_STARTUP_PROJECT ymir-sdl3)
 endif ()

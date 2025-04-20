@@ -1,5 +1,5 @@
 ## Create the library target
-add_library(Ymir-core
+add_library(ymir-core
     include/ymir/ymir.hpp
     include/ymir/version.hpp
 
@@ -211,18 +211,18 @@ add_library(Ymir-core
     src/ymir/util/date_time.cpp
     src/ymir/util/process.cpp
 )
-add_library(Ymir::Ymir-core ALIAS Ymir-core)
-set_target_properties(Ymir-core PROPERTIES
+add_library(ymir::ymir-core ALIAS ymir-core)
+set_target_properties(ymir-core PROPERTIES
                       VERSION ${Ymir_core_VERSION}
                       SOVERSION ${Ymir_core_VERSION_MAJOR})
-target_include_directories(Ymir-core
+target_include_directories(ymir-core
     PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>"
 )
-target_compile_features(Ymir-core PUBLIC cxx_std_20)
+target_compile_features(ymir-core PUBLIC cxx_std_20)
 
 ## Add dependencies
-target_link_libraries(Ymir-core PUBLIC
+target_link_libraries(ymir-core PUBLIC
     fmt
     mio
     concurrentqueue
@@ -230,7 +230,7 @@ target_link_libraries(Ymir-core PUBLIC
 )
 
 # Build precompiled header
-target_precompile_headers(Ymir-core
+target_precompile_headers(ymir-core
     PUBLIC
         <algorithm>
         <array>
@@ -278,43 +278,43 @@ target_precompile_headers(Ymir-core
 )
 
 ## Define version macros
-target_add_version_defines(Ymir-core)
+target_add_version_defines(ymir-core)
 
 ## Define additional macros
-target_compile_definitions(Ymir-core PUBLIC "Ymir_ENABLE_DEVLOG=$<BOOL:${Ymir_ENABLE_DEVLOG}>")
-target_compile_definitions(Ymir-core PUBLIC "TOML_EXCEPTIONS=0")
+target_compile_definitions(ymir-core PUBLIC "Ymir_ENABLE_DEVLOG=$<BOOL:${Ymir_ENABLE_DEVLOG}>")
+target_compile_definitions(ymir-core PUBLIC "TOML_EXCEPTIONS=0")
 
 ## Generate the export header and attach it to the target
 include(GenerateExportHeader)
-generate_export_header(Ymir-core EXPORT_FILE_NAME include/ymir/export.h)
-target_compile_definitions(Ymir-core PUBLIC "$<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:Ymir_core_STATIC_DEFINE>")
-target_include_directories(Ymir-core PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>")
+generate_export_header(ymir-core EXPORT_FILE_NAME include/ymir/export.h)
+target_compile_definitions(ymir-core PUBLIC "$<$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>:Ymir_core_STATIC_DEFINE>")
+target_include_directories(ymir-core PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>")
 
 if (IPO_SUPPORTED AND Ymir_ENABLE_IPO)
-    message(STATUS "Enabling IPO / LTO for Ymir-core")
-    set_property(TARGET Ymir-core PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    message(STATUS "Enabling IPO / LTO for ymir-core")
+    set_property(TARGET ymir-core PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 ## Apply performance options
 if (Ymir_AVX2)
-    target_compile_definitions(Ymir-core PUBLIC ${PROJECT_NAME}_AVX2=1)
+    target_compile_definitions(ymir-core PUBLIC ${PROJECT_NAME}_AVX2=1)
     if (MSVC)
-        target_compile_options(Ymir-core PUBLIC "/arch:AVX2")
+        target_compile_options(ymir-core PUBLIC "/arch:AVX2")
     else ()
-        target_compile_options(Ymir-core PUBLIC "-mavx2")
-        target_compile_options(Ymir-core PUBLIC "-mfma")
-        target_compile_options(Ymir-core PUBLIC "-mbmi")
+        target_compile_options(ymir-core PUBLIC "-mavx2")
+        target_compile_options(ymir-core PUBLIC "-mfma")
+        target_compile_options(ymir-core PUBLIC "-mbmi")
     endif ()
 endif ()
 
 ## Enable unity build
-#set_target_properties(Ymir-core PROPERTIES UNITY_BUILD ON)
-#set_target_properties(Ymir-core PROPERTIES UNITY_BUILD_BATCH_SIZE 0)
+#set_target_properties(ymir-core PROPERTIES UNITY_BUILD ON)
+#set_target_properties(ymir-core PROPERTIES UNITY_BUILD_BATCH_SIZE 0)
 
 ## Configure Visual Studio filters
 if (MSVC)
-    vs_set_filters(TARGET Ymir-core)
-    set_target_properties(Ymir-core PROPERTIES FOLDER "Ymir")
+    vs_set_filters(TARGET ymir-core)
+    set_target_properties(ymir-core PROPERTIES FOLDER "Ymir")
 endif ()
 
 ## Include the install rules if the user wanted them

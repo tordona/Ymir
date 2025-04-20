@@ -73,13 +73,13 @@ jobs:
 
     - name: Package artifacts
       run: |
-        powershell Compress-Archive -Path "build/apps/ymir-sdl3/ymir-sdl3.exe" -DestinationPath "ymir-windows-${{ matrix.x86_simd_ext.name }}.zip"
+        powershell Compress-Archive -Path "build/apps/ymir-sdl3/ymir-sdl3.exe" -DestinationPath "ymir-windows-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}.zip"
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ymir-windows-${{ matrix.x86_simd_ext.name }}
-        path: ymir-windows-${{ matrix.x86_simd_ext.name }}.zip
+        name: ymir-windows-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}
+        path: ymir-windows-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}.zip
 
   build-linux:
     name: linux-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}

@@ -14,7 +14,7 @@ endif ()
 
 install(EXPORT Ymir_Targets
         DESTINATION "${Ymir_INSTALL_CMAKEDIR}"
-        NAMESPACE Ymir::
+        NAMESPACE ymir::
         FILE Ymir-${type}-targets.cmake
         COMPONENT Ymir_Development)
 

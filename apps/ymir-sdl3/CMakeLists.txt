@@ -1,5 +1,5 @@
 ## Create the executable target
-add_executable(Ymir-sdl3
+add_executable(ymir-sdl3
     src/main.cpp
     src/winmain.cpp
 
@@ -199,16 +199,16 @@ add_executable(Ymir-sdl3
     src/util/ring_buffer.hpp
     src/util/sdl_file_dialog.hpp
 )
-add_executable(Ymir::Ymir-sdl3 ALIAS Ymir-sdl3)
-set_target_properties(Ymir-sdl3 PROPERTIES
+add_executable(ymir::ymir-sdl3 ALIAS ymir-sdl3)
+set_target_properties(ymir-sdl3 PROPERTIES
                       VERSION ${Ymir_VERSION}
                       SOVERSION ${Ymir_VERSION_MAJOR})
-target_include_directories(Ymir-sdl3
+target_include_directories(ymir-sdl3
     PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>"
 )
-target_link_libraries(Ymir-sdl3 PRIVATE
-    Ymir::Ymir-core
+target_link_libraries(ymir-sdl3 PRIVATE
+    ymir::ymir-core
     SDL3::SDL3
     cxxopts
     imgui::imgui
@@ -216,11 +216,11 @@ target_link_libraries(Ymir-sdl3 PRIVATE
     cereal::cereal
     lz4::lz4
 )
-target_compile_features(Ymir-sdl3 PUBLIC cxx_std_20)
+target_compile_features(ymir-sdl3 PUBLIC cxx_std_20)
 
 ## Create embedded resource library
-cmrc_add_resource_library(Ymir-sdl3-rc
-    ALIAS Ymir-sdl3::rc
+cmrc_add_resource_library(ymir-sdl3-rc
+    ALIAS ymir-sdl3::rc
     NAMESPACE Ymir_sdl3_rc
     WHENCE res/embed
     res/embed/fonts/SplineSans-Bold.ttf
@@ -231,41 +231,41 @@ cmrc_add_resource_library(Ymir-sdl3-rc
 )
 
 ## Add dependencies
-target_link_libraries(Ymir-sdl3 PRIVATE fmt Ymir-sdl3::rc)
+target_link_libraries(ymir-sdl3 PRIVATE fmt ymir-sdl3::rc)
 
-cmrk_copy_runtime_dlls(Ymir-sdl3)
+cmrk_copy_runtime_dlls(ymir-sdl3)
 
 ## Make it a Win32 executable (without a console window) on Windows
 if (WIN32 AND NOT Ymir_ENABLE_DEVLOG)
-    set_target_properties(Ymir-sdl3 PROPERTIES WIN32_EXECUTABLE ON)
+    set_target_properties(ymir-sdl3 PROPERTIES WIN32_EXECUTABLE ON)
 endif ()
 
 if (IPO_SUPPORTED AND Ymir_ENABLE_IPO)
-    message(STATUS "Enabling IPO / LTO for Ymir-sdl3")
-    set_property(TARGET Ymir-sdl3 PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    message(STATUS "Enabling IPO / LTO for ymir-sdl3")
+    set_property(TARGET ymir-sdl3 PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 ## Define additional macros
-target_compile_definitions(Ymir-sdl3 PUBLIC Ymir_ENABLE_IMGUI_DEMO=$<BOOL:${Ymir_ENABLE_IMGUI_DEMO}>)
-target_compile_definitions(Ymir-sdl3 PUBLIC Ymir_ORGANIZATION_NAME="StrikerX3")
-target_compile_definitions(Ymir-sdl3 PUBLIC Ymir_APP_NAME="${PROJECT_NAME}")
+target_compile_definitions(ymir-sdl3 PUBLIC Ymir_ENABLE_IMGUI_DEMO=$<BOOL:${Ymir_ENABLE_IMGUI_DEMO}>)
+target_compile_definitions(ymir-sdl3 PUBLIC Ymir_ORGANIZATION_NAME="StrikerX3")
+target_compile_definitions(ymir-sdl3 PUBLIC Ymir_APP_NAME="${PROJECT_NAME}")
 
 ## Apply performance options
 if (Ymir_AVX2)
     if (MSVC)
-        target_compile_options(Ymir-sdl3 PUBLIC "/arch:AVX2")
+        target_compile_options(ymir-sdl3 PUBLIC "/arch:AVX2")
     else ()
-        target_compile_options(Ymir-sdl3 PUBLIC "-mavx2")
-        target_compile_options(Ymir-sdl3 PUBLIC "-mfma")
-        target_compile_options(Ymir-sdl3 PUBLIC "-mbmi")
+        target_compile_options(ymir-sdl3 PUBLIC "-mavx2")
+        target_compile_options(ymir-sdl3 PUBLIC "-mfma")
+        target_compile_options(ymir-sdl3 PUBLIC "-mbmi")
     endif ()
 endif ()
 
 ## Configure Visual Studio solution
 if (MSVC)
-    vs_set_filters(TARGET Ymir-sdl3)
-    set_target_properties(Ymir-sdl3 PROPERTIES FOLDER "Ymir")
-    set_target_properties(Ymir-sdl3-rc PROPERTIES FOLDER "Ymir")
+    vs_set_filters(TARGET ymir-sdl3)
+    set_target_properties(ymir-sdl3 PROPERTIES FOLDER "Ymir")
+    set_target_properties(ymir-sdl3-rc PROPERTIES FOLDER "Ymir")
 endif ()
 
 ## Include the install rules if requested
