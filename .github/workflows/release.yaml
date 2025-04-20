@@ -41,6 +41,7 @@ jobs:
       shell: bash
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+        echo "artifact-name=ymir-windows-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
 
     - name: Configure MSVC
       if: ${{ matrix.c_compiler == 'cl' }}
@@ -73,13 +74,13 @@ jobs:
 
     - name: Package artifacts
       run: |
-        powershell Compress-Archive -Path "build/apps/ymir-sdl3/ymir-sdl3.exe" -DestinationPath "ymir-windows-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}.zip"
+        powershell Compress-Archive -Path "build/apps/ymir-sdl3/ymir-sdl3.exe" -DestinationPath "${{ steps.strings.outputs.artifact-name }}.zip"
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ymir-windows-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}
-        path: ymir-windows-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}.zip
+        name: ${{ steps.strings.outputs.artifact-name }}
+        path: ${{ steps.strings.outputs.artifact-name }}.zip
 
   build-linux:
     name: linux-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}
@@ -112,6 +113,7 @@ jobs:
       shell: bash
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+        echo "artifact-name=ymir-linux-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
 
     - name: Install SDL3 Dependencies
       run: |
@@ -152,13 +154,13 @@ jobs:
 
     - name: Package artifacts
       run: |
-        tar cJvfh ymir-linux-${{ matrix.x86_simd_ext.name }}.tar.xz -C build/apps/ymir-sdl3 ymir-sdl3
+        tar cJvfh ${{ steps.strings.outputs.artifact-name }}.tar.xz -C build/apps/ymir-sdl3 ymir-sdl3
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ymir-linux-${{ matrix.x86_simd_ext.name }}
-        path: ymir-linux-${{ matrix.x86_simd_ext.name }}.tar.xz
+        name: ${{ steps.strings.outputs.artifact-name }}
+        path: ${{ steps.strings.outputs.artifact-name }}.tar.xz
 
   release:
     runs-on: ubuntu-latest
