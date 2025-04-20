@@ -83,7 +83,7 @@ jobs:
 
   build-linux:
     name: linux-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
