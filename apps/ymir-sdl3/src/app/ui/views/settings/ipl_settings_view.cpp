@@ -62,6 +62,9 @@ void IPLSettingsView::Display() {
     ImGui::SameLine();
     if (ImGui::Button("Rescan")) {
         m_context.iplRomManager.Scan(iplRomsPath);
+        if (m_context.iplRomPath.empty() && !m_context.iplRomManager.GetROMs().empty()) {
+            m_context.EnqueueEvent(events::gui::ReloadIPLROM());
+        }
     }
 
     int index = 0;
