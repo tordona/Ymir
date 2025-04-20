@@ -609,6 +609,10 @@ BackupFile BackupMemory::BuildFile(const BackupFileParams &params) const {
     uint32 remaining = info.size;
 
     while (remaining > 0) {
+        if (blockListIndex >= blockList.size()) {
+            // TODO: warn about file truncation
+            break;
+        }
         const uint32 blockOffset = blockList[blockListIndex] * m_blockSize;
         uint32 innerOffset = blockListIndex == 0 ? 0x22 : 0x04;
         uint32 availBytes = m_blockSize - innerOffset;
