@@ -431,7 +431,7 @@ void Settings::ResetToDefaults() {
     general.boostEmuThreadPriority = true;
     general.boostProcessPriority = true;
     general.enableRewindBuffer = false;
-    general.rewindCompressionLevel = 6;
+    general.rewindCompressionLevel = 12;
 
     system.internalBackupRAMImagePath = m_profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
 
