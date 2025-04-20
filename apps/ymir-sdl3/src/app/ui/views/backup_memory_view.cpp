@@ -58,7 +58,7 @@ void BackupMemoryView::Display() {
         files = m_bup->List();
     } else {
         ImGui::BeginDisabled();
-        ImGui::TextUnformatted("Unavailable");
+        ImGui::TextUnformatted("Unavailable - insert a backup memory cartridge to manage it");
     }
 
     // Make room for buttons below the table
@@ -195,7 +195,9 @@ void BackupMemoryView::Display() {
     const float loadImageWidth = ImGui::CalcTextSize("Load image...").x + ImGui::GetStyle().FramePadding.x * 2;
     const float sameLineSpacing = ImGui::GetStyle().ItemSpacing.x;
     const float saveImageWidth = ImGui::CalcTextSize("Save image...").x + ImGui::GetStyle().FramePadding.x * 2;
-    auto bupMemFilename = m_external ? fmt::format("bup-ext-{}M.bin", m_bup->Size() * 8 / 1024 / 1024) : "bup-int.bin";
+    auto bupMemFilename =
+        m_external ? m_bup != nullptr ? fmt::format("bup-ext-{}M.bin", m_bup->Size() * 8 / 1024 / 1024) : "bup-ext.bin"
+                   : "bup-int.bin";
     ImGui::SameLine(avail.x - loadImageWidth - sameLineSpacing - saveImageWidth);
     if (ImGui::Button("Load image...")) {
         // Open file dialog to select backup memory image to load
