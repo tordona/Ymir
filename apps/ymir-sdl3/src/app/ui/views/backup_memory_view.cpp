@@ -245,6 +245,10 @@ void BackupMemoryView::Display() {
     DisplayErrorModal();
 }
 
+bool BackupMemoryView::HasBackupMemory() const {
+    return m_bup != nullptr;
+}
+
 bool BackupMemoryView::HasSelection() const {
     return !m_selected.empty();
 }

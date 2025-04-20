@@ -24,6 +24,7 @@ public:
 
     void Display();
 
+    bool HasBackupMemory() const;
     bool HasSelection() const;
 
     std::vector<ymir::bup::BackupFile> ExportAll() const;

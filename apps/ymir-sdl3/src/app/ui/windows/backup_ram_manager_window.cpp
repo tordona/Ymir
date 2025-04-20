@@ -47,16 +47,27 @@ void BackupMemoryManagerWindow::DrawContents() {
             const float buttonHeight = ImGui::GetFrameHeightWithSpacing();
             const float totalHeight = textHeight + buttonHeight * 4;
 
+            const bool hasCartBup = m_cartBupView.HasBackupMemory();
+            const bool hasCartBupSelection = m_cartBupView.HasSelection();
+            const bool hasSysBupSelection = m_sysBupView.HasSelection();
+
             // Center vertically
             ImGui::Dummy(ImVec2(0, (avail.y - totalHeight) * 0.5f));
             ImGui::TextUnformatted("Copy");
+
+            if (!hasCartBup) {
+                ImGui::BeginDisabled();
+            }
             if (ImGui::Button("<<", ImVec2(35, 0))) {
                 std::unique_lock lock{m_context.locks.cart};
                 auto files = m_cartBupView.ExportAll();
                 m_sysBupView.ImportAll(files);
             }
+            if (!hasCartBup) {
+                ImGui::EndDisabled();
+            }
 
-            if (!m_cartBupView.HasSelection()) {
+            if (!hasCartBup || !hasCartBupSelection) {
                 ImGui::BeginDisabled();
             }
             if (ImGui::Button("<", ImVec2(35, 0))) {
@@ -64,11 +75,11 @@ void BackupMemoryManagerWindow::DrawContents() {
                 auto files = m_cartBupView.ExportSelected();
                 m_sysBupView.ImportAll(files);
             }
-            if (!m_cartBupView.HasSelection()) {
+            if (!hasCartBup || !hasCartBupSelection) {
                 ImGui::EndDisabled();
             }
 
-            if (!m_sysBupView.HasSelection()) {
+            if (!hasCartBup || !hasSysBupSelection) {
                 ImGui::BeginDisabled();
             }
             if (ImGui::Button(">", ImVec2(35, 0))) {
@@ -76,14 +87,20 @@ void BackupMemoryManagerWindow::DrawContents() {
                 auto files = m_sysBupView.ExportSelected();
                 m_cartBupView.ImportAll(files);
             }
-            if (!m_sysBupView.HasSelection()) {
+            if (!hasCartBup || !hasSysBupSelection) {
                 ImGui::EndDisabled();
             }
 
+            if (!hasCartBup) {
+                ImGui::BeginDisabled();
+            }
             if (ImGui::Button(">>", ImVec2(35, 0))) {
                 std::unique_lock lock{m_context.locks.cart};
                 auto files = m_sysBupView.ExportAll();
                 m_cartBupView.ImportAll(files);
+            }
+            if (!hasCartBup) {
+                ImGui::EndDisabled();
             }
         }
         if (ImGui::TableNextColumn()) {
