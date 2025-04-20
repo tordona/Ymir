@@ -8,8 +8,9 @@ You can also initialize submodules with `git submodule update --init --recursive
 Ymir has been successfully compiled with the following toolchains:
 - Visual Studio 2022's Clang 19.1.1
 - Visual Studio 2022's MSVC 19.43.34810.0
-- Clang 15.0.7 on WSL Ubuntu 22.04.5 LTS
-- Clang 19.1.1 on Ubuntu 24.04.2 LTS
+- Clang 14.0.0 on WSL Ubuntu 22.04.5 LTS (`clang`)
+- Clang 15.0.7 on WSL Ubuntu 22.04.5 LTS (`clang-15`)
+- Clang 19.1.1 on Ubuntu 24.04.2 LTS (`clang-19`)
 
 The project has been compiled for x86_64 Windows and Linux platforms only. It may or may not compile for ARM64 or macOS.
 
