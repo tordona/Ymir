@@ -115,9 +115,8 @@ public:
     // -------------------------------------------------------------------------
     // External interrupt triggers
 
-    void TriggerVBlankIN();
-    void TriggerVBlankOUT();
-    void TriggerHBlankIN();
+    void UpdateHBlank(bool level);
+    void UpdateVBlank(bool level);
     void TriggerTimer0();
     void TriggerTimer1();
     void TriggerDSPEnd();
@@ -278,13 +277,11 @@ public:
     const sh2::CBAcknowledgeExternalInterrupt CbAckExtIntr =
         util::MakeClassMemberRequiredCallback<&SCU::AcknowledgeExternalInterrupt>(this);
 
-    const vdp::CBTriggerInterrupt CbTriggerHBlankIN =
-        util::MakeClassMemberRequiredCallback<&SCU::TriggerHBlankIN>(this);
-    const vdp::CBTriggerInterrupt CbTriggerVBlankIN =
-        util::MakeClassMemberRequiredCallback<&SCU::TriggerVBlankIN>(this);
-    const vdp::CBTriggerInterrupt CbTriggerVBlankOUT =
-        util::MakeClassMemberRequiredCallback<&SCU::TriggerVBlankOUT>(this);
-    const vdp::CBTriggerInterrupt CbTriggerSpriteDrawEnd =
+    const vdp::CBHVBlankStateChange CbHBlankStateChange =
+        util::MakeClassMemberRequiredCallback<&SCU::UpdateHBlank>(this);
+    const vdp::CBHVBlankStateChange CbVBlankStateChange =
+        util::MakeClassMemberRequiredCallback<&SCU::UpdateVBlank>(this);
+    const vdp::CBTriggerEvent CbTriggerSpriteDrawEnd =
         util::MakeClassMemberRequiredCallback<&SCU::TriggerSpriteDrawEnd>(this);
 
     const scsp::CBTriggerSoundRequestInterrupt CbTriggerSoundRequest =

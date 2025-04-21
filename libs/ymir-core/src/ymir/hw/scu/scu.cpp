@@ -150,79 +150,123 @@ void SCU::Advance(uint64 cycles) {
 template void SCU::Advance<false>(uint64 cycles);
 template void SCU::Advance<true>(uint64 cycles);
 
-void SCU::TriggerVBlankIN() {
-    m_intrStatus.VDP2_VBlankIN = 1;
-    UpdateInterruptLevel<false>();
-    TriggerDMATransfer(DMATrigger::VBlankIN);
-}
-
-void SCU::TriggerVBlankOUT() {
-    m_intrStatus.VDP2_VBlankOUT = 1;
-    m_timer0Counter = 0;
-    UpdateInterruptLevel<false>();
-    TriggerDMATransfer(DMATrigger::VBlankOUT);
-}
-
-void SCU::TriggerHBlankIN() {
-    m_intrStatus.VDP2_HBlankIN = 1;
-    m_timer0Counter++;
-    if (m_timer0Counter == m_timer0Compare) {
-        TriggerTimer0();
+void SCU::UpdateHBlank(bool level) {
+    if (m_intrStatus.VDP2_HBlankIN != level) {
+        m_intrStatus.VDP2_HBlankIN = level;
+        UpdateInterruptLevel<false>();
+        if (level) {
+            m_timer0Counter++;
+            if (m_timer0Counter == m_timer0Compare) {
+                TriggerTimer0();
+            }
+            m_scheduler.ScheduleFromNow(m_timer1Event, m_timer1Reload);
+            TriggerDMATransfer(DMATrigger::HBlankIN);
+        }
     }
-    m_scheduler.ScheduleFromNow(m_timer1Event, m_timer1Reload);
-    UpdateInterruptLevel<false>();
-    TriggerDMATransfer(DMATrigger::HBlankIN);
+}
+
+void SCU::UpdateVBlank(bool level) {
+    bool updateIntrs = false;
+    if (m_intrStatus.VDP2_VBlankIN != level) {
+        m_intrStatus.VDP2_VBlankIN = level;
+        updateIntrs = true;
+        if (level) {
+            TriggerDMATransfer(DMATrigger::VBlankIN);
+        }
+    }
+
+    if (m_intrStatus.VDP2_VBlankOUT != !level) {
+        m_intrStatus.VDP2_VBlankOUT = !level;
+        updateIntrs = true;
+        m_timer0Counter = 0;
+        if (!level) {
+            TriggerDMATransfer(DMATrigger::VBlankOUT);
+        }
+    }
+
+    if (updateIntrs) {
+        UpdateInterruptLevel<false>();
+    }
 }
 
 void SCU::TriggerTimer0() {
-    m_intrStatus.SCU_Timer0 = 1;
-    UpdateInterruptLevel<false>();
-    TriggerDMATransfer(DMATrigger::Timer0);
+    if (m_intrStatus.SCU_Timer0 != 1) {
+        m_intrStatus.SCU_Timer0 = 1;
+        UpdateInterruptLevel<false>();
+        TriggerDMATransfer(DMATrigger::Timer0);
+    }
 }
 
 void SCU::TriggerTimer1() {
-    m_intrStatus.SCU_Timer1 = 1;
-    UpdateInterruptLevel<false>();
-    TriggerDMATransfer(DMATrigger::Timer1);
+    if (m_intrStatus.SCU_Timer1 != 1) {
+        m_intrStatus.SCU_Timer1 = 1;
+        UpdateInterruptLevel<false>();
+        TriggerDMATransfer(DMATrigger::Timer1);
+    }
 }
 
 void SCU::TriggerDSPEnd() {
-    m_intrStatus.SCU_DSPEnd = 1;
-    UpdateInterruptLevel<false>();
+    if (m_intrStatus.SCU_DSPEnd != 1) {
+        m_intrStatus.SCU_DSPEnd = 1;
+        UpdateInterruptLevel<false>();
+    }
 }
 
 void SCU::TriggerSoundRequest(bool level) {
-    m_intrStatus.SCSP_SoundRequest = level;
-    UpdateInterruptLevel<false>();
-    if (level) {
-        TriggerDMATransfer(DMATrigger::SoundRequest);
+    if (m_intrStatus.SCSP_SoundRequest != level) {
+        m_intrStatus.SCSP_SoundRequest = level;
+        UpdateInterruptLevel<false>();
+        if (level) {
+            TriggerDMATransfer(DMATrigger::SoundRequest);
+        }
     }
 }
 
 void SCU::TriggerSystemManager() {
-    m_intrStatus.SM_SystemManager = 1;
-    UpdateInterruptLevel<false>();
+    if (m_intrStatus.SM_SystemManager != 1) {
+        m_intrStatus.SM_SystemManager = 1;
+        UpdateInterruptLevel<false>();
+    }
 }
 
 void SCU::TriggerDMAEnd(uint32 level) {
     assert(level < 3);
     switch (level) {
-    case 0: m_intrStatus.ABus_Level0DMAEnd = 1; break;
-    case 1: m_intrStatus.ABus_Level1DMAEnd = 1; break;
-    case 2: m_intrStatus.ABus_Level2DMAEnd = 1; break;
+    case 0:
+        if (m_intrStatus.ABus_Level0DMAEnd == 1) {
+            return;
+        }
+        m_intrStatus.ABus_Level0DMAEnd = 1;
+        break;
+    case 1:
+        if (m_intrStatus.ABus_Level1DMAEnd == 1) {
+            return;
+        }
+        m_intrStatus.ABus_Level1DMAEnd = 1;
+        break;
+    case 2:
+        if (m_intrStatus.ABus_Level2DMAEnd == 1) {
+            return;
+        }
+        m_intrStatus.ABus_Level2DMAEnd = 1;
+        break;
     }
     UpdateInterruptLevel<false>();
 }
 
 void SCU::TriggerSpriteDrawEnd() {
-    m_intrStatus.VDP1_SpriteDrawEnd = 1;
-    UpdateInterruptLevel<false>();
-    TriggerDMATransfer(DMATrigger::SpriteDrawEnd);
+    if (m_intrStatus.VDP1_SpriteDrawEnd != 1) {
+        m_intrStatus.VDP1_SpriteDrawEnd = 1;
+        UpdateInterruptLevel<false>();
+        TriggerDMATransfer(DMATrigger::SpriteDrawEnd);
+    }
 }
 
 void SCU::TriggerExternalInterrupt0() {
-    m_intrStatus.ABus_ExtIntr0 = 1;
-    UpdateInterruptLevel<false>();
+    if (m_intrStatus.ABus_ExtIntr0 != 1) {
+        m_intrStatus.ABus_ExtIntr0 = 1;
+        UpdateInterruptLevel<false>();
+    }
 }
 
 void SCU::AcknowledgeExternalInterrupt() {

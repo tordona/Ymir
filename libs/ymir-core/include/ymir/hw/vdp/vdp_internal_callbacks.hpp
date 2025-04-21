@@ -4,8 +4,8 @@
 
 namespace ymir::vdp {
 
-// Invoked when various interrupt signals are raised.
-using CBTriggerInterrupt = util::RequiredCallback<void()>;
+// Invoked when the HBlank and VBlank signals change.
+using CBHVBlankStateChange = util::RequiredCallback<void(bool level)>;
 
 // Invoked when specific events occur while processing.
 using CBTriggerEvent = util::RequiredCallback<void()>;

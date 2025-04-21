@@ -39,11 +39,10 @@ public:
 
     void Reset(bool hard);
 
-    void MapCallbacks(CBTriggerInterrupt cbHBlankIN, CBTriggerInterrupt cbVBlankIN, CBTriggerInterrupt cbVBlankOUT,
-                      CBTriggerInterrupt cbSpriteDrawEnd, CBTriggerEvent cbOptimizedINTBACKRead) {
-        m_cbTriggerHBlankIN = cbHBlankIN;
-        m_cbTriggerVBlankIN = cbVBlankIN;
-        m_cbTriggerVBlankOUT = cbVBlankOUT;
+    void MapCallbacks(CBHVBlankStateChange cbHBlankStateChange, CBHVBlankStateChange cbVBlankStateChange,
+                      CBTriggerEvent cbSpriteDrawEnd, CBTriggerEvent cbOptimizedINTBACKRead) {
+        m_cbHBlankStateChange = cbHBlankStateChange;
+        m_cbVBlankStateChange = cbVBlankStateChange;
         m_cbTriggerSpriteDrawEnd = cbSpriteDrawEnd;
         m_cbTriggerOptimizedINTBACKRead = cbOptimizedINTBACKRead;
     }
@@ -91,10 +90,9 @@ private:
     // Only valid when color RAM mode is one of the RGB555 modes.
     alignas(16) std::array<Color888, kVDP2CRAMSize / sizeof(uint16)> m_CRAMCache;
 
-    CBTriggerInterrupt m_cbTriggerHBlankIN;
-    CBTriggerInterrupt m_cbTriggerVBlankIN;
-    CBTriggerInterrupt m_cbTriggerVBlankOUT;
-    CBTriggerInterrupt m_cbTriggerSpriteDrawEnd;
+    CBHVBlankStateChange m_cbHBlankStateChange;
+    CBHVBlankStateChange m_cbVBlankStateChange;
+    CBTriggerEvent m_cbTriggerSpriteDrawEnd;
     CBTriggerEvent m_cbTriggerOptimizedINTBACKRead;
 
     core::Scheduler &m_scheduler;
