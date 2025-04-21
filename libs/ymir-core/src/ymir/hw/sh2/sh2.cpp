@@ -1394,6 +1394,7 @@ FORCE_INLINE void SH2::SetExternalInterrupt(uint8 level, uint8 vector) {
 
     if (level > 0) {
         INTC.UpdateIRLVector();
+        UpdateInterruptLevels<source>();
         RaiseInterrupt(source);
     } else {
         INTC.SetVector(source, 0);
