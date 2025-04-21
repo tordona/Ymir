@@ -345,8 +345,9 @@ void SMPC::Write(uint32 address, uint8 value) {
                     devlog::trace<grp::base>("INTBACK continue request");
                     // HACK: delay by a long while to fix Virtua Racing which expects the status report before VBlank
                     // OUT and the peripheral reports after VBlank OUT
-                    m_scheduler.ScheduleFromNow(m_commandEvent, 300000);
+                    m_scheduler.ScheduleFromNow(m_commandEvent, 100000);
                     // INTBACK();
+                    SF = true;
                 }
             }
         }
