@@ -188,7 +188,7 @@ add_executable(ymir-sdl3
     src/app/ui/windows/debug/sh2_window_set.hpp
 
     src/serdes/cereal_archive_vector.hpp
-    src/serdes/state_v1_cereal.hpp
+    src/serdes/state_cereal.hpp
 
     src/util/file_loader.cpp
     src/util/file_loader.hpp

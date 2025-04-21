@@ -6,7 +6,7 @@
 #include <cereal/cereal.hpp>
 
 #include <serdes/cereal_archive_vector.hpp>
-#include <serdes/state_v1_cereal.hpp>
+#include <serdes/state_cereal.hpp>
 
 #include <lz4.h>
 

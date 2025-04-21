@@ -236,7 +236,7 @@
 #include <app/ui/widgets/cartridge_widgets.hpp>
 #include <app/ui/widgets/system_widgets.hpp>
 
-#include <serdes/state_v1_cereal.hpp>
+#include <serdes/state_cereal.hpp>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
