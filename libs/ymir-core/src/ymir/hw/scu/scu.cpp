@@ -1137,7 +1137,7 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
         } else {
             if (internalLevel >= externalLevel) {
                 m_cbExternalMasterInterrupt(internalLevel, internalIndex + 0x40);
-                devlog::trace<grp::base>("Raising internal interrupt {:X}", internalIndex);
+                devlog::trace<grp::base>("Raising internal interrupt {:X}, level {:X}", internalIndex, internalLevel);
                 TraceRaiseInterrupt(m_tracer, internalIndex, internalLevel);
 
                 // Also send VBlank IN and HBlank IN to slave SH2 if it is enabled
@@ -1149,7 +1149,7 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
                     m_cbExternalSlaveInterrupt(0, 0);
                 }
             } else if (m_abusIntrAck) {
-                devlog::trace<grp::base>("Raising external interrupt {:X}", externalIndex);
+                devlog::trace<grp::base>("Raising external interrupt {:X}, level {:X}", externalIndex, externalLevel);
                 TraceRaiseInterrupt(m_tracer, externalIndex + 16, externalLevel);
                 m_abusIntrAck = false;
                 m_cbExternalMasterInterrupt(externalLevel, externalIndex + 0x50);
