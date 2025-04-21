@@ -5,13 +5,13 @@
 #include <cereal/types/array.hpp>
 #include <cereal/types/vector.hpp>
 
-CEREAL_CLASS_VERSION(ymir::state::v1::State, 1);
+CEREAL_CLASS_VERSION(ymir::state::State, 2);
 
 namespace ymir::state {
 
 template <class Archive>
 void serialize(Archive &ar, State &s, const uint32 version) {
-    if (version == 1) {
+    if (version > 0) {
         ar(s.scheduler);
         ar(s.system);
         ar(s.msh2);

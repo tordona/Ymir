@@ -11,20 +11,16 @@
 
 namespace ymir::state {
 
-inline namespace v1 {
-
-    struct State {
-        SchedulerState scheduler;
-        SystemState system;
-        SH2State msh2;
-        SH2State ssh2;
-        SCUState scu;
-        SMPCState smpc;
-        VDPState vdp;
-        SCSPState scsp;
-        CDBlockState cdblock;
-    };
-
-} // namespace v1
+struct State {
+    SchedulerState scheduler;
+    SystemState system;
+    SH2State msh2;
+    SH2State ssh2;
+    SCUState scu;
+    SMPCState smpc;
+    VDPState vdp;
+    SCSPState scsp;
+    CDBlockState cdblock;
+};
 
 } // namespace ymir::state
