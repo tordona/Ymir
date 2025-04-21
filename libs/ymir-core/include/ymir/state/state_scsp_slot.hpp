@@ -4,7 +4,7 @@
 
 namespace ymir::state {
 
-inline namespace v1 {
+namespace v1 {
 
     struct SCSPSlotState {
         uint32 SA;
@@ -79,5 +79,11 @@ inline namespace v1 {
     };
 
 } // namespace v1
+
+inline namespace v2 {
+
+    using v1::SCSPSlotState;
+
+} // namespace v2
 
 } // namespace ymir::state

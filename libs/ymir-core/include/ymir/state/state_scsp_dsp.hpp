@@ -6,7 +6,7 @@
 
 namespace ymir::state {
 
-inline namespace v1 {
+namespace v1 {
 
     struct SCSPDSP {
         alignas(16) std::array<uint64, 128> MPRO;
@@ -41,5 +41,11 @@ inline namespace v1 {
     };
 
 } // namespace v1
+
+inline namespace v2 {
+
+    using v1::SCSPDSP;
+
+} // namespace v2
 
 } // namespace ymir::state

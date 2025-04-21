@@ -6,7 +6,7 @@
 
 namespace ymir::state {
 
-inline namespace v1 {
+namespace v1 {
 
     struct M68KState {
         alignas(16) std::array<uint32, 8 + 8> DA;
@@ -19,5 +19,11 @@ inline namespace v1 {
     };
 
 } // namespace v1
+
+inline namespace v2 {
+
+    using v1::M68KState;
+
+} // namespace v2
 
 } // namespace ymir::state

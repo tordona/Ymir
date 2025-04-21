@@ -13,7 +13,7 @@
 
 namespace ymir::state {
 
-inline namespace v1 {
+namespace v1 {
 
     struct SCSPState {
         alignas(16) std::array<uint8, m68k::kM68KWRAMSize> WRAM;
@@ -64,5 +64,11 @@ inline namespace v1 {
     };
 
 } // namespace v1
+
+inline namespace v2 {
+
+    using v1::SCSPState;
+
+} // namespace v2
 
 } // namespace ymir::state

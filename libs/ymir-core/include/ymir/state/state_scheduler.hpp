@@ -6,7 +6,7 @@
 
 namespace ymir::state {
 
-inline namespace v1 {
+namespace v1 {
 
     struct SchedulerState {
         struct EventState {
@@ -21,5 +21,11 @@ inline namespace v1 {
     };
 
 } // namespace v1
+
+inline namespace v2 {
+
+    using v1::SchedulerState;
+
+} // namespace v2
 
 } // namespace ymir::state

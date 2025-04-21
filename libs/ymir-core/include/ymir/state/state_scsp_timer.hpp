@@ -4,7 +4,7 @@
 
 namespace ymir::state {
 
-inline namespace v1 {
+namespace v1 {
 
     struct SCSPTimer {
         uint8 incrementInterval;
@@ -15,5 +15,11 @@ inline namespace v1 {
     };
 
 } // namespace v1
+
+inline namespace v2 {
+
+    using v1::SCSPTimer;
+
+} // namespace v2
 
 } // namespace ymir::state

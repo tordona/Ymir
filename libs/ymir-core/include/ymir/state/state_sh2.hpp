@@ -6,7 +6,7 @@
 
 namespace ymir::state {
 
-inline namespace v1 {
+namespace v1 {
 
     struct SH2State {
         alignas(16) std::array<uint32, 16> R;
@@ -106,5 +106,11 @@ inline namespace v1 {
     };
 
 } // namespace v1
+
+inline namespace v2 {
+
+    using v1::SH2State;
+
+} // namespace v2
 
 } // namespace ymir::state

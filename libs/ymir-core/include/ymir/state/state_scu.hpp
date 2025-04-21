@@ -7,7 +7,7 @@
 
 namespace ymir::state {
 
-inline namespace v1 {
+namespace v1 {
 
     struct SCUDMAState {
         uint32 srcAddr;
@@ -97,5 +97,63 @@ inline namespace v1 {
     };
 
 } // namespace v1
+
+inline namespace v2 {
+
+    using v1::SCUDMAState;
+    using v1::SCUDSPState;
+
+    struct SCUState {
+        std::array<SCUDMAState, 3> dma;
+        SCUDSPState dsp;
+
+        enum class CartType { None, BackupMemory, DRAM8Mbit, DRAM32Mbit };
+        CartType cartType;
+        std::vector<uint8> dramCartData;
+
+        uint32 intrMask;
+        uint32 intrStatus;
+        bool abusIntrAck;
+        bool intrPending;
+
+        uint16 timer0Counter;
+        uint16 timer0Compare;
+        uint16 timer1Reload;
+        bool timer1Enable;
+        bool timer1Mode;
+
+        bool wramSizeSelect;
+
+        void Upgrade(const v1::SCUState &s) {
+            dma = s.dma;
+            dsp = s.dsp;
+            // dma.Upgrade(s.dma);
+            // dsp.Upgrade(s.dsp);
+
+            switch (s.cartType) {
+            default: [[fallthrough]];
+            case v1::SCUState::CartType::None: cartType = CartType::None; break;
+            case v1::SCUState::CartType::BackupMemory: cartType = CartType::BackupMemory; break;
+            case v1::SCUState::CartType::DRAM8Mbit: cartType = CartType::DRAM8Mbit; break;
+            case v1::SCUState::CartType::DRAM32Mbit: cartType = CartType::DRAM32Mbit; break;
+            }
+            dramCartData = s.dramCartData;
+
+            intrMask = s.intrMask;
+            intrStatus = s.intrStatus;
+            abusIntrAck = s.abusIntrAck;
+            intrPending = s.intrMask & ~s.intrStatus; // assume pending if any of the bits are set
+
+            timer0Counter = s.timer0Counter;
+            timer0Compare = s.timer0Compare;
+            timer1Reload = s.timer1Reload;
+            timer1Enable = s.timer1Enable;
+            timer1Mode = s.timer1Mode;
+
+            wramSizeSelect = s.wramSizeSelect;
+        }
+    };
+
+} // namespace v2
 
 } // namespace ymir::state

@@ -8,7 +8,7 @@
 
 namespace ymir::state {
 
-inline namespace v1 {
+namespace v1 {
 
     struct SystemState {
         config::sys::VideoStandard videoStandard;
@@ -22,5 +22,11 @@ inline namespace v1 {
     };
 
 } // namespace v1
+
+inline namespace v2 {
+
+    using v1::SystemState;
+
+} // namespace v2
 
 } // namespace ymir::state

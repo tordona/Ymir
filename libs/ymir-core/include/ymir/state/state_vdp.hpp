@@ -10,7 +10,7 @@
 
 namespace ymir::state {
 
-inline namespace v1 {
+namespace v1 {
 
     struct VDPState {
         alignas(16) std::array<uint8, vdp::kVDP1VRAMSize> VRAM1;
@@ -235,5 +235,11 @@ inline namespace v1 {
     };
 
 } // namespace v1
+
+inline namespace v2 {
+
+    using v1::VDPState;
+
+} // namespace v2
 
 } // namespace ymir::state
