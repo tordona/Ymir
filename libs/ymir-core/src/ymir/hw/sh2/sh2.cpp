@@ -1396,6 +1396,8 @@ FORCE_INLINE void SH2::SetExternalInterrupt(uint8 level, uint8 vector) {
         INTC.UpdateIRLVector();
         UpdateInterruptLevels<source>();
         RaiseInterrupt(source);
+        devlog::trace<grp::exec>(m_logPrefix, "Set IRL vector/level to {:02X}/{:X}; pending level {:X}", vector, level,
+                                 INTC.pending.level);
     } else {
         INTC.SetVector(source, 0);
         LowerInterrupt(source);
@@ -1530,8 +1532,8 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
         // Service interrupt
         const uint8 vecNum = INTC.GetVector(INTC.pending.source);
         TraceInterrupt<debug>(m_tracer, vecNum, INTC.pending.level, INTC.pending.source, PC);
-        devlog::trace<grp::exec>(m_logPrefix, "Handling interrupt level {:02X}, vector number {:02X}",
-                                 INTC.pending.level, vecNum);
+        devlog::trace<grp::exec>(m_logPrefix, "Handling interrupt level {:02X}, vector number {:02X}, PC {:08X}",
+                                 INTC.pending.level, vecNum, PC);
         EnterException<debug, enableCache>(vecNum);
         SR.ILevel = std::min<uint8>(INTC.pending.level, 0xF);
 
@@ -2818,6 +2820,8 @@ FORCE_INLINE void SH2::RTE() {
     R[15] += 4;
     SR.u32 = MemReadLong<enableCache>(R[15]) & 0x000003F3;
     R[15] += 4;
+    devlog::trace<grp::exec>(m_logPrefix, "Returning from interrupt handler, PC {:08X} -> {:08X}", PC,
+                             m_delaySlotTarget);
 }
 
 // rts
