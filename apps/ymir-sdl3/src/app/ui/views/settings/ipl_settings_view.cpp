@@ -122,8 +122,10 @@ void IPLSettingsView::Display() {
                 if (ImGui::Button(fmt::format("Use##{}", index).c_str())) {
                     settings.overrideImage = true;
                     settings.path = path;
-                    m_context.EnqueueEvent(events::gui::ReloadIPLROM());
-                    m_context.settings.MakeDirty();
+                    if (!settings.path.empty()) {
+                        m_context.EnqueueEvent(events::gui::ReloadIPLROM());
+                        m_context.settings.MakeDirty();
+                    }
                 }
             }
             ++index;
@@ -135,8 +137,10 @@ void IPLSettingsView::Display() {
     ImGui::Separator();
 
     if (MakeDirty(ImGui::Checkbox("Override IPL ROM", &settings.overrideImage))) {
-        m_context.EnqueueEvent(events::gui::ReloadIPLROM());
-        m_context.settings.MakeDirty();
+        if (settings.overrideImage && !settings.path.empty()) {
+            m_context.EnqueueEvent(events::gui::ReloadIPLROM());
+            m_context.settings.MakeDirty();
+        }
     }
 
     if (!settings.overrideImage) {
@@ -163,8 +167,10 @@ void IPLSettingsView::Display() {
     }
     ImGui::SameLine();
     if (ImGui::Button("Reload")) {
-        m_context.EnqueueEvent(events::gui::ReloadIPLROM());
-        m_context.settings.MakeDirty();
+        if (!settings.path.empty()) {
+            m_context.EnqueueEvent(events::gui::ReloadIPLROM());
+            m_context.settings.MakeDirty();
+        }
     }
     if (!settings.overrideImage) {
         ImGui::EndDisabled();
