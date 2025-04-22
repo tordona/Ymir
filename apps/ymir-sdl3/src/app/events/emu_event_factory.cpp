@@ -60,6 +60,22 @@ EmuEvent DumpMemory() {
         devlog::info<grp::base>("Dumping all memory to {}...", std::filesystem::current_path().string());
         auto dumpPath = ctx.profile.GetPath(ProfilePath::Dumps);
         {
+            std::ofstream out{dumpPath / "msh2-cache-data.bin", std::ios::binary};
+            ctx.saturn.masterSH2.DumpCacheData(out);
+        }
+        {
+            std::ofstream out{dumpPath / "msh2-cache-addrtag.bin", std::ios::binary};
+            ctx.saturn.masterSH2.DumpCacheAddressTag(out);
+        }
+        {
+            std::ofstream out{dumpPath / "ssh2-cache-data.bin", std::ios::binary};
+            ctx.saturn.slaveSH2.DumpCacheData(out);
+        }
+        {
+            std::ofstream out{dumpPath / "ssh2-cache-addrtag.bin", std::ios::binary};
+            ctx.saturn.slaveSH2.DumpCacheAddressTag(out);
+        }
+        {
             std::ofstream out{dumpPath / "wram-lo.bin", std::ios::binary};
             ctx.saturn.mem.DumpWRAMLow(out);
         }
