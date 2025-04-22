@@ -15,6 +15,7 @@ string(COMPARE EQUAL "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}" is_top_
 option(Ymir_INCLUDE_PACKAGING "Include packaging rules for Ymir" "${is_top_level}")
 option(Ymir_ENABLE_TESTS "Enable tests for Ymir" "${is_top_level}")
 option(Ymir_ENABLE_SANDBOX "Compile the sandbox app" "${is_top_level}")
+option(Ymir_ENABLE_YMDASM "Compile the disassembly tool" "${is_top_level}")
 option(Ymir_ENABLE_IPO "Enable IPO / LTO for Ymir" ON)
 option(Ymir_ENABLE_DEVLOG "Enable development logs" ON)
 option(Ymir_ENABLE_IMGUI_DEMO "Enable ImGui demo window" ON)

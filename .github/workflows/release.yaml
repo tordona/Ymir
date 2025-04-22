@@ -61,6 +61,7 @@ jobs:
         -DYmir_ENABLE_DEVLOG=${{ matrix.subsystem.enable_devlog_option }}
         -DYmir_ENABLE_IMGUI_DEMO=OFF
         -DYmir_ENABLE_SANDBOX=OFF
+        -DYmir_ENABLE_YMDASM=OFF
         -S ${{ github.workspace }}
         -G Ninja
 
@@ -141,6 +142,7 @@ jobs:
         -DYmir_ENABLE_DEVLOG=OFF
         -DYmir_ENABLE_IMGUI_DEMO=OFF
         -DYmir_ENABLE_SANDBOX=OFF
+        -DYmir_ENABLE_YMDASM=OFF
         -S ${{ github.workspace }}
         -G Ninja
 
