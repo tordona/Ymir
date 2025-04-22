@@ -1163,11 +1163,11 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
     //   31   5F     1  A-Bus   External Interrupt 0F
 
     // Don't send any additional interrupts if the master SH2 hasn't acknowledged the last one
-    if constexpr (!acknowledge) {
+    /*if constexpr (!acknowledge) {
         if (m_intrPending) {
             return;
         }
-    }
+    }*/
 
     static constexpr uint32 kInternalLevels[] = {0xF, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8, //
                                                  0x8, 0x6, 0x6, 0x5, 0x3, 0x2, 0x0, 0x0, //
