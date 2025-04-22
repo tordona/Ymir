@@ -11,32 +11,30 @@ namespace ymir::state {
 
 template <class Archive>
 void serialize(Archive &ar, State &s, const uint32 version) {
-    if (version > 0) {
-        if (version == 2) {
-            ar(s.scheduler);
-            ar(s.system);
-            ar(s.msh2);
-            ar(s.ssh2);
-            ar(s.scu);
-            ar(s.smpc);
-            ar(s.vdp);
-            ar(s.scsp);
-            ar(s.cdblock);
-        } else {
-            v1::SCUState scu{};
+    if (version == 2) {
+        ar(s.scheduler);
+        ar(s.system);
+        ar(s.msh2);
+        ar(s.ssh2);
+        ar(s.scu);
+        ar(s.smpc);
+        ar(s.vdp);
+        ar(s.scsp);
+        ar(s.cdblock);
+    } else if (version == 1) {
+        v1::SCUState scu{};
 
-            ar(s.scheduler);
-            ar(s.system);
-            ar(s.msh2);
-            ar(s.ssh2);
-            ar(scu);
-            ar(s.smpc);
-            ar(s.vdp);
-            ar(s.scsp);
-            ar(s.cdblock);
+        ar(s.scheduler);
+        ar(s.system);
+        ar(s.msh2);
+        ar(s.ssh2);
+        ar(scu);
+        ar(s.smpc);
+        ar(s.vdp);
+        ar(s.scsp);
+        ar(s.cdblock);
 
-            s.scu.Upgrade(scu);
-        }
+        s.scu.Upgrade(scu);
     }
 }
 
