@@ -41,7 +41,7 @@ struct FreeRunningTimer {
 
         uint64 nextFRC = FRC + steps;
         if (FRC < OCRA && nextFRC >= OCRA) {
-            FTCSR.OCFA = TOCR.OLVLA;
+            FTCSR.OCFA = 1;
             if (FTCSR.CCLRA) {
                 nextFRC = 0;
             }
@@ -50,7 +50,7 @@ struct FreeRunningTimer {
             }
         }
         if (FRC < OCRB && nextFRC >= OCRB) {
-            FTCSR.OCFB = TOCR.OLVLB;
+            FTCSR.OCFB = 1;
             if (TIER.OCIBE) {
                 event = Event::OCI;
             }
@@ -89,16 +89,16 @@ struct FreeRunningTimer {
         }
 
         void Reset() {
-            OVIE = false;
+            ICIE = false;
             OCIAE = false;
             OCIBE = false;
-            ICIE = false;
+            OVIE = false;
         }
 
-        bool OVIE;  // 7   R/W  ICIE     Input Capture Interrupt Enable
+        bool ICIE;  // 7   R/W  ICIE     Input Capture Interrupt Enable
         bool OCIAE; // 3   R/W  OCIAE    Output Compare Interrupt A Enable
         bool OCIBE; // 2   R/W  OCIBE    Output Compare Interrupt B Enable
-        bool ICIE;  // 1   R/W  OVIE     Timer Overflow Interrupt Enable
+        bool OVIE;  // 1   R/W  OVIE     Timer Overflow Interrupt Enable
     } TIER;
 
     FORCE_INLINE uint8 ReadTIER() const {
