@@ -110,7 +110,10 @@ void BackupMemory::CreateFrom(const std::filesystem::path &path, BackupMemorySiz
     // Resize file if necessary
     if (std::filesystem::file_size(path) != sz) {
         format = true;
-        std::filesystem::resize_file(path, sz);
+        std::filesystem::resize_file(path, sz, error);
+        if (error) {
+            return;
+        }
     }
 
     // Attempt to memory-map the file

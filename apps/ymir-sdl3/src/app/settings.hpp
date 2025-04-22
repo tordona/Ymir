@@ -3,6 +3,7 @@
 #include <ymir/core/configuration.hpp>
 
 #include <ymir/hw/smpc/peripheral/peripheral_defs.hpp>
+#include <ymir/sys/backup_ram_defs.hpp>
 
 #include <ymir/db/ipl_db.hpp>
 
@@ -277,6 +278,9 @@ public:
 
         struct BackupRAM {
             std::filesystem::path imagePath;
+
+            enum Capacity { _4Mbit, _8Mbit, _16Mbit, _32Mbit };
+            Capacity capacity;
         } backupRAM;
 
         struct DRAM {
@@ -300,6 +304,12 @@ private:
 
     std::unordered_map<input::ActionID, std::unordered_set<InputBindWithContext>> m_actionInputs;
 };
+
+const char *BupCapacityShortName(Settings::Cartridge::BackupRAM::Capacity capacity);
+const char *BupCapacityLongName(Settings::Cartridge::BackupRAM::Capacity capacity);
+Settings::Cartridge::BackupRAM::Capacity SizeToCapacity(uint32 size);
+ymir::bup::BackupMemorySize CapacityToBupSize(Settings::Cartridge::BackupRAM::Capacity capacity);
+uint32 CapacityToSize(Settings::Cartridge::BackupRAM::Capacity capacity);
 
 } // namespace app
 

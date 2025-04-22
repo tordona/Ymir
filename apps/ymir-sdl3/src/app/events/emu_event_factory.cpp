@@ -176,31 +176,29 @@ EmuEvent InsertPort2Peripheral(peripheral::PeripheralType type) {
     });
 }
 
-static void InsertBackupMemoryCartridge(SharedContext &ctx, std::filesystem::path path) {
-    std::error_code error{};
-    bup::BackupMemory bupMem{};
-    const auto result = bupMem.LoadFrom(path, error);
-    switch (result) {
-    case bup::BackupMemoryImageLoadResult::Success:
-        ctx.saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
-        devlog::info<grp::base>("External backup memory cartridge loaded from {}", path.string());
-        break;
-    case bup::BackupMemoryImageLoadResult::FilesystemError:
-        if (error) {
-            devlog::warn<grp::base>("Failed to load external backup memory: {}", error.message());
-        } else {
-            devlog::warn<grp::base>("Failed to load external backup memory: Unspecified file system error");
-        }
-        break;
-    case bup::BackupMemoryImageLoadResult::InvalidSize:
-        devlog::warn<grp::base>("Failed to load external backup memory: Invalid image size");
-        break;
-    default: devlog::warn<grp::base>("Failed to load external backup memory: Unexpected error"); break;
-    }
-}
-
 EmuEvent InsertBackupMemoryCartridge(std::filesystem::path path) {
-    return RunFunction([=](SharedContext &ctx) { InsertBackupMemoryCartridge(ctx, path); });
+    return RunFunction([=](SharedContext &ctx) {
+        std::error_code error{};
+        bup::BackupMemory bupMem{};
+        const auto result = bupMem.LoadFrom(path, error);
+        switch (result) {
+        case bup::BackupMemoryImageLoadResult::Success:
+            ctx.saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
+            devlog::info<grp::base>("External backup memory cartridge loaded from {}", path.string());
+            break;
+        case bup::BackupMemoryImageLoadResult::FilesystemError:
+            if (error) {
+                devlog::warn<grp::base>("Failed to load external backup memory: {}", error.message());
+            } else {
+                devlog::warn<grp::base>("Failed to load external backup memory: Unspecified file system error");
+            }
+            break;
+        case bup::BackupMemoryImageLoadResult::InvalidSize:
+            devlog::warn<grp::base>("Failed to load external backup memory: Invalid image size");
+            break;
+        default: devlog::warn<grp::base>("Failed to load external backup memory: Unexpected error"); break;
+        };
+    });
 }
 
 EmuEvent Insert8MbitDRAMCartridge() {
@@ -223,11 +221,22 @@ EmuEvent InsertCartridgeFromSettings() {
             devlog::info<grp::base>("Cartridge removed");
             break;
 
-        case Settings::Cartridge::Type::BackupRAM:
-            InsertBackupMemoryCartridge(ctx, settings.backupRAM.imagePath);
-            devlog::info<grp::base>("Backup RAM cartridge inserted");
+        case Settings::Cartridge::Type::BackupRAM: {
+            std::error_code error{};
+            bup::BackupMemory bupMem{};
+            bupMem.CreateFrom(settings.backupRAM.imagePath, CapacityToBupSize(settings.backupRAM.capacity), error);
+            if (error) {
+                devlog::info<grp::base>("Failed to insert {} backup RAM cartridge from {}: {}",
+                                        BupCapacityShortName(settings.backupRAM.capacity),
+                                        settings.backupRAM.imagePath.string(), error.message());
+            } else {
+                devlog::info<grp::base>("{} backup RAM cartridge inserted with image from {}",
+                                        BupCapacityShortName(settings.backupRAM.capacity),
+                                        settings.backupRAM.imagePath.string());
+                ctx.saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
+            }
             break;
-
+        }
         case Settings::Cartridge::Type::DRAM:
             switch (settings.dram.capacity) {
             case Settings::Cartridge::DRAM::Capacity::_32Mbit:

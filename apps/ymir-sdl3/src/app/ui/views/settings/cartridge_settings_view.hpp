@@ -19,8 +19,6 @@ private:
 
     void LoadBackupImage(std::filesystem::path file);
     void ShowLoadBackupImageError(const char *message);
-
-    bool m_cartSettingsDirty = false;
 };
 
 } // namespace app::ui

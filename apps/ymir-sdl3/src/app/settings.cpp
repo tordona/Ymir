@@ -1009,4 +1009,56 @@ void Settings::ResetBinds(Input::Port::StandardPadBinds &binds) {
     RebindInputs();
 }
 
+const char *BupCapacityLongName(Settings::Cartridge::BackupRAM::Capacity capacity) {
+    switch (capacity) {
+    case Settings::Cartridge::BackupRAM::Capacity::_4Mbit: return "4 Mbit (512 KiB)";
+    case Settings::Cartridge::BackupRAM::Capacity::_8Mbit: return "8 Mbit (1 MiB)";
+    case Settings::Cartridge::BackupRAM::Capacity::_16Mbit: return "16 Mbit (2 MiB)";
+    case Settings::Cartridge::BackupRAM::Capacity::_32Mbit: return "32 Mbit (4 MiB)";
+    default: return "32 Mbit (4 MiB)";
+    }
+}
+
+const char *BupCapacityShortName(Settings::Cartridge::BackupRAM::Capacity capacity) {
+    switch (capacity) {
+    case Settings::Cartridge::BackupRAM::Capacity::_4Mbit: return "4 Mbit";
+    case Settings::Cartridge::BackupRAM::Capacity::_8Mbit: return "8 Mbit";
+    case Settings::Cartridge::BackupRAM::Capacity::_16Mbit: return "16 Mbit";
+    case Settings::Cartridge::BackupRAM::Capacity::_32Mbit: return "32 Mbit";
+    default: return "32 Mbit";
+    }
+}
+
+Settings::Cartridge::BackupRAM::Capacity SizeToCapacity(uint32 size) {
+    if (size <= 512_KiB) {
+        return Settings::Cartridge::BackupRAM::Capacity::_4Mbit;
+    } else if (size <= 1_MiB) {
+        return Settings::Cartridge::BackupRAM::Capacity::_8Mbit;
+    } else if (size <= 2_MiB) {
+        return Settings::Cartridge::BackupRAM::Capacity::_16Mbit;
+    } else {
+        return Settings::Cartridge::BackupRAM::Capacity::_32Mbit;
+    }
+}
+
+ymir::bup::BackupMemorySize CapacityToBupSize(Settings::Cartridge::BackupRAM::Capacity capacity) {
+    switch (capacity) {
+    case Settings::Cartridge::BackupRAM::Capacity::_4Mbit: return ymir::bup::BackupMemorySize::_4Mbit;
+    case Settings::Cartridge::BackupRAM::Capacity::_8Mbit: return ymir::bup::BackupMemorySize::_8Mbit;
+    case Settings::Cartridge::BackupRAM::Capacity::_16Mbit: return ymir::bup::BackupMemorySize::_16Mbit;
+    case Settings::Cartridge::BackupRAM::Capacity::_32Mbit: return ymir::bup::BackupMemorySize::_32Mbit;
+    default: return ymir::bup::BackupMemorySize::_32Mbit;
+    }
+}
+
+uint32 CapacityToSize(Settings::Cartridge::BackupRAM::Capacity capacity) {
+    switch (capacity) {
+    case Settings::Cartridge::BackupRAM::Capacity::_4Mbit: return 512_KiB;
+    case Settings::Cartridge::BackupRAM::Capacity::_8Mbit: return 1_MiB;
+    case Settings::Cartridge::BackupRAM::Capacity::_16Mbit: return 2_MiB;
+    case Settings::Cartridge::BackupRAM::Capacity::_32Mbit: return 4_MiB;
+    default: return 4_MiB;
+    }
+}
+
 } // namespace app

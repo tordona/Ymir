@@ -3,6 +3,7 @@
 #include <ymir/sys/backup_ram.hpp>
 
 #include <app/ui/widgets/cartridge_widgets.hpp>
+#include <app/ui/widgets/common_widgets.hpp>
 
 #include <app/events/emu_event_factory.hpp>
 #include <app/events/gui_event_factory.hpp>
@@ -23,6 +24,8 @@ static const char *GetCartTypeName(Settings::Cartridge::Type type) {
     default: return "Unknown";
     }
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 CartridgeSettingsView::CartridgeSettingsView(SharedContext &context)
     : SettingsViewBase(context) {}
@@ -48,23 +51,14 @@ void CartridgeSettingsView::Display() {
         for (auto type : kCartTypes) {
             if (MakeDirty(ImGui::Selectable(GetCartTypeName(type), type == settings.type))) {
                 settings.type = type;
-                m_cartSettingsDirty = true;
             }
         }
 
         ImGui::EndCombo();
     }
     ImGui::SameLine();
-    const bool dirty = m_cartSettingsDirty;
-    if (!dirty) {
-        ImGui::BeginDisabled();
-    }
     if (ImGui::Button("Insert")) {
         m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
-        m_cartSettingsDirty = false;
-    }
-    if (!dirty) {
-        ImGui::EndDisabled();
     }
 
     switch (settings.type) {
@@ -81,6 +75,29 @@ void CartridgeSettingsView::DrawBackupRAMSettings() {
     const float itemSpacingWidth = ImGui::GetStyle().ItemSpacing.x;
     const float fileSelectorButtonWidth = ImGui::CalcTextSize("...").x + paddingWidth * 2;
 
+    using BUPCap = Settings::Cartridge::BackupRAM::Capacity;
+
+    uint32 currSize = 0;
+    {
+        std::unique_lock lock{m_context.locks.cart};
+        auto *cart = m_context.saturn.GetCartridge().As<cart::CartType::BackupMemory>();
+        if (cart != nullptr) {
+            currSize = cart->GetBackupMemory().Size();
+        }
+    }
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Capacity:");
+    ImGui::SameLine();
+    if (ImGui::BeginCombo("##bup_capacity", BupCapacityLongName(settings.capacity), ImGuiComboFlags_WidthFitPreview)) {
+        for (auto cap : {BUPCap::_4Mbit, BUPCap::_8Mbit, BUPCap::_16Mbit, BUPCap::_32Mbit}) {
+            if (MakeDirty(ImGui::Selectable(BupCapacityLongName(cap), settings.capacity == cap))) {
+                settings.capacity = cap;
+            }
+        }
+        ImGui::EndCombo();
+    }
+
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Backup memory image path");
     ImGui::SameLine();
@@ -88,11 +105,10 @@ void CartridgeSettingsView::DrawBackupRAMSettings() {
     std::string imagePath = settings.imagePath.string();
     if (MakeDirty(ImGui::InputText("##bup_image_path", &imagePath))) {
         settings.imagePath = imagePath;
-        m_cartSettingsDirty = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("...##bup_image_path")) {
-        m_context.EnqueueEvent(events::gui::OpenFile({
+        m_context.EnqueueEvent(events::gui::SaveFile({
             .dialogTitle = "Load backup memory image",
             .defaultPath = settings.imagePath.empty()
                                ? m_context.profile.GetPath(ProfilePath::PersistentState) / "bup-ext.bin"
@@ -108,6 +124,10 @@ void CartridgeSettingsView::DrawBackupRAMSettings() {
     if (ImGui::Button("Open backup memory manager")) {
         m_context.EnqueueEvent(events::gui::OpenBackupMemoryManager());
     }
+
+    if (currSize != 0 && CapacityToSize(settings.capacity) != currSize) {
+        ImGui::TextUnformatted("WARNING: Changing the size of the cartridge will format it!");
+    }
 }
 
 void CartridgeSettingsView::DrawDRAMSettings() {
@@ -120,12 +140,10 @@ void CartridgeSettingsView::DrawDRAMSettings() {
     ImGui::SameLine();
     if (MakeDirty(ImGui::RadioButton("32 Mbit (4 MiB)", settings.capacity == DRAMCap::_32Mbit))) {
         settings.capacity = DRAMCap::_32Mbit;
-        m_cartSettingsDirty = true;
     }
     ImGui::SameLine();
     if (MakeDirty(ImGui::RadioButton("8 Mbit (1 MiB)", settings.capacity == DRAMCap::_8Mbit))) {
         settings.capacity = DRAMCap::_8Mbit;
-        m_cartSettingsDirty = true;
     }
 }
 
@@ -140,15 +158,15 @@ void CartridgeSettingsView::ProcessLoadBackupImageError(void *userdata, const ch
 void CartridgeSettingsView::LoadBackupImage(std::filesystem::path file) {
     auto &settings = m_context.settings.cartridge.backupRAM;
 
+    std::error_code error{};
+    bup::BackupMemory bupMem{};
     if (std::filesystem::is_regular_file(file)) {
         // The user selected an existing image. Make sure it's a proper backup image.
-        std::error_code error{};
-        bup::BackupMemory bupMem{};
         const auto result = bupMem.LoadFrom(file, error);
         switch (result) {
         case bup::BackupMemoryImageLoadResult::Success:
             settings.imagePath = file;
-            m_cartSettingsDirty = false;
+            settings.capacity = SizeToCapacity(bupMem.Size());
             m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
             MakeDirty();
             break;
@@ -172,10 +190,15 @@ void CartridgeSettingsView::LoadBackupImage(std::filesystem::path file) {
         }
     } else {
         // The user wants to create a new image file
-        settings.imagePath = file;
-        m_cartSettingsDirty = false;
-        m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
-        MakeDirty();
+        bupMem.CreateFrom(file, CapacityToBupSize(settings.capacity), error);
+        if (error) {
+            m_context.EnqueueEvent(
+                events::gui::ShowError(fmt::format("Could not load backup memory image: {}", error.message())));
+        } else {
+            settings.imagePath = file;
+            m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
+            MakeDirty();
+        }
     }
 }
 
