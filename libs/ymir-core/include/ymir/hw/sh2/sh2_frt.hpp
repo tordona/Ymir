@@ -322,6 +322,7 @@ struct FreeRunningTimer {
 
     FORCE_INLINE uint8 ReadTOCR() const {
         uint8 value = 0;
+        bit::deposit_into<5, 7>(value, 0b111);
         bit::deposit_into<4>(value, TOCR.OCRS);
         bit::deposit_into<1>(value, TOCR.OLVLA);
         bit::deposit_into<0>(value, TOCR.OLVLB);
