@@ -2,6 +2,7 @@
 
 #include <ymir/util/bit_ops.hpp>
 #include <ymir/util/data_ops.hpp>
+#include <ymir/util/dev_log.hpp>
 #include <ymir/util/unreachable.hpp>
 
 #include <algorithm>
@@ -262,6 +263,20 @@ void SH2::MapMemory(sys::Bus &bus) {
     const uint32 addressOffset = !BCR1.MASTER * 0x80'0000;
     bus.MapNormal(0x100'0000 + addressOffset, 0x17F'FFFF + addressOffset, this,
                   [](uint32 address, uint16, void *ctx) { static_cast<SH2 *>(ctx)->TriggerFRTInputCapture(); });
+}
+
+void SH2::DumpCacheData(std::ostream &out) const {
+    for (uint32 addr = 0; addr < 4096; addr += 4) {
+        const uint32 value = m_cache.ReadDataArray<uint32>(addr);
+        out.write((const char *)&value, sizeof(value));
+    }
+}
+
+void SH2::DumpCacheAddressTag(std::ostream &out) const {
+    for (uint32 addr = 0; addr < 1024; addr += 4) {
+        const uint32 value = m_cache.ReadAddressArray<true>(addr);
+        out.write((const char *)&value, sizeof(value));
+    }
 }
 
 template <bool debug, bool enableCache>

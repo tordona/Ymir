@@ -30,11 +30,10 @@
 
 #include <ymir/core/types.hpp>
 
-#include <ymir/util/dev_log.hpp>
 #include <ymir/util/inline.hpp>
 
 #include <array>
-#include <vector>
+#include <iosfwd>
 
 namespace ymir::sh2 {
 
@@ -51,6 +50,9 @@ public:
     }
 
     void MapMemory(sys::Bus &bus);
+
+    void DumpCacheData(std::ostream &out) const;
+    void DumpCacheAddressTag(std::ostream &out) const;
 
     // -------------------------------------------------------------------------
     // Usage
