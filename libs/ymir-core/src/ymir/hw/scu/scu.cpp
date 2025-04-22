@@ -63,7 +63,7 @@ void SCU::Reset(bool hard) {
     m_intrMask.u32 = 0;
     m_intrStatus.u32 = 0;
     m_abusIntrAck = false;
-    m_intrPending = false;
+    // m_intrPending = false;
 
     if (hard) {
         for (auto &ch : m_dmaChannels) {
@@ -347,7 +347,7 @@ void SCU::SaveState(state::SCUState &state) const {
     state.intrMask = m_intrMask.u32;
     state.intrStatus = m_intrStatus.u32;
     state.abusIntrAck = m_abusIntrAck;
-    state.intrPending = m_intrPending;
+    // state.intrPending = m_intrPending;
 
     state.timer0Compare = m_timer0Compare;
     state.timer0Counter = m_timer0Counter;
@@ -410,7 +410,7 @@ void SCU::LoadState(const state::SCUState &state) {
     m_intrMask.u32 = state.intrMask & 0x0000BFFF;
     m_intrStatus.u32 = state.intrStatus & 0xFFFFBFFF;
     m_abusIntrAck = state.abusIntrAck;
-    m_intrPending = state.intrPending;
+    // m_intrPending = state.intrPending;
 
     m_timer0Compare = state.timer0Compare;
     m_timer0Counter = state.timer0Counter;
@@ -1202,7 +1202,7 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
             }
             UpdateInterruptLevel<false>();
 
-            m_intrPending = false;
+            // m_intrPending = false;
         } else {
             if (internalLevel >= externalLevel) {
                 m_cbExternalMasterInterrupt(internalLevel, internalIndex + 0x40);
@@ -1218,7 +1218,7 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
                     m_cbExternalSlaveInterrupt(0, 0);
                 }
 
-                m_intrPending = true;
+                // m_intrPending = true;
             } else if (m_abusIntrAck) {
                 devlog::trace<grp::base>("Raising external interrupt {:X}, level {:X}", externalIndex, externalLevel);
                 TraceRaiseInterrupt(m_tracer, externalIndex + 16, externalLevel);
@@ -1226,20 +1226,20 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
                 m_cbExternalMasterInterrupt(externalLevel, externalIndex + 0x50);
                 m_cbExternalSlaveInterrupt(0, 0);
 
-                m_intrPending = true;
+                // m_intrPending = true;
             } else {
                 devlog::trace<grp::base>("Lowering interrupt signal");
                 m_cbExternalMasterInterrupt(0, 0);
                 m_cbExternalSlaveInterrupt(0, 0);
 
-                m_intrPending = false;
+                // m_intrPending = false;
             }
         }
     } else {
         m_cbExternalMasterInterrupt(0, 0);
         m_cbExternalSlaveInterrupt(0, 0);
 
-        m_intrPending = false;
+        // m_intrPending = false;
     }
 }
 

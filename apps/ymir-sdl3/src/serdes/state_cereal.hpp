@@ -388,7 +388,7 @@ inline namespace v2 {
     void serialize(Archive &ar, SCUState &s) {
         ar(s.dma, s.dsp);
         ar(s.cartType, s.dramCartData);
-        ar(s.intrMask, s.intrStatus, s.abusIntrAck, s.intrPending);
+        ar(s.intrMask, s.intrStatus, s.abusIntrAck /*, s.intrPending*/);
         ar(s.timer0Counter, s.timer0Compare);
         ar(s.timer1Reload, s.timer1Enable, s.timer1Mode);
         ar(s.wramSizeSelect);

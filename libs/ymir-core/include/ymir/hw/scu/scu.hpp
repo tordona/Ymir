@@ -174,7 +174,7 @@ private:
     InterruptMask m_intrMask;
     InterruptStatus m_intrStatus;
     bool m_abusIntrAck;
-    bool m_intrPending;
+    // bool m_intrPending;
 
     // -------------------------------------------------------------------------
     // DMA

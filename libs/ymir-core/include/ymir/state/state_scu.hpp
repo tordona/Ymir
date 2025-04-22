@@ -114,7 +114,7 @@ inline namespace v2 {
         uint32 intrMask;
         uint32 intrStatus;
         bool abusIntrAck;
-        bool intrPending;
+        // bool intrPending;
 
         uint16 timer0Counter;
         uint16 timer0Compare;
@@ -142,7 +142,7 @@ inline namespace v2 {
             intrMask = s.intrMask;
             intrStatus = s.intrStatus;
             abusIntrAck = s.abusIntrAck;
-            intrPending = s.intrMask & ~s.intrStatus; // assume pending if any of the bits are set
+            // intrPending = s.intrMask & ~s.intrStatus; // assume pending if any of the bits are set
 
             timer0Counter = s.timer0Counter;
             timer0Compare = s.timer0Compare;
