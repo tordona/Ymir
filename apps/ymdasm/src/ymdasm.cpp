@@ -14,6 +14,5 @@ int main(int argc, char *argv[]) {
     //   - parses the command line syntax described in README
     //   - calls command processor methods with structured data
     //   - also processes the ISA switch commands
-    // - global options
-    //   - shared with all command processors
+    // - global options shared with all command processors
 }
