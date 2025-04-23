@@ -1,7 +1,17 @@
+#include "processors/processors.hpp"
+
 #include <fmt/format.h>
+
+#include <memory>
 
 int main(int argc, char *argv[]) {
     fmt::println("ymdasm " Ymir_VERSION);
+
+    std::unique_ptr<ICommandProcessor> processor = std::make_unique<InitialCommandProcessor>();
+
+    for (int i = 1; i < argc; i++) {
+        processor->Argument(argv[i]);
+    }
 
     // TODO: architecture
     // - command processor (doubles as disassembly engine)

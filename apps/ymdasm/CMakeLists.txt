@@ -2,6 +2,7 @@
 add_executable(ymdasm
     src/ymdasm.cpp
 
+    src/processors/processors.hpp
     src/processors/processor_initial.cpp
     src/processors/processor_initial.hpp
     src/processors/processor_interface.hpp
