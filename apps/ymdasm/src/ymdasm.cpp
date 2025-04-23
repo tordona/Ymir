@@ -6,9 +6,9 @@ int main(int argc, char *argv[]) {
     // TODO: architecture
     // - command processor (doubles as disassembly engine)
     //   - interface
-    //   - concrete instances for:
-    //     - base processor (default instance)
-    //     - processors for each ISA
+    //   - abstract base class for ISA processors
+    //     - concrete classes for each ISA
+    //   - concrete class for initial processor (default)
     // - command line parser
     //   - reads argc and argv
     //   - parses the command line syntax described in README

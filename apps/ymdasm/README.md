@@ -3,70 +3,14 @@ Ymir disassembly tool, supporting SH-2, Motorola 68000, Saturn SCU DSP and SCSP 
 
 
 
-## Examples
-
-Disassemble SH-2 code:
-```sh
-ymdasm sh2 3233 8BF8 000B
-```
-```
-3233  cmp/ge    r3, r2
-8BF8  bf        #0xFFFFFFF4
-000B  > rts
-```
-
-Display addresses and change origin:
-```sh
-ymdasm sh2 -a -o 6000180 3233 8BF8 000B
-```
-```
-6000180  3233  cmp/ge    r3, r2
-6000182  8BF8  bf        #0x6000174
-6000184  000B  > rts
-```
-
-Force delay slot for first instruction:
-```sh
-ymdasm sh2 -d 000B 000B
-```
-```
-000B  > (illegal)
-000B  rts
-```
-
-Disassemble Motorola 68000 code:
-```sh
-ymdasm m68k -a -o 10000 807b f566 e82f
-```
-```
-10000  807b f566 e82f  or.w     ([$0x1e831, pc]), d0
-```
-
-Disassemble SH-2 and M68000 code in one go:
-```sh
-ymdasm m68k -a -o 10000 807b f566 e82f 5c78 4000  sh2 -a -o 6000180 3233 8BF8 000B
-```
-```
-; Motorola 68000
-10000  807b f566 e82f  or.w     ([#0x1e831, pc]), d0
-10006  5c78 4000       addq.w   #0x6, #0x4000.w
-
-; Hitachi SH-2
-6000180  3233  cmp/ge    r3, r2
-6000182  8BF8  bf        #0x6000174
-6000184  000B  > rts
-```
-
-
-
 ## Usage
 
 The command syntax is:
 
 ```sh
 ymdasm [GLOBAL OPTIONS] \
-    <isa 1> [ISA 1 OPTIONS] <isa 1 opcodes...> \
-   [<isa 2> [ISA 2 OPTIONS] <isa 2 opcodes...> [...]]
+    <isa 1> {[ISA 1 OPTIONS]|<program bytes>}... \
+   [<isa 2> {[ISA 2 OPTIONS]|<program bytes>}... [...]]
 ```
 
 `ymdasm` supports the following instruction set architectures used by the Sega Saturn:
@@ -87,7 +31,7 @@ Options that apply to ISAs must be passed after the ISA argument.
 combined into one argument. If they take arguments, they will be parsed in the order specified in the argument. For
 example, `-abc X Y Z` is equivalent to `-a X -b Y -c Z`.
 
-You may also use an equals sign to set options, such as `-a=X` or `--foo=bar`.
+You may use an equals sign to set options, such as `-a=X` or `--foo=bar`.
 
 Append `-` to a flag option to disable it. For instance, `-a` enables option `a`, and `-a-` disables it. To disable
 flags in a combined series of short options, append `-` after the flags you wish to disable: `-ab-c-de` enables
@@ -101,8 +45,8 @@ options `a`, `d` and `e`, and disables options `b` and `c`.
 
 |Short|Long|Arguments|Description|
 |:--|:--|:--|
-|`-c`|`--color`|(none)|Enables colored output using ANSI 16-color escape codes. Ignored when outputting to files.|
-|`-C`|`--high-color`|(none)|Enables colored output using ANSI 24-bit color escape codes. Ignored when outputting to files.|
+|`-c`|`--color`|flag|Enables colored output using ANSI 16-color escape codes. Ignored when outputting to files.|
+|`-C`|`--high-color`|flag|Enables colored output using ANSI 24-bit color escape codes. Ignored when outputting to files.|
 
 
 
@@ -112,34 +56,40 @@ These options can be used with all ISAs:
 
 |Short|Long|Arguments|Description|
 |:--|:--|:--|
-|`-i`|`--input-file`|`path`|Disassembles code from the specified file. If omitted, disassembles opcodes from the command line.|
-|`-s`|`--input-offset`|`offset`|Specifies the offset into the input file from which to start disassembling code. (default: 0)|
-|`-l`|`--input-length`|`length`|Specifies the length (in bytes) of the code to read from the input file. (default: maximum possible)|
-|`-f`|`--output-file`|`path`|Outputs disassembled code to the specified file. If omitted, prints to stdout.|
-|`-o`|`--org`, `--origin`|`address`|Specifies the origin (base) address of the disassembled code. (default: 0)|
-|`-a`|`--print-address`|(flag)|Prints addresses in the disassembly listing. (default: enabled)|
-|`-c`|`--print-opcodes`|(flag)|Prints opcodes in the disassembly listing. (default: enabled)|
-|`-E`|`--big-endian`|(flag)|Force big-endian parsing. Mutually exclusive with `-e`. (default: depends on ISA)|
-|`-e`|`--little-endian`|(flag)|Force little-endian parsing. Mutually exclusive with `-E`. (default: depends on ISA)|
+|`-i`|`--input-file`|string|Disassembles code from the specified file. If omitted, disassembles opcodes from the command line.|
+|`-s`|`--input-offset`|unsigned integer|Specifies the offset into the input file from which to start disassembling code. (default: 0)|
+|`-l`|`--input-length`|unsigned integer|Specifies the length (in bytes) of the code to read from the input file. (default: maximum possible)|
+|`-f`|`--output-file`|string|Outputs disassembled code to the specified file. If omitted, prints to stdout.|
+|`-o`|`--org`, `--origin`|unsigned integer|Specifies the origin (base) address of the disassembled code. (default: 0)|
+|`-a`|`--print-address`|flag|Prints addresses in the disassembly listing. (default: enabled)|
+|`-c`|`--print-opcodes`|flag|Prints opcodes in the disassembly listing. (default: enabled)|
+|`-E`|`--big-endian`|flag|Force big-endian parsing. Mutually exclusive with `-e`. (default: depends on ISA)|
+|`-e`|`--little-endian`|flag|Force little-endian parsing. Mutually exclusive with `-E`. (default: depends on ISA)|
 
-Multiple input files can be specified and intermingled with opcodes directly specified in the command line.
-The resulting disassembly effectively contains the merged contents of all files and opcodes in the specified order.
-Each individual input file takes its own set of parameters and does not reuse previously configured options.
-For instance, `ymdasm sh2 -isl 8 4 file1.bin 0009 -i file2.bin ca00` will disassemble 4 bytes of SH-2 code from `file1.bin` starting from offset 8,
-then the opcode `0009`, followed by the entire contents of `file2.bin`, and finally the opcode `ca00`.
+Multiple input files can be specified and interweaved with opcodes directly specified in the command line. The resulting
+disassembly contains the merged contents of all files and opcodes in the specified order. Each input file takes its own
+set of parameters and does not reuse previously configured options. For instance:
+```sh
+ymdasm sh2 -isl 8 4 file1.bin 0009 -i file2.bin ca00
+```
+will disassemble 4 bytes of SH-2 code from `file1.bin` starting from offset 8, followed by the opcode `0009`, then the
+entire contents of `file2.bin`, and finally the opcode `ca00`.
 
-`<opcodes>` are a sequence of hexadecimal values representing the opcodes to be disassembled.
-Individual space-separated values are left padded with zeros to an even number of digits, the converted to bytes using the ISA's endianness.
-For example, assuming a big-endian ISA:
+`<program bytes>` are a sequence of hexadecimal values representing the program bytes. Individual space-separated values
+are left padded with zeros to an even number of digits, the converted to bytes using the ISA's endianness.
+
+For example, with a big-endian ISA:
 - `1 2 3 4` is padded to `01 02 03 04`
 - `1 23 456` is padded to `01 23 0456` then converted to `01 23 04 56`
 - `12 34 56 78`, `1234 5678`, `12 345678` and `12345678` are all equivalent
 
-- In a little-endian ISA:
+With a little-endian ISA:
 - `1 23 456` is padded to `01 23 0456` then converted to `01 23 56 04`
 - `12 34 56 78`, `3412 7856`, `12 785634` and `78563412` are all equivalent
 
-Partial opcodes will be left padded with zeros to full opcodes. For a 16-bit ISA, the opcode `9` would be interpreted as `0009`.
+Partial opcodes are left padded with zeros to full opcodes. For a 16-bit ISA, the opcode `9` is interpreted as `0009`.
+
+`-e` and `-E` lets you override the endianness for subsequent opcodes. `-e 1234 -E 1234` produces `12 34 34 12`.
 
 
 
@@ -211,3 +161,59 @@ will result in:
 
 Note that you can instantiate the same ISA multiple times and each instantiation resets the options, as seen in the two
 separate SH-2 disassembly listings.
+
+
+
+## Examples
+
+Disassemble SH-2 code:
+```sh
+ymdasm sh2 3233 8BF8 000B
+```
+```
+3233  cmp/ge    r3, r2
+8BF8  bf        #0xFFFFFFF4
+000B  > rts
+```
+
+Display addresses and change origin:
+```sh
+ymdasm sh2 -a -o 6000180 3233 8BF8 000B
+```
+```
+6000180  3233  cmp/ge    r3, r2
+6000182  8BF8  bf        #0x6000174
+6000184  000B  > rts
+```
+
+Force delay slot for first instruction:
+```sh
+ymdasm sh2 -d 000B 000B
+```
+```
+000B  > (illegal)
+000B  rts
+```
+
+Disassemble Motorola 68000 code:
+```sh
+ymdasm m68k -a -o 10000 807b f566 e82f
+```
+```
+10000  807b f566 e82f  or.w     ([#0x1e831, pc]), d0
+```
+
+Disassemble M68000 and SH-2 code in one go:
+```sh
+ymdasm m68k -a -o 10000 807b f566 e82f 5c78 4000  sh2 -a -o 6000180 3233 8BF8 000B
+```
+```
+; Motorola 68000
+10000  807b f566 e82f  or.w     ([#0x1e831, pc]), d0
+10006  5c78 4000       addq.w   #0x6, #0x4000.w
+
+; Hitachi SH-2
+6000180  3233  cmp/ge    r3, r2
+6000182  8BF8  bf        #0x6000174
+6000184  000B  > rts
+```
