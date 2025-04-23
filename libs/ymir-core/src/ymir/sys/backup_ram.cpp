@@ -69,24 +69,9 @@ BackupMemoryImageLoadResult BackupMemory::LoadFrom(const std::filesystem::path &
 
     RebuildFileList(true);
 
+    m_path = path;
+
     return BackupMemoryImageLoadResult::Success;
-}
-
-bool BackupMemory::CopyFrom(const IBackupMemory &backupRAM) {
-    // Preemptively fail to import from larger backup memories, even if their contents would fit here
-    if (backupRAM.Size() > Size()) {
-        return false;
-    }
-
-    // Clear this backup memory
-    Format();
-
-    // Copy everything from the other backup memory
-    for (auto &file : backupRAM.ExportAll()) {
-        Import(file, true);
-    }
-
-    return true;
 }
 
 void BackupMemory::CreateFrom(const std::filesystem::path &path, BackupMemorySize size, std::error_code &error) {
@@ -139,6 +124,29 @@ void BackupMemory::CreateFrom(const std::filesystem::path &path, BackupMemorySiz
     }
 
     RebuildFileList(true);
+
+    m_path = path;
+}
+
+bool BackupMemory::CopyFrom(const IBackupMemory &backupRAM) {
+    // Preemptively fail to import from larger backup memories, even if their contents would fit here
+    if (backupRAM.Size() > Size()) {
+        return false;
+    }
+
+    // Clear this backup memory
+    Format();
+
+    // Copy everything from the other backup memory
+    for (auto &file : backupRAM.ExportAll()) {
+        Import(file, true);
+    }
+
+    return true;
+}
+
+std::filesystem::path BackupMemory::GetPath() const {
+    return m_path;
 }
 
 uint8 BackupMemory::ReadByte(uint32 address) const {

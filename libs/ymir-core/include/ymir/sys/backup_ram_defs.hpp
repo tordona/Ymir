@@ -66,6 +66,9 @@ public:
     // Note that copying from a smaller backup memory is supported.
     virtual bool CopyFrom(const IBackupMemory &backupRAM) = 0;
 
+    // Retrieves the path to the file with the backing image of the backup memory if in use.
+    virtual std::filesystem::path GetPath() const = 0;
+
     // Reads the entire backup memory into a vector.
     virtual std::vector<uint8> ReadAll() const = 0;
 

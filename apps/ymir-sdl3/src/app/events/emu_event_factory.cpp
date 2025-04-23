@@ -6,6 +6,7 @@
 
 #include <util/ipl_rom_loader.hpp>
 #include <ymir/util/dev_log.hpp>
+#include <ymir/util/scope_guard.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -222,6 +223,32 @@ EmuEvent InsertCartridgeFromSettings() {
             break;
 
         case Settings::Cartridge::Type::BackupRAM: {
+            // If a backup RAM cartridge is inserted, remove it first to unlock the file and reinsert the previous
+            // cartridge in case of failure
+            std::filesystem::path prevPath = "";
+            util::ScopeGuard sgReinsertOnFailure{[&] {
+                if (prevPath.empty()) {
+                    return;
+                }
+
+                std::error_code error{};
+                bup::BackupMemory bupMem{};
+                auto result = bupMem.LoadFrom(prevPath, error);
+                if (result == bup::BackupMemoryImageLoadResult::Success) {
+                    ctx.saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
+                }
+            }};
+            if (auto *cart = ctx.saturn.GetCartridge().As<cart::CartType::BackupMemory>()) {
+                prevPath = cart->GetBackupMemory().GetPath();
+                if (prevPath == settings.backupRAM.imagePath) {
+                    ctx.saturn.RemoveCartridge();
+                } else {
+                    sgReinsertOnFailure.Cancel();
+                }
+            } else {
+                sgReinsertOnFailure.Cancel();
+            }
+
             std::error_code error{};
             bup::BackupMemory bupMem{};
             bupMem.CreateFrom(settings.backupRAM.imagePath, CapacityToBupSize(settings.backupRAM.capacity), error);
@@ -234,6 +261,9 @@ EmuEvent InsertCartridgeFromSettings() {
                                         BupCapacityShortName(settings.backupRAM.capacity),
                                         settings.backupRAM.imagePath.string());
                 ctx.saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
+
+                // If the cartridge was successfully inserted, we don't need to reinsert the previous cartridge
+                sgReinsertOnFailure.Cancel();
             }
             break;
         }

@@ -45,6 +45,8 @@ public:
 
     bool CopyFrom(const IBackupMemory &backupRAM) final;
 
+    std::filesystem::path GetPath() const final;
+
     uint8 ReadByte(uint32 address) const final;
     uint16 ReadWord(uint32 address) const final;
     uint32 ReadLong(uint32 address) const final;
@@ -77,6 +79,8 @@ private:
     // - memory-mapped file (mio::mmap_sink)
     // - memory-mapped copy-on-write file (mio::mmap_cow_sink)
     mio::mmap_sink m_backupRAM;
+
+    std::filesystem::path m_path;
 
     size_t m_addressMask = 0;
     uint32 m_blockSize = 0;

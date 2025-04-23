@@ -78,16 +78,21 @@ void CartridgeSettingsView::DrawBackupRAMSettings() {
     using BUPCap = Settings::Cartridge::BackupRAM::Capacity;
 
     uint32 currSize = 0;
+    std::filesystem::path currPath = "";
     {
         std::unique_lock lock{m_context.locks.cart};
         auto *cart = m_context.saturn.GetCartridge().As<cart::CartType::BackupMemory>();
         if (cart != nullptr) {
-            currSize = cart->GetBackupMemory().Size();
+            auto &bupMem = cart->GetBackupMemory();
+            currSize = bupMem.Size();
+            currPath = bupMem.GetPath();
         }
     }
 
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Capacity:");
+    widgets::ExplanationTooltip(
+        "This will automatically adjust if you load an existing image from the file selector below.");
     ImGui::SameLine();
     if (ImGui::BeginCombo("##bup_capacity", BupCapacityLongName(settings.capacity), ImGuiComboFlags_WidthFitPreview)) {
         for (auto cap : {BUPCap::_4Mbit, BUPCap::_8Mbit, BUPCap::_16Mbit, BUPCap::_32Mbit}) {
@@ -99,7 +104,7 @@ void CartridgeSettingsView::DrawBackupRAMSettings() {
     }
 
     ImGui::AlignTextToFramePadding();
-    ImGui::TextUnformatted("Backup memory image path");
+    ImGui::TextUnformatted("Image path:");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + itemSpacingWidth * 2));
     std::string imagePath = settings.imagePath.string();
@@ -125,8 +130,9 @@ void CartridgeSettingsView::DrawBackupRAMSettings() {
         m_context.EnqueueEvent(events::gui::OpenBackupMemoryManager());
     }
 
-    if (currSize != 0 && CapacityToSize(settings.capacity) != currSize) {
-        ImGui::TextUnformatted("WARNING: Changing the size of the cartridge will format it!");
+    if (currSize != 0 && CapacityToSize(settings.capacity) != currSize && !currPath.empty() &&
+        !settings.imagePath.empty() && currPath == settings.imagePath) {
+        ImGui::TextUnformatted("WARNING: Changing the size of the backup memory image will format it!");
     }
 }
 
@@ -157,6 +163,12 @@ void CartridgeSettingsView::ProcessLoadBackupImageError(void *userdata, const ch
 
 void CartridgeSettingsView::LoadBackupImage(std::filesystem::path file) {
     auto &settings = m_context.settings.cartridge.backupRAM;
+
+    // TODO: rework this entire process
+    // - everything here should be done by the emulator event
+    // - it should also reuse the current backup cartridge and ask the bup::BackupMemory to LoadFrom/CreateFrom
+    //   - CreateFrom should temporarily disconnect the file in order to modify its size if it's trying to change the
+    //     file it has already loaded
 
     std::error_code error{};
     bup::BackupMemory bupMem{};

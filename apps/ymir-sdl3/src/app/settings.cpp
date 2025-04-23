@@ -143,6 +143,21 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, Settings::Cart
     }
 }
 
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, Settings::Cartridge::BackupRAM::Capacity &value) {
+    value = Settings::Cartridge::BackupRAM::Capacity::_32Mbit;
+    if (auto opt = node.value<std::string>()) {
+        if (*opt == "32Mbit"s) {
+            value = Settings::Cartridge::BackupRAM::Capacity::_32Mbit;
+        } else if (*opt == "16Mbit"s) {
+            value = Settings::Cartridge::BackupRAM::Capacity::_16Mbit;
+        } else if (*opt == "8Mbit"s) {
+            value = Settings::Cartridge::BackupRAM::Capacity::_8Mbit;
+        } else if (*opt == "4Mbit"s) {
+            value = Settings::Cartridge::BackupRAM::Capacity::_4Mbit;
+        }
+    }
+}
+
 FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, Settings::Cartridge::DRAM::Capacity &value) {
     value = Settings::Cartridge::DRAM::Capacity::_32Mbit;
     if (auto opt = node.value<std::string>()) {
@@ -228,6 +243,16 @@ FORCE_INLINE static const char *ToTOML(const Settings::Cartridge::Type value) {
     case Settings::Cartridge::Type::None: return "None";
     case Settings::Cartridge::Type::BackupRAM: return "BackupRAM";
     case Settings::Cartridge::Type::DRAM: return "DRAM";
+    }
+}
+
+FORCE_INLINE static const char *ToTOML(const Settings::Cartridge::BackupRAM::Capacity value) {
+    switch (value) {
+    default: [[fallthrough]];
+    case Settings::Cartridge::BackupRAM::Capacity::_32Mbit: return "32Mbit";
+    case Settings::Cartridge::BackupRAM::Capacity::_16Mbit: return "16Mbit";
+    case Settings::Cartridge::BackupRAM::Capacity::_8Mbit: return "8Mbit";
+    case Settings::Cartridge::BackupRAM::Capacity::_4Mbit: return "4Mbit";
     }
 }
 
@@ -461,6 +486,7 @@ void Settings::ResetToDefaults() {
 
     cartridge.type = Settings::Cartridge::Type::None;
     cartridge.backupRAM.imagePath = "";
+    cartridge.backupRAM.capacity = Settings::Cartridge::BackupRAM::Capacity::_32Mbit;
     cartridge.dram.capacity = Settings::Cartridge::DRAM::Capacity::_32Mbit;
 }
 
@@ -640,6 +666,7 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         Parse(tblCart, "Type", cartridge.type);
         if (auto tblBackupRAM = tblCart["BackupRAM"]) {
             Parse(tblBackupRAM, "ImagePath", cartridge.backupRAM.imagePath);
+            Parse(tblBackupRAM, "Capacity", cartridge.backupRAM.capacity);
         }
         if (auto tblDRAM = tblCart["DRAM"]) {
             Parse(tblDRAM, "Capacity", cartridge.dram.capacity);
@@ -818,6 +845,7 @@ SettingsSaveResult Settings::Save() {
             {"Type", ToTOML(cartridge.type)},
             {"BackupRAM", toml::table{{
                 {"ImagePath", cartridge.backupRAM.imagePath.string()},
+                {"Capacity", ToTOML(cartridge.backupRAM.capacity)},
             }}},
             {"DRAM", toml::table{{
                 {"Capacity", ToTOML(cartridge.dram.capacity)},
