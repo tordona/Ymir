@@ -13,6 +13,7 @@ bool PeripheralSelector(SharedContext &ctx, uint32 portIndex) {
     const bool isPort1 = portIndex == 1;
     auto &port = isPort1 ? ctx.saturn.SMPC.GetPeripheralPort1() : ctx.saturn.SMPC.GetPeripheralPort2();
     auto &periph = port.GetPeripheral();
+    auto &settings = isPort1 ? ctx.settings.input.port1 : ctx.settings.input.port2;
     const bool isNone = periph.GetType() == peripheral::PeripheralType::None;
 
     bool changed = false;
@@ -35,8 +36,7 @@ bool PeripheralSelector(SharedContext &ctx, uint32 portIndex) {
                                       periph.GetName().data())) {
                     for (auto type : peripheral::kTypes) {
                         if (ImGui::Selectable(peripheral::GetPeripheralName(type).data(), periph.GetType() == type)) {
-                            ctx.EnqueueEvent(isPort1 ? events::emu::InsertPort1Peripheral(type)
-                                                     : events::emu::InsertPort2Peripheral(type));
+                            settings.type = type;
                             changed = true;
                         }
                     }

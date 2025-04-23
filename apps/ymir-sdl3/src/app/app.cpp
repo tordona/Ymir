@@ -303,9 +303,6 @@ int App::Run(const CommandLineOptions &options) {
 
     devlog::debug<grp::base>("Profile directory: {}", m_context.profile.GetPath(ProfilePath::Root).string());
 
-    // TODO: setup path for persistent SMPC state, internal backup memory and cartridges
-    // m_context.profile.GetPath(ProfilePath::PersistentState);
-
     m_context.settings.input.port1.type.Observe([&](ymir::peripheral::PeripheralType type) {
         m_context.EnqueueEvent(events::emu::InsertPort1Peripheral(type));
     });
