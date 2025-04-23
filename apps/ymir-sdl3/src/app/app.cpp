@@ -234,6 +234,7 @@
 #include <app/input/input_utils.hpp>
 
 #include <app/ui/widgets/cartridge_widgets.hpp>
+#include <app/ui/widgets/savestate_widgets.hpp>
 #include <app/ui/widgets/system_widgets.hpp>
 
 #include <serdes/state_cereal.hpp>
@@ -1806,6 +1807,11 @@ void App::RunEmulator() {
             // Draw windows and modals
             DrawWindows();
             DrawErrorModal();
+
+            // Draw rewind buffer bar widget
+            if (m_context.rewindBuffer.IsRunning()) {
+                ui::widgets::RewindBar(m_context);
+            }
         }
         ImGui::End();
 

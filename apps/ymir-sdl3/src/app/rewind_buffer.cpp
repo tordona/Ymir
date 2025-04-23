@@ -29,6 +29,7 @@ void RewindBuffer::Reset() {
     }
     m_deltaBuffer.clear();
     m_deltaCount = 0;
+    m_totalDeltaCount = 0;
 }
 
 void RewindBuffer::Start() {
@@ -59,6 +60,7 @@ bool RewindBuffer::PopState() {
 
     // Remove delta from ring buffer
     --m_deltaCount;
+    --m_totalDeltaCount;
     if (m_deltaWritePos == 0) {
         m_deltaWritePos = m_deltas.size() - 1;
     } else {
@@ -171,6 +173,7 @@ void RewindBuffer::ProcessFrame() {
     if (m_deltaCount < m_deltas.size()) {
         ++m_deltaCount;
     }
+    ++m_totalDeltaCount;
     outBuffer.resize(dstSize);
     const char *const src = m_deltaBuffer.data();
     char *const dst = outBuffer.data();

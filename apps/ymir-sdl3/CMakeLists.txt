@@ -138,6 +138,8 @@ add_executable(ymir-sdl3
     src/app/ui/widgets/datetime_widgets.hpp
     src/app/ui/widgets/peripheral_widgets.cpp
     src/app/ui/widgets/peripheral_widgets.hpp
+    src/app/ui/widgets/savestate_widgets.cpp
+    src/app/ui/widgets/savestate_widgets.hpp
     src/app/ui/widgets/system_widgets.cpp
     src/app/ui/widgets/system_widgets.hpp
 
