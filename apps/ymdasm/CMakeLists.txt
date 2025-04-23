@@ -1,7 +1,8 @@
 ## Create the executable target
 add_executable(ymdasm
-    src/cmd_opts.hpp
     src/ymdasm.cpp
+
+    src/processors/processor_interface.hpp
 )
 add_executable(ymir::ymdasm ALIAS ymdasm)
 set_target_properties(ymdasm PROPERTIES
@@ -13,7 +14,6 @@ target_include_directories(ymdasm
 )
 target_link_libraries(ymdasm PRIVATE
     ymir::ymir-core
-    cxxopts
 )
 target_compile_features(ymdasm PUBLIC cxx_std_20)
 
