@@ -2368,6 +2368,7 @@ bool App::LoadDiscImage(std::filesystem::path path) {
     }
 
     LoadSaveStates();
+    m_context.rewindBuffer.Reset();
     return true;
 }
 
