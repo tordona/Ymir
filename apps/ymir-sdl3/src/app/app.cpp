@@ -1810,7 +1810,7 @@ void App::RunEmulator() {
 
             // Draw rewind buffer bar widget
             if (m_context.rewindBuffer.IsRunning()) {
-                ui::widgets::RewindBar(m_context);
+                ui::widgets::RewindBar(m_context, 0.0f);
             }
         }
         ImGui::End();

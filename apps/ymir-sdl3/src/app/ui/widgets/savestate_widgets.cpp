@@ -6,7 +6,12 @@
 
 namespace app::ui::widgets {
 
-void RewindBar(SharedContext &context) {
+void RewindBar(SharedContext &context, float alpha, const RewindBarStyle &style) {
+    alpha = std::clamp(alpha, 0.0f, 1.0f);
+    if (alpha == 0.0f) {
+        return;
+    }
+
     const ImGuiViewport *viewport = ImGui::GetMainViewport();
     const ImVec2 workPos = viewport->WorkPos;
     const ImVec2 workSize = viewport->WorkSize;
@@ -38,56 +43,89 @@ void RewindBar(SharedContext &context) {
         const ImVec2 pos = ImGui::GetCursorScreenPos();
         const ImVec2 avail = ImGui::GetContentRegionAvail();
 
-        const auto cap = context.rewindBuffer.GetBufferCapacity();
-        const auto curr = context.rewindBuffer.GetBufferSize();
-        const auto endOffset = context.rewindBuffer.GetTotalFrames();
-        const auto startOffset = endOffset - curr;
+        const size_t cap = context.rewindBuffer.GetBufferCapacity();
+        const size_t curr = context.rewindBuffer.GetBufferSize();
+        const size_t endOffset = context.rewindBuffer.GetTotalFrames();
+        const size_t startOffset = endOffset - curr;
         const float pct = (float)curr / cap;
 
-        const auto startFrame = startOffset % 60;
-        const auto startSecond = startOffset / 60 % 60;
-        const auto startMinute = startOffset / 60 / 60 % 60;
-        const auto startHour = startOffset / 60 / 60 / 60 % 60;
-        const auto startStr = fmt::format("{:d}:{:02d}:{:02d}.{:02d}", startHour, startMinute, startSecond, startFrame);
+        const size_t startFrame = startOffset % 60;
+        const size_t startSecond = startOffset / 60 % 60;
+        const size_t startMinute = startOffset / 60 / 60 % 60;
+        const size_t startHour = startOffset / 60 / 60 / 60 % 60;
+        const std::string startStr =
+            fmt::format("{:d}:{:02d}:{:02d}.{:02d}", startHour, startMinute, startSecond, startFrame);
 
-        const auto endFrame = endOffset % 60;
-        const auto endSecond = endOffset / 60 % 60;
-        const auto endMinute = endOffset / 60 / 60 % 60;
-        const auto endHour = endOffset / 60 / 60 / 60 % 60;
-        const auto endStr = fmt::format("{:d}:{:02d}:{:02d}.{:02d}", endHour, endMinute, endSecond, endFrame);
+        const size_t endFrame = endOffset % 60;
+        const size_t endSecond = endOffset / 60 % 60;
+        const size_t endMinute = endOffset / 60 / 60 % 60;
+        const size_t endHour = endOffset / 60 / 60 / 60 % 60;
+        const std::string endStr = fmt::format("{:d}:{:02d}:{:02d}.{:02d}", endHour, endMinute, endSecond, endFrame);
 
-        ImGui::PushFont(context.fonts.monospace.small.bold);
-        const float endWidth = ImGui::CalcTextSize(endStr.c_str()).x;
-        const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
+        auto applyAlpha = [=](ImVec4 color) { return ImVec4(color.x, color.y, color.z, color.w * alpha); };
+
+        const ImU32 bgColor = ImGui::ColorConvertFloat4ToU32(applyAlpha(style.colors.background));
+        const ImU32 borderColor = ImGui::ColorConvertFloat4ToU32(applyAlpha(style.colors.border));
+        const ImU32 barColor = ImGui::ColorConvertFloat4ToU32(applyAlpha(style.colors.bar));
+        const ImU32 secondsMarkerColor = ImGui::ColorConvertFloat4ToU32(applyAlpha(style.colors.secondsMarker));
+        const ImU32 textColor = ImGui::ColorConvertFloat4ToU32(applyAlpha(style.colors.text));
+        const ImU32 textOutlineColor = ImGui::ColorConvertFloat4ToU32(ImVec4(0.0f, 0.0f, 0.0f, alpha * 0.8f));
 
         ImDrawList *drawList = ImGui::GetWindowDrawList();
 
+        ImGui::PushFont(context.fonts.monospace.small.bold);
+
+        const ImVec2 startSize = ImGui::CalcTextSize(startStr.c_str());
+        const ImVec2 endSize = ImGui::CalcTextSize(endStr.c_str());
+        const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
+        const float textSpacing = ImGui::GetStyle().ItemSpacing.x;
+
+        const ImVec2 startPos{pos.x, pos.y};
+        const ImVec2 endPos{std::max(pos.x + avail.x * pct - endSize.x, pos.x + startSize.x + textSpacing * 3), pos.y};
+
+        // Outline text
         for (int y = -1; y <= 1; y++) {
             for (int x = -1; x <= 1; x++) {
                 if (x == 0 && y == 0) {
                     continue;
                 }
-                drawList->AddText(ImVec2(pos.x + x, pos.y + y), 0xBB000000, startStr.c_str());
-                drawList->AddText(ImVec2(pos.x + x + avail.x * pct - endWidth, pos.y + y), 0xBB000000, endStr.c_str());
+                drawList->AddText(ImVec2(startPos.x + x, startPos.y + y), textOutlineColor, startStr.c_str());
+                drawList->AddText(ImVec2(endPos.x + x, endPos.y + y), textOutlineColor, endStr.c_str());
             }
         }
 
-        drawList->AddText(ImVec2(pos.x, pos.y), 0xF0FFF8C0, startStr.c_str());
-        drawList->AddText(ImVec2(pos.x + avail.x * pct - endWidth, pos.y), 0xF0FFF8C0, endStr.c_str());
+        // drawList->AddRectFilled(startPos, ImVec2(startPos.x + startSize.x, startPos.y + startSize.y), bgColor);
+        // drawList->AddRectFilled(endPos, ImVec2(endPos.x + startSize.x, endPos.y + startSize.y), bgColor);
+
+        drawList->AddText(startPos, textColor, startStr.c_str());
+        drawList->AddText(endPos, textColor, endStr.c_str());
+
         ImGui::PopFont();
 
         const ImVec2 rectTopLeft = ImVec2(pos.x, pos.y + lineHeight);
 
         // Background
-        drawList->AddRectFilled(rectTopLeft, ImVec2(pos.x + avail.x, pos.y + avail.y), 0xAA211F15, 2.0f,
+        drawList->AddRectFilled(rectTopLeft, ImVec2(pos.x + avail.x, pos.y + avail.y), bgColor, 2.0f,
                                 ImDrawFlags_RoundCornersAll);
 
         // Progress bar
-        drawList->AddRectFilled(rectTopLeft, ImVec2(pos.x + avail.x * pct, pos.y + avail.y), 0xC0FF7322, 2.0f,
+        drawList->AddRectFilled(rectTopLeft, ImVec2(pos.x + avail.x * pct, pos.y + avail.y), barColor, 2.0f,
                                 ImDrawFlags_RoundCornersAll);
 
+        // Seconds markers
+        size_t secondOffset = endOffset - endFrame;
+        while (secondOffset >= startOffset && secondOffset <= endOffset) {
+            size_t barOffset = secondOffset - startOffset;
+            const float secondPct = (float)barOffset / cap;
+            const float x = pos.x + avail.x * secondPct;
+            const float yTop = pos.y + lineHeight;
+            const float yBtm = pos.y + avail.y;
+            drawList->AddLine(ImVec2(x, yTop), ImVec2(x, yBtm), secondsMarkerColor, 1.5f);
+            secondOffset -= 60;
+        }
+
         // Border
-        drawList->AddRect(rectTopLeft, ImVec2(pos.x + avail.x, pos.y + avail.y), 0xE0FF9A35, 2.0f,
+        drawList->AddRect(rectTopLeft, ImVec2(pos.x + avail.x, pos.y + avail.y), borderColor, 2.0f,
                           ImDrawFlags_RoundCornersAll, 2.0f);
     }
     ImGui::End();
