@@ -261,6 +261,8 @@
 
 CMRC_DECLARE(Ymir_sdl3_rc);
 
+using clk = std::chrono::steady_clock;
+
 namespace app {
 
 App::App()
@@ -365,7 +367,6 @@ void App::RunEmulator() {
     // TODO: setting the main thread name on Linux replaces the process name displayed on tools like `top`
     // util::SetCurrentThreadName("Main thread");
 
-    using clk = std::chrono::steady_clock;
     using namespace std::chrono_literals;
     using namespace ymir;
     using namespace util;
@@ -1822,8 +1823,6 @@ void App::RunEmulator() {
 
             // Draw rewind buffer bar widget
             if (m_context.rewindBuffer.IsRunning()) {
-                using namespace std::chrono_literals;
-
                 const auto now = clk::now();
 
                 auto *viewport = ImGui::GetMainViewport();
@@ -2311,8 +2310,10 @@ void App::EnableRewindBuffer(bool enable) {
     if (enable != wasEnabled) {
         if (enable) {
             m_context.rewindBuffer.Start();
+            m_rewindBarFadeTimeBase = clk::now();
         } else {
             m_context.rewindBuffer.Stop();
+            m_context.rewindBuffer.Reset();
         }
         devlog::debug<grp::base>("Rewind buffer {}", (enable ? "enabled" : "disabled"));
     }
