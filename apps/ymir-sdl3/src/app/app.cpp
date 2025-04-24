@@ -1223,6 +1223,7 @@ void App::RunEmulator() {
     m_context.saturn.Reset(true);
 
     auto t = clk::now();
+    m_mouseHideTime = t;
 
     // Start emulator thread
     m_emuThread = std::thread([&] { EmulatorThread(); });
@@ -1471,6 +1472,17 @@ void App::RunEmulator() {
 
         const bool prevForceAspectRatio = m_context.settings.video.forceAspectRatio;
         const double prevForcedAspect = m_context.settings.video.forcedAspect;
+
+        // Hide mouse cursor if no interactions were made recently
+        const bool mouseMoved = io.MouseDelta.x != 0.0f && io.MouseDelta.y != 0.0f;
+        const bool mouseDown =
+            io.MouseDown[0] || io.MouseDown[1] || io.MouseDown[2] || io.MouseDown[3] || io.MouseDown[4];
+        if (mouseMoved || mouseDown || io.WantCaptureMouse) {
+            m_mouseHideTime = clk::now();
+        }
+        if (clk::now() >= m_mouseHideTime + 2s) {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+        }
 
         // ---------------------------------------------------------------------
         // Draw ImGui widgets
@@ -1810,12 +1822,32 @@ void App::RunEmulator() {
 
             // Draw rewind buffer bar widget
             if (m_context.rewindBuffer.IsRunning()) {
-                // TODO: fade in and out
-                // - fade in while rewinding ou paused
-                // - fade in if mouse is near the bar
-                // - fade out after a short while when none of those are true
-                // - add mouse interactions
-                ui::widgets::RewindBar(m_context, 1.0f);
+                using namespace std::chrono_literals;
+
+                const auto now = clk::now();
+
+                auto *viewport = ImGui::GetMainViewport();
+
+                const float mousePosY = io.MousePos.y;
+                const float vpBottomQuarter =
+                    viewport->Pos.y + std::min(viewport->Size.y * 0.75f, viewport->Size.y - 120.0f);
+                if ((mouseMoved && mousePosY >= vpBottomQuarter) || m_context.rewinding || paused) {
+                    m_rewindBarFadeTimeBase = now;
+                }
+
+                // Delta time since last fade in event
+                const auto delta = now - m_rewindBarFadeTimeBase;
+
+                // TODO: make these configurable
+                static constexpr auto kOpaqueTime = 2.0s; // how long to keep the bar opaque since last event
+                static constexpr auto kFadeTime = 0.75s;  // how long to fade from opaque to transparent
+
+                const double t = (delta - kOpaqueTime) / kFadeTime;
+                const double alpha = std::clamp(1.0 - t, 0.0, 1.0);
+
+                ui::widgets::RewindBar(m_context, alpha);
+
+                // TODO: add mouse interactions
             }
         }
         ImGui::End();

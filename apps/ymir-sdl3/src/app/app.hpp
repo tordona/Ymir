@@ -25,6 +25,7 @@
 
 #include <imgui.h>
 
+#include <chrono>
 #include <filesystem>
 #include <string_view>
 #include <thread>
@@ -64,6 +65,8 @@ private:
     std::thread m_emuThread;
 
     AudioSystem m_audioSystem;
+
+    std::chrono::steady_clock::time_point m_mouseHideTime;
 
     void RunEmulator();
 
@@ -131,6 +134,9 @@ private:
 
     bool m_openErrorModal = false; // Open error modal on the next frame
     std::function<void()> m_errorModalContents;
+
+    // Rewind bar
+    std::chrono::steady_clock::time_point m_rewindBarFadeTimeBase;
 };
 
 } // namespace app
