@@ -1815,7 +1815,7 @@ void App::RunEmulator() {
                 // - fade in if mouse is near the bar
                 // - fade out after a short while when none of those are true
                 // - add mouse interactions
-                ui::widgets::RewindBar(m_context, 0.0f);
+                ui::widgets::RewindBar(m_context, 1.0f);
             }
         }
         ImGui::End();

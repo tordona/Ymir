@@ -16,22 +16,16 @@ void RewindBar(SharedContext &context, float alpha, const RewindBarStyle &style)
     const ImVec2 workPos = viewport->WorkPos;
     const ImVec2 workSize = viewport->WorkSize;
 
-    // TODO: make several parameters configurable
-    // - padding from window borders
-    // - height
-    // TODO: use ImGui style variables for certain options
-    // - rounding
-    // - background alpha
+    // TODO: custom size and position
+    // - remove height from style
     // TODO: mouse interaction
-
-    const float padding = 10.0f;
 
     const ImVec2 windowPos{
         (workPos.x + workSize.x) * 0.5f,
-        (workPos.y + workSize.y - padding),
+        (workPos.y + workSize.y - style.padding),
     };
     ImGui::SetNextWindowPos(windowPos, ImGuiCond_Always, ImVec2{0.5f, 1.0f});
-    ImGui::SetNextWindowSize(ImVec2(workSize.x - padding * 2.0f, 50.0f));
+    ImGui::SetNextWindowSize(ImVec2(workSize.x - style.padding * 2.0f, style.height));
     ImGui::SetNextWindowViewport(viewport->ID);
 
     const ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking |
@@ -104,11 +98,11 @@ void RewindBar(SharedContext &context, float alpha, const RewindBarStyle &style)
         const ImVec2 rectTopLeft = ImVec2(pos.x, pos.y + lineHeight);
 
         // Background
-        drawList->AddRectFilled(rectTopLeft, ImVec2(pos.x + avail.x, pos.y + avail.y), bgColor, 2.0f,
+        drawList->AddRectFilled(rectTopLeft, ImVec2(pos.x + avail.x, pos.y + avail.y), bgColor, style.rounding,
                                 ImDrawFlags_RoundCornersAll);
 
         // Progress bar
-        drawList->AddRectFilled(rectTopLeft, ImVec2(pos.x + avail.x * pct, pos.y + avail.y), barColor, 2.0f,
+        drawList->AddRectFilled(rectTopLeft, ImVec2(pos.x + avail.x * pct, pos.y + avail.y), barColor, style.rounding,
                                 ImDrawFlags_RoundCornersAll);
 
         // Seconds markers
@@ -119,13 +113,13 @@ void RewindBar(SharedContext &context, float alpha, const RewindBarStyle &style)
             const float x = pos.x + avail.x * secondPct;
             const float yTop = pos.y + lineHeight;
             const float yBtm = pos.y + avail.y;
-            drawList->AddLine(ImVec2(x, yTop), ImVec2(x, yBtm), secondsMarkerColor, 1.5f);
+            drawList->AddLine(ImVec2(x, yTop), ImVec2(x, yBtm), secondsMarkerColor, style.secondsMarkerThickness);
             secondOffset -= 60;
         }
 
         // Border
-        drawList->AddRect(rectTopLeft, ImVec2(pos.x + avail.x, pos.y + avail.y), borderColor, 2.0f,
-                          ImDrawFlags_RoundCornersAll, 2.0f);
+        drawList->AddRect(rectTopLeft, ImVec2(pos.x + avail.x, pos.y + avail.y), borderColor, style.rounding,
+                          ImDrawFlags_RoundCornersAll, style.borderThickness);
     }
     ImGui::End();
 }

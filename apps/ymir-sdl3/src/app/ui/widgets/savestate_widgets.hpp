@@ -12,6 +12,12 @@ struct RewindBarStyle {
         ImVec4 secondsMarker;
         ImVec4 text;
     } colors;
+
+    float padding = 10.0f;
+    float height = 50.0f;
+    float rounding = 2.0f;
+    float borderThickness = 2.0f;
+    float secondsMarkerThickness = 1.5f;
 };
 
 #define C(r, g, b, a) (r / 255.0f), (g / 255.0f), (b / 255.0f), a
