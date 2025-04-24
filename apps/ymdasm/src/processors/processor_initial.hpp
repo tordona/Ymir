@@ -1,8 +1,16 @@
-#include "processor_interface.hpp"
+#include "processor.hpp"
 
-class InitialCommandProcessor : public ICommandProcessor {
+class InitialCommandProcessor : public CommandProcessor {
 public:
-    bool Option(std::string_view name, std::string_view args) final;
-    bool Flag(std::string_view name, bool value) final;
+    const std::span<const OptionInfo *> GetOptions() const final;
+    const OptionInfo *LongOptionInfo(std::string_view name) const final;
+    const OptionInfo *ShortOptionInfo(char name) const final;
+
+    bool LongOption(std::string_view name, std::string_view value) final;
+    bool LongFlag(std::string_view name, bool value) final;
+
+    bool ShortOption(char name, std::string_view value) final;
+    bool ShortFlag(char name, bool value) final;
+
     bool Argument(std::string_view arg) final;
 };
