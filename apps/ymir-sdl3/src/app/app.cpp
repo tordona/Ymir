@@ -1810,6 +1810,11 @@ void App::RunEmulator() {
 
             // Draw rewind buffer bar widget
             if (m_context.rewindBuffer.IsRunning()) {
+                // TODO: fade in and out
+                // - fade in while rewinding ou paused
+                // - fade in if mouse is near the bar
+                // - fade out after a short while when none of those are true
+                // - add mouse interactions
                 ui::widgets::RewindBar(m_context, 0.0f);
             }
         }

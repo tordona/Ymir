@@ -18,11 +18,10 @@ void RewindBar(SharedContext &context, float alpha, const RewindBarStyle &style)
 
     // TODO: make several parameters configurable
     // - padding from window borders
-    // - colors
+    // - height
     // TODO: use ImGui style variables for certain options
     // - rounding
     // - background alpha
-    // TODO: global alpha, to allow for fade-out effects
     // TODO: mouse interaction
 
     const float padding = 10.0f;
