@@ -36,6 +36,8 @@
 
 #define ANSI_FGCOLOR_24B(r, g, b) ANSI_ESCAPE "[38;2;" #r ";" #g ";" #b "m"
 
+using namespace ymir;
+
 struct ColorEscapes {
     const char *address;
     const char *bytes;
@@ -287,31 +289,43 @@ int main(int argc, char *argv[]) {
             uint32 address = *maybeAddress;
             bool isDelaySlot = false;
 
+            int x = 0;
+
+            auto printRaw = [&](std::string_view text) {
+                fmt::print("{}", text);
+                x += text.size();
+            };
+
+            auto print = [&](const char *color, std::string_view text) {
+                fmt::print("{}{}", color, text);
+                x += text.size();
+            };
+
             auto printAddress = [&](uint32 address) {
                 if (!hideAddresses) {
-                    fmt::print("{}{:08X}  ", colors.address, address);
+                    print(colors.address, fmt::format("{:08X}  ", address));
                 }
             };
 
             auto printOpcode = [&](uint16 opcode) {
                 if (!hideOpcodes) {
-                    fmt::print("{}{:04X}  ", colors.bytes, opcode);
+                    print(colors.bytes, fmt::format("{:04X}  ", opcode));
                 }
             };
 
-            auto printDelaySlotPrefix = [&] { fmt::print("{}> ", colors.delaySlot); };
+            auto printDelaySlotPrefix = [&] { print(colors.delaySlot, "> "); };
 
-            auto printMnemonic = [&](const char *mnemonic) { fmt::print("{}{}", colors.mnemonic, mnemonic); };
-            auto printIllegalMnemonic = [&] { fmt::print("{}{}", colors.illegalMnemonic, "(illegal)"); };
-            auto printUnknownMnemonic = [&] { fmt::print("{}{}", colors.illegalMnemonic, "(?)"); };
-            auto printCond = [&](const char *cond) { fmt::print("{}{}", colors.cond, cond); };
-            auto printSeparator = [&](const char *separator) { fmt::print("{}{}", colors.separator, separator); };
+            auto printMnemonic = [&](const char *mnemonic) { print(colors.mnemonic, mnemonic); };
+            auto printIllegalMnemonic = [&] { print(colors.illegalMnemonic, "(illegal)"); };
+            auto printUnknownMnemonic = [&] { print(colors.illegalMnemonic, "(?)"); };
+            auto printCond = [&](const char *cond) { print(colors.cond, cond); };
+            auto printSeparator = [&](const char *separator) { print(colors.separator, separator); };
             auto printSize = [&](const char *size) {
                 printSeparator(".");
-                fmt::print("{}{}", colors.sizeSuffix, size);
+                print(colors.sizeSuffix, size);
             };
 
-            auto printInstruction = [&](const ymir::sh2::OpcodeDisasm &disasm, bool delaySlot) {
+            auto printInstruction = [&](const sh2::OpcodeDisasm &disasm, bool delaySlot) {
                 if (delaySlot) {
                     if (!disasm.validInDelaySlot) {
                         printIllegalMnemonic();
@@ -319,8 +333,6 @@ int main(int argc, char *argv[]) {
                     }
                     printDelaySlotPrefix();
                 }
-
-                using namespace ymir;
 
                 switch (disasm.mnemonic) {
                 case sh2::Mnemonic::NOP: printMnemonic("nop"); break;
@@ -458,6 +470,133 @@ int main(int argc, char *argv[]) {
                 }
             };
 
+            auto printImm = [&](sint32 imm) {
+                print(colors.immediate, fmt::format("#0x{:X}", static_cast<uint32>(imm)));
+            };
+
+            auto printOpRead = [&](std::string_view op) { print(colors.opRead, op); };
+            auto printOpWrite = [&](std::string_view op) { print(colors.opWrite, op); };
+            auto printOpReadWrite = [&](std::string_view op) { print(colors.opReadWrite, op); };
+
+            auto printOpName = [&](std::string_view op, bool read, bool write) {
+                if (read && write) {
+                    printOpReadWrite(op);
+                } else if (write) {
+                    printOpWrite(op);
+                } else {
+                    printOpRead(op);
+                }
+            };
+
+            auto printRnRead = [&](uint8 rn) { print(colors.opRead, fmt::format("r{}", rn)); };
+            auto printRnWrite = [&](uint8 rn) { print(colors.opWrite, fmt::format("r{}", rn)); };
+            auto printRnReadWrite = [&](uint8 rn) { print(colors.opReadWrite, fmt::format("r{}", rn)); };
+
+            auto printRn = [&](uint8 rn, bool read, bool write) {
+                if (read && write) {
+                    printRnReadWrite(rn);
+                } else if (write) {
+                    printRnWrite(rn);
+                } else {
+                    printRnRead(rn);
+                }
+            };
+
+            auto printRWSymbol = [&](const char *symbol, bool write) {
+                const auto color = write ? colors.opWrite : colors.opRead;
+                print(color, symbol);
+            };
+
+            auto printPlus = [&] { print(colors.addrInc, "+"); };
+            auto printMinus = [&] { print(colors.addrDec, "-"); };
+            auto printComma = [&] { print(colors.separator, ", "); };
+
+            auto printOp = [&](const sh2::Operand &op) {
+                if (op.type == sh2::Operand::Type::None) {
+                    return;
+                }
+
+                switch (op.type) {
+                case sh2::Operand::Type::Imm: printImm(op.immDisp); break;
+                case sh2::Operand::Type::Rn: printRn(op.reg, op.read, op.write); break;
+                case sh2::Operand::Type::AtRn:
+                    printRWSymbol("@", op.write);
+                    printRnRead(op.reg);
+                    break;
+                case sh2::Operand::Type::AtRnPlus:
+                    printRWSymbol("@", op.write);
+                    printRnReadWrite(op.reg);
+                    printPlus();
+                    break;
+                case sh2::Operand::Type::AtMinusRn:
+                    printRWSymbol("@", op.write);
+                    printMinus();
+                    printRnReadWrite(op.reg);
+                    break;
+                case sh2::Operand::Type::AtDispRn:
+                    printRWSymbol("@(", op.write);
+                    printImm(op.immDisp);
+                    printComma();
+                    printRnRead(op.reg);
+                    printRWSymbol(")", op.write);
+                    break;
+                case sh2::Operand::Type::AtR0Rn:
+                    printRWSymbol("@(", op.write);
+                    printRnRead(0);
+                    printComma();
+                    printRnRead(op.reg);
+                    printRWSymbol(")", op.write);
+                    break;
+                case sh2::Operand::Type::AtDispGBR:
+                    printRWSymbol("@(", op.write);
+                    printImm(op.immDisp);
+                    printComma();
+                    printOpRead("gbr");
+                    printRWSymbol(")", op.write);
+                    break;
+                case sh2::Operand::Type::AtR0GBR:
+                    printRWSymbol("@(", op.write);
+                    printRnRead(0);
+                    printComma();
+                    printOpRead("gbr");
+                    printRWSymbol(")", op.write);
+                    break;
+                case sh2::Operand::Type::AtDispPC:
+                    printRWSymbol("@(", false);
+                    printImm(address + op.immDisp);
+                    printRWSymbol(")", false);
+                    break;
+                case sh2::Operand::Type::AtDispPCWordAlign:
+                    printRWSymbol("@(", false);
+                    printImm((address & ~3) + op.immDisp);
+                    printRWSymbol(")", false);
+                    break;
+                case sh2::Operand::Type::DispPC: printImm(address + op.immDisp); break;
+                case sh2::Operand::Type::RnPC: printRnRead(op.reg); break;
+                case sh2::Operand::Type::SR: printOpName("sr", op.read, op.write); break;
+                case sh2::Operand::Type::GBR: printOpName("gbr", op.read, op.write); break;
+                case sh2::Operand::Type::VBR: printOpName("vbr", op.read, op.write); break;
+                case sh2::Operand::Type::MACH: printOpName("mach", op.read, op.write); break;
+                case sh2::Operand::Type::MACL: printOpName("macl", op.read, op.write); break;
+                case sh2::Operand::Type::PR: printOpName("pr", op.read, op.write); break;
+                default: return;
+                }
+
+                return;
+            };
+
+            auto printOp1 = [&](const sh2::OpcodeDisasm &disasm) { printOp(disasm.op1); };
+            auto printOp2 = [&](const sh2::OpcodeDisasm &disasm) { printOp(disasm.op2); };
+
+            auto printComment = [&](std::string_view comment) { print(colors.comment, comment); };
+
+            auto align = [&](int pos) {
+                if (pos > x) {
+                    std::string pad(pos - x, ' ');
+                    printRaw(pad);
+                }
+            };
+
             if (inputFile.empty()) {
                 for (auto &opcodeStr : args) {
                     std::string_view strippedOpcode = opcodeStr;
@@ -479,21 +618,29 @@ int main(int argc, char *argv[]) {
                     }
                     const uint16 opcode = *maybeOpcode;
 
-                    const ymir::sh2::OpcodeDisasm &disasm = ymir::sh2::Disassemble(opcode);
+                    const sh2::OpcodeDisasm &disasm = sh2::Disassemble(opcode);
 
                     bool delaySlotState = (isDelaySlot || forceDelaySlot > 0) && forceDelaySlot >= 0;
 
                     printAddress(address);
                     printOpcode(opcode);
                     printInstruction(disasm, delaySlotState);
+                    align(28);
+                    printOp1(disasm);
+                    if (disasm.op1.type != sh2::Operand::Type::None && disasm.op2.type != sh2::Operand::Type::None) {
+                        printComma();
+                    }
+                    printOp2(disasm);
 
+                    align(50);
                     if (forceDelaySlot > 0) {
-                        fmt::print("{}; delay slot override", colors.comment);
+                        printComment("; delay slot override");
                     } else if (forceDelaySlot < 0) {
-                        fmt::print("{}; non-delay slot override", colors.comment);
+                        printComment("; non-delay slot override");
                     }
 
                     fmt::println("{}", colors.reset);
+                    x = 0;
 
                     isDelaySlot = disasm.hasDelaySlot;
                     address += sizeof(uint16);
