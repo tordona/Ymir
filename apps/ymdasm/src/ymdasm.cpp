@@ -34,6 +34,100 @@
 
 #define ANSI_FGCOLOR_24B(r, g, b) ANSI_ESCAPE "[38;2;" #r ";" #g ";" #b "m"
 
+struct ColorEscapes {
+    const char *address;
+    const char *bytes;
+
+    const char *delaySlot;       // SH2 delay slot prefix
+    const char *mnemonic;        // All except NOP
+    const char *nopMnemonic;     // NOP
+    const char *illegalMnemonic; // (illegal)
+    const char *sizeSuffix;      // SH2/M68K size suffixes: b w l
+
+    const char *immediate;   // #0x1234
+    const char *opRead;      // Read operands
+    const char *opWrite;     // Written operands
+    const char *opReadWrite; // Read and written operands
+
+    const char *separator; // Operand (,) and size suffix (.) separators
+
+    const char *addrInc; // SH2 and M68K address increment (@Rn+, (An)+)
+    const char *addrDec; // SH2 and M68K address increment (@-Rn, -(An))
+
+    const char *reset; // Color reset sequence
+};
+
+static ColorEscapes kNoColors = {
+    .address = "",
+    .bytes = "",
+
+    .delaySlot = "",
+    .mnemonic = "",
+    .nopMnemonic = "",
+    .illegalMnemonic = "",
+    .sizeSuffix = "",
+
+    .immediate = "",
+    .opRead = "",
+    .opWrite = "",
+    .opReadWrite = "",
+
+    .separator = "",
+
+    .addrInc = "",
+    .addrDec = "",
+
+    .reset = "",
+};
+
+// TODO: set this up
+static ColorEscapes kBasicColors = {
+    .address = "",
+    .bytes = "",
+
+    .delaySlot = "",
+    .mnemonic = "",
+    .nopMnemonic = "",
+    .illegalMnemonic = "",
+    .sizeSuffix = "",
+
+    .immediate = "",
+    .opRead = "",
+    .opWrite = "",
+    .opReadWrite = "",
+
+    .separator = "",
+
+    .addrInc = "",
+    .addrDec = "",
+
+    .reset = ANSI_RESET,
+};
+
+// TODO: set this up
+static ColorEscapes kTrueColors = {
+    .address = "",
+    .bytes = "",
+
+    .delaySlot = "",
+    .mnemonic = "",
+    .nopMnemonic = "",
+    .illegalMnemonic = "",
+    .sizeSuffix = "",
+
+    .immediate = "",
+    .opRead = "",
+    .opWrite = "",
+    .opReadWrite = "",
+
+    .separator = "",
+
+    .addrInc = "",
+    .addrDec = "",
+
+    .reset = ANSI_RESET,
+};
+
 template <std::unsigned_integral T>
 std::optional<T> ParseOpcode(std::string_view opcode) {
     static constexpr size_t kHexOpcodeLength = sizeof(T) * 2;
@@ -150,16 +244,17 @@ int main(int argc, char *argv[]) {
         }
 
         // Color mode must be one of the valid modes
+        ColorEscapes colorEscapes = kNoColors;
         if (result.contains("color")) {
             std::string lcColorMode = colorMode;
             std::transform(lcColorMode.cbegin(), lcColorMode.cend(), lcColorMode.begin(),
                            [](char c) { return std::tolower(c); });
             if (lcColorMode == "none") {
-                // TODO: use the plain color palette
+                colorEscapes = kNoColors;
             } else if (lcColorMode == "basic") {
-                // TODO: use the basic color palette
+                colorEscapes = kBasicColors;
             } else if (lcColorMode == "truecolor") {
-                // TODO: use the 24-bit color palette
+                colorEscapes = kTrueColors;
             } else {
                 fmt::println("Invalid color mode: {}", colorMode);
                 fmt::println("");
