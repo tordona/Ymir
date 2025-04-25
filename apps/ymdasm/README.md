@@ -5,8 +5,13 @@ Ymir disassembly tool, supporting SH-2, Motorola 68000, Saturn SCU DSP and SCSP 
 
 ## Usage
 
+Type `ymdasm --help` to get help about the command.
+
 ```sh
-ymdasm [OPTION...] <isa> {<program opcodes>|[<offset> [<length>]]}
+Ymir disassembly tool
+Version 0.1.0
+Usage:
+  ymdasm [OPTION...] <isa> {<program opcodes>|[<offset> [<length>]]}
 
   -h, --help              Display this help text.
   -C, --color color_mode  Color text output (stdout only): none, basic,
@@ -35,29 +40,17 @@ ymdasm [OPTION...] <isa> {<program opcodes>|[<offset> [<length>]]}
   <length> is rounded down to the nearest multiple of the opcode size.
   If <offset> is omitted, ymdasm disassembles from the start of the file.
   If <length> is omitted, ymdasm disassembles until the end of the file.
+
+  SuperH-2 opcodes can be prefixed with > to force them to be decoded as delay
+  slot instructions or < to force instructions in delay slots to be decoded as
+  regular instructions.
 ```
 
 The instruction set architecture argument is case-insensitive.
 
 `ymdasm` does not assume a default ISA; you must always specify one of the supported ISA arguments to disassemble code.
 
-
-
-### Global options
-
-These options can be used with all ISAs:
-
-|Short|Long|Arguments|Description|
-|:--|:--|:--|
-|`-h`|`--help`|flag|Prints help text about the current ISA, or all ISAs if none was specified.|
-|`-C`|`--color`|string|Selects colored text mode:<ul><li>`none` for no coloring (default)</li><li>`basic` for 16 colors</li><li>`truecolor` for 24-bit colors</li></ul>|
-|`-i`|`--input-file`|string|Disassembles code from the specified file. If omitted, disassembles opcodes from the command line.|
-|`-f`|`--output-file`|string|Outputs disassembled code to the specified file. If omitted, prints to stdout.|
-|`-o`|`--org`|unsigned integer|Specifies the origin (base) address of the disassembled code. (default: `0`)|
-|`-a`|`--hide-address`|flag|Hides addresses in the disassembly listing. (default: display)|
-|`-c`|`--hide-opcodes`|flag|Hides opcodes in the disassembly listing. (default: display)|
-
-`<program opcodes>` are a sequence of hex-encoded opcodes. Each space-separated value is interpreted as one opcode.
+`<program opcodes>` is a sequence of hexadecimal opcodes. Each space-separated value is interpreted as one opcode.
 Partial opcodes are left padded with zeros to full opcodes, and opcodes that exceed the opcode length of the ISA are
 rejected. For example, with a 16-bit ISA, `1 22 333 4444` contains opcodes `0001`, `0022`, `0333` and `4444`, and
 `55555` would cause an error.
