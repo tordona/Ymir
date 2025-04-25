@@ -1,5 +1,7 @@
 #include <ymir/core/types.hpp>
 
+#include <ymir/hw/sh2/sh2_disasm.hpp>
+
 #include <cxxopts.hpp>
 #include <fmt/format.h>
 
@@ -213,8 +215,8 @@ int main(int argc, char *argv[]) {
         fmt::println("  If <offset> is omitted, ymdasm disassembles from the start of the file.");
         fmt::println("  If <length> is omitted, ymdasm disassembles until the end of the file.");
         fmt::println("");
-        fmt::println("  SuperH-2 opcodes can be prefixed with > to force them to be decoded as delay");
-        fmt::println("  slot instructions or < to force instructions in delay slots to be decoded as");
+        fmt::println("  SuperH-2 opcodes can be prefixed with ! to force them to be decoded as delay");
+        fmt::println("  slot instructions or _ to force instructions in delay slots to be decoded as");
         fmt::println("  regular instructions.");
     };
 
@@ -244,17 +246,17 @@ int main(int argc, char *argv[]) {
         }
 
         // Color mode must be one of the valid modes
-        ColorEscapes colorEscapes = kNoColors;
+        ColorEscapes colors = kNoColors;
         if (result.contains("color")) {
             std::string lcColorMode = colorMode;
             std::transform(lcColorMode.cbegin(), lcColorMode.cend(), lcColorMode.begin(),
                            [](char c) { return std::tolower(c); });
             if (lcColorMode == "none") {
-                colorEscapes = kNoColors;
+                colors = kNoColors;
             } else if (lcColorMode == "basic") {
-                colorEscapes = kBasicColors;
+                colors = kBasicColors;
             } else if (lcColorMode == "truecolor") {
-                colorEscapes = kTrueColors;
+                colors = kTrueColors;
             } else {
                 fmt::println("Invalid color mode: {}", colorMode);
                 fmt::println("");
@@ -285,6 +287,177 @@ int main(int argc, char *argv[]) {
             uint32 address = *maybeAddress;
             bool isDelaySlot = false;
 
+            auto printAddress = [&](uint32 address) {
+                if (!hideAddresses) {
+                    fmt::print("{}{:08X}  ", colors.address, address);
+                }
+            };
+
+            auto printOpcode = [&](uint16 opcode) {
+                if (!hideOpcodes) {
+                    fmt::print("{}{:04X}  ", colors.bytes, opcode);
+                }
+            };
+
+            auto printDelaySlotPrefix = [&] { fmt::print("{}> ", colors.delaySlot); };
+
+            auto printMnemonic = [&](const char *mnemonic) { fmt::print("{}{}", colors.mnemonic, mnemonic); };
+            auto printIllegalMnemonic = [&] { fmt::print("{}{}", colors.illegalMnemonic, "(illegal)"); };
+            auto printUnknownMnemonic = [&] { fmt::print("{}{}", colors.illegalMnemonic, "(?)"); };
+            auto printCond = [&](const char *cond) { fmt::print("{}{}", colors.cond, cond); };
+            auto printSeparator = [&](const char *separator) { fmt::print("{}{}", colors.separator, separator); };
+            auto printSize = [&](const char *size) {
+                printSeparator(".");
+                fmt::print("{}{}", colors.sizeSuffix, size);
+            };
+
+            auto printInstruction = [&](const ymir::sh2::OpcodeDisasm &disasm, bool delaySlot) {
+                if (delaySlot) {
+                    if (!disasm.validInDelaySlot) {
+                        printIllegalMnemonic();
+                        return;
+                    }
+                    printDelaySlotPrefix();
+                }
+
+                using namespace ymir;
+
+                switch (disasm.mnemonic) {
+                case sh2::Mnemonic::NOP: printMnemonic("nop"); break;
+                case sh2::Mnemonic::SLEEP: printMnemonic("sleep"); break;
+                case sh2::Mnemonic::MOV: printMnemonic("mov"); break;
+                case sh2::Mnemonic::MOVA: printMnemonic("mova"); break;
+                case sh2::Mnemonic::MOVT: printMnemonic("movt"); break;
+                case sh2::Mnemonic::CLRT: printMnemonic("clrt"); break;
+                case sh2::Mnemonic::SETT: printMnemonic("sett"); break;
+                case sh2::Mnemonic::EXTU: printMnemonic("extu"); break;
+                case sh2::Mnemonic::EXTS: printMnemonic("exts"); break;
+                case sh2::Mnemonic::SWAP: printMnemonic("swap"); break;
+                case sh2::Mnemonic::XTRCT: printMnemonic("xtrct"); break;
+                case sh2::Mnemonic::LDC: printMnemonic("ldc"); break;
+                case sh2::Mnemonic::LDS: printMnemonic("lds"); break;
+                case sh2::Mnemonic::STC: printMnemonic("stc"); break;
+                case sh2::Mnemonic::STS: printMnemonic("sts"); break;
+                case sh2::Mnemonic::ADD: printMnemonic("add"); break;
+                case sh2::Mnemonic::ADDC: printMnemonic("addc"); break;
+                case sh2::Mnemonic::ADDV: printMnemonic("addv"); break;
+                case sh2::Mnemonic::AND: printMnemonic("and"); break;
+                case sh2::Mnemonic::NEG: printMnemonic("neg"); break;
+                case sh2::Mnemonic::NEGC: printMnemonic("negc"); break;
+                case sh2::Mnemonic::NOT: printMnemonic("not"); break;
+                case sh2::Mnemonic::OR: printMnemonic("or"); break;
+                case sh2::Mnemonic::ROTCL: printMnemonic("rotcl"); break;
+                case sh2::Mnemonic::ROTCR: printMnemonic("rotcr"); break;
+                case sh2::Mnemonic::ROTL: printMnemonic("rotl"); break;
+                case sh2::Mnemonic::ROTR: printMnemonic("rotr"); break;
+                case sh2::Mnemonic::SHAL: printMnemonic("shal"); break;
+                case sh2::Mnemonic::SHAR: printMnemonic("shar"); break;
+                case sh2::Mnemonic::SHLL: printMnemonic("shll"); break;
+                case sh2::Mnemonic::SHLL2: printMnemonic("shll2"); break;
+                case sh2::Mnemonic::SHLL8: printMnemonic("shll8"); break;
+                case sh2::Mnemonic::SHLL16: printMnemonic("shll16"); break;
+                case sh2::Mnemonic::SHLR: printMnemonic("shlr"); break;
+                case sh2::Mnemonic::SHLR2: printMnemonic("shlr2"); break;
+                case sh2::Mnemonic::SHLR8: printMnemonic("shlr8"); break;
+                case sh2::Mnemonic::SHLR16: printMnemonic("shlr16"); break;
+                case sh2::Mnemonic::SUB: printMnemonic("sub"); break;
+                case sh2::Mnemonic::SUBC: printMnemonic("subc"); break;
+                case sh2::Mnemonic::SUBV: printMnemonic("subv"); break;
+                case sh2::Mnemonic::XOR: printMnemonic("xor"); break;
+                case sh2::Mnemonic::DT: printMnemonic("dt"); break;
+                case sh2::Mnemonic::CLRMAC: printMnemonic("clrmac"); break;
+                case sh2::Mnemonic::MAC: printMnemonic("mac"); break;
+                case sh2::Mnemonic::MUL: printMnemonic("mul"); break;
+                case sh2::Mnemonic::MULS: printMnemonic("muls"); break;
+                case sh2::Mnemonic::MULU: printMnemonic("mulu"); break;
+                case sh2::Mnemonic::DMULS: printMnemonic("dmuls"); break;
+                case sh2::Mnemonic::DMULU: printMnemonic("dmulu"); break;
+                case sh2::Mnemonic::DIV0S: printMnemonic("div0s"); break;
+                case sh2::Mnemonic::DIV0U: printMnemonic("div0u"); break;
+                case sh2::Mnemonic::DIV1: printMnemonic("div1"); break;
+                case sh2::Mnemonic::CMP_EQ:
+                    printMnemonic("cmp");
+                    printSeparator("/");
+                    printCond("eq");
+                    break;
+                case sh2::Mnemonic::CMP_GE:
+                    printMnemonic("cmp");
+                    printSeparator("/");
+                    printCond("ge");
+                    break;
+                case sh2::Mnemonic::CMP_GT:
+                    printMnemonic("cmp");
+                    printSeparator("/");
+                    printCond("gt");
+                    break;
+                case sh2::Mnemonic::CMP_HI:
+                    printMnemonic("cmp");
+                    printSeparator("/");
+                    printCond("hi");
+                    break;
+                case sh2::Mnemonic::CMP_HS:
+                    printMnemonic("cmp");
+                    printSeparator("/");
+                    printCond("hs");
+                    break;
+                case sh2::Mnemonic::CMP_PL:
+                    printMnemonic("cmp");
+                    printSeparator("/");
+                    printCond("pl");
+                    break;
+                case sh2::Mnemonic::CMP_PZ:
+                    printMnemonic("cmp");
+                    printSeparator("/");
+                    printCond("pz");
+                    break;
+                case sh2::Mnemonic::CMP_STR:
+                    printMnemonic("cmp");
+                    printSeparator("/");
+                    printCond("str");
+                    break;
+                case sh2::Mnemonic::TAS: printMnemonic("tas"); break;
+                case sh2::Mnemonic::TST: printMnemonic("tst"); break;
+                case sh2::Mnemonic::BF:
+                    printMnemonic("b");
+                    printCond("f");
+                    break;
+                case sh2::Mnemonic::BFS:
+                    printMnemonic("b");
+                    printCond("f");
+                    printSeparator("/");
+                    printMnemonic("s");
+                    break;
+                case sh2::Mnemonic::BT:
+                    printMnemonic("b");
+                    printCond("t");
+                    break;
+                case sh2::Mnemonic::BTS:
+                    printMnemonic("b");
+                    printCond("t");
+                    printSeparator("/");
+                    printMnemonic("s");
+                    break;
+                case sh2::Mnemonic::BRA: printMnemonic("bra"); break;
+                case sh2::Mnemonic::BRAF: printMnemonic("braf"); break;
+                case sh2::Mnemonic::BSR: printMnemonic("bsr"); break;
+                case sh2::Mnemonic::BSRF: printMnemonic("bsrf"); break;
+                case sh2::Mnemonic::JMP: printMnemonic("jmp"); break;
+                case sh2::Mnemonic::JSR: printMnemonic("jsr"); break;
+                case sh2::Mnemonic::TRAPA: printMnemonic("trapa"); break;
+                case sh2::Mnemonic::RTE: printMnemonic("rte"); break;
+                case sh2::Mnemonic::RTS: printMnemonic("rts"); break;
+                case sh2::Mnemonic::Illegal: printIllegalMnemonic(); break;
+                default: printUnknownMnemonic(); break;
+                }
+
+                switch (disasm.opSize) {
+                case sh2::OperandSize::Byte: printSize("b"); break;
+                case sh2::OperandSize::Word: printSize("w"); break;
+                case sh2::OperandSize::Long: printSize("l"); break;
+                default: break;
+                }
+            };
+
             if (inputFile.empty()) {
                 for (auto &opcodeStr : args) {
                     std::string_view strippedOpcode = opcodeStr;
@@ -306,23 +479,23 @@ int main(int argc, char *argv[]) {
                     }
                     const uint16 opcode = *maybeOpcode;
 
-                    if (!hideAddresses) {
-                        fmt::print("{}{:08X}  ", colorEscapes.address, address);
-                    }
-                    if (!hideOpcodes) {
-                        fmt::print("{}{:04X}  ", colorEscapes.bytes, opcode);
-                    }
+                    const ymir::sh2::OpcodeDisasm &disasm = ymir::sh2::Disassemble(opcode);
 
-                    // TODO: disassemble and print opcode
+                    bool delaySlotState = (isDelaySlot || forceDelaySlot > 0) && forceDelaySlot >= 0;
+
+                    printAddress(address);
+                    printOpcode(opcode);
+                    printInstruction(disasm, delaySlotState);
 
                     if (forceDelaySlot > 0) {
-                        fmt::print("{}; delay slot override", colorEscapes.comment);
+                        fmt::print("{}; delay slot override", colors.comment);
                     } else if (forceDelaySlot < 0) {
-                        fmt::print("{}; non-delay slot override", colorEscapes.comment);
+                        fmt::print("{}; non-delay slot override", colors.comment);
                     }
 
-                    fmt::println("{}", colorEscapes.reset);
+                    fmt::println("{}", colors.reset);
 
+                    isDelaySlot = disasm.hasDelaySlot;
                     address += sizeof(uint16);
                 }
             } else {

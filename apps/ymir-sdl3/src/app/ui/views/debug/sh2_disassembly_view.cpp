@@ -239,7 +239,7 @@ void SH2DisassemblyView::Display() {
                 ImGui::TextColored(m_colors.disasm.sizeSuffix, "%s", size.data());
             };
 
-            auto drawFullMnemonic = [&] {
+            auto drawInstruction = [&] {
                 const float startX = ImGui::GetCursorPosX();
                 ImGui::Dummy(ImVec2(0, 0));
 
@@ -562,7 +562,7 @@ void SH2DisassemblyView::Display() {
                 ImGui::SameLine(0.0f, m_style.disasmSpacing);
                 drawOpcodeAscii();
                 ImGui::SameLine(0.0f, m_style.disasmSpacing);
-                drawFullMnemonic();
+                drawInstruction();
                 ImGui::SameLine(0, 0);
                 drawOp1();
                 if (disasm.op1.type != sh2::Operand::Type::None && disasm.op2.type != sh2::Operand::Type::None) {

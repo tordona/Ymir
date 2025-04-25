@@ -62,9 +62,9 @@ opcodes.
 
 You can find an opcode table [here](https://shared-ptr.com/sh_insns.html).
 
-For this ISA, you can modify opcode decoding with the following prefixes:
-- `>`: force decoding as a delay slot instruction
-- `<`: force decoding as a non-delay slot instruction
+For this ISA, you can modify opcode decoding by prefixing opcodes with one of these symbols:
+- `!`: force decoding as a delay slot instruction
+- `_`: force decoding as a non-delay slot instruction
 
 For example:
 ```sh
@@ -79,6 +79,8 @@ results in:
 00000008  0009  > nop                                     ; delay slot override
 0000000A  000B  > (illegal)                               ; delay slot override
 ```
+
+These modifiers cannot be used when disassembling files. The first instruction is assumed to not be in a delay slot.
 
 
 
@@ -133,7 +135,7 @@ ymdasm sh2 -o 6000180 3233 8BF8 000B
 
 Force delay slot for first SH-2 instruction:
 ```sh
-ymdasm sh2 >000B 000B
+ymdasm sh2 !000B 000B
 ```
 ```
 00000000  000B  > (illegal)
