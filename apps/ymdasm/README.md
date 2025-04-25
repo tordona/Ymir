@@ -18,8 +18,6 @@ Usage:
                           truecolor (default: none)
   -i, --input-file path   Disassemble code from the specified file. Omit to
                           disassemble command line arguments.
-  -f, --output-file path  Output disassembled code to the specified file.
-                          If omitted, print to stdout.
   -o, --origin address    Origin (base) address of the disassembled code.
                           (default: 0)
   -a, --hide-addresses    Hide addresses from disassembly listing.

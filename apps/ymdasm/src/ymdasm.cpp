@@ -4,16 +4,78 @@
 #include <fmt/format.h>
 
 #include <algorithm>
+#include <concepts>
+#include <optional>
+#include <string>
+#include <string_view>
 #include <vector>
+
+#define ANSI_ESCAPE "\x1b"
+
+#define ANSI_RESET ANSI_ESCAPE "[0m"
+
+#define ANSI_FGCOLOR_BLACK ANSI_ESCAPE "[30m"
+#define ANSI_FGCOLOR_RED ANSI_ESCAPE "[31m"
+#define ANSI_FGCOLOR_GREEN ANSI_ESCAPE "[32m"
+#define ANSI_FGCOLOR_YELLOW ANSI_ESCAPE "[33m"
+#define ANSI_FGCOLOR_BLUE ANSI_ESCAPE "[34m"
+#define ANSI_FGCOLOR_MAGENTA ANSI_ESCAPE "[35m"
+#define ANSI_FGCOLOR_CYAN ANSI_ESCAPE "[36m"
+#define ANSI_FGCOLOR_WHITE ANSI_ESCAPE "[37m"
+
+#define ANSI_FGCOLOR_BRIGHT_BLACK ANSI_ESCAPE "[1;30m"
+#define ANSI_FGCOLOR_BRIGHT_RED ANSI_ESCAPE "[1;31m"
+#define ANSI_FGCOLOR_BRIGHT_GREEN ANSI_ESCAPE "[1;32m"
+#define ANSI_FGCOLOR_BRIGHT_YELLOW ANSI_ESCAPE "[1;33m"
+#define ANSI_FGCOLOR_BRIGHT_BLUE ANSI_ESCAPE "[1;34m"
+#define ANSI_FGCOLOR_BRIGHT_MAGENTA ANSI_ESCAPE "[1;35m"
+#define ANSI_FGCOLOR_BRIGHT_CYAN ANSI_ESCAPE "[1;36m"
+#define ANSI_FGCOLOR_BRIGHT_WHITE ANSI_ESCAPE "[1;37m"
+
+#define ANSI_FGCOLOR_24B(r, g, b) ANSI_ESCAPE "[38;2;" #r ";" #g ";" #b "m"
+
+template <std::unsigned_integral T>
+std::optional<T> ParseOpcode(std::string_view opcode) {
+    static constexpr size_t kHexOpcodeLength = sizeof(T) * 2;
+
+    if (opcode.size() > kHexOpcodeLength) {
+        fmt::println("Opcode \"{}\" exceeds maximum length of {} hex digits", opcode, kHexOpcodeLength);
+        return std::nullopt;
+    }
+
+    T value = 0;
+    for (char c : opcode) {
+        if (c >= '0' && c <= '9') {
+            value = (value << 4ull) + c - '0';
+        } else if (c >= 'A' && c <= 'F') {
+            value = (value << 4ull) + c - 'A' + 10;
+        } else if (c >= 'a' || c <= 'f') {
+            value = (value << 4ull) + c - 'a' + 10;
+        } else {
+            fmt::println("Opcode \"{}\" is not a valid hexadecimal number", opcode);
+            return std::nullopt;
+        }
+    }
+    return value;
+}
 
 int main(int argc, char *argv[]) {
     bool showHelp = false;
     bool hideAddresses = false;
     bool hideOpcodes = false;
-    std::string colorMode{};
+    std::string colorMode = "none";
     std::string inputFile{};
-    std::string outputFile{};
     uint32 origin = 0;
+
+    fmt::println(ANSI_FGCOLOR_BLACK "test" ANSI_FGCOLOR_BRIGHT_BLACK "TEST" ANSI_RESET);
+    fmt::println(ANSI_FGCOLOR_RED "test" ANSI_FGCOLOR_BRIGHT_RED "TEST" ANSI_RESET);
+    fmt::println(ANSI_FGCOLOR_GREEN "test" ANSI_FGCOLOR_BRIGHT_GREEN "TEST" ANSI_RESET);
+    fmt::println(ANSI_FGCOLOR_YELLOW "test" ANSI_FGCOLOR_BRIGHT_YELLOW "TEST" ANSI_RESET);
+    fmt::println(ANSI_FGCOLOR_BLUE "test" ANSI_FGCOLOR_BRIGHT_BLUE "TEST" ANSI_RESET);
+    fmt::println(ANSI_FGCOLOR_MAGENTA "test" ANSI_FGCOLOR_BRIGHT_MAGENTA "TEST" ANSI_RESET);
+    fmt::println(ANSI_FGCOLOR_CYAN "test" ANSI_FGCOLOR_BRIGHT_CYAN "TEST" ANSI_RESET);
+    fmt::println(ANSI_FGCOLOR_WHITE "test" ANSI_FGCOLOR_BRIGHT_WHITE "TEST" ANSI_RESET);
+    fmt::println(ANSI_FGCOLOR_24B(240, 192, 80) "test" ANSI_RESET "TEST");
 
     std::string isa{};
     std::vector<std::string> args{};
@@ -25,11 +87,8 @@ int main(int argc, char *argv[]) {
     options.add_options()("i,input-file",
                           "Disassemble code from the specified file. Omit to disassemble command line arguments.",
                           cxxopts::value(inputFile), "path");
-    options.add_options()("f,output-file",
-                          "Output disassembled code to the specified file. If omitted, print to stdout.",
-                          cxxopts::value(outputFile), "path");
     options.add_options()("o,origin", "Origin (base) address of the disassembled code.",
-                          cxxopts::value(outputFile)->default_value("0"), "address");
+                          cxxopts::value(origin)->default_value("0"), "address");
     options.add_options()("a,hide-addresses", "Hide addresses from disassembly listing.",
                           cxxopts::value(hideAddresses)->default_value("false"));
     options.add_options()("c,hide-opcodes", "Hide opcodes from disassembly listing.",
@@ -82,12 +141,31 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
-        // When disassembling from command line, must specify at least one opcode
+        // Must specify at least one opcode when disassembling from command line
         if (inputFile.empty() && args.empty()) {
             fmt::println("Missing argument: <program opcodes>");
             fmt::println("");
             printHelp();
             return 1;
+        }
+
+        // Color mode must be one of the valid modes
+        if (result.contains("color")) {
+            std::string lcColorMode = colorMode;
+            std::transform(lcColorMode.cbegin(), lcColorMode.cend(), lcColorMode.begin(),
+                           [](char c) { return std::tolower(c); });
+            if (lcColorMode == "none") {
+                // TODO: use the plain color palette
+            } else if (lcColorMode == "basic") {
+                // TODO: use the basic color palette
+            } else if (lcColorMode == "truecolor") {
+                // TODO: use the 24-bit color palette
+            } else {
+                fmt::println("Invalid color mode: {}", colorMode);
+                fmt::println("");
+                printHelp();
+                return 1;
+            }
         }
 
         // TODO: read program according to specified ISA
@@ -96,6 +174,11 @@ int main(int argc, char *argv[]) {
         // - SCUDSP: 32-bit VLIW opcodes
         // - SCSPDSP: 64-bit VLIW opcodes
         // If reading from command line, SH2 can also override the delay slot flag with opcode prefixes > and <
+        //
+        // Design ideas:
+        // - coloring boils down to a set of ANSI escape sequences per mode
+        // - opcode parsing:
+        //   - v1: each ISA (re)implements opcode reading from a std::istream or from the args vector
 
         // Disassemble code
         std::string lcisa = isa;
