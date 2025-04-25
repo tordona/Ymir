@@ -39,8 +39,8 @@ Usage:
   If <offset> is omitted, ymdasm disassembles from the start of the file.
   If <length> is omitted, ymdasm disassembles until the end of the file.
 
-  SuperH-2 opcodes can be prefixed with > to force them to be decoded as delay
-  slot instructions or < to force instructions in delay slots to be decoded as
+  SuperH-2 opcodes can be prefixed with ! to force them to be decoded as delay
+  slot instructions or _ to force instructions in delay slots to be decoded as
   regular instructions.
 ```
 
@@ -68,7 +68,7 @@ For this ISA, you can modify opcode decoding with the following prefixes:
 
 For example:
 ```sh
-ymdasm sh2 000B 0009 000B <0009 >0009 >000B
+ymdasm sh2 000B 0009 000B _0009 !0009 !000B
 ```
 results in:
 ```

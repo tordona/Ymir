@@ -139,11 +139,11 @@ static ColorEscapes kTrueColors = {
 };
 
 template <std::unsigned_integral T>
-std::optional<T> ParseOpcode(std::string_view opcode) {
+std::optional<T> ParseHex(std::string_view opcode) {
     static constexpr size_t kHexOpcodeLength = sizeof(T) * 2;
 
     if (opcode.size() > kHexOpcodeLength) {
-        fmt::println("Opcode \"{}\" exceeds maximum length of {} hex digits", opcode, kHexOpcodeLength);
+        fmt::println("Value \"{}\" exceeds maximum length of {} hex digits", opcode, kHexOpcodeLength);
         return std::nullopt;
     }
 
@@ -153,10 +153,10 @@ std::optional<T> ParseOpcode(std::string_view opcode) {
             value = (value << 4ull) + c - '0';
         } else if (c >= 'A' && c <= 'F') {
             value = (value << 4ull) + c - 'A' + 10;
-        } else if (c >= 'a' || c <= 'f') {
+        } else if (c >= 'a' && c <= 'f') {
             value = (value << 4ull) + c - 'a' + 10;
         } else {
-            fmt::println("Opcode \"{}\" is not a valid hexadecimal number", opcode);
+            fmt::println("Value \"{}\" is not a valid hexadecimal number", opcode);
             return std::nullopt;
         }
     }
@@ -169,7 +169,7 @@ int main(int argc, char *argv[]) {
     bool hideOpcodes = false;
     std::string colorMode = "none";
     std::string inputFile{};
-    uint32 origin = 0;
+    std::string origin{};
 
     std::string isa{};
     std::vector<std::string> args{};
@@ -268,18 +268,67 @@ int main(int argc, char *argv[]) {
         // - M68K: 16-bit variable-length opcodes
         // - SCUDSP: 32-bit VLIW opcodes
         // - SCSPDSP: 64-bit VLIW opcodes
-        // If reading from command line, SH2 can also override the delay slot flag with opcode prefixes > and <
+        // If reading from command line, SH2 can also override the delay slot flag with opcode prefixes ! and _
         //
-        // Design ideas:
-        // - coloring boils down to a set of ANSI escape sequences per mode
-        // - opcode parsing:
-        //   - v1: each ISA (re)implements opcode reading from a std::istream or from the args vector
+        // Design ideas for opcode parsing:
+        // - v1: each ISA (re)implements opcode reading from a std::istream or from the args vector
 
         // Disassemble code
         std::string lcisa = isa;
         std::transform(lcisa.cbegin(), lcisa.cend(), lcisa.begin(), [](char c) { return std::tolower(c); });
         if (lcisa == "sh2" || lcisa == "sh-2") {
-            // TODO: disassemble SH-2
+            auto maybeAddress = ParseHex<uint32>(origin);
+            if (!maybeAddress) {
+                fmt::println("Invalid origin address: {}", origin);
+                return 1;
+            }
+            uint32 address = *maybeAddress;
+            bool isDelaySlot = false;
+
+            if (inputFile.empty()) {
+                for (auto &opcodeStr : args) {
+                    std::string_view strippedOpcode = opcodeStr;
+
+                    // 0 = no change; +1 = force delay slot, -1 = force non-delay slot
+                    int forceDelaySlot = 0;
+                    if (opcodeStr.starts_with('_')) {
+                        forceDelaySlot = +1;
+                        strippedOpcode = strippedOpcode.substr(1);
+                    } else if (opcodeStr.starts_with('!')) {
+                        forceDelaySlot = -1;
+                        strippedOpcode = strippedOpcode.substr(1);
+                    }
+
+                    auto maybeOpcode = ParseHex<uint16>(strippedOpcode);
+                    if (!maybeOpcode) {
+                        fmt::println("Invalid opcode: {}", opcodeStr);
+                        return 1;
+                    }
+                    const uint16 opcode = *maybeOpcode;
+
+                    if (!hideAddresses) {
+                        fmt::print("{}{:08X}  ", colorEscapes.address, address);
+                    }
+                    if (!hideOpcodes) {
+                        fmt::print("{}{:04X}  ", colorEscapes.bytes, opcode);
+                    }
+
+                    // TODO: disassemble and print opcode
+
+                    if (forceDelaySlot > 0) {
+                        fmt::print("{}; delay slot override", colorEscapes.comment);
+                    } else if (forceDelaySlot < 0) {
+                        fmt::print("{}; non-delay slot override", colorEscapes.comment);
+                    }
+
+                    fmt::println("{}", colorEscapes.reset);
+
+                    address += sizeof(uint16);
+                }
+            } else {
+                // TODO: disassemble from inputFile
+                // - parse optional args: [<offset> [<length>]]
+            }
         } else if (lcisa == "m68k" || lcisa == "m68000") {
             // TODO: disassemble M68000
         } else if (lcisa == "scudsp") {
