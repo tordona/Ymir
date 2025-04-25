@@ -97,12 +97,12 @@ static ColorEscapes kBasicColors = {
     .sizeSuffix = ANSI_FGCOLOR_BLUE,
     .cond = ANSI_FGCOLOR_MAGENTA,
 
-    .immediate = ANSI_FGCOLOR_BRIGHT_GREEN,
+    .immediate = ANSI_FGCOLOR_BRIGHT_YELLOW,
     .opRead = ANSI_FGCOLOR_BRIGHT_GREEN,
     .opWrite = ANSI_FGCOLOR_BRIGHT_MAGENTA,
     .opReadWrite = ANSI_FGCOLOR_BRIGHT_YELLOW,
 
-    .separator = ANSI_FGCOLOR_WHITE,
+    .separator = ANSI_FGCOLOR_BRIGHT_BLACK,
 
     .addrInc = ANSI_FGCOLOR_GREEN,
     .addrDec = ANSI_FGCOLOR_RED,
