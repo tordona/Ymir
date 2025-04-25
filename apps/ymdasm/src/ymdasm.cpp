@@ -1,163 +1,83 @@
-#include "processors.hpp"
+#include <ymir/core/types.hpp>
 
+#include <cxxopts.hpp>
 #include <fmt/format.h>
 
-#include <memory>
 #include <optional>
 #include <string_view>
+#include <vector>
 
 int main(int argc, char *argv[]) {
-    fmt::println("ymdasm " Ymir_VERSION);
+    bool showHelp = false;
+    bool hideAddresses = false;
+    bool hideOpcodes = false;
+    std::string colorMode{};
+    std::string inputFile{};
+    std::string outputFile{};
+    uint32 origin = 0;
 
-    std::unique_ptr<CommandProcessor> processor = std::make_unique<InitialCommandProcessor>();
+    std::string isa{};
+    std::vector<std::string> args{};
 
-    auto readArg = [&, i = 1]() mutable -> std::optional<std::string_view> {
-        if (i < argc) {
-            return argv[i++];
-        } else {
-            return std::nullopt;
-        }
-    };
+    cxxopts::Options options("ymdasm", "Ymir disassembly tool\nVersion " Ymir_VERSION);
+    options.add_options()("h,help", "Display this help text.", cxxopts::value(showHelp)->default_value("false"));
+    options.add_options()("C,color", "Color text output (stdout only): none, basic, truecolor",
+                          cxxopts::value(colorMode)->default_value("none"), "color_mode");
+    options.add_options()("i,input-file",
+                          "Disassemble code from the specified file. Omit to disassemble command line arguments.",
+                          cxxopts::value(inputFile), "path");
+    options.add_options()("f,output-file",
+                          "Output disassembled code to the specified file. If omitted, print to stdout.",
+                          cxxopts::value(outputFile), "path");
+    options.add_options()("o,origin", "Origin (base) address of the disassembled code.",
+                          cxxopts::value(outputFile)->default_value("0"), "address");
+    options.add_options()("a,hide-addresses", "Hide addresses from disassembly listing.",
+                          cxxopts::value(hideAddresses)->default_value("false"));
+    options.add_options()("c,hide-opcodes", "Hide opcodes from disassembly listing.",
+                          cxxopts::value(hideOpcodes)->default_value("false"));
 
-    auto printHelp = [&] {
-        for (const OptionInfo *info : processor->GetOptions()) {
-            if (info->argument) {
-                fmt::println("-{}, --{} <{}>  {}", info->shortName, info->longName, info->argument, info->description);
-            } else {
-                fmt::println("-{}, --{}  {}", info->shortName, info->longName, info->description);
+    options.add_options()("isa", "Instruction set architecture: sh2, sh-2, m68k, m68000, scudsp, scspdsp",
+                          cxxopts::value(isa));
+    options.add_options()("opcodes", "Sequence of program opcodes", cxxopts::value(args));
+
+    options.parse_positional({"isa", "opcodes"});
+    options.positional_help("<isa> {<program opcodes>|[<offset> [<length>]]}");
+
+    try {
+        auto result = options.parse(argc, argv);
+        if (showHelp || !result.contains("isa")) {
+            fmt::println("{}", options.help());
+            fmt::println("  <isa> specifies an instruction set architecture to disassemble:");
+            fmt::println("    sh2, sh-2     Hitachi/Renesas SuperH-2");
+            fmt::println("    m68k, m68000  Motorola 68000");
+            fmt::println("    scudsp        SCU (Saturn Control Unit) DSP");
+            fmt::println("    scspdsp       SCSP (Saturn Custom Sound Processor) DSP");
+            fmt::println("  This argument is case-insensitive.");
+            fmt::println("");
+            fmt::println("  When disassembling command line arguments, <program opcodes> specifies the");
+            fmt::println("  hexadecimal opcodes to disassemble.");
+            fmt::println("");
+            fmt::println("  When disassembling from a file, <offset> specifies the offset from the start");
+            fmt::println("  of the file and <length> determines the number of bytes to disassemble.");
+            fmt::println("  <length> is rounded down to the nearest multiple of the opcode size.");
+            fmt::println("  If <offset> is omitted, ymdasm disassembles from the start of the file.");
+            fmt::println("  If <length> is omitted, ymdasm disassembles until the end of the file.");
+
+            if (!result.contains("isa")) {
+                fmt::println("");
+                fmt::println("Missing argument: <isa>");
+                return 1;
             }
+            return 0;
         }
-    };
-
-    while (auto arg = readArg()) {
-        if (arg->starts_with("--")) {
-            // Long options:
-            // --name=value
-            // --name value
-            // --name
-            // --name-
-
-            const auto equalsPos = arg->find_first_of('=');
-            if (equalsPos != std::string::npos) {
-                // --name=value
-                std::string_view name = arg->substr(2, equalsPos);
-
-                const OptionInfo *info = processor->LongOptionInfo(name);
-                if (info == nullptr) {
-                    fmt::println("Invalid option: --{}", name);
-                    printHelp();
-                    return 1;
-                } else if (info->argument == nullptr) {
-                    fmt::println("Option --{} does not take an argument", name);
-                    printHelp();
-                    return 1;
-                } else {
-                    std::string_view value = arg->substr(equalsPos + 1);
-                    processor->LongOption(name, value);
-                }
-            } else {
-                std::string_view name = arg->substr(2);
-                bool flagValue = true;
-                if (name.ends_with('-')) {
-                    // "flag-" -> disable "flag"
-                    name = name.substr(2, name.size() - 2);
-                    flagValue = false;
-                }
-
-                const OptionInfo *info = processor->LongOptionInfo(name);
-                if (info == nullptr) {
-                    fmt::println("Invalid option: --{}", name);
-                    printHelp();
-                    return 1;
-                } else if (info->argument != nullptr) {
-                    if (!flagValue) {
-                        fmt::println("Option --{} is not a flag", info->argument, name);
-                        printHelp();
-                        return 1;
-                    } else if (auto value = readArg()) {
-                        // --name value
-                        processor->LongOption(name, *value);
-                    } else {
-                        fmt::println("Missing argument <{}> for option --{}", info->argument, name);
-                        printHelp();
-                        return 1;
-                    }
-                } else {
-                    // --flag or --flag-
-                    processor->LongFlag(name, flagValue);
-                }
-            }
-        } else if (arg->starts_with("-")) {
-            // Short options sequence
-            // -a
-            // -b 2
-            // -c-
-            // -d 4
-            // -ab 2
-            // -bd 2 4
-            // -dcba 4 2
-            // etc.
-
-            auto readShortOpt = [&, i = 1]() mutable -> std::optional<std::string_view> {
-                if (i < arg->length()) {
-                    char opt = (*arg)[i];
-                    if (i + 1 < arg->length()) {
-                        char possibleFlagDisable = (*arg)[i + 1];
-                        if (possibleFlagDisable == '-') {
-                            auto ret = arg->substr(i, i + 2);
-                            i += 2;
-                            return ret;
-                        }
-                    }
-                    auto ret = arg->substr(i, i + 1);
-                    ++i;
-                    return ret;
-                } else {
-                    return std::nullopt;
-                }
-            };
-
-            while (auto shortOpt = readShortOpt()) {
-                char name = (*shortOpt)[0];
-                const OptionInfo *info = processor->ShortOptionInfo(name);
-                if (info == nullptr) {
-                    fmt::println("Invalid option: -{}", name);
-                    printHelp();
-                    return 1;
-                } else if (shortOpt->ends_with('-')) {
-                    // -x-
-                    processor->ShortFlag(name, false);
-                } else if (info->argument != nullptr) {
-                    if (auto shortArg = readArg()) {
-                        // -x value
-                        processor->ShortOption(name, *shortArg);
-                    } else {
-                        fmt::println("Missing argument <{}> for option -{}", info->argument, name);
-                        printHelp();
-                        return 1;
-                    }
-                } else {
-                    // -x
-                    processor->ShortFlag(name, true);
-                }
-            }
-        } else {
-            processor->Argument(*arg);
-        }
+    } catch (const cxxopts::exceptions::exception &e) {
+        fmt::println("Failed to parse arguments: {}", e.what());
+        return -1;
+    } catch (const std::system_error &e) {
+        fmt::println("System error: {}", e.what());
+        return e.code().value();
+    } catch (const std::exception &e) {
+        fmt::println("Unhandled exception: {}", e.what());
+        return -1;
     }
-
-    // TODO: architecture
-    // - command processor (doubles as disassembly engine)
-    //   - interface
-    //   - abstract base class to build processors with compile-time-defined options
-    //     - similar to the structured registers idea
-    //   - abstract base class for ISA processors
-    //     - concrete classes for each ISA
-    //   - concrete class for initial processor (default)
-    // - command line parser
-    //   - reads argc and argv
-    //   - parses the command line syntax described in README
-    //   - calls command processor methods with structured data
-    //   - also processes the ISA switch commands
-    // - global options shared with all command processors
 }
