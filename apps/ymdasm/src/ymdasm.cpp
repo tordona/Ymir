@@ -124,8 +124,8 @@ static ColorEscapes kTrueColors = {
     .mnemonic = ANSI_FGCOLOR_24B(173, 216, 247),
     .nopMnemonic = ANSI_FGCOLOR_24B(66, 81, 92),
     .illegalMnemonic = ANSI_FGCOLOR_24B(247, 191, 173),
-    .sizeSuffix = ANSI_FGCOLOR_24B(128, 145, 194),
-    .cond = ANSI_FGCOLOR_24B(138, 128, 194),
+    .sizeSuffix = ANSI_FGCOLOR_24B(143, 159, 207),
+    .cond = ANSI_FGCOLOR_24B(155, 146, 212),
 
     .immediate = ANSI_FGCOLOR_24B(221, 247, 173),
     .opRead = ANSI_FGCOLOR_24B(173, 247, 206),
@@ -320,7 +320,7 @@ int main(int argc, char *argv[]) {
             auto printUnknownMnemonic = [&] { print(colors.illegalMnemonic, "(?)"); };
             auto printCond = [&](const char *cond) { print(colors.cond, cond); };
             auto printSeparator = [&](const char *separator) { print(colors.separator, separator); };
-            auto printSize = [&](const char *size) {
+            auto printSizeSuffix = [&](const char *size) {
                 printSeparator(".");
                 print(colors.sizeSuffix, size);
             };
@@ -463,9 +463,9 @@ int main(int argc, char *argv[]) {
                 }
 
                 switch (disasm.opSize) {
-                case sh2::OperandSize::Byte: printSize("b"); break;
-                case sh2::OperandSize::Word: printSize("w"); break;
-                case sh2::OperandSize::Long: printSize("l"); break;
+                case sh2::OperandSize::Byte: printSizeSuffix("b"); break;
+                case sh2::OperandSize::Word: printSizeSuffix("w"); break;
+                case sh2::OperandSize::Long: printSizeSuffix("l"); break;
                 default: break;
                 }
             };
@@ -488,9 +488,9 @@ int main(int argc, char *argv[]) {
                 }
             };
 
-            auto printRnRead = [&](uint8 rn) { print(colors.opRead, fmt::format("r{}", rn)); };
-            auto printRnWrite = [&](uint8 rn) { print(colors.opWrite, fmt::format("r{}", rn)); };
-            auto printRnReadWrite = [&](uint8 rn) { print(colors.opReadWrite, fmt::format("r{}", rn)); };
+            auto printRnRead = [&](uint8 rn) { printOpRead(fmt::format("r{}", rn)); };
+            auto printRnWrite = [&](uint8 rn) { printOpWrite(fmt::format("r{}", rn)); };
+            auto printRnReadWrite = [&](uint8 rn) { printOpReadWrite(fmt::format("r{}", rn)); };
 
             auto printRn = [&](uint8 rn, bool read, bool write) {
                 if (read && write) {
@@ -507,8 +507,8 @@ int main(int argc, char *argv[]) {
                 print(color, symbol);
             };
 
-            auto printPlus = [&] { print(colors.addrInc, "+"); };
-            auto printMinus = [&] { print(colors.addrDec, "-"); };
+            auto printAddrInc = [&] { print(colors.addrInc, "+"); };
+            auto printAddrDec = [&] { print(colors.addrDec, "-"); };
             auto printComma = [&] { print(colors.separator, ", "); };
 
             auto printOp = [&](const sh2::Operand &op) {
@@ -526,11 +526,11 @@ int main(int argc, char *argv[]) {
                 case sh2::Operand::Type::AtRnPlus:
                     printRWSymbol("@", op.write);
                     printRnReadWrite(op.reg);
-                    printPlus();
+                    printAddrInc();
                     break;
                 case sh2::Operand::Type::AtMinusRn:
                     printRWSymbol("@", op.write);
-                    printMinus();
+                    printAddrDec();
                     printRnReadWrite(op.reg);
                     break;
                 case sh2::Operand::Type::AtDispRn:
@@ -579,10 +579,8 @@ int main(int argc, char *argv[]) {
                 case sh2::Operand::Type::MACH: printOpName("mach", op.read, op.write); break;
                 case sh2::Operand::Type::MACL: printOpName("macl", op.read, op.write); break;
                 case sh2::Operand::Type::PR: printOpName("pr", op.read, op.write); break;
-                default: return;
+                default: break;
                 }
-
-                return;
             };
 
             auto printOp1 = [&](const sh2::OpcodeDisasm &disasm) { printOp(disasm.op1); };
