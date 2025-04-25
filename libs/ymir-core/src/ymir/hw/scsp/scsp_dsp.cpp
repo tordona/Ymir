@@ -101,9 +101,9 @@ void DSP::UpdateProgramLength(uint8 writeIndex) {
 void DSP::Run() {
     for (uint8 i = 0; i < m_programLength; i++) {
         DSPInstr instr = program[i];
-        if (instr.u64 == 0) {
+        /*if (instr.u64 == 0) {
             continue;
-        }
+        }*/
 
         if (instr.IRA <= 0x1F) {
             // MEMS area: 24 -> 24 bits
