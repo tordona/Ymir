@@ -1,5 +1,6 @@
 #include <ymir/core/types.hpp>
 
+#include <ymir/hw/scu/scu_dsp_disasm.hpp>
 #include <ymir/hw/sh2/sh2_disasm.hpp>
 
 #include <cxxopts.hpp>
@@ -279,6 +280,57 @@ int main(int argc, char *argv[]) {
         // Design ideas for opcode parsing:
         // - v1: each ISA (re)implements opcode reading from a std::istream or from the args vector
 
+        int x = 0;
+
+        auto printRaw = [&](std::string_view text, bool incPos = true) {
+            fmt::print("{}", text);
+            if (incPos) {
+                x += text.size();
+            }
+        };
+
+        auto print = [&](const char *color, std::string_view text, bool incPos = true) {
+            fmt::print("{}{}", color, text);
+            if (incPos) {
+                x += text.size();
+            }
+        };
+
+        auto align = [&](int pos) {
+            if (pos > x) {
+                std::string pad(pos - x, ' ');
+                printRaw(pad);
+            }
+        };
+
+        auto printMnemonic = [&](std::string_view mnemonic) { print(colors.mnemonic, mnemonic); };
+        auto printNOP = [&](const char *mnemonic) { print(colors.nopMnemonic, mnemonic); };
+        auto printIllegalMnemonic = [&] { print(colors.illegalMnemonic, "(illegal)"); };
+        auto printUnknownMnemonic = [&] { print(colors.illegalMnemonic, "(?)"); };
+        auto printCond = [&](const char *cond) { print(colors.cond, cond); };
+        auto printSeparator = [&](const char *separator) { print(colors.separator, separator); };
+        auto printComma = [&] { printSeparator(", "); };
+        auto printSizeSuffix = [&](const char *size) {
+            printSeparator(".");
+            print(colors.sizeSuffix, size);
+        };
+
+        auto printOpRead = [&](std::string_view op) { print(colors.opRead, op); };
+        auto printOpWrite = [&](std::string_view op) { print(colors.opWrite, op); };
+        auto printOpReadWrite = [&](std::string_view op) { print(colors.opReadWrite, op); };
+
+        auto printOp = [&](std::string_view op, bool read, bool write) {
+            if (read && write) {
+                printOpReadWrite(op);
+            } else if (write) {
+                printOpWrite(op);
+            } else {
+                printOpRead(op);
+            }
+        };
+
+        auto printReset = [&] { fmt::println("{}", colors.reset); };
+
         // Disassemble code
         std::string lcisa = isa;
         std::transform(lcisa.cbegin(), lcisa.cend(), lcisa.begin(), [](char c) { return std::tolower(c); });
@@ -291,41 +343,19 @@ int main(int argc, char *argv[]) {
             uint32 address = *maybeAddress;
             bool isDelaySlot = false;
 
-            int x = 0;
-
-            auto printRaw = [&](std::string_view text) {
-                fmt::print("{}", text);
-                x += text.size();
-            };
-
-            auto print = [&](const char *color, std::string_view text) {
-                fmt::print("{}{}", color, text);
-                x += text.size();
-            };
-
             auto printAddress = [&](uint32 address) {
                 if (!hideAddresses) {
-                    print(colors.address, fmt::format("{:08X}  ", address));
+                    print(colors.address, fmt::format("{:08X}  ", address), false);
                 }
             };
 
             auto printOpcode = [&](uint16 opcode) {
                 if (!hideOpcodes) {
-                    print(colors.bytes, fmt::format("{:04X}  ", opcode));
+                    print(colors.bytes, fmt::format("{:04X}  ", opcode), false);
                 }
             };
 
             auto printDelaySlotPrefix = [&] { print(colors.delaySlot, "> "); };
-
-            auto printMnemonic = [&](const char *mnemonic) { print(colors.mnemonic, mnemonic); };
-            auto printIllegalMnemonic = [&] { print(colors.illegalMnemonic, "(illegal)"); };
-            auto printUnknownMnemonic = [&] { print(colors.illegalMnemonic, "(?)"); };
-            auto printCond = [&](const char *cond) { print(colors.cond, cond); };
-            auto printSeparator = [&](const char *separator) { print(colors.separator, separator); };
-            auto printSizeSuffix = [&](const char *size) {
-                printSeparator(".");
-                print(colors.sizeSuffix, size);
-            };
 
             auto printInstruction = [&](const sh2::OpcodeDisasm &disasm, bool delaySlot) {
                 if (delaySlot) {
@@ -472,24 +502,6 @@ int main(int argc, char *argv[]) {
                 }
             };
 
-            auto printImm = [&](sint32 imm) {
-                print(colors.immediate, fmt::format("#0x{:X}", static_cast<uint32>(imm)));
-            };
-
-            auto printOpRead = [&](std::string_view op) { print(colors.opRead, op); };
-            auto printOpWrite = [&](std::string_view op) { print(colors.opWrite, op); };
-            auto printOpReadWrite = [&](std::string_view op) { print(colors.opReadWrite, op); };
-
-            auto printOpName = [&](std::string_view op, bool read, bool write) {
-                if (read && write) {
-                    printOpReadWrite(op);
-                } else if (write) {
-                    printOpWrite(op);
-                } else {
-                    printOpRead(op);
-                }
-            };
-
             auto printRnRead = [&](uint8 rn) { printOpRead(fmt::format("r{}", rn)); };
             auto printRnWrite = [&](uint8 rn) { printOpWrite(fmt::format("r{}", rn)); };
             auto printRnReadWrite = [&](uint8 rn) { printOpReadWrite(fmt::format("r{}", rn)); };
@@ -511,9 +523,12 @@ int main(int argc, char *argv[]) {
 
             auto printAddrInc = [&] { print(colors.addrInc, "+"); };
             auto printAddrDec = [&] { print(colors.addrDec, "-"); };
-            auto printComma = [&] { print(colors.separator, ", "); };
 
-            auto printOp = [&](const sh2::Operand &op) {
+            auto printImm = [&](sint32 imm) {
+                print(colors.immediate, fmt::format("#0x{:X}", static_cast<uint32>(imm)));
+            };
+
+            auto printSH2Op = [&](const sh2::Operand &op) {
                 if (op.type == sh2::Operand::Type::None) {
                     return;
                 }
@@ -575,27 +590,20 @@ int main(int argc, char *argv[]) {
                     break;
                 case sh2::Operand::Type::DispPC: printImm(address + op.immDisp); break;
                 case sh2::Operand::Type::RnPC: printRnRead(op.reg); break;
-                case sh2::Operand::Type::SR: printOpName("sr", op.read, op.write); break;
-                case sh2::Operand::Type::GBR: printOpName("gbr", op.read, op.write); break;
-                case sh2::Operand::Type::VBR: printOpName("vbr", op.read, op.write); break;
-                case sh2::Operand::Type::MACH: printOpName("mach", op.read, op.write); break;
-                case sh2::Operand::Type::MACL: printOpName("macl", op.read, op.write); break;
-                case sh2::Operand::Type::PR: printOpName("pr", op.read, op.write); break;
+                case sh2::Operand::Type::SR: printOp("sr", op.read, op.write); break;
+                case sh2::Operand::Type::GBR: printOp("gbr", op.read, op.write); break;
+                case sh2::Operand::Type::VBR: printOp("vbr", op.read, op.write); break;
+                case sh2::Operand::Type::MACH: printOp("mach", op.read, op.write); break;
+                case sh2::Operand::Type::MACL: printOp("macl", op.read, op.write); break;
+                case sh2::Operand::Type::PR: printOp("pr", op.read, op.write); break;
                 default: break;
                 }
             };
 
-            auto printOp1 = [&](const sh2::OpcodeDisasm &disasm) { printOp(disasm.op1); };
-            auto printOp2 = [&](const sh2::OpcodeDisasm &disasm) { printOp(disasm.op2); };
+            auto printOp1 = [&](const sh2::OpcodeDisasm &disasm) { printSH2Op(disasm.op1); };
+            auto printOp2 = [&](const sh2::OpcodeDisasm &disasm) { printSH2Op(disasm.op2); };
 
             auto printComment = [&](std::string_view comment) { print(colors.comment, comment); };
-
-            auto align = [&](int pos) {
-                if (pos > x) {
-                    std::string pad(pos - x, ' ');
-                    printRaw(pad);
-                }
-            };
 
             if (inputFile.empty()) {
                 for (auto &opcodeStr : args) {
@@ -625,25 +633,25 @@ int main(int argc, char *argv[]) {
                     printAddress(address);
                     printOpcode(opcode);
                     printInstruction(disasm, delaySlotState);
-                    align(28);
+                    align(12);
                     printOp1(disasm);
                     if (disasm.op1.type != sh2::Operand::Type::None && disasm.op2.type != sh2::Operand::Type::None) {
                         printComma();
                     }
                     printOp2(disasm);
 
-                    align(50);
+                    align(34);
                     if (forceDelaySlot > 0) {
                         printComment("; delay slot override");
                     } else if (forceDelaySlot < 0) {
                         printComment("; non-delay slot override");
                     }
 
-                    fmt::println("{}", colors.reset);
+                    printReset();
                     x = 0;
 
                     isDelaySlot = disasm.hasDelaySlot;
-                    address += sizeof(uint16);
+                    address += sizeof(opcode);
                 }
             } else {
                 std::ifstream in{inputFile, std::ios::binary};
@@ -695,24 +703,264 @@ int main(int argc, char *argv[]) {
                     printAddress(address);
                     printOpcode(opcode);
                     printInstruction(disasm, isDelaySlot);
-                    align(28);
+                    align(12);
                     printOp1(disasm);
                     if (disasm.op1.type != sh2::Operand::Type::None && disasm.op2.type != sh2::Operand::Type::None) {
                         printComma();
                     }
                     printOp2(disasm);
 
-                    fmt::println("{}", colors.reset);
+                    printReset();
                     x = 0;
 
                     isDelaySlot = disasm.hasDelaySlot;
-                    address += sizeof(uint16);
+                    address += sizeof(opcode);
                 }
             }
         } else if (lcisa == "m68k" || lcisa == "m68000") {
             // TODO: disassemble M68000
         } else if (lcisa == "scudsp") {
-            // TODO: disassemble SCU DSP
+            auto maybeAddress = ParseHex<uint8>(origin);
+            if (!maybeAddress) {
+                fmt::println("Invalid origin address: {}", origin);
+                return 1;
+            }
+            uint8 address = *maybeAddress;
+
+            auto printAddress = [&](uint8 address) {
+                if (!hideAddresses) {
+                    print(colors.address, fmt::format("{:02X}  ", address), false);
+                }
+            };
+
+            auto printOpcode = [&](uint32 opcode) {
+                if (!hideOpcodes) {
+                    print(colors.bytes, fmt::format("{:08X}  ", opcode), false);
+                }
+            };
+
+            auto printU8 = [&](uint8 imm) { print(colors.immediate, fmt::format("#0x{:X}", imm)); };
+            auto printS8 = [&](sint8 imm) {
+                print(colors.immediate, fmt::format("#{}0x{:X}", (imm < 0 ? "-" : ""), abs(imm)));
+            };
+            auto printS32 = [&](sint32 imm) {
+                print(colors.immediate, fmt::format("#{}0x{:X}", (imm < 0 ? "-" : ""), abs(imm)));
+            };
+
+            auto printCond = [&](scu::SCUDSPInstruction::Cond cond) { print(colors.cond, scu::ToString(cond)); };
+
+            auto printInstruction = [&](const scu::SCUDSPInstruction &disasm) {
+                switch (disasm.type) {
+                case scu::SCUDSPInstruction::Type::Operation: //
+                {
+                    if (disasm.operation.aluOp == scu::SCUDSPInstruction::ALUOp::NOP) {
+                        printNOP("NOP");
+                    } else {
+                        printMnemonic(scu::ToString(disasm.operation.aluOp));
+                    }
+                    align(5);
+
+                    switch (disasm.operation.xbusPOp) {
+                    case scu::SCUDSPInstruction::XBusPOp::NOP: printNOP("NOP"); break;
+                    case scu::SCUDSPInstruction::XBusPOp::MOV_MUL_P:
+                        printMnemonic("MOV ");
+                        printOpRead("MUL");
+                        printComma();
+                        printOpWrite("P");
+                        break;
+                    case scu::SCUDSPInstruction::XBusPOp::MOV_S_P:
+                        printMnemonic("MOV ");
+                        printOpRead(scu::ToString(disasm.operation.xbusSrc));
+                        printComma();
+                        printOpWrite("P");
+                        break;
+                    }
+                    align(17);
+
+                    if (disasm.operation.xbusXOp) {
+                        printMnemonic("MOV ");
+                        printOpRead(scu::ToString(disasm.operation.xbusSrc));
+                        printComma();
+                        printOpWrite("X");
+                    } else {
+                        printNOP("NOP");
+                    }
+                    align(29);
+
+                    switch (disasm.operation.ybusAOp) {
+                    case scu::SCUDSPInstruction::YBusAOp::NOP: printNOP("NOP"); break;
+                    case scu::SCUDSPInstruction::YBusAOp::CLR_A:
+                        printMnemonic("CLR ");
+                        printOpWrite("A");
+                        break;
+                    case scu::SCUDSPInstruction::YBusAOp::MOV_ALU_A:
+                        printMnemonic("MOV ");
+                        printOpRead("ALU");
+                        printComma();
+                        printOpWrite("A");
+                        break;
+                    case scu::SCUDSPInstruction::YBusAOp::MOV_S_A:
+                        printMnemonic("MOV ");
+                        printOpRead(scu::ToString(disasm.operation.xbusSrc));
+                        printComma();
+                        printOpWrite("A");
+                        break;
+                    }
+                    align(41);
+
+                    if (disasm.operation.ybusYOp) {
+                        printMnemonic("MOV ");
+                        printOpRead(scu::ToString(disasm.operation.ybusSrc));
+                        printComma();
+                        printOpWrite("Y");
+                    } else {
+                        printNOP("NOP");
+                    }
+                    align(53);
+
+                    switch (disasm.operation.d1BusOp) {
+                    case scu::SCUDSPInstruction::D1BusOp::NOP: printNOP("NOP"); break;
+                    case scu::SCUDSPInstruction::D1BusOp::MOV_SIMM_D:
+                        printMnemonic("MOV ");
+                        printS8(disasm.operation.d1BusSrc.imm);
+                        printComma();
+                        printOpWrite(scu::ToString(disasm.operation.d1BusDst));
+                        break;
+                    case scu::SCUDSPInstruction::D1BusOp::MOV_S_D:
+                        printMnemonic("MOV ");
+                        printOpRead(scu::ToString(disasm.operation.d1BusSrc.reg));
+                        printComma();
+                        printOpWrite(scu::ToString(disasm.operation.d1BusDst));
+                        break;
+                    }
+
+                    break;
+                }
+                case scu::SCUDSPInstruction::Type::MVI:
+                    printMnemonic("MVI ");
+                    printS32(disasm.mvi.imm);
+                    printComma();
+                    printOpWrite(scu::ToString(disasm.mvi.dst));
+                    if (disasm.mvi.cond != scu::SCUDSPInstruction::Cond::None) {
+                        printComma();
+                        printCond(disasm.mvi.cond);
+                    }
+                    break;
+                case scu::SCUDSPInstruction::Type::DMA:
+                    printMnemonic(disasm.dma.hold ? "DMAH " : "DMA ");
+                    if (disasm.dma.toD0) {
+                        printOpRead(scu::ToString(disasm.dma.ramOp));
+                    } else {
+                        printOpRead("D0");
+                    }
+                    printComma();
+                    if (disasm.dma.toD0) {
+                        printOpWrite("D0");
+                    } else {
+                        printOpWrite(scu::ToString(disasm.dma.ramOp));
+                    }
+                    printComma();
+                    if (disasm.dma.countType) {
+                        auto reg = fmt::format("M{}{}", (disasm.dma.count.ct < 4 ? "" : "C"), disasm.dma.count.ct & 3);
+                        printOpRead(reg);
+                    } else {
+                        printU8(disasm.dma.count.imm);
+                    }
+                    break;
+                case scu::SCUDSPInstruction::Type::JMP:
+                    printMnemonic("JMP ");
+                    if (disasm.jmp.cond != scu::SCUDSPInstruction::Cond::None) {
+                        printCond(disasm.jmp.cond);
+                        printComma();
+                    }
+                    printU8(disasm.jmp.target);
+                    break;
+                case scu::SCUDSPInstruction::Type::LPS: printMnemonic("LPS"); break;
+                case scu::SCUDSPInstruction::Type::BTM: printMnemonic("BTM"); break;
+                case scu::SCUDSPInstruction::Type::END: printMnemonic("END"); break;
+                case scu::SCUDSPInstruction::Type::ENDI: printMnemonic("ENDI"); break;
+                default: printIllegalMnemonic(); break;
+                }
+            };
+
+            if (inputFile.empty()) {
+                for (auto &opcodeStr : args) {
+                    auto maybeOpcode = ParseHex<uint32>(opcodeStr);
+                    if (!maybeOpcode) {
+                        fmt::println("Invalid opcode: {}", opcodeStr);
+                        return 1;
+                    }
+                    const uint32 opcode = *maybeOpcode;
+
+                    const scu::SCUDSPInstruction &disasm = scu::Disassemble(opcode);
+
+                    printAddress(address);
+                    printOpcode(opcode);
+                    printInstruction(disasm);
+
+                    printReset();
+                    x = 0;
+
+                    ++address;
+                }
+            } else {
+                std::ifstream in{inputFile, std::ios::binary};
+                if (!in) {
+                    std::error_code error{errno, std::generic_category()};
+                    fmt::println("Could not open file: {}", error.message());
+                    return 1;
+                }
+
+                in.seekg(0, std::ios::end);
+                const size_t fileSize = in.tellg();
+
+                size_t offset = 0;
+                size_t length = fileSize;
+
+                if (args.size() >= 1) {
+                    auto maybeOffset = ParseHex<size_t>(args[0]);
+                    if (!maybeOffset) {
+                        fmt::println("Invalid offset: {}", args[0]);
+                        return 1;
+                    }
+                    offset = *maybeOffset;
+                }
+                if (args.size() >= 2) {
+                    auto maybeLength = ParseHex<size_t>(args[1]);
+                    if (!maybeLength) {
+                        fmt::println("Invalid length: {}", args[1]);
+                        return 1;
+                    }
+                    length = *maybeLength;
+                }
+
+                length = std::min(length, fileSize - offset);
+
+                in.seekg(offset, std::ios::beg);
+
+                uint32 opcode{};
+
+                auto readOpcode = [&] {
+                    uint8 b[4] = {0};
+                    in.read((char *)b, 4);
+                    opcode = (static_cast<uint32>(b[0]) << 24u) | (static_cast<uint32>(b[1]) << 16u) |
+                             (static_cast<uint32>(b[2]) << 8u) | static_cast<uint32>(b[3]);
+                    return in.good();
+                };
+
+                while (readOpcode()) {
+                    const scu::SCUDSPInstruction &disasm = scu::Disassemble(opcode);
+
+                    printAddress(address);
+                    printOpcode(opcode);
+                    printInstruction(disasm);
+
+                    printReset();
+                    x = 0;
+
+                    ++address;
+                }
+            }
         } else if (lcisa == "scspdsp") {
             // TODO: disassemble SCSP DSP
         } else {

@@ -244,6 +244,11 @@ void SCUDSPDisassemblyView::Display() {
                     break;
                 case scu::SCUDSPInstruction::Type::JMP:
                     drawMnemonic("JMP");
+                    if (disasm.jmp.cond != scu::SCUDSPInstruction::Cond::None) {
+                        ImGui::SameLine();
+                        drawCond(disasm.jmp.cond);
+                        drawComma();
+                    }
                     ImGui::SameLine();
                     drawU8(disasm.jmp.target);
                     break;
