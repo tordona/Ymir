@@ -4,40 +4,40 @@
 
 namespace ymir::sh2 {
 
-DisasmTable::DisasmTable() {
-    for (uint32 instr = 0; instr < 0x10000; instr++) {
-        OpcodeDisasm &disasm = this->disasm[instr];
+DisassemblyTable::DisassemblyTable() {
+    for (uint32 opcode = 0; opcode < 0x10000; opcode++) {
+        DisassembledInstruction &instr = this->instrs[opcode];
 
         // ---------------------------------------
 
         // .... nnnn .... ....
-        auto decodeRN8 = [&] { return bit::extract<8, 11>(instr); };
+        auto decodeRN8 = [&] { return bit::extract<8, 11>(opcode); };
 
         // .... mmmm .... ....
-        auto decodeRM8 = [&] { return bit::extract<8, 11>(instr); };
+        auto decodeRM8 = [&] { return bit::extract<8, 11>(opcode); };
 
         // .... .... nnnn ....
-        auto decodeRN4 = [&] { return bit::extract<4, 7>(instr); };
+        auto decodeRN4 = [&] { return bit::extract<4, 7>(opcode); };
 
         // .... .... mmmm ....
-        auto decodeRM4 = [&] { return bit::extract<4, 7>(instr); };
+        auto decodeRM4 = [&] { return bit::extract<4, 7>(opcode); };
 
         // .... .... .... dddd -> uint16
-        auto decodeUDisp4 = [&](uint16 shift) { return bit::extract<0, 3>(instr) << shift; };
+        auto decodeUDisp4 = [&](uint16 shift) { return bit::extract<0, 3>(opcode) << shift; };
 
         // .... .... dddd dddd -> uint16
         // .... .... iiii iiii -> uint16
-        auto decodeUDispImm8 = [&](uint16 shift, uint16 add) { return (bit::extract<0, 7>(instr) << shift) + add; };
+        auto decodeUDispImm8 = [&](uint16 shift, uint16 add) { return (bit::extract<0, 7>(opcode) << shift) + add; };
 
         // .... .... dddd dddd -> sint16
         // .... .... iiii iiii -> sint16
         auto decodeSDispImm8 = [&](sint16 shift, sint16 add) {
-            return (bit::extract_signed<0, 7>(instr) << shift) + add;
+            return (bit::extract_signed<0, 7>(opcode) << shift) + add;
         };
 
         // .... dddd dddd dddd -> sint16
         auto decodeSDisp12 = [&](sint16 shift, sint16 add) {
-            return (bit::extract_signed<0, 11>(instr) << shift) + add;
+            return (bit::extract_signed<0, 11>(opcode) << shift) + add;
         };
 
         // ---------------------------------------
@@ -86,42 +86,42 @@ DisasmTable::DisasmTable() {
         // ---------------------------------------
 
         // <op>
-        auto make0 = [&](Mnemonic mnemonic) { disasm.mnemonic = mnemonic; };
+        auto make0 = [&](Mnemonic mnemonic) { instr.mnemonic = mnemonic; };
 
         // <op>.b <op1>, <op2>
         auto makeOpB = [&](Mnemonic mnemonic, Operand op1, Operand op2 = Operand::None()) {
-            disasm.mnemonic = mnemonic;
-            disasm.opSize = OperandSize::Byte;
-            disasm.op1 = op1;
-            disasm.op2 = op2;
+            instr.mnemonic = mnemonic;
+            instr.opSize = OperandSize::Byte;
+            instr.op1 = op1;
+            instr.op2 = op2;
         };
 
         // <op>.w <op1>, <op2>
         auto makeOpW = [&](Mnemonic mnemonic, Operand op1, Operand op2 = Operand::None()) {
-            disasm.mnemonic = mnemonic;
-            disasm.opSize = OperandSize::Word;
-            disasm.op1 = op1;
-            disasm.op2 = op2;
+            instr.mnemonic = mnemonic;
+            instr.opSize = OperandSize::Word;
+            instr.op1 = op1;
+            instr.op2 = op2;
         };
 
         // <op>.l <op1>, <op2>
         auto makeOpL = [&](Mnemonic mnemonic, Operand op1, Operand op2 = Operand::None()) {
-            disasm.mnemonic = mnemonic;
-            disasm.opSize = OperandSize::Long;
-            disasm.op1 = op1;
-            disasm.op2 = op2;
+            instr.mnemonic = mnemonic;
+            instr.opSize = OperandSize::Long;
+            instr.op1 = op1;
+            instr.op2 = op2;
         };
 
         // <op> <op1>, <op2> (implicit long operand)
         auto makeOp = [&](Mnemonic mnemonic, Operand op1, Operand op2 = Operand::None()) {
-            disasm.mnemonic = mnemonic;
-            disasm.opSize = OperandSize::LongImplicit;
-            disasm.op1 = op1;
-            disasm.op2 = op2;
+            instr.mnemonic = mnemonic;
+            instr.opSize = OperandSize::LongImplicit;
+            instr.op1 = op1;
+            instr.op2 = op2;
         };
 
-        auto hasDelaySlot = [&] { disasm.hasDelaySlot = true; };
-        auto invalidInDelaySlot = [&] { disasm.validInDelaySlot = false; };
+        auto hasDelaySlot = [&] { instr.hasDelaySlot = true; };
+        auto invalidInDelaySlot = [&] { instr.validInDelaySlot = false; };
 
         // ---------------------------------------
 
@@ -129,9 +129,9 @@ DisasmTable::DisasmTable() {
 
         using Op = Operand;
 
-        switch (instr >> 12u) {
+        switch (opcode >> 12u) {
         case 0x0:
-            switch (instr) {
+            switch (opcode) {
             case 0x0008: make0(CLRT); break;
             case 0x0009: make0(NOP); break;
             case 0x000B: make0(RTS), hasDelaySlot(), invalidInDelaySlot(); break;
@@ -141,7 +141,7 @@ DisasmTable::DisasmTable() {
             case 0x0028: make0(CLRMAC); break;
             case 0x002B: make0(RTE), hasDelaySlot(), invalidInDelaySlot(); break;
             default:
-                switch (instr & 0xFF) {
+                switch (opcode & 0xFF) {
                 case 0x02: makeOp(STC, Op::SR_R(), Op::Rn_W(decodeN())); break;
                 case 0x03: makeOp(BSRF, Op::RnPC(decodeM())), hasDelaySlot(), invalidInDelaySlot(); break;
                 case 0x0A: makeOp(STS, Op::MACH_R(), Op::Rn_W(decodeN())); break;
@@ -153,7 +153,7 @@ DisasmTable::DisasmTable() {
                 case 0x2A: makeOp(STS, Op::PR_R(), Op::Rn_W(decodeN())); break;
                 default: {
                     auto [rn, rm] = decodeNM();
-                    switch (instr & 0xF) {
+                    switch (opcode & 0xF) {
                     case 0x4: makeOpB(MOV, Op::Rn_R(rm), Op::AtR0Rn_W(rn)); break;
                     case 0x5: makeOpW(MOV, Op::Rn_R(rm), Op::AtR0Rn_W(rn)); break;
                     case 0x6: makeOpL(MOV, Op::Rn_R(rm), Op::AtR0Rn_W(rn)); break;
@@ -177,7 +177,7 @@ DisasmTable::DisasmTable() {
         case 0x2: {
             auto [rn, rm] = decodeNM();
 
-            switch (instr & 0xF) {
+            switch (opcode & 0xF) {
             case 0x0: makeOpB(MOV, Op::Rn_R(rm), Op::AtRn_W(rn)); break;
             case 0x1: makeOpW(MOV, Op::Rn_R(rm), Op::AtRn_W(rn)); break;
             case 0x2: makeOpL(MOV, Op::Rn_R(rm), Op::AtRn_W(rn)); break;
@@ -200,7 +200,7 @@ DisasmTable::DisasmTable() {
         case 0x3: {
             auto [rn, rm] = decodeNM();
 
-            switch (instr & 0xF) {
+            switch (opcode & 0xF) {
             case 0x0: makeOp(CMP_EQ, Op::Rn_R(rm), Op::Rn_R(rn)); break;
             case 0x2: makeOp(CMP_HS, Op::Rn_R(rm), Op::Rn_R(rn)); break;
             case 0x3: makeOp(CMP_GE, Op::Rn_R(rm), Op::Rn_R(rn)); break;
@@ -221,11 +221,11 @@ DisasmTable::DisasmTable() {
             break;
         }
         case 0x4:
-            if ((instr & 0xF) == 0xF) {
+            if ((opcode & 0xF) == 0xF) {
                 auto [rn, rm] = decodeNM();
                 makeOpW(MAC, Op::AtRnPlus_R(rm), Op::AtRnPlus_R(rn));
             } else {
-                switch (instr & 0xFF) {
+                switch (opcode & 0xFF) {
                 case 0x00: makeOp(SHLL, Op::Rn_RW(decodeN())); break;
                 case 0x01: makeOp(SHLR, Op::Rn_RW(decodeN())); break;
                 case 0x02: makeOpL(STS, Op::MACH_R(), Op::AtMinusRn_W(decodeN())); break;
@@ -280,7 +280,7 @@ DisasmTable::DisasmTable() {
         }
         case 0x6: {
             auto [rn, rm] = decodeNM();
-            switch (instr & 0xF) {
+            switch (opcode & 0xF) {
             case 0x0: makeOpB(MOV, Op::AtRn_R(rm), Op::Rn_W(rn)); break;
             case 0x1: makeOpW(MOV, Op::AtRn_R(rm), Op::Rn_W(rn)); break;
             case 0x2: makeOpL(MOV, Op::AtRn_R(rm), Op::Rn_W(rn)); break;
@@ -306,7 +306,7 @@ DisasmTable::DisasmTable() {
             break;
         }
         case 0x8:
-            switch ((instr >> 8u) & 0xF) {
+            switch ((opcode >> 8u) & 0xF) {
             case 0x0: {
                 auto [rn, disp] = decodeND4(0u);
                 makeOpB(MOV, Op::Rn_R(0), Op::AtDispRn_W(rn, disp));
@@ -347,7 +347,7 @@ DisasmTable::DisasmTable() {
         case 0xA: makeOp(BRA, Op::DispPC(decodeD12(1, 4))), hasDelaySlot(); break;
         case 0xB: makeOp(BSR, Op::DispPC(decodeD12(1, 4))), hasDelaySlot(); break;
         case 0xC: {
-            switch ((instr >> 8u) & 0xF) {
+            switch ((opcode >> 8u) & 0xF) {
             case 0x0: makeOpB(MOV, Op::Rn_R(0), Op::AtDispGBR_W(decodeD_U(0u, 0u))); break;
             case 0x1: makeOpW(MOV, Op::Rn_R(0), Op::AtDispGBR_W(decodeD_U(1u, 0u))); break;
             case 0x2: makeOpL(MOV, Op::Rn_R(0), Op::AtDispGBR_W(decodeD_U(2u, 0u))); break;
@@ -381,10 +381,10 @@ DisasmTable::DisasmTable() {
     }
 }
 
-DisasmTable DisasmTable::s_instance{};
+DisassemblyTable DisassemblyTable::s_instance{};
 
-const OpcodeDisasm &Disassemble(uint16 opcode) {
-    return DisasmTable::s_instance.disasm[opcode];
+const DisassembledInstruction &Disassemble(uint16 opcode) {
+    return DisassemblyTable::s_instance.instrs[opcode];
 }
 
 } // namespace ymir::sh2

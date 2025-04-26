@@ -4,6 +4,7 @@
 
 #include <array>
 #include <functional>
+#include <vector>
 
 namespace ymir::m68k {
 
@@ -296,7 +297,7 @@ struct Operand {
     }
 };
 
-struct OpcodeDisasm {
+struct DisassemblyInfo {
     Mnemonic mnemonic = Mnemonic::Illegal;
     Condition cond = Condition::T;
     OperandSize opSize = OperandSize::None;
@@ -312,26 +313,27 @@ struct OperandDetails {
     bool ixLong;    // true: <ix> is longword; false: <ix> is word
 };
 
-struct FullDisasm {
-    const OpcodeDisasm &opcode;
+struct DisassembledInstruction {
+    const DisassemblyInfo &info;
     OperandDetails op1;
     OperandDetails op2;
+    std::vector<uint16> opcodes;
 };
 
-struct DisasmTable {
+struct DisassemblyTable {
 private:
     static constexpr auto alignment = 64;
 
-    DisasmTable();
+    DisassemblyTable();
 
 public:
-    static DisasmTable s_instance;
+    static DisassemblyTable s_instance;
 
-    alignas(alignment) std::array<OpcodeDisasm, 0x10000> disasm;
+    alignas(alignment) std::array<DisassemblyInfo, 0x10000> infos;
 };
 
 // Disassembles M68K code, reading opcodes using the given fetcher function.
 // Every invocation of the function must return successive words starting from the base opcode.
-FullDisasm Disassemble(std::function<uint16()> fetcher);
+DisassembledInstruction Disassemble(std::function<uint16()> fetcher);
 
 } // namespace ymir::m68k

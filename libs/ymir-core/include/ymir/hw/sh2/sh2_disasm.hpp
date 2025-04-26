@@ -272,7 +272,7 @@ struct Operand {
     }
 };
 
-struct OpcodeDisasm {
+struct DisassembledInstruction {
     bool hasDelaySlot = false;
     bool validInDelaySlot = true;
     Mnemonic mnemonic = Mnemonic::Illegal;
@@ -281,18 +281,18 @@ struct OpcodeDisasm {
     Operand op2 = Operand::None();
 };
 
-struct DisasmTable {
+struct DisassemblyTable {
 private:
     static constexpr auto alignment = 64;
 
-    DisasmTable();
+    DisassemblyTable();
 
 public:
-    static DisasmTable s_instance;
+    static DisassemblyTable s_instance;
 
-    alignas(alignment) std::array<OpcodeDisasm, 0x10000> disasm;
+    alignas(alignment) std::array<DisassembledInstruction, 0x10000> instrs;
 };
 
-const OpcodeDisasm &Disassemble(uint16 opcode);
+const DisassembledInstruction &Disassemble(uint16 opcode);
 
 } // namespace ymir::sh2

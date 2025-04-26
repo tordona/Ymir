@@ -37,8 +37,8 @@ void SH2DisassemblyView::Display() {
             const uint32 address = baseAddress + i * sizeof(uint16);
             const uint16 prevOpcode = m_context.saturn.mainBus.Peek<uint16>(address - 2);
             const uint16 opcode = m_context.saturn.mainBus.Peek<uint16>(address);
-            const sh2::OpcodeDisasm &prevDisasm = sh2::Disassemble(prevOpcode);
-            const sh2::OpcodeDisasm &disasm = sh2::Disassemble(opcode);
+            const sh2::DisassembledInstruction &prevDisasm = sh2::Disassemble(prevOpcode);
+            const sh2::DisassembledInstruction &disasm = sh2::Disassemble(opcode);
 
             auto memRead = [&](uint32 address) -> uint32 {
                 switch (disasm.opSize) {
