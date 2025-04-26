@@ -1160,7 +1160,7 @@ int main(int argc, char *argv[]) {
                     case 0: printOpRead("TMP"); break;
                     case 1: printOpRead("INPUTS"); break;
                     }
-                    align(56);
+                    //align(56);
                     printOperator("*");
                     switch (disasm.YSEL) {
                     case 0: printOpRead("FRC"); break;
@@ -1180,7 +1180,7 @@ int main(int argc, char *argv[]) {
                         break;
                     }
                     if (!disasm.ZERO) {
-                        align(67);
+                        //align(67);
                         if (disasm.NEGB) {
                             printOperator("-");
                         } else {
@@ -1193,7 +1193,7 @@ int main(int argc, char *argv[]) {
                         }
                     }
                     if (disasm.SHFT0 ^ disasm.SHFT1) {
-                        align(71);
+                        //align(71);
                         printOperator("<<");
                         printImmDec(1);
                     }
@@ -1283,7 +1283,7 @@ int main(int argc, char *argv[]) {
                     }
 
                     if (disasm.MRD) {
-                        align(205);
+                        align(211);
                         printOpWrite("MEM");
                         printOperator("<-");
                         printOpRead("WRAM");
@@ -1293,7 +1293,7 @@ int main(int argc, char *argv[]) {
                     }
 
                     if (disasm.MWT) {
-                        align(222);
+                        align(228);
                         printOpWrite("WRAM");
                         printOperator("[");
                         printOpRead("MADR");
@@ -1303,12 +1303,12 @@ int main(int argc, char *argv[]) {
                     }
 
                     if (disasm.NOFL) {
-                        align(239);
+                        align(245);
                         printMnemonic("NOFL");
                     }
 
                     if (disasm.ADRL) {
-                        align(245);
+                        align(251);
                         printOpWrite("ADRS_REG");
                         printOperator("<-");
                         if (disasm.SHFT0 & disasm.SHFT1) {
