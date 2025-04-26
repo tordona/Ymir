@@ -37,6 +37,7 @@ add_library(ymir-core
     include/ymir/hw/scsp/scsp_callbacks.hpp
     include/ymir/hw/scsp/scsp_defs.hpp
     include/ymir/hw/scsp/scsp_dsp.hpp
+    include/ymir/hw/scsp/scsp_dsp_instr.hpp
     include/ymir/hw/scsp/scsp_internal_callbacks.hpp
     include/ymir/hw/scsp/scsp_slot.hpp
     include/ymir/hw/scsp/scsp_timer.hpp
