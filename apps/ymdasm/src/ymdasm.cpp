@@ -1123,7 +1123,7 @@ int main(int argc, char *argv[]) {
                     }
                 } else {
                     printOpWrite("INPUTS");
-                    printOperator("=");
+                    printOperator("<-");
                     if (disasm.IRA <= 0x1F) {
                         printOpRead("MEMS");
                         printOperator("[");
@@ -1143,9 +1143,9 @@ int main(int argc, char *argv[]) {
                         printIllegalMnemonic();
                     }
 
-                    align(18);
+                    align(20);
                     printOpWrite("TMP");
-                    printOperator("=");
+                    printOperator("<-");
                     printOpRead("TEMP");
                     printOperator("[");
                     printImm(disasm.TRA);
@@ -1153,14 +1153,15 @@ int main(int argc, char *argv[]) {
                     printOpRead("MDEC_CT");
                     printOperator("]");
 
-                    align(41);
+                    align(45);
                     printOpWrite("SFT");
-                    printOperator("=");
+                    printOperator("<-");
                     switch (disasm.XSEL) {
                     case 0: printOpRead("TMP"); break;
                     case 1: printOpRead("INPUTS"); break;
                     }
-                    printOperator(" * ");
+                    align(56);
+                    printOperator("*");
                     switch (disasm.YSEL) {
                     case 0: printOpRead("FRC"); break;
                     case 1:
@@ -1179,10 +1180,11 @@ int main(int argc, char *argv[]) {
                         break;
                     }
                     if (!disasm.ZERO) {
+                        align(67);
                         if (disasm.NEGB) {
-                            printOperator(" - ");
+                            printOperator("-");
                         } else {
-                            printOperator(" + ");
+                            printOperator("+");
                         }
                         if (disasm.BSEL) {
                             printOpRead("SFT");
@@ -1190,27 +1192,23 @@ int main(int argc, char *argv[]) {
                             printOpRead("TMP");
                         }
                     }
+                    if (disasm.SHFT0 ^ disasm.SHFT1) {
+                        align(71);
+                        printOperator("<<");
+                        printImmDec(1);
+                    }
+
                     if (disasm.YRL) {
-                        align(72);
+                        align(76);
                         printOpWrite("Y");
-                        printOperator("=");
+                        printOperator("<-");
                         printOpRead("INPUTS");
                     }
 
-                    if (disasm.SHFT0) {
-                        align(73);
-                        printMnemonic("SHFT0");
-                    }
-
-                    if (disasm.SHFT1) {
-                        align(79);
-                        printMnemonic("SHFT1");
-                    }
-
                     if (disasm.FRCL) {
-                        align(85);
+                        align(87);
                         printOpWrite("FRC");
-                        printOperator("=");
+                        printOperator("<-");
                         printOpRead("SFT");
                         if (disasm.SHFT0 & disasm.SHFT1) {
                             printBitRange(11, 0);
@@ -1219,11 +1217,107 @@ int main(int argc, char *argv[]) {
                         }
                     }
 
-                    align(27);
+                    align(104);
+                    if (disasm.EWT) {
+                        printOpWrite("EFREG");
+                        printOperator("[");
+                        printImm(disasm.EWA);
+                        printOperator("]");
+                        printOperator("<-");
+                        printOpRead("SFT");
+                        printBitRange(23, 8);
+                    }
+
+                    align(127);
                     if (disasm.TWT) {
-                        printMnemonic("TWA");
-                        printOperator("=");
+                        printOpWrite("TEMP");
+                        printOperator("[");
                         printImm(disasm.TWA);
+                        printOperator("+");
+                        printOpRead("MDEC_CT");
+                        printOperator("]");
+                        printOperator("<-");
+                        printOpRead("SFT");
+                    }
+
+                    align(152);
+                    if (disasm.IWT) {
+                        printOpWrite("MEMS");
+                        printOperator("[");
+                        printImm(disasm.IWA);
+                        printOperator("]");
+                        printOperator("<-");
+                        printOpRead("MEM");
+                    }
+
+                    align(169);
+                    if (disasm.MRD || disasm.MWT) {
+                        printOpWrite("MADR");
+                        printOperator("<-");
+                        printOperator("(");
+                        if (!disasm.TABLE && (disasm.ADREB || disasm.NXADR)) {
+                            printOperator("(");
+                        }
+                        printOpRead("MADRS");
+                        printOperator("[");
+                        printImm(disasm.MASA);
+                        printOperator("]");
+                        if (disasm.ADREB) {
+                            printOperator("+");
+                            printOpRead("ADRS_REG");
+                        }
+                        if (disasm.NXADR) {
+                            printOperator("+");
+                            printImmDec(1);
+                        }
+                        if (!disasm.TABLE) {
+                            if (disasm.ADREB || disasm.NXADR) {
+                                printOperator(")");
+                            }
+                            printOperator("&");
+                            printOpRead("RBL");
+                        }
+                        printOperator(")");
+                        printOperator("+");
+                        printOpRead("RBP");
+                    }
+
+                    if (disasm.MRD) {
+                        align(205);
+                        printOpWrite("MEM");
+                        printOperator("<-");
+                        printOpRead("WRAM");
+                        printOperator("[");
+                        printOpRead("MADR");
+                        printOperator("]");
+                    }
+
+                    if (disasm.MWT) {
+                        align(222);
+                        printOpWrite("WRAM");
+                        printOperator("[");
+                        printOpRead("MADR");
+                        printOperator("]");
+                        printOperator("<-");
+                        printOpRead("MEM");
+                    }
+
+                    if (disasm.NOFL) {
+                        align(239);
+                        printMnemonic("NOFL");
+                    }
+
+                    if (disasm.ADRL) {
+                        align(245);
+                        printOpWrite("ADRS_REG");
+                        printOperator("<-");
+                        if (disasm.SHFT0 & disasm.SHFT1) {
+                            printOpRead("INPUTS");
+                            printBitRange(27, 16);
+                        } else {
+                            printOpRead("SFT");
+                            printBitRange(23, 12);
+                        }
                     }
                 }
             };
