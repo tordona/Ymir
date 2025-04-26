@@ -20,6 +20,8 @@
 
 using namespace ymir;
 
+// TODO: reuse code where possible
+
 struct ColorEscapes {
     const char *address;
     const char *bytes;
@@ -36,7 +38,7 @@ struct ColorEscapes {
     const char *opWrite;     // Written operands
     const char *opReadWrite; // Read and written operands
 
-    const char *separator; // Operand (,) and size suffix (.) separators
+    const char *oper; // Operand (,); size suffix (.); operators (+, -, =, etc.)
 
     const char *addrInc; // SH2 and M68K address increment (@Rn+, (An)+)
     const char *addrDec; // SH2 and M68K address increment (@-Rn, -(An))
@@ -62,7 +64,7 @@ static ColorEscapes kNoColors = {
     .opWrite = "",
     .opReadWrite = "",
 
-    .separator = "",
+    .oper = "",
 
     .addrInc = "",
     .addrDec = "",
@@ -88,7 +90,7 @@ static ColorEscapes kBasicColors = {
     .opWrite = ANSI_FGCOLOR_BRIGHT_MAGENTA,
     .opReadWrite = ANSI_FGCOLOR_BRIGHT_YELLOW,
 
-    .separator = ANSI_FGCOLOR_BRIGHT_BLACK,
+    .oper = ANSI_FGCOLOR_BRIGHT_BLACK,
 
     .addrInc = ANSI_FGCOLOR_GREEN,
     .addrDec = ANSI_FGCOLOR_RED,
@@ -114,7 +116,7 @@ static ColorEscapes kTrueColors = {
     .opWrite = ANSI_FGCOLOR_24B(215, 173, 247),
     .opReadWrite = ANSI_FGCOLOR_24B(247, 206, 173),
 
-    .separator = ANSI_FGCOLOR_24B(186, 191, 194),
+    .oper = ANSI_FGCOLOR_24B(186, 191, 194),
 
     .addrInc = ANSI_FGCOLOR_24B(147, 194, 155),
     .addrDec = ANSI_FGCOLOR_24B(194, 159, 147),
@@ -188,6 +190,7 @@ int main(int argc, char *argv[]) {
         fmt::println("    m68k, m68000  Motorola 68000");
         fmt::println("    scudsp        SCU (Saturn Control Unit) DSP");
         fmt::println("    scspdsp       SCSP (Saturn Custom Sound Processor) DSP");
+        fmt::println("    scspdspraw    SCSP (Saturn Custom Sound Processor) DSP (raw dissasembly)");
         fmt::println("  This argument is case-insensitive.");
         fmt::println("");
         fmt::println("  When disassembling command line arguments, <program opcodes> specifies the");
@@ -249,16 +252,6 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // TODO: read program according to specified ISA
-        // - SH2: 16-bit fixed-length opcodes
-        // - M68K: 16-bit variable-length opcodes
-        // - SCUDSP: 32-bit VLIW opcodes
-        // - SCSPDSP: 64-bit VLIW opcodes
-        // If reading from command line, SH2 can also override the delay slot flag with opcode prefixes ! and _
-        //
-        // Design ideas for opcode parsing:
-        // - v1: each ISA (re)implements opcode reading from a std::istream or from the args vector
-
         int x = 0;
 
         auto printRaw = [&](std::string_view text, bool incPos = true) {
@@ -287,10 +280,10 @@ int main(int argc, char *argv[]) {
         auto printIllegalMnemonic = [&] { print(colors.illegalMnemonic, "(illegal)"); };
         auto printUnknownMnemonic = [&] { print(colors.illegalMnemonic, "(?)"); };
         auto printCond = [&](const char *cond) { print(colors.cond, cond); };
-        auto printSeparator = [&](const char *separator) { print(colors.separator, separator); };
-        auto printComma = [&] { printSeparator(", "); };
+        auto printOperator = [&](const char *oper) { print(colors.oper, oper); };
+        auto printComma = [&] { printOperator(", "); };
         auto printSizeSuffix = [&](const char *size) {
-            printSeparator(".");
+            printOperator(".");
             print(colors.sizeSuffix, size);
         };
 
@@ -400,42 +393,42 @@ int main(int argc, char *argv[]) {
                 case sh2::Mnemonic::DIV1: printMnemonic("div1"); break;
                 case sh2::Mnemonic::CMP_EQ:
                     printMnemonic("cmp");
-                    printSeparator("/");
+                    printOperator("/");
                     printCond("eq");
                     break;
                 case sh2::Mnemonic::CMP_GE:
                     printMnemonic("cmp");
-                    printSeparator("/");
+                    printOperator("/");
                     printCond("ge");
                     break;
                 case sh2::Mnemonic::CMP_GT:
                     printMnemonic("cmp");
-                    printSeparator("/");
+                    printOperator("/");
                     printCond("gt");
                     break;
                 case sh2::Mnemonic::CMP_HI:
                     printMnemonic("cmp");
-                    printSeparator("/");
+                    printOperator("/");
                     printCond("hi");
                     break;
                 case sh2::Mnemonic::CMP_HS:
                     printMnemonic("cmp");
-                    printSeparator("/");
+                    printOperator("/");
                     printCond("hs");
                     break;
                 case sh2::Mnemonic::CMP_PL:
                     printMnemonic("cmp");
-                    printSeparator("/");
+                    printOperator("/");
                     printCond("pl");
                     break;
                 case sh2::Mnemonic::CMP_PZ:
                     printMnemonic("cmp");
-                    printSeparator("/");
+                    printOperator("/");
                     printCond("pz");
                     break;
                 case sh2::Mnemonic::CMP_STR:
                     printMnemonic("cmp");
-                    printSeparator("/");
+                    printOperator("/");
                     printCond("str");
                     break;
                 case sh2::Mnemonic::TAS: printMnemonic("tas"); break;
@@ -447,7 +440,7 @@ int main(int argc, char *argv[]) {
                 case sh2::Mnemonic::BFS:
                     printMnemonic("b");
                     printCond("f");
-                    printSeparator("/");
+                    printOperator("/");
                     printMnemonic("s");
                     break;
                 case sh2::Mnemonic::BT:
@@ -457,7 +450,7 @@ int main(int argc, char *argv[]) {
                 case sh2::Mnemonic::BTS:
                     printMnemonic("b");
                     printCond("t");
-                    printSeparator("/");
+                    printOperator("/");
                     printMnemonic("s");
                     break;
                 case sh2::Mnemonic::BRA: printMnemonic("bra"); break;
@@ -940,7 +933,8 @@ int main(int argc, char *argv[]) {
                     ++address;
                 }
             }
-        } else if (lcisa == "scspdsp") {
+        } else if (lcisa == "scspdspraw" || lcisa == "scspdsp") {
+            const bool rawDisasm = lcisa == "scspdspraw";
             auto maybeAddress = ParseHex<uint8>(origin);
             if (!maybeAddress) {
                 fmt::println("Invalid origin address: {}", origin);
@@ -964,8 +958,274 @@ int main(int argc, char *argv[]) {
                 }
             };
 
+            auto printImm = [&](uint64 imm) { print(colors.immediate, fmt::format("0x{:X}", imm)); };
+            auto printImmDec = [&](uint64 imm) { print(colors.immediate, fmt::format("{:d}", imm)); };
+
+            auto printBitRange = [&](uint32 high, uint32 low) {
+                printOperator("[");
+                printImmDec(high);
+                printOperator(":");
+                printImmDec(low);
+                printOperator("]");
+            };
+
             auto printInstruction = [&](scsp::DSPInstr disasm) {
-                // TODO: print SCSP DSP instruction
+                if (disasm.u64 == 0) {
+                    printNOP("NOP");
+                    return;
+                }
+
+                if (rawDisasm) {
+                    printMnemonic("IRA");
+                    printOperator("=");
+                    if (disasm.IRA <= 0x1F) {
+                        printOpRead("MEMS");
+                        printOperator("[");
+                        printImm(disasm.IRA);
+                        printOperator("]");
+                    } else if (disasm.IRA <= 0x2F) {
+                        printOpRead("MIXS");
+                        printOperator("[");
+                        printImm(disasm.IRA & 0xF);
+                        printOperator("]");
+                    } else if (disasm.IRA <= 0x31) {
+                        printOpRead("EXTS");
+                        printOperator("[");
+                        printImm(disasm.IRA & 0x1);
+                        printOperator("]");
+                    } else {
+                        printIllegalMnemonic();
+                    }
+
+                    if (disasm.IWT) {
+                        align(15);
+                        printMnemonic("IWA");
+                        printOperator("=");
+                        printImm(disasm.IWA);
+                    }
+
+                    align(24);
+                    printMnemonic("TRA");
+                    printOperator("=");
+                    printImm(disasm.TRA);
+
+                    if (disasm.TWT) {
+                        align(33);
+                        printMnemonic("TWA");
+                        printOperator("=");
+                        printImm(disasm.TWA);
+                    }
+
+                    align(42);
+                    printMnemonic("XSEL");
+                    printOperator("=");
+                    switch (disasm.XSEL) {
+                    case 0: printOpRead("TEMP"); break;
+                    case 1: printOpRead("INPUTS"); break;
+                    }
+
+                    align(54);
+                    printMnemonic("YSEL");
+                    printOperator("=");
+                    switch (disasm.YSEL) {
+                    case 0: printOpRead("FRC"); break;
+                    case 1:
+                        printOpRead("COEF");
+                        printOperator("[");
+                        printImm(disasm.CRA);
+                        printOperator("]");
+                        break;
+                    case 2:
+                        printOpRead("Y");
+                        printBitRange(23, 11);
+                        break;
+                    case 3:
+                        printOpRead("Y");
+                        printBitRange(15, 4);
+                        break;
+                    }
+
+                    if (disasm.YRL) {
+                        align(70);
+                        printMnemonic("YRL");
+                    }
+
+                    if (disasm.FRCL) {
+                        align(74);
+                        printMnemonic("FRCL");
+                    }
+
+                    align(79);
+                    if (disasm.ZERO) {
+                        printMnemonic("ZERO");
+                    } else {
+                        if (disasm.NEGB) {
+                            printMnemonic("NEGB");
+                            if (disasm.BSEL) {
+                                printOperator(" ");
+                            }
+                        }
+                        if (disasm.BSEL) {
+                            printMnemonic("BSEL");
+                        }
+                    }
+
+                    if (disasm.SHFT0) {
+                        align(89);
+                        printMnemonic("SHFT0");
+                    }
+                    if (disasm.SHFT1) {
+                        align(95);
+                        printMnemonic("SHFT1");
+                    }
+
+                    if (disasm.EWT) {
+                        align(101);
+                        printMnemonic("EWA");
+                        printOperator("=");
+                        printImm(disasm.EWA);
+                    }
+
+                    if (disasm.MRD || disasm.MWT) {
+                        align(109);
+                        printMnemonic("MASA");
+                        printOperator("=");
+                        printImm(disasm.MASA);
+                        if (disasm.MRD) {
+                            align(119);
+                            printMnemonic("MRD");
+                        }
+                        if (disasm.MWT) {
+                            align(123);
+                            printMnemonic("MWT");
+                        }
+                        if (disasm.NXADR) {
+                            align(127);
+                            printMnemonic("NXADR");
+                        }
+                        if (disasm.ADREB) {
+                            align(133);
+                            printMnemonic("ADREB");
+                        }
+                        if (disasm.NOFL) {
+                            align(139);
+                            printMnemonic("NOFL");
+                        }
+                        if (disasm.TABLE) {
+                            align(144);
+                            printMnemonic("TABLE");
+                        }
+                    }
+
+                    if (disasm.ADRL) {
+                        align(150);
+                        printMnemonic("ADRL");
+                    }
+                } else {
+                    printOpWrite("INPUTS");
+                    printOperator("=");
+                    if (disasm.IRA <= 0x1F) {
+                        printOpRead("MEMS");
+                        printOperator("[");
+                        printImm(disasm.IRA);
+                        printOperator("]");
+                    } else if (disasm.IRA <= 0x2F) {
+                        printOpRead("MIXS");
+                        printOperator("[");
+                        printImm(disasm.IRA & 0xF);
+                        printOperator("]");
+                    } else if (disasm.IRA <= 0x31) {
+                        printOpRead("EXTS");
+                        printOperator("[");
+                        printImm(disasm.IRA & 0x1);
+                        printOperator("]");
+                    } else {
+                        printIllegalMnemonic();
+                    }
+
+                    align(18);
+                    printOpWrite("TMP");
+                    printOperator("=");
+                    printOpRead("TEMP");
+                    printOperator("[");
+                    printImm(disasm.TRA);
+                    printOperator("+");
+                    printOpRead("MDEC_CT");
+                    printOperator("]");
+
+                    align(41);
+                    printOpWrite("SFT");
+                    printOperator("=");
+                    switch (disasm.XSEL) {
+                    case 0: printOpRead("TMP"); break;
+                    case 1: printOpRead("INPUTS"); break;
+                    }
+                    printOperator(" * ");
+                    switch (disasm.YSEL) {
+                    case 0: printOpRead("FRC"); break;
+                    case 1:
+                        printOpRead("COEF");
+                        printOperator("[");
+                        printImm(disasm.CRA);
+                        printOperator("]");
+                        break;
+                    case 2:
+                        printOpRead("Y");
+                        printBitRange(23, 11);
+                        break;
+                    case 3:
+                        printOpRead("Y");
+                        printBitRange(15, 4);
+                        break;
+                    }
+                    if (!disasm.ZERO) {
+                        if (disasm.NEGB) {
+                            printOperator(" - ");
+                        } else {
+                            printOperator(" + ");
+                        }
+                        if (disasm.BSEL) {
+                            printOpRead("SFT");
+                        } else {
+                            printOpRead("TMP");
+                        }
+                    }
+                    if (disasm.YRL) {
+                        align(72);
+                        printOpWrite("Y");
+                        printOperator("=");
+                        printOpRead("INPUTS");
+                    }
+
+                    if (disasm.SHFT0) {
+                        align(73);
+                        printMnemonic("SHFT0");
+                    }
+
+                    if (disasm.SHFT1) {
+                        align(79);
+                        printMnemonic("SHFT1");
+                    }
+
+                    if (disasm.FRCL) {
+                        align(85);
+                        printOpWrite("FRC");
+                        printOperator("=");
+                        printOpRead("SFT");
+                        if (disasm.SHFT0 & disasm.SHFT1) {
+                            printBitRange(11, 0);
+                        } else {
+                            printBitRange(23, 11);
+                        }
+                    }
+
+                    align(27);
+                    if (disasm.TWT) {
+                        printMnemonic("TWA");
+                        printOperator("=");
+                        printImm(disasm.TWA);
+                    }
+                }
             };
 
             if (inputFile.empty()) {

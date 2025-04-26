@@ -102,12 +102,15 @@ You can find an opcode table [here](https://github.com/srg320/Saturn_hw/blob/mai
 
 
 
-### SCSP DSP (`scspdsp`)
+### SCSP DSP (`scspdsp`, `scspdspraw`)
 
 The SCSP (Saturn Custom Sound Processor) DSP uses 64-bit big-endian instructions specialized for audio processing.
 
 The best source of information about this ISA is Neill Corlett's research on the Dreamcast's AICA (the successor of the
 SCSP), which has been mirrored [here](https://raw.githubusercontent.com/Senryoku/dreamcast-docs/refs/heads/master/AICA/DOCS/myaica.txt).
+
+The raw disassembly (`scspdspraw`) prints out the raw values of the instruction's parameters.
+The regular disassembly (`scspdsp`) converts the raw parameters into a human-readable format.
 
 
 
