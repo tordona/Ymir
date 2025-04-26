@@ -1,7 +1,10 @@
 #include <ymir/core/types.hpp>
 
+#include <ymir/hw/scsp/scsp_dsp_instr.hpp>
 #include <ymir/hw/scu/scu_dsp_disasm.hpp>
 #include <ymir/hw/sh2/sh2_disasm.hpp>
+
+#include "ansi.hpp"
 
 #include <cxxopts.hpp>
 #include <fmt/format.h>
@@ -14,30 +17,6 @@
 #include <string>
 #include <string_view>
 #include <vector>
-
-#define ANSI_ESCAPE "\x1b"
-
-#define ANSI_RESET ANSI_ESCAPE "[0m"
-
-#define ANSI_FGCOLOR_BLACK ANSI_ESCAPE "[30m"
-#define ANSI_FGCOLOR_RED ANSI_ESCAPE "[31m"
-#define ANSI_FGCOLOR_GREEN ANSI_ESCAPE "[32m"
-#define ANSI_FGCOLOR_YELLOW ANSI_ESCAPE "[33m"
-#define ANSI_FGCOLOR_BLUE ANSI_ESCAPE "[34m"
-#define ANSI_FGCOLOR_MAGENTA ANSI_ESCAPE "[35m"
-#define ANSI_FGCOLOR_CYAN ANSI_ESCAPE "[36m"
-#define ANSI_FGCOLOR_WHITE ANSI_ESCAPE "[37m"
-
-#define ANSI_FGCOLOR_BRIGHT_BLACK ANSI_ESCAPE "[1;30m"
-#define ANSI_FGCOLOR_BRIGHT_RED ANSI_ESCAPE "[1;31m"
-#define ANSI_FGCOLOR_BRIGHT_GREEN ANSI_ESCAPE "[1;32m"
-#define ANSI_FGCOLOR_BRIGHT_YELLOW ANSI_ESCAPE "[1;33m"
-#define ANSI_FGCOLOR_BRIGHT_BLUE ANSI_ESCAPE "[1;34m"
-#define ANSI_FGCOLOR_BRIGHT_MAGENTA ANSI_ESCAPE "[1;35m"
-#define ANSI_FGCOLOR_BRIGHT_CYAN ANSI_ESCAPE "[1;36m"
-#define ANSI_FGCOLOR_BRIGHT_WHITE ANSI_ESCAPE "[1;37m"
-
-#define ANSI_FGCOLOR_24B(r, g, b) ANSI_ESCAPE "[38;2;" #r ";" #g ";" #b "m"
 
 using namespace ymir;
 
@@ -962,7 +941,113 @@ int main(int argc, char *argv[]) {
                 }
             }
         } else if (lcisa == "scspdsp") {
-            // TODO: disassemble SCSP DSP
+            auto maybeAddress = ParseHex<uint8>(origin);
+            if (!maybeAddress) {
+                fmt::println("Invalid origin address: {}", origin);
+                return 1;
+            }
+            uint8 address = *maybeAddress;
+            if (address >= 128) {
+                fmt::println("Invalid origin address: {}", origin);
+                return 1;
+            }
+
+            auto printAddress = [&](uint8 address) {
+                if (!hideAddresses) {
+                    print(colors.address, fmt::format("{:02X}  ", address), false);
+                }
+            };
+
+            auto printOpcode = [&](uint64 opcode) {
+                if (!hideOpcodes) {
+                    print(colors.bytes, fmt::format("{:016X}  ", opcode), false);
+                }
+            };
+
+            auto printInstruction = [&](scsp::DSPInstr disasm) {
+                // TODO: print SCSP DSP instruction
+            };
+
+            if (inputFile.empty()) {
+                for (auto &opcodeStr : args) {
+                    auto maybeOpcode = ParseHex<uint64>(opcodeStr);
+                    if (!maybeOpcode) {
+                        fmt::println("Invalid opcode: {}", opcodeStr);
+                        return 1;
+                    }
+                    const uint64 opcode = *maybeOpcode;
+
+                    const scsp::DSPInstr disasm{.u64 = opcode};
+
+                    printAddress(address);
+                    printOpcode(opcode);
+                    printInstruction(disasm);
+
+                    printReset();
+                    x = 0;
+
+                    ++address;
+                }
+            } else {
+                std::ifstream in{inputFile, std::ios::binary};
+                if (!in) {
+                    std::error_code error{errno, std::generic_category()};
+                    fmt::println("Could not open file: {}", error.message());
+                    return 1;
+                }
+
+                in.seekg(0, std::ios::end);
+                const size_t fileSize = in.tellg();
+
+                size_t offset = 0;
+                size_t length = fileSize;
+
+                if (args.size() >= 1) {
+                    auto maybeOffset = ParseHex<size_t>(args[0]);
+                    if (!maybeOffset) {
+                        fmt::println("Invalid offset: {}", args[0]);
+                        return 1;
+                    }
+                    offset = *maybeOffset;
+                }
+                if (args.size() >= 2) {
+                    auto maybeLength = ParseHex<size_t>(args[1]);
+                    if (!maybeLength) {
+                        fmt::println("Invalid length: {}", args[1]);
+                        return 1;
+                    }
+                    length = *maybeLength;
+                }
+
+                length = std::min(length, fileSize - offset);
+
+                in.seekg(offset, std::ios::beg);
+
+                uint64 opcode{};
+
+                auto readOpcode = [&] {
+                    uint8 b[8] = {0};
+                    in.read((char *)b, 8);
+                    opcode = (static_cast<uint64>(b[0]) << 56ull) | (static_cast<uint64>(b[1]) << 48ull) |
+                             (static_cast<uint64>(b[2]) << 40ull) | (static_cast<uint64>(b[3]) << 32ull) |
+                             (static_cast<uint64>(b[4]) << 24ull) | (static_cast<uint64>(b[5]) << 16ull) |
+                             (static_cast<uint64>(b[6]) << 8ull) | static_cast<uint64>(b[7]);
+                    return in.good();
+                };
+
+                while (readOpcode()) {
+                    const scsp::DSPInstr disasm{.u64 = opcode};
+
+                    printAddress(address);
+                    printOpcode(opcode);
+                    printInstruction(disasm);
+
+                    printReset();
+                    x = 0;
+
+                    ++address;
+                }
+            }
         } else {
             fmt::println("Invalid ISA: {}", isa);
             fmt::println("");

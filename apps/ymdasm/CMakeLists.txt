@@ -1,5 +1,6 @@
 ## Create the executable target
 add_executable(ymdasm
+    src/ansi.hpp
     src/ymdasm.cpp
 )
 add_executable(ymir::ymdasm ALIAS ymdasm)
