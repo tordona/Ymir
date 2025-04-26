@@ -997,9 +997,9 @@ uint64 MC68EC000::Execute() {
 
     case OpcodeType::Noop: Instr_Noop(instr); return 4 / 2;
 
-    case OpcodeType::Illegal: Instr_Illegal(instr); return 34 / 2;
     case OpcodeType::Illegal1010: Instr_Illegal1010(instr); return 34 / 2;
     case OpcodeType::Illegal1111: Instr_Illegal1111(instr); return 34 / 2;
+    case OpcodeType::Illegal: Instr_Illegal(instr); return 34 / 2;
 
     default:
 #ifndef NDEBUG
@@ -1217,8 +1217,8 @@ FORCE_INLINE void MC68EC000::Instr_MoveP_Dx_Ay(uint16 instr) {
 
 FORCE_INLINE void MC68EC000::Instr_MoveQ(uint16 instr) {
     const sint32 value = static_cast<sint8>(bit::extract<0, 7>(instr));
-    const uint32 reg = bit::extract<9, 11>(instr);
-    regs.D[reg] = value;
+    const uint32 Dn = bit::extract<9, 11>(instr);
+    regs.D[Dn] = value;
     SR.N = IsNegative(value);
     SR.Z = value == 0;
     SR.V = SR.C = 0;
@@ -1292,9 +1292,9 @@ FORCE_INLINE void MC68EC000::Instr_Ext_L(uint16 instr) {
 }
 
 FORCE_INLINE void MC68EC000::Instr_Swap(uint16 instr) {
-    const uint32 reg = bit::extract<0, 2>(instr);
-    const uint32 value = (regs.D[reg] >> 16u) | (regs.D[reg] << 16u);
-    regs.D[reg] = value;
+    const uint32 Dn = bit::extract<0, 2>(instr);
+    const uint32 value = (regs.D[Dn] >> 16u) | (regs.D[Dn] << 16u);
+    regs.D[Dn] = value;
     SR.N = IsNegative(value);
     SR.Z = value == 0;
     SR.V = SR.C = 0;
@@ -1510,10 +1510,11 @@ FORCE_INLINE void MC68EC000::Instr_AddI(uint16 instr) {
 template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_AddQ_An(uint16 instr) {
     const uint16 An = bit::extract<0, 2>(instr);
+    const uint16 data = bit::extract<9, 11>(instr);
 
-    const uint32 op1 = static_cast<std::make_signed_t<T>>(bit::extract<9, 11>(instr));
+    const uint32 op1 = data == 0 ? 8 : data;
     const uint32 op2 = regs.A[An];
-    const uint32 result = op2 + (op1 == 0 ? 8 : op1);
+    const uint32 result = op2 + op1;
     regs.A[An] = result;
 
     PrefetchTransfer();
@@ -1899,10 +1900,11 @@ FORCE_INLINE void MC68EC000::Instr_SubI(uint16 instr) {
 template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_SubQ_An(uint16 instr) {
     const uint16 An = bit::extract<0, 2>(instr);
+    const uint16 data = bit::extract<9, 11>(instr);
 
-    const uint32 op1 = static_cast<std::make_signed_t<T>>(bit::extract<9, 11>(instr));
+    const uint32 op1 = data == 0 ? 8 : data;
     const uint32 op2 = regs.A[An];
-    const uint32 result = op2 - (op1 == 0 ? 8 : op1);
+    const uint32 result = op2 - op1;
     regs.A[An] = result;
 
     PrefetchTransfer();
@@ -1928,13 +1930,13 @@ FORCE_INLINE void MC68EC000::Instr_SubQ_EA(uint16 instr) {
 
 template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_SubX_M(uint16 instr) {
-    const uint16 Ry = bit::extract<0, 2>(instr);
-    const uint16 Rx = bit::extract<9, 11>(instr);
+    const uint16 Ay = bit::extract<0, 2>(instr);
+    const uint16 Ax = bit::extract<9, 11>(instr);
 
-    AdvanceAddress<T, false>(Ry);
-    const T op1 = MemReadDesc<T, false>(regs.A[Ry]);
-    AdvanceAddress<T, false>(Rx);
-    const T op2 = MemReadDesc<T, false>(regs.A[Rx]);
+    AdvanceAddress<T, false>(Ay);
+    const T op1 = MemReadDesc<T, false>(regs.A[Ay]);
+    AdvanceAddress<T, false>(Ax);
+    const T op2 = MemReadDesc<T, false>(regs.A[Ax]);
     const T result = op2 - op1 - SR.X;
     SR.N = IsNegative(result);
     SR.Z &= result == 0;
@@ -1942,28 +1944,28 @@ FORCE_INLINE void MC68EC000::Instr_SubX_M(uint16 instr) {
     SR.C = SR.X = IsSubCarry(op1, op2, result);
 
     if constexpr (std::is_same_v<T, uint32>) {
-        MemWrite<uint16>(regs.A[Rx] + 2, result >> 0u);
+        MemWrite<uint16>(regs.A[Ax] + 2, result >> 0u);
         PrefetchTransfer();
-        MemWrite<uint16>(regs.A[Rx] + 0, result >> 16u);
+        MemWrite<uint16>(regs.A[Ax] + 0, result >> 16u);
     } else {
         PrefetchTransfer();
-        MemWrite<T>(regs.A[Rx], result);
+        MemWrite<T>(regs.A[Ax], result);
     }
 }
 
 template <mem_primitive T>
 FORCE_INLINE void MC68EC000::Instr_SubX_R(uint16 instr) {
-    const uint16 Ry = bit::extract<0, 2>(instr);
-    const uint16 Rx = bit::extract<9, 11>(instr);
+    const uint16 Dy = bit::extract<0, 2>(instr);
+    const uint16 Dx = bit::extract<9, 11>(instr);
 
-    const T op1 = regs.D[Ry];
-    const T op2 = regs.D[Rx];
+    const T op1 = regs.D[Dy];
+    const T op2 = regs.D[Dx];
     const T result = op2 - op1 - SR.X;
     SR.N = IsNegative(result);
     SR.Z &= result == 0;
     SR.V = IsSubOverflow(op1, op2, result);
     SR.C = SR.X = IsSubCarry(op1, op2, result);
-    bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Rx], result);
+    bit::deposit_into<0, sizeof(T) * 8 - 1>(regs.D[Dx], result);
 
     PrefetchTransfer();
 }

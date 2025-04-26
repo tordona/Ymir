@@ -1,97 +1,10 @@
 #include <ymir/hw/m68k/m68k.hpp>
 
+#include "m68k_addr_modes.hpp"
+
 #include <ymir/util/bit_ops.hpp>
 
 namespace ymir::m68k {
-
-// All valid addressing modes
-static constexpr auto kValidAddrModes = [] {
-    std::array<bool, 0b111'111 + 1> arr{};
-    arr.fill(false);
-    for (int i = 0b000; i <= 0b111; i++) {
-        arr[(0b000 << 3) | i] = true; // Dn
-        arr[(0b001 << 3) | i] = true; // An
-        arr[(0b010 << 3) | i] = true; // (An)
-        arr[(0b011 << 3) | i] = true; // (An)+
-        arr[(0b100 << 3) | i] = true; // -(An)
-        arr[(0b101 << 3) | i] = true; // (disp, An)
-        arr[(0b110 << 3) | i] = true; // (disp, An, Xn)
-    }
-    arr[0b111'010] = true; // (disp, PC)
-    arr[0b111'011] = true; // (disp, PC, Xn)
-    arr[0b111'000] = true; // (xxx).w
-    arr[0b111'001] = true; // (xxx).l
-    arr[0b111'100] = true; // #imm
-    return arr;
-}();
-
-// Valid data addressing modes
-static constexpr auto kValidDataAddrModes = [] {
-    std::array<bool, 0b111'111 + 1> arr = kValidAddrModes;
-    for (int i = 0b000; i <= 0b111; i++) {
-        arr[(0b001 << 3) | i] = false; // An
-    }
-    return arr;
-}();
-
-// Valid memory addressing modes
-static constexpr auto kValidMemoryAddrModes = [] {
-    std::array<bool, 0b111'111 + 1> arr = kValidAddrModes;
-    for (int i = 0b000; i <= 0b111; i++) {
-        arr[(0b000 << 3) | i] = false; // Dn
-        arr[(0b001 << 3) | i] = false; // An
-    }
-    return arr;
-}();
-
-// Valid control addressing modes
-static constexpr auto kValidControlAddrModes = [] {
-    std::array<bool, 0b111'111 + 1> arr = kValidAddrModes;
-    for (int i = 0b000; i <= 0b111; i++) {
-        arr[(0b000 << 3) | i] = false; // Dn
-        arr[(0b001 << 3) | i] = false; // An
-        arr[(0b011 << 3) | i] = false; // (An)+
-        arr[(0b100 << 3) | i] = false; // -(An)
-    }
-    arr[0b111'100] = false; // #imm
-    return arr;
-}();
-
-// Valid alterable addressing modes
-static constexpr auto kValidAlterableAddrModes = [] {
-    std::array<bool, 0b111'111 + 1> arr = kValidAddrModes;
-    arr[0b111'010] = false; // (disp, PC)
-    arr[0b111'011] = false; // (disp, PC, Xn)
-    arr[0b111'100] = false; // #imm
-    return arr;
-}();
-
-// Valid data alterable addressing modes
-static constexpr auto kValidDataAlterableAddrModes = [] {
-    std::array<bool, 0b111'111 + 1> arr{};
-    for (int i = 0; i < arr.size(); i++) {
-        arr[i] = kValidDataAddrModes[i] && kValidAlterableAddrModes[i];
-    }
-    return arr;
-}();
-
-// Valid memory alterable addressing modes
-static constexpr auto kValidMemoryAlterableAddrModes = [] {
-    std::array<bool, 0b111'111 + 1> arr{};
-    for (int i = 0; i < arr.size(); i++) {
-        arr[i] = kValidMemoryAddrModes[i] && kValidAlterableAddrModes[i];
-    }
-    return arr;
-}();
-
-// Valid control alterable addressing modes
-static constexpr auto kValidControlAlterableAddrModes = [] {
-    std::array<bool, 0b111'111 + 1> arr{};
-    for (int i = 0; i < arr.size(); i++) {
-        arr[i] = kValidControlAddrModes[i] && kValidAlterableAddrModes[i];
-    }
-    return arr;
-}();
 
 DecodeTable BuildDecodeTable() {
     DecodeTable table{};
@@ -135,43 +48,43 @@ DecodeTable BuildDecodeTable() {
                 if ((ea >> 3u) == 0b000) {
                     opcode = OpcodeType::BChg_R_Dn;
                 } else {
-                    opcode = legalIf(OpcodeType::BChg_R_EA, kValidDataAddrModes[ea]);
+                    opcode = legalIf(OpcodeType::BChg_R_EA, kValidDataAlterableAddrModes[ea]);
                 }
             } else if (bit::extract<6, 8>(instr) == 0b110) {
                 if ((ea >> 3u) == 0b000) {
                     opcode = OpcodeType::BClr_R_Dn;
                 } else {
-                    opcode = legalIf(OpcodeType::BClr_R_EA, kValidDataAddrModes[ea]);
+                    opcode = legalIf(OpcodeType::BClr_R_EA, kValidDataAlterableAddrModes[ea]);
                 }
             } else if (bit::extract<6, 8>(instr) == 0b111) {
                 if ((ea >> 3u) == 0b000) {
                     opcode = OpcodeType::BSet_R_Dn;
                 } else {
-                    opcode = legalIf(OpcodeType::BSet_R_EA, kValidDataAddrModes[ea]);
+                    opcode = legalIf(OpcodeType::BSet_R_EA, kValidDataAlterableAddrModes[ea]);
                 }
             } else if (bit::extract<6, 11>(instr) == 0b100000) {
                 if ((ea >> 3u) == 0b000) {
                     opcode = OpcodeType::BTst_I_Dn;
                 } else {
-                    opcode = OpcodeType::BTst_I_EA;
+                    opcode = legalIf(OpcodeType::BTst_I_EA, kValidDataAddrModes[ea]);
                 }
             } else if (bit::extract<6, 11>(instr) == 0b100001) {
                 if ((ea >> 3u) == 0b000) {
                     opcode = OpcodeType::BChg_I_Dn;
                 } else {
-                    opcode = OpcodeType::BChg_I_EA;
+                    opcode = legalIf(OpcodeType::BChg_I_EA, kValidDataAlterableAddrModes[ea]);
                 }
             } else if (bit::extract<6, 11>(instr) == 0b100010) {
                 if ((ea >> 3u) == 0b000) {
                     opcode = OpcodeType::BClr_I_Dn;
                 } else {
-                    opcode = OpcodeType::BClr_I_EA;
+                    opcode = legalIf(OpcodeType::BClr_I_EA, kValidDataAlterableAddrModes[ea]);
                 }
             } else if (bit::extract<6, 11>(instr) == 0b100011) {
                 if ((ea >> 3u) == 0b000) {
                     opcode = OpcodeType::BSet_I_Dn;
                 } else {
-                    opcode = OpcodeType::BSet_I_EA;
+                    opcode = legalIf(OpcodeType::BSet_I_EA, kValidDataAlterableAddrModes[ea]);
                 }
             } else if (bit::extract<8, 11>(instr) == 0b0000) {
                 switch (sz) {
@@ -217,10 +130,13 @@ DecodeTable BuildDecodeTable() {
         case 0x3:
             if (bit::extract<6, 8>(instr) == 0b001) {
                 const uint16 size = bit::extract<12, 13>(instr);
+                const uint16 ea = bit::extract<0, 5>(instr);
+
                 switch (size) {
                 case 0b11: opcode = OpcodeType::MoveA_W; break;
                 case 0b10: opcode = OpcodeType::MoveA_L; break;
                 }
+                opcode = legalIf(opcode, kValidAddrModes[ea]);
             } else {
                 const uint16 size = bit::extract<12, 13>(instr);
                 const uint16 srcEA = bit::extract<0, 5>(instr);
@@ -414,9 +330,9 @@ DecodeTable BuildDecodeTable() {
                 const bool dir = bit::test<8>(instr);
                 if (dir) {
                     switch (sz) {
-                    case 0b00: opcode = legalIf(OpcodeType::Or_Dn_EA_B, kValidDataAddrModes[ea]); break;
-                    case 0b01: opcode = legalIf(OpcodeType::Or_Dn_EA_W, kValidDataAddrModes[ea]); break;
-                    case 0b10: opcode = legalIf(OpcodeType::Or_Dn_EA_L, kValidDataAddrModes[ea]); break;
+                    case 0b00: opcode = legalIf(OpcodeType::Or_Dn_EA_B, kValidMemoryAlterableAddrModes[ea]); break;
+                    case 0b01: opcode = legalIf(OpcodeType::Or_Dn_EA_W, kValidMemoryAlterableAddrModes[ea]); break;
+                    case 0b10: opcode = legalIf(OpcodeType::Or_Dn_EA_L, kValidMemoryAlterableAddrModes[ea]); break;
                     }
                 } else {
                     switch (sz) {
@@ -433,8 +349,7 @@ DecodeTable BuildDecodeTable() {
             const uint16 sz = bit::extract<6, 7>(instr);
             if (bit::extract<6, 7>(instr) == 0b11) {
                 const bool szBit = bit::test<8>(instr);
-                opcode = legalIf(szBit ? OpcodeType::SubA_L : OpcodeType::SubA_W,
-                                 kValidAddrModes[bit::extract<0, 5>(instr)]);
+                opcode = legalIf(szBit ? OpcodeType::SubA_L : OpcodeType::SubA_W, kValidAddrModes[ea]);
             } else if (bit::extract<4, 5>(instr) == 0b00 && bit::extract<8>(instr) == 1) {
                 const bool rm = bit::test<3>(instr);
                 if (rm) {
@@ -517,9 +432,9 @@ DecodeTable BuildDecodeTable() {
                 const bool dir = bit::test<8>(instr);
                 if (dir) {
                     switch (sz) {
-                    case 0b00: opcode = legalIf(OpcodeType::And_Dn_EA_B, kValidDataAddrModes[ea]); break;
-                    case 0b01: opcode = legalIf(OpcodeType::And_Dn_EA_W, kValidDataAddrModes[ea]); break;
-                    case 0b10: opcode = legalIf(OpcodeType::And_Dn_EA_L, kValidDataAddrModes[ea]); break;
+                    case 0b00: opcode = legalIf(OpcodeType::And_Dn_EA_B, kValidMemoryAlterableAddrModes[ea]); break;
+                    case 0b01: opcode = legalIf(OpcodeType::And_Dn_EA_W, kValidMemoryAlterableAddrModes[ea]); break;
+                    case 0b10: opcode = legalIf(OpcodeType::And_Dn_EA_L, kValidMemoryAlterableAddrModes[ea]); break;
                     }
                 } else {
                     switch (sz) {
@@ -536,8 +451,7 @@ DecodeTable BuildDecodeTable() {
             const uint16 sz = bit::extract<6, 7>(instr);
             if (sz == 0b11) {
                 const bool szBit = bit::test<8>(instr);
-                opcode = legalIf(szBit ? OpcodeType::AddA_L : OpcodeType::AddA_W,
-                                 kValidAddrModes[bit::extract<0, 5>(instr)]);
+                opcode = legalIf(szBit ? OpcodeType::AddA_L : OpcodeType::AddA_W, kValidAddrModes[ea]);
             } else if (bit::extract<4, 5>(instr) == 0b00 && bit::extract<8>(instr) == 1) {
                 const bool rm = bit::test<3>(instr);
                 if (rm) {

@@ -32,6 +32,7 @@ add_library(ymir-core
     include/ymir/hw/m68k/m68k.hpp
     include/ymir/hw/m68k/m68k_decode.hpp
     include/ymir/hw/m68k/m68k_defs.hpp
+    include/ymir/hw/m68k/m68k_disasm.hpp
 
     include/ymir/hw/scsp/scsp.hpp
     include/ymir/hw/scsp/scsp_callbacks.hpp
@@ -169,7 +170,9 @@ add_library(ymir-core
     src/ymir/hw/cdblock/cdblock_partition_manager.cpp
     
     src/ymir/hw/m68k/m68k.cpp
+    src/ymir/hw/m68k/m68k_addr_modes.hpp
     src/ymir/hw/m68k/m68k_decode.cpp
+    src/ymir/hw/m68k/m68k_disasm.cpp
     
     src/ymir/hw/scsp/scsp.cpp
     src/ymir/hw/scsp/scsp_dsp.cpp

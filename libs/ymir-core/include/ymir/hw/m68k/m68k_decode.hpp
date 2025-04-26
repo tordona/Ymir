@@ -189,66 +189,66 @@ enum class OpcodeType : uint8 {
     BTst_R_Dn, // btst.l Dn, Dn
     BTst_R_EA, // btst.b Dn, <ea>
 
-    ASL_I_B,  // asl.b #<data>, <ea>
-    ASL_I_W,  // asl.w #<data>, <ea>
-    ASL_I_L,  // asl.l #<data>, <ea>
+    ASL_I_B,  // asl.b #<data>, Dy
+    ASL_I_W,  // asl.w #<data>, Dy
+    ASL_I_L,  // asl.l #<data>, Dy
     ASL_M,    // asl.w <ea>
-    ASL_R_B,  // asl.b Dn, <ea>
-    ASL_R_W,  // asl.w Dn, <ea>
-    ASL_R_L,  // asl.l Dn, <ea>
-    ASR_I_B,  // asr.b #<data>, <ea>
-    ASR_I_W,  // asr.w #<data>, <ea>
-    ASR_I_L,  // asr.l #<data>, <ea>
+    ASL_R_B,  // asl.b Dx, Dy
+    ASL_R_W,  // asl.w Dx, Dy
+    ASL_R_L,  // asl.l Dx, Dy
+    ASR_I_B,  // asr.b #<data>, Dy
+    ASR_I_W,  // asr.w #<data>, Dy
+    ASR_I_L,  // asr.l #<data>, Dy
     ASR_M,    // asr.w <ea>
-    ASR_R_B,  // asr.b Dn, <ea>
-    ASR_R_W,  // asr.w Dn, <ea>
-    ASR_R_L,  // asr.l Dn, <ea>
-    LSL_I_B,  // lsl.b #<data>, <ea>
-    LSL_I_W,  // lsl.w #<data>, <ea>
-    LSL_I_L,  // lsl.l #<data>, <ea>
+    ASR_R_B,  // asr.b Dx, Dy
+    ASR_R_W,  // asr.w Dx, Dy
+    ASR_R_L,  // asr.l Dx, Dy
+    LSL_I_B,  // lsl.b #<data>, Dy
+    LSL_I_W,  // lsl.w #<data>, Dy
+    LSL_I_L,  // lsl.l #<data>, Dy
     LSL_M,    // lsl.w <ea>
-    LSL_R_B,  // lsl.b Dn, <ea>
-    LSL_R_W,  // lsl.w Dn, <ea>
-    LSL_R_L,  // lsl.l Dn, <ea>
-    LSR_I_B,  // lsr.b #<data>, <ea>
-    LSR_I_W,  // lsr.w #<data>, <ea>
-    LSR_I_L,  // lsr.l #<data>, <ea>
+    LSL_R_B,  // lsl.b Dx, Dy
+    LSL_R_W,  // lsl.w Dx, Dy
+    LSL_R_L,  // lsl.l Dx, Dy
+    LSR_I_B,  // lsr.b #<data>, Dy
+    LSR_I_W,  // lsr.w #<data>, Dy
+    LSR_I_L,  // lsr.l #<data>, Dy
     LSR_M,    // lsr.w <ea>
-    LSR_R_B,  // lsr.b Dn, <ea>
-    LSR_R_W,  // lsr.w Dn, <ea>
-    LSR_R_L,  // lsr.l Dn, <ea>
-    ROL_I_B,  // rol.b #<data>, <ea>
-    ROL_I_W,  // rol.w #<data>, <ea>
-    ROL_I_L,  // rol.l #<data>, <ea>
+    LSR_R_B,  // lsr.b Dx, Dy
+    LSR_R_W,  // lsr.w Dx, Dy
+    LSR_R_L,  // lsr.l Dx, Dy
+    ROL_I_B,  // rol.b #<data>, Dy
+    ROL_I_W,  // rol.w #<data>, Dy
+    ROL_I_L,  // rol.l #<data>, Dy
     ROL_M,    // rol.w <ea>
-    ROL_R_B,  // rol.b Dn, <ea>
-    ROL_R_W,  // rol.w Dn, <ea>
-    ROL_R_L,  // rol.l Dn, <ea>
-    ROR_I_B,  // ror.b #<data>, <ea>
-    ROR_I_W,  // ror.w #<data>, <ea>
-    ROR_I_L,  // ror.l #<data>, <ea>
+    ROL_R_B,  // rol.b Dx, Dy
+    ROL_R_W,  // rol.w Dx, Dy
+    ROL_R_L,  // rol.l Dx, Dy
+    ROR_I_B,  // ror.b #<data>, Dy
+    ROR_I_W,  // ror.w #<data>, Dy
+    ROR_I_L,  // ror.l #<data>, Dy
     ROR_M,    // ror.w <ea>
-    ROR_R_B,  // ror.v Dn, <ea>
-    ROR_R_W,  // ror.v Dn, <ea>
-    ROR_R_L,  // ror.v Dn, <ea>
-    ROXL_I_B, // roxl.b #<data>, <ea>
-    ROXL_I_W, // roxl.w #<data>, <ea>
-    ROXL_I_L, // roxl.l #<data>, <ea>
+    ROR_R_B,  // ror.v Dx, Dy
+    ROR_R_W,  // ror.v Dx, Dy
+    ROR_R_L,  // ror.v Dx, Dy
+    ROXL_I_B, // roxl.b #<data>, Dy
+    ROXL_I_W, // roxl.w #<data>, Dy
+    ROXL_I_L, // roxl.l #<data>, Dy
     ROXL_M,   // roxl.w <ea>
-    ROXL_R_B, // roxl.b Dn, <ea>
-    ROXL_R_W, // roxl.w Dn, <ea>
-    ROXL_R_L, // roxl.l Dn, <ea>
-    ROXR_I_B, // roxr.b #<data>, <ea>
-    ROXR_I_W, // roxr.w #<data>, <ea>
-    ROXR_I_L, // roxr.l #<data>, <ea>
+    ROXL_R_B, // roxl.b Dx, Dy
+    ROXL_R_W, // roxl.w Dx, Dy
+    ROXL_R_L, // roxl.l Dx, Dy
+    ROXR_I_B, // roxr.b #<data>, Dy
+    ROXR_I_W, // roxr.w #<data>, Dy
+    ROXR_I_L, // roxr.l #<data>, Dy
     ROXR_M,   // roxr.w <ea>
-    ROXR_R_B, // roxr.b Dn, <ea>
-    ROXR_R_W, // roxr.w Dn, <ea>
-    ROXR_R_L, // roxr.l Dn, <ea>
+    ROXR_R_B, // roxr.b Dx, Dy
+    ROXR_R_W, // roxr.w Dx, Dy
+    ROXR_R_L, // roxr.l Dx, Dy
 
-    Cmp_B,  // cmp.b <ea>, An
-    Cmp_W,  // cmp.w <ea>, An
-    Cmp_L,  // cmp.l <ea>, An
+    Cmp_B,  // cmp.b <ea>, Dn
+    Cmp_W,  // cmp.w <ea>, Dn
+    Cmp_L,  // cmp.l <ea>, Dn
     CmpA_W, // cmpa.w <ea>, An
     CmpA_L, // cmpa.l <ea>, An
     CmpI_B, // cmpi.b #<data>, <ea>
@@ -288,14 +288,13 @@ enum class OpcodeType : uint8 {
 
     Noop, // nop
 
-    Illegal,     // any illegal instruction, including the designated ILLEGAL instruction 0100 1010 1111 1100
     Illegal1010, // illegal instructions with bits 15-12 = 1010
     Illegal1111, // illegal instructions with bits 15-12 = 1111
+    Illegal,     // any other illegal instruction, including the designated ILLEGAL instruction 0100 1010 1111 1100
 };
 
 struct DecodeTable {
     alignas(64) std::array<OpcodeType, 0x10000> opcodeTypes;
-    // TODO: disassembly info/function pointers?
 };
 
 DecodeTable BuildDecodeTable();

@@ -1,5 +1,6 @@
 #include <ymir/core/types.hpp>
 
+#include <ymir/hw/m68k/m68k_disasm.hpp>
 #include <ymir/hw/scsp/scsp_dsp_instr.hpp>
 #include <ymir/hw/scu/scu_dsp_disasm.hpp>
 #include <ymir/hw/sh2/sh2_disasm.hpp>
@@ -1160,7 +1161,7 @@ int main(int argc, char *argv[]) {
                     case 0: printOpRead("TMP"); break;
                     case 1: printOpRead("INPUTS"); break;
                     }
-                    //align(56);
+                    // align(56);
                     printOperator("*");
                     switch (disasm.YSEL) {
                     case 0: printOpRead("FRC"); break;
@@ -1180,7 +1181,7 @@ int main(int argc, char *argv[]) {
                         break;
                     }
                     if (!disasm.ZERO) {
-                        //align(67);
+                        // align(67);
                         if (disasm.NEGB) {
                             printOperator("-");
                         } else {
@@ -1193,7 +1194,7 @@ int main(int argc, char *argv[]) {
                         }
                     }
                     if (disasm.SHFT0 ^ disasm.SHFT1) {
-                        //align(71);
+                        // align(71);
                         printOperator("<<");
                         printImmDec(1);
                     }
@@ -1302,7 +1303,7 @@ int main(int argc, char *argv[]) {
                         printOpRead("MEM");
                     }
 
-                    if (disasm.NOFL) {
+                    if ((disasm.MRD || disasm.MWT) && disasm.NOFL) {
                         align(245);
                         printMnemonic("NOFL");
                     }
