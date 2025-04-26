@@ -309,6 +309,7 @@ struct OperandDetails {
     sint32 immDisp; // #imm, disp
     uint16 regList; // <list> (movem)
     uint8 ix;       // <ix>: 0-7 = D0-7, 8-15 = A0-7
+    bool ixLong;    // true: <ix> is longword; false: <ix> is word
 };
 
 struct FullDisasm {

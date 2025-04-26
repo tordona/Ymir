@@ -75,19 +75,7 @@ DisasmTable::DisasmTable() {
             disasm.op2 = op2;
         };
 
-        // M   Xn
-        // 000 <reg>  D<reg>               Data register
-        // 001 <reg>  A<reg>               Address register
-        // 010 <reg>  (A<reg>)             Address
-        // 011 <reg>  (A<reg>)+            Address with postincrement
-        // 100 <reg>  -(A<reg>)            Address with predecrement
-        // 101 <reg>  disp(A<reg>)         Address with displacement
-        // 110 <reg>  disp(A<reg>, <ix>)   Address with index
-        // 111 010    disp(PC)             Program counter with displacement
-        // 111 011    disp(PC, <ix>)       Program counter with index
-        // 111 000    (xxx).w              Absolute short
-        // 111 001    (xxx).l              Absolute long
-        // 111 100    #imm                 Immediate
+        // <ea>
         auto eaOp_R = [](uint8 ea) {
             const uint16 Xn = bit::extract<0, 2>(ea);
             const uint16 M = bit::extract<3, 5>(ea);
@@ -906,12 +894,71 @@ DisasmTable::DisasmTable() {
 
 FullDisasm Disassemble(std::function<uint16()> fetcher) {
     const uint16 opcode = fetcher();
+    const OpcodeDisasm &opDisasm = DisasmTable::s_instance.disasm[opcode];
 
     FullDisasm disasm{
-        .opcode = DisasmTable::s_instance.disasm[opcode],
+        .opcode = opDisasm,
     };
 
-    // TODO: fetch extra words as needed for effective addresses, immediates, etc.
+    auto translateOperand = [&](const Operand &op, OperandSize opSize, OperandDetails &det) {
+        using Type = Operand::Type;
+        switch (op.type) {
+        case Type::AtDispAn: det.immDisp = static_cast<sint16>(fetcher()); break;
+        case Type::AtDispAnIx: {
+            const uint16 briefExtWord = fetcher();
+            det.immDisp = static_cast<sint8>(bit::extract<0, 7>(briefExtWord));
+            det.ixLong = bit::test<11>(briefExtWord);
+            det.ix = bit::extract<12, 15>(briefExtWord);
+            break;
+        }
+        case Type::AtDispPC: det.immDisp = static_cast<sint16>(fetcher()) - 4; break;
+        case Type::AtDispPCIx: {
+            const uint16 briefExtWord = fetcher();
+            det.immDisp = static_cast<sint8>(bit::extract<0, 7>(briefExtWord)) - 2;
+            det.ixLong = bit::test<11>(briefExtWord);
+            det.ix = bit::extract<12, 15>(briefExtWord);
+            break;
+        }
+        case Type::AtImmWord: det.immDisp = static_cast<sint16>(fetcher()); break;
+        case Type::AtImmLong: {
+            const uint32 addressHigh = fetcher();
+            const uint32 addressLow = fetcher();
+            det.immDisp = (addressHigh << 16u) | addressLow;
+            break;
+        }
+        case Type::SImmFetched:
+            switch (opSize) {
+            case OperandSize::Byte: [[fallthrough]];
+            case OperandSize::ByteImplicit: det.immDisp = static_cast<sint8>(fetcher()); break;
+            case OperandSize::Word: [[fallthrough]];
+            case OperandSize::WordImplicit: det.immDisp = static_cast<sint16>(fetcher()); break;
+            case OperandSize::Long: [[fallthrough]];
+            case OperandSize::LongImplicit:
+                det.immDisp = fetcher();
+                det.immDisp = (det.immDisp << 16u) | fetcher();
+                break;
+            default: break;
+            }
+        case Type::UImmFetched:
+            switch (opSize) {
+            case OperandSize::Byte: [[fallthrough]];
+            case OperandSize::ByteImplicit: det.immDisp = fetcher(); break;
+            case OperandSize::Word: [[fallthrough]];
+            case OperandSize::WordImplicit: det.immDisp = fetcher(); break;
+            case OperandSize::Long: [[fallthrough]];
+            case OperandSize::LongImplicit:
+                det.immDisp = fetcher();
+                det.immDisp = (det.immDisp << 16u) | fetcher();
+                break;
+            default: break;
+            }
+        case Type::RegList: det.regList = fetcher(); break;
+        default: break;
+        }
+    };
+
+    translateOperand(opDisasm.op1, opDisasm.opSize, disasm.op1);
+    translateOperand(opDisasm.op2, opDisasm.opSize, disasm.op2);
 
     return disasm;
 }
