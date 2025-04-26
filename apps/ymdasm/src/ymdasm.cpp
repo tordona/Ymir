@@ -7,6 +7,8 @@
 
 #include <algorithm>
 #include <concepts>
+#include <fstream>
+#include <iostream>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -644,8 +646,68 @@ int main(int argc, char *argv[]) {
                     address += sizeof(uint16);
                 }
             } else {
-                // TODO: disassemble from inputFile
-                // - parse optional args: [<offset> [<length>]]
+                std::ifstream in{inputFile, std::ios::binary};
+                if (!in) {
+                    std::error_code error{errno, std::generic_category()};
+                    fmt::println("Could not open file: {}", error.message());
+                    return 1;
+                }
+
+                in.seekg(0, std::ios::end);
+                const size_t fileSize = in.tellg();
+
+                size_t offset = 0;
+                size_t length = fileSize;
+
+                if (args.size() >= 1) {
+                    auto maybeOffset = ParseHex<size_t>(args[0]);
+                    if (!maybeOffset) {
+                        fmt::println("Invalid offset: {}", args[0]);
+                        return 1;
+                    }
+                    offset = *maybeOffset;
+                }
+                if (args.size() >= 2) {
+                    auto maybeLength = ParseHex<size_t>(args[1]);
+                    if (!maybeLength) {
+                        fmt::println("Invalid length: {}", args[1]);
+                        return 1;
+                    }
+                    length = *maybeLength;
+                }
+
+                length = std::min(length, fileSize - offset);
+
+                in.seekg(offset, std::ios::beg);
+
+                uint16 opcode{};
+
+                auto readOpcode = [&] {
+                    uint8 b[2] = {0};
+                    in.read((char *)b, 2);
+                    opcode = (static_cast<uint16>(b[0]) << 8u) | static_cast<uint16>(b[1]);
+                    return in.good();
+                };
+
+                while (readOpcode()) {
+                    const sh2::OpcodeDisasm &disasm = sh2::Disassemble(opcode);
+
+                    printAddress(address);
+                    printOpcode(opcode);
+                    printInstruction(disasm, isDelaySlot);
+                    align(28);
+                    printOp1(disasm);
+                    if (disasm.op1.type != sh2::Operand::Type::None && disasm.op2.type != sh2::Operand::Type::None) {
+                        printComma();
+                    }
+                    printOp2(disasm);
+
+                    fmt::println("{}", colors.reset);
+                    x = 0;
+
+                    isDelaySlot = disasm.hasDelaySlot;
+                    address += sizeof(uint16);
+                }
             }
         } else if (lcisa == "m68k" || lcisa == "m68000") {
             // TODO: disassemble M68000
