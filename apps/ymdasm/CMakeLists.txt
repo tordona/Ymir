@@ -6,6 +6,7 @@ add_executable(ymdasm
     src/disassembler_m68k.hpp
     src/disassembler_scspdsp.hpp
     src/disassembler_scudsp.hpp
+    src/disassembler_sh2.cpp
     src/disassembler_sh2.hpp
     src/fetcher.hpp
     src/utils.hpp

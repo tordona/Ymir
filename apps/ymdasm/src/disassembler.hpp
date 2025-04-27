@@ -2,8 +2,11 @@
 
 #include "colors.hpp"
 
+#include <ymir/core/types.hpp>
+
 #include <fmt/format.h>
 
+#include <concepts>
 #include <cstdlib>
 #include <string>
 #include <string_view>
