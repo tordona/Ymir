@@ -494,74 +494,42 @@ int main(int argc, char *argv[]) {
                 int forceDelaySlot = 0;
             };
 
-            using SH2OpcodeFetcher = IOpcodeFetcher<SH2Opcode>;
-
-            struct CommandLineSH2OpcodeFetcher : public SH2OpcodeFetcher {
-                CommandLineSH2OpcodeFetcher(std::span<const std::string> args)
-                    : m_args(args) {}
-
-                Result Fetch() final {
-                    if (m_index >= m_args.size()) {
-                        return OpcodeFetchEnd{};
-                    }
-
-                    auto &opcodeStr = m_args[m_index++];
-                    std::string_view strippedOpcode = opcodeStr;
+            struct SH2CommandLineOpcodeParser {
+                static OpcodeFetchResult<SH2Opcode> Parse(std::string_view arg) {
+                    std::string_view strippedOpcode = arg;
 
                     // 0 = no change; +1 = force delay slot, -1 = force non-delay slot
                     int forceDelaySlot = 0;
-                    if (opcodeStr.starts_with('_')) {
+                    if (arg.starts_with('_')) {
                         forceDelaySlot = +1;
                         strippedOpcode = strippedOpcode.substr(1);
-                    } else if (opcodeStr.starts_with('!')) {
+                    } else if (arg.starts_with('!')) {
                         forceDelaySlot = -1;
                         strippedOpcode = strippedOpcode.substr(1);
                     }
 
                     auto maybeOpcode = ParseHex<uint16>(strippedOpcode);
                     if (!maybeOpcode) {
-                        return OpcodeFetchError{fmt::format("Invalid opcode: {}", opcodeStr)};
+                        return OpcodeFetchError{fmt::format("Invalid opcode: {}", arg)};
                     }
 
                     const uint16 opcode = *maybeOpcode;
                     return SH2Opcode{opcode, forceDelaySlot};
                 }
-
-            private:
-                size_t m_index = 0;
-                std::span<const std::string> m_args;
             };
 
-            struct StreamSH2OpcodeFetcher : public SH2OpcodeFetcher {
-                StreamSH2OpcodeFetcher(std::unique_ptr<std::istream> &&input, size_t offset, size_t length)
-                    : m_input(std::move(input)) {
-
-                    m_input->seekg(0, std::ios::end);
-                    const size_t size = m_input->tellg();
-                    m_remaining = std::min(length, size - offset);
-                    m_input->seekg(offset, std::ios::beg);
-                }
-
-                Result Fetch() final {
-                    if (m_remaining == 0) {
-                        return OpcodeFetchEnd{};
-                    }
+            struct SH2StreamOpcodeParser {
+                static SH2Opcode Parse(std::istream &input) {
                     uint16 opcode{};
-                    m_input->read((char *)&opcode, sizeof(opcode));
+                    input.read((char *)&opcode, sizeof(uint16));
                     opcode = bit::big_endian_swap(opcode);
-                    if (m_input->good() && sizeof(opcode) <= m_remaining) {
-                        m_remaining -= sizeof(opcode);
-                        return SH2Opcode{opcode, 0};
-                    } else {
-                        m_remaining = 0;
-                        return OpcodeFetchEnd{};
-                    }
+                    return SH2Opcode{opcode, 0};
                 }
-
-            private:
-                std::unique_ptr<std::istream> m_input;
-                size_t m_remaining;
             };
+
+            using SH2OpcodeFetcher = IOpcodeFetcher<SH2Opcode>;
+            using CommandLineSH2OpcodeFetcher = CommandLineOpcodeFetcher<SH2Opcode, SH2CommandLineOpcodeParser>;
+            using StreamSH2OpcodeFetcher = StreamOpcodeFetcher<SH2Opcode, SH2StreamOpcodeParser>;
 
             std::unique_ptr<SH2OpcodeFetcher> fetcher{};
 
