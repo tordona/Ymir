@@ -181,6 +181,9 @@ struct Operand {
         return {.type = Type::An, .read = true, .write = true, .rn = rn};
     }
 
+    static Operand AtAn_N(uint8 rn) {
+        return {.type = Type::AtAn, .read = false, .write = false, .rn = rn};
+    }
     static Operand AtAn_R(uint8 rn) {
         return {.type = Type::AtAn, .read = true, .write = false, .rn = rn};
     }
@@ -211,6 +214,9 @@ struct Operand {
         return {.type = Type::MinusAtAn, .read = true, .write = true, .rn = rn};
     }
 
+    static Operand AtDispAn_N(uint8 rn) {
+        return {.type = Type::AtDispAn, .read = false, .write = false, .rn = rn};
+    }
     static Operand AtDispAn_R(uint8 rn) {
         return {.type = Type::AtDispAn, .read = true, .write = false, .rn = rn};
     }
@@ -221,6 +227,9 @@ struct Operand {
         return {.type = Type::AtDispAn, .read = true, .write = true, .rn = rn};
     }
 
+    static Operand AtDispAnIx_N(uint8 rn) {
+        return {.type = Type::AtDispAnIx, .read = false, .write = false, .rn = rn};
+    }
     static Operand AtDispAnIx_R(uint8 rn) {
         return {.type = Type::AtDispAnIx, .read = true, .write = false, .rn = rn};
     }
@@ -231,14 +240,23 @@ struct Operand {
         return {.type = Type::AtDispAnIx, .read = true, .write = true, .rn = rn};
     }
 
+    static Operand AtDispPC_N() {
+        return {.type = Type::AtDispPC, .read = false, .write = false};
+    }
     static Operand AtDispPC_R() {
         return {.type = Type::AtDispPC, .read = true, .write = false};
     }
 
+    static Operand AtDispPCIx_N() {
+        return {.type = Type::AtDispPCIx, .read = false, .write = false};
+    }
     static Operand AtDispPCIx_R() {
         return {.type = Type::AtDispPCIx, .read = true, .write = false};
     }
 
+    static Operand AtImmWord_N() {
+        return {.type = Type::AtImmWord, .read = false, .write = false};
+    }
     static Operand AtImmWord_R() {
         return {.type = Type::AtImmWord, .read = true, .write = false};
     }
@@ -249,6 +267,9 @@ struct Operand {
         return {.type = Type::AtImmWord, .read = true, .write = true};
     }
 
+    static Operand AtImmLong_N() {
+        return {.type = Type::AtImmLong, .read = false, .write = false};
+    }
     static Operand AtImmLong_R() {
         return {.type = Type::AtImmLong, .read = true, .write = false};
     }

@@ -14,6 +14,7 @@ struct Colors {
     const char *cond;            // Conditions: eq, ne, z, nz, T0, ...
 
     const char *immediate;   // #0x1234
+    const char *opUse;       // Used operands
     const char *opRead;      // Read operands
     const char *opWrite;     // Written operands
     const char *opReadWrite; // Read and written operands
@@ -40,6 +41,7 @@ inline Colors kNoColors = {
     .cond = "",
 
     .immediate = "",
+    .opUse = "",
     .opRead = "",
     .opWrite = "",
     .opReadWrite = "",
@@ -66,6 +68,7 @@ inline Colors kBasicColors = {
     .cond = ANSI_FGCOLOR_MAGENTA,
 
     .immediate = ANSI_FGCOLOR_BRIGHT_YELLOW,
+    .opUse = ANSI_FGCOLOR_BRIGHT_CYAN,
     .opRead = ANSI_FGCOLOR_BRIGHT_GREEN,
     .opWrite = ANSI_FGCOLOR_BRIGHT_MAGENTA,
     .opReadWrite = ANSI_FGCOLOR_BRIGHT_YELLOW,
@@ -92,6 +95,7 @@ inline Colors kTrueColors = {
     .cond = ANSI_FGCOLOR_24B(155, 146, 212),
 
     .immediate = ANSI_FGCOLOR_24B(221, 247, 173),
+    .opUse = ANSI_FGCOLOR_24B(247, 240, 173),
     .opRead = ANSI_FGCOLOR_24B(173, 247, 206),
     .opWrite = ANSI_FGCOLOR_24B(215, 173, 247),
     .opReadWrite = ANSI_FGCOLOR_24B(247, 206, 173),

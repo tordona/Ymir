@@ -76,6 +76,26 @@ DisassemblyTable::DisassemblyTable() {
         };
 
         // <ea>
+        auto eaOp_N = [](uint8 ea) {
+            const uint16 Xn = bit::extract<0, 2>(ea);
+            const uint16 M = bit::extract<3, 5>(ea);
+            switch (M) {
+            case 0b010: return Op::AtAn_N(Xn);
+            case 0b101: return Op::AtDispAn_N(Xn);
+            case 0b110: return Op::AtDispAnIx_N(Xn);
+            case 0b111:
+                switch (Xn) {
+                case 0b010: return Op::AtDispPC_N();
+                case 0b011: return Op::AtDispPCIx_N();
+                case 0b000: return Op::AtImmWord_N();
+                case 0b001: return Op::AtImmLong_N();
+                }
+                break;
+            }
+
+            util::unreachable();
+        };
+
         auto eaOp_R = [](uint8 ea, OperandSize size) {
             const uint16 Xn = bit::extract<0, 2>(ea);
             const uint16 M = bit::extract<3, 5>(ea);
@@ -103,6 +123,7 @@ DisassemblyTable::DisassemblyTable() {
                     case OperandSize::LongImplicit: return Op::UImm32Fetched();
                     default: break;
                     }
+                    break;
                 }
                 break;
             }
@@ -112,6 +133,7 @@ DisassemblyTable::DisassemblyTable() {
         auto eaOp_R_B = [&](uint8 ea) { return eaOp_R(ea, OperandSize::Byte); };
         auto eaOp_R_W = [&](uint8 ea) { return eaOp_R(ea, OperandSize::Word); };
         auto eaOp_R_L = [&](uint8 ea) { return eaOp_R(ea, OperandSize::Long); };
+
         auto eaOp_W = [](uint8 ea) {
             const uint16 Xn = bit::extract<0, 2>(ea);
             const uint16 M = bit::extract<3, 5>(ea);
@@ -133,6 +155,7 @@ DisassemblyTable::DisassemblyTable() {
 
             util::unreachable();
         };
+
         auto eaOp_RW = [](uint8 ea) {
             const uint16 Xn = bit::extract<0, 2>(ea);
             const uint16 M = bit::extract<3, 5>(ea);
@@ -393,15 +416,15 @@ DisassemblyTable::DisassemblyTable() {
                 }
             } else if (bit::extract<6, 11>(opcode) == 0b100001) {
                 if (kValidControlAddrModes[ea]) {
-                    makeOpLI(PEA, eaOp_R_L(ea));
+                    makeOpLI(PEA, eaOp_N(ea));
                 }
             } else if (bit::extract<6, 11>(opcode) == 0b111010) {
                 if (kValidControlAddrModes[ea]) {
-                    makeOpLI(JSR, eaOp_R_L(ea));
+                    makeOpLI(JSR, eaOp_N(ea));
                 }
             } else if (bit::extract<6, 11>(opcode) == 0b111011) {
                 if (kValidControlAddrModes[ea]) {
-                    makeOpLI(Jmp, eaOp_R_L(ea));
+                    makeOpLI(Jmp, eaOp_N(ea));
                 }
             } else if (bit::extract<7, 11>(opcode) == 0b10001) {
                 const bool isPredecrement = (ea >> 3u) == 0b100;
@@ -487,7 +510,7 @@ DisassemblyTable::DisassemblyTable() {
             } else if (bit::extract<6, 8>(opcode) == 0b111) {
                 if (kValidControlAddrModes[ea]) {
                     const uint16 An = bit::extract<9, 11>(opcode);
-                    makeOpLI(LEA, eaOp_R_L(ea), Op::An_W(An));
+                    makeOpLI(LEA, eaOp_N(ea), Op::An_W(An));
                 }
             }
             break;
