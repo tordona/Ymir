@@ -454,8 +454,6 @@ DisassemblyTable::DisassemblyTable() {
                         makeOpW(MoveM, Op::AtAnPlus_R(An), Op::RegList_W());
                     }
                 } else if (kValidControlAddrModes[ea]) {
-                    const uint16 Xn = bit::extract<0, 2>(opcode);
-                    const uint16 M = bit::extract<3, 5>(opcode);
                     if (sz) {
                         makeOpL(MoveM, eaOp_R_L(ea), Op::RegList_W());
                     } else {
