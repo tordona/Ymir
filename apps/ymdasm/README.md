@@ -28,6 +28,7 @@ Usage:
     m68k, m68000  Motorola 68000
     scudsp        SCU (Saturn Control Unit) DSP
     scspdsp       SCSP (Saturn Custom Sound Processor) DSP
+    scspdspraw    SCSP (Saturn Custom Sound Processor) DSP (raw dissasembly)
   This argument is case-insensitive.
 
   When disassembling command line arguments, <program opcodes> specifies the
@@ -35,7 +36,8 @@ Usage:
 
   When disassembling from a file, <offset> specifies the offset from the start
   of the file and <length> determines the number of bytes to disassemble.
-  <length> is rounded down to the nearest multiple of the opcode size.
+  Both parameters are specified in hexadecimal.
+  <length> is truncated down to the nearest multiple of the opcode size.
   If <offset> is omitted, ymdasm disassembles from the start of the file.
   If <length> is omitted, ymdasm disassembles until the end of the file.
 
