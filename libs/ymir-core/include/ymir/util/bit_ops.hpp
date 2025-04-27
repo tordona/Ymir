@@ -182,4 +182,42 @@ constexpr decltype(auto) byte_swap(T i) {
     return detail::byte_swap_impl<U>(i, std::make_index_sequence<sizeof(T)>{});
 }
 
+// Reverses the bits of the given value
+constexpr uint8 reverse(uint8 n) {
+    n = (n << 4u) | (n >> 4u);
+    n = ((n & 0x33u) << 2u) | ((n >> 2u) & 0x33u);
+    n = ((n & 0x55u) << 1u) | ((n >> 1u) & 0x55u);
+    return n;
+}
+
+// Reverses the bits of the given value
+constexpr uint16 reverse(uint16 n) {
+    n = (n << 8u) | (n >> 8u);
+    n = ((n & 0x0F0Fu) << 4u) | ((n >> 4u) & 0x0F0Fu);
+    n = ((n & 0x3333u) << 2u) | ((n >> 2u) & 0x3333u);
+    n = ((n & 0x5555u) << 1u) | ((n >> 1u) & 0x5555u);
+    return n;
+}
+
+// Reverses the bits of the given value
+constexpr uint32 reverse(uint32 n) {
+    n = (n << 16u) | (n >> 16u);
+    n = ((n & 0x00FF00FFu) << 8u) | ((n >> 8u) & 0x00FF00FFu);
+    n = ((n & 0x0F0F0F0Fu) << 4u) | ((n >> 4u) & 0x0F0F0F0Fu);
+    n = ((n & 0x33333333u) << 2u) | ((n >> 2u) & 0x33333333u);
+    n = ((n & 0x55555555u) << 1u) | ((n >> 1u) & 0x55555555u);
+    return n;
+}
+
+// Reverses the bits of the given value
+constexpr uint64 reverse(uint64 n) {
+    n = (n << 32ull) | (n >> 32ull);
+    n = ((n & 0x0000FFFF0000FFFFull) << 16ull) | ((n >> 16ull) & 0x0000FFFF0000FFFFull);
+    n = ((n & 0x00FF00FF00FF00FFull) << 8ull) | ((n >> 8ull) & 0x00FF00FF00FF00FFull);
+    n = ((n & 0x0F0F0F0F0F0F0F0Full) << 4ull) | ((n >> 4ull) & 0x0F0F0F0F0F0F0F0Full);
+    n = ((n & 0x3333333333333333ull) << 2ull) | ((n >> 2ull) & 0x3333333333333333ull);
+    n = ((n & 0x5555555555555555ull) << 1ull) | ((n >> 1ull) & 0x5555555555555555ull);
+    return n;
+}
+
 } // namespace bit

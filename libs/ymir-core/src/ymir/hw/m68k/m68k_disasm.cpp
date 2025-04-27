@@ -76,7 +76,7 @@ DisassemblyTable::DisassemblyTable() {
         };
 
         // <ea>
-        auto eaOp_R = [](uint8 ea) {
+        auto eaOp_R = [](uint8 ea, OperandSize size) {
             const uint16 Xn = bit::extract<0, 2>(ea);
             const uint16 M = bit::extract<3, 5>(ea);
             switch (M) {
@@ -93,13 +93,25 @@ DisassemblyTable::DisassemblyTable() {
                 case 0b011: return Op::AtDispPCIx_R();
                 case 0b000: return Op::AtImmWord_R();
                 case 0b001: return Op::AtImmLong_R();
-                case 0b100: return Op::UImmFetched();
+                case 0b100:
+                    switch (size) {
+                    case OperandSize::Byte: [[fallthrough]];
+                    case OperandSize::ByteImplicit: return Op::UImm8Fetched();
+                    case OperandSize::Word: [[fallthrough]];
+                    case OperandSize::WordImplicit: return Op::UImm16Fetched();
+                    case OperandSize::Long: [[fallthrough]];
+                    case OperandSize::LongImplicit: return Op::UImm32Fetched();
+                    default: break;
+                    }
                 }
                 break;
             }
 
             util::unreachable();
         };
+        auto eaOp_R_B = [&](uint8 ea) { return eaOp_R(ea, OperandSize::Byte); };
+        auto eaOp_R_W = [&](uint8 ea) { return eaOp_R(ea, OperandSize::Word); };
+        auto eaOp_R_L = [&](uint8 ea) { return eaOp_R(ea, OperandSize::Long); };
         auto eaOp_W = [](uint8 ea) {
             const uint16 Xn = bit::extract<0, 2>(ea);
             const uint16 M = bit::extract<3, 5>(ea);
@@ -157,17 +169,17 @@ DisassemblyTable::DisassemblyTable() {
             const uint16 Dx = bit::extract<9, 11>(opcode);
 
             if (opcode == 0x003C) {
-                makeOpW(OrI, Op::UImmFetched(), Op::CCR_W());
+                makeOpW(OrI, Op::UImm16Fetched(), Op::CCR_W());
             } else if (opcode == 0x007C) {
-                makeOpW(OrI, Op::UImmFetched(), Op::SR_W()), privileged();
+                makeOpW(OrI, Op::UImm16Fetched(), Op::SR_W()), privileged();
             } else if (opcode == 0x023C) {
-                makeOpW(AndI, Op::UImmFetched(), Op::CCR_W());
+                makeOpW(AndI, Op::UImm16Fetched(), Op::CCR_W());
             } else if (opcode == 0x027C) {
-                makeOpW(AndI, Op::UImmFetched(), Op::SR_W()), privileged();
+                makeOpW(AndI, Op::UImm16Fetched(), Op::SR_W()), privileged();
             } else if (opcode == 0x0A3C) {
-                makeOpW(EorI, Op::UImmFetched(), Op::CCR_W());
+                makeOpW(EorI, Op::UImm16Fetched(), Op::CCR_W());
             } else if (opcode == 0x0A7C) {
-                makeOpW(EorI, Op::UImmFetched(), Op::SR_W()), privileged();
+                makeOpW(EorI, Op::UImm16Fetched(), Op::SR_W()), privileged();
             } else if (bit::extract<3, 5>(opcode) == 0b001 && bit::extract<8>(opcode) == 1) {
                 const bool szBit = bit::test<6>(opcode);
                 const uint8 Ay = bit::extract<0, 2>(opcode);
@@ -188,7 +200,7 @@ DisassemblyTable::DisassemblyTable() {
                 if ((ea >> 3u) == 0b000) {
                     makeOpL(BTst, Op::Dn_R(Dx), Op::Dn_W(bit::extract<0, 2>(ea)));
                 } else if (kValidDataAddrModes[ea]) {
-                    makeOpB(BTst, Op::Dn_R(Dx), eaOp_R(ea));
+                    makeOpB(BTst, Op::Dn_R(Dx), eaOp_R_B(ea));
                 }
             } else if (bit::extract<6, 8>(opcode) == 0b101) {
                 if ((ea >> 3u) == 0b000) {
@@ -210,74 +222,74 @@ DisassemblyTable::DisassemblyTable() {
                 }
             } else if (bit::extract<6, 11>(opcode) == 0b100000) {
                 if ((ea >> 3u) == 0b000) {
-                    makeOpL(BTst, Op::UImmFetched(), Op::Dn_W(bit::extract<0, 2>(ea)));
+                    makeOpL(BTst, Op::UImm8Fetched(), Op::Dn_W(bit::extract<0, 2>(ea)));
                 } else if (kValidDataAddrModes[ea]) {
-                    makeOpB(BTst, Op::UImmFetched(), eaOp_R(ea));
+                    makeOpB(BTst, Op::UImm8Fetched(), eaOp_R_B(ea));
                 }
             } else if (bit::extract<6, 11>(opcode) == 0b100001) {
                 if ((ea >> 3u) == 0b000) {
-                    makeOpL(BChg, Op::UImmFetched(), Op::Dn_W(bit::extract<0, 2>(ea)));
+                    makeOpL(BChg, Op::UImm8Fetched(), Op::Dn_W(bit::extract<0, 2>(ea)));
                 } else if (kValidDataAlterableAddrModes[ea]) {
-                    makeOpB(BChg, Op::UImmFetched(), eaOp_RW(ea));
+                    makeOpB(BChg, Op::UImm8Fetched(), eaOp_RW(ea));
                 }
             } else if (bit::extract<6, 11>(opcode) == 0b100010) {
                 if ((ea >> 3u) == 0b000) {
-                    makeOpL(BClr, Op::UImmFetched(), Op::Dn_W(bit::extract<0, 2>(ea)));
+                    makeOpL(BClr, Op::UImm8Fetched(), Op::Dn_W(bit::extract<0, 2>(ea)));
                 } else if (kValidDataAlterableAddrModes[ea]) {
-                    makeOpB(BClr, Op::UImmFetched(), eaOp_RW(ea));
+                    makeOpB(BClr, Op::UImm8Fetched(), eaOp_RW(ea));
                 }
             } else if (bit::extract<6, 11>(opcode) == 0b100011) {
                 if ((ea >> 3u) == 0b000) {
-                    makeOpL(BSet, Op::UImmFetched(), Op::Dn_W(bit::extract<0, 2>(ea)));
+                    makeOpL(BSet, Op::UImm8Fetched(), Op::Dn_W(bit::extract<0, 2>(ea)));
                 } else if (kValidDataAlterableAddrModes[ea]) {
-                    makeOpB(BSet, Op::UImmFetched(), eaOp_RW(ea));
+                    makeOpB(BSet, Op::UImm8Fetched(), eaOp_RW(ea));
                 }
             } else if (bit::extract<8, 11>(opcode) == 0b0000) {
                 if (kValidDataAlterableAddrModes[ea]) {
                     switch (sz) {
-                    case 0b00: makeOpB(OrI, Op::UImmFetched(), eaOp_RW(ea)); break;
-                    case 0b01: makeOpW(OrI, Op::UImmFetched(), eaOp_RW(ea)); break;
-                    case 0b10: makeOpL(OrI, Op::UImmFetched(), eaOp_RW(ea)); break;
+                    case 0b00: makeOpB(OrI, Op::UImm8Fetched(), eaOp_RW(ea)); break;
+                    case 0b01: makeOpW(OrI, Op::UImm16Fetched(), eaOp_RW(ea)); break;
+                    case 0b10: makeOpL(OrI, Op::UImm32Fetched(), eaOp_RW(ea)); break;
                     }
                 }
             } else if (bit::extract<8, 11>(opcode) == 0b0010) {
                 if (kValidDataAlterableAddrModes[ea]) {
                     switch (sz) {
-                    case 0b00: makeOpB(AndI, Op::UImmFetched(), eaOp_RW(ea)); break;
-                    case 0b01: makeOpW(AndI, Op::UImmFetched(), eaOp_RW(ea)); break;
-                    case 0b10: makeOpL(AndI, Op::UImmFetched(), eaOp_RW(ea)); break;
+                    case 0b00: makeOpB(AndI, Op::UImm8Fetched(), eaOp_RW(ea)); break;
+                    case 0b01: makeOpW(AndI, Op::UImm16Fetched(), eaOp_RW(ea)); break;
+                    case 0b10: makeOpL(AndI, Op::UImm32Fetched(), eaOp_RW(ea)); break;
                     }
                 }
             } else if (bit::extract<8, 11>(opcode) == 0b1010) {
                 if (kValidDataAlterableAddrModes[ea]) {
                     switch (sz) {
-                    case 0b00: makeOpB(EorI, Op::UImmFetched(), eaOp_RW(ea)); break;
-                    case 0b01: makeOpW(EorI, Op::UImmFetched(), eaOp_RW(ea)); break;
-                    case 0b10: makeOpL(EorI, Op::UImmFetched(), eaOp_RW(ea)); break;
+                    case 0b00: makeOpB(EorI, Op::UImm8Fetched(), eaOp_RW(ea)); break;
+                    case 0b01: makeOpW(EorI, Op::UImm16Fetched(), eaOp_RW(ea)); break;
+                    case 0b10: makeOpL(EorI, Op::UImm32Fetched(), eaOp_RW(ea)); break;
                     }
                 }
             } else if (bit::extract<8, 11>(opcode) == 0b0100) {
                 if (kValidDataAlterableAddrModes[ea]) {
                     switch (sz) {
-                    case 0b00: makeOpB(SubI, Op::UImmFetched(), eaOp_RW(ea)); break;
-                    case 0b01: makeOpW(SubI, Op::UImmFetched(), eaOp_RW(ea)); break;
-                    case 0b10: makeOpL(SubI, Op::UImmFetched(), eaOp_RW(ea)); break;
+                    case 0b00: makeOpB(SubI, Op::UImm8Fetched(), eaOp_RW(ea)); break;
+                    case 0b01: makeOpW(SubI, Op::UImm16Fetched(), eaOp_RW(ea)); break;
+                    case 0b10: makeOpL(SubI, Op::UImm32Fetched(), eaOp_RW(ea)); break;
                     }
                 }
             } else if (bit::extract<8, 11>(opcode) == 0b0110) {
                 if (kValidDataAlterableAddrModes[ea]) {
                     switch (sz) {
-                    case 0b00: makeOpB(AddI, Op::UImmFetched(), eaOp_RW(ea)); break;
-                    case 0b01: makeOpW(AddI, Op::UImmFetched(), eaOp_RW(ea)); break;
-                    case 0b10: makeOpL(AddI, Op::UImmFetched(), eaOp_RW(ea)); break;
+                    case 0b00: makeOpB(AddI, Op::UImm8Fetched(), eaOp_RW(ea)); break;
+                    case 0b01: makeOpW(AddI, Op::UImm16Fetched(), eaOp_RW(ea)); break;
+                    case 0b10: makeOpL(AddI, Op::UImm32Fetched(), eaOp_RW(ea)); break;
                     }
                 }
             } else if (bit::extract<8, 11>(opcode) == 0b1100) {
                 if (kValidDataAddrModes[ea]) {
                     switch (sz) {
-                    case 0b00: makeOpB(CmpI, Op::UImmFetched(), eaOp_R(ea)); break;
-                    case 0b01: makeOpW(CmpI, Op::UImmFetched(), eaOp_R(ea)); break;
-                    case 0b10: makeOpL(CmpI, Op::UImmFetched(), eaOp_R(ea)); break;
+                    case 0b00: makeOpB(CmpI, Op::UImm8Fetched(), eaOp_R_B(ea)); break;
+                    case 0b01: makeOpW(CmpI, Op::UImm16Fetched(), eaOp_R_W(ea)); break;
+                    case 0b10: makeOpL(CmpI, Op::UImm32Fetched(), eaOp_R_L(ea)); break;
                     }
                 }
             }
@@ -293,8 +305,8 @@ DisassemblyTable::DisassemblyTable() {
                     const uint16 An = bit::extract<9, 11>(opcode);
                     const uint16 size = bit::extract<12, 13>(opcode);
                     switch (size) {
-                    case 0b11: makeOpW(MoveA, eaOp_R(ea), Op::An_W(An)); break;
-                    case 0b10: makeOpL(MoveA, eaOp_R(ea), Op::An_W(An)); break;
+                    case 0b11: makeOpW(MoveA, eaOp_R_W(ea), Op::An_W(An)); break;
+                    case 0b10: makeOpL(MoveA, eaOp_R_L(ea), Op::An_W(An)); break;
                     }
                 }
             } else {
@@ -305,9 +317,9 @@ DisassemblyTable::DisassemblyTable() {
                     // Note the swapped bit order between word and longword moves
                     const uint16 size = bit::extract<12, 13>(opcode);
                     switch (size) {
-                    case 0b01: makeOpB(Move, eaOp_R(srcEA), eaOp_W(dstEA)); break;
-                    case 0b11: makeOpW(Move, eaOp_R(srcEA), eaOp_W(dstEA)); break;
-                    case 0b10: makeOpL(Move, eaOp_R(srcEA), eaOp_W(dstEA)); break;
+                    case 0b01: makeOpB(Move, eaOp_R_B(srcEA), eaOp_W(dstEA)); break;
+                    case 0b11: makeOpW(Move, eaOp_R_W(srcEA), eaOp_W(dstEA)); break;
+                    case 0b10: makeOpL(Move, eaOp_R_L(srcEA), eaOp_W(dstEA)); break;
                     }
                 }
             }
@@ -320,7 +332,7 @@ DisassemblyTable::DisassemblyTable() {
             } else if (opcode == 0x4E71) {
                 make0(Noop);
             } else if (opcode == 0x4E72) {
-                makeOpWI(Stop, Op::UImmFetched()), privileged();
+                makeOpWI(Stop, Op::UImm16Fetched()), privileged();
             } else if (opcode == 0x4E73) {
                 make0(RTE), privileged();
             } else if (opcode == 0x4E75) {
@@ -342,7 +354,7 @@ DisassemblyTable::DisassemblyTable() {
                 makeOpLI(Ext, Op::Dn_RW(Dn));
             } else if (bit::extract<3, 11>(opcode) == 0b111001010) {
                 const uint16 An = bit::extract<0, 2>(opcode);
-                makeOpWI(Link, Op::An_R(An), Op::SImmFetched());
+                makeOpW(Link, Op::An_RW(An), Op::UImm16Fetched());
             } else if (bit::extract<3, 11>(opcode) == 0b111001011) {
                 const uint16 An = bit::extract<0, 2>(opcode);
                 makeOpLI(Unlink, Op::An_RW(An));
@@ -365,11 +377,11 @@ DisassemblyTable::DisassemblyTable() {
                 }
             } else if (bit::extract<6, 11>(opcode) == 0b010011) {
                 if (kValidDataAddrModes[ea]) {
-                    makeOpW(Move, eaOp_R(ea), Op::CCR_W());
+                    makeOpW(Move, eaOp_R_W(ea), Op::CCR_W());
                 }
             } else if (bit::extract<6, 11>(opcode) == 0b011011) {
                 if (kValidDataAddrModes[ea]) {
-                    makeOpW(Move, eaOp_R(ea), Op::SR_W()), privileged();
+                    makeOpW(Move, eaOp_R_W(ea), Op::SR_W()), privileged();
                 }
             } else if (bit::extract<6, 11>(opcode) == 0b100000) {
                 if (kValidDataAlterableAddrModes[ea]) {
@@ -381,15 +393,15 @@ DisassemblyTable::DisassemblyTable() {
                 }
             } else if (bit::extract<6, 11>(opcode) == 0b100001) {
                 if (kValidControlAddrModes[ea]) {
-                    makeOpLI(PEA, eaOp_R(ea));
+                    makeOpLI(PEA, eaOp_R_L(ea));
                 }
             } else if (bit::extract<6, 11>(opcode) == 0b111010) {
                 if (kValidControlAddrModes[ea]) {
-                    makeOpLI(JSR, eaOp_R(ea));
+                    makeOpLI(JSR, eaOp_R_L(ea));
                 }
             } else if (bit::extract<6, 11>(opcode) == 0b111011) {
                 if (kValidControlAddrModes[ea]) {
-                    makeOpLI(Jmp, eaOp_R(ea));
+                    makeOpLI(Jmp, eaOp_R_L(ea));
                 }
             } else if (bit::extract<7, 11>(opcode) == 0b10001) {
                 const bool isPredecrement = (ea >> 3u) == 0b100;
@@ -397,13 +409,15 @@ DisassemblyTable::DisassemblyTable() {
                 if (isPredecrement) {
                     const uint16 An = bit::extract<0, 2>(opcode);
                     if (sz) {
-                        makeOpL(MoveM, Op::RegList_R(), Op::MinusAtAn_W(An));
+                        makeOpL(MoveM, Op::RevRegList_R(), Op::MinusAtAn_W(An));
                     } else {
-                        makeOpW(MoveM, Op::RegList_R(), Op::MinusAtAn_W(An));
+                        makeOpW(MoveM, Op::RevRegList_R(), Op::MinusAtAn_W(An));
                     }
                 } else if (kValidControlAlterableAddrModes[ea]) {
                     if (sz) {
                         makeOpL(MoveM, Op::RegList_R(), eaOp_W(ea));
+                    } else {
+                        makeOpW(MoveM, Op::RegList_R(), eaOp_W(ea));
                     }
                 }
             } else if (bit::extract<7, 11>(opcode) == 0b11001) {
@@ -420,9 +434,9 @@ DisassemblyTable::DisassemblyTable() {
                     const uint16 Xn = bit::extract<0, 2>(opcode);
                     const uint16 M = bit::extract<3, 5>(opcode);
                     if (sz) {
-                        makeOpL(MoveM, eaOp_R(ea), Op::RegList_W());
+                        makeOpL(MoveM, eaOp_R_L(ea), Op::RegList_W());
                     } else {
-                        makeOpW(MoveM, eaOp_R(ea), Op::RegList_W());
+                        makeOpW(MoveM, eaOp_R_W(ea), Op::RegList_W());
                     }
                 }
             } else if (bit::extract<8, 11>(opcode) == 0b0000) {
@@ -460,20 +474,20 @@ DisassemblyTable::DisassemblyTable() {
             } else if (bit::extract<8, 11>(opcode) == 0b1010) {
                 if (kValidDataAlterableAddrModes[ea]) {
                     switch (sz) {
-                    case 0b00: makeOpB(Tst, eaOp_R(ea)); break;
-                    case 0b01: makeOpB(Tst, eaOp_R(ea)); break;
-                    case 0b10: makeOpB(Tst, eaOp_R(ea)); break;
+                    case 0b00: makeOpB(Tst, eaOp_R_B(ea)); break;
+                    case 0b01: makeOpB(Tst, eaOp_R_W(ea)); break;
+                    case 0b10: makeOpB(Tst, eaOp_R_L(ea)); break;
                     }
                 }
             } else if (bit::extract<6, 8>(opcode) == 0b110) {
                 if (kValidDataAddrModes[ea]) {
                     const uint16 Dn = bit::extract<9, 11>(opcode);
-                    makeOpWI(Chk, eaOp_R(ea), Op::Dn_R(Dn));
+                    makeOpWI(Chk, eaOp_R_W(ea), Op::Dn_R(Dn));
                 }
             } else if (bit::extract<6, 8>(opcode) == 0b111) {
                 if (kValidControlAddrModes[ea]) {
                     const uint16 An = bit::extract<9, 11>(opcode);
-                    makeOpLI(LEA, eaOp_R(ea), Op::An_W(An));
+                    makeOpLI(LEA, eaOp_R_L(ea), Op::An_W(An));
                 }
             }
             break;
@@ -483,7 +497,7 @@ DisassemblyTable::DisassemblyTable() {
             if (bit::extract<3, 7>(opcode) == 0b11001) {
                 const uint32 condNum = bit::extract<8, 11>(opcode);
                 const uint32 Dn = bit::extract<0, 2>(opcode);
-                makeOpW(DBcc, Op::Dn_R(Dn), Op::SImmFetched()), cond(static_cast<Cond>(condNum));
+                makeOpWI(DBcc, Op::Dn_R(Dn), Op::WordDispPCFetched()), cond(static_cast<Cond>(condNum));
             } else if (bit::extract<6, 7>(opcode) == 0b11) {
                 if (kValidDataAlterableAddrModes[ea]) {
                     const uint32 condNum = bit::extract<8, 11>(opcode);
@@ -532,21 +546,21 @@ DisassemblyTable::DisassemblyTable() {
             const bool longDisp = disp == 0;
             if (longDisp) {
                 switch (bit::extract<8, 11>(opcode)) {
-                case 0b0000: makeOpWI(BRA, Op::SImmFetched()); break;
-                case 0b0001: makeOpWI(BSR, Op::SImmFetched()); break;
+                case 0b0000: makeOpW(BRA, Op::WordDispPCFetched()); break;
+                case 0b0001: makeOpW(BSR, Op::WordDispPCFetched()); break;
                 default: {
                     const uint32 condNum = bit::extract<8, 11>(opcode);
-                    makeOpWI(Bcc, Op::SImmFetched()), cond(static_cast<Cond>(condNum));
+                    makeOpW(Bcc, Op::WordDispPCFetched()), cond(static_cast<Cond>(condNum));
                     break;
                 }
                 }
             } else {
                 switch (bit::extract<8, 11>(opcode)) {
-                case 0b0000: makeOpN(BRA, Op::SImmEmbedded(disp)); break;
-                case 0b0001: makeOpN(BSR, Op::SImmEmbedded(disp)); break;
+                case 0b0000: makeOpN(BRA, Op::WordDispPCEmbedded(disp)); break;
+                case 0b0001: makeOpN(BSR, Op::WordDispPCEmbedded(disp)); break;
                 default: {
                     const uint32 condNum = bit::extract<8, 11>(opcode);
-                    makeOpN(Bcc, Op::SImmEmbedded(disp)), cond(static_cast<Cond>(condNum));
+                    makeOpN(Bcc, Op::WordDispPCEmbedded(disp)), cond(static_cast<Cond>(condNum));
                     break;
                 }
                 }
@@ -555,9 +569,9 @@ DisassemblyTable::DisassemblyTable() {
         }
         case 0x7: {
             if (bit::extract<8>(opcode) == 0) {
-                const sint16 value = static_cast<sint8>(bit::extract<0, 7>(opcode));
+                const uint8 value = bit::extract<0, 7>(opcode);
                 const uint32 Dn = bit::extract<9, 11>(opcode);
-                makeOpLI(MoveQ, Op::SImmEmbedded(value), Op::Dn_W(Dn));
+                makeOpLI(MoveQ, Op::UImmEmbedded(value), Op::Dn_W(Dn));
             }
             break;
         }
@@ -567,11 +581,11 @@ DisassemblyTable::DisassemblyTable() {
             const uint16 Dn = bit::extract<9, 11>(opcode);
             if (bit::extract<6, 8>(opcode) == 0b011) {
                 if (kValidDataAddrModes[ea]) {
-                    makeOpWI(DivU, eaOp_R(ea), Op::Dn_RW(Dn));
+                    makeOpWI(DivU, eaOp_R_W(ea), Op::Dn_RW(Dn));
                 }
             } else if (bit::extract<6, 8>(opcode) == 0b111) {
                 if (kValidDataAddrModes[ea]) {
-                    makeOpWI(DivS, eaOp_R(ea), Op::Dn_RW(Dn));
+                    makeOpWI(DivS, eaOp_R_W(ea), Op::Dn_RW(Dn));
                 }
             } else if (bit::extract<3, 8>(opcode) == 0b100000) {
                 const uint16 Dy = bit::extract<0, 2>(opcode);
@@ -594,9 +608,9 @@ DisassemblyTable::DisassemblyTable() {
                 } else {
                     if (kValidDataAddrModes[ea]) {
                         switch (sz) {
-                        case 0b00: makeOpB(Or, eaOp_R(ea), Op::Dn_RW(Dn)); break;
-                        case 0b01: makeOpW(Or, eaOp_R(ea), Op::Dn_RW(Dn)); break;
-                        case 0b10: makeOpL(Or, eaOp_R(ea), Op::Dn_RW(Dn)); break;
+                        case 0b00: makeOpB(Or, eaOp_R_B(ea), Op::Dn_RW(Dn)); break;
+                        case 0b01: makeOpW(Or, eaOp_R_W(ea), Op::Dn_RW(Dn)); break;
+                        case 0b10: makeOpL(Or, eaOp_R_L(ea), Op::Dn_RW(Dn)); break;
                         }
                     }
                 }
@@ -611,9 +625,9 @@ DisassemblyTable::DisassemblyTable() {
                     const uint16 An = bit::extract<9, 11>(opcode);
                     const bool szBit = bit::test<8>(opcode);
                     if (szBit) {
-                        makeOpL(SubA, eaOp_R(ea), Op::An_RW(An));
+                        makeOpL(SubA, eaOp_R_L(ea), Op::An_RW(An));
                     } else {
-                        makeOpW(SubA, eaOp_R(ea), Op::An_RW(An));
+                        makeOpW(SubA, eaOp_R_W(ea), Op::An_RW(An));
                     }
                 }
             } else if (bit::extract<4, 5>(opcode) == 0b00 && bit::extract<8>(opcode) == 1) {
@@ -647,9 +661,9 @@ DisassemblyTable::DisassemblyTable() {
                 } else {
                     if (kValidAddrModes[ea]) {
                         switch (sz) {
-                        case 0b00: makeOpB(Sub, eaOp_R(ea), Op::Dn_RW(Dn)); break;
-                        case 0b01: makeOpW(Sub, eaOp_R(ea), Op::Dn_RW(Dn)); break;
-                        case 0b10: makeOpL(Sub, eaOp_R(ea), Op::Dn_RW(Dn)); break;
+                        case 0b00: makeOpB(Sub, eaOp_R_B(ea), Op::Dn_RW(Dn)); break;
+                        case 0b01: makeOpW(Sub, eaOp_R_W(ea), Op::Dn_RW(Dn)); break;
+                        case 0b10: makeOpL(Sub, eaOp_R_L(ea), Op::Dn_RW(Dn)); break;
                         }
                     }
                 }
@@ -665,18 +679,18 @@ DisassemblyTable::DisassemblyTable() {
                     const uint16 An = bit::extract<9, 11>(opcode);
                     const bool szBit = bit::test<8>(opcode);
                     if (szBit) {
-                        makeOpL(CmpA, eaOp_R(ea), Op::An_R(An));
+                        makeOpL(CmpA, eaOp_R_L(ea), Op::An_R(An));
                     } else {
-                        makeOpW(CmpA, eaOp_R(ea), Op::An_R(An));
+                        makeOpW(CmpA, eaOp_R_W(ea), Op::An_R(An));
                     }
                 }
             } else if (bit::extract<8>(opcode) == 0) {
                 if (kValidAddrModes[ea]) {
                     const uint16 Dn = bit::extract<9, 11>(opcode);
                     switch (sz) {
-                    case 0b00: makeOpB(Cmp, eaOp_R(ea), Op::Dn_R(Dn)); break;
-                    case 0b01: makeOpW(Cmp, eaOp_R(ea), Op::Dn_R(Dn)); break;
-                    case 0b10: makeOpL(Cmp, eaOp_R(ea), Op::Dn_R(Dn)); break;
+                    case 0b00: makeOpB(Cmp, eaOp_R_B(ea), Op::Dn_R(Dn)); break;
+                    case 0b01: makeOpW(Cmp, eaOp_R_W(ea), Op::Dn_R(Dn)); break;
+                    case 0b10: makeOpL(Cmp, eaOp_R_L(ea), Op::Dn_R(Dn)); break;
                     }
                 }
             } else if (bit::extract<3, 5>(opcode) == 0b001) {
@@ -716,11 +730,11 @@ DisassemblyTable::DisassemblyTable() {
                 makeOpLI(Exg, Op::Dn_RW(Ry), Op::An_RW(Rx));
             } else if (bit::extract<6, 8>(opcode) == 0b011) {
                 if (kValidDataAddrModes[ea]) {
-                    makeOpWI(MulU, eaOp_R(ea), Op::Dn_RW(Rx));
+                    makeOpWI(MulU, eaOp_R_W(ea), Op::Dn_RW(Rx));
                 }
             } else if (bit::extract<6, 8>(opcode) == 0b111) {
                 if (kValidDataAddrModes[ea]) {
-                    makeOpWI(MulS, eaOp_R(ea), Op::Dn_RW(Rx));
+                    makeOpWI(MulS, eaOp_R_W(ea), Op::Dn_RW(Rx));
                 }
             } else {
                 const bool dir = bit::test<8>(opcode);
@@ -736,9 +750,9 @@ DisassemblyTable::DisassemblyTable() {
                 } else {
                     if (kValidDataAddrModes[ea]) {
                         switch (sz) {
-                        case 0b00: makeOpB(And, eaOp_R(ea), Op::Dn_RW(Dn)); break;
-                        case 0b01: makeOpW(And, eaOp_R(ea), Op::Dn_RW(Dn)); break;
-                        case 0b10: makeOpL(And, eaOp_R(ea), Op::Dn_RW(Dn)); break;
+                        case 0b00: makeOpB(And, eaOp_R_B(ea), Op::Dn_RW(Dn)); break;
+                        case 0b01: makeOpW(And, eaOp_R_W(ea), Op::Dn_RW(Dn)); break;
+                        case 0b10: makeOpL(And, eaOp_R_L(ea), Op::Dn_RW(Dn)); break;
                         }
                     }
                 }
@@ -753,9 +767,9 @@ DisassemblyTable::DisassemblyTable() {
                     const uint16 An = bit::extract<9, 11>(opcode);
                     const bool szBit = bit::test<8>(opcode);
                     if (szBit) {
-                        makeOpL(AddA, eaOp_R(ea), Op::An_RW(An));
+                        makeOpL(AddA, eaOp_R_L(ea), Op::An_RW(An));
                     } else {
-                        makeOpW(AddA, eaOp_R(ea), Op::An_RW(An));
+                        makeOpW(AddA, eaOp_R_W(ea), Op::An_RW(An));
                     }
                 }
             } else if (bit::extract<4, 5>(opcode) == 0b00 && bit::extract<8>(opcode) == 1) {
@@ -789,9 +803,9 @@ DisassemblyTable::DisassemblyTable() {
                 } else {
                     if (kValidAddrModes[ea]) {
                         switch (sz) {
-                        case 0b00: makeOpB(Add, eaOp_R(ea), Op::Dn_RW(Dn)); break;
-                        case 0b01: makeOpW(Add, eaOp_R(ea), Op::Dn_RW(Dn)); break;
-                        case 0b10: makeOpL(Add, eaOp_R(ea), Op::Dn_RW(Dn)); break;
+                        case 0b00: makeOpB(Add, eaOp_R_B(ea), Op::Dn_RW(Dn)); break;
+                        case 0b01: makeOpW(Add, eaOp_R_W(ea), Op::Dn_RW(Dn)); break;
+                        case 0b10: makeOpL(Add, eaOp_R_L(ea), Op::Dn_RW(Dn)); break;
                         }
                     }
                 }
@@ -907,7 +921,7 @@ DisassembledInstruction Disassemble(std::function<uint16()> fetcher) {
         return value;
     };
 
-    auto translateOperand = [&](const Operand &op, OperandSize opSize, OperandDetails &det) {
+    auto translateOperand = [&](const Operand &op, OperandDetails &det) {
         using Type = Operand::Type;
         switch (op.type) {
         case Type::AtDispAn: det.immDisp = static_cast<sint16>(fetch()); break;
@@ -918,7 +932,7 @@ DisassembledInstruction Disassemble(std::function<uint16()> fetcher) {
             det.ix = bit::extract<12, 15>(briefExtWord);
             break;
         }
-        case Type::AtDispPC: det.immDisp = static_cast<sint16>(fetch()) - 4; break;
+        case Type::AtDispPC: det.immDisp = static_cast<sint16>(fetch()) - 2; break;
         case Type::AtDispPCIx: {
             const uint16 briefExtWord = fetch();
             det.immDisp = static_cast<sint8>(bit::extract<0, 7>(briefExtWord)) - 2;
@@ -933,39 +947,25 @@ DisassembledInstruction Disassemble(std::function<uint16()> fetcher) {
             det.immDisp = (addressHigh << 16u) | addressLow;
             break;
         }
-        case Type::SImmFetched:
-            switch (opSize) {
-            case OperandSize::Byte: [[fallthrough]];
-            case OperandSize::ByteImplicit: det.immDisp = static_cast<sint8>(fetch()); break;
-            case OperandSize::Word: [[fallthrough]];
-            case OperandSize::WordImplicit: det.immDisp = static_cast<sint16>(fetch()); break;
-            case OperandSize::Long: [[fallthrough]];
-            case OperandSize::LongImplicit:
-                det.immDisp = fetch();
-                det.immDisp = (det.immDisp << 16u) | fetch();
-                break;
-            default: break;
-            }
-        case Type::UImmFetched:
-            switch (opSize) {
-            case OperandSize::Byte: [[fallthrough]];
-            case OperandSize::ByteImplicit: det.immDisp = fetch(); break;
-            case OperandSize::Word: [[fallthrough]];
-            case OperandSize::WordImplicit: det.immDisp = fetch(); break;
-            case OperandSize::Long: [[fallthrough]];
-            case OperandSize::LongImplicit:
-                det.immDisp = fetch();
-                det.immDisp = (det.immDisp << 16u) | fetch();
-                break;
-            default: break;
-            }
+        case Type::UImm8Fetched: det.immDisp = static_cast<uint8>(fetch()); break;
+        case Type::UImm16Fetched: det.immDisp = fetch(); break;
+        case Type::UImm32Fetched: {
+            det.immDisp = fetch();
+            det.immDisp = (det.immDisp << 16u) | fetch();
+            break;
+        }
+
+        case Type::WordDispPCFetched: det.immDisp = static_cast<sint16>(fetch()) - 2; break;
+
         case Type::RegList: det.regList = fetch(); break;
+        case Type::RevRegList: det.regList = bit::reverse(fetch()); break;
+
         default: break;
         }
     };
 
-    translateOperand(opDisasm.op1, opDisasm.opSize, disasm.op1);
-    translateOperand(opDisasm.op2, opDisasm.opSize, disasm.op2);
+    translateOperand(opDisasm.op1, disasm.op1);
+    translateOperand(opDisasm.op2, disasm.op2);
 
     return disasm;
 }

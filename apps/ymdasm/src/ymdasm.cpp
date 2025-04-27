@@ -5,6 +5,8 @@
 #include <ymir/hw/scu/scu_dsp_disasm.hpp>
 #include <ymir/hw/sh2/sh2_disasm.hpp>
 
+#include <ymir/util/bit_ops.hpp>
+
 #include "ansi.hpp"
 
 #include <cxxopts.hpp>
@@ -278,8 +280,10 @@ int main(int argc, char *argv[]) {
 
         auto printMnemonic = [&](std::string_view mnemonic) { print(colors.mnemonic, mnemonic); };
         auto printNOP = [&](const char *mnemonic) { print(colors.nopMnemonic, mnemonic); };
-        auto printIllegalMnemonic = [&] { print(colors.illegalMnemonic, "(illegal)"); };
-        auto printUnknownMnemonic = [&] { print(colors.illegalMnemonic, "(?)"); };
+        auto printIllegalMnemonic = [&](const char *mnemonic = "(illegal)") {
+            print(colors.illegalMnemonic, mnemonic);
+        };
+        auto printUnknownMnemonic = [&] { printIllegalMnemonic("(?)"); };
         auto printCond = [&](const char *cond) { print(colors.cond, cond); };
         auto printOperator = [&](const char *oper) { print(colors.oper, oper); };
         auto printComma = [&] { printOperator(", "); };
@@ -301,6 +305,9 @@ int main(int argc, char *argv[]) {
                 printOpRead(op);
             }
         };
+
+        auto printAddrInc = [&] { print(colors.addrInc, "+"); };
+        auto printAddrDec = [&] { print(colors.addrDec, "-"); };
 
         auto printReset = [&] { fmt::println("{}", colors.reset); };
 
@@ -493,9 +500,6 @@ int main(int argc, char *argv[]) {
                 const auto color = write ? colors.opWrite : colors.opRead;
                 print(color, symbol);
             };
-
-            auto printAddrInc = [&] { print(colors.addrInc, "+"); };
-            auto printAddrDec = [&] { print(colors.addrDec, "-"); };
 
             auto printImm = [&](sint32 imm) {
                 print(colors.immediate, fmt::format("#0x{:X}", static_cast<uint32>(imm)));
@@ -705,7 +709,7 @@ int main(int argc, char *argv[]) {
                 }
             };
 
-            auto printOpcodes = [&](std::span<uint16> opcodes) {
+            auto printOpcodes = [&](std::span<const uint16> opcodes) {
                 if (!hideOpcodes) {
                     for (auto opcode : opcodes) {
                         print(colors.bytes, fmt::format("{:04X} ", opcode), false);
@@ -717,9 +721,253 @@ int main(int argc, char *argv[]) {
                 }
             };
 
-            auto printInstruction = [&](const m68k::DisassembledInstruction &instr) {
-                // TODO: print disassembly
+            auto printM68KCond = [&](m68k::Condition cond) {
+                switch (cond) {
+                case m68k::Condition::T: printCond("t"); break;
+                case m68k::Condition::F: printCond("f"); break;
+                case m68k::Condition::HI: printCond("hi"); break;
+                case m68k::Condition::LS: printCond("ls"); break;
+                case m68k::Condition::CC: printCond("cc"); break;
+                case m68k::Condition::CS: printCond("cs"); break;
+                case m68k::Condition::NE: printCond("ne"); break;
+                case m68k::Condition::EQ: printCond("eq"); break;
+                case m68k::Condition::VC: printCond("vc"); break;
+                case m68k::Condition::VS: printCond("vs"); break;
+                case m68k::Condition::PL: printCond("pl"); break;
+                case m68k::Condition::MI: printCond("mi"); break;
+                case m68k::Condition::GE: printCond("ge"); break;
+                case m68k::Condition::LT: printCond("lt"); break;
+                case m68k::Condition::GT: printCond("gt"); break;
+                case m68k::Condition::LE: printCond("le"); break;
+                }
             };
+
+            auto printInstruction = [&](const m68k::DisassembledInstruction &instr) {
+                switch (instr.info.mnemonic) {
+                case m68k::Mnemonic::Move: printMnemonic("move"); break;
+                case m68k::Mnemonic::MoveA: printMnemonic("movea"); break;
+                case m68k::Mnemonic::MoveM: printMnemonic("movem"); break;
+                case m68k::Mnemonic::MoveP: printMnemonic("movep"); break;
+                case m68k::Mnemonic::MoveQ: printMnemonic("moveq"); break;
+                case m68k::Mnemonic::Clr: printMnemonic("clr"); break;
+                case m68k::Mnemonic::Exg: printMnemonic("exg"); break;
+                case m68k::Mnemonic::Ext: printMnemonic("ext"); break;
+                case m68k::Mnemonic::Swap: printMnemonic("swap"); break;
+                case m68k::Mnemonic::ABCD: printMnemonic("abcd"); break;
+                case m68k::Mnemonic::NBCD: printMnemonic("nbcd"); break;
+                case m68k::Mnemonic::SBCD: printMnemonic("sbcd"); break;
+                case m68k::Mnemonic::Add: printMnemonic("add"); break;
+                case m68k::Mnemonic::AddA: printMnemonic("adda"); break;
+                case m68k::Mnemonic::AddI: printMnemonic("addi"); break;
+                case m68k::Mnemonic::AddQ: printMnemonic("addq"); break;
+                case m68k::Mnemonic::AddX: printMnemonic("addx"); break;
+                case m68k::Mnemonic::And: printMnemonic("and"); break;
+                case m68k::Mnemonic::AndI: printMnemonic("andi"); break;
+                case m68k::Mnemonic::Eor: printMnemonic("eor"); break;
+                case m68k::Mnemonic::EorI: printMnemonic("eori"); break;
+                case m68k::Mnemonic::Neg: printMnemonic("neg"); break;
+                case m68k::Mnemonic::NegX: printMnemonic("negx"); break;
+                case m68k::Mnemonic::Not: printMnemonic("not"); break;
+                case m68k::Mnemonic::Or: printMnemonic("or"); break;
+                case m68k::Mnemonic::OrI: printMnemonic("ori"); break;
+                case m68k::Mnemonic::Sub: printMnemonic("sub"); break;
+                case m68k::Mnemonic::SubA: printMnemonic("suba"); break;
+                case m68k::Mnemonic::SubI: printMnemonic("subi"); break;
+                case m68k::Mnemonic::SubQ: printMnemonic("subq"); break;
+                case m68k::Mnemonic::SubX: printMnemonic("subx"); break;
+                case m68k::Mnemonic::DivS: printMnemonic("divs"); break;
+                case m68k::Mnemonic::DivU: printMnemonic("divu"); break;
+                case m68k::Mnemonic::MulS: printMnemonic("muls"); break;
+                case m68k::Mnemonic::MulU: printMnemonic("mulu"); break;
+                case m68k::Mnemonic::BChg: printMnemonic("bchg"); break;
+                case m68k::Mnemonic::BClr: printMnemonic("bclr"); break;
+                case m68k::Mnemonic::BSet: printMnemonic("bset"); break;
+                case m68k::Mnemonic::BTst: printMnemonic("btst"); break;
+                case m68k::Mnemonic::ASL: printMnemonic("asl"); break;
+                case m68k::Mnemonic::ASR: printMnemonic("asr"); break;
+                case m68k::Mnemonic::LSL: printMnemonic("lsl"); break;
+                case m68k::Mnemonic::LSR: printMnemonic("lsr"); break;
+                case m68k::Mnemonic::ROL: printMnemonic("rol"); break;
+                case m68k::Mnemonic::ROR: printMnemonic("ror"); break;
+                case m68k::Mnemonic::ROXL: printMnemonic("roxl"); break;
+                case m68k::Mnemonic::ROXR: printMnemonic("roxr"); break;
+                case m68k::Mnemonic::Cmp: printMnemonic("cmp"); break;
+                case m68k::Mnemonic::CmpA: printMnemonic("cmpa"); break;
+                case m68k::Mnemonic::CmpI: printMnemonic("cmpi"); break;
+                case m68k::Mnemonic::CmpM: printMnemonic("cmpm"); break;
+                case m68k::Mnemonic::Scc:
+                    printMnemonic("s");
+                    printM68KCond(instr.info.cond);
+                    break;
+                case m68k::Mnemonic::TAS: printMnemonic("tas"); break;
+                case m68k::Mnemonic::Tst: printMnemonic("tst"); break;
+                case m68k::Mnemonic::LEA: printMnemonic("lea"); break;
+                case m68k::Mnemonic::PEA: printMnemonic("pea"); break;
+                case m68k::Mnemonic::Link: printMnemonic("link"); break;
+                case m68k::Mnemonic::Unlink: printMnemonic("unlk"); break;
+                case m68k::Mnemonic::BRA: printMnemonic("bra"); break;
+                case m68k::Mnemonic::BSR: printMnemonic("bsr"); break;
+                case m68k::Mnemonic::Bcc:
+                    printMnemonic("b");
+                    printM68KCond(instr.info.cond);
+                    break;
+                case m68k::Mnemonic::DBcc:
+                    printMnemonic("db");
+                    printM68KCond(instr.info.cond);
+                    break;
+                case m68k::Mnemonic::JSR: printMnemonic("jsr"); break;
+                case m68k::Mnemonic::Jmp: printMnemonic("jmp"); break;
+                case m68k::Mnemonic::RTE: printMnemonic("rte"); break;
+                case m68k::Mnemonic::RTR: printMnemonic("rtr"); break;
+                case m68k::Mnemonic::RTS: printMnemonic("rts"); break;
+                case m68k::Mnemonic::Chk: printMnemonic("chk"); break;
+                case m68k::Mnemonic::Reset: printMnemonic("reset"); break;
+                case m68k::Mnemonic::Stop: printMnemonic("stop"); break;
+                case m68k::Mnemonic::Trap: printMnemonic("trap"); break;
+                case m68k::Mnemonic::TrapV: printMnemonic("trapv"); break;
+                case m68k::Mnemonic::Noop: printMnemonic("nop"); break;
+
+                case m68k::Mnemonic::Illegal1010: printIllegalMnemonic("(illegal 1010)"); break;
+                case m68k::Mnemonic::Illegal1111: printIllegalMnemonic("(illegal 1111)"); break;
+                case m68k::Mnemonic::Illegal: printIllegalMnemonic(); break;
+                }
+
+                switch (instr.info.opSize) {
+                case m68k::OperandSize::Byte: printSizeSuffix("b"); break;
+                case m68k::OperandSize::Word: printSizeSuffix("w"); break;
+                case m68k::OperandSize::Long: printSizeSuffix("l"); break;
+                default: break;
+                }
+            };
+
+            auto printUImm8 = [&](uint8 imm, bool hashPrefix) {
+                print(colors.immediate, fmt::format("{}${:X}", (hashPrefix ? "#" : ""), imm));
+            };
+            auto printUImm16 = [&](uint16 imm, bool hashPrefix) {
+                print(colors.immediate, fmt::format("{}${:X}", (hashPrefix ? "#" : ""), imm));
+            };
+            auto printUImm32 = [&](uint32 imm, bool hashPrefix) {
+                print(colors.immediate, fmt::format("{}${:X}", (hashPrefix ? "#" : ""), imm));
+            };
+            auto printSImm16 = [&](sint16 imm, bool hashPrefix) {
+                print(colors.immediate,
+                      fmt::format("{}{}${:X}", (imm < 0 ? "-" : ""), (hashPrefix ? "#" : ""), (uint16)abs(imm)));
+            };
+            auto printSImm32 = [&](sint32 imm, bool hashPrefix) {
+                print(colors.immediate,
+                      fmt::format("{}{}${:X}", (imm < 0 ? "-" : ""), (hashPrefix ? "#" : ""), (uint32)abs(imm)));
+            };
+
+            auto printRegSublist = [&](uint16 regList, bool read, bool write, char regPrefix, bool &printedOnce) {
+                uint16 bits = bit::extract<0, 7>(regList);
+                uint16 pos = 0;
+                uint16 numOnes = std::countr_one(bits);
+                while (bits != 0) {
+                    if (numOnes >= 1) {
+                        if (printedOnce) {
+                            printOperator("/");
+                        }
+                        if (numOnes == 1) {
+                            printOp(fmt::format("{}{}", regPrefix, pos), read, write);
+                        } else {
+                            printOp(fmt::format("{0}{1}-{0}{2}", regPrefix, pos, pos + numOnes - 1), read, write);
+                        }
+                        printedOnce = true;
+                    }
+
+                    bits >>= numOnes;
+                    const uint16 numZeros = std::countr_zero(bits);
+                    bits >>= numZeros;
+                    pos += numOnes + numZeros;
+                    numOnes = std::countr_one(bits);
+                }
+            };
+
+            auto printRegList = [&](uint16 regList, bool read, bool write) {
+                bool printedOnce = false;
+                printRegSublist(bit::extract<0, 7>(regList), read, write, 'd', printedOnce);
+                printRegSublist(bit::extract<8, 15>(regList), read, write, 'a', printedOnce);
+            };
+
+            auto printM68KOp = [&](const m68k::Operand &op, const m68k::OperandDetails &det) {
+                switch (op.type) {
+                case m68k::Operand::Type::None: break;
+                case m68k::Operand::Type::Dn: printOp(fmt::format("d{}", op.rn), op.read, op.write); break;
+                case m68k::Operand::Type::An: printOp(fmt::format("a{}", op.rn), op.read, op.write); break;
+                case m68k::Operand::Type::AtAn:
+                    printOp("(", op.read, op.write);
+                    printOpRead(fmt::format("a{}", op.rn));
+                    printOp(")", op.read, op.write);
+                    break;
+                case m68k::Operand::Type::AtAnPlus:
+                    printOp("(", op.read, op.write);
+                    printOpReadWrite(fmt::format("a{}", op.rn));
+                    printOp(")", op.read, op.write);
+                    printAddrInc();
+                    break;
+                case m68k::Operand::Type::MinusAtAn:
+                    printAddrDec();
+                    printOp("(", op.read, op.write);
+                    printOpReadWrite(fmt::format("a{}", op.rn));
+                    printOp(")", op.read, op.write);
+                    break;
+                case m68k::Operand::Type::AtDispAn:
+                    printSImm16(det.immDisp, false);
+                    printOp("(", op.read, op.write);
+                    printOpRead(fmt::format("a{}", op.rn));
+                    printOp(")", op.read, op.write);
+                    break;
+                case m68k::Operand::Type::AtDispAnIx:
+                    printSImm16(det.immDisp, false);
+                    printOp("(", op.read, op.write);
+                    printOpRead(fmt::format("a{}", op.rn));
+                    printComma();
+                    printOpRead(fmt::format("{}{}", (det.ix >= 8 ? 'a' : 'd'), det.ix & 7));
+                    printSizeSuffix(det.ixLong ? "l" : "w");
+                    printOp(")", op.read, op.write);
+                    break;
+                case m68k::Operand::Type::AtDispPC:
+                    printUImm32(det.immDisp + address, false);
+                    printOp("(", op.read, op.write);
+                    printOpRead("pc");
+                    printOp(")", op.read, op.write);
+                    break;
+                case m68k::Operand::Type::AtDispPCIx:
+                    printUImm32(det.immDisp + address, false);
+                    printOp("(", op.read, op.write);
+                    printOpRead("pc");
+                    printComma();
+                    printOpRead(fmt::format("{}{}", (det.ix >= 8 ? 'a' : 'd'), det.ix & 7));
+                    printSizeSuffix(det.ixLong ? "l" : "w");
+                    printOp(")", op.read, op.write);
+                    break;
+                case m68k::Operand::Type::AtImmWord:
+                    printUImm16(det.immDisp, false);
+                    printSizeSuffix("w");
+                    break;
+                case m68k::Operand::Type::AtImmLong:
+                    printUImm32(det.immDisp, false);
+                    printSizeSuffix("l");
+                    break;
+                case m68k::Operand::Type::UImmEmbedded: printUImm32(op.simm, true); break;
+                case m68k::Operand::Type::UImm8Fetched: printUImm8(det.immDisp, true); break;
+                case m68k::Operand::Type::UImm16Fetched: printUImm16(det.immDisp, true); break;
+                case m68k::Operand::Type::UImm32Fetched: printUImm32(det.immDisp, true); break;
+
+                case m68k::Operand::Type::WordDispPCEmbedded: printUImm32(op.simm + address, false); break;
+                case m68k::Operand::Type::WordDispPCFetched: printUImm32(det.immDisp + address, false); break;
+
+                case m68k::Operand::Type::CCR: printOp("ccr", op.read, op.write); break;
+                case m68k::Operand::Type::SR: printOp("sr", op.read, op.write); break;
+                case m68k::Operand::Type::USP: printOp("usp", op.read, op.write); break;
+
+                case m68k::Operand::Type::RegList: printRegList(det.regList, op.read, op.write); break;
+                case m68k::Operand::Type::RevRegList: printRegList(det.regList, op.read, op.write); break;
+                }
+            };
+
+            auto printOp1 = [&](const m68k::DisassembledInstruction &instr) { printM68KOp(instr.info.op1, instr.op1); };
+            auto printOp2 = [&](const m68k::DisassembledInstruction &instr) { printM68KOp(instr.info.op2, instr.op2); };
 
             size_t opcodeOffset = 0;
 
@@ -729,7 +977,7 @@ int main(int argc, char *argv[]) {
                 while (true) {
                     uint32 baseAddress = address;
 
-                    auto instr = m68k::Disassemble([&]() -> uint16 {
+                    const m68k::DisassembledInstruction instr = m68k::Disassemble([&]() -> uint16 {
                         if (!valid) {
                             return 0;
                         }
@@ -758,6 +1006,13 @@ int main(int argc, char *argv[]) {
                     printAddress(baseAddress);
                     printOpcodes(instr.opcodes);
                     printInstruction(instr);
+                    align(9);
+                    printOp1(instr);
+                    if (instr.info.op1.type != m68k::Operand::Type::None &&
+                        instr.info.op2.type != m68k::Operand::Type::None) {
+                        printComma();
+                    }
+                    printOp2(instr);
 
                     printReset();
                     x = 0;

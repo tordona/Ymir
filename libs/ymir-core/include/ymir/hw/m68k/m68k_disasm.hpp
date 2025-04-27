@@ -122,33 +122,37 @@ struct Operand {
         None,
 
         // Effective addresses
-        Dn,           // Dn
-        An,           // An
-        AtAn,         // (An)
-        AtAnPlus,     // (An)+
-        MinusAtAn,    // -(An)
-        AtDispAn,     // (disp,An)
-        AtDispAnIx,   // (disp,An,<ix>)
-        AtDispPC,     // (disp,PC)
-        AtDispPCIx,   // (disp,PC,<ix>)
-        AtImmWord,    // (xxx).w
-        AtImmLong,    // (xxx).l
-        SImmEmbedded, // #simm (embedded in opcode)
-        UImmEmbedded, // #uimm (embedded in opcode)
-        SImmFetched,  // #simm (fetched from next word(s))
-        UImmFetched,  // #uimm (fetched from next word(s))
+        Dn,            // Dn
+        An,            // An
+        AtAn,          // (An)
+        AtAnPlus,      // (An)+
+        MinusAtAn,     // -(An)
+        AtDispAn,      // (disp,An)
+        AtDispAnIx,    // (disp,An,<ix>)
+        AtDispPC,      // (disp,PC)
+        AtDispPCIx,    // (disp,PC,<ix>)
+        AtImmWord,     // (xxx).w
+        AtImmLong,     // (xxx).l
+        UImmEmbedded,  // #uimm (embedded in opcode)
+        UImm8Fetched,  // #uimm8 (fetched from next word)
+        UImm16Fetched, // #uimm16 (fetched from next word)
+        UImm32Fetched, // #uimm32 (fetched from next word)
+
+        WordDispPCEmbedded, // #disp (embedded in opcode)
+        WordDispPCFetched,  // #disp (fetched from next word)
 
         CCR, // CCR
         SR,  // SR
         USP, // USP
 
-        RegList, // <list>  (movem)
+        RegList,    // <list>  (movem)
+        RevRegList, // <list>  (movem predecrement - reversed list)
     };
 
     Type type;
     bool read, write;
     union {
-        uint8 rn;    // Dn, An: 0-7 = D0-7, 8-15 = A0-7
+        uint8 rn;    // Dn, An
         uint16 uimm; // #uimm (embedded in opcode)
         sint16 simm; // #simm (embedded in opcode)
     };
@@ -255,17 +259,24 @@ struct Operand {
         return {.type = Type::AtImmLong, .read = true, .write = true};
     }
 
-    static Operand SImmEmbedded(sint16 simm) {
-        return {.type = Type::SImmEmbedded, .simm = simm};
-    }
     static Operand UImmEmbedded(uint16 uimm) {
         return {.type = Type::UImmEmbedded, .uimm = uimm};
     }
-    static Operand SImmFetched() {
-        return {.type = Type::SImmFetched};
+    static Operand UImm8Fetched() {
+        return {.type = Type::UImm8Fetched};
     }
-    static Operand UImmFetched() {
-        return {.type = Type::UImmFetched};
+    static Operand UImm16Fetched() {
+        return {.type = Type::UImm16Fetched};
+    }
+    static Operand UImm32Fetched() {
+        return {.type = Type::UImm32Fetched};
+    }
+
+    static Operand WordDispPCEmbedded(sint16 imm) {
+        return {.type = Type::WordDispPCEmbedded, .simm = imm};
+    }
+    static Operand WordDispPCFetched() {
+        return {.type = Type::WordDispPCFetched};
     }
 
     static Operand CCR_R() {
@@ -294,6 +305,13 @@ struct Operand {
     }
     static Operand RegList_W() {
         return {.type = Type::RegList, .read = false, .write = true};
+    }
+
+    static Operand RevRegList_R() {
+        return {.type = Type::RevRegList, .read = true, .write = false};
+    }
+    static Operand RevRegList_W() {
+        return {.type = Type::RevRegList, .read = false, .write = true};
     }
 };
 
