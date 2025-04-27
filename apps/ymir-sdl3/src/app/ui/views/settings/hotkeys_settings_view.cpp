@@ -22,6 +22,7 @@ void HotkeysSettingsView::Display() {
         for (size_t i = 0; i < kNumBindsPerInput; i++) {
             ImGui::TableSetupColumn(fmt::format("Hotkey {}", i + 1).c_str(), ImGuiTableColumnFlags_WidthStretch, 1.0f);
         }
+        ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableHeadersRow();
 
         auto drawRow = [&](const char *type, const char *cmdName, InputBind &bind) {

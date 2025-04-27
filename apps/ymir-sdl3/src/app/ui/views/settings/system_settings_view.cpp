@@ -75,6 +75,7 @@ void SystemSettingsView::Display() {
 
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Preferred region order:");
+    widgets::ExplanationTooltip("Drag items to reorder");
 
     std::vector<config::sys::Region> prefRgnOrder{};
     {
