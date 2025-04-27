@@ -1018,6 +1018,86 @@ int main(int argc, char *argv[]) {
                     x = 0;
                 }
             } else {
+                std::ifstream in{inputFile, std::ios::binary};
+                if (!in) {
+                    std::error_code error{errno, std::generic_category()};
+                    fmt::println("Could not open file: {}", error.message());
+                    return 1;
+                }
+
+                in.seekg(0, std::ios::end);
+                const size_t fileSize = in.tellg();
+
+                size_t offset = 0;
+                size_t length = fileSize;
+
+                if (args.size() >= 1) {
+                    auto maybeOffset = ParseHex<size_t>(args[0]);
+                    if (!maybeOffset) {
+                        fmt::println("Invalid offset: {}", args[0]);
+                        return 1;
+                    }
+                    offset = *maybeOffset;
+                }
+                if (args.size() >= 2) {
+                    auto maybeLength = ParseHex<size_t>(args[1]);
+                    if (!maybeLength) {
+                        fmt::println("Invalid length: {}", args[1]);
+                        return 1;
+                    }
+                    length = *maybeLength;
+                }
+
+                length = std::min(length, fileSize - offset);
+
+                in.seekg(offset, std::ios::beg);
+
+                uint16 opcode{};
+
+                auto readOpcode = [&] {
+                    uint8 b[2] = {0};
+                    in.read((char *)b, 2);
+                    opcode = (static_cast<uint16>(b[0]) << 8u) | static_cast<uint16>(b[1]);
+                    return in.good();
+                };
+
+                bool valid = true;
+
+                while (true) {
+                    uint32 baseAddress = address;
+
+                    const m68k::DisassembledInstruction instr = m68k::Disassemble([&]() -> uint16 {
+                        if (!valid) {
+                            return 0;
+                        }
+                        if (!readOpcode()) {
+                            valid = false;
+                            return 0;
+                        }
+
+                        address += sizeof(uint16);
+                        ++opcodeOffset;
+                        return opcode;
+                    });
+
+                    if (!valid) {
+                        break;
+                    }
+
+                    printAddress(baseAddress);
+                    printOpcodes(instr.opcodes);
+                    printInstruction(instr);
+                    align(9);
+                    printOp1(instr);
+                    if (instr.info.op1.type != m68k::Operand::Type::None &&
+                        instr.info.op2.type != m68k::Operand::Type::None) {
+                        printComma();
+                    }
+                    printOp2(instr);
+
+                    printReset();
+                    x = 0;
+                }
             }
         } else if (lcisa == "scudsp") {
             auto maybeAddress = ParseHex<uint8>(origin);
