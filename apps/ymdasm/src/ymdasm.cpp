@@ -668,10 +668,18 @@ int main(int argc, char *argv[]) {
                 uint16 opcode{};
 
                 auto readOpcode = [&] {
+                    if (length == 0) {
+                        return false;
+                    }
                     uint8 b[2] = {0};
                     in.read((char *)b, 2);
                     opcode = (static_cast<uint16>(b[0]) << 8u) | static_cast<uint16>(b[1]);
-                    return in.good();
+                    if (in.good() && sizeof(b) < length) {
+                        length -= sizeof(b);
+                    } else {
+                        length = 0;
+                    }
+                    return length > 0;
                 };
 
                 while (readOpcode()) {
@@ -1055,10 +1063,18 @@ int main(int argc, char *argv[]) {
                 uint16 opcode{};
 
                 auto readOpcode = [&] {
+                    if (length <= 0) {
+                        return false;
+                    }
                     uint8 b[2] = {0};
                     in.read((char *)b, 2);
                     opcode = (static_cast<uint16>(b[0]) << 8u) | static_cast<uint16>(b[1]);
-                    return in.good();
+                    if (in.good() && sizeof(b) < length) {
+                        length -= sizeof(b);
+                    } else {
+                        length = 0;
+                    }
+                    return length > 0;
                 };
 
                 bool valid = true;
@@ -1321,11 +1337,19 @@ int main(int argc, char *argv[]) {
                 uint32 opcode{};
 
                 auto readOpcode = [&] {
+                    if (length == 0) {
+                        return false;
+                    }
                     uint8 b[4] = {0};
                     in.read((char *)b, 4);
                     opcode = (static_cast<uint32>(b[0]) << 24u) | (static_cast<uint32>(b[1]) << 16u) |
                              (static_cast<uint32>(b[2]) << 8u) | static_cast<uint32>(b[3]);
-                    return in.good();
+                    if (in.good() && sizeof(b) < length) {
+                        length -= sizeof(b);
+                    } else {
+                        length = 0;
+                    }
+                    return length > 0;
                 };
 
                 while (readOpcode()) {
@@ -1788,13 +1812,21 @@ int main(int argc, char *argv[]) {
                 uint64 opcode{};
 
                 auto readOpcode = [&] {
+                    if (length == 0) {
+                        return false;
+                    }
                     uint8 b[8] = {0};
                     in.read((char *)b, 8);
                     opcode = (static_cast<uint64>(b[0]) << 56ull) | (static_cast<uint64>(b[1]) << 48ull) |
                              (static_cast<uint64>(b[2]) << 40ull) | (static_cast<uint64>(b[3]) << 32ull) |
                              (static_cast<uint64>(b[4]) << 24ull) | (static_cast<uint64>(b[5]) << 16ull) |
                              (static_cast<uint64>(b[6]) << 8ull) | static_cast<uint64>(b[7]);
-                    return in.good();
+                    if (in.good() && sizeof(b) < length) {
+                        length -= sizeof(b);
+                    } else {
+                        length = 0;
+                    }
+                    return length > 0;
                 };
 
                 while (readOpcode()) {
