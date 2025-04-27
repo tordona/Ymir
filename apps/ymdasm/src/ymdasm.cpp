@@ -7,13 +7,13 @@
 
 #include <ymir/util/bit_ops.hpp>
 
-#include "ansi.hpp"
+#include "colors.hpp"
+#include "utils.hpp"
 
 #include <cxxopts.hpp>
 #include <fmt/format.h>
 
 #include <algorithm>
-#include <concepts>
 #include <fstream>
 #include <iostream>
 #include <optional>
@@ -24,135 +24,6 @@
 using namespace ymir;
 
 // TODO: reuse code where possible
-
-struct ColorEscapes {
-    const char *address;
-    const char *bytes;
-
-    const char *delaySlot;       // SH2 delay slot prefix
-    const char *mnemonic;        // All except NOP
-    const char *nopMnemonic;     // NOP
-    const char *illegalMnemonic; // (illegal)
-    const char *sizeSuffix;      // SH2/M68K size suffixes: b w l
-    const char *cond;            // Conditions: eq, ne, z, nz, T0, ...
-
-    const char *immediate;   // #0x1234
-    const char *opRead;      // Read operands
-    const char *opWrite;     // Written operands
-    const char *opReadWrite; // Read and written operands
-
-    const char *oper; // Operand (,); size suffix (.); operators (+, -, =, etc.)
-
-    const char *addrInc; // SH2 and M68K address increment (@Rn+, (An)+)
-    const char *addrDec; // SH2 and M68K address increment (@-Rn, -(An))
-
-    const char *comment; // Comments
-
-    const char *reset; // Color reset sequence
-};
-
-static ColorEscapes kNoColors = {
-    .address = "",
-    .bytes = "",
-
-    .delaySlot = "",
-    .mnemonic = "",
-    .nopMnemonic = "",
-    .illegalMnemonic = "",
-    .sizeSuffix = "",
-    .cond = "",
-
-    .immediate = "",
-    .opRead = "",
-    .opWrite = "",
-    .opReadWrite = "",
-
-    .oper = "",
-
-    .addrInc = "",
-    .addrDec = "",
-
-    .comment = "",
-
-    .reset = "",
-};
-
-static ColorEscapes kBasicColors = {
-    .address = ANSI_FGCOLOR_WHITE,
-    .bytes = ANSI_FGCOLOR_WHITE,
-
-    .delaySlot = ANSI_FGCOLOR_BLUE,
-    .mnemonic = ANSI_FGCOLOR_BRIGHT_CYAN,
-    .nopMnemonic = ANSI_FGCOLOR_CYAN,
-    .illegalMnemonic = ANSI_FGCOLOR_BRIGHT_RED,
-    .sizeSuffix = ANSI_FGCOLOR_BLUE,
-    .cond = ANSI_FGCOLOR_MAGENTA,
-
-    .immediate = ANSI_FGCOLOR_BRIGHT_YELLOW,
-    .opRead = ANSI_FGCOLOR_BRIGHT_GREEN,
-    .opWrite = ANSI_FGCOLOR_BRIGHT_MAGENTA,
-    .opReadWrite = ANSI_FGCOLOR_BRIGHT_YELLOW,
-
-    .oper = ANSI_FGCOLOR_BRIGHT_BLACK,
-
-    .addrInc = ANSI_FGCOLOR_GREEN,
-    .addrDec = ANSI_FGCOLOR_RED,
-
-    .comment = ANSI_FGCOLOR_BRIGHT_BLACK,
-
-    .reset = ANSI_RESET,
-};
-
-static ColorEscapes kTrueColors = {
-    .address = ANSI_FGCOLOR_24B(217, 216, 237),
-    .bytes = ANSI_FGCOLOR_24B(237, 236, 216),
-
-    .delaySlot = ANSI_FGCOLOR_24B(96, 112, 156),
-    .mnemonic = ANSI_FGCOLOR_24B(173, 216, 247),
-    .nopMnemonic = ANSI_FGCOLOR_24B(66, 81, 92),
-    .illegalMnemonic = ANSI_FGCOLOR_24B(247, 191, 173),
-    .sizeSuffix = ANSI_FGCOLOR_24B(143, 159, 207),
-    .cond = ANSI_FGCOLOR_24B(155, 146, 212),
-
-    .immediate = ANSI_FGCOLOR_24B(221, 247, 173),
-    .opRead = ANSI_FGCOLOR_24B(173, 247, 206),
-    .opWrite = ANSI_FGCOLOR_24B(215, 173, 247),
-    .opReadWrite = ANSI_FGCOLOR_24B(247, 206, 173),
-
-    .oper = ANSI_FGCOLOR_24B(186, 191, 194),
-
-    .addrInc = ANSI_FGCOLOR_24B(147, 194, 155),
-    .addrDec = ANSI_FGCOLOR_24B(194, 159, 147),
-
-    .comment = ANSI_FGCOLOR_24B(151, 154, 156),
-
-    .reset = ANSI_RESET,
-};
-
-template <std::unsigned_integral T>
-std::optional<T> ParseHex(std::string_view opcode) {
-    static constexpr size_t kHexOpcodeLength = sizeof(T) * 2;
-
-    if (opcode.size() > kHexOpcodeLength) {
-        fmt::println("Value \"{}\" exceeds maximum length of {} hex digits", opcode, kHexOpcodeLength);
-        return std::nullopt;
-    }
-
-    T value = 0;
-    for (char c : opcode) {
-        if (c >= '0' && c <= '9') {
-            value = (value << 4ull) + c - '0';
-        } else if (c >= 'A' && c <= 'F') {
-            value = (value << 4ull) + c - 'A' + 10;
-        } else if (c >= 'a' && c <= 'f') {
-            value = (value << 4ull) + c - 'a' + 10;
-        } else {
-            fmt::println("Value \"{}\" is not a valid hexadecimal number", opcode);
-            return std::nullopt;
-        }
-    }
-    return value;
-}
 
 int main(int argc, char *argv[]) {
     bool showHelp = false;
@@ -236,7 +107,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Color mode must be one of the valid modes
-        ColorEscapes colors = kNoColors;
+        Colors colors = kNoColors;
         if (result.contains("color")) {
             std::string lcColorMode = colorMode;
             std::transform(lcColorMode.cbegin(), lcColorMode.cend(), lcColorMode.begin(),
