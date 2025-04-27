@@ -274,6 +274,48 @@ struct SH2Disassembler {
     bool isDelaySlot = false;
 };
 
+struct SH2Opcode {
+    uint16 opcode;
+    int forceDelaySlot = 0;
+};
+
+struct SH2CommandLineOpcodeParser {
+    static OpcodeFetchResult<SH2Opcode> Parse(std::string_view arg) {
+        std::string_view strippedOpcode = arg;
+
+        // 0 = no change; +1 = force delay slot, -1 = force non-delay slot
+        int forceDelaySlot = 0;
+        if (arg.starts_with('_')) {
+            forceDelaySlot = +1;
+            strippedOpcode = strippedOpcode.substr(1);
+        } else if (arg.starts_with('!')) {
+            forceDelaySlot = -1;
+            strippedOpcode = strippedOpcode.substr(1);
+        }
+
+        auto maybeOpcode = ParseHex<uint16>(strippedOpcode);
+        if (!maybeOpcode) {
+            return OpcodeFetchError{fmt::format("Invalid opcode: {}", arg)};
+        }
+
+        const uint16 opcode = *maybeOpcode;
+        return SH2Opcode{opcode, forceDelaySlot};
+    }
+};
+
+struct SH2StreamOpcodeParser {
+    static SH2Opcode Parse(std::istream &input) {
+        uint16 opcode{};
+        input.read((char *)&opcode, sizeof(uint16));
+        opcode = bit::big_endian_swap(opcode);
+        return SH2Opcode{opcode, 0};
+    }
+};
+
+using SH2OpcodeFetcher = IOpcodeFetcher<SH2Opcode>;
+using CommandLineSH2OpcodeFetcher = CommandLineOpcodeFetcher<SH2Opcode, SH2CommandLineOpcodeParser>;
+using StreamSH2OpcodeFetcher = StreamOpcodeFetcher<SH2Opcode, SH2StreamOpcodeParser>;
+
 bool DisassembleSH2(Disassembler &disasm, std::string_view origin, const std::vector<std::string> &args,
                     const std::string &inputFile) {
     auto maybeAddress = ParseHex<uint32>(origin);
@@ -284,48 +326,6 @@ bool DisassembleSH2(Disassembler &disasm, std::string_view origin, const std::ve
 
     SH2Disassembler sh2Disasm{disasm};
     sh2Disasm.address = *maybeAddress;
-
-    struct SH2Opcode {
-        uint16 opcode;
-        int forceDelaySlot = 0;
-    };
-
-    struct SH2CommandLineOpcodeParser {
-        static OpcodeFetchResult<SH2Opcode> Parse(std::string_view arg) {
-            std::string_view strippedOpcode = arg;
-
-            // 0 = no change; +1 = force delay slot, -1 = force non-delay slot
-            int forceDelaySlot = 0;
-            if (arg.starts_with('_')) {
-                forceDelaySlot = +1;
-                strippedOpcode = strippedOpcode.substr(1);
-            } else if (arg.starts_with('!')) {
-                forceDelaySlot = -1;
-                strippedOpcode = strippedOpcode.substr(1);
-            }
-
-            auto maybeOpcode = ParseHex<uint16>(strippedOpcode);
-            if (!maybeOpcode) {
-                return OpcodeFetchError{fmt::format("Invalid opcode: {}", arg)};
-            }
-
-            const uint16 opcode = *maybeOpcode;
-            return SH2Opcode{opcode, forceDelaySlot};
-        }
-    };
-
-    struct SH2StreamOpcodeParser {
-        static SH2Opcode Parse(std::istream &input) {
-            uint16 opcode{};
-            input.read((char *)&opcode, sizeof(uint16));
-            opcode = bit::big_endian_swap(opcode);
-            return SH2Opcode{opcode, 0};
-        }
-    };
-
-    using SH2OpcodeFetcher = IOpcodeFetcher<SH2Opcode>;
-    using CommandLineSH2OpcodeFetcher = CommandLineOpcodeFetcher<SH2Opcode, SH2CommandLineOpcodeParser>;
-    using StreamSH2OpcodeFetcher = StreamOpcodeFetcher<SH2Opcode, SH2StreamOpcodeParser>;
 
     auto fetcher = MakeFetcher<SH2OpcodeFetcher, CommandLineSH2OpcodeFetcher, StreamSH2OpcodeFetcher>(args, inputFile);
 

@@ -3,8 +3,11 @@ add_executable(ymdasm
     src/ansi.hpp
     src/colors.hpp
     src/disassembler.hpp
+    src/disassembler_m68k.cpp
     src/disassembler_m68k.hpp
+    src/disassembler_scspdsp.cpp
     src/disassembler_scspdsp.hpp
+    src/disassembler_scudsp.cpp
     src/disassembler_scudsp.hpp
     src/disassembler_sh2.cpp
     src/disassembler_sh2.hpp

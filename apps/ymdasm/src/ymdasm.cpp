@@ -138,113 +138,21 @@ int main(int argc, char *argv[]) {
         std::string lcisa = isa;
         std::transform(lcisa.cbegin(), lcisa.cend(), lcisa.begin(), [](char c) { return std::tolower(c); });
         if (lcisa == "sh2" || lcisa == "sh-2") {
-            DisassembleSH2(disasm, origin, args, inputFile);
-        } else if (lcisa == "m68k" || lcisa == "m68000") {
-            auto maybeAddress = ParseHex<uint32>(origin);
-            if (!maybeAddress) {
-                fmt::println("Invalid origin address: {}", origin);
+            if (!DisassembleSH2(disasm, origin, args, inputFile)) {
                 return 1;
             }
-
-            M68KDisassembler m68kDisasm{disasm};
-            m68kDisasm.address = *maybeAddress;
-
-            using M68KOpcode = uint16;
-            using M68KOpcodeFetcher = IOpcodeFetcher<M68KOpcode>;
-            using CommandLineM68KOpcodeFetcher = CommandLineOpcodeFetcher<M68KOpcode>;
-            using StreamM68KOpcodeFetcher = StreamOpcodeFetcher<M68KOpcode>;
-
-            auto fetcher =
-                MakeFetcher<M68KOpcodeFetcher, CommandLineM68KOpcodeFetcher, StreamM68KOpcodeFetcher>(args, inputFile);
-
-            while (m68kDisasm.valid) {
-                m68kDisasm.Disassemble([&]() -> uint16 {
-                    if (!m68kDisasm.valid) {
-                        return 0;
-                    }
-
-                    auto result = fetcher->Fetch();
-                    if (std::holds_alternative<M68KOpcode>(result)) {
-                        return std::get<M68KOpcode>(result);
-                    } else {
-                        if (std::holds_alternative<OpcodeFetchError>(result)) {
-                            auto &error = std::get<OpcodeFetchError>(result);
-                            fmt::println("{}", error.message);
-                        }
-                        m68kDisasm.valid = false;
-                        return 0;
-                    }
-                });
+        } else if (lcisa == "m68k" || lcisa == "m68000") {
+            if (!DisassembleM68K(disasm, origin, args, inputFile)) {
+                return 1;
             }
         } else if (lcisa == "scudsp") {
-            auto maybeAddress = ParseHex<uint8>(origin);
-            if (!maybeAddress) {
-                fmt::println("Invalid origin address: {}", origin);
+            if (!DisassembleSCUDSP(disasm, origin, args, inputFile)) {
                 return 1;
-            }
-
-            SCUDSPDisassembler scuDspDisasm{disasm};
-            scuDspDisasm.address = *maybeAddress;
-
-            using SCUDSPOpcode = uint32;
-            using SCUDSPOpcodeFetcher = IOpcodeFetcher<SCUDSPOpcode>;
-            using CommandLineSCUDSPOpcodeFetcher = CommandLineOpcodeFetcher<SCUDSPOpcode>;
-            using StreamSCUDSPOpcodeFetcher = StreamOpcodeFetcher<SCUDSPOpcode>;
-
-            auto fetcher = MakeFetcher<SCUDSPOpcodeFetcher, CommandLineSCUDSPOpcodeFetcher, StreamSCUDSPOpcodeFetcher>(
-                args, inputFile);
-
-            bool running = true;
-            const auto visitor = overloads{
-                [&](SCUDSPOpcode opcode) { scuDspDisasm.Disassemble(opcode); },
-                [&](OpcodeFetchError &error) {
-                    fmt::println("{}", error.message);
-                    running = false;
-                },
-                [&](OpcodeFetchEnd) { running = false; },
-            };
-
-            while (running) {
-                auto result = fetcher->Fetch();
-                std::visit(visitor, result);
             }
         } else if (lcisa == "scspdspraw" || lcisa == "scspdsp") {
-            const bool rawDisasm = lcisa == "scspdspraw";
-            auto maybeAddress = ParseHex<uint8>(origin);
-            if (!maybeAddress) {
-                fmt::println("Invalid origin address: {}", origin);
+            const bool raw = lcisa == "scspdspraw";
+            if (!DisassembleSCSPDSP(disasm, origin, args, inputFile, raw)) {
                 return 1;
-            }
-
-            SCSPDSPDisassembler scspDspDisasm{disasm};
-            scspDspDisasm.address = *maybeAddress;
-            if (scspDspDisasm.address >= 128) {
-                fmt::println("Invalid origin address: {}", origin);
-                return 1;
-            }
-
-            using SCSPDSPOpcode = uint64;
-            using SCSPDSPOpcodeFetcher = IOpcodeFetcher<SCSPDSPOpcode>;
-            using CommandLineSCSPDSPOpcodeFetcher = CommandLineOpcodeFetcher<SCSPDSPOpcode>;
-            using StreamSCSPDSPOpcodeFetcher = StreamOpcodeFetcher<SCSPDSPOpcode>;
-
-            auto fetcher =
-                MakeFetcher<SCSPDSPOpcodeFetcher, CommandLineSCSPDSPOpcodeFetcher, StreamSCSPDSPOpcodeFetcher>(
-                    args, inputFile);
-
-            bool running = true;
-            const auto visitor = overloads{
-                [&](SCSPDSPOpcode &opcode) { scspDspDisasm.Disassemble(opcode, rawDisasm); },
-                [&](OpcodeFetchError &error) {
-                    fmt::println("{}", error.message);
-                    running = false;
-                },
-                [&](OpcodeFetchEnd) { running = false; },
-            };
-
-            while (running) {
-                auto result = fetcher->Fetch();
-                std::visit(visitor, result);
             }
         } else {
             fmt::println("Invalid ISA: {}", isa);
