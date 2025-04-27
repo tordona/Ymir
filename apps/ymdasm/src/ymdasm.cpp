@@ -453,6 +453,35 @@ int main(int argc, char *argv[]) {
 
             auto printComment = [&](std::string_view comment) { print(colors.comment, comment); };
 
+            auto printDisassembly = [&](uint16 opcode, int forceDelaySlot = 0) {
+                const sh2::DisassembledInstruction &instr = sh2::Disassemble(opcode);
+
+                bool delaySlotState = (isDelaySlot || forceDelaySlot > 0) && forceDelaySlot >= 0;
+
+                printAddress(address);
+                printOpcode(opcode);
+                printInstruction(instr, delaySlotState);
+                align(12);
+                printOp1(instr);
+                if (instr.op1.type != sh2::Operand::Type::None && instr.op2.type != sh2::Operand::Type::None) {
+                    printComma();
+                }
+                printOp2(instr);
+
+                align(34);
+                if (forceDelaySlot > 0) {
+                    printComment("; delay slot override");
+                } else if (forceDelaySlot < 0) {
+                    printComment("; non-delay slot override");
+                }
+
+                printReset();
+                x = 0;
+
+                isDelaySlot = instr.hasDelaySlot;
+                address += sizeof(opcode);
+            };
+
             if (inputFile.empty()) {
                 for (auto &opcodeStr : args) {
                     std::string_view strippedOpcode = opcodeStr;
@@ -474,32 +503,7 @@ int main(int argc, char *argv[]) {
                     }
                     const uint16 opcode = *maybeOpcode;
 
-                    const sh2::DisassembledInstruction &instr = sh2::Disassemble(opcode);
-
-                    bool delaySlotState = (isDelaySlot || forceDelaySlot > 0) && forceDelaySlot >= 0;
-
-                    printAddress(address);
-                    printOpcode(opcode);
-                    printInstruction(instr, delaySlotState);
-                    align(12);
-                    printOp1(instr);
-                    if (instr.op1.type != sh2::Operand::Type::None && instr.op2.type != sh2::Operand::Type::None) {
-                        printComma();
-                    }
-                    printOp2(instr);
-
-                    align(34);
-                    if (forceDelaySlot > 0) {
-                        printComment("; delay slot override");
-                    } else if (forceDelaySlot < 0) {
-                        printComment("; non-delay slot override");
-                    }
-
-                    printReset();
-                    x = 0;
-
-                    isDelaySlot = instr.hasDelaySlot;
-                    address += sizeof(opcode);
+                    printDisassembly(opcode, forceDelaySlot);
                 }
             } else {
                 std::ifstream in{inputFile, std::ios::binary};
@@ -545,32 +549,17 @@ int main(int argc, char *argv[]) {
                     uint8 b[2] = {0};
                     in.read((char *)b, 2);
                     opcode = (static_cast<uint16>(b[0]) << 8u) | static_cast<uint16>(b[1]);
-                    if (in.good() && sizeof(b) < length) {
+                    if (in.good() && sizeof(b) <= length) {
                         length -= sizeof(b);
+                        return true;
                     } else {
                         length = 0;
+                        return false;
                     }
-                    return length > 0;
                 };
 
                 while (readOpcode()) {
-                    const sh2::DisassembledInstruction &instr = sh2::Disassemble(opcode);
-
-                    printAddress(address);
-                    printOpcode(opcode);
-                    printInstruction(instr, isDelaySlot);
-                    align(12);
-                    printOp1(instr);
-                    if (instr.op1.type != sh2::Operand::Type::None && instr.op2.type != sh2::Operand::Type::None) {
-                        printComma();
-                    }
-                    printOp2(instr);
-
-                    printReset();
-                    x = 0;
-
-                    isDelaySlot = instr.hasDelaySlot;
-                    address += sizeof(opcode);
+                    printDisassembly(opcode);
                 }
             }
         } else if (lcisa == "m68k" || lcisa == "m68000") {
@@ -849,14 +838,35 @@ int main(int argc, char *argv[]) {
             auto printOp2 = [&](const m68k::DisassembledInstruction &instr) { printM68KOp(instr.info.op2, instr.op2); };
 
             size_t opcodeOffset = 0;
+            bool valid = true;
+
+            auto printDisassembly = [&](auto fetcher) {
+                uint32 baseAddress = address;
+
+                const m68k::DisassembledInstruction instr = m68k::Disassemble(fetcher);
+
+                if (!valid) {
+                    return;
+                }
+
+                printAddress(baseAddress);
+                printOpcodes(instr.opcodes);
+                printInstruction(instr);
+                align(9);
+                printOp1(instr);
+                if (instr.info.op1.type != m68k::Operand::Type::None &&
+                    instr.info.op2.type != m68k::Operand::Type::None) {
+                    printComma();
+                }
+                printOp2(instr);
+
+                printReset();
+                x = 0;
+            };
 
             if (inputFile.empty()) {
-                bool valid = true;
-
-                while (true) {
-                    uint32 baseAddress = address;
-
-                    const m68k::DisassembledInstruction instr = m68k::Disassemble([&]() -> uint16 {
+                while (valid) {
+                    printDisassembly([&]() -> uint16 {
                         if (!valid) {
                             return 0;
                         }
@@ -877,24 +887,6 @@ int main(int argc, char *argv[]) {
                         ++opcodeOffset;
                         return *maybeOpcode;
                     });
-
-                    if (!valid) {
-                        break;
-                    }
-
-                    printAddress(baseAddress);
-                    printOpcodes(instr.opcodes);
-                    printInstruction(instr);
-                    align(9);
-                    printOp1(instr);
-                    if (instr.info.op1.type != m68k::Operand::Type::None &&
-                        instr.info.op2.type != m68k::Operand::Type::None) {
-                        printComma();
-                    }
-                    printOp2(instr);
-
-                    printReset();
-                    x = 0;
                 }
             } else {
                 std::ifstream in{inputFile, std::ios::binary};
@@ -940,20 +932,17 @@ int main(int argc, char *argv[]) {
                     uint8 b[2] = {0};
                     in.read((char *)b, 2);
                     opcode = (static_cast<uint16>(b[0]) << 8u) | static_cast<uint16>(b[1]);
-                    if (in.good() && sizeof(b) < length) {
+                    if (in.good() && sizeof(b) <= length) {
                         length -= sizeof(b);
+                        return true;
                     } else {
                         length = 0;
+                        return false;
                     }
-                    return length > 0;
                 };
 
-                bool valid = true;
-
-                while (true) {
-                    uint32 baseAddress = address;
-
-                    const m68k::DisassembledInstruction instr = m68k::Disassemble([&]() -> uint16 {
+                while (valid) {
+                    printDisassembly([&]() -> uint16 {
                         if (!valid) {
                             return 0;
                         }
@@ -966,24 +955,6 @@ int main(int argc, char *argv[]) {
                         ++opcodeOffset;
                         return opcode;
                     });
-
-                    if (!valid) {
-                        break;
-                    }
-
-                    printAddress(baseAddress);
-                    printOpcodes(instr.opcodes);
-                    printInstruction(instr);
-                    align(9);
-                    printOp1(instr);
-                    if (instr.info.op1.type != m68k::Operand::Type::None &&
-                        instr.info.op2.type != m68k::Operand::Type::None) {
-                        printComma();
-                    }
-                    printOp2(instr);
-
-                    printReset();
-                    x = 0;
                 }
             }
         } else if (lcisa == "scudsp") {
@@ -1150,6 +1121,19 @@ int main(int argc, char *argv[]) {
                 }
             };
 
+            auto printDisassembly = [&](uint32 opcode) {
+                const scu::SCUDSPInstruction &instr = scu::Disassemble(opcode);
+
+                printAddress(address);
+                printOpcode(opcode);
+                printInstruction(instr);
+
+                printReset();
+                x = 0;
+
+                ++address;
+            };
+
             if (inputFile.empty()) {
                 for (auto &opcodeStr : args) {
                     auto maybeOpcode = ParseHex<uint32>(opcodeStr);
@@ -1158,17 +1142,7 @@ int main(int argc, char *argv[]) {
                         return 1;
                     }
                     const uint32 opcode = *maybeOpcode;
-
-                    const scu::SCUDSPInstruction &instr = scu::Disassemble(opcode);
-
-                    printAddress(address);
-                    printOpcode(opcode);
-                    printInstruction(instr);
-
-                    printReset();
-                    x = 0;
-
-                    ++address;
+                    printDisassembly(opcode);
                 }
             } else {
                 std::ifstream in{inputFile, std::ios::binary};
@@ -1215,25 +1189,17 @@ int main(int argc, char *argv[]) {
                     in.read((char *)b, 4);
                     opcode = (static_cast<uint32>(b[0]) << 24u) | (static_cast<uint32>(b[1]) << 16u) |
                              (static_cast<uint32>(b[2]) << 8u) | static_cast<uint32>(b[3]);
-                    if (in.good() && sizeof(b) < length) {
+                    if (in.good() && sizeof(b) <= length) {
                         length -= sizeof(b);
+                        return true;
                     } else {
                         length = 0;
+                        return false;
                     }
-                    return length > 0;
                 };
 
                 while (readOpcode()) {
-                    const scu::SCUDSPInstruction &instr = scu::Disassemble(opcode);
-
-                    printAddress(address);
-                    printOpcode(opcode);
-                    printInstruction(instr);
-
-                    printReset();
-                    x = 0;
-
-                    ++address;
+                    printDisassembly(opcode);
                 }
             }
         } else if (lcisa == "scspdspraw" || lcisa == "scspdsp") {
@@ -1261,7 +1227,9 @@ int main(int argc, char *argv[]) {
                 }
             };
 
-            auto printImm = [&](uint64 imm) { print(colors.immediate, fmt::format("0x{:X}", imm)); };
+            auto printImm = [&](uint64 imm, uint8 width = 1) {
+                print(colors.immediate, fmt::format("0x{:0{}X}", imm, width));
+            };
             auto printImmDec = [&](uint64 imm) { print(colors.immediate, fmt::format("{:d}", imm)); };
 
             auto printBitRange = [&](uint32 high, uint32 low) {
@@ -1284,7 +1252,7 @@ int main(int argc, char *argv[]) {
                     if (instr.IRA <= 0x1F) {
                         printOpRead("MEMS");
                         printOperator("[");
-                        printImm(instr.IRA);
+                        printImm(instr.IRA, 2);
                         printOperator("]");
                     } else if (instr.IRA <= 0x2F) {
                         printOpRead("MIXS");
@@ -1304,7 +1272,7 @@ int main(int argc, char *argv[]) {
                         align(15);
                         printMnemonic("IWA");
                         printOperator("=");
-                        printImm(instr.IWA);
+                        printImm(instr.IWA, 2);
                     }
 
                     align(24);
@@ -1316,7 +1284,7 @@ int main(int argc, char *argv[]) {
                         align(33);
                         printMnemonic("TWA");
                         printOperator("=");
-                        printImm(instr.TWA);
+                        printImm(instr.TWA, 2);
                     }
 
                     align(42);
@@ -1335,7 +1303,7 @@ int main(int argc, char *argv[]) {
                     case 1:
                         printOpRead("COEF");
                         printOperator("[");
-                        printImm(instr.CRA);
+                        printImm(instr.CRA, 2);
                         printOperator("]");
                         break;
                     case 2:
@@ -1386,14 +1354,14 @@ int main(int argc, char *argv[]) {
                         align(101);
                         printMnemonic("EWA");
                         printOperator("=");
-                        printImm(instr.EWA);
+                        printImm(instr.EWA, 2);
                     }
 
                     if (instr.MRD || instr.MWT) {
                         align(109);
                         printMnemonic("MASA");
                         printOperator("=");
-                        printImm(instr.MASA);
+                        printImm(instr.MASA, 2);
                         if (instr.MRD) {
                             align(119);
                             printMnemonic("MRD");
@@ -1430,7 +1398,7 @@ int main(int argc, char *argv[]) {
                     if (instr.IRA <= 0x1F) {
                         printOpRead("MEMS");
                         printOperator("[");
-                        printImm(instr.IRA);
+                        printImm(instr.IRA, 2);
                         printOperator("]");
                     } else if (instr.IRA <= 0x2F) {
                         printOpRead("MIXS");
@@ -1451,7 +1419,7 @@ int main(int argc, char *argv[]) {
                     printOperator("<-");
                     printOpRead("TEMP");
                     printOperator("[");
-                    printImm(instr.TRA);
+                    printImm(instr.TRA, 2);
                     printOperator("+");
                     printOpRead("MDEC_CT");
                     printOperator("]");
@@ -1470,7 +1438,7 @@ int main(int argc, char *argv[]) {
                     case 1:
                         printOpRead("COEF");
                         printOperator("[");
-                        printImm(instr.CRA);
+                        printImm(instr.CRA, 2);
                         printOperator("]");
                         break;
                     case 2:
@@ -1524,7 +1492,7 @@ int main(int argc, char *argv[]) {
                     if (instr.EWT) {
                         printOpWrite("EFREG");
                         printOperator("[");
-                        printImm(instr.EWA);
+                        printImm(instr.EWA, 2);
                         printOperator("]");
                         printOperator("<-");
                         printOpRead("SFT");
@@ -1535,7 +1503,7 @@ int main(int argc, char *argv[]) {
                     if (instr.TWT) {
                         printOpWrite("TEMP");
                         printOperator("[");
-                        printImm(instr.TWA);
+                        printImm(instr.TWA, 2);
                         printOperator("+");
                         printOpRead("MDEC_CT");
                         printOperator("]");
@@ -1547,7 +1515,7 @@ int main(int argc, char *argv[]) {
                     if (instr.IWT) {
                         printOpWrite("MEMS");
                         printOperator("[");
-                        printImm(instr.IWA);
+                        printImm(instr.IWA, 2);
                         printOperator("]");
                         printOperator("<-");
                         printOpRead("MEM");
@@ -1563,7 +1531,7 @@ int main(int argc, char *argv[]) {
                         }
                         printOpRead("MADRS");
                         printOperator("[");
-                        printImm(instr.MASA);
+                        printImm(instr.MASA, 2);
                         printOperator("]");
                         if (instr.ADREB) {
                             printOperator("+");
@@ -1625,6 +1593,19 @@ int main(int argc, char *argv[]) {
                 }
             };
 
+            auto printDisassembly = [&](uint64 opcode) {
+                const scsp::DSPInstr instr{.u64 = opcode};
+
+                printAddress(address);
+                printOpcode(opcode);
+                printInstruction(instr);
+
+                printReset();
+                x = 0;
+
+                ++address;
+            };
+
             if (inputFile.empty()) {
                 for (auto &opcodeStr : args) {
                     auto maybeOpcode = ParseHex<uint64>(opcodeStr);
@@ -1633,17 +1614,7 @@ int main(int argc, char *argv[]) {
                         return 1;
                     }
                     const uint64 opcode = *maybeOpcode;
-
-                    const scsp::DSPInstr instr{.u64 = opcode};
-
-                    printAddress(address);
-                    printOpcode(opcode);
-                    printInstruction(instr);
-
-                    printReset();
-                    x = 0;
-
-                    ++address;
+                    printDisassembly(opcode);
                 }
             } else {
                 std::ifstream in{inputFile, std::ios::binary};
@@ -1692,25 +1663,17 @@ int main(int argc, char *argv[]) {
                              (static_cast<uint64>(b[2]) << 40ull) | (static_cast<uint64>(b[3]) << 32ull) |
                              (static_cast<uint64>(b[4]) << 24ull) | (static_cast<uint64>(b[5]) << 16ull) |
                              (static_cast<uint64>(b[6]) << 8ull) | static_cast<uint64>(b[7]);
-                    if (in.good() && sizeof(b) < length) {
+                    if (in.good() && sizeof(b) <= length) {
                         length -= sizeof(b);
+                        return true;
                     } else {
                         length = 0;
+                        return false;
                     }
-                    return length > 0;
                 };
 
                 while (readOpcode()) {
-                    const scsp::DSPInstr instr{.u64 = opcode};
-
-                    printAddress(address);
-                    printOpcode(opcode);
-                    printInstruction(instr);
-
-                    printReset();
-                    x = 0;
-
-                    ++address;
+                    printDisassembly(opcode);
                 }
             }
         } else {

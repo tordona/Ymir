@@ -169,17 +169,38 @@ FORCE_INLINE constexpr T scatter(T value) {
 namespace detail {
 
     template <class T, std::size_t... N>
-    constexpr T byte_swap_impl(T i, std::index_sequence<N...>) {
-        return ((((i >> (N * CHAR_BIT)) & (T)(unsigned char)(-1)) << ((sizeof(T) - 1 - N) * CHAR_BIT)) | ...);
+    constexpr T byte_swap_impl(T value, std::index_sequence<N...>) {
+        return ((((value >> (N * CHAR_BIT)) & (T)(unsigned char)(-1)) << ((sizeof(T) - 1 - N) * CHAR_BIT)) | ...);
     };
 
 } // namespace detail
 
 // Byte swaps the given value
 template <std::unsigned_integral T>
-constexpr decltype(auto) byte_swap(T i) {
-    using U = typename std::make_unsigned_t<T>;
-    return detail::byte_swap_impl<U>(i, std::make_index_sequence<sizeof(T)>{});
+constexpr T byte_swap(T value) {
+    return detail::byte_swap_impl<T>(value, std::make_index_sequence<sizeof(T)>{});
+}
+
+// Byte swaps the given value if the endianness doesn't match native endianness
+template <std::endian endianness, std::unsigned_integral T>
+constexpr T endian_swap(T value) {
+    if constexpr (endianness == std::endian::native) {
+        return value;
+    } else {
+        return byte_swap(value);
+    }
+}
+
+// Byte swaps the given value if the native endianness is not big-endian
+template <std::unsigned_integral T>
+constexpr T big_endian_swap(T value) {
+    return endian_swap<std::endian::big>(value);
+}
+
+// Byte swaps the given value if the native endianness is not little-endian
+template <std::unsigned_integral T>
+constexpr T little_endian_swap(T value) {
+    return endian_swap<std::endian::little>(value);
 }
 
 // Reverses the bits of the given value

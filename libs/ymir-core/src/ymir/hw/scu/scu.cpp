@@ -275,11 +275,19 @@ void SCU::AcknowledgeExternalInterrupt() {
 }
 
 void SCU::DumpDSPProgramRAM(std::ostream &out) const {
-    out.write((const char *)m_dsp.programRAM.data(), sizeof(m_dsp.programRAM));
+    for (uint32 i = 0; i < m_dsp.programRAM.size(); ++i) {
+        const uint32 value = bit::big_endian_swap(m_dsp.programRAM[i]);
+        out.write((const char *)&value, sizeof(value));
+    }
 }
 
 void SCU::DumpDSPDataRAM(std::ostream &out) const {
-    out.write((const char *)m_dsp.dataRAM.data(), sizeof(m_dsp.dataRAM));
+    for (uint32 i = 0; i < m_dsp.dataRAM.size(); ++i) {
+        for (uint32 j = 0; j < m_dsp.dataRAM[j].size(); ++j) {
+            const uint32 value = bit::big_endian_swap(m_dsp.dataRAM[i][j]);
+            out.write((const char *)&value, sizeof(value));
+        }
+    }
 }
 
 void SCU::DumpDSPRegs(std::ostream &out) const {

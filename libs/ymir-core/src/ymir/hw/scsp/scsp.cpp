@@ -163,35 +163,59 @@ void SCSP::DumpWRAM(std::ostream &out) const {
 }
 
 void SCSP::DumpDSP_MPRO(std::ostream &out) const {
-    out.write((const char *)m_dsp.program.data(), sizeof(m_dsp.program));
+    for (DSPInstr instr : m_dsp.program) {
+        uint64 value = bit::big_endian_swap(instr.u64);
+        out.write((const char *)&value, sizeof(value));
+    }
 }
 
 void SCSP::DumpDSP_TEMP(std::ostream &out) const {
-    out.write((const char *)m_dsp.tempMem.data(), sizeof(m_dsp.tempMem));
+    for (uint32 value : m_dsp.tempMem) {
+        value = bit::big_endian_swap(value);
+        out.write((const char *)&value, sizeof(value));
+    }
 }
 
 void SCSP::DumpDSP_MEMS(std::ostream &out) const {
-    out.write((const char *)m_dsp.soundMem.data(), sizeof(m_dsp.soundMem));
+    for (uint32 value : m_dsp.soundMem) {
+        value = bit::big_endian_swap(value);
+        out.write((const char *)&value, sizeof(value));
+    }
 }
 
 void SCSP::DumpDSP_COEF(std::ostream &out) const {
-    out.write((const char *)m_dsp.coeffs.data(), sizeof(m_dsp.coeffs));
+    for (uint16 value : m_dsp.coeffs) {
+        value = bit::big_endian_swap(value);
+        out.write((const char *)&value, sizeof(value));
+    }
 }
 
 void SCSP::DumpDSP_MADRS(std::ostream &out) const {
-    out.write((const char *)m_dsp.addrs.data(), sizeof(m_dsp.addrs));
+    for (uint16 value : m_dsp.addrs) {
+        value = bit::big_endian_swap(value);
+        out.write((const char *)&value, sizeof(value));
+    }
 }
 
 void SCSP::DumpDSP_MIXS(std::ostream &out) const {
-    out.write((const char *)m_dsp.mixStack.data(), sizeof(m_dsp.mixStack));
+    for (uint32 value : m_dsp.mixStack) {
+        value = bit::big_endian_swap(value);
+        out.write((const char *)&value, sizeof(value));
+    }
 }
 
 void SCSP::DumpDSP_EFREG(std::ostream &out) const {
-    out.write((const char *)m_dsp.effectOut.data(), sizeof(m_dsp.effectOut));
+    for (uint16 value : m_dsp.effectOut) {
+        value = bit::big_endian_swap(value);
+        out.write((const char *)&value, sizeof(value));
+    }
 }
 
 void SCSP::DumpDSP_EXTS(std::ostream &out) const {
-    out.write((const char *)m_dsp.audioInOut.data(), sizeof(m_dsp.audioInOut));
+    for (uint16 value : m_dsp.audioInOut) {
+        value = bit::big_endian_swap(value);
+        out.write((const char *)&value, sizeof(value));
+    }
 }
 
 void SCSP::DumpDSPRegs(std::ostream &out) const {
