@@ -4,11 +4,16 @@
 
 #include <ymir/util/bit_ops.hpp>
 
+#include <fmt/format.h>
+
 #include <istream>
+#include <limits>
 #include <memory>
 #include <span>
 #include <string>
+#include <system_error>
 #include <variant>
+#include <vector>
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Return types
@@ -122,3 +127,43 @@ private:
     std::unique_ptr<std::istream> m_input;
     size_t m_endPos;
 };
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Opcode fetcher selector
+
+template <typename TBaseFetcher, typename TCmdLineFetcher, typename TStreamFetcher>
+    requires std::derived_from<TCmdLineFetcher, TBaseFetcher> && std::derived_from<TStreamFetcher, TBaseFetcher>
+std::unique_ptr<TBaseFetcher> MakeFetcher(const std::vector<std::string> &args, const std::string &inputFile) {
+    if (inputFile.empty()) {
+        return std::make_unique<TCmdLineFetcher>(args);
+    }
+
+    auto in = std::make_unique<std::ifstream>(inputFile, std::ios::binary);
+    if (!in || !(*in)) {
+        std::error_code error{errno, std::generic_category()};
+        fmt::println("Could not open file: {}", error.message());
+        return nullptr;
+    }
+
+    size_t offset = 0;
+    size_t length = std::numeric_limits<size_t>::max();
+
+    if (args.size() >= 1) {
+        auto maybeOffset = ParseHex<size_t>(args[0]);
+        if (!maybeOffset) {
+            fmt::println("Invalid offset: {}", args[0]);
+            return nullptr;
+        }
+        offset = *maybeOffset;
+    }
+    if (args.size() >= 2) {
+        auto maybeLength = ParseHex<size_t>(args[1]);
+        if (!maybeLength) {
+            fmt::println("Invalid length: {}", args[1]);
+            return nullptr;
+        }
+        length = *maybeLength;
+    }
+
+    return std::make_unique<TStreamFetcher>(std::move(in), offset, length);
+}

@@ -30,3 +30,8 @@ std::optional<T> ParseHex(std::string_view opcode) {
     }
     return value;
 }
+
+template <class... Ts>
+struct overloads : Ts... {
+    using Ts::operator()...;
+};

@@ -20,15 +20,11 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
 using namespace ymir;
-
-template <class... Ts>
-struct overloads : Ts... {
-    using Ts::operator()...;
-};
 
 // TODO: reuse code where possible
 
@@ -79,7 +75,8 @@ int main(int argc, char *argv[]) {
         fmt::println("");
         fmt::println("  When disassembling from a file, <offset> specifies the offset from the start");
         fmt::println("  of the file and <length> determines the number of bytes to disassemble.");
-        fmt::println("  <length> is rounded down to the nearest multiple of the opcode size.");
+        fmt::println("  Both parameters are specified in hexadecimal.");
+        fmt::println("  <length> is truncated down to the nearest multiple of the opcode size.");
         fmt::println("  If <offset> is omitted, ymdasm disassembles from the start of the file.");
         fmt::println("  If <length> is omitted, ymdasm disassembles until the end of the file.");
         fmt::println("");
@@ -531,40 +528,8 @@ int main(int argc, char *argv[]) {
             using CommandLineSH2OpcodeFetcher = CommandLineOpcodeFetcher<SH2Opcode, SH2CommandLineOpcodeParser>;
             using StreamSH2OpcodeFetcher = StreamOpcodeFetcher<SH2Opcode, SH2StreamOpcodeParser>;
 
-            std::unique_ptr<SH2OpcodeFetcher> fetcher{};
-
-            if (inputFile.empty()) {
-                fetcher = std::make_unique<CommandLineSH2OpcodeFetcher>(args);
-            } else {
-                auto in = std::make_unique<std::ifstream>(inputFile, std::ios::binary);
-                if (!in || !(*in)) {
-                    std::error_code error{errno, std::generic_category()};
-                    fmt::println("Could not open file: {}", error.message());
-                    return 1;
-                }
-
-                size_t offset = 0;
-                size_t length = std::numeric_limits<size_t>::max();
-
-                if (args.size() >= 1) {
-                    auto maybeOffset = ParseHex<size_t>(args[0]);
-                    if (!maybeOffset) {
-                        fmt::println("Invalid offset: {}", args[0]);
-                        return 1;
-                    }
-                    offset = *maybeOffset;
-                }
-                if (args.size() >= 2) {
-                    auto maybeLength = ParseHex<size_t>(args[1]);
-                    if (!maybeLength) {
-                        fmt::println("Invalid length: {}", args[1]);
-                        return 1;
-                    }
-                    length = *maybeLength;
-                }
-
-                fetcher = std::make_unique<StreamSH2OpcodeFetcher>(std::move(in), offset, length);
-            }
+            auto fetcher =
+                MakeFetcher<SH2OpcodeFetcher, CommandLineSH2OpcodeFetcher, StreamSH2OpcodeFetcher>(args, inputFile);
 
             bool running = true;
             const auto visitor = overloads{
@@ -889,40 +854,8 @@ int main(int argc, char *argv[]) {
             using CommandLineM68KOpcodeFetcher = CommandLineOpcodeFetcher<M68KOpcode>;
             using StreamM68KOpcodeFetcher = StreamOpcodeFetcher<M68KOpcode>;
 
-            std::unique_ptr<M68KOpcodeFetcher> fetcher{};
-
-            if (inputFile.empty()) {
-                fetcher = std::make_unique<CommandLineM68KOpcodeFetcher>(args);
-            } else {
-                auto in = std::make_unique<std::ifstream>(inputFile, std::ios::binary);
-                if (!in || !(*in)) {
-                    std::error_code error{errno, std::generic_category()};
-                    fmt::println("Could not open file: {}", error.message());
-                    return 1;
-                }
-
-                size_t offset = 0;
-                size_t length = std::numeric_limits<size_t>::max();
-
-                if (args.size() >= 1) {
-                    auto maybeOffset = ParseHex<size_t>(args[0]);
-                    if (!maybeOffset) {
-                        fmt::println("Invalid offset: {}", args[0]);
-                        return 1;
-                    }
-                    offset = *maybeOffset;
-                }
-                if (args.size() >= 2) {
-                    auto maybeLength = ParseHex<size_t>(args[1]);
-                    if (!maybeLength) {
-                        fmt::println("Invalid length: {}", args[1]);
-                        return 1;
-                    }
-                    length = *maybeLength;
-                }
-
-                fetcher = std::make_unique<StreamM68KOpcodeFetcher>(std::move(in), offset, length);
-            }
+            auto fetcher =
+                MakeFetcher<M68KOpcodeFetcher, CommandLineM68KOpcodeFetcher, StreamM68KOpcodeFetcher>(args, inputFile);
 
             while (valid) {
                 printDisassembly([&]() -> uint16 {
@@ -1125,40 +1058,8 @@ int main(int argc, char *argv[]) {
             using CommandLineSCUDSPOpcodeFetcher = CommandLineOpcodeFetcher<SCUDSPOpcode>;
             using StreamSCUDSPOpcodeFetcher = StreamOpcodeFetcher<SCUDSPOpcode>;
 
-            std::unique_ptr<SCUDSPOpcodeFetcher> fetcher{};
-
-            if (inputFile.empty()) {
-                fetcher = std::make_unique<CommandLineSCUDSPOpcodeFetcher>(args);
-            } else {
-                auto in = std::make_unique<std::ifstream>(inputFile, std::ios::binary);
-                if (!in || !(*in)) {
-                    std::error_code error{errno, std::generic_category()};
-                    fmt::println("Could not open file: {}", error.message());
-                    return 1;
-                }
-
-                size_t offset = 0;
-                size_t length = std::numeric_limits<size_t>::max();
-
-                if (args.size() >= 1) {
-                    auto maybeOffset = ParseHex<size_t>(args[0]);
-                    if (!maybeOffset) {
-                        fmt::println("Invalid offset: {}", args[0]);
-                        return 1;
-                    }
-                    offset = *maybeOffset;
-                }
-                if (args.size() >= 2) {
-                    auto maybeLength = ParseHex<size_t>(args[1]);
-                    if (!maybeLength) {
-                        fmt::println("Invalid length: {}", args[1]);
-                        return 1;
-                    }
-                    length = *maybeLength;
-                }
-
-                fetcher = std::make_unique<StreamSCUDSPOpcodeFetcher>(std::move(in), offset, length);
-            }
+            auto fetcher = MakeFetcher<SCUDSPOpcodeFetcher, CommandLineSCUDSPOpcodeFetcher, StreamSCUDSPOpcodeFetcher>(
+                args, inputFile);
 
             bool running = true;
             const auto visitor = overloads{
@@ -1583,40 +1484,9 @@ int main(int argc, char *argv[]) {
             using CommandLineSCSPDSPOpcodeFetcher = CommandLineOpcodeFetcher<SCSPDSPOpcode>;
             using StreamSCSPDSPOpcodeFetcher = StreamOpcodeFetcher<SCSPDSPOpcode>;
 
-            std::unique_ptr<SCSPDSPOpcodeFetcher> fetcher{};
-
-            if (inputFile.empty()) {
-                fetcher = std::make_unique<CommandLineSCSPDSPOpcodeFetcher>(args);
-            } else {
-                auto in = std::make_unique<std::ifstream>(inputFile, std::ios::binary);
-                if (!in || !(*in)) {
-                    std::error_code error{errno, std::generic_category()};
-                    fmt::println("Could not open file: {}", error.message());
-                    return 1;
-                }
-
-                size_t offset = 0;
-                size_t length = std::numeric_limits<size_t>::max();
-
-                if (args.size() >= 1) {
-                    auto maybeOffset = ParseHex<size_t>(args[0]);
-                    if (!maybeOffset) {
-                        fmt::println("Invalid offset: {}", args[0]);
-                        return 1;
-                    }
-                    offset = *maybeOffset;
-                }
-                if (args.size() >= 2) {
-                    auto maybeLength = ParseHex<size_t>(args[1]);
-                    if (!maybeLength) {
-                        fmt::println("Invalid length: {}", args[1]);
-                        return 1;
-                    }
-                    length = *maybeLength;
-                }
-
-                fetcher = std::make_unique<StreamSCSPDSPOpcodeFetcher>(std::move(in), offset, length);
-            }
+            auto fetcher =
+                MakeFetcher<SCSPDSPOpcodeFetcher, CommandLineSCSPDSPOpcodeFetcher, StreamSCSPDSPOpcodeFetcher>(
+                    args, inputFile);
 
             bool running = true;
             const auto visitor = overloads{
