@@ -8,6 +8,7 @@
 #include <ymir/util/bit_ops.hpp>
 
 #include "colors.hpp"
+#include "fetcher.hpp"
 #include "utils.hpp"
 
 #include <cxxopts.hpp>
@@ -493,18 +494,7 @@ int main(int argc, char *argv[]) {
                 int forceDelaySlot = 0;
             };
 
-            struct OpcodeFetchError {
-                std::string message;
-            };
-
-            struct OpcodeFetchEnd {};
-
-            struct SH2OpcodeFetcher {
-                virtual ~SH2OpcodeFetcher() = default;
-
-                using Result = std::variant<SH2Opcode, OpcodeFetchError, OpcodeFetchEnd>;
-                virtual Result Fetch() = 0;
-            };
+            using SH2OpcodeFetcher = IOpcodeFetcher<SH2Opcode>;
 
             struct CommandLineSH2OpcodeFetcher : public SH2OpcodeFetcher {
                 CommandLineSH2OpcodeFetcher(std::span<const std::string> args)
@@ -926,77 +916,10 @@ int main(int argc, char *argv[]) {
                 x = 0;
             };
 
-            struct M68KOpcode {
-                uint16 opcode;
-            };
-
-            struct OpcodeFetchError {
-                std::string message;
-            };
-
-            struct OpcodeFetchEnd {};
-
-            struct M68KOpcodeFetcher {
-                virtual ~M68KOpcodeFetcher() = default;
-
-                using Result = std::variant<M68KOpcode, OpcodeFetchError, OpcodeFetchEnd>;
-                virtual Result Fetch() = 0;
-            };
-
-            struct CommandLineM68KOpcodeFetcher : public M68KOpcodeFetcher {
-                CommandLineM68KOpcodeFetcher(std::span<const std::string> args)
-                    : m_args(args) {}
-
-                Result Fetch() final {
-                    if (m_index >= m_args.size()) {
-                        return OpcodeFetchEnd{};
-                    }
-
-                    auto &opcodeStr = m_args[m_index++];
-                    auto maybeOpcode = ParseHex<uint16>(opcodeStr);
-                    if (!maybeOpcode) {
-                        return OpcodeFetchError{fmt::format("Invalid opcode: {}", opcodeStr)};
-                    }
-
-                    const uint16 opcode = *maybeOpcode;
-                    return M68KOpcode{opcode};
-                }
-
-            private:
-                size_t m_index = 0;
-                std::span<const std::string> m_args;
-            };
-
-            struct StreamM68KOpcodeFetcher : public M68KOpcodeFetcher {
-                StreamM68KOpcodeFetcher(std::unique_ptr<std::istream> &&input, size_t offset, size_t length)
-                    : m_input(std::move(input)) {
-
-                    m_input->seekg(0, std::ios::end);
-                    const size_t size = m_input->tellg();
-                    m_remaining = std::min(length, size - offset);
-                    m_input->seekg(offset, std::ios::beg);
-                }
-
-                Result Fetch() final {
-                    if (m_remaining == 0) {
-                        return OpcodeFetchEnd{};
-                    }
-                    uint16 opcode{};
-                    m_input->read((char *)&opcode, sizeof(opcode));
-                    opcode = bit::big_endian_swap(opcode);
-                    if (m_input->good() && sizeof(opcode) <= m_remaining) {
-                        m_remaining -= sizeof(opcode);
-                        return M68KOpcode{opcode};
-                    } else {
-                        m_remaining = 0;
-                        return OpcodeFetchEnd{};
-                    }
-                }
-
-            private:
-                std::unique_ptr<std::istream> m_input;
-                size_t m_remaining;
-            };
+            using M68KOpcode = uint16;
+            using M68KOpcodeFetcher = IOpcodeFetcher<M68KOpcode>;
+            using CommandLineM68KOpcodeFetcher = CommandLineOpcodeFetcher<M68KOpcode>;
+            using StreamM68KOpcodeFetcher = StreamOpcodeFetcher<M68KOpcode>;
 
             std::unique_ptr<M68KOpcodeFetcher> fetcher{};
 
@@ -1041,8 +964,7 @@ int main(int argc, char *argv[]) {
 
                     auto result = fetcher->Fetch();
                     if (std::holds_alternative<M68KOpcode>(result)) {
-                        auto &opcode = std::get<M68KOpcode>(result);
-                        return opcode.opcode;
+                        return std::get<M68KOpcode>(result);
                     } else {
                         if (std::holds_alternative<OpcodeFetchError>(result)) {
                             auto &error = std::get<OpcodeFetchError>(result);
@@ -1230,77 +1152,10 @@ int main(int argc, char *argv[]) {
                 ++address;
             };
 
-            struct SCUDSPOpcode {
-                uint32 opcode;
-            };
-
-            struct OpcodeFetchError {
-                std::string message;
-            };
-
-            struct OpcodeFetchEnd {};
-
-            struct SCUDSPOpcodeFetcher {
-                virtual ~SCUDSPOpcodeFetcher() = default;
-
-                using Result = std::variant<SCUDSPOpcode, OpcodeFetchError, OpcodeFetchEnd>;
-                virtual Result Fetch() = 0;
-            };
-
-            struct CommandLineSCUDSPOpcodeFetcher : public SCUDSPOpcodeFetcher {
-                CommandLineSCUDSPOpcodeFetcher(std::span<const std::string> args)
-                    : m_args(args) {}
-
-                Result Fetch() final {
-                    if (m_index >= m_args.size()) {
-                        return OpcodeFetchEnd{};
-                    }
-
-                    auto &opcodeStr = m_args[m_index++];
-                    auto maybeOpcode = ParseHex<uint32>(opcodeStr);
-                    if (!maybeOpcode) {
-                        return OpcodeFetchError{fmt::format("Invalid opcode: {}", opcodeStr)};
-                    }
-
-                    const uint32 opcode = *maybeOpcode;
-                    return SCUDSPOpcode{opcode};
-                }
-
-            private:
-                size_t m_index = 0;
-                std::span<const std::string> m_args;
-            };
-
-            struct StreamSCUDSPOpcodeFetcher : public SCUDSPOpcodeFetcher {
-                StreamSCUDSPOpcodeFetcher(std::unique_ptr<std::istream> &&input, size_t offset, size_t length)
-                    : m_input(std::move(input)) {
-
-                    m_input->seekg(0, std::ios::end);
-                    const size_t size = m_input->tellg();
-                    m_remaining = std::min(length, size - offset);
-                    m_input->seekg(offset, std::ios::beg);
-                }
-
-                Result Fetch() final {
-                    if (m_remaining == 0) {
-                        return OpcodeFetchEnd{};
-                    }
-                    uint32 opcode{};
-                    m_input->read((char *)&opcode, sizeof(opcode));
-                    opcode = bit::big_endian_swap(opcode);
-                    if (m_input->good() && sizeof(opcode) <= m_remaining) {
-                        m_remaining -= sizeof(opcode);
-                        return SCUDSPOpcode{opcode};
-                    } else {
-                        m_remaining = 0;
-                        return OpcodeFetchEnd{};
-                    }
-                }
-
-            private:
-                std::unique_ptr<std::istream> m_input;
-                size_t m_remaining;
-            };
+            using SCUDSPOpcode = uint32;
+            using SCUDSPOpcodeFetcher = IOpcodeFetcher<SCUDSPOpcode>;
+            using CommandLineSCUDSPOpcodeFetcher = CommandLineOpcodeFetcher<SCUDSPOpcode>;
+            using StreamSCUDSPOpcodeFetcher = StreamOpcodeFetcher<SCUDSPOpcode>;
 
             std::unique_ptr<SCUDSPOpcodeFetcher> fetcher{};
 
@@ -1339,7 +1194,7 @@ int main(int argc, char *argv[]) {
 
             bool running = true;
             const auto visitor = overloads{
-                [&](SCUDSPOpcode &opcode) { printDisassembly(opcode.opcode); },
+                [&](SCUDSPOpcode opcode) { printDisassembly(opcode); },
                 [&](OpcodeFetchError &error) {
                     fmt::println("{}", error.message);
                     running = false;
@@ -1755,77 +1610,10 @@ int main(int argc, char *argv[]) {
                 ++address;
             };
 
-            struct SCSPDSPOpcode {
-                uint64 opcode;
-            };
-
-            struct OpcodeFetchError {
-                std::string message;
-            };
-
-            struct OpcodeFetchEnd {};
-
-            struct SCSPDSPOpcodeFetcher {
-                virtual ~SCSPDSPOpcodeFetcher() = default;
-
-                using Result = std::variant<SCSPDSPOpcode, OpcodeFetchError, OpcodeFetchEnd>;
-                virtual Result Fetch() = 0;
-            };
-
-            struct CommandLineSCSPDSPOpcodeFetcher : public SCSPDSPOpcodeFetcher {
-                CommandLineSCSPDSPOpcodeFetcher(std::span<const std::string> args)
-                    : m_args(args) {}
-
-                Result Fetch() final {
-                    if (m_index >= m_args.size()) {
-                        return OpcodeFetchEnd{};
-                    }
-
-                    auto &opcodeStr = m_args[m_index++];
-                    auto maybeOpcode = ParseHex<uint64>(opcodeStr);
-                    if (!maybeOpcode) {
-                        return OpcodeFetchError{fmt::format("Invalid opcode: {}", opcodeStr)};
-                    }
-
-                    const uint64 opcode = *maybeOpcode;
-                    return SCSPDSPOpcode{opcode};
-                }
-
-            private:
-                size_t m_index = 0;
-                std::span<const std::string> m_args;
-            };
-
-            struct StreamSCSPDSPOpcodeFetcher : public SCSPDSPOpcodeFetcher {
-                StreamSCSPDSPOpcodeFetcher(std::unique_ptr<std::istream> &&input, size_t offset, size_t length)
-                    : m_input(std::move(input)) {
-
-                    m_input->seekg(0, std::ios::end);
-                    const size_t size = m_input->tellg();
-                    m_remaining = std::min(length, size - offset);
-                    m_input->seekg(offset, std::ios::beg);
-                }
-
-                Result Fetch() final {
-                    if (m_remaining == 0) {
-                        return OpcodeFetchEnd{};
-                    }
-                    uint64 opcode{};
-                    m_input->read((char *)&opcode, sizeof(opcode));
-                    opcode = bit::big_endian_swap(opcode);
-                    if (m_input->good() && sizeof(opcode) <= m_remaining) {
-                        m_remaining -= sizeof(opcode);
-                        return SCSPDSPOpcode{opcode};
-                    } else {
-                        m_remaining = 0;
-                        return OpcodeFetchEnd{};
-                    }
-                }
-
-            private:
-                std::unique_ptr<std::istream> m_input;
-                size_t m_remaining;
-            };
+            using SCSPDSPOpcode = uint64;
+            using SCSPDSPOpcodeFetcher = IOpcodeFetcher<SCSPDSPOpcode>;
+            using CommandLineSCSPDSPOpcodeFetcher = CommandLineOpcodeFetcher<SCSPDSPOpcode>;
+            using StreamSCSPDSPOpcodeFetcher = StreamOpcodeFetcher<SCSPDSPOpcode>;
 
             std::unique_ptr<SCSPDSPOpcodeFetcher> fetcher{};
 
@@ -1864,7 +1652,7 @@ int main(int argc, char *argv[]) {
 
             bool running = true;
             const auto visitor = overloads{
-                [&](SCSPDSPOpcode &opcode) { printDisassembly(opcode.opcode); },
+                [&](SCSPDSPOpcode &opcode) { printDisassembly(opcode); },
                 [&](OpcodeFetchError &error) {
                     fmt::println("{}", error.message);
                     running = false;

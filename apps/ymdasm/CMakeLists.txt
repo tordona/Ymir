@@ -2,6 +2,7 @@
 add_executable(ymdasm
     src/ansi.hpp
     src/colors.hpp
+    src/fetcher.hpp
     src/utils.hpp
     src/ymdasm.cpp
 )
