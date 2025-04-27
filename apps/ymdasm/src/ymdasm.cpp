@@ -19,9 +19,15 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 using namespace ymir;
+
+template <class... Ts>
+struct overloads : Ts... {
+    using Ts::operator()...;
+};
 
 // TODO: reuse code where possible
 
@@ -482,8 +488,34 @@ int main(int argc, char *argv[]) {
                 address += sizeof(opcode);
             };
 
-            if (inputFile.empty()) {
-                for (auto &opcodeStr : args) {
+            struct SH2Opcode {
+                uint16 opcode;
+                int forceDelaySlot = 0;
+            };
+
+            struct OpcodeFetchError {
+                std::string message;
+            };
+
+            struct OpcodeFetchEnd {};
+
+            struct SH2OpcodeFetcher {
+                virtual ~SH2OpcodeFetcher() = default;
+
+                using Result = std::variant<SH2Opcode, OpcodeFetchError, OpcodeFetchEnd>;
+                virtual Result Fetch() = 0;
+            };
+
+            struct CommandLineSH2OpcodeFetcher : public SH2OpcodeFetcher {
+                CommandLineSH2OpcodeFetcher(std::span<const std::string> args)
+                    : m_args(args) {}
+
+                Result Fetch() final {
+                    if (m_index >= m_args.size()) {
+                        return OpcodeFetchEnd{};
+                    }
+
+                    auto &opcodeStr = m_args[m_index++];
                     std::string_view strippedOpcode = opcodeStr;
 
                     // 0 = no change; +1 = force delay slot, -1 = force non-delay slot
@@ -498,26 +530,63 @@ int main(int argc, char *argv[]) {
 
                     auto maybeOpcode = ParseHex<uint16>(strippedOpcode);
                     if (!maybeOpcode) {
-                        fmt::println("Invalid opcode: {}", opcodeStr);
-                        return 1;
+                        return OpcodeFetchError{fmt::format("Invalid opcode: {}", opcodeStr)};
                     }
-                    const uint16 opcode = *maybeOpcode;
 
-                    printDisassembly(opcode, forceDelaySlot);
+                    const uint16 opcode = *maybeOpcode;
+                    return SH2Opcode{opcode, forceDelaySlot};
                 }
+
+            private:
+                size_t m_index = 0;
+                std::span<const std::string> m_args;
+            };
+
+            struct StreamSH2OpcodeFetcher : public SH2OpcodeFetcher {
+                StreamSH2OpcodeFetcher(std::unique_ptr<std::istream> &&input, size_t offset, size_t length)
+                    : m_input(std::move(input)) {
+
+                    m_input->seekg(0, std::ios::end);
+                    const size_t size = m_input->tellg();
+                    m_remaining = std::min(length, size - offset);
+                    m_input->seekg(offset, std::ios::beg);
+                }
+
+                Result Fetch() final {
+                    if (m_remaining == 0) {
+                        return OpcodeFetchEnd{};
+                    }
+                    uint16 opcode{};
+                    m_input->read((char *)&opcode, sizeof(opcode));
+                    opcode = bit::big_endian_swap(opcode);
+                    if (m_input->good() && sizeof(opcode) <= m_remaining) {
+                        m_remaining -= sizeof(opcode);
+                        return SH2Opcode{opcode, 0};
+                    } else {
+                        m_remaining = 0;
+                        return OpcodeFetchEnd{};
+                    }
+                }
+
+            private:
+                std::unique_ptr<std::istream> m_input;
+                size_t m_remaining;
+            };
+
+            std::unique_ptr<SH2OpcodeFetcher> fetcher{};
+
+            if (inputFile.empty()) {
+                fetcher = std::make_unique<CommandLineSH2OpcodeFetcher>(args);
             } else {
-                std::ifstream in{inputFile, std::ios::binary};
-                if (!in) {
+                auto in = std::make_unique<std::ifstream>(inputFile, std::ios::binary);
+                if (!in || !(*in)) {
                     std::error_code error{errno, std::generic_category()};
                     fmt::println("Could not open file: {}", error.message());
                     return 1;
                 }
 
-                in.seekg(0, std::ios::end);
-                const size_t fileSize = in.tellg();
-
                 size_t offset = 0;
-                size_t length = fileSize;
+                size_t length = std::numeric_limits<size_t>::max();
 
                 if (args.size() >= 1) {
                     auto maybeOffset = ParseHex<size_t>(args[0]);
@@ -536,31 +605,22 @@ int main(int argc, char *argv[]) {
                     length = *maybeLength;
                 }
 
-                length = std::min(length, fileSize - offset);
+                fetcher = std::make_unique<StreamSH2OpcodeFetcher>(std::move(in), offset, length);
+            }
 
-                in.seekg(offset, std::ios::beg);
+            bool running = true;
+            const auto visitor = overloads{
+                [&](SH2Opcode &opcode) { printDisassembly(opcode.opcode, opcode.forceDelaySlot); },
+                [&](OpcodeFetchError &error) {
+                    fmt::println("{}", error.message);
+                    running = false;
+                },
+                [&](OpcodeFetchEnd) { running = false; },
+            };
 
-                uint16 opcode{};
-
-                auto readOpcode = [&] {
-                    if (length == 0) {
-                        return false;
-                    }
-                    uint8 b[2] = {0};
-                    in.read((char *)b, 2);
-                    opcode = (static_cast<uint16>(b[0]) << 8u) | static_cast<uint16>(b[1]);
-                    if (in.good() && sizeof(b) <= length) {
-                        length -= sizeof(b);
-                        return true;
-                    } else {
-                        length = 0;
-                        return false;
-                    }
-                };
-
-                while (readOpcode()) {
-                    printDisassembly(opcode);
-                }
+            while (running) {
+                auto result = fetcher->Fetch();
+                std::visit(visitor, result);
             }
         } else if (lcisa == "m68k" || lcisa == "m68000") {
             auto maybeAddress = ParseHex<uint32>(origin);
@@ -849,6 +909,8 @@ int main(int argc, char *argv[]) {
                     return;
                 }
 
+                address += instr.opcodes.size() * sizeof(uint16);
+
                 printAddress(baseAddress);
                 printOpcodes(instr.opcodes);
                 printInstruction(instr);
@@ -864,43 +926,92 @@ int main(int argc, char *argv[]) {
                 x = 0;
             };
 
-            if (inputFile.empty()) {
-                while (valid) {
-                    printDisassembly([&]() -> uint16 {
-                        if (!valid) {
-                            return 0;
-                        }
-                        if (opcodeOffset >= args.size()) {
-                            valid = false;
-                            return 0;
-                        }
+            struct M68KOpcode {
+                uint16 opcode;
+            };
 
-                        std::string opcodeStr = args[opcodeOffset];
-                        auto maybeOpcode = ParseHex<uint32>(opcodeStr);
-                        if (!maybeOpcode) {
-                            fmt::println("Invalid opcode: {}", opcodeStr);
-                            valid = false;
-                            return 0;
-                        }
+            struct OpcodeFetchError {
+                std::string message;
+            };
 
-                        address += sizeof(uint16);
-                        ++opcodeOffset;
-                        return *maybeOpcode;
-                    });
+            struct OpcodeFetchEnd {};
+
+            struct M68KOpcodeFetcher {
+                virtual ~M68KOpcodeFetcher() = default;
+
+                using Result = std::variant<M68KOpcode, OpcodeFetchError, OpcodeFetchEnd>;
+                virtual Result Fetch() = 0;
+            };
+
+            struct CommandLineM68KOpcodeFetcher : public M68KOpcodeFetcher {
+                CommandLineM68KOpcodeFetcher(std::span<const std::string> args)
+                    : m_args(args) {}
+
+                Result Fetch() final {
+                    if (m_index >= m_args.size()) {
+                        return OpcodeFetchEnd{};
+                    }
+
+                    auto &opcodeStr = m_args[m_index++];
+                    auto maybeOpcode = ParseHex<uint16>(opcodeStr);
+                    if (!maybeOpcode) {
+                        return OpcodeFetchError{fmt::format("Invalid opcode: {}", opcodeStr)};
+                    }
+
+                    const uint16 opcode = *maybeOpcode;
+                    return M68KOpcode{opcode};
                 }
+
+            private:
+                size_t m_index = 0;
+                std::span<const std::string> m_args;
+            };
+
+            struct StreamM68KOpcodeFetcher : public M68KOpcodeFetcher {
+                StreamM68KOpcodeFetcher(std::unique_ptr<std::istream> &&input, size_t offset, size_t length)
+                    : m_input(std::move(input)) {
+
+                    m_input->seekg(0, std::ios::end);
+                    const size_t size = m_input->tellg();
+                    m_remaining = std::min(length, size - offset);
+                    m_input->seekg(offset, std::ios::beg);
+                }
+
+                Result Fetch() final {
+                    if (m_remaining == 0) {
+                        return OpcodeFetchEnd{};
+                    }
+                    uint16 opcode{};
+                    m_input->read((char *)&opcode, sizeof(opcode));
+                    opcode = bit::big_endian_swap(opcode);
+                    if (m_input->good() && sizeof(opcode) <= m_remaining) {
+                        m_remaining -= sizeof(opcode);
+                        return M68KOpcode{opcode};
+                    } else {
+                        m_remaining = 0;
+                        return OpcodeFetchEnd{};
+                    }
+                }
+
+            private:
+                std::unique_ptr<std::istream> m_input;
+                size_t m_remaining;
+            };
+
+            std::unique_ptr<M68KOpcodeFetcher> fetcher{};
+
+            if (inputFile.empty()) {
+                fetcher = std::make_unique<CommandLineM68KOpcodeFetcher>(args);
             } else {
-                std::ifstream in{inputFile, std::ios::binary};
-                if (!in) {
+                auto in = std::make_unique<std::ifstream>(inputFile, std::ios::binary);
+                if (!in || !(*in)) {
                     std::error_code error{errno, std::generic_category()};
                     fmt::println("Could not open file: {}", error.message());
                     return 1;
                 }
 
-                in.seekg(0, std::ios::end);
-                const size_t fileSize = in.tellg();
-
                 size_t offset = 0;
-                size_t length = fileSize;
+                size_t length = std::numeric_limits<size_t>::max();
 
                 if (args.size() >= 1) {
                     auto maybeOffset = ParseHex<size_t>(args[0]);
@@ -919,43 +1030,28 @@ int main(int argc, char *argv[]) {
                     length = *maybeLength;
                 }
 
-                length = std::min(length, fileSize - offset);
+                fetcher = std::make_unique<StreamM68KOpcodeFetcher>(std::move(in), offset, length);
+            }
 
-                in.seekg(offset, std::ios::beg);
-
-                uint16 opcode{};
-
-                auto readOpcode = [&] {
-                    if (length <= 0) {
-                        return false;
+            while (valid) {
+                printDisassembly([&]() -> uint16 {
+                    if (!valid) {
+                        return 0;
                     }
-                    uint8 b[2] = {0};
-                    in.read((char *)b, 2);
-                    opcode = (static_cast<uint16>(b[0]) << 8u) | static_cast<uint16>(b[1]);
-                    if (in.good() && sizeof(b) <= length) {
-                        length -= sizeof(b);
-                        return true;
+
+                    auto result = fetcher->Fetch();
+                    if (std::holds_alternative<M68KOpcode>(result)) {
+                        auto &opcode = std::get<M68KOpcode>(result);
+                        return opcode.opcode;
                     } else {
-                        length = 0;
-                        return false;
+                        if (std::holds_alternative<OpcodeFetchError>(result)) {
+                            auto &error = std::get<OpcodeFetchError>(result);
+                            fmt::println("{}", error.message);
+                        }
+                        valid = false;
+                        return 0;
                     }
-                };
-
-                while (valid) {
-                    printDisassembly([&]() -> uint16 {
-                        if (!valid) {
-                            return 0;
-                        }
-                        if (!readOpcode()) {
-                            valid = false;
-                            return 0;
-                        }
-
-                        address += sizeof(uint16);
-                        ++opcodeOffset;
-                        return opcode;
-                    });
-                }
+                });
             }
         } else if (lcisa == "scudsp") {
             auto maybeAddress = ParseHex<uint8>(origin);
@@ -1134,29 +1230,92 @@ int main(int argc, char *argv[]) {
                 ++address;
             };
 
-            if (inputFile.empty()) {
-                for (auto &opcodeStr : args) {
+            struct SCUDSPOpcode {
+                uint32 opcode;
+            };
+
+            struct OpcodeFetchError {
+                std::string message;
+            };
+
+            struct OpcodeFetchEnd {};
+
+            struct SCUDSPOpcodeFetcher {
+                virtual ~SCUDSPOpcodeFetcher() = default;
+
+                using Result = std::variant<SCUDSPOpcode, OpcodeFetchError, OpcodeFetchEnd>;
+                virtual Result Fetch() = 0;
+            };
+
+            struct CommandLineSCUDSPOpcodeFetcher : public SCUDSPOpcodeFetcher {
+                CommandLineSCUDSPOpcodeFetcher(std::span<const std::string> args)
+                    : m_args(args) {}
+
+                Result Fetch() final {
+                    if (m_index >= m_args.size()) {
+                        return OpcodeFetchEnd{};
+                    }
+
+                    auto &opcodeStr = m_args[m_index++];
                     auto maybeOpcode = ParseHex<uint32>(opcodeStr);
                     if (!maybeOpcode) {
-                        fmt::println("Invalid opcode: {}", opcodeStr);
-                        return 1;
+                        return OpcodeFetchError{fmt::format("Invalid opcode: {}", opcodeStr)};
                     }
+
                     const uint32 opcode = *maybeOpcode;
-                    printDisassembly(opcode);
+                    return SCUDSPOpcode{opcode};
                 }
+
+            private:
+                size_t m_index = 0;
+                std::span<const std::string> m_args;
+            };
+
+            struct StreamSCUDSPOpcodeFetcher : public SCUDSPOpcodeFetcher {
+                StreamSCUDSPOpcodeFetcher(std::unique_ptr<std::istream> &&input, size_t offset, size_t length)
+                    : m_input(std::move(input)) {
+
+                    m_input->seekg(0, std::ios::end);
+                    const size_t size = m_input->tellg();
+                    m_remaining = std::min(length, size - offset);
+                    m_input->seekg(offset, std::ios::beg);
+                }
+
+                Result Fetch() final {
+                    if (m_remaining == 0) {
+                        return OpcodeFetchEnd{};
+                    }
+                    uint32 opcode{};
+                    m_input->read((char *)&opcode, sizeof(opcode));
+                    opcode = bit::big_endian_swap(opcode);
+                    if (m_input->good() && sizeof(opcode) <= m_remaining) {
+                        m_remaining -= sizeof(opcode);
+                        return SCUDSPOpcode{opcode};
+                    } else {
+                        m_remaining = 0;
+                        return OpcodeFetchEnd{};
+                    }
+                }
+
+            private:
+                std::unique_ptr<std::istream> m_input;
+                size_t m_remaining;
+            };
+
+            std::unique_ptr<SCUDSPOpcodeFetcher> fetcher{};
+
+            if (inputFile.empty()) {
+                fetcher = std::make_unique<CommandLineSCUDSPOpcodeFetcher>(args);
             } else {
-                std::ifstream in{inputFile, std::ios::binary};
-                if (!in) {
+                auto in = std::make_unique<std::ifstream>(inputFile, std::ios::binary);
+                if (!in || !(*in)) {
                     std::error_code error{errno, std::generic_category()};
                     fmt::println("Could not open file: {}", error.message());
                     return 1;
                 }
 
-                in.seekg(0, std::ios::end);
-                const size_t fileSize = in.tellg();
-
                 size_t offset = 0;
-                size_t length = fileSize;
+                size_t length = std::numeric_limits<size_t>::max();
 
                 if (args.size() >= 1) {
                     auto maybeOffset = ParseHex<size_t>(args[0]);
@@ -1175,32 +1334,22 @@ int main(int argc, char *argv[]) {
                     length = *maybeLength;
                 }
 
-                length = std::min(length, fileSize - offset);
+                fetcher = std::make_unique<StreamSCUDSPOpcodeFetcher>(std::move(in), offset, length);
+            }
 
-                in.seekg(offset, std::ios::beg);
+            bool running = true;
+            const auto visitor = overloads{
+                [&](SCUDSPOpcode &opcode) { printDisassembly(opcode.opcode); },
+                [&](OpcodeFetchError &error) {
+                    fmt::println("{}", error.message);
+                    running = false;
+                },
+                [&](OpcodeFetchEnd) { running = false; },
+            };
 
-                uint32 opcode{};
-
-                auto readOpcode = [&] {
-                    if (length == 0) {
-                        return false;
-                    }
-                    uint8 b[4] = {0};
-                    in.read((char *)b, 4);
-                    opcode = (static_cast<uint32>(b[0]) << 24u) | (static_cast<uint32>(b[1]) << 16u) |
-                             (static_cast<uint32>(b[2]) << 8u) | static_cast<uint32>(b[3]);
-                    if (in.good() && sizeof(b) <= length) {
-                        length -= sizeof(b);
-                        return true;
-                    } else {
-                        length = 0;
-                        return false;
-                    }
-                };
-
-                while (readOpcode()) {
-                    printDisassembly(opcode);
-                }
+            while (running) {
+                auto result = fetcher->Fetch();
+                std::visit(visitor, result);
             }
         } else if (lcisa == "scspdspraw" || lcisa == "scspdsp") {
             const bool rawDisasm = lcisa == "scspdspraw";
@@ -1606,29 +1755,92 @@ int main(int argc, char *argv[]) {
                 ++address;
             };
 
-            if (inputFile.empty()) {
-                for (auto &opcodeStr : args) {
+            struct SCSPDSPOpcode {
+                uint64 opcode;
+            };
+
+            struct OpcodeFetchError {
+                std::string message;
+            };
+
+            struct OpcodeFetchEnd {};
+
+            struct SCSPDSPOpcodeFetcher {
+                virtual ~SCSPDSPOpcodeFetcher() = default;
+
+                using Result = std::variant<SCSPDSPOpcode, OpcodeFetchError, OpcodeFetchEnd>;
+                virtual Result Fetch() = 0;
+            };
+
+            struct CommandLineSCSPDSPOpcodeFetcher : public SCSPDSPOpcodeFetcher {
+                CommandLineSCSPDSPOpcodeFetcher(std::span<const std::string> args)
+                    : m_args(args) {}
+
+                Result Fetch() final {
+                    if (m_index >= m_args.size()) {
+                        return OpcodeFetchEnd{};
+                    }
+
+                    auto &opcodeStr = m_args[m_index++];
                     auto maybeOpcode = ParseHex<uint64>(opcodeStr);
                     if (!maybeOpcode) {
-                        fmt::println("Invalid opcode: {}", opcodeStr);
-                        return 1;
+                        return OpcodeFetchError{fmt::format("Invalid opcode: {}", opcodeStr)};
                     }
+
                     const uint64 opcode = *maybeOpcode;
-                    printDisassembly(opcode);
+                    return SCSPDSPOpcode{opcode};
                 }
+
+            private:
+                size_t m_index = 0;
+                std::span<const std::string> m_args;
+            };
+
+            struct StreamSCSPDSPOpcodeFetcher : public SCSPDSPOpcodeFetcher {
+                StreamSCSPDSPOpcodeFetcher(std::unique_ptr<std::istream> &&input, size_t offset, size_t length)
+                    : m_input(std::move(input)) {
+
+                    m_input->seekg(0, std::ios::end);
+                    const size_t size = m_input->tellg();
+                    m_remaining = std::min(length, size - offset);
+                    m_input->seekg(offset, std::ios::beg);
+                }
+
+                Result Fetch() final {
+                    if (m_remaining == 0) {
+                        return OpcodeFetchEnd{};
+                    }
+                    uint64 opcode{};
+                    m_input->read((char *)&opcode, sizeof(opcode));
+                    opcode = bit::big_endian_swap(opcode);
+                    if (m_input->good() && sizeof(opcode) <= m_remaining) {
+                        m_remaining -= sizeof(opcode);
+                        return SCSPDSPOpcode{opcode};
+                    } else {
+                        m_remaining = 0;
+                        return OpcodeFetchEnd{};
+                    }
+                }
+
+            private:
+                std::unique_ptr<std::istream> m_input;
+                size_t m_remaining;
+            };
+
+            std::unique_ptr<SCSPDSPOpcodeFetcher> fetcher{};
+
+            if (inputFile.empty()) {
+                fetcher = std::make_unique<CommandLineSCSPDSPOpcodeFetcher>(args);
             } else {
-                std::ifstream in{inputFile, std::ios::binary};
-                if (!in) {
+                auto in = std::make_unique<std::ifstream>(inputFile, std::ios::binary);
+                if (!in || !(*in)) {
                     std::error_code error{errno, std::generic_category()};
                     fmt::println("Could not open file: {}", error.message());
                     return 1;
                 }
 
-                in.seekg(0, std::ios::end);
-                const size_t fileSize = in.tellg();
-
                 size_t offset = 0;
-                size_t length = fileSize;
+                size_t length = std::numeric_limits<size_t>::max();
 
                 if (args.size() >= 1) {
                     auto maybeOffset = ParseHex<size_t>(args[0]);
@@ -1647,34 +1859,22 @@ int main(int argc, char *argv[]) {
                     length = *maybeLength;
                 }
 
-                length = std::min(length, fileSize - offset);
+                fetcher = std::make_unique<StreamSCSPDSPOpcodeFetcher>(std::move(in), offset, length);
+            }
 
-                in.seekg(offset, std::ios::beg);
+            bool running = true;
+            const auto visitor = overloads{
+                [&](SCSPDSPOpcode &opcode) { printDisassembly(opcode.opcode); },
+                [&](OpcodeFetchError &error) {
+                    fmt::println("{}", error.message);
+                    running = false;
+                },
+                [&](OpcodeFetchEnd) { running = false; },
+            };
 
-                uint64 opcode{};
-
-                auto readOpcode = [&] {
-                    if (length == 0) {
-                        return false;
-                    }
-                    uint8 b[8] = {0};
-                    in.read((char *)b, 8);
-                    opcode = (static_cast<uint64>(b[0]) << 56ull) | (static_cast<uint64>(b[1]) << 48ull) |
-                             (static_cast<uint64>(b[2]) << 40ull) | (static_cast<uint64>(b[3]) << 32ull) |
-                             (static_cast<uint64>(b[4]) << 24ull) | (static_cast<uint64>(b[5]) << 16ull) |
-                             (static_cast<uint64>(b[6]) << 8ull) | static_cast<uint64>(b[7]);
-                    if (in.good() && sizeof(b) <= length) {
-                        length -= sizeof(b);
-                        return true;
-                    } else {
-                        length = 0;
-                        return false;
-                    }
-                };
-
-                while (readOpcode()) {
-                    printDisassembly(opcode);
-                }
+            while (running) {
+                auto result = fetcher->Fetch();
+                std::visit(visitor, result);
             }
         } else {
             fmt::println("Invalid ISA: {}", isa);
