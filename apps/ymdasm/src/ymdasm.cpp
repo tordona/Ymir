@@ -1,31 +1,16 @@
-#include <ymir/core/types.hpp>
-
-#include <ymir/hw/scsp/scsp_dsp_instr.hpp>
-
-#include <ymir/util/bit_ops.hpp>
-
-#include "colors.hpp"
 #include "disassembler_m68k.hpp"
 #include "disassembler_scspdsp.hpp"
 #include "disassembler_scudsp.hpp"
 #include "disassembler_sh2.hpp"
-#include "fetcher.hpp"
-#include "utils.hpp"
+
+#include "colors.hpp"
 
 #include <cxxopts.hpp>
 #include <fmt/format.h>
 
 #include <algorithm>
-#include <fstream>
-#include <iostream>
-#include <optional>
 #include <string>
-#include <string_view>
-#include <type_traits>
-#include <variant>
 #include <vector>
-
-using namespace ymir;
 
 // TODO: reuse code where possible
 
