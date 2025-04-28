@@ -1,4 +1,5 @@
 #pragma once
+
 /**
 @file
 @brief A collection of bitwise operations and bit twiddling tricks.
