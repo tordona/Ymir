@@ -76,7 +76,11 @@ if (wbm.NoneExcept(oneAndThree)) {
     ...
 }
 // Check if any bit is set
-if (wbm) {
+if (wbm.Any()) { // or just (wbm)
+    ...
+}
+// Check if no bits are set
+if (wbm.None()) { // or just (!wbm)
     ...
 }
 // Convert back to the enum class
