@@ -1,5 +1,31 @@
 #pragma once
 
+/**
+@file
+@brief Macros for managing function inlining and flattening.
+
+In Debug builds, these macros have no effect in order to not disrupt the debugging experience.
+
+The macros use appropriate attributes for MSVC, Clang and GCC. For any other compiler, these macros do nothing.
+*/
+
+/**
+@def FORCE_INLINE
+@brief Forces function inlining and marks the function `inline`.
+*/
+
+/**
+@def NO_INLINE
+@brief Prevents function inlining.
+*/
+
+/**
+@def FLATTEN
+@brief Flattens the function.
+
+Essentially inlines all functions called by the flattened function.
+*/
+
 #if !defined(NDEBUG) || defined(DISABLE_FORCE_INLINE)
     #define FORCE_INLINE inline
     #define NO_INLINE
