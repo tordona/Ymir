@@ -57,7 +57,7 @@ template <typename TOpcode, typename TParser = SimpleCommandLineOpcodeParser<TOp
         { TParser::Parse(std::declval<std::string_view>()) } -> std::same_as<OpcodeFetchResult<TOpcode>>;
     }
 struct CommandLineOpcodeFetcher : public IOpcodeFetcher<TOpcode> {
-    using Result = IOpcodeFetcher<TOpcode>::Result;
+    using Result = typename IOpcodeFetcher<TOpcode>::Result;
 
     CommandLineOpcodeFetcher(std::span<const std::string> args)
         : m_args(args) {}
@@ -93,7 +93,7 @@ template <typename TOpcode, typename TParser = SimpleStreamOpcodeParser<TOpcode>
         { TParser::Parse(std::declval<std::istream &>()) } -> std::same_as<TOpcode>;
     }
 struct StreamOpcodeFetcher : public IOpcodeFetcher<TOpcode> {
-    using Result = IOpcodeFetcher<TOpcode>::Result;
+    using Result = typename IOpcodeFetcher<TOpcode>::Result;
 
     StreamOpcodeFetcher(std::unique_ptr<std::istream> &&input, size_t offset, size_t length)
         : m_input(std::move(input)) {

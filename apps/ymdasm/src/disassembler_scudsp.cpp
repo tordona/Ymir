@@ -208,13 +208,16 @@ bool DisassembleSCUDSP(Disassembler &disasm, std::string_view origin, const std:
         MakeFetcher<SCUDSPOpcodeFetcher, CommandLineSCUDSPOpcodeFetcher, StreamSCUDSPOpcodeFetcher>(args, inputFile);
 
     bool running = true;
-    const auto visitor = overloads{
-        [&](SCUDSPOpcode opcode) { scuDspDisasm.Disassemble(opcode); },
-        [&](OpcodeFetchError &error) {
-            fmt::println("{}", error.message);
+    const auto visitor = [&](auto &value) {
+        using T = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<T, SCUDSPOpcode>) {
+            scuDspDisasm.Disassemble(value);
+        } else if constexpr (std::is_same_v<T, OpcodeFetchError>) {
+            fmt::println("{}", value.message);
             running = false;
-        },
-        [&](OpcodeFetchEnd) { running = false; },
+        } else if constexpr (std::is_same_v<T, OpcodeFetchEnd>) {
+            running = false;
+        }
     };
 
     while (running) {

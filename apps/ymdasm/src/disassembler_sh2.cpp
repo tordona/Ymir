@@ -330,13 +330,16 @@ bool DisassembleSH2(Disassembler &disasm, std::string_view origin, const std::ve
     auto fetcher = MakeFetcher<SH2OpcodeFetcher, CommandLineSH2OpcodeFetcher, StreamSH2OpcodeFetcher>(args, inputFile);
 
     bool running = true;
-    const auto visitor = overloads{
-        [&](SH2Opcode &opcode) { sh2Disasm.Disassemble(opcode.opcode, opcode.forceDelaySlot); },
-        [&](OpcodeFetchError &error) {
-            fmt::println("{}", error.message);
+    const auto visitor = [&](auto &value) {
+        using T = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<T, SH2Opcode>) {
+            sh2Disasm.Disassemble(value.opcode, value.forceDelaySlot);
+        } else if constexpr (std::is_same_v<T, OpcodeFetchError>) {
+            fmt::println("{}", value.message);
             running = false;
-        },
-        [&](OpcodeFetchEnd) { running = false; },
+        } else if constexpr (std::is_same_v<T, OpcodeFetchEnd>) {
+            running = false;
+        }
     };
 
     while (running) {
