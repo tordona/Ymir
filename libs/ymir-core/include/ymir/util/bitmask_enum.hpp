@@ -39,11 +39,11 @@ You may find it cumbersome to check for the presence or absence of specific valu
 MyBitmask bm = ...;
 MyBitmask oneAndThree = (MyBitmask::One | MyBitmask::Three);
 // Check if either bit one or three is set
-if (bm & oneAndThree != MyBitmask::None) {
+if ((bm & oneAndThree) != MyBitmask::None) {
     ...
 }
 // Check if both bits one and three are set
-if (bm & oneAndThree == oneAndThree) {
+if ((bm & oneAndThree) == oneAndThree) {
     ...
 }
 ```
