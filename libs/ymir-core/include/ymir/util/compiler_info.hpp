@@ -24,7 +24,7 @@ namespace version {
 
 #elif defined(__GNUC__)
 
-static constexpr const char *name = "GCC";
+inline constexpr const char *name = "GCC";
 
 namespace version {
     inline constexpr int major = __GNUC__;
