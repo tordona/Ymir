@@ -1,11 +1,20 @@
-/*
-Contains constexpr constants specifying information about the compiler.
+#pragma once
+
+/**
+@file
+@brief Contains `constexpr` constants specifying information about the compiler used to build the program.
+
 Currently supports:
-- Clang on Linux and Windows
+- Clang on Linux, macOS and Windows
 - GCC on Linux, macOS and MinGW
 - MSVC on Windows
- */
-#pragma once
+
+@namespace compiler
+@brief Compiler-specific definitions, constants, functions and features.
+
+@namespace compiler::version
+@brief Compiler version constants.
+*/
 
 #include <string>
 
@@ -52,13 +61,18 @@ namespace version {
 
 #else
 
+/// @brief The name of the compiler.
 inline constexpr const char *name = "<unidentified compiler>";
 
 namespace version {
+    /// @brief The major version of the compiler.
     inline constexpr int major = 0;
+    /// @brief The minor version of the compiler.
     inline constexpr int minor = 0;
+    /// @brief The patch version of the compiler.
     inline constexpr int patch = 0;
-    inline const std::string string = "";
+    /// @brief The version of the compiler as a string in the format `"<major>.<minor>.<patch>"`.
+    inline const std::string string = "0.0.0";
 } // namespace version
 
 #endif

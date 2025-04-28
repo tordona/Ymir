@@ -1,3 +1,5 @@
+#pragma once
+
 /**
 @file
 @brief Type-safe enum class bitmasks
@@ -87,7 +89,6 @@ if (wbm.None()) { // or just (!wbm)
 MyBitmask backToEnum = wbm;
 ```
 */
-#pragma once
 
 #include <type_traits>
 
