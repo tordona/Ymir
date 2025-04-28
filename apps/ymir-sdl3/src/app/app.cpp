@@ -345,7 +345,7 @@ int App::Run(const CommandLineOptions &options) {
     // Load IPL ROM
     // Should be done after loading disc image so that the auto-detected region is used to select the appropriate ROM
     ScanIPLROMs();
-    LoadIPLROM(true);
+    LoadIPLROM();
 
     // Load SMPC persistent data and set up the path
     std::error_code error{};
@@ -1420,7 +1420,7 @@ void App::RunEmulator() {
                 break;
             }
             case EvtType::ReloadIPLROM: {
-                util::IPLROMLoadResult result = LoadIPLROM(false);
+                util::IPLROMLoadResult result = LoadIPLROM();
                 if (result.succeeded) {
                     m_context.EnqueueEvent(events::emu::HardReset());
                 } else {
@@ -2125,8 +2125,8 @@ void App::ScanIPLROMs() {
     }
 }
 
-util::IPLROMLoadResult App::LoadIPLROM(bool startup) {
-    std::filesystem::path iplPath = GetIPLROMPath(startup);
+util::IPLROMLoadResult App::LoadIPLROM() {
+    std::filesystem::path iplPath = GetIPLROMPath();
     if (iplPath.empty()) {
         devlog::warn<grp::base>("No IPL ROM found");
         return util::IPLROMLoadResult::Fail("No IPL ROM found");
@@ -2143,13 +2143,7 @@ util::IPLROMLoadResult App::LoadIPLROM(bool startup) {
     return result;
 }
 
-std::filesystem::path App::GetIPLROMPath(bool startup) {
-    // Load from command-line if starting up
-    if (startup && !m_options.iplPath.empty()) {
-        devlog::info<grp::base>("Using IPL ROM provided through command-line");
-        return m_options.iplPath;
-    }
-
+std::filesystem::path App::GetIPLROMPath() {
     // Load from settings if override is enabled
     if (m_context.settings.system.ipl.overrideImage && !m_context.settings.system.ipl.path.empty()) {
         devlog::info<grp::base>("Using IPL ROM overridden by settings");

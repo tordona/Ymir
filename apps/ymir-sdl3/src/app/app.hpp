@@ -79,8 +79,8 @@ private:
     void ReadPeripheral(ymir::peripheral::PeripheralReport &report);
 
     void ScanIPLROMs();
-    util::IPLROMLoadResult LoadIPLROM(bool startup);
-    std::filesystem::path GetIPLROMPath(bool startup);
+    util::IPLROMLoadResult LoadIPLROM();
+    std::filesystem::path GetIPLROMPath();
 
     void LoadSaveStates();
     void PersistSaveState(uint32 slot);
