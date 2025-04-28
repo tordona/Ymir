@@ -121,6 +121,10 @@ template <class Enum>
 constexpr bool is_bitmask_enum_v = is_bitmask_enum<Enum>::enable;
 
 /// @brief Identifies enum types with bitwise operators enabled.
+///
+/// Matches types which have bitmask operators enabled with `ENABLE_BITMASK_OPERATORS(x)`. Such types can be wrapped in
+/// a `BitmaskEnum` to perform common bitmask query operations.
+///
 /// @tparam Enum the enum type
 template <class Enum>
 concept BitmaskType = is_bitmask_enum_v<Enum>;
@@ -212,7 +216,7 @@ constexpr Enum operator^=(Enum &lhs, Enum rhs) noexcept {
 
 /// @brief Wraps the enumerated type `Enum` to simplify bitmask queries.
 ///
-/// The `Enum` must have bitwise operators enabled with `ENABLE_BITWISE_OPERATORS(x)`.
+/// The `Enum` must have bitwise operators enabled with `ENABLE_BITMASK_OPERATORS(x)`.
 ///
 /// @tparam Enum the enum type
 template <BitmaskType Enum>
