@@ -6,6 +6,8 @@
 #include <app/ui/widgets/cartridge_widgets.hpp>
 #include <app/ui/widgets/system_widgets.hpp>
 
+#include <SDL3/SDL_clipboard.h>
+
 using namespace ymir;
 
 namespace app::ui {
@@ -218,6 +220,17 @@ void SystemStateWindow::DrawCDDrive() {
         ImGui::TextUnformatted("No image loaded");
     } else {
         ImGui::Text("Image from %s", m_context.state.loadedDiscImagePath.string().c_str());
+        std::string hash{};
+        {
+            std::unique_lock lock{m_context.locks.disc};
+            hash = ToString(m_context.saturn.CDBlock.GetDiscHash());
+        }
+
+        ImGui::Text("Hash: %s", hash.c_str());
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Copy##disc_hash")) {
+            SDL_SetClipboardText(hash.c_str());
+        }
     }
     ImGui::PopTextWrapPos();
     switch (status) {

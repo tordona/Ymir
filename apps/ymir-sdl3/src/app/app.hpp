@@ -84,6 +84,7 @@ private:
 
     void LoadSaveStates();
     void PersistSaveState(uint32 slot);
+    void WriteSaveStateMeta();
     void EnableRewindBuffer(bool enable);
     void ToggleRewindBuffer();
 

@@ -1517,6 +1517,13 @@ void App::RunEmulator() {
                     SDL_OpenURL(
                         fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::Root).string()).c_str());
                 }
+                if (ImGui::MenuItem("Open save states directory", nullptr, nullptr,
+                                    !m_context.state.loadedDiscImagePath.empty())) {
+                    auto path =
+                        m_context.profile.GetPath(ProfilePath::SaveStates) / ToString(m_context.saturn.GetDiscHash());
+
+                    SDL_OpenURL(fmt::format("file:///{}", path.string()).c_str());
+                }
 
                 ImGui::Separator();
 
@@ -2215,6 +2222,8 @@ std::filesystem::path App::GetIPLROMPath() {
 }
 
 void App::LoadSaveStates() {
+    WriteSaveStateMeta();
+
     auto basePath = m_context.profile.GetPath(ProfilePath::SaveStates);
     auto gameStatesPath = basePath / ymir::ToString(m_context.saturn.GetDiscHash());
 
@@ -2253,48 +2262,54 @@ void App::PersistSaveState(uint32 slot) {
         cereal::PortableBinaryOutputArchive archive{out};
         archive(state);
 
-        // Write metadata
-        auto gameMetaPath = gameStatesPath / "meta.txt";
-        if (!std::filesystem::is_regular_file(gameMetaPath)) {
-            std::ofstream out{gameMetaPath};
-            if (out) {
-                std::unique_lock lock{m_context.locks.disc};
-                const auto &disc = m_context.saturn.CDBlock.GetDisc();
+        WriteSaveStateMeta();
+    }
+}
 
-                auto iter = std::ostream_iterator<char>(out);
-                fmt::format_to(iter, "Title: {}\n", disc.header.gameTitle);
-                fmt::format_to(iter, "Product Number: {}\n", disc.header.productNumber);
-                fmt::format_to(iter, "Version: {}\n", disc.header.version);
-                fmt::format_to(iter, "Release date: {}\n", disc.header.releaseDate);
-                fmt::format_to(iter, "Disc: {}\n", disc.header.deviceInfo);
-                fmt::format_to(iter, "Compatible area codes: ");
-                auto bmAreaCodes = BitmaskEnum(disc.header.compatAreaCode);
-                if (bmAreaCodes.AnyOf(ymir::media::AreaCode::Japan)) {
-                    fmt::format_to(iter, "J");
-                }
-                if (bmAreaCodes.AnyOf(ymir::media::AreaCode::AsiaNTSC)) {
-                    fmt::format_to(iter, "T");
-                }
-                if (bmAreaCodes.AnyOf(ymir::media::AreaCode::NorthAmerica)) {
-                    fmt::format_to(iter, "U");
-                }
-                if (bmAreaCodes.AnyOf(ymir::media::AreaCode::CentralSouthAmericaNTSC)) {
-                    fmt::format_to(iter, "B");
-                }
-                if (bmAreaCodes.AnyOf(ymir::media::AreaCode::AsiaPAL)) {
-                    fmt::format_to(iter, "A");
-                }
-                if (bmAreaCodes.AnyOf(ymir::media::AreaCode::EuropePAL)) {
-                    fmt::format_to(iter, "E");
-                }
-                if (bmAreaCodes.AnyOf(ymir::media::AreaCode::Korea)) {
-                    fmt::format_to(iter, "K");
-                }
-                if (bmAreaCodes.AnyOf(ymir::media::AreaCode::CentralSouthAmericaPAL)) {
-                    fmt::format_to(iter, "L");
-                }
-                fmt::format_to(iter, "\n");
+void App::WriteSaveStateMeta() {
+    auto basePath = m_context.profile.GetPath(ProfilePath::SaveStates);
+    auto gameStatesPath = basePath / ymir::ToString(m_context.saturn.GetDiscHash());
+    auto gameMetaPath = gameStatesPath / "meta.txt";
+    if (!std::filesystem::is_regular_file(gameMetaPath)) {
+        std::filesystem::create_directories(gameStatesPath);
+        std::ofstream out{gameMetaPath};
+        if (out) {
+            std::unique_lock lock{m_context.locks.disc};
+            const auto &disc = m_context.saturn.CDBlock.GetDisc();
+
+            auto iter = std::ostream_iterator<char>(out);
+            fmt::format_to(iter, "Title: {}\n", disc.header.gameTitle);
+            fmt::format_to(iter, "Product Number: {}\n", disc.header.productNumber);
+            fmt::format_to(iter, "Version: {}\n", disc.header.version);
+            fmt::format_to(iter, "Release date: {}\n", disc.header.releaseDate);
+            fmt::format_to(iter, "Disc: {}\n", disc.header.deviceInfo);
+            fmt::format_to(iter, "Compatible area codes: ");
+            auto bmAreaCodes = BitmaskEnum(disc.header.compatAreaCode);
+            if (bmAreaCodes.AnyOf(ymir::media::AreaCode::Japan)) {
+                fmt::format_to(iter, "J");
             }
+            if (bmAreaCodes.AnyOf(ymir::media::AreaCode::AsiaNTSC)) {
+                fmt::format_to(iter, "T");
+            }
+            if (bmAreaCodes.AnyOf(ymir::media::AreaCode::NorthAmerica)) {
+                fmt::format_to(iter, "U");
+            }
+            if (bmAreaCodes.AnyOf(ymir::media::AreaCode::CentralSouthAmericaNTSC)) {
+                fmt::format_to(iter, "B");
+            }
+            if (bmAreaCodes.AnyOf(ymir::media::AreaCode::AsiaPAL)) {
+                fmt::format_to(iter, "A");
+            }
+            if (bmAreaCodes.AnyOf(ymir::media::AreaCode::EuropePAL)) {
+                fmt::format_to(iter, "E");
+            }
+            if (bmAreaCodes.AnyOf(ymir::media::AreaCode::Korea)) {
+                fmt::format_to(iter, "K");
+            }
+            if (bmAreaCodes.AnyOf(ymir::media::AreaCode::CentralSouthAmericaPAL)) {
+                fmt::format_to(iter, "L");
+            }
+            fmt::format_to(iter, "\n");
         }
     }
 }
