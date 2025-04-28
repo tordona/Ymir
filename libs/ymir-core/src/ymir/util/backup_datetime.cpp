@@ -4,6 +4,7 @@
 
 namespace util {
 
+/// @brief The origin point corresponding to the raw value of 0.
 static const auto kOrigin = [] {
     std::tm tm{};
     tm.tm_year = 1980 - 1900;
@@ -16,7 +17,7 @@ static const auto kOrigin = [] {
     return mktime(&tm);
 }();
 
-BackupDateTime::BackupDateTime(uint32 raw) {
+BackupDateTime::BackupDateTime(uint32 raw) noexcept {
     const auto dt = kOrigin + raw * 60;
     tm tm{};
 #ifdef _MSC_VER
@@ -32,7 +33,7 @@ BackupDateTime::BackupDateTime(uint32 raw) {
     minute = tm.tm_min;
 }
 
-uint32 BackupDateTime::ToRaw() const {
+uint32 BackupDateTime::ToRaw() const noexcept {
     std::tm tm{};
     tm.tm_year = year - 1900;
     tm.tm_mon = month - 1;

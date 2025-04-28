@@ -3,9 +3,6 @@
 /**
 @file
 @brief A collection of useful arithmetic operations.
-
-@namespace bit
-@brief Contains several useful arithmetic operations.
 */
 
 #include "inline.hpp"
