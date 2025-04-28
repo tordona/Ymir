@@ -15,7 +15,7 @@ enum class MyBitmask {
 ENABLE_BITMASK_OPERATORS(MyBitmask)
 ```
 
-From now on, MyBitmask's values can be used with bitwise operators.
+From now on, `MyBitmask`'s values can be used with bitwise operators.
 
 The macro must be used at the global namespace scope. To enable `BitmaskEnum` for types living under a namespace, use
 the following idiom:
