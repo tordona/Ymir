@@ -1,4 +1,11 @@
 #pragma once
+/**
+@file
+@brief A collection of bitwise operations and bit twiddling tricks.
+
+@namespace bit
+@brief Contains a collection of bitwise operations and bit twiddling tricks.
+*/
 
 #include "inline.hpp"
 
@@ -11,53 +18,75 @@
 
 namespace bit {
 
-// Determines if the given unsigned integral is a power of two.
+/// @brief Determines if `value` is a power of two.
+/// @tparam T the type of the unsigned integral
+/// @param value the value to check
+/// @return `true` if `value` is a power of two
 template <std::unsigned_integral T>
-FORCE_INLINE constexpr bool is_power_of_two(T x) {
-    return x != 0 && (x & (x - 1)) == 0;
+[[nodiscard]] FORCE_INLINE constexpr bool is_power_of_two(T value) noexcept {
+    return value != 0 && (value & (value - 1)) == 0;
 }
 
-// Returns the next power of two not less than x.
+/// @brief Returns the next power of two not less than `value`.
+/// @tparam T the type of the unsigned integral
+/// @param value the base value
+/// @return `value` rounded up to the next power of two
 template <std::unsigned_integral T>
-FORCE_INLINE constexpr T next_power_of_two(T x) {
-    x--;
-    x |= x >> 1u;
-    x |= x >> 2u;
-    x |= x >> 4u;
+[[nodiscard]] FORCE_INLINE constexpr T next_power_of_two(T value) noexcept {
+    value--;
+    value |= value >> 1u;
+    value |= value >> 2u;
+    value |= value >> 4u;
     if constexpr (sizeof(T) > 1) {
-        x |= x >> 8u;
+        value |= value >> 8u;
     }
     if constexpr (sizeof(T) > 2) {
-        x |= x >> 16u;
+        value |= value >> 16u;
     }
     if constexpr (sizeof(T) > 4) {
-        x |= x >> 32ull;
+        value |= value >> 32ull;
     }
-    x++;
-    return x;
+    value++;
+    return value;
 }
 
-// Sign-extend from a constant bit width.
-// The return type is the signed equivalent of T.
+/// @brief Sign-extends a `B`-int integer from the least significant bits of `value`.
+/// @tparam B the bit width of the value
+/// @tparam T the type of the integral
+/// @param value the value to sign-extend
+/// @return the signed version of the value, sign-extended from `B` bits to the bit width of `T`
 template <unsigned B, std::integral T>
-[[nodiscard]] FORCE_INLINE constexpr auto sign_extend(T x) {
+[[nodiscard]] FORCE_INLINE constexpr auto sign_extend(T value) noexcept {
     using ST = std::make_signed_t<T>;
     struct {
         ST x : B;
-    } s{static_cast<ST>(x)};
+    } s{static_cast<ST>(value)};
     return s.x;
 }
 
-// Tests if a bit is set.
+/// @brief Tests if the bit at `pos` is set in `value`.
+/// @tparam pos the bit position, where 0 is the least significant bit; must not exceed the bit width of `T`
+/// @tparam T the type of the integral
+/// @param value the value to test
+/// @return `true` if the `pos`-th bit is set, `false` if clear
 template <std::size_t pos, std::integral T>
-[[nodiscard]] FORCE_INLINE constexpr bool test(T value) {
+[[nodiscard]] FORCE_INLINE constexpr bool test(T value) noexcept {
     static_assert(pos < sizeof(T) * 8, "pos out of range");
     return (value >> pos) & 1;
 }
-// Extracts a range of bits from the value.
-// start and end are both inclusive.
+
+/// @brief Extracts the range of bits from `start` to `end` from `value`.
+///
+/// The range is inclusive on both `start` and `end`. Also, `start` must be less than or equal to `end` and neither may
+/// exceed the bit width of `T`.
+///
+/// @tparam start the least significant bit of the range to extract.
+/// @tparam end the most significant bit of the range to extract.
+/// @tparam T the type of the integral
+/// @param value the value to extract bits from
+/// @return the bits from `start` to `end` of `value`, shifted down to the zeroth position
 template <std::size_t start, std::size_t end = start, std::integral T>
-[[nodiscard]] FORCE_INLINE constexpr T extract(T value) {
+[[nodiscard]] FORCE_INLINE constexpr T extract(T value) noexcept {
     static_assert(start < sizeof(T) * 8, "start out of range");
     static_assert(end < sizeof(T) * 8, "end out of range");
     static_assert(end >= start, "end cannot be before start");
@@ -69,17 +98,36 @@ template <std::size_t start, std::size_t end = start, std::integral T>
     return (value >> start) & mask;
 }
 
-// Extracts a range of bits from the value, converting them into a signed integer.
-// start and end are both inclusive.
+/// @brief Extracts a signed integer from the range of bits from `start` to `end` from `value`.
+///
+/// The range is inclusive on both `start` and `end`. Also, `start` must be less than or equal to `end` and neither may
+/// exceed the bit width of `T`.
+///
+/// @tparam start the least significant bit of the range to extract.
+/// @tparam end the most significant bit of the range to extract.
+/// @tparam T the type of the integral
+/// @param value the value to extract bits from
+/// @return the signed integer contained in the bit range between `start` and `end` of `value`
 template <std::size_t start, std::size_t end = start, std::integral T>
-[[nodiscard]] FORCE_INLINE auto extract_signed(T value) {
+[[nodiscard]] FORCE_INLINE auto extract_signed(T value) noexcept {
     return sign_extend<end - start + 1>(extract<start, end>(value));
 }
 
-// Deposits a range of bits into the value and returns the modified value.
-// start and end are both inclusive.
+/// @brief Deposits the least significant bits from `value` into the bit range between `start` and `end` of `base` and
+/// returns the modified value.
+///
+/// The range is inclusive on both `start` and `end`. Also, `start` must be less than or equal to `end` and neither may
+/// exceed the bit width of `T`.
+///
+/// @tparam start the least significant bit of the range to extract.
+/// @tparam end the most significant bit of the range to extract.
+/// @tparam T the type of `base`
+/// @tparam TV the type of `value`
+/// @param base the value to deposit bits into
+/// @param value the value to extract bits from
+/// @return `base` with the bits between `start` and `end` replaced with the least significant bits of `value`
 template <std::size_t start, std::size_t end = start, std::integral T, std::integral TV = T>
-[[nodiscard]] FORCE_INLINE constexpr T deposit(T base, TV value) {
+[[nodiscard]] FORCE_INLINE constexpr T deposit(T base, TV value) noexcept {
     static_assert(start < sizeof(T) * 8, "start out of range");
     static_assert(end < sizeof(T) * 8, "end out of range");
     static_assert(end >= start, "end cannot be before start");
@@ -93,16 +141,30 @@ template <std::size_t start, std::size_t end = start, std::integral T, std::inte
     return base;
 }
 
-// Deposits a range of bits into the destination value.
-// start and end are both inclusive.
+/// @brief Deposits the least significant bits from `value` into the bit range between `start` and `end` of `dest`.
+///
+/// The range is inclusive on both `start` and `end`. Also, `start` must be less than or equal to `end` and neither may
+/// exceed the bit width of `T`.
+///
+/// @tparam start the least significant bit of the range to extract.
+/// @tparam end the most significant bit of the range to extract.
+/// @tparam T the type of `base`
+/// @tparam TV the type of `value`
+/// @param base the value to deposit bits into
+/// @param value the value to extract bits from
 template <std::size_t start, std::size_t end = start, std::integral T, std::integral TV = T>
-FORCE_INLINE constexpr void deposit_into(T &dest, TV value) {
+FORCE_INLINE constexpr void deposit_into(T &dest, TV value) noexcept {
     dest = deposit<start, end>(dest, value);
 }
 
-// Compresses the selected bits of the value into the least significant bits of the output.
+/// @brief Compresses (gathers) the masked bits of `value` into the least significant bits of the output.
+///
+/// @tparam mask the bits to gather
+/// @tparam T the type of the integral
+/// @param value the value to extract bits from
+/// @return the bits of value selected by `mask`, gathered into the least significant bits
 template <std::size_t mask, std::integral T>
-FORCE_INLINE constexpr T gather(T value) {
+[[nodiscard]] FORCE_INLINE constexpr T gather(T value) noexcept {
     // TODO: use _pext_u32/64 if available
 
     // Hacker's Delight, volume 2, page 153
@@ -129,9 +191,14 @@ FORCE_INLINE constexpr T gather(T value) {
     return value;
 }
 
-// Expands the least significant bits of the value into the corresponding bits of the given mask.
+/// @brief Expands (scatters) the least significant bits of `value` into the places selected by `mask`.
+///
+/// @tparam mask the bits to scatter the value into
+/// @tparam T the type of the integral
+/// @param value the value to extract bits from
+/// @return the least significant bits of `value` scattered into the `mask` bits
 template <std::size_t mask, std::integral T>
-FORCE_INLINE constexpr T scatter(T value) {
+[[nodiscard]] FORCE_INLINE constexpr T scatter(T value) noexcept {
     // TODO: use _pdep_u32/64 if available
 
     // Hacker's Delight, volume 2, page 157
@@ -169,21 +236,29 @@ FORCE_INLINE constexpr T scatter(T value) {
 namespace detail {
 
     template <class T, std::size_t... N>
-    constexpr T byte_swap_impl(T value, std::index_sequence<N...>) {
+    [[nodiscard]] FORCE_INLINE constexpr T byte_swap_impl(T value, std::index_sequence<N...>) noexcept {
         return ((((value >> (N * CHAR_BIT)) & (T)(unsigned char)(-1)) << ((sizeof(T) - 1 - N) * CHAR_BIT)) | ...);
     };
 
 } // namespace detail
 
-// Byte swaps the given value
+/// @brief Swaps the bytes of `value`.
+///
+/// @tparam T the type of the unsigned integral
+/// @param value the value to byte swap
+/// @return `value` with its bytes swapped
 template <std::unsigned_integral T>
-constexpr T byte_swap(T value) {
+[[nodiscard]] FORCE_INLINE constexpr T byte_swap(T value) noexcept {
     return detail::byte_swap_impl<T>(value, std::make_index_sequence<sizeof(T)>{});
 }
 
-// Byte swaps the given value if the endianness doesn't match native endianness
+/// @brief Swaps the bytes of `value` if `endianness` doesn't match the native endianness.
+///
+/// @tparam T the type of the unsigned integral
+/// @param value the value to byte swap
+/// @return `value` with its bytes swapped if `endianess` is not native
 template <std::endian endianness, std::unsigned_integral T>
-constexpr T endian_swap(T value) {
+[[nodiscard]] FORCE_INLINE constexpr T endian_swap(T value) noexcept {
     if constexpr (endianness == std::endian::native) {
         return value;
     } else {
@@ -191,54 +266,74 @@ constexpr T endian_swap(T value) {
     }
 }
 
-// Byte swaps the given value if the native endianness is not big-endian
+/// @brief Swaps the bytes of `value` if the native endianness is not big-endian.
+///
+/// @tparam T the type of the unsigned integral
+/// @param value the value to byte swap
+/// @return `value` with its bytes swapped if the native endianness is not big-endian
 template <std::unsigned_integral T>
-constexpr T big_endian_swap(T value) {
+[[nodiscard]] FORCE_INLINE constexpr T big_endian_swap(T value) noexcept {
     return endian_swap<std::endian::big>(value);
 }
 
-// Byte swaps the given value if the native endianness is not little-endian
+/// @brief Swaps the bytes of `value` if the native endianness is not little-endian.
+///
+/// @tparam T the type of the unsigned integral
+/// @param value the value to byte swap
+/// @return `value` with its bytes swapped if the native endianness is not little-endian
 template <std::unsigned_integral T>
-constexpr T little_endian_swap(T value) {
+[[nodiscard]] FORCE_INLINE constexpr T little_endian_swap(T value) noexcept {
     return endian_swap<std::endian::little>(value);
 }
 
-// Reverses the bits of the given value
-constexpr uint8 reverse(uint8 n) {
-    n = (n << 4u) | (n >> 4u);
-    n = ((n & 0x33u) << 2u) | ((n >> 2u) & 0x33u);
-    n = ((n & 0x55u) << 1u) | ((n >> 1u) & 0x55u);
-    return n;
+/// @brief Reverses the bits of `value`.
+///
+/// @param value the value to reverse bits from
+/// @return `value` with its bits reversed
+[[nodiscard]] FORCE_INLINE constexpr uint8 reverse(uint8 value) noexcept {
+    value = (value << 4u) | (value >> 4u);
+    value = ((value & 0x33u) << 2u) | ((value >> 2u) & 0x33u);
+    value = ((value & 0x55u) << 1u) | ((value >> 1u) & 0x55u);
+    return value;
 }
 
-// Reverses the bits of the given value
-constexpr uint16 reverse(uint16 n) {
-    n = (n << 8u) | (n >> 8u);
-    n = ((n & 0x0F0Fu) << 4u) | ((n >> 4u) & 0x0F0Fu);
-    n = ((n & 0x3333u) << 2u) | ((n >> 2u) & 0x3333u);
-    n = ((n & 0x5555u) << 1u) | ((n >> 1u) & 0x5555u);
-    return n;
+/// @brief Reverses the bits of `value`.
+///
+/// @param value the value to reverse bits from
+/// @return `value` with its bits reversed
+[[nodiscard]] FORCE_INLINE constexpr uint16 reverse(uint16 value) noexcept {
+    value = (value << 8u) | (value >> 8u);
+    value = ((value & 0x0F0Fu) << 4u) | ((value >> 4u) & 0x0F0Fu);
+    value = ((value & 0x3333u) << 2u) | ((value >> 2u) & 0x3333u);
+    value = ((value & 0x5555u) << 1u) | ((value >> 1u) & 0x5555u);
+    return value;
 }
 
-// Reverses the bits of the given value
-constexpr uint32 reverse(uint32 n) {
-    n = (n << 16u) | (n >> 16u);
-    n = ((n & 0x00FF00FFu) << 8u) | ((n >> 8u) & 0x00FF00FFu);
-    n = ((n & 0x0F0F0F0Fu) << 4u) | ((n >> 4u) & 0x0F0F0F0Fu);
-    n = ((n & 0x33333333u) << 2u) | ((n >> 2u) & 0x33333333u);
-    n = ((n & 0x55555555u) << 1u) | ((n >> 1u) & 0x55555555u);
-    return n;
+/// @brief Reverses the bits of `value`.
+///
+/// @param value the value to reverse bits from
+/// @return `value` with its bits reversed
+[[nodiscard]] FORCE_INLINE constexpr uint32 reverse(uint32 value) noexcept {
+    value = (value << 16u) | (value >> 16u);
+    value = ((value & 0x00FF00FFu) << 8u) | ((value >> 8u) & 0x00FF00FFu);
+    value = ((value & 0x0F0F0F0Fu) << 4u) | ((value >> 4u) & 0x0F0F0F0Fu);
+    value = ((value & 0x33333333u) << 2u) | ((value >> 2u) & 0x33333333u);
+    value = ((value & 0x55555555u) << 1u) | ((value >> 1u) & 0x55555555u);
+    return value;
 }
 
-// Reverses the bits of the given value
-constexpr uint64 reverse(uint64 n) {
-    n = (n << 32ull) | (n >> 32ull);
-    n = ((n & 0x0000FFFF0000FFFFull) << 16ull) | ((n >> 16ull) & 0x0000FFFF0000FFFFull);
-    n = ((n & 0x00FF00FF00FF00FFull) << 8ull) | ((n >> 8ull) & 0x00FF00FF00FF00FFull);
-    n = ((n & 0x0F0F0F0F0F0F0F0Full) << 4ull) | ((n >> 4ull) & 0x0F0F0F0F0F0F0F0Full);
-    n = ((n & 0x3333333333333333ull) << 2ull) | ((n >> 2ull) & 0x3333333333333333ull);
-    n = ((n & 0x5555555555555555ull) << 1ull) | ((n >> 1ull) & 0x5555555555555555ull);
-    return n;
+/// @brief Reverses the bits of `value`.
+///
+/// @param value the value to reverse bits from
+/// @return `value` with its bits reversed
+[[nodiscard]] FORCE_INLINE constexpr uint64 reverse(uint64 value) noexcept {
+    value = (value << 32ull) | (value >> 32ull);
+    value = ((value & 0x0000FFFF0000FFFFull) << 16ull) | ((value >> 16ull) & 0x0000FFFF0000FFFFull);
+    value = ((value & 0x00FF00FF00FF00FFull) << 8ull) | ((value >> 8ull) & 0x00FF00FF00FF00FFull);
+    value = ((value & 0x0F0F0F0F0F0F0F0Full) << 4ull) | ((value >> 4ull) & 0x0F0F0F0F0F0F0F0Full);
+    value = ((value & 0x3333333333333333ull) << 2ull) | ((value >> 2ull) & 0x3333333333333333ull);
+    value = ((value & 0x5555555555555555ull) << 1ull) | ((value >> 1ull) & 0x5555555555555555ull);
+    return value;
 }
 
 } // namespace bit
