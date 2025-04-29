@@ -8,7 +8,7 @@ namespace util {
 // An event suspends threads that wait on it until it is signaled.
 class Event {
 public:
-    explicit Event(bool set = false)
+    [[nodiscard]] explicit Event(bool set = false) noexcept
         : m_set(set) {}
 
     void Wait(bool autoReset) {

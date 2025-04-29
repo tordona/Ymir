@@ -55,11 +55,6 @@ if constexpr (devlog::trace_enabled<grp::base>) {
 ```
 */
 
-/**
-@namespace devlog
-@brief Development logging utilities.
-*/
-
 #include <fmt/format.h>
 
 #include <concepts>
@@ -76,7 +71,6 @@ inline constexpr bool globalEnable = Ymir_ENABLE_DEVLOG;
 /// @brief Log level type - a simple integer type.
 using Level = uint32;
 
-/// @brief Dev log levels definitions.
 namespace level {
     /// @brief The lowest log level for fine-grained details.
     ///

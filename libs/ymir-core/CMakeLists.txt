@@ -140,6 +140,7 @@ add_library(ymir-core
     include/ymir/util/bitmask_enum.hpp
     include/ymir/util/callback.hpp
     include/ymir/util/compiler_info.hpp
+    include/ymir/util/constexpr_for.hpp
     include/ymir/util/data_ops.hpp
     include/ymir/util/date_time.hpp
     include/ymir/util/dev_log.hpp
@@ -210,7 +211,6 @@ add_library(ymir-core
     src/ymir/sys/saturn.cpp
 
     src/ymir/util/backup_datetime.cpp
-    src/ymir/util/constexpr_for.hpp
     src/ymir/util/date_time.cpp
     src/ymir/util/process.cpp
 )

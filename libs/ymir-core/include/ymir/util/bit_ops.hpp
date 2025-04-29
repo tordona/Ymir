@@ -3,9 +3,6 @@
 /**
 @file
 @brief Bitwise operations and bit twiddling tricks.
-
-@namespace bit
-@brief Bitwise operations and bit twiddling tricks.
 */
 
 #include "inline.hpp"

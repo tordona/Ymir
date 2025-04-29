@@ -68,7 +68,7 @@ operations are available in this class and work in the same manner.
 To process inputs, you'll need to attach a controller to one or both ports and configure callbacks. You'll find the
 ports in the @link ymir::Saturn::SMPC `SMPC` @endlink member of `ymir::Saturn`.
 
-Ports are instances of `ymir::peripheral::PeripheralPort` and provides methods for inserting, removing and retrieving
+Ports are instances of `ymir::peripheral::PeripheralPort` which provides methods for inserting, removing and retrieving
 connected peripherals.
 
 Use one of the `Connect` methods to attempt to attach a controller of a specific type to the port. If successful, the
@@ -80,8 +80,8 @@ with other connected peripherals (e.g. you cannot use the Virtua Gun with a mult
 peripherals (including multi-tap) are planned.
 
 Use `ymir::peripheral::PeripheralPort::DisconnectPeripherals()` to disconnect all peripherals connected to the port. Be
-careful: any existing pointers to previously connected peripheral(s) will become invalid. The same applies when
-replacing a peripheral.
+careful: any existing pointers to previously connected peripherals will become invalid. The same applies when replacing
+a peripheral.
 
 Whenever input is queried, either through INTBACK or by direct access to PDR/DDR registers, the peripheral will invoke a
 callback function with the following signature:
@@ -94,6 +94,8 @@ The type of the peripheral is specified in `ymir::peripheral::PeripheralReport::
 `ymir::peripheral::PeripheralType`. The callback function must fill in the appropriate report depending on the type. The
 report is preinitialized with the default values for the controller: all buttons released, all axes at zero, etc. This
 callback is invoked from the emulator thread.
+
+Use `ymir::peripheral::PeripheralPort::SetPeripheralReportCallback` to bind the callback.
 
 
 
@@ -112,8 +114,11 @@ void FrameCompleteCallback(uint32 *fb, uint32 width, uint32 height, void *userCo
 where:
 - `fb` is a pointer to the rendered framebuffer in little-endian XBGR8888 format (`..BBGGRR`)
 - `width` and `height` specify the dimensions of the framebuffer
-NOTE: The most significant byte is set to 0xFF for convenience, so that it is fully opaque in case your framebuffer
-texture has an alpha channel (ABGR8888 format).
+
+Use `ymir::vdp::VDP::SetRenderCallback` to bind this callback.
+
+@note The most significant byte of the framebuffer data is set to 0xFF for convenience, so that it is fully opaque in
+case your framebuffer texture has an alpha channel (ABGR8888 format).
 
 Additionally, you can specify a VDP1 frame completed callback in order to count VDP1 frames. This callback has the
 following signature:
@@ -121,6 +126,8 @@ following signature:
 ```cpp
 void VDP1FrameCompleteCallback(void *userContext)
 ```
+
+Use `ymir::vdp::VDP::SetVDP1Callback` to bind this callback.
 
 The SCSP invokes the sample callback on every sample (signed 16-bit PCM, stereo, 44100 Hz).
 The callback signature is:
@@ -131,6 +138,8 @@ void SCSPSampleCallback(sint16 left, sint16 right, void *userContext)
 
 where `left` and `right` are the samples for the respective channels.
 You'll probably want to accumulate those samples into a ring buffer before sending them to the audio system.
+
+Use `ymir::scsp::SCSP::SetSampleCallback` to bind this callback.
 
 You can run the emulator core without providing video and audio callbacks (headless mode). It will work fine, but you
 won't receive video frames or audio samples.
@@ -144,10 +153,13 @@ on a dedicated thread you need to make sure to sync/mutex updates coming from th
 
 The internal backup memory, external backup RAM cartridge and SMPC persist data to disk.
 
-Invoke `ymir::Saturn::LoadInternalBackupMemoryImage` to configure the path to the internal backup memory image. By
-default, the emulator core will *not* load any images, so the internal backup memory will not work. Make sure to check
-the error code in `error` to ensure the image was properly loaded. If the file contains a proper internal backup memory
-image, it is loaded as is, otherwise the file is resized or truncated to 32 KiB and formatted to a blank backup memory.
+Use `ymir::Saturn::LoadInternalBackupMemoryImage` to configure the path to the internal backup memory image. Make sure
+to check the error code in `error` to ensure the image was properly loaded. If the file is 32 KiB in size and contains a
+proper internal backup memory image, it is loaded as is, otherwise the file is resized or truncated to 32 KiB and
+formatted to a blank backup memory.
+
+By default, the emulator core will *not* load an internal backup memory image, so it will not work out of the box. You
+must load or create an image in order to use internal backup memory saves.
 
 For external backup RAM cartridges, you will need to use `ymir::bup::BackupMemory` to try to load the image:
 
@@ -174,13 +186,17 @@ ymir::Saturn &saturn = ...;
 saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
 ```
 
-The SMPC is initialized with factory defaults. Upon startup, the system will require the user to set up the language and
-system clock. It will not automatically persist any settings upon exit. In order to persist them, use either one of
-`ymir::smpc::SMPC::LoadPersistentDataFrom` or `ymir::smpc::SMPC::SavePersistentDataTo`. As their names imply,
-`LoadPersistentDataFrom` will attempt to read persistent data from the given path and `SavePersistentDataTo` will
-attempt to write the current settings to the file. Both functions will additionally set the persistent data path to the
-specified path so that any further changes are automatically saved to that file. It is sufficient to call one of these
-functions only once to configure the persistent path for SMPC settings.
+The SMPC is initialized with factory defaults. Upon startup, the emulated Saturn will require the user to set up the
+language and system clock just like a real Saturn when the system configuration is reset or lost due to a dead battery.
+You can also force a factory reset with `ymir::Saturn::FactoryReset`.
+
+As with the internal backup memory, the emulator core will not automatically persist any settings upon exit unless you
+bind it to a file with either `ymir::smpc::SMPC::LoadPersistentDataFrom` or `ymir::smpc::SMPC::SavePersistentDataTo`.
+As their names imply, `LoadPersistentDataFrom` will attempt to read persistent data from the given path and
+`SavePersistentDataTo` will attempt to write the current settings to the file. Both functions will additionally bind the
+persistent data path so that any further changes are automatically saved to that file. It is sufficient to call one of
+these functions only once to configure the persistent path for SMPC settings for the lifetime of the `ymir::Saturn`
+instance.
 
 
 
@@ -196,21 +212,21 @@ limitations, allowing debuggers to read from write-only registers or do 8-bit re
 normally disallow accesses of that size. `Peek` and `Poke` also avoid side-effects when accessing certain registers such
 as the CD Block's data transfer register which would cause the transfer pointer to advance and break emulated software.
 
-@a Probes are provided by components to inspect or modify their internal state. They are always available and have
-virtually no performance cost on the emulator thread. Probes can perform operations that cannot normally be done through
-simple memory reads and writes such as directly reading from or writing to SH2 cache arrays or CD Block buffers. Not
-even `Peek`/`Poke` on `ymir::sys::Bus` can reach that far.
+@a Probes are provided by components through `GetProbe()` methods to inspect or modify their internal state. They are
+always available and have virtually no performance cost on the emulator thread. Probes can perform operations that
+cannot normally be done through simple memory reads and writes such as directly reading from or writing to SH2 cache
+arrays or CD Block buffers. Not even `Peek`/`Poke` on `ymir::sys::Bus` can reach that far.
 
 @a Tracers are integrated into the components themselves in order to capture events as the emulator executes. The
-application must implement the provided interfaces in `ymir/debug/[component]_tracer.hpp`, then attach tracer instances
-to the components with the `UseTracer(...)` methods provided by them which will then receive events as they occur while
-the emulator is running.
+application must implement the provided interfaces in @link libs/ymir-core/include/ymir/debug ymir/debug @endlink then
+attach tracer instances to the components with their `UseTracer()` methods to receive events as they occur while the
+emulator is running.
 
 Some tracers require you to run the emulator in *debug tracing mode*. Call `ymir::Saturn::EnableDebugTracing` on the
-`Saturn` instance with `true` then attach the traceers. There's no need to reset or reinitialize the emulator core to
+`Saturn` instance with `true` then attach the tracers. There's no need to reset or reinitialize the emulator core to
 switch modes -- you can run the emulator normally for a while, then switch to debug mode at any point to enable tracing,
-and switch back and forth as often as you want. Tracers that need debug mode to work are documented as such in their
-header files.
+and switch back and forth as often as you want. Tracers that need debug tracing mode to work are documented as such in
+their header files.
 
 Running in debug tracing mode has a noticeable performance penalty as the alternative code path enables calls to the
 tracers in hot paths. This is left as an option in order to maximize performance for the primary use case of playing
@@ -222,7 +238,7 @@ the SH2 and SCU DSP tracers honor the debug tracing mode flag.
 
 Debug tracing mode is not necessary to use probes as these have no performace impact on the emulator.
 
-Tracers are invoked from the emulator thread -- you will need to manage thread safety if trace data is to be consumed by
+Tracers are invoked from the emulator thread. You will need to manage thread safety if trace data is to be consumed by
 another thread. It's also important to minimize performance impact, especially on hot tracers (memory accesses and CPU
 instructions primarily). A good approach to optimize time spent handling the event is to copy the trace data into a
 lock-free ring buffer to be processed further by another thread.
@@ -243,5 +259,5 @@ you plan to run it in a dedicated thread.
 As noted above, the input, video and audio callbacks as well as debug tracers are invoked from the emulator thread.
 Provide proper synchronization between the emulator thread and the main/GUI thread when handling these events.
 
-The VDP renderer runs in its own thread and is thread-safe within the core.
+The VDP renderer may optionally run in its own thread. It is thread-safe within the core.
 */

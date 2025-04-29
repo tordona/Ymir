@@ -8,12 +8,6 @@ Currently supports:
 - Clang on Linux, macOS and Windows
 - GCC on Linux, macOS and MinGW
 - MSVC on Windows
-
-@namespace compiler
-@brief Compiler-specific definitions, constants, functions and features.
-
-@namespace compiler::version
-@brief Compiler version constants.
 */
 
 #include <string>

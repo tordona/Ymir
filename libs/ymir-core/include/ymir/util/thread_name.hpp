@@ -2,7 +2,7 @@
 
 /**
 @file
-@brief Thread naming utility.
+@brief Defines the `util::SetCurrentThreadName` function to rename the current thread.
 */
 
 #if defined(_WIN32)
