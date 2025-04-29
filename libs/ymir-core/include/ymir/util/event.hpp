@@ -1,16 +1,76 @@
 #pragma once
 
+/**
+@file
+@brief Defines `util::Event`, a synchronization primitive that blocks threads until a signal is raised.
+*/
+
 #include <condition_variable>
 #include <mutex>
 
 namespace util {
 
-// An event suspends threads that wait on it until it is signaled.
+int x;
+
+/// @brief An event, based on a condition variable, that blocks threads until it is signaled.
+///
+/// Example usage:
+///
+/// ```cpp
+/// // A simple blocking queue that blocks consumer thread until there are
+/// template <typename T>
+/// class BlockingQueue {
+///     // Inserts a value in the queue.
+///     void Offer(T value) {
+///         // Wait until the queue is not full.
+///         // `false` causes the signal to not be reset once received.
+///         // This will block the thread until the event is signaled.
+///         queueNotFullEvent.Wait(false);
+///
+///         // Push the element to the queue
+///         // NOTE: synchronization omitted for brevity
+///         queue.offer(value);
+///
+///         // Signal not empty event now that there is at least one element on the queue.
+///         // This will unblock all threads waiting for this event to be signaled.
+///         queueNotEmptyEvent.Set();
+///     }
+///
+///     // Removes a value from the queue.
+///     T Poll() {
+///         // Wait until the queue is not empty.
+///         // `false` causes the signal to not be reset once received.
+///         // This will block the thread until the event is signaled.
+///         queueNotEmptyEvent.Wait(false);
+///
+///         // Pop the element from the queue
+///         // NOTE: synchronization omitted for brevity
+///         T value = queue.poll();
+///
+///         // Signal not full event now that there is at least one free space on the queue.
+///         // This will unblock all threads waiting for this event to be signaled.
+///         queueNotFullEvent.Set();
+///     }
+/// private:
+///     Queue<T> queue = ...; // some queue implementation
+///
+///     // Initialize events to their default states.
+///     // The queue starts out empty, so the "not full" event is signaled and the "not empty" event is not.
+///     util::Event queueNotFullEvent{true};
+///     util::Event queueNotEmptyEvent{false};
+/// };
+///
+///
+/// ```
 class Event {
 public:
+    /// @brief Constructs a new event with an initial signal state.
+    /// @param[in] set the signal state
     [[nodiscard]] explicit Event(bool set = false) noexcept
         : m_set(set) {}
 
+    /// @brief Waits until the event is signaled, optionally resetting it.
+    /// @param[in] autoReset whether to automatically clear the event after being signaled
     void Wait(bool autoReset) {
         std::unique_lock<std::mutex> lock(m_mutex);
         while (!m_set) {
@@ -21,6 +81,8 @@ public:
         }
     }
 
+    /// @brief Signals the event and notifies waiting threads.
+    /// @param[in] notifyAll `true` to notify all waiting threads, `false` to notify one thread at random
     void Set(bool notifyAll = true) {
         std::unique_lock<std::mutex> lock(m_mutex);
         m_set = true;
@@ -31,6 +93,7 @@ public:
         }
     }
 
+    /// @brief Resets (clears) the event signal.
     void Reset() {
         std::unique_lock<std::mutex> lock(m_mutex);
         m_set = false;
