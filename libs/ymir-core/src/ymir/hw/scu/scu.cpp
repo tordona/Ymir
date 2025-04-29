@@ -224,8 +224,8 @@ void SCU::TriggerSoundRequest(bool level) {
 }
 
 void SCU::TriggerSystemManager() {
-    if (m_intrStatus.SM_SystemManager != 1) {
-        m_intrStatus.SM_SystemManager = 1;
+    if (m_intrStatus.SMPC_SystemManager != 1) {
+        m_intrStatus.SMPC_SystemManager = 1;
         UpdateInterruptLevel<false>();
     }
 }
