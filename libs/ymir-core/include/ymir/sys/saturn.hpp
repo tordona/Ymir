@@ -50,18 +50,30 @@ struct Saturn : sys::ISystemOperations {
     /// @brief Erases SMPC settings and does a hard reset.
     void FactoryReset();
 
-    config::sys::VideoStandard GetVideoStandard() const {
+    /// @brief Retrieves the current video standard (NTSC or PAL) used by the system.
+    /// @return the video standard in use
+    [[nodiscard]] config::sys::VideoStandard GetVideoStandard() const noexcept {
         return configuration.system.videoStandard;
     }
 
+    /// @brief Changes the video standard (NTSC or PAL) to the specified mode.
+    /// @param[in] videoStandard the new video standard to use
     void SetVideoStandard(config::sys::VideoStandard videoStandard) {
         configuration.system.videoStandard = videoStandard;
     }
 
-    sys::ClockSpeed GetClockSpeed() const;
+    /// @brief Retrieves the current clock speed mode (320 or 352) in use by the system.
+    /// @return the current clock speed mode
+    [[nodiscard]] sys::ClockSpeed GetClockSpeed() const noexcept;
+
+    /// @brief Changes the clock speed (320 or 352) to the specified mode.
+    /// @param clockSpeed the new clock speed mode to use
     void SetClockSpeed(sys::ClockSpeed clockSpeed);
 
-    const sys::ClockRatios &GetClockRatios() const;
+    /// @brief Retrieves the current clock ratios in use by the system based on the current video standard and clock
+    /// speed.
+    /// @return the clock ratios in use
+    [[nodiscard]] const sys::ClockRatios &GetClockRatios() const noexcept;
 
     /// @brief Loads the specified IPL ROM image.
     /// @param[in] ipl the contents of the IPL ROM image
@@ -77,11 +89,11 @@ struct Saturn : sys::ISystemOperations {
 
     /// @brief Retrieves the IPL ROM hash code.
     /// @return the hash code of the currently loaded IPL ROM image
-    XXH128Hash GetIPLHash() const;
+    [[nodiscard]] XXH128Hash GetIPLHash() const noexcept;
 
     /// @brief Retrieves the game disc image hash code.
     /// @return the hash code of the currently loaded game disc image
-    XXH128Hash GetDiscHash() const;
+    [[nodiscard]] XXH128Hash GetDiscHash() const noexcept;
 
     /// @brief Inserts a cartridge into the cartridge slot.
     /// @tparam T the cartridge type, which must be a specialization of `ymir::cart::BaseCartridge`
@@ -121,7 +133,7 @@ struct Saturn : sys::ISystemOperations {
 
     /// @brief Determines if the CD drive tray is open or closed.
     /// @return `true` if the tray is open, `false` if closed
-    bool IsTrayOpen() const;
+    [[nodiscard]] bool IsTrayOpen() const noexcept;
 
     /// @brief Switches the SMPC area code to the preferred region.
     void UsePreferredRegion();

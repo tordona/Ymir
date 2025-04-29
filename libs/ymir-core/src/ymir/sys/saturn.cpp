@@ -122,7 +122,7 @@ void Saturn::FactoryReset() {
     Reset(true);
 }
 
-sys::ClockSpeed Saturn::GetClockSpeed() const {
+sys::ClockSpeed Saturn::GetClockSpeed() const noexcept {
     return m_system.clockSpeed;
 }
 
@@ -131,7 +131,7 @@ void Saturn::SetClockSpeed(sys::ClockSpeed clockSpeed) {
     m_system.UpdateClockRatios();
 }
 
-const sys::ClockRatios &Saturn::GetClockRatios() const {
+const sys::ClockRatios &Saturn::GetClockRatios() const noexcept {
     return m_system.GetClockRatios();
 }
 
@@ -143,11 +143,11 @@ void Saturn::LoadInternalBackupMemoryImage(std::filesystem::path path, std::erro
     mem.LoadInternalBackupMemoryImage(path, error);
 }
 
-XXH128Hash Saturn::GetIPLHash() const {
+XXH128Hash Saturn::GetIPLHash() const noexcept {
     return mem.GetIPLHash();
 }
 
-XXH128Hash Saturn::GetDiscHash() const {
+XXH128Hash Saturn::GetDiscHash() const noexcept {
     return CDBlock.GetDiscHash();
 }
 
@@ -169,7 +169,7 @@ void Saturn::CloseTray() {
     CDBlock.CloseTray();
 }
 
-bool Saturn::IsTrayOpen() const {
+bool Saturn::IsTrayOpen() const noexcept {
     return CDBlock.IsTrayOpen();
 }
 
