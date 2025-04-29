@@ -94,7 +94,7 @@ MyBitmask backToEnum = wbm;
 
 /// @brief Enables usage of bitwise operators with type `x`.
 ///
-/// @param x the enum type
+/// @param[in] x the enum type
 #define ENABLE_BITMASK_OPERATORS(x)      \
     template <>                          \
     struct is_bitmask_enum<x> {          \
@@ -138,8 +138,8 @@ concept BitmaskType = is_bitmask_enum_v<Enum>;
 
 /// @brief Bitwise OR operator applied to two `Enum` values.
 /// @tparam Enum the enum type
-/// @param lhs the left-hand side value
-/// @param rhs the right-hand side value
+/// @param[in] lhs the left-hand side value
+/// @param[in] rhs the right-hand side value
 /// @return `lhs | rhs`
 template <BitmaskType Enum>
 constexpr Enum operator|(Enum lhs, Enum rhs) noexcept {
@@ -149,8 +149,8 @@ constexpr Enum operator|(Enum lhs, Enum rhs) noexcept {
 
 /// @brief Bitwise AND operator applied to two `Enum` values.
 /// @tparam Enum the enum type
-/// @param lhs the left-hand side value
-/// @param rhs the right-hand side value
+/// @param[in] lhs the left-hand side value
+/// @param[in] rhs the right-hand side value
 /// @return `lhs & rhs`
 template <BitmaskType Enum>
 constexpr Enum operator&(Enum lhs, Enum rhs) noexcept {
@@ -160,8 +160,8 @@ constexpr Enum operator&(Enum lhs, Enum rhs) noexcept {
 
 /// @brief Bitwise XOR operator applied to two `Enum` values.
 /// @tparam Enum the enum type
-/// @param lhs the left-hand side value
-/// @param rhs the right-hand side value
+/// @param[in] lhs the left-hand side value
+/// @param[in] rhs the right-hand side value
 /// @return `lhs ^ rhs`
 template <BitmaskType Enum>
 constexpr Enum operator^(Enum lhs, Enum rhs) noexcept {
@@ -171,7 +171,7 @@ constexpr Enum operator^(Enum lhs, Enum rhs) noexcept {
 
 /// @brief Bitwise NOT operator applied to an `Enum` value.
 /// @tparam Enum the enum type
-/// @param value the value
+/// @param[in] value the value
 /// @return `~value`
 template <BitmaskType Enum>
 constexpr Enum operator~(Enum value) noexcept {
@@ -183,8 +183,8 @@ constexpr Enum operator~(Enum value) noexcept {
 
 /// @brief Bitwise OR assignment between two `Enum` values.
 /// @tparam Enum the enum type
-/// @param lhs the left-hand side value, where the result is stored
-/// @param rhs the right-hand side value
+/// @param[in,out] lhs the left-hand side value, where the result is stored
+/// @param[in] rhs the right-hand side value
 /// @return a reference to `lhs` after ORing with `rhs`
 template <BitmaskType Enum>
 constexpr Enum operator|=(Enum &lhs, Enum rhs) noexcept {
@@ -195,8 +195,8 @@ constexpr Enum operator|=(Enum &lhs, Enum rhs) noexcept {
 
 /// @brief Bitwise AND assignment between two `Enum` values.
 /// @tparam Enum the enum type
-/// @param lhs the left-hand side value, where the result is stored
-/// @param rhs the right-hand side value
+/// @param[in,out] lhs the left-hand side value, where the result is stored
+/// @param[in] rhs the right-hand side value
 /// @return a reference to `lhs` after ANDing with `rhs`
 template <BitmaskType Enum>
 constexpr Enum operator&=(Enum &lhs, Enum rhs) noexcept {
@@ -207,8 +207,8 @@ constexpr Enum operator&=(Enum &lhs, Enum rhs) noexcept {
 
 /// @brief Bitwise XOR assignment between two `Enum` values.
 /// @tparam Enum the enum type
-/// @param lhs the left-hand side value, where the result is stored
-/// @param rhs the right-hand side value
+/// @param[in,out] lhs the left-hand side value, where the result is stored
+/// @param[in] rhs the right-hand side value
 /// @return a reference to `lhs` after XORing with `rhs`
 template <BitmaskType Enum>
 constexpr Enum operator^=(Enum &lhs, Enum rhs) noexcept {
@@ -233,7 +233,7 @@ struct BitmaskEnum {
     static constexpr Enum none = static_cast<Enum>(0);
 
     /// @brief Creates a `BitmaskEnum` from the given value.
-    /// @param value the enum value
+    /// @param[in] value the enum value
     constexpr BitmaskEnum(Enum value) noexcept
         : value(value) {}
 
@@ -258,32 +258,32 @@ struct BitmaskEnum {
     }
 
     /// @brief Returns true if any bit in the given mask is set.
-    /// @param mask the bitmask to check against the value in this `BitmaskEnum`
-    [[nodiscard]] constexpr bool AnyOf(const Enum &mask) const noexcept {
+    /// @param[in] mask the bitmask to check against the value in this `BitmaskEnum`
+    [[nodiscard]] constexpr bool AnyOf(Enum mask) const noexcept {
         return (value & mask) != none;
     }
 
     /// @brief Returns true if all bits in the given mask are set.
-    /// @param mask the bitmask to check against the value in this `BitmaskEnum`
-    [[nodiscard]] constexpr bool AllOf(const Enum &mask) const noexcept {
+    /// @param[in] mask the bitmask to check against the value in this `BitmaskEnum`
+    [[nodiscard]] constexpr bool AllOf(Enum mask) const noexcept {
         return (value & mask) == mask;
     }
 
     /// @brief Returns true if none of the bits in the given mask are set.
-    /// @param mask the bitmask to check against the value in this `BitmaskEnum`
-    [[nodiscard]] constexpr bool NoneOf(const Enum &mask) const noexcept {
+    /// @param[in] mask the bitmask to check against the value in this `BitmaskEnum`
+    [[nodiscard]] constexpr bool NoneOf(Enum mask) const noexcept {
         return (value & mask) == none;
     }
 
     /// @brief Returns true if any bits excluding the mask are set.
-    /// @param mask the bitmask to check against the value in this `BitmaskEnum`
-    [[nodiscard]] constexpr bool AnyExcept(const Enum &mask) const noexcept {
+    /// @param[in] mask the bitmask to check against the value in this `BitmaskEnum`
+    [[nodiscard]] constexpr bool AnyExcept(Enum mask) const noexcept {
         return (value & ~mask) != none;
     }
 
     /// @brief Returns true if no bits excluding the mask are set.
-    /// @param mask the bitmask to check against the value in this `BitmaskEnum`
-    [[nodiscard]] constexpr bool NoneExcept(const Enum &mask) const noexcept {
+    /// @param[in] mask the bitmask to check against the value in this `BitmaskEnum`
+    [[nodiscard]] constexpr bool NoneExcept(Enum mask) const noexcept {
         return (value & ~mask) == none;
     }
 };

@@ -14,8 +14,8 @@ namespace util {
 /// @brief Computes `base` to the power of `exp` at compile time where both are integral types.
 /// @tparam T the type of `base`
 /// @tparam U the type of `exp`
-/// @param base the base
-/// @param exp the exponent
+/// @param[in] base the base
+/// @param[in] exp the exponent
 /// @return `base` to the power of `exp`
 template <std::integral T, std::unsigned_integral U>
 [[nodiscard]] FORCE_INLINE constexpr auto ipow(T base, U exp) noexcept {
@@ -36,7 +36,7 @@ template <std::integral T, std::unsigned_integral U>
 ///
 /// @tparam T the type of `value`
 /// @tparam R the type of the result
-/// @param value the value to convert
+/// @param[in] value the value to convert
 /// @return `value` converted to BCD
 template <std::integral T, std::integral R = T>
 [[nodiscard]] FORCE_INLINE constexpr R to_bcd(T value) noexcept {
@@ -57,7 +57,7 @@ template <std::integral T, std::integral R = T>
 /// @brief Converts `value` from binary-coded decimal representation (BCD) to hexadecimal.
 /// @tparam T the type of `value`
 /// @tparam R the type of the result
-/// @param value the value to convert
+/// @param[in] value the value to convert
 /// @return `value` converted from BCD
 template <std::integral T, std::integral R = T>
 [[nodiscard]] FORCE_INLINE constexpr R from_bcd(T value) noexcept {

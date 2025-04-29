@@ -12,7 +12,7 @@ namespace util {
 /// @brief A structured representation of the Saturn's backup memory date/time value.
 struct BackupDateTime {
     /// @brief Constructs a backup memory date/time value from a raw value.
-    /// @param raw the raw value
+    /// @param[in] raw the raw value
     BackupDateTime(uint32 raw) noexcept;
 
     uint32 year;   ///< The full year (e.g. 1994, 2025, etc.)
