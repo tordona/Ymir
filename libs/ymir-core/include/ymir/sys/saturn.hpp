@@ -5,7 +5,7 @@
 @brief The facade of the Ymir emulator core.
 Defines the `ymir::Saturn` type, the primary object used for emulating a Sega Saturn system.
 
-See ymir.hpp for instructions on how to use the emulator.
+See @ref index for instructions on how to use the emulator.
 */
 
 #include <ymir/core/configuration.hpp>
@@ -39,7 +39,7 @@ namespace ymir {
 ///
 /// This is the entrypoint of the emulator core. Every operation must be done through this object or any of its members.
 ///
-/// See ymir.hpp for details on how to use the emulator.
+/// See @ref index for details on how to use the emulator.
 struct Saturn : sys::ISystemOperations {
     /// @brief Creates a new Sega Saturn emulator reset to factory state.
     ///

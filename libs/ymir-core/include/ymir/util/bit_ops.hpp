@@ -5,7 +5,7 @@
 @brief A collection of bitwise operations and bit twiddling tricks.
 
 @namespace bit
-@brief Contains a collection of bitwise operations and bit twiddling tricks.
+@brief Bitwise operations and bit twiddling tricks.
 */
 
 #include "inline.hpp"

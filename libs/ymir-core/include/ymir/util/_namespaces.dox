@@ -1,0 +1,7 @@
+/**
+@namespace util
+@brief Utility functions, types, constants and concepts.
+
+@namespace util::detail
+@brief Internal implementation details for utilities.
+*/

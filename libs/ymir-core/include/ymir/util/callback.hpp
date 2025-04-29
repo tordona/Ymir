@@ -1,5 +1,48 @@
 #pragma once
 
+/**
+@file
+@brief Structured C-style callback classes.
+
+This file defines two primary callback types: `RequiredCallback` and `OptionalCallback`. They both implement C-style
+callback functions with a context (or user data) `void` pointer. The difference between the *required* and *optional*
+variants is that the former omits a `nullptr` check for performance. When attempting to assign a `nullptr` function to a
+required callback, the class automatically assigns a default no-op function that returns the default value instead. This
+requires the return type to have an accessible default constructor.
+
+The callback function signature is encoded as a template type parameter. The context pointer is passed as the last
+argument to the callback function.
+
+Callbacks can be used with any C-style function pointer. The header provides helper functions to construct callbacks
+from class member function pointers.
+
+Usage example:
+
+```cpp
+void ReceiveCallback(int x, void *ctx) {
+    // ctx has the user data pointer
+    // do something with x
+}
+
+// Construct an optional callback from a freestanding function with no context pointer
+util::OptionalCallback<void(int)> myCallback{ReceiveCallback};
+
+struct MyType {
+    void ReceiveCallback(int x) {
+        // do something with x
+    }
+};
+
+// Construct a required callback from a member function pointer bound to a particular instance of MyType
+MyType instance{};
+util::RequiredCallback<void(int)> myRequiredCallback =
+    util::MakeClassMemberRequiredCallback<&MyType::ReceiveCallback>(&instance);
+
+// Reassign the required callback to another function
+myRequiredCallback = {ReceiveCallback};
+```
+*/
+
 #include <cassert>
 #include <functional>
 #include <type_traits>
@@ -11,31 +54,47 @@ namespace util {
 
 namespace detail {
 
+    /// @brief A type-dependent always false value to use in static assertions.
+    /// @tparam T the type
     template <typename T>
-    constexpr bool alwaysFalse = false;
+    inline constexpr bool alwaysFalse = false;
 
+    /// @brief The callback implementation.
+    /// @tparam TReturn the return type of the callback function
+    /// @tparam ...TArgs the argument types of the callback function
+    /// @tparam skipNullCheck whether to skip the `nullptr` check for performance
     template <bool skipNullCheck, typename TReturn, typename... TArgs>
     struct FuncClass {
+        /// @brief The function pointer type, constructed from the class's template types.
         using FnType = TReturn (*)(TArgs... args, void *context);
 
+        /// @brief Constructs an unbound callback.
         FuncClass() {
             Rebind(nullptr);
         }
 
+        /// @brief Constructs a callback bound to the given function and context pointers.
+        /// @param context the context (user data) pointer
+        /// @param fn the function pointer
         FuncClass(void *context, FnType fn) {
             Rebind(context, fn);
         }
 
-        FuncClass(const FuncClass &) = default;
-        FuncClass(FuncClass &&) = default;
+        FuncClass(const FuncClass &) = default; ///< Default copy constructor
+        FuncClass(FuncClass &&) = default;      ///< Default move constructor
 
-        FuncClass &operator=(const FuncClass &) = default;
-        FuncClass &operator=(FuncClass &&) = default;
+        FuncClass &operator=(const FuncClass &) = default; ///< Default copy assignment operator
+        FuncClass &operator=(FuncClass &&) = default;      ///< Default move assignment operator
 
+        /// @brief Rebinds the callback to the given function pointer and sets the context pointer to `nullptr`.
+        /// @param fn the function pointer
         void Rebind(FnType fn) {
             Rebind(nullptr, fn);
         }
 
+        /// @brief Rebinds the callback to the given context and function pointers.
+        /// @param context the context (user data) pointer
+        /// @param fn the function pointer
         void Rebind(void *context, FnType fn) {
             m_context = context;
             if (skipNullCheck && fn == nullptr) {
@@ -49,6 +108,9 @@ namespace detail {
             }
         }
 
+        /// @brief Invokes the callback function with the specified arguments.
+        /// @param ...args the arguments to pass to the callback function
+        /// @return the return value of the callback function
         FLATTEN FORCE_INLINE TReturn operator()(TArgs... args) {
             if constexpr (!skipNullCheck) {
                 if (m_fn == nullptr) [[unlikely]] {
@@ -65,50 +127,79 @@ namespace detail {
         }
 
     private:
-        void *m_context;
-        FnType m_fn;
+        void *m_context; ///< The context (user data) pointer
+        FnType m_fn;     ///< The callback function pointer
     };
 
+    /// @brief The default case for a function helper type that rejects `TFunc` if it's not a function type.
+    /// @tparam TFunc the (not-)function type
+    /// @tparam skipNullCheck whether to skip the `nullptr` check for performance
     template <bool skipNullCheck, typename TFunc>
-    struct FuncImpl {
+    struct FuncHelper {
         static_assert(alwaysFalse<TFunc>, "Callback requires a function argument");
     };
 
+    /// @brief A function helper type that extracts the return and argument types from a function type.
+    /// @tparam TReturn the return type of the function
+    /// @tparam ...TArgs the arguments of the function
+    /// @tparam skipNullCheck whether to skip the `nullptr` check for performance
     template <bool skipNullCheck, typename TReturn, typename... TArgs>
-    struct FuncImpl<skipNullCheck, TReturn(TArgs...)> {
+    struct FuncHelper<skipNullCheck, TReturn(TArgs...)> {
         using type = FuncClass<skipNullCheck, TReturn, TArgs...>;
     };
 
+    /// @brief A C-style callback containing a function pointer and a context/user data pointer.
+    /// @tparam TFunc the function type of the form `ReturnType(Args...)`
+    /// @tparam skipNullCheck whether to skip the `nullptr` check when invoking the function pointer
     template <typename TFunc, bool skipNullCheck>
-    class Callback : public detail::FuncImpl<skipNullCheck, TFunc>::type {
-        using FnType = typename detail::FuncImpl<skipNullCheck, TFunc>::type::FnType;
+    class Callback : public detail::FuncHelper<skipNullCheck, TFunc>::type {
+        using FnType = typename detail::FuncHelper<skipNullCheck, TFunc>::type::FnType;
 
     public:
+        /// @brief Constructs an empty (no-op) callback.
         Callback() = default;
 
+        /// @brief Constructs a callback from the given function pointer with a `nullptr` context.
+        /// @param fn
         Callback(FnType fn)
-            : detail::FuncImpl<skipNullCheck, TFunc>::type(nullptr, fn) {}
+            : detail::FuncHelper<skipNullCheck, TFunc>::type(nullptr, fn) {}
 
+        /// @brief Constructs a callback from the given function and context pointers.
+        /// @param context the context (user data) pointer
+        /// @param fn the function pointer
         Callback(void *context, FnType fn)
-            : detail::FuncImpl<skipNullCheck, TFunc>::type(context, fn) {}
+            : detail::FuncHelper<skipNullCheck, TFunc>::type(context, fn) {}
 
-        Callback(const Callback &) = default;
-        Callback(Callback &&) = default;
+        Callback(const Callback &) = default; ///< Default copy constructor
+        Callback(Callback &&) = default;      ///< Default move constructor
 
-        Callback &operator=(const Callback &) = default;
-        Callback &operator=(Callback &&) = default;
+        Callback &operator=(const Callback &) = default; ///< Default copy assignment operator
+        Callback &operator=(Callback &&) = default;      ///< Default move assignment operator
     };
 
 } // namespace detail
 
-// Defines a "required" callback - one that is guaranteed to be always set to a valid function at runtime.
-// Callbacks include a context pointer that is passed as the last argument to the specified function call.
-// Use with care, as it does not check for nullptr for performance.
+/// @brief Defines a *required* callback - one that is guaranteed to be always set to a valid function at runtime.
+///
+/// Callbacks include a context pointer (also called user data pointer) that is passed as the last argument to the
+/// specified function call.
+///
+/// Setting the callback to `nullptr` uses an automatically defined no-op function that returns a default-constructed
+/// value of the return type.
+///
+/// @note This callback omits the `nullptr` check for performance.
+///
+/// @tparam TFunc the function type of the form `ReturnType(Args...)`
 template <typename TFunc>
 using RequiredCallback = detail::Callback<TFunc, true>;
 
-// Defines an "optional" callback which may be set to nullptr to disable it, or a valid function pointer to enable it.
-// Callbacks include a context pointer that is passed as the last argument to the specified function call.
+/// @brief Defines an *optional* callback which may be set to `nullptr` to disable it, or a valid function pointer to
+/// enable it.
+///
+/// Callbacks include a context pointer (also called user data pointer) that is passed as the last argument to the
+/// specified function call.
+///
+/// @tparam TFunc the function type of the form `ReturnType(Args...)`
 template <typename TFunc>
 using OptionalCallback = detail::Callback<TFunc, false>;
 
@@ -116,9 +207,14 @@ using OptionalCallback = detail::Callback<TFunc, false>;
 
 namespace detail {
 
+    /// @brief Helper type that constructs a `Callback` object from a member function pointer.
     template <typename>
     struct MFPCallbackMaker;
 
+    /// @brief Helper type that constructs a `Callback` object from a member function pointer.
+    /// @tparam Return the return type of the function
+    /// @tparam Object the type of the object
+    /// @tparam ...Args the types of the function's arguments
     template <typename Return, typename Object, typename... Args>
     struct MFPCallbackMaker<Return (Object::*)(Args...)> {
         using class_type = Object;
@@ -132,6 +228,10 @@ namespace detail {
         }
     };
 
+    /// @brief Helper type that constructs a `Callback` object from a `const`-qualified member function pointer.
+    /// @tparam Return the return type of the function
+    /// @tparam Object the type of the object
+    /// @tparam ...Args the types of the function's arguments
     template <typename Return, typename Object, typename... Args>
     struct MFPCallbackMaker<Return (Object::*)(Args...) const> {
         using class_type = Object;
@@ -147,14 +247,22 @@ namespace detail {
 
 } // namespace detail
 
-// Creates a required callback to a member function pointer that will be invoked on the given instance of the class.
+/// @brief Creates a required callback to a member function pointer that will be invoked on the given instance of the
+/// class.
+/// @tparam mfp the member function pointer
+/// @param context the object instance to bind to
+/// @return a `RequiredCallback` bound to the object instance and member function pointer
 template <auto mfp>
     requires std::is_member_function_pointer_v<decltype(mfp)>
 auto MakeClassMemberRequiredCallback(typename detail::MFPCallbackMaker<decltype(mfp)>::class_type *context) {
     return detail::MFPCallbackMaker<decltype(mfp)>::template GetCallback<mfp, true>(context);
 }
 
-// Creates an optional callback to a member function pointer that will be invoked on the given instance of the class.
+/// @brief Creates an optional callback to a member function pointer that will be invoked on the given instance of the
+/// class.
+/// @tparam mfp the member function pointer
+/// @param context the object instance to bind to
+/// @return an `OptionalCallback` bound to the object instance and member function pointer
 template <auto mfp>
     requires std::is_member_function_pointer_v<decltype(mfp)>
 auto MakeClassMemberOptionalCallback(typename detail::MFPCallbackMaker<decltype(mfp)>::class_type *context) {
