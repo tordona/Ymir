@@ -97,7 +97,7 @@ struct SystemMemory {
     void SaveState(state::SystemState &state) const;
 
     /// @brief Validates the given state object.
-    /// @param state the state object to validate
+    /// @param[in] state the state object to validate
     /// @return `true` if the state is valid
     bool ValidateState(const state::SystemState &state) const;
 

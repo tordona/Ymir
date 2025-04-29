@@ -74,8 +74,8 @@ namespace detail {
         }
 
         /// @brief Constructs a callback bound to the given function and context pointers.
-        /// @param context the context (user data) pointer
-        /// @param fn the function pointer
+        /// @param[in] context the context (user data) pointer
+        /// @param[in] fn the function pointer
         FuncClass(void *context, FnType fn) {
             Rebind(context, fn);
         }
@@ -87,14 +87,14 @@ namespace detail {
         FuncClass &operator=(FuncClass &&) = default;      ///< Default move assignment operator
 
         /// @brief Rebinds the callback to the given function pointer and sets the context pointer to `nullptr`.
-        /// @param fn the function pointer
+        /// @param[in] fn the function pointer
         void Rebind(FnType fn) {
             Rebind(nullptr, fn);
         }
 
         /// @brief Rebinds the callback to the given context and function pointers.
-        /// @param context the context (user data) pointer
-        /// @param fn the function pointer
+        /// @param[in] context the context (user data) pointer
+        /// @param[in] fn the function pointer
         void Rebind(void *context, FnType fn) {
             m_context = context;
             if (skipNullCheck && fn == nullptr) {
@@ -109,7 +109,7 @@ namespace detail {
         }
 
         /// @brief Invokes the callback function with the specified arguments.
-        /// @param ...args the arguments to pass to the callback function
+        /// @param[in,out] ...args the arguments to pass to the callback function
         /// @return the return value of the callback function
         FLATTEN FORCE_INLINE TReturn operator()(TArgs... args) {
             if constexpr (!skipNullCheck) {
@@ -160,13 +160,13 @@ namespace detail {
         Callback() = default;
 
         /// @brief Constructs a callback from the given function pointer with a `nullptr` context.
-        /// @param fn
+        /// @param[in] fn the function pointer
         Callback(FnType fn)
             : detail::FuncHelper<skipNullCheck, TFunc>::type(nullptr, fn) {}
 
         /// @brief Constructs a callback from the given function and context pointers.
-        /// @param context the context (user data) pointer
-        /// @param fn the function pointer
+        /// @param[in] context the context (user data) pointer
+        /// @param[in] fn the function pointer
         Callback(void *context, FnType fn)
             : detail::FuncHelper<skipNullCheck, TFunc>::type(context, fn) {}
 
@@ -250,7 +250,7 @@ namespace detail {
 /// @brief Creates a required callback to a member function pointer that will be invoked on the given instance of the
 /// class.
 /// @tparam mfp the member function pointer
-/// @param context the object instance to bind to
+/// @param[in] context the object instance to bind to
 /// @return a `RequiredCallback` bound to the object instance and member function pointer
 template <auto mfp>
     requires std::is_member_function_pointer_v<decltype(mfp)>
@@ -261,7 +261,7 @@ auto MakeClassMemberRequiredCallback(typename detail::MFPCallbackMaker<decltype(
 /// @brief Creates an optional callback to a member function pointer that will be invoked on the given instance of the
 /// class.
 /// @tparam mfp the member function pointer
-/// @param context the object instance to bind to
+/// @param[in] context the object instance to bind to
 /// @return an `OptionalCallback` bound to the object instance and member function pointer
 template <auto mfp>
     requires std::is_member_function_pointer_v<decltype(mfp)>

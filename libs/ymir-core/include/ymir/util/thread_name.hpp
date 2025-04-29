@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+@file
+@brief Thread naming utility.
+*/
+
 #if defined(_WIN32)
 
     #ifndef WIN32_LEAN_AND_MEAN
@@ -15,7 +20,10 @@
 // Dynamically link to SetThreadDescription
 namespace util::detail {
 
+/// @brief Windows-specific dynamic linking helper for the `SetThreadDescription` function.
 inline struct ThreadDynamicLink {
+    /// @brief Creates the dynamic link to `Kernel32.dll` and attempts to retrieve a pointer to the
+    /// `SetThreadDescription` function.
     ThreadDynamicLink() {
         hKernel32 = LoadLibrary("Kernel32.dll");
         if (hKernel32 != NULL) {
@@ -25,9 +33,11 @@ inline struct ThreadDynamicLink {
         }
     }
 
-    HMODULE hKernel32 = NULL;
+    HMODULE hKernel32 = NULL; ///< `Kernel32.dll` module handle
 
+    /// @brief `SetThreadDescription` function type.
     using FnSetThreadDescription = HRESULT(WINAPI *)(HANDLE hThread, PCWSTR lpThreadDescription);
+    /// @brief `SetThreadDescription` function pointer. Will be `nullptr` if not linked.
     FnSetThreadDescription fnSetThreadDescription;
 } g_threadDynamicLink;
 
@@ -45,6 +55,8 @@ inline struct ThreadDynamicLink {
 
 namespace util {
 
+/// @brief Changes the name of the current thread.
+/// @param[in] threadName the new thread name
 inline void SetCurrentThreadName(const char *threadName) {
 #if defined(_WIN32)
     #if _MSC_VER

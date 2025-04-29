@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+@file
+@brief Useful type traits.
+*/
+
 #include <type_traits>
 
 namespace util {
@@ -20,6 +25,8 @@ namespace detail {
 
 } // namespace detail
 
+/// @brief Determines if the given types are all unique.
+/// @tparam ...T the types to check
 template <typename... T>
 concept unique_types = std::is_standard_layout_v<detail::indexed_types<std::make_index_sequence<sizeof...(T)>, T...>>;
 

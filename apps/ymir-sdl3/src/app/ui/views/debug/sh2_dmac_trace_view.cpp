@@ -37,13 +37,13 @@ void SH2DMAControllerChannelTraceView::DisplayStatistics() {
         if (ImGui::TableNextColumn()) {
             ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
             if (stats.bytesTransferred >= 1_TiB) {
-                ImGui::Text("%0.2lf TiB", util::ToTiB(stats.bytesTransferred));
+                ImGui::Text("%0.2lf TiB", util::BytesToTiB(stats.bytesTransferred));
             } else if (stats.bytesTransferred >= 1_GiB) {
-                ImGui::Text("%0.2lf GiB", util::ToGiB(stats.bytesTransferred));
+                ImGui::Text("%0.2lf GiB", util::BytesToGiB(stats.bytesTransferred));
             } else if (stats.bytesTransferred >= 1_MiB) {
-                ImGui::Text("%0.2lf MiB", util::ToMiB(stats.bytesTransferred));
+                ImGui::Text("%0.2lf MiB", util::BytesToMiB(stats.bytesTransferred));
             } else if (stats.bytesTransferred >= 1_KiB) {
-                ImGui::Text("%0.2lf KiB", util::ToKiB(stats.bytesTransferred));
+                ImGui::Text("%0.2lf KiB", util::BytesToKiB(stats.bytesTransferred));
             } else {
                 ImGui::Text("%" PRIu64 " bytes", stats.bytesTransferred);
             }

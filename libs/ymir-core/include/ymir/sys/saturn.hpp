@@ -71,7 +71,7 @@ struct Saturn : sys::ISystemOperations {
     [[nodiscard]] sys::ClockSpeed GetClockSpeed() const noexcept;
 
     /// @brief Changes the clock speed (320 or 352) to the specified mode.
-    /// @param clockSpeed the new clock speed mode to use
+    /// @param[in] clockSpeed the new clock speed mode to use
     void SetClockSpeed(sys::ClockSpeed clockSpeed);
 
     /// @brief Retrieves the current clock ratios in use by the system based on the current video standard and clock
