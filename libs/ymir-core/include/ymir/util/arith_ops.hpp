@@ -2,7 +2,7 @@
 
 /**
 @file
-@brief A collection of useful arithmetic operations.
+@brief Useful arithmetic operations.
 */
 
 #include "inline.hpp"

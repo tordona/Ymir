@@ -2,7 +2,7 @@
 
 /**
 @file
-@brief Defines `ScopeGuard`, an utility type that executes code on scope exit.
+@brief Defines `util::ScopeGuard`, an utility type that executes code on scope exit.
 */
 
 #include <type_traits>

@@ -2,7 +2,7 @@
 
 /**
 @file
-@brief A collection of utilities for dealing with Saturn backup memory date/time values.
+@brief Utilities for dealing with Saturn backup memory date/time values.
 */
 
 #include <ymir/core/types.hpp>

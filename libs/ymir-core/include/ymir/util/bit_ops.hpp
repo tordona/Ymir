@@ -2,7 +2,7 @@
 
 /**
 @file
-@brief A collection of bitwise operations and bit twiddling tricks.
+@brief Bitwise operations and bit twiddling tricks.
 
 @namespace bit
 @brief Bitwise operations and bit twiddling tricks.
