@@ -10,8 +10,6 @@
 
 namespace util {
 
-int x;
-
 /// @brief An event, based on a condition variable, that blocks threads until it is signaled.
 ///
 /// Example usage:
@@ -25,15 +23,15 @@ int x;
 ///         // Wait until the queue is not full.
 ///         // `false` causes the signal to not be reset once received.
 ///         // This will block the thread until the event is signaled.
-///         queueNotFullEvent.Wait(false);
+///         m_queueNotFullEvent.Wait(false);
 ///
 ///         // Push the element to the queue
 ///         // NOTE: synchronization omitted for brevity
-///         queue.offer(value);
+///         m_queue.offer(value);
 ///
 ///         // Signal not empty event now that there is at least one element on the queue.
 ///         // This will unblock all threads waiting for this event to be signaled.
-///         queueNotEmptyEvent.Set();
+///         m_queueNotEmptyEvent.Set();
 ///     }
 ///
 ///     // Removes a value from the queue.
@@ -41,23 +39,23 @@ int x;
 ///         // Wait until the queue is not empty.
 ///         // `false` causes the signal to not be reset once received.
 ///         // This will block the thread until the event is signaled.
-///         queueNotEmptyEvent.Wait(false);
+///         m_queueNotEmptyEvent.Wait(false);
 ///
 ///         // Pop the element from the queue
 ///         // NOTE: synchronization omitted for brevity
-///         T value = queue.poll();
+///         T value = m_queue.poll();
 ///
 ///         // Signal not full event now that there is at least one free space on the queue.
 ///         // This will unblock all threads waiting for this event to be signaled.
-///         queueNotFullEvent.Set();
+///         m_queueNotFullEvent.Set();
 ///     }
 /// private:
-///     Queue<T> queue = ...; // some queue implementation
+///     Queue<T> m_queue = ...; // some queue implementation
 ///
 ///     // Initialize events to their default states.
 ///     // The queue starts out empty, so the "not full" event is signaled and the "not empty" event is not.
-///     util::Event queueNotFullEvent{true};
-///     util::Event queueNotEmptyEvent{false};
+///     util::Event m_queueNotFullEvent{true};
+///     util::Event m_queueNotEmptyEvent{false};
 /// };
 ///
 ///
