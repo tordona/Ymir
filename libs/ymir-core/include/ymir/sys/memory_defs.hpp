@@ -13,5 +13,6 @@ inline constexpr size_t kWRAMLowSize = 1_MiB;
 inline constexpr size_t kWRAMHighSize = 1_MiB;
 
 inline constexpr bup::BackupMemorySize kInternalBackupRAMSize = bup::BackupMemorySize::_256Kbit;
+inline constexpr size_t kInternalBackupRAMSizeAmount = 32_KiB;
 
 } // namespace ymir::sys
