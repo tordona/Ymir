@@ -35,7 +35,7 @@ Saturn::Saturn()
     , slaveSH2(mainBus, false, m_systemFeatures)
     , SCU(m_scheduler, mainBus)
     , VDP(m_scheduler, configuration)
-    , SMPC(m_scheduler, *this, configuration.rtc)
+    , SMPC(m_scheduler, smpcOps, configuration.rtc)
     , SCSP(m_scheduler, configuration.audio)
     , CDBlock(m_scheduler, configuration.cdblock) {
 
@@ -371,39 +371,53 @@ void Saturn::UpdateVideoStandard(config::sys::VideoStandard videoStandard) {
     m_system.UpdateClockRatios();
 }
 
-bool Saturn::GetNMI() const {
-    return masterSH2.GetNMI();
+// -----------------------------------------------------------------------------
+// System operations (SMPC) - smpc::ISMPCOperations implementation
+
+Saturn::SMPCOperations::SMPCOperations(Saturn &saturn)
+    : m_saturn(saturn) {}
+
+bool Saturn::SMPCOperations::GetNMI() const {
+    return m_saturn.masterSH2.GetNMI();
 }
 
-void Saturn::RaiseNMI() {
-    masterSH2.SetNMI();
+void Saturn::SMPCOperations::RaiseNMI() {
+    m_saturn.masterSH2.SetNMI();
 }
 
-void Saturn::EnableAndResetSlaveSH2() {
-    slaveSH2Enabled = true;
-    slaveSH2.Reset(true);
+void Saturn::SMPCOperations::EnableAndResetSlaveSH2() {
+    m_saturn.slaveSH2Enabled = true;
+    m_saturn.slaveSH2.Reset(true);
 }
 
-void Saturn::DisableSlaveSH2() {
-    slaveSH2Enabled = false;
+void Saturn::SMPCOperations::DisableSlaveSH2() {
+    m_saturn.slaveSH2Enabled = false;
 }
 
-void Saturn::EnableAndResetM68K() {
-    SCSP.SetCPUEnabled(true);
+void Saturn::SMPCOperations::EnableAndResetM68K() {
+    m_saturn.SCSP.SetCPUEnabled(true);
 }
 
-void Saturn::DisableM68K() {
-    SCSP.SetCPUEnabled(false);
+void Saturn::SMPCOperations::DisableM68K() {
+    m_saturn.SCSP.SetCPUEnabled(false);
 }
 
-void Saturn::SoftResetSystem() {
-    Reset(false);
+void Saturn::SMPCOperations::SoftResetSystem() {
+    m_saturn.Reset(false);
 }
 
-void Saturn::ClockChangeSoftReset() {
-    VDP.Reset(false);
-    SCU.Reset(false);
-    SCSP.Reset(false);
+void Saturn::SMPCOperations::ClockChangeSoftReset() {
+    m_saturn.VDP.Reset(false);
+    m_saturn.SCU.Reset(false);
+    m_saturn.SCSP.Reset(false);
+}
+
+sys::ClockSpeed Saturn::SMPCOperations::GetClockSpeed() const {
+    return m_saturn.GetClockSpeed();
+}
+
+void Saturn::SMPCOperations::SetClockSpeed(sys::ClockSpeed clockSpeed) {
+    m_saturn.SetClockSpeed(clockSpeed);
 }
 
 } // namespace ymir

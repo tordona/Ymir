@@ -130,7 +130,6 @@ add_library(ymir-core
     include/ymir/sys/memory.hpp
     include/ymir/sys/memory_defs.hpp
     include/ymir/sys/saturn.hpp
-    include/ymir/sys/sys_ops.hpp
     include/ymir/sys/system.hpp
     include/ymir/sys/system_features.hpp
     include/ymir/sys/system_internal_callbacks.hpp

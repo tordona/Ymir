@@ -6,10 +6,10 @@
 
 #include <ymir/core/scheduler.hpp>
 #include <ymir/sys/bus.hpp>
-#include <ymir/sys/sys_ops.hpp>
 
 #include <ymir/state/state_smpc.hpp>
 
+#include <ymir/hw/smpc/smpc_internal_callbacks.hpp>
 #include <ymir/hw/vdp/vdp_internal_callbacks.hpp>
 #include <ymir/sys/system_internal_callbacks.hpp>
 
@@ -21,7 +21,7 @@ namespace ymir::smpc {
 
 class SMPC {
 public:
-    SMPC(core::Scheduler &scheduler, sys::ISystemOperations &sysOps, core::Configuration::RTC &rtcConfig);
+    SMPC(core::Scheduler &scheduler, ISMPCOperations &smpcOps, core::Configuration::RTC &rtcConfig);
     ~SMPC();
 
     void Reset(bool hard);
@@ -107,7 +107,7 @@ private:
 
     CBSystemManagerInterruptCallback m_cbSystemManagerInterruptCallback;
 
-    sys::ISystemOperations &m_sysOps;
+    ISMPCOperations &m_smpcOps;
     core::Scheduler &m_scheduler;
     core::EventID m_commandEvent;
 

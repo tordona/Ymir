@@ -33,8 +33,8 @@ namespace grp {
 
 } // namespace grp
 
-SMPC::SMPC(core::Scheduler &scheduler, sys::ISystemOperations &sysOps, core::Configuration::RTC &rtcConfig)
-    : m_sysOps(sysOps)
+SMPC::SMPC(core::Scheduler &scheduler, ISMPCOperations &smpcOps, core::Configuration::RTC &rtcConfig)
+    : m_smpcOps(smpcOps)
     , m_scheduler(scheduler)
     , m_rtc(rtcConfig) {
 
@@ -211,7 +211,7 @@ void SMPC::LoadState(const state::SMPCState &state) {
 
 void SMPC::UpdateResetNMI() {
     if (!m_resetDisable && m_resetState) {
-        m_sysOps.RaiseNMI();
+        m_smpcOps.RaiseNMI();
     }
 }
 
@@ -585,7 +585,7 @@ void SMPC::SSHON() {
     devlog::debug<grp::base>("Processing SSHON");
 
     // Turn on and reset slave SH-2
-    m_sysOps.EnableAndResetSlaveSH2();
+    m_smpcOps.EnableAndResetSlaveSH2();
 
     SF = false; // done processing
 
@@ -596,7 +596,7 @@ void SMPC::SSHOFF() {
     devlog::debug<grp::base>("Processing SSHOFF");
 
     // Turn off slave SH-2
-    m_sysOps.DisableSlaveSH2();
+    m_smpcOps.DisableSlaveSH2();
 
     SF = false; // done processing
 
@@ -606,7 +606,7 @@ void SMPC::SSHOFF() {
 void SMPC::SNDON() {
     devlog::debug<grp::base>("Processing SNDON");
 
-    m_sysOps.EnableAndResetM68K();
+    m_smpcOps.EnableAndResetM68K();
 
     SF = false; // done processing
 
@@ -616,7 +616,7 @@ void SMPC::SNDON() {
 void SMPC::SNDOFF() {
     devlog::debug<grp::base>("Processing SNDOFF");
 
-    m_sysOps.DisableM68K();
+    m_smpcOps.DisableM68K();
 
     SF = false; // done processing
 
@@ -626,7 +626,7 @@ void SMPC::SNDOFF() {
 void SMPC::SYSRES() {
     devlog::debug<grp::base>("Processing SYSRES");
 
-    m_sysOps.SoftResetSystem();
+    m_smpcOps.SoftResetSystem();
 
     SF = false; // done processing
 
@@ -655,7 +655,7 @@ void SMPC::CKCHG320() {
 void SMPC::NMIREQ() {
     devlog::debug<grp::base>("Processing NMIREQ");
 
-    m_sysOps.RaiseNMI();
+    m_smpcOps.RaiseNMI();
 
     SF = false; // done processing
 
@@ -796,8 +796,8 @@ void SMPC::WriteINTBACKStatusReport() {
     OREG[9] = m_areaCode;
 
     // TODO: update flags accordingly
-    const bool dotsel = m_sysOps.GetClockSpeed() == sys::ClockSpeed::_352;
-    const bool mshnmi = m_sysOps.GetNMI();
+    const bool dotsel = m_smpcOps.GetClockSpeed() == sys::ClockSpeed::_352;
+    const bool mshnmi = m_smpcOps.GetNMI();
     OREG[10] = 0b00110100 | (dotsel << 6u) | (mshnmi << 3u); // System status 1 (TODO: 1=SYSRES, 0=SNDRES)
     OREG[11] = 0b00000000;                                   // System status 2 (TODO: 6=CDRES)
 
@@ -872,11 +872,11 @@ void SMPC::SETTIME() {
 }
 
 void SMPC::ClockChange(sys::ClockSpeed clockSpeed) {
-    m_sysOps.ClockChangeSoftReset();
+    m_smpcOps.ClockChangeSoftReset();
     // TODO: clear VDP VRAMs?
-    m_sysOps.DisableSlaveSH2();
-    m_sysOps.RaiseNMI();
-    m_sysOps.SetClockSpeed(clockSpeed);
+    m_smpcOps.DisableSlaveSH2();
+    m_smpcOps.RaiseNMI();
+    m_smpcOps.SetClockSpeed(clockSpeed);
 }
 
 // -----------------------------------------------------------------------------

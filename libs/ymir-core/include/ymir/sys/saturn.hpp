@@ -27,8 +27,6 @@ See @ref index for instructions on how to use the emulator.
 #include <ymir/hw/smpc/smpc.hpp>
 #include <ymir/hw/vdp/vdp.hpp>
 
-#include <ymir/sys/sys_ops.hpp>
-
 #include <ymir/media/disc.hpp>
 
 #include <memory>
@@ -40,7 +38,7 @@ namespace ymir {
 /// This is the entrypoint of the emulator core. Every operation must be done through this object or any of its members.
 ///
 /// See @ref index for details on how to use the emulator.
-struct Saturn : sys::ISystemOperations {
+struct Saturn {
     /// @brief Creates a new Sega Saturn emulator reset to factory state.
     ///
     /// The emulator comes with no disc, no peripherals, and a basic IPL ROM that puts the master SH-2 into an infinite
@@ -300,19 +298,32 @@ public:
 
 private:
     // -------------------------------------------------------------------------
-    // System operations (SMPC) - sys::ISystemOperations implementation
+    // System operations (SMPC) - smpc::ISMPCOperations implementation
 
-    bool GetNMI() const final; ///< Retrieves the NMI line state
-    void RaiseNMI() final;     ///< Raises the NMI line
+    /// @brief SMPC operations wrapper
+    struct SMPCOperations : smpc::ISMPCOperations {
+        SMPCOperations(Saturn &saturn);
 
-    void EnableAndResetSlaveSH2() final; ///< Enables and reset the slave SH-2
-    void DisableSlaveSH2() final;        ///< Disables the slave SH-2
+        bool GetNMI() const final; ///< Retrieves the NMI line state
+        void RaiseNMI() final;     ///< Raises the NMI line
 
-    void EnableAndResetM68K() final; ///< Enables and resets the M68K CPU
-    void DisableM68K() final;        ///< Disables the M68K CPU
+        void EnableAndResetSlaveSH2() final; ///< Enables and reset the slave SH-2
+        void DisableSlaveSH2() final;        ///< Disables the slave SH-2
 
-    void SoftResetSystem() final;      ///< Soft resets the entire system
-    void ClockChangeSoftReset() final; ///< Soft resets VDP, SCU and SCSP after a clock change
+        void EnableAndResetM68K() final; ///< Enables and resets the M68K CPU
+        void DisableM68K() final;        ///< Disables the M68K CPU
+
+        void SoftResetSystem() final;      ///< Soft resets the entire system
+        void ClockChangeSoftReset() final; ///< Soft resets VDP, SCU and SCSP after a clock change
+
+        sys::ClockSpeed GetClockSpeed() const final;          ///< Retrieves the current clock speed
+        void SetClockSpeed(sys::ClockSpeed clockSpeed) final; ///< Changes the current clock speed
+
+    private:
+        Saturn &m_saturn;
+    };
+
+    SMPCOperations smpcOps{*this};
 };
 
 } // namespace ymir
