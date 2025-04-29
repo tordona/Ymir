@@ -17,54 +17,26 @@
 //
 // ---------------------------------------------------------------------------------------------------------------------
 //
+// Check the documentation on ymir.hpp for how to use the emulator core. Listed below are some high-level implementation
+// details on how this frontend uses it.
+//
 // General usage
 // -------------
-// ymir::Saturn emulates the entire system. You can make as many instances of it as you want; they're all completely
-// independent. (Yay for not using global state!)
-//
-// Use the methods and members on that instance to control the emulator. The Saturn's components can be accessed
-// directly through the instance as well.
-//
-// The constructor automatically hard resets the emulator with Reset(true). This is cheaper than constructing the object
-// from scratch. You can also soft reset with Reset(false) or by changing the Reset button state through the SMPC.
-//
-// In order to run the emulator, set up a loop that processes application events and invokes RunFrame(false) to run the
-// emulator for a single frame. The "false" argument disables debug tracing, which increases performance at the cost of
-// some debugging features, explained later in the Debugging section.
-//
-// The emulator core makes no attempt to pace execution to realtime speed - it's up to the frontend to implement some
-// rate control method. If no such method is used, it will run as fast as your CPU allows.
-//
 // This frontend implements a simple audio sync that locks up the emulator thread while the audio ring buffer is full.
 // Fast-forward simply disables audio sync, which allows the core to run as fast as possible as the audio callback
 // overruns the audio buffer. The buffer size requested from the audio device is slightly smaller than 1/60 of the
 // sample rate which results in minor video jitter but no frame skipping.
 //
 //
-// Receiving input
-// ---------------
-// To process inputs, you'll need to attach a controller to one or both ports and configure callbacks. You'll find the
-// ports in the SMPC.
+// Loading IPL ROMs, discs, backup memory and cartridges
+// -----------------------------------------------------
+// This frontend uses the standard pathways to load IPL ROMs, discs, backup memories and cartridges, with extra care
+// taken to ensure thread-safety. Global mutexes for each component (peripherals, the disc and the cartridge slot) are
+// carefully used throughout the frontend codebase.
 //
-// Use one of the Connect* methods to attempt to attach a controller to the port. If successful, the method will return
-// a valid pointer to the specialized controller instance which you can use to further configure the peripheral. nullptr
-// indicates failure to instantiate the object or to attach the peripheral due to incompatibility with other connected
-// peripherals (e.g. you cannot use the Virtua Gun with a multi-tap adapter).
 //
-// NOTE: The emulator currently only supports attaching a single standard Saturn Pad to the ports. More types of
-// peripherals (including multi-tap) are planned.
-//
-// DisconnectPeripherals() will disconnect all peripherals connected to the port. Be careful: any existing pointers to
-// previously connected peripheral(s) will become invalid. The same applies when replacing a peripheral.
-//
-// Whenever input is queried, either through INTBACK or by direct access to PDR/DDR registers, the peripheral will
-// invoke a callback function with the following signature:
-//   void PeripheralReportCallback(ymir::peripheral::PeripheralReport &report, void *userContext)
-// The type of the peripheral is specified in the type field of the PeripheralReport, which is an enum of the type
-// ymir::peripheral::PeripheralType. The callback function must fill in the appropriate report depending on the type.
-// The report is preinitialized with the default values for the controller: all buttons released, all axes at zero, etc.
-// This callback is invoked from the emulator thread.
-//
+// Sending input
+// -------------
 // This frontend attaches a standard Saturn Pad to both ports and redirects keyboard input to them with the following
 // default key mappings:
 //
@@ -85,134 +57,33 @@
 //
 // Receiving video frames and audio samples
 // ----------------------------------------
-// In order to receive video and audio, you must configure callbacks in VDP and SCSP.
+// This frontend implements all video and audio callbacks.
 //
-// The VDP invokes the frame completed callback once a frame finishes rendering (as soon as it enters the VBlank area).
-// The callback signature is:
-//   void FrameCompleteCallback(uint32 *fb, uint32 width, uint32 height, void *userContext)
-// where:
-//   fb is a pointer to the rendered framebuffer in little-endian XBGR8888 format (..BBGGRR)
-//   width and height specify the dimensions of the framebuffer
-// NOTE: The most significant byte is set to 0xFF for convenience, so that it is fully opaque in case your framebuffer
-// texture has an alpha channel (ABGR8888 format).
+// The VDP2 frame complete callback copies the framebuffer into an intermediate buffer and sets a signal, letting the
+// GUI thread know that there is a new frame available to be rendered. It also increments the total frame counter to
+// display the frame rate.
 //
-// Additionally, you can specify a VDP1 frame completed callback in order to count VDP1 frames. This callback has the
-// following signature:
-//   void VDP1FrameCompleteCallback(void *userContext)
+// The VDP1 frame complete callback simply updates the VDP1 frame counter for the FPS counter.
 //
-// The SCSP invokes the sample callback on every sample (signed 16-bit PCM, stereo, 44100 Hz).
-// The callback signature is:
-//   void SCSPSampleCallback(sint16 left, sint16 right, void *userContext)
-// where left and right are the samples for the respective channels.
-// You'll probably want to accumulate those samples into a ring buffer before sending them to the audio system.
-//
-// You can run the emulator core without providing video and audio callbacks (headless mode). It will work fine, but you
-// won't receive video frames or audio samples.
-//
-// All callbacks are invoked from inside the emulator core deep within the RunFrame() call stack, so if you're running
-// it on a dedicated thread (as is done here) you need to make sure to sync/mutex updates coming from the callbacks into
-// the GUI/main thread.
+// The audio callback writes the sample to a ring buffer. It blocks the emulator thread if the ring buffer is full,
+// which serves as a synchronization/pacing method to make the emulator run in real time at 100% speed.
 //
 //
 // Persistent state
 // ----------------
-// The internal backup memory, external backup RAM cartridge and SMPC persist data to disk.
+// This frontend persists SMPC state into the state folder of the user profile. Other state, including internal and
+// external backup memories, are also persisted in the user profile directory by default, but they may be located
+// anywhere on the file system.
 //
-// Invoke Saturn::LoadInternalBackupMemoryImage(std::filesystem::path path, std::error_code &error) to configure the
-// path to the internal backup memory image. By default, the emulator core will *not* load any images, so the internal
-// backup memory will not work. Make sure to check the error code in `error` to ensure the image was properly loaded.
-// If the file contains a proper internal backup memory image, it is loaded as is, otherwise the file is resized or
-// truncated to 32 KiB and formatted to a blank backup memory.
-//
-// For external backup RAM cartridges, you will need to use ymir::bup::BackupMemory to try to load the image:
-//    std::error_code error{};
-//    bup::BackupMemory bupMem{};
-//    switch (bupMem.LoadFrom(path, error)) {
-//    case bup::BackupMemoryImageLoadResult::Success:
-//        // The image is valid
-//        break;
-//    case bup::BackupMemoryImageLoadResult::FilesystemError:
-//        // A file system error occurred; check `error` for details
-//        break;
-//    case bup::BackupMemoryImageLoadResult::InvalidSize:
-//        // The file does not have a valid backup memory image size
-//        break;
-//    }
-// If the backup image loaded successfully, you can insert the cartridge:
-//    Saturn &saturn = ...;
-//    saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
-//
-// SMPC is initialized with factory defaults. Upon startup, the system will require the user to set up the language and
-// system clock. It will not automatically persist any settings upon exit. In order to persist them, use either one of:
-//    SMPC::LoadPersistentDataFrom(std::filesystem::path)
-//    SMPC::SavePersistentDataTo(std::filesystem::path)
-// As the names imply, LoadPersistentDataFrom will attempt to read persistent data from the given path and Save will
-// attempt to write the current settings to the file. Both functions will additionally set the persistent data path to
-// the specified path, so that any further changes are automatically saved to that file.
-// It is sufficient to call one of these functions only once to configure the persistent path for SMPC settings.
 //
 // Debugging
 // ---------
-// WARNING: The debugger is a work in progress and in a flow state. Expect things to change dramatically.
-//
-// The debugger framework provides two major components: the probes and the tracers. You can also use Bus objects to
-// directly read or write memory.
-//
-// Bus instances provide Peek/Poke variants of Read/Write methods that circumvent memory access limitations, allowing
-// debuggers to read from write-only registers or do 8-bit reads and writes to VDP registers which normally disallow
-// accesses of that size. Peek and Poke also avoid side-effects when accessing certain registers such as the CD Block's
-// data transfer register which would cause the transfer pointer to advance and break emulated software.
-//
-// Probes are provided by components to inspect or modify their internal state. They are always available and have
-// virtually no performance cost on the emulator thread. Probes can perform operations that cannot normally be done
-// through simple memory reads and writes such as directly reading from or writing to SH2 cache arrays or CD Block
-// buffers. Not even Peek/Poke on the Bus can reach that far.
-//
-// Tracers are integrated into the components themselves in order to capture events as the emulator executes. The
-// application must implement the provided interfaces in ymir/debug/*_tracer.hpp, then attach tracer instances to the
-// components with the UseTracer(...) methods provided by them which will then receive events as they occur while the
-// emulator is running.
-//
-// Some tracers require you to run the emulator in "debug mode", which is accomplished with EnableDebugTracing(true)
-// on the Saturn instance, then attaching the traceers. There's no need to reset or reinitialize the emulator core to
-// switch modes -- you can run the emulator normally for a while, then switch to debug mode at any point to enable
-// tracing, and switch back and forth as often as you want. Tracers that need debug mode to work are documented as such
-// in their header files.
-//
-// Running in debug mode has a noticeable performance penalty as the alternative code path enables calls to the tracers
-// in hot paths. This is left as an option in order to maximize performance for the primary use case of playing games
-// without using any debugging features. For this reason, EnableDebugTracing(false) will also detach all tracers.
-//
-// Some components always have tracing enabled if provided a valid instance, so in order avoid the performance penalty,
-// make sure to also detach tracers from all components when you don't need them by calling DetachAllTracers() on the
-// ymir::Saturn instance. Currently, only the SH2 and SCU DSP tracers honor the debug mode flag.
-//
-// Debug mode is not necessary to use probes as they have no performace impact.
-//
-// Tracers are invoked from the emulator thread -- you will need to manage thread safety if trace data is to be consumed
-// by another thread. It's also important to minimize performance impact, especially on hot tracers (memory accesses and
-// CPU instructions primarily). A good approach to optimize time spent handling the event is to copy the trace data into
-// a lock-free ring buffer to be processed further by another thread.
-//
-// WARNING: Since the emulator is not thread-safe, care must be taken when using buses, probes and tracers while the
-// emulator is running in a multithreaded context:
-// - Reads will retrieve dirty data but are otherwise safe.
-// - Certain writes (especially to nontrivial registers or internal state) will cause race conditions and potentially
-//   crash the emulator.
-//
-// This frontend enqueues debugger writes to be executed on the emulator thread when it is convenient.
+// This frontend enqueues debugger writes to be executed on the emulator thread when it is convenient and implements all
+// tracers, storing their data into bounded ring buffers to be used by the debug views.
 //
 //
 // Thread safety
 // -------------
-// The emulator core is *not* thread-safe and *will never be*. Make sure to provide your own synchronization mechanisms
-// if you plan to run it in a dedicated thread.
-//
-// As noted above, the input, video and audio callbacks as well as debug tracers are invoked from the emulator thread.
-// Provide proper synchronization between the emulator thread and the main/GUI thread when handling these events.
-//
-// The VDP renderer runs in its own thread and is thread-safe within the core.
-//
 // This frontend runs the emulator core in a dedicated thread while the GUI runs on the main thread. Synchronization
 // between threads is accomplished by using a blocking concurrent queue to send events to the emulator thread, which
 // processes the events between frames. The debugger performs dirty reads and enqueues writes to be executed in the

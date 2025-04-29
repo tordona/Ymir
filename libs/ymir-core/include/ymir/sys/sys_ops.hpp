@@ -4,7 +4,7 @@
 
 namespace ymir::sys {
 
-// The subset of system operations used by the SMPC.
+/// @brief The subset of system operations used by the SMPC.
 class ISystemOperations {
 public:
     virtual bool GetNMI() const = 0;
