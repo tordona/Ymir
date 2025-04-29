@@ -1,4 +1,9 @@
 /**
+@file
+@brief Main page documentation.
+*/
+
+/**
 @mainpage Ymir
 
 Ymir is a Sega Saturn emulator written in C++20.

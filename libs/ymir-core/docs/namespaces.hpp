@@ -1,4 +1,9 @@
 /**
+@file
+@brief Namespaces documentation.
+*/
+
+/**
 @namespace bit
 @brief Bitwise operations and bit twiddling tricks.
 
@@ -13,6 +18,12 @@
 
 @namespace devlog::level
 @brief Dev log levels.
+
+@namespace fninfo
+@brief Function identification.
+
+@namespace fninfo::detail
+@brief Implementation details for function identification.
 
 @namespace util
 @brief Utility functions, types, constants and concepts.
