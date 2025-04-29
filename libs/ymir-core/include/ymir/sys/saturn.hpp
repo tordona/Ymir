@@ -41,6 +41,10 @@ namespace ymir {
 ///
 /// See ymir.hpp for details on how to use the emulator.
 struct Saturn : sys::ISystemOperations {
+    /// @brief Creates a new Sega Saturn emulator reset to factory state.
+    ///
+    /// The emulator comes with no disc, no peripherals, and a basic IPL ROM that puts the master SH-2 into an infinite
+    /// do-nothing loop.
     Saturn();
 
     /// @brief Performs a soft or hard reset of the system.

@@ -27,6 +27,8 @@ run the emulator for a single frame.
 The emulator core makes no attempt to pace execution to realtime speed - it's up to the frontend to implement some rate
 control method. If no such method is used, it will run as fast as your CPU allows.
 
+You can configure several parameters of the emulator core through `ymir::Saturn::configuration`.
+
 
 Loading IPL ROMs, discs, backup memory and cartridges
 -----------------------------------------------------
