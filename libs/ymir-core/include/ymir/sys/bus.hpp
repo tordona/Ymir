@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+@file
+@brief Defines `ymir::sys::Bus`, a memory bus interconnecting various components in the system.
+*/
+
 #include <ymir/core/types.hpp>
 
 #include <ymir/hw/hw_defs.hpp>
@@ -16,28 +21,28 @@
 
 namespace ymir::sys {
 
-using FnRead8 = uint8 (*)(uint32 address, void *ctx);
-using FnRead16 = uint16 (*)(uint32 address, void *ctx);
-using FnRead32 = uint32 (*)(uint32 address, void *ctx);
+using FnRead8 = uint8 (*)(uint32 address, void *ctx);   ///< Function signature for 8-bit reads.
+using FnRead16 = uint16 (*)(uint32 address, void *ctx); ///< Function signature for 16-bit reads.
+using FnRead32 = uint32 (*)(uint32 address, void *ctx); ///< Function signature for 32-bit reads.
 
-using FnWrite8 = void (*)(uint32 address, uint8 value, void *ctx);
-using FnWrite16 = void (*)(uint32 address, uint16 value, void *ctx);
-using FnWrite32 = void (*)(uint32 address, uint32 value, void *ctx);
+using FnWrite8 = void (*)(uint32 address, uint8 value, void *ctx);   ///< Function signature for 8-bit writes.
+using FnWrite16 = void (*)(uint32 address, uint16 value, void *ctx); ///< Function signature for 16-bit writes.
+using FnWrite32 = void (*)(uint32 address, uint32 value, void *ctx); ///< Function signature for 32-bit writes.
 
-// Specifies valid bus handler function types.
+/// @brief Specifies valid bus handler function types.
+/// @tparam T the type to check
 template <typename T>
 concept bus_handler_fn =
     fninfo::IsAssignable<FnRead8, T> || fninfo::IsAssignable<FnRead16, T> || fninfo::IsAssignable<FnRead32, T> ||
     fninfo::IsAssignable<FnWrite8, T> || fninfo::IsAssignable<FnWrite16, T> || fninfo::IsAssignable<FnWrite32, T>;
 
-// Represents a memory bus interconnecting various components in the system.
-//
-// Read and Write perform reads and writes with all side-effects and restrictions imposed by the hardware.
-// Peek and Poke bypass restrictions and don't cause any side-effects. These are meant to be used by debuggers.
-//
-// Map* methods assign read/write functions to a range of addresses. "Normal" refers to the regular Read/Write functions
-// and "SideEffectFree" refers to the Peek/Poke variants.
-// Unmap clears the assignments.
+/// @brief Represents a memory bus interconnecting various components in the system.
+///
+/// `Read` and `Write` perform reads and writes with all side-effects and restrictions imposed by the hardware.
+/// `Peek` and `Poke` bypass restrictions and don't cause any side-effects. These are meant to be used by debuggers.
+///
+/// `Map` methods assign read/write functions to a range of addresses. `MapNormal` refers to the regular `Read`/`Write`
+/// functions and `MapSideEffectFree` refers to the `Peek`/`Poke` variants. `Unmap` clears the assignments.
 class Bus {
     static constexpr uint32 kAddressBits = 27; // TODO: turn this into a class template parameter
     static constexpr uint32 kAddressMask = (1u << kAddressBits) - 1;
@@ -46,32 +51,37 @@ class Bus {
     static constexpr uint32 kPageCount = (1u << (kAddressBits - kPageGranularityBits));
 
 public:
-    // Maps both normal (read/write) and side-effect-free (peek/poke) handlers to the specified range.
-    // The same handler of a given type will be used for both categories.
-    // Only the handlers of the specified types are modified; all others are left untouched.
-    // Handler types must be unique.
-    //
-    // `THandlers` specifies the types of the handlers; automatically deduced from function arguments.
-    //
-    // `start` and `end` specify the address range to map the handlers.
-    // `context` is a user pointer to any object that's passed as the context pointer to handlers.
-    // `handlers` are the handlers to map.
+    /// @brief Maps both normal (read/write) and side-effect-free (peek/poke) handlers to the specified range.
+    ///
+    /// The same handler of a given type will be used for both categories.
+    ///
+    /// Only the handlers of the specified types are modified; all others are left untouched.
+    ///
+    /// Handler types must be unique.
+    ///
+    /// @tparam ...THandlers the types of the handlers; automatically deduced from function arguments.
+    /// @param[in] start the lower bound of the address range to map the handlers into
+    /// @param[in] end the upper bound of the address range to map the handlers into
+    /// @param[in] context a user pointer to any object that's passed as the context pointer to handlers
+    /// @param[in] ...handlers the handlers to map
     template <bus_handler_fn... THandlers>
         requires util::unique_types<THandlers...>
     void MapBoth(uint32 start, uint32 end, void *context, THandlers &&...handlers) {
         Map<true, true, THandlers...>(start, end, context, std::forward<THandlers>(handlers)...);
     }
 
-    // Maps normal (read/write) handlers to the specified range.
-    // Only the handlers of the specified types are modified; all others (including side-effect-free versions) are left
-    // untouched.
-    // Handler types must be unique.
-    //
-    // `THandlers` specifies the types of the handlers; automatically deduced from function arguments.
-    //
-    // `start` and `end` specify the address range to map the handlers.
-    // `context` is a user pointer to any object that's passed as the context pointer to handlers.
-    // `handlers` are the handlers to map.
+    /// @brief Maps normal (read/write) handlers to the specified range.
+    ///
+    /// Only the handlers of the specified types are modified; all others (including side-effect-free versions) are left
+    /// untouched.
+    ///
+    /// Handler types must be unique.
+    ///
+    /// @tparam ...THandlers the types of the handlers; automatically deduced from function arguments.
+    /// @param[in] start the lower bound of the address range to map the handlers into
+    /// @param[in] end the upper bound of the address range to map the handlers into
+    /// @param[in] context a user pointer to any object that's passed as the context pointer to handlers
+    /// @param[in] ...handlers the handlers to map
     template <bus_handler_fn... THandlers>
         requires util::unique_types<THandlers...>
     void MapNormal(uint32 start, uint32 end, void *context, THandlers &&...handlers) {
@@ -87,6 +97,19 @@ public:
     // `start` and `end` specify the address range to map the handlers.
     // `context` is a user pointer to any object that's passed as the context pointer to handlers.
     // `handlers` are the handlers to map.
+
+    /// @brief Maps side-effect-free (peek/poke) handlers to the specified range.
+    ///
+    /// Only the handlers of the specified types are modified; all others (including normal versions) are left
+    /// untouched.
+    ///
+    /// Handler types must be unique.
+    ///
+    /// @tparam ...THandlers the types of the handlers; automatically deduced from function arguments.
+    /// @param[in] start the lower bound of the address range to map the handlers into
+    /// @param[in] end the upper bound of the address range to map the handlers into
+    /// @param[in] context a user pointer to any object that's passed as the context pointer to handlers
+    /// @param[in] ...handlers the handlers to map
     template <bus_handler_fn... THandlers>
         requires util::unique_types<THandlers...>
     void MapSideEffectFree(uint32 start, uint32 end, void *context, THandlers &&...handlers) {
@@ -96,6 +119,10 @@ public:
     // Unmaps all handlers from the specified range.
     //
     // `start` and `end` specify the address range to map the handlers.
+
+    /// @brief Unmaps all handlers from the specified range.
+    /// @param[in] start the lower bound of the address range to unmap the handlers from
+    /// @param[in] end the upper bound of the address range to unmap the handlers from
     void Unmap(uint32 start, uint32 end) {
         const uint32 startIndex = start >> kPageGranularityBits;
         const uint32 endIndex = end >> kPageGranularityBits;
@@ -104,16 +131,19 @@ public:
         }
     }
 
-    // Convenience method that maps an array of size N (which must be a power of two) to the specified range.
-    // Both normal and side-effect-free handlers are mapped.
-    //
-    // The array is mapped from the beginning at `start` and mirrored across the whole range until `end`.
-    // If the array is larger than the range, only the range `array[0]..array[end-start-1]` is mapped.
-    // If the array is smalled than the range, the entire array is mirrored as many times as needed to fit the range.
-    //
-    // `start` and `end` specify the address range to map the handlers.
-    // `array` is a reference to the array to be mapped.
-    // `writable` indicates if the array is meant to be writable or read-only.
+    /// @brief Convenience method that maps an array of size N (which must be a power of two) to the specified range.
+    ///
+    /// Both normal and side-effect-free handlers are mapped.
+    ///
+    /// The array is mapped from the beginning at `start` and mirrored across the whole range until `end`.
+    /// If the array is larger than the range, only the range `array[0]..array[end-start-1]` is mapped.
+    /// If the array is smaller than the range, the entire array is mirrored as many times as needed to fit the range.
+    ///
+    /// @tparam N
+    /// @param[in] start the lower bound of the address range to map the handlers into
+    /// @param[in] end the upper bound of the address range to map the handlers into
+    /// @param array a reference to the array to be mapped
+    /// @param writable indicates if the array is meant to be writable or read-only
     template <size_t N>
         requires(bit::is_power_of_two(N))
     void MapArray(uint32 start, uint32 end, std::array<uint8, N> &array, bool writable) {
@@ -145,6 +175,10 @@ public:
     // -----------------------------------------------------------------------------------------------------------------
     // Accessors
 
+    /// @brief Reads data from the bus using the handler assigned to the specified address.
+    /// @tparam T the data type of the access
+    /// @param[in] address the address to read
+    /// @return the value read from the handler
     template <mem_primitive T>
     FLATTEN FORCE_INLINE T Read(uint32 address) const {
         address &= kAddressMask & ~(sizeof(T) - 1);
@@ -163,6 +197,10 @@ public:
         }
     }
 
+    /// @brief Writes data to the bus using the handler assigned to the specified address.
+    /// @tparam T the data type of the access
+    /// @param[in] address the address to write
+    /// @param[in] value the value to write
     template <mem_primitive T>
     FLATTEN FORCE_INLINE void Write(uint32 address, T value) {
         address &= kAddressMask & ~(sizeof(T) - 1);
@@ -181,6 +219,10 @@ public:
         }
     }
 
+    /// @brief Reads data from the bus using the side-effect-free handler assigned to the specified address.
+    /// @tparam T the data type of the access
+    /// @param[in] address the address to read
+    /// @return the value read from the handler
     template <mem_primitive T>
     FLATTEN FORCE_INLINE T Peek(uint32 address) const {
         address &= kAddressMask & ~(sizeof(T) - 1);
@@ -199,6 +241,10 @@ public:
         }
     }
 
+    /// @brief Writes data to the bus using the side-effect-free handler assigned to the specified address.
+    /// @tparam T the data type of the access
+    /// @param[in] address the address to write
+    /// @param[in] value the value to write
     template <mem_primitive T>
     FLATTEN FORCE_INLINE void Poke(uint32 address, T value) {
         address &= kAddressMask & ~(sizeof(T) - 1);
