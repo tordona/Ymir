@@ -41,8 +41,8 @@ namespace ymir {
 struct Saturn {
     /// @brief Creates a new Sega Saturn emulator reset to factory state.
     ///
-    /// The emulator comes with no disc, no peripherals, and a basic IPL ROM that puts the master SH-2 into an infinite
-    /// do-nothing loop.
+    /// The emulator comes with no disc, no peripherals, no cartridge, and a basic IPL ROM that puts the master SH-2
+    /// into an infinite do-nothing loop.
     Saturn();
 
     /// @brief Performs a soft or hard reset of the system.
@@ -160,7 +160,7 @@ struct Saturn {
 
     /// @brief Determines if debug tracing is enabled.
     /// @return the debug tracing state
-    bool IsDebugTracingEnabled() const {
+    [[nodiscard]] bool IsDebugTracingEnabled() const noexcept {
         return m_systemFeatures.enableDebugTracing;
     }
 
@@ -177,7 +177,7 @@ struct Saturn {
 
     /// @brief Determines if SH-2 cache emulation is enabled.
     /// @return the SH-2 cache emulation state
-    bool IsSH2CacheEmulationEnabled() const {
+    [[nodiscard]] bool IsSH2CacheEmulationEnabled() const noexcept {
         return configuration.system.emulateSH2Cache;
     }
 
@@ -217,7 +217,7 @@ struct Saturn {
     ///
     /// @param[in] state the state object to load from
     /// @return `true` if the state was loaded successfully
-    bool LoadState(const state::State &state);
+    [[nodiscard]] bool LoadState(const state::State &state);
 
 private:
     /// @brief Runs the emulator until the end of the current frame

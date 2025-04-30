@@ -1941,7 +1941,9 @@ void App::EmulatorThread() {
             bool doRunFrame = true;
             if (rewindEnabled && m_context.rewinding) {
                 if (m_context.rewindBuffer.PopState()) {
-                    m_context.saturn.LoadState(m_context.rewindBuffer.NextState);
+                    if (!m_context.saturn.LoadState(m_context.rewindBuffer.NextState)) {
+                        doRunFrame = false;
+                    }
                 } else {
                     doRunFrame = false;
                 }

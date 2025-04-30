@@ -2,7 +2,7 @@
 
 /**
 @file
-@brief The entrypoint of the Ymir library core. Includes all functionality needed to operate the emulator.
+@brief The entrypoint of the Ymir core library. Includes all functionality needed to operate the emulator.
 */
 
 #include <ymir/version.hpp>
