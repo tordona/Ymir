@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+@file
+@brief General VDP1 definitions.
+*/
+
 #include <ymir/core/types.hpp>
 
 namespace ymir::vdp {

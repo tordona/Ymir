@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+@file
+@brief VDP callbacks.
+*/
+
 #include <ymir/core/types.hpp>
 
 #include <ymir/util/callback.hpp>

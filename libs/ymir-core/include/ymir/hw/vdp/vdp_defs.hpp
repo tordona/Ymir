@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+@file
+@brief General definitions common to VDP1 and VDP2.
+*/
+
 #include "vdp1_defs.hpp"
 #include "vdp2_defs.hpp"
 

@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+@file
+@brief VDP1 and VDP2 implementation.
+*/
+
 #include "vdp_defs.hpp"
 
 #include "vdp1_regs.hpp"

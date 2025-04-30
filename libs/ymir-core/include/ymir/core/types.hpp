@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+@file
+@brief Core type definitions.
+
+Defines aliases for all fixed-width integer types.
+*/
+
 #include <cstdint>
 
 using uint8 = uint8_t;

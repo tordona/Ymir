@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+@file
+@brief General VDP2 definitions.
+*/
+
 #include <ymir/core/types.hpp>
 
 #include <ymir/util/bit_ops.hpp>

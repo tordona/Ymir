@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+@file
+@brief Internal VDP callbacks.
+*/
+
 #include <ymir/util/callback.hpp>
 
 namespace ymir::vdp {

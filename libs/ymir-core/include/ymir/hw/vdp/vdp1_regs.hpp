@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+@file
+@brief VDP1 register definitions.
+*/
+
 #include "vdp1_defs.hpp"
 
 #include <ymir/util/bit_ops.hpp>
