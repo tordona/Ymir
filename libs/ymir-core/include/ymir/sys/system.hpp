@@ -11,12 +11,12 @@
 namespace ymir::sys {
 
 struct System {
-    config::sys::VideoStandard videoStandard = config::sys::VideoStandard::NTSC;
+    core::config::sys::VideoStandard videoStandard = core::config::sys::VideoStandard::NTSC;
     ClockSpeed clockSpeed = ClockSpeed::_320;
 
     const ClockRatios &GetClockRatios() const {
         const bool clock352 = clockSpeed == ClockSpeed::_352;
-        const bool pal = videoStandard == config::sys::VideoStandard::PAL;
+        const bool pal = videoStandard == core::config::sys::VideoStandard::PAL;
         return kClockRatios[(pal << 1) | (clock352 << 0)];
     }
 
@@ -40,7 +40,8 @@ struct System {
     }
 
     bool ValidateState(const state::SystemState &state) const {
-        if (videoStandard != config::sys::VideoStandard::NTSC && videoStandard != config::sys::VideoStandard::PAL) {
+        if (videoStandard != core::config::sys::VideoStandard::NTSC &&
+            videoStandard != core::config::sys::VideoStandard::PAL) {
             return false;
         }
         if (clockSpeed != ClockSpeed::_320 && clockSpeed != ClockSpeed::_352) {

@@ -79,7 +79,7 @@ inline EmuEvent Shutdown() {
 // Specialized event factories
 
 EmuEvent SetClockSpeed(ymir::sys::ClockSpeed clockSpeed);
-EmuEvent SetVideoStandard(ymir::config::sys::VideoStandard videoStandard);
+EmuEvent SetVideoStandard(ymir::core::config::sys::VideoStandard videoStandard);
 EmuEvent SetAreaCode(uint8 areaCode);
 
 EmuEvent SetDebugTrace(bool enable);

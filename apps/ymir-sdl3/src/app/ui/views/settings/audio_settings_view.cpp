@@ -35,7 +35,7 @@ void AudioSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    using InterpMode = config::audio::SampleInterpolationMode;
+    using InterpMode = core::config::audio::SampleInterpolationMode;
 
     auto interpOption = [&](const char *name, InterpMode mode) {
         const std::string label = fmt::format("{}##sample_interp", name);

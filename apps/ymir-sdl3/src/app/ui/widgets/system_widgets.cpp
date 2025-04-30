@@ -12,14 +12,14 @@ namespace app::ui::widgets {
 
 bool VideoStandardSelector(SharedContext &ctx) {
     bool changed = false;
-    config::sys::VideoStandard videoStandard = ctx.saturn.GetVideoStandard();
-    if (ImGui::RadioButton("NTSC", videoStandard == config::sys::VideoStandard::NTSC)) {
-        ctx.EnqueueEvent(events::emu::SetVideoStandard(config::sys::VideoStandard::NTSC));
+    core::config::sys::VideoStandard videoStandard = ctx.saturn.GetVideoStandard();
+    if (ImGui::RadioButton("NTSC", videoStandard == core::config::sys::VideoStandard::NTSC)) {
+        ctx.EnqueueEvent(events::emu::SetVideoStandard(core::config::sys::VideoStandard::NTSC));
         changed = true;
     }
     ImGui::SameLine();
-    if (ImGui::RadioButton("PAL", videoStandard == config::sys::VideoStandard::PAL)) {
-        ctx.EnqueueEvent(events::emu::SetVideoStandard(config::sys::VideoStandard::PAL));
+    if (ImGui::RadioButton("PAL", videoStandard == core::config::sys::VideoStandard::PAL)) {
+        ctx.EnqueueEvent(events::emu::SetVideoStandard(core::config::sys::VideoStandard::PAL));
         changed = true;
     }
     return changed;
@@ -27,11 +27,11 @@ bool VideoStandardSelector(SharedContext &ctx) {
 
 bool RegionSelector(SharedContext &ctx) {
     bool changed = false;
-    auto areaCode = static_cast<config::sys::Region>(ctx.saturn.SMPC.GetAreaCode());
+    auto areaCode = static_cast<core::config::sys::Region>(ctx.saturn.SMPC.GetAreaCode());
     if (ImGui::BeginCombo("##region", util::RegionToString(areaCode).c_str(),
                           ImGuiComboFlags_WidthFitPreview | ImGuiComboFlags_HeightLargest)) {
-        for (auto rgn : {config::sys::Region::Japan, config::sys::Region::NorthAmerica, config::sys::Region::AsiaNTSC,
-                         config::sys::Region::EuropePAL}) {
+        for (auto rgn : {core::config::sys::Region::Japan, core::config::sys::Region::NorthAmerica,
+                         core::config::sys::Region::AsiaNTSC, core::config::sys::Region::EuropePAL}) {
             if (ImGui::Selectable(util::RegionToString(rgn).c_str(), rgn == areaCode) && rgn != areaCode) {
                 ctx.EnqueueEvent(events::emu::SetAreaCode(static_cast<uint8>(rgn)));
                 // TODO: optional?

@@ -77,11 +77,12 @@ void SystemSettingsView::Display() {
     ImGui::TextUnformatted("Preferred region order:");
     widgets::ExplanationTooltip("Drag items to reorder");
 
-    std::vector<config::sys::Region> prefRgnOrder{};
+    std::vector<core::config::sys::Region> prefRgnOrder{};
     {
         // Set of all valid regions
-        std::set<config::sys::Region> validRegions{config::sys::Region::Japan, config::sys::Region::NorthAmerica,
-                                                   config::sys::Region::AsiaNTSC, config::sys::Region::EuropePAL};
+        std::set<core::config::sys::Region> validRegions{
+            core::config::sys::Region::Japan, core::config::sys::Region::NorthAmerica,
+            core::config::sys::Region::AsiaNTSC, core::config::sys::Region::EuropePAL};
 
         // Build list of regions from setting using only valid options
         for (auto &region : sysConfig.preferredRegionOrder.Get()) {
@@ -98,7 +99,7 @@ void SystemSettingsView::Display() {
         ImGui::PushItemFlag(ImGuiItemFlags_AllowDuplicateId, true);
         bool changed = false;
         for (int n = 0; n < prefRgnOrder.size(); n++) {
-            config::sys::Region item = prefRgnOrder[n];
+            core::config::sys::Region item = prefRgnOrder[n];
             ImGui::Selectable(util::RegionToString(item).c_str());
 
             if (ImGui::IsItemActive() && !ImGui::IsItemHovered()) {
@@ -148,12 +149,12 @@ void SystemSettingsView::Display() {
                                 "- Virtual: Runs a virtual RTC synced to emulation speed.\n\n"
                                 "For deterministic behavior, use a virtual RTC synced to a fixed time point on reset.");
     ImGui::SameLine();
-    if (MakeDirty(ImGui::RadioButton("Host##rtc", rtcConfig.mode == config::rtc::Mode::Host))) {
-        rtcConfig.mode = config::rtc::Mode::Host;
+    if (MakeDirty(ImGui::RadioButton("Host##rtc", rtcConfig.mode == core::config::rtc::Mode::Host))) {
+        rtcConfig.mode = core::config::rtc::Mode::Host;
     }
     ImGui::SameLine();
-    if (MakeDirty(ImGui::RadioButton("Virtual##rtc", rtcConfig.mode == config::rtc::Mode::Virtual))) {
-        rtcConfig.mode = config::rtc::Mode::Virtual;
+    if (MakeDirty(ImGui::RadioButton("Virtual##rtc", rtcConfig.mode == core::config::rtc::Mode::Virtual))) {
+        rtcConfig.mode = core::config::rtc::Mode::Virtual;
     }
 
     auto &rtc = m_context.saturn.SMPC.GetRTC();
@@ -166,7 +167,7 @@ void SystemSettingsView::Display() {
         rtc.SetDateTime(dateTime);
     }
 
-    if (rtcConfig.mode == config::rtc::Mode::Host) {
+    if (rtcConfig.mode == core::config::rtc::Mode::Host) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Host time offset:");
         ImGui::SameLine();
@@ -178,7 +179,7 @@ void SystemSettingsView::Display() {
         if (ImGui::Button("Reset")) {
             rtc.HostTimeOffset() = 0;
         }
-    } else if (rtcConfig.mode == config::rtc::Mode::Virtual) {
+    } else if (rtcConfig.mode == core::config::rtc::Mode::Virtual) {
         // TODO: request emulator to update date/time so that it is updated in real time
         widgets::ExplanationTooltip(
             "This may occasionally stop updating because the virtual RTC is only updated when the game reads from it.");
@@ -191,7 +192,7 @@ void SystemSettingsView::Display() {
             rtc.SetDateTime(util::datetime::from_timestamp(rtcConfig.virtHardResetTimestamp));
         }
 
-        using HardResetStrategy = config::rtc::HardResetStrategy;
+        using HardResetStrategy = core::config::rtc::HardResetStrategy;
 
         auto hardResetOption = [&](const char *name, HardResetStrategy strategy, const char *explanation) {
             if (MakeDirty(ImGui::RadioButton(fmt::format("{}##virt_rtc_reset", name).c_str(),

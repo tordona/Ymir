@@ -18,7 +18,7 @@ static constexpr struct {
     {/*0xE*/ '?', "Invalid"},       {/*0xF*/ '?', "Invalid"},
 };
 
-std::string RegionToString(ymir::config::sys::Region region) {
+std::string RegionToString(ymir::core::config::sys::Region region) {
     auto areaCode = static_cast<uint8>(region);
     areaCode &= 0xF;
     return fmt::format("({:c}) {}", kRegions[areaCode].charCode, kRegions[areaCode].name);

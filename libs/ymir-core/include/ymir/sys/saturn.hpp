@@ -54,13 +54,13 @@ struct Saturn {
 
     /// @brief Retrieves the current video standard (NTSC or PAL) used by the system.
     /// @return the video standard in use
-    [[nodiscard]] config::sys::VideoStandard GetVideoStandard() const noexcept {
+    [[nodiscard]] core::config::sys::VideoStandard GetVideoStandard() const noexcept {
         return configuration.system.videoStandard;
     }
 
     /// @brief Changes the video standard (NTSC or PAL) to the specified mode.
     /// @param[in] videoStandard the new video standard to use
-    void SetVideoStandard(config::sys::VideoStandard videoStandard) {
+    void SetVideoStandard(core::config::sys::VideoStandard videoStandard) {
         configuration.system.videoStandard = videoStandard;
     }
 
@@ -262,7 +262,7 @@ private:
     /// Registered as an observer of `ymir::core::Configuration::system::preferredRegionOrder`.
     ///
     /// @param[in] regions the new preferred region order
-    void UpdatePreferredRegionOrder(std::span<const config::sys::Region> regions);
+    void UpdatePreferredRegionOrder(std::span<const core::config::sys::Region> regions);
 
     /// @brief Updates the SH-2 cache emulation setting and the `RunFrameFn()` pointer.
     /// @param[in] enabled whether to enable SH-2 cache emulation
@@ -270,7 +270,7 @@ private:
 
     /// @brief Updates the video standard to emulate and adjusts clock ratios across the system's components.
     /// @param[in] videoStandard the new video standard
-    void UpdateVideoStandard(config::sys::VideoStandard videoStandard);
+    void UpdateVideoStandard(core::config::sys::VideoStandard videoStandard);
 
     // -------------------------------------------------------------------------
     // Global components and state

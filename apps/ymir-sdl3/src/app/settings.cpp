@@ -50,60 +50,60 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, db::SystemVari
     }
 }
 
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, config::sys::Region &value) {
-    value = config::sys::Region::Japan;
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, core::config::sys::Region &value) {
+    value = core::config::sys::Region::Japan;
     if (auto opt = node.value<std::string>()) {
         if (*opt == "Japan"s) {
-            value = config::sys::Region::Japan;
+            value = core::config::sys::Region::Japan;
         } else if (*opt == "AsiaNTSC"s) {
-            value = config::sys::Region::AsiaNTSC;
+            value = core::config::sys::Region::AsiaNTSC;
         } else if (*opt == "NorthAmerica"s) {
-            value = config::sys::Region::NorthAmerica;
+            value = core::config::sys::Region::NorthAmerica;
         } else if (*opt == "EuropePAL"s) {
-            value = config::sys::Region::EuropePAL;
+            value = core::config::sys::Region::EuropePAL;
         } else if (*opt == "CentralSouthAmericaNTSC"s) {
-            value = config::sys::Region::NorthAmerica;
+            value = core::config::sys::Region::NorthAmerica;
         } else if (*opt == "Korea"s) {
-            value = config::sys::Region::AsiaNTSC;
+            value = core::config::sys::Region::AsiaNTSC;
         } else if (*opt == "AsiaPAL"s) {
-            value = config::sys::Region::EuropePAL;
+            value = core::config::sys::Region::EuropePAL;
         } else if (*opt == "CentralSouthAmericaPAL"s) {
-            value = config::sys::Region::EuropePAL;
+            value = core::config::sys::Region::EuropePAL;
         }
     }
 }
 
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, config::sys::VideoStandard &value) {
-    value = config::sys::VideoStandard::NTSC;
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, core::config::sys::VideoStandard &value) {
+    value = core::config::sys::VideoStandard::NTSC;
     if (auto opt = node.value<std::string>()) {
         if (*opt == "NTSC"s) {
-            value = config::sys::VideoStandard::NTSC;
+            value = core::config::sys::VideoStandard::NTSC;
         } else if (*opt == "PAL"s) {
-            value = config::sys::VideoStandard::PAL;
+            value = core::config::sys::VideoStandard::PAL;
         }
     }
 }
 
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, config::rtc::Mode &value) {
-    value = config::rtc::Mode::Host;
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, core::config::rtc::Mode &value) {
+    value = core::config::rtc::Mode::Host;
     if (auto opt = node.value<std::string>()) {
         if (*opt == "Host"s) {
-            value = config::rtc::Mode::Host;
+            value = core::config::rtc::Mode::Host;
         } else if (*opt == "Virtual"s) {
-            value = config::rtc::Mode::Virtual;
+            value = core::config::rtc::Mode::Virtual;
         }
     }
 }
 
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, config::rtc::HardResetStrategy &value) {
-    value = config::rtc::HardResetStrategy::Preserve;
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, core::config::rtc::HardResetStrategy &value) {
+    value = core::config::rtc::HardResetStrategy::Preserve;
     if (auto opt = node.value<std::string>()) {
         if (*opt == "PreserveCurrentTime"s) {
-            value = config::rtc::HardResetStrategy::Preserve;
+            value = core::config::rtc::HardResetStrategy::Preserve;
         } else if (*opt == "SyncToHost"s) {
-            value = config::rtc::HardResetStrategy::SyncToHost;
+            value = core::config::rtc::HardResetStrategy::SyncToHost;
         } else if (*opt == "SyncToFixedStartingTime"s) {
-            value = config::rtc::HardResetStrategy::ResetToFixedTime;
+            value = core::config::rtc::HardResetStrategy::ResetToFixedTime;
         }
     }
 }
@@ -119,13 +119,13 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, peripheral::Pe
     }
 }
 
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, config::audio::SampleInterpolationMode &value) {
-    value = config::audio::SampleInterpolationMode::NearestNeighbor;
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, core::config::audio::SampleInterpolationMode &value) {
+    value = core::config::audio::SampleInterpolationMode::NearestNeighbor;
     if (auto opt = node.value<std::string>()) {
         if (*opt == "Nearest"s) {
-            value = config::audio::SampleInterpolationMode::NearestNeighbor;
+            value = core::config::audio::SampleInterpolationMode::NearestNeighbor;
         } else if (*opt == "Linear"s) {
-            value = config::audio::SampleInterpolationMode::Linear;
+            value = core::config::audio::SampleInterpolationMode::Linear;
         }
     }
 }
@@ -181,43 +181,43 @@ FORCE_INLINE static const char *ToTOML(const db::SystemVariant value) {
     }
 }
 
-FORCE_INLINE static const char *ToTOML(const config::sys::Region value) {
+FORCE_INLINE static const char *ToTOML(const core::config::sys::Region value) {
     switch (value) {
     default: [[fallthrough]];
-    case config::sys::Region::Japan: return "Japan";
-    case config::sys::Region::AsiaNTSC: return "AsiaNTSC";
-    case config::sys::Region::NorthAmerica: return "NorthAmerica";
-    case config::sys::Region::EuropePAL: return "EuropePAL";
+    case core::config::sys::Region::Japan: return "Japan";
+    case core::config::sys::Region::AsiaNTSC: return "AsiaNTSC";
+    case core::config::sys::Region::NorthAmerica: return "NorthAmerica";
+    case core::config::sys::Region::EuropePAL: return "EuropePAL";
 
-    case config::sys::Region::CentralSouthAmericaNTSC: return "NorthAmerica";
-    case config::sys::Region::Korea: return "AsiaNTSC";
-    case config::sys::Region::AsiaPAL: return "EuropePAL";
-    case config::sys::Region::CentralSouthAmericaPAL: return "EuropePAL";
+    case core::config::sys::Region::CentralSouthAmericaNTSC: return "NorthAmerica";
+    case core::config::sys::Region::Korea: return "AsiaNTSC";
+    case core::config::sys::Region::AsiaPAL: return "EuropePAL";
+    case core::config::sys::Region::CentralSouthAmericaPAL: return "EuropePAL";
     }
 }
 
-FORCE_INLINE static const char *ToTOML(const config::sys::VideoStandard value) {
+FORCE_INLINE static const char *ToTOML(const core::config::sys::VideoStandard value) {
     switch (value) {
     default: [[fallthrough]];
-    case config::sys::VideoStandard::NTSC: return "NTSC";
-    case config::sys::VideoStandard::PAL: return "PAL";
+    case core::config::sys::VideoStandard::NTSC: return "NTSC";
+    case core::config::sys::VideoStandard::PAL: return "PAL";
     }
 }
 
-FORCE_INLINE static const char *ToTOML(const config::rtc::Mode value) {
+FORCE_INLINE static const char *ToTOML(const core::config::rtc::Mode value) {
     switch (value) {
     default: [[fallthrough]];
-    case config::rtc::Mode::Host: return "Host";
-    case config::rtc::Mode::Virtual: return "Virtual";
+    case core::config::rtc::Mode::Host: return "Host";
+    case core::config::rtc::Mode::Virtual: return "Virtual";
     }
 }
 
-FORCE_INLINE static const char *ToTOML(const config::rtc::HardResetStrategy value) {
+FORCE_INLINE static const char *ToTOML(const core::config::rtc::HardResetStrategy value) {
     switch (value) {
     default: [[fallthrough]];
-    case config::rtc::HardResetStrategy::Preserve: return "Preserve";
-    case config::rtc::HardResetStrategy::SyncToHost: return "SyncToHost";
-    case config::rtc::HardResetStrategy::ResetToFixedTime: return "ResetToFixedTime";
+    case core::config::rtc::HardResetStrategy::Preserve: return "Preserve";
+    case core::config::rtc::HardResetStrategy::SyncToHost: return "SyncToHost";
+    case core::config::rtc::HardResetStrategy::ResetToFixedTime: return "ResetToFixedTime";
     }
 }
 
@@ -229,11 +229,11 @@ FORCE_INLINE static const char *ToTOML(const peripheral::PeripheralType value) {
     }
 }
 
-FORCE_INLINE static const char *ToTOML(const config::audio::SampleInterpolationMode value) {
+FORCE_INLINE static const char *ToTOML(const core::config::audio::SampleInterpolationMode value) {
     switch (value) {
     default: [[fallthrough]];
-    case config::audio::SampleInterpolationMode::NearestNeighbor: return "Nearest";
-    case config::audio::SampleInterpolationMode::Linear: return "Linear";
+    case core::config::audio::SampleInterpolationMode::NearestNeighbor: return "Nearest";
+    case core::config::audio::SampleInterpolationMode::Linear: return "Linear";
     }
 }
 

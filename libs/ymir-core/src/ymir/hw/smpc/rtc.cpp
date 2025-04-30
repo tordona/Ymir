@@ -38,7 +38,7 @@ RTC::RTC(core::Configuration::RTC &config)
 
 void RTC::Reset(bool hard) {
     if (hard) {
-        using enum config::rtc::HardResetStrategy;
+        using enum core::config::rtc::HardResetStrategy;
         switch (m_config.virtHardResetStrategy) {
         case SyncToHost: m_timestamp = util::datetime::to_timestamp(util::datetime::host()); break;
         case ResetToFixedTime: m_timestamp = m_config.virtHardResetTimestamp; break;
@@ -60,19 +60,19 @@ void RTC::UpdateSysClock(uint64 sysClock) {
 
 util::datetime::DateTime RTC::GetDateTime() const {
     switch (m_mode) {
-    case config::rtc::Mode::Host: return util::datetime::host(m_offset);
-    case config::rtc::Mode::Virtual: return util::datetime::from_timestamp(m_timestamp);
+    case core::config::rtc::Mode::Host: return util::datetime::host(m_offset);
+    case core::config::rtc::Mode::Virtual: return util::datetime::from_timestamp(m_timestamp);
     }
     util::unreachable();
 }
 
 void RTC::SetDateTime(const util::datetime::DateTime &dateTime) {
     switch (m_mode) {
-    case config::rtc::Mode::Host:
+    case core::config::rtc::Mode::Host:
         m_offset = util::datetime::delta_to_host(dateTime);
         devlog::debug<grp::base>("Setting host time offset to {} seconds", m_offset);
         break;
-    case config::rtc::Mode::Virtual:
+    case core::config::rtc::Mode::Virtual:
         m_timestamp = util::datetime::to_timestamp(dateTime);
         devlog::debug<grp::base>("Setting absolute timestamp to {} seconds", m_timestamp);
         break;

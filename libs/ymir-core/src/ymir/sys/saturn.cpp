@@ -90,10 +90,10 @@ Saturn::Saturn()
     UpdateRunFrameFn();
 
     configuration.system.preferredRegionOrder.Observe(
-        [&](const std::vector<config::sys::Region> &regions) { UpdatePreferredRegionOrder(regions); });
+        [&](const std::vector<core::config::sys::Region> &regions) { UpdatePreferredRegionOrder(regions); });
     configuration.system.emulateSH2Cache.Observe([&](bool enabled) { UpdateSH2CacheEmulation(enabled); });
     configuration.system.videoStandard.Observe(
-        [&](config::sys::VideoStandard videoStandard) { UpdateVideoStandard(videoStandard); });
+        [&](core::config::sys::VideoStandard videoStandard) { UpdateVideoStandard(videoStandard); });
 
     Reset(true);
 }
@@ -332,7 +332,7 @@ void Saturn::UpdateRunFrameFn() {
                                                            : &Saturn::RunFrameImpl<false, false>);
 }
 
-void Saturn::UpdatePreferredRegionOrder(std::span<const config::sys::Region> regions) {
+void Saturn::UpdatePreferredRegionOrder(std::span<const core::config::sys::Region> regions) {
     m_preferredRegionOrder.clear();
     media::AreaCode usedAreaCodes = media::AreaCode::None;
     auto addAreaCode = [&](media::AreaCode areaCode) {
@@ -342,7 +342,7 @@ void Saturn::UpdatePreferredRegionOrder(std::span<const config::sys::Region> reg
         }
     };
 
-    using Region = config::sys::Region;
+    using Region = core::config::sys::Region;
     for (const Region region : regions) {
         switch (region) {
         case Region::Japan: addAreaCode(media::AreaCode::Japan); break;
@@ -366,7 +366,7 @@ void Saturn::UpdateSH2CacheEmulation(bool enabled) {
     UpdateRunFrameFn();
 }
 
-void Saturn::UpdateVideoStandard(config::sys::VideoStandard videoStandard) {
+void Saturn::UpdateVideoStandard(core::config::sys::VideoStandard videoStandard) {
     m_system.videoStandard = videoStandard;
     m_system.UpdateClockRatios();
 }

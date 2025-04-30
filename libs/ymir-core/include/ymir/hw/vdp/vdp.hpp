@@ -105,7 +105,7 @@ private:
 
     static void OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext);
 
-    using VideoStandard = ::ymir::config::sys::VideoStandard;
+    using VideoStandard = ::ymir::core::config::sys::VideoStandard;
     void SetVideoStandard(VideoStandard videoStandard);
 
     // -------------------------------------------------------------------------

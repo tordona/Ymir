@@ -49,6 +49,18 @@
 @namespace ymir::core
 @brief Core emulation components.
 
+@namespace ymir::core::config
+@brief Core configuration.
+
+@namespace ymir::core::config::sys
+@brief System emulation parameters.
+
+@namespace ymir::core::config::rtc
+@brief RTC emulation parameters.
+
+@namespace ymir::core::config::audio
+@brief Audio emulation parameters.
+
 @namespace ymir::db
 @brief ROM databases.
 

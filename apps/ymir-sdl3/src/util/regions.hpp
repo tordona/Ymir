@@ -6,6 +6,6 @@
 
 namespace util {
 
-std::string RegionToString(ymir::config::sys::Region region);
+std::string RegionToString(ymir::core::config::sys::Region region);
 
 } // namespace util

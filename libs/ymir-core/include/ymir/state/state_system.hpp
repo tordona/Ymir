@@ -11,7 +11,7 @@ namespace ymir::state {
 namespace v1 {
 
     struct SystemState {
-        config::sys::VideoStandard videoStandard;
+        core::config::sys::VideoStandard videoStandard;
         sys::ClockSpeed clockSpeed;
         bool slaveSH2Enabled;
 

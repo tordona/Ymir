@@ -58,14 +58,14 @@ private:
     void UpdateClockRatios(const sys::ClockRatios &clockRatios);
 
     bool IsVirtualMode() const {
-        return m_mode == config::rtc::Mode::Virtual;
+        return m_mode == core::config::rtc::Mode::Virtual;
     }
 
     core::Configuration::RTC &m_config;
 
     // RTC mode (host or virtual).
     // Replicated here to eliminate one indirection in the hot path.
-    config::rtc::Mode m_mode;
+    core::config::rtc::Mode m_mode;
 
     // RTC host mode
     sint64 m_offset; // Offset in seconds added to host time
