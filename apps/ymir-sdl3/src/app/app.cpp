@@ -17,8 +17,8 @@
 //
 // ---------------------------------------------------------------------------------------------------------------------
 //
-// Check the documentation on ymir.hpp for how to use the emulator core. Listed below are some high-level implementation
-// details on how this frontend uses it.
+// Check the documentation on mainpage.hpp for how to use the emulator core. Listed below are some high-level
+// implementation details on how this frontend uses it.
 //
 // General usage
 // -------------
@@ -158,10 +158,9 @@ int App::Run(const CommandLineOptions &options) {
 
     m_options = options;
 
-    // TODO: use user profile first, then portable path
-    // - check before use
+    // TODO: check portable path first, then OS's user profile
+    // - override with options.profilePath if not empty (user specified custom profile path with "-p")
     // - if neither are available, ask user where to create files
-    // - allow overriding from command-line
     if (!options.profilePath.empty()) {
         m_context.profile.UseProfilePath(options.profilePath);
     } else {
