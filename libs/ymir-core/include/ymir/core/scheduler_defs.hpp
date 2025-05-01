@@ -1,36 +1,32 @@
 #pragma once
 
+/**
+@file
+@brief Scheduler event definitions.
+*/
+
 #include <ymir/core/types.hpp>
 
 namespace ymir::core {
 
-using IDtype = uint8;
-using EventID = IDtype;
-using UserEventID = IDtype;
+using IDtype = uint8;       ///< The ID type used for scheduler events
+using EventID = IDtype;     ///< The event ID type
+using UserEventID = IDtype; ///< The user ID type (for save states)
 
-// User IDs for all events in the emulator
 namespace events {
 
-    // VDP phase update
-    inline constexpr UserEventID VDPPhase = 0x10;
-
-    // SCSP sample
-    inline constexpr UserEventID SCSPSample = 0x20;
-
-    // CD block drive state update
-    inline constexpr UserEventID CDBlockDriveState = 0x30;
-
-    // CD block command processing
-    inline constexpr UserEventID CDBlockCommand = 0x31;
-
-    // SCU timer 1 interrupt
-    inline constexpr UserEventID SCUTimer1 = 0x40;
-
-    // SMPC command processing
-    inline constexpr UserEventID SMPCCommand = 0x50;
+    inline constexpr UserEventID VDPPhase = 0x10;          ///< VDP phase update
+    inline constexpr UserEventID SCSPSample = 0x20;        ///< SCSP sample tick
+    inline constexpr UserEventID CDBlockDriveState = 0x30; ///< CD block drive state update
+    inline constexpr UserEventID CDBlockCommand = 0x31;    ///< CD block command processing
+    inline constexpr UserEventID SCUTimer1 = 0x40;         ///< SCU timer 1 interrupt
+    inline constexpr UserEventID SMPCCommand = 0x50;       ///< SMPC command processing
 
 } // namespace events
 
-inline constexpr size_t kNumScheduledEvents = 6; // must match the number of events defined in the events namespace
+/// @brief The total number of schedulable events.
+///
+/// Must match the number of events defined in the `ymir::core::events` namespace.
+inline constexpr size_t kNumScheduledEvents = 6;
 
 } // namespace ymir::core

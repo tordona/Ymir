@@ -61,6 +61,9 @@
 @namespace ymir::core::config::audio
 @brief Audio emulation parameters.
 
+@namespace ymir::core::events
+@brief User IDs for all events in the emulator
+
 @namespace ymir::db
 @brief ROM databases.
 
