@@ -90,7 +90,7 @@ jobs:
         copy /b /y vendor/mio/LICENSE licenses/mio-LICENSE
         copy /b /y vendor/SDL/LICENSE.txt licenses/SDL-LICENSE.txt
         copy /b /y vendor/tomlplusplus/LICENSE licenses/tomlplusplus-LICENSE
-        copy /b /y vendor/xxHash/LICENSE licenses/xxHash-LICENSE
+        copy /b /y vendor/xxHash/xxHash/LICENSE licenses/xxHash-LICENSE
         copy /b /y LICENSE licenses/Ymir-LICENSE
         powershell Compress-Archive -Path "licenses/","build/apps/ymir-sdl3/ymir-sdl3.exe" -DestinationPath "${{ steps.strings.outputs.ymir-artifact-name }}.zip"
 
@@ -199,7 +199,7 @@ jobs:
         cp -f vendor/mio/LICENSE licenses/mio-LICENSE
         cp -f vendor/SDL/LICENSE.txt licenses/SDL-LICENSE.txt
         cp -f vendor/tomlplusplus/LICENSE licenses/tomlplusplus-LICENSE
-        cp -f vendor/xxHash/LICENSE licenses/xxHash-LICENSE
+        cp -f vendor/xxHash/xxHash/LICENSE licenses/xxHash-LICENSE
         cp -f LICENSE licenses/Ymir-LICENSE
         tar cJvfh ${{ steps.strings.outputs.ymir-artifact-name }}.tar.xz licenses/ -C build/apps/ymir-sdl3 ymir-sdl3
         tar cJvfh ${{ steps.strings.outputs.ymdasm-artifact-name }}.tar.xzbuild/apps/ymdasm ymdasm
