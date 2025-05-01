@@ -75,7 +75,21 @@ jobs:
 
     - name: Package artifacts
       run: |
-        powershell Compress-Archive -Path "build/apps/ymir-sdl3/ymir-sdl3.exe" -DestinationPath "${{ steps.strings.outputs.artifact-name }}.zip"
+        md licenses
+        xcopy /s /y apps/ymir-sdl3/res/licenses/* licenses/
+        copy /b /y vendor/Catch2/LICENSE.txt licenses/Catch2-LICENSE.txt
+        copy /b /y vendor/cereal/LICENSE licenses/cereal-LICENSE
+        copy /b /y vendor/concurrentqueue/LICENSE.md licenses/concurrentqueue-LICENSE.md
+        copy /b /y vendor/cxxopts/LICENSE licenses/cxxopts-LICENSE
+        copy /b /y vendor/fmt/LICENSE licenses/fmt-LICENSE
+        copy /b /y vendor/imgui/imgui/LICENSE.txt licenses/imgui-LICENSE.txt
+        copy /b /y vendor/lz4/lz4/LICENSE licenses/lz4-LICENSE
+        copy /b /y vendor/mio/LICENSE licenses/mio-LICENSE
+        copy /b /y vendor/SDL/LICENSE.txt licenses/SDL-LICENSE.txt
+        copy /b /y vendor/tomlplusplus/LICENSE licenses/tomlplusplus-LICENSE
+        copy /b /y vendor/xxHash/LICENSE licenses/xxHash-LICENSE
+        copy /b /y LICENSE licenses/Ymir-LICENSE
+        powershell Compress-Archive -Path "licenses/","build/apps/ymir-sdl3/ymir-sdl3.exe" -DestinationPath "${{ steps.strings.outputs.artifact-name }}.zip"
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
@@ -156,7 +170,21 @@ jobs:
 
     - name: Package artifacts
       run: |
-        tar cJvfh ${{ steps.strings.outputs.artifact-name }}.tar.xz -C build/apps/ymir-sdl3 ymir-sdl3
+        mkdir licenses
+        cp -Rf apps/ymir-sdl3/res/licenses ./licenses/
+        cp -f vendor/Catch2/LICENSE.txt licenses/Catch2-LICENSE.txt
+        cp -f vendor/cereal/LICENSE licenses/cereal-LICENSE
+        cp -f vendor/concurrentqueue/LICENSE.md licenses/concurrentqueue-LICENSE.md
+        cp -f vendor/cxxopts/LICENSE licenses/cxxopts-LICENSE
+        cp -f vendor/fmt/LICENSE licenses/fmt-LICENSE
+        cp -f vendor/imgui/imgui/LICENSE.txt licenses/imgui-LICENSE.txt
+        cp -f vendor/lz4/lz4/LICENSE licenses/lz4-LICENSE
+        cp -f vendor/mio/LICENSE licenses/mio-LICENSE
+        cp -f vendor/SDL/LICENSE.txt licenses/SDL-LICENSE.txt
+        cp -f vendor/tomlplusplus/LICENSE licenses/tomlplusplus-LICENSE
+        cp -f vendor/xxHash/LICENSE licenses/xxHash-LICENSE
+        cp -f LICENSE licenses/Ymir-LICENSE
+        tar cJvfh ${{ steps.strings.outputs.artifact-name }}.tar.xz LICENSE -C build/apps/ymir-sdl3 ymir-sdl3
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4

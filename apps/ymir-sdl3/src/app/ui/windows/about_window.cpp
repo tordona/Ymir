@@ -145,6 +145,16 @@ void AboutWindow::DrawAboutTab() {
 #else
     ImGui::Text("Using SSE2 instruction set.");
 #endif
+
+    ImGui::NewLine();
+    ImGui::TextUnformatted("Licensed under ");
+    ImGui::SameLine(0, 0);
+    ImGui::TextLinkOpenURL("GPLv3", "https://www.gnu.org/licenses/gpl-3.0.en.html");
+
+    ImGui::NewLine();
+    ImGui::TextUnformatted("The source code can be found at ");
+    ImGui::SameLine(0, 0);
+    ImGui::TextLinkOpenURL("https://github.com/StrikerX3/Ymir");
 }
 
 void AboutWindow::DrawDependenciesTab() {
