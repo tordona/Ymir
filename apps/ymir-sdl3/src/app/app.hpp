@@ -133,7 +133,8 @@ private:
     void OpenSimpleErrorModal(std::string message);
     void OpenErrorModal(std::function<void()> fnContents);
 
-    bool m_openErrorModal = false; // Open error modal on the next frame
+    bool m_openErrorModal = false;  // Open error modal on the next frame
+    bool m_closeErrorModal = false; // Close error modal on the next frame
     std::function<void()> m_errorModalContents;
 
     // Rewind bar

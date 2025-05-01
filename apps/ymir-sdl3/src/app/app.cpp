@@ -215,7 +215,39 @@ int App::Run(const CommandLineOptions &options) {
     // Load IPL ROM
     // Should be done after loading disc image so that the auto-detected region is used to select the appropriate ROM
     ScanIPLROMs();
-    LoadIPLROM();
+    auto iplLoadResult = LoadIPLROM();
+    if (!iplLoadResult.succeeded) {
+        OpenErrorModal([=, this]() mutable {
+            ImGui::Text("Could not load IPL ROM: %s.", iplLoadResult.errorMessage.c_str());
+            ImGui::TextUnformatted("Games will not work without a valid IPL ROM.");
+            ImGui::Text("Go to Settings > IPL and select a ROM manually or add ROMs to %s then rescan for ROMs.",
+                        m_context.profile.GetPath(ProfilePath::IPLROMImages).string().c_str());
+            if (ImGui::Button("Open IPL ROMs directory")) {
+                SDL_OpenURL(
+                    fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::IPLROMImages).string()).c_str());
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Rescan IPL ROMs")) {
+                ScanIPLROMs();
+
+                util::IPLROMLoadResult result = LoadIPLROM();
+                if (result.succeeded) {
+                    m_context.EnqueueEvent(events::emu::HardReset());
+                    m_closeErrorModal = true;
+                } else {
+                    // This will replace the message displayed above
+                    iplLoadResult = result;
+                }
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Open IPL Settings")) {
+                m_settingsWindow.OpenTab(ui::SettingsTab::IPL);
+                m_closeErrorModal = true;
+            }
+            ImGui::SameLine();
+            // Place OK button next to these
+        });
+    }
 
     // Load SMPC persistent data and set up the path
     std::error_code error{};
@@ -2380,9 +2412,10 @@ void App::DrawErrorModal() {
 
         ImGui::PopTextWrapPos();
 
-        if (ImGui::Button("OK", ImVec2(80, 0))) {
+        if (ImGui::Button("OK", ImVec2(80, 0)) || m_closeErrorModal) {
             ImGui::CloseCurrentPopup();
             m_errorModalContents = {};
+            m_closeErrorModal = false;
         }
 
         ImGui::EndPopup();
