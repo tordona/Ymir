@@ -79,7 +79,7 @@ jobs:
     - name: Package Ymir artifact
       run: |
         md licenses
-        Copy-Item -Path ".\apps\ymir-sdl3\res\licenses\*"     -Destination ".\licenses\"
+        Copy-Item -Path ".\apps\ymir-sdl3\res\licenses\*"     -Destination ".\licenses\"  -Recurse
         Copy-Item -Path ".\vendor\Catch2\LICENSE.txt"         -Destination ".\licenses\Catch2-LICENSE.txt"
         Copy-Item -Path ".\vendor\cereal\LICENSE"             -Destination ".\licenses\cereal-LICENSE"
         Copy-Item -Path ".\vendor\concurrentqueue\LICENSE.md" -Destination ".\licenses\concurrentqueue-LICENSE.md"
@@ -188,7 +188,7 @@ jobs:
     - name: Package artifacts
       run: |
         mkdir licenses
-        cp -Rf apps/ymir-sdl3/res/licenses ./licenses/
+        cp -Rf apps/ymir-sdl3/res/licenses/* ./licenses/
         cp -f vendor/Catch2/LICENSE.txt licenses/Catch2-LICENSE.txt
         cp -f vendor/cereal/LICENSE licenses/cereal-LICENSE
         cp -f vendor/concurrentqueue/LICENSE.md licenses/concurrentqueue-LICENSE.md
