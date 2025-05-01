@@ -12,7 +12,8 @@ DebugOutputWindow::DebugOutputWindow(SharedContext &context)
 }
 
 void DebugOutputWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(365, 150), ImVec2(FLT_MAX, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(365 * m_context.displayScale, 150 * m_context.displayScale),
+                                        ImVec2(FLT_MAX, FLT_MAX));
 }
 
 void DebugOutputWindow::DrawContents() {

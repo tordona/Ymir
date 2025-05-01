@@ -336,60 +336,65 @@ void App::RunEmulator() {
     // ---------------------------------
     // Setup Dear ImGui context
 
+    // Get the DPI scaling multiplier set for the primary screen
+    // TODO: consider dynamically adjusting it based on which display the window is located
+    m_context.displayScale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+    devlog::info<grp::base>("Primary display DPI scaling: {:.1f}%", m_context.displayScale * 100.0f);
+
     std::filesystem::path imguiIniLocation = m_context.profile.GetPath(ProfilePath::PersistentState) / "imgui.ini";
     ScopeGuard sgSaveImguiIni{[&] { ImGui::SaveIniSettingsToDisk(imguiIniLocation.string().c_str()); }};
 
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
-    // TODO: load and decompress from state blob
     ImGui::LoadIniSettingsFromDisk(imguiIniLocation.string().c_str());
     io.IniFilename = nullptr;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
+    // io.FontGlobalScale = m_context.displayScale;
 
     // Setup Dear ImGui style
     ImGuiStyle &style = ImGui::GetStyle();
-    style.WindowPadding = ImVec2(6, 6);
-    style.FramePadding = ImVec2(4, 3);
-    style.ItemSpacing = ImVec2(7, 4);
-    style.ItemInnerSpacing = ImVec2(4, 4);
-    style.TouchExtraPadding = ImVec2(0, 0);
-    style.IndentSpacing = 21.0f;
-    style.ScrollbarSize = 15.0f;
-    style.GrabMinSize = 12.0f;
-    style.WindowBorderSize = 1.0f;
-    style.ChildBorderSize = 1.0f;
-    style.PopupBorderSize = 1.0f;
-    style.FrameBorderSize = 0.0f;
-    style.WindowRounding = 3.0f;
-    style.ChildRounding = 0.0f;
-    style.FrameRounding = 1.0f;
-    style.PopupRounding = 1.0f;
-    style.ScrollbarRounding = 1.0f;
-    style.GrabRounding = 1.0f;
-    style.TabBorderSize = 0.0f;
-    style.TabBarBorderSize = 1.0f;
-    style.TabBarOverlineSize = 2.0f;
+    style.WindowPadding = ImVec2(6 * m_context.displayScale, 6 * m_context.displayScale);
+    style.FramePadding = ImVec2(4 * m_context.displayScale, 3 * m_context.displayScale);
+    style.ItemSpacing = ImVec2(7 * m_context.displayScale, 4 * m_context.displayScale);
+    style.ItemInnerSpacing = ImVec2(4 * m_context.displayScale, 4 * m_context.displayScale);
+    style.TouchExtraPadding = ImVec2(0 * m_context.displayScale, 0 * m_context.displayScale);
+    style.IndentSpacing = 21.0f * m_context.displayScale;
+    style.ScrollbarSize = 15.0f * m_context.displayScale;
+    style.GrabMinSize = 12.0f * m_context.displayScale;
+    style.WindowBorderSize = 1.0f * m_context.displayScale;
+    style.ChildBorderSize = 1.0f * m_context.displayScale;
+    style.PopupBorderSize = 1.0f * m_context.displayScale;
+    style.FrameBorderSize = 0.0f * m_context.displayScale;
+    style.WindowRounding = 3.0f * m_context.displayScale;
+    style.ChildRounding = 0.0f * m_context.displayScale;
+    style.FrameRounding = 1.0f * m_context.displayScale;
+    style.PopupRounding = 1.0f * m_context.displayScale;
+    style.ScrollbarRounding = 1.0f * m_context.displayScale;
+    style.GrabRounding = 1.0f * m_context.displayScale;
+    style.TabBorderSize = 0.0f * m_context.displayScale;
+    style.TabBarBorderSize = 1.0f * m_context.displayScale;
+    style.TabBarOverlineSize = 2.0f * m_context.displayScale;
     style.TabCloseButtonMinWidthSelected = -1.0f;
     style.TabCloseButtonMinWidthUnselected = 0.0f;
-    style.TabRounding = 2.0f;
-    style.CellPadding = ImVec2(3, 2);
+    style.TabRounding = 2.0f * m_context.displayScale;
+    style.CellPadding = ImVec2(3 * m_context.displayScale, 2 * m_context.displayScale);
     style.TableAngledHeadersAngle = 50.0f * (2.0f * std::numbers::pi / 360.0f);
     style.TableAngledHeadersTextAlign = ImVec2(0.50f, 0.00f);
     style.WindowTitleAlign = ImVec2(0.50f, 0.50f);
-    style.WindowBorderHoverPadding = 5.0f;
+    style.WindowBorderHoverPadding = 5.0f * m_context.displayScale;
     style.WindowMenuButtonPosition = ImGuiDir_Left;
     style.ColorButtonPosition = ImGuiDir_Right;
     style.ButtonTextAlign = ImVec2(0.50f, 0.50f);
     style.SelectableTextAlign = ImVec2(0.00f, 0.00f);
-    style.SeparatorTextBorderSize = 2.0f;
-    style.SeparatorTextPadding = ImVec2(21, 2);
-    style.LogSliderDeadzone = 4.0f;
-    style.ImageBorderSize = 0.0f;
-    style.DockingSeparatorSize = 2.0f;
-    style.DisplayWindowPadding = ImVec2(21, 21);
-    style.DisplaySafeAreaPadding = ImVec2(3, 3);
+    style.SeparatorTextBorderSize = 2.0f * m_context.displayScale;
+    style.SeparatorTextPadding = ImVec2(21 * m_context.displayScale, 2 * m_context.displayScale);
+    style.LogSliderDeadzone = 4.0f * m_context.displayScale;
+    style.ImageBorderSize = 0.0f * m_context.displayScale;
+    style.DockingSeparatorSize = 2.0f * m_context.displayScale;
+    style.DisplayWindowPadding = ImVec2(21 * m_context.displayScale, 21 * m_context.displayScale);
+    style.DisplaySafeAreaPadding = ImVec2(3 * m_context.displayScale, 3 * m_context.displayScale);
 
     // Setup Dear ImGui colors
     ImVec4 *colors = ImGui::GetStyle().Colors;
@@ -503,26 +508,30 @@ void App::RunEmulator() {
             return io.Fonts->AddFontFromMemoryTTF((void *)file.begin(), file.size(), size, &config, ranges.Data);
         };
 
-        m_context.fonts.sansSerif.small.regular = loadFont("fonts/SplineSans-Medium.ttf", 14);
-        m_context.fonts.sansSerif.small.bold = loadFont("fonts/SplineSans-Bold.ttf", 14);
-        m_context.fonts.sansSerif.medium.regular = loadFont("fonts/SplineSans-Medium.ttf", 16);
-        m_context.fonts.sansSerif.medium.bold = loadFont("fonts/SplineSans-Bold.ttf", 16);
-        m_context.fonts.sansSerif.large.regular = loadFont("fonts/SplineSans-Medium.ttf", 20);
-        m_context.fonts.sansSerif.large.bold = loadFont("fonts/SplineSans-Bold.ttf", 20);
-        m_context.fonts.sansSerif.xlarge.regular = loadFont("fonts/SplineSans-Medium.ttf", 28);
-        m_context.fonts.sansSerif.xlarge.bold = loadFont("fonts/SplineSans-Bold.ttf", 28);
+        m_context.fonts.sansSerif.small.regular = loadFont("fonts/SplineSans-Medium.ttf", 14 * m_context.displayScale);
+        m_context.fonts.sansSerif.small.bold = loadFont("fonts/SplineSans-Bold.ttf", 14 * m_context.displayScale);
+        m_context.fonts.sansSerif.medium.regular = loadFont("fonts/SplineSans-Medium.ttf", 16 * m_context.displayScale);
+        m_context.fonts.sansSerif.medium.bold = loadFont("fonts/SplineSans-Bold.ttf", 16 * m_context.displayScale);
+        m_context.fonts.sansSerif.large.regular = loadFont("fonts/SplineSans-Medium.ttf", 20 * m_context.displayScale);
+        m_context.fonts.sansSerif.large.bold = loadFont("fonts/SplineSans-Bold.ttf", 20 * m_context.displayScale);
+        m_context.fonts.sansSerif.xlarge.regular = loadFont("fonts/SplineSans-Medium.ttf", 28 * m_context.displayScale);
+        m_context.fonts.sansSerif.xlarge.bold = loadFont("fonts/SplineSans-Bold.ttf", 28 * m_context.displayScale);
 
-        m_context.fonts.monospace.small.regular = loadFont("fonts/SplineSansMono-Medium.ttf", 14);
-        m_context.fonts.monospace.small.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 14);
-        m_context.fonts.monospace.medium.regular = loadFont("fonts/SplineSansMono-Medium.ttf", 16);
-        m_context.fonts.monospace.medium.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 16);
-        m_context.fonts.monospace.large.regular = loadFont("fonts/SplineSansMono-Medium.ttf", 20);
-        m_context.fonts.monospace.large.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 20);
-        m_context.fonts.monospace.xlarge.regular = loadFont("fonts/SplineSansMono-Medium.ttf", 28);
-        m_context.fonts.monospace.xlarge.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 28);
+        m_context.fonts.monospace.small.regular =
+            loadFont("fonts/SplineSansMono-Medium.ttf", 14 * m_context.displayScale);
+        m_context.fonts.monospace.small.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 14 * m_context.displayScale);
+        m_context.fonts.monospace.medium.regular =
+            loadFont("fonts/SplineSansMono-Medium.ttf", 16 * m_context.displayScale);
+        m_context.fonts.monospace.medium.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 16 * m_context.displayScale);
+        m_context.fonts.monospace.large.regular =
+            loadFont("fonts/SplineSansMono-Medium.ttf", 20 * m_context.displayScale);
+        m_context.fonts.monospace.large.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 20 * m_context.displayScale);
+        m_context.fonts.monospace.xlarge.regular =
+            loadFont("fonts/SplineSansMono-Medium.ttf", 28 * m_context.displayScale);
+        m_context.fonts.monospace.xlarge.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 28 * m_context.displayScale);
 
-        m_context.fonts.display.small = loadFont("fonts/ZenDots-Regular.ttf", 24);
-        m_context.fonts.display.large = loadFont("fonts/ZenDots-Regular.ttf", 64);
+        m_context.fonts.display.small = loadFont("fonts/ZenDots-Regular.ttf", 24 * m_context.displayScale);
+        m_context.fonts.display.large = loadFont("fonts/ZenDots-Regular.ttf", 64 * m_context.displayScale);
 
         io.Fonts->Build();
 
@@ -544,7 +553,7 @@ void App::RunEmulator() {
         // TODO: should load from persistent state or assume a reasonable default
 
         // Equivalent to ImGui::GetFrameHeight() without requiring a window
-        const float menuBarHeight = io.FontDefault->FontSize + style.FramePadding.y * 2.0f;
+        const float menuBarHeight = (io.FontDefault->FontSize + style.FramePadding.y * 2.0f) * m_context.displayScale;
 
         const auto &videoSettings = m_context.settings.video;
         const bool forceAspectRatio = videoSettings.forceAspectRatio;
@@ -2405,14 +2414,14 @@ void App::DrawErrorModal() {
     }
 
     if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::PushTextWrapPos(450.0f);
+        ImGui::PushTextWrapPos(450.0f * m_context.displayScale);
         if (m_errorModalContents) {
             m_errorModalContents();
         }
 
         ImGui::PopTextWrapPos();
 
-        if (ImGui::Button("OK", ImVec2(80, 0)) || m_closeErrorModal) {
+        if (ImGui::Button("OK", ImVec2(80 * m_context.displayScale, 0 * m_context.displayScale)) || m_closeErrorModal) {
             ImGui::CloseCurrentPopup();
             m_errorModalContents = {};
             m_closeErrorModal = false;

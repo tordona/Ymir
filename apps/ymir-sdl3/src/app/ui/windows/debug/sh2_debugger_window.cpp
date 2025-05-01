@@ -14,7 +14,8 @@ SH2DebuggerWindow::SH2DebuggerWindow(SharedContext &context, bool master)
 }
 
 void SH2DebuggerWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(740, 370), ImVec2(FLT_MAX, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(740 * m_context.displayScale, 370 * m_context.displayScale),
+                                        ImVec2(FLT_MAX, FLT_MAX));
 }
 
 void SH2DebuggerWindow::DrawContents() {

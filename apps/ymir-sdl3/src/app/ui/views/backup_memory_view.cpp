@@ -439,7 +439,7 @@ void BackupMemoryView::DisplayConfirmDeleteModal(std::span<bup::BackupFileInfo> 
         ImGui::Checkbox("Don't ask me next time", &dont_ask_me_next_time);
         ImGui::PopStyleVar();*/
 
-        if (ImGui::Button("OK", ImVec2(80, 0))) {
+        if (ImGui::Button("OK", ImVec2(80 * m_context.displayScale, 0))) {
             for (uint32 item : m_selected) {
                 auto &file = files[item];
                 m_context.EnqueueEvent(events::emu::DeleteBackupFile(file.header.filename, m_external));
@@ -449,7 +449,7 @@ void BackupMemoryView::DisplayConfirmDeleteModal(std::span<bup::BackupFileInfo> 
         }
         ImGui::SetItemDefaultFocus();
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(80, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(80 * m_context.displayScale, 0))) {
             ImGui::CloseCurrentPopup();
         }
 
@@ -463,14 +463,14 @@ void BackupMemoryView::DisplayConfirmFormatModal() {
         ImGui::TextUnformatted("This operation cannot be undone!\n");
         ImGui::Text("Are you sure you want to format %s?", m_name.c_str());
 
-        if (ImGui::Button("Yes", ImVec2(80, 0))) {
+        if (ImGui::Button("Yes", ImVec2(80 * m_context.displayScale, 0))) {
             m_context.EnqueueEvent(events::emu::FormatBackupMemory(m_external));
             m_selected.clear();
             ImGui::CloseCurrentPopup();
         }
         ImGui::SetItemDefaultFocus();
         ImGui::SameLine();
-        if (ImGui::Button("No", ImVec2(80, 0))) {
+        if (ImGui::Button("No", ImVec2(80 * m_context.displayScale, 0))) {
             ImGui::CloseCurrentPopup();
         }
 
@@ -581,11 +581,11 @@ void BackupMemoryView::DisplayFileImportOverwriteModal(std::span<bup::BackupFile
 
         bool execute = false;
 
-        if (ImGui::Button("Import", ImVec2(100, 0))) {
+        if (ImGui::Button("Import", ImVec2(100 * m_context.displayScale, 0))) {
             execute = true;
         }
         ImGui::SameLine();
-        if (ImGui::Button("Overwrite all", ImVec2(100, 0))) {
+        if (ImGui::Button("Overwrite all", ImVec2(100 * m_context.displayScale, 0))) {
             for (auto &ovFile : m_importOverwrite) {
                 ovFile.overwrite = true;
                 break;
@@ -593,7 +593,7 @@ void BackupMemoryView::DisplayFileImportOverwriteModal(std::span<bup::BackupFile
             execute = true;
         }
         ImGui::SameLine();
-        if (ImGui::Button("Ignore all", ImVec2(100, 0))) {
+        if (ImGui::Button("Ignore all", ImVec2(100 * m_context.displayScale, 0))) {
             execute = false;
             ImGui::CloseCurrentPopup();
             OpenFileImportResultModal();
@@ -636,7 +636,7 @@ void BackupMemoryView::DisplayFileImportResultModal() {
         m_openFileImportResultModal = false;
     }
 
-    ImGui::SetNextWindowSizeConstraints(ImVec2(250, 0), ImVec2(FLT_MAX, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(250 * m_context.displayScale, 0), ImVec2(FLT_MAX, FLT_MAX));
     if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::PushFont(m_context.fonts.monospace.medium.regular);
         const float monoCharWidth = ImGui::CalcTextSize("F").x;
@@ -653,7 +653,7 @@ void BackupMemoryView::DisplayFileImportResultModal() {
             ImGui::Text("The following file%s could not be imported:", (m_importFailed.size() == 1 ? "" : "s"));
 
             const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
-            if (ImGui::BeginChild("##bup_failed_table", ImVec2(550, lineHeight * 10))) {
+            if (ImGui::BeginChild("##bup_failed_table", ImVec2(550 * m_context.displayScale, lineHeight * 10))) {
                 if (ImGui::BeginTable("bup_files_failed_list", 2,
                                       ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY)) {
                     ImGui::TableSetupColumn("File name", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 12.5f);
@@ -685,7 +685,7 @@ void BackupMemoryView::DisplayFileImportResultModal() {
             ImGui::Text("The following file%s could not be loaded:", (m_importBad.size() == 1 ? "" : "s"));
 
             const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
-            if (ImGui::BeginChild("##bup_bad_table", ImVec2(550, lineHeight * 10))) {
+            if (ImGui::BeginChild("##bup_bad_table", ImVec2(550 * m_context.displayScale, lineHeight * 10))) {
                 if (ImGui::BeginTable("bup_files_bad_list", 2,
                                       ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY)) {
                     ImGui::TableSetupColumn("Path");
@@ -713,7 +713,7 @@ void BackupMemoryView::DisplayFileImportResultModal() {
             ImGui::EndChild();
         }
 
-        if (ImGui::Button("OK", ImVec2(80, 0))) {
+        if (ImGui::Button("OK", ImVec2(80 * m_context.displayScale, 0))) {
             m_importBad.clear();
             m_importFailed.clear();
             m_importOverwrite.clear();
@@ -736,7 +736,7 @@ void BackupMemoryView::DisplayFilesExportSuccessfulModal() {
     if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("%u file%s exported successfully.", m_filesExportCount, (m_filesExportCount == 1 ? "" : "s"));
 
-        if (ImGui::Button("OK", ImVec2(80, 0))) {
+        if (ImGui::Button("OK", ImVec2(80 * m_context.displayScale, 0))) {
             m_filesExportCount = 0;
             ImGui::CloseCurrentPopup();
         }
@@ -756,7 +756,7 @@ void BackupMemoryView::DisplayImageImportSuccessfulModal() {
     if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("%s image imported successfully.", m_name.c_str());
 
-        if (ImGui::Button("OK", ImVec2(80, 0))) {
+        if (ImGui::Button("OK", ImVec2(80 * m_context.displayScale, 0))) {
             ImGui::CloseCurrentPopup();
         }
 
@@ -775,7 +775,7 @@ void BackupMemoryView::DisplayImageExportSuccessfulModal() {
     if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("%s image exported successfully.", m_name.c_str());
 
-        if (ImGui::Button("OK", ImVec2(80, 0))) {
+        if (ImGui::Button("OK", ImVec2(80 * m_context.displayScale, 0))) {
             m_filesExportCount = 0;
             ImGui::CloseCurrentPopup();
         }
@@ -797,7 +797,7 @@ void BackupMemoryView::DisplayErrorModal() {
         ImGui::Text("%s", m_errorModalMessage.c_str());
         ImGui::PopTextWrapPos();
 
-        if (ImGui::Button("OK", ImVec2(80, 0))) {
+        if (ImGui::Button("OK", ImVec2(80 * m_context.displayScale, 0))) {
             m_filesExportCount = 0;
             ImGui::CloseCurrentPopup();
         }

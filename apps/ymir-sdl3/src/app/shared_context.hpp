@@ -29,6 +29,8 @@ namespace app {
 struct SharedContext {
     ymir::Saturn saturn;
 
+    float displayScale = 1.0f;
+
     input::InputContext inputContext;
     input::InputCapturer inputCapturer;
 

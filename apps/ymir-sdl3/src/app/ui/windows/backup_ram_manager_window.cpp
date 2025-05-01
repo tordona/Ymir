@@ -21,7 +21,8 @@ BackupMemoryManagerWindow::BackupMemoryManagerWindow(SharedContext &context)
 }
 
 void BackupMemoryManagerWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(1135, 340), ImVec2(1135, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(1135 * m_context.displayScale, 340 * m_context.displayScale),
+                                        ImVec2(1135 * m_context.displayScale, FLT_MAX));
 }
 
 void BackupMemoryManagerWindow::DrawContents() {
@@ -58,7 +59,7 @@ void BackupMemoryManagerWindow::DrawContents() {
             if (!hasCartBup) {
                 ImGui::BeginDisabled();
             }
-            if (ImGui::Button("<<", ImVec2(35, 0))) {
+            if (ImGui::Button("<<", ImVec2(35 * m_context.displayScale, 0 * m_context.displayScale))) {
                 std::unique_lock lock{m_context.locks.cart};
                 auto files = m_cartBupView.ExportAll();
                 m_sysBupView.ImportAll(files);
@@ -70,7 +71,7 @@ void BackupMemoryManagerWindow::DrawContents() {
             if (!hasCartBup || !hasCartBupSelection) {
                 ImGui::BeginDisabled();
             }
-            if (ImGui::Button("<", ImVec2(35, 0))) {
+            if (ImGui::Button("<", ImVec2(35 * m_context.displayScale, 0 * m_context.displayScale))) {
                 std::unique_lock lock{m_context.locks.cart};
                 auto files = m_cartBupView.ExportSelected();
                 m_sysBupView.ImportAll(files);
@@ -82,7 +83,7 @@ void BackupMemoryManagerWindow::DrawContents() {
             if (!hasCartBup || !hasSysBupSelection) {
                 ImGui::BeginDisabled();
             }
-            if (ImGui::Button(">", ImVec2(35, 0))) {
+            if (ImGui::Button(">", ImVec2(35 * m_context.displayScale, 0 * m_context.displayScale))) {
                 std::unique_lock lock{m_context.locks.cart};
                 auto files = m_sysBupView.ExportSelected();
                 m_cartBupView.ImportAll(files);
@@ -94,7 +95,7 @@ void BackupMemoryManagerWindow::DrawContents() {
             if (!hasCartBup) {
                 ImGui::BeginDisabled();
             }
-            if (ImGui::Button(">>", ImVec2(35, 0))) {
+            if (ImGui::Button(">>", ImVec2(35 * m_context.displayScale, 0 * m_context.displayScale))) {
                 std::unique_lock lock{m_context.locks.cart};
                 auto files = m_sysBupView.ExportAll();
                 m_cartBupView.ImportAll(files);

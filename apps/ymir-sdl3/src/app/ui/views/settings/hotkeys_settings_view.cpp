@@ -17,8 +17,8 @@ void HotkeysSettingsView::Display() {
     ImGui::TextUnformatted("Left-click a button to assign a hotkey. Right-click to clear.");
     if (ImGui::BeginTable("hotkeys", 2 + kNumBindsPerInput,
                           ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY)) {
-        ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-        ImGui::TableSetupColumn("Command", ImGuiTableColumnFlags_WidthFixed, 200.0f);
+        ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 80.0f * m_context.displayScale);
+        ImGui::TableSetupColumn("Command", ImGuiTableColumnFlags_WidthFixed, 200.0f * m_context.displayScale);
         for (size_t i = 0; i < kNumBindsPerInput; i++) {
             ImGui::TableSetupColumn(fmt::format("Hotkey {}", i + 1).c_str(), ImGuiTableColumnFlags_WidthStretch, 1.0f);
         }

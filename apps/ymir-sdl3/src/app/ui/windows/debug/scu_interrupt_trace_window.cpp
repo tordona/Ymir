@@ -12,7 +12,8 @@ SCUInterruptTraceWindow::SCUInterruptTraceWindow(SharedContext &context)
 }
 
 void SCUInterruptTraceWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(300, 200), ImVec2(450, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(300 * m_context.displayScale, 200 * m_context.displayScale),
+                                        ImVec2(450 * m_context.displayScale, FLT_MAX));
 }
 
 void SCUInterruptTraceWindow::DrawContents() {

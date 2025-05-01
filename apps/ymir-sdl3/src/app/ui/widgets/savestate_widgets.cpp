@@ -22,10 +22,11 @@ void RewindBar(SharedContext &context, float alpha, const RewindBarStyle &style)
 
     const ImVec2 windowPos{
         (workPos.x + workSize.x) * 0.5f,
-        (workPos.y + workSize.y - style.padding),
+        (workPos.y + workSize.y - style.padding * context.displayScale),
     };
     ImGui::SetNextWindowPos(windowPos, ImGuiCond_Always, ImVec2{0.5f, 1.0f});
-    ImGui::SetNextWindowSize(ImVec2(workSize.x - style.padding * 2.0f, style.height));
+    ImGui::SetNextWindowSize(
+        ImVec2(workSize.x - style.padding * 2.0f * context.displayScale, style.height * context.displayScale));
     ImGui::SetNextWindowViewport(viewport->ID);
 
     const ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking |
@@ -98,12 +99,12 @@ void RewindBar(SharedContext &context, float alpha, const RewindBarStyle &style)
         const ImVec2 rectTopLeft = ImVec2(pos.x, pos.y + lineHeight);
 
         // Background
-        drawList->AddRectFilled(rectTopLeft, ImVec2(pos.x + avail.x, pos.y + avail.y), bgColor, style.rounding,
-                                ImDrawFlags_RoundCornersAll);
+        drawList->AddRectFilled(rectTopLeft, ImVec2(pos.x + avail.x, pos.y + avail.y), bgColor,
+                                style.rounding * context.displayScale, ImDrawFlags_RoundCornersAll);
 
         // Progress bar
-        drawList->AddRectFilled(rectTopLeft, ImVec2(pos.x + avail.x * pct, pos.y + avail.y), barColor, style.rounding,
-                                ImDrawFlags_RoundCornersAll);
+        drawList->AddRectFilled(rectTopLeft, ImVec2(pos.x + avail.x * pct, pos.y + avail.y), barColor,
+                                style.rounding * context.displayScale, ImDrawFlags_RoundCornersAll);
 
         // Seconds markers
         size_t secondOffset = endOffset - endFrame;
@@ -118,8 +119,9 @@ void RewindBar(SharedContext &context, float alpha, const RewindBarStyle &style)
         }
 
         // Border
-        drawList->AddRect(rectTopLeft, ImVec2(pos.x + avail.x, pos.y + avail.y), borderColor, style.rounding,
-                          ImDrawFlags_RoundCornersAll, style.borderThickness);
+        drawList->AddRect(rectTopLeft, ImVec2(pos.x + avail.x, pos.y + avail.y), borderColor,
+                          style.rounding * context.displayScale, ImDrawFlags_RoundCornersAll,
+                          style.borderThickness * context.displayScale);
     }
     ImGui::End();
 }

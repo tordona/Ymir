@@ -14,7 +14,8 @@ SH2DivisionUnitWindow::SH2DivisionUnitWindow(SharedContext &context, bool master
 }
 
 void SH2DivisionUnitWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(570, 356), ImVec2(570, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(570 * m_context.displayScale, 356 * m_context.displayScale),
+                                        ImVec2(570 * m_context.displayScale, FLT_MAX));
 }
 
 void SH2DivisionUnitWindow::DrawContents() {

@@ -145,8 +145,8 @@ void SH2InterruptsView::Display() {
                         ImGuiStyle &style = ImGui::GetStyle();
                         const float xOfs = ImGui::GetContentRegionAvail().x;
                         const float yOfs = ImGui::GetFrameHeightWithSpacing() * 0.2f;
-                        const float width = 8.0f;
-                        const float thickness = 3.0f;
+                        const float width = 8.0f * m_context.displayScale;
+                        const float thickness = 3.0f * m_context.displayScale;
                         const float paddingX = style.FramePadding.x;
                         const float spacingY = style.ItemSpacing.y;
 

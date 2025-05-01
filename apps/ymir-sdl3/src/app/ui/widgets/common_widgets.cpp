@@ -4,13 +4,13 @@
 
 namespace app::ui::widgets {
 
-void ExplanationTooltip(const char *explanation, bool sameLine) {
+void ExplanationTooltip(const char *explanation, float scale, bool sameLine) {
     if (sameLine) {
         ImGui::SameLine();
     }
     ImGui::TextDisabled("(?)");
     if (ImGui::BeginItemTooltip()) {
-        ImGui::PushTextWrapPos(450.0f);
+        ImGui::PushTextWrapPos(450.0f * scale);
         ImGui::TextUnformatted(explanation);
         ImGui::PopTextWrapPos();
         ImGui::EndTooltip();

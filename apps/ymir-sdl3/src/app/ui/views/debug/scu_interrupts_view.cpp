@@ -8,7 +8,7 @@ SCUInterruptsView::SCUInterruptsView(SharedContext &context)
 
 void SCUInterruptsView::Display() {
     if (ImGui::BeginTable("main", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {
-        ImGui::TableSetupColumn("##left", ImGuiTableColumnFlags_WidthFixed, 265);
+        ImGui::TableSetupColumn("##left", ImGuiTableColumnFlags_WidthFixed, 265 * m_context.displayScale);
         ImGui::TableSetupColumn("##right", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableNextRow();
 

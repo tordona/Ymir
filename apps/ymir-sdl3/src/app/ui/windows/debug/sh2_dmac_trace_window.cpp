@@ -11,7 +11,8 @@ SH2DMAControllerTraceWindow::SH2DMAControllerTraceWindow(SharedContext &context,
 }
 
 void SH2DMAControllerTraceWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(900, 279), ImVec2(1121, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(900 * m_context.displayScale, 279 * m_context.displayScale),
+                                        ImVec2(1121 * m_context.displayScale, FLT_MAX));
 }
 
 void SH2DMAControllerTraceWindow::DrawContents() {

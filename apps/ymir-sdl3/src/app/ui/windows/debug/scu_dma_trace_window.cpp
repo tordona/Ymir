@@ -10,7 +10,8 @@ SCUDMATraceWindow::SCUDMATraceWindow(SharedContext &context)
 }
 
 void SCUDMATraceWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(425, 200), ImVec2(525, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(425 * m_context.displayScale, 200 * m_context.displayScale),
+                                        ImVec2(525 * m_context.displayScale, FLT_MAX));
 }
 
 void SCUDMATraceWindow::DrawContents() {

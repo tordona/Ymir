@@ -57,7 +57,7 @@ void SystemSettingsView::Display() {
         if (ImGui::TableNextColumn()) {
             ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted("Region");
-            widgets::ExplanationTooltip("Changing this option will cause a hard reset");
+            widgets::ExplanationTooltip("Changing this option will cause a hard reset", m_context.displayScale);
         }
         if (ImGui::TableNextColumn()) {
             ui::widgets::RegionSelector(m_context);
@@ -71,11 +71,12 @@ void SystemSettingsView::Display() {
     widgets::ExplanationTooltip(
         "Whenever a game disc is loaded, the emulator will automatically switch the system region to match one of the "
         "game's supported regions. The list below allows you to choose the preferred region order. If none of the "
-        "preferred regions is supported by the game, the emulator will pick the first region listed on the disc.");
+        "preferred regions is supported by the game, the emulator will pick the first region listed on the disc.",
+        m_context.displayScale);
 
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Preferred region order:");
-    widgets::ExplanationTooltip("Drag items to reorder");
+    widgets::ExplanationTooltip("Drag items to reorder", m_context.displayScale);
 
     std::vector<core::config::sys::Region> prefRgnOrder{};
     {
@@ -95,7 +96,7 @@ void SystemSettingsView::Display() {
         prefRgnOrder.insert(prefRgnOrder.end(), validRegions.begin(), validRegions.end());
     }
 
-    if (ImGui::BeginListBox("##pref_rgn_order", ImVec2(150, ImGui::GetFrameHeight() * 4))) {
+    if (ImGui::BeginListBox("##pref_rgn_order", ImVec2(150 * m_context.displayScale, ImGui::GetFrameHeight() * 4))) {
         ImGui::PushItemFlag(ImGuiItemFlags_AllowDuplicateId, true);
         bool changed = false;
         for (int n = 0; n < prefRgnOrder.size(); n++) {
@@ -135,7 +136,8 @@ void SystemSettingsView::Display() {
     widgets::ExplanationTooltip("Enables emulation of the SH-2 cache.\n"
                                 "A few games require this to work properly.\n"
                                 "Reduces emulation performance by about 10%.\n\n"
-                                "Upon enabling this option, both SH-2 CPUs' caches will be flushed.");
+                                "Upon enabling this option, both SH-2 CPUs' caches will be flushed.",
+                                m_context.displayScale);
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -147,7 +149,8 @@ void SystemSettingsView::Display() {
     ImGui::TextUnformatted("Mode:");
     widgets::ExplanationTooltip("- Host: Syncs the emulated RTC to your system's clock.\n"
                                 "- Virtual: Runs a virtual RTC synced to emulation speed.\n\n"
-                                "For deterministic behavior, use a virtual RTC synced to a fixed time point on reset.");
+                                "For deterministic behavior, use a virtual RTC synced to a fixed time point on reset.",
+                                m_context.displayScale);
     ImGui::SameLine();
     if (MakeDirty(ImGui::RadioButton("Host##rtc", rtcConfig.mode == core::config::rtc::Mode::Host))) {
         rtcConfig.mode = core::config::rtc::Mode::Host;
@@ -182,7 +185,8 @@ void SystemSettingsView::Display() {
     } else if (rtcConfig.mode == core::config::rtc::Mode::Virtual) {
         // TODO: request emulator to update date/time so that it is updated in real time
         widgets::ExplanationTooltip(
-            "This may occasionally stop updating because the virtual RTC is only updated when the game reads from it.");
+            "This may occasionally stop updating because the virtual RTC is only updated when the game reads from it.",
+            m_context.displayScale);
 
         if (ImGui::Button("Set to host time##curr_time")) {
             rtc.SetDateTime(util::datetime::host());
@@ -199,12 +203,12 @@ void SystemSettingsView::Display() {
                                              rtcConfig.virtHardResetStrategy == strategy))) {
                 rtcConfig.virtHardResetStrategy = strategy;
             }
-            widgets::ExplanationTooltip(explanation);
+            widgets::ExplanationTooltip(explanation, m_context.displayScale);
         };
 
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Hard reset behavior:");
-        widgets::ExplanationTooltip("Specifies how the virtual RTC behaves on a hard reset.");
+        widgets::ExplanationTooltip("Specifies how the virtual RTC behaves on a hard reset.", m_context.displayScale);
 
         hardResetOption("Preserve current time", HardResetStrategy::Preserve,
                         "The virtual RTC will continue counting from the time point prior to the reset.\n"

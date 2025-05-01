@@ -22,7 +22,7 @@ void VideoSettingsView::Display() {
 
     MakeDirty(ImGui::Checkbox("Force integer scaling", &settings.forceIntegerScaling));
     MakeDirty(ImGui::Checkbox("Force aspect ratio", &settings.forceAspectRatio));
-    widgets::ExplanationTooltip("If disabled, forces square pixels.");
+    widgets::ExplanationTooltip("If disabled, forces square pixels.", m_context.displayScale);
     ImGui::SameLine();
     if (MakeDirty(ImGui::Button("4:3"))) {
         settings.forcedAspect = 4.0 / 3.0;
@@ -36,7 +36,8 @@ void VideoSettingsView::Display() {
     MakeDirty(ImGui::Checkbox("Auto-fit window to screen", &settings.autoResizeWindow));
     widgets::ExplanationTooltip(
         "If forced aspect ratio is disabled, adjusts and recenters the window whenever the display "
-        "resolution changes.");
+        "resolution changes.",
+        m_context.displayScale);
     ImGui::SameLine();
     if (settings.displayVideoOutputInWindow) {
         ImGui::BeginDisabled();
@@ -67,7 +68,8 @@ void VideoSettingsView::Display() {
     widgets::ExplanationTooltip("Runs the software VDP1/VDP2 renderer in a dedicated thread.\n"
                                 "Greatly improves performance at the cost of accuracy.\n"
                                 "A few select games may break when this option is enabled.\n"
-                                "When disabled, rendering is done on the emulator thread.");
+                                "When disabled, rendering is done on the emulator thread.",
+                                m_context.displayScale);
 }
 
 } // namespace app::ui

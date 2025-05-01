@@ -52,7 +52,8 @@ void AudioSettingsView::Display() {
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Interpolation:");
     widgets::ExplanationTooltip("- Nearest neighbor: Cheapest option with grittier sounds.\n"
-                                "- Linear: Hardware accurate option with softer sounds. (default)");
+                                "- Linear: Hardware accurate option with softer sounds. (default)",
+                                m_context.displayScale);
     interpOption("Nearest neighbor", InterpMode::NearestNeighbor);
     interpOption("Linear", InterpMode::Linear);
 
@@ -69,7 +70,8 @@ void AudioSettingsView::Display() {
     widgets::ExplanationTooltip("NOTE: This feature is currently unimplemented.\n\n"
                                 "Runs the SCSP and MC68EC000 in a dedicated thread.\n"
                                 "Improves performance at the cost of accuracy.\n"
-                                "A few select games may break when this option is enabled.");
+                                "A few select games may break when this option is enabled.",
+                                m_context.displayScale);
 }
 
 } // namespace app::ui

@@ -11,7 +11,8 @@ SH2CacheWindow::SH2CacheWindow(SharedContext &context, bool master)
 }
 
 void SH2CacheWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(652, 246), ImVec2(652, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(652 * m_context.displayScale, 246 * m_context.displayScale),
+                                        ImVec2(652 * m_context.displayScale, FLT_MAX));
 }
 
 void SH2CacheWindow::DrawContents() {

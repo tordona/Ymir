@@ -27,7 +27,8 @@ void MemoryViewerWindow::PrepareWindow() {
     MemoryEditor::Sizes sizes{};
     m_memViewState->memoryEditor.CalcSizes(sizes, 0x8000000, 0x0);
 
-    ImGui::SetNextWindowSizeConstraints(ImVec2(sizes.WindowWidth, 245), ImVec2(sizes.WindowWidth, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(sizes.WindowWidth, 245 * m_context.displayScale),
+                                        ImVec2(sizes.WindowWidth, FLT_MAX));
 }
 
 void MemoryViewerWindow::DrawContents() {

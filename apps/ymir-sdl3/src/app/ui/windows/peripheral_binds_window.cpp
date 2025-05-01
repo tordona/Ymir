@@ -21,7 +21,8 @@ void PeripheralBindsWindow::PrepareWindow() {
     // m_windowConfig.name =
     //     fmt::format("Port {} slot {} input binds###periph_binds_window", m_portIndex + 1, m_slotIndex + 1);
 
-    ImGui::SetNextWindowSizeConstraints(ImVec2(500, 300), ImVec2(FLT_MAX, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(500 * m_context.displayScale, 300 * m_context.displayScale),
+                                        ImVec2(FLT_MAX, FLT_MAX));
 }
 
 void PeripheralBindsWindow::DrawContents() {

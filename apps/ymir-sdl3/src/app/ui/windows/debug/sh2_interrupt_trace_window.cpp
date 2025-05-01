@@ -12,7 +12,8 @@ SH2InterruptTraceWindow::SH2InterruptTraceWindow(SharedContext &context, bool ma
 }
 
 void SH2InterruptTraceWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(250, 200), ImVec2(600, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(250 * m_context.displayScale, 200 * m_context.displayScale),
+                                        ImVec2(600 * m_context.displayScale, FLT_MAX));
 }
 
 void SH2InterruptTraceWindow::DrawContents() {

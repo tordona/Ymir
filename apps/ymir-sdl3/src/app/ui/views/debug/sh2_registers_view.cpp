@@ -27,7 +27,7 @@ void SH2RegistersView::Display() {
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
-    const float flagsSpacing = 4.0f;
+    const float flagsSpacing = 4.0f * m_context.displayScale;
     const float itemSpacing = ImGui::GetStyle().ItemSpacing.x;
     const float framePadding = ImGui::GetStyle().FramePadding.x;
     const float frameHeight = ImGui::GetFrameHeight();
@@ -201,7 +201,7 @@ float SH2RegistersView::GetViewWidth() {
     ImGui::PushFont(m_context.fonts.monospace.medium.regular);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
-    const float flagsSpacing = 4.0f;
+    const float flagsSpacing = 4.0f * m_context.displayScale;
     const float framePadding = ImGui::GetStyle().FramePadding.x;
     const float frameHeight = ImGui::GetFrameHeight();
     const float flagsWidth = (frameHeight + flagsSpacing) * 4 + framePadding * 2 + hexCharWidth * 1;

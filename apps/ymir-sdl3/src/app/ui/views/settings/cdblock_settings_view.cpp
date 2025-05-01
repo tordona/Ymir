@@ -22,7 +22,8 @@ void CDBlockSettingsView::Display() {
     ImGui::TextUnformatted("Read speed");
     widgets::ExplanationTooltip("Changes the maximum read speed of the emulated CD drive.\n"
                                 "The default value is 2x, matching the real Saturn's CD drive speed.\n"
-                                "Higher speeds decrease load times but may reduce compatibility.");
+                                "Higher speeds decrease load times but may reduce compatibility.",
+                                m_context.displayScale);
 
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-1.0f);

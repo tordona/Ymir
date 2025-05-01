@@ -14,14 +14,15 @@ SCUDSPWindow::SCUDSPWindow(SharedContext &context)
 }
 
 void SCUDSPWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(800, 368), ImVec2(FLT_MAX, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(800 * m_context.displayScale, 368 * m_context.displayScale),
+                                        ImVec2(FLT_MAX, FLT_MAX));
 }
 
 void SCUDSPWindow::DrawContents() {
     if (ImGui::BeginTable("scu_dsp", 3, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {
-        ImGui::TableSetupColumn("Registers", ImGuiTableColumnFlags_WidthFixed, 170);
+        ImGui::TableSetupColumn("Registers", ImGuiTableColumnFlags_WidthFixed, 170 * m_context.displayScale);
         ImGui::TableSetupColumn("Disassembly", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("DMA", ImGuiTableColumnFlags_WidthFixed, 310);
+        ImGui::TableSetupColumn("DMA", ImGuiTableColumnFlags_WidthFixed, 310 * m_context.displayScale);
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {

@@ -92,7 +92,8 @@ void CartridgeSettingsView::DrawBackupRAMSettings() {
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Capacity:");
     widgets::ExplanationTooltip(
-        "This will automatically adjust if you load an existing image from the file selector below.");
+        "This will automatically adjust if you load an existing image from the file selector below.",
+        m_context.displayScale);
     ImGui::SameLine();
     if (ImGui::BeginCombo("##bup_capacity", BupCapacityLongName(settings.capacity), ImGuiComboFlags_WidthFitPreview)) {
         for (auto cap : {BUPCap::_4Mbit, BUPCap::_8Mbit, BUPCap::_16Mbit, BUPCap::_32Mbit}) {

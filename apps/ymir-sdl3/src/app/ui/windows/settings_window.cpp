@@ -26,7 +26,8 @@ void SettingsWindow::OpenTab(SettingsTab tab) {
 }
 
 void SettingsWindow::PrepareWindow() {
-    ImGui::SetNextWindowSizeConstraints(ImVec2(500, 300), ImVec2(FLT_MAX, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(500 * m_context.displayScale, 300 * m_context.displayScale),
+                                        ImVec2(FLT_MAX, FLT_MAX));
     /*auto *vp = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + vp->Size.x * 0.5f, vp->Pos.y + vp->Size.y * 0.5f),
                             ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));*/

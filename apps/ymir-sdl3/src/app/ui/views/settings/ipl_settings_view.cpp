@@ -68,12 +68,12 @@ void IPLSettingsView::Display() {
     }
 
     int index = 0;
-    if (ImGui::BeginTable("sys_ipl_roms", 6, ImGuiTableFlags_ScrollY, ImVec2(0, 250))) {
+    if (ImGui::BeginTable("sys_ipl_roms", 6, ImGuiTableFlags_ScrollY, ImVec2(0, 250 * m_context.displayScale))) {
         ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("Version", ImGuiTableColumnFlags_WidthFixed, 50);
-        ImGui::TableSetupColumn("Date", ImGuiTableColumnFlags_WidthFixed, 75);
-        ImGui::TableSetupColumn("Variant", ImGuiTableColumnFlags_WidthFixed, 60);
-        ImGui::TableSetupColumn("Region", ImGuiTableColumnFlags_WidthFixed, 80);
+        ImGui::TableSetupColumn("Version", ImGuiTableColumnFlags_WidthFixed, 50 * m_context.displayScale);
+        ImGui::TableSetupColumn("Date", ImGuiTableColumnFlags_WidthFixed, 75 * m_context.displayScale);
+        ImGui::TableSetupColumn("Variant", ImGuiTableColumnFlags_WidthFixed, 60 * m_context.displayScale);
+        ImGui::TableSetupColumn("Region", ImGuiTableColumnFlags_WidthFixed, 80 * m_context.displayScale);
         ImGui::TableSetupColumn("##use", ImGuiTableColumnFlags_WidthFixed, useButtonWidth);
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableHeadersRow();
