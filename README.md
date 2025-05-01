@@ -14,6 +14,20 @@ A work-in-progress Sega Saturn emulator.
 </div>
 
 
+## Features
+
+- Load games from BIN+CUE, IMG+CCD, MDF+MDS or ISO files
+- Automatic IPL (BIOS) ROM detection
+- Automatic region switching
+- Up to two players with standard Control Pads on both ports (more to come)
+- Fully customizable keybindings
+- Backup RAM and DRAM cartridges (more to come)
+- Integrated backup memory manager to import and export saves, and transfer between internal and cartridge RAM
+- Save states
+- Rewinding (up to one minute at 60 fps), turbo speed, frame step (forwards and backwards)
+- A work-in-progress feature-rich debugger
+
+
 ## Usage
 
 Grab the latest release [here](https://github.com/StrikerX3/Ymir/releases/latest).
