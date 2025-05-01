@@ -128,14 +128,15 @@ private:
 
     // Error modal dialog
 
-    void DrawErrorModal();
+    void DrawGenericModal();
 
     void OpenSimpleErrorModal(std::string message);
-    void OpenErrorModal(std::function<void()> fnContents);
+    void OpenGenericModal(std::string title, std::function<void()> fnContents);
 
-    bool m_openErrorModal = false;  // Open error modal on the next frame
-    bool m_closeErrorModal = false; // Close error modal on the next frame
-    std::function<void()> m_errorModalContents;
+    bool m_openGenericModal = false;  // Open error modal on the next frame
+    bool m_closeGenericModal = false; // Close error modal on the next frame
+    std::string m_genericModalTitle = "Message";
+    std::function<void()> m_genericModalContents;
 
     // Rewind bar
     std::chrono::steady_clock::time_point m_rewindBarFadeTimeBase;

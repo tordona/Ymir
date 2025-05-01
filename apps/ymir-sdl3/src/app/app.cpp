@@ -217,11 +217,25 @@ int App::Run(const CommandLineOptions &options) {
     ScanIPLROMs();
     auto iplLoadResult = LoadIPLROM();
     if (!iplLoadResult.succeeded) {
-        OpenErrorModal([=, this]() mutable {
-            ImGui::Text("Could not load IPL ROM: %s.", iplLoadResult.errorMessage.c_str());
-            ImGui::TextUnformatted("Games will not work without a valid IPL ROM.");
-            ImGui::Text("Go to Settings > IPL and select a ROM manually or add ROMs to %s then rescan for ROMs.",
+        OpenGenericModal("Welcome", [=, this]() mutable {
+            if (m_context.iplRomManager.GetROMs().empty()) {
+                ImGui::PushFont(m_context.fonts.sansSerif.large.regular);
+                ImGui::TextUnformatted("Welcome to Ymir!");
+                ImGui::PopFont();
+                ImGui::NewLine();
+                ImGui::TextUnformatted("Ymir requires a valid IPL ROM to work.");
+            } else {
+                ImGui::Text("Could not load IPL ROM: %s.", iplLoadResult.errorMessage.c_str());
+                ImGui::NewLine();
+                ImGui::TextUnformatted("Games will not work without a valid IPL ROM.");
+            }
+            ImGui::NewLine();
+            ImGui::Text("Place ROMs in %s, then click Rescan IPL ROMs below to load one automatically.",
                         m_context.profile.GetPath(ProfilePath::IPLROMImages).string().c_str());
+            ImGui::Text("Alternatively, you can manually select an IPL ROM in Settings > IPL.");
+
+            ImGui::Separator();
+
             if (ImGui::Button("Open IPL ROMs directory")) {
                 SDL_OpenURL(
                     fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::IPLROMImages).string()).c_str());
@@ -233,7 +247,7 @@ int App::Run(const CommandLineOptions &options) {
                 util::IPLROMLoadResult result = LoadIPLROM();
                 if (result.succeeded) {
                     m_context.EnqueueEvent(events::emu::HardReset());
-                    m_closeErrorModal = true;
+                    m_closeGenericModal = true;
                 } else {
                     // This will replace the message displayed above
                     iplLoadResult = result;
@@ -242,7 +256,7 @@ int App::Run(const CommandLineOptions &options) {
             ImGui::SameLine();
             if (ImGui::Button("Open IPL Settings")) {
                 m_settingsWindow.OpenTab(ui::SettingsTab::IPL);
-                m_closeErrorModal = true;
+                m_closeGenericModal = true;
             }
             ImGui::SameLine();
             // Place OK button next to these
@@ -455,7 +469,7 @@ void App::RunEmulator() {
     colors[ImGuiCol_NavCursor] = ImVec4(0.26f, 0.46f, 0.98f, 1.00f);
     colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
     colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
-    colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+    colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.07f, 0.07f, 0.07f, 0.35f);
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use
@@ -1737,7 +1751,7 @@ void App::RunEmulator() {
 
             // Draw windows and modals
             DrawWindows();
-            DrawErrorModal();
+            DrawGenericModal();
 
             // Draw rewind buffer bar widget
             if (m_context.rewindBuffer.IsRunning()) {
@@ -2405,26 +2419,27 @@ void App::OpenPeripheralBindsEditor(const PeripheralBindsParams &params) {
     m_periphBindsWindow.RequestFocus();
 }
 
-void App::DrawErrorModal() {
-    static constexpr const char *kTitle = "Error##generic_modal";
+void App::DrawGenericModal() {
+    std::string title = fmt::format("{}##generic_modal", m_genericModalTitle);
 
-    if (m_openErrorModal) {
-        m_openErrorModal = false;
-        ImGui::OpenPopup(kTitle);
+    if (m_openGenericModal) {
+        m_openGenericModal = false;
+        ImGui::OpenPopup(title.c_str());
     }
 
-    if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::PushTextWrapPos(450.0f * m_context.displayScale);
-        if (m_errorModalContents) {
-            m_errorModalContents();
+    if (ImGui::BeginPopupModal(title.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::PushTextWrapPos(500.0f * m_context.displayScale);
+        if (m_genericModalContents) {
+            m_genericModalContents();
         }
 
         ImGui::PopTextWrapPos();
 
-        if (ImGui::Button("OK", ImVec2(80 * m_context.displayScale, 0 * m_context.displayScale)) || m_closeErrorModal) {
+        if (ImGui::Button("OK", ImVec2(80 * m_context.displayScale, 0 * m_context.displayScale)) ||
+            m_closeGenericModal) {
             ImGui::CloseCurrentPopup();
-            m_errorModalContents = {};
-            m_closeErrorModal = false;
+            m_genericModalContents = {};
+            m_closeGenericModal = false;
         }
 
         ImGui::EndPopup();
@@ -2432,12 +2447,13 @@ void App::DrawErrorModal() {
 }
 
 void App::OpenSimpleErrorModal(std::string message) {
-    OpenErrorModal([=] { ImGui::Text("%s", message.c_str()); });
+    OpenGenericModal("Error", [=] { ImGui::Text("%s", message.c_str()); });
 }
 
-void App::OpenErrorModal(std::function<void()> fnContents) {
-    m_openErrorModal = true;
-    m_errorModalContents = fnContents;
+void App::OpenGenericModal(std::string title, std::function<void()> fnContents) {
+    m_openGenericModal = true;
+    m_genericModalTitle = title;
+    m_genericModalContents = fnContents;
 }
 
 } // namespace app
