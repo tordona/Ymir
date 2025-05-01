@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+@file
+@brief Defines `ymir::core::Scheduler`, the event scheduler.
+*/
+
 #include "scheduler_defs.hpp"
 
 #include <ymir/state/state_scheduler.hpp>
@@ -14,18 +19,22 @@ namespace ymir::core {
 
 class Scheduler;
 
-// Contains the context for a scheduled event.
-// Passed as a parameter to scheduled event handlers to let them reschedule the event relative to the previous trigger
-// or the current cycle count.
-// By default, events are not rescheduled unless requested by the methods in this struct.
+/// @brief Contains the context for a scheduled event.
+///
+/// Passed as a parameter to scheduled event handlers to let them reschedule the event relative to the previous trigger
+/// or the current cycle count.
+///
+/// By default, events are not rescheduled unless requested by the methods in this struct.
 struct EventContext {
-    // Reschedules the event with an offset from the current deadline.
+    /// @brief Reschedules the event with an offset from the current deadline.
+    /// @param[in] interval the interval in cycles from the previous deadline
     void RescheduleFromPrevious(uint64 interval) {
         action = Action::RescheduleFromPrevious;
         this->interval = interval;
     }
 
-    // Reschedules the event with an offset from the current cycle count.
+    /// @brief Reschedules the event with an offset from the current cycle count.
+    /// @param[in] interval the interval in cycles from the current cycle count
     void RescheduleFromNow(uint64 interval) {
         action = Action::RescheduleFromNow;
         this->interval = interval;
@@ -38,13 +47,37 @@ private:
     friend class Scheduler;
 };
 
+/// @brief The event scheduler.
+///
+/// The scheduler is an optimization to the emulator loop when many events need to be triggered at specific points in
+/// time. The naive approach is to use a simple cycle counter for each event that is decremented as emulation advances.
+/// The events are triggered when the counter reaches zero. Another option is to use a global counter and use deadlines
+/// instead of counting down cycles. Both of these have the disadvantage of requiring an O(n) search to determine what
+/// is the next event to trigger.
+///
+/// This implementation of the scheduler uses absolute timestamps. It contains a primary cycle counter and events are
+/// scheduled with absolute deadlines. The scheduler precomputes the closest deadline to be reached and provides this
+/// information to the emulator loop so that it can run unimpeded by events for as many cycles as possible. Once the
+/// deadlines are reached, the scheduler triggers the events, invoking their registered callbacks, and reschedules them
+/// if necessary, also updating the next deadline.
+///
+/// The scheduler contains a fixed-size array of `kNumScheduledEvent` elements that must be manually registered by each
+/// component that needs to handle such events. Registering is done by the `Scheduler::RegisterEvent` method that takes
+/// the callback function, an user context pointer and an user ID for identifying the event in save states. The returned
+/// `EventID` must be used to schedule the event with `Scheduler::ScheduleFromNow` or `Scheduler::ScheduleAt`.
+///
+/// The callback function takes an `EventContext` object and the user context pointer provided on registration. The
+/// event context must be used to reschedule the event. Events are single-shot unless they reschedule themselves with
+/// `EventContext::RescheduleFromPrevious` or `EventContext::RescheduleFromNow`.
 class Scheduler {
 public:
-    // Callback signature for scheduled events
+    /// @brief Callback signature for scheduled events
     using EventCallback = void (*)(EventContext &eventContext, void *userContext);
 
+    /// @brief An event ID that represents an invalid event.
     static constexpr EventID kInvalidEvent = ~static_cast<EventID>(0);
 
+    /// @brief Creates a new, empty scheduler.
     Scheduler() {
         m_eventPtrs.fill(kInvalidEvent);
         for (Event &event : m_events) {
@@ -54,7 +87,7 @@ public:
         Reset();
     }
 
-    // Resets the scheduler's current and target counters
+    /// @brief Resets the scheduler's current and target counters.
     void Reset() {
         m_currCount = 0;
         m_nextCount = kNoDeadline;
@@ -63,7 +96,11 @@ public:
         }
     }
 
-    // Registers an event. The returned ID must be used to refer to the event.
+    /// @brief Registers an event. The returned ID must be used to refer to the event.
+    /// @param[in] userID the user ID (for save states)
+    /// @param[in] userContext the user context pointer
+    /// @param[in] callback the event callback function
+    /// @return the event ID for the newly registered event
     EventID RegisterEvent(UserEventID userID, void *userContext, EventCallback callback) {
         assert(m_eventPtrs[userID] == kInvalidEvent);                    // ensure user IDs are unique
         assert(m_nextEventIndex <= std::numeric_limits<EventID>::max()); // IDtype value space exhausted
@@ -79,7 +116,12 @@ public:
         return id;
     }
 
-    // Sets the event cycle counting factor.
+    /// @brief Sets the event cycle counting factor.
+    ///
+    /// This enables cycle counting between components of varying clock rates.
+    /// @param[in] id the event ID to modify
+    /// @param[in] numerator the cycle counting factor numerator
+    /// @param[in] denominator the cycle counting factor denominator
     void SetEventCountFactor(EventID id, uint64 numerator, uint64 denominator) {
         assert(numerator > 0);
         assert(denominator > 0);
@@ -99,23 +141,35 @@ public:
         }
     }
 
+    /// @brief Retrieves the current value of the primary cycle counter.
+    /// @return the current cycle count
     uint64 CurrentCount() const {
         return m_currCount;
     }
 
+    /// @brief Retrieves the absolute cycle count of the earliest scheduled event.
+    /// @return the cycle count of the next event to trigger
     uint64 NextCount() const {
         return m_nextCount;
     }
 
+    /// @brief Retrieves a pointer to the absolute cycle count of the earliest scheduled event.
+    /// @return a pointer to the cycle count of the next event to trigger
     const uint64 *NextCountPtr() const {
         return &m_nextCount;
     }
 
+    /// @brief Retrieves the number of cycles remaining until the next event is triggered.
+    ///
+    /// If the result is negative, an event is late.
+    /// @return the number of cycles until the next event
     sint64 RemainingCount() const {
         return (sint64)m_nextCount - (sint64)m_currCount;
     }
 
-    // Schedules the specified event to happen $interval cycles from the current count
+    /// @brief Schedules the specified event to happen `interval` cycles from the current count.
+    /// @param[in] id the event ID
+    /// @param[in] interval the interval in cycles from the current cycle count
     void ScheduleFromNow(EventID id, uint64 interval) {
         assert(id < kNumScheduledEvents);
         Event &event = m_events[id];
@@ -123,20 +177,24 @@ public:
         ScheduleEvent(id, scaledCount + interval);
     }
 
-    // Schedules the specified event to happen at the specified cycle count
+    /// @brief Schedules the specified event to happen at the specified cycle count.
+    /// @param[in] id the event ID
+    /// @param[in] target the absolute cycle count
     void ScheduleAt(EventID id, uint64 target) {
         assert(id < kNumScheduledEvents);
         ScheduleEvent(id, target);
     }
 
-    // Removes the specified event from the schedule
+    /// @brief Removes the specified event from the schedule.
+    /// @param[in] id the event ID
     void Cancel(EventID id) {
         assert(id < kNumScheduledEvents);
         Event &event = m_events[id];
         event.target = kNoDeadline;
     }
 
-    // Advances the scheduler by the specified count and fire scheduled events
+    /// @brief Advances the scheduler by the specified count and fire scheduled events.
+    /// @param count the number of cycles to advance
     FORCE_INLINE void Advance(uint64 count) {
         m_currCount += count;
         if (m_currCount >= m_nextCount) {
@@ -147,6 +205,11 @@ public:
     // -------------------------------------------------------------------------
     // Save states
 
+    /// @brief Saves the Scheduler state into the given state object.
+    ///
+    /// This function should not be used directly. Use `ymir::Saturn::SaveState` with the full state object instead.
+    ///
+    /// @param[in] state the state object
     void SaveState(state::SchedulerState &state) const {
         state.currCount = m_currCount;
         for (size_t i = 0; i < kNumScheduledEvents; i++) {
@@ -157,6 +220,9 @@ public:
         }
     }
 
+    /// @brief Validates the given state object.
+    /// @param state the state object
+    /// @return `true` if the state object is valid
     bool ValidateState(const state::SchedulerState &state) const {
         for (size_t i = 0; i < kNumScheduledEvents; i++) {
             const size_t eventIndex = m_eventPtrs[state.events[i].id];
@@ -167,6 +233,13 @@ public:
         return true;
     }
 
+    /// @brief Loads the Scheduler state from the given state object.
+    ///
+    /// This function should not be used directly. Use `ymir::Saturn::LoadState` with the full state object instead.
+    ///
+    /// This function does not validate the state.
+    ///
+    /// @param state the state object
     void LoadState(const state::SchedulerState &state) {
         m_currCount = state.currCount;
         for (size_t i = 0; i < kNumScheduledEvents; i++) {
@@ -180,21 +253,27 @@ public:
     }
 
 private:
+    /// @brief A cycle count representing the "not scheduled" state.
     static constexpr uint64 kNoDeadline = ~static_cast<uint64>(0);
 
+    /// @brief A schedulable event.
     struct Event {
-        uint64 target;
-        uint64 countNumerator;
-        uint64 countDenominator;
-        void *userContext;
-        EventCallback callback;
+        uint64 target;           ///< Deadline in cycles
+        uint64 countNumerator;   ///< Cycle scaling factor numerator
+        uint64 countDenominator; ///< Cycle scaling factor denominator
+        void *userContext;       ///< User context pointer
+        EventCallback callback;  ///< Event callback function
 
+        /// @brief Calculates the target cycle count scaled by the reciprocal of the scaling factor.
+        /// @return `(target * countDenominator + countNumerator - 1) / countNumerator`
         FORCE_INLINE uint64 CalcTargetScaledByReciprocal() const {
             return (target * countDenominator + countNumerator - 1) / countNumerator;
         }
     };
 
-    // Schedules an event to execute at the specified time
+    /// @brief Schedules an event to execute at the specified time.
+    /// @param[in] id the event ID
+    /// @param[in] target the deadline in cycles
     FORCE_INLINE void ScheduleEvent(EventID id, uint64 target) {
         Event &event = m_events[id];
         event.target = target;
@@ -202,7 +281,7 @@ private:
         m_nextCount = std::min(m_nextCount, scaledTarget);
     }
 
-    // Executes all scheduled events up to the current count
+    /// @brief Executes all scheduled events up to the current count.
     FORCE_INLINE void Execute() {
         const uint64 currCount = m_currCount;
         for (size_t index = 0; index < kNumScheduledEvents; ++index) {
@@ -233,6 +312,7 @@ private:
         RecalcSchedule();
     }
 
+    /// @brief Recalculates the next deadline.
     FORCE_INLINE void RecalcSchedule() {
         m_nextCount = kNoDeadline;
         for (const Event &event : m_events) {
@@ -244,12 +324,12 @@ private:
         }
     }
 
-    uint64 m_currCount;
-    uint64 m_nextCount;
-    std::array<Event, kNumScheduledEvents> m_events;
-    std::array<UserEventID, kNumScheduledEvents> m_userIDs;
-    size_t m_nextEventIndex;
-    std::array<EventID, std::numeric_limits<UserEventID>::max() + 1> m_eventPtrs;
+    uint64 m_currCount;                                     ///< The primary cycle counter
+    uint64 m_nextCount;                                     ///< The cached cycle counter to the next event
+    std::array<Event, kNumScheduledEvents> m_events;        ///< Schedulable events
+    std::array<UserEventID, kNumScheduledEvents> m_userIDs; ///< User IDs associated with events
+    size_t m_nextEventIndex;                                ///< The next event index on which to register new events
+    std::array<EventID, std::numeric_limits<UserEventID>::max() + 1> m_eventPtrs; ///< Translates user IDs to event IDs
 };
 
 } // namespace ymir::core
