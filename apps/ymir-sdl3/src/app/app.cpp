@@ -625,22 +625,36 @@ void App::RunEmulator() {
 
     {
         // Compute initial window size
-        // TODO: should load from persistent state or assume a reasonable default
+        // TODO: load from persistent state
 
-        // Equivalent to ImGui::GetFrameHeight() without requiring a window
+        // This is equivalent to ImGui::GetFrameHeight() without requiring a window
         const float menuBarHeight = (io.FontDefault->FontSize + style.FramePadding.y * 2.0f) * m_context.displayScale;
 
         const auto &videoSettings = m_context.settings.video;
         const bool forceAspectRatio = videoSettings.forceAspectRatio;
         const double forcedAspect = videoSettings.forcedAspect;
 
+        // Find reasonable default scale based on the primary display resolution
+        SDL_Rect displayRect{};
+        auto displayID = SDL_GetPrimaryDisplay();
+        if (!SDL_GetDisplayBounds(displayID, &displayRect)) {
+            devlog::error<grp::base>("Could not get primary display resolution: {}", SDL_GetError());
+
+            // This will set the window scale to 1.0 without assuming any resolution
+            displayRect.w = 0;
+            displayRect.h = 0;
+        }
+
+        devlog::info<grp::base>("Primary display resolution: {}x{}", displayRect.w, displayRect.h);
+
+        // Take up to 90% of the available display, with an integer multiple of 2 for the scale
+        const double maxScaleX = (double)displayRect.w / screen.width * 0.90;
+        const double maxScaleY = (double)displayRect.h / screen.height * 0.90;
+        const double scale = std::max(1.0, std::floor(std::min(maxScaleX, maxScaleY) / 2.0) * 2.0);
+
         const double baseWidth =
             forceAspectRatio ? ceil(screen.height * forcedAspect * screen.scaleY) : screen.width * screen.scaleX;
         const double baseHeight = screen.height * screen.scaleY;
-        double scale = 4.0; // TODO: find reasonable default scale based on screen resolution
-        if (videoSettings.forceIntegerScaling) {
-            scale = floor(scale);
-        }
         const int scaledWidth = baseWidth * scale;
         const int scaledHeight = baseHeight * scale;
 
