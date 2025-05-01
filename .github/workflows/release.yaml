@@ -20,8 +20,10 @@ jobs:
         subsystem:
           - name: Console
             enable_devlog_option: "ON"
+            build_ymdasm_option: "ON"
           - name: Win32
             enable_devlog_option: "OFF"
+            build_ymdasm_option: "OFF"
         x86_simd_ext:
           - name: "SSE2"
             enable_avx2_option: "OFF"
@@ -41,7 +43,8 @@ jobs:
       shell: bash
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-        echo "artifact-name=ymir-windows-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+        echo "ymir-artifact-name=ymir-windows-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+        echo "ymdasm-artifact-name=ymdasm-windows-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
 
     - name: Configure MSVC
       if: ${{ matrix.c_compiler == 'cl' }}
@@ -61,7 +64,7 @@ jobs:
         -DYmir_ENABLE_DEVLOG=${{ matrix.subsystem.enable_devlog_option }}
         -DYmir_ENABLE_IMGUI_DEMO=OFF
         -DYmir_ENABLE_SANDBOX=OFF
-        -DYmir_ENABLE_YMDASM=OFF
+        -DYmir_ENABLE_YMDASM=${{ matrix.subsystem.build_ymdasm_option }}
         -S ${{ github.workspace }}
         -G Ninja
 
@@ -73,7 +76,7 @@ jobs:
     #  working-directory: ${{ steps.strings.outputs.build-output-dir }}
     #  run: ctest --build-config ${{ matrix.build_type }}
 
-    - name: Package artifacts
+    - name: Package Ymir artifact
       run: |
         md licenses
         xcopy /s /y apps/ymir-sdl3/res/licenses/* licenses/
@@ -89,13 +92,26 @@ jobs:
         copy /b /y vendor/tomlplusplus/LICENSE licenses/tomlplusplus-LICENSE
         copy /b /y vendor/xxHash/LICENSE licenses/xxHash-LICENSE
         copy /b /y LICENSE licenses/Ymir-LICENSE
-        powershell Compress-Archive -Path "licenses/","build/apps/ymir-sdl3/ymir-sdl3.exe" -DestinationPath "${{ steps.strings.outputs.artifact-name }}.zip"
+        powershell Compress-Archive -Path "licenses/","build/apps/ymir-sdl3/ymir-sdl3.exe" -DestinationPath "${{ steps.strings.outputs.ymir-artifact-name }}.zip"
 
-    - name: Upload artifacts
+    - name: Upload Ymir artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ steps.strings.outputs.artifact-name }}
-        path: ${{ steps.strings.outputs.artifact-name }}.zip
+        name: ${{ steps.strings.outputs.ymir-artifact-name }}
+        path: ${{ steps.strings.outputs.ymir-artifact-name }}.zip
+    
+    - name: Package ymdasm artifact
+      if: ${{ matrix.subsystem.enable_ymdasm_option == "ON" }}
+      run: |
+        powershell Compress-Archive -Path "build/apps/ymdasm/ymdasm.exe" -DestinationPath "${{ steps.strings.outputs.ymdasm-artifact-name }}.zip"
+
+    - name: Upload ymdasm artifact
+      if: ${{ matrix.subsystem.enable_ymdasm_option == "ON" }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.strings.outputs.ymdasm-artifact-name }}
+        path: ${{ steps.strings.outputs.ymdasm-artifact-name }}.zip
+
 
   build-linux:
     name: linux-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}
@@ -128,7 +144,8 @@ jobs:
       shell: bash
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-        echo "artifact-name=ymir-linux-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+        echo "ymir-artifact-name=ymir-linux-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+        echo "ymdasm-artifact-name=ymdasm-linux-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
 
     - name: Install SDL3 Dependencies
       run: |
@@ -156,7 +173,7 @@ jobs:
         -DYmir_ENABLE_DEVLOG=OFF
         -DYmir_ENABLE_IMGUI_DEMO=OFF
         -DYmir_ENABLE_SANDBOX=OFF
-        -DYmir_ENABLE_YMDASM=OFF
+        -DYmir_ENABLE_YMDASM=ON
         -S ${{ github.workspace }}
         -G Ninja
 
@@ -184,13 +201,20 @@ jobs:
         cp -f vendor/tomlplusplus/LICENSE licenses/tomlplusplus-LICENSE
         cp -f vendor/xxHash/LICENSE licenses/xxHash-LICENSE
         cp -f LICENSE licenses/Ymir-LICENSE
-        tar cJvfh ${{ steps.strings.outputs.artifact-name }}.tar.xz LICENSE -C build/apps/ymir-sdl3 ymir-sdl3
+        tar cJvfh ${{ steps.strings.outputs.ymir-artifact-name }}.tar.xz licenses/ -C build/apps/ymir-sdl3 ymir-sdl3
+        tar cJvfh ${{ steps.strings.outputs.ymdasm-artifact-name }}.tar.xzbuild/apps/ymdasm ymdasm
 
-    - name: Upload artifacts
+    - name: Upload Ymir artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ steps.strings.outputs.artifact-name }}
-        path: ${{ steps.strings.outputs.artifact-name }}.tar.xz
+        name: ${{ steps.strings.outputs.ymir-artifact-name }}
+        path: ${{ steps.strings.outputs.ymir-artifact-name }}.tar.xz
+
+    - name: Upload ymdasm artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.strings.outputs.ymdasm-artifact-name }}
+        path: ${{ steps.strings.outputs.ymdasm-artifact-name }}.tar.xz
 
   release:
     runs-on: ubuntu-latest
