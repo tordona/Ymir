@@ -217,50 +217,57 @@ int App::Run(const CommandLineOptions &options) {
     ScanIPLROMs();
     auto iplLoadResult = LoadIPLROM();
     if (!iplLoadResult.succeeded) {
-        OpenGenericModal("Welcome", [=, this]() mutable {
-            if (m_context.iplRomManager.GetROMs().empty()) {
+        using namespace std::chrono_literals;
+        static constexpr auto kScanInterval = 400ms;
+
+        if (m_context.iplRomManager.GetROMs().empty()) {
+            OpenGenericModal("Welcome", [=, this, nextScanDeadline = clk::now() + kScanInterval,
+                                         lastROMCount = m_context.iplRomManager.GetROMs().size()]() mutable {
                 ImGui::PushFont(m_context.fonts.sansSerif.large.regular);
                 ImGui::TextUnformatted("Welcome to Ymir!");
                 ImGui::PopFont();
                 ImGui::NewLine();
                 ImGui::TextUnformatted("Ymir requires a valid IPL ROM to work.");
-            } else {
-                ImGui::Text("Could not load IPL ROM: %s.", iplLoadResult.errorMessage.c_str());
+
                 ImGui::NewLine();
-                ImGui::TextUnformatted("Games will not work without a valid IPL ROM.");
-            }
-            ImGui::NewLine();
-            ImGui::Text("Place ROMs in %s, then click Rescan IPL ROMs below to load one automatically.",
-                        m_context.profile.GetPath(ProfilePath::IPLROMImages).string().c_str());
-            ImGui::Text("Alternatively, you can manually select an IPL ROM in Settings > IPL.");
+                ImGui::Text("Ymir will automatically load IPL ROMs placed in %s.",
+                            m_context.profile.GetPath(ProfilePath::IPLROMImages).string().c_str());
+                ImGui::Text("Alternatively, you can manually select an IPL ROM in Settings > IPL.");
 
-            ImGui::Separator();
+                ImGui::Separator();
 
-            if (ImGui::Button("Open IPL ROMs directory")) {
-                SDL_OpenURL(
-                    fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::IPLROMImages).string()).c_str());
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Rescan IPL ROMs")) {
-                ScanIPLROMs();
-
-                util::IPLROMLoadResult result = LoadIPLROM();
-                if (result.succeeded) {
-                    m_context.EnqueueEvent(events::emu::HardReset());
-                    m_closeGenericModal = true;
-                } else {
-                    // This will replace the message displayed above
-                    iplLoadResult = result;
+                if (ImGui::Button("Open IPL ROMs directory")) {
+                    SDL_OpenURL(fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::IPLROMImages).string())
+                                    .c_str());
                 }
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Open IPL Settings")) {
-                m_settingsWindow.OpenTab(ui::SettingsTab::IPL);
-                m_closeGenericModal = true;
-            }
-            ImGui::SameLine();
-            // Place OK button next to these
-        });
+                ImGui::SameLine();
+                if (ImGui::Button("Open IPL settings")) {
+                    m_settingsWindow.OpenTab(ui::SettingsTab::IPL);
+                    m_closeGenericModal = true;
+                }
+                ImGui::SameLine(); // this places the OK button next to these
+
+                // Periodically scan for IPL ROMs.
+                // Stop when files stop being added to the directory.
+                if (clk::now() >= nextScanDeadline) {
+                    nextScanDeadline += kScanInterval;
+
+                    ScanIPLROMs();
+                    auto romCount = m_context.iplRomManager.GetROMs().size();
+                    if (romCount != lastROMCount) {
+                        lastROMCount = romCount;
+                    } else {
+                        util::IPLROMLoadResult result = LoadIPLROM();
+                        if (result.succeeded) {
+                            m_context.EnqueueEvent(events::emu::HardReset());
+                            m_closeGenericModal = true;
+                        }
+                    }
+                }
+            });
+        } else {
+            OpenSimpleErrorModal(fmt::format("Could not load IPL ROM: {}", iplLoadResult.errorMessage));
+        }
     }
 
     // Load SMPC persistent data and set up the path
