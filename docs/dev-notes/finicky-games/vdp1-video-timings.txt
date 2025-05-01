@@ -9,7 +9,7 @@ Panzer Dragoon 1 (in-game)
   Frame 2: nothing
   Frame 3: nothing
 
-If you don't delay VBE and FCT/FCT handling until HBlank, you get flashing VDP1 graphics due to swapping frames too late or erasing frames too early.
+If you don't delay VBE and FCM/FCT handling until HBlank, you get flashing VDP1 graphics due to swapping frames too late or erasing frames too early.
 
 -----
 
@@ -19,7 +19,7 @@ Sonic R (during title screen, menus and in-game)
     [VBlank OUT] VBE=0 FCM=1 FCT=1 PTM=1 -- expects the swap to happen at this line's HBlank IN (halfway through)
   Frame 2: nothing
 
-If you don't delay VBE and FCT/FCT handling until HBlank, you get unsorted, overlapping or flashing polygons.
+If you don't delay VBE and FCM/FCT handling until HBlank, you get unsorted, overlapping or flashing polygons.
 
 -----
 

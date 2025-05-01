@@ -81,12 +81,13 @@ Notes
 - Backup RAM
   - Only odd bytes mapped
   - Reads from even bytes return 0xFF
-  - Writes to even bytes map to correspoding odd byte
+  - Writes to even bytes map to corresponding odd byte
 
 Interconnections:
-- SH-2 has access to SCU, SMPC, 2 MiB WRAM and 512 KiB IPL ROM
+- Both SH-2s have access to SCU, SMPC, 2 MiB WRAM and 512 KiB IPL ROM
 - SCU has access to VDP1, VDP2, SCSP, CD Block and the cartridge interface
 - SMPC has access to peripherals (gamepads)
 - VDP1 has 1 MiB RAM (2x 256 KiB framebuffers + 512 KiB VRAM)
 - VDP2 has 516 KiB RAM (4x 128 KiB VRAM banks A0 A1 B0 B1 + 4 KiB color RAM)
-- SCSP contains the MC68EC000 and 512 KiB of RAM
+- SCSP contains the MC68EC000 and 512 KiB of sound RAM
+- MC68EC000 can only access the 512 KiB of sound RAM
