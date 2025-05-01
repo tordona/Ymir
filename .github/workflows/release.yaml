@@ -101,12 +101,12 @@ jobs:
         path: ${{ steps.strings.outputs.ymir-artifact-name }}.zip
     
     - name: Package ymdasm artifact
-      if: ${{ matrix.subsystem.enable_ymdasm_option }} == "ON"
+      if: ${{ matrix.subsystem.enable_ymdasm_option == 'ON' }}
       run: |
         Compress-Archive -Path "build/apps/ymdasm/ymdasm.exe" -DestinationPath "${{ steps.strings.outputs.ymdasm-artifact-name }}.zip"
 
     - name: Upload ymdasm artifact
-      if: ${{ matrix.subsystem.enable_ymdasm_option }} == "ON"
+      if: ${{ matrix.subsystem.enable_ymdasm_option == 'ON' }}
       uses: actions/upload-artifact@v4
       with:
         name: ${{ steps.strings.outputs.ymdasm-artifact-name }}
