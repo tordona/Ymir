@@ -783,6 +783,9 @@ void Slot::IncrementLFO() {
         lfoCycles = 0;
         lfoStep++;
     }
+    if (lfoReset) {
+        lfoStep = 0;
+    }
 }
 
 void Slot::IncrementPhase(sint32 pitchLFO) {
