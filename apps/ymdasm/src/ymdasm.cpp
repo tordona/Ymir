@@ -12,8 +12,6 @@
 #include <string>
 #include <vector>
 
-// TODO: reuse code where possible
-
 int main(int argc, char *argv[]) {
     bool showHelp = false;
     bool hideAddresses = false;

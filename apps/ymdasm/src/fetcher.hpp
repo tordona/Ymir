@@ -116,7 +116,7 @@ struct StreamOpcodeFetcher : public IOpcodeFetcher<TOpcode> {
 
         TOpcode opcode = TParser::Parse(*m_input);
         pos = m_input->tellg();
-        if (m_input->good() && pos < m_endPos) {
+        if (m_input->good() && pos <= m_endPos) {
             return opcode;
         } else {
             return OpcodeFetchEnd{};
