@@ -392,14 +392,16 @@ void SCSP::HandleKYONEX() {
         }
     }
 
-    auto makeList = [&] {
-        static char out[32];
-        for (auto &slot : m_slots) {
-            out[slot.index] = slot.keyOnBit ? '+' : '_';
-        }
-        return std::string_view(out, 32);
-    };
-    devlog::trace<grp::regs>("KYONEX: {}", makeList());
+    if constexpr (devlog::trace_enabled<grp::regs>) {
+        auto makeList = [&] {
+            static char out[32];
+            for (auto &slot : m_slots) {
+                out[slot.index] = slot.keyOnBit ? '+' : '_';
+            }
+            return std::string_view(out, 32);
+        };
+        devlog::trace<grp::regs>("KYONEX: {}", makeList());
+    }
 }
 
 void SCSP::SetInterrupt(uint16 intr, bool level) {
@@ -490,12 +492,12 @@ void SCSP::ExecuteDMA() {
     while (m_dmaExec) {
         if (m_dmaXferToMem) {
             const uint16 value = ReadReg<uint16>(m_dmaRegAddress);
-            devlog::debug<grp::dma>("Register {:03X} -> Memory {:06X} = {:04X}", m_dmaRegAddress, m_dmaMemAddress,
+            devlog::trace<grp::dma>("Register {:03X} -> Memory {:06X} = {:04X}", m_dmaRegAddress, m_dmaMemAddress,
                                     value);
             WriteWRAM<uint16>(m_dmaMemAddress, m_dmaGate ? 0u : value);
         } else {
             const uint16 value = ReadWRAM<uint16>(m_dmaMemAddress);
-            devlog::debug<grp::dma>("Memory {:06X} -> Register {:03X} = {:04X}", m_dmaMemAddress, m_dmaRegAddress,
+            devlog::trace<grp::dma>("Memory {:06X} -> Register {:03X} = {:04X}", m_dmaMemAddress, m_dmaRegAddress,
                                     value);
             WriteReg<uint16>(m_dmaRegAddress, m_dmaGate ? 0u : value);
         }
@@ -738,13 +740,13 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
     }
 
     if (slot.soundSource == Slot::SoundSource::SoundRAM) {
-    switch (m_interpMode) {
-    case core::config::audio::SampleInterpolationMode::NearestNeighbor: slot.output = slot.sample1; break;
-    case core::config::audio::SampleInterpolationMode::Linear:
-        slot.output =
-            slot.sample1 + (slot.sample2 - slot.sample1) * static_cast<sint64>(slot.currPhase & 0x3FFFF) / 0x40000;
-        break;
-    }
+        switch (m_interpMode) {
+        case core::config::audio::SampleInterpolationMode::NearestNeighbor: slot.output = slot.sample1; break;
+        case core::config::audio::SampleInterpolationMode::Linear:
+            slot.output =
+                slot.sample1 + (slot.sample2 - slot.sample1) * static_cast<sint64>(slot.currPhase & 0x3FFFF) / 0x40000;
+            break;
+        }
     } else {
         slot.output = slot.sample1;
     }
