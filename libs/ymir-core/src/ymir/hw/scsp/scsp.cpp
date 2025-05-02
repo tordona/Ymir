@@ -666,15 +666,19 @@ FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
 
     // Compute pitch LFO
     sint32 pitchLFO = 0;
-    using enum Slot::Waveform;
-    switch (slot.pitchLFOWaveform) {
-    case Saw: pitchLFO = sawTable[slot.lfoStep]; break;
-    case Square: pitchLFO = squareTable[slot.lfoStep]; break;
-    case Triangle: pitchLFO = triangleTable[slot.lfoStep]; break;
-    case Noise: pitchLFO = static_cast<sint8>(m_lfsr & ~1); break;
+    if (slot.pitchLFOSens != 0) {
+        using enum Slot::Waveform;
+        switch (slot.pitchLFOWaveform) {
+        case Saw: pitchLFO = sawTable[slot.lfoStep]; break;
+        case Square: pitchLFO = squareTable[slot.lfoStep]; break;
+        case Triangle: pitchLFO = triangleTable[slot.lfoStep]; break;
+        case Noise: pitchLFO = static_cast<sint8>(m_lfsr & ~1); break;
+        }
+        pitchLFO <<= slot.pitchLFOSens;
+        pitchLFO >>= 2;
     }
 
-    slot.IncrementPhase((pitchLFO << slot.pitchLFOSens) >> 2);
+    slot.IncrementPhase(pitchLFO);
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
@@ -874,15 +878,17 @@ FORCE_INLINE void SCSP::SlotProcessStep5(Slot &slot) {
         }();
 
         uint32 alfoLevel = 0u;
-        using enum Slot::Waveform;
-        switch (slot.ampLFOWaveform) {
-        case Saw: alfoLevel = sawTable[slot.lfoStep]; break;
-        case Square: alfoLevel = squareTable[slot.lfoStep]; break;
-        case Triangle: alfoLevel = triangleTable[slot.lfoStep]; break;
-        case Noise: alfoLevel = static_cast<uint8>(m_lfsr & ~1); break;
+        if (slot.ampLFOSens != 0) {
+            using enum Slot::Waveform;
+            switch (slot.ampLFOWaveform) {
+            case Saw: alfoLevel = sawTable[slot.lfoStep]; break;
+            case Square: alfoLevel = squareTable[slot.lfoStep]; break;
+            case Triangle: alfoLevel = triangleTable[slot.lfoStep]; break;
+            case Noise: alfoLevel = static_cast<uint8>(m_lfsr & ~1); break;
+            }
+            alfoLevel = ((alfoLevel + 1u) >> (7u - slot.ampLFOSens)) << 1u;
         }
 
-        alfoLevel = ((alfoLevel + 1u) >> (7u - slot.ampLFOSens)) << 1u;
         const sint32 envLevel = slot.GetEGLevel();
         const sint32 totalLevel = slot.totalLevel << 2u;
         const sint32 level = std::min<sint32>(alfoLevel + envLevel + totalLevel, 0x3FF);
