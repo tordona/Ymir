@@ -111,6 +111,7 @@ inline namespace v3 {
         uint8 KRS;
         bool EGHOLD;
         bool LPSLNK;
+        bool EGBYPASS;
 
         uint8 MDL;
         uint8 MDXSL;
@@ -139,7 +140,6 @@ inline namespace v3 {
         uint8 EFSDL;
         uint8 EFPAN;
 
-        uint16 extra0A;
         uint16 extra0C;
         uint16 extra10;
         uint16 extra14;
@@ -186,6 +186,7 @@ inline namespace v3 {
             KRS = state.KRS;
             EGHOLD = state.EGHOLD;
             LPSLNK = state.LPSLNK;
+            EGBYPASS = false;
 
             MDL = state.MDL;
             MDXSL = state.MDXSL;
@@ -213,7 +214,6 @@ inline namespace v3 {
             EFSDL = state.EFSDL;
             EFPAN = state.EFPAN;
 
-            extra0A = 0;
             extra0C = 0;
             extra10 = 0;
             extra14 = 0;

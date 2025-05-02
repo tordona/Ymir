@@ -30,6 +30,7 @@ void Slot::Reset() {
     keyRateScaling = 0;
 
     egHold = false;
+    egBypass = false;
 
     loopStartLink = false;
 
@@ -58,7 +59,6 @@ void Slot::Reset() {
     effectSendLevel = 0;
     effectPan = 0;
 
-    extraBits0A = 0;
     extraBits0C = 0;
     extraBits10 = 0;
     extraBits14 = 0;
@@ -318,7 +318,7 @@ uint16 Slot::ReadReg0A() const {
     if constexpr (upperByte) {
         bit::deposit_into<10, 13>(value, keyRateScaling);
         bit::deposit_into<14>(value, loopStartLink);
-        bit::deposit_into<15>(value, bit::extract<15>(extraBits0A));
+        bit::deposit_into<15>(value, egBypass);
     }
     return value;
 }
@@ -334,7 +334,7 @@ void Slot::WriteReg0A(uint16 value) {
     if constexpr (upperByte) {
         keyRateScaling = bit::extract<10, 13>(value);
         loopStartLink = bit::test<14>(value);
-        bit::deposit_into<15>(extraBits0A, bit::extract<15>(value));
+        egBypass = bit::test<15>(value);
     }
 }
 
@@ -531,6 +531,7 @@ void Slot::SaveState(state::SCSPSlotState &state) const {
     state.KRS = keyRateScaling;
     state.EGHOLD = egHold;
     state.LPSLNK = loopStartLink;
+    state.EGBYPASS = egBypass;
 
     state.MDL = modLevel;
     state.MDXSL = modXSelect;
@@ -568,7 +569,6 @@ void Slot::SaveState(state::SCSPSlotState &state) const {
     state.EFSDL = effectSendLevel;
     state.EFPAN = effectPan;
 
-    state.extra0A = extraBits0A;
     state.extra0C = extraBits0C;
     state.extra10 = extraBits10;
     state.extra14 = extraBits14;
@@ -677,6 +677,7 @@ void Slot::LoadState(const state::SCSPSlotState &state) {
     keyRateScaling = state.KRS & 0xF;
     egHold = state.EGHOLD;
     loopStartLink = state.LPSLNK;
+    egBypass = state.EGBYPASS;
 
     modLevel = state.MDL & 0xF;
     modXSelect = state.MDXSL & 0x3F;
@@ -715,7 +716,6 @@ void Slot::LoadState(const state::SCSPSlotState &state) {
     effectSendLevel = state.EFSDL & 0x7;
     effectPan = state.EFPAN & 0x1F;
 
-    extraBits0A = state.extra0A;
     extraBits0C = state.extra0C;
     extraBits10 = state.extra10;
     extraBits14 = state.extra14;
@@ -770,7 +770,7 @@ uint8 Slot::GetCurrentEGRate() const {
 }
 
 uint16 Slot::GetEGLevel() const {
-    if (egState == EGState::Attack && egHold) {
+    if (egBypass || (egState == EGState::Attack && egHold)) {
         return 0x000;
     } else {
         return egLevel;

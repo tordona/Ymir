@@ -205,6 +205,10 @@ struct Slot {
                         //          if the state change happens below DL, decay 2 state is never reached
                         //   false: state changes are dictated by rates only
 
+    bool egBypass; // (R/W) EGBYPASS (undocumented
+                   //  true:  volume is always set to maximum regardless of EG state
+                   //  false: volume follows EG level
+
     // --- FM Modulation Control Register ---
 
     uint8 modLevel;         // (R/W) MDL - add +- n * pi where n is:
@@ -256,7 +260,6 @@ struct Slot {
     // --- Extra bits ---
 
     // Storage for unused but writable bits.
-    uint16 extraBits0A; // bit 15
     uint16 extraBits0C; // bits 10 and 11
     uint16 extraBits10; // bits 10 and 15
     uint16 extraBits14; // bit 7
