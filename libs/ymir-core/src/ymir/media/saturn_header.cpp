@@ -5,8 +5,8 @@
 namespace ymir::media {
 
 static std::string TrimWhitespace(std::string view) {
-    auto start = view.find_first_not_of("\0 ");
-    auto end = view.find_last_not_of("\0 ");
+    auto start = view.find_first_not_of(" ");
+    auto end = view.find_last_not_of(" ");
 
     if (start == std::string::npos && end == std::string::npos) {
         // The entire string is whitespace
@@ -22,7 +22,8 @@ static std::string TrimWhitespace(std::string view) {
 }
 
 static std::string ReadString(std::span<uint8, 256> data, std::size_t start, std::size_t end) {
-    const std::string view{(char *)&data[start], end - start + 1};
+    std::string view{(char *)&data[start], end - start + 1};
+    std::transform(view.begin(), view.end(), view.begin(), [](char c) { return c == 0 ? ' ' : c; });
     return TrimWhitespace(view);
 }
 
