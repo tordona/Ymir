@@ -5,9 +5,13 @@
 namespace ymir::media {
 
 static std::string TrimWhitespace(std::string view) {
-    auto start = view.find_first_not_of(" ");
-    auto end = view.find_last_not_of(" ");
+    auto start = view.find_first_not_of("\0 ");
+    auto end = view.find_last_not_of("\0 ");
 
+    if (start == std::string::npos && end == std::string::npos) {
+        // The entire string is whitespace
+        return "";
+    }
     if (start == std::string::npos) {
         start = 0;
     }
