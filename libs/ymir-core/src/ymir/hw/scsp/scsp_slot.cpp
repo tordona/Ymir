@@ -504,6 +504,7 @@ void Slot::SaveState(state::SCSPSlotState &state) const {
     state.LEA = loopEndAddress;
     state.PCM8B = pcm8Bit;
     state.KYONB = keyOnBit;
+    state.SBCTL = sampleXOR;
 
     switch (loopControl) {
     default: [[fallthrough]];
@@ -649,6 +650,7 @@ void Slot::LoadState(const state::SCSPSlotState &state) {
     loopEndAddress = state.LEA & 0xFFFF;
     pcm8Bit = state.PCM8B;
     keyOnBit = state.KYONB;
+    sampleXOR = state.SBCTL;
 
     switch (state.LPCTL) {
     default: [[fallthrough]];

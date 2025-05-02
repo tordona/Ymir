@@ -94,6 +94,7 @@ inline namespace v3 {
         uint32 LEA;
         bool PCM8B;
         bool KYONB;
+        uint16 SBCTL;
 
         using LoopControl = v2::SCSPSlotState::LoopControl;
         LoopControl LPCTL;
@@ -170,6 +171,7 @@ inline namespace v3 {
             LEA = state.LEA;
             PCM8B = state.PCM8B;
             KYONB = state.KYONB;
+            SBCTL = 0;
 
             LPCTL = state.LPCTL;
 

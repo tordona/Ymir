@@ -438,6 +438,7 @@ inline namespace v3 {
     template <class Archive>
     void serialize(Archive &ar, SCSPSlotState &s) {
         ar(s.SA, s.LSA, s.LEA, s.PCM8B, s.KYONB);
+        ar(s.SBCTL);
         ar(s.LPCTL);
         ar(s.SSCTL);
         ar(s.AR, s.D1R, s.D2R, s.RR, s.DL);

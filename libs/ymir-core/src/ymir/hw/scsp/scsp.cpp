@@ -723,19 +723,9 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
         }
         break;
     }
-    case Slot::SoundSource::Noise:
-        slot.sample2 = slot.sample1;
-        slot.sample1 = m_lfsr;
-        break;
-    case Slot::SoundSource::Silence:
-        slot.sample2 = slot.sample1;
-        slot.sample1 = 0;
-        break;
-    case Slot::SoundSource::Unknown:
-        // TODO: what happens in this mode?
-        slot.sample2 = slot.sample1;
-        slot.sample1 = 0;
-        break;
+    case Slot::SoundSource::Noise: slot.sample1 = m_lfsr & ~0xFF; break;
+    case Slot::SoundSource::Silence: slot.sample1 = 0; break;
+    case Slot::SoundSource::Unknown: slot.sample1 = 0; break; // TODO: what happens in this mode?
     }
 
     slot.sample1 ^= slot.sampleXOR;
@@ -747,12 +737,16 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
         return;
     }
 
+    if (slot.soundSource == Slot::SoundSource::SoundRAM) {
     switch (m_interpMode) {
     case core::config::audio::SampleInterpolationMode::NearestNeighbor: slot.output = slot.sample1; break;
     case core::config::audio::SampleInterpolationMode::Linear:
         slot.output =
             slot.sample1 + (slot.sample2 - slot.sample1) * static_cast<sint64>(slot.currPhase & 0x3FFFF) / 0x40000;
         break;
+    }
+    } else {
+        slot.output = slot.sample1;
     }
 
     // TODO: what does the ALFO calculation deliver here?
