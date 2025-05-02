@@ -261,7 +261,7 @@ struct Slot {
 
     // Storage for unused but writable bits.
     uint16 extraBits0C; // bits 10 and 11
-    uint16 extraBits10; // bits 10 and 15
+    uint16 extraBits10; // bit 15
     uint16 extraBits14; // bit 7
 
     // -------------------------------------------------------------------------

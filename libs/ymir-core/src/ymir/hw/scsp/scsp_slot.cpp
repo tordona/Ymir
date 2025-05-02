@@ -399,10 +399,9 @@ template <bool lowerByte, bool upperByte>
 uint16 Slot::ReadReg10() const {
     uint16 value = 0;
 
-    util::SplitReadWord<lowerByte, upperByte, 0, 9>(value, freqNumSwitch);
+    util::SplitReadWord<lowerByte, upperByte, 0, 10>(value, freqNumSwitch ^ 0x400);
 
     if constexpr (upperByte) {
-        bit::deposit_into<10>(value, bit::extract<10>(extraBits10));
         bit::deposit_into<11, 14>(value, octave);
         bit::deposit_into<15>(value, bit::extract<15>(extraBits10));
     }
@@ -411,10 +410,10 @@ uint16 Slot::ReadReg10() const {
 
 template <bool lowerByte, bool upperByte>
 void Slot::WriteReg10(uint16 value) {
-    util::SplitWriteWord<lowerByte, upperByte, 0, 9>(freqNumSwitch, value);
+    util::SplitWriteWord<lowerByte, upperByte, 0, 10>(freqNumSwitch, value);
+    freqNumSwitch ^= 0x400u;
 
     if constexpr (upperByte) {
-        bit::deposit_into<10>(extraBits10, bit::extract<10>(value));
         octave = bit::extract<11, 14>(value);
         bit::deposit_into<15>(extraBits10, bit::extract<15>(value));
     }
@@ -793,7 +792,7 @@ void Slot::IncrementLFO() {
 
 void Slot::IncrementPhase(sint32 pitchLFO) {
     currPhase = nextPhase;
-    // NOTE: freqNumSwitch already has 0x400u added to it
+    // NOTE: freqNumSwitch already has ^ 0x400u
     const uint32 phaseInc = (freqNumSwitch << (octave ^ 8u)) >> 4u;
     nextPhase = (nextPhase & 0x3FFF) + phaseInc + pitchLFO;
 }
