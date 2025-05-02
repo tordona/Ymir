@@ -686,46 +686,6 @@ FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
         return;
     }
 
-    // TODO: check behavior on loop boundaries
-    switch (slot.soundSource) {
-    case Slot::SoundSource::SoundRAM: //
-    {
-        const sint32 inc = slot.reverse ? -1 : +1;
-        if (slot.pcm8Bit) {
-            const uint32 address1 = slot.currAddress;
-            const uint32 address2 = slot.currAddress + inc * sizeof(uint8);
-            slot.sample1 = static_cast<sint8>(ReadWRAM<uint8>(address1)) << 8;
-            if (address2 >= slot.startAddress && address2 < slot.startAddress + slot.loopEndAddress) {
-                slot.sample2 = static_cast<sint8>(ReadWRAM<uint8>(address2)) << 8;
-            } else {
-                slot.sample2 = slot.sample1;
-            }
-        } else {
-            const uint32 address1 = slot.currAddress;
-            const uint32 address2 = slot.currAddress + inc * sizeof(uint16);
-            slot.sample1 = static_cast<sint16>(ReadWRAM<uint16>(address1 & ~1));
-            if (address2 >= slot.startAddress && address2 < slot.startAddress + slot.loopEndAddress * sizeof(uint16)) {
-                slot.sample2 = static_cast<sint16>(ReadWRAM<uint16>(address2 & ~1));
-            } else {
-                slot.sample2 = slot.sample1;
-            }
-        }
-        break;
-    }
-    case Slot::SoundSource::Noise: slot.sample1 = m_lfsr & ~0xFF; break;
-    case Slot::SoundSource::Silence: slot.sample1 = 0; break;
-    case Slot::SoundSource::Unknown: slot.sample1 = 0; break; // TODO: what happens in this mode?
-    }
-
-    slot.sample1 ^= slot.sampleXOR;
-    slot.sample2 ^= slot.sampleXOR;
-}
-
-FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
-    if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
-        return;
-    }
-
     sint32 modulation = 0;
     if (slot.modLevel > 0 || slot.modXSelect != 0 || slot.modYSelect != 0) {
         const sint16 xd = m_soundStack[(m_soundStackIndex - 1 + slot.modXSelect) & 63];
@@ -738,6 +698,38 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
     slot.IncrementAddress(modulation);
 }
 
+FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
+    if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
+        return;
+    }
+
+    // TODO: check behavior on loop boundaries
+    switch (slot.soundSource) {
+    case Slot::SoundSource::SoundRAM: //
+    {
+        const sint32 inc = slot.reverse ? -1 : +1;
+        if (slot.pcm8Bit) {
+            const uint32 address1 = slot.currAddress;
+            const uint32 address2 = slot.currAddress + inc * sizeof(uint8);
+            slot.sample1 = static_cast<sint8>(ReadWRAM<uint8>(address1)) << 8;
+            slot.sample2 = static_cast<sint8>(ReadWRAM<uint8>(address2)) << 8;
+        } else {
+            const uint32 address1 = slot.currAddress;
+            const uint32 address2 = slot.currAddress + inc * sizeof(uint16);
+            slot.sample1 = static_cast<sint16>(ReadWRAM<uint16>(address1 & ~1));
+            slot.sample2 = static_cast<sint16>(ReadWRAM<uint16>(address2 & ~1));
+        }
+        break;
+    }
+    case Slot::SoundSource::Noise: slot.sample1 = m_lfsr & ~0xFF; break;
+    case Slot::SoundSource::Silence: slot.sample1 = 0; break;
+    case Slot::SoundSource::Unknown: slot.sample1 = 0; break; // TODO: what happens in this mode?
+    }
+
+    slot.sample1 ^= slot.sampleXOR;
+    slot.sample2 ^= slot.sampleXOR;
+}
+
 FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
     if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
         return;
@@ -747,8 +739,7 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
         switch (m_interpMode) {
         case core::config::audio::SampleInterpolationMode::NearestNeighbor: slot.output = slot.sample1; break;
         case core::config::audio::SampleInterpolationMode::Linear:
-            slot.output =
-                slot.sample1 + (slot.sample2 - slot.sample1) * static_cast<sint64>(slot.currPhase & 0x3FFFF) / 0x40000;
+            slot.output = slot.sample1 + (slot.sample2 - slot.sample1) * ((slot.currPhase >> 8u) & 0x3F) / 0x40;
             break;
         }
     } else {

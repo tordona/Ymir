@@ -227,7 +227,7 @@ inline namespace v3 {
             sampleCount = state.sampleCount;
             currAddress = state.currAddress;
             currSample = state.currSample;
-            currPhase = state.currPhase;
+            currPhase = state.currPhase >> 4u;
             reverse = state.reverse;
             crossedLoopStart = state.crossedLoopStart;
 

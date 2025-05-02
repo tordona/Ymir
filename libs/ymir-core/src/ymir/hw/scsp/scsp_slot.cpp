@@ -790,15 +790,15 @@ void Slot::IncrementLFO() {
 
 void Slot::IncrementPhase(sint32 pitchLFO) {
     // NOTE: freqNumSwitch already has 0x400u added to it
-    const uint32 phaseInc = freqNumSwitch << (octave ^ 8u);
-    currPhase = (currPhase & 0x3FFFF) + phaseInc + pitchLFO;
+    const uint32 phaseInc = (freqNumSwitch << (octave ^ 8u)) >> 4u;
+    currPhase = (currPhase & 0x3FFF) + phaseInc + pitchLFO;
 }
 
 void Slot::IncrementSampleCounter() {
     if (reverse) {
-        currSample -= currPhase >> 18u;
+        currSample -= currPhase >> 14u;
     } else {
-        currSample += currPhase >> 18u;
+        currSample += currPhase >> 14u;
         if (!crossedLoopStart && currSample >= loopStartAddress) {
             crossedLoopStart = true;
             if (loopStartLink && egState == EGState::Attack) {
