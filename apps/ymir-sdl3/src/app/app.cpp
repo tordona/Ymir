@@ -1935,11 +1935,17 @@ void App::RunEmulator() {
                 int wx, wy;
                 SDL_GetWindowPosition(screen.window, &wx, &wy);
 
+                // Get window decoration borders in order to prevent moving it off the screen
+                int wbt = 0;
+                int wbl = 0;
+                SDL_GetWindowBordersSize(screen.window, &wbt, &wbl, nullptr, nullptr);
+
                 int dx = scaledWidth - ww;
                 int dy = scaledHeight - wh;
                 SDL_SetWindowSize(screen.window, scaledWidth, scaledHeight + menuBarHeight);
-                int nwx = std::max(0, wx - dx / 2);
-                int nwy = std::max(0, wy - dy / 2);
+
+                int nwx = std::max(wx - dx / 2, wbt);
+                int nwy = std::max(wy - dy / 2, wbl);
                 SDL_SetWindowPosition(screen.window, nwx, nwy);
             }
 
