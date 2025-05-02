@@ -41,10 +41,16 @@ namespace v1 {
 
 } // namespace v1
 
-inline namespace v2 {
+namespace v2 {
 
     using v1::SMPCState;
 
 } // namespace v2
+
+inline namespace v3 {
+
+    using v2::SMPCState;
+
+} // namespace v3
 
 } // namespace ymir::state

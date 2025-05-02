@@ -236,10 +236,16 @@ namespace v1 {
 
 } // namespace v1
 
-inline namespace v2 {
+namespace v2 {
 
     using v1::VDPState;
 
 } // namespace v2
+
+inline namespace v3 {
+
+    using v2::VDPState;
+
+} // namespace v3
 
 } // namespace ymir::state

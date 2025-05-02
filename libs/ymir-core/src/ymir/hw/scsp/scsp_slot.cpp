@@ -58,6 +58,11 @@ void Slot::Reset() {
     effectSendLevel = 0;
     effectPan = 0;
 
+    extraBits0A = 0;
+    extraBits0C = 0;
+    extraBits10 = 0;
+    extraBits14 = 0;
+
     active = false;
 
     egState = EGState::Release;
@@ -313,6 +318,7 @@ uint16 Slot::ReadReg0A() const {
     if constexpr (upperByte) {
         bit::deposit_into<10, 13>(value, keyRateScaling);
         bit::deposit_into<14>(value, loopStartLink);
+        bit::deposit_into<15>(value, bit::extract<15>(extraBits0A));
     }
     return value;
 }
@@ -328,6 +334,7 @@ void Slot::WriteReg0A(uint16 value) {
     if constexpr (upperByte) {
         keyRateScaling = bit::extract<10, 13>(value);
         loopStartLink = bit::test<14>(value);
+        bit::deposit_into<15>(extraBits0A, bit::extract<15>(value));
     }
 }
 
@@ -341,8 +348,9 @@ uint16 Slot::ReadReg0C() const {
     if constexpr (upperByte) {
         bit::deposit_into<8>(value, soundDirect);
         bit::deposit_into<9>(value, stackWriteInhibit);
+        bit::deposit_into<10, 11>(value, bit::extract<10, 11>(extraBits0C));
     }
-    return 0;
+    return value;
 }
 
 template <bool lowerByte, bool upperByte>
@@ -354,6 +362,7 @@ void Slot::WriteReg0C(uint16 value) {
     if constexpr (upperByte) {
         soundDirect = bit::test<8>(value);
         stackWriteInhibit = bit::test<9>(value);
+        bit::deposit_into<10, 11>(extraBits0C, bit::extract<10, 11>(value));
     }
 }
 
@@ -392,7 +401,9 @@ uint16 Slot::ReadReg10() const {
     util::SplitReadWord<lowerByte, upperByte, 0, 9>(value, freqNumSwitch);
 
     if constexpr (upperByte) {
+        bit::deposit_into<10>(value, bit::extract<10>(extraBits10));
         bit::deposit_into<11, 14>(value, octave);
+        bit::deposit_into<15>(value, bit::extract<15>(extraBits10));
     }
     return value;
 }
@@ -402,7 +413,9 @@ void Slot::WriteReg10(uint16 value) {
     util::SplitWriteWord<lowerByte, upperByte, 0, 9>(freqNumSwitch, value);
 
     if constexpr (upperByte) {
+        bit::deposit_into<10>(extraBits10, bit::extract<10>(value));
         octave = bit::extract<11, 14>(value);
+        bit::deposit_into<15>(extraBits10, bit::extract<15>(value));
     }
 }
 
@@ -445,6 +458,7 @@ uint16 Slot::ReadReg14() const {
     if constexpr (lowerByte) {
         bit::deposit_into<0, 2>(value, inputMixingLevel);
         bit::deposit_into<3, 6>(value, inputSelect);
+        bit::deposit_into<7>(value, bit::extract<7>(extraBits14));
     }
     return value;
 }
@@ -454,6 +468,7 @@ void Slot::WriteReg14(uint16 value) {
     if constexpr (lowerByte) {
         inputMixingLevel = bit::extract<0, 2>(value);
         inputSelect = bit::extract<3, 6>(value);
+        bit::deposit_into<7>(extraBits14, bit::extract<7>(value));
     }
 }
 
@@ -551,6 +566,11 @@ void Slot::SaveState(state::SCSPSlotState &state) const {
 
     state.EFSDL = effectSendLevel;
     state.EFPAN = effectPan;
+
+    state.extra0A = extraBits0A;
+    state.extra0C = extraBits0C;
+    state.extra10 = extraBits10;
+    state.extra14 = extraBits14;
 
     state.active = active;
 
@@ -693,6 +713,11 @@ void Slot::LoadState(const state::SCSPSlotState &state) {
     effectSendLevel = state.EFSDL & 0x7;
     effectPan = state.EFPAN & 0x1F;
 
+    extraBits0A = state.extra0A;
+    extraBits0C = state.extra0C;
+    extraBits10 = state.extra10;
+    extraBits14 = state.extra14;
+
     active = state.active;
 
     switch (state.egState) {
@@ -781,7 +806,6 @@ void Slot::IncrementSampleCounter() {
     case LoopControl::Off:
         if (currSample >= loopEndAddress) {
             active = false;
-            keyOnBit = false;
         }
         break;
     case LoopControl::Normal:

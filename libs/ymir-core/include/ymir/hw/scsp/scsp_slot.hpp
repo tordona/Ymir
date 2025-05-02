@@ -253,6 +253,14 @@ struct Slot {
     uint8 effectSendLevel; // (R/W) EFSDL - 0 (no send) to 7 (maximum)
     uint8 effectPan;       // (R/W) EFPAN - 0 to 31 - [100% left]  31..16  [center]  0..15  [100% right]
 
+    // --- Extra bits ---
+
+    // Storage for unused but writable bits.
+    uint16 extraBits0A; // bit 15
+    uint16 extraBits0C; // bits 10 and 11
+    uint16 extraBits10; // bits 10 and 15
+    uint16 extraBits14; // bit 7
+
     // -------------------------------------------------------------------------
     // State
 

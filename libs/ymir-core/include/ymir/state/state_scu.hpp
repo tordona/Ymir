@@ -98,7 +98,7 @@ namespace v1 {
 
 } // namespace v1
 
-inline namespace v2 {
+namespace v2 {
 
     using v1::SCUDMAState;
     using v1::SCUDSPState;
@@ -155,5 +155,13 @@ inline namespace v2 {
     };
 
 } // namespace v2
+
+inline namespace v3 {
+
+    using v2::SCUDMAState;
+    using v2::SCUDSPState;
+    using v2::SCUState;
+
+} // namespace v3
 
 } // namespace ymir::state
