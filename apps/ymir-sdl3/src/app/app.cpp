@@ -647,7 +647,7 @@ void App::RunEmulator() {
 
         devlog::info<grp::base>("Primary display resolution: {}x{}", displayRect.w, displayRect.h);
 
-        // Take up to 90% of the available display, with an integer multiple of 2 for the scale
+        // Take up to 90% of the available display with an integer multiple of 2 for the scale
         const double maxScaleX = (double)displayRect.w / screen.width * 0.90;
         const double maxScaleY = (double)displayRect.h / screen.height * 0.90;
         const double scale = std::max(1.0, std::floor(std::min(maxScaleX, maxScaleY) / 2.0) * 2.0);
