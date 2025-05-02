@@ -1458,13 +1458,30 @@ void App::RunEmulator() {
         if (t2 - t >= 1s) {
             const media::Disc &disc = m_context.saturn.CDBlock.GetDisc();
             const media::SaturnHeader &header = disc.header;
+            std::string productNumber = "";
+            std::string gameTitle{};
+            if (disc.sessions.empty()) {
+                gameTitle = "No disc inserted";
+            } else {
+                if (!header.productNumber.empty()) {
+                    productNumber = fmt::format("[{}] ", header.productNumber);
+                }
+
+                if (header.gameTitle.empty()) {
+                    gameTitle = "Unnamed game";
+                } else {
+                    gameTitle = header.gameTitle;
+                }
+            }
+            std::string fullGameTitle = fmt::format("{}{}", productNumber, gameTitle);
+
             std::string title{};
             if (paused) {
-                title = fmt::format("[{}] {} - paused | GUI: {:.0f} fps", header.productNumber, header.gameTitle,
+                title = fmt::format("Ymir - {} | VDP2: paused | VDP1: paused | GUI: {:.0f} fps", fullGameTitle,
                                     io.Framerate);
             } else {
-                title = fmt::format("[{}] {} | VDP2: {} fps | VDP1: {} fps | GUI: {:.0f} fps", header.productNumber,
-                                    header.gameTitle, screen.frames, screen.vdp1Frames, io.Framerate);
+                title = fmt::format("Ymir - {} | VDP2: {} fps | VDP1: {} fps | GUI: {:.0f} fps", fullGameTitle,
+                                    screen.frames, screen.vdp1Frames, io.Framerate);
             }
             SDL_SetWindowTitle(screen.window, title.c_str());
             screen.frames = 0;
