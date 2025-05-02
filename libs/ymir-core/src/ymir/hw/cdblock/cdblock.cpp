@@ -2673,7 +2673,7 @@ void CDBlock::CmdGetFileSystemScope() {
     m_CR[2] = (endOfDirectory << 8u) | bit::extract<16, 23>(fileOffset);
     m_CR[3] = bit::extract<0, 15>(fileOffset);
 
-    devlog::debug<grp::base>("Get file system scope: {} files from offset {}, ", fileCount, fileOffset,
+    devlog::trace<grp::base>("Get file system scope: {} files from offset {}, {}", fileCount, fileOffset,
                              (endOfDirectory ? "end of list" : "more files available"));
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_EFLS);
@@ -2693,7 +2693,7 @@ void CDBlock::CmdGetFileInfo() {
     if (!m_fs.IsValid() || !m_fs.HasCurrentDirectory()) {
         reject = true;
     }
-    if (fileID != 0xFFFFFF && fileID > m_fs.GetFileCount() - m_fs.GetFileOffset()) {
+    if (fileID != 0xFFFFFF && fileID > 2 + m_fs.GetFileCount() - m_fs.GetFileOffset()) {
         reject = true;
     }
 
