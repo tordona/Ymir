@@ -32,3 +32,6 @@
 [submodule "vendor/lz4/lz4"]
 	path = vendor/lz4/lz4
 	url = git@github.com:lz4/lz4.git
+[submodule "vendor/stb/stb"]
+	path = vendor/stb/stb
+	url = git@github.com:nothings/stb.git

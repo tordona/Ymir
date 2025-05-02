@@ -17,6 +17,7 @@ add_executable(ymir-sdl3
     src/app/settings.cpp
     src/app/settings.hpp
     src/app/shared_context.hpp
+    src/app/stb_implementations.cpp
 
     src/app/debug/scu_tracer.cpp
     src/app/debug/scu_tracer.hpp
@@ -217,6 +218,7 @@ target_link_libraries(ymir-sdl3 PRIVATE
     tomlplusplus::tomlplusplus
     cereal::cereal
     lz4::lz4
+    stb::stb
 )
 target_compile_features(ymir-sdl3 PUBLIC cxx_std_20)
 
@@ -225,11 +227,14 @@ cmrc_add_resource_library(ymir-sdl3-rc
     ALIAS ymir-sdl3::rc
     NAMESPACE Ymir_sdl3_rc
     WHENCE res/embed
+
     res/embed/fonts/SplineSans-Bold.ttf
     res/embed/fonts/SplineSans-Medium.ttf
     res/embed/fonts/SplineSansMono-Bold.ttf
     res/embed/fonts/SplineSansMono-Medium.ttf
     res/embed/fonts/ZenDots-Regular.ttf
+    
+    res/embed/images/ymir.png
 )
 
 ## Add dependencies

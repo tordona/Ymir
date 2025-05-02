@@ -18,6 +18,8 @@
 
 #include <imgui.h>
 
+#include <SDL3/SDL_render.h>
+
 #include <blockingconcurrentqueue.h>
 
 #include <filesystem>
@@ -132,6 +134,10 @@ struct SharedContext {
             ImFont *large = nullptr;
         } display;
     } fonts;
+
+    struct Images {
+        SDL_Texture *ymirLogo = nullptr;
+    } images;
 
     struct EventQueues {
         moodycamel::BlockingConcurrentQueue<EmuEvent> emulator;

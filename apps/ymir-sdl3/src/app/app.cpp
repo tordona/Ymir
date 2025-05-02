@@ -124,6 +124,8 @@
 
 #include <cmrc/cmrc.hpp>
 
+#include <stb_image.h>
+
 #include <mutex>
 #include <numbers>
 #include <span>
@@ -347,6 +349,9 @@ void App::RunEmulator() {
     using namespace std::chrono_literals;
     using namespace ymir;
     using namespace util;
+
+    // Get embedded file system
+    auto embedfs = cmrc::Ymir_sdl3_rc::get_filesystem();
 
     // Screen parameters
     struct ScreenParams {
@@ -576,8 +581,6 @@ void App::RunEmulator() {
         builder.AddChar(0x2193); // Down arrow
         builder.BuildRanges(&ranges);
 
-        auto embedfs = cmrc::Ymir_sdl3_rc::get_filesystem();
-
         auto loadFont = [&](const char *path, float size) {
             cmrc::file file = embedfs.open(path);
             return io.Fonts->AddFontFromMemoryTTF((void *)file.begin(), file.size(), size, &config, ranges.Data);
@@ -763,6 +766,35 @@ void App::RunEmulator() {
         // Restore render target
         SDL_SetRenderTarget(renderer, prevRenderTarget);
     };
+
+    // Logo texture
+    {
+        // Read PNG from embedded filesystem
+        cmrc::file ymirLogoFile = embedfs.open("images/ymir.png");
+        int imgW, imgH, chans;
+        stbi_uc *imgData =
+            stbi_load_from_memory((const stbi_uc *)ymirLogoFile.begin(), ymirLogoFile.size(), &imgW, &imgH, &chans, 4);
+        if (imgData == nullptr) {
+            devlog::error<grp::base>("Could not read logo image");
+            return;
+        }
+        ScopeGuard sgFreeImageData{[&] { stbi_image_free(imgData); }};
+        if (chans != 4) {
+            devlog::error<grp::base>("Unexpected logo image format");
+            return;
+        }
+
+        // Create texture with the logo image
+        m_context.images.ymirLogo =
+            SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, imgW, imgH);
+        if (m_context.images.ymirLogo == nullptr) {
+            devlog::error<grp::base>("Unable to create texture: {}", SDL_GetError());
+            return;
+        }
+        SDL_SetTextureScaleMode(m_context.images.ymirLogo, SDL_SCALEMODE_LINEAR);
+        SDL_UpdateTexture(m_context.images.ymirLogo, nullptr, imgData, imgW * sizeof(uint32));
+    }
+    ScopeGuard sgDestroyYmirLogoTexture{[&] { SDL_DestroyTexture(m_context.images.ymirLogo); }};
 
     // ---------------------------------
     // Setup Dear ImGui Platform/Renderer backends

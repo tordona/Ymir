@@ -17,6 +17,7 @@
 #define IMGUI_VERSION_FULL IMGUI_VERSION " (" _STR(IMGUI_VERSION_NUM) ")"
 #define MIO_VERSION "1.1.0" // Not exported
 #define SDL_VERSION_STR _STR(SDL_MAJOR_VERSION) "." _STR(SDL_MINOR_VERSION) "." _STR(SDL_MICRO_VERSION)
+#define STB_IMAGE_VERSION "2.30"     // Not exported
 #define MC_CONCQUEUE_VERSION "1.0.4" // Not exported
 #define TOMLPP_VERSION _STR(TOML_LIB_MAJOR) "." _STR(TOML_LIB_MINOR) "." _STR(TOML_LIB_PATCH)
 #define XXHASH_VERSION _STR(XXH_VERSION_MAJOR) "." _STR(XXH_VERSION_MINOR) "." _STR(XXH_VERSION_RELEASE)
@@ -69,6 +70,7 @@ static const struct {
     {.name = "mio",                           .version = MIO_VERSION,                .license = licenseMIT,   .repoURL = "https://github.com/StrikerX3/mio",               .licenseURL = "https://github.com/StrikerX3/mio/blob/master/LICENSE"},
     {.name = "moodycamel::\nConcurrentQueue", .version = "\n" MC_CONCQUEUE_VERSION,  .license = licenseBSD2,  .repoURL = "https://github.com/cameron314/concurrentqueue",  .licenseURL = "https://github.com/cameron314/concurrentqueue/blob/master/LICENSE.md"},
     {.name = "SDL3",                          .version = SDL_VERSION_STR,            .license = licenseZlib,  .repoURL = "https://github.com/libsdl-org/SDL",              .licenseURL = "https://github.com/libsdl-org/SDL/blob/main/LICENSE.txt"},
+    {.name = "stb_image",                     .version = STB_IMAGE_VERSION,          .license = licenseMIT,   .repoURL = "https://github.com/nothings/stb",                .licenseURL = "https://github.com/nothings/stb/blob/master/LICENSE"},
     {.name = "toml++",                        .version = TOMLPP_VERSION,             .license = licenseMIT,   .repoURL = "https://github.com/marzer/tomlplusplus" ,        .licenseURL = "https://github.com/marzer/tomlplusplus/blob/master/LICENSE",             .homeURL = "https://marzer.github.io/tomlplusplus/"},
     {.name = "xxHash",                        .version = XXHASH_VERSION,             .license = licenseBSD2,  .repoURL = "https://github.com/Cyan4973/xxHash",             .licenseURL = "https://github.com/Cyan4973/xxHash/blob/dev/LICENSE",                    .homeURL = "https://xxhash.com/"},
 };
@@ -128,6 +130,9 @@ void AboutWindow::DrawContents() {
 
 void AboutWindow::DrawAboutTab() {
     ImGui::PushTextWrapPos(ImGui::GetWindowContentRegionMax().x);
+
+    ImGui::Image((ImTextureID)m_context.images.ymirLogo,
+                 ImVec2(256 * m_context.displayScale, 256 * m_context.displayScale));
 
     ImGui::PushFont(m_context.fonts.display.large);
     ImGui::TextUnformatted("Ymir");

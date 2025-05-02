@@ -81,6 +81,10 @@ set(BUILD_SANDBOX OFF)
 set(JUST_INSTALL_CEREAL ON)
 add_subdirectory(cereal EXCLUDE_FROM_ALL)
 
+# stb - https://github.com/nothings/stb
+message(STATUS "==> stb")
+add_subdirectory(stb)
+
 # --------------------------------------------------------------------------------------------------
 # Test dependencies
 
