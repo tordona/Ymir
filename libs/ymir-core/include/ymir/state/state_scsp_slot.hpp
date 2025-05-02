@@ -155,6 +155,7 @@ inline namespace v3 {
         uint32 currAddress;
         uint32 currSample;
         uint32 currPhase;
+        uint32 nextPhase;
         bool reverse;
         bool crossedLoopStart;
 
@@ -228,6 +229,7 @@ inline namespace v3 {
             currAddress = state.currAddress;
             currSample = state.currSample;
             currPhase = state.currPhase >> 4u;
+            nextPhase = currPhase;
             reverse = state.reverse;
             crossedLoopStart = state.crossedLoopStart;
 

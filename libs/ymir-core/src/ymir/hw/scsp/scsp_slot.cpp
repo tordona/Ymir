@@ -73,6 +73,7 @@ void Slot::Reset() {
     currAddress = 0;
     currSample = 0;
     currPhase = 0;
+    nextPhase = 0;
     reverse = false;
     crossedLoopStart = false;
 
@@ -106,7 +107,7 @@ bool Slot::TriggerKey() {
             sampleCount = 0;
             currAddress = startAddress;
             currSample = 0;
-            currPhase = 0;
+            nextPhase = 0;
             reverse = false;
             crossedLoopStart = false;
 
@@ -589,6 +590,7 @@ void Slot::SaveState(state::SCSPSlotState &state) const {
     state.currAddress = currAddress;
     state.currSample = currSample;
     state.currPhase = currPhase;
+    state.nextPhase = nextPhase;
     state.reverse = reverse;
     state.crossedLoopStart = crossedLoopStart;
 
@@ -736,6 +738,7 @@ void Slot::LoadState(const state::SCSPSlotState &state) {
     currAddress = state.currAddress;
     currSample = state.currSample;
     currPhase = state.currPhase;
+    nextPhase = state.nextPhase;
     reverse = state.reverse;
     crossedLoopStart = state.crossedLoopStart;
 
@@ -789,9 +792,10 @@ void Slot::IncrementLFO() {
 }
 
 void Slot::IncrementPhase(sint32 pitchLFO) {
+    currPhase = nextPhase;
     // NOTE: freqNumSwitch already has 0x400u added to it
     const uint32 phaseInc = (freqNumSwitch << (octave ^ 8u)) >> 4u;
-    currPhase = (currPhase & 0x3FFF) + phaseInc + pitchLFO;
+    nextPhase = (nextPhase & 0x3FFF) + phaseInc + pitchLFO;
 }
 
 void Slot::IncrementSampleCounter() {
@@ -809,7 +813,7 @@ void Slot::IncrementSampleCounter() {
 
     switch (loopControl) {
     case LoopControl::Off:
-        if (currSample > loopEndAddress) {
+        if (currSample >= loopEndAddress) {
             active = false;
         }
         break;

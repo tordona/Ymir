@@ -280,6 +280,7 @@ struct Slot {
     uint32 currAddress;
     uint32 currSample;
     uint32 currPhase;
+    uint32 nextPhase;
     bool reverse;
     bool crossedLoopStart;
 
