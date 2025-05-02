@@ -237,6 +237,11 @@ target_link_libraries(ymir-sdl3 PRIVATE fmt ymir-sdl3::rc)
 
 cmrk_copy_runtime_dlls(ymir-sdl3)
 
+## Add icon
+if (WIN32)
+    target_sources(ymir-sdl3 PRIVATE res/ymir.rc)
+endif ()
+
 ## Make it a Win32 executable (without a console window) on Windows
 if (WIN32 AND NOT Ymir_ENABLE_DEVLOG)
     set_target_properties(ymir-sdl3 PROPERTIES WIN32_EXECUTABLE ON)
