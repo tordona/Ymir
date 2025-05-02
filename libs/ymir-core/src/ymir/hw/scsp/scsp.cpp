@@ -680,23 +680,6 @@ FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
         return;
     }
 
-    sint32 modulation = 0;
-    if (slot.modLevel > 0 || slot.modXSelect != 0 || slot.modYSelect != 0) {
-        const sint16 xd = m_soundStack[(m_soundStackIndex - 1 + slot.modXSelect) & 63];
-        const sint16 yd = m_soundStack[(m_soundStackIndex - 1 + slot.modYSelect) & 63];
-        const sint32 zd = (xd + yd) / 2;
-        modulation = (zd << 5) >> (20 - slot.modLevel);
-    }
-
-    slot.IncrementSampleCounter();
-    slot.IncrementAddress(modulation);
-}
-
-FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
-    if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
-        return;
-    }
-
     // TODO: check behavior on loop boundaries
     switch (slot.soundSource) {
     case Slot::SoundSource::SoundRAM: //
@@ -730,6 +713,23 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
 
     slot.sample1 ^= slot.sampleXOR;
     slot.sample2 ^= slot.sampleXOR;
+}
+
+FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
+    if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
+        return;
+    }
+
+    sint32 modulation = 0;
+    if (slot.modLevel > 0 || slot.modXSelect != 0 || slot.modYSelect != 0) {
+        const sint16 xd = m_soundStack[(m_soundStackIndex - 1 + slot.modXSelect) & 63];
+        const sint16 yd = m_soundStack[(m_soundStackIndex - 1 + slot.modYSelect) & 63];
+        const sint32 zd = (xd + yd) / 2;
+        modulation = (zd << 5) >> (20 - slot.modLevel);
+    }
+
+    slot.IncrementSampleCounter();
+    slot.IncrementAddress(modulation);
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
