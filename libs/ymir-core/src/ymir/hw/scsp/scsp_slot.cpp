@@ -399,7 +399,7 @@ template <bool lowerByte, bool upperByte>
 uint16 Slot::ReadReg10() const {
     uint16 value = 0;
 
-    util::SplitReadWord<lowerByte, upperByte, 0, 10>(value, freqNumSwitch ^ 0x400);
+    util::SplitReadWord<lowerByte, upperByte, 0, 10>(value, freqNumSwitch ^ 0x400u);
 
     if constexpr (upperByte) {
         bit::deposit_into<11, 14>(value, octave);
@@ -411,9 +411,9 @@ uint16 Slot::ReadReg10() const {
 template <bool lowerByte, bool upperByte>
 void Slot::WriteReg10(uint16 value) {
     util::SplitWriteWord<lowerByte, upperByte, 0, 10>(freqNumSwitch, value);
-    freqNumSwitch ^= 0x400u;
 
     if constexpr (upperByte) {
+        freqNumSwitch ^= 0x400u;
         octave = bit::extract<11, 14>(value);
         bit::deposit_into<15>(extraBits10, bit::extract<15>(value));
     }
