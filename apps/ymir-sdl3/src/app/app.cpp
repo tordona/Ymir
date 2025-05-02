@@ -234,17 +234,42 @@ int App::Run(const CommandLineOptions &options) {
             OpenGenericModal("Welcome", [=, this, nextScanDeadline = clk::now() + kScanInterval,
                                          lastROMCount = m_context.iplRomManager.GetROMs().size(),
                                          romSelectResult = ROMSelectResult{}]() mutable {
-                ImGui::PushFont(m_context.fonts.sansSerif.large.regular);
+                bool doSelectRom = false;
+                bool doOpenSettings = false;
+
+                ImGui::Image((ImTextureID)m_context.images.ymirLogo.texture,
+                             ImVec2(m_context.images.ymirLogo.size.x * m_context.displayScale * 0.7f,
+                                    m_context.images.ymirLogo.size.y * m_context.displayScale * 0.7f));
+
+                ImGui::PushFont(m_context.fonts.display.large);
+                ImGui::TextUnformatted("Ymir");
+                ImGui::PopFont();
+                ImGui::PushFont(m_context.fonts.sansSerif.xlarge.regular);
                 ImGui::TextUnformatted("Welcome to Ymir!");
                 ImGui::PopFont();
                 ImGui::NewLine();
                 ImGui::TextUnformatted("Ymir requires a valid IPL ROM to work.");
 
                 ImGui::NewLine();
-                ImGui::Text("Ymir will automatically load IPL ROMs placed in %s.",
-                            m_context.profile.GetPath(ProfilePath::IPLROMImages).string().c_str());
-                ImGui::Text(
-                    "Alternatively, you can manually select an IPL ROM or manage the ROM settings in Settings > IPL.");
+                ImGui::TextUnformatted("Ymir will automatically load IPL ROMs placed in ");
+                ImGui::SameLine(0, 0);
+                auto romPath = m_context.profile.GetPath(ProfilePath::IPLROMImages).string();
+                if (ImGui::TextLink(romPath.c_str())) {
+                    SDL_OpenURL(fmt::format("file:///{}", romPath).c_str());
+                }
+                ImGui::TextUnformatted("Alternatively, you can ");
+                ImGui::SameLine(0, 0);
+                if (ImGui::TextLink("manually select an IPL ROM")) {
+                    doSelectRom = true;
+                }
+                ImGui::SameLine(0, 0);
+                ImGui::TextUnformatted(" or");
+                ImGui::SameLine(0, 0);
+                if (ImGui::TextLink("manage the ROM settings in Settings > IPL")) {
+                    doOpenSettings = true;
+                }
+                ImGui::SameLine(0, 0);
+                ImGui::TextUnformatted(".");
                 if (romSelectResult.hasResult && !romSelectResult.result.succeeded) {
                     ImGui::NewLine();
                     ImGui::Text("The file %s does not contain a valid IPL ROM.", romSelectResult.path.string().c_str());
@@ -259,6 +284,15 @@ int App::Run(const CommandLineOptions &options) {
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Select IPL ROM...")) {
+                    doSelectRom = true;
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Open IPL settings")) {
+                    doOpenSettings = true;
+                }
+                ImGui::SameLine(); // this places the OK button next to these
+
+                if (doSelectRom) {
                     FileDialogParams params{
                         .dialogTitle = "Select IPL ROM",
                         .defaultPath = m_context.profile.GetPath(ProfilePath::IPLROMImages),
@@ -281,12 +315,11 @@ int App::Run(const CommandLineOptions &options) {
                     };
                     InvokeOpenFileDialog(params);
                 }
-                ImGui::SameLine();
-                if (ImGui::Button("Open IPL settings")) {
+
+                if (doOpenSettings) {
                     m_settingsWindow.OpenTab(ui::SettingsTab::IPL);
                     m_closeGenericModal = true;
                 }
-                ImGui::SameLine(); // this places the OK button next to these
 
                 // Try loading IPL ROM selected through the file dialog.
                 // If successful, set the override path and close the modal.
