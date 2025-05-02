@@ -2372,6 +2372,7 @@ void App::WriteSaveStateMeta() {
             const auto &disc = m_context.saturn.CDBlock.GetDisc();
 
             auto iter = std::ostream_iterator<char>(out);
+            fmt::format_to(iter, "Image path: {}\n", m_context.state.loadedDiscImagePath.string());
             fmt::format_to(iter, "Title: {}\n", disc.header.gameTitle);
             fmt::format_to(iter, "Product Number: {}\n", disc.header.productNumber);
             fmt::format_to(iter, "Version: {}\n", disc.header.version);
