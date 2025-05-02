@@ -631,7 +631,7 @@ FORCE_INLINE void SCSP::UpdateTimers() {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
-    if (!slot.active) {
+    if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
         return;
     }
 
@@ -676,7 +676,7 @@ FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
-    if (!slot.active) {
+    if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
         return;
     }
 
@@ -693,37 +693,57 @@ FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
-    if (!slot.active) {
+    if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
         return;
     }
 
     // TODO: check behavior on loop boundaries
-    const sint32 inc = slot.reverse ? -1 : +1;
-    if (slot.pcm8Bit) {
-        const uint32 address1 = slot.currAddress;
-        const uint32 address2 = slot.currAddress + inc * sizeof(uint8);
-        slot.sample1 = static_cast<sint8>(ReadWRAM<uint8>(address1)) << 8;
-        if (address2 >= slot.startAddress && address2 < slot.startAddress + slot.loopEndAddress) {
-            slot.sample2 = static_cast<sint8>(ReadWRAM<uint8>(address2)) << 8;
+    switch (slot.soundSource) {
+    case Slot::SoundSource::SoundRAM: //
+    {
+        const sint32 inc = slot.reverse ? -1 : +1;
+        if (slot.pcm8Bit) {
+            const uint32 address1 = slot.currAddress;
+            const uint32 address2 = slot.currAddress + inc * sizeof(uint8);
+            slot.sample1 = static_cast<sint8>(ReadWRAM<uint8>(address1)) << 8;
+            if (address2 >= slot.startAddress && address2 < slot.startAddress + slot.loopEndAddress) {
+                slot.sample2 = static_cast<sint8>(ReadWRAM<uint8>(address2)) << 8;
+            } else {
+                slot.sample2 = slot.sample1;
+            }
         } else {
-            slot.sample2 = slot.sample1;
+            const uint32 address1 = slot.currAddress;
+            const uint32 address2 = slot.currAddress + inc * sizeof(uint16);
+            slot.sample1 = static_cast<sint16>(ReadWRAM<uint16>(address1 & ~1));
+            if (address2 >= slot.startAddress && address2 < slot.startAddress + slot.loopEndAddress * sizeof(uint16)) {
+                slot.sample2 = static_cast<sint16>(ReadWRAM<uint16>(address2 & ~1));
+            } else {
+                slot.sample2 = slot.sample1;
+            }
         }
-    } else {
-        const uint32 address1 = slot.currAddress;
-        const uint32 address2 = slot.currAddress + inc * sizeof(uint16);
-        slot.sample1 = static_cast<sint16>(ReadWRAM<uint16>(address1 & ~1));
-        if (address2 >= slot.startAddress && address2 < slot.startAddress + slot.loopEndAddress * sizeof(uint16)) {
-            slot.sample2 = static_cast<sint16>(ReadWRAM<uint16>(address2 & ~1));
-        } else {
-            slot.sample2 = slot.sample1;
-        }
+        break;
     }
+    case Slot::SoundSource::Noise:
+        slot.sample2 = slot.sample1;
+        slot.sample1 = m_lfsr;
+        break;
+    case Slot::SoundSource::Silence:
+        slot.sample2 = slot.sample1;
+        slot.sample1 = 0;
+        break;
+    case Slot::SoundSource::Unknown:
+        // TODO: what happens in this mode?
+        slot.sample2 = slot.sample1;
+        slot.sample1 = 0;
+        break;
+    }
+
     slot.sample1 ^= slot.sampleXOR;
     slot.sample2 ^= slot.sampleXOR;
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
-    if (!slot.active) {
+    if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
         return;
     }
 
@@ -827,7 +847,7 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
 FORCE_INLINE void SCSP::SlotProcessStep5(Slot &slot) {
     m_lfsr = (m_lfsr >> 1u) | (((m_lfsr >> 5u) ^ m_lfsr) & 1u) << 16u;
 
-    if (!slot.active) {
+    if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
         slot.output = 0;
         return;
     }
