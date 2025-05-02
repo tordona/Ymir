@@ -87,6 +87,8 @@ inline namespace v3 {
 
         alignas(16) std::array<SCSPSlotState, 32> slots;
 
+        bool KYONEX;
+
         uint32 MVOL;
         bool DAC18B;
         bool MEM4MB;
@@ -135,6 +137,8 @@ inline namespace v3 {
             for (size_t i = 0; i < slots.size(); i++) {
                 slots[i].Upgrade(state.slots[i]);
             }
+
+            KYONEX = false;
 
             MVOL = state.MVOL;
             DAC18B = state.DAC18B;

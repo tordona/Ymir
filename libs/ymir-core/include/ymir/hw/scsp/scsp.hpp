@@ -75,6 +75,7 @@ namespace grp {
     //
     // base
     //   regs
+    //     kyonex
     //   dma
 
     struct base {
@@ -85,6 +86,11 @@ namespace grp {
 
     struct regs : public base {
         static constexpr std::string_view name = "SCSP-Regs";
+    };
+
+    struct kyonex : public regs {
+        static constexpr bool enabled = false;
+        static constexpr std::string_view name = "SCSP-KYONEX";
     };
 
     struct dma : public base {
@@ -387,7 +393,7 @@ private:
 
         default:
             if constexpr (!peek) {
-                devlog::debug<grp::regs>("Unhandled {}-bit SCSP register read via {} bus from {:03X}", sizeof(T) * 8,
+                devlog::trace<grp::regs>("Unhandled {}-bit SCSP register read via {} bus from {:03X}", sizeof(T) * 8,
                                          accessTypeName<accessType>, address);
             }
             break;
@@ -434,7 +440,7 @@ private:
             auto &slot = m_slots[slotIndex];
             slot.WriteReg<T>(address & 0x1F, value);
             if ((address & 0x1E) == 0x00 && bit::test<12>(value16)) {
-                HandleKYONEX();
+                m_kyonex = true;
             }
             return;
         } else if (AddressInRange<0x600, 0x67F>(address)) {
@@ -566,7 +572,7 @@ private:
 
         default:
             if constexpr (!poke) {
-                devlog::debug<grp::regs>("Unhandled {}-bit SCSP register write via {} bus to {:03X} = {:X}",
+                devlog::trace<grp::regs>("Unhandled {}-bit SCSP register write via {} bus to {:03X} = {:X}",
                                          sizeof(T) * 8, accessTypeName<accessType>, address, value);
             }
             break;
@@ -878,7 +884,7 @@ private:
 
     alignas(16) std::array<Slot, 32> m_slots;
 
-    void HandleKYONEX();
+    bool m_kyonex; // (W) KYONEX - Key on execute
 
     // --- Mixer Register ---
 

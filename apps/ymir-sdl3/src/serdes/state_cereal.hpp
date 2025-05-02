@@ -422,7 +422,7 @@ inline namespace v3 {
         ar(s.WRAM);
         ar(s.cddaBuffer, s.cddaReadPos, s.cddaWritePos, s.cddaReady);
         ar(s.m68k, s.m68kSpilloverCycles, s.m68kEnabled);
-        ar(s.slots);
+        ar(s.slots, s.KYONEX);
         ar(s.MVOL, s.DAC18B, s.MEM4MB, s.MSLC);
         ar(s.timers);
         ar(s.MCIEB, s.MCIPD);

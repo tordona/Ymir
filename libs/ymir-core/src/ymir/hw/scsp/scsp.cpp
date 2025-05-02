@@ -248,6 +248,8 @@ void SCSP::SaveState(state::SCSPState &state) const {
         m_slots[i].SaveState(state.slots[i]);
     }
 
+    state.KYONEX = m_kyonex;
+
     state.MVOL = m_masterVolume;
     state.DAC18B = m_dac18Bits;
     state.MEM4MB = m_mem4MB;
@@ -326,6 +328,8 @@ void SCSP::LoadState(const state::SCSPState &state) {
         m_slots[i].LoadState(state.slots[i]);
     }
 
+    m_kyonex = state.KYONEX;
+
     m_masterVolume = state.MVOL & 0xF;
     m_dac18Bits = state.DAC18B;
     m_mem4MB = state.MEM4MB;
@@ -374,33 +378,6 @@ void SCSP::EnableThreading(bool enable) {
         devlog::debug<grp::base>("Threaded SCSP is unimplemented");
     } else {
         devlog::debug<grp::base>("Running SCSP on emulator thread");
-    }
-}
-
-void SCSP::HandleKYONEX() {
-    for (auto &slot : m_slots) {
-        if (slot.TriggerKey()) {
-            static constexpr const char *loopNames[] = {"->|", ">->", "<-<", ">-<"};
-            devlog::trace<grp::regs>(
-                "Slot {:02d} key {} {:2d}-bit addr={:05X} loop={:04X}-{:04X} {} OCT={:02d} FNS={:03X} KRS={:X} "
-                "EG {:02d} {:02d} {:02d} {:02d} DL={:03X} EGHOLD={} LPSLNK={} mod X={:02X} Y={:02X} lv={:X}",
-                slot.index, (slot.keyOnBit ? " ON" : "OFF"), (slot.pcm8Bit ? 8 : 16), slot.startAddress,
-                slot.loopStartAddress, slot.loopEndAddress, loopNames[static_cast<uint32>(slot.loopControl)],
-                slot.octave, slot.freqNumSwitch, slot.keyRateScaling, slot.attackRate, slot.decay1Rate, slot.decay2Rate,
-                slot.releaseRate, slot.decayLevel, static_cast<uint8>(slot.egHold),
-                static_cast<uint8>(slot.loopStartLink), slot.modXSelect, slot.modYSelect, slot.modLevel);
-        }
-    }
-
-    if constexpr (devlog::trace_enabled<grp::regs>) {
-        auto makeList = [&] {
-            static char out[32];
-            for (auto &slot : m_slots) {
-                out[slot.index] = slot.keyOnBit ? '+' : '_';
-            }
-            return std::string_view(out, 32);
-        };
-        devlog::trace<grp::regs>("KYONEX: {}", makeList());
     }
 }
 
@@ -570,6 +547,18 @@ FORCE_INLINE void SCSP::GenerateSample() {
         m_soundStackIndex = (m_soundStackIndex + 1) & 63;
     }
 
+    if constexpr (devlog::debug_enabled<grp::kyonex>) {
+        if (m_kyonex) {
+            static char out[32];
+            for (auto &slot : m_slots) {
+                out[slot.index] = slot.keyOnBit ? '+' : '_';
+            }
+            devlog::debug<grp::kyonex>("{}", std::string_view(out, 32));
+        }
+    }
+
+    m_kyonex = false;
+
     // Copy CDDA data to DSP EXTS (0=left, 1=right)
     if (m_cddaReady && m_cddaReadPos != m_cddaWritePos) {
         m_dsp.audioInOut[0] = util::ReadLE<uint16>(&m_cddaBuffer[m_cddaReadPos + 0]);
@@ -633,6 +622,18 @@ FORCE_INLINE void SCSP::UpdateTimers() {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
+    if (m_kyonex && slot.TriggerKey()) {
+        static constexpr const char *loopNames[] = {"->|", ">->", "<-<", ">-<"};
+        devlog::trace<grp::kyonex>(
+            "Slot {:02d} key {} {:2d}-bit addr={:05X} loop={:04X}-{:04X} {} OCT={:02d} FNS={:03X} KRS={:X} "
+            "EG {:02d} {:02d} {:02d} {:02d} DL={:03X} EGHOLD={} LPSLNK={} mod X={:02X} Y={:02X} lv={:X}",
+            slot.index, (slot.keyOnBit ? " ON" : "OFF"), (slot.pcm8Bit ? 8 : 16), slot.startAddress,
+            slot.loopStartAddress, slot.loopEndAddress, loopNames[static_cast<uint32>(slot.loopControl)], slot.octave,
+            slot.freqNumSwitch, slot.keyRateScaling, slot.attackRate, slot.decay1Rate, slot.decay2Rate,
+            slot.releaseRate, slot.decayLevel, static_cast<uint8>(slot.egHold), static_cast<uint8>(slot.loopStartLink),
+            slot.modXSelect, slot.modYSelect, slot.modLevel);
+    }
+
     if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
         return;
     }
