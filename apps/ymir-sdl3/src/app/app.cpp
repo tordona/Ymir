@@ -1336,8 +1336,9 @@ void App::RunEmulator() {
             case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
             case SDL_EVENT_GAMEPAD_BUTTON_UP:
                 if (m_context.inputCapturer.IsCapturing()) {
-                    m_context.inputCapturer.ProcessPrimitive(input::SDL3ScancodeToKeyboardKey(evt.key.scancode),
-                                                             input::SDL3ToKeyModifier(evt.key.mod), evt.key.down);
+                    m_context.inputCapturer.ProcessPrimitive(
+                        evt.gbutton.which, input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button),
+                        evt.gbutton.down);
                 } else {
                     inputContext.ProcessPrimitive(evt.gbutton.which,
                                                   input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button),
