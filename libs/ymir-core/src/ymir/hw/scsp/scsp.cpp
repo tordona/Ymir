@@ -844,7 +844,7 @@ FORCE_INLINE void SCSP::SlotProcessStep5(Slot &slot) {
     m_lfsr = (m_lfsr >> 1u) | (((m_lfsr >> 5u) ^ m_lfsr) & 1u) << 16u;
 
     if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
-        slot.output = 0;
+        slot.output = slot.sampleXOR;
         return;
     }
 
