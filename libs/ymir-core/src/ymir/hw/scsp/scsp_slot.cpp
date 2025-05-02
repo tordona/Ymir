@@ -104,7 +104,7 @@ bool Slot::TriggerKey() {
             }
 
             sampleCount = 0;
-            currAddress = 0;
+            currAddress = startAddress;
             currSample = 0;
             currPhase = 0;
             reverse = false;
@@ -809,7 +809,7 @@ void Slot::IncrementSampleCounter() {
 
     switch (loopControl) {
     case LoopControl::Off:
-        if (currSample >= loopEndAddress) {
+        if (currSample > loopEndAddress) {
             active = false;
         }
         break;
