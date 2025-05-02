@@ -785,16 +785,19 @@ void App::RunEmulator() {
         }
 
         // Create texture with the logo image
-        m_context.images.ymirLogo =
+        m_context.images.ymirLogo.texture =
             SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, imgW, imgH);
-        if (m_context.images.ymirLogo == nullptr) {
+        if (m_context.images.ymirLogo.texture == nullptr) {
             devlog::error<grp::base>("Unable to create texture: {}", SDL_GetError());
             return;
         }
-        SDL_SetTextureScaleMode(m_context.images.ymirLogo, SDL_SCALEMODE_LINEAR);
-        SDL_UpdateTexture(m_context.images.ymirLogo, nullptr, imgData, imgW * sizeof(uint32));
+        SDL_SetTextureScaleMode(m_context.images.ymirLogo.texture, SDL_SCALEMODE_LINEAR);
+        SDL_UpdateTexture(m_context.images.ymirLogo.texture, nullptr, imgData, imgW * sizeof(uint32));
+
+        m_context.images.ymirLogo.size.x = imgW;
+        m_context.images.ymirLogo.size.y = imgH;
     }
-    ScopeGuard sgDestroyYmirLogoTexture{[&] { SDL_DestroyTexture(m_context.images.ymirLogo); }};
+    ScopeGuard sgDestroyYmirLogoTexture{[&] { SDL_DestroyTexture(m_context.images.ymirLogo.texture); }};
 
     // ---------------------------------
     // Setup Dear ImGui Platform/Renderer backends

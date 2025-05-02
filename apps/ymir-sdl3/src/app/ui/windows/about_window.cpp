@@ -131,8 +131,9 @@ void AboutWindow::DrawContents() {
 void AboutWindow::DrawAboutTab() {
     ImGui::PushTextWrapPos(ImGui::GetWindowContentRegionMax().x);
 
-    ImGui::Image((ImTextureID)m_context.images.ymirLogo,
-                 ImVec2(256 * m_context.displayScale, 256 * m_context.displayScale));
+    ImGui::Image((ImTextureID)m_context.images.ymirLogo.texture,
+                 ImVec2(m_context.images.ymirLogo.size.x * m_context.displayScale,
+                        m_context.images.ymirLogo.size.y * m_context.displayScale));
 
     ImGui::PushFont(m_context.fonts.display.large);
     ImGui::TextUnformatted("Ymir");

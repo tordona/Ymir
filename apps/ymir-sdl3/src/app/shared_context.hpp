@@ -136,7 +136,12 @@ struct SharedContext {
     } fonts;
 
     struct Images {
-        SDL_Texture *ymirLogo = nullptr;
+        struct Image {
+            SDL_Texture *texture = nullptr;
+            ImVec2 size;
+        };
+
+        Image ymirLogo;
     } images;
 
     struct EventQueues {
