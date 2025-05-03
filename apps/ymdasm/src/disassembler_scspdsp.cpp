@@ -278,7 +278,7 @@ struct SCSPDSPDisassembler {
         if (instr.MWT) {
             disasm.Align(228);
             disasm.OperandWrite("WRAM").Operator("[").OperandRead("MADR").Operator("]").Operator("<-").OperandRead(
-                "MEM");
+                "SFT");
         }
 
         if ((instr.MRD || instr.MWT) && instr.NOFL) {
