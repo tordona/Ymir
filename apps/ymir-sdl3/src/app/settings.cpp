@@ -418,7 +418,7 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapActionInput(hotkeys.saveStates.save9);
     mapActionInput(hotkeys.saveStates.save10);
 
-    auto ctx1 = &sharedCtx.standardPadButtons[0];
+    auto ctx1 = &sharedCtx.standardPadInputs[0];
     mapActionInput(input.port1.standardPadBinds.a, ctx1);
     mapActionInput(input.port1.standardPadBinds.b, ctx1);
     mapActionInput(input.port1.standardPadBinds.c, ctx1);
@@ -432,8 +432,9 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapActionInput(input.port1.standardPadBinds.down, ctx1);
     mapActionInput(input.port1.standardPadBinds.left, ctx1);
     mapActionInput(input.port1.standardPadBinds.right, ctx1);
+    mapActionInput(input.port1.standardPadBinds.dpad, ctx1);
 
-    auto ctx2 = &sharedCtx.standardPadButtons[1];
+    auto ctx2 = &sharedCtx.standardPadInputs[1];
     mapActionInput(input.port2.standardPadBinds.a, ctx2);
     mapActionInput(input.port2.standardPadBinds.b, ctx2);
     mapActionInput(input.port2.standardPadBinds.c, ctx2);
@@ -447,6 +448,7 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapActionInput(input.port2.standardPadBinds.down, ctx2);
     mapActionInput(input.port2.standardPadBinds.left, ctx2);
     mapActionInput(input.port2.standardPadBinds.right, ctx2);
+    mapActionInput(input.port2.standardPadBinds.dpad, ctx2);
 
     ResetToDefaults();
 }
@@ -480,6 +482,7 @@ void Settings::ResetToDefaults() {
     input.gamepadRSDeadzone.x = 0.15f;
     input.gamepadRSDeadzone.y = 0.15f;
     input.gamepadTriggerToButtonThreshold = 0.20f;
+    input.gamepadAnalogDPadSensitivity = 0.20f;
 
     video.forceIntegerScaling = false;
     video.forceAspectRatio = true;
@@ -643,6 +646,7 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
                     Parse(tblStandardPadBinds, "Down", portSettings.standardPadBinds.down);
                     Parse(tblStandardPadBinds, "Left", portSettings.standardPadBinds.left);
                     Parse(tblStandardPadBinds, "Right", portSettings.standardPadBinds.right);
+                    Parse(tblStandardPadBinds, "DPad", portSettings.standardPadBinds.dpad);
                 }
             }
         };
@@ -654,6 +658,7 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         Parse(tblInput, "GamepadRSDeadzoneX", input.gamepadRSDeadzone.x);
         Parse(tblInput, "GamepadRSDeadzoneY", input.gamepadRSDeadzone.y);
         Parse(tblInput, "GamepadTriggerToButtonThreshold", input.gamepadTriggerToButtonThreshold);
+        Parse(tblInput, "GamepadAnalogDPadSensitivity", input.gamepadAnalogDPadSensitivity);
     }
 
     if (auto tblVideo = data["Video"]) {
@@ -840,6 +845,7 @@ SettingsSaveResult Settings::Save() {
             {"GamepadRSDeadzoneX", input.gamepadRSDeadzone.x.Get()},
             {"GamepadRSDeadzoneY", input.gamepadRSDeadzone.y.Get()},
             {"GamepadTriggerToButtonThreshold", input.gamepadTriggerToButtonThreshold.Get()},
+            {"GamepadAnalogDPadSensitivity", input.gamepadAnalogDPadSensitivity},
         }}},
 
         {"Video", toml::table{{
@@ -1020,6 +1026,7 @@ void Settings::ResetHotkeys() {
 void Settings::ResetBinds(Input::Port::StandardPadBinds &binds) {
     using Key = input::KeyboardKey;
     using GPBtn = input::GamepadButton;
+    using GPAxis2 = input::GamepadAxis2D;
 
     if (&binds == &input.port1.standardPadBinds) {
         // Default port 1 Standard Pad controller inputs
@@ -1033,10 +1040,11 @@ void Settings::ResetBinds(Input::Port::StandardPadBinds &binds) {
         input.port1.standardPadBinds.r.elements = {{{Key::E}, {0, GPBtn::RightTrigger}}};
         input.port1.standardPadBinds.start.elements = {
             {{Key::G}, {Key::F}, {Key::H}, {Key::Return}, {0, GPBtn::Start}}};
-        input.port1.standardPadBinds.up.elements = {{{Key::W}, {0, GPBtn::DpadUp}}};
-        input.port1.standardPadBinds.down.elements = {{{Key::S}, {0, GPBtn::DpadDown}}};
-        input.port1.standardPadBinds.left.elements = {{{Key::A}, {0, GPBtn::DpadLeft}}};
-        input.port1.standardPadBinds.right.elements = {{{Key::D}, {0, GPBtn::DpadRight}}};
+        input.port1.standardPadBinds.up.elements = {{{Key::W}}};
+        input.port1.standardPadBinds.down.elements = {{{Key::S}}};
+        input.port1.standardPadBinds.left.elements = {{{Key::A}}};
+        input.port1.standardPadBinds.right.elements = {{{Key::D}}};
+        input.port1.standardPadBinds.dpad.elements = {{{0, GPAxis2::DPad}, {0, GPAxis2::LeftStick}}};
     } else if (&binds == &input.port2.standardPadBinds) {
         // Default port 2 Standard Pad controller inputs
         input.port2.standardPadBinds.a.elements = {{{Key::KeyPad1}, {1, GPBtn::X}}};
@@ -1048,10 +1056,11 @@ void Settings::ResetBinds(Input::Port::StandardPadBinds &binds) {
         input.port2.standardPadBinds.l.elements = {{{Key::KeyPad7}, {Key::Insert}, {1, GPBtn::LeftTrigger}}};
         input.port2.standardPadBinds.r.elements = {{{Key::KeyPad9}, {Key::PageUp}, {1, GPBtn::RightTrigger}}};
         input.port2.standardPadBinds.start.elements = {{{Key::KeyPadEnter}, {1, GPBtn::Start}}};
-        input.port2.standardPadBinds.up.elements = {{{Key::Up}, {Key::Home}, {1, GPBtn::DpadUp}}};
-        input.port2.standardPadBinds.down.elements = {{{Key::Down}, {Key::End}, {1, GPBtn::DpadDown}}};
-        input.port2.standardPadBinds.left.elements = {{{Key::Left}, {Key::Delete}, {1, GPBtn::DpadLeft}}};
-        input.port2.standardPadBinds.right.elements = {{{Key::Right}, {Key::PageDown}, {1, GPBtn::DpadRight}}};
+        input.port2.standardPadBinds.up.elements = {{{Key::Up}, {Key::Home}}};
+        input.port2.standardPadBinds.down.elements = {{{Key::Down}, {Key::End}}};
+        input.port2.standardPadBinds.left.elements = {{{Key::Left}, {Key::Delete}}};
+        input.port2.standardPadBinds.right.elements = {{{Key::Right}, {Key::PageDown}}};
+        input.port2.standardPadBinds.dpad.elements = {{{1, GPAxis2::DPad}, {1, GPAxis2::LeftStick}}};
     }
     RebindInputs();
 }

@@ -49,7 +49,7 @@ void StandardPadBindsView::Display(Settings::Input::Port::StandardPadBinds &bind
         drawRow("Left", binds.left);
         drawRow("Down", binds.down);
         drawRow("Right", binds.right);
-        drawRow("D-Pad", binds.dpad);
+        drawRow("D-Pad axis", binds.dpad);
 
         m_inputCaptureWidget.DrawCapturePopup();
 

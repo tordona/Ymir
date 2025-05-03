@@ -257,20 +257,20 @@ void InputContext::ProcessEvent(const InputEvent &event) {
         case InputElement::Type::KeyCombo: [[fallthrough]];
         case InputElement::Type::MouseCombo: [[fallthrough]];
         case InputElement::Type::GamepadButton:
-            if (auto handler = m_actionHandlers.find(action->second.action); handler != m_actionHandlers.end()) {
-                handler->second(action->second.context, event.buttonPressed);
+            if (auto handler = m_buttonHandlers.find(action->second.action); handler != m_buttonHandlers.end()) {
+                handler->second(action->second.context, event.element, event.buttonPressed);
             }
             break;
         case InputElement::Type::MouseAxis1D: [[fallthrough]];
         case InputElement::Type::GamepadAxis1D:
             if (auto handler = m_axis1DHandlers.find(action->second.action); handler != m_axis1DHandlers.end()) {
-                handler->second(action->second.context, event.axis1DValue);
+                handler->second(action->second.context, event.element, event.axis1DValue);
             }
             break;
         case InputElement::Type::MouseAxis2D: [[fallthrough]];
         case InputElement::Type::GamepadAxis2D:
             if (auto handler = m_axis2DHandlers.find(action->second.action); handler != m_axis2DHandlers.end()) {
-                handler->second(action->second.context, event.axis2D.x, event.axis2D.y);
+                handler->second(action->second.context, event.element, event.axis2D.x, event.axis2D.y);
             }
             break;
         }
@@ -343,12 +343,12 @@ void InputContext::UnmapAllActions() {
 // ---------------------------------------------------------------------------------------------------------------------
 // Action handler mapping
 
-void InputContext::SetActionHandler(Action action, ActionHandler handler) {
-    m_actionHandlers[action] = handler;
+void InputContext::SetButtonHandler(Action action, ButtonHandler handler) {
+    m_buttonHandlers[action] = handler;
 }
 
-void InputContext::ClearActionHandler(Action action) {
-    m_actionHandlers.erase(action);
+void InputContext::ClearButtonHandler(Action action) {
+    m_buttonHandlers.erase(action);
 }
 
 void InputContext::SetAxis1DHandler(Action action, Axis1DHandler handler) {

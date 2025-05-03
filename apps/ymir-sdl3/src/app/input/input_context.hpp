@@ -12,9 +12,9 @@
 
 namespace app::input {
 
-using ActionHandler = std::function<void(void *context, bool actuated)>;
-using Axis1DHandler = std::function<void(void *context, float value)>;
-using Axis2DHandler = std::function<void(void *context, float x, float y)>;
+using ButtonHandler = std::function<void(void *context, const InputElement &element, bool actuated)>;
+using Axis1DHandler = std::function<void(void *context, const InputElement &element, float value)>;
+using Axis2DHandler = std::function<void(void *context, const InputElement &element, float x, float y)>;
 
 struct MappedAction {
     Action action;
@@ -129,11 +129,11 @@ public:
     // -----------------------------------------------------------------------------------------------------------------
     // Action and axis handler mapping
 
-    // Registers an action handler to handle the specified action.
-    void SetActionHandler(Action action, ActionHandler handler);
+    // Registers a button handler to handle the specified action.
+    void SetButtonHandler(Action action, ButtonHandler handler);
 
-    // Unregisters the action handler from the specified action.
-    void ClearActionHandler(Action action);
+    // Unregisters the button handler from the specified action.
+    void ClearButtonHandler(Action action);
 
     // Registers an 1D axis handler to handle the specified action.
     void SetAxis1DHandler(Action action, Axis1DHandler handler);
@@ -174,7 +174,7 @@ private:
     std::unordered_map<InputElement, MappedAction> m_actions;
     std::unordered_map<Action, std::unordered_set<MappedInputElement>> m_actionsReverse;
 
-    std::unordered_map<Action, ActionHandler> m_actionHandlers;
+    std::unordered_map<Action, ButtonHandler> m_buttonHandlers;
     std::unordered_map<Action, Axis1DHandler> m_axis1DHandlers;
     std::unordered_map<Action, Axis2DHandler> m_axis2DHandlers;
 };

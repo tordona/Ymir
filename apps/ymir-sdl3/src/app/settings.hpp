@@ -256,6 +256,7 @@ public:
         Deadzone gamepadLSDeadzone;
         Deadzone gamepadRSDeadzone;
         util::Observable<float> gamepadTriggerToButtonThreshold;
+        float gamepadAnalogDPadSensitivity;
     } input;
 
     struct Video {
