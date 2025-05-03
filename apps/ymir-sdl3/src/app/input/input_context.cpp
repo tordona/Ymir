@@ -2,19 +2,41 @@
 
 namespace app::input {
 
+InputContext::InputContext() {
+    m_keyStates.fill(false);
+    m_mouseButtonStates.fill(false);
+    m_gamepadButtonStates.fill(false);
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Input primitive processing
 
 void InputContext::ProcessPrimitive(KeyboardKey key, KeyModifier modifiers, bool pressed) {
-    ProcessEvent(InputEvent{KeyCombo{modifiers, key}}, pressed);
+    m_currModifiers = modifiers;
+    const auto index = static_cast<size_t>(key);
+    if (m_keyStates[index] != pressed || key == KeyboardKey::None) {
+        // The "None" key is used for key modifier-only events (e.g. Ctrl+Shift)
+        if (key != KeyboardKey::None) {
+            m_keyStates[index] = pressed;
+        }
+        ProcessEvent(InputEvent{KeyCombo{modifiers, key}}, pressed);
+    }
 }
 
-void InputContext::ProcessPrimitive(MouseButton button, KeyModifier modifiers, bool pressed) {
-    ProcessEvent(InputEvent{MouseCombo{modifiers, button}}, pressed);
+void InputContext::ProcessPrimitive(MouseButton button, bool pressed) {
+    const auto index = static_cast<size_t>(button);
+    if (m_mouseButtonStates[index] != pressed) {
+        m_mouseButtonStates[index] = pressed;
+        ProcessEvent(InputEvent{MouseCombo{m_currModifiers, button}}, pressed);
+    }
 }
 
 void InputContext::ProcessPrimitive(uint32 id, GamepadButton button, bool pressed) {
-    ProcessEvent(InputEvent{id, button}, pressed);
+    const auto index = static_cast<size_t>(button);
+    if (m_gamepadButtonStates[index] != pressed) {
+        m_gamepadButtonStates[index] = pressed;
+        ProcessEvent(InputEvent{id, button}, pressed);
+    }
 }
 
 void InputContext::ProcessEvent(const InputEvent &event, bool actuated) {

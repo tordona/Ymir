@@ -13,7 +13,7 @@ std::string ToHumanString(const InputEvent &bind) {
     case InputEvent::Type::KeyCombo: return ToHumanString(bind.keyCombo);
     case InputEvent::Type::MouseCombo: return ToHumanString(bind.mouseCombo);
     case InputEvent::Type::GamepadButton:
-        return fmt::format("Gamepad {} {}", bind.gamepad.id, ToHumanString(bind.gamepad.button));
+        return fmt::format("Gamepad {} {}", bind.gamepad.id + 1, ToHumanString(bind.gamepad.button));
     }
 }
 

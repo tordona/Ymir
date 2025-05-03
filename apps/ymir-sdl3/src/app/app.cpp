@@ -248,7 +248,7 @@ int App::Run(const CommandLineOptions &options) {
                 ImGui::TextUnformatted("Welcome to Ymir!");
                 ImGui::PopFont();
                 ImGui::NewLine();
-                ImGui::TextUnformatted("Ymir requires a valid IPL ROM to work.");
+                ImGui::TextUnformatted("Ymir requires a valid IPL (BIOS) ROM to work.");
 
                 ImGui::NewLine();
                 ImGui::TextUnformatted("Ymir will automatically load IPL ROMs placed in ");
@@ -462,8 +462,8 @@ void App::RunEmulator() {
     ImGui::LoadIniSettingsFromDisk(imguiIniLocation.string().c_str());
     io.IniFilename = nullptr;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
+    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
     // io.FontGlobalScale = m_context.displayScale;
 
     // Setup Dear ImGui style
@@ -1311,6 +1311,8 @@ void App::RunEmulator() {
 
     SDL_ShowWindow(screen.window);
 
+    std::unordered_map<SDL_JoystickID, int> gamepadPlayerIndexes{};
+
     std::array<GUIEvent, 64> evts{};
 
 #if Ymir_ENABLE_IMGUI_DEMO
@@ -1332,13 +1334,13 @@ void App::RunEmulator() {
             }
 
             switch (evt.type) {
-            case SDL_EVENT_KEYBOARD_ADDED:
+            case SDL_EVENT_KEYBOARD_ADDED: [[fallthrough]];
             case SDL_EVENT_KEYBOARD_REMOVED:
                 // TODO: handle these
                 // evt.kdevice.type;
                 // evt.kdevice.which;
                 break;
-            case SDL_EVENT_KEY_DOWN:
+            case SDL_EVENT_KEY_DOWN: [[fallthrough]];
             case SDL_EVENT_KEY_UP:
                 if (!io.WantCaptureKeyboard) {
                     // TODO: consider supporting multiple keyboards (evt.key.which)
@@ -1350,24 +1352,23 @@ void App::RunEmulator() {
                 }
                 break;
 
-            case SDL_EVENT_MOUSE_ADDED:
+            case SDL_EVENT_MOUSE_ADDED: [[fallthrough]];
             case SDL_EVENT_MOUSE_REMOVED:
                 // TODO: handle these
                 // evt.mdevice.type;
                 // evt.mdevice.which;
                 break;
-            case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            case SDL_EVENT_MOUSE_BUTTON_DOWN: [[fallthrough]];
             case SDL_EVENT_MOUSE_BUTTON_UP:
                 /*if (!io.WantCaptureMouse) {
                     // TODO: consider supporting multiple mice (evt.button.which)
                     // TODO: evt.button.clicks?
                     // TODO: evt.button.x, evt.button.y?
                     // TODO: key modifiers
-                    inputContext.ProcessPrimitive(input::SDL3ToMouseButton(evt.button.button), input::KeyModifier::None,
-                                                  evt.button.down);
+                    inputContext.ProcessPrimitive(input::SDL3ToMouseButton(evt.button.button), evt.button.down);
                 } else if (m_context.inputCapturer.IsCapturing()) {
                     m_context.inputCapturer.ProcessPrimitive(input::SDL3ToMouseButton(evt.button.button),
-                                                             input::KeyModifier::None, evt.button.down);
+                                                             evt.button.down);
                 }*/
                 break;
             case SDL_EVENT_MOUSE_MOTION:
@@ -1386,10 +1387,24 @@ void App::RunEmulator() {
                 }
                 break;
 
-            case SDL_EVENT_GAMEPAD_ADDED:
+            case SDL_EVENT_GAMEPAD_ADDED: //
+            {
+                SDL_Gamepad *gamepad = SDL_OpenGamepad(evt.gdevice.which);
+                if (gamepad != nullptr) {
+                    gamepadPlayerIndexes[evt.gdevice.which] = SDL_GetGamepadPlayerIndex(gamepad);
+                    SDL_CloseGamepad(gamepad);
+                }
+                devlog::debug<grp::base>("Gamepad {} added -> player index {}", evt.gdevice.which,
+                                         gamepadPlayerIndexes[evt.gdevice.which]);
+                break;
+            }
             case SDL_EVENT_GAMEPAD_REMOVED:
-            case SDL_EVENT_GAMEPAD_REMAPPED:
-            case SDL_EVENT_GAMEPAD_UPDATE_COMPLETE:
+                devlog::debug<grp::base>("Gamepad {} removed -> player index {}", evt.gdevice.which,
+                                         gamepadPlayerIndexes[evt.gdevice.which]);
+                gamepadPlayerIndexes.erase(evt.gdevice.which);
+                break;
+            case SDL_EVENT_GAMEPAD_REMAPPED: [[fallthrough]];
+            case SDL_EVENT_GAMEPAD_UPDATE_COMPLETE: [[fallthrough]];
             case SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED:
                 // TODO: handle these
                 // evt.gdevice.type;
@@ -1401,21 +1416,25 @@ void App::RunEmulator() {
                 // evt.gaxis.axis;
                 // evt.gaxis.value;
                 break;
-            case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-            case SDL_EVENT_GAMEPAD_BUTTON_UP:
+            case SDL_EVENT_GAMEPAD_BUTTON_DOWN: [[fallthrough]];
+            case SDL_EVENT_GAMEPAD_BUTTON_UP: //
+            {
+                const int playerIndex =
+                    gamepadPlayerIndexes.contains(evt.gbutton.which) ? gamepadPlayerIndexes.at(evt.gbutton.which) : -1;
                 if (m_context.inputCapturer.IsCapturing()) {
                     m_context.inputCapturer.ProcessPrimitive(
-                        evt.gbutton.which, input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button),
+                        playerIndex, input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button),
                         evt.gbutton.down);
                 } else {
-                    inputContext.ProcessPrimitive(evt.gbutton.which,
+                    inputContext.ProcessPrimitive(playerIndex,
                                                   input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button),
                                                   evt.gbutton.down);
                 }
                 break;
+            }
 
-            case SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN:
-            case SDL_EVENT_GAMEPAD_TOUCHPAD_MOTION:
+            case SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN: [[fallthrough]];
+            case SDL_EVENT_GAMEPAD_TOUCHPAD_MOTION: [[fallthrough]];
             case SDL_EVENT_GAMEPAD_TOUCHPAD_UP:
                 // TODO: handle these
                 // evt.gtouchpad.type;

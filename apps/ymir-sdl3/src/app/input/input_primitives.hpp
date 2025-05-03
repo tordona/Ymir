@@ -23,7 +23,7 @@ enum class KeyModifier {
 };
 
 enum class KeyboardKey {
-    None,
+    None = 0,
 
     // Codes are from USB Keyboard/Keypad Page (0x07)
     // See https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf
@@ -262,6 +262,8 @@ enum class KeyboardKey {
     RightShift = 229,
     RightAlt = 230,
     RightGui = 231, // Windows/Command key
+
+    _Count,
 };
 
 // Mouse buttons.
@@ -273,6 +275,8 @@ enum MouseButton {
     Middle,
     Extra1,
     Extra2,
+
+    _Count,
 };
 
 // 1D mouse axes.
@@ -319,6 +323,8 @@ enum class GamepadButton {
     Misc4,
     Misc5,
     Misc6,
+
+    _Count,
 };
 
 // Xbox (or compatible gamepad) 1D axes.
@@ -358,7 +364,7 @@ struct KeyCombo {
         : modifiers(modifiers)
         , key(key) {
 
-        FixModifiers();
+        Canonicalize();
     }
 
     KeyCombo &operator=(const KeyCombo &) = default;
@@ -367,7 +373,7 @@ struct KeyCombo {
     bool operator==(const KeyCombo &) const = default;
 
 private:
-    void FixModifiers();
+    void Canonicalize();
 };
 
 // Combination of a mouse button and key modifiers.
@@ -439,7 +445,7 @@ bool TryParse(std::string_view str, MouseCombo &combo);
 
 ENABLE_BITMASK_OPERATORS(app::input::KeyModifier);
 
-inline void app::input::KeyCombo::FixModifiers() {
+inline void app::input::KeyCombo::Canonicalize() {
     switch (key) {
     case KeyboardKey::LeftControl:
     case KeyboardKey::RightControl:

@@ -5,6 +5,7 @@
 
 #include <ymir/core/types.hpp>
 
+#include <array>
 #include <optional>
 #include <unordered_map>
 #include <unordered_set>
@@ -37,13 +38,15 @@ struct MappedInputEvent {
 // TODO: implement primitive processing in input_backend_sdl3
 class InputContext {
 public:
+    InputContext();
+
     // -----------------------------------------------------------------------------------------------------------------
     // Input primitive processing
 
     // Processes a keyboard primitive.
     void ProcessPrimitive(KeyboardKey key, KeyModifier modifiers, bool pressed);
     // Processes a mouse button primitive.
-    void ProcessPrimitive(MouseButton button, KeyModifier modifiers, bool pressed);
+    void ProcessPrimitive(MouseButton button, bool pressed);
     // Processes a gamepad button primitive.
     void ProcessPrimitive(uint32 id, GamepadButton button, bool pressed);
 
@@ -86,6 +89,12 @@ public:
     void ClearActionHandler(ActionID action);
 
 private:
+    KeyModifier m_currModifiers = KeyModifier::None;
+
+    std::array<bool, static_cast<size_t>(KeyboardKey::_Count)> m_keyStates;
+    std::array<bool, static_cast<size_t>(MouseButton::_Count)> m_mouseButtonStates;
+    std::array<bool, static_cast<size_t>(GamepadButton::_Count)> m_gamepadButtonStates;
+
     std::unordered_map<InputEvent, MappedAction> m_actions;
     std::unordered_map<ActionID, std::unordered_set<MappedInputEvent>> m_actionsReverse;
 
