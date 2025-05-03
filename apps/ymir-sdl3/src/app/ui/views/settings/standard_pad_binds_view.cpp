@@ -30,7 +30,7 @@ void StandardPadBindsView::Display(Settings::Input::Port::StandardPadBinds &bind
             }
             for (uint32 i = 0; i < kNumBindsPerInput; i++) {
                 if (ImGui::TableNextColumn()) {
-                    const std::string bindStr = input::ToHumanString(bind.events[i]);
+                    const std::string bindStr = input::ToHumanString(bind.elements[i]);
                     const std::string label = fmt::format("{}##bind_{}_{}", bindStr, btnName, i);
                     const float availWidth = ImGui::GetContentRegionAvail().x;
 
@@ -38,7 +38,7 @@ void StandardPadBindsView::Display(Settings::Input::Port::StandardPadBinds &bind
                     if (ImGui::Button(label.c_str(), ImVec2(availWidth, 0))) {
                         ImGui::OpenPopup("input_capture");
                         m_context.inputContext.Capture([=, this, &bind](const input::InputElement &event) {
-                            bind.events[i] = event;
+                            bind.elements[i] = event;
                             MakeDirty();
                             m_context.EnqueueEvent(events::gui::RebindAction(bind.action));
                             m_captured = true;
@@ -48,7 +48,7 @@ void StandardPadBindsView::Display(Settings::Input::Port::StandardPadBinds &bind
                     // Right-click erases a bind
                     if (MakeDirty(ImGui::IsItemClicked(ImGuiMouseButton_Right))) {
                         m_context.inputContext.CancelCapture();
-                        bind.events[i] = {};
+                        bind.elements[i] = {};
                         m_context.EnqueueEvent(events::gui::RebindAction(bind.action));
                     }
                 }

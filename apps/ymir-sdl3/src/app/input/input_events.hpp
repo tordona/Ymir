@@ -97,6 +97,18 @@ struct InputElement {
     }
 };
 
+// An input event is an occurence of an input element with a particular value.
+struct InputEvent {
+    InputElement element;
+    union {
+        bool button;
+        float axis1D;
+        struct {
+            float x, y;
+        } axis2D;
+    };
+};
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Human-readable string converters
 

@@ -97,7 +97,7 @@ struct SettingsSaveResult {
     std::variant<std::monostate, std::error_code> value;
 };
 
-// Number of simultaneous input binds allowed per input event
+// Number of simultaneous input elements allowed per bind
 inline constexpr size_t kNumBindsPerInput = 5;
 
 struct InputBind {
@@ -105,7 +105,7 @@ struct InputBind {
         : action(action) {}
 
     const input::ActionID action;
-    std::array<input::InputElement, kNumBindsPerInput> events;
+    std::array<input::InputElement, kNumBindsPerInput> elements;
 };
 
 struct InputBindWithContext {

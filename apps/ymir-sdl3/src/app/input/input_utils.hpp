@@ -16,7 +16,7 @@ inline std::string ToShortcut(InputContext &ctx, ActionID action) {
         } else {
             fmt::format_to(inserter, ", ");
         }
-        fmt::format_to(inserter, "{}", input::ToHumanString(bind.event));
+        fmt::format_to(inserter, "{}", input::ToHumanString(bind.element));
     }
     return fmt::to_string(buf);
 };

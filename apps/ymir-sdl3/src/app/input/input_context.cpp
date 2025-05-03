@@ -21,7 +21,7 @@ void InputContext::ProcessPrimitive(KeyboardKey key, KeyModifier modifiers, bool
     m_currModifiers = modifiers;
     const auto index = static_cast<size_t>(key);
     if (m_keyStates[index] != pressed || key == KeyboardKey::None) {
-        // The "None" key is used for key modifier-only events (e.g. Ctrl+Shift)
+        // The "None" key is used for key modifier-only elements (e.g. Ctrl+Shift)
         if (key != KeyboardKey::None) {
             m_keyStates[index] = pressed;
         }
@@ -61,7 +61,7 @@ void InputContext::ProcessPrimitive(KeyboardKey key, KeyModifier modifiers, bool
                 break;
             }
         } else {
-            ProcessButtonEvent(InputElement{KeyCombo{modifiers, key}}, pressed);
+            ProcessEvent({.element = {KeyCombo{modifiers, key}}, .button = pressed});
         }
     }
 }
@@ -75,7 +75,7 @@ void InputContext::ProcessPrimitive(MouseButton button, bool pressed) {
                 InvokeCaptureCallback(InputElement{MouseCombo{m_currModifiers, button}});
             }
         } else {
-            ProcessButtonEvent(InputElement{MouseCombo{m_currModifiers, button}}, pressed);
+            ProcessEvent({.element = {MouseCombo{m_currModifiers, button}}, .button = pressed});
         }
     }
 }
@@ -89,7 +89,7 @@ void InputContext::ProcessPrimitive(uint32 id, GamepadButton button, bool presse
                 InvokeCaptureCallback(InputElement{id, button});
             }
         } else {
-            ProcessButtonEvent(InputElement{id, button}, pressed);
+            ProcessEvent({.element = {id, button}, .button = pressed});
         }
 
         // Convert D-Pad buttons into axis primitives
@@ -179,7 +179,7 @@ void InputContext::ProcessAxes() {
             continue;
         }
         state.changed = false;
-        ProcessAxis1DEvent(InputElement{axis}, state.value);
+        ProcessEvent({.element = {axis}, .axis1D = state.value});
     }
     for (size_t i = 0; i < m_mouseAxes2D.size(); ++i) {
         const auto axis = static_cast<MouseAxis2D>(i);
@@ -188,7 +188,7 @@ void InputContext::ProcessAxes() {
             continue;
         }
         state.changed = false;
-        ProcessAxis2DEvent(InputElement{axis}, state.x, state.y);
+        ProcessEvent({.element = {axis}, .axis2D = {.x = state.x, .y = state.y}});
     }
 
     for (auto &[id, axes] : m_gamepadAxes1D) {
@@ -199,7 +199,7 @@ void InputContext::ProcessAxes() {
                 continue;
             }
             state.changed = false;
-            ProcessAxis1DEvent(InputElement{id, axis}, state.value);
+            ProcessEvent({.element = {id, axis}, .axis1D = state.value});
         }
     }
     for (auto &[id, axes] : m_gamepadAxes2D) {
@@ -210,7 +210,7 @@ void InputContext::ProcessAxes() {
                 continue;
             }
             state.changed = false;
-            ProcessAxis2DEvent(InputElement{id, axis}, state.x, state.y);
+            ProcessEvent({.element = {id, axis}, .axis2D = {.x = state.x, .y = state.y}});
         }
     }
 }
@@ -227,26 +227,28 @@ bool InputContext::IsCapturing() const {
     return (bool)m_captureCallback;
 }
 
-void InputContext::ProcessButtonEvent(const InputElement &event, bool actuated) {
-    if (auto action = m_actions.find(event); action != m_actions.end()) {
-        if (auto handler = m_actionHandlers.find(action->second.action); handler != m_actionHandlers.end()) {
-            handler->second(action->second.context, actuated);
-        }
-    }
-}
-
-void InputContext::ProcessAxis1DEvent(const InputElement &event, float value) {
-    if (auto action = m_actions.find(event); action != m_actions.end()) {
-        if (auto handler = m_axis1DHandlers.find(action->second.action); handler != m_axis1DHandlers.end()) {
-            handler->second(action->second.context, value);
-        }
-    }
-}
-
-void InputContext::ProcessAxis2DEvent(const InputElement &event, float x, float y) {
-    if (auto action = m_actions.find(event); action != m_actions.end()) {
-        if (auto handler = m_axis2DHandlers.find(action->second.action); handler != m_axis2DHandlers.end()) {
-            handler->second(action->second.context, x, y);
+void InputContext::ProcessEvent(const InputEvent &event) {
+    if (auto action = m_actions.find(event.element); action != m_actions.end()) {
+        switch (event.element.type) {
+        case InputElement::Type::KeyCombo: [[fallthrough]];
+        case InputElement::Type::MouseCombo: [[fallthrough]];
+        case InputElement::Type::GamepadButton:
+            if (auto handler = m_actionHandlers.find(action->second.action); handler != m_actionHandlers.end()) {
+                handler->second(action->second.context, event.button);
+            }
+            break;
+        case InputElement::Type::MouseAxis1D: [[fallthrough]];
+        case InputElement::Type::GamepadAxis1D:
+            if (auto handler = m_axis1DHandlers.find(action->second.action); handler != m_axis1DHandlers.end()) {
+                handler->second(action->second.context, event.axis1D);
+            }
+            break;
+        case InputElement::Type::MouseAxis2D: [[fallthrough]];
+        case InputElement::Type::GamepadAxis2D:
+            if (auto handler = m_axis2DHandlers.find(action->second.action); handler != m_axis2DHandlers.end()) {
+                handler->second(action->second.context, event.axis2D.x, event.axis2D.y);
+            }
+            break;
         }
     }
 }
@@ -304,7 +306,7 @@ const std::unordered_map<ActionID, std::unordered_set<MappedInputElement>> &Inpu
 void InputContext::UnmapAction(ActionID action) {
     if (m_actionsReverse.contains(action)) {
         for (auto &evt : m_actionsReverse.at(action)) {
-            m_actions.erase(evt.event);
+            m_actions.erase(evt.element);
         }
         m_actionsReverse.erase(action);
     }

@@ -307,12 +307,12 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
 // Reads until the InputElementArray is full or runs out of entries, skipping all invalid and "None" entries.
 FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, InputBind &value) {
     if (toml::array *arr = node[name].as_array()) {
-        value.events.fill({});
+        value.elements.fill({});
         const size_t count = arr->size();
         size_t outIndex = 0;
         for (size_t i = 0; i < count && outIndex < kNumBindsPerInput; i++) {
             if (auto opt = arr->at(i).value<std::string_view>()) {
-                auto &event = value.events[i];
+                auto &event = value.elements[i];
                 input::TryParse((*opt), event);
                 if (event.type != input::InputElement::Type::None) {
                     ++outIndex;
@@ -328,7 +328,7 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
 // Creates a TOML array with valid entries (skips Nones).
 FORCE_INLINE static toml::array ToTOML(const InputBind &value) {
     toml::array out{};
-    for (auto &event : value.events) {
+    for (auto &event : value.elements) {
         if (event.type != input::InputElement::Type::None) {
             out.push_back(input::ToString(event));
         }
@@ -889,7 +889,7 @@ void Settings::RebindInputs() {
 
     for (auto &[action, mappings] : m_actionInputs) {
         for (auto &[bind, context] : mappings) {
-            for (auto &event : bind->events) {
+            for (auto &event : bind->elements) {
                 // Sanitization -- skip ESC binds if they were manually added in the configuration file
                 if (event.type == input::InputElement::Type::KeyCombo &&
                     event.keyCombo.key == input::KeyboardKey::Escape) {
@@ -908,7 +908,7 @@ void Settings::RebindAction(input::ActionID action) {
 
     if (auto it = m_actionInputs.find(action); it != m_actionInputs.end()) {
         for (auto &[bind, context] : it->second) {
-            for (auto &event : bind->events) {
+            for (auto &event : bind->elements) {
                 m_inputContext.MapAction(event, action, context);
             }
         }
@@ -920,10 +920,10 @@ void Settings::RebindAction(input::ActionID action) {
 void Settings::SyncInputSettings() {
     for (auto &[action, mappings] : m_actionInputs) {
         for (auto &[bind, context] : mappings) {
-            bind->events.fill({});
+            bind->elements.fill({});
             for (int i = 0; auto &input : m_inputContext.GetMappedInputs(bind->action)) {
                 if (input.context == context) {
-                    bind->events[i++] = input.event;
+                    bind->elements[i++] = input.element;
                     if (i == kNumBindsPerInput) {
                         break;
                     }
@@ -938,66 +938,66 @@ void Settings::ResetHotkeys() {
     using Key = input::KeyboardKey;
     using KeyCombo = input::KeyCombo;
 
-    hotkeys.openSettings.events = {KeyCombo{Mod::None, Key::F10}};
-    hotkeys.toggleWindowedVideoOutput.events = {KeyCombo{Mod::None, Key::F9}};
+    hotkeys.openSettings.elements = {KeyCombo{Mod::None, Key::F10}};
+    hotkeys.toggleWindowedVideoOutput.elements = {KeyCombo{Mod::None, Key::F9}};
 
-    hotkeys.toggleMute.events = {KeyCombo{Mod::Control, Key::M}};
-    hotkeys.increaseVolume.events = {KeyCombo{Mod::Control, Key::EqualsPlus}};
-    hotkeys.decreaseVolume.events = {KeyCombo{Mod::Control, Key::MinusUnderscore}};
+    hotkeys.toggleMute.elements = {KeyCombo{Mod::Control, Key::M}};
+    hotkeys.increaseVolume.elements = {KeyCombo{Mod::Control, Key::EqualsPlus}};
+    hotkeys.decreaseVolume.elements = {KeyCombo{Mod::Control, Key::MinusUnderscore}};
 
-    hotkeys.loadDisc.events = {KeyCombo{Mod::Control, Key::O}};
-    hotkeys.ejectDisc.events = {KeyCombo{Mod::Control, Key::W}};
-    hotkeys.openCloseTray.events = {KeyCombo{Mod::Control, Key::T}};
+    hotkeys.loadDisc.elements = {KeyCombo{Mod::Control, Key::O}};
+    hotkeys.ejectDisc.elements = {KeyCombo{Mod::Control, Key::W}};
+    hotkeys.openCloseTray.elements = {KeyCombo{Mod::Control, Key::T}};
 
-    hotkeys.hardReset.events = {KeyCombo{Mod::Control, Key::R}};
-    hotkeys.softReset.events = {KeyCombo{Mod::Control | Mod::Shift, Key::R}};
-    hotkeys.resetButton.events = {KeyCombo{Mod::Shift, Key::R}};
+    hotkeys.hardReset.elements = {KeyCombo{Mod::Control, Key::R}};
+    hotkeys.softReset.elements = {KeyCombo{Mod::Control | Mod::Shift, Key::R}};
+    hotkeys.resetButton.elements = {KeyCombo{Mod::Shift, Key::R}};
 
-    hotkeys.turboSpeed.events = {KeyCombo{Mod::None, Key::Tab}};
-    hotkeys.pauseResume.events = {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::Control, Key::P}};
-    hotkeys.fwdFrameStep.events = {KeyCombo{Mod::None, Key::RightBracket}};
-    hotkeys.revFrameStep.events = {KeyCombo{Mod::None, Key::LeftBracket}};
-    hotkeys.rewind.events = {KeyCombo{Mod::None, Key::Backspace}};
-    hotkeys.toggleRewindBuffer.events = {KeyCombo{Mod::None, Key::F8}};
+    hotkeys.turboSpeed.elements = {KeyCombo{Mod::None, Key::Tab}};
+    hotkeys.pauseResume.elements = {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::Control, Key::P}};
+    hotkeys.fwdFrameStep.elements = {KeyCombo{Mod::None, Key::RightBracket}};
+    hotkeys.revFrameStep.elements = {KeyCombo{Mod::None, Key::LeftBracket}};
+    hotkeys.rewind.elements = {KeyCombo{Mod::None, Key::Backspace}};
+    hotkeys.toggleRewindBuffer.elements = {KeyCombo{Mod::None, Key::F8}};
 
-    hotkeys.toggleDebugTrace.events = {KeyCombo{Mod::None, Key::F11}};
-    hotkeys.dumpMemory.events = {KeyCombo{Mod::Control, Key::F11}};
+    hotkeys.toggleDebugTrace.elements = {KeyCombo{Mod::None, Key::F11}};
+    hotkeys.dumpMemory.elements = {KeyCombo{Mod::Control, Key::F11}};
 
-    hotkeys.saveStates.quickLoad.events = {KeyCombo{Mod::None, Key::F3}};
-    hotkeys.saveStates.quickSave.events = {KeyCombo{Mod::None, Key::F2}};
+    hotkeys.saveStates.quickLoad.elements = {KeyCombo{Mod::None, Key::F3}};
+    hotkeys.saveStates.quickSave.elements = {KeyCombo{Mod::None, Key::F2}};
 
-    hotkeys.saveStates.select1.events = {KeyCombo{Mod::None, Key::Alpha1}};
-    hotkeys.saveStates.select2.events = {KeyCombo{Mod::None, Key::Alpha2}};
-    hotkeys.saveStates.select3.events = {KeyCombo{Mod::None, Key::Alpha3}};
-    hotkeys.saveStates.select4.events = {KeyCombo{Mod::None, Key::Alpha4}};
-    hotkeys.saveStates.select5.events = {KeyCombo{Mod::None, Key::Alpha5}};
-    hotkeys.saveStates.select6.events = {KeyCombo{Mod::None, Key::Alpha6}};
-    hotkeys.saveStates.select7.events = {KeyCombo{Mod::None, Key::Alpha7}};
-    hotkeys.saveStates.select8.events = {KeyCombo{Mod::None, Key::Alpha8}};
-    hotkeys.saveStates.select9.events = {KeyCombo{Mod::None, Key::Alpha9}};
-    hotkeys.saveStates.select10.events = {KeyCombo{Mod::None, Key::Alpha0}};
+    hotkeys.saveStates.select1.elements = {KeyCombo{Mod::None, Key::Alpha1}};
+    hotkeys.saveStates.select2.elements = {KeyCombo{Mod::None, Key::Alpha2}};
+    hotkeys.saveStates.select3.elements = {KeyCombo{Mod::None, Key::Alpha3}};
+    hotkeys.saveStates.select4.elements = {KeyCombo{Mod::None, Key::Alpha4}};
+    hotkeys.saveStates.select5.elements = {KeyCombo{Mod::None, Key::Alpha5}};
+    hotkeys.saveStates.select6.elements = {KeyCombo{Mod::None, Key::Alpha6}};
+    hotkeys.saveStates.select7.elements = {KeyCombo{Mod::None, Key::Alpha7}};
+    hotkeys.saveStates.select8.elements = {KeyCombo{Mod::None, Key::Alpha8}};
+    hotkeys.saveStates.select9.elements = {KeyCombo{Mod::None, Key::Alpha9}};
+    hotkeys.saveStates.select10.elements = {KeyCombo{Mod::None, Key::Alpha0}};
 
-    hotkeys.saveStates.load1.events = {KeyCombo{Mod::Control, Key::Alpha1}};
-    hotkeys.saveStates.load2.events = {KeyCombo{Mod::Control, Key::Alpha2}};
-    hotkeys.saveStates.load3.events = {KeyCombo{Mod::Control, Key::Alpha3}};
-    hotkeys.saveStates.load4.events = {KeyCombo{Mod::Control, Key::Alpha4}};
-    hotkeys.saveStates.load5.events = {KeyCombo{Mod::Control, Key::Alpha5}};
-    hotkeys.saveStates.load6.events = {KeyCombo{Mod::Control, Key::Alpha6}};
-    hotkeys.saveStates.load7.events = {KeyCombo{Mod::Control, Key::Alpha7}};
-    hotkeys.saveStates.load8.events = {KeyCombo{Mod::Control, Key::Alpha8}};
-    hotkeys.saveStates.load9.events = {KeyCombo{Mod::Control, Key::Alpha9}};
-    hotkeys.saveStates.load10.events = {KeyCombo{Mod::Control, Key::Alpha0}};
+    hotkeys.saveStates.load1.elements = {KeyCombo{Mod::Control, Key::Alpha1}};
+    hotkeys.saveStates.load2.elements = {KeyCombo{Mod::Control, Key::Alpha2}};
+    hotkeys.saveStates.load3.elements = {KeyCombo{Mod::Control, Key::Alpha3}};
+    hotkeys.saveStates.load4.elements = {KeyCombo{Mod::Control, Key::Alpha4}};
+    hotkeys.saveStates.load5.elements = {KeyCombo{Mod::Control, Key::Alpha5}};
+    hotkeys.saveStates.load6.elements = {KeyCombo{Mod::Control, Key::Alpha6}};
+    hotkeys.saveStates.load7.elements = {KeyCombo{Mod::Control, Key::Alpha7}};
+    hotkeys.saveStates.load8.elements = {KeyCombo{Mod::Control, Key::Alpha8}};
+    hotkeys.saveStates.load9.elements = {KeyCombo{Mod::Control, Key::Alpha9}};
+    hotkeys.saveStates.load10.elements = {KeyCombo{Mod::Control, Key::Alpha0}};
 
-    hotkeys.saveStates.save1.events = {KeyCombo{Mod::Shift, Key::Alpha1}};
-    hotkeys.saveStates.save2.events = {KeyCombo{Mod::Shift, Key::Alpha2}};
-    hotkeys.saveStates.save3.events = {KeyCombo{Mod::Shift, Key::Alpha3}};
-    hotkeys.saveStates.save4.events = {KeyCombo{Mod::Shift, Key::Alpha4}};
-    hotkeys.saveStates.save5.events = {KeyCombo{Mod::Shift, Key::Alpha5}};
-    hotkeys.saveStates.save6.events = {KeyCombo{Mod::Shift, Key::Alpha6}};
-    hotkeys.saveStates.save7.events = {KeyCombo{Mod::Shift, Key::Alpha7}};
-    hotkeys.saveStates.save8.events = {KeyCombo{Mod::Shift, Key::Alpha8}};
-    hotkeys.saveStates.save9.events = {KeyCombo{Mod::Shift, Key::Alpha9}};
-    hotkeys.saveStates.save10.events = {KeyCombo{Mod::Shift, Key::Alpha0}};
+    hotkeys.saveStates.save1.elements = {KeyCombo{Mod::Shift, Key::Alpha1}};
+    hotkeys.saveStates.save2.elements = {KeyCombo{Mod::Shift, Key::Alpha2}};
+    hotkeys.saveStates.save3.elements = {KeyCombo{Mod::Shift, Key::Alpha3}};
+    hotkeys.saveStates.save4.elements = {KeyCombo{Mod::Shift, Key::Alpha4}};
+    hotkeys.saveStates.save5.elements = {KeyCombo{Mod::Shift, Key::Alpha5}};
+    hotkeys.saveStates.save6.elements = {KeyCombo{Mod::Shift, Key::Alpha6}};
+    hotkeys.saveStates.save7.elements = {KeyCombo{Mod::Shift, Key::Alpha7}};
+    hotkeys.saveStates.save8.elements = {KeyCombo{Mod::Shift, Key::Alpha8}};
+    hotkeys.saveStates.save9.elements = {KeyCombo{Mod::Shift, Key::Alpha9}};
+    hotkeys.saveStates.save10.elements = {KeyCombo{Mod::Shift, Key::Alpha0}};
 }
 
 void Settings::ResetBinds(Input::Port::StandardPadBinds &binds) {
@@ -1005,34 +1005,34 @@ void Settings::ResetBinds(Input::Port::StandardPadBinds &binds) {
 
     if (&binds == &input.port1.standardPadBinds) {
         // Default port 1 Standard Pad controller inputs
-        input.port1.standardPadBinds.a.events = {{{Key::J}}};
-        input.port1.standardPadBinds.b.events = {{{Key::K}}};
-        input.port1.standardPadBinds.c.events = {{{Key::L}}};
-        input.port1.standardPadBinds.x.events = {{{Key::U}}};
-        input.port1.standardPadBinds.y.events = {{{Key::I}}};
-        input.port1.standardPadBinds.z.events = {{{Key::O}}};
-        input.port1.standardPadBinds.l.events = {{{Key::Q}}};
-        input.port1.standardPadBinds.r.events = {{{Key::E}}};
-        input.port1.standardPadBinds.start.events = {{{Key::G}, {Key::F}, {Key::H}, {Key::Return}}};
-        input.port1.standardPadBinds.up.events = {{{Key::W}}};
-        input.port1.standardPadBinds.down.events = {{{Key::S}}};
-        input.port1.standardPadBinds.left.events = {{{Key::A}}};
-        input.port1.standardPadBinds.right.events = {{{Key::D}}};
+        input.port1.standardPadBinds.a.elements = {{{Key::J}}};
+        input.port1.standardPadBinds.b.elements = {{{Key::K}}};
+        input.port1.standardPadBinds.c.elements = {{{Key::L}}};
+        input.port1.standardPadBinds.x.elements = {{{Key::U}}};
+        input.port1.standardPadBinds.y.elements = {{{Key::I}}};
+        input.port1.standardPadBinds.z.elements = {{{Key::O}}};
+        input.port1.standardPadBinds.l.elements = {{{Key::Q}}};
+        input.port1.standardPadBinds.r.elements = {{{Key::E}}};
+        input.port1.standardPadBinds.start.elements = {{{Key::G}, {Key::F}, {Key::H}, {Key::Return}}};
+        input.port1.standardPadBinds.up.elements = {{{Key::W}}};
+        input.port1.standardPadBinds.down.elements = {{{Key::S}}};
+        input.port1.standardPadBinds.left.elements = {{{Key::A}}};
+        input.port1.standardPadBinds.right.elements = {{{Key::D}}};
     } else if (&binds == &input.port2.standardPadBinds) {
         // Default port 2 Standard Pad controller inputs
-        input.port2.standardPadBinds.a.events = {{{Key::KeyPad1}}};
-        input.port2.standardPadBinds.b.events = {{{Key::KeyPad2}}};
-        input.port2.standardPadBinds.c.events = {{{Key::KeyPad3}}};
-        input.port2.standardPadBinds.x.events = {{{Key::KeyPad4}}};
-        input.port2.standardPadBinds.y.events = {{{Key::KeyPad5}}};
-        input.port2.standardPadBinds.z.events = {{{Key::KeyPad6}}};
-        input.port2.standardPadBinds.l.events = {{{Key::KeyPad7}, {Key::Insert}}};
-        input.port2.standardPadBinds.r.events = {{{Key::KeyPad9}, {Key::PageUp}}};
-        input.port2.standardPadBinds.start.events = {{{Key::KeyPadEnter}}};
-        input.port2.standardPadBinds.up.events = {{{Key::Up}, {Key::Home}}};
-        input.port2.standardPadBinds.down.events = {{{Key::Down}, {Key::End}}};
-        input.port2.standardPadBinds.left.events = {{{Key::Left}, {Key::Delete}}};
-        input.port2.standardPadBinds.right.events = {{{Key::Right}, {Key::PageDown}}};
+        input.port2.standardPadBinds.a.elements = {{{Key::KeyPad1}}};
+        input.port2.standardPadBinds.b.elements = {{{Key::KeyPad2}}};
+        input.port2.standardPadBinds.c.elements = {{{Key::KeyPad3}}};
+        input.port2.standardPadBinds.x.elements = {{{Key::KeyPad4}}};
+        input.port2.standardPadBinds.y.elements = {{{Key::KeyPad5}}};
+        input.port2.standardPadBinds.z.elements = {{{Key::KeyPad6}}};
+        input.port2.standardPadBinds.l.elements = {{{Key::KeyPad7}, {Key::Insert}}};
+        input.port2.standardPadBinds.r.elements = {{{Key::KeyPad9}, {Key::PageUp}}};
+        input.port2.standardPadBinds.start.elements = {{{Key::KeyPadEnter}}};
+        input.port2.standardPadBinds.up.elements = {{{Key::Up}, {Key::Home}}};
+        input.port2.standardPadBinds.down.elements = {{{Key::Down}, {Key::End}}};
+        input.port2.standardPadBinds.left.elements = {{{Key::Left}, {Key::Delete}}};
+        input.port2.standardPadBinds.right.elements = {{{Key::Right}, {Key::PageDown}}};
     }
     RebindInputs();
 }

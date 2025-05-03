@@ -24,7 +24,7 @@ struct MappedAction {
 };
 
 struct MappedInputElement {
-    InputElement event;
+    InputElement element;
     void *context;
 
     constexpr bool operator==(const MappedInputElement &rhs) const = default;
@@ -85,9 +85,7 @@ public:
     bool IsCapturing() const;
 
 private:
-    void ProcessButtonEvent(const InputElement &event, bool actuated);
-    void ProcessAxis1DEvent(const InputElement &event, float value);
-    void ProcessAxis2DEvent(const InputElement &event, float x, float y);
+    void ProcessEvent(const InputEvent &event);
 
     CaptureCallback m_captureCallback;
 
@@ -95,24 +93,24 @@ private:
 
 public:
     // -----------------------------------------------------------------------------------------------------------------
-    // Event-action mapping
+    // Element-action mapping
 
-    // Maps an input event to an action.
-    void MapAction(InputElement event, ActionID action, void *context = nullptr);
+    // Maps an input element to an action.
+    void MapAction(InputElement element, ActionID action, void *context = nullptr);
 
-    // Gets the action mapped to the input event, if any.
-    std::optional<MappedAction> GetMappedAction(InputElement event) const;
+    // Gets the action mapped to the input element, if any.
+    std::optional<MappedAction> GetMappedAction(InputElement element) const;
 
-    // Gets all actions mapped to input events.
+    // Gets all actions mapped to input elements.
     const std::unordered_map<InputElement, MappedAction> &GetMappedInputElementActions() const;
 
-    // Gets the input events mapped to the action.
+    // Gets the input elements mapped to the action.
     std::unordered_set<MappedInputElement> GetMappedInputs(ActionID action) const;
 
-    // Gets all action to input event mappings.
+    // Gets all action to input element mappings.
     const std::unordered_map<ActionID, std::unordered_set<MappedInputElement>> &GetAllMappedInputs() const;
 
-    // Unmaps the input events from the action.
+    // Unmaps the input elements from the action.
     void UnmapAction(ActionID action);
 
     // Clears all action mappings.
@@ -187,6 +185,6 @@ struct std::hash<app::input::MappedAction> {
 template <>
 struct std::hash<app::input::MappedInputElement> {
     std::size_t operator()(const app::input::MappedInputElement &e) const noexcept {
-        return std::hash<app::input::InputElement>{}(e.event) ^ std::hash<void *>{}(e.context);
+        return std::hash<app::input::InputElement>{}(e.element) ^ std::hash<void *>{}(e.context);
     }
 };
