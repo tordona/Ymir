@@ -91,11 +91,6 @@ void DSP::UpdateProgramLength(uint8 writeIndex) {
         m_programLength = writeIndex + 1;
         updated = true;
     }
-
-    // Add one extra step if needed to allow a memory write in the last step to take place
-    if (updated && m_programLength > 0 && m_programLength < program.size() && program[m_programLength - 1].MWT) {
-        ++m_programLength;
-    }
 }
 
 void DSP::Run() {
@@ -215,6 +210,11 @@ void DSP::Run() {
         }
     }
 
+    if (m_writePending) {
+        WriteWRAM();
+        m_writePending = false;
+    }
+
     if (MDEC_CT == 0) {
         MDEC_CT = 0x2000 << ringBufferLength;
     }
@@ -291,9 +291,6 @@ void DSP::LoadState(const state::SCSPDSP &state) {
         if (program[i].u64 != 0) {
             m_programLength = i;
         }
-    }
-    if (m_programLength > 0 && m_programLength < program.size() && program[m_programLength - 1].MWT) {
-        ++m_programLength;
     }
 
     tempMem = state.TEMP;
