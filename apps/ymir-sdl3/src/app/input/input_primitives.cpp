@@ -772,6 +772,8 @@ std::string_view ToString(GamepadAxis1D axis) {
     case GamepadAxis1D::RightStickY: return "GamepadRightStickY";
     case GamepadAxis1D::LeftTrigger: return "GamepadLeftTrigger";
     case GamepadAxis1D::RightTrigger: return "GamepadRightTrigger";
+    case GamepadAxis1D::DPadX: return "GamepadDPadX";
+    case GamepadAxis1D::DPadY: return "GamepadDPadY";
     default: return "Unknown";
     }
 }
@@ -780,6 +782,7 @@ std::string_view ToString(GamepadAxis2D axis) {
     switch (axis) {
     case GamepadAxis2D::LeftStick: return "GamepadLeftStick";
     case GamepadAxis2D::RightStick: return "GamepadRightStick";
+    case GamepadAxis2D::DPad: return "GamepadDPad";
     default: return "Unknown";
     }
 }

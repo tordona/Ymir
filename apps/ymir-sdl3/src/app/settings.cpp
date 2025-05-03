@@ -820,6 +820,7 @@ SettingsSaveResult Settings::Save() {
                     {"Down", ToTOML(input.port1.standardPadBinds.down)},
                     {"Left", ToTOML(input.port1.standardPadBinds.left)},
                     {"Right", ToTOML(input.port1.standardPadBinds.right)},
+                    {"DPad", ToTOML(input.port1.standardPadBinds.dpad)},
                 }}},
             }}},
             {"Port2", toml::table{{
@@ -838,6 +839,7 @@ SettingsSaveResult Settings::Save() {
                     {"Down", ToTOML(input.port2.standardPadBinds.down)},
                     {"Left", ToTOML(input.port2.standardPadBinds.left)},
                     {"Right", ToTOML(input.port2.standardPadBinds.right)},
+                    {"DPad", ToTOML(input.port1.standardPadBinds.dpad)},
                 }}},
             }}},
             {"GamepadLSDeadzoneX", input.gamepadLSDeadzone.x.Get()},
