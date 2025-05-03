@@ -287,6 +287,8 @@ struct Slot {
     uint32 lfoCycles; // Incremented every sample
     uint8 lfoStep;    // Incremented when lfoCycles reaches lfoStepInterval
 
+    uint8 alfoOutput;
+
     sint16 sample1;
     sint16 sample2;
     sint16 output;

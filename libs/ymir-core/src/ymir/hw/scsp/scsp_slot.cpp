@@ -80,6 +80,8 @@ void Slot::Reset() {
     lfoCycles = 0;
     lfoStep = 0;
 
+    alfoOutput = 0;
+
     sample1 = 0;
     sample2 = 0;
 
@@ -596,6 +598,8 @@ void Slot::SaveState(state::SCSPSlotState &state) const {
     state.lfoCycles = lfoCycles;
     state.lfoStep = lfoStep;
 
+    state.alfoOutput = alfoOutput;
+
     state.sample1 = sample1;
     state.sample2 = sample2;
     state.output = output;
@@ -743,6 +747,8 @@ void Slot::LoadState(const state::SCSPSlotState &state) {
 
     lfoCycles = state.lfoCycles;
     lfoStep = state.lfoStep;
+
+    alfoOutput = state.alfoOutput;
 
     sample1 = state.sample1;
     sample2 = state.sample2;

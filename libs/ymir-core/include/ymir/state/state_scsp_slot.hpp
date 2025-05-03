@@ -162,6 +162,8 @@ inline namespace v3 {
         uint32 lfoCycles;
         uint8 lfoStep;
 
+        uint8 alfoOutput;
+
         sint16 sample1;
         sint16 sample2;
         sint16 output;
@@ -235,6 +237,8 @@ inline namespace v3 {
 
             lfoCycles = state.lfoCycles;
             lfoStep = state.lfoStep;
+
+            alfoOutput = 0;
 
             sample1 = state.sample1;
             sample2 = state.sample2;

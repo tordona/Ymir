@@ -626,19 +626,20 @@ FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
         static constexpr const char *loopNames[] = {"->|", ">->", "<-<", ">-<"};
         devlog::trace<grp::kyonex>(
             "Slot {:02d} key {} {:2d}-bit addr={:05X} loop={:04X}-{:04X} {} OCT={:02d} FNS={:03X} KRS={:X} "
-            "EG {:02d} {:02d} {:02d} {:02d} DL={:03X} EGHOLD={} LPSLNK={} mod X={:02X} Y={:02X} lv={:X}",
+            "EG {:02d} {:02d} {:02d} {:02d} DL={:03X} EGHOLD={} LPSLNK={} mod X={:02X} Y={:02X} lv={:X} ALFOWS={:X} "
+            "ALFOS={:X}",
             slot.index, (slot.keyOnBit ? " ON" : "OFF"), (slot.pcm8Bit ? 8 : 16), slot.startAddress,
             slot.loopStartAddress, slot.loopEndAddress, loopNames[static_cast<uint32>(slot.loopControl)], slot.octave,
             slot.freqNumSwitch, slot.keyRateScaling, slot.attackRate, slot.decay1Rate, slot.decay2Rate,
             slot.releaseRate, slot.decayLevel, static_cast<uint8>(slot.egHold), static_cast<uint8>(slot.loopStartLink),
-            slot.modXSelect, slot.modYSelect, slot.modLevel);
+            slot.modXSelect, slot.modYSelect, slot.modLevel, static_cast<uint8>(slot.ampLFOWaveform), slot.ampLFOSens);
     }
+
+    slot.IncrementLFO();
 
     if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
         return;
     }
-
-    slot.IncrementLFO();
 
     // Pitch LFO waveform tables
     static constexpr auto sawTable = [] {
@@ -700,6 +701,8 @@ FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
+    m_lfsr = (m_lfsr >> 1u) | (((m_lfsr >> 5u) ^ m_lfsr) & 1u) << 16u;
+
     if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
         return;
     }
@@ -722,7 +725,7 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
         }
         break;
     }
-    case Slot::SoundSource::Noise: slot.sample1 = m_lfsr & ~0xFF; break;
+    case Slot::SoundSource::Noise: slot.sample1 = (m_lfsr & 0xFFu) << 8u; break;
     case Slot::SoundSource::Silence: slot.sample1 = 0; break;
     case Slot::SoundSource::Unknown: slot.sample1 = 0; break; // TODO: what happens in this mode?
     }
@@ -747,7 +750,42 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
         slot.output = slot.sample1;
     }
 
-    // TODO: what does the ALFO calculation deliver here?
+    // ALFO calculation
+    static constexpr auto sawTable = [] {
+        std::array<uint8, 256> arr{};
+        for (uint32 i = 0; i < 256; i++) {
+            arr[i] = i & ~1;
+        }
+        return arr;
+    }();
+    static constexpr auto squareTable = [] {
+        std::array<uint8, 256> arr{};
+        for (uint32 i = 0; i < 256; i++) {
+            arr[i] = i < 128 ? 0x00 : 0xFE;
+        }
+        return arr;
+    }();
+    static constexpr auto triangleTable = [] {
+        std::array<uint8, 256> arr{};
+        for (uint32 i = 0; i < 128; i++) {
+            const uint8 il = i;
+            const uint8 ir = 255 - i;
+            arr[il] = arr[ir] = i * 2;
+        }
+        return arr;
+    }();
+
+    slot.alfoOutput = 0u;
+    if (slot.ampLFOSens != 0) {
+        using enum Slot::Waveform;
+        switch (slot.ampLFOWaveform) {
+        case Saw: slot.alfoOutput = sawTable[slot.lfoStep]; break;
+        case Square: slot.alfoOutput = squareTable[slot.lfoStep]; break;
+        case Triangle: slot.alfoOutput = triangleTable[slot.lfoStep]; break;
+        case Noise: slot.alfoOutput = static_cast<uint8>(m_lfsr) & ~1u; break;
+        }
+        slot.alfoOutput >>= 7u - slot.ampLFOSens;
+    }
 
     // Advance envelope generator
     if (!m_egStep) {
@@ -837,53 +875,15 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep5(Slot &slot) {
-    m_lfsr = (m_lfsr >> 1u) | (((m_lfsr >> 5u) ^ m_lfsr) & 1u) << 16u;
-
     if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
         slot.output = slot.sampleXOR;
         return;
     }
 
     if (!slot.soundDirect) {
-        static constexpr auto sawTable = [] {
-            std::array<uint8, 256> arr{};
-            for (uint32 i = 0; i < 256; i++) {
-                arr[i] = i;
-            }
-            return arr;
-        }();
-        static constexpr auto squareTable = [] {
-            std::array<uint8, 256> arr{};
-            for (uint32 i = 0; i < 256; i++) {
-                arr[i] = i < 128 ? 0x00 : 0xFF;
-            }
-            return arr;
-        }();
-        static constexpr auto triangleTable = [] {
-            std::array<uint8, 256> arr{};
-            for (uint32 i = 0; i < 128; i++) {
-                const uint8 il = i;
-                const uint8 ir = 255 - i;
-                arr[il] = arr[ir] = i * 2;
-            }
-            return arr;
-        }();
-
-        uint32 alfoLevel = 0u;
-        if (slot.ampLFOSens != 0) {
-            using enum Slot::Waveform;
-            switch (slot.ampLFOWaveform) {
-            case Saw: alfoLevel = sawTable[slot.lfoStep]; break;
-            case Square: alfoLevel = squareTable[slot.lfoStep]; break;
-            case Triangle: alfoLevel = triangleTable[slot.lfoStep]; break;
-            case Noise: alfoLevel = static_cast<uint8>(m_lfsr & ~1); break;
-            }
-            alfoLevel = ((alfoLevel + 1u) >> (7u - slot.ampLFOSens)) << 1u;
-        }
-
         const sint32 envLevel = slot.GetEGLevel();
         const sint32 totalLevel = slot.totalLevel << 2u;
-        const sint32 level = std::min<sint32>(alfoLevel + envLevel + totalLevel, 0x3FF);
+        const sint32 level = std::min<sint32>(slot.alfoOutput + envLevel + totalLevel, 0x3FF);
         slot.output = (slot.output * ((level & 0x3F) ^ 0x7F)) >> ((level >> 6) + 7);
     }
 }

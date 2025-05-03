@@ -455,6 +455,7 @@ inline namespace v3 {
         ar(s.egLevel);
         ar(s.sampleCount, s.currAddress, s.currSample, s.currPhase, s.nextPhase, s.reverse, s.crossedLoopStart);
         ar(s.lfoCycles, s.lfoStep);
+        ar(s.alfoOutput);
         ar(s.sample1, s.sample2, s.output);
     }
 
