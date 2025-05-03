@@ -635,24 +635,18 @@ FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
             slot.modXSelect, slot.modYSelect, slot.modLevel, static_cast<uint8>(slot.ampLFOWaveform), slot.ampLFOSens);
     }
 
-    slot.IncrementLFO();
-
-    if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
-        return;
-    }
-
     // Pitch LFO waveform tables
     static constexpr auto sawTable = [] {
         std::array<sint8, 256> arr{};
         for (uint32 i = 0; i < 256; i++) {
-            arr[i] = static_cast<sint8>(i);
+            arr[i] = static_cast<sint8>(i) & ~1;
         }
         return arr;
     }();
     static constexpr auto squareTable = [] {
         std::array<sint8, 256> arr{};
         for (uint32 i = 0; i < 256; i++) {
-            arr[i] = i < 128 ? 127 : -128;
+            arr[i] = i < 128 ? 126 : -128;
         }
         return arr;
     }();
@@ -667,7 +661,7 @@ FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
     }();
 
     // Compute pitch LFO
-    sint32 pitchLFO = 0;
+    sint8 pitchLFO = 0;
     if (slot.pitchLFOSens != 0) {
         using enum Slot::Waveform;
         switch (slot.pitchLFOWaveform) {
@@ -676,10 +670,10 @@ FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
         case Triangle: pitchLFO = triangleTable[slot.lfoStep]; break;
         case Noise: pitchLFO = static_cast<sint8>(m_lfsr & ~1); break;
         }
-        pitchLFO <<= slot.pitchLFOSens;
-        pitchLFO >>= 2;
+        pitchLFO >>= 7 - (int)slot.pitchLFOSens;
     }
 
+    slot.IncrementLFO();
     slot.IncrementPhase(pitchLFO);
 }
 
@@ -750,7 +744,7 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
         slot.output = slot.sample1;
     }
 
-    // ALFO calculation
+    // Amplitude LFO waveform tables
     static constexpr auto sawTable = [] {
         std::array<uint8, 256> arr{};
         for (uint32 i = 0; i < 256; i++) {
@@ -775,6 +769,7 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
         return arr;
     }();
 
+    // Compute amplitude LFO
     slot.alfoOutput = 0u;
     if (slot.ampLFOSens != 0) {
         using enum Slot::Waveform;
