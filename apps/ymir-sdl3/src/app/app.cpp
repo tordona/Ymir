@@ -263,7 +263,7 @@ int App::Run(const CommandLineOptions &options) {
                     doSelectRom = true;
                 }
                 ImGui::SameLine(0, 0);
-                ImGui::TextUnformatted(" or");
+                ImGui::TextUnformatted(" or ");
                 ImGui::SameLine(0, 0);
                 if (ImGui::TextLink("manage the ROM settings in Settings > IPL")) {
                     doOpenSettings = true;
