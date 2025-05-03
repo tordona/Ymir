@@ -53,8 +53,9 @@ public:
         float y = 0.15f;
     };
 
-    Deadzone GamepadLSDeadzones;
-    Deadzone GamepadRSDeadzones;
+    Deadzone GamepadLSDeadzones;          // Left stick deadzones
+    Deadzone GamepadRSDeadzones;          // Right stick deadzones
+    float GamepadTriggerThreshold = 0.2f; // Trigger-to-button-press threshold
 
     // -----------------------------------------------------------------------------------------------------------------
     // Input primitive processing

@@ -21,15 +21,31 @@ void InputContext::ProcessPrimitive(KeyboardKey key, KeyModifier modifiers, bool
     m_currModifiers = modifiers;
     const auto index = static_cast<size_t>(key);
     if (m_keyStates[index] != pressed || key == KeyboardKey::None) {
-        // Canonicalize key event
+        // Canonicalize key event by converting modifier key presses into modifiers.
+        // The "None" key is used for key modifier-only elements (e.g. Ctrl+Shift).
         switch (key) {
         case KeyboardKey::LeftControl: [[fallthrough]];
         case KeyboardKey::RightControl:
             key = KeyboardKey::None;
             modifiers |= KeyModifier::Control;
             break;
+        case KeyboardKey::LeftShift: [[fallthrough]];
+        case KeyboardKey::RightShift:
+            key = KeyboardKey::None;
+            modifiers |= KeyModifier::Shift;
+            break;
+        case KeyboardKey::LeftAlt: [[fallthrough]];
+        case KeyboardKey::RightAlt:
+            key = KeyboardKey::None;
+            modifiers |= KeyModifier::Alt;
+            break;
+        case KeyboardKey::LeftGui: [[fallthrough]];
+        case KeyboardKey::RightGui:
+            key = KeyboardKey::None;
+            modifiers |= KeyModifier::Super;
+            break;
+        default: break;
         }
-        // The "None" key is used for key modifier-only elements (e.g. Ctrl+Shift)
 
         if (key != KeyboardKey::None) {
             m_keyStates[index] = pressed;
@@ -101,12 +117,19 @@ void InputContext::ProcessPrimitive(uint32 id, GamepadAxis1D axis, float value) 
     const GamepadAxis2D axis2D = Get2DAxisFrom1DAxis(axis);
     const auto index1D = static_cast<size_t>(axis);
 
-    // Apply deadzone mapping to LS/RS values
+    // Apply deadzone mapping to LS/RS values.
+    // Convert triggers into button presses once they reach the threshold.
     switch (axis) {
     case GamepadAxis1D::LeftStickX: value = ApplyDeadzone(value, GamepadLSDeadzones.x); break;
     case GamepadAxis1D::LeftStickY: value = ApplyDeadzone(value, GamepadLSDeadzones.y); break;
     case GamepadAxis1D::RightStickX: value = ApplyDeadzone(value, GamepadRSDeadzones.x); break;
     case GamepadAxis1D::RightStickY: value = ApplyDeadzone(value, GamepadRSDeadzones.y); break;
+    case GamepadAxis1D::LeftTrigger:
+        ProcessPrimitive(id, GamepadButton::LeftTrigger, value >= GamepadTriggerThreshold);
+        break;
+    case GamepadAxis1D::RightTrigger:
+        ProcessPrimitive(id, GamepadButton::RightTrigger, value >= GamepadTriggerThreshold);
+        break;
     default: break;
     }
 

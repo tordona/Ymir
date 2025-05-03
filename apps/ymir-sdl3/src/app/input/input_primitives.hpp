@@ -331,6 +331,10 @@ enum class GamepadButton {
     Misc5,
     Misc6,
 
+    // Buttons converted from 1D axes
+    LeftTrigger,
+    RightTrigger,
+
     _Count,
 };
 

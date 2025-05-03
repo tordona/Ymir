@@ -375,6 +375,8 @@ std::string_view ToHumanString(GamepadButton btn) {
     case GamepadButton::Misc4: return "Misc 4";
     case GamepadButton::Misc5: return "Misc 5";
     case GamepadButton::Misc6: return "Misc 6";
+    case GamepadButton::LeftTrigger: return "LT";
+    case GamepadButton::RightTrigger: return "RT";
     default: return "Unknown";
     }
 }
@@ -756,6 +758,8 @@ std::string_view ToString(GamepadButton btn) {
     case GamepadButton::Misc4: return "GamepadMisc4";
     case GamepadButton::Misc5: return "GamepadMisc5";
     case GamepadButton::Misc6: return "GamepadMisc6";
+    case GamepadButton::LeftTrigger: return "GamepadLeftTriggerButton";
+    case GamepadButton::RightTrigger: return "GamepadRightTriggerButton";
     default: return "Unknown";
     }
 }
@@ -1090,6 +1094,8 @@ static const std::unordered_map<std::string_view, GamepadButton> kGamepadButtons
     {"GamepadMisc4", GamepadButton::Misc4},
     {"GamepadMisc5", GamepadButton::Misc5},
     {"GamepadMisc6", GamepadButton::Misc6},
+    {"GamepadLeftTriggerButton", GamepadButton::LeftTrigger},
+    {"GamepadRightTriggerButton", GamepadButton::RightTrigger},
 };
 
 static const std::unordered_map<std::string_view, GamepadAxis1D> kGamepadAxes1D{
