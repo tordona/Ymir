@@ -123,9 +123,32 @@ void InputContext::ProcessPrimitive(MouseAxis1D axis, float value) {
     m_axesDirty = true;
 }
 
+static float ApplyDeadzone(float value, float deadzone) {
+    // Limit deadzone to 90%
+    deadzone = std::min(deadzone, 0.9f);
+
+    // Map values in the deadzone to 0.0f
+    if (abs(value) < deadzone) {
+        return 0.0f;
+    }
+
+    // Linearly map values outsize of the deadzone to 0.0f..1.0f
+    const float sign = value < 0.0f ? -1.0f : +1.0f;
+    return sign * (abs(value) - deadzone) / (1.0f - deadzone);
+}
+
 void InputContext::ProcessPrimitive(uint32 id, GamepadAxis1D axis, float value) {
     const GamepadAxis2D axis2D = Get2DAxisFrom1DAxis(axis);
     const auto index1D = static_cast<size_t>(axis);
+
+    // Apply deadzone mapping to LS/RS values
+    switch (axis) {
+    case GamepadAxis1D::LeftStickX: value = ApplyDeadzone(value, GamepadLSDeadzones.x); break;
+    case GamepadAxis1D::LeftStickY: value = ApplyDeadzone(value, GamepadLSDeadzones.y); break;
+    case GamepadAxis1D::RightStickX: value = ApplyDeadzone(value, GamepadRSDeadzones.x); break;
+    case GamepadAxis1D::RightStickY: value = ApplyDeadzone(value, GamepadRSDeadzones.y); break;
+    default: break;
+    }
 
     m_gamepadAxes1D[id][index1D].value = value;
     m_gamepadAxes1D[id][index1D].changed = true;

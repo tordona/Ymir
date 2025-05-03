@@ -41,6 +41,20 @@ public:
     InputContext();
 
     // -----------------------------------------------------------------------------------------------------------------
+    // Configuration
+
+    // Deadzone parameters for gamepad sticks.
+    // The range of values from 0.0 to +-<x/y> is mapped to 0.0
+    // The range of values from +-<x/y> to 1.0 are mapped linearly to 0.0..1.0.
+    struct Deadzone {
+        float x = 0.15f;
+        float y = 0.15f;
+    };
+
+    Deadzone GamepadLSDeadzones;
+    Deadzone GamepadRSDeadzones;
+
+    // -----------------------------------------------------------------------------------------------------------------
     // Input primitive processing
 
     // Processes a keyboard primitive.
@@ -133,13 +147,6 @@ private:
 
     std::array<Axis2D, static_cast<size_t>(MouseAxis2D::_Count)> m_mouseAxes2D;
     std::unordered_map<uint32, std::array<Axis2D, static_cast<size_t>(GamepadAxis2D::_Count)>> m_gamepadAxes2D;
-
-    struct Deadzone {
-        float x = 0.0f;
-        float y = 0.0f;
-    };
-
-    std::unordered_map<uint32, Deadzone> m_gamepadDeadzones;
 
     std::unordered_map<InputEvent, MappedAction> m_actions;
     std::unordered_map<ActionID, std::unordered_set<MappedInputEvent>> m_actionsReverse;

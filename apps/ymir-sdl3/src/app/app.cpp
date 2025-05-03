@@ -1459,7 +1459,7 @@ void App::RunEmulator() {
             }
         }
 
-        // Process all axes
+        // Process all axis changes
         m_context.inputContext.ProcessAxes();
 
         // Process GUI events
