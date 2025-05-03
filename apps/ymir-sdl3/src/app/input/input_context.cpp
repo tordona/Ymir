@@ -18,34 +18,35 @@ InputContext::InputContext() {
 // Input primitive processing
 
 void InputContext::ProcessPrimitive(KeyboardKey key, KeyModifier modifiers, bool pressed) {
+    // Canonicalize key event by converting modifier key presses into modifiers.
+    // The "None" key is used for key modifier-only elements (e.g. Ctrl+Shift).
+    switch (key) {
+    case KeyboardKey::LeftControl: [[fallthrough]];
+    case KeyboardKey::RightControl:
+        key = KeyboardKey::None;
+        modifiers |= KeyModifier::Control;
+        break;
+    case KeyboardKey::LeftShift: [[fallthrough]];
+    case KeyboardKey::RightShift:
+        key = KeyboardKey::None;
+        modifiers |= KeyModifier::Shift;
+        break;
+    case KeyboardKey::LeftAlt: [[fallthrough]];
+    case KeyboardKey::RightAlt:
+        key = KeyboardKey::None;
+        modifiers |= KeyModifier::Alt;
+        break;
+    case KeyboardKey::LeftGui: [[fallthrough]];
+    case KeyboardKey::RightGui:
+        key = KeyboardKey::None;
+        modifiers |= KeyModifier::Super;
+        break;
+    default: break;
+    }
+
     m_currModifiers = modifiers;
     const auto index = static_cast<size_t>(key);
     if (m_keyStates[index] != pressed || key == KeyboardKey::None) {
-        // Canonicalize key event by converting modifier key presses into modifiers.
-        // The "None" key is used for key modifier-only elements (e.g. Ctrl+Shift).
-        switch (key) {
-        case KeyboardKey::LeftControl: [[fallthrough]];
-        case KeyboardKey::RightControl:
-            key = KeyboardKey::None;
-            modifiers |= KeyModifier::Control;
-            break;
-        case KeyboardKey::LeftShift: [[fallthrough]];
-        case KeyboardKey::RightShift:
-            key = KeyboardKey::None;
-            modifiers |= KeyModifier::Shift;
-            break;
-        case KeyboardKey::LeftAlt: [[fallthrough]];
-        case KeyboardKey::RightAlt:
-            key = KeyboardKey::None;
-            modifiers |= KeyModifier::Alt;
-            break;
-        case KeyboardKey::LeftGui: [[fallthrough]];
-        case KeyboardKey::RightGui:
-            key = KeyboardKey::None;
-            modifiers |= KeyModifier::Super;
-            break;
-        default: break;
-        }
 
         if (key != KeyboardKey::None) {
             m_keyStates[index] = pressed;
