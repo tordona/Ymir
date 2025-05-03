@@ -14,6 +14,69 @@
 
 namespace app::input {
 
+MouseAxis2D Get2DAxisFrom1DAxis(MouseAxis1D axis) {
+    switch (axis) {
+    case MouseAxis1D::Horizontal: [[fallthrough]];
+    case MouseAxis1D::Vertical: return MouseAxis2D::Mouse;
+    case MouseAxis1D::WheelHorizontal: [[fallthrough]];
+    case MouseAxis1D::WheelVertical: return MouseAxis2D::Wheel;
+    default: return MouseAxis2D::None;
+    }
+}
+
+GamepadAxis2D Get2DAxisFrom1DAxis(GamepadAxis1D axis) {
+    switch (axis) {
+    case GamepadAxis1D::LeftStickX: [[fallthrough]];
+    case GamepadAxis1D::LeftStickY: return GamepadAxis2D::LeftStick;
+    case GamepadAxis1D::RightStickX: [[fallthrough]];
+    case GamepadAxis1D::RightStickY: return GamepadAxis2D::RightStick;
+    case GamepadAxis1D::DPadX: [[fallthrough]];
+    case GamepadAxis1D::DPadY: return GamepadAxis2D::DPad;
+    default: return GamepadAxis2D::None;
+    }
+}
+
+MouseAxisPair Get1DAxesFrom2DAxis(MouseAxis2D axis) {
+    switch (axis) {
+    case MouseAxis2D::Mouse: return {MouseAxis1D::Horizontal, MouseAxis1D::Vertical};
+    case MouseAxis2D::Wheel: return {MouseAxis1D::WheelHorizontal, MouseAxis1D::WheelVertical};
+    default: return {MouseAxis1D::None, MouseAxis1D::None};
+    }
+}
+
+GamepadAxisPair Get1DAxesFrom2DAxis(GamepadAxis2D axis) {
+    switch (axis) {
+    case GamepadAxis2D::LeftStick: return {GamepadAxis1D::LeftStickX, GamepadAxis1D::LeftStickY};
+    case GamepadAxis2D::RightStick: return {GamepadAxis1D::RightStickX, GamepadAxis1D::RightStickY};
+    case GamepadAxis2D::DPad: return {GamepadAxis1D::DPadX, GamepadAxis1D::DPadY};
+    default: return {GamepadAxis1D::None, GamepadAxis1D::None};
+    }
+}
+
+AxisDirection GetAxisDirection(MouseAxis1D axis) {
+    switch (axis) {
+    case MouseAxis1D::Horizontal: [[fallthrough]];
+    case MouseAxis1D::WheelHorizontal: return AxisDirection::Horizontal;
+    case MouseAxis1D::Vertical: [[fallthrough]];
+    case MouseAxis1D::WheelVertical: return AxisDirection::Vertical;
+    default: return AxisDirection::None;
+    }
+}
+
+AxisDirection GetAxisDirection(GamepadAxis1D axis) {
+    switch (axis) {
+    case GamepadAxis1D::LeftStickX: [[fallthrough]];
+    case GamepadAxis1D::RightStickX: [[fallthrough]];
+    case GamepadAxis1D::DPadX: return AxisDirection::Horizontal;
+    case GamepadAxis1D::LeftStickY: [[fallthrough]];
+    case GamepadAxis1D::RightStickY: [[fallthrough]];
+    case GamepadAxis1D::DPadY: return AxisDirection::Vertical;
+    default: return AxisDirection::None;
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
 std::string ToHumanString(KeyModifier mod) {
     return ToString(mod);
 }

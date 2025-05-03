@@ -1311,7 +1311,16 @@ void App::RunEmulator() {
 
     SDL_ShowWindow(screen.window);
 
+    std::unordered_map<SDL_JoystickID, SDL_Gamepad *> gamepads{};
     std::unordered_map<SDL_JoystickID, int> gamepadPlayerIndexes{};
+
+    auto getGamepadPlayerIndex = [&](SDL_JoystickID id) {
+        if (gamepadPlayerIndexes.contains(id)) {
+            return gamepadPlayerIndexes.at(id);
+        } else {
+            return -1;
+        }
+    };
 
     std::array<GUIEvent, 64> evts{};
 
@@ -1386,7 +1395,7 @@ void App::RunEmulator() {
                 SDL_Gamepad *gamepad = SDL_OpenGamepad(evt.gdevice.which);
                 if (gamepad != nullptr) {
                     gamepadPlayerIndexes[evt.gdevice.which] = SDL_GetGamepadPlayerIndex(gamepad);
-                    SDL_CloseGamepad(gamepad);
+                    gamepads[evt.gdevice.which] = gamepad;
                 }
                 devlog::debug<grp::base>("Gamepad {} added -> player index {}", evt.gdevice.which,
                                          gamepadPlayerIndexes[evt.gdevice.which]);
@@ -1396,6 +1405,8 @@ void App::RunEmulator() {
                 devlog::debug<grp::base>("Gamepad {} removed -> player index {}", evt.gdevice.which,
                                          gamepadPlayerIndexes[evt.gdevice.which]);
                 gamepadPlayerIndexes.erase(evt.gdevice.which);
+                SDL_CloseGamepad(gamepads.at(evt.gdevice.which));
+                gamepads.erase(evt.gdevice.which);
                 break;
             case SDL_EVENT_GAMEPAD_REMAPPED: [[fallthrough]];
             case SDL_EVENT_GAMEPAD_UPDATE_COMPLETE: [[fallthrough]];
@@ -1404,17 +1415,18 @@ void App::RunEmulator() {
                 // evt.gdevice.type;
                 // evt.gdevice.which;
                 break;
-            case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-                // TODO: handle these
-                // evt.gaxis.which;
-                // evt.gaxis.axis;
-                // evt.gaxis.value;
+            case SDL_EVENT_GAMEPAD_AXIS_MOTION: //
+            {
+                const int playerIndex = getGamepadPlayerIndex(evt.gaxis.which);
+                const float value = evt.gaxis.value < 0 ? evt.gaxis.value / 32768.0f : evt.gaxis.value / 32767.0f;
+                inputContext.ProcessPrimitive(playerIndex, input::SDL3ToGamepadAxis1D((SDL_GamepadAxis)evt.gaxis.axis),
+                                              value);
                 break;
+            }
             case SDL_EVENT_GAMEPAD_BUTTON_DOWN: [[fallthrough]];
             case SDL_EVENT_GAMEPAD_BUTTON_UP: //
             {
-                const int playerIndex =
-                    gamepadPlayerIndexes.contains(evt.gbutton.which) ? gamepadPlayerIndexes.at(evt.gbutton.which) : -1;
+                const int playerIndex = getGamepadPlayerIndex(evt.gbutton.which);
                 inputContext.ProcessPrimitive(
                     playerIndex, input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button), evt.gbutton.down);
                 break;
@@ -1446,6 +1458,9 @@ void App::RunEmulator() {
                 }
             }
         }
+
+        // Process all axes
+        m_context.inputContext.ProcessAxes();
 
         // Process GUI events
         const size_t evtCount = m_context.eventQueues.gui.try_dequeue_bulk(evts.begin(), evts.size());

@@ -1,5 +1,11 @@
 # Ymir changelog
 
+## Version 0.1.2
+
+### New features and improvements
+
+- Input: Add support for gamepad axes
+
 
 ## Version 0.1.1
 
@@ -14,7 +20,7 @@
 
 - VDP1: Truncate polygon coordinates to 13 bits, fixing a short freeze in Virtua Fighter 2
 - SCSP: Various accuracy improvements and bug fixes (thanks to @celeriyacon)
-- CD Block: Fix errors when loading homebrew discs with a single file
+- CD Block: Fix errors when loading homebrew discs containing a single file
 - Input: Properly handle gamepad buttons when binding inputs
 - ymdasm: Fix disassembly skipping the very last instruction in files
 

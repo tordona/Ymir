@@ -7,11 +7,11 @@ InputContext::InputContext() {
     m_mouseButtonStates.fill(false);
     m_gamepadButtonStates.fill(false);
 
-    m_mouseAxes1D.fill(0.0f);
-    m_gamepadAxes1D.fill(0.0f);
+    m_mouseAxes1D.fill({});
+    m_gamepadAxes1D.clear();
 
-    m_mouseAxes2D.fill({0.0f, 0.0f});
-    m_gamepadAxes2D.fill({0.0f, 0.0f});
+    m_mouseAxes2D.fill({});
+    m_gamepadAxes2D.clear();
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -91,23 +91,109 @@ void InputContext::ProcessPrimitive(uint32 id, GamepadButton button, bool presse
         } else {
             ProcessEvent(InputEvent{id, button}, pressed);
         }
+
+        // Convert D-Pad buttons into axis primitives
+        switch (button) {
+        case GamepadButton::DpadLeft: ProcessPrimitive(id, GamepadAxis1D::DPadX, pressed ? -1.0f : 0.0f); break;
+        case GamepadButton::DpadRight: ProcessPrimitive(id, GamepadAxis1D::DPadX, pressed ? +1.0f : 0.0f); break;
+        case GamepadButton::DpadUp: ProcessPrimitive(id, GamepadAxis1D::DPadY, pressed ? -1.0f : 0.0f); break;
+        case GamepadButton::DpadDown: ProcessPrimitive(id, GamepadAxis1D::DPadY, pressed ? +1.0f : 0.0f); break;
+        default: break;
+        }
     }
 }
 
 void InputContext::ProcessPrimitive(MouseAxis1D axis, float value) {
-    m_mouseAxes1D[static_cast<size_t>(axis)] = value;
+    const MouseAxis2D axis2D = Get2DAxisFrom1DAxis(axis);
+    const auto index1D = static_cast<size_t>(axis);
+
+    m_mouseAxes1D[index1D].value = value;
+    m_mouseAxes1D[index1D].changed = true;
+
+    if (axis2D != MouseAxis2D::None) {
+        const auto index2D = static_cast<size_t>(axis2D);
+        if (GetAxisDirection(axis) == AxisDirection::Horizontal) {
+            m_mouseAxes2D[index2D].h = value;
+        } else {
+            m_mouseAxes2D[index2D].v = value;
+        }
+        m_mouseAxes2D[index2D].changed = true;
+    }
+
+    m_axesDirty = true;
 }
 
-void InputContext::ProcessPrimitive(GamepadAxis1D axis, float value) {
-    m_gamepadAxes1D[static_cast<size_t>(axis)] = value;
+void InputContext::ProcessPrimitive(uint32 id, GamepadAxis1D axis, float value) {
+    const GamepadAxis2D axis2D = Get2DAxisFrom1DAxis(axis);
+    const auto index1D = static_cast<size_t>(axis);
+
+    m_gamepadAxes1D[id][index1D].value = value;
+    m_gamepadAxes1D[id][index1D].changed = true;
+
+    if (axis2D != GamepadAxis2D::None) {
+        const auto index2D = static_cast<size_t>(axis2D);
+        if (GetAxisDirection(axis) == AxisDirection::Horizontal) {
+            m_gamepadAxes2D[id][index2D].h = value;
+        } else {
+            m_gamepadAxes2D[id][index2D].v = value;
+        }
+        m_gamepadAxes2D[id][index2D].changed = true;
+    }
+
+    m_axesDirty = true;
 }
 
-void InputContext::ProcessPrimitive(MouseAxis2D axis, float x, float y) {
-    m_mouseAxes2D[static_cast<size_t>(axis)] = {x, y};
-}
+void InputContext::ProcessAxes() {
+    if (!m_axesDirty) {
+        return;
+    }
+    m_axesDirty = false;
 
-void InputContext::ProcessPrimitive(GamepadAxis2D axis, float x, float y) {
-    m_gamepadAxes2D[static_cast<size_t>(axis)] = {x, y};
+    for (size_t i = 0; i < m_mouseAxes1D.size(); ++i) {
+        const auto axis = static_cast<MouseAxis1D>(i);
+        Axis1D &state = m_mouseAxes1D[i];
+        if (!state.changed) {
+            continue;
+        }
+        state.changed = false;
+        // TODO: map to action
+        // axis, state.value
+    }
+    for (size_t i = 0; i < m_mouseAxes2D.size(); ++i) {
+        const auto axis = static_cast<MouseAxis2D>(i);
+        Axis2D &state = m_mouseAxes2D[i];
+        if (!state.changed) {
+            continue;
+        }
+        state.changed = false;
+        // TODO: map to action
+        // axis, state.h, state.v
+    }
+
+    for (auto &[id, axes] : m_gamepadAxes1D) {
+        for (size_t i = 0; i < axes.size(); ++i) {
+            const auto axis = static_cast<GamepadAxis1D>(i);
+            Axis1D &state = axes[i];
+            if (!state.changed) {
+                continue;
+            }
+            state.changed = false;
+            // TODO: map to action
+            // axis, state.value
+        }
+    }
+    for (auto &[id, axes] : m_gamepadAxes2D) {
+        for (size_t i = 0; i < axes.size(); ++i) {
+            const auto axis = static_cast<GamepadAxis2D>(i);
+            Axis2D &state = axes[i];
+            if (!state.changed) {
+                continue;
+            }
+            state.changed = false;
+            // TODO: map to action
+            // axis, state.h, state.v
+        }
+    }
 }
 
 void InputContext::Capture(CaptureCallback &&callback) {

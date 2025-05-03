@@ -281,6 +281,8 @@ enum MouseButton {
 
 // 1D mouse axes.
 enum class MouseAxis1D {
+    None,
+
     Vertical,
     Horizontal,
     WheelVertical,
@@ -291,6 +293,8 @@ enum class MouseAxis1D {
 
 // 2D mouse axes.
 enum class MouseAxis2D {
+    None,
+
     Mouse,
     Wheel,
 
@@ -358,6 +362,21 @@ enum class GamepadAxis2D {
     _Count,
 };
 
+// Destructured 2D mouse axis into a pair of 1D mouse axes.
+struct MouseAxisPair {
+    MouseAxis1D horz;
+    MouseAxis1D vert;
+};
+
+// Destructured 2D gamepad axis into a pair of 1D gamepad axes.
+struct GamepadAxisPair {
+    GamepadAxis1D horz;
+    GamepadAxis1D vert;
+};
+
+// Direction of an axis.
+enum class AxisDirection { None, Horizontal, Vertical };
+
 // Combination of a keyboard key and key modifiers.
 struct KeyCombo {
     KeyModifier modifiers;
@@ -409,6 +428,18 @@ struct MouseCombo {
 
     bool operator==(const MouseCombo &) const = default;
 };
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Axis converters between 1D and 2D
+
+MouseAxis2D Get2DAxisFrom1DAxis(MouseAxis1D axis);
+GamepadAxis2D Get2DAxisFrom1DAxis(GamepadAxis1D axis);
+
+MouseAxisPair Get1DAxesFrom2DAxis(MouseAxis2D axis);
+GamepadAxisPair Get1DAxesFrom2DAxis(GamepadAxis2D axis);
+
+AxisDirection GetAxisDirection(MouseAxis1D axis);
+AxisDirection GetAxisDirection(GamepadAxis1D axis);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Human-readable string converters (for shortcuts, menus, etc.)
