@@ -6,7 +6,8 @@ add_library(xxHash
 
 ## Add x86 dispatch if compiling for x86_64
 CMAKE_HOST_SYSTEM_INFORMATION(RESULT PLATFORM QUERY OS_PLATFORM)
-if (DEFINED PLATFORM)
+string(TOLOWER "${PLATFORM}" PLATFORM)
+if (PLATFORM MATCHES "^(amd64|x86_64)$")
     set(XXHSUM_DISPATCH ON)
 	target_sources(xxHash PRIVATE
 		xxHash/xxh_x86dispatch.c
