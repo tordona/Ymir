@@ -688,7 +688,7 @@ FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
     }
 
     sint32 modulation = 0;
-    if (slot.modLevel > 0 || slot.modXSelect != 0 || slot.modYSelect != 0) {
+    if (slot.modLevel >= 5) {
         const sint16 xd = m_soundStack[(m_soundStackIndex - 1 + slot.modXSelect) & 63];
         const sint16 yd = m_soundStack[(m_soundStackIndex - 1 + slot.modYSelect) & 63];
         const sint32 zd = (xd + yd) / 2;
