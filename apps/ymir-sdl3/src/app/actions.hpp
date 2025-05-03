@@ -110,7 +110,7 @@ namespace control_pad {
     inline constexpr auto Start = input::Action::Button(0xC0100A);
     inline constexpr auto L = input::Action::Button(0xC0100B);
     inline constexpr auto R = input::Action::Button(0xC0100C);
-    inline constexpr auto DPad = input::Action::Axis1D(0xC0100D);
+    inline constexpr auto DPad = input::Action::Axis2D(0xC0100D);
 
 } // namespace control_pad
 

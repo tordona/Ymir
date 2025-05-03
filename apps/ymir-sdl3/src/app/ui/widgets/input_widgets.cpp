@@ -57,6 +57,7 @@ void InputCaptureWidget::DrawCapturePopup() {
 }
 
 void InputCaptureWidget::CaptureButton(input::InputBind &bind, size_t elementIndex) {
+    m_kind = input::Action::Kind::Button;
     m_context.inputContext.Capture([=, this, &bind](const input::InputEvent &event) -> bool {
         if (!event.element.IsButton()) {
             return false;
@@ -83,11 +84,38 @@ void InputCaptureWidget::CaptureButton(input::InputBind &bind, size_t elementInd
 }
 
 void InputCaptureWidget::CaptureAxis1D(input::InputBind &bind, size_t elementIndex) {
-    // TODO: implement
+    m_kind = input::Action::Kind::Axis1D;
+    m_context.inputContext.Capture([=, this, &bind](const input::InputEvent &event) -> bool {
+        if (!event.element.IsAxis1D()) {
+            return false;
+        }
+        if (abs(event.axis1DValue) < 0.5f) {
+            return false;
+        }
+        bind.elements[elementIndex] = event.element;
+        MakeDirty();
+        m_context.EnqueueEvent(events::gui::RebindAction(bind.action));
+        m_closePopup = true;
+        return true;
+    });
 }
 
 void InputCaptureWidget::CaptureAxis2D(input::InputBind &bind, size_t elementIndex) {
-    // TODO: implement
+    m_kind = input::Action::Kind::Axis2D;
+    m_context.inputContext.Capture([=, this, &bind](const input::InputEvent &event) -> bool {
+        if (!event.element.IsAxis2D()) {
+            return false;
+        }
+        const float d = event.axis2D.x * event.axis2D.x + event.axis2D.y * event.axis2D.y;
+        if (d < 0.5f * 0.5f) {
+            return false;
+        }
+        bind.elements[elementIndex] = event.element;
+        MakeDirty();
+        m_context.EnqueueEvent(events::gui::RebindAction(bind.action));
+        m_closePopup = true;
+        return true;
+    });
 }
 
 void InputCaptureWidget::MakeDirty() {
