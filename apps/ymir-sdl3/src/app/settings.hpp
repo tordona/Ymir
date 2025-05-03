@@ -98,14 +98,14 @@ struct SettingsSaveResult {
 };
 
 // Number of simultaneous input binds allowed per input event
-inline constexpr size_t kNumBindsPerInput = 4;
+inline constexpr size_t kNumBindsPerInput = 5;
 
 struct InputBind {
     InputBind(input::ActionID action)
         : action(action) {}
 
     const input::ActionID action;
-    std::array<input::InputEvent, kNumBindsPerInput> events;
+    std::array<input::InputElement, kNumBindsPerInput> events;
 };
 
 struct InputBindWithContext {

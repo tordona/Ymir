@@ -23,11 +23,11 @@ struct MappedAction {
     constexpr bool operator==(const MappedAction &rhs) const = default;
 };
 
-struct MappedInputEvent {
-    InputEvent event;
+struct MappedInputElement {
+    InputElement event;
     void *context;
 
-    constexpr bool operator==(const MappedInputEvent &rhs) const = default;
+    constexpr bool operator==(const MappedInputElement &rhs) const = default;
 };
 
 // An input context encompasses a set of action mappings for a particular context in the application.
@@ -77,7 +77,7 @@ public:
     // -----------------------------------------------------------------------------------------------------------------
     // Input capture
 
-    using CaptureCallback = std::function<void(const InputEvent &)>;
+    using CaptureCallback = std::function<void(const InputElement &)>;
 
     // Captures the next input event.
     void Capture(CaptureCallback &&callback);
@@ -85,32 +85,32 @@ public:
     bool IsCapturing() const;
 
 private:
-    void ProcessButtonEvent(const InputEvent &event, bool actuated);
-    void ProcessAxis1DEvent(const InputEvent &event, float value);
-    void ProcessAxis2DEvent(const InputEvent &event, float x, float y);
+    void ProcessButtonEvent(const InputElement &event, bool actuated);
+    void ProcessAxis1DEvent(const InputElement &event, float value);
+    void ProcessAxis2DEvent(const InputElement &event, float x, float y);
 
     CaptureCallback m_captureCallback;
 
-    void InvokeCaptureCallback(InputEvent &&event);
+    void InvokeCaptureCallback(InputElement &&event);
 
 public:
     // -----------------------------------------------------------------------------------------------------------------
     // Event-action mapping
 
     // Maps an input event to an action.
-    void MapAction(InputEvent event, ActionID action, void *context = nullptr);
+    void MapAction(InputElement event, ActionID action, void *context = nullptr);
 
     // Gets the action mapped to the input event, if any.
-    std::optional<MappedAction> GetMappedAction(InputEvent event) const;
+    std::optional<MappedAction> GetMappedAction(InputElement event) const;
 
     // Gets all actions mapped to input events.
-    const std::unordered_map<InputEvent, MappedAction> &GetMappedInputEventActions() const;
+    const std::unordered_map<InputElement, MappedAction> &GetMappedInputElementActions() const;
 
     // Gets the input events mapped to the action.
-    std::unordered_set<MappedInputEvent> GetMappedInputs(ActionID action) const;
+    std::unordered_set<MappedInputElement> GetMappedInputs(ActionID action) const;
 
     // Gets all action to input event mappings.
-    const std::unordered_map<ActionID, std::unordered_set<MappedInputEvent>> &GetAllMappedInputs() const;
+    const std::unordered_map<ActionID, std::unordered_set<MappedInputElement>> &GetAllMappedInputs() const;
 
     // Unmaps the input events from the action.
     void UnmapAction(ActionID action);
@@ -164,8 +164,8 @@ private:
     std::array<Axis2D, static_cast<size_t>(MouseAxis2D::_Count)> m_mouseAxes2D;
     std::unordered_map<uint32, std::array<Axis2D, static_cast<size_t>(GamepadAxis2D::_Count)>> m_gamepadAxes2D;
 
-    std::unordered_map<InputEvent, MappedAction> m_actions;
-    std::unordered_map<ActionID, std::unordered_set<MappedInputEvent>> m_actionsReverse;
+    std::unordered_map<InputElement, MappedAction> m_actions;
+    std::unordered_map<ActionID, std::unordered_set<MappedInputElement>> m_actionsReverse;
 
     std::unordered_map<ActionID, ActionHandler> m_actionHandlers;
     std::unordered_map<ActionID, Axis1DHandler> m_axis1DHandlers;
@@ -185,8 +185,8 @@ struct std::hash<app::input::MappedAction> {
 };
 
 template <>
-struct std::hash<app::input::MappedInputEvent> {
-    std::size_t operator()(const app::input::MappedInputEvent &e) const noexcept {
-        return std::hash<app::input::InputEvent>{}(e.event) ^ std::hash<void *>{}(e.context);
+struct std::hash<app::input::MappedInputElement> {
+    std::size_t operator()(const app::input::MappedInputElement &e) const noexcept {
+        return std::hash<app::input::InputElement>{}(e.event) ^ std::hash<void *>{}(e.context);
     }
 };

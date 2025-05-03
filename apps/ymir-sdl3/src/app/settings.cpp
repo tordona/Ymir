@@ -304,7 +304,7 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
     value = wrappedValue;
 }
 
-// Reads until the InputEventArray is full or runs out of entries, skipping all invalid and "None" entries.
+// Reads until the InputElementArray is full or runs out of entries, skipping all invalid and "None" entries.
 FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, InputBind &value) {
     if (toml::array *arr = node[name].as_array()) {
         value.events.fill({});
@@ -314,7 +314,7 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
             if (auto opt = arr->at(i).value<std::string_view>()) {
                 auto &event = value.events[i];
                 input::TryParse((*opt), event);
-                if (event.type != input::InputEvent::Type::None) {
+                if (event.type != input::InputElement::Type::None) {
                     ++outIndex;
                 }
             }
@@ -329,7 +329,7 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
 FORCE_INLINE static toml::array ToTOML(const InputBind &value) {
     toml::array out{};
     for (auto &event : value.events) {
-        if (event.type != input::InputEvent::Type::None) {
+        if (event.type != input::InputElement::Type::None) {
             out.push_back(input::ToString(event));
         }
     }
@@ -891,7 +891,7 @@ void Settings::RebindInputs() {
         for (auto &[bind, context] : mappings) {
             for (auto &event : bind->events) {
                 // Sanitization -- skip ESC binds if they were manually added in the configuration file
-                if (event.type == input::InputEvent::Type::KeyCombo &&
+                if (event.type == input::InputElement::Type::KeyCombo &&
                     event.keyCombo.key == input::KeyboardKey::Escape) {
                     continue;
                 }

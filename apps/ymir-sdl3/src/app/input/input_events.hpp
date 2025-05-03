@@ -6,8 +6,8 @@
 
 namespace app::input {
 
-// An input event includes keyboard and mouse combos, gamepad buttons and any axis movement (both 1D and 2D).
-struct InputEvent {
+// An input element includes keyboard and mouse combos, gamepad buttons and any axis movement (both 1D and 2D).
+struct InputElement {
     enum class Type {
         None,
         KeyCombo,
@@ -48,38 +48,38 @@ struct InputEvent {
         } gamepadAxis2D;
     };
 
-    InputEvent()
+    InputElement()
         : type(Type::None) {}
 
-    InputEvent(KeyCombo keyCombo)
+    InputElement(KeyCombo keyCombo)
         : type(Type::KeyCombo)
         , keyCombo(keyCombo) {}
 
-    InputEvent(MouseCombo mouseCombo)
+    InputElement(MouseCombo mouseCombo)
         : type(Type::MouseCombo)
         , mouseCombo(mouseCombo) {}
 
-    InputEvent(uint32 id, GamepadButton button)
+    InputElement(uint32 id, GamepadButton button)
         : type(Type::GamepadButton)
         , gamepadButton{.id = id, .button = button} {}
 
-    InputEvent(MouseAxis1D axis)
+    InputElement(MouseAxis1D axis)
         : type(Type::MouseAxis1D)
         , mouseAxis1D{.axis = axis} {}
 
-    InputEvent(MouseAxis2D axis)
+    InputElement(MouseAxis2D axis)
         : type(Type::MouseAxis2D)
         , mouseAxis2D{.axis = axis} {}
 
-    InputEvent(uint32 id, GamepadAxis1D axis)
+    InputElement(uint32 id, GamepadAxis1D axis)
         : type(Type::GamepadAxis1D)
         , gamepadAxis1D{.id = id, .axis = axis} {}
 
-    InputEvent(uint32 id, GamepadAxis2D axis)
+    InputElement(uint32 id, GamepadAxis2D axis)
         : type(Type::GamepadAxis2D)
         , gamepadAxis2D{.id = id, .axis = axis} {}
 
-    constexpr bool operator==(const InputEvent &rhs) const {
+    constexpr bool operator==(const InputElement &rhs) const {
         if (type != rhs.type) {
             return false;
         }
@@ -97,22 +97,20 @@ struct InputEvent {
     }
 };
 
-// TODO: axis events
-
 // ---------------------------------------------------------------------------------------------------------------------
 // Human-readable string converters
 
-std::string ToHumanString(const InputEvent &bind);
+std::string ToHumanString(const InputElement &bind);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // String converters
 
-std::string ToString(const InputEvent &bind);
+std::string ToString(const InputElement &bind);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // String parsers
 
-bool TryParse(std::string_view str, InputEvent &event);
+bool TryParse(std::string_view str, InputElement &event);
 
 } // namespace app::input
 
@@ -120,9 +118,9 @@ bool TryParse(std::string_view str, InputEvent &event);
 // Hashing
 
 template <>
-struct std::hash<app::input::InputEvent> {
-    std::size_t operator()(const app::input::InputEvent &e) const noexcept {
-        using Type = app::input::InputEvent::Type;
+struct std::hash<app::input::InputElement> {
+    std::size_t operator()(const app::input::InputElement &e) const noexcept {
+        using Type = app::input::InputElement::Type;
 
         std::size_t hash = std::hash<uint8>{}(static_cast<uint8>(e.type));
         switch (e.type) {

@@ -37,7 +37,7 @@ void StandardPadBindsView::Display(Settings::Input::Port::StandardPadBinds &bind
                     // Left-click engages bind mode
                     if (ImGui::Button(label.c_str(), ImVec2(availWidth, 0))) {
                         ImGui::OpenPopup("input_capture");
-                        m_context.inputContext.Capture([=, this, &bind](const input::InputEvent &event) {
+                        m_context.inputContext.Capture([=, this, &bind](const input::InputElement &event) {
                             bind.events[i] = event;
                             MakeDirty();
                             m_context.EnqueueEvent(events::gui::RebindAction(bind.action));

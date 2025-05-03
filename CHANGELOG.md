@@ -5,6 +5,7 @@
 ### New features and improvements
 
 - Input: Add support for gamepad axes
+- Input: Added one more slot for input binds
 
 
 ## Version 0.1.1

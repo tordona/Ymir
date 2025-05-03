@@ -50,18 +50,18 @@ void InputContext::ProcessPrimitive(KeyboardKey key, KeyModifier modifiers, bool
                     case KeyboardKey::RightGui: modifiers |= KeyModifier::Super; break;
                     default: break;
                     }
-                    InvokeCaptureCallback(InputEvent{KeyCombo{modifiers, KeyboardKey::None}});
+                    InvokeCaptureCallback(InputElement{KeyCombo{modifiers, KeyboardKey::None}});
                 }
                 break;
 
             default:
                 if (pressed) {
-                    InvokeCaptureCallback(InputEvent{KeyCombo{modifiers, key}});
+                    InvokeCaptureCallback(InputElement{KeyCombo{modifiers, key}});
                 }
                 break;
             }
         } else {
-            ProcessButtonEvent(InputEvent{KeyCombo{modifiers, key}}, pressed);
+            ProcessButtonEvent(InputElement{KeyCombo{modifiers, key}}, pressed);
         }
     }
 }
@@ -72,10 +72,10 @@ void InputContext::ProcessPrimitive(MouseButton button, bool pressed) {
         m_mouseButtonStates[index] = pressed;
         if (m_captureCallback) [[unlikely]] {
             if (pressed) {
-                InvokeCaptureCallback(InputEvent{MouseCombo{m_currModifiers, button}});
+                InvokeCaptureCallback(InputElement{MouseCombo{m_currModifiers, button}});
             }
         } else {
-            ProcessButtonEvent(InputEvent{MouseCombo{m_currModifiers, button}}, pressed);
+            ProcessButtonEvent(InputElement{MouseCombo{m_currModifiers, button}}, pressed);
         }
     }
 }
@@ -86,10 +86,10 @@ void InputContext::ProcessPrimitive(uint32 id, GamepadButton button, bool presse
         m_gamepadButtonStates[index] = pressed;
         if (m_captureCallback) [[unlikely]] {
             if (pressed) {
-                InvokeCaptureCallback(InputEvent{id, button});
+                InvokeCaptureCallback(InputElement{id, button});
             }
         } else {
-            ProcessButtonEvent(InputEvent{id, button}, pressed);
+            ProcessButtonEvent(InputElement{id, button}, pressed);
         }
 
         // Convert D-Pad buttons into axis primitives
@@ -179,7 +179,7 @@ void InputContext::ProcessAxes() {
             continue;
         }
         state.changed = false;
-        ProcessAxis1DEvent(InputEvent{axis}, state.value);
+        ProcessAxis1DEvent(InputElement{axis}, state.value);
     }
     for (size_t i = 0; i < m_mouseAxes2D.size(); ++i) {
         const auto axis = static_cast<MouseAxis2D>(i);
@@ -188,7 +188,7 @@ void InputContext::ProcessAxes() {
             continue;
         }
         state.changed = false;
-        ProcessAxis2DEvent(InputEvent{axis}, state.x, state.y);
+        ProcessAxis2DEvent(InputElement{axis}, state.x, state.y);
     }
 
     for (auto &[id, axes] : m_gamepadAxes1D) {
@@ -199,7 +199,7 @@ void InputContext::ProcessAxes() {
                 continue;
             }
             state.changed = false;
-            ProcessAxis1DEvent(InputEvent{id, axis}, state.value);
+            ProcessAxis1DEvent(InputElement{id, axis}, state.value);
         }
     }
     for (auto &[id, axes] : m_gamepadAxes2D) {
@@ -210,7 +210,7 @@ void InputContext::ProcessAxes() {
                 continue;
             }
             state.changed = false;
-            ProcessAxis2DEvent(InputEvent{id, axis}, state.x, state.y);
+            ProcessAxis2DEvent(InputElement{id, axis}, state.x, state.y);
         }
     }
 }
@@ -227,7 +227,7 @@ bool InputContext::IsCapturing() const {
     return (bool)m_captureCallback;
 }
 
-void InputContext::ProcessButtonEvent(const InputEvent &event, bool actuated) {
+void InputContext::ProcessButtonEvent(const InputElement &event, bool actuated) {
     if (auto action = m_actions.find(event); action != m_actions.end()) {
         if (auto handler = m_actionHandlers.find(action->second.action); handler != m_actionHandlers.end()) {
             handler->second(action->second.context, actuated);
@@ -235,7 +235,7 @@ void InputContext::ProcessButtonEvent(const InputEvent &event, bool actuated) {
     }
 }
 
-void InputContext::ProcessAxis1DEvent(const InputEvent &event, float value) {
+void InputContext::ProcessAxis1DEvent(const InputElement &event, float value) {
     if (auto action = m_actions.find(event); action != m_actions.end()) {
         if (auto handler = m_axis1DHandlers.find(action->second.action); handler != m_axis1DHandlers.end()) {
             handler->second(action->second.context, value);
@@ -243,7 +243,7 @@ void InputContext::ProcessAxis1DEvent(const InputEvent &event, float value) {
     }
 }
 
-void InputContext::ProcessAxis2DEvent(const InputEvent &event, float x, float y) {
+void InputContext::ProcessAxis2DEvent(const InputElement &event, float x, float y) {
     if (auto action = m_actions.find(event); action != m_actions.end()) {
         if (auto handler = m_axis2DHandlers.find(action->second.action); handler != m_axis2DHandlers.end()) {
             handler->second(action->second.context, x, y);
@@ -251,7 +251,7 @@ void InputContext::ProcessAxis2DEvent(const InputEvent &event, float x, float y)
     }
 }
 
-void InputContext::InvokeCaptureCallback(InputEvent &&event) {
+void InputContext::InvokeCaptureCallback(InputElement &&event) {
     if (m_captureCallback) {
         m_captureCallback(event);
         m_captureCallback = {};
@@ -261,8 +261,8 @@ void InputContext::InvokeCaptureCallback(InputEvent &&event) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Event-action mapping
 
-void InputContext::MapAction(InputEvent event, ActionID action, void *context) {
-    if (event.type == InputEvent::Type::None) {
+void InputContext::MapAction(InputElement event, ActionID action, void *context) {
+    if (event.type == InputElement::Type::None) {
         return;
     }
 
@@ -277,7 +277,7 @@ void InputContext::MapAction(InputEvent event, ActionID action, void *context) {
     m_actionsReverse[action].insert({event, context});
 }
 
-std::optional<MappedAction> InputContext::GetMappedAction(InputEvent event) const {
+std::optional<MappedAction> InputContext::GetMappedAction(InputElement event) const {
     if (m_actions.contains(event)) {
         return m_actions.at(event);
     } else {
@@ -285,11 +285,11 @@ std::optional<MappedAction> InputContext::GetMappedAction(InputEvent event) cons
     }
 }
 
-const std::unordered_map<InputEvent, MappedAction> &InputContext::GetMappedInputEventActions() const {
+const std::unordered_map<InputElement, MappedAction> &InputContext::GetMappedInputElementActions() const {
     return m_actions;
 }
 
-std::unordered_set<MappedInputEvent> InputContext::GetMappedInputs(ActionID action) const {
+std::unordered_set<MappedInputElement> InputContext::GetMappedInputs(ActionID action) const {
     if (m_actionsReverse.contains(action)) {
         return m_actionsReverse.at(action);
     } else {
@@ -297,7 +297,7 @@ std::unordered_set<MappedInputEvent> InputContext::GetMappedInputs(ActionID acti
     }
 }
 
-const std::unordered_map<ActionID, std::unordered_set<MappedInputEvent>> &InputContext::GetAllMappedInputs() const {
+const std::unordered_map<ActionID, std::unordered_set<MappedInputElement>> &InputContext::GetAllMappedInputs() const {
     return m_actionsReverse;
 }
 
