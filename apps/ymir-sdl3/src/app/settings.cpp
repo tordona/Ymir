@@ -1002,37 +1002,39 @@ void Settings::ResetHotkeys() {
 
 void Settings::ResetBinds(Input::Port::StandardPadBinds &binds) {
     using Key = input::KeyboardKey;
+    using GPBtn = input::GamepadButton;
 
     if (&binds == &input.port1.standardPadBinds) {
         // Default port 1 Standard Pad controller inputs
-        input.port1.standardPadBinds.a.elements = {{{Key::J}}};
-        input.port1.standardPadBinds.b.elements = {{{Key::K}}};
-        input.port1.standardPadBinds.c.elements = {{{Key::L}}};
-        input.port1.standardPadBinds.x.elements = {{{Key::U}}};
-        input.port1.standardPadBinds.y.elements = {{{Key::I}}};
-        input.port1.standardPadBinds.z.elements = {{{Key::O}}};
-        input.port1.standardPadBinds.l.elements = {{{Key::Q}}};
-        input.port1.standardPadBinds.r.elements = {{{Key::E}}};
-        input.port1.standardPadBinds.start.elements = {{{Key::G}, {Key::F}, {Key::H}, {Key::Return}}};
-        input.port1.standardPadBinds.up.elements = {{{Key::W}}};
-        input.port1.standardPadBinds.down.elements = {{{Key::S}}};
-        input.port1.standardPadBinds.left.elements = {{{Key::A}}};
-        input.port1.standardPadBinds.right.elements = {{{Key::D}}};
+        input.port1.standardPadBinds.a.elements = {{{Key::J}, {0, GPBtn::X}}};
+        input.port1.standardPadBinds.b.elements = {{{Key::K}, {0, GPBtn::A}}};
+        input.port1.standardPadBinds.c.elements = {{{Key::L}, {0, GPBtn::B}}};
+        input.port1.standardPadBinds.x.elements = {{{Key::U}, {0, GPBtn::LeftBumper}}};
+        input.port1.standardPadBinds.y.elements = {{{Key::I}, {0, GPBtn::Y}}};
+        input.port1.standardPadBinds.z.elements = {{{Key::O}, {0, GPBtn::RightBumper}}};
+        input.port1.standardPadBinds.l.elements = {{{Key::Q}, {0, GPBtn::LeftTrigger}}};
+        input.port1.standardPadBinds.r.elements = {{{Key::E}, {0, GPBtn::RightTrigger}}};
+        input.port1.standardPadBinds.start.elements = {
+            {{Key::G}, {Key::F}, {Key::H}, {Key::Return}, {0, GPBtn::Start}}};
+        input.port1.standardPadBinds.up.elements = {{{Key::W}, {0, GPBtn::DpadUp}}};
+        input.port1.standardPadBinds.down.elements = {{{Key::S}, {0, GPBtn::DpadDown}}};
+        input.port1.standardPadBinds.left.elements = {{{Key::A}, {0, GPBtn::DpadLeft}}};
+        input.port1.standardPadBinds.right.elements = {{{Key::D}, {0, GPBtn::DpadRight}}};
     } else if (&binds == &input.port2.standardPadBinds) {
         // Default port 2 Standard Pad controller inputs
-        input.port2.standardPadBinds.a.elements = {{{Key::KeyPad1}}};
-        input.port2.standardPadBinds.b.elements = {{{Key::KeyPad2}}};
-        input.port2.standardPadBinds.c.elements = {{{Key::KeyPad3}}};
-        input.port2.standardPadBinds.x.elements = {{{Key::KeyPad4}}};
-        input.port2.standardPadBinds.y.elements = {{{Key::KeyPad5}}};
-        input.port2.standardPadBinds.z.elements = {{{Key::KeyPad6}}};
-        input.port2.standardPadBinds.l.elements = {{{Key::KeyPad7}, {Key::Insert}}};
-        input.port2.standardPadBinds.r.elements = {{{Key::KeyPad9}, {Key::PageUp}}};
-        input.port2.standardPadBinds.start.elements = {{{Key::KeyPadEnter}}};
-        input.port2.standardPadBinds.up.elements = {{{Key::Up}, {Key::Home}}};
-        input.port2.standardPadBinds.down.elements = {{{Key::Down}, {Key::End}}};
-        input.port2.standardPadBinds.left.elements = {{{Key::Left}, {Key::Delete}}};
-        input.port2.standardPadBinds.right.elements = {{{Key::Right}, {Key::PageDown}}};
+        input.port2.standardPadBinds.a.elements = {{{Key::KeyPad1}, {1, GPBtn::X}}};
+        input.port2.standardPadBinds.b.elements = {{{Key::KeyPad2}, {1, GPBtn::A}}};
+        input.port2.standardPadBinds.c.elements = {{{Key::KeyPad3}, {1, GPBtn::B}}};
+        input.port2.standardPadBinds.x.elements = {{{Key::KeyPad4}, {1, GPBtn::LeftBumper}}};
+        input.port2.standardPadBinds.y.elements = {{{Key::KeyPad5}, {1, GPBtn::Y}}};
+        input.port2.standardPadBinds.z.elements = {{{Key::KeyPad6}, {1, GPBtn::RightBumper}}};
+        input.port2.standardPadBinds.l.elements = {{{Key::KeyPad7}, {Key::Insert}, {1, GPBtn::LeftTrigger}}};
+        input.port2.standardPadBinds.r.elements = {{{Key::KeyPad9}, {Key::PageUp}, {1, GPBtn::RightTrigger}}};
+        input.port2.standardPadBinds.start.elements = {{{Key::KeyPadEnter}, {1, GPBtn::Start}}};
+        input.port2.standardPadBinds.up.elements = {{{Key::Up}, {Key::Home}, {1, GPBtn::DpadUp}}};
+        input.port2.standardPadBinds.down.elements = {{{Key::Down}, {Key::End}, {1, GPBtn::DpadDown}}};
+        input.port2.standardPadBinds.left.elements = {{{Key::Left}, {Key::Delete}, {1, GPBtn::DpadLeft}}};
+        input.port2.standardPadBinds.right.elements = {{{Key::Right}, {Key::PageDown}, {1, GPBtn::DpadRight}}};
     }
     RebindInputs();
 }
