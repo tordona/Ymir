@@ -79,6 +79,18 @@ struct InputElement {
         : type(Type::GamepadAxis2D)
         , gamepadAxis2D{.id = id, .axis = axis} {}
 
+    bool IsButton() const {
+        return type == Type::KeyCombo || type == Type::MouseCombo || type == Type::GamepadButton;
+    }
+
+    bool IsAxis1D() const {
+        return type == Type::MouseAxis1D || type == Type::GamepadAxis1D;
+    }
+
+    bool IsAxis2D() const {
+        return type == Type::MouseAxis2D || type == Type::GamepadAxis2D;
+    }
+
     constexpr bool operator==(const InputElement &rhs) const {
         if (type != rhs.type) {
             return false;

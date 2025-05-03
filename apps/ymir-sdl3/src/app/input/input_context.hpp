@@ -77,7 +77,7 @@ public:
     // -----------------------------------------------------------------------------------------------------------------
     // Input capture
 
-    using CaptureCallback = std::function<void(const InputElement &)>;
+    using CaptureCallback = std::function<bool(const InputElement &)>;
 
     // Captures the next input event.
     void Capture(CaptureCallback &&callback);

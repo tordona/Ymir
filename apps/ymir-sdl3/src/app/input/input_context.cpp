@@ -254,8 +254,7 @@ void InputContext::ProcessEvent(const InputEvent &event) {
 }
 
 void InputContext::InvokeCaptureCallback(InputElement &&event) {
-    if (m_captureCallback) {
-        m_captureCallback(event);
+    if (m_captureCallback && m_captureCallback(event)) {
         m_captureCallback = {};
     }
 }
