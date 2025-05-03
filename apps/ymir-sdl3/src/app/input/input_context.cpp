@@ -21,7 +21,16 @@ void InputContext::ProcessPrimitive(KeyboardKey key, KeyModifier modifiers, bool
     m_currModifiers = modifiers;
     const auto index = static_cast<size_t>(key);
     if (m_keyStates[index] != pressed || key == KeyboardKey::None) {
+        // Canonicalize key event
+        switch (key) {
+        case KeyboardKey::LeftControl: [[fallthrough]];
+        case KeyboardKey::RightControl:
+            key = KeyboardKey::None;
+            modifiers |= KeyModifier::Control;
+            break;
+        }
         // The "None" key is used for key modifier-only elements (e.g. Ctrl+Shift)
+
         if (key != KeyboardKey::None) {
             m_keyStates[index] = pressed;
         }

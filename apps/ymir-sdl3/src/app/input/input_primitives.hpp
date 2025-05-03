@@ -296,7 +296,6 @@ enum class MouseAxis2D {
     None,
 
     Mouse,
-    Wheel,
 
     _Count,
 };

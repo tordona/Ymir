@@ -18,8 +18,6 @@ MouseAxis2D Get2DAxisFrom1DAxis(MouseAxis1D axis) {
     switch (axis) {
     case MouseAxis1D::Horizontal: [[fallthrough]];
     case MouseAxis1D::Vertical: return MouseAxis2D::Mouse;
-    case MouseAxis1D::WheelHorizontal: [[fallthrough]];
-    case MouseAxis1D::WheelVertical: return MouseAxis2D::Wheel;
     default: return MouseAxis2D::None;
     }
 }
@@ -39,7 +37,6 @@ GamepadAxis2D Get2DAxisFrom1DAxis(GamepadAxis1D axis) {
 MouseAxisPair Get1DAxesFrom2DAxis(MouseAxis2D axis) {
     switch (axis) {
     case MouseAxis2D::Mouse: return {MouseAxis1D::Horizontal, MouseAxis1D::Vertical};
-    case MouseAxis2D::Wheel: return {MouseAxis1D::WheelHorizontal, MouseAxis1D::WheelVertical};
     default: return {MouseAxis1D::None, MouseAxis1D::None};
     }
 }
@@ -346,7 +343,6 @@ std::string_view ToHumanString(MouseAxis1D axis) {
 std::string_view ToHumanString(MouseAxis2D axis) {
     switch (axis) {
     case MouseAxis2D::Mouse: return "Mouse";
-    case MouseAxis2D::Wheel: return "Mouse Wheel";
     default: return "Unknown";
     }
 }
@@ -728,7 +724,6 @@ std::string_view ToString(MouseAxis1D axis) {
 std::string_view ToString(MouseAxis2D axis) {
     switch (axis) {
     case MouseAxis2D::Mouse: return "Mouse";
-    case MouseAxis2D::Wheel: return "MouseWheel";
     default: return "Unknown";
     }
 }
@@ -1066,7 +1061,6 @@ static const std::unordered_map<std::string_view, MouseAxis1D> kMouseAxes1D{
 
 static const std::unordered_map<std::string_view, MouseAxis2D> kMouseAxes2D{
     {"Mouse", MouseAxis2D::Mouse},
-    {"MouseWheel", MouseAxis2D::Wheel},
 };
 
 static const std::unordered_map<std::string_view, GamepadButton> kGamepadButtons{
