@@ -178,12 +178,22 @@ int App::Run(const CommandLineOptions &options) {
 
     devlog::debug<grp::base>("Profile directory: {}", m_context.profile.GetPath(ProfilePath::Root).string());
 
-    m_context.settings.input.port1.type.Observe([&](ymir::peripheral::PeripheralType type) {
-        m_context.EnqueueEvent(events::emu::InsertPort1Peripheral(type));
-    });
-    m_context.settings.input.port2.type.Observe([&](ymir::peripheral::PeripheralType type) {
-        m_context.EnqueueEvent(events::emu::InsertPort2Peripheral(type));
-    });
+    {
+        auto &inputSettings = m_context.settings.input;
+        auto &inputContext = m_context.inputContext;
+
+        inputSettings.port1.type.Observe([&](ymir::peripheral::PeripheralType type) {
+            m_context.EnqueueEvent(events::emu::InsertPort1Peripheral(type));
+        });
+        inputSettings.port2.type.Observe([&](ymir::peripheral::PeripheralType type) {
+            m_context.EnqueueEvent(events::emu::InsertPort2Peripheral(type));
+        });
+        inputSettings.gamepadLSDeadzone.x.Observe(inputContext.GamepadLSDeadzones.x);
+        inputSettings.gamepadLSDeadzone.y.Observe(inputContext.GamepadLSDeadzones.y);
+        inputSettings.gamepadRSDeadzone.x.Observe(inputContext.GamepadRSDeadzones.x);
+        inputSettings.gamepadRSDeadzone.y.Observe(inputContext.GamepadRSDeadzones.y);
+        inputSettings.gamepadTriggerToButtonThreshold.Observe(inputContext.GamepadTriggerToButtonThreshold);
+    }
 
     {
         auto result = m_context.settings.Load(m_context.profile.GetPath(ProfilePath::Root) / "Ymir.toml");

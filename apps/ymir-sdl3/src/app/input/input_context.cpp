@@ -126,10 +126,10 @@ void InputContext::ProcessPrimitive(uint32 id, GamepadAxis1D axis, float value) 
     case GamepadAxis1D::RightStickX: value = ApplyDeadzone(value, GamepadRSDeadzones.x); break;
     case GamepadAxis1D::RightStickY: value = ApplyDeadzone(value, GamepadRSDeadzones.y); break;
     case GamepadAxis1D::LeftTrigger:
-        ProcessPrimitive(id, GamepadButton::LeftTrigger, value >= GamepadTriggerThreshold);
+        ProcessPrimitive(id, GamepadButton::LeftTrigger, value >= GamepadTriggerToButtonThreshold);
         break;
     case GamepadAxis1D::RightTrigger:
-        ProcessPrimitive(id, GamepadButton::RightTrigger, value >= GamepadTriggerThreshold);
+        ProcessPrimitive(id, GamepadButton::RightTrigger, value >= GamepadTriggerToButtonThreshold);
         break;
     default: break;
     }
