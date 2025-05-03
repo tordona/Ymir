@@ -113,8 +113,8 @@ struct InputElement {
 struct InputEvent {
     InputElement element;
     union {
-        bool button;
-        float axis1D;
+        bool buttonPressed;
+        float axis1DValue;
         struct {
             float x, y;
         } axis2D;

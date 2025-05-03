@@ -74,10 +74,18 @@ public:
     // Processes all updated axes.
     void ProcessAxes();
 
+    // Clears all keyboard inputs.
+    // Can be used for when the application loses focus.
+    void ClearAllKeyboardInputs();
+
+    // Clears all mouse inputs.
+    // Can be used for when the application loses focus.
+    void ClearAllMouseInputs();
+
     // -----------------------------------------------------------------------------------------------------------------
     // Input capture
 
-    using CaptureCallback = std::function<bool(const InputElement &)>;
+    using CaptureCallback = std::function<bool(const InputEvent &)>;
 
     // Captures the next input event.
     void Capture(CaptureCallback &&callback);
@@ -89,7 +97,7 @@ private:
 
     CaptureCallback m_captureCallback;
 
-    void InvokeCaptureCallback(InputElement &&event);
+    void InvokeCaptureCallback(const InputEvent &event);
 
 public:
     // -----------------------------------------------------------------------------------------------------------------

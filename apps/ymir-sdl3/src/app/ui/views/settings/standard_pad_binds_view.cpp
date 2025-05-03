@@ -37,11 +37,24 @@ void StandardPadBindsView::Display(Settings::Input::Port::StandardPadBinds &bind
                     // Left-click engages bind mode
                     if (ImGui::Button(label.c_str(), ImVec2(availWidth, 0))) {
                         ImGui::OpenPopup("input_capture");
-                        m_context.inputContext.Capture([=, this, &bind](const input::InputElement &element) {
-                            if (!element.IsButton()) {
+                        m_context.inputContext.Capture([=, this, &bind](const input::InputEvent &event) -> bool {
+                            if (!event.element.IsButton()) {
                                 return false;
                             }
-                            bind.elements[i] = element;
+                            if (event.element.type == input::InputElement::Type::KeyCombo) {
+                                if (event.element.keyCombo.key == input::KeyboardKey::None) {
+                                    // Map key modifier combos without a key press when releasing the keys
+                                    if (event.buttonPressed) {
+                                        return false;
+                                    }
+                                } else {
+                                    // Map other key combos when pressed
+                                    if (!event.buttonPressed) {
+                                        return false;
+                                    }
+                                }
+                            }
+                            bind.elements[i] = event.element;
                             MakeDirty();
                             m_context.EnqueueEvent(events::gui::RebindAction(bind.action));
                             m_captured = true;

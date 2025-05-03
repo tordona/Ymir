@@ -1336,10 +1336,10 @@ void App::RunEmulator() {
         while (SDL_PollEvent(&evt)) {
             ImGui_ImplSDL3_ProcessEvent(&evt);
             if (io.WantCaptureKeyboard) {
-                // TODO: clear keyboard state
+                inputContext.ClearAllKeyboardInputs();
             }
             if (io.WantCaptureMouse) {
-                // TODO: clear mouse state
+                inputContext.ClearAllMouseInputs();
             }
 
             switch (evt.type) {
