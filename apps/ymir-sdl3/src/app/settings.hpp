@@ -8,6 +8,7 @@
 #include <ymir/db/ipl_db.hpp>
 
 #include <app/input/input_action.hpp>
+#include <app/input/input_bind.hpp>
 #include <app/input/input_context.hpp>
 #include <app/input/input_events.hpp>
 
@@ -97,19 +98,8 @@ struct SettingsSaveResult {
     std::variant<std::monostate, std::error_code> value;
 };
 
-// Number of simultaneous input elements allowed per bind
-inline constexpr size_t kNumBindsPerInput = 5;
-
-struct InputBind {
-    InputBind(input::ActionID action)
-        : action(action) {}
-
-    const input::ActionID action;
-    std::array<input::InputElement, kNumBindsPerInput> elements;
-};
-
 struct InputBindWithContext {
-    InputBind *bind;
+    input::InputBind *bind;
     void *context;
 
     constexpr bool operator==(const InputBindWithContext &) const = default;
@@ -138,7 +128,7 @@ public:
     void RebindInputs();
 
     // Clears and rebinds the inputs of the specified action
-    void RebindAction(input::ActionID action);
+    void RebindAction(input::Action action);
 
     // Synchronizes input settings with those from the input context
     void SyncInputSettings();
@@ -171,67 +161,67 @@ public:
     } system;
 
     struct Hotkeys {
-        InputBind openSettings{actions::general::OpenSettings};
-        InputBind toggleWindowedVideoOutput{actions::general::ToggleWindowedVideoOutput};
+        input::InputBind openSettings{actions::general::OpenSettings};
+        input::InputBind toggleWindowedVideoOutput{actions::general::ToggleWindowedVideoOutput};
 
-        InputBind toggleMute{actions::audio::ToggleMute};
-        InputBind increaseVolume{actions::audio::IncreaseVolume};
-        InputBind decreaseVolume{actions::audio::DecreaseVolume};
+        input::InputBind toggleMute{actions::audio::ToggleMute};
+        input::InputBind increaseVolume{actions::audio::IncreaseVolume};
+        input::InputBind decreaseVolume{actions::audio::DecreaseVolume};
 
-        InputBind loadDisc{actions::cd_drive::LoadDisc};
-        InputBind ejectDisc{actions::cd_drive::EjectDisc};
-        InputBind openCloseTray{actions::cd_drive::OpenCloseTray};
+        input::InputBind loadDisc{actions::cd_drive::LoadDisc};
+        input::InputBind ejectDisc{actions::cd_drive::EjectDisc};
+        input::InputBind openCloseTray{actions::cd_drive::OpenCloseTray};
 
-        InputBind hardReset{actions::sys::HardReset};
-        InputBind softReset{actions::sys::SoftReset};
-        InputBind resetButton{actions::sys::ResetButton};
+        input::InputBind hardReset{actions::sys::HardReset};
+        input::InputBind softReset{actions::sys::SoftReset};
+        input::InputBind resetButton{actions::sys::ResetButton};
 
-        InputBind turboSpeed{actions::emu::TurboSpeed};
-        InputBind pauseResume{actions::emu::PauseResume};
-        InputBind fwdFrameStep{actions::emu::ForwardFrameStep};
-        InputBind revFrameStep{actions::emu::ReverseFrameStep};
-        InputBind rewind{actions::emu::Rewind};
-        InputBind toggleRewindBuffer{actions::emu::ToggleRewindBuffer};
+        input::InputBind turboSpeed{actions::emu::TurboSpeed};
+        input::InputBind pauseResume{actions::emu::PauseResume};
+        input::InputBind fwdFrameStep{actions::emu::ForwardFrameStep};
+        input::InputBind revFrameStep{actions::emu::ReverseFrameStep};
+        input::InputBind rewind{actions::emu::Rewind};
+        input::InputBind toggleRewindBuffer{actions::emu::ToggleRewindBuffer};
 
-        InputBind toggleDebugTrace{actions::dbg::ToggleDebugTrace};
-        InputBind dumpMemory{actions::dbg::DumpMemory};
+        input::InputBind toggleDebugTrace{actions::dbg::ToggleDebugTrace};
+        input::InputBind dumpMemory{actions::dbg::DumpMemory};
 
         struct SaveStates {
-            InputBind quickLoad{actions::save_states::QuickLoadState};
-            InputBind quickSave{actions::save_states::QuickSaveState};
+            input::InputBind quickLoad{actions::save_states::QuickLoadState};
+            input::InputBind quickSave{actions::save_states::QuickSaveState};
 
-            InputBind select1{actions::save_states::SelectState1};
-            InputBind select2{actions::save_states::SelectState2};
-            InputBind select3{actions::save_states::SelectState3};
-            InputBind select4{actions::save_states::SelectState4};
-            InputBind select5{actions::save_states::SelectState5};
-            InputBind select6{actions::save_states::SelectState6};
-            InputBind select7{actions::save_states::SelectState7};
-            InputBind select8{actions::save_states::SelectState8};
-            InputBind select9{actions::save_states::SelectState9};
-            InputBind select10{actions::save_states::SelectState10};
+            input::InputBind select1{actions::save_states::SelectState1};
+            input::InputBind select2{actions::save_states::SelectState2};
+            input::InputBind select3{actions::save_states::SelectState3};
+            input::InputBind select4{actions::save_states::SelectState4};
+            input::InputBind select5{actions::save_states::SelectState5};
+            input::InputBind select6{actions::save_states::SelectState6};
+            input::InputBind select7{actions::save_states::SelectState7};
+            input::InputBind select8{actions::save_states::SelectState8};
+            input::InputBind select9{actions::save_states::SelectState9};
+            input::InputBind select10{actions::save_states::SelectState10};
 
-            InputBind load1{actions::save_states::LoadState1};
-            InputBind load2{actions::save_states::LoadState2};
-            InputBind load3{actions::save_states::LoadState3};
-            InputBind load4{actions::save_states::LoadState4};
-            InputBind load5{actions::save_states::LoadState5};
-            InputBind load6{actions::save_states::LoadState6};
-            InputBind load7{actions::save_states::LoadState7};
-            InputBind load8{actions::save_states::LoadState8};
-            InputBind load9{actions::save_states::LoadState9};
-            InputBind load10{actions::save_states::LoadState10};
+            input::InputBind load1{actions::save_states::LoadState1};
+            input::InputBind load2{actions::save_states::LoadState2};
+            input::InputBind load3{actions::save_states::LoadState3};
+            input::InputBind load4{actions::save_states::LoadState4};
+            input::InputBind load5{actions::save_states::LoadState5};
+            input::InputBind load6{actions::save_states::LoadState6};
+            input::InputBind load7{actions::save_states::LoadState7};
+            input::InputBind load8{actions::save_states::LoadState8};
+            input::InputBind load9{actions::save_states::LoadState9};
+            input::InputBind load10{actions::save_states::LoadState10};
 
-            InputBind save1{actions::save_states::SaveState1};
-            InputBind save2{actions::save_states::SaveState2};
-            InputBind save3{actions::save_states::SaveState3};
-            InputBind save4{actions::save_states::SaveState4};
-            InputBind save5{actions::save_states::SaveState5};
-            InputBind save6{actions::save_states::SaveState6};
-            InputBind save7{actions::save_states::SaveState7};
-            InputBind save8{actions::save_states::SaveState8};
-            InputBind save9{actions::save_states::SaveState9};
-            InputBind save10{actions::save_states::SaveState10};
+            input::InputBind save1{actions::save_states::SaveState1};
+            input::InputBind save2{actions::save_states::SaveState2};
+            input::InputBind save3{actions::save_states::SaveState3};
+            input::InputBind save4{actions::save_states::SaveState4};
+            input::InputBind save5{actions::save_states::SaveState5};
+            input::InputBind save6{actions::save_states::SaveState6};
+            input::InputBind save7{actions::save_states::SaveState7};
+            input::InputBind save8{actions::save_states::SaveState8};
+            input::InputBind save9{actions::save_states::SaveState9};
+            input::InputBind save10{actions::save_states::SaveState10};
         } saveStates;
     } hotkeys;
 
@@ -240,19 +230,20 @@ public:
             util::Observable<ymir::peripheral::PeripheralType> type;
 
             struct StandardPadBinds {
-                InputBind a{actions::std_saturn_pad::A};
-                InputBind b{actions::std_saturn_pad::B};
-                InputBind c{actions::std_saturn_pad::C};
-                InputBind x{actions::std_saturn_pad::X};
-                InputBind y{actions::std_saturn_pad::Y};
-                InputBind z{actions::std_saturn_pad::Z};
-                InputBind l{actions::std_saturn_pad::L};
-                InputBind r{actions::std_saturn_pad::R};
-                InputBind start{actions::std_saturn_pad::Start};
-                InputBind up{actions::std_saturn_pad::Up};
-                InputBind down{actions::std_saturn_pad::Down};
-                InputBind left{actions::std_saturn_pad::Left};
-                InputBind right{actions::std_saturn_pad::Right};
+                input::InputBind a{actions::control_pad::A};
+                input::InputBind b{actions::control_pad::B};
+                input::InputBind c{actions::control_pad::C};
+                input::InputBind x{actions::control_pad::X};
+                input::InputBind y{actions::control_pad::Y};
+                input::InputBind z{actions::control_pad::Z};
+                input::InputBind l{actions::control_pad::L};
+                input::InputBind r{actions::control_pad::R};
+                input::InputBind start{actions::control_pad::Start};
+                input::InputBind up{actions::control_pad::Up};
+                input::InputBind down{actions::control_pad::Down};
+                input::InputBind left{actions::control_pad::Left};
+                input::InputBind right{actions::control_pad::Right};
+                input::InputBind dpad{actions::control_pad::DPad};
             } standardPadBinds;
         };
         Port port1;
@@ -302,7 +293,7 @@ private:
     bool m_dirty = false;
     std::chrono::steady_clock::time_point m_dirtyTimestamp;
 
-    std::unordered_map<input::ActionID, std::unordered_set<InputBindWithContext>> m_actionInputs;
+    std::unordered_map<input::Action, std::unordered_set<InputBindWithContext>> m_actionInputs;
 };
 
 const char *BupCapacityShortName(Settings::Cartridge::BackupRAM::Capacity capacity);

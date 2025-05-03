@@ -55,7 +55,7 @@ inline GUIEvent RebindInputs() {
     return {.type = GUIEvent::Type::RebindInputs};
 }
 
-inline GUIEvent RebindAction(input::ActionID action) {
+inline GUIEvent RebindAction(input::Action action) {
     return {.type = GUIEvent::Type::RebindAction, .value = action};
 }
 

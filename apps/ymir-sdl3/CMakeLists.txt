@@ -35,6 +35,7 @@ add_executable(ymir-sdl3
     src/app/input/input_action.hpp
     src/app/input/input_backend_sdl3.cpp
     src/app/input/input_backend_sdl3.hpp
+    src/app/input/input_bind.hpp
     src/app/input/input_context.cpp
     src/app/input/input_context.hpp
     src/app/input/input_events.cpp
@@ -135,6 +136,8 @@ add_executable(ymir-sdl3
     src/app/ui/widgets/common_widgets.hpp
     src/app/ui/widgets/datetime_widgets.cpp
     src/app/ui/widgets/datetime_widgets.hpp
+    src/app/ui/widgets/input_widgets.cpp
+    src/app/ui/widgets/input_widgets.hpp
     src/app/ui/widgets/peripheral_widgets.cpp
     src/app/ui/widgets/peripheral_widgets.hpp
     src/app/ui/widgets/savestate_widgets.cpp

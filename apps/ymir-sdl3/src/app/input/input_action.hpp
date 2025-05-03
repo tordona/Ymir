@@ -8,6 +8,33 @@ namespace app::input {
 // 4 billion different actions should be more than enough for any kind of app.
 //
 // Any number of input elements can be mapped to a given action.
-using ActionID = uint32;
+struct Action {
+    enum class Kind { Button, Axis1D, Axis2D };
+
+    uint32 id;
+    Kind kind;
+
+    static constexpr Action Button(uint32 id) {
+        return {id, Kind::Button};
+    }
+    static constexpr Action Axis1D(uint32 id) {
+        return {id, Kind::Axis1D};
+    }
+    static constexpr Action Axis2D(uint32 id) {
+        return {id, Kind::Axis2D};
+    }
+
+    constexpr bool operator==(const Action &) const = default;
+};
 
 } // namespace app::input
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Hashing
+
+template <>
+struct std::hash<app::input::Action> {
+    std::size_t operator()(const app::input::Action &a) const noexcept {
+        return std::hash<uint64>{}(static_cast<uint64>(a.id) | (static_cast<uint64>(a.kind) << 32ull));
+    }
+};

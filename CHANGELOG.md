@@ -7,6 +7,10 @@
 - Input: Add support for gamepad axes
 - Input: Added one more slot for input binds
 
+### Fixes
+
+- Input: No longer leaves keys stuck when focusing windows, menus, etc.
+
 
 ## Version 0.1.1
 

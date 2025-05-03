@@ -1258,7 +1258,7 @@ void App::RunEmulator() {
     {
         using Button = peripheral::StandardPadButton;
 
-        auto registerStandardPadButton = [&](input::ActionID action, Button button) {
+        auto registerStandardPadButton = [&](input::Action action, Button button) {
             inputContext.SetActionHandler(action, [=](void *context, bool actuated) {
                 auto &buttons = *reinterpret_cast<peripheral::StandardPadButton *>(context);
                 if (actuated) {
@@ -1269,19 +1269,19 @@ void App::RunEmulator() {
             });
         };
 
-        registerStandardPadButton(actions::std_saturn_pad::A, Button::A);
-        registerStandardPadButton(actions::std_saturn_pad::B, Button::B);
-        registerStandardPadButton(actions::std_saturn_pad::C, Button::C);
-        registerStandardPadButton(actions::std_saturn_pad::X, Button::X);
-        registerStandardPadButton(actions::std_saturn_pad::Y, Button::Y);
-        registerStandardPadButton(actions::std_saturn_pad::Z, Button::Z);
-        registerStandardPadButton(actions::std_saturn_pad::Up, Button::Up);
-        registerStandardPadButton(actions::std_saturn_pad::Down, Button::Down);
-        registerStandardPadButton(actions::std_saturn_pad::Left, Button::Left);
-        registerStandardPadButton(actions::std_saturn_pad::Right, Button::Right);
-        registerStandardPadButton(actions::std_saturn_pad::Start, Button::Start);
-        registerStandardPadButton(actions::std_saturn_pad::L, Button::L);
-        registerStandardPadButton(actions::std_saturn_pad::R, Button::R);
+        registerStandardPadButton(actions::control_pad::A, Button::A);
+        registerStandardPadButton(actions::control_pad::B, Button::B);
+        registerStandardPadButton(actions::control_pad::C, Button::C);
+        registerStandardPadButton(actions::control_pad::X, Button::X);
+        registerStandardPadButton(actions::control_pad::Y, Button::Y);
+        registerStandardPadButton(actions::control_pad::Z, Button::Z);
+        registerStandardPadButton(actions::control_pad::Up, Button::Up);
+        registerStandardPadButton(actions::control_pad::Down, Button::Down);
+        registerStandardPadButton(actions::control_pad::Left, Button::Left);
+        registerStandardPadButton(actions::control_pad::Right, Button::Right);
+        registerStandardPadButton(actions::control_pad::Start, Button::Start);
+        registerStandardPadButton(actions::control_pad::L, Button::L);
+        registerStandardPadButton(actions::control_pad::R, Button::R);
     }
 
     RebindInputs();
@@ -1487,7 +1487,7 @@ void App::RunEmulator() {
             case EvtType::FitWindowToScreen: fitWindowToScreenNow = true; break;
 
             case EvtType::RebindInputs: RebindInputs(); break;
-            case EvtType::RebindAction: RebindAction(std::get<input::ActionID>(evt.value)); break;
+            case EvtType::RebindAction: RebindAction(std::get<input::Action>(evt.value)); break;
 
             case EvtType::ShowErrorMessage: OpenSimpleErrorModal(std::get<std::string>(evt.value)); break;
 
@@ -2213,7 +2213,7 @@ void App::RebindInputs() {
     m_context.settings.RebindInputs();
 }
 
-void App::RebindAction(input::ActionID action) {
+void App::RebindAction(input::Action action) {
     m_context.settings.RebindAction(action);
 }
 

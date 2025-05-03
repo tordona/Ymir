@@ -262,7 +262,7 @@ void InputContext::InvokeCaptureCallback(const InputEvent &event) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Event-action mapping
 
-void InputContext::MapAction(InputElement event, ActionID action, void *context) {
+void InputContext::MapAction(InputElement event, Action action, void *context) {
     if (event.type == InputElement::Type::None) {
         return;
     }
@@ -290,7 +290,7 @@ const std::unordered_map<InputElement, MappedAction> &InputContext::GetMappedInp
     return m_actions;
 }
 
-std::unordered_set<MappedInputElement> InputContext::GetMappedInputs(ActionID action) const {
+std::unordered_set<MappedInputElement> InputContext::GetMappedInputs(Action action) const {
     if (m_actionsReverse.contains(action)) {
         return m_actionsReverse.at(action);
     } else {
@@ -298,11 +298,11 @@ std::unordered_set<MappedInputElement> InputContext::GetMappedInputs(ActionID ac
     }
 }
 
-const std::unordered_map<ActionID, std::unordered_set<MappedInputElement>> &InputContext::GetAllMappedInputs() const {
+const std::unordered_map<Action, std::unordered_set<MappedInputElement>> &InputContext::GetAllMappedInputs() const {
     return m_actionsReverse;
 }
 
-void InputContext::UnmapAction(ActionID action) {
+void InputContext::UnmapAction(Action action) {
     if (m_actionsReverse.contains(action)) {
         for (auto &evt : m_actionsReverse.at(action)) {
             m_actions.erase(evt.element);
@@ -319,27 +319,27 @@ void InputContext::UnmapAllActions() {
 // ---------------------------------------------------------------------------------------------------------------------
 // Action handler mapping
 
-void InputContext::SetActionHandler(ActionID action, ActionHandler handler) {
+void InputContext::SetActionHandler(Action action, ActionHandler handler) {
     m_actionHandlers[action] = handler;
 }
 
-void InputContext::ClearActionHandler(ActionID action) {
+void InputContext::ClearActionHandler(Action action) {
     m_actionHandlers.erase(action);
 }
 
-void InputContext::SetAxis1DHandler(ActionID action, Axis1DHandler handler) {
+void InputContext::SetAxis1DHandler(Action action, Axis1DHandler handler) {
     m_axis1DHandlers[action] = handler;
 }
 
-void InputContext::ClearAxis1DHandler(ActionID action) {
+void InputContext::ClearAxis1DHandler(Action action) {
     m_axis1DHandlers.erase(action);
 }
 
-void InputContext::SetAxis2DHandler(ActionID action, Axis2DHandler handler) {
+void InputContext::SetAxis2DHandler(Action action, Axis2DHandler handler) {
     m_axis2DHandlers[action] = handler;
 }
 
-void InputContext::ClearAxis2DHandler(ActionID action) {
+void InputContext::ClearAxis2DHandler(Action action) {
     m_axis2DHandlers.erase(action);
 }
 

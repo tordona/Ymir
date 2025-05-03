@@ -305,12 +305,12 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
 }
 
 // Reads until the InputElementArray is full or runs out of entries, skipping all invalid and "None" entries.
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, InputBind &value) {
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *name, input::InputBind &value) {
     if (toml::array *arr = node[name].as_array()) {
         value.elements.fill({});
         const size_t count = arr->size();
         size_t outIndex = 0;
-        for (size_t i = 0; i < count && outIndex < kNumBindsPerInput; i++) {
+        for (size_t i = 0; i < count && outIndex < input::kNumBindsPerInput; i++) {
             if (auto opt = arr->at(i).value<std::string_view>()) {
                 auto &event = value.elements[i];
                 input::TryParse((*opt), event);
@@ -326,7 +326,7 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
 // Value-to-string converters
 
 // Creates a TOML array with valid entries (skips Nones).
-FORCE_INLINE static toml::array ToTOML(const InputBind &value) {
+FORCE_INLINE static toml::array ToTOML(const input::InputBind &value) {
     toml::array out{};
     for (auto &event : value.elements) {
         if (event.type != input::InputElement::Type::None) {
@@ -353,7 +353,7 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     , m_inputContext(sharedCtx.inputContext)
     , m_profile(sharedCtx.profile) {
 
-    auto mapActionInput = [&](InputBind &bind, void *context = nullptr) {
+    auto mapActionInput = [&](input::InputBind &bind, void *context = nullptr) {
         m_actionInputs[bind.action].insert({&bind, context});
     };
 
@@ -903,7 +903,7 @@ void Settings::RebindInputs() {
     SyncInputSettings();
 }
 
-void Settings::RebindAction(input::ActionID action) {
+void Settings::RebindAction(input::Action action) {
     m_inputContext.UnmapAction(action);
 
     if (auto it = m_actionInputs.find(action); it != m_actionInputs.end()) {
@@ -924,7 +924,7 @@ void Settings::SyncInputSettings() {
             for (int i = 0; auto &input : m_inputContext.GetMappedInputs(bind->action)) {
                 if (input.context == context) {
                     bind->elements[i++] = input.element;
-                    if (i == kNumBindsPerInput) {
+                    if (i == input::kNumBindsPerInput) {
                         break;
                     }
                 }

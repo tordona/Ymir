@@ -2,6 +2,8 @@
 
 #include "settings_view_base.hpp"
 
+#include <app/ui/widgets/input_widgets.hpp>
+
 namespace app::ui {
 
 class StandardPadBindsView : public SettingsViewBase {
@@ -11,7 +13,7 @@ public:
     void Display(Settings::Input::Port::StandardPadBinds &binds);
 
 private:
-    bool m_captured = false;
+    widgets::InputCaptureWidget m_inputCaptureWidget;
 };
 
 } // namespace app::ui

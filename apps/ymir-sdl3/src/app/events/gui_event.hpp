@@ -1,5 +1,6 @@
 #pragma once
 
+#include <app/input/input_action.hpp>
 #include <app/ui/defs/settings_defs.hpp>
 
 #include <filesystem>
@@ -76,7 +77,7 @@ struct GUIEvent {
     };
 
     Type type;
-    std::variant<std::monostate, bool, uint32, std::string, std::filesystem::path, PeripheralBindsParams,
+    std::variant<std::monostate, bool, uint32, std::string, std::filesystem::path, input::Action, PeripheralBindsParams,
                  FileDialogParams, FolderDialogParams, ui::SettingsTab>
         value;
 };

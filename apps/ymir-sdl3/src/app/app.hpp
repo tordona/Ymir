@@ -73,7 +73,7 @@ private:
     void EmulatorThread();
 
     void RebindInputs();
-    void RebindAction(input::ActionID action);
+    void RebindAction(input::Action action);
 
     template <int port>
     void ReadPeripheral(ymir::peripheral::PeripheralReport &report);

@@ -6,7 +6,7 @@
 
 namespace app::input {
 
-inline std::string ToShortcut(InputContext &ctx, ActionID action) {
+inline std::string ToShortcut(InputContext &ctx, Action action) {
     fmt::memory_buffer buf{};
     auto inserter = std::back_inserter(buf);
     bool first = true;

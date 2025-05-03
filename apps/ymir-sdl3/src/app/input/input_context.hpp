@@ -17,7 +17,7 @@ using Axis1DHandler = std::function<void(void *context, float value)>;
 using Axis2DHandler = std::function<void(void *context, float x, float y)>;
 
 struct MappedAction {
-    ActionID action;
+    Action action;
     void *context;
 
     constexpr bool operator==(const MappedAction &rhs) const = default;
@@ -104,7 +104,7 @@ public:
     // Element-action mapping
 
     // Maps an input element to an action.
-    void MapAction(InputElement element, ActionID action, void *context = nullptr);
+    void MapAction(InputElement element, Action action, void *context = nullptr);
 
     // Gets the action mapped to the input element, if any.
     std::optional<MappedAction> GetMappedAction(InputElement element) const;
@@ -113,13 +113,13 @@ public:
     const std::unordered_map<InputElement, MappedAction> &GetMappedInputElementActions() const;
 
     // Gets the input elements mapped to the action.
-    std::unordered_set<MappedInputElement> GetMappedInputs(ActionID action) const;
+    std::unordered_set<MappedInputElement> GetMappedInputs(Action action) const;
 
     // Gets all action to input element mappings.
-    const std::unordered_map<ActionID, std::unordered_set<MappedInputElement>> &GetAllMappedInputs() const;
+    const std::unordered_map<Action, std::unordered_set<MappedInputElement>> &GetAllMappedInputs() const;
 
     // Unmaps the input elements from the action.
-    void UnmapAction(ActionID action);
+    void UnmapAction(Action action);
 
     // Clears all action mappings.
     void UnmapAllActions();
@@ -129,22 +129,22 @@ public:
     // Action and axis handler mapping
 
     // Registers an action handler to handle the specified action.
-    void SetActionHandler(ActionID action, ActionHandler handler);
+    void SetActionHandler(Action action, ActionHandler handler);
 
     // Unregisters the action handler from the specified action.
-    void ClearActionHandler(ActionID action);
+    void ClearActionHandler(Action action);
 
     // Registers an 1D axis handler to handle the specified action.
-    void SetAxis1DHandler(ActionID action, Axis1DHandler handler);
+    void SetAxis1DHandler(Action action, Axis1DHandler handler);
 
     // Unregisters the 1D axis handler from the specified action.
-    void ClearAxis1DHandler(ActionID action);
+    void ClearAxis1DHandler(Action action);
 
     // Registers an 2D axis handler to handle the specified action.
-    void SetAxis2DHandler(ActionID action, Axis2DHandler handler);
+    void SetAxis2DHandler(Action action, Axis2DHandler handler);
 
     // Unregisters the 2D axis handler from the specified action.
-    void ClearAxis2DHandler(ActionID action);
+    void ClearAxis2DHandler(Action action);
 
 private:
     struct Axis1D {
@@ -171,11 +171,11 @@ private:
     std::unordered_map<uint32, std::array<Axis2D, static_cast<size_t>(GamepadAxis2D::_Count)>> m_gamepadAxes2D;
 
     std::unordered_map<InputElement, MappedAction> m_actions;
-    std::unordered_map<ActionID, std::unordered_set<MappedInputElement>> m_actionsReverse;
+    std::unordered_map<Action, std::unordered_set<MappedInputElement>> m_actionsReverse;
 
-    std::unordered_map<ActionID, ActionHandler> m_actionHandlers;
-    std::unordered_map<ActionID, Axis1DHandler> m_axis1DHandlers;
-    std::unordered_map<ActionID, Axis2DHandler> m_axis2DHandlers;
+    std::unordered_map<Action, ActionHandler> m_actionHandlers;
+    std::unordered_map<Action, Axis1DHandler> m_axis1DHandlers;
+    std::unordered_map<Action, Axis2DHandler> m_axis2DHandlers;
 };
 
 } // namespace app::input
@@ -186,7 +186,7 @@ private:
 template <>
 struct std::hash<app::input::MappedAction> {
     std::size_t operator()(const app::input::MappedAction &e) const noexcept {
-        return std::hash<app::input::ActionID>{}(e.action) ^ std::hash<void *>{}(e.context);
+        return std::hash<app::input::Action>{}(e.action) ^ std::hash<void *>{}(e.context);
     }
 };
 
