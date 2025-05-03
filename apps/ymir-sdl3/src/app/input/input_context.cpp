@@ -61,7 +61,7 @@ void InputContext::ProcessPrimitive(KeyboardKey key, KeyModifier modifiers, bool
                 break;
             }
         } else {
-            ProcessEvent(InputEvent{KeyCombo{modifiers, key}}, pressed);
+            ProcessButtonEvent(InputEvent{KeyCombo{modifiers, key}}, pressed);
         }
     }
 }
@@ -75,7 +75,7 @@ void InputContext::ProcessPrimitive(MouseButton button, bool pressed) {
                 InvokeCaptureCallback(InputEvent{MouseCombo{m_currModifiers, button}});
             }
         } else {
-            ProcessEvent(InputEvent{MouseCombo{m_currModifiers, button}}, pressed);
+            ProcessButtonEvent(InputEvent{MouseCombo{m_currModifiers, button}}, pressed);
         }
     }
 }
@@ -89,7 +89,7 @@ void InputContext::ProcessPrimitive(uint32 id, GamepadButton button, bool presse
                 InvokeCaptureCallback(InputEvent{id, button});
             }
         } else {
-            ProcessEvent(InputEvent{id, button}, pressed);
+            ProcessButtonEvent(InputEvent{id, button}, pressed);
         }
 
         // Convert D-Pad buttons into axis primitives
@@ -113,9 +113,9 @@ void InputContext::ProcessPrimitive(MouseAxis1D axis, float value) {
     if (axis2D != MouseAxis2D::None) {
         const auto index2D = static_cast<size_t>(axis2D);
         if (GetAxisDirection(axis) == AxisDirection::Horizontal) {
-            m_mouseAxes2D[index2D].h = value;
+            m_mouseAxes2D[index2D].x = value;
         } else {
-            m_mouseAxes2D[index2D].v = value;
+            m_mouseAxes2D[index2D].y = value;
         }
         m_mouseAxes2D[index2D].changed = true;
     }
@@ -156,9 +156,9 @@ void InputContext::ProcessPrimitive(uint32 id, GamepadAxis1D axis, float value) 
     if (axis2D != GamepadAxis2D::None) {
         const auto index2D = static_cast<size_t>(axis2D);
         if (GetAxisDirection(axis) == AxisDirection::Horizontal) {
-            m_gamepadAxes2D[id][index2D].h = value;
+            m_gamepadAxes2D[id][index2D].x = value;
         } else {
-            m_gamepadAxes2D[id][index2D].v = value;
+            m_gamepadAxes2D[id][index2D].y = value;
         }
         m_gamepadAxes2D[id][index2D].changed = true;
     }
@@ -179,8 +179,7 @@ void InputContext::ProcessAxes() {
             continue;
         }
         state.changed = false;
-        // TODO: map to action
-        // axis, state.value
+        ProcessAxis1DEvent(InputEvent{axis}, state.value);
     }
     for (size_t i = 0; i < m_mouseAxes2D.size(); ++i) {
         const auto axis = static_cast<MouseAxis2D>(i);
@@ -189,8 +188,7 @@ void InputContext::ProcessAxes() {
             continue;
         }
         state.changed = false;
-        // TODO: map to action
-        // axis, state.h, state.v
+        ProcessAxis2DEvent(InputEvent{axis}, state.x, state.y);
     }
 
     for (auto &[id, axes] : m_gamepadAxes1D) {
@@ -201,8 +199,7 @@ void InputContext::ProcessAxes() {
                 continue;
             }
             state.changed = false;
-            // TODO: map to action
-            // axis, state.value
+            ProcessAxis1DEvent(InputEvent{id, axis}, state.value);
         }
     }
     for (auto &[id, axes] : m_gamepadAxes2D) {
@@ -213,8 +210,7 @@ void InputContext::ProcessAxes() {
                 continue;
             }
             state.changed = false;
-            // TODO: map to action
-            // axis, state.h, state.v
+            ProcessAxis2DEvent(InputEvent{id, axis}, state.x, state.y);
         }
     }
 }
@@ -231,10 +227,26 @@ bool InputContext::IsCapturing() const {
     return (bool)m_captureCallback;
 }
 
-void InputContext::ProcessEvent(const InputEvent &event, bool actuated) {
+void InputContext::ProcessButtonEvent(const InputEvent &event, bool actuated) {
     if (auto action = m_actions.find(event); action != m_actions.end()) {
         if (auto handler = m_actionHandlers.find(action->second.action); handler != m_actionHandlers.end()) {
             handler->second(action->second.context, actuated);
+        }
+    }
+}
+
+void InputContext::ProcessAxis1DEvent(const InputEvent &event, float value) {
+    if (auto action = m_actions.find(event); action != m_actions.end()) {
+        if (auto handler = m_axis1DHandlers.find(action->second.action); handler != m_axis1DHandlers.end()) {
+            handler->second(action->second.context, value);
+        }
+    }
+}
+
+void InputContext::ProcessAxis2DEvent(const InputEvent &event, float x, float y) {
+    if (auto action = m_actions.find(event); action != m_actions.end()) {
+        if (auto handler = m_axis2DHandlers.find(action->second.action); handler != m_axis2DHandlers.end()) {
+            handler->second(action->second.context, x, y);
         }
     }
 }
@@ -273,7 +285,7 @@ std::optional<MappedAction> InputContext::GetMappedAction(InputEvent event) cons
     }
 }
 
-const std::unordered_map<InputEvent, MappedAction> &InputContext::GetMappedActions() const {
+const std::unordered_map<InputEvent, MappedAction> &InputContext::GetMappedInputEventActions() const {
     return m_actions;
 }
 
@@ -312,6 +324,22 @@ void InputContext::SetActionHandler(ActionID action, ActionHandler handler) {
 
 void InputContext::ClearActionHandler(ActionID action) {
     m_actionHandlers.erase(action);
+}
+
+void InputContext::SetAxis1DHandler(ActionID action, Axis1DHandler handler) {
+    m_axis1DHandlers[action] = handler;
+}
+
+void InputContext::ClearAxis1DHandler(ActionID action) {
+    m_axis1DHandlers.erase(action);
+}
+
+void InputContext::SetAxis2DHandler(ActionID action, Axis2DHandler handler) {
+    m_axis2DHandlers[action] = handler;
+}
+
+void InputContext::ClearAxis2DHandler(ActionID action) {
+    m_axis2DHandlers.erase(action);
 }
 
 } // namespace app::input

@@ -13,7 +13,13 @@ std::string ToHumanString(const InputEvent &bind) {
     case InputEvent::Type::KeyCombo: return ToHumanString(bind.keyCombo);
     case InputEvent::Type::MouseCombo: return ToHumanString(bind.mouseCombo);
     case InputEvent::Type::GamepadButton:
-        return fmt::format("Gamepad {} {}", bind.gamepad.id + 1, ToHumanString(bind.gamepad.button));
+        return fmt::format("Gamepad {} {}", bind.gamepadButton.id + 1, ToHumanString(bind.gamepadButton.button));
+    case InputEvent::Type::MouseAxis1D: return std::string(ToHumanString(bind.mouseAxis1D.axis));
+    case InputEvent::Type::MouseAxis2D: return std::string(ToHumanString(bind.mouseAxis2D.axis));
+    case InputEvent::Type::GamepadAxis1D:
+        return fmt::format("Gamepad {} {}", bind.gamepadAxis1D.id + 1, ToHumanString(bind.gamepadAxis1D.axis));
+    case InputEvent::Type::GamepadAxis2D:
+        return fmt::format("Gamepad {} {}", bind.gamepadAxis2D.id + 1, ToHumanString(bind.gamepadAxis2D.axis));
     }
 }
 
@@ -23,7 +29,14 @@ std::string ToString(const InputEvent &bind) {
     case InputEvent::Type::None: return "None";
     case InputEvent::Type::KeyCombo: return ToString(bind.keyCombo);
     case InputEvent::Type::MouseCombo: return ToString(bind.mouseCombo);
-    case InputEvent::Type::GamepadButton: return fmt::format("{}@{}", ToString(bind.gamepad.button), bind.gamepad.id);
+    case InputEvent::Type::GamepadButton:
+        return fmt::format("{}@{}", ToString(bind.gamepadButton.button), bind.gamepadButton.id);
+    case InputEvent::Type::MouseAxis1D: return std::string(ToString(bind.mouseAxis1D.axis));
+    case InputEvent::Type::MouseAxis2D: return std::string(ToString(bind.mouseAxis2D.axis));
+    case InputEvent::Type::GamepadAxis1D:
+        return fmt::format("{}@{}", ToString(bind.gamepadAxis1D.axis), bind.gamepadAxis1D.id);
+    case InputEvent::Type::GamepadAxis2D:
+        return fmt::format("{}@{}", ToString(bind.gamepadAxis2D.axis), bind.gamepadAxis2D.id);
     }
 }
 
@@ -48,17 +61,39 @@ bool TryParse(std::string_view str, InputEvent &event) {
         return true;
     }
 
-    // Check for GamepadButton@<id>
+    // Check for MouseAxis1D
+    if (TryParse(str, event.mouseAxis1D.axis)) {
+        event.type = InputEvent::Type::MouseAxis1D;
+        return true;
+    }
+
+    // Check for MouseAxis2D
+    if (TryParse(str, event.mouseAxis2D.axis)) {
+        event.type = InputEvent::Type::MouseAxis2D;
+        return true;
+    }
+
+    // Check for GamepadButton@<id> or GamepadAxis1D@<id> or GamepadAxis2D@<id>
     if (auto atPos = str.find_first_of('@'); atPos != std::string::npos) {
         auto btnStr = str.substr(0, atPos);
         auto idStr = str.substr(atPos + 1);
-        if (TryParse(btnStr, event.gamepad.button)) {
-            std::istringstream in{idStr.data()};
-            uint32 id{};
-            in >> id;
-            if (in.eof()) {
+        std::istringstream in{idStr.data()};
+        uint32 id{};
+        in >> id;
+        if (in.eof()) {
+            if (TryParse(btnStr, event.gamepadButton.button)) {
                 event.type = InputEvent::Type::GamepadButton;
-                event.gamepad.id = id;
+                event.gamepadButton.id = id;
+                return true;
+            }
+            if (TryParse(btnStr, event.gamepadAxis1D.axis)) {
+                event.type = InputEvent::Type::GamepadAxis1D;
+                event.gamepadAxis1D.id = id;
+                return true;
+            }
+            if (TryParse(btnStr, event.gamepadAxis2D.axis)) {
+                event.type = InputEvent::Type::GamepadAxis2D;
+                event.gamepadAxis2D.id = id;
                 return true;
             }
         }

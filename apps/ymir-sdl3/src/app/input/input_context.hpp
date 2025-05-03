@@ -13,6 +13,8 @@
 namespace app::input {
 
 using ActionHandler = std::function<void(void *context, bool actuated)>;
+using Axis1DHandler = std::function<void(void *context, float value)>;
+using Axis2DHandler = std::function<void(void *context, float x, float y)>;
 
 struct MappedAction {
     ActionID action;
@@ -83,7 +85,9 @@ public:
     bool IsCapturing() const;
 
 private:
-    void ProcessEvent(const InputEvent &event, bool actuated);
+    void ProcessButtonEvent(const InputEvent &event, bool actuated);
+    void ProcessAxis1DEvent(const InputEvent &event, float value);
+    void ProcessAxis2DEvent(const InputEvent &event, float x, float y);
 
     CaptureCallback m_captureCallback;
 
@@ -99,8 +103,8 @@ public:
     // Gets the action mapped to the input event, if any.
     std::optional<MappedAction> GetMappedAction(InputEvent event) const;
 
-    // Gets all mapped actions.
-    const std::unordered_map<InputEvent, MappedAction> &GetMappedActions() const;
+    // Gets all actions mapped to input events.
+    const std::unordered_map<InputEvent, MappedAction> &GetMappedInputEventActions() const;
 
     // Gets the input events mapped to the action.
     std::unordered_set<MappedInputEvent> GetMappedInputs(ActionID action) const;
@@ -116,7 +120,7 @@ public:
 
 public:
     // -----------------------------------------------------------------------------------------------------------------
-    // Action handler mapping
+    // Action and axis handler mapping
 
     // Registers an action handler to handle the specified action.
     void SetActionHandler(ActionID action, ActionHandler handler);
@@ -124,13 +128,25 @@ public:
     // Unregisters the action handler from the specified action.
     void ClearActionHandler(ActionID action);
 
+    // Registers an 1D axis handler to handle the specified action.
+    void SetAxis1DHandler(ActionID action, Axis1DHandler handler);
+
+    // Unregisters the 1D axis handler from the specified action.
+    void ClearAxis1DHandler(ActionID action);
+
+    // Registers an 2D axis handler to handle the specified action.
+    void SetAxis2DHandler(ActionID action, Axis2DHandler handler);
+
+    // Unregisters the 2D axis handler from the specified action.
+    void ClearAxis2DHandler(ActionID action);
+
 private:
     struct Axis1D {
         float value = 0.0f;
         bool changed = false;
     };
     struct Axis2D {
-        float h = 0.0f, v = 0.0f;
+        float x = 0.0f, y = 0.0f;
         bool changed = false;
     };
 
@@ -152,6 +168,8 @@ private:
     std::unordered_map<ActionID, std::unordered_set<MappedInputEvent>> m_actionsReverse;
 
     std::unordered_map<ActionID, ActionHandler> m_actionHandlers;
+    std::unordered_map<ActionID, Axis1DHandler> m_axis1DHandlers;
+    std::unordered_map<ActionID, Axis2DHandler> m_axis2DHandlers;
 };
 
 } // namespace app::input
