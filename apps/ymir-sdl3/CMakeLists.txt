@@ -35,8 +35,6 @@ add_executable(ymir-sdl3
     src/app/input/input_action.hpp
     src/app/input/input_backend_sdl3.cpp
     src/app/input/input_backend_sdl3.hpp
-    src/app/input/input_capturer.cpp
-    src/app/input/input_capturer.hpp
     src/app/input/input_context.cpp
     src/app/input/input_context.hpp
     src/app/input/input_events.cpp

@@ -6,6 +6,12 @@ InputContext::InputContext() {
     m_keyStates.fill(false);
     m_mouseButtonStates.fill(false);
     m_gamepadButtonStates.fill(false);
+
+    m_mouseAxes1D.fill(0.0f);
+    m_gamepadAxes1D.fill(0.0f);
+
+    m_mouseAxes2D.fill({0.0f, 0.0f});
+    m_gamepadAxes2D.fill({0.0f, 0.0f});
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -19,7 +25,44 @@ void InputContext::ProcessPrimitive(KeyboardKey key, KeyModifier modifiers, bool
         if (key != KeyboardKey::None) {
             m_keyStates[index] = pressed;
         }
-        ProcessEvent(InputEvent{KeyCombo{modifiers, key}}, pressed);
+
+        if (m_captureCallback) [[unlikely]] {
+            switch (key) {
+            case KeyboardKey::Escape: CancelCapture(); break;
+
+            case KeyboardKey::LeftControl:
+            case KeyboardKey::RightControl:
+            case KeyboardKey::LeftAlt:
+            case KeyboardKey::RightAlt:
+            case KeyboardKey::LeftShift:
+            case KeyboardKey::RightShift:
+            case KeyboardKey::LeftGui:
+            case KeyboardKey::RightGui:
+                if (!pressed) {
+                    switch (key) {
+                    case KeyboardKey::LeftControl:
+                    case KeyboardKey::RightControl: modifiers |= KeyModifier::Control; break;
+                    case KeyboardKey::LeftAlt:
+                    case KeyboardKey::RightAlt: modifiers |= KeyModifier::Alt; break;
+                    case KeyboardKey::LeftShift:
+                    case KeyboardKey::RightShift: modifiers |= KeyModifier::Shift; break;
+                    case KeyboardKey::LeftGui:
+                    case KeyboardKey::RightGui: modifiers |= KeyModifier::Super; break;
+                    default: break;
+                    }
+                    InvokeCaptureCallback(InputEvent{KeyCombo{modifiers, KeyboardKey::None}});
+                }
+                break;
+
+            default:
+                if (pressed) {
+                    InvokeCaptureCallback(InputEvent{KeyCombo{modifiers, key}});
+                }
+                break;
+            }
+        } else {
+            ProcessEvent(InputEvent{KeyCombo{modifiers, key}}, pressed);
+        }
     }
 }
 
@@ -27,7 +70,13 @@ void InputContext::ProcessPrimitive(MouseButton button, bool pressed) {
     const auto index = static_cast<size_t>(button);
     if (m_mouseButtonStates[index] != pressed) {
         m_mouseButtonStates[index] = pressed;
-        ProcessEvent(InputEvent{MouseCombo{m_currModifiers, button}}, pressed);
+        if (m_captureCallback) [[unlikely]] {
+            if (pressed) {
+                InvokeCaptureCallback(InputEvent{MouseCombo{m_currModifiers, button}});
+            }
+        } else {
+            ProcessEvent(InputEvent{MouseCombo{m_currModifiers, button}}, pressed);
+        }
     }
 }
 
@@ -35,8 +84,42 @@ void InputContext::ProcessPrimitive(uint32 id, GamepadButton button, bool presse
     const auto index = static_cast<size_t>(button);
     if (m_gamepadButtonStates[index] != pressed) {
         m_gamepadButtonStates[index] = pressed;
-        ProcessEvent(InputEvent{id, button}, pressed);
+        if (m_captureCallback) [[unlikely]] {
+            if (pressed) {
+                InvokeCaptureCallback(InputEvent{id, button});
+            }
+        } else {
+            ProcessEvent(InputEvent{id, button}, pressed);
+        }
     }
+}
+
+void InputContext::ProcessPrimitive(MouseAxis1D axis, float value) {
+    m_mouseAxes1D[static_cast<size_t>(axis)] = value;
+}
+
+void InputContext::ProcessPrimitive(GamepadAxis1D axis, float value) {
+    m_gamepadAxes1D[static_cast<size_t>(axis)] = value;
+}
+
+void InputContext::ProcessPrimitive(MouseAxis2D axis, float x, float y) {
+    m_mouseAxes2D[static_cast<size_t>(axis)] = {x, y};
+}
+
+void InputContext::ProcessPrimitive(GamepadAxis2D axis, float x, float y) {
+    m_gamepadAxes2D[static_cast<size_t>(axis)] = {x, y};
+}
+
+void InputContext::Capture(CaptureCallback &&callback) {
+    m_captureCallback.swap(callback);
+}
+
+void InputContext::CancelCapture() {
+    m_captureCallback = {};
+}
+
+bool InputContext::IsCapturing() const {
+    return (bool)m_captureCallback;
 }
 
 void InputContext::ProcessEvent(const InputEvent &event, bool actuated) {
@@ -44,6 +127,13 @@ void InputContext::ProcessEvent(const InputEvent &event, bool actuated) {
         if (auto handler = m_actionHandlers.find(action->second.action); handler != m_actionHandlers.end()) {
             handler->second(action->second.context, actuated);
         }
+    }
+}
+
+void InputContext::InvokeCaptureCallback(InputEvent &&event) {
+    if (m_captureCallback) {
+        m_captureCallback(event);
+        m_captureCallback = {};
     }
 }
 

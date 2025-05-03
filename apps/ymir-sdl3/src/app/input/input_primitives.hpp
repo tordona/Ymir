@@ -280,17 +280,21 @@ enum MouseButton {
 };
 
 // 1D mouse axes.
-enum MouseAxis1D {
+enum class MouseAxis1D {
     Vertical,
     Horizontal,
     WheelVertical,
     WheelHorizontal,
+
+    _Count,
 };
 
 // 2D mouse axes.
-enum MouseAxis2D {
+enum class MouseAxis2D {
     Mouse,
     Wheel,
+
+    _Count,
 };
 
 // Xbox (or compatible gamepad) buttons
@@ -337,6 +341,10 @@ enum class GamepadAxis1D {
     RightStickY,
     LeftTrigger,
     RightTrigger,
+    DPadX,
+    DPadY,
+
+    _Count,
 };
 
 // Xbox (or compatible gamepad) 2D axes.
@@ -345,6 +353,9 @@ enum class GamepadAxis2D {
 
     LeftStick,
     RightStick,
+    DPad,
+
+    _Count,
 };
 
 // Combination of a keyboard key and key modifiers.

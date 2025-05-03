@@ -44,7 +44,7 @@ void HotkeysSettingsView::Display() {
                     // Left-click engages bind mode
                     if (ImGui::Button(label.c_str(), ImVec2(availWidth, 0))) {
                         ImGui::OpenPopup("input_capture");
-                        m_context.inputCapturer.Capture([=, this, &bind](const input::InputEvent &event) {
+                        m_context.inputContext.Capture([=, this, &bind](const input::InputEvent &event) {
                             bind.events[i] = event;
                             MakeDirty();
                             m_context.EnqueueEvent(events::gui::RebindAction(bind.action));
@@ -54,7 +54,7 @@ void HotkeysSettingsView::Display() {
 
                     // Right-click erases a bind
                     if (MakeDirty(ImGui::IsItemClicked(ImGuiMouseButton_Right))) {
-                        m_context.inputCapturer.CancelCapture();
+                        m_context.inputContext.CancelCapture();
                         bind.events[i] = {};
                         m_context.EnqueueEvent(events::gui::RebindAction(bind.action));
                     }
@@ -134,7 +134,7 @@ void HotkeysSettingsView::Display() {
                                    "Press Escape or click outside of this popup to cancel.");
             ImGui::EndPopup();
         } else {
-            m_context.inputCapturer.CancelCapture();
+            m_context.inputContext.CancelCapture();
         }
 
         ImGui::EndTable();

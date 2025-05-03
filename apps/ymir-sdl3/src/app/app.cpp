@@ -1342,13 +1342,10 @@ void App::RunEmulator() {
                 break;
             case SDL_EVENT_KEY_DOWN: [[fallthrough]];
             case SDL_EVENT_KEY_UP:
-                if (!io.WantCaptureKeyboard) {
+                if (!io.WantCaptureKeyboard || inputContext.IsCapturing()) {
                     // TODO: consider supporting multiple keyboards (evt.key.which)
                     inputContext.ProcessPrimitive(input::SDL3ScancodeToKeyboardKey(evt.key.scancode),
                                                   input::SDL3ToKeyModifier(evt.key.mod), evt.key.down);
-                } else if (m_context.inputCapturer.IsCapturing()) {
-                    m_context.inputCapturer.ProcessPrimitive(input::SDL3ScancodeToKeyboardKey(evt.key.scancode),
-                                                             input::SDL3ToKeyModifier(evt.key.mod), evt.key.down);
                 }
                 break;
 
@@ -1360,31 +1357,28 @@ void App::RunEmulator() {
                 break;
             case SDL_EVENT_MOUSE_BUTTON_DOWN: [[fallthrough]];
             case SDL_EVENT_MOUSE_BUTTON_UP:
-                /*if (!io.WantCaptureMouse) {
+                /*if (!io.WantCaptureMouse || inputContext.IsCapturing()) {
                     // TODO: consider supporting multiple mice (evt.button.which)
                     // TODO: evt.button.clicks?
                     // TODO: evt.button.x, evt.button.y?
                     // TODO: key modifiers
                     inputContext.ProcessPrimitive(input::SDL3ToMouseButton(evt.button.button), evt.button.down);
-                } else if (m_context.inputCapturer.IsCapturing()) {
-                    m_context.inputCapturer.ProcessPrimitive(input::SDL3ToMouseButton(evt.button.button),
-                                                             evt.button.down);
                 }*/
                 break;
             case SDL_EVENT_MOUSE_MOTION:
-                if (!io.WantCaptureMouse) {
+                /*if (!io.WantCaptureMouse || inputContext.IsCapturing()) {
                     // TODO: handle these
                     // TODO: consider supporting multiple mice (evt.motion.which)
                     // inputContext.ProcessMouseMotionEvent(evt.motion.xrel, evt.motion.yrel);
-                }
+                }*/
                 break;
             case SDL_EVENT_MOUSE_WHEEL:
-                if (!io.WantCaptureMouse) {
+                /*if (!io.WantCaptureMouse || inputContext.IsCapturing()) {
                     // TODO: handle these
                     // TODO: consider supporting multiple mice (evt.wheel.which)
                     // const float flippedFactor = evt.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1.0f : 1.0f;
                     // inputContext.ProcessMouseMotionEvent(evt.wheel.x * flippedFactor, evt.wheel.y * flippedFactor);
-                }
+                }*/
                 break;
 
             case SDL_EVENT_GAMEPAD_ADDED: //
@@ -1421,15 +1415,8 @@ void App::RunEmulator() {
             {
                 const int playerIndex =
                     gamepadPlayerIndexes.contains(evt.gbutton.which) ? gamepadPlayerIndexes.at(evt.gbutton.which) : -1;
-                if (m_context.inputCapturer.IsCapturing()) {
-                    m_context.inputCapturer.ProcessPrimitive(
-                        playerIndex, input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button),
-                        evt.gbutton.down);
-                } else {
-                    inputContext.ProcessPrimitive(playerIndex,
-                                                  input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button),
-                                                  evt.gbutton.down);
-                }
+                inputContext.ProcessPrimitive(
+                    playerIndex, input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button), evt.gbutton.down);
                 break;
             }
 

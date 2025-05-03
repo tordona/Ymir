@@ -328,6 +328,8 @@ std::string_view ToHumanString(GamepadAxis1D axis) {
     case GamepadAxis1D::RightStickY: return "RS Vertical";
     case GamepadAxis1D::LeftTrigger: return "LT";
     case GamepadAxis1D::RightTrigger: return "RT";
+    case GamepadAxis1D::DPadX: return "DPad Horizontal";
+    case GamepadAxis1D::DPadY: return "DPad Vertical";
     default: return "Unknown";
     }
 }
@@ -336,6 +338,7 @@ std::string_view ToHumanString(GamepadAxis2D axis) {
     switch (axis) {
     case GamepadAxis2D::LeftStick: return "LS";
     case GamepadAxis2D::RightStick: return "RS";
+    case GamepadAxis2D::DPad: return "DPad";
     default: return "Unknown";
     }
 }
@@ -1033,14 +1036,20 @@ static const std::unordered_map<std::string_view, GamepadButton> kGamepadButtons
 };
 
 static const std::unordered_map<std::string_view, GamepadAxis1D> kGamepadAxes1D{
-    {"GamepadLeftStickX", GamepadAxis1D::LeftStickX},   {"GamepadLeftStickY", GamepadAxis1D::LeftStickY},
-    {"GamepadRightStickX", GamepadAxis1D::RightStickX}, {"GamepadRightStickY", GamepadAxis1D::RightStickY},
-    {"GamepadLeftTrigger", GamepadAxis1D::LeftTrigger}, {"GamepadRightTrigger", GamepadAxis1D::RightTrigger},
+    {"GamepadLeftStickX", GamepadAxis1D::LeftStickX},
+    {"GamepadLeftStickY", GamepadAxis1D::LeftStickY},
+    {"GamepadRightStickX", GamepadAxis1D::RightStickX},
+    {"GamepadRightStickY", GamepadAxis1D::RightStickY},
+    {"GamepadLeftTrigger", GamepadAxis1D::LeftTrigger},
+    {"GamepadRightTrigger", GamepadAxis1D::RightTrigger},
+    {"GamepadDPadX", GamepadAxis1D::DPadX},
+    {"GamepadDPadY", GamepadAxis1D::DPadY},
 };
 
 static const std::unordered_map<std::string_view, GamepadAxis2D> kGamepadAxes2D{
     {"GamepadLeftStick", GamepadAxis2D::LeftStick},
     {"GamepadRightStick", GamepadAxis2D::RightStick},
+    {"GamepadDPad", GamepadAxis2D::DPad},
 };
 
 bool TryParse(std::string_view str, KeyModifier &mod) {

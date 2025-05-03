@@ -50,8 +50,32 @@ public:
     // Processes a gamepad button primitive.
     void ProcessPrimitive(uint32 id, GamepadButton button, bool pressed);
 
+    // Processes an 1D mouse axis primitive.
+    void ProcessPrimitive(MouseAxis1D axis, float value);
+    // Processes an 1D gamepad axis primitive.
+    void ProcessPrimitive(GamepadAxis1D axis, float value);
+
+    // Processes a 2D mouse axis primitive.
+    void ProcessPrimitive(MouseAxis2D axis, float x, float y);
+    // Processes a 2D gamepad axis primitive.
+    void ProcessPrimitive(GamepadAxis2D axis, float x, float y);
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Input capture
+
+    using CaptureCallback = std::function<void(const InputEvent &)>;
+
+    // Captures the next input event.
+    void Capture(CaptureCallback &&callback);
+    void CancelCapture();
+    bool IsCapturing() const;
+
 private:
     void ProcessEvent(const InputEvent &event, bool actuated);
+
+    CaptureCallback m_captureCallback;
+
+    void InvokeCaptureCallback(InputEvent &&event);
 
 public:
     // -----------------------------------------------------------------------------------------------------------------
@@ -89,11 +113,24 @@ public:
     void ClearActionHandler(ActionID action);
 
 private:
+    struct Axis2D {
+        float h, v;
+    };
+
     KeyModifier m_currModifiers = KeyModifier::None;
 
     std::array<bool, static_cast<size_t>(KeyboardKey::_Count)> m_keyStates;
     std::array<bool, static_cast<size_t>(MouseButton::_Count)> m_mouseButtonStates;
     std::array<bool, static_cast<size_t>(GamepadButton::_Count)> m_gamepadButtonStates;
+
+    std::array<float, static_cast<size_t>(MouseAxis1D::_Count)> m_mouseAxes1D;
+    std::array<float, static_cast<size_t>(GamepadAxis1D::_Count)> m_gamepadAxes1D;
+
+    std::array<Axis2D, static_cast<size_t>(MouseAxis2D::_Count)> m_mouseAxes2D;
+    std::array<Axis2D, static_cast<size_t>(GamepadAxis2D::_Count)> m_gamepadAxes2D;
+
+    float m_gamepadDeadzoneX;
+    float m_gamepadDeadzoneY;
 
     std::unordered_map<InputEvent, MappedAction> m_actions;
     std::unordered_map<ActionID, std::unordered_set<MappedInputEvent>> m_actionsReverse;

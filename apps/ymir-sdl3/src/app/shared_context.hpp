@@ -7,7 +7,6 @@
 #include <app/rewind_buffer.hpp>
 #include <app/settings.hpp>
 
-#include <app/input/input_capturer.hpp>
 #include <app/input/input_context.hpp>
 
 #include <app/debug/scu_tracer.hpp>
@@ -34,7 +33,6 @@ struct SharedContext {
     float displayScale = 1.0f;
 
     input::InputContext inputContext;
-    input::InputCapturer inputCapturer;
 
     std::array<ymir::peripheral::StandardPadButton, 2> standardPadButtons{ymir::peripheral::StandardPadButton::Default,
                                                                           ymir::peripheral::StandardPadButton::Default};
