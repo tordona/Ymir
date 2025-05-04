@@ -127,6 +127,10 @@ public:
     // Clears and rebinds all configured inputs
     void RebindInputs();
 
+    // Clears an existing bind of the specified input element.
+    // Returns the previously bound action, if any.
+    std::optional<input::Action> UnbindInput(const input::InputElement &element);
+
     // Clears and rebinds the inputs of the specified action
     void RebindAction(input::Action action);
 

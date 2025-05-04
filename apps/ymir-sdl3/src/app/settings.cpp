@@ -312,9 +312,9 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
         size_t outIndex = 0;
         for (size_t i = 0; i < count && outIndex < input::kNumBindsPerInput; i++) {
             if (auto opt = arr->at(i).value<std::string_view>()) {
-                auto &event = value.elements[i];
-                input::TryParse((*opt), event);
-                if (event.type != input::InputElement::Type::None) {
+                auto &element = value.elements[i];
+                input::TryParse((*opt), element);
+                if (element.type != input::InputElement::Type::None) {
                     ++outIndex;
                 }
             }
@@ -328,9 +328,9 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, const char *na
 // Creates a TOML array with valid entries (skips Nones).
 FORCE_INLINE static toml::array ToTOML(const input::InputBind &value) {
     toml::array out{};
-    for (auto &event : value.elements) {
-        if (event.type != input::InputElement::Type::None) {
-            out.push_back(input::ToString(event));
+    for (auto &element : value.elements) {
+        if (element.type != input::InputElement::Type::None) {
+            out.push_back(input::ToString(element));
         }
     }
     return out;
@@ -914,13 +914,13 @@ void Settings::RebindInputs() {
 
     for (auto &[action, mappings] : m_actionInputs) {
         for (auto &[bind, context] : mappings) {
-            for (auto &event : bind->elements) {
+            for (auto &element : bind->elements) {
                 // Sanitization -- skip ESC binds if they were manually added in the configuration file
-                if (event.type == input::InputElement::Type::KeyCombo &&
-                    event.keyCombo.key == input::KeyboardKey::Escape) {
+                if (element.type == input::InputElement::Type::KeyCombo &&
+                    element.keyCombo.key == input::KeyboardKey::Escape) {
                     continue;
                 }
-                m_inputContext.MapAction(event, action, context);
+                m_inputContext.MapAction(element, action, context);
             }
         }
     }
@@ -928,13 +928,46 @@ void Settings::RebindInputs() {
     SyncInputSettings();
 }
 
+std::optional<input::Action> Settings::UnbindInput(const input::InputElement &element) {
+    if (element.type == input::InputElement::Type::None) {
+        return std::nullopt;
+    }
+    auto existingAction = m_inputContext.GetMappedAction(element);
+    if (!existingAction) {
+        return std::nullopt;
+    }
+
+    if (m_actionInputs.contains(existingAction->action)) {
+        auto &inputs = m_actionInputs.at(existingAction->action);
+        for (auto &inputBind : inputs) {
+            if (inputBind.bind == nullptr) {
+                continue;
+            }
+            if (inputBind.bind->action != existingAction->action) {
+                continue;
+            }
+            if (inputBind.context != existingAction->context) {
+                continue;
+            }
+            for (auto &boundElement : inputBind.bind->elements) {
+                if (boundElement == element) {
+                    boundElement = {};
+                    RebindAction(existingAction->action);
+                    return existingAction->action;
+                }
+            }
+        }
+    }
+    return std::nullopt;
+}
+
 void Settings::RebindAction(input::Action action) {
     m_inputContext.UnmapAction(action);
 
     if (auto it = m_actionInputs.find(action); it != m_actionInputs.end()) {
         for (auto &[bind, context] : it->second) {
-            for (auto &event : bind->elements) {
-                m_inputContext.MapAction(event, action, context);
+            for (auto &element : bind->elements) {
+                m_inputContext.MapAction(element, action, context);
             }
         }
     }

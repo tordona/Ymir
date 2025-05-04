@@ -55,8 +55,8 @@ inline GUIEvent RebindInputs() {
     return {.type = GUIEvent::Type::RebindInputs};
 }
 
-inline GUIEvent RebindAction(input::Action action) {
-    return {.type = GUIEvent::Type::RebindAction, .value = action};
+inline GUIEvent RebindAction(input::Action action, input::InputElement element) {
+    return {.type = GUIEvent::Type::RebindAction, .value = RebindActionParams{action, element}};
 }
 
 inline GUIEvent ShowError(std::string message) {

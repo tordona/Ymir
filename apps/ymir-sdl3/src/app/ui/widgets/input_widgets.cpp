@@ -26,7 +26,7 @@ void InputCaptureWidget::DrawInputBindButton(input::InputBind &bind, size_t elem
     if (MakeDirty(ImGui::IsItemClicked(ImGuiMouseButton_Right))) {
         m_context.inputContext.CancelCapture();
         bind.elements[elementIndex] = {};
-        m_context.EnqueueEvent(events::gui::RebindAction(bind.action));
+        m_context.EnqueueEvent(events::gui::RebindAction(bind.action, {}));
     }
 }
 
@@ -77,7 +77,7 @@ void InputCaptureWidget::CaptureButton(input::InputBind &bind, size_t elementInd
         }
         bind.elements[elementIndex] = event.element;
         MakeDirty();
-        m_context.EnqueueEvent(events::gui::RebindAction(bind.action));
+        m_context.EnqueueEvent(events::gui::RebindAction(bind.action, event.element));
         m_closePopup = true;
         return true;
     });
@@ -94,7 +94,7 @@ void InputCaptureWidget::CaptureAxis1D(input::InputBind &bind, size_t elementInd
         }
         bind.elements[elementIndex] = event.element;
         MakeDirty();
-        m_context.EnqueueEvent(events::gui::RebindAction(bind.action));
+        m_context.EnqueueEvent(events::gui::RebindAction(bind.action, event.element));
         m_closePopup = true;
         return true;
     });
@@ -112,7 +112,7 @@ void InputCaptureWidget::CaptureAxis2D(input::InputBind &bind, size_t elementInd
         }
         bind.elements[elementIndex] = event.element;
         MakeDirty();
-        m_context.EnqueueEvent(events::gui::RebindAction(bind.action));
+        m_context.EnqueueEvent(events::gui::RebindAction(bind.action, event.element));
         m_closePopup = true;
         return true;
     });

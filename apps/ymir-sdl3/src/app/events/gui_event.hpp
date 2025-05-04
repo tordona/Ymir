@@ -1,6 +1,7 @@
 #pragma once
 
 #include <app/input/input_action.hpp>
+#include <app/input/input_events.hpp>
 #include <app/ui/defs/settings_defs.hpp>
 
 #include <filesystem>
@@ -9,6 +10,11 @@
 #include <vector>
 
 namespace app {
+
+struct RebindActionParams {
+    input::Action action;
+    input::InputElement element;
+};
 
 // A filter for the file dialog.
 // Follows SDL3 rules:
@@ -77,8 +83,8 @@ struct GUIEvent {
     };
 
     Type type;
-    std::variant<std::monostate, bool, uint32, std::string, std::filesystem::path, input::Action, PeripheralBindsParams,
-                 FileDialogParams, FolderDialogParams, ui::SettingsTab>
+    std::variant<std::monostate, bool, uint32, std::string, std::filesystem::path, RebindActionParams,
+                 PeripheralBindsParams, FileDialogParams, FolderDialogParams, ui::SettingsTab>
         value;
 };
 
