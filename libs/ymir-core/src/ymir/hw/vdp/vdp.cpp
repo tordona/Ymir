@@ -1348,8 +1348,8 @@ void VDP::VDPRenderThread() {
                     for (int i = 0; i < 100000 && m_VDP1RenderContext.rendering; i++) {
                         VDP1ProcessCommand();
                     }
-                    break;
                 }
+                break;
             /*case EvtType::VDP1ProcessCommands:
                 if (m_threadedVDPRendering) {
                     for (uint64 i = 0; i < event.processCommands.steps; i++) {
