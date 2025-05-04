@@ -6,15 +6,17 @@ namespace app::ui {
 
 StandardPadBindsView::StandardPadBindsView(SharedContext &context)
     : SettingsViewBase(context)
-    , m_inputCaptureWidget(context) {}
+    , m_inputCaptureWidget(context, m_unboundActionsWidget)
+    , m_unboundActionsWidget(context) {}
 
 void StandardPadBindsView::Display(Settings::Input::Port::StandardPadBinds &binds, void *context) {
     if (ImGui::Button("Restore defaults")) {
-        m_context.settings.ResetBinds(binds);
+        m_unboundActionsWidget.Capture(m_context.settings.ResetBinds(binds));
         MakeDirty();
     }
 
     ImGui::TextUnformatted("Left-click a button to assign a hotkey. Right-click to clear.");
+    m_unboundActionsWidget.Display();
     if (ImGui::BeginTable("hotkeys", 1 + input::kNumBindsPerInput,
                           ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY)) {
         ImGui::TableSetupColumn("Button", ImGuiTableColumnFlags_WidthFixed, 70.0f);

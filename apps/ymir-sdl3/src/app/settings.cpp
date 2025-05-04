@@ -474,10 +474,10 @@ void Settings::ResetToDefaults() {
         input.port1.type = PeriphType::StandardPad;
         input.port2.type = PeriphType::None;
 
-        ResetHotkeys();
+        (void)ResetHotkeys();
 
-        ResetBinds(input.port1.standardPadBinds);
-        ResetBinds(input.port2.standardPadBinds);
+        (void)ResetBinds(input.port1.standardPadBinds);
+        (void)ResetBinds(input.port2.standardPadBinds);
     }
 
     input.gamepad.lsDeadzone = 0.15f;
@@ -920,7 +920,7 @@ void Settings::RebindInputs() {
                         element.keyCombo.key == input::KeyboardKey::Escape) {
                         continue;
                     }
-                    inputContext.MapAction(element, action, map.context);
+                    (void)inputContext.MapAction(element, action, map.context);
                 }
             }
         }

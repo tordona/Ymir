@@ -22,6 +22,13 @@ struct MappedAction {
     void *context;
 
     constexpr bool operator==(const MappedAction &rhs) const = default;
+
+    constexpr auto operator<=>(const MappedAction &rhs) const {
+        if (context != rhs.context) {
+            return context <=> rhs.context;
+        }
+        return action <=> rhs.action;
+    }
 };
 
 struct MappedInputElement {
@@ -127,31 +134,32 @@ public:
 
     // Maps an input element to an action.
     // Returns the previously-mapped action, if any.
-    std::optional<MappedAction> MapAction(InputElement element, Action action, void *context = nullptr);
+    [[nodiscard]] std::optional<MappedAction> MapAction(InputElement element, Action action, void *context = nullptr);
 
     // Gets the action mapped to the input element, if any.
-    std::optional<MappedAction> GetMappedAction(InputElement element) const;
+    [[nodiscard]] std::optional<MappedAction> GetMappedAction(InputElement element) const;
 
     // Gets the input elements mapped to the action.
-    std::unordered_set<MappedInputElement> GetMappedInputs(Action action) const;
+    [[nodiscard]] std::unordered_set<MappedInputElement> GetMappedInputs(Action action) const;
 
     // Gets all actions mapped to input elements.
-    const std::unordered_map<InputElement, MappedAction> &GetAllInputElementMappings() const;
+    [[nodiscard]] const std::unordered_map<InputElement, MappedAction> &GetAllInputElementMappings() const;
 
     // Gets all action to input element mappings.
-    const std::unordered_map<Action, std::unordered_set<MappedInputElement>> &GetAllActionMappings() const;
+    [[nodiscard]] const std::unordered_map<Action, std::unordered_set<MappedInputElement>> &
+    GetAllActionMappings() const;
 
     // Unmaps the input elements from the action.
     // Returns the previously mapped elements, if any.
-    std::unordered_set<MappedInputElement> UnmapAction(Action action);
+    [[nodiscard]] std::unordered_set<MappedInputElement> UnmapAction(Action action);
 
     // Unmaps the input elements with the given context from the action.
     // Returns the previously mapped elements, if any.
-    std::unordered_set<MappedInputElement> UnmapAction(Action action, void *context);
+    [[nodiscard]] std::unordered_set<MappedInputElement> UnmapAction(Action action, void *context);
 
     // Unmaps the action from the input element.
     // Returns the previously mapped action, if any.
-    std::optional<MappedAction> UnmapInput(InputElement element);
+    [[nodiscard]] std::optional<MappedAction> UnmapInput(InputElement element);
 
     // Clears all action mappings.
     void UnmapAllActions();

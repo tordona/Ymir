@@ -26,7 +26,16 @@ struct Action {
         return {id, Kind::Axis2D, group, name};
     }
 
-    constexpr bool operator==(const Action &) const = default;
+    constexpr bool operator==(const Action &rhs) const {
+        return id == rhs.id && kind == rhs.kind;
+    }
+
+    constexpr auto operator<=>(const Action &rhs) const {
+        if (id != rhs.id) {
+            return id <=> rhs.id;
+        }
+        return kind <=> rhs.kind;
+    }
 };
 
 } // namespace app::input

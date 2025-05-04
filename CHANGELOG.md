@@ -4,12 +4,13 @@
 
 ### New features and improvements
 
-- Input: Improved support for gamepads. You can now configure triggers as buttons, map analog sticks to the D-Pad, adjust deadzones, and more.
+- Input: Improved support for gamepads. You can now configure triggers as buttons, map analog sticks to the D-Pad, adjust deadzones, and more. (#36, #37, #54)
 - Input: Added one more slot for input binds
 
 ### Fixes
 
 - Input: Keys no longer get stuck when focusing windows, menus, etc.
+- Input: Keys bound to controller on port 2 (by default: arrow keys, numpad and navigation block) should no longer prevent keys bound to the controller on port 1 from working. (#50)
 
 
 ## Version 0.1.1

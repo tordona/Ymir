@@ -273,18 +273,18 @@ public:
 
     // Clears an existing bind of the specified input element.
     // Returns the previously bound action, if any.
-    std::optional<input::MappedAction> UnbindInput(const input::InputElement &element);
+    [[nodiscard]] std::optional<input::MappedAction> UnbindInput(const input::InputElement &element);
 
     // Synchronizes input settings with those from the input context
     void SyncInputSettings();
 
     // Restores all default hotkeys.
     // Returns all unbound actions.
-    std::unordered_set<input::MappedAction> ResetHotkeys();
+    [[nodiscard]] std::unordered_set<input::MappedAction> ResetHotkeys();
 
     // Restores all default input binds for the specified standard pad
     // Returns all unbound actions.
-    std::unordered_set<input::MappedAction> ResetBinds(Input::Port::StandardPadBinds &binds);
+    [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::StandardPadBinds &binds);
 
 private:
     SharedContext &m_context;

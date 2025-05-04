@@ -4,8 +4,9 @@
 
 namespace app::ui::widgets {
 
-InputCaptureWidget::InputCaptureWidget(SharedContext &context)
-    : m_context(context) {}
+InputCaptureWidget::InputCaptureWidget(SharedContext &context, UnboundActionsWidget &unboundActionsWidget)
+    : m_context(context)
+    , m_unboundActionsWidget(unboundActionsWidget) {}
 
 void InputCaptureWidget::DrawInputBindButton(input::InputBind &bind, size_t elementIndex, void *context) {
     const std::string bindStr = input::ToHumanString(bind.elements[elementIndex]);
@@ -80,7 +81,7 @@ void InputCaptureWidget::CaptureButton(input::InputBind &bind, size_t elementInd
         }
         bind.elements[elementIndex] = event.element;
         MakeDirty();
-        m_context.settings.UnbindInput(event.element);
+        m_unboundActionsWidget.Capture(m_context.settings.UnbindInput(event.element));
         m_context.EnqueueEvent(events::gui::RebindInputs());
         m_closePopup = true;
         return true;
@@ -98,7 +99,7 @@ void InputCaptureWidget::CaptureAxis1D(input::InputBind &bind, size_t elementInd
         }
         bind.elements[elementIndex] = event.element;
         MakeDirty();
-        m_context.settings.UnbindInput(event.element);
+        m_unboundActionsWidget.Capture(m_context.settings.UnbindInput(event.element));
         m_context.EnqueueEvent(events::gui::RebindInputs());
         m_closePopup = true;
         return true;
@@ -117,7 +118,7 @@ void InputCaptureWidget::CaptureAxis2D(input::InputBind &bind, size_t elementInd
         }
         bind.elements[elementIndex] = event.element;
         MakeDirty();
-        m_context.settings.UnbindInput(event.element);
+        m_unboundActionsWidget.Capture(m_context.settings.UnbindInput(event.element));
         m_context.EnqueueEvent(events::gui::RebindInputs());
         m_closePopup = true;
         return true;

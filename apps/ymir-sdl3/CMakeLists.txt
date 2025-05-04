@@ -144,6 +144,8 @@ add_executable(ymir-sdl3
     src/app/ui/widgets/savestate_widgets.hpp
     src/app/ui/widgets/system_widgets.cpp
     src/app/ui/widgets/system_widgets.hpp
+    src/app/ui/widgets/unbound_actions_widget.cpp
+    src/app/ui/widgets/unbound_actions_widget.hpp
 
     src/app/ui/windows/about_window.cpp
     src/app/ui/windows/about_window.hpp

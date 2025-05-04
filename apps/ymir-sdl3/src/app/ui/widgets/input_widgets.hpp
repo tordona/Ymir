@@ -4,11 +4,13 @@
 
 #include <app/input/input_bind.hpp>
 
+#include <app/ui/widgets/unbound_actions_widget.hpp>
+
 namespace app::ui::widgets {
 
 class InputCaptureWidget {
 public:
-    InputCaptureWidget(SharedContext &context);
+    InputCaptureWidget(SharedContext &context, UnboundActionsWidget &unboundActionsWidget);
 
     void DrawInputBindButton(input::InputBind &bind, size_t elementIndex, void *context);
 
@@ -20,6 +22,8 @@ private:
     input::Action::Kind m_kind;
     bool m_closePopup = false;
     bool m_capturing = false;
+
+    UnboundActionsWidget &m_unboundActionsWidget;
 
     void CaptureButton(input::InputBind &bind, size_t elementIndex, void *context);
     void CaptureAxis1D(input::InputBind &bind, size_t elementIndex, void *context);

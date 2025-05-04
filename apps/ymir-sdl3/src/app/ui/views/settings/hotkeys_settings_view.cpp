@@ -6,15 +6,17 @@ namespace app::ui {
 
 HotkeysSettingsView::HotkeysSettingsView(SharedContext &context)
     : SettingsViewBase(context)
-    , m_inputCaptureWidget(context) {}
+    , m_inputCaptureWidget(context, m_unboundActionsWidget)
+    , m_unboundActionsWidget(context) {}
 
 void HotkeysSettingsView::Display() {
     if (ImGui::Button("Restore defaults")) {
-        m_context.settings.ResetHotkeys();
+        m_unboundActionsWidget.Capture(m_context.settings.ResetHotkeys());
         MakeDirty();
     }
 
     ImGui::TextUnformatted("Left-click a button to assign a hotkey. Right-click to clear.");
+    m_unboundActionsWidget.Display();
     if (ImGui::BeginTable("hotkeys", 2 + input::kNumBindsPerInput,
                           ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY)) {
         ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 80.0f * m_context.displayScale);
