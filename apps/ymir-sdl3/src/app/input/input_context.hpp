@@ -126,29 +126,35 @@ public:
     // Element-action mapping
 
     // Maps an input element to an action.
-    void MapAction(InputElement element, Action action, void *context = nullptr);
+    // Returns the previously-mapped action, if any.
+    std::optional<MappedAction> MapAction(InputElement element, Action action, void *context = nullptr);
 
     // Gets the action mapped to the input element, if any.
     std::optional<MappedAction> GetMappedAction(InputElement element) const;
 
-    // Gets all actions mapped to input elements.
-    const std::unordered_map<InputElement, MappedAction> &GetMappedInputElementActions() const;
-
     // Gets the input elements mapped to the action.
     std::unordered_set<MappedInputElement> GetMappedInputs(Action action) const;
 
+    // Gets all actions mapped to input elements.
+    const std::unordered_map<InputElement, MappedAction> &GetAllInputElementMappings() const;
+
     // Gets all action to input element mappings.
-    const std::unordered_map<Action, std::unordered_set<MappedInputElement>> &GetAllMappedInputs() const;
+    const std::unordered_map<Action, std::unordered_set<MappedInputElement>> &GetAllActionMappings() const;
 
     // Unmaps the input elements from the action.
-    void UnmapAction(Action action);
+    // Returns the previously mapped elements, if any.
+    std::unordered_set<MappedInputElement> UnmapAction(Action action);
+
+    // Unmaps the input elements with the given context from the action.
+    // Returns the previously mapped elements, if any.
+    std::unordered_set<MappedInputElement> UnmapAction(Action action, void *context);
 
     // Clears all action mappings.
     void UnmapAllActions();
 
 public:
     // -----------------------------------------------------------------------------------------------------------------
-    // Action and axis handler mapping
+    // Button and axis handler mapping
 
     // Registers a button handler to handle the specified action.
     void SetButtonHandler(Action action, ButtonHandler handler);
@@ -169,6 +175,9 @@ public:
     void ClearAxis2DHandler(Action action);
 
 private:
+    // -----------------------------------------------------------------------------------------------------------------
+    // Button and axis state
+
     struct Axis1D {
         float value = 0.0f;
         bool changed = false;
@@ -194,8 +203,14 @@ private:
     std::array<Axis2D, static_cast<size_t>(MouseAxis2D::_Count)> m_mouseAxes2D;
     std::unordered_map<uint32, std::array<Axis2D, static_cast<size_t>(GamepadAxis2D::_Count)>> m_gamepadAxes2D;
 
+    // -----------------------------------------------------------------------------------------------------------------
+    // Element-action mappings
+
     std::unordered_map<InputElement, MappedAction> m_actions;
     std::unordered_map<Action, std::unordered_set<MappedInputElement>> m_actionsReverse;
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Button and axis handlers
 
     std::unordered_map<Action, ButtonHandler> m_buttonHandlers;
     std::unordered_map<Action, Axis1DHandler> m_axis1DHandlers;

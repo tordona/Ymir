@@ -351,34 +351,33 @@ void InputContext::InvokeCaptureCallback(const InputEvent &event) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Event-action mapping
+// Element-action mapping
 
-void InputContext::MapAction(InputElement event, Action action, void *context) {
-    if (event.type == InputElement::Type::None) {
-        return;
+std::optional<MappedAction> InputContext::MapAction(InputElement element, Action action, void *context) {
+    if (element.type == InputElement::Type::None) {
+        return std::nullopt;
     }
 
-    if (m_actions.contains(event)) {
-        const auto &prev = m_actions.at(event);
-        m_actionsReverse[prev.action].erase({event, context});
+    std::optional<MappedAction> prevBoundAction = std::nullopt;
+    if (m_actions.contains(element)) {
+        const auto &prev = m_actions.at(element);
+        m_actionsReverse[prev.action].erase({element, context});
+        prevBoundAction = prev;
         if (m_actionsReverse[prev.action].empty()) {
             m_actionsReverse.erase(prev.action);
         }
     }
-    m_actions[event] = {action, context};
-    m_actionsReverse[action].insert({event, context});
+    m_actions[element] = {action, context};
+    m_actionsReverse[action].insert({element, context});
+    return prevBoundAction;
 }
 
-std::optional<MappedAction> InputContext::GetMappedAction(InputElement event) const {
-    if (m_actions.contains(event)) {
-        return m_actions.at(event);
+std::optional<MappedAction> InputContext::GetMappedAction(InputElement element) const {
+    if (m_actions.contains(element)) {
+        return m_actions.at(element);
     } else {
         return std::nullopt;
     }
-}
-
-const std::unordered_map<InputElement, MappedAction> &InputContext::GetMappedInputElementActions() const {
-    return m_actions;
 }
 
 std::unordered_set<MappedInputElement> InputContext::GetMappedInputs(Action action) const {
@@ -389,17 +388,40 @@ std::unordered_set<MappedInputElement> InputContext::GetMappedInputs(Action acti
     }
 }
 
-const std::unordered_map<Action, std::unordered_set<MappedInputElement>> &InputContext::GetAllMappedInputs() const {
+const std::unordered_map<InputElement, MappedAction> &InputContext::GetAllInputElementMappings() const {
+    return m_actions;
+}
+
+const std::unordered_map<Action, std::unordered_set<MappedInputElement>> &InputContext::GetAllActionMappings() const {
     return m_actionsReverse;
 }
 
-void InputContext::UnmapAction(Action action) {
+std::unordered_set<MappedInputElement> InputContext::UnmapAction(Action action) {
+    std::unordered_set<MappedInputElement> mappedElems{};
     if (m_actionsReverse.contains(action)) {
         for (auto &evt : m_actionsReverse.at(action)) {
             m_actions.erase(evt.element);
+            mappedElems.insert(evt);
         }
         m_actionsReverse.erase(action);
     }
+    return mappedElems;
+}
+
+std::unordered_set<MappedInputElement> InputContext::UnmapAction(Action action, void *context) {
+    std::unordered_set<MappedInputElement> toRemove{};
+    if (m_actionsReverse.contains(action)) {
+        for (auto &evt : m_actionsReverse.at(action)) {
+            if (evt.context == context) {
+                m_actions.erase(evt.element);
+                toRemove.insert(evt);
+            }
+        }
+        for (auto &evt : toRemove) {
+            m_actionsReverse.at(action).erase(evt);
+        }
+    }
+    return toRemove;
 }
 
 void InputContext::UnmapAllActions() {
