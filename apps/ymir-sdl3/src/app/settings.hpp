@@ -253,14 +253,12 @@ public:
         Port port1;
         Port port2;
 
-        struct Deadzone {
-            util::Observable<float> x;
-            util::Observable<float> y;
-        };
-        Deadzone gamepadLSDeadzone;
-        Deadzone gamepadRSDeadzone;
-        util::Observable<float> gamepadTriggerToButtonThreshold;
-        float gamepadAnalogDPadSensitivity;
+        struct Gamepad {
+            util::Observable<float> lsDeadzone;
+            util::Observable<float> rsDeadzone;
+            util::Observable<float> analogToDigitalSensitivity;
+        } gamepad;
+
     } input;
 
     struct Video {

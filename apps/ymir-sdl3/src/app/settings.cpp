@@ -477,12 +477,9 @@ void Settings::ResetToDefaults() {
         ResetBinds(input.port2.standardPadBinds);
     }
 
-    input.gamepadLSDeadzone.x = 0.15f;
-    input.gamepadLSDeadzone.y = 0.15f;
-    input.gamepadRSDeadzone.x = 0.15f;
-    input.gamepadRSDeadzone.y = 0.15f;
-    input.gamepadTriggerToButtonThreshold = 0.20f;
-    input.gamepadAnalogDPadSensitivity = 0.20f;
+    input.gamepad.lsDeadzone = 0.15f;
+    input.gamepad.rsDeadzone = 0.15f;
+    input.gamepad.analogToDigitalSensitivity = 0.20f;
 
     video.forceIntegerScaling = false;
     video.forceAspectRatio = true;
@@ -653,12 +650,9 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         parsePort("Port1", input.port1);
         parsePort("Port2", input.port2);
 
-        Parse(tblInput, "GamepadLSDeadzoneX", input.gamepadLSDeadzone.x);
-        Parse(tblInput, "GamepadLSDeadzoneY", input.gamepadLSDeadzone.y);
-        Parse(tblInput, "GamepadRSDeadzoneX", input.gamepadRSDeadzone.x);
-        Parse(tblInput, "GamepadRSDeadzoneY", input.gamepadRSDeadzone.y);
-        Parse(tblInput, "GamepadTriggerToButtonThreshold", input.gamepadTriggerToButtonThreshold);
-        Parse(tblInput, "GamepadAnalogDPadSensitivity", input.gamepadAnalogDPadSensitivity);
+        Parse(tblInput, "GamepadLSDeadzone", input.gamepad.lsDeadzone);
+        Parse(tblInput, "GamepadRSDeadzone", input.gamepad.rsDeadzone);
+        Parse(tblInput, "GamepadAnalogToDigitalSensitivity", input.gamepad.analogToDigitalSensitivity);
     }
 
     if (auto tblVideo = data["Video"]) {
@@ -839,15 +833,12 @@ SettingsSaveResult Settings::Save() {
                     {"Down", ToTOML(input.port2.standardPadBinds.down)},
                     {"Left", ToTOML(input.port2.standardPadBinds.left)},
                     {"Right", ToTOML(input.port2.standardPadBinds.right)},
-                    {"DPad", ToTOML(input.port1.standardPadBinds.dpad)},
+                    {"DPad", ToTOML(input.port2.standardPadBinds.dpad)},
                 }}},
             }}},
-            {"GamepadLSDeadzoneX", input.gamepadLSDeadzone.x.Get()},
-            {"GamepadLSDeadzoneY", input.gamepadLSDeadzone.y.Get()},
-            {"GamepadRSDeadzoneX", input.gamepadRSDeadzone.x.Get()},
-            {"GamepadRSDeadzoneY", input.gamepadRSDeadzone.y.Get()},
-            {"GamepadTriggerToButtonThreshold", input.gamepadTriggerToButtonThreshold.Get()},
-            {"GamepadAnalogDPadSensitivity", input.gamepadAnalogDPadSensitivity},
+            {"GamepadLSDeadzoneY", input.gamepad.lsDeadzone.Get()},
+            {"GamepadRSDeadzoneY", input.gamepad.rsDeadzone.Get()},
+            {"GamepadAnalogToDigitalSensitivity", input.gamepad.analogToDigitalSensitivity.Get()},
         }}},
 
         {"Video", toml::table{{

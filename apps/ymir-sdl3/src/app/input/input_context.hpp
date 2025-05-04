@@ -7,6 +7,7 @@
 
 #include <array>
 #include <optional>
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -30,6 +31,10 @@ struct MappedInputElement {
     constexpr bool operator==(const MappedInputElement &rhs) const = default;
 };
 
+struct Axis2DValue {
+    float x, y;
+};
+
 // An input context encompasses a set of action mappings for a particular context in the application.
 // The application can use as many input contexts as needed.
 //
@@ -48,14 +53,10 @@ public:
     // Deadzone parameters for gamepad sticks.
     // The range of values from 0.0 to +-<x/y> is mapped to 0.0
     // The range of values from +-<x/y> to 1.0 are mapped linearly to 0.0..1.0.
-    struct Deadzone {
-        float x = 0.15f;
-        float y = 0.15f;
-    };
 
-    Deadzone GamepadLSDeadzones;                  // Left stick deadzones
-    Deadzone GamepadRSDeadzones;                  // Right stick deadzones
-    float GamepadTriggerToButtonThreshold = 0.2f; // Trigger-to-button-press threshold
+    float GamepadLSDeadzone = 0.15f;         // Left stick deadzone
+    float GamepadRSDeadzone = 0.15f;         // Right stick deadzone
+    float GamepadAnalogToDigitalSens = 0.2f; // Analog to digital sensitivity
 
     // -----------------------------------------------------------------------------------------------------------------
     // Input primitive processing
@@ -71,6 +72,11 @@ public:
     void ProcessPrimitive(MouseAxis1D axis, float value);
     // Processes an 1D gamepad axis primitive.
     void ProcessPrimitive(uint32 id, GamepadAxis1D axis, float value);
+
+    // Adds the specified gamepad to the connected list.
+    void ConnectGamepad(uint32 id);
+    // Removes the specified gamepad from the connected list.
+    void DisconnectGamepad(uint32 id);
 
     // Processes all updated axes.
     void ProcessAxes();
@@ -92,6 +98,21 @@ public:
     void Capture(CaptureCallback &&callback);
     void CancelCapture();
     bool IsCapturing() const;
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Input state queries
+
+    std::set<uint32> GetConnectedGamepads() const;
+
+    bool IsPressed(KeyboardKey key) const;
+    bool IsPressed(MouseButton button) const;
+    bool IsPressed(uint32 id, GamepadButton button) const;
+
+    float GetAxis1D(MouseAxis1D axis) const;
+    float GetAxis1D(uint32 id, GamepadAxis1D axis) const;
+
+    Axis2DValue GetAxis2D(MouseAxis2D axis) const;
+    Axis2DValue GetAxis2D(uint32 id, GamepadAxis2D axis) const;
 
 private:
     void ProcessEvent(const InputEvent &event);
@@ -161,7 +182,9 @@ private:
 
     std::array<bool, static_cast<size_t>(KeyboardKey::_Count)> m_keyStates;
     std::array<bool, static_cast<size_t>(MouseButton::_Count)> m_mouseButtonStates;
-    std::array<bool, static_cast<size_t>(GamepadButton::_Count)> m_gamepadButtonStates;
+    std::unordered_map<uint32, std::array<bool, static_cast<size_t>(GamepadButton::_Count)>> m_gamepadButtonStates;
+
+    std::set<uint32> m_connectedGamepads;
 
     bool m_axesDirty = false;
 

@@ -1,11 +1,13 @@
 #include "input_context.hpp"
 
+#include "input_utils.hpp"
+
 namespace app::input {
 
 InputContext::InputContext() {
     m_keyStates.fill(false);
     m_mouseButtonStates.fill(false);
-    m_gamepadButtonStates.fill(false);
+    m_gamepadButtonStates.clear();
 
     m_mouseAxes1D.fill({});
     m_gamepadAxes1D.clear();
@@ -65,8 +67,8 @@ void InputContext::ProcessPrimitive(MouseButton button, bool pressed) {
 
 void InputContext::ProcessPrimitive(uint32 id, GamepadButton button, bool pressed) {
     const auto index = static_cast<size_t>(button);
-    if (m_gamepadButtonStates[index] != pressed) {
-        m_gamepadButtonStates[index] = pressed;
+    if (m_gamepadButtonStates[id][index] != pressed) {
+        m_gamepadButtonStates[id][index] = pressed;
         ProcessEvent({.element = {id, button}, .buttonPressed = pressed});
 
         // Convert D-Pad buttons into axis primitives
@@ -100,39 +102,9 @@ void InputContext::ProcessPrimitive(MouseAxis1D axis, float value) {
     m_axesDirty = true;
 }
 
-static float ApplyDeadzone(float value, float deadzone) {
-    // Limit deadzone to 90%
-    deadzone = std::min(deadzone, 0.9f);
-
-    // Map values in the deadzone to 0.0f
-    if (abs(value) < deadzone) {
-        return 0.0f;
-    }
-
-    // Linearly map values outsize of the deadzone to 0.0f..1.0f
-    const float sign = value < 0.0f ? -1.0f : +1.0f;
-    return sign * (abs(value) - deadzone) / (1.0f - deadzone);
-}
-
 void InputContext::ProcessPrimitive(uint32 id, GamepadAxis1D axis, float value) {
     const GamepadAxis2D axis2D = Get2DAxisFrom1DAxis(axis);
     const auto index1D = static_cast<size_t>(axis);
-
-    // Apply deadzone mapping to LS/RS values.
-    // Convert triggers into button presses once they reach the threshold.
-    switch (axis) {
-    case GamepadAxis1D::LeftStickX: value = ApplyDeadzone(value, GamepadLSDeadzones.x); break;
-    case GamepadAxis1D::LeftStickY: value = ApplyDeadzone(value, GamepadLSDeadzones.y); break;
-    case GamepadAxis1D::RightStickX: value = ApplyDeadzone(value, GamepadRSDeadzones.x); break;
-    case GamepadAxis1D::RightStickY: value = ApplyDeadzone(value, GamepadRSDeadzones.y); break;
-    case GamepadAxis1D::LeftTrigger:
-        ProcessPrimitive(id, GamepadButton::LeftTrigger, value >= GamepadTriggerToButtonThreshold);
-        break;
-    case GamepadAxis1D::RightTrigger:
-        ProcessPrimitive(id, GamepadButton::RightTrigger, value >= GamepadTriggerToButtonThreshold);
-        break;
-    default: break;
-    }
 
     m_gamepadAxes1D[id][index1D].value = value;
     m_gamepadAxes1D[id][index1D].changed = true;
@@ -148,6 +120,14 @@ void InputContext::ProcessPrimitive(uint32 id, GamepadAxis1D axis, float value) 
     }
 
     m_axesDirty = true;
+}
+
+void InputContext::ConnectGamepad(uint32 id) {
+    m_connectedGamepads.insert(id);
+}
+
+void InputContext::DisconnectGamepad(uint32 id) {
+    m_connectedGamepads.erase(id);
 }
 
 void InputContext::ProcessAxes() {
@@ -183,7 +163,26 @@ void InputContext::ProcessAxes() {
                 continue;
             }
             state.changed = false;
-            ProcessEvent({.element = {id, axis}, .axis1DValue = state.value});
+
+            float value = state.value;
+
+            // Apply deadzone to stick axes.
+            // Convert triggers into button presses once they reach the threshold.
+            switch (axis) {
+            case GamepadAxis1D::LeftStickX: value = ApplyDeadzone(value, GamepadLSDeadzone); break;
+            case GamepadAxis1D::LeftStickY: value = ApplyDeadzone(value, GamepadLSDeadzone); break;
+            case GamepadAxis1D::RightStickX: value = ApplyDeadzone(value, GamepadRSDeadzone); break;
+            case GamepadAxis1D::RightStickY: value = ApplyDeadzone(value, GamepadRSDeadzone); break;
+            case GamepadAxis1D::LeftTrigger:
+                ProcessPrimitive(id, GamepadButton::LeftTrigger, value >= GamepadAnalogToDigitalSens);
+                break;
+            case GamepadAxis1D::RightTrigger:
+                ProcessPrimitive(id, GamepadButton::RightTrigger, value >= GamepadAnalogToDigitalSens);
+                break;
+            default: break;
+            }
+
+            ProcessEvent({.element = {id, axis}, .axis1DValue = value});
         }
     }
     for (auto &[id, axes] : m_gamepadAxes2D) {
@@ -194,7 +193,29 @@ void InputContext::ProcessAxes() {
                 continue;
             }
             state.changed = false;
-            ProcessEvent({.element = {id, axis}, .axis2D = {.x = state.x, .y = state.y}});
+
+            float x = state.x;
+            float y = state.y;
+
+            // Apply deadzone to stick axes
+            switch (axis) {
+            case GamepadAxis2D::LeftStick: //
+            {
+                auto [nx, ny] = ApplyDeadzone(x, y, GamepadLSDeadzone);
+                x = nx;
+                y = ny;
+                break;
+            }
+            case GamepadAxis2D::RightStick: //
+            {
+                auto [nx, ny] = ApplyDeadzone(x, y, GamepadRSDeadzone);
+                x = nx;
+                y = ny;
+                break;
+            }
+            default: break;
+            }
+            ProcessEvent({.element = {id, axis}, .axis2D = {.x = x, .y = y}});
         }
     }
 }
@@ -238,6 +259,52 @@ void InputContext::CancelCapture() {
 
 bool InputContext::IsCapturing() const {
     return (bool)m_captureCallback;
+}
+
+std::set<uint32> InputContext::GetConnectedGamepads() const {
+    return m_connectedGamepads;
+}
+
+bool InputContext::IsPressed(KeyboardKey key) const {
+    return m_keyStates[static_cast<size_t>(key)];
+}
+
+bool InputContext::IsPressed(MouseButton button) const {
+    return m_mouseButtonStates[static_cast<size_t>(button)];
+}
+
+bool InputContext::IsPressed(uint32 id, GamepadButton button) const {
+    if (m_gamepadButtonStates.contains(id)) {
+        return m_gamepadButtonStates.at(id)[static_cast<size_t>(button)];
+    } else {
+        return false;
+    }
+}
+
+float InputContext::GetAxis1D(MouseAxis1D axis) const {
+    return m_mouseAxes1D[static_cast<size_t>(axis)].value;
+}
+
+float InputContext::GetAxis1D(uint32 id, GamepadAxis1D axis) const {
+    if (m_gamepadAxes1D.contains(id)) {
+        return m_gamepadAxes1D.at(id)[static_cast<size_t>(axis)].value;
+    } else {
+        return 0.0f;
+    }
+}
+
+Axis2DValue InputContext::GetAxis2D(MouseAxis2D axis) const {
+    const auto &value = m_mouseAxes2D[static_cast<size_t>(axis)];
+    return {value.x, value.y};
+}
+
+Axis2DValue InputContext::GetAxis2D(uint32 id, GamepadAxis2D axis) const {
+    if (m_gamepadAxes2D.contains(id)) {
+        const auto &value = m_gamepadAxes2D.at(id)[static_cast<size_t>(axis)];
+        return {value.x, value.y};
+    } else {
+        return {0.0f, 0.0f};
+    }
 }
 
 void InputContext::ProcessEvent(const InputEvent &event) {

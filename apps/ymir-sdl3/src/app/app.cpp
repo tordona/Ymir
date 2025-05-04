@@ -188,11 +188,9 @@ int App::Run(const CommandLineOptions &options) {
         inputSettings.port2.type.Observe([&](ymir::peripheral::PeripheralType type) {
             m_context.EnqueueEvent(events::emu::InsertPort2Peripheral(type));
         });
-        inputSettings.gamepadLSDeadzone.x.Observe(inputContext.GamepadLSDeadzones.x);
-        inputSettings.gamepadLSDeadzone.y.Observe(inputContext.GamepadLSDeadzones.y);
-        inputSettings.gamepadRSDeadzone.x.Observe(inputContext.GamepadRSDeadzones.x);
-        inputSettings.gamepadRSDeadzone.y.Observe(inputContext.GamepadRSDeadzones.y);
-        inputSettings.gamepadTriggerToButtonThreshold.Observe(inputContext.GamepadTriggerToButtonThreshold);
+        inputSettings.gamepad.lsDeadzone.Observe(inputContext.GamepadLSDeadzone);
+        inputSettings.gamepad.rsDeadzone.Observe(inputContext.GamepadRSDeadzone);
+        inputSettings.gamepad.analogToDigitalSensitivity.Observe(inputContext.GamepadAnalogToDigitalSens);
     }
 
     {
@@ -1328,6 +1326,33 @@ void App::RunEmulator() {
             });
         };
 
+        auto registerStandardPadDPadButton = [&](input::Action action, float x, float y) {
+            inputContext.SetButtonHandler(
+                action, [=, this](void *context, const input::InputElement &element, bool actuated) {
+                    auto &input = *reinterpret_cast<SharedContext::StandardPadInput *>(context);
+                    auto &dpadInput = input.dpad2DInputs[element];
+                    if (actuated) {
+                        dpadInput.x = x;
+                        dpadInput.y = y;
+                    } else {
+                        dpadInput.x = 0;
+                        dpadInput.y = 0.0f;
+                    }
+                    input.UpdateDPadInput(m_context.settings.input.gamepad.analogToDigitalSensitivity);
+                });
+        };
+
+        auto registerStandardPadDPad2DAxis = [&](input::Action action) {
+            inputContext.SetAxis2DHandler(
+                action, [this](void *context, const input::InputElement &element, float x, float y) {
+                    auto &input = *reinterpret_cast<SharedContext::StandardPadInput *>(context);
+                    auto &dpadInput = input.dpad2DInputs[element];
+                    dpadInput.x = x;
+                    dpadInput.y = y;
+                    input.UpdateDPadInput(m_context.settings.input.gamepad.analogToDigitalSensitivity);
+                });
+        };
+
         registerStandardPadButton(actions::control_pad::A, Button::A);
         registerStandardPadButton(actions::control_pad::B, Button::B);
         registerStandardPadButton(actions::control_pad::C, Button::C);
@@ -1337,60 +1362,11 @@ void App::RunEmulator() {
         registerStandardPadButton(actions::control_pad::Start, Button::Start);
         registerStandardPadButton(actions::control_pad::L, Button::L);
         registerStandardPadButton(actions::control_pad::R, Button::R);
-
-        inputContext.SetButtonHandler(actions::control_pad::Up,
-                                      [this](void *context, const input::InputElement &element, bool actuated) {
-                                          auto &input = *reinterpret_cast<SharedContext::StandardPadInput *>(context);
-                                          auto &dpadInput = input.dpad2DInputs[element];
-                                          if (actuated) {
-                                              dpadInput.y = -1.0f;
-                                          } else {
-                                              dpadInput.y = 0.0f;
-                                          }
-                                          input.UpdateDPadInput(m_context.settings.input.gamepadAnalogDPadSensitivity);
-                                      });
-        inputContext.SetButtonHandler(actions::control_pad::Down,
-                                      [this](void *context, const input::InputElement &element, bool actuated) {
-                                          auto &input = *reinterpret_cast<SharedContext::StandardPadInput *>(context);
-                                          auto &dpadInput = input.dpad2DInputs[element];
-                                          if (actuated) {
-                                              dpadInput.y = +1.0f;
-                                          } else {
-                                              dpadInput.y = 0.0f;
-                                          }
-                                          input.UpdateDPadInput(m_context.settings.input.gamepadAnalogDPadSensitivity);
-                                      });
-        inputContext.SetButtonHandler(actions::control_pad::Left,
-                                      [this](void *context, const input::InputElement &element, bool actuated) {
-                                          auto &input = *reinterpret_cast<SharedContext::StandardPadInput *>(context);
-                                          auto &dpadInput = input.dpad2DInputs[element];
-                                          if (actuated) {
-                                              dpadInput.x = -1.0f;
-                                          } else {
-                                              dpadInput.x = 0.0f;
-                                          }
-                                          input.UpdateDPadInput(m_context.settings.input.gamepadAnalogDPadSensitivity);
-                                      });
-        inputContext.SetButtonHandler(actions::control_pad::Right,
-                                      [this](void *context, const input::InputElement &element, bool actuated) {
-                                          auto &input = *reinterpret_cast<SharedContext::StandardPadInput *>(context);
-                                          auto &dpadInput = input.dpad2DInputs[element];
-                                          if (actuated) {
-                                              dpadInput.x = +1.0f;
-                                          } else {
-                                              dpadInput.x = 0.0f;
-                                          }
-                                          input.UpdateDPadInput(m_context.settings.input.gamepadAnalogDPadSensitivity);
-                                      });
-
-        inputContext.SetAxis2DHandler(actions::control_pad::DPad,
-                                      [this](void *context, const input::InputElement &element, float x, float y) {
-                                          auto &input = *reinterpret_cast<SharedContext::StandardPadInput *>(context);
-                                          auto &dpadInput = input.dpad2DInputs[element];
-                                          dpadInput.x = x;
-                                          dpadInput.y = y;
-                                          input.UpdateDPadInput(m_context.settings.input.gamepadAnalogDPadSensitivity);
-                                      });
+        registerStandardPadDPadButton(actions::control_pad::Up, 0.0f, -1.0f);
+        registerStandardPadDPadButton(actions::control_pad::Down, 0.0f, +1.0f);
+        registerStandardPadDPadButton(actions::control_pad::Left, -1.0f, 0.0f);
+        registerStandardPadDPadButton(actions::control_pad::Right, +1.0f, 0.0f);
+        registerStandardPadDPad2DAxis(actions::control_pad::DPad);
     }
 
     RebindInputs();
@@ -1503,20 +1479,24 @@ void App::RunEmulator() {
             {
                 SDL_Gamepad *gamepad = SDL_OpenGamepad(evt.gdevice.which);
                 if (gamepad != nullptr) {
-                    gamepadPlayerIndexes[evt.gdevice.which] = SDL_GetGamepadPlayerIndex(gamepad);
+                    const int playerIndex = SDL_GetGamepadPlayerIndex(gamepad);
+                    gamepadPlayerIndexes[evt.gdevice.which] = playerIndex;
                     gamepads[evt.gdevice.which] = gamepad;
+                    devlog::debug<grp::base>("Gamepad {} added -> player index {}", evt.gdevice.which, playerIndex);
+                    inputContext.ConnectGamepad(playerIndex);
                 }
-                devlog::debug<grp::base>("Gamepad {} added -> player index {}", evt.gdevice.which,
-                                         gamepadPlayerIndexes[evt.gdevice.which]);
                 break;
             }
-            case SDL_EVENT_GAMEPAD_REMOVED:
-                devlog::debug<grp::base>("Gamepad {} removed -> player index {}", evt.gdevice.which,
-                                         gamepadPlayerIndexes[evt.gdevice.which]);
+            case SDL_EVENT_GAMEPAD_REMOVED: //
+            {
+                const int playerIndex = gamepadPlayerIndexes[evt.gdevice.which];
+                devlog::debug<grp::base>("Gamepad {} removed -> player index {}", evt.gdevice.which, playerIndex);
                 gamepadPlayerIndexes.erase(evt.gdevice.which);
                 SDL_CloseGamepad(gamepads.at(evt.gdevice.which));
                 gamepads.erase(evt.gdevice.which);
+                inputContext.DisconnectGamepad(playerIndex);
                 break;
+            }
             case SDL_EVENT_GAMEPAD_REMAPPED: [[fallthrough]];
             case SDL_EVENT_GAMEPAD_UPDATE_COMPLETE: [[fallthrough]];
             case SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED:
