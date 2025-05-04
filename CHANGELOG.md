@@ -4,12 +4,12 @@
 
 ### New features and improvements
 
-- Input: Add support for gamepad axes
+- Input: Improved support for gamepads. You can now configure triggers as buttons, map analog sticks to the D-Pad, adjust deadzones, and more.
 - Input: Added one more slot for input binds
 
 ### Fixes
 
-- Input: No longer leaves keys stuck when focusing windows, menus, etc.
+- Input: Keys no longer get stuck when focusing windows, menus, etc.
 
 
 ## Version 0.1.1
