@@ -31,6 +31,7 @@ RTC::RTC(core::Configuration::RTC &config)
 
     config.mode.Observe(m_mode);
 
+    m_offset = 0;
     m_timestamp = 0;
 
     Reset(true);
