@@ -11,7 +11,6 @@ HotkeysSettingsView::HotkeysSettingsView(SharedContext &context)
 void HotkeysSettingsView::Display() {
     if (ImGui::Button("Restore defaults")) {
         m_context.settings.ResetHotkeys();
-        m_context.settings.RebindInputs();
         MakeDirty();
     }
 
@@ -26,85 +25,85 @@ void HotkeysSettingsView::Display() {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableHeadersRow();
 
-        auto drawRow = [&](const char *type, const char *cmdName, input::InputBind &bind) {
+        auto drawRow = [&](input::InputBind &bind) {
             ImGui::TableNextRow();
             if (ImGui::TableNextColumn()) {
                 ImGui::AlignTextToFramePadding();
-                ImGui::TextUnformatted(type);
+                ImGui::TextUnformatted(bind.action.group);
             }
             if (ImGui::TableNextColumn()) {
                 ImGui::AlignTextToFramePadding();
-                ImGui::TextUnformatted(cmdName);
+                ImGui::TextUnformatted(bind.action.name);
             }
             for (uint32 i = 0; i < input::kNumBindsPerInput; i++) {
                 if (ImGui::TableNextColumn()) {
-                    m_inputCaptureWidget.DrawInputBindButton(bind, i);
+                    m_inputCaptureWidget.DrawInputBindButton(bind, i, nullptr);
                 }
             }
         };
 
         auto &hotkeys = m_context.settings.hotkeys;
 
-        drawRow("General", "Open settings", hotkeys.openSettings);
-        drawRow("General", "Toggle windowed video output", hotkeys.toggleWindowedVideoOutput);
+        drawRow(hotkeys.openSettings);
+        drawRow(hotkeys.toggleWindowedVideoOutput);
 
-        drawRow("Audio", "Toggle mute", hotkeys.toggleMute);
-        drawRow("Audio", "Increase volume by 10%", hotkeys.increaseVolume);
-        drawRow("Audio", "Decrease volume by 10%", hotkeys.decreaseVolume);
+        drawRow(hotkeys.toggleMute);
+        drawRow(hotkeys.increaseVolume);
+        drawRow(hotkeys.decreaseVolume);
 
-        drawRow("CD drive", "Load disc", hotkeys.loadDisc);
-        drawRow("CD drive", "Eject disc", hotkeys.ejectDisc);
-        drawRow("CD drive", "Open/close tray", hotkeys.openCloseTray);
+        drawRow(hotkeys.loadDisc);
+        drawRow(hotkeys.ejectDisc);
+        drawRow(hotkeys.openCloseTray);
 
-        drawRow("System", "Hard reset", hotkeys.hardReset);
-        drawRow("System", "Soft reset", hotkeys.softReset);
-        drawRow("System", "Reset button", hotkeys.resetButton);
+        drawRow(hotkeys.hardReset);
+        drawRow(hotkeys.softReset);
+        drawRow(hotkeys.resetButton);
 
-        drawRow("Emulation", "Turbo speed", hotkeys.turboSpeed);
-        drawRow("Emulation", "Pause/resume", hotkeys.pauseResume);
-        drawRow("Emulation", "Forward frame step", hotkeys.fwdFrameStep);
-        drawRow("Emulation", "Reverse frame step", hotkeys.revFrameStep);
-        drawRow("Emulation", "Toggle rewind buffer", hotkeys.toggleRewindBuffer);
-        drawRow("Emulation", "Rewind", hotkeys.rewind);
+        drawRow(hotkeys.turboSpeed);
+        drawRow(hotkeys.pauseResume);
+        drawRow(hotkeys.fwdFrameStep);
+        drawRow(hotkeys.revFrameStep);
+        drawRow(hotkeys.toggleRewindBuffer);
+        drawRow(hotkeys.rewind);
 
-        drawRow("Debugger", "Toggle tracing", hotkeys.toggleDebugTrace);
-        drawRow("Debugger", "Dump all memory", hotkeys.dumpMemory);
+        drawRow(hotkeys.toggleDebugTrace);
+        drawRow(hotkeys.dumpMemory);
 
-        drawRow("Save states", "Quick load state", hotkeys.saveStates.quickLoad);
-        drawRow("Save states", "Quick save state", hotkeys.saveStates.quickSave);
+        drawRow(hotkeys.saveStates.quickLoad);
+        drawRow(hotkeys.saveStates.quickSave);
 
-        drawRow("Save states", "Select state 1", hotkeys.saveStates.select1);
-        drawRow("Save states", "Select state 2", hotkeys.saveStates.select2);
-        drawRow("Save states", "Select state 3", hotkeys.saveStates.select3);
-        drawRow("Save states", "Select state 4", hotkeys.saveStates.select4);
-        drawRow("Save states", "Select state 5", hotkeys.saveStates.select5);
-        drawRow("Save states", "Select state 6", hotkeys.saveStates.select6);
-        drawRow("Save states", "Select state 7", hotkeys.saveStates.select7);
-        drawRow("Save states", "Select state 8", hotkeys.saveStates.select8);
-        drawRow("Save states", "Select state 9", hotkeys.saveStates.select9);
-        drawRow("Save states", "Select state 10", hotkeys.saveStates.select10);
+        drawRow(hotkeys.saveStates.select1);
+        drawRow(hotkeys.saveStates.select2);
+        drawRow(hotkeys.saveStates.select3);
+        drawRow(hotkeys.saveStates.select4);
+        drawRow(hotkeys.saveStates.select5);
+        drawRow(hotkeys.saveStates.select6);
+        drawRow(hotkeys.saveStates.select7);
+        drawRow(hotkeys.saveStates.select8);
+        drawRow(hotkeys.saveStates.select9);
+        drawRow(hotkeys.saveStates.select10);
 
-        drawRow("Save states", "Load state 1", hotkeys.saveStates.load1);
-        drawRow("Save states", "Load state 2", hotkeys.saveStates.load2);
-        drawRow("Save states", "Load state 3", hotkeys.saveStates.load3);
-        drawRow("Save states", "Load state 4", hotkeys.saveStates.load4);
-        drawRow("Save states", "Load state 5", hotkeys.saveStates.load5);
-        drawRow("Save states", "Load state 6", hotkeys.saveStates.load6);
-        drawRow("Save states", "Load state 7", hotkeys.saveStates.load7);
-        drawRow("Save states", "Load state 8", hotkeys.saveStates.load8);
-        drawRow("Save states", "Load state 9", hotkeys.saveStates.load9);
-        drawRow("Save states", "Load state 10", hotkeys.saveStates.load10);
+        drawRow(hotkeys.saveStates.load1);
+        drawRow(hotkeys.saveStates.load2);
+        drawRow(hotkeys.saveStates.load3);
+        drawRow(hotkeys.saveStates.load4);
+        drawRow(hotkeys.saveStates.load5);
+        drawRow(hotkeys.saveStates.load6);
+        drawRow(hotkeys.saveStates.load7);
+        drawRow(hotkeys.saveStates.load8);
+        drawRow(hotkeys.saveStates.load9);
+        drawRow(hotkeys.saveStates.load10);
 
-        drawRow("Save states", "Save state 1", hotkeys.saveStates.save1);
-        drawRow("Save states", "Save state 2", hotkeys.saveStates.save2);
-        drawRow("Save states", "Save state 3", hotkeys.saveStates.save3);
-        drawRow("Save states", "Save state 4", hotkeys.saveStates.save4);
-        drawRow("Save states", "Save state 5", hotkeys.saveStates.save5);
-        drawRow("Save states", "Save state 6", hotkeys.saveStates.save6);
-        drawRow("Save states", "Save state 7", hotkeys.saveStates.save7);
-        drawRow("Save states", "Save state 8", hotkeys.saveStates.save8);
-        drawRow("Save states", "Save state 9", hotkeys.saveStates.save9);
-        drawRow("Save states", "Save state 10", hotkeys.saveStates.save10);
+        drawRow(hotkeys.saveStates.save1);
+        drawRow(hotkeys.saveStates.save2);
+        drawRow(hotkeys.saveStates.save3);
+        drawRow(hotkeys.saveStates.save4);
+        drawRow(hotkeys.saveStates.save5);
+        drawRow(hotkeys.saveStates.save6);
+        drawRow(hotkeys.saveStates.save7);
+        drawRow(hotkeys.saveStates.save8);
+        drawRow(hotkeys.saveStates.save9);
+        drawRow(hotkeys.saveStates.save10);
 
         m_inputCaptureWidget.DrawCapturePopup();
 

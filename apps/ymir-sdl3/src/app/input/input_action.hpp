@@ -13,15 +13,17 @@ struct Action {
 
     uint32 id;
     Kind kind;
+    const char *group;
+    const char *name;
 
-    static constexpr Action Button(uint32 id) {
-        return {id, Kind::Button};
+    static constexpr Action Button(uint32 id, const char *group, const char *name) {
+        return {id, Kind::Button, group, name};
     }
-    static constexpr Action Axis1D(uint32 id) {
-        return {id, Kind::Axis1D};
+    static constexpr Action Axis1D(uint32 id, const char *group, const char *name) {
+        return {id, Kind::Axis1D, group, name};
     }
-    static constexpr Action Axis2D(uint32 id) {
-        return {id, Kind::Axis2D};
+    static constexpr Action Axis2D(uint32 id, const char *group, const char *name) {
+        return {id, Kind::Axis2D, group, name};
     }
 
     constexpr bool operator==(const Action &) const = default;

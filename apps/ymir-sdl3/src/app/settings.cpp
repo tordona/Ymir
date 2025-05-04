@@ -1,19 +1,22 @@
 #include "settings.hpp"
 
-#include <app/actions.hpp>
-
 #include <app/shared_context.hpp>
 
 #include <ymir/sys/saturn.hpp>
 
-#include <ymir/util/date_time.hpp>
 #include <ymir/util/dev_log.hpp>
 #include <ymir/util/inline.hpp>
+
+#include <cassert>
 
 using namespace std::literals;
 using namespace ymir;
 
 namespace app {
+
+// Increment this version and implement a new LoadV# when making breaking changes to the settings file structure.
+// Existing versions should convert old formats on a best-effort basis.
+inline constexpr int kConfigVersion = 1;
 
 namespace grp {
 
@@ -31,8 +34,6 @@ namespace grp {
     };
 
 } // namespace grp
-
-inline constexpr int kConfigVersion = 1;
 
 // -------------------------------------------------------------------------------------------------
 // Enum parsers
@@ -349,106 +350,108 @@ FORCE_INLINE static toml::array ToTOML(const std::vector<T> &value) {
 // Implementation
 
 Settings::Settings(SharedContext &sharedCtx) noexcept
-    : m_emuConfig(sharedCtx.saturn.configuration)
-    , m_inputContext(sharedCtx.inputContext)
-    , m_profile(sharedCtx.profile) {
+    : m_context(sharedCtx) {
 
-    auto mapActionInput = [&](input::InputBind &bind, void *context = nullptr) {
-        m_actionInputs[bind.action].insert({&bind, context});
+    auto mapInput = [&](InputMap &map, input::InputBind &bind) {
+        assert(!map.map.contains(bind.action));
+        map.map[bind.action].insert(&bind);
     };
 
-    mapActionInput(hotkeys.openSettings);
-    mapActionInput(hotkeys.toggleWindowedVideoOutput);
+    m_port1ControlPadInputs.context = &m_context.standardPadInputs[0];
+    m_port2ControlPadInputs.context = &m_context.standardPadInputs[1];
 
-    mapActionInput(hotkeys.toggleMute);
-    mapActionInput(hotkeys.increaseVolume);
-    mapActionInput(hotkeys.decreaseVolume);
+    mapInput(m_actionInputs, hotkeys.openSettings);
+    mapInput(m_actionInputs, hotkeys.toggleWindowedVideoOutput);
 
-    mapActionInput(hotkeys.loadDisc);
-    mapActionInput(hotkeys.ejectDisc);
-    mapActionInput(hotkeys.openCloseTray);
+    mapInput(m_actionInputs, hotkeys.toggleMute);
+    mapInput(m_actionInputs, hotkeys.increaseVolume);
+    mapInput(m_actionInputs, hotkeys.decreaseVolume);
 
-    mapActionInput(hotkeys.hardReset);
-    mapActionInput(hotkeys.softReset);
-    mapActionInput(hotkeys.resetButton);
+    mapInput(m_actionInputs, hotkeys.loadDisc);
+    mapInput(m_actionInputs, hotkeys.ejectDisc);
+    mapInput(m_actionInputs, hotkeys.openCloseTray);
 
-    mapActionInput(hotkeys.turboSpeed);
-    mapActionInput(hotkeys.pauseResume);
-    mapActionInput(hotkeys.fwdFrameStep);
-    mapActionInput(hotkeys.revFrameStep);
-    mapActionInput(hotkeys.rewind);
-    mapActionInput(hotkeys.toggleRewindBuffer);
+    mapInput(m_actionInputs, hotkeys.hardReset);
+    mapInput(m_actionInputs, hotkeys.softReset);
+    mapInput(m_actionInputs, hotkeys.resetButton);
 
-    mapActionInput(hotkeys.toggleDebugTrace);
-    mapActionInput(hotkeys.dumpMemory);
+    mapInput(m_actionInputs, hotkeys.turboSpeed);
+    mapInput(m_actionInputs, hotkeys.pauseResume);
+    mapInput(m_actionInputs, hotkeys.fwdFrameStep);
+    mapInput(m_actionInputs, hotkeys.revFrameStep);
+    mapInput(m_actionInputs, hotkeys.rewind);
+    mapInput(m_actionInputs, hotkeys.toggleRewindBuffer);
 
-    mapActionInput(hotkeys.saveStates.quickLoad);
-    mapActionInput(hotkeys.saveStates.quickSave);
+    mapInput(m_actionInputs, hotkeys.toggleDebugTrace);
+    mapInput(m_actionInputs, hotkeys.dumpMemory);
 
-    mapActionInput(hotkeys.saveStates.select1);
-    mapActionInput(hotkeys.saveStates.select2);
-    mapActionInput(hotkeys.saveStates.select3);
-    mapActionInput(hotkeys.saveStates.select4);
-    mapActionInput(hotkeys.saveStates.select5);
-    mapActionInput(hotkeys.saveStates.select6);
-    mapActionInput(hotkeys.saveStates.select7);
-    mapActionInput(hotkeys.saveStates.select8);
-    mapActionInput(hotkeys.saveStates.select9);
-    mapActionInput(hotkeys.saveStates.select10);
+    mapInput(m_actionInputs, hotkeys.saveStates.quickLoad);
+    mapInput(m_actionInputs, hotkeys.saveStates.quickSave);
 
-    mapActionInput(hotkeys.saveStates.load1);
-    mapActionInput(hotkeys.saveStates.load2);
-    mapActionInput(hotkeys.saveStates.load3);
-    mapActionInput(hotkeys.saveStates.load4);
-    mapActionInput(hotkeys.saveStates.load5);
-    mapActionInput(hotkeys.saveStates.load6);
-    mapActionInput(hotkeys.saveStates.load7);
-    mapActionInput(hotkeys.saveStates.load8);
-    mapActionInput(hotkeys.saveStates.load9);
-    mapActionInput(hotkeys.saveStates.load10);
+    mapInput(m_actionInputs, hotkeys.saveStates.select1);
+    mapInput(m_actionInputs, hotkeys.saveStates.select2);
+    mapInput(m_actionInputs, hotkeys.saveStates.select3);
+    mapInput(m_actionInputs, hotkeys.saveStates.select4);
+    mapInput(m_actionInputs, hotkeys.saveStates.select5);
+    mapInput(m_actionInputs, hotkeys.saveStates.select6);
+    mapInput(m_actionInputs, hotkeys.saveStates.select7);
+    mapInput(m_actionInputs, hotkeys.saveStates.select8);
+    mapInput(m_actionInputs, hotkeys.saveStates.select9);
+    mapInput(m_actionInputs, hotkeys.saveStates.select10);
 
-    mapActionInput(hotkeys.saveStates.save1);
-    mapActionInput(hotkeys.saveStates.save2);
-    mapActionInput(hotkeys.saveStates.save3);
-    mapActionInput(hotkeys.saveStates.save4);
-    mapActionInput(hotkeys.saveStates.save5);
-    mapActionInput(hotkeys.saveStates.save6);
-    mapActionInput(hotkeys.saveStates.save7);
-    mapActionInput(hotkeys.saveStates.save8);
-    mapActionInput(hotkeys.saveStates.save9);
-    mapActionInput(hotkeys.saveStates.save10);
+    mapInput(m_actionInputs, hotkeys.saveStates.load1);
+    mapInput(m_actionInputs, hotkeys.saveStates.load2);
+    mapInput(m_actionInputs, hotkeys.saveStates.load3);
+    mapInput(m_actionInputs, hotkeys.saveStates.load4);
+    mapInput(m_actionInputs, hotkeys.saveStates.load5);
+    mapInput(m_actionInputs, hotkeys.saveStates.load6);
+    mapInput(m_actionInputs, hotkeys.saveStates.load7);
+    mapInput(m_actionInputs, hotkeys.saveStates.load8);
+    mapInput(m_actionInputs, hotkeys.saveStates.load9);
+    mapInput(m_actionInputs, hotkeys.saveStates.load10);
 
-    auto ctx1 = &sharedCtx.standardPadInputs[0];
-    mapActionInput(input.port1.standardPadBinds.a, ctx1);
-    mapActionInput(input.port1.standardPadBinds.b, ctx1);
-    mapActionInput(input.port1.standardPadBinds.c, ctx1);
-    mapActionInput(input.port1.standardPadBinds.x, ctx1);
-    mapActionInput(input.port1.standardPadBinds.y, ctx1);
-    mapActionInput(input.port1.standardPadBinds.z, ctx1);
-    mapActionInput(input.port1.standardPadBinds.l, ctx1);
-    mapActionInput(input.port1.standardPadBinds.r, ctx1);
-    mapActionInput(input.port1.standardPadBinds.start, ctx1);
-    mapActionInput(input.port1.standardPadBinds.up, ctx1);
-    mapActionInput(input.port1.standardPadBinds.down, ctx1);
-    mapActionInput(input.port1.standardPadBinds.left, ctx1);
-    mapActionInput(input.port1.standardPadBinds.right, ctx1);
-    mapActionInput(input.port1.standardPadBinds.dpad, ctx1);
+    mapInput(m_actionInputs, hotkeys.saveStates.save1);
+    mapInput(m_actionInputs, hotkeys.saveStates.save2);
+    mapInput(m_actionInputs, hotkeys.saveStates.save3);
+    mapInput(m_actionInputs, hotkeys.saveStates.save4);
+    mapInput(m_actionInputs, hotkeys.saveStates.save5);
+    mapInput(m_actionInputs, hotkeys.saveStates.save6);
+    mapInput(m_actionInputs, hotkeys.saveStates.save7);
+    mapInput(m_actionInputs, hotkeys.saveStates.save8);
+    mapInput(m_actionInputs, hotkeys.saveStates.save9);
+    mapInput(m_actionInputs, hotkeys.saveStates.save10);
 
-    auto ctx2 = &sharedCtx.standardPadInputs[1];
-    mapActionInput(input.port2.standardPadBinds.a, ctx2);
-    mapActionInput(input.port2.standardPadBinds.b, ctx2);
-    mapActionInput(input.port2.standardPadBinds.c, ctx2);
-    mapActionInput(input.port2.standardPadBinds.x, ctx2);
-    mapActionInput(input.port2.standardPadBinds.y, ctx2);
-    mapActionInput(input.port2.standardPadBinds.z, ctx2);
-    mapActionInput(input.port2.standardPadBinds.l, ctx2);
-    mapActionInput(input.port2.standardPadBinds.r, ctx2);
-    mapActionInput(input.port2.standardPadBinds.start, ctx2);
-    mapActionInput(input.port2.standardPadBinds.up, ctx2);
-    mapActionInput(input.port2.standardPadBinds.down, ctx2);
-    mapActionInput(input.port2.standardPadBinds.left, ctx2);
-    mapActionInput(input.port2.standardPadBinds.right, ctx2);
-    mapActionInput(input.port2.standardPadBinds.dpad, ctx2);
+    // Saturn Control Pad on port 1
+    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.a);
+    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.b);
+    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.c);
+    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.x);
+    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.y);
+    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.z);
+    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.l);
+    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.r);
+    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.start);
+    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.up);
+    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.down);
+    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.left);
+    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.right);
+    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.dpad);
+
+    // Saturn Control Pad on port 2
+    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.a);
+    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.b);
+    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.c);
+    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.x);
+    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.y);
+    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.z);
+    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.l);
+    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.r);
+    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.start);
+    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.up);
+    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.down);
+    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.left);
+    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.right);
+    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.dpad);
 
     ResetToDefaults();
 }
@@ -460,7 +463,7 @@ void Settings::ResetToDefaults() {
     general.enableRewindBuffer = false;
     general.rewindCompressionLevel = 12;
 
-    system.internalBackupRAMImagePath = m_profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
+    system.internalBackupRAMImagePath = m_context.profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
 
     system.ipl.overrideImage = false;
     system.ipl.path = "";
@@ -527,6 +530,8 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
 }
 
 SettingsLoadResult Settings::LoadV1(toml::table &data) {
+    auto &emuConfig = m_context.saturn.configuration;
+
     if (auto tblGeneral = data["General"]) {
         Parse(tblGeneral, "PreloadDiscImagesToRAM", general.preloadDiscImagesToRAM);
         Parse(tblGeneral, "BoostEmuThreadPriority", general.boostEmuThreadPriority);
@@ -536,10 +541,10 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
     }
 
     if (auto tblSystem = data["System"]) {
-        Parse(tblSystem, "VideoStandard", m_emuConfig.system.videoStandard);
-        Parse(tblSystem, "AutoDetectRegion", m_emuConfig.system.autodetectRegion);
-        Parse(tblSystem, "PreferredRegionOrder", m_emuConfig.system.preferredRegionOrder);
-        Parse(tblSystem, "EmulateSH2Cache", m_emuConfig.system.emulateSH2Cache);
+        Parse(tblSystem, "VideoStandard", emuConfig.system.videoStandard);
+        Parse(tblSystem, "AutoDetectRegion", emuConfig.system.autodetectRegion);
+        Parse(tblSystem, "PreferredRegionOrder", emuConfig.system.preferredRegionOrder);
+        Parse(tblSystem, "EmulateSH2Cache", emuConfig.system.emulateSH2Cache);
         Parse(tblSystem, "InternalBackupRAMImagePath", system.internalBackupRAMImagePath);
 
         auto &ipl = system.ipl;
@@ -549,7 +554,7 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
             Parse(tblIPL, "Variant", ipl.variant);
         }
 
-        auto &rtc = m_emuConfig.rtc;
+        auto &rtc = emuConfig.rtc;
         if (auto tblRTC = tblSystem["RTC"]) {
             Parse(tblRTC, "Mode", rtc.mode);
             if (auto tblVirtual = tblRTC["Virtual"]) {
@@ -663,14 +668,14 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         Parse(tblVideo, "AutoResizeWindow", video.autoResizeWindow);
         Parse(tblVideo, "DisplayVideoOutputInWindow", video.displayVideoOutputInWindow);
 
-        Parse(tblVideo, "ThreadedVDP", m_emuConfig.video.threadedVDP);
+        Parse(tblVideo, "ThreadedVDP", emuConfig.video.threadedVDP);
     }
 
     if (auto tblAudio = data["Audio"]) {
         Parse(tblAudio, "Volume", audio.volume);
         Parse(tblAudio, "Mute", audio.mute);
-        Parse(tblAudio, "InterpolationMode", m_emuConfig.audio.interpolation);
-        Parse(tblAudio, "ThreadedSCSP", m_emuConfig.audio.threadedSCSP);
+        Parse(tblAudio, "InterpolationMode", emuConfig.audio.interpolation);
+        Parse(tblAudio, "ThreadedSCSP", emuConfig.audio.threadedSCSP);
     }
 
     if (auto tblCart = data["Cartridge"]) {
@@ -685,7 +690,7 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
     }
 
     if (auto tblCDBlock = data["CDBlock"]) {
-        Parse(tblCDBlock, "ReadSpeed", m_emuConfig.cdblock.readSpeedFactor);
+        Parse(tblCDBlock, "ReadSpeed", emuConfig.cdblock.readSpeedFactor);
     }
 
     return SettingsLoadResult::Success();
@@ -696,7 +701,8 @@ SettingsSaveResult Settings::Save() {
         path = "Ymir.toml";
     }
 
-    const auto &rtc = m_emuConfig.rtc;
+    auto &emuConfig = m_context.saturn.configuration;
+    const auto &rtc = emuConfig.rtc;
 
     // clang-format off
     auto tbl = toml::table{{
@@ -711,10 +717,10 @@ SettingsSaveResult Settings::Save() {
         }}},
 
         {"System", toml::table{{
-            {"VideoStandard", ToTOML(m_emuConfig.system.videoStandard)},
-            {"AutoDetectRegion", m_emuConfig.system.autodetectRegion},
-            {"PreferredRegionOrder", ToTOML(m_emuConfig.system.preferredRegionOrder.Get())},
-            {"EmulateSH2Cache", m_emuConfig.system.emulateSH2Cache.Get()},
+            {"VideoStandard", ToTOML(emuConfig.system.videoStandard)},
+            {"AutoDetectRegion", emuConfig.system.autodetectRegion},
+            {"PreferredRegionOrder", ToTOML(emuConfig.system.preferredRegionOrder.Get())},
+            {"EmulateSH2Cache", emuConfig.system.emulateSH2Cache.Get()},
             {"InternalBackupRAMImagePath", system.internalBackupRAMImagePath.string()},
         
             {"IPL", toml::table{{
@@ -847,14 +853,14 @@ SettingsSaveResult Settings::Save() {
             {"ForcedAspect", video.forcedAspect},
             {"AutoResizeWindow", video.autoResizeWindow},
             {"DisplayVideoOutputInWindow", video.displayVideoOutputInWindow},
-            {"ThreadedVDP", m_emuConfig.video.threadedVDP.Get()},
+            {"ThreadedVDP", emuConfig.video.threadedVDP.Get()},
         }}},
 
         {"Audio", toml::table{{
             {"Volume", audio.volume.Get()},
             {"Mute", audio.mute.Get()},
-            {"InterpolationMode", ToTOML(m_emuConfig.audio.interpolation)},
-            {"ThreadedSCSP", m_emuConfig.audio.threadedSCSP.Get()},
+            {"InterpolationMode", ToTOML(emuConfig.audio.interpolation)},
+            {"ThreadedSCSP", emuConfig.audio.threadedSCSP.Get()},
         }}},
 
         {"Cartridge", toml::table{{
@@ -869,7 +875,7 @@ SettingsSaveResult Settings::Save() {
         }}},
 
         {"CDBlock", toml::table{{
-            {"ReadSpeed", m_emuConfig.cdblock.readSpeedFactor.Get()},
+            {"ReadSpeed", emuConfig.cdblock.readSpeedFactor.Get()},
         }}},
     }};
     // clang-format on
@@ -901,194 +907,308 @@ void Settings::MakeDirty() {
 }
 
 void Settings::RebindInputs() {
-    m_inputContext.UnmapAllActions();
+    auto &inputContext = m_context.inputContext;
+    inputContext.UnmapAllActions();
 
-    for (auto &[action, mappings] : m_actionInputs) {
-        for (auto &[bind, context] : mappings) {
-            for (auto &element : bind->elements) {
-                // Sanitization -- skip ESC binds if they were manually added in the configuration file
-                if (element.type == input::InputElement::Type::KeyCombo &&
-                    element.keyCombo.key == input::KeyboardKey::Escape) {
-                    continue;
+    auto bindAll = [&](InputMap &map) {
+        for (auto &[action, mappings] : map.map) {
+            for (auto *bind : mappings) {
+                assert(bind != nullptr);
+                for (auto &element : bind->elements) {
+                    // Sanitization -- skip ESC binds if they were manually added in the configuration file
+                    if (element.type == input::InputElement::Type::KeyCombo &&
+                        element.keyCombo.key == input::KeyboardKey::Escape) {
+                        continue;
+                    }
+                    inputContext.MapAction(element, action, map.context);
                 }
-                m_inputContext.MapAction(element, action, context);
             }
         }
+    };
+
+    bindAll(m_actionInputs);
+
+    switch (m_context.settings.input.port1.type) {
+    case peripheral::PeripheralType::None: break;
+    case peripheral::PeripheralType::StandardPad: bindAll(m_port1ControlPadInputs); break;
+    }
+
+    switch (m_context.settings.input.port2.type) {
+    case peripheral::PeripheralType::None: break;
+    case peripheral::PeripheralType::StandardPad: bindAll(m_port2ControlPadInputs); break;
     }
 
     SyncInputSettings();
 }
 
-std::optional<input::Action> Settings::UnbindInput(const input::InputElement &element) {
+std::optional<input::MappedAction> Settings::UnbindInput(const input::InputElement &element) {
     if (element.type == input::InputElement::Type::None) {
         return std::nullopt;
     }
-    auto existingAction = m_inputContext.GetMappedAction(element);
+
+    auto &inputContext = m_context.inputContext;
+    auto existingAction = inputContext.UnmapInput(element);
     if (!existingAction) {
         return std::nullopt;
     }
 
-    if (m_actionInputs.contains(existingAction->action)) {
-        auto &inputs = m_actionInputs.at(existingAction->action);
+    auto &map = GetInputMapForContext(existingAction->context);
+    if (map.map.contains(existingAction->action)) {
+        auto &inputs = map.map.at(existingAction->action);
         for (auto &inputBind : inputs) {
-            if (inputBind.bind == nullptr) {
+            assert(inputBind != nullptr);
+            if (inputBind->action != existingAction->action) {
                 continue;
             }
-            if (inputBind.bind->action != existingAction->action) {
-                continue;
-            }
-            if (inputBind.context != existingAction->context) {
-                continue;
-            }
-            for (auto &boundElement : inputBind.bind->elements) {
+            for (auto &boundElement : inputBind->elements) {
                 if (boundElement == element) {
                     boundElement = {};
-                    RebindAction(existingAction->action);
-                    return existingAction->action;
+                    return existingAction;
                 }
             }
         }
     }
+
     return std::nullopt;
 }
 
-void Settings::RebindAction(input::Action action) {
-    m_inputContext.UnmapAction(action);
-
-    if (auto it = m_actionInputs.find(action); it != m_actionInputs.end()) {
-        for (auto &[bind, context] : it->second) {
-            for (auto &element : bind->elements) {
-                m_inputContext.MapAction(element, action, context);
-            }
-        }
-    }
-
-    SyncInputSettings();
-}
-
 void Settings::SyncInputSettings() {
-    for (auto &[action, mappings] : m_actionInputs) {
-        for (auto &[bind, context] : mappings) {
-            bind->elements.fill({});
-            for (int i = 0; auto &input : m_inputContext.GetMappedInputs(bind->action)) {
-                if (input.context == context) {
-                    bind->elements[i++] = input.element;
-                    if (i == input::kNumBindsPerInput) {
-                        break;
+    auto &inputContext = m_context.inputContext;
+    auto sync = [&](InputMap &map) {
+        for (auto &[action, mappings] : map.map) {
+            for (auto *bind : mappings) {
+                bind->elements.fill({});
+                for (int i = 0; auto &input : inputContext.GetMappedInputs(bind->action)) {
+                    if (input.context == map.context) {
+                        bind->elements[i++] = input.element;
+                        if (i == input::kNumBindsPerInput) {
+                            break;
+                        }
                     }
                 }
             }
         }
-    }
+    };
+
+    sync(m_actionInputs);
+    sync(m_port1ControlPadInputs);
+    sync(m_port2ControlPadInputs);
 }
 
-void Settings::ResetHotkeys() {
-    using Mod = input::KeyModifier;
-    using Key = input::KeyboardKey;
-    using KeyCombo = input::KeyCombo;
+std::unordered_set<input::MappedAction> Settings::ResetHotkeys() {
+    using namespace input;
 
-    hotkeys.openSettings.elements = {KeyCombo{Mod::None, Key::F10}};
-    hotkeys.toggleWindowedVideoOutput.elements = {KeyCombo{Mod::None, Key::F9}};
+    using Mod = KeyModifier;
+    using Key = KeyboardKey;
+    using GPBtn = GamepadButton;
 
-    hotkeys.toggleMute.elements = {KeyCombo{Mod::Control, Key::M}};
-    hotkeys.increaseVolume.elements = {KeyCombo{Mod::Control, Key::EqualsPlus}};
-    hotkeys.decreaseVolume.elements = {KeyCombo{Mod::Control, Key::MinusUnderscore}};
+    std::unordered_set<MappedAction> previousActions{};
+    std::unordered_set<MappedAction> replacedActions{};
 
-    hotkeys.loadDisc.elements = {KeyCombo{Mod::Control, Key::O}};
-    hotkeys.ejectDisc.elements = {KeyCombo{Mod::Control, Key::W}};
-    hotkeys.openCloseTray.elements = {KeyCombo{Mod::Control, Key::T}};
+    // TODO: deduplicate code
+    auto rebind = [&](InputBind &bind, const std::array<InputElement, kNumBindsPerInput> &defaults) {
+        // Unbind the old inputs and remember which actions were bound to them to exclude from the set of replaced
+        // actions
+        for (auto &input : bind.elements) {
+            if (auto replaced = m_context.inputContext.UnmapInput(input)) {
+                previousActions.insert(*replaced);
+            }
+        }
 
-    hotkeys.hardReset.elements = {KeyCombo{Mod::Control, Key::R}};
-    hotkeys.softReset.elements = {KeyCombo{Mod::Control | Mod::Shift, Key::R}};
-    hotkeys.resetButton.elements = {KeyCombo{Mod::Shift, Key::R}};
+        // Replace the binds
+        bind.elements = defaults;
 
-    hotkeys.turboSpeed.elements = {KeyCombo{Mod::None, Key::Tab}};
-    hotkeys.pauseResume.elements = {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::Control, Key::P}};
-    hotkeys.fwdFrameStep.elements = {KeyCombo{Mod::None, Key::RightBracket}};
-    hotkeys.revFrameStep.elements = {KeyCombo{Mod::None, Key::LeftBracket}};
-    hotkeys.rewind.elements = {KeyCombo{Mod::None, Key::Backspace}};
-    hotkeys.toggleRewindBuffer.elements = {KeyCombo{Mod::None, Key::F8}};
+        // Unbind the new inputs and add the replaced actions to the set if not previously bound to one of the actions
+        // we're replacing
+        for (auto &input : defaults) {
+            if (auto replaced = m_context.inputContext.UnmapInput(input)) {
+                if (!previousActions.contains(*replaced)) {
+                    replacedActions.insert(*replaced);
 
-    hotkeys.toggleDebugTrace.elements = {KeyCombo{Mod::None, Key::F11}};
-    hotkeys.dumpMemory.elements = {KeyCombo{Mod::Control, Key::F11}};
+                    // Also remove the bind from the settings
+                    auto &map = GetInputMapForContext(replaced->context);
+                    if (map.map.contains(replaced->action)) {
+                        for (auto *replacedBind : map.map.at(replaced->action)) {
+                            assert(replacedBind != nullptr);
+                            for (auto &element : replacedBind->elements) {
+                                for (auto &defaultElem : defaults) {
+                                    if (element == defaultElem) {
+                                        element = {};
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
 
-    hotkeys.saveStates.quickLoad.elements = {KeyCombo{Mod::None, Key::F3}};
-    hotkeys.saveStates.quickSave.elements = {KeyCombo{Mod::None, Key::F2}};
+    rebind(hotkeys.openSettings, {KeyCombo{Mod::None, Key::F10}});
+    rebind(hotkeys.toggleWindowedVideoOutput, {KeyCombo{Mod::None, Key::F9}});
 
-    hotkeys.saveStates.select1.elements = {KeyCombo{Mod::None, Key::Alpha1}};
-    hotkeys.saveStates.select2.elements = {KeyCombo{Mod::None, Key::Alpha2}};
-    hotkeys.saveStates.select3.elements = {KeyCombo{Mod::None, Key::Alpha3}};
-    hotkeys.saveStates.select4.elements = {KeyCombo{Mod::None, Key::Alpha4}};
-    hotkeys.saveStates.select5.elements = {KeyCombo{Mod::None, Key::Alpha5}};
-    hotkeys.saveStates.select6.elements = {KeyCombo{Mod::None, Key::Alpha6}};
-    hotkeys.saveStates.select7.elements = {KeyCombo{Mod::None, Key::Alpha7}};
-    hotkeys.saveStates.select8.elements = {KeyCombo{Mod::None, Key::Alpha8}};
-    hotkeys.saveStates.select9.elements = {KeyCombo{Mod::None, Key::Alpha9}};
-    hotkeys.saveStates.select10.elements = {KeyCombo{Mod::None, Key::Alpha0}};
+    rebind(hotkeys.toggleMute, {KeyCombo{Mod::Control, Key::M}});
+    rebind(hotkeys.increaseVolume, {KeyCombo{Mod::Control, Key::EqualsPlus}});
+    rebind(hotkeys.decreaseVolume, {KeyCombo{Mod::Control, Key::MinusUnderscore}});
 
-    hotkeys.saveStates.load1.elements = {KeyCombo{Mod::Control, Key::Alpha1}};
-    hotkeys.saveStates.load2.elements = {KeyCombo{Mod::Control, Key::Alpha2}};
-    hotkeys.saveStates.load3.elements = {KeyCombo{Mod::Control, Key::Alpha3}};
-    hotkeys.saveStates.load4.elements = {KeyCombo{Mod::Control, Key::Alpha4}};
-    hotkeys.saveStates.load5.elements = {KeyCombo{Mod::Control, Key::Alpha5}};
-    hotkeys.saveStates.load6.elements = {KeyCombo{Mod::Control, Key::Alpha6}};
-    hotkeys.saveStates.load7.elements = {KeyCombo{Mod::Control, Key::Alpha7}};
-    hotkeys.saveStates.load8.elements = {KeyCombo{Mod::Control, Key::Alpha8}};
-    hotkeys.saveStates.load9.elements = {KeyCombo{Mod::Control, Key::Alpha9}};
-    hotkeys.saveStates.load10.elements = {KeyCombo{Mod::Control, Key::Alpha0}};
+    rebind(hotkeys.loadDisc, {KeyCombo{Mod::Control, Key::O}});
+    rebind(hotkeys.ejectDisc, {KeyCombo{Mod::Control, Key::W}});
+    rebind(hotkeys.openCloseTray, {KeyCombo{Mod::Control, Key::T}});
 
-    hotkeys.saveStates.save1.elements = {KeyCombo{Mod::Shift, Key::Alpha1}};
-    hotkeys.saveStates.save2.elements = {KeyCombo{Mod::Shift, Key::Alpha2}};
-    hotkeys.saveStates.save3.elements = {KeyCombo{Mod::Shift, Key::Alpha3}};
-    hotkeys.saveStates.save4.elements = {KeyCombo{Mod::Shift, Key::Alpha4}};
-    hotkeys.saveStates.save5.elements = {KeyCombo{Mod::Shift, Key::Alpha5}};
-    hotkeys.saveStates.save6.elements = {KeyCombo{Mod::Shift, Key::Alpha6}};
-    hotkeys.saveStates.save7.elements = {KeyCombo{Mod::Shift, Key::Alpha7}};
-    hotkeys.saveStates.save8.elements = {KeyCombo{Mod::Shift, Key::Alpha8}};
-    hotkeys.saveStates.save9.elements = {KeyCombo{Mod::Shift, Key::Alpha9}};
-    hotkeys.saveStates.save10.elements = {KeyCombo{Mod::Shift, Key::Alpha0}};
+    rebind(hotkeys.hardReset, {KeyCombo{Mod::Control, Key::R}});
+    rebind(hotkeys.softReset, {KeyCombo{Mod::Control | Mod::Shift, Key::R}});
+    rebind(hotkeys.resetButton, {KeyCombo{Mod::Shift, Key::R}});
+
+    rebind(hotkeys.turboSpeed, {KeyCombo{Mod::None, Key::Tab}, {0, GPBtn::Back}});
+    rebind(hotkeys.pauseResume, {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::Control, Key::P}});
+    rebind(hotkeys.fwdFrameStep, {KeyCombo{Mod::None, Key::RightBracket}});
+    rebind(hotkeys.revFrameStep, {KeyCombo{Mod::None, Key::LeftBracket}});
+    rebind(hotkeys.rewind, {KeyCombo{Mod::None, Key::Backspace}});
+    rebind(hotkeys.toggleRewindBuffer, {KeyCombo{Mod::None, Key::F8}});
+
+    rebind(hotkeys.toggleDebugTrace, {KeyCombo{Mod::None, Key::F11}});
+    rebind(hotkeys.dumpMemory, {KeyCombo{Mod::Control, Key::F11}});
+
+    rebind(hotkeys.saveStates.quickLoad, {KeyCombo{Mod::None, Key::F3}});
+    rebind(hotkeys.saveStates.quickSave, {KeyCombo{Mod::None, Key::F2}});
+
+    rebind(hotkeys.saveStates.select1, {KeyCombo{Mod::None, Key::Alpha1}});
+    rebind(hotkeys.saveStates.select2, {KeyCombo{Mod::None, Key::Alpha2}});
+    rebind(hotkeys.saveStates.select3, {KeyCombo{Mod::None, Key::Alpha3}});
+    rebind(hotkeys.saveStates.select4, {KeyCombo{Mod::None, Key::Alpha4}});
+    rebind(hotkeys.saveStates.select5, {KeyCombo{Mod::None, Key::Alpha5}});
+    rebind(hotkeys.saveStates.select6, {KeyCombo{Mod::None, Key::Alpha6}});
+    rebind(hotkeys.saveStates.select7, {KeyCombo{Mod::None, Key::Alpha7}});
+    rebind(hotkeys.saveStates.select8, {KeyCombo{Mod::None, Key::Alpha8}});
+    rebind(hotkeys.saveStates.select9, {KeyCombo{Mod::None, Key::Alpha9}});
+    rebind(hotkeys.saveStates.select10, {KeyCombo{Mod::None, Key::Alpha0}});
+
+    rebind(hotkeys.saveStates.load1, {KeyCombo{Mod::Control, Key::Alpha1}});
+    rebind(hotkeys.saveStates.load2, {KeyCombo{Mod::Control, Key::Alpha2}});
+    rebind(hotkeys.saveStates.load3, {KeyCombo{Mod::Control, Key::Alpha3}});
+    rebind(hotkeys.saveStates.load4, {KeyCombo{Mod::Control, Key::Alpha4}});
+    rebind(hotkeys.saveStates.load5, {KeyCombo{Mod::Control, Key::Alpha5}});
+    rebind(hotkeys.saveStates.load6, {KeyCombo{Mod::Control, Key::Alpha6}});
+    rebind(hotkeys.saveStates.load7, {KeyCombo{Mod::Control, Key::Alpha7}});
+    rebind(hotkeys.saveStates.load8, {KeyCombo{Mod::Control, Key::Alpha8}});
+    rebind(hotkeys.saveStates.load9, {KeyCombo{Mod::Control, Key::Alpha9}});
+    rebind(hotkeys.saveStates.load10, {KeyCombo{Mod::Control, Key::Alpha0}});
+
+    rebind(hotkeys.saveStates.save1, {KeyCombo{Mod::Shift, Key::Alpha1}});
+    rebind(hotkeys.saveStates.save2, {KeyCombo{Mod::Shift, Key::Alpha2}});
+    rebind(hotkeys.saveStates.save3, {KeyCombo{Mod::Shift, Key::Alpha3}});
+    rebind(hotkeys.saveStates.save4, {KeyCombo{Mod::Shift, Key::Alpha4}});
+    rebind(hotkeys.saveStates.save5, {KeyCombo{Mod::Shift, Key::Alpha5}});
+    rebind(hotkeys.saveStates.save6, {KeyCombo{Mod::Shift, Key::Alpha6}});
+    rebind(hotkeys.saveStates.save7, {KeyCombo{Mod::Shift, Key::Alpha7}});
+    rebind(hotkeys.saveStates.save8, {KeyCombo{Mod::Shift, Key::Alpha8}});
+    rebind(hotkeys.saveStates.save9, {KeyCombo{Mod::Shift, Key::Alpha9}});
+    rebind(hotkeys.saveStates.save10, {KeyCombo{Mod::Shift, Key::Alpha0}});
+
+    RebindInputs();
+
+    return replacedActions;
 }
 
-void Settings::ResetBinds(Input::Port::StandardPadBinds &binds) {
-    using Key = input::KeyboardKey;
-    using GPBtn = input::GamepadButton;
-    using GPAxis2 = input::GamepadAxis2D;
+std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::StandardPadBinds &binds) {
+    using namespace input;
+
+    using Key = KeyboardKey;
+    using GPBtn = GamepadButton;
+    using GPAxis2 = GamepadAxis2D;
+
+    std::unordered_set<MappedAction> previousActions{};
+    std::unordered_set<MappedAction> replacedActions{};
+
+    // TODO: deduplicate code
+    auto rebind = [&](InputBind &bind, const std::array<InputElement, kNumBindsPerInput> &defaults) {
+        // Unbind the old inputs and remember which actions were bound to them to exclude from the set of replaced
+        // actions
+        for (auto &input : bind.elements) {
+            if (auto replaced = m_context.inputContext.UnmapInput(input)) {
+                previousActions.insert(*replaced);
+            }
+        }
+
+        // Replace the binds
+        bind.elements = defaults;
+
+        // Unbind the new inputs and add the replaced actions to the set if not previously bound to one of the actions
+        // we're replacing
+        for (auto &input : defaults) {
+            if (auto replaced = m_context.inputContext.UnmapInput(input)) {
+                if (!previousActions.contains(*replaced)) {
+                    replacedActions.insert(*replaced);
+
+                    // Also remove the bind from the settings
+                    auto &map = GetInputMapForContext(replaced->context);
+                    if (map.map.contains(replaced->action)) {
+                        for (auto *replacedBind : map.map.at(replaced->action)) {
+                            assert(replacedBind != nullptr);
+                            for (auto &element : replacedBind->elements) {
+                                for (auto &defaultElem : defaults) {
+                                    if (element == defaultElem) {
+                                        element = {};
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
 
     if (&binds == &input.port1.standardPadBinds) {
-        // Default port 1 Standard Pad controller inputs
-        input.port1.standardPadBinds.a.elements = {{{Key::J}, {0, GPBtn::X}}};
-        input.port1.standardPadBinds.b.elements = {{{Key::K}, {0, GPBtn::A}}};
-        input.port1.standardPadBinds.c.elements = {{{Key::L}, {0, GPBtn::B}}};
-        input.port1.standardPadBinds.x.elements = {{{Key::U}, {0, GPBtn::LeftBumper}}};
-        input.port1.standardPadBinds.y.elements = {{{Key::I}, {0, GPBtn::Y}}};
-        input.port1.standardPadBinds.z.elements = {{{Key::O}, {0, GPBtn::RightBumper}}};
-        input.port1.standardPadBinds.l.elements = {{{Key::Q}, {0, GPBtn::LeftTrigger}}};
-        input.port1.standardPadBinds.r.elements = {{{Key::E}, {0, GPBtn::RightTrigger}}};
-        input.port1.standardPadBinds.start.elements = {
-            {{Key::G}, {Key::F}, {Key::H}, {Key::Return}, {0, GPBtn::Start}}};
-        input.port1.standardPadBinds.up.elements = {{{Key::W}}};
-        input.port1.standardPadBinds.down.elements = {{{Key::S}}};
-        input.port1.standardPadBinds.left.elements = {{{Key::A}}};
-        input.port1.standardPadBinds.right.elements = {{{Key::D}}};
-        input.port1.standardPadBinds.dpad.elements = {{{0, GPAxis2::DPad}, {0, GPAxis2::LeftStick}}};
+        // Default port 1 Control Pad controller inputs
+        rebind(input.port1.standardPadBinds.a, {{{Key::J}, {0, GPBtn::X}}});
+        rebind(input.port1.standardPadBinds.b, {{{Key::K}, {0, GPBtn::A}}});
+        rebind(input.port1.standardPadBinds.c, {{{Key::L}, {0, GPBtn::B}}});
+        rebind(input.port1.standardPadBinds.x, {{{Key::U}, {0, GPBtn::LeftBumper}}});
+        rebind(input.port1.standardPadBinds.y, {{{Key::I}, {0, GPBtn::Y}}});
+        rebind(input.port1.standardPadBinds.z, {{{Key::O}, {0, GPBtn::RightBumper}}});
+        rebind(input.port1.standardPadBinds.l, {{{Key::Q}, {0, GPBtn::LeftTrigger}}});
+        rebind(input.port1.standardPadBinds.r, {{{Key::E}, {0, GPBtn::RightTrigger}}});
+        rebind(input.port1.standardPadBinds.start, {{{Key::G}, {Key::F}, {Key::H}, {Key::Return}, {0, GPBtn::Start}}});
+        rebind(input.port1.standardPadBinds.up, {{{Key::W}}});
+        rebind(input.port1.standardPadBinds.down, {{{Key::S}}});
+        rebind(input.port1.standardPadBinds.left, {{{Key::A}}});
+        rebind(input.port1.standardPadBinds.right, {{{Key::D}}});
+        rebind(input.port1.standardPadBinds.dpad, {{{0, GPAxis2::DPad}, {0, GPAxis2::LeftStick}}});
     } else if (&binds == &input.port2.standardPadBinds) {
-        // Default port 2 Standard Pad controller inputs
-        input.port2.standardPadBinds.a.elements = {{{Key::KeyPad1}, {1, GPBtn::X}}};
-        input.port2.standardPadBinds.b.elements = {{{Key::KeyPad2}, {1, GPBtn::A}}};
-        input.port2.standardPadBinds.c.elements = {{{Key::KeyPad3}, {1, GPBtn::B}}};
-        input.port2.standardPadBinds.x.elements = {{{Key::KeyPad4}, {1, GPBtn::LeftBumper}}};
-        input.port2.standardPadBinds.y.elements = {{{Key::KeyPad5}, {1, GPBtn::Y}}};
-        input.port2.standardPadBinds.z.elements = {{{Key::KeyPad6}, {1, GPBtn::RightBumper}}};
-        input.port2.standardPadBinds.l.elements = {{{Key::KeyPad7}, {Key::Insert}, {1, GPBtn::LeftTrigger}}};
-        input.port2.standardPadBinds.r.elements = {{{Key::KeyPad9}, {Key::PageUp}, {1, GPBtn::RightTrigger}}};
-        input.port2.standardPadBinds.start.elements = {{{Key::KeyPadEnter}, {1, GPBtn::Start}}};
-        input.port2.standardPadBinds.up.elements = {{{Key::Up}, {Key::Home}}};
-        input.port2.standardPadBinds.down.elements = {{{Key::Down}, {Key::End}}};
-        input.port2.standardPadBinds.left.elements = {{{Key::Left}, {Key::Delete}}};
-        input.port2.standardPadBinds.right.elements = {{{Key::Right}, {Key::PageDown}}};
-        input.port2.standardPadBinds.dpad.elements = {{{1, GPAxis2::DPad}, {1, GPAxis2::LeftStick}}};
+        // Default port 2 Control Pad controller inputs
+        rebind(input.port2.standardPadBinds.a, {{{Key::KeyPad1}, {1, GPBtn::X}}});
+        rebind(input.port2.standardPadBinds.b, {{{Key::KeyPad2}, {1, GPBtn::A}}});
+        rebind(input.port2.standardPadBinds.c, {{{Key::KeyPad3}, {1, GPBtn::B}}});
+        rebind(input.port2.standardPadBinds.x, {{{Key::KeyPad4}, {1, GPBtn::LeftBumper}}});
+        rebind(input.port2.standardPadBinds.y, {{{Key::KeyPad5}, {1, GPBtn::Y}}});
+        rebind(input.port2.standardPadBinds.z, {{{Key::KeyPad6}, {1, GPBtn::RightBumper}}});
+        rebind(input.port2.standardPadBinds.l, {{{Key::KeyPad7}, {Key::Insert}, {1, GPBtn::LeftTrigger}}});
+        rebind(input.port2.standardPadBinds.r, {{{Key::KeyPad9}, {Key::PageUp}, {1, GPBtn::RightTrigger}}});
+        rebind(input.port2.standardPadBinds.start, {{{Key::KeyPadEnter}, {1, GPBtn::Start}}});
+        rebind(input.port2.standardPadBinds.up, {{{Key::Up}, {Key::Home}}});
+        rebind(input.port2.standardPadBinds.down, {{{Key::Down}, {Key::End}}});
+        rebind(input.port2.standardPadBinds.left, {{{Key::Left}, {Key::Delete}}});
+        rebind(input.port2.standardPadBinds.right, {{{Key::Right}, {Key::PageDown}}});
+        rebind(input.port2.standardPadBinds.dpad, {{{1, GPAxis2::DPad}, {1, GPAxis2::LeftStick}}});
     }
+
     RebindInputs();
+
+    return replacedActions;
+}
+
+Settings::InputMap &Settings::GetInputMapForContext(void *context) {
+    if (context == &m_context.standardPadInputs[0]) {
+        // Port 1 Control Pad inputs
+        return m_port1ControlPadInputs;
+    } else if (context == &m_context.standardPadInputs[1]) {
+        // Port 2 Control Pad inputs
+        return m_port2ControlPadInputs;
+    } else {
+        // Hotkeys
+        return m_actionInputs;
+    }
 }
 
 const char *BupCapacityLongName(Settings::Cartridge::BackupRAM::Capacity capacity) {

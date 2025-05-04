@@ -1576,12 +1576,6 @@ void App::RunEmulator() {
             case EvtType::FitWindowToScreen: fitWindowToScreenNow = true; break;
 
             case EvtType::RebindInputs: RebindInputs(); break;
-            case EvtType::RebindAction: //
-            {
-                auto &params = std::get<RebindActionParams>(evt.value);
-                RebindAction(params.action, params.element);
-                break;
-            }
 
             case EvtType::ShowErrorMessage: OpenSimpleErrorModal(std::get<std::string>(evt.value)); break;
 
@@ -2305,14 +2299,6 @@ void App::EmulatorThread() {
 
 void App::RebindInputs() {
     m_context.settings.RebindInputs();
-}
-
-void App::RebindAction(input::Action action, const input::InputElement &element) {
-    if (auto prevAction = m_context.settings.UnbindInput(element)) {
-        devlog::warn<grp::base>("Input {} unbound from action {:X}", ToString(element), prevAction->id);
-    }
-
-    m_context.settings.RebindAction(action);
 }
 
 template <int port>

@@ -8,7 +8,7 @@ StandardPadBindsView::StandardPadBindsView(SharedContext &context)
     : SettingsViewBase(context)
     , m_inputCaptureWidget(context) {}
 
-void StandardPadBindsView::Display(Settings::Input::Port::StandardPadBinds &binds) {
+void StandardPadBindsView::Display(Settings::Input::Port::StandardPadBinds &binds, void *context) {
     if (ImGui::Button("Restore defaults")) {
         m_context.settings.ResetBinds(binds);
         MakeDirty();
@@ -23,33 +23,33 @@ void StandardPadBindsView::Display(Settings::Input::Port::StandardPadBinds &bind
         }
         ImGui::TableHeadersRow();
 
-        auto drawRow = [&](const char *btnName, input::InputBind &bind) {
+        auto drawRow = [&](input::InputBind &bind) {
             ImGui::TableNextRow();
             if (ImGui::TableNextColumn()) {
                 ImGui::AlignTextToFramePadding();
-                ImGui::TextUnformatted(btnName);
+                ImGui::TextUnformatted(bind.action.name);
             }
             for (uint32 i = 0; i < input::kNumBindsPerInput; i++) {
                 if (ImGui::TableNextColumn()) {
-                    m_inputCaptureWidget.DrawInputBindButton(bind, i);
+                    m_inputCaptureWidget.DrawInputBindButton(bind, i, context);
                 }
             }
         };
 
-        drawRow("A", binds.a);
-        drawRow("B", binds.b);
-        drawRow("C", binds.c);
-        drawRow("X", binds.x);
-        drawRow("Y", binds.y);
-        drawRow("Z", binds.z);
-        drawRow("L", binds.l);
-        drawRow("R", binds.r);
-        drawRow("Start", binds.start);
-        drawRow("Up", binds.up);
-        drawRow("Left", binds.left);
-        drawRow("Down", binds.down);
-        drawRow("Right", binds.right);
-        drawRow("D-Pad axis", binds.dpad);
+        drawRow(binds.a);
+        drawRow(binds.b);
+        drawRow(binds.c);
+        drawRow(binds.x);
+        drawRow(binds.y);
+        drawRow(binds.z);
+        drawRow(binds.l);
+        drawRow(binds.r);
+        drawRow(binds.start);
+        drawRow(binds.up);
+        drawRow(binds.left);
+        drawRow(binds.down);
+        drawRow(binds.right);
+        drawRow(binds.dpad);
 
         m_inputCaptureWidget.DrawCapturePopup();
 

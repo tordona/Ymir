@@ -34,7 +34,9 @@ void PeripheralBindsWindow::DrawContents() {
 
     switch (periph.GetType()) {
     case peripheral::PeripheralType::None: break;
-    case peripheral::PeripheralType::StandardPad: m_standardPadView.Display(settings.standardPadBinds); break;
+    case peripheral::PeripheralType::StandardPad:
+        m_standardPadView.Display(settings.standardPadBinds, &m_context.standardPadInputs[m_portIndex]);
+        break;
     }
 }
 

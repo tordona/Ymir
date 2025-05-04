@@ -10,7 +10,7 @@ class StandardPadBindsView : public SettingsViewBase {
 public:
     StandardPadBindsView(SharedContext &context);
 
-    void Display(Settings::Input::Port::StandardPadBinds &binds);
+    void Display(Settings::Input::Port::StandardPadBinds &binds, void *context);
 
 private:
     widgets::InputCaptureWidget m_inputCaptureWidget;

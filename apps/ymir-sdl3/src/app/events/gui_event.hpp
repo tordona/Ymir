@@ -11,11 +11,6 @@
 
 namespace app {
 
-struct RebindActionParams {
-    input::Action action;
-    input::InputElement element;
-};
-
 // A filter for the file dialog.
 // Follows SDL3 rules:
 // - filters must be specified
@@ -68,7 +63,6 @@ struct GUIEvent {
         FitWindowToScreen,
 
         RebindInputs,
-        RebindAction,
 
         ShowErrorMessage,
 
@@ -83,8 +77,8 @@ struct GUIEvent {
     };
 
     Type type;
-    std::variant<std::monostate, bool, uint32, std::string, std::filesystem::path, RebindActionParams,
-                 PeripheralBindsParams, FileDialogParams, FolderDialogParams, ui::SettingsTab>
+    std::variant<std::monostate, bool, uint32, std::string, std::filesystem::path, PeripheralBindsParams,
+                 FileDialogParams, FolderDialogParams, ui::SettingsTab>
         value;
 };
 

@@ -149,6 +149,10 @@ public:
     // Returns the previously mapped elements, if any.
     std::unordered_set<MappedInputElement> UnmapAction(Action action, void *context);
 
+    // Unmaps the action from the input element.
+    // Returns the previously mapped action, if any.
+    std::optional<MappedAction> UnmapInput(InputElement element);
+
     // Clears all action mappings.
     void UnmapAllActions();
 

@@ -10,7 +10,7 @@ class InputCaptureWidget {
 public:
     InputCaptureWidget(SharedContext &context);
 
-    void DrawInputBindButton(input::InputBind &bind, size_t elementIndex);
+    void DrawInputBindButton(input::InputBind &bind, size_t elementIndex, void *context);
 
     void DrawCapturePopup();
 
@@ -19,10 +19,11 @@ private:
 
     input::Action::Kind m_kind;
     bool m_closePopup = false;
+    bool m_capturing = false;
 
-    void CaptureButton(input::InputBind &bind, size_t elementIndex);
-    void CaptureAxis1D(input::InputBind &bind, size_t elementIndex);
-    void CaptureAxis2D(input::InputBind &bind, size_t elementIndex);
+    void CaptureButton(input::InputBind &bind, size_t elementIndex, void *context);
+    void CaptureAxis1D(input::InputBind &bind, size_t elementIndex, void *context);
+    void CaptureAxis2D(input::InputBind &bind, size_t elementIndex, void *context);
 
     void MakeDirty();
     bool MakeDirty(bool value);

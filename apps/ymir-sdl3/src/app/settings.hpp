@@ -13,14 +13,12 @@
 #include <app/input/input_events.hpp>
 
 #include <app/actions.hpp>
-#include <app/profile.hpp>
 
 #include <ymir/util/observable.hpp>
 
 #include <fmt/format.h>
 #include <toml++/toml.hpp>
 
-#include <array>
 #include <chrono>
 #include <filesystem>
 #include <sstream>
@@ -98,13 +96,6 @@ struct SettingsSaveResult {
     std::variant<std::monostate, std::error_code> value;
 };
 
-struct InputBindWithContext {
-    input::InputBind *bind;
-    void *context;
-
-    constexpr bool operator==(const InputBindWithContext &) const = default;
-};
-
 struct SharedContext;
 
 struct Settings {
@@ -123,22 +114,6 @@ public:
     // Auto-saves if the settings have been dirty for a while
     void CheckDirty();
     void MakeDirty();
-
-    // Clears and rebinds all configured inputs
-    void RebindInputs();
-
-    // Clears an existing bind of the specified input element.
-    // Returns the previously bound action, if any.
-    std::optional<input::Action> UnbindInput(const input::InputElement &element);
-
-    // Clears and rebinds the inputs of the specified action
-    void RebindAction(input::Action action);
-
-    // Synchronizes input settings with those from the input context
-    void SyncInputSettings();
-
-    // Restores all default hotkeys
-    void ResetHotkeys();
 
     // ---------------------------------------------------------------------------------------------
 
@@ -293,18 +268,40 @@ public:
 
     // ---------------------------------------------------------------------------------------------
 
+    // Clears and rebinds all configured inputs
+    void RebindInputs();
+
+    // Clears an existing bind of the specified input element.
+    // Returns the previously bound action, if any.
+    std::optional<input::MappedAction> UnbindInput(const input::InputElement &element);
+
+    // Synchronizes input settings with those from the input context
+    void SyncInputSettings();
+
+    // Restores all default hotkeys.
+    // Returns all unbound actions.
+    std::unordered_set<input::MappedAction> ResetHotkeys();
+
     // Restores all default input binds for the specified standard pad
-    void ResetBinds(Input::Port::StandardPadBinds &binds);
+    // Returns all unbound actions.
+    std::unordered_set<input::MappedAction> ResetBinds(Input::Port::StandardPadBinds &binds);
 
 private:
-    ymir::core::Configuration &m_emuConfig;
-    input::InputContext &m_inputContext;
-    Profile &m_profile;
+    SharedContext &m_context;
 
     bool m_dirty = false;
     std::chrono::steady_clock::time_point m_dirtyTimestamp;
 
-    std::unordered_map<input::Action, std::unordered_set<InputBindWithContext>> m_actionInputs;
+    struct InputMap {
+        std::unordered_map<input::Action, std::unordered_set<input::InputBind *>> map;
+        void *context = nullptr;
+    };
+
+    InputMap m_actionInputs;
+    InputMap m_port1ControlPadInputs;
+    InputMap m_port2ControlPadInputs;
+
+    InputMap &GetInputMapForContext(void *context);
 };
 
 const char *BupCapacityShortName(Settings::Cartridge::BackupRAM::Capacity capacity);
@@ -314,13 +311,3 @@ ymir::bup::BackupMemorySize CapacityToBupSize(Settings::Cartridge::BackupRAM::Ca
 uint32 CapacityToSize(Settings::Cartridge::BackupRAM::Capacity capacity);
 
 } // namespace app
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Hashing
-
-template <>
-struct std::hash<app::InputBindWithContext> {
-    std::size_t operator()(const app::InputBindWithContext &e) const noexcept {
-        return std::hash<void *>{}(e.bind) ^ std::hash<void *>{}(e.context);
-    }
-};

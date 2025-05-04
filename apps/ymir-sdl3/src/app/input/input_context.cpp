@@ -49,7 +49,6 @@ void InputContext::ProcessPrimitive(KeyboardKey key, KeyModifier modifiers, bool
     m_currModifiers = modifiers;
     const auto index = static_cast<size_t>(key);
     if (m_keyStates[index] != pressed || key == KeyboardKey::None) {
-
         if (key != KeyboardKey::None) {
             m_keyStates[index] = pressed;
         }
@@ -422,6 +421,19 @@ std::unordered_set<MappedInputElement> InputContext::UnmapAction(Action action, 
         }
     }
     return toRemove;
+}
+
+std::optional<MappedAction> InputContext::UnmapInput(InputElement element) {
+    if (!m_actions.contains(element)) {
+        return std::nullopt;
+    }
+
+    const MappedAction action = m_actions.at(element);
+    m_actions.erase(element);
+    if (m_actionsReverse.contains(action.action)) {
+        m_actionsReverse.at(action.action).erase({element, action.context});
+    }
+    return action;
 }
 
 void InputContext::UnmapAllActions() {
