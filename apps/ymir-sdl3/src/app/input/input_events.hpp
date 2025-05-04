@@ -20,32 +20,38 @@ struct InputElement {
     };
     Type type = Type::None;
 
+    struct GamepadButtonEvent {
+        uint32 id;
+        GamepadButton button;
+        constexpr bool operator==(const GamepadButtonEvent &rhs) const = default;
+    };
+    struct MouseAxis1DEvent {
+        MouseAxis1D axis;
+        constexpr bool operator==(const MouseAxis1DEvent &rhs) const = default;
+    };
+    struct MouseAxis2DEvent {
+        MouseAxis2D axis;
+        constexpr bool operator==(const MouseAxis2DEvent &rhs) const = default;
+    };
+    struct GamepadAxis1DEvent {
+        uint32 id;
+        GamepadAxis1D axis;
+        constexpr bool operator==(const GamepadAxis1DEvent &rhs) const = default;
+    };
+    struct GamepadAxis2DEvent {
+        uint32 id;
+        GamepadAxis2D axis;
+        constexpr bool operator==(const GamepadAxis2DEvent &rhs) const = default;
+    };
+
     union {
         KeyCombo keyCombo;
         MouseCombo mouseCombo;
-        struct GamepadButtonEvent {
-            uint32 id;
-            GamepadButton button;
-            constexpr bool operator==(const GamepadButtonEvent &rhs) const = default;
-        } gamepadButton;
-        struct MouseAxis1DEvent {
-            MouseAxis1D axis;
-            constexpr bool operator==(const MouseAxis1DEvent &rhs) const = default;
-        } mouseAxis1D;
-        struct MouseAxis2DEvent {
-            MouseAxis2D axis;
-            constexpr bool operator==(const MouseAxis2DEvent &rhs) const = default;
-        } mouseAxis2D;
-        struct GamepadAxis1DEvent {
-            uint32 id;
-            GamepadAxis1D axis;
-            constexpr bool operator==(const GamepadAxis1DEvent &rhs) const = default;
-        } gamepadAxis1D;
-        struct GamepadAxis2DEvent {
-            uint32 id;
-            GamepadAxis2D axis;
-            constexpr bool operator==(const GamepadAxis2DEvent &rhs) const = default;
-        } gamepadAxis2D;
+        GamepadButtonEvent gamepadButton;
+        MouseAxis1DEvent mouseAxis1D;
+        MouseAxis2DEvent mouseAxis2D;
+        GamepadAxis1DEvent gamepadAxis1D;
+        GamepadAxis2DEvent gamepadAxis2D;
     };
 
     InputElement()
