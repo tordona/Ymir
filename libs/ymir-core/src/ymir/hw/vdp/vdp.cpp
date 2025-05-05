@@ -1343,18 +1343,14 @@ void VDP::VDPRenderThread() {
                 rctx.framebufferSwapSignal.Set();
                 break;
             case EvtType::VDP1BeginFrame:
-                if (m_threadedVDPRendering) {
-                    m_VDPRenderContext.vdp1Done = false;
-                    for (int i = 0; i < 100000 && m_VDP1RenderContext.rendering; i++) {
-                        VDP1ProcessCommand();
-                    }
+                m_VDPRenderContext.vdp1Done = false;
+                for (int i = 0; i < 100000 && m_VDP1RenderContext.rendering; i++) {
+                    VDP1ProcessCommand();
                 }
                 break;
             /*case EvtType::VDP1ProcessCommands:
-                if (m_threadedVDPRendering) {
-                    for (uint64 i = 0; i < event.processCommands.steps; i++) {
-                        VDP1ProcessCommand();
-                    }
+                for (uint64 i = 0; i < event.processCommands.steps; i++) {
+                    VDP1ProcessCommand();
                 }
                 break;*/
             case EvtType::VDP2DrawLine: VDP2DrawLine(event.drawLine.vcnt); break;
@@ -3622,7 +3618,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
 template <bool selRotParam, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
                                              const std::array<bool, kMaxResH> &windowState) {
-    const VDP2Regs &regs = m_VDPRenderContext.vdp2.regs;
+    const VDP2Regs &regs = VDP2GetRegs();
 
     const bool doubleResH = regs.TVMD.HRESOn & 0b010;
     const uint32 xShift = doubleResH ? 1 : 0;
