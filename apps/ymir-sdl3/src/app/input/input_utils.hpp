@@ -27,13 +27,13 @@ inline float ApplyDeadzone(float value, float deadzone) {
     deadzone = std::clamp(deadzone, 0.0f, 0.9f);
 
     // Map values in the deadzone to 0.0f
-    if (abs(value) < deadzone) {
+    if (std::abs(value) < deadzone) {
         return 0.0f;
     }
 
     // Linearly map values outsize of the deadzone to 0.0f..1.0f
     const float sign = value < 0.0f ? -1.0f : +1.0f;
-    return sign * (abs(value) - deadzone) / (1.0f - deadzone);
+    return sign * (std::abs(value) - deadzone) / (1.0f - deadzone);
 }
 
 // Apply deadzone to a 2D axis.
@@ -48,7 +48,7 @@ inline Axis2DValue ApplyDeadzone(float x, float y, float deadzone) {
     }
 
     // Map values outsize of the deadzone to 0.0f..1.0f
-    const float len = sqrt(lenSq);
+    const float len = std::sqrt(lenSq);
     const float factor = (len - deadzone) / ((1.0f - deadzone) * len);
     return {x * factor, y * factor};
 }
@@ -76,8 +76,8 @@ inline T AnalogToDigital2DAxis(float x, float y, float sens, T xPosOut, T xNegOu
     }
 
     // Constrain to one quadrant
-    float ax = abs(x);
-    float ay = abs(y);
+    float ax = std::abs(x);
+    float ay = std::abs(y);
 
     // Normalize vector
     const float dist = sqrt(distSq);
@@ -96,8 +96,8 @@ inline T AnalogToDigital2DAxis(float x, float y, float sens, T xPosOut, T xNegOu
     const bool diagonal = dot >= kThreshold;
 
     // Select values based on sign
-    const bool sx = signbit(x);
-    const bool sy = signbit(y);
+    const bool sx = std::signbit(x);
+    const bool sy = std::signbit(y);
     const T valX = sx ? xNegOut : xPosOut;
     const T valY = sy ? yNegOut : yPosOut;
 
