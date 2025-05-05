@@ -2482,8 +2482,6 @@ void App::WriteSaveStateMeta() {
             const auto &disc = m_context.saturn.CDBlock.GetDisc();
 
             auto iter = std::ostream_iterator<char>(out);
-            fmt::format_to(iter, "Image path: {}\n", m_context.state.loadedDiscImagePath.string());
-            fmt::format_to(iter, "IPL ROM path: {}\n", m_context.iplRomPath.string());
             fmt::format_to(iter, "IPL ROM hash: {}\n", ymir::ToString(m_context.saturn.GetIPLHash()));
             fmt::format_to(iter, "Title: {}\n", disc.header.gameTitle);
             fmt::format_to(iter, "Product Number: {}\n", disc.header.productNumber);
