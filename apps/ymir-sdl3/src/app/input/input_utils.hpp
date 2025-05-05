@@ -43,13 +43,13 @@ inline Axis2DValue ApplyDeadzone(float x, float y, float deadzone) {
 
     // Map values in the deadzone to 0.0f
     const float lenSq = x * x + y * y;
-    if (lenSq < deadzone * deadzone) {
+    if (lenSq == 0.0f || lenSq < deadzone * deadzone) {
         return {0.0f, 0.0f};
     }
 
     // Map values outsize of the deadzone to 0.0f..1.0f
     const float len = sqrt(lenSq);
-    const float factor = (len - deadzone) / (1.0f - deadzone);
+    const float factor = (len - deadzone) / ((1.0f - deadzone) * len);
     return {x * factor, y * factor};
 }
 
