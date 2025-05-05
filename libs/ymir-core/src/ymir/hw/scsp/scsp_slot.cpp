@@ -799,8 +799,8 @@ void Slot::IncrementLFO() {
 void Slot::IncrementPhase(sint32 pitchLFO) {
     currPhase = nextPhase;
     // NOTE: freqNumSwitch already has ^ 0x400u
-    const uint32 phaseInc = (freqNumSwitch << (octave ^ 8u)) >> 4u;
-    nextPhase = (nextPhase & 0x3FFF) + phaseInc + pitchLFO;
+    const uint32 phaseInc = ((freqNumSwitch + pitchLFO) << (octave ^ 8u)) >> 4u;
+    nextPhase = (nextPhase & 0x3FFF) + phaseInc;
 }
 
 void Slot::IncrementSampleCounter() {
